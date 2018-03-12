@@ -53,7 +53,7 @@ namespace pseudopotential {
 
       if(!pseudo_node_){
 	pseudo_node_ = root_node_->first_node("norm_conserving_pseudopotential");
-	if(pseudo_node_) type_ = pseudopotential::type::NORM_CONSERVING;
+	if(pseudo_node_) type_ = pseudopotential::type::SEMILOCAL;
       }
 
       assert(pseudo_node_);
@@ -166,7 +166,7 @@ namespace pseudopotential {
 	}
 	return count;
       }
-      case pseudopotential::type::NORM_CONSERVING:
+      case pseudopotential::type::SEMILOCAL:
 	return 0;
       }
       return 0;

@@ -55,7 +55,7 @@ module pseudo_oct_m
   !these values have to match with those on base.hpp
   integer, parameter, public ::               &
     PSEUDO_TYPE_ULTRASOFT         = 30,       &
-    PSEUDO_TYPE_NORM_CONSERVING   = 31,       &
+    PSEUDO_TYPE_SEMILOCAL         = 31,       &
     PSEUDO_TYPE_KLEINMAN_BYLANDER = 32
 
   !these values have to match with those on pseudo_low.cc

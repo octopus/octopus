@@ -27,7 +27,7 @@ namespace pseudopotential {
 
   enum class type {
     ULTRASOFT = 30,
-    NORM_CONSERVING = 31,
+    SEMILOCAL = 31,
     KLEINMAN_BYLANDER = 32
   };
   
