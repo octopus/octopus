@@ -87,6 +87,21 @@ contains
       call messages_fatal()
     end if
 
+    if(ierr == PSEUDO_STATUS_UNSUPPORTED_TYPE_ULTRASOFT) then
+      call messages_write("Ultrasoft pseudopotential file '" // trim(filename) // "' not supported")
+      call messages_fatal()
+    end if
+
+    if(ierr == PSEUDO_STATUS_UNSUPPORTED_TYPE_PAW) then
+      call messages_write("PAW pseudopotential file '" // trim(filename) // "' not supported")
+      call messages_fatal()
+    end if
+    
+    if(ierr == PSEUDO_STATUS_UNSUPPORTED_TYPE) then
+      call messages_write("Pseudopotential file '" // trim(filename) // "' not supported")
+      call messages_fatal()
+    end if
+    
     if(ierr == PSEUDO_STATUS_FORMAT_NOT_SUPPORTED) then
       POP_SUB(ps_xml_init)
       return
