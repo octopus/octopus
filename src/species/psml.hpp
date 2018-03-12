@@ -212,10 +212,24 @@ namespace pseudopotential {
       return false;
     }
 
-    void radial_function(int l, std::vector<double> & function) const {
+    void radial_function(int l, std::vector<double> & val) const {
+      rapidxml::xml_node<> * node = root_node_->first_node("pseudo-wave-functions")->first_node("pswf");
+      while(node){
+	int read_l = letter_to_l(node->first_attribute("l")->value());
+	if(l == read_l) break;
+	node = node->next_sibling("pswf");
+      }
+      read_function(node, val);
     }
 
-    void radial_potential(int l, std::vector<double> & function) const {
+    void radial_potential(int l, std::vector<double> & val) const {
+      rapidxml::xml_node<> * node = root_node_->first_node("semilocal-potentials")->first_node("slps");
+      while(node){
+	int read_l = letter_to_l(node->first_attribute("l")->value());
+	if(l == read_l) break;
+	node = node->next_sibling("slps");
+      }
+      read_function(node, val);
     }
 
     bool has_nlcc() const{
@@ -259,9 +273,11 @@ namespace pseudopotential {
   private:
 
     void read_function(rapidxml::xml_node<> * base_node, std::vector<double> & val, bool potential_padding = false) const{
+      assert(base_node);
       rapidxml::xml_node<> * node = base_node->first_node("radfunc")->first_node("data");
       assert(node);
-      int size = value<int>(node->first_attribute("npts"));
+      int size = grid_.size();
+      if(node->first_attribute("npts")) size = value<int>(node->first_attribute("npts"));
       val.resize(grid_.size());
       std::istringstream stst(node->value());
       for(int ii = 0; ii < size; ii++) stst >> val[ii];
