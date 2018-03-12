@@ -56,18 +56,33 @@ namespace pseudopotential {
       } else {
 	throw status::UNSUPPORTED_TYPE;
       }
-      
-      //read lmax
-      lmax_ = -1;
-      for(int l = 0; l <= 10; l++ ){
-	if(!has_projectors(l)){
-	  lmax_ = l - 1;
-	  break;
-	}
-      }
-      assert(lmax_ >= 0);
-      assert(lmax_ < 9);
 
+      {
+	//read lmax
+	std::string tag1, tag2;
+	if(type_ == pseudopotential::type::KLEINMAN_BYLANDER){
+	  tag1 = "nonlocal-projectors";
+	  tag2 = "proj";
+	} else if(type_ == pseudopotential::type::SEMILOCAL){
+	  tag1 = "semilocal-potentials";
+	  tag2 = "slps";
+	} else {
+	  assert(false);
+	}
+      
+	lmax_ = -1;
+	rapidxml::xml_node<> * node = root_node_->first_node(tag1.c_str());
+	assert(node);
+	node = node->first_node(tag2.c_str());
+	while(node){
+	  int read_l = letter_to_l(node->first_attribute("l")->value());
+	  lmax_ = std::max(lmax_, read_l);
+	  node = node->next_sibling(tag2.c_str());
+	}
+	assert(lmax_ >= 0);
+	assert(lmax_ < 9);
+      }
+      
       //read grid
       {
 	rapidxml::xml_node<> * node = root_node_->first_node("grid");
