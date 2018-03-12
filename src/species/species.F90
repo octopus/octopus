@@ -378,10 +378,13 @@ contains
     !% maximum angular momentum component to be used, and
     !% <tt>lloc</tt>, that defines the angular momentum to be
     !% considered as local. When these parameters are not set, the
-    !% values are taken from the pseudopotential file. Note that,
-    !% depending on the type of pseudopotential, it might not be
-    !% possible to select <tt>lmax</tt> and <tt>lloc</tt>, if that is
-    !% the case the parameters will be ignored.
+    !% value for lmax is the maximum angular component from the
+    !% pseudopotential file. The default value for <tt>lloc</tt> is
+    !% taken from the pseudopotential if available, if not, it is set
+    !% to 0. Note that, depending on the type of pseudopotential, it
+    !% might not be possible to select <tt>lmax</tt> and
+    !% <tt>lloc</tt>, if that is the case the parameters will be
+    !% ignored.
     !%Option species_pspio  -110
     !% (experimental) Alternative method to read pseudopotentials
     !% using the PSPIO library. This species uses the same parameters

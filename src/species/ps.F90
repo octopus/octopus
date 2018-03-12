@@ -320,7 +320,7 @@ contains
           ! we have several options
           ps%llocal = user_llocal                     ! user supplied local component
           if(ps%llocal < 0) ps%llocal = ps_xml%llocal ! the one given in the pseudopotential file
-          if(ps%llocal < 0) ps%llocal = ps_xml%lmax   ! we use the maximum l possible as local
+          if(ps%llocal < 0) ps%llocal = 0             ! we do not have any info, set the local component to 0
           ASSERT(ps%llocal >= 0)
           ASSERT(ps%llocal <= ps%lmax)
         end if
