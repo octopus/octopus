@@ -71,7 +71,7 @@ module ps_oct_m
     PS_FILTER_TS   = 2,         &
     PS_FILTER_BSB  = 3
 
-  integer, parameter, public :: INVALID_L = 100
+  integer, parameter, public :: INVALID_L = 333
   
   character(len=3), parameter  :: ps_name(PS_TYPE_PSF:PS_TYPE_XML) = (/"tm2", "hgh", "cpi", "fhi", "upf", "qso"/)
 
