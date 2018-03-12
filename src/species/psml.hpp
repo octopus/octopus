@@ -176,19 +176,6 @@ namespace pseudopotential {
       return count;
     }
     
-    bool has_projectors(int l) const {
-      //note: this function can't use lmax_ or lmax()
-      rapidxml::xml_node<> * node = root_node_->first_node("nonlocal-projectors");
-      if(!node) return false;
-      node = node->first_node("proj");
-      while(node){
-	int read_l = letter_to_l(node->first_attribute("l")->value());
-	if(l == read_l) break;
-	node = node->next_sibling("proj");
-      }
-      return node != NULL;
-    }
-    
     void projector(int l, int ic, std::vector<double> & val) const {
       rapidxml::xml_node<> * node = root_node_->first_node("nonlocal-projectors")->first_node("proj");
       while(node){

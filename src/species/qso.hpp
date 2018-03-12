@@ -172,16 +172,6 @@ namespace pseudopotential {
       return 0;
     }
     
-    bool has_projectors(int l) const {
-      rapidxml::xml_node<> * node = pseudo_node_->first_node("projector");
-      while(node){
-	int read_l = value<int>(node->first_attribute("l"));
-	if(l == read_l) break;
-	node = node->next_sibling("projector");
-      }
-      return node != NULL;
-    }
-    
     void projector(int l, int i, std::vector<double> & proj) const {
 
       std::string tag = "projector";
@@ -383,10 +373,19 @@ namespace pseudopotential {
     
   private:
 
+    bool has_projectors(int l) const {
+      rapidxml::xml_node<> * node = pseudo_node_->first_node("projector");
+      while(node){
+	int read_l = value<int>(node->first_attribute("l"));
+	if(l == read_l) break;
+	node = node->next_sibling("projector");
+      }
+      return node != NULL;
+    }
+    
     int nbeta() const {
       return value<int>(pseudo_node_->first_node("nbeta"));
     }
-
 
     std::ifstream file_;
     std::vector<char> buffer_;

@@ -40,7 +40,6 @@ module pseudo_oct_m
     pseudo_llocal,              &
     pseudo_nchannels,           &
     pseudo_local_potential,     &
-    pseudo_has_projectors,      &
     pseudo_projector,           &
     pseudo_radial_function,     &
     pseudo_radial_potential,    &
@@ -267,26 +266,6 @@ module pseudo_oct_m
   end interface
   
 contains
-
-  ! -------------------------------------------------
-  
-  logical function pseudo_has_projectors(pseudo, l)
-    type(pseudo_t),   intent(in)      :: pseudo
-    integer,          intent(in)      :: l
-    
-    interface
-      integer function pseudo_has_projectors_low(pseudo, l)
-        import :: pseudo_t
-        implicit none
-        
-        type(pseudo_t),   intent(in)      :: pseudo
-        integer,          intent(in)      :: l
-      end function pseudo_has_projectors_low
-    end interface
-
-    pseudo_has_projectors = (pseudo_has_projectors_low(pseudo, l) /= 0)
-    
-  end function pseudo_has_projectors
 
   ! -------------------------------------------------
   

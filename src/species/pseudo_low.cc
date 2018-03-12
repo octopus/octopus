@@ -105,10 +105,6 @@ extern "C" fint FC_FUNC_(pseudo_nchannels, PSEUDO_NCHANNELS)(const pseudopotenti
   return (*pseudo)->nchannels();
 }
 
-extern "C" fint FC_FUNC_(pseudo_has_projectors_low, PSEUDO_HAS_PROJECTORS_LOW)(const pseudopotential::base ** pseudo, const fint * l){
-  return fint((*pseudo)->has_projectors(*l));
-}
-
 extern "C" void FC_FUNC_(pseudo_local_potential, PSEUDO_LOCAL_POTENTIAL)(const pseudopotential::base ** pseudo, double * local_potential){
   std::vector<double> val;
   (*pseudo)->local_potential(val);
