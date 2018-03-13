@@ -64,6 +64,7 @@ contains
     PUSH_SUB(periodic_copy_init)
 
     ASSERT(range >= M_ZERO)
+
     this%range = range
     this%pos(1:sb%dim) = pos(1:sb%dim)
 

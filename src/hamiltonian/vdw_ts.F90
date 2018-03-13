@@ -21,7 +21,6 @@
 #include "global.h"
 
 module vdw_ts_oct_m
-
   use base_term_oct_m 
   use comm_oct_m 
   use derivatives_oct_m
@@ -64,7 +63,6 @@ module vdw_ts_oct_m
     type(hirshfeld_t) :: hirshfeld
   end type vdw_ts_t
 
-
 contains
 
   subroutine vdw_ts_init(this, geo, der, st)
@@ -98,7 +96,9 @@ contains
         this%c6abfree(ispecies, jspecies) = num/den
       end do
     end do
+
     call hirshfeld_init(this%hirshfeld, der%mesh, geo, st)
+
     POP_SUB(vdw_ts_init)
   end subroutine vdw_ts_init
 
@@ -169,11 +169,11 @@ contains
 
     do iatom = 1, geo%natoms
       ispecies = species_index(geo%atom(iatom)%species)
-
       call hirshfeld_volume_ratio(this%hirshfeld, iatom, density, volume_ratio(iatom))
+      
       dr0dvra(iatom) = this%r0free(ispecies)/(3.0*(volume_ratio(iatom)**(CNST(2.0)/CNST(3.0)))) 
       ! I do not know how to compute in a better way x^(2/3) in F90
-
+      
     end do
 
     do iatom = 1, geo%natoms
@@ -508,9 +508,7 @@ contains
       alpha = CNST(199.000000)
       c6 = CNST(3170.000000)
       r0 = CNST(4.540000)
-     
-!   Elements from 39 - Yttrium (Y) to 44 Ruthenium (Ru) are not included. 
-
+      
     case('Rh')
       alpha = CNST(56.1)
       c6 = CNST(469.0)
@@ -530,9 +528,7 @@ contains
       alpha = CNST(39.7)
       c6 = CNST(452.0)
       r0 = CNST(3.99)
-
-!  Elements from 49 - Indium (In) to 51 - Antimony (Sb) are not included.      
-
+      
     case('Te')
       alpha = CNST(37.65)
       c6 = CNST(396.0)
@@ -547,15 +543,11 @@ contains
       alpha = CNST(27.300000)
       c6 = CNST(285.900000)
       r0 = CNST(4.080000)
-
-!  Element 55 - Caesium (Cs) is not included.
- 
+      
     case('Ba')
       alpha = CNST(275.0)
       c6 = CNST(5727.0)
       r0 = CNST(4.77)
-
-!  Elements from 57 - Lanthanum (La) to 76 - Osmium (Os) are not included.
       
     case('Ir')
       alpha = CNST(42.51)
@@ -576,9 +568,7 @@ contains
       alpha = CNST(33.9)
       c6 = CNST(392.0)
       r0 = CNST(3.98)
-
-!  Element 81 - Thallium (Tl) is not included.
-   
+      
     case('Pb')
       alpha = CNST(61.8)
       c6 = CNST(697.0)
@@ -588,8 +578,6 @@ contains
       alpha = CNST(49.02)
       c6 = CNST(571.0)
       r0 = CNST(4.32)
-
-! Elements from 84 - Polonium (Po) to 118 - Ununoctium (Uuo) are not included.
       
     case default
       
