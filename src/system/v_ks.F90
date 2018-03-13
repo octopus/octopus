@@ -389,20 +389,8 @@ contains
     !% The DFT-D3 scheme of S. Grimme, J. Antony, S. Ehrlich, and
     !% S. Krieg, J. Chem. Phys. 132, 154104 (2010).
     !%End
-
-    !%Variable VDW_ts_cutoff
-    !%Type float
-    !%Default 10.0
-    !%Section Hamiltonian::XC
-    !%Description
-    !% Set the value of the cutoff for the VDW interaction in periodic system in the Tkatchenko and Scheffler (vdw_ts) scheme only. 
-    !%End
-    call parse_variable('VDW_ts_cutoff', CNST(10.0), ks%xc%VDW_cutoff)
-
-
-
     call parse_variable('VDWCorrection', OPTION__VDWCORRECTION__NONE, ks%vdw_correction)
-    
+
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
       call messages_experimental('VDWCorrection')
 
@@ -419,6 +407,16 @@ contains
         !% the total energy. This option only works with vdw_ts.
         !%End
         call parse_variable('VDWSelfConsistent', .true., ks%vdw_self_consistent)
+
+
+        !%Variable VDW_TS_cutoff
+        !%Type float
+        !%Default 10.0
+        !%Section Hamiltonian::XC
+        !%Description
+        !% Set the value of the cutoff for the VDW correction in periodic system in the Tkatchenko and Scheffler (vdw_ts) scheme only. 
+        !%End
+        call parse_variable('VDW_TS_cutoff', CNST(10.0), ks%xc%VDW_cutoff)
 
         call vdw_ts_init(ks%vdw_ts, geo, gr%fine%der, st)
 
