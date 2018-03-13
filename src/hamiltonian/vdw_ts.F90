@@ -172,7 +172,8 @@ contains
     SAFE_ALLOCATE(r0ab(1:geo%natoms,1:geo%natoms))
     SAFE_ALLOCATE(c6ab(1:geo%natoms,1:geo%natoms))
     SAFE_ALLOCATE(x_j(1:sb%dim))
-    energy=0
+
+    energy=M_ZERO
     derivative_coeff(1:geo%natoms) = M_ZERO
     force(1:3, 1:geo%natoms) = M_ZERO
 
@@ -180,19 +181,15 @@ contains
       ispecies = species_index(geo%atom(iatom)%species)
       call hirshfeld_volume_ratio(this%hirshfeld, iatom, density, volume_ratio(iatom))
       
-      dr0dvra(iatom) = this%r0free(ispecies)/(3.0*(volume_ratio(iatom)**(CNST(2.0)/CNST(3.0)))) 
-      ! I do not know how to compute in a better way x^(2/3) in F90
+      dr0dvra(iatom) = this%r0free(ispecies)/(CNST(3.0)*(volume_ratio(iatom)**(CNST(2.0)/CNST(3.0)))) 
       
-    end do
-
-    do iatom = 1, geo%natoms
       ispecies = species_index(geo%atom(iatom)%species)
       do jatom = 1, geo%natoms
        jspecies = species_index(geo%atom(jatom)%species)
 
        r0ab(iatom,jatom) = (volume_ratio(iatom)**(CNST(1.0)/CNST(3.0)))*this%r0free(ispecies) &
                           +(volume_ratio(jatom)**(CNST(1.0)/CNST(3.0)))*this%r0free(jspecies) 
-       ! I do not know how to implement in F90 a better way to compute the cubic root for a number !
+
        c6ab(iatom,jatom) = volume_ratio(iatom)*volume_ratio(jatom)*this%c6abfree(ispecies,jspecies)
 
       end do
@@ -216,22 +213,22 @@ contains
            
             
             rr =  sqrt(rr2)
-            rr6 = rr2*rr2*rr2
+            rr6 = rr2**3
             rr7 = rr6*rr
 
-            ee = exp(-dd*((rr/(sr*r0ab(iatom,jatom))) - 1.0))
-            ff = 1.0/(1.0 + ee)
-            dee = ee*(ff)*(ff)
+            ee = exp(-dd*((rr/(sr*r0ab(iatom,jatom))) - M_ONE))
+            ff = M_ONE/(M_ONE + ee)
+            dee = ee*ff**2
 
             !Calculate the derivative of the damping function with respect to the distance between atoms A and B.
             dffdrab = (dd/(sr*r0ab(iatom,jatom)))*dee
             !Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
-            dffdr0 = -dd*rr/(sr*r0ab(iatom,jatom)*r0ab(iatom,jatom))*dee
+            dffdr0 = -dd*rr/(sr*r0ab(iatom,jatom)**2)*dee
 
-            energy = energy -0.5*ff*c6ab(iatom,jatom)/rr6
+            energy = energy -M_HALF*ff*c6ab(iatom,jatom)/rr6
 
             ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
-            deabdrab = -dffdrab*c6ab(iatom,jatom)/rr6 + 6.0*ff*c6ab(iatom,jatom)/rr7;
+            deabdrab = -dffdrab*c6ab(iatom,jatom)/rr6 + CNST(6.0)*ff*c6ab(iatom,jatom)/rr7;
       
             ! Derivative of the damping function with respecto to the volume ratio of atom A.
             dffdvra = dffdr0*dr0dvra(iatom);
@@ -291,7 +288,7 @@ contains
 !------------------------------------------------------------!
 
     ! Calculate the potential
-    potential = CNST(0.0)
+    potential = M_ZERO
     do iatom = 1, geo%natoms
       call hirshfeld_density_derivative(this%hirshfeld, iatom, dvadens)
       potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*dvadens(1:der%mesh%np)
