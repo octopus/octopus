@@ -24,6 +24,7 @@ module photon_mode_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
+  use io_oct_m
   use lalg_adv_oct_m
   use linear_response_oct_m
   use linear_solver_oct_m
@@ -75,9 +76,94 @@ contains
     type(grid_t),         intent(inout) :: gr
 
     type(block_t)         :: blk
-    integer               :: ii, ncols
+    integer               :: ii, ncols, iunit, ierr
+    character(MAX_PATH_LEN) :: filename
+    logical               :: file_exists
 
     PUSH_SUB(photon_mode_init)
+
+    this%nmodes = 0
+    this%has_arrays = .false.
+    this%has_q0_p0 = .false.
+
+    !%Variable PhotonmodesFilename
+    !%Type string
+    !%Default "photonmodes"
+    !%Section Linear Response::Casida
+    !%Description
+    !% Filename for photon modes in text format
+    !%  - first line contains 2 integers: number of photon modes and number of
+    !%    columns
+    !%  - each further line contains the given number of floats for one photon
+    !%    mode
+    !%End
+    call parse_variable('PhotonmodesFilename', 'photonmodes', filename)
+    inquire(file=trim(filename), exist=file_exists)
+    if(file_exists) then
+      this%has_arrays = .true.
+      if(mpi_grp_is_root(mpi_world)) then
+        message(1) = 'Opening '//trim(filename)
+        call messages_info(1)
+        ! open file on root
+        iunit = io_open(trim(filename), action='read', form='formatted')
+
+        ! get dimensions from first line
+        read(iunit, *) this%nmodes, ncols
+
+        write(message(1), '(3a,i7,a,i3,a)') 'Reading file ', trim(filename), ' with ', &
+          this%nmodes, ' photon modes and ', ncols, ' columns.'
+        call messages_info(1)
+
+        SAFE_ALLOCATE(this%omega_array(1:this%nmodes))
+        SAFE_ALLOCATE(this%lambda_array(1:this%nmodes))
+        SAFE_ALLOCATE(this%pol_array(1:this%nmodes,3))
+        if (ncols > 5) then
+          this%has_q0_p0 = .true.
+          SAFE_ALLOCATE(this%q0_array(1:this%nmodes))
+          SAFE_ALLOCATE(this%p0_array(1:this%nmodes))
+        end if
+
+        ! now read in all modes
+        do ii = 1, this%nmodes
+          if(ncols == 5) then
+            read(iunit, *) this%omega_array(ii), this%lambda_array(ii), &
+              this%pol_array(ii,1), this%pol_array(ii,2), this%pol_array(ii,3)
+          else if(ncols == 7) then
+            read(iunit, *) this%omega_array(ii), this%lambda_array(ii), &
+              this%pol_array(ii,1), this%pol_array(ii,2), this%pol_array(ii,3), &
+              this%q0_array(ii), this%p0_array(ii)
+          else
+            ! error if not 5 or 7 columns
+            message(1) = 'Error: unexpected number of columns in '//filename
+            call messages_fatal(1)
+          end if
+        end do
+        call io_close(iunit)
+      end if
+#ifdef HAVE_MPI
+      ! broadcast first array dimensions, then allocate and broadcast arrays
+      call MPI_Bcast(this%nmodes, 1, MPI_INTEGER, 0, mpi_world%comm, ierr)
+      call MPI_Bcast(ncols, 1, MPI_INTEGER, 0, mpi_world%comm, ierr)
+      if(.not. mpi_grp_is_root(mpi_world)) then
+        SAFE_ALLOCATE(this%omega_array(1:this%nmodes))
+        SAFE_ALLOCATE(this%lambda_array(1:this%nmodes))
+        SAFE_ALLOCATE(this%pol_array(1:this%nmodes,3))
+        if(ncols > 5) then
+          this%has_q0_p0 = .true.
+          SAFE_ALLOCATE(this%q0_array(1:this%nmodes))
+          SAFE_ALLOCATE(this%p0_array(1:this%nmodes))
+        end if
+      end if
+      call MPI_Bcast(this%omega_array(1), this%nmodes, MPI_FLOAT, 0, mpi_world%comm, ierr)
+      call MPI_Bcast(this%lambda_array(1), this%nmodes, MPI_FLOAT, 0, mpi_world%comm, ierr)
+      call MPI_Bcast(this%pol_array(1,1), this%nmodes*3, MPI_FLOAT, 0, mpi_world%comm, ierr)
+      if(this%has_q0_p0) then
+        call MPI_Bcast(this%q0_array(1), this%nmodes, MPI_FLOAT, 0, mpi_world%comm, ierr)
+        call MPI_Bcast(this%p0_array(1), this%nmodes, MPI_FLOAT, 0, mpi_world%comm, ierr)
+      end if
+#endif
+    end if
+
 
     !%Variable PhotonModes
     !%Type block
@@ -91,10 +177,7 @@ contains
     !%End
     !% frequency, coupling strength, pol in (x,y,z), q(t0), p(t0)
     ! todo extend to more modes and put defaults
-    this%nmodes = 0
-    this%has_arrays = .false.
-    this%has_q0_p0 = .false.
-    if(parse_block('PhotonModes', blk) == 0) then
+    if(.not. file_exists .and. parse_block('PhotonModes', blk) == 0) then
       this%has_arrays = .true.
       this%nmodes = parse_block_n(blk)
       SAFE_ALLOCATE(this%omega_array(1:this%nmodes))

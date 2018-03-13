@@ -314,7 +314,7 @@ contains
     if (cas%has_photons) then
       if(cas%has_photons) call messages_experimental('Photons = yes')  
       call photon_mode_init(cas%pt, sys%gr)
-      write(message(1), '(a,i5,a)') 'Happy to have Casida with ', cas%pt%nmodes, ' photon modes.'
+      write(message(1), '(a,i7,a)') 'Happy to have Casida with ', cas%pt%nmodes, ' photon modes.'
       call messages_info(1)
       cas%pt_nmodes = cas%pt%nmodes
     end if
