@@ -41,7 +41,6 @@ module vdw_ts_oct_m
   use states_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use xc_oct_m 
 
   implicit none
 
@@ -61,6 +60,8 @@ module vdw_ts_oct_m
     FLOAT, allocatable :: c6abfree(:, :) !> Free atomic heteronuclear C6 coefficient for each atom pair.
     FLOAT, allocatable :: volfree(:)
     type(hirshfeld_t) :: hirshfeld
+
+    FLOAT   :: VDW_cutoff                !> cutoff value for the calculation of the VdW TS correction in solids 
   end type vdw_ts_t
 
 contains
@@ -76,6 +77,15 @@ contains
 
     PUSH_SUB(vdw_ts_init)
     
+    !%Variable VDW_TS_cutoff
+    !%Type float
+    !%Default 10.0
+    !%Section Hamiltonian::XC
+    !%Description
+    !% Set the value of the cutoff for the VDW correction in periodic system in the Tkatchenko and Scheffler (vdw_ts) scheme only. 
+    !%End
+    call parse_variable('VDW_TS_cutoff', CNST(10.0), this%VDW_cutoff)
+
     SAFE_ALLOCATE(this%c6free(1:geo%nspecies))
     SAFE_ALLOCATE(this%dpfree(1:geo%nspecies))
     SAFE_ALLOCATE(this%r0free(1:geo%nspecies))
@@ -122,12 +132,11 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_calculate(this, geo, der, sb, xcs, density, energy, potential, force)
+  subroutine vdw_ts_calculate(this, geo, der, sb, density, energy, potential, force)
     type(vdw_ts_t),      intent(inout) :: this
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
     type(simul_box_t),   intent(in)    :: sb
-    type(xc_t),          intent(in)    :: xcs
     FLOAT,               intent(in)    :: density(:, :)
     FLOAT,               intent(out)   :: energy
     FLOAT,               intent(out)   :: potential(:)
@@ -198,7 +207,7 @@ contains
       do jatom = 1, geo%natoms
         jspecies = species_index(geo%atom(jatom)%species)
                 
-        call periodic_copy_init(pc, sb, geo%atom(jatom)%x, xcs%VDW_cutoff)
+        call periodic_copy_init(pc, sb, geo%atom(jatom)%x, this%VDW_cutoff)
         do jcopy = 1, periodic_copy_num(pc) ! one of the periodic copy is the initial atom  
           do iatom = 1, geo%natoms
             ispecies = species_index(geo%atom(iatom)%species) 
@@ -242,7 +251,7 @@ contains
 
       ! Add the extra term for the force 
       do jatom = 1, geo%natoms
-        call periodic_copy_init(pc, sb, geo%atom(jatom)%x, xcs%VDW_cutoff)
+        call periodic_copy_init(pc, sb, geo%atom(jatom)%x, this%VDW_cutoff)
         do jcopy = 1, periodic_copy_num(pc)
           x_j(1:sb%dim) = periodic_copy_position(pc, sb, jcopy)
           do iatom = 1, geo%natoms
