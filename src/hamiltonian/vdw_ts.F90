@@ -246,14 +246,10 @@ contains
       ! Add the extra term for the force 
       do jatom = 1, geo%natoms
         call periodic_copy_init(pc, sb, geo%atom(jatom)%x, this%VDW_cutoff)
-        do jcopy = 1, periodic_copy_num(pc)
-          x_j(1:sb%dim) = periodic_copy_position(pc, sb, jcopy)
-          do iatom = 1, geo%natoms
-            !call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, geo%atom(iatom)%x(1:sb%dim), x_j(1:sb%dim) , density, dvadrr)
-            !force(1:3, jatom) = force(1:3, jatom) - derivative_coeff(iatom)*dvadrr(1:3)
-          end do
+        do iatom = 1, geo%natoms
+          call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, geo%atom(iatom)%x(1:sb%dim), geo%atom(jatom)%x(1:sb%dim), density, dvadrr)
+          force(1:3, jatom) = force(1:3, jatom) - derivative_coeff(iatom)*dvadrr(1:3)
         end do
-        call periodic_copy_end(pc)
       end do
 
 
