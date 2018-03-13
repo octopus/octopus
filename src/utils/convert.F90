@@ -1079,7 +1079,7 @@ contains
             write(pr_info, fmt=trim(frmt))  ist, (tmp(ist, ast), ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
           end do
         end if
-        projections(:,:,ik) = projections(:,:,ik) + tmp
+        projections(:,:,ik) = projections(:,:,ik) + abs(tmp)**2
       
       end do
       !
@@ -1096,7 +1096,7 @@ contains
     if (mpi_world%rank == 0) then
       do ik = 1, st%d%nik
         do ist = 1, n_occ(ik)
-          write(pr_info, fmt=trim(frmt)) ist, (projections(ist, ast, ik), ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
+          write(pr_info, fmt=trim(frmt)) ist, (sqrt(projections(ist, ast, ik)), ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
         end do
       end do
     end if
