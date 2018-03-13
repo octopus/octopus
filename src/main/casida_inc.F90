@@ -1395,7 +1395,6 @@ subroutine X(casida_write)(cas, sys)
   
   PUSH_SUB(X(casida_write))
 
-  
   full_printing = .false.
   if (cas%print_exst == 'all') full_printing = .true.
 
@@ -1448,7 +1447,6 @@ subroutine X(casida_write)(cas, sys)
         if(loct_isinstringlist(ia, cas%print_exst) .or. full_printing) then 
           write(str,'(i5.5)') ia
           
-#ifndef HAVE_SCALAPACK
           ! output eigenvectors
           if(cas%type /= CASIDA_EPS_DIFF) then
             iunit = io_open(trim(dir_name)//'/'//trim(str), action='write')
@@ -1499,7 +1497,6 @@ subroutine X(casida_write)(cas, sys)
             call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
             call io_close(iunit)
           end if
-#endif
         end if
       end do
     end if

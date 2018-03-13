@@ -416,7 +416,12 @@ contains
     !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
     !% valid.
     !%End
+#ifndef HAVE_SCALAPACK
     call parse_variable('CasidaPrintExcitations', "all", cas%print_exst)
+#else
+    ! do not print excited states -> too many files generated!
+    call parse_variable('CasidaPrintExcitations', "none", cas%print_exst)
+#endif
 
     !%Variable CasidaWeightThreshold
     !%Type float
