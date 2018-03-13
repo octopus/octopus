@@ -157,7 +157,7 @@ contains
 
     type(periodic_copy_t) :: pc
     integer :: iatom, jatom, ispecies, jspecies, jcopy, ddimention, ip 
-    FLOAT :: rr, rr2, rr6, rr7, dd, sr, dffdrr, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra, deabdrab
+    FLOAT :: rr, rr2, rr6, dd, sr, dffdrr, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra, deabdrab
     FLOAT, allocatable :: coordinates(:,:), x_j(:), volume_ratio(:), dvadens(:), dvadrr(:), derivative_coeff(:), & 
                           dr0dvra(:), r0ab(:,:), c6ab(:,:)
     integer, allocatable :: zatom(:)
@@ -168,21 +168,23 @@ contains
     SAFE_ALLOCATE(derivative_coeff(1:geo%natoms))
     SAFE_ALLOCATE(dvadens(1:der%mesh%np))
     SAFE_ALLOCATE(dvadrr(1:3))
-    SAFE_ALLOCATE(dr0dvra(1:3))
+    SAFE_ALLOCATE(dr0dvra(1:geo%natoms))
     SAFE_ALLOCATE(r0ab(1:geo%natoms,1:geo%natoms))
     SAFE_ALLOCATE(c6ab(1:geo%natoms,1:geo%natoms))
     SAFE_ALLOCATE(x_j(1:sb%dim))
 
     energy=M_ZERO
     derivative_coeff(1:geo%natoms) = M_ZERO
-    force(1:3, 1:geo%natoms) = M_ZERO
+    force(1:sb%dim, 1:geo%natoms) = M_ZERO
 
     do iatom = 1, geo%natoms
       ispecies = species_index(geo%atom(iatom)%species)
       call hirshfeld_volume_ratio(this%hirshfeld, iatom, density, volume_ratio(iatom))
       
       dr0dvra(iatom) = this%r0free(ispecies)/(CNST(3.0)*(volume_ratio(iatom)**(CNST(2.0)/CNST(3.0)))) 
-      
+    end do
+
+    do iatom = 1, geo%natoms 
       ispecies = species_index(geo%atom(iatom)%species)
       do jatom = 1, geo%natoms
        jspecies = species_index(geo%atom(jatom)%species)
@@ -210,11 +212,10 @@ contains
           do iatom = 1, geo%natoms
             ispecies = species_index(geo%atom(iatom)%species) 
             rr2 =  sum( (x_j(1:sb%dim) - geo%atom(iatom)%x(1:sb%dim))**2 )
-           
-            
             rr =  sqrt(rr2)
             rr6 = rr2**3
-            rr7 = rr6*rr
+
+            if(rr < CNST(1.0e-10)) cycle
 
             ee = exp(-dd*((rr/(sr*r0ab(iatom,jatom))) - M_ONE))
             ff = M_ONE/(M_ONE + ee)
@@ -228,7 +229,7 @@ contains
             energy = energy -M_HALF*ff*c6ab(iatom,jatom)/rr6
 
             ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
-            deabdrab = -dffdrab*c6ab(iatom,jatom)/rr6 + CNST(6.0)*ff*c6ab(iatom,jatom)/rr7;
+            deabdrab = (-dffdrab*c6ab(iatom,jatom) + CNST(6.0)*ff*c6ab(iatom,jatom)/rr)/rr6;
       
             ! Derivative of the damping function with respecto to the volume ratio of atom A.
             dffdvra = dffdr0*dr0dvra(iatom);
@@ -243,45 +244,35 @@ contains
         call periodic_copy_end(pc)
       end do
 
-      ! Add the extra term for the force 
-      do jatom = 1, geo%natoms
-        call periodic_copy_init(pc, sb, geo%atom(jatom)%x, this%VDW_cutoff)
-        do iatom = 1, geo%natoms
-          call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, geo%atom(iatom)%x(1:sb%dim), geo%atom(jatom)%x(1:sb%dim), density, dvadrr)
-          force(1:3, jatom) = force(1:3, jatom) - derivative_coeff(iatom)*dvadrr(1:3)
-        end do
-      end do
-
-
 
 !------------------------------------------------------------!
 
     else ! Non periodic case 
-      SAFE_ALLOCATE(coordinates(1:3, 1:geo%natoms))
+      SAFE_ALLOCATE(coordinates(1:sb%dim, 1:geo%natoms))
       SAFE_ALLOCATE(zatom(1:geo%natoms))
 
       do iatom = 1, geo%natoms
-        coordinates(1:3, iatom) = geo%atom(iatom)%x(1:3)
+        coordinates(1:sb%dim, iatom) = geo%atom(iatom)%x(1:sb%dim)
         zatom(iatom) = species_z(geo%atom(iatom)%species)
 
       end do
  
       call f90_vdw_calculate(geo%natoms, zatom(1), coordinates(1, 1), volume_ratio(1), &
       energy, force(1, 1), derivative_coeff(1))
-      
-      ! Add the extra term for the force 
-      do jatom = 1, geo%natoms
-        do iatom = 1, geo%natoms
-          call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, geo%atom(iatom)%x(1:3) , geo%atom(jatom)%x(1:3), density, dvadrr)
-          force(1:3, jatom) = force(1:3, jatom) - derivative_coeff(iatom)*dvadrr(1:3)
-        end do
-      end do
 
       SAFE_DEALLOCATE_A(coordinates)
       SAFE_DEALLOCATE_A(zatom)
     end if
-
-!------------------------------------------------------------!
+      
+    ! Add the extra term for the force 
+    do jatom = 1, geo%natoms
+      do iatom = 1, geo%natoms
+        call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, density, dvadrr)
+        force(1:sb%dim, jatom) = force(1:sb%dim, jatom) - derivative_coeff(iatom)*dvadrr(1:sb%dim)
+      end do
+    end do
+    print *, force
+    print *, ''
 
     ! Calculate the potential
     potential = M_ZERO
