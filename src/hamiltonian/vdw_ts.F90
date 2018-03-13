@@ -209,41 +209,38 @@ contains
                 
         call periodic_copy_init(pc, sb, geo%atom(jatom)%x, this%VDW_cutoff)
         do jcopy = 1, periodic_copy_num(pc) ! one of the periodic copy is the initial atom  
+          x_j(1:sb%dim) = periodic_copy_position(pc, sb, jcopy)
           do iatom = 1, geo%natoms
             ispecies = species_index(geo%atom(iatom)%species) 
-
-            x_j(1:sb%dim) = periodic_copy_position(pc, sb, jcopy)
             rr2 =  sum( (x_j(1:sb%dim) - geo%atom(iatom)%x(1:sb%dim))**2 )
            
-            if (.not. rr2<0.001) then ! Remove the self interaction case 
-              
-              rr =  sqrt(rr2)
-              rr6 = rr2*rr2*rr2
-              rr7 = rr6*rr
+            
+            rr =  sqrt(rr2)
+            rr6 = rr2*rr2*rr2
+            rr7 = rr6*rr
 
-              ee = exp(-dd*((rr/(sr*r0ab(iatom,jatom))) - 1.0))
-              ff = 1.0/(1.0 + ee)
-              dee = ee*(ff)*(ff)
+            ee = exp(-dd*((rr/(sr*r0ab(iatom,jatom))) - 1.0))
+            ff = 1.0/(1.0 + ee)
+            dee = ee*(ff)*(ff)
 
-              !Calculate the derivative of the damping function with respect to the distance between atoms A and B.
-              dffdrab = (dd/(sr*r0ab(iatom,jatom)))*dee
-              !Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
-              dffdr0 = -dd*rr/(sr*r0ab(iatom,jatom)*r0ab(iatom,jatom))*dee
+            !Calculate the derivative of the damping function with respect to the distance between atoms A and B.
+            dffdrab = (dd/(sr*r0ab(iatom,jatom)))*dee
+            !Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
+            dffdr0 = -dd*rr/(sr*r0ab(iatom,jatom)*r0ab(iatom,jatom))*dee
 
-              energy = energy -0.5*ff*c6ab(iatom,jatom)/rr6
+            energy = energy -0.5*ff*c6ab(iatom,jatom)/rr6
 
-              ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
-              deabdrab = -dffdrab*c6ab(iatom,jatom)/rr6 + 6.0*ff*c6ab(iatom,jatom)/rr7;
+            ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
+            deabdrab = -dffdrab*c6ab(iatom,jatom)/rr6 + 6.0*ff*c6ab(iatom,jatom)/rr7;
       
-              ! Derivative of the damping function with respecto to the volume ratio of atom A.
-              dffdvra = dffdr0*dr0dvra(iatom);
+            ! Derivative of the damping function with respecto to the volume ratio of atom A.
+            dffdvra = dffdr0*dr0dvra(iatom);
 
-              ! Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
-              deabdvra = (-dffdvra*c6ab(iatom,jatom) - ff*volume_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6
+            ! Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
+            deabdvra = (-dffdvra*c6ab(iatom,jatom) - ff*volume_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6
               
-              force(1:sb%dim,iatom)= force(1:sb%dim,iatom) - deabdrab*(geo%atom(iatom)%x(sb%dim) -x_j(1:sb%dim) )/rr; 
-              derivative_coeff(iatom) = derivative_coeff(iatom) + deabdvra;
-            end if
+            force(1:sb%dim,iatom)= force(1:sb%dim,iatom) - deabdrab*(geo%atom(iatom)%x(sb%dim) -x_j(1:sb%dim) )/rr; 
+            derivative_coeff(iatom) = derivative_coeff(iatom) + deabdvra;
           end do
         end do
         call periodic_copy_end(pc)
