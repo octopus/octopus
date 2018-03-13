@@ -81,10 +81,6 @@ contains
       call messages_fatal(1)
     end if
     
-    message(1) = "Reading pseudopotential from file:"
-    write(message(2), '(6x,3a)') "'", trim(fullpath), "'"
-    call messages_info(2)
-
     if(ascii) then
       iunit = io_open(fullpath, action='read', form='formatted', status='old')
     else
@@ -260,10 +256,6 @@ contains
     REAL_DOUBLE, allocatable :: s(:), hato(:), gg(:), y(:)
 
     PUSH_SUB(solve_schroedinger)
-
-    ! Let us be a bit informative.
-    message(1) = '      Calculating atomic pseudo-eigenfunctions for species ' // psf_file%namatm // '....'
-    call messages_info(1)
 
     ! Allocation.
     SAFE_ALLOCATE(s   (1:g%nrval))

@@ -293,7 +293,7 @@ contains
 
     case(PS_TYPE_HGH)
       ps%pseudo_format = PSEUDO_FORMAT_HGH
-      ps%pseudo_type   = PSEUDO_TYPE_KLEINMAN_BYLANDER
+      ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
       
       call hgh_init(ps_hgh, trim(filename))
       call valconf_copy(ps%conf, ps_hgh%conf)
@@ -502,6 +502,17 @@ contains
     end select
     call messages_info()
 
+    if(ps%pseudo_type == PSEUDO_TYPE_SEMILOCAL) then
+      call messages_write("    orbital origin   :")
+      select case(ps%pseudo_format)
+      case(PSEUDO_FORMAT_PSF, PSEUDO_FORMAT_HGH)
+        call messages_write(" calculated");
+      case default
+        call messages_write(" from file");
+      end select
+      call messages_info()
+    end if
+    
     call messages_write("    lmax             :")
     call messages_write(ps%lmax, fmt = '(i2)')
     call messages_info()

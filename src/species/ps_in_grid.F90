@@ -149,9 +149,6 @@ contains
     PUSH_SUB(ps_in_grid_vlocal)
 
     if(l_loc >= 0) then
-      write(message(1), '(a,i2,a)') "Info: l = ", l_loc, " component used as local potential."
-      call messages_info(1)
-
       ps%vlocal(:) = ps%vps(:, l_loc+1)
 
     else if(l_loc == -1) then
@@ -159,9 +156,6 @@ contains
         message(1) = "For the moment, Vanderbilt local potentials are only possible with tm grids."
         call messages_fatal(1)
       end if
-
-      message(1) = "Info: The local potential is a Vanderbilt function."
-      call messages_info(1)
 
       a = CNST(1.82) / rcore
       b = M_ONE

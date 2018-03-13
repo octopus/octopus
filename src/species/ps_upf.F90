@@ -99,11 +99,6 @@ contains
     
     PUSH_SUB(ps_upf_init)
 
-
-    message(1) = "Reading pseudopotential from file:"
-    write(message(2), '(6x,3a)') "'", trim(filename), "'"
-    call messages_info(2)
-
     inquire(file=filename, exist=found)
 
     if(.not.found) then
