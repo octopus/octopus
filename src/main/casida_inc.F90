@@ -734,8 +734,11 @@ contains
 
     FLOAT, allocatable  :: deltav(:)
     integer            :: idir
+    type(profile_t), save :: prof
 
     PUSH_SUB(X(casida_get_matrix).X(MN_term))
+    call profiling_in(prof, 'CASIDA_GET_MATRIX.MN_TERM')
+
 
     SAFE_ALLOCATE(deltav(1:mesh%np))
 !     do idir = 1, mesh%sb%dim
@@ -748,6 +751,7 @@ contains
 !     end do
     SAFE_DEALLOCATE_A(deltav)
 
+    call profiling_out(prof)
     POP_SUB(X(casida_get_matrix).X(MN_term))
   end subroutine X(MN_term)
 
