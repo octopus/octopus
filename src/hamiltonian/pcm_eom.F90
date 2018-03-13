@@ -328,7 +328,7 @@ module pcm_eom_oct_m
     if( which_eps .eq. "drl" ) then
       dqkick_tp=matmul(matqv_lf,pot_t)*dt
     else
-      q_t = matmul(matqv_lf,pot_t)
+      q_t = matmul(matqv_lf-matmul(matqq,matqd_lf),pot_t)
     endif
 
     SAFE_ALLOCATE(qkick_tp(nts_act))
@@ -375,7 +375,7 @@ module pcm_eom_oct_m
 
     potext_tp = pot_t
 
-   else if( which_eom == 'justkick' ) then 
+   else if( which_eom == 'justkick' ) then
     !> simplifying for kick
     q_t(:) = qkick_tp(:) - dt*matmul(matqq,qkick_tp)            !< N.B. matqq
 
@@ -475,6 +475,7 @@ module pcm_eom_oct_m
     endif
    else if( which_eom == 'justkick' ) then
     SAFE_ALLOCATE(matqv_lf(nts_act,nts_act))
+    SAFE_ALLOCATE(matqd_lf(nts_act,nts_act))
     if( (.not.allocated(matqq)) .and. which_eps == 'deb' ) then
      SAFE_ALLOCATE(matqq(nts_act,nts_act))
     endif
@@ -691,7 +692,7 @@ module pcm_eom_oct_m
    enddo
    if( which_eom == 'electron' ) then
     matqd=-matmul(scr1,scr4)				       !< from Eq.(14) and (18) for eps_d, ibid.
-   else if( which_eom == 'external' ) then
+   else if( which_eom == 'external' .or. which_eom == 'justkick' ) then
     matqd_lf=-matmul(scr1,scr4)				       !< local field analogous
    endif
    SAFE_DEALLOCATE_A(scr4)

@@ -1332,11 +1332,20 @@ contains
 
 
       if ( pcm%kick_like ) then
-        !< kick-like polarization charges
-        if ( pcm%epsilon_infty /= pcm%epsilon_0 ) then
-          call pcm_charges(pcm%q_kick, pcm%qtot_kick, pcm%v_kick, pcm%matrix_lf_d, pcm%n_tesserae)
+        if ( is_time_for_kick ) then
+         !< kick-like polarization charges
+         if ( pcm%epsilon_infty /= pcm%epsilon_0 ) then
+           call pcm_charges(pcm%q_kick, pcm%qtot_kick, pcm%v_kick, pcm%matrix_lf_d, pcm%n_tesserae)
+         else
+           call pcm_charges(pcm%q_kick, pcm%qtot_kick, pcm%v_kick, pcm%matrix_lf, pcm%n_tesserae)
+         end if
         else
-          call pcm_charges(pcm%q_kick, pcm%qtot_kick, pcm%v_kick, pcm%matrix_lf, pcm%n_tesserae)
+         pcm%q_kick = M_ZERO
+         pcm%qtot_kick = M_ZERO
+         if (pcm%calc_method == PCM_CALC_POISSON) pcm%rho_kick = M_ZERO
+         pcm%v_kick_rs = M_ZERO
+         POP_SUB(pcm_calc_pot_rs)
+         return
         end if
       else
         if ( after_kick ) then
