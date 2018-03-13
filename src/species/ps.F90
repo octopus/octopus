@@ -37,6 +37,7 @@ module ps_oct_m
 #endif
   use ps_psf_oct_m
   use ps_upf_oct_m
+  use pseudo_oct_m
   use splines_oct_m
   use spline_filter_oct_m
   implicit none
@@ -63,14 +64,16 @@ module ps_oct_m
     PS_TYPE_CPI = 102,          &
     PS_TYPE_FHI = 103,          &
     PS_TYPE_UPF = 104,          &
-    PS_TYPE_QSO = 105
+    PS_TYPE_XML = 105
 
   integer, parameter, public :: &
     PS_FILTER_NONE = 0,         &
     PS_FILTER_TS   = 2,         &
     PS_FILTER_BSB  = 3
 
-  character(len=3), parameter  :: ps_name(PS_TYPE_PSF:PS_TYPE_QSO) = (/"tm2", "hgh", "cpi", "fhi", "upf", "qso"/)
+  integer, parameter, public :: INVALID_L = 333
+  
+  character(len=3), parameter  :: ps_name(PS_TYPE_PSF:PS_TYPE_XML) = (/"tm2", "hgh", "cpi", "fhi", "upf", "qso"/)
 
   type ps_t
     character(len=10) :: label
@@ -84,8 +87,8 @@ module ps_oct_m
     type(spline_t), pointer :: ur_sq(:, :)  !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r^2
 
     ! Kleinman-Bylander projectors stuff
-    integer  :: l_max    !< maximum value of l to take
-    integer  :: l_loc    !< which component to take as local
+    integer  :: lmax    !< maximum value of l to take
+    integer  :: llocal  !< which component to take as local
 
     type(spline_t) :: vl         !< local part
 
@@ -125,6 +128,8 @@ module ps_oct_m
     logical :: is_separated
     logical :: local
     logical :: hamann
+    integer :: pseudo_format
+    integer :: pseudo_type
   end type ps_t
 
   FLOAT, parameter :: eps = CNST(1.0e-8)
@@ -133,11 +138,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_init(ps, label, z, lmax, lloc, ispin, filename)
+  subroutine ps_init(ps, label, z, user_lmax, user_llocal, ispin, filename)
     type(ps_t),        intent(out)   :: ps
     character(len=10), intent(in)    :: label
-    integer,           intent(in)    :: lmax
-    integer,           intent(in)    :: lloc, ispin
+    integer,           intent(in)    :: user_lmax
+    integer,           intent(in)    :: user_llocal
+    integer,           intent(in)    :: ispin
     FLOAT,             intent(in)    :: z
     character(len=*),  intent(in)    :: filename
     
@@ -148,7 +154,8 @@ contains
     type(ps_upf_t) :: ps_upf !< In case UPF format is used
     type(ps_hgh_t) :: ps_hgh !< In case Hartwigsen-Goedecker-Hutter ps are used.
     type(ps_xml_t) :: ps_xml !< For xml based pseudopotentials
-
+    logical, save :: xml_warned = .false.
+    
     PUSH_SUB(ps_init)
 
     ! Fix the threshold to calculate the radius of the projector-function localization spheres:
@@ -187,35 +194,56 @@ contains
       ps%has_density = .false.
     end select
     
-    if(.not. (ps%flavour >= PS_TYPE_PSF .and. ps%flavour <= PS_TYPE_QSO)) then
+    if(.not. (ps%flavour >= PS_TYPE_PSF .and. ps%flavour <= PS_TYPE_XML)) then
       call messages_write("Cannot determine the pseudopotential type for species '"//trim(label)//"' from", new_line = .true.)
       call messages_write("file '"//trim(filename)//"'.")
       call messages_fatal()
     end if
-
+    
     select case(ps%flavour)
     case(PS_TYPE_PSF)
+      ps%pseudo_format = PSEUDO_FORMAT_PSF
+      ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
+      
       call ps_psf_init(ps_psf, ispin, filename)
 
       call valconf_copy(ps%conf, ps_psf%conf)
       ps%z      = z
       ps%conf%z = nint(z) ! atomic number
       ps%kbc    = 1     ! only one projector per angular momentum
-      ps%l_loc  = lloc  ! the local part of the pseudo
+      
+      ps%lmax = ps_psf%ps_grid%no_l_channels - 1
 
-      ps%l_max  = min(ps_psf%ps_grid%no_l_channels - 1, lmax) ! Maybe the file does not have enough components.
-      ps%conf%p = ps_psf%ps_grid%no_l_channels
-      if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
-
-      if(lmax /= ps%l_max) then
-        message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
-        call messages_fatal(1)
+      if(user_lmax /= INVALID_L) then
+        ps%lmax = min(ps%lmax, user_lmax) ! Maybe the file does not have enough components.
+        if(user_lmax /= ps%lmax) then
+          message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
+          call messages_fatal(1)
+        end if
       end if
 
-      call ps_psf_process(ps_psf, lmax, ps%l_loc)
+      ps%conf%p = ps_psf%ps_grid%no_l_channels
+      if(ps%lmax == 0) ps%llocal = 0 ! Vanderbilt is not acceptable if ps%lmax == 0.
+
+      ! the local part of the pseudo
+      if(user_llocal == INVALID_L) then
+        ps%llocal = 0
+      else
+        ps%llocal = user_llocal
+      end if
+      
+      call ps_psf_process(ps_psf, ps%lmax, ps%llocal)
       call logrid_copy(ps_psf%ps_grid%g, ps%g)
 
     case(PS_TYPE_CPI, PS_TYPE_FHI)
+
+      if(PS_TYPE_CPI == ps%flavour) then
+        ps%pseudo_format = PSEUDO_FORMAT_CPI
+      else
+        ps%pseudo_format = PSEUDO_FORMAT_FHI
+      end if
+      ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
+      
       call valconf_null(ps%conf)
 
       if(ps%flavour == PS_TYPE_CPI) then
@@ -230,48 +258,66 @@ contains
       ps%conf%symbol = label(1:2)
       ps%conf%type   = 1
       do l = 1, ps%conf%p
-        ps%conf%l(l) = l-1
+        ps%conf%l(l) = l - 1
       end do
 
       ps%z      = z
       ps%kbc    = 1     ! only one projector per angular momentum
-      ps%l_loc  = lloc  ! the local part of the pseudo
 
-      ps%l_max  = min(ps%conf%p - 1, lmax)   ! Maybe the file does not have enough components.
-      if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
-      
-      if(lmax /= ps%l_max) then
-        message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
-        call messages_fatal(1)
+      ps%lmax  = ps%conf%p - 1
+
+      if(user_lmax /= INVALID_L) then
+        ps%lmax = min(ps%lmax, user_lmax) ! Maybe the file does not have enough components.
+        if(user_lmax /= ps%lmax) then
+          message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
+          call messages_fatal(1)
+        end if
       end if
 
+      if(ps%lmax == 0) ps%llocal = 0 ! Vanderbilt is not acceptable if ps%lmax == 0.
+
+      ! the local part of the pseudo
+      if(user_llocal == INVALID_L) then
+        ps%llocal = 0
+      else
+        ps%llocal = user_llocal
+      end if
+      
       if(ps%flavour == PS_TYPE_CPI) then
-        call ps_cpi_process(ps_cpi, ps%l_loc)
+        call ps_cpi_process(ps_cpi, ps%llocal)
         call logrid_copy(ps_cpi%ps_grid%g, ps%g)
       else
-        call ps_fhi_process(ps_fhi, lmax, ps%l_loc)
+        call ps_fhi_process(ps_fhi, ps%lmax, ps%llocal)
         call logrid_copy(ps_fhi%ps_grid%g, ps%g)
       end if
 
     case(PS_TYPE_HGH)
+      ps%pseudo_format = PSEUDO_FORMAT_HGH
+      ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
+      
       call hgh_init(ps_hgh, trim(filename))
       call valconf_copy(ps%conf, ps_hgh%conf)
 
       ps%z        = z
       ps%kbc      = 3
-      ps%l_loc    = -1
-      ps%l_max    = ps_hgh%l_max
+      ps%llocal    = -1
+      ps%lmax    = ps_hgh%l_max
 
       call hgh_process(ps_hgh)
       call logrid_copy(ps_hgh%g, ps%g)
 
-    case(PS_TYPE_QSO, PS_TYPE_UPF)
+    case(PS_TYPE_XML, PS_TYPE_UPF)
       
-      call messages_experimental('QSO pseudopotential support')
+      if(.not. xml_warned) then
+        call messages_experimental('XML (QSO, UPF, and PSML) pseudopotential support')
+        xml_warned = .true.
+      end if
       
       call ps_xml_init(ps_xml, trim(filename), ierr)
 
       if(ierr == 0) then
+        ps%pseudo_format = pseudo_format(ps_xml%pseudo)
+        ps%pseudo_type   = pseudo_type(ps_xml%pseudo)
         
         call valconf_null(ps%conf)
         
@@ -289,8 +335,18 @@ contains
         end do
         
         ps%kbc    = ps_xml%nchannels
-        ps%l_max  = ps_xml%lmax
-        ps%l_loc  = ps_xml%llocal
+        ps%lmax  = ps_xml%lmax
+
+        if(ps_xml%kleinman_bylander) then
+          ps%llocal = ps_xml%llocal
+        else
+          ! we have several options
+          ps%llocal = 0                                     ! the default
+          if(ps_xml%llocal >= 0) ps%llocal = ps_xml%llocal  ! the one given in the pseudopotential file
+          if(user_llocal /= INVALID_L) ps%llocal = user_llocal ! user supplied local component
+          ASSERT(ps%llocal >= 0)
+          ASSERT(ps%llocal <= ps%lmax)
+        end if
         
         nullify(ps%g%drdi, ps%g%s)
         
@@ -305,18 +361,21 @@ contains
           ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
         end do
 
-        ps%flavour = PS_TYPE_QSO
+        ps%flavour = PS_TYPE_XML
         
       else !read failed, this must be a UPF 1 file
-        
+
+        ps%pseudo_format = PSEUDO_FORMAT_UPF1
+        ps%pseudo_type   = PSEUDO_TYPE_KLEINMAN_BYLANDER
+      
         call ps_upf_init(ps_upf, trim(filename))
         
         call valconf_copy(ps%conf, ps_upf%conf)
         ps%z      = z
         ps%conf%z = nint(z)
         ps%kbc    = ps_upf%kb_nc
-        ps%l_max  = ps_upf%l_max
-        ps%l_loc  = ps_upf%l_local
+        ps%lmax  = ps_upf%l_max
+        ps%llocal  = ps_upf%l_loc
         ps%has_density = .true.
         
         nullify(ps%g%drdi, ps%g%s)
@@ -330,17 +389,15 @@ contains
       
     end select
 
-    write(message(1), '(a,i2,a)') "Info: l = ", ps%l_max, " is maximum angular momentum considered."
-    call messages_info(1)
+    ps%local = (ps%lmax == 0 .and. ps%llocal == 0 ) .or. (ps%lmax == -1 .and. ps%llocal == -1)
 
-    ps%local = (ps%l_max == 0 .and. ps%l_loc == 0 ) .or. (ps%l_max == -1 .and. ps%l_loc == -1)
     
     ! We allocate all the stuff
-    SAFE_ALLOCATE(ps%kb   (0:ps%l_max, 1:ps%kbc))
-    SAFE_ALLOCATE(ps%dkb  (0:ps%l_max, 1:ps%kbc))
+    SAFE_ALLOCATE(ps%kb   (0:ps%lmax, 1:ps%kbc))
+    SAFE_ALLOCATE(ps%dkb  (0:ps%lmax, 1:ps%kbc))
     SAFE_ALLOCATE(ps%ur   (1:ps%conf%p, 1:ps%ispin))
     SAFE_ALLOCATE(ps%ur_sq(1:ps%conf%p, 1:ps%ispin))
-    SAFE_ALLOCATE(ps%h    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
+    SAFE_ALLOCATE(ps%h    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
     SAFE_ALLOCATE(ps%density(1:ps%ispin))
     SAFE_ALLOCATE(ps%density_der(1:ps%ispin))
 
@@ -365,10 +422,10 @@ contains
       call ps_grid_load(ps, ps_fhi%ps_grid)
       call ps_fhi_end(ps_fhi)
     case(PS_TYPE_HGH)
-      SAFE_ALLOCATE(ps%k    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
+      SAFE_ALLOCATE(ps%k    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
       call hgh_load(ps, ps_hgh)
       call hgh_end(ps_hgh)
-    case(PS_TYPE_QSO, PS_TYPE_UPF)
+    case(PS_TYPE_XML, PS_TYPE_UPF)
       if(ps_xml%initialized) then
         call ps_xml_load(ps, ps_xml)
         call ps_xml_end(ps_xml)
@@ -385,12 +442,113 @@ contains
     end if
 
     ps%has_long_range = .true.
-
     ps%is_separated = .false.
 
+    call ps_info(ps, filename)
+    
     POP_SUB(ps_init)
   end subroutine ps_init
 
+  !------------------------------------------------------------------------
+  
+  subroutine ps_info(ps, filename)
+    type(ps_t),       intent(in) :: ps
+    character(len=*), intent(in) :: filename
+
+    call messages_write("  Species '"//trim(ps%label)//"'", new_line = .true.)
+    call messages_write("    type             : pseudopotential", new_line = .true.)
+    call messages_write("    file             : '"//trim(filename)//"'")
+    call messages_info()
+    
+    call messages_write("    file format      :")
+    select case(ps%pseudo_format)
+    case(PSEUDO_FORMAT_UPF1)
+      call messages_write(" UPF1")
+    case(PSEUDO_FORMAT_UPF2)
+      call messages_write(" UPF2")
+    case(PSEUDO_FORMAT_QSO)
+      call messages_write(" QSO")
+    case(PSEUDO_FORMAT_PSML)
+      call messages_write(" PSML")
+    case(PSEUDO_FORMAT_PSF)
+      call messages_write(" PSF")
+    case(PSEUDO_FORMAT_CPI)
+      call messages_write(" CPI")
+    case(PSEUDO_FORMAT_FHI)
+      call messages_write(" FHI")
+    case(PSEUDO_FORMAT_HGH)
+      call messages_write(" HGH")
+    end select
+    call messages_new_line()
+
+    call messages_write("    valence charge   :")
+    call messages_write(ps%z_val, align_left = .true., fmt = '(f3.1)')
+    call messages_info()
+
+    call messages_write("    atomic number    :")
+    call messages_write(ps%z, align_left = .true., fmt = '(f3.1)')
+    call messages_info()
+    
+    call messages_write("    form on file     :")
+    select case(ps%pseudo_type)
+    case(PSEUDO_TYPE_ULTRASOFT)
+      call messages_write(" ultrasoft")
+    case(PSEUDO_TYPE_SEMILOCAL)
+      call messages_write(" semilocal")
+    case(PSEUDO_TYPE_KLEINMAN_BYLANDER)
+      call messages_write(" kleinman-bylander")
+    case(PSEUDO_TYPE_PAW)
+      call messages_write(" paw")
+    end select
+    call messages_info()
+
+    if(ps%pseudo_type == PSEUDO_TYPE_SEMILOCAL) then
+      call messages_write("    orbital origin   :")
+      select case(ps%pseudo_format)
+      case(PSEUDO_FORMAT_PSF, PSEUDO_FORMAT_HGH)
+        call messages_write(" calculated");
+      case default
+        call messages_write(" from file");
+      end select
+      call messages_info()
+    end if
+    
+    call messages_write("    lmax             :")
+    call messages_write(ps%lmax, fmt = '(i2)')
+    call messages_info()
+
+    call messages_write("    llocal           :")
+    if(ps%llocal >= 0) then
+      call messages_write(ps%llocal, fmt = '(i2)')
+    else
+      call messages_write(ps%llocal, fmt = '(i3)')
+    end if
+    call messages_info()
+
+    call messages_write("    total projectors :")
+    if(ps%llocal < 0) then
+      call messages_write(ps%kbc*(ps%lmax + 1), fmt = '(i2)')
+    else
+      call messages_write(ps%kbc*ps%lmax, fmt = '(i2)')
+    end if
+    call messages_info()
+
+    if(ps%local) then
+      call messages_write("    application form : local")
+    else
+      call messages_write("    application form : kleinman-bylander")
+    end if
+    call messages_info()
+
+    call messages_write("    orbitals         :")
+    call messages_write(ps_niwfs(ps), fmt='(i3)')
+    call messages_info()
+
+    call messages_info()
+    
+  end subroutine ps_info
+
+  
   ! ---------------------------------------------------------
   !> separate the local potential into (soft) long-ranged and (hard) short-ranged parts
   subroutine ps_separate(ps)
@@ -454,7 +612,7 @@ contains
 
     ps%rc_max = CNST(0.0)
 
-    do l = 0, ps%l_max
+    do l = 0, ps%lmax
       do j = 1, ps%kbc
         ps%rc_max = max(ps%rc_max, spline_cutoff_radius(ps%kb(l, j), ps%projectors_sphere_threshold))
       end do
@@ -471,7 +629,7 @@ contains
 
     PUSH_SUB(ps_derivatives)
 
-    do l = 0, ps%l_max
+    do l = 0, ps%lmax
       do j = 1, ps%kbc
         call spline_der(ps%kb(l, j), ps%dkb(l, j))
       end do
@@ -503,9 +661,9 @@ contains
       gamma = CNST(2.0)
 
       rmax = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold)
-      call spline_filter_mask(ps%vl, max(0, ps%l_loc), rmax, gmax, alpha, gamma)
-      do l = 0, ps%l_max
-        if(l == ps%l_loc) cycle
+      call spline_filter_mask(ps%vl, max(0, ps%llocal), rmax, gmax, alpha, gamma)
+      do l = 0, ps%lmax
+        if(l == ps%llocal) cycle
         do k = 1, ps%kbc
           call spline_filter_mask(ps%kb(l, k), l, ps%rc_max, gmax, alpha, gamma)
         end do
@@ -531,9 +689,9 @@ contains
       rcut    = CNST(2.5)
       beta_rs = CNST(0.4)
 
-      call spline_filter_bessel(ps%vl, ps%l_loc, gmax, alpha, beta_fs, rcut, beta_rs)
-      do l = 0, ps%l_max
-        if(l == ps%l_loc) cycle
+      call spline_filter_bessel(ps%vl, ps%llocal, gmax, alpha, beta_fs, rcut, beta_rs)
+      do l = 0, ps%lmax
+        if(l == ps%llocal) cycle
         do k = 1, ps%kbc
           call spline_filter_bessel(ps%kb(l, k), l, gmax, alpha, beta_fs, rcut, beta_rs)
         end do
@@ -576,19 +734,19 @@ contains
     write(iunit,'(a,a,/)')    'Flavour : ', ps_name(ps%flavour)
     write(iunit,'(a,f6.3)')   'z       : ', ps%z
     write(iunit,'(a,f6.3,/)') 'zval    : ', ps%z_val
-    write(iunit,'(a,i4)')     'lmax    : ', ps%l_max
-    write(iunit,'(a,i4)')     'lloc    : ', ps%l_loc
+    write(iunit,'(a,i4)')     'lmax    : ', ps%lmax
+    write(iunit,'(a,i4)')     'lloc    : ', ps%llocal
     write(iunit,'(a,i4,/)')   'kbc     : ', ps%kbc
     write(iunit,'(a,f9.5,/)') 'rcmax   : ', ps%rc_max
     write(iunit,'(a,/)')    'h matrix:'
-    do l = 0, ps%l_max
+    do l = 0, ps%lmax
       do k = 1, ps%kbc
         write(iunit,'(10f9.5)') (ps%h(l, k, j), j = 1, ps%kbc)
       end do
     end do
     if(associated(ps%k)) then
       write(iunit,'(/,a,/)')    'k matrix:'
-      do l = 0, ps%l_max
+      do l = 0, ps%lmax
         do k = 1, ps%kbc
           write(iunit,'(10f9.5)') (ps%k(l, k, j), j = 1, ps%kbc)
         end do
@@ -626,9 +784,9 @@ contains
     call io_close(iunit)
 
     iunit = io_open(trim(dir)//'/nonlocal_ft', action='write')
-    SAFE_ALLOCATE(fw(0:ps%l_max, 1:ps%kbc))
+    SAFE_ALLOCATE(fw(0:ps%lmax, 1:ps%kbc))
     call spline_init(fw)
-    do k = 0, ps%l_max
+    do k = 0, ps%lmax
       do j = 1, ps%kbc
         call spline_3dft(ps%kb(k, j), fw(k, j), gmax = gmax)
       end do
@@ -718,13 +876,13 @@ contains
     ! Fixes some components of ps
     ps%z_val = ps_hgh%z_val
     ps%nlcc = .false.
-    if(ps%l_max>=0) then
-      ps%rc_max = CNST(1.1) * maxval(ps_hgh%kbr(0:ps%l_max)) ! Increase a little.
+    if(ps%lmax>=0) then
+      ps%rc_max = CNST(1.1) * maxval(ps_hgh%kbr(0:ps%lmax)) ! Increase a little.
     else
       ps%rc_max = M_ZERO
     end if
-    ps%h(0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = ps_hgh%h(0:ps%l_max, 1:ps%kbc, 1:ps%kbc)
-    ps%k(0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = ps_hgh%k(0:ps%l_max, 1:ps%kbc, 1:ps%kbc)
+    ps%h(0:ps%lmax, 1:ps%kbc, 1:ps%kbc) = ps_hgh%h(0:ps%lmax, 1:ps%kbc, 1:ps%kbc)
+    ps%k(0:ps%lmax, 1:ps%kbc, 1:ps%kbc) = ps_hgh%k(0:ps%lmax, 1:ps%kbc, 1:ps%kbc)
 
     ! Fixes the occupations
     if(ps%ispin == 2) then
@@ -803,17 +961,17 @@ contains
 
     ps%nlcc = ps_grid%core_corrections
 
-    ps%h(0:ps%l_max, 1, 1) = ps_grid%dkbcos(1:ps%l_max+1)
+    ps%h(0:ps%lmax, 1, 1) = ps_grid%dkbcos(1:ps%lmax+1)
 
     ! Increasing radius a little, just in case.
     ! I have hard-coded a larger increase of the cutoff for the filtering.
-    ps%rc_max = maxval(ps_grid%kb_radius(1:ps%l_max+1)) * CNST(1.5)
+    ps%rc_max = maxval(ps_grid%kb_radius(1:ps%lmax+1)) * CNST(1.5)
 
     ! now we fit the splines
     call get_splines(ps_grid%g)
 
     ! Passes from Rydbergs to Hartrees.
-    ps%h(0:ps%l_max,:,:)    = ps%h(0:ps%l_max,:,:)    / M_TWO
+    ps%h(0:ps%lmax,:,:)    = ps%h(0:ps%lmax,:,:)    / M_TWO
 
     POP_SUB(ps_grid_load)
 
@@ -852,7 +1010,7 @@ contains
       
 
       ! the Kleinman-Bylander projectors
-      do l = 1, ps%l_max+1
+      do l = 1, ps%lmax+1
         nrc = logrid_index(g, ps_grid%kb_radius(l)) + 1
         hato(1:nrc)         = ps_grid%KB(1:nrc, l)
         hato(nrc+1:g%nrval) = M_ZERO
@@ -957,10 +1115,10 @@ contains
     ps%rc_max = max(ps_upf%local_radius, ps%rc_max) * CNST(1.5)
 
     ! Interpolate the KB-projection functions
-    if (ps_upf%l_local >= 0) then
+    if (ps_upf%l_loc >= 0) then
       hato = M_ZERO
       do j = 1, ps%kbc
-        call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%l_local, j))
+        call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%l_loc, j))
       end do
     end if
 
@@ -1082,7 +1240,7 @@ contains
     do ip = 1, ps%g%nrval
       rr = (ip - 1)*ps_xml%mesh_spacing
       if(ip <= ps_xml%grid_size) then
-        vlocal(ip) = ps_xml%potential(ip, ps_xml%llocal)
+        vlocal(ip) = ps_xml%potential(ip, ps%llocal)
       else
         vlocal(ip) = -ps_xml%valence_charge/rr
       end if
@@ -1148,7 +1306,7 @@ contains
         do ip = 1, ps_xml%grid_size
           rr = (ip - 1)*ps_xml%mesh_spacing
           volume_element = rr**2*ps_xml%mesh_spacing
-          kbprojector(ip) = (ps_xml%potential(ip, ll) - ps_xml%potential(ip, ps_xml%llocal))*ps_xml%wavefunction(ip, ll)
+          kbprojector(ip) = (ps_xml%potential(ip, ll) - ps_xml%potential(ip, ps%llocal))*ps_xml%wavefunction(ip, ll)
           dnrm = dnrm + kbprojector(ip)**2*volume_element
           avgv = avgv + kbprojector(ip)*ps_xml%wavefunction(ip, ll)*volume_element
         end do
@@ -1156,7 +1314,7 @@ contains
         kbcos = dnrm/(avgv + CNST(1.0e-20))
         kbnorm = M_ONE/(sqrt(dnrm) + CNST(1.0e-20))
 
-        if(ll /= ps_xml%llocal) then
+        if(ll /= ps%llocal) then
           ps%h(ll, 1, 1) = kbcos        
           kbprojector = kbprojector*kbnorm
         else
@@ -1264,8 +1422,10 @@ contains
     if(index(filename, ".FHI ") /= 0) type = PS_TYPE_FHI
     if(index(filename, ".upf ") /= 0) type = PS_TYPE_UPF
     if(index(filename, ".UPF ") /= 0) type = PS_TYPE_UPF
-    if(index(filename, ".xml ") /= 0) type = PS_TYPE_QSO
-    if(index(filename, ".XML ") /= 0) type = PS_TYPE_QSO
+    if(index(filename, ".xml ") /= 0) type = PS_TYPE_XML
+    if(index(filename, ".XML ") /= 0) type = PS_TYPE_XML
+    if(index(filename, ".psml") /= 0) type = PS_TYPE_XML
+    if(index(filename, ".PSML") /= 0) type = PS_TYPE_XML
     
     POP_SUB(ps_get_type)    
   end function ps_get_type

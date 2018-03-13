@@ -30,15 +30,6 @@
 
 namespace pseudopotential {
 
-  template <typename Type>
-  static Type value(const rapidxml::xml_base<> * node){
-    assert(node);
-    std::istringstream stst(node->value());
-    Type value;
-    stst >> value;
-    return value;
-  }
-
   class qso : public pseudopotential::base {
 
   public:
@@ -62,7 +53,7 @@ namespace pseudopotential {
 
       if(!pseudo_node_){
 	pseudo_node_ = root_node_->first_node("norm_conserving_pseudopotential");
-	if(pseudo_node_) type_ = pseudopotential::type::NORM_CONSERVING;
+	if(pseudo_node_) type_ = pseudopotential::type::SEMILOCAL;
       }
 
       assert(pseudo_node_);
@@ -84,7 +75,7 @@ namespace pseudopotential {
       
     }
 
-    std::string format() const { return "quantum-simulation.org (XML)"; }
+    pseudopotential::format format() const { return pseudopotential::format::QSO; }
     
     int size() const { return buffer_.size(); };
 
@@ -175,20 +166,10 @@ namespace pseudopotential {
 	}
 	return count;
       }
-      case pseudopotential::type::NORM_CONSERVING:
+      case pseudopotential::type::SEMILOCAL:
 	return 0;
       }
       return 0;
-    }
-    
-    bool has_projectors(int l) const {
-      rapidxml::xml_node<> * node = pseudo_node_->first_node("projector");
-      while(node){
-	int read_l = value<int>(node->first_attribute("l"));
-	if(l == read_l) break;
-	node = node->next_sibling("projector");
-      }
-      return node != NULL;
     }
     
     void projector(int l, int i, std::vector<double> & proj) const {
@@ -392,10 +373,19 @@ namespace pseudopotential {
     
   private:
 
+    bool has_projectors(int l) const {
+      rapidxml::xml_node<> * node = pseudo_node_->first_node("projector");
+      while(node){
+	int read_l = value<int>(node->first_attribute("l"));
+	if(l == read_l) break;
+	node = node->next_sibling("projector");
+      }
+      return node != NULL;
+    }
+    
     int nbeta() const {
       return value<int>(pseudo_node_->first_node("nbeta"));
     }
-
 
     std::ifstream file_;
     std::vector<char> buffer_;

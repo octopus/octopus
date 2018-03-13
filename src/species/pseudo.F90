@@ -32,6 +32,7 @@ module pseudo_oct_m
     pseudo_init,                &
     pseudo_end,                 &
     pseudo_type,                &
+    pseudo_format,              &
     pseudo_valence_charge,      &
     pseudo_mesh_spacing,        &
     pseudo_mesh_size,           &
@@ -40,7 +41,6 @@ module pseudo_oct_m
     pseudo_llocal,              &
     pseudo_nchannels,           &
     pseudo_local_potential,     &
-    pseudo_has_projectors,      &
     pseudo_projector,           &
     pseudo_radial_function,     &
     pseudo_radial_potential,    &
@@ -52,13 +52,13 @@ module pseudo_oct_m
     pseudo_nwavefunctions,      &
     pseudo_wavefunction
   
-  !these values have to match with those on base.hpp
+  !the following sets of values have to match with those on base.hpp
   integer, parameter, public ::               &
     PSEUDO_TYPE_ULTRASOFT         = 30,       &
-    PSEUDO_TYPE_NORM_CONSERVING   = 31,       &
-    PSEUDO_TYPE_KLEINMAN_BYLANDER = 32
+    PSEUDO_TYPE_SEMILOCAL         = 31,       &
+    PSEUDO_TYPE_KLEINMAN_BYLANDER = 32,       &
+    PSEUDO_TYPE_PAW               = 33
 
-  !these values have to match with those on pseudo_low.cc
   integer, parameter, public ::                       &
     PSEUDO_STATUS_SUCCESS                      = 0,   &
     PSEUDO_STATUS_FILE_NOT_FOUND               = 455, &
@@ -67,7 +67,17 @@ module pseudo_oct_m
     PSEUDO_STATUS_UNSUPPORTED_TYPE_ULTRASOFT   = 458, &
     PSEUDO_STATUS_UNSUPPORTED_TYPE_PAW         = 459, &
     PSEUDO_STATUS_UNSUPPORTED_TYPE             = 460
-  
+
+  integer, parameter, public ::                       &
+    PSEUDO_FORMAT_UPF1                       = 775,   &
+    PSEUDO_FORMAT_UPF2                       = 776,   &
+    PSEUDO_FORMAT_QSO                        = 777,   &
+    PSEUDO_FORMAT_PSML                       = 778,   &
+    PSEUDO_FORMAT_PSF                        = 779,   &
+    PSEUDO_FORMAT_CPI                        = 780,   &
+    PSEUDO_FORMAT_FHI                        = 781,   &
+    PSEUDO_FORMAT_HGH                        = 782
+    
   type pseudo_t
     private
     integer(8) :: dummy
@@ -101,6 +111,15 @@ module pseudo_oct_m
       
       type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_type
+
+    ! -------------------------------------------------
+    
+    integer function pseudo_format(pseudo)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+    end function pseudo_format
 
     ! -------------------------------------------------
     
@@ -267,26 +286,6 @@ module pseudo_oct_m
   end interface
   
 contains
-
-  ! -------------------------------------------------
-  
-  logical function pseudo_has_projectors(pseudo, l)
-    type(pseudo_t),   intent(in)      :: pseudo
-    integer,          intent(in)      :: l
-    
-    interface
-      integer function pseudo_has_projectors_low(pseudo, l)
-        import :: pseudo_t
-        implicit none
-        
-        type(pseudo_t),   intent(in)      :: pseudo
-        integer,          intent(in)      :: l
-      end function pseudo_has_projectors_low
-    end interface
-
-    pseudo_has_projectors = (pseudo_has_projectors_low(pseudo, l) /= 0)
-    
-  end function pseudo_has_projectors
 
   ! -------------------------------------------------
   

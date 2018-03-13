@@ -23,7 +23,6 @@ noinst_LIBRARIES = libspecies.a
 # Fortran sources - keep in alphabetical order
 libspecies_f_srcs =                      \
 	atomic.F90                       \
-	chemical_element.cc              \
 	element.F90                      \
 	logrid.F90                       \
 	ps_cpi.F90                       \
@@ -38,12 +37,13 @@ libspecies_f_srcs =                      \
 	ps_xml.F90                       \
 	ps_upf.F90                       \
 	pseudo.F90                       \
-	pseudo_low.cc                    \
-	species.F90                      \
-	spline.cc
+	species.F90
 
 # C/C++ sources - keep in alphabetical order
-libspecies_c_srcs =
+libspecies_c_srcs =                      \
+	chemical_element.cc              \
+	pseudo_low.cc                    \
+	spline.cc
 
 libspecies_a_SOURCES = $(libspecies_c_srcs) $(libspecies_f_srcs)
 
@@ -52,6 +52,7 @@ noinst_HEADERS =                         \
 	base.hpp                         \
 	chemical_element.hpp             \
 	ps_pspio_inc.F90                 \
+	psml.hpp                         \
 	qso.hpp                          \
 	spline.h                         \
 	upf.hpp

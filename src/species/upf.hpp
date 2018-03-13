@@ -111,7 +111,7 @@ namespace pseudopotential {
       assert(lmax_ >= 0);
     }
 
-    std::string format() const { return "UPF 2"; }
+    pseudopotential::format format() const { return pseudopotential::format::UPF2; }
     
     int size() const { return buffer_.size(); };
 
@@ -187,10 +187,6 @@ namespace pseudopotential {
 
     int nprojectors() const {
       return value<int>(root_node_->first_node("PP_HEADER")->first_attribute("number_of_proj"));
-    }
-    
-    bool has_projectors(int l) const {
-      return l >=0 && l <= lmax();
     }
     
     void projector(int l, int i, std::vector<double> & proj) const {
@@ -322,7 +318,7 @@ namespace pseudopotential {
       for(int ii = 0; ii < size; ii++) stst >> val[start_point_ + ii];
 
       // the density comes multiplied by 4\pi r
-      for(int ii = 1; ii < size + start_point_; ii++) val[ii] /= 4.0*M_PI*grid_[ii];
+      for(int ii = 1; ii < size + start_point_; ii++) val[ii] /= 4.0*M_PI*grid_[ii]*grid_[ii];
       extrapolate_first_point(val);
       
       interpolate(val);

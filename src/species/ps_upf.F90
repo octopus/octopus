@@ -39,7 +39,7 @@ module ps_upf_oct_m
 
     logical :: version2
     integer :: kb_nc
-    integer :: l_local
+    integer :: l_loc
     FLOAT :: local_radius
     FLOAT, pointer :: kb_radius(:)
 
@@ -99,11 +99,6 @@ contains
     
     PUSH_SUB(ps_upf_init)
 
-
-    message(1) = "Reading pseudopotential from file:"
-    write(message(2), '(6x,3a)') "'", trim(filename), "'"
-    call messages_info(2)
-
     inquire(file=filename, exist=found)
 
     if(.not.found) then
@@ -137,11 +132,11 @@ contains
       end if
     end do
     if (count(found_l) /= 1) then
-      ps_upf%l_local = -1
+      ps_upf%l_loc = -1
     else
       do l = 0, ps_upf%l_max
         if (found_l(l)) then
-          ps_upf%l_local = l
+          ps_upf%l_loc = l
           exit
         end if
       end do

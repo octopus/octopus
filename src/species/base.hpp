@@ -21,13 +21,15 @@
 
 #include <vector>
 #include <string>
+#include <rapidxml.hpp>
 
 namespace pseudopotential {
 
   enum class type {
-    ULTRASOFT = 30,
-    NORM_CONSERVING = 31,
-    KLEINMAN_BYLANDER = 32
+    ULTRASOFT         = 30,
+    SEMILOCAL         = 31,
+    KLEINMAN_BYLANDER = 32,
+    PAW               = 33
   };
   
   enum class status {
@@ -39,6 +41,17 @@ namespace pseudopotential {
     UNSUPPORTED_TYPE_PAW       = 459,
     UNSUPPORTED_TYPE           = 460
   };
+
+  enum class format {
+    UPF1                       = 775,
+    UPF2                       = 776,
+    QSO                        = 777,
+    PSML                       = 778,
+    PSF                        = 779,
+    CPI                        = 780,
+    FHI                        = 781,
+    HGH                        = 782
+  };
   
   class base {
 
@@ -49,7 +62,7 @@ namespace pseudopotential {
     virtual int lmax() const { return lmax_; }
 
     //Pure virtual functions
-    virtual std::string format() const = 0;
+    virtual pseudopotential::format format() const = 0;
     virtual int size() const = 0;
     virtual std::string description() const = 0;
     virtual std::string symbol() const = 0;
@@ -64,7 +77,6 @@ namespace pseudopotential {
     virtual int mesh_size() const = 0;
     virtual void local_potential(std::vector<double> & potential) const = 0;
     virtual int nprojectors() const = 0;
-    virtual bool has_projectors(int l) const = 0;
     virtual void projector(int l, int i, std::vector<double> & proj) const = 0;
     virtual double d_ij(int l, int i, int j) const = 0;
     virtual bool has_radial_function(int l) const= 0;
@@ -87,6 +99,15 @@ namespace pseudopotential {
    
   protected:
 
+    template <typename Type>
+    static Type value(const rapidxml::xml_base<> * node){
+      assert(node);
+      std::istringstream stst(node->value());
+      Type value;
+      stst >> value;
+      return value;
+    }
+    
     pseudopotential::type type_;
     int lmax_;
     

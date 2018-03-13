@@ -58,6 +58,7 @@ module ps_xml_oct_m
     integer, allocatable :: wf_n(:)
     integer, allocatable :: wf_l(:)
     FLOAT, allocatable :: wf_occ(:)
+    type(pseudo_t)     :: pseudo
   end type ps_xml_t
 
 contains
@@ -87,6 +88,21 @@ contains
       call messages_fatal()
     end if
 
+    if(ierr == PSEUDO_STATUS_UNSUPPORTED_TYPE_ULTRASOFT) then
+      call messages_write("Ultrasoft pseudopotential file '" // trim(filename) // "' not supported")
+      call messages_fatal()
+    end if
+
+    if(ierr == PSEUDO_STATUS_UNSUPPORTED_TYPE_PAW) then
+      call messages_write("PAW pseudopotential file '" // trim(filename) // "' not supported")
+      call messages_fatal()
+    end if
+    
+    if(ierr == PSEUDO_STATUS_UNSUPPORTED_TYPE) then
+      call messages_write("Pseudopotential file '" // trim(filename) // "' not supported")
+      call messages_fatal()
+    end if
+    
     if(ierr == PSEUDO_STATUS_FORMAT_NOT_SUPPORTED) then
       POP_SUB(ps_xml_init)
       return
@@ -120,7 +136,7 @@ contains
       
       call pseudo_local_potential(pseudo, this%potential(1, -1))
 
-      SAFE_ALLOCATE(this%projector(1:this%grid_size, 0:3, 1:2))
+      SAFE_ALLOCATE(this%projector(1:this%grid_size, 0:this%lmax, 1:this%nchannels))
       
       do ll = 0, this%lmax
         do ic = 1, this%nchannels
@@ -164,10 +180,10 @@ contains
       call pseudo_nlcc_density(pseudo, this%nlcc_density(1))
     end if
 
-    call pseudo_end(pseudo)
-    
     if(.not. this%kleinman_bylander) call ps_xml_check_normalization(this)
 
+    this%pseudo = pseudo
+    
     POP_SUB(ps_xml_init)
   end subroutine ps_xml_init
 
@@ -207,6 +223,8 @@ contains
     type(ps_xml_t), intent(inout) :: this
 
     PUSH_SUB(ps_xml_end)
+
+    call pseudo_end(this%pseudo)
 
     SAFE_DEALLOCATE_A(this%potential)
     SAFE_DEALLOCATE_A(this%wavefunction)

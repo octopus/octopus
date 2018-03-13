@@ -148,7 +148,8 @@ module species_oct_m
     integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :), iwf_n(:, :) !< i, n, l, m as a function of iorb and ispin
     CMPLX, pointer :: iwf_j(:)    !< j as a function of iorb
 
-    integer :: lmax, lloc         !< For the TM pseudos, the lmax and lloc.
+    integer :: user_lmax          !< For the TM pseudos, user defined lmax 
+    integer :: user_llocal        !< For the TM pseudos, used defined llocal
  
   end type species_t
 
@@ -194,8 +195,8 @@ contains
     nullify(this%iwf_i)
     nullify(this%iwf_n)
     nullify(this%iwf_j)
-    this%lmax=0
-    this%lloc=0
+    this%user_lmax   = INVALID_L
+    this%user_llocal = INVALID_L
 
     POP_SUB(species_nullify)
   end subroutine species_nullify
@@ -377,10 +378,13 @@ contains
     !% maximum angular momentum component to be used, and
     !% <tt>lloc</tt>, that defines the angular momentum to be
     !% considered as local. When these parameters are not set, the
-    !% values are taken from the pseudopotential file. Note that,
-    !% depending on the type of pseudopotential, it might not be
-    !% possible to select <tt>lmax</tt> and <tt>lloc</tt>, if that is
-    !% the case the parameters will be ignored.
+    !% value for lmax is the maximum angular component from the
+    !% pseudopotential file. The default value for <tt>lloc</tt> is
+    !% taken from the pseudopotential if available, if not, it is set
+    !% to 0. Note that, depending on the type of pseudopotential, it
+    !% might not be possible to select <tt>lmax</tt> and
+    !% <tt>lloc</tt>, if that is the case the parameters will be
+    !% ignored.
     !%Option species_pspio  -110
     !% (experimental) Alternative method to read pseudopotentials
     !% using the PSPIO library. This species uses the same parameters
@@ -621,17 +625,17 @@ contains
       ! allocate structure
       SAFE_ALLOCATE(spec%ps)
       if(spec%type == SPECIES_PSPIO) then
-        call ps_pspio_init(spec%ps, spec%label, spec%Z, spec%lmax, spec%lloc, ispin, spec%filename)
+        call ps_pspio_init(spec%ps, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
       else
-        call ps_init(spec%ps, spec%label, spec%Z, spec%lmax, spec%lloc, ispin, spec%filename)
+        call ps_init(spec%ps, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
       end if
       spec%z_val = spec%ps%z_val
       spec%nlcc = spec%ps%nlcc
       spec%niwfs = ps_niwfs(spec%ps)
 
-      ! give this variables an absurd value as they should not be used after
-      spec%lmax = -2
-      spec%lloc = -2
+      ! invalidate these variables as they should not be used after
+      spec%user_lmax = INVALID_L
+      spec%user_llocal = INVALID_L
 
     case(SPECIES_USDEF)
       if(print_info_) then
@@ -727,13 +731,11 @@ contains
 
     call species_iwf_fix_qn(spec, ispin, dim)
 
-    if(species_is_ps(spec)) then
-      write(message(1),'(a,i6,a,i6)') 'Number of orbitals: total = ', ps_niwfs(spec%ps), ', bound = ', spec%niwfs
-    else
+    if(.not. species_is_ps(spec)) then
       write(message(1),'(a,i6,a,i6)') 'Number of orbitals: ', spec%niwfs
+      if(print_info_) call messages_info(1)
       nullify(spec%ps)
     end if
-    if(print_info_) call messages_info(1)
 
     POP_SUB(species_build)
   end subroutine species_build
@@ -1170,7 +1172,7 @@ contains
     species_is_local = .true.
       
     if( species_is_ps(spec) ) then 
-      if ( spec%ps%l_max /= 0 ) species_is_local = .false. 
+      if ( spec%ps%lmax /= 0 ) species_is_local = .false. 
     end if
 
     POP_SUB(species_is_local)
@@ -1369,8 +1371,8 @@ contains
     call loct_pointer_copy(this%iwf_m, that%iwf_m)
     call loct_pointer_copy(this%iwf_i, that%iwf_i)
     call loct_pointer_copy(this%iwf_j, that%iwf_j)
-    this%lmax=that%lmax
-    this%lloc=that%lloc
+    this%user_lmax=that%user_lmax
+    this%user_llocal=that%user_llocal
 
     POP_SUB(species_copy)
   end subroutine species_copy
@@ -1492,7 +1494,7 @@ contains
 
     spec%type = SPECIES_PSEUDO
     
-    read(iunit,*) label, spec%filename, spec%z, spec%lmax, spec%lloc, spec%def_h, spec%def_rsize
+    read(iunit,*) label, spec%filename, spec%z, spec%user_lmax, spec%user_llocal, spec%def_h, spec%def_rsize
 
     spec%filename = trim(conf%share)//'/pseudopotentials/'//trim(spec%filename)
     
@@ -1607,27 +1609,27 @@ contains
 
       case(OPTION__SPECIES__LMAX)
         call check_duplication(OPTION__SPECIES__LMAX)
-        call parse_block_integer(blk, row, icol + 1, spec%lmax)
+        call parse_block_integer(blk, row, icol + 1, spec%user_lmax)
 
         if(spec%type /= SPECIES_PSEUDO .and. spec%type /= SPECIES_PSPIO) then
           call messages_input_error('Species', &
             "The 'lmax' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")          
         end if
         
-        if(spec%lmax < 0) then
+        if(spec%user_lmax < 0) then
           call messages_input_error('Species', "The 'lmax' parameter in species "//trim(spec%label)//" cannot be negative")
         end if
 
       case(OPTION__SPECIES__LLOC)
         call check_duplication(OPTION__SPECIES__LLOC)
-        call parse_block_integer(blk, row, icol + 1, spec%lloc)
+        call parse_block_integer(blk, row, icol + 1, spec%user_llocal)
 
         if(spec%type /= SPECIES_PSEUDO .and. spec%type /= SPECIES_PSPIO) then
           call messages_input_error('Species', &
             "The 'lloc' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")          
         end if
 
-        if(spec%lloc < 0) then
+        if(spec%user_llocal < 0) then
           call messages_input_error('Species', "The 'lloc' parameter in species "//trim(spec%label)//" cannot be negative")
         end if
 
@@ -1760,7 +1762,7 @@ contains
     end if
 
     if(parameter_defined(OPTION__SPECIES__LMAX) .and. parameter_defined(OPTION__SPECIES__LLOC)) then
-      if(spec%lloc > spec%lmax) then
+      if(spec%user_llocal > spec%user_lmax) then
         call messages_input_error('Species', &
           "the 'lloc' parameter cannot be larger than the 'lmax' parameter in species "//trim(spec%label))
       end if

@@ -86,10 +86,6 @@ contains
 
     PUSH_SUB(hgh_init)
 
-    message(1) = "Reading pseudopotential from file:"
-    write(message(2), '(6x,3a)') "'", trim(filename), "'"
-    call messages_info(2)
-
     iunit = io_open(trim(filename), action='read', form='formatted', status='old')
     i = load_params(iunit, psp)
     if(i /= 0) then
@@ -547,11 +543,7 @@ contains
     s(2:psp%g%nrval) = psp%g%drdi(2:psp%g%nrval)*psp%g%drdi(2:psp%g%nrval)
     s(1) = s(2)
     a2b4 = M_FOURTH*psp%g%a**2
-
-    ! Let us be a bit informative.
-    message(1) = '      Calculating atomic pseudo-eigenfunctions for species ' // psp%atom_name // '....'
-    call messages_info(1)
-
+    
     ! "Double" self-consistent loop: nonlocal and XC parts have to be calculated
     ! self-consistently.
     diff = CNST(1e5)

@@ -26,6 +26,7 @@
 #include "base.hpp"
 #include "qso.hpp"
 #include "upf.hpp"
+#include "psml.hpp"
 
 extern "C" void FC_FUNC_(pseudo_init, PSEUDO_INIT)(pseudopotential::base ** pseudo, STR_F_TYPE const filename_f, fint * ierr STR_ARG1){
   char * filename_c;
@@ -53,6 +54,8 @@ extern "C" void FC_FUNC_(pseudo_init, PSEUDO_INIT)(pseudopotential::base ** pseu
       *pseudo = new pseudopotential::qso(filename);
     } else if(extension == "upf") {
       *pseudo = new pseudopotential::upf(filename);
+    } else if(extension == "psml") {
+      *pseudo = new pseudopotential::psml(filename);
     } else {
       *ierr = fint(pseudopotential::status::UNKNOWN_FORMAT);
       return;
@@ -72,6 +75,10 @@ extern "C" void FC_FUNC_(pseudo_end, PSEUDO_END)(pseudopotential::base ** pseudo
 
 extern "C" fint FC_FUNC_(pseudo_type, PSEUDO_TYPE)(const pseudopotential::base ** pseudo){
   return fint((*pseudo)->type());
+}
+
+extern "C" fint FC_FUNC_(pseudo_format, PSEUDO_FORMAT)(pseudopotential::base ** pseudo){
+  return fint((*pseudo)->format());
 }
 
 extern "C" double FC_FUNC_(pseudo_valence_charge, PSEUDO_VALENCE_CHARGE)(const pseudopotential::base ** pseudo){
@@ -100,10 +107,6 @@ extern "C" fint FC_FUNC_(pseudo_llocal, PSEUDO_LLOCAL)(const pseudopotential::ba
 
 extern "C" fint FC_FUNC_(pseudo_nchannels, PSEUDO_NCHANNELS)(const pseudopotential::base ** pseudo){
   return (*pseudo)->nchannels();
-}
-
-extern "C" fint FC_FUNC_(pseudo_has_projectors_low, PSEUDO_HAS_PROJECTORS_LOW)(const pseudopotential::base ** pseudo, const fint * l){
-  return fint((*pseudo)->has_projectors(*l));
 }
 
 extern "C" void FC_FUNC_(pseudo_local_potential, PSEUDO_LOCAL_POTENTIAL)(const pseudopotential::base ** pseudo, double * local_potential){
@@ -166,4 +169,5 @@ extern "C" void FC_FUNC_(pseudo_wavefunction, PSEUDO_WAVEFUNCTION)
   (*pseudo)->wavefunction(*index - 1, *n, *l, *occ, val);
   for(unsigned i = 0; i < val.size(); i++) wavefunction[i] = val[i];
 }
+
 
