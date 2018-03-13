@@ -530,7 +530,7 @@ contains
     call messages_info()
 
     call messages_write("    orbitals         :")
-    call messages_write(ps_niwfs(ps), fmt='(i2)')
+    call messages_write(ps_niwfs(ps), fmt='(i3)')
     call messages_info()
 
     call messages_info()
