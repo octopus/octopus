@@ -2,6 +2,7 @@ CalculationMode = gs
 PeriodicDimensions = 3
 BoxShape = parallelepiped
 ExperimentalFeatures = yes
+
 EigenSolver = rmmdiis
 
 a = 7.8809
@@ -55,7 +56,7 @@ LCAOStart= lcao_states
 %
 KPointsUseSymmetries = no
 
-ExtraStates = 2
+ExtraStates = 6
 
 OrbitalsTruncationMethod = box
 OutputLDA_U = occupation_matrices + effectiveU
