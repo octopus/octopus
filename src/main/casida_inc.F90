@@ -480,7 +480,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
     ia_length = (cas%n_pairs - 1) / 2
     if(mod(cas%n_pairs, 2) == 0) then ! even
       if(jb > cas%n_pairs / 2) then
-        jb_tmp = cas%n_pairs - jb + 1
+        jb_tmp = cas%n_pairs - jb
       else
         jb_tmp = jb
       end if
