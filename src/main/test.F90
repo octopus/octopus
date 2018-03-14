@@ -30,6 +30,7 @@ program oct_test
   use io_oct_m
   use ion_interaction_oct_m
   use mesh_interpolation_oct_m
+  use mesh_function_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -228,6 +229,11 @@ program oct_test
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
+    call messages_write('Info: Testing the nonlocal part of the pseudopotential with SOC')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
     call system_init(sys)
 
     call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
@@ -245,6 +251,11 @@ program oct_test
     do itime = 1, test_param%repetitions
       call zproject_psi_batch(sys%gr%mesh, ep%proj, ep%natoms, 2, &
                                sys%st%group%psib(1, 1), epsib, 1)
+    end do
+    do itime = 1, epsib%nst
+      call messages_write(zmf_nrm2(sys%gr%mesh, 2, epsib%states(itime)%zpsi))
+      write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, 2, epsib%states(itime)%zpsi)
+      call messages_info(1)
     end do
 
     call batch_end(epsib)
