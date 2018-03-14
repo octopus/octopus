@@ -408,7 +408,7 @@ contains
         !%End
         call parse_variable('VDWSelfConsistent', .true., ks%vdw_self_consistent)
 
-        call vdw_ts_init(ks%vdw_ts, geo, gr%fine%der, st)
+        call vdw_ts_init(ks%vdw_ts, geo, gr%fine%der)
 
       case(OPTION__VDWCORRECTION__VDW_D3)
         ks%vdw_self_consistent = .false.
@@ -1009,7 +1009,7 @@ contains
 
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
-          call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
+          call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
 
         case(OPTION__VDWCORRECTION__VDW_D3)
 

@@ -52,16 +52,14 @@ module vdw_ts_oct_m
     FLOAT, allocatable :: r0free(:)      !> Free atomic vdW radius for each atomic species.
     FLOAT, allocatable :: c6abfree(:, :) !> Free atomic heteronuclear C6 coefficient for each atom pair.
     FLOAT, allocatable :: volfree(:)
-    type(hirshfeld_t) :: hirshfeld
   end type vdw_ts_t
 
 contains
 
-  subroutine vdw_ts_init(this, geo, der, st)
+  subroutine vdw_ts_init(this, geo, der)
     type(vdw_ts_t),      intent(out)   :: this
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
-    type(states_t),      intent(in)    :: st
     
     integer :: ispecies, jspecies
     FLOAT :: num, den
@@ -89,8 +87,6 @@ contains
       end do
     end do
 
-    call hirshfeld_init(this%hirshfeld, der%mesh, geo, st)
-
     POP_SUB(vdw_ts_init)
   end subroutine vdw_ts_init
 
@@ -100,8 +96,6 @@ contains
     type(vdw_ts_t), intent(inout) :: this
 
     PUSH_SUB(vdw_ts_end)
-    
-    call hirshfeld_end(this%hirshfeld)
     
     SAFE_DEALLOCATE_A(this%c6free)
     SAFE_DEALLOCATE_A(this%dpfree)
@@ -114,10 +108,11 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_calculate(this, geo, der, density, energy, potential, force)
+  subroutine vdw_ts_calculate(this, geo, der, st, density, energy, potential, force)
     type(vdw_ts_t),      intent(inout) :: this
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
+    type(states_t),      intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
     FLOAT,               intent(out)   :: energy
     FLOAT,               intent(out)   :: potential(:)
@@ -139,7 +134,7 @@ contains
     integer :: iatom, jatom, ispecies, jspecies, ip, idir
     FLOAT :: rr, c6ab, c6abfree, ff, dffdrr, dffdr0
     FLOAT, allocatable :: c6(:), r0(:), volume_ratio(:), dvadens(:), dvadrr(:), coordinates(:,:), derivative_coeff(:)
-
+    type(hirshfeld_t) :: hirshfeld
     integer, allocatable :: zatom(:)
 
     PUSH_SUB(vdw_ts_calculate)
@@ -152,10 +147,12 @@ contains
     SAFE_ALLOCATE(derivative_coeff(1:geo%natoms))
     SAFE_ALLOCATE(dvadens(1:der%mesh%np))
     SAFE_ALLOCATE(dvadrr(1:3))
-    
+  
+    call hirshfeld_init(hirshfeld, der%mesh, geo, st)
+  
     do iatom = 1, geo%natoms
       ispecies = species_index(geo%atom(iatom)%species)
-      call hirshfeld_volume_ratio(this%hirshfeld, iatom, density, volume_ratio(iatom))
+      call hirshfeld_volume_ratio(hirshfeld, iatom, density, volume_ratio(iatom))
       
       c6(iatom) = volume_ratio(iatom)**2*this%c6free(ispecies)
       r0(iatom) = volume_ratio(iatom)**(CNST(1.0)/CNST(3.0))*this%r0free(ispecies)
@@ -177,7 +174,7 @@ contains
 !    force = CNST(0.0)
     do jatom = 1, geo%natoms
       do iatom = 1, geo%natoms
-        call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, density, dvadrr)
+        call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr)
         force(1:3, jatom) = force(1:3, jatom) - derivative_coeff(iatom)*dvadrr(1:3)
       end do
     end do
@@ -185,7 +182,7 @@ contains
     ! and calculate the potential
     potential = CNST(0.0)
     do iatom = 1, geo%natoms
-      call hirshfeld_density_derivative(this%hirshfeld, iatom, dvadens)
+      call hirshfeld_density_derivative(hirshfeld, iatom, dvadens)
       potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*dvadens(1:der%mesh%np)
     end do
 
@@ -196,6 +193,8 @@ contains
     
     print*, dmf_integrate(der%mesh, potential(1:der%mesh%np)*density(1:der%mesh%np, 1))
 #endif    
+
+    call hirshfeld_end(hirshfeld)
 
     SAFE_DEALLOCATE_A(c6)
     SAFE_DEALLOCATE_A(r0)
