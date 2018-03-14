@@ -130,6 +130,7 @@ module states_oct_m
     type(states_dim_t)       :: d
     type(states_priv_t)      :: priv                  !< the private components
     integer                  :: nst                   !< Number of states in each irreducible subspace
+    integer                  :: nst_conv              !< Number of states to be converged for unocc calc.
 
     logical                  :: only_userdef_istates  !< only use user-defined states as initial states in propagation
      
@@ -154,7 +155,7 @@ module states_oct_m
 
     !> used for the user-defined wavefunctions (they are stored as formula strings)
     !! (st%d%dim, st%nst, st%d%nik)
-    character(len=1024), pointer :: user_def_states(:,:,:)
+    character(len=1024), allocatable :: user_def_states(:,:,:)
 
     !> the densities and currents (after all we are doing DFT :)
     FLOAT, pointer :: rho(:,:)         !< rho(gr%mesh%np_part, st%d%nspin)
@@ -262,7 +263,6 @@ contains
     nullify(st%Imrho_core, st%Imfrozen_rho)
     nullify(st%psibL)
 
-    nullify(st%user_def_states)
     nullify(st%rho, st%current)
     nullify(st%rho_core, st%frozen_rho)
     nullify(st%subsys_st)
@@ -289,6 +289,7 @@ contains
 
     FLOAT :: excess_charge
     integer :: nempty, ntot, default, nthreads
+    integer :: nempty_conv
 
     PUSH_SUB(states_init)
 
@@ -405,6 +406,30 @@ contains
       call messages_fatal(1)
     end if
 
+    !%Variable ExtraStatesToConverge
+    !%Type integer
+    !%Default 0
+    !%Section States
+    !%Description
+    !% Only for unocc calculations.
+    !% Specifies the number of extra states that will be considered for reaching the convergence.
+    !% Together with <tt>ExtraStates</tt>, one can have some more states which will not be
+    !% considered for the convergence criteria, thus making the convergence of the
+    !% unocc calculation faster.
+    !% By default, all extra states need to be converged.
+    !%End
+    call parse_variable('ExtraStatesToConverge', nempty, nempty_conv)
+    if (nempty < 0) then
+      write(message(1), '(a,i5,a)') "Input: '", nempty_conv, "' is not a valid value for ExtraStatesToConverge."
+      message(2) = '(0 <= ExtraStatesToConverge)'
+      call messages_fatal(2)
+    end if
+
+    if(nempty_conv > nempty) then
+      message(1) = 'You cannot set ExtraStatesToConverge to an higer value than ExtraStates.'
+      call messages_fatal(1)
+    end if
+
     ! For non-periodic systems this should just return the Gamma point
     call states_choose_kpoints(st%d, gr%sb)
 
@@ -448,6 +473,7 @@ contains
       st%nst = ntot
     end if
 
+    st%nst_conv = st%nst + nempty_conv
     st%nst = st%nst + nempty
     if(st%nst == 0) then
       message(1) = "Cannot run with number of states = zero."
@@ -1475,7 +1501,7 @@ contains
     ! it allocates iblock, psib, block_is_local
     stout%group%nblocks = stin%group%nblocks
 
-    call loct_pointer_copy(stout%user_def_states, stin%user_def_states)
+    call loct_allocatable_copy(stout%user_def_states, stin%user_def_states)
 
     call loct_pointer_copy(stout%current, stin%current)
  
@@ -1543,7 +1569,7 @@ contains
     ! this deallocates dpsi, zpsi, psib, iblock, iblock
     call states_deallocate_wfns(st)
 
-    SAFE_DEALLOCATE_P(st%user_def_states)
+    SAFE_DEALLOCATE_A(st%user_def_states)
 
     if(associated(st%subsys_st))then
       !subsystems

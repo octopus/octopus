@@ -160,7 +160,7 @@ contains
 
     nullify(p%phase)
     p%reltype = reltype
-    p%lmax = ps%l_max
+    p%lmax = ps%lmax
 
     if(ps%local) then
       p%type = M_NONE
@@ -168,7 +168,7 @@ contains
       return
     end if
 
-    p%lloc = ps%l_loc
+    p%lloc = ps%llocal
 
     select case (ps%kbc)
     case (1)

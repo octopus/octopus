@@ -44,6 +44,7 @@ libpoisson_a_SOURCES = $(libpoisson_c_srcs) $(libpoisson_f_srcs)
 noinst_HEADERS =                         \
 	lazy_8_inc.F90                   \
 	poisson_inc.F90                  \
+	poisson_direct_sm_inc.F90        \
 	poisson_init_direct_inc.F90      \
 	solver_1d_solve_inc.F90
 
@@ -68,7 +69,7 @@ poisson_cutoffs.o : poisson_cutoffs.c
 poisson_cg.o : poisson_cg.F90 poisson_corrections.o 
 poisson_corrections.o : poisson_corrections.F90 
 poisson_cutoff.o : poisson_cutoff.F90 
-poisson.o : poisson.F90 solver_1d_solve_inc.F90 poisson_inc.F90 poisson_init_direct_inc.F90 poisson_no.o poisson_multigrid.o poisson_libisf.o poisson_fmm.o poisson_fft.o poisson_isf.o poisson_corrections.o poisson_cg.o 
+poisson.o : poisson.F90 solver_1d_solve_inc.F90 poisson_inc.F90 poisson_init_direct_inc.F90 poisson_no.o poisson_multigrid.o poisson_libisf.o poisson_fmm.o poisson_fft.o poisson_isf.o poisson_corrections.o poisson_cg.o poisson_direct_sm_inc.F90 
 poisson_fft.o : poisson_fft.F90 poisson_cutoff.o 
 poisson_fmm.o : poisson_fmm.F90 
 poisson_isf.o : poisson_isf.F90 scaling_function.o 
