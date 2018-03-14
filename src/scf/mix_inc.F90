@@ -105,15 +105,15 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter)
     end do
 
 #ifdef R_TREAL
-    gamma = M_ONE/sqrt(max(gamma,M_EPSILON))
+    smix%X(gamma) = M_ONE/sqrt(max(smix%X(gamma),CNST(1.0e-8)))
 #else
-    gamma = sqrt(cmplx(max(R_REAL(gamma),M_EPSILON),&
-                       max(R_AIMAG(gamma),M_EPSILON),REAL_PRECISION))
-    gamma = M_ONE/gamma
+    smix%X(gamma) = sqrt(cmplx(max(R_REAL(smix%X(gamma)),CNST(1.0e-8)),&
+                       max(R_AIMAG(smix%X(gamma)),CNST(1.0e-8)),REAL_PRECISION))
+    smix%X(gamma) = M_ONE/smix%X(gamma)
 #endif
 
-    call lalg_scal(d1, d2, d3, gamma, smix%X(df)(:, :, :, ipos))
-    call lalg_scal(d1, d2, d3, gamma, smix%X(dv)(:, :, :, ipos))
+    call lalg_scal(d1, d2, d3, smix%X(gamma), smix%mixfield%X(df)(:, :, :, ipos))
+    call lalg_scal(d1, d2, d3, smix%X(gamma), smix%mixfield%X(dv)(:, :, :, ipos))
     
     smix%last_ipos = ipos
   end if
