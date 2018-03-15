@@ -18,4 +18,8 @@
 ## 02110-1301, USA.
 ##
 
-SUBDIRS = pbesol_s_sr  pbe_s_sr  pw_s_sr nc-sr-04_pbe_standard  nc-sr-04_pbe_stringent
+SUBDIRS =                                \
+	pbesol_s_sr                      \
+	pw_s_sr                          \
+	nc-sr-04_pbe_standard            \
+	nc-sr-04_pbe_stringent

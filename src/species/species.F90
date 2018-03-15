@@ -255,8 +255,6 @@ contains
     !% (experimental) High-accuracy PBE version of the pseudopotentials of http://pseudo-dojo.org. Version 0.4.
     !%Option pseudodojo_lda 103
     !% (experimental) LDA pseudopotentials of http://pseudo-dojo.org. Version 0.3.
-    !%Option pseudodojo_pbe_03 104
-    !% (experimental) PBE version of the pseudopotentials of http://pseudo-dojo.org. Old version 0.3.
     !%Option pseudodojo_pbesol 105
     !% (experimental) PBEsol version of the pseudopotentials of http://pseudo-dojo.org. Version 0.3.
     !%End
@@ -268,8 +266,7 @@ contains
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__HSCV_PBE) call messages_experimental('PseudopotentialSet = hscv_pbe')
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA) call messages_experimental('PseudopotentialSet = pseudodojo_lda')
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE) call messages_experimental('PseudopotentialSet = pseudodojo_pbe')
-    if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE_03) call messages_experimental('PseudopotentialSet = pseudodojo_pbe_03')
-    if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE_STRINGENT) call messages_experimental('PseudopotentialSet = pseudodojo_pbe_03')
+    if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE_STRINGENT) call messages_experimental('PseudopotentialSet = pseudodojo_pbe_stringent')
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL) call messages_experimental('PseudopotentialSet = pseudodojo_pbesol')
 
     POP_SUB(species_init_global)
@@ -543,8 +540,6 @@ contains
       fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe.set'
     case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE_STRINGENT)
       fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe_stringent.set'
-    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE_03)
-      fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe_03.set'
     case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL)
       fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbesol.set'
     case default
