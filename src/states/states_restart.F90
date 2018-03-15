@@ -839,11 +839,11 @@ contains
 
       if(gr%have_fine_mesh)then
         if(st%cmplxscl%space) then
-          zrho_fine(:) = st%zrho%Re(:,isp) + M_zI*st%zrho%Im(:,isp)
+          zrho_fine(1:gr%fine%mesh%np) = st%zrho%Re(1:gr%fine%mesh%np,isp) + M_zI*st%zrho%Im(1:gr%fine%mesh%np,isp)
           call zmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, zrho_fine, zrho, INJECTION)
           call zrestart_write_mesh_function(restart, filename, gr%mesh, zrho, err)
         else
-          rho_fine(:) = st%rho(:,isp)
+          rho_fine(1:gr%fine%mesh%np) = st%rho(1:gr%fine%mesh%np,isp)
           call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, rho_fine, rho, INJECTION)
           call drestart_write_mesh_function(restart, filename, gr%mesh, rho, err)
         end if
