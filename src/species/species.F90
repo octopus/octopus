@@ -254,9 +254,13 @@ contains
     !%Option pseudodojo_pbe_stringent 102
     !% (experimental) High-accuracy PBE version of the pseudopotentials of http://pseudo-dojo.org. Version 0.4.
     !%Option pseudodojo_lda 103
-    !% (experimental) LDA pseudopotentials of http://pseudo-dojo.org. Version 0.3.
+    !% (experimental) LDA pseudopotentials of http://pseudo-dojo.org. Version 0.4.
+    !%Option pseudodojo_lda_stringent 104
+    !% (experimental) High-accuracy LDA pseudopotentials of http://pseudo-dojo.org. Version 0.4.
     !%Option pseudodojo_pbesol 105
     !% (experimental) PBEsol version of the pseudopotentials of http://pseudo-dojo.org. Version 0.3.
+    !%Option pseudodojo_pbesol_stringent 106
+    !% (experimental) High-accuracy PBEsol version of the pseudopotentials of http://pseudo-dojo.org. Version 0.4.
     !%End
 
     call parse_variable('PseudopotentialSet', OPTION__PSEUDOPOTENTIALSET__STANDARD, pseudo_set)
@@ -265,10 +269,12 @@ contains
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__HSCV_LDA) call messages_experimental('PseudopotentialSet = hscv_lda')
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__HSCV_PBE) call messages_experimental('PseudopotentialSet = hscv_pbe')
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA) call messages_experimental('PseudopotentialSet = pseudodojo_lda')
+    if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA_STRINGENT) call messages_experimental('PseudopotentialSet = pseudodojo_lda_stringent')
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE) call messages_experimental('PseudopotentialSet = pseudodojo_pbe')
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE_STRINGENT) call messages_experimental('PseudopotentialSet = pseudodojo_pbe_stringent')
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL) call messages_experimental('PseudopotentialSet = pseudodojo_pbesol')
-
+    if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL_STRINGENT) call messages_experimental('PseudopotentialSet = pseudodojo_pbesol_stringent')
+    
     POP_SUB(species_init_global)
   end subroutine species_init_global
   
@@ -536,12 +542,16 @@ contains
       fname = trim(conf%share)//'/pseudopotentials/hscv_pbe.set'
     case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA)
       fname = trim(conf%share)//'/pseudopotentials/pseudodojo_lda.set'
+    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA_STRINGENT)
+      fname = trim(conf%share)//'/pseudopotentials/pseudodojo_lda.set'
     case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE)
       fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe.set'
     case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE_STRINGENT)
       fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe_stringent.set'
     case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL)
       fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbesol.set'
+    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL_STRINGENT)
+      fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbesol_stringent.set'
     case default
       ASSERT(.false.)
     end select
