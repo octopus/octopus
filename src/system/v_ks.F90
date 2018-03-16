@@ -228,7 +228,7 @@ contains
       end if
     end if
 
-    if(pseudo_c_functional /= PSEUDO_EXCHANGE_ANY) then
+    if(pseudo_c_functional /= PSEUDO_CORRELATION_ANY) then
       default = default + 1000*pseudo_c_functional
     else
       if(ks%theory_level == KOHN_SHAM_DFT) then
@@ -239,7 +239,7 @@ contains
         end select
       end if
     end if
-    
+
     ! The description of this variable can be found in file src/xc/functionals_list.F90
     call parse_variable('XCFunctional', default, val)
 
@@ -247,7 +247,14 @@ contains
     ! the next 3 the C functional.
     c_id = val / 1000
     x_id = val - c_id*1000
-
+    
+    if( (x_id /= pseudo_x_functional .and. pseudo_x_functional /= PSEUDO_EXCHANGE_ANY) .or. &
+      (c_id /= pseudo_c_functional .and. pseudo_c_functional /= PSEUDO_EXCHANGE_ANY)) then
+      call messages_write('The XCFunctional that you selected does not match the one used', new_line = .true.)
+      call messages_write('to generate the pseudopotentials.')
+      call messages_warning()
+    end if
+    
     ! FIXME: we rarely need this. We should only parse when necessary.
     
     !%Variable XCKernel
@@ -540,10 +547,10 @@ contains
           end if
         end if
 
-        if(pseudo_x_functional == PSEUDO_EXCHANGE_ANY) then
-          pseudo_x_functional = xf
+        if(pseudo_c_functional == PSEUDO_CORRELATION_ANY) then
+          pseudo_c_functional = cf
         else
-          if(xf /= pseudo_x_functional .and. .not. warned_inconsistent) then
+          if(cf /= pseudo_c_functional .and. .not. warned_inconsistent) then
             call messages_write('Inconsistent XC functional detected between species');
             call messages_warning()
             warned_inconsistent = .true.
