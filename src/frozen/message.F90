@@ -7,6 +7,7 @@ module message_oct_m
   use messages_oct_m
   use profiling_oct_m
   use refcount_oct_m
+  use uuid_oct_m
 
   implicit none
 
@@ -15,13 +16,14 @@ module message_oct_m
   public ::    &
     message_t
 
-  public ::       &
-    message_new,  &
-    message_del,  &
-    message_init, &
-    message_reg,  &
-    message_get,  &
-    message_copy, & 
+  public ::         &
+    message_new,    &
+    message_del,    &
+    message_init,   &
+    message_attach, &
+    message_detach, &
+    message_get,    &
+    message_copy,   & 
     message_end
 
   integer, parameter :: MSSG_STAT_NULL = 0
@@ -29,9 +31,9 @@ module message_oct_m
 
   type :: message_t
     private
-    type(refcount_t), pointer :: rcnt =>null()
-    integer                   :: stat = MSSG_STAT_NULL
-    type(json_object_t)       :: data
+    integer             :: stat = MSSG_STAT_NULL
+    type(refcount_t)    :: rcnt
+    type(json_object_t) :: data
   end type message_t
 
 contains
@@ -45,7 +47,6 @@ contains
     nullify(this)
     SAFE_ALLOCATE(this)
     call message_init(this)
-    ASSERT(associated(this%rcnt))
     call refcount_set(this%rcnt, dynamic=.true.)
 
     POP_SUB(message_new)
@@ -60,7 +61,7 @@ contains
     PUSH_SUB(message_del)
     
     if(associated(this))then
-      ASSERT(associated(this%rcnt))
+      ASSERT(this%stat>MSSG_STAT_NULL)
       call refcount_get(this%rcnt, free=free)
       if(free)then
         call message_end(this)
@@ -78,25 +79,38 @@ contains
 
     PUSH_SUB(message_init)
 
-    this%rcnt => refcount_new()
     this%stat = MSSG_STAT_LIVE
+    call refcount_init(this%rcnt)
     call json_init(this%data)
     
     POP_SUB(message_init)
   end subroutine message_init
 
   ! ---------------------------------------------------------
-  subroutine message_reg(this, that)
-    type(message_t),   target, intent(in)  :: this
-    type(refcount_t), pointer, intent(out) :: that
+  subroutine message_attach(this, that)
+    type(message_t), intent(inout) :: this
+    type(uuid_t),    intent(in)    :: that
 
-    PUSH_SUB(message_reg)
+    PUSH_SUB(message_attach)
 
-    nullify(that)
-    if(associated(this%rcnt)) that => this%rcnt
+    ASSERT(this%stat>MSSG_STAT_NULL)
+    call refcount_attach(this%rcnt, that)
 
-    POP_SUB(message_reg)
-  end subroutine message_reg
+    POP_SUB(message_attach)
+  end subroutine message_attach
+
+  ! ---------------------------------------------------------
+  subroutine message_detach(this, that)
+    type(message_t), intent(inout) :: this
+    type(uuid_t),    intent(in)    :: that
+
+    PUSH_SUB(message_detach)
+
+    ASSERT(this%stat>MSSG_STAT_NULL)
+    call refcount_detach(this%rcnt, that)
+
+    POP_SUB(message_detach)
+  end subroutine message_detach
 
   ! ---------------------------------------------------------
   subroutine message_get(this, data)
@@ -105,10 +119,8 @@ contains
 
     PUSH_SUB(message_get)
 
-    ASSERT(associated(this%rcnt))
-    ASSERT(this%stat==MSSG_STAT_LIVE)
     nullify(data)
-    data => this%data
+    if(this%stat==MSSG_STAT_LIVE) data => this%data
 
     POP_SUB(message_get)
   end subroutine message_get
@@ -122,12 +134,13 @@ contains
 
     PUSH_SUB(message_copy)
 
-    call message_end(this)
+    call json_end(this%data)
     if(that%stat==MSSG_STAT_LIVE)then
       call message_get(that, data)
       ASSERT(associated(data))
-      call message_init(this)
       call json_copy(this%data, data)
+    else
+      call json_init(this%data)
     end if
     
     POP_SUB(message_copy)
@@ -139,9 +152,8 @@ contains
 
     PUSH_SUB(message_end)
 
-    if(associated(this%rcnt)) call refcount_del(this%rcnt)
-    nullify(this%rcnt)
     this%stat = MSSG_STAT_NULL
+    call refcount_end(this%rcnt)
     call json_end(this%data)
     
     POP_SUB(message_end)

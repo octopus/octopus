@@ -524,11 +524,12 @@ contains
   end subroutine memo_set_r1
 
   ! ---------------------------------------------------------
-  subroutine memo_get_r0(this, key, val, ierr)
-    type(memo_t),      intent(in)  :: this
-    character(len=*),  intent(in)  :: key
-    real(kind=wp),     intent(out) :: val
-    integer, optional, intent(out) :: ierr
+  subroutine memo_get_r0(this, key, val, default, ierr)
+    type(memo_t),            intent(in)  :: this
+    character(len=*),        intent(in)  :: key
+    real(kind=wp),           intent(out) :: val
+    real(kind=wp), optional, intent(in)  :: default
+    integer,       optional, intent(out) :: ierr
 
     type(data_t),                pointer :: data
     real(kind=wp), dimension(:), pointer :: ival
@@ -545,6 +546,8 @@ contains
       ASSERT(size(ival)==1)
       val = ival(1)
       nullify(ival)
+    else
+      if(present(default)) val = default
     end if
     nullify(data)
     if(present(ierr)) ierr = jerr
@@ -553,11 +556,12 @@ contains
   end subroutine memo_get_r0
 
   ! ---------------------------------------------------------
-  subroutine memo_get_r1(this, key, val, ierr)
-    type(memo_t),                intent(in)  :: this
-    character(len=*),            intent(in)  :: key
-    real(kind=wp), dimension(:), intent(out) :: val
-    integer,           optional, intent(out) :: ierr
+  subroutine memo_get_r1(this, key, val, default, ierr)
+    type(memo_t),                          intent(in)  :: this
+    character(len=*),                      intent(in)  :: key
+    real(kind=wp), dimension(:),           intent(out) :: val
+    real(kind=wp), dimension(:), optional, intent(in)  :: default
+    integer,                     optional, intent(out) :: ierr
 
     type(data_t),                pointer :: data
     real(kind=wp), dimension(:), pointer :: ival
@@ -574,6 +578,11 @@ contains
       ASSERT(size(ival)==size(val))
       val = ival
       nullify(ival)
+    else
+      if(present(default))then
+        ASSERT(size(val)==size(default))
+        val = default
+      end if
     end if
     nullify(data)
     if(present(ierr)) ierr = jerr
@@ -605,17 +614,18 @@ contains
   end subroutine memo_del_nv
 
   ! ---------------------------------------------------------
-  subroutine memo_del_r0(this, key, val, ierr)
-    type(memo_t),      intent(inout) :: this
-    character(len=*),  intent(in)    :: key
-    real(kind=wp),     intent(out)   :: val
-    integer, optional, intent(out)   :: ierr
+  subroutine memo_del_r0(this, key, val, default, ierr)
+    type(memo_t),            intent(inout) :: this
+    character(len=*),        intent(in)    :: key
+    real(kind=wp),           intent(out)   :: val
+    real(kind=wp), optional, intent(in)    :: default
+    integer,       optional, intent(out)   :: ierr
 
     type(data_t),                pointer :: data
     real(kind=wp), dimension(:), pointer :: ival
     integer                              :: jerr
 
-    PUSH_SUB(memo_del)
+    PUSH_SUB(memo_del_r0)
 
     nullify(data, ival)
     call data_dict_del(this%dict, key, data, jerr)
@@ -627,6 +637,8 @@ contains
       val = ival(1)
       nullify(ival)
       call data_del(data)
+    else
+      if(present(default)) val = default
     end if
     nullify(data)
     if(present(ierr)) ierr = jerr
@@ -635,11 +647,12 @@ contains
   end subroutine memo_del_r0
 
   ! ---------------------------------------------------------
-  subroutine memo_del_r1(this, key, val, ierr)
-    type(memo_t),                intent(inout) :: this
-    character(len=*),            intent(in)    :: key
-    real(kind=wp), dimension(:), intent(out)   :: val
-    integer,           optional, intent(out)   :: ierr
+  subroutine memo_del_r1(this, key, val, default, ierr)
+    type(memo_t),                          intent(inout) :: this
+    character(len=*),                      intent(in)    :: key
+    real(kind=wp), dimension(:),           intent(out)   :: val
+    real(kind=wp), dimension(:), optional, intent(in)  :: default
+    integer,                     optional, intent(out)   :: ierr
 
     type(data_t),                pointer :: data
     real(kind=wp), dimension(:), pointer :: ival
@@ -657,6 +670,11 @@ contains
       val = ival
       nullify(ival)
       call data_del(data)
+    else
+      if(present(default))then
+        ASSERT(size(val)==size(default))
+        val = default
+      end if
     end if
     nullify(data)
     if(present(ierr)) ierr = jerr

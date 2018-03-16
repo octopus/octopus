@@ -7,9 +7,9 @@ module smlt_intrf_oct_m
   use json_oct_m
   use messages_oct_m
   use profiling_oct_m
-  use refcount_oct_m
   use simulation_oct_m
   use space_oct_m
+  use uuid_oct_m
 
   implicit none
 
@@ -35,8 +35,8 @@ module smlt_intrf_oct_m
   type :: smlt_intrf_t
     private
     type(simulation_t), pointer :: self =>null()
-    type(refcount_t),   pointer :: rcnt =>null()
     integer                     :: type = SMLT_INTRF_DISA
+    type(uuid_t)                :: uuid
   end type smlt_intrf_t
 
   interface smlt_intrf_new
@@ -153,9 +153,9 @@ contains
     PUSH_SUB(smlt_intrf_del_pass)
 
     ASSERT(smlt_intrf_assoc(this))
-    call refcount_dec(this%rcnt)
+    call simulation_detach(this%self, this%uuid)
     call simulation_del(this%self, finis)
-    nullify(this%self, this%rcnt)
+    nullify(this%self)
     this%type = SMLT_INTRF_NULL
 
     POP_SUB(smlt_intrf_del_pass)
@@ -174,11 +174,9 @@ contains
       that = .false.
     case(SMLT_INTRF_NULL)
       ASSERT(.not.associated(this%self))
-      ASSERT(.not.associated(this%rcnt))
       that = .true.
     case(SMLT_INTRF_ASSC)
       ASSERT(associated(this%self))
-      ASSERT(associated(this%rcnt))
       that = .false.
     case default
       ASSERT(.false.)
@@ -200,11 +198,9 @@ contains
       that = .false.
     case(SMLT_INTRF_NULL)
       ASSERT(.not.associated(this%self))
-      ASSERT(.not.associated(this%rcnt))
       that = .false.
     case(SMLT_INTRF_ASSC)
       ASSERT(associated(this%self))
-      ASSERT(associated(this%rcnt))
       that = .true.
     case default
       ASSERT(.false.)
@@ -220,8 +216,9 @@ contains
 
     PUSH_SUB(smlt_intrf_init_type)
 
-    nullify(this%self, this%rcnt)
+    nullify(this%self)
     this%type = SMLT_INTRF_NULL
+    call uuid_init(this%uuid)
     if(present(that)) call smlt_intrf_set(this, that)
 
     POP_SUB(smlt_intrf_init_type)
@@ -280,9 +277,7 @@ contains
 
     ASSERT(smlt_intrf_isnull(this))
     this%self => that
-    call simulation_reg(that, this%rcnt)
-    ASSERT(associated(this%rcnt))
-    call refcount_inc(this%rcnt)
+    call simulation_attach(this%self, this%uuid)
     this%type = SMLT_INTRF_ASSC
 
     POP_SUB(smlt_intrf_set)
@@ -290,8 +285,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine smlt_intrf_get(this, that)
-    type(smlt_intrf_t),  intent(in) :: this
-    type(simulation_t), pointer     :: that
+    type(smlt_intrf_t),          intent(in)  :: this
+    type(simulation_t), pointer, intent(out) :: that
 
     PUSH_SUB(smlt_intrf_get)
 
@@ -311,6 +306,7 @@ contains
 
     call smlt_intrf_end(this)
     this%type = that%type
+    call uuid_init(this%uuid)
     if(smlt_intrf_assoc(that)) call smlt_intrf_set(this, that%self)
 
     POP_SUB(smlt_intrf_copy)
@@ -322,8 +318,9 @@ contains
 
     PUSH_SUB(smlt_intrf__end__)
 
-    nullify(this%self, this%rcnt)
+    nullify(this%self)
     this%type = SMLT_INTRF_DISA
+    call uuid_end(this%uuid)
 
     POP_SUB(smlt_intrf__end__)
   end subroutine smlt_intrf__end__

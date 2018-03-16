@@ -6,7 +6,7 @@ module envelope_oct_m
   use message_oct_m
   use messages_oct_m
   use profiling_oct_m
-  use refcount_oct_m
+  use uuid_oct_m
 
   implicit none
 
@@ -29,9 +29,9 @@ module envelope_oct_m
 
   type :: envelope_t
     private
-    type(message_t),  pointer :: self =>null()
-    type(refcount_t), pointer :: rcnt =>null()
-    integer                   :: stat = ENVL_STAT_DISA
+    type(message_t), pointer :: self =>null()
+    integer                  :: stat = ENVL_STAT_DISA
+    type(uuid_t)             :: uuid
   end type envelope_t
 
   interface envelope_new
@@ -104,11 +104,9 @@ contains
       that = .false.
     case(ENVL_STAT_NULL)
       ASSERT(.not.associated(this%self))
-      ASSERT(.not.associated(this%rcnt))
       that = .false.
     case(ENVL_STAT_ASSC)
       ASSERT(associated(this%self))
-      ASSERT(associated(this%rcnt))
       that = .true.
     case default
       ASSERT(.false.)
@@ -124,8 +122,9 @@ contains
 
     PUSH_SUB(envelope_init_type)
 
-    nullify(this%self, this%rcnt)
+    nullify(this%self)
     this%stat = ENVL_STAT_NULL
+    call uuid_init(this%uuid)
     if(present(that))then
       call envelope_set(this, that)
     else
@@ -162,9 +161,7 @@ contains
 
     ASSERT(this%stat==ENVL_STAT_NULL)
     this%self => that
-    call message_reg(that, this%rcnt)
-    ASSERT(associated(this%rcnt))
-    call refcount_inc(this%rcnt)
+    call message_attach(this%self, this%uuid)
     this%stat = ENVL_STAT_ASSC
 
     POP_SUB(envelope_set)
@@ -204,10 +201,13 @@ contains
 
     PUSH_SUB(envelope_end)
 
-    if(envelope_assoc(this)) call refcount_dec(this%rcnt)
-    call message_del(this%self)
-    nullify(this%self, this%rcnt)
+    if(envelope_assoc(this))then
+      call message_detach(this%self, this%uuid)
+      call message_del(this%self)
+    end if
+    nullify(this%self)
     this%stat = ENVL_STAT_DISA
+    call uuid_end(this%uuid)
 
     POP_SUB(envelope_end)
   end subroutine envelope_end

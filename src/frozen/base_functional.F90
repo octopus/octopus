@@ -611,7 +611,7 @@ contains
     call base_functional_get(this, use=fuse)
     if(fuse)then
       call base_functional_update(this, energy=.true.)
-      call memo_get(this%memo, "energy", energy, ierr)
+      call memo_get(this%memo, "energy", energy, ierr=ierr)
       ASSERT(ierr==MEMO_OK)
     end if
 

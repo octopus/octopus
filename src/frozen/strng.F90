@@ -157,7 +157,7 @@ contains
   !Daniel J. Bernstein Hash Function
   ! ---------------------------------------------------------
   elemental function strng_hash(this, size) result(hash)
-    type(strng_t),    intent(in) :: this
+    type(strng_t),     intent(in) :: this
     integer, optional, intent(in) :: size
 
     integer :: hash
@@ -234,75 +234,59 @@ contains
   end subroutine strng_reallocate
 
   ! ---------------------------------------------------------
-  subroutine strng_inew(this)
-    type(strng_t), pointer :: this
-
-    PUSH_SUB(strng_inew)
-
-    nullify(this)
-    SAFE_ALLOCATE(this)
-
-    POP_SUB(strng_inew)
-  end subroutine strng_inew
-
-  ! ---------------------------------------------------------
-  subroutine strng_idel(this)
-    type(strng_t), pointer :: this
-
-    PUSH_SUB(strng_idel)
-
-    SAFE_DEALLOCATE_P(this)
-    nullify(this)
-
-    POP_SUB(strng_idel)
-  end subroutine strng_idel
-
-  ! ---------------------------------------------------------
-  subroutine strng_new_null(this)
+  function strng_new_null() result(this)
     type(strng_t), pointer :: this
 
     PUSH_SUB(strng_new_null)
 
-    call strng_inew(this)
+    nullify(this)
+    SAFE_ALLOCATE(this)
     call strng_init(this)
 
     POP_SUB(strng_new_null)
-  end subroutine strng_new_null
+  end function strng_new_null
 
   ! ---------------------------------------------------------
-  subroutine strng_new_char(this, value)
-    type(strng_t),   pointer     :: this
+  function strng_new_char(value) result(this)
     character(len=*), intent(in) :: value
 
+    type(strng_t), pointer :: this
+    
     PUSH_SUB(strng_new_char)
 
-    call strng_inew(this)
+    nullify(this)
+    SAFE_ALLOCATE(this)
     call strng_init(this, trim(adjustl(value)))
 
     POP_SUB(strng_new_char)
-  end subroutine strng_new_char
+  end function strng_new_char
 
   ! ---------------------------------------------------------
-  subroutine strng_new_strng(this, that)
-    type(strng_t), pointer     :: this
-    type(strng_t),  intent(in) :: that
+  function strng_new_strng(that) result(this)
+    type(strng_t), intent(in) :: that
 
+    type(strng_t), pointer :: this
+    
     PUSH_SUB(strng_new_strng)
 
-    call strng_inew(this)
+    nullify(this)
+    SAFE_ALLOCATE(this)
     call strng_init(this, that)
 
     POP_SUB(strng_new_strng)
-  end subroutine strng_new_strng
+  end function strng_new_strng
 
   ! ---------------------------------------------------------
   subroutine strng_del(this)
-    type(strng_t), pointer :: this
+    type(strng_t), pointer, intent(inout) :: this
 
     PUSH_SUB(strng_del)
 
-    call strng_end(this)
-    call strng_idel(this)
+    if(associated(this))then
+      call strng_end(this)
+      SAFE_DEALLOCATE_P(this)
+    end if
+    nullify(this)
 
     POP_SUB(strng_del)
   end subroutine strng_del
@@ -448,7 +432,7 @@ contains
 
   ! ---------------------------------------------------------
   elemental subroutine strng_tolower(this)
-    type(strng_t),   intent(inout) :: this
+    type(strng_t), intent(inout) :: this
 
     integer :: idx, pos
 
@@ -461,7 +445,7 @@ contains
 
   ! ---------------------------------------------------------
   elemental subroutine strng_toupper(this)
-    type(strng_t),   intent(inout) :: this
+    type(strng_t), intent(inout) :: this
 
     integer :: idx, pos
 

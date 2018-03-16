@@ -98,11 +98,6 @@ module base_potential_oct_m
     module procedure base_potential__init__copy
   end interface base_potential__init__
 
-  interface base_potential__load__
-    module procedure base_potential__load__r1
-    module procedure base_potential__load__r2
-  end interface base_potential__load__
-  
   interface base_potential__sets__
     module procedure base_potential__sets__info
     module procedure base_potential__sets__type
@@ -397,17 +392,17 @@ contains
 
   contains
 
-    function sfnc(x) result(val)
-      real(kind=wp), dimension(:), intent(in) :: x
-
-      real(kind=wp) :: val
+    subroutine sfnc(x, val)
+      real(kind=wp), dimension(:), intent(in)  :: x
+      real(kind=wp), dimension(:), intent(out) :: val
 
       PUSH_SUB(base_potential__interpolate__.sfnc)
 
-      call intrpl_eval(intp, x, val, ifnc)
+      ASSERT(size(val)==1)
+      call intrpl_eval(intp, x, val(1), ifnc)
 
       POP_SUB(base_potential__interpolate__.sfnc)
-    end function sfnc
+    end subroutine sfnc
 
     function ifnc(x) result(val)
       real(kind=wp), dimension(:), intent(in) :: x
@@ -561,38 +556,7 @@ contains
   end function base_potential__calc__
 
   ! ---------------------------------------------------------
-  subroutine base_potential__load__r1(this, func)
-    type(base_potential_t), intent(inout) :: this
-
-    interface
-      function func(x) result(f)
-        use kinds_oct_m
-        implicit none
-        real(kind=wp), dimension(:), intent(in) :: x
-        real(kind=wp)                           :: f
-      end function func
-    end interface
-
-    logical :: accu
-    integer :: ierr
-
-    PUSH_SUB(base_potential__load__r1)
-
-    ASSERT(associated(this%config))
-    ASSERT(associated(this%sim))
-    ASSERT(this%nspin==1)
-    call json_get(this%config, "reduce", accu, ierr)
-    if(ierr/=JSON_OK) accu = .false.
-    ASSERT(.not.accu)
-    call base_potential__reset__(this)
-    call storage_load(this%data, func)
-    call base_potential__update__(this)
-    
-    POP_SUB(base_potential__load__r1)
-  end subroutine base_potential__load__r1
-  
-  ! ---------------------------------------------------------
-  subroutine base_potential__load__r2(this, func)
+  subroutine base_potential__load__(this, func)
     type(base_potential_t), intent(inout) :: this
 
     interface
@@ -606,7 +570,7 @@ contains
     logical :: accu
     integer :: ierr
 
-    PUSH_SUB(base_potential__load__r2)
+    PUSH_SUB(base_potential__load__)
 
     ASSERT(associated(this%config))
     ASSERT(associated(this%sim))
@@ -617,8 +581,8 @@ contains
     call storage_load(this%data, func)
     call base_potential__update__(this)
 
-    POP_SUB(base_potential__load__r2)
-  end subroutine base_potential__load__r2
+    POP_SUB(base_potential__load__)
+  end subroutine base_potential__load__
   
   ! ---------------------------------------------------------
   subroutine base_potential__update__(this, energy)
@@ -1145,7 +1109,7 @@ contains
     call base_potential_get(this, use=fuse)
     if(fuse)then
       call base_potential_update(this, energy=.true.)
-      call memo_get(this%memo, "energy", energy, ierr)
+      call memo_get(this%memo, "energy", energy, ierr=ierr)
       ASSERT(ierr==MEMO_OK)
     end if
 

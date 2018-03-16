@@ -68,6 +68,7 @@ module TEMPLATE(base_oct_m)
 #include "template.h"
 
   use refcount_oct_m
+  use uuid_oct_m
 
 #endif
 #if defined(BASE_INCLUDE_MODULE)
@@ -98,8 +99,9 @@ module TEMPLATE(base_oct_m)
   public ::               &
     TEMPLATE(iterator_t)
 
-  public ::            &
-    SPECIAL(register)
+  public ::          &
+    SPECIAL(attach), &
+    SPECIAL(detach)
 
   public ::          &
     SPECIAL(apply),  &
@@ -112,7 +114,7 @@ module TEMPLATE(base_oct_m)
     TEMPLATE(dels),   &
     TEMPLATE(next)
 
-  integer, parameter :: TEMPLATE(NAME_LEN) = TEMPLATE(DICT_NAME_LEN)
+  integer, parameter :: TEMPLATE(NAME_LEN) = 63
 
   integer, parameter :: TEMPLATE(OK)          = TEMPLATE(DICT_OK)
   integer, parameter :: TEMPLATE(KEY_ERROR)   = TEMPLATE(DICT_KEY_ERROR)
@@ -125,11 +127,11 @@ module TEMPLATE(base_oct_m)
   type :: TEMPLATE(husk_t)
     private
     type(BASE_TYPE_NAME), pointer :: self =>null()
-    type(refcount_t),     pointer :: rcnt =>null()
     type(json_object_t),  pointer :: cnfg =>null()
     logical                       :: lock = .false.
     logical                       :: actv = .true.
     integer                       :: type = TEMPLATE(HUSK_DISA)
+    type(uuid_t)                  :: uuid
   end type TEMPLATE(husk_t)
 
 #if !defined(BASE_EXTENDED_ITERATOR_TYPE)
@@ -264,12 +266,10 @@ contains
     select case(this%type)
     case(TEMPLATE(HUSK_DISA))
       ASSERT(.not.associated(this%self))
-      ASSERT(.not.associated(this%rcnt))
       ASSERT(.not.associated(this%cnfg))
       that = .false.
     case(TEMPLATE(HUSK_ASSC))
       ASSERT(associated(this%self))
-      ASSERT(associated(this%rcnt))
       ASSERT(associated(this%cnfg))
       that = .true.
     case default
@@ -325,10 +325,11 @@ contains
 
     PUSH_SUB(TEMPLATE(husk_init))
 
-    nullify(this%self, this%rcnt, this%cnfg)
+    nullify(this%self, this%cnfg)
     this%lock = .false.
     this%actv = .true.
     this%type = TEMPLATE(HUSK_NULL)
+    call uuid_init(this%uuid)
     call TEMPLATE(husk_set)(this, that, config=config, lock=lock, active=active)
 
     POP_SUB(TEMPLATE(husk_init))
@@ -362,9 +363,7 @@ contains
     ASSERT(this%type==TEMPLATE(HUSK_NULL))
     this%self => that
     this%cnfg => config
-    call SPECIAL(register)(that, this%rcnt)
-    ASSERT(associated(this%rcnt))
-    call refcount_inc(this%rcnt)
+    call SPECIAL(attach)(this%self, this%uuid)
     this%type = TEMPLATE(HUSK_ASSC)
     call TEMPLATE(husk_set)(this, lock=lock, active=active)
 
@@ -417,6 +416,7 @@ contains
     PUSH_SUB(TEMPLATE(husk_copy))
 
     call TEMPLATE(husk_end)(this)
+    call uuid_init(this%uuid)
     select case(that%type)
     case(TEMPLATE(HUSK_DISA))
     case(TEMPLATE(HUSK_ASSC))
@@ -436,11 +436,12 @@ contains
 
     PUSH_SUB(TEMPLATE(husk_end))
 
-    if(TEMPLATE(husk_assoc)(this)) call refcount_dec(this%rcnt)
-    nullify(this%self, this%rcnt, this%cnfg)
+    if(TEMPLATE(husk_assoc)(this)) call SPECIAL(detach)(this%self, this%uuid)
+    nullify(this%self, this%cnfg)
     this%lock = .false.
     this%actv = .true.
     this%type = TEMPLATE(HUSK_DISA)
+    call uuid_end(this%uuid)
 
     POP_SUB(TEMPLATE(husk_end))
   end subroutine TEMPLATE(husk_end)
@@ -543,17 +544,30 @@ contains
   end subroutine TEMPLATE(init_copy)
 
   ! ---------------------------------------------------------
-  subroutine SPECIAL(register)(this, that)
-    type(BASE_TYPE_NAME), intent(in) :: this
-    type(refcount_t),    pointer     :: that
+  subroutine SPECIAL(attach)(this, that)
+    type(BASE_TYPE_NAME), intent(inout) :: this
+    type(uuid_t),         intent(in)    :: that
 
-    PUSH_SUB(SPECIAL(register))
+    PUSH_SUB(SPECIAL(attach))
 
-    nullify(that)
-    if(associated(this%rcnt)) that => this%rcnt
+    ASSERT(associated(this%rcnt))
+    call refcount_attach(this%rcnt, that)
 
-    POP_SUB(SPECIAL(register))
-  end subroutine SPECIAL(register)
+    POP_SUB(SPECIAL(attach))
+  end subroutine SPECIAL(attach)
+
+  ! ---------------------------------------------------------
+  subroutine SPECIAL(detach)(this, that)
+    type(BASE_TYPE_NAME), intent(inout) :: this
+    type(uuid_t),         intent(in)    :: that
+
+    PUSH_SUB(SPECIAL(detach))
+
+    ASSERT(associated(this%rcnt))
+    call refcount_detach(this%rcnt, that)
+
+    POP_SUB(SPECIAL(detach))
+  end subroutine SPECIAL(detach)
 
   ! ---------------------------------------------------------
   recursive subroutine SPECIAL(apply)(this, operation, parent, enforce_lock, enforce_active)
@@ -703,7 +717,8 @@ contains
       ASSERT(associated(husk))
       ASSERT(TEMPLATE(husk_assoc)(husk))
       call TEMPLATE(husk_get)(husk, subs)
-      that = TEMPLATE(dict_has_key)(subs%dict, trim(adjustl(name)))
+      ASSERT(associated(subs))
+      that = .true.
       nullify(subs)
     end if
     nullify(husk)

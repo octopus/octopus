@@ -7,7 +7,6 @@
 
 #if defined(DICT_TEMPLATE_NAME)
 #if !defined(DICT_TYPE_NAME)
-#define IDICT_TYPE_NAME_INTERNAL
 #define DICT_TYPE_NAME DECORATE(DICT_TEMPLATE_NAME,t)
 #endif
 #if !defined(DICT_TYPE_MODULE_NAME)
@@ -23,19 +22,14 @@
 #undef HASH_KEY_TEMPLATE_NAME
 #undef HASH_KEY_TYPE_NAME
 #undef HASH_KEY_TYPE_MODULE_NAME
-#undef HASH_KEY_INCLUDE
 #undef HASH_KEY_FUNCTION_NAME
 #undef HASH_KEY_FUNCTION_MODULE_NAME
 #undef HASH_VAL_TEMPLATE_NAME
 #undef HASH_VAL_TYPE_NAME
 #undef HASH_VAL_TYPE_MODULE_NAME
-#undef HASH_VAL_INCLUDE
 #undef HASH_INCLUDE_PREFIX
 #undef HASH_INCLUDE_HEADER
 #undef HASH_INCLUDE_BODY
-
-#define hash_t             dict_t 
-#define hash_iterator_t    dict_iterator_t
 
 #define HASH_TEMPLATE_NAME DICT_TEMPLATE_NAME
 #if defined(DICT_INITIAL_SIZE)
@@ -102,9 +96,6 @@ module TEMPLATE(dict_oct_m)
 
   private
 
-  public ::                  &
-    TEMPLATE(DICT_NAME_LEN)
-
   public ::                     &
     TEMPLATE(DICT_OK),          &
     TEMPLATE(DICT_KEY_ERROR),   &
@@ -139,20 +130,25 @@ module TEMPLATE(dict_oct_m)
 #define TEMPLATE_NAME DICT_TEMPLATE_NAME
 #include "template.h"
 
-  integer, parameter :: TEMPLATE(DICT_NAME_LEN) = 63
-
   integer, parameter :: TEMPLATE(DICT_OK)          = TEMPLATE(HASH_OK)
   integer, parameter :: TEMPLATE(DICT_KEY_ERROR)   = TEMPLATE(HASH_KEY_ERROR)
   integer, parameter :: TEMPLATE(DICT_EMPTY_ERROR) = TEMPLATE(HASH_EMPTY_ERROR)
 
-  interface TEMPLATE(dict_len)
-    module procedure TEMPLATE(hash_len)
-  end interface TEMPLATE(dict_len)
+  type :: TEMPLATE(dict_t)
+    private
+    type(TEMPLATE(hash_t)) :: hash
+  end type TEMPLATE(dict_t)
+
+  type :: TEMPLATE(dict_iterator_t)
+    private
+    type(TEMPLATE(dict_t)), pointer :: self =>null()
+    type(TEMPLATE(hash_iterator_t)) :: iter
+  end type TEMPLATE(dict_iterator_t)
 
   interface TEMPLATE(dict_init)
-    module procedure INTERNAL(hash_init)
-    module procedure INTERNAL(hash_iterator_init_hash)
-    module procedure INTERNAL(hash_iterator_init_iterator)
+    module procedure INTERNAL(dict_init_type)
+    module procedure INTERNAL(dict_iterator_init_type)
+    module procedure INTERNAL(dict_iterator_init_copy)
   end interface TEMPLATE(dict_init)
 
   interface TEMPLATE(dict_pop)
@@ -174,12 +170,12 @@ module TEMPLATE(dict_oct_m)
 
   interface TEMPLATE(dict_copy)
     module procedure INTERNAL(dict_copy)
-    module procedure INTERNAL(hash_iterator_copy)
+    module procedure INTERNAL(dict_iterator_copy)
   end interface TEMPLATE(dict_copy)
 
   interface TEMPLATE(dict_end)
     module procedure INTERNAL(dict_end)
-    module procedure INTERNAL(hash_iterator_end)
+    module procedure INTERNAL(dict_iterator_end)
   end interface TEMPLATE(dict_end)
 
 #endif
@@ -198,11 +194,33 @@ contains
 #include "template.h"
 
   ! ---------------------------------------------------------
+  elemental function TEMPLATE(dict_len)(this) result(len)
+    type(TEMPLATE(dict_t)), intent(in) :: this
+
+    integer :: len
+
+    len = TEMPLATE(hash_len)(this%hash)
+
+  end function TEMPLATE(dict_len)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(dict_init_type)(this, size)
+    type(TEMPLATE(dict_t)), intent(out) :: this
+    integer,      optional, intent(in)  :: size
+
+    PUSH_SUB(INTERNAL(dict_init_type))
+
+    call TEMPLATE(hash_init)(this%hash, size)
+
+    POP_SUB(INTERNAL(dict_init_type))
+  end subroutine INTERNAL(dict_init_type)
+
+  ! ---------------------------------------------------------
   subroutine INTERNAL(dict_pop_item)(this, key, val, ierr)
-    type(TEMPLATE(dict_t)), intent(inout) :: this
-    character(len=*),       intent(out)   :: key
-    type(DICT_TYPE_NAME),  pointer        :: val
-    integer,      optional, intent(out)   :: ierr
+    type(TEMPLATE(dict_t)),        intent(inout) :: this
+    character(len=*),              intent(out)   :: key
+    type(DICT_TYPE_NAME), pointer, intent(out)   :: val
+    integer,             optional, intent(out)   :: ierr
 
     type(strng_t), pointer :: str
     integer                :: jerr
@@ -210,7 +228,7 @@ contains
     PUSH_SUB(INTERNAL(dict_pop_item))
 
     nullify(val, str)
-    call TEMPLATE(hash_pop)(this, str, val, jerr)
+    call TEMPLATE(hash_pop)(this%hash, str, val, jerr)
     if(jerr==TEMPLATE(DICT_OK))then
       call strng_get(str, key)
       call strng_del(str)
@@ -233,7 +251,7 @@ contains
     PUSH_SUB(INTERNAL(dict_pop_key))
 
     nullify(str)
-    call TEMPLATE(hash_pop)(this, str, jerr)
+    call TEMPLATE(hash_pop)(this%hash, str, jerr)
     if(jerr==TEMPLATE(DICT_OK))then
       call strng_get(str, key)
       call strng_del(str)
@@ -246,9 +264,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine INTERNAL(dict_pop_val)(this, val, ierr)
-    type(TEMPLATE(dict_t)), intent(inout) :: this
-    type(DICT_TYPE_NAME),  pointer        :: val
-    integer,      optional, intent(out)   :: ierr
+    type(TEMPLATE(dict_t)),        intent(inout) :: this
+    type(DICT_TYPE_NAME), pointer, intent(out)   :: val
+    integer,             optional, intent(out)   :: ierr
  
     type(strng_t), pointer :: str
     integer                :: jerr
@@ -256,7 +274,7 @@ contains
     PUSH_SUB(INTERNAL(dict_pop_val))
  
     nullify(val, str)
-    call TEMPLATE(hash_pop)(this, str, val, jerr)
+    call TEMPLATE(hash_pop)(this%hash, str, val, jerr)
     if(jerr==TEMPLATE(DICT_OK)) call strng_del(str)
     nullify(str)
     if(present(ierr)) ierr = jerr
@@ -276,7 +294,7 @@ contains
     PUSH_SUB(TEMPLATE(dict_has_key))
 
     call strng_init(str, key)
-    has = TEMPLATE(hash_has_key)(this, str)
+    has = TEMPLATE(hash_has_key)(this%hash, str)
     call strng_end(str)
 
     POP_SUB(TEMPLATE(dict_has_key))
@@ -294,9 +312,9 @@ contains
     PUSH_SUB(TEMPLATE(dict_set))
 
     nullify(str)
-    call strng_new(str, key)
-    has = TEMPLATE(hash_has_key)(this, str)
-    call TEMPLATE(hash_set)(this, str, val)
+    str => strng_new(key)
+    has = TEMPLATE(hash_has_key)(this%hash, str)
+    call TEMPLATE(hash_set)(this%hash, str, val)
     if(has) call strng_del(str)
     nullify(str)
 
@@ -305,10 +323,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine TEMPLATE(dict_get)(this, key, val, ierr)
-    type(TEMPLATE(dict_t)), intent(in)  :: this
-    character(len=*),       intent(in)  :: key
-    type(DICT_TYPE_NAME),  pointer      :: val
-    integer,      optional, intent(out) :: ierr
+    type(TEMPLATE(dict_t)),        intent(in)  :: this
+    character(len=*),              intent(in)  :: key
+    type(DICT_TYPE_NAME), pointer, intent(out) :: val
+    integer,             optional, intent(out) :: ierr
 
     type(strng_t) :: str
 
@@ -316,7 +334,7 @@ contains
 
     nullify(val)
     call strng_init(str, key)
-    call TEMPLATE(hash_get)(this, str, val, ierr)
+    call TEMPLATE(hash_get)(this%hash, str, val, ierr)
     call strng_end(str)
 
     POP_SUB(TEMPLATE(dict_get))
@@ -324,10 +342,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine INTERNAL(dict_del_val)(this, key, val, ierr)
-    type(TEMPLATE(dict_t)), intent(inout) :: this
-    character(len=*),       intent(in)    :: key
-    type(DICT_TYPE_NAME),  pointer        :: val
-    integer,      optional, intent(out)   :: ierr
+    type(TEMPLATE(dict_t)),        intent(inout) :: this
+    character(len=*),              intent(in)    :: key
+    type(DICT_TYPE_NAME), pointer, intent(out)   :: val
+    integer,             optional, intent(out)   :: ierr
 
     type(strng_t), pointer :: pkey
     type(strng_t)          :: str
@@ -337,7 +355,7 @@ contains
 
     nullify(pkey, val)
     call strng_init(str, key)
-    call TEMPLATE(hash_del)(this, str, pkey, val, jerr)
+    call TEMPLATE(hash_del)(this%hash, str, pkey, val, jerr)
     if(jerr==TEMPLATE(DICT_OK))call strng_del(pkey)
     call strng_end(str)
     nullify(pkey)
@@ -368,23 +386,22 @@ contains
     type(TEMPLATE(dict_t)), intent(inout) :: this
     type(TEMPLATE(dict_t)), intent(in)    :: that
 
-    type(TEMPLATE(dict_iterator_t)) :: iter
-    type(strng_t),          pointer :: ikey, okey
+    type(TEMPLATE(hash_iterator_t)) :: iter
+    type(strng_t),          pointer :: key
     type(DICT_TYPE_NAME),   pointer :: val
     integer                         :: ierr
 
     PUSH_SUB(TEMPLATE(dict_extend))
 
-    call TEMPLATE(dict_init)(iter, that)
+    call TEMPLATE(hash_init)(iter, that%hash)
     do
-      nullify(ikey, okey, val)
-      call TEMPLATE(hash_next)(iter, ikey, val, ierr)
+      nullify(key, val)
+      call TEMPLATE(hash_next)(iter, key, val, ierr)
       if(ierr/=TEMPLATE(DICT_OK))exit
-      call strng_new(okey, ikey)
-      call TEMPLATE(hash_set)(this, okey, val)
+      call TEMPLATE(hash_set)(this%hash, strng_new(key), val)
     end do
-    nullify(ikey, val)
-    call TEMPLATE(dict_end)(iter)
+    nullify(key, val)
+    call TEMPLATE(hash_end)(iter)
 
     POP_SUB(TEMPLATE(dict_extend))
   end subroutine TEMPLATE(dict_extend)
@@ -428,16 +445,42 @@ contains
     PUSH_SUB(INTERNAL(dict_end))
 
     call INTERNAL(dict_purge)(this)
-    call TEMPLATE(hash_end)(this)
+    call TEMPLATE(hash_end)(this%hash)
 
     POP_SUB(INTERNAL(dict_end))
   end subroutine INTERNAL(dict_end)
 
   ! ---------------------------------------------------------
+  subroutine INTERNAL(dict_iterator_init_type)(this, that)
+    type(TEMPLATE(dict_iterator_t)), intent(out) :: this
+    type(TEMPLATE(dict_t)),  target, intent(in)  :: that
+
+    PUSH_SUB(INTERNAL(dict_iterator_init_type))
+
+    this%self => that
+    call TEMPLATE(hash_init)(this%iter, that%hash)
+
+    POP_SUB(INTERNAL(dict_iterator_init_type))
+  end subroutine INTERNAL(dict_iterator_init_type)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(dict_iterator_init_copy)(this, that)
+    type(TEMPLATE(dict_iterator_t)), intent(out) :: this
+    type(TEMPLATE(dict_iterator_t)), intent(in)  :: that
+
+    PUSH_SUB(INTERNAL(dict_iterator_init_copy))
+
+    ASSERT(associated(that%self))
+    call TEMPLATE(dict_copy)(this, that)
+
+    POP_SUB(INTERNAL(dict_iterator_init_copy))
+  end subroutine INTERNAL(dict_iterator_init_copy)
+
+  ! ---------------------------------------------------------
   subroutine INTERNAL(dict_iterator_next_item)(this, key, val, ierr)
     type(TEMPLATE(dict_iterator_t)), intent(inout) :: this
     character(len=*),                intent(out)   :: key
-    type(DICT_TYPE_NAME),           pointer        :: val
+    type(DICT_TYPE_NAME),   pointer, intent(out)   :: val
     integer,               optional, intent(out)   :: ierr
 
     type(strng_t), pointer :: str
@@ -446,7 +489,7 @@ contains
     PUSH_SUB(INTERNAL(dict_iterator_next_item))
 
     nullify(str)
-    call TEMPLATE(hash_next)(this, str, val, jerr)
+    call TEMPLATE(hash_next)(this%iter, str, val, jerr)
     if(jerr==TEMPLATE(DICT_OK)) call strng_get(str, key)
     nullify(str)
     if(present(ierr)) ierr = jerr
@@ -466,7 +509,7 @@ contains
     PUSH_SUB(INTERNAL(dict_iterator_next_key))
 
     nullify(str)
-    call TEMPLATE(hash_next)(this, str, jerr)
+    call TEMPLATE(hash_next)(this%iter, str, jerr)
     if(jerr==TEMPLATE(DICT_OK)) call strng_get(str, that)
     nullify(str)
     if(present(ierr)) ierr = jerr
@@ -477,16 +520,41 @@ contains
   ! ---------------------------------------------------------
   subroutine INTERNAL(dict_iterator_next_val)(this, that, ierr)
     type(TEMPLATE(dict_iterator_t)), intent(inout) :: this
-    type(DICT_TYPE_NAME),           pointer        :: that
+    type(DICT_TYPE_NAME),   pointer, intent(out)   :: that
     integer,               optional, intent(out)   :: ierr
 
     PUSH_SUB(INTERNAL(dict_iterator_next_val))
 
     nullify(that)
-    call TEMPLATE(hash_next)(this, that, ierr)
+    call TEMPLATE(hash_next)(this%iter, that, ierr)
 
     POP_SUB(INTERNAL(dict_iterator_next_val))
   end subroutine INTERNAL(dict_iterator_next_val)
+
+  ! ---------------------------------------------------------
+  subroutine INTERNAL(dict_iterator_copy)(this, that)
+    type(TEMPLATE(dict_iterator_t)), intent(out) :: this
+    type(TEMPLATE(dict_iterator_t)), intent(in)  :: that
+
+    PUSH_SUB(INTERNAL(dict_iterator_copy))
+
+    call TEMPLATE(dict_end)(this)
+    if(associated(that%self))then
+      this%self => that%self
+      call TEMPLATE(hash_init)(this%iter, that%iter)
+    end if
+
+    POP_SUB(INTERNAL(dict_iterator_copy))
+  end subroutine INTERNAL(dict_iterator_copy)
+
+  ! ---------------------------------------------------------
+  elemental subroutine INTERNAL(dict_iterator_end)(this)
+    type(TEMPLATE(dict_iterator_t)), intent(inout) :: this
+
+    nullify(this%self)
+    call TEMPLATE(hash_end)(this%iter)
+
+  end subroutine INTERNAL(dict_iterator_end)
 
 #endif
 #if defined(DICT_INCLUDE_MODULE)
@@ -495,31 +563,17 @@ end module TEMPLATE(dict_oct_m)
 
 #endif
 
-#undef HASH_OK
-#undef HASH_KEY_ERROR
-
-#undef HASH_EMPTY_ERROR
-#undef hash_t
-#undef hash_iterator_t
-
 #undef HASH_TEMPLATE_NAME
 #undef HASH_INITIAL_SIZE
 #undef HASH_GROWTH_FACTOR
 #undef HASH_KEY_TEMPLATE_NAME
 #undef HASH_KEY_TYPE_NAME
 #undef HASH_KEY_TYPE_MODULE_NAME
-#undef HASH_KEY_INCLUDE
 #undef HASH_KEY_FUNCTION_NAME
 #undef HASH_KEY_FUNCTION_MODULE_NAME
 #undef HASH_VAL_TEMPLATE_NAME
 #undef HASH_VAL_TYPE_NAME
 #undef HASH_VAL_TYPE_MODULE_NAME
-#undef HASH_VAL_INCLUDE
-
-#if defined(IDICT_TYPE_NAME_INTERNAL)
-#undef IDICT_TYPE_NAME_INTERNAL
-#undef DICT_TYPE_NAME
-#endif
 
 #undef TEMPLATE_NAME
 

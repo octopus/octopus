@@ -31,6 +31,7 @@ module base_hamiltonian_oct_m
   use profiling_oct_m
   use simulation_oct_m
   use storage_oct_m
+  use uuid_oct_m
 
 #define DICT_TEMPLATE_NAME term
 #define DICT_TYPE_NAME term_husk_t
@@ -113,19 +114,19 @@ module base_hamiltonian_oct_m
     type(base_potential_t),   pointer :: potn =>null()
     type(base_functional_t),  pointer :: fnct =>null()
     type(base_hamiltonian_t), pointer :: hmlt =>null()
-    type(refcount_t),         pointer :: rcnt =>null()
     integer                           :: type = TERM_TYPE_NONE
     integer                           :: stat = TERM_STAT_DISA
+    type(uuid_t)                      :: uuid
   end type term_intrf_t
 
   type :: term_husk_t
     private
     type(term_intrf_t), pointer :: self =>null()
-    type(refcount_t),   pointer :: rcnt =>null()
     integer                     :: stat = TERM_STAT_DISA
     logical                     :: lock = .false.
     logical                     :: actv = .true.
     real(kind=wp)               :: fctr = 1.0_wp
+    type(uuid_t)                :: uuid
   end type term_husk_t
 
   type :: base_hamiltonian_t
@@ -281,7 +282,6 @@ contains
     nullify(this)
     SAFE_ALLOCATE(this)
     call term_intrf_init(this, sys, config)
-    ASSERT(associated(this%rcnt))
     
     POP_SUB(term_intrf_new_type)
   end function term_intrf_new_type
@@ -305,7 +305,6 @@ contains
     else
       ASSERT(.FALSE.)
     end if
-    ASSERT(associated(this%rcnt))
 
     POP_SUB(term_intrf_new_copy)
   end function term_intrf_new_copy
@@ -397,7 +396,6 @@ contains
     that = .false.
     select case(this%stat)
     case(TERM_STAT_DISA, TERM_STAT_NULL)
-      ASSERT(.not.associated(this%rcnt))
       select case(this%type)
       case(TERM_TYPE_NONE)
         ASSERT(.not.associated(this%term))
@@ -409,7 +407,6 @@ contains
         ASSERT(.false.)
       end select
     case(TERM_STAT_ASSC)
-      ASSERT(associated(this%rcnt))
       select case(this%type)
       case(TERM_TYPE_TERM)
         ASSERT(associated(this%term))
@@ -462,6 +459,7 @@ contains
     nullify(term, potn, fnct, hmlt)
     this%type = TERM_TYPE_NONE
     this%stat = TERM_STAT_NULL
+    call uuid_init(this%uuid)
     call json_get(config, "type", type, ierr)
     ASSERT(ierr==JSON_OK)
     select case(type)
@@ -504,6 +502,7 @@ contains
     nullify(term, potn, fnct, hmlt)
     this%type = TERM_TYPE_NONE
     this%stat = TERM_STAT_NULL
+    call uuid_init(this%uuid)
     select case(that%type)
     case(TERM_TYPE_TERM)
       call term_intrf_get(that, term)
@@ -541,6 +540,7 @@ contains
 
     this%type = TERM_TYPE_NONE
     this%stat = TERM_STAT_NULL
+    call uuid_init(this%uuid)
     call term_intrf_set(this, that)
 
     POP_SUB(term_intrf_init_term)
@@ -555,6 +555,7 @@ contains
 
     this%type = TERM_TYPE_NONE
     this%stat = TERM_STAT_NULL
+    call uuid_init(this%uuid)
     call term_intrf_set(this, that)
 
     POP_SUB(term_intrf_init_potn)
@@ -569,6 +570,7 @@ contains
 
     this%type = TERM_TYPE_NONE
     this%stat = TERM_STAT_NULL
+    call uuid_init(this%uuid)
     call term_intrf_set(this, that)
 
     POP_SUB(term_intrf_init_fnct)
@@ -583,23 +585,59 @@ contains
 
     this%type = TERM_TYPE_NONE
     this%stat = TERM_STAT_NULL
+    call uuid_init(this%uuid)
     call term_intrf_set(this, that)
 
     POP_SUB(term_intrf_init_hmlt)
   end subroutine term_intrf_init_hmlt
 
   ! ---------------------------------------------------------
-  subroutine term_intrf__register__(this, that)
-    type(term_intrf_t),        intent(in)  :: this
-    type(refcount_t), pointer, intent(out) :: that
+  subroutine term_intrf__attach__(this, that)
+    type(term_intrf_t), intent(inout) :: this
+    type(uuid_t),       intent(in)    :: that
 
-    PUSH_SUB(term_intrf__register__)
+    PUSH_SUB(term_intrf__attach__)
 
-    nullify(that)
-    if(associated(this%rcnt)) that => this%rcnt
+    ASSERT(term_intrf_assoc(this))  
+    select case(this%type)
+    case(TERM_TYPE_TERM)
+      call base_term__attach__(this%term, that)
+    case(TERM_TYPE_POTN)
+      call base_potential__attach__(this%potn, that)
+    case(TERM_TYPE_FNCT)
+      call base_functional__attach__(this%fnct, that)
+    case(TERM_TYPE_HMLT)
+      call base_hamiltonian__attach__(this%hmlt, that)
+    case default
+      ASSERT(.false.)
+    end select
 
-    POP_SUB(term_intrf__register__)
-  end subroutine term_intrf__register__
+    POP_SUB(term_intrf__attach__)
+  end subroutine term_intrf__attach__
+
+  ! ---------------------------------------------------------
+  subroutine term_intrf__detach__(this, that)
+    type(term_intrf_t), intent(inout) :: this
+    type(uuid_t),       intent(in)    :: that
+
+    PUSH_SUB(term_intrf__detach__)
+
+    ASSERT(term_intrf_assoc(this))  
+    select case(this%type)
+    case(TERM_TYPE_TERM)
+      call base_term__detach__(this%term, that)
+    case(TERM_TYPE_POTN)
+      call base_potential__detach__(this%potn, that)
+    case(TERM_TYPE_FNCT)
+      call base_functional__detach__(this%fnct, that)
+    case(TERM_TYPE_HMLT)
+      call base_hamiltonian__detach__(this%hmlt, that)
+    case default
+      ASSERT(.false.)
+    end select
+
+    POP_SUB(term_intrf__detach__)
+  end subroutine term_intrf__detach__
 
   ! ---------------------------------------------------------
   recursive subroutine term_intrf__start__(this, sim)
@@ -840,9 +878,7 @@ contains
     ASSERT(this%stat==TERM_STAT_NULL)
     ASSERT(.not.term_intrf_assoc(this))
     this%term => that
-    call base_term__register__(this%term, this%rcnt)
-    ASSERT(associated(this%rcnt))
-    call refcount_inc(this%rcnt)
+    call base_term__attach__(this%term, this%uuid)
     this%type = TERM_TYPE_TERM
     this%stat = TERM_STAT_ASSC
 
@@ -860,9 +896,7 @@ contains
     ASSERT(this%stat==TERM_STAT_NULL)
     ASSERT(.not.term_intrf_assoc(this))
     this%potn => that
-    call base_potential__register__(this%potn, this%rcnt)
-    ASSERT(associated(this%rcnt))
-    call refcount_inc(this%rcnt)
+    call base_potential__attach__(this%potn, this%uuid)
     this%type = TERM_TYPE_POTN
     this%stat = TERM_STAT_ASSC
 
@@ -880,9 +914,7 @@ contains
     ASSERT(this%stat==TERM_STAT_NULL)
     ASSERT(.not.term_intrf_assoc(this))
     this%fnct => that
-    call base_functional__register__(this%fnct, this%rcnt)
-    ASSERT(associated(this%rcnt))
-    call refcount_inc(this%rcnt)
+    call base_functional__attach__(this%fnct, this%uuid)
     this%type = TERM_TYPE_FNCT
     this%stat = TERM_STAT_ASSC
 
@@ -900,9 +932,7 @@ contains
     ASSERT(this%stat==TERM_STAT_NULL)
     ASSERT(.not.term_intrf_assoc(this))
     this%hmlt => that
-    call base_hamiltonian__register__(this%hmlt, this%rcnt)
-    ASSERT(associated(this%rcnt))
-    call refcount_inc(this%rcnt)
+    call base_hamiltonian__attach__(this%hmlt, this%uuid)
     this%type = TERM_TYPE_HMLT
     this%stat = TERM_STAT_ASSC
 
@@ -1065,6 +1095,7 @@ contains
 
     nullify(term, potn, fnct, hmlt)
     call term_intrf_end(this)
+    call uuid_init(this%uuid)
     select case(that%stat)
     case(TERM_STAT_DISA)
     case(TERM_STAT_ASSC)
@@ -1109,15 +1140,18 @@ contains
     case(TERM_STAT_DISA)
     case(TERM_STAT_ASSC)
       ASSERT(term_intrf_assoc(this))
-      call refcount_dec(this%rcnt)
       select case(this%type)
       case(TERM_TYPE_TERM)
+        call base_term__detach__(this%term, this%uuid)
         call base_term_del(this%term)
       case(TERM_TYPE_POTN)
+        call base_potential__detach__(this%potn, this%uuid)
         call base_potential_del(this%potn)
       case(TERM_TYPE_FNCT)
+        call base_functional__detach__(this%fnct, this%uuid)
         call base_functional_del(this%fnct)
       case(TERM_TYPE_HMLT)
+        call base_hamiltonian__detach__(this%hmlt, this%uuid)
         call base_hamiltonian_del(this%hmlt)
       case default
         ASSERT(.false.)
@@ -1125,8 +1159,9 @@ contains
     case default
       ASSERT(.false.)
     end select
-    nullify(this%term, this%potn, this%fnct, this%hmlt, this%rcnt)
+    nullify(this%term, this%potn, this%fnct, this%hmlt)
     this%type = TERM_STAT_DISA
+    call uuid_end(this%uuid)
 
     POP_SUB(term_intrf_end)
   end subroutine term_intrf_end
@@ -1175,12 +1210,10 @@ contains
     select case(this%stat)
     case(TERM_STAT_DISA)
       ASSERT(.not.associated(this%self))
-      ASSERT(.not.associated(this%rcnt))
       that = .false.
     case(TERM_STAT_ASSC)
       ASSERT(associated(this%self))
       ASSERT(term_intrf_assoc(this%self))
-      ASSERT(associated(this%rcnt))
       that = .true.
     case default
       ASSERT(.false.)
@@ -1199,11 +1232,12 @@ contains
 
     PUSH_SUB(term_husk_init)
 
-    nullify(this%self, this%rcnt)
+    nullify(this%self)
     this%stat = TERM_STAT_NULL
     this%lock = .false.
     this%actv = .true.
     this%fctr = 1.0_wp
+    call uuid_init(this%uuid)
     call term_husk_set(this, that, factor=factor, lock=lock, active=active)
 
     POP_SUB(term_husk_init)
@@ -1238,9 +1272,7 @@ contains
 
     ASSERT(this%stat==TERM_STAT_NULL)
     this%self => that
-    call term_intrf__register__(that, this%rcnt)
-    ASSERT(associated(this%rcnt))
-    call refcount_inc(this%rcnt)
+    call term_intrf__attach__(this%self, this%uuid)
     this%stat = TERM_STAT_ASSC
     if(present(factor).or.present(lock).or.present(active))&
       call term_husk_set(this, factor=factor, lock=lock, active=active)
@@ -1291,6 +1323,7 @@ contains
     PUSH_SUB(term_husk_copy)
 
     call term_husk_end(this)
+    call uuid_init(this%uuid)
     select case(that%stat)
     case(TERM_STAT_DISA)
     case(TERM_STAT_ASSC)
@@ -1310,12 +1343,13 @@ contains
 
     PUSH_SUB(term_husk_end)
 
-    if(term_husk_assoc(this)) call refcount_dec(this%rcnt)
-    nullify(this%self, this%rcnt)
+    if(term_husk_assoc(this)) call term_intrf__detach__(this%self, this%uuid)
+    nullify(this%self)
     this%stat = TERM_STAT_DISA
     this%lock = .false.
     this%actv = .true.
     this%fctr = 1.0_wp
+    call uuid_end(this%uuid)
     
     POP_SUB(term_husk_end)
   end subroutine term_husk_end
@@ -1445,7 +1479,7 @@ contains
     type(json_object_t),      intent(in)  :: config
 
     type(json_object_iterator_t)             :: iter
-    character(len=BASE_HAMILTONIAN_NAME_LEN) :: name, rnam
+    character(len=BASE_HAMILTONIAN_NAME_LEN) :: name
     type(json_object_t),             pointer :: trms, cnfg, defn
     real(kind=wp)                            :: fctr
     logical                                  :: lock, actv
@@ -2379,7 +2413,7 @@ contains
     ASSERT(associated(this%config))
     ASSERT(associated(this%sys))
     call base_hamiltonian_update(this, energy=.true.)
-    call memo_get(this%memo, "energy", energy, ierr)
+    call memo_get(this%memo, "energy", energy, ierr=ierr)
     ASSERT(ierr==MEMO_OK)
     
     POP_SUB(base_hamiltonian_get_energy)
