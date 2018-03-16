@@ -33,6 +33,7 @@ module species_oct_m
   use parser_oct_m
   use profiling_oct_m
   use ps_oct_m
+  use pseudo_oct_m
   use space_oct_m
   use splines_oct_m
   use string_oct_m
@@ -86,7 +87,9 @@ module species_oct_m
     species_get_iwf_radius,        &
     species_get_ps_radius,         &
     species_copy,                  &
-    species_end
+    species_end,                   &
+    species_x_functional,          &
+    species_c_functional
 
   integer, public, parameter :: LABEL_LEN=15
 
@@ -1155,6 +1158,32 @@ contains
     species_is_ps = spec%type == SPECIES_PSEUDO .or. spec%type == SPECIES_PSPIO
  
   end function species_is_ps
+
+  ! ---------------------------------------------------------
+
+  integer pure function species_x_functional(spec)
+    type(species_t), intent(in) :: spec
+
+    if(species_is_ps(spec)) then
+      species_x_functional = spec%ps%exchange_functional
+    else
+      species_x_functional = PSEUDO_EXCHANGE_ANY
+    end if
+ 
+  end function species_x_functional
+
+  ! ---------------------------------------------------------
+
+  integer pure function species_c_functional(spec)
+    type(species_t), intent(in) :: spec
+
+    if(species_is_ps(spec)) then
+      species_c_functional = spec%ps%exchange_functional
+    else
+      species_c_functional = PSEUDO_CORRELATION_ANY
+    end if
+ 
+  end function species_c_functional
 
   ! ---------------------------------------------------------
 

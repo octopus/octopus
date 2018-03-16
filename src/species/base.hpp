@@ -55,15 +55,19 @@ namespace pseudopotential {
 
   // these values match libxc convention
   enum class exchange {
-    UNKNOWN                    = 0,
-    LDA                        = 1,
+    UNKNOWN                    =  -2,
+    ANY                        =  -1,
+    NONE                       =   0,    
+    LDA                        =   1,
     PBE                        = 101,
     PBE_SOL                    = 116
   };
 
   enum class correlation {
-    UNKNOWN                    = 0,
-    LDA_PW                     = 12,
+    UNKNOWN                    =  -2,
+    ANY                        =  -1,
+    NONE                       =   0,
+    LDA_PW                     =  12,
     PBE                        = 130,
     PBESOL                     = 133
   };
