@@ -1190,7 +1190,7 @@ contains
     else
       species_x_functional = PSEUDO_EXCHANGE_ANY
     end if
- 
+
   end function species_x_functional
 
   ! ---------------------------------------------------------
@@ -1202,7 +1202,7 @@ contains
       species_c_functional = spec%ps%correlation_functional
 
       ! if we do not know, try the pseudpotential set
-      if(species_c_functional == PSEUDO_EXCHANGE_UNKNOWN) then
+      if(species_c_functional == PSEUDO_CORRELATION_UNKNOWN) then
         select case(spec%pseudopotential_set)
         case(OPTION__PSEUDOPOTENTIALSET__STANDARD, OPTION__PSEUDOPOTENTIALSET__HGH_LDA, OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
           species_c_functional = OPTION__XCFUNCTIONAL__LDA_C_PZ_MOD/1000
@@ -1213,7 +1213,7 @@ contains
     else
       species_c_functional = PSEUDO_CORRELATION_ANY
     end if
- 
+
   end function species_c_functional
 
   ! ---------------------------------------------------------

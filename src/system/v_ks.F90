@@ -214,7 +214,7 @@ contains
     ! parse the XC functional
     default = 0
 
-    call get_functional_from_pseudos()
+    call get_functional_from_pseudos(pseudo_x_functional, pseudo_c_functional)
 
     if(pseudo_x_functional /= PSEUDO_EXCHANGE_ANY) then
       default = pseudo_x_functional
@@ -227,7 +227,7 @@ contains
         end select
       end if
     end if
-
+    
     ASSERT(default >= 0)
     
     if(pseudo_c_functional /= PSEUDO_CORRELATION_ANY) then
@@ -244,6 +244,13 @@ contains
 
     ASSERT(default >= 0)
 
+    if(.not. parse_is_defined('XCFunctional') &
+      .and. (pseudo_x_functional /= PSEUDO_EXCHANGE_ANY .or. pseudo_c_functional /= PSEUDO_CORRELATION_ANY)) then
+      call messages_write('Info: the XCFunctional has been selected to match the pseudopotentials', new_line = .true.)
+      call messages_write('      used in the calculation.')
+      call messages_info()
+    end if
+    
     ! The description of this variable can be found in file src/xc/functionals_list.F90
     call parse_variable('XCFunctional', default, val)
 
@@ -522,39 +529,41 @@ contains
 
   contains
 
-    subroutine get_functional_from_pseudos()
-
+    subroutine get_functional_from_pseudos(x_functional, c_functional)
+      integer, intent(out) :: x_functional
+      integer, intent(out) :: c_functional
+      
       integer :: xf, cf, ispecies
       logical :: warned_inconsistent
       
-      pseudo_x_functional = PSEUDO_EXCHANGE_ANY
-      pseudo_c_functional = PSEUDO_CORRELATION_ANY
+      x_functional = PSEUDO_EXCHANGE_ANY
+      c_functional = PSEUDO_CORRELATION_ANY
       
       warned_inconsistent = .false.
       do ispecies = 1, geo%nspecies
         xf = species_x_functional(geo%species(ispecies))
         cf = species_c_functional(geo%species(ispecies))
-        
+
         if(xf == PSEUDO_EXCHANGE_UNKNOWN .or. cf == PSEUDO_CORRELATION_UNKNOWN) then
           call messages_write("Unknown XC functional for species '"//trim(species_label(geo%species(ispecies)))//"'")
           call messages_warning()
           cycle
         end if
 
-        if(pseudo_x_functional == PSEUDO_EXCHANGE_ANY) then
-          pseudo_x_functional = xf
+        if(x_functional == PSEUDO_EXCHANGE_ANY) then
+          x_functional = xf
         else
-          if(xf /= pseudo_x_functional .and. .not. warned_inconsistent) then
+          if(xf /= x_functional .and. .not. warned_inconsistent) then
             call messages_write('Inconsistent XC functional detected between species');
             call messages_warning()
             warned_inconsistent = .true.
           end if
         end if
 
-        if(pseudo_c_functional == PSEUDO_CORRELATION_ANY) then
-          pseudo_c_functional = cf
+        if(c_functional == PSEUDO_CORRELATION_ANY) then
+          c_functional = cf
         else
-          if(cf /= pseudo_c_functional .and. .not. warned_inconsistent) then
+          if(cf /= c_functional .and. .not. warned_inconsistent) then
             call messages_write('Inconsistent XC functional detected between species');
             call messages_warning()
             warned_inconsistent = .true.
@@ -562,6 +571,9 @@ contains
         end if
         
       end do
+      
+      ASSERT(x_functional /= PSEUDO_EXCHANGE_UNKNOWN)
+      ASSERT(c_functional /= PSEUDO_CORRELATION_UNKNOWN)
       
     end subroutine get_functional_from_pseudos
   end subroutine v_ks_init

@@ -81,15 +81,17 @@ module pseudo_oct_m
     PSEUDO_FORMAT_HGH                        = 782
 
   integer, parameter, public ::                       &
-    PSEUDO_EXCHANGE_UNKNOWN                  = -1,    &
-    PSEUDO_EXCHANGE_ANY                      = 0,     &    
+    PSEUDO_EXCHANGE_UNKNOWN                  = -2,    &
+    PSEUDO_EXCHANGE_ANY                      = -1,    &
+    PSEUDO_EXCHANGE_NONE                     = 0,     &    
     PSEUDO_EXCHANGE_LDA                      = 1,     &
     PSEUDO_EXCHANGE_PBE                      = 101,   &
     PSEUDO_EXCHANGE_PBE_SOL                  = 116
 
   integer, parameter, public ::                       &
-    PSEUDO_CORRELATION_UNKNOWN               = -1,    &
-    PSEUDO_CORRELATION_ANY                   = 0,     &    
+    PSEUDO_CORRELATION_UNKNOWN               = -2,    &
+    PSEUDO_CORRELATION_ANY                   = -1,     &
+    PSEUDO_CORRELATION_NONE                  = 0,     &    
     PSEUDO_CORRELATION_LDA_PW                = 12,    &
     PSEUDO_CORRELATION_PBE                   = 130,   &
     PSEUDO_CORRELATION_PBESOL                = 133
