@@ -50,7 +50,9 @@ module pseudo_oct_m
     pseudo_has_density,         &
     pseudo_density,             &
     pseudo_nwavefunctions,      &
-    pseudo_wavefunction
+    pseudo_wavefunction,        &
+    pseudo_exchange,            &
+    pseudo_correlation
   
   !the following sets of values have to match with those on base.hpp
   integer, parameter, public ::               &
@@ -77,7 +79,17 @@ module pseudo_oct_m
     PSEUDO_FORMAT_CPI                        = 780,   &
     PSEUDO_FORMAT_FHI                        = 781,   &
     PSEUDO_FORMAT_HGH                        = 782
-    
+
+  ! we only define these values here, the specific functionals are
+  ! obtained from libxc
+  integer, parameter, public ::                       &
+    PSEUDO_EXCHANGE_UNKNOWN                  = -2,    &
+    PSEUDO_EXCHANGE_ANY                      = -1
+
+  integer, parameter, public ::                       &
+    PSEUDO_CORRELATION_UNKNOWN               = -2,    &
+    PSEUDO_CORRELATION_ANY                   = -1
+  
   type pseudo_t
     private
     integer(8) :: dummy
@@ -283,6 +295,24 @@ module pseudo_oct_m
       real(8),          intent(out)   :: wf
     end subroutine pseudo_wavefunction
 
+    ! -------------------------------------------------
+
+    integer function pseudo_exchange(pseudo)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+    end function pseudo_exchange
+
+    ! -------------------------------------------------
+
+    integer function pseudo_correlation(pseudo)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+    end function pseudo_correlation
+    
   end interface
   
 contains

@@ -130,6 +130,8 @@ module ps_oct_m
     logical :: hamann
     integer :: pseudo_format
     integer :: pseudo_type
+    integer :: exchange_functional
+    integer :: correlation_functional
   end type ps_t
 
   FLOAT, parameter :: eps = CNST(1.0e-8)
@@ -158,6 +160,9 @@ contains
     
     PUSH_SUB(ps_init)
 
+    ps%exchange_functional = PSEUDO_EXCHANGE_UNKNOWN
+    ps%correlation_functional = PSEUDO_CORRELATION_UNKNOWN
+    
     ! Fix the threshold to calculate the radius of the projector-function localization spheres:
 
     call messages_obsolete_variable('SpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
@@ -318,7 +323,9 @@ contains
       if(ierr == 0) then
         ps%pseudo_format = pseudo_format(ps_xml%pseudo)
         ps%pseudo_type   = pseudo_type(ps_xml%pseudo)
-        
+        ps%exchange_functional = pseudo_exchange(ps_xml%pseudo)
+        ps%correlation_functional = pseudo_correlation(ps_xml%pseudo)
+
         call valconf_null(ps%conf)
         
         ps%z      = z
