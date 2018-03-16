@@ -60,7 +60,8 @@ namespace pseudopotential {
     NONE                       =   0,    
     LDA                        =   1,
     PBE                        = 101,
-    PBE_SOL                    = 116
+    PBE_SOL                    = 116,
+    B88                        = 106
   };
 
   enum class correlation {
@@ -69,7 +70,8 @@ namespace pseudopotential {
     NONE                       =   0,
     LDA_PW                     =  12,
     PBE                        = 130,
-    PBE_SOL                    = 133
+    PBE_SOL                    = 133,
+    LYP                        = 131
   };
   
   class base {

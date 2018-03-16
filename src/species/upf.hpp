@@ -147,6 +147,7 @@ namespace pseudopotential {
       if(functional == "PBE") return pseudopotential::exchange::PBE;
       if(functional == "PBESOL") return pseudopotential::exchange::PBE_SOL;
       if(functional == "SLA  PW   NOGX NOGC") return pseudopotential::exchange::LDA;
+      if(functional == "BLYP") return pseudopotential::exchange::B88;
       return pseudopotential::exchange::UNKNOWN;
     }
 
@@ -155,6 +156,7 @@ namespace pseudopotential {
       if(functional == "PBE") return pseudopotential::correlation::PBE;
       if(functional == "PBESOL") return pseudopotential::correlation::PBE_SOL;
       if(functional == "SLA  PW   NOGX NOGC") return pseudopotential::correlation::LDA_PW;
+      if(functional == "BLYP") return pseudopotential::correlation::LYP;
       return pseudopotential::correlation::UNKNOWN;
     }
 
