@@ -254,6 +254,10 @@ contains
       call messages_write('to generate the pseudopotentials.')
       call messages_warning()
     end if
+
+    print*, pseudo_x_functional, pseudo_c_functional
+    print*, x_id, c_id
+    
     
     ! FIXME: we rarely need this. We should only parse when necessary.
     
