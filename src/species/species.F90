@@ -153,7 +153,7 @@ module species_oct_m
 
     integer :: user_lmax          !< For the TM pseudos, user defined lmax 
     integer :: user_llocal        !< For the TM pseudos, used defined llocal
- 
+    integer :: pseudopotential_set !< to which set this pseudopotential belongs
   end type species_t
 
   interface species_end
@@ -225,6 +225,9 @@ contains
     !% expected to check the quality and suitability of the
     !% pseudopotential for your application.
     !%
+    !%Option none 0
+    !% Do not load any pseudopotential by default. All species must be
+    !% specified in the Species block.
     !%Option standard 1
     !% The standard set of Octopus that provides LDA pseudopotentials
     !% in the PSF format for some elements: H, Li, C, N, O, Na, Si, S, Ti, Se, Cd.
@@ -268,6 +271,7 @@ contains
 
     call parse_variable('PseudopotentialSet', OPTION__PSEUDOPOTENTIALSET__STANDARD, pseudo_set)
     call messages_print_var_option(stdout, 'PseudopotentialSet', pseudo_set)
+    if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__NONE) call messages_experimental('PseudopotentialSet = none')
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__SG15) call messages_experimental('PseudopotentialSet = sg15')
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__HSCV_LDA) call messages_experimental('PseudopotentialSet = hscv_lda')
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__HSCV_PBE) call messages_experimental('PseudopotentialSet = hscv_pbe')
@@ -325,6 +329,7 @@ contains
     spec%def_h     = -M_ONE    ! not defined
     spec%def_rsize = -M_ONE    ! not defined
     spec%potential_formula  = ""
+    spec%pseudopotential_set = OPTION__PSEUDOPOTENTIALSET__NONE
     read_data   = 0
 
     !%Variable Species
@@ -528,62 +533,67 @@ contains
 
     ! We get here if there is a Species block but it does not contain
     ! the species we are looking for.
-    if(n_spec_block > 0) &
-      call parse_block_end(blk)
+    if(n_spec_block > 0) call parse_block_end(blk)
 
-    ! Find out if the species is in the pseudopotential set
-    select case(pseudo_set)
-    case(OPTION__PSEUDOPOTENTIALSET__STANDARD)
-      fname = trim(conf%share)//'/pseudopotentials/standard.set'
-    case(OPTION__PSEUDOPOTENTIALSET__SG15)
-      fname = trim(conf%share)//'/pseudopotentials/sg15.set'
-    case(OPTION__PSEUDOPOTENTIALSET__HGH_LDA)
-      fname = trim(conf%share)//'/pseudopotentials/hgh_lda.set'
-    case(OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
-      fname = trim(conf%share)//'/pseudopotentials/hscv_lda.set'
-    case(OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
-      fname = trim(conf%share)//'/pseudopotentials/hscv_pbe.set'
-    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA)
-      fname = trim(conf%share)//'/pseudopotentials/pseudodojo_lda.set'
-    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA_STRINGENT)
-      fname = trim(conf%share)//'/pseudopotentials/pseudodojo_lda.set'
-    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE)
-      fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe.set'
-    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE_STRINGENT)
-      fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe_stringent.set'
-    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL)
-      fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbesol.set'
-    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL_STRINGENT)
-      fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbesol_stringent.set'
-    case default
-      ASSERT(.false.)
-    end select
-      
-    n_spec_def = max(0, loct_number_of_lines(fname))
-    if(n_spec_def > 0) n_spec_def = n_spec_def - 1 ! First line is a comment
+    if(pseudo_set /= OPTION__PSEUDOPOTENTIALSET__NONE) then 
 
-    iunit = io_open(fname, action='read', status='old', die=.false.)
+      spec%pseudopotential_set = pseudo_set
 
-    if(iunit > 0) then
-      read(iunit,*)
+      ! Find out if the species is in the pseudopotential set
+      select case(pseudo_set)
+      case(OPTION__PSEUDOPOTENTIALSET__STANDARD)
+        fname = trim(conf%share)//'/pseudopotentials/standard.set'
+      case(OPTION__PSEUDOPOTENTIALSET__SG15)
+        fname = trim(conf%share)//'/pseudopotentials/sg15.set'
+      case(OPTION__PSEUDOPOTENTIALSET__HGH_LDA)
+        fname = trim(conf%share)//'/pseudopotentials/hgh_lda.set'
+      case(OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
+        fname = trim(conf%share)//'/pseudopotentials/hscv_lda.set'
+      case(OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
+        fname = trim(conf%share)//'/pseudopotentials/hscv_pbe.set'
+      case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA)
+        fname = trim(conf%share)//'/pseudopotentials/pseudodojo_lda.set'
+      case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA_STRINGENT)
+        fname = trim(conf%share)//'/pseudopotentials/pseudodojo_lda.set'
+      case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE)
+        fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe.set'
+      case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE_STRINGENT)
+        fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe_stringent.set'
+      case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL)
+        fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbesol.set'
+      case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL_STRINGENT)
+        fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbesol_stringent.set'
+      case default
+        ASSERT(.false.)
+      end select
 
-      default_file: do ispec = 1, n_spec_def
-        read(iunit,*) lab
-        if(trim(lab) == trim(spec%label)) then
-          call read_from_default_file(iunit, read_data, spec)
-          exit default_file
-        end if
-      end do default_file
+      n_spec_def = max(0, loct_number_of_lines(fname))
+      if(n_spec_def > 0) n_spec_def = n_spec_def - 1 ! First line is a comment
 
-      call io_close(iunit)
+      iunit = io_open(fname, action='read', status='old', die=.false.)
 
-    else
+      if(iunit > 0) then
+        read(iunit,*)
 
-      call messages_write('Cannot open the octopus internal file:', new_line = .true.)
-      call messages_write(" '"//trim(fname)//"'", new_line = .true.)
-      call messages_write('There is something wrong with your octopus installation.')
-      call messages_fatal()
-      
+        default_file: do ispec = 1, n_spec_def
+          read(iunit,*) lab
+          if(trim(lab) == trim(spec%label)) then
+            call read_from_default_file(iunit, read_data, spec)
+            exit default_file
+          end if
+        end do default_file
+
+        call io_close(iunit)
+
+      else
+
+        call messages_write('Cannot open the octopus internal file:', new_line = .true.)
+        call messages_write(" '"//trim(fname)//"'", new_line = .true.)
+        call messages_write('There is something wrong with your octopus installation.')
+        call messages_fatal()
+
+      end if
+
     end if
 
     if(read_data == 0) then
@@ -1166,6 +1176,17 @@ contains
 
     if(species_is_ps(spec)) then
       species_x_functional = spec%ps%exchange_functional
+
+      ! if we do not know, try the pseudpotential set
+      if(species_x_functional == PSEUDO_EXCHANGE_UNKNOWN) then
+        select case(spec%pseudopotential_set)
+        case(OPTION__PSEUDOPOTENTIALSET__STANDARD, OPTION__PSEUDOPOTENTIALSET__HGH_LDA, OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
+          species_x_functional = PSEUDO_EXCHANGE_LDA
+        case(OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
+          species_x_functional = PSEUDO_EXCHANGE_PBE
+        end select
+      end if
+      
     else
       species_x_functional = PSEUDO_EXCHANGE_ANY
     end if
@@ -1179,6 +1200,16 @@ contains
 
     if(species_is_ps(spec)) then
       species_c_functional = spec%ps%correlation_functional
+
+      ! if we do not know, try the pseudpotential set
+      if(species_c_functional == PSEUDO_EXCHANGE_UNKNOWN) then
+        select case(spec%pseudopotential_set)
+        case(OPTION__PSEUDOPOTENTIALSET__STANDARD, OPTION__PSEUDOPOTENTIALSET__HGH_LDA, OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
+          species_c_functional = OPTION__XCFUNCTIONAL__LDA_C_PZ_MOD/1000
+        case(OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
+          species_c_functional = PSEUDO_CORRELATION_PBE
+        end select
+      end if
     else
       species_c_functional = PSEUDO_CORRELATION_ANY
     end if

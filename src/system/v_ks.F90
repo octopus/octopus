@@ -228,6 +228,8 @@ contains
       end if
     end if
 
+    ASSERT(default >= 0)
+    
     if(pseudo_c_functional /= PSEUDO_CORRELATION_ANY) then
       default = default + 1000*pseudo_c_functional
     else
@@ -239,6 +241,8 @@ contains
         end select
       end if
     end if
+
+    ASSERT(default >= 0)
 
     ! The description of this variable can be found in file src/xc/functionals_list.F90
     call parse_variable('XCFunctional', default, val)
