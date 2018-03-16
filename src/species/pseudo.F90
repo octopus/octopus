@@ -77,7 +77,20 @@ module pseudo_oct_m
     PSEUDO_FORMAT_CPI                        = 780,   &
     PSEUDO_FORMAT_FHI                        = 781,   &
     PSEUDO_FORMAT_HGH                        = 782
-    
+
+  integer, parameter, public ::                       &
+    PSEUDO_EXCHANGE_UNKNOWN                  = 0,     &
+    PSEUDO_EXCHANGE_LDA                      = 1,     &
+    PSEUDO_EXCHANGE_PBE                      = 101,   &
+    PSEUDO_EXCHANGE_PBE_SOL                  = 116
+
+  integer, parameter, public ::                       &
+    PSEUDO_CORRELATION_UNKNOWN               = 0,     &
+    PSEUDO_CORRELATION_LDA_PW                = 12,    &
+    PSEUDO_CORRELATION_PBE                   = 130,   &
+    PSEUDO_CORRELATION_PBESOL                = 133
+
+  
   type pseudo_t
     private
     integer(8) :: dummy
