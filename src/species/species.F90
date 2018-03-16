@@ -1181,9 +1181,9 @@ contains
       if(species_x_functional == PSEUDO_EXCHANGE_UNKNOWN) then
         select case(spec%pseudopotential_set)
         case(OPTION__PSEUDOPOTENTIALSET__STANDARD, OPTION__PSEUDOPOTENTIALSET__HGH_LDA, OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
-          species_x_functional = PSEUDO_EXCHANGE_LDA
+          species_x_functional = OPTION__XCFUNCTIONAL__LDA_X
         case(OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
-          species_x_functional = PSEUDO_EXCHANGE_PBE
+          species_x_functional = OPTION__XCFUNCTIONAL__GGA_X_PBE
         end select
       end if
       
@@ -1207,7 +1207,7 @@ contains
         case(OPTION__PSEUDOPOTENTIALSET__STANDARD, OPTION__PSEUDOPOTENTIALSET__HGH_LDA, OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
           species_c_functional = OPTION__XCFUNCTIONAL__LDA_C_PZ_MOD/1000
         case(OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
-          species_c_functional = PSEUDO_CORRELATION_PBE
+          species_c_functional = OPTION__XCFUNCTIONAL__GGA_C_PBE/1000
         end select
       end if
     else
