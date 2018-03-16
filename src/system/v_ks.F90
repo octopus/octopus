@@ -216,10 +216,10 @@ contains
 
     call get_functional_from_pseudos(pseudo_x_functional, pseudo_c_functional)
 
-    if(pseudo_x_functional /= PSEUDO_EXCHANGE_ANY) then
-      default = pseudo_x_functional
-    else
-      if(ks%theory_level == KOHN_SHAM_DFT) then
+    if(ks%theory_level == KOHN_SHAM_DFT) then
+      if(pseudo_x_functional /= PSEUDO_EXCHANGE_ANY) then
+        default = pseudo_x_functional
+      else
         select case(gr%mesh%sb%dim)
         case(3); default = XC_LDA_X   
         case(2); default = XC_LDA_X_2D
@@ -229,11 +229,11 @@ contains
     end if
     
     ASSERT(default >= 0)
-    
-    if(pseudo_c_functional /= PSEUDO_CORRELATION_ANY) then
-      default = default + 1000*pseudo_c_functional
-    else
-      if(ks%theory_level == KOHN_SHAM_DFT) then
+
+    if(ks%theory_level == KOHN_SHAM_DFT) then
+      if(pseudo_c_functional /= PSEUDO_CORRELATION_ANY) then
+        default = default + 1000*pseudo_c_functional
+      else
         select case(gr%mesh%sb%dim)
         case(3); default = default + 1000*XC_LDA_C_PZ_MOD
         case(2); default = default + 1000*XC_LDA_C_2D_AMGB
