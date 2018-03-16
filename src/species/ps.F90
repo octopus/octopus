@@ -323,6 +323,8 @@ contains
       if(ierr == 0) then
         ps%pseudo_format = pseudo_format(ps_xml%pseudo)
         ps%pseudo_type   = pseudo_type(ps_xml%pseudo)
+        ps%exchange_functional = pseudo_exchange(ps_xml%pseudo)
+        ps%correlation_functional = pseudo_correlation(ps_xml%pseudo)
         
         call valconf_null(ps%conf)
         

@@ -115,7 +115,9 @@ namespace pseudopotential {
     virtual void density(std::vector<double> & val) const { val.clear(); }
     virtual int nwavefunctions() const { return 0; }
     virtual void wavefunction(int index, int & n, int & l, double & occ, std::vector<double> & val) const { val.clear(); }
-   
+    virtual pseudopotential::exchange exchange() const { return pseudopotential::exchange::UNKNOWN; }
+    virtual pseudopotential::correlation correlation() const { return pseudopotential::correlation::UNKNOWN; }
+    
   protected:
 
     template <typename Type>

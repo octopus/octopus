@@ -170,4 +170,12 @@ extern "C" void FC_FUNC_(pseudo_wavefunction, PSEUDO_WAVEFUNCTION)
   for(unsigned i = 0; i < val.size(); i++) wavefunction[i] = val[i];
 }
 
+extern "C" fint FC_FUNC_(pseudo_exchange, PSEUDO_EXCHANGE)(const pseudopotential::base ** pseudo){
+  return fint((*pseudo)->exchange());
+}
+
+extern "C" fint FC_FUNC_(pseudo_correlation, PSEUDO_CORRELATION)(const pseudopotential::base ** pseudo){
+  return fint((*pseudo)->correlation());
+}
+
 

@@ -50,7 +50,9 @@ module pseudo_oct_m
     pseudo_has_density,         &
     pseudo_density,             &
     pseudo_nwavefunctions,      &
-    pseudo_wavefunction
+    pseudo_wavefunction,        &
+    pseudo_exchange,            &
+    pseudo_correlation
   
   !the following sets of values have to match with those on base.hpp
   integer, parameter, public ::               &
@@ -298,6 +300,24 @@ module pseudo_oct_m
       real(8),          intent(out)   :: wf
     end subroutine pseudo_wavefunction
 
+    ! -------------------------------------------------
+
+    integer function pseudo_exchange(pseudo)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+    end function pseudo_exchange
+
+    ! -------------------------------------------------
+
+    integer function pseudo_correlation(pseudo)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+    end function pseudo_correlation
+    
   end interface
   
 contains
