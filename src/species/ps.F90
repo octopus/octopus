@@ -326,8 +326,6 @@ contains
         ps%exchange_functional = pseudo_exchange(ps_xml%pseudo)
         ps%correlation_functional = pseudo_correlation(ps_xml%pseudo)
 
-        print*, "XXXCCCC", ps%exchange_functional, ps%correlation_functional
-        
         call valconf_null(ps%conf)
         
         ps%z      = z

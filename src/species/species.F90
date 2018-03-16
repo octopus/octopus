@@ -1178,7 +1178,7 @@ contains
     type(species_t), intent(in) :: spec
 
     if(species_is_ps(spec)) then
-      species_c_functional = spec%ps%exchange_functional
+      species_c_functional = spec%ps%correlation_functional
     else
       species_c_functional = PSEUDO_CORRELATION_ANY
     end if
