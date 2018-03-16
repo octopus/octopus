@@ -69,7 +69,7 @@ namespace pseudopotential {
     NONE                       =   0,
     LDA_PW                     =  12,
     PBE                        = 130,
-    PBESOL                     = 133
+    PBE_SOL                    = 133
   };
   
   class base {

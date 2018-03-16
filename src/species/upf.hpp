@@ -145,7 +145,7 @@ namespace pseudopotential {
     pseudopotential::exchange exchange() const {
       std::string functional = root_node_->first_node("PP_HEADER")->first_attribute("functional")->value();
       if(functional == "PBE") return pseudopotential::exchange::PBE;
-      if(functional == "PBESOL") return pseudopotential::exchange::PBE;
+      if(functional == "PBESOL") return pseudopotential::exchange::PBE_SOL;
       if(functional == "SLA  PW   NOGX NOGC") return pseudopotential::exchange::LDA;
       return pseudopotential::exchange::UNKNOWN;
     }
@@ -153,7 +153,7 @@ namespace pseudopotential {
     pseudopotential::correlation correlation() const {
       std::string functional = root_node_->first_node("PP_HEADER")->first_attribute("functional")->value();
       if(functional == "PBE") return pseudopotential::correlation::PBE;
-      if(functional == "PBESOL") return pseudopotential::correlation::PBE;
+      if(functional == "PBESOL") return pseudopotential::correlation::PBE_SOL;
       if(functional == "SLA  PW   NOGX NOGC") return pseudopotential::correlation::LDA_PW;
       return pseudopotential::correlation::UNKNOWN;
     }

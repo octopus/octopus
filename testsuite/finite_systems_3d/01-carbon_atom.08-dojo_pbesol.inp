@@ -27,8 +27,6 @@ ExtraStates = 2
 0 | 0 | 0
 %
 
-XCFunctional = gga_x_pbe_sol + gga_c_pbe_sol
-
 ConvRelDens = 4e-6
 
 ExperimentalFeatures = yes

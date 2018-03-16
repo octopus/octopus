@@ -26,8 +26,6 @@ ExtraStates = 2
 0 | 0 | 0
 %
 
-XCFunctional = lda_x + lda_c_pw
-
 ConvRelDens = 4e-6
 
 ExperimentalFeatures = yes
