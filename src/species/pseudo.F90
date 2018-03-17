@@ -29,6 +29,7 @@ module pseudo_oct_m
 
   public ::                     &
     pseudo_t,                   &
+    pseudo_detect_format,       &
     pseudo_init,                &
     pseudo_end,                 &
     pseudo_type,                &
@@ -71,6 +72,8 @@ module pseudo_oct_m
     PSEUDO_STATUS_UNSUPPORTED_TYPE             = 460
 
   integer, parameter, public ::                       &
+    PSEUDO_FORMAT_FILE_NOT_FOUND             = 773,   &
+    PSEUDO_FORMAT_UNKNOWN                    = 774,   &
     PSEUDO_FORMAT_UPF1                       = 775,   &
     PSEUDO_FORMAT_UPF2                       = 776,   &
     PSEUDO_FORMAT_QSO                        = 777,   &

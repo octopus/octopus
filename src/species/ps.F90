@@ -149,7 +149,7 @@ contains
     FLOAT,             intent(in)    :: z
     character(len=*),  intent(in)    :: filename
     
-    integer :: l, ii, ll, is, ierr
+    integer :: l, ii, ll, is, ierr, fmt
     type(ps_psf_t) :: ps_psf !< SIESTA pseudopotential
     type(ps_cpi_t) :: ps_cpi !< Fritz-Haber pseudopotential
     type(ps_fhi_t) :: ps_fhi !< Fritz-Haber pseudopotential (from abinit)
@@ -186,9 +186,29 @@ contains
     !%End
     call parse_variable('SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
     if(ps%projectors_sphere_threshold <= M_ZERO) call messages_input_error('SpeciesProjectorSphereThreshold')
-   
-    ! Sets the flavour, label, and number of spin channels.
-    ps%flavour = ps_get_type(filename)
+
+    fmt = pseudo_detect_format(filename)
+
+    if(fmt == PSEUDO_FORMAT_FILE_NOT_FOUND) then
+      call messages_write("Cannot open pseudopotential file '"//trim(filename)//"'.")
+      call messages_fatal()
+    end if
+    
+    select case(fmt)
+    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
+      ps%flavour = PS_TYPE_XML
+    case(PSEUDO_FORMAT_CPI)
+      ps%flavour = PS_TYPE_CPI
+    case(PSEUDO_FORMAT_FHI)
+      ps%flavour = PS_TYPE_FHI
+    case(PSEUDO_FORMAT_HGH)
+      ps%flavour = PS_TYPE_HGH
+    case(PSEUDO_FORMAT_PSF)
+      ps%flavour = PS_TYPE_PSF
+    case default
+      ASSERT(.false.)
+    end select
+
     ps%label   = label
     ps%ispin   = ispin
     ps%hamann  = .false.
@@ -1409,34 +1429,6 @@ contains
     end do
 
   end function ps_niwfs
-
-
-  ! ---------------------------------------------------------
-  integer function ps_get_type(filename) result(type)
-    character(len=*), intent(in) :: filename
-
-    PUSH_SUB(ps_get_type)
-
-    type = 0
-    
-    if(index(filename, ".psf ") /= 0) type = PS_TYPE_PSF
-    if(index(filename, ".PSF ") /= 0) type = PS_TYPE_PSF
-    if(index(filename, ".hgh ") /= 0) type = PS_TYPE_HGH
-    if(index(filename, ".HGH ") /= 0) type = PS_TYPE_HGH
-    if(index(filename, ".cpi ") /= 0) type = PS_TYPE_CPI
-    if(index(filename, ".CPI ") /= 0) type = PS_TYPE_CPI
-    if(index(filename, ".fhi ") /= 0) type = PS_TYPE_FHI
-    if(index(filename, ".FHI ") /= 0) type = PS_TYPE_FHI
-    if(index(filename, ".upf ") /= 0) type = PS_TYPE_UPF
-    if(index(filename, ".UPF ") /= 0) type = PS_TYPE_UPF
-    if(index(filename, ".xml ") /= 0) type = PS_TYPE_XML
-    if(index(filename, ".XML ") /= 0) type = PS_TYPE_XML
-    if(index(filename, ".psml") /= 0) type = PS_TYPE_XML
-    if(index(filename, ".PSML") /= 0) type = PS_TYPE_XML
-    
-    POP_SUB(ps_get_type)    
-  end function ps_get_type
-
 
   !---------------------------------------
   pure integer function ps_type(ps)

@@ -29,16 +29,37 @@ namespace pseudopotential {
   pseudopotential::format detect_format(const std::string & filename){
 
     std::ifstream  file(filename);
+
+    if(!file) return pseudopotential::format::FILE_NOT_FOUND;
+    
     std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     buffer.push_back('\0');
-    rapidxml::xml_document<> doc;
-    doc.parse<0>(&buffer[0]);
-    
-    if(doc.first_node("fpmd:species")) return pseudopotential::format::QSO;
-    if(doc.first_node("PP_INFO")) return pseudopotential::format::UPF1;
-    if(doc.first_node("UPF")) return pseudopotential::format::UPF2;
-    if(doc.first_node("psml")) return pseudopotential::format::PSML;
 
+    {
+      rapidxml::xml_document<> doc;
+      bool is_xml = true;
+      try {
+	doc.parse<0>(&buffer[0]);
+      } catch(rapidxml::parse_error xml_error){
+	is_xml = false;
+      }
+      
+      if(is_xml){
+	if(doc.first_node("fpmd:species")) return pseudopotential::format::QSO;
+	if(doc.first_node("PP_INFO")) return pseudopotential::format::UPF1;
+	if(doc.first_node("UPF")) return pseudopotential::format::UPF2;
+	if(doc.first_node("psml")) return pseudopotential::format::PSML;
+      }
+    }
+
+    std::string extension = filename.substr(filename.find_last_of(".") + 1);
+    std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+
+    if(extension == "psf") return pseudopotential::format::PSF;
+    if(extension == "cpi") return pseudopotential::format::CPI;
+    if(extension == "fhi") return pseudopotential::format::FHI;
+    if(extension == "hgh") return pseudopotential::format::HGH;
+    
     return pseudopotential::format::UNKNOWN;
   }
   

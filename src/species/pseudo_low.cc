@@ -29,7 +29,7 @@
 #include "psml.hpp"
 #include "detect_format.hpp"
 
-extern "C" fint FC_FUNC_(detect_format, DETECT_FORMAT)(STR_F_TYPE const filename_f STR_ARG1){
+extern "C" fint FC_FUNC_(pseudo_detect_format, PSEUDO_DETECT_FORMAT)(STR_F_TYPE const filename_f STR_ARG1){
 
   char * filename_c;
   TO_C_STR1(filename_f, filename_c);
