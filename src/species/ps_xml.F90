@@ -85,7 +85,7 @@ contains
     end if
 
     if(ierr == PSEUDO_STATUS_UNKNOWN_FORMAT) then
-      call messages_write("Cannot determine the format for pseudopotential file '" // trim(filename) // "' not found")
+      call messages_write("Cannot determine the format for pseudopotential file '" // trim(filename) // "'")
       call messages_fatal()
     end if
 

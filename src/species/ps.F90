@@ -300,7 +300,7 @@ contains
       call hgh_process(ps_hgh)
       call logrid_copy(ps_hgh%g, ps%g)
 
-    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
+    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
       
       if(.not. xml_warned) then
         call messages_experimental('XML (QSO, UPF, and PSML) pseudopotential support')
@@ -355,7 +355,7 @@ contains
         ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
       end do
       
-    case(PSEUDO_FORMAT_UPF1)
+    case default
       
       ps%file_format = PSEUDO_FORMAT_UPF1
       ps%pseudo_type   = PSEUDO_TYPE_KLEINMAN_BYLANDER

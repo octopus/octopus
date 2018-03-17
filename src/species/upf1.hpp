@@ -1,5 +1,5 @@
-#ifndef PSEUDO_UPF2_HPP
-#define PSEUDO_UPF2_HPP
+#ifndef PSEUDO_UPF1_HPP
+#define PSEUDO_UPF1_HPP
 
 /*
  Copyright (C) 2018 Xavier Andrade
@@ -34,25 +34,54 @@
 
 namespace pseudopotential {
 
-  class upf2 : public pseudopotential::base {
+  class upf1 : public pseudopotential::base {
 
   public:
     
-    upf2(const std::string & filename):
+    upf1(const std::string & filename):
       file_(filename),
       buffer_((std::istreambuf_iterator<char>(file_)), std::istreambuf_iterator<char>()){
       
       buffer_.push_back('\0');
       doc_.parse<0>(&buffer_[0]);
       
-      root_node_ = doc_.first_node("UPF");
-      
-      if(!root_node_) throw status::FORMAT_NOT_SUPPORTED;
-      
-      if(root_node_->first_attribute("version")->value()[0] != '2') throw status::FORMAT_NOT_SUPPORTED;
-      
-      std::string pseudo_type = root_node_->first_node("PP_HEADER")->first_attribute("pseudo_type")->value();
-      
+      std::istringstream header(doc_.first_node("PP_HEADER")->value());
+
+      std::string line;
+
+      getline(header, line); //version
+
+      header >> symbol_;
+      getline(header, line);
+
+      std::string pseudo_type;
+      header >> pseudo_type;
+      getline(header, line);
+
+      //nlcc tag
+      getline(header, line);
+
+      getline(header, xc_functional_);
+
+      header >> zval_;
+      getline(header, line);
+
+      //total energy
+      getline(header, line);
+
+      //cutoff
+      getline(header, line);
+
+      header >> lmax_;
+      getline(header, line);
+
+      header >> mesh_size_;
+      getline(header, line);
+
+      header >> nwavefunctions_;
+      header >> nprojectors_;
+      getline(header, line);
+
       if(pseudo_type == "NC" || pseudo_type == "SL"){
 	type_ = pseudopotential::type::KLEINMAN_BYLANDER;
       } else if(pseudo_type == "USPP"){
@@ -62,8 +91,6 @@ namespace pseudopotential {
       } else {
 	throw status::UNSUPPORTED_TYPE;
       }
-      
-      assert(root_node_);
 
       // Read the grid
       {
@@ -418,6 +445,13 @@ namespace pseudopotential {
     std::vector<double> dij_;
     int start_point_;
     int mesh_size_;
+
+    std::string symbol_;
+    std::string xc_functional_;
+    int zval_;
+    int nwavefunctions_;
+    int nprojectors_;
+    
     
   };
 

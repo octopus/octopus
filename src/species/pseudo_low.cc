@@ -25,6 +25,7 @@
 
 #include "base.hpp"
 #include "qso.hpp"
+#include "upf1.hpp"
 #include "upf2.hpp"
 #include "psml.hpp"
 #include "detect_format.hpp"
@@ -66,8 +67,11 @@ extern "C" void FC_FUNC_(pseudo_init, PSEUDO_INIT)(pseudopotential::base ** pseu
     case pseudopotential::format::QSO:
       *pseudo = new pseudopotential::qso(filename);
       break;
+    case pseudopotential::format::UPF1:
+      *pseudo = new pseudopotential::upf1(filename);
+      break;
     case pseudopotential::format::UPF2:
-      *pseudo = new pseudopotential::upf(filename);
+      *pseudo = new pseudopotential::upf2(filename);
       break;
     case pseudopotential::format::PSML:
       *pseudo = new pseudopotential::psml(filename);
