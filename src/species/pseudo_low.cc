@@ -40,7 +40,7 @@ extern "C" fint FC_FUNC_(pseudo_detect_format, PSEUDO_DETECT_FORMAT)(STR_F_TYPE 
   return fint(ft);
 }
 
-extern "C" void FC_FUNC_(pseudo_init, PSEUDO_INIT)(pseudopotential::base ** pseudo, STR_F_TYPE const filename_f, fint * ierr STR_ARG1){
+extern "C" void FC_FUNC_(pseudo_init, PSEUDO_INIT)(pseudopotential::base ** pseudo, STR_F_TYPE const filename_f, fint * format, fint * ierr STR_ARG1){
   char * filename_c;
   TO_C_STR1(filename_f, filename_c);
   std::string filename(filename_c);
@@ -62,13 +62,17 @@ extern "C" void FC_FUNC_(pseudo_init, PSEUDO_INIT)(pseudopotential::base ** pseu
   *pseudo = NULL;
 
   try{
-    if(extension == "xml"){
+    switch(pseudopotential::format(*format)){
+    case pseudopotential::format::QSO:
       *pseudo = new pseudopotential::qso(filename);
-    } else if(extension == "upf") {
+      break;
+    case pseudopotential::format::UPF2:
       *pseudo = new pseudopotential::upf(filename);
-    } else if(extension == "psml") {
+      break;
+    case pseudopotential::format::PSML:
       *pseudo = new pseudopotential::psml(filename);
-    } else {
+      break;
+    default:
       *ierr = fint(pseudopotential::status::UNKNOWN_FORMAT);
       return;
     }

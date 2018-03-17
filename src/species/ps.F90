@@ -307,7 +307,7 @@ contains
         xml_warned = .true.
       end if
       
-      call ps_xml_init(ps_xml, trim(filename), ierr)
+      call ps_xml_init(ps_xml, trim(filename), ps%file_format, ierr)
 
       ps%pseudo_type   = pseudo_type(ps_xml%pseudo)
       ps%exchange_functional = pseudo_exchange(ps_xml%pseudo)

@@ -111,12 +111,13 @@ module pseudo_oct_m
 
     ! -------------------------------------------------
     
-    subroutine pseudo_init(pseudo, filename, ierr)
+    subroutine pseudo_init(pseudo, filename, fmt, ierr)
       import :: pseudo_t
       implicit none
       
       type(pseudo_t),   intent(out)   :: pseudo
       character(len=*), intent(in)    :: filename
+      integer,          intent(in)    :: fmt
       integer,          intent(out)   :: ierr
     end subroutine pseudo_init
 

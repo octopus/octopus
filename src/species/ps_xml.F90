@@ -64,9 +64,10 @@ module ps_xml_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_xml_init(this, filename, ierr)
+  subroutine ps_xml_init(this, filename, fmt, ierr)
     type(ps_xml_t),   intent(inout) :: this
     character(len=*), intent(in)    :: filename
+    integer,          intent(in)    :: fmt
     integer,          intent(out)   :: ierr
 
     integer :: ll, ii, ic, jc
@@ -76,7 +77,7 @@ contains
 
     this%initialized = .false.
     
-    call pseudo_init(pseudo, filename, ierr)
+    call pseudo_init(pseudo, filename, fmt, ierr)
 
     if(ierr == PSEUDO_STATUS_FILE_NOT_FOUND) then
       call messages_write("Pseudopotential file '" // trim(filename) // "' not found")
