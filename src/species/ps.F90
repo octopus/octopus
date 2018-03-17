@@ -195,8 +195,10 @@ contains
     end if
     
     select case(fmt)
-    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
+    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
       ps%flavour = PS_TYPE_XML
+    case(PSEUDO_FORMAT_UPF1)
+      ps%flavour = PS_TYPE_UPF
     case(PSEUDO_FORMAT_CPI)
       ps%flavour = PS_TYPE_CPI
     case(PSEUDO_FORMAT_FHI)
@@ -331,7 +333,7 @@ contains
       call hgh_process(ps_hgh)
       call logrid_copy(ps_hgh%g, ps%g)
 
-    case(PS_TYPE_XML, PS_TYPE_UPF)
+    case(PS_TYPE_XML)
       
       if(.not. xml_warned) then
         call messages_experimental('XML (QSO, UPF, and PSML) pseudopotential support')
@@ -340,82 +342,77 @@ contains
       
       call ps_xml_init(ps_xml, trim(filename), ierr)
 
-      if(ierr == 0) then
-        ps%pseudo_format = pseudo_format(ps_xml%pseudo)
-        ps%pseudo_type   = pseudo_type(ps_xml%pseudo)
-        ps%exchange_functional = pseudo_exchange(ps_xml%pseudo)
-        ps%correlation_functional = pseudo_correlation(ps_xml%pseudo)
-
-        call valconf_null(ps%conf)
-        
-        ps%z      = z
-        ps%conf%z = nint(z)
-        
-        if(ps_xml%kleinman_bylander) then
-          ps%conf%p = ps_xml%nwavefunctions
-        else
-          ps%conf%p = ps_xml%lmax + 1
-        end if
-        
-        do ll = 0, ps_xml%lmax
-          ps%conf%l(ll + 1) = ll
-        end do
-        
-        ps%kbc    = ps_xml%nchannels
-        ps%lmax  = ps_xml%lmax
-
-        if(ps_xml%kleinman_bylander) then
-          ps%llocal = ps_xml%llocal
-        else
-          ! we have several options
-          ps%llocal = 0                                     ! the default
-          if(ps_xml%llocal >= 0) ps%llocal = ps_xml%llocal  ! the one given in the pseudopotential file
-          if(user_llocal /= INVALID_L) ps%llocal = user_llocal ! user supplied local component
-          ASSERT(ps%llocal >= 0)
-          ASSERT(ps%llocal <= ps%lmax)
-        end if
-        
-        nullify(ps%g%drdi, ps%g%s)
-        
-        ! use a larger grid
-        ps%g%nrval = max(ps_xml%grid_size, nint(CNST(20.0)/(ps_xml%mesh_spacing)))
-        
-        SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
-        SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
-        
-        do ii = 1, ps%g%nrval
-          ps%g%rofi(ii) = (ii - 1)*ps_xml%mesh_spacing
-          ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
-        end do
-
-        ps%flavour = PS_TYPE_XML
-        
-      else !read failed, this must be a UPF 1 file
-
-        ps%pseudo_format = PSEUDO_FORMAT_UPF1
-        ps%pseudo_type   = PSEUDO_TYPE_KLEINMAN_BYLANDER
+      ps%pseudo_format = pseudo_format(ps_xml%pseudo)
+      ps%pseudo_type   = pseudo_type(ps_xml%pseudo)
+      ps%exchange_functional = pseudo_exchange(ps_xml%pseudo)
+      ps%correlation_functional = pseudo_correlation(ps_xml%pseudo)
       
-        call ps_upf_init(ps_upf, trim(filename))
-        
-        call valconf_copy(ps%conf, ps_upf%conf)
-        ps%z      = z
-        ps%conf%z = nint(z)
-        ps%kbc    = ps_upf%kb_nc
-        ps%lmax  = ps_upf%l_max
-        ps%llocal  = ps_upf%l_loc
-        ps%has_density = .true.
-        
-        nullify(ps%g%drdi, ps%g%s)
-        ps%g%nrval = ps_upf%np
-        SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
-        SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
-        ps%g%rofi = ps_upf%r
-        ps%g%r2ofi = ps%g%rofi**2
-        
+      call valconf_null(ps%conf)
+      
+      ps%z      = z
+      ps%conf%z = nint(z)
+      
+      if(ps_xml%kleinman_bylander) then
+        ps%conf%p = ps_xml%nwavefunctions
+      else
+        ps%conf%p = ps_xml%lmax + 1
       end if
       
+      do ll = 0, ps_xml%lmax
+        ps%conf%l(ll + 1) = ll
+      end do
+      
+      ps%kbc    = ps_xml%nchannels
+      ps%lmax  = ps_xml%lmax
+      
+      if(ps_xml%kleinman_bylander) then
+        ps%llocal = ps_xml%llocal
+      else
+        ! we have several options
+        ps%llocal = 0                                     ! the default
+        if(ps_xml%llocal >= 0) ps%llocal = ps_xml%llocal  ! the one given in the pseudopotential file
+        if(user_llocal /= INVALID_L) ps%llocal = user_llocal ! user supplied local component
+        ASSERT(ps%llocal >= 0)
+        ASSERT(ps%llocal <= ps%lmax)
+      end if
+      
+      nullify(ps%g%drdi, ps%g%s)
+      
+      ! use a larger grid
+      ps%g%nrval = max(ps_xml%grid_size, nint(CNST(20.0)/(ps_xml%mesh_spacing)))
+      
+      SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
+      SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
+      
+      do ii = 1, ps%g%nrval
+        ps%g%rofi(ii) = (ii - 1)*ps_xml%mesh_spacing
+        ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
+      end do
+      
+    case(PS_TYPE_UPF)
+      
+      ps%pseudo_format = PSEUDO_FORMAT_UPF1
+      ps%pseudo_type   = PSEUDO_TYPE_KLEINMAN_BYLANDER
+      
+      call ps_upf_init(ps_upf, trim(filename))
+      
+      call valconf_copy(ps%conf, ps_upf%conf)
+      ps%z      = z
+      ps%conf%z = nint(z)
+      ps%kbc    = ps_upf%kb_nc
+      ps%lmax  = ps_upf%l_max
+      ps%llocal  = ps_upf%l_loc
+      ps%has_density = .true.
+      
+      nullify(ps%g%drdi, ps%g%s)
+      ps%g%nrval = ps_upf%np
+      SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
+      SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
+      ps%g%rofi = ps_upf%r
+      ps%g%r2ofi = ps%g%rofi**2
+      
     end select
-
+    
     ps%local = (ps%lmax == 0 .and. ps%llocal == 0 ) .or. (ps%lmax == -1 .and. ps%llocal == -1)
 
     
