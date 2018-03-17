@@ -43,6 +43,7 @@ namespace pseudopotential {
   };
 
   enum class format {
+    UNKNOWN                    = 774,
     UPF1                       = 775,
     UPF2                       = 776,
     QSO                        = 777,

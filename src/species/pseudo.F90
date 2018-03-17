@@ -97,6 +97,17 @@ module pseudo_oct_m
 
   interface
     
+    ! -------------------------------------------------
+    
+    integer function pseudo_detect_format(filename)
+      import :: pseudo_t
+      implicit none
+      
+      character(len=*), intent(in)    :: filename
+    end function pseudo_detect_format
+
+    ! -------------------------------------------------
+    
     subroutine pseudo_init(pseudo, filename, ierr)
       import :: pseudo_t
       implicit none

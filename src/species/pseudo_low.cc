@@ -27,6 +27,18 @@
 #include "qso.hpp"
 #include "upf.hpp"
 #include "psml.hpp"
+#include "detect_format.hpp"
+
+extern "C" fint FC_FUNC_(detect_format, DETECT_FORMAT)(STR_F_TYPE const filename_f STR_ARG1){
+
+  char * filename_c;
+  TO_C_STR1(filename_f, filename_c);
+  
+  pseudopotential::format ft = pseudopotential::detect_format(filename_c);
+
+  free(filename_c);
+  return fint(ft);
+}
 
 extern "C" void FC_FUNC_(pseudo_init, PSEUDO_INIT)(pseudopotential::base ** pseudo, STR_F_TYPE const filename_f, fint * ierr STR_ARG1){
   char * filename_c;
