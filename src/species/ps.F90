@@ -54,30 +54,21 @@ module ps_oct_m
     ps_debug,                   &
     ps_niwfs,                   &
     ps_end,                     &
-    ps_type,                    &
     ps_has_density,             &
     ps_density_volume
   
-  integer, parameter, public :: &
-    PS_TYPE_PSF = 100,          &
-    PS_TYPE_HGH = 101,          &
-    PS_TYPE_CPI = 102,          &
-    PS_TYPE_FHI = 103,          &
-    PS_TYPE_UPF = 104,          &
-    PS_TYPE_XML = 105
-
   integer, parameter, public :: &
     PS_FILTER_NONE = 0,         &
     PS_FILTER_TS   = 2,         &
     PS_FILTER_BSB  = 3
 
   integer, parameter, public :: INVALID_L = 333
-  
-  character(len=3), parameter  :: ps_name(PS_TYPE_PSF:PS_TYPE_XML) = (/"tm2", "hgh", "cpi", "fhi", "upf", "qso"/)
+
+  character(len=4), parameter  :: ps_name(PSEUDO_FORMAT_UPF1:PSEUDO_FORMAT_HGH) = &
+    (/"upf1", "upf2", "qso ", "psml", "psf ", "cpi ", "fhi ", "hgh "/)
 
   type ps_t
     character(len=10) :: label
-    integer           :: flavour
 
     integer  :: ispin    !< Consider spin (ispin = 2) or not (ispin = 1)
     FLOAT    :: z, z_val
@@ -128,7 +119,7 @@ module ps_oct_m
     logical :: is_separated
     logical :: local
     logical :: hamann
-    integer :: pseudo_format
+    integer :: file_format
     integer :: pseudo_type
     integer :: exchange_functional
     integer :: correlation_functional
@@ -187,49 +178,32 @@ contains
     call parse_variable('SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
     if(ps%projectors_sphere_threshold <= M_ZERO) call messages_input_error('SpeciesProjectorSphereThreshold')
 
-    fmt = pseudo_detect_format(filename)
+    ps%file_format = pseudo_detect_format(filename)
 
-    if(fmt == PSEUDO_FORMAT_FILE_NOT_FOUND) then
+    if(ps%file_format == PSEUDO_FORMAT_FILE_NOT_FOUND) then
       call messages_write("Cannot open pseudopotential file '"//trim(filename)//"'.")
       call messages_fatal()
     end if
-    
-    select case(fmt)
-    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
-      ps%flavour = PS_TYPE_XML
-    case(PSEUDO_FORMAT_UPF1)
-      ps%flavour = PS_TYPE_UPF
-    case(PSEUDO_FORMAT_CPI)
-      ps%flavour = PS_TYPE_CPI
-    case(PSEUDO_FORMAT_FHI)
-      ps%flavour = PS_TYPE_FHI
-    case(PSEUDO_FORMAT_HGH)
-      ps%flavour = PS_TYPE_HGH
-    case(PSEUDO_FORMAT_PSF)
-      ps%flavour = PS_TYPE_PSF
-    case default
-      ASSERT(.false.)
-    end select
 
-    ps%label   = label
-    ps%ispin   = ispin
-    ps%hamann  = .false.
-    select case(ps%flavour)
-    case(PS_TYPE_PSF, PS_TYPE_HGH)
-      ps%has_density = .true.
-    case default
-      ps%has_density = .false.
-    end select
-    
-    if(.not. (ps%flavour >= PS_TYPE_PSF .and. ps%flavour <= PS_TYPE_XML)) then
+    if(ps%file_format == PSEUDO_FORMAT_UNKNOWN) then
       call messages_write("Cannot determine the pseudopotential type for species '"//trim(label)//"' from", new_line = .true.)
       call messages_write("file '"//trim(filename)//"'.")
       call messages_fatal()
     end if
+
+    ps%label   = label
+    ps%ispin   = ispin
+    ps%hamann  = .false.
     
-    select case(ps%flavour)
-    case(PS_TYPE_PSF)
-      ps%pseudo_format = PSEUDO_FORMAT_PSF
+    select case(ps%file_format)
+    case(PSEUDO_FORMAT_PSF, PSEUDO_FORMAT_HGH)
+      ps%has_density = .true.
+    case default
+      ps%has_density = .false.
+    end select
+       
+    select case(ps%file_format)
+    case(PSEUDO_FORMAT_PSF)
       ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
       
       call ps_psf_init(ps_psf, ispin, filename)
@@ -262,18 +236,12 @@ contains
       call ps_psf_process(ps_psf, ps%lmax, ps%llocal)
       call logrid_copy(ps_psf%ps_grid%g, ps%g)
 
-    case(PS_TYPE_CPI, PS_TYPE_FHI)
-
-      if(PS_TYPE_CPI == ps%flavour) then
-        ps%pseudo_format = PSEUDO_FORMAT_CPI
-      else
-        ps%pseudo_format = PSEUDO_FORMAT_FHI
-      end if
+    case(PSEUDO_FORMAT_CPI, PSEUDO_FORMAT_FHI)
       ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
       
       call valconf_null(ps%conf)
 
-      if(ps%flavour == PS_TYPE_CPI) then
+      if(ps%file_format == PSEUDO_FORMAT_CPI) then
         call ps_cpi_init(ps_cpi, trim(filename))
         ps%conf%p      = ps_cpi%ps_grid%no_l_channels
       else
@@ -310,7 +278,7 @@ contains
         ps%llocal = user_llocal
       end if
       
-      if(ps%flavour == PS_TYPE_CPI) then
+      if(ps%file_format == PSEUDO_FORMAT_CPI) then
         call ps_cpi_process(ps_cpi, ps%llocal)
         call logrid_copy(ps_cpi%ps_grid%g, ps%g)
       else
@@ -318,8 +286,7 @@ contains
         call logrid_copy(ps_fhi%ps_grid%g, ps%g)
       end if
 
-    case(PS_TYPE_HGH)
-      ps%pseudo_format = PSEUDO_FORMAT_HGH
+    case(PSEUDO_FORMAT_HGH)
       ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
       
       call hgh_init(ps_hgh, trim(filename))
@@ -333,7 +300,7 @@ contains
       call hgh_process(ps_hgh)
       call logrid_copy(ps_hgh%g, ps%g)
 
-    case(PS_TYPE_XML)
+    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
       
       if(.not. xml_warned) then
         call messages_experimental('XML (QSO, UPF, and PSML) pseudopotential support')
@@ -342,7 +309,6 @@ contains
       
       call ps_xml_init(ps_xml, trim(filename), ierr)
 
-      ps%pseudo_format = pseudo_format(ps_xml%pseudo)
       ps%pseudo_type   = pseudo_type(ps_xml%pseudo)
       ps%exchange_functional = pseudo_exchange(ps_xml%pseudo)
       ps%correlation_functional = pseudo_correlation(ps_xml%pseudo)
@@ -389,9 +355,9 @@ contains
         ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
       end do
       
-    case(PS_TYPE_UPF)
+    case(PSEUDO_FORMAT_UPF1)
       
-      ps%pseudo_format = PSEUDO_FORMAT_UPF1
+      ps%file_format = PSEUDO_FORMAT_UPF1
       ps%pseudo_type   = PSEUDO_TYPE_KLEINMAN_BYLANDER
       
       call ps_upf_init(ps_upf, trim(filename))
@@ -435,28 +401,26 @@ contains
     call spline_init(ps%density_der)
     
     ! Now we load the necessary information.
-    select case(ps%flavour)
-    case(PS_TYPE_PSF)
+    select case(ps%file_format)
+    case(PSEUDO_FORMAT_PSF)
       call ps_grid_load(ps, ps_psf%ps_grid)
       call ps_psf_end(ps_psf)
-    case(PS_TYPE_CPI)
+    case(PSEUDO_FORMAT_CPI)
       call ps_grid_load(ps, ps_cpi%ps_grid)
       call ps_cpi_end(ps_cpi)
-    case(PS_TYPE_FHI)
+    case(PSEUDO_FORMAT_FHI)
       call ps_grid_load(ps, ps_fhi%ps_grid)
       call ps_fhi_end(ps_fhi)
-    case(PS_TYPE_HGH)
+    case(PSEUDO_FORMAT_HGH)
       SAFE_ALLOCATE(ps%k    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
       call hgh_load(ps, ps_hgh)
       call hgh_end(ps_hgh)
-    case(PS_TYPE_XML, PS_TYPE_UPF)
-      if(ps_xml%initialized) then
-        call ps_xml_load(ps, ps_xml)
-        call ps_xml_end(ps_xml)
-      else
-        call ps_upf_load(ps, ps_upf)
-        call ps_upf_end(ps_upf)
-      end if
+    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
+      call ps_xml_load(ps, ps_xml)
+      call ps_xml_end(ps_xml)
+    case(PSEUDO_FORMAT_UPF1)
+      call ps_upf_load(ps, ps_upf)
+      call ps_upf_end(ps_upf)
     end select
 
     if(ps_has_density(ps)) then 
@@ -485,7 +449,7 @@ contains
     call messages_info()
     
     call messages_write("    file format      :")
-    select case(ps%pseudo_format)
+    select case(ps%file_format)
     case(PSEUDO_FORMAT_UPF1)
       call messages_write(" UPF1")
     case(PSEUDO_FORMAT_UPF2)
@@ -528,7 +492,7 @@ contains
 
     if(ps%pseudo_type == PSEUDO_TYPE_SEMILOCAL) then
       call messages_write("    orbital origin   :")
-      select case(ps%pseudo_format)
+      select case(ps%file_format)
       case(PSEUDO_FORMAT_PSF, PSEUDO_FORMAT_HGH)
         call messages_write(" calculated");
       case default
@@ -755,7 +719,7 @@ contains
     ! A text file with some basic data.
     iunit = io_open(trim(dir)//'/pseudo-info', action='write')
     write(iunit,'(a,/)')      ps%label
-    write(iunit,'(a,a,/)')    'Flavour : ', ps_name(ps%flavour)
+    write(iunit,'(a,a,/)')    'Format  : ', ps_name(ps%file_format)
     write(iunit,'(a,f6.3)')   'z       : ', ps%z
     write(iunit,'(a,f6.3,/)') 'zval    : ', ps%z_val
     write(iunit,'(a,i4)')     'lmax    : ', ps%lmax
@@ -1428,21 +1392,13 @@ contains
   end function ps_niwfs
 
   !---------------------------------------
-  pure integer function ps_type(ps)
-    type(ps_t), intent(in) :: ps
 
-    ps_type = ps%flavour
-  end function ps_type
-
-  
-  !---------------------------------------
   pure logical function ps_has_density(ps) result(has_density)
     type(ps_t), intent(in) :: ps
 
     has_density = ps%has_density
 
   end function ps_has_density
-
   
   !---------------------------------------
   FLOAT function ps_density_volume(ps) result(volume)
