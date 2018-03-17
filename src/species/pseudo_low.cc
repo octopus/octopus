@@ -25,7 +25,7 @@
 
 #include "base.hpp"
 #include "qso.hpp"
-#include "upf.hpp"
+#include "upf2.hpp"
 #include "psml.hpp"
 #include "detect_format.hpp"
 

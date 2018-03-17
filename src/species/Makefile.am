@@ -56,7 +56,7 @@ noinst_HEADERS =                         \
 	psml.hpp                         \
 	qso.hpp                          \
 	spline.h                         \
-	upf.hpp
+	upf2.hpp
 
 
 include $(srcdir)/../common-rules.make
