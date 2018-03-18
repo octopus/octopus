@@ -171,6 +171,9 @@ contains
     end if
 
     this%has_density = pseudo_has_density(pseudo)
+
+    print*, "here", this%has_density
+    
     if(this%has_density) then
       SAFE_ALLOCATE(this%density(1:this%grid_size))
       call pseudo_density(pseudo, this%density(1))

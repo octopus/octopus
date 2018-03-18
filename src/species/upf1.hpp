@@ -403,7 +403,6 @@ namespace pseudopotential {
     }
 
     bool has_density(){
-      return false;
       return doc_.first_node("PP_RHOATOM");
     }
       
@@ -411,14 +410,13 @@ namespace pseudopotential {
       rapidxml::xml_node<> * node = doc_.first_node("PP_RHOATOM");
       assert(node);
       
-      int size = value<int>(node->first_attribute("size"));
-      val.resize(size);
+      val.resize(grid_.size());
       
       std::istringstream stst(node->value());
-      for(int ii = 0; ii < size; ii++) stst >> val[start_point_ + ii];
+      for(unsigned ii = 0; ii < grid_.size() - start_point_; ii++) stst >> val[start_point_ + ii];
 
       // the density comes multiplied by 4\pi r
-      for(int ii = 1; ii < size + start_point_; ii++) val[ii] /= 4.0*M_PI*grid_[ii]*grid_[ii];
+      for(unsigned ii = 1; ii < val.size(); ii++) val[ii] /= 4.0*M_PI*grid_[ii]*grid_[ii];
       extrapolate_first_point(val);
       
       interpolate(val);
