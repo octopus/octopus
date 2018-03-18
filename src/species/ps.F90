@@ -415,10 +415,10 @@ contains
       SAFE_ALLOCATE(ps%k    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
       call hgh_load(ps, ps_hgh)
       call hgh_end(ps_hgh)
-    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
+    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
       call ps_xml_load(ps, ps_xml)
       call ps_xml_end(ps_xml)
-    case(PSEUDO_FORMAT_UPF1)
+    case default
       call ps_upf_load(ps, ps_upf)
       call ps_upf_end(ps_upf)
     end select

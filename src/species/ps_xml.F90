@@ -133,9 +133,9 @@ contains
 
     else
 
-      SAFE_ALLOCATE(this%potential(1:this%grid_size, -1:-1))
+      SAFE_ALLOCATE(this%potential(1:this%grid_size, this%llocal:this%llocal))
       
-      call pseudo_local_potential(pseudo, this%potential(1, -1))
+      call pseudo_local_potential(pseudo, this%potential(1, this%llocal))
 
       SAFE_ALLOCATE(this%projector(1:this%grid_size, 0:this%lmax, 1:this%nchannels))
       
