@@ -390,37 +390,40 @@ namespace pseudopotential {
     }
 
     int nwavefunctions() const {
-      return 0;
-      //return nwavefunctions_;
+      return nwavefunctions_;
     }
     
     void wavefunction(int index, int & n, int & l, double & occ, std::vector<double> & proj) const {
-      rapidxml::xml_node<> * node = NULL;
-      
-      std::string tag = "PP_CHI." + std::to_string(index + 1);
-      node = doc_.first_node("PP_PSWFC")->first_node(tag.c_str());
+      rapidxml::xml_node<> * node = doc_.first_node("PP_PSWFC");
       
       assert(node);
 
-      // not all files have "n", so we might have to parse the label
-      if(node->first_attribute("n")){
-	n = value<int>(node->first_attribute("n"));
-      } else {
-	std::string label = node->first_attribute("label")->value();
-	n = std::stoi(label.substr(0, 1));
-      }
-      
-      l = value<int>(node->first_attribute("l"));
-
-      occ = value<double>(node->first_attribute("occupation"));
-      
-      int size = value<int>(node->first_attribute("size"));
-      proj.resize(size + start_point_);
       std::istringstream stst(node->value());
-      for(int ii = 0; ii < size; ii++) stst >> proj[ii + start_point_];
+
+      std::string line;
+      
+      //skip until the correct wavefunction
+      for(int ii = 0; ii < index; ii++){
+	double tmp;
+
+	stst >> line;
+	std::cout << ii << " " << line << std::endl;
+	getline(stst, line);
+	for(unsigned ii = 0; ii < grid_.size() - start_point_; ii++) stst >> tmp;
+      }
+
+      std::string label;
+      stst >> label >> l >> occ;
+      getline(stst, line);
+      
+      n = std::stoi(label.substr(0, 1));
+      
+      proj.resize(grid_.size());
+
+      for(unsigned ii = 0; ii < grid_.size() - start_point_; ii++) stst >> proj[ii + start_point_];
 
       //the wavefunctions come multiplied by r, so we have to divide and fix the first point
-      for(int ii = 1; ii < size + start_point_; ii++) proj[ii] /= grid_[ii];
+      for(unsigned ii = 1; ii < grid_.size() - start_point_; ii++) proj[ii] /= grid_[ii];
       extrapolate_first_point(proj);
       
       interpolate(proj);
