@@ -180,12 +180,12 @@ namespace pseudopotential {
 	  int ii, jj;
 	  double val;
 	  stst >> ii >> jj >> val;
-	  val *= 0.5; //convert from Rydberg to Hartree
+	  val *= 2.0; //convert from 1/Rydberg to 1/Hartree
 	  ii--;
 	  jj--;
 	  int ic = ii%nchannels();
 	  int jc = jj%nchannels();
-	  
+
 	  assert(proj_l[ii] == proj_l[jj]);
 	  
 	  d_ij(proj_l[ii], ic, jc) = val;
@@ -333,8 +333,6 @@ namespace pseudopotential {
       assert(i >= 0 && i <= nchannels());
       assert(j >= 0 && j <= nchannels());
 
-      //std::cout << l << " " << i << " " << j << " | " << n << " " << m << " " << n*nprojectors() + m << std::endl;
-      
       return dij_[l*nchannels()*nchannels() + i*nchannels() + j];
     }
 
