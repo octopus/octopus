@@ -322,7 +322,7 @@ namespace pseudopotential {
       val.clear();
     }
 
-    bool has_density(){
+    bool has_density() const {
       return root_node_->first_node("PP_RHOATOM");
     }
       

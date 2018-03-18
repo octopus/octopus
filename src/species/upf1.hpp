@@ -402,7 +402,7 @@ namespace pseudopotential {
       val.clear();
     }
 
-    bool has_density(){
+    bool has_density() const {
       return doc_.first_node("PP_RHOATOM");
     }
       
