@@ -140,6 +140,7 @@ contains
       SAFE_ALLOCATE(this%projector(1:this%grid_size, 0:this%lmax, 1:this%nchannels))
       
       do ll = 0, this%lmax
+        if(this%llocal == ll) cycle
         do ic = 1, this%nchannels
           call pseudo_projector(pseudo, ll, ic, this%projector(1, ll, ic))
         end do

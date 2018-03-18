@@ -97,6 +97,8 @@ namespace pseudopotential {
 	throw status::UNSUPPORTED_TYPE;
       }
 
+      std::vector<int> proj_l(10, -1);
+      
       //lmax and lloc
       {
 	rapidxml::xml_node<> * node = doc_.first_node("PP_NONLOCAL")->first_node("PP_BETA");
@@ -111,11 +113,14 @@ namespace pseudopotential {
 	  std::istringstream stst(node->value());
 
 	  int read_i, read_l;
-
+	  
 	  stst >> read_i >> read_l;
+
+	  read_i--;
 
 	  lmax_ = std::max(lmax_, read_l);
 	  has_l[read_l] = true;
+	  proj_l[read_i] = read_l;
 	  
 	  node = node->next_sibling("PP_BETA");
 	}
@@ -153,14 +158,15 @@ namespace pseudopotential {
 	for(double rr = 0.0; rr <= grid_[grid_.size() - 1]; rr += mesh_spacing()) mesh_size_++;
 
       }
-
+      
       //Read dij once
       {
       	rapidxml::xml_node<> * node = doc_.first_node("PP_NONLOCAL")->first_node("PP_DIJ");
 
 	assert(node);
 	
-	dij_.resize(nprojectors()*nprojectors());
+	dij_.resize(nchannels()*nchannels()*(lmax_ + 1));
+	
 	for(unsigned kk = 0; kk < dij_.size(); kk++) dij_[kk] = 0.0;
 	
 	std::istringstream stst(node->value());
@@ -177,8 +183,13 @@ namespace pseudopotential {
 	  val *= 0.5; //convert from Rydberg to Hartree
 	  ii--;
 	  jj--;
-	  dij_[ii + jj*nprojectors()] = val;
-	  dij_[jj + ii*nprojectors()] = val;
+	  int ic = ii%nchannels();
+	  int jc = jj%nchannels();
+	  
+	  assert(proj_l[ii] == proj_l[jj]);
+	  
+	  d_ij(proj_l[ii], ic, jc) = val;
+	  d_ij(proj_l[ii], jc, ic) = val;
 	}
       }
 
@@ -215,20 +226,18 @@ namespace pseudopotential {
     }
 
     pseudopotential::exchange exchange() const {
-      std::string functional = doc_.first_node("PP_HEADER")->first_attribute("functional")->value();
-      if(functional == "PBE") return pseudopotential::exchange::PBE;
-      if(functional == "PBESOL") return pseudopotential::exchange::PBE_SOL;
-      if(functional == "SLA  PW   NOGX NOGC") return pseudopotential::exchange::LDA;
-      if(functional == "BLYP") return pseudopotential::exchange::B88;
+      if(xc_functional_ == "PBE") return pseudopotential::exchange::PBE;
+      if(xc_functional_ == "PBESOL") return pseudopotential::exchange::PBE_SOL;
+      if(xc_functional_ == "SLA  PW   NOGX NOGC") return pseudopotential::exchange::LDA;
+      if(xc_functional_ == "BLYP") return pseudopotential::exchange::B88;
       return pseudopotential::exchange::UNKNOWN;
     }
 
     pseudopotential::correlation correlation() const {
-      std::string functional = doc_.first_node("PP_HEADER")->first_attribute("functional")->value();
-      if(functional == "PBE") return pseudopotential::correlation::PBE;
-      if(functional == "PBESOL") return pseudopotential::correlation::PBE_SOL;
-      if(functional == "SLA  PW   NOGX NOGC") return pseudopotential::correlation::LDA_PW;
-      if(functional == "BLYP") return pseudopotential::correlation::LYP;
+      if(xc_functional_ == "PBE") return pseudopotential::correlation::PBE;
+      if(xc_functional_ == "PBESOL") return pseudopotential::correlation::PBE_SOL;
+      if(xc_functional_ == "SLA  PW   NOGX NOGC") return pseudopotential::correlation::LDA_PW;
+      if(xc_functional_ == "BLYP") return pseudopotential::correlation::LYP;
       return pseudopotential::correlation::UNKNOWN;
     }
 
@@ -281,8 +290,6 @@ namespace pseudopotential {
     void projector(int l, int i, std::vector<double> & proj) const {
       rapidxml::xml_node<> * node = doc_.first_node("PP_NONLOCAL")->first_node("PP_BETA");
 
-      std::cout << "LLLLL " << l << "  " << i << std::endl;
-      
       assert(node);
       
       while(node){
@@ -297,8 +304,6 @@ namespace pseudopotential {
 	
 	read_i = read_i%nchannels();
 
-	std::cout << read_i << " " << read_l << " " << i << " " << l << std::endl;
-	
 	if(l != read_l || i != read_i) {
 	  node = node->next_sibling("PP_BETA");
 	  continue;
@@ -307,28 +312,40 @@ namespace pseudopotential {
 	stst >> size;
 	getline(stst, line);
 	
-	std::cout << "size " << size << std::endl;
-	
 	proj.resize(size + start_point_);
 
 	for(unsigned ii = 0; ii < proj.size(); ii++) stst >> proj[ii + start_point_];
 	
 	break;
-
       }
 
-      //the projectors come multiplied by r, so we have to divide and fix the first point
-      for(unsigned ii = 1; ii < proj.size(); ii++) proj[ii] /= grid_[ii];
+      //the projectors come in Rydberg and multiplied by r, so we have to divide and fix the first point
+      for(unsigned ii = 1; ii < proj.size(); ii++) proj[ii] /= 2.0*grid_[ii];
       extrapolate_first_point(proj);
       
       interpolate(proj);
     }
-    
-    double d_ij(int l, int i, int j) const {
-      int n = l*nchannels() + i;
-      int m = l*nchannels() + j;
 
-      return dij_[n*nprojectors() + m];
+  private:
+    
+    double & d_ij(int l, int i, int j) {
+      assert(l >= 0 && l <= lmax_);
+      assert(i >= 0 && i <= nchannels());
+      assert(j >= 0 && j <= nchannels());
+
+      //std::cout << l << " " << i << " " << j << " | " << n << " " << m << " " << n*nprojectors() + m << std::endl;
+      
+      return dij_[l*nchannels()*nchannels() + i*nchannels() + j];
+    }
+
+  public:
+
+    double d_ij(int l, int i, int j) const {
+      assert(l >= 0 && l <= lmax_);
+      assert(i >= 0 && i <= nchannels());
+      assert(j >= 0 && j <= nchannels());
+
+      return dij_[l*nchannels()*nchannels() + i*nchannels() + j];
     }
 
     bool has_radial_function(int l) const{
@@ -410,7 +427,8 @@ namespace pseudopotential {
     }
 
     int nwavefunctions() const {
-      return nwavefunctions_;
+      return 0;
+      //return nwavefunctions_;
     }
     
     void wavefunction(int index, int & n, int & l, double & occ, std::vector<double> & proj) const {
