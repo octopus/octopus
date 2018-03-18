@@ -474,7 +474,7 @@ contains
     call messages_info()
 
     call messages_write("    atomic number    :")
-    call messages_write(ps%z, align_left = .true., fmt = '(f3.1)')
+    call messages_write(nint(ps%z), fmt = '(i4)')
     call messages_info()
     
     call messages_write("    form on file     :")
