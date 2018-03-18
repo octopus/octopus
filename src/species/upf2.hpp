@@ -160,15 +160,6 @@ namespace pseudopotential {
       return pseudopotential::correlation::UNKNOWN;
     }
 
-    
-    int nquad() const {
-      return 0;
-    }
-
-    double rquad() const {
-      return 0.0;
-    }
-
     double mesh_spacing() const {
       return 0.01;
     }
@@ -304,22 +295,6 @@ namespace pseudopotential {
 	  dnm[i][j] = dij_[i*nbeta + j];
 	}
       }
-    }
-
-    bool has_rinner() const {
-      return false;
-    }
-    
-    void rinner(std::vector<double> & val) const {
-      val.clear();
-    }
-
-    void qnm(int index, int & l1, int & l2, int & n, int & m, std::vector<double> & val) const {
-      val.clear();
-    }
-
-    void qfcoeff(int index, int ltot, std::vector<double> & val) const {
-      val.clear();
     }
 
     bool has_density() const {

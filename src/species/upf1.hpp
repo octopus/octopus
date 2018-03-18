@@ -241,15 +241,6 @@ namespace pseudopotential {
       return pseudopotential::correlation::UNKNOWN;
     }
 
-    
-    int nquad() const {
-      return 0;
-    }
-
-    double rquad() const {
-      return 0.0;
-    }
-
     double mesh_spacing() const {
       return 0.01;
     }
@@ -378,30 +369,6 @@ namespace pseudopotential {
       interpolate(density);
     }
     
-    void beta(int iproj, int & l, std::vector<double> & proj) const {
-      proj.clear();
-    }
-
-    void dnm_zero(int nbeta, std::vector<std::vector<double> > & dnm) const {
-      dnm.clear();
-    }
-
-    bool has_rinner() const {
-      return false;
-    }
-    
-    void rinner(std::vector<double> & val) const {
-      val.clear();
-    }
-
-    void qnm(int index, int & l1, int & l2, int & n, int & m, std::vector<double> & val) const {
-      val.clear();
-    }
-
-    void qfcoeff(int index, int ltot, std::vector<double> & val) const {
-      val.clear();
-    }
-
     bool has_density() const {
       return doc_.first_node("PP_RHOATOM");
     }

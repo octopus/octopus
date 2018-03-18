@@ -94,8 +94,6 @@ namespace pseudopotential {
     virtual int valence_charge() const = 0;
     virtual int llocal() const = 0;
     virtual int nchannels() const = 0;
-    virtual int nquad() const = 0;
-    virtual double rquad() const = 0;
     virtual double mesh_spacing() const = 0;
     virtual int mesh_size() const = 0;
     virtual void local_potential(std::vector<double> & potential) const = 0;
@@ -107,8 +105,9 @@ namespace pseudopotential {
     virtual void radial_potential(int l, std::vector<double> & function) const = 0;
 
     //Functions for things that might not be provided
-
-    virtual bool has_nlcc() const { return false; };
+    virtual int nquad() const { return 0; }
+    virtual double rquad() const { return 0.0; }
+    virtual bool has_nlcc() const { return false; }
     virtual void nlcc_density(std::vector<double> & density) const { density.clear(); }
     virtual void beta(int index, int & l, std::vector<double> & proj) const { l = 0; proj.clear(); }
     virtual void dnm_zero(int nbeta, std::vector<std::vector<double> > & dnm) const { dnm.clear(); }
