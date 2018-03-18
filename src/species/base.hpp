@@ -105,16 +105,17 @@ namespace pseudopotential {
     virtual bool has_radial_function(int l) const= 0;
     virtual void radial_function(int l, std::vector<double> & function) const = 0;
     virtual void radial_potential(int l, std::vector<double> & function) const = 0;
-    virtual bool has_nlcc() const= 0;
-    virtual void nlcc_density(std::vector<double> & density) const = 0;
-    virtual void beta(int index, int & l, std::vector<double> & proj) const = 0;
-    virtual void dnm_zero(int nbeta, std::vector<std::vector<double> > & dnm) const = 0;
-    virtual bool has_rinner() const = 0;
-    virtual void rinner(std::vector<double> & val) const = 0;
-    virtual void qnm(int index, int & l1, int & l2, int & n, int & m, std::vector<double> & val) const = 0;
-    virtual void qfcoeff(int index, int ltot, std::vector<double> & val) const = 0;
 
     //Functions for things that might not be provided
+
+    virtual bool has_nlcc() const { return false; };
+    virtual void nlcc_density(std::vector<double> & density) const { density.clear(); }
+    virtual void beta(int index, int & l, std::vector<double> & proj) const { l = 0; proj.clear(); }
+    virtual void dnm_zero(int nbeta, std::vector<std::vector<double> > & dnm) const { dnm.clear(); }
+    virtual bool has_rinner() const { return false; }
+    virtual void rinner(std::vector<double> & val) const { val.clear(); }
+    virtual void qnm(int index, int & l1, int & l2, int & n, int & m, std::vector<double> & val) const { val.clear(); }
+    virtual void qfcoeff(int index, int ltot, std::vector<double> & val) const { val.clear(); }
     virtual bool has_density() const { return false; }
     virtual void density(std::vector<double> & val) const { val.clear(); }
     virtual int nwavefunctions() const { return 0; }
