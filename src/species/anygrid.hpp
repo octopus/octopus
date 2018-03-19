@@ -21,7 +21,7 @@
 
 #include <vector>
 #include <string>
-#include <base.hpp>
+#include "base.hpp"
 #include "spline.h"
 
 namespace pseudopotential {
