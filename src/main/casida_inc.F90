@@ -1218,6 +1218,9 @@ subroutine X(casida_solve)(cas, st)
   call profiling_in(prof, "CASIDA_DIAGONALIZATION")
   if(cas%calc_forces) cas%X(mat_save) = cas%X(mat) ! save before gets turned into eigenvectors
 
+#ifndef HAVE_SCALAPACK
+  call lalg_eigensolve_parallel(cas%n_pairs + cas%pt_nmodes, cas%X(mat), cas%w)
+#else
   SAFE_ALLOCATE(eigenvectors(cas%nb_rows, cas%nb_cols))
 
 #ifdef HAVE_ELPA
@@ -1332,6 +1335,8 @@ subroutine X(casida_solve)(cas, st)
   end if
 #endif
 !(HAVE_ELPA)
+#endif
+!(HAVE_SCALAPACK)
   call profiling_out(prof)
 
   ! save eigenvectors to X(mat)
