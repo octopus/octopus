@@ -31,7 +31,6 @@
 #include <rapidxml.hpp>
 
 #include "chemical_element.hpp"
-#include "spline.h"
 
 namespace pseudopotential {
 
@@ -242,14 +241,6 @@ namespace pseudopotential {
       return pseudopotential::correlation::UNKNOWN;
     }
 
-    double mesh_spacing() const {
-      return 0.01;
-    }
-
-    int mesh_size() const {
-      return mesh_size_;
-    }
-    
     int nchannels() const {
       if(llocal() >= 0){
 	return nprojectors()/lmax();
@@ -436,20 +427,6 @@ namespace pseudopotential {
     
   private:
 
-    void interpolate(std::vector<double> & function) const {
-      std::vector<double> function_in_grid = function;
-
-      assert(function.size() == grid_.size());
-      
-      Spline function_spline;
-      function_spline.fit(grid_.data(), function_in_grid.data(), function_in_grid.size(), SPLINE_FLAT_BC, SPLINE_NATURAL_BC);
-
-      function.clear();
-      for(double rr = 0.0; rr <= grid_[grid_.size() - 1]; rr += mesh_spacing()){
-	function.push_back(function_spline.value(rr));
-      }
-    }
-    
     void extrapolate_first_point(std::vector<double> & function_) const{
 
       assert(function_.size() >= 4);
@@ -474,10 +451,8 @@ namespace pseudopotential {
     std::ifstream file_;
     std::vector<char> buffer_;
     rapidxml::xml_document<> doc_;
-    std::vector<double> grid_;
     std::vector<double> dij_;
     int start_point_;
-    int mesh_size_;
 
     std::string symbol_;
     std::string xc_functional_;
