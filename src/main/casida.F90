@@ -590,17 +590,16 @@ contains
 #ifdef HAVE_SCALAPACK
     ! processor layout
     np = cas%mpi_grp%size
+    np_cols = 1
     if(np > 3) then
       do ii = floor(sqrt(real(np))), 2, -1
         if(mod(np, ii) == 0) then
-          np_rows = ii
+          np_cols = ii
           exit
         end if
       end do
-    else
-      np_rows = 1
     end if
-    np_cols = np / np_rows
+    np_rows = np / np_cols
 
     ! recommended block size: 64, take smaller value for smaller matrices
     !cas%block_size = min(64, n/np_cols)
