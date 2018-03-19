@@ -302,11 +302,15 @@ namespace pseudopotential {
 
 	stst >> size;
 	getline(stst, line);
-	
-	proj.resize(size + start_point_);
 
-	for(unsigned ii = 0; ii < proj.size(); ii++) stst >> proj[ii + start_point_];
-	
+	assert(size >= 0);
+	assert(size <= int(grid_.size()));
+
+	proj.resize(grid_.size());
+
+	for(int ii = 0; ii < size; ii++) stst >> proj[ii + start_point_];
+	for(unsigned ii = size; ii < grid_.size(); ii++) proj[ii + start_point_] = 0.0; 
+	    
 	break;
       }
 
