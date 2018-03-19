@@ -1069,27 +1069,6 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
 
 end subroutine X(casida_get_lr_hmat1)
 
-! -----------------------------------------------------
-
-subroutine X(casida_save_pot_init)(this, mesh)
-  type(casida_save_pot_t), intent(out)   :: this
-  type(mesh_t),            intent(in)    :: mesh
-  
-  SAFE_ALLOCATE(this%X(pot)(1:mesh%np))
-  this%qi = -1
-  this%qa = -1
-  this%qk = -1
-
-end subroutine X(casida_save_pot_init)
-    
-! -----------------------------------------------------
-
-subroutine X(casida_save_pot_end)(this)
-  type(casida_save_pot_t), intent(inout)   :: this
-
-  SAFE_DEALLOCATE_P(this%X(pot))
-
-end subroutine X(casida_save_pot_end)
 
 ! ---------------------------------------------------------
 subroutine X(casida_solve)(cas, st)
@@ -1157,9 +1136,6 @@ subroutine X(casida_solve)(cas, st)
       else
         cas%X(mat)(jb_local, ia_local) = cas%X(mat(jb_local, ia_local)) * sqrt(occ_diffs(jb) * occ_diffs(ia))
       end if
-!#ifndef HAVE_SCALAPACK
-!      if(ia /= jb) cas%X(mat)(ia, jb) = R_CONJ(cas%X(mat)(jb, ia)) ! the matrix is Hermitian
-!#endif
       if(ia == jb) then
         if(cas%type == CASIDA_CASIDA) then
           cas%X(mat)(jb_local, ia_local) = eig_diff**2 + cas%X(mat)(jb_local, ia_local)
@@ -1200,12 +1176,14 @@ subroutine X(casida_solve)(cas, st)
           cas%X(mat)(jb_local,ia_local) = M_TWO*cas%X(mat)(jb_local,ia_local) &
              *sqrt(cas%pt%omega_array(ia-cas%n_pairs))/sqrt(cas%s(jb))/sqrt(M_TWO)
         end if
-!#ifndef HAVE_SCALAPACK
-!          cas%X(mat)(ia_local,jb_local) = cas%X(mat)(jb_local,ia_local)
-!#endif
       end do
     end do
   end if
+
+!#ifdef HAVE_SCALAPACK
+!  call X(write_distributed_matrix)(cas, cas%X(mat), &
+!    CASIDA_DIR//trim(theory_name(cas))//"_matrix_beforediag")
+!#endif
 
 #if HAVE_MPI
   ! wait at barrier for profiling
