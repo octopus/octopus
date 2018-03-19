@@ -381,7 +381,6 @@ contains
     
     ps%local = (ps%lmax == 0 .and. ps%llocal == 0 ) .or. (ps%lmax == -1 .and. ps%llocal == -1)
 
-    
     ! We allocate all the stuff
     SAFE_ALLOCATE(ps%kb   (0:ps%lmax, 1:ps%kbc))
     SAFE_ALLOCATE(ps%dkb  (0:ps%lmax, 1:ps%kbc))

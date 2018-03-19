@@ -1236,8 +1236,9 @@ contains
 
     species_is_local = .true.
       
-    if( species_is_ps(spec) ) then 
-      if ( spec%ps%lmax /= 0 ) species_is_local = .false. 
+    if( species_is_ps(spec) ) then
+      species_is_local = .false.
+      if ( spec%ps%lmax == 0 .and. spec%ps%llocal == 0) species_is_local = .true.
     end if
 
     POP_SUB(species_is_local)
