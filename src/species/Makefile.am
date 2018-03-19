@@ -49,6 +49,7 @@ libspecies_a_SOURCES = $(libspecies_c_srcs) $(libspecies_f_srcs)
 
 # Include files - keep in alphabetical order
 noinst_HEADERS =                         \
+	anygrid.hpp                      \
 	base.hpp                         \
 	chemical_element.hpp             \
 	detect_format.hpp                \

@@ -26,6 +26,7 @@
 #include <iostream>
 #include <cmath>
 
+#include "anygrid.hpp"
 #include "base.hpp"
 #include <rapidxml.hpp>
 
@@ -34,7 +35,7 @@
 
 namespace pseudopotential {
 
-  class upf2 : public pseudopotential::base {
+  class upf2 : public pseudopotential::anygrid {
 
   public:
     

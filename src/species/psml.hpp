@@ -25,13 +25,14 @@
 #include <sstream>
 #include <iostream>
 
+#include "anygrid.hpp"
 #include "base.hpp"
 #include "chemical_element.hpp"
 #include <rapidxml.hpp>
 
 namespace pseudopotential {
 
-  class psml : public pseudopotential::base {
+  class psml : public pseudopotential::anygrid {
 
   public:
 
