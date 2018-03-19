@@ -271,7 +271,7 @@ contains
       SAFE_ALLOCATE(ps_upf%core_density(1:ps_upf%np))
       read(unit,*) (ps_upf%core_density(ir), ir = ip, ps_upf%np)
       call check_end_tag(unit, "PP_NLCC")
-      if (ip == 2) ps_upf%core_density(1) = first_point_extrapolate(ps_upf%r, ps_upf%core_density)
+      if (ip == 2) ps_upf%core_density(1) = first_point_extrapolate(ps_upf%r, ps_upf%core_density, high_order = .true.)
     else
       nullify(ps_upf%core_density)
     end if
@@ -280,7 +280,7 @@ contains
     call init_tag(unit, "PP_LOCAL", .true.)
     SAFE_ALLOCATE(ps_upf%v_local(1:ps_upf%np))
     read(unit,*) (ps_upf%v_local(ir), ir = ip, ps_upf%np)
-    if (ip == 2) ps_upf%v_local(1) = first_point_extrapolate(ps_upf%r, ps_upf%v_local)
+    if (ip == 2) ps_upf%v_local(1) = first_point_extrapolate(ps_upf%r, ps_upf%v_local, high_order = .true.)
     call check_end_tag(unit, "PP_LOCAL")
 
     !Non-local components

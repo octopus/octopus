@@ -1139,7 +1139,7 @@ contains
       
       nrc = logrid_index(ps%g, ps_upf%kb_radius(i)) + 1
       hato(2:nrc) = ps_upf%proj(2:nrc, i)/ps%g%rofi(2:nrc) ! in upf the projector is given in Rydbergs and is multiplied by r
-      hato(1) = first_point_extrapolate(ps%g%rofi, hato) !take care of the point at zero
+      hato(1) = first_point_extrapolate(ps%g%rofi, hato, high_order = .true.) !take care of the point at zero
       hato(nrc+1:ps%g%nrval) = M_ZERO
 
       if(.not. ps_upf%version2) then
@@ -1173,7 +1173,7 @@ contains
           end if
           ! rofi /= 0 except rofi(1) possibly
           hato(2:ps%g%nrval) = ps_upf%wfs(2:ps%g%nrval, l)/ps%g%rofi(2:ps%g%nrval)
-          hato(1) = first_point_extrapolate(ps%g%rofi, hato) !take care of the point at zero
+          hato(1) = first_point_extrapolate(ps%g%rofi, hato, high_order = .true.) !take care of the point at zero
           
           call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%ur(l, is))
           call spline_fit(ps%g%nrval, ps%g%r2ofi, hato, ps%ur_sq(l, is))
@@ -1188,7 +1188,7 @@ contains
     SAFE_ALLOCATE(dens(1:ps%g%nrval))
     
     dens(2:ps%g%nrval) = ps_upf%rho(2:ps%g%nrval)/ps%g%r2ofi(2:ps%g%nrval)/ps%ispin/CNST(4.0)/M_PI
-    dens(1) = first_point_extrapolate(ps%g%rofi, dens) !take care of the point at zero
+    dens(1) = first_point_extrapolate(ps%g%rofi, dens, high_order = .true.) !take care of the point at zero
       
     do is = 1, ps%ispin
       call spline_fit(ps%g%nrval, ps%g%rofi, dens, ps%density(is))

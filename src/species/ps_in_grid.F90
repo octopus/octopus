@@ -331,11 +331,12 @@ contains
     POP_SUB(ps_in_grid_check_rphi)
   end subroutine ps_in_grid_check_rphi
 
-
   ! ---------------------------------------------------------
-  FLOAT function first_point_extrapolate(x, y) result(y0)
-    FLOAT, intent(in) :: x(:)
-    FLOAT, intent(in) :: y(:)
+
+  FLOAT function first_point_extrapolate(x, y, high_order) result(y0)
+    FLOAT,             intent(in)    :: x(:)
+    FLOAT,             intent(in)    :: y(:)
+    logical, optional, intent(in)    :: high_order
     
     FLOAT :: x1, x2, x3
     FLOAT :: y1, y2, y3
@@ -346,10 +347,18 @@ contains
     y1 = y(2)
     y2 = y(3)
     y3 = y(4)
-    
-    y0 = y1*x2*x3*(x2 - x3) + y2*x1*x3*(x3 - x1) + y3*x1*x2*(x1 - x2);
-    y0 = y0/((x1 - x2)*(x1 - x3)*(x2 - x3));
-    
+
+    if(optional_default(high_order, .false.)) then
+
+      y0 = y1*x2*x3*(x2 - x3) + y2*x1*x3*(x3 - x1) + y3*x1*x2*(x1 - x2);
+      y0 = y0/((x1 - x2)*(x1 - x3)*(x2 - x3));
+
+    else
+
+      y0 = y1 - (y2 - y1)*x1/(x2 - x1)
+
+    end if
+      
   end function first_point_extrapolate
 
 end module ps_in_grid_oct_m
