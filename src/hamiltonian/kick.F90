@@ -792,14 +792,14 @@ contains
       		end if
           SAFE_ALLOCATE(kick_function_real(1:mesh%np_part))
           kick_function_real = DREAL(kick_function_interpolate)
-          if ( pcm%kick_like ) then
+          if ( pcm%kick_like .or. pcm%which_eps == 'drl' ) then
             call pcm_calc_pot_rs(pcm, mesh, kick = kick%delta_strength * kick_function_real, kick_time = .true.)
-          else
+          else if ( .not.pcm%kick_like .and. pcm%which_eps == 'deb' ) then
             pcm%kick_like = .true.
             call pcm_calc_pot_rs(pcm, mesh, kick = kick%delta_strength * kick_function_real, kick_time = .true.)
             pcm%kick_like = .false.
           end if
-          kick_function = kick_function + pcm%v_kick_rs / kick%delta_strength
+          if( pcm%kick_like .or. pcm%which_eps == 'deb' ) kick_function = kick_function + pcm%v_kick_rs / kick%delta_strength
         end if
       end if
 
