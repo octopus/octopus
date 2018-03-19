@@ -491,9 +491,10 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
   type(profile_t), save :: prof
 
-  !integer :: pi, qi, pa, qa, pk, qk
   R_TYPE, allocatable :: rho_i(:), rho_j(:), integrand(:)
   FLOAT :: coeff_vh
+  integer :: iimode
+  FLOAT, allocatable  :: deltav(:)
 
   PUSH_SUB(X(casida_get_matrix))
   call profiling_in(prof, 'CASIDA_GET_MATRIX')
@@ -557,6 +558,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   SAFE_ALLOCATE(integrand(1:mesh%np))
   SAFE_ALLOCATE(X(pot)(1:mesh%np))
   SAFE_ALLOCATE(buffer(1:mesh%np))
+  SAFE_ALLOCATE(deltav(1:mesh%np))
 
   ! coefficients for Hartree potential
   coeff_vh = - cas%kernel_lrc_alpha / (M_FOUR * M_PI)
@@ -567,7 +569,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   ! calculate the matrix elements of (v + fxc)
   if(.not. cas%kernel_saved) then
 
-    ! precompute buffer once
+    ! precompute buffer once for photon terms
     if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
       buffer(1:mesh%np) = R_TOTYPE(M_ZERO)
       do ii = 1, cas%pt_nmodes
@@ -654,23 +656,28 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 #ifndef HAVE_SCALAPACK
           if(jb /= ia) matrix(jb, ia) = R_CONJ(matrix(ia, jb))
 #endif
-        if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
+          if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
         end do
-      else
-        ! photon-electron coupling (upper right/lower left)
-        ! here, jb > n_pairs
+
+        ! compute photon part, reuse rho_j to avoid excessive memory access
         if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
-          counter = counter + 1
-          ! avoid multiple computations of MN_term
-          call X(MN_term)(cas, jb-cas%n_pairs, xx)
-          !do ia = 1, cas%n_pairs
           do ia_local = 1, cas%nb_cols
             ia = get_global_col(cas, ia_local)
-            ! compute only lower left part for pairs
-            if(ia > cas%n_pairs) cycle
-            matrix(jb_local, ia_local) = sqrt(M_HALF*cas%pt%omega_array(jb-cas%n_pairs))*xx(ia)
+            if(ia <= cas%n_pairs) cycle
+
+            iimode = ia - cas%n_pairs
+!           do idir = 1, mesh%sb%dim
+            deltav(1:mesh%np) = cas%pt%lambda_array(iimode)*&
+                         ( cas%pt%pol_array(iimode,1)*mesh%x(1:mesh%np, 1)  &
+                         + cas%pt%pol_array(iimode,2)*mesh%x(1:mesh%np, 2)  &
+                         + cas%pt%pol_array(iimode,3)*mesh%x(1:mesh%np, 3))
+
+            xx(jb) = X(mf_integrate)(mesh, deltav(1:mesh%np)*rho_j(1:mesh%np))
+!           end do
+
+            matrix(jb_local, ia_local) = sqrt(M_HALF*cas%pt%omega_array(ia-cas%n_pairs))*xx(jb)
 #ifndef HAVE_SCALAPACK
-            matrix(ia, jb) = matrix(jb, ia)
+            matrix(jb, ia) = matrix(ia, jb)
 #endif
           end do
         end if
@@ -688,6 +695,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   SAFE_DEALLOCATE_A(integrand)
   SAFE_DEALLOCATE_A(X(pot))
   SAFE_DEALLOCATE_A(buffer)
+  SAFE_DEALLOCATE_A(deltav)
 
   if(mpi_grp_is_root(mpi_world)) then
     call loct_progress_bar(maxcount, maxcount)
@@ -718,7 +726,6 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   SAFE_DEALLOCATE_A(buffer_transpose)
 #endif
 
-
   SAFE_DEALLOCATE_A(xx)
 
   call profiling_out(prof)
@@ -727,35 +734,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 contains
 
   ! ---------------------------------------------------------
-  subroutine X(MN_term)(cas, iimode, xx)
-    type(casida_t), intent(in)  :: cas
-    integer,        intent(in)  :: iimode
-    R_TYPE,         intent(out) :: xx(:)
-
-    FLOAT, allocatable  :: deltav(:)
-    integer            :: idir
-    type(profile_t), save :: prof
-
-    PUSH_SUB(X(casida_get_matrix).X(MN_term))
-    call profiling_in(prof, 'CASIDA_GET_MATRIX.MN_TERM')
-
-
-    SAFE_ALLOCATE(deltav(1:mesh%np))
-!     do idir = 1, mesh%sb%dim
-      deltav(1:mesh%np) = cas%pt%lambda_array(iimode)*&
-                   ( cas%pt%pol_array(iimode,1)*mesh%x(1:mesh%np, 1)  &
-                   + cas%pt%pol_array(iimode,2)*mesh%x(1:mesh%np, 2)  &
-                   + cas%pt%pol_array(iimode,3)*mesh%x(1:mesh%np, 3))
-      ! let us get now the x vector.
-      xx = X(ks_matrix_elements)(cas, st, mesh, deltav)
-!     end do
-    SAFE_DEALLOCATE_A(deltav)
-
-    call profiling_out(prof)
-    POP_SUB(X(casida_get_matrix).X(MN_term))
-  end subroutine X(MN_term)
-
-  ! ---------------------------------------------------------
+  ! this routine is now legacy and could be removed?
   subroutine load_saved(matrix, is_saved, restart_file)
     R_TYPE,           intent(out) :: matrix(:,:)
     logical,          intent(out) :: is_saved(:,:)
