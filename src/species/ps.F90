@@ -1211,7 +1211,7 @@ contains
 
     PUSH_SUB(ps_xml_load)
 
-    if(ps_xml%kleinman_bylander .and. ps_xml%nchannels == 2) then
+    if(ps_xml%kleinman_bylander .and. ps_xml%nchannels == 2 .and. ps_xml%llocal == -1) then
       ps%hamann = .true.
     end if
     
