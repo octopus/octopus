@@ -1293,7 +1293,19 @@ contains
         end do
       end do
 
+      ps%conf%p = ps_xml%nwavefunctions
+      
       do ii = 1, ps_xml%nwavefunctions
+
+        ps%conf%n(ii) = ps_xml%wf_n(ii)
+        ps%conf%l(ii) = ps_xml%wf_l(ii)
+
+        if(ps%ispin == 2) then
+          ps%conf%occ(ii, 1) = min(ps_xml%wf_occ(ii), 2.0*ps_xml%wf_l(ii) + 1.0)
+          ps%conf%occ(ii, 2) = ps_xml%wf_occ(ii) - ps%conf%occ(ii, 1)
+        else
+          ps%conf%occ(ii, 1) = ps_xml%wf_occ(ii)
+        end if
         
         do ip = 1, ps%g%nrval
           if(ip <= ps_xml%grid_size) then
