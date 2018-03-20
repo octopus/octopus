@@ -93,10 +93,10 @@ module pcm_eom_oct_m
                                                  !< \tilde{Q} and R matrices from Eq.(38)-(39) (Ref.1), respectively
                                                  !<  Q_f and Q_{\omega} from Eq.(17)-(16) (Ref.2), respectively
   FLOAT, allocatable :: matqv(:,:),matqq(:,:)       !< 			 for solute
-  FLOAT, allocatable :: matqv_lf(:,:),matqq_lf(:,:) !< 			 for external potential
+  FLOAT, allocatable :: matqv_lf(:,:)								!< 			 for external potential
                                                  !< Q^{IEF(d)}_d, \tilde{Q} and R matrices enter the EOM in eq.(37), Ref.1
                                                  !< Q_f and Q_{\omega} matrices enter the EOM in eq.(15), Ref.2
-                                                 !< N.B.: For Debye case (Ref.1), matqq_lf is not needed; matqq == matqq_lf !
+                                                 !< N.B.: matrices R (in case of Debye) and Q_{\omega} (in case of Drude-Lorentz) --namely matqq in this implementation-- are the same in the EOMs for polarization charges due to solute and due to external potential
 
   !> mathematical constants
   FLOAT, parameter :: twopi=M_TWO*M_Pi
@@ -427,7 +427,7 @@ module pcm_eom_oct_m
    else if( which_eom == 'external' ) then
     !> analagous to Eq.(15) ibid. with different matrices
     q_t = qext_tp + f1*dqext_tp + f2*force_qext_tp
-    force = -matmul(matqq_lf,q_t) + matmul(matqv_lf,pot_t)
+    force = -matmul(matqq,q_t) + matmul(matqv_lf,pot_t)					!< N.B. matqq
     dqext_tp = f3*dqext_tp + f4*(force+force_qext_tp) -f5*force_qext_tp
     force_qext_tp = force
     q_tp = q_t
@@ -435,7 +435,7 @@ module pcm_eom_oct_m
    else if( which_eom == 'justkick' ) then
     !> simplifying for kick
     q_t = qkick_tp + f1*dqkick_tp + f2*force_qkick_tp
-    force = -matmul(matqq_lf,q_t)
+    force = -matmul(matqq,q_t)																	!< N.B. matqq
     dqkick_tp = f3*dqkick_tp + f4*(force+force_qkick_tp) -f5*force_qkick_tp
     force_qkick_tp = force
     q_tp = q_t
@@ -470,17 +470,11 @@ module pcm_eom_oct_m
     if( (.not.allocated(matqq)) .and. which_eps == 'deb' ) then
      SAFE_ALLOCATE(matqq(nts_act,nts_act))
     endif
-    if( which_eps == 'drl' ) then
-     SAFE_ALLOCATE(matqq_lf(nts_act,nts_act))
-    endif
    else if( which_eom == 'justkick' ) then
     SAFE_ALLOCATE(matqv_lf(nts_act,nts_act))
     SAFE_ALLOCATE(matqd_lf(nts_act,nts_act))
     if( (.not.allocated(matqq)) .and. which_eps == 'deb' ) then
      SAFE_ALLOCATE(matqq(nts_act,nts_act))
-    endif
-    if( which_eps == 'drl' ) then
-     SAFE_ALLOCATE(matqq_lf(nts_act,nts_act))
     endif
    endif  
    call do_PCM_propMat
@@ -568,9 +562,6 @@ module pcm_eom_oct_m
    endif
    if( allocated(matqq) ) then
     SAFE_DEALLOCATE_A(matqv)
-   endif
-   if( allocated(matqq_lf) ) then
-    SAFE_DEALLOCATE_A(matqv_lf)
    endif
 
    POP_SUB(pcm_eom_end)
@@ -666,11 +657,7 @@ module pcm_eom_oct_m
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*fact1(i)
    enddo
-   if( which_eom == 'electron' .or. ( which_eom /= 'electron' .and. which_eps == 'deb' ) ) then
-    matqq=matmul(scr1,scr2)				       !< Eq.(39) in Ref.1 and Eq.(16) in Ref.2
-   else if( which_eom /= 'electron' .and. which_eps == 'drl' ) then
-    matqq_lf=matmul(scr1,scr2)				       !< local field analogous
-   endif
+   matqq=matmul(scr1,scr2)				       !< Eq.(39) in Ref.1 and Eq.(16) in Ref.2
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*fact2(i)
    enddo
