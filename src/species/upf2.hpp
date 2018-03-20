@@ -90,25 +90,69 @@ namespace pseudopotential {
 	for(double rr = 0.0; rr <= grid_[grid_.size() - 1]; rr += mesh_spacing()) mesh_size_++;
 	
       }
+
+      //calculate lmax (we can't trust the one given by the file :-/)
+
+      std::vector<bool> has_l(10, false);
       
+      lmax_ = 0;
+
+      std::vector<int> proj_l(nprojectors());
+      std::vector<int> proj_c(nprojectors());
+
+      //projector info
+      for(int iproj = 0; iproj < nprojectors(); iproj++){
+	std::string tag = "PP_BETA." + std::to_string(iproj + 1);
+	rapidxml::xml_node<> * node = root_node_->first_node("PP_NONLOCAL")->first_node(tag.c_str());
+
+	assert(node);
+
+	int read_l = value<int>(node->first_attribute("angular_momentum"));
+
+	lmax_ = std::max(lmax_, read_l);
+	proj_l[iproj] = read_l;
+	has_l[read_l] = true;
+ 
+	//now calculate the channel index, by counting previous projectors with the same l
+	proj_c[iproj] = 0;
+	for(int jproj = 0; jproj < iproj; jproj++) if(read_l == proj_l[jproj]) proj_c[iproj]++;
+
+      }
+
+      assert(lmax_ >= 0);
+      llocal_ = -1;
+      for(int l = 0; l <= lmax_; l++) if(!has_l[l]) llocal_ = l;
+
       //Read dij once
       {
+
       	rapidxml::xml_node<> * node = root_node_->first_node("PP_NONLOCAL")->first_node("PP_DIJ");
 
 	assert(node);
+
+	dij_.resize((lmax_ + 1)*nchannels()*nchannels());
 	
-	dij_.resize(nprojectors()*nprojectors());
+	for(unsigned kk = 0; kk < dij_.size(); kk++) dij_[kk] = 0.0;
 	
 	std::istringstream stst(node->value());
-	for(unsigned ii = 0; ii < dij_.size(); ii++){
-	  stst >> dij_[ii];
-	  dij_[ii] *= 0.5; //convert from Rydberg to Hartree
+	for(int ii = 0; ii < nprojectors(); ii++){
+	  for(int jj = 0; jj < nprojectors(); jj++){
+	    double val;
+	    stst >> val;
+
+	    if(proj_l[ii] != proj_l[jj]) {
+	      assert(fabs(val) < 1.0e-10);
+	      continue;
+	    }
+	    
+	    val *= 0.5; //convert from Rydberg to Hartree
+
+	    d_ij(proj_l[ii], proj_c[ii], proj_c[jj]) = val;
+	  }
 	}
+	
       }
 
-      //Read lmax
-      lmax_ = value<int>(root_node_->first_node("PP_HEADER")->first_attribute("l_max"));
-      assert(lmax_ >= 0);
     }
 
     pseudopotential::format format() const { return pseudopotential::format::UPF2; }
@@ -138,8 +182,7 @@ namespace pseudopotential {
     }
 
     int llocal() const {
-      int ll = value<int>(root_node_->first_node("PP_HEADER")->first_attribute("l_local"));
-      return std::max(-1, ll); 
+      return llocal_;
     }
 
     pseudopotential::exchange exchange() const {
@@ -217,13 +260,6 @@ namespace pseudopotential {
       extrapolate_first_point(proj);
       
       interpolate(proj);
-    }
-    
-    double d_ij(int l, int i, int j) const {
-      int n = l*nchannels() + i;
-      int m = l*nchannels() + j;
-
-      return dij_[n*nprojectors() + m];
     }
 
     bool has_radial_function(int l) const{
@@ -352,7 +388,6 @@ namespace pseudopotential {
     std::vector<char> buffer_;
     rapidxml::xml_document<> doc_;
     rapidxml::xml_node<> * root_node_;
-    std::vector<double> dij_;
     int start_point_;
     
   };

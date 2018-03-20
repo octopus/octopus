@@ -313,26 +313,6 @@ namespace pseudopotential {
       interpolate(proj);
     }
 
-  private:
-    
-    double & d_ij(int l, int i, int j) {
-      assert(l >= 0 && l <= lmax_);
-      assert(i >= 0 && i <= nchannels());
-      assert(j >= 0 && j <= nchannels());
-
-      return dij_[l*nchannels()*nchannels() + i*nchannels() + j];
-    }
-
-  public:
-
-    double d_ij(int l, int i, int j) const {
-      assert(l >= 0 && l <= lmax_);
-      assert(i >= 0 && i <= nchannels());
-      assert(j >= 0 && j <= nchannels());
-
-      return dij_[l*nchannels()*nchannels() + i*nchannels() + j];
-    }
-
     bool has_radial_function(int l) const{
       return false;
     }
@@ -427,7 +407,6 @@ namespace pseudopotential {
     std::ifstream file_;
     std::vector<char> buffer_;
     rapidxml::xml_document<> doc_;
-    std::vector<double> dij_;
     int start_point_;
 
     std::string symbol_;
@@ -435,7 +414,6 @@ namespace pseudopotential {
     int zval_;
     int nwavefunctions_;
     int nprojectors_;
-    int llocal_;
     
   };
 

@@ -33,9 +33,25 @@ namespace pseudopotential {
   class upf : public pseudopotential::anygrid {
 
   public:
-    
+
+    double d_ij(int l, int i, int j) const {
+      assert(l >= 0 && l <= lmax_);
+      assert(i >= 0 && i <= nchannels());
+      assert(j >= 0 && j <= nchannels());
+
+      return dij_[l*nchannels()*nchannels() + i*nchannels() + j];
+    }
+
   protected:
 
+    double & d_ij(int l, int i, int j) {
+      assert(l >= 0 && l <= lmax_);
+      assert(i >= 0 && i <= nchannels());
+      assert(j >= 0 && j <= nchannels());
+
+      return dij_[l*nchannels()*nchannels() + i*nchannels() + j];
+    }
+    
     void extrapolate_first_point(std::vector<double> & function_) const{
 
       assert(function_.size() >= 4);
@@ -56,7 +72,10 @@ namespace pseudopotential {
       function_[0] /= (x1 - x2)*(x1 - x3)*(x2 - x3);
 
     }
-    
+
+    std::vector<double> dij_;
+    int llocal_;
+
   };
 
 }
