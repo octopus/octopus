@@ -279,24 +279,26 @@ namespace pseudopotential {
       rapidxml::xml_node<> * node = doc_.first_node("PP_NONLOCAL")->first_node("PP_BETA");
 
       assert(node);
-      
-      while(node){
 
+      int iproj = 0;
+      while(node){
+	
+	if(l != proj_l_[iproj] || i != proj_c_[iproj]) {
+	  iproj++;
+	  node = node->next_sibling("PP_BETA");
+	  continue;
+	}
+	
 	std::string line;
 	std::istringstream stst(node->value());
-
+	
 	int read_i, read_l, size;
 
 	stst >> read_i >> read_l;
 	getline(stst, line);
+
+	assert(read_l == proj_l_[iproj]);
 	
-	read_i = read_i%nchannels();
-
-	if(l != read_l || i != read_i) {
-	  node = node->next_sibling("PP_BETA");
-	  continue;
-	}
-
 	stst >> size;
 	getline(stst, line);
 
