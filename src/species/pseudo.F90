@@ -27,33 +27,35 @@ module pseudo_oct_m
 
   private
 
-  public ::                     &
-    pseudo_t,                   &
-    pseudo_detect_format,       &
-    pseudo_init,                &
-    pseudo_end,                 &
-    pseudo_type,                &
-    pseudo_format,              &
-    pseudo_valence_charge,      &
-    pseudo_mesh_spacing,        &
-    pseudo_mesh_size,           &
-    pseudo_mass,                &
-    pseudo_lmax,                &
-    pseudo_llocal,              &
-    pseudo_nchannels,           &
-    pseudo_local_potential,     &
-    pseudo_projector,           &
-    pseudo_radial_function,     &
-    pseudo_radial_potential,    &
-    pseudo_has_nlcc,            &
-    pseudo_nlcc_density,        &
-    pseudo_dij,                 &
-    pseudo_has_density,         &
-    pseudo_density,             &
-    pseudo_nwavefunctions,      &
-    pseudo_wavefunction,        &
-    pseudo_exchange,            &
-    pseudo_correlation
+  public ::                              &
+    pseudo_t,                            &
+    pseudo_detect_format,                &
+    pseudo_init,                         &
+    pseudo_end,                          &
+    pseudo_type,                         &
+    pseudo_format,                       &
+    pseudo_valence_charge,               &
+    pseudo_mesh_spacing,                 &
+    pseudo_mesh_size,                    &
+    pseudo_mass,                         &
+    pseudo_lmax,                         &
+    pseudo_llocal,                       &
+    pseudo_nchannels,                    &
+    pseudo_local_potential,              &
+    pseudo_projector,                    &
+    pseudo_radial_function,              &
+    pseudo_radial_potential,             &
+    pseudo_has_nlcc,                     &
+    pseudo_nlcc_density,                 &
+    pseudo_dij,                          &
+    pseudo_has_density,                  &
+    pseudo_density,                      &
+    pseudo_nwavefunctions,               &
+    pseudo_wavefunction,                 &
+    pseudo_exchange,                     &
+    pseudo_correlation,                  &
+    pseudo_has_total_angular_momentum,   &
+    pseudo_total_angular_momentum
   
   !the following sets of values have to match with those on base.hpp
   integer, parameter, public ::               &
@@ -327,7 +329,18 @@ module pseudo_oct_m
       
       type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_correlation
+
+    ! -------------------------------------------------
     
+    integer function pseudo_total_angular_momentum(pseudo, l, ic)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+      integer,          intent(in)    :: l
+      integer,          intent(in)    :: ic
+    end function pseudo_total_angular_momentum
+
   end interface
   
 contains
@@ -367,6 +380,23 @@ contains
     pseudo_has_density = (pseudo_has_density_low(pseudo) /= 0)
     
   end function pseudo_has_density
+    ! -------------------------------------------------
+  
+  logical function pseudo_has_total_angular_momentum(pseudo)
+    type(pseudo_t),   intent(in)      :: pseudo
+    
+    interface
+      integer function pseudo_has_total_angular_momentum_low(pseudo)
+        import :: pseudo_t
+        implicit none
+        
+        type(pseudo_t),   intent(in)      :: pseudo
+      end function pseudo_has_total_angular_momentum_low
+    end interface
+
+    pseudo_has_total_angular_momentum = (pseudo_has_total_angular_momentum_low(pseudo) /= 0)
+    
+  end function pseudo_has_total_angular_momentum
   
 end module pseudo_oct_m
 

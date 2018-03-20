@@ -198,4 +198,10 @@ extern "C" fint FC_FUNC_(pseudo_correlation, PSEUDO_CORRELATION)(const pseudopot
   return fint((*pseudo)->correlation());
 }
 
+extern "C" fint FC_FUNC_(pseudo_has_total_angular_momentum_low, PSEUDO_HAS_TOTAL_ANGULAR_MOMENTUM_LOW)(const pseudopotential::base ** pseudo){
+  return fint((*pseudo)->has_total_angular_momentum());
+}
 
+extern "C" fint FC_FUNC_(pseudo_total_angular_momentum, PSEUDO_TOTAL_ANGULAR_MOMENTUM)(const pseudopotential::base ** pseudo, int * l, int * ic){
+  return (*pseudo)->total_angular_momentum(*l, *ic - 1);
+}

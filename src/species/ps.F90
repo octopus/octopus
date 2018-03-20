@@ -1205,9 +1205,10 @@ contains
     type(ps_t),     intent(inout) :: ps
     type(ps_xml_t), intent(in)    :: ps_xml
 
-    integer :: ll, ip, is, ic, jc, ir, nrc, ii
+    integer :: ll, ip, is, ic, jc, ir, nrc, ii, dest_ic
     FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element
     FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:), nlcc_density(:), dens(:)
+    integer, allocatable :: cmap(:, :)
 
     PUSH_SUB(ps_xml_load)
 
@@ -1244,9 +1245,37 @@ contains
     ! the projectors and the orbitals
     if(ps_xml%kleinman_bylander) then
 
+      SAFE_ALLOCATE(cmap(0:ps_xml%lmax, 1:ps_xml%nchannels))
+
+      ! the order of the channels is determined by spin orbit and the j value
       do ll = 0, ps_xml%lmax
         do ic = 1, ps_xml%nchannels
-          
+          cmap(ll, ic) = ic
+
+          if(ll == 0) cycle
+          if(ll == ps_xml%llocal) cycle
+          if(.not. pseudo_has_total_angular_momentum(ps_xml%pseudo)) cycle
+
+          ASSERT(ps_xml%nchannels == 2)
+          if(pseudo_total_angular_momentum(ps_xml%pseudo, ll, ic) == 2*ll - 1) then
+            ! this is Octopus convention
+            cmap(ll, ic) = 2
+          else
+            ASSERT(pseudo_total_angular_momentum(ps_xml%pseudo, ll, ic) == 2*ll + 1)
+            cmap(ll, ic) = 1
+          end if
+
+        end do
+
+        ! check that all numbers are present for each l
+        ASSERT(sum(cmap(ll, 1:ps_xml%nchannels)) == (ps_xml%nchannels + 1)*ps_xml%nchannels/2)
+      end do
+
+      ASSERT(all(cmap >= 0 .and. cmap <= ps_xml%nchannels))
+      
+      do ll = 0, ps_xml%lmax
+        do ic = 1, ps_xml%nchannels
+
           do ip = 1, ps%g%nrval
             if(ip <= ps_xml%grid_size) then
               kbprojector(ip) = ps_xml%projector(ip, ll, ic)
@@ -1255,10 +1284,10 @@ contains
             end if
           end do
 
-          call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, ic))
+          call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, cmap(ll, ic)))
 
           do jc = 1, ps_xml%nchannels
-            ps%h(ll, ic, jc) = ps_xml%dij(ll, ic, jc)
+            ps%h(ll, cmap(ll, ic), cmap(ll, jc)) = ps_xml%dij(ll, ic, jc)
           end do
 
         end do
@@ -1280,6 +1309,8 @@ contains
         end do
 
       end do
+
+      SAFE_DEALLOCATE_A(cmap)
       
     else
 
