@@ -133,7 +133,7 @@ namespace pseudopotential {
 
 	rapidxml::xml_node<> * node = doc_.first_node("PP_NONLOCAL")->first_node("PP_BETA");
 
-	std::vector<bool> has_l(10, false);
+	std::vector<bool> has_l(MAX_L, false);
 
 	lmax_ = 0;
 	int iproj = 0;

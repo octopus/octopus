@@ -93,7 +93,7 @@ namespace pseudopotential {
 
       //calculate lmax (we can't trust the one given by the file :-/)
 
-      std::vector<bool> has_l(10, false);
+      std::vector<bool> has_l(MAX_L, false);
       
       lmax_ = 0;
 
