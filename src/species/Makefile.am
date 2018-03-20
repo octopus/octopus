@@ -57,6 +57,7 @@ noinst_HEADERS =                         \
 	psml.hpp                         \
 	qso.hpp                          \
 	spline.h                         \
+	upf.hpp                          \
 	upf1.hpp                         \
 	upf2.hpp
 

@@ -26,7 +26,7 @@
 #include <iostream>
 #include <cmath>
 
-#include "anygrid.hpp"
+#include "upf.hpp"
 #include "base.hpp"
 #include <rapidxml.hpp>
 
@@ -34,7 +34,7 @@
 
 namespace pseudopotential {
 
-  class upf1 : public pseudopotential::anygrid {
+  class upf1 : public pseudopotential::upf {
 
   public:
     
@@ -424,27 +424,6 @@ namespace pseudopotential {
     
   private:
 
-    void extrapolate_first_point(std::vector<double> & function_) const{
-
-      assert(function_.size() >= 4);
-      assert(grid_.size() >= 4);
-      
-      double x1 = grid_[1];
-      double x2 = grid_[2];
-      double x3 = grid_[3];
-      double f1 = function_[1];
-      double f2 = function_[2];
-      double f3 = function_[3];
-
-
-      // obtained from:
-      // http://www.wolframalpha.com/input/?i=solve+%7Bb*x1%5E2+%2B+c*x1+%2B+d+%3D%3D+f1,++b*x2%5E2+%2B+c*x2+%2B+d+%3D%3D+f2,+b*x3%5E2+%2B+c*x3+%2B+d+%3D%3D+f3+%7D++for+b,+c,+d
-      
-      function_[0] = f1*x2*x3*(x2 - x3) + f2*x1*x3*(x3 - x1) + f3*x1*x2*(x1 - x2);
-      function_[0] /= (x1 - x2)*(x1 - x3)*(x2 - x3);
-
-    }
-    
     std::ifstream file_;
     std::vector<char> buffer_;
     rapidxml::xml_document<> doc_;
