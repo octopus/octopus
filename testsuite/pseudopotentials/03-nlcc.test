@@ -2,7 +2,7 @@
 
 Test       : Non-linear core corrections
 Program    : octopus
-TestGroups : short-run, finite_systems_3d
+TestGroups : short-run, pseudpotentials
 Enabled    : Yes
 
 Input      : 03-nlcc.01-Fatom.inp
