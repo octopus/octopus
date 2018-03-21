@@ -793,8 +793,10 @@ contains
           SAFE_ALLOCATE(kick_function_real(1:mesh%np_part))
           kick_function_real = DREAL(kick_function_interpolate)
           if ( pcm%kick_like .or. pcm%which_eps == 'drl' ) then
+            ! computing kick-like polarization due to kick or initialize polarization due to kick for the Drude-Lorentz model
             call pcm_calc_pot_rs(pcm, mesh, kick = kick%delta_strength * kick_function_real, kick_time = .true.)
           else if ( .not.pcm%kick_like .and. pcm%which_eps == 'deb' ) then
+            ! computing the kick-like part of polarization due to kick for Debye dielectric model
             pcm%kick_like = .true.
             call pcm_calc_pot_rs(pcm, mesh, kick = kick%delta_strength * kick_function_real, kick_time = .true.)
             pcm%kick_like = .false.
