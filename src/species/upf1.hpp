@@ -248,6 +248,7 @@ namespace pseudopotential {
 
     int nchannels() const {
       if(llocal() >= 0){
+	if(lmax() == 0) return 0;
 	return nprojectors()/lmax();
       } else {
 	return nprojectors()/(lmax() + 1);
@@ -395,8 +396,12 @@ namespace pseudopotential {
       std::string label;
       stst >> label >> l >> occ;
       getline(stst, line);
-      
-      n = std::stoi(label.substr(0, 1));
+
+      if(label == "s"){
+	n = 1;
+      } else {
+	n = std::stoi(label.substr(0, 1));
+      }
       
       proj.resize(grid_.size());
 

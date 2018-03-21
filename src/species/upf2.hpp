@@ -205,6 +205,7 @@ namespace pseudopotential {
 
     int nchannels() const {
       if(llocal() >= 0){
+	if(lmax() == 0) return 0;
 	return nprojectors()/lmax();
       } else {
 	return nprojectors()/(lmax() + 1);
