@@ -444,6 +444,27 @@ module scalapack_oct_m
     end subroutine pdlacp3
   end interface
 
+  interface
+    integer function indxl2g(indxloc, nb, iproc, isrcproc, nprocs)
+      implicit none
+      integer            indxloc, iproc, isrcproc, nb, nprocs
+    end function
+  end interface
+
+  interface
+    integer function indxg2l(indxglob, nb, iproc, isrcproc, nprocs)
+      implicit none
+      integer            indxglob, iproc, isrcproc, nb, nprocs
+    end function
+  end interface
+
+  interface
+    integer function indxg2p(indxglob, nb, iproc, isrcproc, nprocs)
+      implicit none
+      integer            indxglob, iproc, isrcproc, nb, nprocs
+    end function
+  end interface
+
 #endif
 end module scalapack_oct_m
 
