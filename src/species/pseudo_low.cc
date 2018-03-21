@@ -202,6 +202,12 @@ extern "C" fint FC_FUNC_(pseudo_has_total_angular_momentum_low, PSEUDO_HAS_TOTAL
   return fint((*pseudo)->has_total_angular_momentum());
 }
 
-extern "C" fint FC_FUNC_(pseudo_total_angular_momentum, PSEUDO_TOTAL_ANGULAR_MOMENTUM)(const pseudopotential::base ** pseudo, int * l, int * ic){
-  return (*pseudo)->total_angular_momentum(*l, *ic - 1);
+extern "C" fint FC_FUNC_(pseudo_projector_2j, PSEUDO_PROJECTOR_2J)(const pseudopotential::base ** pseudo, fint * l, fint * ic){
+  return (*pseudo)->projector_2j(*l, *ic - 1);
 }
+
+extern "C" fint FC_FUNC_(pseudo_wavefunction_2j, PSEUDO_WAVEFUNCTION_2J)(const pseudopotential::base ** pseudo, fint * ii){
+  return (*pseudo)->wavefunction_2j(*ii);
+}
+
+

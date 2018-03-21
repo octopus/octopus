@@ -1257,11 +1257,11 @@ contains
           if(.not. pseudo_has_total_angular_momentum(ps_xml%pseudo)) cycle
 
           ASSERT(ps_xml%nchannels == 2)
-          if(pseudo_total_angular_momentum(ps_xml%pseudo, ll, ic) == 2*ll - 1) then
+          if(pseudo_projector_2j(ps_xml%pseudo, ll, ic) == 2*ll - 1) then
             ! this is Octopus convention
             cmap(ll, ic) = 2
           else
-            ASSERT(pseudo_total_angular_momentum(ps_xml%pseudo, ll, ic) == 2*ll + 1)
+            ASSERT(pseudo_projector_2j(ps_xml%pseudo, ll, ic) == 2*ll + 1)
             cmap(ll, ic) = 1
           end if
 
@@ -1306,7 +1306,12 @@ contains
         else
           ps%conf%occ(ii, 1) = ps_xml%wf_occ(ii)
         end if
-        
+
+        ps%conf%j(ii) = 0.0
+        if(pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
+          ps%conf%j(ii) = 0.5*pseudo_wavefunction_2j(ps_xml%pseudo, ii)
+        end if
+
         do ip = 1, ps%g%nrval
           if(ip <= ps_xml%grid_size) then
             wavefunction(ip) = ps_xml%wavefunction(ip, ii)

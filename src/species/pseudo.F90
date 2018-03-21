@@ -55,7 +55,8 @@ module pseudo_oct_m
     pseudo_exchange,                     &
     pseudo_correlation,                  &
     pseudo_has_total_angular_momentum,   &
-    pseudo_total_angular_momentum
+    pseudo_projector_2j,                 &
+    pseudo_wavefunction_2j
   
   !the following sets of values have to match with those on base.hpp
   integer, parameter, public ::               &
@@ -332,15 +333,25 @@ module pseudo_oct_m
 
     ! -------------------------------------------------
     
-    integer function pseudo_total_angular_momentum(pseudo, l, ic)
+    integer function pseudo_projector_2j(pseudo, l, ic)
       import :: pseudo_t
       implicit none
       
       type(pseudo_t),   intent(in)    :: pseudo
       integer,          intent(in)    :: l
       integer,          intent(in)    :: ic
-    end function pseudo_total_angular_momentum
+    end function pseudo_projector_2j
 
+    ! -------------------------------------------------
+    
+    integer function pseudo_wavefunction_2j(pseudo, ii)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+      integer,          intent(in)    :: ii
+    end function pseudo_wavefunction_2j
+    
   end interface
   
 contains
