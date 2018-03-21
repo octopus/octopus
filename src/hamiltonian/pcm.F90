@@ -546,8 +546,6 @@ contains
     !%  as another kick, i.e., it is a delta-perturbation. 
     !% If .false. ALL           degrees-of-freedom of the solvent follow the kick. The potential due to polarization charges evolves 
     !%  following an equation of motion. When Debye dielectric model is used, just a part of the potential behaves as another kick.
-    !%  PCMKick = .true. case is a limiting situation of this case for the Debye dielectric model, when
-    !%  </math>\tau\rightarrow\infty,0</math> or </math>\varepsilon_0=\varepsilon_d\rightarrow 0</math> .
     !%End
     call parse_variable('PCMKick', .false., pcm%kick_like)
     call messages_print_var_value(stdout, "PCMKick", pcm%kick_like)
