@@ -104,8 +104,6 @@ dist_share_DATA = \
 	24-o2-spin.01-gs.inp \
 	25-multiresolution.01-Hatom.inp \
 	25-multiresolution.test \
-	26-nlcc.01-Fatom.inp \
-	26-nlcc.test                                 \
 	27-fine_mesh.test                            \
 	27-fine_mesh.01-gs.inp \
         29-pcm_chlorine_anion.01-ground_state.inp \

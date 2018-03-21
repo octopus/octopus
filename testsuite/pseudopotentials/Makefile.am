@@ -26,6 +26,8 @@ dist_share_DATA =                                  \
 	02-cu2_hgh.test                            \
 	02-cu2_hgh.01_gs.inp                       \
 	02-cu2_hgh.02_gs_current.inp               \
-	02-cu2_hgh.03_gs_current_fast.inp
+	02-cu2_hgh.03_gs_current_fast.inp          \
+	03-nlcc.test                               \
+	03-nlcc.01-Fatom.inp
 
 CLEANFILES = *~ *.bak
