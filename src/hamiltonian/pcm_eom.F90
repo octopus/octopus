@@ -33,70 +33,72 @@ module pcm_eom_oct_m
 
   !> tesselation derived type
   type :: pcm_tessera_t
-    FLOAT :: point(1:3)  !< representative point of the tessera  
-    FLOAT :: area        !< area of the tessera
-    FLOAT :: normal(1:3) !< unitary outgoing vector normal to the tessera surface  
-    FLOAT :: r_sphere    !< radius of the sphere to which the tessera belongscd
+    FLOAT :: point(1:3)                           !< representative point of the tessera  
+    FLOAT :: area                                 !< area of the tessera
+    FLOAT :: normal(1:3)                          !< unitary outgoing vector normal to the tessera surface  
+    FLOAT :: r_sphere                             !< radius of the sphere to which the tessera belongscd
   end type pcm_tessera_t
 
-  type(pcm_tessera_t), allocatable :: cts_act(:) !< tesselation arrays (nts_act)
-  integer :: nts_act				 !< number of tesserae
+  type(pcm_tessera_t), allocatable :: cts_act(:)  !< tesselation arrays (nts_act)
+  integer :: nts_act				                      !< number of tesserae
 
   !> set of parameters for Debye dielectric model
   type :: debye_param_t
-    FLOAT :: eps_0 !< static  dielectric constant (at ZERO     frequency of the field)
-    FLOAT :: eps_d !< dynamic dielectric constant (at INFINITE frequency of the field)
-    FLOAT :: tau   !< Debye relaxation time
+    FLOAT :: eps_0                                !< static  dielectric constant (at ZERO     frequency of the field)
+    FLOAT :: eps_d                                !< dynamic dielectric constant (at INFINITE frequency of the field)
+    FLOAT :: tau                                  !< Debye relaxation time
   end type debye_param_t
 
   !> set of parameters for Drude-Lorentz dielectric model
   !> no parameter allows the match with the dynamic dielectric constant
   type :: drude_param_t
-    FLOAT :: aa !< parameter matching the static dielectric constant
-    FLOAT :: gm !< damping of the plasma oscillation
-    FLOAT :: w0 !< plasma frequency
+    FLOAT :: aa                                   !< parameter matching the static dielectric constant
+    FLOAT :: gm                                   !< damping of the plasma oscillation
+    FLOAT :: w0                                   !< resonance frequency
   end type drude_param_t
 
   type(debye_param_t) :: deb
   type(drude_param_t) :: drl
 
-  character(8) :: which_eom			 !< character flag for PCM charges due to:
-                                                 !< electrons ('electron'), external potential ('external') or kick ('justkick')
+  character(8) :: which_eom			                  !< character flag for PCM charges due to:
+                                                  !< electrons ('electron'), external potential ('external') or kick ('justkick')
 
-  character(3) :: which_eps			 !< character flag for Debye ('deb') and Drude-Lorentz models ('drl')
+  character(3) :: which_eps			                  !< character flag for Debye ('deb') and Drude-Lorentz models ('drl')
 
-  FLOAT :: dt 					 !< time-step of the propagation
+  FLOAT :: dt 					                          !< time-step of the propagation
 
-						 !< polarization charges and variation of it in the previous iteration:
+						                                      !< polarization charges and variation of it in the previous iteration:
   FLOAT, allocatable :: q_tp(:), dq_tp(:)	        !< 			 due to solute electrons
   FLOAT, allocatable :: qext_tp(:), dqext_tp(:)	  !< 			 due to external potential
   FLOAT, allocatable :: qkick_tp(:), dqkick_tp(:)	!< 			 due to kick
 
-  FLOAT, allocatable :: pot_tp(:)		 !< Hartree (electrons) potential in previous iteration
-  FLOAT, allocatable :: potext_tp(:)		 !< external potential in previous iteration
+  FLOAT, allocatable :: pot_tp(:)		              !< Hartree (electrons) potential in previous iteration
+  FLOAT, allocatable :: potext_tp(:)		          !< external potential in previous iteration
 
-                                                 !< See Chem.Phys.Lett. 429 (2006) 310-316 for Velocity-Verlet (VV) algorithm... 
-  FLOAT :: f1, f2, f3, f4, f5			 !< auxiliar constants for VV
-                                                 !< analogous to force in the equation of motion for the pol.charges, prev. iter.
-  FLOAT, allocatable :: force_tp(:)	      !< 			 due to solute electrons
-  FLOAT, allocatable :: force_qext_tp(:)  !< 			 due to external potential
-  FLOAT, allocatable :: force_qkick_tp(:) !< 			 due to kick
+                                                  !< See Chem.Phys.Lett. 429 (2006) 310-316 for Velocity-Verlet (VV) algorithm... 
+  FLOAT :: f1, f2, f3, f4, f5			                !< auxiliar constants for VV
+                                                  !< analogous to force in the equation of motion for the pol.charges, prev. iter.
+  FLOAT, allocatable :: force_tp(:)	              !< 			 due to solute electrons
+  FLOAT, allocatable :: force_qext_tp(:)          !< 			 due to external potential
+  FLOAT, allocatable :: force_qkick_tp(:)         !< 			 due to kick
 
-  						 !< In Ref.1 - J.Phys.Chem.A 2015, 119, 5405-5416... - Debye dielectric func. (eps)
-                                                 !< In Ref.2 - In J. Phys. Chem. C 2016, 120, 28774−28781... - Drude-Lorentz eps
-  FLOAT, allocatable :: cals(:,:),cald(:,:)	 !< Calderon matrices S and D from Eq.(5), Ref.1
-  FLOAT, allocatable :: eigv(:),eigt(:,:)        !< \Lambda and T matrices from Eq.(10), Ref.1
-  FLOAT, allocatable :: sm12(:,:),sp12(:,:)      !< S^{-1/2} and S^{1/2}
-                                                 !< Q^{IEF(d)}_0 (not used in ref.) and Q^{IEF(d)}_d from Eq.(18) with eps_0/eps_d
+  						                                    !< In Ref.1 - J.Phys.Chem.A 2015, 119, 5405-5416... - Debye dielectric func. (eps)
+                                                  !< In Ref.2 - In J. Phys. Chem. C 2016, 120, 28774−28781... - Drude-Lorentz eps
+  FLOAT, allocatable :: cals(:,:),cald(:,:)	      !< Calderon matrices S and D from Eq.(5), Ref.1
+  FLOAT, allocatable :: eigv(:),eigt(:,:)         !< \Lambda and T matrices from Eq.(10), Ref.1
+  FLOAT, allocatable :: sm12(:,:),sp12(:,:)       !< S^{-1/2} and S^{1/2}
+                                                  !< Q^{IEF(d)}_0 (not used in ref.) and Q^{IEF(d)}_d from Eq.(18) with eps_0/eps_d
   FLOAT, allocatable :: matq0(:,:),matqd(:,:)       !< 			 for solute
   FLOAT, allocatable :: matq0_lf(:,:),matqd_lf(:,:) !< 			 for external potential
-                                                 !< \tilde{Q} and R matrices from Eq.(38)-(39) (Ref.1), respectively
-                                                 !<  Q_f and Q_{\omega} from Eq.(17)-(16) (Ref.2), respectively
-  FLOAT, allocatable :: matqv(:,:),matqq(:,:)       !< 			 for solute
-  FLOAT, allocatable :: matqv_lf(:,:)								!< 			 for external potential
-                                                 !< Q^{IEF(d)}_d, \tilde{Q} and R matrices enter the EOM in eq.(37), Ref.1
-                                                 !< Q_f and Q_{\omega} matrices enter the EOM in eq.(15), Ref.2
-                                                 !< N.B.: matrices R (in case of Debye) and Q_{\omega} (in case of Drude-Lorentz) --namely matqq in this implementation-- are the same in the EOMs for polarization charges due to solute and due to external potential
+                                                  !< \tilde{Q} and R matrices from Eq.(38)-(39) (Ref.1), respectively
+                                                  !<  Q_f and Q_{\omega} from Eq.(17)-(16) (Ref.2), respectively
+  FLOAT, allocatable :: matqv(:,:),matqq(:,:)     !< 			 for solute
+  FLOAT, allocatable :: matqv_lf(:,:)							!< 			 for external potential
+                                                  !< Q^{IEF(d)}_d, \tilde{Q} and R matrices enter the EOM in eq.(37), Ref.1
+                                                  !< Q_f and Q_{\omega} matrices enter the EOM in eq.(15), Ref.2
+                                                  !< N.B.: matrices R (in case of Debye) and Q_{\omega} (in case of Drude-Lorentz), 
+                                                  !< i.e., matqq in this implementation, 
+                                                  !< are the same in the EOMs for polarization charges due to the solute or ext.pot.
 
   !> mathematical constants
   FLOAT, parameter :: twopi=M_TWO*M_Pi
@@ -276,7 +278,7 @@ module pcm_eom_oct_m
    if( which_eom == 'electron' ) then
     !< Here we consider the potential at any earlier time equal to the initial potential.
     !< Therefore, we can suppose that the solvent is already in equilibrium with the initial solute potential.
-    !< The latter is valid when starting the propagation from the ground state but do not hold in general.
+    !< The latter is valid when starting the propagation from the ground state but does not hold in general.
     message(1) = 'EOM-PCM for solvent polarization due to solute electrons considers that you start from a ground state run.'
     call messages_warning(1)
   
@@ -369,7 +371,7 @@ module pcm_eom_oct_m
     !> analogous to Eq.(47) ibid. with different matrices
     q_t(:) = qext_tp(:) - dt*matmul(matqq,qext_tp)   + &
 	  	          dt*matmul(matqv_lf,potext_tp) + &
-			     matmul(matqd_lf,pot_t-potext_tp) !< N.B. matqq
+			     matmul(matqd_lf,pot_t-potext_tp)             !< N.B. matqq
 
     qext_tp = q_t
 
@@ -377,7 +379,7 @@ module pcm_eom_oct_m
 
    else if( which_eom == 'justkick' ) then
     !> simplifying for kick
-    q_t(:) = qkick_tp(:) - dt*matmul(matqq,qkick_tp)            !< N.B. matqq
+    q_t(:) = qkick_tp(:) - dt*matmul(matqq,qkick_tp)    !< N.B. matqq
 
     qkick_tp = q_t
 
@@ -427,7 +429,7 @@ module pcm_eom_oct_m
    else if( which_eom == 'external' ) then
     !> analagous to Eq.(15) ibid. with different matrices
     q_t = qext_tp + f1*dqext_tp + f2*force_qext_tp
-    force = -matmul(matqq,q_t) + matmul(matqv_lf,pot_t)					!< N.B. matqq
+    force = -matmul(matqq,q_t) + matmul(matqv_lf,pot_t)	!< N.B. matqq
     dqext_tp = f3*dqext_tp + f4*(force+force_qext_tp) -f5*force_qext_tp
     force_qext_tp = force
     q_tp = q_t
@@ -435,7 +437,7 @@ module pcm_eom_oct_m
    else if( which_eom == 'justkick' ) then
     !> simplifying for kick
     q_t = qkick_tp + f1*dqkick_tp + f2*force_qkick_tp
-    force = -matmul(matqq,q_t)																	!< N.B. matqq
+    force = -matmul(matqq,q_t)												  !< N.B. matqq
     dqkick_tp = f3*dqkick_tp + f4*(force+force_qkick_tp) -f5*force_qkick_tp
     force_qkick_tp = force
     q_tp = q_t
@@ -578,7 +580,7 @@ module pcm_eom_oct_m
    integer :: i,j
    FLOAT, allocatable :: scr4(:,:),scr1(:,:)
    FLOAT, allocatable :: scr2(:,:),scr3(:,:)
-   FLOAT, allocatable :: fact1(:),fact2(:)   !< tau^{-1} and tau^{-1}K_0 from (38)-(39), respectively, with from Eq.(32), Ref.1
+   FLOAT, allocatable :: fact1(:),fact2(:)   !< tau^{-1} and tau^{-1}K_0 from (38)-(39), respectively, with Eq.(32), Ref.1
                                              !< K_{\omega} and K_f from (19)-(10), respectively, Ref.2
    FLOAT, allocatable :: Kdiag0(:),Kdiagd(:) !< correspond to K_0 (static dielec. const.) and K_d (dynamic dielec. const.) in Ref.1
                                              !< e.g. Eq.(38) -^                               ^- e.g. implicitly in Q_d^{IEF(d)}, 
@@ -637,19 +639,19 @@ module pcm_eom_oct_m
     else
      Kdiagd(:)=M_ZERO
     endif
-    fact1(:)=((twopi-sgn*eigv(:))*deb%eps_0+twopi+eigv(:))/ &  !< inverse of Eq.(32), ibid.
+    fact1(:)=((twopi-sgn*eigv(:))*deb%eps_0+twopi+eigv(:))/ &                 !< inverse of Eq.(32), ibid.
     ((twopi-sgn*eigv(:))*deb%eps_d+twopi+eigv(:))/deb%tau
-    fact2(:)=Kdiag0(:)*fact1(:)				       !< tau^{-1}K_0 in Eq.(38), ibid.
+    fact2(:)=Kdiag0(:)*fact1(:)				                                        !< tau^{-1}K_0 in Eq.(38), ibid.
    elseif (which_eps .eq. "drl") then
-    Kdiagd(:)=M_ZERO					       !< from Eq.(10) up in Ref.2
-    fact2(:)=(twopi-sgn*eigv(:))*drl%aa/fourpi                 !< Eq.(10) down
+    Kdiagd(:)=M_ZERO					                                                !< from Eq.(10) up in Ref.2
+    fact2(:)=(twopi-sgn*eigv(:))*drl%aa/fourpi                                !< Eq.(10) down
     do i=1,nts_act
-     if(fact2(i).lt.M_ZERO) fact2(i)=M_ZERO                    !< check out
+     if(fact2(i).lt.M_ZERO) fact2(i)=M_ZERO !< check out
     enddo
-    if (drl%w0.eq.M_ZERO) drl%w0=1.d-8                         !< check out
-    fact1(:)=fact2(:)+drl%w0*drl%w0			       !< Eq.(19), ibid.
-    fact2(:)=sgn_lf*(twopi-sgn*sgn_lf*eigv(:))*drl%aa/fourpi   !< Eq.(10) down, local field analogous
-    Kdiag0(:)=fact2(:)/fact1(:)				       !< from Eq.(10) up, ibid.
+    if (drl%w0.eq.M_ZERO) drl%w0=1.d-8      !< check out
+    fact1(:)=fact2(:)+drl%w0*drl%w0			                                      !< Eq.(19), ibid.
+    fact2(:)=sgn_lf*(twopi-sgn*sgn_lf*eigv(:))*drl%aa/fourpi                  !< Eq.(10) down, local field analogous
+    Kdiag0(:)=fact2(:)/fact1(:)				                                        !< from Eq.(10) up, ibid.
    endif
    scr3=matmul(sm12,eigt)
    scr2=matmul(transpose(eigt),sp12)
@@ -657,30 +659,30 @@ module pcm_eom_oct_m
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*fact1(i)
    enddo
-   matqq=matmul(scr1,scr2)				       !< Eq.(39) in Ref.1 and Eq.(16) in Ref.2
+   matqq=matmul(scr1,scr2)				                                            !< Eq.(39) in Ref.1 and Eq.(16) in Ref.2
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*fact2(i)
    enddo
    if( which_eom == 'electron' ) then
-    matqv=-matmul(scr1,scr4)				       !< Eq.(38) in Ref.1 and Eq.(17) in Ref.2
+    matqv=-matmul(scr1,scr4)				                                          !< Eq.(38) in Ref.1 and Eq.(17) in Ref.2
    else if( which_eom == 'external' .or. which_eom == 'justkick' ) then
-    matqv_lf=-matmul(scr1,scr4)				       !< local field analogous
+    matqv_lf=-matmul(scr1,scr4)				                                        !< local field analogous
    endif
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*Kdiag0(i)
    enddo
    if( which_eom == 'electron' ) then
-    matq0=-matmul(scr1,scr4)				       !< from Eq.(14) and (18) for eps_0 in Ref.1
+    matq0=-matmul(scr1,scr4)				                                          !< from Eq.(14) and (18) for eps_0 in Ref.1
    else if( which_eom == 'external' ) then
-    matq0_lf=-matmul(scr1,scr4)			        !< local field analogous !< not used yet
+    matq0_lf=-matmul(scr1,scr4)			                                          !< local field analogous !< not used yet
    endif
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*Kdiagd(i)
    enddo
    if( which_eom == 'electron' ) then
-    matqd=-matmul(scr1,scr4)				       !< from Eq.(14) and (18) for eps_d, ibid.
+    matqd=-matmul(scr1,scr4)				                                          !< from Eq.(14) and (18) for eps_d, ibid.
    else if( which_eom == 'external' .or. which_eom == 'justkick' ) then
-    matqd_lf=-matmul(scr1,scr4)				       !< local field analogous
+    matqd_lf=-matmul(scr1,scr4)				                                        !< local field analogous
    endif
    SAFE_DEALLOCATE_A(scr4)
    SAFE_DEALLOCATE_A(scr1)
@@ -711,7 +713,7 @@ module pcm_eom_oct_m
    if (i.ne.j) then
     diff=cts_act(i)%point-cts_act(j)%point
     dist=sqrt(dot_product(diff,diff))
-    value=dot_product(cts_act(j)%normal,diff)/dist**3	    !< Eq.(5) in Refs.1-2
+    value=dot_product(cts_act(j)%normal,diff)/dist**3       !< Eq.(5) in Refs.1-2
    else
     value=-1.0694*sqrt(fourpi*cts_act(i)%area)
     value=value/(M_TWO*cts_act(i)%r_sphere)/cts_act(i)%area !< diagonal part is a bit cumbersome
@@ -733,9 +735,9 @@ module pcm_eom_oct_m
    if (i.ne.j) then
     diff=cts_act(i)%point-cts_act(j)%point
     dist=sqrt(dot_product(diff,diff))
-    value=M_ONE/dist					    !< Eq.(5) in Refs.1-2
+    value=M_ONE/dist					                !< Eq.(5) in Refs.1-2
    else
-    value=1.0694*sqrt(fourpi/cts_act(i)%area)		    !< diagonal part is a bit cumbersome
+    value=1.0694*sqrt(fourpi/cts_act(i)%area) !< diagonal part is a bit cumbersome
    endif
 
    POP_SUB(green_s)
@@ -803,11 +805,11 @@ module pcm_eom_oct_m
     scr1(:,i)=eigt(:,i)*sqrt(eigv(i))
    enddo
    eigt_t=transpose(eigt)
-   sp12=matmul(scr1,eigt_t) 		 !< building S^{1/2} to be used in R (Ref.1) and Q_{\omega} (Ref.2)
+   sp12=matmul(scr1,eigt_t) 		         !< building S^{1/2} to be used in R (Ref.1) and Q_{\omega} (Ref.2)
    do i=1,nts_act
     scr1(:,i)=eigt(:,i)/sqrt(eigv(i))
    enddo
-   sm12=matmul(scr1,eigt_t) 		 !< building S^{-1/2} to be used in R and \tilde{Q} (Ref.1) and Q_{\omega} and Q_f (Ref.2)
+   sm12=matmul(scr1,eigt_t) 		         !< building S^{-1/2} to be used in R and \tilde{Q} (Ref.1) and Q_{\omega} and Q_f (Ref.2)
    do i=1,nts_act
     scr1(:,i)=cald(:,i)*cts_act(i)%area
    enddo
@@ -818,7 +820,7 @@ module pcm_eom_oct_m
     enddo
    enddo
    call dsyevd(jobz,uplo,nts_act,eigt,nts_act,eigv,work,lwork, &
-               iwork,liwork,info)	 !< obtaining \Lambda (eigv) and T (eigt), Eq.(10), ibid.
+               iwork,liwork,info)        !< obtaining \Lambda (eigv) and T (eigt), Eq.(10), ibid.
 
    SAFE_DEALLOCATE_A(work)
    SAFE_DEALLOCATE_A(iwork)

@@ -404,12 +404,12 @@ contains
     !%Default 0
     !%Section Hamiltonian::PCM
     !%Description
-    !% If 0 the propagation of the solvent polarization charges starts from internally generated initial charges 
+    !% If =0 the propagation of the solvent polarization charges starts from internally generated initial charges 
     !%  in equilibrium with the initial potential.
     !% For Debye EOM-PCM, if >0 the propagation of the solvent polarization charges starts from initial charges from input file.
-    !%                      * 1 initial pol. charges due to solute electrons are read from input file.
-    !%                      * 2 initial pol. charges due to external potential are read from input file.
-    !%                      * 3 initial pol. charges due to solute electrons and external potential are read from input file.
+    !% 										if =1, initial pol. charges due to solute electrons are read from input file.
+    !% 										else if =2, initial pol. charges due to external potential are read from input file.
+    !% 										else if =3, initial pol. charges due to solute electrons and external potential are read from input file.
     !% Files should be located in pcm directory and are called ASC_e.dat and ASC_ext.dat, respectively.
     !% The latter files are generated after any PCM run and contain the last values of the polarization charges.
     !%End
@@ -436,8 +436,8 @@ contains
     !%Default 0.0
     !%Section Hamiltonian::PCM
     !%Description
-    !% Relaxation time of the solvent within Debye model (<math>\tau</math>).
-    !% Recall Debye dieletric function: <math>\varepsilon(\omega)=\varepsilon_d+\frac{\varepsilon_0-\varepsilon_d}{1-i\omega\tau}</math>    
+    !% Relaxation time of the solvent within Debye model (<math>\tau</math>). Recall Debye dieletric function: 
+    !% <math>\varepsilon(\omega)=\varepsilon_d+\frac{\varepsilon_0-\varepsilon_d}{1-i\omega\tau}</math>    
     !%End
     call parse_variable('PCMDebyeRelaxTime', M_ZERO, pcm%deb%tau)
     call messages_print_var_value(stdout, "PCMDebyeRelaxTime", pcm%deb%tau)
@@ -458,24 +458,24 @@ contains
         call messages_fatal(1)
       end if
     else
-      !%Variable PCMPlasmaFrequency
+      !%Variable PCMDrudeLOmega
       !%Type float
       !%Default <math>\sqrt{1/(\varepsilon_0-1)}</math>
       !%Section Hamiltonian::PCM
       !%Description
-      !% Plasma frequency of the solvent within Drude-Lorentz model (<math>\omega_0</math>).
-      !% Default values of <math>\omega_0</math>   
+      !% Resonance frequency of the solvent within Drude-Lorentz model (<math>\omega_0</math>).
       !% Recall Drude-Lorentz dielectric function: <math>\varepsilon(\omega)=1+\frac{A}{\omega_0^2-\omega^2+i\gamma\omega}</math>   
+      !% Default values of <math>\omega_0</math> guarantee to recover static dielectric constant.   
       !%End
-      call parse_variable('PCMPlasmaFrequency', sqrt(M_ONE/(pcm%epsilon_0-M_ONE)), pcm%drl%w0)
-      call messages_print_var_value(stdout, "PCMPlasmaFrequency", pcm%drl%w0)
+      call parse_variable('PCMDrudeLOmega', sqrt(M_ONE/(pcm%epsilon_0-M_ONE)), pcm%drl%w0)
+      call messages_print_var_value(stdout, "PCMDrudeLOmega", pcm%drl%w0)
     end if    
 
     if( pcm%eom .and. pcm%which_eps == 'drl' .and. pcm%drl%w0 == M_ZERO ) then
-      call messages_write('Sorry, you have set PCMPlasmaFrequency = 0 but this is incompatible with a Drude-Lorentz EOM-PCM run.')
+      call messages_write('Sorry, you have set PCMDrudeLOmega = 0 but this is incompatible with a Drude-Lorentz EOM-PCM run.')
       call messages_new_line()
       if( pcm%epsilon_0 /= M_ONE ) then
-        call messages_write('Octopus will run using the default value of PCMPlasmaFrequency.')        
+        call messages_write('Octopus will run using the default value of PCMDrudeLOmega.')        
         call messages_warning()
         pcm%drl%w0 = sqrt(M_ONE/(pcm%epsilon_0-M_ONE))
       else
@@ -503,7 +503,9 @@ contains
     !%Default no
     !%Section Hamiltonian::PCM
     !%Description
-    !% This variable is a flag for including local field effects.
+    !% This variable is a flag for including local field effects when an external field is applied. The total field interacting with
+    !% the molecule (also known as cavity field) is not the bare field in the solvent (the so-called Maxwell field), but it also
+    !% include a contribution due to the polarization of the solvent. The latter is calculated here within the PCM framework.
     !%End
     call parse_variable('PCMLocalField', .false., pcm%localf)
     call messages_print_var_value(stdout, "PCMLocalField", pcm%localf)
@@ -518,7 +520,9 @@ contains
     !%Default yes
     !%Section Hamiltonian::PCM
     !%Description
-    !% This variable is a flag for including polarization effects of the solvent due to the solute.
+    !% This variable is a flag for including polarization effects of the solvent due to the solute. 
+    !% (Useful for analysis) When external fields are applied, turning off the solvent-molecule interaction (PCMSolute=no) and 
+    !% activating the solvent polarization due to the applied field (PCMLocalField=yes) allows to include only local field effects. 
     !%End
     call parse_variable('PCMSolute', .true., pcm%solute)
     call messages_print_var_value(stdout, "PCMSolute", pcm%solute)
@@ -538,8 +542,12 @@ contains
     !%Section Hamiltonian::PCM
     !%Description
     !% This variable controls the effect the kick has on the polarization of the solvent.
-    !% If .true.  ONLY the FAST degrees-of-freedom of the solvent follow the kick. 
-    !% If .false. ALL           degrees-of-freedom of the solvent follow the kick.
+    !% If .true.  ONLY the FAST degrees-of-freedom of the solvent follow the kick. The potential due to polarization charges behaves 
+    !%  as another kick, i.e., it is a delta-perturbation. 
+    !% If .false. ALL           degrees-of-freedom of the solvent follow the kick. The potential due to polarization charges evolves 
+    !%  following an equation of motion. When Debye dielectric model is used, just a part of the potential behaves as another kick.
+    !%  PCMKick = .true. case is a limiting situation of this case for the Debye dielectric model, when
+    !%  </math>\tau\rightarrow\infty,0</math> or </math>\varepsilon_0=\varepsilon_d\rightarrow 0</math> .
     !%End
     call parse_variable('PCMKick', .false., pcm%kick_like)
     call messages_print_var_value(stdout, "PCMKick", pcm%kick_like)
@@ -721,8 +729,8 @@ contains
       !%Default 1
       !%Section Hamiltonian::PCM
       !%Description
-      !% Allows to subdivide further each tessera. Can take only two values, 1 or 4.
-      !% 1 => 60 tesserae/sphere; 4 => 240 tesserae/sphere.
+      !% Allows to subdivide further each tessera refining the discretization of the cavity tesselation. 
+      !% Can take only two values, 1 or 4. 1 corresponds to 60 tesserae per sphere, while 4 corresponds to 240 tesserae per sphere.
       !%End
       call parse_variable('PCMTessSubdivider', 1, subdivider)
 
@@ -1211,17 +1219,14 @@ contains
      
     if (calc == PCM_NUCLEI) then
       call pcm_v_nuclei_cav(pcm%v_n, geo, pcm%tess, pcm%n_tesserae)
-      if (pcm%solute) then !< N.B.
-        call pcm_charges(pcm%q_n, pcm%qtot_n, pcm%v_n, pcm%matrix, pcm%n_tesserae, &
-                         pcm%q_n_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_n)
-        if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_n, pcm%qtot_n, mesh, pcm%rho_n)
-        call pcm_pot_rs(pcm, pcm%v_n_rs, pcm%q_n, pcm%rho_n, mesh)
-      end if !< N.B.     
+      call pcm_charges(pcm%q_n, pcm%qtot_n, pcm%v_n, pcm%matrix, pcm%n_tesserae, &
+                       pcm%q_n_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_n)
+      if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_n, pcm%qtot_n, mesh, pcm%rho_n)
+      call pcm_pot_rs(pcm, pcm%v_n_rs, pcm%q_n, pcm%rho_n, mesh)
     end if
 
     if (calc == PCM_ELECTRONS) then
       call pcm_v_cav_li(pcm%v_e, v_h, pcm, mesh)
-      if (pcm%solute) then !< N.B.
       if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 .and. pcm%noneq ) then
         !< BEGIN - equation-of-motion propagation or inertial/dynamical charge splitting
         if( pcm%eom ) then	!< equation-of-motion propagation
@@ -1234,7 +1239,6 @@ contains
           if ( (.not.pcm%localf) .and. not_yet_called ) call pcm_eom_enough_initial(not_yet_called)
           !< total pcm charges due to solute electrons
           pcm%qtot_e = sum(pcm%q_e)
-          ! introduce renormalization at each time step?
         else			!< inertial/dynamical partition
           select case (pcm%iter)
           case(1)
@@ -1243,8 +1247,8 @@ contains
             !< (first step) calculating polarization charges equilibrated with the initial Hartree potential (just once)
             call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
                              pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
-	    !< (second step) calculating initial dynamic polarization charges 
-	    !< dont pay attention to the use of q_e_in and qtot_e_in, whose role here is only auxiliary
+	          !< (second step) calculating initial dynamic polarization charges 
+	          !< dont pay attention to the use of q_e_in and qtot_e_in, whose role here is only auxiliary
             call pcm_charges(pcm%q_e_in, pcm%qtot_e_in, pcm%v_e, pcm%matrix_d, pcm%n_tesserae, &
                              pcm%q_e_nominal, pcm%epsilon_infty, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
             !< (finally) the inertial polarization charges
@@ -1271,7 +1275,6 @@ contains
       end if !< END - pcm charges propagation in equilibrium with solute
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_e, pcm%qtot_e, mesh, pcm%rho_e)
       call pcm_pot_rs(pcm, pcm%v_e_rs, pcm%q_e, pcm%rho_e, mesh )
-      end if !< N.B.
     end if
 
     if( .not.pcm%kick_like ) then
@@ -1279,12 +1282,12 @@ contains
       pcm%v_ext_rs = M_ZERO
     end if
 
-    if (calc == PCM_EXTERNAL_POTENTIAL .or. calc == PCM_EXTERNAL_PLUS_KICK) then !under development
+    if (calc == PCM_EXTERNAL_POTENTIAL .or. calc == PCM_EXTERNAL_PLUS_KICK) then
       call pcm_v_cav_li(pcm%v_ext, v_ext, pcm, mesh)
       if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 .and. pcm%noneq ) then
         !< BEGIN - equation-of-motion propagation or inertial/dynamical charge splitting
         if( pcm%eom ) then	!< equation-of-motion propagation
-          select case (pcm%which_eps) !under development
+          select case (pcm%which_eps)
             case('drl')
              call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, input_asc_ext, 'external', 'drl', this_drl = pcm%drl)
             case default
@@ -1322,15 +1325,12 @@ contains
 
     end if
 
-    if (calc == PCM_EXTERNAL_PLUS_KICK .or. calc == PCM_KICK) then !under development
-
+    if (calc == PCM_EXTERNAL_PLUS_KICK .or. calc == PCM_KICK) then
       if ( is_time_for_kick ) then
         call pcm_v_cav_li(pcm%v_kick, kick, pcm, mesh)
       else
         pcm%v_kick = M_ZERO
       end if
-
-
       if ( pcm%kick_like ) then
         if ( is_time_for_kick ) then
          !< kick-like polarization charges

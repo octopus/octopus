@@ -1457,7 +1457,7 @@ contains
           end do
           kick_time =((hm%pcm%iter-1)*dt <= hm%ep%kick%time) .and. (hm%pcm%iter*dt > hm%ep%kick%time)
           if ( hm%pcm%iter > 1 .and. kick_time ) then 
-            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.) !< kick at first time in propagation
+            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.)
             kick = hm%ep%kick%delta_strength * kick
             kick_real = DREAL(kick)
             call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = kick_real, time_present = ks%calc%time_present, &
@@ -1483,7 +1483,7 @@ contains
           kick_real = M_ZERO
           kick_time =((hm%pcm%iter-1)*dt <= hm%ep%kick%time) .and. (hm%pcm%iter*dt > hm%ep%kick%time)
           if ( hm%pcm%iter > 1 .and. kick_time ) then
-            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.) !< kick at first time in propagation
+            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.)
             kick = hm%ep%kick%delta_strength * kick
             kick_real = DREAL(kick)
           end if
