@@ -24,13 +24,6 @@ dist_share_DATA = \
 	01-carbon_atom.01-psf_l0.inp \
 	01-carbon_atom.02-psf_l1.inp \
 	01-carbon_atom.03-ground_state_double_grid.inp \
-	01-carbon_atom.04-cpi.inp \
-	01-carbon_atom.05-fhi.inp \
-	01-carbon_atom.06-dojo_lda.inp                 \
-	01-carbon_atom.07-dojo_pbe.inp                 \
-	01-carbon_atom.08-dojo_pbesol.inp              \
-	01-carbon_atom.09-dojo_pbe_psml.inp            \
-	01-carbon_atom.pseudodojo.psml                 \
 	01-carbon_atom.test \
 	02-curvilinear_coordinates.01-gygi.inp \
 	02-curvilinear_coordinates.test \
