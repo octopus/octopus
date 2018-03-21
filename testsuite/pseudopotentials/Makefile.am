@@ -33,6 +33,10 @@ dist_share_DATA =                                  \
 	04-carbon_dojo_psml.pseudo.psml            \
 	04-carbon_dojo_psml.01-gs.inp              \
 	05-carbon_dojo_pbesol.01-gs.inp            \
-	05-carbon_dojo_pbesol.test
+	05-carbon_dojo_pbesol.test                 \
+	06-carbon_dojo_pbe.01-gs.inp               \
+	06-carbon_dojo_pbe.test                    \
+	07-carbon_dojo_lda.01-gs.inp               \
+	07-carbon_dojo_lda.test
 
 CLEANFILES = *~ *.bak
