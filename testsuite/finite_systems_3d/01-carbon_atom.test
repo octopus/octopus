@@ -103,4 +103,3 @@ match ; Eigenvalue   [4up] ; GREPFIELD(static/info, '4   up', 3) ;  -6.137501
 match ; Occupation   [4up] ; GREPFIELD(static/info, '4   up', 4) ;   0.666667
 match ; Eigenvalue   [4dn] ; GREPFIELD(static/info, '4   dn', 3) ;  -3.481641
 match ; Occupation   [4dn] ; GREPFIELD(static/info, '4   dn', 4) ;   0.000000
-
