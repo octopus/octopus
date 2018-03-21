@@ -35,7 +35,6 @@ libspecies_f_srcs =                      \
 	ps_psf.F90                       \
 	ps_psf_file.F90                  \
 	ps_xml.F90                       \
-	ps_upf.F90                       \
 	pseudo.F90                       \
 	species.F90
 
@@ -83,7 +82,7 @@ element.o : element.F90
 logrid.o : logrid.F90 
 ps_cpi.o : ps_cpi.F90 ps_in_grid.o ps_cpi_file.o logrid.o atomic.o 
 ps_cpi_file.o : ps_cpi_file.F90 ps_in_grid.o 
-ps.o : ps.F90 ps_pspio_inc.F90 ps_upf.o ps_psf.o ps_in_grid.o ps_xml.o ps_hgh.o ps_fhi.o ps_cpi.o logrid.o atomic.o 
+ps.o : ps.F90 ps_pspio_inc.F90 ps_psf.o ps_in_grid.o ps_xml.o ps_hgh.o ps_fhi.o ps_cpi.o logrid.o atomic.o 
 ps_fhi.o : ps_fhi.F90 ps_in_grid.o ps_fhi_file.o ps_cpi.o ps_cpi_file.o atomic.o 
 ps_fhi_file.o : ps_fhi_file.F90 
 ps_hgh.o : ps_hgh.F90 logrid.o atomic.o 
@@ -91,6 +90,5 @@ ps_in_grid.o : ps_in_grid.F90 logrid.o atomic.o
 ps_psf.o : ps_psf.F90 ps_psf_file.o ps_in_grid.o logrid.o atomic.o 
 ps_psf_file.o : ps_psf_file.F90 ps_in_grid.o 
 ps_xml.o : ps_xml.F90 ps_in_grid.o atomic.o pseudo.o
-ps_upf.o : ps_upf.F90 ps_in_grid.o atomic.o 
 species.o : species.F90 ps.o logrid.o element.o
 

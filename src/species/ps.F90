@@ -36,7 +36,6 @@ module ps_oct_m
   use fpspio_m
 #endif
   use ps_psf_oct_m
-  use ps_upf_oct_m
   use pseudo_oct_m
   use splines_oct_m
   use spline_filter_oct_m
@@ -144,7 +143,6 @@ contains
     type(ps_psf_t) :: ps_psf !< SIESTA pseudopotential
     type(ps_cpi_t) :: ps_cpi !< Fritz-Haber pseudopotential
     type(ps_fhi_t) :: ps_fhi !< Fritz-Haber pseudopotential (from abinit)
-    type(ps_upf_t) :: ps_upf !< In case UPF format is used
     type(ps_hgh_t) :: ps_hgh !< In case Hartwigsen-Goedecker-Hutter ps are used.
     type(ps_xml_t) :: ps_xml !< For xml based pseudopotentials
     logical, save :: xml_warned = .false.
@@ -354,29 +352,7 @@ contains
         ps%g%rofi(ii) = (ii - 1)*ps_xml%mesh_spacing
         ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
       end do
-      
-    case default
-      
-      ps%file_format = PSEUDO_FORMAT_UPF1
-      ps%pseudo_type   = PSEUDO_TYPE_KLEINMAN_BYLANDER
-      
-      call ps_upf_init(ps_upf, trim(filename))
-      
-      call valconf_copy(ps%conf, ps_upf%conf)
-      ps%z      = z
-      ps%conf%z = nint(z)
-      ps%kbc    = ps_upf%kb_nc
-      ps%lmax  = ps_upf%l_max
-      ps%llocal  = ps_upf%l_loc
-      ps%has_density = .true.
-      
-      nullify(ps%g%drdi, ps%g%s)
-      ps%g%nrval = ps_upf%np
-      SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
-      SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
-      ps%g%rofi = ps_upf%r
-      ps%g%r2ofi = ps%g%rofi**2
-      
+
     end select
     
     ps%local = (ps%lmax == 0 .and. ps%llocal == 0 ) .or. (ps%lmax == -1 .and. ps%llocal == -1)
@@ -417,9 +393,6 @@ contains
     case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
       call ps_xml_load(ps, ps_xml)
       call ps_xml_end(ps_xml)
-    case default
-      call ps_upf_load(ps, ps_upf)
-      call ps_upf_end(ps_upf)
     end select
 
     if(ps_has_density(ps)) then 
@@ -1032,175 +1005,9 @@ contains
       POP_SUB(ps_grid_load.get_splines)
     end subroutine get_splines
   end subroutine ps_grid_load
-
-
-  ! ---------------------------------------------------------
-  subroutine ps_upf_load(ps, ps_upf)
-    type(ps_t),     intent(inout) :: ps
-    type(ps_upf_t), intent(in)    :: ps_upf
-
-    integer :: i, l, ll, is, nrc, ir, j, ij, ispin, ip
-    FLOAT :: x
-    FLOAT, allocatable :: hato(:), dens(:)
-
-    PUSH_SUB(ps_upf_load)
-
-    ! Fixes some components of ps, read in ps_upf
-    ps%z_val = ps_upf%z_val
-
-    ps%nlcc = ps_upf%nlcc
-
-    ! if there are two projectors for l==0, this is a hamann
-    ps%hamann = ps_upf%nchannels(0) == 2
-
-    ! The spin-dependent pseudopotentials are not supported yet, so we need to fix the occupations
-    ! if we want to have a spin-dependent atomic density.
-    if(ps%ispin == 2) then
-      do l = 1, ps%conf%p
-        ll = ps%conf%l(l)
-        x = ps%conf%occ(l, 1)
-        ps%conf%occ(l, 1) = min(x, real(2*ll+1, REAL_PRECISION))
-        ps%conf%occ(l, 2) = x - ps%conf%occ(l, 1)
-      end do
-    end if
-
-    SAFE_ALLOCATE(hato(1:ps%g%nrval))
-
-    ! only ps%g%rofi(1) is allowed to be zero
-    if(any(abs(ps%g%rofi(2:ps%g%nrval)) < M_EPSILON)) then
-      message(1) = "Illegal zero values in UPF radial grid ps%g%rofi(2:ps%g%nrval)"
-      call messages_fatal(1)
-    end if
-
-    !Non-linear core-corrections
-    if(ps_upf%nlcc) then
-      ! find cutoff radius
-      hato = ps_upf%core_density
-
-      do ir = ps%g%nrval-1, 1, -1
-        if(hato(ir) > eps) then
-          nrc = ir + 1
-          exit
-        end if
-      end do
-
-      hato(nrc:ps%g%nrval) = M_ZERO
-
-      call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%core)
-    end if
-
-    ! Now the part corresponding to the local pseudopotential
-    ! where the asymptotic part is subtracted
-    hato(:) = ps_upf%v_local/M_TWO
-    call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%vl)
-
-    ! Increasing radius a little, just in case.
-    ! I have hard-coded a larger increase of the cutoff for the filtering.
-    ps%rc_max = maxval(ps_upf%kb_radius)
-    ps%rc_max = max(ps_upf%local_radius, ps%rc_max) * CNST(1.5)
-
-    ! Interpolate the KB-projection functions
-    if (ps_upf%l_loc >= 0) then
-      hato = M_ZERO
-      do j = 1, ps%kbc
-        call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%l_loc, j))
-      end do
-    end if
-
-    ps%local = ps_upf%n_proj == 0
-    
-    ps%h = M_ZERO
-    do i = 1, ps_upf%n_proj
-
-      if(associated(ps_upf%proj_j)) then
-        
-        ij = 1
-        if (ps_upf%kb_nc == 2) then
-          if (ps_upf%proj_j(i) == ps_upf%proj_l(i) - M_HALF) ij = 2
-        end if
-
-      else
-
-        ij = 1 + count(ps_upf%proj_l(1:i - 1) == ps_upf%proj_l(i))
-        
-      end if
-
-      ASSERT(ij <= ps%kbc)
-      
-      ps%h(ps_upf%proj_l(i), ij, ij) = ps_upf%e(i)
-
-      if(.not. ps_upf%version2) then
-        ! in UPF 1 this value is in Ry^-1
-        ps%h(ps_upf%proj_l(i), ij, ij) = ps%h(ps_upf%proj_l(i), ij, ij)*M_TWO
-      else
-        ! in UPF 2 this value is in Ry
-        ps%h(ps_upf%proj_l(i), ij, ij) = ps%h(ps_upf%proj_l(i), ij, ij)/M_TWO
-      end if
-      
-      nrc = logrid_index(ps%g, ps_upf%kb_radius(i)) + 1
-      hato(2:nrc) = ps_upf%proj(2:nrc, i)/ps%g%rofi(2:nrc) ! in upf the projector is given in Rydbergs and is multiplied by r
-      hato(1) = first_point_extrapolate(ps%g%rofi, hato, high_order = .true.) !take care of the point at zero
-      hato(nrc+1:ps%g%nrval) = M_ZERO
-
-      if(.not. ps_upf%version2) then
-        ! in UPF 1 the projectors are in Ry.
-        hato(1:nrc) = hato(1:nrc)/M_TWO
-        ! in v2 they are in Bohr^{-1/2}, so no conversion is required
-      end if
-
-      call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), ij))
-
-      if(.not. ps%hamann) then
-        if (ps_upf%proj_l(i) == 0 .and. ps_upf%kb_nc == 2) then
-          hato = M_ZERO
-          call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), 2))
-        end if
-      end if
-
-    end do
-
-    if(ps%conf%p > 0) then
-      
-      ! Define the table for the pseudo-wavefunction components (using splines)
-      ! with a correct normalization function
-      do is = 1, ps%ispin
-        do l = 1, ps%conf%p
-          ! do not divide by zero
-          if(ps%g%rofi(1) > M_EPSILON) then
-            hato(1) = ps_upf%wfs(1, l)/ps%g%rofi(1)
-          else
-            hato(1) = M_ZERO
-          end if
-          ! rofi /= 0 except rofi(1) possibly
-          hato(2:ps%g%nrval) = ps_upf%wfs(2:ps%g%nrval, l)/ps%g%rofi(2:ps%g%nrval)
-          hato(1) = first_point_extrapolate(ps%g%rofi, hato, high_order = .true.) !take care of the point at zero
-          
-          call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%ur(l, is))
-          call spline_fit(ps%g%nrval, ps%g%r2ofi, hato, ps%ur_sq(l, is))
-        end do
-      end do
-
-    end if
-
-    SAFE_DEALLOCATE_A(hato)
-
-    
-    SAFE_ALLOCATE(dens(1:ps%g%nrval))
-    
-    dens(2:ps%g%nrval) = ps_upf%rho(2:ps%g%nrval)/ps%g%r2ofi(2:ps%g%nrval)/ps%ispin/CNST(4.0)/M_PI
-    dens(1) = first_point_extrapolate(ps%g%rofi, dens, high_order = .true.) !take care of the point at zero
-      
-    do is = 1, ps%ispin
-      call spline_fit(ps%g%nrval, ps%g%rofi, dens, ps%density(is))
-    end do
-
-    SAFE_DEALLOCATE_A(dens)
-
-    POP_SUB(ps_upf_load)
-  end subroutine ps_upf_load
-
   
   ! ---------------------------------------------------------
+
   subroutine ps_xml_load(ps, ps_xml)
     type(ps_t),     intent(inout) :: ps
     type(ps_xml_t), intent(in)    :: ps_xml
