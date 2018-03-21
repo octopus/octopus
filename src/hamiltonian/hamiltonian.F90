@@ -435,16 +435,17 @@ contains
       call init_phase()
     ! no e^ik phase needed for Gamma-point-only periodic calculations
 
-    !%Variable StatesPack
+    !%Variable HamiltonianApplyPacked
     !%Type logical
     !%Default yes
     !%Section Execution::Optimization
     !%Description
     !% If set to yes (the default), Octopus will 'pack' the
-    !% wave-functions when operating with them. This involves some
+    !% wave-functions when operating with them. This might involve some
     !% additional copying but makes operations more efficient.
+    !% See also the related <tt>StatesPack</tt> variable.
     !%End
-    call parse_variable('StatesPack', .true., hm%apply_packed)
+    call parse_variable('HamiltonianApplyPacked', .true., hm%apply_packed)
 
     external_potentials_present = associated(hm%ep%v_static) .or. &
 				  associated(hm%ep%E_field)  .or. &

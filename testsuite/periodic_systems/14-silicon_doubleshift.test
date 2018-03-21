@@ -45,13 +45,13 @@ match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   3', 3, 8) ; -0.001970
 match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   3', 3, 16) ; 0.111068
 match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   3', 3, 17) ; 0.182411
 
-match ; k-point 4 (x) ; GREPFIELD(static/info, '#k =   4', 7) ; 0.050000
-match ; k-point 4 (y) ; GREPFIELD(static/info, '#k =   4', 8) ; -0.400000
-match ; k-point 4 (z) ; GREPFIELD(static/info, '#k =   4', 9) ; 0.150000
-match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   4', 3, 1) ; -0.258388
-match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   4', 3, 8) ; -0.008116
-match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   4', 3, 16) ; 0.107465
-match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   4', 3, 17) ; 0.196336
+match ; k-point 4 (x) ; GREPFIELD(static/info, '#k =   4', 7) ; -0.050000
+match ; k-point 4 (y) ; GREPFIELD(static/info, '#k =   4', 8) ; -0.100000
+match ; k-point 4 (z) ; GREPFIELD(static/info, '#k =   4', 9) ; 0.350000
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   4', 3, 1) ; -0.266296
+match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   4', 3, 8) ; -0.001970
+match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   4', 3, 16) ; 0.111068
+match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   4', 3, 17) ; 0.182411
 
 match ; geometry size  ; LINEFIELD(static/geometry.xyz,  1, 1) ;  8
 match ; geometry  4 1  ; LINEFIELD(static/geometry.xyz,  6, 2) ;  0.0

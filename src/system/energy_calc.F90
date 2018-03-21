@@ -277,18 +277,17 @@ contains
 
   ! --------------------------------------------------------------------
   
-  subroutine energy_calc_eigenvalues(hm, der, st, time)
+  subroutine energy_calc_eigenvalues(hm, der, st)
     type(hamiltonian_t), intent(inout) :: hm
     type(derivatives_t), intent(inout) :: der
     type(states_t),      intent(inout) :: st
-    FLOAT,   optional,   intent(in)    :: time
     
     PUSH_SUB(energy_calc_eigenvalues)
 
     if(states_are_real(st)) then
-      call dcalculate_eigenvalues(hm, der, st, time)
+      call dcalculate_eigenvalues(hm, der, st)
     else
-      call zcalculate_eigenvalues(hm, der, st, time)
+      call zcalculate_eigenvalues(hm, der, st)
     end if
 
     POP_SUB(energy_calc_eigenvalues)

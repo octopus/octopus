@@ -28,8 +28,7 @@ module subspace_oct_m
   use comm_oct_m
   use derivatives_oct_m
 #ifdef HAVE_ELPA
-  use elpa1
-  use elpa2
+  use elpa
 #endif
   use global_oct_m
   use grid_oct_m

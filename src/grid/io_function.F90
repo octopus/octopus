@@ -55,6 +55,7 @@ module io_function_oct_m
     io_function_read_how,         &
     io_function_fill_how,         &
     write_bild_forces_file,       &
+    write_canonicalized_xyz_file, &
     write_xsf_geometry,           &
     write_xsf_geometry_file,      &
     dio_function_input,           &
@@ -64,7 +65,7 @@ module io_function_oct_m
     dio_function_output_global,   &
     zio_function_output_global,   &
     io_function_output_vector
-    
+
 
 #if defined(HAVE_NETCDF)
  public ::                        &
@@ -362,6 +363,49 @@ contains
 
     POP_SUB(write_bild_forces_file)
   end subroutine write_bild_forces_file
+
+  ! ---------------------------------------------------------
+  !> Write canonicalized xyz file with atom labels and positions in Angstroms.
+  !> Includes information about simulation box and periodicity when applicable.
+  !> This differs from a normal xyz file by including information about box
+  !> shape and always using Angstroms.
+  subroutine write_canonicalized_xyz_file(dir, fname, geo, mesh)
+    character(len=*), intent(in) :: dir
+    character(len=*), intent(in) :: fname
+    type(geometry_t), intent(in) :: geo
+    type(mesh_t),     intent(in) :: mesh
+
+    integer :: iunit
+    integer :: idir
+    FLOAT :: position
+    integer :: iatom
+
+    PUSH_SUB(write_canonicalized_xyz_file)
+
+    call io_mkdir(dir)
+    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', action='write', position='asis')
+
+    write(iunit, '(i6)') geo%natoms
+    call simul_box_write_short_info(mesh%sb, iunit)
+
+    ! xyz-style labels and positions:
+    do iatom=1, geo%natoms
+      write(iunit, '(10a)', advance='no') geo%atom(iatom)%label
+      do idir=1, 3
+        if(idir <= mesh%sb%dim) then
+          position = geo%atom(iatom)%x(idir)
+        else
+          position = M_ZERO
+        end if
+        write(iunit, '(xf11.6)', advance='no') units_from_atomic(unit_angstrom, position)
+      end do
+      write(iunit, '()')
+    end do
+
+    call io_close(iunit)
+
+    POP_SUB(write_canonicalized_xyz_file)
+  end subroutine write_canonicalized_xyz_file
 
   ! ---------------------------------------------------------
   subroutine write_xsf_geometry_file(dir, fname, geo, mesh, write_forces)

@@ -63,8 +63,7 @@ libbasic_f_srcs =                        \
 	unit_system.F90                  \
 	utils.F90                        \
 	varinfo.F90                      \
-	write_iter.F90                   \
-	xml.F90
+	write_iter.F90
 
 # C/C++ sources - keep in alphabetical order
 libbasic_c_srcs =                        \
@@ -80,8 +79,7 @@ libbasic_c_srcs =                        \
 	sort_low.cc                      \
 	varia.c                          \
 	varinfo_low.c                    \
-	write_iter_low.cc                \
-	xml_low.c
+	write_iter_low.cc
 
 libbasic_a_SOURCES = $(libbasic_c_srcs) $(libbasic_f_srcs)
 
@@ -155,5 +153,4 @@ unit.o : unit.F90 global.o
 unit_system.o : unit_system.F90 varinfo.o unit.o parser.o messages.o io.o global.o 
 utils.o : utils.F90 string.o unit_system.o unit.o mpi.o messages.o loct.o io.o global.o 
 varinfo.o : varinfo.F90 string.o 
-write_iter.o : write_iter.F90 
-xml.o : xml.F90
+write_iter.o : write_iter.F90
