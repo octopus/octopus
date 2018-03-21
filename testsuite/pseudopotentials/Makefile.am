@@ -28,6 +28,11 @@ dist_share_DATA =                                  \
 	02-cu2_hgh.02_gs_current.inp               \
 	02-cu2_hgh.03_gs_current_fast.inp          \
 	03-nlcc.test                               \
-	03-nlcc.01-Fatom.inp
+	03-nlcc.01-Fatom.inp                       \
+	04-carbon_dojo_psml.test                   \
+	04-carbon_dojo_psml.pseudo.psml            \
+	04-carbon_dojo_psml.01-gs.inp              \
+	05-carbon_dojo_pbesol.01-gs.inp            \
+	05-carbon_dojo_pbesol.test
 
 CLEANFILES = *~ *.bak
