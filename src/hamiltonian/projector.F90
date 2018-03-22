@@ -74,12 +74,6 @@ module projector_oct_m
     dr_project_psi,            &
     zr_project_psi
   
-  integer, public, parameter ::  &
-    M_NONE = 0,  &
-    M_HGH  = 1,  &
-    M_KB   = 2,  &
-    M_RKB  = 3
-
   integer, parameter :: MAX_NPROJECTIONS = 24
   integer, parameter :: MAX_L = 5
 

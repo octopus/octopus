@@ -62,6 +62,12 @@ module ps_oct_m
     PS_FILTER_TS   = 2,         &
     PS_FILTER_BSB  = 3
 
+  integer, public, parameter ::  &
+    M_NONE = 0,  &
+    M_HGH  = 1,  &
+    M_KB   = 2,  &
+    M_RKB  = 3
+  
   integer, parameter, public :: INVALID_L = 333
 
   character(len=4), parameter  :: ps_name(PSEUDO_FORMAT_UPF1:PSEUDO_FORMAT_HGH) = &
