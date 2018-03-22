@@ -89,7 +89,7 @@ module projector_oct_m
   !! - Kleinman-Bylander projector (includes spin-orbit)
 
   type projector_t
-    integer :: type = M_NONE
+    integer :: type = PROJ_NONE
     integer :: nprojections
     integer :: lmax
     integer :: lloc
@@ -115,7 +115,7 @@ contains
 
     PUSH_SUB(projector_null)
 
-    p%type = M_NONE
+    p%type = PROJ_NONE
     call submesh_null(p%sphere)
 
     POP_SUB(projector_null)
@@ -127,7 +127,7 @@ contains
   !---------------------------------------------------------
   logical elemental function projector_is_null(p)
     type(projector_t), intent(in) :: p
-    projector_is_null = (p%type == M_NONE)
+    projector_is_null = (p%type == PROJ_NONE)
   end function projector_is_null
   !---------------------------------------------------------
 
@@ -157,7 +157,7 @@ contains
     p%lmax = ps%lmax
 
     if(ps%local) then
-      p%type = M_NONE
+      p%type = PROJ_NONE
       POP_SUB(projector_init)
       return
     end if
@@ -166,7 +166,7 @@ contains
 
     select case (ps%kbc)
     case (1)
-      p%type = M_KB
+      p%type = PROJ_KB
       if (reltype == 1) then
         write(message(1),'(a,a,a)') &
           "Spin-orbit coupling for species ", trim(species_label(atm%species)), " is not available."
@@ -174,20 +174,20 @@ contains
       end if
     case (2)
       if (reltype == 0) then
-        p%type = M_KB
+        p%type = PROJ_KB
       else
-        p%type = M_RKB
+        p%type = PROJ_RKB
       end if
     case (3)
-      p%type = M_HGH
+      p%type = PROJ_HGH
     end select
     
     select case(p%type)
-    case(M_KB)
+    case(PROJ_KB)
       p%nprojections = dim * ps%kbc
-    case(M_RKB)
+    case(PROJ_RKB)
       p%nprojections = 4
-    case(M_HGH)
+    case(PROJ_HGH)
       p%nprojections = 24
     end select
 
@@ -262,7 +262,7 @@ contains
 
     select case (p%type)
 
-    case (M_HGH)
+    case (PROJ_HGH)
       SAFE_ALLOCATE(p%hgh_p(0:p%lmax, -p%lmax:p%lmax))
       do ll = 0, p%lmax
         if(ll == p%lloc) cycle
@@ -272,7 +272,7 @@ contains
         end do
       end do
 
-    case (M_KB)
+    case (PROJ_KB)
       SAFE_ALLOCATE(p%kb_p(0:p%lmax, -p%lmax:p%lmax))
       do ll = 0, p%lmax
         if(ll == p%lloc) cycle
@@ -282,7 +282,7 @@ contains
         end do
       end do
 
-    case (M_RKB)
+    case (PROJ_RKB)
       SAFE_ALLOCATE(p%rkb_p(1:p%lmax, -p%lmax:p%lmax))
       do ll = 1, p%lmax
         if(ll == p%lloc) cycle
@@ -314,7 +314,7 @@ contains
     call submesh_end(p%sphere)
 
     select case(p%type)
-    case(M_HGH)
+    case(PROJ_HGH)
       do ll = 0, p%lmax
         if(ll == p%lloc) cycle
         do mm = -ll, ll
@@ -323,7 +323,7 @@ contains
       end do
       SAFE_DEALLOCATE_P(p%hgh_p)
 
-    case(M_KB)
+    case(PROJ_KB)
       do ll = 0, p%lmax
         if(ll == p%lloc) cycle
         do mm = -ll, ll
@@ -332,7 +332,7 @@ contains
       end do
       SAFE_DEALLOCATE_P(p%kb_p)
 
-    case(M_RKB)
+    case(PROJ_RKB)
       do ll = 1, p%lmax
         if(ll == p%lloc) cycle
         do mm = -ll, ll
@@ -347,7 +347,7 @@ contains
 
     end select
     
-    p%type = M_NONE
+    p%type = PROJ_NONE
 
     SAFE_DEALLOCATE_P(p%phase)
 

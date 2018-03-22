@@ -63,10 +63,10 @@ module ps_oct_m
     PS_FILTER_BSB  = 3
 
   integer, public, parameter ::  &
-    M_NONE = 0,  &
-    M_HGH  = 1,  &
-    M_KB   = 2,  &
-    M_RKB  = 3
+    PROJ_NONE = 0,  &
+    PROJ_HGH  = 1,  &
+    PROJ_KB   = 2,  &
+    PROJ_RKB  = 3
   
   integer, parameter, public :: INVALID_L = 333
 
