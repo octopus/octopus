@@ -171,15 +171,21 @@ contains
     
     PUSH_SUB(casida_run_init)
     
+    ! TODO: This comment seems to be outdated. With the newer version the
+    ! parallelization in the states using 'other' is good enough. When using
+    ! ScaLAPACK/ELPA, it is even necessary since these functions work only with
+    ! the mpi_world communicator... --- STO
+    ! ---
     ! Pure 'other' parallelization is a bad idea. Trying to solve the Poisson equation separately on each node
     ! consumes excessive memory and time (easily more than is available). In principle, the line below would setup
     ! joint domain/other parallelization, but 'other' parallelization takes precedence, especially since
     ! multicomm_init does not know the actual problem size and uses a fictitious value of 10000, making it
     ! impossible to choose joint parallelization wisely, and generally resulting in a choice of only one domain
     ! group. FIXME! --DAS
+    ! ---
 
-    ! call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .true).
-    call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .false.) ! enabled, but not default
+    call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .true.)
+    !call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .false.) ! enabled, but not default
     call calc_mode_par_unset_parallelization(P_STRATEGY_KPOINTS) ! disabled. FIXME: could be implemented.
 
     POP_SUB(casida_run_init)
