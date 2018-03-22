@@ -1525,6 +1525,7 @@ subroutine X(write_distributed_matrix)(cas, matrix, filename)
   integer :: outfile, mpistatus, ierr
   integer :: locsize, nelements
 
+#ifdef HAVE_MPI
   ! create MPI IO types
   call MPI_Type_create_darray(mpi_world%size, mpi_world%rank, 2, (/ cas%n, cas%n /), &
     (/ MPI_DISTRIBUTE_CYCLIC, MPI_DISTRIBUTE_CYCLIC /), (/ cas%block_size, cas%block_size/), &
@@ -1544,6 +1545,7 @@ subroutine X(write_distributed_matrix)(cas, matrix, filename)
   call MPI_File_set_view(outfile, sizeof(cas%n), R_MPITYPE, cas%darray, "native", MPI_INFO_NULL, ierr)
   call MPI_File_write_all(outfile, matrix, cas%nb_rows*cas%nb_cols, R_MPITYPE, mpistatus, ierr)
   call MPI_File_close(outfile, ierr)
+#endif
 end subroutine X(write_distributed_matrix)
 
 ! communication function used for sums over the casida matrix
