@@ -588,7 +588,8 @@ contains
     cas%n = cas%n_pairs+cas%pt_nmodes
 
 #ifdef HAVE_SCALAPACK
-    ! processor layout
+    ! processor layout: always use more processors for rows, this leads to
+    ! better load balancing when computing the matrix elements
     np = cas%mpi_grp%size
     np_cols = 1
     if(np > 3) then
@@ -601,9 +602,15 @@ contains
     end if
     np_rows = np / np_cols
 
-    ! recommended block size: 64, take smaller value for smaller matrices
-    !cas%block_size = min(64, n/np_cols)
-    cas%block_size = 10
+    ! recommended block size: 64, take smaller value for smaller matrices for
+    ! better load balancing
+    cas%block_size = min(64, cas%n_pairs / np_rows)
+    ! limit to a minimum block size of 5 for diagonalization efficiency
+    cas%block_size = max(5, cas%block_size)
+    write(message(1), '(A,I5,A,I5,A,I5,A)') 'Parallel layout: using block size of ',&
+      cas%block_size, ' and a processor grid with ', np_rows, 'x', np_cols, &
+      ' processors (rows x cols)'
+    call messages_info(1)
 
     call blacs_proc_grid_init(cas%proc_grid, mpi_world, procdim = (/np_rows, np_cols/))
 
