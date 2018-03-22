@@ -485,6 +485,10 @@ contains
     end if
     call messages_info()
 
+    call messages_write("    projectors per l :")
+    call messages_write(ps%kbc, fmt = '(i2)')
+    call messages_info()
+    
     call messages_write("    total projectors :")
     if(ps%llocal < 0) then
       call messages_write(ps%kbc*(ps%lmax + 1), fmt = '(i2)')
