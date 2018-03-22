@@ -41,6 +41,7 @@ module pseudo_oct_m
     pseudo_lmax,                         &
     pseudo_llocal,                       &
     pseudo_nchannels,                    &
+    pseudo_nprojectors,                  &
     pseudo_local_potential,              &
     pseudo_projector,                    &
     pseudo_radial_function,              &
@@ -213,6 +214,15 @@ module pseudo_oct_m
       
       type(pseudo_t),   intent(in)    :: pseudo
     end function pseudo_nchannels
+
+    ! -------------------------------------------------
+
+    integer function pseudo_nprojectors(pseudo)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+    end function pseudo_nprojectors
 
     ! -------------------------------------------------
 
