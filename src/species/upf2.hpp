@@ -122,7 +122,6 @@ namespace pseudopotential {
 
       }
 
-      assert(nchannels_ > 0);
       assert(lmax_ >= 0);
       
       llocal_ = -1;

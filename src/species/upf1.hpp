@@ -164,7 +164,6 @@ namespace pseudopotential {
 	}
 
 	assert(lmax_ >= 0);
-	assert(nchannels_ > 0);
 
 	llocal_ = -1;
 	for(int l = 0; l <= lmax_; l++) if(!has_l[l]) llocal_ = l;
