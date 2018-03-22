@@ -482,7 +482,7 @@ contains
       ! time iterate the system, one time step.
       select case(td%dynamics)
       case(EHRENFEST)
-        call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%energy_update_iter*td%mu, iter, td%ions, geo, sys%outp, &
+        call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%energy_update_iter*td%mu, iter, td%ions, geo, sys%outp,&
           scsteps = scsteps, &
           update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
       case(BO)

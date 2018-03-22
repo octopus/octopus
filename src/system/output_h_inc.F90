@@ -84,7 +84,7 @@
           if(outp%gradientpotential) then
             SAFE_ALLOCATE(gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
             call dderivatives_grad(der, hm%vhartree(1:der%mesh%np_part), gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
-            call io_function_output_vector(outp%how, dir, 'grad_vh', der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err, &
+            call io_function_output_vector(outp%how, dir, 'grad_vh', der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
                      geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
             SAFE_DEALLOCATE_A(gradvh)
           end if
