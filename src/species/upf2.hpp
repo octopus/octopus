@@ -335,7 +335,7 @@ namespace pseudopotential {
       assert(node);
       
       int size = value<int>(node->first_attribute("size"));
-      val.resize(size);
+      val.resize(size + start_point_);
       
       std::istringstream stst(node->value());
       for(int ii = 0; ii < size; ii++) stst >> val[start_point_ + ii];
