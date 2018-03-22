@@ -1091,38 +1091,41 @@ contains
 
       ps%h = CNST(0.0)
 
-      do ll = 0, ps_xml%lmax
 
-        ! diagonalize the coefficient matrix
-        if(.not. pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
-          matrix(1:ps_xml%nchannels, 1:ps_xml%nchannels) = ps_xml%dij(ll, 1:ps_xml%nchannels, 1:ps_xml%nchannels)
-          call lalg_eigensolve(ps_xml%nchannels, matrix, eigenvalues)
-        else
-          matrix = CNST(0.0)
-          forall(ic = 1:ps_xml%nchannels)
-            eigenvalues(ic) = ps_xml%dij(ll, ic, ic)
-            matrix(ic, ic) = CNST(1.0)
-          end forall
-        end if
+      if(pseudo_nprojectors(ps_xml%pseudo) > 0) then
+        do ll = 0, ps_xml%lmax
           
-        do ic = 1, ps_xml%nchannels
-
-          do ip = 1, ps%g%nrval
-            kbprojector(ip) = 0.0
-            if(ip <= ps_xml%grid_size) then
-              do jc = 1, ps_xml%nchannels
-                kbprojector(ip) = kbprojector(ip) + matrix(jc, ic)*ps_xml%projector(ip, ll, jc)
-              end do
-            end if
+          ! diagonalize the coefficient matrix
+          if(.not. pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
+            matrix(1:ps_xml%nchannels, 1:ps_xml%nchannels) = ps_xml%dij(ll, 1:ps_xml%nchannels, 1:ps_xml%nchannels)
+            call lalg_eigensolve(ps_xml%nchannels, matrix, eigenvalues)
+          else
+            matrix = CNST(0.0)
+            forall(ic = 1:ps_xml%nchannels)
+              eigenvalues(ic) = ps_xml%dij(ll, ic, ic)
+              matrix(ic, ic) = CNST(1.0)
+            end forall
+          end if
+          
+          do ic = 1, ps_xml%nchannels
+            
+            do ip = 1, ps%g%nrval
+              kbprojector(ip) = 0.0
+              if(ip <= ps_xml%grid_size) then
+                do jc = 1, ps_xml%nchannels
+                  kbprojector(ip) = kbprojector(ip) + matrix(jc, ic)*ps_xml%projector(ip, ll, jc)
+                end do
+              end if
+            end do
+            
+            call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, cmap(ll, ic)))
+            
+            ps%h(ll, cmap(ll, ic), cmap(ll, ic)) = eigenvalues(ic)
+            
           end do
-          
-          call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, cmap(ll, ic)))
-
-          ps%h(ll, cmap(ll, ic), cmap(ll, ic)) = eigenvalues(ic)
-
         end do
-      end do
-
+      end if
+      
       SAFE_DEALLOCATE_A(matrix)
       SAFE_DEALLOCATE_A(eigenvalues)
       
