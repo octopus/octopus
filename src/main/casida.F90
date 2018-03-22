@@ -171,15 +171,21 @@ contains
     
     PUSH_SUB(casida_run_init)
     
+    ! TODO: This comment seems to be outdated. With the newer version the
+    ! parallelization in the states using 'other' is good enough. When using
+    ! ScaLAPACK/ELPA, it is even necessary since these functions work only with
+    ! the mpi_world communicator... --- STO
+    ! ---
     ! Pure 'other' parallelization is a bad idea. Trying to solve the Poisson equation separately on each node
     ! consumes excessive memory and time (easily more than is available). In principle, the line below would setup
     ! joint domain/other parallelization, but 'other' parallelization takes precedence, especially since
     ! multicomm_init does not know the actual problem size and uses a fictitious value of 10000, making it
     ! impossible to choose joint parallelization wisely, and generally resulting in a choice of only one domain
     ! group. FIXME! --DAS
+    ! ---
 
-    ! call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .true).
-    call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .false.) ! enabled, but not default
+    call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .true.)
+    !call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .false.) ! enabled, but not default
     call calc_mode_par_unset_parallelization(P_STRATEGY_KPOINTS) ! disabled. FIXME: could be implemented.
 
     POP_SUB(casida_run_init)
@@ -588,7 +594,8 @@ contains
     cas%n = cas%n_pairs+cas%pt_nmodes
 
 #ifdef HAVE_SCALAPACK
-    ! processor layout
+    ! processor layout: always use more processors for rows, this leads to
+    ! better load balancing when computing the matrix elements
     np = cas%mpi_grp%size
     np_cols = 1
     if(np > 3) then
@@ -601,9 +608,15 @@ contains
     end if
     np_rows = np / np_cols
 
-    ! recommended block size: 64, take smaller value for smaller matrices
-    !cas%block_size = min(64, n/np_cols)
-    cas%block_size = 10
+    ! recommended block size: 64, take smaller value for smaller matrices for
+    ! better load balancing
+    cas%block_size = min(64, cas%n_pairs / np_rows)
+    ! limit to a minimum block size of 5 for diagonalization efficiency
+    cas%block_size = max(5, cas%block_size)
+    write(message(1), '(A,I5,A,I5,A,I5,A)') 'Parallel layout: using block size of ',&
+      cas%block_size, ' and a processor grid with ', np_rows, 'x', np_cols, &
+      ' processors (rows x cols)'
+    call messages_info(1)
 
     call blacs_proc_grid_init(cas%proc_grid, mpi_world, procdim = (/np_rows, np_cols/))
 
@@ -1060,6 +1073,33 @@ contains
     ia = indxl2g(ia_local, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
 #endif
   end function get_global_col
+
+  subroutine local_indices(cas, ia, jb, on_this_processor, ia_local, jb_local)
+    implicit none
+    type(casida_t), intent(in) :: cas
+    integer, intent(in) :: ia, jb
+    logical, intent(out) :: on_this_processor
+    integer, intent(out) :: ia_local, jb_local
+    integer :: ia_proc, jb_proc
+#ifndef HAVE_SCALAPACK
+    on_this_processor = .true.
+    ia_local = ia
+    jb_local = jb
+#else
+    ia_proc = indxg2p(ia, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
+    jb_proc = indxg2p(jb, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
+    if(cas%proc_grid%mycol == ia_proc .and. cas%proc_grid%myrow == jb_proc) then
+    !if(mpi_world%rank == ia_proc .and. mpi_world%rank == jb_proc) then
+      on_this_processor = .true.
+      ia_local = indxg2l(ia, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
+      jb_local = indxg2l(jb, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
+    else
+      on_this_processor = .false.
+      ia_local = -1
+      jb_local = -1
+    end if
+#endif
+  end subroutine local_indices
 
 #include "undef.F90"
 #include "real.F90"

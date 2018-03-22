@@ -203,7 +203,7 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
           zz = zz + xx(jb) * cas%X(mat)(jb_local, ia_local) / sqrt(cas%s(jb))
         end if
       end do
-      zz = allreduce_sum(zz)
+      zz = X(allreduce_sum)(zz)
       zz = zz / sqrt(cas%w(ia))
     else ! TAMM_DANCOFF, VARIATIONAL, PETERSILKA
       do jb = 1, cas%n_pairs
@@ -212,53 +212,12 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
           zz = zz + xx(jb) * cas%X(mat)(jb_local, ia_local)
         end if
       end do
-      zz = allreduce_sum(zz)
+      zz = X(allreduce_sum)(zz)
     end if
     zz = sqrt(TOFLOAT(cas%el_per_state)) * zz
   end if
 
   POP_SUB(X(transition_matrix_element))
-
-  contains
-    subroutine local_indices(cas, ia, jb, on_this_processor, ia_local, jb_local)
-      implicit none
-      type(casida_t), intent(in) :: cas
-      integer, intent(in) :: ia, jb
-      logical, intent(out) :: on_this_processor
-      integer, intent(out) :: ia_local, jb_local
-      integer :: ia_proc, jb_proc
-#ifndef HAVE_SCALAPACK
-      on_this_processor = .true.
-      ia_local = ia
-      jb_local = jb
-#else
-      ia_proc = indxg2p(ia, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
-      jb_proc = indxg2p(jb, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
-      if(cas%proc_grid%mycol == ia_proc .and. cas%proc_grid%myrow == jb_proc) then
-      !if(mpi_world%rank == ia_proc .and. mpi_world%rank == jb_proc) then
-        on_this_processor = .true.
-        ia_local = indxg2l(ia, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
-        jb_local = indxg2l(jb, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
-      else
-        on_this_processor = .false.
-        ia_local = -1
-        jb_local = -1
-      end if
-#endif
-    end subroutine local_indices
-
-    R_TYPE function allreduce_sum(variable) result(output)
-      R_TYPE, intent(in) :: variable
-      R_TYPE :: buffer
-      integer :: ierr
-#ifndef HAVE_SCALAPACK
-      output = variable
-#else
-      call MPI_Allreduce(variable, buffer, 1, R_MPITYPE, MPI_SUM, &
-        mpi_world%comm, ierr)
-      output = buffer
-#endif
-    end function allreduce_sum
 end function X(transition_matrix_element)
 
 ! ---------------------------------------------------------
@@ -1351,9 +1310,10 @@ subroutine X(casida_write)(cas, sys)
   
   character(len=5) :: str
   character(len=50) :: dir_name
-  integer :: iunit, ia, jb, idim, index
-  logical :: full_printing
-  R_TYPE  :: temp, norm_e, norm_p
+  integer :: iunit, ia, jb, idim, index, ia_local, jb_local
+  logical :: full_printing, on_this_processor
+  R_TYPE  :: temp
+  FLOAT   :: norm, norm_e, norm_p
   
   PUSH_SUB(X(casida_write))
 
@@ -1467,6 +1427,48 @@ subroutine X(casida_write)(cas, sys)
 #ifdef HAVE_SCALAPACK
   call X(write_distributed_matrix)(cas, cas%X(mat), &
     CASIDA_DIR//trim(theory_name(cas))//"_matrix")
+
+  ! TODO: create input file options to enable/disable this output?
+  if(cas%has_photons) then
+    ! compute and write norms
+    if(mpi_grp_is_root(mpi_world)) then
+      iunit = io_open(CASIDA_DIR//trim(theory_name(cas))//"_norms", action='write')
+      ! first, a header line
+      write(iunit, '(6x)', advance='no')
+      write(iunit, '(1x,a15)', advance='no') 'E [' // trim(units_abbrev(units_out%energy)) // ']'
+      write(iunit, '(1x,a15)', advance='no') 'Electron part'
+      write(iunit, '(1x,a15)') 'Photon part'
+    end if
+    do ia = 1, cas%n
+      norm = M_ZERO
+      norm_e = M_ZERO
+      norm_p = M_ZERO
+      do jb = 1, cas%n
+        call local_indices(cas, cas%ind(ia), jb, on_this_processor, ia_local, jb_local)
+        if(on_this_processor) then
+          ! sum up norm, electronic norm and photonic norm on each processorc
+          norm = norm + abs(cas%X(mat)(jb_local, ia_local))**2
+          if(jb <= cas%n_pairs) then
+            norm_e = norm_e + abs(cas%X(mat)(jb_local, ia_local))**2
+          else
+            norm_p = norm_p + abs(cas%X(mat)(jb_local, ia_local))**2
+          end if
+        end if
+      end do
+      norm = dallreduce_sum(norm)
+      norm_e = dallreduce_sum(norm_e)
+      norm_p = dallreduce_sum(norm_p)
+      if(mpi_grp_is_root(mpi_world)) then
+        ! write contributions to norm to file
+        write(iunit, '(i6)', advance='no') cas%ind(ia)
+        write(iunit, '(99(1x,es15.8))') units_from_atomic(units_out%energy, cas%w(cas%ind(ia))), &
+          norm_e/norm, norm_p/norm
+      end if
+    end do
+    if(mpi_grp_is_root(mpi_world)) then
+      call io_close(iunit)
+    end if
+  end if
 #endif
 
   ! Calculate and write the transition densities
@@ -1543,6 +1545,20 @@ subroutine X(write_distributed_matrix)(cas, matrix, filename)
   call MPI_File_write_all(outfile, matrix, cas%nb_rows*cas%nb_cols, R_MPITYPE, mpistatus, ierr)
   call MPI_File_close(outfile, ierr)
 end subroutine X(write_distributed_matrix)
+
+! communication function used for sums over the casida matrix
+R_TYPE function X(allreduce_sum)(variable) result(output)
+  R_TYPE, intent(in) :: variable
+  R_TYPE :: buffer
+  integer :: ierr
+#ifndef HAVE_SCALAPACK
+  output = variable
+#else
+  call MPI_Allreduce(variable, buffer, 1, R_MPITYPE, MPI_SUM, &
+    mpi_world%comm, ierr)
+  output = buffer
+#endif
+end function X(allreduce_sum)
 
 
 !! Local Variables:
