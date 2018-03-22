@@ -352,17 +352,17 @@ contains
       
       nullify(ps%g%drdi, ps%g%s)
       
-      ! use a larger grid
-      ps%g%nrval = max(ps_xml%grid_size, nint(CNST(20.0)/(ps_xml%mesh_spacing)))
+      ps%g%nrval = ps_xml%grid_size
       
       SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
       SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
+
+      call pseudo_grid(ps_xml%pseudo, ps%g%rofi(1))
       
       do ii = 1, ps%g%nrval
-        ps%g%rofi(ii) = (ii - 1)*ps_xml%mesh_spacing
         ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
       end do
-
+      
     end select
     
     ps%local = (ps%lmax == 0 .and. ps%llocal == 0 ) .or. (ps%lmax == -1 .and. ps%llocal == -1)
@@ -1030,7 +1030,7 @@ contains
     FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element
     FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:), nlcc_density(:), dens(:)
     integer, allocatable :: cmap(:, :)
-    FLOAT, allocatable :: matrix(:, :), eigenvalues(:)
+    FLOAT, allocatable :: matrix(:, :), eigenvalues(:), weights(:)
 
     PUSH_SUB(ps_xml_load)
 
@@ -1176,14 +1176,18 @@ contains
       
     else
 
+      SAFE_ALLOCATE(weights(1:ps_xml%grid_size))
+
+      call pseudo_grid_weights(ps_xml%pseudo, weights(1))
+      
       do ll = 0, ps_xml%lmax
         ! we need to build the KB projectors
         ! the procedure was copied from ps_in_grid.F90 (r12967)
         dnrm = M_ZERO
         avgv = M_ZERO
         do ip = 1, ps_xml%grid_size
-          rr = (ip - 1)*ps_xml%mesh_spacing
-          volume_element = rr**2*ps_xml%mesh_spacing
+          rr = ps%g%rofi(ip)
+          volume_element = rr**2*weights(ip)
           kbprojector(ip) = (ps_xml%potential(ip, ll) - ps_xml%potential(ip, ps%llocal))*ps_xml%wavefunction(ip, ll)
           dnrm = dnrm + kbprojector(ip)**2*volume_element
           avgv = avgv + kbprojector(ip)*ps_xml%wavefunction(ip, ll)*volume_element
@@ -1216,6 +1220,8 @@ contains
           call spline_fit(ps%g%nrval, ps%g%r2ofi, wavefunction, ps%ur_sq(ll + 1, is))
         end do
       end do
+
+      SAFE_DEALLOCATE_A(weights)
         
     end if
 

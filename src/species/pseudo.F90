@@ -42,6 +42,8 @@ module pseudo_oct_m
     pseudo_llocal,                       &
     pseudo_nchannels,                    &
     pseudo_nprojectors,                  &
+    pseudo_grid,                         &
+    pseudo_grid_weights,                 &
     pseudo_local_potential,              &
     pseudo_projector,                    &
     pseudo_radial_function,              &
@@ -226,6 +228,26 @@ module pseudo_oct_m
 
     ! -------------------------------------------------
 
+    subroutine pseudo_grid(pseudo, grid)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+      real(8),          intent(out)   :: grid
+    end subroutine pseudo_grid
+    
+    ! -------------------------------------------------
+
+    subroutine pseudo_grid_weights(pseudo, weight)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+      real(8),          intent(out)   :: weight
+    end subroutine pseudo_grid_weights
+
+    ! -------------------------------------------------
+
     subroutine pseudo_local_potential(pseudo, local_potential)
       import :: pseudo_t
       implicit none
@@ -233,7 +255,7 @@ module pseudo_oct_m
       type(pseudo_t),   intent(in)    :: pseudo
       real(8),          intent(out)   :: local_potential
     end subroutine pseudo_local_potential
-
+    
     ! -------------------------------------------------
     
     subroutine pseudo_projector(pseudo, l, ic, projector)
