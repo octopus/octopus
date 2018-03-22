@@ -164,27 +164,20 @@ contains
 
     p%lloc = ps%llocal
 
-    select case (ps%kbc)
-    case (1)
-      p%type = PROJ_KB
-      if (reltype == 1) then
-        write(message(1),'(a,a,a)') &
-          "Spin-orbit coupling for species ", trim(species_label(atm%species)), " is not available."
-        call messages_warning(1)
-      end if
-    case (2)
-      if (reltype == 0) then
-        p%type = PROJ_KB
-      else
+    p%type = ps%projector_type
+
+    if(p%type == PROJ_KB .and. reltype == 1) then
+      if(ps%kbc == 2) then
         p%type = PROJ_RKB
+      else
+        call messages_write("Spin-orbit coupling for species '"//trim(species_label(atm%species))//" is not available.")
+        call messages_warning()
       end if
-    case (3)
-      p%type = PROJ_HGH
-    end select
+    end if
     
     select case(p%type)
     case(PROJ_KB)
-      p%nprojections = dim * ps%kbc
+      p%nprojections = dim*ps%kbc
     case(PROJ_RKB)
       p%nprojections = 4
     case(PROJ_HGH)

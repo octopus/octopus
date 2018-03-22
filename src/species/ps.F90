@@ -74,6 +74,7 @@ module ps_oct_m
     (/"upf1", "upf2", "qso ", "psml", "psf ", "cpi ", "fhi ", "hgh "/)
 
   type ps_t
+    integer :: projector_type
     character(len=10) :: label
 
     integer  :: ispin    !< Consider spin (ispin = 2) or not (ispin = 1)
@@ -199,6 +200,7 @@ contains
     ps%label   = label
     ps%ispin   = ispin
     ps%hamann  = .false.
+    ps%projector_type = PROJ_KB
     
     select case(ps%file_format)
     case(PSEUDO_FORMAT_PSF, PSEUDO_FORMAT_HGH)
@@ -293,6 +295,7 @@ contains
 
     case(PSEUDO_FORMAT_HGH)
       ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
+      ps%projector_type = PROJ_HGH
       
       call hgh_init(ps_hgh, trim(filename))
       call valconf_copy(ps%conf, ps_hgh%conf)
