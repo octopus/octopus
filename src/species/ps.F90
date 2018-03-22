@@ -22,6 +22,7 @@ module ps_oct_m
   use atomic_oct_m
   use global_oct_m
   use io_oct_m
+  use lalg_adv_oct_m
   use loct_math_oct_m
   use parser_oct_m
   use logrid_oct_m
@@ -1020,6 +1021,7 @@ contains
     FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element
     FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:), nlcc_density(:), dens(:)
     integer, allocatable :: cmap(:, :)
+    FLOAT, allocatable :: matrix(:, :), eigenvalues(:)
 
     PUSH_SUB(ps_xml_load)
 
@@ -1083,27 +1085,47 @@ contains
       end do
 
       ASSERT(all(cmap >= 0 .and. cmap <= ps_xml%nchannels))
-      
+
+      SAFE_ALLOCATE(matrix(1:ps_xml%nchannels, 1:ps_xml%nchannels))
+      SAFE_ALLOCATE(eigenvalues(1:ps_xml%nchannels))
+
+      ps%h = CNST(0.0)
+
       do ll = 0, ps_xml%lmax
+
+        ! diagonalize the coefficient matrix
+        if(.not. pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
+          matrix(1:ps_xml%nchannels, 1:ps_xml%nchannels) = ps_xml%dij(ll, 1:ps_xml%nchannels, 1:ps_xml%nchannels)
+          call lalg_eigensolve(ps_xml%nchannels, matrix, eigenvalues)
+        else
+          matrix = CNST(0.0)
+          forall(ic = 1:ps_xml%nchannels)
+            eigenvalues(ic) = ps_xml%dij(ll, ic, ic)
+            matrix(ic, ic) = CNST(1.0)
+          end forall
+        end if
+          
         do ic = 1, ps_xml%nchannels
 
           do ip = 1, ps%g%nrval
+            kbprojector(ip) = 0.0
             if(ip <= ps_xml%grid_size) then
-              kbprojector(ip) = ps_xml%projector(ip, ll, ic)
-            else
-              kbprojector(ip) = 0.0
+              do jc = 1, ps_xml%nchannels
+                kbprojector(ip) = kbprojector(ip) + matrix(jc, ic)*ps_xml%projector(ip, ll, jc)
+              end do
             end if
           end do
-
+          
           call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, cmap(ll, ic)))
 
-          do jc = 1, ps_xml%nchannels
-            ps%h(ll, cmap(ll, ic), cmap(ll, jc)) = ps_xml%dij(ll, ic, jc)
-          end do
+          ps%h(ll, cmap(ll, ic), cmap(ll, ic)) = eigenvalues(ic)
 
         end do
       end do
 
+      SAFE_DEALLOCATE_A(matrix)
+      SAFE_DEALLOCATE_A(eigenvalues)
+      
       ps%conf%p = ps_xml%nwavefunctions
       
       do ii = 1, ps_xml%nwavefunctions
