@@ -1275,7 +1275,7 @@ contains
       call pcm_pot_rs(pcm, pcm%v_e_rs, pcm%q_e, pcm%rho_e, mesh )
     end if
 
-    if( .not.pcm%kick_like ) then
+    if( ( calc == PCM_EXTERNAL_PLUS_KICK .or. calc == PCM_KICK ) .and. .not.pcm%kick_like ) then
       pcm%q_ext    = M_ZERO
       pcm%v_ext_rs = M_ZERO
     end if
