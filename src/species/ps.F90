@@ -360,7 +360,8 @@ contains
       call pseudo_grid(ps_xml%pseudo, ps%g%rofi(1))
       
       do ii = 1, ps%g%nrval
-        ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
+        ps%g%rofi(ii) = ps_xml%grid(ii)
+        ps%g%r2ofi(ii) = ps_xml%grid(ii)**2
       end do
       
     end select
@@ -1031,7 +1032,7 @@ contains
     FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element
     FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:), nlcc_density(:), dens(:)
     integer, allocatable :: cmap(:, :)
-    FLOAT, allocatable :: matrix(:, :), eigenvalues(:), weights(:)
+    FLOAT, allocatable :: matrix(:, :), eigenvalues(:)
 
     PUSH_SUB(ps_xml_load)
 
@@ -1047,7 +1048,7 @@ contains
     SAFE_ALLOCATE(vlocal(1:ps%g%nrval))
 
     do ip = 1, ps%g%nrval
-      rr = (ip - 1)*ps_xml%mesh_spacing
+      rr = ps_xml%grid(ip)
       if(ip <= ps_xml%grid_size) then
         vlocal(ip) = ps_xml%potential(ip, ps%llocal)
       else
@@ -1177,18 +1178,14 @@ contains
       
     else
 
-      SAFE_ALLOCATE(weights(1:ps_xml%grid_size))
-
-      call pseudo_grid_weights(ps_xml%pseudo, weights(1))
-      
       do ll = 0, ps_xml%lmax
         ! we need to build the KB projectors
         ! the procedure was copied from ps_in_grid.F90 (r12967)
         dnrm = M_ZERO
         avgv = M_ZERO
         do ip = 1, ps_xml%grid_size
-          rr = ps%g%rofi(ip)
-          volume_element = rr**2*weights(ip)
+          rr = ps_xml%grid(ip)
+          volume_element = rr**2*ps_xml%weights(ip)
           kbprojector(ip) = (ps_xml%potential(ip, ll) - ps_xml%potential(ip, ps%llocal))*ps_xml%wavefunction(ip, ll)
           dnrm = dnrm + kbprojector(ip)**2*volume_element
           avgv = avgv + kbprojector(ip)*ps_xml%wavefunction(ip, ll)*volume_element
@@ -1208,7 +1205,6 @@ contains
 
         ! wavefunctions, for the moment we pad them with zero
         do ip = 1, ps%g%nrval
-          rr = (ip - 1)*ps_xml%mesh_spacing
           if(ip <= ps_xml%grid_size) then
             wavefunction(ip) = ps_xml%wavefunction(ip, ll)
           else
@@ -1222,8 +1218,6 @@ contains
         end do
       end do
 
-      SAFE_DEALLOCATE_A(weights)
-        
     end if
 
     ps%has_density = ps_xml%has_density
