@@ -30,7 +30,7 @@ namespace pseudopotential {
 
   public:
 
-    anygrid(bool uniform_grid = false):
+    anygrid(bool uniform_grid):
       uniform_grid_(uniform_grid){
     }
     
