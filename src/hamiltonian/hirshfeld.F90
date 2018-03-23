@@ -285,7 +285,7 @@ contains
       rmax_j = max(rmax_j, spline_cutoff_radius(ps_j%density_der(isp), ps_j%projectors_sphere_threshold))
     end do
 
-
+    !print *, 'ok 1'
     call periodic_copy_init(pp_i, this%mesh%sb, this%geo%atom(iatom)%x, rmax_i)
     call periodic_copy_init(pp_j, this%mesh%sb, this%geo%atom(jatom)%x, rmax_j)
 
@@ -307,6 +307,8 @@ contains
           r_small = CNST(0.0)
           rr = CNST(0.0)
           do ip = 1, this%mesh%np
+            if(this%total_density(ip)<CNST(1e-12)) cycle
+
             call mesh_r(this%mesh, ip, rr, origin = pos_j)
             rr = max(rr, r_small)
             do isp = 1, this%st%d%nspin
@@ -323,8 +325,8 @@ contains
             tdensity = sum(density(ip, 1:this%st%d%nspin))
             atom_dens = sum(atom_density(ip, 1:this%st%d%nspin))
             atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin))
-
-            if(rrj > CNST(1e-12) .AND. this%total_density(ip)> CNST(1e-12)) then
+            !print *, 'ok 5'
+            if(rrj > CNST(1e-12)) then
               do idir = 1, this%mesh%sb%dim
                 grad(ip, idir) = grad(ip, idir) -rri**3*atom_dens*tdensity*atom_der/this%total_density(ip)**2&
                 *(pos_j(idir) - this%mesh%x(ip, idir))/rrj
@@ -332,13 +334,15 @@ contains
             !else
               !grad(ip, 1:this%mesh%sb%dim) = grad(ip, 1:this%mesh%sb%dim) + CNST(0.0)
             end if
-
-            if(iatom == jatom) then
-
-              do idir = 1, this%mesh%sb%dim
-                grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
-                *tdensity/this%total_density(ip)*(pos_i(idir) - this%mesh%x(ip, idir))
-              end do
+            !print *, 'ok 6'
+            if(iatom == jatom )then
+              !Only if we really have the same atoms
+              if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < CNST(1e-12))) then
+                do idir = 1, this%mesh%sb%dim
+                  grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
+                  *tdensity/this%total_density(ip)*(pos_i(idir) - this%mesh%x(ip, idir))
+                end do
+              end if
             end if
           end do
 
