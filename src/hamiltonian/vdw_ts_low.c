@@ -409,11 +409,8 @@ void get_vdw_params (const int zatom,
 
 
 /* Damping function. */
-void fdamp (const double rr, const double r0ab, 
+void fdamp (const double rr, const double r0ab, const double dd, const double sr,
 	    double * ff, double * dffdrab, double * dffdr0) {
-
-  const double dd = 20.0;
-  const double sr = 0.94; // Value for PBE. Should be 0.96 for PBE0.
 
   // Calculate the damping coefficient.
   double ee = exp(-dd*((rr/(sr*r0ab)) - 1.0));
@@ -451,8 +448,8 @@ void distance (const int iatom, const int jatom, const double coordinates[],
 
 
 /* Function to calculate the Van der Waals energy... and forces */
-void vdw_calculate (const int natoms, const int zatom[], const double coordinates[], const double volume_ratio[], 
-		    double * energy, double force[], double derivative_coeff[]) {
+void vdw_calculate (const int natoms, const int zatom[], const double coordinates[], const double volume_ratio[],
+ const double dd, const double sr, double * energy, double force[], double derivative_coeff[]) {
   
   int ia;
 
@@ -500,7 +497,7 @@ void vdw_calculate (const int natoms, const int zatom[], const double coordinate
       double ff;
       double dffdrab;
       double dffdr0;
-      fdamp(rr, r0ab, &ff, &dffdrab, &dffdr0);
+      fdamp(rr, r0ab, dd, sr, &ff, &dffdrab, &dffdr0);
       
       // Pair-wise correction to energy.
       *energy += -0.5*ff*c6ab/rr6;
@@ -536,9 +533,9 @@ void vdw_calculate (const int natoms, const int zatom[], const double coordinate
 
 #ifndef _TEST
 /* This is a wrapper to be called from Fortran. */
-void FC_FUNC_(f90_vdw_calculate, F90_VDW_CALCULATE) (const int * natoms, const int zatom[], const double coordinates[], const double volume_ratio[],
-						     double * energy, double force[], double derivative_coeff[]) {
-  vdw_calculate(*natoms, zatom, coordinates, volume_ratio, energy, force, derivative_coeff);
+void FC_FUNC_(f90_vdw_calculate, F90_VDW_CALCULATE) (const int * natoms, const int zatom[], const double coordinates[], 
+const double volume_ratio[], const double dd, const double sr, double * energy, double force[], double derivative_coeff[]) {
+  vdw_calculate(*natoms, zatom, coordinates, volume_ratio, dd, sr, energy, force, derivative_coeff);
 }
 #endif
 

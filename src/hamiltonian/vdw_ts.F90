@@ -61,7 +61,9 @@ module vdw_ts_oct_m
     FLOAT, allocatable :: volfree(:)
     type(hirshfeld_t)  :: hirshfeld
 
-    FLOAT              :: VDW_cutoff     !> cutoff value for the calculation of the VdW TS correction in solids 
+    FLOAT              :: VDW_cutoff      !> Cutoff value for the calculation of the VdW TS correction in periodic system.
+    FLOAT              :: VDW_dd_parameter !> Parameter for the damping function steepness.
+    FLOAT              :: VDW_sr_parameter!> Parameter for the damping function. Can depend on the XC correction used.
   end type vdw_ts_t
 
 contains
@@ -85,6 +87,29 @@ contains
     !% Set the value of the cutoff for the VDW correction in periodic system in the Tkatchenko and Scheffler (vdw_ts) scheme only. 
     !%End
     call parse_variable('VDW_TS_cutoff', CNST(10.0), this%VDW_cutoff)
+
+
+    !%Variable VDW_TS_d
+    !%Type float
+    !%Default 20.0
+    !%Section Hamiltonian::XC
+    !%Description
+    !% Set the value of the d parameter, which adjusts the damping function steepness for the VDW correction in the Tkatchenko and 
+    !% Scheffler (vdw_ts) scheme only. See Equation (12) of Phys. Rev. Lett. 102 073005 (2009). 
+    !%End
+    call parse_variable('VDW_TS_d', CNST(20.0), this%VDW_dd_parameter)
+
+    !%Variable VDW_TS_sr
+    !%Type float
+    !%Default 0.94
+    !%Section Hamiltonian::XC
+    !%Description
+    !% Set the value of the sr parameter, which adjusts the damping function for the VDW correction in the Tkatchenko and 
+    !% Scheffler (vdw_ts) scheme only. See Equation (12) of Phys. Rev. Lett. 102 073005 (2009). This can depend on the XC correction used,
+    !% the default 0.94 is for PBE - 0.94 for PBE0.
+    !%End
+    call parse_variable('VDW_TS_sr', CNST(0.94), this%VDW_sr_parameter)
+
 
     SAFE_ALLOCATE(this%c6free(1:geo%nspecies))
     SAFE_ALLOCATE(this%dpfree(1:geo%nspecies))
@@ -143,12 +168,14 @@ contains
     FLOAT,               intent(out)   :: force(:, :)
 
  interface
-     subroutine f90_vdw_calculate(natoms, zatom, coordinates, volume_ratio, &
+     subroutine f90_vdw_calculate(natoms, zatom, coordinates, volume_ratio, dd, sr, &
        energy, force, derivative_coeff)
         integer, intent(in)  :: natoms
         integer, intent(in)  :: zatom
         real(8), intent(in)  :: coordinates
         real(8), intent(in)  :: volume_ratio
+        real(8), intent(in)  :: dd
+        real(8), intent(in)  :: sr
         real(8), intent(out) :: energy
         real(8), intent(out) :: force
         real(8), intent(out) :: derivative_coeff
@@ -197,9 +224,6 @@ contains
       end do
     end do
     
-    dd = 20.0  !TODO parametrisez dans vdw initialiser en tant que parameter style vdw cutoff
-    sr = 0.94 ! Value for PBE. Should be 0.96 for PBE0.
-
 !---------------------------------------------------------------------------------!    
 
     if(sb%periodic_dim > 0) then ! periodic case
@@ -217,14 +241,14 @@ contains
 
             if(rr < CNST(1.0e-10)) cycle
 
-            ee = exp(-dd*((rr/(sr*r0ab(iatom,jatom))) - M_ONE))
+            ee = exp(- this%VDW_dd_parameter*((rr/( this%VDW_sr_parameter*r0ab(iatom,jatom))) - M_ONE))
             ff = M_ONE/(M_ONE + ee)
             dee = ee*ff**2
 
             !Calculate the derivative of the damping function with respect to the distance between atoms A and B.
-            dffdrab = (dd/(sr*r0ab(iatom,jatom)))*dee
+            dffdrab = ( this%VDW_dd_parameter/( this%VDW_sr_parameter*r0ab(iatom,jatom)))*dee
             !Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
-            dffdr0 = -dd*rr/(sr*r0ab(iatom,jatom)**2)*dee
+            dffdr0 = - this%VDW_dd_parameter*rr/( this%VDW_sr_parameter*r0ab(iatom,jatom)**2)*dee
 
             energy = energy -M_HALF*ff*c6ab(iatom,jatom)/rr6
 
@@ -257,8 +281,8 @@ contains
 
       end do
  
-      call f90_vdw_calculate(geo%natoms, zatom(1), coordinates(1, 1), volume_ratio(1), &
-      energy, force(1, 1), derivative_coeff(1))
+      call f90_vdw_calculate(geo%natoms, zatom(1), coordinates(1, 1), volume_ratio(1), this%VDW_dd_parameter, &
+      this%VDW_sr_parameter, energy, force(1, 1), derivative_coeff(1))
 
       SAFE_DEALLOCATE_A(coordinates)
       SAFE_DEALLOCATE_A(zatom)
