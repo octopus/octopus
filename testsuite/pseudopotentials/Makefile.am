@@ -44,6 +44,8 @@ dist_share_DATA =                                  \
 	09-carbon_cpi.test                         \
 	10-helium_upf.test                         \
 	10-helium_upf.pbe-mt.UPF                   \
-	10-helium_upf.01-gs.inp
+	10-helium_upf.01-gs_nofilter.inp           \
+	10-helium_upf.02-gs_filter_ts.inp          \
+	10-helium_upf.03-gs_filter_bsb.inp
 
 CLEANFILES = *~ *.bak

@@ -5,17 +5,44 @@ Program    : octopus
 TestGroups : short-run, pseudopotentials
 Enabled    : Yes
 
+
 ExtraFile: 10-helium_upf.pbe-mt.UPF
-Input: 10-helium_upf.01-gs.inp
+Input: 10-helium_upf.01-gs_nofilter.inp
 Precision: 0.00011
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -2.83763329
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;     -2.87062228
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;      0.00000000
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;     -1.15699050
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;      2.00325768
+match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ;  -1.31978407
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;     -0.98416530
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;     -0.04599286
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;      2.56933532
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;     -6.41306502
+match ; Eigenvalue 1       ; GREPFIELD(static/info, '  1   --', 3) ;          -0.578495
+
+Input: 10-helium_upf.02-gs_filter_ts.inp
+Precision: 0.00011
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -2.89583136
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  0.00000000
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -1.14324249
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  1.99478473
-match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -1.26961787
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.85818564
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.11103830
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  2.57373458
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -6.43692872
-match ; Eigenvalue 1       ; GREPFIELD(static/info, '  1   --', 3) ;      -0.571621
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -1.16286262
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  2.02539756
+match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -1.33449764
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.99685739
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.04521143
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  2.65207533
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -6.53123566
+match ; Eigenvalue 1       ; GREPFIELD(static/info, '  1   --', 3) ;      -0.581431
+
+Input: 10-helium_upf.03-gs_filter_bsb.inp
+Precision: 0.00011
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;    -2.84285262
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;     0.00000000
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;    -1.14509434
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;     1.98457607
+match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -1.30698559
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;    -0.97455803
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;    -0.04560977
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;     2.51291308
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;    -6.32017808
+match ; Eigenvalue 1       ; GREPFIELD(static/info, '  1   --', 3) ;         -0.572547
 
