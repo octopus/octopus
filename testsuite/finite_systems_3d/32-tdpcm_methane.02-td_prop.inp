@@ -24,7 +24,7 @@ TDPolarizationDirection = 3
 
 TDPropagator = aetrs
 TDTimeStep = 0.0023/eV
-TDMaxSteps = 4350  # ~ 10.0/TDTimeStep
+TDMaxSteps = 25
 
 FromScratch = yes
 ExperimentalFeatures = yes
