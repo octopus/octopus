@@ -79,7 +79,10 @@ namespace pseudopotential {
 
     std::vector<double> dij_;
     int llocal_;
+    int start_point_;
+    int nchannels_;
 
+    
   };
 
 }

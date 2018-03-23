@@ -398,8 +398,6 @@ namespace pseudopotential {
     std::vector<char> buffer_;
     rapidxml::xml_document<> doc_;
     rapidxml::xml_node<> * root_node_;
-    int start_point_;
-    int nchannels_;
     
     
   };

@@ -491,7 +491,6 @@ namespace pseudopotential {
     std::ifstream file_;
     std::vector<char> buffer_;
     rapidxml::xml_document<> doc_;
-    int start_point_;
 
     std::string symbol_;
     std::string xc_functional_;
@@ -500,7 +499,6 @@ namespace pseudopotential {
     int nprojectors_;
     std::vector<int> proj_l_;
     std::vector<int> proj_c_;
-    int nchannels_;
     
   };
 
