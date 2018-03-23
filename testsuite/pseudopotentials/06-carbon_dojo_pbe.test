@@ -7,7 +7,7 @@ Enabled    : Yes
 
 Input: 06-carbon_dojo_pbe.01-gs.inp
 Precision: 0.00011
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -156.14466362
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -156.14452521
 match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -14.651344
 match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ;   1.000000
 match ; Eigenvalue   [1dn] ; GREPFIELD(static/info, '1   dn', 3) ; -11.709735
