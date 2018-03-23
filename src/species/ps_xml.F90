@@ -138,6 +138,8 @@ contains
       call pseudo_local_potential(pseudo, this%potential(1, this%llocal))
 
       SAFE_ALLOCATE(this%projector(1:this%grid_size, 0:this%lmax, 1:this%nchannels))
+
+      this%projector = CNST(0.0)
       
       do ll = 0, this%lmax
         if(this%llocal == ll) cycle
