@@ -58,6 +58,7 @@ module species_pot_oct_m
     zspecies_get_orbital_submesh,   &
     species_get_local,              &
     species_atom_density,           &
+    species_atom_density_np,           &
     species_atom_density_derivative
 
   type(mesh_t), pointer :: mesh_p
@@ -298,6 +299,83 @@ contains
 
     POP_SUB(species_atom_density)
   end subroutine species_atom_density
+
+  ! ---------------------------------------------------------
+
+ subroutine species_atom_density_np(mesh, sb, atom, pos,  spin_channels, rho)
+    type(mesh_t),         intent(in)    :: mesh
+    type(simul_box_t),    intent(in)    :: sb
+    type(atom_t), target, intent(in)    :: atom
+    FLOAT,                intent(in)    :: pos(:) !< (Max dim)
+    integer,              intent(in)    :: spin_channels
+    FLOAT,                intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
+    integer :: isp, ip
+    FLOAT :: rr, nrm, rmax
+    type(species_t), pointer :: species
+    type(ps_t), pointer :: ps
+
+
+    PUSH_SUB(species_atom_density_np)
+ 
+    rho = M_ZERO
+    species => atom%species
+    ps => species_ps(species)
+   !case (SPECIES_PSEUDO, SPECIES_PSPIO)
+      ! ...from pseudopotentials
+
+      if(ps_has_density(ps)) then
+
+        ASSERT(associated(ps%density))
+
+        rmax = CNST(0.0)
+        do isp = 1, spin_channels
+          rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
+        end do
+
+        do ip = 1, mesh%np
+          call mesh_r(mesh, ip, rr, origin = pos)
+          rr = max(rr, r_small)
+
+          do isp = 1, spin_channels
+            if(rr >= spline_range_max(ps%density(isp))) cycle
+            rho(ip, isp) = rho(ip, isp) + spline_eval(ps%density(isp), rr)
+          end do
+
+        end do
+
+      else
+
+        !we use the square root of the short-range local potential, just to put something that looks like a density
+
+        !call periodic_copy_init(pp, sb, atom%x, range = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold))
+
+        do ip = 1, mesh%np
+          call mesh_r(mesh, ip, rr, origin = pos)
+          rr = max(rr, r_small)
+
+          if(rr >= spline_range_max(ps%vl)) cycle
+
+          do isp = 1, spin_channels
+            rho(ip, isp) = rho(ip, isp) + sqrt(abs(spline_eval(ps%vl, rr)))
+          end do
+
+        end do
+
+        ! normalize
+        nrm = CNST(0.0)
+        do isp = 1, spin_channels
+          nrm = nrm + dmf_integrate(mesh, rho(:, isp))
+        end do
+
+        rho(1:mesh%np, 1:spin_channels) = rho(1:mesh%np, 1:spin_channels)*species_zval(species)/nrm
+
+      end if
+
+   ! end select
+
+    POP_SUB(species_atom_density_np)
+  end subroutine species_atom_density_np
+
 
   ! ---------------------------------------------------------
 

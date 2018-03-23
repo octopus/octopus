@@ -59,9 +59,9 @@ module vdw_ts_oct_m
     FLOAT, allocatable :: r0free(:)      !> Free atomic vdW radius for each atomic species.
     FLOAT, allocatable :: c6abfree(:, :) !> Free atomic heteronuclear C6 coefficient for each atom pair.
     FLOAT, allocatable :: volfree(:)
-    type(hirshfeld_t) :: hirshfeld
+    type(hirshfeld_t)  :: hirshfeld
 
-    FLOAT   :: VDW_cutoff                !> cutoff value for the calculation of the VdW TS correction in solids 
+    FLOAT              :: VDW_cutoff     !> cutoff value for the calculation of the VdW TS correction in solids 
   end type vdw_ts_t
 
 contains
@@ -193,11 +193,11 @@ contains
                           +(volume_ratio(jatom)**(CNST(1.0)/CNST(3.0)))*this%r0free(jspecies) 
 
        c6ab(iatom,jatom) = volume_ratio(iatom)*volume_ratio(jatom)*this%c6abfree(ispecies,jspecies)
-
+       !Print*, 'iatom= ', iatom, 'jatom =', jatom, 'cab(iatom,jatom)= ', c6ab(iatom,jatom)
       end do
     end do
-
-    dd = 20.0
+    
+    dd = 20.0  !TODO parametrisez dans vdw initialiser en tant que parameter style vdw cutoff
     sr = 0.94 ! Value for PBE. Should be 0.96 for PBE0.
 
 !---------------------------------------------------------------------------------!    
@@ -265,10 +265,11 @@ contains
     end if
       
     ! Add the extra term for the force 
-    do jatom = 1, geo%natoms
-      do iatom = 1, geo%natoms
+    do iatom = 1, geo%natoms
+      do jatom = 1, geo%natoms
+        !print *, 'debut force'
         call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, density, dvadrr)
-        force(1:sb%dim, jatom) = force(1:sb%dim, jatom) - derivative_coeff(iatom)*dvadrr(1:sb%dim)
+        force(1:sb%dim, iatom) = force(1:sb%dim, iatom) - derivative_coeff(iatom)*dvadrr(1:sb%dim)
       end do
     end do
     print *, force
@@ -278,7 +279,9 @@ contains
     potential = M_ZERO
     do iatom = 1, geo%natoms
       call hirshfeld_density_derivative(this%hirshfeld, iatom, dvadens)
-      potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*dvadens(1:der%mesh%np)
+      Potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*dvadens(1:der%mesh%np)
+      !Potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*this%hirshfeld%free_vol_r3(iatom,1:der%mesh%np)/(this%hirshfeld%total_density(1:der%mesh%np)*this%hirshfeld%free_volume(iatom))
+
     end do
 
     call dio_function_output(1, "./", "vvdw", der%mesh, potential, unit_one, ip)
