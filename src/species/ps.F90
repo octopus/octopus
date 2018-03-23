@@ -587,6 +587,7 @@ contains
     ps%rc_max = CNST(0.0)
 
     do l = 0, ps%lmax
+      if(l == ps%llocal) cycle
       do j = 1, ps%kbc
         ps%rc_max = max(ps%rc_max, spline_cutoff_radius(ps%kb(l, j), ps%projectors_sphere_threshold))
       end do
