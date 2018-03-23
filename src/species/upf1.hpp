@@ -241,10 +241,6 @@ namespace pseudopotential {
       return zval_;
     }
 
-    int llocal() const {
-      return llocal_;
-    }
-
     pseudopotential::exchange exchange() const {
       if(xc_functional_ == "PBE") return pseudopotential::exchange::PBE;
       if(xc_functional_ == "PBESOL") return pseudopotential::exchange::PBE_SOL;
@@ -261,10 +257,6 @@ namespace pseudopotential {
       return pseudopotential::correlation::UNKNOWN;
     }
 
-    int nchannels() const {
-      return nchannels_;
-    }
-    
     void local_potential(std::vector<double> & potential) const {
       rapidxml::xml_node<> * node = doc_.first_node("PP_LOCAL");
 
