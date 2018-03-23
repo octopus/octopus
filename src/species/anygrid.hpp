@@ -46,6 +46,22 @@ namespace pseudopotential {
       }
     }
     
+    virtual void grid(std::vector<double> & val) const {
+      if(uniform_grid_){
+	pseudopotential::base::grid(val);
+      } else {
+	val = grid_;
+      }
+    }
+
+    virtual void grid_weights(std::vector<double> & val) const {
+      if(uniform_grid_){
+	pseudopotential::base::grid(val);
+      } else {
+	val = grid_weights_;
+      }
+    }
+
   protected:
 
     void interpolate(std::vector<double> & function) const {
@@ -66,6 +82,7 @@ namespace pseudopotential {
 
     bool uniform_grid_;
     std::vector<double> grid_;
+    std::vector<double> grid_weights_;
     int mesh_size_;
     
   };
