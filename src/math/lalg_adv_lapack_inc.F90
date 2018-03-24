@@ -107,7 +107,7 @@ subroutine X(geneigensolve)(n, a, b, e, bof, err_code)
   ! b was destroyed, so we rebuild it
   do ii = 1, n
     do jj = 1, ii - 1
-      b(jj, ii) = b(ii, jj)
+      b(jj, ii) = R_CONJ(b(ii, jj))
     end do
     b(ii, ii) = diag(ii)
   end do

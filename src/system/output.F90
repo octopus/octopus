@@ -135,7 +135,7 @@ module output_oct_m
     integer :: output_interval     !< output every iter
     integer :: restart_write_interval
     logical :: duringscf
-
+    logical :: gradientpotential
     character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
     character(len=MAX_PATH_LEN) :: iter_dir  !< The folder name, if information will be output while iterating.
 
@@ -288,6 +288,22 @@ contains
     !% Generates input for a frozen calculation.
     !%End
     call parse_variable('Output', 0, outp%what)
+
+
+
+
+    !%Variable OutputGradientPotential
+    !%Type logical
+    !%Default no
+    !%Section Output
+    !%Description
+    !% During <tt>gs</tt>, <tt>unocc</tt> runs and <tt>td</tt> if this variable is set to yes, 
+    !% output will be written after every <tt>OutputInterval</tt> iterations.
+    !%End
+    call parse_variable('OutputGradientPotential', .false., outp%gradientpotential)
+
+
+
 
     if(iand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
       call messages_experimental("Wave-functions in Fourier space")

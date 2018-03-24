@@ -155,7 +155,7 @@ module states_oct_m
 
     !> used for the user-defined wavefunctions (they are stored as formula strings)
     !! (st%d%dim, st%nst, st%d%nik)
-    character(len=1024), pointer :: user_def_states(:,:,:)
+    character(len=1024), allocatable :: user_def_states(:,:,:)
 
     !> the densities and currents (after all we are doing DFT :)
     FLOAT, pointer :: rho(:,:)         !< rho(gr%mesh%np_part, st%d%nspin)
@@ -263,7 +263,6 @@ contains
     nullify(st%Imrho_core, st%Imfrozen_rho)
     nullify(st%psibL)
 
-    nullify(st%user_def_states)
     nullify(st%rho, st%current)
     nullify(st%rho_core, st%frozen_rho)
     nullify(st%subsys_st)
@@ -1502,7 +1501,7 @@ contains
     ! it allocates iblock, psib, block_is_local
     stout%group%nblocks = stin%group%nblocks
 
-    call loct_pointer_copy(stout%user_def_states, stin%user_def_states)
+    call loct_allocatable_copy(stout%user_def_states, stin%user_def_states)
 
     call loct_pointer_copy(stout%current, stin%current)
  
@@ -1570,7 +1569,7 @@ contains
     ! this deallocates dpsi, zpsi, psib, iblock, iblock
     call states_deallocate_wfns(st)
 
-    SAFE_DEALLOCATE_P(st%user_def_states)
+    SAFE_DEALLOCATE_A(st%user_def_states)
 
     if(associated(st%subsys_st))then
       !subsystems
