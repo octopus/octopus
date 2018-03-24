@@ -25,13 +25,14 @@
 #include <sstream>
 #include <iostream>
 
+#include "anygrid.hpp"
 #include "base.hpp"
 #include "chemical_element.hpp"
 #include <rapidxml.hpp>
 
 namespace pseudopotential {
 
-  class psml : public pseudopotential::base {
+  class psml : public pseudopotential::anygrid {
 
   public:
 
@@ -140,6 +141,30 @@ namespace pseudopotential {
       return -1;
     }
 
+    pseudopotential::exchange exchange() const {
+      // PSML uses libxc ids, so we just need to read the value
+      rapidxml::xml_node<> * node = spec_node_->first_node("exchange-correlation")->first_node("libxc-info")->first_node("functional");
+      while(node){
+	if(value<std::string>(node->first_attribute("type")) == "exchange") {
+	  return pseudopotential::exchange(value<int>(node->first_attribute("id")));
+	}
+	node = node->next_sibling("functional");
+      }
+      return pseudopotential::exchange::UNKNOWN;
+    }
+
+    pseudopotential::correlation correlation() const {
+      // PSML uses libxc ids, so we just need to read the value
+      rapidxml::xml_node<> * node = spec_node_->first_node("exchange-correlation")->first_node("libxc-info")->first_node("functional");
+      while(node){
+	if(value<std::string>(node->first_attribute("type")) == "correlation") {
+	  return pseudopotential::correlation(value<int>(node->first_attribute("id")));
+	}
+	node = node->next_sibling("functional");
+      }
+      return pseudopotential::correlation::UNKNOWN;
+    }
+    
     int nchannels() const {
       if(type_ == pseudopotential::type::SEMILOCAL) return 1;
       int nc = 0;
@@ -152,22 +177,6 @@ namespace pseudopotential {
 	node = node->next_sibling("proj");
       }
       return nc;
-    }
-    
-    int nquad() const {
-      return 0;
-    }
-
-    double rquad() const {
-      return 0.0;
-    }
-
-    double mesh_spacing() const {
-      return 0.01;
-    }
-
-    int mesh_size() const {
-      return mesh_size_;
     }
     
     void local_potential(std::vector<double> & val) const {
@@ -243,25 +252,6 @@ namespace pseudopotential {
       for(unsigned ii = 0; ii < val.size(); ii++) val[ii] /= 4.0*M_PI;
     }
     
-    void beta(int index, int & l, std::vector<double> & proj) const {
-    }
-
-    void dnm_zero(int nbeta, std::vector<std::vector<double> > & dnm) const {
-    }
-
-    bool has_rinner() const {
-      return false;
-    }
-    
-    void rinner(std::vector<double> & val) const {
-    }
-
-    void qnm(int index, int & l1, int & l2, int & n, int & m, std::vector<double> & val) const {
-    }
-
-    void qfcoeff(int index, int ltot, std::vector<double> & val) const {
-    }
-    
     bool has_density(){
       return root_node_->first_node("valence-charge");
     }
@@ -292,18 +282,6 @@ namespace pseudopotential {
       interpolate(val);
     }
     
-    void interpolate(std::vector<double> & function) const {
-      std::vector<double> function_in_grid = function;
-      
-      Spline function_spline;
-      function_spline.fit(grid_.data(), function_in_grid.data(), function_in_grid.size(), SPLINE_FLAT_BC, SPLINE_NATURAL_BC);
-      
-      function.clear();
-      for(double rr = 0.0; rr <= grid_[grid_.size() - 1]; rr += mesh_spacing()){
-	function.push_back(function_spline.value(rr));
-      }
-    }
-    
     //for some stupid reason psml uses letters instead of numbers for angular momentum
     static int letter_to_l(const std::string & letter){
       if(letter == "s") return 0;
@@ -320,8 +298,6 @@ namespace pseudopotential {
     rapidxml::xml_document<> doc_;
     rapidxml::xml_node<> * root_node_;
     rapidxml::xml_node<> * spec_node_;
-    std::vector<double> grid_;
-    int mesh_size_;
     
   };
 

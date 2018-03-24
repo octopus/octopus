@@ -27,30 +27,36 @@ module pseudo_oct_m
 
   private
 
-  public ::                     &
-    pseudo_t,                   &
-    pseudo_init,                &
-    pseudo_end,                 &
-    pseudo_type,                &
-    pseudo_format,              &
-    pseudo_valence_charge,      &
-    pseudo_mesh_spacing,        &
-    pseudo_mesh_size,           &
-    pseudo_mass,                &
-    pseudo_lmax,                &
-    pseudo_llocal,              &
-    pseudo_nchannels,           &
-    pseudo_local_potential,     &
-    pseudo_projector,           &
-    pseudo_radial_function,     &
-    pseudo_radial_potential,    &
-    pseudo_has_nlcc,            &
-    pseudo_nlcc_density,        &
-    pseudo_dij,                 &
-    pseudo_has_density,         &
-    pseudo_density,             &
-    pseudo_nwavefunctions,      &
-    pseudo_wavefunction
+  public ::                              &
+    pseudo_t,                            &
+    pseudo_detect_format,                &
+    pseudo_init,                         &
+    pseudo_end,                          &
+    pseudo_type,                         &
+    pseudo_format,                       &
+    pseudo_valence_charge,               &
+    pseudo_mesh_spacing,                 &
+    pseudo_mesh_size,                    &
+    pseudo_mass,                         &
+    pseudo_lmax,                         &
+    pseudo_llocal,                       &
+    pseudo_nchannels,                    &
+    pseudo_local_potential,              &
+    pseudo_projector,                    &
+    pseudo_radial_function,              &
+    pseudo_radial_potential,             &
+    pseudo_has_nlcc,                     &
+    pseudo_nlcc_density,                 &
+    pseudo_dij,                          &
+    pseudo_has_density,                  &
+    pseudo_density,                      &
+    pseudo_nwavefunctions,               &
+    pseudo_wavefunction,                 &
+    pseudo_exchange,                     &
+    pseudo_correlation,                  &
+    pseudo_has_total_angular_momentum,   &
+    pseudo_projector_2j,                 &
+    pseudo_wavefunction_2j
   
   !the following sets of values have to match with those on base.hpp
   integer, parameter, public ::               &
@@ -69,6 +75,8 @@ module pseudo_oct_m
     PSEUDO_STATUS_UNSUPPORTED_TYPE             = 460
 
   integer, parameter, public ::                       &
+    PSEUDO_FORMAT_FILE_NOT_FOUND             = 773,   &
+    PSEUDO_FORMAT_UNKNOWN                    = 774,   &
     PSEUDO_FORMAT_UPF1                       = 775,   &
     PSEUDO_FORMAT_UPF2                       = 776,   &
     PSEUDO_FORMAT_QSO                        = 777,   &
@@ -77,7 +85,17 @@ module pseudo_oct_m
     PSEUDO_FORMAT_CPI                        = 780,   &
     PSEUDO_FORMAT_FHI                        = 781,   &
     PSEUDO_FORMAT_HGH                        = 782
-    
+
+  ! we only define these values here, the specific functionals are
+  ! obtained from libxc
+  integer, parameter, public ::                       &
+    PSEUDO_EXCHANGE_UNKNOWN                  = -2,    &
+    PSEUDO_EXCHANGE_ANY                      = -1
+
+  integer, parameter, public ::                       &
+    PSEUDO_CORRELATION_UNKNOWN               = -2,    &
+    PSEUDO_CORRELATION_ANY                   = -1
+  
   type pseudo_t
     private
     integer(8) :: dummy
@@ -85,12 +103,24 @@ module pseudo_oct_m
 
   interface
     
-    subroutine pseudo_init(pseudo, filename, ierr)
+    ! -------------------------------------------------
+    
+    integer function pseudo_detect_format(filename)
+      import :: pseudo_t
+      implicit none
+      
+      character(len=*), intent(in)    :: filename
+    end function pseudo_detect_format
+
+    ! -------------------------------------------------
+    
+    subroutine pseudo_init(pseudo, filename, fmt, ierr)
       import :: pseudo_t
       implicit none
       
       type(pseudo_t),   intent(out)   :: pseudo
       character(len=*), intent(in)    :: filename
+      integer,          intent(in)    :: fmt
       integer,          intent(out)   :: ierr
     end subroutine pseudo_init
 
@@ -283,6 +313,45 @@ module pseudo_oct_m
       real(8),          intent(out)   :: wf
     end subroutine pseudo_wavefunction
 
+    ! -------------------------------------------------
+
+    integer function pseudo_exchange(pseudo)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+    end function pseudo_exchange
+
+    ! -------------------------------------------------
+
+    integer function pseudo_correlation(pseudo)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+    end function pseudo_correlation
+
+    ! -------------------------------------------------
+    
+    integer function pseudo_projector_2j(pseudo, l, ic)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+      integer,          intent(in)    :: l
+      integer,          intent(in)    :: ic
+    end function pseudo_projector_2j
+
+    ! -------------------------------------------------
+    
+    integer function pseudo_wavefunction_2j(pseudo, ii)
+      import :: pseudo_t
+      implicit none
+      
+      type(pseudo_t),   intent(in)    :: pseudo
+      integer,          intent(in)    :: ii
+    end function pseudo_wavefunction_2j
+    
   end interface
   
 contains
@@ -322,6 +391,23 @@ contains
     pseudo_has_density = (pseudo_has_density_low(pseudo) /= 0)
     
   end function pseudo_has_density
+    ! -------------------------------------------------
+  
+  logical function pseudo_has_total_angular_momentum(pseudo)
+    type(pseudo_t),   intent(in)      :: pseudo
+    
+    interface
+      integer function pseudo_has_total_angular_momentum_low(pseudo)
+        import :: pseudo_t
+        implicit none
+        
+        type(pseudo_t),   intent(in)      :: pseudo
+      end function pseudo_has_total_angular_momentum_low
+    end interface
+
+    pseudo_has_total_angular_momentum = (pseudo_has_total_angular_momentum_low(pseudo) /= 0)
+    
+  end function pseudo_has_total_angular_momentum
   
 end module pseudo_oct_m
 

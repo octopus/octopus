@@ -36,7 +36,6 @@ module ps_oct_m
   use fpspio_m
 #endif
   use ps_psf_oct_m
-  use ps_upf_oct_m
   use pseudo_oct_m
   use splines_oct_m
   use spline_filter_oct_m
@@ -54,30 +53,21 @@ module ps_oct_m
     ps_debug,                   &
     ps_niwfs,                   &
     ps_end,                     &
-    ps_type,                    &
     ps_has_density,             &
     ps_density_volume
   
-  integer, parameter, public :: &
-    PS_TYPE_PSF = 100,          &
-    PS_TYPE_HGH = 101,          &
-    PS_TYPE_CPI = 102,          &
-    PS_TYPE_FHI = 103,          &
-    PS_TYPE_UPF = 104,          &
-    PS_TYPE_XML = 105
-
   integer, parameter, public :: &
     PS_FILTER_NONE = 0,         &
     PS_FILTER_TS   = 2,         &
     PS_FILTER_BSB  = 3
 
   integer, parameter, public :: INVALID_L = 333
-  
-  character(len=3), parameter  :: ps_name(PS_TYPE_PSF:PS_TYPE_XML) = (/"tm2", "hgh", "cpi", "fhi", "upf", "qso"/)
+
+  character(len=4), parameter  :: ps_name(PSEUDO_FORMAT_UPF1:PSEUDO_FORMAT_HGH) = &
+    (/"upf1", "upf2", "qso ", "psml", "psf ", "cpi ", "fhi ", "hgh "/)
 
   type ps_t
     character(len=10) :: label
-    integer           :: flavour
 
     integer  :: ispin    !< Consider spin (ispin = 2) or not (ispin = 1)
     FLOAT    :: z, z_val
@@ -128,8 +118,10 @@ module ps_oct_m
     logical :: is_separated
     logical :: local
     logical :: hamann
-    integer :: pseudo_format
+    integer :: file_format
     integer :: pseudo_type
+    integer :: exchange_functional
+    integer :: correlation_functional
   end type ps_t
 
   FLOAT, parameter :: eps = CNST(1.0e-8)
@@ -147,17 +139,19 @@ contains
     FLOAT,             intent(in)    :: z
     character(len=*),  intent(in)    :: filename
     
-    integer :: l, ii, ll, is, ierr
+    integer :: l, ii, ll, is, ierr, fmt
     type(ps_psf_t) :: ps_psf !< SIESTA pseudopotential
     type(ps_cpi_t) :: ps_cpi !< Fritz-Haber pseudopotential
     type(ps_fhi_t) :: ps_fhi !< Fritz-Haber pseudopotential (from abinit)
-    type(ps_upf_t) :: ps_upf !< In case UPF format is used
     type(ps_hgh_t) :: ps_hgh !< In case Hartwigsen-Goedecker-Hutter ps are used.
     type(ps_xml_t) :: ps_xml !< For xml based pseudopotentials
     logical, save :: xml_warned = .false.
     
     PUSH_SUB(ps_init)
 
+    ps%exchange_functional = PSEUDO_EXCHANGE_UNKNOWN
+    ps%correlation_functional = PSEUDO_CORRELATION_UNKNOWN
+    
     ! Fix the threshold to calculate the radius of the projector-function localization spheres:
 
     call messages_obsolete_variable('SpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
@@ -181,28 +175,33 @@ contains
     !%End
     call parse_variable('SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
     if(ps%projectors_sphere_threshold <= M_ZERO) call messages_input_error('SpeciesProjectorSphereThreshold')
-   
-    ! Sets the flavour, label, and number of spin channels.
-    ps%flavour = ps_get_type(filename)
-    ps%label   = label
-    ps%ispin   = ispin
-    ps%hamann  = .false.
-    select case(ps%flavour)
-    case(PS_TYPE_PSF, PS_TYPE_HGH)
-      ps%has_density = .true.
-    case default
-      ps%has_density = .false.
-    end select
-    
-    if(.not. (ps%flavour >= PS_TYPE_PSF .and. ps%flavour <= PS_TYPE_XML)) then
+
+    ps%file_format = pseudo_detect_format(filename)
+
+    if(ps%file_format == PSEUDO_FORMAT_FILE_NOT_FOUND) then
+      call messages_write("Cannot open pseudopotential file '"//trim(filename)//"'.")
+      call messages_fatal()
+    end if
+
+    if(ps%file_format == PSEUDO_FORMAT_UNKNOWN) then
       call messages_write("Cannot determine the pseudopotential type for species '"//trim(label)//"' from", new_line = .true.)
       call messages_write("file '"//trim(filename)//"'.")
       call messages_fatal()
     end if
+
+    ps%label   = label
+    ps%ispin   = ispin
+    ps%hamann  = .false.
     
-    select case(ps%flavour)
-    case(PS_TYPE_PSF)
-      ps%pseudo_format = PSEUDO_FORMAT_PSF
+    select case(ps%file_format)
+    case(PSEUDO_FORMAT_PSF, PSEUDO_FORMAT_HGH)
+      ps%has_density = .true.
+    case default
+      ps%has_density = .false.
+    end select
+       
+    select case(ps%file_format)
+    case(PSEUDO_FORMAT_PSF)
       ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
       
       call ps_psf_init(ps_psf, ispin, filename)
@@ -235,18 +234,12 @@ contains
       call ps_psf_process(ps_psf, ps%lmax, ps%llocal)
       call logrid_copy(ps_psf%ps_grid%g, ps%g)
 
-    case(PS_TYPE_CPI, PS_TYPE_FHI)
-
-      if(PS_TYPE_CPI == ps%flavour) then
-        ps%pseudo_format = PSEUDO_FORMAT_CPI
-      else
-        ps%pseudo_format = PSEUDO_FORMAT_FHI
-      end if
+    case(PSEUDO_FORMAT_CPI, PSEUDO_FORMAT_FHI)
       ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
       
       call valconf_null(ps%conf)
 
-      if(ps%flavour == PS_TYPE_CPI) then
+      if(ps%file_format == PSEUDO_FORMAT_CPI) then
         call ps_cpi_init(ps_cpi, trim(filename))
         ps%conf%p      = ps_cpi%ps_grid%no_l_channels
       else
@@ -283,7 +276,7 @@ contains
         ps%llocal = user_llocal
       end if
       
-      if(ps%flavour == PS_TYPE_CPI) then
+      if(ps%file_format == PSEUDO_FORMAT_CPI) then
         call ps_cpi_process(ps_cpi, ps%llocal)
         call logrid_copy(ps_cpi%ps_grid%g, ps%g)
       else
@@ -291,8 +284,7 @@ contains
         call logrid_copy(ps_fhi%ps_grid%g, ps%g)
       end if
 
-    case(PS_TYPE_HGH)
-      ps%pseudo_format = PSEUDO_FORMAT_HGH
+    case(PSEUDO_FORMAT_HGH)
       ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
       
       call hgh_init(ps_hgh, trim(filename))
@@ -306,92 +298,65 @@ contains
       call hgh_process(ps_hgh)
       call logrid_copy(ps_hgh%g, ps%g)
 
-    case(PS_TYPE_XML, PS_TYPE_UPF)
+    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
       
       if(.not. xml_warned) then
         call messages_experimental('XML (QSO, UPF, and PSML) pseudopotential support')
         xml_warned = .true.
       end if
       
-      call ps_xml_init(ps_xml, trim(filename), ierr)
+      call ps_xml_init(ps_xml, trim(filename), ps%file_format, ierr)
 
-      if(ierr == 0) then
-        ps%pseudo_format = pseudo_format(ps_xml%pseudo)
-        ps%pseudo_type   = pseudo_type(ps_xml%pseudo)
-        
-        call valconf_null(ps%conf)
-        
-        ps%z      = z
-        ps%conf%z = nint(z)
-        
-        if(ps_xml%kleinman_bylander) then
-          ps%conf%p = ps_xml%nwavefunctions
-        else
-          ps%conf%p = ps_xml%lmax + 1
-        end if
-        
-        do ll = 0, ps_xml%lmax
-          ps%conf%l(ll + 1) = ll
-        end do
-        
-        ps%kbc    = ps_xml%nchannels
-        ps%lmax  = ps_xml%lmax
-
-        if(ps_xml%kleinman_bylander) then
-          ps%llocal = ps_xml%llocal
-        else
-          ! we have several options
-          ps%llocal = 0                                     ! the default
-          if(ps_xml%llocal >= 0) ps%llocal = ps_xml%llocal  ! the one given in the pseudopotential file
-          if(user_llocal /= INVALID_L) ps%llocal = user_llocal ! user supplied local component
-          ASSERT(ps%llocal >= 0)
-          ASSERT(ps%llocal <= ps%lmax)
-        end if
-        
-        nullify(ps%g%drdi, ps%g%s)
-        
-        ! use a larger grid
-        ps%g%nrval = max(ps_xml%grid_size, nint(CNST(20.0)/(ps_xml%mesh_spacing)))
-        
-        SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
-        SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
-        
-        do ii = 1, ps%g%nrval
-          ps%g%rofi(ii) = (ii - 1)*ps_xml%mesh_spacing
-          ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
-        end do
-
-        ps%flavour = PS_TYPE_XML
-        
-      else !read failed, this must be a UPF 1 file
-
-        ps%pseudo_format = PSEUDO_FORMAT_UPF1
-        ps%pseudo_type   = PSEUDO_TYPE_KLEINMAN_BYLANDER
+      ps%pseudo_type   = pseudo_type(ps_xml%pseudo)
+      ps%exchange_functional = pseudo_exchange(ps_xml%pseudo)
+      ps%correlation_functional = pseudo_correlation(ps_xml%pseudo)
       
-        call ps_upf_init(ps_upf, trim(filename))
-        
-        call valconf_copy(ps%conf, ps_upf%conf)
-        ps%z      = z
-        ps%conf%z = nint(z)
-        ps%kbc    = ps_upf%kb_nc
-        ps%lmax  = ps_upf%l_max
-        ps%llocal  = ps_upf%l_loc
-        ps%has_density = .true.
-        
-        nullify(ps%g%drdi, ps%g%s)
-        ps%g%nrval = ps_upf%np
-        SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
-        SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
-        ps%g%rofi = ps_upf%r
-        ps%g%r2ofi = ps%g%rofi**2
-        
+      call valconf_null(ps%conf)
+      
+      ps%z      = z
+      ps%conf%z = nint(z)
+      
+      if(ps_xml%kleinman_bylander) then
+        ps%conf%p = ps_xml%nwavefunctions
+      else
+        ps%conf%p = ps_xml%lmax + 1
       end if
       
-    end select
+      do ll = 0, ps_xml%lmax
+        ps%conf%l(ll + 1) = ll
+      end do
+      
+      ps%kbc    = ps_xml%nchannels
+      ps%lmax  = ps_xml%lmax
+      
+      if(ps_xml%kleinman_bylander) then
+        ps%llocal = ps_xml%llocal
+      else
+        ! we have several options
+        ps%llocal = 0                                     ! the default
+        if(ps_xml%llocal >= 0) ps%llocal = ps_xml%llocal  ! the one given in the pseudopotential file
+        if(user_llocal /= INVALID_L) ps%llocal = user_llocal ! user supplied local component
+        ASSERT(ps%llocal >= 0)
+        ASSERT(ps%llocal <= ps%lmax)
+      end if
+      
+      nullify(ps%g%drdi, ps%g%s)
+      
+      ! use a larger grid
+      ps%g%nrval = max(ps_xml%grid_size, nint(CNST(20.0)/(ps_xml%mesh_spacing)))
+      
+      SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
+      SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
+      
+      do ii = 1, ps%g%nrval
+        ps%g%rofi(ii) = (ii - 1)*ps_xml%mesh_spacing
+        ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
+      end do
 
+    end select
+    
     ps%local = (ps%lmax == 0 .and. ps%llocal == 0 ) .or. (ps%lmax == -1 .and. ps%llocal == -1)
 
-    
     ! We allocate all the stuff
     SAFE_ALLOCATE(ps%kb   (0:ps%lmax, 1:ps%kbc))
     SAFE_ALLOCATE(ps%dkb  (0:ps%lmax, 1:ps%kbc))
@@ -411,28 +376,23 @@ contains
     call spline_init(ps%density_der)
     
     ! Now we load the necessary information.
-    select case(ps%flavour)
-    case(PS_TYPE_PSF)
+    select case(ps%file_format)
+    case(PSEUDO_FORMAT_PSF)
       call ps_grid_load(ps, ps_psf%ps_grid)
       call ps_psf_end(ps_psf)
-    case(PS_TYPE_CPI)
+    case(PSEUDO_FORMAT_CPI)
       call ps_grid_load(ps, ps_cpi%ps_grid)
       call ps_cpi_end(ps_cpi)
-    case(PS_TYPE_FHI)
+    case(PSEUDO_FORMAT_FHI)
       call ps_grid_load(ps, ps_fhi%ps_grid)
       call ps_fhi_end(ps_fhi)
-    case(PS_TYPE_HGH)
+    case(PSEUDO_FORMAT_HGH)
       SAFE_ALLOCATE(ps%k    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
       call hgh_load(ps, ps_hgh)
       call hgh_end(ps_hgh)
-    case(PS_TYPE_XML, PS_TYPE_UPF)
-      if(ps_xml%initialized) then
-        call ps_xml_load(ps, ps_xml)
-        call ps_xml_end(ps_xml)
-      else
-        call ps_upf_load(ps, ps_upf)
-        call ps_upf_end(ps_upf)
-      end if
+    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
+      call ps_xml_load(ps, ps_xml)
+      call ps_xml_end(ps_xml)
     end select
 
     if(ps_has_density(ps)) then 
@@ -461,7 +421,7 @@ contains
     call messages_info()
     
     call messages_write("    file format      :")
-    select case(ps%pseudo_format)
+    select case(ps%file_format)
     case(PSEUDO_FORMAT_UPF1)
       call messages_write(" UPF1")
     case(PSEUDO_FORMAT_UPF2)
@@ -486,7 +446,7 @@ contains
     call messages_info()
 
     call messages_write("    atomic number    :")
-    call messages_write(ps%z, align_left = .true., fmt = '(f3.1)')
+    call messages_write(nint(ps%z), fmt = '(i4)')
     call messages_info()
     
     call messages_write("    form on file     :")
@@ -504,7 +464,7 @@ contains
 
     if(ps%pseudo_type == PSEUDO_TYPE_SEMILOCAL) then
       call messages_write("    orbital origin   :")
-      select case(ps%pseudo_format)
+      select case(ps%file_format)
       case(PSEUDO_FORMAT_PSF, PSEUDO_FORMAT_HGH)
         call messages_write(" calculated");
       case default
@@ -731,7 +691,7 @@ contains
     ! A text file with some basic data.
     iunit = io_open(trim(dir)//'/pseudo-info', action='write')
     write(iunit,'(a,/)')      ps%label
-    write(iunit,'(a,a,/)')    'Flavour : ', ps_name(ps%flavour)
+    write(iunit,'(a,a,/)')    'Format  : ', ps_name(ps%file_format)
     write(iunit,'(a,f6.3)')   'z       : ', ps%z
     write(iunit,'(a,f6.3,/)') 'zval    : ', ps%z_val
     write(iunit,'(a,i4)')     'lmax    : ', ps%lmax
@@ -995,8 +955,7 @@ contains
 
         do l = 1, ps_grid%no_l_channels
           hato(2:) = ps_grid%rphi(2:, l, 1+is)/g%rofi(2:)
-          hato(1)  = linear_extrapolate(g%rofi(1), g%rofi(2), g%rofi(3), &
-            hato(2), hato(3))
+          hato(1)  = first_point_extrapolate(g%rofi, hato)
 
           forall(ip = 1:g%nrval) dens(ip) = dens(ip) + ps%conf%occ(l, is)*hato(ip)**2/(M_FOUR*M_PI)
           
@@ -1035,8 +994,7 @@ contains
         end do
 
         hato(nrc:g%nrval) = M_ZERO
-        hato(1) = linear_extrapolate(g%rofi(1), g%rofi(2), g%rofi(3), &
-          hato(2), hato(3))
+        hato(1) = first_point_extrapolate(g%rofi, hato)
 
         call spline_fit(g%nrval, g%rofi, hato, ps%core)
       end if
@@ -1047,186 +1005,21 @@ contains
       POP_SUB(ps_grid_load.get_splines)
     end subroutine get_splines
   end subroutine ps_grid_load
-
-
-  ! ---------------------------------------------------------
-  subroutine ps_upf_load(ps, ps_upf)
-    type(ps_t),     intent(inout) :: ps
-    type(ps_upf_t), intent(in)    :: ps_upf
-
-    integer :: i, l, ll, is, nrc, ir, j, ij, ispin, ip
-    FLOAT :: x
-    FLOAT, allocatable :: hato(:), dens(:)
-
-    PUSH_SUB(ps_upf_load)
-
-    ! Fixes some components of ps, read in ps_upf
-    ps%z_val = ps_upf%z_val
-
-    ps%nlcc = ps_upf%nlcc
-
-    ! if there are two projectors for l==0, this is a hamann
-    ps%hamann = ps_upf%nchannels(0) == 2
-
-    ! The spin-dependent pseudopotentials are not supported yet, so we need to fix the occupations
-    ! if we want to have a spin-dependent atomic density.
-    if(ps%ispin == 2) then
-      do l = 1, ps%conf%p
-        ll = ps%conf%l(l)
-        x = ps%conf%occ(l, 1)
-        ps%conf%occ(l, 1) = min(x, real(2*ll+1, REAL_PRECISION))
-        ps%conf%occ(l, 2) = x - ps%conf%occ(l, 1)
-      end do
-    end if
-
-    SAFE_ALLOCATE(hato(1:ps%g%nrval))
-
-    ! only ps%g%rofi(1) is allowed to be zero
-    if(any(abs(ps%g%rofi(2:ps%g%nrval)) < M_EPSILON)) then
-      message(1) = "Illegal zero values in UPF radial grid ps%g%rofi(2:ps%g%nrval)"
-      call messages_fatal(1)
-    end if
-
-    !Non-linear core-corrections
-    if(ps_upf%nlcc) then
-      ! find cutoff radius
-      hato = ps_upf%core_density
-
-      do ir = ps%g%nrval-1, 1, -1
-        if(hato(ir) > eps) then
-          nrc = ir + 1
-          exit
-        end if
-      end do
-
-      hato(nrc:ps%g%nrval) = M_ZERO
-
-      call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%core)
-    end if
-
-    ! Now the part corresponding to the local pseudopotential
-    ! where the asymptotic part is subtracted
-    hato(:) = ps_upf%v_local/M_TWO
-    call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%vl)
-
-    ! Increasing radius a little, just in case.
-    ! I have hard-coded a larger increase of the cutoff for the filtering.
-    ps%rc_max = maxval(ps_upf%kb_radius)
-    ps%rc_max = max(ps_upf%local_radius, ps%rc_max) * CNST(1.5)
-
-    ! Interpolate the KB-projection functions
-    if (ps_upf%l_loc >= 0) then
-      hato = M_ZERO
-      do j = 1, ps%kbc
-        call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%l_loc, j))
-      end do
-    end if
-
-    ps%local = ps_upf%n_proj == 0
-    
-    ps%h = M_ZERO
-    do i = 1, ps_upf%n_proj
-
-      if(associated(ps_upf%proj_j)) then
-        
-        ij = 1
-        if (ps_upf%kb_nc == 2) then
-          if (ps_upf%proj_j(i) == ps_upf%proj_l(i) - M_HALF) ij = 2
-        end if
-
-      else
-
-        ij = 1 + count(ps_upf%proj_l(1:i - 1) == ps_upf%proj_l(i))
-        
-      end if
-
-      ASSERT(ij <= ps%kbc)
-      
-      ps%h(ps_upf%proj_l(i), ij, ij) = ps_upf%e(i)
-
-      if(.not. ps_upf%version2) then
-        ! in UPF 1 this value is in Ry^-1
-        ps%h(ps_upf%proj_l(i), ij, ij) = ps%h(ps_upf%proj_l(i), ij, ij)*M_TWO
-      else
-        ! in UPF 2 this value is in Ry
-        ps%h(ps_upf%proj_l(i), ij, ij) = ps%h(ps_upf%proj_l(i), ij, ij)/M_TWO
-      end if
-      
-      nrc = logrid_index(ps%g, ps_upf%kb_radius(i)) + 1
-      hato(2:nrc) = ps_upf%proj(2:nrc, i)/ps%g%rofi(2:nrc) ! in upf the projector is given in Rydbergs and is multiplied by r
-      hato(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), ps%g%rofi(3), hato(2), hato(3)) !take care of the point at zero
-      hato(nrc+1:ps%g%nrval) = M_ZERO
-
-      if(.not. ps_upf%version2) then
-        ! in UPF 1 the projectors are in Ry.
-        hato(1:nrc) = hato(1:nrc)/M_TWO
-        ! in v2 they are in Bohr^{-1/2}, so no conversion is required
-      end if
-
-      call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), ij))
-
-      if(.not. ps%hamann) then
-        if (ps_upf%proj_l(i) == 0 .and. ps_upf%kb_nc == 2) then
-          hato = M_ZERO
-          call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%kb(ps_upf%proj_l(i), 2))
-        end if
-      end if
-
-    end do
-
-    if(ps%conf%p > 0) then
-      
-      ! Define the table for the pseudo-wavefunction components (using splines)
-      ! with a correct normalization function
-      do is = 1, ps%ispin
-        do l = 1, ps%conf%p
-          ! do not divide by zero
-          if(ps%g%rofi(1) > M_EPSILON) then
-            hato(1) = ps_upf%wfs(1, l)/ps%g%rofi(1)
-          else
-            hato(1) = M_ZERO
-          end if
-          ! rofi /= 0 except rofi(1) possibly
-          hato(2:ps%g%nrval) = ps_upf%wfs(2:ps%g%nrval, l)/ps%g%rofi(2:ps%g%nrval)
-          hato(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), ps%g%rofi(3), hato(2), hato(3)) !take care of the point at zero
-          
-          call spline_fit(ps%g%nrval, ps%g%rofi, hato, ps%ur(l, is))
-          call spline_fit(ps%g%nrval, ps%g%r2ofi, hato, ps%ur_sq(l, is))
-        end do
-      end do
-
-    end if
-
-    SAFE_DEALLOCATE_A(hato)
-
-    
-    SAFE_ALLOCATE(dens(1:ps%g%nrval))
-    
-    dens(2:ps%g%nrval) = ps_upf%rho(2:ps%g%nrval)/ps%g%r2ofi(2:ps%g%nrval)/ps%ispin/CNST(4.0)/M_PI
-    dens(1) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), ps%g%rofi(3), dens(2), dens(3)) !take care of the point at zero
-      
-    do is = 1, ps%ispin
-      call spline_fit(ps%g%nrval, ps%g%rofi, dens, ps%density(is))
-    end do
-
-    SAFE_DEALLOCATE_A(dens)
-
-    POP_SUB(ps_upf_load)
-  end subroutine ps_upf_load
-
   
   ! ---------------------------------------------------------
+
   subroutine ps_xml_load(ps, ps_xml)
     type(ps_t),     intent(inout) :: ps
     type(ps_xml_t), intent(in)    :: ps_xml
 
-    integer :: ll, ip, is, ic, jc, ir, nrc, ii
+    integer :: ll, ip, is, ic, jc, ir, nrc, ii, dest_ic
     FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element
     FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:), nlcc_density(:), dens(:)
+    integer, allocatable :: cmap(:, :)
 
     PUSH_SUB(ps_xml_load)
 
-    if(ps_xml%kleinman_bylander .and. ps_xml%nchannels == 2) then
+    if(ps_xml%kleinman_bylander .and. ps_xml%nchannels == 2 .and. ps_xml%llocal == -1) then
       ps%hamann = .true.
     end if
     
@@ -1259,9 +1052,37 @@ contains
     ! the projectors and the orbitals
     if(ps_xml%kleinman_bylander) then
 
+      SAFE_ALLOCATE(cmap(0:ps_xml%lmax, 1:ps_xml%nchannels))
+
+      ! the order of the channels is determined by spin orbit and the j value
       do ll = 0, ps_xml%lmax
         do ic = 1, ps_xml%nchannels
-          
+          cmap(ll, ic) = ic
+
+          if(ll == 0) cycle
+          if(ll == ps_xml%llocal) cycle
+          if(.not. pseudo_has_total_angular_momentum(ps_xml%pseudo)) cycle
+
+          ASSERT(ps_xml%nchannels == 2)
+          if(pseudo_projector_2j(ps_xml%pseudo, ll, ic) == 2*ll - 1) then
+            ! this is Octopus convention
+            cmap(ll, ic) = 2
+          else
+            ASSERT(pseudo_projector_2j(ps_xml%pseudo, ll, ic) == 2*ll + 1)
+            cmap(ll, ic) = 1
+          end if
+
+        end do
+
+        ! check that all numbers are present for each l
+        ASSERT(sum(cmap(ll, 1:ps_xml%nchannels)) == (ps_xml%nchannels + 1)*ps_xml%nchannels/2)
+      end do
+
+      ASSERT(all(cmap >= 0 .and. cmap <= ps_xml%nchannels))
+      
+      do ll = 0, ps_xml%lmax
+        do ic = 1, ps_xml%nchannels
+
           do ip = 1, ps%g%nrval
             if(ip <= ps_xml%grid_size) then
               kbprojector(ip) = ps_xml%projector(ip, ll, ic)
@@ -1270,17 +1091,34 @@ contains
             end if
           end do
 
-          call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, ic))
+          call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, cmap(ll, ic)))
 
           do jc = 1, ps_xml%nchannels
-            ps%h(ll, ic, jc) = ps_xml%dij(ll, ic, jc)
+            ps%h(ll, cmap(ll, ic), cmap(ll, jc)) = ps_xml%dij(ll, ic, jc)
           end do
 
         end do
       end do
 
+      ps%conf%p = ps_xml%nwavefunctions
+      
       do ii = 1, ps_xml%nwavefunctions
-        
+
+        ps%conf%n(ii) = ps_xml%wf_n(ii)
+        ps%conf%l(ii) = ps_xml%wf_l(ii)
+
+        if(ps%ispin == 2) then
+          ps%conf%occ(ii, 1) = min(ps_xml%wf_occ(ii), 2.0*ps_xml%wf_l(ii) + 1.0)
+          ps%conf%occ(ii, 2) = ps_xml%wf_occ(ii) - ps%conf%occ(ii, 1)
+        else
+          ps%conf%occ(ii, 1) = ps_xml%wf_occ(ii)
+        end if
+
+        ps%conf%j(ii) = 0.0
+        if(pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
+          ps%conf%j(ii) = 0.5*pseudo_wavefunction_2j(ps_xml%pseudo, ii)
+        end if
+
         do ip = 1, ps%g%nrval
           if(ip <= ps_xml%grid_size) then
             wavefunction(ip) = ps_xml%wavefunction(ip, ii)
@@ -1295,6 +1133,8 @@ contains
         end do
 
       end do
+
+      SAFE_DEALLOCATE_A(cmap)
       
     else
 
@@ -1403,50 +1243,14 @@ contains
 
   end function ps_niwfs
 
-
-  ! ---------------------------------------------------------
-  integer function ps_get_type(filename) result(type)
-    character(len=*), intent(in) :: filename
-
-    PUSH_SUB(ps_get_type)
-
-    type = 0
-    
-    if(index(filename, ".psf ") /= 0) type = PS_TYPE_PSF
-    if(index(filename, ".PSF ") /= 0) type = PS_TYPE_PSF
-    if(index(filename, ".hgh ") /= 0) type = PS_TYPE_HGH
-    if(index(filename, ".HGH ") /= 0) type = PS_TYPE_HGH
-    if(index(filename, ".cpi ") /= 0) type = PS_TYPE_CPI
-    if(index(filename, ".CPI ") /= 0) type = PS_TYPE_CPI
-    if(index(filename, ".fhi ") /= 0) type = PS_TYPE_FHI
-    if(index(filename, ".FHI ") /= 0) type = PS_TYPE_FHI
-    if(index(filename, ".upf ") /= 0) type = PS_TYPE_UPF
-    if(index(filename, ".UPF ") /= 0) type = PS_TYPE_UPF
-    if(index(filename, ".xml ") /= 0) type = PS_TYPE_XML
-    if(index(filename, ".XML ") /= 0) type = PS_TYPE_XML
-    if(index(filename, ".psml") /= 0) type = PS_TYPE_XML
-    if(index(filename, ".PSML") /= 0) type = PS_TYPE_XML
-    
-    POP_SUB(ps_get_type)    
-  end function ps_get_type
-
-
   !---------------------------------------
-  pure integer function ps_type(ps)
-    type(ps_t), intent(in) :: ps
 
-    ps_type = ps%flavour
-  end function ps_type
-
-  
-  !---------------------------------------
   pure logical function ps_has_density(ps) result(has_density)
     type(ps_t), intent(in) :: ps
 
     has_density = ps%has_density
 
   end function ps_has_density
-
   
   !---------------------------------------
   FLOAT function ps_density_volume(ps) result(volume)

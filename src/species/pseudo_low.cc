@@ -25,10 +25,23 @@
 
 #include "base.hpp"
 #include "qso.hpp"
-#include "upf.hpp"
+#include "upf1.hpp"
+#include "upf2.hpp"
 #include "psml.hpp"
+#include "detect_format.hpp"
 
-extern "C" void FC_FUNC_(pseudo_init, PSEUDO_INIT)(pseudopotential::base ** pseudo, STR_F_TYPE const filename_f, fint * ierr STR_ARG1){
+extern "C" fint FC_FUNC_(pseudo_detect_format, PSEUDO_DETECT_FORMAT)(STR_F_TYPE const filename_f STR_ARG1){
+
+  char * filename_c;
+  TO_C_STR1(filename_f, filename_c);
+  
+  pseudopotential::format ft = pseudopotential::detect_format(filename_c);
+
+  free(filename_c);
+  return fint(ft);
+}
+
+extern "C" void FC_FUNC_(pseudo_init, PSEUDO_INIT)(pseudopotential::base ** pseudo, STR_F_TYPE const filename_f, fint * format, fint * ierr STR_ARG1){
   char * filename_c;
   TO_C_STR1(filename_f, filename_c);
   std::string filename(filename_c);
@@ -50,13 +63,20 @@ extern "C" void FC_FUNC_(pseudo_init, PSEUDO_INIT)(pseudopotential::base ** pseu
   *pseudo = NULL;
 
   try{
-    if(extension == "xml"){
+    switch(pseudopotential::format(*format)){
+    case pseudopotential::format::QSO:
       *pseudo = new pseudopotential::qso(filename);
-    } else if(extension == "upf") {
-      *pseudo = new pseudopotential::upf(filename);
-    } else if(extension == "psml") {
+      break;
+    case pseudopotential::format::UPF1:
+      *pseudo = new pseudopotential::upf1(filename);
+      break;
+    case pseudopotential::format::UPF2:
+      *pseudo = new pseudopotential::upf2(filename);
+      break;
+    case pseudopotential::format::PSML:
       *pseudo = new pseudopotential::psml(filename);
-    } else {
+      break;
+    default:
       *ierr = fint(pseudopotential::status::UNKNOWN_FORMAT);
       return;
     }
@@ -149,7 +169,7 @@ extern "C" void FC_FUNC_(pseudo_nlcc_density, PSEUDO_NLCC_DENSITY)(const pseudop
 }
 
 extern "C" fint FC_FUNC_(pseudo_has_density_low, PSEUDO_HAS_DENSITY_LOW)(const pseudopotential::base ** pseudo){
-  return fint((*pseudo)->has_nlcc());
+  return fint((*pseudo)->has_density());
 }
 
 extern "C" void FC_FUNC_(pseudo_density, PSEUDO_DENSITY)(const pseudopotential::base ** pseudo, double * density){
@@ -168,6 +188,26 @@ extern "C" void FC_FUNC_(pseudo_wavefunction, PSEUDO_WAVEFUNCTION)
   std::vector<double> val;
   (*pseudo)->wavefunction(*index - 1, *n, *l, *occ, val);
   for(unsigned i = 0; i < val.size(); i++) wavefunction[i] = val[i];
+}
+
+extern "C" fint FC_FUNC_(pseudo_exchange, PSEUDO_EXCHANGE)(const pseudopotential::base ** pseudo){
+  return fint((*pseudo)->exchange());
+}
+
+extern "C" fint FC_FUNC_(pseudo_correlation, PSEUDO_CORRELATION)(const pseudopotential::base ** pseudo){
+  return fint((*pseudo)->correlation());
+}
+
+extern "C" fint FC_FUNC_(pseudo_has_total_angular_momentum_low, PSEUDO_HAS_TOTAL_ANGULAR_MOMENTUM_LOW)(const pseudopotential::base ** pseudo){
+  return fint((*pseudo)->has_total_angular_momentum());
+}
+
+extern "C" fint FC_FUNC_(pseudo_projector_2j, PSEUDO_PROJECTOR_2J)(const pseudopotential::base ** pseudo, fint * l, fint * ic){
+  return (*pseudo)->projector_2j(*l, *ic - 1);
+}
+
+extern "C" fint FC_FUNC_(pseudo_wavefunction_2j, PSEUDO_WAVEFUNCTION_2J)(const pseudopotential::base ** pseudo, fint * ii){
+  return (*pseudo)->wavefunction_2j(*ii);
 }
 
 
