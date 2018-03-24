@@ -63,3 +63,84 @@ match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -14.467194
 match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ; 1.000000
 match ; Eigenvalue [4down] ; GREPFIELD(static/info, '4   dn', 3) ; -3.683530
 match ; Occupation [4down] ; GREPFIELD(static/info, '4   dn', 4) ; 0.000000
+
+Input: 01-carbon_atom.06-dojo_lda.inp
+Precision: 0.00011
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -155.35863440
+match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -14.452787
+match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ;   1.000000
+match ; Eigenvalue   [1dn] ; GREPFIELD(static/info, '1   dn', 3) ; -11.813598
+match ; Occupation   [1dn] ; GREPFIELD(static/info, '1   dn', 4) ;   1.000000
+match ; Eigenvalue   [2up] ; GREPFIELD(static/info, '2   up', 3) ;  -6.191649
+match ; Occupation   [2up] ; GREPFIELD(static/info, '2   up', 4) ;   0.666667
+match ; Eigenvalue   [2dn] ; GREPFIELD(static/info, '2   dn', 3) ;  -3.801037
+match ; Occupation   [2dn] ; GREPFIELD(static/info, '2   dn', 4) ;   0.000000
+match ; Eigenvalue   [3up] ; GREPFIELD(static/info, '3   up', 3) ;  -6.191649
+match ; Occupation   [3up] ; GREPFIELD(static/info, '3   up', 4) ;   0.666667
+match ; Eigenvalue   [3dn] ; GREPFIELD(static/info, '3   dn', 3) ;  -3.801037
+match ; Occupation   [3dn] ; GREPFIELD(static/info, '3   dn', 4) ;   0.000000
+match ; Eigenvalue   [4up] ; GREPFIELD(static/info, '4   up', 3) ;  -6.191649
+match ; Occupation   [4up] ; GREPFIELD(static/info, '4   up', 4) ;   0.666667
+match ; Eigenvalue   [4dn] ; GREPFIELD(static/info, '4   dn', 3) ;  -3.801037
+match ; Occupation   [4dn] ; GREPFIELD(static/info, '4   dn', 4) ;   0.000000
+
+Input: 01-carbon_atom.07-dojo_pbe.inp
+Precision: 0.00011
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -156.14466362
+match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -14.651344
+match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ;   1.000000
+match ; Eigenvalue   [1dn] ; GREPFIELD(static/info, '1   dn', 3) ; -11.709735
+match ; Occupation   [1dn] ; GREPFIELD(static/info, '1   dn', 4) ;   1.000000
+match ; Eigenvalue   [2up] ; GREPFIELD(static/info, '2   up', 3) ;  -6.137501
+match ; Occupation   [2up] ; GREPFIELD(static/info, '2   up', 4) ;   0.666667
+match ; Eigenvalue   [2dn] ; GREPFIELD(static/info, '2   dn', 3) ;  -3.481641
+match ; Occupation   [2dn] ; GREPFIELD(static/info, '2   dn', 4) ;   0.000000
+match ; Eigenvalue   [3up] ; GREPFIELD(static/info, '3   up', 3) ;  -6.137501
+match ; Occupation   [3up] ; GREPFIELD(static/info, '3   up', 4) ;   0.666667
+match ; Eigenvalue   [3dn] ; GREPFIELD(static/info, '3   dn', 3) ;  -3.481641
+match ; Occupation   [3dn] ; GREPFIELD(static/info, '3   dn', 4) ;   0.000000
+match ; Eigenvalue   [4up] ; GREPFIELD(static/info, '4   up', 3) ;  -6.137501
+match ; Occupation   [4up] ; GREPFIELD(static/info, '4   up', 4) ;   0.666667
+match ; Eigenvalue   [4dn] ; GREPFIELD(static/info, '4   dn', 3) ;  -3.481641
+match ; Occupation   [4dn] ; GREPFIELD(static/info, '4   dn', 4) ;   0.000000
+
+Input: 01-carbon_atom.08-dojo_pbesol.inp
+Precision: 0.00011
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -155.19847543
+match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ;  -14.529881
+match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ;    1.000000
+match ; Eigenvalue   [1dn] ; GREPFIELD(static/info, '1   dn', 3) ;  -11.667288
+match ; Occupation   [1dn] ; GREPFIELD(static/info, '1   dn', 4) ;    1.000000
+match ; Eigenvalue   [2up] ; GREPFIELD(static/info, '2   up', 3) ;   -6.072458
+match ; Occupation   [2up] ; GREPFIELD(static/info, '2   up', 4) ;    0.666667
+match ; Eigenvalue   [2dn] ; GREPFIELD(static/info, '2   dn', 3) ;   -3.466888
+match ; Occupation   [2dn] ; GREPFIELD(static/info, '2   dn', 4) ;    0.000000
+match ; Eigenvalue   [3up] ; GREPFIELD(static/info, '3   up', 3) ;   -6.072458
+match ; Occupation   [3up] ; GREPFIELD(static/info, '3   up', 4) ;    0.666667
+match ; Eigenvalue   [3dn] ; GREPFIELD(static/info, '3   dn', 3) ;   -3.466888
+match ; Occupation   [3dn] ; GREPFIELD(static/info, '3   dn', 4) ;    0.000000
+match ; Eigenvalue   [4up] ; GREPFIELD(static/info, '4   up', 3) ;   -6.072458
+match ; Occupation   [4up] ; GREPFIELD(static/info, '4   up', 4) ;    0.666667
+match ; Eigenvalue   [4dn] ; GREPFIELD(static/info, '4   dn', 3) ;   -3.466888
+match ; Occupation   [4dn] ; GREPFIELD(static/info, '4   dn', 4) ;    0.000000
+
+ExtraFile  : 01-carbon_atom.pseudodojo.psml
+Input: 01-carbon_atom.09-dojo_pbe_psml.inp
+Precision: 0.00011
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -156.14463148
+match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -14.651334
+match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ;   1.000000
+match ; Eigenvalue   [1dn] ; GREPFIELD(static/info, '1   dn', 3) ; -11.709682
+match ; Occupation   [1dn] ; GREPFIELD(static/info, '1   dn', 4) ;   1.000000
+match ; Eigenvalue   [2up] ; GREPFIELD(static/info, '2   up', 3) ;  -6.137490
+match ; Occupation   [2up] ; GREPFIELD(static/info, '2   up', 4) ;   0.666667
+match ; Eigenvalue   [2dn] ; GREPFIELD(static/info, '2   dn', 3) ;  -3.481605
+match ; Occupation   [2dn] ; GREPFIELD(static/info, '2   dn', 4) ;   0.000000
+match ; Eigenvalue   [3up] ; GREPFIELD(static/info, '3   up', 3) ;  -6.137490
+match ; Occupation   [3up] ; GREPFIELD(static/info, '3   up', 4) ;   0.666667
+match ; Eigenvalue   [3dn] ; GREPFIELD(static/info, '3   dn', 3) ;  -3.481605
+match ; Occupation   [3dn] ; GREPFIELD(static/info, '3   dn', 4) ;   0.000000
+match ; Eigenvalue   [4up] ; GREPFIELD(static/info, '4   up', 3) ;  -6.137490
+match ; Occupation   [4up] ; GREPFIELD(static/info, '4   up', 4) ;   0.666667
+match ; Eigenvalue   [4dn] ; GREPFIELD(static/info, '4   dn', 3) ;  -3.481604
+match ; Occupation   [4dn] ; GREPFIELD(static/info, '4   dn', 4) ;   0.000000

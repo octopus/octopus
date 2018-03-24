@@ -133,7 +133,7 @@ contains
       do ist = st%st_start, st%st_end
 
         call states_get_state(st, gr%mesh, ist, ik, zpsi_rhs)
-        call exponential_apply(tr%te, gr%der, hm, zpsi_rhs, ist, ik, dt/M_TWO, time - dt/M_TWO)
+        call exponential_apply(tr%te, gr%der, hm, zpsi_rhs, ist, ik, dt/M_TWO)
 
         if(hamiltonian_inh_term(hm)) then
           SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
@@ -197,7 +197,7 @@ contains
         do ist = st%st_start, st%st_end
 
           call states_get_state(st, gr%mesh, ist, ik, zpsi_rhs,left = .true. )
-          call exponential_apply(tr%te, gr%der, hm, zpsi_rhs, ist, ik, -dt/M_TWO, time + dt/M_TWO)
+          call exponential_apply(tr%te, gr%der, hm, zpsi_rhs, ist, ik, -dt/M_TWO)
 
           if(hamiltonian_inh_term(hm)) then
             SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
@@ -279,7 +279,7 @@ contains
         M_zI * xim((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np)
     end forall
 
-    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO, t_op)
+    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
 
     forall(idim = 1:dim_op)
       yre((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) = real(zpsi(1:grid_p%mesh%np, idim))
@@ -316,7 +316,7 @@ contains
         M_zI * xim((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np)
     end forall
 
-    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO, t_op)
+    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
 
     forall(idim = 1:dim_op)
       yre((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) =    real(zpsi(1:grid_p%mesh%np, idim))
@@ -346,7 +346,7 @@ contains
       zpsi(1:grid_p%mesh%np, idim) = x((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np)
     end forall
 
-    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO, t_op)
+    call exponential_apply(tr_p%te, grid_p%der, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
 
     forall(idim = 1:dim_op)
       y((idim-1)*grid_p%mesh%np+1:idim*grid_p%mesh%np) = zpsi(1:grid_p%mesh%np, idim)

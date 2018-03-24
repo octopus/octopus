@@ -1,0 +1,27 @@
+CalculationMode = gs
+
+XYZCoordinates = "10-vdw_d3_dna.xyz"
+
+PeriodicDimensions = 3
+
+%LatticeVectors 
+ 8.0 * angstrom | 0.0            | 0.0 
+ 0.0            | 8.0 * angstrom | 0.0
+ 0.0            | 0.0            | 15.0 * angstrom
+%
+
+BoxShape = parallelepiped
+
+Spacing = 0.45
+
+EigenSolver = rmmdiis
+
+TotalStates = 128
+
+VDWCorrection = vdw_d3
+
+# Using this parametrization for an actual calculation does not make
+# sense. We do it here to compare with reference results.
+VDWD3Functional = 'dftb3'
+
+ExperimentalFeatures = yes

@@ -20,24 +20,33 @@
 
 program oct_test
   use global_oct_m
+  use batch_oct_m
+  use base_hamiltonian_oct_m
   use calc_mode_par_oct_m
   use command_line_oct_m
   use derivatives_oct_m
+  use epot_oct_m
   use fft_oct_m
   use io_oct_m
   use ion_interaction_oct_m
   use mesh_interpolation_oct_m
+  use mesh_function_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
+  use projector_oct_m
   use restart_oct_m
+  use states_oct_m
   use states_calc_oct_m
+  use states_dim_oct_m
   use system_oct_m
   use test_parameters_oct_m
+  use types_oct_m
   use unit_system_oct_m
   use utils_oct_m
   use messages_oct_m
   use multicomm_oct_m
+  use XC_F90(lib_m)
 
   implicit none
 
@@ -46,6 +55,9 @@ program oct_test
   integer :: test_mode
   type(test_parameters_t) :: test_param
   integer :: ierr
+ 
+  integer, parameter ::              &
+    XC_FLAGS_NONE = 0
 
   call getopt_init(ierr)
   config_str = trim(get_config_opts()) // trim(get_optional_libraries())
@@ -74,6 +86,9 @@ program oct_test
   !% Test the interpolation routines.
   !%Option ion_interaction 5
   !% Tests the ion-ion interaction routines.
+  !%Option projector 6
+  !% Tests the code that applies the nonlocal part of the pseudopotentials 
+  !% in case of spin-orbit coupling
   !%End
   call parse_variable('TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -113,8 +128,8 @@ program oct_test
   !% computational kernel of a test will be executed, in order to
   !% provide more accurate timings.
   !%
-  !% Currently this variable is used by the <tt>hartree_test</tt> and
-  !% <tt>derivatives</tt> tests.
+  !% Currently this variable is used by the <tt>hartree_test</tt>,
+  !% <tt>derivatives</tt>, and <tt>projector</tt> tests.
   !%End  
   call parse_variable('TestRepetitions', 1, test_param%repetitions)
 
@@ -172,6 +187,8 @@ program oct_test
     call test_interpolation()
   case(OPTION__TESTMODE__ION_INTERACTION)
     call test_ion_interaction() 
+  case(OPTION__TESTMODE__PROJECTOR)
+    call test_projector()
   end select
 
   call fft_all_end()
@@ -199,6 +216,56 @@ program oct_test
 
     POP_SUB(test_hartree)
   end subroutine test_hartree
+
+ ! ---------------------------------------------------------
+  subroutine test_projector
+    type(system_t)      :: sys
+    type(epot_t) :: ep
+    type(batch_t), pointer :: epsib
+    integer :: itime
+    type(base_hamiltonian_t), pointer :: subsys_hm
+
+    PUSH_SUB(test_projector)
+
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+    call messages_write('Info: Testing the nonlocal part of the pseudopotential with SOC')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    call system_init(sys)
+
+    call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
+    call states_generate_random(sys%st, sys%gr%mesh)
+  
+    !Initialize external potential
+    nullify(subsys_hm)
+    call epot_init(ep, sys%gr, sys%geo, SPINORS, 1, .false., subsys_hm, XC_FAMILY_NONE)
+    call epot_generate(ep, sys%gr, sys%geo, sys%st, .false.)
+   
+    !Initialize external potential
+    SAFE_ALLOCATE(epsib)
+    call batch_copy(sys%st%group%psib(1, 1), epsib)
+
+    do itime = 1, test_param%repetitions
+      call zproject_psi_batch(sys%gr%mesh, ep%proj, ep%natoms, 2, &
+                               sys%st%group%psib(1, 1), epsib, 1)
+    end do
+    do itime = 1, epsib%nst
+      call messages_write(zmf_nrm2(sys%gr%mesh, 2, epsib%states(itime)%zpsi))
+      write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, 2, epsib%states(itime)%zpsi)
+      call messages_info(1)
+    end do
+
+    call batch_end(epsib)
+    SAFE_DEALLOCATE_P(epsib)
+    call epot_end(ep)
+    call states_deallocate_wfns(sys%st)
+    call system_end(sys)
+
+    POP_SUB(test_projector)
+  end subroutine test_projector
 
 
 ! ---------------------------------------------------------
