@@ -681,6 +681,11 @@ contains
             call spline_filter_mask(ps%density(ispin), 0, rmax, gmax, alpha, gamma)
             call spline_force_pos(ps%density(ispin))
           end if
+
+          if(abs(spline_integral(ps%density_der(ispin))) > CNST(1.0e-12)) then
+            rmax = spline_cutoff_radius(ps%density_der(ispin), ps%projectors_sphere_threshold)
+            call spline_filter_mask(ps%density_der(ispin), 0, rmax, gmax, alpha, gamma)
+          end if
         end do
       end if
 
@@ -706,6 +711,7 @@ contains
         do ispin = 1, ps%ispin
           call spline_filter_bessel(ps%density(ispin), 0, gmax, alpha, beta_fs, rcut, beta_rs)
           call spline_force_pos(ps%density(ispin))
+          call spline_filter_bessel(ps%density_der(ispin), 0, gmax, alpha, beta_fs, rcut, beta_rs)
         end do
       end if
 
