@@ -241,6 +241,11 @@
 
       SAFE_ALLOCATE(density_tmp(1:gr%fine%mesh%np, st%d%nspin))
 
+      !These two conditions should be copied from the density_calc_end routine
+      !We cannot call this routine as we must not symmetrize of reduce on kpoints
+      ASSERT(.not.states_are_packed(st))
+      ASSERT(.not.gr%have_fine_mesh)
+
       do ik = st%d%kpt%start,st%d%kpt%end
         call density_calc_init(dens_calc, st, gr, density_tmp)
         do ib = st%group%block_start, st%group%block_end

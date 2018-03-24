@@ -2364,7 +2364,7 @@ contains
       call zstates_calc_projections(gr%mesh, st, gs_st, ik, projections)
       do ist = 1, gs_st%nst
         weight = st%d%kweights(ik) * occ(ist, ik)/ st%smear%el_per_state 
-        do uist = 1, st%nst
+        do uist = st%st_start, st%st_end
           Nex_kpt(ikpt) = Nex_kpt(ikpt) - weight * occ(uist, ik) * abs(projections(ist, uist))**2
         end do
       end do
@@ -2378,7 +2378,6 @@ contains
 #endif  
 
   Nex = sum(Nex_kpt)
- ! Nex = Nex + st%qtot 
 
   if(mpi_grp_is_root(mpi_world)) then
     call write_iter_start(out_nex)
