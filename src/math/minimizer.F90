@@ -397,10 +397,6 @@ contains
 
     PUSH_SUB(minimize_fire)
 
-    if(mpi_grp_is_root(mpi_world)) then
-      call messages_experimental('GOMethod = fire')
-    end if
-
     SAFE_ALLOCATE(grad_atoms(1:dim/3))
     SAFE_ALLOCATE(grad(1:dim))
 

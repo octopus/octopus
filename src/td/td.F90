@@ -377,7 +377,7 @@ contains
       call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX, alloc_Left = cmplxscl)
     else
       call states_allocate_wfns(st, gr%mesh, alloc_Left = cmplxscl)
-      call scf_init(td%scf, sys%gr, sys%geo, sys%st, hm)
+      call scf_init(td%scf, sys%gr, sys%geo, sys%st, sys%mc, hm)
     end if
 
     if(hm%scdm_EXX) then
@@ -413,6 +413,10 @@ contains
       call forces_calculate(gr, geo, hm, st, td%iter*td%dt, td%dt)
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
+    else
+      if(iand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+        call forces_calculate(gr, geo, hm, st, td%iter*td%dt, td%dt)
+      end if  
     end if
 
     call td_write_init(write_handler, sys%outp, gr, st, hm, geo, sys%ks, &
@@ -432,7 +436,7 @@ contains
     call restart_init(restart_dump, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
     if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
       ! We will also use the TD restart directory as temporary storage during the time propagation
-      call restart_init(restart_load, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
+      call restart_init(restart_load, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
     end if
 
     call messages_print_stress(stdout, "Time-Dependent Simulation")
@@ -470,7 +474,7 @@ contains
       ! time iterate the system, one time step.
       select case(td%dynamics)
       case(EHRENFEST)
-        call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%energy_update_iter*td%mu, iter, td%ions, geo, &
+        call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%energy_update_iter*td%mu, iter, td%ions, geo, sys%outp, &
           scsteps = scsteps, &
           update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
       case(BO)
@@ -572,12 +576,21 @@ contains
         if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
+          call states_deallocate_wfns(sys%st)
           call ground_state_run(sys, hm, fromScratch)
-          call states_load(restart_load, st, gr, ierr, iter=iter)
+          call states_allocate_wfns(sys%st, gr%mesh)
+          call td_load(restart_load, gr, st, hm, td, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to load TD states."
             call messages_fatal(1)
           end if
+          if(.not. cmplxscl) then
+            call density_calc(st, gr, st%rho)
+          else
+            call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
+          end if
+          call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
+          call forces_calculate(gr, geo, hm, st, iter*td%dt, td%dt)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds")
           call print_header()
         end if
@@ -592,7 +605,6 @@ contains
 
       ! free memory
       call states_deallocate_wfns(st)
-      call ion_dynamics_end(td%ions)
       call td_end(td)
       if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(restart_load)
 
@@ -789,15 +801,15 @@ contains
 
       do iatom = 1, geo%natoms
         read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%x(1:gr%mesh%sb%dim)
-        geo%atom(iatom)%x(:) = units_to_atomic(units_inp%length, geo%atom(iatom)%x(:))
+        geo%atom(iatom)%x(:) = units_to_atomic(units_out%length, geo%atom(iatom)%x(:))
       end do
       do iatom = 1, geo%natoms
         read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%v(1:gr%mesh%sb%dim)
-        geo%atom(iatom)%v(:) = units_to_atomic(units_inp%velocity, geo%atom(iatom)%v(:))
+        geo%atom(iatom)%v(:) = units_to_atomic(units_out%velocity, geo%atom(iatom)%v(:))
       end do
       do iatom = 1, geo%natoms
         read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%f(1:gr%mesh%sb%dim)
-        geo%atom(iatom)%f(:) = units_to_atomic(units_inp%force, geo%atom(iatom)%f(:))
+        geo%atom(iatom)%f(:) = units_to_atomic(units_out%force, geo%atom(iatom)%f(:))
       end do
 
       call io_close(iunit)

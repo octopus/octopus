@@ -24,6 +24,7 @@ module ground_state_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
+  use io_function_oct_m
   use lcao_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -109,7 +110,9 @@ contains
       end if
     end if
 
-    call scf_init(scfv, sys%gr, sys%geo, sys%st, hm)
+    call write_canonicalized_xyz_file("exec", "initial_coordinates", sys%geo, sys%gr%mesh)
+
+    call scf_init(scfv, sys%gr, sys%geo, sys%st, sys%mc, hm)
 
     if(fromScratch) then
       if(sys%ks%theory_level == RDMFT) then
@@ -139,9 +142,9 @@ contains
 
     if(sys%st%d%pack_states) call states_pack(sys%st)
     
-    ! self-consistency for occupation numbers in RDMFT
+    ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
-      call scf_rdmft(sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp,scfv%max_iter)
+      call scf_rdmft(sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, scfv%max_iter, restart_dump)
     else
       if(.not. fromScratch) then
         call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, &

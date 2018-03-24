@@ -27,6 +27,11 @@ module xc_functl_oct_m
 
   implicit none
 
+  ! Although the following file only contain comments, we include it here to make sure it exists.
+  ! Otherwise the code might compile, but not run properly, as the variables documentations
+  ! will be incomplete.
+#include "functionals_list.F90"
+  
   private
   public ::                     &
     xc_functl_t,                &
@@ -105,6 +110,9 @@ contains
 
     integer :: interact_1d
     FLOAT   :: alpha
+#ifdef HAVE_LIBXC4
+    FLOAT   :: parameters(2)
+#endif
     logical :: ok, lb94_modified
     integer, parameter :: INT_EXP_SCREENED = 0, INT_SOFT_COULOMB = 1
 
@@ -243,8 +251,13 @@ contains
       !% <tt>XCFunctional = xc_lda_c_xalpha</tt>.
       !%End
       call parse_variable('Xalpha', M_ONE, alpha)
+#ifdef HAVE_LIBXC4
+      parameters(1) = alpha
+      call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
+#else
       call XC_F90(lda_c_xalpha_set_par)(functl%conf, alpha)
-
+#endif
+      
       ! FIXME: doesn`t this apply to other 1D functionals?
     case(XC_LDA_X_1D, XC_LDA_C_1D_CSC)
       !%Variable Interaction1D
@@ -273,16 +286,26 @@ contains
       !%End
       call messages_obsolete_variable('SoftInteraction1D_alpha', 'Interaction1DScreening')
       call parse_variable('Interaction1DScreening', M_ONE, alpha)
-      
+#ifdef HAVE_LIBXC4
+      parameters(1) = real(interact_1d, REAL_PRECISION)
+      parameters(2) = alpha
+      call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
+#else
       if(functl%id == XC_LDA_X_1D) then
         call XC_F90(lda_x_1d_set_par)(functl%conf, interact_1d, alpha)
       else
         call XC_F90(lda_c_1d_csc_set_par)(functl%conf, interact_1d, alpha)
       end if
-
+#endif
+      
     case(XC_LDA_C_2D_PRM)
+#ifdef HAVE_LIBXC4
+      parameters(1) = nel
+      call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
+#else
       call XC_F90(lda_c_2d_prm_set_par)(functl%conf, nel)
-
+#endif
+      
     ! FIXME: libxc has XC_GGA_X_LBM, isn`t that the modified one?
     case(XC_GGA_X_LB)
       !%Variable LB94_modified
@@ -418,7 +441,7 @@ contains
       call messages_info(2, iunit)
       
       ii = 0
-#ifdef HAVE_LIBXC3
+#if defined HAVE_LIBXC3 || defined HAVE_LIBXC4
       call XC_F90(info_refs)(functl%info, ii, s1)
 #else
       call XC_F90(info_refs)(functl%info, ii, str, s1)
@@ -426,7 +449,7 @@ contains
       do while(ii >= 0)
         write(message(1), '(4x,a,i1,2a)') '[', ii, '] ', trim(s1)
         call messages_info(1, iunit)
-#ifdef HAVE_LIBXC3
+#if defined HAVE_LIBXC3 || defined HAVE_LIBXC4
         call XC_F90(info_refs)(functl%info, ii, s1)
 #else
         call XC_F90(info_refs)(functl%info, ii, str, s1)

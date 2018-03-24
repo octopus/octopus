@@ -19,13 +19,16 @@
 #include "global.h"
   
 module kpoints_oct_m
+  use distributed_oct_m
   use geometry_oct_m
   use global_oct_m
   use loct_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use parser_oct_m
   use profiling_oct_m
   use sort_oct_m
+  use symm_op_oct_m
   use symmetries_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -289,6 +292,8 @@ contains
     !%End
     default_timereversal = this%use_symmetries .and. .not. symmetries_have_break_dir(symm)
     call parse_variable('KPointsUseTimeReversal', default_timereversal, this%use_time_reversal)
+    if(this%use_time_reversal) &
+      call messages_experimental("KPointsUseTimeReversal")
 
     !We determine the method used to define k-point
     this%method = 0
@@ -311,6 +316,11 @@ contains
     if(parse_is_defined('KPointsReduced').or. parse_is_defined('KPoints')) then
       this%method = this%method + KPOINTS_USER
 
+      if(this%use_symmetries) then
+        write(message(1), '(a)') "User-defined k-points are not compatible with KPointsUseSymmetries=yes."
+        call messages_warning(1)
+      end if
+
       call read_user_kpoints()
     end if
 
@@ -318,6 +328,10 @@ contains
     if(parse_is_defined('KPointsPath')) then
       this%method = this%method + KPOINTS_PATH
        
+      if(this%use_symmetries) then
+        write(message(1), '(a)') "KPointsPath is not compatible with KPointsUseSymmetries=yes."
+        call messages_warning(1)
+      end if
       call read_path() 
     end if
 
@@ -334,7 +348,7 @@ contains
     if( iand(this%method, KPOINTS_MONKH_PACK) /= 0  ) then
 
       write(message(1),'(a)') ' '
-      write(message(2),'(1x,i3,a)') this%reduced%npoints, ' k-points generated from parameters :'
+      write(message(2),'(1x,i5,a)') this%reduced%npoints, ' k-points generated from parameters :'
       write(message(3),'(1x,a)') '---------------------------------------------------'
       write(message(4),'(4x,a)') 'n ='
       do idir = 1, dim
@@ -490,7 +504,17 @@ contains
       call kpoints_grid_generate(dim, this%nik_axis(1:dim), this%full%nshifts, &
                this%full%shifts(1:dim,1:this%full%nshifts), this%full%red_point)
 
+      do ik = 1, this%full%npoints
+        call kpoints_to_absolute(klattice, this%full%red_point(:, ik), this%full%point(:, ik), dim)
+      end do
+
       this%full%weight = M_ONE / this%full%npoints
+
+      if(this%use_symmetries) then
+        message(1) = "Checking if the generated full k-point grid is symmetric";
+        call messages_info(1)
+        call kpoints_check_symmetries(this%full, symm, dim, klattice, this%use_time_reversal)
+      end if
 
       call kpoints_grid_copy(this%full, this%reduced)
 
@@ -508,7 +532,7 @@ contains
         
         call kpoints_grid_reduce(symm, this%use_time_reversal, &
           this%reduced%npoints, dim, this%reduced%red_point, this%reduced%weight, symm_ops, num_symm_ops)
-        
+       
         ! sanity checks
         ASSERT(maxval(num_symm_ops) >= 1)
         if(this%use_time_reversal) then
@@ -539,11 +563,7 @@ contains
         this%symmetry_ops(1:this%reduced%npoints, 1) = 1
         
       end if
-      
-      do ik = 1, this%full%npoints
-        call kpoints_to_absolute(klattice, this%full%red_point(:, ik), this%full%point(:, ik), dim)
-      end do
-
+     
       do ik = 1, this%reduced%npoints
         call kpoints_to_absolute(klattice, this%reduced%red_point(:, ik), this%reduced%point(:, ik), dim)
       end do
@@ -947,7 +967,6 @@ contains
     integer :: ii, jj, divisor, ik, idir, npoints, is
     integer, allocatable :: ix(:), lk123_(:,:),idx(:)
     FLOAT, allocatable :: nrm(:), shell(:), coords(:, :)
-    logical, allocatable :: move_to_minus_half(:)
 
     PUSH_SUB(kpoints_grid_generate)
    
@@ -955,7 +974,6 @@ contains
 
     npoints = product(naxis(1:dim))
 
-    SAFE_ALLOCATE(move_to_minus_half(1:dim))
     SAFE_ALLOCATE(ix(1:dim))
     
     if (present(lk123)) then
@@ -963,8 +981,6 @@ contains
       SAFE_ALLOCATE(idx(1:npoints*nshifts))
     end if
 
-    move_to_minus_half(1:dim) = .true.
-    
     do is = 1, nshifts
       do ii = 0, npoints - 1
         ik = npoints*is - ii
@@ -982,10 +998,6 @@ contains
           !bring back point to first Brillouin zone, except for points at 1/2
           if ( abs(kpoints(idir, ik) - CNST(0.5)) > CNST(1e-14) )  then
             kpoints(idir, ik) = mod(kpoints(idir, ik) + M_HALF, M_ONE) - M_HALF
-          else
-            ! alternate the assignation of points at 1/2 and -1/2 such that the total sum of k-points is zero.
-            if(move_to_minus_half(idir)) kpoints(idir,ik) = -CNST(0.5)
-            move_to_minus_half(idir) = .not. move_to_minus_half(idir)
           end if
 
         end do
@@ -1016,7 +1028,7 @@ contains
     nrm(1:npoints*nshifts) = M_ZERO
 
     maxcoord = CNST(1.0)
-    do idir = dim, 1, -1
+    do idir = 1, dim
       do ik = 1, npoints*nshifts
         nrm(ik) = nrm(ik) + coords(idir, ik)*maxcoord
       end do
@@ -1042,7 +1054,6 @@ contains
     SAFE_DEALLOCATE_A(nrm)
     SAFE_DEALLOCATE_A(shell)
     SAFE_DEALLOCATE_A(coords)
-    SAFE_DEALLOCATE_A(move_to_minus_half)
 
     POP_SUB(kpoints_grid_generate)
   end subroutine kpoints_grid_generate
@@ -1126,23 +1137,29 @@ contains
     FLOAT, allocatable :: reduced(:, :)
     
     FLOAT :: dw
-    integer ik, iop, ik2
-    FLOAT :: tran(MAX_DIM), tran_inv(MAX_DIM)
-    integer, allocatable :: kmap(:)
+    integer ik, iop, ik2, idim
+    FLOAT :: tran(MAX_DIM), diff(MAX_DIM)
+    FLOAT, allocatable :: kweight(:)
+
+    FLOAT :: PREC
 
     PUSH_SUB(kpoints_grid_reduce)
+
+    ! In case of really dense k-point grid, 1/nkpoints is might be smaller
+    ! the SYMPREC, causing problems
+    ! Therefore we use PREC in the following
+    PREC = min(SYMPREC, M_ONE/(nkpoints*100))
 
     ! reduce to irreducible zone
 
     ! kmap is used to mark reducible k-points and also to
     ! map reducible to irreducible k-points
 
-    SAFE_ALLOCATE(kmap(1:nkpoints))
+    SAFE_ALLOCATE(kweight(1:nkpoints))
     SAFE_ALLOCATE(reduced(1:dim, 1:nkpoints))
 
-    forall(ik = 1:nkpoints) kmap(ik) = ik
-    
     dw = M_ONE / nkpoints
+    forall(ik = 1:nkpoints) kweight(ik) = dw   
 
     nreduced = 0
 
@@ -1150,57 +1167,79 @@ contains
     symm_ops(:, 1) = symmetries_identity_index(symm)
 
     do ik = 1, nkpoints
-      if (kmap(ik) /= ik) cycle
-      
+      if (kweight(ik) < PREC) cycle
+
       ! new irreducible point
-      ! mark reduced with negative kmap
-      
+      ! has reduced non-zero weight      
       nreduced = nreduced + 1
       reduced(1:dim, nreduced) = kpoints(1:dim, ik)
-      
-      kmap(ik) = -nreduced
-      
-      weights(nreduced) = dw
+     
+      !No need to check Gamma
+      if(maxval(abs(kpoints(1:dim, ik))) < M_EPSILON) cycle
 
       if (ik == nkpoints) cycle
       
       ! operate with the symmetry operations
-      
       do iop = 1, symmetries_number(symm)
-        if(iop == symmetries_identity_index(symm)) cycle ! no need to check for the identity
+        if(iop == symmetries_identity_index(symm) .and. &
+           .not. time_reversal) cycle ! no need to check for the identity
 
-        call symmetries_apply_kpoint(symm, iop, reduced(1:dim, nreduced), tran)
-        tran_inv(1:dim) = -tran(1:dim)
-           
+        call symmetries_apply_kpoint_red(symm, iop, reduced(1:dim, nreduced), tran)
+        !We remove potential umklapp
+        do idim = 1, dim
+          tran(idim)=tran(idim)-anint(tran(idim)+M_HALF*PREC)
+        end do           
+
         ! remove (mark) k-points related to irreducible reduced by symmetry
         do ik2 = ik + 1, nkpoints
-          if (kmap(ik2) /= ik2) cycle
-          
-          ! both the transformed rk ...
-          if (all( abs(tran(1:dim) - kpoints(1:dim, ik2)) <= CNST(1.0e-5))) then
-            weights(nreduced) = weights(nreduced) + dw
-            kmap(ik2) = nreduced
-            INCR(num_symm_ops(nreduced), 1)
-            symm_ops(nreduced, num_symm_ops(nreduced)) = iop
-            cycle
+          if (kweight(ik2) < PREC) cycle
+
+          if(.not. iop==symmetries_identity_index(symm)) then ! no need to check for the identity
+            diff(1:dim) = tran(1:dim)-kpoints(1:dim, ik2)
+            do idim = 1, dim
+              diff(idim)=diff(idim)-anint(diff(idim))
+            end do
+
+            ! both the transformed rk ...
+            if(sum(abs(diff(1:dim))) < PREC ) then 
+              kweight(ik) = kweight(ik) + kweight(ik2)
+              kweight(ik2) = M_ZERO 
+              weights(nreduced) = kweight(ik)
+              INCR(num_symm_ops(nreduced), 1)
+              symm_ops(nreduced, num_symm_ops(nreduced)) = iop
+              cycle
+            end if
           end if
 
-          ! and its inverse
-          if (time_reversal .and. all(abs(tran_inv(1:dim) - kpoints(1:dim, ik2)) <= CNST(1.0e-5)) ) then
-            weights(nreduced) = weights(nreduced) + dw
-            kmap(ik2) = nreduced
-            INCR(num_symm_ops(nreduced), 1)
-            symm_ops(nreduced, num_symm_ops(nreduced)) = iop
+          if (time_reversal) then
+            diff(1:dim) = tran(1:dim)+kpoints(1:dim, ik2)
+            do idim = 1, dim
+              diff(idim)=diff(idim)-anint(diff(idim))
+            end do
+
+            ! and its inverse
+            if(sum(abs(diff(1:dim))) < PREC ) then
+              kweight(ik) = kweight(ik) + kweight(ik2)
+              kweight(ik2) = M_ZERO
+              weights(nreduced) = kweight(ik)
+              INCR(num_symm_ops(nreduced), 1)
+              !We mark the symmetry+time-reversal operation as negative
+              symm_ops(nreduced, num_symm_ops(nreduced)) = -iop
+            end if
           end if
-          
         end do
       end do
     end do
     
+    ASSERT(sum(weights(1:nreduced))-M_ONE<PREC) 
+
     nkpoints = nreduced
     do ik = 1, nreduced
       kpoints(1:dim, ik) = reduced(1:dim, ik)
     end do
+
+    SAFE_DEALLOCATE_A(kweight)
+    SAFE_DEALLOCATE_A(reduced)
 
     POP_SUB(kpoints_grid_reduce)
   end subroutine kpoints_grid_reduce
@@ -1411,8 +1450,8 @@ contains
     end if
 
   end function kpoints_have_zero_weight_path
-
-  !-------------------------------------------------------- 
+ 
+  !--------------------------------------------------------
   integer pure function kpoints_get_kpoint_method(this) 
     type(kpoints_t),    intent(in) :: this
 
@@ -1426,6 +1465,95 @@ contains
 
     coord = this%coord_along_path(ind)
   end function 
+
+  
+
+  !--------------------------------------------------------
+  subroutine kpoints_check_symmetries(grid, symm, dim, klattice, time_reversal)
+    type(kpoints_grid_t), intent(in) :: grid
+    type(symmetries_t),   intent(in) :: symm    
+    integer,              intent(in) :: dim
+    FLOAT,                intent(in) :: klattice(:,:)
+    logical,              intent(in) :: time_reversal
+    
+    integer, allocatable :: kmap(:)
+    FLOAT :: kpt(1:MAX_DIM), kpt_abs(1:MAX_DIM), diff(1:MAX_DIM), symlength2
+    integer :: nk, ik, ik2, iop, idim
+    type(distributed_t) :: kpt_dist
+
+    PUSH_SUB(kpoints_check_symmetries)
+
+    nk = grid%npoints
+
+    !We distribute the k-points here for this routine, independently of the rest of the code
+    call distributed_nullify(kpt_dist, nk)
+ #ifdef HAVE_MPI
+  call distributed_init(kpt_dist, nk, MPI_COMM_WORLD, "kpt_check")
+ #endif
+
+    !A simple map to tell if the k-point as a matching symmetric point or not
+    SAFE_ALLOCATE(kmap(kpt_dist%start:kpt_dist%end))
+
+    do iop = 1, symmetries_number(symm)
+      if(iop == symmetries_identity_index(symm) .and. &
+            .not. time_reversal) cycle
+
+      forall(ik=kpt_dist%start:kpt_dist%end)  kmap(ik) = ik
+
+      do ik = kpt_dist%start, kpt_dist%end
+        !We apply the symmetry
+        call symmetries_apply_kpoint_red(symm, iop, grid%red_point(1:dim, ik), kpt)
+        !We remove potential umklapp
+        do idim = 1, dim
+          kpt(idim)=kpt(idim)-anint(kpt(idim)+M_HALF*SYMPREC)
+        end do
+
+        ! remove (mark) k-points which already have a symmetric point
+        do ik2 = 1, nk
+
+          if(iop /= symmetries_identity_index(symm)) then
+            diff(1:dim) = kpt(1:dim)-grid%red_point(1:dim, ik2)  
+            do idim = 1, dim
+              diff(idim)=diff(idim)-anint(diff(idim))
+            end do
+            !We found point corresponding to the symmetric kpoint
+            if(sum(abs(diff(1:dim))) < symprec ) then
+              kmap(ik) = -ik2
+              exit
+            end if
+          end if
+ 
+          if(time_reversal) then
+            diff(1:dim) = kpt(1:dim)+grid%red_point(1:dim, ik2)
+            do idim = 1, dim
+              diff(idim)=diff(idim)-anint(diff(idim))
+            end do
+            !We found point corresponding to the symmetric kpoint
+            if(sum(abs(diff(1:dim))) < symprec ) then
+              kmap(ik) = -ik2
+              exit
+            end if
+          end if
+
+        end do
+        !In case we have not found a symnetric k-point...
+        if(kmap(ik) == ik) then
+          write(message(1),'(a,i5,a2,3(f7.3,a2),a)') "The reduced k-point ", ik, " (", &
+           grid%red_point(1, ik), ", ", grid%red_point(2, ik), ", ", grid%red_point(3, ik),  &
+           ") ", "has no symmetric in the k-point grid for the following symmetry"
+          write(message(2),'(i5,1x,a,2x,3(3i4,2x))') iop, ':', transpose(symm_op_rotation_matrix_red(symm%ops(iop)))
+          message(3) = "Change your k-point grid or use KPointsUseSymmetries=no."
+          call messages_fatal(3)    
+        end if
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(kmap)
+
+    call distributed_end(kpt_dist)
+ 
+    POP_SUB(kpoints_check_symmetries)
+  end subroutine kpoints_check_symmetries
 
 end module kpoints_oct_m
 

@@ -226,12 +226,10 @@ contains
          "C compiler             : "//trim(conf%cc)
     message(2) = &
          "C compiler flags       : "//trim(conf%cflags)
-    message(3) = &
 #ifdef HAVE_FC_COMPILER_VERSION
-         "Fortran compiler       : "//trim(conf%fc) &
-         //" ("//compiler_version()//")"
+    message(3) = "Fortran compiler       : "//trim(conf%fc) //" ("//compiler_version()//")"
 #else
-         "Fortran compiler       : "//trim(conf%fc)
+    message(3) = "Fortran compiler       : "//trim(conf%fc)
 #endif
     message(4) = &
          "Fortran compiler flags : "//trim(conf%fcflags)

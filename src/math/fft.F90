@@ -24,27 +24,27 @@
 !! FFT implementations.
 module fft_oct_m
   use accel_oct_m
-  use,intrinsic :: iso_c_binding
-#ifdef HAVE_OPENCL  
+#ifdef HAVE_OPENCL
   use cl
 #ifdef HAVE_CLFFT
   use clfft
 #endif
 #endif
   use fftw_oct_m
+  use fftw_params_oct_m
   use global_oct_m
+  use,intrinsic :: iso_c_binding
   use lalg_basic_oct_m
   use loct_math_oct_m
   use messages_oct_m
   use mpi_oct_m
-#if defined(HAVE_NFFT)
   use nfft_oct_m
-#endif
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
   use omp_lib
 #endif
   use parser_oct_m
   use pfft_oct_m
+  use pfft_params_oct_m
   use pnfft_oct_m
   use profiling_oct_m
   use types_oct_m
@@ -477,10 +477,6 @@ contains
 
         n3 = ceiling(real(2*alloc_size)/real(n_1*n_2))
         SAFE_ALLOCATE(fft_array(jj)%drs_data(1:n_1, 1:n_2, 1:n3))
-
-        ! For real functions, PFFT increases the size of rs_n(1) by 1, such that rs_n(1) = nn(1) + 1.
-        ! The rest of the code does not need to know about this.
-        fft_array(jj)%rs_n(1) = fft_array(jj)%rs_n(1) - 1
       else
         n3 = ceiling(real(alloc_size)/real(fft_array(jj)%rs_n(1)*fft_array(jj)%rs_n(2)))
         SAFE_ALLOCATE(fft_array(jj)%zrs_data(1:fft_array(jj)%rs_n(1), 1:fft_array(jj)%rs_n(2), 1:n3))

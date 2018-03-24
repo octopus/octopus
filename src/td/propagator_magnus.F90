@@ -106,7 +106,7 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         call states_get_state(st, gr%mesh, ist, ik, psi)
-        call exponential_apply(tr%te, gr%der, hm, psi, ist, ik, dt, M_ZERO, vmagnus = tr%vmagnus)
+        call exponential_apply(tr%te, gr%der, hm, psi, ist, ik, dt, vmagnus = tr%vmagnus)
         call states_set_state(st, gr%mesh, ist, ik, psi)
       end do
     end do

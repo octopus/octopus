@@ -218,6 +218,7 @@ contains
     !% (zero-time) wavefunctions to the file
     !% <tt>td.general/projections.XXX</tt>. Only use this option if
     !% you really need it, as it might be computationally expensive. See <tt>TDProjStateStart</tt>.
+    !% The output interval of this quantity is controled by the variable <tt>TDOutputComputeInterval</tt>
     !%Option local_mag_moments 512
     !% If set, outputs the local magnetic moments, integrated in sphere centered around each atom.
     !% The radius of the sphere can be set with <tt>LocalMagneticMomentsSphereRadius</tt>.
@@ -260,6 +261,7 @@ contains
     !%Option n_excited_el 1048576
     !% Output the number of excited electrons, based on the projections 
     !% of the time evolved wave-functions on the ground-state wave-functions. 
+    !% The output interval of this quantity is controled by the variable <tt>TDOutputComputeInterval</tt>
     !%Option coordinates_sep 2097152
     !% Writes geometries in a separate file.
     !%Option velocities_sep 4194304
@@ -2868,6 +2870,13 @@ contains
         call write_iter_header(out_total_current, aux)
       end do
       
+      do ispin = 1, st%d%nspin
+        do idir = 1, gr%mesh%sb%dim
+          write(aux, '(a4,i1,a1,i1,a1)') 'I-sp', ispin, '(', idir, ')'
+          call write_iter_header(out_total_current, aux)
+        end do
+      end do      
+
       call write_iter_nl(out_total_current)
 
       call td_write_print_header_end(out_total_current)
@@ -2875,9 +2884,12 @@ contains
     
     ASSERT(associated(st%current))
 
+    if(mpi_grp_is_root(mpi_world)) &
+      call write_iter_start(out_total_current)
+
     total_current = CNST(0.0)
     do idir = 1, gr%sb%dim
-      do ispin = 1, st%d%nspin
+      do ispin = 1, st%d%spin_channels
         total_current(idir) =  total_current(idir) + dmf_integrate(gr%mesh, st%current(:, idir, ispin))
       end do
       total_current(idir) = units_from_atomic(units_out%length/units_out%time, total_current(idir))
@@ -2885,18 +2897,29 @@ contains
 
     abs_current = CNST(0.0)
     do idir = 1, gr%sb%dim
-      do ispin = 1, st%d%nspin
+      do ispin = 1, st%d%spin_channels
         abs_current(idir) =  abs_current(idir) + dmf_integrate(gr%mesh, abs(st%current(:, idir, ispin)))
       end do
       abs_current(idir) = units_from_atomic(units_out%length/units_out%time, abs_current(idir))
     end do
 
-    if(mpi_grp_is_root(mpi_world)) then
-      call write_iter_start(out_total_current)
+   if(mpi_grp_is_root(mpi_world)) then
       call write_iter_double(out_total_current, total_current, gr%mesh%sb%dim)
       call write_iter_double(out_total_current, abs_current, gr%mesh%sb%dim)
+   end if
+  
+    do ispin = 1, st%d%nspin
+      total_current = CNST(0.0)
+      do idir = 1, gr%sb%dim
+        total_current(idir) = units_from_atomic(units_out%length/units_out%time, &
+                                    dmf_integrate(gr%mesh, st%current(:, idir, ispin)))
+      end do
+      if(mpi_grp_is_root(mpi_world)) &
+        call write_iter_double(out_total_current, total_current, gr%mesh%sb%dim)
+    end do
+
+    if(mpi_grp_is_root(mpi_world)) &
       call write_iter_nl(out_total_current)
-    end if
       
     POP_SUB(td_write_total_current)
   end subroutine td_write_total_current

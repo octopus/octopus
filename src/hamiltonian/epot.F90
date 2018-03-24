@@ -61,6 +61,7 @@ module epot_oct_m
   use states_oct_m
   use states_dim_oct_m
   use submesh_oct_m
+  use symmetrizer_oct_m
   use tdfunction_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -663,6 +664,8 @@ contains
     CMPLX,    allocatable :: ztmp(:)
     type(profile_t), save :: epot_reduce
     type(ps_t), pointer :: ps
+    type(symmetrizer_t) :: symmetrizer
+    FLOAT, allocatable :: tmpdensity(:)
     
     call profiling_in(epot_generate_prof, "EPOT_GENERATE")
     PUSH_SUB(epot_generate)
@@ -722,6 +725,28 @@ contains
       ASSERT(.not.cmplxscl) ! not implemented
       call profiling_out(epot_reduce)
     end if
+
+   if(st%symmetrize_density) then
+      SAFE_ALLOCATE(tmpdensity(1:gr%mesh%np))
+      call symmetrizer_init(symmetrizer, gr%mesh)
+
+      call dsymmetrizer_apply(symmetrizer, field = vpsl, symmfield = tmpdensity)
+      vpsl(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
+
+      if(associated(st%rho_core)) then
+        call dsymmetrizer_apply(symmetrizer, field = st%rho_core, symmfield = tmpdensity)
+        st%rho_core(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
+      end if
+
+      if(ep%have_density) then
+        call dsymmetrizer_apply(symmetrizer, field = density, symmfield = tmpdensity)
+        density(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
+      end if
+
+      call symmetrizer_end(symmetrizer)
+      SAFE_DEALLOCATE_A(tmpdensity)
+    end if
+
 
     if(ep%have_density) then
       ! now we solve the poisson equation with the density of all nodes
@@ -807,7 +832,7 @@ contains
   
   ! ---------------------------------------------------------
   subroutine epot_local_potential(ep, der, dgrid, geo, iatom, vpsl, Imvpsl, rho_core, density, Imdensity)
-    type(epot_t),             intent(inout) :: ep
+    type(epot_t),             intent(in)    :: ep
     type(derivatives_t),      intent(in)    :: der
     type(double_grid_t),      intent(in)    :: dgrid
     type(geometry_t),         intent(in)    :: geo
