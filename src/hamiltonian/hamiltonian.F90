@@ -191,8 +191,8 @@ module hamiltonian_oct_m
     type(scdm_t)  :: scdm
 
     !> For the LDA+U 
-    logical :: use_lda_u
     type(lda_u_t) :: lda_u
+    integer       :: lda_u_level
 
     logical :: time_zero
   end type hamiltonian_t
@@ -433,18 +433,28 @@ contains
 
     hm%adjoint = .false.
 
-    !%Variable LDA_U
-    !%Type logical
+    !%Variable DFTULevel
+    !%Type integer
     !%Default no
-    !%Section Hamiltonian
+    !%Section Hamiltonian::XC
     !%Description
-    !% (Experimental) If set to yes, the LDA+U calculation is performed.
+    !% (Experimental) This variable selects which DFT+U
+    !% expression is added to the Hamiltonian.
+    !%Option dft_u_none 0
+    !% No +U term is not applied.
+    !%Option dft_u_empirical 1
+    !% An empiricial Hubbard U is added on the orbitals specified in the block species
+    !% with hubbard_l and hubbard_u
+    !%Option dft_u_acbn0 2
+    !% Octopus determines the effective U term using the 
+    !% ACBN0 functional as defined in PRX 5, 011006 (2015)
     !%End
-    call parse_variable('LDA_U', .false., hm%use_lda_u)
+    call parse_variable('DFTULevel', DFT_U_NONE, hm%lda_u_level)
+    call messages_print_var_option(stdout,  'DFTULevel', hm%lda_u_level)
     call lda_u_nullify(hm%lda_u)
-    if(hm%use_lda_u) then
-      call messages_experimental('LDA+U')
-      call lda_u_init(hm%lda_u, gr, geo, st, mc)
+    if(hm%lda_u_level /= DFT_U_NONE) then
+      call messages_experimental('DFT+U')
+      call lda_u_init(hm%lda_u, hm%lda_u_level, gr, geo, st, mc)
     end if
  
 
@@ -541,7 +551,7 @@ contains
       end if
 
       ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
-      if(hm%lda_u%apply) then
+      if(hm%lda_u_level /= DFT_U_NONE) then
         call lda_u_build_phase_correction(hm%lda_u, gr%mesh%sb, hm%d )
       end if
 
@@ -884,7 +894,7 @@ contains
         end if
 
         ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
-        if(this%lda_u%apply) then
+        if(this%lda_u_level /= DFT_U_NONE) then
           call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, &
                vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end if

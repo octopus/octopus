@@ -283,7 +283,7 @@ contains
     !% <tt>RestartWriteInterval</tt> time steps.
     !%End
     call parse_variable('RecalculateGSDuringEvolution', .false., td%recalculate_gs)
-    if( hm%lda_u%apply .and. td%recalculate_gs) &
+    if( hm%lda_u_level /= DFT_U_NONE .and. td%recalculate_gs) &
       call messages_not_implemented("DFT+U with RecalculateGSDuringEvolution=yes")
 
     !%Variable TDScissor 
@@ -376,18 +376,18 @@ contains
 
     if(simul_box_is_periodic(gr%mesh%sb)) call messages_experimental('Time propagation for periodic systems')
 
-    if(ion_dynamics_ions_move(td%ions) .and. hm%lda_u%apply ) call messages_experimental("DFT+U with MoveIons=yes") 
+    if(ion_dynamics_ions_move(td%ions) .and. hm%lda_u_level /= DFT_U_NONE ) call messages_experimental("DFT+U with MoveIons=yes") 
 
     call td_init(td, sys, hm)
 
     ! Allocate wavefunctions during time-propagation
     if(td%dynamics == EHRENFEST) then
       !Note: this is not really clean to do this
-      if(hm%lda_u%apply .and. states_are_real(st)) then
+      if(hm%lda_u_level /= DFT_U_NONE .and. states_are_real(st)) then
         call lda_u_end(hm%lda_u)
         !complex wfs are required for Ehrenfest
         call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX, alloc_Left = cmplxscl)
-        call lda_u_init(hm%lda_u, gr, geo, st, sys%mc) 
+        call lda_u_init(hm%lda_u, hm%lda_u_level, gr, geo, st, sys%mc) 
       else
         !complex wfs are required for Ehrenfest
         call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX, alloc_Left = cmplxscl)
@@ -781,7 +781,7 @@ contains
         call lda_u_freeze_occ(hm%lda_u)
 
         !In this case we should reload GS wavefunctions 
-        if(hm%lda_u%apply .and..not.fromScratch) then 
+        if(hm%lda_u_level /= DFT_U_NONE .and..not.fromScratch) then 
           call restart_init(restart_frozen, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
           call lda_u_load(restart_frozen, hm%lda_u, st, ierr)
           call restart_end(restart_frozen)
@@ -802,7 +802,7 @@ contains
         call lda_u_freeze_u(hm%lda_u)
 
         !In this case we should reload GS wavefunctions
-        if(hm%lda_u%apply.and. hm%lda_u%useACBN0 .and. .not.fromScratch) then
+        if(hm%lda_u_level == DFT_U_ACBN0 .and. .not.fromScratch) then
           call restart_init(restart_frozen, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
           call lda_u_load(restart_frozen, hm%lda_u, st, ierr)
           call restart_end(restart_frozen)    
@@ -1021,7 +1021,7 @@ contains
     call states_dump_rho(restart, st, gr, ierr, iter=iter)
     if (err /= 0) ierr = ierr + 1 
 
-    if(hm%lda_u%apply) then
+    if(hm%lda_u_level /= DFT_U_NONE) then
       call lda_u_dump(restart, hm%lda_u, st, ierr, iter=iter)
       if (err /= 0) ierr = ierr + 1
     end if

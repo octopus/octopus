@@ -19,8 +19,7 @@ SpinComponents = polarized
 
 StatesPack = yes
 
-LDA_U = yes
-UseACBN0Functional = yes
+DFTULevel = dft_u_acbn0
 UseAllAtomicOrbitals = yes
 SkipSOrbitals = no
 OrbitalsThreshold_LDAU = 0.05

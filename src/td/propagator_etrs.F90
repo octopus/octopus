@@ -301,7 +301,7 @@ contains
 
     end do
 
-    if(hm%lda_u%apply) then 
+    if(hm%lda_u_level /= DFT_U_NONE) then 
       call lda_u_write_U(hm%lda_u, stdout) 
     end if
 

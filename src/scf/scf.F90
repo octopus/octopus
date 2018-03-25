@@ -604,7 +604,7 @@ contains
         end if
       end if
 
-      if(hm%lda_u%apply) then
+      if(hm%lda_u_level /= DFT_U_NONE) then
         call lda_u_load(restart_load, hm%lda_u, st, ierr) 
         if (ierr /= 0) then
           message(1) = "Unable to read LDA+U information. LDA+U data will be calculated from states."
@@ -910,7 +910,7 @@ contains
             call messages_warning(1)
           end if
 
-          if(hm%lda_u%apply) then
+          if(hm%lda_u_level /= DFT_U_NONE) then
             call lda_u_dump(restart_dump, hm%lda_u, st, ierr, iter=iter)
             if (ierr /= 0) then
               message(1) = 'Unable to write LDA+U information.'
@@ -1118,7 +1118,7 @@ contains
           call write_magnetic_moments(stdout, gr%mesh, st, geo, scf%lmm_r)
         end if
 
-        if(hm%lda_u%apply .and. hm%lda_u%useACBN0) then
+        if(hm%lda_u_level == DFT_U_ACBN0) then
           call lda_u_write_U(hm%lda_u, stdout)
         end if
 
@@ -1222,7 +1222,7 @@ contains
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
 
-      if(hm%lda_u%apply .and. hm%lda_u%useACBN0) then
+      if(hm%lda_u_level == DFT_U_ACBN0) then
           call lda_u_write_U(hm%lda_u, iunit)
           if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
         end if 

@@ -685,17 +685,17 @@ contains
     end if
 
     if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCCUPATION_MATRICES) /= 0&
-       .and. hm%lda_u%apply) then
+       .and. hm%lda_u_level /= DFT_U_NONE) then
       call lda_u_write_occupation_matrices(dir, hm%lda_u, st)
     end if
 
     if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__EFFECTIVEU) /= 0&
-       .and. hm%lda_u%apply) then
+       .and. hm%lda_u_level /= DFT_U_NONE) then
       call lda_u_write_effectiveU(dir, hm%lda_u)
     end if
 
     if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__MAGNETIZATION) /= 0&
-       .and. hm%lda_u%apply) then
+       .and. hm%lda_u_level /= DFT_U_NONE) then
       call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st)
     end if
 

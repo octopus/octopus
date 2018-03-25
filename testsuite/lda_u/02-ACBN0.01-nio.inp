@@ -11,7 +11,7 @@ a = 7.8809
 "Ni" | species_pseudo | db_file | 'hscv/pbe/Ni_HSCV_PBE-1.0.xml' | hubbard_l | 2 | hubbard_u | 0.0
 "O" | species_pseudo | db_file | 'hscv/pbe/O_HSCV_PBE-1.0.xml' | hubbard_l | 1 | hubbard_u | 0.0
 %
-LDA_U = yes
+DFTULevel = dft_u_acbn0
 
 PseudopotentialSet=hscv_pbe
 XCFunctional=gga_x_pbe + gga_c_pbe
@@ -60,4 +60,3 @@ ExtraStates = 6
 
 OrbitalsTruncationMethod = box
 OutputLDA_U = occupation_matrices + effectiveU
-UseACBN0Functional = yes

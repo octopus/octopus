@@ -408,7 +408,7 @@ subroutine X(total_force_from_potential)(gr, geo, hm, ep, st, x)
   PUSH_SUB(X(total_force_from_potential))
 
   ASSERT(.not. st%symmetrize_density)
-  ASSERT(.not. hm%lda_u%apply)
+  ASSERT(hm%lda_u_level == DFT_U_NONE)
 
   np = gr%mesh%np
   np_part = gr%mesh%np_part
@@ -522,7 +522,7 @@ subroutine X(forces_derivative)(gr, geo, hm, ep, st, lr, lr2, force_deriv)
 
   PUSH_SUB(X(forces_derivative))
 
-  ASSERT(.not. hm%lda_u%apply)
+  ASSERT(hm%lda_u_level == DFT_U_NONE)
 
   np      = gr%mesh%np
   np_part = gr%mesh%np_part
