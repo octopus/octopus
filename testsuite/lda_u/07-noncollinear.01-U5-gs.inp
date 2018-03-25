@@ -6,7 +6,7 @@ BoxShape = parallelepiped
 
 ExperimentalFeatures = yes
 
-Smearing = 0.01
+Smearing = 0.1*eV
 SmearingFunction = fermi_dirac
 
 EigenSolver = rmmdiis
@@ -49,10 +49,10 @@ SpinComponents = spinors
 SCFCalculateForces = no
 GuessMagnetDensity = user_defined
 %AtomsMagnetDirection
- 8.0
--8.0
- 0.0
- 0.0
+ 8.0 | 0.0 | 0.0
+-8.0 | 0.0 | 0.0
+ 0.0 | 0.0 | 0.0 
+ 0.0 | 0.0 | 0.0 
 %
 
 LCAOStart= lcao_states
