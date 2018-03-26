@@ -834,10 +834,10 @@ contains
       if (pcm%localf) then
      write(pcm%info_unit,'(A1,4X,A4,14X,A4,21X,A4,21X,A4,21X,A4,21X,A7,18X,A7,18X,A8,17X,A5,20X,A8,17X,A5,20X,A8,17X,A5)') &
           '#','iter', 'E_ee', 'E_en', 'E_nn', 'E_ne', 'E_e_ext', 'E_n_ext', 'E_M-solv', &
-          'Q_M^e', 'deltaQ^e', 'Q_M^n', 'deltaQ^n', 'Q_M^ext'  
+          'Q_pol^e', 'deltaQ^e', 'Q_pol^n', 'deltaQ^n', 'Q_pol^ext'  
       else
         write(pcm%info_unit,'(A1,4X,A4,14X,A4,21X,A4,21X,A4,21X,A4,21X,A8,17X,A5,20X,A8,17X,A5,20X, A8)') &
-          '#','iter', 'E_ee', 'E_en', 'E_nn', 'E_ne', 'E_M-solv', 'Q_M^e', 'deltaQ^e', 'Q_M^n', 'deltaQ^n'
+          '#','iter', 'E_ee', 'E_en', 'E_nn', 'E_ne', 'E_M-solv', 'Q_pol^e', 'deltaQ^e', 'Q_pol^n', 'deltaQ^n'
       end if
     end if
     pcm%counter = 0
