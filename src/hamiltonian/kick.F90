@@ -746,6 +746,51 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! 
+  subroutine kick_pcm_function_get(mesh, kick, pcm, kick_pcm_function, theta)
+    type(mesh_t),         intent(in)    :: mesh
+    type(kick_t),         intent(in)    :: kick
+    type(pcm_t),          intent(inout) :: pcm
+    CMPLX,                intent(out)   :: kick_pcm_function(:)
+    FLOAT, optional,      intent(in)    :: theta
+
+    logical :: cmplxscl
+
+    CMPLX, allocatable :: kick_function_interpolate(:)
+    FLOAT, allocatable :: kick_function_real(:)
+
+    PUSH_SUB(kick_pcm_function_get)
+
+    cmplxscl = .false.
+    if(present(theta)) cmplxscl = .true.
+
+    kick_pcm_function = M_ZERO
+    if ( pcm%localf ) then
+    	SAFE_ALLOCATE(kick_function_interpolate(1:mesh%np_part))
+      kick_function_interpolate = M_ZERO
+    	call kick_function_get(mesh, kick, kick_function_interpolate, to_interpolate = .true.)
+      SAFE_ALLOCATE(kick_function_real(1:mesh%np_part))
+      kick_function_real = DREAL(kick_function_interpolate)
+      if ( pcm%kick_like .or. pcm%which_eps == 'drl' ) then
+        ! computing kick-like polarization due to kick or initialize polarization due to kick for the Drude-Lorentz model
+        call pcm_calc_pot_rs(pcm, mesh, kick = kick%delta_strength * kick_function_real, kick_time = .true.)
+      else if ( .not.pcm%kick_like .and. pcm%which_eps == 'deb' ) then
+        ! computing the kick-like part of polarization due to kick for Debye dielectric model
+        pcm%kick_like = .true.
+        call pcm_calc_pot_rs(pcm, mesh, kick = kick%delta_strength * kick_function_real, kick_time = .true.)
+        pcm%kick_like = .false.
+      end if
+      if( pcm%kick_like .or. pcm%which_eps == 'deb' ) then
+        kick_pcm_function = pcm%v_kick_rs / kick%delta_strength
+        if(cmplxscl) kick_pcm_function = kick_pcm_function * exp(M_zI * theta)
+      end if
+    end if
+
+    POP_SUB(kick_pcm_function_get)
+  end subroutine kick_pcm_function_get
+
+
+  ! ---------------------------------------------------------
   !> Applies the delta-function electric field \f$ E(t) = E_0 \Delta(t) \f$
   !! where \f$ E_0 = \frac{- k \hbar}{e} \f$ k = kick\%delta_strength.
   subroutine kick_apply(mesh, st, ions, geo, kick, theta, pcm)
@@ -762,8 +807,7 @@ contains
     CMPLX, allocatable :: kick_function(:), psi(:, :)
     logical :: cmplxscl
 
-    CMPLX, allocatable :: kick_function_interpolate(:)
-    FLOAT, allocatable :: kick_function_real(:)
+    CMPLX, allocatable :: kick_pcm_function(:)
 
     PUSH_SUB(kick_apply)
 
@@ -781,28 +825,15 @@ contains
         call kick_function_get(mesh, kick, kick_function, theta)          
       end if
 
+      ! PCM - computing polarization due to kick
       if( present(pcm) ) then
-        if ( pcm%localf ) then
-      		SAFE_ALLOCATE(kick_function_interpolate(1:mesh%np_part))
-          kick_function_interpolate = M_ZERO
-      		if(.not. cmplxscl) then
-        		call kick_function_get(mesh, kick, kick_function_interpolate, to_interpolate = .true.)
-      		else
-        		call kick_function_get(mesh, kick, kick_function_interpolate, theta, to_interpolate = .true.)
-      		end if
-          SAFE_ALLOCATE(kick_function_real(1:mesh%np_part))
-          kick_function_real = DREAL(kick_function_interpolate)
-          if ( pcm%kick_like .or. pcm%which_eps == 'drl' ) then
-            ! computing kick-like polarization due to kick or initialize polarization due to kick for the Drude-Lorentz model
-            call pcm_calc_pot_rs(pcm, mesh, kick = kick%delta_strength * kick_function_real, kick_time = .true.)
-          else if ( .not.pcm%kick_like .and. pcm%which_eps == 'deb' ) then
-            ! computing the kick-like part of polarization due to kick for Debye dielectric model
-            pcm%kick_like = .true.
-            call pcm_calc_pot_rs(pcm, mesh, kick = kick%delta_strength * kick_function_real, kick_time = .true.)
-            pcm%kick_like = .false.
-          end if
-          if( pcm%kick_like .or. pcm%which_eps == 'deb' ) kick_function = kick_function + pcm%v_kick_rs / kick%delta_strength
+        SAFE_ALLOCATE(kick_pcm_function(1:mesh%np))
+        if(.not. cmplxscl) then
+          call kick_pcm_function_get(mesh, kick, pcm, kick_pcm_function)
+        else
+          call kick_pcm_function_get(mesh, kick, pcm, kick_pcm_function, theta)        
         end if
+        kick_function = kick_function + kick_pcm_function
       end if
 
       write(message(1),'(a,f11.6)') 'Info: Applying delta kick: k = ', kick%delta_strength
