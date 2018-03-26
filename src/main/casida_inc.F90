@@ -1520,7 +1520,7 @@ subroutine X(write_distributed_matrix)(cas, matrix, filename)
   integer :: locsize, nelements
 
   if(.not. cas%use_scalapack) then
-    messages(1) = "Cannot write distributed matrix if not using ScaLAPACK layout"
+    message(1) = "Cannot write distributed matrix if not using ScaLAPACK layout"
     call messages_info(1)
     return
   end if
