@@ -203,7 +203,7 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
           zz = zz + xx(jb) * cas%X(mat)(jb_local, ia_local) / sqrt(cas%s(jb))
         end if
       end do
-      zz = X(allreduce_sum)(zz)
+      zz = X(allreduce_sum)(cas, zz)
       zz = zz / sqrt(cas%w(ia))
     else ! TAMM_DANCOFF, VARIATIONAL, PETERSILKA
       do jb = 1, cas%n_pairs
@@ -212,7 +212,7 @@ R_TYPE function X(transition_matrix_element) (cas, ia, xx) result(zz)
           zz = zz + xx(jb) * cas%X(mat)(jb_local, ia_local)
         end if
       end do
-      zz = X(allreduce_sum)(zz)
+      zz = X(allreduce_sum)(cas, zz)
     end if
     zz = sqrt(TOFLOAT(cas%el_per_state)) * zz
   end if
@@ -481,9 +481,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
         if(ia > cas%n_pairs) cycle
         if(isnt_degenerate(cas, st, ia, jb)) then
           matrix(jb_local, ia_local) = M_ZERO
-#ifndef HAVE_SCALAPACK
-          matrix(ia_local, jb_local) = M_ZERO
-#endif
+          if(.not. cas%use_scalapack) matrix(ia_local, jb_local) = M_ZERO
         end if
       end do
     end do
@@ -507,10 +505,10 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   end if
 
 
-#ifndef HAVE_SCALAPACK
-  ! only root retains the saved values
-  if(.not. mpi_grp_is_root(mpi_world)) matrix = M_ZERO
-#endif
+  if(.not. cas%use_scalapack) then
+    ! only root retains the saved values
+    if(.not. mpi_grp_is_root(mpi_world)) matrix = M_ZERO
+  end if
 
   SAFE_ALLOCATE(rho_i(1:mesh%np))
   SAFE_ALLOCATE(rho_j(1:mesh%np))
@@ -541,10 +539,10 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
     end if
 
     do jb_local = 1, cas%nb_rows
-#ifndef HAVE_SCALAPACK
-      actual = actual + 1
-      if(mod(actual, cas%mpi_grp%size) /= cas%mpi_grp%rank) cycle
-#endif
+      if(.not. cas%use_scalapack) then
+        actual = actual + 1
+        if(mod(actual, cas%mpi_grp%size) /= cas%mpi_grp%rank) cycle
+      end if
       jb = get_global_row(cas, jb_local)
 
       ! first electron-hole contributions
@@ -610,11 +608,10 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
               X(mf_dotp)(mesh, rho_i(1:mesh%np), buffer(1:mesh%np)*rho_j(1:mesh%np))
           end if
 
-          !matrix(ia_local, jb_local) = mtxel_vh + mtxel_xc + mtxel_vm
-          matrix(jb_local, ia_local) = R_CONJ(mtxel_vh + mtxel_xc + mtxel_vm)
-#ifndef HAVE_SCALAPACK
-          if(jb /= ia) matrix(jb, ia) = R_CONJ(matrix(ia, jb))
-#endif
+          matrix(jb_local, ia_local) = mtxel_vh + mtxel_xc + mtxel_vm
+          if(.not. cas%use_scalapack) then
+            if(jb /= ia) matrix(ia, jb) = R_CONJ(matrix(jb, ia))
+          end if
           if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
         end do
 
@@ -635,9 +632,9 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 !           end do
 
             matrix(jb_local, ia_local) = sqrt(M_HALF*cas%pt%omega_array(ia-cas%n_pairs))*xx(jb)
-#ifndef HAVE_SCALAPACK
-            matrix(jb, ia) = matrix(ia, jb)
-#endif
+            if(.not. cas%use_scalapack) then
+              matrix(ia, jb) = matrix(jb, ia)
+            end if
           end do
         end if
       end if
@@ -662,28 +659,29 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
     write(stdout, '(1x)')
   end if
 
-#ifndef HAVE_SCALAPACK
   ! sum all matrix elements
-  if(cas%parallel_in_eh_pairs) then
+  if(cas%parallel_in_eh_pairs .and. .not. cas%use_scalapack) then
     call comm_allreduce(cas%mpi_grp%comm, matrix)
   end if
-#else
-  ! add transpose of matrix to get full matrix
-  SAFE_ALLOCATE(buffer_transpose(1:cas%nb_rows,1:cas%nb_cols))
-  buffer_transpose(1:cas%nb_rows,1:cas%nb_cols) = cas%X(mat)(1:cas%nb_rows,1:cas%nb_cols)
-  ! set diagonal to zero and add transpose of buffer to matrix to get full matrix
-  do jb_local = 1, cas%nb_rows
-    jb = get_global_row(cas, jb_local)
-    do ia_local = 1, cas%nb_cols
-      ia = get_global_col(cas, ia_local)
-      if(ia == jb) buffer_transpose(jb_local,ia_local) = M_ZERO
+  if(cas%use_scalapack) then
+#ifdef HAVE_SCALAPACK
+    ! add transpose of matrix to get full matrix
+    SAFE_ALLOCATE(buffer_transpose(1:cas%nb_rows,1:cas%nb_cols))
+    buffer_transpose(1:cas%nb_rows,1:cas%nb_cols) = cas%X(mat)(1:cas%nb_rows,1:cas%nb_cols)
+    ! set diagonal to zero and add transpose of buffer to matrix to get full matrix
+    do jb_local = 1, cas%nb_rows
+      jb = get_global_row(cas, jb_local)
+      do ia_local = 1, cas%nb_cols
+        ia = get_global_col(cas, ia_local)
+        if(ia == jb) buffer_transpose(jb_local,ia_local) = M_ZERO
+      end do
     end do
-  end do
-  ! this call adds transpose/hermitian conjugate and saves it to matrix
-  call pblas_tran(cas%n, cas%n, R_TOTYPE(M_ONE), buffer_transpose(1,1), 1, 1, cas%desc(1), &
-    R_TOTYPE(M_ONE), matrix(1,1), 1, 1, cas%desc(1))
-  SAFE_DEALLOCATE_A(buffer_transpose)
+    ! this call adds transpose/hermitian conjugate and saves it to matrix
+    call pblas_tran(cas%n, cas%n, R_TOTYPE(M_ONE), buffer_transpose(1,1), 1, 1, cas%desc(1), &
+      R_TOTYPE(M_ONE), matrix(1,1), 1, 1, cas%desc(1))
+    SAFE_DEALLOCATE_A(buffer_transpose)
 #endif
+  end if
 
   SAFE_DEALLOCATE_A(xx)
 
@@ -1139,15 +1137,12 @@ subroutine X(casida_solve)(cas, st)
     end do
   end if
 
-!#ifdef HAVE_SCALAPACK
-!  call X(write_distributed_matrix)(cas, cas%X(mat), &
-!    CASIDA_DIR//trim(theory_name(cas))//"_matrix_beforediag")
-!#endif
-
-#if HAVE_MPI
-  ! wait at barrier for profiling
-  call MPI_Barrier(mpi_world%comm, info)
+  if(cas%parallel_in_eh_pairs) then
+#ifdef HAVE_MPI
+    ! wait here instead of in diagonalization for better profiling
+    call MPI_Barrier(cas%mpi_grp%comm, info)
 #endif
+  end if
   message(1) = "Info: Diagonalizing matrix for resonance energies."
   call messages_info(1)
 
@@ -1155,99 +1150,100 @@ subroutine X(casida_solve)(cas, st)
   call profiling_in(prof, "CASIDA_DIAGONALIZATION")
   if(cas%calc_forces) cas%X(mat_save) = cas%X(mat) ! save before gets turned into eigenvectors
 
-#ifndef HAVE_SCALAPACK
-  call lalg_eigensolve_parallel(cas%n_pairs + cas%pt_nmodes, cas%X(mat), cas%w)
-#else
-  SAFE_ALLOCATE(eigenvectors(cas%nb_rows, cas%nb_cols))
+  if(.not. cas%use_scalapack) then
+    call lalg_eigensolve_parallel(cas%n_pairs + cas%pt_nmodes, cas%X(mat), cas%w)
+  else
+#ifdef HAVE_SCALAPACK
+    SAFE_ALLOCATE(eigenvectors(cas%nb_rows, cas%nb_cols))
 
 #ifdef HAVE_ELPA
-  ! eigensolver settings (allocate workspace)
-  if (elpa_init(20170403) /= elpa_ok) then
-    write(message(1),'(a)') "ELPA API version not supported"
-    call messages_fatal(1)
-  endif
-  elpa => elpa_allocate()
+    ! eigensolver settings (allocate workspace)
+    if (elpa_init(20170403) /= elpa_ok) then
+      write(message(1),'(a)') "ELPA API version not supported"
+      call messages_fatal(1)
+    endif
+    elpa => elpa_allocate()
 
-  ! set parameters describing the matrix
-  call elpa%set("na", cas%n, info)
-  call elpa%set("nev", cas%n, info)
-  call elpa%set("local_nrows", cas%nb_rows, info)
-  call elpa%set("local_ncols", cas%nb_cols, info)
-  call elpa%set("nblk", cas%block_size, info)
-  call elpa%set("mpi_comm_parent", mpi_world%comm, info)
-  call elpa%set("process_row", cas%proc_grid%myrow, info)
-  call elpa%set("process_col", cas%proc_grid%mycol, info)
+    ! set parameters describing the matrix
+    call elpa%set("na", cas%n, info)
+    call elpa%set("nev", cas%n, info)
+    call elpa%set("local_nrows", cas%nb_rows, info)
+    call elpa%set("local_ncols", cas%nb_cols, info)
+    call elpa%set("nblk", cas%block_size, info)
+    call elpa%set("mpi_comm_parent", cas%mpi_grp%comm, info)
+    call elpa%set("process_row", cas%proc_grid%myrow, info)
+    call elpa%set("process_col", cas%proc_grid%mycol, info)
 
-  info = elpa%setup()
+    info = elpa%setup()
 
-  call elpa%set("solver", elpa_solver_2stage, info)
-  
-  ! call eigensolver
-  call elpa%eigenvectors(cas%X(mat), cas%w, eigenvectors, info)
+    call elpa%set("solver", elpa_solver_2stage, info)
 
-  ! error handling
-  if (info /= elpa_ok) then
-    write(message(1),'(a,i6,a,a)') "Error in ELPA, code: ", info, ", message: ", &
-      elpa_strerr(info)
-    call messages_fatal(1)
-  end if
+    ! call eigensolver
+    call elpa%eigenvectors(cas%X(mat), cas%w, eigenvectors, info)
 
-  call elpa_deallocate(elpa)
-  call elpa_uninit()
+    ! error handling
+    if (info /= elpa_ok) then
+      write(message(1),'(a,i6,a,a)') "Error in ELPA, code: ", info, ", message: ", &
+        elpa_strerr(info)
+      call messages_fatal(1)
+    end if
+
+    call elpa_deallocate(elpa)
+    call elpa_uninit()
 
 #else
-  ! use ScaLAPACK solver if ELPA not available
-  ! eigensolver settings (allocate workspace)
-  ! workspace query
+    ! use ScaLAPACK solver if ELPA not available
+    ! eigensolver settings (allocate workspace)
+    ! workspace query
 #ifdef R_TREAL
-  call pdsyev(jobz='V', uplo='L', n=cas%n, &
-    a=cas%X(mat)(1, 1), ia=1, ja=1, desca=cas%desc(1), w=cas%w(1), &
-    z=eigenvectors(1, 1), iz=1, jz=1, descz=cas%desc(1), &
-    work=worksize, lwork=-1, info=info)
+    call pdsyev(jobz='V', uplo='L', n=cas%n, &
+      a=cas%X(mat)(1, 1), ia=1, ja=1, desca=cas%desc(1), w=cas%w(1), &
+      z=eigenvectors(1, 1), iz=1, jz=1, descz=cas%desc(1), &
+      work=worksize, lwork=-1, info=info)
 #else
-  call pzheev(jobz='V', uplo='L', n=cas%n, &
-    a=cas%X(mat)(1, 1), ia=1, ja=1, desca=cas%desc(1), w=cas%w(1), &
-    z=eigenvectors(1, 1), iz=1, jz=1, descz=cas%desc(1), &
-    work=worksize, lwork=-1, rwork=rworksize, lrwork=-1, info=info)
+    call pzheev(jobz='V', uplo='L', n=cas%n, &
+      a=cas%X(mat)(1, 1), ia=1, ja=1, desca=cas%desc(1), w=cas%w(1), &
+      z=eigenvectors(1, 1), iz=1, jz=1, descz=cas%desc(1), &
+      work=worksize, lwork=-1, rwork=rworksize, lrwork=-1, info=info)
 #endif
 
-  if(info /= 0) then
-    write(message(1),'(a,i6)') "ScaLAPACK workspace query failure, error code=", info
-    call messages_fatal(1)
-  end if
+    if(info /= 0) then
+      write(message(1),'(a,i6)') "ScaLAPACK workspace query failure, error code=", info
+      call messages_fatal(1)
+    end if
 
-  SAFE_ALLOCATE(work(1:int(worksize)))
+    SAFE_ALLOCATE(work(1:int(worksize)))
 #ifdef R_TCOMPLEX
-  SAFE_ALLOCATE(rwork(1:int(rworksize)))
+    SAFE_ALLOCATE(rwork(1:int(rworksize)))
 #endif
 
-  ! call eigensolver
+    ! call eigensolver
 #ifdef R_TREAL
-  call pdsyev(jobz='V', uplo='L', n=cas%n, &
-    a=cas%X(mat)(1, 1) , ia=1, ja=1, desca=cas%desc(1), w=cas%w(1), &
-    z=eigenvectors(1, 1), iz=1, jz=1, descz=cas%desc(1), &
-    work=work(1), lwork=int(worksize), info=info)
+    call pdsyev(jobz='V', uplo='L', n=cas%n, &
+      a=cas%X(mat)(1, 1) , ia=1, ja=1, desca=cas%desc(1), w=cas%w(1), &
+      z=eigenvectors(1, 1), iz=1, jz=1, descz=cas%desc(1), &
+      work=work(1), lwork=int(worksize), info=info)
 #else
-  call pzheev(jobz='V', uplo='L', n=cas%n, &
-    a=cas%X(mat)(1, 1), ia=1, ja=1, desca=cas%desc(1), w=cas%w(1), &
-    z=eigenvectors(1, 1), iz=1, jz=1, descz=cas%desc(1), &
-    work=work(1), lwork=int(worksize), &
-    rwork=rwork(1), lrwork=int(rworksize), info=info)
+    call pzheev(jobz='V', uplo='L', n=cas%n, &
+      a=cas%X(mat)(1, 1), ia=1, ja=1, desca=cas%desc(1), w=cas%w(1), &
+      z=eigenvectors(1, 1), iz=1, jz=1, descz=cas%desc(1), &
+      work=work(1), lwork=int(worksize), &
+      rwork=rwork(1), lrwork=int(rworksize), info=info)
 #endif
 
-  SAFE_DEALLOCATE_A(work)
+    SAFE_DEALLOCATE_A(work)
 #ifdef R_TCOMPLEX
-  SAFE_DEALLOCATE_A(rwork)
+    SAFE_DEALLOCATE_A(rwork)
 #endif
 
-  ! error handling
-  if(info /= 0) then
+    ! error handling
+    if(info /= 0) then
 #ifdef R_TCOMPLEX
-    write(message(1),'(3a,i5)') trim(message(1)), TOSTRING(pX(heev)), &
-      ' returned error message ', info
+      write(message(1),'(3a,i5)') trim(message(1)), TOSTRING(pX(heev)), &
+        ' returned error message ', info
 #else
-    write(message(1),'(3a,i5)') trim(message(1)), TOSTRING(pX(syev)), &
-      ' returned error message ', info
+      write(message(1),'(3a,i5)') trim(message(1)), TOSTRING(pX(syev)), &
+        ' returned error message ', info
 #endif
 !*  INFO    (global output) INTEGER
 !*          = 0:  successful exit
@@ -1261,24 +1257,22 @@ subroutine X(casida_solve)(cas, st)
 !*                by finding that eigenvalues were not identical across
 !*                the process grid.  In this case, the accuracy of
 !*                the results from PDSYEV cannot be guaranteed.
-    if(info < 0) then
-      write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
-    else if(info == cas%n+1) then
-      write(message(2), '(a)') 'Eigenvalues were not identical over the process grid.'
-    else
-      write(message(2), '(i5,a)') info, 'th eigenvalue did not converge.'
+      if(info < 0) then
+        write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
+      else if(info == cas%n+1) then
+        write(message(2), '(a)') 'Eigenvalues were not identical over the process grid.'
+      else
+        write(message(2), '(i5,a)') info, 'th eigenvalue did not converge.'
+      end if
+      call messages_fatal(2)
     end if
-    call messages_fatal(2)
+#endif
+    ! save eigenvectors to X(mat)
+    cas%X(mat)(1:cas%nb_rows,1:cas%nb_cols) = eigenvectors(1:cas%nb_rows,1:cas%nb_cols)
+    SAFE_DEALLOCATE_A(eigenvectors)
+#endif
   end if
-#endif
-!(HAVE_ELPA)
-#endif
-!(HAVE_SCALAPACK)
   call profiling_out(prof)
-
-  ! save eigenvectors to X(mat)
-  cas%X(mat)(1:cas%nb_rows,1:cas%nb_cols) = eigenvectors(1:cas%nb_rows,1:cas%nb_cols)
-  SAFE_DEALLOCATE_A(eigenvectors)
 
   do ia = 1, cas%n_pairs+cas%pt_nmodes
     if(cas%type == CASIDA_CASIDA) then
@@ -1424,11 +1418,12 @@ subroutine X(casida_write)(cas, sys)
     end if
   end if
   
-#ifdef HAVE_SCALAPACK
-  call X(write_distributed_matrix)(cas, cas%X(mat), &
-    CASIDA_DIR//trim(theory_name(cas))//"_matrix")
+  if(cas%use_scalapack) then
+    call X(write_distributed_matrix)(cas, cas%X(mat), &
+      CASIDA_DIR//trim(theory_name(cas))//"_matrix")
+  end if
 
-  ! TODO: create input file options to enable/disable this output?
+  ! Output the norm files always in photon mode
   if(cas%has_photons) then
     ! compute and write norms
     if(mpi_grp_is_root(mpi_world)) then
@@ -1455,9 +1450,9 @@ subroutine X(casida_write)(cas, sys)
           end if
         end if
       end do
-      norm = dallreduce_sum(norm)
-      norm_e = dallreduce_sum(norm_e)
-      norm_p = dallreduce_sum(norm_p)
+      norm = dallreduce_sum(cas, norm)
+      norm_e = dallreduce_sum(cas, norm_e)
+      norm_p = dallreduce_sum(cas, norm_p)
       if(mpi_grp_is_root(mpi_world)) then
         ! write contributions to norm to file
         write(iunit, '(i6)', advance='no') cas%ind(ia)
@@ -1469,7 +1464,6 @@ subroutine X(casida_write)(cas, sys)
       call io_close(iunit)
     end if
   end if
-#endif
 
   ! Calculate and write the transition densities
   call X(get_transition_densities)(cas, sys)
@@ -1525,19 +1519,25 @@ subroutine X(write_distributed_matrix)(cas, matrix, filename)
   integer :: outfile, mpistatus, ierr
   integer :: locsize, nelements
 
+  if(.not. cas%use_scalapack) then
+    messages(1) = "Cannot write distributed matrix if not using ScaLAPACK layout"
+    call messages_info(1)
+    return
+  end if
+
 #ifdef HAVE_MPI
   ! create MPI IO types
-  call MPI_Type_create_darray(mpi_world%size, mpi_world%rank, 2, (/ cas%n, cas%n /), &
+  call MPI_Type_create_darray(cas%mpi_grp%size, cas%mpi_grp%rank, 2, (/ cas%n, cas%n /), &
     (/ MPI_DISTRIBUTE_CYCLIC, MPI_DISTRIBUTE_CYCLIC /), (/ cas%block_size, cas%block_size/), &
     (/ cas%proc_grid%nprow, cas%proc_grid%npcol /), MPI_ORDER_FORTRAN, MPI_FLOAT, &
     cas%darray, ierr)
   call MPI_Type_commit(cas%darray, ierr)
 
-  call MPI_Barrier(mpi_world%comm, ierr)
+  call MPI_Barrier(cas%mpi_grp%comm, ierr)
   ! write out casida matrix
-  call MPI_File_open(mpi_world%comm, trim(filename), MPI_MODE_CREATE+MPI_MODE_WRONLY, &
+  call MPI_File_open(cas%mpi_grp%comm, trim(filename), MPI_MODE_CREATE+MPI_MODE_WRONLY, &
     MPI_INFO_NULL, outfile, ierr)
-  if(mpi_grp_is_root(mpi_world)) then
+  if(mpi_grp_is_root(cas%mpi_grp)) then
     ! write size of matrix
     call MPI_File_write(outfile, cas%n, 1, MPI_INTEGER, MPI_STATUS_IGNORE, ierr)
   end if
@@ -1549,17 +1549,20 @@ subroutine X(write_distributed_matrix)(cas, matrix, filename)
 end subroutine X(write_distributed_matrix)
 
 ! communication function used for sums over the casida matrix
-R_TYPE function X(allreduce_sum)(variable) result(output)
+R_TYPE function X(allreduce_sum)(cas, variable) result(output)
+  type(casida_t), intent(in) :: cas
   R_TYPE, intent(in) :: variable
   R_TYPE :: buffer
   integer :: ierr
-#ifndef HAVE_SCALAPACK
-  output = variable
-#else
-  call MPI_Allreduce(variable, buffer, 1, R_MPITYPE, MPI_SUM, &
-    mpi_world%comm, ierr)
-  output = buffer
+  if(.not. cas%use_scalapack) then
+    output = variable
+  else
+#ifdef HAVE_SCALAPACK
+    call MPI_Allreduce(variable, buffer, 1, R_MPITYPE, MPI_SUM, &
+      cas%mpi_grp%comm, ierr)
+    output = buffer
 #endif
+  end if
 end function X(allreduce_sum)
 
 
