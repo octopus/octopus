@@ -1267,9 +1267,6 @@ contains
         call pcm_charges(pcm%q_e, pcm%qtot_e, pcm%v_e, pcm%matrix, pcm%n_tesserae, &
                          pcm%q_e_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_e)
 
-        !< dont pay attention to the use of q_e_in and qtot_e_in, whose role here is only auxiliary
-        pcm%q_e_in = pcm%q_e
-        pcm%qtot_e_in = pcm%qtot_e
       end if !< END - pcm charges propagation in equilibrium with solute
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_e, pcm%qtot_e, mesh, pcm%rho_e)
       call pcm_pot_rs(pcm, pcm%v_e_rs, pcm%q_e, pcm%rho_e, mesh )
@@ -1548,10 +1545,9 @@ contains
                                                                   E_int_ne +  &
                                                                E_int_e_ext +  &
                                                                E_int_n_ext ), &
-                       ( pcm%epsilon_0 / (pcm%epsilon_0 - M_ONE) ) * pcm%qtot_e_in + &
- ( pcm%epsilon_infty / (pcm%epsilon_infty - M_ONE) ) * (pcm%qtot_e - pcm%qtot_e_in), &
+                                                                     pcm%qtot_e, &
                                                                    pcm%deltaQ_e, &
-                         ( pcm%epsilon_0/(pcm%epsilon_0 - M_ONE) ) * pcm%qtot_n, &
+                                                                     pcm%qtot_n, &
                                                                    pcm%deltaQ_n, &
                                                                    pcm%qtot_ext
       else
@@ -1567,10 +1563,9 @@ contains
                                                                   E_int_en +  &
                                                                   E_int_nn +  &
                                                                   E_int_ne ), &
-                       ( pcm%epsilon_0 / (pcm%epsilon_0 - M_ONE) ) * pcm%qtot_e_in + &
- ( pcm%epsilon_infty / (pcm%epsilon_infty - M_ONE) ) * (pcm%qtot_e - pcm%qtot_e_in), &
+                                                                     pcm%qtot_e, &
                                                                    pcm%deltaQ_e, &
-                         ( pcm%epsilon_0/(pcm%epsilon_0 - M_ONE) ) * pcm%qtot_n, &
+                                                                     pcm%qtot_n, &
                                                                    pcm%deltaQ_n
       end if
     end if
