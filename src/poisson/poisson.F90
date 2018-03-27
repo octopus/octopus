@@ -834,6 +834,9 @@ contains
         message(1) = "Direct sum Poisson solver only available for 1, 2, or 3 dimensions."
         call messages_fatal(1)
       end select
+      
+    case(POISSON_DRDMFT)
+	  call poisson_solve_drdmft(this, pot, rho)
 
     case(POISSON_FMM)
       call poisson_fmm_solve(this%params_fmm, this%der, pot, rho)
