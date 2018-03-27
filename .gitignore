@@ -268,6 +268,18 @@
 /external_libs/yaml-0.1.4/src/*.a
 /external_libs/yaml-0.1.4/src/.deps
 
+# /external_libs/dftd3/
+/external_libs/dftd3/Makefile
+/external_libs/dftd3/Makefile.in
+/external_libs/dftd3/*.o
+/external_libs/dftd3/*.a
+/external_libs/dftd3/*.mod
+
+
+# /external_libs/rapidxml/
+/external_libs/rapidxml/Makefile
+/external_libs/rapidxml/Makefile.in
+
 # /liboct_parser/
 /liboct_parser/*.log
 /liboct_parser/config.status
@@ -426,6 +438,35 @@
 # /share/pseudopotentials/sg15/
 /share/pseudopotentials/sg15/Makefile
 /share/pseudopotentials/sg15/Makefile.in
+
+# /share/pseudopotentials/quantum-simulation.org/
+/share/pseudopotentials/quantum-simulation.org/Makefile
+/share/pseudopotentials/quantum-simulation.org/Makefile.in
+/share/pseudopotentials/quantum-simulation.org/hscv/Makefile
+/share/pseudopotentials/quantum-simulation.org/hscv/Makefile.in
+/share/pseudopotentials/quantum-simulation.org/hscv/lda/Makefile
+/share/pseudopotentials/quantum-simulation.org/hscv/lda/Makefile.in
+/share/pseudopotentials/quantum-simulation.org/hscv/pbe/Makefile
+/share/pseudopotentials/quantum-simulation.org/hscv/pbe/Makefile.in
+/share/pseudopotentials/quantum-simulation.org/sg15/Makefile
+/share/pseudopotentials/quantum-simulation.org/sg15/Makefile.in
+
+# /share/pseudopotentials/pseudo-dojo.org/
+/share/pseudopotentials/pseudo-dojo.org/Makefile
+/share/pseudopotentials/pseudo-dojo.org/Makefile.in
+/share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbe_standard/Makefile
+/share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbe_standard/Makefile.in
+/share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbe_stringent/Makefile
+/share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbe_stringent/Makefile.in
+/share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbesol_standard/Makefile
+/share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbesol_standard/Makefile.in
+/share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbesol_stringent/Makefile
+/share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbesol_stringent/Makefile.in
+/share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pw_standard/Makefile
+/share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pw_standard/Makefile.in
+/share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pw_stringent/Makefile
+/share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pw_stringent/Makefile.in
+
 
 # /share/quadrature/
 /share/quadrature/Makefile
