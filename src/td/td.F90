@@ -732,6 +732,7 @@ contains
         call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
       end if
 
+
       if(freeze_orbitals > 0) then
         ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
         call states_freeze_orbitals(st, gr, sys%mc, freeze_orbitals)
@@ -781,7 +782,12 @@ contains
 #endif
       call hamiltonian_span(hm, minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
       ! initialize Fermi energy
-      call states_fermi(st, gr%mesh)
+      if (.not. hm%F%propagate) then
+         call states_fermi(st, gr%mesh)
+      else
+         print *, "FLOQUET TIME PROPAGATION IS NOT WORKING WITH SMEARING!!!"
+      end if
+            
       call energy_calc_total(hm, gr, st)
 
       POP_SUB(td_run.init_wfs)

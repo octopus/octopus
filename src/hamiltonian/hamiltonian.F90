@@ -120,7 +120,7 @@ module hamiltonian_oct_m
     integer :: nT, ncycle, interval, count, floquet_dim, spindim, order(2), mode, boson
     integer :: max_solve_iter, iter, init, occ_cut, cf_nsteps
     logical ::  downfolding, sample, sample_one_only, FBZ_solver, propagate
-    FLOAT :: omega, Tcycle, dt, pes_omega, pol(1:MAX_DIM), lambda
+    FLOAT :: omega, Tcycle, dt, pes_omega, pol(1:MAX_DIM), lambda, conv_rel_dens
     FLOAT, pointer :: frozen_distortion(:,:)
     logical :: is_parallel 
     logical :: calc_occupations
