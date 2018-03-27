@@ -231,7 +231,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
 #if defined(HAVE_MPI)        
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n))
-    if(this%useACBN0) &
+    if(this%level == DFT_U_ACBN0) &
       call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n_alt))
   end if
 #endif      
