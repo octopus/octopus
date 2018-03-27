@@ -6,9 +6,6 @@ BoxShape = parallelepiped
 
 ExperimentalFeatures = yes
 
-Smearing = 0.1*eV
-SmearingFunction = fermi_dirac
-
 EigenSolver = rmmdiis
 
 a = 7.8809
@@ -58,11 +55,12 @@ GuessMagnetDensity = user_defined
 LCAOStart= lcao_states
 
 %KPointsGrid
-2 | 2 | 2
+2 | 2 | 1
 %
 KPointsUseSymmetries = no
 
-ExtraStates = 10
+ExtraStates = 6
+ConvRelDens = 1e-4
 
 OrbitalsTruncationMethod = box
 OutputLDA_U = occupation_matrices

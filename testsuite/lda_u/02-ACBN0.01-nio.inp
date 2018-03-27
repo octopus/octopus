@@ -6,26 +6,21 @@ ExperimentalFeatures = yes
 EigenSolver = rmmdiis
 
 a = 7.8809
-
 %Species
 "Ni" | species_pseudo | db_file | 'hscv/pbe/Ni_HSCV_PBE-1.0.xml' | hubbard_l | 2 | hubbard_u | 0.0
 "O" | species_pseudo | db_file | 'hscv/pbe/O_HSCV_PBE-1.0.xml' | hubbard_l | 1 | hubbard_u | 0.0
 %
 DFTULevel = dft_u_acbn0
-
-PseudopotentialSet=hscv_pbe
 XCFunctional=gga_x_pbe + gga_c_pbe
 
 %LatticeParameters
   a | a | a
 %
-
 %LatticeVectors
  0.0 | 1/2 | 1/2
  1/2 | 0.0 | 1/2
  1.0 | 1.0 | 0.0
 %
-
 %ReducedCoordinates
  "Ni" | 0.0 | 0.0 | 0.0
  "Ni" | 0.0 | 0.0 | 0.5
@@ -36,7 +31,6 @@ XCFunctional=gga_x_pbe + gga_c_pbe
 Spacing = 0.5
 
 FromScratch = yes
-ParStates = no
 ParDomains = no
 ParKPoints = auto
 
@@ -54,9 +48,9 @@ LCAOStart= lcao_states
 %KPointsGrid
 2 | 2 | 1
 %
-KPointsUseSymmetries = no
 
 ExtraStates = 6
 
+FilterPotentials = filter_none
 OrbitalsTruncationMethod = box
 OutputLDA_U = occupation_matrices + effectiveU

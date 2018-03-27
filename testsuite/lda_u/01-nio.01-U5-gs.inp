@@ -54,14 +54,16 @@ GuessMagnetDensity = user_defined
  0.0
 %
 
-LCAOStart= lcao_states
+LCAOStart = lcao_states
 
 %KPointsGrid
 2 | 2 | 2
 %
-KPointsUseSymmetries = no
+KPointsUseSymmetries = yes
+KPointsUseTimeReversal = no
 
-ExtraStates = 10
+ExtraStates = 6
+ConvRelDens = 1e-6
 
 OrbitalsTruncationMethod = box
 OutputLDA_U = occupation_matrices
