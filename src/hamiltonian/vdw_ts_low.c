@@ -411,7 +411,7 @@ void get_vdw_params (const int zatom,
 /* Damping function. */
 void fdamp (const double rr, const double r0ab, const double dd, const double sr,
 	    double * ff, double * dffdrab, double * dffdr0) {
-
+    printf("ok 1d dd= %f sr= %f \n", dd, sr);
   // Calculate the damping coefficient.
   double ee = exp(-dd*((rr/(sr*r0ab)) - 1.0));
   *ff = 1.0/(1.0 + ee);
@@ -422,7 +422,7 @@ void fdamp (const double rr, const double r0ab, const double dd, const double sr
   
   // Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
   *dffdr0 = -dd*rr/(sr*r0ab*r0ab)*dee;
-
+    printf("ok 1e");
 }
 
 
@@ -448,13 +448,19 @@ void distance (const int iatom, const int jatom, const double coordinates[],
 
 
 /* Function to calculate the Van der Waals energy... and forces */
-void vdw_calculate (const int natoms, const int zatom[], const double coordinates[], const double volume_ratio[],
- const double dd, const double sr, double * energy, double force[], double derivative_coeff[]) {
-  
+void vdw_calculate (const int natoms, const double dd, const double sr, const int zatom[], const double coordinates[], const double volume_ratio[],
+                    double * energy, double force[], double derivative_coeff[]) {
+ 
+   double eee;
+   eee = 1+sr+dd;
   int ia;
+   printf("ok 1a dd= %f sr= %f \n", dd, sr);
+   printf("ok 1aa natoms= %i \n", natoms);
+   printf("ok 1bb coord 1= %f \n", coordinates[1]);
+   printf("ok 1a eee = %f \n", eee);
+
 
   *energy = 0.0;
-
   // Loop to calculate the pair-wise Van der Waals energy correction.
   for (ia = 0; ia < natoms; ia++) {
 
@@ -497,8 +503,9 @@ void vdw_calculate (const int natoms, const int zatom[], const double coordinate
       double ff;
       double dffdrab;
       double dffdr0;
+         printf("ok 1b");
       fdamp(rr, r0ab, dd, sr, &ff, &dffdrab, &dffdr0);
-      
+         printf("ok 1c");
       // Pair-wise correction to energy.
       *energy += -0.5*ff*c6ab/rr6;
       
@@ -533,11 +540,12 @@ void vdw_calculate (const int natoms, const int zatom[], const double coordinate
 
 #ifndef _TEST
 /* This is a wrapper to be called from Fortran. */
-void FC_FUNC_(f90_vdw_calculate, F90_VDW_CALCULATE) (const int * natoms, const int zatom[], const double coordinates[], 
-const double volume_ratio[], const double dd, const double sr, double * energy, double force[], double derivative_coeff[]) {
-  vdw_calculate(*natoms, zatom, coordinates, volume_ratio, dd, sr, energy, force, derivative_coeff);
+void FC_FUNC_(f90_vdw_calculate, F90_VDW_CALCULATE) (const int * natoms, const double dd, const double sr, const int zatom[], const double coordinates[], const double volume_ratio[],
+                                                     double * energy, double force[], double derivative_coeff[]) {
+  vdw_calculate(*natoms, dd, sr, zatom, coordinates, volume_ratio, energy, force, derivative_coeff);
 }
 #endif
+
 
 /* Main test function. */
 #ifdef _TEST
