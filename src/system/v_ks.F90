@@ -32,9 +32,11 @@ module v_ks_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
+  use kick_oct_m
   use index_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
+  use lasers_oct_m
   use libvdwxc_oct_m
   use magnetic_oct_m
   use mesh_function_oct_m
@@ -1377,13 +1379,24 @@ contains
     CMPLX, pointer :: zpot(:)
     CMPLX :: ztmp
 
+    FLOAT, allocatable :: potx(:)
+    CMPLX, allocatable :: kick(:)
+    FLOAT, allocatable :: kick_real(:)
+    integer :: ii
+
+    integer :: asc_unit_test
+
+    FLOAT :: dt
+
+    logical :: kick_time
+
     PUSH_SUB(v_ks_hartree)
 
     ASSERT(associated(ks%hartree_solver))
 
     if(.not. ks%gr%have_fine_mesh) then
       pot => hm%vhartree
-      if (hm%cmplxscl%space) then 
+      if (hm%cmplxscl%space) then
         Impot => hm%Imvhartree
         SAFE_ALLOCATE(zpot(1:size(Impot,1)))
       end if
@@ -1419,15 +1432,73 @@ contains
       end if
     end if
 
+
     !> PCM reaction field due to the electronic density
-    if (hm%pcm%run_pcm) then
-      if(pcm_update(hm%pcm,hm%current_time)) then
-        !> Generates the real-space PCM potential due to electrons during the SCF calculation.
-        call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_h = pot)
-        
+    if (hm%pcm%run_pcm .and. pcm_update(hm%pcm,hm%current_time)) then
+
+      !> Generates the real-space PCM potential due to electrons during the SCF calculation.
+      if (hm%pcm%solute) &
+        call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_h = pot, time_present = ks%calc%time_present)
+
+      dt=hm%current_time/hm%pcm%iter
+
+      !> Local field effects due to the applied electrostatic potential representing the laser and the kick (if they were).
+      !! For the laser, the latter is only valid in the long-wavelength limit.
+      !! Static potentials are included in subroutine hamiltonian_epot_generate (module hamiltonian).
+      if( hm%pcm%localf .and. ks%calc%time_present ) then
+        if ( associated(hm%ep%lasers) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< external potential and kick
+          SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
+          SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part)) 
+          SAFE_ALLOCATE(kick_real(1:ks%gr%mesh%np_part))
+          potx = M_ZERO    
+          kick = M_ZERO
+          do ii = 1, hm%ep%no_lasers        
+            call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
+          end do
+          kick_real = M_ZERO
+          kick_time =((hm%pcm%iter-1)*dt <= hm%ep%kick%time) .and. (hm%pcm%iter*dt > hm%ep%kick%time)
+          if ( hm%pcm%iter > 1 .and. kick_time ) then 
+            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.)
+            kick = hm%ep%kick%delta_strength * kick
+            kick_real = DREAL(kick)
+          end if
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = kick_real, time_present = ks%calc%time_present, &
+                                                                 kick_time = kick_time )
+          SAFE_DEALLOCATE_A(potx)
+          SAFE_DEALLOCATE_A(kick)
+          SAFE_DEALLOCATE_A(kick_real)
+        else if ( associated(hm%ep%lasers) .and. hm%ep%kick%delta_strength == M_ZERO ) then !< just external potential
+          SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
+          potx = M_ZERO    
+          do ii = 1, hm%ep%no_lasers        
+            call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
+          end do
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, time_present = ks%calc%time_present)
+          SAFE_DEALLOCATE_A(potx)
+        else if ( (.not.associated(hm%ep%lasers)) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< just kick
+          SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part))
+          SAFE_ALLOCATE(kick_real(1:ks%gr%mesh%np_part))
+          kick = M_ZERO
+          kick_real = M_ZERO
+          kick_time =((hm%pcm%iter-1)*dt <= hm%ep%kick%time) .and. (hm%pcm%iter*dt > hm%ep%kick%time)
+          if ( hm%pcm%iter > 1 .and. kick_time ) then
+            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.)
+            kick = hm%ep%kick%delta_strength * kick
+            kick_real = DREAL(kick)
+          end if
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, kick = kick_real, time_present = ks%calc%time_present, kick_time = kick_time )
+          SAFE_DEALLOCATE_A(kick)
+          SAFE_DEALLOCATE_A(kick_real)
+        end if
+
+        ! Calculating the PCM term renormalizing the sum of the single-particle energies
+        ! to keep the idea of pcm_corr... but it will be added later on
+        hm%energy%pcm_corr = dmf_dotp( ks%gr%fine%mesh, ks%calc%total_density, hm%pcm%v_e_rs + hm%pcm%v_n_rs + hm%pcm%v_ext_rs )
+      else
         ! Calculating the PCM term renormalizing the sum of the single-particle energies
         hm%energy%pcm_corr = dmf_dotp( ks%gr%fine%mesh, ks%calc%total_density, hm%pcm%v_e_rs + hm%pcm%v_n_rs )
       end if
+        
     end if
 
     if(ks%calc%calc_energy) then

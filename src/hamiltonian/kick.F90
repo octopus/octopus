@@ -29,6 +29,7 @@ module kick_oct_m
   use mesh_oct_m
   use messages_oct_m
   use parser_oct_m
+  use pcm_oct_m
   use profiling_oct_m
   use species_oct_m
   use states_oct_m
@@ -647,21 +648,29 @@ contains
 
   ! ---------------------------------------------------------
   ! 
-  subroutine kick_function_get(mesh, kick, kick_function, theta)
+  subroutine kick_function_get(mesh, kick, kick_function, theta, to_interpolate)
     type(mesh_t),         intent(in)    :: mesh
     type(kick_t),         intent(in)    :: kick
     CMPLX,                intent(out)   :: kick_function(:)
     FLOAT, optional,      intent(in)    :: theta
+    logical, optional,    intent(in)    :: to_interpolate
 
     integer :: ip, im
     FLOAT   :: xx(MAX_DIM)
     FLOAT   :: rkick, ikick, rr, ylm
     logical :: cmplxscl
 
+    integer :: np
+
     PUSH_SUB(kick_function_get)
 
     cmplxscl = .false.
     if(present(theta)) cmplxscl = .true.
+
+    np = mesh%np
+    if(present(to_interpolate)) then
+      if(to_interpolate) np = mesh%np_part
+    end if 
     
     if(abs(kick%qlength) > M_EPSILON) then ! q-vector is set
 
@@ -683,7 +692,7 @@ contains
       call messages_info(1)
 
       kick_function = M_z0
-      do ip = 1, mesh%np
+      do ip = 1, np
         call mesh_r(mesh, ip, rr, coords = xx)
         select case (kick%qkick_mode)
           case (QKICKMODE_COS)
@@ -704,7 +713,7 @@ contains
       if(kick%function_mode  ==  KICK_FUNCTION_USER_DEFINED) then
 
         kick_function = M_z0
-        do ip = 1, mesh%np
+        do ip = 1, np
           call mesh_r(mesh, ip, rr, coords = xx)
             rkick = M_ZERO; ikick = M_ZERO
           call parse_expression(rkick, ikick, mesh%sb%dim, xx, rr, M_ZERO, trim(kick%user_defined_function))
@@ -715,14 +724,14 @@ contains
 
         kick_function = M_z0
         do im = 1, kick%n_multipoles
-          do ip = 1, mesh%np
+          do ip = 1, np
             call mesh_r(mesh, ip, rr, coords = xx)
             call loct_ylm(1, xx(1), xx(2), xx(3), kick%l(im), kick%m(im), ylm)
               kick_function(ip) = kick_function(ip) + kick%weight(im) * (rr**kick%l(im)) * ylm
           end do
         end do
       else
-        forall(ip = 1:mesh%np)
+        forall(ip = 1:np)
           kick_function(ip) = sum(mesh%x(ip, 1:mesh%sb%dim) * &
             kick%pol(1:mesh%sb%dim, kick%pol_dir))
         end forall
@@ -737,20 +746,68 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! 
+  subroutine kick_pcm_function_get(mesh, kick, pcm, kick_pcm_function, theta)
+    type(mesh_t),         intent(in)    :: mesh
+    type(kick_t),         intent(in)    :: kick
+    type(pcm_t),          intent(inout) :: pcm
+    CMPLX,                intent(out)   :: kick_pcm_function(:)
+    FLOAT, optional,      intent(in)    :: theta
+
+    logical :: cmplxscl
+
+    CMPLX, allocatable :: kick_function_interpolate(:)
+    FLOAT, allocatable :: kick_function_real(:)
+
+    PUSH_SUB(kick_pcm_function_get)
+
+    cmplxscl = .false.
+    if(present(theta)) cmplxscl = .true.
+
+    kick_pcm_function = M_ZERO
+    if ( pcm%localf ) then
+    	SAFE_ALLOCATE(kick_function_interpolate(1:mesh%np_part))
+      kick_function_interpolate = M_ZERO
+    	call kick_function_get(mesh, kick, kick_function_interpolate, to_interpolate = .true.)
+      SAFE_ALLOCATE(kick_function_real(1:mesh%np_part))
+      kick_function_real = DREAL(kick_function_interpolate)
+      if ( pcm%kick_like .or. pcm%which_eps == 'drl' ) then
+        ! computing kick-like polarization due to kick or initialize polarization due to kick for the Drude-Lorentz model
+        call pcm_calc_pot_rs(pcm, mesh, kick = kick%delta_strength * kick_function_real, kick_time = .true.)
+      else if ( .not.pcm%kick_like .and. pcm%which_eps == 'deb' ) then
+        ! computing the kick-like part of polarization due to kick for Debye dielectric model
+        pcm%kick_like = .true.
+        call pcm_calc_pot_rs(pcm, mesh, kick = kick%delta_strength * kick_function_real, kick_time = .true.)
+        pcm%kick_like = .false.
+      end if
+      if( pcm%kick_like .or. pcm%which_eps == 'deb' ) then
+        kick_pcm_function = pcm%v_kick_rs / kick%delta_strength
+        if(cmplxscl) kick_pcm_function = kick_pcm_function * exp(M_zI * theta)
+      end if
+    end if
+
+    POP_SUB(kick_pcm_function_get)
+  end subroutine kick_pcm_function_get
+
+
+  ! ---------------------------------------------------------
   !> Applies the delta-function electric field \f$ E(t) = E_0 \Delta(t) \f$
   !! where \f$ E_0 = \frac{- k \hbar}{e} \f$ k = kick\%delta_strength.
-  subroutine kick_apply(mesh, st, ions, geo, kick, theta)
+  subroutine kick_apply(mesh, st, ions, geo, kick, theta, pcm)
     type(mesh_t),         intent(in)    :: mesh
     type(states_t),       intent(inout) :: st
     type(ion_dynamics_t), intent(in)    :: ions
     type(geometry_t),     intent(inout) :: geo
     type(kick_t),         intent(in)    :: kick
     FLOAT, optional,      intent(in)    :: theta
+    type(pcm_t), optional, intent(inout) :: pcm
 
     integer :: iqn, ist, idim, ip, ispin, iatom
     CMPLX   :: cc(2), kick_value
     CMPLX, allocatable :: kick_function(:), psi(:, :)
     logical :: cmplxscl
+
+    CMPLX, allocatable :: kick_pcm_function(:)
 
     PUSH_SUB(kick_apply)
 
@@ -762,11 +819,21 @@ contains
     delta_strength: if(kick%delta_strength /= M_ZERO) then
 
       SAFE_ALLOCATE(kick_function(1:mesh%np))
-        
       if(.not. cmplxscl) then
         call kick_function_get(mesh, kick, kick_function)
       else
         call kick_function_get(mesh, kick, kick_function, theta)          
+      end if
+
+      ! PCM - computing polarization due to kick
+      if( present(pcm) ) then
+        SAFE_ALLOCATE(kick_pcm_function(1:mesh%np))
+        if(.not. cmplxscl) then
+          call kick_pcm_function_get(mesh, kick, pcm, kick_pcm_function)
+        else
+          call kick_pcm_function_get(mesh, kick, pcm, kick_pcm_function, theta)        
+        end if
+        kick_function = kick_function + kick_pcm_function
       end if
 
       write(message(1),'(a,f11.6)') 'Info: Applying delta kick: k = ', kick%delta_strength
