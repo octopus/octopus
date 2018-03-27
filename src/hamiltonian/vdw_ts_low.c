@@ -446,16 +446,17 @@ void distance (const int iatom, const int jatom, const double coordinates[],
 
 
 /* Function to calculate the Van der Waals energy... and forces */
-void vdw_calculate (const int natoms, const double * dd, const double * sr, const int zatom[], const double coordinates[], const double volume_ratio[],
+void vdw_calculate (const int natoms, const double dd, const double sr, const int zatom[], const double coordinates[], const double volume_ratio[],
                     double * energy, double force[], double derivative_coeff[]) {
    double sr_ok;
    double dd_ok;;
-   sr_ok=*sr;
-   dd_ok=*dd;
+   //sr_ok=*sr;
+   //dd_ok=*dd;
+   
    
    
   int ia;
- //  printf("ok 1a dd= %f sr= %f \n", dd_ok, sr_ok);
+   printf("ok 1a dd= %f sr= %f \n", dd, sr);
 
 
   *energy = 0.0;
@@ -501,8 +502,8 @@ void vdw_calculate (const int natoms, const double * dd, const double * sr, cons
       double ff;
       double dffdrab;
       double dffdr0;
-      fdamp(rr, r0ab, dd_ok, sr_ok, &ff, &dffdrab, &dffdr0);
-      
+      //fdamp(rr, r0ab, dd_ok, sr_ok, &ff, &dffdrab, &dffdr0);
+      fdamp(rr, r0ab, dd, sr, &ff, &dffdrab, &dffdr0);
       // Pair-wise correction to energy.
       *energy += -0.5*ff*c6ab/rr6;
       
@@ -539,7 +540,7 @@ void vdw_calculate (const int natoms, const double * dd, const double * sr, cons
 /* This is a wrapper to be called from Fortran. */
 void FC_FUNC_(f90_vdw_calculate, F90_VDW_CALCULATE) (const int * natoms, const double * dd, const double * sr, const int zatom[], const double coordinates[], const double volume_ratio[],
                                                      double * energy, double force[], double derivative_coeff[]) {
-  vdw_calculate(*natoms, dd, sr, zatom, coordinates, volume_ratio, energy, force, derivative_coeff);
+  vdw_calculate(*natoms, *dd, *sr, zatom, coordinates, volume_ratio, energy, force, derivative_coeff);
 }
 #endif
 
