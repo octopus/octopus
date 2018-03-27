@@ -74,7 +74,7 @@ module projector_oct_m
     dr_project_psi,            &
     zr_project_psi
   
-  integer, parameter :: MAX_NPROJECTIONS = 24
+  integer, parameter :: MAX_NPROJECTIONS = 4
   integer, parameter :: MAX_L = 5
 
   !> The projector data type is intended to hold the local and
@@ -181,7 +181,7 @@ contains
     case(PROJ_RKB)
       p%nprojections = 4
     case(PROJ_HGH)
-      p%nprojections = 24
+      p%nprojections = 3
     end select
 
     POP_SUB(projector_init)
@@ -261,7 +261,7 @@ contains
         if(ll == p%lloc) cycle
         do mm = -ll, ll
           call hgh_projector_null(p%hgh_p(ll, mm))
-          call hgh_projector_init(p%hgh_p(ll, mm), p%sphere, a, ll, mm, so_strength)
+          call hgh_projector_init(p%hgh_p(ll, mm), p%sphere, p%reltype, a, ll, mm, so_strength)
         end do
       end do
 

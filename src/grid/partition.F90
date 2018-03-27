@@ -547,7 +547,7 @@ contains
   !! points that each partition has.
   subroutine partition_get_np_local(partition, np_local_vec)
     type(partition_t),    intent(in)  :: partition       !< Current partition
-    integer, pointer,     intent(out) :: np_local_vec(:) !< Vector of local points (np_local)
+    integer, pointer,     intent(inout) :: np_local_vec(:) !< Vector of local points (np_local)
     
     integer, pointer :: np_local_vec_tmp(:)
     integer :: ip

@@ -64,8 +64,8 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   type(batch_t),     intent(inout) :: ppsib
   integer,           intent(in)    :: ik
 
-  integer :: ipj, nreduce, ii, ns, idim, ll, mm, is, ist, bind
-  R_TYPE, allocatable :: reduce_buffer(:,:), lpsi(:, :)
+  integer :: ipj, nreduce, ii, jj, ns, idim, ll, mm, is, ist, bind
+  R_TYPE, allocatable :: reduce_buffer(:,:), lpsi(:, :), uvpsi(:,:,:)
   integer, allocatable :: ireduce(:, :, :, :)
   type(profile_t), save :: prof
   type(profile_t), save :: reduce_prof
@@ -163,7 +163,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   end if
 
   ! calculate |ppsi> += |p><p|psi>
-  !$omp parallel private(ist, ipj, ns, lpsi, ll, mm, ii, idim, is)
+  !$omp parallel private(ist, ipj, ns, lpsi, ll, mm, ii, idim, is, uvpsi)
   SAFE_ALLOCATE(lpsi(1:maxval(pj(1:npj)%sphere%np), 1:dim))
   !$omp do
   do ist = 1, psib%nst
@@ -191,14 +191,23 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
               call zkb_project_ket(pj(ipj)%kb_p(1, 1), dim, reduce_buffer(1:dim, ii:), lpsi(1:ns, 1:dim))
             end if
 #endif
-          case(PROJ_HGH)
-            call X(hgh_project_ket)(pj(ipj)%hgh_p(ll, mm), dim, &
-              pj(ipj)%reltype, reduce_buffer(1:dim, ii:), lpsi(1:ns, 1:dim))
           end select
-          
         end do ! mm
+ 
+        if(pj(ipj)%type == PROJ_HGH) then
+          SAFE_ALLOCATE(uvpsi(1:dim, 1:3, -ll:ll))
+          do mm = -ll,ll
+            ii = ireduce(ipj, ll, mm, ist)
+            uvpsi(1:dim, 1:3, mm) = reduce_buffer(1:dim, ii:ii+2)
+          end do
+          call X(hgh_project_ket)(pj(ipj)%hgh_p(ll, :), ll, pj(ipj)%lmax, dim, &
+              pj(ipj)%reltype, uvpsi(1:dim, 1:3, -ll:ll), lpsi(1:ns, 1:dim))
+          SAFE_DEALLOCATE_A(uvpsi)
+        end if
       end do ! ll
-    
+
+    !  print *, ll, lpsi(1, 1:dim)  
+  
       !put the result back in the complete grid
       do idim = 1, dim
         bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
@@ -311,8 +320,6 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi)
     do mm = -ll, ll
       
       select case (pj%type)
-      case (PROJ_HGH)
-        call X(hgh_project)(mesh, pj%sphere, pj%hgh_p(ll, mm), dim, psi, ppsi, pj%reltype)
       case (PROJ_KB)
         call X(kb_project)(mesh, pj%sphere, pj%kb_p(ll, mm), dim, psi, ppsi)
       case (PROJ_RKB)
@@ -326,6 +333,9 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi)
       end select
   
     end do
+    if(pj%type == PROJ_HGH) then
+      call X(hgh_project)(mesh, pj%sphere, pj%hgh_p(ll, :), ll, pj%lmax, dim, psi, ppsi, pj%reltype)
+    end if
   end do
 
   POP_SUB(X(project_sphere))
