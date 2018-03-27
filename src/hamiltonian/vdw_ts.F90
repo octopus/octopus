@@ -188,7 +188,6 @@ contains
     FLOAT, allocatable :: coordinates(:,:), x_j(:), volume_ratio(:), dvadens(:), dvadrr(:), derivative_coeff(:), & 
                           dr0dvra(:), r0ab(:,:), c6ab(:,:)
     integer, allocatable :: zatom(:)
-    Real(8) :: aa, bb
 
     PUSH_SUB(vdw_ts_calculate)
 
@@ -281,18 +280,11 @@ contains
         zatom(iatom) = species_z(geo%atom(iatom)%species)
 
       end do
-      print *,'ok 1',this%VDW_sr_parameter, this%VDW_dd_parameter, energy 
       
-      print *, 'print kind(1.d0)', kind(1.d0)
-
-
-      aa = this%VDW_dd_parameter
-      bb = this%VDW_sr_parameter                
       call f90_vdw_calculate(geo%natoms,  this%VDW_dd_parameter, this%VDW_sr_parameter, zatom(1), coordinates(1, 1), &
  volume_ratio(1), energy, force(1, 1), derivative_coeff(1))
 
 
-      print *,'ok 2'
       SAFE_DEALLOCATE_A(coordinates)
       SAFE_DEALLOCATE_A(zatom)
     end if
