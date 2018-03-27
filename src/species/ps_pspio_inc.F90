@@ -64,7 +64,6 @@
     call check_error(fpspio_pspdata_read(pspdata, PSPIO_FMT_UNKNOWN, filename2))
 
     ! General info
-    ps%flavour = ps_get_type(filename)
     ps%label = label
     ps%ispin = ispin
     ps%hamann = .false.

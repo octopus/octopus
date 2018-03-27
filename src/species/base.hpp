@@ -23,6 +23,8 @@
 #include <string>
 #include <rapidxml.hpp>
 
+#define MAX_L 10 
+
 namespace pseudopotential {
 
   enum class type {
@@ -43,6 +45,8 @@ namespace pseudopotential {
   };
 
   enum class format {
+    FILE_NOT_FOUND             = 773,
+    UNKNOWN                    = 774,
     UPF1                       = 775,
     UPF2                       = 776,
     QSO                        = 777,
@@ -92,8 +96,6 @@ namespace pseudopotential {
     virtual int valence_charge() const = 0;
     virtual int llocal() const = 0;
     virtual int nchannels() const = 0;
-    virtual int nquad() const = 0;
-    virtual double rquad() const = 0;
     virtual double mesh_spacing() const = 0;
     virtual int mesh_size() const = 0;
     virtual void local_potential(std::vector<double> & potential) const = 0;
@@ -103,22 +105,28 @@ namespace pseudopotential {
     virtual bool has_radial_function(int l) const= 0;
     virtual void radial_function(int l, std::vector<double> & function) const = 0;
     virtual void radial_potential(int l, std::vector<double> & function) const = 0;
-    virtual bool has_nlcc() const= 0;
-    virtual void nlcc_density(std::vector<double> & density) const = 0;
-    virtual void beta(int index, int & l, std::vector<double> & proj) const = 0;
-    virtual void dnm_zero(int nbeta, std::vector<std::vector<double> > & dnm) const = 0;
-    virtual bool has_rinner() const = 0;
-    virtual void rinner(std::vector<double> & val) const = 0;
-    virtual void qnm(int index, int & l1, int & l2, int & n, int & m, std::vector<double> & val) const = 0;
-    virtual void qfcoeff(int index, int ltot, std::vector<double> & val) const = 0;
 
     //Functions for things that might not be provided
+    virtual int nquad() const { return 0; }
+    virtual double rquad() const { return 0.0; }
+    virtual bool has_nlcc() const { return false; }
+    virtual void nlcc_density(std::vector<double> & density) const { density.clear(); }
+    virtual void beta(int index, int & l, std::vector<double> & proj) const { l = 0; proj.clear(); }
+    virtual void dnm_zero(int nbeta, std::vector<std::vector<double> > & dnm) const { dnm.clear(); }
+    virtual bool has_rinner() const { return false; }
+    virtual void rinner(std::vector<double> & val) const { val.clear(); }
+    virtual void qnm(int index, int & l1, int & l2, int & n, int & m, std::vector<double> & val) const { val.clear(); }
+    virtual void qfcoeff(int index, int ltot, std::vector<double> & val) const { val.clear(); }
     virtual bool has_density() const { return false; }
     virtual void density(std::vector<double> & val) const { val.clear(); }
     virtual int nwavefunctions() const { return 0; }
     virtual void wavefunction(int index, int & n, int & l, double & occ, std::vector<double> & val) const { val.clear(); }
     virtual pseudopotential::exchange exchange() const { return pseudopotential::exchange::UNKNOWN; }
     virtual pseudopotential::correlation correlation() const { return pseudopotential::correlation::UNKNOWN; }
+
+    virtual bool has_total_angular_momentum() const { return false; }
+    virtual int projector_2j(int l, int ic) const { return 0; } // returns j multiplied by 2
+    virtual int wavefunction_2j(int ii) const { return 0; } // returns j multiplied by 2
     
   protected:
 

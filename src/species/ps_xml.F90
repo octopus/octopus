@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
+!! Copyright (C) 2015-2018 Xavier Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -64,9 +64,10 @@ module ps_xml_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_xml_init(this, filename, ierr)
+  subroutine ps_xml_init(this, filename, fmt, ierr)
     type(ps_xml_t),   intent(inout) :: this
     character(len=*), intent(in)    :: filename
+    integer,          intent(in)    :: fmt
     integer,          intent(out)   :: ierr
 
     integer :: ll, ii, ic, jc
@@ -76,7 +77,7 @@ contains
 
     this%initialized = .false.
     
-    call pseudo_init(pseudo, filename, ierr)
+    call pseudo_init(pseudo, filename, fmt, ierr)
 
     if(ierr == PSEUDO_STATUS_FILE_NOT_FOUND) then
       call messages_write("Pseudopotential file '" // trim(filename) // "' not found")
@@ -84,7 +85,7 @@ contains
     end if
 
     if(ierr == PSEUDO_STATUS_UNKNOWN_FORMAT) then
-      call messages_write("Cannot determine the format for pseudopotential file '" // trim(filename) // "' not found")
+      call messages_write("Cannot determine the format for pseudopotential file '" // trim(filename) // "'")
       call messages_fatal()
     end if
 
@@ -132,13 +133,14 @@ contains
 
     else
 
-      SAFE_ALLOCATE(this%potential(1:this%grid_size, -1:-1))
+      SAFE_ALLOCATE(this%potential(1:this%grid_size, this%llocal:this%llocal))
       
-      call pseudo_local_potential(pseudo, this%potential(1, -1))
+      call pseudo_local_potential(pseudo, this%potential(1, this%llocal))
 
       SAFE_ALLOCATE(this%projector(1:this%grid_size, 0:this%lmax, 1:this%nchannels))
       
       do ll = 0, this%lmax
+        if(this%llocal == ll) cycle
         do ic = 1, this%nchannels
           call pseudo_projector(pseudo, ll, ic, this%projector(1, ll, ic))
         end do
@@ -169,6 +171,7 @@ contains
     end if
 
     this%has_density = pseudo_has_density(pseudo)
+
     if(this%has_density) then
       SAFE_ALLOCATE(this%density(1:this%grid_size))
       call pseudo_density(pseudo, this%density(1))

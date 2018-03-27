@@ -56,7 +56,7 @@ if test "$acx_pspio_ok" = no; then
     LIBS=" $acx_pspio_save_LIBS $pspio_libs $GSL_LIBS"
     AC_LINK_IFELSE($testprog, [acx_pspio_ok=yes; FCFLAGS_PSPIO="$pspio_fcflags"; LIBS_PSPIO="$pspio_libs"], [])
   fi
-  AC_MSG_RESULT([$acx_pspio_ok ($LIBS_PSPIO)])
+  AC_MSG_RESULT([$acx_pspio_ok ($FCFLAGS_PSPIO $LIBS_PSPIO)])
 fi
 
 AC_SUBST(FCFLAGS_PSPIO)
