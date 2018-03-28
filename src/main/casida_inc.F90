@@ -534,7 +534,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
             (cas%pt%lambda_array(ii)* &
                ( cas%pt%pol_array(ii,1)*mesh%x(1:mesh%np, 1)  &
                + cas%pt%pol_array(ii,2)*mesh%x(1:mesh%np, 2)  &
-               + cas%pt%pol_array(ii,3)*mesh%x(1:mesh%np, 3)))**2
+               + cas%pt%pol_array(ii,3)*mesh%x(1:mesh%np, 3)))
       end do
     end if
 
@@ -605,7 +605,8 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
           if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
             ! buffer is precomputed once before double loop
             mtxel_vm = mtxel_vm + &
-              X(mf_dotp)(mesh, rho_i(1:mesh%np), buffer(1:mesh%np)*rho_j(1:mesh%np))
+              X(mf_dotp)(mesh, rho_i(1:mesh%np), buffer(1:mesh%np))* &
+              X(mf_dotp)(mesh, rho_j(1:mesh%np), buffer(1:mesh%np))
           end if
 
           matrix(jb_local, ia_local) = mtxel_vh + mtxel_xc + mtxel_vm
