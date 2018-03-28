@@ -139,37 +139,37 @@ contains
       maxcount = 50
     endif
     
-    !If using a basis set, localize the starting orbitals
-    if(rdm%do_basis.eqv..true.) then
-      !Find the charge center of they system  
-      SAFE_ALLOCATE(species_charge_center(1:geo%space%dim))
-      call geometry_dipole(geo,species_charge_center)
-      sum_charge = M_ZERO
-      do iatom = 1, geo%natoms
-        sum_charge = sum_charge + species_zval(geo%atom(iatom)%species)
-      end do
-      species_charge_center = species_charge_center/(sum_charge*P_PROTON_CHARGE)
-      !Localize orbitals
-      SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
-      do ist = 1, st%nst
-        call states_get_state(st, gr%mesh, ist, 1, psi)
-        do ip = 1, gr%mesh%np
-          call mesh_r(gr%mesh, ip, rr, species_charge_center)
-          if (st%eigenval(ist, 1) < M_ZERO) then
-            psi(ip, 1) = psi(ip, 1)&
-              *exp((-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF), 1))) + sqrt(-M_TWO*st%eigenval(ist, 1)))*rr)
-          else
-            psi(ip, 1) = psi(ip, 1)*exp(-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF), 1)))*rr)
-          end if
-        end do
-        call states_set_state(st, gr%mesh, ist, 1, psi)
-      end do
-      ! Orthogonalize the resulting orbitals
-      call dstates_orthogonalization_full(st,gr%mesh,1)
+!    !If using a basis set, localize the starting orbitals
+!    if(rdm%do_basis.eqv..true.) then
+!      !Find the charge center of they system  
+!      SAFE_ALLOCATE(species_charge_center(1:geo%space%dim))
+!      call geometry_dipole(geo,species_charge_center)
+!      sum_charge = M_ZERO
+!      do iatom = 1, geo%natoms
+!        sum_charge = sum_charge + species_zval(geo%atom(iatom)%species)
+!      end do
+!      species_charge_center = species_charge_center/(sum_charge*P_PROTON_CHARGE)
+!      !Localize orbitals
+!      SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
+!      do ist = 1, st%nst
+!        call states_get_state(st, gr%mesh, ist, 1, psi)
+!        do ip = 1, gr%mesh%np
+!          call mesh_r(gr%mesh, ip, rr, species_charge_center)
+!          if (st%eigenval(ist, 1) < M_ZERO) then
+!            psi(ip, 1) = psi(ip, 1)&
+!              *exp((-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF), 1))) + sqrt(-M_TWO*st%eigenval(ist, 1)))*rr)
+!          else
+!            psi(ip, 1) = psi(ip, 1)*exp(-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF), 1)))*rr)
+!          end if
+!        end do
+!        call states_set_state(st, gr%mesh, ist, 1, psi)
+!      end do
+!      ! Orthogonalize the resulting orbitals
+!      call dstates_orthogonalization_full(st,gr%mesh,1)
 
-      SAFE_DEALLOCATE_A(psi)
-      SAFE_DEALLOCATE_A(species_charge_center)
-    endif
+!      SAFE_DEALLOCATE_A(psi)
+!      SAFE_DEALLOCATE_A(species_charge_center)
+!    endif
     
     ! Start the actual minimization, first step is minimization of occupation numbers
     ! Orbital minimization is according to Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem. (scf_orb) or
@@ -367,11 +367,11 @@ contains
           call messages_fatal(1)
         end if
         
-        if (rdm%do_basis.eqv..true.) then
-          message(1) = "dressed state formalism works (probably) not with basis set implementation"
-          message(2) = "instead RDMBasis=no needs to be set"
-          call messages_fatal(1)
-        end if
+!        if (rdm%do_basis.eqv..true.) then
+!          message(1) = "dressed state formalism works (probably) not with basis set implementation"
+!          message(2) = "instead RDMBasis=no needs to be set"
+!          call messages_fatal(1)
+!        end if
 
       end if
 
