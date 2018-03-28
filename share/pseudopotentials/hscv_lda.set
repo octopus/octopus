@@ -1,4 +1,6 @@
 #Name   Path                                                    Z       Lmax    Lloc    Spacing Radius
+D	"quantum-simulation.org/hscv/lda/H_HSCV_LDA-1.0.xml"	-1	333	333	-1	-1
+T	"quantum-simulation.org/hscv/lda/H_HSCV_LDA-1.0.xml"	-1	333	333	-1	-1
 Ac	"quantum-simulation.org/hscv/lda/Ac_HSCV_LDA-1.0.xml"	-1	333	333	-1	-1
 Ag	"quantum-simulation.org/hscv/lda/Ag_HSCV_LDA-1.0.xml"	-1	333	333	-1	-1
 Al	"quantum-simulation.org/hscv/lda/Al_HSCV_LDA-1.0.xml"	-1	333	333	-1	-1
