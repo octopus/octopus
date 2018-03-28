@@ -14,7 +14,7 @@ UnitsOutput = ev_angstrom
 %
 
 %Species
-"C" | species_pseudo | file | "01-carbon_atom.pseudodojo.psml"
+"C" | species_pseudo | file | "04-carbon_dojo_psml.pseudo.psml"
 %
 
 spacing = 0.19*angstrom

@@ -239,8 +239,10 @@ subroutine X(broyden_extrapolation_aux)(this, ii, coeff, iter_used, dbeta, dwork
 
    call lalg_copy(d1, d2, d3, f(:, :, :), this%auxmixfield(ii)%p%X(df)(:, :, :, ipos))
    call lalg_copy(d1, d2, d3, this%auxmixfield(ii)%p%X(vin)(:, :, :), this%auxmixfield(ii)%p%X(dv)(:, :, :, ipos))
-   call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), this%auxmixfield(ii)%p%X(f_old)(:, :, :),   this%auxmixfield(ii)%p%X(df)(:, :, :, ipos))
-   call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), this%auxmixfield(ii)%p%X(vin_old)(:, :, :), this%auxmixfield(ii)%p%X(dv)(:, :, :, ipos))
+   call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), this%auxmixfield(ii)%p%X(f_old)(:, :, :), &
+                  this%auxmixfield(ii)%p%X(df)(:, :, :, ipos))
+   call lalg_axpy(d1, d2, d3, R_TOTYPE(-M_ONE), this%auxmixfield(ii)%p%X(vin_old)(:, :, :), &
+                  this%auxmixfield(ii)%p%X(dv)(:, :, :, ipos))
 
    if(present(dgamma)) then
      gamma = dgamma

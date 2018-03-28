@@ -1927,16 +1927,16 @@ contains
         
       if(spec%vdw_radius < CNST(0.0)) then
         spec%vdw_radius = element_vdw_radius(element)
+        if(spec%vdw_radius < CNST(0.0)) then
+          spec%vdw_radius = CNST(0.0)
+          call messages_write("The default vdW radius for species '"//trim(spec%label)//"' is not defined.", new_line = .true.)
+          call messages_write("You can specify the vdW radius in %Species block.")
+          call messages_warning()
+        end if
         call messages_write('Info: default vdW radius for species '//trim(spec%label)//':')
         call messages_write(spec%vdw_radius)
         call messages_write(' [b]')
         call messages_info()
-        if(spec%vdw_radius < CNST(0.0)) then
-          call messages_write('The default vdW radius for species '//trim(spec%label)//':')
-          call messages_write(' is not defined. ')
-          call messages_write(' Add a positive vdW radius value in %Species block. ')
-          call messages_fatal()
-        end if
       end if
 
       call element_end(element)
