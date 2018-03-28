@@ -200,7 +200,8 @@ contains
     nullify(this%iwf_j)
     this%user_lmax   = INVALID_L
     this%user_llocal = INVALID_L
-
+    this%pseudopotential_set = OPTION__PSEUDOPOTENTIALSET__NONE
+    
     POP_SUB(species_nullify)
   end subroutine species_nullify
 
@@ -317,9 +318,8 @@ contains
   subroutine species_read(spec)
     type(species_t), intent(inout) :: spec
 
-    character(len=256) :: fname
     character(len=LABEL_LEN)  :: lab
-    integer :: ib, ispec, row, n_spec_block, n_spec_def, iunit, read_data
+    integer :: ib, ispec, row, n_spec_block, iunit, read_data
     type(block_t) :: blk
 
     PUSH_SUB(species_read)
@@ -476,6 +476,10 @@ contains
     !%Option jellium_radius -10007
     !% The radius of the sphere for <tt>species_jellium</tt>. If this value is not specified,
     !% the default of 0.5 bohr is used.
+    !%Option set -10017
+    !% For a <tt>species_pseudo</tt>, get the pseudopotential from a
+    !% particular set. This flag must be followed with one of the
+    !% valid values for the variable <tt>PseudopotentialSet</tt>.
     !%Option gaussian_width -10008
     !% The width of the Gaussian (in units of spacing) used to represent
     !% the nuclear charge for <tt>species_full_gaussian</tt>. If not present,
@@ -535,12 +539,33 @@ contains
     ! the species we are looking for.
     if(n_spec_block > 0) call parse_block_end(blk)
 
-    if(pseudo_set /= OPTION__PSEUDOPOTENTIALSET__NONE) then 
+    spec%pseudopotential_set = pseudo_set
+    call read_from_set(spec, read_data)
+    
+    if(read_data == 0) then
+      message(1) = 'Species '//trim(spec%label)//' not found.'
+      call messages_fatal(1)
+    end if
 
-      spec%pseudopotential_set = pseudo_set
+    POP_SUB(species_read)
+  end subroutine species_read
+
+  ! ---------------------------------------------------------
+
+  subroutine read_from_set(spec, read_data)
+    type(species_t), intent(inout) :: spec
+    integer,         intent(out)   :: read_data
+
+    integer :: ib, ispec, row, n_spec_block, n_spec_def, iunit
+    character(len=256) :: fname
+    character(len=LABEL_LEN)  :: label
+
+    read_data = 0
+
+    if(spec%pseudopotential_set /= OPTION__PSEUDOPOTENTIALSET__NONE) then 
 
       ! Find out if the species is in the pseudopotential set
-      select case(pseudo_set)
+      select case(spec%pseudopotential_set)
       case(OPTION__PSEUDOPOTENTIALSET__STANDARD)
         fname = trim(conf%share)//'/pseudopotentials/standard.set'
       case(OPTION__PSEUDOPOTENTIALSET__SG15)
@@ -576,8 +601,8 @@ contains
         read(iunit,*)
 
         default_file: do ispec = 1, n_spec_def
-          read(iunit,*) lab
-          if(trim(lab) == trim(spec%label)) then
+          read(iunit,*) label
+          if(trim(label) == trim(spec%label)) then
             call read_from_default_file(iunit, read_data, spec)
             exit default_file
           end if
@@ -596,15 +621,8 @@ contains
 
     end if
 
-    if(read_data == 0) then
-      message(1) = 'Species '//trim(spec%label)//' not found.'
-      call messages_fatal(1)
-    end if
-
-    POP_SUB(species_read)
-  end subroutine species_read
-  ! ---------------------------------------------------------
-
+  end subroutine read_from_set
+  
 
   ! ---------------------------------------------------------
   subroutine species_build(spec, ispin, dim, print_info)
@@ -1594,7 +1612,7 @@ contains
     type(species_t), intent(inout) :: spec
     integer,         intent(out)   :: read_data
 
-    integer :: ncols, icol, flag
+    integer :: ncols, icol, flag, set_read_data
     type(element_t) :: element
     type(iihash_t) :: read_parameters
 
@@ -1743,6 +1761,10 @@ contains
         call parse_block_string(blk, row, icol + 1, spec%filename)
         spec%filename = trim(conf%share)//'/pseudopotentials/'//trim(spec%filename)
 
+      case(OPTION__SPECIES__SET)
+        call check_duplication(OPTION__SPECIES__SET)
+        call parse_block_integer(blk, row, icol + 1, spec%pseudopotential_set)
+        
       case(OPTION__SPECIES__POTENTIAL_FORMULA)
         call check_duplication(OPTION__SPECIES__POTENTIAL_FORMULA)
         call parse_block_string(blk, row, icol + 1, spec%potential_formula)
@@ -1811,12 +1833,12 @@ contains
         "The 'density_formula' parameter is missing for species '"//trim(spec%label)//"'")
     end if
     
-    if((spec%type == SPECIES_PSEUDO .or. spec%type == SPECIES_PSPIO .or. spec%type == SPECIES_FROM_FILE) &
+    if(spec%type == SPECIES_FROM_FILE &
       .and. .not. (parameter_defined(OPTION__SPECIES__FILE) .or. parameter_defined(OPTION__SPECIES__DB_FILE))) then
       call messages_input_error('Species', &
         "The 'file' or 'db_file' parameter is missing for species '"//trim(spec%label)//"'")
     end if
-      
+
     if(spec%type == SPECIES_JELLIUM_SLAB .and. .not. parameter_defined(OPTION__SPECIES__THICKNESS)) then
       call messages_input_error('Species', &
         "The 'thickness' parameter is missing for species '"//trim(spec%label)//"'")
@@ -1873,7 +1895,24 @@ contains
       end if
 
       call element_end(element)
+
+      if( (spec%type == SPECIES_PSEUDO .or. spec%type == SPECIES_PSPIO) &
+        .and. .not. (parameter_defined(OPTION__SPECIES__FILE) .or. parameter_defined(OPTION__SPECIES__DB_FILE))) then
+        ! we need to read the species from the pseudopotential set
+
+        !if the set was not defined, use the default set
+        if(.not. parameter_defined(OPTION__SPECIES__SET)) spec%pseudopotential_set = pseudo_set
+
+        call read_from_set(spec, set_read_data)
+
+        if(set_read_data == 0) then
+          call messages_write('Species '//trim(spec%label)//' is not defined in the requested pseudopotential set.')
+          call messages_warning()
+        end if
         
+      end if
+
+      
     case default
       if(.not. parameter_defined(OPTION__SPECIES__MASS)) then
         spec%mass = 1.0
