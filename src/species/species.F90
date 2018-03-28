@@ -176,10 +176,10 @@ contains
     this%index=0
     this%label=""
     this%type=0
-    this%z=M_ZERO
-    this%z_val=M_ZERO
-    this%mass=M_ZERO
-    this%vdw_radius=M_ZERO
+    this%z = CNST(-1.0)
+    this%z_val = CNST(-1.0)
+    this%mass = CNST(-1.0)
+    this%vdw_radius = CNST(-1.0)
     this%has_density=.false.
     this%potential_formula=""
     this%omega=M_ZERO
@@ -190,8 +190,8 @@ contains
     this%nlcc=.false.
     this%sigma=M_ZERO
     this%density_formula=""
-    this%def_rsize=M_ZERO
-    this%def_h=-M_ONE
+    this%def_rsize = CNST(-1.0)
+    this%def_h = CNST(-1.0)
     this%niwfs=-1
     nullify(this%iwf_l)
     nullify(this%iwf_m)
@@ -1571,6 +1571,8 @@ contains
 
     character(len=LABEL_LEN) :: label
     type(element_t) :: element
+    integer :: lmax, llocal
+    FLOAT :: zz, spacing, rsize
 
     PUSH_SUB(read_from_default_file)
 
@@ -1578,7 +1580,7 @@ contains
 
     spec%type = SPECIES_PSEUDO
     
-    read(iunit,*) label, spec%filename, spec%z, spec%user_lmax, spec%user_llocal, spec%def_h, spec%def_rsize
+    read(iunit,*) label, spec%filename, zz, lmax, llocal, spacing, rsize
 
     spec%filename = trim(conf%share)//'/pseudopotentials/'//trim(spec%filename)
     
@@ -1591,12 +1593,15 @@ contains
 
     ASSERT(element_valid(element))
 
-    spec%mass = element_mass(element)
-    spec%vdw_radius = element_vdw_radius(element)
-
-    if(spec%z < 0) then
-      spec%z = element_atomic_number(element)
-    end if
+    ! these might have been set before
+    if(spec%z < 0) spec%z = zz
+    if(spec%z < 0) spec%z = element_atomic_number(element)
+    if(spec%user_lmax == INVALID_L) spec%user_lmax = lmax
+    if(spec%user_llocal == INVALID_L) spec%user_llocal = llocal
+    if(spec%def_h < 0) spec%def_h = spacing
+    if(spec%def_rsize < 0) spec%def_rsize = rsize
+    if(spec%mass < 0) spec%mass = element_mass(element)
+    if(spec%vdw_radius < 0) spec%vdw_radius = element_vdw_radius(element)
     
     call element_end(element)
     
