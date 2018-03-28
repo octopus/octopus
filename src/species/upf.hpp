@@ -34,6 +34,10 @@ namespace pseudopotential {
 
   public:
 
+    upf(bool uniform_grid):
+      pseudopotential::anygrid(uniform_grid){
+    }
+    
     double d_ij(int l, int i, int j) const {
       assert(l >= 0 && l <= lmax_);
       assert(i >= 0 && i <= nchannels());
@@ -44,6 +48,14 @@ namespace pseudopotential {
 
   protected:
 
+    int llocal() const {
+      return llocal_;
+    }
+
+    int nchannels() const {
+      return nchannels_;
+    }
+    
     double & d_ij(int l, int i, int j) {
       assert(l >= 0 && l <= lmax_);
       assert(i >= 0 && i <= nchannels());
@@ -75,7 +87,10 @@ namespace pseudopotential {
 
     std::vector<double> dij_;
     int llocal_;
+    int start_point_;
+    int nchannels_;
 
+    
   };
 
 }

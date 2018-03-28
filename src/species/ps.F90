@@ -22,6 +22,7 @@ module ps_oct_m
   use atomic_oct_m
   use global_oct_m
   use io_oct_m
+  use lalg_adv_oct_m
   use loct_math_oct_m
   use parser_oct_m
   use logrid_oct_m
@@ -61,12 +62,19 @@ module ps_oct_m
     PS_FILTER_TS   = 2,         &
     PS_FILTER_BSB  = 3
 
+  integer, public, parameter ::  &
+    PROJ_NONE = 0,  &
+    PROJ_HGH  = 1,  &
+    PROJ_KB   = 2,  &
+    PROJ_RKB  = 3
+  
   integer, parameter, public :: INVALID_L = 333
 
   character(len=4), parameter  :: ps_name(PSEUDO_FORMAT_UPF1:PSEUDO_FORMAT_HGH) = &
     (/"upf1", "upf2", "qso ", "psml", "psf ", "cpi ", "fhi ", "hgh "/)
 
   type ps_t
+    integer :: projector_type
     character(len=10) :: label
 
     integer  :: ispin    !< Consider spin (ispin = 2) or not (ispin = 1)
@@ -192,6 +200,7 @@ contains
     ps%label   = label
     ps%ispin   = ispin
     ps%hamann  = .false.
+    ps%projector_type = PROJ_KB
     
     select case(ps%file_format)
     case(PSEUDO_FORMAT_PSF, PSEUDO_FORMAT_HGH)
@@ -286,6 +295,7 @@ contains
 
     case(PSEUDO_FORMAT_HGH)
       ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
+      ps%projector_type = PROJ_HGH
       
       call hgh_init(ps_hgh, trim(filename))
       call valconf_copy(ps%conf, ps_hgh%conf)
@@ -342,17 +352,18 @@ contains
       
       nullify(ps%g%drdi, ps%g%s)
       
-      ! use a larger grid
-      ps%g%nrval = max(ps_xml%grid_size, nint(CNST(20.0)/(ps_xml%mesh_spacing)))
+      ps%g%nrval = ps_xml%grid_size
       
       SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
       SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
+
+      call pseudo_grid(ps_xml%pseudo, ps%g%rofi(1))
       
       do ii = 1, ps%g%nrval
-        ps%g%rofi(ii) = (ii - 1)*ps_xml%mesh_spacing
-        ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
+        ps%g%rofi(ii) = ps_xml%grid(ii)
+        ps%g%r2ofi(ii) = ps_xml%grid(ii)**2
       end do
-
+      
     end select
     
     ps%local = (ps%lmax == 0 .and. ps%llocal == 0 ) .or. (ps%lmax == -1 .and. ps%llocal == -1)
@@ -485,6 +496,10 @@ contains
     end if
     call messages_info()
 
+    call messages_write("    projectors per l :")
+    call messages_write(ps%kbc, fmt = '(i2)')
+    call messages_info()
+    
     call messages_write("    total projectors :")
     if(ps%llocal < 0) then
       call messages_write(ps%kbc*(ps%lmax + 1), fmt = '(i2)')
@@ -573,6 +588,7 @@ contains
     ps%rc_max = CNST(0.0)
 
     do l = 0, ps%lmax
+      if(l == ps%llocal) cycle
       do j = 1, ps%kbc
         ps%rc_max = max(ps%rc_max, spline_cutoff_radius(ps%kb(l, j), ps%projectors_sphere_threshold))
       end do
@@ -1016,6 +1032,7 @@ contains
     FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element
     FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:), nlcc_density(:), dens(:)
     integer, allocatable :: cmap(:, :)
+    FLOAT, allocatable :: matrix(:, :), eigenvalues(:)
 
     PUSH_SUB(ps_xml_load)
 
@@ -1031,7 +1048,7 @@ contains
     SAFE_ALLOCATE(vlocal(1:ps%g%nrval))
 
     do ip = 1, ps%g%nrval
-      rr = (ip - 1)*ps_xml%mesh_spacing
+      rr = ps_xml%grid(ip)
       if(ip <= ps_xml%grid_size) then
         vlocal(ip) = ps_xml%potential(ip, ps%llocal)
       else
@@ -1079,27 +1096,50 @@ contains
       end do
 
       ASSERT(all(cmap >= 0 .and. cmap <= ps_xml%nchannels))
-      
-      do ll = 0, ps_xml%lmax
-        do ic = 1, ps_xml%nchannels
 
-          do ip = 1, ps%g%nrval
-            if(ip <= ps_xml%grid_size) then
-              kbprojector(ip) = ps_xml%projector(ip, ll, ic)
-            else
+      SAFE_ALLOCATE(matrix(1:ps_xml%nchannels, 1:ps_xml%nchannels))
+      SAFE_ALLOCATE(eigenvalues(1:ps_xml%nchannels))
+
+      ps%h = CNST(0.0)
+
+
+      if(pseudo_nprojectors(ps_xml%pseudo) > 0) then
+        do ll = 0, ps_xml%lmax
+          
+          ! diagonalize the coefficient matrix
+          if(.not. pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
+            matrix(1:ps_xml%nchannels, 1:ps_xml%nchannels) = ps_xml%dij(ll, 1:ps_xml%nchannels, 1:ps_xml%nchannels)
+            call lalg_eigensolve(ps_xml%nchannels, matrix, eigenvalues)
+          else
+            matrix = CNST(0.0)
+            forall(ic = 1:ps_xml%nchannels)
+              eigenvalues(ic) = ps_xml%dij(ll, ic, ic)
+              matrix(ic, ic) = CNST(1.0)
+            end forall
+          end if
+          
+          do ic = 1, ps_xml%nchannels
+            
+            do ip = 1, ps%g%nrval
               kbprojector(ip) = 0.0
-            end if
+              if(ip <= ps_xml%grid_size) then
+                do jc = 1, ps_xml%nchannels
+                  kbprojector(ip) = kbprojector(ip) + matrix(jc, ic)*ps_xml%projector(ip, ll, jc)
+                end do
+              end if
+            end do
+            
+            call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, cmap(ll, ic)))
+            
+            ps%h(ll, cmap(ll, ic), cmap(ll, ic)) = eigenvalues(ic)
+            
           end do
-
-          call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, cmap(ll, ic)))
-
-          do jc = 1, ps_xml%nchannels
-            ps%h(ll, cmap(ll, ic), cmap(ll, jc)) = ps_xml%dij(ll, ic, jc)
-          end do
-
         end do
-      end do
-
+      end if
+      
+      SAFE_DEALLOCATE_A(matrix)
+      SAFE_DEALLOCATE_A(eigenvalues)
+      
       ps%conf%p = ps_xml%nwavefunctions
       
       do ii = 1, ps_xml%nwavefunctions
@@ -1144,8 +1184,8 @@ contains
         dnrm = M_ZERO
         avgv = M_ZERO
         do ip = 1, ps_xml%grid_size
-          rr = (ip - 1)*ps_xml%mesh_spacing
-          volume_element = rr**2*ps_xml%mesh_spacing
+          rr = ps_xml%grid(ip)
+          volume_element = rr**2*ps_xml%weights(ip)
           kbprojector(ip) = (ps_xml%potential(ip, ll) - ps_xml%potential(ip, ps%llocal))*ps_xml%wavefunction(ip, ll)
           dnrm = dnrm + kbprojector(ip)**2*volume_element
           avgv = avgv + kbprojector(ip)*ps_xml%wavefunction(ip, ll)*volume_element
@@ -1165,7 +1205,6 @@ contains
 
         ! wavefunctions, for the moment we pad them with zero
         do ip = 1, ps%g%nrval
-          rr = (ip - 1)*ps_xml%mesh_spacing
           if(ip <= ps_xml%grid_size) then
             wavefunction(ip) = ps_xml%wavefunction(ip, ll)
           else
@@ -1178,7 +1217,7 @@ contains
           call spline_fit(ps%g%nrval, ps%g%r2ofi, wavefunction, ps%ur_sq(ll + 1, is))
         end do
       end do
-        
+
     end if
 
     ps%has_density = ps_xml%has_density
