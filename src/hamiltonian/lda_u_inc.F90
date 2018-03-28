@@ -918,7 +918,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
       !This is a dirty way to detect if the pseudopotential has j-dependent atomic wavefunctions
       hasjdependence = .false.
       call species_iwf_j(geo%atom(ia)%species, 1, jj)
-      if(jj /= M_ZERO) hasjdependence = .true.
+      if(abs(jj) > M_EPSILON) hasjdependence = .true.
 
       if(hasjdependence .and. hubbardj == M_ZERO) then
         norb = norb+2
@@ -975,7 +975,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
     !This is a dirty way to detect if the pseudopotential has j-dependent atomic wavefunctions
     hasjdependence = .false.
     call species_iwf_j(geo%atom(ia)%species, 1, jj)
-    if(jj /= M_ZERO) hasjdependence = .true.
+    if(abs(jj) >  M_EPSILON) hasjdependence = .true.
     if (debug%info .and. hasjdependence) then
       write(message(1),'(a,i3,a)')  'Debug: Atom ', ia, ' has j-dependent pseudo-wavefunctions.'
       call messages_info(1)
