@@ -541,8 +541,8 @@ contains
 
     spec%pseudopotential_set = pseudo_set
     call read_from_set(spec, read_data)
-    
-    if(read_data == 0) then
+
+   if(read_data == 0) then
       message(1) = 'Species '//trim(spec%label)//' not found.'
       call messages_fatal(1)
     end if
@@ -1859,6 +1859,22 @@ contains
     select case(spec%type)
     case(SPECIES_PSEUDO, SPECIES_PSPIO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
 
+      if( (spec%type == SPECIES_PSEUDO .or. spec%type == SPECIES_PSPIO) &
+        .and. .not. (parameter_defined(OPTION__SPECIES__FILE) .or. parameter_defined(OPTION__SPECIES__DB_FILE))) then
+        ! we need to read the species from the pseudopotential set
+
+        !if the set was not defined, use the default set
+        if(.not. parameter_defined(OPTION__SPECIES__SET)) spec%pseudopotential_set = pseudo_set
+
+        call read_from_set(spec, set_read_data)
+
+        if(set_read_data == 0) then
+          call messages_write('Species '//trim(spec%label)//' is not defined in the requested pseudopotential set.')
+          call messages_fatal()
+        end if
+        
+      end if
+
       call element_init(element, spec%label)
       
       if(.not. element_valid(element)) then
@@ -1896,23 +1912,6 @@ contains
 
       call element_end(element)
 
-      if( (spec%type == SPECIES_PSEUDO .or. spec%type == SPECIES_PSPIO) &
-        .and. .not. (parameter_defined(OPTION__SPECIES__FILE) .or. parameter_defined(OPTION__SPECIES__DB_FILE))) then
-        ! we need to read the species from the pseudopotential set
-
-        !if the set was not defined, use the default set
-        if(.not. parameter_defined(OPTION__SPECIES__SET)) spec%pseudopotential_set = pseudo_set
-
-        call read_from_set(spec, set_read_data)
-
-        if(set_read_data == 0) then
-          call messages_write('Species '//trim(spec%label)//' is not defined in the requested pseudopotential set.')
-          call messages_warning()
-        end if
-        
-      end if
-
-      
     case default
       if(.not. parameter_defined(OPTION__SPECIES__MASS)) then
         spec%mass = 1.0
