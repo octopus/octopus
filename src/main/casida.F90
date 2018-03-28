@@ -141,6 +141,7 @@ module casida_oct_m
     integer           :: avg_order      !< Quadrature order for directional averaging (Gauss-Legendre scheme) 
 
     logical           :: parallel_in_eh_pairs
+    logical           :: use_scalapack
     type(mpi_grp_t)   :: mpi_grp
     logical           :: fromScratch
     logical              :: has_photons
@@ -171,21 +172,25 @@ contains
     
     PUSH_SUB(casida_run_init)
     
-    ! TODO: This comment seems to be outdated. With the newer version the
-    ! parallelization in the states using 'other' is good enough. When using
-    ! ScaLAPACK/ELPA, it is even necessary since these functions work only with
-    ! the mpi_world communicator... --- STO
-    ! ---
     ! Pure 'other' parallelization is a bad idea. Trying to solve the Poisson equation separately on each node
     ! consumes excessive memory and time (easily more than is available). In principle, the line below would setup
     ! joint domain/other parallelization, but 'other' parallelization takes precedence, especially since
     ! multicomm_init does not know the actual problem size and uses a fictitious value of 10000, making it
     ! impossible to choose joint parallelization wisely, and generally resulting in a choice of only one domain
     ! group. FIXME! --DAS
-    ! ---
+    ! This is not completely true anymore. The 'other' parallelization over
+    ! electron-hole pairs works quite well. For smaller matrices, a combination
+    ! seems to give the fastest run times. For larger matrices (more than a few
+    ! thousand entries per dimension), CasidaUseScalapackLayout is needed for
+    ! the Casida matrix to fit into memory; this takes the cores from the
+    ! 'other' strategy. For very large matrices (more than 100000), it is
+    ! advisable to use only the 'other' strategy because the diagonalization
+    ! uses most of the computation time.
+    ! Thus you may want to enable this or a combination to get better
+    ! performance - STO, 03/2018
 
-    call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .true.)
-    !call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .false.) ! enabled, but not default
+    call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .false.) ! enabled, but not default
+
     call calc_mode_par_unset_parallelization(P_STRATEGY_KPOINTS) ! disabled. FIXME: could be implemented.
 
     POP_SUB(casida_run_init)
@@ -314,7 +319,6 @@ contains
     !%Description
     !% Activate the photon Casida
     !%End
-    
     call parse_variable('Photons', .false., cas%has_photons)
     cas%pt_nmodes = 0
     if (cas%has_photons) then
@@ -412,6 +416,27 @@ contains
     !%End
     call parse_variable('CasidaHermitianConjugate', .false., cas%herm_conj)
 
+    !%Variable CasidaUseScalapackLayout
+    !%Type logical
+    !%Section Linear Response::Casida
+    !%Default false
+    !%Description
+    !% Large matrices with more than a few thousand rows and columns usually do
+    !% not fit into the memory of one processor anymore. With this option, the
+    !% Casida matrix is distributed in block-cyclic fashion over all cores in the
+    !% ParOther group. The diagonalization is done in parallel using ScaLAPACK
+    !% or ELPA, if available. For very large matrices (>100000), only the
+    !% ParOther strategy should be used because the diagonalization dominates
+    !% the run time of the computation.
+    !%End
+    call parse_variable('CasidaUseScalapackLayout', .false., cas%use_scalapack)
+#ifndef HAVE_SCALAPACK
+    if(cas%use_scalapack) then
+      message(1) = "ScaLAPACK layout requested, but code not compiled with ScaLAPACK"
+      call messages_fatal(1)
+    end if
+#endif
+
     !%Variable CasidaPrintExcitations
     !%Type string
     !%Section Linear Response::Casida
@@ -422,12 +447,14 @@ contains
     !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
     !% valid.
     !%End
-#ifndef HAVE_SCALAPACK
     call parse_variable('CasidaPrintExcitations', "all", cas%print_exst)
-#else
-    ! do not print excited states -> too many files generated!
-    call parse_variable('CasidaPrintExcitations', "none", cas%print_exst)
-#endif
+    if(cas%use_scalapack) then
+      ! do not print excited states -> too many files generated!
+      cas%print_exst = "none"
+      message(1) = "Using ScaLAPACK layout, thus disabling output of excited states."
+      message(2) = "This options creates too many files for large Casida matrices."
+      call messages_info(2)
+    end if
 
     !%Variable CasidaWeightThreshold
     !%Type float
@@ -477,6 +504,12 @@ contains
       !% If false, the excited-state forces that are produced are only the gradients of the excitation energy.
       !%End
       call parse_variable('CasidaCalcForcesSCF', .false., cas%calc_forces_scf)
+
+      if(cas%use_scalapack) then
+        message(1) = "Info: Forces calculation not compatible with ScaLAPACK layout."
+        message(2) = "Using normal layout."
+        call messages_info(2)
+      end if
     end if
 
     ! Initialize structure
@@ -568,6 +601,12 @@ contains
 
     cas%kernel_lrc_alpha = sys%ks%xc%kernel_lrc_alpha
     cas%states_are_real = states_are_real(sys%st)
+    if(cas%use_scalapack .and. .not. cas%states_are_real) then
+      call messages_experimental("Complex wavefunctions with ScaLAPACK layout")
+      message(1) = "ScaLAPACK layout requested with complex wavefunctions."
+      message(2) = "This has not been tested, please proceed with caution!"
+      call messages_warning(2)
+    end if
 
     write(message(1), '(a,i9)') "Number of occupied-unoccupied pairs: ", cas%n_pairs
     call messages_info(1)
@@ -582,57 +621,64 @@ contains
     ! now let us take care of initializing the parallel stuff
     cas%parallel_in_eh_pairs = multicomm_strategy_is_parallel(sys%mc, P_STRATEGY_OTHER)
     if(cas%parallel_in_eh_pairs) then
-      !call mpi_grp_init(cas%mpi_grp, sys%mc%group_comm(P_STRATEGY_OTHER))
-      !cas%mpi_grp = mpi_world
-      call mpi_grp_copy(cas%mpi_grp, mpi_world)
+      call mpi_grp_init(cas%mpi_grp, sys%mc%group_comm(P_STRATEGY_OTHER))
     else
       call mpi_grp_init(cas%mpi_grp, -1)
     end if
 
-    ! initialize block-cyclic matrix
+    if(cas%use_scalapack .and. .not. cas%parallel_in_eh_pairs) then
+      message(1) = "ScaLAPACK layout requested, but 'Other' parallelization strategy not available."
+      message(2) = "Please set ParOther to use the ScaLAPACK layout."
+      message(3) = "Continuing without ScaLAPACK layout."
+      call messages_info(3)
+      cas%use_scalapack = .false.
+    end if
+
     ! dimension of matrix
     cas%n = cas%n_pairs+cas%pt_nmodes
 
+    ! initialize block-cyclic matrix
+    if(cas%use_scalapack) then
 #ifdef HAVE_SCALAPACK
-    ! processor layout: always use more processors for rows, this leads to
-    ! better load balancing when computing the matrix elements
-    np = cas%mpi_grp%size
-    np_cols = 1
-    if(np > 3) then
-      do ii = floor(sqrt(real(np))), 2, -1
-        if(mod(np, ii) == 0) then
-          np_cols = ii
-          exit
-        end if
-      end do
-    end if
-    np_rows = np / np_cols
+      ! processor layout: always use more processors for rows, this leads to
+      ! better load balancing when computing the matrix elements
+      np = cas%mpi_grp%size
+      np_cols = 1
+      if(np > 3) then
+        do ii = floor(sqrt(real(np))), 2, -1
+          if(mod(np, ii) == 0) then
+            np_cols = ii
+            exit
+          end if
+        end do
+      end if
+      np_rows = np / np_cols
 
-    ! recommended block size: 64, take smaller value for smaller matrices for
-    ! better load balancing
-    cas%block_size = min(64, cas%n_pairs / np_rows)
-    ! limit to a minimum block size of 5 for diagonalization efficiency
-    cas%block_size = max(5, cas%block_size)
-    write(message(1), '(A,I5,A,I5,A,I5,A)') 'Parallel layout: using block size of ',&
-      cas%block_size, ' and a processor grid with ', np_rows, 'x', np_cols, &
-      ' processors (rows x cols)'
-    call messages_info(1)
+      ! recommended block size: 64, take smaller value for smaller matrices for
+      ! better load balancing
+      cas%block_size = min(64, cas%n_pairs / np_rows)
+      ! limit to a minimum block size of 5 for diagonalization efficiency
+      cas%block_size = max(5, cas%block_size)
+      write(message(1), '(A,I5,A,I5,A,I5,A)') 'Parallel layout: using block size of ',&
+        cas%block_size, ' and a processor grid with ', np_rows, 'x', np_cols, &
+        ' processors (rows x cols)'
+      call messages_info(1)
 
-    call blacs_proc_grid_init(cas%proc_grid, mpi_world, procdim = (/np_rows, np_cols/))
+      call blacs_proc_grid_init(cas%proc_grid, cas%mpi_grp, procdim = (/np_rows, np_cols/))
 
-    ! get size of local matrices
-    cas%nb_rows = max(1, numroc(cas%n, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow))
-    cas%nb_cols = max(1, numroc(cas%n, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol))
+      ! get size of local matrices
+      cas%nb_rows = max(1, numroc(cas%n, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow))
+      cas%nb_cols = max(1, numroc(cas%n, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol))
 
-    ! get ScaLAPACK descriptor
-    call descinit(cas%desc(1), cas%n, cas%n, cas%block_size, cas%block_size, 0, 0, &
-      cas%proc_grid%context, cas%nb_rows, info)
-
-#else
-    ! set to full size
-    cas%nb_rows = cas%n
-    cas%nb_cols = cas%n
+      ! get ScaLAPACK descriptor
+      call descinit(cas%desc(1), cas%n, cas%n, cas%block_size, cas%block_size, 0, 0, &
+        cas%proc_grid%context, cas%nb_rows, info)
 #endif
+    else
+      ! set to full size
+      cas%nb_rows = cas%n
+      cas%nb_cols = cas%n
+    end if
 
 
     ! allocate stuff
@@ -642,9 +688,10 @@ contains
       SAFE_ALLOCATE(    cas%dtm(1:cas%n_pairs+cas%pt_nmodes, 1:cas%sb_dim))
       SAFE_ALLOCATE(cas%dkernel(1:cas%nb_rows, 1:cas%nb_cols))
     else
-      SAFE_ALLOCATE(   cas%zmat(1:cas%n_pairs, 1:cas%n_pairs))
-      SAFE_ALLOCATE(    cas%ztm(1:cas%n_pairs, 1:cas%sb_dim))
-      SAFE_ALLOCATE(cas%zkernel(1:cas%n_pairs, 1:cas%n_pairs))
+      ! caution: ScaLAPACK layout not yet tested for complex wavefunctions!
+      SAFE_ALLOCATE(   cas%zmat(1:cas%nb_rows, 1:cas%nb_cols))
+      SAFE_ALLOCATE(    cas%ztm(1:cas%n_pairs+cas%pt_nmodes, 1:cas%sb_dim))
+      SAFE_ALLOCATE(cas%zkernel(1:cas%nb_rows, 1:cas%nb_cols))
     end if
     SAFE_ALLOCATE(   cas%f(1:cas%n_pairs+cas%pt_nmodes))
     SAFE_ALLOCATE(   cas%s(1:cas%n_pairs))
@@ -750,9 +797,11 @@ contains
     if (cas%has_photons) then
       call photon_mode_end(cas%pt)
     end if
+    if(cas%use_scalapack) then
 #ifdef HAVE_SCALAPACK
-    call blacs_proc_grid_end(cas%proc_grid)
+      call blacs_proc_grid_end(cas%proc_grid)
 #endif
+    end if
 
     POP_SUB(casida_type_end)
   end subroutine casida_type_end
@@ -844,17 +893,14 @@ contains
       end if
     end select
 
-#ifndef HAVE_SCALAPACK
-    if (mpi_grp_is_root(cas%mpi_grp)) then
-#endif
+    ! compute oscillator strengths on all processes for the ScaLAPACK layout
+    if (mpi_grp_is_root(cas%mpi_grp) .or. cas%use_scalapack) then
       if(cas%states_are_real) then
         call doscillator_strengths(cas, mesh, st)
       else
         call zoscillator_strengths(cas, mesh, st)
       end if
-#ifndef HAVE_SCALAPACK
     end if
-#endif
 
     if(cas%calc_forces) then
       if(cas%states_are_real) then
@@ -1054,24 +1100,28 @@ contains
     implicit none
     type(casida_t), intent(inout) :: cas
     integer, intent(in) :: jb_local
-#ifndef HAVE_SCALAPACK
-    jb = jb_local
-#else
-    ! get global value
-    jb = indxl2g(jb_local, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
+
+    if(.not. cas%use_scalapack) then
+      jb = jb_local
+    else
+#ifdef HAVE_SCALAPACK
+      jb = indxl2g(jb_local, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
 #endif
+    end if
   end function get_global_row
 
   integer function get_global_col(cas, ia_local) result(ia)
     implicit none
     type(casida_t), intent(inout) :: cas
     integer, intent(in) :: ia_local
-#ifndef HAVE_SCALAPACK
-    ia = ia_local
-#else
-    ! get global value
-    ia = indxl2g(ia_local, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
+
+    if(.not. cas%use_scalapack) then
+      ia = ia_local
+    else
+#ifdef HAVE_SCALAPACK
+      ia = indxl2g(ia_local, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
 #endif
+    end if
   end function get_global_col
 
   subroutine local_indices(cas, ia, jb, on_this_processor, ia_local, jb_local)
@@ -1081,24 +1131,25 @@ contains
     logical, intent(out) :: on_this_processor
     integer, intent(out) :: ia_local, jb_local
     integer :: ia_proc, jb_proc
-#ifndef HAVE_SCALAPACK
-    on_this_processor = .true.
-    ia_local = ia
-    jb_local = jb
-#else
-    ia_proc = indxg2p(ia, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
-    jb_proc = indxg2p(jb, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
-    if(cas%proc_grid%mycol == ia_proc .and. cas%proc_grid%myrow == jb_proc) then
-    !if(mpi_world%rank == ia_proc .and. mpi_world%rank == jb_proc) then
+    if(.not. cas%use_scalapack) then
       on_this_processor = .true.
-      ia_local = indxg2l(ia, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
-      jb_local = indxg2l(jb, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
+      ia_local = ia
+      jb_local = jb
     else
-      on_this_processor = .false.
-      ia_local = -1
-      jb_local = -1
-    end if
+#ifdef HAVE_SCALAPACK
+      ia_proc = indxg2p(ia, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
+      jb_proc = indxg2p(jb, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
+      if(cas%proc_grid%mycol == ia_proc .and. cas%proc_grid%myrow == jb_proc) then
+        on_this_processor = .true.
+        ia_local = indxg2l(ia, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
+        jb_local = indxg2l(jb, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
+      else
+        on_this_processor = .false.
+        ia_local = -1
+        jb_local = -1
+      end if
 #endif
+    end if
   end subroutine local_indices
 
 #include "undef.F90"
