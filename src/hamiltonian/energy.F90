@@ -48,6 +48,8 @@ module energy_oct_m
     FLOAT :: int_en_pcm  !< 1/2 [v_Hartree]*[q_pcm_n] 
     FLOAT :: int_ne_pcm  !< 1/2 [v_n]*[q_pcm_e] 
     FLOAT :: int_nn_pcm  !< 1/2 [v_n]*[q_pcm_n]
+    FLOAT :: int_e_ext_pcm  !< [v_Hartree]*[q_pcm_ext]
+    FLOAT :: int_n_ext_pcm  !< [v_n]*[q_pcm_ext]
     FLOAT :: pcm_corr    !< Int[n (v_e_rs + v_n_rs)]
     FLOAT :: kinetic     !< Kinetic energy of the non-interacting (KS) system of electrons
     FLOAT :: extern      !< External     V = <Phi|V|Phi> = Int[n v] (if no non-local pseudos exist)
@@ -95,6 +97,8 @@ contains
     this%int_en_pcm   = M_ZERO
     this%int_ne_pcm   = M_ZERO
     this%int_nn_pcm   = M_ZERO
+    this%int_e_ext_pcm   = M_ZERO
+    this%int_n_ext_pcm   = M_ZERO
     this%pcm_corr     = M_ZERO
     this%kinetic      = M_ZERO
     this%extern       = M_ZERO
@@ -141,6 +145,8 @@ contains
     eout%int_en_pcm   = ein%int_en_pcm
     eout%int_nn_pcm   = ein%int_nn_pcm
     eout%int_ne_pcm   = ein%int_ne_pcm
+    eout%int_e_ext_pcm   = ein%int_e_ext_pcm
+    eout%int_n_ext_pcm   = ein%int_n_ext_pcm
     eout%pcm_corr     = ein%pcm_corr
     eout%kinetic      = ein%kinetic
     eout%extern       = ein%extern

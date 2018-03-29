@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2011 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira
+!! Copyright (C) 2015-2018 Xavier Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -45,10 +45,11 @@ module ps_xml_oct_m
     FLOAT              :: valence_charge
     integer            :: lmax
     integer            :: llocal
-    FLOAT              :: mesh_spacing
     integer            :: nchannels
     integer            :: grid_size
     integer            :: nwavefunctions
+    FLOAT, allocatable :: grid(:)
+    FLOAT, allocatable :: weights(:)
     FLOAT, allocatable :: potential(:, :)
     FLOAT, allocatable :: wavefunction(:, :)
     FLOAT, allocatable :: projector(:, :, :)
@@ -64,9 +65,10 @@ module ps_xml_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_xml_init(this, filename, ierr)
+  subroutine ps_xml_init(this, filename, fmt, ierr)
     type(ps_xml_t),   intent(inout) :: this
     character(len=*), intent(in)    :: filename
+    integer,          intent(in)    :: fmt
     integer,          intent(out)   :: ierr
 
     integer :: ll, ii, ic, jc
@@ -76,7 +78,7 @@ contains
 
     this%initialized = .false.
     
-    call pseudo_init(pseudo, filename, ierr)
+    call pseudo_init(pseudo, filename, fmt, ierr)
 
     if(ierr == PSEUDO_STATUS_FILE_NOT_FOUND) then
       call messages_write("Pseudopotential file '" // trim(filename) // "' not found")
@@ -84,7 +86,7 @@ contains
     end if
 
     if(ierr == PSEUDO_STATUS_UNKNOWN_FORMAT) then
-      call messages_write("Cannot determine the format for pseudopotential file '" // trim(filename) // "' not found")
+      call messages_write("Cannot determine the format for pseudopotential file '" // trim(filename) // "'")
       call messages_fatal()
     end if
 
@@ -110,7 +112,6 @@ contains
 
     this%initialized = .true.
     this%valence_charge = pseudo_valence_charge(pseudo)
-    this%mesh_spacing = pseudo_mesh_spacing(pseudo)
     this%mass = pseudo_mass(pseudo)
     this%lmax = pseudo_lmax(pseudo)
     this%llocal = pseudo_llocal(pseudo) 
@@ -119,6 +120,12 @@ contains
     this%kleinman_bylander = (pseudo_type(pseudo) == PSEUDO_TYPE_KLEINMAN_BYLANDER)
 
     this%grid_size = pseudo_mesh_size(pseudo)
+
+    SAFE_ALLOCATE(this%grid(1:this%grid_size))
+    SAFE_ALLOCATE(this%weights(1:this%grid_size))
+    
+    call pseudo_grid(pseudo, this%grid(1))
+    call pseudo_grid_weights(pseudo, this%weights(1))
     
     if(.not. this%kleinman_bylander) then
 
@@ -132,13 +139,16 @@ contains
 
     else
 
-      SAFE_ALLOCATE(this%potential(1:this%grid_size, -1:-1))
+      SAFE_ALLOCATE(this%potential(1:this%grid_size, this%llocal:this%llocal))
       
-      call pseudo_local_potential(pseudo, this%potential(1, -1))
+      call pseudo_local_potential(pseudo, this%potential(1, this%llocal))
 
       SAFE_ALLOCATE(this%projector(1:this%grid_size, 0:this%lmax, 1:this%nchannels))
+
+      this%projector = CNST(0.0)
       
       do ll = 0, this%lmax
+        if(this%llocal == ll) cycle
         do ic = 1, this%nchannels
           call pseudo_projector(pseudo, ll, ic, this%projector(1, ll, ic))
         end do
@@ -169,6 +179,7 @@ contains
     end if
 
     this%has_density = pseudo_has_density(pseudo)
+
     if(this%has_density) then
       SAFE_ALLOCATE(this%density(1:this%grid_size))
       call pseudo_density(pseudo, this%density(1))
@@ -194,6 +205,7 @@ contains
     
     integer :: ll, ip
     FLOAT   :: nrm, rr
+    FLOAT, allocatable :: grid(:), weights(:)
 
     PUSH_SUB(ps_xml_check_normalization)
 
@@ -201,8 +213,8 @@ contains
     do ll = 0, this%lmax
       nrm = 0.0
       do ip = 1, this%grid_size
-        rr = (ip - 1)*this%mesh_spacing
-        nrm = nrm + this%wavefunction(ip, ll)**2*this%mesh_spacing*rr**2
+        rr = this%grid(ip)
+        nrm = nrm + this%wavefunction(ip, ll)**2*this%weights(ip)*rr**2
       end do
       nrm = sqrt(nrm)
 
@@ -214,7 +226,7 @@ contains
       end if
 
     end do
-      
+    
     POP_SUB(ps_xml_check_normalization)
   end subroutine ps_xml_check_normalization
   
@@ -226,6 +238,8 @@ contains
 
     call pseudo_end(this%pseudo)
 
+    SAFE_DEALLOCATE_A(this%grid)
+    SAFE_DEALLOCATE_A(this%weights)
     SAFE_DEALLOCATE_A(this%potential)
     SAFE_DEALLOCATE_A(this%wavefunction)
     SAFE_DEALLOCATE_A(this%projector)

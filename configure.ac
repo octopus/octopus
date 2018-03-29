@@ -415,11 +415,12 @@ AC_CONFIG_FILES([Makefile
   share/pseudopotentials/quantum-simulation.org/hscv/pbe/Makefile
   share/pseudopotentials/quantum-simulation.org/sg15/Makefile
   share/pseudopotentials/pseudo-dojo.org/Makefile  
-  share/pseudopotentials/pseudo-dojo.org/pbe_s_sr/Makefile
-  share/pseudopotentials/pseudo-dojo.org/pbesol_s_sr/Makefile  
-  share/pseudopotentials/pseudo-dojo.org/pw_s_sr/Makefile
   share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbe_standard/Makefile
   share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbe_stringent/Makefile
+  share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbesol_standard/Makefile
+  share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbesol_stringent/Makefile
+  share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pw_standard/Makefile
+  share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pw_stringent/Makefile
   share/recipes/Makefile
   share/recipes/da/Makefile
   share/recipes/de/Makefile
