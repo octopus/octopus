@@ -301,7 +301,9 @@ contains
   end subroutine species_atom_density
 
   ! ---------------------------------------------------------
-
+  ! A non periodized version of the routine species_atom_density
+  ! This is used for the Hirshfeld routines
+  ! TODO: implement it for other approaches than pseudo potentials.
  subroutine species_atom_density_np(mesh, sb, atom, pos,  spin_channels, rho)
     type(mesh_t),         intent(in)    :: mesh
     type(simul_box_t),    intent(in)    :: sb
@@ -320,7 +322,8 @@ contains
     rho = M_ZERO
     species => atom%species
     ps => species_ps(species)
-   !case (SPECIES_PSEUDO, SPECIES_PSPIO)
+    select case (species_type(species))
+    case (SPECIES_PSEUDO, SPECIES_PSPIO)
       ! ...from pseudopotentials
 
       if(ps_has_density(ps)) then
@@ -368,8 +371,10 @@ contains
         rho(1:mesh%np, 1:spin_channels) = rho(1:mesh%np, 1:spin_channels)*species_zval(species)/nrm
 
       end if
+    case default
+      call messages_not_implemented('species_atom_density_np for non-pseudopotential species')
 
-   ! end select
+    end select
 
     POP_SUB(species_atom_density_np)
   end subroutine species_atom_density_np
