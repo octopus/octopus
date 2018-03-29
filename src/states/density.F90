@@ -350,6 +350,7 @@ contains
     if(this%st%parallel_in_states .or. this%st%d%kpt%parallel) then
       call profiling_in(reduce_prof, "DENSITY_REDUCE")
       call comm_allreduce(this%st%st_kpt_mpi_grp%comm, this%density, dim = (/this%gr%fine%mesh%np, this%st%d%nspin/))
+      call profiling_out(reduce_prof)
     end if
 
     if(this%st%symmetrize_density) then
