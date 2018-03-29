@@ -38,7 +38,8 @@ namespace pseudopotential {
 
   public:
     
-    upf2(const std::string & filename):
+    upf2(const std::string & filename, bool uniform_grid = false):
+      pseudopotential::upf(uniform_grid),
       file_(filename),
       buffer_((std::istreambuf_iterator<char>(file_)), std::istreambuf_iterator<char>()){
       
@@ -83,9 +84,19 @@ namespace pseudopotential {
 	for(int ii = 0; ii < size; ii++) stst >> grid_[start_point_ + ii];
 	
 	assert(fabs(grid_[0]) <= 1e-10);
+      }
 
-	mesh_size_ = start_point_ + value<int>(root_node_->first_node("PP_HEADER")->first_attribute("mesh_size"));
-
+      {
+	rapidxml::xml_node<> * node = root_node_->first_node("PP_MESH")->first_node("PP_RAB");
+	
+	assert(node);
+	
+	int size = value<int>(node->first_attribute("size"));
+	grid_weights_.resize(size + start_point_);
+	std::istringstream stst(node->value());
+	grid_weights_[0] = 0.5*(grid_[1] - grid_[0]);
+	for(int ii = 0; ii < size; ii++) stst >> grid_weights_[start_point_ + ii];
+	
 	mesh_size_ = 0;
 	for(double rr = 0.0; rr <= grid_[grid_.size() - 1]; rr += mesh_spacing()) mesh_size_++;
 	
@@ -96,6 +107,7 @@ namespace pseudopotential {
       std::vector<bool> has_l(MAX_L, false);
       
       lmax_ = 0;
+      nchannels_ = 0;
 
       std::vector<int> proj_l(nprojectors());
       std::vector<int> proj_c(nprojectors());
@@ -117,9 +129,12 @@ namespace pseudopotential {
 	proj_c[iproj] = 0;
 	for(int jproj = 0; jproj < iproj; jproj++) if(read_l == proj_l[jproj]) proj_c[iproj]++;
 
+	nchannels_ = std::max(nchannels_, proj_c[iproj] + 1);
+
       }
 
       assert(lmax_ >= 0);
+      
       llocal_ = -1;
       for(int l = 0; l <= lmax_; l++) if(!has_l[l]) llocal_ = l;
 
@@ -130,7 +145,7 @@ namespace pseudopotential {
 
 	assert(node);
 
-	dij_.resize((lmax_ + 1)*nchannels()*nchannels());
+	dij_.resize((lmax_ + 1)*nchannels_*nchannels_);
 	
 	for(unsigned kk = 0; kk < dij_.size(); kk++) dij_[kk] = 0.0;
 	
@@ -146,7 +161,6 @@ namespace pseudopotential {
 	    }
 	    
 	    val *= 0.5; //convert from Rydberg to Hartree
-
 	    d_ij(proj_l[ii], proj_c[ii], proj_c[jj]) = val;
 	  }
 	}
@@ -181,10 +195,6 @@ namespace pseudopotential {
       return value<int>(root_node_->first_node("PP_HEADER")->first_attribute("z_valence"));
     }
 
-    int llocal() const {
-      return llocal_;
-    }
-
     pseudopotential::exchange exchange() const {
       std::string functional = root_node_->first_node("PP_HEADER")->first_attribute("functional")->value();
       if(functional == "PBE") return pseudopotential::exchange::PBE;
@@ -203,15 +213,6 @@ namespace pseudopotential {
       return pseudopotential::correlation::UNKNOWN;
     }
 
-    int nchannels() const {
-      if(llocal() >= 0){
-	if(lmax() == 0) return 0;
-	return nprojectors()/lmax();
-      } else {
-	return nprojectors()/(lmax() + 1);
-      }
-    }
-    
     void local_potential(std::vector<double> & potential) const {
       rapidxml::xml_node<> * node = root_node_->first_node("PP_LOCAL");
 
@@ -335,7 +336,7 @@ namespace pseudopotential {
       assert(node);
       
       int size = value<int>(node->first_attribute("size"));
-      val.resize(size);
+      val.resize(size + start_point_);
       
       std::istringstream stst(node->value());
       for(int ii = 0; ii < size; ii++) stst >> val[start_point_ + ii];
@@ -389,7 +390,7 @@ namespace pseudopotential {
     std::vector<char> buffer_;
     rapidxml::xml_document<> doc_;
     rapidxml::xml_node<> * root_node_;
-    int start_point_;
+    
     
   };
 

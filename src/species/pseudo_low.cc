@@ -129,6 +129,22 @@ extern "C" fint FC_FUNC_(pseudo_nchannels, PSEUDO_NCHANNELS)(const pseudopotenti
   return (*pseudo)->nchannels();
 }
 
+extern "C" fint FC_FUNC_(pseudo_nprojectors, PSEUDO_NPROJECTORS)(const pseudopotential::base ** pseudo){
+  return (*pseudo)->nprojectors();
+}
+
+extern "C" void FC_FUNC_(pseudo_grid, PSEUDO_GRID)(const pseudopotential::base ** pseudo, double * grid){
+  std::vector<double> val;
+  (*pseudo)->grid(val);
+  for(unsigned i = 0; i < val.size(); i++) grid[i] = val[i];
+}
+
+extern "C" void FC_FUNC_(pseudo_grid_weights, PSEUDO_GRID_WEIGHT)(const pseudopotential::base ** pseudo, double * weight){
+  std::vector<double> val;
+  (*pseudo)->grid_weights(val);
+  for(unsigned i = 0; i < val.size(); i++) weight[i] = val[i];
+}
+
 extern "C" void FC_FUNC_(pseudo_local_potential, PSEUDO_LOCAL_POTENTIAL)(const pseudopotential::base ** pseudo, double * local_potential){
   std::vector<double> val;
   (*pseudo)->local_potential(val);

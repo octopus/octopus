@@ -2,10 +2,10 @@
 
 Test       : Non-linear core corrections
 Program    : octopus
-TestGroups : short-run, finite_systems_3d
+TestGroups : short-run, pseudpotentials
 Enabled    : Yes
 
-Input      : 26-nlcc.01-Fatom.inp
+Input      : 03-nlcc.01-Fatom.inp
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -26.97584803
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -4.20331421
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 21.24593966

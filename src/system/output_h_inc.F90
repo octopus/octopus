@@ -62,6 +62,10 @@
         call dio_function_output(outp%how, dir, "vc", der%mesh, hm%ep%Vclassical, units_out%energy, err, geo = geo, grp = grp)
       end if
 
+      if(associated(hm%ep%v_static)) then
+        call dio_function_output(outp%how, dir, "vext", der%mesh, hm%ep%v_static, units_out%energy, err, geo = geo, grp = grp)
+      end if
+
       nullify(subsys_external, xpot)
       if(associated(hm%ep%subsys_external))then
         call base_potential_init(iter, hm%ep%subsys_external)
@@ -86,7 +90,7 @@
           if(outp%gradientpotential) then
             SAFE_ALLOCATE(gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
             call dderivatives_grad(der, hm%vhartree(1:der%mesh%np_part), gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
-            call io_function_output_vector(outp%how, dir, 'grad_vh', der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err, &
+            call io_function_output_vector(outp%how, dir, 'grad_vh', der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
                      geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
             SAFE_DEALLOCATE_A(gradvh)
           end if
@@ -154,6 +158,32 @@
         end do
         SAFE_DEALLOCATE_A(potential)
         nullify(tnadd_potential)
+      end if
+
+      !PCM potentials
+      if(hm%theory_level == KOHN_SHAM_DFT .and. hm%pcm%run_pcm ) then
+        if (hm%pcm%solute .and. hm%pcm%localf) then
+          call dio_function_output(outp%how, dir, 'vpcm', der%mesh, hm%pcm%v_e_rs + hm%pcm%v_n_rs + hm%pcm%v_ext_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_sol', der%mesh, hm%pcm%v_e_rs + hm%pcm%v_n_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_e', der%mesh, hm%pcm%v_e_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_n', der%mesh, hm%pcm%v_n_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_ext', der%mesh, hm%pcm%v_ext_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+        else if (hm%pcm%solute .and. .not.hm%pcm%localf) then
+          call dio_function_output(outp%how, dir, 'vpcm_sol', der%mesh, hm%pcm%v_e_rs + hm%pcm%v_n_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_e', der%mesh, hm%pcm%v_e_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_n', der%mesh, hm%pcm%v_n_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+        else if (.not.hm%pcm%solute .and. hm%pcm%localf) then
+          call dio_function_output(outp%how, dir, 'vpcm_ext', der%mesh, hm%pcm%v_ext_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+        end if
       end if
 
       if(hm%self_induced_magnetic) then
