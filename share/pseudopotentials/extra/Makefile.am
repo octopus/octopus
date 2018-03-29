@@ -22,7 +22,6 @@ extradir = $(pkgdatadir)/pseudopotentials/extra
 
 dist_extra_DATA = \
         Xe.UPF    \
-	F.UPF     \
 	C.cpi     \
 	C.fhi     \
 	Ar.psf    \
