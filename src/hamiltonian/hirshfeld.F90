@@ -57,6 +57,8 @@ module hirshfeld_oct_m
     FLOAT,            pointer     :: free_vol_r3(:,:)  !< (natoms,mesh%np)
 
   end type hirshfeld_t
+
+  real(8), parameter, public :: TOL_HIRSHFELD = CNST(1e-12)
     
 contains
 
@@ -162,7 +164,7 @@ contains
 
     do ip = 1, this%mesh%np
       dens_ip = sum(atom_density(ip, 1:this%st%d%nspin))
-      if(abs(dens_ip) > CNST(1e-12)) then
+      if(abs(dens_ip) > TOL_HIRSHFELD) then
         hirshfeld_density(ip) = sum(density(ip, 1:this%st%d%nspin))*dens_ip/this%total_density(ip)
       else
         hirshfeld_density(ip) = CNST(0.0)
@@ -198,7 +200,7 @@ contains
     
 
     do ip = 1, this%mesh%np
-      if( this%total_density(ip) > CNST(1e-15)) then
+      if( this%total_density(ip) > TOL_HIRSHFELD) then
         hirshfeld_density(ip) = this%free_vol_r3(iatom,ip)*sum(density(ip, 1:this%st%d%nspin))/this%total_density(ip)
       else
         hirshfeld_density(ip) = CNST(0.0)
@@ -230,7 +232,7 @@ contains
     
     do ip = 1, this%mesh%np
 
-      if(abs(this%total_density(ip)) > CNST(1e-12)) then
+      if(abs(this%total_density(ip)) > TOL_HIRSHFELD) then
         ddensity(ip) = this%free_vol_r3(iatom,ip)/(this%total_density(ip)*this%free_volume(iatom))
       else
         ddensity(ip) = CNST(0.0)
@@ -297,7 +299,7 @@ contains
           r_small = CNST(0.0)
           rr = CNST(0.0)
           do ip = 1, this%mesh%np
-            if(this%total_density(ip)<CNST(1e-12)) cycle
+            if(this%total_density(ip)< TOL_HIRSHFELD) cycle
 
             call mesh_r(this%mesh, ip, rr, origin = pos_j)
             rr = max(rr, r_small)
@@ -313,7 +315,7 @@ contains
             tdensity = sum(density(ip, 1:this%st%d%nspin))
             atom_dens = sum(atom_density(ip, 1:this%st%d%nspin))
             atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin))
-            if(rrj > CNST(1e-12)) then
+            if(rrj > TOL_HIRSHFELD) then
               do idir = 1, this%mesh%sb%dim
                 grad(ip, idir) = grad(ip, idir) -rri**3*atom_dens*tdensity*atom_der/this%total_density(ip)**2&
                 *(pos_j(idir) - this%mesh%x(ip, idir))/rrj
@@ -321,7 +323,7 @@ contains
             end if
             if(iatom == jatom )then
               !Only if we really have the same atoms
-              if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < CNST(1e-12))) then
+              if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < TOL_HIRSHFELD)) then
                 do idir = 1, this%mesh%sb%dim
                   grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
                   *tdensity/this%total_density(ip)*(pos_i(idir) - this%mesh%x(ip, idir))
