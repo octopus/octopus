@@ -419,7 +419,7 @@ contains
       if(ps_has_density(ps)) then
 
         call periodic_copy_init(pp, sb, atom%x, &
-          range = spline_cutoff_radius(ps%Ur(1, 1), ps%projectors_sphere_threshold))
+          range = spline_cutoff_radius(ps%density_der(1, 1), ps%projectors_sphere_threshold))
 
         do icell = 1, periodic_copy_num(pp)
           pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
@@ -428,7 +428,7 @@ contains
             rr = max(rr, r_small)
             
             do isp = 1, spin_channels
-              if(rr >= spline_range_max(ps%density(isp))) cycle
+              if(rr >= spline_range_max(ps%density_der(isp))) cycle
               drho(ip, isp) = drho(ip, isp) + spline_eval(ps%density_der(isp), rr)
             end do
             
