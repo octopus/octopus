@@ -49,6 +49,9 @@ dist_share_DATA =                                  \
 	10-helium_upf.03-gs_filter_bsb.inp         \
 	11-isotopes.01-deuterium.inp               \
 	11-isotopes.02-tritium.inp                 \
-	11-isotopes.test
+	11-isotopes.test                           \
+	12_mix_and_match.01-mgo.inp                \
+	12_mix_and_match.test
+
 
 CLEANFILES = *~ *.bak
