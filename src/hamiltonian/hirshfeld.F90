@@ -90,15 +90,11 @@ contains
       ps => species_ps(this%geo%atom(iatom)%species)
       atom_density_acc(1:this%mesh%np) = M_ZERO
 
+      rmax = CNST(0.0)
+      do isp = 1, this%st%d%nspin
+        rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
+      end do
 
-    rmax = CNST(0.0)
-    do isp = 1, this%st%d%nspin
-      rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
-    end do
-
-
- 
-      !call periodic_copy_init(pp, this%mesh%sb, this%geo%atom(iatom)%x, range = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold))
       call periodic_copy_init(pp, this%mesh%sb, this%geo%atom(iatom)%x, rmax)
 
       do icell = 1, periodic_copy_num(pp)
@@ -202,9 +198,7 @@ contains
     
 
     do ip = 1, this%mesh%np
-    !TODO Compute rr only if abs(dens_ip) > CNST(1e-12)
       if( this%total_density(ip) > CNST(1e-15)) then
-      !if( this%free_vol(ip) > CNST(1e-12)) then
         hirshfeld_density(ip) = this%free_vol_r3(iatom,ip)*sum(density(ip, 1:this%st%d%nspin))/this%total_density(ip)
       else
         hirshfeld_density(ip) = CNST(0.0)
@@ -270,8 +264,6 @@ contains
     SAFE_ALLOCATE(atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
     SAFE_ALLOCATE(grad(1:this%mesh%np, 1:this%mesh%sb%dim))
    
-    !TODO
-
     dposition(1:this%mesh%sb%dim) = CNST(0.0)
     grad(1:this%mesh%np, 1:this%mesh%sb%dim) = M_ZERO
     !atom_density_acc(1:this%mesh%np) = M_ZERO
@@ -285,7 +277,6 @@ contains
       rmax_j = max(rmax_j, spline_cutoff_radius(ps_j%density_der(isp), ps_j%projectors_sphere_threshold))
     end do
 
-    !print *, 'ok 1'
     call periodic_copy_init(pp_i, this%mesh%sb, this%geo%atom(iatom)%x, rmax_i)
     call periodic_copy_init(pp_j, this%mesh%sb, this%geo%atom(jatom)%x, rmax_j)
 
@@ -298,12 +289,11 @@ contains
 
       call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), pos_i, this%st%d%nspin, atom_density)
  ! ...from pseudopotentials
-      !print *, 'ok 2'
       do jcell = 1, periodic_copy_num(pp_j)
         atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
         pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%mesh%sb, jcell)
         if(ps_has_density(ps_j)) then
-          !print *, 'ok 3'
+          
           r_small = CNST(0.0)
           rr = CNST(0.0)
           do ip = 1, this%mesh%np
@@ -312,29 +302,23 @@ contains
             call mesh_r(this%mesh, ip, rr, origin = pos_j)
             rr = max(rr, r_small)
             do isp = 1, this%st%d%nspin
-              !if(rr >= spline_range_max(ps_j%density(isp))) cycle
               if(rr >= spline_range_max(ps_j%density_der(isp))) cycle
 
               atom_derivative(ip, isp) = atom_derivative(ip, isp) + spline_eval(ps_j%density_der(isp), rr)
             end do
           
-            !print *, 'ok 4'
             rri = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_i(1:this%mesh%sb%dim))**2))
             rrj = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim))**2))
 
             tdensity = sum(density(ip, 1:this%st%d%nspin))
             atom_dens = sum(atom_density(ip, 1:this%st%d%nspin))
             atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin))
-            !print *, 'ok 5'
             if(rrj > CNST(1e-12)) then
               do idir = 1, this%mesh%sb%dim
                 grad(ip, idir) = grad(ip, idir) -rri**3*atom_dens*tdensity*atom_der/this%total_density(ip)**2&
                 *(pos_j(idir) - this%mesh%x(ip, idir))/rrj
               end do
-            !else
-              !grad(ip, 1:this%mesh%sb%dim) = grad(ip, 1:this%mesh%sb%dim) + CNST(0.0)
             end if
-            !print *, 'ok 6'
             if(iatom == jatom )then
               !Only if we really have the same atoms
               if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < CNST(1e-12))) then

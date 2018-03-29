@@ -347,8 +347,6 @@ contains
 
         !we use the square root of the short-range local potential, just to put something that looks like a density
 
-        !call periodic_copy_init(pp, sb, atom%x, range = spline_cutoff_radius(ps%vl, ps%projectors_sphere_threshold))
-
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = pos)
           rr = max(rr, r_small)

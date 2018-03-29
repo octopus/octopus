@@ -292,7 +292,6 @@ contains
     ! Add the extra term for the force 
     do iatom = 1, geo%natoms
       do jatom = 1, geo%natoms
-        !print *, 'debut force'
         call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, density, dvadrr)
         force(1:sb%dim, iatom) = force(1:sb%dim, iatom) - derivative_coeff(iatom)*dvadrr(1:sb%dim)
       end do
@@ -305,8 +304,6 @@ contains
     do iatom = 1, geo%natoms
       call hirshfeld_density_derivative(this%hirshfeld, iatom, dvadens)
       Potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*dvadens(1:der%mesh%np)
-      !Potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*this%hirshfeld%free_vol_r3(iatom,1:der%mesh%np)/(this%hirshfeld%total_density(1:der%mesh%np)*this%hirshfeld%free_volume(iatom))
-
     end do
 
     call dio_function_output(1, "./", "vvdw", der%mesh, potential, unit_one, ip)

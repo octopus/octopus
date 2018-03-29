@@ -450,14 +450,8 @@ void vdw_calculate (const int natoms, const double dd, const double sr, const in
                     double * energy, double force[], double derivative_coeff[]) {
    double sr_ok;
    double dd_ok;;
-   //sr_ok=*sr;
-   //dd_ok=*dd;
-   
-   
    
   int ia;
-   printf("ok 1a dd= %f sr= %f \n", dd, sr);
-
 
   *energy = 0.0;
   // Loop to calculate the pair-wise Van der Waals energy correction.
