@@ -5,6 +5,7 @@ Program    : octopus
 TestGroups : long-run, finite_systems_3d
 Enabled    : Yes
 
+ExtraFile: 16-scfinlcao_std.Cl.psf
 Input: 16-scfinlcao_std.01-gs.inp
 
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;   -1388.70114650

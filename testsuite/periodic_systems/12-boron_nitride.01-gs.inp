@@ -37,7 +37,7 @@ ParKPoints = auto
 %
 
 %Species
- 'B' | species_pseudo | db_file | "HGH/B.hgh"
+ 'B' | species_pseudo | set | hgh_lda
 %
 
 %Coordinates

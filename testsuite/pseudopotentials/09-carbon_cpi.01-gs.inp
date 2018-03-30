@@ -9,7 +9,7 @@ UnitsOutput = ev_angstrom
 %
 
 %Species
-"C" | species_pseudo | db_file | "extra/C.cpi" | lmax | 1 | lloc | 1
+"C" | species_pseudo | file | "09-carbon_cpi.C.cpi" | lmax | 1 | lloc | 1
 %
 
 spacing = 0.19*angstrom

@@ -1,4 +1,5 @@
 #Name	Path				Z	Lmax	Lloc	Spacing	Radius
+T	"quantum-simulation.org/hscv/pbe/D_HSCV_PBE-1.0.xml"	-1	333	333	-1	-1
 Ac	"quantum-simulation.org/hscv/pbe/Ac_HSCV_PBE-1.0.xml"	-1	333	333	-1	-1
 Ag	"quantum-simulation.org/hscv/pbe/Ag_HSCV_PBE-1.0.xml"	-1	333	333	-1	-1
 Al	"quantum-simulation.org/hscv/pbe/Al_HSCV_PBE-1.0.xml"	-1	333	333	-1	-1

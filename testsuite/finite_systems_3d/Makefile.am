@@ -55,6 +55,7 @@ dist_share_DATA = \
 	08-spin_orbit_coupling_full.01-hgh.inp         \
 	08-spin_orbit_coupling_full.02-rkb.inp         \
         08-spin_orbit_coupling_full.03-unocc.inp       \
+	08-spin_orbit_coupling_full.Xe.UPF             \
 	08-spin_orbit_coupling_full.test               \
 	09-spinors.01-ground_state.inp                 \
 	09-spinors.02-rmmdiis.inp                      \
@@ -74,10 +75,12 @@ dist_share_DATA = \
 	14-fullerene_packed.01-gs.inp                 \
 	15-fullerene_stdlcao.test                     \
 	15-fullerene_stdlcao.01-gs.inp                \
-        16-scfinlcao_std.test \
-        16-scfinlcao_std.01-gs.inp \
-        17-scfinlcao_alt.test \
-        17-scfinlcao_alt.01-gs.inp \
+        16-scfinlcao_std.test                         \
+	16-scfinlcao_std.Cl.psf                       \
+        16-scfinlcao_std.01-gs.inp                    \
+        17-scfinlcao_alt.test                         \
+	17-scfinlcao_alt.Cl.psf                       \
+        17-scfinlcao_alt.01-gs.inp                    \
 	20-eigensolver.01-lobpcg.inp \
 	20-eigensolver.02-cg.inp \
 	20-eigensolver.03-cg_new.inp \
