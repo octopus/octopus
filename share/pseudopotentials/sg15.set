@@ -1,5 +1,7 @@
 #Name	Path				Z	Lmax	Lloc	Spacing	Radius
 H	"quantum-simulation.org/sg15/H_ONCV_PBE-1.0.upf"	1	333	333	0.3	8
+D	"quantum-simulation.org/sg15/H_ONCV_PBE-1.0.upf"	1	333	333	0.3	8
+T	"quantum-simulation.org/sg15/H_ONCV_PBE-1.0.upf"	1	333	333	0.3	8
 He	"quantum-simulation.org/sg15/He_ONCV_PBE-1.0.upf"	2	333	333	0.3	8
 Li	"quantum-simulation.org/sg15/Li_ONCV_PBE-1.0.upf"	3	333	333	0.3	8
 Be	"quantum-simulation.org/sg15/Be_ONCV_PBE-1.0.upf"	4	333	333	0.3	8
