@@ -75,10 +75,12 @@ dist_share_DATA = \
 	14-fullerene_packed.01-gs.inp                 \
 	15-fullerene_stdlcao.test                     \
 	15-fullerene_stdlcao.01-gs.inp                \
-        16-scfinlcao_std.test \
-        16-scfinlcao_std.01-gs.inp \
-        17-scfinlcao_alt.test \
-        17-scfinlcao_alt.01-gs.inp \
+        16-scfinlcao_std.test                         \
+	16-scfinlcao_std.Cl.psf                       \
+        16-scfinlcao_std.01-gs.inp                    \
+        17-scfinlcao_alt.test                         \
+	17-scfinlcao_alt.Cl.psf                       \
+        17-scfinlcao_alt.01-gs.inp                    \
 	20-eigensolver.01-lobpcg.inp \
 	20-eigensolver.02-cg.inp \
 	20-eigensolver.03-cg_new.inp \
