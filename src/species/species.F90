@@ -371,7 +371,7 @@ contains
     !% <tt>%Species
     !% <br>&nbsp;&nbsp;'O'       | species_pseudo         | file | 'O.psf' | lmax |  1 | lloc | 1
     !% <br>&nbsp;&nbsp;'H'       | species_pseudo         | file | '../H.hgh'
-    !% <br>&nbsp;&nbsp;'Xe'      | species_pseudo         | mass | 131.29 | db_file | "UPF/Xe.UPF"
+    !% <br>&nbsp;&nbsp;'Xe'      | species_pseudo         | set | pseudojo_pbe_stringent
     !% <br>&nbsp;&nbsp;'C'       | species_pseudo         | file | "carbon.xml"
     !% <br>&nbsp;&nbsp;'jlm'     | species_jellium        | jellium_radius | 5.0
     !% <br>&nbsp;&nbsp;'rho'     | species_charge_density | density_formula | "exp(-r/a)" | mass | 17.0 | valence | 6
@@ -381,21 +381,25 @@ contains
     !% <br>&nbsp;&nbsp;'Li1D'    | species_soft_coulomb   |  softening | 1.5 | valence | 3
     !% <br>%</tt>
     !%Option species_pseudo  -7
-    !% The species is a pseudopotential. The pseudopotential file must
-    !% be defined by the <tt>file</tt> or <tt>db_file</tt>
-    !% parameters.
+    !% The species is a pseudopotential. How to get the
+    !% pseudopotential can be specified by the <tt>file</tt> or
+    !% the <tt>set</tt> parameters. If both are missing, the
+    !% pseudopotential will be taken from the <tt>PseudopotentialSet</tt>
+    !% specified for the run, this is useful if you want to change
+    !% some parameters of the pseudo, like the <tt>mass</tt>.
     !%
-    !% The optional parameters are <tt>lmax</tt>, that defines the
-    !% maximum angular momentum component to be used, and
-    !% <tt>lloc</tt>, that defines the angular momentum to be
-    !% considered as local. When these parameters are not set, the
-    !% value for lmax is the maximum angular component from the
-    !% pseudopotential file. The default value for <tt>lloc</tt> is
-    !% taken from the pseudopotential if available, if not, it is set
-    !% to 0. Note that, depending on the type of pseudopotential, it
-    !% might not be possible to select <tt>lmax</tt> and
-    !% <tt>lloc</tt>, if that is the case the parameters will be
-    !% ignored.
+    !% The optional parameters for this type of species are
+    !% <tt>lmax</tt>, that defines the maximum angular momentum
+    !% component to be used, and <tt>lloc</tt>, that defines the
+    !% angular momentum to be considered as local. When these
+    !% parameters are not set, the value for lmax is the maximum
+    !% angular component from the pseudopotential file. The default
+    !% value for <tt>lloc</tt> is taken from the pseudopotential if
+    !% available, if not, it is set to 0. Note that, depending on the
+    !% type of pseudopotential, it might not be possible to select
+    !% <tt>lmax</tt> and <tt>lloc</tt>, if that is the case the
+    !% parameters will be ignored.
+    !%
     !%Option species_pspio  -110
     !% (experimental) Alternative method to read pseudopotentials
     !% using the PSPIO library. This species uses the same parameters
@@ -489,8 +493,7 @@ contains
     !%Option file -10010
     !% The path for the file that describes the species.
     !%Option db_file -10011
-    !% The path for the file, in the Octopus directory of
-    !% pseudopotentials, that describes the species.
+    !% Obsolete. Use the <tt>set</tt> option of the <tt>PseudopotentialSet</tt> variable instead.
     !%Option potential_formula -10012
     !% Mathematical expression that defines the potential for <tt>species_user_defined</tt>. You can use
     !% any of the <i>x</i>, <i>y</i>, <i>z</i> or <i>r</i> variables.
@@ -1762,9 +1765,9 @@ contains
         call parse_block_string(blk, row, icol + 1, spec%filename)
 
       case(OPTION__SPECIES__DB_FILE)
-        call check_duplication(OPTION__SPECIES__DB_FILE)
-        call parse_block_string(blk, row, icol + 1, spec%filename)
-        spec%filename = trim(conf%share)//'/pseudopotentials/'//trim(spec%filename)
+        call messages_write("The 'db_file' option for 'Species' block is obsolete. Please use", new_line = .true.)
+        call messages_write("the option 'set' or the variable 'PseudopotentialSet' instead.")
+        call messages_fatal()
 
       case(OPTION__SPECIES__SET)
         call check_duplication(OPTION__SPECIES__SET)
