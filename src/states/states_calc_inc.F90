@@ -505,11 +505,11 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
 
   if(.not. mesh%use_curvilinear) then
 
-    do idim = 1, dim
-      do sp = 1, mesh%np, block_size
-        size = min(block_size, mesh%np - sp + 1)
-        do ist = 1, nst
-
+    do sp = 1, mesh%np, block_size
+      size = min(block_size, mesh%np - sp + 1)
+      do ist = 1, nst
+        do idim = 1, dim
+        
           if(present(mask)) then
             if(mask(ist)) cycle
           end if
@@ -525,11 +525,11 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
 
   else
 
-    do idim = 1, dim
-      do sp = 1, mesh%np, block_size
-        size = min(block_size, mesh%np - sp + 1)
-        ep = sp - 1 + size
-        do ist = 1, nst
+    do sp = 1, mesh%np, block_size
+      size = min(block_size, mesh%np - sp + 1)
+      ep = sp - 1 + size
+      do ist = 1, nst
+        do idim = 1, dim
 
           if(present(mask)) then
             if(mask(ist)) cycle
@@ -560,14 +560,15 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   if(present(beta_ij))  &
     ss(:) = ss(:) * beta_ij(:)
 
-  do idim = 1, dim
-    do sp = 1, mesh%np, block_size
-      size = min(block_size, mesh%np - sp + 1)
+  do sp = 1, mesh%np, block_size
+    size = min(block_size, mesh%np - sp + 1)
 
-      if(present(Theta_Fi)) then
-        if(Theta_Fi /= M_ONE) &
-          call blas_scal(size, R_TOTYPE(Theta_Fi), phi(sp, idim), 1)
-      end if
+    if(present(Theta_Fi)) then
+      if(Theta_Fi /= M_ONE) &
+        call blas_scal(size, R_TOTYPE(Theta_Fi), phi(sp, idim), 1)
+    end if
+
+    do idim = 1, dim
 
       do ist = 1, nst
 
