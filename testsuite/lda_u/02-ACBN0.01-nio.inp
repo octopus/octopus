@@ -7,9 +7,10 @@ EigenSolver = rmmdiis
 
 a = 7.8809
 %Species
-"Ni" | species_pseudo | db_file | 'quantum-simulation.org/hscv/pbe/Ni_HSCV_PBE-1.0.xml' | hubbard_l | 2 | hubbard_u | 0.0
-"O" | species_pseudo | db_file | 'quantum-simulation.org/hscv/pbe/O_HSCV_PBE-1.0.xml' | hubbard_l | 1 | hubbard_u | 0.0
+"Ni" | species_pseudo | hubbard_l | 2 
+"O"  | species_pseudo | hubbard_l | 1 
 %
+PseudopotentialSet = hscv_pbe
 DFTULevel = dft_u_acbn0
 XCFunctional=gga_x_pbe + gga_c_pbe
 

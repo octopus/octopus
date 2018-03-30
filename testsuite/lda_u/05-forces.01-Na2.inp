@@ -4,7 +4,7 @@ ExperimentalFeatures = yes
 dist = 3.0
 
 %Species
- "Na" | species_pseudo | db_file | 'PSF/Na.psf' | hubbard_l | 0 | hubbard_u | 2.0/27.21138 
+ "Na" | species_pseudo | set | standard | hubbard_l | 0 | hubbard_u | 2.0/27.21138 
 %
 
 %Coordinates
