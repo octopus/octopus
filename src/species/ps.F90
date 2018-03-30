@@ -357,8 +357,6 @@ contains
       SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
       SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
 
-      call pseudo_grid(ps_xml%pseudo, ps%g%rofi(1))
-      
       do ii = 1, ps%g%nrval
         ps%g%rofi(ii) = ps_xml%grid(ii)
         ps%g%r2ofi(ii) = ps_xml%grid(ii)**2
@@ -1052,9 +1050,7 @@ contains
 
     PUSH_SUB(ps_xml_load)
 
-    if(ps_xml%kleinman_bylander .and. ps_xml%nchannels == 2 .and. ps_xml%llocal == -1) then
-      ps%hamann = .true.
-    end if
+    ps%hamann = (ps_xml%kleinman_bylander .and. ps_xml%nchannels == 2 .and. ps_xml%llocal == -1)
     
     ps%nlcc = ps_xml%nlcc
 

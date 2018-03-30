@@ -1,0 +1,14 @@
+CalculationMode = gs
+
+PseudopotentialSet = sg15
+
+%Coordinates
+ 'T' | 0.0 | 0.0 | 0.0
+%
+
+Spacing = 0.35
+Radius = 6.0
+
+Debug = info
+
+ExperimentalFeatures = yes

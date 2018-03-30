@@ -1,4 +1,4 @@
-## Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+## Copyright (C) 2002-2018 M. Marques, A. Castro, A. Rubio, G. Bertsch, X. Andrade
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -409,7 +409,6 @@ AC_CONFIG_FILES([Makefile
   share/pseudopotentials/Makefile
   share/pseudopotentials/PSF/Makefile
   share/pseudopotentials/HGH/Makefile
-  share/pseudopotentials/extra/Makefile
   share/pseudopotentials/quantum-simulation.org/Makefile
   share/pseudopotentials/quantum-simulation.org/hscv/Makefile
   share/pseudopotentials/quantum-simulation.org/hscv/lda/Makefile

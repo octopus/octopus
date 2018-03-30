@@ -29,6 +29,7 @@ dist_share_DATA =                                  \
 	02-cu2_hgh.03_gs_current_fast.inp          \
 	03-nlcc.test                               \
 	03-nlcc.01-Fatom.inp                       \
+	03-nlcc.F.UPF                              \
 	04-carbon_dojo_psml.test                   \
 	04-carbon_dojo_psml.pseudo.psml            \
 	04-carbon_dojo_psml.01-gs.inp              \
@@ -39,13 +40,22 @@ dist_share_DATA =                                  \
 	07-carbon_dojo_lda.01-gs.inp               \
 	07-carbon_dojo_lda.test                    \
 	08-carbon_fhi.01-gs.inp                    \
+	08-carbon_fhi.01-C.fhi                     \
 	08-carbon_fhi.test                         \
 	09-carbon_cpi.01-gs.inp                    \
+	09-carbon_cpi.C.cpi                        \
 	09-carbon_cpi.test                         \
 	10-helium_upf.test                         \
 	10-helium_upf.pbe-mt.UPF                   \
 	10-helium_upf.01-gs_nofilter.inp           \
 	10-helium_upf.02-gs_filter_ts.inp          \
-	10-helium_upf.03-gs_filter_bsb.inp
+	10-helium_upf.03-gs_filter_bsb.inp         \
+	11-isotopes.01-deuterium.inp               \
+	11-isotopes.02-tritium.inp                 \
+	11-isotopes.test                           \
+	12_mix_and_match.01-mgo.inp                \
+	12_mix_and_match.test                      \
+	13-U235.01-gs.inp                          \
+        13-U235.test 
 
 CLEANFILES = *~ *.bak

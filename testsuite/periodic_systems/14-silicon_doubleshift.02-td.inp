@@ -61,4 +61,4 @@ Tpulse = 210
 %
 
 TDOutput = laser + total_current + n_excited_el
-
+OutputFormat = plane_x
