@@ -20,9 +20,7 @@
 
 extradir = $(pkgdatadir)/pseudopotentials/extra
 
-dist_extra_DATA = \
-	C.cpi     \
-	C.fhi
+dist_extra_DATA = 
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
 # the `distcheck' target) the pseudopotential files have to be accessible
