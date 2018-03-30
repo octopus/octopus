@@ -943,7 +943,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
         if(ll == 0) nSorbitals = nSorbitals + 1
         work = max(work, ii)
 
-        if( hubbardj /= 0 .and. jj == 0 ) then
+        if( hubbardj /= 0 .and. abs(jj) > M_EPSILON ) then
           write(message(1),'(a,i1,a)') 'Atom ', ia, ' has no j-dependent atomic wavefunction.'
           write(message(2),'(a)') 'This is not compatible with the hubbard_j option.'
           call messages_fatal(2)  
