@@ -37,9 +37,7 @@ ParKPoints = auto
   0 | 0 | 0
 %
 
-%Species
- 'B' | species_pseudo | db_file | "HGH/B.hgh"
-%
+PseudopotentialSet = hgh_lda
 
 %Coordinates
  'B' | 0.0    | 0.0  | 0.00
