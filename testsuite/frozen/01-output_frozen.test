@@ -13,7 +13,7 @@ match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -4.99930611
 
 # config.json
 match ; Config.json (mesh)    ; GREPFIELD(static/frozen/config.json, '\"spacing\"\: \[', 1, 3) ;  0.377945227
-match ; Config.json (species) ; GREPFIELD(static/frozen/config.json, '\"def\_rsize\"\:', 2)    ; -1.0
+match ; Config.json (species) ; GREPFIELD(static/frozen/config.json, '\"def\_rsize\"\:', 2)    ;  1.322800000000000E+001
 match ; Config.json (atom)    ; GREPFIELD(static/frozen/config.json, '\"x\"\: \[',       1, 3) ;  0.0
 match ; Config.json (density) ; GREPFIELD(static/frozen/config.json, '\"charge\"\: \[',  1, 1) ;  1.0
 
