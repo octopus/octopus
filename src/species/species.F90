@@ -489,7 +489,7 @@ contains
     !%Option jellium_radius -10007
     !% The radius of the sphere for <tt>species_jellium</tt>. If this value is not specified,
     !% the default of 0.5 bohr is used.
-    !%Option set -10017
+    !%Option set -10011
     !% For a <tt>species_pseudo</tt>, get the pseudopotential from a
     !% particular set. This flag must be followed with one of the
     !% valid values for the variable <tt>PseudopotentialSet</tt>.
@@ -501,25 +501,25 @@ contains
     !% The softening parameter <i>a</i> for <tt>species_soft_coulomb</tt> in units of length.
     !%Option file -10010
     !% The path for the file that describes the species.
-    !%Option db_file -10011
+    !%Option db_file -10012
     !% Obsolete. Use the <tt>set</tt> option of the <tt>PseudopotentialSet</tt> variable instead.
-    !%Option potential_formula -10012
+    !%Option potential_formula -10013
     !% Mathematical expression that defines the potential for <tt>species_user_defined</tt>. You can use
     !% any of the <i>x</i>, <i>y</i>, <i>z</i> or <i>r</i> variables.
-    !%Option density_formula -10013
+    !%Option density_formula -10014
     !% Mathematical expression that defines the charge density for <tt>species_charge_density</tt>. You can use
     !% any of the <i>x</i>, <i>y</i>, <i>z</i> or <i>r</i> variables.
-    !%Option thickness -10014
+    !%Option thickness -10015
     !% The thickness of the slab for species_jellium_slab. Must be positive.
-    !%Option vdw_radius -10015
+    !%Option vdw_radius -10016
     !% The van der Waals radius that will be used for this species.
-    !%Option volume -10016
+    !%Option volume -10017
     !% Name of a volume block
-    !%Option hubbard_l -10017
+    !%Option hubbard_l -10018
     !% The angular-momentum for which the effective U will be applied.
-    !%Option hubbard_u -10018
+    !%Option hubbard_u -10019
     !% The effective U that will be used for the LDA+U calculations.
-    !%Option hubbard_j -10019
+    !%Option hubbard_j -10020
     !% The value of j (hubbard_l-1/2 or hubbard_l+1/2) on which the effective U is applied.
     !%End
 
@@ -1767,7 +1767,7 @@ contains
           call messages_input_error('Species', "The 'lloc' parameter in species "//trim(spec%label)//" cannot be negative")
         end if
 
-       case(OPTION__SPECIES__HUBBARD_L)
+      case(OPTION__SPECIES__HUBBARD_L)
         call check_duplication(OPTION__SPECIES__HUBBARD_L)
         call parse_block_integer(blk, row, icol + 1, spec%hubbard_l)
 
