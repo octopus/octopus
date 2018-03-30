@@ -23,14 +23,7 @@ extradir = $(pkgdatadir)/pseudopotentials/extra
 dist_extra_DATA = \
         Xe.UPF    \
 	C.cpi     \
-	C.fhi     \
-	Ar.psf    \
-	As.psf    \
-	Au.psf    \
-	Cl.psf    \
-	Ga.psf    \
-	Ne.psf    \
-	Xe.psf
+	C.fhi
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
 # the `distcheck' target) the pseudopotential files have to be accessible
