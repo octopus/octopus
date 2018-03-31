@@ -71,7 +71,7 @@ contains
     
     nelement = max(0, loct_number_of_lines(fname) - 3) 
 
-    iunit = io_open(trim(conf%share)//'/pseudopotentials/elements', action='read', status='old', die=.false.)
+    iunit = io_open(trim(conf%share)//'/pseudopotentials/elements.dat', action='read', status='old', die=.false.)
 
     ! skip comment lines
     read(iunit, *)
