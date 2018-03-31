@@ -24,6 +24,7 @@ noinst_LIBRARIES = libspecies.a
 libspecies_f_srcs =                      \
 	atomic.F90                       \
 	element.F90                      \
+	element_low.cc                   \
 	logrid.F90                       \
 	ps_cpi.F90                       \
 	ps_cpi_file.F90                  \

@@ -23,6 +23,7 @@
 #include <cassert>
 #include <cctype>
 #include <iostream>
+#include <fstream>
 #include <unordered_map>
 
 namespace pseudopotential {
@@ -36,8 +37,11 @@ namespace pseudopotential {
       symbol_[0] = std::toupper(symbol_[0]);
       for(unsigned ii = 1; ii < symbol_.size(); ii++) symbol_[ii] = std::tolower(symbol_[ii]);
 
-      assert(map().find(symbol_) != map().end());
+      map(); //make sure the map is initialized
+    }
 
+    bool valid() const {
+      return map().find(symbol_) != map().end();
     }
 
     double charge() const {
