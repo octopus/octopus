@@ -67,12 +67,19 @@ contains
           
     this%valid = .false.
 
-    fname = trim(conf%share)//'/pseudopotentials/elements'
+    fname = trim(conf%share)//'/pseudopotentials/elements.dat'
     
     nelement = max(0, loct_number_of_lines(fname) - 3) 
 
-    iunit = io_open(trim(conf%share)//'/pseudopotentials/elements.dat', action='read', status='old', die=.false.)
+    iunit = io_open(trim(fname), action='read', status='old', die=.false.)
 
+    if(iunit < 0) then
+      call messages_write('Cannot open the octopus internal file:', new_line = .true.)
+      call messages_write(" '"//trim(fname)//"'", new_line = .true.)
+      call messages_write('There is something wrong with your octopus installation.')
+      call messages_fatal()
+    end if
+    
     ! skip comment lines
     read(iunit, *)
     read(iunit, *)
