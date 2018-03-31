@@ -1620,7 +1620,7 @@ contains
     type(species_t), intent(inout) :: spec
     integer,         intent(out)   :: read_data
 
-    integer :: ncols, icol, flag, set_read_data
+    integer :: ncols, icol, flag, set_read_data, ilend
     type(element_t) :: element
     type(iihash_t) :: read_parameters
 
@@ -1883,7 +1883,15 @@ contains
         
       end if
 
-      call element_init(element, spec%label)
+      ! use only the first part of the label to determine the element
+      do ilend = 1, len(spec%label)
+        if( iachar(spec%label(ilend:ilend)) >= iachar('a') .and. iachar(spec%label(ilend:ilend)) <= iachar('z') ) cycle
+        if( iachar(spec%label(ilend:ilend)) >= iachar('A') .and. iachar(spec%label(ilend:ilend)) <= iachar('Z') ) cycle
+        exit
+      end do
+      ilend = ilend - 1
+      
+      call element_init(element, spec%label(1:ilend))
       
       if(.not. element_valid(element)) then
         call messages_write('Cannot determine the element for species '//trim(spec%label)//'.')
