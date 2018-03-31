@@ -40,7 +40,6 @@ libspecies_f_srcs =                      \
 
 # C/C++ sources - keep in alphabetical order
 libspecies_c_srcs =                      \
-	chemical_element.cc              \
 	pseudo_low.cc                    \
 	spline.cc
 

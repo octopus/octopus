@@ -1,5 +1,5 @@
-#ifndef PSEUDO_CHEMICALELEMENT_HPP
-#define PSEUDO_CHEMICALELEMENT_HPP
+#ifndef PSEUDO_ELEMENT_HPP
+#define PSEUDO_ELEMENT_HPP
 
 /*
  Copyright (C) 2018 Xavier Andrade
@@ -20,6 +20,10 @@
 */
 
 #include <string>
+#include <cassert>
+#include <cctype>
+#include <iostream>
+#include <unordered_map>
 
 namespace pseudopotential {
   
@@ -27,20 +31,99 @@ namespace pseudopotential {
 
   public:
 
-    element(const std::string & symbol = "none"){
-      this->set(symbol);
+    element(const std::string & symbol = "none"):symbol_(symbol){
+      trim(symbol_);
+      symbol_[0] = std::toupper(symbol_[0]);
+      for(unsigned ii = 1; ii < symbol_.size(); ii++) symbol_[ii] = std::tolower(symbol_[ii]);
+
+      assert(map().find(symbol_) != map().end());
+
     }
 
-    std::string symbol() const;
+    double charge() const {
+      return -1.0*atomic_number();
+    }
 
-    double charge() const { return -1.0*z; }
-    double mass() const;
-    int atomic_number() const { return z; }
+    const std::string & symbol() const{
+      return symbol_;
+    }
     
+    int atomic_number() const {
+      return map().at(symbol_).z_;
+    }
+    
+    double mass() const{
+      return map().at(symbol_).mass_;
+    }
+
+    double vdw_radius() const{
+      return map().at(symbol_).vdw_radius_;
+    }
+   
   private:
-  
-    char z;
-    void set(const std::string & symbol);
+
+    struct properties {
+      int z_;
+      double mass_;
+      double vdw_radius_;
+    };
+    
+    static std::unordered_map<std::string, properties> & map(){
+      
+      static std::unordered_map<std::string, properties> map;
+
+      if(map.empty()){
+
+	std::string filename = std::string(SHARE_DIR) + "/pseudopotentials/elements.dat";
+	
+	std::ifstream file(filename);
+
+	if(!file){
+	  std::cerr << "Internal error: cannot open file '" << filename << "'." << std::endl;
+	  exit(1);
+	}
+	
+	while(true){
+	  std::string symbol;
+	  
+	  file >> symbol;
+
+	  if(file.eof()) break;
+	  
+	  if(symbol[0] == '#'){
+	    getline(file, symbol);
+	    continue;
+	  }
+	  
+	  properties prop;
+	  
+	  file >> prop.z_ >> prop.mass_ >> prop.vdw_radius_;
+
+	  if(file.eof()) break;
+	  
+	  map[symbol] = prop;
+	  
+	}
+      }
+
+      return map;
+    }
+    
+    static std::string & ltrim(std::string& str, const std::string& chars = "\t\n\v\f\r "){
+      str.erase(0, str.find_first_not_of(chars));
+      return str;
+    }
+ 
+    static std::string & rtrim(std::string& str, const std::string& chars = "\t\n\v\f\r "){
+      str.erase(str.find_last_not_of(chars) + 1);
+      return str;
+    }
+ 
+    static std::string & trim(std::string& str, const std::string& chars = "\t\n\v\f\r "){
+      return ltrim(rtrim(str, chars), chars);
+    }
+    
+    std::string symbol_;
   
   };
 
