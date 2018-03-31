@@ -16,7 +16,7 @@
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "chemical_element.hpp"
+#include "element.hpp"
 
 #include <cassert>
 
@@ -36,7 +36,7 @@ namespace pseudopotential {
     return ltrim(rtrim(str, chars), chars);
   }
   
-  void chemical_element::set(const std::string & symbol){
+  void element::set(const std::string & symbol){
 
     std::string sym = symbol;
     trim(sym);
@@ -142,7 +142,7 @@ namespace pseudopotential {
 
   }
 
-  std::string chemical_element::symbol() const{
+  std::string element::symbol() const{
 
     if(z == 1)  return "H";
     if(z == 2)  return "He";
@@ -242,7 +242,7 @@ namespace pseudopotential {
     assert(false);
   }
 
-  double chemical_element::mass() const{
+  double element::mass() const{
 
     //obtained from http://www.nist.gov/pml/data/comp.cfm
 

@@ -50,7 +50,7 @@ libspecies_a_SOURCES = $(libspecies_c_srcs) $(libspecies_f_srcs)
 noinst_HEADERS =                         \
 	anygrid.hpp                      \
 	base.hpp                         \
-	chemical_element.hpp             \
+	element.hpp                      \
 	detect_format.hpp                \
 	ps_pspio_inc.F90                 \
 	psml.hpp                         \

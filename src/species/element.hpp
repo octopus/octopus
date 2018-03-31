@@ -23,11 +23,11 @@
 
 namespace pseudopotential {
   
-  class chemical_element {
+  class element {
 
   public:
 
-    chemical_element(const std::string & symbol = "none"){
+    element(const std::string & symbol = "none"){
       this->set(symbol);
     }
 
