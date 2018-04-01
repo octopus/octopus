@@ -31,7 +31,7 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask) result(dd)
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
-  dd = M_ZERO
+  dd = R_TOTYPE(M_ZERO)
   if (mesh%use_curvilinear) then
     do ip = 1, mesh%np
       dd = dd + ff(ip)*mesh%vol_pp(ip)
@@ -133,7 +133,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
 #endif
 
   if(mesh%use_curvilinear) then
-    dotp = M_ZERO
+    dotp = R_TOTYPE(M_ZERO)
     ! preprocessor conditionals necessary since blas_dotu only exists for complex input
 #ifdef R_TCOMPLEX
     if (.not. dotu_) then
@@ -610,7 +610,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th, inside)
   if(abs(optional_default(cmplxscl_th, M_ZERO)) > M_EPSILON) then
     factor = R_TOPREC(exp(M_zI * cmplxscl_th))
   else
-    factor = M_ONE
+    factor = R_TOTYPE(M_ONE)
   endif
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
