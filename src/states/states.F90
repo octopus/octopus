@@ -2424,7 +2424,6 @@ contains
 
     integer :: iqn, ib
     integer(8) :: max_mem, mem
-    FLOAT, parameter :: mem_frac = 0.75
 
     PUSH_SUB(states_pack)
 
