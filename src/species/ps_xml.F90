@@ -205,7 +205,6 @@ contains
     
     integer :: ll, ip
     FLOAT   :: nrm, rr
-    FLOAT, allocatable :: grid(:), weights(:)
 
     PUSH_SUB(ps_xml_check_normalization)
 
