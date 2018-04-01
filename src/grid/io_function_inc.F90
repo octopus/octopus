@@ -990,7 +990,6 @@ contains
 
     integer :: ix, iy, iz, np
     integer :: ixvect(MAX_DIM)
-    integer :: ixvect_test(MAX_DIM)
     FLOAT   :: xx(1:MAX_DIM), zz
     R_TYPE  :: fu
 
@@ -1697,7 +1696,7 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, mesh, ff, unit, ier
 
   character(len=512) :: filename
   character(len=20)  :: mformat, mformat2, mfmtheader
-  integer            :: iunit, ip, idir, jj, np_max
+  integer            :: iunit, np_max
 
   call profiling_in(write_prof, "DISK_WRITE")
   PUSH_SUB(X(io_function_output_global_BZ))
