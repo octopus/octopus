@@ -1045,7 +1045,6 @@ contains
     integer,           intent(in) :: iunit
 
     integer :: idir1, idir2
-    character(len=12) :: buf
 
     PUSH_SUB(simul_box_write_short_info)
 
@@ -1598,7 +1597,7 @@ contains
     type(kpoints_t),    intent(in) :: kpoints
     integer,            intent(in) :: dim
 
-    integer :: iop, iatom, iatom_symm, ikpoint
+    integer :: iop, iatom, iatom_symm
     FLOAT :: ratom(1:MAX_DIM)
 
     PUSH_SUB(simul_box_symmetry_check)
