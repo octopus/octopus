@@ -1440,7 +1440,7 @@ subroutine X(states_me_two_body) (gr, st, nint, iindex, jindex, kindex, lindex, 
   integer,          intent(out)             :: jindex(1:nint)
   integer,          intent(out)             :: kindex(1:nint)
   integer,          intent(out)             :: lindex(1:nint)
-  FLOAT,            intent(out)             :: twoint(1:nint)  !this needs to address complex numbers as well?!?
+  R_TYPE,           intent(out)             :: twoint(1:nint)  !
 
   integer :: ist, jst, kst, lst, ijst, klst
   integer :: iint
