@@ -1387,7 +1387,7 @@ subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, ji
   integer,             intent(in)    :: nint
   integer,             intent(out)   :: iindex(1:nint)
   integer,             intent(out)   :: jindex(1:nint)
-  FLOAT,               intent(out)   :: oneint(1:nint)  !this needs to address complex numbers as well?!?
+  R_TYPE,              intent(out)   :: oneint(1:nint)  
   
   integer ist, jst, np, iint
   R_TYPE :: me
