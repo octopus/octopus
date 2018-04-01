@@ -265,8 +265,10 @@ subroutine X(accel_nrm2)(n, x, offx, incx, res, offres)
   type(accel_mem_t), intent(inout) :: res
   integer(8),        intent(in)    :: offres
 
+#ifdef HAVE_OPENCL
   integer :: status
   type(accel_mem_t)  :: scratch_buffer
+#endif
   
   PUSH_SUB(X(accel_nrm2))
 
