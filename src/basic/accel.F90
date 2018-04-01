@@ -1608,12 +1608,12 @@ contains
     character(len=*),            intent(in)    :: kernel_name
     character(len=*), optional,  intent(in)    :: flags
 
-    character(len=1000) :: all_flags
     type(profile_t), save :: prof
 #ifdef HAVE_OPENCL
     type(cl_program) :: prog
 #endif
 #ifdef HAVE_CUDA
+    character(len=1000) :: all_flags
     type(c_ptr) :: cuda_module
 #endif
     
