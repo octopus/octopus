@@ -149,7 +149,7 @@ module species_oct_m
 
     integer :: niwfs              !< The number of initial wavefunctions
     integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :), iwf_n(:, :) !< i, n, l, m as a function of iorb and ispin
-    CMPLX, pointer :: iwf_j(:)    !< j as a function of iorb
+    FLOAT, pointer :: iwf_j(:)    !< j as a function of iorb
 
     integer :: user_lmax          !< For the TM pseudos, user defined lmax 
     integer :: user_llocal        !< For the TM pseudos, used defined llocal
