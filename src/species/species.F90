@@ -34,6 +34,7 @@ module species_oct_m
   use profiling_oct_m
   use ps_oct_m
   use pseudo_oct_m
+  use share_directory_oct_m
   use space_oct_m
   use splines_oct_m
   use string_oct_m
@@ -211,6 +212,8 @@ contains
     PUSH_SUB(species_init_global)
 
     initialized = .true.
+
+    call share_directory_set(conf%share)    
     
     !%Variable PseudopotentialSet
     !%Type integer
