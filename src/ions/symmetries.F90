@@ -465,8 +465,7 @@ contains
     integer,               intent(in) :: dim, periodic_dim
     integer,               intent(in) :: iunit
     
-    integer :: iop, ind
-    type(symm_op_t) :: tmpop   
+    integer :: iop
  
     PUSH_SUB(symmetries_write_info)
     
