@@ -1399,7 +1399,7 @@ subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, ji
   SAFE_ALLOCATE(psij(1:gr%mesh%np_part, 1:st%d%dim))
   
   np = gr%mesh%np
-  iint = M_ONE
+  iint = 1
 
   do ist = 1, st%nst
 
