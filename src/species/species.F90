@@ -319,7 +319,7 @@ contains
     type(species_t), intent(inout) :: spec
 
     character(len=LABEL_LEN)  :: lab
-    integer :: ib, ispec, row, n_spec_block, iunit, read_data
+    integer :: ib, row, n_spec_block, read_data
     type(block_t) :: blk
 
     PUSH_SUB(species_read)
@@ -559,7 +559,7 @@ contains
     type(species_t), intent(inout) :: spec
     integer,         intent(out)   :: read_data
 
-    integer :: ib, ispec, row, n_spec_block, n_spec_def, iunit
+    integer :: ispec, n_spec_def, iunit
     character(len=256) :: fname
     character(len=LABEL_LEN)  :: label
 
