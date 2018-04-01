@@ -773,8 +773,7 @@ module pcm_eom_oct_m
    integer :: i,j
    integer :: info,lwork,liwork
    FLOAT, allocatable :: scr1(:,:),scr2(:,:),eigt_t(:,:)
-   FLOAT :: sgn,fac_eps0,fac_epsd
-   FLOAT:: temp,fact1,fact2
+   FLOAT :: sgn
    character jobz,uplo
    integer, allocatable :: iwork(:)
    FLOAT,allocatable :: work(:)
