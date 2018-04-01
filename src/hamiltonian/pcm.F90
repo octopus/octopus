@@ -1166,7 +1166,6 @@ contains
     logical :: input_asc_ext
 
     ! for debuggin - it should be cleaned up
-    integer :: ii !, asc_unit_test_aux
 
     !character*5 :: iteration 
 
