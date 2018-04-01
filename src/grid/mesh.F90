@@ -795,7 +795,7 @@ contains
     type(mesh_t),       intent(in) :: mesh
     type(simul_box_t),  intent(in) :: sb
 
-    integer :: ikpoint, ii, iop, ip, idim, nops
+    integer :: ikpoint, iop, ip, idim, nops
     FLOAT :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
 
     if(.not.sb%kpoints%use_symmetries) return
