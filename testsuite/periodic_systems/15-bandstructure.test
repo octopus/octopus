@@ -2,7 +2,7 @@
 
 Test       : Band structure calculation
 Program    : octopus
-TestGroups : short-run, periodic_systems
+TestGroups : long-run, periodic_systems
 Enabled    : Yes
 
 Processors : 4

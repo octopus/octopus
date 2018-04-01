@@ -73,6 +73,7 @@ program oct_convert
   call messages_print_stress(stdout, "Convert mode")
   call messages_print_stress(stdout)
 
+  call restart_module_init()
   call fft_all_init()
   call unit_system_init()
 

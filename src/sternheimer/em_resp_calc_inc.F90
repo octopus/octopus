@@ -323,7 +323,7 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
   end if
 #endif
 
-  call zsymmetrize_tensor(mesh%sb%symm, zpol)
+  call zsymmetrize_tensor_cart(mesh%sb%symm, zpol)
 
   POP_SUB(X(calc_polarizability_periodic))
 
@@ -1425,7 +1425,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, hm, nsigma, &
 #endif
 
   zpol(:,:,:) = - M_zI / (frequency) * zpol(:,:,:) 
-  call zsymmetrize_magneto_optics(sys%gr%mesh%sb%symm, zpol(:,:,:))
+  call zsymmetrize_magneto_optics_cart(sys%gr%mesh%sb%symm, zpol(:,:,:))
  
   SAFE_DEALLOCATE_P(mat_eb%X(matrix))
   SAFE_DEALLOCATE_P(mat_be%X(matrix))
@@ -1904,7 +1904,7 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, hm, nsigma, lr_k, lr_b, &
   SAFE_DEALLOCATE_A(Hdl_kb)
   SAFE_DEALLOCATE_A(Hdl_kk) 
 
-  call zsymmetrize_tensor(sys%gr%mesh%sb%symm, magn(:,:))
+  call zsymmetrize_tensor_cart(sys%gr%mesh%sb%symm, magn(:,:))
 
 #ifdef HAVE_MPI
   if(sys%st%parallel_in_states) then

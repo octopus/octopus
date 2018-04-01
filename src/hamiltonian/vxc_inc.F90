@@ -430,13 +430,15 @@ contains
     integer, intent(in)  :: spin_channels
     integer, intent(in)  :: ip
 
-    integer :: ib
+    integer :: ib, is
 
     PUSH_SUB(xc_get_vxc.copy_global_to_local)
 
-    !$omp parallel do
-    do ib = 1, n_block
-      local(1:spin_channels, ib) = global(ib + ip - 1, 1:spin_channels)
+    do is = 1, spin_channels
+      !$omp parallel do
+      do ib = 1, n_block
+        local(is, ib) = global(ib + ip - 1, is)
+      end do
     end do
 
     POP_SUB(xc_get_vxc.copy_global_to_local)
@@ -450,13 +452,15 @@ contains
     integer, intent(in)    :: spin_channels
     integer, intent(in)    :: ip
 
-    integer :: ib
+    integer :: ib, is
 
     PUSH_SUB(xc_get_vxc.copy_local_to_global)
 
-    !$omp parallel do
-    do ib = 1, n_block
-      global(ib + ip - 1, 1:spin_channels) = global(ib + ip - 1, 1:spin_channels) + local(1:spin_channels, ib)
+    do is = 1, spin_channels
+      !$omp parallel do
+      do ib = 1, n_block
+        global(ib + ip - 1, is) = global(ib + ip - 1, is) + local(is, ib)
+      end do
     end do
 
     POP_SUB(xc_get_vxc.copy_local_to_global)
@@ -606,6 +610,9 @@ contains
   !!   *) allocates gradient of the density (gdens), dedgd, and its local variants
   subroutine gga_init()
     integer :: ii
+#ifdef HAVE_LIBXC4
+    FLOAT :: parameters(4)
+#endif
 
     PUSH_SUB(xc_get_vxc.gga_init)
 
@@ -618,8 +625,16 @@ contains
 
     do ii = 1, 2
       if(functl(ii)%id == XC_GGA_X_LB) then
+#ifdef HAVE_LIBXC4
+        parameters(1) = functl(ii)%LB94_modified
+        parameters(2) = functl(ii)%LB94_threshold
+        parameters(3) = ioniz_pot
+        parameters(4) = qtot
+        call XC_F90(func_set_ext_params)(functl(ii)%conf, parameters(1))        
+#else
         call XC_F90(gga_lb_set_par)(functl(ii)%conf, &
           functl(ii)%LB94_modified, functl(ii)%LB94_threshold, ioniz_pot, qtot)
+#endif
       end if
     end do
 
@@ -706,8 +721,12 @@ contains
 
     tb09_c =  -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(der%mesh, gnon)/der%mesh%sb%rcell_volume)
 
+#ifdef HAVE_LIBXC4
+    call XC_F90(func_set_ext_params)(functl(1)%conf, tb09_c)
+#else
     call XC_F90(mgga_x_tb09_set_par)(functl(1)%conf, tb09_c)
-
+#endif
+    
     SAFE_DEALLOCATE_A(gnon)
 
     POP_SUB(xc_get_vxc.calc_tb09_c)

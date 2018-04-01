@@ -223,11 +223,9 @@ contains
     !%Section Execution::Units
     !%Description
     !% This variable selects in which units I/O of XYZ files should be
-    !% performed. 
-    !%Option octopus_units 0
-    !% The XYZ will be assumed to be in the same units that Octopus is
-    !% using for the input file based on the Units, UnitsInput, and
-    !% UnitsOutput variables.
+    !% performed.
+    !%Option bohr_units       0
+    !% The XYZ will be assumed to be in Bohr atomic units.
     !%Option angstrom_units   1
     !% XYZ files will be assumed to be always in Angstrom,
     !% independently of the units used by Octopus. This ensures
@@ -241,9 +239,10 @@ contains
 
     select case(xyz_units)
 
-    case(OPTION__UNITSXYZFILES__OCTOPUS_UNITS)
+    case(OPTION__UNITSXYZFILES__BOHR_UNITS)
+      ! Use units_inp%length for initialization, as units_inp are always in atomic units.
       units_inp%length_xyz_file = units_inp%length
-      units_out%length_xyz_file = units_out%length
+      units_out%length_xyz_file = units_inp%length
 
     case(OPTION__UNITSXYZFILES__ANGSTROM_UNITS)
       units_inp%length_xyz_file = unit_angstrom

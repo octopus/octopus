@@ -112,7 +112,8 @@ module states_oct_m
     cmplx_array2_t,                   &
     states_count_pairs,               &
     occupied_states,                  &
-    states_type
+    states_type,                      &
+    states_set_phase
 
   !>cmplxscl: complex 2D matrices 
   type cmplx_array2_t    
@@ -129,6 +130,7 @@ module states_oct_m
     type(states_dim_t)       :: d
     type(states_priv_t)      :: priv                  !< the private components
     integer                  :: nst                   !< Number of states in each irreducible subspace
+    integer                  :: nst_conv              !< Number of states to be converged for unocc calc.
 
     logical                  :: only_userdef_istates  !< only use user-defined states as initial states in propagation
      
@@ -153,11 +155,14 @@ module states_oct_m
 
     !> used for the user-defined wavefunctions (they are stored as formula strings)
     !! (st%d%dim, st%nst, st%d%nik)
-    character(len=1024), pointer :: user_def_states(:,:,:)
+    character(len=1024), allocatable :: user_def_states(:,:,:)
 
     !> the densities and currents (after all we are doing DFT :)
     FLOAT, pointer :: rho(:,:)         !< rho(gr%mesh%np_part, st%d%nspin)
     FLOAT, pointer :: current(:, :, :) !<   current(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
+
+    !> k-point resolved current
+    FLOAT, pointer :: current_kpt(:,:,:) !< current(gr%mesh%np_part, gr%sb%dim, kpt_start:kpt_end)
 
 
     FLOAT, pointer :: rho_core(:)      !< core charge for nl core corrections
@@ -261,8 +266,8 @@ contains
     nullify(st%Imrho_core, st%Imfrozen_rho)
     nullify(st%psibL)
 
-    nullify(st%user_def_states)
     nullify(st%rho, st%current)
+    nullify(st%current_kpt)
     nullify(st%rho_core, st%frozen_rho)
     nullify(st%subsys_st)
     nullify(st%eigenval, st%occ, st%spin)
@@ -288,6 +293,7 @@ contains
 
     FLOAT :: excess_charge
     integer :: nempty, ntot, default, nthreads
+    integer :: nempty_conv
 
     PUSH_SUB(states_init)
 
@@ -322,6 +328,12 @@ contains
     ! Use of spinors requires complex wavefunctions.
     if (st%d%ispin == SPINORS) st%priv%wfs_type = TYPE_CMPLX
 
+    if(st%d%ispin /= UNPOLARIZED .and. gr%sb%kpoints%use_time_reversal) then
+      message(1) = "Time reversal symmetry is only implemented for unpolarized spins."
+      message(2) = "Use KPointsUseTimeReversal = no."
+      call messages_fatal(2)
+    end if
+      
 
     !%Variable ExcessCharge
     !%Type float
@@ -398,6 +410,30 @@ contains
       call messages_fatal(1)
     end if
 
+    !%Variable ExtraStatesToConverge
+    !%Type integer
+    !%Default 0
+    !%Section States
+    !%Description
+    !% Only for unocc calculations.
+    !% Specifies the number of extra states that will be considered for reaching the convergence.
+    !% Together with <tt>ExtraStates</tt>, one can have some more states which will not be
+    !% considered for the convergence criteria, thus making the convergence of the
+    !% unocc calculation faster.
+    !% By default, all extra states need to be converged.
+    !%End
+    call parse_variable('ExtraStatesToConverge', nempty, nempty_conv)
+    if (nempty < 0) then
+      write(message(1), '(a,i5,a)') "Input: '", nempty_conv, "' is not a valid value for ExtraStatesToConverge."
+      message(2) = '(0 <= ExtraStatesToConverge)'
+      call messages_fatal(2)
+    end if
+
+    if(nempty_conv > nempty) then
+      message(1) = 'You cannot set ExtraStatesToConverge to an higer value than ExtraStates.'
+      call messages_fatal(1)
+    end if
+
     ! For non-periodic systems this should just return the Gamma point
     call states_choose_kpoints(st%d, gr%sb)
 
@@ -441,6 +477,7 @@ contains
       st%nst = ntot
     end if
 
+    st%nst_conv = st%nst + nempty_conv
     st%nst = st%nst + nempty
     if(st%nst == 0) then
       message(1) = "Cannot run with number of states = zero."
@@ -587,11 +624,7 @@ contains
     !% When enabled the density is symmetrized. Currently, this can
     !% only be done for periodic systems. (Experimental.)
     !%End
-    if(gr%sb%kpoints%use_symmetries) then
-      call parse_variable('SymmetrizeDensity', .true., st%symmetrize_density)
-    else
-      call parse_variable('SymmetrizeDensity', .false., st%symmetrize_density)
-    end if
+    call parse_variable('SymmetrizeDensity', gr%sb%kpoints%use_symmetries, st%symmetrize_density)
     call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
 
     ! Why? Resulting discrepancies can be suspiciously large even at SCF convergence;
@@ -1305,6 +1338,11 @@ contains
       st%current = M_ZERO
     end if
 
+    if(.not. associated(st%current_kpt)) then
+      SAFE_ALLOCATE(st%current_kpt(1:gr%mesh%np_part,1:gr%mesh%sb%dim,st%d%kpt%start:st%d%kpt%end))
+      st%current_kpt = M_ZERO
+    end if
+
     POP_SUB(states_allocate_current)
   end subroutine states_allocate_current
 
@@ -1333,6 +1371,7 @@ contains
     !% will store the wave-functions in device (GPU) memory. If
     !% there is not enough memory to store all the wave-functions,
     !% execution will stop with an error.
+    !% See also the related <tt>HamiltonianApplyPacked</tt> variable.
     !%End
 
     call parse_variable('StatesPack', .false., st%d%pack_states)
@@ -1470,9 +1509,10 @@ contains
     ! it allocates iblock, psib, block_is_local
     stout%group%nblocks = stin%group%nblocks
 
-    call loct_pointer_copy(stout%user_def_states, stin%user_def_states)
+    call loct_allocatable_copy(stout%user_def_states, stin%user_def_states)
 
     call loct_pointer_copy(stout%current, stin%current)
+    call loct_pointer_copy(stout%current_kpt, stin%current_kpt)
  
     call loct_pointer_copy(stout%rho_core, stin%rho_core)
     call loct_pointer_copy(stout%frozen_rho, stin%frozen_rho)
@@ -1538,7 +1578,7 @@ contains
     ! this deallocates dpsi, zpsi, psib, iblock, iblock
     call states_deallocate_wfns(st)
 
-    SAFE_DEALLOCATE_P(st%user_def_states)
+    SAFE_DEALLOCATE_A(st%user_def_states)
 
     if(associated(st%subsys_st))then
       !subsystems
@@ -1570,6 +1610,7 @@ contains
     
 
     SAFE_DEALLOCATE_P(st%current)
+    SAFE_DEALLOCATE_P(st%current_kpt)
     SAFE_DEALLOCATE_P(st%rho_core)
     SAFE_DEALLOCATE_P(st%frozen_rho)
     
@@ -2229,7 +2270,7 @@ contains
     ! We have to symmetrize everything as they are calculated from the
     ! wavefunctions.
     ! This must be done before compute the gauge-invariant kinetic energy density 
-    if(der%mesh%sb%kpoints%use_symmetries.or.st%symmetrize_density) then
+    if(st%symmetrize_density) then
       SAFE_ALLOCATE(symm(1:der%mesh%np, 1:der%mesh%sb%dim))
       call symmetrizer_init(symmetrizer, der%mesh)
       do is = 1, st%d%nspin
@@ -2728,6 +2769,44 @@ contains
 
     POP_SUB(occupied_states)
   end subroutine occupied_states
+
+
+  ! ------------------------------------------------------------
+subroutine states_set_phase(st_d, psi, phase, np, conjugate)
+  type(states_dim_t),intent(in)    :: st_d
+  CMPLX,          intent(inout)    :: psi(:, :)
+  CMPLX,             intent(in)    :: phase(:)
+  integer,           intent(in)    :: np
+  logical,           intent(in)    :: conjugate
+
+  integer :: idim, ip
+
+  PUSH_SUB(states_set_phase)
+
+  if(conjugate) then
+    ! Apply the phase that contains both the k-point and vector-potential terms.
+    do idim = 1, st_d%dim
+      !$omp parallel do
+      do ip = 1, np
+        psi(ip, idim) = conjg(phase(ip))*psi(ip, idim)
+      end do
+      !$omp end parallel do
+    end do
+  else
+    ! Apply the conjugate of the phase that contains both the k-point and vector-potential terms.
+    do idim = 1, st_d%dim
+      !$omp parallel do
+      do ip = 1, np
+        psi(ip, idim) = phase(ip)*psi(ip, idim)
+      end do
+      !$omp end parallel do
+    end do
+  end if
+
+  POP_SUB(states_set_phase)
+
+end subroutine  states_set_phase
+
   
 #include "undef.F90"
 #include "real.F90"

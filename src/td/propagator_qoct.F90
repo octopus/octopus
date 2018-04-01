@@ -75,7 +75,7 @@ contains
     end if
 
     call hamiltonian_update(hm, gr%mesh, time = t-dt/M_TWO)
-    call exponential_apply_all(tr%te, gr%der, hm, xc, st, dt, t - dt/M_TWO)
+    call exponential_apply_all(tr%te, gr%der, hm, xc, st, dt)
 
     !restore to time 'time - dt'
     if(ion_dynamics_ions_move(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)

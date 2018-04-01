@@ -17,14 +17,12 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, terms, set_bc)
+subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
   type(hamiltonian_t),   intent(in)    :: hm
   type(derivatives_t),   intent(in)    :: der
   type(batch_t), target, intent(inout) :: psib
   type(batch_t), target, intent(inout) :: hpsib
   integer,               intent(in)    :: ik
-  FLOAT, optional,       intent(in)    :: time
-  FLOAT, optional,       intent(in)    :: Imtime
   integer, optional,     intent(in)    :: terms
   logical, optional,     intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
@@ -38,18 +36,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, time, Imtime, t
   PUSH_SUB(X(hamiltonian_apply_batch))
 
   ASSERT(batch_status(psib) == batch_status(hpsib))
-
-  if(present(time)) then
-    if(abs(time - hm%current_time) > CNST(1e-10)) then
-      write(message(1),'(a)') 'hamiltonian_apply_batch time assertion failed.'
-      write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', hm%current_time
-      call messages_fatal(2)
-    end if
-  end if
-
-  if(present(Imtime)) then
-    ASSERT(abs(Imtime - hm%Imcurrent_time) < CNST(1e-10))
-  end if
 
   ! all terms are enabled by default
   terms_ = optional_default(terms, TERM_ALL)
@@ -260,16 +246,14 @@ end subroutine X(hamiltonian_external)
 
 ! ---------------------------------------------------------
 
-subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms, Imtime, set_bc)
+subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist       !< the index of the state
   integer,             intent(in)    :: ik        !< the index of the k-point
   R_TYPE,   target,    intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
   R_TYPE,   target,    intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
-  FLOAT,    optional,  intent(in)    :: time
   integer,  optional,  intent(in)    :: terms
-  FLOAT,    optional,  intent(in)    :: Imtime
   logical,  optional,  intent(in)    :: set_bc
 
   type(batch_t) :: psib, hpsib
@@ -281,7 +265,7 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, time, terms, Imtim
   call batch_init(hpsib, hm%d%dim, 1)
   call batch_add_state(hpsib, ist, hpsi)
 
-  call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
+  call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, terms = terms, set_bc = set_bc)
 
   call batch_end(psib)
   call batch_end(hpsib)
@@ -291,14 +275,12 @@ end subroutine X(hamiltonian_apply)
 
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_apply_all) (hm, xc, der, st, hst, time, Imtime)
+subroutine X(hamiltonian_apply_all) (hm, xc, der, st, hst)
   type(hamiltonian_t), intent(inout) :: hm
   type(xc_t),          intent(in)    :: xc
   type(derivatives_t), intent(inout) :: der
   type(states_t),      intent(inout) :: st
   type(states_t),      intent(inout) :: hst
-  FLOAT, optional,     intent(in)    :: time
-  FLOAT, optional,     intent(in)    :: Imtime
 
   integer :: ik, ib, ist
   R_TYPE, allocatable :: psi(:, :)
@@ -306,19 +288,11 @@ subroutine X(hamiltonian_apply_all) (hm, xc, der, st, hst, time, Imtime)
   
   PUSH_SUB(X(hamiltonian_apply_all))
 
-  if(present(Imtime)) then
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ib = st%group%block_start, st%group%block_end
-        call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), ik, time, Imtime)
-      end do
+  do ik = st%d%kpt%start, st%d%kpt%end
+    do ib = st%group%block_start, st%group%block_end
+      call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), ik)
     end do
-  else
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ib = st%group%block_start, st%group%block_end
-        call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), ik, time)
-      end do
-    end do
-  end if
+  end do
 
   if(oct_exchange_enabled(hm%oct_exchange)) then
 
@@ -763,7 +737,7 @@ subroutine X(h_mgga_terms) (hm, der, ik, psib, hpsib)
   type(batch_t),       intent(inout) :: psib
   type(batch_t),       intent(inout) :: hpsib
 
-  integer :: ispin, ii, idir
+  integer :: ispin, ii, idir, ip
   R_TYPE, allocatable :: grad(:,:), diverg(:)
   type(batch_t) :: divb
   type(batch_t), allocatable :: gradb(:)
@@ -792,6 +766,13 @@ subroutine X(h_mgga_terms) (hm, der, ik, psib, hpsib)
       call batch_get_state(gradb(idir), ii, der%mesh%np, grad(:, idir))
     end do
     
+    ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
+    if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%nonorthogonal ) then
+      forall (ip = 1:der%mesh%np)
+        grad(ip, 1:der%dim) = matmul(der%mesh%sb%klattice_primitive(1:der%dim, 1:der%dim),grad(ip, 1:der%dim))
+      end forall
+    end if
+
     do idir = 1, der%mesh%sb%dim
       grad(1:der%mesh%np, idir) = grad(1:der%mesh%np, idir)*hm%vtau(1:der%mesh%np, ispin)
     end do

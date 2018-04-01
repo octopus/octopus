@@ -19,6 +19,7 @@
 #include "global.h"
 
 module td_write_oct_m
+  use io_function_oct_m
   use iso_c_binding
   use comm_oct_m
   use excited_states_oct_m
@@ -142,8 +143,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_init(writ, gr, st, hm, geo, ks, ions_move, with_gauge_field, kick, iter, max_iter, dt, mc)
+  subroutine td_write_init(writ, outp, gr, st, hm, geo, ks, ions_move, with_gauge_field, kick, iter, max_iter, dt, mc)
     type(td_write_t), target, intent(out)   :: writ
+    type(output_t),           intent(out)   :: outp
     type(grid_t),             intent(in)    :: gr
     type(states_t),           intent(inout) :: st
     type(hamiltonian_t),      intent(inout) :: hm
@@ -216,6 +218,7 @@ contains
     !% (zero-time) wavefunctions to the file
     !% <tt>td.general/projections.XXX</tt>. Only use this option if
     !% you really need it, as it might be computationally expensive. See <tt>TDProjStateStart</tt>.
+    !% The output interval of this quantity is controled by the variable <tt>TDOutputComputeInterval</tt>
     !%Option local_mag_moments 512
     !% If set, outputs the local magnetic moments, integrated in sphere centered around each atom.
     !% The radius of the sphere can be set with <tt>LocalMagneticMomentsSphereRadius</tt>.
@@ -258,6 +261,7 @@ contains
     !%Option n_excited_el 1048576
     !% Output the number of excited electrons, based on the projections 
     !% of the time evolved wave-functions on the ground-state wave-functions. 
+    !% The output interval of this quantity is controled by the variable <tt>TDOutputComputeInterval</tt>
     !%Option coordinates_sep 2097152
     !% Writes geometries in a separate file.
     !%Option velocities_sep 4194304
@@ -336,7 +340,7 @@ contains
         call messages_fatal(1)
       end if
 
-      if (writ%out(OUT_N_EX)%write.and. st%d%kpt%parallel) then
+      if (writ%out(OUT_N_EX)%write .and. st%parallel_in_states ) then
         message(1) = "Options TDOutput = n_excited_el is not implemented for parallel in states."
         call messages_fatal(1)
       end if
@@ -613,7 +617,17 @@ contains
     if(writ%out(OUT_PARTIAL_CHARGES)%write) then
       call partial_charges_init(writ%partial_charges)
     end if
-      
+     
+
+    if(writ%out(OUT_N_EX)%write .and. writ%compute_interval > 0) then
+      call io_mkdir(outp%iter_dir)
+    end if
+
+    if(outp%how == 0 .and. writ%out(OUT_N_EX)%write) then
+      call io_function_read_how(gr%sb, outp%how)
+    end if
+
+ 
     POP_SUB(td_write_init)
   end subroutine td_write_init
 
@@ -654,8 +668,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_iter(writ, gr, st, hm, geo, kick, dt,ks, iter)
+  subroutine td_write_iter(writ, outp, gr, st, hm, geo, kick, dt,ks, iter)
     type(td_write_t),    intent(inout) :: writ !< Write object
+    type(output_t),      intent(in)    :: outp
     type(grid_t),        intent(inout) :: gr   !< The grid
     type(states_t),      intent(inout) :: st   !< State object
     type(hamiltonian_t), intent(inout) :: hm   !< Hamiltonian object
@@ -743,7 +758,7 @@ contains
 
     if(writ%out(OUT_N_EX)%write .and. mod(iter, writ%compute_interval) == 0) then
       if (mpi_grp_is_root(mpi_world))  call write_iter_set(writ%out(OUT_N_EX)%handle, iter)
-      call td_write_n_ex(writ%out(OUT_N_EX)%handle, gr, st, writ%gs_st, iter)
+      call td_write_n_ex(writ%out(OUT_N_EX)%handle, outp, gr, st, writ%gs_st, iter)
     end if
 
     call profiling_out(prof)
@@ -2273,20 +2288,21 @@ contains
   !> based on projections on the GS orbitals
   !> The procedure is very similar to the td_write_proj
   ! ---------------------------------------------------------
-  subroutine td_write_n_ex(out_nex, gr, st, gs_st, iter)
+  subroutine td_write_n_ex(out_nex, outp, gr, st, gs_st, iter)
     implicit none
  
     type(c_ptr),       intent(inout) :: out_nex
+    type(output_t),    intent(in)    :: outp
     type(grid_t),      intent(in)    :: gr
     type(states_t),    intent(inout) :: st
     type(states_t),    intent(in)    :: gs_st
     integer,           intent(in)    :: iter
 
     CMPLX, allocatable :: projections(:,:)
-    FLOAT, allocatable :: occ(:,:)
-    character(len=80) :: aux
-    integer :: ik, ist, uist
+    character(len=80) :: aux, dir
+    integer :: ik, ikpt, ist, uist, err
     FLOAT :: Nex, weight
+    FLOAT, allocatable :: occ(:,:), Nex_kpt(:)
     
 
     PUSH_SUB(td_write_n_ex)
@@ -2338,34 +2354,43 @@ contains
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
       call comm_allreduce(st%st_kpt_mpi_grp%comm, occ, dim = (/st%nst, st%d%nik/))
     end if 
- 
-    Nex = M_ZERO 
+
+
+    SAFE_ALLOCATE(Nex_kpt(1:st%d%nik)) 
+    Nex_kpt = M_ZERO 
     do ik = st%d%kpt%start, st%d%kpt%end
+      ikpt = states_dim_get_kpoint_index(st%d, ik)
       call zstates_calc_projections(gr%mesh, st, gs_st, ik, projections)
       do ist = 1, gs_st%nst
         weight = st%d%kweights(ik) * occ(ist, ik)/ st%smear%el_per_state 
-        do uist = 1, st%nst
-          Nex = Nex - weight * occ(uist, ik) * abs(projections(ist, uist))**2
+        do uist = st%st_start, st%st_end
+          Nex_kpt(ikpt) = Nex_kpt(ikpt) - weight * occ(uist, ik) * abs(projections(ist, uist))**2
         end do
       end do
+      Nex_kpt(ikpt) = Nex_kpt(ikpt) + st%qtot*st%d%kweights(ik)
     end do
 
 #if defined(HAVE_MPI)        
    if(st%parallel_in_states .or. st%d%kpt%parallel) then
-     call comm_allreduce(st%st_kpt_mpi_grp%comm, Nex)
+     call comm_allreduce(st%st_kpt_mpi_grp%comm, Nex_kpt)
    end if
 #endif  
 
-  Nex = Nex + st%qtot 
+  Nex = sum(Nex_kpt)
 
   if(mpi_grp_is_root(mpi_world)) then
     call write_iter_start(out_nex)
     call write_iter_double(out_nex, Nex, 1)
     call write_iter_nl(out_nex)
   end if
-  
+ 
+  ! now write down the k-resolved part
+  write(dir, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
+  call io_function_output_global_BZ(outp%how, dir, "n_excited_el_kpt", gr%mesh, Nex_kpt, unit_one, err) 
+ 
   SAFE_DEALLOCATE_A(projections)
   SAFE_DEALLOCATE_A(occ)
+  SAFE_DEALLOCATE_A(Nex_kpt)
 
   POP_SUB(td_write_n_ex)
  end subroutine td_write_n_ex
@@ -2452,7 +2477,7 @@ contains
 
     PUSH_SUB(td_write_proj_kp)
 
-    ! this is slow, so we don't do it every step
+    ! this is slow, so we don`t do it every step
     if(.not.mod(iter,50) == 0) then
        POP_SUB(td_write_proj_kp)
        return
@@ -2842,6 +2867,13 @@ contains
         call write_iter_header(out_total_current, aux)
       end do
       
+      do ispin = 1, st%d%nspin
+        do idir = 1, gr%mesh%sb%dim
+          write(aux, '(a4,i1,a1,i1,a1)') 'I-sp', ispin, '(', idir, ')'
+          call write_iter_header(out_total_current, aux)
+        end do
+      end do      
+
       call write_iter_nl(out_total_current)
 
       call td_write_print_header_end(out_total_current)
@@ -2849,9 +2881,12 @@ contains
     
     ASSERT(associated(st%current))
 
+    if(mpi_grp_is_root(mpi_world)) &
+      call write_iter_start(out_total_current)
+
     total_current = CNST(0.0)
     do idir = 1, gr%sb%dim
-      do ispin = 1, st%d%nspin
+      do ispin = 1, st%d%spin_channels
         total_current(idir) =  total_current(idir) + dmf_integrate(gr%mesh, st%current(:, idir, ispin))
       end do
       total_current(idir) = units_from_atomic(units_out%length/units_out%time, total_current(idir))
@@ -2859,18 +2894,29 @@ contains
 
     abs_current = CNST(0.0)
     do idir = 1, gr%sb%dim
-      do ispin = 1, st%d%nspin
+      do ispin = 1, st%d%spin_channels
         abs_current(idir) =  abs_current(idir) + dmf_integrate(gr%mesh, abs(st%current(:, idir, ispin)))
       end do
       abs_current(idir) = units_from_atomic(units_out%length/units_out%time, abs_current(idir))
     end do
 
-    if(mpi_grp_is_root(mpi_world)) then
-      call write_iter_start(out_total_current)
+   if(mpi_grp_is_root(mpi_world)) then
       call write_iter_double(out_total_current, total_current, gr%mesh%sb%dim)
       call write_iter_double(out_total_current, abs_current, gr%mesh%sb%dim)
+   end if
+  
+    do ispin = 1, st%d%nspin
+      total_current = CNST(0.0)
+      do idir = 1, gr%sb%dim
+        total_current(idir) = units_from_atomic(units_out%length/units_out%time, &
+                                    dmf_integrate(gr%mesh, st%current(:, idir, ispin)))
+      end do
+      if(mpi_grp_is_root(mpi_world)) &
+        call write_iter_double(out_total_current, total_current, gr%mesh%sb%dim)
+    end do
+
+    if(mpi_grp_is_root(mpi_world)) &
       call write_iter_nl(out_total_current)
-    end if
       
     POP_SUB(td_write_total_current)
   end subroutine td_write_total_current

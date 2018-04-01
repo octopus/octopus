@@ -1,4 +1,4 @@
-## Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+## Copyright (C) 2002-2018 M. Marques, A. Castro, A. Rubio, G. Bertsch, X. Andrade
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 AC_PREREQ(2.59)
 # Note: the version string is written into ETSF_IO files, so when you update
 # this, update the results for test periodic_systems/09-etsf_io.test too.
-AC_INIT([Octopus],[mimus],[octopus-devel@tddft.org],[octopus])
+AC_INIT([Octopus],[wolfi],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE
@@ -64,6 +64,7 @@ AC_PROG_CC($octopus_default_cc)
 AC_PROG_CC_C99
 
 AC_PROG_CXX
+AX_CXX_COMPILE_STDCXX([11])
 AC_CXX_LIBRARY_LDFLAGS
 
 # optimizations extensions supported by the compiler
@@ -108,11 +109,17 @@ dnl and with OpenMP threads.
 dnl these are the --enable/--disable possible in octopus
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--disable-debug], [debug mode]), [DEBUG=${enableval}])
 AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp], [Multi-threaded parallel version using OpenMP from Fortran]))
+AC_ARG_ENABLE(openmp_simd, AS_HELP_STRING([--enable-openmp_simd], [OpenMP SIMD from Fortran]))
 AC_ARG_ENABLE(opencl, AS_HELP_STRING([--enable-opencl], [OpenCL support (experimental)]))
 
 if test -n "${enable_openmp}" -a x"${enable_openmp}" != x"no"; then
   HAVE_OPENMP=1
 fi
+if test -n "${enable_openmp_simd}" -a x"${enable_openmp_simd}" != x"no"; then
+  HAVE_OPENMP_SIMD=1
+fi
+
+
 
 AC_ARG_ENABLE(cuda, AS_HELP_STRING([--enable-cuda], [Cuda support (experimental)]))
 
@@ -229,6 +236,12 @@ if test "${HAVE_OPENMP}"; then
   AX_OPENMP(,AC_MSG_ERROR([Fortran compiler does not support OpenMP]))
   FCFLAGS="$FCFLAGS $OPENMP_FCFLAGS"
 fi
+
+if test "${HAVE_OPENMP_SIMD}"; then
+  AX_OPENMP_SIMD(,AC_MSG_ERROR([Fortran compiler does not support OpenMP SIMD]))
+  FCFLAGS="$FCFLAGS $OPENMP_SIMD_FCFLAGS"
+fi
+
 
 dnl debug mode
 if test x"${DEBUG}" = x"no" ; then
@@ -354,18 +367,18 @@ ACX_OCTOPUS_COMPILATION_INFO
 
 AC_CONFIG_FILES([Makefile
   external_libs/Makefile
+  external_libs/dftd3/Makefile
   external_libs/metis-5.1/Makefile
   external_libs/metis-5.1/include/Makefile
   external_libs/metis-5.1/GKlib/Makefile
   external_libs/metis-5.1/libmetis/Makefile
   external_libs/qshep/Makefile
-  external_libs/spglib-1.5.2/Makefile
-  external_libs/spglib-1.5.2/src/Makefile
   external_libs/fortrancl/Makefile
   external_libs/bpdn/Makefile
   external_libs/yaml-0.1.4/Makefile
   external_libs/yaml-0.1.4/include/Makefile
   external_libs/yaml-0.1.4/src/Makefile
+  external_libs/rapidxml/Makefile
   liboct_parser/Makefile
   src/Makefile
   src/include/Makefile
@@ -395,11 +408,18 @@ AC_CONFIG_FILES([Makefile
   share/pseudopotentials/Makefile
   share/pseudopotentials/PSF/Makefile
   share/pseudopotentials/HGH/Makefile
-  share/pseudopotentials/extra/Makefile
-  share/pseudopotentials/sg15/Makefile
-  share/pseudopotentials/hscv/Makefile
-  share/pseudopotentials/hscv/lda/Makefile
-  share/pseudopotentials/hscv/pbe/Makefile  
+  share/pseudopotentials/quantum-simulation.org/Makefile
+  share/pseudopotentials/quantum-simulation.org/hscv/Makefile
+  share/pseudopotentials/quantum-simulation.org/hscv/lda/Makefile
+  share/pseudopotentials/quantum-simulation.org/hscv/pbe/Makefile
+  share/pseudopotentials/quantum-simulation.org/sg15/Makefile
+  share/pseudopotentials/pseudo-dojo.org/Makefile  
+  share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbe_standard/Makefile
+  share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbe_stringent/Makefile
+  share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbesol_standard/Makefile
+  share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbesol_stringent/Makefile
+  share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pw_standard/Makefile
+  share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pw_stringent/Makefile
   share/recipes/Makefile
   share/recipes/da/Makefile
   share/recipes/de/Makefile
@@ -425,9 +445,12 @@ AC_CONFIG_FILES([Makefile
   testsuite/photo_electron/Makefile
   testsuite/pseudopotentials/Makefile
   testsuite/complex_scaling/Makefile
-  testsuite/frozen/Makefile])
+  testsuite/frozen/Makefile
+  testsuite/symmetries/Makefile])
 AC_CONFIG_FILES([testsuite/oct-run_testsuite.sh], [chmod +x testsuite/oct-run_testsuite.sh])
 AC_CONFIG_FILES([doc/html/varsRightFrame.html])
+
+AC_CONFIG_SUBDIRS([external_libs/spglib-1.9.9])
 
 dnl if test x"$ac_build_libyaml" != x"skip" ; then
 dnl    AC_CONFIG_SUBDIRS([external_libs/yaml-0.1.4])

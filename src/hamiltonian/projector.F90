@@ -74,13 +74,7 @@ module projector_oct_m
     dr_project_psi,            &
     zr_project_psi
   
-  integer, public, parameter ::  &
-    M_NONE = 0,  &
-    M_HGH  = 1,  &
-    M_KB   = 2,  &
-    M_RKB  = 3
-
-  integer, parameter :: MAX_NPROJECTIONS = 24
+  integer, parameter :: MAX_NPROJECTIONS = 4
   integer, parameter :: MAX_L = 5
 
   !> The projector data type is intended to hold the local and
@@ -95,7 +89,7 @@ module projector_oct_m
   !! - Kleinman-Bylander projector (includes spin-orbit)
 
   type projector_t
-    integer :: type = M_NONE
+    integer :: type = PROJ_NONE
     integer :: nprojections
     integer :: lmax
     integer :: lloc
@@ -121,7 +115,7 @@ contains
 
     PUSH_SUB(projector_null)
 
-    p%type = M_NONE
+    p%type = PROJ_NONE
     call submesh_null(p%sphere)
 
     POP_SUB(projector_null)
@@ -133,7 +127,7 @@ contains
   !---------------------------------------------------------
   logical elemental function projector_is_null(p)
     type(projector_t), intent(in) :: p
-    projector_is_null = (p%type == M_NONE)
+    projector_is_null = (p%type == PROJ_NONE)
   end function projector_is_null
   !---------------------------------------------------------
 
@@ -160,41 +154,34 @@ contains
 
     nullify(p%phase)
     p%reltype = reltype
-    p%lmax = ps%l_max
+    p%lmax = ps%lmax
 
     if(ps%local) then
-      p%type = M_NONE
+      p%type = PROJ_NONE
       POP_SUB(projector_init)
       return
     end if
 
-    p%lloc = ps%l_loc
+    p%lloc = ps%llocal
 
-    select case (ps%kbc)
-    case (1)
-      p%type = M_KB
-      if (reltype == 1) then
-        write(message(1),'(a,a,a)') &
-          "Spin-orbit coupling for species ", trim(species_label(atm%species)), " is not available."
-        call messages_warning(1)
-      end if
-    case (2)
-      if (reltype == 0) then
-        p%type = M_KB
+    p%type = ps%projector_type
+
+    if(p%type == PROJ_KB .and. reltype == 1) then
+      if(ps%kbc == 2) then
+        p%type = PROJ_RKB
       else
-        p%type = M_RKB
+        call messages_write("Spin-orbit coupling for species '"//trim(species_label(atm%species))//" is not available.")
+        call messages_warning()
       end if
-    case (3)
-      p%type = M_HGH
-    end select
+    end if
     
     select case(p%type)
-    case(M_KB)
-      p%nprojections = dim * ps%kbc
-    case(M_RKB)
+    case(PROJ_KB)
+      p%nprojections = dim*ps%kbc
+    case(PROJ_RKB)
       p%nprojections = 4
-    case(M_HGH)
-      p%nprojections = 24
+    case(PROJ_HGH)
+      p%nprojections = 3
     end select
 
     POP_SUB(projector_init)
@@ -268,17 +255,17 @@ contains
 
     select case (p%type)
 
-    case (M_HGH)
+    case (PROJ_HGH)
       SAFE_ALLOCATE(p%hgh_p(0:p%lmax, -p%lmax:p%lmax))
       do ll = 0, p%lmax
         if(ll == p%lloc) cycle
         do mm = -ll, ll
           call hgh_projector_null(p%hgh_p(ll, mm))
-          call hgh_projector_init(p%hgh_p(ll, mm), p%sphere, a, ll, mm, so_strength)
+          call hgh_projector_init(p%hgh_p(ll, mm), p%sphere, p%reltype, a, ll, mm, so_strength)
         end do
       end do
 
-    case (M_KB)
+    case (PROJ_KB)
       SAFE_ALLOCATE(p%kb_p(0:p%lmax, -p%lmax:p%lmax))
       do ll = 0, p%lmax
         if(ll == p%lloc) cycle
@@ -288,7 +275,7 @@ contains
         end do
       end do
 
-    case (M_RKB)
+    case (PROJ_RKB)
       SAFE_ALLOCATE(p%rkb_p(1:p%lmax, -p%lmax:p%lmax))
       do ll = 1, p%lmax
         if(ll == p%lloc) cycle
@@ -320,7 +307,7 @@ contains
     call submesh_end(p%sphere)
 
     select case(p%type)
-    case(M_HGH)
+    case(PROJ_HGH)
       do ll = 0, p%lmax
         if(ll == p%lloc) cycle
         do mm = -ll, ll
@@ -329,7 +316,7 @@ contains
       end do
       SAFE_DEALLOCATE_P(p%hgh_p)
 
-    case(M_KB)
+    case(PROJ_KB)
       do ll = 0, p%lmax
         if(ll == p%lloc) cycle
         do mm = -ll, ll
@@ -338,7 +325,7 @@ contains
       end do
       SAFE_DEALLOCATE_P(p%kb_p)
 
-    case(M_RKB)
+    case(PROJ_RKB)
       do ll = 1, p%lmax
         if(ll == p%lloc) cycle
         do mm = -ll, ll
@@ -353,7 +340,7 @@ contains
 
     end select
     
-    p%type = M_NONE
+    p%type = PROJ_NONE
 
     SAFE_DEALLOCATE_P(p%phase)
 

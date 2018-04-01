@@ -1106,7 +1106,7 @@ contains
     call oct_spline_x(spl%spl, spl%acc, x(1))
     call oct_spline_y(spl%spl, spl%acc, y(1))
     do i = 1, np
-      write(iunit, '(2f16.8)') x(i), y(i)
+      write(iunit, '(2es16.8)') x(i), y(i)
     end do
 
     SAFE_DEALLOCATE_A(x)
@@ -1141,7 +1141,7 @@ contains
     call oct_spline_x(spl(1)%spl, spl(1)%acc, x(1))
     call oct_spline_y(spl(1)%spl, spl(1)%acc, y(1))
     do i = 1, np
-      write(iunit, '('//trim(fm)//'f16.8)') x(i), (spline_eval(spl(j), x(i)), j = 1, size(spl))
+      write(iunit, '('//trim(fm)//'es16.8)') x(i), (spline_eval(spl(j), x(i)), j = 1, size(spl))
     end do
 
     SAFE_DEALLOCATE_A(x)
@@ -1177,7 +1177,7 @@ contains
     call oct_spline_x(spl(1, 1)%spl, spl(1, 1)%acc, x(1))
     call oct_spline_y(spl(1, 1)%spl, spl(1, 1)%acc, y(1))
     do i = 1, np
-      write(iunit, '('//trim(fm)//'f16.8)') x(i), &
+      write(iunit, '('//trim(fm)//'es16.8)') x(i), &
         ((spline_eval(spl(j, k), x(i)), j = 1, n1), k = 1, n2)
     end do
 

@@ -12,46 +12,46 @@ Enabled    : Yes
 Precision : 2.0e-6
 # First start a ground state calculation that uses the mixing of the density
 Input: 06-restart.01-gs_mixrho.inp
-match ; Eigenvalue [up] ; GREPFIELD(static/info, '1   up', 3) ; -0.013820
-match ; Eigenvalue [dn] ; GREPFIELD(static/info, '1   dn', 3) ; -0.085148
+match ; Eigenvalue [up] ; GREPFIELD(workdir/static/info, '1   up', 3) ; -0.013820
+match ; Eigenvalue [dn] ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.085148
 
 
 # Now restart the previous calculation reading the states, the density, and the mixing
 Input: 06-restart.02-restart_gs_mixrho.inp
-match ; Eigenvalue [up] ; GREPFIELD(static/info, '1   up', 3) ; -0.014038
-match ; Eigenvalue [dn] ; GREPFIELD(static/info, '1   dn', 3) ; -0.085315
+match ; Eigenvalue [up] ; GREPFIELD(workdir/static/info, '1   up', 3) ; -0.014038
+match ; Eigenvalue [dn] ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.085315
 
 
 # Start again a ground state calculation, this time using the mixing of the potential
 Input: 06-restart.03-gs_mixvhxc.inp
-match ; Eigenvalue [up] ; GREPFIELD(static/info, '1   up', 3) ; -0.014101
-match ; Eigenvalue [dn] ; GREPFIELD(static/info, '1   dn', 3) ; -0.085397
+match ; Eigenvalue [up] ; GREPFIELD(workdir/static/info, '1   up', 3) ; -0.014101
+match ; Eigenvalue [dn] ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.085397
 
 
 # Now restart the previous calculation reading the states, the potential, and the mixing
 Input: 06-restart.04-restart_gs_mixvhxc.inp
-match ; Eigenvalue [up] ; GREPFIELD(static/info, '1   up', 3) ; -0.014047
-match ; Eigenvalue [dn] ; GREPFIELD(static/info, '1   dn', 3) ; -0.085321
+match ; Eigenvalue [up] ; GREPFIELD(workdir/static/info, '1   up', 3) ; -0.014047
+match ; Eigenvalue [dn] ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.085321
 
 
 # Restart the previous calculation reading only the states
 Input: 06-restart.05-restart_gs.inp
-match ; Eigenvalue [up] ; GREPFIELD(static/info, '1   up', 3) ; -0.014047
-match ; Eigenvalue [dn] ; GREPFIELD(static/info, '1   dn', 3) ; -0.085321
+match ; Eigenvalue [up] ; GREPFIELD(workdir/static/info, '1   up', 3) ; -0.014047
+match ; Eigenvalue [dn] ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.085321
 
 
 # Start a time-dependent calculation
 Input: 06-restart.06-td_calc.inp
-match ; TD start    ; LINEFIELD(td.general/multipoles, -1, 2) ; 3.500000000000e-01
-match ; charge [up] ; LINEFIELD(td.general/multipoles, -1, 3) ; 0.000000000000e+00
-match ; charge [dn] ; LINEFIELD(td.general/multipoles, -1, 7) ; 9.999999999991e-01
-match ; <x> [dn]    ; LINEFIELD(td.general/multipoles, -1, 8) ; -3.495466780114e-03
+match ; TD start    ; LINEFIELD(workdir/td.general/multipoles, -1, 2) ; 3.500000000000e-01
+match ; charge [up] ; LINEFIELD(workdir/td.general/multipoles, -1, 3) ; 0.000000000000e+00
+match ; charge [dn] ; LINEFIELD(workdir/td.general/multipoles, -1, 7) ; 9.999999999991e-01
+match ; <x> [dn]    ; LINEFIELD(workdir/td.general/multipoles, -1, 8) ; -3.495466780114e-03
 
 
 # Finally restart the td calculation
 Input: 06-restart.07-restart_td_calc.inp
-match ; TD start    ; LINEFIELD(td.general/multipoles, -1, 2) ; 7.000000000000e-01
-match ; charge [up] ; LINEFIELD(td.general/multipoles, -1, 3) ; 0.000000000000e+00
-match ; charge [dn] ; LINEFIELD(td.general/multipoles, -1, 7) ; 9.999999999983e-01
-match ; <x> [dn]    ; LINEFIELD(td.general/multipoles, -1, 8) ; -6.969717724775e-03
+match ; TD start    ; LINEFIELD(workdir/td.general/multipoles, -1, 2) ; 7.000000000000e-01
+match ; charge [up] ; LINEFIELD(workdir/td.general/multipoles, -1, 3) ; 0.000000000000e+00
+match ; charge [dn] ; LINEFIELD(workdir/td.general/multipoles, -1, 7) ; 9.999999999983e-01
+match ; <x> [dn]    ; LINEFIELD(workdir/td.general/multipoles, -1, 8) ; -6.969717724775e-03
 

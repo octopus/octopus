@@ -25,6 +25,7 @@ module output_oct_m
   use base_states_oct_m
   use basins_oct_m
   use batch_oct_m
+  use comm_oct_m 
   use cube_function_oct_m
   use cube_oct_m
   use current_oct_m
@@ -123,6 +124,7 @@ module output_oct_m
   type output_t
     !> General output variables:
     integer :: what                !< what to output
+    integer :: whatBZ              !< what to output - for k-point resolved output
     integer :: how                 !< how to output
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
@@ -131,7 +133,7 @@ module output_oct_m
     integer :: output_interval     !< output every iter
     integer :: restart_write_interval
     logical :: duringscf
-
+    logical :: gradientpotential
     character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
     character(len=MAX_PATH_LEN) :: iter_dir  !< The folder name, if information will be output while iterating.
 
@@ -139,8 +141,7 @@ module output_oct_m
     type(mesh_line_t)  :: line     !< or through a line (in 2D)
 
     type(output_bgw_t) :: bgw      !< parameters for BerkeleyGW output
-    type(current_t)    :: current_calculator
-
+  
   end type output_t
 
   integer, parameter, public ::              &
@@ -284,6 +285,22 @@ contains
     !% Generates input for a frozen calculation.
     !%End
     call parse_variable('Output', 0, outp%what)
+
+
+
+
+    !%Variable OutputGradientPotential
+    !%Type logical
+    !%Default no
+    !%Section Output
+    !%Description
+    !% During <tt>gs</tt>, <tt>unocc</tt> runs and <tt>td</tt> if this variable is set to yes, 
+    !% output will be written after every <tt>OutputInterval</tt> iterations.
+    !%End
+    call parse_variable('OutputGradientPotential', .false., outp%gradientpotential)
+
+
+
 
     if(iand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
       call messages_experimental("Wave-functions in Fourier space")
@@ -490,23 +507,6 @@ contains
     !%End
     call parse_variable('OutputDuringSCF', .false., outp%duringscf) 
 
-    !%Variable OutputIterDir
-    !%Default "output_iter"
-    !%Type string
-    !%Section Output
-    !%Description
-    !% The name of the directory where <tt>Octopus</tt> stores information
-    !% such as the density, forces, etc. requested by variable <tt>Output</tt>
-    !% in the format specified by <tt>OutputFormat</tt>.
-    !% This information is written while iterating <tt>CalculationMode = gs</tt>, <tt>unocc</tt>, or <tt>td</tt>,
-    !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
-    !%End
-    call parse_variable('OutputIterDir', "output_iter", outp%iter_dir)
-    if(outp%what /= 0 .and. outp%output_interval > 0) then
-      call io_mkdir(outp%iter_dir)
-    end if
-    call add_last_slash(outp%iter_dir)
-
     !%Variable RestartWriteInterval
     !%Type integer
     !%Default 50
@@ -528,13 +528,6 @@ contains
     what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS + OPTION__OUTPUT__BERKELEYGW + OPTION__OUTPUT__DOS + &
       OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW + OPTION__OUTPUT__FROZEN_SYSTEM
 
-    ! we are using a what that has a how.
-    if(iand(outp%what, not(what_no_how)) /= 0) then
-      call io_function_read_how(sb, outp%how)
-    else
-      outp%how = 0
-    end if
-
     if(iand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
       call messages_experimental("Frozen output")
     end if
@@ -543,6 +536,62 @@ contains
       call v_ks_calculate_current(ks, .true.)
     else
       call v_ks_calculate_current(ks, .false.)
+    end if
+
+   
+    !%Variable Output_KPT
+    !%Type flag
+    !%Default none
+    !%Section Output
+    !%Description
+    !% Specifies what to print. The output files are written at the end of the run into the output directory for the
+    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
+    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
+    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
+    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
+    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
+    !% the options below. Indices in the filename are labelled as follows:
+    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
+    !% There is no tag for directions, given as a letter. The perturbation direction is always
+    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
+    !% Example: <tt>current_kpt</tt>
+    !%Option current_kpt  bit(0)
+    !% Outputs the current density resolved in momentum space. The output file is called <tt>current_kpt-</tt>.
+    !%Option density_kpt bit(1)
+    !% Outputs the electronic density resolved in momentum space. 
+    !%End
+    call parse_variable('Output_KPT', 0, outp%whatBZ)
+
+    if(.not.varinfo_valid_option('Output_KPT', outp%whatBZ, is_flag=.true.)) then
+      call messages_input_error('Output_KPT')
+    end if
+
+    if(iand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
+     call v_ks_calculate_current(ks, .true.) 
+    end if
+
+    !%Variable OutputIterDir
+    !%Default "output_iter"
+    !%Type string
+    !%Section Output
+    !%Description
+    !% The name of the directory where <tt>Octopus</tt> stores information
+    !% such as the density, forces, etc. requested by variable <tt>Output</tt>
+    !% in the format specified by <tt>OutputFormat</tt>.
+    !% This information is written while iterating <tt>CalculationMode = gs</tt>, <tt>unocc</tt>, or <tt>td</tt>,
+    !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
+    !%End
+    call parse_variable('OutputIterDir', "output_iter", outp%iter_dir)
+    if(outp%what + outp%whatBZ /= 0 .and. outp%output_interval > 0) then
+      call io_mkdir(outp%iter_dir)
+    end if
+    call add_last_slash(outp%iter_dir)
+
+    ! we are using a what that has a how.
+    if(iand(outp%what, not(what_no_how)) /= 0 .or. outp%whatBZ /= 0) then
+      call io_function_read_how(sb, outp%how)
+    else
+      outp%how = 0
     end if
 
 
@@ -577,7 +626,7 @@ contains
     PUSH_SUB(output_all)
     call profiling_in(prof, "OUTPUT_ALL")
 
-    if(outp%what /= 0) then
+    if(outp%what+outp%whatBZ /= 0) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
       call io_mkdir(dir)
@@ -592,7 +641,7 @@ contains
     end if
     
     call output_states(st, gr, geo, dir, outp)
-    call output_hamiltonian(hm, st, gr%der, dir, outp, geo, st%st_kpt_mpi_grp)
+    call output_hamiltonian(hm, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
     call output_localization_funct(st, hm, gr, dir, outp, geo)
     call output_current_flow(gr, st, dir, outp)
 
@@ -1208,8 +1257,8 @@ contains
       
       ! symmetry is not analyzed by Octopus for finite systems, but we only need it for periodic ones
       do itran = 1, symmetries_number(gr%sb%symm)
-        mtrx(:,:, itran) = symm_op_rotation_matrix(gr%sb%symm%ops(itran))
-        tnp(:, itran) = symm_op_translation_vector(gr%sb%symm%ops(itran))
+        mtrx(:,:, itran) = symm_op_rotation_matrix_red(gr%sb%symm%ops(itran))
+        tnp(:, itran) = symm_op_translation_vector_red(gr%sb%symm%ops(itran))
       end do
       ! some further work on conventions of mtrx and tnp is required!
       
