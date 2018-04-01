@@ -26,6 +26,8 @@
 #include <fstream>
 #include <unordered_map>
 
+#include "share_directory.hpp"
+
 namespace pseudopotential {
   
   class element {
@@ -78,7 +80,7 @@ namespace pseudopotential {
 
       if(map.empty()){
 
-	std::string filename = std::string(SHARE_DIR) + "/pseudopotentials/elements.dat";
+	std::string filename = pseudopotential::share_directory::get() + "/pseudopotentials/elements.dat";
 	
 	std::ifstream file(filename);
 
