@@ -64,7 +64,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   type(batch_t),     intent(inout) :: ppsib
   integer,           intent(in)    :: ik
 
-  integer :: ipj, nreduce, ii, jj, ns, idim, ll, mm, is, ist, bind
+  integer :: ipj, nreduce, ii, ns, idim, ll, mm, is, ist, bind
   R_TYPE, allocatable :: reduce_buffer(:,:), lpsi(:, :), uvpsi(:,:,:)
   integer, allocatable :: ireduce(:, :, :, :)
   type(profile_t), save :: prof
