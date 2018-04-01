@@ -65,7 +65,7 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   R_TYPE,                intent(in)  :: psi(:, :)
   R_TYPE,               intent(out)  :: uvpsi(:,:) !< (dim, 3)
 
-  integer :: n_s, jj, idim, kk
+  integer :: n_s, jj, idim
   R_TYPE, allocatable :: bra(:, :)
   type(profile_t), save :: prof
   integer :: block_size, sp, ep
@@ -143,8 +143,6 @@ subroutine X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
   R_TYPE,                intent(inout) :: ppsi(:, :)
 
   integer :: n_s, ii, jj, idim, mm
-  integer :: kk
-  CMPLX, allocatable :: lp_psi(:, :, :)
   R_TYPE :: weight(3,dim)
   CMPLX  :: zweight(3,dim)
 

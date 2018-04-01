@@ -351,10 +351,6 @@ module pcm_eom_oct_m
    FLOAT, intent(out) :: q_t(:)
    FLOAT, intent(in)  :: pot_t(:)
 
-   FLOAT :: pot_vac_t(nts_act)
-
-   integer :: ii
-
    PUSH_SUB(pcm_ief_prop_deb)
 
    if( which_eom == 'electron' ) then
