@@ -156,7 +156,7 @@ subroutine X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
 
     n_s = hgh_p(mm)%n_s
 
-    weight(1:3, 1:dim) = M_z0
+    weight(1:3, 1:dim) = R_TOTYPE(M_ZERO)
 
     !We first compute for each value of ii and idim the weight of the projector hgh_p%p(1:n_s, ii)
     !Doing that we need to only apply once the each projector
