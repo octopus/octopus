@@ -264,8 +264,6 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
   integer :: idim, block_size, ib, size, sp
   R_TYPE, allocatable :: psicopy(:, :, :)
   type(accel_mem_t) :: psicopy_buffer, ss_buffer
-  type(accel_kernel_t), save, target :: dkernel, zkernel
-  type(accel_kernel_t), pointer :: kernel
   type(profile_t), save :: prof_copy
   type(profile_t), save :: prof
 
@@ -1055,7 +1053,6 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
   
   integer       :: block_size, sp, idim, size, ib
   R_TYPE, allocatable :: psinew(:, :, :), psicopy(:, :, :)
-  type(accel_kernel_t), save :: dkernel, zkernel
   type(accel_mem_t) :: psinew_buffer, psicopy_buffer, uu_buffer
   type(profile_t), save :: prof
 
