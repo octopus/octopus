@@ -54,8 +54,6 @@ module species_pot_oct_m
   public ::                         &
     species_get_density,            &
     species_get_nlcc,               &
-    dspecies_get_orbital_submesh,   &
-    zspecies_get_orbital_submesh,   &
     species_get_local,              &
     species_atom_density,           &
     species_atom_density_derivative
@@ -814,14 +812,6 @@ contains
       call profiling_out(prof)
     POP_SUB(species_get_local)
   end subroutine species_get_local
-
-#include "complex.F90"
-#include "species_pot_inc.F90"
-
-#include "undef.F90"
-
-#include "real.F90"
-#include "species_pot_inc.F90"
 
 end module species_pot_oct_m
 
