@@ -52,7 +52,6 @@ module stress_oct_m
   use states_oct_m
   use states_dim_oct_m
   use symm_op_oct_m
-  use symmetrizer_oct_m
   use types_oct_m
   use v_ks_oct_m
   use poisson_oct_m
@@ -190,8 +189,7 @@ contains
       type(cube_t),    pointer             :: cube
       type(fourier_space_op_t), pointer    :: coulb
       type(cube_function_t) :: cf
-      type(profile_t), save :: prof
-      integer :: ii, jj, kk, iit, jjt, kkt, idir, jdir
+      integer :: ii, jj, kk, iit, jjt, kkt
       FLOAT :: gx, xx(3)
       CMPLX :: zphase
       
@@ -268,9 +266,7 @@ contains
       type(poisson_t), target,   intent(in)    :: this
       type(cube_t),    pointer             :: cube
       type(fourier_space_op_t), pointer    :: coulb
-      type(cube_function_t) :: cf      
-      type(profile_t), save :: prof
-      integer :: ii, jj, kk, iit, jjt, kkt, db(3)
+      integer :: db(3)
       integer :: ix,iy,iz, ixx(3)
       FLOAT :: gg(3), modg2, temp(3)
 
@@ -342,12 +338,9 @@ contains
     FLOAT,                         intent(inout) :: stress(:, :)
     FLOAT,                         intent(out) :: stress_KE(3, 3) ! temporal
     FLOAT :: stress_l(3, 3)
-    integer :: ik, ist, idir, jdir, idim, iatom, ip, ib, ii, ierr, ispin
-    CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), hpsi(:, :), rhpsi(:, :), rpsi(:, :), hrpsi(:, :)
+    integer :: ik, ist, idir, jdir, idim, ip, ispin
+    CMPLX, allocatable :: gpsi(:, :, :), psi(:, :)
     type(profile_t), save :: prof
-    type(symmetrizer_t) :: symmetrizer
-    type(batch_t) :: hpsib, rhpsib, rpsib, hrpsib, epsib
-    type(batch_t), allocatable :: commpsib(:)
     logical, parameter :: hamiltonian_current = .false.
 
     call profiling_in(prof, "STRESS_FROM_KEE")    
@@ -515,15 +508,13 @@ contains
     FLOAT :: stress_l(3, 3)
     FLOAT :: stress_t_SR(3, 3), stress_t_LR(3, 3), stress_t_NL(3, 3)
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), rppsi(:, :, :)
-    FLOAT,  allocatable :: grad_rho(:, :)
-    FLOAT :: energy_ps_SR,energy_ps_LR,energy_ps_NL, energy_ps
+    FLOAT :: energy_ps_SR
     FLOAT,  allocatable :: vloc(:),rvloc(:,:)
     FLOAT,  allocatable :: rho_t(:),grho_t(:,:)
-    FLOAT :: sigma_erf, alpha, gx, g2, fact, zi, charge
+    FLOAT :: sigma_erf, alpha, gx, g2
     CMPLX :: zphase, zfact
     integer :: ik, ispin, ist, idim, idir, jdir, ip, iatom
     integer :: ii,jj,kk
-    type(ps_t) :: spec_ps
     type(profile_t), save :: prof
 
     call profiling_in(prof, "STRESS_FROM_PSEUDO")    
@@ -712,7 +703,6 @@ contains
     FLOAT, allocatable :: vl(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
-    logical :: cmplxscl
     
     PUSH_SUB(epot_local_pseudopotential_sr)
     call profiling_in(prof, "EPOT_LOCAL_PSEUDOPOTENTIAL_SR")
@@ -754,7 +744,7 @@ contains
     FLOAT,             intent(inout) :: gg(:)
     FLOAT,             intent(out)   :: modg2
 
-    integer :: idir
+!    integer :: idir
 
     ! no PUSH_SUB, called too frequently
 
@@ -777,10 +767,11 @@ contains
     type(hamiltonian_t),  intent(inout)    :: hm
     FLOAT,                         intent(inout) :: stress(:, :)
     FLOAT,                         intent(out) :: stress_Ewald(3, 3) ! temporal
-    FLOAT :: stress_l(3, 3), stress_RS(3, 3), stress_FS(3, 3), stress_PS(3, 3)
+
+    FLOAT :: stress_l(3, 3)
 
     type(simul_box_t), pointer :: sb
-    FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc, rcut, epseudo
+    FLOAT :: rr, xi(1:MAX_DIM), zi, zj, erfc, rcut
     integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
     integer :: ix, iy, iz, isph, ss, idim, idir, jdir
@@ -790,7 +781,6 @@ contains
     CMPLX   :: sumatoms, aa
     FLOAT :: sigma_erf
     type(profile_t), save :: prof
-    FLOAT :: energy_LR, energy_SR, energy_ZERO, energy_TOT, energy_ps
 
     call profiling_in(prof, "STRESS_FROM_EWALD")    
     PUSH_SUB(stress_from_Ewald_sum)

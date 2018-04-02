@@ -138,7 +138,7 @@ contains
     FLOAT,                intent(out)    :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
     FLOAT, pointer,       intent(out)    :: current_kpt(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, kpt%start:kpt%end)
 
-    integer :: ik, ist, idir, idim, iatom, ip, ib, ii, ierr, ispin
+    integer :: ik, ist, idir, idim, ip, ib, ii, ispin
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), hpsi(:, :), rhpsi(:, :), rpsi(:, :), hrpsi(:, :)
     FLOAT, allocatable :: symmcurrent(:, :)
     type(profile_t), save :: prof

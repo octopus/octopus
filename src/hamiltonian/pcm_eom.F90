@@ -351,10 +351,6 @@ module pcm_eom_oct_m
    FLOAT, intent(out) :: q_t(:)
    FLOAT, intent(in)  :: pot_t(:)
 
-   FLOAT :: pot_vac_t(nts_act)
-
-   integer :: ii
-
    PUSH_SUB(pcm_ief_prop_deb)
 
    if( which_eom == 'electron' ) then
@@ -773,8 +769,7 @@ module pcm_eom_oct_m
    integer :: i,j
    integer :: info,lwork,liwork
    FLOAT, allocatable :: scr1(:,:),scr2(:,:),eigt_t(:,:)
-   FLOAT :: sgn,fac_eps0,fac_epsd
-   FLOAT:: temp,fact1,fact2
+   FLOAT :: sgn
    character jobz,uplo
    integer, allocatable :: iwork(:)
    FLOAT,allocatable :: work(:)

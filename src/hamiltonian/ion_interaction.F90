@@ -297,10 +297,7 @@ contains
     FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc, rcut, epseudo
     integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
-    integer :: ix, iy, iz, isph, ss, idim
-    FLOAT   :: gg(1:MAX_DIM), gg2, gx
-    FLOAT   :: factor, charge
-    CMPLX   :: sumatoms, tmp(1:MAX_DIM), aa
+    FLOAT   :: charge
     type(profile_t), save :: prof_short, prof_long
     type(ps_t) :: spec_ps
 
@@ -436,7 +433,7 @@ contains
     FLOAT,                     intent(in)   :: charge
 
     FLOAT :: rcut
-    integer :: iatom, jatom
+    integer :: iatom
     integer :: ix, iy, iz, isph, ss, idim
     FLOAT   :: gg(1:MAX_DIM), gg2, gx
     FLOAT   :: factor
@@ -523,15 +520,12 @@ contains
     FLOAT,                     intent(inout)   :: force(:, :) !< (sb%dim, geo%natoms)
     FLOAT,                     intent(in)   :: charge
 
-    FLOAT :: rcut,rcut_min,rcut_max
+    FLOAT :: rcut
     integer :: iatom, jatom
-    integer :: ix, iy, iz, ix_max, iy_max, ss, idim
+    integer :: ix, iy, ix_max, iy_max, ss
     FLOAT   :: gg(1:MAX_DIM), gg2, gx, gg_abs
     FLOAT   :: factor,factor1,factor2
     FLOAT   :: dz_max, dz_ij, area_cell, erfc
-    CMPLX   :: sumatoms, tmp(1:MAX_DIM), aa
-
-    CMPLX, allocatable :: phase(:)
 
     PUSH_SUB(Ewald_long_2d)
 

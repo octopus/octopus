@@ -33,12 +33,14 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel,
   logical, optional,        intent(in)    :: add
 
   type(species_t), pointer :: spec
-  integer :: idim, iatom, jj, ip, ispin, ii, ll, mm
-  FLOAT, allocatable :: dorbital(:)
+  integer :: idim, iatom, jj, ispin, ii, ll, mm
   R_TYPE, allocatable :: orbital(:)
   FLOAT :: radius
   type(profile_t), save :: prof
   type(submesh_t) :: sphere
+#ifdef R_TCOMPLEX
+  FLOAT, allocatable :: dorbital(:)
+#endif
   
   call profiling_in(prof, "ATOMIC_ORBITAL")
   PUSH_SUB(X(lcao_atomic_orbital))

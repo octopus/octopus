@@ -365,9 +365,11 @@ contains
     integer,           intent(in) :: iunit
 
     character(len=120) :: s1, s2
-    type(XC_F90(pointer_t)) :: str
     integer :: ii
-
+#ifndef HAVE_LIBXC3
+    type(XC_F90(pointer_t)) :: str
+#endif
+    
     PUSH_SUB(xc_functl_write_info)
 
     if(functl%family == XC_FAMILY_OEP) then

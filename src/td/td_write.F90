@@ -778,7 +778,6 @@ contains
     integer,              intent(in)    :: iter
     FLOAT, optional,      intent(in)    :: dt
 
-    character(len=256) :: filename
     integer :: iout
     type(profile_t), save :: prof
 
@@ -2300,10 +2299,10 @@ contains
     integer,           intent(in)    :: iter
 
     CMPLX, allocatable :: projections(:,:)
-    FLOAT, allocatable :: occ(:,:), Nex_kpt(:)
-    character(len=80) :: aux, filename, dir
-    integer :: ik, ikpt, ist, uist, idir, err
+    character(len=80) :: aux, dir
+    integer :: ik, ikpt, ist, uist, err
     FLOAT :: Nex, weight
+    FLOAT, allocatable :: occ(:,:), Nex_kpt(:)
     
 
     PUSH_SUB(td_write_n_ex)
@@ -2472,9 +2471,8 @@ contains
     integer,           intent(in)    :: iter
 
     CMPLX, allocatable :: proj(:,:), psi(:,:,:), gs_psi(:,:,:), temp_state(:,:)
-    character(len=80) :: aux, filename1, filename2
-    integer :: ik,ist, jst, file, idim, nk_proj, ip
-    integer, allocatable :: k_proj(:)
+    character(len=80) :: filename1, filename2
+    integer :: ik,ist, jst, file, idim, nk_proj
     type(mesh_t) :: mesh
 
     PUSH_SUB(td_write_proj_kp)
@@ -2575,11 +2573,11 @@ contains
     type(v_ks_t),      intent(in)      :: ks
     integer,           intent(in)      :: iter 
 
-    CMPLX, allocatable :: hmss(:,:), psi(:,:,:), hpsi(:,:,:), temp_state1(:,:), temp_state2(:,:)
+    CMPLX, allocatable :: hmss(:,:), psi(:,:,:), hpsi(:,:,:), temp_state1(:,:)
     CMPLX, allocatable :: HFloquet(:,:,:), HFloq_eff(:,:), temp(:,:)
     FLOAT, allocatable :: eigenval(:), bands(:,:)
     character(len=80) :: filename
-    integer :: it, nT, ik, ist, jst, in, im, inm, file, idim, nik, ik_count
+    integer :: it, nT, ik, ist, in, im, file, idim, nik, ik_count
     integer :: Forder, Fdim, m0, n0, n1, nst, ii, jj, lim_nst
     logical :: downfolding = .false.
     type(mesh_t) :: mesh

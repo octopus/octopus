@@ -65,7 +65,7 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   R_TYPE,                intent(in)  :: psi(:, :)
   R_TYPE,               intent(out)  :: uvpsi(:,:) !< (dim, 3)
 
-  integer :: n_s, jj, idim, kk
+  integer :: n_s, jj, idim
   R_TYPE, allocatable :: bra(:, :)
   type(profile_t), save :: prof
   integer :: block_size, sp, ep
@@ -143,8 +143,6 @@ subroutine X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
   R_TYPE,                intent(inout) :: ppsi(:, :)
 
   integer :: n_s, ii, jj, idim, mm
-  integer :: kk
-  CMPLX, allocatable :: lp_psi(:, :, :)
   R_TYPE :: weight(3,dim)
   CMPLX  :: zweight(3,dim)
 
@@ -156,7 +154,7 @@ subroutine X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
 
     n_s = hgh_p(mm)%n_s
 
-    weight(1:3, 1:dim) = M_z0
+    weight(1:3, 1:dim) = R_TOTYPE(M_ZERO)
 
     !We first compute for each value of ii and idim the weight of the projector hgh_p%p(1:n_s, ii)
     !Doing that we need to only apply once the each projector
