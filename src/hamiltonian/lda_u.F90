@@ -397,8 +397,6 @@ contains
 
   PUSH_SUB(lda_u_update_basis)
 
-  call messages_print_stress(stdout, "Updating DFT+U basis")
-
   !We clean the orbital basis, to be able to reconstruct it
   do iorbset = 1, this%norbsets
     call orbitalset_end(this%orbsets(iorbset))
@@ -407,9 +405,9 @@ contains
 
   !We now reconstruct the basis
   if (states_are_real(st)) then
-    call dconstruct_orbital_basis(this, geo, gr%mesh, st)
+    call dconstruct_orbital_basis(this, geo, gr%mesh, st, verbose = .false.)
   else
-    call zconstruct_orbital_basis(this, geo, gr%mesh, st)
+    call zconstruct_orbital_basis(this, geo, gr%mesh, st, verbose = .false.)
   end if 
 
   !if(this%useACBN0) then
@@ -427,8 +425,6 @@ contains
   if(states_are_complex(st)) then
     call lda_u_build_phase_correction(this, gr%mesh%sb, st%d)
   end if
-
-  call messages_print_stress(stdout)
 
   POP_SUB(lda_u_update_basis)
 

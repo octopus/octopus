@@ -884,11 +884,12 @@ end subroutine X(compute_coulomb_integrals)
 ! ---------------------------------------------------------
 !> This routine is an interface for constructing the orbital basis.
 ! ---------------------------------------------------------
-subroutine X(construct_orbital_basis)(this, geo, mesh, st)
+subroutine X(construct_orbital_basis)(this, geo, mesh, st, verbose)
   type(lda_u_t),             intent(inout)    :: this
   type(geometry_t), target,  intent(in)       :: geo
   type(mesh_t),              intent(in)       :: mesh
   type(states_t),            intent(in)       :: st 
+  logical, optional,         intent(in)       :: verbose
 
   integer :: ia, iorb, norb, ntotorb, offset, ios, idim
   integer ::  hubbardl, ii, nn, ll, mm, work, work2, iorbset
@@ -897,11 +898,16 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
   integer :: nSorbitals
   type(orbitalset_t), pointer :: os
   logical :: hasjdependence
+  logical :: verbose_
 
   PUSH_SUB(X(construct_orbital_basis))
 
-  write(message(1),'(a)')    'Building the LDA+U localized orbital basis.'
-  call messages_info(1)
+  verbose_ = optional_default(verbose,.true.)
+
+  if(verbose_) then
+    write(message(1),'(a)')    'Building the LDA+U localized orbital basis.'
+    call messages_info(1)
+  end if
 
   !We first count the number of orbital sets we have to treat
   norb = 0
@@ -950,9 +956,10 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
     end do
   end if
 
-
-  write(message(1),'(a, i3, a)')    'Found ', norb, ' orbital sets.'
-  call messages_info(1)
+  if(verbose_) then
+    write(message(1),'(a, i3, a)')    'Found ', norb, ' orbital sets.'
+    call messages_info(1)
+  end if
 
   this%norbsets = norb
   SAFE_ALLOCATE(this%orbsets(1:norb))
@@ -972,7 +979,7 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
     hasjdependence = .false.
     call species_iwf_j(geo%atom(ia)%species, 1, jj)
     if(abs(jj) >  M_EPSILON) hasjdependence = .true.
-    if (debug%info .and. hasjdependence) then
+    if (debug%info .and. hasjdependence .and. verbose_) then
       write(message(1),'(a,i3,a)')  'Debug: Atom ', ia, ' has j-dependent pseudo-wavefunctions.'
       call messages_info(1)
     end if 
@@ -1129,9 +1136,11 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
             os%X(orb)(1:os%sphere%np,idim,iorb)/norm
         end do
       else
-        write(message(1),'(a,i3,a,i3,a,f8.5)') 'Info: Orbset ', iorbset, ' Orbital ', iorb, &
+        if(verbose_) then
+          write(message(1),'(a,i3,a,i3,a,f8.5)') 'Info: Orbset ', iorbset, ' Orbital ', iorb, &
                            ' norm= ',  norm
-        call messages_info(1)
+          call messages_info(1)
+        end if
       end if
     end do
   end do
@@ -1169,13 +1178,14 @@ subroutine X(construct_orbital_basis)(this, geo, mesh, st)
        write(message(2),'(a)') 'Change the input file or use a pseudopotential that contains these orbitals.'
        call messages_fatal(1)
     end if
-
-    write(message(1),'(a,i2,a,f8.5,a)')    'Orbital set ', ios, ' has a value of U of ',&
+    if(verbose_) then
+      write(message(1),'(a,i2,a,f8.5,a)')    'Orbital set ', ios, ' has a value of U of ',&
                          this%orbsets(ios)%Ueff   , ' Ha.'
-    write(message(2),'(a,i2,a)')    'It contains ', this%orbsets(ios)%norbs, ' orbitals.'
-    write(message(3),'(a,f8.5,a,i6,a)') 'The radius is ', this%orbsets(ios)%sphere%radius, &
+      write(message(2),'(a,i2,a)')    'It contains ', this%orbsets(ios)%norbs, ' orbitals.'
+      write(message(3),'(a,f8.5,a,i6,a)') 'The radius is ', this%orbsets(ios)%sphere%radius, &
                         ' Bohr,  with ', this%orbsets(ios)%sphere%np, ' grid points.'
-     call messages_info(3)
+       call messages_info(3)
+    end if
   end do 
 
   if(this%level == DFT_U_ACBN0) then
