@@ -129,15 +129,8 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
       call states_get_state(st, mesh, ist, ik, psi )
 
       if(present(phase)) then
-#ifdef R_TCOMPLEX
-        ! Apply the phase that contains both the k-point and vector-potential terms.
-        do idim = 1, st%d%dim 
-          !$omp parallel do
-          do ip = 1, mesh%np
-            psi(ip, idim) = phase(ip, ik)*psi(ip, idim)
-          end do
-          !$omp end parallel do
-        end do
+  #ifdef R_TCOMPLEX
+        call states_set_phase(st%d, psi, phase(:,ik), mesh%np, .false.)
 #endif
       end if
 
@@ -224,7 +217,6 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
     end do
   end do
 
-  
   SAFE_DEALLOCATE_A(dot)
   SAFE_DEALLOCATE_A(psi)
 
@@ -500,6 +492,7 @@ subroutine X(compute_ACBNO_U_restricted)(this)
         denomU = denomU + real(this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios))
       end do
       end do
+
       this%orbsets(ios)%Ueff = M_TWO*numU/denomU - numJ/denomJ
       this%orbsets(ios)%Ubar = M_TWO*numU/denomU
       this%orbsets(ios)%Jbar = numJ/denomJ
@@ -843,6 +836,7 @@ end subroutine X(compute_coulomb_integrals)
        weight = st%d%kweights(iq)*st%occ(ist, iq)
 
        call batch_get_state(psib, ibatch, mesh%np, psi)
+       !No phase here, this is already added
 
        !We first compute the matrix elemets <\psi | orb_m>
        !taking into account phase correction if needed   
@@ -854,6 +848,8 @@ end subroutine X(compute_coulomb_integrals)
          !We first compute the matrix elemets <\psi | orb_m>
          !taking into account phase correction if needed 
          ! 
+         !No phase here, this is already added
+
          call X(orbitalset_get_coefficients)(os, st%d%dim, gpsi, iq, phase, gdot(1:st%d%dim,1:os%norbs,idir))
 
          do im = 1, os%norbs
@@ -1252,9 +1248,6 @@ subroutine X(build_overlap_matrices)(this, ik, has_phase)
               os%X(S)(im,im2,ios2) = X(submesh_to_submesh_dotp)(os2%sphere, os2%X(orb)(1:os2%sphere%np,1,im2), &
                    os%sphere, os%X(orb)(1:os%sphere%np,1,im))
             end if
-         !   if(ios == ios2 ) then
-         !     print *, ios, ios2, im, im2, os%X(S)(im,im2,ios2)
-         !    end if
             end do ! im2
           end if
         end if
