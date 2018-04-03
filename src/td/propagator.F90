@@ -575,10 +575,10 @@ contains
     if(update_energy_ .and. ion_dynamics_ions_move(ions)) then
       if(.not. propagator_ions_are_propagated(tr)) then
         call ion_dynamics_propagate(ions, gr%sb, geo, abs(nt*dt), ionic_scale*dt)
+        call lda_u_update_basis(hm%lda_u, gr, geo, st)
         generate = .true.
       end if
     end if
-
 
     if(gauge_field_is_applied(hm%ep%gfield) .and. .not. propagator_ions_are_propagated(tr)) then
       call gauge_field_propagate(hm%ep%gfield, dt, time)
@@ -608,11 +608,8 @@ contains
       call gauge_field_propagate_vel(hm%ep%gfield, dt)
     end if
 
-    if(ion_dynamics_ions_move(ions)) &
-      call lda_u_update_basis(hm%lda_u, gr, geo, st)
-
     !We update the occupation matrices
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
 
     POP_SUB(propagator_dt)
     call profiling_out(prof)

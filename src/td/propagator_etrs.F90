@@ -129,6 +129,7 @@ contains
     ! first move the ions to time t
     if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
+      call lda_u_update_basis(hm%lda_u, gr, geo, st)
       call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
     end if
 
@@ -140,6 +141,8 @@ contains
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
     end if
     call hamiltonian_update(hm, gr%mesh, time = time)
+    !We update the occupation matrices
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
@@ -222,17 +225,18 @@ contains
     call density_calc_end(dens_calc)
 
     call v_ks_calc(ks, hm, st, geo, calc_current = .false.)
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
     call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
     call hamiltonian_update(hm, gr%mesh, time = time - dt)
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     ! propagate dt/2 with H(t)
 
     ! first move the ions to time t
     if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
+      call lda_u_update_basis(hm%lda_u, gr, geo, st)
       call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
     end if
 
@@ -245,6 +249,7 @@ contains
     end if
 
     call hamiltonian_update(hm, gr%mesh, time = time)
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     SAFE_ALLOCATE(psi2(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
@@ -376,6 +381,8 @@ contains
       endif
 
       call hamiltonian_update(hm, gr%mesh, time = time - dt)
+      !We update the occupation matrices
+      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
       call v_ks_calc_start(ks, hm, st, geo, time = time - dt, calc_energy = .false., &
              calc_current = .false.)
     end if
@@ -437,6 +444,7 @@ contains
     ! move the ions to time t
     if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
+      call lda_u_update_basis(hm%lda_u, gr, geo, st)
       call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
     end if
 
@@ -445,6 +453,8 @@ contains
     end if
 
     call hamiltonian_update(hm, gr%mesh, time = time)
+    !We update the occupation matrices
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     call density_calc_init(dens_calc, st, gr, st%rho)
 
