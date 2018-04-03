@@ -784,8 +784,6 @@ contains
       ! initialize Fermi energy
       if (.not. hm%F%propagate) then
          call states_fermi(st, gr%mesh)
-      else
-         print *, "FLOQUET TIME PROPAGATION IS NOT WORKING WITH SMEARING!!!"
       end if
             
       call energy_calc_total(hm, gr, st)

@@ -1056,18 +1056,22 @@ contains
            rhoin(1:gr%fine%mesh%np, 1, 1:st%d%nspin) = st%rho(1:gr%fine%mesh%np, 1:st%d%nspin)
            rhoout(1:gr%fine%mesh%np, 1, 1:st%d%nspin) = dressed_st%rho(1:gr%fine%mesh%np, 1:st%d%nspin)
 
-           !Convergence check on the relative density
-           rel_dens = M_ZERO
-           do is = 1, st%d%nspin
-             tmp = abs(rhoout(1:gr%fine%mesh%np, 1, is) - dressed_rhoold(1:gr%fine%mesh%np, 1, is))
-             rel_dens = rel_dens + dmf_integrate(gr%fine%mesh, tmp)
-           end do
-           rel_dens = rel_dens / st%qtot
-           dressed_rhoold(1:gr%fine%mesh%np, 1, 1:st%d%nspin) = rhoout(1:gr%fine%mesh%np, 1, 1:st%d%nspin)
-
-           call dmixing(smix, rhoin, rhoout, mixrho)
-           st%rho(1:gr%fine%mesh%np, 1:st%d%nspin) = mixrho(1:gr%fine%mesh%np, 1, 1:st%d%nspin)
-           dressed_st%rho(1:gr%fine%mesh%np, 1:st%d%nspin) = mixrho(1:gr%fine%mesh%np, 1, 1:st%d%nspin)
+           if (hm%F%boson==OPTION__FLOQUETBOSON__QED_PHOTON) then
+              !Convergence check on the relative density
+              rel_dens = M_ZERO
+              do is = 1, st%d%nspin
+                tmp = abs(rhoout(1:gr%fine%mesh%np, 1, is) - dressed_rhoold(1:gr%fine%mesh%np, 1, is))
+                rel_dens = rel_dens + dmf_integrate(gr%fine%mesh, tmp)
+              end do
+              rel_dens = rel_dens / st%qtot
+              write(message(1),'(a,es15.8,4a)') 'Relative Density: ', rel_dens, ' [au]'
+              call messages_info(1)
+              dressed_rhoold(1:gr%fine%mesh%np, 1, 1:st%d%nspin) = rhoout(1:gr%fine%mesh%np, 1, 1:st%d%nspin)
+   
+              call dmixing(smix, rhoin, rhoout, mixrho)
+              st%rho(1:gr%fine%mesh%np, 1:st%d%nspin) = mixrho(1:gr%fine%mesh%np, 1, 1:st%d%nspin)
+              dressed_st%rho(1:gr%fine%mesh%np, 1:st%d%nspin) = mixrho(1:gr%fine%mesh%np, 1, 1:st%d%nspin)
+           end if
 
            call v_ks_calc(sys%ks, hm, dressed_st, sys%geo)
            call energy_calc_total(hm, gr, dressed_st, iunit = 0)
