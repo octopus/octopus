@@ -152,7 +152,7 @@ module species_oct_m
 
     integer :: niwfs              !< The number of initial wavefunctions
     integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :), iwf_n(:, :) !< i, n, l, m as a function of iorb and ispin
-    CMPLX, pointer :: iwf_j(:)    !< j as a function of iorb
+    FLOAT, pointer :: iwf_j(:)    !< j as a function of iorb
 
     integer :: hubbard_l          !< For the LDA+U, the angular momentum for the applied U
     FLOAT   :: hubbard_U          !< For the LDA+U, the effective U
@@ -328,7 +328,7 @@ contains
     type(species_t), intent(inout) :: spec
 
     character(len=LABEL_LEN)  :: lab
-    integer :: ib, ispec, row, n_spec_block, iunit, read_data
+    integer :: ib, row, n_spec_block, read_data
     type(block_t) :: blk
 
     PUSH_SUB(species_read)
@@ -574,7 +574,7 @@ contains
     type(species_t), intent(inout) :: spec
     integer,         intent(out)   :: read_data
 
-    integer :: ib, ispec, row, n_spec_block, n_spec_def, iunit
+    integer :: ispec, n_spec_def, iunit
     character(len=256) :: fname
     character(len=LABEL_LEN)  :: label
 

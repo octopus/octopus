@@ -1477,7 +1477,7 @@ contains
     logical,              intent(in) :: time_reversal
     
     integer, allocatable :: kmap(:)
-    FLOAT :: kpt(1:MAX_DIM), kpt_abs(1:MAX_DIM), diff(1:MAX_DIM), symlength2
+    FLOAT :: kpt(1:MAX_DIM), diff(1:MAX_DIM)
     integer :: nk, ik, ik2, iop, idim
     type(distributed_t) :: kpt_dist
 
@@ -1488,7 +1488,7 @@ contains
     !We distribute the k-points here for this routine, independently of the rest of the code
     call distributed_nullify(kpt_dist, nk)
  #ifdef HAVE_MPI
-  call distributed_init(kpt_dist, nk, MPI_COMM_WORLD, "kpt_check")
+    call distributed_init(kpt_dist, nk, MPI_COMM_WORLD, "kpt_check")
  #endif
 
     !A simple map to tell if the k-point as a matching symmetric point or not

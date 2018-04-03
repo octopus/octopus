@@ -147,7 +147,8 @@ contains
 
     integer :: id, ll, mm, ik, iunit
     character(len=256) :: fname
-    FLOAT, allocatable :: oneint(:), twoint(:)
+    FLOAT, allocatable :: doneint(:), dtwoint(:)
+    CMPLX, allocatable :: zoneint(:), ztwoint(:)
     integer, allocatable :: iindex(:), jindex(:), kindex(:), lindex(:)
     
     PUSH_SUB(output_me)
@@ -223,23 +224,27 @@ contains
 
       id = st%nst*(st%nst+1)/2
 
-      SAFE_ALLOCATE(oneint(1:id))
       SAFE_ALLOCATE(iindex(1:id))
       SAFE_ALLOCATE(jindex(1:id))
 
       if (states_are_real(st)) then
-        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, oneint)
+        SAFE_ALLOCATE(doneint(1:id))
+        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, doneint)
+        do ll = 1, id
+          write(iunit, *) iindex(ll), jindex(ll), doneint(ll)
+        enddo
+        SAFE_DEALLOCATE_A(doneint)
       else
-        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, oneint)
+        SAFE_ALLOCATE(zoneint(1:id))
+        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, zoneint)
+        do ll = 1, id
+          write(iunit, *) iindex(ll), jindex(ll), zoneint(ll)
+        enddo
+        SAFE_DEALLOCATE_A(zoneint)
       end if
-
-      do ll = 1, id
-        write(iunit, *) iindex(ll), jindex(ll), oneint(ll)
-      enddo
 
       SAFE_DEALLOCATE_A(iindex)
       SAFE_DEALLOCATE_A(jindex)
-      SAFE_DEALLOCATE_A(oneint)
       call io_close(iunit)
 
     end if
@@ -254,26 +259,31 @@ contains
       iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
 
       id = st%nst*(st%nst+1)*(st%nst**2+st%nst+2)/8
-      SAFE_ALLOCATE(twoint(1:id))
       SAFE_ALLOCATE(iindex(1:id))
       SAFE_ALLOCATE(jindex(1:id))
       SAFE_ALLOCATE(kindex(1:id))
       SAFE_ALLOCATE(lindex(1:id))
 
       if (states_are_real(st)) then
-        call dstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, twoint)
+        SAFE_ALLOCATE(dtwoint(1:id))
+        call dstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, dtwoint)
+        do ll = 1, id
+          write(iunit, *) iindex(ll), jindex(ll), kindex(ll), lindex(ll), dtwoint(ll)
+        enddo
+        SAFE_DEALLOCATE_A(dtwoint)
       else
-        call zstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, twoint)
+        SAFE_ALLOCATE(ztwoint(1:id))
+        call zstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, ztwoint)
+        do ll = 1, id
+          write(iunit, *) iindex(ll), jindex(ll), kindex(ll), lindex(ll), ztwoint(ll)
+        enddo
+        SAFE_DEALLOCATE_A(ztwoint)
       end if
       
-      do ll = 1, id
-        write(iunit, *) iindex(ll), jindex(ll), kindex(ll), lindex(ll), twoint(ll)
-      enddo
       SAFE_DEALLOCATE_A(iindex)
       SAFE_DEALLOCATE_A(jindex)
       SAFE_DEALLOCATE_A(kindex)
       SAFE_DEALLOCATE_A(lindex)
-      SAFE_DEALLOCATE_A(twoint)
       call io_close(iunit)
 
     end if

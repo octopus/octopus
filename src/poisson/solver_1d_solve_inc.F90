@@ -26,12 +26,12 @@ subroutine X(poisson1D_solve_direct)(this, pot, rho)
   !! Note that we don`t divide by e^(i theta) here, we do it "outside" as with the other Poisson solvers.
 
   integer             :: ip, jp
-  integer, allocatable :: ip_v(:), part_v(:)
   FLOAT               :: xx, yy
   R_TYPE              :: soft_coulomb_param_squared
 #ifdef HAVE_MPI
   R_TYPE              :: tmp
   FLOAT               :: xg(1:MAX_DIM)
+  integer, allocatable :: ip_v(:), part_v(:)
   R_TYPE, allocatable :: pvec(:)
 #endif
 

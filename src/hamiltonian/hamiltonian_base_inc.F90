@@ -495,7 +495,6 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   integer :: npoints, nprojs, nst, maxnpoints
   integer, allocatable :: ind(:)
   R_TYPE :: aa, bb, cc, dd
-  CMPLX :: phase
   type(projector_matrix_t), pointer :: pmat
   integer :: padnprojs, wgsize, lnprojs, size
   type(profile_t), save :: cl_prof
@@ -1093,8 +1092,7 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
   CMPLX :: phase
   type(projector_matrix_t), pointer :: pmat
   type(profile_t), save :: prof, reduce_prof
-  integer :: padnprojs, wgsize, lnprojs, size
-  type(profile_t), save :: cl_prof
+  integer :: wgsize, size
   type(accel_kernel_t), save :: ker_proj_bra, ker_proj_bra_phase
 
   if(.not. this%apply_projector_matrices) return

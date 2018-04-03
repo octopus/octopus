@@ -569,7 +569,7 @@ contains
     type(oct_prop_t),                  intent(inout) :: prop_chi
     type(oct_prop_t),                  intent(inout) :: prop_psi
 
-    integer :: i, ierr, ik, ib, j
+    integer :: i, ierr, ik, ib
     logical :: freeze
     type(grid_t), pointer :: gr
     type(propagator_t) :: tr_chi

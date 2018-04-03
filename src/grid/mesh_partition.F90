@@ -101,7 +101,9 @@ contains
     integer, allocatable :: xadj(:)          !< Local part of xadj
     
     integer, allocatable :: options(:)     !< Options to (Par)METIS.
+#ifdef HAVE_METIS
     integer              :: edgecut        !< Number of edges cut by partitioning.
+#endif
     REAL_SINGLE, allocatable :: tpwgts(:)  !< The fraction of vertex weight that should be distributed 
 
     integer              :: iunit          !< For debug output to files.

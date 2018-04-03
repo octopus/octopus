@@ -27,20 +27,29 @@ subroutine X(eigensolver_arpack)(arpack, gr, st, hm, tolerance, current_rel_dens
   integer,             intent(out)   :: converged
   integer,             intent(in)    :: ik
   FLOAT,     optional, intent(out)   :: diff(:) !< (1:st%nst)
-	
+
+#ifdef HAVE_ARPACK
   logical, allocatable :: select(:)
   R_TYPE, allocatable  :: resid(:), v(:, :), &
-                          workd(:), workev(:), workl(:), zd(:), &
-                          psi(:,:)
+                          workd(:), workev(:), workl(:), psi(:,:)
                      
   integer              :: ldv, nev, iparam(11), ipntr(14), ido, n, lworkl, info, &
     j, ncv
-  FLOAT                :: tol, sigmar, sigmai, tolpower
-  FLOAT, allocatable   :: rwork(:), d(:, :)
-  CMPLX                :: sigma, eps_temp
+  FLOAT                :: tol, tolpower
+  FLOAT, allocatable   :: d(:, :)
+  CMPLX                :: eps_temp
   integer              :: mpi_comm
   character(len=2)     :: which
-  	
+#ifdef R_TCOMPLEX
+  CMPLX, allocatable  :: zd(:)
+
+  CMPLX                :: sigma
+  FLOAT, allocatable   :: rwork(:)
+#else
+  FLOAT                :: sigmar, sigmai
+#endif
+#endif
+  
   PUSH_SUB(X(eigensolver_arpack))
 
 #ifdef HAVE_ARPACK

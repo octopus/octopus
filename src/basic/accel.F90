@@ -251,9 +251,10 @@ contains
 
     logical  :: disable, default, run_benchmark
     integer  :: device_type
-    integer  :: idevice, iplatform, ndevices, idev, cl_status, ret_devices, nplatforms, iplat
-    character(len=256) :: device_name
+    integer  :: idevice, iplatform, ndevices, ret_devices, nplatforms, iplat
 #ifdef HAVE_OPENCL
+    integer :: cl_status, idev
+    character(len=256) :: device_name
     type(cl_platform_id) :: platform_id
     type(cl_program) :: prog
     type(cl_platform_id), allocatable :: allplatforms(:)
@@ -1608,12 +1609,12 @@ contains
     character(len=*),            intent(in)    :: kernel_name
     character(len=*), optional,  intent(in)    :: flags
 
-    character(len=1000) :: all_flags
     type(profile_t), save :: prof
 #ifdef HAVE_OPENCL
     type(cl_program) :: prog
 #endif
 #ifdef HAVE_CUDA
+    character(len=1000) :: all_flags
     type(c_ptr) :: cuda_module
 #endif
     

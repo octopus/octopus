@@ -207,7 +207,7 @@ contains
     logical         , intent(in)  :: external_potentials_present
     logical         , intent(in)  :: kick_present
 
-    integer :: ia, ip, ii, itess, jtess, pcm_vdw_type, subdivider
+    integer :: ia, ii, itess, jtess, pcm_vdw_type, subdivider
     integer :: cav_unit_test, iunit, pcmmat_unit
     integer :: pcmmat_gamess_unit, cav_gamess_unit
     FLOAT   :: min_distance      
@@ -223,9 +223,6 @@ contains
     logical :: add_spheres_h
     logical :: changed_default_nn
 
-    type(species_t), pointer :: spci 
-    FLOAT :: z_ia
-    
     integer :: default_nn
     FLOAT   :: max_area
     
@@ -1169,7 +1166,6 @@ contains
     logical :: input_asc_ext
 
     ! for debuggin - it should be cleaned up
-    integer :: ii !, asc_unit_test_aux
 
     !character*5 :: iteration 
 
@@ -1711,7 +1707,7 @@ contains
       type(pcm_t),     intent(in) :: pcm 
       type(mesh_t),    intent(in) :: mesh
 
-      integer :: ia, nm(1:MAX_DIM), ipt, npt, i1, i2, i3
+      integer :: ia, nm(1:MAX_DIM), ipt, i1, i2, i3
       FLOAT :: posrel(1:MAX_DIM)
       integer :: pt
       
@@ -1753,11 +1749,6 @@ contains
     type(pcm_t),     intent(in) :: pcm 
     type(mesh_t),    intent(in) :: mesh
     
-    
-    integer :: ia, nm(1:MAX_DIM), ipt, npt, i1, i2, i3
-    FLOAT :: posrel(1:MAX_DIM)
-    integer :: pt
-    
     PUSH_SUB(pcm_poisson_sanity_check)
 
     if ( .not. pcm_nn_in_mesh(pcm, mesh) ) then 
@@ -1786,7 +1777,7 @@ contains
     FLOAT   :: Norm, qtot, RR, XX(1:MAX_DIM), PP(1:MAX_DIM)
     
     ! nearest neighbor variables 
-    integer :: nm(1:MAX_DIM), ipoint
+    integer :: nm(1:MAX_DIM)
     FLOAT :: posrel(1:MAX_DIM)
     integer :: npt, ipt
     integer :: i1, i2, i3

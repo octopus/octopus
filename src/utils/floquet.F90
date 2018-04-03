@@ -67,24 +67,20 @@ program oct_floquet
 
   implicit none
 
-  character(len=256) :: config_str
-  integer :: inp_calc_mode, ierr
-  type(block_t) :: blk
+  integer :: ierr
 
   type(system_t) :: sys
   type(simul_box_t) :: sb
   type(hamiltonian_t) :: hm
   type(states_t) :: st
   type(grid_t)   :: gr
-  CMPLX, allocatable :: hmss(:,:), psi(:,:,:), hpsi(:,:,:), temp_state1(:,:), temp_state2(:,:)
+  CMPLX, allocatable :: hmss(:,:), psi(:,:,:), hpsi(:,:,:), temp_state1(:,:)
   CMPLX, allocatable :: HFloquet(:,:,:), HFloq_eff(:,:), temp(:,:)
   FLOAT, allocatable :: eigenval(:), bands(:,:)
   character(len=80) :: filename
-  integer :: it, nT, ik, ist, jst, in, im, inm, file, idim, nik, ik_count
+  integer :: it, nT, ik, ist, in, im, file, idim, nik, ik_count
   integer :: Forder, Fdim, m0, n0, n1, nst, ii, jj, lim_nst
   FLOAT :: dt, Tcycle,omega
-  integer :: ispin, ip
-  FLOAT :: time, time_step
   logical :: downfolding = .false.
   type(mesh_t) :: mesh
   type(restart_t) :: restart
