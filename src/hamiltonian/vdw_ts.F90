@@ -220,7 +220,7 @@ contains
                           +(volume_ratio(jatom)**(CNST(1.0)/CNST(3.0)))*this%r0free(jspecies) 
 
        c6ab(iatom,jatom) = volume_ratio(iatom)*volume_ratio(jatom)*this%c6abfree(ispecies,jspecies)
-       Print*, 'iatom= ', iatom, 'jatom =', jatom, 'cab(iatom,jatom)= ', c6ab(iatom,jatom)
+       !Print*, 'iatom= ', iatom, 'jatom =', jatom, 'cab(iatom,jatom)= ', c6ab(iatom,jatom)
       end do
     end do
     
@@ -296,8 +296,8 @@ contains
         force(1:sb%dim, iatom) = force(1:sb%dim, iatom) - derivative_coeff(iatom)*dvadrr(1:sb%dim)
       end do
     end do
-    print *, force
-    print *, ''
+    !print *, force
+    !print *, ''
 
     ! Calculate the potential
     potential = M_ZERO
