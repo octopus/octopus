@@ -1239,8 +1239,10 @@ contains
     PUSH_SUB(ps_density_volume)
     
     if (.not. ps_has_density(ps)) then
-       call messages_not_implemented('This pseudopotential cannot be used for the VDW TS. Please check the file src/species/ps.F90 - ')
+       message(1) = "The pseudopotential does not contain an atomic density"
+       call messages_fatal(1)
     end if
+
     SAFE_ALLOCATE(vol(1:ps%g%nrval))
 
     do ip = 1, ps%g%nrval
@@ -1250,6 +1252,7 @@ contains
         vol(ip) = vol(ip) + spline_eval(ps%density(ispin), rr)*CNST(4.0)*M_PI*rr**5
       end do
     end do
+
     call spline_init(volspl)
     call spline_fit(ps%g%nrval, ps%g%rofi, vol, volspl)
     volume = spline_integral(volspl)

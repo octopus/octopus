@@ -58,8 +58,9 @@ module species_pot_oct_m
     zspecies_get_orbital_submesh,   &
     species_get_local,              &
     species_atom_density,           &
-    species_atom_density_np,           &
-    species_atom_density_derivative
+    species_atom_density_np,        &
+    species_atom_density_derivative,&
+    species_atom_density_derivative_np 
 
   type(mesh_t), pointer :: mesh_p
   FLOAT, allocatable :: rho_p(:)
@@ -301,7 +302,9 @@ contains
   end subroutine species_atom_density
 
   ! ---------------------------------------------------------
-
+  ! A non periodized version of the routine species_atom_density
+  ! This is used for the Hirshfeld routines
+  ! TODO: implement it for other approaches than pseudo potentials.
  subroutine species_atom_density_np(mesh, sb, atom, pos,  spin_channels, rho)
     type(mesh_t),         intent(in)    :: mesh
     type(simul_box_t),    intent(in)    :: sb
@@ -320,7 +323,8 @@ contains
     rho = M_ZERO
     species => atom%species
     ps => species_ps(species)
-   !case (SPECIES_PSEUDO, SPECIES_PSPIO)
+    select case (species_type(species))
+    case (SPECIES_PSEUDO, SPECIES_PSPIO)
       ! ...from pseudopotentials
 
       if(ps_has_density(ps)) then
@@ -368,8 +372,10 @@ contains
         rho(1:mesh%np, 1:spin_channels) = rho(1:mesh%np, 1:spin_channels)*species_zval(species)/nrm
 
       end if
+    case default
+      call messages_not_implemented('species_atom_density_np for non-pseudopotential species')
 
-   ! end select
+    end select
 
     POP_SUB(species_atom_density_np)
   end subroutine species_atom_density_np
@@ -411,33 +417,15 @@ contains
       pos(1:MAX_DIM) = M_ZERO
       ps => species_ps(species)
 
-      if(ps_has_density(ps)) then
+      call periodic_copy_init(pp, sb, atom%x, &
+          range = spline_cutoff_radius(ps%density_der(1), ps%projectors_sphere_threshold))
 
-        call periodic_copy_init(pp, sb, atom%x, &
-          range = spline_cutoff_radius(ps%Ur(1, 1), ps%projectors_sphere_threshold))
-
-        do icell = 1, periodic_copy_num(pp)
-          pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
-          do ip = 1, mesh%np
-            call mesh_r(mesh, ip, rr, origin = pos)
-            rr = max(rr, r_small)
-            
-            do isp = 1, spin_channels
-              if(rr >= spline_range_max(ps%density(isp))) cycle
-              drho(ip, isp) = drho(ip, isp) + spline_eval(ps%density_der(isp), rr)
-            end do
-            
-          end do
-        end do
+      do icell = 1, periodic_copy_num(pp)
+        pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
+        call species_atom_density_derivative_np(mesh, sb, atom, pos, spin_channels,  drho)
+      end do
   
-        call periodic_copy_end(pp)
-
-      else 
-        call messages_write('The pseudopotential for')
-        call messages_write(species_label(species))
-        call messages_write(' does not contain the density.')
-        call messages_fatal()
-      end if
+      call periodic_copy_end(pp)
       
     case default
       call messages_not_implemented('species_atom_density_derivative for non-pseudopotential species')
@@ -446,6 +434,47 @@ contains
 
     POP_SUB(species_atom_density_derivative)
   end subroutine species_atom_density_derivative
+
+  subroutine species_atom_density_derivative_np(mesh, sb, atom, pos, spin_channels,  drho)
+    type(mesh_t),         intent(in)    :: mesh
+    type(simul_box_t),    intent(in)    :: sb
+    type(atom_t),         intent(in)    :: atom
+    FLOAT,                intent(in)    :: pos(:)
+    integer,              intent(in)    :: spin_channels
+    FLOAT,                intent(inout) :: drho(:, :) !< (mesh%np, spin_channels)
+
+    integer :: isp, ip
+    FLOAT :: rr, r_small
+    type(ps_t), pointer :: ps
+
+    PUSH_SUB(species_atom_density_derivative_np)
+
+
+    ps => species_ps(atom%species)
+
+    if(ps_has_density(ps)) then
+
+      r_small = M_ZERO
+      do ip = 1, mesh%np
+        call mesh_r(mesh, ip, rr, origin = pos)
+        rr = max(rr, r_small)
+
+        do isp = 1, spin_channels
+          if(rr >= spline_range_max(ps%density_der(isp))) cycle
+          drho(ip, isp) = drho(ip, isp) + spline_eval(ps%density_der(isp), rr)
+        end do
+
+      end do
+    else
+      call messages_write('The pseudopotential for')
+      call messages_write(species_label(atom%species))
+      call messages_write(' does not contain the density.')
+      call messages_fatal()
+    end if
+
+    POP_SUB(species_atom_density_derivative_np)
+  end subroutine species_atom_density_derivative_np
+  
 
   ! ---------------------------------------------------------
 

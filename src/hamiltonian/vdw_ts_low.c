@@ -411,6 +411,7 @@ void get_vdw_params (const int zatom,
 /* Damping function. */
 void fdamp (const double rr, const double r0ab, const double dd, const double sr,
 	    double * ff, double * dffdrab, double * dffdr0) {
+
   // Calculate the damping coefficient.
   double ee = exp(-dd*((rr/(sr*r0ab)) - 1.0));
   *ff = 1.0/(1.0 + ee);
@@ -421,6 +422,7 @@ void fdamp (const double rr, const double r0ab, const double dd, const double sr
   
   // Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
   *dffdr0 = -dd*rr/(sr*r0ab*r0ab)*dee;
+
 }
 
 
@@ -496,7 +498,6 @@ void vdw_calculate (const int natoms, const double dd, const double sr, const in
       double ff;
       double dffdrab;
       double dffdr0;
-      //fdamp(rr, r0ab, dd_ok, sr_ok, &ff, &dffdrab, &dffdr0);
       fdamp(rr, r0ab, dd, sr, &ff, &dffdrab, &dffdr0);
       // Pair-wise correction to energy.
       *energy += -0.5*ff*c6ab/rr6;

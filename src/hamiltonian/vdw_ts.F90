@@ -105,8 +105,9 @@ contains
     !%Section Hamiltonian::XC
     !%Description
     !% Set the value of the sr parameter, which adjusts the damping function for the VDW correction in the Tkatchenko and 
-    !% Scheffler (vdw_ts) scheme only. See Equation (12) of Phys. Rev. Lett. 102 073005 (2009). This can depend on the XC correction used,
-    !% the default 0.94 is for PBE - 0.94 for PBE0.
+    !% Scheffler (vdw_ts) scheme only. See Equation (12) of Phys. Rev. Lett. 102 073005 (2009).
+    !% This parameter depends on the xc functional used. 
+    !% The default value is 0.94, which holds for PBE. For PBE0, a value of 0.96 should be used.
     !%End
     call parse_variable('VDW_TS_sr', CNST(0.94), this%VDW_sr_parameter)
 
@@ -125,7 +126,7 @@ contains
 
     do ispecies = 1, geo%nspecies
       do jspecies = 1, geo%nspecies
-        num = CNST(2.0)*this%c6free(ispecies)*this%c6free(jspecies)
+        num = M_TWO*this%c6free(ispecies)*this%c6free(jspecies)
         den = (this%dpfree(jspecies)/this%dpfree(ispecies))*this%c6free(ispecies) &
           + (this%dpfree(ispecies)/this%dpfree(jspecies))*this%c6free(jspecies)
         this%c6abfree(ispecies, jspecies) = num/den
@@ -185,9 +186,10 @@ contains
     type(periodic_copy_t) :: pc
     integer :: iatom, jatom, ispecies, jspecies, jcopy, ddimention, ip 
     FLOAT :: rr, rr2, rr6, dd, sr, dffdrr, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra, deabdrab
-    FLOAT, allocatable :: coordinates(:,:), x_j(:), volume_ratio(:), dvadens(:), dvadrr(:), derivative_coeff(:), & 
+    FLOAT, allocatable :: coordinates(:,:), volume_ratio(:), dvadens(:), dvadrr(:), derivative_coeff(:), & 
                           dr0dvra(:), r0ab(:,:), c6ab(:,:)
     integer, allocatable :: zatom(:)
+    FLOAT :: x_j(1:MAX_DIM)
 
     PUSH_SUB(vdw_ts_calculate)
 
@@ -196,9 +198,6 @@ contains
     SAFE_ALLOCATE(dvadens(1:der%mesh%np))
     SAFE_ALLOCATE(dvadrr(1:3))
     SAFE_ALLOCATE(dr0dvra(1:geo%natoms))
-    SAFE_ALLOCATE(r0ab(1:geo%natoms,1:geo%natoms))
-    SAFE_ALLOCATE(c6ab(1:geo%natoms,1:geo%natoms))
-    SAFE_ALLOCATE(x_j(1:sb%dim))
 
     energy=M_ZERO
     derivative_coeff(1:geo%natoms) = M_ZERO
@@ -207,26 +206,27 @@ contains
     do iatom = 1, geo%natoms
       ispecies = species_index(geo%atom(iatom)%species)
       call hirshfeld_volume_ratio(this%hirshfeld, iatom, density, volume_ratio(iatom))
-      
-      dr0dvra(iatom) = this%r0free(ispecies)/(CNST(3.0)*(volume_ratio(iatom)**(CNST(2.0)/CNST(3.0)))) 
+      dr0dvra(iatom) = this%r0free(ispecies)/(CNST(3.0)*(volume_ratio(iatom)**(M_TWO/CNST(3.0)))) 
     end do
-
-    do iatom = 1, geo%natoms 
-      ispecies = species_index(geo%atom(iatom)%species)
-      do jatom = 1, geo%natoms
-       jspecies = species_index(geo%atom(jatom)%species)
-
-       r0ab(iatom,jatom) = (volume_ratio(iatom)**(CNST(1.0)/CNST(3.0)))*this%r0free(ispecies) &
-                          +(volume_ratio(jatom)**(CNST(1.0)/CNST(3.0)))*this%r0free(jspecies) 
-
-       c6ab(iatom,jatom) = volume_ratio(iatom)*volume_ratio(jatom)*this%c6abfree(ispecies,jspecies)
-       !Print*, 'iatom= ', iatom, 'jatom =', jatom, 'cab(iatom,jatom)= ', c6ab(iatom,jatom)
-      end do
-    end do
-    
-!---------------------------------------------------------------------------------!    
 
     if(sb%periodic_dim > 0) then ! periodic case
+      SAFE_ALLOCATE(r0ab(1:geo%natoms,1:geo%natoms))
+      SAFE_ALLOCATE(c6ab(1:geo%natoms,1:geo%natoms))
+
+      !Precomputing some quantities
+      do iatom = 1, geo%natoms
+        ispecies = species_index(geo%atom(iatom)%species)
+        do jatom = 1, geo%natoms
+         jspecies = species_index(geo%atom(jatom)%species)
+
+         r0ab(iatom,jatom) = (volume_ratio(iatom)**(M_ONE/CNST(3.0)))*this%r0free(ispecies) &
+                            +(volume_ratio(jatom)**(M_ONE/CNST(3.0)))*this%r0free(jspecies)
+
+         c6ab(iatom,jatom) = volume_ratio(iatom)*volume_ratio(jatom)*this%c6abfree(ispecies,jspecies)
+        end do
+      end do
+
+
       do jatom = 1, geo%natoms
         jspecies = species_index(geo%atom(jatom)%species)
                 
@@ -268,9 +268,8 @@ contains
         call periodic_copy_end(pc)
       end do
 
-
-!------------------------------------------------------------!
-
+      SAFE_DEALLOCATE_A(r0ab)
+      SAFE_DEALLOCATE_A(c6ab)
     else ! Non periodic case 
       SAFE_ALLOCATE(coordinates(1:sb%dim, 1:geo%natoms))
       SAFE_ALLOCATE(zatom(1:geo%natoms))
@@ -282,7 +281,7 @@ contains
       end do
       
       call f90_vdw_calculate(geo%natoms,  this%VDW_dd_parameter, this%VDW_sr_parameter, zatom(1), coordinates(1, 1), &
- volume_ratio(1), energy, force(1, 1), derivative_coeff(1))
+                             volume_ratio(1), energy, force(1, 1), derivative_coeff(1))
 
 
       SAFE_DEALLOCATE_A(coordinates)
@@ -296,27 +295,23 @@ contains
         force(1:sb%dim, iatom) = force(1:sb%dim, iatom) - derivative_coeff(iatom)*dvadrr(1:sb%dim)
       end do
     end do
-    !print *, force
-    !print *, ''
 
     ! Calculate the potential
     potential = M_ZERO
     do iatom = 1, geo%natoms
       call hirshfeld_density_derivative(this%hirshfeld, iatom, dvadens)
-      Potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*dvadens(1:der%mesh%np)
+      potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*dvadens(1:der%mesh%np)
     end do
 
-    call dio_function_output(1, "./", "vvdw", der%mesh, potential, unit_one, ip)
- 
+    if(debug%info) then
+      call dio_function_output(1, "./", "vvdw", der%mesh, potential, unit_one, ip)
+    end if
 
     SAFE_DEALLOCATE_A(volume_ratio)
     SAFE_DEALLOCATE_A(derivative_coeff)
     SAFE_DEALLOCATE_A(dvadens)
     SAFE_DEALLOCATE_A(dvadrr)
     SAFE_DEALLOCATE_A(dr0dvra)
-    SAFE_DEALLOCATE_A(r0ab)
-    SAFE_DEALLOCATE_A(c6ab)
-    SAFE_DEALLOCATE_A(x_j)
 
     POP_SUB(vdw_ts_calculate)
   end subroutine vdw_ts_calculate

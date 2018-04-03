@@ -57,6 +57,8 @@ module hirshfeld_oct_m
     FLOAT,            pointer     :: free_vol_r3(:,:)  !< (natoms,mesh%np)
 
   end type hirshfeld_t
+
+  real(8), parameter, public :: TOL_HIRSHFELD = CNST(1e-12)
     
 contains
 
@@ -162,7 +164,7 @@ contains
 
     do ip = 1, this%mesh%np
       dens_ip = sum(atom_density(ip, 1:this%st%d%nspin))
-      if(abs(dens_ip) > CNST(1e-12)) then
+      if(abs(dens_ip) > TOL_HIRSHFELD) then
         hirshfeld_density(ip) = sum(density(ip, 1:this%st%d%nspin))*dens_ip/this%total_density(ip)
       else
         hirshfeld_density(ip) = CNST(0.0)
@@ -198,7 +200,7 @@ contains
     
 
     do ip = 1, this%mesh%np
-      if( this%total_density(ip) > CNST(1e-15)) then
+      if( this%total_density(ip) > TOL_HIRSHFELD) then
         hirshfeld_density(ip) = this%free_vol_r3(iatom,ip)*sum(density(ip, 1:this%st%d%nspin))/this%total_density(ip)
       else
         hirshfeld_density(ip) = CNST(0.0)
@@ -230,7 +232,7 @@ contains
     
     do ip = 1, this%mesh%np
 
-      if(abs(this%total_density(ip)) > CNST(1e-12)) then
+      if(abs(this%total_density(ip)) > TOL_HIRSHFELD) then
         ddensity(ip) = this%free_vol_r3(iatom,ip)/(this%total_density(ip)*this%free_volume(iatom))
       else
         ddensity(ip) = CNST(0.0)
@@ -253,7 +255,7 @@ contains
     FLOAT,                     intent(out)   :: dposition(:)
 
     integer :: ip, idir, icell, jcell, isp
-    FLOAT :: atom_dens, atom_der,rr ,rri, rrj, tdensity, pos_i(1:MAX_DIM), pos_j(1:MAX_DIM), rmax_i, rmax_j, r_small
+    FLOAT :: atom_dens, atom_der,rri, rrj, tdensity, pos_i(1:MAX_DIM), pos_j(1:MAX_DIM), rmax_i, rmax_j
     FLOAT, allocatable :: grad(:, :), atom_density(:, :), atom_derivative(:, :)
     type(periodic_copy_t) :: pp_i, pp_j
     type(ps_t), pointer :: ps_i, ps_j
@@ -287,55 +289,41 @@ contains
       !We get the non periodized density
       !We need to do it to have the r^3 correctly computed for periodic systems
 
-      call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), pos_i, this%st%d%nspin, atom_density)
+      call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), &
+                                   pos_i, this%st%d%nspin, atom_density)
  ! ...from pseudopotentials
       do jcell = 1, periodic_copy_num(pp_j)
         atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
         pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%mesh%sb, jcell)
-        if(ps_has_density(ps_j)) then
           
-          r_small = CNST(0.0)
-          rr = CNST(0.0)
-          do ip = 1, this%mesh%np
-            if(this%total_density(ip)<CNST(1e-12)) cycle
+        call species_atom_density_derivative_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), &
+                                                 pos_j, this%st%d%spin_channels, atom_derivative)
 
-            call mesh_r(this%mesh, ip, rr, origin = pos_j)
-            rr = max(rr, r_small)
-            do isp = 1, this%st%d%nspin
-              if(rr >= spline_range_max(ps_j%density_der(isp))) cycle
+        do ip = 1, this%mesh%np
+          if(this%total_density(ip)< TOL_HIRSHFELD) cycle
 
-              atom_derivative(ip, isp) = atom_derivative(ip, isp) + spline_eval(ps_j%density_der(isp), rr)
+          rri = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_i(1:this%mesh%sb%dim))**2))
+          rrj = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim))**2))
+
+          tdensity = sum(density(ip, 1:this%st%d%nspin))
+          atom_dens = sum(atom_density(ip, 1:this%st%d%nspin))
+          atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin))
+          if(rrj > TOL_HIRSHFELD) then
+            do idir = 1, this%mesh%sb%dim
+              grad(ip, idir) = grad(ip, idir) -rri**3*atom_dens*tdensity*atom_der/this%total_density(ip)**2&
+              *(pos_j(idir) - this%mesh%x(ip, idir))/rrj
             end do
-          
-            rri = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_i(1:this%mesh%sb%dim))**2))
-            rrj = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim))**2))
-
-            tdensity = sum(density(ip, 1:this%st%d%nspin))
-            atom_dens = sum(atom_density(ip, 1:this%st%d%nspin))
-            atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin))
-            if(rrj > CNST(1e-12)) then
+          end if
+          if(iatom == jatom )then
+            !Only if we really have the same atoms
+            if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < TOL_HIRSHFELD)) then
               do idir = 1, this%mesh%sb%dim
-                grad(ip, idir) = grad(ip, idir) -rri**3*atom_dens*tdensity*atom_der/this%total_density(ip)**2&
-                *(pos_j(idir) - this%mesh%x(ip, idir))/rrj
+                grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
+                *tdensity/this%total_density(ip)*(pos_i(idir) - this%mesh%x(ip, idir))
               end do
             end if
-            if(iatom == jatom )then
-              !Only if we really have the same atoms
-              if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < CNST(1e-12))) then
-                do idir = 1, this%mesh%sb%dim
-                  grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
-                  *tdensity/this%total_density(ip)*(pos_i(idir) - this%mesh%x(ip, idir))
-                end do
-              end if
-            end if
-          end do
-
-        else
-          call messages_write('The pseudopotential for')
-          call messages_write(species_label(this%geo%atom(iatom)%species))
-          call messages_write(' does not contain the density.')
-          call messages_fatal()
-        end if
+          end if
+        end do
       end do
     end do
 
