@@ -422,6 +422,11 @@ contains
   !  end if
   !end if
 
+  ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
+  ! In case of a laser field, the phase is recomputed in hamiltonian_update
+  if(this%level /= DFT_U_NONE) then
+    call lda_u_build_phase_correction(this, gr%mesh%sb, st%d)
+  end if
 
   call messages_print_stress(stdout)
 
