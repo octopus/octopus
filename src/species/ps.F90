@@ -648,15 +648,6 @@ contains
         call spline_filter_mask(ps%core, 0, rmax, gmax, alpha, gamma)
       end if
 
-      if(ps_has_density(ps)) then
-        do ispin = 1, ps%ispin
-          if(abs(spline_integral(ps%density(ispin))) > CNST(1.0e-12)) then
-            rmax = spline_cutoff_radius(ps%density(ispin), ps%projectors_sphere_threshold)
-            call spline_filter_mask(ps%density(ispin), 0, rmax, gmax, alpha, gamma)
-          end if
-        end do
-      end if
-
     case(PS_FILTER_BSB)
       alpha   = CNST(0.7) ! The original was M_FOUR/CNST(7.0)
       beta_fs = CNST(18.0)
@@ -675,12 +666,6 @@ contains
         call spline_filter_bessel(ps%core, 0, gmax, alpha, beta_fs, rcut, beta_rs)
       end if
       
-      if(ps_has_density(ps)) then
-        do ispin = 1, ps%ispin
-          call spline_filter_bessel(ps%density(ispin), 0, gmax, alpha, beta_fs, rcut, beta_rs)
-        end do
-      end if
-
     end select
 
     call profiling_out(prof)
