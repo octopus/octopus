@@ -1049,7 +1049,11 @@ contains
          
          call smear_find_fermi_energy(dressed_st%smear, dressed_st%eigenval, dressed_st%occ, dressed_st%qtot, &
            dressed_st%d%nik, dressed_st%nst, dressed_st%d%kweights)
-                 
+               
+         ! compute Floquet-spin expectation values
+         if(dressed_st%d%ispin == SPINORS) then
+            call floquet_calc_spin(hm%F,gr%mesh,dressed_st)
+         end if
 
          write(message(1),'(a,i6)') 'Converged eigenvectors: ', sum(eigens%converged(1:st%d%nik))
          call messages_info(1)
@@ -1072,7 +1076,19 @@ contains
              filename = 'bands_occ'!//trim(adjustl(iterstr))
              call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename, vec = dressed_st%occ)
            end if
-                     
+
+           if(dressed_st%d%ispin == SPINORS) then
+             filename = 'bands_Sx'
+             call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, &
+                                             filename, vec = dressed_st%spin(1,:,:))
+             filename = 'bands_Sy'
+             call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, &
+                                             filename, vec = dressed_st%spin(2,:,:))
+             filename = 'bands_Sz'
+             call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, &
+                                             filename, vec = dressed_st%spin(3,:,:))
+           end if
+            
          else
                       
            filename = FLOQUET_DIR//'/eigenvalues'!//trim(adjustl(iterstr))
@@ -1183,7 +1199,50 @@ contains
     !psi_t(1:mesh%np,1:F%spindim)  = M_ONE/zmf_nrm2(mesh,F%spindim,psi_t)*psi_t(1:mesh%np,1:F%spindim) 
 
     end subroutine floquet_td_state
+
+
+    !--------------------------------
+    subroutine floquet_calc_spin(F,mesh,st)
+
+    type(floquet_t) :: F
+    type(mesh_t)    :: mesh
+    type(states_t)  :: st
+    CMPLX, allocatable   :: psi(:,:), temp(:,:)
+
+    integer :: ik, ist,idim, im, imm
+
+    PUSH_SUB(floquet_calc_spin)
+
+    SAFE_ALLOCATE(psi(1:mesh%np,1:st%d%dim))
+    SAFE_ALLOCATE(temp(1:mesh%np,1:F%spindim))
     
+    st%spin = M_ZERO
+
+    do ik=st%d%kpt%start,st%d%kpt%end
+      do ist=st%st_start,st%st_end
+        call states_get_state(st,mesh,ist,ik,psi)
+
+        do im= F%order(1),F%order(2)
+          imm = im - F%order(1) + 1
+          temp = M_ZERO
+          do idim=1,F%spindim
+            temp(1:mesh%np, idim) = psi(1:mesh%np,(imm-1)*F%spindim+idim)
+          end do
+          st%spin(1:3,ist,ik) = st%spin(1:3,ist,ik) + state_spin(mesh,temp)
+        end do
+      end do
+    end do
+
+    if(st%d%kpt%parallel) then
+       call comm_allreduce(st%d%kpt%mpi_grp%comm,  st%spin(:,:,:))
+    end if
+
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(temp)
+
+    POP_SUB(floquet_calc_spin)
+   end subroutine floquet_calc_spin
+
 
     !--------------------------------------------
     ! Occupation strategy wrapper routine 
