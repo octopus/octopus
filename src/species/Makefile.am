@@ -36,12 +36,14 @@ libspecies_f_srcs =                      \
 	ps_psf_file.F90                  \
 	ps_xml.F90                       \
 	pseudo.F90                       \
+	share_directory.F90              \
 	species.F90
 
 # C/C++ sources - keep in alphabetical order
 libspecies_c_srcs =                      \
-	chemical_element.cc              \
+	element_low.cc                   \
 	pseudo_low.cc                    \
+	share_directory_low.cc           \
 	spline.cc
 
 libspecies_a_SOURCES = $(libspecies_c_srcs) $(libspecies_f_srcs)
@@ -50,11 +52,12 @@ libspecies_a_SOURCES = $(libspecies_c_srcs) $(libspecies_f_srcs)
 noinst_HEADERS =                         \
 	anygrid.hpp                      \
 	base.hpp                         \
-	chemical_element.hpp             \
+	element.hpp                      \
 	detect_format.hpp                \
 	ps_pspio_inc.F90                 \
 	psml.hpp                         \
 	qso.hpp                          \
+	share_directory.hpp              \
 	spline.h                         \
 	upf.hpp                          \
 	upf1.hpp                         \
@@ -90,5 +93,5 @@ ps_in_grid.o : ps_in_grid.F90 logrid.o atomic.o
 ps_psf.o : ps_psf.F90 ps_psf_file.o ps_in_grid.o logrid.o atomic.o 
 ps_psf_file.o : ps_psf_file.F90 ps_in_grid.o 
 ps_xml.o : ps_xml.F90 ps_in_grid.o atomic.o pseudo.o
-species.o : species.F90 ps.o logrid.o element.o
+species.o : species.F90 ps.o logrid.o element.o share_directory.o
 
