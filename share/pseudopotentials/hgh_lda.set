@@ -1,5 +1,7 @@
 #Name	Path		Z	Lmax	Lloc	Spacing	Radius
 H	"HGH/H.hgh"	1	-1	-1	-1	-1
+D	"HGH/H.hgh"	1	-1	-1	-1	-1
+T	"HGH/H.hgh"	1	-1	-1	-1	-1
 He	"HGH/He.hgh"	2	-1	-1	-1	-1
 Li	"HGH/Li.hgh"	3	-1	-1	-1	-1
 Li_sc	"HGH/Li_sc.hgh"	3	-1	-1	-1	-1

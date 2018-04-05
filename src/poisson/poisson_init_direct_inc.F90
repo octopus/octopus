@@ -216,11 +216,11 @@ subroutine poisson_solve_direct(this, pot, rho)
 
   FLOAT                :: prefactor, aa1, aa2, aa3, aa4
   integer              :: ip, jp, dim
-  integer, allocatable :: ip_v(:), part_v(:)
   FLOAT                :: xx1(1:MAX_DIM), xx2(1:MAX_DIM), xx3(1:MAX_DIM), xx4(1:MAX_DIM)
 #ifdef HAVE_MPI
   FLOAT                :: xx(1:this%der%mesh%sb%dim), yy(1:this%der%mesh%sb%dim) 
   FLOAT                :: tmp, xg(MAX_DIM)
+  integer, allocatable :: ip_v(:), part_v(:)
   FLOAT, allocatable   :: pvec(:) 
 #endif
 

@@ -186,6 +186,7 @@ subroutine X(symmetrize_tensor_cart)(symm, tensor)
   
   integer :: iop, nops
   R_TYPE :: tensor_symm(3, 3)
+  FLOAT :: tmp(3,3)
   
   PUSH_SUB(X(symmetrize_tensor_cart))
 
@@ -193,9 +194,10 @@ subroutine X(symmetrize_tensor_cart)(symm, tensor)
   
   tensor_symm(:,:) = M_ZERO
   do iop = 1, nops
-    tensor_symm(:,:) = tensor_symm(:,:) + &
-      matmul(matmul(dble(transpose(symm_op_rotation_matrix_cart(symm%ops(iop)))), tensor(1:3, 1:3)), &
-      dble(symm_op_rotation_matrix_cart(symm%ops(iop))))
+    ! The use of the tmp array is a workaround for a PGI bug
+    tmp = symm_op_rotation_matrix_cart(symm%ops(iop))
+    tensor_symm(1:3,1:3) = tensor_symm(1:3,1:3) + &
+      matmul(matmul(transpose(symm_op_rotation_matrix_cart(symm%ops(iop))), tensor(1:3, 1:3)), tmp)
   end do
 
   tensor(1:3,1:3) = tensor_symm(1:3,1:3) / nops
@@ -217,7 +219,7 @@ subroutine X(symmetrize_magneto_optics_cart)(symm, tensor)
   
   integer :: iop, nops
   R_TYPE  :: tensor_symm(3, 3, 3)
-  integer :: rot(3, 3)
+  FLOAT   :: rot(3, 3)
   integer :: idir1, idir2, idir3, ndir
   integer :: i1, i2, i3, det
   

@@ -137,18 +137,14 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   type(scdm_t) :: scdm
   logical, optional :: operate_on_scdm  !< apply exchange to SCDM states by performing a basis rotation on the st object
   
-  type(cmplxscl_t) :: cmplxscl
-  integer :: ii, jj, kk, ip, rank
-  integer :: inp_calc_mode
+  integer :: ii, jj, kk, ip
   logical :: operate_on_scdm_
-  !debug
-  integer :: temp(3)
   
   integer,  allocatable:: istart(:)
   integer,  allocatable:: iend(:)
   integer,  allocatable:: ilsize(:)
   integer :: box(3)
-  FLOAT :: dummy, enlarge(3)
+  FLOAT :: dummy
   
   PUSH_SUB(scdm_init)
   ! check if already initialized

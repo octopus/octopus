@@ -225,7 +225,7 @@
     type(states_t),   intent(inout) :: chi_out
     type(geometry_t), intent(in)    :: geo
 
-    integer :: ip, idim, ist, jst, ik, ib
+    integer :: ip, ist, jst, ik, ib
     character(len=1024) :: temp_string
     FLOAT :: df_dv, dummy(3)
     FLOAT, allocatable :: x(:, :)

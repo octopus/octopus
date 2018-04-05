@@ -34,8 +34,10 @@ else
     [Directory where external METIS library was installed (must be single-precision)])])
 
   case $with_metis_prefix in
+    yes | "") ;;
     no ) acx_external_metis=disabled ;;
-    "") with_metis_prefix="/usr" ;;
+    *) LIBS_METIS="-L$with_metis_prefix/lib -lmetis";
+       METIS_CFLAGS="-I$with_metis_prefix/include"
   esac
 
   if test x"$acx_external_metis" != xdisabled; then
@@ -44,24 +46,8 @@ else
     acx_metis_save_CFLAGS="$CFLAGS"
     acx_metis_save_LIBS="$LIBS"
 
-    # normal situation: "$with_metis_prefix/include/metis.h"
-    lib_path="lib"
-    include_path="include"
-    if test -f "$with_metis_prefix/include/metis/metis.h"; then
-      lib_path="lib"
-      include_path="include/metis"
-    fi
-    # catch bad convention in the downloadable metis version
-    if test -f "$with_metis_prefix/Lib/metis.h"; then
-      lib_path=""
-      include_path="Lib"
-    fi
-    
-    if test "x${METIS_CFLAGS+set}" != xset ; then
-      METIS_CFLAGS="-I$with_metis_prefix/$include_path"
-    fi
     if test "x${LIBS_METIS+set}" != xset ; then
-      LIBS_METIS="-L$with_metis_prefix/$lib_path -lmetis"
+      LIBS_METIS="-lmetis"
     fi
 
     CFLAGS="$CFLAGS $METIS_CFLAGS"

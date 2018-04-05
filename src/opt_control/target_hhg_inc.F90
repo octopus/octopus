@@ -295,7 +295,7 @@
     type(grid_t),      intent(inout) :: gr
     type(states_t),    intent(inout) :: chi_out
 
-    integer :: ik, idim, ist, ip, ib
+    integer :: ik, ib
     PUSH_SUB(target_chi_hhg)
 
     !we have a time-dependent target --> Chi(T)=0

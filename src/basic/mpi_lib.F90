@@ -40,10 +40,10 @@ module mpi_lib_oct_m
   interface lmpi_gen_allgatherv
     module procedure dlmpi_gen_allgatherv, zlmpi_gen_allgatherv, ilmpi_gen_allgatherv
   end interface lmpi_gen_allgatherv
+
+  type(profile_t), save :: prof_allgatherv
 #endif
   
-  type(profile_t), save :: prof_allgatherv
-
 contains
 
 #if defined(HAVE_MPI)

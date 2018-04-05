@@ -405,7 +405,7 @@ contains
     character(len=*), intent(inout) :: ref_name       !< Reference file name 
     character(len=*), intent(inout) :: ref_folder     !< Reference folder name
 
-    integer                 :: ierr, ii, i_space, i_time, nn(1:3), optimize_parity(1:3), wd_info
+    integer                 :: ierr, i_space, i_time, nn(1:3), optimize_parity(1:3), wd_info
     integer                 :: i_energy, e_end, e_start, e_point, chunk_size, read_count, t_point
     logical                 :: optimize(1:3)
     integer                 :: folder_index
