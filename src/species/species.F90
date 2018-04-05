@@ -657,7 +657,6 @@ contains
 
     POP_SUB(get_set_filename)
   end function get_set_filename
-  
 
   ! ---------------------------------------------------------
   subroutine species_build(spec, ispin, dim, print_info)
