@@ -173,7 +173,6 @@ module species_oct_m
 
   logical :: initialized = .false.
   integer :: pseudo_set
-  type(pseudo_set_t) :: pseudopotential_set
   
 contains
 
@@ -301,35 +300,6 @@ contains
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE_STRINGENT) call messages_experimental('PseudopotentialSet = pseudodojo_pbe_stringent')
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL) call messages_experimental('PseudopotentialSet = pseudodojo_pbesol')
     if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL_STRINGENT) call messages_experimental('PseudopotentialSet = pseudodojo_pbesol_stringent')
-
-    select case(pseudo_set)
-    case(OPTION__PSEUDOPOTENTIALSET__STANDARD)
-      filename = trim(conf%share)//'/pseudopotentials/standard.set'
-    case(OPTION__PSEUDOPOTENTIALSET__SG15)
-      filename = trim(conf%share)//'/pseudopotentials/sg15.set'
-    case(OPTION__PSEUDOPOTENTIALSET__HGH_LDA)
-      filename = trim(conf%share)//'/pseudopotentials/hgh_lda.set'
-    case(OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
-      filename = trim(conf%share)//'/pseudopotentials/hscv_lda.set'
-    case(OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
-      filename = trim(conf%share)//'/pseudopotentials/hscv_pbe.set'
-    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA)
-      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_lda.set'
-    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA_STRINGENT)
-      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_lda.set'
-    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE)
-      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe.set'
-    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE_STRINGENT)
-      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe_stringent.set'
-    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL)
-      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_pbesol.set'
-    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL_STRINGENT)
-      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_pbesol_stringent.set'
-    case default
-      ASSERT(.false.)
-    end select
-
-    call pseudo_set_init(pseudopotential_set, filename, ierr)    
 
     POP_SUB(species_init_global)
   end subroutine species_init_global
@@ -616,71 +586,60 @@ contains
     type(species_t), intent(inout) :: spec
     integer,         intent(out)   :: read_data
 
-    integer :: ispec, n_spec_def, iunit
-    character(len=256) :: fname
-    character(len=LABEL_LEN)  :: label
+    type(pseudo_set_t) :: pseudopotential_set
+    type(element_t) :: el
+    character(len=MAX_PATH_LEN) :: filename
+    integer :: ierr
 
-    read_data = 0
+    select case(spec%pseudopotential_set)
+    case(OPTION__PSEUDOPOTENTIALSET__STANDARD)
+      filename = trim(conf%share)//'/pseudopotentials/standard.set'
+    case(OPTION__PSEUDOPOTENTIALSET__SG15)
+      filename = trim(conf%share)//'/pseudopotentials/sg15.set'
+    case(OPTION__PSEUDOPOTENTIALSET__HGH_LDA)
+      filename = trim(conf%share)//'/pseudopotentials/hgh_lda.set'
+    case(OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
+      filename = trim(conf%share)//'/pseudopotentials/hscv_lda.set'
+    case(OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
+      filename = trim(conf%share)//'/pseudopotentials/hscv_pbe.set'
+    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA)
+      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_lda.set'
+    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA_STRINGENT)
+      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_lda.set'
+    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE)
+      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe.set'
+    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE_STRINGENT)
+      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe_stringent.set'
+    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL)
+      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_pbesol.set'
+    case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL_STRINGENT)
+      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_pbesol_stringent.set'
+    case default
+      ASSERT(.false.)
+    end select
 
-    if(spec%pseudopotential_set /= OPTION__PSEUDOPOTENTIALSET__NONE) then 
+    call pseudo_set_init(pseudopotential_set, filename, ierr)    
+    call element_init(el, get_symbol(spec%label))
 
-      ! Find out if the species is in the pseudopotential set
-      select case(spec%pseudopotential_set)
-      case(OPTION__PSEUDOPOTENTIALSET__STANDARD)
-        fname = trim(conf%share)//'/pseudopotentials/standard.set'
-      case(OPTION__PSEUDOPOTENTIALSET__SG15)
-        fname = trim(conf%share)//'/pseudopotentials/sg15.set'
-      case(OPTION__PSEUDOPOTENTIALSET__HGH_LDA)
-        fname = trim(conf%share)//'/pseudopotentials/hgh_lda.set'
-      case(OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
-        fname = trim(conf%share)//'/pseudopotentials/hscv_lda.set'
-      case(OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
-        fname = trim(conf%share)//'/pseudopotentials/hscv_pbe.set'
-      case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA)
-        fname = trim(conf%share)//'/pseudopotentials/pseudodojo_lda.set'
-      case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA_STRINGENT)
-        fname = trim(conf%share)//'/pseudopotentials/pseudodojo_lda.set'
-      case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE)
-        fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe.set'
-      case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE_STRINGENT)
-        fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe_stringent.set'
-      case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL)
-        fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbesol.set'
-      case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL_STRINGENT)
-        fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbesol_stringent.set'
-      case default
-        ASSERT(.false.)
-      end select
+    if(pseudo_set_has(pseudopotential_set, el)) then
+      spec%type = SPECIES_PSEUDO
+      spec%filename = trim(conf%share)//'/pseudopotentials/'//pseudo_set_file_path(pseudopotential_set, el)
 
-      n_spec_def = max(0, loct_number_of_lines(fname))
-      if(n_spec_def > 0) n_spec_def = n_spec_def - 1 ! First line is a comment
-
-      iunit = io_open(fname, action='read', status='old', die=.false.)
-
-      if(iunit > 0) then
-        read(iunit,*)
-
-        default_file: do ispec = 1, n_spec_def
-          read(iunit,*) label
-          if(trim(label) == trim(spec%label)) then
-            call read_from_default_file(iunit, read_data, spec)
-            exit default_file
-          end if
-        end do default_file
-
-        call io_close(iunit)
-
-      else
-
-        call messages_write('Cannot open the octopus internal file:', new_line = .true.)
-        call messages_write(" '"//trim(fname)//"'", new_line = .true.)
-        call messages_write('There is something wrong with your octopus installation.')
-        call messages_fatal()
-
-      end if
-
+      ! these might have been set before      
+      if(spec%z < 0) spec%z = element_atomic_number(el)
+      if(spec%user_lmax == INVALID_L) spec%user_lmax = pseudo_set_lmax(pseudopotential_set, el)
+      if(spec%user_llocal == INVALID_L) spec%user_llocal = pseudo_set_llocal(pseudopotential_set, el)
+      if(spec%def_h < 0) spec%def_h = pseudo_set_spacing(pseudopotential_set, el)
+      if(spec%def_rsize < 0) spec%def_rsize = pseudo_set_radius(pseudopotential_set, el)
+      if(spec%mass < 0) spec%mass = element_mass(el)
+      if(spec%vdw_radius < 0) spec%vdw_radius = element_vdw_radius(el)
+      read_data = 8
+    else
+      read_data = 0
     end if
 
+    call element_end(el)
+    
   end subroutine read_from_set
   
 
@@ -1666,7 +1625,7 @@ contains
     integer,         intent(inout) :: read_data
     type(species_t), intent(inout) :: spec
 
-    character(len=LABEL_LEN) :: label, symbol
+    character(len=LABEL_LEN) :: label
     type(element_t) :: element
     integer :: lmax, llocal
     FLOAT :: zz, spacing, rsize

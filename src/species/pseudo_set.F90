@@ -19,6 +19,7 @@
 #include "global.h"
 
 module pseudo_set_oct_m
+  use element_oct_m
   use global_oct_m
   use messages_oct_m
   use profiling_oct_m
@@ -30,7 +31,13 @@ module pseudo_set_oct_m
   public ::                                  &
     pseudo_set_t,                            &
     pseudo_set_init,                         &
-    pseudo_set_end
+    pseudo_set_end,                          &
+    pseudo_set_has,                          &
+    pseudo_set_file_path,                    &
+    pseudo_set_lmax,                         &
+    pseudo_set_llocal,                       &
+    pseudo_set_spacing,                      &
+    pseudo_set_radius
   
   type pseudo_set_t
     private
@@ -60,8 +67,94 @@ module pseudo_set_oct_m
     end subroutine pseudo_set_end
 
     ! -------------------------------------------------
+
+    integer function pseudo_set_lmax(pseudo_set, element)
+      use element_oct_m
+      import :: pseudo_set_t
+      implicit none
+      
+      type(pseudo_set_t), intent(in)    :: pseudo_set
+      type(element_t),    intent(in)    :: element
+    end function pseudo_set_lmax
     
+    ! -------------------------------------------------
+
+    integer function pseudo_set_llocal(pseudo_set, element)
+      use element_oct_m
+      import :: pseudo_set_t
+      implicit none
+      
+      type(pseudo_set_t), intent(in)    :: pseudo_set
+      type(element_t),    intent(in)    :: element
+    end function pseudo_set_llocal
+
+    ! -------------------------------------------------
+
+    real(8) function pseudo_set_spacing(pseudo_set, element)
+      use element_oct_m
+      import :: pseudo_set_t
+      implicit none
+      
+      type(pseudo_set_t), intent(in)    :: pseudo_set
+      type(element_t),    intent(in)    :: element
+    end function pseudo_set_spacing
+    
+    ! -------------------------------------------------
+
+    real(8) function pseudo_set_radius(pseudo_set, element)
+      use element_oct_m
+      import :: pseudo_set_t
+      implicit none
+      
+      type(pseudo_set_t), intent(in)    :: pseudo_set
+      type(element_t),    intent(in)    :: element
+    end function pseudo_set_radius
+
   end interface
+
+
+contains
+
+  logical function pseudo_set_has(pseudo_set, element)
+    type(pseudo_set_t), intent(in)    :: pseudo_set
+    type(element_t),    intent(in)    :: element
+    
+    interface
+      integer function pseudo_set_has_low(pseudo_set, element)
+        use element_oct_m
+        import :: pseudo_set_t
+        implicit none
+      
+        type(pseudo_set_t), intent(in)    :: pseudo_set
+        type(element_t),    intent(in)    :: element
+      end function pseudo_set_has_low
+    end interface
+
+    pseudo_set_has = pseudo_set_has_low(pseudo_set, element) /= 0
+    
+  end function pseudo_set_has
+
+  ! -----------------------------------------------------------------
+  
+  character(len=MAX_PATH_LEN) function pseudo_set_file_path(pseudo_set, element)
+    type(pseudo_set_t), intent(in)    :: pseudo_set
+    type(element_t),    intent(in)    :: element
+    
+    interface
+      subroutine pseudo_set_file_path_low(pseudo_set, element, path)
+        use element_oct_m
+        import :: pseudo_set_t
+        implicit none
+      
+        type(pseudo_set_t), intent(in)    :: pseudo_set
+        type(element_t),    intent(in)    :: element
+        character(len=*),   intent(out)   :: path
+      end subroutine pseudo_set_file_path_low
+    end interface
+
+    call pseudo_set_file_path_low(pseudo_set, element, pseudo_set_file_path)
+    
+  end function pseudo_set_file_path
   
 end module pseudo_set_oct_m
 

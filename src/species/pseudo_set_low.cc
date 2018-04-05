@@ -26,6 +26,8 @@
 
 #include "set.hpp"
 
+#include "element.hpp"
+
 extern "C" void FC_FUNC_(pseudo_set_init, PSEUDO_SET_INIT)
   (pseudopotential::set ** pseudo_set, STR_F_TYPE const filename_f, fint * ierr STR_ARG1){
 
@@ -42,4 +44,35 @@ extern "C" void FC_FUNC_(pseudo_set_init, PSEUDO_SET_INIT)
 
 extern "C" void FC_FUNC_(pseudo_set_end, PSEUDO_SET_END)(pseudopotential::set ** pseudo_set){
   delete *pseudo_set;
+}
+
+extern "C" fint FC_FUNC_(pseudo_set_has_low, PSEUDO_SET_HAS_LOW)
+  (const pseudopotential::set ** pseudo_set, pseudopotential::element **el){
+  return (*pseudo_set)->has(**el);
+}
+
+extern "C" void FC_FUNC_(pseudo_set_file_path_low, PSEUDO_SET_FILE_PATH_LOW)
+  (const pseudopotential::set ** pseudo_set, pseudopotential::element **el, STR_F_TYPE const path_f STR_ARG1){
+  std::string path = (*pseudo_set)->file_path(**el);
+  TO_F_STR1(path.c_str(), path_f);
+}
+
+extern "C" fint FC_FUNC_(pseudo_set_lmax, PSEUDO_SET_LMAX)
+  (const pseudopotential::set ** pseudo_set, pseudopotential::element **el){
+  return (*pseudo_set)->lmax(**el);
+}
+
+extern "C" fint FC_FUNC_(pseudo_set_llocal, PSEUDO_SET_LLOCAL)
+  (const pseudopotential::set ** pseudo_set, pseudopotential::element **el){
+  return (*pseudo_set)->llocal(**el);
+}
+
+extern "C" double FC_FUNC_(pseudo_set_spacing, PSEUDO_SET_SPACING)
+  (const pseudopotential::set ** pseudo_set, pseudopotential::element **el){
+  return (*pseudo_set)->spacing(**el);
+}
+
+extern "C" double FC_FUNC_(pseudo_set_radius, PSEUDO_SET_RADIUS)
+  (const pseudopotential::set ** pseudo_set, pseudopotential::element **el){
+  return (*pseudo_set)->radius(**el);
 }

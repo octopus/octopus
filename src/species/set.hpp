@@ -49,8 +49,6 @@ namespace pseudopotential {
 
 	map_[symbol] = vals;
 
-	std::cout << symbol << std::endl;
-
 	element el(symbol);
 
       }
