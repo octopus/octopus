@@ -71,7 +71,6 @@ noinst_HEADERS =                         \
 	projector_inc.F90                \
 	scdm_inc.F90                     \
 	scissor_inc.F90                  \
-	species_pot_inc.F90              \
 	vxc_inc.F90
 
 include $(srcdir)/../common-rules.make
@@ -115,6 +114,6 @@ rkb_projector.o : rkb_projector.F90
 scdm.o : scdm.F90 scdm_inc.F90 xc.o
 scf_tol.o : scf_tol.F90
 scissor.o : scissor.F90 scissor_inc.F90
-species_pot.o : species_pot.F90 species_pot_inc.F90
+species_pot.o : species_pot.F90
 vdw_ts.o : vdw_ts.F90 hirshfeld.o
 xc.o : xc.F90 kxc_inc.F90 fxc_inc.F90 vxc_inc.F90 functionals.o libvdwxc.o
