@@ -23,7 +23,7 @@
 #include <unordered_map>
 #include <fstream>
 
-#include "chemical_element.hpp"
+#include "element.hpp"
 
 #include <iostream>
 
@@ -51,33 +51,33 @@ namespace pseudopotential {
 
 	std::cout << symbol << std::endl;
 
-	chemical_element el(symbol);
+	element el(symbol);
 
       }
 	  
     }
     
-    bool has(const chemical_element & el) const {
+    bool has(const element & el) const {
       return map_.find(el.symbol()) != map_.end();
     }
     
-    const std::string & file_path(const chemical_element & el) const {
+    const std::string & file_path(const element & el) const {
       return map_.at(el.symbol()).file_path_;
     }
     
-    int lmax(const chemical_element & el) const {
+    int lmax(const element & el) const {
       return map_.at(el.symbol()).lmax_;
     }
     
-    int llocal(const chemical_element & el) const {
+    int llocal(const element & el) const {
       return map_.at(el.symbol()).llocal_;
     }
     
-    double spacing(const chemical_element & el) const {
+    double spacing(const element & el) const {
       return map_.at(el.symbol()).spacing_;
     }
     
-    double radius(const chemical_element & el) const {
+    double radius(const element & el) const {
       return map_.at(el.symbol()).radius_;
     }
 
