@@ -34,6 +34,7 @@ subroutine output_states(st, gr, geo, dir, outp)
   FLOAT,       dimension(:,:), pointer :: density
   FLOAT, allocatable :: dtmp(:), elf(:,:), polarization(:, :)
   CMPLX, allocatable :: ztmp(:)
+  type(dos_t) :: dos
 
   PUSH_SUB(output_states)
 
@@ -222,7 +223,9 @@ subroutine output_states(st, gr, geo, dir, outp)
   end if
 
   if(iand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
-    call states_write_dos (trim(dir), st)
+    call dos_init(dos, st)
+    call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh)
+    call dos_end(dos)
   end if
 
   if(iand(outp%what, OPTION__OUTPUT__TPA) /= 0) then
