@@ -593,7 +593,39 @@ contains
 
     PUSH_SUB(read_from_set)
     
-    select case(spec%pseudopotential_set)
+    call pseudo_set_init(pseudopotential_set, get_set_filename(spec%pseudopotential_set), ierr)
+    call element_init(el, get_symbol(spec%label))
+    
+    if(pseudo_set_has(pseudopotential_set, el)) then
+      spec%type = SPECIES_PSEUDO
+      spec%filename = trim(conf%share)//'/pseudopotentials/'//pseudo_set_file_path(pseudopotential_set, el)
+
+      ! these might have been set before
+      if(spec%z < 0) spec%z = element_atomic_number(el)
+      if(spec%user_lmax == INVALID_L) spec%user_lmax = pseudo_set_lmax(pseudopotential_set, el)
+      if(spec%user_llocal == INVALID_L) spec%user_llocal = pseudo_set_llocal(pseudopotential_set, el)
+      if(spec%def_h < 0) spec%def_h = pseudo_set_spacing(pseudopotential_set, el)
+      if(spec%def_rsize < 0) spec%def_rsize = pseudo_set_radius(pseudopotential_set, el)
+      if(spec%mass < 0) spec%mass = element_mass(el)
+      if(spec%vdw_radius < 0) spec%vdw_radius = element_vdw_radius(el)
+      read_data = 8
+    else
+      read_data = 0
+    end if
+
+    call element_end(el)
+
+    POP_SUB(read_from_set)
+  end subroutine read_from_set
+
+    ! ---------------------------------------------------------
+
+  character(len=MAX_PATH_LEN) function get_set_filename(set_id) result(filename)
+    integer,         intent(in)   :: set_id
+
+    PUSH_SUB(get_set_filename)
+    
+    select case(set_id)
     case(OPTION__PSEUDOPOTENTIALSET__STANDARD)
       filename = trim(conf%share)//'/pseudopotentials/standard.set'
     case(OPTION__PSEUDOPOTENTIALSET__SG15)
@@ -621,31 +653,9 @@ contains
     case default
       ASSERT(.false.)
     end select
-    
-    call pseudo_set_init(pseudopotential_set, filename, ierr)
-    call element_init(el, get_symbol(spec%label))
-    
-    if(pseudo_set_has(pseudopotential_set, el)) then
-      spec%type = SPECIES_PSEUDO
-      spec%filename = trim(conf%share)//'/pseudopotentials/'//pseudo_set_file_path(pseudopotential_set, el)
 
-      ! these might have been set before      
-      if(spec%z < 0) spec%z = element_atomic_number(el)
-      if(spec%user_lmax == INVALID_L) spec%user_lmax = pseudo_set_lmax(pseudopotential_set, el)
-      if(spec%user_llocal == INVALID_L) spec%user_llocal = pseudo_set_llocal(pseudopotential_set, el)
-      if(spec%def_h < 0) spec%def_h = pseudo_set_spacing(pseudopotential_set, el)
-      if(spec%def_rsize < 0) spec%def_rsize = pseudo_set_radius(pseudopotential_set, el)
-      if(spec%mass < 0) spec%mass = element_mass(el)
-      if(spec%vdw_radius < 0) spec%vdw_radius = element_vdw_radius(el)
-      read_data = 8
-    else
-      read_data = 0
-    end if
-
-    call element_end(el)
-
-    POP_SUB(read_from_set)    
-  end subroutine read_from_set
+    POP_SUB(get_set_filename)
+  end function get_set_filename
   
 
   ! ---------------------------------------------------------
