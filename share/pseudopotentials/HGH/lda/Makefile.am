@@ -18,39 +18,97 @@
 ## 02110-1301, USA.
 ##
 
-SUBDIRS = PSF HGH quantum-simulation.org pseudo-dojo.org
+hghdir = $(pkgdatadir)/pseudopotentials/HGH
 
-ppdir = $(pkgdatadir)/pseudopotentials
+dist_hgh_DATA = \
+	Ag.hgh \
+	Al.hgh \
+	Ar.hgh \
+	As.hgh \
+	At.hgh \
+	Au.hgh \
+	Ba.hgh \
+	Be.hgh \
+	B.hgh \
+	Bi.hgh \
+	Br.hgh \
+	Ca.hgh \
+	Cd.hgh \
+	C.hgh \
+	Cl.hgh \
+	Co.hgh \
+	Cr.hgh \
+	Cs.hgh \
+	Cu.hgh \
+	Fe.hgh \
+	F.hgh \
+	Ga.hgh \
+	Ge.hgh \
+	He.hgh \
+	Hg.hgh \
+	H.hgh \
+	I.hgh \
+	In.hgh \
+	Ir.hgh \
+	K.hgh \
+	Kr.hgh \
+	Li.hgh \
+	Mg.hgh \
+	Mn.hgh \
+	Mo.hgh \
+	Na.hgh \
+	Nb.hgh \
+	Ne.hgh \
+	N.hgh \
+	Ni.hgh \
+	O.hgh \
+	Os.hgh \
+	Pb.hgh \
+	Pd.hgh \
+	P.hgh \
+	Po.hgh \
+	Pt.hgh \
+	Rb.hgh \
+	Re.hgh \
+	Rh.hgh \
+	Rn.hgh \
+	Ru.hgh \
+	Sb.hgh \
+	Sc.hgh \
+	Se.hgh \
+	S.hgh \
+	Si.hgh \
+	Sn.hgh \
+	Sr.hgh \
+	Ta.hgh \
+	Tc.hgh \
+	Te.hgh \
+	Ti.hgh \
+	Tl.hgh \
+	V.hgh \
+	W.hgh \
+	Xe.hgh \
+	Y.hgh \
+	Zn.hgh \
+	Zr.hgh
 
-dist_pp_DATA =                            \
-	standard.set                      \
-	sg15.set                          \
-	hgh_lda.set                       \
-	hgh_lda_sc.set                    \
-	hscv_lda.set                      \
-	hscv_pbe.set                      \
-	pseudodojo_lda.set                \
-	pseudodojo_lda_stringent.set      \
-	pseudodojo_pbe.set                \
-	pseudodojo_pbe_stringent.set      \
-	pseudodojo_pbesol.set             \
-	pseudodojo_pbesol_stringent.set   \
-	elements.dat
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
 # the `distcheck' target) the pseudopotential files have to be accessible
 # in the build tree.
 check:
-	for f in $(dist_pp_DATA); do \
+	for f in $(dist_hgh_DATA); do \
 	  if [ ! -e $$f -o $$f -ot $(srcdir)/$$f ]; then \
 	    cp $(srcdir)/$$f $$f; \
 	  fi \
 	done
 
+check-short: check
+check-long: check
+
 clean-local:
-	if [ -n "$(top_builddir)" -a "$(top_builddir)" != "$(top_srcdir)" ]; then \
-	  rm -f $(dist_pp_DATA); \
+	@if [ -n "$(top_builddir)" -a "$(top_builddir)" != "$(top_srcdir)" ]; then \
+	  rm -f $(dist_hgh_DATA); \
 	fi
 
-.PHONY: check
-
+.PHONY: check check-short check-long

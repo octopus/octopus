@@ -257,10 +257,10 @@ contains
     !% This set provides pseudopotentials for elements up to Z = 83
     !% (Bi), excluding Lanthanides.
     !%Option hgh_lda 3
-    !% The set of Hartwigsen-Goedecker-Hutter LDA pseudopotentials
-    !% for elements from H to Rn. For many species a semi-core variant
-    !% is available, obtained by appending <tt>_sc</tt> to the
-    !% element name.
+    !% The set of Hartwigsen-Goedecker-Hutter LDA pseudopotentials for elements from H to Rn.
+    !% Ref: C. Hartwigsen, S. Goedecker, and J. Hutter, <i>Phys. Rev. B</i> <b>58</b>, 3641 (1998).
+    !%Option hgh_lda_sc 31
+    !% The semicore set of Hartwigsen-Goedecker-Hutter LDA pseudopotentials.
     !% Ref: C. Hartwigsen, S. Goedecker, and J. Hutter, <i>Phys. Rev. B</i> <b>58</b>, 3641 (1998).
     !%Option hscv_lda 4
     !% (experimental) The set of Hamann-Schlueter-Chiang-Vanderbilt (HSCV) potentials
@@ -591,6 +591,8 @@ contains
     character(len=MAX_PATH_LEN) :: filename
     integer :: ierr
 
+    PUSH_SUB(read_from_set)
+    
     select case(spec%pseudopotential_set)
     case(OPTION__PSEUDOPOTENTIALSET__STANDARD)
       filename = trim(conf%share)//'/pseudopotentials/standard.set'
@@ -598,6 +600,8 @@ contains
       filename = trim(conf%share)//'/pseudopotentials/sg15.set'
     case(OPTION__PSEUDOPOTENTIALSET__HGH_LDA)
       filename = trim(conf%share)//'/pseudopotentials/hgh_lda.set'
+    case(OPTION__PSEUDOPOTENTIALSET__HGH_LDA_SC)
+      filename = trim(conf%share)//'/pseudopotentials/hgh_lda_sc.set'
     case(OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
       filename = trim(conf%share)//'/pseudopotentials/hscv_lda.set'
     case(OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
@@ -617,10 +621,10 @@ contains
     case default
       ASSERT(.false.)
     end select
-
-    call pseudo_set_init(pseudopotential_set, filename, ierr)    
+    
+    call pseudo_set_init(pseudopotential_set, filename, ierr)
     call element_init(el, get_symbol(spec%label))
-
+    
     if(pseudo_set_has(pseudopotential_set, el)) then
       spec%type = SPECIES_PSEUDO
       spec%filename = trim(conf%share)//'/pseudopotentials/'//pseudo_set_file_path(pseudopotential_set, el)
@@ -639,7 +643,8 @@ contains
     end if
 
     call element_end(el)
-    
+
+    POP_SUB(read_from_set)    
   end subroutine read_from_set
   
 
@@ -1246,8 +1251,14 @@ contains
       ! if we do not know, try the pseudpotential set
       if(species_x_functional == PSEUDO_EXCHANGE_UNKNOWN) then
         select case(spec%pseudopotential_set)
-        case(OPTION__PSEUDOPOTENTIALSET__STANDARD, OPTION__PSEUDOPOTENTIALSET__HGH_LDA, OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
+        case(                                     &
+          OPTION__PSEUDOPOTENTIALSET__STANDARD,   &
+          OPTION__PSEUDOPOTENTIALSET__HGH_LDA,    &
+          OPTION__PSEUDOPOTENTIALSET__HGH_LDA_SC, &
+          OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
+          
           species_x_functional = OPTION__XCFUNCTIONAL__LDA_X
+          
         case(OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
           species_x_functional = OPTION__XCFUNCTIONAL__GGA_X_PBE
         end select
@@ -1270,8 +1281,14 @@ contains
       ! if we do not know, try the pseudpotential set
       if(species_c_functional == PSEUDO_CORRELATION_UNKNOWN) then
         select case(spec%pseudopotential_set)
-        case(OPTION__PSEUDOPOTENTIALSET__STANDARD, OPTION__PSEUDOPOTENTIALSET__HGH_LDA, OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
+        case(                                     &
+          OPTION__PSEUDOPOTENTIALSET__STANDARD,   &
+          OPTION__PSEUDOPOTENTIALSET__HGH_LDA,    &
+          OPTION__PSEUDOPOTENTIALSET__HGH_LDA_SC, &
+          OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
+          
           species_c_functional = OPTION__XCFUNCTIONAL__LDA_C_PZ_MOD/1000
+          
         case(OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
           species_c_functional = OPTION__XCFUNCTIONAL__GGA_C_PBE/1000
         end select

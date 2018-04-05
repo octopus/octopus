@@ -37,6 +37,11 @@ namespace pseudopotential {
     set(const std::string & filename){
       std::ifstream file(filename);
 
+      if(!file){
+	std::cerr << "Internal error: cannot open file '" << filename << "'." << std::endl;
+	exit(1);
+      }
+	
       std::string line, symbol;
       element_values vals;
       int zz;
@@ -45,12 +50,10 @@ namespace pseudopotential {
 
       while(true){
 	file >> symbol >> vals.file_path_ >> zz >> vals.lmax_ >> vals.llocal_ >> vals.spacing_ >> vals.radius_;
+
 	if(file.eof()) break;
 
 	map_[symbol] = vals;
-
-	element el(symbol);
-
       }
 	  
     }
