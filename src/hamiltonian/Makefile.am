@@ -95,7 +95,7 @@ born_charges.o : born_charges.F90
 boundary_op.o : boundary_op.F90 
 energy.o : energy.F90 
 epot.o : epot.F90 xc.o species_pot.o projector.o lasers.o kick.o ion_interaction.o gauge_field.o 
-functionals.o : functionals.F90 libvdwxc.o 
+functionals.o : functionals.F90 libvdwxc.o functionals_list.F90
 gauge_field.o : gauge_field.F90 projector.o 
 hamiltonian_base.o : hamiltonian_base.F90 hamiltonian_base_inc.F90 projector_matrix.o projector.o hgh_projector.o kb_projector.o epot.o 
 hamiltonian.o : hamiltonian.F90 hamiltonian_inc.F90 functionals.o xc.o scissor.o scdm.o pcm.o projector.o oct_exchange.o lasers.o gauge_field.o epot.o hamiltonian_base.o energy.o boundary_op.o 
