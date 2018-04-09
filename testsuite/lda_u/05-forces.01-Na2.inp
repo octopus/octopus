@@ -23,6 +23,6 @@ ParDomains = no
 MixField = density
 
 DFTULevel = dft_u_empirical
-OrbitalsThreshold_LDAU = 0.05
+DFTUOrbitalsThreshold = 0.05
 DFTUNormalizeOrbitals = no
 

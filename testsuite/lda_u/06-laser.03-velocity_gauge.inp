@@ -53,5 +53,5 @@ MixField = density
 
 DFTULevel = dft_u_empirical
 ExperimentalFeatures = yes
-OrbitalsThreshold_LDAU = 0.1
+DFTUOrbitalsThreshold = 0.1
 

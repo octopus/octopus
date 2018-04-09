@@ -206,7 +206,7 @@ contains
   call parse_variable('OrbitalsTruncationMethod', OPTION__ORBITALSTRUNCATIONMETHOD__FULL, this%truncation)
   call messages_print_var_option(stdout, 'OrbitalsTruncationMethod', this%truncation)
 
-  !%Variable OrbitalsThreshold_LDAU
+  !%Variable DFTUOrbitalsThreshold
   !%Type float
   !%Default 0.01
   !%Section Hamiltonian::DFT+U
@@ -217,9 +217,9 @@ contains
   !% This value should be converged to be sure that results do not depend on this value. 
   !% However increasing this value increases the number of grid points covered by the orbitals and directly affect performances.
   !%End
-  call parse_variable('OrbitalsThreshold_LDAU', CNST(0.01), this%orbitals_threshold)
-  if(this%orbitals_threshold <= M_ZERO) call messages_input_error('OrbitalsThreshold_LDAU')
-  call messages_print_var_value(stdout, 'OrbitalsThreshold_LDAU', this%orbitals_threshold)
+  call parse_variable('DFTUOrbitalsThreshold', CNST(0.01), this%orbitals_threshold)
+  if(this%orbitals_threshold <= M_ZERO) call messages_input_error('DFTUOrbitalsThreshold')
+  call messages_print_var_value(stdout, 'DFTUOrbitalsThreshold', this%orbitals_threshold)
 
   !%Variable DFTUNormalizeOrbitals
   !%Type logical
