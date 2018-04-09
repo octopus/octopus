@@ -25,6 +25,7 @@
 #include <iostream>
 #include <fstream>
 #include <unordered_map>
+#include <cstdlib>
 
 #include "share_directory.hpp"
 
@@ -86,7 +87,7 @@ namespace pseudopotential {
 
 	if(!file){
 	  std::cerr << "Internal error: cannot open file '" << filename << "'." << std::endl;
-	  exit(1);
+	  exit(EXIT_FAILURE);
 	}
 	
 	while(true){
