@@ -374,9 +374,9 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
       if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, sd, normalize = .false., mask = orthogonal)
 
       ! Get conjugate-gradient vector
-      dot = X(mf_nrm2)(gr%mesh, dim, sd)**2
-      gamma = dot/mu
-      mu    = dot
+      dump = X(mf_nrm2)(gr%mesh, dim, sd)**2
+      gamma = dump/mu
+      mu    = dump
 
       do idim = 1, st%d%dim
         do ip = 1, gr%mesh%np
@@ -384,11 +384,11 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
         end do
       end do
 
-      dump = X(mf_dotp)(gr%mesh, dim, psi, cg)
+      dot = X(mf_dotp)(gr%mesh, dim, psi, cg)
 
       do idim = 1, st%d%dim
         do ip = 1, gr%mesh%np
-          cgp(ip, idim) = cg(ip, idim) - dump*psi(ip, idim)
+          cgp(ip, idim) = cg(ip, idim) - dot*psi(ip, idim)
         end do
       end do
 
