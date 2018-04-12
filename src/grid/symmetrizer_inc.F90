@@ -17,13 +17,14 @@
 !!
 
 !> supply field and symmfield, and/or field_vector and symmfield_vector
-subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_vector, &
+subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfield_vector, &
           suppress_warning, reduced_quantity)
   type(symmetrizer_t), target, intent(in)    :: this
-  R_TYPE,    optional, target, intent(in)    :: field(:) !< (this%mesh%np)
-  R_TYPE,    optional, target, intent(in)    :: field_vector(:, :)  !< (this%mesh%np, 3)
-  R_TYPE,            optional, intent(out)   :: symmfield(:) !< (this%mesh%np)
-  R_TYPE,            optional, intent(out)   :: symmfield_vector(:, :) !< (this%mesh%np, 3)
+  integer,                     intent(in)    :: np !mesh%np or mesh%fine%np
+  R_TYPE,    optional, target, intent(in)    :: field(:) !< (np)
+  R_TYPE,    optional, target, intent(in)    :: field_vector(:, :)  !< (np, 3)
+  R_TYPE,            optional, intent(out)   :: symmfield(:) !< (np)
+  R_TYPE,            optional, intent(out)   :: symmfield_vector(:, :) !< (np, 3)
   logical,           optional, intent(in)    :: suppress_warning !< use to avoid output of discrepancy,
     !! for forces, where this routine is not used to symmetrize something already supposed to be symmetric,
     !! but rather to construct the quantity properly from reduced k-points
@@ -42,6 +43,14 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
   ASSERT(present(field_vector) .eqv. present(symmfield_vector))
   ! we will do nothing if following condition is not met!
   ASSERT(present(field) .or. present(field_vector))
+
+  if(present(field)) then
+    ASSERT(ubound(field, dim = 1) >= np)
+    ASSERT(ubound(symmfield, dim = 1) >= np)
+  else
+    ASSERT(ubound(field_vector, dim = 1) >= np)
+    ASSERT(ubound(symmfield_vector, dim = 1) >= np)
+  end if
 
   ASSERT(associated(this%mesh))
   vp => this%mesh%vp
@@ -83,7 +92,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
   lsize(1:3) = dble(this%mesh%idx%ll(1:3))
   offset(1:3) = dble(this%mesh%idx%nr(1, 1:3) + this%mesh%idx%enlarge(1:3))
 
-  do ip = 1, this%mesh%np
+  do ip = 1, np
     if(this%mesh%parallel_in_domains) then
       ! convert to global point
       destpoint(1:3) = dble(this%mesh%idx%lxyz(vp%local(vp%xlocal + ip - 1), 1:3)) - offset(1:3)
@@ -149,8 +158,8 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
 
   if(.not. optional_default(suppress_warning, .false.)) then
     if(present(field)) then
-      maxabs = maxval(abs(field(1:this%mesh%np)))
-      maxabsdiff = maxval(abs(field(1:this%mesh%np) - symmfield(1:this%mesh%np)))
+      maxabs = maxval(abs(field(1:np)))
+      maxabsdiff = maxval(abs(field(1:np) - symmfield(1:np)))
       if(maxabsdiff / maxabs > CNST(1e-6)) then
         write(message(1),'(a, es12.5)') 'Symmetrization discrepancy ratio (scalar) = ', maxabsdiff / maxabs
         call messages_warning(1)
@@ -158,8 +167,8 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
     end if
     
     if(present(field_vector)) then
-      maxabs = maxval(abs(field_vector(1:this%mesh%np, 1:3)))
-      maxabsdiff = maxval(abs(field_vector(1:this%mesh%np, 1:3) - symmfield_vector(1:this%mesh%np, 1:3)))
+      maxabs = maxval(abs(field_vector(1:np, 1:3)))
+      maxabsdiff = maxval(abs(field_vector(1:np, 1:3) - symmfield_vector(1:np, 1:3)))
       if(maxabsdiff / maxabs > CNST(1e-6)) then
         write(message(1),'(a, es12.5)') 'Symmetrization discrepancy ratio (vector) = ', maxabsdiff / maxabs
         call messages_warning(1)

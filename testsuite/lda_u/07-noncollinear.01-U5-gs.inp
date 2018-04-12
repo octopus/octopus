@@ -57,10 +57,11 @@ LCAOStart= lcao_states
 %KPointsGrid
 2 | 2 | 1
 %
-KPointsUseSymmetries = no
+KPointsUseSymmetries = yes
+KPointsUseTimeReversal = no
 
 ExtraStates = 6
-ConvRelDens = 1e-4
+ConvRelDens = 5e-6
 
 OrbitalsTruncationMethod = box
 OutputLDA_U = occupation_matrices

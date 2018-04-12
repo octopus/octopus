@@ -358,7 +358,8 @@ contains
       call symmetrizer_init(symmetrizer, this%gr%fine%mesh)
 
       do ispin = 1, this%st%d%nspin
-        call dsymmetrizer_apply(symmetrizer, field = this%density(:, ispin), symmfield = tmpdensity)
+        call dsymmetrizer_apply(symmetrizer, this%gr%fine%mesh%np, field = this%density(:, ispin), &
+                                 symmfield = tmpdensity)
         this%density(1:this%gr%fine%mesh%np, ispin) = tmpdensity(1:this%gr%fine%mesh%np)
       end do
 
