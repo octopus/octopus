@@ -27,5 +27,5 @@ ParDomains = no
 
 DFTULevel = dft_u_empirical
 AOThreshold = 0.05
-DFTUNormalizeOrbitals = no
+AONormalize = no
 
