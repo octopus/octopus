@@ -575,7 +575,6 @@ contains
     if(update_energy_ .and. ion_dynamics_ions_move(ions)) then
       if(.not. propagator_ions_are_propagated(tr)) then
         call ion_dynamics_propagate(ions, gr%sb, geo, abs(nt*dt), ionic_scale*dt)
-        call lda_u_update_basis(hm%lda_u, gr, geo, st)
         generate = .true.
       end if
     end if

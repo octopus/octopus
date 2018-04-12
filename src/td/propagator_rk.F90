@@ -351,7 +351,6 @@ contains
           geo%atom(iatom)%v(1:geo%space%dim) = vel(:, iatom)
         end do
         call hamiltonian_epot_generate(hm, gr, geo, stphi, time = tau)
-        call lda_u_update_basis(hm%lda_u, gr, geo, st)
       end if
       if(.not.oct_exchange_enabled(hm%oct_exchange)) then
         call density_calc(stphi, gr, stphi%rho)
@@ -593,7 +592,6 @@ contains
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
         call ion_dynamics_propagate(ions, gr%sb, geo, time, dt)
-        call lda_u_update_basis(hm%lda_u, gr, geo, st)
         call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
         vpsl1_op = hm%ep%vpsl
       end if
@@ -613,7 +611,6 @@ contains
 
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_restore_state(ions, geo, ions_state)
-        call lda_u_update_basis(hm%lda_u, gr, geo, st)
       end if
 
       j = 1
@@ -800,7 +797,6 @@ contains
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
         call ion_dynamics_propagate(ions, gr%sb, geo, time - dt + c(1)*dt, c(1)*dt)
-        call lda_u_update_basis(hm%lda_u, gr, geo, st)
         call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt + c(1)*dt)
         vpsl1_op = hm%ep%vpsl
       end if
@@ -825,7 +821,6 @@ contains
       rhs1 = - M_zI * dt * rhs1
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_restore_state(ions, geo, ions_state)
-        call lda_u_update_basis(hm%lda_u, gr, geo, st)
       end if
 
       ! Set the Hamiltonian at time-dt + c(2) * dt
@@ -839,7 +834,6 @@ contains
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
         call ion_dynamics_propagate(ions, gr%sb, geo, time - dt + c(2)*dt, c(2)*dt)
-        call lda_u_update_basis(hm%lda_u, gr, geo, st)
         call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt + c(2)*dt)
         vpsl2_op = hm%ep%vpsl
       end if
@@ -864,7 +858,6 @@ contains
       rhs2 = -M_zI * dt * rhs2
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_restore_state(ions, geo, ions_state)
-        call lda_u_update_basis(hm%lda_u, gr, geo, st)
       end if
 
       j = 1

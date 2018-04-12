@@ -129,7 +129,6 @@ contains
     ! first move the ions to time t
     if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
-      call lda_u_update_basis(hm%lda_u, gr, geo, st)
       call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
     end if
 
@@ -236,7 +235,6 @@ contains
     ! first move the ions to time t
     if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
-      call lda_u_update_basis(hm%lda_u, gr, geo, st)
       call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
     end if
 
@@ -444,7 +442,6 @@ contains
     ! move the ions to time t
     if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
-      call lda_u_update_basis(hm%lda_u, gr, geo, st)
       call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
     end if
 

@@ -986,6 +986,8 @@ contains
 
     end if
 
+    call lda_u_update_basis(hm%lda_u, gr, geo, st)
+
     POP_SUB(hamiltonian_epot_generate)
   end subroutine hamiltonian_epot_generate
 

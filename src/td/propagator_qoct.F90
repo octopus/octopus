@@ -72,7 +72,6 @@ contains
     if(ion_dynamics_ions_move(ions)) then
       call ion_dynamics_save_state(ions, geo, ions_state)
       call ion_dynamics_propagate(ions, gr%sb, geo, t - dt/M_TWO, M_HALF*dt)
-      call lda_u_update_basis(hm%lda_u, gr, geo, st)
       call hamiltonian_epot_generate(hm, gr, geo, st, time = t - dt/M_TWO)
     end if
 
@@ -89,7 +88,6 @@ contains
     !restore to time 'time - dt'
     if(ion_dynamics_ions_move(ions)) then
       call ion_dynamics_restore_state(ions, geo, ions_state)
-      call lda_u_update_basis(hm%lda_u, gr, geo, st)
     end if
 
     POP_SUB(td_qoct_tddft_propagator)
