@@ -232,6 +232,7 @@ contains
     
     pcm%iter = 0
     pcm%update_iter = 1
+    pcm%kick_like = .false.
 
     !%Variable PCMCalculation
     !%Type logical
