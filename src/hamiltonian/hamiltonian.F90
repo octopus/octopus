@@ -986,7 +986,7 @@ contains
 
     end if
 
-    call lda_u_update_basis(hm%lda_u, gr, geo, st)
+    call lda_u_update_basis(this%lda_u, gr, geo, st, associated(this%hm_base%phase))
 
     POP_SUB(hamiltonian_epot_generate)
   end subroutine hamiltonian_epot_generate

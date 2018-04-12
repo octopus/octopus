@@ -48,17 +48,15 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
   do ios = 1, this%norbsets
     os => this%orbsets(ios)
     call X(orbitalset_get_coeff_batch)(os, d%dim, psib, ik, has_phase, dot(1:d%dim,1:os%norbs,1:psib%nst))
-
     !
     reduced(:,:) = R_TOTYPE(M_ZERO) 
     !
     do ibatch = 1, psib%nst
       bind1 = batch_ist_idim_to_linear(psib, (/ibatch, 1/))
       bind2 = batch_ist_idim_to_linear(psib, (/ibatch, 2/))
-      do im = 1,this%orbsets(ios)%norbs
+      do im = 1,os%norbs
         ! sum_mp Vmmp <phi mp | psi >
-        do imp = 1, this%orbsets(ios)%norbs
-
+        do imp = 1, os%norbs
           !Note here that V_{mmp} =U/2(delta_{mmp}-2n_{mpm})
           if(d%ispin /= SPINORS) then
             reduced(im,ibatch) = reduced(im,ibatch) + this%X(V)(im,imp,ispin,ios)*dot(1,imp,ibatch)
@@ -73,7 +71,7 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
     end do !ibatch
  
     !We add the orbitals properly weighted to hpsi
-    call X(orbitalset_add_to_batch)(this%orbsets(ios), d%dim, hpsib, ik, has_phase, reduced)
+    call X(orbitalset_add_to_batch)(os, d%dim, hpsib, ik, has_phase, reduced)
   end do
  
   SAFE_DEALLOCATE_A(dot)
@@ -95,7 +93,6 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   CMPLX, pointer, optional             :: phase(:,:) 
 
   integer :: ios, im, ik, ist, ispin, norbs, ip, idim
-  integer :: ios2, im2
   R_TYPE, allocatable :: psi(:,:) 
   R_TYPE, allocatable :: dot(:,:,:)
   FLOAT   :: weight
@@ -117,11 +114,6 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   !TODO: use symmetries of the occupation matrices
   do ik = st%d%kpt%start, st%d%kpt%end
     ispin =  states_dim_get_spin_index(st%d,ik)
-
-    !We recompute the overlap matrices here
-    if(this%level == DFT_U_ACBN0) then
-      call X(build_overlap_matrices)(this, ik, present(phase))
-    end if
 
     do ist = st%st_start, st%st_end
 
@@ -148,17 +140,12 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         this%X(renorm_occ)(:,:,:,ist,ik) = R_TOTYPE(M_ZERO)
         do ios = 1, this%norbsets
           os => this%orbsets(ios)
-          norbs = this%orbsets(ios)%norbs
+          norbs = os%norbs
           do im = 1, norbs 
-            !This sum runs over all the orbitals of the same type as im
-            do ios2 = 1, this%norbsets
-              do im2 = 1, this%orbsets(ios2)%norbs
-                do idim = 1, st%d%dim
-                  this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik) = &
-                   this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik) &
-                     + R_CONJ(dot(idim,im,ios))*dot(idim,im2,ios2)*os%X(S)(im,im2,ios2)
-                end do
-              end do
+            do idim = 1, st%d%dim
+              this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik) = &
+               this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik) &
+                 + R_CONJ(dot(idim,im,ios))*dot(idim,im,ios)
             end do
           end do
         end do
@@ -170,16 +157,16 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         !We can compute the (renormalized) occupation matrices
         do ios = 1, this%norbsets
           os => this%orbsets(ios)
-          norbs = this%orbsets(ios)%norbs
+          norbs = os%norbs
           do im = 1, norbs
-              this%X(n)(1:norbs,im,ispin,ios) = this%X(n)(1:norbs,im,ispin,ios) &
-                                           + weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
-              !We compute the renomalized occupation matrices
-              if(this%level == DFT_U_ACBN0) then
-                renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik)*weight
-                this%X(n_alt)(1:norbs,im,ispin,ios) = this%X(n_alt)(1:norbs,im,ispin,ios) &
-                                           + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
-              end if 
+            this%X(n)(1:norbs,im,ispin,ios) = this%X(n)(1:norbs,im,ispin,ios) &
+                                         + weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
+            !We compute the renomalized occupation matrices
+            if(this%level == DFT_U_ACBN0) then
+              renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik)*weight
+              this%X(n_alt)(1:norbs,im,ispin,ios) = this%X(n_alt)(1:norbs,im,ispin,ios) &
+                                         + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
+            end if
           end do !im
         end do !ios
 
@@ -188,7 +175,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         !We can compute the (renormalized) occupation matrices
         do ios = 1, this%norbsets
           os => this%orbsets(ios)
-          norbs = this%orbsets(ios)%norbs
+          norbs = os%norbs
           do im = 1, norbs
             this%X(n)(1:norbs,im,1,ios) = this%X(n)(1:norbs,im,1,ios) &
                                       + weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
@@ -646,7 +633,7 @@ end subroutine X(compute_coulomb_integrals)
 
    PUSH_SUB(lda_u_commute_r)
 
-   if(simul_box_is_periodic(mesh%sb) .and. .not. this%submeshforperiodic) then
+   if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
      SAFE_ALLOCATE(epsi(1:mesh%np,1:d%dim))
    else
      SAFE_ALLOCATE(epsi(1:this%max_np,1:d%dim))
@@ -688,7 +675,7 @@ end subroutine X(compute_coulomb_integrals)
           !In case of phase, we have to apply the conjugate of the phase here
           if(has_phase) then
 #ifdef R_TCOMPLEX
-            if(simul_box_is_periodic(mesh%sb) .and. .not. this%submeshforperiodic) then
+            if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
               epsi(:,idim) = R_TOTYPE(M_ZERO)
               !$omp parallel do
               do is = 1, os%sphere%np
@@ -728,7 +715,7 @@ end subroutine X(compute_coulomb_integrals)
        ! We first compute <phi m| r | psi> for all orbitals of the atom
        !
        !
-       if(simul_box_is_periodic(mesh%sb) .and. .not. this%submeshforperiodic) then
+       if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
          forall(is = 1:mesh%np)
            epsi(is,1) = mesh%x(is,idir)*psi(is,1)
          end forall
@@ -742,7 +729,7 @@ end subroutine X(compute_coulomb_integrals)
 
        if(has_phase) then
 #ifdef R_TCOMPLEX
-         if(simul_box_is_periodic(mesh%sb) .and. .not. this%submeshforperiodic) then
+         if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
            do im = 1, os%norbs
              do idim = 1, d%dim
                dot(idim,im) = X(mf_dotp)(mesh, os%eorb_mesh(1:mesh%np,idim,im,ik),&
@@ -880,393 +867,6 @@ end subroutine X(compute_coulomb_integrals)
 
    POP_SUB(X(lda_u_force))
  end subroutine X(lda_u_force)
-
-! ---------------------------------------------------------
-!> This routine is an interface for constructing the orbital basis.
-! ---------------------------------------------------------
-subroutine X(construct_orbital_basis)(this, geo, mesh, st, verbose)
-  type(lda_u_t),             intent(inout)    :: this
-  type(geometry_t), target,  intent(in)       :: geo
-  type(mesh_t),              intent(in)       :: mesh
-  type(states_t),            intent(in)       :: st 
-  logical, optional,         intent(in)       :: verbose
-
-  integer :: ia, iorb, norb, ntotorb, offset, ios, idim
-  integer ::  hubbardl, ii, nn, ll, mm, work, work2, iorbset
-  FLOAT   :: norm, hubbardj, radius, jj
-  FLOAT, allocatable :: minradii(:)
-  integer :: nSorbitals
-  type(orbitalset_t), pointer :: os
-  logical :: hasjdependence
-  logical :: verbose_
-
-  PUSH_SUB(X(construct_orbital_basis))
-
-  verbose_ = optional_default(verbose,.true.)
-
-  if(verbose_) then
-    write(message(1),'(a)')    'Building the LDA+U localized orbital basis.'
-    call messages_info(1)
-  end if
-
-  !We first count the number of orbital sets we have to treat
-  norb = 0
-  if( .not. this%useAllOrbitals ) then
-    do ia = 1, geo%natoms
-      hubbardl = species_hubbard_l(geo%atom(ia)%species)
-      hubbardj = species_hubbard_j(geo%atom(ia)%species)
-      if( hubbardl .eq. -1 ) cycle
-  
-      !This is a dirty way to detect if the pseudopotential has j-dependent atomic wavefunctions
-      hasjdependence = .false.
-      call species_iwf_j(geo%atom(ia)%species, 1, jj)
-      if(abs(jj) > M_EPSILON) hasjdependence = .true.
-
-      if(hasjdependence .and. hubbardj == M_ZERO) then
-        norb = norb+2
-      else
-        norb = norb+1
-      end if
-
-      if( hubbardj /= 0 .and. .not. hasjdependence) then
-        write(message(1),'(a,i1,a)') 'Atom ', ia, ' has no j-dependent atomic wavefunctions.'
-        write(message(2),'(a)') 'This is not compatible with the hubbard_j option.'
-        call messages_fatal(2)
-      end if
-    end do
-  else
-    do ia = 1, geo%natoms
-      work = 0
-      nSorbitals = 0
-      hubbardj = species_hubbard_j(geo%atom(ia)%species)
-      do iorb = 1, species_niwfs(geo%atom(ia)%species)
-        call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm) 
-        call species_iwf_j(geo%atom(ia)%species, iorb, jj)
-        if(ll == 0) nSorbitals = nSorbitals + 1
-        work = max(work, ii)
-
-        if( hubbardj /= 0 .and. abs(jj) > M_EPSILON ) then
-          write(message(1),'(a,i1,a)') 'Atom ', ia, ' has no j-dependent atomic wavefunction.'
-          write(message(2),'(a)') 'This is not compatible with the hubbard_j option.'
-          call messages_fatal(2)  
-        end if
-      end do
-      if(this%skipSOrbitals) work = work-nSorbitals
-      norb = norb + work
-    end do
-  end if
-
-  if(verbose_) then
-    write(message(1),'(a, i3, a)')    'Found ', norb, ' orbital sets.'
-    call messages_info(1)
-  end if
-
-  this%norbsets = norb
-  SAFE_ALLOCATE(this%orbsets(1:norb))
-  do iorbset = 1, this%norbsets
-    call orbitalset_nullify(this%orbsets(iorbset))
-  end do
-
-  if( this%useAllOrbitals .and. this%minimalAtomicSphere ) then
-   SAFE_ALLOCATE(minradii(1:geo%natoms))
-   call find_minimal_atomic_spheres(geo, mesh, minradii, this%truncation, this%orbitals_threshold)
-  end if
-
-  iorbset = 0
-  do ia = 1, geo%natoms
-    hubbardj = species_hubbard_j(geo%atom(ia)%species)
-    !This is a dirty way to detect if the pseudopotential has j-dependent atomic wavefunctions
-    hasjdependence = .false.
-    call species_iwf_j(geo%atom(ia)%species, 1, jj)
-    if(abs(jj) >  M_EPSILON) hasjdependence = .true.
-    if (debug%info .and. hasjdependence .and. verbose_) then
-      write(message(1),'(a,i3,a)')  'Debug: Atom ', ia, ' has j-dependent pseudo-wavefunctions.'
-      call messages_info(1)
-    end if 
-
-    if(.not. this%useAllOrbitals) then
-      hubbardl = species_hubbard_l(geo%atom(ia)%species)
-      if( hubbardl .eq. -1 ) cycle
-      !In this case we only have one orbital or we only want one
-      if(.not. hasjdependence .or. hubbardj /= M_ZERO &
-            .or. hubbardl == 0 ) then
-        iorbset = iorbset + 1
-        os => this%orbsets(iorbset)
-        norb = 0
-        do iorb = 1, species_niwfs(geo%atom(ia)%species)
-          call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-          call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
-          call species_iwf_j(geo%atom(ia)%species, iorb, jj)
-          if(ll .eq. hubbardl .and. hubbardj == jj ) then
-            norb = norb + 1
-            os%ll = hubbardl
-            os%nn = nn
-            os%jj = jj 
-            os%ii = ii
-            os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
-                          this%truncation, this%orbitals_threshold)
-          end if
-        end do
-        if( hasjdependence ) then
-          os%ndim = st%d%dim
-          os%norbs = norb + int((os%jj - os%ll)*2)
-        else
-          os%ndim = 1
-          os%norbs = norb
-        end if
-        os%Ueff = species_hubbard_u(geo%atom(ia)%species)
-        os%submeshforperiodic = this%submeshforperiodic
-        os%spec => geo%atom(ia)%species
-        os%iatom = ia
-        call X(orbitalset_utils_getorbitals)(os, geo, mesh)
-      else
-        !j = l-1/2
-        iorbset = iorbset + 1
-        os => this%orbsets(iorbset)
-        norb = 0
-        do iorb = 1, species_niwfs(geo%atom(ia)%species)
-          call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-          call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
-          call species_iwf_j(geo%atom(ia)%species, iorb, jj)
-          if(ll .eq. hubbardl .and. jj < ll ) then
-            norb = norb + 1
-            os%ll = hubbardl
-            os%nn = nn
-            os%jj = jj
-            os%ii = ii
-            os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
-                        this%truncation, this%orbitals_threshold)
-          end if
-        end do
-        os%ndim = st%d%dim
-        os%norbs = norb-1
-        os%Ueff = species_hubbard_u(geo%atom(ia)%species)
-        os%submeshforperiodic = this%submeshforperiodic
-        os%spec => geo%atom(ia)%species
-        os%iatom = ia
-        call X(orbitalset_utils_getorbitals)(os, geo, mesh)
-
-        !j = l+1/2
-        iorbset = iorbset + 1
-        os => this%orbsets(iorbset)
-        norb = 0
-        do iorb = 1, species_niwfs(geo%atom(ia)%species)
-          call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-          call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
-          call species_iwf_j(geo%atom(ia)%species, iorb, jj)
-          if(ll .eq. hubbardl .and. jj > ll ) then
-            norb = norb + 1
-            os%ll = hubbardl
-            os%nn = nn
-            os%jj = jj
-            os%ii = ii
-            os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
-                        this%truncation, this%orbitals_threshold)
-          end if
-        end do
-        os%ndim = st%d%dim
-        os%norbs = norb+1
-        os%Ueff = species_hubbard_u(geo%atom(ia)%species)
-        os%submeshforperiodic = this%submeshforperiodic
-        os%spec => geo%atom(ia)%species
-        os%iatom = ia
-        call X(orbitalset_utils_getorbitals)(os, geo, mesh)
-      end if
-    else !useAllOrbitals
-      ASSERT(.not.hasjdependence)
-      work = 0
-      nSorbitals = 0
-      do iorb = 1, species_niwfs(geo%atom(ia)%species)
-        call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-        if(ll == 0) nSorbitals = nSorbitals + 1
-        work = max(work, ii)          
-      end do
-      if(this%skipSOrbitals) work = work-nSorbitals
-      offset = 0
-      if(this%skipSOrbitals) offset = 1
-
-      !We loop over the orbital sets of the atom ia
-      do norb = 1, work
-        os => this%orbsets(iorbset+norb)
-        !We count the number of orbital for this orbital set
-        work2 = 0
-        do iorb = 1, species_niwfs(geo%atom(ia)%species)
-          call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-          call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
-          call species_iwf_j(geo%atom(ia)%species, iorb, jj )
-          if(ii == norb+offset .and. hubbardj == jj) then
-            work2 = work2 + 1
-            os%ll = ll
-            os%nn = nn
-            os%jj = jj
-            os%ii = ii
-            if(this%minimalAtomicSphere) then
-              radius = minradii(ia)
-            else
-              os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
-                               this%truncation, this%orbitals_threshold)
-            end if
-          end if
-        end do
-        os%norbs = work2
-        os%ndim = 1
-        os%Ueff = species_hubbard_u(geo%atom(ia)%species)
-        os%submeshforperiodic = this%submeshforperiodic
-        os%spec => geo%atom(ia)%species
-        os%iatom = ia
-        call X(orbitalset_utils_getorbitals)(os, geo, mesh)
-      end do !norb
-      iorbset = iorbset + work
-    end if
-  end do
-
-  ! We have to normalize the orbitals, 
-  ! in case the orbitals that comes out of the pseudo are not properly normalised
-  do iorbset = 1, this%norbsets
-    os => this%orbsets(iorbset)
-    do iorb = 1, os%norbs
-      norm = M_ZERO
-      do idim = 1, os%ndim
-        norm = norm + X(sm_nrm2)(os%sphere, os%X(orb)(1:os%sphere%np,idim,iorb))**2
-      end do
-      norm = sqrt(norm)
-      if(this%normalizeOrbitals) then
-        do idim = 1, os%ndim
-          os%X(orb)(1:os%sphere%np,idim,iorb) =  &
-            os%X(orb)(1:os%sphere%np,idim,iorb)/norm
-        end do
-      else
-        if(verbose_) then
-          write(message(1),'(a,i3,a,i3,a,f8.5)') 'Info: Orbset ', iorbset, ' Orbital ', iorb, &
-                           ' norm= ',  norm
-          call messages_info(1)
-        end if
-      end if
-    end do
-  end do
-
-  this%maxnorbs = 0
-  this%max_np = 0
-  do iorbset = 1, this%norbsets
-    os => this%orbsets(iorbset)
-    if( os%norbs > this%maxnorbs ) this%maxnorbs = os%norbs
-
-    nullify(os%phase)
-    ! In case of complex wavefunction, we allocate the array for the phase correction
-  #ifdef R_TCOMPLEX
-    SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
-    os%phase(:,:) = M_ZERO
-    if(simul_box_is_periodic(mesh%sb) .and. .not. this%submeshforperiodic) then 
-      SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
-      os%eorb_mesh(:,:,:,:) = M_ZERO
-    else
-      SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
-      os%eorb_submesh(:,:,:,:) = M_ZERO
-    end if
-  #endif
-
-    ! We need to know the maximum number of points in order to allocate a temporary array
-    ! to apply the phase in lda_u_apply
-    if(os%sphere%np > this%max_np) this%max_np = os%sphere%np
-
-  end do  
-
-  do ios = 1, this%norbsets
-    if(this%orbsets(ios)%sphere%np == -1) then
-       write(message(1),'(a,a4,i1,a1,a)')    'The orbital ',trim(species_label(this%orbsets(ios)%spec)), &
-                      this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), ' has no grid point.'
-       write(message(2),'(a)') 'Change the input file or use a pseudopotential that contains these orbitals.'
-       call messages_fatal(1)
-    end if
-    if(verbose_) then
-      write(message(1),'(a,i2,a,f8.5,a)')    'Orbital set ', ios, ' has a value of U of ',&
-                         this%orbsets(ios)%Ueff   , ' Ha.'
-      write(message(2),'(a,i2,a)')    'It contains ', this%orbsets(ios)%norbs, ' orbitals.'
-      write(message(3),'(a,f8.5,a,i6,a)') 'The radius is ', this%orbsets(ios)%sphere%radius, &
-                        ' Bohr,  with ', this%orbsets(ios)%sphere%np, ' grid points.'
-       call messages_info(3)
-    end if
-  end do 
-
-  if(this%level == DFT_U_ACBN0) then
-    do iorbset = 1, this%norbsets
-      os => this%orbsets(iorbset)
-      if(states_are_real(st)) then
-        SAFE_ALLOCATE(os%dS(os%norbs,this%maxnorbs,this%norbsets))
-      else
-        SAFE_ALLOCATE(os%zS(os%norbs,this%maxnorbs,this%norbsets))
-      end if
-    end do
-  end if
-
-  if( this%useAllOrbitals .and. this%minimalAtomicSphere ) then
-   SAFE_DEALLOCATE_A(minradii)
-  end if
-
- 
-  POP_SUB(X(construct_orbital_basis))
-
-end subroutine X(construct_orbital_basis)
-
-subroutine X(build_overlap_matrices)(this, ik, has_phase)
-  type(lda_u_t),    intent(inout)    :: this
-  integer,          intent(in)       :: ik
-  logical,          intent(in)       :: has_phase
-
-  integer :: ios, ios2, im, im2, norbs, np
-  type(orbitalset_t), pointer :: os, os2
-!  R_TYPE, allocatable :: orb1(:,:), orb2(:)
-
-  if(this%nspins > this%spin_channels .and. this%IncludeOverlap) &
-      call messages_not_implemented("Overlap matrices with spinors")
-
-  PUSH_SUB(X(build_overlap_matrices))
-
-  np = this%orbsets(1)%sphere%mesh%np
-
-  do ios = 1, this%norbsets
-    os => this%orbsets(ios)
-    norbs = this%orbsets(ios)%norbs
-    os%X(S)(1:norbs,1:this%maxnorbs,1:this%norbsets) = R_TOTYPE(M_ZERO)
-
-    !TODO: Use symmetry of the overlap matrices
-    norbs = this%orbsets(ios)%norbs
-
-    do im = 1, norbs
-
-      do ios2 = 1, this%norbsets
-        os2 => this%orbsets(ios2)
-
-        if(ios2 == ios) then
-          os%X(S)(im,im,ios2) = M_ONE
-        else
-          if(this%IncludeOverlap) then  
-          do im2 = 1, os2%norbs
-            if(has_phase) then
- #ifdef R_TCOMPLEX
-              if(simul_box_is_periodic(os%sphere%mesh%sb) .and. .not. this%submeshforperiodic) then
-                os%X(S)(im,im2,ios2) = zmf_dotp(os%sphere%mesh, &
-                                          os2%eorb_mesh(1:os2%sphere%mesh%np,1,im2,ik), &
-                                          os%eorb_mesh(1:os%sphere%mesh%np,1,im,ik))
-              else
-                os%X(S)(im,im2,ios2) = zsubmesh_to_submesh_dotp(os2%sphere, &
-                                         os2%eorb_submesh(1:os2%sphere%np,1,im2,ik), &
-                                         os%sphere, os%eorb_submesh(1:os%sphere%np,1,im,ik))
-              end if
- #endif
-            else
-              os%X(S)(im,im2,ios2) = X(submesh_to_submesh_dotp)(os2%sphere, os2%X(orb)(1:os2%sphere%np,1,im2), &
-                   os%sphere, os%X(orb)(1:os%sphere%np,1,im))
-            end if
-            end do ! im2
-          end if
-        end if
-      end do !im
-    end do !ios2
-  end do !ios 
-
-  POP_SUB(X(build_overlap_matrices))
-end subroutine X(build_overlap_matrices)
 
  ! ---------------------------------------------------------
   subroutine X(lda_u_set_occupations)(this, occ)

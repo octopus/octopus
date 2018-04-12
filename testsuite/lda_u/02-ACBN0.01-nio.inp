@@ -53,5 +53,5 @@ LCAOStart= lcao_states
 ExtraStates = 6
 
 FilterPotentials = filter_none
-OrbitalsTruncationMethod = box
+AOTruncation = ao_box
 OutputLDA_U = occupation_matrices + effectiveU

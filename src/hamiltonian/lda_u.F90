@@ -40,6 +40,7 @@ module lda_u_oct_m
   use messages_oct_m
   use multicomm_oct_m
   use mpi_oct_m
+  use orbitalbasis_oct_m
   use orbitalset_oct_m
   use orbitalset_utils_oct_m
   use parser_oct_m
@@ -102,26 +103,20 @@ module lda_u_oct_m
     CMPLX, pointer           :: zcoulomb(:,:,:,:,:,:,:) !>Coulomb integrals for all the system
                                                         !> (for the ACBN0 functional with spinors) 
 
+    type(orbitalbasis_t) :: basis               !> The full basis of localized orbitals
     type(orbitalset_t), pointer :: orbsets(:)   !> All the orbital setss of the system
+    integer             :: norbsets
 
-    integer             :: norbsets           !> Number of orbital sets 
     integer             :: nspins
     integer             :: spin_channels
     integer             :: nspecies        
-    integer             :: st_end
     integer             :: maxnorbs           !> Maximal number of orbitals for all the atoms
     integer             :: max_np             !> Maximum number of points in all orbitals submesh spheres 
  
-    integer             :: truncation         !> Truncation method for the orbitals
-    FLOAT               :: orbitals_threshold !> Threshold for orbital truncation
     logical             :: useAllOrbitals     !> Do we use all atomic orbitals possible
     logical             :: skipSOrbitals      !> Not using s orbitals
-    logical             :: IncludeOverlap     !> Do we compute and use overlap or not
     logical             :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
     logical             :: freeze_u           !> U is not recomputed during TD evolution
-    logical             :: normalizeOrbitals  !> Do we normalize the orbitals 
-    logical             :: minimalAtomicSphere!> Use the smallest atomic orbital radius for all of them
-    logical             :: submeshforperiodic !> Do we use or not submeshes for the orbitals
 
     type(distributed_t) :: orbs_dist
   end type lda_u_t
@@ -147,7 +142,6 @@ contains
   this%nspecies = 0
   this%freeze_occ = .false.
   this%freeze_u = .false.
-  this%IncludeOverlap = .false.
 
   nullify(this%dn)
   nullify(this%zn)
@@ -175,8 +169,8 @@ contains
   type(states_t),            intent(in)    :: st
   type(multicomm_t),         intent(in)    :: mc
 
-  integer :: maxorbs, ios
   logical :: complex_coulomb_integrals
+  integer :: ios
 
   PUSH_SUB(lda_u_init)
 
@@ -184,65 +178,9 @@ contains
 
   call messages_print_stress(stdout, "DFT+U")
   if(gr%mesh%parallel_in_domains) call messages_not_implemented("dft+u parallel in domains")
-
   this%level = level
 
-  !%Variable OrbitalsTruncationMethod
-  !%Type flag
-  !%Default full
-  !%Section Hamiltonian::DFT+U
-  !%Description
-  !% This option determine how Octopus will truncate the orbitals used for LDA+U.
-  !% Except for the full method, the other options are only there to get a quick idea.
-  !%Option full bit(0)
-  !% The full size of the orbitals used. The radius is controled by variable OrbitalThreshold_LDAU
-  !%Option box bit(1)
-  !% The radius of the orbitals are restricted to the size of the simulation box. 
-  !% This reduces the number of points used to discretize the orbitals.
-  !%Option NLradius bit(2)
-  !% The radius of the orbitals are restricted to the radius of the non-local part of the pseudopotential 
-  !% of the corresponding atom.
-  !%End
-  call parse_variable('OrbitalsTruncationMethod', OPTION__ORBITALSTRUNCATIONMETHOD__FULL, this%truncation)
-  call messages_print_var_option(stdout, 'OrbitalsTruncationMethod', this%truncation)
-
-  !%Variable OrbitalsThreshold_LDAU
-  !%Type float
-  !%Default 0.01
-  !%Section Hamiltonian::DFT+U
-  !%Description
-  !% Determine the threshold used to compute the radius of the atomic orbitals for LDA+U.
-  !% This radius is computed by making sure that the 
-  !% absolute value of the radial part of the atomic orbital is below the specified threshold.
-  !% This value should be converged to be sure that results do not depend on this value. 
-  !% However increasing this value increases the number of grid points covered by the orbitals and directly affect performances.
-  !%End
-  call parse_variable('OrbitalsThreshold_LDAU', CNST(0.01), this%orbitals_threshold)
-  if(this%orbitals_threshold <= M_ZERO) call messages_input_error('OrbitalsThreshold_LDAU')
-  call messages_print_var_value(stdout, 'OrbitalsThreshold_LDAU', this%orbitals_threshold)
-
-  !%Variable DFTUNormalizeOrbitals
-  !%Type logical
-  !%Default yes
-  !%Section Hamiltonian::DFT+U
-  !%Description
-  !% If set to yes, Octopus will normalize the atomic orbitals
-  !%End
-  call parse_variable('DFTUNormalizeOrbitals', .true., this%normalizeOrbitals)
-  call messages_print_var_value(stdout, 'DFTUNormalizeOrbitals', this%normalizeOrbitals)
-
-  !%Variable DFTUSubmeshForPeriodic
-  !%Type logical
-  !%Default no
-  !%Section Hamiltonian::DFT+U
-  !%Description
-  !% If set to yes, Octopus will use submeshes to internally store the orbitals with
-  !% their phase instead of storing them on the mesh. This is usually slower for small
-  !% periodic systems, but becomes advantageous for large supercells.
-  !%End
-  call parse_variable('DFTUSubmeshForPeriodic', .false., this%submeshforperiodic)
-  call messages_print_var_value(stdout, 'DFTUSubmeshForPeriodic', this%submeshforperiodic)
-
+  call orbitalbasis_init(this%basis)
 
   if( this%level == DFT_U_ACBN0 ) then
     !%Variable UseAllAtomicOrbitals
@@ -266,44 +204,22 @@ contains
     !%End
     call parse_variable('SkipSOrbitals', .true., this%skipSOrbitals)   
     if(.not.this%SkipSOrbitals) call messages_experimental("SkipSOrbitals")
-
-    !%Variable DFTUIncludeOverlap
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian::DFT+U
-    !%Description
-    !% If set to yes, Octopus will determine the overlap between orbitals on different atomic sites
-    !% and use it for the ACBN0 functional
-    !%End
-    call parse_variable('DFTUIncludeOverlap', .false., this%IncludeOverlap)
-    if(this%IncludeOverlap) call messages_experimental("DFTUIncludeOverlap")
-
-    if(this%useAllOrbitals) then
-      !%Variable DFTUMinimalAtomicSphere
-      !%Type logical
-      !%Default yes
-      !%Section Hamiltonian::DFT+U
-      !%Description
-      !% If set to yes, Octupus will set the radius of the orbitals to the smallest orbital
-      !% present in the pseudopotential file. Only with the ACBN0 functional and the UseAllAtomicOrbitals 
-      !% options activated.
-      !%End
-      call parse_variable('DFTUMinimalAtomicSphere', .false., this%minimalAtomicSphere)
-      if(this%minimalAtomicSphere) call messages_experimental("DFTUMinimalAtomicSphere")
-    end if
   end if
 
-  !We first need to load the basis
   if (states_are_real(st)) then
-    call dconstruct_orbital_basis(this, geo, gr%mesh, st)
+    call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
+                             this%skipSOrbitals, this%useAllOrbitals)
   else
-    call zconstruct_orbital_basis(this, geo, gr%mesh, st)  
+    call zorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
+                             this%skipSOrbitals, this%useAllOrbitals)
   end if
-  maxorbs = this%maxnorbs
+  this%orbsets => this%basis%orbsets
+  this%norbsets = this%basis%norbsets
+  this%maxnorbs = this%basis%maxnorbs
+  this%max_np = this%basis%max_np
   this%nspins = st%d%nspin
   this%spin_channels = st%d%spin_channels
   this%nspecies = geo%nspecies
-  this%st_end = st%st_end
 
   !We allocate the necessary ressources
   if (states_are_real(st)) then
@@ -351,11 +267,9 @@ contains
    implicit none
    type(lda_u_t), intent(inout) :: this
 
-   integer :: ios
-  
    PUSH_SUB(lda_u_end)  
 
-   this%level = DFT_U_ACBN0
+   this%level = DFT_U_NONE
 
    SAFE_DEALLOCATE_P(this%dn)
    SAFE_DEALLOCATE_P(this%zn)
@@ -368,14 +282,10 @@ contains
    SAFE_DEALLOCATE_P(this%drenorm_occ)
    SAFE_DEALLOCATE_P(this%zrenorm_occ)
 
-   do ios = 1, this%norbsets
-     call orbitalset_end(this%orbsets(ios))
-   end do
-
-   SAFE_DEALLOCATE_P(this%orbsets)
+   nullify(this%orbsets)
+   call orbitalbasis_end(this%basis)
 
    this%max_np = 0
-   this%norbsets = 0
 
  #ifdef HAVE_MPI
    call distributed_end(this%orbs_dist)  
@@ -385,44 +295,34 @@ contains
  end subroutine lda_u_end
 
  ! When moving the ions, the basis must be reconstructed
- subroutine lda_u_update_basis(this, gr, geo, st)
+ subroutine lda_u_update_basis(this, gr, geo, st, has_phase)
   type(lda_u_t),             intent(inout) :: this
   type(grid_t),              intent(in)    :: gr
   type(geometry_t), target,  intent(in)    :: geo
   type(states_t),            intent(in)    :: st
-
-  integer :: iorbset
+  logical,                   intent(in)    :: has_phase
 
   if(this%level == DFT_U_NONE) return
 
   PUSH_SUB(lda_u_update_basis)
 
   !We clean the orbital basis, to be able to reconstruct it
-  do iorbset = 1, this%norbsets
-    call orbitalset_end(this%orbsets(iorbset))
-  end do
-  SAFE_DEALLOCATE_P(this%orbsets)
+  call orbitalbasis_end(this%basis)
+  nullify(this%orbsets)
 
   !We now reconstruct the basis
   if (states_are_real(st)) then
-    call dconstruct_orbital_basis(this, geo, gr%mesh, st, verbose = .false.)
+    call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
+                             this%skipSOrbitals, this%useAllOrbitals, verbose = .false.)
   else
-    call zconstruct_orbital_basis(this, geo, gr%mesh, st, verbose = .false.)
-  end if 
-
-  !if(this%useACBN0) then
-  !  write(message(1),'(a)')    'Computing the Coulomb integrals localized orbital basis.'
-  !  call messages_info(1)
-  !  if (states_are_real(st)) then
-  !    call dcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
-  !  else
-  !    call zcompute_coulomb_integrals(this, gr%mesh, gr%der, st)
-  !  end if
-  !end if
+    call zorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
+                             this%skipSOrbitals, this%useAllOrbitals, verbose = .false.)
+  end if
+  this%orbsets => this%basis%orbsets
 
   ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
   ! In case of a laser field, the phase is recomputed in hamiltonian_update
-  if(states_are_complex(st)) then
+  if(has_phase) then
     call lda_u_build_phase_correction(this, gr%mesh%sb, st%d)
   end if
 
@@ -519,31 +419,6 @@ contains
 
     POP_SUB(lda_u_get_effectiveU)
   end subroutine lda_u_get_effectiveU
-
-  ! ---------------------------------------------------------
-  subroutine find_minimal_atomic_spheres(geo, mesh, minradii, truncation, threshold)
-    type(geometry_t), target, intent(in)    :: geo
-    type(mesh_t),             intent(in)    :: mesh
-    FLOAT,                  intent(inout)   :: minradii(:)
-    integer,                  intent(in)    :: truncation
-    FLOAT,                    intent(in)    :: threshold
-
-    integer :: ia, iorb
-
-    PUSH_SUB(find_minimal_atomic_spheres)
-
-    do ia = 1, geo%natoms
-
-     if(species_niwfs(geo%atom(ia)%species) < 1) cycle
-
-      minradii(ia) = atomic_orbital_get_radius(geo, mesh, ia, 1, 1, truncation, threshold)
-      do iorb = 2, species_niwfs(geo%atom(ia)%species)
-        minradii(ia) = min(minradii(ia), atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, truncation, threshold))
-      end do !iorb
-    end do !ia
-
-    POP_SUB(find_minimal_atomic_spheres) 
-  end subroutine find_minimal_atomic_spheres
 
 #include "dft_u_noncollinear_inc.F90"
 

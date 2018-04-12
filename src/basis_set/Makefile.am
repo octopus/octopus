@@ -23,12 +23,16 @@ noinst_LIBRARIES = libbasis_set.a
 # Fortran sources - keep in alphabetical order
 libbasis_set_a_SOURCES =             \
 		atomic_orbital.F90   \
+		loewdin.F90          \
+		orbitalbasis.F90     \
 		orbitalset.F90       \
 		orbitalset_utils.F90
 
 # Include files - keep this in alphabetical order
 noinst_HEADERS =                        \
 		atomic_orbital_inc.F90  \
+		loewdin_inc.F90		\
+		orbitalbasis_inc.F90    \
 		orbitalset_inc.F90      \
 		orbitalset_utils_inc.F90
 
@@ -38,5 +42,7 @@ depend:
 	@makedepf90 $(libbasis_set_a_SOURCES)
 
 atomic_orbital.o : atomic_orbital.F90 atomic_orbital_inc.F90 orbitalset.o
+loewdin.o : loewdin.F90 loewdin_inc.F90 orbitalbasis.o orbitalset.o 
+orbitalbasis.o : orbitalbasis.F90 orbitalbasis_inc.F90 orbitalset.o atomic_orbital.o orbitalset_utils.o
 orbitalset.o : orbitalset.F90 orbitalset_inc.F90
 orbitalset_utils.o : orbitalset_utils.F90 orbitalset_utils_inc.F90 atomic_orbital.o orbitalset.o

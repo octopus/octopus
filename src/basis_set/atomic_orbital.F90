@@ -69,12 +69,12 @@ contains
     spec => geo%atom(ia)%species
     call species_iwf_ilm(spec, iorb, ispin, ii, ll, mm)
 
-    if(truncation == OPTION__ORBITALSTRUNCATIONMETHOD__FULL) then
+    if(truncation == OPTION__AOTRUNCATION__AO_FULL) then
       radius = species_get_iwf_radius(spec, ii, ispin, threshold)
     else
       radius = species_get_iwf_radius(spec, ii, ispin)
 
-      if(truncation == OPTION__ORBITALSTRUNCATIONMETHOD__BOX) then
+      if(truncation == OPTION__AOTRUNCATION__AO_BOX) then
         ! if the orbital is larger than the size of the box, we restrict it to this size, 
         ! otherwise the orbital will overlap more than one time with the simulation box.
         ! This would induces phase problem if the complete mesh is used instead of the sphere

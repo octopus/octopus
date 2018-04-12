@@ -46,9 +46,8 @@ ExtraStates = 1
 
 DFTULevel = dft_u_acbn0
 UseAllAtomicOrbitals = yes
-DFTUMinimalAtomicSphere = no
-OrbitalsTruncationMethod = full
-OrbitalsThreshold_LDAU = 0.05
-DFTUNormalizeOrbitals = no
+AOTruncation = ao_full
+AOThreshold = 0.05
+AONormalize = no
 OutputLDA_U = occupation_matrices + effectiveU
 

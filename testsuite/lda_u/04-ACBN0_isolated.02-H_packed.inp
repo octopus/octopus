@@ -22,5 +22,5 @@ StatesPack = yes
 DFTULevel = dft_u_acbn0
 UseAllAtomicOrbitals = yes
 SkipSOrbitals = no
-OrbitalsThreshold_LDAU = 0.05
+AOThreshold = 0.05
 OutputLDA_U = occupation_matrices + effectiveU

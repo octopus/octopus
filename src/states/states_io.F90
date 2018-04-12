@@ -904,7 +904,7 @@ contains
               os%nn = nn
               os%ii = ii
               os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
-                                OPTION__ORBITALSTRUNCATIONMETHOD__FULL, CNST(0.01))
+                                OPTION__AOTRUNCATION__AO_FULL, CNST(0.01))
               work2 = work2 + 1
             end if
           end do

@@ -63,6 +63,6 @@ KPointsUseTimeReversal = no
 ExtraStates = 6
 ConvRelDens = 5e-6
 
-OrbitalsTruncationMethod = box
+AOTruncation = ao_box
 OutputLDA_U = occupation_matrices
 
