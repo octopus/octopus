@@ -55,12 +55,8 @@ module orbitalset_oct_m
        dorbitalset_add_to_batch,       &
        zorbitalset_add_to_batch,       &
        dorbitalset_add_to_psi,         &
-<<<<<<< HEAD
        zorbitalset_add_to_psi,         &
        orbitalset_set_jln
-=======
-       zorbitalset_add_to_psi
->>>>>>> develop
 
   type orbitalset_t
     integer             :: nn, ll, ii
@@ -76,12 +72,6 @@ module orbitalset_oct_m
     FLOAT               :: radius
     type(species_t), pointer :: spec          
 
-<<<<<<< HEAD
-=======
-    FLOAT, pointer      :: dS(:,:,:)             !> Overlap matrix for each orbital with similar orbital on other atomic sites    
-    CMPLX, pointer      :: zS(:,:,:)
-
->>>>>>> develop
     FLOAT, pointer      :: dorb(:,:,:) !> The orbital, if real, on the submesh
     CMPLX, pointer      :: zorb(:,:,:) !> The orbital, if complex, on the submesh
     CMPLX, pointer      :: eorb_submesh(:,:,:,:) !> Orbitals with its phase factor, on the submesh (for isolated system with TD phase)
@@ -100,11 +90,6 @@ contains
   PUSH_SUB(orbitalset_nullify)
 
   nullify(this%phase)
-<<<<<<< HEAD
-=======
-  nullify(this%dS)
-  nullify(this%zS)
->>>>>>> develop
   nullify(this%spec)
   nullify(this%dorb)
   nullify(this%zorb)
