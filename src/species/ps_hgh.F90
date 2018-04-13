@@ -38,7 +38,8 @@ module ps_hgh_oct_m
     hgh_init,     &
     hgh_process,  &
     hgh_debug,    &
-    hgh_end
+    hgh_end,      &
+    hgh_get_eigen
 
   !> The following data type contains:
   !!   (a) the pseudopotential parameters, as read from a *.hgh file,
@@ -183,7 +184,22 @@ contains
     POP_SUB(hgh_process)
   end subroutine hgh_process
 
+  ! ---------------------------------------------------------
+  subroutine hgh_get_eigen(psp, eigen)
+    type(ps_hgh_t), intent(in)  :: psp
+    FLOAT,          intent(out) :: eigen(:,:)
 
+    integer :: i
+    
+    PUSH_SUB(hgh_get_eigen)
+
+    do i = 1, psp%conf%p
+      eigen(i, :) = psp%eigen(i)
+    end do
+
+    POP_SUB(hgh_get_eigen)
+  end subroutine hgh_get_eigen
+  
   ! ---------------------------------------------------------
   function load_params(unit, params)
     integer,        intent(in)  :: unit        ! where to read from
