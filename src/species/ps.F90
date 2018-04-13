@@ -83,6 +83,7 @@ module ps_oct_m
     type(logrid_t) :: g
     type(spline_t), pointer :: ur(:, :)     !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r
     type(spline_t), pointer :: ur_sq(:, :)  !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r^2
+    logical, allocatable    :: bound(:, :)  !< (1:conf%p, 1:ispin) is the state bound or not
 
     ! Kleinman-Bylander projectors stuff
     integer  :: lmax    !< maximum value of l to take
@@ -371,6 +372,7 @@ contains
     SAFE_ALLOCATE(ps%dkb  (0:ps%lmax, 1:ps%kbc))
     SAFE_ALLOCATE(ps%ur   (1:ps%conf%p, 1:ps%ispin))
     SAFE_ALLOCATE(ps%ur_sq(1:ps%conf%p, 1:ps%ispin))
+    SAFE_ALLOCATE(ps%bound(1:ps%conf%p, 1:ps%ispin))
     SAFE_ALLOCATE(ps%h    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
     SAFE_ALLOCATE(ps%density(1:ps%ispin))
     SAFE_ALLOCATE(ps%density_der(1:ps%ispin))
@@ -409,10 +411,12 @@ contains
         call spline_der(ps%density(is), ps%density_der(is))
       end do
     end if
-
+    
     ps%has_long_range = .true.
     ps%is_separated = .false.
 
+    call ps_check_bound(ps)
+    
     call ps_info(ps, filename)
     
     POP_SUB(ps_init)
@@ -515,6 +519,9 @@ contains
 
     call messages_write("    orbitals         :")
     call messages_write(ps_niwfs(ps), fmt='(i3)')
+    call messages_info()
+    call messages_write("    bound orbitals   :")
+    call messages_write(count(ps%bound), fmt='(i3)')
     call messages_info()
 
     call messages_info()
@@ -687,6 +694,39 @@ contains
     POP_SUB(ps_filter)
   end subroutine ps_filter
 
+  ! ---------------------------------------------------------
+  subroutine ps_check_bound(ps)
+    type(ps_t), intent(inout) :: ps
+
+    integer :: i, is, ir
+    FLOAT :: ur1, ur2
+    
+    PUSH_SUB(ps_check_bound)
+    do i = 1, ps%conf%p
+      do is = 1, ps%ispin
+        ps%bound(i, is) = .true.
+        ! First we look for the outmost value that is not zero
+        do ir = ps%g%nrval, 3, -1
+          if (abs(spline_eval(ps%ur(i, is), ps%g%rofi(ir))*ps%g%rofi(ir)) > M_ZERO) then
+            ! Bound states have exponentially decaying wavefunctions,
+            ! while unbound states have exponentially diverging
+            ! wavefunctions. Therefore we check if the wavefunctions
+            ! value is increasing with increasing radius. The fact
+            ! that we do not use the wavefunctions outmost value that
+            ! is not zero is on purpose, as some pseudopotential
+            ! generators do funny things with that point.
+            ur1 = spline_eval(ps%ur(i, is), ps%g%rofi(ir-2))*ps%g%rofi(ir-2)
+            ur2 = spline_eval(ps%ur(i, is), ps%g%rofi(ir-1))*ps%g%rofi(ir-1)
+            if ((ur1*ur2 > M_ZERO) .and. (abs(ur2) > abs(ur1))) ps%bound(i, is) = .false.
+            exit
+          end if
+        end do
+      end do
+    end do
+    
+    POP_SUB(ps_check_bound)
+  end subroutine ps_check_bound
+
 
   ! ---------------------------------------------------------
   subroutine ps_debug(ps, dir)
@@ -726,6 +766,13 @@ contains
         end do
       end do
     end if
+
+    write(iunit,'(/,a)')    'orbitals:'
+    do j = 1, ps%conf%p
+      write(iunit,'(1x,a,i2,3x,a,i2,3x,a,f5.1,3x,a,l1)') 'n = ', ps%conf%n(j), 'l = ', ps%conf%l(j), 'j = ', ps%conf%j(j), 'bound = ', all(ps%bound(j,:))
+    end do
+
+    
     call io_close(iunit)
 
     ! Local part of the pseudopotential
@@ -828,6 +875,7 @@ contains
     SAFE_DEALLOCATE_P(ps%dkb)
     SAFE_DEALLOCATE_P(ps%ur)
     SAFE_DEALLOCATE_P(ps%ur_sq)
+    SAFE_DEALLOCATE_A(ps%bound)
     SAFE_DEALLOCATE_P(ps%h)
     SAFE_DEALLOCATE_P(ps%k)
     SAFE_DEALLOCATE_P(ps%density)
@@ -1261,8 +1309,7 @@ contains
 
     POP_SUB(ps_xml_load)
   end subroutine ps_xml_load
-
-
+  
   ! ---------------------------------------------------------
   !> Returns the number of atomic orbitals that can be used for LCAO calculations.
   pure integer function ps_niwfs(ps)
