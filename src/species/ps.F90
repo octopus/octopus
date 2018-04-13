@@ -156,6 +156,7 @@ contains
     type(ps_hgh_t) :: ps_hgh !< In case Hartwigsen-Goedecker-Hutter ps are used.
     type(ps_xml_t) :: ps_xml !< For xml based pseudopotentials
     logical, save :: xml_warned = .false.
+    FLOAT, allocatable :: eigen(:, :)  !< eigenvalues    
     
     PUSH_SUB(ps_init)
 
@@ -386,10 +387,14 @@ contains
     call spline_init(ps%core)
     call spline_init(ps%density)
     call spline_init(ps%density_der)
+
+    SAFE_ALLOCATE(eigen(1:ps%conf%p, 1:ps%ispin))
+    eigen = M_ZERO
     
     ! Now we load the necessary information.
     select case(ps%file_format)
     case(PSEUDO_FORMAT_PSF)
+      call ps_psf_get_eigen(ps_psf, eigen)
       call ps_grid_load(ps, ps_psf%ps_grid)
       call ps_psf_end(ps_psf)
     case(PSEUDO_FORMAT_CPI)
@@ -399,6 +404,7 @@ contains
       call ps_grid_load(ps, ps_fhi%ps_grid)
       call ps_fhi_end(ps_fhi)
     case(PSEUDO_FORMAT_HGH)
+      call hgh_get_eigen(ps_hgh, eigen)
       SAFE_ALLOCATE(ps%k    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
       call hgh_load(ps, ps_hgh)
       call hgh_end(ps_hgh)
@@ -412,13 +418,15 @@ contains
         call spline_der(ps%density(is), ps%density_der(is))
       end do
     end if
+
+    call ps_check_bound(ps, eigen)
     
     ps%has_long_range = .true.
     ps%is_separated = .false.
-
-    call ps_check_bound(ps)
     
     call ps_info(ps, filename)
+
+    SAFE_DEALLOCATE_A(eigen)
     
     POP_SUB(ps_init)
   end subroutine ps_init
@@ -694,22 +702,33 @@ contains
     call profiling_out(prof)
     POP_SUB(ps_filter)
   end subroutine ps_filter
-
+    
   ! ---------------------------------------------------------
-  subroutine ps_check_bound(ps)
+  subroutine ps_check_bound(ps, eigen)
     type(ps_t), intent(inout) :: ps
+    FLOAT,      intent(in)    :: eigen(:,:)
 
     integer :: i, is, ir
     FLOAT :: ur1, ur2
     
     PUSH_SUB(ps_check_bound)
+
+    ! Unbound states have positive eigenvalues
+    where(eigen > M_ZERO)
+      ps%bound = .false.
+    elsewhere
+      ps%bound = .true.
+    end where
+
+    ! We might not have information about the eigenvalues, so we need to check the wavefunctions    
     do i = 1, ps%conf%p
       do is = 1, ps%ispin
-        ps%bound(i, is) = .true.
-        ! First we look for the outmost value that is not zero
+        if (.not. ps%bound(i, is)) cycle
+
         do ir = ps%g%nrval, 3, -1
+          ! First we look for the outmost value that is not zero
           if (abs(spline_eval(ps%ur(i, is), ps%g%rofi(ir))*ps%g%rofi(ir)) > M_ZERO) then
-            ! Bound states have exponentially decaying wavefunctions,
+            ! Usually bound states have exponentially decaying wavefunctions,
             ! while unbound states have exponentially diverging
             ! wavefunctions. Therefore we check if the wavefunctions
             ! value is increasing with increasing radius. The fact
