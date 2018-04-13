@@ -673,7 +673,7 @@ contains
       end if
       spec%z_val = spec%ps%z_val
       spec%nlcc = spec%ps%nlcc
-      spec%niwfs = ps_niwfs(spec%ps)
+      spec%niwfs = ps_bound_niwfs(spec%ps)
 
       ! invalidate these variables as they should not be used after
       spec%user_lmax = INVALID_L
@@ -1990,39 +1990,25 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> set up quantum numbers of orbitals, and reject those that are unbound (for pseudopotentials)
+  !> set up quantum numbers of orbitals
   subroutine species_iwf_fix_qn(spec, ispin, dim)
     type(species_t), intent(inout) :: spec
     integer,         intent(in)    :: ispin
     integer,         intent(in)    :: dim
 
     integer :: is, n, i, l, m, n1, n2, n3
-    FLOAT   :: radius
-    logical, allocatable :: bound(:)
 
     PUSH_SUB(species_iwf_fix_qn)
 
     if(species_is_ps(spec)) then
-      
-      SAFE_ALLOCATE(bound(1:spec%ps%conf%p))
-
-      ! we check if the orbitals are bound by looking at the atomic radius
-      do i = 1, spec%ps%conf%p
-        radius = M_ZERO
-        do is = 1, ispin
-          radius = max(radius, spline_cutoff_radius(spec%ps%ur(i, is), spec%ps%projectors_sphere_threshold))
-        end do
-        ! we consider as bound a state that is localized to less than half the radius of the radial grid
-        bound(i) = radius < CNST(0.5)*logrid_radius(spec%ps%g)
-      end do
       
       do is = 1, ispin
         n = 1
         do i = 1, spec%ps%conf%p
           if(n > spec%niwfs) exit          
           l = spec%ps%conf%l(i)
-           
-          if(.not. bound(i)) cycle
+
+          if(.not. spec%ps%bound(i,is)) cycle
           
           do m = -l, l
             spec%iwf_i(n, is) = i
@@ -2034,11 +2020,7 @@ contains
           end do
           
         end do
-        ! FIXME: this is wrong when spin-polarized or spinors!
-        spec%niwfs = n - 1
       end do
-
-      SAFE_DEALLOCATE_A(bound)
 
     else if(species_represents_real_atom(spec) .and. dim == 3) then
 
