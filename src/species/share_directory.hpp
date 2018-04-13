@@ -1,5 +1,5 @@
-#ifndef PSEUDO_CHEMICALELEMENT_HPP
-#define PSEUDO_CHEMICALELEMENT_HPP
+#ifndef PSEUDO_SHARE_DIRECTORY_HPP
+#define PSEUDO_SHARE_DIRECTORY_HPP
 
 /*
  Copyright (C) 2018 Xavier Andrade
@@ -22,30 +22,32 @@
 #include <string>
 
 namespace pseudopotential {
-  
-  class chemical_element {
+
+  class share_directory {
 
   public:
 
-    chemical_element(const std::string & symbol = "none"){
-      this->set(symbol);
+    static void set(const std::string & dir){
+      directory() = dir;
     }
 
-    std::string symbol() const;
-
-    double charge() const { return -1.0*z; }
-    double mass() const;
-    int atomic_number() const { return z; }
+    static std::string get(){
+      if(directory().size() != 0) return directory();
+      return SHARE_DIR;
+    }
+    
     
   private:
-  
-    char z;
-    void set(const std::string & symbol);
-  
+    
+    static std::string & directory(){
+      static std::string directory_;
+      return directory_;
+    }
+
   };
 
 }
-
+  
 #endif
 
 // Local Variables:

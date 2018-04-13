@@ -47,7 +47,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/liboct_parser \
         $(GSL_CFLAGS) $(GD_CFLAGS) \
 	@METIS_CFLAGS@ @PARMETIS_CFLAGS@ @CFLAGS_NFFT@ @CFLAGS_FFTW@ @CFLAGS_CUDA@ \
-	-DSHARE_OCTOPUS='"$(pkgdatadir)"'
+	-DSHARE_DIR='"$(pkgdatadir)"'
 
 AM_CCASFLAGS = \
 	-I$(top_builddir)/
