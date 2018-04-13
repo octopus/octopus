@@ -19,27 +19,18 @@
 #include "global.h"
 
 module dos_oct_m
-<<<<<<< HEAD
   use atomic_orbital_oct_m
-=======
->>>>>>> develop
   use comm_oct_m
   use geometry_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use io_oct_m
-<<<<<<< HEAD
   use lda_u_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
   use orbitalset_oct_m
   use orbitalset_utils_oct_m
-=======
-  use mesh_oct_m
-  use messages_oct_m
-  use mpi_oct_m
->>>>>>> develop
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
@@ -66,10 +57,7 @@ module dos_oct_m
     integer :: epoints
     FLOAT   :: gamma
     FLOAT   :: de
-<<<<<<< HEAD
     logical :: computepdos
-=======
->>>>>>> develop
   end type dos_t
 
 contains
@@ -125,7 +113,6 @@ contains
     call parse_variable('DOSGamma', units_from_atomic(units_inp%energy, CNST(0.008)), this%gamma)
     this%gamma = units_to_atomic(units_inp%energy, this%gamma)
 
-<<<<<<< HEAD
     !%Variable DOSComputePDOS
     !%Type logical
     !%Default false
@@ -135,8 +122,6 @@ contains
     !%End
     call parse_variable('DOSComputePDOS', .false., this%computepdos)
 
-=======
->>>>>>> develop
     ! spacing for energy mesh
     this%de = (this%emax - this%emin) / (this%epoints - 1)
 
@@ -155,22 +140,14 @@ contains
 
 
   ! ---------------------------------------------------------
-<<<<<<< HEAD
   subroutine dos_write_dos(this, dir, st, sb, geo, mesh, hm)
-=======
-  subroutine dos_write_dos(this, dir, st, sb, geo, mesh)
->>>>>>> develop
     type(dos_t),               intent(in) :: this
     character(len=*),         intent(in) :: dir
     type(states_t),           intent(in) :: st
     type(simul_box_t),        intent(in) :: sb
     type(geometry_t), target, intent(in) :: geo
     type(mesh_t),             intent(in) :: mesh
-<<<<<<< HEAD
     type(hamiltonian_t),      intent(in) :: hm
-
-=======
->>>>>>> develop
 
     integer :: ie, ik, ist, is, ns, maxdos
     integer, allocatable :: iunit(:)
@@ -185,10 +162,7 @@ contains
     FLOAT, allocatable :: dpsi(:,:), ddot(:,:)
     CMPLX, allocatable :: zpsi(:,:), zdot(:,:)
     FLOAT, allocatable :: weight(:,:)
-<<<<<<< HEAD
     type(orbitalset_t) :: os
-=======
->>>>>>> develop
 
     PUSH_SUB(dos_write_dos)
 
