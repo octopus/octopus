@@ -53,6 +53,7 @@ module ps_oct_m
     ps_derivatives,             &
     ps_debug,                   &
     ps_niwfs,                   &
+    ps_bound_niwfs,             &
     ps_end,                     &
     ps_has_density,             &
     ps_density_volume
@@ -521,7 +522,7 @@ contains
     call messages_write(ps_niwfs(ps), fmt='(i3)')
     call messages_info()
     call messages_write("    bound orbitals   :")
-    call messages_write(count(ps%bound), fmt='(i3)')
+    call messages_write(ps_bound_niwfs(ps), fmt='(i3)')
     call messages_info()
 
     call messages_info()
@@ -1311,7 +1312,7 @@ contains
   end subroutine ps_xml_load
   
   ! ---------------------------------------------------------
-  !> Returns the number of atomic orbitals that can be used for LCAO calculations.
+  !> Returns the number of atomic orbitals taking into account then m quantum number multiplicity
   pure integer function ps_niwfs(ps)
     type(ps_t), intent(in) :: ps
 
@@ -1324,6 +1325,22 @@ contains
     end do
 
   end function ps_niwfs
+
+  ! ---------------------------------------------------------
+  !> Returns the number of bound atomic orbitals taking into account then m quantum number multiplicity
+  pure integer function ps_bound_niwfs(ps)
+    type(ps_t), intent(in) :: ps
+
+    integer :: i, l
+
+    ps_bound_niwfs = 0
+    do i = 1, ps%conf%p
+      l = ps%conf%l(i)
+      if (any(.not. ps%bound(i,:))) cycle
+      ps_bound_niwfs = ps_bound_niwfs + (2*l+1)
+    end do
+
+  end function ps_bound_niwfs
 
   !---------------------------------------
 
