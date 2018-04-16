@@ -155,7 +155,7 @@ contains
   !% The default is set to no for the moment as this option is
   !% not yet implemented for isolated systems, and seems to lead to important egg-box effect
   !%End
-  call parse_variable('AOLoewdin', .true., this%orthogonalization)
+  call parse_variable('AOLoewdin', .false., this%orthogonalization)
   call messages_print_var_value(stdout, 'AOLoewdin', this%orthogonalization)
 
   if(this%orthogonalization .and. this%submeshforperiodic) &
