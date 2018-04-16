@@ -52,7 +52,6 @@
        overlap2(is, 1:basis%size) = eigenval(is)* overlap(is, 1:basis%size)     
      end do 
      overlap = matmul(overlap,overlap2)
-
      if(debug%info) call X(print_matrix)(basis, 'loewdin', overlap, ik)
 
      !We now contruct the orthogonalized basis
@@ -121,26 +120,22 @@
       iorb2 = basis%global2os(2,ind2)
       os2 => basis%orbsets(ios2)
 
-   !   if(ios == ios2) then
-   !     if(iorb == iorb2) overlap(ind,ind2) =  R_TOTYPE(M_ONE)
-   !   else
-        if(simul_box_is_periodic(os%sphere%mesh%sb))then
+      if(simul_box_is_periodic(os%sphere%mesh%sb))then
  #ifdef R_TCOMPLEX
-          if(.not.basis%submeshforperiodic) then
-            overlap(ind,ind2) = zmf_dotp(os%sphere%mesh, os%ndim, &
-                           os%eorb_mesh(:,:,iorb,ik), os2%eorb_mesh(:,:,iorb2,ik))
-            if(abs(overlap(ind,ind2)) < CNST(1.0e-12)) overlap(ind,ind2) = R_TOTYPE(M_ZERO)
-          else
-            !Not implemented
-            call messages_not_implemented("Lowdin orthogonalization with submeshes.")
-          end if
+        if(.not.basis%submeshforperiodic) then
+          overlap(ind,ind2) = zmf_dotp(os%sphere%mesh, os%ndim, &
+                         os%eorb_mesh(:,:,iorb,ik), os2%eorb_mesh(:,:,iorb2,ik))
+          if(abs(overlap(ind,ind2)) < CNST(1.0e-12)) overlap(ind,ind2) = R_TOTYPE(M_ZERO)
+        else
+          !Not implemented
+          call messages_not_implemented("Lowdin orthogonalization with submeshes.")
+        end if
  #endif
-          else
-            !Not implemented
-            call messages_not_implemented("Lowdin orthogonalization with submeshes.")
-          end if
+        else
+          !Not implemented
+          call messages_not_implemented("Lowdin orthogonalization with submeshes.")
+        end if
 
-    !    end if
     end do !ind2
   end do !ind
 
