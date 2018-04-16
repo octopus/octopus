@@ -309,6 +309,23 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skipSorb, useAllOrb
     end if
   end do 
 
+  this%size = 0
+  do ios = 1, this%norbsets
+    this%size = this%size + this%orbsets(ios)%norbs
+  end do
+
+  SAFE_ALLOCATE(this%global2os(2,this%size))
+  SAFE_ALLOCATE(this%os2global(this%norbsets, this%maxnorbs))
+  offset = 1
+  do ios = 1, this%norbsets
+    do iorb = 1, this%orbsets(ios)%norbs
+      this%global2os(1,offset) = ios
+      this%global2os(2,offset) = iorb
+      this%os2global(ios, iorb) = offset
+      offset = offset + 1
+    end do
+  end do
+
   POP_SUB(X(orbitalbasis_build))
 
 end subroutine X(orbitalbasis_build)

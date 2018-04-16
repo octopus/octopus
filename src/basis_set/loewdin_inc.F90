@@ -150,6 +150,23 @@
   POP_SUB(X(loewdin_overlap))
  end subroutine X(loewdin_overlap) 
 
+subroutine X(loewdin_info)(basis, kpt)
+   type(orbitalbasis_t),    intent(inout):: basis
+   type(distributed_t),     intent(in)   :: kpt
+
+   R_TYPE, allocatable :: overlap(:,:)
+   integer :: ik
+
+   PUSH_SUB(X(loewdin_info))
+
+   do ik = kpt%start, kpt%end
+     call X(loewdin_overlap)(basis, overlap, ik)
+     if(debug%info) call X(print_matrix)(basis, 'overlap', overlap, ik)
+   end do
+
+   POP_SUB(X(loewdin_info))
+end subroutine X(loewdin_info)
+
 subroutine X(print_matrix)(basis, label, overlap, ik)
   type(orbitalbasis_t),   intent(in) :: basis
   character(len=*),       intent(in) :: label

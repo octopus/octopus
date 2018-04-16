@@ -185,7 +185,7 @@ contains
           if(allocated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:ndim, os%sphere%map(is))*os%sphere%x(is, 1:ndim))
         end if
 
-        os%phase(is, iq) = exp(M_zI*kr)
+        os%phase(is, iq) = exp(-M_zI*kr)
       end do
 
       if(simul_box_is_periodic(sb) .and. .not. os%submeshforperiodic) then

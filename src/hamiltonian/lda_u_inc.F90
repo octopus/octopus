@@ -145,7 +145,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
             do idim = 1, st%d%dim
               this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik) = &
                this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik) &
-                 + R_CONJ(dot(idim,im,ios))*dot(idim,im,ios)
+                 + abs(dot(idim,im,ios))**2
             end do
           end do
         end do
@@ -676,6 +676,8 @@ end subroutine X(compute_coulomb_integrals)
           if(has_phase) then
 #ifdef R_TCOMPLEX
             if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
+              !If se orthogonalize, the orbital is not anymore zorb*phase
+              ASSERT(.not.this%basis%orthogonalization)
               epsi(:,idim) = R_TOTYPE(M_ZERO)
               !$omp parallel do
               do is = 1, os%sphere%np

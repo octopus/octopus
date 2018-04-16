@@ -35,6 +35,7 @@ module lda_u_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
+  use loewdin_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -371,6 +372,12 @@ contains
      call orbitalset_update_phase(this%orbsets(ios), sb, std%kpt, (std%ispin==SPIN_POLARIZED), &
                                         vec_pot, vec_pot_var)
    end do
+
+   if(this%basis%orthogonalization) then
+     call zloewdin_orthogonalize(this%basis, std%kpt)
+   else
+     if(debug%info) call zloewdin_info(this%basis, std%kpt)
+   end if
   
    POP_SUB(lda_u_build_phase_correction)
 

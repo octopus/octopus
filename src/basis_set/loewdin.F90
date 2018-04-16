@@ -42,7 +42,9 @@ module loewdin_oct_m
         dloewdin_orthogonalize,        &
         zloewdin_orthogonalize,        &
         dloewdin_overlap,              &
-        zloewdin_overlap
+        zloewdin_overlap,              &
+        dloewdin_info,                 &
+        zloewdin_info
 
   contains
 
