@@ -25,8 +25,11 @@
    integer :: ik, is
    integer :: ind, ind2, ios, ios2, iorb, iorb2, ns, idim
    type(orbitalset_t), pointer :: os, os2
+   type(profile_t), save :: prof
 
    PUSH_SUB(X(loewdin_orthogonalize))
+
+   call profiling_in(prof, "LOEWDIN")
 
    SAFE_ALLOCATE(overlap(1:basis%size,1:basis%size))
    SAFE_ALLOCATE(overlap2(1:basis%size,1:basis%size))
@@ -89,6 +92,8 @@
     write(message(1), '(a)') 'Debug: Orthogonalization completed.'
     call messages_info(1)
    end if
+
+   call profiling_out(prof)
 
    POP_SUB(X(loewdin_orthogonalize))
 
