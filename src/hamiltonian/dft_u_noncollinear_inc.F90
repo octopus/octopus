@@ -72,7 +72,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
         do is1 = 1, st%d%dim
           !$omp parallel do
           do ip=1,np_sphere
-            nn(ip,is1)  = os%zorb(ip,is1,ist)*os%zorb(ip,is1,jst)
+            nn(ip,is1)  = conjg(os%zorb(ip,is1,ist))*os%zorb(ip,is1,jst)
           end do
           !$omp end parallel do    
 
@@ -92,7 +92,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
 
                 !$omp parallel do
                 do ip=1,np_sphere
-                 tmp(ip) = vv(ip,is1)*os%zorb(ip,is2,lst)*os%zorb(ip,is2,kst)
+                 tmp(ip) = vv(ip,is1)*conjg(os%zorb(ip,is2,lst))*os%zorb(ip,is2,kst)
                 end do
                 !$omp end parallel do
 
