@@ -16,59 +16,176 @@
 !! 02110-1301, USA.
 !!
 
- subroutine X(lowdin_overlap)( basis )
-  type(orbitalbasis_t),    intent(in)   :: basis
-!  integer,          intent(in)       :: ik
-!  logical,          intent(in)       :: has_phase
+ subroutine X(loewdin_orthogonalize)( basis, kpt )
+   type(orbitalbasis_t),    intent(inout):: basis
+   type(distributed_t),     intent(in)   :: kpt
 
-!  integer :: ios, ios2, im, im2, norbs, np
-!  type(orbitalset_t), pointer :: os, os2
+   R_TYPE, allocatable :: overlap(:,:), overlap2(:,:)
+   FLOAT,  allocatable :: eigenval(:)
+   integer :: ik, is
+   integer :: ind, ind2, ios, ios2, iorb, iorb2, ns, idim
+   type(orbitalset_t), pointer :: os, os2
+
+   PUSH_SUB(X(loewdin_orthogonalize))
+
+   SAFE_ALLOCATE(overlap(1:basis%size,1:basis%size))
+   SAFE_ALLOCATE(overlap2(1:basis%size,1:basis%size))
+   SAFE_ALLOCATE(eigenval(1:basis%size))
+
+   if(debug%info) then
+    write(message(1), '(a)') 'Debug: Orthogonalizing the atomic orbital basis.'
+    call messages_info(1)
+   end if
+
+   do ik = kpt%start, kpt%end
+     call X(loewdin_overlap)(basis, overlap, ik)
+     if(debug%info) call X(print_matrix)(basis, 'overlap', overlap, ik)
+
+     !We compute S^{-1/2} from S
+     call lalg_eigensolve(basis%size, overlap, eigenval)
+     overlap2 = R_CONJ(transpose(overlap))
+     do is = 1, basis%size
+       eigenval(is) = M_ONE/sqrt(eigenval(is))
+       overlap2(is, 1:basis%size) = eigenval(is)* overlap(is, 1:basis%size)     
+     end do 
+     overlap = matmul(overlap,overlap2)
+
+     if(debug%info) call X(print_matrix)(basis, 'loewdin', overlap, ik)
+
+     !We now contruct the orthogonalized basis
+     do ind = 1, basis%size
+       ios  = basis%global2os(1,ind)
+       iorb = basis%global2os(2,ind)
+       os => basis%orbsets(ios)
+       os%eorb_mesh(:,:,iorb,ik) = R_TOTYPE(M_ZERO)
+       do ind2 = 1, basis%size
+         ios2  = basis%global2os(1,ind2)
+         iorb2 = basis%global2os(2,ind2)
+         os2 => basis%orbsets(ios2)
+         ns = os2%sphere%np
+         do idim = 1, os%ndim
+           do is = 1, ns
+             os%eorb_mesh(os2%sphere%map(is),idim,iorb,ik) &
+                      = os%eorb_mesh(os2%sphere%map(is),idim,iorb,ik) &
+                      + overlap(ind2,ind)*os2%zorb(is,idim,iorb2)*os2%phase(is, ik)
+           end do
+         end do
+       end do
+     end do
+
+     !For debugging, we want to control what is the overlap matrix after
+     !orthogonalization
+     if(debug%info) then
+       call X(loewdin_overlap)(basis, overlap, ik)
+       call X(print_matrix)(basis, 'overlap_after', overlap, ik)
+     end if
+
+   end do
+
+   SAFE_DEALLOCATE_A(overlap) 
+   SAFE_DEALLOCATE_A(eigenval)
+
+   if(debug%info) then
+    write(message(1), '(a)') 'Debug: Orthogonalization completed.'
+    call messages_info(1)
+   end if
+
+   POP_SUB(X(loewdin_orthogonalize))
+
+ end subroutine X(loewdin_orthogonalize)
+
+ subroutine X(loewdin_overlap)(basis, overlap, ik)
+  type(orbitalbasis_t),    intent(in)   :: basis
+  R_TYPE,                  intent(inout):: overlap(:,:) !overlap matrix (norb, norb)
+  integer,                 intent(in)   :: ik
+
+  integer :: ios, ios2, iorb, iorb2
+  integer :: ind, ind2, idim
+  type(orbitalset_t), pointer :: os, os2
 
   PUSH_SUB(X(loewdin_overlap))
 
-!  np = this%orbsets(1)%sphere%mesh%np
+  overlap(1:basis%size,1:basis%size) = R_TOTYPE(M_ZERO)
+ 
+  do ind = 1, basis%size
+    ios  = basis%global2os(1,ind)
+    iorb = basis%global2os(2,ind)
+    os => basis%orbsets(ios)
+    do ind2 = ind, basis%size
+      ios2  = basis%global2os(1,ind2)
+      iorb2 = basis%global2os(2,ind2)
+      os2 => basis%orbsets(ios2)
 
-!  do ios = 1, this%norbsets
-!    os => this%orbsets(ios)
-!    norbs = this%orbsets(ios)%norbs
-!    os%X(S)(1:norbs,1:this%maxnorbs,1:this%norbsets) = R_TOTYPE(M_ZERO)
-!
-!    !TODO: Use symmetry of the overlap matrices
-!    norbs = this%orbsets(ios)%norbs
-!
-!    do im = 1, norbs
-!
-!      do ios2 = 1, this%norbsets
-!        os2 => this%orbsets(ios2)
-!
-!        if(ios2 == ios) then
-!          os%X(S)(im,im,ios2) = M_ONE
-!        else
- !         if(this%overlap) then
- !         do im2 = 1, os2%norbs
- !           if(has_phase) then
- !#ifdef R_TCOMPLEX
- !             if(simul_box_is_periodic(os%sphere%mesh%sb) .and. .not. this%submeshforperiodic) then
- !               os%X(S)(im,im2,ios2) = zmf_dotp(os%sphere%mesh, &
- !                                         os%eorb_mesh(1:os%sphere%mesh%np,1,im,ik), &
- !                                         os2%eorb_mesh(1:os%sphere%mesh%np,1,im2,ik))
- !             else
- !               os%X(S)(im,im2,ios2) = zsubmesh_to_submesh_dotp(os2%sphere, &
- !                                        os2%eorb_submesh(1:os2%sphere%np,1,im2,ik), &
- !                                        os%sphere, os%eorb_submesh(1:os%sphere%np,1,im,ik))
- !             end if
- !#endif
- !           else
- !             os%X(S)(im,im2,ios2) = X(submesh_to_submesh_dotp)(os2%sphere, os2%X(orb)(1:os2%sphere%np,1,im2), &
- !                  os%sphere, os%X(orb)(1:os%sphere%np,1,im))
- !           end if
- !                                                                
- !           end do ! im2
- !         end if
- !       end if
- !     end do !im
- !   end do !ios2
- ! end do !ios 
+   !   if(ios == ios2) then
+   !     if(iorb == iorb2) overlap(ind,ind2) =  R_TOTYPE(M_ONE)
+   !   else
+        if(simul_box_is_periodic(os%sphere%mesh%sb))then
+ #ifdef R_TCOMPLEX
+          if(.not.basis%submeshforperiodic) then
+            overlap(ind,ind2) = zmf_dotp(os%sphere%mesh, os%ndim, &
+                           os%eorb_mesh(:,:,iorb,ik), os2%eorb_mesh(:,:,iorb2,ik))
+            if(abs(overlap(ind,ind2)) < CNST(1.0e-12)) overlap(ind,ind2) = R_TOTYPE(M_ZERO)
+          else
+            !Not implemented
+            call messages_not_implemented("Lowdin orthogonalization with submeshes.")
+          end if
+ #endif
+          else
+            !Not implemented
+            call messages_not_implemented("Lowdin orthogonalization with submeshes.")
+          end if
+
+    !    end if
+    end do !ind2
+  end do !ind
+
+  !Thre overlap matric is Hermitian
+  do ind = 1, basis%size
+    do ind2 = 1, ind-1
+      overlap(ind,ind2) = R_CONJ(overlap(ind2, ind))
+    end do
+  end do
+    
 
   POP_SUB(X(loewdin_overlap))
- end subroutine X(lowdin_overlap) 
+ end subroutine X(loewdin_overlap) 
+
+subroutine X(print_matrix)(basis, label, overlap, ik)
+  type(orbitalbasis_t),   intent(in) :: basis
+  character(len=*),       intent(in) :: label
+  R_TYPE,                 intent(in) :: overlap(:,:) !< (basis%size,basis%size)
+  integer,                intent(in) :: ik
+
+  integer :: is, is2, iunit
+  character(len=5) :: filename
+
+  if(.not.mpi_grp_is_root(mpi_world)) return
+
+  PUSH_SUB(X(print_matrix))
+  
+  write(filename, '(i5.5)') ik
+  iunit = io_open(trim(basis%debugdir) // "/" //trim(label) // "_nk" // filename, action='write')
+  write(iunit,'(a)') ' Orthogonalization matrix '
+#ifdef R_TCOMPLEX
+  write(iunit,'(a)') ' Real part '
+#endif
+  do is = 1, basis%size
+    do is2 = 1, basis%size-1
+      write(iunit,'(f14.8)',advance='no') real(overlap(is,is2))
+    end do
+    write(iunit,'(f14.8)') real(overlap(is,basis%size))
+  end do
+#ifdef R_TCOMPLEX
+  write(iunit,'(a)') ' Imaginary part '
+  do is = 1, basis%size
+    do is2 = 1, basis%size-1
+      write(iunit,'(f14.8)',advance='no') aimag(overlap(is,is2))
+    end do
+    write(iunit,'(f14.8)') aimag(overlap(is,basis%size))
+  end do
+#endif
+  call io_close(iunit)
+
+
+  POP_SUB(X(print_matrix))
+end subroutine

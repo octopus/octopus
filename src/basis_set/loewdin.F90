@@ -20,24 +20,31 @@
 #include "global.h"
 
 module loewdin_oct_m
+  use distributed_oct_m
   use global_oct_m
+  use io_oct_m
   use kpoints_oct_m
+  use lalg_adv_oct_m
+  use mesh_function_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use orbitalbasis_oct_m
   use orbitalset_oct_m
   use profiling_oct_m
+  use simul_box_oct_m
   use types_oct_m  
  
   implicit none
 
   private
 
-!  public ::                            &
-!       loewdin_orthonormalize,          &
-!       loewdin_buildoverlap
+  public ::                            &
+        dloewdin_orthogonalize,        &
+        zloewdin_orthogonalize,        &
+        dloewdin_overlap,              &
+        zloewdin_overlap
 
-contains
-
+  contains
 
 #include "undef.F90"
 #include "real.F90"
