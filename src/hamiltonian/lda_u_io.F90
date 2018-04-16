@@ -208,7 +208,7 @@ contains
    PUSH_SUB(lda_u_write_magnetization)
 
    call io_mkdir(dir)
-    iunit = io_open(trim(dir)//'magnetization.xsf', action='write', position='asis')
+    iunit = io_open(trim(dir)//"/magnetization.xsf", action='write', position='asis')
 
     if(this%nspins > 1) then
       SAFE_ALLOCATE(mm(1:geo%natoms, 1:mesh%sb%dim))
