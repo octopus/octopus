@@ -12,7 +12,6 @@ a = 7.8809
 %
 PseudopotentialSet = hscv_pbe
 DFTULevel = dft_u_acbn0
-XCFunctional=gga_x_pbe + gga_c_pbe
 
 %LatticeParameters
   a | a | a
