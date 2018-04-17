@@ -435,16 +435,16 @@ subroutine poisson_solve_drdmft(this, pot, rho)
     do ip = 1, this%der%mesh%np_global
       xg = mesh_x_global(this%der%mesh, ip)
       xx(1:dim) = xg(1:dim)
-      if(this%der%mesh%use_curvilinear) then
-        do jp = 1, this%der%mesh%np
-          if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
-            pvec(jp) = rho(jp)*prefactor**(M_ONE - M_ONE/this%der%mesh%sb%dim)
-          else
-            yy(1:dim) = this%der%mesh%x(jp, 1:dim)
-            pvec(jp) = rho(jp)/sqrt(sum((xx(1:dim) - yy(1:dim))**2))
-          end if
-        end do
-      else
+!      if(this%der%mesh%use_curvilinear) then
+!        do jp = 1, this%der%mesh%np
+!          if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
+!            pvec(jp) = rho(jp)*prefactor**(M_ONE - M_ONE/this%der%mesh%sb%dim)
+!          else
+!            yy(1:dim) = this%der%mesh%x(jp, 1:dim)
+!            pvec(jp) = rho(jp)/sqrt(sum((xx(1:dim) - yy(1:dim))**2))
+!          end if
+!        end do
+!      else
         do jp = 1, this%der%mesh%np
 !          if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
 !            pvec(jp) = rho(jp)*prefactor
@@ -456,7 +456,7 @@ subroutine poisson_solve_drdmft(this, pot, rho)
 						- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*yy(2)*xx(1) + this%dressed_lambda**2/M_TWO*xx(1)*yy(1)) 
 !          end if
         end do
-      end if
+!      end if
       tmp = dmf_integrate(this%der%mesh, pvec)
 
       if (part_v(ip) == this%der%mesh%vp%partno) then
