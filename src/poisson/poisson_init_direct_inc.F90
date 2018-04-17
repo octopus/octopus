@@ -446,12 +446,15 @@ subroutine poisson_solve_drdmft(this, pot, rho)
         end do
       else
         do jp = 1, this%der%mesh%np
-          if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
-            pvec(jp) = rho(jp)*prefactor
-          else
+!          if(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno) == jp) then
+!            pvec(jp) = rho(jp)*prefactor
+!          else
             yy(1:dim) = this%der%mesh%x(jp, 1:dim)
-            pvec(jp) = rho(jp)/sqrt(sum((xx(1:dim) - yy(1:dim))**2))
-          end if
+            pvec(jp) = 	rho(jp)/sqrt((xx(1) - yy(1))**2 + 1) 										  									&
+						+ rho(jp)*( 																									&!this%dressed_omega**2*xx(2)*yy(2) - extra term without conf
+						- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*xx(2)*yy(1) 												&
+						- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*yy(2)*xx(1) + this%dressed_lambda**2/M_TWO*xx(1)*yy(1)) 
+!          end if
         end do
       end if
       tmp = dmf_integrate(this%der%mesh, pvec)
