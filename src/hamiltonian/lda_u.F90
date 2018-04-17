@@ -85,7 +85,8 @@ module lda_u_oct_m
        dlda_u_commute_r,                &
        zlda_u_commute_r,                &
        dlda_u_force,                    &
-       zlda_u_force
+       zlda_u_force,                    &
+       lda_u_write_info
 
 
   type lda_u_t
@@ -180,6 +181,8 @@ contains
   call messages_print_stress(stdout, "DFT+U")
   if(gr%mesh%parallel_in_domains) call messages_not_implemented("dft+u parallel in domains")
   this%level = level
+  
+  call lda_u_write_info(this, stdout)
 
   call orbitalbasis_init(this%basis)
 
@@ -426,6 +429,33 @@ contains
 
     POP_SUB(lda_u_get_effectiveU)
   end subroutine lda_u_get_effectiveU
+
+
+  subroutine lda_u_write_info(this, iunit)
+    type(lda_u_t),  intent(in)    :: this
+    integer,        intent(in)    :: iunit
+
+    PUSH_SUB(lda_u_write_info)
+
+    write(message(1), '(1x)')
+    call messages_info(1, iunit)
+    if(this%level == DFT_U_EMPIRICAL) then
+      write(message(1), '(a)') "Method:"
+      write(message(2), '(a)') "  [1] Dudarev et al., Phys. Rev. B 57, 1505 (1998)"
+      call messages_info(2, iunit)
+    else
+      write(message(1), '(a)') "Method:"
+      write(message(2), '(a)') "  [1] Agapito et al., Phys. Rev. X 5, 011006 (2015)"
+      call messages_info(2, iunit)
+    end if
+    write(message(1), '(a)') "Implementation:"
+    write(message(2), '(a)') "  [1] Tancogne-Dejean, Oliveira, and Rubio, Phys. Rev. B 69, 245133 (2017)"
+    write(message(3), '(1x)')
+    call messages_info(3, iunit)
+
+    POP_SUB(lda_u_write_info)
+
+  end subroutine lda_u_write_info
 
 #include "dft_u_noncollinear_inc.F90"
 
