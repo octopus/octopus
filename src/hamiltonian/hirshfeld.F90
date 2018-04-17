@@ -74,7 +74,10 @@ contains
     type(ps_t), pointer :: ps
     type(periodic_copy_t) :: pp
     INTEGER :: icell
+    type(profile_t), save :: prof
     PUSH_SUB(hirshfeld_init)
+
+    call profiling_in(prof, "HIRSHFELD_INIT")
 
     this%mesh => mesh
     this%geo  => geo
@@ -120,6 +123,8 @@ contains
     SAFE_DEALLOCATE_A(atom_density)
     SAFE_DEALLOCATE_A(atom_density_acc)
 
+    call profiling_out(prof)
+
     POP_SUB(hirshfeld_init)    
   end subroutine hirshfeld_init
 
@@ -152,8 +157,11 @@ contains
     integer :: ip
     FLOAT :: dens_ip
     FLOAT, allocatable :: atom_density(:, :), hirshfeld_density(:)
+    type(profile_t), save :: prof
     
     PUSH_SUB(hirshfeld_charge)
+
+    call profiling_in(prof, "HIRSHFELD_CHARGE")
 
     ASSERT(associated(this%total_density))
     
@@ -175,6 +183,8 @@ contains
     
     SAFE_DEALLOCATE_A(atom_density)
     SAFE_DEALLOCATE_A(hirshfeld_density)
+
+    call profiling_out(prof)
     
     POP_SUB(hirshfeld_charge)
   end subroutine hirshfeld_charge
@@ -190,8 +200,12 @@ contains
     integer :: ip
     FLOAT :: dens_ip, rr
     FLOAT, allocatable :: atom_density(:, :), hirshfeld_density(:)
+
+    type(profile_t), save :: prof
     
     PUSH_SUB(hirshfeld_volume_ratio)
+
+    call profiling_in(prof, "HIRSHFELD_VOLUME_RATIO")
 
     ASSERT(associated(this%total_density))
     
@@ -211,6 +225,8 @@ contains
     
     SAFE_DEALLOCATE_A(atom_density)
     SAFE_DEALLOCATE_A(hirshfeld_density)
+
+    call profiling_out(prof)
     
     POP_SUB(hirshfeld_volume_ratio)
   end subroutine hirshfeld_volume_ratio
@@ -225,8 +241,11 @@ contains
     integer :: ip
     FLOAT :: dens_ip, rr
     FLOAT, allocatable :: atom_density(:, :)
-    
+    type(profile_t), save :: prof   
+ 
     PUSH_SUB(hirshfeld_density_derivative)
+
+    call profiling_in(prof, "HIRSHFELD_DENSITY_DER")
 
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
     
@@ -240,6 +259,8 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(atom_density)
+    
+    call profiling_out(prof)
     
     POP_SUB(hirshfeld_density_derivative)
   end subroutine hirshfeld_density_derivative
@@ -259,8 +280,11 @@ contains
     FLOAT, allocatable :: grad(:, :), atom_density(:, :), atom_derivative(:, :)
     type(periodic_copy_t) :: pp_i, pp_j
     type(ps_t), pointer :: ps_i, ps_j
+    type(profile_t), save :: prof
 
     PUSH_SUB(hirshfeld_position_derivative)
+
+    call profiling_in(prof, "HIRSHFELD_POSITION_DER")
 
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, 1:this%st%d%nspin))
     SAFE_ALLOCATE(atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
@@ -334,6 +358,8 @@ contains
     SAFE_DEALLOCATE_A(atom_density)
     SAFE_DEALLOCATE_A(atom_derivative)
     SAFE_DEALLOCATE_A(grad)
+
+    call profiling_out(prof)
 
     POP_SUB(hirshfeld_position_derivative)
   end subroutine hirshfeld_position_derivative
