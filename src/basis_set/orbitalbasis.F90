@@ -157,6 +157,7 @@ contains
   !%End
   call parse_variable('AOLoewdin', .false., this%orthogonalization)
   call messages_print_var_value(stdout, 'AOLoewdin', this%orthogonalization)
+  if(this%orthogonalization) call messages_experimental("AOLoewdin")
 
   if(this%orthogonalization .and. this%submeshforperiodic) &
     call messages_not_implemented("AOLoewdin=yes with AOSubmeshForPeriodic=yes.") 

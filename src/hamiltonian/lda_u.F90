@@ -194,6 +194,7 @@ contains
     !%Description
     !% If set to yes, Octopus will determine the effective U for all atomic orbitals
     !% from the peusopotential. Only available with ACBN0 functional.
+    !% It is strongly recommended to set AOLoewdin=yes when using the option.
     !%End
     call parse_variable('UseAllAtomicOrbitals', .false., this%useAllOrbitals)
     if(this%useAllOrbitals) call messages_experimental("UseAllAtomicOrbitals")
