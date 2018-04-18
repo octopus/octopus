@@ -441,8 +441,10 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   R_TYPE, allocatable :: xx(:)
   R_TYPE, allocatable :: X(pot)(:)
   R_TYPE, allocatable :: buffer(:)
+  R_TYPE, allocatable :: bufferx(:)
+  R_TYPE, allocatable :: buffery(:)
+  R_TYPE, allocatable :: bufferz(:)
   R_TYPE, allocatable :: buffer_transpose(:,:)
-  FLOAT, allocatable :: pol_buffer(:)
   FLOAT :: eig_diff
   FLOAT, allocatable :: occ_diffs(:)
   !integer :: ia, jb
@@ -515,7 +517,9 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   SAFE_ALLOCATE(integrand(1:mesh%np))
   SAFE_ALLOCATE(X(pot)(1:mesh%np))
   SAFE_ALLOCATE(buffer(1:mesh%np))
-  SAFE_ALLOCATE(pol_buffer(1:3))
+  SAFE_ALLOCATE(bufferx(1:mesh%np))
+  SAFE_ALLOCATE(buffery(1:mesh%np))
+  SAFE_ALLOCATE(bufferz(1:mesh%np))
   SAFE_ALLOCATE(deltav(1:mesh%np))
 
   ! coefficients for Hartree potential
@@ -529,17 +533,20 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
     ! precompute buffer once for photon terms
     if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
-      buffer(1:mesh%np) = R_TOTYPE(M_ZERO)
-      pol_buffer(1:3) = M_ZERO
+      bufferx(1:mesh%np) = R_TOTYPE(M_ZERO)
+      buffery(1:mesh%np) = R_TOTYPE(M_ZERO)
+      bufferz(1:mesh%np) = R_TOTYPE(M_ZERO)
       do ii = 1, cas%pt_nmodes
-          buffer(1:mesh%np) = buffer(1:mesh%np) + &
-            (cas%pt%lambda_array(ii)* &
+          buffer(1:mesh%np) = (cas%pt%lambda_array(ii)* &
                ( cas%pt%pol_array(ii,1)*mesh%x(1:mesh%np, 1)  &
                + cas%pt%pol_array(ii,2)*mesh%x(1:mesh%np, 2)  &
                + cas%pt%pol_array(ii,3)*mesh%x(1:mesh%np, 3)))
-          pol_buffer(1) = cas%pt%lambda_array(ii)*cas%pt%pol_array(ii,1)
-          pol_buffer(2) = cas%pt%lambda_array(ii)*cas%pt%pol_array(ii,2)
-          pol_buffer(3) = cas%pt%lambda_array(ii)*cas%pt%pol_array(ii,3)
+          bufferx(1:mesh%np) = bufferx(1:mesh%np) + &
+              buffer(1:mesh%np)*cas%pt%lambda_array(ii)*cas%pt%pol_array(ii,1)
+          buffery(1:mesh%np) = buffery(1:mesh%np) + &
+              buffer(1:mesh%np)*cas%pt%lambda_array(ii)*cas%pt%pol_array(ii,2)
+          bufferz(1:mesh%np) = bufferz(1:mesh%np) + &
+              buffer(1:mesh%np)*cas%pt%lambda_array(ii)*cas%pt%pol_array(ii,3)
       end do
     end if
 
@@ -610,12 +617,13 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
           if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
             ! buffer is precomputed once before double loop
               mtxel_vm = mtxel_vm + &
-              X(mf_integrate)(mesh, rho_i(1:mesh%np)* buffer(1:mesh%np) )* &
-              X(mf_integrate)(mesh, rho_j(1:mesh%np)*( &
-                pol_buffer(1)*mesh%x(1:mesh%np, 1) &
-                + pol_buffer(2)*mesh%x(1:mesh%np, 2) &
-                + pol_buffer(3)*mesh%x(1:mesh%np, 3)))
-          end if
+              (X(mf_integrate)(mesh, rho_i(1:mesh%np)*bufferx(1:mesh%np))* &
+               X(mf_integrate)(mesh, rho_j(1:mesh%np)*mesh%x(1:mesh%np, 1)) + &
+               X(mf_integrate)(mesh, rho_i(1:mesh%np)*buffery(1:mesh%np))* &
+               X(mf_integrate)(mesh, rho_j(1:mesh%np)*mesh%x(1:mesh%np, 2)) + &
+               X(mf_integrate)(mesh, rho_i(1:mesh%np)*bufferz(1:mesh%np))* &
+               X(mf_integrate)(mesh, rho_j(1:mesh%np)*mesh%x(1:mesh%np, 3)))
+            end if
 
           matrix(jb_local, ia_local) = mtxel_vh + mtxel_xc + mtxel_vm
           if(.not. cas%use_scalapack) then
