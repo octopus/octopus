@@ -49,7 +49,7 @@
      overlap2 = R_CONJ(transpose(overlap))
      do is = 1, basis%size
        eigenval(is) = M_ONE/sqrt(eigenval(is))
-       overlap2(is, 1:basis%size) = eigenval(is)* overlap(is, 1:basis%size)     
+       overlap2(is, 1:basis%size) = eigenval(is)* overlap2(is, 1:basis%size)     
      end do 
      overlap = matmul(overlap,overlap2)
      if(debug%info) call X(print_matrix)(basis, 'loewdin', overlap, ik)
