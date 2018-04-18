@@ -42,7 +42,6 @@ ParDomains = no
 ParKPoints = auto
 
 SpinComponents = spinors
-SCFCalculateForces = no
 GuessMagnetDensity = user_defined
 %AtomsMagnetDirection
  8.0 | 0.0 | 0.0

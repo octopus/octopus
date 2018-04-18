@@ -118,6 +118,8 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
     do ist = st%st_start, st%st_end
 
       weight = st%d%kweights(ik)*st%occ(ist, ik)     
+      if(weight < M_EPSILON) cycle
+ 
       call states_get_state(st, mesh, ist, ik, psi )
 
       if(present(phase)) then
@@ -802,7 +804,6 @@ end subroutine X(compute_coulomb_integrals)
    FLOAT :: weight
 
    if(this%level == DFT_U_NONE) return
-   if(st%d%ispin == SPINORS) call messages_not_implemented("Hubbard forces with spinors")
 
    PUSH_SUB(X(lda_u_force))
 
@@ -841,22 +842,54 @@ end subroutine X(compute_coulomb_integrals)
 
          call X(orbitalset_get_coefficients)(os, st%d%dim, gpsi, iq, phase, gdot(1:st%d%dim,1:os%norbs,idir))
 
-         do im = 1, os%norbs
-           gradn(1:os%norbs,im,ispin,idir) = gradn(1:os%norbs,im,ispin,idir) &
-                                        + weight*(R_CONJ(gdot(1,1:os%norbs,idir))*dot(1,im) &
-                                                 +gdot(1,im,idir)*R_CONJ(dot(1,1:os%norbs)))
-         end do
+         if(st%d%ispin /= SPINORS) then
+           do im = 1, os%norbs
+             gradn(1:os%norbs,im,ispin,idir) = gradn(1:os%norbs,im,ispin,idir) &
+                                          + weight*(R_CONJ(gdot(1,1:os%norbs,idir))*dot(1,im) &
+                                                   +gdot(1,im,idir)*R_CONJ(dot(1,1:os%norbs)))
+           end do
+         else
+           do im = 1, os%norbs
+             do ispin = 1, this%spin_channels
+               gradn(1:os%norbs,im,ispin,idir) = gradn(1:os%norbs,im,ispin,idir) &
+                                            + weight*(R_CONJ(gdot(ispin,1:os%norbs,idir))*dot(ispin,im) &
+                                                     +gdot(ispin,im,idir)*R_CONJ(dot(ispin,1:os%norbs)))
+             end do
+             gradn(1:os%norbs,im,3,idir) = gradn(1:os%norbs,im,3,idir) &
+                                            + weight*(R_CONJ(gdot(3,1:os%norbs,idir))*dot(4,im) &
+                                                     +gdot(4,im,idir)*R_CONJ(dot(3,1:os%norbs)))
+             gradn(1:os%norbs,im,4,idir) = gradn(1:os%norbs,im,4,idir) &
+                                            + weight*(R_CONJ(gdot(4,1:os%norbs,idir))*dot(3,im) &
+                                                     +gdot(3,im,idir)*R_CONJ(dot(4,1:os%norbs)))
+           end do
+           
+         end if
        end do !idir
        
      end do !ibatch
 
-     ff(1:ndim) = M_ZERO
-     do im = 1, os%norbs
-       do imp = 1, os%norbs
-        ff(1:ndim) = ff(1:ndim) - this%X(n)(im,imp,ispin,ios)/st%smear%el_per_state*gradn(im,imp,ispin,1:ndim)
-       end do !imp
-     ff(1:ndim) = ff(1:ndim) + CNST(0.5)*gradn(im, im, ispin,1:ndim)
-     end do !im
+     if(st%d%ispin /= SPINORS) then
+       ff(1:ndim) = M_ZERO
+       do im = 1, os%norbs
+         do imp = 1, os%norbs
+          ff(1:ndim) = ff(1:ndim) - this%X(n)(imp,im,ispin,ios)/st%smear%el_per_state*gradn(im,imp,ispin,1:ndim)
+         end do !imp
+       ff(1:ndim) = ff(1:ndim) + CNST(0.5)*gradn(im, im, ispin,1:ndim)
+       end do !im
+     else
+       ff(1:ndim) = M_ZERO
+       do ispin = 1, st%d%nspin
+         do im = 1, os%norbs
+           do imp = 1, os%norbs
+             !We use R_CONJ to get n(imp,im, sigmap, sigma) from n(im,imp, sigma,sigmap)
+             ff(1:ndim) = ff(1:ndim) - R_CONJ(this%X(n)(im,imp,ispin,ios))/st%smear%el_per_state &
+                                           *gradn(im,imp,ispin,1:ndim)
+           end do !imp 
+           if(ispin <= this%spin_channels) &
+             ff(1:ndim) = ff(1:ndim) + CNST(0.5)*gradn(im, im, ispin,1:ndim)
+         end do !im
+       end do !ispin
+     end if
 
      force(1:ndim, iatom) = force(1:ndim, iatom) - os%Ueff*real(ff(1:ndim))
    end do !ios
