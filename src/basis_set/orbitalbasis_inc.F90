@@ -92,6 +92,12 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skipSorb, useAllOrb
     end do
   end if
 
+  if(norb == 0) then
+    write(message(1),'(a)')  'No orbital sets found. Please check your input file.'
+    call messages_fatal(1)
+  end if
+
+
   if(verbose_) then
     write(message(1),'(a, i3, a)')    'Found ', norb, ' orbital sets.'
     call messages_info(1)

@@ -32,4 +32,4 @@ ParKPoints = auto
 DFTULevel = dft_u_acbn0
 AOLoewdin = yes
 UseAllAtomicOrbitals = yes
-OutputLDA_U = occupation_matrices + effectiveU
+OutputLDA_U = occupations + effectiveU
