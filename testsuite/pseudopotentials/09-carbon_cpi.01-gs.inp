@@ -1,10 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
 #
-# The purpose of this test is making sure that spin-polarized
-# calculations work.
-# It is the calculation of one atom of Carbon, within the LSDA
-# calculation.
-
 CalculationMode = gs
 fromScratch = yes
 UnitsOutput = ev_angstrom
@@ -14,7 +9,7 @@ UnitsOutput = ev_angstrom
 %
 
 %Species
-"C" | species_pseudo | db_file | "extra/C.fhi" | lmax | 1 | lloc | 1
+"C" | species_pseudo | file | "09-carbon_cpi.C.cpi" | lmax | 1 | lloc | 1
 %
 
 spacing = 0.19*angstrom

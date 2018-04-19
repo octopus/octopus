@@ -721,9 +721,6 @@ contains
   real(8) function spline_integral_full(spl) result(res)
     type(spline_t), intent(in) :: spl
 
-    integer :: npoints
-    real(8), allocatable :: x(:)
-
     PUSH_SUB(spline_integral_full)
 
     res = oct_spline_eval_integ_full(spl%spl, spl%acc)

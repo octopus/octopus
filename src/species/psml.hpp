@@ -27,7 +27,7 @@
 
 #include "anygrid.hpp"
 #include "base.hpp"
-#include "chemical_element.hpp"
+#include "element.hpp"
 #include <rapidxml.hpp>
 
 namespace pseudopotential {
@@ -36,7 +36,8 @@ namespace pseudopotential {
 
   public:
 
-    psml(const std::string & filename):
+    psml(const std::string & filename, bool uniform_grid = false):
+      pseudopotential::anygrid(uniform_grid),
       file_(filename),
       buffer_((std::istreambuf_iterator<char>(file_)), std::istreambuf_iterator<char>()){
 
@@ -107,7 +108,13 @@ namespace pseudopotential {
 
 	mesh_size_ = 0;
 	for(double rr = 0.0; rr <= grid_[grid_.size() - 1]; rr += mesh_spacing()) mesh_size_++;
-	
+
+	grid_weights_.resize(grid_.size());
+ 
+	// the integration weights are not available, we approximate them
+	grid_weights_[0] = 0.5*(grid_[1] - grid_[0]);
+	for(unsigned ii = 1; ii < grid_.size() - 1; ii++) grid_weights_[ii] = grid_[ii + 1] - grid_[ii - 1];
+	grid_weights_[grid_.size() - 1] = 0.5*(grid_[grid_.size() - 1] - grid_[grid_.size() - 2]);
       }
       
     }
@@ -129,7 +136,7 @@ namespace pseudopotential {
     }
 
     double mass() const {
-      chemical_element el(symbol());
+      element el(symbol());
       return el.mass();
     }
     
@@ -260,7 +267,27 @@ namespace pseudopotential {
       read_function(root_node_->first_node("valence-charge"), val);
       for(unsigned ii = 0; ii < val.size(); ii++) val[ii] /= 4.0*M_PI;
     }
-    
+
+    bool has_total_angular_momentum() const {
+      return spec_node_->first_attribute("relativity")->value() == std::string("dirac");
+    }
+
+    int projector_2j(int l, int ic) const {
+      rapidxml::xml_node<> * node = root_node_->first_node("nonlocal-projectors")->first_node("proj");
+      while(node){
+	int read_l = letter_to_l(node->first_attribute("l")->value());
+	int read_ic = value<int>(node->first_attribute("seq")) - 1;
+	if(l == read_l && ic == read_ic) {
+	  double read_j = value<double>(node->first_attribute("j"));
+	  std::cout << l << " " << ic << " " << read_j <<  std::endl;
+	  return std::lrint(2.0*read_j);
+	}
+	node = node->next_sibling("proj");
+      }
+      assert(false);
+      return 0;
+    }
+
   private:
 
     void read_function(rapidxml::xml_node<> * base_node, std::vector<double> & val, bool potential_padding = false) const{

@@ -30,7 +30,7 @@
 #include "base.hpp"
 #include <rapidxml.hpp>
 
-#include "chemical_element.hpp"
+#include "element.hpp"
 
 namespace pseudopotential {
 
@@ -38,7 +38,8 @@ namespace pseudopotential {
 
   public:
     
-    upf1(const std::string & filename):
+    upf1(const std::string & filename, bool uniform_grid = false):
+      pseudopotential::upf(uniform_grid),
       file_(filename),
       buffer_((std::istreambuf_iterator<char>(file_)), std::istreambuf_iterator<char>()){
 
@@ -124,7 +125,18 @@ namespace pseudopotential {
 
       }
 
-          
+      {
+	rapidxml::xml_node<> * node = doc_.first_node("PP_MESH")->first_node("PP_R");
+	assert(node);
+
+	std::istringstream stst(node->value());
+
+	grid_weights_.resize(size + start_point_);
+
+	grid_weights_[0] = 0.5*(grid_[1] - grid_[0]);
+	for(int ii = 0; ii < size; ii++) stst >> grid_weights_[start_point_ + ii];
+      }
+      
       //lmax and lloc
       {
 
@@ -136,6 +148,7 @@ namespace pseudopotential {
 	std::vector<bool> has_l(MAX_L, false);
 
 	lmax_ = 0;
+	nchannels_ = 0;
 	int iproj = 0;
 	while(node){
 	  
@@ -155,6 +168,8 @@ namespace pseudopotential {
 	  proj_l_[iproj] = read_l;
 	  proj_c_[iproj] = 0;
 	  for(int jproj = 0; jproj < iproj; jproj++) if(read_l == proj_l_[jproj]) proj_c_[iproj]++;
+
+	  nchannels_ = std::max(nchannels_, proj_c_[iproj] + 1);
 	  
 	  node = node->next_sibling("PP_BETA");
 	  iproj++;
@@ -213,21 +228,17 @@ namespace pseudopotential {
     }
 
     int atomic_number() const {
-      chemical_element el(symbol());
+      element el(symbol());
       return el.atomic_number();
     }
 
     double mass() const {
-      chemical_element el(symbol());
+      element el(symbol());
       return el.mass();
     }
     
     int valence_charge() const {
       return zval_;
-    }
-
-    int llocal() const {
-      return llocal_;
     }
 
     pseudopotential::exchange exchange() const {
@@ -246,15 +257,6 @@ namespace pseudopotential {
       return pseudopotential::correlation::UNKNOWN;
     }
 
-    int nchannels() const {
-      if(llocal() >= 0){
-	if(lmax() == 0) return 0;
-	return nprojectors()/lmax();
-      } else {
-	return nprojectors()/(lmax() + 1);
-      }
-    }
-    
     void local_potential(std::vector<double> & potential) const {
       rapidxml::xml_node<> * node = doc_.first_node("PP_LOCAL");
 
@@ -481,7 +483,6 @@ namespace pseudopotential {
     std::ifstream file_;
     std::vector<char> buffer_;
     rapidxml::xml_document<> doc_;
-    int start_point_;
 
     std::string symbol_;
     std::string xc_functional_;

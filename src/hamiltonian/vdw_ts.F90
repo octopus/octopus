@@ -136,8 +136,7 @@ contains
       end subroutine f90_vdw_calculate
     end interface
 
-    integer :: iatom, jatom, ispecies, jspecies, ip, idir
-    FLOAT :: rr, c6ab, c6abfree, ff, dffdrr, dffdr0
+    integer :: iatom, jatom, ispecies
     FLOAT, allocatable :: c6(:), r0(:), volume_ratio(:), dvadens(:), dvadrr(:), coordinates(:,:), derivative_coeff(:)
 
     integer, allocatable :: zatom(:)

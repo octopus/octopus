@@ -178,8 +178,11 @@ contains
 
     integer :: id, ll, mm, ik, iunit, iunit2, ist, jst, kst, lst
     character(len=256) :: fname
-    FLOAT, allocatable :: oneint(:), twoint(:,:,:,:), vhxcint(:)
+    FLOAT, allocatable :: twoint(:,:,:,:), vhxcint(:)
     integer, allocatable :: iindex(:), jindex(:)
+    FLOAT, allocatable :: doneint(:)
+    CMPLX, allocatable :: zoneint(:)
+    
     PUSH_SUB(output_me)
 
     if(iand(this%what, output_me_momentum) /= 0) then
@@ -261,20 +264,27 @@ contains
       SAFE_ALLOCATE(jindex(1:id))
 
       if (states_are_real(st)) then
-        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, oneint, vhxcint)
+        SAFE_ALLOCATE(doneint(1:id))
+        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, doneint, vhxcint)
+        do ll = 1, id
+          write(iunit, *) iindex(ll), jindex(ll), doneint(ll)
+          write(iunit2, *) iindex(ll), jindex(ll), vhxcint(ll)
+        enddo
+        SAFE_DEALLOCATE_A(doneint)
       else
-        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, oneint, vhxcint)
+        SAFE_ALLOCATE(zoneint(1:id))
+        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, zoneint, vhxcint)
+        do ll = 1, id
+          write(iunit, *) iindex(ll), jindex(ll), zoneint(ll)
+          write(iunit2, *) iindex(ll), jindex(ll), vhxcint(ll)
+        enddo
+        SAFE_DEALLOCATE_A(zoneint)
       end if
-
-      do ll = 1, id
-        write(iunit, *) iindex(ll), jindex(ll), oneint(ll)
-        write(iunit2, *) iindex(ll), jindex(ll), vhxcint(ll)
-      enddo
 
       SAFE_DEALLOCATE_A(iindex)
       SAFE_DEALLOCATE_A(jindex)
-      SAFE_DEALLOCATE_A(oneint)
       SAFE_DEALLOCATE_A(vhxcint)
+
       call io_close(iunit)
       call io_close(iunit2)
 
@@ -297,9 +307,9 @@ contains
       SAFE_ALLOCATE(twoint(1:id,1:id,1:id,1:id))
 
       if (states_are_real(st)) then
-        call dstates_me_two_body(gr, st, id, twoint)
+        call dstates_me_two_body(gr, st, id, twoint, nst = id, verbose = .true.)
       else
-        call zstates_me_two_body(gr, st, id, twoint)
+        call zstates_me_two_body(gr, st, id, twoint, nst = id, verbose = .true.)
       end if
        
       do ist = 1, id

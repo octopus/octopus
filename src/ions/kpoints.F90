@@ -61,6 +61,7 @@ module kpoints_oct_m
 
   type kpoints_grid_t
     FLOAT, pointer   :: point(:, :)
+    FLOAT, pointer   :: point1BZ(:, :)
     FLOAT, pointer   :: red_point(:, :)
     FLOAT, pointer   :: weight(:)
     integer          :: nshifts            !< number of shifts
@@ -101,7 +102,7 @@ contains
   elemental subroutine  kpoints_grid_nullify(this)
     type(kpoints_grid_t), intent(out) :: this
 
-    nullify(this%point, this%red_point, this%weight, this%shifts)
+    nullify(this%point, this%point1BZ, this%red_point, this%weight, this%shifts)
     this%npoints = 0
     this%dim = 0
     this%nshifts = 1
@@ -121,6 +122,7 @@ contains
     this%nshifts = nshifts
     SAFE_ALLOCATE(this%red_point(1:dim, 1:npoints))
     SAFE_ALLOCATE(this%point(1:dim, 1:npoints))
+    SAFE_ALLOCATE(this%point1bz(1:dim,1:npoints))
     SAFE_ALLOCATE(this%weight(1:npoints))
     SAFE_ALLOCATE(this%shifts(1:dim,1:nshifts)) 
 
@@ -137,6 +139,7 @@ contains
 
     SAFE_DEALLOCATE_P(this%red_point)
     SAFE_DEALLOCATE_P(this%point)
+    SAFE_DEALLOCATE_P(this%point1BZ)
     SAFE_DEALLOCATE_P(this%weight)
     SAFE_DEALLOCATE_P(this%shifts)
 
@@ -154,6 +157,7 @@ contains
     call kpoints_grid_init(bb%dim, aa, bb%npoints, bb%nshifts)
     aa%weight = bb%weight
     aa%point  = bb%point
+    aa%point1BZ = bb%point1BZ
     aa%red_point = bb%red_point
     aa%shifts = bb%shifts
 
@@ -193,12 +197,14 @@ contains
     ! Fill the the result with values form this 
     this%red_point(1:old_grid%dim, 1:old_grid%npoints)= old_grid%red_point(1:old_grid%dim, 1:old_grid%npoints)
     this%point(1:old_grid%dim, 1:old_grid%npoints)    = old_grid%point(1:old_grid%dim, 1:old_grid%npoints)
+    this%point1BZ(1:old_grid%dim, 1:old_grid%npoints) = old_grid%point1BZ(1:old_grid%dim, 1:old_grid%npoints)
     this%weight(1:old_grid%npoints)                   = old_grid%weight(1:old_grid%npoints)
     this%shifts(1:old_grid%dim, 1:old_grid%nshifts)   = old_grid%shifts(1:old_grid%dim, 1:old_grid%nshifts)
 
     ! Fill the result with that
     this%red_point(1:old_grid%dim, old_grid%npoints+1:this%npoints)= that%red_point(1:that%dim, 1:that%npoints)
     this%point(1:old_grid%dim, old_grid%npoints+1:this%npoints)    = that%point(1:that%dim, 1:that%npoints)
+    this%point1BZ(1:old_grid%dim, old_grid%npoints+1:this%npoints) = that%point1BZ(1:that%dim, 1:that%npoints)
     this%weight(old_grid%npoints+1:this%npoints)                   = that%weight(1:that%npoints)
 
 
@@ -471,9 +477,18 @@ contains
               call parse_block_float(blk, is, ii - 1, shifts(ii,is))
             end do
           end do
+        else
+          !We include a default -0.5 shift for even number of k-points
+          do ii = 1, dim
+            if(mod(this%nik_axis(ii), 2) /= 0 ) then
+              shifts(ii,1) = M_HALF
+            end if
+          end do
         end if
 
         call parse_block_end(blk)
+      else
+        shifts(1:dim, 1) = -M_HALF                                                                                                                       
       end if
 
       call kpoints_grid_init(dim, this%full, product(this%nik_axis(1:dim))*nshifts, nshifts)
@@ -552,6 +567,9 @@ contains
       do ik = 1, this%reduced%npoints
         call kpoints_to_absolute(klattice, this%reduced%red_point(:, ik), this%reduced%point(:, ik), dim)
       end do
+
+      call kpoints_fold_to_1BZ(this%full, klattice)
+      call kpoints_fold_to_1BZ(this%reduced, klattice)
 
       POP_SUB(kpoints_init.read_MP)
     end subroutine read_MP
@@ -657,6 +675,8 @@ contains
       do ik = 1, path_kpoints_grid%npoints
         call kpoints_to_reduced(rlattice, path_kpoints_grid%point(:, ik), path_kpoints_grid%red_point(:, ik), dim)
       end do
+
+      call kpoints_fold_to_1BZ(path_kpoints_grid, klattice)
 
       call kpoints_grid_addto(this%full   , path_kpoints_grid)
       call kpoints_grid_addto(this%reduced, path_kpoints_grid)
@@ -786,6 +806,8 @@ contains
 
       ! for the moment we do not apply symmetries to user kpoints
 !       call kpoints_grid_copy(this%full, this%reduced)
+
+      call kpoints_fold_to_1BZ(user_kpoints_grid, klattice)
 
       call kpoints_grid_addto(this%full   ,  user_kpoints_grid)
       call kpoints_grid_addto(this%reduced,  user_kpoints_grid)
@@ -971,10 +993,7 @@ contains
           jj = mod(jj, divisor)
 
           kpoints(idir, ik) = (M_TWO*ix(idir) - M_ONE*naxis(idir) + M_TWO*shift(idir,is))*dx(idir)
-
-          if(mod(naxis(idir), 2) /= 0) then    
-            kpoints(idir, ik) = kpoints(idir, ik) - dx(idir)
-          end if
+          !A default shift of +0.5 is including in case if(mod(naxis(idir), 2) /= 0 )
   
           !bring back point to first Brillouin zone, except for points at 1/2
           if ( abs(kpoints(idir, ik) - CNST(0.5)) > CNST(1e-14) )  then
@@ -1226,6 +1245,57 @@ contains
   end subroutine kpoints_grid_reduce
 
 
+  ! --------------------------------------------------------------------------------------------
+  subroutine kpoints_fold_to_1BZ(grid, klattice)
+    type(kpoints_grid_t),    intent(inout) :: grid
+    FLOAT,                   intent(in)    :: klattice(:,:)
+
+    integer :: ig1, ig2, ig3, ik, ii    
+    FLOAT :: Gvec(MAX_DIM,27), Gvec_cart(MAX_DIM,27)
+    FLOAT :: vec(1:MAX_DIM), kpt(1:MAX_DIM)
+    FLOAT :: d, dmin
+
+    PUSH_SUB(kpoints_fold_to_1BZ)
+
+    !We only need to compute the first G-vectors
+    do ig1 = 0,2
+      do ig2 = 0,2 
+        do ig3 = 0,2
+          Gvec(1,ig1*9+ig2*3+ig3+1) = ig1-1
+          Gvec(2,ig1*9+ig2*3+ig3+1) = ig2-1
+          Gvec(3,ig1*9+ig2*3+ig3+1) = ig3-1
+        end do
+      end do
+    end do
+
+    do ig1 = 1, 27
+      call kpoints_to_absolute(klattice, Gvec(1:grid%dim,ig1), Gvec_cart(1:grid%dim,ig1), grid%dim)
+    end do
+
+    do ik = 1, grid%npoints
+
+      dmin = CNST(1e10)
+      do ig1 = 1, 27
+        do ii=1, grid%dim
+          vec(ii) = Gvec_cart(ii,ig1)-grid%point(ii,ik)
+        end do
+        d = real(sum(vec(1:grid%dim)**2),4) !Conversion to simple precision
+                                            !To avoid numerical error problems
+        if( d < dmin ) then
+          dmin = d
+          ig2 = ig1
+        end if
+      end do
+      do ii=1, grid%dim
+        kpt(ii) = grid%red_point(ii,ik) - Gvec(ii,ig2)
+      end do
+      call kpoints_to_absolute(klattice,kpt(1:grid%dim),grid%point1BZ(1:grid%dim,ik),grid%dim) 
+    end do
+
+    POP_SUB(kpoints_fold_to_1BZ)
+  end subroutine kpoints_fold_to_1BZ
+
+
   ! ---------------------------------------------------------
   subroutine kpoints_write_info(this, iunit, absolute_coordinates)
     type(kpoints_t),    intent(in) :: this
@@ -1407,7 +1477,7 @@ contains
     logical,              intent(in) :: time_reversal
     
     integer, allocatable :: kmap(:)
-    FLOAT :: kpt(1:MAX_DIM), kpt_abs(1:MAX_DIM), diff(1:MAX_DIM), symlength2
+    FLOAT :: kpt(1:MAX_DIM), diff(1:MAX_DIM)
     integer :: nk, ik, ik2, iop, idim
     type(distributed_t) :: kpt_dist
 
@@ -1418,7 +1488,7 @@ contains
     !We distribute the k-points here for this routine, independently of the rest of the code
     call distributed_nullify(kpt_dist, nk)
  #ifdef HAVE_MPI
-  call distributed_init(kpt_dist, nk, MPI_COMM_WORLD, "kpt_check")
+    call distributed_init(kpt_dist, nk, MPI_COMM_WORLD, "kpt_check")
  #endif
 
     !A simple map to tell if the k-point as a matching symmetric point or not

@@ -475,7 +475,7 @@ contains
   
     PUSH_SUB(zzsubmesh_to_mesh_dotp)
   
-    dotp = cmplx(M_ZERO)
+    dotp = cmplx(M_ZERO, M_ZERO)
   
     if(this%mesh%use_curvilinear) then
       do is = 1, this%np

@@ -8,13 +8,14 @@ Radius  = 5.0*angstrom
 Spacing = 0.35*angstrom
 
 %Species
- "Xe" | species_pseudo | db_file | "extra/Xe.UPF"
+ "Xe" | species_pseudo | file | "08-spin_orbit_coupling_full.Xe.UPF"
 %
 
 %Coordinates
   "Xe" | -1.5*angstrom | 0 | 0 
   "Xe" |  1.5*angstrom | 0 | 0 
-%
+  %
+  
 ExcessCharge = 1
 
 SpinComponents = non_collinear

@@ -657,7 +657,7 @@ contains
   ! ---------------------------------------------------------
   !> calculates the GGA contribution to vxc
   subroutine gga_process()
-    integer :: ip, is
+    integer :: is
     FLOAT, allocatable :: gf(:,:)
 
     PUSH_SUB(xc_get_vxc.gga_process)
@@ -1465,9 +1465,11 @@ end subroutine zxc_complex_lda
 subroutine cmplxscl_energy_comm_sum(zex, zec)
   CMPLX, intent(inout) :: zex
   CMPLX, intent(inout) :: zec
-  
-  CMPLX                :: zenergies1(2), zenergies2(2)
 
+#ifdef HAVE_MPI
+  CMPLX                :: zenergies1(2), zenergies2(2)
+#endif
+  
   PUSH_SUB(cmplxscl_energy_comm_sum)
 
 #ifdef HAVE_MPI

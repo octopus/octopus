@@ -889,7 +889,7 @@ contains
     type(submesh_t),           intent(in)    :: sm
 
     logical :: need_cube
-    integer :: default_solver, box(MAX_DIM)
+    integer :: default_solver
 
     if(this%method /= POISSON_NULL) return ! already initialized
 

@@ -35,7 +35,8 @@ module ps_psf_oct_m
     ps_psf_t,       &
     ps_psf_init,    &
     ps_psf_end,     &
-    ps_psf_process
+    ps_psf_process, &
+    ps_psf_get_eigen
 
   type ps_psf_t
 
@@ -234,8 +235,27 @@ contains
 
     POP_SUB(psf_process)
   end subroutine ps_psf_process
+  
+  ! ---------------------------------------------------------
+  subroutine ps_psf_get_eigen(ps_psf, eigen)
+    type(ps_psf_t), intent(in)  :: ps_psf
+    FLOAT,          intent(out) :: eigen(:,:)
 
+    integer :: i
+    
+    PUSH_SUB(ps_psf_get_eigen)
 
+    do i = 1, ps_psf%conf%p
+      if (ps_psf%ispin == 1) then
+        eigen(i, 1) = ps_psf%eigen(i, 1)
+      else
+        eigen(i, 1:2) = ps_psf%eigen(i, 2:3)
+      end if        
+    end do
+      
+    POP_SUB(ps_psf_get_eigen)
+  end subroutine ps_psf_get_eigen
+    
   ! ---------------------------------------------------------
   subroutine solve_schroedinger(psf_file, g, conf, ispin, rphi, eigen)
     type(ps_psf_file_t), intent(inout) :: psf_file

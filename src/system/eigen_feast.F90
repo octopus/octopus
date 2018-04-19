@@ -59,7 +59,6 @@ contains
 
     integer :: ncontourpts, icontour
     FLOAT :: recontour, imcontour
-    integer :: nrows
     type(block_t) :: blk
 
     
@@ -134,6 +133,7 @@ contains
     integer,                intent(in)    :: ik
     FLOAT,        optional, intent(out)   :: diff(:) !< (1:st%nst)
 
+#ifdef HAVE_FEAST
     integer :: np, M0
     integer, dimension(64) :: feast_fpm
     CMPLX :: feast_Emid
@@ -164,7 +164,8 @@ contains
     CMPLX, allocatable :: ls_Zebuf(:)
 
     CMPLX, allocatable, target :: xbatchbuf(:,:,:), ybatchbuf(:,:,:)
-
+#endif
+    
     PUSH_SUB(zeigensolver_feast)
 
 ! Let`s just compile an empty subroutine if FEAST is not there.  If it isn`t, we`ll raise an error

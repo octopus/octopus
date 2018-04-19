@@ -34,6 +34,7 @@ module species_oct_m
   use profiling_oct_m
   use ps_oct_m
   use pseudo_oct_m
+  use share_directory_oct_m
   use space_oct_m
   use splines_oct_m
   use string_oct_m
@@ -149,7 +150,7 @@ module species_oct_m
 
     integer :: niwfs              !< The number of initial wavefunctions
     integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :), iwf_n(:, :) !< i, n, l, m as a function of iorb and ispin
-    CMPLX, pointer :: iwf_j(:)    !< j as a function of iorb
+    FLOAT, pointer :: iwf_j(:)    !< j as a function of iorb
 
     integer :: user_lmax          !< For the TM pseudos, user defined lmax 
     integer :: user_llocal        !< For the TM pseudos, used defined llocal
@@ -176,10 +177,10 @@ contains
     this%index=0
     this%label=""
     this%type=0
-    this%z=M_ZERO
-    this%z_val=M_ZERO
-    this%mass=M_ZERO
-    this%vdw_radius=M_ZERO
+    this%z = CNST(-1.0)
+    this%z_val = CNST(-1.0)
+    this%mass = CNST(-1.0)
+    this%vdw_radius = CNST(-1.0)
     this%has_density=.false.
     this%potential_formula=""
     this%omega=M_ZERO
@@ -190,8 +191,8 @@ contains
     this%nlcc=.false.
     this%sigma=M_ZERO
     this%density_formula=""
-    this%def_rsize=M_ZERO
-    this%def_h=-M_ONE
+    this%def_rsize = CNST(-1.0)
+    this%def_h = CNST(-1.0)
     this%niwfs=-1
     nullify(this%iwf_l)
     nullify(this%iwf_m)
@@ -200,7 +201,8 @@ contains
     nullify(this%iwf_j)
     this%user_lmax   = INVALID_L
     this%user_llocal = INVALID_L
-
+    this%pseudopotential_set = OPTION__PSEUDOPOTENTIALSET__NONE
+    
     POP_SUB(species_nullify)
   end subroutine species_nullify
 
@@ -210,6 +212,8 @@ contains
     PUSH_SUB(species_init_global)
 
     initialized = .true.
+
+    call share_directory_set(conf%share)    
     
     !%Variable PseudopotentialSet
     !%Type integer
@@ -317,9 +321,8 @@ contains
   subroutine species_read(spec)
     type(species_t), intent(inout) :: spec
 
-    character(len=256) :: fname
     character(len=LABEL_LEN)  :: lab
-    integer :: ib, ispec, row, n_spec_block, n_spec_def, iunit, read_data
+    integer :: ib, row, n_spec_block, read_data
     type(block_t) :: blk
 
     PUSH_SUB(species_read)
@@ -371,7 +374,7 @@ contains
     !% <tt>%Species
     !% <br>&nbsp;&nbsp;'O'       | species_pseudo         | file | 'O.psf' | lmax |  1 | lloc | 1
     !% <br>&nbsp;&nbsp;'H'       | species_pseudo         | file | '../H.hgh'
-    !% <br>&nbsp;&nbsp;'Xe'      | species_pseudo         | mass | 131.29 | db_file | "UPF/Xe.UPF"
+    !% <br>&nbsp;&nbsp;'Xe'      | species_pseudo         | set | pseudojo_pbe_stringent
     !% <br>&nbsp;&nbsp;'C'       | species_pseudo         | file | "carbon.xml"
     !% <br>&nbsp;&nbsp;'jlm'     | species_jellium        | jellium_radius | 5.0
     !% <br>&nbsp;&nbsp;'rho'     | species_charge_density | density_formula | "exp(-r/a)" | mass | 17.0 | valence | 6
@@ -381,21 +384,25 @@ contains
     !% <br>&nbsp;&nbsp;'Li1D'    | species_soft_coulomb   |  softening | 1.5 | valence | 3
     !% <br>%</tt>
     !%Option species_pseudo  -7
-    !% The species is a pseudopotential. The pseudopotential file must
-    !% be defined by the <tt>file</tt> or <tt>db_file</tt>
-    !% parameters.
+    !% The species is a pseudopotential. How to get the
+    !% pseudopotential can be specified by the <tt>file</tt> or
+    !% the <tt>set</tt> parameters. If both are missing, the
+    !% pseudopotential will be taken from the <tt>PseudopotentialSet</tt>
+    !% specified for the run, this is useful if you want to change
+    !% some parameters of the pseudo, like the <tt>mass</tt>.
     !%
-    !% The optional parameters are <tt>lmax</tt>, that defines the
-    !% maximum angular momentum component to be used, and
-    !% <tt>lloc</tt>, that defines the angular momentum to be
-    !% considered as local. When these parameters are not set, the
-    !% value for lmax is the maximum angular component from the
-    !% pseudopotential file. The default value for <tt>lloc</tt> is
-    !% taken from the pseudopotential if available, if not, it is set
-    !% to 0. Note that, depending on the type of pseudopotential, it
-    !% might not be possible to select <tt>lmax</tt> and
-    !% <tt>lloc</tt>, if that is the case the parameters will be
-    !% ignored.
+    !% The optional parameters for this type of species are
+    !% <tt>lmax</tt>, that defines the maximum angular momentum
+    !% component to be used, and <tt>lloc</tt>, that defines the
+    !% angular momentum to be considered as local. When these
+    !% parameters are not set, the value for lmax is the maximum
+    !% angular component from the pseudopotential file. The default
+    !% value for <tt>lloc</tt> is taken from the pseudopotential if
+    !% available, if not, it is set to 0. Note that, depending on the
+    !% type of pseudopotential, it might not be possible to select
+    !% <tt>lmax</tt> and <tt>lloc</tt>, if that is the case the
+    !% parameters will be ignored.
+    !%
     !%Option species_pspio  -110
     !% (experimental) Alternative method to read pseudopotentials
     !% using the PSPIO library. This species uses the same parameters
@@ -476,6 +483,10 @@ contains
     !%Option jellium_radius -10007
     !% The radius of the sphere for <tt>species_jellium</tt>. If this value is not specified,
     !% the default of 0.5 bohr is used.
+    !%Option set -10017
+    !% For a <tt>species_pseudo</tt>, get the pseudopotential from a
+    !% particular set. This flag must be followed with one of the
+    !% valid values for the variable <tt>PseudopotentialSet</tt>.
     !%Option gaussian_width -10008
     !% The width of the Gaussian (in units of spacing) used to represent
     !% the nuclear charge for <tt>species_full_gaussian</tt>. If not present,
@@ -485,8 +496,7 @@ contains
     !%Option file -10010
     !% The path for the file that describes the species.
     !%Option db_file -10011
-    !% The path for the file, in the Octopus directory of
-    !% pseudopotentials, that describes the species.
+    !% Obsolete. Use the <tt>set</tt> option of the <tt>PseudopotentialSet</tt> variable instead.
     !%Option potential_formula -10012
     !% Mathematical expression that defines the potential for <tt>species_user_defined</tt>. You can use
     !% any of the <i>x</i>, <i>y</i>, <i>z</i> or <i>r</i> variables.
@@ -535,12 +545,33 @@ contains
     ! the species we are looking for.
     if(n_spec_block > 0) call parse_block_end(blk)
 
-    if(pseudo_set /= OPTION__PSEUDOPOTENTIALSET__NONE) then 
+    spec%pseudopotential_set = pseudo_set
+    call read_from_set(spec, read_data)
 
-      spec%pseudopotential_set = pseudo_set
+   if(read_data == 0) then
+      message(1) = 'Species '//trim(spec%label)//' not found.'
+      call messages_fatal(1)
+    end if
+
+    POP_SUB(species_read)
+  end subroutine species_read
+
+  ! ---------------------------------------------------------
+
+  subroutine read_from_set(spec, read_data)
+    type(species_t), intent(inout) :: spec
+    integer,         intent(out)   :: read_data
+
+    integer :: ispec, n_spec_def, iunit
+    character(len=256) :: fname
+    character(len=LABEL_LEN)  :: label
+
+    read_data = 0
+
+    if(spec%pseudopotential_set /= OPTION__PSEUDOPOTENTIALSET__NONE) then 
 
       ! Find out if the species is in the pseudopotential set
-      select case(pseudo_set)
+      select case(spec%pseudopotential_set)
       case(OPTION__PSEUDOPOTENTIALSET__STANDARD)
         fname = trim(conf%share)//'/pseudopotentials/standard.set'
       case(OPTION__PSEUDOPOTENTIALSET__SG15)
@@ -576,8 +607,8 @@ contains
         read(iunit,*)
 
         default_file: do ispec = 1, n_spec_def
-          read(iunit,*) lab
-          if(trim(lab) == trim(spec%label)) then
+          read(iunit,*) label
+          if(trim(label) == trim(spec%label)) then
             call read_from_default_file(iunit, read_data, spec)
             exit default_file
           end if
@@ -596,15 +627,8 @@ contains
 
     end if
 
-    if(read_data == 0) then
-      message(1) = 'Species '//trim(spec%label)//' not found.'
-      call messages_fatal(1)
-    end if
-
-    POP_SUB(species_read)
-  end subroutine species_read
-  ! ---------------------------------------------------------
-
+  end subroutine read_from_set
+  
 
   ! ---------------------------------------------------------
   subroutine species_build(spec, ispin, dim, print_info)
@@ -649,7 +673,7 @@ contains
       end if
       spec%z_val = spec%ps%z_val
       spec%nlcc = spec%ps%nlcc
-      spec%niwfs = ps_niwfs(spec%ps)
+      spec%niwfs = ps_bound_niwfs(spec%ps)
 
       ! invalidate these variables as they should not be used after
       spec%user_lmax = INVALID_L
@@ -1551,8 +1575,10 @@ contains
     integer,         intent(inout) :: read_data
     type(species_t), intent(inout) :: spec
 
-    character(len=LABEL_LEN) :: label
+    character(len=LABEL_LEN) :: label, symbol
     type(element_t) :: element
+    integer :: lmax, llocal
+    FLOAT :: zz, spacing, rsize
 
     PUSH_SUB(read_from_default_file)
 
@@ -1560,7 +1586,7 @@ contains
 
     spec%type = SPECIES_PSEUDO
     
-    read(iunit,*) label, spec%filename, spec%z, spec%user_lmax, spec%user_llocal, spec%def_h, spec%def_rsize
+    read(iunit,*) label, spec%filename, zz, lmax, llocal, spacing, rsize
 
     spec%filename = trim(conf%share)//'/pseudopotentials/'//trim(spec%filename)
     
@@ -1569,16 +1595,19 @@ contains
     read_data = 8
 
     ! get the mass, vdw radius and atomic number for this element
-    call element_init(element, label)
+    call element_init(element, get_symbol(label))
 
     ASSERT(element_valid(element))
 
-    spec%mass = element_mass(element)
-    spec%vdw_radius = element_vdw_radius(element)
-
-    if(spec%z < 0) then
-      spec%z = element_atomic_number(element)
-    end if
+    ! these might have been set before
+    if(spec%z < 0) spec%z = zz
+    if(spec%z < 0) spec%z = element_atomic_number(element)
+    if(spec%user_lmax == INVALID_L) spec%user_lmax = lmax
+    if(spec%user_llocal == INVALID_L) spec%user_llocal = llocal
+    if(spec%def_h < 0) spec%def_h = spacing
+    if(spec%def_rsize < 0) spec%def_rsize = rsize
+    if(spec%mass < 0) spec%mass = element_mass(element)
+    if(spec%vdw_radius < 0) spec%vdw_radius = element_vdw_radius(element)
     
     call element_end(element)
     
@@ -1594,7 +1623,7 @@ contains
     type(species_t), intent(inout) :: spec
     integer,         intent(out)   :: read_data
 
-    integer :: ncols, icol, flag
+    integer :: ncols, icol, flag, set_read_data
     type(element_t) :: element
     type(iihash_t) :: read_parameters
 
@@ -1739,10 +1768,14 @@ contains
         call parse_block_string(blk, row, icol + 1, spec%filename)
 
       case(OPTION__SPECIES__DB_FILE)
-        call check_duplication(OPTION__SPECIES__DB_FILE)
-        call parse_block_string(blk, row, icol + 1, spec%filename)
-        spec%filename = trim(conf%share)//'/pseudopotentials/'//trim(spec%filename)
+        call messages_write("The 'db_file' option for 'Species' block is obsolete. Please use", new_line = .true.)
+        call messages_write("the option 'set' or the variable 'PseudopotentialSet' instead.")
+        call messages_fatal()
 
+      case(OPTION__SPECIES__SET)
+        call check_duplication(OPTION__SPECIES__SET)
+        call parse_block_integer(blk, row, icol + 1, spec%pseudopotential_set)
+        
       case(OPTION__SPECIES__POTENTIAL_FORMULA)
         call check_duplication(OPTION__SPECIES__POTENTIAL_FORMULA)
         call parse_block_string(blk, row, icol + 1, spec%potential_formula)
@@ -1811,12 +1844,12 @@ contains
         "The 'density_formula' parameter is missing for species '"//trim(spec%label)//"'")
     end if
     
-    if((spec%type == SPECIES_PSEUDO .or. spec%type == SPECIES_PSPIO .or. spec%type == SPECIES_FROM_FILE) &
+    if(spec%type == SPECIES_FROM_FILE &
       .and. .not. (parameter_defined(OPTION__SPECIES__FILE) .or. parameter_defined(OPTION__SPECIES__DB_FILE))) then
       call messages_input_error('Species', &
         "The 'file' or 'db_file' parameter is missing for species '"//trim(spec%label)//"'")
     end if
-      
+
     if(spec%type == SPECIES_JELLIUM_SLAB .and. .not. parameter_defined(OPTION__SPECIES__THICKNESS)) then
       call messages_input_error('Species', &
         "The 'thickness' parameter is missing for species '"//trim(spec%label)//"'")
@@ -1837,7 +1870,23 @@ contains
     select case(spec%type)
     case(SPECIES_PSEUDO, SPECIES_PSPIO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
 
-      call element_init(element, spec%label)
+      if( (spec%type == SPECIES_PSEUDO .or. spec%type == SPECIES_PSPIO) &
+        .and. .not. (parameter_defined(OPTION__SPECIES__FILE) .or. parameter_defined(OPTION__SPECIES__DB_FILE))) then
+        ! we need to read the species from the pseudopotential set
+
+        !if the set was not defined, use the default set
+        if(.not. parameter_defined(OPTION__SPECIES__SET)) spec%pseudopotential_set = pseudo_set
+
+        call read_from_set(spec, set_read_data)
+
+        if(set_read_data == 0) then
+          call messages_write('Species '//trim(spec%label)//' is not defined in the requested pseudopotential set.')
+          call messages_fatal()
+        end if
+        
+      end if
+
+      call element_init(element, get_symbol(spec%label))
       
       if(.not. element_valid(element)) then
         call messages_write('Cannot determine the element for species '//trim(spec%label)//'.')
@@ -1860,20 +1909,20 @@ contains
         
       if(spec%vdw_radius < CNST(0.0)) then
         spec%vdw_radius = element_vdw_radius(element)
+        if(spec%vdw_radius < CNST(0.0)) then
+          spec%vdw_radius = CNST(0.0)
+          call messages_write("The default vdW radius for species '"//trim(spec%label)//"' is not defined.", new_line = .true.)
+          call messages_write("You can specify the vdW radius in %Species block.")
+          call messages_warning()
+        end if
         call messages_write('Info: default vdW radius for species '//trim(spec%label)//':')
         call messages_write(spec%vdw_radius)
         call messages_write(' [b]')
         call messages_info()
-        if(spec%vdw_radius < CNST(0.0)) then
-          call messages_write('The default vdW radius for species '//trim(spec%label)//':')
-          call messages_write(' is not defined. ')
-          call messages_write(' Add a positive vdW radius value in %Species block. ')
-          call messages_fatal()
-        end if
       end if
 
       call element_end(element)
-        
+
     case default
       if(.not. parameter_defined(OPTION__SPECIES__MASS)) then
         spec%mass = 1.0
@@ -1941,39 +1990,25 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> set up quantum numbers of orbitals, and reject those that are unbound (for pseudopotentials)
+  !> set up quantum numbers of orbitals
   subroutine species_iwf_fix_qn(spec, ispin, dim)
     type(species_t), intent(inout) :: spec
     integer,         intent(in)    :: ispin
     integer,         intent(in)    :: dim
 
     integer :: is, n, i, l, m, n1, n2, n3
-    FLOAT   :: radius
-    logical, allocatable :: bound(:)
 
     PUSH_SUB(species_iwf_fix_qn)
 
     if(species_is_ps(spec)) then
-      
-      SAFE_ALLOCATE(bound(1:spec%ps%conf%p))
-
-      ! we check if the orbitals are bound by looking at the atomic radius
-      do i = 1, spec%ps%conf%p
-        radius = M_ZERO
-        do is = 1, ispin
-          radius = max(radius, spline_cutoff_radius(spec%ps%ur(i, is), spec%ps%projectors_sphere_threshold))
-        end do
-        ! we consider as bound a state that is localized to less than half the radius of the radial grid
-        bound(i) = radius < CNST(0.5)*logrid_radius(spec%ps%g)
-      end do
       
       do is = 1, ispin
         n = 1
         do i = 1, spec%ps%conf%p
           if(n > spec%niwfs) exit          
           l = spec%ps%conf%l(i)
-           
-          if(.not. bound(i)) cycle
+
+          if(.not. spec%ps%bound(i,is)) cycle
           
           do m = -l, l
             spec%iwf_i(n, is) = i
@@ -1985,11 +2020,7 @@ contains
           end do
           
         end do
-        ! FIXME: this is wrong when spin-polarized or spinors!
-        spec%niwfs = n - 1
       end do
-
-      SAFE_DEALLOCATE_A(bound)
 
     else if(species_represents_real_atom(spec) .and. dim == 3) then
 
@@ -2115,8 +2146,27 @@ contains
 
     POP_SUB(species_iwf_fix_qn)
   end subroutine species_iwf_fix_qn
+
   ! ---------------------------------------------------------
 
+  character(len=LABEL_LEN) function get_symbol(label) result(symbol)
+    character(len=*), intent(in)    :: label
+    
+    integer :: ilend
+
+    ! use only the first part of the label to determine the element
+    do ilend = 1, len(label)
+      if( iachar(label(ilend:ilend)) >= iachar('a') .and. iachar(label(ilend:ilend)) <= iachar('z') ) cycle
+      if( iachar(label(ilend:ilend)) >= iachar('A') .and. iachar(label(ilend:ilend)) <= iachar('Z') ) cycle
+      exit
+    end do
+    ilend = ilend - 1
+
+    symbol = label(1:ilend)
+    
+  end function get_symbol
+      
+  
 end module species_oct_m
 
 !! Local Variables:
