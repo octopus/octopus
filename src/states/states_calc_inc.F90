@@ -1380,7 +1380,7 @@ subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj)
 end subroutine X(states_calc_projections)
 
 ! ---------------------------------------------------------
-subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, jindex, oneint)
+subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, jindex, oneint, vhxcint)
 
   character(len=*),    intent(in)    :: dir
   type(grid_t),        intent(inout) :: gr
@@ -1392,6 +1392,7 @@ subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, ji
   integer,             intent(out)   :: iindex(1:nint)
   integer,             intent(out)   :: jindex(1:nint)
   FLOAT,               intent(out)   :: oneint(1:nint)  !this needs to address complex numbers as well?!?
+  FLOAT,               intent(out)   :: vhxcint(1:nint)
   
   integer ist, jst, np, iint
   R_TYPE :: me
@@ -1417,7 +1418,8 @@ subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, ji
       psij(1:np, 1) = R_CONJ(psii(1:np, 1))*vhxc(1:np, 1)*psij(1:np, 1)
 
       me = - X(mf_integrate)(gr%mesh, psij(:, 1))
-
+      vhxcint(iint) = me
+      
       if(ist==jst) me = me + st%eigenval(ist,1)
 
       iindex(iint) = ist
@@ -1436,18 +1438,17 @@ end subroutine X(states_me_one_body)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_me_two_body) (gr, st, nint, iindex, jindex, kindex, lindex, twoint)
+subroutine X(states_me_two_body) (gr, st, nint, twoint, nst, verbose)
   type(grid_t),     intent(inout)           :: gr
   type(states_t),   intent(in)              :: st
   integer,          intent(in)              :: nint
-  integer,          intent(out)             :: iindex(1:nint)
-  integer,          intent(out)             :: jindex(1:nint)
-  integer,          intent(out)             :: kindex(1:nint)
-  integer,          intent(out)             :: lindex(1:nint)
-  FLOAT,            intent(out)             :: twoint(1:nint)  !this needs to address complex numbers as well?!?
+  FLOAT,            intent(out)             :: twoint(:,:,:,:)  !this needs to address complex numbers as well?!?
+  integer, optional,intent(in)              :: nst
+  logical, optional,intent(in)              :: verbose
 
-  integer :: ist, jst, kst, lst, ijst, klst
-  integer :: iint
+  integer :: ist, jst, kst, lst, ijst, klst, idone, ntodo
+  integer :: iint, nst_
+  logical :: verbose_
   R_TYPE  :: me
   R_TYPE, allocatable :: nn(:), vv(:)
   R_TYPE, allocatable :: psii(:, :), psij(:, :), psik(:, :), psil(:, :)
@@ -1464,11 +1465,26 @@ subroutine X(states_me_two_body) (gr, st, nint, iindex, jindex, kindex, lindex, 
   ijst = 0
   iint = 1
 
-  do ist = 1, st%nst
+  if(present(nst)) then
+    nst_ = nst
+  else
+    nst_ = st%nst
+  end if
+  
+  verbose_ = optional_default(verbose, .false.)
+
+  if(verbose_) then
+    !Lets counts the number of orbital to treat, to display a progress bar
+    ntodo = ((nst_+1)*nst_/2)*((nst_+1)*nst_/2+1)/2
+    idone = 0
+    if(mpi_world%rank == 0) call loct_progress_bar(-1, ntodo)
+  end if
+
+  do ist = 1, nst_
 
     call states_get_state(st, gr%mesh, ist, 1, psii)
 
-    do jst = 1, st%nst
+    do jst = 1, nst_
       if(jst > ist) cycle
       ijst=ijst+1
 
@@ -1478,11 +1494,10 @@ subroutine X(states_me_two_body) (gr, st, nint, iindex, jindex, kindex, lindex, 
       call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
 
       klst=0
-      do kst = 1, st%nst
- 
+      do kst = 1, nst_
         call states_get_state(st, gr%mesh, kst, 1, psik)
 
-        do lst = 1, st%nst
+        do lst = 1, nst_
           if(lst > kst) cycle
           klst=klst+1
           if(klst > ijst) cycle
@@ -1493,13 +1508,20 @@ subroutine X(states_me_two_body) (gr, st, nint, iindex, jindex, kindex, lindex, 
 
           me = X(mf_integrate)(gr%mesh, psil(:, 1))
 
-          iindex(iint) =  ist
-          jindex(iint) =  jst
-          kindex(iint) =  kst
-          lindex(iint) =  lst
-          twoint(iint) =  me
-          iint = iint + 1
+          twoint(ist,jst,kst,lst) =  me
+          
+          twoint(kst,lst,jst,jst) =  me
+          twoint(jst,ist,lst,kst) =  me
+          twoint(lst,kst,jst,ist) =  me
+          twoint(jst,ist,kst,lst) =  me
+          twoint(lst,kst,ist,jst) =  me
+          twoint(ist,jst,lst,kst) =  me
+          twoint(kst,lst,jst,ist) =  me
 
+          if(verbose_) then
+            idone = idone + 1
+            if(mpi_world%rank == 0) call loct_progress_bar(idone, ntodo)
+          end if
         end do
       end do
     end do

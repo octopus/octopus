@@ -30,6 +30,7 @@ module output_me_oct_m
   use messages_oct_m
   use kpoints_oct_m
   use loct_math_oct_m
+  use loct_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
   use parser_oct_m
@@ -60,6 +61,7 @@ module output_me_oct_m
     !! octopole matrix elements (between Kohn-Sham or single-particle orbitals).
     !! In 2D, only the dipole moments are printed.
     integer :: ks_multipoles      
+    character(len=20) :: range_i, range_j, range_k, range_l
   end type output_me_t
 
   integer, parameter, public :: &
@@ -73,9 +75,10 @@ contains
   
   ! ---------------------------------------------------------
   subroutine output_me_init(this, sb)
-    type(output_me_t), intent(out) :: this
+    type(output_me_t), intent(inout) :: this
     type(simul_box_t), intent(in)  :: sb
-
+    type(block_t) :: blk
+    integer :: blk_len, ii
     PUSH_SUB(output_me_init)
 
     !%Variable OutputMatrixElements
@@ -130,7 +133,35 @@ contains
       !% <math>x</math> and <math>x^2</math> matrix elements between Kohn-Sham states.
       !%End
       call parse_variable('OutputMEMultipoles', 1, this%ks_multipoles)
+
     end if
+
+    !%Variable CIrange
+    !%Type block
+    !%Defaul all
+    !%Section Output
+    !%Description
+    !% Dummy description
+    !%End
+    if(parse_block('CIrange', blk) == 0) then
+      if(parse_block_n(blk).eq.1.and.parse_block_cols(blk,0).eq.4)then
+        call parse_block_string(blk,0,0,this%range_i)
+        call parse_block_string(blk,0,1,this%range_j)
+        call parse_block_string(blk,0,2,this%range_k)
+        call parse_block_string(blk,0,3,this%range_l)
+        message(1) = "Ranges:"//this%range_i//this%range_j//this%range_k//this%range_l
+        call messages_info(1)
+      else
+        call messages_write('You need to specify all four ranges for the Coulomb integrals and on one single line.')
+        call messages_fatal()
+      end if
+    else !it is not set
+      this%range_i = '1-999999'
+      this%range_j = '1-999999'
+      this%range_k = '1-999999'
+      this%range_l = '1-999999'
+    end if
+
 
     POP_SUB(output_me_init)
   end subroutine output_me_init
@@ -145,11 +176,10 @@ contains
     type(geometry_t),    intent(in)    :: geo
     type(hamiltonian_t), intent(in)    :: hm
 
-    integer :: id, ll, mm, ik, iunit
+    integer :: id, ll, mm, ik, iunit, iunit2, ist, jst, kst, lst
     character(len=256) :: fname
-    FLOAT, allocatable :: oneint(:), twoint(:)
-    integer, allocatable :: iindex(:), jindex(:), kindex(:), lindex(:)
-    
+    FLOAT, allocatable :: oneint(:), twoint(:,:,:,:), vhxcint(:)
+    integer, allocatable :: iindex(:), jindex(:)
     PUSH_SUB(output_me)
 
     if(iand(this%what, output_me_momentum) /= 0) then
@@ -220,27 +250,33 @@ contains
       call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
       ! how to do this properly? states_matrix
       iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
+      iunit2 = io_open(trim(dir)//'/output_me_vhxc', action='write')
 
-      id = st%nst*(st%nst+1)/2
+      !id = st%nst*(st%nst+1)/2
+      id = st%nst**2
 
       SAFE_ALLOCATE(oneint(1:id))
+      SAFE_ALLOCATE(vhxcint(1:id))
       SAFE_ALLOCATE(iindex(1:id))
       SAFE_ALLOCATE(jindex(1:id))
 
       if (states_are_real(st)) then
-        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, oneint)
+        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, oneint, vhxcint)
       else
-        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, oneint)
+        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, oneint, vhxcint)
       end if
 
       do ll = 1, id
         write(iunit, *) iindex(ll), jindex(ll), oneint(ll)
+        write(iunit2, *) iindex(ll), jindex(ll), vhxcint(ll)
       enddo
 
       SAFE_DEALLOCATE_A(iindex)
       SAFE_DEALLOCATE_A(jindex)
       SAFE_DEALLOCATE_A(oneint)
+      SAFE_DEALLOCATE_A(vhxcint)
       call io_close(iunit)
+      call io_close(iunit2)
 
     end if
 
@@ -253,26 +289,29 @@ contains
       ! how to do this properly? states_matrix
       iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
 
-      id = st%nst*(st%nst+1)*(st%nst**2+st%nst+2)/8
-      SAFE_ALLOCATE(twoint(1:id))
-      SAFE_ALLOCATE(iindex(1:id))
-      SAFE_ALLOCATE(jindex(1:id))
-      SAFE_ALLOCATE(kindex(1:id))
-      SAFE_ALLOCATE(lindex(1:id))
+      id = 0
+      do ll = 1, st%nst
+        if(st%eigenval(ll,1).lt.0) id = id + 1
+      end do 
+
+      SAFE_ALLOCATE(twoint(1:id,1:id,1:id,1:id))
 
       if (states_are_real(st)) then
-        call dstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, twoint)
+        call dstates_me_two_body(gr, st, id, twoint)
       else
-        call zstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, twoint)
+        call zstates_me_two_body(gr, st, id, twoint)
       end if
-      
-      do ll = 1, id
-        write(iunit, *) iindex(ll), jindex(ll), kindex(ll), lindex(ll), twoint(ll)
-      enddo
-      SAFE_DEALLOCATE_A(iindex)
-      SAFE_DEALLOCATE_A(jindex)
-      SAFE_DEALLOCATE_A(kindex)
-      SAFE_DEALLOCATE_A(lindex)
+       
+      do ist = 1, id
+        do jst = 1, id
+          do kst = 1, id
+            do lst = 1, id
+              write(iunit, *) ist, jst, kst, lst, twoint(ist, jst, kst, lst)
+            end do
+          end do
+        end do
+      end do 
+
       SAFE_DEALLOCATE_A(twoint)
       call io_close(iunit)
 
