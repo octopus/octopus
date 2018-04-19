@@ -464,7 +464,7 @@ contains
     call messages_new_line()
 
     call messages_write("    valence charge   :")
-    call messages_write(ps%z_val, align_left = .true., fmt = '(f3.1)')
+    call messages_write(ps%z_val, align_left = .true., fmt = '(f4.1)')
     call messages_info()
 
     call messages_write("    atomic number    :")
