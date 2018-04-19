@@ -258,7 +258,6 @@ contains
       !id = st%nst*(st%nst+1)/2
       id = st%nst**2
 
-      SAFE_ALLOCATE(oneint(1:id))
       SAFE_ALLOCATE(vhxcint(1:id))
       SAFE_ALLOCATE(iindex(1:id))
       SAFE_ALLOCATE(jindex(1:id))
