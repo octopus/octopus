@@ -279,48 +279,47 @@ namespace pseudopotential {
     }
     
     void projector(int l, int i, std::vector<double> & proj) const {
+      proj.clear();
+      
       rapidxml::xml_node<> * node = doc_.first_node("PP_NONLOCAL")->first_node("PP_BETA");
 
       assert(node);
-
+   
       int iproj = 0;
-      while(node){
+      while(l != proj_l_[iproj] || i != proj_c_[iproj]){
+	iproj++;
+	node = node->next_sibling("PP_BETA");
 	
-	if(l != proj_l_[iproj] || i != proj_c_[iproj]) {
-	  iproj++;
-	  node = node->next_sibling("PP_BETA");
-	  continue;
-	}
-	
-	std::string line;
-	std::istringstream stst(node->value());
-	
-	int read_i, read_l, size;
-
-	stst >> read_i >> read_l;
-	getline(stst, line);
-
-	assert(read_l == proj_l_[iproj]);
-	
-	stst >> size;
-	getline(stst, line);
-
-	assert(size >= 0);
-	assert(size <= int(grid_.size()));
-
-	proj.resize(grid_.size());
-
-	for(int ii = 0; ii < size; ii++) stst >> proj[ii + start_point_];
-	for(unsigned ii = size; ii < grid_.size() - start_point_; ii++) proj[ii + start_point_] = 0.0; 
-	    
-	break;
+	if(!node) return;
       }
-
+      
+      std::string line;
+      std::istringstream stst(node->value());
+      
+      int read_i, read_l, size;
+      
+      stst >> read_i >> read_l;
+      getline(stst, line);
+      
+      assert(read_l == proj_l_[iproj]);
+      
+      stst >> size;
+      getline(stst, line);
+      
+      assert(size >= 0);
+      assert(size <= int(grid_.size()));
+      
+      proj.resize(grid_.size());
+      
+      for(int ii = 0; ii < size; ii++) stst >> proj[ii + start_point_];
+      for(unsigned ii = size; ii < grid_.size() - start_point_; ii++) proj[ii + start_point_] = 0.0; 
+      
       //the projectors come in Rydberg and multiplied by r, so we have to divide and fix the first point
       for(unsigned ii = 1; ii < proj.size(); ii++) proj[ii] /= 2.0*grid_[ii];
       extrapolate_first_point(proj);
       
       interpolate(proj);
+
     }
 
     bool has_radial_function(int l) const{
