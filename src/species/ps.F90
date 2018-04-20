@@ -1144,7 +1144,7 @@ contains
         ps%conf%l(ii) = ps_xml%wf_l(ii)
 
         if(ps%ispin == 2) then
-          ps%conf%occ(ii, 1) = min(ps_xml%wf_occ(ii), 2.0*ps_xml%wf_l(ii) + 1.0)
+          ps%conf%occ(ii, 1) = min(ps_xml%wf_occ(ii), CNST(2.0)*ps_xml%wf_l(ii) + CNST(1.0))
           ps%conf%occ(ii, 2) = ps_xml%wf_occ(ii) - ps%conf%occ(ii, 1)
         else
           ps%conf%occ(ii, 1) = ps_xml%wf_occ(ii)
