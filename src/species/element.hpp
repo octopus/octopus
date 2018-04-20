@@ -26,6 +26,7 @@
 #include <fstream>
 #include <cstdlib>
 #include <map>
+#include <cstdlib>
 
 #include "share_directory.hpp"
 
