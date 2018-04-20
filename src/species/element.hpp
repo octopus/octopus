@@ -26,7 +26,6 @@
 #include <fstream>
 #include <cstdlib>
 #include <map>
-#include <cstdlib>
 
 #include "share_directory.hpp"
 
@@ -99,7 +98,6 @@ namespace pseudopotential {
     static map_type & map(){
       
       static map_type map;
-
       if(map.empty()){
 
 	std::string filename = pseudopotential::share_directory::get() + "/pseudopotentials/elements.dat";
