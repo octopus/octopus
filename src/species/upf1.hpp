@@ -401,7 +401,7 @@ namespace pseudopotential {
       if(label == "s"){
 	n = 1;
       } else {
-	n = std::stoi(label.substr(0, 1));
+	n = atoi(label.substr(0, 1).c_str());
       }
       
       proj.resize(grid_.size());
@@ -444,7 +444,7 @@ namespace pseudopotential {
 	if(proj_l_[iproj] == l && proj_c_[iproj] == ic){
 	  double read_j;
 	  stst  >> read_j;
-	  return std::lrint(read_j*2.0);
+	  return lrint(read_j*2.0);
 	} else {
 	  std::string line;
 	  getline(stst, line);
@@ -452,7 +452,7 @@ namespace pseudopotential {
       }
 
       assert(false);
-
+      return 0;
     }
 
     int wavefunction_2j(int ii) const {
@@ -472,7 +472,7 @@ namespace pseudopotential {
 	stst >> label >> n >> l >> j >> occ;
       }
 
-      return std::lrint(j*2.0);
+      return lrint(j*2.0);
       
     }
 

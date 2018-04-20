@@ -280,7 +280,7 @@ namespace pseudopotential {
 	if(l == read_l && ic == read_ic) {
 	  double read_j = value<double>(node->first_attribute("j"));
 	  std::cout << l << " " << ic << " " << read_j <<  std::endl;
-	  return std::lrint(2.0*read_j);
+	  return lrint(2.0*read_j);
 	}
 	node = node->next_sibling("proj");
       }
