@@ -24,7 +24,7 @@
 #include <cctype>
 #include <iostream>
 #include <fstream>
-#include <unordered_map>
+#include <map>
 
 #include "share_directory.hpp"
 
@@ -74,9 +74,9 @@ namespace pseudopotential {
       double vdw_radius_;
     };
     
-    static std::unordered_map<std::string, properties> & map(){
+    static std::map<std::string, properties> & map(){
       
-      static std::unordered_map<std::string, properties> map;
+      static std::map<std::string, properties> map;
 
       if(map.empty()){
 
