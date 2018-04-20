@@ -498,8 +498,8 @@ contains
     !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
     !% There is no tag for directions, given as a letter. The perturbation direction is always
     !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
-    !% Example: <tt>occupations + effectiveU</tt>
-    !%Option occupations  bit(0)
+    !% Example: <tt>occ_matrices + effectiveU</tt>
+    !%Option occ_matrices  bit(0)
     !% Outputs the occupation matrices of LDA+U
     !%Option effectiveU bit(1)
     !% Outputs the value of the effectiveU for each atoms 
@@ -563,7 +563,7 @@ contains
     ! these kinds of Output do not have a how
     what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS + OPTION__OUTPUT__BERKELEYGW + OPTION__OUTPUT__DOS + &
       OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW + OPTION__OUTPUT__FROZEN_SYSTEM
-    what_no_how_u = OPTION__OUTPUTLDA_U__OCCUPATIONS + OPTION__OUTPUTLDA_U__EFFECTIVEU + &
+    what_no_how_u = OPTION__OUTPUTLDA_U__OCC_MATRICES + OPTION__OUTPUTLDA_U__EFFECTIVEU + &
       OPTION__OUTPUTLDA_U__MAGNETIZATION
 
     if(iand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
@@ -724,24 +724,18 @@ contains
       call output_fio(gr, geo, st, hm, trim(adjustl(dir)), mpi_world)
     end if
 
-    if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCCUPATIONS) /= 0&
-       .and. hm%lda_u_level /= DFT_U_NONE) then
-      call lda_u_write_occupation_matrices(dir, hm%lda_u, st)
-    end if
+    if(hm%lda_u_level /= DFT_U_NONE) then
+      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCC_MATRICES) /= 0)&
+        call lda_u_write_occupation_matrices(dir, hm%lda_u, st)
 
-    if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__EFFECTIVEU) /= 0&
-       .and. hm%lda_u_level /= DFT_U_NONE) then
-      call lda_u_write_effectiveU(dir, hm%lda_u)
-    end if
+      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__EFFECTIVEU) /= 0)&
+        call lda_u_write_effectiveU(dir, hm%lda_u)
 
-    if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__MAGNETIZATION) /= 0&
-       .and. hm%lda_u_level /= DFT_U_NONE) then
-      call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st)
-    end if
+      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__MAGNETIZATION) /= 0)&
+        call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st)
 
-    if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__LOCAL_ORBITALS) /= 0&
-      .and. hm%lda_u_level /= DFT_U_NONE) then
-      call output_dftu_orbitals(dir, hm%lda_u, outp, st, gr%mesh, geo, associated(hm%hm_base%phase))
+      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__LOCAL_ORBITALS) /= 0)&
+        call output_dftu_orbitals(dir, hm%lda_u, outp, st, gr%mesh, geo, associated(hm%hm_base%phase))
     end if
 
     call profiling_out(prof)

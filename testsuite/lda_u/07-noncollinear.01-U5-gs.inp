@@ -62,5 +62,5 @@ ExtraStates = 6
 ConvRelDens = 5e-6
 
 AOTruncation = ao_box
-OutputLDA_U = occupations
+OutputLDA_U = occ_matrices
 
