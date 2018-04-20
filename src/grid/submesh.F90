@@ -60,8 +60,6 @@ module submesh_oct_m
     dsubmesh_batch_dotp_matrix,  &
     zsubmesh_batch_dotp_matrix,  &
     submesh_overlap,             &
-    dsubmesh_to_submesh_dotp,    &
-    zsubmesh_to_submesh_dotp,    &
     dsubmesh_copy_from_mesh,     &
     zsubmesh_copy_from_mesh,     &
     dsubmesh_copy_from_mesh_batch,     &

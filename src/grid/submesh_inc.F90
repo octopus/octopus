@@ -273,56 +273,6 @@ end function X(dsubmesh_to_mesh_dotp)
 
 !------------------------------------------------------------
 
-R_TYPE function X(submesh_to_submesh_dotp)(sm1, ff1 , sm2, ff2) result(dotp)
-  type(submesh_t),   intent(in) :: sm1
-  R_TYPE,            intent(in) :: ff1(:)
-  type(submesh_t),   intent(in) :: sm2
-  R_TYPE,            intent(in) :: ff2(:)
-
-  integer :: is, is2, pd, sbdim
-  FLOAT   :: xx(1:MAX_DIM)
-
-  PUSH_SUB(X(submesh_to_submesh_dotp))
-
-  ASSERT(.not.sm1%mesh%parallel_in_domains)
-
-  pd = sm1%mesh%sb%periodic_dim
-  sbdim = sm1%mesh%sb%dim
-
-  if(sm1%mesh%use_curvilinear) then
-    !To be implemented
-    ASSERT(.not.sm1%mesh%use_curvilinear)
-  else
-    dotp = R_TOTYPE(M_ZERO)
-    !$omp parallel do reduction(+:dotp) private(xx)
-    do is = 1, sm1%np
-      do is2 = 1, sm2%np
-        !We want the same points on the mesh
-        if(sm1%map(is) == sm2%map(is2)) then
-          !We need to convert the coordinates to the proper orthogonal coord., 
-          !In order to check that the two points are inside the same replica
-          ! of the simulation box
-          xx(1:pd) = matmul(sm1%x(is, 1:pd), sm1%mesh%sb%klattice_primitive(1:pd, 1:pd)) &
-                      -  matmul(sm2%x(is2, 1:pd), sm1%mesh%sb%klattice_primitive(1:pd, 1:pd))
-          xx(pd+1:sbdim) = sm1%x(is, pd+1:sbdim) - sm2%x(is2, pd+1:sbdim)
-
-          !The next test avoid problems in case of periodic simulations
-          if( all(abs(xx(1:sbdim))-sm1%mesh%sb%lsize(1:sbdim)*M_TWO < M_ZERO) ) &
-            dotp = dotp + R_CONJ(ff1(is))*ff2(is2)
-        end if
-      end do
-    end do
-    !$omp end parallel do
-    dotp = dotp*sm1%mesh%vol_pp(1)
-  end if
-
-  POP_SUB(X(submesh_to_submesh_dotp))
-
-end function X(submesh_to_submesh_dotp)
-
-
-!------------------------------------------------------------
-
 !> The following functions takes a batch of functions defined in
 !! submesh (ss) and adds all of them to each of the mesh functions in
 !! other batch (mm).  Each one is multiplied by a factor given by the
