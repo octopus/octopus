@@ -25,6 +25,7 @@
 #include <iostream>
 #include <fstream>
 #include <map>
+#include <cstdlib>
 
 #include "share_directory.hpp"
 
@@ -82,7 +83,7 @@ namespace pseudopotential {
 
 	std::string filename = pseudopotential::share_directory::get() + "/pseudopotentials/elements.dat";
 	
-	std::ifstream file(filename);
+	std::ifstream file(filename.c_str());
 
 	if(!file){
 	  std::cerr << "Internal error: cannot open file '" << filename << "'." << std::endl;

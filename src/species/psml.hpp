@@ -38,7 +38,7 @@ namespace pseudopotential {
 
     psml(const std::string & filename, bool uniform_grid = false):
       pseudopotential::anygrid(uniform_grid),
-      file_(filename),
+      file_(filename.c_str()),
       buffer_((std::istreambuf_iterator<char>(file_)), std::istreambuf_iterator<char>()){
 
       buffer_.push_back('\0');
