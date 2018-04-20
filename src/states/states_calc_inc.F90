@@ -1374,7 +1374,7 @@ subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj)
 end subroutine X(states_calc_projections)
 
 ! ---------------------------------------------------------
-subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, jindex, oneint, vhxcint)
+subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, oneint, vhxcint, verbose)
 
   character(len=*),    intent(in)    :: dir
   type(grid_t),        intent(inout) :: gr
@@ -1383,12 +1383,15 @@ subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, ji
   integer,             intent(in)    :: nspin
   FLOAT,               intent(in)    :: vhxc(1:gr%mesh%np, nspin)
   integer,             intent(in)    :: nint
-  integer,             intent(out)   :: iindex(1:nint)
-  integer,             intent(out)   :: jindex(1:nint)
-  R_TYPE,              intent(out)   :: oneint(1:nint)  !this needs to address complex numbers as well?!?
-  FLOAT,               intent(out)   :: vhxcint(1:nint)
-  
-  integer ist, jst, np, iint
+  R_TYPE,              intent(out)   :: oneint(:,:)  !this needs to address complex numbers as well?!?
+  FLOAT,               intent(out)   :: vhxcint(:,:)
+  logical, optional,   intent(in)    :: verbose
+
+
+  integer ist, jst, np, iint, idone, ntodo
+
+  logical :: verbose_
+
   R_TYPE :: me
   R_TYPE, allocatable :: psii(:, :), psij(:, :)
 
@@ -1399,7 +1402,18 @@ subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, ji
   
   np = gr%mesh%np
   iint = 1
+  
 
+  verbose_ = optional_default(verbose, .false.)
+
+  if(verbose_) then
+    !Lets counts the number of orbital to treat, to display a progress bar
+    ntodo = st%nst*(st%nst-1)
+    idone = 0
+    if(mpi_world%rank == 0) call loct_progress_bar(-1, ntodo)
+  end if
+
+  
   do ist = 1, st%nst
 
     call states_get_state(st, gr%mesh, ist, 1, psii)
@@ -1412,14 +1426,19 @@ subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, ji
       psij(1:np, 1) = R_CONJ(psii(1:np, 1))*vhxc(1:np, 1)*psij(1:np, 1)
 
       me = - X(mf_integrate)(gr%mesh, psij(:, 1))
-      vhxcint(iint) = me
+      vhxcint(ist,jst) = me
+      vhxcint(jst,ist) = me
       
       if(ist==jst) me = me + st%eigenval(ist,1)
 
-      iindex(iint) = ist
-      jindex(iint) = jst
-      oneint(iint) = me
+      oneint(ist, jst) = me
+      oneint(jst, ist) = me
+
       iint = iint + 1
+      if(verbose_) then
+        idone = idone + 1
+        if(mpi_world%rank == 0) call loct_progress_bar(idone, ntodo)
+      end if
 
     end do
   end do

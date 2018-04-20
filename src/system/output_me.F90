@@ -178,10 +178,9 @@ contains
 
     integer :: id, ll, mm, ik, iunit, iunit2, ist, jst, kst, lst
     character(len=256) :: fname
-    FLOAT, allocatable :: twoint(:,:,:,:), vhxcint(:)
-    integer, allocatable :: iindex(:), jindex(:)
-    FLOAT, allocatable :: doneint(:)
-    CMPLX, allocatable :: zoneint(:)
+    FLOAT, allocatable :: twoint(:,:,:,:), vhxcint(:,:)
+    FLOAT, allocatable :: doneint(:,:)
+    CMPLX, allocatable :: zoneint(:,:)
     
     PUSH_SUB(output_me)
 
@@ -256,32 +255,32 @@ contains
       iunit2 = io_open(trim(dir)//'/output_me_vhxc', action='write')
 
       !id = st%nst*(st%nst+1)/2
-      id = st%nst**2
+      id = st%nst
 
-      SAFE_ALLOCATE(vhxcint(1:id))
-      SAFE_ALLOCATE(iindex(1:id))
-      SAFE_ALLOCATE(jindex(1:id))
+      SAFE_ALLOCATE(vhxcint(1:id, 1:id))
 
       if (states_are_real(st)) then
-        SAFE_ALLOCATE(doneint(1:id))
-        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, doneint, vhxcint)
-        do ll = 1, id
-          write(iunit, *) iindex(ll), jindex(ll), doneint(ll)
-          write(iunit2, *) iindex(ll), jindex(ll), vhxcint(ll)
+        SAFE_ALLOCATE(doneint(1:id, 1:id))
+        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, doneint, vhxcint, verbose=.true.)
+        do ist = 1, id
+          do jst = 1, id
+            write(iunit, *) ist, jst, doneint(ist, jst)
+            write(iunit2, *) ist, jst, vhxcint(ist, jst)
+          enddo
         enddo
         SAFE_DEALLOCATE_A(doneint)
       else
-        SAFE_ALLOCATE(zoneint(1:id))
-        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, zoneint, vhxcint)
-        do ll = 1, id
-          write(iunit, *) iindex(ll), jindex(ll), zoneint(ll)
-          write(iunit2, *) iindex(ll), jindex(ll), vhxcint(ll)
+        SAFE_ALLOCATE(zoneint(1:id, 1:id))
+        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, zoneint, vhxcint, verbose = .true.)
+        do ist = 1, id
+          do jst = 1, id
+            write(iunit, *) ist, jst, zoneint(ist, jst)
+            write(iunit2, *) ist, jst, vhxcint(ist, jst)
+          enddo
         enddo
         SAFE_DEALLOCATE_A(zoneint)
       end if
 
-      SAFE_DEALLOCATE_A(iindex)
-      SAFE_DEALLOCATE_A(jindex)
       SAFE_DEALLOCATE_A(vhxcint)
 
       call io_close(iunit)
