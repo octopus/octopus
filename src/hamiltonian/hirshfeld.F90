@@ -280,7 +280,7 @@ contains
     FLOAT, allocatable :: grad(:, :), atom_density(:, :), atom_derivative(:, :, :)
     type(periodic_copy_t) :: pp_i, pp_j
     type(ps_t), pointer :: ps_i, ps_j
-    type(profile_t), save :: prof
+    type(profile_t), save :: prof, prof2
     FLOAT :: tmp, xxi(1:MAX_DIM), xxj(1:MAX_DIM)
 
     PUSH_SUB(hirshfeld_position_derivative)
@@ -308,7 +308,8 @@ contains
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, 1:this%st%d%nspin))
     SAFE_ALLOCATE(atom_derivative(1:this%mesh%np, 1:this%st%d%nspin, periodic_copy_num(pp_j)))
 
-    !We evaluate here the derivative to avoid call it too many time
+    call profiling_in(prof2, "HIRSHFELD_POSITION_DER2")
+    !We evaluate here the derivative to avoid call it N^2 times
     do jcell = 1, periodic_copy_num(pp_j)
       atom_derivative(1:this%mesh%np, 1:this%st%d%nspin, jcell) = M_ZERO
       pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%mesh%sb, jcell)
@@ -319,6 +320,7 @@ contains
                                   pos_j, this%st%d%spin_channels, &
                                   atom_derivative(1:this%mesh%np, 1:this%st%d%nspin, jcell))
     end do
+    call profiling_out(prof2)
 
     do icell = 1, periodic_copy_num(pp_i)
       atom_density(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
@@ -340,6 +342,7 @@ contains
         tmp = rri**3*atom_dens*tdensity/this%total_density(ip)**2
 
         do jcell = 1, periodic_copy_num(pp_j)
+          pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%mesh%sb, jcell)
           xxj(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim) 
           rrj = sqrt(sum(xxj(1:this%mesh%sb%dim)**2))
           atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin, jcell))
