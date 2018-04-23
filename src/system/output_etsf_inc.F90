@@ -157,7 +157,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
       call output_etsf_basisdata_write(gr%mesh, shell, ncid)
     end if
    
-    call output_etsf_wfs_pw_write(st, gr%mesh, zcube, cf, shell, ncid)
+    call output_etsf_wfs_pw_write(st, gr%mesh, gr%sb, zcube, cf, shell, ncid)
 
     if(mpi_grp_is_root(mpi_world)) then
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
@@ -699,9 +699,10 @@ end subroutine output_etsf_wfs_pw_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid)
+subroutine output_etsf_wfs_pw_write(st, mesh, sb, cube, cf, shell, ncid)
   type(states_t),        intent(in)    :: st
   type(mesh_t),          intent(in)    :: mesh
+  type(simul_box_t),     intent(in)    :: sb
   type(cube_t),          intent(inout) :: cube
   type(cube_function_t), intent(inout) :: cf
   type(fourier_shell_t), intent(in)    :: shell
@@ -737,7 +738,7 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid)
   do iq = 1, st%d%nik
     ispin = states_dim_get_spin_index(st%d, iq)
     ikpoint = states_dim_get_kpoint_index(st%d, iq)
-    call fourier_shell_init(shell_wfn, cube, gr%mesh, kk = gr%sb%kpoints%reduced%red_point(:, iq))
+    call fourier_shell_init(shell_wfn, cube, mesh, kk = sb%kpoints%reduced%red_point(:, iq))
     do ist = 1, st%nst
       do idim = 1, st%d%dim
 
