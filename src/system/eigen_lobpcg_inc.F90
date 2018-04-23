@@ -25,7 +25,7 @@
 subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, diff, block_size)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
-  type(hamiltonian_t),    intent(inout) :: hm
+  type(hamiltonian_t),    intent(in)    :: hm
   type(preconditioner_t), intent(in)    :: pre
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
@@ -141,7 +141,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   ik, pre, tol, niter, converged, diff, constr)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
-  type(hamiltonian_t),    intent(inout) :: hm
+  type(hamiltonian_t),    intent(in)    :: hm
   integer,                intent(in)    :: st_start
   integer,                intent(in)    :: st_end
   R_TYPE, target,         intent(inout) :: psi(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)

@@ -18,7 +18,7 @@
 
 ! ---------------------------------------------------------
 subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
-  type(hamiltonian_t),   intent(inout) :: hm
+  type(hamiltonian_t),   intent(in)    :: hm
   type(derivatives_t),   intent(in)    :: der
   type(batch_t), target, intent(inout) :: psib
   type(batch_t), target, intent(inout) :: hpsib
@@ -125,18 +125,18 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
     select case(hm%theory_level)
 
     case(HARTREE)
-      call X(exchange_operator_hartree_apply)(hm%exxop, der, hm%d, ik, hm%exxop%exx_coef, epsib, hpsib)
+      call X(exchange_operator_hartree_apply)(exxop, der, hm%d, ik, exxop%exx_coef, epsib, hpsib)
 
     case(HARTREE_FOCK)
       if(hm%scdm_EXX)  then
-        call X(exchange_operator_scdm_apply)(hm%exxop, der, hm%d, epsib, hpsib, ik, hm%exxop%exx_coef,hm%theory_level == HARTREE)
+        call X(exchange_operator_scdm_apply)(exxop, der, hm%d, epsib, hpsib, ik, exxop%exx_coef, hm%theory_level == HARTREE)
       else
         ! standard HF 
-        call X(exchange_operator_apply)(hm%exxop, der, hm%d, ik, epsib, hpsib)
+        call X(exchange_operator_apply)(exxop, der, hm%d, ik, epsib, hpsib)
       end if
 
     case(RDMFT)
-      call X(exchange_operator_rdmft_apply)(hm%exxop, der, hm%d, ik, epsib, hpsib)
+      call X(exchange_operator_rdmft_apply)(exxop, der, hm%d, ik, epsib, hpsib)
 
     end select
     call profiling_out(prof_exx)
@@ -248,7 +248,7 @@ end subroutine X(hamiltonian_external)
 ! ---------------------------------------------------------
 
 subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc)
-  type(hamiltonian_t), intent(inout) :: hm
+  type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist       !< the index of the state
   integer,             intent(in)    :: ik        !< the index of the k-point
@@ -325,7 +325,7 @@ end subroutine X(hamiltonian_apply_all)
 ! ---------------------------------------------------------
 
 subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
-  type(hamiltonian_t), intent(inout) :: hm
+  type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ik
   R_TYPE,              intent(inout) :: psi(:,:)

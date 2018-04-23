@@ -44,7 +44,8 @@ subroutine X(fft_forward)(fft, in, out, norm)
       jj = min(1, fft_array(slot)%rs_n(2))
       kk = min(1, fft_array(slot)%rs_n(3))
 #ifdef R_TREAL
-      call fftw_execute_dft_r2c(fft_array(slot)%planf, in(ii:,jj:,kk:), out(ii:,jj:,kk:))
+    !  call fftw_execute_dft_r2c(fft_array(slot)%planf, in(ii:,jj:,kk:), out(ii:,jj:,kk:))
+      call fftw_execute_dft_r2c(fft_array(slot)%planf, in(:,:,:), out(:,:,:))
 #else
       call fftw_execute_dft(fft_array(slot)%planf, in(ii:,jj:,kk:), out(ii:,jj:,kk:))
 #endif

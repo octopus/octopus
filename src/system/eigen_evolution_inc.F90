@@ -20,7 +20,7 @@
 subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff, tau)
   type(grid_t),        target, intent(in)    :: gr
   type(states_t),              intent(inout) :: st
-  type(hamiltonian_t), target, intent(inout) :: hm
+  type(hamiltonian_t), target, intent(in)    :: hm
   FLOAT,                       intent(in)    :: tol
   integer,                     intent(inout) :: niter
   integer,                     intent(inout) :: converged

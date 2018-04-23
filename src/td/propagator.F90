@@ -20,6 +20,7 @@
 
 module propagator_oct_m
   use energy_calc_oct_m
+  use exchange_operator_oct_m
   use exponential_oct_m
   use forces_oct_m
   use gauge_field_oct_m
@@ -533,7 +534,7 @@ contains
 
     ! to work on SCDM states we rotate the states in st to the localized SCDM,
     !i.e. we perform the SCDM procedure and overwrite the states in st
-    if(hm%scdm_EXX) call scdm_rotate_states(st,gr%mesh,hm%exxop%scdm)
+    if(hm%scdm_EXX) call scdm_rotate_states(st,gr%mesh,exxop%scdm)
 
     if(present(scsteps)) scsteps = 1
    

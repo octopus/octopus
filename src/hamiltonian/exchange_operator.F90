@@ -63,6 +63,8 @@ module exchange_operator_oct_m
 
     type(scdm_t)  :: scdm
   end type exchange_operator_t
+ 
+  type(exchange_operator_t), save, public :: exxop 
 
 contains
 

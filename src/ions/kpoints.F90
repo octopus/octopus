@@ -82,6 +82,7 @@ module kpoints_oct_m
 
     !> For the modified Monkhorst-Pack scheme
     integer              :: nik_axis(MAX_DIM)    !< number of MP divisions
+    integer              :: niq_axis(MAX_DIM)    !< number of MP divisions
     integer, pointer     :: symmetry_ops(:, :)  !< (reduced%npoints, nops)
     integer, pointer     :: num_symmetry_ops(:) !< (reduced%npoints)
 
@@ -222,6 +223,7 @@ contains
     this%use_time_reversal = .false.
     this%nik_skip = 0
     this%nik_axis = 0
+    this%niq_axis = 0
     nullify(this%symmetry_ops, this%num_symmetry_ops)
     nullify(this%klattice)
     nullify(this%coord_along_path)
@@ -398,8 +400,6 @@ contains
       integer, allocatable :: symm_ops(:, :), num_symm_ops(:)
       FLOAT, allocatable :: shifts(:,:)
      
-      FLOAT :: qgrid(1:MAX_DIM) 
-
       PUSH_SUB(kpoints_init.read_MP)
 
       call messages_obsolete_variable('KPointsMonkhorstPack', 'KPointsGrid')
@@ -497,6 +497,8 @@ contains
       !% <br>%</tt>
       !%
       !%End
+      this%niq_axis(:) = this%nik_axis(:)
+      this%downsampling(:) = 1
       if(parse_is_defined('QPointsGrid')) then
         if(parse_block('QPointsGrid', blk) == 0) then
           ncols = parse_block_cols(blk, 0)
@@ -505,26 +507,23 @@ contains
             call messages_fatal(1)
           end if
           do ii = 1, dim
-            call parse_block_float(blk, 0, ii - 1, qgrid(ii))
+            call parse_block_integer(blk, 0, ii - 1, this%niq_axis(ii))
           end do 
         
-          if (any(this%nik_axis(1:dim)/qgrid(1:dim) /= nint(this%nik_axis(1:dim)/qgrid(1:dim)))) then
+          if (any(this%nik_axis(1:dim)/this%niq_axis(1:dim) &
+                  /= nint(this%nik_axis(1:dim)/real(this%niq_axis(1:dim))))) then
             message(1) = 'Input: QPointsGrid is not compatible with the KPointsGrid.'
             call messages_fatal(1)
           end if
 
-          this%downsampling(1:dim) = nint(this%nik_axis(1:dim)/qgrid(1:dim))
+          this%downsampling(1:dim) = this%nik_axis(1:dim)/this%niq_axis(1:dim)
  
           if(any(this%downsampling(1:dim)/=1)) then
             ASSERT(.not.this%use_symmetries)
           end if
 
           call parse_block_end(blk)
-        else
-          this%downsampling(1:dim) = 1
         end if
-      else
-        this%downsampling(1:dim) = 1
       end if
 
       call kpoints_grid_init(dim, this%full, product(this%nik_axis(1:dim))*nshifts, nshifts)
@@ -1298,6 +1297,14 @@ contains
         call messages_write(this%nik_axis(idir), fmt = '(i3,1x)')
       end do
       call messages_new_line()
+
+      if(.not.all(this%downsampling(1:this%full%dim) == 1)) then
+        call messages_write('Dimensions of the q-point grid      =')
+        do idir = 1, this%full%dim
+          call messages_write(this%niq_axis(idir), fmt = '(i3,1x)')
+        end do
+        call messages_new_line()
+      end if
       
       call messages_write('Total number of k-points            =')
       call messages_write(this%full%npoints)
@@ -1552,9 +1559,9 @@ contains
     compatible = .true.
     dim = kpt%reduced%dim
     diff(1:dim) = kpt%reduced%red_point(1:dim, ik)-kpt%reduced%red_point(1:dim, iq)
- 
-    !We remove potential umklapp
+
     do idim = 1, dim
+      !We remove potential umklapp
       diff(idim)=diff(idim)-anint(diff(idim)+M_HALF*SYMPREC)
       if(abs(mod(diff(idim),kpt%downsampling(idim)/real(kpt%nik_axis(idim)))) > SYMPREC) then
         compatible = .false. 
@@ -1563,6 +1570,10 @@ contains
       end if
     end do
 
+    !print *, 'These two kpoints are compatibles'
+    !print *, kpt%reduced%red_point(1:dim, ik)
+    !print *, kpt%reduced%red_point(1:dim, iq)
+    !print *, '' 
     POP_SUB(kpoints_is_compatible_downsampling)
 
   end function kpoints_is_compatible_downsampling

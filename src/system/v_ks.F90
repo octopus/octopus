@@ -201,6 +201,8 @@ contains
    
     ks%theory_level = KOHN_SHAM_DFT
     parsed_theory_level = .false.
+
+    call exchange_operator_nullify(exxop)
     
     ! the user knows what he wants, give her that
     if(parse_is_defined('TheoryLevel')) then
@@ -524,6 +526,8 @@ contains
       SAFE_DEALLOCATE_P(ks%hartree_solver)
     end if
 
+    call exchange_operator_end(exxop)
+
     POP_SUB(v_ks_end)
   end subroutine v_ks_end
   ! ---------------------------------------------------------
@@ -605,7 +609,7 @@ contains
   !! can be modified after the function have been used.
   subroutine v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy, calc_current) 
     type(v_ks_t),            target,   intent(inout) :: ks 
-    type(hamiltonian_t),     target,   intent(inout) :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
+    type(hamiltonian_t),     target,   intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
     type(states_t),                    intent(inout) :: st
     type(geometry_t) ,       target,   intent(in)    :: geo
     FLOAT,                   optional, intent(in)    :: time 
@@ -897,7 +901,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine v_a_xc(hm)
-      type(hamiltonian_t),  intent(inout) :: hm 
+      type(hamiltonian_t),  intent(in) :: hm 
 
       type(profile_t), save :: prof
       logical :: cmplxscl
@@ -1232,16 +1236,16 @@ contains
       if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
 
         ! swap the states object
-        call exchange_operator_end(hm%exxop)
+        call exchange_operator_end(exxop)
 
         select case(ks%theory_level)
         case(HARTREE_FOCK)
-          call exchange_operator_init(hm%exxop, ks%calc%hf_st, ks%xc%exx_coef, &
+          call exchange_operator_init(exxop, ks%calc%hf_st, ks%xc%exx_coef, &
             ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta)
         case(HARTREE)
-          call exchange_operator_init(hm%exxop, ks%calc%hf_st, M_ONE, M_ZERO, M_ONE, M_ZERO)
+          call exchange_operator_init(exxop, ks%calc%hf_st, M_ONE, M_ZERO, M_ONE, M_ZERO)
         case(RDMFT) 
-          call exchange_operator_init(hm%exxop, ks%calc%hf_st, M_ONE, M_ZERO, M_ONE, M_ZERO)
+          call exchange_operator_init(exxop, ks%calc%hf_st, M_ONE, M_ZERO, M_ONE, M_ZERO)
         end select
       end if
       

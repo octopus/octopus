@@ -130,8 +130,6 @@ module hamiltonian_oct_m
 
     type(geometry_t), pointer :: geo
 
-    type(exchange_operator_t) :: exxop
-
     !> The self-induced vector potential and magnetic field
     logical :: self_induced_magnetic
     FLOAT, pointer :: a_ind(:, :)
@@ -412,8 +410,6 @@ contains
         call parse_block_end(blk)
     end if
 
-    call exchange_operator_nullify(hm%exxop)    
-
     hm%inh_term = .false.
     call oct_exchange_remove(hm%oct_exchange)
 
@@ -557,8 +553,6 @@ contains
     call states_dim_end(hm%d) 
 
     if(hm%scissor%apply) call scissor_end(hm%scissor)
-
-    call exchange_operator_end(hm%exxop)
 
     SAFE_DEALLOCATE_P(hm%energy)
      

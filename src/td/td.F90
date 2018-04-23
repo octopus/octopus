@@ -24,6 +24,7 @@ module td_oct_m
   use calc_mode_par_oct_m
   use density_oct_m
   use energy_calc_oct_m
+  use exchange_operator_oct_m
   use forces_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
@@ -381,7 +382,7 @@ contains
     end if
 
     if(hm%scdm_EXX) then
-      call scdm_init(st,gr%der,psolver%cube, hm%exxop%scdm,operate_on_scdm=.true.)
+      call scdm_init(st,gr%der,psolver%cube, exxop%scdm,operate_on_scdm=.true.)
       ! make sure scdm is constructed as soon as it is needed
       scdm_is_local = .false.
     end if

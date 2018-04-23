@@ -132,7 +132,7 @@ contains
   subroutine current_calculate(this, der, hm, geo, st, current)
     type(current_t),      intent(in)    :: this
     type(derivatives_t),  intent(inout) :: der
-    type(hamiltonian_t),  intent(inout) :: hm
+    type(hamiltonian_t),  intent(in)    :: hm
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(inout) :: st
     FLOAT,                intent(out)    :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)

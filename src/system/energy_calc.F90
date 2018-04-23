@@ -267,7 +267,7 @@ contains
   ! --------------------------------------------------------------------
   
   subroutine energy_calc_eigenvalues(hm, der, st)
-    type(hamiltonian_t), intent(inout) :: hm
+    type(hamiltonian_t), intent(in)    :: hm
     type(derivatives_t), intent(inout) :: der
     type(states_t),      intent(inout) :: st
     
@@ -284,7 +284,7 @@ contains
 
   subroutine cmplxscl_get_kinetic_elements(st, hm, der, kinetic_energies)
     type(states_t),      intent(inout) :: st
-    type(hamiltonian_t), intent(inout) :: hm
+    type(hamiltonian_t),    intent(in) :: hm
     type(derivatives_t),    intent(in) :: der
     CMPLX, intent(out) :: kinetic_energies(:, :)
 
