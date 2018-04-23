@@ -821,8 +821,8 @@ end subroutine X(compute_coulomb_integrals)
 
      gradn(1:os%norbs,1:os%norbs,1:this%nspins,1:ndim) = M_ZERO
 
-     do ibatch = 1, psib%nst_linear
-       ist = batch_linear_to_ist(psib, ibatch) 
+     do ibatch = 1, psib%nst
+       ist = psib%states(ibatch)%ist
        weight = st%d%kweights(iq)*st%occ(ist, iq)
        if(weight < CNST(1.0e-6)) cycle
 
@@ -857,11 +857,11 @@ end subroutine X(compute_coulomb_integrals)
                                                      +gdot(ispin,im,idir)*R_CONJ(dot(ispin,1:os%norbs)))
              end do
              gradn(1:os%norbs,im,3,idir) = gradn(1:os%norbs,im,3,idir) &
-                                            + weight*(R_CONJ(gdot(3,1:os%norbs,idir))*dot(4,im) &
-                                                     +gdot(4,im,idir)*R_CONJ(dot(3,1:os%norbs)))
+                                            + weight*(R_CONJ(gdot(1,1:os%norbs,idir))*dot(2,im) &
+                                                     +gdot(2,im,idir)*R_CONJ(dot(1,1:os%norbs)))
              gradn(1:os%norbs,im,4,idir) = gradn(1:os%norbs,im,4,idir) &
-                                            + weight*(R_CONJ(gdot(4,1:os%norbs,idir))*dot(3,im) &
-                                                     +gdot(3,im,idir)*R_CONJ(dot(4,1:os%norbs)))
+                                            + weight*(R_CONJ(gdot(2,1:os%norbs,idir))*dot(1,im) &
+                                                     +gdot(1,im,idir)*R_CONJ(dot(2,1:os%norbs)))
            end do
            
          end if
