@@ -159,7 +159,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
  
     call fourier_shell_end(shell)
    
-    call output_etsf_wfs_pw_write(st, gr%mesh, gr%sb, zcube, cf, shell, ncid)
+    call output_etsf_wfs_pw_write(st, gr%mesh, gr%sb, zcube, cf, ncid)
 
     if(mpi_grp_is_root(mpi_world)) then
       call etsf_io_low_close(ncid, lstat, error_data = error_data)
@@ -706,7 +706,6 @@ subroutine output_etsf_wfs_pw_write(st, mesh, sb, cube, cf, ncid)
   type(simul_box_t),     intent(in)    :: sb
   type(cube_t),          intent(inout) :: cube
   type(cube_function_t), intent(inout) :: cf
-  type(fourier_shell_t), intent(in)    :: shell
   integer,               intent(in)    :: ncid
 
   type(etsf_main) :: main
