@@ -1008,7 +1008,12 @@ contains
 
     SAFE_ALLOCATE(mesh%vol_pp(1:np))
 
-    forall(ip = 1:np) mesh%vol_pp(ip) = product(mesh%spacing(1:sb%dim))
+    if(.not.sb%nonorthogonal) then
+      forall(ip = 1:np) mesh%vol_pp(ip) = product(mesh%spacing(1:sb%dim))
+    else
+      forall(ip = 1:np) mesh%vol_pp(ip) = sb%volume_element
+    end if
+
     jj(sb%dim + 1:MAX_DIM) = 0
 
     if(mesh%parallel_in_domains) then
@@ -1068,7 +1073,11 @@ contains
         ! volumes are initialized even for the intermediate points
         nr(:,:) = mesh%idx%nr(:,:)
         SAFE_ALLOCATE(vol_tmp(nr(1,1):nr(2,1),nr(1,2):nr(2,2),nr(1,3):nr(2,3)))
-        vol_tmp(:,:,:) = product(mesh%spacing(1:sb%dim))
+        if(.not.sb%nonorthogonal) then
+          vol_tmp(:,:,:) = product(mesh%spacing(1:sb%dim))
+        else
+          vol_tmp(:,:,:) = sb%volume_element
+        end if
 
         ! The idea is that in the first i_lev loop we find intermediate
         ! points that are odd, i.e. at least one of their indices cannot
@@ -1163,6 +1172,8 @@ contains
     else
       mesh%volume_element = mesh%vol_pp(1)
     end if
+
+    mesh%surface_element(1:sb%dim) = sb%surface_element(1:sb%dim)
 
     POP_SUB(mesh_init_stage_3.mesh_get_vol_pp)
 
