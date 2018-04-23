@@ -64,7 +64,7 @@ AC_PROG_CC($octopus_default_cc)
 AC_PROG_CC_C99
 
 AC_PROG_CXX
-AX_CXX_COMPILE_STDCXX([11])
+AX_CXX_COMPILE_STDCXX([11], [noext], [mandatory])
 AC_CXX_LIBRARY_LDFLAGS
 
 # optimizations extensions supported by the compiler
