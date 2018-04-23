@@ -107,7 +107,6 @@ contains
 
     integer :: max_size, dim4syms
     integer :: idir, iatom, iop, verbosity, point_group
-    real(8) :: determinant
     real(8) :: lattice(1:3, 1:3)
     real(8), allocatable :: position(:, :)
     integer, allocatable :: typs(:)
@@ -466,8 +465,7 @@ contains
     integer,               intent(in) :: dim, periodic_dim
     integer,               intent(in) :: iunit
     
-    integer :: iop, ind
-    type(symm_op_t) :: tmpop   
+    integer :: iop
  
     PUSH_SUB(symmetries_write_info)
     

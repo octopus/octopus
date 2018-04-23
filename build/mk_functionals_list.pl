@@ -67,7 +67,13 @@ print OUT <<"EndOfHeader";
 !% Libxc documentation</a>. The list provided here is from libxc 2.2.3; if you have
 !% linked against a different libxc version, you may have a somewhat different set
 !% of available functionals. Note that kinetic-energy functionals are not supported.
-!% <br>Defaults:
+!%
+!% The default functional will be selected by Octopus to be consistent
+!% with the pseudopotentials you are using. If you are not using
+!% pseudopotentials, Octopus cannot determine the functional used to
+!% generate the pseudopotential, or the pseudopotential functionals
+!% are inconsistent, Octopus will use the following defaults:
+!%
 !% <br>1D: <tt>lda_x_1d + lda_c_1d_csc</tt>
 !% <br>2D: <tt>lda_x_2d + lda_c_2d_amgb</tt>
 !% <br>3D: <tt>lda_x + lda_c_pz_mod</tt>

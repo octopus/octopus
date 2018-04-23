@@ -1,6 +1,8 @@
 # -*- coding: utf-8 mode: shell-script -*-
 #
 
+PseudopotentialSet = hgh_lda
+
 CalculationMode = gs
 FromScratch = yes
 ExperimentalFeatures = yes
@@ -11,10 +13,6 @@ ExperimentalFeatures = yes
 
 UnitsOutput = ev_angstrom
 ExcessCharge = -1
-
-%Species
-  'Cl' | species_pseudo | db_file | "HGH/Cl.hgh" 
-%
 
 BoxShape = minimum
 radius = 5.0*angstrom

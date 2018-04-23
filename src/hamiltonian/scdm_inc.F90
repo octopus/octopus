@@ -30,20 +30,13 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   integer :: icenter(3), ind_center
 
   integer :: nn(3)
-  R_TYPE, allocatable :: KSt(:,:)
   R_TYPE, allocatable :: SCDM_temp(:,:), Pcc(:,:), SCDM_matrix(:,:)
-  R_TYPE, allocatable :: rho(:), pot(:), rho2(:)
-  FLOAT  :: exx, error, error_tmp
+  FLOAT  :: error
   R_TYPE, allocatable ::  state_global(:), temp_state(:,:),  temp_column(:) !< work arrays
   integer,  allocatable :: temp_box(:,:,:)
   integer :: ix(3), nr(3,2)
   logical :: out_of_index_range(3), out_of_mesh(3)
   FLOAT, allocatable :: lxyz_domains(:,:),  lxyz_global(:), lxyz_local(:)
-
-  FLOAT :: temp(3)
-  character(len=50) :: name
-  type(cube_function_t) :: cf
-  integer :: sender
 
   PUSH_SUB(X(scdm_localize))
   ! check if already localized
@@ -424,12 +417,20 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
   R_TYPE, allocatable ::  state_global(:), temp_state(:,:)
   R_TYPE, allocatable :: KSt(:,:)
   R_TYPE, allocatable :: psi(:, :)
-  integer :: ii,ist,  count, sender, ik, jj, lnst
+  integer :: ii,ist,  count, ik, lnst
   logical :: do_serial
-  integer :: psi_block(2), psi_desc(BLACS_DLEN), blacs_info
-  FLOAT :: tmp2
+  integer :: psi_block(2), blacs_info
   integer, allocatable :: ipiv(:)
-  integer :: rwsize, np_start
+#ifdef HAVE_SCALAPACK
+  integer :: psi_desc(BLACS_DLEN)
+#ifndef R_TREAL
+  integer :: rwsize
+  FLOAT :: tmp2
+#endif
+#endif
+#ifdef HAVE_MPI
+  integer :: sender
+#endif
 
   PUSH_SUB(X(scdm_rrqr))
   call profiling_in(prof_scdm_QR,"SCDM_QR")

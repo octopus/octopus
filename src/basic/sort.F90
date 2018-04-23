@@ -61,7 +61,7 @@ module sort_oct_m
   end interface sort
 
   interface matrix_sort
-    module procedure dmatrix_sort, zmatrix_sort
+    module procedure dmatrix_sort, zmatrix_sort, imatrix_sort
   end interface matrix_sort
 
 contains

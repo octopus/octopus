@@ -31,7 +31,7 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask) result(dd)
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
-  dd = M_ZERO
+  dd = R_TOTYPE(M_ZERO)
   if (mesh%use_curvilinear) then
     do ip = 1, mesh%np
       dd = dd + ff(ip)*mesh%vol_pp(ip)
@@ -133,7 +133,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
 #endif
 
   if(mesh%use_curvilinear) then
-    dotp = M_ZERO
+    dotp = R_TOTYPE(M_ZERO)
     ! preprocessor conditionals necessary since blas_dotu only exists for complex input
 #ifdef R_TCOMPLEX
     if (.not. dotu_) then
@@ -188,7 +188,7 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu, np) result(dotp)
      !! no complex conjugation.  Default is false.
   integer, optional, intent(in) :: np
 
-  integer :: idim, np_
+  integer :: idim
 
   PUSH_SUB(X(mf_dotp_2))
 
@@ -300,8 +300,7 @@ subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
   logical, optional, intent(in)  :: normalized !< whether generate states should have norm 1, true by default
   
   integer, save :: iseed = 123
-  integer :: idim, ip
-  R_BASE  :: aa(MAX_DIM), rr
+  R_BASE  :: rr
   type(profile_t), save :: prof
 
   PUSH_SUB(X(mf_random))
@@ -314,7 +313,7 @@ subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
 
   if(present(shift)) then
     !We skip shift times the seed 
-    call shiftseed(iseed, shift, ff(1))
+    call shiftseed(iseed, shift)
   end if
 
   call quickrnd(iseed, mesh%np, ff(1:mesh%np))
@@ -611,7 +610,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th, inside)
   if(abs(optional_default(cmplxscl_th, M_ZERO)) > M_EPSILON) then
     factor = R_TOPREC(exp(M_zI * cmplxscl_th))
   else
-    factor = M_ONE
+    factor = R_TOTYPE(M_ONE)
   endif
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)

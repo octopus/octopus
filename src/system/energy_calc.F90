@@ -140,8 +140,15 @@ contains
 
     if (hm%pcm%run_pcm) then
       hm%pcm%counter = hm%pcm%counter + 1
-      call pcm_elect_energy(hm%geo, hm%pcm, hm%energy%int_ee_pcm, hm%energy%int_en_pcm, &
-                                             hm%energy%int_ne_pcm, hm%energy%int_nn_pcm)
+      if (hm%pcm%localf) then
+        call pcm_elect_energy(hm%geo, hm%pcm, hm%energy%int_ee_pcm, hm%energy%int_en_pcm, &
+                                              hm%energy%int_ne_pcm, hm%energy%int_nn_pcm, &
+                                              E_int_e_ext = hm%energy%int_e_ext_pcm,      &
+                                              E_int_n_ext = hm%energy%int_n_ext_pcm       )
+      else
+        call pcm_elect_energy(hm%geo, hm%pcm, hm%energy%int_ee_pcm, hm%energy%int_en_pcm, &
+                                              hm%energy%int_ne_pcm, hm%energy%int_nn_pcm  )
+      end if
     end if
 
     select case(hm%theory_level)
@@ -168,7 +175,8 @@ contains
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues &
         - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation + hm%energy%vdw - hm%energy%intnvxc - evxctau &
         - hm%energy%pcm_corr + hm%energy%int_ee_pcm + hm%energy%int_en_pcm &
-                             + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm
+                             + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm &
+                             + hm%energy%int_e_ext_pcm + hm%energy%int_n_ext_pcm
 
       if (cmplxscl) then
         hm%energy%Imtotal = hm%energy%Imeigenvalues - hm%energy%Imhartree + hm%energy%Imexchange + hm%energy%Imcorrelation &
@@ -236,12 +244,15 @@ contains
       
       if (hm%pcm%run_pcm) then
           write(message(1),'(6x,a, f18.8)')'E_e-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_ee_pcm + &
-                                                                                                  hm%energy%int_en_pcm   )
+                                                                                                  hm%energy%int_en_pcm + &
+                                                                                                  hm%energy%int_e_ext_pcm )
           write(message(2),'(6x,a, f18.8)')'E_n-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_nn_pcm + &
-                                                                                                  hm%energy%int_ne_pcm   )
+                                                                                                  hm%energy%int_ne_pcm + &
+                                                                                                  hm%energy%int_n_ext_pcm )
           write(message(3),'(6x,a, f18.8)')'E_M-solvent = ',  units_from_atomic(units_out%energy, &
                                                                              hm%energy%int_ee_pcm + hm%energy%int_en_pcm + &
-                                                                             hm%energy%int_nn_pcm + hm%energy%int_ne_pcm   )
+                                                                             hm%energy%int_nn_pcm + hm%energy%int_ne_pcm + &
+                                                                          hm%energy%int_e_ext_pcm + hm%energy%int_n_ext_pcm )
           call messages_info(3, iunit)
       end if
 

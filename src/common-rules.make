@@ -51,6 +51,8 @@ AM_CPPFLAGS = \
 AM_CCASFLAGS = \
 	-I$(top_builddir)/
 
+AM_CXXFLAGS = -I$(top_srcdir)/external_libs/rapidxml
+
 # ---------------------------------------------------------------
 # Define libraries here.
 # ---------------------------------------------------------------

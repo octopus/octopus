@@ -6,12 +6,12 @@ TestGroups : short-run, pseudopotentials
 Enabled    : Yes
 
 Input      : 01-sg15-h.01-gs.inp
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -0.44602615
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.23311090
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 0.28362035
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.19351844
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.03970618
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 0.42125337
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -0.91767516
-match ; Non-local energy   ; GREPFIELD(static/info, 'Non-local   =', 3) ; -0.03260742
-match ; Eigenvalue         ; GREPFIELD(static/info, ' 1   --', 3) ; -0.233111
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -0.44601230
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.23311726
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.28359181
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.19349364
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.03970461
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  0.42094016
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -0.91734586
+match ; Non-local energy   ; GREPFIELD(static/info, 'Non-local   =', 3) ; -0.03254443
+match ; Eigenvalue         ; GREPFIELD(static/info, ' 1   --', 3) ;       -0.233117

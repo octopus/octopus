@@ -188,6 +188,7 @@ contains
     FLOAT :: rr, rr2, rr6, dd, sr, dffdrr, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra, deabdrab
     FLOAT, allocatable :: coordinates(:,:), volume_ratio(:), dvadens(:), dvadrr(:), derivative_coeff(:), & 
                           dr0dvra(:), r0ab(:,:), c6ab(:,:)
+
     integer, allocatable :: zatom(:)
     FLOAT :: x_j(1:MAX_DIM)
 

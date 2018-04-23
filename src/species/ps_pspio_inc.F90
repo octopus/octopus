@@ -64,15 +64,14 @@
     call check_error(fpspio_pspdata_read(pspdata, PSPIO_FMT_UNKNOWN, filename2))
 
     ! General info
-    ps%flavour = ps_get_type(filename)
     ps%label = label
     ps%ispin = ispin
     ps%hamann = .false.
     ps%z = z
     ps%conf%z = nint(z)
     call ps_pspio_read_info(ps, pspdata)
-    lmax = ps%l_max
-    write(message(1), '(a,i2,a)') "Info: l = ", ps%l_max, " is maximum angular momentum considered."
+    lmax = ps%lmax
+    write(message(1), '(a,i2,a)') "Info: l = ", ps%lmax, " is maximum angular momentum considered."
     call messages_info(1)
 
     ! Mesh
@@ -101,7 +100,7 @@
     ps%has_long_range = .true.
     ps%is_separated = .false.
 
-    ps%local = ps%l_max == 0 .and. ps%l_loc == 0
+    ps%local = ps%lmax == 0 .and. ps%llocal == 0
     
     !Free memory
     call fpspio_pspdata_free(pspdata)
@@ -125,7 +124,7 @@
     PUSH_SUB(ps_pspio_read_info)
 
     ps%conf%symbol = fpspio_pspdata_get_symbol(pspdata)
-    ps%l_max = fpspio_pspdata_get_l_max(pspdata)
+    ps%lmax = fpspio_pspdata_get_l_max(pspdata)
     ps%z_val = fpspio_pspdata_get_zvalence(pspdata)
 
     POP_SUB(ps_pspio_read_info)
@@ -281,7 +280,7 @@
     end if
 
     ! Local potential
-    ps%l_loc = fpspio_pspdata_get_l_local(pspdata)
+    ps%llocal = fpspio_pspdata_get_l_local(pspdata)
     vlocal = fpspio_pspdata_get_vlocal(pspdata)
     SAFE_ALLOCATE(v_local(1:ps%g%nrval))
     do ir = 1, ps%g%nrval
@@ -303,10 +302,10 @@
       ps%kbc = 1
     end if
 
-    SAFE_ALLOCATE(ps%kb (0:ps%l_max, 1:ps%kbc))
-    SAFE_ALLOCATE(ps%dkb(0:ps%l_max, 1:ps%kbc))
-    SAFE_ALLOCATE(ps%h  (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
-    SAFE_ALLOCATE(was_init(0:ps%l_max, 1:ps%kbc))
+    SAFE_ALLOCATE(ps%kb (0:ps%lmax, 1:ps%kbc))
+    SAFE_ALLOCATE(ps%dkb(0:ps%lmax, 1:ps%kbc))
+    SAFE_ALLOCATE(ps%h  (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
+    SAFE_ALLOCATE(was_init(0:ps%lmax, 1:ps%kbc))
     SAFE_ALLOCATE(proj(1:ps%g%nrval))
     call spline_init(ps%kb)
     call spline_init(ps%dkb)
@@ -338,7 +337,7 @@
 
     !Make sure all projector splines were initialized
     proj = M_ZERO
-    do l = 0, ps%l_max
+    do l = 0, ps%lmax
       do ikbc = 1, ps%kbc
         if (.not. was_init(l, ikbc)) then
           call spline_fit(ps%g%nrval, ps%g%rofi, proj, ps%kb(l, ikbc))

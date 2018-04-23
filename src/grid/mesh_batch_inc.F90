@@ -27,12 +27,14 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   integer :: ist, jst, idim, sp, block_size, ep, ip, ldaa, ldbb, indb, jndb
   R_TYPE :: ss, tmp1, tmp2
   R_TYPE, allocatable :: dd(:, :)
-  type(profile_t), save :: prof, profgemm, profcomm
-  logical :: use_blas, reduce_, conj
+  logical :: use_blas, conj
   type(accel_mem_t) :: dot_buffer
-  integer            :: ierr
-  type(profile_t), save :: prof_copy, prof_gemmcl
-
+  type(profile_t), save :: prof_copy, prof_gemmcl, prof, profgemm
+#ifdef HAVE_MPI
+  logical :: reduce_
+  type(profile_t), save :: profcomm
+#endif
+  
   PUSH_SUB(X(mesh_batch_dotp_matrix))
   call profiling_in(prof, "DOTP_BATCH")
 
@@ -381,12 +383,11 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   logical, optional, intent(in)    :: reduce
   logical, optional, intent(in)    :: cproduct
 
-  integer :: ist, indb, idim, ip, bsize, status
+  integer :: ist, indb, idim, ip, status
   logical :: reduce_, cproduct_
   type(profile_t), save :: prof, profcomm
   R_TYPE, allocatable :: tmp(:), cltmp(:, :)
   type(accel_mem_t)  :: dot_buffer
-  type(profile_t), save :: prof_copy
 
   PUSH_SUB(X(mesh_batch_dotp_vector))
   call profiling_in(prof, "DOTPV_BATCH")
@@ -731,7 +732,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   type(batch_t),           intent(in)    :: aa
   FLOAT,                   intent(out)   :: nrm2(:)
 
-  integer :: ist, idim, indb, ip, status
+  integer :: ist, idim, indb, ip
   R_TYPE :: a0
   FLOAT, allocatable :: scal(:), ssq(:)
   type(accel_mem_t)  :: nrm2_buffer
