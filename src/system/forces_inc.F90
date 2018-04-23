@@ -347,6 +347,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl,
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call profiling_in(prof_comm, "FORCES_COMM")
     call comm_allreduce(st%st_kpt_mpi_grp%comm, force_nl)
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, force_u)
     call comm_allreduce(st%st_kpt_mpi_grp%comm, grad_rho)
     call profiling_out(prof_comm)
   end if
