@@ -156,6 +156,8 @@ subroutine output_etsf(st, gr, geo, dir, outp)
       call output_etsf_kpoints_write(gr%sb, ncid)
       call output_etsf_basisdata_write(gr%mesh, shell, ncid)
     end if
+ 
+    call fourier_shell_end(shell)
    
     call output_etsf_wfs_pw_write(st, gr%mesh, gr%sb, zcube, cf, shell, ncid)
 
@@ -164,7 +166,6 @@ subroutine output_etsf(st, gr, geo, dir, outp)
       if (.not. lstat) call output_etsf_error(error_data)
     end if
 
-    call fourier_shell_end(shell)
     call cube_function_free_fs(zcube, cf)
     call zcube_function_free_rs(zcube, cf)
   end if
@@ -699,7 +700,7 @@ end subroutine output_etsf_wfs_pw_dims
 
 ! --------------------------------------------------------
 
-subroutine output_etsf_wfs_pw_write(st, mesh, sb, cube, cf, shell, ncid)
+subroutine output_etsf_wfs_pw_write(st, mesh, sb, cube, cf, ncid)
   type(states_t),        intent(in)    :: st
   type(mesh_t),          intent(in)    :: mesh
   type(simul_box_t),     intent(in)    :: sb
@@ -716,6 +717,7 @@ subroutine output_etsf_wfs_pw_write(st, mesh, sb, cube, cf, shell, ncid)
   integer :: nkpoints, nspin, zdim
   integer :: idim, ist, iq, ikpoint, ispin
   integer :: ig, ng, ix, iy, iz
+  type(fourier_shell_t) :: shell
 
   PUSH_SUB(output_etsf_wfs_pw_write)
 
@@ -731,8 +733,6 @@ subroutine output_etsf_wfs_pw_write(st, mesh, sb, cube, cf, shell, ncid)
   SAFE_ALLOCATE(local_wfs(1:zdim, 1:ng, 1:st%d%dim, 1:st%nst, 1:nkpoints, 1:nspin))
 
   SAFE_ALLOCATE(zpsi(1:mesh%np))
-
-  call fourier_shell_end(shell)
 
   !TODO: This loop should be parallelized in kpt and states
   do iq = 1, st%d%nik
