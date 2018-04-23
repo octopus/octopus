@@ -785,7 +785,7 @@ contains
 
   subroutine states_dump_rho(restart, st, gr, ierr, iter)
     type(restart_t),      intent(in)    :: restart
-    type(states_t),       intent(inout) :: st
+    type(states_t),       intent(in)    :: st
     type(grid_t),         intent(in)    :: gr
     integer,              intent(out)   :: ierr
     integer,    optional, intent(in)    :: iter

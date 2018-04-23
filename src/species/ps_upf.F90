@@ -55,6 +55,7 @@ module ps_upf_oct_m
     integer      :: n_wfs    !< number of wavefunctions
     integer, pointer :: n(:)
     integer, pointer :: l(:)
+    FLOAT, pointer :: j(:)
     FLOAT, pointer :: occ(:)
 
     !>Radial mesh
@@ -141,6 +142,7 @@ contains
     ps_upf%conf%n(1:ps_upf%n_wfs) = ps_upf%n(1:ps_upf%n_wfs)
     ps_upf%conf%l(1:ps_upf%n_wfs) = ps_upf%l(1:ps_upf%n_wfs)
     ps_upf%conf%occ(1:ps_upf%n_wfs,1) = ps_upf%occ(1:ps_upf%n_wfs)
+    ps_upf%conf%j(1:ps_upf%n_wfs) = ps_upf%j(1:ps_upf%n_wfs)
 
     if(ps_upf%n_wfs > 0) ps_upf%l_max = maxval(ps_upf%l)
 
@@ -191,6 +193,7 @@ contains
     SAFE_DEALLOCATE_P(ps_upf%n)
     SAFE_DEALLOCATE_P(ps_upf%l)
     SAFE_DEALLOCATE_P(ps_upf%occ)
+    SAFE_DEALLOCATE_P(ps_upf%j)
     SAFE_DEALLOCATE_P(ps_upf%core_density)
     SAFE_DEALLOCATE_P(ps_upf%r)
     SAFE_DEALLOCATE_P(ps_upf%drdi)
@@ -244,6 +247,7 @@ contains
     SAFE_ALLOCATE(ps_upf%n(1:ps_upf%n_wfs))
     SAFE_ALLOCATE(ps_upf%l(1:ps_upf%n_wfs))
     SAFE_ALLOCATE(ps_upf%occ(1:ps_upf%n_wfs))
+    SAFE_ALLOCATE(ps_upf%j(1:ps_upf%n_wfs))
 
     ! els(1)      lchi(1)      oc(1)
     !  ...
@@ -368,7 +372,7 @@ contains
       ps_upf%kb_nc = 2
       call init_tag(unit, "PP_ADDINFO", .true.)
       do i = 1, ps_upf%n_wfs
-        read(unit,*) dummy
+        read(unit,*) dummy, idummy, idummy, ps_upf%j(i) 
       end do
       SAFE_ALLOCATE(ps_upf%proj_j(1:ps_upf%n_proj))
       do i = 1, ps_upf%n_proj
@@ -377,6 +381,7 @@ contains
       read(unit,*) dummy
       call check_end_tag(unit, "PP_ADDINFO")
     else
+      ps_upf%j(1:ps_upf%n_wfs) = M_ZERO
       nullify(ps_upf%proj_j)
     end if
 
@@ -562,6 +567,7 @@ contains
     SAFE_ALLOCATE(ps_upf%l(1:ps_upf%n_wfs))
     SAFE_ALLOCATE(ps_upf%occ(1:ps_upf%n_wfs))
     SAFE_ALLOCATE(ps_upf%wfs(1:ps_upf%np, 1:ps_upf%n_wfs))
+    SAFE_ALLOCATE(ps_upf%j(1:ps_upf%n_wfs))
 
     do iwfs = 1, ps_upf%n_wfs
 
@@ -610,6 +616,7 @@ contains
 
     !Apparently j is not given in the file
     nullify(ps_upf%proj_j)
+    ps_upf%j(1:ps_upf%n_wfs) = M_ZERO
     
     POP_SUB(ps_upf_file_read_version2)
 

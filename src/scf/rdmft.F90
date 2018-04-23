@@ -40,10 +40,12 @@ module rdmft_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
+  use restart_oct_m
   use simul_box_oct_m
   use species_oct_m
   use states_oct_m
   use states_calc_oct_m
+  use states_restart_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
@@ -83,7 +85,7 @@ contains
   ! ----------------------------------------
 
   ! scf for the occupation numbers and the natural orbitals
-  subroutine scf_rdmft(gr, geo, st, ks, hm, outp, max_iter)
+  subroutine scf_rdmft(gr, geo, st, ks, hm, outp, max_iter, restart_dump)
     type(grid_t),  target, intent(inout) :: gr  !< grid
     type(geometry_t),      intent(inout) :: geo !< geometry
     type(states_t),target, intent(inout) :: st  !< States
@@ -91,20 +93,17 @@ contains
     type(hamiltonian_t),   intent(inout) :: hm  !< Hamiltonian
     type(output_t),        intent(in)    :: outp !< output
     integer,               intent(in)    :: max_iter
-
+    type(restart_t),       intent(in)    :: restart_dump
     
-    integer :: iter, icount, ip, ist, iatom
+    integer :: iter, icount, ip, ist, iatom, ierr, maxcount
     FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, sum_charge, rr, rel_ener
-    FLOAT, allocatable :: species_charge_center(:), psi(:, :)
+    FLOAT, allocatable :: species_charge_center(:), psi(:, :), stepsize(:)
     logical :: conv, gs_run_
-    character(len=MAX_PATH_LEN) :: dirname
-    
+    character(len=MAX_PATH_LEN) :: dirname    
 
     PUSH_SUB(scf_rdmft)
 
     gs_run_ = .true.
-
-    SAFE_ALLOCATE(species_charge_center(1:geo%space%dim))
 
     if (hm%d%ispin /= 1) then
       call messages_not_implemented("RDMFT exchange function not yet implemented for spin_polarized or spinors")
@@ -120,106 +119,143 @@ contains
       call messages_not_implemented("RDMFT parallel in states")
     end if
 
-    ! Find the charge center of they system  
-    call geometry_dipole(geo,species_charge_center)
+    call rdmft_init() 
    
-    sum_charge = M_ZERO
 
-    do iatom = 1, geo%natoms
-      sum_charge = sum_charge + species_zval(geo%atom(iatom)%species)
-    end do
-   
-    
-    species_charge_center = species_charge_center/(sum_charge*P_PROTON_CHARGE)
-
-
+    !set initial values
     energy_old = CNST(1.0e20)
     xpos = M_ZERO 
     xneg = M_ZERO
     energy = M_ZERO 
     conv = .false.
-   
-
-    !Localize the starting orbitals so that they decay with the HOMO energy
-
-    SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
+    if(rdm%do_basis.eqv..false.) then
+      !stepsize for steepest decent
+      SAFE_ALLOCATE(stepsize(1:st%nst))
+      stepsize = 0.1
+      maxcount = 10
+    else
+      maxcount = 50
+    endif
     
-    
-    do ist = 1, st%nst
-      call states_get_state(st, gr%mesh, ist, 1, psi)
-      do ip = 1, gr%mesh%np
-        call mesh_r(gr%mesh, ip, rr, species_charge_center)
-        if (st%eigenval(ist, 1) < M_ZERO) then
-          psi(ip, 1) = psi(ip, 1)&
-            *exp((-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF), 1))) + sqrt(-M_TWO*st%eigenval(ist, 1)))*rr)
-        else
-          psi(ip, 1) = psi(ip, 1)*exp(-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF), 1)))*rr)
-        end if
+    !If using a basis set, localize the starting orbitals
+    if(rdm%do_basis.eqv..true.) then
+      !Find the charge center of they system  
+      SAFE_ALLOCATE(species_charge_center(1:geo%space%dim))
+      call geometry_dipole(geo,species_charge_center)
+      sum_charge = M_ZERO
+      do iatom = 1, geo%natoms
+        sum_charge = sum_charge + species_zval(geo%atom(iatom)%species)
       end do
-      call states_set_state(st, gr%mesh, ist, 1, psi)
-    end do
+      species_charge_center = species_charge_center/(sum_charge*P_PROTON_CHARGE)
+      !Localize orbitals
+      SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
+      do ist = 1, st%nst
+        call states_get_state(st, gr%mesh, ist, 1, psi)
+        do ip = 1, gr%mesh%np
+          call mesh_r(gr%mesh, ip, rr, species_charge_center)
+          if (st%eigenval(ist, 1) < M_ZERO) then
+            psi(ip, 1) = psi(ip, 1)&
+              *exp((-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF), 1))) + sqrt(-M_TWO*st%eigenval(ist, 1)))*rr)
+          else
+            psi(ip, 1) = psi(ip, 1)*exp(-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF), 1)))*rr)
+          end if
+        end do
+        call states_set_state(st, gr%mesh, ist, 1, psi)
+      end do
+      ! Orthogonalize the resulting orbitals
+      call dstates_orthogonalization_full(st,gr%mesh,1)
 
-    SAFE_DEALLOCATE_A(psi)
+      SAFE_DEALLOCATE_A(psi)
+      SAFE_DEALLOCATE_A(species_charge_center)
+    endif
     
-    ! Orthogonalize the resulting orbitals
-    call dstates_orthogonalization_full(st,gr%mesh,1)
-
-    write(message(1),'(a)') 'Initial minimization of occupation numbers'
-    call messages_info(1)
-    
-    call rdmft_init() 
     ! Start the actual minimization, first step is minimization of occupation numbers
-    ! Orbital minimization is according to Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem.
+    ! Orbital minimization is according to Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem. (scf_orb) or
+    ! using steepest decent (scf_orb_direct)
     do iter = 1, max_iter
-      write(message(1),'(a, 1x, i4)') 'RDM Iteration:', iter
-      call messages_info(1)
-
+      write(message(1), '(a)') '**********************************************************************'
+      write(message(2),'(a, i4)') 'RDM Iteration:', iter
+      call messages_info(2)
       call scf_occ(rdm, gr, hm, st, energy_occ)
       ! Diagonalization of the generalized Fock matrix 
-      do icount = 1, 50 ! still under investigation how many iterations we need
-        call scf_orb(rdm, gr, geo, st, ks, hm, energy)
+      write(message(1), '(a)') 'Optimization of natural orbitals'
+      call messages_info(1)
+      do icount = 1, maxcount !still under investigation how many iterations we need
+        if (rdm%do_basis.eqv..false.) then
+          call scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
+        else
+          call scf_orb(rdm, gr, geo, st, ks, hm, energy)
+        end if
         energy_dif = energy - energy_old
         energy_old = energy
-        if (abs(energy_dif)/abs(energy).lt. rdm%conv_ener.and.rdm%maxFO < 1.d3*rdm%conv_ener)  exit
-        if (energy_dif < M_ZERO) then
-          xneg = xneg + 1
-        else
-          xpos = xpos + 1
-        end if
-        if (xneg > CNST(1.5e0)*xpos) then
-          rdm%scale_f = CNST(1.01)*rdm%scale_f
-        elseif (xneg > CNST(1.1e0)*xpos) then
-          rdm%scale_f = rdm%scale_f
-        else
-          rdm%scale_f = CNST(0.95)* rdm%scale_f 
-        end if
-        xneg = M_ZERO
-        xpos = M_ZERO
+        if (rdm%do_basis.eqv. .true.) then
+          if (abs(energy_dif)/abs(energy).lt. rdm%conv_ener.and.rdm%maxFO < 1.d3*rdm%conv_ener)  exit
+          if (energy_dif < M_ZERO) then 
+            xneg = xneg + 1
+          else
+            xpos = xpos + 1
+          end if
+          if (xneg > CNST(1.5e0)*xpos) then
+            rdm%scale_f = CNST(1.01)*rdm%scale_f
+          elseif (xneg < CNST(1.1e0)*xpos) then 
+            rdm%scale_f = CNST(0.95)* rdm%scale_f 
+          end if
+        endif !rdm%do_basis
         rdm%iter = rdm%iter + 1
-      end do
+      end do !icount
+      xneg = M_ZERO
+      xpos = M_ZERO
       
       rel_ener = abs(energy_occ-energy)/abs(energy)
 
-      write(message(1),'(a,es15.5)') ' etot RDMFT after orbital minim = ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+      write(message(1),'(a,es15.5)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
       call messages_info(1)
+      if (rdm%do_basis.eqv..true.) then
+        if ((rel_ener < rdm%conv_ener).and.rdm%maxFO < 1.e3*rdm%conv_ener) then
+          conv = .true.
+        end if
+      else
+        if (rel_ener < rdm%conv_ener) then
+          conv = .true.
+        end if
+      endif
+ 
+      if (rdm%toler > 1e-4) rdm%toler = rdm%toler*1e-1 !Is this still okay or does it restrict the possible convergence?
 
+      ! save restart information
+      if ( (conv .or. (modulo(iter, outp%restart_write_interval) == 0) &
+        .or. iter == max_iter)) then
+        call states_dump(restart_dump, st, gr, ierr, iter=iter) 
+        if (ierr /= 0) then
+          message(1) = 'Unable to write states wavefunctions.'
+          call messages_warning(1)
+        end if
+      endif
+      ! write output for iterations if requested
       if(outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
         call output_all(outp, gr, geo, st, hm, ks, dirname)
       end if
 
-      if ((rel_ener < rdm%conv_ener).and.rdm%maxFO < 1.e3*rdm%conv_ener) then
-        conv = .true.
-        exit
-      end if
-      if (rdm%toler > 1e-4) rdm%toler = rdm%toler*1e-1
+      if (conv) exit
     end do
-   
+
     if(conv) then 
+      ! output final information
+      !if (rdm%do_basis.eqv..false.) then
+        !call scf_orb(rdm, gr, geo, st, ks, hm, energy) !NH this call changes the energy again, needs to be replaced
+        !write(message(1),'(a,es15.5)')  'The maximum non diagonal element of the matrix F formed by the Lagrange multiplyers is ', &
+        !                                rdm%maxFO
+        !call messages_info(1)
+      !endif
       write(message(1),'(a,i3,a)')  'The calculation converged after ',iter,' iterations'
-      write(message(2),'(a,es15.5)')  'The total energy is ', energy_occ+hm%ep%eii
+      write(message(2),'(a,es15.5)')  'The total energy is ', units_from_atomic(units_out%energy,energy + hm%ep%eii)
       call messages_info(2)
+      if(gs_run_) then 
+        !call scf_write_static(STATIC_DIR, "info") !NH can we turn this on?
+        call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
+      end if
     else
       write(message(1),'(a,i3,a)')  'The calculation did not converge after ', iter, ' iterations '
       write(message(2),'(a,es15.5)') 'Relative energy difference between the last two iterations ', rel_ener
@@ -227,14 +263,8 @@ contains
       call messages_info(3)
     end if
 
-    if(gs_run_) then 
-      ! output final information
-      ! call scf_write_static(STATIC_DIR, "info")
-      call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
-    end if
+    SAFE_DEALLOCATE_A(stepsize)
 
-
-!    call output_states(st,gr,geo,STATIC_DIR,outp)  
     call rdmft_end()
  
     POP_SUB(scf_rdmft) 
@@ -397,6 +427,8 @@ contains
 
     PUSH_SUB(scf_occ)
 
+    write(message(1),'(a)') 'Optimization of occupation numbers'
+    call messages_info(1)
     
     SAFE_ALLOCATE(occin(1:st%nst, 1:st%d%nik))
     SAFE_ALLOCATE(theta(1:st%nst))
@@ -506,16 +538,17 @@ contains
  
     energy = objective
     
-    write(message(1),'(a,1x,f11.4)') 'Occupations sum', rdm%occsum
-    write(message(2),'(a,es15.5)') ' etot RDMFT after occ minim = ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
-    write(message(3),'(a4,1x,a12)')'#st','Occupation'
-    call messages_info(3)   
+    write(message(1),'(a4,5x,a12)')'#st','Occupation'
+    call messages_info(1)   
 
     do ist = 1, st%nst
       write(message(1),'(i4,3x,f11.4)') ist, st%occ(ist, 1)
       call messages_info(1)
     end do
 
+    write(message(1),'(a,1x,f11.4)') 'Sum of occupation numbers', rdm%occsum
+    write(message(2),'(a,es15.5)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+    call messages_info(2)   
 
     SAFE_DEALLOCATE_A(occin)
     SAFE_DEALLOCATE_A(theta)
@@ -610,11 +643,11 @@ contains
     FO = M_ZERO
     if (rdm%do_basis.eqv..false.) then 
       call density_calc (st,gr,st%rho)
-      call v_ks_calc(ks, hm,st,geo)
+      call v_ks_calc(ks,hm,st,geo)
       call hamiltonian_update(hm, gr%mesh)
     end if
 
-    call construct_f(hm,st,gr,lambda, rdm)
+    call construct_f(hm,st,gr,lambda,rdm)
     
     !Set up FO matrix 
     if (rdm%iter==1) then
@@ -647,12 +680,241 @@ contains
     if (rdm%do_basis.eqv..true.) call sum_integrals(rdm) ! to calculate rdm%Coul and rdm%Exch with the new rdm%vecnat 
     call rdm_derivatives(rdm, hm, st, gr)
     call total_energy_rdm(rdm, st%occ(:,1), energy)
+
     SAFE_DEALLOCATE_A(lambda) 
     SAFE_DEALLOCATE_A(FO) 
 
     POP_SUB(scf_orb)
 
   end subroutine scf_orb
+
+ 
+  !---------------------------------------------------------------
+  ! Minimize the total energy wrt. an orbital by steepest descent
+  !---------------------------------------------------------------
+
+  subroutine scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
+    
+    type(rdm_t),          intent(inout) :: rdm
+    type(grid_t),         intent(inout) :: gr !< grid
+    type(geometry_t),     intent(inout) :: geo !< geometry
+    type(states_t),       intent(inout) :: st !< States
+    type(v_ks_t),         intent(inout) :: ks !< Kohn-Sham
+    type(hamiltonian_t),  intent(inout) :: hm !< Hamiltonian
+    FLOAT,                intent(inout) :: stepsize(1:st%nst) !< step for steepest decent
+    FLOAT,                intent(out)   :: energy    
+
+    type(states_t)     :: states_old
+
+    integer            :: ist, jst, lst, ip, itry, trymax
+    FLOAT              :: scaleup, scaledown, norm, projection
+    FLOAT              :: energy_old, energy_diff, smallstep, thresh
+    FLOAT, allocatable :: E_deriv(:), dpsi(:,:), dpsi2(:,:)  
+
+    PUSH_SUB(scf_orb_direct)
+
+    SAFE_ALLOCATE(E_deriv(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
+
+    E_deriv = M_ZERO
+
+    !set parameters for steepest decent
+    scaleup = 2.4d0
+    scaledown = 0.5d0
+    trymax = 5
+    smallstep = 1d-10
+    thresh = 1d-10
+
+    call density_calc (st, gr, st%rho)
+    call v_ks_calc(ks, hm, st, geo)
+    call hamiltonian_update(hm, gr%mesh)
+
+    call rdm_derivatives(rdm, hm, st, gr)
+    call total_energy_rdm(rdm, st%occ(:,1), energy)
+    !store current energy
+    energy_old = energy
+
+    do ist = 1, st%nst
+      !do not try to improve states that are converged
+      if (stepsize(ist).lt. smallstep) cycle
+
+      !store current states
+      call states_copy(states_old, st)
+
+      !calculate the derivative with respect to state ist (also removes changes in direction of ist and normalizes)
+      call E_deriv_calc(gr, st, hm, ist, E_deriv)    
+      call states_get_state(st, gr%mesh, ist, 1, dpsi)
+      
+      !add a step along the gradient
+      do itry = 1, trymax
+        forall(ip=1:gr%mesh%np_part)
+          dpsi(ip,1) = dpsi(ip,1) - E_deriv(ip)*stepsize(ist)
+        end forall      
+        !orthogonalize new orbital to all orbitals with smaller index and normalize
+        do jst = 1, ist - 1
+          call states_get_state(st, gr%mesh, jst, 1, dpsi2)
+          projection = dmf_dotp(gr%mesh, dpsi(:,1), dpsi2(:,1))
+          forall(ip = 1:gr%mesh%np_part)
+            dpsi(ip, 1) = dpsi(ip, 1) - projection*dpsi2(ip, 1)
+          end forall
+        enddo !jst
+        norm = sqrt(dmf_dotp(gr%mesh, dpsi(:,1), dpsi(:,1)))
+        forall(ip=1:gr%mesh%np_part)
+          dpsi(ip, 1) = dpsi(ip, 1)/norm
+        end forall
+        call states_set_state(st, gr%mesh, ist, 1, dpsi)
+        !orthogonalize all orbitals with larger index to new orbital and normalize
+        do jst = ist + 1, st%nst
+          call states_get_state(st, gr%mesh, jst, 1, dpsi)
+          do lst = ist, jst - 1
+            call states_get_state(st, gr%mesh, lst, 1, dpsi2)
+            projection = dmf_dotp(gr%mesh, dpsi(:,1), dpsi2(:,1))
+            forall(ip = 1:gr%mesh%np_part)
+              dpsi(ip,1) = dpsi(ip,1) - projection*dpsi2(ip,1)
+            end forall
+          enddo !lst
+          norm = sqrt(dmf_dotp(gr%mesh, dpsi(:,1), dpsi(:,1)))
+          forall(ip=1:gr%mesh%np_part)
+            dpsi(ip, 1) = dpsi(ip, 1)/norm
+          end forall
+          call states_set_state(st, gr%mesh, jst, 1, dpsi)
+        enddo !jst
+        
+        !calculate total energy
+        call density_calc (st, gr, st%rho)
+        call v_ks_calc(ks, hm, st, geo)
+        call hamiltonian_update(hm, gr%mesh)
+        call rdm_derivatives(rdm, hm, st, gr)
+        call total_energy_rdm(rdm, st%occ(:,1), energy)
+
+        !check if step lowers the energy
+        energy_diff = energy - energy_old
+
+        if (energy_diff .lt. - thresh) then 
+          !sucessful step
+          stepsize(ist) = stepsize(ist)*scaleup !increase stepsize for this state
+          energy_old = energy
+          exit
+        else 
+          !not sucessful step
+          stepsize(ist) = stepsize(ist)*scaledown !decrease stepsize
+          !undo changes in st and dpsi (cannot use states_copy due to memory leak) 
+          do jst = st%nst, ist, -1
+            call states_get_state(states_old, gr%mesh, jst, 1, dpsi)
+            call states_set_state(st, gr%mesh, jst, 1, dpsi)
+          enddo
+          !if (itry == trymax) then
+          !  write(message(1),'(a,i3,2x,a)') 'for state', ist, 'energy could not be improved'
+          !  call messages_info(1)
+          !endif
+        endif !energy_diff  
+      enddo !itry
+      call states_end(states_old)
+      !scale stepsize for next iteration, check convergence of states
+      stepsize(ist) = scaledown*stepsize(ist)
+      if(abs(stepsize(ist)) .lt. smallstep) then
+        write(message(1),'(a,i3,2x,a)') 'for state', ist, 'the minimal step size is reached'
+        write(message(2),'(a)') 'state is converged'
+        call messages_info(2)
+      endif
+    enddo !ist
+
+    SAFE_DEALLOCATE_A(E_deriv)
+    SAFE_DEALLOCATE_A(dpsi)
+    SAFE_DEALLOCATE_A(dpsi2)
+
+    POP_SUB(scf_orb_direct)
+
+  end subroutine scf_orb_direct
+
+  !--------------------------------------------------------------------
+  ! calculate the derivative of the energy with respect to orbital ist
+  !--------------------------------------------------------------------
+  subroutine E_deriv_calc(gr, st, hm, ist, E_deriv)
+    type(grid_t),         intent(inout) :: gr !< grid
+    type(states_t),       intent(inout) :: st !< States
+    type(hamiltonian_t),  intent(inout) :: hm !< Hamiltonian
+    integer,              intent(in)    :: ist !number of state
+    FLOAT,                intent(out)   :: E_deriv(1:gr%mesh%np_part)
+
+    integer            :: jst, ii, ip
+    FLOAT              :: E_deriv_corr, norm, projection
+    FLOAT, allocatable :: rho_spin(:,:), rho(:), pot(:)
+    FLOAT, allocatable :: hpsi1(:,:), hpsi2(:,:), dpsi(:,:), dpsi2(:,:)
+  
+
+    PUSH_SUB(E_deriv_calc)
+
+    E_deriv = M_ZERO
+
+    SAFE_ALLOCATE(rho_spin(1:gr%mesh%np_part, 1:hm%d%ispin)) 
+    SAFE_ALLOCATE(rho(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(pot(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(hpsi1(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(hpsi2(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
+
+    !Initialize all local arrays to zero
+    hpsi1 = M_ZERO
+    hpsi2 = M_ZERO
+    dpsi  = M_ZERO
+    dpsi2  = M_ZERO
+    rho_spin = M_ZERO    
+    rho = M_ZERO    
+    pot = M_ZERO
+    E_deriv_corr = M_ZERO    
+
+    call density_calc(st, gr, rho_spin)
+    do ii = 1, hm%d%ispin
+      rho(:) = rho_spin(:, ii)
+    end do
+
+    SAFE_DEALLOCATE_A(rho_spin) 
+
+    call dpoisson_solve(psolver, pot, rho, all_nodes=.false.) !the Hartree potential
+    
+    call states_get_state(st, gr%mesh, ist, 1, dpsi)
+
+    call dhamiltonian_apply(hm, gr%der, dpsi, hpsi1, ist, 1, &
+                            & terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
+    call dhamiltonian_apply(hm, gr%der, dpsi, hpsi2, ist, 1, &
+                            & terms = TERM_OTHERS)
+      
+    !bare derivative wrt. state ist   
+    forall(ip=1:gr%mesh%np_part)
+      E_deriv(ip) = st%occ(ist, 1)*(hpsi1(ip, 1) + pot(ip)*dpsi(ip, 1)) 
+     
+      !only for the Mueller functional
+      E_deriv(ip) = E_deriv(ip) + sqrt(st%occ(ist, 1))*hpsi2(ip, 1)
+    end forall
+
+    norm = sqrt(dmf_dotp(gr%mesh, E_deriv, E_deriv))
+
+    !remove gradient in direction of orbital ist itself and normalize
+    projection = dmf_dotp(gr%mesh, E_deriv, dpsi(:,1))
+    forall(ip = 1:gr%mesh%np_part)
+      E_deriv(ip) = E_deriv(ip) - projection*dpsi(ip,1)
+    end forall
+    norm = sqrt(dmf_dotp(gr%mesh, E_deriv(:), E_deriv(:)))
+    if(norm > M_ZERO) then
+      forall(ip=1:gr%mesh%np_part)
+        E_deriv(ip) = E_deriv(ip)/norm
+      end forall
+    endif      
+ 
+    SAFE_DEALLOCATE_A(rho)
+    SAFE_DEALLOCATE_A(pot)
+    SAFE_DEALLOCATE_A(hpsi1)
+    SAFE_DEALLOCATE_A(hpsi2)
+    SAFE_DEALLOCATE_A(dpsi)
+    SAFE_DEALLOCATE_A(dpsi2)
+
+    POP_SUB(E_deriv_calc)
+
+  end subroutine E_deriv_calc
+
 
   ! ----------------------------------------
   ! constructs the Lagrange multiplyers needed for the orbital minimization
@@ -923,8 +1185,8 @@ contains
                               terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
         rdm%eone(ist) = dmf_dotp(gr%mesh, dpsi(:, 1), hpsi(:, 1))
       end do
-    
-    !integrals used for the hartree and exchange parts of the total energy and their derivatives
+
+      !integrals used for the hartree and exchange parts of the total energy and their derivatives
       do is = 1, nspin_
         do jdm = 1, st%d%dim
           call doep_x(gr%der, st, is, jdm, lxc, ex, 1.d0, v_ij)
@@ -983,22 +1245,16 @@ contains
   end subroutine rdm_derivatives
   
   ! --------------------------------------------
-  !calculates the one and two electron integrals in the basis of the initial orbitals
+  !calculates the one electron integrals in the basis of the initial orbitals
   subroutine rdm_integrals(rdm, hm, st, gr)
     type(rdm_t),          intent(inout) :: rdm
     type(hamiltonian_t),  intent(inout) :: hm 
     type(states_t),       intent(in)    :: st 
     type(grid_t),         intent(inout) :: gr
     
-    FLOAT, allocatable :: hpsi(:,:), rho(:), rho1(:), rho2(:), rho3(:)
+    FLOAT, allocatable :: hpsi(:,:)
     FLOAT, allocatable :: dpsi(:,:), dpsi2(:,:)
-    FLOAT, allocatable :: v_ij(:,:,:)
-    FLOAT, allocatable :: lxc(:, :, :) !required input variable for doep_x, not used otherwise, might get used
-    FLOAT              :: ex !required input variable for doep_x, not used otherwise, might get used
-    integer :: ist, jst, kst, lst, nspin_, is, jdm,  icount, ijst, klst
-    FLOAT :: me
-    FLOAT, allocatable :: nn(:), vv(:)
-    FLOAT, allocatable :: psii(:, :), psij(:, :), psik(:, :), psil(:, :)
+    integer :: ist, jst, nspin_ 
 
     PUSH_SUB(rdm_integrals)
  
@@ -1007,7 +1263,7 @@ contains
     SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part,1:st%d%dim))
-    
+
     !calculate integrals of the one-electron energy term with respect to the initial orbital basis
     do ist = 1, st%nst
       call states_get_state(st, gr%mesh, ist, 1, dpsi)
@@ -1020,7 +1276,7 @@ contains
       end do
     end do
 
-    SAFE_DEALLOCATE_A(hpsi)
+    SAFE_DEALLOCATE_A(hpsi)    
     SAFE_DEALLOCATE_A(dpsi)
     SAFE_DEALLOCATE_A(dpsi2)
     

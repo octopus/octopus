@@ -48,7 +48,9 @@ module submesh_oct_m
     dsm_integrate,               &
     zsm_integrate,               &
     dsm_integrate_frommesh,      &
-    zsm_integrate_frommesh,      &         
+    zsm_integrate_frommesh,      & 
+    dsm_nrm2,                    &
+    zsm_nrm2,                    &
     submesh_add_to_mesh,         &
     dsubmesh_batch_add,          &
     zsubmesh_batch_add,          &
@@ -58,6 +60,10 @@ module submesh_oct_m
     dsubmesh_batch_dotp_matrix,  &
     zsubmesh_batch_dotp_matrix,  &
     submesh_overlap,             &
+    dsubmesh_copy_from_mesh,     &
+    zsubmesh_copy_from_mesh,     &
+    dsubmesh_copy_from_mesh_batch,     &
+    zsubmesh_copy_from_mesh_batch,     &
     submesh_end
 
   type submesh_t
@@ -77,8 +83,12 @@ module submesh_oct_m
   end interface submesh_add_to_mesh
 
   interface submesh_to_mesh_dotp
-    module procedure ddsubmesh_to_mesh_dotp, zdsubmesh_to_mesh_dotp
+    module procedure ddsubmesh_to_mesh_dotp, zdsubmesh_to_mesh_dotp, zzsubmesh_to_mesh_dotp
   end interface submesh_to_mesh_dotp
+
+   type(profile_t), save ::           &
+       C_PROFILING_SM_REDUCE,         &
+       C_PROFILING_SM_NRM2
 
 contains
   
@@ -88,6 +98,7 @@ contains
     PUSH_SUB(submesh_null)
 
     sm%np = -1
+    sm%radius = M_ZERO
     nullify(sm%map)
     nullify(sm%x)
     nullify(sm%mesh)
@@ -218,7 +229,8 @@ contains
       is = 0
       do ip = 1, mesh%np_part
         do icell = 1, periodic_copy_num(pp)
-          r2 = sum((mesh%x(ip, 1:sb%dim) - center_copies(1:sb%dim, icell))**2)
+          xx(1:sb%dim) = mesh%x(ip, 1:sb%dim) - center_copies(1:sb%dim, icell)
+          r2 = sum(xx(1:sb%dim)**2)
           if(r2 > rc**2 ) cycle
           is = is + 1
         end do
@@ -416,22 +428,82 @@ contains
     CMPLX,            intent(inout) :: phi(:)
     CMPLX,  optional, intent(in)    :: factor
     
-    integer :: ip
+    integer :: ip, m
     
     PUSH_SUB(zzdsubmesh_add_to_mesh)
-    
+   
     if(present(factor)) then
-      do ip = 1, this%np
+      !Loop unrolling inspired by BLAS axpy routine
+      m = mod(this%np,4)
+      do ip = 1, m
         phi(this%map(ip)) = phi(this%map(ip)) + factor*sphi(ip)
       end do
+      if( this%np.lt.4) return
+      do ip = m+1, this%np, 4
+        phi(this%map(ip))   = phi(this%map(ip))   + factor*sphi(ip)
+        phi(this%map(ip+1)) = phi(this%map(ip+1)) + factor*sphi(ip+1)
+        phi(this%map(ip+2)) = phi(this%map(ip+2)) + factor*sphi(ip+2)
+        phi(this%map(ip+3)) = phi(this%map(ip+3)) + factor*sphi(ip+3)
+      end do
     else
-      do ip = 1, this%np
+      m = mod(this%np,4)
+      do ip = 1, m
         phi(this%map(ip)) = phi(this%map(ip)) + sphi(ip)
       end do
-    end if
+      if( this%np.lt.4) return
+      do ip = m+1, this%np, 4
+        phi(this%map(ip))   = phi(this%map(ip))   + sphi(ip)
+        phi(this%map(ip+1)) = phi(this%map(ip+1)) + sphi(ip+1)
+        phi(this%map(ip+2)) = phi(this%map(ip+2)) + sphi(ip+2)
+        phi(this%map(ip+3)) = phi(this%map(ip+3)) + sphi(ip+3)
+      end do
+    end if 
     
     POP_SUB(zzdsubmesh_add_to_mesh)
   end subroutine zzsubmesh_add_to_mesh
+
+
+  !------------------------------------------------------------
+
+  CMPLX function zzsubmesh_to_mesh_dotp(this, sphi, phi, reduce) result(dotp)
+    type(submesh_t),   intent(in) :: this
+    CMPLX,             intent(in) :: sphi(:)
+    CMPLX,             intent(in) :: phi(:)
+    logical, optional, intent(in) :: reduce
+  
+    integer :: is, m, ip
+  
+    PUSH_SUB(zzsubmesh_to_mesh_dotp)
+  
+    dotp = cmplx(M_ZERO)
+  
+    if(this%mesh%use_curvilinear) then
+      do is = 1, this%np
+        dotp = dotp + this%mesh%vol_pp(this%map(is))*phi(this%map(is))*conjg(sphi(is))
+      end do
+    else
+      m = mod(this%np,4)
+      do ip = 1, m
+        dotp = dotp + phi(this%map(ip))*conjg(sphi(ip))
+      end do
+      if( this%np.lt.4) return
+      do ip = m+1, this%np, 4
+        dotp = dotp + phi(this%map(ip))*conjg(sphi(ip))     &
+                    + phi(this%map(ip+1))*conjg(sphi(ip+1)) &
+                    + phi(this%map(ip+2))*conjg(sphi(ip+2)) &
+                    + phi(this%map(ip+3))*conjg(sphi(ip+3))
+      end do
+      dotp = dotp*this%mesh%vol_pp(1)
+    end if
+  
+    if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) then
+      call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
+      call comm_allreduce(this%mesh%vp%comm, dotp)
+      call profiling_out(C_PROFILING_SM_REDUCE)
+    end if 
+ 
+    POP_SUB(zzsubmesh_to_mesh_dotp)
+  end function zzsubmesh_to_mesh_dotp
 
 
 #include "undef.F90"
