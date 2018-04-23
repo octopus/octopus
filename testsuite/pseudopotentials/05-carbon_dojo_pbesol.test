@@ -6,7 +6,7 @@ TestGroups : short-run, pseudopotentials
 Enabled    : Yes
 
 Input: 05-carbon_dojo_pbesol.01-gs.inp
-Precision: 0.00011
+Precision: 0.0002
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -155.19841765
 match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ;  -14.529876
 match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ;    1.000000
