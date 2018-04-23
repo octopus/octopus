@@ -453,7 +453,7 @@ subroutine poisson_solve_drdmft(this, pot, rho)
             pvec(jp) = 	rho(jp)/sqrt((xx(1) - yy(1))**2 + 1) 										  									&
 						+ rho(jp)*( 																									&!this%dressed_omega**2*xx(2)*yy(2) - extra term without conf
 						- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*xx(2)*yy(1) 												&
-						- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*yy(2)*xx(1) + this%dressed_lambda**2/M_TWO*xx(1)*yy(1)) 
+						- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*yy(2)*xx(1) + this%dressed_lambda**2*xx(1)*yy(1)) 
 !          end if
         end do
 !      end if
@@ -513,19 +513,19 @@ subroutine poisson_solve_drdmft(this, pot, rho)
           aa1 = aa1 + rho(jp)/sqrt((xx1(1) - this%der%mesh%x(jp, 1))**2 + 1) 										  									&
 			+ rho(jp)*( &!this%dressed_omega**2*xx1(2)*this%der%mesh%x(jp, 2) 
 			- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*xx1(2)*this%der%mesh%x(jp, 1) 	&
-			- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx1(1) + this%dressed_lambda**2/M_TWO*xx1(1)*this%der%mesh%x(jp, 1)) 
+			- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx1(1) + this%dressed_lambda**2*xx1(1)*this%der%mesh%x(jp, 1)) 
           aa2 = aa2 + rho(jp)/sqrt((xx2(1) - this%der%mesh%x(jp, 1))**2 + 1) 										  									&
 			+ rho(jp)*( &!this%dressed_omega**2*xx2(2)*this%der%mesh%x(jp, 2) 
 			- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*xx2(2)*this%der%mesh%x(jp, 1) 	&
-			- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx2(1) + this%dressed_lambda**2/M_TWO*xx2(1)*this%der%mesh%x(jp, 1)) 
+			- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx2(1) + this%dressed_lambda**2*xx2(1)*this%der%mesh%x(jp, 1)) 
           aa3 = aa3 + rho(jp)/sqrt((xx3(1) - this%der%mesh%x(jp, 1))**2 + 1) 										  									&
 			+ rho(jp)*( &!this%dressed_omega**2*xx3(2)*this%der%mesh%x(jp, 2) 
 			- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*xx3(2)*this%der%mesh%x(jp, 1) 	&
-			- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx3(1) + this%dressed_lambda**2/M_TWO*xx3(1)*this%der%mesh%x(jp, 1))
+			- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx3(1) + this%dressed_lambda**2*xx3(1)*this%der%mesh%x(jp, 1))
           aa4 = aa4 + rho(jp)/sqrt((xx4(1) - this%der%mesh%x(jp, 1))**2 + 1)										  									&
 			+ rho(jp)*( &!this%dressed_omega**2*xx4(2)*this%der%mesh%x(jp, 2) 
 			- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*xx4(2)*this%der%mesh%x(jp, 1) 	&
-			- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx4(1) + this%dressed_lambda**2/M_TWO*xx4(1)*this%der%mesh%x(jp, 1))
+			- this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx4(1) + this%dressed_lambda**2*xx4(1)*this%der%mesh%x(jp, 1))
         end do
         
       end if
