@@ -156,6 +156,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
       call output_etsf_kpoints_write(gr%sb, ncid)
       call output_etsf_basisdata_write(gr%mesh, shell, ncid)
     end if
+   
     call output_etsf_wfs_pw_write(st, gr%mesh, zcube, cf, shell, ncid)
 
     if(mpi_grp_is_root(mpi_world)) then
@@ -730,9 +731,13 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid)
 
   SAFE_ALLOCATE(zpsi(1:mesh%np))
 
+  call fourier_shell_end(shell)
+
+  !TODO: This loop should be parallelized in kpt and states
   do iq = 1, st%d%nik
     ispin = states_dim_get_spin_index(st%d, iq)
     ikpoint = states_dim_get_kpoint_index(st%d, iq)
+    call fourier_shell_init(shell_wfn, cube, gr%mesh, kk = gr%sb%kpoints%reduced%red_point(:, iq))
     do ist = 1, st%nst
       do idim = 1, st%d%dim
 
@@ -752,6 +757,7 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid)
 
       end do
     end do
+    call fourier_shell_end(shell)
   end do
 
   SAFE_DEALLOCATE_A(zpsi)
