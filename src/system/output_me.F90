@@ -176,9 +176,9 @@ contains
     type(geometry_t),    intent(in)    :: geo
     type(hamiltonian_t), intent(in)    :: hm
 
-    integer :: id, ll, mm, ik, iunit, iunit2, ist, jst, kst, lst
+    integer :: id, ll, mm, ik, iunit, ist, jst, kst, lst
     character(len=256) :: fname
-    FLOAT, allocatable :: twoint(:,:,:,:), vhxcint(:,:)
+    FLOAT, allocatable :: twoint(:,:,:,:)
     FLOAT, allocatable :: doneint(:,:)
     CMPLX, allocatable :: zoneint(:,:)
     
@@ -252,41 +252,44 @@ contains
       call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
       ! how to do this properly? states_matrix
       iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
-      iunit2 = io_open(trim(dir)//'/output_me_vhxc', action='write')
+      
+      !CAREFUL: Here I am doing a dirty hack -- I pass vxc instead of vhxc and I comment out a line in states_calc (adding the eigenvalue on the diagonal)
+      !this way the output_me_one_body is filled with the me of vxc
+      !iunit2 = io_open(trim(dir)//'/output_me_vhxc', action='write')
 
       !id = st%nst*(st%nst+1)/2
       id = st%nst
 
-      SAFE_ALLOCATE(vhxcint(1:id, 1:id))
+      !SAFE_ALLOCATE(vhxcint(1:id, 1:id))
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(doneint(1:id, 1:id))
         !I pass vxc instead of vhxc because of dirty hack. CAREFUL
-        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vxc, id, doneint, vhxcint, verbose=.true.)
+        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vxc, id, doneint, verbose=.true.)
         do ist = 1, id
           do jst = 1, id
             write(iunit, *) ist, jst, doneint(ist, jst)
-            write(iunit2, *) ist, jst, vhxcint(ist, jst)
+            !write(iunit2, *) ist, jst, vhxcint(ist, jst)
           enddo
         enddo
         SAFE_DEALLOCATE_A(doneint)
       else
         SAFE_ALLOCATE(zoneint(1:id, 1:id))
         !I pass vxc instead of vhxc because of dirty hack. CAREFUL
-        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vxc, id, zoneint, vhxcint, verbose = .true.)
+        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vxc, id, zoneint, verbose = .true.)
         do ist = 1, id
           do jst = 1, id
             write(iunit, *) ist, jst, zoneint(ist, jst)
-            write(iunit2, *) ist, jst, vhxcint(ist, jst)
+            !write(iunit2, *) ist, jst, vhxcint(ist, jst)
           enddo
         enddo
         SAFE_DEALLOCATE_A(zoneint)
       end if
 
-      SAFE_DEALLOCATE_A(vhxcint)
+      !SAFE_DEALLOCATE_A(vhxcint)
 
       call io_close(iunit)
-      call io_close(iunit2)
+      !call io_close(iunit2)
 
     end if
 
