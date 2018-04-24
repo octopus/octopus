@@ -982,19 +982,33 @@ contains
       write(message(1),'(a)')'No operations found. Check the input file'
       call messages_fatal(1)
     end if
+     
+    !TODO: define subset of wfc to be projected 
+    SAFE_ALLOCATE(n_occ(st%d%nik))
+    SAFE_ALLOCATE(n_unocc(st%d%nik))
+    call states_count_pairs(st, n_pairs, n_occ, n_unocc, is_included, is_frac_occ)
 
     !Write down the results
+    !TODO: create a file for each k point
+    ik = 1
     if (mpi_world%rank == 0) then
       call io_mkdir('./projections')
       pr_info = io_open(file='./projections/projections.info', action='write')
       call messages_print_stress(pr_info, "Projections from Convert Utility")
       write(pr_info,'(a,i3)') 'Number of states = ', st%nst
+      write(pr_info,'(a,i3)') 'Number of Occupied States = ', n_occ(ik)
+      write(pr_info,'(a,i3)') 'Number of Unoccupied States = ', n_unocc(ik)
       call messages_print_stress(pr_info, "Eigenvalues & Occupations")
-      write(frmt, '(a1,i0,a11)') "(",st%nst,"(6x,i3,7x))"
-      write(pr_info, fmt=trim(frmt)) ( ik, ik=1,st%nst )
-      write(frmt, '(a1,i0,a11)') "(",st%nst,"(g15.6,1x))"
-      write(pr_info, fmt=trim(frmt)) ( st%eigenval(ik, 1), ik=1,st%nst )
-      write(pr_info, fmt=trim(frmt)) ( st%occ(ik, 1), ik=1,st%nst )
+      write(frmt, '(a1,i0,a11)') "(",n_occ(ik),"(6x,i3,7x))"
+      write(pr_info, fmt=trim(frmt)) ( ist, ist = 1, n_occ(ik))
+      write(frmt, '(a1,i0,a11)') "(",n_occ(ik),"(g15.6,1x))"
+      write(pr_info, fmt=trim(frmt)) ( st%eigenval(ist, 1), ist = 1, n_occ(ik) )
+      write(pr_info, fmt=trim(frmt)) ( st%occ(ist, 1), ist = 1, n_occ(ik) )
+      write(frmt, '(a1,i0,a11)') "(",n_unocc(ik),"(6x,i3,7x))"
+      write(pr_info, fmt=trim(frmt)) ( ist, ist = n_occ(ik)+1, n_unocc(ik))
+      write(frmt, '(a1,i0,a11)') "(",n_unocc(ik),"(g15.6,1x))"
+      write(pr_info, fmt=trim(frmt)) ( st%eigenval(ist, 1), ist = n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
+      write(pr_info, fmt=trim(frmt)) ( st%occ(ist, 1), ist = n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
       call messages_print_stress(pr_info, "")
     end if
 
@@ -1014,11 +1028,6 @@ contains
 
     SAFE_ALLOCATE(ket(1:mesh%np, 1:st%nst))
     SAFE_ALLOCATE(bra(1:mesh%np))
-     
-    !TODO: define subset of wfc to be projected 
-    SAFE_ALLOCATE(n_occ(st%d%nik))
-    SAFE_ALLOCATE(n_unocc(st%d%nik))
-    call states_count_pairs(st, n_pairs, n_occ, n_unocc, is_included, is_frac_occ)
 
     do i_op = 1, n_operations
       tmp = M_ZERO
@@ -1052,8 +1061,10 @@ contains
       end do
       do ik = 1, st%d%nik
         if (mpi_world%rank == 0) then
-          write(frmt, '(a4,i0,a11)') "(a7, ",n_unocc(ik),"(6x,i3,7x))"
+          write(frmt, '(a6,i0,a11)') "(a21, ", n_unocc(ik),"(6x,i3,7x))"
           write(pr_info, fmt=trim(frmt))  "", (ast, ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
+          write(frmt, '(a6,i0,a11)') "(a21, ",n_unocc(ik),"(g15.6,1x))"
+          write(pr_info, fmt=trim(frmt))  "", (st%eigenval(ast, 1), ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
         end if
         do ist = 1,  n_occ(ik) !1, st%nst
           if (any(is_included(ist, :, ik))) &
@@ -1074,9 +1085,10 @@ contains
           end do
         end do
         if (mpi_world%rank == 0) then
-          write(frmt, '(a4,i0,a11)') "(i7, ",n_unocc(ik),"(g15.6,1x))"
+          write(frmt, '(a16,i0,a11)') "(i4,1x,g15.6,1x,",n_unocc(ik),"(g15.6,1x))"
           do ist=1, n_occ(ik)
-            write(pr_info, fmt=trim(frmt))  ist, (tmp(ist, ast), ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
+            write(pr_info, fmt=trim(frmt))  ist, st%eigenval(ist, ik), &
+                         (tmp(ist, ast), ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
           end do
         end if
         projections(:,:,ik) = projections(:,:,ik) + abs(tmp)**2
@@ -1094,9 +1106,16 @@ contains
 #endif
     call messages_print_stress(pr_info,'Total Operator')
     if (mpi_world%rank == 0) then
+      ik = 1
+      write(frmt, '(a6,i0,a11)') "(a21, ",n_unocc(ik),"(6x,i3,7x))"
+      write(pr_info, fmt=trim(frmt))  "", (ast, ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
+      write(frmt, '(a6,i0,a11)') "(a21, ",n_unocc(ik),"(g15.6,1x))"
+      write(pr_info, fmt=trim(frmt))  "", (st%eigenval(ast, 1), ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
+      write(frmt, '(a16,i0,a11)') "(i4,1x,g15.6,1x,",n_unocc(ik),"(g15.6,1x))"
       do ik = 1, st%d%nik
         do ist = 1, n_occ(ik)
-          write(pr_info, fmt=trim(frmt)) ist, (sqrt(projections(ist, ast, ik)), ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
+          write(pr_info, fmt=trim(frmt)) ist, st%eigenval(ist, ik), &
+             (sqrt(projections(ist, ast, ik)), ast=n_occ(ik)+1, n_occ(ik)+n_unocc(ik) )
         end do
       end do
     end if
