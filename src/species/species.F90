@@ -34,6 +34,7 @@ module species_oct_m
   use profiling_oct_m
   use ps_oct_m
   use pseudo_oct_m
+  use share_directory_oct_m
   use space_oct_m
   use splines_oct_m
   use string_oct_m
@@ -211,6 +212,8 @@ contains
     PUSH_SUB(species_init_global)
 
     initialized = .true.
+
+    call share_directory_set(conf%share)    
     
     !%Variable PseudopotentialSet
     !%Type integer
@@ -1572,7 +1575,7 @@ contains
     integer,         intent(inout) :: read_data
     type(species_t), intent(inout) :: spec
 
-    character(len=LABEL_LEN) :: label
+    character(len=LABEL_LEN) :: label, symbol
     type(element_t) :: element
     integer :: lmax, llocal
     FLOAT :: zz, spacing, rsize
@@ -1592,7 +1595,7 @@ contains
     read_data = 8
 
     ! get the mass, vdw radius and atomic number for this element
-    call element_init(element, label)
+    call element_init(element, get_symbol(label))
 
     ASSERT(element_valid(element))
 
@@ -1883,7 +1886,7 @@ contains
         
       end if
 
-      call element_init(element, spec%label)
+      call element_init(element, get_symbol(spec%label))
       
       if(.not. element_valid(element)) then
         call messages_write('Cannot determine the element for species '//trim(spec%label)//'.')
@@ -2161,8 +2164,27 @@ contains
 
     POP_SUB(species_iwf_fix_qn)
   end subroutine species_iwf_fix_qn
+
   ! ---------------------------------------------------------
 
+  character(len=LABEL_LEN) function get_symbol(label) result(symbol)
+    character(len=*), intent(in)    :: label
+    
+    integer :: ilend
+
+    ! use only the first part of the label to determine the element
+    do ilend = 1, len(label)
+      if( iachar(label(ilend:ilend)) >= iachar('a') .and. iachar(label(ilend:ilend)) <= iachar('z') ) cycle
+      if( iachar(label(ilend:ilend)) >= iachar('A') .and. iachar(label(ilend:ilend)) <= iachar('Z') ) cycle
+      exit
+    end do
+    ilend = ilend - 1
+
+    symbol = label(1:ilend)
+    
+  end function get_symbol
+      
+  
 end module species_oct_m
 
 !! Local Variables:

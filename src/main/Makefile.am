@@ -40,6 +40,7 @@ oct_test_SOURCES = test.F90
 oct_test_LDADD = \
         $(top_builddir)/src/system/libsystem.a           \
         $(top_builddir)/src/hamiltonian/libhamiltonian.a \
+        $(top_builddir)/src/basis_set/libbasis_set.a     \
         $(top_builddir)/src/poisson/libpoisson.a         \
         $(top_builddir)/src/states/libstates.a           \
         $(top_builddir)/src/frozen/libfrozen.a           \

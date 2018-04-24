@@ -63,8 +63,8 @@ print OUT <<"EndOfHeader";
 !% specified as a sum of an exchange functional and a
 !% correlation functional, or a single exchange-correlation functional
 !% (<i>e.g.</i> <tt>hyb_gga_xc_pbeh</tt>). For more information on the functionals, see
-!% <a href=http://octopus-code.org/wiki/Libxc:manual#Available_functionals>
-!% Libxc documentation</a>. The list provided here is from libxc 2.2.3; if you have
+!% <a href=https://gitlab.com/libxc/libxc/wikis/Functionals-list-4.0.4>
+!% Libxc documentation</a>. The list provided here is from libxc 4; if you have
 !% linked against a different libxc version, you may have a somewhat different set
 !% of available functionals. Note that kinetic-energy functionals are not supported.
 !%

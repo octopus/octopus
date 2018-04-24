@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-## Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+## Copyright (C) 2017 N. Tancogne-Dejean
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -18,23 +18,25 @@
 ## 02110-1301, USA.
 ##
 
-SUBDIRS =                \
-	include          \
-	basic            \
-	math             \
-	species          \
-	ions             \
-	grid             \
-	poisson          \
-	frozen           \
-	basis_set        \
-	states           \
-	hamiltonian      \
-	system           \
-	scf              \
-	td               \
-	opt_control      \
-	sternheimer      \
-	main             \
-	utils
+noinst_LIBRARIES = libbasis_set.a
 
+# Fortran sources - keep in alphabetical order
+libbasis_set_a_SOURCES =             \
+		atomic_orbital.F90   \
+		orbitalset.F90       \
+		orbitalset_utils.F90
+
+# Include files - keep this in alphabetical order
+noinst_HEADERS =                        \
+		atomic_orbital_inc.F90  \
+		orbitalset_inc.F90      \
+		orbitalset_utils_inc.F90
+
+include $(srcdir)/../common-rules.make
+
+depend:
+	@makedepf90 $(libbasis_set_a_SOURCES)
+
+atomic_orbital.o : atomic_orbital.F90 atomic_orbital_inc.F90 orbitalset.o
+orbitalset.o : orbitalset.F90 orbitalset_inc.F90
+orbitalset_utils.o : orbitalset_utils.F90 orbitalset_utils_inc.F90 atomic_orbital.o orbitalset.o
