@@ -1374,14 +1374,14 @@ subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj)
 end subroutine X(states_calc_projections)
 
 ! ---------------------------------------------------------
-subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, oneint, vhxcint, verbose)
+subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vxc, nint, oneint, vhxcint, verbose)
 
   character(len=*),    intent(in)    :: dir
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(in)    :: geo
   type(states_t),      intent(inout) :: st
   integer,             intent(in)    :: nspin
-  FLOAT,               intent(in)    :: vhxc(1:gr%mesh%np, nspin)
+  FLOAT,               intent(in)    :: vxc(1:gr%mesh%np, nspin)  !I am not passing vhxc anymore. CAREFUL
   integer,             intent(in)    :: nint
   R_TYPE,              intent(out)   :: oneint(:,:)  !this needs to address complex numbers as well?!?
   FLOAT,               intent(out)   :: vhxcint(:,:)
@@ -1392,12 +1392,13 @@ subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, oneint, vh
 
   logical :: verbose_
 
-  R_TYPE :: me
-  R_TYPE, allocatable :: psii(:, :), psij(:, :)
+  R_TYPE :: me, me2
+  R_TYPE, allocatable :: psii(:, :), psij(:, :), psij2(:,:)
 
   PUSH_SUB(X(states_me_one_body))
 
   SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psij(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(psij(1:gr%mesh%np_part, 1:st%d%dim))
   
   np = gr%mesh%np
@@ -1408,7 +1409,7 @@ subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, oneint, vh
 
   if(verbose_) then
     !Lets counts the number of orbital to treat, to display a progress bar
-    ntodo = st%nst*(st%nst-1)
+    ntodo = st%nst*(st%nst-1)/2
     idone = 0
     if(mpi_world%rank == 0) call loct_progress_bar(-1, ntodo)
   end if
@@ -1423,14 +1424,18 @@ subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, oneint, vh
       
       call states_get_state(st, gr%mesh, jst, 1, psij)
 
-      psij(1:np, 1) = R_CONJ(psii(1:np, 1))*vhxc(1:np, 1)*psij(1:np, 1)
+      !psij(1:np, 1) = R_CONJ(psii(1:np, 1))*vhxc(1:np, 1)*psij(1:np, 1)
 
-      me = - X(mf_integrate)(gr%mesh, psij(:, 1))
-      vhxcint(ist,jst) = me
-      vhxcint(jst,ist) = me
+      !I am not computing the one_body integral anymore. this needs to be done properly
+      psij2(1:np, 1) = R_CONJ(psii(1:np, 1))*vxc(1:np, 1)*psij(1:np, 1)
+
+      !me = - X(mf_integrate)(gr%mesh, psij(:, 1))
+      me2 = - X(mf_integrate)(gr%mesh, psij(:, 1))
+      vhxcint(ist,jst) = me2
+      vhxcint(jst,ist) = me2
       
-      if(ist==jst) me = me + st%eigenval(ist,1)
-
+      !if(ist==jst) me = me + st%eigenval(ist,1)
+      me = 0
       oneint(ist, jst) = me
       oneint(jst, ist) = me
 

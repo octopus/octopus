@@ -261,7 +261,8 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(doneint(1:id, 1:id))
-        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, doneint, vhxcint, verbose=.true.)
+        !I pass vxc instead of vhxc because of dirty hack. CAREFUL
+        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vxc, id, doneint, vhxcint, verbose=.true.)
         do ist = 1, id
           do jst = 1, id
             write(iunit, *) ist, jst, doneint(ist, jst)
@@ -271,7 +272,8 @@ contains
         SAFE_DEALLOCATE_A(doneint)
       else
         SAFE_ALLOCATE(zoneint(1:id, 1:id))
-        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, zoneint, vhxcint, verbose = .true.)
+        !I pass vxc instead of vhxc because of dirty hack. CAREFUL
+        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vxc, id, zoneint, vhxcint, verbose = .true.)
         do ist = 1, id
           do jst = 1, id
             write(iunit, *) ist, jst, zoneint(ist, jst)
