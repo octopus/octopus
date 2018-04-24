@@ -737,7 +737,7 @@ subroutine output_etsf_wfs_pw_write(st, mesh, sb, cube, cf, ncid)
   do iq = 1, st%d%nik
     ispin = states_dim_get_spin_index(st%d, iq)
     ikpoint = states_dim_get_kpoint_index(st%d, iq)
-    call fourier_shell_init(shell_wfn, cube, mesh, kk = sb%kpoints%reduced%red_point(:, iq))
+    call fourier_shell_init(shell, cube, mesh, kk = sb%kpoints%reduced%red_point(:, iq))
     do ist = 1, st%nst
       do idim = 1, st%d%dim
 
