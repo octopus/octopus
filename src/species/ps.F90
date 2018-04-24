@@ -53,6 +53,7 @@ module ps_oct_m
     ps_derivatives,             &
     ps_debug,                   &
     ps_niwfs,                   &
+    ps_bound_niwfs,             &
     ps_end,                     &
     ps_has_density,             &
     ps_density_volume
@@ -83,6 +84,7 @@ module ps_oct_m
     type(logrid_t) :: g
     type(spline_t), pointer :: ur(:, :)     !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r
     type(spline_t), pointer :: ur_sq(:, :)  !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r^2
+    logical, allocatable    :: bound(:, :)  !< (1:conf%p, 1:ispin) is the state bound or not
 
     ! Kleinman-Bylander projectors stuff
     integer  :: lmax    !< maximum value of l to take
@@ -154,6 +156,7 @@ contains
     type(ps_hgh_t) :: ps_hgh !< In case Hartwigsen-Goedecker-Hutter ps are used.
     type(ps_xml_t) :: ps_xml !< For xml based pseudopotentials
     logical, save :: xml_warned = .false.
+    FLOAT, allocatable :: eigen(:, :)  !< eigenvalues    
     
     PUSH_SUB(ps_init)
 
@@ -371,6 +374,7 @@ contains
     SAFE_ALLOCATE(ps%dkb  (0:ps%lmax, 1:ps%kbc))
     SAFE_ALLOCATE(ps%ur   (1:ps%conf%p, 1:ps%ispin))
     SAFE_ALLOCATE(ps%ur_sq(1:ps%conf%p, 1:ps%ispin))
+    SAFE_ALLOCATE(ps%bound(1:ps%conf%p, 1:ps%ispin))
     SAFE_ALLOCATE(ps%h    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
     SAFE_ALLOCATE(ps%density(1:ps%ispin))
     SAFE_ALLOCATE(ps%density_der(1:ps%ispin))
@@ -383,10 +387,14 @@ contains
     call spline_init(ps%core)
     call spline_init(ps%density)
     call spline_init(ps%density_der)
+
+    SAFE_ALLOCATE(eigen(1:ps%conf%p, 1:ps%ispin))
+    eigen = M_ZERO
     
     ! Now we load the necessary information.
     select case(ps%file_format)
     case(PSEUDO_FORMAT_PSF)
+      call ps_psf_get_eigen(ps_psf, eigen)
       call ps_grid_load(ps, ps_psf%ps_grid)
       call ps_psf_end(ps_psf)
     case(PSEUDO_FORMAT_CPI)
@@ -396,6 +404,7 @@ contains
       call ps_grid_load(ps, ps_fhi%ps_grid)
       call ps_fhi_end(ps_fhi)
     case(PSEUDO_FORMAT_HGH)
+      call hgh_get_eigen(ps_hgh, eigen)
       SAFE_ALLOCATE(ps%k    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
       call hgh_load(ps, ps_hgh)
       call hgh_end(ps_hgh)
@@ -410,10 +419,14 @@ contains
       end do
     end if
 
+    call ps_check_bound(ps, eigen)
+    
     ps%has_long_range = .true.
     ps%is_separated = .false.
-
+    
     call ps_info(ps, filename)
+
+    SAFE_DEALLOCATE_A(eigen)
     
     POP_SUB(ps_init)
   end subroutine ps_init
@@ -451,7 +464,7 @@ contains
     call messages_new_line()
 
     call messages_write("    valence charge   :")
-    call messages_write(ps%z_val, align_left = .true., fmt = '(f3.1)')
+    call messages_write(ps%z_val, align_left = .true., fmt = '(f4.1)')
     call messages_info()
 
     call messages_write("    atomic number    :")
@@ -515,6 +528,9 @@ contains
 
     call messages_write("    orbitals         :")
     call messages_write(ps_niwfs(ps), fmt='(i3)')
+    call messages_info()
+    call messages_write("    bound orbitals   :")
+    call messages_write(ps_bound_niwfs(ps), fmt='(i3)')
     call messages_info()
 
     call messages_info()
@@ -686,6 +702,50 @@ contains
     call profiling_out(prof)
     POP_SUB(ps_filter)
   end subroutine ps_filter
+    
+  ! ---------------------------------------------------------
+  subroutine ps_check_bound(ps, eigen)
+    type(ps_t), intent(inout) :: ps
+    FLOAT,      intent(in)    :: eigen(:,:)
+
+    integer :: i, is, ir
+    FLOAT :: ur1, ur2
+    
+    PUSH_SUB(ps_check_bound)
+
+    ! Unbound states have positive eigenvalues
+    where(eigen > M_ZERO)
+      ps%bound = .false.
+    elsewhere
+      ps%bound = .true.
+    end where
+
+    ! We might not have information about the eigenvalues, so we need to check the wavefunctions    
+    do i = 1, ps%conf%p
+      do is = 1, ps%ispin
+        if (.not. ps%bound(i, is)) cycle
+
+        do ir = ps%g%nrval, 3, -1
+          ! First we look for the outmost value that is not zero
+          if (abs(spline_eval(ps%ur(i, is), ps%g%rofi(ir))*ps%g%rofi(ir)) > M_ZERO) then
+            ! Usually bound states have exponentially decaying wavefunctions,
+            ! while unbound states have exponentially diverging
+            ! wavefunctions. Therefore we check if the wavefunctions
+            ! value is increasing with increasing radius. The fact
+            ! that we do not use the wavefunctions outmost value that
+            ! is not zero is on purpose, as some pseudopotential
+            ! generators do funny things with that point.
+            ur1 = spline_eval(ps%ur(i, is), ps%g%rofi(ir-2))*ps%g%rofi(ir-2)
+            ur2 = spline_eval(ps%ur(i, is), ps%g%rofi(ir-1))*ps%g%rofi(ir-1)
+            if ((ur1*ur2 > M_ZERO) .and. (abs(ur2) > abs(ur1))) ps%bound(i, is) = .false.
+            exit
+          end if
+        end do
+      end do
+    end do
+    
+    POP_SUB(ps_check_bound)
+  end subroutine ps_check_bound
 
 
   ! ---------------------------------------------------------
@@ -726,6 +786,13 @@ contains
         end do
       end do
     end if
+
+    write(iunit,'(/,a)')    'orbitals:'
+    do j = 1, ps%conf%p
+      write(iunit,'(1x,a,i2,3x,a,i2,3x,a,f5.1,3x,a,l1)') 'n = ', ps%conf%n(j), 'l = ', ps%conf%l(j), 'j = ', ps%conf%j(j), 'bound = ', all(ps%bound(j,:))
+    end do
+
+    
     call io_close(iunit)
 
     ! Local part of the pseudopotential
@@ -828,6 +895,7 @@ contains
     SAFE_DEALLOCATE_P(ps%dkb)
     SAFE_DEALLOCATE_P(ps%ur)
     SAFE_DEALLOCATE_P(ps%ur_sq)
+    SAFE_DEALLOCATE_A(ps%bound)
     SAFE_DEALLOCATE_P(ps%h)
     SAFE_DEALLOCATE_P(ps%k)
     SAFE_DEALLOCATE_P(ps%density)
@@ -1261,10 +1329,9 @@ contains
 
     POP_SUB(ps_xml_load)
   end subroutine ps_xml_load
-
-
+  
   ! ---------------------------------------------------------
-  !> Returns the number of atomic orbitals that can be used for LCAO calculations.
+  !> Returns the number of atomic orbitals taking into account then m quantum number multiplicity
   pure integer function ps_niwfs(ps)
     type(ps_t), intent(in) :: ps
 
@@ -1277,6 +1344,22 @@ contains
     end do
 
   end function ps_niwfs
+
+  ! ---------------------------------------------------------
+  !> Returns the number of bound atomic orbitals taking into account then m quantum number multiplicity
+  pure integer function ps_bound_niwfs(ps)
+    type(ps_t), intent(in) :: ps
+
+    integer :: i, l
+
+    ps_bound_niwfs = 0
+    do i = 1, ps%conf%p
+      l = ps%conf%l(i)
+      if (any(.not. ps%bound(i,:))) cycle
+      ps_bound_niwfs = ps_bound_niwfs + (2*l+1)
+    end do
+
+  end function ps_bound_niwfs
 
   !---------------------------------------
 

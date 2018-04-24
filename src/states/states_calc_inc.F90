@@ -647,7 +647,7 @@ FLOAT function X(states_residue)(mesh, dim, hf, ee, ff) result(rr)
 
   call profiling_in(prof, "RESIDUE")
 
-  SAFE_ALLOCATE(res(1:mesh%np_part, 1:dim))
+  SAFE_ALLOCATE(res(1:mesh%np, 1:dim))
 
   forall (idim = 1:dim, ip = 1:mesh%np) res(ip, idim) = hf(ip, idim) - ee*ff(ip, idim)
 

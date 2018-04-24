@@ -308,7 +308,6 @@ contains
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, 1:this%st%d%nspin))
     SAFE_ALLOCATE(atom_derivative(1:this%mesh%np, 1:this%st%d%nspin, periodic_copy_num(pp_j)))
 
-    call profiling_in(prof2, "HIRSHFELD_POSITION_DER2")
     !We evaluate here the derivative to avoid call it N^2 times
     do jcell = 1, periodic_copy_num(pp_j)
       atom_derivative(1:this%mesh%np, 1:this%st%d%nspin, jcell) = M_ZERO
@@ -320,7 +319,6 @@ contains
                                   pos_j, this%st%d%spin_channels, &
                                   atom_derivative(1:this%mesh%np, 1:this%st%d%nspin, jcell))
     end do
-    call profiling_out(prof2)
 
     do icell = 1, periodic_copy_num(pp_i)
       atom_density(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
@@ -331,10 +329,11 @@ contains
       call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), &
              pos_i, this%st%d%nspin, atom_density)
 
+      call profiling_in(prof2, "HIRSHFELD_POSITION_DER2")
       do ip = 1, this%mesh%np
         if(this%total_density(ip)< TOL_HIRSHFELD) cycle
 
-        xxi = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_i(1:this%mesh%sb%dim)
+        xxi(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_i(1:this%mesh%sb%dim)
         rri = sqrt(sum(xxi(1:this%mesh%sb%dim)**2))        
         tdensity = sum(density(ip, 1:this%st%d%nspin))
         atom_dens = sum(atom_density(ip, 1:this%st%d%nspin))
@@ -363,6 +362,7 @@ contains
             end if
           end if
         end do
+       call profiling_out(prof2)
       end do
     end do
 
