@@ -774,9 +774,9 @@ contains
     call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element, sb%dim)
 
     if(sb%dim == 3) then
-      sb%surface_element(1) = abs(sum(dcross_product(sb%rlattice_primitive(1:3, 2), sb%rlattice_primitive(1:3, 3))**2))
-      sb%surface_element(2) = abs(sum(dcross_product(sb%rlattice_primitive(1:3, 3), sb%rlattice_primitive(1:3, 1))**2))
-      sb%surface_element(3) = abs(sum(dcross_product(sb%rlattice_primitive(1:3, 1), sb%rlattice_primitive(1:3, 2))**2))
+      sb%surface_element(1) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 2), sb%rlattice_primitive(1:3, 3))**2)))
+      sb%surface_element(2) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 3), sb%rlattice_primitive(1:3, 1))**2)))
+      sb%surface_element(3) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 1), sb%rlattice_primitive(1:3, 2))**2)))
     end if
 
     sb%metric = M_ZERO
