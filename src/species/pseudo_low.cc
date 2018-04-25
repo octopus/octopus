@@ -167,12 +167,15 @@ extern "C" void FC_FUNC_(pseudo_radial_potential, PSEUDO_RADIAL_POTENTIAL)(const
   for(unsigned i = 0; i < val.size(); i++) radial_potential[i] = val[i];
 }
 
+extern "C" fint FC_FUNC_(pseudo_has_radial_function_low, PSEUDO_HAS_RADIAL_FUNCTION_LOW)(const pseudopotential::base ** pseudo, fint * l){
+  return fint((*pseudo)->has_radial_function(*l));
+}
+
 extern "C" void FC_FUNC_(pseudo_radial_function, PSEUDO_RADIAL_FUNCTION)(const pseudopotential::base ** pseudo, fint * l, double * radial_function){
   std::vector<double> val;
   (*pseudo)->radial_function(*l, val);
   for(unsigned i = 0; i < val.size(); i++) radial_function[i] = val[i];
 }
-
 
 extern "C" fint FC_FUNC_(pseudo_has_nlcc_low, PSEUDO_HAS_NLCC_LOW)(const pseudopotential::base ** pseudo){
   return fint((*pseudo)->has_nlcc());
