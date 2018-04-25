@@ -87,7 +87,7 @@ namespace pseudopotential {
 
 	if(!file){
 	  std::cerr << "Internal error: cannot open file '" << filename << "'." << std::endl;
-	  exit(1);
+	  exit(EXIT_FAILURE);
 	}
 	
 	while(true){
