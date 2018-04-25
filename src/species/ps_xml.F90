@@ -133,8 +133,15 @@ contains
       SAFE_ALLOCATE(this%wavefunction(1:this%grid_size, 0:this%lmax))
       
       do ll = 0, this%lmax
-        call pseudo_radial_potential(pseudo, ll, this%potential(1, ll))
+        if(.not. pseudo_has_radial_function(pseudo, ll)) then
+          call messages_write("The pseudopotential file '"//trim(filename)//"' does not contain")
+          call messages_new_line()
+          call messages_write("the wave functions. Octopus cannot use it.")
+          call messages_fatal()
+        end if
+
         call pseudo_radial_function(pseudo, ll, this%wavefunction(1, ll))
+        call pseudo_radial_potential(pseudo, ll, this%potential(1, ll))
       end do
 
     else
