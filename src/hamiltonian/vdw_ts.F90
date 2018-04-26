@@ -59,7 +59,6 @@ module vdw_ts_oct_m
     FLOAT, allocatable :: r0free(:)      !> Free atomic vdW radius for each atomic species.
     FLOAT, allocatable :: c6abfree(:, :) !> Free atomic heteronuclear C6 coefficient for each atom pair.
     FLOAT, allocatable :: volfree(:)
-    type(hirshfeld_t)  :: hirshfeld
 
     FLOAT              :: VDW_cutoff      !> Cutoff value for the calculation of the VdW TS correction in periodic system.
     FLOAT              :: VDW_dd_parameter !> Parameter for the damping function steepness.
@@ -68,11 +67,10 @@ module vdw_ts_oct_m
 
 contains
 
-  subroutine vdw_ts_init(this, geo, der, st)
+  subroutine vdw_ts_init(this, geo, der)
     type(vdw_ts_t),      intent(out)   :: this
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
-    type(states_t),      intent(in)    :: st
     
     integer :: ispecies, jspecies
     FLOAT :: num, den
@@ -133,8 +131,6 @@ contains
       end do
     end do
 
-    call hirshfeld_init(this%hirshfeld, der%mesh, geo, st)
-
     POP_SUB(vdw_ts_init)
   end subroutine vdw_ts_init
 
@@ -144,8 +140,6 @@ contains
     type(vdw_ts_t), intent(inout) :: this
 
     PUSH_SUB(vdw_ts_end)
-    
-    call hirshfeld_end(this%hirshfeld)
     
     SAFE_DEALLOCATE_A(this%c6free)
     SAFE_DEALLOCATE_A(this%dpfree)
@@ -158,11 +152,11 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_calculate(this, geo, der, sb, density, energy, potential, force)
+  subroutine vdw_ts_calculate(this, geo, der, st, density, energy, potential, force)
     type(vdw_ts_t),      intent(inout) :: this
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
-    type(simul_box_t),   intent(in)    :: sb
+    type(states_t),      intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
     FLOAT,               intent(out)   :: energy
     FLOAT,               intent(out)   :: potential(:)
@@ -188,6 +182,7 @@ contains
     FLOAT :: rr, rr2, rr6, dd, sr, dffdrr, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra, deabdrab
     FLOAT, allocatable :: coordinates(:,:), volume_ratio(:), dvadens(:), dvadrr(:), derivative_coeff(:), & 
                           dr0dvra(:), r0ab(:,:), c6ab(:,:)
+    type(hirshfeld_t) :: hirshfeld
     integer, allocatable :: zatom(:)
     FLOAT :: x_j(1:MAX_DIM)
 
@@ -203,12 +198,14 @@ contains
     derivative_coeff(1:geo%natoms) = M_ZERO
     force(1:sb%dim, 1:geo%natoms) = M_ZERO
 
+    call hirshfeld_init(hirshfeld, der%mesh, geo, st)
+
     do iatom = 1, geo%natoms
       ispecies = species_index(geo%atom(iatom)%species)
       call hirshfeld_volume_ratio(this%hirshfeld, iatom, density, volume_ratio(iatom))
       dr0dvra(iatom) = this%r0free(ispecies)/(CNST(3.0)*(volume_ratio(iatom)**(M_TWO/CNST(3.0)))) 
     end do
-
+  
     if(sb%periodic_dim > 0) then ! periodic case
       SAFE_ALLOCATE(r0ab(1:geo%natoms,1:geo%natoms))
       SAFE_ALLOCATE(c6ab(1:geo%natoms,1:geo%natoms))
@@ -291,7 +288,7 @@ contains
     ! Add the extra term for the force 
     do iatom = 1, geo%natoms
       do jatom = 1, geo%natoms
-        call hirshfeld_position_derivative(this%hirshfeld, der, iatom, jatom, density, dvadrr)
+        call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr)
         force(1:sb%dim, iatom) = force(1:sb%dim, iatom) - derivative_coeff(iatom)*dvadrr(1:sb%dim)
       end do
     end do
@@ -299,13 +296,15 @@ contains
     ! Calculate the potential
     potential = M_ZERO
     do iatom = 1, geo%natoms
-      call hirshfeld_density_derivative(this%hirshfeld, iatom, dvadens)
+      call hirshfeld_density_derivative(hirshfeld, iatom, dvadens)
       potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*dvadens(1:der%mesh%np)
     end do
 
     if(debug%info) then
       call dio_function_output(1, "./", "vvdw", der%mesh, potential, unit_one, ip)
     end if
+
+    call hirshfeld_end(hirshfeld)
 
     SAFE_DEALLOCATE_A(volume_ratio)
     SAFE_DEALLOCATE_A(derivative_coeff)
