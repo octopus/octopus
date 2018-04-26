@@ -152,10 +152,11 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_calculate(this, geo, der, st, density, energy, potential, force)
+  subroutine vdw_ts_calculate(this, geo, der, sb, st, density, energy, potential, force)
     type(vdw_ts_t),      intent(inout) :: this
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
+    type(simul_box_t),   intent(in)    :: sb
     type(states_t),      intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
     FLOAT,               intent(out)   :: energy
@@ -202,7 +203,7 @@ contains
 
     do iatom = 1, geo%natoms
       ispecies = species_index(geo%atom(iatom)%species)
-      call hirshfeld_volume_ratio(this%hirshfeld, iatom, density, volume_ratio(iatom))
+      call hirshfeld_volume_ratio(hirshfeld, iatom, density, volume_ratio(iatom))
       dr0dvra(iatom) = this%r0free(ispecies)/(CNST(3.0)*(volume_ratio(iatom)**(M_TWO/CNST(3.0)))) 
     end do
   
