@@ -1177,17 +1177,17 @@ contains
 
       if(pseudo_nprojectors(ps_xml%pseudo) > 0) then
         do ll = 0, ps_xml%lmax
-          
-          ! diagonalize the coefficient matrix
-          if(.not. pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
-            matrix(1:ps_xml%nchannels, 1:ps_xml%nchannels) = ps_xml%dij(ll, 1:ps_xml%nchannels, 1:ps_xml%nchannels)
-            call lalg_eigensolve(ps_xml%nchannels, matrix, eigenvalues)
-          else
+
+          if(is_diagonal(ps_xml%nchannels, ps_xml%dij(ll, :, :)) .or. pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
             matrix = CNST(0.0)
             forall(ic = 1:ps_xml%nchannels)
               eigenvalues(ic) = ps_xml%dij(ll, ic, ic)
               matrix(ic, ic) = CNST(1.0)
             end forall
+          else
+            ! diagonalize the coefficient matrix
+            matrix(1:ps_xml%nchannels, 1:ps_xml%nchannels) = ps_xml%dij(ll, 1:ps_xml%nchannels, 1:ps_xml%nchannels)
+            call lalg_eigensolve(ps_xml%nchannels, matrix, eigenvalues)
           end if
           
           do ic = 1, ps_xml%nchannels
@@ -1220,7 +1220,7 @@ contains
         ps%conf%l(ii) = ps_xml%wf_l(ii)
 
         if(ps%ispin == 2) then
-          ps%conf%occ(ii, 1) = min(ps_xml%wf_occ(ii), 2.0*ps_xml%wf_l(ii) + 1.0)
+          ps%conf%occ(ii, 1) = min(ps_xml%wf_occ(ii), CNST(2.0)*ps_xml%wf_l(ii) + CNST(1.0))
           ps%conf%occ(ii, 2) = ps_xml%wf_occ(ii) - ps%conf%occ(ii, 1)
         else
           ps%conf%occ(ii, 1) = ps_xml%wf_occ(ii)
@@ -1337,6 +1337,24 @@ contains
 
     POP_SUB(ps_xml_load)
   end subroutine ps_xml_load
+
+  ! ---------------------------------------------------------
+
+  logical function is_diagonal(dim, matrix)
+    integer, intent(in)    :: dim 
+    FLOAT,   intent(in)    :: matrix(:, :)
+
+    integer :: ii, jj
+    
+    is_diagonal = .true.
+    do ii = 1, dim
+      do jj = 1, dim
+        if(ii == jj) cycle
+        if(abs(matrix(ii, jj)) > CNST(1e10)) is_diagonal = .false.
+      end do
+    end do
+    
+  end function is_diagonal
   
   ! ---------------------------------------------------------
   !> Returns the number of atomic orbitals taking into account then m quantum number multiplicity
