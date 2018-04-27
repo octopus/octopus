@@ -30,7 +30,6 @@ module output_me_oct_m
   use messages_oct_m
   use kpoints_oct_m
   use loct_math_oct_m
-  use loct_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
   use parser_oct_m
@@ -61,7 +60,6 @@ module output_me_oct_m
     !! octopole matrix elements (between Kohn-Sham or single-particle orbitals).
     !! In 2D, only the dipole moments are printed.
     integer :: ks_multipoles      
-    character(len=20) :: range_i, range_j, range_k, range_l
   end type output_me_t
 
   integer, parameter, public :: &
@@ -75,10 +73,9 @@ contains
   
   ! ---------------------------------------------------------
   subroutine output_me_init(this, sb)
-    type(output_me_t), intent(inout) :: this
+    type(output_me_t), intent(out) :: this
     type(simul_box_t), intent(in)  :: sb
-    type(block_t) :: blk
-    integer :: blk_len, ii
+
     PUSH_SUB(output_me_init)
 
     !%Variable OutputMatrixElements
@@ -133,35 +130,7 @@ contains
       !% <math>x</math> and <math>x^2</math> matrix elements between Kohn-Sham states.
       !%End
       call parse_variable('OutputMEMultipoles', 1, this%ks_multipoles)
-
     end if
-
-    !%Variable CIrange
-    !%Type block
-    !%Defaul all
-    !%Section Output
-    !%Description
-    !% Dummy description
-    !%End
-    if(parse_block('CIrange', blk) == 0) then
-      if(parse_block_n(blk).eq.1.and.parse_block_cols(blk,0).eq.4)then
-        call parse_block_string(blk,0,0,this%range_i)
-        call parse_block_string(blk,0,1,this%range_j)
-        call parse_block_string(blk,0,2,this%range_k)
-        call parse_block_string(blk,0,3,this%range_l)
-        message(1) = "Ranges:"//this%range_i//this%range_j//this%range_k//this%range_l
-        call messages_info(1)
-      else
-        call messages_write('You need to specify all four ranges for the Coulomb integrals and on one single line.')
-        call messages_fatal()
-      end if
-    else !it is not set
-      this%range_i = '1-999999'
-      this%range_j = '1-999999'
-      this%range_k = '1-999999'
-      this%range_l = '1-999999'
-    end if
-
 
     POP_SUB(output_me_init)
   end subroutine output_me_init
@@ -176,11 +145,10 @@ contains
     type(geometry_t),    intent(in)    :: geo
     type(hamiltonian_t), intent(in)    :: hm
 
-    integer :: id, ll, mm, ik, iunit, ist, jst, kst, lst
+    integer :: id, ll, mm, ik, iunit
     character(len=256) :: fname
-    FLOAT, allocatable :: twoint(:,:,:,:)
-    FLOAT, allocatable :: doneint(:,:)
-    CMPLX, allocatable :: zoneint(:,:)
+    FLOAT, allocatable :: oneint(:), twoint(:)
+    integer, allocatable :: iindex(:), jindex(:), kindex(:), lindex(:)
     
     PUSH_SUB(output_me)
 
@@ -252,44 +220,27 @@ contains
       call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
       ! how to do this properly? states_matrix
       iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
-      
-      !CAREFUL: Here I am doing a dirty hack -- I pass vxc instead of vhxc and I comment out a line in states_calc (adding the eigenvalue on the diagonal)
-      !this way the output_me_one_body is filled with the me of vxc
-      !iunit2 = io_open(trim(dir)//'/output_me_vhxc', action='write')
 
-      !id = st%nst*(st%nst+1)/2
-      id = st%nst
+      id = st%nst*(st%nst+1)/2
 
-      !SAFE_ALLOCATE(vhxcint(1:id, 1:id))
+      SAFE_ALLOCATE(oneint(1:id))
+      SAFE_ALLOCATE(iindex(1:id))
+      SAFE_ALLOCATE(jindex(1:id))
 
       if (states_are_real(st)) then
-        SAFE_ALLOCATE(doneint(1:id, 1:id))
-        !I pass vxc instead of vhxc because of dirty hack. CAREFUL
-        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vxc, id, doneint, verbose=.true.)
-        do ist = 1, id
-          do jst = 1, id
-            write(iunit, *) ist, jst, doneint(ist, jst)
-            !write(iunit2, *) ist, jst, vhxcint(ist, jst)
-          enddo
-        enddo
-        SAFE_DEALLOCATE_A(doneint)
+        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vxc, id, iindex, jindex, oneint)
       else
-        SAFE_ALLOCATE(zoneint(1:id, 1:id))
-        !I pass vxc instead of vhxc because of dirty hack. CAREFUL
-        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vxc, id, zoneint, verbose = .true.)
-        do ist = 1, id
-          do jst = 1, id
-            write(iunit, *) ist, jst, zoneint(ist, jst)
-            !write(iunit2, *) ist, jst, vhxcint(ist, jst)
-          enddo
-        enddo
-        SAFE_DEALLOCATE_A(zoneint)
+        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vxc, id, iindex, jindex, oneint)
       end if
 
-      !SAFE_DEALLOCATE_A(vhxcint)
+      do ll = 1, id
+        write(iunit, *) iindex(ll), jindex(ll), oneint(ll)
+      enddo
 
+      SAFE_DEALLOCATE_A(iindex)
+      SAFE_DEALLOCATE_A(jindex)
+      SAFE_DEALLOCATE_A(oneint)
       call io_close(iunit)
-      !call io_close(iunit2)
 
     end if
 
@@ -302,29 +253,26 @@ contains
       ! how to do this properly? states_matrix
       iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
 
-      id = 0
-      do ll = 1, st%nst
-        if(st%eigenval(ll,1).lt.0) id = id + 1
-      end do 
-
-      SAFE_ALLOCATE(twoint(1:id,1:id,1:id,1:id))
+      id = st%nst*(st%nst+1)*(st%nst**2+st%nst+2)/8
+      SAFE_ALLOCATE(twoint(1:id))
+      SAFE_ALLOCATE(iindex(1:id))
+      SAFE_ALLOCATE(jindex(1:id))
+      SAFE_ALLOCATE(kindex(1:id))
+      SAFE_ALLOCATE(lindex(1:id))
 
       if (states_are_real(st)) then
-        call dstates_me_two_body(gr, st, id, twoint, nst = id, verbose = .true.)
+        call dstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, twoint)
       else
-        call zstates_me_two_body(gr, st, id, twoint, nst = id, verbose = .true.)
+        call zstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, twoint)
       end if
-       
-      do ist = 1, id
-        do jst = 1, id
-          do kst = 1, id
-            do lst = 1, id
-              write(iunit, *) ist, jst, kst, lst, twoint(ist, jst, kst, lst)
-            end do
-          end do
-        end do
-      end do 
-
+      
+      do ll = 1, id
+        write(iunit, *) iindex(ll), jindex(ll), kindex(ll), lindex(ll), twoint(ll)
+      enddo
+      SAFE_DEALLOCATE_A(iindex)
+      SAFE_DEALLOCATE_A(jindex)
+      SAFE_DEALLOCATE_A(kindex)
+      SAFE_DEALLOCATE_A(lindex)
       SAFE_DEALLOCATE_A(twoint)
       call io_close(iunit)
 

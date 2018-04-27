@@ -1653,7 +1653,8 @@ contains
     call X(cube_function_alloc_RS) (cube, cf)
     call X(mesh_to_cube) (mesh, ff, cube, cf)
 
-    filename = io_workpath(trim(dir)//'/'//trim(fname)//".vtk")
+    !filename = io_workpath(trim(dir)//'/'//trim(fname)//".vtk")
+    filename = trim(dir)//'/'//trim(fname)//".vtk"
    
 
     if(mesh%sb%nonorthogonal) then

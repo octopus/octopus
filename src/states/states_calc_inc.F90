@@ -97,10 +97,10 @@ contains
 
     R_TYPE, allocatable :: psi(:, :, :)
     integer             :: psi_block(1:2), total_np
+    type(profile_t), save :: prof_cholesky, prof_trsm, prof_herk
 #ifdef HAVE_SCALAPACK
     integer             :: info, nbl, nrow, ncol
     integer             :: psi_desc(BLACS_DLEN), ss_desc(BLACS_DLEN)
-    type(profile_t), save :: prof_cholesky, prof_trsm, prof_herk
 #endif
 
     PUSH_SUB(X(states_orthogonalization_full).cholesky_parallel)
@@ -263,7 +263,10 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 
   integer :: idim, block_size, ib, size, sp
   R_TYPE, allocatable :: psicopy(:, :, :)
+  integer :: ierr
   type(accel_mem_t) :: psicopy_buffer, ss_buffer
+  type(accel_kernel_t), save, target :: dkernel, zkernel
+  type(accel_kernel_t), pointer :: kernel
   type(profile_t), save :: prof_copy
   type(profile_t), save :: prof
 
@@ -502,11 +505,11 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
 
   if(.not. mesh%use_curvilinear) then
 
-    do sp = 1, mesh%np, block_size
-      size = min(block_size, mesh%np - sp + 1)
-      do ist = 1, nst
-        do idim = 1, dim
-        
+    do idim = 1, dim
+      do sp = 1, mesh%np, block_size
+        size = min(block_size, mesh%np - sp + 1)
+        do ist = 1, nst
+
           if(present(mask)) then
             if(mask(ist)) cycle
           end if
@@ -522,11 +525,11 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
 
   else
 
-    do sp = 1, mesh%np, block_size
-      size = min(block_size, mesh%np - sp + 1)
-      ep = sp - 1 + size
-      do ist = 1, nst
-        do idim = 1, dim
+    do idim = 1, dim
+      do sp = 1, mesh%np, block_size
+        size = min(block_size, mesh%np - sp + 1)
+        ep = sp - 1 + size
+        do ist = 1, nst
 
           if(present(mask)) then
             if(mask(ist)) cycle
@@ -557,15 +560,14 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   if(present(beta_ij))  &
     ss(:) = ss(:) * beta_ij(:)
 
-  do sp = 1, mesh%np, block_size
-    size = min(block_size, mesh%np - sp + 1)
+  do idim = 1, dim
+    do sp = 1, mesh%np, block_size
+      size = min(block_size, mesh%np - sp + 1)
 
-    if(present(Theta_Fi)) then
-      if(Theta_Fi /= M_ONE) &
-        call blas_scal(size, R_TOTYPE(Theta_Fi), phi(sp, idim), 1)
-    end if
-
-    do idim = 1, dim
+      if(present(Theta_Fi)) then
+        if(Theta_Fi /= M_ONE) &
+          call blas_scal(size, R_TOTYPE(Theta_Fi), phi(sp, idim), 1)
+      end if
 
       do ist = 1, nst
 
@@ -647,7 +649,7 @@ FLOAT function X(states_residue)(mesh, dim, hf, ee, ff) result(rr)
 
   call profiling_in(prof, "RESIDUE")
 
-  SAFE_ALLOCATE(res(1:mesh%np, 1:dim))
+  SAFE_ALLOCATE(res(1:mesh%np_part, 1:dim))
 
   forall (idim = 1:dim, ip = 1:mesh%np) res(ip, idim) = hf(ip, idim) - ee*ff(ip, idim)
 
@@ -1052,8 +1054,10 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
   R_TYPE,            intent(in)    :: uu(:, :)
   integer,           intent(in)    :: ik
   
+  type(batch_t) :: psib
   integer       :: block_size, sp, idim, size, ib
   R_TYPE, allocatable :: psinew(:, :, :), psicopy(:, :, :)
+  type(accel_kernel_t), save :: dkernel, zkernel
   type(accel_mem_t) :: psinew_buffer, psicopy_buffer, uu_buffer
   type(profile_t), save :: prof
 
@@ -1159,9 +1163,11 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 #ifndef R_TREAL
   integer :: ist, jst
 #endif
+  type(batch_t) :: psib, psi2b
   type(profile_t), save :: prof
   FLOAT :: vol
   R_TYPE, allocatable :: psi(:, :, :)
+  integer :: ierr
   type(accel_mem_t) :: psi_buffer, overlap_buffer
 
   PUSH_SUB(X(states_calc_overlap))
@@ -1309,9 +1315,9 @@ subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj)
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(out)   :: proj(:, :)
 
-  integer       :: ib, ip
+  integer       :: ib, jb, ip
   R_TYPE, allocatable :: psi(:, :, :), gspsi(:, :, :)
-  integer :: sp, size, block_size
+  integer :: sp, ep, size, block_size, ierr
   type(profile_t), save :: prof
 
   PUSH_SUB(X(states_calc_projections))
@@ -1374,23 +1380,20 @@ subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj)
 end subroutine X(states_calc_projections)
 
 ! ---------------------------------------------------------
-subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, oneint, verbose)
+subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, jindex, oneint)
 
   character(len=*),    intent(in)    :: dir
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(in)    :: geo
   type(states_t),      intent(inout) :: st
   integer,             intent(in)    :: nspin
-  FLOAT,               intent(in)    :: vhxc(1:gr%mesh%np, nspin)  
+  FLOAT,               intent(in)    :: vhxc(1:gr%mesh%np, nspin)
   integer,             intent(in)    :: nint
-  R_TYPE,              intent(out)   :: oneint(:,:)  !this needs to address complex numbers as well?!?
-  logical, optional,   intent(in)    :: verbose
-
-
-  integer ist, jst, np, iint, idone, ntodo
-
-  logical :: verbose_
-
+  integer,             intent(out)   :: iindex(1:nint)
+  integer,             intent(out)   :: jindex(1:nint)
+  FLOAT,               intent(out)   :: oneint(1:nint)  !this needs to address complex numbers as well?!?
+  
+  integer ist, jst, np, iint, ntodo
   R_TYPE :: me
   R_TYPE, allocatable :: psii(:, :), psij(:, :)
 
@@ -1400,19 +1403,11 @@ subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, oneint, ve
   SAFE_ALLOCATE(psij(1:gr%mesh%np_part, 1:st%d%dim))
   
   np = gr%mesh%np
-  iint = 1
-  
+  iint = M_ONE
 
-  verbose_ = optional_default(verbose, .false.)
+  ntodo = nint
+  if(mpi_world%rank == 0) call loct_progress_bar(-1, ntodo)
 
-  if(verbose_) then
-    !Lets counts the number of orbital to treat, to display a progress bar
-    ntodo = st%nst*(st%nst+1)/2
-    idone = 0
-    if(mpi_world%rank == 0) call loct_progress_bar(-1, ntodo)
-  end if
-
-  
   do ist = 1, st%nst
 
     call states_get_state(st, gr%mesh, ist, 1, psii)
@@ -1425,18 +1420,15 @@ subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, oneint, ve
       psij(1:np, 1) = R_CONJ(psii(1:np, 1))*vhxc(1:np, 1)*psij(1:np, 1)
 
       me = - X(mf_integrate)(gr%mesh, psij(:, 1))
-     
-      !to uncomment if I want to actually calculate one_body instead of vxc 
-      !if(ist==jst) me = me + st%eigenval(ist,1)
-      oneint(ist, jst) = me
-      oneint(jst, ist) = me
 
+      if(ist==jst) me = me + st%eigenval(ist,1)
+
+      iindex(iint) = ist
+      jindex(iint) = jst
+      oneint(iint) = me
+      
+      if(mpi_world%rank == 0) call loct_progress_bar(iint, ntodo)
       iint = iint + 1
-      if(verbose_) then
-        idone = idone + 1
-        if(mpi_world%rank == 0) call loct_progress_bar(idone, ntodo)
-      end if
-
     end do
   end do
 
@@ -1448,17 +1440,18 @@ end subroutine X(states_me_one_body)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_me_two_body) (gr, st, nint, twoint, nst, verbose)
+subroutine X(states_me_two_body) (gr, st, nint, iindex, jindex, kindex, lindex, twoint)
   type(grid_t),     intent(inout)           :: gr
   type(states_t),   intent(in)              :: st
   integer,          intent(in)              :: nint
-  FLOAT,            intent(out)             :: twoint(:,:,:,:)  !this needs to address complex numbers as well?!?
-  integer, optional,intent(in)              :: nst
-  logical, optional,intent(in)              :: verbose
+  integer,          intent(out)             :: iindex(1:nint)
+  integer,          intent(out)             :: jindex(1:nint)
+  integer,          intent(out)             :: kindex(1:nint)
+  integer,          intent(out)             :: lindex(1:nint)
+  FLOAT,            intent(out)             :: twoint(1:nint)  !this needs to address complex numbers as well?!?
 
-  integer :: ist, jst, kst, lst, ijst, klst, idone, ntodo
-  integer :: iint, nst_
-  logical :: verbose_
+  integer :: ist, jst, kst, lst, ijst, klst
+  integer :: iint, ntodo
   R_TYPE  :: me
   R_TYPE, allocatable :: nn(:), vv(:)
   R_TYPE, allocatable :: psii(:, :), psij(:, :), psik(:, :), psil(:, :)
@@ -1474,27 +1467,13 @@ subroutine X(states_me_two_body) (gr, st, nint, twoint, nst, verbose)
 
   ijst = 0
   iint = 1
-
-  if(present(nst)) then
-    nst_ = nst
-  else
-    nst_ = st%nst
-  end if
-  
-  verbose_ = optional_default(verbose, .false.)
-
-  if(verbose_) then
-    !Lets counts the number of orbital to treat, to display a progress bar
-    ntodo = ((nst_+1)*nst_/2)*((nst_+1)*nst_/2+1)/2
-    idone = 0
-    if(mpi_world%rank == 0) call loct_progress_bar(-1, ntodo)
-  end if
-
-  do ist = 1, nst_
+  ntodo = nint
+  if(mpi_world%rank == 0) call loct_progress_bar(-1, ntodo)
+  do ist = 1, st%nst
 
     call states_get_state(st, gr%mesh, ist, 1, psii)
 
-    do jst = 1, nst_
+    do jst = 1, st%nst
       if(jst > ist) cycle
       ijst=ijst+1
 
@@ -1504,10 +1483,11 @@ subroutine X(states_me_two_body) (gr, st, nint, twoint, nst, verbose)
       call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
 
       klst=0
-      do kst = 1, nst_
+      do kst = 1, st%nst
+ 
         call states_get_state(st, gr%mesh, kst, 1, psik)
 
-        do lst = 1, nst_
+        do lst = 1, st%nst
           if(lst > kst) cycle
           klst=klst+1
           if(klst > ijst) cycle
@@ -1518,20 +1498,15 @@ subroutine X(states_me_two_body) (gr, st, nint, twoint, nst, verbose)
 
           me = X(mf_integrate)(gr%mesh, psil(:, 1))
 
-          twoint(ist,jst,kst,lst) =  me
-          
-          twoint(kst,lst,jst,jst) =  me
-          twoint(jst,ist,lst,kst) =  me
-          twoint(lst,kst,jst,ist) =  me
-          twoint(jst,ist,kst,lst) =  me
-          twoint(lst,kst,ist,jst) =  me
-          twoint(ist,jst,lst,kst) =  me
-          twoint(kst,lst,jst,ist) =  me
+          iindex(iint) =  ist
+          jindex(iint) =  jst
+          kindex(iint) =  kst
+          lindex(iint) =  lst
+          twoint(iint) =  me
 
-          if(verbose_) then
-            idone = idone + 1
-            if(mpi_world%rank == 0) call loct_progress_bar(idone, ntodo)
-          end if
+          if(mpi_world%rank == 0) call loct_progress_bar(iint, ntodo)
+ 
+          iint = iint + 1
         end do
       end do
     end do
