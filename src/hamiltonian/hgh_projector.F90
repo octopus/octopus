@@ -20,6 +20,7 @@
 
 module hgh_projector_oct_m
   use atom_oct_m
+  use blas_oct_m
   use comm_oct_m
   use global_oct_m
   use hardware_oct_m
