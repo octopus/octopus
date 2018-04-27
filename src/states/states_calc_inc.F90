@@ -1451,7 +1451,7 @@ subroutine X(states_me_two_body) (gr, st, nint, iindex, jindex, kindex, lindex, 
   FLOAT,            intent(out)             :: twoint(1:nint)  !this needs to address complex numbers as well?!?
 
   integer :: ist, jst, kst, lst, ijst, klst
-  integer :: iint, ntodo
+  integer :: iint, ntodo, id
   R_TYPE  :: me
   R_TYPE, allocatable :: nn(:), vv(:)
   R_TYPE, allocatable :: psii(:, :), psij(:, :), psik(:, :), psil(:, :)
@@ -1464,16 +1464,21 @@ subroutine X(states_me_two_body) (gr, st, nint, iindex, jindex, kindex, lindex, 
   SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psik(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psil(1:gr%mesh%np, 1:st%d%dim))
+  
+  !find the number of bound states
+  do ist = 1, st%nst
+    if(st%eigenval(ist,1).lt.0) id=ist
+  enddo
 
   ijst = 0
   iint = 1
   ntodo = nint
   if(mpi_world%rank == 0) call loct_progress_bar(-1, ntodo)
-  do ist = 1, st%nst
+  do ist = 1, id
 
     call states_get_state(st, gr%mesh, ist, 1, psii)
 
-    do jst = 1, st%nst
+    do jst = 1, id
       if(jst > ist) cycle
       ijst=ijst+1
 
@@ -1483,11 +1488,11 @@ subroutine X(states_me_two_body) (gr, st, nint, iindex, jindex, kindex, lindex, 
       call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
 
       klst=0
-      do kst = 1, st%nst
+      do kst = 1, id
  
         call states_get_state(st, gr%mesh, kst, 1, psik)
 
-        do lst = 1, st%nst
+        do lst = 1, id
           if(lst > kst) cycle
           klst=klst+1
           if(klst > ijst) cycle
