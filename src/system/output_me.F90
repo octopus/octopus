@@ -253,7 +253,13 @@ contains
       ! how to do this properly? states_matrix
       iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
 
-      id = st%nst*(st%nst+1)*(st%nst**2+st%nst+2)/8
+      
+      do ll = 1, st%nst
+        if(st%eigenval(ll, 1).lt.0) ik=ll
+      enddo
+
+      id = ik*(ik+1)*(ik**2+ik+2)/8
+      !id = st%nst*(st%nst+1)*(st%nst**2+st%nst+2)/8
       SAFE_ALLOCATE(twoint(1:id))
       SAFE_ALLOCATE(iindex(1:id))
       SAFE_ALLOCATE(jindex(1:id))
