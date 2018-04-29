@@ -6,7 +6,7 @@ TestGroups : long-run, periodic_systems, lda_u
 Enabled    : Yes
 
 Processors : 2
-Precision : 0.0003
+Precision : 0.0004
 
 Input      : 07-noncollinear.01-U5-gs.inp
 
@@ -23,7 +23,7 @@ match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  122.0
 match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -208.04835524 
 match ; Hubbard energy     ; GREPFIELD(static/info, 'Hubbard     =', 3) ;  0.22530356
 
-Precision : 0.0001
+Precision : 0.0003
 match ; Total Magnetic Moment x ; GREPFIELD(static/info, 'mx = ', 3);      0.0000 
 match ; Total Magnetic Moment y ; GREPFIELD(static/info, 'my = ', 3);      0.0000 
 match ; Total Magnetic Moment z ; GREPFIELD(static/info, 'mz = ', 3);      0.0000 
