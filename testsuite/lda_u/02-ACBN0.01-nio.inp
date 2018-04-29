@@ -4,6 +4,7 @@ BoxShape = parallelepiped
 ExperimentalFeatures = yes
 
 EigenSolver = rmmdiis
+ConvRelDens = 1.0e-7
 
 a = 7.8809
 %Species
@@ -49,7 +50,7 @@ LCAOStart= lcao_states
 2 | 2 | 1
 %
 
-ExtraStates = 6
+ExtraStates = 8
 
 FilterPotentials = filter_none
 AOTruncation = ao_box
