@@ -267,7 +267,7 @@ int64_t parse_int(const char *name, int64_t def)
     check_is_numerical(name, ptr);
     ret = ROUND(GSL_REAL(ptr->value.c));
     if(!disable_write) {
-      fprintf(fout, "%s = %d\n", name, ret);
+      fprintf(fout, "%s = %ld\n", name, ret);
     }
     if(fabs(GSL_IMAG(ptr->value.c)) > 1e-10) {
        fprintf(stderr, "Parser error: complex value passed for integer variable '%s'.\n", name);
@@ -280,7 +280,7 @@ int64_t parse_int(const char *name, int64_t def)
   }else{
     ret = def;
     if(!disable_write) {
-      fprintf(fout, "%s = %d\t\t# default\n", name, ret);
+      fprintf(fout, "%s = %ld\t\t# default\n", name, ret);
     }
   }
   return ret;
