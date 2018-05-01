@@ -76,7 +76,7 @@ module varinfo_oct_m
       implicit none
       type(c_ptr), intent(in)  :: opt
       type(c_ptr), intent(out) :: name
-      integer,     intent(out) :: val
+      integer(8),  intent(out) :: val
       type(c_ptr), intent(out) :: desc
     end subroutine varinfo_opt_getinfo
 
@@ -111,7 +111,7 @@ contains
     integer,optional, intent(out):: ierr
 
     type(c_ptr) :: handle, opt, name, type, default, section, desc
-    integer :: val
+    integer(8) :: val
     logical :: first
 
     call varinfo_getvar(var, handle)
@@ -162,7 +162,7 @@ contains
     logical, optional, intent(in) :: is_flag
 
     type(c_ptr) :: handle, opt, name, desc
-    integer :: val, option_
+    integer(8) :: val, option_
     logical :: is_flag_
 
     is_flag_ = .false.
@@ -217,7 +217,7 @@ contains
     character(len=*), intent(in), optional :: pre
 
     type(c_ptr) :: handle, opt, name, desc
-    integer :: val
+    integer(8) :: val
     logical :: option_found
     
     call varinfo_getvar(var, handle)
@@ -234,7 +234,7 @@ contains
 
       call varinfo_opt_getinfo(opt, name, val, desc)
 
-      if(val == option) then
+      if(val == int(option, 8)) then
         option_found = .true.
         exit
       endif

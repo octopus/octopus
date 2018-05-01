@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <fortran_types.h>
 
 #include "string_f.h" /* fortran <-> c string compatibility issues */
 
@@ -275,8 +276,9 @@ void FC_FUNC_(varinfo_getopt, VARINFO_GETOPT)
 
 
 /* --------------------------------------------------------- */
+
 void FC_FUNC_(varinfo_opt_getinfo, VARINFO_OPT_GETINFO)
-  (const opt_type **opt, char **name, int *value, char **desc)
+  (const opt_type **opt, char **name, fint8 *value, char **desc)
 {
   if(opt == NULL){
     *name = NULL; *desc = NULL;
