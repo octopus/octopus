@@ -126,8 +126,8 @@ module parser_oct_m
     subroutine oct_parse_int(name, def, res)
       implicit none
       character(len=*), intent(in) :: name
-      integer, intent(in)          :: def
-      integer, intent(out)         :: res
+      integer(8), intent(in)       :: def
+      integer(8), intent(out)      :: res
     end subroutine oct_parse_int
 
     subroutine oct_parse_double(name, def, res)
@@ -357,9 +357,13 @@ contains
     integer,          intent(in)    :: def
     integer,          intent(out)   :: res
 
+    integer(8) :: res8
+    
     call parse_check_varinfo(name)
-    call oct_parse_int(name, def, res)
+    call oct_parse_int(name, int(def, 8), res8)
 
+    res = res8
+    
   end subroutine parse_integer
 
   ! ---------------------------------------------------------
@@ -381,7 +385,7 @@ contains
     logical,          intent(in)    :: def
     logical,          intent(out)   :: res
 
-    integer :: idef, ires
+    integer(8) :: idef, ires
 
     call parse_check_varinfo(name)
     
