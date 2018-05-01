@@ -34,7 +34,7 @@ extern char ** environ;
 static FILE *fout;
 static int  disable_write;
 
-#define ROUND(x) ((x)<0 ? (int)(x-0.5) : (int)(x+0.5)) 
+#define ROUND(x) ((x)<0 ? (int64_t)(x-0.5) : (int64_t)(x+0.5)) 
 
 void str_trim(char *in)
 {
