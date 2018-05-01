@@ -188,7 +188,7 @@ sub print_defaults_header{
   open(OUT, ">$include/defaults.h");
   my $key;
   foreach $key (sort(keys %default_value)) {
-    print OUT "#define DEFAULT__", uc $key, " (", $default_value{"$key"}, ")\n";
+    print OUT "#define DEFAULT__", uc $key, " (", $default_value{"$key"}, "_8)\n";
   }
   close(OUT);
 }
@@ -199,7 +199,7 @@ sub print_options_header{
   open(OUT, ">$include/options.h");
   my $key;
   foreach $key (sort(keys %varopt)) {
-    print OUT "#define OPTION__", uc $key, " (", $varopt{"$key"}, ")\n";
+    print OUT "#define OPTION__", uc $key, " (", $varopt{"$key"}, "_8)\n";
   }
 
   close(OUT);

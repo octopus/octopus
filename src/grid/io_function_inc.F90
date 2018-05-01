@@ -439,7 +439,7 @@ end subroutine X(io_function_input_global)
 ! ---------------------------------------------------------
 subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, unit, ierr, &
   geo, grp, root, is_global, vector_dim_labels)
-  integer,                    intent(in)  :: how
+  integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
   type(mesh_t),               intent(in)  :: mesh
@@ -453,7 +453,8 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
   logical,          optional, intent(in)  :: is_global !< Input data is mesh%np_global? And, thus, it has not be gathered
   character(len=*), optional, intent(in)  :: vector_dim_labels(:)
 
-  integer :: ivd, how_seq
+  integer :: ivd
+  integer(8) :: how_seq
   character(len=MAX_PATH_LEN) :: full_fname
   R_TYPE, pointer :: ff_global(:, :)
   logical :: i_am_root, is_global_
@@ -600,7 +601,7 @@ end subroutine X(io_function_output_vector)
 ! ---------------------------------------------------------
 subroutine X(io_function_output_vector_BZ)(how, dir, fname, mesh, kpt, ff, vector_dim, unit, & 
   ierr, grp, root, vector_dim_labels)
-  integer,                    intent(in)  :: how
+  integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
   type(mesh_t),               intent(in)  :: mesh
@@ -613,7 +614,8 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, mesh, kpt, ff, vecto
   integer,          optional, intent(in)  :: root !< which process is going to write the data
   character(len=*), optional, intent(in)  :: vector_dim_labels(:)
 
-  integer :: ivd, how_seq
+  integer :: ivd
+  integer(8) :: how_seq
   character(len=MAX_PATH_LEN) :: full_fname
   R_TYPE, pointer :: ff_global(:, :)
   logical :: i_am_root
@@ -698,7 +700,7 @@ end subroutine X(io_function_output_vector_BZ)
 
 ! ---------------------------------------------------------
 subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, grp, root, is_global)
-  integer,                    intent(in)  :: how
+  integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
   type(mesh_t),               intent(in)  :: mesh
@@ -790,7 +792,7 @@ end subroutine X(io_function_output)
 
 ! ---------------------------------------------------------
 subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, geo)
-  integer,                    intent(in)  :: how
+  integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir, fname
   type(mesh_t),               intent(in)  :: mesh
   R_TYPE,                     intent(in)  :: ff(:)  !< (mesh%np_global or mesh%np_part_global)
@@ -1037,7 +1039,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine out_matlab(how, d1, d2, d3, out_what)
-    integer, intent(in) :: how, d1, d2, d3, out_what
+    integer(8), intent(in) :: how
+    integer, intent(in) :: d1, d2, d3, out_what
 
     integer :: ix, iy, record_length
     integer :: min_d2, min_d3, max_d2, max_d3
@@ -1687,7 +1690,7 @@ end subroutine X(io_function_output_global)
 
 ! ---------------------------------------------------------
 subroutine X(io_function_output_global_BZ) (how, dir, fname, mesh, ff, unit, ierr)
-  integer,                    intent(in)  :: how
+  integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir, fname
   type(mesh_t),               intent(in)  :: mesh
   R_TYPE,                     intent(in)  :: ff(:)  !< (st%d%nik)

@@ -57,7 +57,8 @@ program photoelectron_spectrum
   end type pesoutput_t  
 
   integer              :: ierr, integrate
-  integer              :: dim, dir, how, idim, pdim, ngpt
+  integer              :: dim, dir, idim, pdim, ngpt
+  integer(8)           :: how
   integer              :: llp(3), llg(3)   !< The size of the g-point and p-point cubic grids 
   FLOAT                :: Emax, Emin, Estep, uEstep,uEspan(2), pol(3)
   FLOAT                :: uThstep, uThspan(2), uPhstep, uPhspan(2), pvec(3)

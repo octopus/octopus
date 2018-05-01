@@ -126,7 +126,7 @@ module output_oct_m
     !> General output variables:
     integer(8) :: what                !< what to output
     integer(8) :: whatBZ              !< what to output - for k-point resolved output
-    integer    :: how                 !< how to output
+    integer(8) :: how                 !< how to output
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
 
@@ -145,7 +145,7 @@ module output_oct_m
   
   end type output_t
 
-  integer, parameter, public ::              &
+  integer(8), parameter, public ::              &
     OPTION__OUTPUT__J_FLOW          =     32768
   
 contains
@@ -285,7 +285,7 @@ contains
     !%Option frozen_system bit(30)
     !% Generates input for a frozen calculation.
     !%End
-    call parse_variable('Output', 0_8, outp%what)
+    call parse_variable('Output', 0, outp%what)
 
 
 
