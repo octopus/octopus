@@ -257,10 +257,10 @@ static void check_is_numerical(const char * name, const symrec * ptr){
 }
 
 
-int parse_int(const char *name, int def)
+int64_t parse_int(const char *name, int64_t def)
 {
   symrec *ptr;
-  int ret;
+  int64_t ret;
 
   ptr = getsym(name);	
   if(ptr){
