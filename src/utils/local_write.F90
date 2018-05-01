@@ -72,7 +72,7 @@ module local_write_oct_m
   type local_write_t
     private
     type(local_write_prop_t),allocatable :: out(:,:)
-    integer                  :: how              !< how to output
+    integer(8)               :: how              !< how to output
     integer                  :: lmax             !< maximum multipole moment to output
   end type local_write_t
 
@@ -300,7 +300,7 @@ contains
     type(hamiltonian_t),  intent(inout) :: hm
     type(v_ks_t),         intent(inout) :: ks
     integer,              intent(in) :: iter
-    integer,              intent(in) :: how
+    integer(8),           intent(in) :: how
 
     integer            :: id, is, ix, ierr
     character(len=120) :: folder, out_name
@@ -537,7 +537,7 @@ contains
     integer,                  intent(in)    :: iter
     integer,                  intent(in)    :: l_start
     logical,                  intent(in)    :: start
-    integer,                  intent(in)    :: how
+    integer(8),               intent(in)    :: how
 
     integer :: id, is, ll, mm, add_lm
     character(len=120) :: aux

@@ -2044,13 +2044,13 @@ contains
   contains
 
     logical function parameter_defined(param) result(defined)
-      integer, intent(in) :: param
+      integer(8), intent(in) :: param
 
       integer :: tmp
       
       PUSH_SUB(read_from_block.parameter_defined)
 
-      tmp = iihash_lookup(read_parameters, -param, defined)
+      tmp = iihash_lookup(read_parameters, int(-param), defined)
       
       POP_SUB(read_from_block.parameter_defined)
     end function parameter_defined
@@ -2058,7 +2058,7 @@ contains
     !------------------------------------------------------
     
     subroutine check_duplication(param)
-      integer, intent(in) :: param
+      integer(8), intent(in) :: param
 
       PUSH_SUB(read_from_block.check_duplication)
 
@@ -2066,7 +2066,7 @@ contains
         call messages_input_error('Species', "Duplicated parameter in species '"//trim(spec%label)//"'")
       end if
 
-      call iihash_insert(read_parameters, -param, 1)
+      call iihash_insert(read_parameters, int(-param), 1)
 
       POP_SUB(read_from_block.check_duplication)
     end subroutine check_duplication

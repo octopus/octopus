@@ -105,12 +105,12 @@ contains
   ! ---------------------------------------------------------
   subroutine io_function_read_how(sb, how, ignore_error)
     type(simul_box_t), intent(in)  :: sb
-    integer,           intent(out) :: how
+    integer(8),        intent(out) :: how
     logical, optional, intent(in)  :: ignore_error !> Ignore error check. Used when called from some external utility.
 
     PUSH_SUB(io_function_read_how)
 
-    how = 0
+    how = 0_8
     
     call messages_obsolete_variable('OutputHow', 'OutputFormat')
     
@@ -300,7 +300,7 @@ contains
   !! call dio_function_output(io_function_fill_how("AxisX_and_PlaneX_and_DX"), &
   !                       ".", "func", mesh, sb, func, M_ONE, ierr)
   ! -------------------------------------------------------------------
-  integer function io_function_fill_how(where) result(how)
+  integer(8) function io_function_fill_how(where) result(how)
     character(len=*), intent(in) :: where
 
     PUSH_SUB(io_function_fill_how)

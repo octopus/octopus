@@ -710,7 +710,8 @@ contains
     type(local_domain_t),   intent(inout) :: lcl
     FLOAT,                  intent(in)    :: ff(:)
     
-    integer             :: how, id, ip, iunit, ierr
+    integer(8)          :: how
+    integer             :: id, ip, iunit, ierr
     type(basins_t)      :: basins
     FLOAT, allocatable  :: ff2(:,:)
     logical             :: extra_write
@@ -810,7 +811,8 @@ contains
     integer,           intent(in)    :: dsh(:)
     logical,           intent(out)   :: inside(:,:)
 
-    integer               :: how, ia, ib, id, ierr, ip, ix, rankmin
+    integer(8)            :: how
+    integer               :: ia, ib, id, ierr, ip, ix, rankmin
     integer               :: max_check
     integer, allocatable  :: dunit(:), domain_map(:,:), ion_map(:)
     FLOAT                 :: dmin, dd
