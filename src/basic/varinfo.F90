@@ -35,6 +35,11 @@ module varinfo_oct_m
     varinfo_option,       &
     varinfo_exists
 
+  interface varinfo_valid_option
+    module procedure varinfo_valid_option_8
+    module procedure varinfo_valid_option_4
+  end interface varinfo_valid_option
+  
   interface
     subroutine varinfo_init(filename)
       implicit none
@@ -151,9 +156,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  logical function varinfo_valid_option(var, option, is_flag) result(l)
+  logical function varinfo_valid_option_8(var, option, is_flag) result(l)
     character(len=*),  intent(in) :: var
-    integer,           intent(in) :: option
+    integer(8),        intent(in) :: option
     logical, optional, intent(in) :: is_flag
 
     type(c_ptr) :: handle, opt, name, desc
@@ -191,8 +196,18 @@ contains
 
     if(is_flag_ .and. (option_ == 0)) l = .true.
 
-  end function varinfo_valid_option
+  end function varinfo_valid_option_8
 
+  ! ---------------------------------------------------------
+  
+  logical function varinfo_valid_option_4(var, option, is_flag) result(l)
+    character(len=*),  intent(in) :: var
+    integer,           intent(in) :: option
+    logical, optional, intent(in) :: is_flag
+
+    l = varinfo_valid_option_8(var, int(option, 8), is_flag)
+    
+  end function varinfo_valid_option_4
 
   ! ---------------------------------------------------------
   subroutine varinfo_print_option(iunit, var, option, pre)

@@ -128,10 +128,10 @@ module output_oct_m
 
   type output_t
     !> General output variables:
-    integer :: what                !< what to output
-    integer :: what_lda_u          !< what to output for the LDA+U part
-    integer :: whatBZ              !< what to output - for k-point resolved output
-    integer :: how                 !< how to output
+    integer(8) :: what                !< what to output
+    integer(8) :: whatBZ              !< what to output - for k-point resolved output
+    integer    :: how                 !< how to output
+    integer(8) :: what_lda_u          !< what to output for the LDA+U part
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
 
@@ -290,7 +290,7 @@ contains
     !%Option frozen_system bit(30)
     !% Generates input for a frozen calculation.
     !%End
-    call parse_variable('Output', 0, outp%what)
+    call parse_variable('Output', 0_8, outp%what)
 
 
 
@@ -510,7 +510,7 @@ contains
     !%Option local_orbitals bit(3)
     !% Outputs the localized orbitals that form the correlated subspace
     !%End
-    call parse_variable('OutputLDA_U', 0, outp%what_lda_u)
+    call parse_variable('OutputLDA_U', 0_8, outp%what_lda_u)
 
     !%Variable OutputInterval
     !%Type integer
@@ -598,7 +598,7 @@ contains
     !%Option density_kpt bit(1)
     !% Outputs the electronic density resolved in momentum space. 
     !%End
-    call parse_variable('Output_KPT', 0, outp%whatBZ)
+    call parse_variable('Output_KPT', 0_8, outp%whatBZ)
 
     if(.not.varinfo_valid_option('Output_KPT', outp%whatBZ, is_flag=.true.)) then
       call messages_input_error('Output_KPT')
