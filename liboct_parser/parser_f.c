@@ -154,7 +154,7 @@ int FC_FUNC_(oct_parse_isdef, OCT_PARSE_ISDEF)
 
 /* --------------------------------------------------------- */
 void FC_FUNC_(oct_parse_int, OCT_PARSE_INT)
-	(STR_F_TYPE name, int *def, int *res STR_ARG1)
+	(STR_F_TYPE name, long long *def, long long *res STR_ARG1)
 { 
   char *name_c;
 
