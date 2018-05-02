@@ -285,6 +285,9 @@ contains
     !% Generates input for a frozen calculation.
     !%Option potential_gradient bit(31)
     !% Prints the gradient of the potential.
+    !%Option energy_density bit(32)
+    !% Outputs the total energy density to a file called
+    !% <tt>energy_density</tt>.
     !%End
     call parse_variable('Output', 0, outp%what)
 
