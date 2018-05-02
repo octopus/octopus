@@ -95,9 +95,11 @@ contains
     integer,               intent(in)    :: max_iter
     type(restart_t),       intent(in)    :: restart_dump
     
-    integer :: iter, icount, ip, ist, iatom, ierr, maxcount
+    type(states_t) :: states_initial
+    integer :: iter, icount, ip, ist, iatom, ierr, maxcount, iorb
     FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, sum_charge, rr, rel_ener
     FLOAT, allocatable :: species_charge_center(:), psi(:, :), stepsize(:)
+    FLOAT, allocatable :: dpsi(:,:), dpsi2(:,:)
     logical :: conv, gs_run_
     character(len=MAX_PATH_LEN) :: dirname    
 
@@ -131,42 +133,9 @@ contains
     if(rdm%do_basis.eqv..false.) then
       !stepsize for steepest decent
       SAFE_ALLOCATE(stepsize(1:st%nst))
-      stepsize = 0.1
-      maxcount = 10
+      maxcount = 1
     else
       maxcount = 50
-    endif
-    
-    !If using a basis set, localize the starting orbitals
-    if(rdm%do_basis.eqv..true.) then
-      !Find the charge center of they system  
-      SAFE_ALLOCATE(species_charge_center(1:geo%space%dim))
-      call geometry_dipole(geo,species_charge_center)
-      sum_charge = M_ZERO
-      do iatom = 1, geo%natoms
-        sum_charge = sum_charge + species_zval(geo%atom(iatom)%species)
-      end do
-      species_charge_center = species_charge_center/(sum_charge*P_PROTON_CHARGE)
-      !Localize orbitals
-      SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
-      do ist = 1, st%nst
-        call states_get_state(st, gr%mesh, ist, 1, psi)
-        do ip = 1, gr%mesh%np
-          call mesh_r(gr%mesh, ip, rr, species_charge_center)
-          if (st%eigenval(ist, 1) < M_ZERO) then
-            psi(ip, 1) = psi(ip, 1)&
-              *exp((-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF), 1))) + sqrt(-M_TWO*st%eigenval(ist, 1)))*rr)
-          else
-            psi(ip, 1) = psi(ip, 1)*exp(-(sqrt(-M_TWO*st%eigenval(int(st%qtot*M_HALF), 1)))*rr)
-          end if
-        end do
-        call states_set_state(st, gr%mesh, ist, 1, psi)
-      end do
-      ! Orthogonalize the resulting orbitals
-      call dstates_orthogonalization_full(st,gr%mesh,1)
-
-      SAFE_DEALLOCATE_A(psi)
-      SAFE_DEALLOCATE_A(species_charge_center)
     endif
     
     ! Start the actual minimization, first step is minimization of occupation numbers
@@ -182,6 +151,7 @@ contains
       call messages_info(1)
       do icount = 1, maxcount !still under investigation how many iterations we need
         if (rdm%do_basis.eqv..false.) then
+          stepsize = 0.1d0
           call scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
         else
           call scf_orb(rdm, gr, geo, st, ks, hm, energy)
@@ -208,7 +178,7 @@ contains
       
       rel_ener = abs(energy_occ-energy)/abs(energy)
 
-      write(message(1),'(a,es15.5)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+      write(message(1),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
       call messages_info(1)
       if (rdm%do_basis.eqv..true.) then
         if ((rel_ener < rdm%conv_ener).and.rdm%maxFO < 1.e3*rdm%conv_ener) then
@@ -223,8 +193,28 @@ contains
       if (rdm%toler > 1e-4) rdm%toler = rdm%toler*1e-1 !Is this still okay or does it restrict the possible convergence?
 
       ! save restart information
-      if ( (conv .or. (modulo(iter, outp%restart_write_interval) == 0) &
+      if ((conv .or. (modulo(iter, outp%restart_write_interval) == 0) &
         .or. iter == max_iter)) then
+        if(rdm%do_basis .eqv. .true.) then
+          call states_copy(states_initial, st)
+          SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
+          SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
+          do iorb = 1, st%nst
+          dpsi = M_ZERO
+            do ist = 1, st%nst
+              call states_get_state(states_initial, gr%mesh, ist, 1, dpsi2)
+write(*,*) ist, iorb, rdm%vecnat(ist, iorb)
+              forall(ip=1:gr%mesh%np_part)
+                dpsi(ip,1) = dpsi(ip,1) + rdm%vecnat(iorb, ist)*dpsi2(ip,1)
+              end forall
+            enddo
+            call states_set_state(st, gr%mesh, iorb, 1, dpsi)
+          enddo
+          call states_end(states_initial)
+          SAFE_DEALLOCATE_A(dpsi)
+          SAFE_DEALLOCATE_A(dpsi2)
+        endif
+
         call states_dump(restart_dump, st, gr, ierr, iter=iter) 
         if (ierr /= 0) then
           message(1) = 'Unable to write states wavefunctions.'
@@ -243,14 +233,14 @@ contains
 
     if(conv) then 
       ! output final information
-      !if (rdm%do_basis.eqv..false.) then
+        !if (rdm%do_basis.eqv..false.) then
         !call scf_orb(rdm, gr, geo, st, ks, hm, energy) !NH this call changes the energy again, needs to be replaced
         !write(message(1),'(a,es15.5)')  'The maximum non diagonal element of the matrix F formed by the Lagrange multiplyers is ', &
         !                                rdm%maxFO
         !call messages_info(1)
       !endif
       write(message(1),'(a,i3,a)')  'The calculation converged after ',iter,' iterations'
-      write(message(2),'(a,es15.5)')  'The total energy is ', units_from_atomic(units_out%energy,energy + hm%ep%eii)
+      write(message(2),'(a,es20.10)')  'The total energy is ', units_from_atomic(units_out%energy,energy + hm%ep%eii)
       call messages_info(2)
       if(gs_run_) then 
         !call scf_write_static(STATIC_DIR, "info") !NH can we turn this on?
@@ -480,12 +470,12 @@ contains
     !use n_j=sin^2(2pi*theta_j) to treat pinned states, minimize for both intial mu
     theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
     call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
-        real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+        real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
     sumgi1 = rdm%occsum - st%qtot
     rdm%mu = mu2
     theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
     call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
-        real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+        real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
     sumgi2 = rdm%occsum - st%qtot
 
     ! Adjust the interval between the initial mu to include the root of rdm%occsum-st%qtot=M_ZERO
@@ -497,7 +487,7 @@ contains
         rdm%mu = mu1
         theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
         call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
-            real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+            real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
         sumgi1 = rdm%occsum - st%qtot 
       else
         mu1 = mu2
@@ -506,7 +496,7 @@ contains
         rdm%mu = mu2
         theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
         call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
-            real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+            real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
         sumgi2 = rdm%occsum - st%qtot 
       end if
     end do
@@ -515,8 +505,8 @@ contains
       mum = (mu1 + mu2)*M_HALF
       rdm%mu = mum
       theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-      call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
-          real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+      call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.0001, 8), &
+          real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
       sumgim = rdm%occsum - st%qtot
       if (sumgi1*sumgim < M_ZERO) then
         mu2 = mum
@@ -547,7 +537,7 @@ contains
     end do
 
     write(message(1),'(a,1x,f11.4)') 'Sum of occupation numbers', rdm%occsum
-    write(message(2),'(a,es15.5)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+    write(message(2),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
     call messages_info(2)   
 
     SAFE_DEALLOCATE_A(occin)
@@ -707,13 +697,16 @@ contains
     type(states_t)     :: states_old
 
     integer            :: ist, jst, lst, ip, itry, trymax
+!    integer            :: first, last, change, counter, done, notdone
     FLOAT              :: scaleup, scaledown, norm, projection
+    FLOAT              :: step1, step2, test
     FLOAT              :: energy_old, energy_diff, smallstep, thresh
-    FLOAT, allocatable :: E_deriv(:), dpsi(:,:), dpsi2(:,:)  
+    FLOAT, allocatable :: E_deriv(:), E_deriv_mod(:), dpsi(:,:), dpsi2(:,:)  
 
     PUSH_SUB(scf_orb_direct)
 
     SAFE_ALLOCATE(E_deriv(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(E_deriv_mod(1:gr%mesh%np_part))
     SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
 
@@ -735,90 +728,84 @@ contains
     !store current energy
     energy_old = energy
 
-    do ist = 1, st%nst
-      !do not try to improve states that are converged
-      if (stepsize(ist).lt. smallstep) cycle
+    do itry = 1, 10
+      do ist = 1, st%nst
 
       !store current states
       call states_copy(states_old, st)
 
       !calculate the derivative with respect to state ist (also removes changes in direction of ist and normalizes)
       call E_deriv_calc(gr, st, hm, ist, E_deriv)    
-      call states_get_state(st, gr%mesh, ist, 1, dpsi)
-      
-      !add a step along the gradient
-      do itry = 1, trymax
+                  
+      !calculate the correct stepsize
+      step1 = M_ZERO
+      step2 = stepsize(ist)
+      test = M_ONE
+
+      !find interval which contains correct stepsize
+      do while(test .gt. M_ZERO) !tests if derivatives at borders of interval have opposite signs
+        !make sure we start with an unmodified state ist
+        call states_get_state(states_old, gr%mesh, ist, 1, dpsi) 
+        forall(ip=1:gr%mesh%np_part)
+          dpsi(ip,1) = dpsi(ip,1) - E_deriv(ip)*step2
+        end forall      
+        call states_set_state(st, gr%mesh, ist, 1, dpsi)
+        call E_deriv_calc(gr, st, hm, ist, E_deriv_mod)    
+        test = dmf_dotp(gr%mesh, E_deriv(:), E_deriv_mod(:))
+        step2 = step2*M_TWO
+      enddo
+
+      test = M_ONE
+
+      do while(abs(test) .gt. thresh .and. stepsize(ist) .gt. thresh)
+        call states_get_state(states_old, gr%mesh, ist, 1, dpsi)
+        stepsize(ist) = (step1+step2)*M_HALF
         forall(ip=1:gr%mesh%np_part)
           dpsi(ip,1) = dpsi(ip,1) - E_deriv(ip)*stepsize(ist)
-        end forall      
-        !orthogonalize new orbital to all orbitals with smaller index and normalize
-        do jst = 1, ist - 1
-          call states_get_state(st, gr%mesh, jst, 1, dpsi2)
-          projection = dmf_dotp(gr%mesh, dpsi(:,1), dpsi2(:,1))
-          forall(ip = 1:gr%mesh%np_part)
-            dpsi(ip, 1) = dpsi(ip, 1) - projection*dpsi2(ip, 1)
-          end forall
-        enddo !jst
-        norm = sqrt(dmf_dotp(gr%mesh, dpsi(:,1), dpsi(:,1)))
-        forall(ip=1:gr%mesh%np_part)
-          dpsi(ip, 1) = dpsi(ip, 1)/norm
         end forall
+        !normalize state
+        !norm = sqrt(dmf_dotp(gr%mesh, dpsi(:,1), dpsi(:,1)))
+        !forall(ip=1:gr%mesh%np_part)
+        !  dpsi(ip, 1) = dpsi(ip, 1)/norm
+        !end forall
+      
         call states_set_state(st, gr%mesh, ist, 1, dpsi)
-        !orthogonalize all orbitals with larger index to new orbital and normalize
-        do jst = ist + 1, st%nst
-          call states_get_state(st, gr%mesh, jst, 1, dpsi)
-          do lst = ist, jst - 1
-            call states_get_state(st, gr%mesh, lst, 1, dpsi2)
-            projection = dmf_dotp(gr%mesh, dpsi(:,1), dpsi2(:,1))
-            forall(ip = 1:gr%mesh%np_part)
-              dpsi(ip,1) = dpsi(ip,1) - projection*dpsi2(ip,1)
-            end forall
-          enddo !lst
-          norm = sqrt(dmf_dotp(gr%mesh, dpsi(:,1), dpsi(:,1)))
-          forall(ip=1:gr%mesh%np_part)
-            dpsi(ip, 1) = dpsi(ip, 1)/norm
-          end forall
+        call E_deriv_calc(gr, st, hm, ist, E_deriv_mod)  
+        test = dmf_dotp(gr%mesh, E_deriv(:), E_deriv_mod(:)) 
+
+        if(test .gt. M_ZERO) then           
+          step1 = stepsize(ist)
+        else
+          step2 = stepsize(ist)
+        endif
+      enddo
+    
+      call dstates_orthogonalization_full(st,gr%mesh,1)
+
+      !calculate total energy
+      call density_calc (st, gr, st%rho)
+      call v_ks_calc(ks, hm, st, geo)
+      call hamiltonian_update(hm, gr%mesh)
+      call rdm_derivatives(rdm, hm, st, gr)
+      call total_energy_rdm(rdm, st%occ(:,1), energy)
+      !check if step lowers the energy
+      energy_diff = energy - energy_old
+      if (energy_diff .lt. - thresh) then 
+        !sucessful step
+        energy_old = energy
+      else 
+        !not sucessful step
+        energy = energy_old !reset energy
+        !undo changes in st and dpsi (cannot use states_copy due to memory leak) 
+        do jst = 1, st%nst
+          call states_get_state(states_old, gr%mesh, jst, 1, dpsi)
           call states_set_state(st, gr%mesh, jst, 1, dpsi)
-        enddo !jst
-        
-        !calculate total energy
-        call density_calc (st, gr, st%rho)
-        call v_ks_calc(ks, hm, st, geo)
-        call hamiltonian_update(hm, gr%mesh)
-        call rdm_derivatives(rdm, hm, st, gr)
-        call total_energy_rdm(rdm, st%occ(:,1), energy)
-
-        !check if step lowers the energy
-        energy_diff = energy - energy_old
-
-        if (energy_diff .lt. - thresh) then 
-          !sucessful step
-          stepsize(ist) = stepsize(ist)*scaleup !increase stepsize for this state
-          energy_old = energy
-          exit
-        else 
-          !not sucessful step
-          stepsize(ist) = stepsize(ist)*scaledown !decrease stepsize
-          !undo changes in st and dpsi (cannot use states_copy due to memory leak) 
-          do jst = st%nst, ist, -1
-            call states_get_state(states_old, gr%mesh, jst, 1, dpsi)
-            call states_set_state(st, gr%mesh, jst, 1, dpsi)
-          enddo
-          !if (itry == trymax) then
-          !  write(message(1),'(a,i3,2x,a)') 'for state', ist, 'energy could not be improved'
-          !  call messages_info(1)
-          !endif
-        endif !energy_diff  
-      enddo !itry
+        enddo
+      endif !energy_diff  
+      
       call states_end(states_old)
-      !scale stepsize for next iteration, check convergence of states
-      stepsize(ist) = scaledown*stepsize(ist)
-      if(abs(stepsize(ist)) .lt. smallstep) then
-        write(message(1),'(a,i3,2x,a)') 'for state', ist, 'the minimal step size is reached'
-        write(message(2),'(a)') 'state is converged'
-        call messages_info(2)
-      endif
     enddo !ist
+  enddo
 
     SAFE_DEALLOCATE_A(E_deriv)
     SAFE_DEALLOCATE_A(dpsi)
