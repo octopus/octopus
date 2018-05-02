@@ -283,18 +283,20 @@ void FC_FUNC_(varinfo_opt_getinfo, VARINFO_OPT_GETINFO)
   if(opt == NULL){
     *name = NULL; *desc = NULL;
     *value = 0;
-  }else{
+  } else {
     *name = (*opt)->name;
     *desc = (*opt)->desc;
     if((*opt)->value){
       if(strncmp("bit", (*opt)->value, 3) == 0){
-	*value = (1<<atoi((*opt)->value + 4));
+	*value = ((int64_t) 1)<<strtoll((*opt)->value + 4, NULL, 10);
       } else {
-	*value = atoi((*opt)->value);
+	*value = strtoll((*opt)->value, NULL, 10);
       }
-    }
-    else
+
+    } else {
       *value = 0;
+    }
+    
   }
 }
 
