@@ -87,7 +87,7 @@
       if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         if (.not. hm%cmplxscl%space) then 
           call dio_function_output(outp%how, dir, 'vh', der%mesh, hm%vhartree, units_out%energy, err, geo = geo, grp = grp)
-          if(outp%gradientpotential) then
+          if(iand(outp%what, OPTION__OUTPUT__POTENTIAL_GRADIENT) /= 0) then
             SAFE_ALLOCATE(gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
             call dderivatives_grad(der, hm%vhartree(1:der%mesh%np_part), gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
             call io_function_output_vector(outp%how, dir, 'grad_vh', der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
