@@ -190,19 +190,19 @@ contains
       functl%flags    = XC_F90(info_flags)(functl%info)
 
       ! FIXME: no need to say this for kernel
-      if(iand(functl%flags, XC_FLAGS_HAVE_EXC) == 0) then
+      if(bitand(functl%flags, XC_FLAGS_HAVE_EXC) == 0) then
         message(1) = 'Specified functional does not have total energy available.'
         message(2) = 'Corresponding component of energy will just be left as zero.'
         call messages_warning(2)
       end if
 
-      if(iand(functl%flags, XC_FLAGS_HAVE_VXC) == 0) then
+      if(bitand(functl%flags, XC_FLAGS_HAVE_VXC) == 0) then
         message(1) = 'Specified functional does not have XC potential available.'
         message(2) = 'Cannot run calculations. Choose another XCFunctional.'
         call messages_fatal(2)
       end if
 
-      ok = iand(functl%flags, XC_FLAGS_1D) /= 0
+      ok = bitand(functl%flags, XC_FLAGS_1D) /= 0
       if((ndim /= 1).and.ok) then
         message(1) = 'Specified functional is only allowed in 1D.'
         call messages_fatal(1)
@@ -212,7 +212,7 @@ contains
         call messages_fatal(1)
       end if
 
-      ok = iand(functl%flags, XC_FLAGS_2D) /= 0
+      ok = bitand(functl%flags, XC_FLAGS_2D) /= 0
       if((ndim /= 2).and.ok) then
         message(1) = 'Specified functional is only allowed in 2D.'
         call messages_fatal(1)
@@ -222,7 +222,7 @@ contains
         call messages_fatal(1)
       end if
 
-      ok = iand(functl%flags, XC_FLAGS_3D) /= 0
+      ok = bitand(functl%flags, XC_FLAGS_3D) /= 0
       if((ndim /= 3).and.ok) then
         message(1) = 'Specified functional is only allowed in 3D.'
         call messages_fatal(1)

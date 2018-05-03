@@ -293,14 +293,14 @@ contains
     !%End
     call parse_variable('Output', 0, outp%what)
 
-    if(iand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
       call messages_experimental("Wave-functions in Fourier space")
     end if
 
     ! cannot calculate the ELF in 1D
-    if(iand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. iand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
        if(sb%dim /= 2 .and. sb%dim /= 3) then
-         outp%what = iand(outp%what, not(OPTION__OUTPUT__ELF + OPTION__OUTPUT__ELF_BASINS))
+         outp%what = bitand(outp%what, not(OPTION__OUTPUT__ELF + OPTION__OUTPUT__ELF_BASINS))
          write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
          call messages_warning(1)
        end if
@@ -310,11 +310,11 @@ contains
       call messages_input_error('Output')
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
       call messages_experimental("Model many-body wfs")
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
       call messages_experimental("Model many-body density matrix")
       ! NOTES:
       !   could be made into block to be able to specify which dimensions to trace
@@ -323,7 +323,7 @@ contains
       !   dimensions. The current 1D 1-particle case is simple.
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__WFS) /= 0  .or.  iand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0 ) then
+    if(bitand(outp%what, OPTION__OUTPUT__WFS) /= 0  .or.  bitand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0 ) then
 
       !%Variable OutputWfsNumber
       !%Type string
@@ -459,11 +459,11 @@ contains
       call parse_block_end(blk)
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
       call output_me_init(outp%me, sb)
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
       call output_berkeleygw_init(nst, outp%bgw, sb%periodic_dim)
     end if
 
@@ -551,11 +551,11 @@ contains
     what_no_how_u = OPTION__OUTPUTLDA_U__OCC_MATRICES + OPTION__OUTPUTLDA_U__EFFECTIVEU + &
       OPTION__OUTPUTLDA_U__MAGNETIZATION
 
-    if(iand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
       call messages_experimental("Frozen output")
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       call v_ks_calculate_current(ks, .true.)
     else
       call v_ks_calculate_current(ks, .false.)
@@ -589,7 +589,7 @@ contains
       call messages_input_error('Output_KPT')
     end if
 
-    if(iand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
+    if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
      call v_ks_calculate_current(ks, .true.) 
     end if
 
@@ -611,8 +611,7 @@ contains
     call add_last_slash(outp%iter_dir)
 
     ! we are using a what that has a how.
-    if(iand(outp%what, not(what_no_how)) /= 0 .or. outp%whatBZ /= 0 .or. &
-       iand(outp%what_lda_u, not(what_no_how_u)) /= 0) then
+    if(bitand(outp%what, not(what_no_how)) /= 0 .or. outp%whatBZ /= 0 .or. bitand(outp%what_lda_u, not(what_no_how_u)) /= 0) then
       call io_function_read_how(sb, outp%how)
     else
       outp%how = 0
@@ -656,7 +655,7 @@ contains
       call io_mkdir(dir)
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__MESH_R) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__MESH_R) /= 0) then
       do idir = 1, gr%mesh%sb%dim
         write(fname, '(a,a)') 'mesh_r-', index2axis(idir)
         call dio_function_output(outp%how, dir, fname, gr%mesh, gr%mesh%x(:,idir), &
@@ -669,43 +668,43 @@ contains
     call output_localization_funct(st, hm, gr, dir, outp, geo)
     call output_current_flow(gr, st, dir, outp)
 
-    if(iand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
-      if(iand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
+    if(bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
+      if(bitand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
         call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh)
       end if
-      if(iand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
+      if(bitand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
         call geometry_write_xyz(geo, trim(dir)//'/geometry')
         if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir)
       end if
-      if(iand(outp%how, OPTION__OUTPUTFORMAT__OPENSCAD) /= 0) then
+      if(bitand(outp%how, OPTION__OUTPUTFORMAT__OPENSCAD) /= 0) then
         call geometry_write_openscad(geo, trim(dir)//'/geometry')
       end if
-      if(iand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
+      if(bitand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
         call vtk_output_geometry(trim(dir)//'/geometry', geo)
       end if     
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-      if(iand(outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+      if(bitand(outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
         call write_bild_forces_file(dir, "forces", geo, gr%mesh)
       else
         call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, write_forces = .true.)
       end if
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
       call output_me(outp%me, dir, st, gr, geo, hm)
     end if
 
-    if (iand(outp%how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
+    if (bitand(outp%how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
       call output_etsf(st, gr, geo, dir, outp)
     end if
 
-    if (iand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
+    if (bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
       call output_berkeleygw(outp%bgw, dir, st, gr, ks, hm, geo)
     end if
     
-    if(iand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
       call output_fio(gr, geo, st, hm, trim(adjustl(dir)), mpi_world)
     end if
 
@@ -753,13 +752,13 @@ contains
     SAFE_ALLOCATE(f_loc(1:gr%mesh%np, 1:imax))
 
     ! First the ELF in real space
-    if(iand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. iand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
       ASSERT(gr%mesh%sb%dim /= 1)
 
       call elf_calc(st, gr, f_loc)
       
       ! output ELF in real space
-      if(iand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
+      if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
         write(fname, '(a)') 'elf_rs'
         call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
           f_loc(:,imax), unit_one, ierr, geo = geo, grp = mpi_grp)
@@ -775,12 +774,12 @@ contains
         end if
       end if
 
-      if(iand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) &
+      if(bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) &
         call out_basins(f_loc(:,1), "elf_rs_basins")
     end if
 
     ! Now Bader analysis
-    if(iand(outp%what, OPTION__OUTPUT__BADER) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__BADER) /= 0) then
       do is = 1, st%d%nspin
         call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
         write(fname, '(a,i1)') 'bader-sp', is
@@ -794,7 +793,7 @@ contains
     end if
 
     ! Now the pressure
-    if(iand(outp%what, OPTION__OUTPUT__EL_PRESSURE) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__EL_PRESSURE) /= 0) then
       call calc_electronic_pressure(st, hm, gr, f_loc(:,1))
       call dio_function_output(outp%how, dir, "el_pressure", gr%mesh, &
         f_loc(:,1), unit_one, ierr, geo = geo, grp = mpi_grp)

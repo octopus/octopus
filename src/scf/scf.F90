@@ -326,7 +326,7 @@ contains
     end if
 
     if(scf%mix_field == OPTION__MIXFIELD__DENSITY &
-      .and. iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+      .and. bitand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
 
       call messages_write('Input: You have selected to mix the density with OEP or MGGA XC functionals.', new_line = .true.)
       call messages_write('       This might produce convergence problems. Mix the potential instead.')
@@ -1005,7 +1005,7 @@ contains
     if(scf%lcao_restricted) call lcao_end(lcao)
 
     if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) &
-        .or. iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
+        .or. bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       call v_ks_calc(ks, hm, st, geo)
     end if
 
@@ -1055,11 +1055,11 @@ contains
     end if
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
-      if(iand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0) &
+      if(bitand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0)  then
         call states_write_bandstructure(STATIC_DIR, st%nst, st, gr%sb, geo, gr%mesh, &
-              hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
-                                vec_pot_var = hm%hm_base%vector_potential)
-      
+          hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
+          vec_pot_var = hm%hm_base%vector_potential)
+      end if
     end if
 
     POP_SUB(scf_run)

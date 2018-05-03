@@ -691,7 +691,7 @@ contains
     lcl%inside = .false.
     do ip = 1 , sys%gr%mesh%np
       do id = 1, lcl%nd
-        if (iand(int(inside(ip)), 2**id) /= 0) lcl%inside(ip,id) = .true.
+        if (bitand(int(inside(ip)), 2**id) /= 0) lcl%inside(ip,id) = .true.
       end do
     end do
 

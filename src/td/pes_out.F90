@@ -106,7 +106,7 @@ contains
   
 #if defined(HAVE_NETCDF)  
   
-    if(iand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
+    if(bitand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
       filename = trim(file)//".ncdf"
       write(message(1), '(a)') 'Writing netcdf format file: '
       call messages_info(1)
@@ -118,7 +118,7 @@ contains
 
 #endif
   
-    if(iand(how, OPTION__OUTPUTFORMAT__VTK) /= 0)  then
+    if(bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0)  then
       filename = trim(file)//".vtk"
       write(message(1), '(a)') 'Writing vtk format file: '
       call messages_info(1)

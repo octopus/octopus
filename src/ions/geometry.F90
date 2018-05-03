@@ -184,7 +184,7 @@ contains
       SAFE_ALLOCATE(geo%atom(1:geo%natoms))
       do ia = 1, geo%natoms
         move=.true.
-        if(iand(xyz%flags, XYZ_FLAGS_MOVE) /= 0) move=xyz%atom(ia)%move
+        if(bitand(xyz%flags, XYZ_FLAGS_MOVE) /= 0) move=xyz%atom(ia)%move
         call atom_init(geo%atom(ia), xyz%atom(ia)%label, xyz%atom(ia)%x, move=move)
       end do
     end if
@@ -201,7 +201,7 @@ contains
     geo%ncatoms = 0
     call read_coords_read('Classical', xyz, geo%space)
     if(xyz%source /= READ_COORDS_ERR) then ! found classical atoms
-      if(.not. iand(xyz%flags, XYZ_FLAGS_CHARGE) /= 0) then
+      if(.not. bitand(xyz%flags, XYZ_FLAGS_CHARGE) /= 0) then
         message(1) = "Need to know charge for the classical atoms."
         message(2) = "Please use a .pdb"
         call messages_fatal(2)
