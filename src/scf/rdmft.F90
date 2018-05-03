@@ -203,9 +203,8 @@ contains
           dpsi = M_ZERO
             do ist = 1, st%nst
               call states_get_state(states_initial, gr%mesh, ist, 1, dpsi2)
-write(*,*) ist, iorb, rdm%vecnat(ist, iorb)
               forall(ip=1:gr%mesh%np_part)
-                dpsi(ip,1) = dpsi(ip,1) + rdm%vecnat(iorb, ist)*dpsi2(ip,1)
+                dpsi(ip,1) = dpsi(ip,1) + rdm%vecnat(ist, iorb)*dpsi2(ip,1)
               end forall
             enddo
             call states_set_state(st, gr%mesh, iorb, 1, dpsi)
