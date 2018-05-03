@@ -184,6 +184,7 @@ contains
     type(batch_t), allocatable :: psi2(:, :)
     ! these are hardcoded for the moment
     integer, parameter :: niter = 10
+    integer :: ndim, dim_stride, idim
 
     PUSH_SUB(td_etrs_sc)
 
@@ -196,6 +197,31 @@ contains
     call messages_new_line()
     call messages_write('        Self-consistency iteration:')
     call messages_info()
+    
+    ndim = 1
+    dim_stride = 1
+    
+    ! In order to handle the cases where st%d%dim encodes more than 
+    ! just spinors we contract the additional dimensions
+    select case(st%d%ispin)
+    case(UNPOLARIZED)
+      if(st%d%dim>1) then
+        ndim = st%d%dim
+      end if
+
+    case(SPIN_POLARIZED)
+      if(st%d%dim>1) then
+        ndim = st%d%dim
+      end if
+
+    case(SPINORS)
+      if(st%d%dim>2) then
+        dim_stride = 2
+        ndim = st%d%dim
+      end if
+
+    end select
+    
     
     call density_calc_init(dens_calc, st, gr, st%rho)
 
@@ -210,7 +236,9 @@ contains
           psib2 = zpsib_dt, deltat2 = dt)
 
         !use the dt propagation to calculate the density
-        call density_calc_accumulate(dens_calc, ik, zpsib_dt)
+        do idim=1,ndim, dim_stride
+          call density_calc_accumulate(dens_calc, ik, zpsib_dt, dim=idim)
+        end do
 
         call batch_end(zpsib_dt)
 

@@ -1283,6 +1283,7 @@ contains
 
     integer ::  idir, idim, iatom, ip, ib, ii, ierr, ispin, dim
     CMPLX, allocatable :: gpsi(:, :, :), ppsi(:,:)
+    FLOAT :: kpoint(1:3)
 
     PUSH_SUB(grad_dot_pol)
 
@@ -1301,12 +1302,15 @@ contains
       call boundaries_set(der%boundaries, ppsi(:, idim))
     end do
 
-    if(associated(hm%hm_base%phase)) then 
-      ! Apply the phase that contains both the k-point and vector-potential terms.
+
+    if(simul_box_is_periodic(der%mesh%sb)) then 
+      kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_dim_get_kpoint_index(hm%d, ik))      
+      ! Apply the phase that contains both the k-point.      
       do idim = 1, dim
         !$omp parallel do
         do ip = 1, der%mesh%np_part
-          ppsi(ip, idim) = hm%hm_base%phase(ip, ik)*ppsi(ip, idim)
+!           ppsi(ip, idim) = hm%hm_base%phase(ip, ik)*ppsi(ip, idim)
+            ppsi(ip, idim) = ppsi(ip, idim) * exp(-M_zI*sum(der%mesh%x(ip, 1:der%mesh%sb%dim)*kpoint(1:der%mesh%sb%dim) ))
         end do
         !$omp end parallel do
       end do
@@ -1343,6 +1347,18 @@ contains
     do idir = 1, der%mesh%sb%dim
        gppsi(1:der%mesh%np,:) = gppsi(1:der%mesh%np,:) + pol(idir) * gpsi(1:der%mesh%np, idir,:)
     end do
+    
+    if(simul_box_is_periodic(der%mesh%sb)) then 
+      ! remove the phase.      
+      do idim = 1, dim
+        !$omp parallel do
+        do ip = 1, der%mesh%np_part
+            gppsi(ip, idim) = gppsi(ip, idim) * exp(M_zI*sum(der%mesh%x(ip, 1:der%mesh%sb%dim)*kpoint(1:der%mesh%sb%dim) ))
+        end do
+        !$omp end parallel do
+      end do
+    end if
+    
 
     SAFE_DEALLOCATE_A(gpsi)
     SAFE_DEALLOCATE_A(ppsi)
