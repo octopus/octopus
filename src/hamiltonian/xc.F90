@@ -173,8 +173,8 @@ contains
     xcs%exx_coef = M_ZERO
     ll =  (hartree_fock) &
       .or.(xcs%functional(FUNC_X,1)%id == XC_OEP_X) &
-      .or.(iand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0) &
-      .or.(iand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0)
+      .or.(bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0) &
+      .or.(bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0)
     if(ll) then
       if((xcs%functional(FUNC_X,1)%id /= 0).and.(xcs%functional(FUNC_X,1)%id /= XC_OEP_X)) then
         message(1) = "You cannot use an exchange functional when performing"
@@ -186,8 +186,8 @@ contains
         call messages_experimental("Fock operator (Hartree-Fock, OEP, hybrids) in fully periodic systems")
 
       ! get the mixing coefficient for hybrids
-      if(iand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0 .or. &
-         iand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0) then        
+      if(bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0 .or. &
+         bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0) then        
         call XC_F90(hyb_exx_coef)(xcs%functional(FUNC_C,1)%conf, xcs%exx_coef)
       else
         ! we are doing Hartree-Fock plus possibly a correlation functional
@@ -200,7 +200,7 @@ contains
       xcs%family             = ior(xcs%family, XC_FAMILY_OEP)
     end if
 
-    if (iand(xcs%family, XC_FAMILY_LCA) /= 0) &
+    if (bitand(xcs%family, XC_FAMILY_LCA) /= 0) &
       call messages_not_implemented("LCA current functionals") ! not even in libxc!
 
     call messages_obsolete_variable('MGGAimplementation')
@@ -354,8 +354,8 @@ contains
     PUSH_SUB(xc_is_orbital_dependent)
 
     xc_is_orbital_dependent = xcs%exx_coef /= M_ZERO .or. &
-      iand(xcs%functional(FUNC_X,1)%family, XC_FAMILY_OEP) /= 0 .or. &
-      iand(xcs%family, XC_FAMILY_MGGA) /= 0
+      bitand(xcs%functional(FUNC_X,1)%family, XC_FAMILY_OEP) /= 0 .or. &
+      bitand(xcs%family, XC_FAMILY_MGGA) /= 0
 
     POP_SUB(xc_is_orbital_dependent)
   end function xc_is_orbital_dependent

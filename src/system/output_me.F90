@@ -106,9 +106,9 @@ contains
       call messages_input_error('OutputMatrixElements')
     end if
 
-    if(sb%dim /= 2 .and. sb%dim /= 3) this%what = iand(this%what, not(OUTPUT_ME_ANG_MOMENTUM))
+    if(sb%dim /= 2 .and. sb%dim /= 3) this%what = bitand(this%what, not(OUTPUT_ME_ANG_MOMENTUM))
 
-    if(iand(this%what, OUTPUT_ME_KS_MULTIPOLES) /= 0) then
+    if(bitand(this%what, OUTPUT_ME_KS_MULTIPOLES) /= 0) then
       !%Variable OutputMEMultipoles
       !%Type integer
       !%Default 1
@@ -153,17 +153,17 @@ contains
     
     PUSH_SUB(output_me)
 
-    if(iand(this%what, output_me_momentum) /= 0) then
+    if(bitand(this%what, output_me_momentum) /= 0) then
       write(fname,'(2a)') trim(dir), '/ks_me_momentum'
       call output_me_out_momentum(fname, st, gr)
     end if
 
-    if(iand(this%what, output_me_ang_momentum) /= 0) then
+    if(bitand(this%what, output_me_ang_momentum) /= 0) then
       write(fname,'(2a)') trim(dir), '/ks_me_angular_momentum'
       call output_me_out_ang_momentum(fname, st, gr)
     end if
 
-    if(iand(this%what, output_me_ks_multipoles) /= 0) then
+    if(bitand(this%what, output_me_ks_multipoles) /= 0) then
       ! The content of each file should be clear from the header of each file.
       id = 1
       do ik = 1, st%d%nik
@@ -211,7 +211,7 @@ contains
       end do
     end if
 
-    if(iand(this%what, output_me_one_body) /= 0) then
+    if(bitand(this%what, output_me_one_body) /= 0) then
       message(1) = "Computing one-body matrix elements"
       call messages_info(1)
 
@@ -249,7 +249,7 @@ contains
 
     end if
 
-    if(iand(this%what, output_me_two_body) /= 0) then
+    if(bitand(this%what, output_me_two_body) /= 0) then
       message(1) = "Computing two-body matrix elements"
       call messages_info(1)
 

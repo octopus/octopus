@@ -345,7 +345,7 @@ contains
     end if
 
     !Printing the k-point list
-    if( iand(this%method, KPOINTS_MONKH_PACK) /= 0  ) then
+    if( bitand(this%method, KPOINTS_MONKH_PACK) /= 0  ) then
 
       write(message(1),'(a)') ' '
       write(message(2),'(1x,i5,a)') this%reduced%npoints, ' k-points generated from parameters :'

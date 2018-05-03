@@ -307,7 +307,7 @@ contains
     call xc_init(ks%xc, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st%qtot, &
       x_id, c_id, xk_id, ck_id, hartree_fock = ks%theory_level == HARTREE_FOCK)
 
-    if(iand(ks%xc%family, XC_FAMILY_LIBVDWXC) /= 0) then
+    if(bitand(ks%xc%family, XC_FAMILY_LIBVDWXC) /= 0) then
       call libvdwxc_set_geometry(ks%xc%functional(FUNC_C,1)%libvdwxc, gr%mesh)
     end if
 
@@ -318,7 +318,7 @@ contains
       default = KOHN_SHAM_DFT
 
       ! the functional is a hybrid, use Hartree-Fock as theory level by default
-      if(iand(ks%xc_family, XC_FAMILY_HYB_GGA + XC_FAMILY_HYB_MGGA) /= 0) then
+      if(bitand(ks%xc_family, XC_FAMILY_HYB_GGA + XC_FAMILY_HYB_MGGA) /= 0) then
         default = HARTREE_FOCK
       end if
 
@@ -353,7 +353,7 @@ contains
     case(KOHN_SHAM_DFT)
 
       ! check for SIC
-      if(iand(ks%xc_family, XC_FAMILY_LDA + XC_FAMILY_GGA) /= 0) then
+      if(bitand(ks%xc_family, XC_FAMILY_LDA + XC_FAMILY_GGA) /= 0) then
 
         !%Variable SICCorrection
         !%Type integer
@@ -382,10 +382,10 @@ contains
         ks%sic_type = SIC_NONE
       end if
 
-      if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+      if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         call xc_oep_init(ks%oep, ks%xc_family, gr, st)
       end if
-      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
+      if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
         call xc_ks_inversion_init(ks%ks_inversion, gr, geo, st, mc)
       end if
     end select
@@ -597,10 +597,10 @@ contains
 
     select case(ks%theory_level)
     case(KOHN_SHAM_DFT)
-      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
+      if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
         call xc_ks_inversion_end(ks%ks_inversion)
       end if
-      if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+      if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         call xc_oep_end(ks%oep)
       end if
       call xc_end(ks%xc)
@@ -642,10 +642,10 @@ contains
       write(iunit, '(1x)')
       call messages_print_var_option(iunit, 'SICCorrection', ks%sic_type)
 
-      if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+      if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         call xc_oep_write_info(ks%oep, iunit)
       end if
-      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
+      if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
         call xc_ks_inversion_write_info(ks%ks_inversion, iunit)
       end if
 
@@ -1071,7 +1071,7 @@ contains
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
         ! The OEP family has to be handled specially
-        if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+        if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_OEP')
           if (states_are_real(st)) then
             call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
@@ -1082,7 +1082,7 @@ contains
           end if
         end if
 
-        if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
+        if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_KS_INVERSION')
           ! Also treat KS inversion separately (not part of libxc)
           call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, vxc = ks%calc%vxc, time = ks%calc%time)

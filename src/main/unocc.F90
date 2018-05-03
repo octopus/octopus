@@ -308,7 +308,7 @@ contains
     end if
 
     if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) then
-      if(iand(sys%gr%sb%kpoints%method, KPOINTS_PATH) /= 0) &
+      if(bitand(sys%gr%sb%kpoints%method, KPOINTS_PATH) /= 0) &
         call states_write_bandstructure(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb)
     end if
  

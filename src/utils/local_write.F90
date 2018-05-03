@@ -140,7 +140,7 @@ contains
 
     SAFE_ALLOCATE(writ%out(1:LOCAL_OUT_MAX, 1:nd))
     do iout = 1, LOCAL_OUT_MAX
-      writ%out(iout,:)%write = (iand(flags, 2**(iout - 1)) /= 0)
+      writ%out(iout,:)%write = (bitand(flags, 2**(iout - 1)) /= 0)
     end do
 
     call messages_obsolete_variable('LDOutputHow', 'LDOutputFormat')
@@ -720,7 +720,7 @@ contains
     end if
 
    ! Write multipoles in BILD format
-    if(iand(how, OPTION__OUTPUTFORMAT__BILD) /= 0 .and. mpi_grp_is_root(mpi_world))then
+    if(bitand(how, OPTION__OUTPUTFORMAT__BILD) /= 0 .and. mpi_grp_is_root(mpi_world))then
       !FIXME: to include spin larger than 1.
       is = 1
       do id = 1, nd

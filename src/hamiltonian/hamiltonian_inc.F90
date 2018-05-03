@@ -69,20 +69,20 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
     call X(hamiltonian_base_phase)(hm%hm_base, der, der%mesh%np_part, ik, .false., epsib, src = psib)
   end if
 
-  if(iand(TERM_KINETIC, terms_) /= 0) then
+  if(bitand(TERM_KINETIC, terms_) /= 0) then
     ASSERT(associated(hm%hm_base%kinetic))
     call profiling_in(prof_kinetic_start, "KINETIC_START")
     call X(derivatives_batch_start)(hm%hm_base%kinetic, der, epsib, hpsib, handle, set_bc = .false., factor = -M_HALF/hm%mass)
     call profiling_out(prof_kinetic_start)
   end if
 
-  if (hm%ep%non_local .and. iand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
+  if (hm%ep%non_local .and. bitand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
     if(hm%hm_base%apply_projector_matrices) then
       call X(hamiltonian_base_nlocal_start)(hm%hm_base, der%mesh, hm%d, ik, epsib, projection)
     end if
   end if
 
-  if(iand(TERM_KINETIC, terms_) /= 0) then
+  if(bitand(TERM_KINETIC, terms_) /= 0) then
     call profiling_in(prof_kinetic_finish, "KINETIC_FINISH")
     call X(derivatives_batch_finish)(handle)
     call profiling_out(prof_kinetic_finish)
@@ -93,14 +93,14 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
   end if
 
   ! apply the local potential
-  if (iand(TERM_LOCAL_POTENTIAL, terms_) /= 0) then
+  if (bitand(TERM_LOCAL_POTENTIAL, terms_) /= 0) then
     call X(hamiltonian_base_local)(hm%hm_base, der%mesh, hm%d, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
-  else if(iand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
+  else if(bitand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
     call X(hamiltonian_external)(hm, der%mesh, epsib, hpsib)
   end if
 
   ! and the non-local one
-  if (hm%ep%non_local .and. iand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
+  if (hm%ep%non_local .and. bitand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
     if(hm%hm_base%apply_projector_matrices) then
       call X(hamiltonian_base_nlocal_finish)(hm%hm_base, der%mesh, hm%d, ik, projection, hpsib)
     else
@@ -109,16 +109,16 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
     end if
   end if
 
-  if (iand(TERM_OTHERS, terms_) /= 0 .and. hamiltonian_base_has_magnetic(hm%hm_base)) then
+  if (bitand(TERM_OTHERS, terms_) /= 0 .and. hamiltonian_base_has_magnetic(hm%hm_base)) then
     call X(hamiltonian_base_magnetic)(hm%hm_base, der, hm%d, hm%ep, &
              states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   end if
   
-  if (iand(TERM_OTHERS, terms_) /= 0 ) then
+  if (bitand(TERM_OTHERS, terms_) /= 0 ) then
     call X(hamiltonian_base_rashba)(hm%hm_base, der, hm%d, epsib, hpsib)
   end if
 
-  if (iand(TERM_OTHERS, terms_) /= 0) then
+  if (bitand(TERM_OTHERS, terms_) /= 0) then
 
     call profiling_in(prof_exx, "EXCHANGE_OPERATOR")
     select case(hm%theory_level)
@@ -142,11 +142,11 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
     
   end if
 
-  if (iand(TERM_MGGA, terms_) /= 0 .and. hm%family_is_mgga_with_exc) then
+  if (bitand(TERM_MGGA, terms_) /= 0 .and. hm%family_is_mgga_with_exc) then
     call X(h_mgga_terms)(hm, der, ik, epsib, hpsib)
   end if
 
-  if(iand(TERM_OTHERS, terms_) /= 0 .and. hm%scissor%apply) then
+  if(bitand(TERM_OTHERS, terms_) /= 0 .and. hm%scissor%apply) then
     call X(scissor_apply)(hm%scissor, der%mesh, ik, epsib, hpsib)
   end if
 

@@ -369,7 +369,7 @@ contains
       call dio_function_output(outp%how, trim(restart_folder)//trim(folder), & 
            trim(out_name), mesh, read_ff, units_out%length**(-mesh%sb%dim), ierr, geo = geo)
       
-      if (iand(outp%what, OPTION__OUTPUT__POTENTIAL) /= 0) then
+      if (bitand(outp%what, OPTION__OUTPUT__POTENTIAL) /= 0) then
         write(out_name, '(a)') "potential"
         call dpoisson_solve(psolver, pot, read_ff)
         call dio_function_output(outp%how, trim(restart_folder)//trim(folder), &

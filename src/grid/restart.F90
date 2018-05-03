@@ -879,7 +879,7 @@ contains
     type(restart_t), intent(in) :: restart
     integer,         intent(in) :: flag
 
-    restart_has_flag = iand(info(restart%data_type)%flags, flag) /= 0
+    restart_has_flag = bitand(info(restart%data_type)%flags, flag) /= 0
 
   end function restart_has_flag
 
