@@ -31,8 +31,8 @@ module propagator_magnus_oct_m
   use messages_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
-  use propagator_rk_oct_m
   use propagator_base_oct_m
+  use propagator_rk_oct_m
   use states_oct_m
   use v_ks_oct_m
   use xc_oct_m
@@ -144,7 +144,7 @@ contains
     type(geometry_t),                intent(inout) :: geo
     integer,                         intent(in)    :: iter
 
-    integer :: ik, ib, ist, np, np_part, st_dim
+    integer :: ik, ib
     FLOAT :: alpha1, alpha2, c1, c2, t1, t2
     FLOAT, allocatable :: vhxc1(:, :), vhxc2(:, :)
     PUSH_SUB(propagator_dt.td_cfmagnus4)
@@ -155,9 +155,6 @@ contains
       return
     end if
 
-    np      = gr%mesh%np
-    np_part = gr%mesh%np_part
-    st_dim  = st%d%dim
 
     alpha1 = (M_THREE - M_TWO * sqrt(M_THREE))/CNST(12.0)
     alpha2 = (M_THREE + M_TWO * sqrt(M_THREE))/CNST(12.0)
@@ -166,8 +163,8 @@ contains
     t1 = time - dt + c1*dt
     t2 = time - dt + c2*dt
 
-    SAFE_ALLOCATE(vhxc1(1:np, 1:st%d%nspin))
-    SAFE_ALLOCATE(vhxc2(1:np, 1:st%d%nspin))
+    SAFE_ALLOCATE(vhxc1(1:gr%mesh%np, 1:st%d%nspin))
+    SAFE_ALLOCATE(vhxc2(1:gr%mesh%np, 1:st%d%nspin))
 
     call potential_interpolation_interpolate(tr%vksold, 4, time, dt, t1, vhxc1)
     call potential_interpolation_interpolate(tr%vksold, 4, time, dt, t2, vhxc2)
