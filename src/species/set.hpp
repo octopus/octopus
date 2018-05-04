@@ -20,7 +20,7 @@
 */
 
 #include <string>
-#include <unordered_map>
+#include <map>
 #include <fstream>
 
 #include "element.hpp"
@@ -92,7 +92,7 @@ namespace pseudopotential {
       double radius_;
     };
     
-    std::unordered_map<std::string, element_values> map_;
+    std::map<std::string, element_values> map_;
 
     
   };
