@@ -528,7 +528,6 @@ contains
       PUSH_SUB(hamiltonian_init.init_phase)
 
       SAFE_ALLOCATE(hm%hm_base%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
-      if(hm%F%boson==OPTION__FLOQUETBOSON__QED_PHOTON) SAFE_ALLOCATE(hm%hm_base%phase_only_k(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
 
       kpoint(1:gr%sb%dim) = M_ZERO
       do ik = hm%d%kpt%start, hm%d%kpt%end
