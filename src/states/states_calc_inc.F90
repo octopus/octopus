@@ -1472,7 +1472,7 @@ subroutine X(states_me_two_body) (gr, st, nint, iindex, jindex, kindex, lindex, 
 
   ijst = 0
   iint = 1
-  ntodo = nint
+  ntodo = id*(id+1)*(id**2+id+2)/8
   if(mpi_world%rank == 0) call loct_progress_bar(-1, ntodo)
   do ist = 1, id
 
