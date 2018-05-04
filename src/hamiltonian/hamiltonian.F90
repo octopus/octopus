@@ -528,6 +528,7 @@ contains
       PUSH_SUB(hamiltonian_init.init_phase)
 
       SAFE_ALLOCATE(hm%hm_base%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
+      if(hm%F%boson==OPTION__FLOQUETBOSON__QED_PHOTON) SAFE_ALLOCATE(hm%hm_base%phase_only_k(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
 
       kpoint(1:gr%sb%dim) = M_ZERO
       do ik = hm%d%kpt%start, hm%d%kpt%end
@@ -536,6 +537,12 @@ contains
           hm%hm_base%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
         end forall
       end do
+
+      !keep a copy of the phase with only the k-point content
+      if(hm%F%boson==OPTION__FLOQUETBOSON__QED_PHOTON) then
+        SAFE_ALLOCATE(hm%hm_base%phase_only_k(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
+        hm%hm_base%phase_only_k(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end) = hm%hm_base%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end)
+      end if
 
       if(accel_is_enabled()) then
         call accel_create_buffer(hm%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, gr%mesh%np_part*hm%d%kpt%nlocal)
@@ -564,6 +571,9 @@ contains
     end if
 
     SAFE_DEALLOCATE_P(hm%hm_base%phase)
+    if(associated(hm%hm_base%phase_only_k)) then
+      SAFE_DEALLOCATE_P(hm%hm_base%phase_only_k) 
+    end if
     SAFE_DEALLOCATE_P(hm%vhartree)
     SAFE_DEALLOCATE_P(hm%vhxc)
     SAFE_DEALLOCATE_P(hm%vxc)
@@ -1309,8 +1319,8 @@ contains
       do idim = 1, dim
         !$omp parallel do
         do ip = 1, der%mesh%np_part
-!           ppsi(ip, idim) = hm%hm_base%phase(ip, ik)*ppsi(ip, idim)
-            ppsi(ip, idim) = ppsi(ip, idim) * exp(-M_zI*sum(der%mesh%x(ip, 1:der%mesh%sb%dim)*kpoint(1:der%mesh%sb%dim) ))
+           ppsi(ip, idim) = hm%hm_base%phase_only_k(ip, ik)*ppsi(ip, idim)
+!            ppsi(ip, idim) = ppsi(ip, idim) * exp(-M_zI*sum(der%mesh%x(ip, 1:der%mesh%sb%dim)*kpoint(1:der%mesh%sb%dim) ))
         end do
         !$omp end parallel do
       end do
@@ -1353,7 +1363,8 @@ contains
       do idim = 1, dim
         !$omp parallel do
         do ip = 1, der%mesh%np_part
-            gppsi(ip, idim) = gppsi(ip, idim) * exp(M_zI*sum(der%mesh%x(ip, 1:der%mesh%sb%dim)*kpoint(1:der%mesh%sb%dim) ))
+          ppsi(ip, idim) = conjg(hm%hm_base%phase_only_k(ip, ik))*ppsi(ip, idim)
+!            gppsi(ip, idim) = gppsi(ip, idim) * exp(M_zI*sum(der%mesh%x(ip, 1:der%mesh%sb%dim)*kpoint(1:der%mesh%sb%dim) ))
         end do
         !$omp end parallel do
       end do
