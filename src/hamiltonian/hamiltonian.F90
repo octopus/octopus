@@ -1361,7 +1361,7 @@ contains
       do idim = 1, dim
         !$omp parallel do
         do ip = 1, der%mesh%np_part
-          ppsi(ip, idim) = conjg(hm%hm_base%phase_only_k(ip, ik))*ppsi(ip, idim)
+          gppsi(ip, idim) = conjg(hm%hm_base%phase_only_k(ip, ik))*gppsi(ip, idim)
 !            gppsi(ip, idim) = gppsi(ip, idim) * exp(M_zI*sum(der%mesh%x(ip, 1:der%mesh%sb%dim)*kpoint(1:der%mesh%sb%dim) ))
         end do
         !$omp end parallel do
