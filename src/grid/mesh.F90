@@ -103,6 +103,7 @@ module mesh_oct_m
     FLOAT,   allocatable :: x(:,:)            !< The (local) \b points
     integer, allocatable :: resolution(:, :, :)
     FLOAT                :: volume_element    !< The global volume element.
+    FLOAT                :: surface_element(MAX_DIM)
     FLOAT,   allocatable :: vol_pp(:)         !< Element of volume for curvilinear coordinates.
 
     type(mesh_cube_map_t) :: cube_map

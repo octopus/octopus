@@ -46,6 +46,7 @@ module pseudo_oct_m
     pseudo_grid_weights,                 &
     pseudo_local_potential,              &
     pseudo_projector,                    &
+    pseudo_has_radial_function,          &
     pseudo_radial_function,              &
     pseudo_radial_potential,             &
     pseudo_has_nlcc,                     &
@@ -440,7 +441,27 @@ contains
     pseudo_has_total_angular_momentum = (pseudo_has_total_angular_momentum_low(pseudo) /= 0)
     
   end function pseudo_has_total_angular_momentum
+
+  ! -------------------------------------------------
   
+  logical function pseudo_has_radial_function(pseudo, l)
+    type(pseudo_t),   intent(in)      :: pseudo
+    integer,          intent(in)      :: l
+    
+    interface
+      integer function pseudo_has_radial_function_low(pseudo, l)
+        import :: pseudo_t
+        implicit none
+        
+        type(pseudo_t),   intent(in)      :: pseudo
+        integer,          intent(in)      :: l
+      end function pseudo_has_radial_function_low
+    end interface
+    
+    pseudo_has_radial_function = (pseudo_has_radial_function_low(pseudo, l) /= 0)
+    
+  end function pseudo_has_radial_function
+
 end module pseudo_oct_m
 
 !! Local Variables:
