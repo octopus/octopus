@@ -392,11 +392,11 @@ contains
 
         overlap = .false.
 
-        if(.not. projector_is(epot%proj(iatom), M_NONE)) then
+        if(.not. projector_is(epot%proj(iatom), PROJ_NONE)) then
           ASSERT(associated(epot%proj(iatom)%sphere%mesh))
           do jatom = 1, region_count(nregion)
             katom = order(head(nregion) + jatom - 1)
-            if(projector_is(epot%proj(katom), M_NONE)) cycle
+            if(projector_is(epot%proj(katom), PROJ_NONE)) cycle
             overlap = submesh_overlap(epot%proj(iatom)%sphere, epot%proj(katom)%sphere)
             if(overlap) exit
           end do
@@ -427,9 +427,9 @@ contains
 
     do iregion = 1, nregion
       do iatom = head(iregion), head(iregion + 1) - 1
-        if(.not. projector_is(epot%proj(order(iatom)), M_KB)) cycle
+        if(.not. projector_is(epot%proj(order(iatom)), PROJ_KB)) cycle
         do jatom = head(iregion), iatom - 1
-          if(.not. projector_is(epot%proj(order(jatom)), M_KB)) cycle
+          if(.not. projector_is(epot%proj(order(jatom)), PROJ_KB)) cycle
           ASSERT(.not. submesh_overlap(epot%proj(order(iatom))%sphere, epot%proj(order(jatom))%sphere))
         end do
       end do
@@ -448,7 +448,7 @@ contains
     do iorder = 1, epot%natoms
       iatom = order(iorder)
 
-      if(projector_is(epot%proj(iatom), M_KB) .or. projector_is(epot%proj(iatom), M_HGH)) then
+      if(projector_is(epot%proj(iatom), PROJ_KB) .or. projector_is(epot%proj(iatom), PROJ_HGH)) then
         INCR(this%nprojector_matrices, 1)
         this%apply_projector_matrices = .true.
       else if(.not. projector_is_null(epot%proj(iatom))) then
@@ -485,7 +485,7 @@ contains
 
         iatom = order(iorder)
 
-        if(projector_is(epot%proj(iatom), M_NONE)) cycle
+        if(projector_is(epot%proj(iatom), PROJ_NONE)) cycle
           
         INCR(iproj, 1)
 
@@ -496,7 +496,7 @@ contains
         lmax = epot%proj(iatom)%lmax
         lloc = epot%proj(iatom)%lloc
 
-        if(projector_is(epot%proj(iatom), M_KB)) then
+        if(projector_is(epot%proj(iatom), PROJ_KB)) then
           
           ! count the number of projectors for this matrix
           nmat = 0
@@ -525,7 +525,7 @@ contains
             end do
           end do
 
-        else if(projector_is(epot%proj(iatom), M_HGH)) then
+        else if(projector_is(epot%proj(iatom), PROJ_HGH)) then
 
           this%projector_mix = .true.
           
@@ -559,7 +559,7 @@ contains
               end do
               
               do ic = 1, 3
-                forall(ip = 1:pmat%npoints) pmat%projectors(ip, imat) = hgh_p%p(ip, ic)
+                forall(ip = 1:pmat%npoints) pmat%projectors(ip, imat) = hgh_p%dp(ip, ic)
                 pmat%scal(imat) = mesh%volume_element
                 INCR(imat, 1)
               end do

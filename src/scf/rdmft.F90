@@ -472,7 +472,7 @@ contains
 
     integer :: ist, icycle, ierr, ik
     FLOAT ::  sumgi1, sumgi2, sumgim, mu1, mu2, mum, dinterv
-    FLOAT, allocatable ::  occin(:,:),dE_dn(:), occ(:)
+    FLOAT, allocatable ::  occin(:,:)
     FLOAT, parameter :: smallocc = CNST(0.00001) 
     REAL(8), allocatable ::   theta(:)
     REAL(8) :: objective
@@ -990,8 +990,7 @@ call total_energy_rdm(rdm, st%occ(:,1), energy)
       
     FLOAT, allocatable :: hpsi(:,:), hpsi1(:,:), dpsi(:,:), dpsi2(:,:), fvec(:) 
     FLOAT, allocatable :: g_x(:,:), g_h(:,:), rho(:,:), rho_tot(:), pot(:), fock(:,:,:)
-    FLOAT :: dd
-    integer :: ist, jst, ip, iorb, jorb
+    integer :: ist, ip, iorb, jorb, jst
 
     PUSH_SUB(construct_f)
 
@@ -1119,7 +1118,6 @@ call total_energy_rdm(rdm, st%occ(:,1), energy)
     
     integer :: iqn, iorb, jorb, ist
     FLOAT, allocatable :: vecnat_new(:,:)
-    FLOAT :: dd
 
     PUSH_SUB(assign_eigenfunctions)
 

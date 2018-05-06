@@ -43,6 +43,8 @@ bin_PROGRAMS = @UTILITY_PROGRAMS@
 oct_propagation_spectrum_SOURCES = propagation_spectrum.F90
 oct_propagation_spectrum_LDADD   = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
+                                   $(top_builddir)/src/basis_set/libbasis_set.a \
+                                   $(top_builddir)/src/poisson/libpoisson.a \
                                    $(top_builddir)/src/states/libstates.a \
                                    $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/grid/libgrid.a \
@@ -55,6 +57,8 @@ oct_propagation_spectrum_LDADD   = $(top_builddir)/src/td/libtd.a \
 oct_oscillator_strength_SOURCES = oscillator_strength.F90
 oct_oscillator_strength_LDADD    = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
+                                   $(top_builddir)/src/basis_set/libbasis_set.a \
+                                   $(top_builddir)/src/poisson/libpoisson.a \
                                    $(top_builddir)/src/states/libstates.a \
                                    $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/grid/libgrid.a \
@@ -67,6 +71,8 @@ oct_oscillator_strength_LDADD    = $(top_builddir)/src/td/libtd.a \
 oct_dielectric_function_SOURCES = dielectric_function.F90
 oct_dielectric_function_LDADD    = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
+                                   $(top_builddir)/src/basis_set/libbasis_set.a \
+                                   $(top_builddir)/src/poisson/libpoisson.a \
                                    $(top_builddir)/src/states/libstates.a \
                                    $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/grid/libgrid.a \
@@ -79,6 +85,8 @@ oct_dielectric_function_LDADD    = $(top_builddir)/src/td/libtd.a \
 oct_harmonic_spectrum_SOURCES = harmonic_spectrum.F90
 oct_harmonic_spectrum_LDADD      = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
+                                   $(top_builddir)/src/basis_set/libbasis_set.a \
+                                   $(top_builddir)/src/poisson/libpoisson.a \
                                    $(top_builddir)/src/states/libstates.a \
                                    $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/grid/libgrid.a \
@@ -92,6 +100,7 @@ oct_photoelectron_spectrum_SOURCES = photoelectron_spectrum.F90
 oct_photoelectron_spectrum_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/system/libsystem.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
+                                   $(top_builddir)/src/basis_set/libbasis_set.a \
                                    $(top_builddir)/src/states/libstates.a \
                                    $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/poisson/libpoisson.a \
@@ -119,6 +128,8 @@ oct_casida_spectrum_LDADD        = $(top_builddir)/src/ions/libions.a \
 oct_vibrational_spectrum_SOURCES = vibrational.F90
 oct_vibrational_spectrum_LDADD   = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
+                                   $(top_builddir)/src/basis_set/libbasis_set.a \
+                                   $(top_builddir)/src/poisson/libpoisson.a \
                                    $(top_builddir)/src/states/libstates.a \
                                    $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/grid/libgrid.a \
@@ -147,6 +158,7 @@ oct_convert_SOURCES = convert.F90
 oct_convert_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/system/libsystem.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
+                                   $(top_builddir)/src/basis_set/libbasis_set.a \
                                    $(top_builddir)/src/states/libstates.a \
                                    $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/poisson/libpoisson.a \
@@ -163,6 +175,7 @@ oct_local_multipoles_SOURCES = local_multipoles.F90 \
 oct_local_multipoles_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/system/libsystem.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
+                                   $(top_builddir)/src/basis_set/libbasis_set.a \
                                    $(top_builddir)/src/states/libstates.a \
                                    $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/poisson/libpoisson.a \
@@ -176,6 +189,8 @@ oct_local_multipoles_LDADD = $(top_builddir)/src/td/libtd.a \
 oct_conductivity_SOURCES = conductivity.F90
 oct_conductivity_LDADD  = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
+                                   $(top_builddir)/src/basis_set/libbasis_set.a \
+                                   $(top_builddir)/src/poisson/libpoisson.a \
                                    $(top_builddir)/src/states/libstates.a \
                                    $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/grid/libgrid.a \
@@ -194,6 +209,7 @@ oct_floquet_SOURCES = floquet.F90
 oct_floquet_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/system/libsystem.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
+                                   $(top_builddir)/src/basis_set/libbasis_set.a \
                                    $(top_builddir)/src/states/libstates.a \
                                    $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/poisson/libpoisson.a \

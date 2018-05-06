@@ -1,0 +1,18 @@
+CalculationMode = gs
+
+PseudopotentialSet = hscv_pbe
+
+%Species
+ 'U' | species_pseudo | mass | 235.0439299 | min_radius | 10.0 | max_spacing | 0.4
+%
+
+%Coordinates
+ 'U' | 0.0 | 0.0 | 0.0
+%
+
+ExperimentalFeatures = yes
+
+Radius = 10.0
+Spacing = 0.4
+
+Debug = info
