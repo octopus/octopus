@@ -182,14 +182,17 @@ contains
       ! Diagonalization of the generalized Fock matrix 
       write(message(1), '(a)') 'Optimization of natural orbitals'
       call messages_info(1)
+      
       do icount = 1, maxcount !still under investigation how many iterations we need
         if (rdm%do_basis.eqv..false.) then
+		  print*, "outer loop", icount
           call scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
         else
           call scf_orb(rdm, gr, geo, st, ks, hm, energy)
         end if
         energy_dif = energy - energy_old
         energy_old = energy
+        
         if (rdm%do_basis.eqv. .true.) then
           if (abs(energy_dif)/abs(energy).lt. rdm%conv_ener.and.rdm%maxFO < 1.d3*rdm%conv_ener)  exit
           if (energy_dif < M_ZERO) then 
@@ -211,6 +214,7 @@ contains
       rel_ener = abs(energy_occ-energy)/abs(energy)
 
       write(message(1),'(a,es15.5)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+      print*, "energy:", energy
       call messages_info(1)
       if (rdm%do_basis.eqv..true.) then
         if ((rel_ener < rdm%conv_ener).and.rdm%maxFO < 1.e3*rdm%conv_ener) then
@@ -488,28 +492,28 @@ contains
     
     !Initialize the occin. Smallocc is used for numerical stability
     
-    occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
-    where(occin(:,:) < smallocc) occin(:,:) = smallocc 
-    where(occin(:,:) > st%smear%el_per_state-smallocc) occin(:,:) = st%smear%el_per_state - smallocc
+!    occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
+!    where(occin(:,:) < smallocc) occin(:,:) = smallocc 
+!    where(occin(:,:) > st%smear%el_per_state-smallocc) occin(:,:) = st%smear%el_per_state - smallocc
 
-    !Renormalize the occupation numbers 
-    rdm%occsum = M_ZERO
+!    !Renormalize the occupation numbers 
+!    rdm%occsum = M_ZERO
 
-    do ist = 1, st%nst
-      do ik = 1, st%d%nik
-        rdm%occsum = rdm%occsum + occin(ist,ik)
-      end do
-    end do
+!    do ist = 1, st%nst
+!      do ik = 1, st%d%nik
+!        rdm%occsum = rdm%occsum + occin(ist,ik)
+!      end do
+!    end do
 
-    do ist = 1, st%nst
-      do ik = 1, st%d%nik
-        occin(ist, ik) = occin(ist,ik)*st%qtot/rdm%occsum
-      end do
-    end do 
+!    do ist = 1, st%nst
+!      do ik = 1, st%d%nik
+!        occin(ist, ik) = occin(ist,ik)*st%qtot/rdm%occsum
+!      end do
+!    end do 
 
-    rdm%occsum = st%qtot
+!    rdm%occsum = st%qtot
 
-    st%occ = occin
+!    st%occ = occin
     
     if((rdm%iter == 1).and. (rdm%do_basis.eqv. .true.))  then 
       call dstates_me_two_body(gr, st, rdm%n_twoint, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
@@ -519,72 +523,77 @@ contains
 
     call rdm_derivatives(rdm, hm, st, gr)
 
-    !finding the chemical potential mu such that the occupation numbers sum up to the number of electrons
-    !bisection to find the root of rdm%occsum-st%qtot=M_ZERO
-    mu1 = rdm%mu   !initial guess for mu 
-    mu2 = -CNST(1.0e-6)
-    dinterv = M_HALF
+!    !finding the chemical potential mu such that the occupation numbers sum up to the number of electrons
+!    !bisection to find the root of rdm%occsum-st%qtot=M_ZERO
+!    mu1 = rdm%mu   !initial guess for mu 
+!    mu2 = -CNST(1.0e-6)
+!    dinterv = M_HALF
 
-    !use n_j=sin^2(2pi*theta_j) to treat pinned states, minimize for both intial mu
-    theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-    call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
-        real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
-    sumgi1 = rdm%occsum - st%qtot
-    rdm%mu = mu2
-    theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-    call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
-        real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
-    sumgi2 = rdm%occsum - st%qtot
+!    !use n_j=sin^2(2pi*theta_j) to treat pinned states, minimize for both intial mu
+!    theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
+!    call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+!        real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+!    sumgi1 = rdm%occsum - st%qtot
+!    rdm%mu = mu2
+!    theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
+!    call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+!        real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+!    sumgi2 = rdm%occsum - st%qtot
 
-    ! Adjust the interval between the initial mu to include the root of rdm%occsum-st%qtot=M_ZERO
-    do while (sumgi1*sumgi2 > M_ZERO) 
-      if (sumgi2 > M_ZERO) then
-        mu2 = mu1
-        sumgi2 = sumgi1
-        mu1 = mu1 - dinterv
-        rdm%mu = mu1
-        theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-        call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
-            real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
-        sumgi1 = rdm%occsum - st%qtot 
-      else
-        mu1 = mu2
-        sumgi1 = sumgi2
-        mu2 = mu2 + dinterv
-        rdm%mu = mu2
-        theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-        call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
-            real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
-        sumgi2 = rdm%occsum - st%qtot 
-      end if
-    end do
+!    ! Adjust the interval between the initial mu to include the root of rdm%occsum-st%qtot=M_ZERO
+!    do while (sumgi1*sumgi2 > M_ZERO) 
+!      if (sumgi2 > M_ZERO) then
+!        mu2 = mu1
+!        sumgi2 = sumgi1
+!        mu1 = mu1 - dinterv
+!        rdm%mu = mu1
+!        theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
+!        call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+!            real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+!        sumgi1 = rdm%occsum - st%qtot 
+!      else
+!        mu1 = mu2
+!        sumgi1 = sumgi2
+!        mu2 = mu2 + dinterv
+!        rdm%mu = mu2
+!        theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
+!        call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+!            real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+!        sumgi2 = rdm%occsum - st%qtot 
+!      end if
+!    end do
 
-    do icycle = 1, 50
-      mum = (mu1 + mu2)*M_HALF
-      rdm%mu = mum
-      theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-      call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
-          real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
-      sumgim = rdm%occsum - st%qtot
-      if (sumgi1*sumgim < M_ZERO) then
-        mu2 = mum
-      else
-        mu1 = mum
-        sumgi1 = sumgim
-      end if
-      if(abs(sumgim) < rdm%toler .or. abs((mu1-mu2)*M_HALF) < rdm%toler)  exit
-      cycle
-    end do
-    if (icycle >= 50) then
-      write(message(1),'(a,1x,f11.4)') 'Bisection ended without finding mu, sum of occupation numbers:', rdm%occsum
-      call messages_fatal(1)
-    end if
+!    do icycle = 1, 50
+!      mum = (mu1 + mu2)*M_HALF
+!      rdm%mu = mum
+!      theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
+!      call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+!          real(CNST(1e-8), 8), real(CNST(1e-8),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+!      sumgim = rdm%occsum - st%qtot
+!      if (sumgi1*sumgim < M_ZERO) then
+!        mu2 = mum
+!      else
+!        mu1 = mum
+!        sumgi1 = sumgim
+!      end if
+!      if(abs(sumgim) < rdm%toler .or. abs((mu1-mu2)*M_HALF) < rdm%toler)  exit
+!      cycle
+!    end do
+!    if (icycle >= 50) then
+!      write(message(1),'(a,1x,f11.4)') 'Bisection ended without finding mu, sum of occupation numbers:', rdm%occsum
+!      call messages_fatal(1)
+!    end if
 
-    do ist = 1, st%nst
-      st%occ(ist, 1) = st%smear%el_per_state*sin(theta(ist)*M_PI*M_TWO)**2
-    end do
+!    do ist = 1, st%nst
+!      st%occ(ist, 1) = st%smear%el_per_state*sin(theta(ist)*M_PI*M_TWO)**2
+!    end do
  
-    energy = objective
+!    energy = objective
+call density_calc (st,gr,st%rho)
+!call v_ks_calc(ks,hm,st,geo)
+call hamiltonian_update(hm, gr%mesh)
+call rdm_derivatives(rdm, hm, st, gr)
+call total_energy_rdm(rdm, st%occ(:,1), energy)
     
     write(message(1),'(a4,5x,a12)')'#st','Occupation'
     call messages_info(1)   
@@ -770,6 +779,8 @@ contains
     !set parameters for steepest decent
     scaleup = 2.4d0
     scaledown = 0.5d0
+!	scaleup = 1.1d0
+!    scaledown = 0.9d0
     trymax = 5
     smallstep = 1d-10
     thresh = 1d-10
@@ -784,6 +795,8 @@ contains
     energy_old = energy
 
     do ist = 1, st%nst
+      
+      print*, "check the steps", ist, stepsize(ist)
       !do not try to improve states that are converged
       if (stepsize(ist).lt. smallstep) cycle
 
@@ -838,6 +851,7 @@ contains
 
         !check if step lowers the energy
         energy_diff = energy - energy_old
+        print*, "energy_diff", energy_diff
 
         if (energy_diff .lt. - thresh) then 
           !sucessful step
@@ -847,6 +861,7 @@ contains
         else 
           !not sucessful step
           stepsize(ist) = stepsize(ist)*scaledown !decrease stepsize
+          print*, "setpsize, ist", stepsize(ist), ist
           !undo changes in st and dpsi (cannot use states_copy due to memory leak) 
           do jst = st%nst, ist, -1
             call states_get_state(states_old, gr%mesh, jst, 1, dpsi)
