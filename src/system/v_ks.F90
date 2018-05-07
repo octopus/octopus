@@ -590,6 +590,7 @@ contains
     
     select case(ks%vdw_correction)
     case(OPTION__VDWCORRECTION__VDW_TS)
+      call vdw_ts_write_c6ab(ks%vdw_ts, STATIC_DIR, 'c6ab_eff')
       call vdw_ts_end(ks%vdw_ts)
     end select
 

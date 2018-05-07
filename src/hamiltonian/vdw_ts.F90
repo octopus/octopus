@@ -28,10 +28,12 @@ module vdw_ts_oct_m
   use global_oct_m
   use hirshfeld_oct_m
   use ion_interaction_oct_m
+  use io_oct_m !for wrting?
   use io_function_oct_m
   use messages_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
+  use mpi_oct_m ! for writing?
   use parser_oct_m 
   use periodic_copy_oct_m
   use profiling_oct_m
@@ -50,19 +52,21 @@ module vdw_ts_oct_m
     vdw_ts_t,                             &
     vdw_ts_init,                          &
     vdw_ts_end,                           &
+    vdw_ts_write_c6ab,                    &
     vdw_ts_calculate
   
   type vdw_ts_t
     private
-    FLOAT, allocatable :: c6free(:)      !> Free atomic volumes for each atomic species.
-    FLOAT, allocatable :: dpfree(:)      !> Free atomic static dipole polarizability for each atomic species.
-    FLOAT, allocatable :: r0free(:)      !> Free atomic vdW radius for each atomic species.
-    FLOAT, allocatable :: c6abfree(:, :) !> Free atomic heteronuclear C6 coefficient for each atom pair.
+    FLOAT, allocatable :: c6free(:)        !> Free atomic volumes for each atomic species.
+    FLOAT, allocatable :: dpfree(:)        !> Free atomic static dipole polarizability for each atomic species.
+    FLOAT, allocatable :: r0free(:)        !> Free atomic vdW radius for each atomic species.
+    FLOAT, allocatable :: c6abfree(:, :)   !> Free atomic heteronuclear C6 coefficient for each atom pair.
     FLOAT, allocatable :: volfree(:)
 
-    FLOAT              :: VDW_cutoff      !> Cutoff value for the calculation of the VdW TS correction in periodic system.
+    FLOAT, allocatable :: c6ab(:, :)
+    FLOAT              :: VDW_cutoff       !> Cutoff value for the calculation of the VdW TS correction in periodic system.
     FLOAT              :: VDW_dd_parameter !> Parameter for the damping function steepness.
-    FLOAT              :: VDW_sr_parameter!> Parameter for the damping function. Can depend on the XC correction used.
+    FLOAT              :: VDW_sr_parameter !> Parameter for the damping function. Can depend on the XC correction used.
   end type vdw_ts_t
 
 contains
@@ -115,6 +119,7 @@ contains
     SAFE_ALLOCATE(this%r0free(1:geo%nspecies))
     SAFE_ALLOCATE(this%volfree(1:geo%nspecies))
     SAFE_ALLOCATE(this%c6abfree(1:geo%nspecies, 1:geo%nspecies))
+    SAFE_ALLOCATE(this%c6ab(1:geo%nspecies, 1:geo%nspecies))
 
     do ispecies = 1, geo%nspecies
       call get_vdw_param(species_label(geo%species(ispecies)), &
@@ -146,6 +151,7 @@ contains
     SAFE_DEALLOCATE_A(this%r0free)
     SAFE_DEALLOCATE_A(this%volfree)
     SAFE_DEALLOCATE_A(this%c6abfree)
+    SAFE_DEALLOCATE_A(this%c6ab)
 
     POP_SUB(vdw_ts_end)
   end subroutine vdw_ts_end
@@ -182,7 +188,7 @@ contains
     integer :: iatom, jatom, ispecies, jspecies, jcopy, ddimention, ip 
     FLOAT :: rr, rr2, rr6, dd, sr, dffdrr, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra, deabdrab
     FLOAT, allocatable :: coordinates(:,:), volume_ratio(:), dvadens(:), dvadrr(:), derivative_coeff(:), & 
-                          dr0dvra(:), r0ab(:,:), c6ab(:,:)
+                          dr0dvra(:), r0ab(:,:) !, c6ab(:,:)
     type(hirshfeld_t) :: hirshfeld
     integer, allocatable :: zatom(:)
     FLOAT :: x_j(1:MAX_DIM)
@@ -194,6 +200,7 @@ contains
     SAFE_ALLOCATE(dvadens(1:der%mesh%np))
     SAFE_ALLOCATE(dvadrr(1:3))
     SAFE_ALLOCATE(dr0dvra(1:geo%natoms))
+    !SAFE_ALLOCATE(c6ab(1:geo%natoms,1:geo%natoms))
 
     energy=M_ZERO
     derivative_coeff(1:geo%natoms) = M_ZERO
@@ -203,13 +210,19 @@ contains
 
     do iatom = 1, geo%natoms
       ispecies = species_index(geo%atom(iatom)%species)
+
       call hirshfeld_volume_ratio(hirshfeld, iatom, density, volume_ratio(iatom))
       dr0dvra(iatom) = this%r0free(ispecies)/(CNST(3.0)*(volume_ratio(iatom)**(M_TWO/CNST(3.0)))) 
+
+      do jatom = 1, geo%natoms
+         jspecies = species_index(geo%atom(jatom)%species)
+
+         this%c6ab(iatom,jatom) = volume_ratio(iatom)*volume_ratio(jatom)*this%c6abfree(ispecies,jspecies) !this operation is done again inside the .c part for the non periodic case
+        end do
     end do
   
     if(sb%periodic_dim > 0) then ! periodic case
       SAFE_ALLOCATE(r0ab(1:geo%natoms,1:geo%natoms))
-      SAFE_ALLOCATE(c6ab(1:geo%natoms,1:geo%natoms))
 
       !Precomputing some quantities
       do iatom = 1, geo%natoms
@@ -219,8 +232,6 @@ contains
 
          r0ab(iatom,jatom) = (volume_ratio(iatom)**(M_ONE/CNST(3.0)))*this%r0free(ispecies) &
                             +(volume_ratio(jatom)**(M_ONE/CNST(3.0)))*this%r0free(jspecies)
-
-         c6ab(iatom,jatom) = volume_ratio(iatom)*volume_ratio(jatom)*this%c6abfree(ispecies,jspecies)
         end do
       end do
 
@@ -248,16 +259,16 @@ contains
             !Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
             dffdr0 = - this%VDW_dd_parameter*rr/( this%VDW_sr_parameter*r0ab(iatom,jatom)**2)*dee
 
-            energy = energy -M_HALF*ff*c6ab(iatom,jatom)/rr6
+            energy = energy -M_HALF*ff*this%c6ab(iatom,jatom)/rr6
 
             ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
-            deabdrab = (-dffdrab*c6ab(iatom,jatom) + CNST(6.0)*ff*c6ab(iatom,jatom)/rr)/rr6;
+            deabdrab = (-dffdrab*this%c6ab(iatom,jatom) + CNST(6.0)*ff*this%c6ab(iatom,jatom)/rr)/rr6;
       
             ! Derivative of the damping function with respecto to the volume ratio of atom A.
             dffdvra = dffdr0*dr0dvra(iatom);
 
             ! Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
-            deabdvra = (-dffdvra*c6ab(iatom,jatom) - ff*volume_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6
+            deabdvra = (-dffdvra*this%c6ab(iatom,jatom) - ff*volume_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6
               
             force(1:sb%dim,iatom)= force(1:sb%dim,iatom) - deabdrab*(geo%atom(iatom)%x(sb%dim) -x_j(1:sb%dim) )/rr; 
             derivative_coeff(iatom) = derivative_coeff(iatom) + deabdvra;
@@ -267,7 +278,6 @@ contains
       end do
 
       SAFE_DEALLOCATE_A(r0ab)
-      SAFE_DEALLOCATE_A(c6ab)
     else ! Non periodic case 
       SAFE_ALLOCATE(coordinates(1:sb%dim, 1:geo%natoms))
       SAFE_ALLOCATE(zatom(1:geo%natoms))
@@ -312,9 +322,43 @@ contains
     SAFE_DEALLOCATE_A(dvadens)
     SAFE_DEALLOCATE_A(dvadrr)
     SAFE_DEALLOCATE_A(dr0dvra)
+    !SAFE_DEALLOCATE_A(c6ab)
 
     POP_SUB(vdw_ts_calculate)
   end subroutine vdw_ts_calculate
+
+
+
+
+  !------------------------------------------
+
+  subroutine vdw_ts_write_c6ab(this, dir, fname)
+     type(vdw_ts_t), intent(inout) :: this
+     character(len=*), intent(in)  :: dir, fname
+ 
+     integer :: iunit
+
+     PUSH_SUB(vdw_ts_write_c6ab)
+
+     if(mpi_grp_is_root(mpi_world)) then ! Action only for 1 core
+     !Make sure that the directory exist
+       call io_mkdir(dir)
+     !Open the file 
+       iunit = io_open(trim(dir) // "/" // trim(fname), action='write')  
+
+       !write(iunit, this%c6ab(:,:)
+       call messages_write('List of k-points:')
+
+        !write(iunit,'test')
+     !Close the file
+       call io_close(iunit)
+       end if
+
+
+  end subroutine vdw_ts_write_c6ab
+
+
+
 
 
   !------------------------------------------
