@@ -68,10 +68,13 @@ contains
     type(grid_t),          intent(in)    :: gr
     integer,               intent(in)    :: nst
 
-    FLOAT   :: rotate_spectrum_angle
     logical :: use_parpack
-
+#if defined(HAVE_ARPACK)
+    FLOAT   :: rotate_spectrum_angle
+#endif
+    
     PUSH_SUB(arpack_init)
+
     use_parpack = .false.
     this%use_parpack = .false.
 #if defined(HAVE_ARPACK)

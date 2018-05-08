@@ -26,7 +26,6 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
   FLOAT                :: prefactor
   FLOAT                :: aa1, aa2, aa3, aa4
   integer              :: ip, jp, dim, nthreads
-  integer, allocatable :: ip_v(:), part_v(:)
   FLOAT                :: xx1(1:MAX_DIM), xx2(1:MAX_DIM), xx3(1:MAX_DIM), xx4(1:MAX_DIM)
 
   PUSH_SUB(dpoisson_solve_direct_sm)
@@ -146,7 +145,6 @@ end subroutine dpoisson_solve_direct_sm
 
     FLOAT, allocatable :: aux1(:), aux2(:)
     type(derivatives_t), pointer :: der
-    logical :: all_nodes_value
 
     der => this%der
 

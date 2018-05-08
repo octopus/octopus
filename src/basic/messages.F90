@@ -219,11 +219,14 @@ contains
     logical, optional, intent(in) :: only_root_writes
 
     integer :: ii, no_lines_
-    logical :: only_root_writes_, should_write, received
-    integer :: send_req
+    logical :: only_root_writes_, should_write
     integer, allocatable :: recv_buf(:), recv_req(:)
     integer, parameter :: FATAL_TAG = 1620299
-
+#ifdef HAVE_MPI
+    logical :: received
+    integer :: send_req
+#endif
+    
     no_lines_ = current_line
     if(present(no_lines)) no_lines_ = no_lines
 

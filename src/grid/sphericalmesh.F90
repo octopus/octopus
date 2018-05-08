@@ -162,9 +162,10 @@ contains
 
     subroutine radial_init()
       integer :: ir
-      FLOAT   :: factor, xi, dr
+      FLOAT   :: dr
 
 #if 0
+      FLOAT   :: factor, xi
       
       ! this is the radial grid described in:
       ! Becke and Dickson JCP 89 2993-2997 (1988) http://dx.doi.org/10.1063/1.455005

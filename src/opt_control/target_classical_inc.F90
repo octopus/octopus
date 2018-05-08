@@ -171,7 +171,7 @@
     type(opt_control_state_t), intent(inout) :: qcchi
     type(geometry_t), intent(in)    :: geo
 
-    integer :: ist, jst, ik, ib, iqn
+    integer :: ist, jst, ib, iqn
     character(len=1024) :: temp_string
     FLOAT :: df_dv, dummy(3)
     FLOAT, pointer :: q(:, :), p(:, :), tq(:, :), tp(:, :)

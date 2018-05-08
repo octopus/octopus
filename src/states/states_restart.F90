@@ -358,7 +358,7 @@ contains
     logical,          optional, intent(in)    :: verbose
 
     integer              :: states_file, wfns_file, occ_file, err, ik, ist, idir, idim
-    integer              :: idone, iread, ntodo, iread_tmp
+    integer              :: idone, iread, ntodo
     character(len=12)    :: filename
     character(len=1)     :: char
     logical, allocatable :: filled(:, :, :)
@@ -373,8 +373,12 @@ contains
     character(len=256), allocatable :: restart_file(:, :, :)
     logical,            allocatable :: restart_file_present(:, :, :)
     FLOAT                :: kpoint(MAX_DIM), read_kpoint(MAX_DIM)
-    integer, allocatable :: lowest_missing_tmp(:, :)
 
+#if defined(HAVE_MPI)
+    integer              :: iread_tmp
+    integer, allocatable :: lowest_missing_tmp(:, :)
+#endif
+    
     PUSH_SUB(states_load)
 
     ierr = 0
@@ -790,7 +794,7 @@ contains
     integer :: iunit, isp, err, err2(2)
     character(len=80) :: filename
     character(len=300) :: lines(2)
-    FLOAT, pointer :: rho(:)
+    FLOAT, pointer :: rho(:), rho_fine(:)
     CMPLX, pointer :: zrho(:), zrho_fine(:)
 
     PUSH_SUB(states_dump_rho)
@@ -822,6 +826,7 @@ contains
         SAFE_ALLOCATE(zrho_fine(1:gr%fine%mesh%np))
       else
         SAFE_ALLOCATE(rho(1:gr%mesh%np))
+        SAFE_ALLOCATE(rho_fine(1:gr%fine%mesh%np))
       end if
     end if
 
@@ -838,11 +843,12 @@ contains
 
       if(gr%have_fine_mesh)then
         if(st%cmplxscl%space) then
-          zrho_fine(:) = st%zrho%Re(:,isp) + M_zI*st%zrho%Im(:,isp)
+          zrho_fine(1:gr%fine%mesh%np) = st%zrho%Re(1:gr%fine%mesh%np,isp) + M_zI*st%zrho%Im(1:gr%fine%mesh%np,isp)
           call zmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, zrho_fine, zrho, INJECTION)
           call zrestart_write_mesh_function(restart, filename, gr%mesh, zrho, err)
         else
-          call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, st%rho(:,isp), rho, INJECTION)
+          rho_fine(1:gr%fine%mesh%np) = st%rho(1:gr%fine%mesh%np,isp)
+          call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, rho_fine, rho, INJECTION)
           call drestart_write_mesh_function(restart, filename, gr%mesh, rho, err)
         end if
       else
@@ -859,10 +865,12 @@ contains
     if (err2(2) /= 0) ierr = ierr + 4
 
     if(gr%have_fine_mesh)then
-      SAFE_DEALLOCATE_P(rho)
       if(st%cmplxscl%space) then
         SAFE_DEALLOCATE_P(zrho)
         SAFE_DEALLOCATE_P(zrho_fine)
+      else
+        SAFE_DEALLOCATE_P(rho)
+        SAFE_DEALLOCATE_P(rho_fine)
       end if
     end if
 

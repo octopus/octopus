@@ -683,7 +683,6 @@ contains
             call eigensolver_run(scf%eigens, gr, st, hm, iter)
 
             call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
-            call hamiltonian_update(hm, gr%mesh)
 
             dipole_prev = dipole
             call calc_dipole(dipole)
@@ -912,7 +911,7 @@ contains
         exit
       end if
 
-      if((outp%what /=0) .and. outp%duringscf .and. outp%output_interval /= 0 &
+      if((outp%what+outp%whatBZ)/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
         call output_all(outp, gr, geo, st, hm, ks, dirname)
@@ -1010,11 +1009,10 @@ contains
       call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
     end if
 
-    if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) &
-      call states_write_bands(STATIC_DIR, st%nst, st, gr%sb)
+    if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
       if(iand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0) &
         call states_write_bandstructure(STATIC_DIR, st%nst, st, gr%sb)
-      
+    end if
 
     POP_SUB(scf_run)
 

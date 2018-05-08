@@ -721,9 +721,6 @@ contains
   real(8) function spline_integral_full(spl) result(res)
     type(spline_t), intent(in) :: spl
 
-    integer :: npoints
-    real(8), allocatable :: x(:)
-
     PUSH_SUB(spline_integral_full)
 
     res = oct_spline_eval_integ_full(spl%spl, spl%acc)
@@ -1109,7 +1106,7 @@ contains
     call oct_spline_x(spl%spl, spl%acc, x(1))
     call oct_spline_y(spl%spl, spl%acc, y(1))
     do i = 1, np
-      write(iunit, '(2f16.8)') x(i), y(i)
+      write(iunit, '(2es16.8)') x(i), y(i)
     end do
 
     SAFE_DEALLOCATE_A(x)
@@ -1144,7 +1141,7 @@ contains
     call oct_spline_x(spl(1)%spl, spl(1)%acc, x(1))
     call oct_spline_y(spl(1)%spl, spl(1)%acc, y(1))
     do i = 1, np
-      write(iunit, '('//trim(fm)//'f16.8)') x(i), (spline_eval(spl(j), x(i)), j = 1, size(spl))
+      write(iunit, '('//trim(fm)//'es16.8)') x(i), (spline_eval(spl(j), x(i)), j = 1, size(spl))
     end do
 
     SAFE_DEALLOCATE_A(x)
@@ -1180,7 +1177,7 @@ contains
     call oct_spline_x(spl(1, 1)%spl, spl(1, 1)%acc, x(1))
     call oct_spline_y(spl(1, 1)%spl, spl(1, 1)%acc, y(1))
     do i = 1, np
-      write(iunit, '('//trim(fm)//'f16.8)') x(i), &
+      write(iunit, '('//trim(fm)//'es16.8)') x(i), &
         ((spline_eval(spl(j, k), x(i)), j = 1, n1), k = 1, n2)
     end do
 
@@ -1206,7 +1203,14 @@ contains
     jj = int(spl%x_limit(2)/dx) + 1
 
     do ii = jj, 1, -1
+
       r = dx*(ii-1)
+
+      ! The first point might not be inside range, so skip it, this
+      ! should be done in a better way, but doing it introduces small
+      ! numerical differences in many tests, so it is a lot of work.
+      if(r > spl%x_limit(2)) cycle
+
       if(abs(spline_eval(spl, r)) > threshold) exit
     end do
 
