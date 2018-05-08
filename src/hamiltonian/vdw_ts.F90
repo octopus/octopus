@@ -358,7 +358,6 @@ contains
 
 
 
-
   !------------------------------------------
   
   subroutine get_vdw_param(atom, c6, alpha, r0)
