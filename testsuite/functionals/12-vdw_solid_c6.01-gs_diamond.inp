@@ -1,0 +1,46 @@
+CalculationMode = gs
+ExperimentalFeatures = yes
+FromScratch = yes
+
+PeriodicDimensions = 3
+
+ParKPoints = auto
+ParDomains = no
+ParStates = no
+
+a = 6.74065308785213
+
+Spacing = 0.4
+
+
+%LatticeParameters
+  a | a | a
+%
+
+
+%LatticeVectors
+ 0.  | 0.5 | 0.5
+ 0.5 | 0.  | 0.5
+ 0.5 | 0.5 | 0.0
+%
+
+%ReducedCoordinates
+ "C" |   0.0    | 0.0     | 0.0
+ "C" |   1/4    | 1/4     | 1/4
+%
+
+
+
+%KPointsGrid
+ 8 | 8 | 8
+%
+
+KPointsUseSymmetries = yes
+
+
+PseudopotentialSet= sg15 
+XCfunctional = gga_x_pbe + gga_c_pbe
+
+VDWCorrection = vdw_ts
+VDW_ts_cutoff = 40
+
