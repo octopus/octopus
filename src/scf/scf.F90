@@ -683,7 +683,6 @@ contains
             call eigensolver_run(scf%eigens, gr, st, hm, iter)
 
             call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
-            call hamiltonian_update(hm, gr%mesh)
 
             dipole_prev = dipole
             call calc_dipole(dipole)

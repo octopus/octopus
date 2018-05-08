@@ -353,9 +353,10 @@ contains
       end if
       if(.not.oct_exchange_enabled(hm%oct_exchange)) then
         call density_calc(stphi, gr, stphi%rho)
-        call v_ks_calc(ks, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
+        call v_ks_calc(ks, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), time = tau)
+      else
+        call hamiltonian_update(hm, gr%mesh, time = tau)
       end if
-      call hamiltonian_update(hm, gr%mesh, time = tau)
       call zhamiltonian_apply_all(hm, ks%xc, gr%der, stphi, hst)
     end subroutine f_psi
 
