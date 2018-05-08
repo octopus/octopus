@@ -70,6 +70,7 @@ module scf_oct_m
   use utils_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
+  use vdw_ts_oct_m
   use xc_functl_oct_m
   use XC_F90(lib_m)
   use stress_oct_m
@@ -1014,6 +1015,14 @@ contains
       if(iand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0) &
         call states_write_bandstructure(STATIC_DIR, st%nst, st, gr%sb)
     end if
+
+!!!!!!!!!!!!!!!!!!!!!! If vdw_ts, write c6para
+    select case(ks%vdw_correction)
+    case(OPTION__VDWCORRECTION__VDW_TS)
+      call vdw_ts_write_c6ab(ks%vdw_ts, geo, STATIC_DIR, 'c6ab_eff')
+    end select
+!!!!!!!!!!!!!!!!!!!!!
+
 
     POP_SUB(scf_run)
 

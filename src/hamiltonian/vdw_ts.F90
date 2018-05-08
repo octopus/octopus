@@ -28,12 +28,12 @@ module vdw_ts_oct_m
   use global_oct_m
   use hirshfeld_oct_m
   use ion_interaction_oct_m
-  use io_oct_m !for wrting?
+  use io_oct_m !for wrting
   use io_function_oct_m
   use messages_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
-  use mpi_oct_m ! for writing?
+  use mpi_oct_m ! for writing
   use parser_oct_m 
   use periodic_copy_oct_m
   use profiling_oct_m
@@ -64,7 +64,6 @@ module vdw_ts_oct_m
     FLOAT, allocatable :: volfree(:)
 
     FLOAT, allocatable :: c6ab(:, :)
-    INTEGER            :: nbr_atom         !> Information needed for writing the c6 parameters
     FLOAT              :: VDW_cutoff       !> Cutoff value for the calculation of the VdW TS correction in periodic system.
     FLOAT              :: VDW_dd_parameter !> Parameter for the damping function steepness.
     FLOAT              :: VDW_sr_parameter !> Parameter for the damping function. Can depend on the XC correction used.
@@ -136,9 +135,7 @@ contains
         this%c6abfree(ispecies, jspecies) = num/den
       end do
     end do
-    
 
-    this%nbr_atom = geo%natoms !Needed for writing the c6 parameters
     POP_SUB(vdw_ts_init)
   end subroutine vdw_ts_init
 
@@ -203,7 +200,6 @@ contains
     SAFE_ALLOCATE(dvadens(1:der%mesh%np))
     SAFE_ALLOCATE(dvadrr(1:3))
     SAFE_ALLOCATE(dr0dvra(1:geo%natoms))
-    !SAFE_ALLOCATE(c6ab(1:geo%natoms,1:geo%natoms))
 
     energy=M_ZERO
     derivative_coeff(1:geo%natoms) = M_ZERO
@@ -325,7 +321,6 @@ contains
     SAFE_DEALLOCATE_A(dvadens)
     SAFE_DEALLOCATE_A(dvadrr)
     SAFE_DEALLOCATE_A(dr0dvra)
-    !SAFE_DEALLOCATE_A(c6ab)
 
     POP_SUB(vdw_ts_calculate)
   end subroutine vdw_ts_calculate
@@ -335,62 +330,26 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_write_c6ab(this, dir, fname)
+  subroutine vdw_ts_write_c6ab(this, geo, dir, fname)
      type(vdw_ts_t)  , intent(inout) :: this
+     type(geometry_t),    intent(in) :: geo
      character(len=*), intent(in)    :: dir, fname
  
      integer :: iunit, iatom, jatom
-     !integer, allocatable :: ShapeArray(:)
-     integer, dimension(2) :: ShapeArray
+
      PUSH_SUB(vdw_ts_write_c6ab)
 
-
-
-     if(mpi_grp_is_root(mpi_world)) then ! Action only for 1 core
-     !Make sure that the directory exist
+     if(mpi_grp_is_root(mpi_world)) then  
        call io_mkdir(dir)
-     !Open the file 
        iunit = io_open(trim(dir) // "/" // trim(fname), action='write')  
-
-
-      ! SAFE_ALLOCATE(ShapeArray(1:2))
-       ShapeArray = shape(this%c6ab)
-       print *,"ShapeArray(1) and ShapeArray(2):", ShapeArray(1),ShapeArray(2),this%nbr_atom
-
         write(iunit, '(a)') '#Atom1 #Atom2 #C6_{12}^{eff}'
 
-       do iatom = 1, this%nbr_atom
-         do jatom = 1, this%nbr_atom
-           !iatom = 1
-           !jatom = 3
-           !write(iunit, '(a)') '#Atom1 #Atom2 #C6_{12}^{eff}'
+       do iatom = 1, geo%natoms
+         do jatom = 1, geo%natoms
            write(iunit, '(3x, I9, I9, es15.8)') iatom, jatom, this%c6ab(iatom, jatom)
-           !write(iunit, '(3x, I32, I32, es15.8)') iatom, jatom, this%c6ab(iatom, jatom)
-
-          !write(iunit, '(a)') 'Convergence:'
-          !write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'abs_dens = ', scf%abs_dens, &
-          !  ' (', scf%conv_abs_dens, ')'
-          !write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_dens = ', scf%rel_dens, &
-          !  ' (', scf%conv_rel_dens, ')'
-          !write(iunit, '(6x, a, es15.8,a,es15.8,4a)') 'abs_ev = ', scf%abs_ev, &
-          !  ' (', units_from_atomic(units_out%energy, scf%conv_abs_ev), ')', &
-          !  ' [',  trim(units_abbrev(units_out%energy)), ']'
-          !write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_ev = ', scf%rel_ev, &
-          !  ' (', scf%conv_rel_ev, ')'
-          !write(iunit,'(1x)')
-
-
-           !write(iunit, iatom) !, this%c6ab(iatom, jatom)
          end do
        end do
-       !call messages_write('List of k-points:')
-       !write(iunit,'test')
-
-     !Close the file
        call io_close(iunit)
-
-
-       !SAFE_DEALLOCATE_A(ShapeArray)
        end if
      POP_SUB(vdw_ts_write_c6ab)
 
