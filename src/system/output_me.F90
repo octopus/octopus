@@ -67,7 +67,8 @@ module output_me_oct_m
     OUTPUT_ME_ANG_MOMENTUM   =   2, &
     OUTPUT_ME_ONE_BODY       =   4, &
     OUTPUT_ME_TWO_BODY       =   8, &
-    OUTPUT_ME_KS_MULTIPOLES  =  16
+    OUTPUT_ME_KS_MULTIPOLES  =  16, &
+    OUTPUT_ME_MOMENTUM_FULL  =  32
 
 contains
   
@@ -99,6 +100,8 @@ contains
     !% Not available with states parallelization.
     !%Option ks_multipoles 16
     !% See <tt>OutputMEMultipoles</tt>. Not available with states parallelization.
+    !%Option momentum_full 32
+    !% <math>\left< i \left| p | j \right></math>. Not available with states parallelization.
     !%End
 
     call parse_variable('OutputMatrixElements', 0, this%what)
@@ -288,6 +291,11 @@ contains
 
     end if
 
+    if(iand(this%what, output_me_momentum_full) /= 0) then
+      write(fname,'(2a)') trim(dir), '/ks_me_momentum_full'
+      call output_me_out_momentum_full(fname, st, gr)
+    end if
+
     POP_SUB(output_me)
   end subroutine output_me
 
@@ -378,6 +386,25 @@ contains
     POP_SUB(output_me_out_momentum)
   end subroutine output_me_out_momentum
 
+
+  ! ---------------------------------------------------------
+  subroutine output_me_out_momentum_full(fname, st, gr)
+    character(len=*), intent(in) :: fname
+    type(states_t),   intent(inout) :: st
+    type(grid_t),     intent(inout) :: gr
+
+    integer            :: ik, ist, is, ns, iunit, idir
+    character(len=80)  :: cspin, str_tmp
+    FLOAT              :: kpoint(1:MAX_DIM)
+    CMPLX, allocatable :: zmomentum(:,:,:,:)
+
+    PUSH_SUB(output_me_out_momentum_full)
+
+    call states_calc_momentum_full(st, gr%der, zmomentum)
+
+    POP_SUB(output_me_out_momentum_full)
+
+  end subroutine output_me_out_momentum_full
 
   ! ---------------------------------------------------------
   subroutine output_me_out_ang_momentum(fname, st, gr)
