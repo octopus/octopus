@@ -133,9 +133,11 @@ contains
         den = (this%dpfree(jspecies)/this%dpfree(ispecies))*this%c6free(ispecies) &
           + (this%dpfree(ispecies)/this%dpfree(jspecies))*this%c6free(jspecies)
         this%c6abfree(ispecies, jspecies) = num/den
+        if(mpi_grp_is_root(mpi_world)) then
+          print *, 'Spcies:', ispecies, jspecies, this%c6abfree(ispecies, jspecies) !!!!!!!!!
+        end if
       end do
     end do
-
     POP_SUB(vdw_ts_init)
   end subroutine vdw_ts_init
 
@@ -188,7 +190,7 @@ contains
     integer :: iatom, jatom, ispecies, jspecies, jcopy, ddimention, ip 
     FLOAT :: rr, rr2, rr6, dd, sr, dffdrr, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra, deabdrab
     FLOAT, allocatable :: coordinates(:,:), volume_ratio(:), dvadens(:), dvadrr(:), derivative_coeff(:), & 
-                          dr0dvra(:), r0ab(:,:) !, c6ab(:,:)
+                          dr0dvra(:), r0ab(:,:) 
     type(hirshfeld_t) :: hirshfeld
     integer, allocatable :: zatom(:)
     FLOAT :: x_j(1:MAX_DIM)
@@ -208,15 +210,19 @@ contains
     call hirshfeld_init(hirshfeld, der%mesh, geo, st)
 
     do iatom = 1, geo%natoms
-      ispecies = species_index(geo%atom(iatom)%species)
-
+      ispecies = species_index(geo%atom(iatom)%species) 
       call hirshfeld_volume_ratio(hirshfeld, iatom, density, volume_ratio(iatom))
       dr0dvra(iatom) = this%r0free(ispecies)/(CNST(3.0)*(volume_ratio(iatom)**(M_TWO/CNST(3.0)))) 
+    end do
 
+    do iatom = 1, geo%natoms
+       ispecies = species_index(geo%atom(iatom)%species)
       do jatom = 1, geo%natoms
          jspecies = species_index(geo%atom(jatom)%species)
-
-         this%c6ab(iatom,jatom) = volume_ratio(iatom)*volume_ratio(jatom)*this%c6abfree(ispecies,jspecies) !this operation is done again inside the .c part for the non periodic case
+         if(mpi_grp_is_root(mpi_world)) then
+           print *,iatom, jatom, volume_ratio(iatom), volume_ratio(jatom), this%c6abfree(ispecies,jspecies) !!!!!!!!!
+         end if
+        this%c6ab(iatom,jatom) = volume_ratio(iatom)*volume_ratio(jatom)*this%c6abfree(ispecies,jspecies) !this operation is done again inside the .c part for the non periodic case
         end do
     end do
   
@@ -247,7 +253,7 @@ contains
             rr =  sqrt(rr2)
             rr6 = rr2**3
 
-            if(rr < CNST(1.0e-10)) cycle
+            if(rr < CNST(1.0e-10)) cycle !To avoid self interaction
 
             ee = exp(- this%VDW_dd_parameter*((rr/( this%VDW_sr_parameter*r0ab(iatom,jatom))) - M_ONE))
             ff = M_ONE/(M_ONE + ee)
