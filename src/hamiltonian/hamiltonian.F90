@@ -1275,7 +1275,7 @@ contains
 
     FLOAT, allocatable :: velectric(:)
 
-    PUSH_SUB(hamiltonian_update)
+    PUSH_SUB(hamiltonian_update2)
     call profiling_in(prof, "HAMILTONIAN_UPDATE")
 
     this%current_time = M_ZERO
@@ -1401,7 +1401,7 @@ contains
     call build_phase()
 
     call profiling_out(prof)
-    POP_SUB(hamiltonian_update)
+    POP_SUB(hamiltonian_update2)
 
   contains
 
@@ -1409,7 +1409,7 @@ contains
       integer :: ik, imat, nmat, max_npoints, offset
       FLOAT   :: kpoint(1:MAX_DIM)
 
-      PUSH_SUB(hamiltonian_update.build_phase)
+      PUSH_SUB(hamiltonian_update2.build_phase)
 
       if(simul_box_is_periodic(mesh%sb) .or. allocated(this%hm_base%uniform_vector_potential)) then
 
@@ -1477,7 +1477,7 @@ contains
 
       end if
 
-      POP_SUB(hamiltonian_update.build_phase)
+      POP_SUB(hamiltonian_update2.build_phase)
     end subroutine build_phase
 
   end subroutine hamiltonian_update2
