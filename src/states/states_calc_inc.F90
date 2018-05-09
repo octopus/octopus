@@ -787,6 +787,115 @@ subroutine X(states_calc_momentum)(st, der, momentum)
   POP_SUB(X(states_calc_momentum))
 end subroutine X(states_calc_momentum)
 
+! ---------------------------------------------------------
+!> The routine calculates the expectation value of the momentum 
+!! operator
+!! <p> = < phi*(ist, k) | -i \nabla | phi(ist, ik) >
+!!
+! ---------------------------------------------------------
+subroutine X(states_calc_momentum_fullmat)(st, der, momentum)
+  type(states_t),      intent(inout) :: st
+  type(derivatives_t), intent(inout) :: der
+  CMPLX,               intent(out)   :: momentum(:,:,:)
+
+  integer             :: idim, istl, istr, ik, idir, ncount
+  CMPLX               :: expect_val_p
+  R_TYPE, allocatable :: psil(:, :), psir(:, :), grad(:,:,:)
+  FLOAT               :: kpoint(1:MAX_DIM)  
+#if defined(HAVE_MPI)
+  integer             :: tmp
+  FLOAT, allocatable  :: lmomentum(:), gmomentum(:)
+  FLOAT, allocatable  :: lmom(:, :, :)
+  integer             :: kstart, kend, kn, ndim
+#endif
+
+  PUSH_SUB(X(states_calc_momentum_fullmat))
+
+  SAFE_ALLOCATE(psil(1:der%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(psir(1:der%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:st%d%dim, 1:der%mesh%sb%dim))
+
+  ncount = M_ONE
+  do ik = st%d%kpt%start, st%d%kpt%end
+    do istl = st%st_start, st%st_end
+
+      call states_get_state(st, der%mesh, istl, ik, psil)
+
+      do istr = st%st_start, st%st_end
+
+         call states_get_state(st, der%mesh, istr, ik, psir)
+       
+         do idim = 1, st%d%dim
+           call X(derivatives_grad)(der, psir(:, idim), grad(:, idim, 1:der%mesh%sb%dim))
+         end do
+       
+         do idir = 1, der%mesh%sb%dim
+           ! since the expectation value of the momentum operator is real
+           ! for square integrable wfns this integral should be purely imaginary 
+           ! for complex wfns but real for real wfns (see case distinction below)
+           expect_val_p = X(mf_dotp)(der%mesh, st%d%dim, psil, grad(:, :, idir))
+       
+           ! In the case of real wavefunctions we do not include the 
+           ! -i prefactor of p = -i \nabla
+           momentum(idir, ncount, ik) =  -M_zI*expect_val_p 
+         end do
+       
+         ! have to add the momentum vector in the case of periodic systems, 
+         ! since psi contains only u_k
+         kpoint = M_ZERO
+         kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+         forall(idir = 1:der%mesh%sb%periodic_dim) momentum(idir, ncount, ik) = momentum(idir, ncount, ik) + kpoint(idir)
+
+         ncount = ncount + 1
+      end do
+    end do
+
+    ! Exchange momenta in the parallel case.
+#if defined(HAVE_MPI)
+    if(st%parallel_in_states) then
+      SAFE_ALLOCATE(lmomentum(1:st%lnst))
+      SAFE_ALLOCATE(gmomentum(1:st%nst))
+
+      do idir = 1, der%mesh%sb%dim
+        lmomentum(1:st%lnst) = momentum(idir, st%st_start:st%st_end, ik)
+        call lmpi_gen_allgatherv(st%lnst, lmomentum, tmp, gmomentum, st%mpi_grp)
+        momentum(idir, 1:st%nst, ik) = gmomentum(1:st%nst)
+      end do
+
+      SAFE_DEALLOCATE_A(lmomentum)
+      SAFE_DEALLOCATE_A(gmomentum)
+    end if
+#endif
+  end do
+
+#if defined(HAVE_MPI)
+  if(st%d%kpt%parallel) then
+    kstart = st%d%kpt%start
+    kend = st%d%kpt%end
+    kn = st%d%kpt%nlocal
+    ndim = ubound(momentum, dim = 1)
+    
+    ASSERT(.not. st%parallel_in_states)
+    
+    SAFE_ALLOCATE(lmom(1:ndim, 1:st%nst, 1:kn))
+    
+    lmom(1:ndim, 1:st%nst, 1:kn) = momentum(1:ndim, 1:st%nst, kstart:kend)
+    
+    call MPI_Allgatherv(lmom(1, 1, 1), ndim*st%nst*kn, MPI_FLOAT, &
+      momentum, st%d%kpt%num(:)*st%nst*ndim, (st%d%kpt%range(1, :) - 1)*st%nst*ndim, MPI_FLOAT, &
+      st%d%kpt%mpi_grp%comm, mpi_err)
+    
+    SAFE_DEALLOCATE_A(lmom)
+  end if
+#endif  
+
+  SAFE_DEALLOCATE_A(psil)
+  SAFE_DEALLOCATE_A(psir)
+  SAFE_DEALLOCATE_A(grad)
+
+  POP_SUB(X(states_calc_momentum_fullmat))
+end subroutine X(states_calc_momentum_fullmat)
+
 
 ! ---------------------------------------------------------
 !> It calculates the expectation value of the angular

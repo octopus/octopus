@@ -122,6 +122,7 @@ module hamiltonian_base_oct_m
     type(accel_mem_t)                    :: buff_projector_phases
     type(accel_mem_t)                    :: buff_mix
     CMPLX, pointer     :: phase(:, :)
+    CMPLX, pointer     :: phase_only_k(:, :)
     type(accel_mem_t) :: buff_phase
     integer            :: buff_phase_qn_start
   end type hamiltonian_base_t
