@@ -120,8 +120,9 @@ module hamiltonian_oct_m
     integer :: nT, ncycle, interval, count, floquet_dim, spindim, order(2), mode, boson
     integer :: max_solve_iter, iter, init, occ_cut, cf_nsteps
     logical ::  downfolding, sample, sample_one_only, FBZ_solver, propagate
-    FLOAT :: omega, Tcycle, dt, pes_omega, pol(1:MAX_DIM), lambda
+    FLOAT :: omega, Tcycle, dt, pes_omega, lambda
     FLOAT, pointer :: frozen_distortion(:,:)
+    CMPLX :: pol(1:MAX_DIM)
     logical :: is_parallel 
     logical :: calc_occupations
     logical :: calc_pes    
@@ -1277,7 +1278,7 @@ contains
     type(hamiltonian_t),  intent(in)    :: hm
     type(geometry_t),     intent(in)    :: geo
     integer,              intent(in)    :: ik
-    FLOAT,                intent(in)    :: pol(:)
+    CMPLX,                intent(in)    :: pol(:)
     CMPLX,                intent(in)    :: psi(:,:)
     CMPLX,                intent(out)   :: gppsi(:,:)
 

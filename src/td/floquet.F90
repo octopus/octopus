@@ -417,19 +417,25 @@ contains
       !% <br>%</tt>
       !%
       !%End
-      this%pol(1:3)=(/M_ONE,M_ZERO,M_ZERO/)
+      this%pol(1:3)=(/M_z1,M_z0,M_z0/)
     
       if(parse_block('FloquetCavityModePolarization', blk) == 0) then
         if(parse_block_cols(blk,0) < 3) call messages_input_error('FloquetCavityModePolarization')
         do idim = 1, 3
-          call parse_block_float(blk, 0, idim - 1, this%pol(idim))
+          call parse_block_cmplx(blk, 0, idim - 1, this%pol(idim))
         end do
       end if
       
-      this%pol(:)=this%pol(:)/sqrt(sum(this%pol(:)**2))
+      this%pol(:)=this%pol(:)/sqrt(sum(abs(this%pol(:))**2))
 
-      write(message(1),'(a,e8.2,a,e8.2,a,e8.2,a)') 'Info: Cavity polarization direction : (',&
-                                         this%pol(1),',', this%pol(2),',',this%pol(3),')'
+      write(message(1),'(3x,a,3(a1,f7.4,a1,f7.4,a1))') 'Info: Cavity polarization direction: ', &
+            '(', real(this%pol(1)), ',', aimag(this%pol(1)), '), ', &
+            '(', real(this%pol(2)), ',', aimag(this%pol(2)), '), ', &
+            '(', real(this%pol(3)), ',', aimag(this%pol(3)), ')'
+
+
+!       write(message(1),'(a,e8.2,a,e8.2,a,e8.2,a,e8.2,a,e8.2,a,e8.2,a)') 'Info: Cavity polarization direction : (',&
+!                                          this%pol(1),',', this%pol(2),',',this%pol(3),')'
       call messages_info(1)
 
       
