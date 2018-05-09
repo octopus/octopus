@@ -1033,10 +1033,10 @@ contains
       end if
 
       call mix_init(smix, gr%fine%der, gr%fine%mesh%np, 1, st%d%nspin)
-      SAFE_ALLOCATE(rhoin(gr%mesh%np_part,1:1,st%d%nspin))
-      SAFE_ALLOCATE(rhoout(gr%mesh%np_part,1:1,st%d%nspin))
-      SAFE_ALLOCATE(mixrho(gr%mesh%np_part,1:1,st%d%nspin))
-      SAFE_ALLOCATE(dressed_rhoold(gr%mesh%np_part,1:1,st%d%nspin))
+      SAFE_ALLOCATE(rhoin(gr%mesh%np,1:1,st%d%nspin))
+      SAFE_ALLOCATE(rhoout(gr%mesh%np,1:1,st%d%nspin))
+      SAFE_ALLOCATE(mixrho(gr%mesh%np,1:1,st%d%nspin))
+      SAFE_ALLOCATE(dressed_rhoold(gr%mesh%np,1:1,st%d%nspin))
       SAFE_ALLOCATE(tmp(1:gr%fine%mesh%np))
 
       converged=.false.
