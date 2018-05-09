@@ -16,7 +16,7 @@
 !! 02110-1301, USA.
 !!
 
-subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, deltaxc, vtau)
+subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
   type(states_t),       intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
@@ -29,6 +29,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   FLOAT, optional,      intent(inout) :: ec              !< Correlation energy.
   FLOAT, optional,      intent(inout) :: deltaxc         !< The XC derivative discontinuity
   FLOAT, optional,      intent(inout) :: vtau(:,:)       !< Derivative wrt (two times kinetic energy density)
+  FLOAT, optional, target, intent(out)   :: ex_density(:)   !< The exchange energy density
+  FLOAT, optional, target, intent(out)   :: ec_density(:)   !< The correlation energy density
 
   ! Formerly vxc was optional, but I removed this since we always pass vxc, and this simplifies the routine
   ! and avoids some optimization problems. --DAS
@@ -57,8 +59,8 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   FLOAT, allocatable :: ldens(:,:)     ! Laplacian of the density
   FLOAT, allocatable :: tau(:,:)       ! Kinetic energy density
   !  Energies
-  FLOAT, allocatable :: ex_per_vol(:)  ! Exchange energy per unit volume 
-  FLOAT, allocatable :: ec_per_vol(:)  ! Correlation energy per unit volume 
+  FLOAT, pointer :: ex_per_vol(:)  ! Exchange energy per unit volume 
+  FLOAT, pointer :: ec_per_vol(:)  ! Correlation energy per unit volume 
   !  First order (functional) derivatives
   FLOAT, allocatable :: dedd(:,:)      ! Derivative of the exchange or correlation energy wrt the density
   FLOAT, allocatable :: dedgd(:,:,:)   ! Derivative of the exchange or correlation energy wrt the gradient of the density
@@ -79,8 +81,11 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   PUSH_SUB(xc_get_vxc)
   call profiling_in(prof, "XC_LOCAL")
 
+  nullify(ex_per_vol)
+  nullify(ec_per_vol)
+  
   ASSERT(present(ex) .eqv. present(ec))
-  calc_energy = present(ex)
+  calc_energy = present(ex) .or. present(ex_density) .or. present(ec_density)
 
   !Pointer-shortcut for xcs%functional
   !It helps to remember that for xcs%functional(:,:)
@@ -314,7 +319,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
   ! calculate the energy, we do the integrals directly so when the data
   ! is fully distributed we do not need to allgather first
-  if(calc_energy) then
+  if(present(ex) .or. present(ec)) then
 
     energy(1:2) = CNST(0.0)
     
@@ -380,7 +385,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   if(functl(FUNC_C)%family == XC_FAMILY_LIBVDWXC) then
     functl(FUNC_C)%libvdwxc%energy = M_ZERO
     call libvdwxc_calculate(functl(FUNC_C)%libvdwxc, dens, gdens, dedd, dedgd)
-    if(calc_energy) then
+    if(present(ec)) then
       ec = ec + functl(FUNC_C)%libvdwxc%energy
     end if
   end if
@@ -403,7 +408,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
       end do
     end if
 
-    if(calc_energy) ex = ex + dmf_integrate(der%mesh, ex_per_vol)
+    if(present(ex)) ex = ex + dmf_integrate(der%mesh, ex_per_vol)
   end if
 
   ! this has to be done in inverse order
@@ -518,8 +523,16 @@ contains
     dens       = M_ZERO
 
     if(calc_energy) then
-      SAFE_ALLOCATE(ex_per_vol(1:der%mesh%np))
-      SAFE_ALLOCATE(ec_per_vol(1:der%mesh%np))
+      if(present(ex_density)) then
+        ex_per_vol => ex_density
+      else
+        SAFE_ALLOCATE(ex_per_vol(1:der%mesh%np))
+      end if
+      if(present(ec_density)) then
+        ec_per_vol => ec_density
+      else
+        SAFE_ALLOCATE(ec_per_vol(1:der%mesh%np))
+      end if
       ex_per_vol = M_ZERO
       ec_per_vol = M_ZERO
     end if
@@ -564,8 +577,12 @@ contains
     PUSH_SUB(xc_get_vxc.lda_end)
 
     SAFE_DEALLOCATE_A(dens)
-    SAFE_DEALLOCATE_A(ex_per_vol)
-    SAFE_DEALLOCATE_A(ec_per_vol)
+    if(.not. present(ex_density)) then
+      SAFE_DEALLOCATE_P(ex_per_vol)
+    end if
+    if(.not. present(ec_density)) then
+      SAFE_DEALLOCATE_P(ec_per_vol)
+    end if
     SAFE_DEALLOCATE_A(dedd)
 
     POP_SUB(xc_get_vxc.lda_end)
