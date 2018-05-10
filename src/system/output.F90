@@ -674,6 +674,8 @@ contains
       call output_fio(gr, geo, st, hm, trim(adjustl(dir)), mpi_world)
     end if
 
+    call output_energy_density(hm, ks, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
+    
     call profiling_out(prof)
     POP_SUB(output_all)
   end subroutine output_all
@@ -835,6 +837,74 @@ contains
   end subroutine calc_electronic_pressure
 
 
+  ! ---------------------------------------------------------
+  subroutine output_energy_density(hm, ks, st, der, dir, outp, geo, gr, grp)
+    type(hamiltonian_t),       intent(in)    :: hm
+    type(v_ks_t),              intent(in)    :: ks
+    type(states_t),            intent(inout) :: st
+    type(derivatives_t),       intent(inout) :: der
+    character(len=*),          intent(in)    :: dir
+    type(output_t),            intent(in)    :: outp
+    type(geometry_t),          intent(in)    :: geo
+    type(grid_t),              intent(in)    :: gr
+    type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
+
+    integer :: is, ispin, ierr, ip
+    character(len=MAX_PATH_LEN) :: fname
+    type(unit_t) :: fn_unit
+    FLOAT, allocatable :: energy_density(:, :)
+    FLOAT, allocatable :: vxc(:, :)
+    FLOAT, allocatable :: ex_density(:)
+    FLOAT, allocatable :: ec_density(:)
+
+    PUSH_SUB(output_hamiltonian)
+   
+    if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) then
+      fn_unit = units_out%energy*units_out%length**(-gr%mesh%sb%dim)
+      SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
+
+      ! the kinetic energy density
+      call states_calc_quantities(gr%der, st, kinetic_energy_density = energy_density)
+
+      ! the external potential energy density
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
+
+      ! the hartree energy density
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
+
+      ! the XC energy density
+      SAFE_ALLOCATE(vxc(1:gr%mesh%np, 1:st%d%nspin))
+      SAFE_ALLOCATE(ex_density(1:gr%mesh%np))
+      SAFE_ALLOCATE(ec_density(1:gr%mesh%np))
+
+      ASSERT(.not. gr%have_fine_mesh)
+
+      call xc_get_vxc(gr%fine%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, vxc, ex_density = ex_density, ec_density = ec_density)
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*(ex_density(ip) + ec_density(ip))
+      
+      SAFE_DEALLOCATE_A(ex_density)
+      SAFE_DEALLOCATE_A(ec_density)
+      SAFE_DEALLOCATE_A(vxc)
+      
+      select case(st%d%ispin)
+      case(UNPOLARIZED)
+        write(fname, '(a)') 'energy_density'
+        call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+          energy_density(:,1), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+      case(SPIN_POLARIZED, SPINORS)
+        do is = 1, 2
+          write(fname, '(a,i1)') 'energy_density-sp', is
+          call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+            energy_density(:, is), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+        end do
+      end select
+      SAFE_DEALLOCATE_A(energy_density)
+    end if
+ 
+    POP_SUB(output_hamiltonian)
+  end subroutine output_energy_density
+
+  
   ! ---------------------------------------------------------
   subroutine output_berkeleygw_init(nst, bgw, periodic_dim)
     integer,            intent(in)  :: nst

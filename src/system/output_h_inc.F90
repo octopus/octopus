@@ -27,23 +27,18 @@
     type(grid_t),              intent(in)    :: gr
     type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
 
-    integer :: is, err, idir, ispin, ik, ib, ierr, ip
+    integer :: is, err, idir, ispin, ik, ib
     character(len=MAX_PATH_LEN) :: fname
     type(base_potential_iterator_t)        :: iter
     type(base_potential_t),        pointer :: subsys_external
     type(base_hamiltonian_t),      pointer :: subsys_tnadd
     character(len=BASE_POTENTIAL_NAME_LEN) :: name
-    type(unit_t) :: fn_unit
-
     FLOAT,         dimension(:),   pointer :: xpot
     FLOAT,         dimension(:,:), pointer :: tnadd_potential
     FLOAT, allocatable :: v0(:,:), nxc(:), potential(:)
     FLOAT, allocatable :: current_kpt(:, :)
     FLOAT, allocatable :: density_kpt(:), density_tmp(:,:)
-    FLOAT, allocatable :: energy_density(:, :)
     type(density_calc_t) :: dens_calc
-
-    FLOAT, allocatable :: current(:, :, :)
     FLOAT, allocatable :: gradvh(:, :)
 
     PUSH_SUB(output_hamiltonian)
@@ -299,34 +294,6 @@
       call io_function_output_global_BZ(outp%how, dir, "density_kpt", gr%mesh, density_kpt, unit_one, err)
       SAFE_DEALLOCATE_A(density_tmp)
       SAFE_DEALLOCATE_A(density_kpt)
-    end if
-
-    if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) then
-      fn_unit = units_out%energy*units_out%length**(-gr%mesh%sb%dim)
-      SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
-
-      ! the kinetic energy density
-      call states_calc_quantities(gr%der, st, kinetic_energy_density = energy_density)
-
-      ! the external potential energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
-
-      ! the hartree energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
-      
-      select case(st%d%ispin)
-      case(UNPOLARIZED)
-        write(fname, '(a)') 'energy_density'
-        call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-          energy_density(:,1), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
-      case(SPIN_POLARIZED, SPINORS)
-        do is = 1, 2
-          write(fname, '(a,i1)') 'energy_density-sp', is
-          call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-            energy_density(:, is), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
-        end do
-      end select
-      SAFE_DEALLOCATE_A(energy_density)
     end if
  
     POP_SUB(output_hamiltonian)
