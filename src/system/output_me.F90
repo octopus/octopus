@@ -438,6 +438,7 @@ contains
         write(str_tmp, '(a,a1,a)') '        <p', index2axis(idir), '>'
         message(1) = trim(message(1)) // trim(str_tmp)
       end do
+      call messages_info(1, iunit)
 
       do is = 0, ns-1
       
