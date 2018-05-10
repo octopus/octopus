@@ -767,6 +767,78 @@ subroutine X(states_calc_momentum)(st, der, momentum)
   POP_SUB(X(states_calc_momentum))
 end subroutine X(states_calc_momentum)
 
+! ---------------------------------------------------------
+subroutine X(states_calc_momentum_full)(st, der, zmomentum)
+  type(states_t),      intent(inout) :: st
+  type(derivatives_t), intent(inout) :: der
+  CMPLX,               intent(out)   :: zmomentum(:,:,:,:)
+
+  integer             :: idim, ist, jst, ik, idir
+  CMPLX               :: expect_val_p
+  R_TYPE, allocatable :: psi(:, :), grad(:,:,:)
+  FLOAT               :: kpoint(1:MAX_DIM)  
+#if defined(HAVE_MPI)
+  integer,            :: nkp, nst, ndim
+  CMPLX, allocatable  :: lzmomentum(:,:,:,:)
+#endif
+
+  PUSH_SUB(X(states_calc_momentum_full))
+
+  SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:st%d%dim, 1:der%mesh%sb%dim))
+
+  zmomentum = M_ZERO
+
+  do ik = st%d%kpt%start, st%d%kpt%end
+    do ist = 1, st%nst
+
+      call states_get_state(st, der%mesh, ist, ik, psi)
+
+      do idim = 1, st%d%dim
+        call X(derivatives_grad)(der, psi(:, idim), grad(:, idim, 1:der%mesh%sb%dim))
+      end do
+
+      do jst = 1, st%nst
+
+        call states_get_state(st, der%mesh, jst, ik, psi)
+        
+        do idir = 1, der%mesh%sb%dim
+          expect_val_p = X(mf_dotp)(der%mesh, st%d%dim, psi, grad(:, :, idir))
+          zmomentum(idir, jst, ist, ik) = -M_zI*expect_val_p
+        end do
+
+      ! have to add the momentum vector in the case of periodic systems, 
+      ! since psi contains only u_k
+        kpoint = M_ZERO
+        kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+        forall(idir = 1:der%mesh%sb%periodic_dim) zmomentum(idir, ist, ist, ik) = zmomentum(idir, ist, ist, ik) + kpoint(idir)
+
+      end do
+    end do
+  end do
+
+#if defined(HAVE_MPI)
+  ASSERT(.not. st%parallel_in_states)
+  if(st%d%kpt%parallel) then
+    ndim = ubound(zmomentum, dim = 1)
+    nst  = st%nst
+    nkpt = st%d%kpt%nglobal
+ 
+    SAFE_ALLOCATE(lzmomentum(ndim,nst,nst,nkpt))
+    lzmomentum = zmomentum
+    
+    call MPI_Allreduce(lzmomentum, zmomentum, dim*nst**2*nkpt, MPI_CMPLX, MPI_SUM,&
+      st%d%kpt%mpi_grp%comm, mpi_err)
+    
+    SAFE_DEALLOCATE_A(lzmomentum)
+  end if
+#endif  
+
+  SAFE_DEALLOCATE_A(psi)
+  SAFE_DEALLOCATE_A(grad)
+
+  POP_SUB(X(states_calc_momentum_full))
+end subroutine X(states_calc_momentum_full)
 
 ! ---------------------------------------------------------
 !> It calculates the expectation value of the angular

@@ -404,6 +404,20 @@ contains
     end if
   end subroutine states_calc_momentum
 
+  ! -----------------------------------------------------------------------------
+
+  subroutine states_calc_momentum_full(st, der, zmomentum)
+    type(states_t),      intent(inout) :: st
+    type(derivatives_t), intent(inout) :: der
+    CMPLX,               intent(out)   :: zmomentum(:,:,:)
+
+    if (states_are_real(st)) then
+      call dstates_calc_momentum_full(st, der, zmomentum)
+    else
+      call zstates_calc_momentum_full(st, der, zmomentum)
+    end if
+  end subroutine states_calc_momentum_full
+
 #include "undef.F90"
 #include "real.F90"
 #include "states_calc_inc.F90"
@@ -412,6 +426,7 @@ contains
 #include "complex.F90"
 #include "states_calc_inc.F90"
 #include "undef.F90"
+
 
 end module states_calc_oct_m
 
