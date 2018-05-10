@@ -87,6 +87,7 @@ module states_calc_oct_m
     dstates_residue,                &
     zstates_residue,                &
     states_calc_momentum,           &
+    states_calc_momentum_full,      &
     dstates_angular_momentum,       &
     zstates_angular_momentum,       &
     dstates_matrix,                 &
@@ -409,7 +410,7 @@ contains
   subroutine states_calc_momentum_full(st, der, zmomentum)
     type(states_t),      intent(inout) :: st
     type(derivatives_t), intent(inout) :: der
-    CMPLX,               intent(out)   :: zmomentum(:,:,:)
+    CMPLX,               intent(out)   :: zmomentum(:,:,:,:)
 
     if (states_are_real(st)) then
       call dstates_calc_momentum_full(st, der, zmomentum)

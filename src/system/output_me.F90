@@ -393,7 +393,7 @@ contains
     type(states_t),   intent(inout) :: st
     type(grid_t),     intent(inout) :: gr
 
-    integer            :: ik, ist, is, ns, iunit, idir
+    integer            :: ik, ist, jst, is, ns, iunit, idir
     character(len=80)  :: cspin, str_tmp
     FLOAT              :: kpoint(1:MAX_DIM)
     CMPLX, allocatable :: zmomentum(:,:,:,:)
@@ -443,17 +443,18 @@ contains
         do ist = 1, st%nst
           do jst = 1, st%nst
 
-          if(is  ==  0) cspin = 'up'
-          if(is  ==  1) cspin = 'dn'
-          if(st%d%ispin  ==  UNPOLARIZED .or. st%d%ispin  ==  SPINORS) cspin = '--'
+            if(is  ==  0) cspin = 'up'
+            if(is  ==  1) cspin = 'dn'
+            if(st%d%ispin  ==  UNPOLARIZED .or. st%d%ispin  ==  SPINORS) cspin = '--'
           
-          write(message(1), '(a2,1x,i4,3x,i4)') trim(cspin), ist, jst, 
-          do idir = 1, gr%sb%dim
-            write(str_tmp, '(2e16.6)') zmomentum(idir, ist, jst, ik+is)
-            message(1) = trim(message(1)) // trim(str_tmp)
+            write(message(1), '(a2,1x,i4,3x,i4)') trim(cspin), ist, jst 
+            do idir = 1, gr%sb%dim
+              write(str_tmp, '(2e16.6)') zmomentum(idir, ist, jst, ik+is)
+              message(1) = trim(message(1)) // trim(str_tmp)
+            end do
+            call messages_info(1, iunit)
+          
           end do
-          call messages_info(1, iunit)
-          
         end do
       end do
       

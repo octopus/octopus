@@ -778,7 +778,7 @@ subroutine X(states_calc_momentum_full)(st, der, zmomentum)
   R_TYPE, allocatable :: psi(:, :), grad(:,:,:)
   FLOAT               :: kpoint(1:MAX_DIM)  
 #if defined(HAVE_MPI)
-  integer,            :: nkp, nst, ndim
+  integer             :: nkpt, nst, ndim
   CMPLX, allocatable  :: lzmomentum(:,:,:,:)
 #endif
 
@@ -827,7 +827,7 @@ subroutine X(states_calc_momentum_full)(st, der, zmomentum)
     SAFE_ALLOCATE(lzmomentum(ndim,nst,nst,nkpt))
     lzmomentum = zmomentum
     
-    call MPI_Allreduce(lzmomentum, zmomentum, dim*nst**2*nkpt, MPI_CMPLX, MPI_SUM,&
+    call MPI_Allreduce(lzmomentum, zmomentum, ndim*nst**2*nkpt, MPI_CMPLX, MPI_SUM,&
       st%d%kpt%mpi_grp%comm, mpi_err)
     
     SAFE_DEALLOCATE_A(lzmomentum)
