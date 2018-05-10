@@ -1041,6 +1041,13 @@ subroutine  X(apply_floquet_hamiltonian)(hm, der, psib, hpsib, ik, terms, set_bc
       
 
       if (im+1<=Fdim(2)) call set_big_batch_axpy(small_hpsib,im+1, -M_zI*lam*sqrt(TOFLOAT(im+1))  , hpsib)
+
+      do ist=1,psib%nst
+        call batch_get_state(small_psib,ist,der%mesh%np,psi)
+        call grad_dot_pol(der, hm, hm%geo, ik, conjg(hm%F%pol(:)), psi, gppsi)
+        call batch_set_state(small_hpsib,ist,der%mesh%np,gppsi)
+      end do
+
       if (im-1>=Fdim(1)) call set_big_batch_axpy(small_hpsib,im-1, -M_zI*lam*sqrt(TOFLOAT(im)), hpsib)
 
       if (im+2<=Fdim(2)) call set_big_batch_axpy(small_psib,im+2, lam**2/M_z2*sqrt(TOFLOAT(im+1))*sqrt(TOFLOAT(im+2)), hpsib)
