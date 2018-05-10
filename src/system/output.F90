@@ -321,6 +321,10 @@ contains
       !   dimensions. The current 1D 1-particle case is simple.
     end if
 
+    if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) then
+      call messages_experimental("'Output = energy_density'")
+    end if
+    
     if(bitand(outp%what, OPTION__OUTPUT__WFS) /= 0  .or.  bitand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0 ) then
 
       !%Variable OutputWfsNumber
