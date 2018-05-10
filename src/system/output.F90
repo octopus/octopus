@@ -884,7 +884,7 @@ contains
       ASSERT(.not. gr%have_fine_mesh)
 
       call xc_get_vxc(gr%fine%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, vxc, ex_density = ex_density, ec_density = ec_density)
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*(ex_density(ip) + ec_density(ip))
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
       
       SAFE_DEALLOCATE_A(ex_density)
       SAFE_DEALLOCATE_A(ec_density)
