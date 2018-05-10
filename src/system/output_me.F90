@@ -402,6 +402,70 @@ contains
 
     call states_calc_momentum_full(st, gr%der, zmomentum)
 
+    iunit = io_open(fname, action='write')
+
+    ns = 1
+    if(st%d%nspin == 2) ns = 2
+
+    write(message(1),'(a)') 'Momentum matrix of the KS states [a.u.]:'
+    call messages_info(1, iunit)      
+    if (st%d%nik > ns) then
+      message(1) = 'k-points [' // trim(units_abbrev(unit_one/units_out%length)) // ']'
+      call messages_info(1, iunit)
+    end if
+
+    do ik = 1, st%d%nik, ns
+      kpoint = M_ZERO
+      kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+
+      if(st%d%nik > ns) then
+        write(message(1), '(a,i4, a)') '#k =', ik, ', k = ('
+        do idir = 1, gr%sb%dim
+          write(str_tmp, '(f12.6, a)') units_from_atomic(unit_one/units_out%length, kpoint(idir)), ','
+          message(1) = trim(message(1)) // trim(str_tmp)
+          if(idir == gr%sb%dim) then
+            message(1) = trim(message(1)) // ")"
+          else
+            message(1) = trim(message(1)) // ","
+          end if
+        end do
+        call messages_info(1, iunit)
+      end if
+
+      write(message(1), '(a5,1x,a4,1x,a4)') ' Spin','#st','#st'
+      do idir = 1, gr%sb%dim
+        write(str_tmp, '(a,a1,a)') '        <p', index2axis(idir), '>'
+        message(1) = trim(message(1)) // trim(str_tmp)
+      end do
+
+      do is = 0, ns-1
+      
+        do ist = 1, st%nst
+          do jst = 1, st%nst
+
+          if(is  ==  0) cspin = 'up'
+          if(is  ==  1) cspin = 'dn'
+          if(st%d%ispin  ==  UNPOLARIZED .or. st%d%ispin  ==  SPINORS) cspin = '--'
+          
+          write(message(1), '(a2,1x,i4,3x,i4)') trim(cspin), ist, jst, 
+          do idir = 1, gr%sb%dim
+            write(str_tmp, '(2e16.6)') zmomentum(idir, ist, jst, ik+is)
+            message(1) = trim(message(1)) // trim(str_tmp)
+          end do
+          call messages_info(1, iunit)
+          
+        end do
+      end do
+      
+      write(message(1),'(a)') ''
+      call messages_info(1, iunit)      
+      
+    end do
+    
+    SAFE_DEALLOCATE_A(zmomentum)
+    call io_close(iunit)
+
+
     POP_SUB(output_me_out_momentum_full)
 
   end subroutine output_me_out_momentum_full
