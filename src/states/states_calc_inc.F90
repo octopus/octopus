@@ -807,13 +807,14 @@ subroutine X(states_calc_momentum_full)(st, der, zmomentum)
           zmomentum(idir, jst, ist, ik) = -M_zI*expect_val_p
         end do
 
+      end do
+
       ! have to add the momentum vector in the case of periodic systems, 
       ! since psi contains only u_k
         kpoint = M_ZERO
         kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
         forall(idir = 1:der%mesh%sb%periodic_dim) zmomentum(idir, ist, ist, ik) = zmomentum(idir, ist, ist, ik) + kpoint(idir)
 
-      end do
     end do
   end do
 
