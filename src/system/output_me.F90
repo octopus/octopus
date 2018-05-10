@@ -400,6 +400,7 @@ contains
 
     PUSH_SUB(output_me_out_momentum_full)
 
+    SAFE_ALLOCATE(zmomentum(1:gr%sb%dim, 1:st%nst, 1:st%nst, 1:st%d%nik))
     call states_calc_momentum_full(st, gr%der, zmomentum)
 
     iunit = io_open(fname, action='write')
