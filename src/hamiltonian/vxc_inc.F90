@@ -24,16 +24,13 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   integer,              intent(in)    :: ispin           !< Number of spin channels 
   FLOAT,                intent(in)    :: ioniz_pot
   FLOAT,                intent(in)    :: qtot 
-  FLOAT,                intent(inout) :: vxc(:,:)        !< XC potential
+  FLOAT, optional,      intent(inout) :: vxc(:,:)        !< XC potential
   FLOAT, optional,      intent(inout) :: ex              !< Exchange energy.
   FLOAT, optional,      intent(inout) :: ec              !< Correlation energy.
   FLOAT, optional,      intent(inout) :: deltaxc         !< The XC derivative discontinuity
   FLOAT, optional,      intent(inout) :: vtau(:,:)       !< Derivative wrt (two times kinetic energy density)
   FLOAT, optional, target, intent(out)   :: ex_density(:)   !< The exchange energy density
   FLOAT, optional, target, intent(out)   :: ec_density(:)   !< The correlation energy density
-
-  ! Formerly vxc was optional, but I removed this since we always pass vxc, and this simplifies the routine
-  ! and avoids some optimization problems. --DAS
 
   integer, parameter :: N_BLOCK_MAX = 10000
   integer :: n_block
@@ -597,27 +594,31 @@ contains
 
     PUSH_SUB(xc_get_vxc.lda_process)
 
-    if(ispin == SPINORS) then
-      ! rotate back (do not need the rotation matrix for this).
-      do ip = 1, der%mesh%np
-        d(1:spin_channels) = rho(ip, 1:spin_channels)
+    if(present(vxc)) then
+    
+      if(ispin == SPINORS) then
+        ! rotate back (do not need the rotation matrix for this).
+        do ip = 1, der%mesh%np
+          d(1:spin_channels) = rho(ip, 1:spin_channels)
+          
+          dpol = sqrt((d(1) - d(2))**2 + &
+            M_FOUR*(rho(ip, 3)**2 + rho(ip, 4)**2))
+          vpol = (dedd(ip, 1) - dedd(ip, 2))*(d(1) - d(2))/(dpol + tiny)
+          
+          vxc(ip, 1) = vxc(ip, 1) + M_HALF*(dedd(ip, 1) + dedd(ip, 2) + vpol)
+          vxc(ip, 2) = vxc(ip, 2) + M_HALF*(dedd(ip, 1) + dedd(ip, 2) - vpol)
+          vxc(ip, 3) = vxc(ip, 3) + (dedd(ip, 1) - dedd(ip, 2))*rho(ip, 3)/(dpol + tiny)
+          vxc(ip, 4) = vxc(ip, 4) + (dedd(ip, 1) - dedd(ip, 2))*rho(ip, 4)/(dpol + tiny)
+        end do
+      elseif(ispin == SPIN_POLARIZED) then
+        call lalg_axpy(der%mesh%np, M_ONE, dedd(:, 1), vxc(:, 1))
+        call lalg_axpy(der%mesh%np, M_ONE, dedd(:, 2), vxc(:, 2))
+      else
+        call lalg_axpy(der%mesh%np, M_ONE, dedd(:, 1), vxc(:, 1))
+      end if
 
-        dpol = sqrt((d(1) - d(2))**2 + &
-          M_FOUR*(rho(ip, 3)**2 + rho(ip, 4)**2))
-        vpol = (dedd(ip, 1) - dedd(ip, 2))*(d(1) - d(2))/(dpol + tiny)
-
-        vxc(ip, 1) = vxc(ip, 1) + M_HALF*(dedd(ip, 1) + dedd(ip, 2) + vpol)
-        vxc(ip, 2) = vxc(ip, 2) + M_HALF*(dedd(ip, 1) + dedd(ip, 2) - vpol)
-        vxc(ip, 3) = vxc(ip, 3) + (dedd(ip, 1) - dedd(ip, 2))*rho(ip, 3)/(dpol + tiny)
-        vxc(ip, 4) = vxc(ip, 4) + (dedd(ip, 1) - dedd(ip, 2))*rho(ip, 4)/(dpol + tiny)
-      end do
-    elseif(ispin == SPIN_POLARIZED) then
-      call lalg_axpy(der%mesh%np, M_ONE, dedd(:, 1), vxc(:, 1))
-      call lalg_axpy(der%mesh%np, M_ONE, dedd(:, 2), vxc(:, 2))
-    else
-      call lalg_axpy(der%mesh%np, M_ONE, dedd(:, 1), vxc(:, 1))
     end if
-
+      
     POP_SUB(xc_get_vxc.lda_process)
   end subroutine lda_process
 

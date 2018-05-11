@@ -857,7 +857,6 @@ contains
     character(len=MAX_PATH_LEN) :: fname
     type(unit_t) :: fn_unit
     FLOAT, allocatable :: energy_density(:, :)
-    FLOAT, allocatable :: vxc(:, :)
     FLOAT, allocatable :: ex_density(:)
     FLOAT, allocatable :: ec_density(:)
 
@@ -877,18 +876,16 @@ contains
       forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
 
       ! the XC energy density
-      SAFE_ALLOCATE(vxc(1:gr%mesh%np, 1:st%d%nspin))
       SAFE_ALLOCATE(ex_density(1:gr%mesh%np))
       SAFE_ALLOCATE(ec_density(1:gr%mesh%np))
 
       ASSERT(.not. gr%have_fine_mesh)
 
-      call xc_get_vxc(gr%fine%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, vxc, ex_density = ex_density, ec_density = ec_density)
+      call xc_get_vxc(gr%fine%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ex_density = ex_density, ec_density = ec_density)
       forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
       
       SAFE_DEALLOCATE_A(ex_density)
       SAFE_DEALLOCATE_A(ec_density)
-      SAFE_DEALLOCATE_A(vxc)
       
       select case(st%d%ispin)
       case(UNPOLARIZED)
