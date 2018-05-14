@@ -119,7 +119,7 @@ contains
     SAFE_ALLOCATE(this%r0free(1:geo%nspecies))
     SAFE_ALLOCATE(this%volfree(1:geo%nspecies))
     SAFE_ALLOCATE(this%c6abfree(1:geo%nspecies, 1:geo%nspecies))
-    SAFE_ALLOCATE(this%c6ab(1:geo%nspecies, 1:geo%nspecies))
+    SAFE_ALLOCATE(this%c6ab(1:geo%natoms, 1:geo%natoms))
 
     do ispecies = 1, geo%nspecies
       call get_vdw_param(species_label(geo%species(ispecies)), &
