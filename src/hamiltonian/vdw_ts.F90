@@ -170,14 +170,14 @@ contains
     FLOAT,               intent(out)   :: force(:, :)
 
  interface
-     subroutine f90_vdw_calculate(natoms, dd, sr, zatom, coordinates, volume_ratio, &
+     subroutine f90_vdw_calculate(natoms, dd, sr, zatom, coordinates, vol_ratio, &
        energy, force, derivative_coeff)
         integer, intent(in)  :: natoms
         real(8), intent(in)  :: dd
         real(8), intent(in)  :: sr
         integer, intent(in)  :: zatom
         real(8), intent(in)  :: coordinates
-        real(8), intent(in)  :: volume_ratio
+        real(8), intent(in)  :: vol_ratio
         real(8), intent(out) :: energy
         real(8), intent(out) :: force
         real(8), intent(out) :: derivative_coeff
@@ -187,15 +187,15 @@ contains
     type(periodic_copy_t) :: pc
     integer :: iatom, jatom, ispecies, jspecies, jcopy, ddimention, ip 
     FLOAT :: rr, rr2, rr6, dd, sr, dffdrr, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra, deabdrab
-    FLOAT, allocatable :: coordinates(:,:), volume_ratio(:), dvadens(:), dvadrr(:), derivative_coeff(:), & 
-                          dr0dvra(:), r0ab(:,:) !, c6ab(:,:)
+    FLOAT, allocatable :: coordinates(:,:), vol_ratio(:), dvadens(:), dvadrr(:), derivative_coeff(:), & 
+                          dr0dvra(:), r0ab(:,:)
     type(hirshfeld_t) :: hirshfeld
     integer, allocatable :: zatom(:)
     FLOAT :: x_j(1:MAX_DIM)
 
     PUSH_SUB(vdw_ts_calculate)
 
-    SAFE_ALLOCATE(volume_ratio(1:geo%natoms))
+    SAFE_ALLOCATE(vol_ratio(1:geo%natoms))
     SAFE_ALLOCATE(derivative_coeff(1:geo%natoms))
     SAFE_ALLOCATE(dvadens(1:der%mesh%np))
     SAFE_ALLOCATE(dvadrr(1:3))
@@ -208,15 +208,17 @@ contains
     call hirshfeld_init(hirshfeld, der%mesh, geo, st)
 
     do iatom = 1, geo%natoms
-      ispecies = species_index(geo%atom(iatom)%species)
+      call hirshfeld_volume_ratio(hirshfeld, iatom, density, vol_ratio(iatom))
+    end do
 
-      call hirshfeld_volume_ratio(hirshfeld, iatom, density, volume_ratio(iatom))
-      dr0dvra(iatom) = this%r0free(ispecies)/(CNST(3.0)*(volume_ratio(iatom)**(M_TWO/CNST(3.0)))) 
+    do iatom = 1, geo%natoms
+      ispecies = species_index(geo%atom(iatom)%species)
+      dr0dvra(iatom) = this%r0free(ispecies)/(CNST(3.0)*(vol_ratio(iatom)**(M_TWO/CNST(3.0))))
 
       do jatom = 1, geo%natoms
          jspecies = species_index(geo%atom(jatom)%species)
 
-         this%c6ab(iatom,jatom) = volume_ratio(iatom)*volume_ratio(jatom)*this%c6abfree(ispecies,jspecies) !this operation is done again inside the .c part for the non periodic case
+         this%c6ab(iatom,jatom) = vol_ratio(iatom)*vol_ratio(jatom)*this%c6abfree(ispecies,jspecies) !this operation is done again inside the .c part for the non periodic case
         end do
     end do
   
@@ -229,8 +231,8 @@ contains
         do jatom = 1, geo%natoms
          jspecies = species_index(geo%atom(jatom)%species)
 
-         r0ab(iatom,jatom) = (volume_ratio(iatom)**(M_ONE/CNST(3.0)))*this%r0free(ispecies) &
-                            +(volume_ratio(jatom)**(M_ONE/CNST(3.0)))*this%r0free(jspecies)
+         r0ab(iatom,jatom) = (vol_ratio(iatom)**(M_ONE/CNST(3.0)))*this%r0free(ispecies) &
+                            +(vol_ratio(jatom)**(M_ONE/CNST(3.0)))*this%r0free(jspecies)
         end do
       end do
 
@@ -267,7 +269,7 @@ contains
             dffdvra = dffdr0*dr0dvra(iatom);
 
             ! Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
-            deabdvra = (-dffdvra*this%c6ab(iatom,jatom) - ff*volume_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6
+            deabdvra = (-dffdvra*this%c6ab(iatom,jatom) - ff*vol_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6
               
             force(1:sb%dim,iatom)= force(1:sb%dim,iatom) - deabdrab*(geo%atom(iatom)%x(sb%dim) -x_j(1:sb%dim) )/rr; 
             derivative_coeff(iatom) = derivative_coeff(iatom) + deabdvra;
@@ -288,7 +290,7 @@ contains
       end do
       
       call f90_vdw_calculate(geo%natoms,  this%VDW_dd_parameter, this%VDW_sr_parameter, zatom(1), coordinates(1, 1), &
-                             volume_ratio(1), energy, force(1, 1), derivative_coeff(1))
+                             vol_ratio(1), energy, force(1, 1), derivative_coeff(1))
 
 
       SAFE_DEALLOCATE_A(coordinates)
@@ -316,7 +318,7 @@ contains
 
     call hirshfeld_end(hirshfeld)
 
-    SAFE_DEALLOCATE_A(volume_ratio)
+    SAFE_DEALLOCATE_A(vol_ratio)
     SAFE_DEALLOCATE_A(derivative_coeff)
     SAFE_DEALLOCATE_A(dvadens)
     SAFE_DEALLOCATE_A(dvadrr)

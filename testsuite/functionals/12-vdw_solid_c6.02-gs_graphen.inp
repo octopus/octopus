@@ -2,33 +2,25 @@ CalculationMode = gs
 ExperimentalFeatures = yes
 FromScratch = yes
 
-Debug = trace
-
 PeriodicDimensions = 2
 
 ParKPoints = auto
 ParDomains = no
-ParStates = no
-
 
 BoxShape = parallelepiped
 a = 4.65099393883
 
-Spacing= a/50
-
-LL = 10
+Spacing= 0.45
 
 %LatticeParameters
-  a | a | 2*LL
+  a | a | 10
 %
-
 
 %LatticeVectors
 1    | 0         | 0.
 -1/2 | sqrt(3)/2 | 0.
 0.   | 0.        | 1.
 %
-
 
 %ReducedCoordinates
 'C' |  0.  |    0. |   0.
@@ -38,16 +30,13 @@ LL = 10
 SmearingFunction = fermi_dirac
 Smearing = 0.001
 
-
 %KPointsGrid
- 24 | 24 | 1
+ 2 | 2 | 1
 %
-
 KPointsUseSymmetries = yes
 
-ExtraStates = 20 #(5 for gs and unocc)
+ExtraStates = 4
 PseudopotentialSet= sg15
-XCfunctional = gga_x_pbe + gga_c_pbe
 VDWCorrection = vdw_ts
 VDW_ts_cutoff = 40
 
