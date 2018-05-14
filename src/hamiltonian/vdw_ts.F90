@@ -295,18 +295,11 @@ contains
     end if
       
     ! Add the extra term for the force 
-!    do iatom = 1, geo%natoms
-!      do jatom = 1, geo%natoms
-!        call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr)
-!        force(1:sb%dim, iatom) = force(1:sb%dim, iatom) - derivative_coeff(iatom)*dvadrr(1:sb%dim)
-!      end do
-!    end do
-
-
     do iatom = 1, geo%natoms
       do jatom = 1, iatom
         call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr)
         force(1:sb%dim, iatom) = force(1:sb%dim, iatom) - derivative_coeff(iatom)*dvadrr(1:sb%dim)
+        if (iatom == jatom) cycle
         force(1:sb%dim, jatom) = force(1:sb%dim, jatom) + derivative_coeff(iatom)*dvadrr(1:sb%dim)
       end do
     end do
