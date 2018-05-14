@@ -487,12 +487,10 @@ void vdw_calculate (const int natoms, const double dd, const double sr, const in
       double den = (alpha_b/alpha_a)*c6_a + (alpha_a/alpha_b)*c6_b;
 
       double c6abfree = num/den;
-      printf("C6abfree .c = %i %i %f.\n",ia, ib, c6abfree);
 
 
       // Determination of c6ab_effectif, for bonded atoms a and b.
       double c6abeff = volume_ratio[ia]*volume_ratio[ib]*c6abfree;
-      printf("C6ab .c = %i %i %f.\n",ia, ib, c6abfree); 
       // Determination of the effective radius of atom a.
       double r0ab = cbrt(volume_ratio[ia])*r0_a + cbrt(volume_ratio[ib])*r0_b;
 
@@ -562,7 +560,6 @@ int main () {
     double energy_2;
     
     vdw_calculate(natoms, zatom, coordinates, volume_ratio, &energy_2, force, derivative_coeff);
-    printf("%f %f %f %f\n", x, energy, force[5], -(energy_2-energy)/0.001);
   }
 }
 #endif

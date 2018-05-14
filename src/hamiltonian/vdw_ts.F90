@@ -133,9 +133,6 @@ contains
         den = (this%dpfree(jspecies)/this%dpfree(ispecies))*this%c6free(ispecies) &
           + (this%dpfree(ispecies)/this%dpfree(jspecies))*this%c6free(jspecies)
         this%c6abfree(ispecies, jspecies) = num/den
-        if(mpi_grp_is_root(mpi_world)) then
-          print *, 'Spcies:', ispecies, jspecies, this%c6abfree(ispecies, jspecies) !!!!!!!!!
-        end if
       end do
     end do
     POP_SUB(vdw_ts_init)
