@@ -133,9 +133,11 @@ contains
         den = (this%dpfree(jspecies)/this%dpfree(ispecies))*this%c6free(ispecies) &
           + (this%dpfree(ispecies)/this%dpfree(jspecies))*this%c6free(jspecies)
         this%c6abfree(ispecies, jspecies) = num/den
+        if(mpi_grp_is_root(mpi_world)) then
+          print *, 'Spcies:', ispecies, jspecies, this%c6abfree(ispecies, jspecies) !!!!!!!!!
+        end if
       end do
     end do
-
     POP_SUB(vdw_ts_init)
   end subroutine vdw_ts_init
 
@@ -214,12 +216,10 @@ contains
     do iatom = 1, geo%natoms
       ispecies = species_index(geo%atom(iatom)%species)
       dr0dvra(iatom) = this%r0free(ispecies)/(CNST(3.0)*(vol_ratio(iatom)**(M_TWO/CNST(3.0))))
-
       do jatom = 1, geo%natoms
-         jspecies = species_index(geo%atom(jatom)%species)
-
-         this%c6ab(iatom,jatom) = vol_ratio(iatom)*vol_ratio(jatom)*this%c6abfree(ispecies,jspecies) !this operation is done again inside the .c part for the non periodic case
-        end do
+        jspecies = species_index(geo%atom(jatom)%species)
+        this%c6ab(iatom,jatom) = vol_ratio(iatom)*vol_ratio(jatom)*this%c6abfree(ispecies,jspecies) !this operation is done again inside the .c part for the non periodic case
+      end do
     end do
   
     if(sb%periodic_dim > 0) then ! periodic case
@@ -249,7 +249,7 @@ contains
             rr =  sqrt(rr2)
             rr6 = rr2**3
 
-            if(rr < CNST(1.0e-10)) cycle
+            if(rr < CNST(1.0e-10)) cycle !To avoid self interaction
 
             ee = exp(- this%VDW_dd_parameter*((rr/( this%VDW_sr_parameter*r0ab(iatom,jatom))) - M_ONE))
             ff = M_ONE/(M_ONE + ee)
