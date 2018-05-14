@@ -819,7 +819,7 @@ end subroutine X(compute_coulomb_integrals)
      os => this%orbsets(ios)
      iatom = os%iatom
 
-     gradn(1:os%norbs,1:os%norbs,1:this%nspins,1:ndim) = M_ZERO
+     gradn(1:os%norbs,1:os%norbs,1:this%nspins,1:ndim) = R_TOTYPE(M_ZERO)
 
      do ibatch = 1, psib%nst
        ist = psib%states(ibatch)%ist
@@ -846,22 +846,22 @@ end subroutine X(compute_coulomb_integrals)
          if(st%d%ispin /= SPINORS) then
            do im = 1, os%norbs
              gradn(1:os%norbs,im,ispin,idir) = gradn(1:os%norbs,im,ispin,idir) &
-                                          + weight*(R_CONJ(gdot(1,1:os%norbs,idir))*dot(1,im) &
-                                                   +gdot(1,im,idir)*R_CONJ(dot(1,1:os%norbs)))
+                                          + weight*(gdot(1,1:os%norbs,idir)*R_CONJ(dot(1,im)) &
+                                                   +R_CONJ(gdot(1,im,idir))*dot(1,1:os%norbs))
            end do
          else
            do im = 1, os%norbs
              do ispin = 1, this%spin_channels
                gradn(1:os%norbs,im,ispin,idir) = gradn(1:os%norbs,im,ispin,idir) &
-                                            + weight*(R_CONJ(gdot(ispin,1:os%norbs,idir))*dot(ispin,im) &
-                                                     +gdot(ispin,im,idir)*R_CONJ(dot(ispin,1:os%norbs)))
+                                            + weight*(gdot(ispin,1:os%norbs,idir)*R_CONJ(dot(ispin,im)) &
+                                                     +R_CONJ(gdot(ispin,im,idir))*dot(ispin,1:os%norbs))
              end do
              gradn(1:os%norbs,im,3,idir) = gradn(1:os%norbs,im,3,idir) &
-                                            + weight*(R_CONJ(gdot(1,1:os%norbs,idir))*dot(2,im) &
-                                                     +gdot(2,im,idir)*R_CONJ(dot(1,1:os%norbs)))
+                                            + weight*(gdot(1,1:os%norbs,idir)*R_CONJ(dot(2,im)) &
+                                                     +R_CONJ(gdot(2,im,idir))*dot(1,1:os%norbs))
              gradn(1:os%norbs,im,4,idir) = gradn(1:os%norbs,im,4,idir) &
-                                            + weight*(R_CONJ(gdot(2,1:os%norbs,idir))*dot(1,im) &
-                                                     +gdot(1,im,idir)*R_CONJ(dot(2,1:os%norbs)))
+                                            + weight*(gdot(2,1:os%norbs,idir)*R_CONJ(dot(1,im)) &
+                                                     +R_CONJ(gdot(1,im,idir))*dot(2,1:os%norbs))
            end do
            
          end if
@@ -891,6 +891,12 @@ end subroutine X(compute_coulomb_integrals)
          end do !im
        end do !ispin
      end if
+
+     ! We convert the force to Cartesian coordinates
+     ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
+     if (simul_box_is_periodic(mesh%sb) .and. mesh%sb%nonorthogonal ) then
+        ff(1:ndim) = matmul(mesh%sb%klattice_primitive(1:ndim, 1:ndim), ff(1:ndim))
+      end if
 
      force(1:ndim, iatom) = force(1:ndim, iatom) - os%Ueff*real(ff(1:ndim))
    end do !ios
