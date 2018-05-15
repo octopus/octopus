@@ -59,7 +59,8 @@ module rdmft_oct_m
        rdm_t,                    &
        scf_occ,                  &
        scf_orb,                  &
-       scf_rdmft
+       scf_rdmft,				 &
+       scf_occ_NO
 
   type rdm_t
     type(states_t) :: psi
@@ -67,10 +68,11 @@ module rdmft_oct_m
     integer  :: iter
     integer  :: n_twoint !number of unique two electron integrals
     logical  :: do_basis
-    logical  :: dressed
+    logical  :: dressed, hf
     FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO
 	!FLOAT    :: param_lamda,param_omega
-    FLOAT, allocatable   :: eone(:), eone_int(:,:), twoint(:), hartree(:,:), exchange(:,:), evalues(:)   
+    FLOAT, allocatable   :: eone(:), eone_int(:,:), twoint(:), hartree(:,:), exchange(:,:), evalues(:)  
+    FLOAT, allocatable   :: eone_kin(:), eone_int_kin(:,:) 
     FLOAT, allocatable   :: vecnat(:,:), Coul(:,:,:), Exch(:,:,:) 
     integer, allocatable :: i_index(:), j_index(:), k_index(:), l_index(:) 
 
@@ -148,14 +150,17 @@ contains
       write(message(1), '(a)') '**********************************************************************'
       write(message(2),'(a, i4)') 'RDM Iteration:', iter
       call messages_info(2)
-      call scf_occ(rdm, gr, hm, st, energy_occ)
+      if (rdm%hf.eqv. .false.) then
+		call scf_occ(rdm, gr, hm, st, energy_occ)
+	  else
+		call scf_occ_NO(rdm, gr, hm, st, energy_occ)
+	  end if
       ! Diagonalization of the generalized Fock matrix 
       write(message(1), '(a)') 'Optimization of natural orbitals'
       call messages_info(1)
       
       do icount = 1, maxcount !still under investigation how many iterations we need
         if (rdm%do_basis.eqv..false.) then
-
           stepsize = 0.1d0
           call scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
         else
@@ -221,6 +226,7 @@ contains
         endif
 
         call states_dump(restart_dump, st, gr, ierr, iter=iter) 
+
         if (ierr /= 0) then
           message(1) = 'Unable to write states wavefunctions.'
           call messages_warning(1)
@@ -237,7 +243,11 @@ contains
     end do
 
     if(conv) then 
-      ! output final information
+	   ! output final information
+		 call density_calc (st,gr,st%rho)
+		 call hamiltonian_update(hm, gr%mesh)
+		 call rdm_derivatives(rdm, hm, st, gr)
+		 call total_energy_rdm(rdm, st%occ(:,1), energy)
         !if (rdm%do_basis.eqv..false.) then
         !call scf_orb(rdm, gr, geo, st, ks, hm, energy) !NH this call changes the energy again, needs to be replaced
         !write(message(1),'(a,es15.5)')  'The maximum non diagonal element of the matrix F formed by the Lagrange multiplyers is ', &
@@ -247,10 +257,10 @@ contains
       write(message(1),'(a,i3,a)')  'The calculation converged after ',iter,' iterations'
       write(message(2),'(a,es20.10)')  'The total energy is ', units_from_atomic(units_out%energy,energy + hm%ep%eii)
       call messages_info(2)
-      if(gs_run_) then 
-        !call scf_write_static(STATIC_DIR, "info") !NH can we turn this on?
-        call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
-      end if
+!      if(gs_run_) then 
+!        !call scf_write_static(STATIC_DIR, "info") !NH can we turn this on?
+!!        call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
+!      end if
     else
       write(message(1),'(a,i3,a)')  'The calculation did not converge after ', iter, ' iterations '
       write(message(2),'(a,es15.5)') 'Relative energy difference between the last two iterations ', rel_ener
@@ -333,6 +343,17 @@ contains
       !%End
 
       call parse_variable('RDMDressedState',.false., rdm%dressed)
+      
+      !%Variable RDMHartreeFock
+      !%Type logical
+      !%Default no 
+      !%Section SCF::RDMFT
+      !%Description
+      !% If true, the code simulates a HF calculation, by omitting the occ.num. optimization
+      !% can be used for test reasons
+      !%End
+
+      call parse_variable('RDMHartreeFock',.false., rdm%hf)
 	  
 !	  !%Variable RDMParamLambda
 !      !%Type float
@@ -375,6 +396,7 @@ contains
       if (rdm%do_basis.eqv..true.) then
         rdm%n_twoint = st%nst*(st%nst+1)*(st%nst**2+st%nst+2)/8 
         SAFE_ALLOCATE(rdm%eone_int(1:st%nst, 1:st%nst))
+        SAFE_ALLOCATE(rdm%eone_int_kin(1:st%nst, 1:st%nst))
         SAFE_ALLOCATE(rdm%twoint(1:rdm%n_twoint))
         SAFE_ALLOCATE(rdm%i_index(1:rdm%n_twoint))
         SAFE_ALLOCATE(rdm%j_index(1:rdm%n_twoint))
@@ -398,6 +420,7 @@ contains
       end if
 
       SAFE_ALLOCATE(rdm%eone(1:st%nst))
+      SAFE_ALLOCATE(rdm%eone_kin(1:st%nst))
       SAFE_ALLOCATE(rdm%hartree(1:st%nst, 1:st%nst))
       SAFE_ALLOCATE(rdm%exchange(1:st%nst, 1:st%nst))
       SAFE_ALLOCATE(rdm%evalues(1:st%nst))
@@ -428,11 +451,13 @@ contains
 
       SAFE_DEALLOCATE_A(rdm%evalues)
       SAFE_DEALLOCATE_A(rdm%eone)
+      SAFE_DEALLOCATE_A(rdm%eone_kin)
       SAFE_DEALLOCATE_A(rdm%hartree)
       SAFE_DEALLOCATE_A(rdm%exchange)
 
       if (rdm%do_basis.eqv..true.) then
         SAFE_DEALLOCATE_A(rdm%eone_int)
+        SAFE_DEALLOCATE_A(rdm%eone_int_kin)
         SAFE_DEALLOCATE_A(rdm%twoint)
         SAFE_DEALLOCATE_A(rdm%i_index)
         SAFE_DEALLOCATE_A(rdm%j_index)
@@ -450,6 +475,51 @@ contains
   end subroutine scf_rdmft
   
   ! ---------------------------------------------------------
+  
+   ! scf for the occupation numbers 
+  subroutine scf_occ_NO(rdm, gr, hm, st, energy)
+    type(rdm_t),          intent(inout) :: rdm
+    type(grid_t),         intent(inout) :: gr
+    type(hamiltonian_t),  intent(inout) :: hm
+    type(states_t),       intent(inout) :: st
+    FLOAT,                intent(out)   :: energy
+
+    integer :: ist
+    REAL(8) :: objective
+
+    PUSH_SUB(scf_occ_NO)
+
+    write(message(1),'(a)') 'SKIP Optimization of occupation numbers'
+    call messages_info(1)
+    
+    energy = M_ZERO
+    
+   
+    
+    if((rdm%iter == 1).and. (rdm%do_basis.eqv. .true.))  then 
+      call dstates_me_two_body(gr, st, rdm%n_twoint, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
+      call rdm_integrals(rdm,hm,st,gr) 
+      call sum_integrals(rdm)
+    end if
+
+    call rdm_derivatives(rdm, hm, st, gr)
+
+    
+    write(message(1),'(a4,5x,a12)')'#st','Occupation'
+    call messages_info(1)   
+
+    do ist = 1, st%nst
+      write(message(1),'(i4,3x,f11.4)') ist, st%occ(ist, 1)
+      call messages_info(1)
+    end do
+
+    write(message(1),'(a,1x,f11.4)') 'Sum of occupation numbers', rdm%occsum
+    write(message(2),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+    call messages_info(2)   
+    
+    POP_SUB(scf_occ_NO)
+
+  end subroutine scf_occ_NO
   
   ! scf for the occupation numbers 
   subroutine scf_occ(rdm, gr, hm, st, energy)
@@ -479,30 +549,30 @@ contains
     energy = M_ZERO
     
     
-!    !Initialize the occin. Smallocc is used for numerical stability
+    !Initialize the occin. Smallocc is used for numerical stability
     
-!    occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
-!    where(occin(:,:) < smallocc) occin(:,:) = smallocc 
-!    where(occin(:,:) > st%smear%el_per_state-smallocc) occin(:,:) = st%smear%el_per_state - smallocc
+    occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
+    where(occin(:,:) < smallocc) occin(:,:) = smallocc 
+    where(occin(:,:) > st%smear%el_per_state-smallocc) occin(:,:) = st%smear%el_per_state - smallocc
 
-!    !Renormalize the occupation numbers 
-!    rdm%occsum = M_ZERO
+    !Renormalize the occupation numbers 
+    rdm%occsum = M_ZERO
 
-!    do ist = 1, st%nst
-!      do ik = 1, st%d%nik
-!        rdm%occsum = rdm%occsum + occin(ist,ik)
-!      end do
-!    end do
+    do ist = 1, st%nst
+      do ik = 1, st%d%nik
+        rdm%occsum = rdm%occsum + occin(ist,ik)
+      end do
+    end do
 
-!    do ist = 1, st%nst
-!      do ik = 1, st%d%nik
-!        occin(ist, ik) = occin(ist,ik)*st%qtot/rdm%occsum
-!      end do
-!    end do 
+    do ist = 1, st%nst
+      do ik = 1, st%d%nik
+        occin(ist, ik) = occin(ist,ik)*st%qtot/rdm%occsum
+      end do
+    end do 
 
-!    rdm%occsum = st%qtot
+    rdm%occsum = st%qtot
 
-!    st%occ = occin
+    st%occ = occin
     
     if((rdm%iter == 1).and. (rdm%do_basis.eqv. .true.))  then 
       call dstates_me_two_body(gr, st, rdm%n_twoint, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
@@ -512,76 +582,72 @@ contains
 
     call rdm_derivatives(rdm, hm, st, gr)
 
-!    !finding the chemical potential mu such that the occupation numbers sum up to the number of electrons
-!    !bisection to find the root of rdm%occsum-st%qtot=M_ZERO
-!    mu1 = rdm%mu   !initial guess for mu 
-!    mu2 = -CNST(1.0e-6)
-!    dinterv = M_HALF
+    !finding the chemical potential mu such that the occupation numbers sum up to the number of electrons
+    !bisection to find the root of rdm%occsum-st%qtot=M_ZERO
+    mu1 = rdm%mu   !initial guess for mu 
+    mu2 = -CNST(1.0e-6)
+    dinterv = M_HALF
 
-!    !use n_j=sin^2(2pi*theta_j) to treat pinned states, minimize for both intial mu
-!    theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-!    call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
-!        real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
-!    sumgi1 = rdm%occsum - st%qtot
-!    rdm%mu = mu2
-!    theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-!    call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
-!        real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
-!    sumgi2 = rdm%occsum - st%qtot
+    !use n_j=sin^2(2pi*theta_j) to treat pinned states, minimize for both intial mu
+    theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
+    call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+        real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+    sumgi1 = rdm%occsum - st%qtot
+    rdm%mu = mu2
+    theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
+    call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+        real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+    sumgi2 = rdm%occsum - st%qtot
 
-!    ! Adjust the interval between the initial mu to include the root of rdm%occsum-st%qtot=M_ZERO
-!    do while (sumgi1*sumgi2 > M_ZERO) 
-!      if (sumgi2 > M_ZERO) then
-!        mu2 = mu1
-!        sumgi2 = sumgi1
-!        mu1 = mu1 - dinterv
-!        rdm%mu = mu1
-!        theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-!        call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
-!            real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
-!        sumgi1 = rdm%occsum - st%qtot 
-!      else
-!        mu1 = mu2
-!        sumgi1 = sumgi2
-!        mu2 = mu2 + dinterv
-!        rdm%mu = mu2
-!        theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-!        call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
-!            real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
-!        sumgi2 = rdm%occsum - st%qtot 
-!      end if
-!    end do
+    ! Adjust the interval between the initial mu to include the root of rdm%occsum-st%qtot=M_ZERO
+    do while (sumgi1*sumgi2 > M_ZERO) 
+      if (sumgi2 > M_ZERO) then
+        mu2 = mu1
+        sumgi2 = sumgi1
+        mu1 = mu1 - dinterv
+        rdm%mu = mu1
+        theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
+        call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+            real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+        sumgi1 = rdm%occsum - st%qtot 
+      else
+        mu1 = mu2
+        sumgi1 = sumgi2
+        mu2 = mu2 + dinterv
+        rdm%mu = mu2
+        theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
+        call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+            real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+        sumgi2 = rdm%occsum - st%qtot 
+      end if
+    end do
 
-!    do icycle = 1, 50
-!      mum = (mu1 + mu2)*M_HALF
-!      rdm%mu = mum
-!      theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-!      call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.0001, 8), &
-!          real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
-!      sumgim = rdm%occsum - st%qtot
-!      if (sumgi1*sumgim < M_ZERO) then
-!        mu2 = mum
-!      else
-!        mu1 = mum
-!        sumgi1 = sumgim
-!      end if
-!      if(abs(sumgim) < rdm%toler .or. abs((mu1-mu2)*M_HALF) < rdm%toler)  exit
-!      cycle
-!    end do
-!    if (icycle >= 50) then
-!      write(message(1),'(a,1x,f11.4)') 'Bisection ended without finding mu, sum of occupation numbers:', rdm%occsum
-!      call messages_fatal(1)
-!    end if
+    do icycle = 1, 50
+      mum = (mu1 + mu2)*M_HALF
+      rdm%mu = mum
+      theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
+      call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.0001, 8), &
+          real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+      sumgim = rdm%occsum - st%qtot
+      if (sumgi1*sumgim < M_ZERO) then
+        mu2 = mum
+      else
+        mu1 = mum
+        sumgi1 = sumgim
+      end if
+      if(abs(sumgim) < rdm%toler .or. abs((mu1-mu2)*M_HALF) < rdm%toler)  exit
+      cycle
+    end do
+    if (icycle >= 50) then
+      write(message(1),'(a,1x,f11.4)') 'Bisection ended without finding mu, sum of occupation numbers:', rdm%occsum
+      call messages_fatal(1)
+    end if
 
-!    do ist = 1, st%nst
-!      st%occ(ist, 1) = st%smear%el_per_state*sin(theta(ist)*M_PI*M_TWO)**2
-!    end do
+    do ist = 1, st%nst
+      st%occ(ist, 1) = st%smear%el_per_state*sin(theta(ist)*M_PI*M_TWO)**2
+    end do
  
-!    energy = objective
- call density_calc (st,gr,st%rho)
- call hamiltonian_update(hm, gr%mesh)
- call rdm_derivatives(rdm, hm, st, gr)
- call total_energy_rdm(rdm, st%occ(:,1), energy)
+    energy = objective
     
     write(message(1),'(a4,5x,a12)')'#st','Occupation'
     call messages_info(1)   
@@ -1150,7 +1216,7 @@ contains
     energy = M_ZERO
     V_h = M_ZERO
     V_x = M_ZERO
-     
+    
 
     !Calculate hartree and exchange contribution 
     !This is only for the Mueller functional and has to be changed
@@ -1167,13 +1233,43 @@ contains
     if (present(dE_dn)) then
       dE_dn(:) = rdm%eone(:) + V_h(:) + V_x(:)
     end if
+	
+!Calculate the energy contributions separately
+energy=M_ZERO
+do ist = 1, rdm%st%nst
+  energy = energy  + occ(ist)*rdm%eone(ist)
+end do
+print*,'1body=', energy
 
+energy=M_ZERO
+do ist = 1, rdm%st%nst
+  energy = energy  + occ(ist)*rdm%eone_kin(ist)
+end do
+print*,'kinetic=', energy
+
+energy=M_ZERO
+do ist = 1, rdm%st%nst
+  energy = energy  + M_HALF*occ(ist)*V_h(ist)
+end do
+print*,'hartree=', energy
+
+energy=M_ZERO
+do ist = 1, rdm%st%nst
+  energy = energy + occ(ist)*V_x(ist)
+end do
+print*,'exchange=', energy
+
+energy=M_ZERO
+	
     !Total energy calculation without nuclei interaction  
     do ist = 1, rdm%st%nst
       energy = energy + occ(ist)*rdm%eone(ist) &
                       + M_HALF*occ(ist)*V_h(ist) & 
                       + occ(ist)*V_x(ist)
     end do
+    
+
+
 
     SAFE_DEALLOCATE_A(V_h)
     SAFE_DEALLOCATE_A(V_x)
@@ -1257,10 +1353,12 @@ contains
 
       do iorb = 1, st%nst
         rdm%eone(iorb) = M_ZERO
+        rdm%eone_kin(iorb) = M_ZERO
         do ist = 1, st%nst
           do jst = 1, st%nst
             dd = rdm%vecnat(ist, iorb)*rdm%vecnat(jst, iorb)  
             rdm%eone(iorb) =rdm%eone(iorb) + dd*rdm%eone_int(ist, jst)
+            rdm%eone_kin(iorb) =rdm%eone_kin(iorb) + dd*rdm%eone_int_kin(ist, jst)
           end do
         end do
       end do
@@ -1313,6 +1411,12 @@ contains
                               terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
         rdm%eone_int(jst, ist) = dmf_dotp(gr%mesh, dpsi2(:, 1), hpsi(:, 1))
         rdm%eone_int(ist, jst) = rdm%eone_int(jst, ist)
+        
+! write kinetic energy
+call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &
+                              terms = TERM_KINETIC )
+rdm%eone_int_kin(jst, ist) = dmf_dotp(gr%mesh, dpsi2(:, 1), hpsi(:, 1))
+rdm%eone_int_kin(ist, jst) = rdm%eone_int_kin(jst, ist) 
       end do
     end do
 
