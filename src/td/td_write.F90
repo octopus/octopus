@@ -2356,6 +2356,7 @@ contains
     character(len=80) :: aux, dir
     integer :: ik, ikpt, ist, uist, err
     FLOAT :: Nex, weight
+    integer :: gs_nst
     FLOAT, allocatable :: Nex_kpt(:)
     
 
@@ -2396,20 +2397,25 @@ contains
 
     end if
 
+    !We only need the occupied GS states
+    do ist = 1, gs_st%nst
+      if(gs_st%occ(ist, ik)>M_EPSILON) gs_nst = ist
+    end do
+
     ! this is required if st%X(psi) is used
     call states_sync(st)
 
-    SAFE_ALLOCATE(projections(1:gs_st%nst, 1:st%nst))
+    SAFE_ALLOCATE(projections(1:gs_nst, 1:st%nst))
      
     SAFE_ALLOCATE(Nex_kpt(1:st%d%nik)) 
     Nex_kpt = M_ZERO 
     do ik = st%d%kpt%start, st%d%kpt%end
       ikpt = states_dim_get_kpoint_index(st%d, ik)
-      call zstates_calc_projections(gr%mesh, st, gs_st, ik, projections)
-      do ist = 1, gs_st%nst
-        weight = st%d%kweights(ik) * st%occ(ist, ik)/ st%smear%el_per_state 
+      call zstates_calc_projections(gr%mesh, st, gs_st, ik, projections, gs_nst)
+      do ist = 1, gs_nst
+        weight = st%d%kweights(ik) * gs_st%occ(ist, ik)/ st%smear%el_per_state 
         do uist = st%st_start, st%st_end
-          Nex_kpt(ikpt) = Nex_kpt(ikpt) - weight * st%occ(uist, ik) * abs(projections(ist, uist))**2
+          Nex_kpt(ikpt) = Nex_kpt(ikpt) - weight * gs_st%occ(uist, ik) * abs(projections(ist, uist))**2
         end do
       end do
       Nex_kpt(ikpt) = Nex_kpt(ikpt) + st%qtot*st%d%kweights(ik)
@@ -2420,8 +2426,6 @@ contains
      call comm_allreduce(st%st_kpt_mpi_grp%comm, Nex_kpt)
    end if
 #endif  
-
-  Nex = sum(Nex_kpt)
 
   if(mpi_grp_is_root(mpi_world)) then
     call write_iter_start(out_nex)
