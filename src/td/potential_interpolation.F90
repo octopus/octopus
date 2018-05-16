@@ -55,7 +55,7 @@ module potential_interpolation_oct_m
     logical             :: mgga_with_exc
   end type potential_interpolation_t
 
-  integer :: INTERPOLATION_STEPS
+  integer :: interpolation_steps
 
 contains
   
@@ -100,13 +100,13 @@ contains
     
     PUSH_SUB(potential_interpolation_init)
 
-    INTERPOLATION_STEPS = optional_default(order, 3)
+    interpolation_steps = optional_default(order, 3)
 
-    SAFE_ALLOCATE(potential_interpolation%v_old(1:np, 1:nspin, 0:INTERPOLATION_STEPS))
+    SAFE_ALLOCATE(potential_interpolation%v_old(1:np, 1:nspin, 0:interpolation_steps))
     potential_interpolation%v_old(:, :, :) = M_ZERO
     
     if(cmplxscl) then
-      SAFE_ALLOCATE(potential_interpolation%Imv_old(1:np, 1:nspin, 0:INTERPOLATION_STEPS))
+      SAFE_ALLOCATE(potential_interpolation%Imv_old(1:np, 1:nspin, 0:interpolation_steps))
       potential_interpolation%Imv_old(:, :, :) = M_ZERO
     end if
 
@@ -114,11 +114,11 @@ contains
 
     if(potential_interpolation%mgga_with_exc) then
 
-      SAFE_ALLOCATE(potential_interpolation%vtau_old(1:np, 1:nspin, 0:INTERPOLATION_STEPS))
+      SAFE_ALLOCATE(potential_interpolation%vtau_old(1:np, 1:nspin, 0:interpolation_steps))
       potential_interpolation%vtau_old(:, :, :) = M_ZERO
 
        if(cmplxscl) then
-        SAFE_ALLOCATE(potential_interpolation%Imvtau_old(1:np, 1:nspin, 0:INTERPOLATION_STEPS))
+        SAFE_ALLOCATE(potential_interpolation%Imvtau_old(1:np, 1:nspin, 0:interpolation_steps))
         potential_interpolation%Imvtau_old(:, :, :) = M_ZERO
       end if
    end if
@@ -157,24 +157,24 @@ contains
     
     PUSH_SUB(potential_interpolation_run_zero_iter)
 
-    forall(i = 1:INTERPOLATION_STEPS, ispin = 1:nspin, ip = 1:np)
+    forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
       potential_interpolation%v_old(ip, ispin, i) = vhxc(ip, ispin)
     end forall
     
     if(present(imvhxc)) then
-      forall(i = 1:INTERPOLATION_STEPS, ispin = 1:nspin, ip = 1:np)
+      forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
         potential_interpolation%imv_old(ip, ispin, i) = imvhxc(ip, ispin)
       end forall
     end if
 
    if(present(vtau)) then
-      forall(i = 1:INTERPOLATION_STEPS, ispin = 1:nspin, ip = 1:np)
+      forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
         potential_interpolation%vtau_old(ip, ispin, i) = vtau(ip, ispin)
       end forall
     end if 
 
     if(present(imvtau)) then
-      forall(i = 1:INTERPOLATION_STEPS, ispin = 1:nspin, ip = 1:np)
+      forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
         potential_interpolation%imvtau_old(ip, ispin, i) = imvtau(ip, ispin)
       end forall
     end if
@@ -199,42 +199,42 @@ contains
 
     PUSH_SUB(potential_interpolation_new)
 
-    SAFE_ALLOCATE(times(INTERPOLATION_STEPS))
-    do j = 1, INTERPOLATION_STEPS
+    SAFE_ALLOCATE(times(interpolation_steps))
+    do j = 1, interpolation_steps
       times(j) = time - j*dt
     end do
 
-    do j = INTERPOLATION_STEPS, 2, -1
+    do j = interpolation_steps, 2, -1
       call lalg_copy(np, nspin, potential_interpolation%v_old(:, :, j-1), potential_interpolation%v_old(:, :, j))
     end do
     call lalg_copy(np, nspin, vhxc(:, :),     potential_interpolation%v_old(:, :, 1))
-    call interpolate( times, potential_interpolation%v_old(:, :, 1:INTERPOLATION_STEPS), &
+    call interpolate( times, potential_interpolation%v_old(:, :, 1:interpolation_steps), &
          time, potential_interpolation%v_old(:, :, 0))
 
     if(present(imvhxc)) then
-      do j = INTERPOLATION_STEPS, 2, -1
+      do j = interpolation_steps, 2, -1
         call lalg_copy(np, nspin, potential_interpolation%Imv_old(:, :, j-1), potential_interpolation%Imv_old(:, :, j))
       end do
       call lalg_copy(np, nspin, imvhxc(:, :),     potential_interpolation%Imv_old(:, :, 1))
-      call interpolate( times, potential_interpolation%imv_old(:, :, 1:INTERPOLATION_STEPS), &
+      call interpolate( times, potential_interpolation%imv_old(:, :, 1:interpolation_steps), &
            time, potential_interpolation%imv_old(:, :, 0))
     end if
 
     if(present(vtau)) then
-      do j = INTERPOLATION_STEPS, 2, -1
+      do j = interpolation_steps, 2, -1
         call lalg_copy(np, nspin, potential_interpolation%vtau_old(:, :, j-1), potential_interpolation%vtau_old(:, :, j))
       end do
       call lalg_copy(np, nspin, vtau(:, :),     potential_interpolation%vtau_old(:, :, 1))
-      call interpolate( times, potential_interpolation%vtau_old(:, :, 1:INTERPOLATION_STEPS), &
+      call interpolate( times, potential_interpolation%vtau_old(:, :, 1:interpolation_steps), &
            time, potential_interpolation%vtau_old(:, :, 0))
     end if
 
     if(present(imvtau)) then
-      do j = INTERPOLATION_STEPS, 2, -1
+      do j = interpolation_steps, 2, -1
         call lalg_copy(np, nspin, potential_interpolation%imvtau_old(:, :, j-1), potential_interpolation%imvtau_old(:, :, j))
       end do
       call lalg_copy(np, nspin, imvtau(:, :),     potential_interpolation%Imvtau_old(:, :, 1))
-      call interpolate( times, potential_interpolation%Imvtau_old(:, :, 1:INTERPOLATION_STEPS), &
+      call interpolate( times, potential_interpolation%Imvtau_old(:, :, 1:interpolation_steps), &
            time, potential_interpolation%Imvtau_old(:, :, 0))
     end if
 
@@ -351,8 +351,8 @@ contains
 
     PUSH_SUB(potential_interpolation_interpolate)
 
-    SAFE_ALLOCATE(times(INTERPOLATION_STEPS))
-    do j = 1, INTERPOLATION_STEPS
+    SAFE_ALLOCATE(times(interpolation_steps))
+    do j = 1, interpolation_steps
       times(j) = time - (j-1)*dt
     end do
 
@@ -456,7 +456,7 @@ contains
     end if
 
     err2 = 0
-    do ii = 1, INTERPOLATION_STEPS - 1
+    do ii = 1, interpolation_steps - 1
       do is = 1, nspin
         write(filename,'(a,i2.2,i3.3)') 'vprev_', ii, is
         if(cmplxscl) then
@@ -477,7 +477,7 @@ contains
 
     if(potential_interpolation%mgga_with_exc) then
       err2 = 0
-      do ii = 1, INTERPOLATION_STEPS - 1
+      do ii = 1, interpolation_steps - 1
         do is = 1, nspin
           write(filename,'(a,i2.2,i3.3)') 'vtauprev_', ii, is
           if(cmplxscl) then
