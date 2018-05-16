@@ -21,6 +21,7 @@
 module propagator_magnus_oct_m
   use density_oct_m
   use exponential_oct_m
+  use gauge_field_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
@@ -147,6 +148,13 @@ contains
     integer :: ik, ib
     FLOAT :: alpha1, alpha2, c1, c2, t1, t2
     FLOAT, allocatable :: vhxc1(:, :), vhxc2(:, :)
+
+    if(ion_dynamics_ions_move(ions) .or. gauge_field_is_applied(hm%ep%gfield)) then
+      message(1) = "The commutator-free Magnus expansion can't be used &
+                    &with moving ions or gauge fields"
+      call messages_fatal(1)
+    end if
+
     PUSH_SUB(propagator_dt.td_cfmagnus4)
 
     if(iter < 4) then
