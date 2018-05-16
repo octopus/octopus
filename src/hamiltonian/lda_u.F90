@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -142,6 +141,8 @@ contains
   this%nspins = 0
   this%spin_channels = 0
   this%nspecies = 0
+  this%useAllOrbitals = .false.
+  this%skipSOrbitals = .true.
   this%freeze_occ = .false.
   this%freeze_u = .false.
 
