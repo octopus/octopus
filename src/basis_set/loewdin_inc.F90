@@ -65,6 +65,7 @@
          iorb2 = basis%global2os(2,ind2)
          os2 => basis%orbsets(ios2)
          ns = os2%sphere%np
+         if(abs(overlap(ind2,ind)) < CNST(1e-6)) cycle
          do idim = 1, os%ndim
            do is = 1, ns
              os%eorb_mesh(os2%sphere%map(is),idim,iorb,ik) &
@@ -104,12 +105,31 @@
   integer,                 intent(in)   :: ik
 
   integer :: ios, ios2, iorb, iorb2
-  integer :: ind, ind2, idim
+  integer :: ind, ind2, idim, is
   type(orbitalset_t), pointer :: os, os2
 
   PUSH_SUB(X(loewdin_overlap))
 
   overlap(1:basis%size,1:basis%size) = R_TOTYPE(M_ZERO)
+
+  if(simul_box_is_periodic(os%sphere%mesh%sb))then
+    if(.not.basis%submeshforperiodic) then 
+      do ind = 1, basis%size
+        ios  = basis%global2os(1,ind)
+        iorb = basis%global2os(2,ind)
+        os => basis%orbsets(ios)
+        os%eorb_mesh(:,:,iorb,ik) = M_Z0
+        do idim = 1, os%ndim
+          do is = 1, os%sphere%np
+            os%eorb_mesh(os%sphere%map(is),idim,iorb,ik) = os%eorb_mesh(os%sphere%map(is),idim,iorb,ik) &
+                                                  + os%zorb(is,idim,iorb)*R_CONJ(os%phase(is, ik))
+          end do
+        end do
+      end do
+    else
+      call messages_not_implemented("Lowdin orthogonalization with submeshes.")
+    end if
+  end if
  
   do ind = 1, basis%size
     ios  = basis%global2os(1,ind)
@@ -122,20 +142,13 @@
 
       if(simul_box_is_periodic(os%sphere%mesh%sb))then
  #ifdef R_TCOMPLEX
-        if(.not.basis%submeshforperiodic) then
-          overlap(ind,ind2) = zmf_dotp(os%sphere%mesh, os%ndim, &
-                         os%eorb_mesh(:,:,iorb,ik), os2%eorb_mesh(:,:,iorb2,ik))
-          if(abs(overlap(ind,ind2)) < CNST(1.0e-12)) overlap(ind,ind2) = R_TOTYPE(M_ZERO)
-        else
-          !Not implemented
-          call messages_not_implemented("Lowdin orthogonalization with submeshes.")
-        end if
+        overlap(ind,ind2) = zmf_dotp(os%sphere%mesh, os%ndim, &
+                       os%eorb_mesh(:,:,iorb,ik), os2%eorb_mesh(:,:,iorb2,ik))
+        if(abs(overlap(ind,ind2)) < CNST(1.0e-6)) overlap(ind,ind2) = R_TOTYPE(M_ZERO)
  #endif
-        else
-          !Not implemented
-          call messages_not_implemented("Lowdin orthogonalization with submeshes.")
-        end if
-
+      else
+        call messages_not_implemented("Lowdin orthogonalization with submeshes.")
+      end if
     end do !ind2
   end do !ind
 
