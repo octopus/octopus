@@ -59,7 +59,8 @@ module rdmft_oct_m
        rdm_t,                    &
        scf_occ,                  &
        scf_orb,                  &
-       scf_rdmft
+       scf_rdmft,				 &
+       set_occ_pinning
 
   type rdm_t
     type(states_t) :: psi
@@ -95,7 +96,7 @@ contains
     integer,               intent(in)    :: max_iter
     type(restart_t),       intent(in)    :: restart_dump
     
-    type(states_t) :: states_initial
+    type(states_t) :: states_initial, states_save
     integer :: iter, icount, ip, ist, iatom, ierr, maxcount, iorb
     FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, sum_charge, rr, rel_ener
     FLOAT, allocatable :: species_charge_center(:), psi(:, :), stepsize(:)
@@ -197,6 +198,7 @@ contains
         .or. iter == max_iter)) then
         if(rdm%do_basis .eqv. .true.) then
           call states_copy(states_initial, st)
+          call states_copy(states_save, st)
           SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
           SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
           do iorb = 1, st%nst
@@ -207,14 +209,18 @@ contains
                 dpsi(ip,1) = dpsi(ip,1) + rdm%vecnat(ist, iorb)*dpsi2(ip,1)
               end forall
             enddo
-            call states_set_state(st, gr%mesh, iorb, 1, dpsi)
+            call states_set_state(states_save, gr%mesh, iorb, 1, dpsi)
           enddo
+          call states_dump(restart_dump, states_save, gr, ierr, iter=iter) 
+          
           call states_end(states_initial)
+          call states_end(states_save)
+		  
           SAFE_DEALLOCATE_A(dpsi)
           SAFE_DEALLOCATE_A(dpsi2)
         endif
 
-        call states_dump(restart_dump, st, gr, ierr, iter=iter) 
+!        call states_dump(restart_dump, st, gr, ierr, iter=iter) 
         if (ierr /= 0) then
           message(1) = 'Unable to write states wavefunctions.'
           call messages_warning(1)
@@ -228,7 +234,7 @@ contains
       end if
 
       if (conv) exit
-    end do
+    end do 
 
     if(conv) then 
       ! output final information
@@ -396,7 +402,27 @@ contains
     end subroutine rdmft_end
 
   end subroutine scf_rdmft
+
+  ! ---------------------------------------------------------
   
+  ! reset occ.num. to 2/0 for test reasons
+  subroutine set_occ_pinning(st)
+    type(states_t),       intent(inout) :: st
+    FLOAT, allocatable ::  occin(:,:)
+    PUSH_SUB(set_occ_pinning)    
+    SAFE_ALLOCATE(occin(1:st%nst, 1:st%d%nik))
+    
+    occin = M_ZERO
+    occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
+    where(occin(:,:) < 1) occin(:,:) = 0 
+    where(occin(:,:) > 1) occin(:,:) = st%smear%el_per_state
+    
+    st%occ = occin
+    
+    POP_SUB(set_occ_pinning)
+  end subroutine set_occ_pinning
+
+
   ! ---------------------------------------------------------
   
   ! scf for the occupation numbers 
