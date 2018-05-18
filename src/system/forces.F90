@@ -58,7 +58,7 @@ module forces_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
-!  use vdw_ts_oct_m
+  use vdw_ts_oct_m
 
 
 
@@ -302,8 +302,8 @@ contains
       geo%atom(iatom)%f_vdw(1:gr%sb%dim) = hm%ep%vdw_forces(1:gr%sb%dim, iatom)
     end do
     
-    if(  present(derivative_coeff) ) then   
-      call vdw_ts_force_calculate(derivative_coeff, geo, gr%der, gr%sb, st, st%rho)
+    if(  present(vdw_ts) ) then   
+      call vdw_ts_force_calculate(vdw_ts, geo, gr%der, gr%sb, st, st%rho)
     end if 
 
     if(present(t)) then

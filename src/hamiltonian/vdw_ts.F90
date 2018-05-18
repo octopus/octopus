@@ -53,6 +53,7 @@ module vdw_ts_oct_m
     vdw_ts_init,                          &
     vdw_ts_end,                           &
     vdw_ts_write_c6ab,                    &
+    vdw_ts_force_calculate,               &
     vdw_ts_calculate
   
   type vdw_ts_t
@@ -350,7 +351,8 @@ contains
     type(hirshfeld_t) :: hirshfeld
     integer :: iatom, jatom
     FLOAT, allocatable :: dvadrr(:)
-                        
+   
+    PUSH_SUB(vdw_ts_force_calculate)
 
     SAFE_ALLOCATE(dvadrr(1:3))
 
@@ -365,8 +367,10 @@ contains
     end do
 
     call hirshfeld_end(hirshfeld)
+
     SAFE_DEALLOCATE_A(dvadrr)
-    
+ 
+    PUSH_SUB(vdw_ts_force_calculate)
   end subroutine vdw_ts_force_calculate
 
 

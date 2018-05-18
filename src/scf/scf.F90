@@ -997,7 +997,7 @@ contains
     if(scf%calc_force) then
       select case(ks%vdw_correction)
         case(OPTION__VDWCORRECTION__VDW_TS)
-        call forces_calculate(gr, geo, hm, st, ks%vdw_ts)
+        call forces_calculate(gr, geo, hm, st, vdw_ts = ks%vdw_ts)
         case default  
         call forces_calculate(gr, geo, hm, st)
       end select
