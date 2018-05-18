@@ -62,8 +62,8 @@ module vdw_ts_oct_m
     FLOAT, allocatable :: r0free(:)        !> Free atomic vdW radius for each atomic species.
     FLOAT, allocatable :: c6abfree(:, :)   !> Free atomic heteronuclear C6 coefficient for each atom pair.
     FLOAT, allocatable :: volfree(:)
-
-    FLOAT, allocatable :: c6ab(:, :)
+    FLOAT, allocatable :: derivative_coeff(:) 
+    FLOAT, allocatable :: c6ab(:, :)       !> effectif atomic heteronuclear C6 coefficient for each atom pair.
     FLOAT              :: VDW_cutoff       !> Cutoff value for the calculation of the VdW TS correction in periodic system.
     FLOAT              :: VDW_dd_parameter !> Parameter for the damping function steepness.
     FLOAT              :: VDW_sr_parameter !> Parameter for the damping function. Can depend on the XC correction used.
@@ -120,6 +120,8 @@ contains
     SAFE_ALLOCATE(this%volfree(1:geo%nspecies))
     SAFE_ALLOCATE(this%c6abfree(1:geo%nspecies, 1:geo%nspecies))
     SAFE_ALLOCATE(this%c6ab(1:geo%natoms, 1:geo%natoms))
+    SAFE_ALLOCATE(this%derivative_coeff(1:geo%natoms))
+
 
     do ispecies = 1, geo%nspecies
       call get_vdw_param(species_label(geo%species(ispecies)), &
@@ -151,6 +153,7 @@ contains
     SAFE_DEALLOCATE_A(this%volfree)
     SAFE_DEALLOCATE_A(this%c6abfree)
     SAFE_DEALLOCATE_A(this%c6ab)
+    SAFE_DEALLOCATE_A(this%derivative_coeff)
 
     POP_SUB(vdw_ts_end)
   end subroutine vdw_ts_end
@@ -186,7 +189,7 @@ contains
     type(periodic_copy_t) :: pc
     integer :: iatom, jatom, ispecies, jspecies, jcopy, ddimention, ip 
     FLOAT :: rr, rr2, rr6, dd, sr, dffdrr, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra, deabdrab
-    FLOAT, allocatable :: coordinates(:,:), vol_ratio(:), dvadens(:), dvadrr(:), derivative_coeff(:), & 
+    FLOAT, allocatable :: coordinates(:,:), vol_ratio(:), dvadens(:), dvadrr(:), & 
                           dr0dvra(:), r0ab(:,:)
     type(hirshfeld_t) :: hirshfeld
     integer, allocatable :: zatom(:)
@@ -195,13 +198,11 @@ contains
     PUSH_SUB(vdw_ts_calculate)
 
     SAFE_ALLOCATE(vol_ratio(1:geo%natoms))
-    SAFE_ALLOCATE(derivative_coeff(1:geo%natoms))
     SAFE_ALLOCATE(dvadens(1:der%mesh%np))
     SAFE_ALLOCATE(dvadrr(1:3))
     SAFE_ALLOCATE(dr0dvra(1:geo%natoms))
 
     energy=M_ZERO
-    derivative_coeff(1:geo%natoms) = M_ZERO
     force(1:sb%dim, 1:geo%natoms) = M_ZERO
 
     call hirshfeld_init(hirshfeld, der%mesh, geo, st)
@@ -269,7 +270,7 @@ contains
             deabdvra = (-dffdvra*this%c6ab(iatom,jatom) - ff*vol_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6
               
             force(1:sb%dim,iatom)= force(1:sb%dim,iatom) - deabdrab*(geo%atom(iatom)%x(sb%dim) -x_j(1:sb%dim) )/rr; 
-            derivative_coeff(iatom) = derivative_coeff(iatom) + deabdvra;
+            this%derivative_coeff(iatom) = this%derivative_coeff(iatom) + deabdvra;
           end do
         end do
         call periodic_copy_end(pc)
@@ -287,7 +288,7 @@ contains
       end do
       
       call f90_vdw_calculate(geo%natoms,  this%VDW_dd_parameter, this%VDW_sr_parameter, zatom(1), coordinates(1, 1), &
-                             vol_ratio(1), energy, force(1, 1), derivative_coeff(1))
+                             vol_ratio(1), energy, force(1, 1), this%derivative_coeff(1))
 
 
       SAFE_DEALLOCATE_A(coordinates)
@@ -295,22 +296,30 @@ contains
     end if
       
     ! Add the extra term for the force 
+    !do iatom = 1, geo%natoms
+    !  do jatom = 1, iatom
+    !    call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr)
+    !    force(1:sb%dim, iatom) = force(1:sb%dim, iatom) - derivative_coeff(iatom)*dvadrr(1:sb%dim)
+    !    if (iatom == jatom) cycle
+    !    force(1:sb%dim, jatom) = force(1:sb%dim, jatom) + derivative_coeff(iatom)*dvadrr(1:sb%dim)
+    !  end do
+    !end do
+
     do iatom = 1, geo%natoms
-      do jatom = 1, iatom
+      do jatom = 1, geo%natoms
         call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr)
-        force(1:sb%dim, iatom) = force(1:sb%dim, iatom) - derivative_coeff(iatom)*dvadrr(1:sb%dim)
-        if (iatom == jatom) cycle
-        force(1:sb%dim, jatom) = force(1:sb%dim, jatom) + derivative_coeff(iatom)*dvadrr(1:sb%dim)
+        force(1:sb%dim, iatom) = force(1:sb%dim, iatom) - this%derivative_coeff(iatom)*dvadrr(1:sb%dim)
+        !if (iatom == jatom) then
+        print* , iatom, jatom, -this%derivative_coeff(iatom)*dvadrr(1:sb%dim)
+        !end if
       end do
     end do
-
-
 
     ! Calculate the potential
     potential = M_ZERO
     do iatom = 1, geo%natoms
       call hirshfeld_density_derivative(hirshfeld, iatom, dvadens)
-      potential(1:der%mesh%np) = potential(1:der%mesh%np) + derivative_coeff(iatom)*dvadens(1:der%mesh%np)
+      potential(1:der%mesh%np) = potential(1:der%mesh%np) + this%derivative_coeff(iatom)*dvadens(1:der%mesh%np)
     end do
 
     if(debug%info) then
@@ -320,7 +329,6 @@ contains
     call hirshfeld_end(hirshfeld)
 
     SAFE_DEALLOCATE_A(vol_ratio)
-    SAFE_DEALLOCATE_A(derivative_coeff)
     SAFE_DEALLOCATE_A(dvadens)
     SAFE_DEALLOCATE_A(dvadrr)
     SAFE_DEALLOCATE_A(dr0dvra)
@@ -328,7 +336,38 @@ contains
     POP_SUB(vdw_ts_calculate)
   end subroutine vdw_ts_calculate
 
+  !------------------------------------------
 
+  subroutine vdw_ts_force_calculate(this, geo, der, sb, st, density, force)
+    type(vdw_ts_t),      intent(inout) :: this
+    type(geometry_t),    intent(in)    :: geo
+    type(derivatives_t), intent(in)    :: der
+    type(simul_box_t),   intent(in)    :: sb
+    type(states_t),      intent(in)    :: st
+    FLOAT,               intent(in)    :: density(:, :)
+    FLOAT,               intent(out)   :: force(:, :)
+
+    type(hirshfeld_t) :: hirshfeld
+    integer :: iatom, jatom
+    FLOAT, allocatable :: dvadrr(:)
+                        
+
+    SAFE_ALLOCATE(dvadrr(1:3))
+
+    call hirshfeld_init(hirshfeld, der%mesh, geo, st)
+
+    do iatom = 1, geo%natoms
+      do jatom = 1, geo%natoms
+        call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr)
+        force(1:sb%dim, iatom) = force(1:sb%dim, iatom) - this%derivative_coeff(iatom)*dvadrr(1:sb%dim)
+        print* , iatom, jatom, -this%derivative_coeff(iatom)*dvadrr(1:sb%dim)
+      end do
+    end do
+
+    call hirshfeld_end(hirshfeld)
+    SAFE_DEALLOCATE_A(dvadrr)
+    
+  end subroutine vdw_ts_force_calculate
 
 
   !------------------------------------------
