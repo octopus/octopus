@@ -21,15 +21,21 @@
 module propagator_magnus_oct_m
   use density_oct_m
   use exponential_oct_m
-  use grid_oct_m
+  use gauge_field_oct_m
+  use geometry_oct_m
   use global_oct_m
+  use grid_oct_m
+  use hamiltonian_base_oct_m
   use hamiltonian_oct_m
+  use ion_dynamics_oct_m
   use lasers_oct_m
   use messages_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
+  use propagator_rk_oct_m
   use states_oct_m
+  use v_ks_oct_m
   use xc_oct_m
 
   implicit none
@@ -37,7 +43,8 @@ module propagator_magnus_oct_m
   private
 
   public ::                    &
-    td_magnus
+    td_magnus,                 &
+    td_cfmagnus4
 
 contains
   
@@ -122,6 +129,76 @@ contains
     SAFE_DEALLOCATE_A(vaux)
     POP_SUB(propagator_dt.td_magnus)
   end subroutine td_magnus
+
+
+  ! ---------------------------------------------------------
+  !> Commutator-free Magnus propagator of order 4.
+  subroutine td_cfmagnus4(ks, hm, gr, st, tr, time, dt, ions, geo, iter)
+    type(v_ks_t), target,            intent(inout) :: ks
+    type(hamiltonian_t), target,     intent(inout) :: hm
+    type(grid_t),        target,     intent(inout) :: gr
+    type(states_t),      target,     intent(inout) :: st
+    type(propagator_t),  target,     intent(inout) :: tr
+    FLOAT,                           intent(in)    :: time
+    FLOAT,                           intent(in)    :: dt
+    type(ion_dynamics_t),            intent(inout) :: ions
+    type(geometry_t),                intent(inout) :: geo
+    integer,                         intent(in)    :: iter
+
+    integer :: ik, ib
+    FLOAT :: alpha1, alpha2, c1, c2, t1, t2
+    FLOAT, allocatable :: vhxc1(:, :), vhxc2(:, :)
+
+    if(ion_dynamics_ions_move(ions) .or. gauge_field_is_applied(hm%ep%gfield)) then
+      message(1) = "The commutator-free Magnus expansion can't be used &
+                    &with moving ions or gauge fields"
+      call messages_fatal(1)
+    end if
+
+    PUSH_SUB(propagator_dt.td_cfmagnus4)
+
+    if(iter < 4) then
+      call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo)
+      POP_SUB(propagator_dt.td_cfmagnus4)
+      return
+    end if
+
+
+    alpha1 = (M_THREE - M_TWO * sqrt(M_THREE))/CNST(12.0)
+    alpha2 = (M_THREE + M_TWO * sqrt(M_THREE))/CNST(12.0)
+    c1 = M_HALF - sqrt(M_THREE)/CNST(6.0)
+    c2 = M_HALF + sqrt(M_THREE)/CNST(6.0)
+    t1 = time - dt + c1*dt
+    t2 = time - dt + c2*dt
+
+    SAFE_ALLOCATE(vhxc1(1:gr%mesh%np, 1:st%d%nspin))
+    SAFE_ALLOCATE(vhxc2(1:gr%mesh%np, 1:st%d%nspin))
+
+    call potential_interpolation_interpolate(tr%vksold, 4, time, dt, t1, vhxc1)
+    call potential_interpolation_interpolate(tr%vksold, 4, time, dt, t2, vhxc2)
+
+    hm%vhxc = M_TWO * (alpha2 * vhxc1 + alpha1 * vhxc2)
+    call hamiltonian_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha2, M_TWO * alpha1/) )
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ib = st%group%block_start, st%group%block_end
+        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, M_HALF * dt)
+      end do
+    end do
+
+    hm%vhxc = M_TWO * (alpha1 * vhxc1 + alpha2 * vhxc2)
+    call hamiltonian_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha1, M_TWO * alpha2/) )
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ib = st%group%block_start, st%group%block_end
+        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, M_HALF * dt)
+      end do
+    end do
+
+    call density_calc(st, gr, st%rho)
+
+    SAFE_DEALLOCATE_A(vhxc1)
+    SAFE_DEALLOCATE_A(vhxc2)
+    POP_SUB(propagator_dt.td_cfmagnus4)
+  end subroutine td_cfmagnus4
 
 end module propagator_magnus_oct_m
 
