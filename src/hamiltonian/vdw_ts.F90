@@ -56,13 +56,14 @@ module vdw_ts_oct_m
     vdw_ts_calculate
   
   type vdw_ts_t
+    FLOAT, allocatable :: derivative_coeff(:)
+
     private
     FLOAT, allocatable :: c6free(:)        !> Free atomic volumes for each atomic species.
     FLOAT, allocatable :: dpfree(:)        !> Free atomic static dipole polarizability for each atomic species.
     FLOAT, allocatable :: r0free(:)        !> Free atomic vdW radius for each atomic species.
     FLOAT, allocatable :: c6abfree(:, :)   !> Free atomic heteronuclear C6 coefficient for each atom pair.
     FLOAT, allocatable :: volfree(:)
-    FLOAT, allocatable :: derivative_coeff(:) 
     FLOAT, allocatable :: c6ab(:, :)       !> effectif atomic heteronuclear C6 coefficient for each atom pair.
     FLOAT              :: VDW_cutoff       !> Cutoff value for the calculation of the VdW TS correction in periodic system.
     FLOAT              :: VDW_dd_parameter !> Parameter for the damping function steepness.
@@ -338,14 +339,13 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_force_calculate(this, geo, der, sb, st, density, force)
-    type(vdw_ts_t),      intent(inout) :: this
-    type(geometry_t),    intent(in)    :: geo
+  subroutine vdw_ts_force_calculate(vdw_ts, geo, der, sb, st, density)
+    type(vdw_ts_t),      intent(in)    :: vdw_ts
+    type(geometry_t),    intent(inout) :: geo
     type(derivatives_t), intent(in)    :: der
     type(simul_box_t),   intent(in)    :: sb
     type(states_t),      intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
-    FLOAT,               intent(out)   :: force(:, :)
 
     type(hirshfeld_t) :: hirshfeld
     integer :: iatom, jatom
@@ -359,8 +359,8 @@ contains
     do iatom = 1, geo%natoms
       do jatom = 1, geo%natoms
         call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr)
-        force(1:sb%dim, iatom) = force(1:sb%dim, iatom) - this%derivative_coeff(iatom)*dvadrr(1:sb%dim)
-        print* , iatom, jatom, -this%derivative_coeff(iatom)*dvadrr(1:sb%dim)
+        geo%atom(iatom)%f_vdw(1:sb%dim) = geo%atom(iatom)%f_vdw(1:sb%dim) - vdw_ts%derivative_coeff(iatom)*dvadrr(1:sb%dim)
+        print* , iatom, jatom, -vdw_ts%derivative_coeff(iatom)*dvadrr(1:sb%dim)
       end do
     end do
 

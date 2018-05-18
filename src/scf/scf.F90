@@ -994,7 +994,14 @@ contains
     end if
 
     ! calculate forces
-    if(scf%calc_force) call forces_calculate(gr, geo, hm, st)
+    if(scf%calc_force) then
+      select case(ks%vdw_correction)
+        case(OPTION__VDWCORRECTION__VDW_TS)
+        call forces_calculate(gr, geo, hm, st, ks%vdw_ts)
+        case default  
+        call forces_calculate(gr, geo, hm, st)
+      end select
+    end if
 
     ! calculate stress
     if(scf%calc_stress) call stress_calculate(gr, hm, st, geo, ks) 
@@ -1016,13 +1023,11 @@ contains
         call states_write_bandstructure(STATIC_DIR, st%nst, st, gr%sb)
     end if
 
-!!!!!!!!!!!!!!!!!!!!!! If vdw_ts, write c6para
+    !If vdw_ts, write c6para
     select case(ks%vdw_correction)
     case(OPTION__VDWCORRECTION__VDW_TS)
       call vdw_ts_write_c6ab(ks%vdw_ts, geo, STATIC_DIR, 'c6ab_eff')
     end select
-!!!!!!!!!!!!!!!!!!!!!
-
 
     POP_SUB(scf_run)
 

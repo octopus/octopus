@@ -58,6 +58,9 @@ module forces_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
+!  use vdw_ts_oct_m
+
+
 
   implicit none
 
@@ -262,13 +265,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine forces_calculate(gr, geo, hm, st, t, dt)
-    type(grid_t),        intent(inout) :: gr
-    type(geometry_t),    intent(inout) :: geo
-    type(hamiltonian_t), intent(inout) :: hm
-    type(states_t),      intent(inout) :: st
-    FLOAT,     optional, intent(in)    :: t
-    FLOAT,     optional, intent(in)    :: dt
+  subroutine forces_calculate(gr, geo, hm, st, t, dt, vdw_ts)
+    type(grid_t),        intent(inout)   :: gr
+    type(geometry_t),    intent(inout)   :: geo
+    type(hamiltonian_t), intent(inout)   :: hm
+    type(states_t),      intent(inout)   :: st
+    FLOAT,     optional, intent(in)      :: t
+    FLOAT,     optional, intent(in)      :: dt
+    type(vdw_ts_t), optional, intent(in) :: vdw_ts
 
     integer :: j, iatom, idir
     FLOAT :: x(MAX_DIM), time, global_force(1:MAX_DIM)
@@ -297,6 +301,10 @@ contains
       geo%atom(iatom)%f_ii(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
       geo%atom(iatom)%f_vdw(1:gr%sb%dim) = hm%ep%vdw_forces(1:gr%sb%dim, iatom)
     end do
+    
+    if(  present(derivative_coeff) ) then   
+      call vdw_ts_force_calculate(derivative_coeff, geo, gr%der, gr%sb, st, st%rho)
+    end if 
 
     if(present(t)) then
       call epot_global_force(hm%ep, geo, time, global_force)
