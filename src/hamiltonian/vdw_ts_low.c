@@ -488,9 +488,9 @@ void vdw_calculate (const int natoms, const double dd, const double sr, const in
 
       double c6abfree = num/den;
 
-      // Determination of c6ab, for bonded atoms a and b.
-      double c6ab = volume_ratio[ia]*volume_ratio[ib]*c6abfree;
-      
+
+      // Determination of c6ab_effectif, for bonded atoms a and b.
+      double c6abeff = volume_ratio[ia]*volume_ratio[ib]*c6abfree;
       // Determination of the effective radius of atom a.
       double r0ab = cbrt(volume_ratio[ia])*r0_a + cbrt(volume_ratio[ib])*r0_b;
 
@@ -500,10 +500,10 @@ void vdw_calculate (const int natoms, const double dd, const double sr, const in
       double dffdr0;
       fdamp(rr, r0ab, dd, sr, &ff, &dffdrab, &dffdr0);
       // Pair-wise correction to energy.
-      *energy += -0.5*ff*c6ab/rr6;
+      *energy += -0.5*ff*c6abeff/rr6;
       
       // Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
-      double deabdrab = -dffdrab*c6ab/rr6 + 6.0*ff*c6ab/rr7;
+      double deabdrab = -dffdrab*c6abeff/rr6 + 6.0*ff*c6abeff/rr7;
       
       // Derivative of the AB van der Waals separation with respect to the volume ratio of atom A.
       double dr0dvra = r0_a/(3.0*pow(volume_ratio[ia], 2.0/3.0));
@@ -512,7 +512,7 @@ void vdw_calculate (const int natoms, const double dd, const double sr, const in
       double dffdvra = dffdr0*dr0dvra;
       
       // Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
-      double deabdvra = -dffdvra*c6ab/rr6 - ff*volume_ratio[ib]*c6abfree/rr6;
+      double deabdvra = -dffdvra*c6abeff/rr6 - ff*volume_ratio[ib]*c6abfree/rr6;
       
       force[3*ia + 0] += -deabdrab*(coordinates[3*ia + 0] - coordinates[3*ib + 0])/rr;
       force[3*ia + 1] += -deabdrab*(coordinates[3*ia + 1] - coordinates[3*ib + 1])/rr;
@@ -524,7 +524,7 @@ void vdw_calculate (const int natoms, const double dd, const double sr, const in
       //printf("Distance between atoms %i and %i = %f.\n", ia+1, ib+1, rr);
       //printf("Atom %i, c6= %f, alpha= %f, r0= %f.\n", ia+1, c6_a, alpha_a, r0_a);
       //printf("Atom %i, c6= %f, alpha= %f, r0= %f.\n", ib+1, c6_b, alpha_b, r0_b);
-      //printf("For atoms %i and %i, c6ab= %f.\n", ia+1, ib+1, c6abfree);
+      //printf("For atoms %i and %i, c6abeff= %f.\n", ia+1, ib+1, c6abfree);
     }
   }
   //printf("THE FINAL VAN DER WAALS ENERGY CORRECTION IS = %f.\n", *energy);
@@ -560,7 +560,6 @@ int main () {
     double energy_2;
     
     vdw_calculate(natoms, zatom, coordinates, volume_ratio, &energy_2, force, derivative_coeff);
-    printf("%f %f %f %f\n", x, energy, force[5], -(energy_2-energy)/0.001);
   }
 }
 #endif

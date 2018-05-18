@@ -113,6 +113,7 @@ module simul_box_oct_m
     FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     FLOAT :: klattice          (MAX_DIM,MAX_DIM)   !< reciprocal-lattice vectors
     FLOAT :: volume_element                      !< the volume element in real space
+    FLOAT :: surface_element   (MAX_DIM)         !< surface element in real space
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
     FLOAT :: metric            (MAX_DIM,MAX_DIM) !< metric tensor F matrix following Chelikowski paper PRB 78 075109 (2008)
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
@@ -771,6 +772,12 @@ contains
     sb%klattice = sb%klattice * M_TWO*M_PI
 
     call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element, sb%dim)
+
+    if(sb%dim == 3) then
+      sb%surface_element(1) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 2), sb%rlattice_primitive(1:3, 3))**2)))
+      sb%surface_element(2) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 3), sb%rlattice_primitive(1:3, 1))**2)))
+      sb%surface_element(3) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 1), sb%rlattice_primitive(1:3, 2))**2)))
+    end if
 
     sb%metric = M_ZERO
     sb%metric = matmul(transpose(sb%klattice_primitive), sb%klattice_primitive)
