@@ -143,7 +143,6 @@ contains
       maxcount = 50
     endif
     
-
     ! Start the actual minimization, first step is minimization of occupation numbers
     ! Orbital minimization is according to Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem. (scf_orb) or
     ! using steepest decent (scf_orb_direct)
@@ -159,7 +158,6 @@ contains
       ! Diagonalization of the generalized Fock matrix 
       write(message(1), '(a)') 'Optimization of natural orbitals'
       call messages_info(1)
-      
       do icount = 1, maxcount !still under investigation how many iterations we need
         if (rdm%do_basis.eqv..false.) then
           stepsize = 0.1d0
@@ -169,7 +167,6 @@ contains
         end if
         energy_dif = energy - energy_old
         energy_old = energy
-        
         if (rdm%do_basis.eqv. .true.) then
           if (abs(energy_dif)/abs(energy).lt. rdm%conv_ener.and.rdm%maxFO < 1.d3*rdm%conv_ener)  exit
           if (energy_dif < M_ZERO) then 
@@ -229,6 +226,8 @@ contains
 		  
           SAFE_DEALLOCATE_A(dpsi)
           SAFE_DEALLOCATE_A(dpsi2)
+        else
+		  call states_dump(restart_dump, st, gr, ierr, iter=iter) 
         endif
 
         if (ierr /= 0) then
@@ -247,11 +246,7 @@ contains
     end do 
 
     if(conv) then 
-	   ! output final information
-		 call density_calc (st,gr,st%rho)
-		 call hamiltonian_update(hm, gr%mesh)
-		 call rdm_derivatives(rdm, hm, st, gr)
-		 call total_energy_rdm(rdm, st%occ(:,1), energy)
+	  ! output final information
         !if (rdm%do_basis.eqv..false.) then
         !call scf_orb(rdm, gr, geo, st, ks, hm, energy) !NH this call changes the energy again, needs to be replaced
         !write(message(1),'(a,es15.5)')  'The maximum non diagonal element of the matrix F formed by the Lagrange multiplyers is ', &
@@ -261,10 +256,10 @@ contains
       write(message(1),'(a,i3,a)')  'The calculation converged after ',iter,' iterations'
       write(message(2),'(a,es20.10)')  'The total energy is ', units_from_atomic(units_out%energy,energy + hm%ep%eii)
       call messages_info(2)
-!      if(gs_run_) then 
-!        !call scf_write_static(STATIC_DIR, "info") !NH can we turn this on?
-!!        call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
-!      end if
+      if(gs_run_) then 
+        !call scf_write_static(STATIC_DIR, "info") !NH can we turn this on?
+        call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
+      end if
     else
       write(message(1),'(a,i3,a)')  'The calculation did not converge after ', iter, ' iterations '
       write(message(2),'(a,es15.5)') 'Relative energy difference between the last two iterations ', rel_ener
@@ -500,7 +495,7 @@ contains
 
   ! ---------------------------------------------------------
   
-   ! scf for the occupation numbers 
+   ! dummy routine for occupation numbers which only calculates the necessary vairables for further use
   subroutine scf_occ_NO(rdm, gr, hm, st, energy)
     type(rdm_t),          intent(inout) :: rdm
     type(grid_t),         intent(inout) :: gr
@@ -517,8 +512,6 @@ contains
     call messages_info(1)
     
     energy = M_ZERO
-    
-   
     
     if((rdm%iter == 1).and. (rdm%do_basis.eqv. .true.))  then 
       call dstates_me_two_body(gr, st, rdm%n_twoint, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
@@ -574,7 +567,7 @@ contains
     
     
     !Initialize the occin. Smallocc is used for numerical stability
-    
+
     occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
     where(occin(:,:) < smallocc) occin(:,:) = smallocc 
     where(occin(:,:) > st%smear%el_per_state-smallocc) occin(:,:) = st%smear%el_per_state - smallocc
@@ -597,7 +590,7 @@ contains
     rdm%occsum = st%qtot
 
     st%occ = occin
-    
+   
     if((rdm%iter == 1).and. (rdm%do_basis.eqv. .true.))  then 
       call dstates_me_two_body(gr, st, rdm%n_twoint, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
       call rdm_integrals(rdm,hm,st,gr) 
@@ -1259,29 +1252,29 @@ contains
     end if
 	
 !Calculate the energy contributions separately
-energy=M_ZERO
-do ist = 1, rdm%st%nst
-  energy = energy  + occ(ist)*rdm%eone(ist)
-end do
-print*,'1body=', energy
+!energy=M_ZERO
+!do ist = 1, rdm%st%nst
+!  energy = energy  + occ(ist)*rdm%eone(ist)
+!end do
+!print*,'1body=', energy
 
-energy=M_ZERO
-do ist = 1, rdm%st%nst
-  energy = energy  + occ(ist)*rdm%eone_kin(ist)
-end do
-print*,'kinetic=', energy
+!energy=M_ZERO
+!do ist = 1, rdm%st%nst
+!  energy = energy  + occ(ist)*rdm%eone_kin(ist)
+!end do
+!print*,'kinetic=', energy
 
-energy=M_ZERO
-do ist = 1, rdm%st%nst
-  energy = energy  + M_HALF*occ(ist)*V_h(ist)
-end do
-print*,'hartree=', energy
+!energy=M_ZERO
+!do ist = 1, rdm%st%nst
+!  energy = energy  + M_HALF*occ(ist)*V_h(ist)
+!end do
+!print*,'hartree=', energy
 
-energy=M_ZERO
-do ist = 1, rdm%st%nst
-  energy = energy + occ(ist)*V_x(ist)
-end do
-print*,'exchange=', energy
+!energy=M_ZERO
+!do ist = 1, rdm%st%nst
+!  energy = energy + occ(ist)*V_x(ist)
+!end do
+!print*,'exchange=', energy
 
 energy=M_ZERO
 	
