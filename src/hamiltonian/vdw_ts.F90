@@ -307,15 +307,15 @@ contains
     !  end do
     !end do
 
-    do iatom = 1, geo%natoms
-      do jatom = 1, geo%natoms
-        call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr)
-        force(1:sb%dim, iatom) = force(1:sb%dim, iatom) - this%derivative_coeff(iatom)*dvadrr(1:sb%dim)
-        !if (iatom == jatom) then
-        print* , iatom, jatom, -this%derivative_coeff(iatom)*dvadrr(1:sb%dim)
-        !end if
-      end do
-    end do
+    !do iatom = 1, geo%natoms
+    !  do jatom = 1, geo%natoms
+    !    call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr)
+    !    force(1:sb%dim, iatom) = force(1:sb%dim, iatom) - this%derivative_coeff(iatom)*dvadrr(1:sb%dim)
+    !    !if (iatom == jatom) then
+    !    print* , iatom, jatom, -this%derivative_coeff(iatom)*dvadrr(1:sb%dim)
+    !    !end if
+    !  end do
+    !end do
 
     ! Calculate the potential
     potential = M_ZERO
