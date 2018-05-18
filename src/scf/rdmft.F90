@@ -211,6 +211,8 @@ contains
             enddo
             call states_set_state(states_save, gr%mesh, iorb, 1, dpsi)
           enddo
+          call density_calc (states_save,gr,states_save%rho)
+          ! if other quantities besides the densities and the states are need they also have to be recalculated here!
           call states_dump(restart_dump, states_save, gr, ierr, iter=iter) 
           
           call states_end(states_initial)
