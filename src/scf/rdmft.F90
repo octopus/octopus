@@ -218,9 +218,10 @@ contains
 		  
           SAFE_DEALLOCATE_A(dpsi)
           SAFE_DEALLOCATE_A(dpsi2)
+        else
+		  call states_dump(restart_dump, st, gr, ierr, iter=iter) 
         endif
-
-!        call states_dump(restart_dump, st, gr, ierr, iter=iter) 
+         
         if (ierr /= 0) then
           message(1) = 'Unable to write states wavefunctions.'
           call messages_warning(1)
