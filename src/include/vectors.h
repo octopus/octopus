@@ -37,7 +37,7 @@
 #define VEC_SCAL(aa) _mm512_set1_pd(aa)
 #define VEC_ZERO _mm512_setzero_pd()
 
-#define DEPTH 32
+#define DEPTH 16
 
 #elif defined(HAVE_M256D)
 #include <immintrin.h>
