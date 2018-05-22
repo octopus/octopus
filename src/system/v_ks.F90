@@ -430,6 +430,7 @@ contains
     !% S. Krieg, J. Chem. Phys. 132, 154104 (2010).
     !%End
     call parse_variable('VDWCorrection', OPTION__VDWCORRECTION__NONE, ks%vdw_correction)
+    ks%vdw_ts%vdw_correction = ks%vdw_correction
 
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
       call messages_experimental('VDWCorrection')
@@ -1101,7 +1102,7 @@ contains
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
           call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, ks%gr%sb, st, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
-
+          hm%vdw_ts=ks%vdw_ts
         case(OPTION__VDWCORRECTION__VDW_D3)
 
           SAFE_ALLOCATE(coords(1:3, geo%natoms))
@@ -1172,7 +1173,7 @@ contains
           end if
         end do
       end if
-
+      hm%ks_t=ks !!!!!!!!!!!!!!!11
       call profiling_out(prof)
       POP_SUB(v_ks_calc_start.v_a_xc)
     end subroutine v_a_xc

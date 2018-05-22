@@ -265,14 +265,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine forces_calculate(gr, geo, hm, st, t, dt, vdw_ts)
+  subroutine forces_calculate(gr, geo, hm, st, t, dt)
     type(grid_t),        intent(inout)   :: gr
     type(geometry_t),    intent(inout)   :: geo
     type(hamiltonian_t), intent(inout)   :: hm
     type(states_t),      intent(inout)   :: st
     FLOAT,     optional, intent(in)      :: t
     FLOAT,     optional, intent(in)      :: dt
-    type(vdw_ts_t), optional, intent(in) :: vdw_ts
+    !type(vdw_ts_t), optional, intent(in) :: vdw_ts
 
     integer :: j, iatom, idir
     FLOAT :: x(MAX_DIM), time, global_force(1:MAX_DIM)
@@ -301,10 +301,13 @@ contains
       geo%atom(iatom)%f_ii(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
       geo%atom(iatom)%f_vdw(1:gr%sb%dim) = hm%ep%vdw_forces(1:gr%sb%dim, iatom)
     end do
-    
-    if(  present(vdw_ts) ) then   
-      call vdw_ts_force_calculate(vdw_ts, geo, gr%der, gr%sb, st, st%rho)
-    end if 
+
+    if(hm%vdw_ts%vdw_correction /= OPTION__VDWCORRECTION__NONE) then 
+      select case(hm%vdw_ts%vdw_correction)
+        case(OPTION__VDWCORRECTION__VDW_TS)
+        call vdw_ts_force_calculate(hm%vdw_ts, geo, gr%der, gr%sb, st, st%rho)
+      end select
+    end if
 
     if(present(t)) then
       call epot_global_force(hm%ep, geo, time, global_force)

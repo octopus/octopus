@@ -58,7 +58,8 @@ module vdw_ts_oct_m
   
   type vdw_ts_t
     FLOAT, allocatable :: derivative_coeff(:)
-
+    integer            :: vdw_correction
+    
     private
     FLOAT, allocatable :: c6free(:)        !> Free atomic volumes for each atomic species.
     FLOAT, allocatable :: dpfree(:)        !> Free atomic static dipole polarizability for each atomic species.

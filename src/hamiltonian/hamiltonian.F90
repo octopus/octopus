@@ -69,6 +69,7 @@ module hamiltonian_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
+  use vdw_ts_oct_m
   use xc_oct_m
   use xc_functl_oct_m
   use XC_F90(lib_m)
@@ -189,6 +190,8 @@ module hamiltonian_oct_m
     type(scdm_t)  :: scdm
 
     logical :: time_zero
+
+    type(vdw_ts_t)  :: vdw_ts  !<needed while using vdw TS 
   end type hamiltonian_t
 
   integer, public, parameter :: &
