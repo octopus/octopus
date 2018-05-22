@@ -2413,9 +2413,9 @@ contains
       ikpt = states_dim_get_kpoint_index(st%d, ik)
       call zstates_calc_projections(gr%mesh, st, gs_st, ik, projections, gs_nst)
       do ist = 1, gs_nst
-        weight = st%d%kweights(ik) * gs_st%occ(ist, ik)/ st%smear%el_per_state 
+        weight = st%d%kweights(ik) * st%occ(ist, ik)/ st%smear%el_per_state 
         do uist = st%st_start, st%st_end
-          Nex_kpt(ikpt) = Nex_kpt(ikpt) - weight * gs_st%occ(uist, ik) * abs(projections(ist, uist))**2
+          Nex_kpt(ikpt) = Nex_kpt(ikpt) - weight * st%occ(uist, ik) * abs(projections(ist, uist))**2
         end do
       end do
       Nex_kpt(ikpt) = Nex_kpt(ikpt) + st%qtot*st%d%kweights(ik)
