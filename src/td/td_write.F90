@@ -2427,6 +2427,8 @@ contains
    end if
 #endif  
 
+  Nex = sum(Nex_kpt)
+
   if(mpi_grp_is_root(mpi_world)) then
     call write_iter_start(out_nex)
     call write_iter_double(out_nex, Nex, 1)
