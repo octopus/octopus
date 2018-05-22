@@ -41,6 +41,7 @@
    end if
 
    do ik = kpt%start, kpt%end
+
      call X(loewdin_overlap)(basis, overlap, ik)
      if(debug%info) call X(print_matrix)(basis, 'overlap', overlap, ik)
 
@@ -112,25 +113,6 @@
 
   overlap(1:basis%size,1:basis%size) = R_TOTYPE(M_ZERO)
 
-  if(simul_box_is_periodic(os%sphere%mesh%sb))then
-    if(.not.basis%submeshforperiodic) then 
-      do ind = 1, basis%size
-        ios  = basis%global2os(1,ind)
-        iorb = basis%global2os(2,ind)
-        os => basis%orbsets(ios)
-        os%eorb_mesh(:,:,iorb,ik) = M_Z0
-        do idim = 1, os%ndim
-          do is = 1, os%sphere%np
-            os%eorb_mesh(os%sphere%map(is),idim,iorb,ik) = os%eorb_mesh(os%sphere%map(is),idim,iorb,ik) &
-                                                  + os%zorb(is,idim,iorb)*R_CONJ(os%phase(is, ik))
-          end do
-        end do
-      end do
-    else
-      call messages_not_implemented("Lowdin orthogonalization with submeshes.")
-    end if
-  end if
- 
   do ind = 1, basis%size
     ios  = basis%global2os(1,ind)
     iorb = basis%global2os(2,ind)
