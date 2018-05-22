@@ -26,6 +26,7 @@ module vdw_ts_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
+  use hamiltonian_oct_m
   use hirshfeld_oct_m
   use ion_interaction_oct_m
   use io_oct_m !for wrting
@@ -54,11 +55,11 @@ module vdw_ts_oct_m
     vdw_ts_end,                           &
     vdw_ts_write_c6ab,                    &
     vdw_ts_force_calculate,               &
-    vdw_ts_calculate
+    vdw_ts_calculate,                     &
+    vdw_ts_copy_deriv_coeff
   
   type vdw_ts_t
     FLOAT, allocatable :: derivative_coeff(:)
-    integer            :: vdw_correction
     
     private
     FLOAT, allocatable :: c6free(:)        !> Free atomic volumes for each atomic species.
@@ -124,7 +125,6 @@ contains
     SAFE_ALLOCATE(this%c6abfree(1:geo%nspecies, 1:geo%nspecies))
     SAFE_ALLOCATE(this%c6ab(1:geo%natoms, 1:geo%natoms))
     SAFE_ALLOCATE(this%derivative_coeff(1:geo%natoms))
-
 
     do ispecies = 1, geo%nspecies
       call get_vdw_param(species_label(geo%species(ispecies)), &
@@ -297,26 +297,6 @@ contains
       SAFE_DEALLOCATE_A(coordinates)
       SAFE_DEALLOCATE_A(zatom)
     end if
-      
-    ! Add the extra term for the force 
-    !do iatom = 1, geo%natoms
-    !  do jatom = 1, iatom
-    !    call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr)
-    !    force(1:sb%dim, iatom) = force(1:sb%dim, iatom) - derivative_coeff(iatom)*dvadrr(1:sb%dim)
-    !    if (iatom == jatom) cycle
-    !    force(1:sb%dim, jatom) = force(1:sb%dim, jatom) + derivative_coeff(iatom)*dvadrr(1:sb%dim)
-    !  end do
-    !end do
-
-    !do iatom = 1, geo%natoms
-    !  do jatom = 1, geo%natoms
-    !    call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr)
-    !    force(1:sb%dim, iatom) = force(1:sb%dim, iatom) - this%derivative_coeff(iatom)*dvadrr(1:sb%dim)
-    !    !if (iatom == jatom) then
-    !    print* , iatom, jatom, -this%derivative_coeff(iatom)*dvadrr(1:sb%dim)
-    !    !end if
-    !  end do
-    !end do
 
     ! Calculate the potential
     potential = M_ZERO
@@ -341,8 +321,25 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_force_calculate(vdw_ts, geo, der, sb, st, density)
-    type(vdw_ts_t),      intent(in)    :: vdw_ts
+  subroutine vdw_ts_copy_deriv_coeff(hm, vdw_ts)
+    type(hamiltonian_t), intent(inout) :: hm
+    type(vdw_ts_t),         intent(in) :: vdw_ts
+
+    PUSH_SUB(vdw_ts_copy_deriv_coeff)
+
+    if (.not. allocated(hm%derivative_coeff)) then
+      SAFE_ALLOCATE(hm%derivative_coeff(1:hm%geo%natoms))
+    end if
+
+    hm%derivative_coeff(1:hm%geo%natoms)=vdw_ts%derivative_coeff(1:hm%geo%natoms)
+
+    POP_SUB(vdw_ts_copy_deriv_coeff)
+  end subroutine vdw_ts_copy_deriv_coeff
+
+  !------------------------------------------
+
+  subroutine vdw_ts_force_calculate(derivative_coeff, geo, der, sb, st, density)
+    FLOAT,               intent(in)    :: derivative_coeff(:)
     type(geometry_t),    intent(inout) :: geo
     type(derivatives_t), intent(in)    :: der
     type(simul_box_t),   intent(in)    :: sb
@@ -362,8 +359,8 @@ contains
     do iatom = 1, geo%natoms
       do jatom = 1, geo%natoms
         call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr)
-        geo%atom(iatom)%f_vdw(1:sb%dim) = geo%atom(iatom)%f_vdw(1:sb%dim) - vdw_ts%derivative_coeff(iatom)*dvadrr(1:sb%dim)
-        print* , iatom, jatom, -vdw_ts%derivative_coeff(iatom)*dvadrr(1:sb%dim)
+        geo%atom(iatom)%f_vdw(1:sb%dim) = geo%atom(iatom)%f_vdw(1:sb%dim) - derivative_coeff(iatom)*dvadrr(1:sb%dim)
+        !print* , iatom, jatom, -derivative_coeff(iatom)*dvadrr(1:sb%dim)
       end do
     end do
 
@@ -371,7 +368,7 @@ contains
 
     SAFE_DEALLOCATE_A(dvadrr)
  
-    PUSH_SUB(vdw_ts_force_calculate)
+    POP_SUB(vdw_ts_force_calculate)
   end subroutine vdw_ts_force_calculate
 
 

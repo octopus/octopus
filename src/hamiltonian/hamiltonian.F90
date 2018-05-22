@@ -69,7 +69,6 @@ module hamiltonian_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
-  use vdw_ts_oct_m
   use xc_oct_m
   use xc_functl_oct_m
   use XC_F90(lib_m)
@@ -191,7 +190,7 @@ module hamiltonian_oct_m
 
     logical :: time_zero
 
-    type(vdw_ts_t)  :: vdw_ts  !<needed while using vdw TS 
+    FLOAT, allocatable :: derivative_coeff(:)  !<needed while using vdw TS 
   end type hamiltonian_t
 
   integer, public, parameter :: &
@@ -587,6 +586,11 @@ contains
     SAFE_DEALLOCATE_P(hm%energy)
      
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
+     
+    ! If vdw TS is used
+    if (allocated(hm%derivative_coeff)) then
+      SAFE_DEALLOCATE_A(hm%derivative_coeff) 
+    end if
 
     POP_SUB(hamiltonian_end)
   end subroutine hamiltonian_end

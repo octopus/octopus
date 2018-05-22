@@ -272,7 +272,6 @@ contains
     type(states_t),      intent(inout)   :: st
     FLOAT,     optional, intent(in)      :: t
     FLOAT,     optional, intent(in)      :: dt
-    !type(vdw_ts_t), optional, intent(in) :: vdw_ts
 
     integer :: j, iatom, idir
     FLOAT :: x(MAX_DIM), time, global_force(1:MAX_DIM)
@@ -302,12 +301,8 @@ contains
       geo%atom(iatom)%f_vdw(1:gr%sb%dim) = hm%ep%vdw_forces(1:gr%sb%dim, iatom)
     end do
 
-    if(hm%vdw_ts%vdw_correction /= OPTION__VDWCORRECTION__NONE) then 
-      select case(hm%vdw_ts%vdw_correction)
-        case(OPTION__VDWCORRECTION__VDW_TS)
-        call vdw_ts_force_calculate(hm%vdw_ts, geo, gr%der, gr%sb, st, st%rho)
-      end select
-    end if
+    ! If VDW TS is used, an extra term for the force must be computed
+    if (allocated(hm%derivative_coeff)) call vdw_ts_force_calculate(hm%derivative_coeff, geo, gr%der, gr%sb, st, st%rho)
 
     if(present(t)) then
       call epot_global_force(hm%ep, geo, time, global_force)

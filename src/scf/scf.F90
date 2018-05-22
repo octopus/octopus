@@ -994,16 +994,6 @@ contains
     end if
 
     ! calculate forces
-  
-    !if(scf%calc_force) then
-    !  select case(ks%vdw_correction)
-    !    case(OPTION__VDWCORRECTION__VDW_TS)
-    !    call forces_calculate(gr, geo, hm, st, vdw_ts = ks%vdw_ts)
-    !    case default  
-    !    call forces_calculate(gr, geo, hm, st)
-    !  end select
-    !end if
-
     if(scf%calc_force) then
       call forces_calculate(gr, geo, hm, st)
     end if

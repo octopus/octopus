@@ -430,7 +430,6 @@ contains
     !% S. Krieg, J. Chem. Phys. 132, 154104 (2010).
     !%End
     call parse_variable('VDWCorrection', OPTION__VDWCORRECTION__NONE, ks%vdw_correction)
-    ks%vdw_ts%vdw_correction = ks%vdw_correction
 
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
       call messages_experimental('VDWCorrection')
@@ -1102,7 +1101,7 @@ contains
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
           call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, ks%gr%sb, st, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
-          hm%vdw_ts=ks%vdw_ts
+           
         case(OPTION__VDWCORRECTION__VDW_D3)
 
           SAFE_ALLOCATE(coords(1:3, geo%natoms))
@@ -1173,7 +1172,6 @@ contains
           end if
         end do
       end if
-      hm%ks_t=ks !!!!!!!!!!!!!!!11
       call profiling_out(prof)
       POP_SUB(v_ks_calc_start.v_a_xc)
     end subroutine v_a_xc
@@ -1197,6 +1195,14 @@ contains
     if(ks%frozen_hxc) then
       POP_SUB(v_ks_calc_finish)
       return
+    end if
+
+    ! If VDW TS is used, some coefficiant have to be copied to compute accurate forces:
+    if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
+      select case(ks%vdw_correction)
+      case(OPTION__VDWCORRECTION__VDW_TS)
+        call vdw_ts_copy_deriv_coeff(hm, ks%vdw_ts)
+      end select
     end if
 
     !change the pointer to the energy object
