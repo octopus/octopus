@@ -128,7 +128,6 @@ AC_MSG_RESULT($acx_m256d)])
 
 ################################################################
 # Check whether the hardware accepts FMA3 instructions
-# FIXME: the test program here is not considered legal by compilers regardless.
 # ----------------------------------
 AC_DEFUN([ACX_FMA3],
 [AC_MSG_CHECKING([whether FMA3 instructions can be used])
@@ -136,13 +135,19 @@ acx_save_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS"
 AC_RUN_IFELSE([AC_LANG_PROGRAM( [
 #include <x86intrin.h>
+#include <stdio.h>
 ], [
-__m128d a __attribute__((aligned(16)));
-__m128d b __attribute__((aligned(16)));
-__m128d c __attribute__((aligned(16)));
-__m128d d __attribute__((aligned(16)));
-d = (__m128d) _mm256_fmadd_pd(a, b, c);
- ])], 
+changequote(,)
+__m256d a __attribute__((aligned(32)));
+__m256d b __attribute__((aligned(32)));
+__m256d c __attribute__((aligned(32)));
+__m256d d __attribute__((aligned(32)));
+double e[4];
+d = (__m256d) _mm256_fmadd_pd(a, b, c);
+_mm256_storeu_pd(e, d);
+printf("",  *e);
+changequote([, ])
+ ])],
  [acx_fma3=yes], [acx_fma3=no], [acx_fma3=no;echo -n "cross-compiling; assuming... "])
 CFLAGS="$acx_save_CFLAGS"
 AC_MSG_RESULT($acx_fma3)])
@@ -196,6 +201,33 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM( [
  ]])], 
  [AC_DEFINE(HAVE_BLUE_GENE_Q, 1, [compiler supports Blue Gene Q intrinsics]) [acx_blue_gene_q=yes]], [acx_blue_gene_q=no])
 AC_MSG_RESULT($acx_blue_gene_q)])
+
+################################################################
+# Check whether the hardware accepts AVX512 instructions
+# ----------------------------------
+AC_DEFUN([ACX_AVX512],
+[AC_MSG_CHECKING([whether AVX512 instructions can be used])
+acx_save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS"
+AC_RUN_IFELSE([AC_LANG_PROGRAM( [
+#include <stdio.h>
+#include <immintrin.h>
+], [
+changequote(,)
+__m512d a __attribute__((aligned(64)));
+__m512d b __attribute__((aligned(64)));
+__m512d c __attribute__((aligned(64)));
+__m512d d __attribute__((aligned(64)));
+double e[8];
+d = (__m512d) _mm512_fmadd_pd(a, b, c);
+_mm512_storeu_pd(e, d);
+printf("",  *e);
+changequote([, ])
+ ])],
+ [acx_avx512=yes], [acx_avx512=no], [acx_avx512=no;echo -n "cross-compiling; assuming... "])
+CFLAGS="$acx_save_CFLAGS"
+AC_MSG_RESULT($acx_avx512)])
+
 
 #################################################################
 # Enables architecture-specific code
@@ -261,23 +293,23 @@ x86_64)
 ACX_SSE2_WRAPPER
 
 #FMA3
-#AC_ARG_ENABLE(fma3, AS_HELP_STRING([--enable-fma3], [Enable the use of FMA3 vectorial instructions (x86_64)]), 
-#	[ac_enable_fma3=${enableval}])
-#if test "x$vector" = "xno" ; then
-# ac_enable_fma3=no
-#fi
-#if test "x$ac_enable_fma3" = "x" ; then
-#  ACX_FMA3
-#elif test "x$ac_enable_fma3" = "xyes" ; then
-#  AC_MSG_NOTICE([FMA3 instruction support enabled])
-#  acx_fma3=yes
-#else # no
-#  AC_MSG_NOTICE([FMA3 instruction support disabled])
-#  acx_fma3=no
-#fi
-#if test "x$acx_fma3" = "xyes" ; then
-#  AC_DEFINE(HAVE_FMA3, 1, [compiler and hardware supports the FMA3 instructions])
-#fi
+AC_ARG_ENABLE(fma3, AS_HELP_STRING([--enable-fma3], [Enable the use of FMA3 vectorial instructions (x86_64)]),
+	[ac_enable_fma3=${enableval}])
+if test "x$vector" = "xno" ; then
+ ac_enable_fma3=no
+fi
+if test "x$ac_enable_fma3" = "x" ; then
+  ACX_FMA3
+elif test "x$ac_enable_fma3" = "xyes" ; then
+  AC_MSG_NOTICE([FMA3 instruction support enabled])
+  acx_fma3=yes
+else # no
+  AC_MSG_NOTICE([FMA3 instruction support disabled])
+  acx_fma3=no
+fi
+if test "x$acx_fma3" = "xyes" ; then
+  AC_DEFINE(HAVE_FMA3, 1, [compiler and hardware supports the FMA3 instructions])
+fi
 
 #FMA4
 AC_ARG_ENABLE(fma4, AS_HELP_STRING([--enable-fma4], [Enable the use of FMA4 vectorial instructions (x86_64)]), 
@@ -320,6 +352,27 @@ if test "x$acx_m256d" = "xyes" ; then
   AC_DEFINE(HAVE_M256D, 1, [compiler and hardware support the m256d type and AVX instructions])
   vector=$acx_m256d
   vector_type="(avx)"
+fi
+
+#AVX512
+AC_ARG_ENABLE(avx512, AS_HELP_STRING([--enable-avx512], [Enable the use of AVX512 vectorial instructions (x86_64)]),
+	[ac_enable_avx512=${enableval}])
+if test "x$vector" = "xno" ; then
+ ac_enable_avx512=no
+fi
+if test "x$ac_enable_avx512" = "x" ; then
+  ACX_AVX512
+elif test "x$ac_enable_avx512" = "xyes" ; then
+  AC_MSG_NOTICE([AVX instruction support enabled])
+  acx_avx512=yes
+else # no
+  AC_MSG_NOTICE([AVX instruction support disabled])
+  acx_avx512=no
+fi
+if test "x$acx_avx512" = "xyes" ; then
+  AC_DEFINE(HAVE_M512D, 1, [compiler and hardware support the m512d type and AVX512 instructions])
+  vector=$acx_avx512
+  vector_type="(avx512)"
 fi
 ;;
 ##########################################

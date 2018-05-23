@@ -582,7 +582,7 @@ contains
     type(states_t),  intent(in)  :: st
     type(mesh_t),    intent(in)  :: mesh
     FLOAT,           intent(out) :: rho(:,:)
-    FLOAT, optional, pointer, intent(out) :: Imrho(:,:)
+    FLOAT, optional, pointer, intent(inout) :: Imrho(:,:)
 
     FLOAT, dimension(:,:), pointer :: density
     integer :: is, ip
