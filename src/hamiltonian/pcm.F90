@@ -63,7 +63,10 @@ module pcm_oct_m
     pcm_v_cav_li, &
     pcm_update,             &
     pcm_calc_pot_rs,				&
-    pcm_charge_density
+    pcm_charge_density,     &
+    pcm_dipole,             &
+    pcm_field,             &
+    pcm_eps
 
 
   !> The cavity hosting the solute molecule is built from a set of 
@@ -3317,6 +3320,128 @@ contains
         end select
 
   end function pcm_get_vdw_radius
+
+
+  ! -----------------------------------------------------------------------------
+  !> Computes the dipole moment mu_pcm due to a distribution of charges q_pcm
+  subroutine pcm_dipole(mu_pcm, q_pcm, tess, n_tess)
+    FLOAT,           intent(out) :: mu_pcm(:) !< (1:pcm_dim_space)
+    FLOAT,           intent(in)  :: q_pcm(:)  !< (1:n_tess)
+    integer,         intent(in)  :: n_tess
+    type(pcm_tessera_t), intent(in)  :: tess(:) !< (1:n_tess)
+
+    integer :: ia
+
+    PUSH_SUB(pcm_dipole)
+
+    mu_pcm = M_ZERO
+
+    do ia = 1, n_tess
+
+      mu_pcm = mu_pcm + q_pcm(ia) * tess(ia)%point
+
+    end do
+
+    POP_SUB(pcm_dipole)
+  end subroutine pcm_dipole
+
+  ! -----------------------------------------------------------------------------
+  !> Computes the field e_pcm at the reference point ref_point due to a distribution of charges q_pcm
+  subroutine pcm_field(e_pcm, q_pcm, ref_point, tess, n_tess)
+    FLOAT,           intent(out) :: e_pcm(:) !< (1:pcm_dim_space)
+    FLOAT,           intent(in)  :: q_pcm(:)  !< (1:n_tess)
+    integer,         intent(in)  :: n_tess
+    type(pcm_tessera_t), intent(in)  :: tess(:) !< (1:n_tess)
+
+    FLOAT,           intent(in) :: ref_point(1:3)
+
+    integer :: ia
+
+    PUSH_SUB(pcm_field)
+
+    e_pcm = M_ZERO
+
+    do ia = 1, n_tess
+
+      e_pcm = e_pcm + q_pcm(ia) * ( ref_point - tess(ia)%point ) / NORM2( ref_point - tess(ia)%point )**3
+
+    end do
+
+    POP_SUB(pcm_field)
+  end subroutine pcm_field
+
+  ! -----------------------------------------------------------------------------
+  ! Driver function to evaluate eps(omega)
+  subroutine pcm_eps(eps, omega)
+    save
+    CMPLX, intent(out) :: eps
+    FLOAT, intent(in) :: omega
+    character(len=3) :: which_eps
+    type(debye_param_t) :: deb
+    type(drude_param_t) :: drl
+    logical :: eom
+    logical :: noneq
+    logical :: firsttime = .true.
+
+    PUSH_SUB(pcm_eps)
+
+    ! re-parsing useful PCM data
+    if ( firsttime ) then
+      call parse_variable('PCMEpsilonModel', 'deb', which_eps)
+      call parse_variable('PCMStaticEpsilon' , M_ONE, deb%eps_0)
+      call parse_variable('PCMDynamicEpsilon', deb%eps_0, deb%eps_d)
+      call parse_variable('PCMDebyeRelaxTime', M_ZERO, deb%tau)
+      call parse_variable('PCMDrudeLOmega', sqrt(M_ONE/(deb%eps_0-M_ONE)), drl%w0)
+      call parse_variable('PCMDrudeLDamping', M_ZERO, drl%gm)
+      call parse_variable('PCMEoM' , .false., eom)
+      call parse_variable('PCMNonequilibrium' , .false., noneq)
+      firsttime = .false.
+    end if
+
+    if ( eom ) then
+      if ( which_eps == 'deb') then
+       call pcm_eps_deb(eps, deb, omega)
+      else if (which_eps == 'drl') then
+       call pcm_eps_drl(eps, drl, omega)
+      end if
+    else if( noneq .and. (.not.eom) ) then
+      eps = deb%eps_d
+    else if( (.not.noneq) .and. (.not.eom) ) then
+      eps = deb%eps_0
+    end if
+
+    POP_SUB(pcm_eps)
+  end subroutine pcm_eps
+
+  ! -----------------------------------------------------------------------------
+  ! Debye dielectric function
+  subroutine pcm_eps_deb(eps, deb, omega)
+    CMPLX, intent(out) :: eps
+    type(debye_param_t), intent(in) :: deb
+    FLOAT, intent(in) :: omega
+
+    PUSH_SUB(pcm_eps_deb)
+
+    eps = deb%eps_d +  (deb%eps_0-deb%eps_d)/(1+(omega*deb%tau)**2) +&
+    M_zI*omega*deb%tau*(deb%eps_0-deb%eps_d)/(1+(omega*deb%tau)**2)
+
+    POP_SUB(pcm_eps_deb)
+  end subroutine pcm_eps_deb
+
+  ! -----------------------------------------------------------------------------
+  ! Drude-Lorentz dielectric function
+  subroutine pcm_eps_drl(eps, drl, omega)
+    CMPLX, intent(out) :: eps
+    type(drude_param_t), intent(in) :: drl
+    FLOAT, intent(in) :: omega
+
+    PUSH_SUB(pcm_eps_drl)
+
+    eps = M_ONE+(drl%w0**2-omega**2)*drl%aa/((drl%w0**2-omega**2)**2+(omega*drl%gm)**2) + &
+                   M_zI*omega*drl%gm*drl%aa/((drl%w0**2-omega**2)**2+(omega*drl%gm)**2)
+
+    POP_SUB(pcm_eps_drl)
+  end subroutine pcm_eps_drl
 
 end module pcm_oct_m
 
