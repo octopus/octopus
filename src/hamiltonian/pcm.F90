@@ -3385,16 +3385,33 @@ contains
 
     PUSH_SUB(pcm_eps)
 
-    ! re-parsing useful PCM data
+    ! parsing and re-printing to output useful PCM data
     if ( firsttime ) then
-      call parse_variable('PCMEpsilonModel', 'deb', which_eps)
-      call parse_variable('PCMStaticEpsilon' , M_ONE, deb%eps_0)
-      call parse_variable('PCMDynamicEpsilon', deb%eps_0, deb%eps_d)
-      call parse_variable('PCMDebyeRelaxTime', M_ZERO, deb%tau)
-      call parse_variable('PCMDrudeLOmega', sqrt(M_ONE/(deb%eps_0-M_ONE)), drl%w0)
-      call parse_variable('PCMDrudeLDamping', M_ZERO, drl%gm)
       call parse_variable('PCMEoM' , .false., eom)
+      call messages_print_var_value(stdout, "PCMEoM", eom)
       call parse_variable('PCMNonequilibrium' , .false., noneq)
+      if ( eom ) noneq = .true.
+      call messages_print_var_value(stdout, "PCMNonequilibrium", noneq)
+      call parse_variable('PCMStaticEpsilon' , M_ONE, deb%eps_0)
+      call messages_print_var_value(stdout, "PCMStaticEpsilon", deb%eps_0)
+      if ( eom ) then
+        call parse_variable('PCMEpsilonModel', 'deb', which_eps)
+        call messages_print_var_value(stdout, "PCMEpsilonModel", which_eps)
+        if ( which_eps == 'deb' ) then
+          call parse_variable('PCMDynamicEpsilon', deb%eps_0, deb%eps_d)
+          call messages_print_var_value(stdout, "PCMDynamicEpsilon", deb%eps_d)
+          call parse_variable('PCMDebyeRelaxTime', M_ZERO, deb%tau)
+          call messages_print_var_value(stdout, "PCMDebyeRelaxTime", deb%tau)
+        else if( which_eps == 'drl' ) then
+          call parse_variable('PCMDrudeLOmega', sqrt(M_ONE/(deb%eps_0-M_ONE)), drl%w0)
+          call messages_print_var_value(stdout, "PCMDrudeLOmega", drl%w0)
+          call parse_variable('PCMDrudeLDamping', M_ZERO, drl%gm)
+          call messages_print_var_value(stdout, "PCMDrudeLDamping", drl%gm)
+        end if
+      else if ( noneq .and. (.not.eom) ) then
+        call parse_variable('PCMDynamicEpsilon', deb%eps_0, deb%eps_d)
+        call messages_print_var_value(stdout, "PCMDynamicEpsilon", deb%eps_d)
+      end if
       firsttime = .false.
     end if
 
