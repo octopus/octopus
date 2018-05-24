@@ -4,12 +4,13 @@ BoxShape = parallelepiped
 ExperimentalFeatures = yes
 
 EigenSolver = rmmdiis
+#EigenSolverTolerance = 1.0e-9
+#EigensolverMaxIter = 50
 ConvRelDens = 1.0e-7
 
 a = 7.8809
 %Species
 "Ni" | species_pseudo | hubbard_l | 2 
-"O"  | species_pseudo | hubbard_l | 1 
 %
 PseudopotentialSet = hscv_pbe
 DFTULevel = dft_u_acbn0
@@ -50,8 +51,8 @@ LCAOStart= lcao_states
 2 | 2 | 1
 %
 
-ExtraStates = 8
+ExtraStates = 10
 
 FilterPotentials = filter_none
-AOTruncation = ao_box
+AOThreshold = 0.05
 OutputLDA_U = occ_matrices + effectiveU
