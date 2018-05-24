@@ -641,7 +641,7 @@ contains
 
     ! ---------------------------------------------------------
 
-  subroutine states_write_bandstructure(dir, nst, st, sb, geo, mesh, phase, uniform_vector_potential, vector_potential)
+  subroutine states_write_bandstructure(dir, nst, st, sb, geo, mesh, phase, vec_pot, vec_pot_var)
     character(len=*),  intent(in)             :: dir
     integer,           intent(in)             :: nst
     type(states_t),    intent(in)             :: st
@@ -649,8 +649,8 @@ contains
     type(geometry_t), target, intent(in)      :: geo
     type(mesh_t),             intent(in)      :: mesh
     CMPLX, pointer                            :: phase(:, :)
-    FLOAT, allocatable, intent(in)            :: uniform_vector_potential(:) !< (sb%dim)
-    FLOAT, allocatable, intent(in)            :: vector_potential(:, :) !< (1:sb%dim, 1:ns)
+    FLOAT, optional, allocatable, intent(in)  :: vec_pot(:) !< (sb%dim)
+    FLOAT, optional, allocatable, intent(in)  :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
     integer :: idir, ist, ik, ns, is,npath
     integer, allocatable :: iunit(:)
@@ -772,17 +772,23 @@ contains
                                                 os, iorb, os%radius, os%ndim)
               norm = M_ZERO
               do idim = 1, os%ndim
-                norm = norm + dsm_nrm2(os%sphere, os%dorb(1:os%sphere%np,idim,iorb))
+                norm = norm + dsm_nrm2(os%sphere, os%dorb(1:os%sphere%np,idim,iorb))**2
               end do
-             norm = sqrt(norm)
+              norm = sqrt(norm)
+              do idim = 1, os%ndim
+                os%dorb(1:os%sphere%np,idim,iorb) =  os%dorb(1:os%sphere%np,idim,iorb)/norm
+              end do
             else
               call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
                                                 os, iorb, os%radius, os%ndim)
               norm = M_ZERO
               do idim = 1, os%ndim
-                norm = norm + zsm_nrm2(os%sphere, os%zorb(1:os%sphere%np,idim,iorb))
+                norm = norm + zsm_nrm2(os%sphere, os%zorb(1:os%sphere%np,idim,iorb))**2
               end do
-             norm = sqrt(norm)
+              norm = sqrt(norm)
+              do idim = 1, os%ndim
+                os%zorb(1:os%sphere%np,idim,iorb) =  os%zorb(1:os%sphere%np,idim,iorb)/norm
+              end do
             end if
           end do !iorb
 
@@ -799,7 +805,7 @@ contains
               os%eorb_submesh(:,:,:,:) = M_ZERO
             end if
             call orbitalset_update_phase(os, sb, st%d%kpt, (st%d%ispin==SPIN_POLARIZED), &
-                              vec_pot = uniform_vector_potential, vec_pot_var = vector_potential)
+                              vec_pot, vec_pot_var)
           end if
 
           if(states_are_real(st)) then
@@ -822,12 +828,8 @@ contains
             else
               call states_get_state(st, mesh, ist, ik, zpsi )
               if(associated(phase)) then
-              ! Apply the phase that contains both the k-point and vector-potential terms.
-                do idim = 1, st%d%dim
-                  forall(ip = 1:mesh%np)
-                    zpsi(ip, idim) = phase(ip, ik)*zpsi(ip, idim)
-                  end forall
-                end do
+                ! Apply the phase that contains both the k-point and vector-potential terms.
+                call states_set_phase(st%d, zpsi, phase(:,ik), mesh%np, .false.)
               end if
               call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(phase), &
                                  zdot(1:st%d%dim,1:os%norbs))
