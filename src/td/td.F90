@@ -759,7 +759,7 @@ contains
 
         !In this case we should reload GS wavefunctions 
         if(.not.fromScratch) then
-          call messages_not_implemented("TDFreezeOccupations with FromScratch=no")
+          call messages_not_implemented("TDFreezeHXC with FromScratch=no")
         end if
       end if
 
@@ -774,7 +774,7 @@ contains
       call states_fermi(st, gr%mesh)
       call energy_calc_total(hm, gr, st)
 
-      !%Variable TDFreezeOccupations
+      !%Variable TDFreezeDFTUOccupations
       !%Type logical
       !%Default no
       !%Section Time-Dependent
@@ -782,9 +782,9 @@ contains
       !% The occupation matrices than enters in the LDA+U potential
       !% are not evolved during the time evolution.
       !%End
-      call parse_variable('TDFreezeOccupations', .false., freeze_occ)
+      call parse_variable('TDFreezeDFTUOccupations', .false., freeze_occ)
       if(freeze_occ) then
-        write(message(1),'(a)') 'Info: Freezing occupation matrices that enters in the DFT+U potential.'
+        write(message(1),'(a)') 'Info: Freezing DFT+U occupation matrices that enters in the DFT+U potential.'
         call messages_info(1)
         call lda_u_freeze_occ(hm%lda_u)
 
