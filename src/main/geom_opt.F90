@@ -27,7 +27,6 @@ module geom_opt_oct_m
   use io_oct_m
   use io_function_oct_m
   use lcao_oct_m
-  use lda_u_oct_m
   use loct_oct_m
   use parser_oct_m
   use mesh_oct_m
