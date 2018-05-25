@@ -214,16 +214,7 @@ contains
           call density_calc (states_save,gr,states_save%rho)
           ! if other quantities besides the densities and the states are need they also have to be recalculated here!
           call states_dump(restart_dump, states_save, gr, ierr, iter=iter) 
-          
-!          write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
-!          call output_all(outp, gr, geo, states_save, hm, ks, dirname)
-          
-!! write output for iterations if requested
-!if(outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
-!  .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
-!  write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
-!  call output_all(outp, gr, geo, states_save, hm, ks, dirname)
-!end if
+
           if ((conv .or. iter == max_iter)) then
             call states_copy(st, states_save)
           endif
