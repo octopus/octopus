@@ -50,7 +50,6 @@ module hamiltonian_oct_m
   use messages_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
-  use multicomm_oct_m
   use oct_exchange_oct_m
   use parser_oct_m
   use par_vec_oct_m
@@ -216,7 +215,7 @@ module hamiltonian_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, xc_flags, mc, &
+  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, xc_flags, &
         family_is_mgga_with_exc, subsys_hm)
     type(hamiltonian_t),                        intent(out)   :: hm
     type(grid_t),                       target, intent(inout) :: gr
@@ -225,7 +224,6 @@ contains
     integer,                                    intent(in)    :: theory_level
     integer,                                    intent(in)    :: xc_family
     integer,                                    intent(in)    :: xc_flags
-    type(multicomm_t),                          intent(in)    :: mc
     logical,                                    intent(in)    :: family_is_mgga_with_exc
     type(base_hamiltonian_t), optional, target, intent(in)    :: subsys_hm
 
@@ -458,7 +456,7 @@ contains
     call lda_u_nullify(hm%lda_u)
     if(hm%lda_u_level /= DFT_U_NONE) then
       call messages_experimental('DFT+U')
-      call lda_u_init(hm%lda_u, hm%lda_u_level, gr, geo, st, mc)
+      call lda_u_init(hm%lda_u, hm%lda_u_level, gr, geo, st)
     end if
  
 

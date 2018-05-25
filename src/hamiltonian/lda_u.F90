@@ -38,7 +38,6 @@ module lda_u_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use multicomm_oct_m
   use mpi_oct_m
   use orbitalbasis_oct_m
   use orbitalset_oct_m
@@ -164,13 +163,12 @@ contains
 
  end subroutine lda_u_nullify
 
- subroutine lda_u_init(this, level, gr, geo, st, mc)
+ subroutine lda_u_init(this, level, gr, geo, st)
   type(lda_u_t),             intent(inout) :: this
   integer,                   intent(in)    :: level
   type(grid_t),              intent(in)    :: gr
   type(geometry_t), target,  intent(in)    :: geo
   type(states_t),            intent(in)    :: st
-  type(multicomm_t),         intent(in)    :: mc
 
   logical :: complex_coulomb_integrals
   integer :: ios

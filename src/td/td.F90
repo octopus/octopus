@@ -387,7 +387,7 @@ contains
         call lda_u_end(hm%lda_u)
         !complex wfs are required for Ehrenfest
         call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX, alloc_Left = cmplxscl)
-        call lda_u_init(hm%lda_u, hm%lda_u_level, gr, geo, st, sys%mc) 
+        call lda_u_init(hm%lda_u, hm%lda_u_level, gr, geo, st) 
       else
         !complex wfs are required for Ehrenfest
         call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX, alloc_Left = cmplxscl)

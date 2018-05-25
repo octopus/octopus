@@ -32,7 +32,6 @@ module xc_ks_inversion_oct_m
   use mesh_function_oct_m 
   use mesh_oct_m 
   use messages_oct_m 
-  use multicomm_oct_m
   use parser_oct_m 
   use poisson_oct_m 
   use profiling_oct_m 
@@ -92,12 +91,11 @@ module xc_ks_inversion_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_init(ks_inv, gr, geo, st, mc)
+  subroutine xc_ks_inversion_init(ks_inv, gr, geo, st)
     type(xc_ks_inversion_t), intent(out)   :: ks_inv
     type(grid_t),            intent(inout) :: gr
     type(geometry_t),        intent(inout) :: geo
     type(states_t),          intent(in)    :: st
-    type(multicomm_t),       intent(in)    :: mc
 
     PUSH_SUB(xc_ks_inversion_init)
 
@@ -168,7 +166,7 @@ contains
       ! initialize densities, hamiltonian and eigensolver
       call states_densities_init(ks_inv%aux_st, gr, geo)
       call hamiltonian_init(ks_inv%aux_hm, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, &
-                            XC_FAMILY_NONE, XC_FLAGS_NONE, mc, .false.)
+                            XC_FAMILY_NONE, XC_FLAGS_NONE, .false.)
       call eigensolver_init(ks_inv%eigensolver, gr, ks_inv%aux_st)
     end if
 

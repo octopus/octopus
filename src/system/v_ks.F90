@@ -387,7 +387,7 @@ contains
         call xc_oep_init(ks%oep, ks%xc_family, gr, st)
       end if
       if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_init(ks%ks_inversion, gr, geo, st, mc)
+        call xc_ks_inversion_init(ks%ks_inversion, gr, geo, st)
       end if
     end select
 

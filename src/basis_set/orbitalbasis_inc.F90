@@ -300,7 +300,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skipSorb, useAllOrb
 
   do ios = 1, this%norbsets
     if(this%orbsets(ios)%sphere%np == -1) then
-       write(message(1),'(a,a4,i1,a1,a)')    'The orbital ',trim(species_label(this%orbsets(ios)%spec)), &
+       write(message(1),'(a,a4,i1,a1,a)')    'Internal error: the orbital ',trim(species_label(this%orbsets(ios)%spec)), &
                       this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), ' has no grid point.'
        write(message(2),'(a)') 'Change the input file or use a pseudopotential that contains these orbitals.'
        call messages_fatal(2)
