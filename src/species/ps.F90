@@ -673,14 +673,6 @@ contains
         end do
       end if
 
-    !  do ispin = 1, ps%ispin
-    !    do l = 1, ps%conf%p
-    !      if(ps%conf%l(l) > ps%l_max) cycle
-    !      rmax = spline_cutoff_radius(ps%ur(l, ispin), ps%projectors_sphere_threshold)
-    !      call spline_filter_mask(ps%ur(l, ispin), ps%conf%l(l), rmax, gmax, alpha, gamma)
-    !    end do
-    !  end do
-
     case(PS_FILTER_BSB)
       alpha   = CNST(0.7) ! The original was M_FOUR/CNST(7.0)
       beta_fs = CNST(18.0)
@@ -704,14 +696,6 @@ contains
           call spline_filter_bessel(ps%density(ispin), 0, gmax, alpha, beta_fs, rcut, beta_rs)
         end do
       end if
-
-    !  do ispin = 1, ps%ispin
-    !    do l = 1, ps%conf%p
-    !      if(ps%conf%l(l) > ps%l_max) cycle
-    !      call spline_filter_bessel(ps%ur(l, ispin), ps%conf%l(l), gmax, alpha, beta_fs, rcut, beta_rs)
-    !    end do
-    !  end do
-
 
     end select
 
