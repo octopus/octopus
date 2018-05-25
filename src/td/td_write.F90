@@ -2399,7 +2399,7 @@ contains
 
     !We only need the occupied GS states
     do ist = 1, gs_st%nst
-      if(gs_st%occ(ist, ik)>M_EPSILON) gs_nst = ist
+      if(st%occ(ist, ik)>M_EPSILON) gs_nst = ist
     end do
 
     ! this is required if st%X(psi) is used
