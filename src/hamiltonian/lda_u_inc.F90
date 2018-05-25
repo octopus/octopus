@@ -616,10 +616,10 @@ end subroutine X(compute_coulomb_integrals)
  ! ---------------------------------------------------------
  subroutine X(lda_u_commute_r)(this, mesh, d, ik, ist, psi, gpsi, has_phase)
    type(lda_u_t),      intent(in) :: this
-   type(mesh_t),    intent(in)    :: mesh
+   type(mesh_t),       intent(in) :: mesh
    type(states_dim_t), intent(in) :: d
-   R_TYPE,          intent(in)    :: psi(:,:)
-   integer,         intent(in)    :: ik, ist
+   R_TYPE,             intent(in) :: psi(:,:)
+   integer,            intent(in) :: ik, ist
    R_TYPE,          intent(inout) :: gpsi(:, :, :)
    logical,            intent(in) :: has_phase !True if the wavefunction has an associated phase 
 
