@@ -66,7 +66,6 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
     do ist = 1, norbs
 
       do jst = 1, norbs
-       ! if(jst > ist) cycle
         ijst=ijst+1
 
         do is1 = 1, st%d%dim
@@ -83,9 +82,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
         klst=0
         do kst = 1, norbs
           do lst = 1, norbs
-       !     if(lst > kst) cycle
             klst=klst+1
-       !     if(klst > ijst) cycle
 
             do is1 = 1, st%d%dim
               do is2 = 1, st%d%dim
@@ -104,10 +101,6 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
               do is2 = 1, st%d%dim
                 if(abs(this%zcoulomb(ist,jst,kst,lst,is1,is2,ios))<CNST(1.0e-12)) then
                   this%zcoulomb(ist,jst,kst,lst,is1,is2,ios) = M_ZERO
-           !     else
-           !       this%zcoulomb(kst,lst,ist,jst,is2,is1,ios) = this%zcoulomb(ist,jst,kst,lst,is1,is2,ios)
-           !       this%zcoulomb(jst,ist,lst,kst,is2,is1,ios) = conjg(this%zcoulomb(ist,jst,kst,lst,is1,is2,ios))
-           !       this%zcoulomb(lst,kst,jst,ist,is2,is1,ios) = conjg(this%zcoulomb(ist,jst,kst,lst,is1,is2,ios))
                 end if
 
               end do !is2
