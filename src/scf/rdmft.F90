@@ -548,6 +548,8 @@ contains
     end if
 
     call rdm_derivatives(rdm, hm, st, gr)
+    
+    call total_energy_rdm(rdm, st%occ(:,1), energy)
 
     
     write(message(1),'(a4,5x,a12)')'#st','Occupation'
