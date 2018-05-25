@@ -68,7 +68,7 @@ module rdmft_oct_m
     integer  :: iter
     integer  :: n_twoint !number of unique two electron integrals
     logical  :: do_basis
-    FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO
+    FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO, tolerFO
     FLOAT, allocatable   :: eone(:), eone_int(:,:), twoint(:), hartree(:,:), exchange(:,:), evalues(:)   
     FLOAT, allocatable   :: vecnat(:,:), Coul(:,:,:), Exch(:,:,:) 
     integer, allocatable :: i_index(:), j_index(:), k_index(:), l_index(:) 
@@ -160,7 +160,7 @@ contains
         energy_dif = energy - energy_old
         energy_old = energy
         if (rdm%do_basis.eqv. .true.) then
-          if (abs(energy_dif)/abs(energy).lt. rdm%conv_ener.and.rdm%maxFO < 1.d3*rdm%conv_ener)  exit
+          if (abs(energy_dif)/abs(energy).lt. rdm%conv_ener.and.rdm%maxFO < rdm%tolerFO)  exit
           if (energy_dif < M_ZERO) then 
             xneg = xneg + 1
           else
@@ -182,7 +182,7 @@ contains
       write(message(1),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
       call messages_info(1)
       if (rdm%do_basis.eqv..true.) then
-        if ((rel_ener < rdm%conv_ener).and.rdm%maxFO < 1.e3*rdm%conv_ener) then
+        if ((rel_ener < rdm%conv_ener).and.rdm%maxFO < rdm%tolerFO) then
           conv = .true.
         end if
       else
@@ -312,6 +312,18 @@ contains
       !%End
 
       call parse_variable('RDMTolerance', CNST(1.0e-7), rdm%toler)
+      
+      !%Variable RDMToleranceFO
+      !%Type float
+      !%Default 1e-4 Ha
+      !%Section SCF::RDMFT
+      !%Description
+      !% Convergence criterion for stopping the diagonalization of the Fock Matrix in the Piris Method. 
+      !% Orbital minimization is stopped when all off-diagonal ellements of the FOck Matrix  
+      !% are smaller than this criterion.
+      !%End
+
+      call parse_variable('RDMToleranceFO', CNST(1.0e-4), rdm%tolerFO)
 
       !%Variable RDMConvEner
       !%Type float
