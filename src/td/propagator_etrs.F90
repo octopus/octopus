@@ -140,8 +140,6 @@ contains
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
     end if
     call hamiltonian_update(hm, gr%mesh, time = time)
-    !We update the occupation matrices
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
@@ -228,7 +226,6 @@ contains
     call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
     call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
     call hamiltonian_update(hm, gr%mesh, time = time - dt)
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     ! propagate dt/2 with H(t)
 
@@ -247,7 +244,6 @@ contains
     end if
 
     call hamiltonian_update(hm, gr%mesh, time = time)
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     SAFE_ALLOCATE(psi2(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
@@ -277,7 +273,6 @@ contains
       end if
 
       call v_ks_calc(ks, hm, st, geo, time = time, calc_current = .false.)
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
       ! now check how much the potential changed
       do ip = 1, gr%mesh%np
@@ -379,8 +374,6 @@ contains
       endif
 
       call hamiltonian_update(hm, gr%mesh, time = time - dt)
-      !We update the occupation matrices
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
       call v_ks_calc_start(ks, hm, st, geo, time = time - dt, calc_energy = .false., &
              calc_current = .false.)
     end if
@@ -393,7 +386,7 @@ contains
     end do
 
     if(tr%method == PROP_CAETRS) then
-      call v_ks_calc_finish(ks, hm)
+      call v_ks_calc_finish(ks, hm, st)
 
       if(hm%family_is_mgga_with_exc) then 
         !TODO: This does not support complex scaling for the apparently
@@ -450,8 +443,6 @@ contains
     end if
 
     call hamiltonian_update(hm, gr%mesh, time = time)
-    !We update the occupation matrices
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     call density_calc_init(dens_calc, st, gr, st%rho)
 

@@ -26,7 +26,6 @@ module propagator_qoct_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
-  use lda_u_oct_m
   use messages_oct_m
   use oct_exchange_oct_m
   use potential_interpolation_oct_m
@@ -76,7 +75,6 @@ contains
     end if
 
     call hamiltonian_update(hm, gr%mesh, time = t-dt/M_TWO)
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
     call exponential_apply_all(tr%te, gr%der, hm, xc, st, dt)
 
     if(.not. hm%cmplxscl%space) then
