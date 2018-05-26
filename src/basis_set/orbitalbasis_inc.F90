@@ -18,20 +18,20 @@
 ! ---------------------------------------------------------
 !> This routine is an interface for constructing the orbital basis.
 ! ---------------------------------------------------------
-subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skipSorb, useAllOrb, verbose)
+subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all_orb, verbose)
   type(orbitalbasis_t),      intent(inout)    :: this
   type(geometry_t), target,  intent(in)       :: geo
   type(mesh_t),              intent(in)       :: mesh
   type(distributed_t),       intent(in)       :: kpt
   integer,                   intent(in)       :: ndim
-  logical,                   intent(in)       :: skipSorb 
-  logical,                   intent(in)       :: useAllOrb
+  logical,                   intent(in)       :: skip_s_orb 
+  logical,                   intent(in)       :: use_all_orb
   logical, optional,         intent(in)       :: verbose
 
   integer :: ia, iorb, norb, ntotorb, offset, ios, idim
   integer ::  hubbardl, ii, nn, ll, mm, work, work2, iorbset
   FLOAT   :: norm, hubbardj, radius, jj
-  integer :: nSorbitals
+  integer :: n_s_orb
   type(orbitalset_t), pointer :: os
   logical :: hasjdependence
   logical :: verbose_
@@ -47,7 +47,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skipSorb, useAllOrb
 
   !We first count the number of orbital sets we have to treat
   norb = 0
-  if( .not. useAllOrb ) then
+  if( .not. use_all_orb ) then
     do ia = 1, geo%natoms
       hubbardl = species_hubbard_l(geo%atom(ia)%species)
       hubbardj = species_hubbard_j(geo%atom(ia)%species)
@@ -73,12 +73,12 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skipSorb, useAllOrb
   else
     do ia = 1, geo%natoms
       work = 0
-      nSorbitals = 0
+      n_s_orb = 0
       hubbardj = species_hubbard_j(geo%atom(ia)%species)
       do iorb = 1, species_niwfs(geo%atom(ia)%species)
         call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm) 
         call species_iwf_j(geo%atom(ia)%species, iorb, jj)
-        if(ll == 0) nSorbitals = nSorbitals + 1
+        if(ll == 0) n_s_orb = n_s_orb + 1
         work = max(work, ii)
 
         if( hubbardj /= 0 .and. abs(jj) > M_EPSILON ) then
@@ -87,7 +87,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skipSorb, useAllOrb
           call messages_fatal(2)  
         end if
       end do
-      if(skipSorb) work = work-nSorbitals
+      if(skip_s_orb) work = work-n_s_orb
       norb = norb + work
     end do
   end if
@@ -121,7 +121,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skipSorb, useAllOrb
       call messages_info(1)
     end if 
 
-    if(.not. useAllOrb) then
+    if(.not. use_all_orb) then
       hubbardl = species_hubbard_l(geo%atom(ia)%species)
       if( hubbardl .eq. -1 ) cycle
       !In this case we only have one orbital or we only want one
@@ -203,18 +203,18 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skipSorb, useAllOrb
         os%iatom = ia
         call X(orbitalset_utils_getorbitals)(os, geo, mesh)
       end if
-    else !useAllOrbitals
+    else !use_all_orbitals
       ASSERT(.not.hasjdependence)
       work = 0
-      nSorbitals = 0
+      n_s_orb = 0
       do iorb = 1, species_niwfs(geo%atom(ia)%species)
         call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
-        if(ll == 0) nSorbitals = nSorbitals + 1
+        if(ll == 0) n_s_orb = n_s_orb + 1
         work = max(work, ii)          
       end do
       offset = 0
-      if(skipSorb) then
-        work = work-nSorbitals
+      if(skip_s_orb) then
+        work = work-n_s_orb
         offset = 1
       end if
 
