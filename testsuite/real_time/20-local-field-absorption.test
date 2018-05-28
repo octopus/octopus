@@ -12,8 +12,8 @@ match ; eigenvalue [1]                ;  GREPFIELD(static/info, '1   --', 3)    
 match ; electrons-solvent int. energy ;  GREPFIELD(static/info, 'E_e-solvent =', 3)     ;   0.00003115
 match ; nuclei-solvent int. energy    ;  GREPFIELD(static/info, 'E_n-solvent =', 3)     ;  -0.00003120
 match ; molecule-solvent int. energy  ;  GREPFIELD(static/info, 'E_M-solvent =', 3)     ;  -0.00000005
-match ; electronic pol. charge        ;  GREPFIELD(pcm/pcm_info.out, '       9   ', 7)  ;  -0.98711707
-match ; nuclear pol. charge           ;  GREPFIELD(pcm/pcm_info.out, '       9   ', 9)  ;   0.98713876
+match ; electronic pol. charge        ;  GREPFIELD(pcm/pcm_info.out, '       8   ', 7)  ;  -0.98711707
+match ; nuclear pol. charge           ;  GREPFIELD(pcm/pcm_info.out, '       8   ', 9)  ;   0.98713876
 
 Processors : 4
 Input      : 20-local-field-absorption.02-td_prop_eom.inp
@@ -27,9 +27,9 @@ Processors : 1
 Input      : 20-local-field-absorption.02-td_prop_eom.inp
 
 Precision: 0.0001
-match ; 1st absorption peak (~7eV) - energy    ;  LINE(cross_section_vector, 761, 1)    ; 0.73600000E+01
-match ; 1st absorption peak (~7eV) - strength  ;  LINE(cross_section_vector, 761, 86)   ; 0.16749858E+00
-match ; 2nd absorption peak (~10eV) - energy   ;  LINE(cross_section_vector, 1111, 1)   ; 0.10860000E+02
-match ; 2nd absorption peak (~10eV) - strength ;  LINE(cross_section_vector, 1111, 86)  ; 0.14473052E+00
-match ; 3rd absorption peak (~16eV) - energy   ;  LINE(cross_section_vector, 1657, 1)   ; 0.16320000E+02
-match ; 3rd absorption peak (~16eV) - strength ;  LINE(cross_section_vector, 1657, 86)  ; 0.84804755E-01
+match ; 1st absorption peak (~7eV) - energy    ;  LINE(cross_section_vector, 760, 1)    ; 0.73500000E+01
+match ; 1st absorption peak (~7eV) - strength  ;  LINE(cross_section_vector, 760, 86)   ; 0.16919151E+00
+match ; 2nd absorption peak (~10eV) - energy   ;  LINE(cross_section_vector, 1110, 1)   ; 0.10850000E+02
+match ; 2nd absorption peak (~10eV) - strength ;  LINE(cross_section_vector, 1110, 86)  ; 0.14647736E+00
+match ; 3rd absorption peak (~16eV) - energy   ;  LINE(cross_section_vector, 1658, 1)   ; 0.16330000E+02
+match ; 3rd absorption peak (~16eV) - strength ;  LINE(cross_section_vector, 1658, 86)  ; 0.85620264E-01
