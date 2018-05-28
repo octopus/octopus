@@ -618,6 +618,9 @@ contains
       call gauge_field_propagate_vel(hm%ep%gfield, dt)
     end if
 
+    !We update the occupation matrices
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+
     POP_SUB(propagator_dt)
     call profiling_out(prof)
 

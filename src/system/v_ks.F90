@@ -38,7 +38,6 @@ module v_ks_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
-  use lda_u_oct_m
   use libvdwxc_oct_m
   use magnetic_oct_m
   use mesh_function_oct_m
@@ -679,7 +678,7 @@ contains
     calc_current_ = optional_default(calc_current, .true.)
 
     call v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy, calc_current_)
-    call v_ks_calc_finish(ks, hm, st)
+    call v_ks_calc_finish(ks, hm)
 
     if(optional_default(calc_eigenval, .false.)) then
       call energy_calc_eigenvalues(hm, ks%gr%der, st)
@@ -1190,10 +1189,9 @@ contains
   end subroutine v_ks_calc_start
   ! ---------------------------------------------------------
 
-  subroutine v_ks_calc_finish(ks, hm, st)
+  subroutine v_ks_calc_finish(ks, hm)
     type(v_ks_t), target, intent(inout) :: ks
     type(hamiltonian_t),  intent(inout) :: hm
-    type(states_t),       intent(in)    :: st
 
     type(base_hamiltonian_t), pointer :: subsys_tnadd
     FLOAT, dimension(:,:),    pointer :: potential
