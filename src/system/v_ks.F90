@@ -1352,9 +1352,6 @@ contains
       
     end if
 
-    !For DFT+U
-    call lda_u_update_occ_matrices(hm%lda_u, ks%gr%mesh, st, hm%hm_base, hm%energy )
-
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
       hm%ep%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms) = ks%calc%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms)
       SAFE_DEALLOCATE_A(ks%calc%vdw_forces)
@@ -1367,6 +1364,11 @@ contains
     else
       call hamiltonian_update(hm, ks%gr%mesh)
     end if
+
+    !For DFT+U
+    !This needs to be called after hamiltonian_update, which set the phase also for the +U part
+    call lda_u_update_occ_matrices(hm%lda_u, ks%gr%mesh, st, hm%hm_base, hm%energy )
+
 
     SAFE_DEALLOCATE_P(ks%calc%density)
     SAFE_DEALLOCATE_P(ks%calc%Imdensity)
