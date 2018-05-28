@@ -1363,10 +1363,6 @@ contains
       call hamiltonian_update(hm, ks%gr%mesh)
     end if
 
-    !For DFT+U
-    !This needs to be called after hamiltonian_update, which set the phase also for the +U part
-    call lda_u_update_occ_matrices(hm%lda_u, ks%gr%mesh, st, hm%hm_base, hm%energy )
-
 
     SAFE_DEALLOCATE_P(ks%calc%density)
     SAFE_DEALLOCATE_P(ks%calc%Imdensity)
