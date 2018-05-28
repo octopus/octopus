@@ -17,7 +17,7 @@ PseudopotentialSet = hgh_lda
 
 TDPropagator = aetrs
 TDTimeStep = 0.0023/eV
-TDMaxSteps = 1000
+TDMaxSteps = 100
 
 TDDeltaStrength = 0.01/angstrom
 TDPolarizationDirection = 1

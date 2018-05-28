@@ -18,8 +18,8 @@ match ; nuclear pol. charge           ;  GREPFIELD(pcm/pcm_info.out, '       8  
 Processors : 4
 Input      : 20-local-field-absorption.02-td_prop_eom.inp
 Precision: 0.0001
-match ; M-solvent int. energy @ t=0        ;  GREPFIELD(td.general/energy,'       0', 12)   ; -4.691771297979e-08
-match ; M-solvent int. energy @ t=1000*dt  ;  GREPFIELD(td.general/energy,'    1000', 12)   ; -6.003241376706e-07
+match ; M-solvent int. energy @ t=0       ;  GREPFIELD(td.general/energy,'       0', 12)   ; -4.691771297979e-08
+match ; M-solvent int. energy @ t=100*dt  ;  GREPFIELD(td.general/energy,'     100', 12)   ; -5.809845217443e-07
 
 Util       : oct-propagation_spectrum
 
@@ -27,9 +27,9 @@ Processors : 1
 Input      : 20-local-field-absorption.02-td_prop_eom.inp
 
 Precision: 0.0001
-match ; 1st absorption peak (~7eV) - energy    ;  LINE(cross_section_vector, 760, 1)    ; 0.73500000E+01
-match ; 1st absorption peak (~7eV) - strength  ;  LINE(cross_section_vector, 760, 86)   ; 0.16919151E+00
-match ; 2nd absorption peak (~10eV) - energy   ;  LINE(cross_section_vector, 1110, 1)   ; 0.10850000E+02
-match ; 2nd absorption peak (~10eV) - strength ;  LINE(cross_section_vector, 1110, 86)  ; 0.14647736E+00
-match ; 3rd absorption peak (~16eV) - energy   ;  LINE(cross_section_vector, 1658, 1)   ; 0.16330000E+02
-match ; 3rd absorption peak (~16eV) - strength ;  LINE(cross_section_vector, 1658, 86)  ; 0.85620264E-01
+match ; Energy    ;  LINE(cross_section_vector, 47, 1)    ; 0.22000000E+00
+match ; Strength  ;  LINE(cross_section_vector, 47, 86)   ; 0.43037030E-04
+match ; Energy   ;  LINE(cross_section_vector, 981, 1)   ; 0.95600000E+01
+match ; Strength ;  LINE(cross_section_vector, 981, 86)  ; 0.29671669E-01
+match ; Energy   ;  LINE(cross_section_vector, 1921, 1)   ; 0.18960000E+02
+match ; Strength ;  LINE(cross_section_vector, 1921, 86)  ; 0.58371775E-01
