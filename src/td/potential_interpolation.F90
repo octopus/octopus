@@ -55,6 +55,8 @@ module potential_interpolation_oct_m
     logical             :: mgga_with_exc
   end type potential_interpolation_t
 
+  integer :: interpolation_steps
+
 contains
   
   ! ---------------------------------------------------------
@@ -89,19 +91,22 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine potential_interpolation_init(potential_interpolation, cmplxscl, np, nspin, mgga_with_exc)
+  subroutine potential_interpolation_init(potential_interpolation, cmplxscl, np, nspin, mgga_with_exc, order)
     type(potential_interpolation_t), intent(inout) :: potential_interpolation
     logical, intent(in) :: cmplxscl
     integer, intent(in) :: np, nspin
     logical, intent(in) :: mgga_with_exc
+    integer, optional, intent(in) :: order
     
     PUSH_SUB(potential_interpolation_init)
 
-    SAFE_ALLOCATE(potential_interpolation%v_old(1:np, 1:nspin, 0:3))
+    interpolation_steps = optional_default(order, 3)
+
+    SAFE_ALLOCATE(potential_interpolation%v_old(1:np, 1:nspin, 0:interpolation_steps))
     potential_interpolation%v_old(:, :, :) = M_ZERO
     
     if(cmplxscl) then
-      SAFE_ALLOCATE(potential_interpolation%Imv_old(1:np, 1:nspin, 0:3))
+      SAFE_ALLOCATE(potential_interpolation%Imv_old(1:np, 1:nspin, 0:interpolation_steps))
       potential_interpolation%Imv_old(:, :, :) = M_ZERO
     end if
 
@@ -109,11 +114,11 @@ contains
 
     if(potential_interpolation%mgga_with_exc) then
 
-      SAFE_ALLOCATE(potential_interpolation%vtau_old(1:np, 1:nspin, 0:3))
+      SAFE_ALLOCATE(potential_interpolation%vtau_old(1:np, 1:nspin, 0:interpolation_steps))
       potential_interpolation%vtau_old(:, :, :) = M_ZERO
 
        if(cmplxscl) then
-        SAFE_ALLOCATE(potential_interpolation%Imvtau_old(1:np, 1:nspin, 0:3))
+        SAFE_ALLOCATE(potential_interpolation%Imvtau_old(1:np, 1:nspin, 0:interpolation_steps))
         potential_interpolation%Imvtau_old(:, :, :) = M_ZERO
       end if
    end if
@@ -152,24 +157,24 @@ contains
     
     PUSH_SUB(potential_interpolation_run_zero_iter)
 
-    forall(i = 1:3, ispin = 1:nspin, ip = 1:np)
+    forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
       potential_interpolation%v_old(ip, ispin, i) = vhxc(ip, ispin)
     end forall
     
     if(present(imvhxc)) then
-      forall(i = 1:3, ispin = 1:nspin, ip = 1:np)
+      forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
         potential_interpolation%imv_old(ip, ispin, i) = imvhxc(ip, ispin)
       end forall
     end if
 
    if(present(vtau)) then
-      forall(i = 1:3, ispin = 1:nspin, ip = 1:np)
+      forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
         potential_interpolation%vtau_old(ip, ispin, i) = vtau(ip, ispin)
       end forall
     end if 
 
     if(present(imvtau)) then
-      forall(i = 1:3, ispin = 1:nspin, ip = 1:np)
+      forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
         potential_interpolation%imvtau_old(ip, ispin, i) = imvtau(ip, ispin)
       end forall
     end if
@@ -189,39 +194,51 @@ contains
     FLOAT, optional,   intent(in)    :: vtau(:, :)
     FLOAT, optional,   intent(in)    :: imvtau(:, :)
 
+    FLOAT, allocatable :: times(:)
+    integer :: j
+
     PUSH_SUB(potential_interpolation_new)
 
-    call lalg_copy(np, nspin, potential_interpolation%v_old(:, :, 2), potential_interpolation%v_old(:, :, 3))
-    call lalg_copy(np, nspin, potential_interpolation%v_old(:, :, 1), potential_interpolation%v_old(:, :, 2))
+    SAFE_ALLOCATE(times(interpolation_steps))
+    do j = 1, interpolation_steps
+      times(j) = time - j*dt
+    end do
+
+    do j = interpolation_steps, 2, -1
+      call lalg_copy(np, nspin, potential_interpolation%v_old(:, :, j-1), potential_interpolation%v_old(:, :, j))
+    end do
     call lalg_copy(np, nspin, vhxc(:, :),     potential_interpolation%v_old(:, :, 1))
-    call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
-      potential_interpolation%v_old(:, :, 1:3), time, potential_interpolation%v_old(:, :, 0))
+    call interpolate( times, potential_interpolation%v_old(:, :, 1:interpolation_steps), &
+         time, potential_interpolation%v_old(:, :, 0))
 
     if(present(imvhxc)) then
-      call lalg_copy(np, nspin, potential_interpolation%Imv_old(:, :, 2), potential_interpolation%Imv_old(:, :, 3))
-      call lalg_copy(np, nspin, potential_interpolation%Imv_old(:, :, 1), potential_interpolation%Imv_old(:, :, 2))
+      do j = interpolation_steps, 2, -1
+        call lalg_copy(np, nspin, potential_interpolation%Imv_old(:, :, j-1), potential_interpolation%Imv_old(:, :, j))
+      end do
       call lalg_copy(np, nspin, imvhxc(:, :),     potential_interpolation%Imv_old(:, :, 1))
-      call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
-        potential_interpolation%imv_old(:, :, 1:3), time, potential_interpolation%imv_old(:, :, 0))
+      call interpolate( times, potential_interpolation%imv_old(:, :, 1:interpolation_steps), &
+           time, potential_interpolation%imv_old(:, :, 0))
     end if
 
-     if(present(vtau)) then
-      call lalg_copy(np, nspin, potential_interpolation%vtau_old(:, :, 2), potential_interpolation%vtau_old(:, :, 3))
-      call lalg_copy(np, nspin, potential_interpolation%vtau_old(:, :, 1), potential_interpolation%vtau_old(:, :, 2))
+    if(present(vtau)) then
+      do j = interpolation_steps, 2, -1
+        call lalg_copy(np, nspin, potential_interpolation%vtau_old(:, :, j-1), potential_interpolation%vtau_old(:, :, j))
+      end do
       call lalg_copy(np, nspin, vtau(:, :),     potential_interpolation%vtau_old(:, :, 1))
-      call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
-        potential_interpolation%vtau_old(:, :, 1:3), time, potential_interpolation%vtau_old(:, :, 0))
+      call interpolate( times, potential_interpolation%vtau_old(:, :, 1:interpolation_steps), &
+           time, potential_interpolation%vtau_old(:, :, 0))
     end if
 
     if(present(imvtau)) then
-      call lalg_copy(np, nspin, potential_interpolation%imvtau_old(:, :, 2), potential_interpolation%imvtau_old(:, :, 3))
-      call lalg_copy(np, nspin, potential_interpolation%imvtau_old(:, :, 1), potential_interpolation%imvtau_old(:, :, 2))
+      do j = interpolation_steps, 2, -1
+        call lalg_copy(np, nspin, potential_interpolation%imvtau_old(:, :, j-1), potential_interpolation%imvtau_old(:, :, j))
+      end do
       call lalg_copy(np, nspin, imvtau(:, :),     potential_interpolation%Imvtau_old(:, :, 1))
-      call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
-        potential_interpolation%Imvtau_old(:, :, 1:3), time, potential_interpolation%Imvtau_old(:, :, 0))
+      call interpolate( times, potential_interpolation%Imvtau_old(:, :, 1:interpolation_steps), &
+           time, potential_interpolation%Imvtau_old(:, :, 0))
     end if
 
-
+    SAFE_DEALLOCATE_A(times)
     POP_SUB(potential_interpolation_new)
   end subroutine potential_interpolation_new
   ! ---------------------------------------------------------
@@ -329,37 +346,28 @@ contains
     FLOAT, optional,   intent(inout) :: vtau(:, :)
     FLOAT, optional,   intent(inout) :: imvtau(:, :)
 
+    integer :: j
+    FLOAT, allocatable :: times(:)
 
     PUSH_SUB(potential_interpolation_interpolate)
 
-    select case(order)
-    case(3)
-      call interpolate( (/time, time - dt, time - M_TWO*dt/), potential_interpolation%v_old(:, :, 0:2), t, vhxc(:, :))
-      if(present(imvhxc)) then
-        call interpolate( (/time, time - dt, time - M_TWO*dt/), potential_interpolation%Imv_old(:, :, 0:2), t, imvhxc(:, :))
-      end if
-      if(present(vtau)) then
-        call interpolate( (/time, time - dt, time - M_TWO*dt/), potential_interpolation%vtau_old(:, :, 0:2), t, vtau(:, :))
-      end if
-       if(present(imvtau)) then
-        call interpolate( (/time, time - dt, time - M_TWO*dt/), potential_interpolation%Imvtau_old(:, :, 0:2), t, imvtau(:, :))
-      end if
+    SAFE_ALLOCATE(times(interpolation_steps))
+    do j = 1, interpolation_steps
+      times(j) = time - (j-1)*dt
+    end do
 
-    case(2)
-      call interpolate( (/time, time-dt/), potential_interpolation%v_old(:, :, 0:1), t, vhxc(:, :))
-      if(present(imvhxc)) then
-        call interpolate( (/time, time-dt/), potential_interpolation%imv_old(:, :, 0:1), t, imvhxc(:, :))
-      end if
-      if(present(vtau)) then
-        call interpolate( (/time, time-dt/), potential_interpolation%vtau_old(:, :, 0:1), t, vtau(:, :))
-      end if
-      if(present(imvtau)) then
-        call interpolate( (/time, time-dt/), potential_interpolation%Imvtau_old(:, :, 0:1), t, imvtau(:, :))
-      end if
-    case default
-       ASSERT(.false.)
-    end select
+    call interpolate( times(1:order), potential_interpolation%v_old(:, :, 0:order-1), t, vhxc(:, :))
+    if(present(imvhxc)) then
+      call interpolate( times(1:order), potential_interpolation%Imv_old(:, :, 0:order-1), t, imvhxc(:, :))
+    end if
+    if(present(vtau)) then
+      call interpolate( times(1:order), potential_interpolation%vtau_old(:, :, 0:order-1), t, vtau(:, :))
+    end if
+    if(present(imvtau)) then
+      call interpolate( times(1:order), potential_interpolation%Imvtau_old(:, :, 0:order-1), t, imvtau(:, :))
+    end if
 
+    SAFE_DEALLOCATE_A(times)
     POP_SUB(potential_interpolation_interpolate)
   end subroutine potential_interpolation_interpolate
   ! ---------------------------------------------------------
@@ -448,7 +456,7 @@ contains
     end if
 
     err2 = 0
-    do ii = 1, 2
+    do ii = 1, interpolation_steps - 1
       do is = 1, nspin
         write(filename,'(a,i2.2,i3.3)') 'vprev_', ii, is
         if(cmplxscl) then
@@ -469,7 +477,7 @@ contains
 
     if(potential_interpolation%mgga_with_exc) then
       err2 = 0
-      do ii = 1, 2
+      do ii = 1, interpolation_steps - 1
         do is = 1, nspin
           write(filename,'(a,i2.2,i3.3)') 'vtauprev_', ii, is
           if(cmplxscl) then

@@ -98,25 +98,27 @@ subroutine X(dsubmesh_add_to_mesh)(this, sphi, phi, factor)
     do ip = 1, m
       phi(this%map(ip)) = phi(this%map(ip)) + factor*sphi(ip)
     end do
-    if( this%np.lt.4) return
-    do ip = m+1, this%np, 4
-      phi(this%map(ip))   = phi(this%map(ip))   + factor*sphi(ip)
-      phi(this%map(ip+1)) = phi(this%map(ip+1)) + factor*sphi(ip+1)
-      phi(this%map(ip+2)) = phi(this%map(ip+2)) + factor*sphi(ip+2)
-      phi(this%map(ip+3)) = phi(this%map(ip+3)) + factor*sphi(ip+3)
-    end do
+    if( this%np.ge.4) then
+      do ip = m+1, this%np, 4
+        phi(this%map(ip))   = phi(this%map(ip))   + factor*sphi(ip)
+        phi(this%map(ip+1)) = phi(this%map(ip+1)) + factor*sphi(ip+1)
+        phi(this%map(ip+2)) = phi(this%map(ip+2)) + factor*sphi(ip+2)
+        phi(this%map(ip+3)) = phi(this%map(ip+3)) + factor*sphi(ip+3)
+      end do
+    end if
   else
     m = mod(this%np,4)
     do ip = 1, m
       phi(this%map(ip)) = phi(this%map(ip)) + sphi(ip)
     end do
-    if( this%np.lt.4) return
-    do ip = m+1, this%np, 4
-      phi(this%map(ip))   = phi(this%map(ip))   + sphi(ip)
-      phi(this%map(ip+1)) = phi(this%map(ip+1)) + sphi(ip+1)
-      phi(this%map(ip+2)) = phi(this%map(ip+2)) + sphi(ip+2)
-      phi(this%map(ip+3)) = phi(this%map(ip+3)) + sphi(ip+3)
-    end do
+    if( this%np.ge.4) then
+      do ip = m+1, this%np, 4
+        phi(this%map(ip))   = phi(this%map(ip))   + sphi(ip)
+        phi(this%map(ip+1)) = phi(this%map(ip+1)) + sphi(ip+1)
+        phi(this%map(ip+2)) = phi(this%map(ip+2)) + sphi(ip+2)
+        phi(this%map(ip+3)) = phi(this%map(ip+3)) + sphi(ip+3)
+      end do
+    end if
   end if
 
   POP_SUB(X(dsubmesh_add_to_mesh))
@@ -255,18 +257,20 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, sphi, phi, reduce) result(dotp)
     do ip = 1, m
       dotp = dotp + phi(this%map(ip))*sphi(ip)
     end do
-    if( this%np.lt.4) return
-    do ip = m+1, this%np, 4
-      dotp = dotp + phi(this%map(ip))*sphi(ip) &
-                  + phi(this%map(ip+1))*sphi(ip+1) &
-                  + phi(this%map(ip+2))*sphi(ip+2) &
-                  + phi(this%map(ip+3))*sphi(ip+3)
-    end do
+    if( this%np.ge.4) then
+      do ip = m+1, this%np, 4
+        dotp = dotp + phi(this%map(ip))*sphi(ip) &
+                    + phi(this%map(ip+1))*sphi(ip+1) &
+                    + phi(this%map(ip+2))*sphi(ip+2) &
+                    + phi(this%map(ip+3))*sphi(ip+3)
+      end do
+    end if
     dotp = dotp*this%mesh%vol_pp(1)
   end if
 
   if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) &
     call comm_allreduce(this%mesh%vp%comm, dotp)
+
 
   POP_SUB(X(dsubmesh_to_mesh_dotp))
 end function X(dsubmesh_to_mesh_dotp)
