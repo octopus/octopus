@@ -3347,6 +3347,9 @@ contains
 
     FLOAT,           intent(in) :: ref_point(1:3)
 
+    FLOAT :: diff(1:3)
+    FLOAT :: dist
+
     integer :: ia
 
     PUSH_SUB(pcm_field)
@@ -3354,8 +3357,11 @@ contains
     e_pcm = M_ZERO
 
     do ia = 1, n_tess
+ 
+      diff = ref_point - tess(ia)%point
+      dist = sqrt( dot_product( diff, diff ) )
 
-      e_pcm = e_pcm + q_pcm(ia) * ( ref_point - tess(ia)%point ) / NORM2( ref_point - tess(ia)%point )**3
+      e_pcm = e_pcm + q_pcm(ia) * diff / dist**3
 
     end do
 
