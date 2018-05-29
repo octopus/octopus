@@ -465,13 +465,13 @@ module pcm_eom_oct_m
     SAFE_ALLOCATE(matq0_lf(nts_act,nts_act)) !< not used yet
     SAFE_ALLOCATE(matqd_lf(nts_act,nts_act))
     SAFE_ALLOCATE(matqv_lf(nts_act,nts_act))
-    if( (.not.allocated(matqq)) .and. which_eps == 'deb' ) then
+    if( .not.allocated(matqq) ) then
      SAFE_ALLOCATE(matqq(nts_act,nts_act))
     endif
    else if( which_eom == 'justkick' ) then
     SAFE_ALLOCATE(matqv_lf(nts_act,nts_act))
     SAFE_ALLOCATE(matqd_lf(nts_act,nts_act))
-    if( (.not.allocated(matqq)) .and. which_eps == 'deb' ) then
+    if( .not.allocated(matqq) ) then
      SAFE_ALLOCATE(matqq(nts_act,nts_act))
     endif
    endif  
