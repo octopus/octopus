@@ -1,4 +1,6 @@
 #Name   Path                                            Z       Lmax    Lloc    Spacing Radius
+D     "pseudo-dojo.org/nc-sr-04_pw_standard/H.upf"  	-1	333	333	-1	-1
+T     "pseudo-dojo.org/nc-sr-04_pw_standard/H.upf"  	-1	333	333	-1	-1
 Ag    "pseudo-dojo.org/nc-sr-04_pw_standard/Ag.upf" 	-1	333	333	-1	-1
 Al    "pseudo-dojo.org/nc-sr-04_pw_standard/Al.upf" 	-1	333	333	-1	-1
 Ar    "pseudo-dojo.org/nc-sr-04_pw_standard/Ar.upf" 	-1	333	333	-1	-1
@@ -9,6 +11,7 @@ Be    "pseudo-dojo.org/nc-sr-04_pw_standard/Be.upf" 	-1	333	333	-1	-1
 Bi    "pseudo-dojo.org/nc-sr-04_pw_standard/Bi.upf" 	-1	333	333	-1	-1
 Br    "pseudo-dojo.org/nc-sr-04_pw_standard/Br.upf" 	-1	333	333	-1	-1
 B     "pseudo-dojo.org/nc-sr-04_pw_standard/B.upf"  	-1	333	333	-1	-1
+C     "pseudo-dojo.org/nc-sr-04_pw_standard/C.upf" 	-1	333	333	-1	-1
 Ca    "pseudo-dojo.org/nc-sr-04_pw_standard/Ca.upf" 	-1	333	333	-1	-1
 Cd    "pseudo-dojo.org/nc-sr-04_pw_standard/Cd.upf" 	-1	333	333	-1	-1
 Cl    "pseudo-dojo.org/nc-sr-04_pw_standard/Cl.upf" 	-1	333	333	-1	-1

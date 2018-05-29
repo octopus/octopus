@@ -884,8 +884,10 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
 
   integer :: ist, ip
   R_TYPE :: mul
+#if defined(R_TREAL)
   integer :: iprange
-  type(accel_mem_t)      :: ff_buffer
+  type(accel_mem_t) :: ff_buffer
+#endif
   
   PUSH_SUB(X(batch_mul))
   call profiling_in(mul_prof, "BATCH_MUL")

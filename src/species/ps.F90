@@ -22,6 +22,7 @@ module ps_oct_m
   use atomic_oct_m
   use global_oct_m
   use io_oct_m
+  use lalg_adv_oct_m
   use loct_math_oct_m
   use parser_oct_m
   use logrid_oct_m
@@ -52,6 +53,7 @@ module ps_oct_m
     ps_derivatives,             &
     ps_debug,                   &
     ps_niwfs,                   &
+    ps_bound_niwfs,             &
     ps_end,                     &
     ps_has_density,             &
     ps_density_volume
@@ -61,12 +63,19 @@ module ps_oct_m
     PS_FILTER_TS   = 2,         &
     PS_FILTER_BSB  = 3
 
+  integer, public, parameter ::  &
+    PROJ_NONE = 0,  &
+    PROJ_HGH  = 1,  &
+    PROJ_KB   = 2,  &
+    PROJ_RKB  = 3
+  
   integer, parameter, public :: INVALID_L = 333
 
   character(len=4), parameter  :: ps_name(PSEUDO_FORMAT_UPF1:PSEUDO_FORMAT_HGH) = &
     (/"upf1", "upf2", "qso ", "psml", "psf ", "cpi ", "fhi ", "hgh "/)
 
   type ps_t
+    integer :: projector_type
     character(len=10) :: label
 
     integer  :: ispin    !< Consider spin (ispin = 2) or not (ispin = 1)
@@ -75,6 +84,7 @@ module ps_oct_m
     type(logrid_t) :: g
     type(spline_t), pointer :: ur(:, :)     !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r
     type(spline_t), pointer :: ur_sq(:, :)  !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r^2
+    logical, allocatable    :: bound(:, :)  !< (1:conf%p, 1:ispin) is the state bound or not
 
     ! Kleinman-Bylander projectors stuff
     integer  :: lmax    !< maximum value of l to take
@@ -139,13 +149,14 @@ contains
     FLOAT,             intent(in)    :: z
     character(len=*),  intent(in)    :: filename
     
-    integer :: l, ii, ll, is, ierr, fmt
+    integer :: l, ii, ll, is, ierr
     type(ps_psf_t) :: ps_psf !< SIESTA pseudopotential
     type(ps_cpi_t) :: ps_cpi !< Fritz-Haber pseudopotential
     type(ps_fhi_t) :: ps_fhi !< Fritz-Haber pseudopotential (from abinit)
     type(ps_hgh_t) :: ps_hgh !< In case Hartwigsen-Goedecker-Hutter ps are used.
     type(ps_xml_t) :: ps_xml !< For xml based pseudopotentials
     logical, save :: xml_warned = .false.
+    FLOAT, allocatable :: eigen(:, :)  !< eigenvalues    
     
     PUSH_SUB(ps_init)
 
@@ -192,6 +203,7 @@ contains
     ps%label   = label
     ps%ispin   = ispin
     ps%hamann  = .false.
+    ps%projector_type = PROJ_KB
     
     select case(ps%file_format)
     case(PSEUDO_FORMAT_PSF, PSEUDO_FORMAT_HGH)
@@ -286,6 +298,7 @@ contains
 
     case(PSEUDO_FORMAT_HGH)
       ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
+      ps%projector_type = PROJ_HGH
       
       call hgh_init(ps_hgh, trim(filename))
       call valconf_copy(ps%conf, ps_hgh%conf)
@@ -342,17 +355,16 @@ contains
       
       nullify(ps%g%drdi, ps%g%s)
       
-      ! use a larger grid
-      ps%g%nrval = max(ps_xml%grid_size, nint(CNST(20.0)/(ps_xml%mesh_spacing)))
+      ps%g%nrval = ps_xml%grid_size
       
       SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))
       SAFE_ALLOCATE(ps%g%r2ofi(1:ps%g%nrval))
-      
-      do ii = 1, ps%g%nrval
-        ps%g%rofi(ii) = (ii - 1)*ps_xml%mesh_spacing
-        ps%g%r2ofi(ii) = ps%g%rofi(ii)**2
-      end do
 
+      do ii = 1, ps%g%nrval
+        ps%g%rofi(ii) = ps_xml%grid(ii)
+        ps%g%r2ofi(ii) = ps_xml%grid(ii)**2
+      end do
+      
     end select
     
     ps%local = (ps%lmax == 0 .and. ps%llocal == 0 ) .or. (ps%lmax == -1 .and. ps%llocal == -1)
@@ -362,6 +374,7 @@ contains
     SAFE_ALLOCATE(ps%dkb  (0:ps%lmax, 1:ps%kbc))
     SAFE_ALLOCATE(ps%ur   (1:ps%conf%p, 1:ps%ispin))
     SAFE_ALLOCATE(ps%ur_sq(1:ps%conf%p, 1:ps%ispin))
+    SAFE_ALLOCATE(ps%bound(1:ps%conf%p, 1:ps%ispin))
     SAFE_ALLOCATE(ps%h    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
     SAFE_ALLOCATE(ps%density(1:ps%ispin))
     SAFE_ALLOCATE(ps%density_der(1:ps%ispin))
@@ -374,10 +387,14 @@ contains
     call spline_init(ps%core)
     call spline_init(ps%density)
     call spline_init(ps%density_der)
+
+    SAFE_ALLOCATE(eigen(1:ps%conf%p, 1:ps%ispin))
+    eigen = M_ZERO
     
     ! Now we load the necessary information.
     select case(ps%file_format)
     case(PSEUDO_FORMAT_PSF)
+      call ps_psf_get_eigen(ps_psf, eigen)
       call ps_grid_load(ps, ps_psf%ps_grid)
       call ps_psf_end(ps_psf)
     case(PSEUDO_FORMAT_CPI)
@@ -387,6 +404,7 @@ contains
       call ps_grid_load(ps, ps_fhi%ps_grid)
       call ps_fhi_end(ps_fhi)
     case(PSEUDO_FORMAT_HGH)
+      call hgh_get_eigen(ps_hgh, eigen)
       SAFE_ALLOCATE(ps%k    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
       call hgh_load(ps, ps_hgh)
       call hgh_end(ps_hgh)
@@ -401,10 +419,14 @@ contains
       end do
     end if
 
+    call ps_check_bound(ps, eigen)
+    
     ps%has_long_range = .true.
     ps%is_separated = .false.
-
+    
     call ps_info(ps, filename)
+
+    SAFE_DEALLOCATE_A(eigen)
     
     POP_SUB(ps_init)
   end subroutine ps_init
@@ -442,7 +464,7 @@ contains
     call messages_new_line()
 
     call messages_write("    valence charge   :")
-    call messages_write(ps%z_val, align_left = .true., fmt = '(f3.1)')
+    call messages_write(ps%z_val, align_left = .true., fmt = '(f4.1)')
     call messages_info()
 
     call messages_write("    atomic number    :")
@@ -485,6 +507,10 @@ contains
     end if
     call messages_info()
 
+    call messages_write("    projectors per l :")
+    call messages_write(ps%kbc, fmt = '(i2)')
+    call messages_info()
+    
     call messages_write("    total projectors :")
     if(ps%llocal < 0) then
       call messages_write(ps%kbc*(ps%lmax + 1), fmt = '(i2)')
@@ -502,6 +528,9 @@ contains
 
     call messages_write("    orbitals         :")
     call messages_write(ps_niwfs(ps), fmt='(i3)')
+    call messages_info()
+    call messages_write("    bound orbitals   :")
+    call messages_write(ps_bound_niwfs(ps), fmt='(i3)')
     call messages_info()
 
     call messages_info()
@@ -573,6 +602,7 @@ contains
     ps%rc_max = CNST(0.0)
 
     do l = 0, ps%lmax
+      if(l == ps%llocal) cycle
       do j = 1, ps%kbc
         ps%rc_max = max(ps%rc_max, spline_cutoff_radius(ps%kb(l, j), ps%projectors_sphere_threshold))
       end do
@@ -672,6 +702,50 @@ contains
     call profiling_out(prof)
     POP_SUB(ps_filter)
   end subroutine ps_filter
+    
+  ! ---------------------------------------------------------
+  subroutine ps_check_bound(ps, eigen)
+    type(ps_t), intent(inout) :: ps
+    FLOAT,      intent(in)    :: eigen(:,:)
+
+    integer :: i, is, ir
+    FLOAT :: ur1, ur2
+    
+    PUSH_SUB(ps_check_bound)
+
+    ! Unbound states have positive eigenvalues
+    where(eigen > M_ZERO)
+      ps%bound = .false.
+    elsewhere
+      ps%bound = .true.
+    end where
+
+    ! We might not have information about the eigenvalues, so we need to check the wavefunctions    
+    do i = 1, ps%conf%p
+      do is = 1, ps%ispin
+        if (.not. ps%bound(i, is)) cycle
+
+        do ir = ps%g%nrval, 3, -1
+          ! First we look for the outmost value that is not zero
+          if (abs(spline_eval(ps%ur(i, is), ps%g%rofi(ir))*ps%g%rofi(ir)) > M_ZERO) then
+            ! Usually bound states have exponentially decaying wavefunctions,
+            ! while unbound states have exponentially diverging
+            ! wavefunctions. Therefore we check if the wavefunctions
+            ! value is increasing with increasing radius. The fact
+            ! that we do not use the wavefunctions outmost value that
+            ! is not zero is on purpose, as some pseudopotential
+            ! generators do funny things with that point.
+            ur1 = spline_eval(ps%ur(i, is), ps%g%rofi(ir-2))*ps%g%rofi(ir-2)
+            ur2 = spline_eval(ps%ur(i, is), ps%g%rofi(ir-1))*ps%g%rofi(ir-1)
+            if ((ur1*ur2 > M_ZERO) .and. (abs(ur2) > abs(ur1))) ps%bound(i, is) = .false.
+            exit
+          end if
+        end do
+      end do
+    end do
+    
+    POP_SUB(ps_check_bound)
+  end subroutine ps_check_bound
 
 
   ! ---------------------------------------------------------
@@ -712,6 +786,13 @@ contains
         end do
       end do
     end if
+
+    write(iunit,'(/,a)')    'orbitals:'
+    do j = 1, ps%conf%p
+      write(iunit,'(1x,a,i2,3x,a,i2,3x,a,f5.1,3x,a,l1)') 'n = ', ps%conf%n(j), 'l = ', ps%conf%l(j), 'j = ', ps%conf%j(j), 'bound = ', all(ps%bound(j,:))
+    end do
+
+    
     call io_close(iunit)
 
     ! Local part of the pseudopotential
@@ -814,6 +895,7 @@ contains
     SAFE_DEALLOCATE_P(ps%dkb)
     SAFE_DEALLOCATE_P(ps%ur)
     SAFE_DEALLOCATE_P(ps%ur_sq)
+    SAFE_DEALLOCATE_A(ps%bound)
     SAFE_DEALLOCATE_P(ps%h)
     SAFE_DEALLOCATE_P(ps%k)
     SAFE_DEALLOCATE_P(ps%density)
@@ -1012,16 +1094,15 @@ contains
     type(ps_t),     intent(inout) :: ps
     type(ps_xml_t), intent(in)    :: ps_xml
 
-    integer :: ll, ip, is, ic, jc, ir, nrc, ii, dest_ic
+    integer :: ll, ip, is, ic, jc, ir, nrc, ii
     FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element
     FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:), nlcc_density(:), dens(:)
     integer, allocatable :: cmap(:, :)
+    FLOAT, allocatable :: matrix(:, :), eigenvalues(:)
 
     PUSH_SUB(ps_xml_load)
 
-    if(ps_xml%kleinman_bylander .and. ps_xml%nchannels == 2 .and. ps_xml%llocal == -1) then
-      ps%hamann = .true.
-    end if
+    ps%hamann = (ps_xml%kleinman_bylander .and. ps_xml%nchannels == 2 .and. ps_xml%llocal == -1)
     
     ps%nlcc = ps_xml%nlcc
 
@@ -1031,7 +1112,7 @@ contains
     SAFE_ALLOCATE(vlocal(1:ps%g%nrval))
 
     do ip = 1, ps%g%nrval
-      rr = (ip - 1)*ps_xml%mesh_spacing
+      rr = ps_xml%grid(ip)
       if(ip <= ps_xml%grid_size) then
         vlocal(ip) = ps_xml%potential(ip, ps%llocal)
       else
@@ -1079,27 +1160,50 @@ contains
       end do
 
       ASSERT(all(cmap >= 0 .and. cmap <= ps_xml%nchannels))
-      
-      do ll = 0, ps_xml%lmax
-        do ic = 1, ps_xml%nchannels
 
-          do ip = 1, ps%g%nrval
-            if(ip <= ps_xml%grid_size) then
-              kbprojector(ip) = ps_xml%projector(ip, ll, ic)
-            else
+      SAFE_ALLOCATE(matrix(1:ps_xml%nchannels, 1:ps_xml%nchannels))
+      SAFE_ALLOCATE(eigenvalues(1:ps_xml%nchannels))
+
+      ps%h = CNST(0.0)
+
+
+      if(pseudo_nprojectors(ps_xml%pseudo) > 0) then
+        do ll = 0, ps_xml%lmax
+
+          if(is_diagonal(ps_xml%nchannels, ps_xml%dij(ll, :, :)) .or. pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
+            matrix = CNST(0.0)
+            forall(ic = 1:ps_xml%nchannels)
+              eigenvalues(ic) = ps_xml%dij(ll, ic, ic)
+              matrix(ic, ic) = CNST(1.0)
+            end forall
+          else
+            ! diagonalize the coefficient matrix
+            matrix(1:ps_xml%nchannels, 1:ps_xml%nchannels) = ps_xml%dij(ll, 1:ps_xml%nchannels, 1:ps_xml%nchannels)
+            call lalg_eigensolve(ps_xml%nchannels, matrix, eigenvalues)
+          end if
+          
+          do ic = 1, ps_xml%nchannels
+            
+            do ip = 1, ps%g%nrval
               kbprojector(ip) = 0.0
-            end if
+              if(ip <= ps_xml%grid_size) then
+                do jc = 1, ps_xml%nchannels
+                  kbprojector(ip) = kbprojector(ip) + matrix(jc, ic)*ps_xml%projector(ip, ll, jc)
+                end do
+              end if
+            end do
+            
+            call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, cmap(ll, ic)))
+            
+            ps%h(ll, cmap(ll, ic), cmap(ll, ic)) = eigenvalues(ic)
+            
           end do
-
-          call spline_fit(ps%g%nrval, ps%g%rofi, kbprojector, ps%kb(ll, cmap(ll, ic)))
-
-          do jc = 1, ps_xml%nchannels
-            ps%h(ll, cmap(ll, ic), cmap(ll, jc)) = ps_xml%dij(ll, ic, jc)
-          end do
-
         end do
-      end do
-
+      end if
+      
+      SAFE_DEALLOCATE_A(matrix)
+      SAFE_DEALLOCATE_A(eigenvalues)
+      
       ps%conf%p = ps_xml%nwavefunctions
       
       do ii = 1, ps_xml%nwavefunctions
@@ -1108,7 +1212,7 @@ contains
         ps%conf%l(ii) = ps_xml%wf_l(ii)
 
         if(ps%ispin == 2) then
-          ps%conf%occ(ii, 1) = min(ps_xml%wf_occ(ii), 2.0*ps_xml%wf_l(ii) + 1.0)
+          ps%conf%occ(ii, 1) = min(ps_xml%wf_occ(ii), CNST(2.0)*ps_xml%wf_l(ii) + CNST(1.0))
           ps%conf%occ(ii, 2) = ps_xml%wf_occ(ii) - ps%conf%occ(ii, 1)
         else
           ps%conf%occ(ii, 1) = ps_xml%wf_occ(ii)
@@ -1144,8 +1248,8 @@ contains
         dnrm = M_ZERO
         avgv = M_ZERO
         do ip = 1, ps_xml%grid_size
-          rr = (ip - 1)*ps_xml%mesh_spacing
-          volume_element = rr**2*ps_xml%mesh_spacing
+          rr = ps_xml%grid(ip)
+          volume_element = rr**2*ps_xml%weights(ip)
           kbprojector(ip) = (ps_xml%potential(ip, ll) - ps_xml%potential(ip, ps%llocal))*ps_xml%wavefunction(ip, ll)
           dnrm = dnrm + kbprojector(ip)**2*volume_element
           avgv = avgv + kbprojector(ip)*ps_xml%wavefunction(ip, ll)*volume_element
@@ -1165,7 +1269,6 @@ contains
 
         ! wavefunctions, for the moment we pad them with zero
         do ip = 1, ps%g%nrval
-          rr = (ip - 1)*ps_xml%mesh_spacing
           if(ip <= ps_xml%grid_size) then
             wavefunction(ip) = ps_xml%wavefunction(ip, ll)
           else
@@ -1178,7 +1281,7 @@ contains
           call spline_fit(ps%g%nrval, ps%g%r2ofi, wavefunction, ps%ur_sq(ll + 1, is))
         end do
       end do
-        
+
     end if
 
     ps%has_density = ps_xml%has_density
@@ -1227,9 +1330,26 @@ contains
     POP_SUB(ps_xml_load)
   end subroutine ps_xml_load
 
-
   ! ---------------------------------------------------------
-  !> Returns the number of atomic orbitals that can be used for LCAO calculations.
+
+  logical function is_diagonal(dim, matrix)
+    integer, intent(in)    :: dim 
+    FLOAT,   intent(in)    :: matrix(:, :)
+
+    integer :: ii, jj
+    
+    is_diagonal = .true.
+    do ii = 1, dim
+      do jj = 1, dim
+        if(ii == jj) cycle
+        if(abs(matrix(ii, jj)) > CNST(1e10)) is_diagonal = .false.
+      end do
+    end do
+    
+  end function is_diagonal
+  
+  ! ---------------------------------------------------------
+  !> Returns the number of atomic orbitals taking into account then m quantum number multiplicity
   pure integer function ps_niwfs(ps)
     type(ps_t), intent(in) :: ps
 
@@ -1242,6 +1362,22 @@ contains
     end do
 
   end function ps_niwfs
+
+  ! ---------------------------------------------------------
+  !> Returns the number of bound atomic orbitals taking into account then m quantum number multiplicity
+  pure integer function ps_bound_niwfs(ps)
+    type(ps_t), intent(in) :: ps
+
+    integer :: i, l
+
+    ps_bound_niwfs = 0
+    do i = 1, ps%conf%p
+      l = ps%conf%l(i)
+      if (any(.not. ps%bound(i,:))) cycle
+      ps_bound_niwfs = ps_bound_niwfs + (2*l+1)
+    end do
+
+  end function ps_bound_niwfs
 
   !---------------------------------------
 

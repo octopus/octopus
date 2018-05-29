@@ -44,7 +44,9 @@ subroutine X(accel_write_buffer_1)(this, size, data, offset)
   integer,                optional, intent(in)    :: offset
 
   integer(8) :: fsize, offset_
+#ifdef HAVE_OPENCL
   integer :: ierr
+#endif
 
   PUSH_SUB(X(accel_write_buffer_1))
   call profiling_in(prof_write, "CL_WRITE_BUFFER")
@@ -85,7 +87,9 @@ subroutine X(accel_write_buffer_2)(this, size, data, offset)
   integer,                optional, intent(in)    :: offset
 
   integer(8) :: fsize, offset_
+#ifdef HAVE_OPENCL
   integer :: ierr
+#endif
 
   PUSH_SUB(X(accel_write_buffer_2))
   call profiling_in(prof_write, "CL_WRITE_BUFFER")
@@ -167,7 +171,9 @@ subroutine X(accel_read_buffer_1)(this, size, data, offset)
   integer,                optional, intent(in)    :: offset
 
   integer(8) :: fsize, offset_
+#ifdef HAVE_OPENCL
   integer :: ierr
+#endif
 
   PUSH_SUB(X(accel_read_buffer_1))
   call profiling_in(prof_read, "CL_READ_BUFFER")
@@ -208,7 +214,9 @@ subroutine X(accel_read_buffer_2)(this, size, data, offset)
   integer,                optional, intent(in)    :: offset
 
   integer(8) :: fsize, offset_
+#ifdef HAVE_OPENCL
   integer :: ierr
+#endif
   
   PUSH_SUB(X(accel_read_buffer_2))
   call profiling_in(prof_read, "CL_READ_BUFFER")
@@ -249,7 +257,9 @@ subroutine X(accel_read_buffer_3)(this, size, data, offset)
   integer,                optional, intent(in)    :: offset
 
   integer(8) :: fsize, offset_
+#ifdef HAVE_OPENCL
   integer :: ierr
+#endif
   
   PUSH_SUB(X(accel_read_buffer_3))
   call profiling_in(prof_read, "CL_READ_BUFFER")
@@ -287,8 +297,10 @@ subroutine X(accel_set_kernel_arg_data)(kernel, narg, data)
   type(accel_kernel_t), intent(inout) :: kernel
   integer,              intent(in)    :: narg
   R_TYPE,               intent(in)    :: data
-  
+ 
+#ifdef HAVE_OPENCL 
   integer :: ierr
+#endif
 
   ! no push_sub, called too frequently
 #ifdef HAVE_CUDA

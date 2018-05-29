@@ -65,10 +65,10 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   R_TYPE,                intent(in)  :: psi(:, :)
   R_TYPE,               intent(out)  :: uvpsi(:,:) !< (dim, 3)
 
-  integer :: n_s, jj, idim, kk
+  integer :: n_s, jj, idim
   R_TYPE, allocatable :: bra(:, :)
   type(profile_t), save :: prof
-  integer :: block_size, sp, ep
+  integer :: block_size, sp, ep, size
 
   call profiling_in(prof, "HGH_PROJECT_BRA")
 
@@ -110,16 +110,17 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
 
   else
 
-    do idim = 1, dim
-      do sp = 1, n_s, block_size
-        ep = sp - 1 + min(block_size, n_s - sp + 1)
-        do jj = 1, 3
+    do sp = 1, n_s, block_size
+      ep = sp - 1 + min(block_size, n_s - sp + 1)
+      size = min(block_size, n_s - sp + 1)
+      do jj = 1, 3
+        do idim = 1, dim
           if(reltype == 1) then 
-            uvpsi(idim, jj) = uvpsi(idim, jj) + &
-                            sum(psi(sp:ep, idim)*R_CONJ(hgh_p%X(p)(sp:ep, jj)))*mesh%volume_element
+#ifdef R_TCOMPLEX
+            uvpsi(idim, jj) = uvpsi(idim, jj) + blas_dot(size, hgh_p%X(p)(sp, jj), 1, psi(sp, idim), 1)*mesh%volume_element
+#endif
           else
-            uvpsi(idim, jj) = uvpsi(idim, jj) + &
-                            sum(psi(sp:ep, idim)*hgh_p%dp(sp:ep, jj))*mesh%volume_element
+            uvpsi(idim, jj) = uvpsi(idim, jj) + sum(psi(sp:ep, idim)*hgh_p%dp(sp:ep, jj))*mesh%volume_element
           endif
         end do
       end do
@@ -143,8 +144,6 @@ subroutine X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
   R_TYPE,                intent(inout) :: ppsi(:, :)
 
   integer :: n_s, ii, jj, idim, mm
-  integer :: kk
-  CMPLX, allocatable :: lp_psi(:, :, :)
   R_TYPE :: weight(3,dim)
   CMPLX  :: zweight(3,dim)
 
@@ -156,7 +155,7 @@ subroutine X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
 
     n_s = hgh_p(mm)%n_s
 
-    weight(1:3, 1:dim) = M_z0
+    weight(1:3, 1:dim) = R_TOTYPE(M_ZERO)
 
     !We first compute for each value of ii and idim the weight of the projector hgh_p%p(1:n_s, ii)
     !Doing that we need to only apply once the each projector
@@ -196,7 +195,10 @@ subroutine X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
       !We now apply the projectors
       do idim = 1, dim
         do ii = 1, 3
-          ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + (M_HALF*zweight(ii,idim)+weight(ii,idim))*hgh_p(mm)%zp(1:n_s, ii)
+          !If we have SOC, we can only have complex wfns 
+#ifdef R_TCOMPLEX
+          call blas_axpy(n_s, (M_HALF*zweight(ii,idim)+weight(ii,idim)), hgh_p(mm)%zp(1, ii), 1, ppsi(1, idim), 1)
+#endif 
         end do
       end do
 
@@ -205,7 +207,12 @@ subroutine X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
       !We now apply the projectors
       do idim = 1, dim
         do ii = 1, 3
+         !In case of complex wfns, we cannot use blas
+#ifdef R_TCOMPLEX
           ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + weight(ii,idim)*hgh_p(mm)%dp(1:n_s, ii)
+#else
+          call blas_axpy(n_s, weight(ii,idim), hgh_p(mm)%dp(1, ii), 1, ppsi(1, idim), 1)
+#endif
         end do
       end do
 

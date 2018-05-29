@@ -77,8 +77,8 @@ contains
 
   CMPLX, allocatable   :: phase(:)
   type(restart_t) :: restart_gs
-  integer :: ierr, ii, jj
-  integer :: ist, ik, idim, ip
+  integer :: ierr
+  integer :: ist, ik, ip
   CMPLX, allocatable :: temp_state(:,:)
   FLOAT   :: kpoint(1:MAX_DIM)
 

@@ -45,10 +45,11 @@ module ps_xml_oct_m
     FLOAT              :: valence_charge
     integer            :: lmax
     integer            :: llocal
-    FLOAT              :: mesh_spacing
     integer            :: nchannels
     integer            :: grid_size
     integer            :: nwavefunctions
+    FLOAT, allocatable :: grid(:)
+    FLOAT, allocatable :: weights(:)
     FLOAT, allocatable :: potential(:, :)
     FLOAT, allocatable :: wavefunction(:, :)
     FLOAT, allocatable :: projector(:, :, :)
@@ -111,7 +112,6 @@ contains
 
     this%initialized = .true.
     this%valence_charge = pseudo_valence_charge(pseudo)
-    this%mesh_spacing = pseudo_mesh_spacing(pseudo)
     this%mass = pseudo_mass(pseudo)
     this%lmax = pseudo_lmax(pseudo)
     this%llocal = pseudo_llocal(pseudo) 
@@ -120,6 +120,12 @@ contains
     this%kleinman_bylander = (pseudo_type(pseudo) == PSEUDO_TYPE_KLEINMAN_BYLANDER)
 
     this%grid_size = pseudo_mesh_size(pseudo)
+
+    SAFE_ALLOCATE(this%grid(1:this%grid_size))
+    SAFE_ALLOCATE(this%weights(1:this%grid_size))
+    
+    call pseudo_grid(pseudo, this%grid(1))
+    call pseudo_grid_weights(pseudo, this%weights(1))
     
     if(.not. this%kleinman_bylander) then
 
@@ -127,8 +133,15 @@ contains
       SAFE_ALLOCATE(this%wavefunction(1:this%grid_size, 0:this%lmax))
       
       do ll = 0, this%lmax
-        call pseudo_radial_potential(pseudo, ll, this%potential(1, ll))
+        if(.not. pseudo_has_radial_function(pseudo, ll)) then
+          call messages_write("The pseudopotential file '"//trim(filename)//"' does not contain")
+          call messages_new_line()
+          call messages_write("the wave functions. Octopus cannot use it.")
+          call messages_fatal()
+        end if
+
         call pseudo_radial_function(pseudo, ll, this%wavefunction(1, ll))
+        call pseudo_radial_potential(pseudo, ll, this%potential(1, ll))
       end do
 
     else
@@ -138,6 +151,8 @@ contains
       call pseudo_local_potential(pseudo, this%potential(1, this%llocal))
 
       SAFE_ALLOCATE(this%projector(1:this%grid_size, 0:this%lmax, 1:this%nchannels))
+
+      this%projector = CNST(0.0)
       
       do ll = 0, this%lmax
         if(this%llocal == ll) cycle
@@ -204,8 +219,8 @@ contains
     do ll = 0, this%lmax
       nrm = 0.0
       do ip = 1, this%grid_size
-        rr = (ip - 1)*this%mesh_spacing
-        nrm = nrm + this%wavefunction(ip, ll)**2*this%mesh_spacing*rr**2
+        rr = this%grid(ip)
+        nrm = nrm + this%wavefunction(ip, ll)**2*this%weights(ip)*rr**2
       end do
       nrm = sqrt(nrm)
 
@@ -217,7 +232,7 @@ contains
       end if
 
     end do
-      
+    
     POP_SUB(ps_xml_check_normalization)
   end subroutine ps_xml_check_normalization
   
@@ -229,6 +244,8 @@ contains
 
     call pseudo_end(this%pseudo)
 
+    SAFE_DEALLOCATE_A(this%grid)
+    SAFE_DEALLOCATE_A(this%weights)
     SAFE_DEALLOCATE_A(this%potential)
     SAFE_DEALLOCATE_A(this%wavefunction)
     SAFE_DEALLOCATE_A(this%projector)

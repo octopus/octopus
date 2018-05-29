@@ -30,7 +30,7 @@
 #include "base.hpp"
 #include <rapidxml.hpp>
 
-#include "chemical_element.hpp"
+#include "element.hpp"
 
 namespace pseudopotential {
 
@@ -38,8 +38,9 @@ namespace pseudopotential {
 
   public:
     
-    upf1(const std::string & filename):
-      file_(filename),
+    upf1(const std::string & filename, bool uniform_grid = false):
+      pseudopotential::upf(uniform_grid),
+      file_(filename.c_str()),
       buffer_((std::istreambuf_iterator<char>(file_)), std::istreambuf_iterator<char>()){
 
       buffer_.push_back('\0');
@@ -124,7 +125,18 @@ namespace pseudopotential {
 
       }
 
-          
+      {
+	rapidxml::xml_node<> * node = doc_.first_node("PP_MESH")->first_node("PP_R");
+	assert(node);
+
+	std::istringstream stst(node->value());
+
+	grid_weights_.resize(size + start_point_);
+
+	grid_weights_[0] = 0.5*(grid_[1] - grid_[0]);
+	for(int ii = 0; ii < size; ii++) stst >> grid_weights_[start_point_ + ii];
+      }
+      
       //lmax and lloc
       {
 
@@ -136,6 +148,7 @@ namespace pseudopotential {
 	std::vector<bool> has_l(MAX_L, false);
 
 	lmax_ = 0;
+	nchannels_ = 0;
 	int iproj = 0;
 	while(node){
 	  
@@ -155,6 +168,8 @@ namespace pseudopotential {
 	  proj_l_[iproj] = read_l;
 	  proj_c_[iproj] = 0;
 	  for(int jproj = 0; jproj < iproj; jproj++) if(read_l == proj_l_[jproj]) proj_c_[iproj]++;
+
+	  nchannels_ = std::max(nchannels_, proj_c_[iproj] + 1);
 	  
 	  node = node->next_sibling("PP_BETA");
 	  iproj++;
@@ -213,21 +228,17 @@ namespace pseudopotential {
     }
 
     int atomic_number() const {
-      chemical_element el(symbol());
+      element el(symbol());
       return el.atomic_number();
     }
 
     double mass() const {
-      chemical_element el(symbol());
+      element el(symbol());
       return el.mass();
     }
     
     int valence_charge() const {
       return zval_;
-    }
-
-    int llocal() const {
-      return llocal_;
     }
 
     pseudopotential::exchange exchange() const {
@@ -246,15 +257,6 @@ namespace pseudopotential {
       return pseudopotential::correlation::UNKNOWN;
     }
 
-    int nchannels() const {
-      if(llocal() >= 0){
-	if(lmax() == 0) return 0;
-	return nprojectors()/lmax();
-      } else {
-	return nprojectors()/(lmax() + 1);
-      }
-    }
-    
     void local_potential(std::vector<double> & potential) const {
       rapidxml::xml_node<> * node = doc_.first_node("PP_LOCAL");
 
@@ -277,48 +279,47 @@ namespace pseudopotential {
     }
     
     void projector(int l, int i, std::vector<double> & proj) const {
+      proj.clear();
+      
       rapidxml::xml_node<> * node = doc_.first_node("PP_NONLOCAL")->first_node("PP_BETA");
 
       assert(node);
-
+   
       int iproj = 0;
-      while(node){
+      while(l != proj_l_[iproj] || i != proj_c_[iproj]){
+	iproj++;
+	node = node->next_sibling("PP_BETA");
 	
-	if(l != proj_l_[iproj] || i != proj_c_[iproj]) {
-	  iproj++;
-	  node = node->next_sibling("PP_BETA");
-	  continue;
-	}
-	
-	std::string line;
-	std::istringstream stst(node->value());
-	
-	int read_i, read_l, size;
-
-	stst >> read_i >> read_l;
-	getline(stst, line);
-
-	assert(read_l == proj_l_[iproj]);
-	
-	stst >> size;
-	getline(stst, line);
-
-	assert(size >= 0);
-	assert(size <= int(grid_.size()));
-
-	proj.resize(grid_.size());
-
-	for(int ii = 0; ii < size; ii++) stst >> proj[ii + start_point_];
-	for(unsigned ii = size; ii < grid_.size() - start_point_; ii++) proj[ii + start_point_] = 0.0; 
-	    
-	break;
+	if(!node) return;
       }
-
+      
+      std::string line;
+      std::istringstream stst(node->value());
+      
+      int read_i, read_l, size;
+      
+      stst >> read_i >> read_l;
+      getline(stst, line);
+      
+      assert(read_l == proj_l_[iproj]);
+      
+      stst >> size;
+      getline(stst, line);
+      
+      assert(size >= 0);
+      assert(size <= int(grid_.size()));
+      
+      proj.resize(grid_.size());
+      
+      for(int ii = 0; ii < size; ii++) stst >> proj[ii + start_point_];
+      for(unsigned ii = size; ii < grid_.size() - start_point_; ii++) proj[ii + start_point_] = 0.0; 
+      
       //the projectors come in Rydberg and multiplied by r, so we have to divide and fix the first point
       for(unsigned ii = 1; ii < proj.size(); ii++) proj[ii] /= 2.0*grid_[ii];
       extrapolate_first_point(proj);
       
       interpolate(proj);
+
     }
 
     bool has_radial_function(int l) const{
@@ -400,7 +401,7 @@ namespace pseudopotential {
       if(label == "s"){
 	n = 1;
       } else {
-	n = std::stoi(label.substr(0, 1));
+	n = atoi(label.substr(0, 1).c_str());
       }
       
       proj.resize(grid_.size());
@@ -443,7 +444,7 @@ namespace pseudopotential {
 	if(proj_l_[iproj] == l && proj_c_[iproj] == ic){
 	  double read_j;
 	  stst  >> read_j;
-	  return std::lrint(read_j*2.0);
+	  return lrint(read_j*2.0);
 	} else {
 	  std::string line;
 	  getline(stst, line);
@@ -451,7 +452,7 @@ namespace pseudopotential {
       }
 
       assert(false);
-
+      return 0;
     }
 
     int wavefunction_2j(int ii) const {
@@ -471,7 +472,7 @@ namespace pseudopotential {
 	stst >> label >> n >> l >> j >> occ;
       }
 
-      return std::lrint(j*2.0);
+      return lrint(j*2.0);
       
     }
 
@@ -481,7 +482,6 @@ namespace pseudopotential {
     std::ifstream file_;
     std::vector<char> buffer_;
     rapidxml::xml_document<> doc_;
-    int start_point_;
 
     std::string symbol_;
     std::string xc_functional_;

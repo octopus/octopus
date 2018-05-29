@@ -162,13 +162,13 @@ contains
 
     call hardware_init()
 
-    ! Get the environment variable OCTOPUS_SHARE that overrides SHARE_OCTOPUS/share/octopus.
+    ! Get the environment variable OCTOPUS_SHARE that overrides SHARE_DIR/share/octopus.
     call loct_getenv("OCTOPUS_SHARE", share)
 
     if(share /= "") then
       conf%share = trim(share)
     else
-      conf%share = SHARE_OCTOPUS
+      conf%share = SHARE_DIR
     end if
     conf%git_commit = GIT_COMMIT
     conf%build_time = BUILD_TIME

@@ -162,9 +162,6 @@ contains
     real(8), intent(out)   :: minimum
     integer, intent(out)   :: ierr
     
-    integer :: npt, iprint, sizeofw
-    REAL_DOUBLE, allocatable :: w(:)
-    
     PUSH_SUB(minimize_multidim_nograd)
 
     ASSERT(ubound(x, dim = 1) >= dim)
@@ -201,7 +198,6 @@ contains
 #if defined(HAVE_NLOPT)
 
     integer(8) :: opt
-    real(8) :: minf
     integer :: ires
     include 'nlopt.f'
 
@@ -230,7 +226,8 @@ contains
     call nlo_optimize(ires, opt, x, minimum)
     ierr = ires
     call nlo_destroy(opt)
-
+#else
+    ierr = 0
 #endif
   end subroutine minimize_multidim_nlopt
 
@@ -371,7 +368,6 @@ contains
     integer :: n_iter
     real(8), allocatable :: grad(:)
     real(8) :: dt
-    real(8) :: max_grad_atoms
 
     integer :: n_min
     real (8) :: alpha

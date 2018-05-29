@@ -161,6 +161,9 @@ module states_oct_m
     FLOAT, pointer :: rho(:,:)         !< rho(gr%mesh%np_part, st%d%nspin)
     FLOAT, pointer :: current(:, :, :) !<   current(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
 
+    !> k-point resolved current
+    FLOAT, pointer :: current_kpt(:,:,:) !< current(gr%mesh%np_part, gr%sb%dim, kpt_start:kpt_end)
+
 
     FLOAT, pointer :: rho_core(:)      !< core charge for nl core corrections
 
@@ -264,6 +267,7 @@ contains
     nullify(st%psibL)
 
     nullify(st%rho, st%current)
+    nullify(st%current_kpt)
     nullify(st%rho_core, st%frozen_rho)
     nullify(st%subsys_st)
     nullify(st%eigenval, st%occ, st%spin)
@@ -1034,7 +1038,6 @@ contains
     type(type_t), optional, intent(in)      :: wfs_type
     logical,      optional, intent(in)      :: alloc_Left !< allocate an additional set of wfs to store left eigenstates
 
-    integer :: st1, st2, k1, k2, np_part
     logical :: force
 
     PUSH_SUB(states_allocate_wfns)
@@ -1335,6 +1338,11 @@ contains
       st%current = M_ZERO
     end if
 
+    if(.not. associated(st%current_kpt)) then
+      SAFE_ALLOCATE(st%current_kpt(1:gr%mesh%np_part,1:gr%mesh%sb%dim,st%d%kpt%start:st%d%kpt%end))
+      st%current_kpt = M_ZERO
+    end if
+
     POP_SUB(states_allocate_current)
   end subroutine states_allocate_current
 
@@ -1504,6 +1512,7 @@ contains
     call loct_allocatable_copy(stout%user_def_states, stin%user_def_states)
 
     call loct_pointer_copy(stout%current, stin%current)
+    call loct_pointer_copy(stout%current_kpt, stin%current_kpt)
  
     call loct_pointer_copy(stout%rho_core, stin%rho_core)
     call loct_pointer_copy(stout%frozen_rho, stin%frozen_rho)
@@ -1601,6 +1610,7 @@ contains
     
 
     SAFE_DEALLOCATE_P(st%current)
+    SAFE_DEALLOCATE_P(st%current_kpt)
     SAFE_DEALLOCATE_P(st%rho_core)
     SAFE_DEALLOCATE_P(st%frozen_rho)
     
@@ -1768,7 +1778,7 @@ contains
 
     type(base_density_t), pointer :: dnst
     FLOAT                         :: chrg, qtot
-    integer                       :: ispn, ik, ierr
+    integer                       :: ispn, ik
 
     PUSH_SUB(substates_set_charge)
 
@@ -1799,10 +1809,6 @@ contains
     integer            :: ist, ik
     FLOAT              :: charge
     CMPLX, allocatable :: zpsi(:, :)
-#if defined(HAVE_MPI)
-    integer            :: idir, tmp
-    FLOAT, allocatable :: lspin(:), lspin2(:) !< To exchange spin.
-#endif
 
     PUSH_SUB(states_fermi)
 
@@ -1935,10 +1941,6 @@ contains
   subroutine states_distribute_nodes(st, mc)
     type(states_t),    intent(inout) :: st
     type(multicomm_t), intent(in)    :: mc
-
-#ifdef HAVE_MPI
-    integer :: inode, ist
-#endif
 
     PUSH_SUB(states_distribute_nodes)
 
@@ -2422,7 +2424,6 @@ contains
 
     integer :: iqn, ib
     integer(8) :: max_mem, mem
-    FLOAT, parameter :: mem_frac = 0.75
 
     PUSH_SUB(states_pack)
 

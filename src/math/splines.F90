@@ -721,9 +721,6 @@ contains
   real(8) function spline_integral_full(spl) result(res)
     type(spline_t), intent(in) :: spl
 
-    integer :: npoints
-    real(8), allocatable :: x(:)
-
     PUSH_SUB(spline_integral_full)
 
     res = oct_spline_eval_integ_full(spl%spl, spl%acc)
@@ -1206,7 +1203,14 @@ contains
     jj = int(spl%x_limit(2)/dx) + 1
 
     do ii = jj, 1, -1
+
       r = dx*(ii-1)
+
+      ! The first point might not be inside range, so skip it, this
+      ! should be done in a better way, but doing it introduces small
+      ! numerical differences in many tests, so it is a lot of work.
+      if(r > spl%x_limit(2)) cycle
+
       if(abs(spline_eval(spl, r)) > threshold) exit
     end do
 
