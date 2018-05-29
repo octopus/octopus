@@ -6,6 +6,9 @@ FromScratch = yes
 
 ExperimentalFeatures = yes
 
+Debug = trace
+MPIDebugHook = yes
+
 %Coordinates
  'H' | 0 | 0 | 0
 %
