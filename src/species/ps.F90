@@ -789,7 +789,8 @@ contains
 
     write(iunit,'(/,a)')    'orbitals:'
     do j = 1, ps%conf%p
-      write(iunit,'(1x,a,i2,3x,a,i2,3x,a,f5.1,3x,a,l1)') 'n = ', ps%conf%n(j), 'l = ', ps%conf%l(j), 'j = ', ps%conf%j(j), 'bound = ', all(ps%bound(j,:))
+      write(iunit,'(1x,a,i2,3x,a,i2,3x,a,f5.1,3x,a,l1)') 'n = ', ps%conf%n(j), 'l = ', ps%conf%l(j), 'j = ', ps%conf%j(j), &
+                                                         'bound = ', all(ps%bound(j,:))
     end do
 
     
