@@ -145,7 +145,7 @@ contains
     endif
     
     ! Start the actual minimization, first step is minimization of occupation numbers
-    ! Orbital minimization is according to Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem. (scf_orb) or
+    ! Orbital minimization is according to Piris and Ugalde, Vol. 30, No. 13, J. Comput. Chem. (scf_orb) or
     ! using steepest decent (scf_orb_direct)
     do iter = 1, max_iter
       write(message(1), '(a)') '**********************************************************************'
@@ -224,15 +224,6 @@ contains
           ! if other quantities besides the densities and the states are need they also have to be recalculated here!
           call states_dump(restart_dump, states_save, gr, ierr, iter=iter) 
           
-!          write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
-!          call output_all(outp, gr, geo, states_save, hm, ks, dirname)
-          
-!! write output for iterations if requested
-!if(outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
-!  .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
-!  write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
-!  call output_all(outp, gr, geo, states_save, hm, ks, dirname)
-!end if
           if ((conv .or. iter == max_iter)) then
             call states_copy(st, states_save)
           endif
@@ -700,7 +691,7 @@ contains
     call messages_info(1)   
 
     do ist = 1, st%nst
-      write(message(1),'(i4,3x,f11.4)') ist, st%occ(ist, 1)
+      write(message(1),'(i4,3x,f11.8)') ist, st%occ(ist, 1)
       call messages_info(1)
     end do
 
@@ -793,7 +784,7 @@ contains
     
     PUSH_SUB(scf_orb)
 
-    !matrix of Lagrange Multipliers from  Equation (8), Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem. 
+    !matrix of Lagrange Multipliers from  Equation (8), Piris and Ugalde, Vol. 30, No. 13, J. Comput. Chem. 
     SAFE_ALLOCATE(lambda(1:st%nst,1:st%nst)) 
     SAFE_ALLOCATE(FO(1:st%nst, 1:st%nst))    !Generalized Fockian Equation (11) 
 
@@ -1110,7 +1101,7 @@ contains
       g_x = M_ZERO
       g_h = M_ZERO
     
-      !calculate the Lagrange multiplyer lambda matrix on the grid, Eq. (9), Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem.
+      !calculate the Lagrange multiplyer lambda matrix on the grid, Eq. (9), Piris and Ugalde, Vol. 30, No. 13, J. Comput. Chem.
       call density_calc(st, gr, rho)
       do ist =1, hm%d%ispin
         rho_tot(:) = rho(:, ist)
