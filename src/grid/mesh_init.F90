@@ -596,16 +596,16 @@ contains
       ! first we fill the points in the inner mesh
       iin = 0
       ien = mesh%np_global
-      do ixb = mesh%idx%nr(1,1), mesh%idx%nr(2,1), bsize(1)
+      do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsize(3)
         do iyb = mesh%idx%nr(1,2), mesh%idx%nr(2,2), bsize(2)
-          do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsize(3)
+          do ixb = mesh%idx%nr(1,1), mesh%idx%nr(2,1), bsize(1)
 
-            do ix = ixb, min(ixb + bsize(1) - 1, mesh%idx%nr(2,1))
-              chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1)
+            do iz = izb, min(izb + bsize(3) - 1, mesh%idx%nr(2,3))
+              chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3)
               do iy = iyb, min(iyb + bsize(2) - 1, mesh%idx%nr(2,2))
                 chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2)
-                do iz = izb, min(izb + bsize(3) - 1, mesh%idx%nr(2,3))
-                  chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3)
+                do ix = ixb, min(ixb + bsize(1) - 1, mesh%idx%nr(2,1))
+                  chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1)
 
                   if(btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) then
                     iin = iin + 1
