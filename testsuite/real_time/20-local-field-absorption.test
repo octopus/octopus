@@ -1,6 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
-Test       : Absorption spectrum
+Test       : Absorption spectrum of solvated molecules with local field effects within the Polarizable Continuum Model (PCM)
 Program    : octopus
 TestGroups : short-run, real_time
 Enabled    : Yes

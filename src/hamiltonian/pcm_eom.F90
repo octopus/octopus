@@ -144,6 +144,7 @@ module pcm_eom_oct_m
    if(firsttime) then
     dt=this_dt
     nts_act=size(this_cts_act)
+    write(*,*) "Number of tesserae", nts_act
     if (size(q_t) /= nts_act) then
       message(1) = "pcm_charges_propagation: Number of tesserae do not coincide with size of PCM charges array."
       call messages_fatal(1)     
@@ -461,16 +462,10 @@ module pcm_eom_oct_m
     if( .not.allocated(matqq) ) then
      SAFE_ALLOCATE(matqq(nts_act,nts_act))
     endif
-   else if( which_eom == 'external' ) then
+   else if( which_eom == 'external' .or. which_eom == 'justkick' ) then
     SAFE_ALLOCATE(matq0_lf(nts_act,nts_act)) !< not used yet
     SAFE_ALLOCATE(matqd_lf(nts_act,nts_act))
     SAFE_ALLOCATE(matqv_lf(nts_act,nts_act))
-    if( .not.allocated(matqq) ) then
-     SAFE_ALLOCATE(matqq(nts_act,nts_act))
-    endif
-   else if( which_eom == 'justkick' ) then
-    SAFE_ALLOCATE(matqv_lf(nts_act,nts_act))
-    SAFE_ALLOCATE(matqd_lf(nts_act,nts_act))
     if( .not.allocated(matqq) ) then
      SAFE_ALLOCATE(matqq(nts_act,nts_act))
     endif
