@@ -1201,7 +1201,10 @@ contains
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
       select case(ks%vdw_correction)
       case(OPTION__VDWCORRECTION__VDW_TS)
-        call vdw_ts_copy_deriv_coeff(hm, ks%vdw_ts)
+        if (.not. allocated(hm%derivative_coeff)) then
+          SAFE_ALLOCATE(hm%derivative_coeff(1:hm%geo%natoms))
+        end if
+        call vdw_ts_copy_deriv_coeff(ks%vdw_ts, hm%derivative_coeff, hm%geo%natoms)
       end select
     end if
 

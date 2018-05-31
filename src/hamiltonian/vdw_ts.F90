@@ -26,7 +26,6 @@ module vdw_ts_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
   use hirshfeld_oct_m
   use ion_interaction_oct_m
   use io_oct_m !for wrting
@@ -57,11 +56,9 @@ module vdw_ts_oct_m
     vdw_ts_force_calculate,               &
     vdw_ts_calculate,                     &
     vdw_ts_copy_deriv_coeff
+    
   
   type vdw_ts_t
-    FLOAT, allocatable :: derivative_coeff(:)
-    
-    private
     FLOAT, allocatable :: c6free(:)        !> Free atomic volumes for each atomic species.
     FLOAT, allocatable :: dpfree(:)        !> Free atomic static dipole polarizability for each atomic species.
     FLOAT, allocatable :: r0free(:)        !> Free atomic vdW radius for each atomic species.
@@ -71,6 +68,8 @@ module vdw_ts_oct_m
     FLOAT              :: VDW_cutoff       !> Cutoff value for the calculation of the VdW TS correction in periodic system.
     FLOAT              :: VDW_dd_parameter !> Parameter for the damping function steepness.
     FLOAT              :: VDW_sr_parameter !> Parameter for the damping function. Can depend on the XC correction used.
+
+    FLOAT, allocatable :: derivative_coeff(:)
   end type vdw_ts_t
 
 contains
@@ -321,17 +320,14 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_copy_deriv_coeff(hm, vdw_ts)
-    type(hamiltonian_t), intent(inout) :: hm
+  subroutine vdw_ts_copy_deriv_coeff(vdw_ts, derivative_coeff, natoms)
     type(vdw_ts_t),         intent(in) :: vdw_ts
+    FLOAT,                  intent(inout) :: derivative_coeff(:)
+    integer,                intent(in) :: natoms
 
     PUSH_SUB(vdw_ts_copy_deriv_coeff)
 
-    if (.not. allocated(hm%derivative_coeff)) then
-      SAFE_ALLOCATE(hm%derivative_coeff(1:hm%geo%natoms))
-    end if
-
-    hm%derivative_coeff(1:hm%geo%natoms)=vdw_ts%derivative_coeff(1:hm%geo%natoms)
+    derivative_coeff(1:natoms)=vdw_ts%derivative_coeff(1:natoms)
 
     POP_SUB(vdw_ts_copy_deriv_coeff)
   end subroutine vdw_ts_copy_deriv_coeff
