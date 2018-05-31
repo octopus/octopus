@@ -19,6 +19,8 @@
 #include "global.h"
 
 module states_io_oct_m
+  use atomic_orbital_oct_m
+  use comm_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
@@ -32,13 +34,17 @@ module states_io_oct_m
   use messages_oct_m
   use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
   use mpi_lib_oct_m
+  use orbitalset_oct_m
+  use orbitalset_utils_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use sort_oct_m
+  use species_oct_m
   use states_oct_m
   use states_dim_oct_m
+  use submesh_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -635,18 +641,31 @@ contains
 
     ! ---------------------------------------------------------
 
-  subroutine states_write_bandstructure(dir, nst, st, sb)
-    character(len=*),  intent(in) :: dir
-    integer,           intent(in) :: nst
-    type(states_t),    intent(in) :: st
-    type(simul_box_t), intent(in) :: sb
+  subroutine states_write_bandstructure(dir, nst, st, sb, geo, mesh, phase, vec_pot, vec_pot_var)
+    character(len=*),  intent(in)             :: dir
+    integer,           intent(in)             :: nst
+    type(states_t),    intent(in)             :: st
+    type(simul_box_t), intent(in)             :: sb
+    type(geometry_t), target, intent(in)      :: geo
+    type(mesh_t),             intent(in)      :: mesh
+    CMPLX, pointer                            :: phase(:, :)
+    FLOAT, optional, allocatable, intent(in)  :: vec_pot(:) !< (sb%dim)
+    FLOAT, optional, allocatable, intent(in)  :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
     integer :: idir, ist, ik, ns, is,npath
     integer, allocatable :: iunit(:)
     FLOAT   :: red_kpoint(1:MAX_DIM)
     character(len=80) :: filename
 
-    if(.not. mpi_grp_is_root(mpi_world)) return
+    logical :: projection
+    integer :: ii, ll, mm, nn, work, norb, work2
+    integer :: ia, iorb, idim, ip, maxnorb
+    FLOAT   :: norm
+    FLOAT, allocatable :: dpsi(:,:), ddot(:,:)
+    CMPLX, allocatable :: zpsi(:,:), zdot(:,:)
+    FLOAT, allocatable :: weight(:,:,:,:,:)
+    type(orbitalset_t) :: os
+
 
     PUSH_SUB(states_write_bandstructure)   
 
@@ -654,26 +673,192 @@ contains
     ns = 1
     if(st%d%nspin == 2) ns = 2
 
-    SAFE_ALLOCATE(iunit(0:ns-1))
+    !%Variable BandStructureComputeProjections
+    !%Type logical
+    !%Default false
+    !%Section Output
+    !%Description
+    !% Determines if projections of wavefunctions on the atomic orbitals 
+    !% are computed or not for obtaining the orbital resolved band-structure.
+    !%End
+    call parse_variable('BandStructureComputeProjections', .false., projection)
 
-    do is = 0, ns-1
-      if (ns > 1) then
-        write(filename, '(a,i1.1,a)') 'bandstructure-sp', is+1
-      else
-        write(filename, '(a)') 'bandstructure'
-      end if
-      iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
 
-      ! write header
-      write(iunit(is),'(a)',advance='no') '# coord. '
-      do idir = 1, sb%dim
-        write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
+    if(mpi_grp_is_root(mpi_world)) then
+      SAFE_ALLOCATE(iunit(0:ns-1))
+
+      do is = 0, ns-1
+        if (ns > 1) then
+          write(filename, '(a,i1.1,a)') 'bandstructure-sp', is+1
+        else
+          write(filename, '(a)') 'bandstructure'
+        end if
+        iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
+
+        ! write header
+        write(iunit(is),'(a)',advance='no') '# coord. '
+        do idir = 1, sb%dim
+          write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
+        end do
+        if(.not.projection) then
+          write(iunit(is),'(a,i6,3a)') '(red. coord.), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), ']'
+        else 
+         write(iunit(is),'(a,i6,3a)',advance='no') '(red. coord.), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), '] '
+         do ia = 1, geo%natoms
+            work = orbitalset_utils_count(geo, ia)
+            do norb = 1, work
+             work2 = orbitalset_utils_count(geo, ia, norb)
+              write(iunit(is),'(a, i3.3,a,i1.1,a)',advance='no') 'w(at=',ia,',os=',norb,') '
+            end do
+          end do
+          write(iunit(is),'(a)') ''
+        end if
       end do
-      write(iunit(is),'(a,i6,3a)') '(red. coord.), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), ']'
-    end do
-
+    end if
+ 
     npath = SIZE(sb%kpoints%coord_along_path)*ns
 
+
+    !We need to compute the projections of each wavefunctions on the localized basis
+    if(projection) then    
+
+      if(states_are_real(st)) then
+        SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
+      else
+        SAFE_ALLOCATE(zpsi(1:mesh%np, 1:st%d%dim))
+      end if
+
+      maxnorb = 0
+      do ia = 1, geo%natoms
+        maxnorb = max(maxnorb, orbitalset_utils_count(geo, ia))
+      end do
+
+      SAFE_ALLOCATE(weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L, 1:geo%natoms))
+      weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L, 1:geo%natoms) = M_ZERO
+ 
+      do ia = 1, geo%natoms
+
+        !We first count how many orbital set we have
+        work = orbitalset_utils_count(geo, ia)
+
+        !We loop over the orbital sets of the atom ia
+        do norb = 1, work
+          call orbitalset_nullify(os)
+
+          !We count the orbitals
+          work2 = 0
+          do iorb = 1, species_niwfs(geo%atom(ia)%species)
+           call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
+            call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
+            if(ii == norb) then
+              os%ll = ll
+              os%nn = nn
+              os%ii = ii
+              os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
+                                OPTION__AOTRUNCATION__AO_FULL, CNST(0.01))
+              work2 = work2 + 1
+            end if
+          end do
+          os%norbs = work2
+          os%ndim = 1
+          os%submeshforperiodic = .false.
+          os%spec => geo%atom(ia)%species
+          call submesh_null(os%sphere)
+
+          do iorb = 1, os%norbs
+            ! We obtain the orbital
+            if(states_are_real(st)) then
+              call dget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
+                                                os, iorb, os%radius, os%ndim)
+              norm = M_ZERO
+              do idim = 1, os%ndim
+                norm = norm + dsm_nrm2(os%sphere, os%dorb(1:os%sphere%np,idim,iorb))**2
+              end do
+              norm = sqrt(norm)
+              do idim = 1, os%ndim
+                os%dorb(1:os%sphere%np,idim,iorb) =  os%dorb(1:os%sphere%np,idim,iorb)/norm
+              end do
+            else
+              call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
+                                                os, iorb, os%radius, os%ndim)
+              norm = M_ZERO
+              do idim = 1, os%ndim
+                norm = norm + zsm_nrm2(os%sphere, os%zorb(1:os%sphere%np,idim,iorb))**2
+              end do
+              norm = sqrt(norm)
+              do idim = 1, os%ndim
+                os%zorb(1:os%sphere%np,idim,iorb) =  os%zorb(1:os%sphere%np,idim,iorb)/norm
+              end do
+            end if
+          end do !iorb
+
+          nullify(os%phase)
+          if(associated(phase)) then
+            ! In case of complex wavefunction, we allocate the array for the phase correction
+            SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
+            os%phase(:,:) = M_ZERO
+            if(simul_box_is_periodic(mesh%sb) .and. .not. os%submeshforperiodic) then
+              SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
+              os%eorb_mesh(:,:,:,:) = M_ZERO
+            else
+              SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
+              os%eorb_submesh(:,:,:,:) = M_ZERO
+            end if
+            call orbitalset_update_phase(os, sb, st%d%kpt, (st%d%ispin==SPIN_POLARIZED), &
+                              vec_pot, vec_pot_var)
+          end if
+
+          if(states_are_real(st)) then
+            SAFE_ALLOCATE(ddot(1:st%d%dim,1:os%norbs))
+          else
+            SAFE_ALLOCATE(zdot(1:st%d%dim,1:os%norbs))
+          end if
+
+          do ist = st%st_start, st%st_end
+           do ik = st%d%kpt%start, st%d%kpt%end
+            if(ik < st%d%nik-npath+1 ) cycle ! We only want points inside the k-point path
+            if(states_are_real(st)) then
+              call states_get_state(st, mesh, ist, ik, dpsi )
+              call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., ddot(1:st%d%dim,1:os%norbs))
+              do iorb = 1, os%norbs
+                do idim = 1, st%d%dim
+                  weight(ik,ist,iorb,norb,ia) = weight(ik,ist,iorb,norb,ia) + abs(ddot(idim,iorb))**2
+                end do
+              end do
+            else
+              call states_get_state(st, mesh, ist, ik, zpsi )
+              if(associated(phase)) then
+                ! Apply the phase that contains both the k-point and vector-potential terms.
+                call states_set_phase(st%d, zpsi, phase(:,ik), mesh%np, .false.)
+              end if
+              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(phase), &
+                                 zdot(1:st%d%dim,1:os%norbs))
+              do iorb = 1, os%norbs
+                do idim = 1, st%d%dim
+                  weight(ik,ist,iorb,norb,ia) = weight(ik,ist,iorb,norb,ia) + abs(zdot(idim,iorb))**2
+                end do
+              end do
+            end if
+          end do
+         end do
+
+         SAFE_DEALLOCATE_A(ddot)
+         SAFE_DEALLOCATE_A(zdot)
+
+         call orbitalset_end(os)
+       end do !norb
+
+       if(st%parallel_in_states .or. st%d%kpt%parallel) then
+         call comm_allreduce(st%st_kpt_mpi_grp%comm, weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L,ia))
+       end if
+     end do !ia
+
+    SAFE_DEALLOCATE_A(dpsi)
+    SAFE_DEALLOCATE_A(zpsi)
+
+  end if  !projection
+
+  if(mpi_grp_is_root(mpi_world)) then
     ! output bands
     do ik = st%d%nik-npath+1, st%d%nik, ns
       do is = 0, ns - 1
@@ -681,23 +866,43 @@ contains
                                                    absolute_coordinates=.false.)
         write(iunit(is),'(1x)',advance='no')
         write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, & 
-                                                    states_dim_get_kpoint_index(st%d, ik + is)-(st%d%nik -npath)) 
+                                                   states_dim_get_kpoint_index(st%d, ik + is)-(st%d%nik -npath)) 
         do idir = 1, sb%dim
           write(iunit(is),'(f14.8)',advance='no') red_kpoint(idir)
         end do
         do ist = 1, nst
           write(iunit(is),'(1x,f14.8)',advance='no') units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
         end do
+        if(projection) then
+          do ia = 1, geo%natoms
+            work = orbitalset_utils_count(geo, ia)
+            do norb = 1, work
+              work2 = orbitalset_utils_count(geo, ia, norb)              
+              do iorb = 1, work2
+                do ist = 1, nst
+                  write(iunit(is),'(es15.8)',advance='no') weight(ik+is,ist,iorb,norb,ia)
+                end do
+              end do
+            end do
+          end do
+        end if
       end do
+
       do is = 0, ns-1
         write(iunit(is), '(a)')
       end do
     end do
+
     do is = 0, ns-1
       call io_close(iunit(is))
     end do
+  end if
 
-    SAFE_DEALLOCATE_A(iunit)
+  if(projection) then
+     SAFE_DEALLOCATE_A(weight)
+  end if
+
+  SAFE_DEALLOCATE_A(iunit)
 
 
   POP_SUB(states_write_bandstructure)

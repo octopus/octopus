@@ -27,6 +27,8 @@ module unocc_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lcao_oct_m
+  use lda_u_oct_m
+  use lda_u_io_oct_m
   use loct_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -114,6 +116,8 @@ contains
 
       if(ierr == 0) then
         call states_load(restart_load_unocc, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+        if(hm%lda_u_level /= DFT_U_NONE) &
+          call lda_u_load(restart_load_unocc, hm%lda_u, sys%st, ierr)
         call restart_end(restart_load_unocc)
       end if
       
@@ -129,6 +133,8 @@ contains
     if(ierr_rho == 0) then
       if (read_gs) then
         call states_load(restart_load_gs, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+        if(hm%lda_u_level /= DFT_U_NONE) &
+          call lda_u_load(restart_load_gs, hm%lda_u, sys%st, ierr)
       end if
       call states_load_rho(restart_load_gs, sys%st, sys%gr, ierr_rho)
       write_density = restart_has_map(restart_load_gs)
@@ -254,8 +260,6 @@ contains
 
       call write_iter_(sys%st)
 
-
-
       ! write output file
       if(mpi_grp_is_root(mpi_world)) then
         call io_mkdir(STATIC_DIR)
@@ -309,7 +313,9 @@ contains
 
     if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) then
       if(iand(sys%gr%sb%kpoints%method, KPOINTS_PATH) /= 0) &
-        call states_write_bandstructure(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb)
+        call states_write_bandstructure(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb, sys%geo, sys%gr%mesh, &
+              hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
+                                vec_pot_var = hm%hm_base%vector_potential)
     end if
  
 

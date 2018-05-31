@@ -810,6 +810,7 @@ contains
         if(.not. present(st_start)) then
           call states_fermi(sys%st, sys%gr%mesh) ! occupations
         end if
+
       end if
 
     else if (present(st_start)) then
@@ -823,6 +824,7 @@ contains
     end if
 
     call lcao_end(lcao)
+
 
     call profiling_out(prof)
     POP_SUB(lcao_run)

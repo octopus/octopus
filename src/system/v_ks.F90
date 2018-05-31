@@ -32,6 +32,7 @@ module v_ks_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
+  use hamiltonian_base_oct_m
   use kick_oct_m
   use index_oct_m
   use io_function_oct_m
@@ -386,7 +387,7 @@ contains
         call xc_oep_init(ks%oep, ks%xc_family, gr, st)
       end if
       if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_init(ks%ks_inversion, gr, geo, st, mc)
+        call xc_ks_inversion_init(ks%ks_inversion, gr, geo, st)
       end if
     end select
 
@@ -1170,6 +1171,15 @@ contains
             ks%calc%energy%Imintnvxc = ks%calc%energy%Imintnvxc + aimag(ctmp)          
           end if
         end do
+
+        if(states_are_real(st)) then
+          ks%calc%energy%int_dft_u = denergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)
+        else
+          ctmp = zenergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)
+          ks%calc%energy%int_dft_u   = real(ctmp)
+          ks%calc%energy%Imint_dft_u = aimag(ctmp)
+        end if
+
       end if
 
       call profiling_out(prof)
@@ -1352,6 +1362,7 @@ contains
     else
       call hamiltonian_update(hm, ks%gr%mesh)
     end if
+
 
     SAFE_DEALLOCATE_P(ks%calc%density)
     SAFE_DEALLOCATE_P(ks%calc%Imdensity)

@@ -38,6 +38,7 @@ module forces_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
+  use lda_u_oct_m
   use linear_response_oct_m
   use loct_math_oct_m
   use math_oct_m
@@ -90,12 +91,13 @@ contains
   ! ---------------------------------------------------------
   !> This computes the total forces on the ions created by the electrons
   !! (it excludes the force due to possible time-dependent external fields).
-  subroutine total_force_calculate(gr, geo, ep, st, x)
+  subroutine total_force_calculate(gr, geo, ep, st, x, lda_u)
     type(grid_t),     intent(inout) :: gr
     type(geometry_t), intent(in)    :: geo
     type(epot_t),     intent(inout) :: ep
     type(states_t),   intent(inout) :: st
     FLOAT, intent(inout)            :: x(MAX_DIM)
+    integer,          intent(in)    :: lda_u
 
     type(profile_t), save :: forces_prof
 
@@ -104,9 +106,9 @@ contains
 
     x = M_ZERO
     if (states_are_real(st) ) then 
-      call dtotal_force_from_potential(gr, geo, ep, st, x)
+      call dtotal_force_from_potential(gr, geo, ep, st, x, lda_u)
     else
-      call ztotal_force_from_potential(gr, geo, ep, st, x)
+      call ztotal_force_from_potential(gr, geo, ep, st, x, lda_u)
     end if
 
     POP_SUB(total_force_calculate)
@@ -272,7 +274,7 @@ contains
 
     integer :: j, iatom, idir
     FLOAT :: x(MAX_DIM), time, global_force(1:MAX_DIM)
-    FLOAT, allocatable :: force(:, :), force_loc(:, :), force_nl(:, :)
+    FLOAT, allocatable :: force(:, :), force_loc(:, :), force_nl(:, :), force_u(:, :)
     type(profile_t), save :: forces_prof
 
     call profiling_in(forces_prof, "FORCES")
@@ -288,6 +290,7 @@ contains
       geo%atom(iatom)%f_vdw(1:gr%sb%dim) = M_ZERO
       geo%atom(iatom)%f_loc(1:gr%sb%dim) = M_ZERO
       geo%atom(iatom)%f_nl(1:gr%sb%dim) = M_ZERO
+      geo%atom(iatom)%f_u(1:gr%sb%dim) = M_ZERO
       geo%atom(iatom)%f_fields(1:gr%sb%dim) = M_ZERO
     end do
 
@@ -311,18 +314,19 @@ contains
     SAFE_ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_loc(1:gr%mesh%sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_nl(1:gr%mesh%sb%dim, 1:geo%natoms))
-   
+    SAFE_ALLOCATE(force_u(1:gr%mesh%sb%dim, 1:geo%natoms)) 
  
     if (states_are_real(st) ) then 
-      call dforces_from_potential(gr, geo, hm, st, force, force_loc, force_nl)
+      call dforces_from_potential(gr, geo, hm, st, force, force_loc, force_nl, force_u)
     else
-      call zforces_from_potential(gr, geo, hm, st, force, force_loc, force_nl)
+      call zforces_from_potential(gr, geo, hm, st, force, force_loc, force_nl, force_u)
     end if
 
     if(hm%ep%force_total_enforce) then
       call forces_set_total_to_zero(geo, force)
       call forces_set_total_to_zero(geo, force_loc)
       call forces_set_total_to_zero(geo, force_nl)
+      call forces_set_total_to_zero(geo, force_u)
     end if
 
     do iatom = 1, geo%natoms
@@ -330,13 +334,15 @@ contains
         geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + force(idir, iatom)
         geo%atom(iatom)%f_loc(idir) = force_loc(idir, iatom)
         geo%atom(iatom)%f_nl(idir) = force_nl(idir, iatom)
+        geo%atom(iatom)%f_u(idir) = force_u(idir, iatom)
       end do
     end do
 
     SAFE_DEALLOCATE_A(force)
     SAFE_DEALLOCATE_A(force_loc)
     SAFE_DEALLOCATE_A(force_nl)
-    
+    SAFE_DEALLOCATE_A(force_u)
+ 
     !\todo forces due to the magnetic fields (static and time-dependent)
     if(present(t)) then
       do j = 1, hm%ep%no_lasers
@@ -459,15 +465,16 @@ contains
 
 
     iunit2 = io_open(trim(dir)//'/forces', action='write', position='asis')
-    write(iunit2,'(a)') ' # Total force (x,y,z) Ion-Ion (x,y,z) VdW (x,y,z) Local (x,y,z) NL (x,y,z) Fields (x,y,z)'
+    write(iunit2,'(a)') ' # Total force (x,y,z) Ion-Ion (x,y,z) VdW (x,y,z) Local (x,y,z) NL (x,y,z) Fields (x,y,z) Hubbard(x,y,z)'
     do iatom = 1, geo%natoms
-       write(iunit2,'(i4,a10,18e15.6)') iatom, trim(species_label(geo%atom(iatom)%species)), &
+       write(iunit2,'(i4,a10,21e15.6)') iatom, trim(species_label(geo%atom(iatom)%species)), &
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, sb%dim), &
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f_ii(idir)), idir=1, sb%dim), &
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f_vdw(idir)), idir=1, sb%dim), &
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f_loc(idir)), idir=1, sb%dim), &
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f_nl(idir)), idir=1, sb%dim), &
-                 (units_from_atomic(units_out%force, geo%atom(iatom)%f_fields(idir)), idir=1, sb%dim)
+                 (units_from_atomic(units_out%force, geo%atom(iatom)%f_fields(idir)), idir=1, sb%dim), &
+                 (units_from_atomic(units_out%force, geo%atom(iatom)%f_u(idir)), idir=1, sb%dim)
     end do
     call io_close(iunit2) 
 

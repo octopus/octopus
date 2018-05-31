@@ -440,6 +440,7 @@ AC_CONFIG_FILES([Makefile
   testsuite/finite_systems_3d/Makefile
   testsuite/functionals/Makefile
   testsuite/real_time/Makefile
+  testsuite/lda_u/Makefile
   testsuite/linear_response/Makefile
   testsuite/optimal_control/Makefile
   testsuite/periodic_systems/Makefile

@@ -49,6 +49,8 @@ module output_oct_m
   use kick_oct_m
   use kpoints_oct_m
   use lasers_oct_m
+  use lda_u_oct_m
+  use lda_u_io_oct_m
   use linear_response_oct_m
   use loct_oct_m
   use loct_math_oct_m
@@ -60,6 +62,7 @@ module output_oct_m
   use modelmb_density_matrix_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
+  use orbitalset_oct_m
   use output_fio_oct_m
   use output_me_oct_m
   use parser_oct_m
@@ -73,6 +76,7 @@ module output_oct_m
   use states_oct_m
   use states_dim_oct_m
   use states_io_oct_m
+  use submesh_oct_m
   use symm_op_oct_m
   use symmetries_oct_m
   use unit_oct_m
@@ -125,6 +129,7 @@ module output_oct_m
   type output_t
     !> General output variables:
     integer :: what                !< what to output
+    integer :: what_lda_u          !< what to output for the LDA+U part
     integer :: whatBZ              !< what to output - for k-point resolved output
     integer :: how                 !< how to output
 
@@ -159,7 +164,7 @@ contains
     type(block_t) :: blk
     FLOAT :: norm
     character(len=80) :: nst_string, default
-    integer :: what_no_how
+    integer :: what_no_how, what_no_how_u
 
     PUSH_SUB(output_init)
 
@@ -477,6 +482,36 @@ contains
       call output_berkeleygw_init(nst, outp%bgw, sb%periodic_dim)
     end if
 
+    !%Variable OutputLDA_U
+    !%Type flag
+    !%Default none
+    !%Section Output
+    !%Description
+    !% Specifies what to print, related to LDA+U. 
+    !% The output files are written at the end of the run into the output directory for the
+    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
+    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
+    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
+    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir/effectiveU</tt>.
+    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
+    !% the options below. Indices in the filename are labelled as follows:
+    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
+    !% There is no tag for directions, given as a letter. The perturbation direction is always
+    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
+    !% Example: <tt>occ_matrices + effectiveU</tt>
+    !%Option occ_matrices  bit(0)
+    !% Outputs the occupation matrices of LDA+U
+    !%Option effectiveU bit(1)
+    !% Outputs the value of the effectiveU for each atoms 
+    !%Option magnetization bit(2)
+    !% Outputs file containing structure and magnetization of the localized subspace 
+    !% on the atoms as a vector associated with each atom, which can be visualized.
+    !% For the moment, it only works if a +U is added on one type of orbital per atom. 
+    !%Option local_orbitals bit(3)
+    !% Outputs the localized orbitals that form the correlated subspace
+    !%End
+    call parse_variable('OutputLDA_U', 0, outp%what_lda_u)
+
     !%Variable OutputInterval
     !%Type integer
     !%Default 50
@@ -528,6 +563,8 @@ contains
     ! these kinds of Output do not have a how
     what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS + OPTION__OUTPUT__BERKELEYGW + OPTION__OUTPUT__DOS + &
       OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW + OPTION__OUTPUT__FROZEN_SYSTEM
+    what_no_how_u = OPTION__OUTPUTLDA_U__OCC_MATRICES + OPTION__OUTPUTLDA_U__EFFECTIVEU + &
+      OPTION__OUTPUTLDA_U__MAGNETIZATION
 
     if(iand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
       call messages_experimental("Frozen output")
@@ -589,7 +626,8 @@ contains
     call add_last_slash(outp%iter_dir)
 
     ! we are using a what that has a how.
-    if(iand(outp%what, not(what_no_how)) /= 0 .or. outp%whatBZ /= 0) then
+    if(iand(outp%what, not(what_no_how)) /= 0 .or. outp%whatBZ /= 0 .or. &
+       iand(outp%what_lda_u, not(what_no_how_u)) /= 0) then
       call io_function_read_how(sb, outp%how)
     else
       outp%how = 0
@@ -627,7 +665,7 @@ contains
     PUSH_SUB(output_all)
     call profiling_in(prof, "OUTPUT_ALL")
 
-    if(outp%what+outp%whatBZ /= 0) then
+    if(outp%what+outp%whatBZ+outp%what_lda_u /= 0) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
       call io_mkdir(dir)
@@ -641,7 +679,7 @@ contains
       end do
     end if
     
-    call output_states(st, gr, geo, dir, outp)
+    call output_states(st, gr, geo, hm, dir, outp)
     call output_hamiltonian(hm, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
     call output_localization_funct(st, hm, gr, dir, outp, geo)
     call output_current_flow(gr, st, dir, outp)
@@ -684,6 +722,20 @@ contains
     
     if(iand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
       call output_fio(gr, geo, st, hm, trim(adjustl(dir)), mpi_world)
+    end if
+
+    if(hm%lda_u_level /= DFT_U_NONE) then
+      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCC_MATRICES) /= 0)&
+        call lda_u_write_occupation_matrices(dir, hm%lda_u, st)
+
+      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__EFFECTIVEU) /= 0)&
+        call lda_u_write_effectiveU(dir, hm%lda_u)
+
+      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__MAGNETIZATION) /= 0)&
+        call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st)
+
+      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__LOCAL_ORBITALS) /= 0)&
+        call output_dftu_orbitals(dir, hm%lda_u, outp, st, gr%mesh, geo, associated(hm%hm_base%phase))
     end if
 
     call profiling_out(prof)
@@ -1337,6 +1389,90 @@ contains
 #endif
 
   end subroutine output_berkeleygw
+
+   ! ---------------------------------------------------------
+  subroutine output_dftu_orbitals(dir, this, outp, st, mesh, geo, has_phase)
+    character(len=*),  intent(in) :: dir
+    type(lda_u_t),     intent(in) :: this
+    type(output_t),    intent(in) :: outp
+    type(states_t),    intent(in) :: st
+    type(mesh_t),      intent(in) :: mesh
+    type(geometry_t),  intent(in) :: geo
+    logical,           intent(in) :: has_phase
+
+    integer :: ios, im, ik, idim, ierr
+    CMPLX, allocatable :: tmp(:)
+    FLOAT, allocatable :: dtmp(:)
+    type(orbitalset_t), pointer :: os
+    type(unit_t) :: fn_unit
+    character(len=32) :: fname
+
+    PUSH_SUB(output_dftu_orbitals)
+
+    fn_unit = sqrt(units_out%length**(-mesh%sb%dim))
+
+    if(.not.(has_phase .and. .not.this%basis%submeshforperiodic &
+                .and.simul_box_is_periodic(mesh%sb))) then
+      if(states_are_real(st)) then
+        SAFE_ALLOCATE(dtmp(1:mesh%np))
+      else
+        SAFE_ALLOCATE(tmp(1:mesh%np))
+      end if
+    end if
+
+    do ios = 1, this%norbsets
+      os => this%orbsets(ios)
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do im = 1, this%orbsets(ios)%norbs
+          do idim = 1, st%d%dim
+            if(st%d%nik > 1) then
+              if(st%d%dim > 1) then
+                write(fname, '(a,i1,a,i3.3,a,i4.4,a,i1)') 'orb', im, '-os', ios, '-k', ik, '-sp', idim
+              else
+                write(fname, '(a,i1,a,i3.3,a,i4.4)') 'orb', im, '-os', ios, '-k', ik
+              end if
+            else
+              if(st%d%dim > 1) then
+                write(fname, '(a,i1,a,i3.3,a,i1)') 'orb', im, '-os', ios, '-sp', idim
+              else
+                write(fname, '(a,i1,a,i3.3)') 'orb', im, '-os', ios
+              end if
+            end if
+            if(has_phase) then
+              if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
+               call zio_function_output(outp%how, dir, fname, mesh, &
+                  os%eorb_mesh(1:mesh%np,idim,im, ik), fn_unit, ierr, geo = geo)
+              else
+               tmp = M_Z0
+               call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,idim,im,ik), tmp)
+               call zio_function_output(outp%how, dir, fname, mesh, tmp, fn_unit, ierr, geo = geo)
+              end if
+            else
+              if (states_are_real(st)) then
+                dtmp = M_Z0
+                call submesh_add_to_mesh(os%sphere, os%dorb(1:os%sphere%np,idim,im), dtmp)
+                call dio_function_output(outp%how, dir, fname, mesh, dtmp, fn_unit, ierr, geo = geo)
+              else
+                tmp = M_Z0
+                call submesh_add_to_mesh(os%sphere, os%zorb(1:os%sphere%np,idim,im), tmp)
+                call zio_function_output(outp%how, dir, fname, mesh, tmp, fn_unit, ierr, geo = geo)
+              end if
+            end if
+          end do
+        end do
+      end do
+    end do
+
+    if(.not.(has_phase .and. .not.this%basis%submeshforperiodic &
+               .and.simul_box_is_periodic(mesh%sb))) then
+      SAFE_DEALLOCATE_A(tmp)
+      SAFE_DEALLOCATE_A(dtmp)
+    end if
+
+    POP_SUB(output_dftu_orbitals)
+  end subroutine output_dftu_orbitals
+
+  ! ---------------------------------------------------------
 
 #include "output_etsf_inc.F90"
 

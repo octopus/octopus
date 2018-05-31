@@ -43,6 +43,7 @@ module hamiltonian_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
+  use lda_u_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -188,6 +189,10 @@ module hamiltonian_oct_m
     !> For the Rashba spin-orbit coupling
     FLOAT :: rashba_coupling
     type(scdm_t)  :: scdm
+
+    !> For the LDA+U 
+    type(lda_u_t) :: lda_u
+    integer       :: lda_u_level
 
     logical :: time_zero
   end type hamiltonian_t
@@ -430,6 +435,31 @@ contains
 
     hm%adjoint = .false.
 
+    !%Variable DFTULevel
+    !%Type integer
+    !%Default no
+    !%Section Hamiltonian::XC
+    !%Description
+    !% (Experimental) This variable selects which DFT+U
+    !% expression is added to the Hamiltonian.
+    !%Option dft_u_none 0
+    !% No +U term is not applied.
+    !%Option dft_u_empirical 1
+    !% An empiricial Hubbard U is added on the orbitals specified in the block species
+    !% with hubbard_l and hubbard_u
+    !%Option dft_u_acbn0 2
+    !% Octopus determines the effective U term using the 
+    !% ACBN0 functional as defined in PRX 5, 011006 (2015)
+    !%End
+    call parse_variable('DFTULevel', DFT_U_NONE, hm%lda_u_level)
+    call messages_print_var_option(stdout,  'DFTULevel', hm%lda_u_level)
+    call lda_u_nullify(hm%lda_u)
+    if(hm%lda_u_level /= DFT_U_NONE) then
+      call messages_experimental('DFT+U')
+      call lda_u_init(hm%lda_u, hm%lda_u_level, gr, geo, st)
+    end if
+ 
+
     nullify(hm%hm_base%phase)
     if (simul_box_is_periodic(gr%sb) .and. &
         .not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) &
@@ -526,6 +556,11 @@ contains
         call accel_create_buffer(hm%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, gr%mesh%np_part*hm%d%kpt%nlocal)
         call accel_write_buffer(hm%hm_base%buff_phase, gr%mesh%np_part*hm%d%kpt%nlocal, hm%hm_base%phase)
         hm%hm_base%buff_phase_qn_start = hm%d%kpt%start
+      end if
+
+      ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
+      if(hm%lda_u_level /= DFT_U_NONE) then
+        call lda_u_build_phase_correction(hm%lda_u, gr%mesh%sb, hm%d )
       end if
 
       POP_SUB(hamiltonian_init.init_phase)
@@ -873,6 +908,14 @@ contains
         if(accel_is_enabled()) then
           call accel_write_buffer(this%hm_base%buff_phase, mesh%np_part*this%d%kpt%nlocal, this%hm_base%phase)
         end if
+
+        ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
+        if(this%lda_u_level /= DFT_U_NONE) then
+          call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, &
+               vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
+        end if
+
+
       end if
 
       max_npoints = this%hm_base%max_npoints
@@ -941,6 +984,8 @@ contains
         call pcm_calc_pot_rs(this%pcm, gr%mesh, v_ext = this%ep%v_ext(1:gr%mesh%np_part))
 
     end if
+
+    call lda_u_update_basis(this%lda_u, gr, geo, st, associated(this%hm_base%phase))
 
     POP_SUB(hamiltonian_epot_generate)
   end subroutine hamiltonian_epot_generate

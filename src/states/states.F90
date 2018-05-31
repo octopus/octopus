@@ -2275,25 +2275,25 @@ contains
       call symmetrizer_init(symmetrizer, der%mesh)
       do is = 1, st%d%nspin
         if(associated(tau)) then
-          call dsymmetrizer_apply(symmetrizer, field = tau(:, is), symmfield = symm(:,1), &
+          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field = tau(:, is), symmfield = symm(:,1), &
             suppress_warning = .true.)
           tau(1:der%mesh%np, is) = symm(1:der%mesh%np,1)
         end if
 
         if(present(density_laplacian)) then
-          call dsymmetrizer_apply(symmetrizer, field = density_laplacian(:, is), symmfield = symm(:,1), &
+          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field = density_laplacian(:, is), symmfield = symm(:,1), &
             suppress_warning = .true.)
           density_laplacian(1:der%mesh%np, is) = symm(1:der%mesh%np,1)
         end if
 
         if(associated(jp)) then 
-          call dsymmetrizer_apply(symmetrizer, field_vector = jp(:, :, is), symmfield_vector = symm, &
+          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = jp(:, :, is), symmfield_vector = symm, &
             suppress_warning = .true.)
           jp(1:der%mesh%np, 1:der%mesh%sb%dim, is) = symm(1:der%mesh%np, 1:der%mesh%sb%dim)
         end if
  
         if(present(density_gradient)) then
-          call dsymmetrizer_apply(symmetrizer, field_vector = density_gradient(:, :, is), &
+          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = density_gradient(:, :, is), &
             symmfield_vector = symm, suppress_warning = .true.)
           density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = symm(1:der%mesh%np, 1:der%mesh%sb%dim)
         end if   

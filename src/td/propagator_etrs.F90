@@ -31,6 +31,8 @@ module propagator_etrs_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
   use lalg_basic_oct_m
+  use lda_u_oct_m
+  use lda_u_io_oct_m
   use loct_pointer_oct_m
   use math_oct_m
   use messages_oct_m
@@ -138,6 +140,8 @@ contains
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
     end if
     call hamiltonian_update(hm, gr%mesh, time = time)
+    !We update the occupation matrices
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
@@ -224,6 +228,7 @@ contains
     call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
     call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
     call hamiltonian_update(hm, gr%mesh, time = time - dt)
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     ! propagate dt/2 with H(t)
 
@@ -242,6 +247,7 @@ contains
     end if
 
     call hamiltonian_update(hm, gr%mesh, time = time)
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     SAFE_ALLOCATE(psi2(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
@@ -271,6 +277,7 @@ contains
       end if
 
       call v_ks_calc(ks, hm, st, geo, time = time, calc_current = .false.)
+      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
       ! now check how much the potential changed
       do ip = 1, gr%mesh%np
@@ -296,6 +303,10 @@ contains
       end if
 
     end do
+
+    if(hm%lda_u_level /= DFT_U_NONE) then 
+      call lda_u_write_U(hm%lda_u, stdout) 
+    end if
 
     ! print an empty line
     call messages_info()
@@ -368,6 +379,8 @@ contains
       endif
 
       call hamiltonian_update(hm, gr%mesh, time = time - dt)
+      !We update the occupation matrices
+      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
       call v_ks_calc_start(ks, hm, st, geo, time = time - dt, calc_energy = .false., &
              calc_current = .false.)
     end if
@@ -437,6 +450,8 @@ contains
     end if
 
     call hamiltonian_update(hm, gr%mesh, time = time)
+    !We update the occupation matrices
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     call density_calc_init(dens_calc, st, gr, st%rho)
 

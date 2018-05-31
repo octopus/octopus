@@ -19,14 +19,18 @@
 #include "global.h"
 
 module dos_oct_m
+  use atomic_orbital_oct_m
   use comm_oct_m
   use geometry_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use io_oct_m
+  use lda_u_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use orbitalset_oct_m
+  use orbitalset_utils_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
@@ -53,6 +57,7 @@ module dos_oct_m
     integer :: epoints
     FLOAT   :: gamma
     FLOAT   :: de
+    logical :: computepdos
   end type dos_t
 
 contains
@@ -108,6 +113,15 @@ contains
     call parse_variable('DOSGamma', units_from_atomic(units_inp%energy, CNST(0.008)), this%gamma)
     this%gamma = units_to_atomic(units_inp%energy, this%gamma)
 
+    !%Variable DOSComputePDOS
+    !%Type logical
+    !%Default false
+    !%Section Output
+    !%Description
+    !% Determines if projected dos are computed or not.
+    !%End
+    call parse_variable('DOSComputePDOS', .false., this%computepdos)
+
     ! spacing for energy mesh
     this%de = (this%emax - this%emin) / (this%epoints - 1)
 
@@ -126,13 +140,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine dos_write_dos(this, dir, st, sb, geo, mesh)
+  subroutine dos_write_dos(this, dir, st, sb, geo, mesh, hm)
     type(dos_t),               intent(in) :: this
     character(len=*),         intent(in) :: dir
     type(states_t),           intent(in) :: st
     type(simul_box_t),        intent(in) :: sb
     type(geometry_t), target, intent(in) :: geo
     type(mesh_t),             intent(in) :: mesh
+    type(hamiltonian_t),      intent(in) :: hm
 
     integer :: ie, ik, ist, is, ns, maxdos
     integer, allocatable :: iunit(:)
@@ -147,6 +162,7 @@ contains
     FLOAT, allocatable :: dpsi(:,:), ddot(:,:)
     CMPLX, allocatable :: zpsi(:,:), zdot(:,:)
     FLOAT, allocatable :: weight(:,:)
+    type(orbitalset_t) :: os
 
     PUSH_SUB(dos_write_dos)
 
@@ -253,6 +269,172 @@ contains
       call messages_info(3, iunit(0))
       call io_close(iunit(0))
 
+    end if
+
+    if(this%computepdos) then
+
+      if (states_are_real(st)) then
+        SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
+      else
+        SAFE_ALLOCATE(zpsi(1:mesh%np, 1:st%d%dim))
+      end if
+
+      SAFE_ALLOCATE(weight(1:st%d%nik,1:st%nst))
+
+      do ia = 1, geo%natoms
+        !We first count how many orbital set we have
+        work = orbitalset_utils_count(geo, ia)
+
+        !We loop over the orbital sets of the atom ia
+        do norb = 1, work
+          call orbitalset_nullify(os)
+
+          !We count the orbitals
+          work2 = 0
+          do iorb = 1, species_niwfs(geo%atom(ia)%species)
+            call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
+            call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
+            if(ii == norb) then
+              os%ll = ll
+              os%nn = nn
+              os%ii = ii
+              os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
+                                OPTION__AOTRUNCATION__AO_FULL, CNST(0.01))
+              work2 = work2 + 1
+            end if
+          end do
+          os%norbs = work2
+          os%ndim = 1
+          os%submeshforperiodic = .false.
+          os%spec => geo%atom(ia)%species
+          call submesh_null(os%sphere)
+ 
+          do work = 1, os%norbs
+            ! We obtain the orbital
+            if(states_are_real(st)) then
+              call dget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
+                                                os, work, os%radius, os%ndim)
+              norm = M_ZERO
+              do idim = 1, os%ndim
+                norm = norm + dsm_nrm2(os%sphere, os%dorb(1:os%sphere%np,idim,work))
+              end do
+             norm = sqrt(norm)
+            else
+              call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
+                                                os, work, os%radius, os%ndim)
+              norm = M_ZERO
+              do idim = 1, os%ndim
+                norm = norm + zsm_nrm2(os%sphere, os%zorb(1:os%sphere%np,idim,work))
+              end do
+             norm = sqrt(norm)
+            end if
+          end do
+
+          nullify(os%phase)
+          if(associated(hm%hm_base%phase)) then
+            ! In case of complex wavefunction, we allocate the array for the phase correction
+            SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
+            os%phase(:,:) = M_ZERO
+            if(simul_box_is_periodic(mesh%sb) .and. .not. os%submeshforperiodic) then
+              SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
+              os%eorb_mesh(:,:,:,:) = M_ZERO
+            else
+              SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
+              os%eorb_submesh(:,:,:,:) = M_ZERO
+            end if
+            call orbitalset_update_phase(os, sb, st%d%kpt, (st%d%ispin==SPIN_POLARIZED), &
+                                            vec_pot = hm%hm_base%uniform_vector_potential, &
+                                            vec_pot_var = hm%hm_base%vector_potential)
+          end if
+
+          if(mpi_grp_is_root(mpi_world)) then
+            if(os%nn /= 0 ) then
+              write(filename,'(a, i3.3, a1, a2, i1.1, a1,a)') 'pdos-at', ia, '-', trim(species_label(os%spec)), &
+                           os%nn, l_notation(os%ll), '.dat'
+            else
+              write(filename,'(a,  i3.3, a1, a2, a1,a)') 'pdos-at', ia, '-', trim(species_label(os%spec)), &
+                            l_notation(os%ll), '.dat'
+            end if
+ 
+            iunit(0) = io_open(trim(dir)//'/'//trim(filename), action='write')
+            ! write header
+            write(iunit(0), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], projected DOS'
+          end if
+
+          if(states_are_real(st)) then
+            SAFE_ALLOCATE(ddot(1:st%d%dim,1:os%norbs))
+          else
+            SAFE_ALLOCATE(zdot(1:st%d%dim,1:os%norbs))
+          end if
+
+          weight(1:st%d%nik,1:st%nst) = M_ZERO
+
+          do ist = st%st_start, st%st_end
+           do ik = st%d%kpt%start, st%d%kpt%end
+            if(states_are_real(st)) then
+              call states_get_state(st, mesh, ist, ik, dpsi )
+              call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., ddot(1:st%d%dim,1:os%norbs))
+              do iorb = 1, os%norbs
+                do idim = 1, st%d%dim
+                  weight(ik,ist) = weight(ik,ist) + st%d%kweights(ik)*abs(ddot(idim,iorb))**2
+                end do
+              end do
+            else
+              call states_get_state(st, mesh, ist, ik, zpsi )
+              if(associated(hm%hm_base%phase)) then
+              ! Apply the phase that contains both the k-point and vector-potential terms.
+                do idim = 1, st%d%dim
+                  !$omp parallel do
+                  do ip = 1, mesh%np
+                    zpsi(ip, idim) = hm%hm_base%phase(ip, ik)*zpsi(ip, idim)
+                end do
+                !$omp end parallel do
+              end do
+              end if
+              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(hm%hm_base%phase), &
+                                 zdot(1:st%d%dim,1:os%norbs))
+
+              do iorb = 1, os%norbs
+                do idim = 1, st%d%dim
+                  weight(ik,ist) = weight(ik,ist) + st%d%kweights(ik)*abs(zdot(idim,iorb))**2
+                end do
+              end do
+            end if
+           end do
+          end do
+
+          if(st%parallel_in_states .or. st%d%kpt%parallel) then
+            call comm_allreduce(st%st_kpt_mpi_grp%comm, weight)
+          end if
+
+          SAFE_DEALLOCATE_A(ddot)
+          SAFE_DEALLOCATE_A(zdot)
+
+          if(mpi_grp_is_root(mpi_world)) then
+            do ie = 1, this%epoints
+              energy = this%emin + (ie - 1) * this%de
+              tdos = M_ZERO
+              do ist = 1, st%nst
+                do ik = 1, st%d%nik
+                  tdos = tdos + weight(ik,ist) * M_ONE/M_Pi * &
+                   this%gamma / ( (energy - st%eigenval(ist, ik))**2 + this%gamma**2 )
+                end do
+              end do
+              write(message(1), '(2f12.6)') units_from_atomic(units_out%energy, energy), &
+                                      units_from_atomic(unit_one / units_out%energy, tdos)
+              call messages_info(1, iunit(0))
+            end do
+            call io_close(iunit(0))
+          end if
+     
+        end do
+      
+        call orbitalset_end(os)
+      end do
+
+      SAFE_DEALLOCATE_A(weight)
+      SAFE_DEALLOCATE_A(dpsi)
+      SAFE_DEALLOCATE_A(zpsi)
     end if
 
     SAFE_DEALLOCATE_A(iunit)

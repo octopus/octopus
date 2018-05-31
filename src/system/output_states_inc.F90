@@ -17,10 +17,11 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine output_states(st, gr, geo, dir, outp)
+subroutine output_states(st, gr, geo, hm, dir, outp)
   type(states_t),         intent(inout) :: st
   type(grid_t),           intent(inout) :: gr
   type(geometry_t),       intent(in)    :: geo
+  type(hamiltonian_t),    intent(in)    :: hm
   character(len=*),       intent(in)    :: dir
   type(output_t),         intent(in)    :: outp
 
@@ -224,7 +225,7 @@ subroutine output_states(st, gr, geo, dir, outp)
 
   if(iand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
     call dos_init(dos, st)
-    call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh)
+    call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh, hm)
     call dos_end(dos)
   end if
 
