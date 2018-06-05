@@ -2902,10 +2902,10 @@ contains
   !! of p1 and p2 with the 'alpha' parameter optimized iteratively.
   subroutine inter( sfe, p1, p2, p3, p4, ns, ia)
     type(pcm_sphere_t), intent(in) :: sfe(:) !< (1:nesf)
-    FLOAT, intent(in)          :: p1(:)  !< (1:pcm_dim_space)
-    FLOAT, intent(in)          :: p2(:)  !< (1:pcm_dim_space)
-    FLOAT, intent(in)          :: p3(:)  !< (1:pcm_dim_space)
-    FLOAT, intent(out)         :: p4(:)  !< (1:pcm_dim_space)
+    FLOAT, intent(in)          :: p1(1:pcm_dim_space)  !< (1:pcm_dim_space)
+    FLOAT, intent(in)          :: p2(1:pcm_dim_space)  !< (1:pcm_dim_space)
+    FLOAT, intent(in)          :: p3(1:pcm_dim_space)  !< (1:pcm_dim_space)
+    FLOAT, intent(out)         :: p4(1:pcm_dim_space)  !< (1:pcm_dim_space)
     integer, intent(in) :: ns
     integer, intent(in) :: ia
 
@@ -2919,6 +2919,8 @@ contains
     FLOAT  :: diff
     FLOAT  :: diff_vec(1:pcm_dim_space)
     logical :: band_iter
+
+    PUSH_SUB(inter)
 
     diff_vec = M_ZERO
 
@@ -2947,7 +2949,10 @@ contains
       diff =( p4(1) - sfe(ns)%x )**2 + ( p4(2) - sfe(ns)%y )**2 + ( p4(3) - sfe(ns)%z )**2
       diff = sqrt(diff) - sfe(ns)%r
 
-      if ( abs(diff) < tol ) return
+      if ( abs(diff) < tol ) then
+       POP_SUB(inter)
+       return
+      endif
 
       if (ia == 0) then
         if (diff > M_ZERO) delta =  M_ONE/(M_TWO**(m_iter+1))
@@ -2964,6 +2969,7 @@ contains
       end if
     end do
     
+    POP_SUB(inter)
   end subroutine inter
 
   ! -----------------------------------------------------------------------------
