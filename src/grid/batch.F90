@@ -156,11 +156,16 @@ contains
   subroutine batch_end(this, copy)
     type(batch_t),           intent(inout) :: this
     logical,       optional, intent(in)    :: copy
+    logical :: copy_
 
     PUSH_SUB(batch_end)
 
+    ! CAUTION: does this break OpenCL stuff?
+    copy_ = .false.
+    if(present(copy)) copy_ = copy
+
     if(batch_is_packed(this)) then
-      call batch_unpack(this, copy, force = .true.)
+      call batch_unpack(this, copy_, force = .true.)
     end if
 
     if(this%is_allocated) then
