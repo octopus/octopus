@@ -430,7 +430,6 @@ contains
 
     hm%adjoint = .false.
 
-    nullify(hm%hm_base%phase)
     if (simul_box_is_periodic(gr%sb) .and. &
         .not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) &
       call init_phase()
@@ -544,11 +543,11 @@ contains
 
     nullify(hm%subsys_hm)
     
-    if(associated(hm%hm_base%phase) .and. accel_is_enabled()) then
+    if(allocated(hm%hm_base%phase) .and. accel_is_enabled()) then
       call accel_release_buffer(hm%hm_base%buff_phase)
     end if
 
-    SAFE_DEALLOCATE_P(hm%hm_base%phase)
+    SAFE_DEALLOCATE_A(hm%hm_base%phase)
     SAFE_DEALLOCATE_P(hm%vhartree)
     SAFE_DEALLOCATE_P(hm%vhxc)
     SAFE_DEALLOCATE_P(hm%vxc)
@@ -854,7 +853,7 @@ contains
       end if
 
       if(allocated(this%hm_base%uniform_vector_potential)) then
-        if(.not. associated(this%hm_base%phase)) then
+        if(.not. allocated(this%hm_base%phase)) then
           SAFE_ALLOCATE(this%hm_base%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, mesh%np_part*this%d%kpt%nlocal)
@@ -879,7 +878,7 @@ contains
       nmat = this%hm_base%nprojector_matrices
 
 
-      if(associated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
+      if(allocated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
 
         if(.not. allocated(this%hm_base%projector_phases)) then
           SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, this%d%kpt%start:this%d%kpt%end))
@@ -968,7 +967,7 @@ contains
     if(this%scissor%apply) apply = .false.
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
     if(this%cmplxscl%space .and. accel_is_enabled()) apply = .false.
-    if(associated(this%hm_base%phase) .and. accel_is_enabled()) apply = .false.
+    if(allocated(this%hm_base%phase) .and. accel_is_enabled()) apply = .false.
     
   end function hamiltonian_apply_packed
 
@@ -1424,7 +1423,7 @@ contains
       end if
 
       if(allocated(this%hm_base%uniform_vector_potential)) then
-        if(.not. associated(this%hm_base%phase)) then
+        if(.not. allocated(this%hm_base%phase)) then
           SAFE_ALLOCATE(this%hm_base%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, mesh%np_part*this%d%kpt%nlocal)
@@ -1449,7 +1448,7 @@ contains
       nmat = this%hm_base%nprojector_matrices
 
 
-      if(associated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
+      if(allocated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
 
         if(.not. allocated(this%hm_base%projector_phases)) then
           SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, this%d%kpt%start:this%d%kpt%end))

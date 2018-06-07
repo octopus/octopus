@@ -179,7 +179,7 @@ contains
           call batch_copy(st%group%psib(ib, ik), epsib)
           call boundaries_set(der%boundaries, st%group%psib(ib, ik))
           
-          if(associated(hm%hm_base%phase)) then
+          if(allocated(hm%hm_base%phase)) then
             call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np_part, ik, &
               conjugate = .false., psib = epsib, src = st%group%psib(ib, ik))
           else
@@ -197,7 +197,7 @@ contains
 
           do idir = 1, der%mesh%sb%dim
 
-            if(associated(hm%hm_base%phase)) then
+            if(allocated(hm%hm_base%phase)) then
               call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np_part, ik, conjugate = .true., psib = commpsib(idir))
             end if
             
@@ -327,7 +327,7 @@ contains
             call boundaries_set(der%boundaries, psi(:, idim))
           end do
 
-          if(associated(hm%hm_base%phase)) then 
+          if(allocated(hm%hm_base%phase)) then
             call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
           end if
 
@@ -479,7 +479,7 @@ contains
       call boundaries_set(der%boundaries, ppsi_j(:, idim))
     end do
 
-    if(associated(hm%hm_base%phase)) then 
+    if(allocated(hm%hm_base%phase)) then
       ! Apply the phase that contains both the k-point and vector-potential terms.
       do idim = 1, hm%d%dim
         !$omp parallel do

@@ -188,7 +188,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl)
       call boundaries_set(gr%der%boundaries, psib)
 
       ! set the phase for periodic systems
-      if(associated(hm%hm_base%phase)) then
+      if(allocated(hm%hm_base%phase)) then
         call X(hamiltonian_base_phase)(hm%hm_base, gr%der, gr%mesh%np_part, iq, .false., psib)
       end if
 

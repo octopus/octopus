@@ -45,7 +45,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
   ASSERT(psib%nst == hpsib%nst)
   ASSERT(ik >= hm%d%kpt%start .and. ik <= hm%d%kpt%end)
 
-  apply_phase = associated(hm%hm_base%phase)
+  apply_phase = allocated(hm%hm_base%phase)
 
   pack = hamiltonian_apply_packed(hm, der%mesh) &
     .and. (accel_is_enabled() .or. psib%nst_linear > 1) &
