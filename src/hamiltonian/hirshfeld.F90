@@ -318,6 +318,12 @@ contains
       call species_atom_density_derivative_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), &
                                   pos_j, this%st%d%spin_channels, &
                                   atom_derivative(1:this%mesh%np, 1:this%st%d%nspin, jcell))
+      ! Ce terme (hors composant spin) est: \frac{\delta n_{i free}(\vec{r_j})}{\delta r}
+      ! hors nous le seul term de type \frac{\delta n_{free}}{\delta r} a calculer sont des termes diagonaux de type: \frac{\delta n_{A free}(\vec{r_A})}{\delta r}
+      ! Il faudrait que ce terme soit de type 
+      ! species_atom_density_derivative_np(this%mesh, this%mesh%sb, this%geo%atom(jatom), &
+      !                            pos_j, this%st%d%spin_channels, &
+      !                            atom_derivative(1:this%mesh%np, 1:this%st%d%nspin, jcell))
     end do
 
     do icell = 1, periodic_copy_num(pp_i)
@@ -328,6 +334,8 @@ contains
       !We need to do it to have the r^3 correctly computed for periodic systems
       call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), &
              pos_i, this%st%d%nspin, atom_density)
+
+      ! Par contre je suis d accort avec ce terme qui est:  n_{i free}(\vec{r_i})
 
       call profiling_in(prof2, "HIRSHFELD_POSITION_DER2")
       do ip = 1, this%mesh%np

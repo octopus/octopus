@@ -219,6 +219,7 @@ contains
       do jatom = 1, geo%natoms
         jspecies = species_index(geo%atom(jatom)%species)
         this%c6ab(iatom,jatom) = vol_ratio(iatom)*vol_ratio(jatom)*this%c6abfree(ispecies,jspecies) !this operation is done again inside the .c part for the non periodic case
+        print *, 'i,j,c6', iatom, jatom, this%c6ab(iatom,jatom)
       end do
     end do
   
@@ -263,7 +264,7 @@ contains
             energy = energy -M_HALF*ff*this%c6ab(iatom,jatom)/rr6
 
             ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
-            deabdrab = (-dffdrab*this%c6ab(iatom,jatom) + CNST(6.0)*ff*this%c6ab(iatom,jatom)/rr)/rr6;
+            deabdrab = this%c6ab(iatom,jatom)*(this%c6ab(iatom,jatom) + CNST(6.0)*ff/rr)/rr6;
       
             ! Derivative of the damping function with respecto to the volume ratio of atom A.
             dffdvra = dffdr0*dr0dvra(iatom);
@@ -271,7 +272,7 @@ contains
             ! Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
             deabdvra = (-dffdvra*this%c6ab(iatom,jatom) - ff*vol_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6
               
-            force(1:sb%dim,iatom)= force(1:sb%dim,iatom) - deabdrab*(geo%atom(iatom)%x(sb%dim) -x_j(1:sb%dim) )/rr; 
+            force(1:sb%dim,iatom)= force(1:sb%dim,iatom) - M_HALF*deabdrab*(geo%atom(iatom)%x(sb%dim) -x_j(1:sb%dim) )/rr; 
             this%derivative_coeff(iatom) = this%derivative_coeff(iatom) + deabdvra;
           end do
         end do
