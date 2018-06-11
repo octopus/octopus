@@ -93,7 +93,7 @@ contains
     nullify(this%cube)
     nullify(this%mesh_cube_map)
 
-    if(abs(this%q0) > CNST(1.0e-6) .or. (abs(this%q1) > CNST(1.0e-6) ) then
+    if(abs(this%q0) > CNST(1.0e-6) .or. abs(this%q1) > CNST(1.0e-6) ) then
 
       ASSERT(associated(poisson%cube%fft))
       if(poisson%cube%fft%library /= FFTLIB_FFTW) then
@@ -116,10 +116,10 @@ contains
       type(cube_t),  intent(in) :: cube
  
       integer :: ix, iy, iz, ixx(3), db(3)
-      integer :: ix0; iy0, iz0
-      FLOAT :: temp(3), modg2, mdog2_min
+      integer :: ix0, iy0, iz0
+      FLOAT :: temp(3), modg2, modg2_max
       FLOAT :: gg(3)
-      FLOAT, allocatable :: kerker_FS(:,:,:), metric_FC(:,:,:)
+      FLOAT, allocatable :: kerker_FS(:,:,:), metric_FS(:,:,:)
 
       PUSH_SUB(kerker_init.build_kerker)
 
@@ -133,7 +133,7 @@ contains
 
       temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
 
-      mdog2_min = M_HUGE
+      modg2_max = M_ZERO
 
       do ix = 1, cube%fs_n_global(1)
         ixx(1) = pad_feq(ix, db(1), .true.)
@@ -147,9 +147,9 @@ contains
             modg2 = sum(gg(1:3)**2)
 
             kerker_FS(ix, iy, iz) = modg2/(modg2 + this%q0**2)
+            metric_FS(ix, iy, iz) = sqrt((modg2 + this%q1**2)/modg2)
 
-            metric_FS(ix, iy, iz) = (modg2 + this%q1**2)/modg2
-            if(modg2 > M_EPSILON .and. modg2 < mdog2_min) mdog2_min = modg2
+            if(modg2 > modg2_max) modg2_max = modg2
             if(modg2 <= M_EPSILON) then
               ix0 = ix; iy0 = iy; iz0 = iz
             end if
@@ -157,13 +157,14 @@ contains
         end do
       end do
 
-      metric_FS(ix0, iy0, iz0) = (modg2_min + this%q1**2)/modg2_min
+      metric_FS(ix0, iy0, iz0) = sqrt((modg2_max + this%q1**2)/modg2_max)
       
 
       call dfourier_space_op_init(this%kerker_op, cube, kerker_FS)
-      call dfourier_space_op_init(this%metric_op, cube, kerker_FS)
+      call dfourier_space_op_init(this%metric_op, cube, metric_FS)
 
       SAFE_DEALLOCATE_A(kerker_FS)
+      SAFE_DEALLOCATE_A(metric_FS)
 
       POP_SUB(kerker_init.build_kerker)
     end subroutine build_kerker
@@ -180,6 +181,7 @@ contains
       nullify(this%cube)
       nullify(this%mesh_cube_map)
       call fourier_space_op_end(this%kerker_op)
+      call fourier_space_op_end(this%metric_op)
     end if
 
     POP_SUB(kerker_end)
@@ -197,7 +199,7 @@ contains
 
     PUSH_SUB(kerker_filtering)
 
-    if(abs(this%q0) <= CNST(1.0e-6)) then
+    if(abs(this%q0) <= CNST(1.0e-6) .and. abs(this%q1) <= CNST(1.0e-6)) then
       rho_out = rho
       POP_SUB(kerker_filtering)
       return
@@ -206,30 +208,62 @@ contains
     call cube_function_null(cf)
     call dcube_function_alloc_RS(this%cube, cf, in_device = .true.)
 
-    ! put the density in the cube
-    if (this%cube%parallel_in_domains) then
-      call dmesh_to_cube_parallel(mesh, rho, this%cube, cf, this%mesh_cube_map)
-    else
-      if(mesh%parallel_in_domains) then
-        call dmesh_to_cube(mesh, rho, this%cube, cf, local = .true.)
+    if(abs(this%q0) >= CNST(1.0e-6)) then
+      ! put the density in the cube
+      if (this%cube%parallel_in_domains) then
+        call dmesh_to_cube_parallel(mesh, rho, this%cube, cf, this%mesh_cube_map)
       else
-        call dmesh_to_cube(mesh, rho, this%cube, cf)
+        if(mesh%parallel_in_domains) then
+          call dmesh_to_cube(mesh, rho, this%cube, cf, local = .true.)
+        else
+          call dmesh_to_cube(mesh, rho, this%cube, cf)
+        end if
+      end if
+
+      ! apply the Kerker preconditioner in Fourier space
+      call dfourier_space_op_apply(this%kerker_op, this%cube, cf)
+
+      ! move the potential back to the mesh
+      if (this%cube%parallel_in_domains) then
+        call dcube_to_mesh_parallel(this%cube, cf, mesh, rho_out, this%mesh_cube_map)
+      else
+        if(mesh%parallel_in_domains) then
+          call dcube_to_mesh(this%cube, cf, mesh, rho_out, local=.true.)
+        else
+          call dcube_to_mesh(this%cube, cf, mesh, rho_out)
+        end if
       end if
     end if
 
-    ! apply the Kerker preconditioner in Fourier space
-    call dfourier_space_op_apply(this%kerker_op, this%cube, cf)
-
-    ! move the potential back to the mesh
-    if (this%cube%parallel_in_domains) then
-      call dcube_to_mesh_parallel(this%cube, cf, mesh, rho_out, this%mesh_cube_map)
-    else
-      if(mesh%parallel_in_domains) then
-        call dcube_to_mesh(this%cube, cf, mesh, rho_out, local=.true.)
+    !TODO: We are redoing many copies and one FFT
+    ! This could be combined in a better way
+    if(abs(this%q1) >= CNST(1.0e-6)) then
+      ! put the density in the cube
+      if (this%cube%parallel_in_domains) then
+        call dmesh_to_cube_parallel(mesh, rho, this%cube, cf, this%mesh_cube_map)
       else
-        call dcube_to_mesh(this%cube, cf, mesh, rho_out)
+        if(mesh%parallel_in_domains) then
+          call dmesh_to_cube(mesh, rho, this%cube, cf, local = .true.)
+        else
+          call dmesh_to_cube(mesh, rho, this%cube, cf)
+        end if
+      end if
+
+      ! apply the Kerker preconditioner in Fourier space
+      call dfourier_space_op_apply(this%metric_op, this%cube, cf)
+
+      ! move the potential back to the mesh
+      if (this%cube%parallel_in_domains) then
+        call dcube_to_mesh_parallel(this%cube, cf, mesh, rho, this%mesh_cube_map)
+      else
+        if(mesh%parallel_in_domains) then
+          call dcube_to_mesh(this%cube, cf, mesh, rho, local=.true.)
+        else
+          call dcube_to_mesh(this%cube, cf, mesh, rho)
+        end if
       end if
     end if
+
 
     call dcube_function_free_RS(this%cube, cf)
 
