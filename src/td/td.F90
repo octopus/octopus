@@ -394,7 +394,7 @@ contains
       end if 
     else
       call states_allocate_wfns(st, gr%mesh, alloc_Left = cmplxscl)
-      call scf_init(td%scf, sys%gr, sys%geo, sys%st, sys%mc, hm)
+      call scf_init(td%scf, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks%hartree_solver)
     end if
 
     if(hm%scdm_EXX) then

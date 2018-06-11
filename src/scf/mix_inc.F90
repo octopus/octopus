@@ -17,8 +17,9 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(mixing)(smix, vin, vout, vnew)
+subroutine X(mixing)(smix, mesh, vin, vout, vnew)
   type(mix_t),  intent(inout) :: smix
+  type(mesh_t), intent(in)    :: mesh
   R_TYPE,       intent(in)    :: vin(:, :, :), vout(:, :, :)
   R_TYPE,       intent(out)   :: vnew(:, :, :)
   
@@ -42,7 +43,7 @@ subroutine X(mixing)(smix, vin, vout, vnew)
     call X(mixing_broyden)(smix, vin, vout, vnew, smix%iter)
     
   case (OPTION__MIXINGSCHEME__DIIS)
-    call X(mixing_diis)(smix, vin, vout, vnew, smix%iter)
+    call X(mixing_diis)(smix, mesh, vin, vout, vnew, smix%iter)
 
   case (OPTION__MIXINGSCHEME__BOWLER_GILLAN)
     call X(mixing_grpulay)(smix, vin, vout, vnew, smix%iter)
@@ -283,8 +284,9 @@ endsubroutine X(broyden_extrapolation_aux)
 
 !--------------------------------------------------------------------
 
-subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
+subroutine X(mixing_diis)(this, mesh, vin, vout, vnew, iter)
   type(mix_t), intent(inout) :: this
+  type(mesh_t),intent(in)    :: mesh
   R_TYPE,      intent(in)    :: vin(:, :, :)
   R_TYPE,      intent(in)    :: vout(:, :, :)
   R_TYPE,      intent(out)   :: vnew(:, :, :)
@@ -312,12 +314,25 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
     do ii = 2, size
       call lalg_copy(d1, d2, d3, this%mixfield%X(dv)(:, :, :, ii), this%mixfield%X(dv)(:, :, :, ii - 1))
       call lalg_copy(d1, d2, d3, this%mixfield%X(df)(:, :, :, ii), this%mixfield%X(df)(:, :, :, ii - 1))
+      call lalg_copy(d1, d2, d3, this%mixfield%X(df_k)(:, :, :, ii), this%mixfield%X(df_k)(:, :, :, ii - 1))
     end do
     
   end if
 
   call lalg_copy(d1, d2, d3, vin, this%mixfield%X(dv)(:, :, :, size))
   this%mixfield%X(df)(1:d1, 1:d2, 1:d3, size) = vout(1:d1, 1:d2, 1:d3) - vin(1:d1, 1:d2, 1:d3)
+
+  !Kerker preconditioning for the Pulay scheme
+#ifdef R_TREAL
+    do kk = 1, d2
+      do ll = 1, d3
+        call kerker_filtering(this%kerker, mesh, this%mixfield%X(df)(1:d1, kk, ll, size), &
+                                                   this%mixfield%X(df_k)(1:d1, kk, ll, size)) 
+      end do
+    end do
+#else
+    call lalg_copy(d1, d2, d3, this%mixfield%X(df)(:, :, :, size), this%mixfield%X(df_k)(:, :, :, size))
+#endif
 
   if(iter == 1 .or. mod(iter, this%interval) /= 0) then
 
@@ -334,7 +349,7 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
   SAFE_ALLOCATE(rhs(1:size + 1))
 
   do ii = 1, size
-    do jj = 1, size
+    do jj = ii, size
 
       aa(ii, jj) = CNST(0.0)
       do kk = 1, d2
@@ -343,6 +358,7 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
         end do
       end do
       
+      if(jj>ii) aa(jj, ii) = aa(ii, jj)
     end do
   end do
 
@@ -358,12 +374,12 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
   sumalpha = sum(alpha(1:size))
   alpha = alpha/sumalpha
   
-  vnew(1:d1, 1:d2, 1:d3) = CNST(0.0)
-  
+  vnew(1:d1, 1:d2, 1:d3) = CNST(0.0) 
+ 
   do ii = 1, size
     vnew(1:d1, 1:d2, 1:d3) = vnew(1:d1, 1:d2, 1:d3) &
       + alpha(ii)*(this%mixfield%X(dv)(1:d1, 1:d2, 1:d3, ii) &
-      + this%residual_coeff*this%mixfield%X(df)(1:d1, 1:d2, 1:d3, ii))
+      + this%residual_coeff*this%mixfield%X(df_k)(1:d1, 1:d2, 1:d3, ii))
   end do
 
   POP_SUB(X(mixing_diis))

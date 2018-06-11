@@ -146,9 +146,11 @@ contains
     end if
 
     if(wfs_are_cplx) then
-      call mix_init(this%mixer, sys%gr%der, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type_= TYPE_CMPLX)
+      call mix_init(this%mixer, sys%gr%der, sys%ks%hartree_solver, &
+                       sys%gr%mesh%np, sys%st%d%nspin, 1, func_type_= TYPE_CMPLX)
     else
-      call mix_init(this%mixer, sys%gr%der, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type_= TYPE_FLOAT)
+      call mix_init(this%mixer, sys%gr%der, sys%ks%hartree_solver, &
+                       sys%gr%mesh%np, sys%st%d%nspin, 1, func_type_= TYPE_FLOAT)
     end if
 
     if(present(set_occ_response)) then

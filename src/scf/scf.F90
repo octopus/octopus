@@ -53,6 +53,7 @@ module scf_oct_m
   use multicomm_oct_m
   use parser_oct_m
   use partial_charges_oct_m
+  use poisson_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -124,13 +125,14 @@ module scf_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(scf, gr, geo, st, mc, hm, conv_force)
+  subroutine scf_init(scf, gr, geo, st, mc, hm, poisson, conv_force)
     type(scf_t),         intent(inout) :: scf
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(in)    :: geo
     type(states_t),      intent(in)    :: st
     type(multicomm_t),   intent(in)    :: mc
     type(hamiltonian_t), intent(in)    :: hm
+    type(poisson_t),     intent(in)    :: poisson
     FLOAT,   optional,   intent(in)    :: conv_force
 
     FLOAT :: rmin
@@ -353,9 +355,9 @@ contains
     
 
     if(scf%mix_field == OPTION__MIXFIELD__DENSITY) then
-      call mix_init(scf%smix, gr%fine%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
+      call mix_init(scf%smix, gr%fine%der, poisson, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     else if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
-      call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
+      call mix_init(scf%smix, gr%der, poisson, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     end if
     call mix_get_field(scf%smix, scf%mixfield)
 
@@ -844,7 +846,7 @@ contains
       select case (scf%mix_field)
       case (OPTION__MIXFIELD__DENSITY)
         ! mix input and output densities and compute new potential
-        call mixing(scf%smix)
+        call mixing(scf%smix, gr%mesh)
         if(.not. cmplxscl) then
           call mixfield_get_vnew(scf%mixfield, st%rho)
           ! for spinors, having components 3 or 4 be negative is not unphysical
@@ -860,7 +862,7 @@ contains
         call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
       case (OPTION__MIXFIELD__POTENTIAL)
         ! mix input and output potentials
-        call mixing(scf%smix)
+        call mixing(scf%smix, gr%mesh)
         if(.not. cmplxscl) then
           call mixfield_get_vnew(scf%mixfield, hm%vhxc)
         else
