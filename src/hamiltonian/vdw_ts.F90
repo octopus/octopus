@@ -357,7 +357,6 @@ contains
       do jatom = 1, geo%natoms
         call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr)
         geo%atom(iatom)%f_vdw(1:sb%dim) = geo%atom(iatom)%f_vdw(1:sb%dim) - derivative_coeff(iatom)*dvadrr(1:sb%dim)
-        !print* , iatom, jatom, -derivative_coeff(iatom)*dvadrr(1:sb%dim)
       end do
     end do
 
