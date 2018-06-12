@@ -564,13 +564,20 @@ contains
       !% performance of <tt>Octopus</tt> and not the results.)
       !%End
 
+      ! TODO: adapt these values for the xyz ordering of the mesh
+      ! VERY IMPORTANT for performance, difference in speed up to a factor of 2!
+      ! (first dimension should probably always be >= 9 to have one stencil
+      ! application in x linearly in memory for the standard 4th order stencil;
+      ! depending on the size of the L1 cache, in y and z one should probably
+      ! take 4 or 8)
       select case(conf%target_states_block_size)
       case(1)
         bsize(1:3) = (/  2,   1, 200/)
       case(2)
         bsize(1:3) = (/ 10,   4, 200/)
       case(4)
-        bsize(1:3) = (/ 10,   4,  80/)
+        ! already adapted:
+        bsize(1:3) = (/ 40,   8,  8 /)
       case(8)
         bsize(1:3) = (/ 10,   2,  30/)
       case(16)
