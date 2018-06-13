@@ -99,6 +99,8 @@ contains
     ! end MPI, if we started it
     if(mpi_world%comm /= -1) call MPI_Finalize(mpi_err)
 #endif 
+
+    call blacs_exit(0)
  
   end subroutine mpi_mod_end
 
