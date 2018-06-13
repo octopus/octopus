@@ -347,7 +347,7 @@ contains
 
           if(rrj > TOL_HIRSHFELD) then
             do idir = 1, this%mesh%sb%dim
-              grad(ip, idir) = grad(ip, idir) + tmp*atom_der*xxj(idir)/rrj
+              grad(ip, idir) = grad(ip, idir) - tmp*atom_der*xxj(idir)/rrj
             end do
           end if
 
@@ -355,7 +355,7 @@ contains
             !Only if we really have the same atoms
             if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < TOL_HIRSHFELD)) then
               do idir = 1, this%mesh%sb%dim
-                grad(ip, idir) = grad(ip, idir) - (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
+                grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
                                       *tdensity/this%total_density(ip)*xxi(idir)
               end do
             end if

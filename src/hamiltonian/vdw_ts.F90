@@ -219,7 +219,7 @@ contains
       do jatom = 1, geo%natoms
         jspecies = species_index(geo%atom(jatom)%species)
         this%c6ab(iatom,jatom) = vol_ratio(iatom)*vol_ratio(jatom)*this%c6abfree(ispecies,jspecies) !this operation is done again inside the .c part for the non periodic case
-        print *, 'i,j,c6', iatom, jatom, this%c6ab(iatom,jatom)
+        !print *, 'i,j,c6', iatom, jatom, this%c6ab(iatom,jatom)
       end do
     end do
   
@@ -273,7 +273,9 @@ contains
             deabdvra = (-dffdvra*this%c6ab(iatom,jatom) - ff*vol_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6
               
             force(1:sb%dim,iatom)= force(1:sb%dim,iatom) - M_HALF*deabdrab*(geo%atom(iatom)%x(sb%dim) -x_j(1:sb%dim) )/rr; 
-            this%derivative_coeff(iatom) = this%derivative_coeff(iatom) + deabdvra;
+            !this%derivative_coeff(iatom) = this%derivative_coeff(iatom) + deabdvra;
+            this%derivative_coeff(iatom) = this%derivative_coeff(iatom) + ff*vol_ratio(jatom)*this%c6abfree(ispecies, jspecies)/rr6;
+
           end do
         end do
         call periodic_copy_end(pc)
@@ -355,8 +357,8 @@ contains
 
     do iatom = 1, geo%natoms
       do jatom = 1, geo%natoms
-        call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr)
-        geo%atom(iatom)%f_vdw(1:sb%dim) = geo%atom(iatom)%f_vdw(1:sb%dim) - derivative_coeff(iatom)*dvadrr(1:sb%dim)
+        call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
+        geo%atom(jatom)%f_vdw(1:sb%dim) = geo%atom(jatom)%f_vdw(1:sb%dim) + derivative_coeff(iatom)*dvadrr(1:sb%dim)  ! geo%atom(jatom)%f_vdw(1:sb%dim) = sum_i coeff_i * dvadrr_ij
       end do
     end do
 
