@@ -750,12 +750,9 @@ contains
           if (.not. parse_is_defined('Lsize')) then
             sb%lsize(:) = M_ZERO
             sb%lsize(1:sb%dim) = lparams(1:sb%dim)*M_HALF
-          end if        
+          end if
+        end if
       end if
-    end if
-
-    if(sb%nonorthogonal) &
-      call messages_experimental('Non-orthogonal unit cells')
     end if
 
     sb%rlattice = M_ZERO
