@@ -384,31 +384,36 @@ contains
       CMPLX :: zfact
       CMPLX, allocatable :: zpsi1(:,:,:)
 
+      integer :: np
+
       PUSH_SUB(exponential_apply.cheby)
 
+      np = der%mesh%np
+
+      !TODO: We can save memory here as we only need one array of size np_part and not 4
       SAFE_ALLOCATE(zpsi1(1:der%mesh%np_part, 1:hm%d%dim, 0:2))
       zpsi1 = M_z0
       do j = te%exp_order - 1, 0, -1
         do idim = 1, hm%d%dim
-          call lalg_copy(der%mesh%np, zpsi1(:, idim, 1), zpsi1(:, idim, 2))
-          call lalg_copy(der%mesh%np, zpsi1(:, idim, 0), zpsi1(:, idim, 1))
+          call lalg_copy(der%mesh%np, zpsi1(1:np, idim, 1), zpsi1(1:np, idim, 2))
+          call lalg_copy(der%mesh%np, zpsi1(1:np, idim, 0), zpsi1(1:np, idim, 1))
         end do
 
         call operate(zpsi1(:, :, 1), zpsi1(:, :, 0))
         zfact = 2*(-M_zI)**j*loct_bessel(j, hm%spectral_half_span*deltat)
 
         do idim = 1, hm%d%dim
-          call lalg_axpy(der%mesh%np, -hm%spectral_middle_point, zpsi1(:, idim, 1), &
-            zpsi1(:, idim, 0))
-          call lalg_scal(der%mesh%np, M_TWO/hm%spectral_half_span, zpsi1(:, idim, 0))
-          call lalg_axpy(der%mesh%np, zfact, zpsi(:, idim), zpsi1(:, idim, 0))
-          call lalg_axpy(der%mesh%np, -M_ONE, zpsi1(:, idim, 2),  zpsi1(:, idim, 0))
+          call lalg_axpy(np, -hm%spectral_middle_point, zpsi1(1:np, idim, 1), &
+            zpsi1(1:np, idim, 0))
+          call lalg_scal(np, M_TWO/hm%spectral_half_span, zpsi1(1:np, idim, 0))
+          call lalg_axpy(np, zfact, zpsi(:, idim), zpsi1(1:np, idim, 0))
+          call lalg_axpy(der%mesh%np, -M_ONE, zpsi1(1:np, idim, 2),  zpsi1(1:np, idim, 0))
         end do
       end do
 
-      zpsi(:, :) = M_HALF*(zpsi1(:, :, 0) - zpsi1(:, :, 2))
+      zpsi(1:np, 1:hm%d%dim) = M_HALF*(zpsi1(1:np, 1:hm%d%dim, 0) - zpsi1(1:np, 1:hm%d%dim, 2))
       do idim = 1, hm%d%dim
-        call lalg_scal(der%mesh%np, exp(-M_zI*hm%spectral_middle_point*deltat), zpsi(:, idim))
+        call lalg_scal(np, exp(-M_zI*hm%spectral_middle_point*deltat), zpsi(1:np, idim))
       end do
       SAFE_DEALLOCATE_A(zpsi1)
 

@@ -43,6 +43,7 @@ module hamiltonian_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
+  use lda_u_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -101,6 +102,7 @@ module hamiltonian_oct_m
     hamiltonian_hermitian,           &
     hamiltonian_epot_generate,       &
     hamiltonian_update,              &
+    hamiltonian_update2,             &
     hamiltonian_get_time,            &
     hamiltonian_apply_packed,        &
     dexchange_operator_single,       &
@@ -188,6 +190,10 @@ module hamiltonian_oct_m
     FLOAT :: rashba_coupling
     type(scdm_t)  :: scdm
 
+    !> For the LDA+U 
+    type(lda_u_t) :: lda_u
+    integer       :: lda_u_level
+
     logical :: time_zero
   end type hamiltonian_t
 
@@ -225,6 +231,9 @@ contains
     integer :: ncols
     type(block_t) :: blk
     type(profile_t), save :: prof
+
+    logical :: external_potentials_present
+    logical :: kick_present
 
     PUSH_SUB(hamiltonian_init)
     call profiling_in(prof, 'HAMILTONIAN_INIT')
@@ -426,6 +435,31 @@ contains
 
     hm%adjoint = .false.
 
+    !%Variable DFTULevel
+    !%Type integer
+    !%Default no
+    !%Section Hamiltonian::XC
+    !%Description
+    !% (Experimental) This variable selects which DFT+U
+    !% expression is added to the Hamiltonian.
+    !%Option dft_u_none 0
+    !% No +U term is not applied.
+    !%Option dft_u_empirical 1
+    !% An empiricial Hubbard U is added on the orbitals specified in the block species
+    !% with hubbard_l and hubbard_u
+    !%Option dft_u_acbn0 2
+    !% Octopus determines the effective U term using the 
+    !% ACBN0 functional as defined in PRX 5, 011006 (2015)
+    !%End
+    call parse_variable('DFTULevel', DFT_U_NONE, hm%lda_u_level)
+    call messages_print_var_option(stdout,  'DFTULevel', hm%lda_u_level)
+    call lda_u_nullify(hm%lda_u)
+    if(hm%lda_u_level /= DFT_U_NONE) then
+      call messages_experimental('DFT+U')
+      call lda_u_init(hm%lda_u, hm%lda_u_level, gr, geo, st)
+    end if
+ 
+
     nullify(hm%hm_base%phase)
     if (simul_box_is_periodic(gr%sb) .and. &
         .not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) &
@@ -444,7 +478,13 @@ contains
     !%End
     call parse_variable('HamiltonianApplyPacked', .true., hm%apply_packed)
 
-    call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge)  !< initializes PCM  
+    external_potentials_present = associated(hm%ep%v_static) .or. &
+				  associated(hm%ep%E_field)  .or. &
+				  associated(hm%ep%lasers)
+
+    kick_present = hm%ep%kick%delta_strength /= M_ZERO
+
+    call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM  
     if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) &
       call messages_not_implemented("PCM for TheoryLevel /= DFT")
     
@@ -516,6 +556,11 @@ contains
         call accel_create_buffer(hm%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, gr%mesh%np_part*hm%d%kpt%nlocal)
         call accel_write_buffer(hm%hm_base%buff_phase, gr%mesh%np_part*hm%d%kpt%nlocal, hm%hm_base%phase)
         hm%hm_base%buff_phase_qn_start = hm%d%kpt%start
+      end if
+
+      ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
+      if(hm%lda_u_level /= DFT_U_NONE) then
+        call lda_u_build_phase_correction(hm%lda_u, gr%mesh%sb, hm%d )
       end if
 
       POP_SUB(hamiltonian_init.init_phase)
@@ -714,10 +759,18 @@ contains
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
         !> Adds PCM contributions
         if (this%pcm%run_pcm) then
-          forall (ip = 1:mesh%np)  
-            this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
-              this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
-          end forall
+          if (this%pcm%solute) then
+            forall (ip = 1:mesh%np)  
+              this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
+                this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
+            end forall
+          end if
+          if (this%pcm%localf) then
+            forall (ip = 1:mesh%np)  
+              this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
+                this%pcm%v_ext_rs(ip)
+            end forall
+          end if 
         end if
 
         if(this%cmplxscl%space) then
@@ -855,6 +908,14 @@ contains
         if(accel_is_enabled()) then
           call accel_write_buffer(this%hm_base%buff_phase, mesh%np_part*this%d%kpt%nlocal, this%hm_base%phase)
         end if
+
+        ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
+        if(this%lda_u_level /= DFT_U_NONE) then
+          call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, &
+               vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
+        end if
+
+
       end if
 
       max_npoints = this%hm_base%max_npoints
@@ -913,8 +974,18 @@ contains
     if (this%pcm%run_pcm) then
      !> Generates the real-space PCM potential due to nuclei which do not change
      !! during the SCF calculation.
-     call pcm_calc_pot_rs(this%pcm, gr%mesh, geo = geo)
+     if (this%pcm%solute) &
+       call pcm_calc_pot_rs(this%pcm, gr%mesh, geo = geo)
+
+      !> Local field effects due to static electrostatic potentials (if they were).
+      !! The laser and the kick are included in subroutine v_ks_hartree (module v_ks).
+      !  Interpolation is needed, hence gr%mesh%np_part -> 1:gr%mesh%np
+      if( this%pcm%localf .and. associated(this%ep%v_static)) &
+        call pcm_calc_pot_rs(this%pcm, gr%mesh, v_ext = this%ep%v_ext(1:gr%mesh%np_part))
+
     end if
+
+    call lda_u_update_basis(this%lda_u, gr, geo, st, associated(this%hm_base%phase))
 
     POP_SUB(hamiltonian_epot_generate)
   end subroutine hamiltonian_epot_generate
@@ -1230,6 +1301,231 @@ contains
     POP_SUB(hamiltonian_load_vhxc)
   end subroutine hamiltonian_load_vhxc
 
+  ! ---------------------------------------------------------
+  ! This is an extension of "hamiltonian_update2" to be used by the
+  ! CFM4 propagator. It updates the Hamiltonian by considering a
+  ! weighted sum of the external potentials at times time(1) and time(2),
+  ! weighted by alpha(1) and alpha(2).
+  subroutine hamiltonian_update2(this, mesh, time, mu,  Imtime)
+    type(hamiltonian_t), intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+    FLOAT,               intent(in)    :: time(1:2)
+    FLOAT,               intent(in)    :: mu(1:2)
+    FLOAT, optional,     intent(in)    :: Imtime(1:2)
+
+    integer :: ispin, ip, idir, iatom, ilaser, itime
+    type(profile_t), save :: prof, prof_phases
+    FLOAT :: aa(1:MAX_DIM), time_
+    FLOAT, allocatable :: vp(:,:)
+
+    FLOAT, allocatable :: velectric(:)
+
+    PUSH_SUB(hamiltonian_update2)
+    call profiling_in(prof, "HAMILTONIAN_UPDATE")
+
+    this%current_time = M_ZERO
+    this%Imcurrent_time = M_ZERO !cmplxscl
+    this%current_time = time(1)
+    if(present(Imtime)) this%Imcurrent_time = Imtime(1) !cmplxscl
+
+    ! set everything to zero
+    call hamiltonian_base_clear(this%hm_base)
+
+    ! the xc, hartree and external potentials
+    call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_POTENTIAL, &
+      complex_potential = this%cmplxscl%space .or. this%bc%abtype == IMAGINARY_ABSORBING)
+
+
+    do ispin = 1, this%d%nspin
+      if(ispin <= 2) then
+        forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
+        !> Adds PCM contributions
+        if (this%pcm%run_pcm) then
+          forall (ip = 1:mesh%np)
+            this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
+              this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
+          end forall
+        end if
+
+        if(this%cmplxscl%space) then
+          forall (ip = 1:mesh%np)
+            this%hm_base%Impotential(ip, ispin) = &
+              this%hm_base%Impotential(ip, ispin) + this%Imvhxc(ip, ispin) +  this%ep%Imvpsl(ip)
+          end forall
+        end if
+
+        if(this%bc%abtype == IMAGINARY_ABSORBING) then
+          forall (ip = 1:mesh%np)
+            this%hm_base%Impotential(ip, ispin) = this%hm_base%Impotential(ip, ispin) + this%bc%mf(ip)
+          end forall
+        end if
+
+      else !Spinors
+        forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
+        if(this%cmplxscl%space) then
+          forall (ip = 1:mesh%np) this%hm_base%Impotential(ip, ispin) = this%Imvhxc(ip, ispin)
+        end if
+
+      end if
+
+
+    end do
+
+
+    do itime = 1, 2
+      time_ = time(itime)
+
+      do ilaser = 1, this%ep%no_lasers
+        select case(laser_kind(this%ep%lasers(ilaser)))
+        case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
+          SAFE_ALLOCATE(velectric(1:mesh%np))
+          do ispin = 1, this%d%spin_channels
+            velectric = M_ZERO
+            call laser_potential(this%ep%lasers(ilaser), mesh,  velectric, time_)
+            this%hm_base%potential(:, ispin) = this%hm_base%potential(:, ispin) + mu(itime) * velectric(:)
+          end do
+          SAFE_DEALLOCATE_A(velectric)
+        case(E_FIELD_MAGNETIC)
+          call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL + FIELD_UNIFORM_MAGNETIC_FIELD, &
+            this%cmplxscl%space)
+          ! get the vector potential
+          SAFE_ALLOCATE(vp(1:mesh%np, 1:mesh%sb%dim))
+          vp(1:mesh%np, 1:mesh%sb%dim) = M_ZERO
+          call laser_vector_potential(this%ep%lasers(ilaser), mesh, vp, time_)
+          forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np)
+            this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) &
+              - mu(itime) * vp(ip, idir)/P_C
+          end forall
+          ! and the magnetic field
+          call laser_field(this%ep%lasers(ilaser), this%hm_base%uniform_magnetic_field(1:mesh%sb%dim), time_)
+          SAFE_DEALLOCATE_A(vp)
+        case(E_FIELD_VECTOR_POTENTIAL)
+          call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, this%cmplxscl%space)
+          ! get the uniform vector potential associated with a magnetic field
+          aa = M_ZERO
+          call laser_field(this%ep%lasers(ilaser), aa(1:mesh%sb%dim), time_)
+          this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim) &
+            - mu(itime) * aa(1:mesh%sb%dim)/P_C
+        end select
+      end do
+
+      ! the gauge field
+      if(gauge_field_is_applied(this%ep%gfield)) then
+        call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, this%cmplxscl%space)
+        call gauge_field_get_vec_pot(this%ep%gfield, aa)
+        this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim)  &
+          - aa(1:mesh%sb%dim)/P_c
+      end if
+
+      ! the electric field for a periodic system through the gauge field
+      if(associated(this%ep%e_field) .and. gauge_field_is_applied(this%ep%gfield)) then
+        this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) = &
+          this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) - time_*this%ep%e_field(1:mesh%sb%periodic_dim)
+      end if
+
+    end do
+
+    ! the vector potential of a static magnetic field
+    if(associated(this%ep%a_static)) then
+      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL, this%cmplxscl%space)
+      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np)
+        this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) + this%ep%a_static(ip, idir)
+      end forall
+    end if
+
+    ! and the static magnetic field
+    if(associated(this%ep%b_field)) then
+      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_MAGNETIC_FIELD, this%cmplxscl%space)
+      forall (idir = 1:3)
+        this%hm_base%uniform_magnetic_field(idir) = this%hm_base%uniform_magnetic_field(idir) + this%ep%b_field(idir)
+      end forall
+    end if
+
+    call hamiltonian_base_update(this%hm_base, mesh)
+
+    call build_phase()
+
+    call profiling_out(prof)
+    POP_SUB(hamiltonian_update2)
+
+  contains
+
+    subroutine build_phase()
+      integer :: ik, imat, nmat, max_npoints, offset
+      FLOAT   :: kpoint(1:MAX_DIM)
+
+      PUSH_SUB(hamiltonian_update2.build_phase)
+
+      if(simul_box_is_periodic(mesh%sb) .or. allocated(this%hm_base%uniform_vector_potential)) then
+
+        call profiling_in(prof_phases, 'UPDATE_PHASES')
+        ! now regenerate the phases for the pseudopotentials
+        do iatom = 1, this%ep%natoms
+          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, &
+            vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
+        end do
+
+        call profiling_out(prof_phases)
+      end if
+
+      if(allocated(this%hm_base%uniform_vector_potential)) then
+        if(.not. associated(this%hm_base%phase)) then
+          SAFE_ALLOCATE(this%hm_base%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
+          if(accel_is_enabled()) then
+            call accel_create_buffer(this%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, mesh%np_part*this%d%kpt%nlocal)
+          end if
+        end if
+
+        kpoint(1:mesh%sb%dim) = M_ZERO
+        do ik = this%d%kpt%start, this%d%kpt%end
+          kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, states_dim_get_kpoint_index(this%d, ik))
+
+          forall (ip = 1:mesh%np_part)
+            this%hm_base%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(kpoint(1:mesh%sb%dim) &
+              + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
+          end forall
+        end do
+        if(accel_is_enabled()) then
+          call accel_write_buffer(this%hm_base%buff_phase, mesh%np_part*this%d%kpt%nlocal, this%hm_base%phase)
+        end if
+      end if
+
+      max_npoints = this%hm_base%max_npoints
+      nmat = this%hm_base%nprojector_matrices
+
+
+      if(associated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
+
+        if(.not. allocated(this%hm_base%projector_phases)) then
+          SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, this%d%kpt%start:this%d%kpt%end))
+          if(accel_is_enabled()) then
+            call accel_create_buffer(this%hm_base%buff_projector_phases, ACCEL_MEM_READ_ONLY, &
+              TYPE_CMPLX, this%hm_base%total_points*this%d%kpt%nlocal)
+          end if
+        end if
+
+        offset = 0
+        do ik = this%d%kpt%start, this%d%kpt%end
+          do imat = 1, this%hm_base%nprojector_matrices
+            iatom = this%hm_base%projector_to_atom(imat)
+            do ip = 1, this%hm_base%projector_matrices(imat)%npoints
+              this%hm_base%projector_phases(ip, imat, ik) = this%ep%proj(iatom)%phase(ip, ik)
+            end do
+
+            if(accel_is_enabled() .and. this%hm_base%projector_matrices(imat)%npoints > 0) then
+              call accel_write_buffer(this%hm_base%buff_projector_phases, &
+                this%hm_base%projector_matrices(imat)%npoints, this%hm_base%projector_phases(1:, imat, ik), offset = offset)
+            end if
+            offset = offset + this%hm_base%projector_matrices(imat)%npoints
+          end do
+        end do
+
+      end if
+
+      POP_SUB(hamiltonian_update2.build_phase)
+    end subroutine build_phase
+
+  end subroutine hamiltonian_update2
 
 
 #include "undef.F90"

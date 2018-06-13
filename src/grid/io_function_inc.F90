@@ -598,6 +598,105 @@ contains
 end subroutine X(io_function_output_vector)
 
 ! ---------------------------------------------------------
+subroutine X(io_function_output_vector_BZ)(how, dir, fname, mesh, kpt, ff, vector_dim, unit, & 
+  ierr, grp, root, vector_dim_labels)
+  integer,                    intent(in)  :: how
+  character(len=*),           intent(in)  :: dir
+  character(len=*),           intent(in)  :: fname
+  type(mesh_t),               intent(in)  :: mesh
+  type(distributed_t),        intent(in)  :: kpt
+  R_TYPE,           target,   intent(in)  :: ff(:, :)
+  integer,                    intent(in)  :: vector_dim
+  type(unit_t),               intent(in)  :: unit
+  integer,                    intent(out) :: ierr
+  type(mpi_grp_t),  optional, intent(in)  :: grp !< the group that shares the same data, must contain the domains group
+  integer,          optional, intent(in)  :: root !< which process is going to write the data
+  character(len=*), optional, intent(in)  :: vector_dim_labels(:)
+
+  integer :: ivd, how_seq
+  character(len=MAX_PATH_LEN) :: full_fname
+  R_TYPE, pointer :: ff_global(:, :)
+  logical :: i_am_root
+  integer :: root_, comm
+
+  PUSH_SUB(X(io_function_output_vector_BZ))
+
+  if(present(vector_dim_labels)) then
+    ASSERT(ubound(vector_dim_labels, dim = 1) >= vector_dim)
+  end if
+
+  ASSERT(vector_dim < 10)
+
+  ierr = 0
+  ASSERT( ubound(ff, 1) - lbound(ff, dim = 1 ) + 1 == kpt%end - kpt%start +1 )
+
+  i_am_root = .true.
+#ifdef HAVE_MPI
+  comm = MPI_COMM_NULL
+#endif
+  root_ = optional_default(root, 0)
+
+  if(kpt%parallel) then
+    comm = grp%comm
+
+    i_am_root = (grp%rank == root_)
+
+    SAFE_ALLOCATE(ff_global(1:mesh%sb%kpoints%reduced%npoints, 1:vector_dim))
+    ff_global(1:mesh%sb%kpoints%reduced%npoints, 1:vector_dim) = R_TOTYPE(M_ZERO)   
+ 
+    do ivd = 1, vector_dim
+      ff_global(kpt%start:kpt%end, ivd) = ff(lbound(ff, 1):ubound(ff, 1), ivd) 
+    end do
+#ifdef HAVE_MPI
+    call comm_allreduce(comm, ff_global)
+#endif
+  else
+    ff_global => ff
+  end if
+
+  if(present(grp)) then
+    i_am_root = i_am_root .and. (grp%rank == root_)
+    comm = grp%comm
+  end if
+
+  if(i_am_root) then
+
+    how_seq = how
+
+    if(how_seq /= 0) then !perhaps there is nothing left to do
+      do ivd = 1, vector_dim
+        if(present(vector_dim_labels)) then
+          full_fname = trim(fname)//'-'//vector_dim_labels(ivd)
+        else
+          write(full_fname, '(2a,i1)') trim(fname), '-', ivd
+        end if
+        
+        call X(io_function_output_global_BZ)(how_seq, dir, full_fname, mesh, ff_global(:, ivd), unit, ierr)
+      end do
+    end if
+
+  end if
+
+#ifdef HAVE_MPI
+  if(comm /= MPI_COMM_NULL .and. comm /= 0 ) then
+    ! I have to broadcast the error code
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
+    ! Add a barrier to ensure that the process are synchronized
+    call MPI_Barrier(comm, mpi_err)
+  end if
+#endif
+  
+  if(kpt%parallel) then
+    SAFE_DEALLOCATE_P(ff_global)
+  else
+    nullify(ff_global)
+  end if
+
+  POP_SUB(X(io_function_output_vector_BZ))
+end subroutine X(io_function_output_vector_BZ)
+
+
+! ---------------------------------------------------------
 subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, grp, root, is_global)
   integer,                    intent(in)  :: how
   character(len=*),           intent(in)  :: dir
@@ -891,7 +990,6 @@ contains
 
     integer :: ix, iy, iz, np
     integer :: ixvect(MAX_DIM)
-    integer :: ixvect_test(MAX_DIM)
     FLOAT   :: xx(1:MAX_DIM), zz
     R_TYPE  :: fu
 
@@ -927,7 +1025,7 @@ contains
         end do
       end do
      
-      if(.not.mesh%use_curvilinear) fu = fu*mesh%volume_element
+      if(.not.mesh%use_curvilinear) fu = fu*mesh%surface_element(d3)
       if(np > 0 ) write(iunit, mformat, iostat=ierr) zz, fu
     end do
 
@@ -1137,6 +1235,7 @@ contains
   subroutine out_cube()
 
     integer :: ix, iy, iz, idir, idir2, iatom
+    integer :: int_unit(3)
     FLOAT   :: offset(MAX_DIM)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
@@ -1168,12 +1267,13 @@ contains
 
     ! According to http://gaussian.com/cubegen/
     ! If N1<0 the input cube coordinates are assumed to be in Bohr, otherwise, they are interpreted as Angstroms. 
+    int_unit(1:3) = 1
     if (units_out%length%abbrev == "b") then
-      cube%rs_n_global(1) = -cube%rs_n_global(1) 
+      int_unit(1) = -1
     end if
 
     do idir = 1, 3
-      write(iunit, '(i5,3f12.6)') cube%rs_n_global(idir), (units_from_atomic(units_out%length, &
+      write(iunit, '(i5,3f12.6)') int_unit(idir)*cube%rs_n_global(idir), (units_from_atomic(units_out%length, &
         mesh%spacing(idir)*mesh%sb%rlattice_primitive(idir2, idir)), idir2 = 1, 3)
     end do
     do iatom = 1, geo%natoms
@@ -1583,6 +1683,94 @@ contains
   end subroutine out_vtk
 
 end subroutine X(io_function_output_global)
+
+
+! ---------------------------------------------------------
+subroutine X(io_function_output_global_BZ) (how, dir, fname, mesh, ff, unit, ierr)
+  integer,                    intent(in)  :: how
+  character(len=*),           intent(in)  :: dir, fname
+  type(mesh_t),               intent(in)  :: mesh
+  R_TYPE,                     intent(in)  :: ff(:)  !< (st%d%nik)
+  type(unit_t),               intent(in)  :: unit
+  integer,                    intent(out) :: ierr
+
+  character(len=512) :: filename
+  character(len=20)  :: mformat, mformat2, mfmtheader
+  integer            :: iunit, np_max
+
+  call profiling_in(write_prof, "DISK_WRITE")
+  PUSH_SUB(X(io_function_output_global_BZ))
+
+  call io_mkdir(dir)
+
+! Define the format
+  mformat    = '(99es23.14E3)'
+  mformat2   = '(i12,99es34.24E3)'
+  mfmtheader = '(a,a10,5a23)'
+
+  ASSERT(how > 0)
+  ASSERT(ubound(ff, dim = 1) >= mesh%sb%kpoints%reduced%npoints)
+
+  np_max = mesh%sb%kpoints%reduced%npoints
+
+  if(iand(how, OPTION__OUTPUTFORMAT__BINARY)     /= 0) call messages_not_implemented("Outpur_KPT with format binary") 
+  if(iand(how, OPTION__OUTPUTFORMAT__AXIS_X)     /= 0) call messages_not_implemented("Outpur_KPT with format axis x")
+  if(iand(how, OPTION__OUTPUTFORMAT__AXIS_Y)     /= 0) call messages_not_implemented("Outpur_KPT with format axis y")
+  if(iand(how, OPTION__OUTPUTFORMAT__AXIS_Z)     /= 0) call messages_not_implemented("Outpur_KPT with format axis z")
+  if(iand(how, OPTION__OUTPUTFORMAT__PLANE_X)    /= 0) call out_plane(1, 2, 3) ! x=0; y; z;
+  if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Y)    /= 0) call out_plane(2, 1, 3) ! y=0; x; z;
+  if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Z)    /= 0) call out_plane(3, 1, 2) ! z=0; x; y;
+  if(iand(how, OPTION__OUTPUTFORMAT__DX)         /= 0) call messages_not_implemented("Outpur_KPT with format dx")
+  if(iand(how, OPTION__OUTPUTFORMAT__XCRYSDEN)   /= 0) call messages_not_implemented("Outpur_KPT with format xcrysden")
+  if(iand(how, OPTION__OUTPUTFORMAT__CUBE)       /= 0) call messages_not_implemented("Outpur_KPT with format cube")
+
+  if(iand(how, OPTION__OUTPUTFORMAT__MATLAB) /= 0) call messages_not_implemented("Outpur_KPT with format matlab")
+
+#if defined(HAVE_NETCDF)
+  if(iand(how, OPTION__OUTPUTFORMAT__NETCDF)     /= 0) call messages_not_implemented("Outpur_KPT with format netcdf")
+#endif
+  if(iand(how, OPTION__OUTPUTFORMAT__OPENSCAD) /= 0) call messages_not_implemented("Outpur_KPT with format openscad")
+  if(iand(how, OPTION__OUTPUTFORMAT__VTK) /= 0) call messages_not_implemented("Outpur_KPT with format vtk")
+
+  POP_SUB(X(io_function_output_global_BZ))
+  call profiling_out(write_prof)
+
+
+ contains
+  ! ---------------------------------------------------------
+  subroutine out_plane(d1, d2, d3)
+    integer, intent(in) :: d1, d2, d3
+
+    integer :: ik, dim
+    FLOAT   :: kk(1:MAX_DIM)
+    R_TYPE  :: fu
+
+    PUSH_SUB(X(io_function_output_global_BZ).out_plane)
+
+    filename = trim(dir)//'/'//trim(fname)//"."//index2axisBZ(d1)//"=0"
+    iunit = io_open(filename, action='write')
+
+    write(iunit, mfmtheader, iostat=ierr) '#', index2axisBZ(d2), index2axisBZ(d3), 'Re', 'Im'
+
+    kk(1:MAX_DIM) = M_ZERO
+    dim = mesh%sb%kpoints%reduced%dim
+
+    do ik = 1, mesh%sb%kpoints%reduced%npoints
+      kk(1:dim) = units_from_atomic(units_out%length**(-1), &
+                         mesh%sb%kpoints%reduced%point1BZ(1:dim,ik))
+      if(abs(kk(d1)) < CNST(1.0e-6)) then
+        fu = units_from_atomic(unit, ff(ik))
+        write(iunit, mformat, iostat=ierr)  &
+          kk(d2), kk(d3), fu
+         
+      end if
+    end do
+
+    call io_close(iunit)
+
+    POP_SUB(X(io_function_output_global_BZ).out_plane)
+  end subroutine out_plane
+end subroutine X(io_function_output_global_BZ)
 
 ! -----------------------------------------------
 

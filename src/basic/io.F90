@@ -335,8 +335,6 @@ contains
   subroutine io_rm(fname)
     character(len=*),  intent(in) :: fname
 
-    integer :: last_slash, pos, length
-
     PUSH_SUB(io_rm)
 
     call loct_rm(trim(io_workpath(fname)))

@@ -34,6 +34,8 @@ module td_oct_m
   use ion_dynamics_oct_m
   use kick_oct_m
   use lasers_oct_m
+  use lda_u_oct_m
+  use lda_u_io_oct_m
   use loct_oct_m
   use loct_math_oct_m
   use modelmb_exchange_syms_oct_m
@@ -95,6 +97,9 @@ module td_oct_m
     integer              :: dynamics
     integer              :: energy_update_iter
     FLOAT                :: scissor
+
+    logical              :: freeze_occ
+    logical              :: freeze_u
   end type td_t
 
 
@@ -278,6 +283,8 @@ contains
     !% <tt>RestartWriteInterval</tt> time steps.
     !%End
     call parse_variable('RecalculateGSDuringEvolution', .false., td%recalculate_gs)
+    if( hm%lda_u_level /= DFT_U_NONE .and. td%recalculate_gs) &
+      call messages_not_implemented("DFT+U with RecalculateGSDuringEvolution=yes")
 
     !%Variable TDScissor 
     !%Type float 
@@ -369,12 +376,22 @@ contains
 
     if(simul_box_is_periodic(gr%mesh%sb)) call messages_experimental('Time propagation for periodic systems')
 
+    if(ion_dynamics_ions_move(td%ions) .and. hm%lda_u_level /= DFT_U_NONE ) call messages_experimental("DFT+U with MoveIons=yes") 
+
     call td_init(td, sys, hm)
 
     ! Allocate wavefunctions during time-propagation
     if(td%dynamics == EHRENFEST) then
-      !complex wfs are required for Ehrenfest
-      call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX, alloc_Left = cmplxscl)
+      !Note: this is not really clean to do this
+      if(hm%lda_u_level /= DFT_U_NONE .and. states_are_real(st)) then
+        call lda_u_end(hm%lda_u)
+        !complex wfs are required for Ehrenfest
+        call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX, alloc_Left = cmplxscl)
+        call lda_u_init(hm%lda_u, hm%lda_u_level, gr, geo, st) 
+      else
+        !complex wfs are required for Ehrenfest
+        call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX, alloc_Left = cmplxscl)
+      end if 
     else
       call states_allocate_wfns(st, gr%mesh, alloc_Left = cmplxscl)
       call scf_init(td%scf, sys%gr, sys%geo, sys%st, sys%mc, hm)
@@ -413,9 +430,13 @@ contains
       call forces_calculate(gr, geo, hm, st, td%iter*td%dt, td%dt)
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
+    else
+      if(iand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+        call forces_calculate(gr, geo, hm, st, td%iter*td%dt, td%dt)
+      end if  
     end if
 
-    call td_write_init(write_handler, gr, st, hm, geo, sys%ks, &
+    call td_write_init(write_handler, sys%outp, gr, st, hm, geo, sys%ks, &
       ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt, sys%mc)
 
     if(td%scissor > M_EPSILON) then
@@ -455,10 +476,18 @@ contains
 
       if(iter > 1) then
         if( ((iter-1)*td%dt <= hm%ep%kick%time) .and. (iter*td%dt > hm%ep%kick%time) ) then
-          if(.not. cmplxscl) then
-            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
+          if( .not.hm%pcm%kick_like ) then
+            if(.not. cmplxscl) then
+              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
+            else
+              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, theta = hm%cmplxscl%theta)
+            endif
           else
-            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta)
+            if(.not. cmplxscl) then
+              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)
+            else
+              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, theta = hm%cmplxscl%theta, pcm = hm%pcm)
+            endif
           end if
           call td_write_kick(gr%mesh, hm%ep%kick, sys%outp, geo, iter)
         end if
@@ -470,7 +499,7 @@ contains
       ! time iterate the system, one time step.
       select case(td%dynamics)
       case(EHRENFEST)
-        call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%energy_update_iter*td%mu, iter, td%ions, geo, &
+        call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%energy_update_iter*td%mu, iter, td%ions, geo, sys%outp,&
           scsteps = scsteps, &
           update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
       case(BO)
@@ -484,7 +513,7 @@ contains
       if(td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) &
         call pes_calc(td%pesv, gr%mesh, st, td%dt, iter, gr, hm)
 
-      call td_write_iter(write_handler, gr, st, hm, geo, hm%ep%kick, td%dt, sys%ks, iter)
+      call td_write_iter(write_handler, sys%outp, gr, st, hm, geo, hm%ep%kick, td%dt, sys%ks, iter)
 
       ! write down data
       call check_point()
@@ -612,8 +641,8 @@ contains
 
       integer :: ierr, freeze_orbitals
       FLOAT :: x
-      logical :: freeze_hxc
-      type(restart_t) :: restart
+      logical :: freeze_hxc, freeze_occ, freeze_u
+      type(restart_t) :: restart, restart_frozen
 
       PUSH_SUB(td_run.init_wfs)
 
@@ -657,7 +686,10 @@ contains
         call restart_end(restart)
       end if
 
-
+      ! Initialize the occupation matrices and U for LDA+U
+      ! This must be called before parsing TDFreezeOccupations and TDFreezeU
+      ! in order that the code does properly the initialization.
+      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
       !%Variable TDFreezeOrbitals
       !%Type integer
@@ -727,7 +759,7 @@ contains
 
         !In this case we should reload GS wavefunctions 
         if(.not.fromScratch) then
-          call messages_not_implemented("TDFreezeOccupations with FromScratch=no")
+          call messages_not_implemented("TDFreezeHXC with FromScratch=no")
         end if
       end if
 
@@ -742,6 +774,52 @@ contains
       call states_fermi(st, gr%mesh)
       call energy_calc_total(hm, gr, st)
 
+      !%Variable TDFreezeDFTUOccupations
+      !%Type logical
+      !%Default no
+      !%Section Time-Dependent
+      !%Description
+      !% The occupation matrices than enters in the LDA+U potential
+      !% are not evolved during the time evolution.
+      !%End
+      call parse_variable('TDFreezeDFTUOccupations', .false., freeze_occ)
+      if(freeze_occ) then
+        write(message(1),'(a)') 'Info: Freezing DFT+U occupation matrices that enters in the DFT+U potential.'
+        call messages_info(1)
+        call lda_u_freeze_occ(hm%lda_u)
+
+        !In this case we should reload GS wavefunctions 
+        if(hm%lda_u_level /= DFT_U_NONE .and..not.fromScratch) then 
+          call restart_init(restart_frozen, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+          call lda_u_load(restart_frozen, hm%lda_u, st, ierr)
+          call restart_end(restart_frozen)
+        end if
+      end if
+
+      !%Variable TDFreezeU
+      !%Type logical
+      !%Default no
+      !%Section Time-Dependent
+      !%Description
+      !% The effective U of LDA+U is not evolved during the time evolution.
+      !%End
+      call parse_variable('TDFreezeU', .false., freeze_u)
+      if(freeze_u) then
+        write(message(1),'(a)') 'Info: Freezing the effective U of DFT+U.'
+        call messages_info(1)
+        call lda_u_freeze_u(hm%lda_u)
+
+        !In this case we should reload GS wavefunctions
+        if(hm%lda_u_level == DFT_U_ACBN0 .and. .not.fromScratch) then
+          call restart_init(restart_frozen, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+          call lda_u_load(restart_frozen, hm%lda_u, st, ierr)
+          call restart_end(restart_frozen)    
+          write(message(1),'(a)') 'Loaded GS effective U of DFT+U'
+          call messages_info(1)
+          call lda_u_write_U(hm%lda_u, stdout)
+        end if
+      end if
+
       POP_SUB(td_run.init_wfs)
     end subroutine init_wfs
 
@@ -750,15 +828,23 @@ contains
     subroutine td_run_zero_iter()
       PUSH_SUB(td_run.td_run_zero_iter)
 
-      call td_write_iter(write_handler, gr, st, hm, geo, hm%ep%kick, td%dt, sys%ks, 0)
+      call td_write_iter(write_handler, sys%outp, gr, st, hm, geo, hm%ep%kick, td%dt, sys%ks, 0)
 
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
       if(hm%ep%kick%time  ==  M_ZERO) then
-        if(.not. cmplxscl) then
-          call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
+        if( .not.hm%pcm%localf ) then
+          if(.not. cmplxscl) then
+            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
+          else
+            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, theta = hm%cmplxscl%theta)
+          endif
         else
-          call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, hm%cmplxscl%theta)
+          if(.not. cmplxscl) then
+            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)
+          else
+            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, theta = hm%cmplxscl%theta, pcm = hm%pcm)
+          endif
         end if
         call td_write_kick(gr%mesh, hm%ep%kick, sys%outp, geo, 0)
       end if
@@ -947,6 +1033,14 @@ contains
     ! first write resume file
     call states_dump(restart, st, gr, err, iter=iter)
     if (err /= 0) ierr = ierr + 1
+
+    call states_dump_rho(restart, st, gr, ierr, iter=iter)
+    if (err /= 0) ierr = ierr + 1 
+
+    if(hm%lda_u_level /= DFT_U_NONE) then
+      call lda_u_dump(restart, hm%lda_u, st, ierr, iter=iter)
+      if (err /= 0) ierr = ierr + 1
+    end if
 
     cmplxscl = st%cmplxscl%space      
     call potential_interpolation_dump(td%tr%vksold, restart, gr, cmplxscl, st%d%nspin, err2)

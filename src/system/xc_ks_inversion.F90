@@ -32,7 +32,6 @@ module xc_ks_inversion_oct_m
   use mesh_function_oct_m 
   use mesh_oct_m 
   use messages_oct_m 
-  use multicomm_oct_m
   use parser_oct_m 
   use poisson_oct_m 
   use profiling_oct_m 
@@ -92,12 +91,11 @@ module xc_ks_inversion_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_init(ks_inv, gr, geo, st, mc)
+  subroutine xc_ks_inversion_init(ks_inv, gr, geo, st)
     type(xc_ks_inversion_t), intent(out)   :: ks_inv
     type(grid_t),            intent(inout) :: gr
     type(geometry_t),        intent(inout) :: geo
     type(states_t),          intent(in)    :: st
-    type(multicomm_t),       intent(in)    :: mc
 
     PUSH_SUB(xc_ks_inversion_init)
 

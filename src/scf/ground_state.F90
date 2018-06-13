@@ -142,9 +142,9 @@ contains
 
     if(sys%st%d%pack_states) call states_pack(sys%st)
     
-    ! self-consistency for occupation numbers in RDMFT
+    ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
-      call scf_rdmft(sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp,scfv%max_iter)
+      call scf_rdmft(sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, scfv%max_iter, restart_dump)
     else
       if(.not. fromScratch) then
         call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, &

@@ -24,8 +24,6 @@ dist_share_DATA = \
 	01-carbon_atom.01-psf_l0.inp \
 	01-carbon_atom.02-psf_l1.inp \
 	01-carbon_atom.03-ground_state_double_grid.inp \
-	01-carbon_atom.04-cpi.inp \
-	01-carbon_atom.05-fhi.inp \
 	01-carbon_atom.test \
 	02-curvilinear_coordinates.01-gygi.inp \
 	02-curvilinear_coordinates.test \
@@ -57,6 +55,7 @@ dist_share_DATA = \
 	08-spin_orbit_coupling_full.01-hgh.inp         \
 	08-spin_orbit_coupling_full.02-rkb.inp         \
         08-spin_orbit_coupling_full.03-unocc.inp       \
+	08-spin_orbit_coupling_full.Xe.UPF             \
 	08-spin_orbit_coupling_full.test               \
 	09-spinors.01-ground_state.inp                 \
 	09-spinors.02-rmmdiis.inp                      \
@@ -76,10 +75,12 @@ dist_share_DATA = \
 	14-fullerene_packed.01-gs.inp                 \
 	15-fullerene_stdlcao.test                     \
 	15-fullerene_stdlcao.01-gs.inp                \
-        16-scfinlcao_std.test \
-        16-scfinlcao_std.01-gs.inp \
-        17-scfinlcao_alt.test \
-        17-scfinlcao_alt.01-gs.inp \
+        16-scfinlcao_std.test                         \
+	16-scfinlcao_std.Cl.psf                       \
+        16-scfinlcao_std.01-gs.inp                    \
+        17-scfinlcao_alt.test                         \
+	17-scfinlcao_alt.Cl.psf                       \
+        17-scfinlcao_alt.01-gs.inp                    \
 	20-eigensolver.01-lobpcg.inp \
 	20-eigensolver.02-cg.inp \
 	20-eigensolver.03-cg_new.inp \
@@ -99,8 +100,6 @@ dist_share_DATA = \
 	24-o2-spin.01-gs.inp \
 	25-multiresolution.01-Hatom.inp \
 	25-multiresolution.test \
-	26-nlcc.01-Fatom.inp \
-	26-nlcc.test                                 \
 	27-fine_mesh.test                            \
 	27-fine_mesh.01-gs.inp \
         29-pcm_chlorine_anion.01-ground_state.inp \

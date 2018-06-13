@@ -113,6 +113,7 @@ module simul_box_oct_m
     FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     FLOAT :: klattice          (MAX_DIM,MAX_DIM)   !< reciprocal-lattice vectors
     FLOAT :: volume_element                      !< the volume element in real space
+    FLOAT :: surface_element   (MAX_DIM)         !< surface element in real space
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
     FLOAT :: metric            (MAX_DIM,MAX_DIM) !< metric tensor F matrix following Chelikowski paper PRB 78 075109 (2008)
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
@@ -142,7 +143,6 @@ contains
 
     ! some local stuff
     FLOAT :: def_h, def_rsize
-    integer :: idir
     logical :: only_gamma_kpoint
 
     PUSH_SUB(simul_box_init)
@@ -289,7 +289,7 @@ contains
       type(block_t) :: blk
 
       FLOAT :: default
-      integer :: default_boxshape
+      integer :: default_boxshape, idir
 #if defined(HAVE_GDLIB)
       logical :: found
       integer :: box_npts
@@ -624,7 +624,7 @@ contains
     FLOAT,   optional, intent(in)    :: rlattice_primitive(:,:)
 
     type(block_t) :: blk
-    FLOAT :: norm, cross(1:3), lparams(3)
+    FLOAT :: norm, lparams(3)
     integer :: idim, jdim, ncols
     logical :: has_angles
     FLOAT :: angles(1:MAX_DIM), cosang, a2, aa, cc
@@ -773,6 +773,12 @@ contains
 
     call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element, sb%dim)
 
+    if(sb%dim == 3) then
+      sb%surface_element(1) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 2), sb%rlattice_primitive(1:3, 3))**2)))
+      sb%surface_element(2) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 3), sb%rlattice_primitive(1:3, 1))**2)))
+      sb%surface_element(3) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 1), sb%rlattice_primitive(1:3, 2))**2)))
+    end if
+
     sb%metric = M_ZERO
     sb%metric = matmul(transpose(sb%klattice_primitive), sb%klattice_primitive)
 
@@ -802,8 +808,7 @@ contains
     logical,           intent(in)    :: warn_if_not
     logical, optional, intent(in)    :: die_if_not
 
-    integer :: iatom, pd, idir
-    FLOAT :: xx(1:MAX_DIM)
+    integer :: iatom, pd
     logical :: die_if_not_
 
     PUSH_SUB(simul_box_atoms_in_box)
@@ -912,11 +917,11 @@ contains
       volume = rv(1, 1)
       kv(1, 1) = M_ONE / rv(1, 1)
     case default ! dim > 3
-      message(1) = "Reciprocal lattice is not correct for dim > 3."
+      message(1) = "Reciprocal lattice for dim > 3 assumes no periodicity."
       call messages_warning(1)
       volume = M_ONE
       do ii = 1, dim
-        kv(ii, ii) = M_ONE
+        kv(ii, ii) = M_ONE/rv(ii,ii)
         !  At least initialize the thing
         volume = volume * sqrt(sum(rv(:, ii)**2))
       end do
@@ -1047,7 +1052,6 @@ contains
     integer,           intent(in) :: iunit
 
     integer :: idir1, idir2
-    character(len=12) :: buf
 
     PUSH_SUB(simul_box_write_short_info)
 
@@ -1600,7 +1604,7 @@ contains
     type(kpoints_t),    intent(in) :: kpoints
     integer,            intent(in) :: dim
 
-    integer :: iop, iatom, iatom_symm, ikpoint
+    integer :: iop, iatom, iatom_symm
     FLOAT :: ratom(1:MAX_DIM)
 
     PUSH_SUB(simul_box_symmetry_check)

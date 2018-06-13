@@ -201,17 +201,18 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_hhg(tg, gr, dir, geo, outp)
+  subroutine target_output_hhg(tg, gr, dir, geo, hm, outp)
     type(target_t), intent(inout) :: tg
     type(grid_t), intent(inout)   :: gr
     character(len=*), intent(in)  :: dir
     type(geometry_t),       intent(in)  :: geo
+    type(hamiltonian_t),    intent(in)  :: hm
     type(output_t),         intent(in)  :: outp
 
     PUSH_SUB(target_output_hhg)
     
     call io_mkdir(trim(dir))
-    call output_states(tg%st, gr, geo, trim(dir), outp)
+    call output_states(tg%st, gr, geo, hm, trim(dir), outp)
 
     POP_SUB(target_output_hhg)
   end subroutine target_output_hhg
@@ -295,7 +296,7 @@
     type(grid_t),      intent(inout) :: gr
     type(states_t),    intent(inout) :: chi_out
 
-    integer :: ik, idim, ist, ip, ib
+    integer :: ik, ib
     PUSH_SUB(target_chi_hhg)
 
     !we have a time-dependent target --> Chi(T)=0

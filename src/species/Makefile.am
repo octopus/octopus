@@ -21,7 +21,7 @@
 noinst_LIBRARIES = libspecies.a
 
 # Fortran sources - keep in alphabetical order
-libspecies_f_srcs =                         \
+libspecies_f_srcs =                      \
 	atomic.F90                       \
 	element.F90                      \
 	logrid.F90                       \
@@ -34,18 +34,34 @@ libspecies_f_srcs =                         \
 	ps_in_grid.F90                   \
 	ps_psf.F90                       \
 	ps_psf_file.F90                  \
-	ps_qso.F90                       \
-	ps_upf.F90                       \
+	ps_xml.F90                       \
+	pseudo.F90                       \
+	share_directory.F90              \
 	species.F90
 
 # C/C++ sources - keep in alphabetical order
-libspecies_c_srcs =
+libspecies_c_srcs =                      \
+	element_low.cc                   \
+	pseudo_low.cc                    \
+	share_directory_low.cc           \
+	spline.cc
 
 libspecies_a_SOURCES = $(libspecies_c_srcs) $(libspecies_f_srcs)
 
 # Include files - keep in alphabetical order
 noinst_HEADERS =                         \
-	ps_pspio_inc.F90
+	anygrid.hpp                      \
+	base.hpp                         \
+	element.hpp                      \
+	detect_format.hpp                \
+	ps_pspio_inc.F90                 \
+	psml.hpp                         \
+	qso.hpp                          \
+	share_directory.hpp              \
+	spline.h                         \
+	upf.hpp                          \
+	upf1.hpp                         \
+	upf2.hpp
 
 
 include $(srcdir)/../common-rules.make
@@ -69,13 +85,13 @@ element.o : element.F90
 logrid.o : logrid.F90 
 ps_cpi.o : ps_cpi.F90 ps_in_grid.o ps_cpi_file.o logrid.o atomic.o 
 ps_cpi_file.o : ps_cpi_file.F90 ps_in_grid.o 
-ps.o : ps.F90 ps_pspio_inc.F90 ps_upf.o ps_psf.o ps_in_grid.o ps_qso.o ps_hgh.o ps_fhi.o ps_cpi.o logrid.o atomic.o 
+ps.o : ps.F90 ps_pspio_inc.F90 ps_psf.o ps_in_grid.o ps_xml.o ps_hgh.o ps_fhi.o ps_cpi.o logrid.o atomic.o 
 ps_fhi.o : ps_fhi.F90 ps_in_grid.o ps_fhi_file.o ps_cpi.o ps_cpi_file.o atomic.o 
 ps_fhi_file.o : ps_fhi_file.F90 
 ps_hgh.o : ps_hgh.F90 logrid.o atomic.o 
 ps_in_grid.o : ps_in_grid.F90 logrid.o atomic.o 
 ps_psf.o : ps_psf.F90 ps_psf_file.o ps_in_grid.o logrid.o atomic.o 
 ps_psf_file.o : ps_psf_file.F90 ps_in_grid.o 
-ps_qso.o : ps_qso.F90 ps_in_grid.o atomic.o 
-ps_upf.o : ps_upf.F90 ps_in_grid.o atomic.o 
-species.o : species.F90 ps.o logrid.o element.o
+ps_xml.o : ps_xml.F90 ps_in_grid.o atomic.o pseudo.o
+species.o : species.F90 ps.o logrid.o element.o share_directory.o
+

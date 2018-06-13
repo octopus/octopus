@@ -110,6 +110,7 @@ module epot_oct_m
     type(laser_t), pointer :: lasers(:)            !< lasers stuff
     FLOAT,         pointer :: E_field(:)           !< static electric field
     FLOAT, pointer         :: v_static(:)          !< static scalar potential
+    FLOAT, allocatable     :: v_ext(:)             !< static scalar potential - 1:gr%mesh%np_part
     FLOAT, pointer         :: B_field(:)           !< static magnetic field
     FLOAT, pointer         :: A_static(:,:)        !< static vector potential
     type(gauge_field_t)    :: gfield               !< the time-dependent gauge field
@@ -311,6 +312,12 @@ contains
         SAFE_ALLOCATE(ep%v_static(1:gr%mesh%np))
         forall(ip = 1:gr%mesh%np)
           ep%v_static(ip) = sum(gr%mesh%x(ip, gr%sb%periodic_dim + 1:gr%sb%dim) * ep%E_field(gr%sb%periodic_dim + 1:gr%sb%dim))
+        end forall
+        ! The following is needed to make interpolations.
+        ! It is used by PCM.
+        SAFE_ALLOCATE(ep%v_ext(1:gr%mesh%np_part))
+        forall(ip = 1:gr%mesh%np_part)
+          ep%v_ext(ip) = sum(gr%mesh%x(ip, gr%sb%periodic_dim + 1:gr%sb%dim) * ep%E_field(gr%sb%periodic_dim + 1:gr%sb%dim))
         end forall
       end if
     end if
@@ -628,6 +635,7 @@ contains
     ! the macroscopic fields
     SAFE_DEALLOCATE_P(ep%E_field)
     SAFE_DEALLOCATE_P(ep%v_static)
+    SAFE_DEALLOCATE_A(ep%v_ext)
     SAFE_DEALLOCATE_P(ep%B_field)
     SAFE_DEALLOCATE_P(ep%A_static)
 
@@ -730,16 +738,16 @@ contains
       SAFE_ALLOCATE(tmpdensity(1:gr%mesh%np))
       call symmetrizer_init(symmetrizer, gr%mesh)
 
-      call dsymmetrizer_apply(symmetrizer, field = vpsl, symmfield = tmpdensity)
+      call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field = vpsl, symmfield = tmpdensity)
       vpsl(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
 
       if(associated(st%rho_core)) then
-        call dsymmetrizer_apply(symmetrizer, field = st%rho_core, symmfield = tmpdensity)
+        call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field = st%rho_core, symmfield = tmpdensity)
         st%rho_core(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
       end if
 
       if(ep%have_density) then
-        call dsymmetrizer_apply(symmetrizer, field = density, symmfield = tmpdensity)
+        call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field = density, symmfield = tmpdensity)
         density(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
       end if
 
@@ -788,14 +796,14 @@ contains
     end do
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
-      if(ep%proj(ia)%type == M_NONE) cycle
+      if(ep%proj(ia)%type == PROJ_NONE) cycle
       ps => species_ps(geo%atom(ia)%species)
       call submesh_init(ep%proj(ia)%sphere, mesh%sb, mesh, geo%atom(ia)%x, ps%rc_max + mesh%spacing(1))
     end do
 
     if(geo%atoms_dist%parallel) then
       do ia = 1, geo%natoms
-        if(ep%proj(ia)%type == M_NONE) cycle
+        if(ep%proj(ia)%type == PROJ_NONE) cycle
         ps => species_ps(geo%atom(ia)%species)
         call submesh_broadcast(ep%proj(ia)%sphere, mesh, geo%atom(ia)%x, ps%rc_max + mesh%spacing(1), &
           geo%atoms_dist%node(ia), geo%atoms_dist%mpi_grp)
@@ -805,7 +813,7 @@ contains
     do ia = 1, geo%natoms
       atm => geo%atom(ia)
       call projector_build(ep%proj(ia), gr, atm, ep%so_strength)
-      if(.not. projector_is(ep%proj(ia), M_NONE)) ep%non_local = .true.
+      if(.not. projector_is(ep%proj(ia), PROJ_NONE)) ep%non_local = .true.
     end do
 
     ! add static electric fields
@@ -832,7 +840,7 @@ contains
   
   ! ---------------------------------------------------------
   subroutine epot_local_potential(ep, der, dgrid, geo, iatom, vpsl, Imvpsl, rho_core, density, Imdensity)
-    type(epot_t),             intent(inout) :: ep
+    type(epot_t),             intent(in)    :: ep
     type(derivatives_t),      intent(in)    :: der
     type(double_grid_t),      intent(in)    :: dgrid
     type(geometry_t),         intent(in)    :: geo

@@ -39,7 +39,7 @@ module atom_oct_m
     FLOAT, dimension(MAX_DIM) :: x     = M_ZERO !< position of atom in real space
     FLOAT, dimension(MAX_DIM) :: v     = M_ZERO !< velocity of atom in real space
     FLOAT, dimension(MAX_DIM) :: f     = M_ZERO !< force on atom in real space
-    integer, dimension(MAX_DIM) :: c   = M_ZERO !< Constrain on te atom (0 or 1)
+    integer, dimension(MAX_DIM) :: c   = 0      !< Constrain on te atom (0 or 1)
     logical                   :: move  = .true. !< should I move this atom in the optimization mode
 
     !Components of the force
@@ -48,6 +48,7 @@ module atom_oct_m
     FLOAT, dimension(MAX_DIM) :: f_loc    = M_ZERO !< Local electronic part
     FLOAT, dimension(MAX_DIM) :: f_nl     = M_ZERO !< NL electronic part
     FLOAT, dimension(MAX_DIM) :: f_fields = M_ZERO !< Lasers
+    FLOAT, dimension(MAX_DIM) :: f_u      = M_ZERO !< Hubbard forces
   end type atom_t
 
   type, public :: atom_classical_t
@@ -56,7 +57,7 @@ module atom_oct_m
     FLOAT, dimension(MAX_DIM) :: x      = M_ZERO
     FLOAT, dimension(MAX_DIM) :: v      = M_ZERO
     FLOAT, dimension(MAX_DIM) :: f      = M_ZERO
-    integer, dimension(MAX_DIM) :: c    = M_ZERO
+    integer, dimension(MAX_DIM) :: c    = 0
     FLOAT                     :: charge = M_ZERO
   end type atom_classical_t
 
@@ -85,13 +86,14 @@ contains
     this%x     = x
     this%v     = M_ZERO
     this%f     = M_ZERO
-    this%c     = M_ZERO
+    this%c     = 0
 
     this%f_ii      = M_ZERO
     this%f_vdw     = M_ZERO
     this%f_loc     = M_ZERO
     this%f_nl      = M_ZERO
     this%f_fields  = M_ZERO
+    this%f_u       = M_ZERO
 
     this%move  = .true.
     if(present(move))this%move=move
@@ -108,13 +110,14 @@ contains
     this%x     = M_ZERO
     this%v     = M_ZERO
     this%f     = M_ZERO
-    this%c     = M_ZERO
+    this%c     = 0
 
     this%f_ii      = M_ZERO
     this%f_vdw     = M_ZERO
     this%f_loc     = M_ZERO
     this%f_nl      = M_ZERO
     this%f_fields  = M_ZERO    
+    this%f_u       = M_ZERO
 
     this%move  = .true.
 
@@ -152,6 +155,7 @@ contains
     this%f_loc     = M_ZERO
     this%f_nl      = M_ZERO
     this%f_fields  = M_ZERO
+    this%f_u       = M_ZERO
 
     POP_SUB(atom_init_from_data_object)
   end subroutine atom_init_from_data_object
@@ -306,7 +310,7 @@ contains
     this%x      = x
     this%v      = M_ZERO
     this%f      = M_ZERO
-    this%c      = M_ZERO
+    this%c      = 0
     this%charge = charge
 
   end subroutine atom_classical_init
@@ -319,7 +323,7 @@ contains
     this%x      = M_ZERO
     this%v      = M_ZERO
     this%f      = M_ZERO
-    this%c      = M_ZERO
+    this%c      = 0
     this%charge = M_ZERO
 
   end subroutine atom_classical_end

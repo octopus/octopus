@@ -7,7 +7,7 @@ Radius = angstrom*3.0
 Spacing = angstrom*0.15
 PseudopotentialSet = standard
 %Species
-	'Li' | species_pseudo | db_file | 'PSF/Li.psf'
+	'Li' | species_pseudo   | lmax | 0 | lloc | 0
 %
 %Coordinates
         'Li' | 0.0 |  0.0 | 0.0 | no

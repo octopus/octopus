@@ -480,7 +480,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
     ia_length = (cas%n_pairs - 1) / 2
     if(mod(cas%n_pairs, 2) == 0) then ! even
       if(jb > cas%n_pairs / 2) then
-        jb_tmp = cas%n_pairs - jb + 1
+        jb_tmp = cas%n_pairs - jb
       else
         jb_tmp = jb
       end if
@@ -1087,10 +1087,14 @@ subroutine X(casida_write)(cas, sys)
   character(len=5) :: str
   character(len=50) :: dir_name
   integer :: iunit, ia, jb, idim, index
+  logical :: full_printing
   R_TYPE  :: temp
   
   PUSH_SUB(X(casida_write))
   
+  full_printing = .false.
+  if (cas%print_exst == 'all') full_printing = .true.
+
   if(mpi_grp_is_root(mpi_world)) then
   ! output excitation energies and oscillator strengths
     call io_mkdir(CASIDA_DIR)
@@ -1130,47 +1134,51 @@ subroutine X(casida_write)(cas, sys)
   
     if(cas%qcalc) call qcasida_write(cas)
   
-    if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
-      dir_name = CASIDA_DIR//trim(theory_name(cas))//'_excitations'
-      call io_mkdir(trim(dir_name))
-    end if
-    
-    do ia = 1, cas%n_pairs
+    if (.not.(cas%print_exst == "0" .or. cas%print_exst == "none")) then
+      if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
+        dir_name = CASIDA_DIR//trim(theory_name(cas))//'_excitations'
+        call io_mkdir(trim(dir_name))
+      end if
       
-      write(str,'(i5.5)') ia
-      
-      ! output eigenvectors
-      if(cas%type /= CASIDA_EPS_DIFF) then
-        iunit = io_open(trim(dir_name)//'/'//trim(str), action='write')
-        ! First, a little header
-        write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
-          units_from_atomic(units_out%energy, cas%w(cas%ind(ia)))
-        do idim = 1, cas%sb_dim
-          write(iunit,'(a,2es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
-            units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim))
-        end do
-        
-        ! this stuff should go BEFORE calculation of transition matrix elements!
-        ! make the largest component positive and real, to specify the phase
-        index = maxloc(abs(cas%X(mat)(:, cas%ind(ia))), dim = 1)
-        temp = abs(cas%X(mat)(index, cas%ind(ia))) / cas%X(mat)(index, cas%ind(ia))
-        
-        do jb = 1, cas%n_pairs
-          write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, temp * cas%X(mat)(jb, cas%ind(ia))
-        end do
-        
-        if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
-          call X(write_implied_occupations)(cas, iunit, cas%ind(ia))
+      do ia = 1, cas%n_pairs
+        if(loct_isinstringlist(ia, cas%print_exst) .or. full_printing) then 
+          write(str,'(i5.5)') ia
+          
+          ! output eigenvectors
+          if(cas%type /= CASIDA_EPS_DIFF) then
+            iunit = io_open(trim(dir_name)//'/'//trim(str), action='write')
+            ! First, a little header
+            write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
+              units_from_atomic(units_out%energy, cas%w(cas%ind(ia)))
+            do idim = 1, cas%sb_dim
+              write(iunit,'(a,2es14.5)') '# <' // index2axis(idim) // '> ['//trim(units_abbrev(units_out%length))// '] = ', &
+                units_from_atomic(units_out%length, cas%X(tm)(cas%ind(ia), idim))
+            end do
+            
+            ! this stuff should go BEFORE calculation of transition matrix elements!
+            ! make the largest component positive and real, to specify the phase
+            index = maxloc(abs(cas%X(mat)(:, cas%ind(ia))), dim = 1)
+            temp = abs(cas%X(mat)(index, cas%ind(ia))) / cas%X(mat)(index, cas%ind(ia))
+            
+            do jb = 1, cas%n_pairs
+              if ( abs( temp * cas%X(mat)(jb, cas%ind(ia)) ) >= cas%weight_thresh ) &
+                write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, temp * cas%X(mat)(jb, cas%ind(ia))
+            end do
+            
+            if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
+              call X(write_implied_occupations)(cas, iunit, cas%ind(ia))
+            end if
+            call io_close(iunit)
+          end if
+          
+          if(cas%calc_forces .and. cas%type /= CASIDA_CASIDA) then
+            iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', action='write')
+            call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
+            call io_close(iunit)
+          end if
         end if
-        call io_close(iunit)
-      end if
-      
-      if(cas%calc_forces .and. cas%type /= CASIDA_CASIDA) then
-        iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', action='write')
-        call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
-        call io_close(iunit)
-      end if
-    end do
+      end do
+    end if
   
   end if
   ! Calculate and write the transition densities

@@ -97,10 +97,10 @@ contains
 
     R_TYPE, allocatable :: psi(:, :, :)
     integer             :: psi_block(1:2), total_np
-    type(profile_t), save :: prof_cholesky, prof_trsm, prof_herk
 #ifdef HAVE_SCALAPACK
     integer             :: info, nbl, nrow, ncol
     integer             :: psi_desc(BLACS_DLEN), ss_desc(BLACS_DLEN)
+    type(profile_t), save :: prof_cholesky, prof_trsm, prof_herk
 #endif
 
     PUSH_SUB(X(states_orthogonalization_full).cholesky_parallel)
@@ -199,7 +199,6 @@ contains
     integer :: ist, jst, idim
     FLOAT   :: cc
     R_TYPE, allocatable :: aa(:), psii(:, :), psij(:, :)
-    FLOAT,  allocatable :: bb(:)
     
     PUSH_SUB(X(states_orthogonalization_full).mgs)
 
@@ -208,27 +207,8 @@ contains
       call messages_fatal(1, only_root_writes = .true.)
     end if
 
-    SAFE_ALLOCATE(bb(1:nst))
     SAFE_ALLOCATE(psii(1:mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(psij(1:mesh%np, 1:st%d%dim))
-
-    ! normalize the initial vectors
-    do ist = 1, nst
-      call states_get_state(st, mesh, ist, ik, psii)
-      bb(ist) = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii, reduce = .false.))
-      call states_set_state(st, mesh, ist, ik, psii)
-    end do
-
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, bb, dim = nst)
-
-    do ist = 1, nst
-      call states_get_state(st, mesh, ist, ik, psii)
-      do idim = 1, st%d%dim
-        call lalg_scal(mesh%np, M_ONE/sqrt(bb(ist)), psii(:, idim))
-      end do
-    end do
-
-    SAFE_DEALLOCATE_A(bb)
 
     SAFE_ALLOCATE(aa(1:nst))
 
@@ -283,10 +263,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 
   integer :: idim, block_size, ib, size, sp
   R_TYPE, allocatable :: psicopy(:, :, :)
-  integer :: ierr
   type(accel_mem_t) :: psicopy_buffer, ss_buffer
-  type(accel_kernel_t), save, target :: dkernel, zkernel
-  type(accel_kernel_t), pointer :: kernel
   type(profile_t), save :: prof_copy
   type(profile_t), save :: prof
 
@@ -326,6 +303,8 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
       end do
 
     end do 
+    
+    SAFE_DEALLOCATE_A(psicopy)
 
   else
 
@@ -523,11 +502,11 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
 
   if(.not. mesh%use_curvilinear) then
 
-    do idim = 1, dim
-      do sp = 1, mesh%np, block_size
-        size = min(block_size, mesh%np - sp + 1)
-        do ist = 1, nst
-
+    do sp = 1, mesh%np, block_size
+      size = min(block_size, mesh%np - sp + 1)
+      do ist = 1, nst
+        do idim = 1, dim
+        
           if(present(mask)) then
             if(mask(ist)) cycle
           end if
@@ -543,11 +522,11 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
 
   else
 
-    do idim = 1, dim
-      do sp = 1, mesh%np, block_size
-        size = min(block_size, mesh%np - sp + 1)
-        ep = sp - 1 + size
-        do ist = 1, nst
+    do sp = 1, mesh%np, block_size
+      size = min(block_size, mesh%np - sp + 1)
+      ep = sp - 1 + size
+      do ist = 1, nst
+        do idim = 1, dim
 
           if(present(mask)) then
             if(mask(ist)) cycle
@@ -578,14 +557,15 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   if(present(beta_ij))  &
     ss(:) = ss(:) * beta_ij(:)
 
-  do idim = 1, dim
-    do sp = 1, mesh%np, block_size
-      size = min(block_size, mesh%np - sp + 1)
+  do sp = 1, mesh%np, block_size
+    size = min(block_size, mesh%np - sp + 1)
 
-      if(present(Theta_Fi)) then
-        if(Theta_Fi /= M_ONE) &
-          call blas_scal(size, R_TOTYPE(Theta_Fi), phi(sp, idim), 1)
-      end if
+    if(present(Theta_Fi)) then
+      if(Theta_Fi /= M_ONE) &
+        call blas_scal(size, R_TOTYPE(Theta_Fi), phi(sp, idim), 1)
+    end if
+
+    do idim = 1, dim
 
       do ist = 1, nst
 
@@ -667,7 +647,7 @@ FLOAT function X(states_residue)(mesh, dim, hf, ee, ff) result(rr)
 
   call profiling_in(prof, "RESIDUE")
 
-  SAFE_ALLOCATE(res(1:mesh%np_part, 1:dim))
+  SAFE_ALLOCATE(res(1:mesh%np, 1:dim))
 
   forall (idim = 1:dim, ip = 1:mesh%np) res(ip, idim) = hf(ip, idim) - ee*ff(ip, idim)
 
@@ -1072,10 +1052,8 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
   R_TYPE,            intent(in)    :: uu(:, :)
   integer,           intent(in)    :: ik
   
-  type(batch_t) :: psib
   integer       :: block_size, sp, idim, size, ib
   R_TYPE, allocatable :: psinew(:, :, :), psicopy(:, :, :)
-  type(accel_kernel_t), save :: dkernel, zkernel
   type(accel_mem_t) :: psinew_buffer, psicopy_buffer, uu_buffer
   type(profile_t), save :: prof
 
@@ -1181,11 +1159,9 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 #ifndef R_TREAL
   integer :: ist, jst
 #endif
-  type(batch_t) :: psib, psi2b
   type(profile_t), save :: prof
   FLOAT :: vol
   R_TYPE, allocatable :: psi(:, :, :)
-  integer :: ierr
   type(accel_mem_t) :: psi_buffer, overlap_buffer
 
   PUSH_SUB(X(states_calc_overlap))
@@ -1333,9 +1309,9 @@ subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj)
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(out)   :: proj(:, :)
 
-  integer       :: ib, jb, ip
+  integer       :: ib, ip
   R_TYPE, allocatable :: psi(:, :, :), gspsi(:, :, :)
-  integer :: sp, ep, size, block_size, ierr
+  integer :: sp, size, block_size
   type(profile_t), save :: prof
 
   PUSH_SUB(X(states_calc_projections))
@@ -1409,7 +1385,7 @@ subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, ji
   integer,             intent(in)    :: nint
   integer,             intent(out)   :: iindex(1:nint)
   integer,             intent(out)   :: jindex(1:nint)
-  FLOAT,               intent(out)   :: oneint(1:nint)  !this needs to address complex numbers as well?!?
+  R_TYPE,              intent(out)   :: oneint(1:nint)  
   
   integer ist, jst, np, iint
   R_TYPE :: me
@@ -1421,7 +1397,7 @@ subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, ji
   SAFE_ALLOCATE(psij(1:gr%mesh%np_part, 1:st%d%dim))
   
   np = gr%mesh%np
-  iint = M_ONE
+  iint = 1
 
   do ist = 1, st%nst
 
@@ -1462,7 +1438,7 @@ subroutine X(states_me_two_body) (gr, st, nint, iindex, jindex, kindex, lindex, 
   integer,          intent(out)             :: jindex(1:nint)
   integer,          intent(out)             :: kindex(1:nint)
   integer,          intent(out)             :: lindex(1:nint)
-  FLOAT,            intent(out)             :: twoint(1:nint)  !this needs to address complex numbers as well?!?
+  R_TYPE,           intent(out)             :: twoint(1:nint)  !
 
   integer :: ist, jst, kst, lst, ijst, klst
   integer :: iint

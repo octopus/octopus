@@ -151,23 +151,22 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   FLOAT, optional,     intent(out)   :: diff(:)
  
 #ifdef HAVE_SCALAPACK
-  R_TYPE, allocatable  :: hs(:, :), hpsi(:, :, :), evectors(:, :), work(:)
-  R_TYPE               :: rttmp
-  integer              :: ist, lwork, size
+  R_TYPE, allocatable :: hs(:, :), hpsi(:, :, :), evectors(:, :), work(:)
+  R_TYPE              :: rttmp
+  integer             :: ist, size, lwork
   integer :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), hs_desc(BLACS_DLEN), info
   integer :: nbl, nrow, ncol, ip, idim
   type(batch_t) :: psib, hpsib
+  type(profile_t), save :: prof_diag, prof_gemm1, prof_gemm2
 #ifdef R_TCOMPLEX
   integer :: lrwork
   CMPLX, allocatable :: rwork(:)
   CMPLX :: ftmp
 #endif
-  type(profile_t), save :: prof_diag, prof_gemm1, prof_gemm2
 #ifdef HAVE_ELPA
-  integer :: rcomm, ccomm
-  logical :: elpa_success
+  class(elpa_t), pointer :: elpa
 #endif
-
+  
   PUSH_SUB(X(subspace_diag_scalapack))
 
   SAFE_ALLOCATE(hpsi(1:der%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end))
@@ -235,6 +234,44 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   call profiling_in(prof_diag, "SCALAPACK_DIAG")
 
   ! now diagonalize
+#ifdef HAVE_ELPA
+  if (elpa_init(20170403) /= elpa_ok) then
+    write(message(1),'(a)') "ELPA API version not supported"
+    call messages_fatal(1)
+  endif
+  elpa => elpa_allocate()
+
+  ! set parameters describing the matrix
+  call elpa%set("na", st%nst, info)
+  call elpa%set("nev", st%nst, info)
+  call elpa%set("local_nrows", nrow, info)
+  call elpa%set("local_ncols", ncol, info)
+  call elpa%set("nblk", nbl, info)
+  call elpa%set("mpi_comm_parent", st%dom_st_mpi_grp%comm, info)
+  call elpa%set("process_row", st%dom_st_proc_grid%myrow, info)
+  call elpa%set("process_col", st%dom_st_proc_grid%mycol, info)
+
+  info = elpa%setup()
+
+  ! one stage solver usually shows worse performance than two stage solver
+  call elpa%set("solver", elpa_solver_2stage, info)
+
+  ! call eigensolver
+  call elpa%eigenvectors(hs, eigenval, evectors, info)
+
+  ! error handling
+  if (info /= elpa_ok) then
+    write(message(1),'(a,i6,a,a)') "Error in ELPA, code: ", info, ", message: ", &
+      elpa_strerr(info)
+    call messages_fatal(1)
+  end if
+
+  call elpa_deallocate(elpa)
+  call elpa_uninit()
+
+#else
+! Use ScaLAPACK function if ELPA not available
+
 #ifdef R_TCOMPLEX
 
   call pzheev(jobz = 'V', uplo = 'U', n = st%nst, a = hs(1, 1) , ia = 1, ja = 1, desca = hs_desc(1), &
@@ -266,26 +303,6 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 
 #else
 
-#ifdef HAVE_ELPA
-  
-  mpi_err = get_elpa_communicators(st%dom_st_mpi_grp%comm, st%dom_st_proc_grid%myrow, st%dom_st_proc_grid%mycol, rcomm, ccomm)
-
-  if(.false.) then
-
-    elpa_success = solve_evp_real_1stage(na = st%nst, nev = st%nst, a = hs, &
-      lda = ubound(hs, dim = 1), ev = eigenval, q = evectors, ldq = ubound(evectors, dim = 1), &
-      nblk = nbl, matrixCols = ubound(hs, dim = 2), mpi_comm_rows = rcomm, mpi_comm_cols = ccomm)
-  else
-    
-    elpa_success = solve_evp_real_2stage(na = st%nst, nev = st%nst, a = hs, &
-      lda = ubound(hs, dim = 1), ev = eigenval, q = evectors, ldq = ubound(evectors, dim = 1), &
-      nblk = nbl, matrixCols = ubound(hs, dim = 2), &
-      mpi_comm_rows = rcomm, mpi_comm_cols = ccomm, mpi_comm_all = st%dom_st_mpi_grp%comm)
-
-  end if
-  
-#else
-
   call pdsyev(jobz = 'V', uplo = 'U', n = st%nst, a = hs(1, 1) , ia = 1, ja = 1, desca = hs_desc(1), &
     w = eigenval(1), z = evectors(1, 1), iz = 1, jz = 1, descz = hs_desc(1), work = rttmp, lwork = -1, info = info)
 
@@ -309,6 +326,7 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
 #endif
   
 #endif
+!(HAVE_ELPA)
 
   call profiling_out(prof_diag)
 
@@ -359,10 +377,10 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(out)   :: hmss(:, :)
 
-  integer       :: ib, jb, ip
+  integer       :: ib, ip
   R_TYPE, allocatable :: psi(:, :, :), hpsi(:, :, :)
   type(batch_t), allocatable :: hpsib(:)
-  integer :: sp, ep, size, block_size, ierr
+  integer :: sp, size, block_size
   type(accel_mem_t) :: psi_buffer, hpsi_buffer, hmss_buffer
 
   PUSH_SUB(X(subspace_diag_hamiltonian))
