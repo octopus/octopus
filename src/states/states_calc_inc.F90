@@ -1085,7 +1085,7 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
       
       do idim = 1, st%d%dim
         
-        call blas_gemm(transa = 't', transb = 'n',        &
+        call blas_gemm(transa = 'c', transb = 'n',        &
           m = st%nst, n = size, k = st%nst,               &
           alpha = R_TOTYPE(M_ONE),                        &
           a = uu(1, 1), lda = ubound(uu, dim = 1),        &
