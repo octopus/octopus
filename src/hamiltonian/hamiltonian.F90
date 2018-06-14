@@ -610,6 +610,8 @@ contains
 
     if(hm%scissor%apply) call scissor_end(hm%scissor)
 
+    call lda_u_end(hm%lda_u)
+
     ! this is a bit ugly, hf_st is initialized in v_ks_calc but deallocated here.
     if(associated(hm%hf_st))  then
       if(hm%hf_st%parallel_in_states) call states_parallel_remote_access_stop(hm%hf_st)
