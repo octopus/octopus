@@ -182,6 +182,7 @@ contains
    do ios = 1, this%norbsets
      call orbitalset_end(this%orbsets(ios))
    end do
+   SAFE_DEALLOCATE_P(this%orbsets)
   
    SAFE_DEALLOCATE_P(this%global2os)
    SAFE_DEALLOCATE_P(this%os2global)
