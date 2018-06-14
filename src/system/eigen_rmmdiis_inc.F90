@@ -96,6 +96,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(1)%batch, resb(1)%batch)
 
+    call batch_scal(gr%mesh%np, R_TOTYPE(M_ONE/R_REAL(me(2,:))), resb(1)%batch, a_start = minst)
+
     done = 0
 
     call X(mesh_batch_dotp_vector)(gr%mesh, resb(1)%batch, resb(1)%batch, nrmsq)
@@ -171,6 +173,9 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       nops = nops + bsize
 
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(iter)%batch, resb(iter)%batch)
+
+      call X(mesh_batch_dotp_vector)(gr%mesh, psib(iter)%batch, psib(iter)%batch, me(2,:))
+      call batch_scal(gr%mesh%np, R_TOTYPE(M_ONE/R_REAL(me(2,:))), resb(iter)%batch, a_start = minst)
 
       call profiling_in(prof_sync, "RMMDIIS_SYNC")
       if(save_pack_mem) then
@@ -248,6 +253,9 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       call X(hamiltonian_apply_batch)(hm, gr%der, psib(iter)%batch, resb(iter)%batch, ik)
       nops = nops + bsize
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(iter)%batch, resb(iter)%batch)
+
+      call X(mesh_batch_dotp_vector)(gr%mesh, psib(iter)%batch, psib(iter)%batch, me(2,:))
+      call batch_scal(gr%mesh%np, R_TOTYPE(M_ONE/R_REAL(me(2,:))), resb(iter)%batch, a_start = minst)
 
       ! why not allocate these outside the loop?
       SAFE_DEALLOCATE_A(eval)      
@@ -437,6 +445,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
  
       !We get the residual vector
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%group%psib(ib, ik), resb)
+      call batch_scal(gr%mesh%np, R_TOTYPE(M_ONE/R_REAL(me1(2,:))), resb, a_start = minst)
 
       if(debug%info) then
         call X(mesh_batch_dotp_vector)(gr%der%mesh, resb, resb, diff)
