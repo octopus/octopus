@@ -7,8 +7,11 @@ PeriodicDimensions = 3
 a = 10.2
 
 BoxShape = parallelepiped
-Lsize = a/2
-Spacing = Lsize/7
+%LatticeParameters
+ a | a | a
+ 90 | 90 | 90
+%
+Spacing = a/14
 
 %ReducedCoordinates
   "Si" |   0.0       | 0.0       | 0.0 
@@ -35,9 +38,6 @@ ConvRelDens = 1e-7
 
 Output = geometry + dos
 OutputFormat = xyz
-
-OutputBandsGnuplotMode = yes
-OutputBandsGraceMode = yes
 
 FilterPotentials = filter_none
 

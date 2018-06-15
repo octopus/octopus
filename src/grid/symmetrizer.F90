@@ -38,10 +38,10 @@ module symmetrizer_oct_m
     symmetrizer_end,                    &
     dsymmetrizer_apply,                 &
     zsymmetrizer_apply,                 &
-    dsymmetrize_tensor,                 &
-    zsymmetrize_tensor,                 &
-    dsymmetrize_magneto_optics,         &
-    zsymmetrize_magneto_optics
+    dsymmetrize_tensor_cart,            &
+    zsymmetrize_tensor_cart,            &
+    dsymmetrize_magneto_optics_cart,    &
+    zsymmetrize_magneto_optics_cart
 
   type symmetrizer_t
     type(mesh_t), pointer :: mesh

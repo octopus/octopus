@@ -17,18 +17,21 @@
 !!
 
 !> supply field and symmfield, and/or field_vector and symmfield_vector
-subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_vector, suppress_warning)
+subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfield_vector, &
+          suppress_warning, reduced_quantity)
   type(symmetrizer_t), target, intent(in)    :: this
-  R_TYPE,    optional, target, intent(in)    :: field(:) !< (this%mesh%np)
-  R_TYPE,    optional, target, intent(in)    :: field_vector(:, :)  !< (this%mesh%np, 3)
-  R_TYPE,            optional, intent(out)   :: symmfield(:) !< (this%mesh%np)
-  R_TYPE,            optional, intent(out)   :: symmfield_vector(:, :) !< (this%mesh%np, 3)
+  integer,                     intent(in)    :: np !mesh%np or mesh%fine%np
+  R_TYPE,    optional, target, intent(in)    :: field(:) !< (np)
+  R_TYPE,    optional, target, intent(in)    :: field_vector(:, :)  !< (np, 3)
+  R_TYPE,            optional, intent(out)   :: symmfield(:) !< (np)
+  R_TYPE,            optional, intent(out)   :: symmfield_vector(:, :) !< (np, 3)
   logical,           optional, intent(in)    :: suppress_warning !< use to avoid output of discrepancy,
     !! for forces, where this routine is not used to symmetrize something already supposed to be symmetric,
     !! but rather to construct the quantity properly from reduced k-points
+  logical,           optional, intent(in)    :: reduced_quantity
 
   integer :: ip, iop, nops, ipsrc, idir
-  integer :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
+  FLOAT :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
   R_TYPE  :: acc, acc_vector(1:3)
   FLOAT   :: weight, maxabsdiff, maxabs
   R_TYPE, pointer :: field_global(:), field_global_vector(:, :)
@@ -40,6 +43,14 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
   ASSERT(present(field_vector) .eqv. present(symmfield_vector))
   ! we will do nothing if following condition is not met!
   ASSERT(present(field) .or. present(field_vector))
+
+  if(present(field)) then
+    ASSERT(ubound(field, dim = 1) >= np)
+    ASSERT(ubound(symmfield, dim = 1) >= np)
+  else
+    ASSERT(ubound(field_vector, dim = 1) >= np)
+    ASSERT(ubound(symmfield_vector, dim = 1) >= np)
+  end if
 
   ASSERT(associated(this%mesh))
   vp => this%mesh%vp
@@ -62,6 +73,7 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
   end if
 
   if(present(field_vector)) then
+    ASSERT(ubound(field_vector, dim=2) == 3)
     if(this%mesh%parallel_in_domains) then
       SAFE_ALLOCATE(field_global_vector(1:this%mesh%np_global, 1:3))
       do idir = 1, 3
@@ -77,15 +89,15 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
   nops = symmetries_number(this%mesh%sb%symm)
   weight = M_ONE/nops
 
-  lsize(1:3) = this%mesh%idx%ll(1:3)
-  offset(1:3) = this%mesh%idx%nr(1, 1:3) + this%mesh%idx%enlarge(1:3)
+  lsize(1:3) = dble(this%mesh%idx%ll(1:3))
+  offset(1:3) = dble(this%mesh%idx%nr(1, 1:3) + this%mesh%idx%enlarge(1:3))
 
-  do ip = 1, this%mesh%np
+  do ip = 1, np
     if(this%mesh%parallel_in_domains) then
       ! convert to global point
-      destpoint(1:3) = this%mesh%idx%lxyz(vp%local(vp%xlocal + ip - 1), 1:3) - offset(1:3)
+      destpoint(1:3) = dble(this%mesh%idx%lxyz(vp%local(vp%xlocal + ip - 1), 1:3)) - offset(1:3)
     else
-      destpoint(1:3) = this%mesh%idx%lxyz(ip, 1:3) - offset(1:3)
+      destpoint(1:3) = dble(this%mesh%idx%lxyz(ip, 1:3)) - offset(1:3)
     end if
     ! offset moves corner of cell to origin, in integer mesh coordinates
 
@@ -93,7 +105,10 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
     ASSERT(all(destpoint < lsize))
 
     ! move to center of cell in real coordinates
-    destpoint = destpoint - lsize / 2
+    destpoint = destpoint - dble(int(lsize)/2)
+
+    !convert to proper reduced coordinates
+    forall(idir = 1:3) destpoint(idir) = destpoint(idir)/lsize(idir)
 
     if(present(field)) &
       acc = M_ZERO
@@ -102,30 +117,36 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
 
     ! iterate over all points that go to this point by a symmetry operation
     do iop = 1, nops
-      srcpoint = symm_op_apply(this%mesh%sb%symm%ops(iop), destpoint) 
+      srcpoint = symm_op_apply_red(this%mesh%sb%symm%ops(iop), destpoint) 
+
+      !We now come back to what should be an integer, if the symmetric point beloings to the grid
+      !At this point, this is already checked
+      forall(idir = 1:3) srcpoint(idir) = srcpoint(idir)*lsize(idir)  
 
       ! move back to reference to origin at corner of cell
-      srcpoint = srcpoint + lsize / 2
+      srcpoint = srcpoint + dble(int(lsize)/2)
+
       ! apply periodic boundary conditions in periodic directions
       do idir = 1, this%mesh%sb%periodic_dim
-        if(srcpoint(idir) < 0) then
-          srcpoint(idir) = srcpoint(idir) + lsize(idir)
-          ASSERT(srcpoint(idir) >= 0)
-        else if(srcpoint(idir) >= lsize(idir)) then
-          srcpoint(idir) = mod(srcpoint(idir), lsize(idir))
+        if(srcpoint(idir) < M_ZERO .or. srcpoint(idir) + M_HALF*SYMPREC >= lsize(idir)) then
+          srcpoint(idir) = modulo(srcpoint(idir)+M_HALF*SYMPREC, lsize(idir))
         end if
       end do
-      ASSERT(all(srcpoint >= 0))
+      ASSERT(all(srcpoint >= -SYMPREC))
       ASSERT(all(srcpoint < lsize))
       srcpoint(1:3) = srcpoint(1:3) + offset(1:3)
 
-      ipsrc = this%mesh%idx%lxyz_inv(srcpoint(1), srcpoint(2), srcpoint(3))
+      ipsrc = this%mesh%idx%lxyz_inv(nint(srcpoint(1)), nint(srcpoint(2)), nint(srcpoint(3)))
 
       if(present(field)) then
         acc = acc + field_global(ipsrc)
       end if
       if(present(field_vector)) then
-        acc_vector(1:3) = acc_vector(1:3) + symm_op_apply(this%mesh%sb%symm%ops(iop), field_global_vector(ipsrc, 1:3))
+        if(.not.optional_default(reduced_quantity, .false.)) then
+          acc_vector(1:3) = acc_vector(1:3) + symm_op_apply_inv_cart(this%mesh%sb%symm%ops(iop), field_global_vector(ipsrc, 1:3))
+        else
+          acc_vector(1:3) = acc_vector(1:3) + symm_op_apply_inv_red(this%mesh%sb%symm%ops(iop), field_global_vector(ipsrc, 1:3))
+        end if
       end if
     end do
     if(present(field)) &
@@ -137,19 +158,19 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
 
   if(.not. optional_default(suppress_warning, .false.)) then
     if(present(field)) then
-      maxabs = maxval(abs(field(1:this%mesh%np)))
-      maxabsdiff = maxval(abs(field(1:this%mesh%np) - symmfield(1:this%mesh%np)))
+      maxabs = maxval(abs(field(1:np)))
+      maxabsdiff = maxval(abs(field(1:np) - symmfield(1:np)))
       if(maxabsdiff / maxabs > CNST(1e-6)) then
-        write(message(1),'(a, es12.6)') 'Symmetrization discrepancy ratio (scalar) = ', maxabsdiff / maxabs
+        write(message(1),'(a, es12.5)') 'Symmetrization discrepancy ratio (scalar) = ', maxabsdiff / maxabs
         call messages_warning(1)
       end if
     end if
     
     if(present(field_vector)) then
-      maxabs = maxval(abs(field_vector(1:this%mesh%np, 1:3)))
-      maxabsdiff = maxval(abs(field_vector(1:this%mesh%np, 1:3) - symmfield_vector(1:this%mesh%np, 1:3)))
+      maxabs = maxval(abs(field_vector(1:np, 1:3)))
+      maxabsdiff = maxval(abs(field_vector(1:np, 1:3) - symmfield_vector(1:np, 1:3)))
       if(maxabsdiff / maxabs > CNST(1e-6)) then
-        write(message(1),'(a, es12.6)') 'Symmetrization discrepancy ratio (vector) = ', maxabsdiff / maxabs
+        write(message(1),'(a, es12.5)') 'Symmetrization discrepancy ratio (vector) = ', maxabsdiff / maxabs
         call messages_warning(1)
       end if
     end if
@@ -168,28 +189,30 @@ subroutine X(symmetrizer_apply)(this, field, field_vector, symmfield, symmfield_
 end subroutine X(symmetrizer_apply)
 
 ! -------------------------------------------------------------------------------
-subroutine X(symmetrize_tensor)(symm, tensor)
+subroutine X(symmetrize_tensor_cart)(symm, tensor)
   type(symmetries_t), intent(in)    :: symm
   R_TYPE,             intent(inout) :: tensor(:,:) !< (3, 3)
   
   integer :: iop, nops
   R_TYPE :: tensor_symm(3, 3)
+  FLOAT :: tmp(3,3)
   
-  PUSH_SUB(X(symmetrize_tensor))
+  PUSH_SUB(X(symmetrize_tensor_cart))
 
   nops = symmetries_number(symm)
   
   tensor_symm(:,:) = M_ZERO
   do iop = 1, nops
-    tensor_symm(:,:) = tensor_symm(:,:) + &
-      matmul(matmul(dble(transpose(symm_op_rotation_matrix(symm%ops(iop)))), tensor(1:3, 1:3)), &
-      dble(symm_op_rotation_matrix(symm%ops(iop))))
+    ! The use of the tmp array is a workaround for a PGI bug
+    tmp = symm_op_rotation_matrix_cart(symm%ops(iop))
+    tensor_symm(1:3,1:3) = tensor_symm(1:3,1:3) + &
+      matmul(matmul(transpose(symm_op_rotation_matrix_cart(symm%ops(iop))), tensor(1:3, 1:3)), tmp)
   end do
 
   tensor(1:3,1:3) = tensor_symm(1:3,1:3) / nops
 
-  POP_SUB(X(symmetrize_tensor))
-end subroutine X(symmetrize_tensor)
+  POP_SUB(X(symmetrize_tensor_cart))
+end subroutine X(symmetrize_tensor_cart)
 
 ! -------------------------------------------------------------------------------
 ! The magneto-optical response 
@@ -199,17 +222,17 @@ end subroutine X(symmetrize_tensor)
 ! However, it should change sign upon permutation in the order of axes (x,y -> y,x).
 ! Therefore, contribution from a rotation symmetry should be multiplied by the
 ! determinant of the rotation matrix ignoring signs of the rotation matrix elements.
-subroutine X(symmetrize_magneto_optics)(symm, tensor) 
+subroutine X(symmetrize_magneto_optics_cart)(symm, tensor) 
   type(symmetries_t),   intent(in)    :: symm 
   R_TYPE,               intent(inout) :: tensor(:,:,:) !< (3, 3, 3)
   
   integer :: iop, nops
   R_TYPE  :: tensor_symm(3, 3, 3)
-  integer :: rot(3, 3)
+  FLOAT   :: rot(3, 3)
   integer :: idir1, idir2, idir3, ndir
   integer :: i1, i2, i3, det
   
-  PUSH_SUB(X(symmetrize_magneto_optics))
+  PUSH_SUB(X(symmetrize_magneto_optics_cart))
     
   ndir = 3
   
@@ -218,7 +241,7 @@ subroutine X(symmetrize_magneto_optics)(symm, tensor)
   tensor_symm(:,:,:) = M_ZERO
   
   do iop = 1, nops
-    rot = symm_op_rotation_matrix(symm%ops(iop))
+    rot = symm_op_rotation_matrix_cart(symm%ops(iop))
     det = abs(rot(1,1) * rot(2,2) * rot(3,3)) + abs(rot(1,2) * rot(2,3) * rot(3,1)) &
       + abs(rot(1,3) * rot(2,1) * rot(3,2)) - abs(rot(1,1) * rot(2,3) * rot(3,2)) &
       - abs(rot(1,2) * rot(2,1) * rot(3,3)) - abs(rot(1,3) * rot(2,2) * rot(3,1))
@@ -239,8 +262,8 @@ subroutine X(symmetrize_magneto_optics)(symm, tensor)
   end do
   tensor(1:3,1:3,1:3) = tensor_symm(1:3,1:3,1:3) / nops
 
-  POP_SUB(X(symmetrize_magneto_optics))
-end subroutine X(symmetrize_magneto_optics)
+  POP_SUB(X(symmetrize_magneto_optics_cart))
+end subroutine X(symmetrize_magneto_optics_cart)
 
 !! Local Variables:
 !! mode: f90

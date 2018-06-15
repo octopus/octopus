@@ -1,5 +1,7 @@
 # Name	path		Z 	Lmax 	Lloc	H [b]      Rsize [b]
  H      "PSF/H.psf"	1       0       0       0.43463    7.5589
+ D      "PSF/H.psf"	1       0       0       0.43463    7.5589
+ T      "PSF/H.psf"	1       0       0       0.43463    7.5589
  Li     "PSF/Li.psf"	3       1       0       0.43463    7.5589
  C      "PSF/C.psf"	6       1       0       0.43463    7.5589
  N      "PSF/N.psf"	7       1       0       0.43463    7.5589

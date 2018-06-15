@@ -1,0 +1,25 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Non-linear core corrections
+Program    : octopus
+TestGroups : short-run, pseudpotentials
+Enabled    : Yes
+
+ExtraFile : 03-nlcc.F.UPF
+Input      : 03-nlcc.01-Fatom.inp
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -26.97584803
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -4.20331421
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 21.24593966
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -6.94955566
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.57417836
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 18.50619540
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -59.20424397
+match ; Eigenvalue 1 up    ; GREPFIELD(static/info, ' 1   up', 3) ; -1.097592
+match ; Eigenvalue 1 dn    ; GREPFIELD(static/info, ' 1   dn', 3) ; -1.038910
+match ; Eigenvalue 2 up    ; GREPFIELD(static/info, ' 2   up', 3) ; -0.435956
+match ; Eigenvalue 2 dn    ; GREPFIELD(static/info, ' 2   dn', 3) ; -0.379473
+match ; Eigenvalue 3 up    ; GREPFIELD(static/info, ' 3   up', 3) ; -0.435956
+match ; Eigenvalue 3 dn    ; GREPFIELD(static/info, ' 3   dn', 3) ; -0.379473
+match ; Eigenvalue 4 up    ; GREPFIELD(static/info, ' 4   up', 3) ; -0.435956
+match ; Eigenvalue 4 dn    ; GREPFIELD(static/info, ' 4   dn', 3) ; -0.379473
+match ; Force              ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; -0.000000

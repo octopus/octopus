@@ -152,9 +152,13 @@ contains
     character(len=*),  intent(in)  :: filename
     integer,           intent(out) :: ierr
 
-    integer :: ipart, err
-    integer, allocatable :: part_global(:)
+    integer :: err
+#ifdef HAVE_MPI2
+    integer :: ipart
     integer, allocatable :: scounts(:), sdispls(:)
+#else
+    integer, allocatable :: part_global(:)    
+#endif
     character(len=MAX_PATH_LEN) :: full_filename
     
     PUSH_SUB(partition_dump)
@@ -235,8 +239,10 @@ contains
     integer,           intent(out)   :: ierr
 
     integer :: ipart, err, np, file_size
-    integer, allocatable :: part_global(:)
     integer, allocatable :: scounts(:), sdispls(:)
+#ifndef HAVE_MPI2
+    integer, allocatable :: part_global(:)
+#endif
     character(len=MAX_PATH_LEN) :: full_filename
     
     PUSH_SUB(partition_load)
@@ -547,7 +553,7 @@ contains
   !! points that each partition has.
   subroutine partition_get_np_local(partition, np_local_vec)
     type(partition_t),    intent(in)  :: partition       !< Current partition
-    integer, pointer,     intent(out) :: np_local_vec(:) !< Vector of local points (np_local)
+    integer, pointer,     intent(inout) :: np_local_vec(:) !< Vector of local points (np_local)
     
     integer, pointer :: np_local_vec_tmp(:)
     integer :: ip

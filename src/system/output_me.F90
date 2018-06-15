@@ -145,8 +145,11 @@ contains
     type(geometry_t),    intent(in)    :: geo
     type(hamiltonian_t), intent(in)    :: hm
 
-    integer :: id, ll, mm, ik
+    integer :: id, ll, mm, ik, iunit
     character(len=256) :: fname
+    FLOAT, allocatable :: doneint(:), dtwoint(:)
+    CMPLX, allocatable :: zoneint(:), ztwoint(:)
+    integer, allocatable :: iindex(:), jindex(:), kindex(:), lindex(:)
     
     PUSH_SUB(output_me)
 
@@ -211,21 +214,78 @@ contains
     if(iand(this%what, output_me_one_body) /= 0) then
       message(1) = "Computing one-body matrix elements"
       call messages_info(1)
+
+      ASSERT(.not. st%parallel_in_states)
+      if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
+      if(hm%family_is_mgga_with_exc) &
+      call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
+      ! how to do this properly? states_matrix
+      iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
+
+      id = st%nst*(st%nst+1)/2
+
+      SAFE_ALLOCATE(iindex(1:id))
+      SAFE_ALLOCATE(jindex(1:id))
+
       if (states_are_real(st)) then
-        call done_body(dir, gr, geo, st, hm)
+        SAFE_ALLOCATE(doneint(1:id))
+        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, doneint)
+        do ll = 1, id
+          write(iunit, *) iindex(ll), jindex(ll), doneint(ll)
+        enddo
+        SAFE_DEALLOCATE_A(doneint)
       else
-        call zone_body(dir, gr, geo, st, hm)
+        SAFE_ALLOCATE(zoneint(1:id))
+        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, zoneint)
+        do ll = 1, id
+          write(iunit, *) iindex(ll), jindex(ll), zoneint(ll)
+        enddo
+        SAFE_DEALLOCATE_A(zoneint)
       end if
+
+      SAFE_DEALLOCATE_A(iindex)
+      SAFE_DEALLOCATE_A(jindex)
+      call io_close(iunit)
+
     end if
 
     if(iand(this%what, output_me_two_body) /= 0) then
       message(1) = "Computing two-body matrix elements"
       call messages_info(1)
+
+      ASSERT(.not. st%parallel_in_states)
+      if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
+      ! how to do this properly? states_matrix
+      iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
+
+      id = st%nst*(st%nst+1)*(st%nst**2+st%nst+2)/8
+      SAFE_ALLOCATE(iindex(1:id))
+      SAFE_ALLOCATE(jindex(1:id))
+      SAFE_ALLOCATE(kindex(1:id))
+      SAFE_ALLOCATE(lindex(1:id))
+
       if (states_are_real(st)) then
-        call dtwo_body(dir, gr, st)
+        SAFE_ALLOCATE(dtwoint(1:id))
+        call dstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, dtwoint)
+        do ll = 1, id
+          write(iunit, *) iindex(ll), jindex(ll), kindex(ll), lindex(ll), dtwoint(ll)
+        enddo
+        SAFE_DEALLOCATE_A(dtwoint)
       else
-        call ztwo_body(dir, gr, st)
+        SAFE_ALLOCATE(ztwoint(1:id))
+        call zstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, ztwoint)
+        do ll = 1, id
+          write(iunit, *) iindex(ll), jindex(ll), kindex(ll), lindex(ll), ztwoint(ll)
+        enddo
+        SAFE_DEALLOCATE_A(ztwoint)
       end if
+      
+      SAFE_DEALLOCATE_A(iindex)
+      SAFE_DEALLOCATE_A(jindex)
+      SAFE_DEALLOCATE_A(kindex)
+      SAFE_DEALLOCATE_A(lindex)
+      call io_close(iunit)
+
     end if
 
     POP_SUB(output_me)
@@ -297,7 +357,7 @@ contains
           
           write(message(1), '(i4,3x,a2,1x)') ist, trim(cspin)
           do idir = 1, gr%sb%dim
-            write(str_tmp, '(f12.6)') momentum(idir, ist, ik)
+            write(str_tmp, '(f12.6)') momentum(idir, ist, ik+is)
             message(1) = trim(message(1)) // trim(str_tmp)
           end do
           write(str_tmp, '(3x,f12.6)') st%occ(ist, ik+is)

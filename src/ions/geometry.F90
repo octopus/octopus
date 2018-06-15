@@ -766,9 +766,8 @@ contains
     character(len=*),    intent(in), optional :: comment
 
     integer :: iatom, iunit
-    character(len=6) position
 
-    PUSH_SUB(atom_read_xyz)
+    PUSH_SUB(geometry_read_xyz)
 
     iunit = io_open(trim(fname)//'.xyz', action='read', position='rewind')
 
@@ -793,7 +792,7 @@ contains
       call io_close(iunit)
     end if
 
-    POP_SUB(atom_read_xyz)
+    POP_SUB(geometry_read_xyz)
   end subroutine geometry_read_xyz
 
 
@@ -834,7 +833,7 @@ contains
       write(numi, '(i12)') iatom
       call openscad_file_comment(cad_file_, 'Atom '//trim(adjustl(numi))//': '//trim(species_label(geo%atom(iatom)%species)))
 
-      if(species_z(geo%atom(iatom)%species) == 1) then
+      if(species_z(geo%atom(iatom)%species) == M_ONE) then
         call openscad_file_sphere(cad_file_, geo%atom(iatom)%x(1:3), radius_variable = "hydrogen_radius")
         max_bond_length = hydrogen_max_bond_length
       else

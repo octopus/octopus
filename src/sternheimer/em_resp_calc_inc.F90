@@ -323,7 +323,7 @@ subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, n
   end if
 #endif
 
-  call zsymmetrize_tensor(mesh%sb%symm, zpol)
+  call zsymmetrize_tensor_cart(mesh%sb%symm, zpol)
 
   POP_SUB(X(calc_polarizability_periodic))
 
@@ -876,8 +876,8 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, nfactor,
   type(lr_t),             intent(inout) :: lr_b(:,:)
   CMPLX,                  intent(out)   :: chi(:,:,:)
 
-  integer :: dir1, dir2, dir3, pert_order, ist, ist_occ, dir(nfactor)
-  integer :: ik, idim, ip, is1, is2, is3, isigma, ispin, ii
+  integer :: dir1, dir2, dir3, ist, ist_occ, dir(nfactor)
+  integer :: ik, idim, ip, isigma, ispin, ii
   type(pert_t) :: pert_m, pert_e(nfactor)
   R_TYPE, allocatable :: pertpsi_e(:,:,:), pertpsi_b(:,:)
   FLOAT :: weight
@@ -1141,7 +1141,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, hm, nsigma, &
   CMPLX,                intent(in)    :: frequency
   CMPLX,                intent(inout) :: zpol(:,:,:)
   
-  integer :: idir1, idir2, idir3, idir4, ist, &
+  integer :: idir1, idir2, idir3, ist, &
     ispin, idim, ndim, np, ik, ndir, ist_occ, isigma, isigma_alt, ip
   FLOAT :: weight
   R_TYPE, allocatable :: gpsi(:,:,:,:), gdl_e(:,:,:), gdl_k(:,:,:,:), gdl_b(:,:,:), &
@@ -1425,7 +1425,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, hm, nsigma, &
 #endif
 
   zpol(:,:,:) = - M_zI / (frequency) * zpol(:,:,:) 
-  call zsymmetrize_magneto_optics(sys%gr%mesh%sb%symm, zpol(:,:,:))
+  call zsymmetrize_magneto_optics_cart(sys%gr%mesh%sb%symm, zpol(:,:,:))
  
   SAFE_DEALLOCATE_P(mat_eb%X(matrix))
   SAFE_DEALLOCATE_P(mat_be%X(matrix))
@@ -1511,7 +1511,7 @@ subroutine X(lr_calc_magnetization_periodic)(sys, hm, lr_k, magn)
   type(lr_t),           intent(inout) :: lr_k(:) 
   CMPLX,                intent(out)   :: magn(:)
 
-  integer :: idir1, idir2, idir, ist, idim, ndim, ik, ndir, ip, np
+  integer :: idir1, idir2, idir, ist, idim, ndim, ik, ndir, np
   R_TYPE :: factor
   R_TYPE, allocatable :: Hdl_psi(:,:,:)
   FLOAT :: weight
@@ -1904,7 +1904,7 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, hm, nsigma, lr_k, lr_b, &
   SAFE_DEALLOCATE_A(Hdl_kb)
   SAFE_DEALLOCATE_A(Hdl_kk) 
 
-  call zsymmetrize_tensor(sys%gr%mesh%sb%symm, magn(:,:))
+  call zsymmetrize_tensor_cart(sys%gr%mesh%sb%symm, magn(:,:))
 
 #ifdef HAVE_MPI
   if(sys%st%parallel_in_states) then
@@ -2186,7 +2186,6 @@ subroutine X(inhomog_EB)(sys, hm, ik, add_hartree, add_fxc, &
   R_TYPE,     optional, intent(inout) :: psi_k1(:,:,:), psi_k2(:,:,:)
   
   R_TYPE :: factor, factor_e, factor_sum
-  integer :: isigma
  
   PUSH_SUB(X(inhomog_EB))
   
@@ -2219,7 +2218,7 @@ contains
     
     R_TYPE, allocatable :: psi(:,:,:), psi0(:,:)
     integer :: ip, ist, idim, ist1
-    R_TYPE :: factor0, factor_k, factor_k0
+    R_TYPE :: factor0, factor_k
     type(matrix_t):: prod_mat2, prod_mat
     
     PUSH_SUB(X(inhomog_EB).calc_hvar_lr2)
@@ -2299,7 +2298,7 @@ subroutine X(inhomog_BE)(sys, hm, idir1, idir2, ik, &
   R_TYPE,               intent(inout) :: psi_out(:,:,:) 
   
   R_TYPE :: factor_plus, factor_minus, factor_magn
-  R_TYPE :: factor_k, factor_k0, factor_e, factor_b
+  R_TYPE :: factor_k, factor_k0, factor_b
   
   PUSH_SUB(X(inhomog_BE))
 
@@ -2832,7 +2831,7 @@ subroutine X(calc_hvar_lr)(sys, hm, ik, hvar, psi_in, &
   R_TYPE,               intent(inout) :: psi_out(:,:,:)
     
   R_TYPE, allocatable :: psi(:,:,:)
-  integer :: ip, ist, idim, isigma, ist1
+  integer :: ip, ist, idim, ist1
   type(matrix_t):: mat
   R_TYPE, allocatable :: psi0(:,:,:)
     

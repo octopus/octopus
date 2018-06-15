@@ -62,7 +62,7 @@ end subroutine X(forces_gather)
 subroutine X(forces_from_local_potential)(gr, geo, ep, gdensity, force)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
-  type(epot_t),                   intent(inout) :: ep
+  type(epot_t),                   intent(in)    :: ep
   R_TYPE,                         intent(in)    :: gdensity(:, :)
   R_TYPE,                         intent(inout) :: force(:, :)
 
@@ -131,22 +131,28 @@ end subroutine X(total_force_from_local_potential)
 !! First-principles calculations in real-space formalism: Electronic configurations
 !! and transport properties of nanostructures, Imperial College Press (2005)
 !! Section 1.6, page 12
-subroutine X(forces_from_potential)(gr, geo, hm, st, force)
+subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl, force_u)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
-  type(hamiltonian_t),            intent(inout) :: hm
+  type(hamiltonian_t),            intent(in)    :: hm
   type(states_t),                 intent(inout) :: st
   FLOAT,                          intent(out)   :: force(:, :)
+  FLOAT,                          intent(out)   :: force_loc(:, :)
+  FLOAT,                          intent(out)   :: force_nl(:, :)
+  FLOAT,                          intent(out)   :: force_u(:, :)
+
 
   type(symmetrizer_t) :: symmetrizer
   integer :: iatom, ist, iq, idim, idir, np, np_part, ikpoint, iop, ii, iatom_symm
-  integer :: ib, maxst, minst
+  integer :: ib, maxst, minst, ip
   FLOAT :: ratom(1:MAX_DIM)
   R_TYPE, allocatable :: psi(:, :)
   R_TYPE, allocatable :: grad_psi(:, :, :)
-  FLOAT,  allocatable :: grad_rho(:, :), force_loc(:, :), force_psi(:), force_tmp(:)
+  FLOAT,  pointer :: grad_rho(:, :)
+  FLOAT,  allocatable :: force_psi(:), force_tmp(:)
   FLOAT, allocatable :: symmtmp(:, :)
   type(batch_t) :: psib, grad_psib(1:MAX_DIM)
+  FLOAT :: kweight
 
   PUSH_SUB(X(forces_from_potential))
 
@@ -161,6 +167,9 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
   SAFE_ALLOCATE(force_tmp(1:gr%mesh%sb%dim))
 
   force = M_ZERO
+  force_loc = M_ZERO
+  force_nl = M_ZERO
+  force_u = M_ZERO
 
   ! even if there is no fine mesh, we need to make another copy
   SAFE_ALLOCATE(psi(1:np_part, 1:st%d%dim))
@@ -198,7 +207,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
       if(hm%hm_base%apply_projector_matrices .and. .not. accel_is_enabled() .and. &
         .not. (st%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
 
-        call X(hamiltonian_base_nlocal_force)(hm%hm_base, gr%mesh, st, geo, iq, gr%mesh%sb%dim, psib, grad_psib, force)
+        call X(hamiltonian_base_nlocal_force)(hm%hm_base, gr%mesh, st, geo, iq, gr%mesh%sb%dim, psib, grad_psib, force_nl)
 
       else 
 
@@ -225,15 +234,25 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
             !
             ! V_iatom(R*r) = V_iatom_symm(r)
             !
+
+            !We apply N symmetries, so we have to use the proper weight
+            kweight = st%d%kweights(iq) / kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
+
             do ii = 1, kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
 
-              iop = kpoints_get_symmetry_ops(gr%sb%kpoints, ikpoint, ii)
+              iop = abs(kpoints_get_symmetry_ops(gr%sb%kpoints, ikpoint, ii))
+              !if(iop < 0 ) cycle !Time reversal symmetry
 
               do iatom = 1, geo%natoms
                 if(projector_is_null(hm%ep%proj(iatom))) cycle
 
+                !We find the atom that correspond to this one, once symmetry is applied
                 ratom = M_ZERO
-                ratom(1:gr%sb%dim) = symm_op_apply_inv(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
+                if(geo%reduced_coordinates) then
+                  ratom(1:gr%sb%dim) = symm_op_apply_inv_red(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
+                else
+                  ratom(1:gr%sb%dim) = symm_op_apply_inv_cart(gr%sb%symm%ops(iop), geo%atom(iatom)%x)
+                end if
 
                 call simul_box_periodic_atom_in_box(gr%sb, geo, ratom)
 
@@ -249,15 +268,22 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
                 end if
 
                 do idir = 1, gr%mesh%sb%dim
-                  force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
+                  force_psi(idir) = - M_TWO * kweight * st%occ(ist, iq) * &
                     R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom_symm), st%d%dim, iq, psi, grad_psi(:, idir, :)))
                 end do
 
+                ! We convert the force to Cartesian coordinates before symmetrization
+                ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
+                if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then 
+                  force_psi(1:gr%mesh%sb%dim) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim), &
+                                                            force_psi(1:gr%mesh%sb%dim))
+                end if
 
-                force_tmp = symm_op_apply(gr%sb%symm%ops(iop), force_psi)
-
-                force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + &
-                  force_tmp(1:gr%mesh%sb%dim)/kpoints_get_num_symmetry_ops(gr%sb%kpoints, ikpoint)
+                !Let us now apply the symmetry to the force
+                !Note: here we are working with reduced quantities
+                force_tmp(1:gr%sb%dim) = symm_op_apply_cart(gr%sb%symm%ops(iop), force_psi)
+                force_nl(1:gr%sb%dim, iatom) = force_nl(1:gr%mesh%sb%dim, iatom) + &
+                  force_tmp(1:gr%mesh%sb%dim)
 
               end do
 
@@ -274,7 +300,13 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
                   R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom), st%d%dim, iq, psi, grad_psi(:, idir, :)))
               end do
 
-              force(1:gr%mesh%sb%dim, iatom) = force(1:gr%mesh%sb%dim, iatom) + force_psi(1:gr%mesh%sb%dim)
+              ! We convert the forces to Cartesian coordinates
+              if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then
+                force_psi(1:gr%mesh%sb%dim) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim), &
+                                                             force_psi(1:gr%mesh%sb%dim))
+              end if
+
+              force_nl(1:gr%mesh%sb%dim, iatom) = force_nl(1:gr%mesh%sb%dim, iatom) + force_psi(1:gr%mesh%sb%dim)
             end do
 
           end if
@@ -283,6 +315,9 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
 
       end if
 
+      !The Hubbard forces
+      call X(lda_u_force)(hm%lda_u, gr%mesh, st, iq, gr%mesh%sb%dim, psib, grad_psib, &
+                            force_u, associated(hm%hm_base%phase))  
 
       call batch_end(psib)
       do idir = 1, gr%mesh%sb%dim
@@ -295,23 +330,45 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(grad_psi)
 
+ ! in this case we need to convert to Cartesian coordinates at the end
+ ! TODO: integrate this to the routine X(hamiltonian_base_nlocal_force)
+ if(hm%hm_base%apply_projector_matrices .and. .not. accel_is_enabled() .and. &
+        .not. (st%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
+   ! We convert the forces to Cartesian coordinates
+   if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then
+     do iatom = 1, geo%natoms
+       force_nl(1:gr%mesh%sb%dim,iatom) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim), &
+                                                   force_nl(1:gr%mesh%sb%dim,iatom))
+     end do
+   end if
+ end if
+ 
 #if defined(HAVE_MPI)
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call profiling_in(prof_comm, "FORCES_COMM")
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, force)
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, force_nl)
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, force_u)
     call comm_allreduce(st%st_kpt_mpi_grp%comm, grad_rho)
     call profiling_out(prof_comm)
   end if
 #endif
 
-  SAFE_ALLOCATE(force_loc(1:gr%mesh%sb%dim, 1:geo%natoms))
+  ! We convert the gradient of the density to cartesian coordinates before symmetrization
+  ! as the two operation do not commute
+  ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
+  if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal )  then
+    do ip = 1, gr%mesh%np
+      grad_rho(ip, 1:gr%mesh%sb%dim) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim), &
+                                                   grad_rho(ip, 1:gr%mesh%sb%dim))
+    end do
+  end if
 
   if(st%symmetrize_density) then
     call symmetrizer_init(symmetrizer, gr%mesh)
-    SAFE_ALLOCATE(symmtmp(1:gr%mesh%np, 1:3))
+    SAFE_ALLOCATE(symmtmp(1:gr%mesh%np, 1:gr%mesh%sb%dim))
 
-    call dsymmetrizer_apply(symmetrizer, field_vector = grad_rho, symmfield_vector = symmtmp, suppress_warning = .true.)
-    grad_rho(1:gr%mesh%np, 1:3) = symmtmp(1:gr%mesh%np, 1:3)
+    call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field_vector = grad_rho, symmfield_vector = symmtmp, suppress_warning = .true.)
+    grad_rho(1:gr%mesh%np, 1:gr%mesh%sb%dim) = symmtmp(1:gr%mesh%np, 1:gr%mesh%sb%dim)
 
     SAFE_DEALLOCATE_A(symmtmp)
     call symmetrizer_end(symmetrizer)
@@ -321,34 +378,26 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force)
 
   do iatom = 1, geo%natoms
     do idir = 1, gr%mesh%sb%dim
-      force(idir, iatom) = force(idir, iatom) + force_loc(idir, iatom)
+      force(idir, iatom) = force_nl(idir, iatom) + force_loc(idir, iatom) + force_u(idir, iatom)
     end do
   end do
 
 
-  ! transformation from reduced coordinates to Cartesian coordinates
-  if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then
-     forall (iatom = 1:geo%natoms)
-        force(1:gr%mesh%sb%dim,iatom) = &
-          matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim),force(1:gr%mesh%sb%dim,iatom))
-     end forall
-  end if
-
   SAFE_DEALLOCATE_A(force_tmp)
   SAFE_DEALLOCATE_A(force_psi)
-  SAFE_DEALLOCATE_A(force_loc)
-  SAFE_DEALLOCATE_A(grad_rho)
+  SAFE_DEALLOCATE_P(grad_rho)
   
   POP_SUB(X(forces_from_potential))
 end subroutine X(forces_from_potential)
 
 !---------------------------------------------------------------------------
-subroutine X(total_force_from_potential)(gr, geo, ep, st, x)
+subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(in)    :: geo
   type(epot_t),                   intent(inout) :: ep
   type(states_t),                 intent(inout) :: st
   FLOAT,                          intent(inout) :: x(1:MAX_DIM)
+  integer,                        intent(in)    :: lda_u_level
  
   integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint
   FLOAT :: ff, kpoint(1:MAX_DIM)
@@ -358,6 +407,9 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x)
   CMPLX :: phase
 
   PUSH_SUB(X(total_force_from_potential))
+
+  ASSERT(.not. st%symmetrize_density)
+  ASSERT(lda_u_level == DFT_U_NONE)
 
   np = gr%mesh%np
   np_part = gr%mesh%np_part
@@ -373,6 +425,7 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x)
 
   !THE NON-LOCAL PART (parallel in states and k-points)
   do iq = st%d%kpt%start, st%d%kpt%end
+    ikpoint = states_dim_get_kpoint_index(st%d, iq)
     do ist = st%st_start, st%st_end
 
       call states_get_state(st, gr%mesh, ist, iq, psi)
@@ -380,12 +433,13 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x)
       do idim = 1, st%d%dim
         call boundaries_set(gr%der%boundaries, psi(:, idim))
 
-        ikpoint = states_dim_get_kpoint_index(st%d, iq)
         if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
 
           kpoint = M_ZERO
           kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint)
 
+          !Note this phase is not correct in general. We should use the phase from the Hamiltonian
+          !Here we recompute it, and moreover the vector potential is missing
           do ip = 1, np_part
             phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
             psi(ip, idim) = phase*psi(ip, idim)
@@ -445,7 +499,7 @@ end subroutine X(total_force_from_potential)
 
 
 ! --------------------------------------------------------------------------------
-subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv)
+subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv, lda_u_level)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
   type(epot_t),                   intent(inout) :: ep
@@ -453,6 +507,7 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv)
   type(lr_t),                     intent(in)    :: lr
   type(lr_t),                     intent(in)    :: lr2
   CMPLX,                          intent(out)   :: force_deriv(:,:) !< (gr%mesh%sb%dim, geo%natoms)
+  integer,                        intent(in)    :: lda_u_level
 
   integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint
   FLOAT :: ff, kpoint(1:MAX_DIM)
@@ -467,6 +522,8 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv)
   CMPLX, allocatable  :: force_local(:, :)
 
   PUSH_SUB(X(forces_derivative))
+
+  ASSERT(lda_u_level == DFT_U_NONE)
 
   np      = gr%mesh%np
   np_part = gr%mesh%np_part
@@ -485,6 +542,7 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv)
 
   !THE NON-LOCAL PART (parallel in states and k-points)
   do iq = st%d%kpt%start, st%d%kpt%end
+    ikpoint = states_dim_get_kpoint_index(st%d, iq)
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
 
@@ -495,12 +553,13 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv)
         call lalg_copy(gr%mesh%np_part, lr2%X(dl_psi)(:, idim, ist, iq), dl_psi2(:, idim))
         call boundaries_set(gr%der%boundaries, dl_psi2(:, idim))
 
-        ikpoint = states_dim_get_kpoint_index(st%d, iq)
         if(simul_box_is_periodic(gr%sb) .and. .not. kpoints_point_is_gamma(gr%sb%kpoints, ikpoint)) then
 
           kpoint = M_ZERO
           kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint)
 
+          !Note this phase is not correct in general. We should use the phase from the Hamiltonian
+          !Here we recompute it, and moreover the vector potential is missing
           do ip = 1, np_part
             phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
             psi(ip, idim) = phase*psi(ip, idim)
@@ -569,7 +628,7 @@ end subroutine X(forces_derivative)
 ! --------------------------------------------------------------------------------
 !> lr, lr2 are wfns from electric perturbation; lr is for +omega, lr2 is for -omega.
 !! for each atom, Z*(i,j) = dF(j)/dE(i)
-subroutine X(forces_born_charges)(gr, geo, ep, st, lr, lr2, born_charges)
+subroutine X(forces_born_charges)(gr, geo, ep, st, lr, lr2, born_charges, lda_u_level)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
   type(epot_t),                   intent(inout) :: ep
@@ -577,6 +636,7 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, lr, lr2, born_charges)
   type(lr_t),                     intent(in)    :: lr(:)  !< (gr%mesh%sb%dim)
   type(lr_t),                     intent(in)    :: lr2(:) !< (gr%mesh%sb%dim)
   type(born_charges_t),           intent(inout) :: born_charges
+  integer,                        intent(in)    :: lda_u_level
 
   integer :: iatom, idir
   CMPLX, allocatable :: force_deriv(:, :)
@@ -586,7 +646,7 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, lr, lr2, born_charges)
   SAFE_ALLOCATE(force_deriv(1:gr%mesh%sb%dim, 1:geo%natoms))
 
   do idir = 1, gr%mesh%sb%dim
-    call X(forces_derivative)(gr, geo, ep, st, lr(idir), lr2(idir), force_deriv)
+    call X(forces_derivative)(gr, geo, ep, st, lr(idir), lr2(idir), force_deriv, lda_u_level)
     do iatom = 1, geo%natoms
       born_charges%charge(:, idir, iatom) = force_deriv(:, iatom)
       born_charges%charge(idir, idir, iatom) = born_charges%charge(idir, idir, iatom) + species_zval(geo%atom(iatom)%species)
@@ -596,7 +656,7 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, lr, lr2, born_charges)
   SAFE_DEALLOCATE_A(force_deriv)
 
   do iatom = 1, geo%natoms
-    call zsymmetrize_tensor(gr%sb%symm, born_charges%charge(:, :, iatom))
+    call zsymmetrize_tensor_cart(gr%sb%symm, born_charges%charge(:, :, iatom))
   end do
 
   POP_SUB(X(forces_born_charges))

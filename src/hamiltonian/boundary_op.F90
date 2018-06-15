@@ -287,7 +287,7 @@ contains
     FLOAT,                    intent(in)    :: bounds(1:2)
     FLOAT,                    intent(inout) :: mf(:)
 
-    integer :: ip, dir, ierr
+    integer :: ip, dir
     FLOAT   :: width
     FLOAT   :: xx(1:MAX_DIM), rr, dd, ddv(1:MAX_DIM), tmp(1:MAX_DIM)
 

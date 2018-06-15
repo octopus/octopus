@@ -17,10 +17,11 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine output_states(st, gr, geo, dir, outp)
+subroutine output_states(st, gr, geo, hm, dir, outp)
   type(states_t),         intent(inout) :: st
   type(grid_t),           intent(inout) :: gr
   type(geometry_t),       intent(in)    :: geo
+  type(hamiltonian_t),    intent(in)    :: hm
   character(len=*),       intent(in)    :: dir
   type(output_t),         intent(in)    :: outp
 
@@ -34,6 +35,7 @@ subroutine output_states(st, gr, geo, dir, outp)
   FLOAT,       dimension(:,:), pointer :: density
   FLOAT, allocatable :: dtmp(:), elf(:,:), polarization(:, :)
   CMPLX, allocatable :: ztmp(:)
+  type(dos_t) :: dos
 
   PUSH_SUB(output_states)
 
@@ -222,7 +224,9 @@ subroutine output_states(st, gr, geo, dir, outp)
   end if
 
   if(iand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
-    call states_write_dos (trim(dir), st)
+    call dos_init(dos, st)
+    call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh, hm)
+    call dos_end(dos)
   end if
 
   if(iand(outp%what, OPTION__OUTPUT__TPA) /= 0) then

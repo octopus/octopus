@@ -1,0 +1,36 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Hubbard forces
+Program    : octopus
+TestGroups : short-run, finite_systems_3d, lda_u
+Enabled    : Yes
+
+#So far no domain parallelization
+Processors: 1
+
+Input      : 05-forces.01-Na2.inp
+
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -0.35617620
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;   0.16666667
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -0.18198861
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   0.46327384
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;  -0.20354879
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -0.05908882
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;   0.18462092
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  -0.94454781
+match ; Hubbard energy     ; GREPFIELD(static/info, 'Hubbard     =', 3) ;   0.03644781
+
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '1   --', 3) ;  -0.090994
+
+match ; Max abs force ; GREPFIELD(static/info, 'Max abs force', 6) ; 0.008595
+match ;   Total force ; GREPFIELD(static/info, 'Total force', 5)   ; 0.000000
+
+
+Input      : 05-forces.02-Na2_go.inp
+
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.35992289
+match ; Force    [1] ; GREPFIELD(static/info, 'Forces on the ions', 5, 2) ;-0.000039
+match ; Force    [2] ; GREPFIELD(static/info, 'Forces on the ions', 5, 3) ;0.000039
+match ; Geometry [1] ; LINEFIELD(min.xyz, 3, 4) ; -1.385281
+match ; Geometry [2] ; LINEFIELD(min.xyz, 4, 4) ;  1.385281
+

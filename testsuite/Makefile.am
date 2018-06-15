@@ -25,13 +25,15 @@ SUBDIRS = \
 	finite_systems_3d \
 	functionals      \
 	real_time        \
+        symmetries       \
 	linear_response  \
+        lda_u            \
 	optimal_control  \
 	periodic_systems \
-        photo_electron   \
-        complex_scaling  \
+	photo_electron   \
+	complex_scaling  \
 	pseudopotentials \
-	frozen
+	frozen           
 
 bin_SCRIPTS = oct-run_regression_test.pl oct-run_testsuite.sh
 
@@ -42,26 +44,26 @@ EXTRA_DIST = oct-run_regression_test.pl oct-run_testsuite.sh.in
 # testcase.
 # If the testsuite should be skipped, e.g. in make distcheck,
 # set the environment variable SKIP_CHECK to some value.
-check:
+check: $(bin_SCRIPTS)
 	@CHECKOPTS="" $(MAKE) check-wrapper
 
-check-short:
+check-short: $(bin_SCRIPTS)
 	@CHECKOPTS="-g short-run" $(MAKE) check-wrapper
 
-check-long:
+check-long: $(bin_SCRIPTS)
 	@CHECKOPTS="-g long-run" $(MAKE) check-wrapper
 
-check-dryrun:
+check-dryrun: $(bin_SCRIPTS)
 	@CHECKOPTS="-n" $(MAKE) check-base
 
-check-wrapper:
+check-wrapper: $(bin_SCRIPTS)
 	@if test "x$(SKIP_CHECK)" == "x"; then \
 	    $(MAKE) check-base; \
 	else \
             $(MAKE) check-dryrun; \
 	fi
 
-check-base:
+check-base: $(bin_SCRIPTS)
 	@base=`basename "$(top_builddir)/share"` && \
 	dir=`dirname "$(top_builddir)/share"` && \
 	sharedir="`(cd \"$$dir\" 2> /dev/null && pwd || echo \"$$dir\")`/$$base" && \

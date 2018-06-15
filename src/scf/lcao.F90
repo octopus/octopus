@@ -20,6 +20,7 @@
 
 module lcao_oct_m
   use atom_oct_m
+  use atomic_orbital_oct_m
   use batch_oct_m
   use blacs_proc_grid_oct_m
   use geometry_oct_m
@@ -693,7 +694,7 @@ contains
     FLOAT,   optional,   intent(in)    :: lmm_r !< used only if not present(st_start)
 
     type(lcao_t) :: lcao
-    integer :: s1, s2, k1, k2, is, ik, st_start_random
+    integer :: st_start_random
     logical :: lcao_done
     type(profile_t), save :: prof
 
@@ -809,6 +810,7 @@ contains
         if(.not. present(st_start)) then
           call states_fermi(sys%st, sys%gr%mesh) ! occupations
         end if
+
       end if
 
     else if (present(st_start)) then
@@ -822,6 +824,7 @@ contains
     end if
 
     call lcao_end(lcao)
+
 
     call profiling_out(prof)
     POP_SUB(lcao_run)
@@ -1069,7 +1072,7 @@ contains
     integer,           intent(in)    :: nspin, spin_channels
     FLOAT,             intent(out)   :: rho(:, :)
 
-    integer :: ia, is, ip, idir, gmd_opt
+    integer :: ia, is, idir, gmd_opt
     integer, save :: iseed = 321
     type(block_t) :: blk
     FLOAT :: rr, rnd, phi, theta, mag(1:3), lmag, n1, n2
@@ -1262,7 +1265,7 @@ contains
             if (mag(2) == M_ZERO) then
               phi = M_ZERO
             elseif (mag(2) < M_ZERO) then
-              phi = M_PI*M_TWOTHIRD
+              phi = M_PI*CNST(3.0/2.0)
             elseif (mag(2) > M_ZERO) then
               phi = M_PI*M_HALF
             end if

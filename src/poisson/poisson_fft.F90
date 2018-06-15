@@ -182,7 +182,7 @@ contains
     FLOAT,             intent(inout) :: gg(:)
     FLOAT,             intent(out)   :: modg2
 
-    integer :: idir
+!    integer :: idir
 
     ! no PUSH_SUB, called too frequently
 

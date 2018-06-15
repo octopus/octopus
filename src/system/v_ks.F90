@@ -32,9 +32,12 @@ module v_ks_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
+  use hamiltonian_base_oct_m
+  use kick_oct_m
   use index_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
+  use lasers_oct_m
   use libvdwxc_oct_m
   use magnetic_oct_m
   use mesh_function_oct_m
@@ -45,8 +48,10 @@ module v_ks_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
+  use pseudo_oct_m
   use pcm_oct_m 
   use simul_box_oct_m
+  use species_oct_m
   use ssys_states_oct_m
   use ssys_tnadd_oct_m
   use states_oct_m
@@ -61,6 +66,9 @@ module v_ks_oct_m
   use xc_ks_inversion_oct_m
   use xc_OEP_oct_m
 
+  ! from the dftd3 library
+  use dftd3_api
+  
   implicit none
 
   private
@@ -132,6 +140,7 @@ module v_ks_oct_m
     integer                  :: vdw_correction
     logical                  :: vdw_self_consistent
     type(vdw_ts_t)           :: vdw_ts
+    type(dftd3_calc)         :: vdw_d3
     logical                  :: include_td_field
   end type v_ks_t
 
@@ -145,8 +154,11 @@ contains
     type(geometry_t),     intent(inout) :: geo
     type(multicomm_t),    intent(in)    :: mc  
 
-    integer :: x_id, c_id, xk_id, ck_id, default, val
+    integer :: x_id, c_id, xk_id, ck_id, default, val, iatom
     logical :: parsed_theory_level
+    type(dftd3_input) :: d3_input
+    character(len=20) :: d3func_def, d3func
+    integer :: pseudo_x_functional, pseudo_c_functional
     
     PUSH_SUB(v_ks_init)
 
@@ -202,15 +214,44 @@ contains
       parsed_theory_level = .true.
     end if
 
-
     ! parse the XC functional
     default = 0
+
+    call get_functional_from_pseudos(pseudo_x_functional, pseudo_c_functional)
+
     if(ks%theory_level == KOHN_SHAM_DFT) then
-      select case(gr%mesh%sb%dim)
-      case(3); default = XC_LDA_X    + 1000*XC_LDA_C_PZ_MOD
-      case(2); default = XC_LDA_X_2D + 1000*XC_LDA_C_2D_AMGB
-      case(1); default = XC_LDA_X_1D + 1000*XC_LDA_C_1D_CSC
-      end select
+      if(pseudo_x_functional /= PSEUDO_EXCHANGE_ANY) then
+        default = pseudo_x_functional
+      else
+        select case(gr%mesh%sb%dim)
+        case(3); default = XC_LDA_X   
+        case(2); default = XC_LDA_X_2D
+        case(1); default = XC_LDA_X_1D
+        end select
+      end if
+    end if
+    
+    ASSERT(default >= 0)
+
+    if(ks%theory_level == KOHN_SHAM_DFT) then
+      if(pseudo_c_functional /= PSEUDO_CORRELATION_ANY) then
+        default = default + 1000*pseudo_c_functional
+      else
+        select case(gr%mesh%sb%dim)
+        case(3); default = default + 1000*XC_LDA_C_PZ_MOD
+        case(2); default = default + 1000*XC_LDA_C_2D_AMGB
+        case(1); default = default + 1000*XC_LDA_C_1D_CSC
+        end select
+      end if
+    end if
+
+    ASSERT(default >= 0)
+
+    if(.not. parse_is_defined('XCFunctional') &
+      .and. (pseudo_x_functional /= PSEUDO_EXCHANGE_ANY .or. pseudo_c_functional /= PSEUDO_CORRELATION_ANY)) then
+      call messages_write('Info: the XCFunctional has been selected to match the pseudopotentials', new_line = .true.)
+      call messages_write('      used in the calculation.')
+      call messages_info()
     end if
     
     ! The description of this variable can be found in file src/xc/functionals_list.F90
@@ -220,6 +261,13 @@ contains
     ! the next 3 the C functional.
     c_id = val / 1000
     x_id = val - c_id*1000
+    
+    if( (x_id /= pseudo_x_functional .and. pseudo_x_functional /= PSEUDO_EXCHANGE_ANY) .or. &
+      (c_id /= pseudo_c_functional .and. pseudo_c_functional /= PSEUDO_EXCHANGE_ANY)) then
+      call messages_write('The XCFunctional that you selected does not match the one used', new_line = .true.)
+      call messages_write('to generate the pseudopotentials.')
+      call messages_warning()
+    end if
 
     ! FIXME: we rarely need this. We should only parse when necessary.
     
@@ -339,7 +387,7 @@ contains
         call xc_oep_init(ks%oep, ks%xc_family, gr, st)
       end if
       if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_init(ks%ks_inversion, gr, geo, st, mc)
+        call xc_ks_inversion_init(ks%ks_inversion, gr, geo, st)
       end if
     end select
 
@@ -378,26 +426,99 @@ contains
     !%Option vdw_ts 1
     !% The scheme of Tkatchenko and Scheffler, Phys. Rev. Lett. 102
     !% 073005 (2009).
+    !%Option vdw_d3 3
+    !% The DFT-D3 scheme of S. Grimme, J. Antony, S. Ehrlich, and
+    !% S. Krieg, J. Chem. Phys. 132, 154104 (2010).
     !%End
     call parse_variable('VDWCorrection', OPTION__VDWCORRECTION__NONE, ks%vdw_correction)
     
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
       call messages_experimental('VDWCorrection')
 
-      !%Variable VDWSelfConsistent
-      !%Type logical
-      !%Default yes
-      !%Section Hamiltonian::XC
-      !%Description
-      !% This variable controls whether the VDW correction is applied
-      !% self-consistently, the default, or just as a correction to
-      !% the total energy.
-      !%End
-      call parse_variable('VDWSelfConsistent', .true., ks%vdw_self_consistent)
-
       select case(ks%vdw_correction)
       case(OPTION__VDWCORRECTION__VDW_TS)
+
+        !%Variable VDWSelfConsistent
+        !%Type logical
+        !%Default yes
+        !%Section Hamiltonian::XC
+        !%Description
+        !% This variable controls whether the VDW correction is applied
+        !% self-consistently, the default, or just as a correction to
+        !% the total energy. This option only works with vdw_ts.
+        !%End
+        call parse_variable('VDWSelfConsistent', .true., ks%vdw_self_consistent)
+
         call vdw_ts_init(ks%vdw_ts, geo, gr%fine%der, st)
+
+      case(OPTION__VDWCORRECTION__VDW_D3)
+        ks%vdw_self_consistent = .false.
+
+        if(ks%gr%sb%dim /= 3) then
+          call messages_write('vdw_d3 can only be used in 3-dimensional systems')
+          call messages_fatal()
+        end if
+        
+        do iatom = 1, geo%natoms
+          if(.not. species_represents_real_atom(geo%atom(iatom)%species)) then
+            call messages_write('vdw_d3 is not implemented when non-atomic species are present')
+            call messages_fatal()
+          end if
+        end do
+         
+        d3func_def = ''
+
+        ! The list of valid values can be found in 'external_libs/dftd3/core.f90'.
+        ! For the moment I include the most common ones.
+        if(x_id == OPTION__XCFUNCTIONAL__GGA_X_B88 .and. c_id*1000 == OPTION__XCFUNCTIONAL__GGA_C_LYP) &
+          d3func_def = 'b-lyp'
+        if(x_id == OPTION__XCFUNCTIONAL__GGA_X_PBE .and. c_id*1000 == OPTION__XCFUNCTIONAL__GGA_C_PBE) &
+          d3func_def = 'pbe'
+        if(x_id == OPTION__XCFUNCTIONAL__GGA_X_PBE_SOL .and. c_id*1000 == OPTION__XCFUNCTIONAL__GGA_C_PBE_SOL) &
+          d3func_def = 'pbesol'
+        if(c_id*1000 == OPTION__XCFUNCTIONAL__HYB_GGA_XC_B3LYP) &
+          d3func_def = 'b3-lyp'
+        if(c_id*1000 == OPTION__XCFUNCTIONAL__HYB_GGA_XC_PBEH) &
+          d3func_def = 'pbe0'
+
+        !%Variable VDWD3Functional
+        !%Type string
+        !%Section Hamiltonian::XC
+        !%Description
+        !% (Experimental) You can use this variable to override the
+        !% parametrization used by the DFT-D3 van deer Waals
+        !% correction. Normally you need not set this variable, as the
+        !% proper value will be selected by Octopus (if available).
+        !%
+        !% This variable takes a string value, the valid values can
+        !% be found in the source file 'external_libs/dftd3/core.f90'.
+        !% For example you can use:
+        !%
+        !%  VDWD3Functional = 'pbe'
+        !%
+        !%End
+        if(parse_is_defined('VDWD3Functional')) call messages_experimental('VDWD3Functional')
+        call parse_variable('VDWD3Functional', d3func_def, d3func)
+        
+        if(d3func == '') then
+          call messages_write('Cannot find  a matching parametrization  of DFT-D3 for the current')
+          call messages_new_line()
+          call messages_write('XCFunctional.  Please select a different XCFunctional, or select a')
+          call messages_new_line()
+          call messages_write('functional for DFT-D3 using the <tt>VDWD3Functional</tt> variable.')
+          call messages_fatal()
+        end if
+
+        if(ks%gr%sb%periodic_dim /= 0 .and. ks%gr%sb%periodic_dim /= 3) then
+          call messages_write('For partially periodic systems,  the vdw_d3 interaction is assumed')
+          call messages_new_line()
+          call messages_write('to be periodic in three dimensions.')
+          call messages_warning()
+        end if
+          
+        call dftd3_init(ks%vdw_d3, d3_input)
+        call dftd3_set_functional(ks%vdw_d3, func = d3func, version = 4, tz = .false.)
+
       case default
         ASSERT(.false.)
       end select
@@ -408,6 +529,56 @@ contains
     
     
     POP_SUB(v_ks_init)
+
+  contains
+
+    subroutine get_functional_from_pseudos(x_functional, c_functional)
+      integer, intent(out) :: x_functional
+      integer, intent(out) :: c_functional
+      
+      integer :: xf, cf, ispecies
+      logical :: warned_inconsistent
+      
+      x_functional = PSEUDO_EXCHANGE_ANY
+      c_functional = PSEUDO_CORRELATION_ANY
+      
+      warned_inconsistent = .false.
+      do ispecies = 1, geo%nspecies
+        xf = species_x_functional(geo%species(ispecies))
+        cf = species_c_functional(geo%species(ispecies))
+
+        if(xf == PSEUDO_EXCHANGE_UNKNOWN .or. cf == PSEUDO_CORRELATION_UNKNOWN) then
+          call messages_write("Unknown XC functional for species '"//trim(species_label(geo%species(ispecies)))//"'")
+          call messages_warning()
+          cycle
+        end if
+
+        if(x_functional == PSEUDO_EXCHANGE_ANY) then
+          x_functional = xf
+        else
+          if(xf /= x_functional .and. .not. warned_inconsistent) then
+            call messages_write('Inconsistent XC functional detected between species');
+            call messages_warning()
+            warned_inconsistent = .true.
+          end if
+        end if
+
+        if(c_functional == PSEUDO_CORRELATION_ANY) then
+          c_functional = cf
+        else
+          if(cf /= c_functional .and. .not. warned_inconsistent) then
+            call messages_write('Inconsistent XC functional detected between species');
+            call messages_warning()
+            warned_inconsistent = .true.
+          end if
+        end if
+        
+      end do
+      
+      ASSERT(x_functional /= PSEUDO_EXCHANGE_UNKNOWN)
+      ASSERT(c_functional /= PSEUDO_CORRELATION_UNKNOWN)
+      
+    end subroutine get_functional_from_pseudos
   end subroutine v_ks_init
   ! ---------------------------------------------------------
 
@@ -579,7 +750,7 @@ contains
     if(ks%frozen_hxc) then      
       if(ks%calculate_current .and. calc_current_ ) then
         call states_allocate_current(st, ks%gr)
-        call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, st%current)
+        call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
       end if      
 
       POP_SUB(v_ks_calc_start)
@@ -623,7 +794,7 @@ contains
 
     if(ks%calculate_current .and. calc_current_ ) then
       call states_allocate_current(st, ks%gr)
-      call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, st%current)
+      call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
     end if
 
     nullify(ks%calc%hf_st) 
@@ -821,9 +992,12 @@ contains
       logical :: cmplxscl
       FLOAT :: factor
       CMPLX :: ctmp
-      integer :: ispin
+      integer :: ispin, iatom
       FLOAT, allocatable :: vvdw(:)
       FLOAT, dimension(:,:), pointer :: density
+      FLOAT, allocatable :: coords(:, :)
+      FLOAT :: vdw_stress(1:3, 1:3), latvec(1:3, 1:3)
+      integer, allocatable :: atnum(:)
       
       PUSH_SUB(v_ks_calc_start.v_a_xc)
       call profiling_in(prof, "XC")
@@ -917,7 +1091,8 @@ contains
       end if
 
       if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
-
+        ASSERT(geo%space%dim == 3)
+        
         SAFE_ALLOCATE(vvdw(1:ks%gr%fine%mesh%np))
         SAFE_ALLOCATE(ks%calc%vdw_forces(1:geo%space%dim, 1:geo%natoms))
 
@@ -926,6 +1101,26 @@ contains
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
           call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
+
+        case(OPTION__VDWCORRECTION__VDW_D3)
+
+          SAFE_ALLOCATE(coords(1:3, geo%natoms))
+          SAFE_ALLOCATE(atnum(geo%natoms))
+
+          do iatom = 1, geo%natoms
+            atnum(iatom) = nint(species_z(geo%atom(iatom)%species))
+            coords(1:3, iatom) = geo%atom(iatom)%x(1:3)
+          end do
+          
+          if(simul_box_is_periodic(ks%gr%sb)) then
+            latvec(1:3, 1:3) = ks%gr%sb%rlattice(1:3, 1:3) !make a copy as rlattice goes up to MAX_DIM
+            call dftd3_pbc_dispersion(ks%vdw_d3, coords, atnum, latvec, ks%calc%energy%vdw, ks%calc%vdw_forces, vdw_stress)
+          else
+            call dftd3_dispersion(ks%vdw_d3, coords, atnum, ks%calc%energy%vdw, ks%calc%vdw_forces)
+          end if
+
+          SAFE_DEALLOCATE_A(coords)
+          SAFE_DEALLOCATE_A(atnum)
           
         case default
           ASSERT(.false.)
@@ -976,6 +1171,15 @@ contains
             ks%calc%energy%Imintnvxc = ks%calc%energy%Imintnvxc + aimag(ctmp)          
           end if
         end do
+
+        if(states_are_real(st)) then
+          ks%calc%energy%int_dft_u = denergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)
+        else
+          ctmp = zenergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)
+          ks%calc%energy%int_dft_u   = real(ctmp)
+          ks%calc%energy%Imint_dft_u = aimag(ctmp)
+        end if
+
       end if
 
       call profiling_out(prof)
@@ -1159,6 +1363,7 @@ contains
       call hamiltonian_update(hm, ks%gr%mesh)
     end if
 
+
     SAFE_DEALLOCATE_P(ks%calc%density)
     SAFE_DEALLOCATE_P(ks%calc%Imdensity)
     if(ks%calc%total_density_alloc) then
@@ -1185,13 +1390,24 @@ contains
     CMPLX, pointer :: zpot(:)
     CMPLX :: ztmp
 
+    FLOAT, allocatable :: potx(:)
+    CMPLX, allocatable :: kick(:)
+    FLOAT, allocatable :: kick_real(:)
+    integer :: ii
+
+    integer :: asc_unit_test
+
+    FLOAT :: dt
+
+    logical :: kick_time
+
     PUSH_SUB(v_ks_hartree)
 
     ASSERT(associated(ks%hartree_solver))
 
     if(.not. ks%gr%have_fine_mesh) then
       pot => hm%vhartree
-      if (hm%cmplxscl%space) then 
+      if (hm%cmplxscl%space) then
         Impot => hm%Imvhartree
         SAFE_ALLOCATE(zpot(1:size(Impot,1)))
       end if
@@ -1227,13 +1443,73 @@ contains
       end if
     end if
 
+
     !> PCM reaction field due to the electronic density
     if (hm%pcm%run_pcm .and. pcm_update(hm%pcm,hm%current_time)) then
-    !> Generates the real-space PCM potential due to electrons during the SCF calculation.
-        call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_h = pot)
-        
+
+      !> Generates the real-space PCM potential due to electrons during the SCF calculation.
+      if (hm%pcm%solute) &
+        call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_h = pot, time_present = ks%calc%time_present)
+
+      dt=hm%current_time/hm%pcm%iter
+
+      !> Local field effects due to the applied electrostatic potential representing the laser and the kick (if they were).
+      !! For the laser, the latter is only valid in the long-wavelength limit.
+      !! Static potentials are included in subroutine hamiltonian_epot_generate (module hamiltonian).
+      if( hm%pcm%localf .and. ks%calc%time_present ) then
+        if ( associated(hm%ep%lasers) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< external potential and kick
+          SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
+          SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part)) 
+          SAFE_ALLOCATE(kick_real(1:ks%gr%mesh%np_part))
+          potx = M_ZERO    
+          kick = M_ZERO
+          do ii = 1, hm%ep%no_lasers        
+            call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
+          end do
+          kick_real = M_ZERO
+          kick_time =((hm%pcm%iter-1)*dt <= hm%ep%kick%time) .and. (hm%pcm%iter*dt > hm%ep%kick%time)
+          if ( hm%pcm%iter > 1 .and. kick_time ) then 
+            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.)
+            kick = hm%ep%kick%delta_strength * kick
+            kick_real = DREAL(kick)
+          end if
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = kick_real, time_present = ks%calc%time_present, &
+                                                                 kick_time = kick_time )
+          SAFE_DEALLOCATE_A(potx)
+          SAFE_DEALLOCATE_A(kick)
+          SAFE_DEALLOCATE_A(kick_real)
+        else if ( associated(hm%ep%lasers) .and. hm%ep%kick%delta_strength == M_ZERO ) then !< just external potential
+          SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
+          potx = M_ZERO    
+          do ii = 1, hm%ep%no_lasers        
+            call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
+          end do
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, time_present = ks%calc%time_present)
+          SAFE_DEALLOCATE_A(potx)
+        else if ( (.not.associated(hm%ep%lasers)) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< just kick
+          SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part))
+          SAFE_ALLOCATE(kick_real(1:ks%gr%mesh%np_part))
+          kick = M_ZERO
+          kick_real = M_ZERO
+          kick_time =((hm%pcm%iter-1)*dt <= hm%ep%kick%time) .and. (hm%pcm%iter*dt > hm%ep%kick%time)
+          if ( hm%pcm%iter > 1 .and. kick_time ) then
+            call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.)
+            kick = hm%ep%kick%delta_strength * kick
+            kick_real = DREAL(kick)
+          end if
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, kick = kick_real, time_present = ks%calc%time_present, kick_time = kick_time )
+          SAFE_DEALLOCATE_A(kick)
+          SAFE_DEALLOCATE_A(kick_real)
+        end if
+
+        ! Calculating the PCM term renormalizing the sum of the single-particle energies
+        ! to keep the idea of pcm_corr... but it will be added later on
+        hm%energy%pcm_corr = dmf_dotp( ks%gr%fine%mesh, ks%calc%total_density, hm%pcm%v_e_rs + hm%pcm%v_n_rs + hm%pcm%v_ext_rs )
+      else
         ! Calculating the PCM term renormalizing the sum of the single-particle energies
         hm%energy%pcm_corr = dmf_dotp( ks%gr%fine%mesh, ks%calc%total_density, hm%pcm%v_e_rs + hm%pcm%v_n_rs )
+      end if
+        
     end if
 
     if(ks%calc%calc_energy) then

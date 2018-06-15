@@ -610,6 +610,9 @@ contains
   !!   *) allocates gradient of the density (gdens), dedgd, and its local variants
   subroutine gga_init()
     integer :: ii
+#ifdef HAVE_LIBXC4
+    FLOAT :: parameters(4)
+#endif
 
     PUSH_SUB(xc_get_vxc.gga_init)
 
@@ -622,8 +625,16 @@ contains
 
     do ii = 1, 2
       if(functl(ii)%id == XC_GGA_X_LB) then
+#ifdef HAVE_LIBXC4
+        parameters(1) = functl(ii)%LB94_modified
+        parameters(2) = functl(ii)%LB94_threshold
+        parameters(3) = ioniz_pot
+        parameters(4) = qtot
+        call XC_F90(func_set_ext_params)(functl(ii)%conf, parameters(1))        
+#else
         call XC_F90(gga_lb_set_par)(functl(ii)%conf, &
           functl(ii)%LB94_modified, functl(ii)%LB94_threshold, ioniz_pot, qtot)
+#endif
       end if
     end do
 
@@ -646,7 +657,7 @@ contains
   ! ---------------------------------------------------------
   !> calculates the GGA contribution to vxc
   subroutine gga_process()
-    integer :: ip, is
+    integer :: is
     FLOAT, allocatable :: gf(:,:)
 
     PUSH_SUB(xc_get_vxc.gga_process)
@@ -710,8 +721,12 @@ contains
 
     tb09_c =  -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(der%mesh, gnon)/der%mesh%sb%rcell_volume)
 
+#ifdef HAVE_LIBXC4
+    call XC_F90(func_set_ext_params)(functl(1)%conf, tb09_c)
+#else
     call XC_F90(mgga_x_tb09_set_par)(functl(1)%conf, tb09_c)
-
+#endif
+    
     SAFE_DEALLOCATE_A(gnon)
 
     POP_SUB(xc_get_vxc.calc_tb09_c)
@@ -1450,9 +1465,11 @@ end subroutine zxc_complex_lda
 subroutine cmplxscl_energy_comm_sum(zex, zec)
   CMPLX, intent(inout) :: zex
   CMPLX, intent(inout) :: zec
-  
-  CMPLX                :: zenergies1(2), zenergies2(2)
 
+#ifdef HAVE_MPI
+  CMPLX                :: zenergies1(2), zenergies2(2)
+#endif
+  
   PUSH_SUB(cmplxscl_energy_comm_sum)
 
 #ifdef HAVE_MPI

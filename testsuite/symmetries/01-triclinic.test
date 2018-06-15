@@ -1,0 +1,94 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Triclinic symmetries
+Program    : octopus
+TestGroups : long-run, periodic_systems, symmetries
+Enabled    : Yes
+
+Input      : 01-triclinic.01-spg1.inp
+#match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 1
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 1
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 28 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 29 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 30 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 31 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 32 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 33 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 34 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+
+Input      : 01-triclinic.02-spg2.inp
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 2
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ; 2
+match ; S1 ; GREP(static/info, "   1   0   0     0   1   0     0   0   1", 60 ); 0.000000
+match ; S2 ; GREP(static/info, "  -1   0   0     0  -1   0     0   0  -1", 60 ); 0.000000
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 36
+match ; kpt 1 ; GREP(static/info, "      0.0000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 2 ; GREP(static/info, "      0.2500      0.0000      0.0000", 51 ); 0.03125
+match ; kpt 3 ; GREP(static/info, "      0.5000      0.0000      0.0000", 51 ); 0.01563
+match ; kpt 4 ; GREP(static/info, "      0.0000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 5 ; GREP(static/info, "      0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 6 ; GREP(static/info, "      0.5000      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 7 ; GREP(static/info, "     -0.2500      0.2500      0.0000", 51 ); 0.03125
+match ; kpt 8 ; GREP(static/info, "      0.0000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 9 ; GREP(static/info, "      0.2500      0.5000      0.0000", 51 ); 0.03125
+match ; kpt 10 ; GREP(static/info, "      0.5000      0.5000      0.0000", 51 ); 0.01563
+match ; kpt 11 ; GREP(static/info, "      0.0000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 12 ; GREP(static/info, "      0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 13 ; GREP(static/info, "      0.5000      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 14 ; GREP(static/info, "     -0.2500      0.0000      0.2500", 51 ); 0.03125
+match ; kpt 15 ; GREP(static/info, "      0.0000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 16 ; GREP(static/info, "      0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 17 ; GREP(static/info, "      0.5000      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 18 ; GREP(static/info, "     -0.2500      0.2500      0.2500", 51 ); 0.03125
+match ; kpt 19 ; GREP(static/info, "      0.0000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 20 ; GREP(static/info, "      0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 21 ; GREP(static/info, "      0.5000      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 22 ; GREP(static/info, "     -0.2500      0.5000      0.2500", 51 ); 0.03125
+match ; kpt 23 ; GREP(static/info, "      0.0000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 24 ; GREP(static/info, "      0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 25 ; GREP(static/info, "      0.5000     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 26 ; GREP(static/info, "     -0.2500     -0.2500      0.2500", 51 ); 0.03125
+match ; kpt 27 ; GREP(static/info, "      0.0000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 28 ; GREP(static/info, "      0.2500      0.0000      0.5000", 51 ); 0.03125
+match ; kpt 29 ; GREP(static/info, "      0.5000      0.0000      0.5000", 51 ); 0.01563
+match ; kpt 30 ; GREP(static/info, "      0.0000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 31 ; GREP(static/info, "      0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 32 ; GREP(static/info, "      0.5000      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 33 ; GREP(static/info, "     -0.2500      0.2500      0.5000", 51 ); 0.03125
+match ; kpt 34 ; GREP(static/info, "      0.0000      0.5000      0.5000", 51 ); 0.01563
+match ; kpt 35 ; GREP(static/info, "      0.2500      0.5000      0.5000", 51 ); 0.03125
+match ; kpt 36 ; GREP(static/info, "      0.5000      0.5000      0.5000", 51 ); 0.01563
+

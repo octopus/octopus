@@ -8,7 +8,7 @@ Radius = angstrom*12.0
 Spacing = angstrom*0.4
 PseudopotentialSet = standard
 %Species
-	"Na" | species_pseudo | db_file | "PSF/Na.psf"
+	"Na" | species_pseudo   | lmax | 0 | lloc | 0
 %
 %Coordinates
 	"Na" | 1.25*angstrom | 0.0 | 0.0 | no

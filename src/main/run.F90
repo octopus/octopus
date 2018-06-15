@@ -169,7 +169,8 @@ contains
       end if
     else
       call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
-            sys%ks%xc_family, sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+            sys%ks%xc_family, sys%ks%xc_flags, &
+            family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
 
       if (hm%pcm%run_pcm) then 
         if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
@@ -224,8 +225,12 @@ contains
       case(CM_UNOCC)
         call unocc_run(sys, hm, fromScratch)
       case(CM_TD)
+        if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = td")
         call td_run(sys, hm, fromScratch)
       case(CM_LR_POL)
+        if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = em_resp")
         select case(get_resp_method())
         case(FD)
           call static_pol_run(sys, hm, fromScratch)
@@ -233,10 +238,16 @@ contains
           call em_resp_run(sys, hm, fromScratch)
         end select
       case(CM_VDW)
+         if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = vdw")
         call vdW_run(sys, hm, fromScratch)
       case(CM_GEOM_OPT)
+        if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = go")
         call geom_opt_run(sys, hm, fromScratch)
       case(CM_PHONONS_LR)
+        if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = vib_modes")
         select case(get_resp_method())
         case(FD)
           call phonons_run(sys, hm)
@@ -244,16 +255,24 @@ contains
           call phonons_lr_run(sys, hm, fromscratch)
         end select
       case(CM_OPT_CONTROL)
+        if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = opt_control")
         call opt_control_run(sys, hm)
       case(CM_CASIDA)
+        if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = casida")
         call casida_run(sys, hm, fromScratch)
       case(CM_ONE_SHOT)
         message(1) = "CalculationMode = one_shot is obsolete. Please use gs with MaximumIter = 0."
         call messages_fatal(1)
       case(CM_KDOTP)
+        if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = kdotp")
         call kdotp_lr_run(sys, hm, fromScratch)
       case(CM_DUMMY)
       case(CM_INVERTKDS)
+        if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = invert_ks")
         call invert_ks_run(sys, hm)
       case(CM_PULPO_A_FEIRA)
         ASSERT(.false.) !this is handled before, if we get here, it is an error

@@ -215,11 +215,13 @@ void harmonic_spectrum_help(){
   printf("  -a, --ar        Calculates the angle-resolved harmonic-spectrum along a\n");
   printf("                  direction (X,Y,Z) specified by  by -x X -y Y -z Z.\n");
   printf("  -m, --mode=mode Whether the harmonic spectrum is computed by taking the\n");
-  printf("                  second derivative of the dipole moment numerically, or by\n");
-  printf("                  making use of the acceleration operator, stored in the\n:");
-  printf("                  'acceleration' file. The options are:\n");
+  printf("                  second derivative of the dipole moment numerically, the \n");
+  printf("                  the time derivative of the current, or by making use of \n:");
+  printf("                  the dipole acceleration.\n");
+  printf("                  ' The options are:\n");
   printf("                     '1' : use the dipole, take second derivative numerically.\n");
   printf("                     '2' : use the acceleration file.\n");
+  printf("                     '3' : use the total current file.\n");
   printf("                  The default is '1'\n");
   exit(-1);
 }

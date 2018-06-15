@@ -29,6 +29,7 @@ module propagator_rk_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
+  use lda_u_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use oct_exchange_oct_m
@@ -353,10 +354,12 @@ contains
       end if
       if(.not.oct_exchange_enabled(hm%oct_exchange)) then
         call density_calc(stphi, gr, stphi%rho)
-        call v_ks_calc(ks, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
+        call v_ks_calc(ks, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), time = tau)
+      else
+        call hamiltonian_update(hm, gr%mesh, time = tau)
       end if
-      call hamiltonian_update(hm, gr%mesh, time = tau)
-      call zhamiltonian_apply_all(hm, ks%xc, gr%der, stphi, hst, tau)
+      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+      call zhamiltonian_apply_all(hm, ks%xc, gr%der, stphi, hst)
     end subroutine f_psi
 
     subroutine f_ions(tau)
@@ -383,7 +386,8 @@ contains
       call prepare_inh()
       call hamiltonian_adjoint(hm)
       call hamiltonian_update(hm, gr%mesh, time = tau)
-      call zhamiltonian_apply_all(hm, ks%xc, gr%der, stchi, hchi, tau)
+      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+      call zhamiltonian_apply_all(hm, ks%xc, gr%der, stchi, hchi)
       call hamiltonian_not_adjoint(hm)
 
 
@@ -540,10 +544,11 @@ contains
 
     if(oct_exchange_enabled(hm%oct_exchange)) call oct_exchange_prepare(hm%oct_exchange, gr%mesh, zphi, ks%xc)
     call hamiltonian_update(hm, gr%mesh, time = time-dt)
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
     rhs1 = M_z0
     do ik = kp1, kp2
       do ist = st1, st2
-        call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik, time -dt)
+        call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
       end do
     end do
     do ik = kp1, kp2
@@ -592,6 +597,7 @@ contains
         vpsl1_op = hm%ep%vpsl
       end if
       call hamiltonian_update(hm, gr%mesh, time = time)
+      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
       if(.not.oct_exchange_enabled(hm_p%oct_exchange)) then
         if (i==1) then
           call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, vhxc1_op)
@@ -604,7 +610,9 @@ contains
         vhxc1_op = hm%vhxc
       end if
 
-      if(ion_dynamics_ions_move(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
+      if(ion_dynamics_ions_move(ions)) then
+        call ion_dynamics_restore_state(ions, geo, ions_state)
+      end if
 
       j = 1
       do ik = kp1, kp2
@@ -794,12 +802,13 @@ contains
         vpsl1_op = hm%ep%vpsl
       end if
       call hamiltonian_update(hm, gr%mesh, time = time - dt + c(1)*dt)
+      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
       vhxc1_op = hm%vhxc
       t_op  = time - dt + c(1) * dt
       rhs1 = M_z0
       do ik = kp1, kp2
         do ist = st1, st2
-          call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik, t_op)
+          call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
           if(hamiltonian_inh_term(hm)) then
             SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
             do idim = 1, st%d%dim
@@ -811,7 +820,9 @@ contains
         end do
       end do
       rhs1 = - M_zI * dt * rhs1
-      if(ion_dynamics_ions_move(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
+      if(ion_dynamics_ions_move(ions)) then
+        call ion_dynamics_restore_state(ions, geo, ions_state)
+      end if
 
       ! Set the Hamiltonian at time-dt + c(2) * dt
       do ik = kp1, kp2
@@ -828,12 +839,13 @@ contains
         vpsl2_op = hm%ep%vpsl
       end if
       call hamiltonian_update(hm, gr%mesh, time = time - dt + c(2)*dt)
+      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
       vhxc2_op = hm%vhxc
       t_op  = time - dt + c(2) * dt
       rhs2 = M_z0
       do ik = kp1, kp2
         do ist = st1, st2
-          call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs2(:, :, ist, ik), ist, ik, t_op)
+          call zhamiltonian_apply(hm_p, grid_p%der, zphi(:, :, ist, ik), rhs2(:, :, ist, ik), ist, ik)
           if(hamiltonian_inh_term(hm)) then
             SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
             do idim = 1, st%d%dim
@@ -845,7 +857,9 @@ contains
         end do
       end do
       rhs2 = -M_zI * dt * rhs2
-      if(ion_dynamics_ions_move(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
+      if(ion_dynamics_ions_move(ions)) then
+        call ion_dynamics_restore_state(ions, geo, ions_state)
+      end if
 
       j = 1
       do ik = kp1, kp2
@@ -998,6 +1012,7 @@ contains
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
     call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(1)*dt_op)
+    call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
     do ik = kp1, kp2
@@ -1010,7 +1025,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(1)*dt_op)
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1023,6 +1038,7 @@ contains
     hm_p%vhxc = vhxc2_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl2_op
     call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(2)*dt_op)
+    call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
     do ik = kp1, kp2
@@ -1035,7 +1051,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(2)*dt_op)
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1092,6 +1108,7 @@ contains
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
     call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(1)*dt_op)
+    call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
     do ik = kp1, kp2
@@ -1104,7 +1121,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(1)*dt_op)
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1117,6 +1134,7 @@ contains
     hm_p%vhxc = vhxc2_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl2_op
     call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(2)*dt_op)
+    call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
     do ik = kp1, kp2
@@ -1129,7 +1147,7 @@ contains
           k = k + np
         end do
 
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + c(2)*dt_op)
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
@@ -1179,6 +1197,7 @@ contains
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
     call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + dt_op)
+   call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
 
     if(oct_exchange_enabled(hm_p%oct_exchange)) then
       zpsi_ = M_z0
@@ -1203,7 +1222,7 @@ contains
           zpsi(1:np, idim) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
           j = j + np
         end do
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + dt_op)
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
           yim(jj:jj+np-1) = xim(jj:jj+np-1) + aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
@@ -1274,6 +1293,7 @@ contains
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
     call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + dt_op)
+    call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
 
     if(oct_exchange_enabled(hm_p%oct_exchange)) then
       zpsi_ = M_z0
@@ -1298,7 +1318,7 @@ contains
           zpsi(1:np, idim) = cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION)
           j = j + np
         end do
-        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik, t_op + dt_op)
+        call zhamiltonian_apply(hm_p, grid_p%der, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
           yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
