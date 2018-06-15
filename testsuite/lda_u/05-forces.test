@@ -5,9 +5,6 @@ Program    : octopus
 TestGroups : short-run, finite_systems_3d, lda_u
 Enabled    : Yes
 
-#So far no domain parallelization
-Processors: 1
-
 Input      : 05-forces.01-Na2.inp
 
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -0.35617620
