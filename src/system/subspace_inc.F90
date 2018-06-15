@@ -498,6 +498,9 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
     hmss(1:st%nst, 1:st%nst) = R_CONJ(hmss(1:st%nst, 1:st%nst))
 #endif
 
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(hpsi)
+
   end if
   
   call profiling_count_operations((R_ADD + R_MUL)*st%nst*(st%nst - CNST(1.0))*der%mesh%np)
