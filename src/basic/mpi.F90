@@ -96,7 +96,7 @@ contains
   subroutine mpi_mod_end()
 
 #ifdef HAVE_SCALAPACK
-    call blacs_exit(0)
+    call blacs_exit(1)
 #endif
 
 #if defined(HAVE_MPI)
