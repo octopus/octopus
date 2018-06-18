@@ -296,6 +296,10 @@ subroutine X(lda_u_update_potential)(this, st)
         ! Only the diagonal part in spin space (for spinors)
         if(ispin <= this%spin_channels) &
           this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + CNST(0.5)*this%orbsets(ios)%Ueff
+
+        if(this%orbsets(ios)%alpha > CNST(1.0e-6)) then
+          this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + this%orbsets(ios)%alpha
+        end if
       end do
     end do
   end do
