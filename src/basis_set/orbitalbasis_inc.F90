@@ -150,6 +150,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
           os%norbs = norb
         end if
         os%Ueff = species_hubbard_u(geo%atom(ia)%species)
+        os%alpha = species_hubbard_alpha(geo%atom(ia)%species)
         os%submeshforperiodic = this%submeshforperiodic
         os%spec => geo%atom(ia)%species
         os%iatom = ia
@@ -174,6 +175,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
         os%ndim = ndim
         os%norbs = norb-1
         os%Ueff = species_hubbard_u(geo%atom(ia)%species)
+        os%alpha = species_hubbard_alpha(geo%atom(ia)%species)
         os%submeshforperiodic = this%submeshforperiodic
         os%spec => geo%atom(ia)%species
         os%iatom = ia
@@ -198,6 +200,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
         os%ndim = ndim
         os%norbs = norb+1
         os%Ueff = species_hubbard_u(geo%atom(ia)%species)
+        os%alpha = species_hubbard_alpha(geo%atom(ia)%species)
         os%submeshforperiodic = this%submeshforperiodic
         os%spec => geo%atom(ia)%species
         os%iatom = ia
@@ -238,6 +241,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
         os%norbs = work2
         os%ndim = 1
         os%Ueff = species_hubbard_u(geo%atom(ia)%species)
+        os%alpha = species_hubbard_alpha(geo%atom(ia)%species)
         os%submeshforperiodic = this%submeshforperiodic
         os%spec => geo%atom(ia)%species
         os%iatom = ia

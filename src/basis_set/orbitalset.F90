@@ -69,6 +69,7 @@ module orbitalset_oct_m
                                               !> if the sphere cross the border of the box
     FLOAT               :: Ueff               !> The effective U of the simplified rotational invariant form
     FLOAT               :: Ubar, Jbar
+    FLOAT               :: alpha              !> A potential used to constrained occupations, as defined in PRB 71, 035105 (2005)
     FLOAT               :: radius
     type(species_t), pointer :: spec          
 
