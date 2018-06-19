@@ -24,7 +24,7 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, dot)
   R_TYPE,            intent(inout) :: dot(:,:)
 
   integer :: im, ip, idim, idim_orb
-  type(profile_t), save :: prof
+  type(profile_t), save :: prof, prof_reduce
   R_TYPE, allocatable :: spsi(:)
 
   call profiling_in(prof, "ORBSET_GET_COEFFICIENTS")
@@ -39,13 +39,13 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, dot)
         do idim = 1, ndim
           idim_orb = min(idim,os%ndim)
           dot(idim,im) = zmf_dotp(os%sphere%mesh, os%eorb_mesh(1:os%sphere%mesh%np,idim_orb,im,ik),&
-                              psi(1:os%sphere%mesh%np,idim))
+                              psi(1:os%sphere%mesh%np,idim), reduce=.false.)
         end do
       else
         do idim = 1, ndim
           idim_orb = min(idim,os%ndim)
           dot(idim, im) = submesh_to_mesh_dotp(os%sphere, os%eorb_submesh(1:os%sphere%np,idim_orb,im,ik),&
-                              psi(1:os%sphere%mesh%np, idim))
+                              psi(1:os%sphere%mesh%np, idim), reduce=.false.)
         end do
       endif 
 #endif
@@ -53,10 +53,16 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, dot)
       do idim = 1, ndim
         idim_orb = min(idim,os%ndim)
         dot(idim,im) = submesh_to_mesh_dotp(os%sphere, os%X(orb)(1:os%sphere%np,idim_orb,im),&
-                               psi(1:os%sphere%mesh%np, idim))
+                               psi(1:os%sphere%mesh%np, idim), reduce=.false.)
       end do
     end if
   end do
+
+  if(os%sphere%mesh%parallel_in_domains) then
+    call profiling_in(prof_reduce, "ORBSET_GET_COEFF_REDUCE")
+    call comm_allreduce(os%sphere%mesh%mpi_grp%comm, dot) 
+    call profiling_out(prof_reduce)
+  end if
 
   POP_SUB(X(orbitalset_get_coefficients))
   call profiling_out(prof)

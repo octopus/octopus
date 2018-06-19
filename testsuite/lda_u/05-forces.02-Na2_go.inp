@@ -23,7 +23,6 @@ GOCenter = yes
 FilterPotentials = filter_none
 
 MixField = density
-ParDomains = no
 
 DFTULevel = dft_u_empirical
 AOThreshold = 0.05
