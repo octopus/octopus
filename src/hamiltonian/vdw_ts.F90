@@ -362,6 +362,8 @@ contains
      !  end do
      !end if
 
+   force_vdw(1:sb%dim, 1:geo%natoms) = M_ZERO
+
     do iatom = 1, geo%natoms
       do jatom = 1, geo%natoms
         call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
