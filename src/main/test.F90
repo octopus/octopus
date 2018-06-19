@@ -21,6 +21,7 @@
 program oct_test
   use global_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use base_hamiltonian_oct_m
   use calc_mode_par_oct_m
   use command_line_oct_m
@@ -31,6 +32,8 @@ program oct_test
   use ion_interaction_oct_m
   use mesh_interpolation_oct_m
   use mesh_function_oct_m
+  use orbitalbasis_oct_m
+  use orbitalset_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -89,6 +92,8 @@ program oct_test
   !%Option projector 6
   !% Tests the code that applies the nonlocal part of the pseudopotentials 
   !% in case of spin-orbit coupling
+  !%Option dft_u 7
+  !% Tests the DFT+U part of the code for projections on the basis.
   !%End
   call parse_variable('TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -189,6 +194,8 @@ program oct_test
     call test_ion_interaction() 
   case(OPTION__TESTMODE__PROJECTOR)
     call test_projector()
+  case(OPTION__TESTMODE__DFT_U)
+    call test_dft_u()
   end select
 
   call fft_all_end()
@@ -253,7 +260,6 @@ program oct_test
                                sys%st%group%psib(1, 1), epsib, 1)
     end do
     do itime = 1, epsib%nst
-      call messages_write(zmf_nrm2(sys%gr%mesh, 2, epsib%states(itime)%zpsi))
       write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, 2, epsib%states(itime)%zpsi)
       call messages_info(1)
     end do
@@ -266,6 +272,96 @@ program oct_test
 
     POP_SUB(test_projector)
   end subroutine test_projector
+
+  ! ---------------------------------------------------------
+  subroutine test_dft_u
+    type(system_t)      :: sys
+    type(epot_t) :: ep
+    type(batch_t), pointer :: epsib
+    integer :: itime
+    type(base_hamiltonian_t), pointer :: subsys_hm
+    type(orbitalbasis_t) :: basis
+    FLOAT, allocatable :: ddot(:,:,:), dweight(:,:)
+    CMPLX, allocatable :: zdot(:,:,:), zweight(:,:)
+
+    PUSH_SUB(test_dft_u)
+
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+    call messages_write('Info: Testing the nonlocal part of the pseudopotential with SOC')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    call system_init(sys)
+
+    call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
+    call states_generate_random(sys%st, sys%gr%mesh)
+
+    !Initialize external potential
+    nullify(subsys_hm)
+    call epot_init(ep, sys%gr, sys%geo, SPINORS, 1, .false., subsys_hm, XC_FAMILY_NONE)
+    call epot_generate(ep, sys%gr, sys%geo, sys%st, .false.)
+
+    !Initialize external potential
+    SAFE_ALLOCATE(epsib)
+    call batch_copy(sys%st%group%psib(1, 1), epsib)
+    call batch_copy_data(sys%gr%mesh%np, sys%st%group%psib(1, 1), epsib)
+
+    !Initialize the orbital basis
+    call orbitalbasis_init(basis)
+    if (states_are_real(sys%st)) then
+      call dorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, &
+                                .false., .false.)
+      SAFE_ALLOCATE(dweight(1:basis%orbsets(1)%sphere%np,1:epsib%nst_linear))
+      SAFE_ALLOCATE(ddot(1:sys%st%d%dim,1:basis%orbsets(1)%norbs, 1:epsib%nst))
+    else
+      call zorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, &
+                                .false., .false.)
+      call orbitalset_update_phase(basis%orbsets(1), sys%gr%sb, sys%st%d%kpt, (sys%st%d%ispin==SPIN_POLARIZED))
+      SAFE_ALLOCATE(zweight(1:basis%orbsets(1)%sphere%np,1:epsib%nst_linear))
+      SAFE_ALLOCATE(zdot(1:sys%st%d%dim,1:basis%orbsets(1)%norbs, 1:epsib%nst))
+    end if
+
+    do itime = 1, test_param%repetitions
+      call batch_set_zero(epsib)
+      if(states_are_real(sys%st)) then
+        dweight = M_ONE
+        ddot = M_ZERO
+        call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), 1, .false., ddot)
+        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib, 1, .false., dweight)
+      else
+        zweight = M_ONE
+        zdot = M_ZERO
+        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), 1, .true., zdot)
+        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, 1, .true., zweight)
+      end if
+    end do
+    do itime = 1, epsib%nst
+      if(states_are_real(sys%st)) then 
+        write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, dmf_nrm2(sys%gr%mesh, sys%st%d%dim, epsib%states(itime)%dpsi)
+      else
+        write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, sys%st%d%dim, epsib%states(itime)%zpsi)
+      end if
+      call messages_info(1)
+    end do
+
+
+    SAFE_DEALLOCATE_A(dweight)
+    SAFE_DEALLOCATE_A(zweight)
+    SAFE_DEALLOCATE_A(ddot)
+    SAFE_DEALLOCATE_A(zdot)
+
+    call batch_end(epsib)
+    SAFE_DEALLOCATE_P(epsib)
+    call orbitalbasis_end(basis)
+    call epot_end(ep)
+    call states_deallocate_wfns(sys%st)
+    call system_end(sys)
+
+    POP_SUB(test_dft_u)
+  end subroutine test_dft_u
+
 
 
 ! ---------------------------------------------------------
