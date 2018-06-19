@@ -54,6 +54,7 @@ module vdw_ts_oct_m
     vdw_ts_end,                           &
     vdw_ts_write_c6ab,                    &
     vdw_ts_force_calculate,               &
+    vdw_ts_force_calculate_n,             &
     vdw_ts_calculate,                     &
     vdw_ts_copy_deriv_coeff
     
@@ -319,11 +320,11 @@ contains
     SAFE_DEALLOCATE_A(dr0dvra)
 
     POP_SUB(vdw_ts_calculate)
-  end subroutine vdw_ts_calculate
+    end subroutine vdw_ts_calculate
 
-  !------------------------------------------
+    !------------------------------------------
 
-  subroutine vdw_ts_copy_deriv_coeff(vdw_ts, derivative_coeff, natoms)
+    subroutine vdw_ts_copy_deriv_coeff(vdw_ts, derivative_coeff, natoms)
     type(vdw_ts_t),         intent(in) :: vdw_ts
     FLOAT,                  intent(inout) :: derivative_coeff(:)
     integer,                intent(in) :: natoms
@@ -333,9 +334,172 @@ contains
     derivative_coeff(1:natoms)=vdw_ts%derivative_coeff(1:natoms)
 
     POP_SUB(vdw_ts_copy_deriv_coeff)
-  end subroutine vdw_ts_copy_deriv_coeff
+   end subroutine vdw_ts_copy_deriv_coeff
 
   !------------------------------------------
+  !------------------------------------------
+  !------------------------------------------
+  !------------------------------------------
+  !------------------------------------------
+
+
+  subroutine vdw_ts_force_calculate_n(force_vdw, geo, der, sb, st, density)
+    FLOAT,               intent(inout) :: force_vdw(:,:)
+    type(geometry_t),    intent(in)    :: geo
+    type(derivatives_t), intent(in)    :: der
+    type(simul_box_t),   intent(in)    :: sb
+    type(states_t),      intent(in)    :: st
+    FLOAT,               intent(in)    :: density(:, :)
+
+    type(hirshfeld_t) :: hirshfeld
+    type(periodic_copy_t) :: pc
+
+    integer :: iatom, jatom, ispecies, jspecies, jcopy
+    FLOAT :: rr, rr2, rr6,  dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra, deabdrab, x_j(1:MAX_DIM)
+    FLOAT, allocatable ::  vol_ratio(:), dvadrr(:), dr0dvra(:), r0ab(:,:), derivative_coeff(:)
+
+
+
+
+    PUSH_SUB(vdw_ts_force_calculate_n)
+
+
+    SAFE_ALLOCATE(vol_ratio(1:geo%natoms))
+    SAFE_ALLOCATE(dvadrr(1:3))
+    SAFE_ALLOCATE(dr0dvra(1:geo%natoms))
+    SAFE_ALLOCATE(r0ab(1:geo%natoms,1:geo%natoms))
+    SAFE_ALLOCATE(derivative_coeff(1:geo%natoms))
+
+
+
+
+    force_vdw(1:sb%dim, 1:geo%natoms) = M_ZERO
+
+    call hirshfeld_init(hirshfeld, der%mesh, geo, st)
+
+    do iatom = 1, geo%natoms
+      call hirshfeld_volume_ratio(hirshfeld, iatom, density, vol_ratio(iatom))
+    end do
+
+    do iatom = 1, geo%natoms
+      ispecies = species_index(geo%atom(iatom)%species)
+      dr0dvra(iatom) = this%r0free(ispecies)/(CNST(3.0)*(vol_ratio(iatom)**(M_TWO/CNST(3.0))))
+      do jatom = 1, geo%natoms
+        jspecies = species_index(geo%atom(jatom)%species)
+        this%c6ab(iatom,jatom) = vol_ratio(iatom)*vol_ratio(jatom)*this%c6abfree(ispecies,jspecies) 
+      end do
+    end do
+
+      !Precomputing some quantities
+      do iatom = 1, geo%natoms
+        ispecies = species_index(geo%atom(iatom)%species)
+        do jatom = 1, geo%natoms
+         jspecies = species_index(geo%atom(jatom)%species)
+
+         r0ab(iatom,jatom) = (vol_ratio(iatom)**(M_ONE/CNST(3.0)))*this%r0free(ispecies) &
+                            +(vol_ratio(jatom)**(M_ONE/CNST(3.0)))*this%r0free(jspecies)
+        end do
+      end do
+
+
+      do jatom = 1, geo%natoms
+        jspecies = species_index(geo%atom(jatom)%species)
+        
+        if(sb%periodic_dim > 0) then ! periodic case
+          call periodic_copy_init(pc, sb, geo%atom(jatom)%x, this%VDW_cutoff)
+          do jcopy = 1, periodic_copy_num(pc) ! one of the periodic copy is the initial atom  
+            x_j(1:sb%dim) = periodic_copy_position(pc, sb, jcopy)
+            do iatom = 1, geo%natoms
+              ispecies = species_index(geo%atom(iatom)%species)
+              rr2 =  sum( (x_j(1:sb%dim) - geo%atom(iatom)%x(1:sb%dim))**2 )
+              rr =  sqrt(rr2)
+              rr6 = rr2**3
+
+              if(rr < CNST(1.0e-10)) cycle !To avoid self interaction
+
+              ee = exp(- this%VDW_dd_parameter*((rr/( this%VDW_sr_parameter*r0ab(iatom,jatom))) - M_ONE))
+              ff = M_ONE/(M_ONE + ee)
+              dee = ee*ff**2
+              !Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
+              dffdr0 =  - this%VDW_dd_parameter*rr/( this%VDW_sr_parameter*r0ab(iatom,jatom)**2)*dee
+              ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
+              deabdrab = this%c6ab(iatom,jatom)*(-this%VDW_dd_parameter/(this%VDW_sr_parameter*r0ab(iatom,jatom))*dee + CNST(6.0)*ff/rr)/rr6;
+              ! Derivative of the damping function with respecto to the volume ratio of atom A.
+              dffdvra = dffdr0*dr0dvra(iatom); ! Ces termes sont bon
+              ! Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
+              deabdvra = (dffdvra*this%c6ab(iatom,jatom) + ff*vol_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6
+
+              force_vdw(1:sb%dim,iatom)= force_vdw(1:sb%dim,iatom) - M_HALF*deabdrab*(geo%atom(iatom)%x(1:sb%dim) -x_j(1:sb%dim))/rr;
+              derivative_coeff(iatom) = derivative_coeff(iatom) + deabdvra;
+            end do
+          end do
+          call periodic_copy_end(pc)
+        else
+          do iatom = 1, geo%natoms
+            ispecies = species_index(geo%atom(iatom)%species)
+            rr2 =  sum( (geo%atom(jatom)%x(1:sb%dim) - geo%atom(iatom)%x(1:sb%dim))**2 )
+            rr =  sqrt(rr2)
+            rr6 = rr2**3
+
+            if(rr < CNST(1.0e-10)) cycle !To avoid self interaction
+
+            ee = exp(- this%VDW_dd_parameter*((rr/( this%VDW_sr_parameter*r0ab(iatom,jatom))) - M_ONE))
+            ff = M_ONE/(M_ONE + ee)
+            dee = ee*ff**2
+            !Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
+            dffdr0 =  - this%VDW_dd_parameter*rr/( this%VDW_sr_parameter*r0ab(iatom,jatom)**2)*dee
+            ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
+            deabdrab = this%c6ab(iatom,jatom)*(-this%VDW_dd_parameter/(this%VDW_sr_parameter*r0ab(iatom,jatom))*dee + CNST(6.0)*ff/rr)/rr6;
+            ! Derivative of the damping function with respecto to the volume ratio of atom A.
+            dffdvra = dffdr0*dr0dvra(iatom); ! Ces termes sont bon
+            ! Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
+            deabdvra = (dffdvra*this%c6ab(iatom,jatom) + ff*vol_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6
+
+            force_vdw(1:sb%dim,iatom)= force_vdw(1:sb%dim,iatom) - M_HALF*deabdrab*(geo%atom(iatom)%x(1:sb%dim) -geo%atom(jatom)%x(1:sb%dim))/rr;
+            derivative_coeff(iatom) = derivative_coeff(iatom) + deabdvra;
+          end do
+        end if
+      end do
+
+
+     !if(mpi_grp_is_root(mpi_world)) then
+     !  do iatom = 1, geo%natoms
+     !    print *,'i initial force', iatom, force_vdw(1:sb%dim,iatom)
+     !  end do
+     !end if
+
+    do iatom = 1, geo%natoms
+      do jatom = 1, geo%natoms
+        call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
+        !print *,'i,j, extra F_ij', jatom, iatom, derivative_coeff(iatom)*dvadrr(1:sb%dim)
+        force_vdw(1:sb%dim,jatom)= force_vdw(1:sb%dim,jatom) + derivative_coeff(iatom)*dvadrr(1:sb%dim)  ! geo%atom(jatom)%f_vdw(1:sb%dim) = sum_i coeff_i * dvadrr_ij
+      end do
+    end do
+
+     !if(mpi_grp_is_root(mpi_world)) then
+     !  do iatom = 1, geo%natoms
+     !    print *,'i with extra f', iatom, force_vdw(1:sb%dim,iatom)
+     !  end do
+     !end if
+
+
+    call hirshfeld_end(hirshfeld)
+
+    SAFE_DEALLOCATE_A(vol_ratio)
+    SAFE_DEALLOCATE_A(dvadrr)
+    SAFE_DEALLOCATE_A(dr0dvra)
+    SAFE_DEALLOCATE_A(r0ab)
+    SAFE_DEALLOCATE_A(derivative_coeff)
+
+    POP_SUB(vdw_ts_force_calculate_n)
+  end subroutine vdw_ts_force_calculate_n
+
+  !------------------------------------------
+  !------------------------------------------
+  !------------------------------------------
+  !------------------------------------------
+
+
 
   subroutine vdw_ts_force_calculate(force_vdw, derivative_coeff, geo, der, sb, st, density)
     FLOAT,               intent(inout) :: force_vdw(:,:)
