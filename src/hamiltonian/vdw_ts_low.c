@@ -512,13 +512,13 @@ void vdw_calculate (const int natoms, const double dd, const double sr, const in
       double dffdvra = dffdr0*dr0dvra;
       
       // Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
-      double deabdvra = -dffdvra*c6abeff/rr6 - ff*volume_ratio[ib]*c6abfree/rr6;
+      double deabdvra = dffdvra*c6abeff/rr6 + ff*volume_ratio[ib]*c6abfree/rr6;
       
       force[3*ia + 0] += -deabdrab*(coordinates[3*ia + 0] - coordinates[3*ib + 0])/rr;
       force[3*ia + 1] += -deabdrab*(coordinates[3*ia + 1] - coordinates[3*ib + 1])/rr;
       force[3*ia + 2] += -deabdrab*(coordinates[3*ia + 2] - coordinates[3*ib + 2])/rr;
       
-      derivative_coeff[ia] += deabdvra;
+      derivative_coeff[ia] += deabdvra; 
       
       // Print information controls.
       //printf("Distance between atoms %i and %i = %f.\n", ia+1, ib+1, rr);
