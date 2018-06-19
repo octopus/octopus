@@ -2398,8 +2398,10 @@ contains
     end if
 
     !We only need the occupied GS states
-    do ist = 1, gs_st%nst
-      if(st%occ(ist, ik)>M_EPSILON) gs_nst = ist
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ist = 1, gs_st%nst
+        if(st%occ(ist, ik)>M_EPSILON) gs_nst = ist
+      end do
     end do
 
     ! this is required if st%X(psi) is used
