@@ -584,6 +584,7 @@ contains
     ierr = 0
 
     if (restart_skip(restart)) then
+      call profiling_out(prof)
       POP_SUB(mesh_partition_dump)
       return
     end if
