@@ -206,7 +206,7 @@ contains
 
     energy=M_ZERO
     force(1:sb%dim, 1:geo%natoms) = M_ZERO
-
+    this%derivative_coeff(1:geo%natoms) = M_ZERO
     call hirshfeld_init(hirshfeld, der%mesh, geo, st)
 
     do iatom = 1, geo%natoms
@@ -259,22 +259,22 @@ contains
             !Calculate the derivative of the damping function with respect to the distance between atoms A and B.
             dffdrab = ( this%VDW_dd_parameter/( this%VDW_sr_parameter*r0ab(iatom,jatom)))*dee
             !Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
-            dffdr0 = - this%VDW_dd_parameter*rr/( this%VDW_sr_parameter*r0ab(iatom,jatom)**2)*dee
+            dffdr0 =  - this%VDW_dd_parameter*rr/( this%VDW_sr_parameter*r0ab(iatom,jatom)**2)*dee
 
             energy = energy -M_HALF*ff*this%c6ab(iatom,jatom)/rr6
 
             ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
-            deabdrab = this%c6ab(iatom,jatom)*(this%c6ab(iatom,jatom) + CNST(6.0)*ff/rr)/rr6;
+            deabdrab = this%c6ab(iatom,jatom)*(this%VDW_dd_parameter/(this%VDW_sr_parameter*r0ab(iatom,jatom))*dee + CNST(6.0)*ff/rr)/rr6;
       
             ! Derivative of the damping function with respecto to the volume ratio of atom A.
-            dffdvra = dffdr0*dr0dvra(iatom);
+            dffdvra = dffdr0*dr0dvra(iatom); ! Ces termes sont bon
 
             ! Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
-            deabdvra = (-dffdvra*this%c6ab(iatom,jatom) - ff*vol_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6
-              
-            force(1:sb%dim,iatom)= force(1:sb%dim,iatom) - M_HALF*deabdrab*(geo%atom(iatom)%x(sb%dim) -x_j(1:sb%dim) )/rr; 
-            !this%derivative_coeff(iatom) = this%derivative_coeff(iatom) + deabdvra;
-            this%derivative_coeff(iatom) = this%derivative_coeff(iatom) + ff*vol_ratio(jatom)*this%c6abfree(ispecies, jspecies)/rr6;
+            deabdvra = (dffdvra*this%c6ab(iatom,jatom) + ff*vol_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6 
+               
+            force(1:sb%dim,iatom)= force(1:sb%dim,iatom) - M_HALF*deabdrab*(geo%atom(iatom)%x(1:sb%dim) -x_j(1:sb%dim))/rr; 
+
+            this%derivative_coeff(iatom) = this%derivative_coeff(iatom) + deabdvra;
 
           end do
         end do
@@ -304,7 +304,7 @@ contains
     potential = M_ZERO
     do iatom = 1, geo%natoms
       call hirshfeld_density_derivative(hirshfeld, iatom, dvadens)
-      potential(1:der%mesh%np) = potential(1:der%mesh%np) + this%derivative_coeff(iatom)*dvadens(1:der%mesh%np)
+      potential(1:der%mesh%np) = potential(1:der%mesh%np) - this%derivative_coeff(iatom)*dvadens(1:der%mesh%np) 
     end do
 
     if(debug%info) then
@@ -337,9 +337,10 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_force_calculate(derivative_coeff, geo, der, sb, st, density)
+  subroutine vdw_ts_force_calculate(force_vdw, derivative_coeff, geo, der, sb, st, density)
+    FLOAT,               intent(inout) :: force_vdw(:,:)
     FLOAT,               intent(in)    :: derivative_coeff(:)
-    type(geometry_t),    intent(inout) :: geo
+    type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
     type(simul_box_t),   intent(in)    :: sb
     type(states_t),      intent(in)    :: st
@@ -355,12 +356,26 @@ contains
 
     call hirshfeld_init(hirshfeld, der%mesh, geo, st)
 
+     !if(mpi_grp_is_root(mpi_world)) then
+     !  do iatom = 1, geo%natoms
+     !    print *,'i initial force', iatom, force_vdw(1:sb%dim,iatom)
+     !  end do
+     !end if
+
     do iatom = 1, geo%natoms
       do jatom = 1, geo%natoms
         call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
-        geo%atom(jatom)%f_vdw(1:sb%dim) = geo%atom(jatom)%f_vdw(1:sb%dim) + derivative_coeff(iatom)*dvadrr(1:sb%dim)  ! geo%atom(jatom)%f_vdw(1:sb%dim) = sum_i coeff_i * dvadrr_ij
+        !print *,'i,j, extra F_ij', jatom, iatom, derivative_coeff(iatom)*dvadrr(1:sb%dim)
+        force_vdw(1:sb%dim,jatom)= force_vdw(1:sb%dim,jatom) + derivative_coeff(iatom)*dvadrr(1:sb%dim)  ! geo%atom(jatom)%f_vdw(1:sb%dim) = sum_i coeff_i * dvadrr_ij
       end do
     end do
+
+     !if(mpi_grp_is_root(mpi_world)) then
+     !  do iatom = 1, geo%natoms
+     !    print *,'i with extra f', iatom, force_vdw(1:sb%dim,iatom)
+     !  end do
+     !end if
+
 
     call hirshfeld_end(hirshfeld)
 
@@ -385,6 +400,7 @@ contains
        call io_mkdir(dir)
        iunit = io_open(trim(dir) // "/" // trim(fname), action='write')  
         write(iunit, '(a)') '#Atom1 #Atom2 #C6_{12}^{eff}'
+
 
        do iatom = 1, geo%natoms
          do jatom = 1, geo%natoms

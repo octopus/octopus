@@ -295,14 +295,15 @@ contains
     end do
 
     ! the ion-ion and vdw terms are already calculated
+
+    ! If VDW TS is used, an extra term for the force must be computed
+    if (allocated(hm%derivative_coeff)) call vdw_ts_force_calculate(hm%ep%vdw_forces, hm%derivative_coeff, geo, gr%der, gr%sb, st, st%rho)
+
     do iatom = 1, geo%natoms
       geo%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom) + hm%ep%vdw_forces(1:gr%sb%dim, iatom)
       geo%atom(iatom)%f_ii(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
       geo%atom(iatom)%f_vdw(1:gr%sb%dim) = hm%ep%vdw_forces(1:gr%sb%dim, iatom)
     end do
-
-    ! If VDW TS is used, an extra term for the force must be computed
-    if (allocated(hm%derivative_coeff)) call vdw_ts_force_calculate(hm%derivative_coeff, geo, gr%der, gr%sb, st, st%rho)
 
     if(present(t)) then
       call epot_global_force(hm%ep, geo, time, global_force)
