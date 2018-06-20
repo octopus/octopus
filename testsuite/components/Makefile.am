@@ -65,6 +65,8 @@ dist_share_DATA =                                  \
 	18-interpolation.03-3d.inp                 \
 	18-interpolation.test                      \
 	19-hgh_soc.01-3d.inp                       \
-        19-hgh_soc.test
+        19-hgh_soc.test                            \
+	20-dft_u.01-NiO.inp                        \
+	20-dft_u.test
 
 CLEANFILES = *~ *.bak

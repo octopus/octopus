@@ -490,7 +490,7 @@ subroutine X(calc_properties_linear)()
       
         call X(forces_born_charges)(sys%gr, sys%geo, hm%ep, sys%st, &
           lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, em_vars%nsigma, ifactor), &
-          Born_charges = em_vars%Born_charges(ifactor))
+          Born_charges = em_vars%Born_charges(ifactor), lda_u_level= hm%lda_u_level)
       end if
 
       if(em_vars%calc_magnetooptics) then

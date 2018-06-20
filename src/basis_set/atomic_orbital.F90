@@ -54,10 +54,11 @@ module atomic_orbital_oct_m
 contains
 
   ! ---------------------------------------------------------
-  FLOAT function atomic_orbital_get_radius(geo, mesh, ia, iorb, ispin, threshold) result(radius)
+  FLOAT function atomic_orbital_get_radius(geo, mesh, ia, iorb, ispin, truncation, threshold) result(radius)
     type(geometry_t), target, intent(in)   :: geo
     type(mesh_t),             intent(in)   :: mesh
     integer,                  intent(in)   :: ia, iorb, ispin
+    integer,                  intent(in)   :: truncation
     FLOAT,                    intent(in)   :: threshold
 
     type(species_t), pointer :: spec
@@ -68,7 +69,27 @@ contains
     spec => geo%atom(ia)%species
     call species_iwf_ilm(spec, iorb, ispin, ii, ll, mm)
 
-    radius = species_get_iwf_radius(spec, ii, ispin, threshold)
+    if(truncation == OPTION__AOTRUNCATION__AO_FULL) then
+      radius = species_get_iwf_radius(spec, ii, ispin, threshold)
+    else
+      radius = species_get_iwf_radius(spec, ii, ispin)
+
+      if(truncation == OPTION__AOTRUNCATION__AO_BOX) then
+        ! if the orbital is larger than the size of the box, we restrict it to this size, 
+        ! otherwise the orbital will overlap more than one time with the simulation box.
+        ! This would induces phase problem if the complete mesh is used instead of the sphere
+        radius = min(radius, minval(mesh%sb%lsize(1:mesh%sb%dim)-mesh%spacing(1:mesh%sb%dim)*CNST(1.01)))
+      else
+        !If asked, we truncate the orbital to the radius on the projector spheres 
+        !of the NL part of the pseudopotential.
+        !This is a way to garanty no overlap between orbitals of different atoms.
+        if(species_is_ps(spec)) &
+          radius = min(radius,species_get_ps_radius(spec))
+        end if
+
+      end if
+      ! make sure that if the spacing is too large, the orbitals fit in a few points at least
+      radius = max(radius, CNST(2.0)*maxval(mesh%spacing(1:mesh%sb%dim)))
 
     POP_SUB(atomic_orbital_get_radius)
   end function atomic_orbital_get_radius

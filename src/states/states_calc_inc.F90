@@ -647,7 +647,7 @@ FLOAT function X(states_residue)(mesh, dim, hf, ee, ff) result(rr)
 
   call profiling_in(prof, "RESIDUE")
 
-  SAFE_ALLOCATE(res(1:mesh%np_part, 1:dim))
+  SAFE_ALLOCATE(res(1:mesh%np, 1:dim))
 
   forall (idim = 1:dim, ip = 1:mesh%np) res(ip, idim) = hf(ip, idim) - ee*ff(ip, idim)
 
@@ -1102,6 +1102,9 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
     end do
 
     call profiling_count_operations((R_ADD + R_MUL)*st%nst*(st%nst - CNST(1.0))*mesh%np)
+
+    SAFE_DEALLOCATE_A(psinew)
+    SAFE_DEALLOCATE_A(psicopy)
 
   else
 

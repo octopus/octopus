@@ -1009,6 +1009,7 @@ contains
     SAFE_ALLOCATE(mesh%vol_pp(1:np))
 
     forall(ip = 1:np) mesh%vol_pp(ip) = product(mesh%spacing(1:sb%dim))
+
     jj(sb%dim + 1:MAX_DIM) = 0
 
     if(mesh%parallel_in_domains) then
@@ -1163,6 +1164,8 @@ contains
     else
       mesh%volume_element = mesh%vol_pp(1)
     end if
+
+    mesh%surface_element(1:sb%dim) = sb%surface_element(1:sb%dim)
 
     POP_SUB(mesh_init_stage_3.mesh_get_vol_pp)
 

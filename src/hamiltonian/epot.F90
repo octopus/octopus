@@ -738,16 +738,16 @@ contains
       SAFE_ALLOCATE(tmpdensity(1:gr%mesh%np))
       call symmetrizer_init(symmetrizer, gr%mesh)
 
-      call dsymmetrizer_apply(symmetrizer, field = vpsl, symmfield = tmpdensity)
+      call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field = vpsl, symmfield = tmpdensity)
       vpsl(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
 
       if(associated(st%rho_core)) then
-        call dsymmetrizer_apply(symmetrizer, field = st%rho_core, symmfield = tmpdensity)
+        call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field = st%rho_core, symmfield = tmpdensity)
         st%rho_core(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
       end if
 
       if(ep%have_density) then
-        call dsymmetrizer_apply(symmetrizer, field = density, symmfield = tmpdensity)
+        call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field = density, symmfield = tmpdensity)
         density(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
       end if
 
