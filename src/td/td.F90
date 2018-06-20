@@ -374,8 +374,6 @@ contains
     geo => sys%geo
     st  => sys%st
 
-    if(simul_box_is_periodic(gr%mesh%sb)) call messages_experimental('Time propagation for periodic systems')
-
     if(ion_dynamics_ions_move(td%ions) .and. hm%lda_u_level /= DFT_U_NONE ) call messages_experimental("DFT+U with MoveIons=yes") 
 
     call td_init(td, sys, hm)
