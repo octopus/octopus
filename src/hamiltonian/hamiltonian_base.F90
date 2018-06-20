@@ -22,6 +22,7 @@ module hamiltonian_base_oct_m
   use accel_oct_m
   use batch_oct_m
   use batch_ops_oct_m
+  use boundaries_oct_m
   use blas_oct_m
   use comm_oct_m
   use derivatives_oct_m
@@ -82,6 +83,8 @@ module hamiltonian_base_oct_m
     hamiltonian_base_update,                   &
     dhamiltonian_base_phase,                   &
     zhamiltonian_base_phase,                   &
+    dhamiltonian_base_phase_correction,        &
+    zhamiltonian_base_phase_correction,        &
     dhamiltonian_base_nlocal_force,            &
     zhamiltonian_base_nlocal_force,            &
     projection_t

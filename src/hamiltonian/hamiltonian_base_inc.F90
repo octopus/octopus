@@ -358,6 +358,134 @@ end subroutine X(hamiltonian_base_phase)
 
 ! ---------------------------------------------------------------------------------------
 
+subroutine X(hamiltonian_base_phase_correction)(this, der, iqn, conjugate, psib, src)
+  type(hamiltonian_base_t),              intent(in)    :: this
+  type(derivatives_t),                   intent(in)    :: der
+  integer,                               intent(in)    :: iqn
+  logical,                               intent(in)    :: conjugate
+  type(batch_t),                 target, intent(inout) :: psib
+  type(batch_t),       optional, target, intent(in)    :: src
+
+  integer :: ip, ii, ip_bnd, ip_inn
+  type(batch_t), pointer :: src_
+  type(profile_t), save :: phase_prof
+  CMPLX :: phase
+  type(accel_kernel_t), save :: ker_phase
+
+  PUSH_SUB(X(hamiltonian_base_phase))
+  call profiling_in(phase_prof, "PBC_PHASE_APPLY_CORR")
+
+  call profiling_count_operations(R_MUL*dble(der%boundaries%nper)*psib%nst_linear)
+
+  src_ => psib
+  if(present(src)) then
+    src_ => src
+  end if
+
+  !TODO: Implement this for domain parallelization
+  ASSERT(.not.der%mesh%parallel_in_domains)
+
+  select case(batch_status(psib))
+  case(BATCH_PACKED)
+
+    if(conjugate) then
+
+      !$omp parallel do private(ip_bnd, ip_inn, phase)
+      do ip = 1, der%boundaries%nper
+        ip_bnd = der%boundaries%per_points(POINT_BOUNDARY, ip)
+        ip_inn = der%boundaries%per_points(POINT_INNER, ip)
+        phase = conjg(this%phase(ip_bnd, iqn))*this%phase(ip_inn, iqn)
+        do ii = 1, psib%nst_linear
+          psib%pack%X(psi)(ii, ip_bnd) = phase*src_%pack%X(psi)(ii, ip_bnd)
+        end do
+      end do
+      !$omp end parallel do
+
+    else
+
+      !$omp parallel do private(ip_bnd, ip_inn, phase)
+      do ip = 1, der%boundaries%nper
+        ip_bnd = der%boundaries%per_points(POINT_BOUNDARY, ip)
+        ip_inn = der%boundaries%per_points(POINT_INNER, ip)
+        phase = this%phase(ip_bnd, iqn)*conjg(this%phase(ip_inn, iqn))
+        do ii = 1, psib%nst_linear
+          psib%pack%X(psi)(ii, ip_bnd) = phase*src_%pack%X(psi)(ii, ip_bnd)
+        end do
+      end do
+      !$omp end parallel do
+
+    end if
+
+    !In this case we need to copy the inner points
+    if(present(src)) then
+      !$omp parallel do
+      do ip = 1, der%mesh%np
+        do ii = 1, psib%nst_linear
+          psib%pack%X(psi)(ii, ip) = src_%pack%X(psi)(ii, ip)
+        end do
+      end do
+     !$omp end parallel do
+    end if
+
+  case(BATCH_NOT_PACKED)
+
+    if(conjugate) then
+
+      !$omp parallel private(ip_bnd, ip_inn, phase)
+      do ii = 1, psib%nst_linear
+        !$omp do
+        do ip = 1, der%boundaries%nper
+          ip_bnd = der%boundaries%per_points(POINT_BOUNDARY, ip)
+          ip_inn = der%boundaries%per_points(POINT_INNER, ip)
+          phase = conjg(this%phase(ip_bnd, iqn))*this%phase(ip_inn, iqn)
+          psib%states_linear(ii)%X(psi)(ip_bnd) = phase*src_%states_linear(ii)%X(psi)(ip_bnd)
+        end do
+        !$omp end do nowait
+      end do
+      !$omp end parallel
+
+    else
+      !$omp parallel private(ip_bnd, ip_inn, phase)
+      do ii = 1, psib%nst_linear
+        !$omp do
+        do ip = 1, der%boundaries%nper
+          ip_bnd = der%boundaries%per_points(POINT_BOUNDARY, ip)
+          ip_inn = der%boundaries%per_points(POINT_INNER, ip)
+          phase = this%phase(ip_bnd, iqn)*conjg(this%phase(ip_inn, iqn))
+          psib%states_linear(ii)%X(psi)(ip_bnd) = phase*src_%states_linear(ii)%X(psi)(ip_bnd)
+        end do
+        !$omp end do nowait
+      end do
+      !$omp end parallel
+
+    end if
+
+    !In this case we need to copy the inner points
+    if(present(src)) then
+      !$omp parallel 
+      do ii = 1, psib%nst_linear
+        !$omp do
+        do ip = 1, der%mesh%np
+          psib%states_linear(ii)%X(psi)(ip) = src_%states_linear(ii)%X(psi)(ip)
+        end do
+        !$omp end do nowait
+      end do
+      !$omp end parallel
+    end if
+
+  case(BATCH_CL_PACKED)
+    call messages_not_implemented("hamiltonian_base_phase_correction with OpenCL")
+  end select
+
+  call batch_pack_was_modified(psib)
+
+  call profiling_out(phase_prof)
+  POP_SUB(X(hamiltonian_base_phase_correction))
+end subroutine X(hamiltonian_base_phase_correction)
+
+
+! ---------------------------------------------------------------------------------------
+
 subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
   type(hamiltonian_base_t),    intent(in)    :: this
   type(derivatives_t),         intent(in)    :: der
