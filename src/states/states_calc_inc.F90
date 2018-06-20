@@ -1103,6 +1103,9 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
 
     call profiling_count_operations((R_ADD + R_MUL)*st%nst*(st%nst - CNST(1.0))*mesh%np)
 
+    SAFE_DEALLOCATE_A(psinew)
+    SAFE_DEALLOCATE_A(psicopy)
+
   else
 
     if(st%d%dim > 1) call messages_not_implemented('Opencl states_rotate for spinors')

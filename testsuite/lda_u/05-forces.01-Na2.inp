@@ -19,7 +19,6 @@ FromScratch = yes
 
 FilterPotentials = filter_none
 
-ParDomains = no
 MixField = density
 
 DFTULevel = dft_u_empirical

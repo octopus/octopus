@@ -526,6 +526,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
   PUSH_SUB(X(compute_coulomb_integrals))
 
   ASSERT(.not. mesh%parallel_in_domains)
+  if(mesh%parallel_in_domains) call messages_not_implemented("Coulomb integrals parallel in domains")
   
   SAFE_ALLOCATE(nn(1:this%max_np))
   SAFE_ALLOCATE(vv(1:this%max_np))
@@ -761,6 +762,8 @@ end subroutine X(compute_coulomb_integrals)
            end do
          end do
        end if
+ 
+      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, dot) 
  
        do im = 1, os%norbs
          ! sum_mp Vmmp <phi mp|r| psi >

@@ -296,7 +296,6 @@ contains
     if(writ%out(OUT_POPULATIONS)%write) call messages_experimental('TDOutput = populations')
     if(writ%out(OUT_PROJ)%write) call messages_experimental('TDOutput = td_occup')
     if(writ%out(OUT_ION_CH)%write) call messages_experimental('TDOutput = ionization_channels')
-    if(writ%out(OUT_TOTAL_CURRENT)%write) call messages_experimental('TDOutput = total_current')
     if(writ%out(OUT_PARTIAL_CHARGES)%write) call messages_experimental('TDOutput = partial_charges')
     if(writ%out(OUT_KP_PROJ)%write) call messages_experimental('TDOutput = td_kpoint_occup')
     if(writ%out(OUT_FLOQUET)%write) call messages_experimental('TDOutput = td_floquet')

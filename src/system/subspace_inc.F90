@@ -494,6 +494,9 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
         c = hmss(1, 1), ldc = ubound(hmss, dim = 1))
     end do
 
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(hpsi)
+
   end if
   
   call profiling_count_operations((R_ADD + R_MUL)*st%nst*(st%nst - CNST(1.0))*der%mesh%np)

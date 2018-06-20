@@ -159,6 +159,8 @@ contains
 
   call distributed_nullify(this%orbs_dist, 0)
 
+  call orbitalbasis_nullify(this%basis)
+
   POP_SUB(lda_u_nullify)
 
  end subroutine lda_u_nullify
@@ -178,7 +180,7 @@ contains
   ASSERT(.not. (level == DFT_U_NONE))
 
   call messages_print_stress(stdout, "DFT+U")
-  if(gr%mesh%parallel_in_domains) call messages_not_implemented("dft+u parallel in domains")
+  if(gr%mesh%parallel_in_domains) call messages_experimental("dft+u parallel in domains")
   this%level = level
   
   call lda_u_write_info(this, stdout)
