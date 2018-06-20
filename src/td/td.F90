@@ -407,7 +407,7 @@ contains
 
       ! initialize the vector field and update the hamiltonian
       call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb, st)
-      call hamiltonian_update(hm, gr%mesh, time = td%dt*td%iter)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = td%dt*td%iter)
     end if
 
     call init_wfs()
@@ -1110,7 +1110,7 @@ contains
       if (err /= 0) then
         ierr = ierr + 8
       else
-        call hamiltonian_update(hm, gr%mesh, time = td%dt*td%iter)
+        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = td%dt*td%iter)
       end if
     end if
 

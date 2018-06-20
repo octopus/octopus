@@ -79,7 +79,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
     else if(optional_default(set_bc, .true.)) then
       !If we applied the boundary condition, and that there is a phase to be applied, 
       !we apply the phase condition 
-      call X(hamiltonian_base_phase_correction)(hm%hm_base, der, ik, .false., epsib, src = psib)
+      call X(hamiltonian_base_phase_correction)(hm%hm_base, der, ik, epsib, src = psib)
     end if
   end if
 

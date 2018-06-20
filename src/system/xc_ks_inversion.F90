@@ -316,7 +316,7 @@ contains
       aux_hm%vhxc(:,ii) = aux_hm%vxc(:,ii) + aux_hm%vhartree(1:np)
     end do
     
-    call hamiltonian_update(aux_hm, gr%mesh)
+    call hamiltonian_update(aux_hm, gr%mesh, gr%der%boundaries)
     call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
     call density_calc(st, gr, st%rho)
 
@@ -460,7 +460,7 @@ contains
              ".", "rho"//fname, gr%mesh, st%rho(:,1), units_out%length**(-gr%sb%dim), ierr)
       end if
 
-      call hamiltonian_update(aux_hm, gr%mesh)
+      call hamiltonian_update(aux_hm, gr%mesh, gr%der%boundaries)
       call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
       call density_calc(st, gr, st%rho)      
 
@@ -586,7 +586,7 @@ contains
 
     !calculate final density
 
-    call hamiltonian_update(aux_hm, gr%mesh)
+    call hamiltonian_update(aux_hm, gr%mesh, gr%der%boundaries)
     call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
     call density_calc(st, gr, st%rho)
     

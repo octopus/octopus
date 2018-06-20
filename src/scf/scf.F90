@@ -587,7 +587,7 @@ contains
           message(1) = 'Unable to read Vhxc. Vhxc will be calculated from states.'
           call messages_warning(1)
         else
-          call hamiltonian_update(hm, gr%mesh)
+          call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
         end if
       end if
 
@@ -867,7 +867,7 @@ contains
           call mixfield_get_vnew(scf%mixfield, hm%vhxc, hm%Imvhxc)
         end if
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
-        call hamiltonian_update(hm, gr%mesh)
+        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
         
       case(OPTION__MIXFIELD__STATES)
 
