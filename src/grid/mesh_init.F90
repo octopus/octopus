@@ -156,7 +156,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
     end if
   end do
 
-  mesh%idx%ll(:) = mesh%idx%nr(2, :) - mesh%idx%nr(1, :) + 1
+  mesh%idx%ll(1:MAX_DIM) = mesh%idx%nr(2, 1:MAX_DIM) - mesh%idx%nr(1, 1:MAX_DIM) + 1
 
 
   call profiling_out(mesh_init_prof)
