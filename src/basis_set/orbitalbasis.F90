@@ -56,7 +56,7 @@ module orbitalbasis_oct_m
     integer, pointer    :: global2os(:,:)     !> Mapping functions
     integer, pointer    :: os2global(:,:)     
 
-    integer             :: truncation         !> Truncation method for the orbitals
+    integer(8)          :: truncation         !> Truncation method for the orbitals
     FLOAT               :: threshold          !> Threshold for orbital truncation
 
     logical             :: normalize          !> Do we normalize the orbitals 
