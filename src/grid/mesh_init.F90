@@ -196,6 +196,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   ! enlarge mesh for boundary points
   mesh%idx%nr(1, 1:MAX_DIM) = mesh%idx%nr(1, 1:MAX_DIM) - mesh%idx%enlarge(1:MAX_DIM)
   mesh%idx%nr(2, 1:MAX_DIM) = mesh%idx%nr(2, 1:MAX_DIM) + mesh%idx%enlarge(1:MAX_DIM)
+  
   if(mesh%idx%is_hypercube) then
     call hypercube_init(mesh%idx%hypercube, sb%dim, mesh%idx%nr, mesh%idx%enlarge(1))
     mesh%np_part_global = hypercube_number_total_points(mesh%idx%hypercube)
@@ -274,6 +275,10 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
           end if
         else ! the usual way: mark both inner and enlargement points
           if (in_box(ix)) then
+
+            ASSERT(all((/ix, iy, iz/) <=  mesh%idx%nr(2, 1:3) - mesh%idx%enlarge(1:3)))
+            ASSERT(all((/ix, iy, iz/) >=  mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3)))
+            
             mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)
             do is = 1, stencil%size
               if(stencil%center == is) cycle
