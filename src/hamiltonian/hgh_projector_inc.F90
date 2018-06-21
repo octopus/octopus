@@ -110,21 +110,29 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
 
   else
 
-    do sp = 1, n_s, block_size
-      ep = sp - 1 + min(block_size, n_s - sp + 1)
-      size = min(block_size, n_s - sp + 1)
-      do jj = 1, 3
-        do idim = 1, dim
-          if(reltype == 1) then 
+    if(reltype == 1) then
+      do sp = 1, n_s, block_size
+        ep = sp - 1 + min(block_size, n_s - sp + 1)
+        size = min(block_size, n_s - sp + 1)
+        do jj = 1, 3
+          do idim = 1, dim
 #ifdef R_TCOMPLEX
-            uvpsi(idim, jj) = uvpsi(idim, jj) + blas_dot(size, hgh_p%X(p)(sp, jj), 1, psi(sp, idim), 1)*mesh%volume_element
+            uvpsi(idim, jj) = uvpsi(idim, jj) + blas_dot(size, hgh_p%zp(sp, jj), 1, psi(sp, idim), 1)*mesh%volume_element
 #endif
-          else
-            uvpsi(idim, jj) = uvpsi(idim, jj) + sum(psi(sp:ep, idim)*hgh_p%dp(sp:ep, jj))*mesh%volume_element
-          endif
+          end do
         end do
       end do
-    end do
+    else
+      do sp = 1, n_s, block_size
+        ep = sp - 1 + min(block_size, n_s - sp + 1)
+        size = min(block_size, n_s - sp + 1)
+        do jj = 1, 3
+          do idim = 1, dim
+            uvpsi(idim, jj) = uvpsi(idim, jj) + sum(psi(sp:ep, idim)*hgh_p%dp(sp:ep, jj))*mesh%volume_element
+          end do
+        end do
+      end do
+    end if
 
   end if
 
@@ -147,9 +155,18 @@ subroutine X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
   R_TYPE :: weight(3,dim)
   CMPLX  :: zweight(3,dim)
 
+  integer :: block_size, sp, ep, size
   type(profile_t), save :: prof
 
   call profiling_in(prof, "HGH_PROJECT_KET")
+
+  ! This routine uses blocking to optimize cache usage. One block of
+  ! |phi> is loaded in cache L1 and then then we calculate the dot
+  ! product of it with the corresponding blocks of |psi_k>, next we
+  ! load another block and do the same. This way we only have to load
+  ! |psi> from the L2 or memory.
+  block_size = hardware%X(block_size)
+
 
   do mm = -ll,ll
 
@@ -192,27 +209,34 @@ subroutine X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
         end do
       end do
 
-      !We now apply the projectors
-      do idim = 1, dim
-        do ii = 1, 3
-          !If we have SOC, we can only have complex wfns 
+      do sp = 1, n_s, block_size
+        size = min(block_size, n_s - sp + 1) 
+        !We now apply the projectors
+        do idim = 1, dim
+          do ii = 1, 3
+            !If we have SOC, we can only have complex wfns 
 #ifdef R_TCOMPLEX
-          call blas_axpy(n_s, (M_HALF*zweight(ii,idim)+weight(ii,idim)), hgh_p(mm)%zp(1, ii), 1, ppsi(1, idim), 1)
+            call blas_axpy(size, (M_HALF*zweight(ii,idim)+weight(ii,idim)), hgh_p(mm)%zp(sp, ii), 1, ppsi(sp, idim), 1)
 #endif 
+          end do
         end do
       end do
 
     else
 
-      !We now apply the projectors
-      do idim = 1, dim
-        do ii = 1, 3
-         !In case of complex wfns, we cannot use blas
+      do sp = 1, n_s, block_size
+        size = min(block_size, n_s - sp + 1)
+        ep = sp -1 + size
+        !We now apply the projectors
+        do idim = 1, dim
+          do ii = 1, 3
+           !In case of complex wfns, we cannot use blas
 #ifdef R_TCOMPLEX
-          ppsi(1:n_s, idim) = ppsi(1:n_s, idim) + weight(ii,idim)*hgh_p(mm)%dp(1:n_s, ii)
+            ppsi(sp:ep, idim) = ppsi(sp:ep, idim) + weight(ii,idim)*hgh_p(mm)%dp(sp:ep, ii)
 #else
-          call blas_axpy(n_s, weight(ii,idim), hgh_p(mm)%dp(1, ii), 1, ppsi(1, idim), 1)
+            call blas_axpy(size, weight(ii,idim), hgh_p(mm)%dp(sp, ii), 1, ppsi(sp, idim), 1)
 #endif
+          end do
         end do
       end do
 
