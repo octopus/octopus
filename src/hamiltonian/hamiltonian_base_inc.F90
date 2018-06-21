@@ -402,7 +402,7 @@ subroutine X(hamiltonian_base_phase_correction)(this, der, iqn, psib, src)
 
   case(BATCH_NOT_PACKED)
 
-    !$omp parallel private(ip_bnd, ip_inn, phase)
+    !$omp parallel
     do ii = 1, psib%nst_linear
       !$omp do
       do ip =  der%mesh%np+1, der%mesh%np_part

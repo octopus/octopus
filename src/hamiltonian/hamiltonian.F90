@@ -543,8 +543,10 @@ contains
       PUSH_SUB(hamiltonian_init.init_phase)
 
       SAFE_ALLOCATE(hm%hm_base%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
-      if(.not.accel_is_enabled() .and. .not. gr%mesh%parallel_in_domains) &
+      if(.not.accel_is_enabled() .and. .not. gr%mesh%parallel_in_domains) then
         SAFE_ALLOCATE(hm%hm_base%phase_corr(gr%mesh%np+1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
+        hm%hm_base%phase_corr = M_ONE
+      end if
 
       kpoint(1:gr%sb%dim) = M_ZERO
       do ik = hm%d%kpt%start, hm%d%kpt%end
@@ -909,6 +911,13 @@ contains
           SAFE_ALLOCATE(this%hm_base%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, mesh%np_part*this%d%kpt%nlocal)
+          end if
+        end if
+
+        if(.not. allocated(this%hm_base%phase_corr)) then
+          if(.not.accel_is_enabled() .and. .not. mesh%parallel_in_domains) then
+            SAFE_ALLOCATE(this%hm_base%phase_corr(mesh%np+1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
+            this%hm_base%phase_corr = M_ONE
           end if
         end if
 
