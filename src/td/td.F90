@@ -429,7 +429,7 @@ contains
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
-      if(iand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+      if(bitand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
         call forces_calculate(gr, geo, hm, st, td%iter*td%dt, td%dt)
       end if  
     end if

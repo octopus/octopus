@@ -94,15 +94,15 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
   ! is there anything to do ?
   families = XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC
-  if(iand(xcs%family, families) == 0) then
+  if(bitand(xcs%family, families) == 0) then
     POP_SUB(xc_get_vxc)
     call profiling_out(prof)
     return
   end if
 
   do ixc = 1, 2
-    if(functl(ixc)%family /= XC_FAMILY_NONE .and. iand(functl(ixc)%family, XC_FAMILY_OEP) == 0) then
-      ASSERT(iand(functl(ixc)%flags, XC_FLAGS_HAVE_VXC) /= 0)
+    if(functl(ixc)%family /= XC_FAMILY_NONE .and. bitand(functl(ixc)%family, XC_FAMILY_OEP) == 0) then
+      ASSERT(bitand(functl(ixc)%flags, XC_FLAGS_HAVE_VXC) /= 0)
     end if
   end do
 
@@ -119,7 +119,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   ! never initializes l_vsigma in the libxc space/functional loop.
   ! Thus, it must never use l_vsigma!!  libvdwxc adds its own gradient
   ! corrections from the nonlocal part afterwards.
-  libvdwxc = iand(xcs%family, XC_FAMILY_LIBVDWXC) /= 0
+  libvdwxc = bitand(xcs%family, XC_FAMILY_LIBVDWXC) /= 0
 
   !Read the spin channels
   spin_channels = functl(FUNC_X)%spin_channels
@@ -182,7 +182,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
       call profiling_in(prof_libxc, "LIBXC")
 
-      if(calc_energy .and. iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0) then
+      if(calc_energy .and. bitand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0) then
         ! we get the xc energy and potential
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
@@ -303,7 +303,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         ! XXXXX does this work correctly when functionals belong to
         ! different families and only one is mgga?
         call copy_local_to_global(l_dedldens, dedldens, n_block, spin_channels, ip)
-        if(iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0 ) &
+        if(bitand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0 ) &
           call copy_local_to_global(l_dedtau, vtau, n_block, spin_channels, ip)
       end if
 
@@ -820,14 +820,14 @@ end subroutine xc_get_vxc
   pure logical function family_is_gga(family)
     integer, intent(in) :: family
 
-    family_is_gga = iand(family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + &
+    family_is_gga = bitand(family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + &
       XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC) /= 0
   end function  family_is_gga
 
   pure logical function family_is_mgga(family)
     integer, intent(in) :: family
 
-    family_is_mgga = iand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
+    family_is_mgga = bitand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
   end function family_is_mgga
 
   logical function family_is_mgga_with_exc(xcs, ispin)
@@ -851,8 +851,8 @@ end subroutine xc_get_vxc
 
     family_is_mgga_with_exc = .false.
     do ixc = 1, 2
-        if((iand(functl(ixc)%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) &
-           .and. (iand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0 )) family_is_mgga_with_exc = .true.
+        if((bitand(functl(ixc)%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) &
+           .and. (bitand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0 )) family_is_mgga_with_exc = .true.
     end do
 
     POP_SUB(family_is_mgga_with_exc)

@@ -109,7 +109,7 @@ contains
     this%ndim = this%mesh%sb%dim
     ASSERT(this%ndim>0)
     if(this%id>XC_NONE)then
-      if(iand(this%flags,xc_flags_nd(this%ndim))==0)then
+      if(bitand(this%flags,xc_flags_nd(this%ndim))==0)then
         write(unit=message(1), fmt="(a,i1.1,a2)") "Cannot use the specified functional in ", this%ndim, "D."
         call messages_fatal(1)
       end if
@@ -326,7 +326,7 @@ contains
     PUSH_SUB(interface_xc_lda_exc)
 
     exc = 0.0_wp
-    if((this%id>XC_NONE).and.(iand(this%flags, XC_FLAGS_HAVE_EXC)/=0))then
+    if((this%id>XC_NONE).and.(bitand(this%flags, XC_FLAGS_HAVE_EXC)/=0))then
       do ip = 1, this%mesh%np, this%nblock
         nb = min(this%mesh%np-ip+1, this%nblock)
         call interface_xc_block_density(this, nb, density(ip:,:), l_dens)
@@ -350,7 +350,7 @@ contains
     PUSH_SUB(interface_xc_lda_vxc)
 
     vxc = 0.0_wp
-    if((this%id>XC_NONE).and.(iand(this%flags, XC_FLAGS_HAVE_VXC)/=0))then
+    if((this%id>XC_NONE).and.(bitand(this%flags, XC_FLAGS_HAVE_VXC)/=0))then
       do ip = 1, this%mesh%np, this%nblock
         nb = min(this%mesh%np-ip+1, this%nblock)
         call interface_xc_block_density(this, nb, density(ip:,:), l_dens)
@@ -378,8 +378,8 @@ contains
     exc = 0.0_wp
     vxc = 0.0_wp
     if((this%id>XC_NONE)                           &
-      .and.(iand(this%flags,XC_FLAGS_HAVE_EXC)/=0) &
-      .and.(iand(this%flags,XC_FLAGS_HAVE_VXC)/=0))then
+      .and.(bitand(this%flags,XC_FLAGS_HAVE_EXC)/=0) &
+      .and.(bitand(this%flags,XC_FLAGS_HAVE_VXC)/=0))then
       do ip = 1, this%mesh%np, this%nblock
         nb = min(this%mesh%np-ip+1, this%nblock)
         call interface_xc_block_density(this, nb, density(ip:,:), l_dens)
@@ -407,7 +407,7 @@ contains
     PUSH_SUB(interface_xc_block_gga_exc)
 
     exc = 0.0_wp
-    if((this%id>XC_NONE).and.(iand(this%flags, XC_FLAGS_HAVE_EXC)/=0))then
+    if((this%id>XC_NONE).and.(bitand(this%flags, XC_FLAGS_HAVE_EXC)/=0))then
       do ip = 1, this%mesh%np, this%nblock
         nb = min(this%mesh%np-ip+1, this%nblock)
         call interface_xc_block_density(this, nb, density(ip:,:), l_dens)
@@ -436,7 +436,7 @@ contains
     PUSH_SUB(interface_xc_block_gga_vxc)
 
     vxc = 0.0_wp
-    if((this%id>XC_NONE).and.(iand(this%flags, XC_FLAGS_HAVE_VXC)/=0))then
+    if((this%id>XC_NONE).and.(bitand(this%flags, XC_FLAGS_HAVE_VXC)/=0))then
       do ip = 1, this%mesh%np, this%nblock
         nb = min(this%mesh%np-ip+1, this%nblock)
         call interface_xc_block_density(this, nb, density(ip:,:), l_dens)
@@ -470,8 +470,8 @@ contains
     exc = 0.0_wp
     vxc = 0.0_wp
     if((this%id>XC_NONE)                           &
-      .and.(iand(this%flags,XC_FLAGS_HAVE_EXC)/=0) &
-      .and.(iand(this%flags,XC_FLAGS_HAVE_VXC)/=0))then
+      .and.(bitand(this%flags,XC_FLAGS_HAVE_EXC)/=0) &
+      .and.(bitand(this%flags,XC_FLAGS_HAVE_VXC)/=0))then
 
       do ip = 1, this%mesh%np, this%nblock
         nb = min(this%mesh%np-ip+1, this%nblock)

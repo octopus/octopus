@@ -42,7 +42,7 @@ module output_fio_oct_m
   public ::     &
     output_fio
 
-  integer, parameter :: output_format = OPTION__OUTPUTFORMAT__BINARY
+  integer(8), parameter :: output_format = OPTION__OUTPUTFORMAT__BINARY
 
   character(len=*), parameter :: grid_dump_file = "grid"
 

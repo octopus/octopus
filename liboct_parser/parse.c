@@ -34,7 +34,7 @@ extern char ** environ;
 static FILE *fout;
 static int  disable_write;
 
-#define ROUND(x) ((x)<0 ? (int)(x-0.5) : (int)(x+0.5)) 
+#define ROUND(x) ((x)<0 ? (int64_t)(x-0.5) : (int64_t)(x+0.5)) 
 
 void str_trim(char *in)
 {
@@ -257,17 +257,17 @@ static void check_is_numerical(const char * name, const symrec * ptr){
 }
 
 
-int parse_int(const char *name, int def)
+int64_t parse_int(const char *name, int64_t def)
 {
   symrec *ptr;
-  int ret;
+  int64_t ret;
 
   ptr = getsym(name);	
   if(ptr){
     check_is_numerical(name, ptr);
     ret = ROUND(GSL_REAL(ptr->value.c));
     if(!disable_write) {
-      fprintf(fout, "%s = %d\n", name, ret);
+      fprintf(fout, "%s = %ld\n", name, ret);
     }
     if(fabs(GSL_IMAG(ptr->value.c)) > 1e-10) {
        fprintf(stderr, "Parser error: complex value passed for integer variable '%s'.\n", name);
@@ -280,7 +280,7 @@ int parse_int(const char *name, int def)
   }else{
     ret = def;
     if(!disable_write) {
-      fprintf(fout, "%s = %d\t\t# default\n", name, ret);
+      fprintf(fout, "%s = %ld\t\t# default\n", name, ret);
     }
   }
   return ret;
