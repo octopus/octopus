@@ -66,7 +66,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
 
   if(optional_default(set_bc, .true.)) call boundaries_set(der%boundaries, psib)
 
-  if(apply_phase) then
+  if(apply_phase .and. set_phase_) then
     SAFE_ALLOCATE(epsib)
     call batch_copy(psib, epsib)
   else
@@ -168,9 +168,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
     call X(lda_u_apply)(hm%lda_u, hm%d, ik, epsib, hpsib, apply_phase)
   end if  
 
-  if(apply_phase) then
-    if(set_phase_) &
-      call X(hamiltonian_base_phase)(hm%hm_base, der, der%mesh%np, ik, .true., hpsib)
+  if(apply_phase .and. set_phase_) then
+    call X(hamiltonian_base_phase)(hm%hm_base, der, der%mesh%np, ik, .true., hpsib)
     call batch_end(epsib)
     SAFE_DEALLOCATE_P(epsib)
   end if

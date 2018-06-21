@@ -395,10 +395,6 @@ subroutine X(hamiltonian_base_phase_correction)(this, der, iqn, psib, src)
     end do
     !$omp end parallel do
 
-    !In this case we need to copy the inner points
-    if(present(src)) then
-      call lalg_copy(psib%nst_linear,der%mesh%np, src_%pack%X(psi), psib%pack%X(psi))
-    end if
 
   case(BATCH_NOT_PACKED)
 
@@ -412,12 +408,6 @@ subroutine X(hamiltonian_base_phase_correction)(this, der, iqn, psib, src)
     end do
     !$omp end parallel
 
-    !In this case we need to copy the inner points
-    if(present(src)) then
-      do ii = 1, psib%nst_linear
-        call lalg_copy(der%mesh%np, src_%states_linear(ii)%X(psi), psib%states_linear(ii)%X(psi))
-      end do
-    end if
 
   case(BATCH_CL_PACKED)
     call messages_not_implemented("hamiltonian_base_phase_correction with OpenCL")
