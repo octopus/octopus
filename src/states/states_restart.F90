@@ -757,7 +757,7 @@ contains
           do idim = 1, st%d%dim
             if(filled(idim, ist, ik)) cycle
 
-            call states_generate_random(st, gr%mesh, ist, ist, ik, ik)
+            call states_generate_random(st, gr%mesh, gr%sb, ist, ist, ik, ik)
           end do
         end do
       end do

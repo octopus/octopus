@@ -161,7 +161,7 @@ contains
       
       ! initialize auxiliary random wavefunctions
       call states_allocate_wfns(ks_inv%aux_st, gr%mesh)
-      call states_generate_random(ks_inv%aux_st, gr%mesh)      
+      call states_generate_random(ks_inv%aux_st, gr%mesh, gr%sb)      
 
       ! initialize densities, hamiltonian and eigensolver
       call states_densities_init(ks_inv%aux_st, gr, geo)
