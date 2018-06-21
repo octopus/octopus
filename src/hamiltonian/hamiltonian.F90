@@ -190,7 +190,10 @@ module hamiltonian_oct_m
 
     logical :: time_zero
 
-    FLOAT, allocatable :: derivative_coeff(:)  !<needed while using vdw TS 
+    !> For VDW TS
+    FLOAT, allocatable :: vdw_ts_r0free(:)
+    FLOAT, allocatable :: vdw_ts_c6abfree(:,:)
+ 
   end type hamiltonian_t
 
   integer, public, parameter :: &
@@ -588,8 +591,9 @@ contains
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
      
     ! If vdw TS is used
-    if (allocated(hm%derivative_coeff)) then
-      SAFE_DEALLOCATE_A(hm%derivative_coeff) 
+    if (allocated(hm%vdw_ts_r0free)) then
+      SAFE_DEALLOCATE_A(hm%vdw_ts_r0free)
+      SAFE_DEALLOCATE_A(hm%vdw_ts_c6abfree)
     end if
 
     POP_SUB(hamiltonian_end)
