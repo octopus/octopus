@@ -1649,7 +1649,7 @@ contains
 
     PUSH_SUB(states_generate_random)
  
-    if(st%randomization == PAR_INDEPENDENT) then
+    if(st%randomization == PAR_DEPENDENT) then
       ist_start = optional_default(ist_start_, st%st_start)
       ist_end = optional_default(ist_end_, st%st_end)
       ikpt_start = optional_default(ikpt_start_, st%d%kpt%start)
