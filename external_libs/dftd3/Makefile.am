@@ -27,8 +27,7 @@ libdftd3_a_SOURCES =            \
 	common.f90              \
 	core.f90                \
 	pars.F90                \
-	sizes.f90               \
-	interface.f90
+	sizes.f90
 
 dist_dftd3_DATA =               \
 	pars.dat
