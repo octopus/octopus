@@ -1151,7 +1151,13 @@ contains
     case(CYLINDER)
       do ip = 1, npoints
         rr = sqrt(sum(xx(2:sb%dim, ip)**2))
-        in_box(ip) = (rr <= sb%rsize + DELTA .and. abs(xx(1, ip)) <= sb%xsize + DELTA)
+        in_box(ip) = rr <= sb%rsize + DELTA
+        if(sb%periodic_dim >= 1) then
+          in_box(ip) = in_box(ip) .and. xx(1, ip) >= -sb%xsize - DELTA
+          in_box(ip) = in_box(ip) .and. xx(1, ip) <=  sb%xsize - DELTA
+        else
+          in_box(ip) = in_box(ip) .and. abs(xx(1, ip)) <= sb%xsize + DELTA
+        end if
       end do
 
     case(MINIMUM)
