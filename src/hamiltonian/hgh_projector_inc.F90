@@ -152,8 +152,8 @@ subroutine X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
   R_TYPE,                intent(inout) :: ppsi(:, :)
 
   integer :: n_s, ii, jj, idim, mm
-  R_TYPE :: weight(3,dim)
-  CMPLX  :: zweight(3,dim)
+  R_TYPE :: weight(1:3,1:dim, -ll:ll)
+  CMPLX  :: zweight(1:3,1:dim, -ll:ll)
 
   integer :: block_size, sp, ep, size
   type(profile_t), save :: prof
@@ -167,19 +167,17 @@ subroutine X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
   ! |psi> from the L2 or memory.
   block_size = hardware%X(block_size)
 
+  n_s = hgh_p(0)%n_s
 
   do mm = -ll,ll
-
-    n_s = hgh_p(mm)%n_s
-
-    weight(1:3, 1:dim) = R_TOTYPE(M_ZERO)
+    weight(1:3, 1:dim, mm) = R_TOTYPE(M_ZERO)
 
     !We first compute for each value of ii and idim the weight of the projector hgh_p%p(1:n_s, ii)
     !Doing that we need to only apply once the each projector
     do idim = 1, dim
       do ii = 1, 3
         do jj = 1, 3
-          weight(ii,idim) = weight(ii,idim) + hgh_p(mm)%h(ii, jj)*uvpsi(idim, jj, mm)
+          weight(ii,idim,mm) = weight(ii,idim,mm) + hgh_p(mm)%h(ii, jj)*uvpsi(idim, jj, mm)
         end do
       end do
     end do
@@ -188,61 +186,66 @@ subroutine X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
 
       !We compute for each value of ii, kk and idim the weight of the projector hgh_p%p(1:n_s, ii)
       !Doing that we need to only apply once the each projector 
-      zweight(1:3,1:dim) = M_z0
+      zweight(1:3,1:dim,mm) = M_z0
       
       do ii = 1, 3
         do jj = 1, 3
 
-          zweight(ii,1) =  zweight(ii,1) + mm*hgh_p(mm)%k(ii, jj)*uvpsi(1, jj, mm)
-          zweight(ii,2) =  zweight(ii,2) - mm*hgh_p(mm)%k(ii, jj)*uvpsi(2, jj, mm)
+          zweight(ii,1,mm) =  zweight(ii,1,mm) + mm*hgh_p(mm)%k(ii, jj)*uvpsi(1, jj, mm)
+          zweight(ii,2,mm) =  zweight(ii,2,mm) - mm*hgh_p(mm)%k(ii, jj)*uvpsi(2, jj, mm)
 
           if(mm < ll) then 
-            zweight(ii,1) =  zweight(ii,1) + hgh_p(mm)%k(ii, jj)*sqrt(real(ll*(ll+1)-mm*(mm+1)))&
+            zweight(ii,1,mm) =  zweight(ii,1,mm) + hgh_p(mm)%k(ii, jj)*sqrt(real(ll*(ll+1)-mm*(mm+1)))&
                * uvpsi(2, jj, mm+1) 
           end if
 
           if(-mm < ll) then
-            zweight(ii,2) =  zweight(ii,2) + hgh_p(mm)%k(ii, jj)*sqrt(real(ll*(ll+1)-mm*(mm-1)))&
+            zweight(ii,2,mm) =  zweight(ii,2,mm) + hgh_p(mm)%k(ii, jj)*sqrt(real(ll*(ll+1)-mm*(mm-1)))&
                * uvpsi(1, jj, mm-1)
           end if
 
         end do
       end do
+    end if
+  end do
 
-      do sp = 1, n_s, block_size
-        size = min(block_size, n_s - sp + 1) 
-        !We now apply the projectors
+
+  if (reltype == 1) then
+    do sp = 1, n_s, block_size
+      size = min(block_size, n_s - sp + 1) 
+      !We now apply the projectors
+      do mm=-ll, ll
         do idim = 1, dim
           do ii = 1, 3
             !If we have SOC, we can only have complex wfns 
 #ifdef R_TCOMPLEX
-            call blas_axpy(size, (M_HALF*zweight(ii,idim)+weight(ii,idim)), hgh_p(mm)%zp(sp, ii), 1, ppsi(sp, idim), 1)
+            call blas_axpy(size, (M_HALF*zweight(ii,idim,mm)+weight(ii,idim,mm)), hgh_p(mm)%zp(sp, ii), 1, ppsi(sp, idim), 1)
 #endif 
           end do
         end do
       end do
+     end do
+  else
 
-    else
-
-      do sp = 1, n_s, block_size
-        size = min(block_size, n_s - sp + 1)
-        ep = sp -1 + size
-        !We now apply the projectors
+    do sp = 1, n_s, block_size
+      size = min(block_size, n_s - sp + 1)
+      ep = sp -1 + size
+      !We now apply the projectors
+      do mm=-ll, ll 
         do idim = 1, dim
           do ii = 1, 3
            !In case of complex wfns, we cannot use blas
 #ifdef R_TCOMPLEX
-            ppsi(sp:ep, idim) = ppsi(sp:ep, idim) + weight(ii,idim)*hgh_p(mm)%dp(sp:ep, ii)
+            ppsi(sp:ep, idim) = ppsi(sp:ep, idim) + weight(ii,idim,mm)*hgh_p(mm)%dp(sp:ep, ii)
 #else
-            call blas_axpy(size, weight(ii,idim), hgh_p(mm)%dp(sp, ii), 1, ppsi(sp, idim), 1)
+            call blas_axpy(size, weight(ii,idim,mm), hgh_p(mm)%dp(sp, ii), 1, ppsi(sp, idim), 1)
 #endif
           end do
         end do
       end do
+    end do
+  end if
 
-    end if
-
-  end do
 
   call profiling_out(prof)  
 
