@@ -1675,25 +1675,25 @@ contains
           if (states_are_real(st)) then
             if(st%randomization == PAR_INDEPENDENT) then
               call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+              if(.not. state_kpt_is_local(st, ist, ik)) cycle
             else
               call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
-              if(.not. state_kpt_is_local(st, ist, ik)) cycle
             end if
             call states_set_state(st, mesh, ist,  ik, dpsi)
           else
             if(st%randomization == PAR_INDEPENDENT) then
               call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+              if(.not. state_kpt_is_local(st, ist, ik)) cycle
             else
               call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
-              if(.not. state_kpt_is_local(st, ist, ik)) cycle
             end if
             call states_set_state(st, mesh, ist,  ik, zpsi)
             if(st%have_left_states) then
               if(st%randomization == PAR_INDEPENDENT) then
                 call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+                if(.not. state_kpt_is_local(st, ist, ik)) cycle
               else
                 call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
-                if(.not. state_kpt_is_local(st, ist, ik)) cycle
               end if
               call states_set_state(st, mesh, ist,  ik, zpsi, left = .true.)
             end if
@@ -1711,9 +1711,9 @@ contains
           do ist = ist_start, ist_end
             if(st%randomization == PAR_INDEPENDENT) then
               call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+              if(.not. state_kpt_is_local(st, ist, ik)) cycle
             else
               call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
-              if(.not. state_kpt_is_local(st, ist, ik)) cycle
             end if
             ! In this case, the spinors are made of a spatial part times a vector [alpha beta]^T in
             ! spin space (i.e., same spatial part for each spin component). So (alpha, beta)
