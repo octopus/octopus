@@ -32,8 +32,9 @@ module hirshfeld_oct_m
   use states_oct_m
   use species_oct_m
   use splines_oct_m
-
-  
+  use mpi_oct_m !for writing
+  use parser_oct_m !for the variable
+ 
   implicit none
 
   private
@@ -275,9 +276,11 @@ contains
     FLOAT,                     intent(in)    :: density(:, :)
     FLOAT,                     intent(out)   :: dposition(:)
 
-    integer :: ip, idir, icell, jcell, isp
-    FLOAT :: atom_dens, atom_der,rri, rrj, tdensity, pos_i(1:MAX_DIM), pos_j(1:MAX_DIM), rmax_i, rmax_j
-    FLOAT, allocatable :: grad(:, :), atom_density(:, :), atom_derivative(:, :, :)
+    integer :: ip, idir, icell, jcell, isp, ipp
+    FLOAT :: atom_dens, atom_der,rri, rrj, tdensity, pos_i(1:MAX_DIM), pos_j(1:MAX_DIM), rmax_i, rmax_j, &
+             VDW_TS_extraterm_i, VDW_TS_extraterm_j
+    FLOAT, allocatable :: grad(:, :), atom_density(:, :), atom_derivative(:, :, :), tt(:), & 
+                          i_contribution(:), j_contribution(:)
     type(periodic_copy_t) :: pp_i, pp_j
     type(ps_t), pointer :: ps_i, ps_j
     type(profile_t), save :: prof, prof2
@@ -285,95 +288,159 @@ contains
 
     PUSH_SUB(hirshfeld_position_derivative)
 
-    call profiling_in(prof, "HIRSHFELD_POSITION_DER")
 
-    SAFE_ALLOCATE(grad(1:this%mesh%np, 1:this%mesh%sb%dim))
-   
-    dposition(1:this%mesh%sb%dim) = CNST(0.0)
-    grad(1:this%mesh%np, 1:this%mesh%sb%dim) = M_ZERO
-    ps_i => species_ps(this%geo%atom(iatom)%species)
-    ps_j => species_ps(this%geo%atom(jatom)%species)
-
-    rmax_i = CNST(0.0)
-    rmax_j = CNST(0.0)
-    do isp = 1, this%st%d%nspin
-      rmax_i = max(rmax_i, spline_cutoff_radius(ps_i%density(isp), ps_i%projectors_sphere_threshold))
-      rmax_j = max(rmax_j, spline_cutoff_radius(ps_j%density_der(isp), ps_j%projectors_sphere_threshold))
-    end do
-
-    call periodic_copy_init(pp_i, this%mesh%sb, this%geo%atom(iatom)%x, rmax_i)
-    call periodic_copy_init(pp_j, this%mesh%sb, this%geo%atom(jatom)%x, rmax_j)
-
-    SAFE_ALLOCATE(atom_density(1:this%mesh%np, 1:this%st%d%nspin))
-    SAFE_ALLOCATE(atom_derivative(1:this%mesh%np, 1:this%st%d%nspin, periodic_copy_num(pp_j)))
-
-    !We evaluate here the derivative to avoid call it N^2 times
-    do jcell = 1, periodic_copy_num(pp_j)
-      atom_derivative(1:this%mesh%np, 1:this%st%d%nspin, jcell) = M_ZERO
-      pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%mesh%sb, jcell)
-          
-      !We get the non periodized density
-      !We need to do it to have the r^3 correctly computed for periodic systems
-      call species_atom_density_derivative_np(this%mesh, this%mesh%sb, this%geo%atom(jatom), &
-                                  pos_j, this%st%d%spin_channels, &
-                                  atom_derivative(1:this%mesh%np, 1:this%st%d%nspin, jcell))
-    end do
-
-    do icell = 1, periodic_copy_num(pp_i)
-      atom_density(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
-      pos_i(1:this%mesh%sb%dim) = periodic_copy_position(pp_i, this%mesh%sb, icell)
-
-      !We get the non periodized density
-      !We need to do it to have the r^3 correctly computed for periodic systems
-      call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), &
-             pos_i, this%st%d%nspin, atom_density)
-
-      call profiling_in(prof2, "HIRSHFELD_POSITION_DER2")
-      do ip = 1, this%mesh%np
-        if(this%total_density(ip)< TOL_HIRSHFELD) cycle
-
-        xxi(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_i(1:this%mesh%sb%dim)
-        rri = sqrt(sum(xxi(1:this%mesh%sb%dim)**2))        
-        tdensity = sum(density(ip, 1:this%st%d%nspin))
-        atom_dens = sum(atom_density(ip, 1:this%st%d%nspin))
-
-        tmp = rri**3*atom_dens*tdensity/this%total_density(ip)**2
-
+    if(mpi_grp_is_root(mpi_world)) then
+      call profiling_in(prof, "HIRSHFELD_POSITION_DER")
+  
+      SAFE_ALLOCATE(grad(1:this%mesh%np, 1:this%mesh%sb%dim))
+      SAFE_ALLOCATE(tt(1:this%mesh%np))
+  
+      dposition(1:this%mesh%sb%dim) = CNST(0.0)
+      grad(1:this%mesh%np, 1:this%mesh%sb%dim) = M_ZERO
+      ps_i => species_ps(this%geo%atom(iatom)%species)
+      ps_j => species_ps(this%geo%atom(jatom)%species)
+  
+      rmax_i = CNST(0.0)
+      rmax_j = CNST(0.0)
+      do isp = 1, this%st%d%nspin
+        rmax_i = max(rmax_i, spline_cutoff_radius(ps_i%density(isp), ps_i%projectors_sphere_threshold))
+        rmax_j = max(rmax_j, spline_cutoff_radius(ps_j%density_der(isp), ps_j%projectors_sphere_threshold))
+      end do
+  
+      !if(mpi_grp_is_root(mpi_world)) then
+      !  print*, 'rmaxi rmaxj', rmax_i, rmax_j
+      !end if
+  
+  
+      !%Variable VDW_TS_extraterm_i
+      !%Type float
+      !%Default 1
+      !%Section Hamiltonian::XC
+      !%Description
+      !% to be converged  
+      !%End
+      call parse_variable('VDW_TS_extraterm_i', CNST(1.0), VDW_TS_extraterm_i)
+  
+      !%Variable VDW_TS_extraterm_j
+      !%Type float
+      !%Default 1
+      !%Section Hamiltonian::XC
+      !%Description
+      !% to be converged                                                                         
+      !%End
+      call parse_variable('VDW_TS_extraterm_j', CNST(1.0), VDW_TS_extraterm_j)
+  
+      call periodic_copy_init(pp_i, this%mesh%sb, this%geo%atom(iatom)%x, VDW_TS_extraterm_i*rmax_i)
+      call periodic_copy_init(pp_j, this%mesh%sb, this%geo%atom(jatom)%x, VDW_TS_extraterm_j*rmax_j) !!!! Devrai etre this%geo%atom(iatom)%x?! Ce qui compte c est la proximite avec l atome i?!
+  
+      SAFE_ALLOCATE(atom_density(1:this%mesh%np, 1:this%st%d%nspin))
+      SAFE_ALLOCATE(atom_derivative(1:this%mesh%np, 1:this%st%d%nspin, 1:periodic_copy_num(pp_j)))
+  
+      SAFE_ALLOCATE(i_contribution(1:periodic_copy_num(pp_i)))
+      SAFE_ALLOCATE(j_contribution(1:periodic_copy_num(pp_j)))
+  
+      !We evaluate here the derivative to avoid call it N^2 times
+      do jcell = 1, periodic_copy_num(pp_j)
+        atom_derivative(1:this%mesh%np, 1:this%st%d%nspin, jcell) = M_ZERO
+        pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%mesh%sb, jcell)
+            
+        !We get the non periodized density
+        !We need to do it to have the r^3 correctly computed for periodic systems
+        call species_atom_density_derivative_np(this%mesh, this%mesh%sb, this%geo%atom(jatom), &
+                                    pos_j, this%st%d%spin_channels, &
+                                    atom_derivative(1:this%mesh%np, 1:this%st%d%nspin, jcell))
+        do ip = 1, this%mesh%np      
+          tt(ip)=abs(sum(atom_derivative(ip, 1:this%st%d%nspin, jcell))) 
+        end do
+        j_contribution(jcell) = sum(tt(1:this%mesh%np))
+      end do
+  
+      if(mpi_grp_is_root(mpi_world)) then
+        print*, 'contribution de la celulle jcell', j_contribution
+      end if
+      
+  
+      do icell = 1, periodic_copy_num(pp_i)
+        atom_density(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
+        pos_i(1:this%mesh%sb%dim) = periodic_copy_position(pp_i, this%mesh%sb, icell)
+  
+        !We get the non periodized density
+        !We need to do it to have the r^3 correctly computed for periodic systems
+        call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), &
+               pos_i, this%st%d%nspin, atom_density)
+  
+  
+        do ip = 1, this%mesh%np
+          tt(ip)=abs(sum(atom_density(ip, 1:this%st%d%nspin)))
+        end do
+        i_contribution(icell) = sum(tt(1:this%mesh%np))
+        if(mpi_grp_is_root(mpi_world)) then
+          print*, 'contribution de la celulle icell', icell, i_contribution(icell)
+        end if
+        if(i_contribution(icell) < 0.00000000001) cycle
+        if(mpi_grp_is_root(mpi_world)) then
+          print*, 'condition passed, icell:', icell
+        end if
+  
+        call profiling_in(prof2, "HIRSHFELD_POSITION_DER2")
+  
+  
         do jcell = 1, periodic_copy_num(pp_j)
-          pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%mesh%sb, jcell)
-          xxj(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim) 
-          rrj = sqrt(sum(xxj(1:this%mesh%sb%dim)**2))
-          atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin, jcell))
-
-          if(rrj > TOL_HIRSHFELD) then
-            do idir = 1, this%mesh%sb%dim
-              grad(ip, idir) = grad(ip, idir) - tmp*atom_der*xxj(idir)/rrj
-            end do
-          end if
-
-          if(iatom == jatom .and. icell == jcell )then
-            !Only if we really have the same atoms
-            if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < TOL_HIRSHFELD)) then
+          
+          if(j_contribution(jcell)< 0.00000000001) cycle
+         
+          !if(mpi_grp_is_root(mpi_world)) then 
+          print*, 'condition passed, icell, jcell:', icell, jcell
+          !end if
+  
+          do ip = 1, this%mesh%np
+            if(this%total_density(ip)< TOL_HIRSHFELD) cycle
+  
+            xxi(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_i(1:this%mesh%sb%dim)
+            rri = sqrt(sum(xxi(1:this%mesh%sb%dim)**2))        
+            tdensity = sum(density(ip, 1:this%st%d%nspin))
+            atom_dens = sum(atom_density(ip, 1:this%st%d%nspin))
+  
+            tmp = rri**3*atom_dens*tdensity/this%total_density(ip)**2
+  
+            pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%mesh%sb, jcell)
+            xxj(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim) 
+            rrj = sqrt(sum(xxj(1:this%mesh%sb%dim)**2))
+            atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin, jcell))
+  
+            if(rrj > TOL_HIRSHFELD) then
               do idir = 1, this%mesh%sb%dim
-                grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
-                                      *tdensity/this%total_density(ip)*xxi(idir)
+                grad(ip, idir) = grad(ip, idir) - tmp*atom_der*xxj(idir)/rrj
               end do
             end if
-          end if
+  
+            if(iatom == jatom .and. icell == jcell )then
+              !Only if we really have the same atoms
+              if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < TOL_HIRSHFELD)) then
+                do idir = 1, this%mesh%sb%dim
+                  grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
+                                        *tdensity/this%total_density(ip)*xxi(idir)
+                end do
+              end if
+            end if
+          end do
+         call profiling_out(prof2)
         end do
-       call profiling_out(prof2)
       end do
-    end do
-
-    do idir = 1, this%mesh%sb%dim
-      dposition(idir) = dmf_integrate(this%mesh, grad(1:this%mesh%np, idir))/this%free_volume(iatom)
-    end do
-
-    SAFE_DEALLOCATE_A(atom_density)
-    SAFE_DEALLOCATE_A(atom_derivative)
-    SAFE_DEALLOCATE_A(grad)
-
-    call profiling_out(prof)
+  
+      do idir = 1, this%mesh%sb%dim
+        dposition(idir) = dmf_integrate(this%mesh, grad(1:this%mesh%np, idir))/this%free_volume(iatom)
+      end do
+  
+      SAFE_DEALLOCATE_A(atom_density)
+      SAFE_DEALLOCATE_A(atom_derivative)
+      SAFE_DEALLOCATE_A(grad)
+      SAFE_DEALLOCATE_A(tt)
+      SAFE_DEALLOCATE_A(j_contribution)
+      SAFE_DEALLOCATE_A(i_contribution)
+  
+      call profiling_out(prof)
+    end if
 
     POP_SUB(hirshfeld_position_derivative)
   end subroutine hirshfeld_position_derivative
