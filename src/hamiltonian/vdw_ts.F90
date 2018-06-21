@@ -462,7 +462,7 @@ contains
             !Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
             dffdr0 =  - VDW_dd_parameter*rr/( VDW_sr_parameter*r0ab(iatom,jatom)**2)*dee
             ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
-            deabdrab = c6ab(iatom,jatom)*(-VDW_dd_parameter/(VDW_sr_parameter*r0ab(iatom,jatom))*dee + CNST(6.0)*ff/rr)/rr6;
+            deabdrab = c6ab(iatom,jatom)*(VDW_dd_parameter/(VDW_sr_parameter*r0ab(iatom,jatom))*dee + CNST(6.0)*ff/rr)/rr6;
             ! Derivative of the damping function with respecto to the volume ratio of atom A.
             dffdvra = dffdr0*dr0dvra(iatom); ! Ces termes sont bon
             ! Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
@@ -488,7 +488,7 @@ contains
           !Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
           dffdr0 =  - VDW_dd_parameter*rr/( VDW_sr_parameter*r0ab(iatom,jatom)**2)*dee
           ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
-          deabdrab = c6ab(iatom,jatom)*(-VDW_dd_parameter/(VDW_sr_parameter*r0ab(iatom,jatom))*dee + CNST(6.0)*ff/rr)/rr6;
+          deabdrab = c6ab(iatom,jatom)*(VDW_dd_parameter/(VDW_sr_parameter*r0ab(iatom,jatom))*dee + CNST(6.0)*ff/rr)/rr6;
           ! Derivative of the damping function with respecto to the volume ratio of atom A.
           dffdvra = dffdr0*dr0dvra(iatom); ! Ces termes sont bon
           ! Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.

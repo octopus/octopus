@@ -503,7 +503,7 @@ void vdw_calculate (const int natoms, const double dd, const double sr, const in
       *energy += -0.5*ff*c6abeff/rr6;
       
       // Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
-      double deabdrab = -dffdrab*c6abeff/rr6 + 6.0*ff*c6abeff/rr7;
+      double deabdrab = dffdrab*c6abeff/rr6 + 6.0*ff*c6abeff/rr7;
       
       // Derivative of the AB van der Waals separation with respect to the volume ratio of atom A.
       double dr0dvra = r0_a/(3.0*pow(volume_ratio[ia], 2.0/3.0));
