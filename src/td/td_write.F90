@@ -2421,7 +2421,11 @@ contains
           Nex_kpt(ikpt) = Nex_kpt(ikpt) - weight * occ(uist, ik) * abs(projections(ist, uist))**2
         end do
       end do
-      Nex_kpt(ikpt) = Nex_kpt(ikpt) + st%qtot*st%d%kweights(ik)
+     if(st%d%ispin == SPIN_POLARIZED) then
+       Nex_kpt(ikpt) = Nex_kpt(ikpt) + st%qtot*M_HALF*st%d%kweights(ik)
+     else
+       Nex_kpt(ikpt) = Nex_kpt(ikpt) + st%qtot*st%d%kweights(ik)
+     end if
     end do
 
 #if defined(HAVE_MPI)        
