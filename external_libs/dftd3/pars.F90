@@ -35,11 +35,12 @@ module dftd3_pars
 
 contains
 
-  subroutine init_pars()
-
+  subroutine init_pars(filename)
+    character(len=*), intent(in) :: filename
+    
     integer :: ii
 
-    open(unit = 77, file = SHARE_DIR//'/dftd3/pars.dat') 
+    open(unit = 77, file = filename)
 
     do ii = 1, 161925, 5
       read(77, *) pars(ii), pars(ii + 1), pars(ii + 2), pars(ii + 3), pars(ii + 4)
