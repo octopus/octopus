@@ -356,7 +356,7 @@ contains
         call density_calc(stphi, gr, stphi%rho)
         call v_ks_calc(ks, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), time = tau)
       else
-        call hamiltonian_update(hm, gr%mesh, time = tau)
+        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = tau)
       end if
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
       call zhamiltonian_apply_all(hm, ks%xc, gr%der, stphi, hst)
@@ -385,7 +385,7 @@ contains
       if( hm%theory_level /= INDEPENDENT_PARTICLES) call oct_exchange_set(hm%oct_exchange, stphi, gr%mesh)
       call prepare_inh()
       call hamiltonian_adjoint(hm)
-      call hamiltonian_update(hm, gr%mesh, time = tau)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = tau)
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
       call zhamiltonian_apply_all(hm, ks%xc, gr%der, stchi, hchi)
       call hamiltonian_not_adjoint(hm)
@@ -543,7 +543,7 @@ contains
     end do
 
     if(oct_exchange_enabled(hm%oct_exchange)) call oct_exchange_prepare(hm%oct_exchange, gr%mesh, zphi, ks%xc)
-    call hamiltonian_update(hm, gr%mesh, time = time-dt)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time-dt)
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
     rhs1 = M_z0
     do ik = kp1, kp2
@@ -596,7 +596,7 @@ contains
         call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
         vpsl1_op = hm%ep%vpsl
       end if
-      call hamiltonian_update(hm, gr%mesh, time = time)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time)
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
       if(.not.oct_exchange_enabled(hm_p%oct_exchange)) then
         if (i==1) then
@@ -801,7 +801,7 @@ contains
         call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt + c(1)*dt)
         vpsl1_op = hm%ep%vpsl
       end if
-      call hamiltonian_update(hm, gr%mesh, time = time - dt + c(1)*dt)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt + c(1)*dt)
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
       vhxc1_op = hm%vhxc
       t_op  = time - dt + c(1) * dt
@@ -838,7 +838,7 @@ contains
         call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt + c(2)*dt)
         vpsl2_op = hm%ep%vpsl
       end if
-      call hamiltonian_update(hm, gr%mesh, time = time - dt + c(2)*dt)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt + c(2)*dt)
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
       vhxc2_op = hm%vhxc
       t_op  = time - dt + c(2) * dt
@@ -1011,7 +1011,7 @@ contains
 
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(1)*dt_op)
+    call hamiltonian_update(hm_p, grid_p%mesh, grid_p%der%boundaries, time = t_op + c(1)*dt_op)
     call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
@@ -1037,7 +1037,7 @@ contains
 
     hm_p%vhxc = vhxc2_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl2_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(2)*dt_op)
+    call hamiltonian_update(hm_p, grid_p%mesh, grid_p%der%boundaries, time = t_op + c(2)*dt_op)
     call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
@@ -1107,7 +1107,7 @@ contains
 
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(1)*dt_op)
+    call hamiltonian_update(hm_p, grid_p%mesh, grid_p%der%boundaries, time = t_op + c(1)*dt_op)
     call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
@@ -1133,7 +1133,7 @@ contains
 
     hm_p%vhxc = vhxc2_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl2_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + c(2)*dt_op)
+    call hamiltonian_update(hm_p, grid_p%mesh, grid_p%der%boundaries, time = t_op + c(2)*dt_op)
     call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
     j = 1
     k = np * (kp2 - kp1 + 1) * (st2 - st1 + 1) * dim + 1
@@ -1196,7 +1196,7 @@ contains
 
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + dt_op)
+    call hamiltonian_update(hm_p, grid_p%mesh, grid_p%der%boundaries, time = t_op + dt_op)
    call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
 
     if(oct_exchange_enabled(hm_p%oct_exchange)) then
@@ -1292,7 +1292,7 @@ contains
 
     hm_p%vhxc = vhxc1_op
     if(move_ions_op) hm_p%ep%vpsl = vpsl1_op
-    call hamiltonian_update(hm_p, grid_p%mesh, time = t_op + dt_op)
+    call hamiltonian_update(hm_p, grid_p%mesh, grid_p%der%boundaries, time = t_op + dt_op)
     call lda_u_update_occ_matrices(hm_p%lda_u, grid_p%mesh, st_p, hm_p%hm_base, hm_p%energy)
 
     if(oct_exchange_enabled(hm_p%oct_exchange)) then

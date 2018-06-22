@@ -103,7 +103,7 @@ contains
         call gauge_field_propagate(hm%ep%gfield, M_HALF*dt,time)
       end if
 
-      call hamiltonian_update(hm, gr%mesh, time = real(zt - zdt/M_z2, REAL_PRECISION), Imtime = aimag(zt - zdt/M_z2  ))
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = real(zt - zdt/M_z2, REAL_PRECISION), Imtime = aimag(zt - zdt/M_z2  ))
       !We update the occupation matrices
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
@@ -138,7 +138,7 @@ contains
         call gauge_field_get_vec_pot_vel(hm%ep%gfield, vecpot_vel)
         call gauge_field_propagate(hm%ep%gfield, M_HALF*dt, time)
       end if
-      call hamiltonian_update(hm, gr%mesh, time = time - M_HALF*dt)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - M_HALF*dt)
       !We update the occupation matrices
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -163,7 +163,7 @@ contains
             time, dt, time+dt/M_TWO, hm%vhxc, hm%imvhxc)
         end if
 
-        call hamiltonian_update(hm, gr%mesh, time = real(zt + zdt/M_z2, REAL_PRECISION), Imtime = aimag(zt + zdt/M_z2  ))
+        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = real(zt + zdt/M_z2, REAL_PRECISION), Imtime = aimag(zt + zdt/M_z2  ))
         !We update the occupation matrices
         call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
@@ -185,7 +185,7 @@ contains
             tr%vksold%Imv_old(:, :, 0:2), time + dt/M_TWO, hm%Imvhxc(:, :))
         end if
 
-        call hamiltonian_update(hm, gr%mesh, time = time + M_HALF*dt)
+        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time + M_HALF*dt)
         !We update the occupation matrices
         call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
@@ -207,7 +207,7 @@ contains
     if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_set_vec_pot(hm%ep%gfield, vecpot)
       call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)
-      call hamiltonian_update(hm, gr%mesh)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     end if
 
     if(.not. hm%cmplxscl%space) then

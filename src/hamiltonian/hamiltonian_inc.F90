@@ -17,7 +17,7 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
+subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, set_phase)
   type(hamiltonian_t),   intent(in)    :: hm
   type(derivatives_t),   intent(in)    :: der
   type(batch_t), target, intent(inout) :: psib
@@ -25,8 +25,9 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
   integer,               intent(in)    :: ik
   integer, optional,     intent(in)    :: terms
   logical, optional,     intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
+  logical, optional,     intent(in)    :: set_phase !< If set to .false. the phase will not be added to the states.
 
-  logical :: apply_phase, pack
+  logical :: apply_phase, pack, set_phase_
   type(batch_t), pointer :: epsib
   type(derivatives_handle_batch_t) :: handle
   integer :: terms_
@@ -39,6 +40,13 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
 
   ! all terms are enabled by default
   terms_ = optional_default(terms, TERM_ALL)
+  set_phase_ = optional_default(set_phase, .true.)
+  !At the moment domain parallelization is not supported for the phase correction
+  !OpenCL is also not supported
+  if(.not.set_phase_) then
+    if(der%mesh%parallel_in_domains) set_phase_ = .true.
+    if(batch_status(psib) == BATCH_CL_PACKED) set_phase_ = .true.
+  end if
 
   ASSERT(batch_is_ok(psib))
   ASSERT(batch_is_ok(hpsib))
@@ -58,7 +66,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
 
   if(optional_default(set_bc, .true.)) call boundaries_set(der%boundaries, psib)
 
-  if(apply_phase) then
+  if(apply_phase .and. set_phase_) then
     SAFE_ALLOCATE(epsib)
     call batch_copy(psib, epsib)
   else
@@ -66,7 +74,13 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
   end if
 
   if(apply_phase) then ! we copy psi to epsi applying the exp(i k.r) phase
-    call X(hamiltonian_base_phase)(hm%hm_base, der, der%mesh%np_part, ik, .false., epsib, src = psib)
+    if(set_phase_) then
+      call X(hamiltonian_base_phase)(hm%hm_base, der, der%mesh%np_part, ik, .false., epsib, src = psib)
+    else if(optional_default(set_bc, .true.)) then
+      !If we applied the boundary condition, and that there is a phase to be applied, 
+      !we apply the phase condition 
+      call X(hamiltonian_base_phase_correction)(hm%hm_base, der, ik, epsib, src = psib)
+    end if
   end if
 
   if(bitand(TERM_KINETIC, terms_) /= 0) then
@@ -154,7 +168,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
     call X(lda_u_apply)(hm%lda_u, hm%d, ik, epsib, hpsib, apply_phase)
   end if  
 
-  if(apply_phase) then
+  if(apply_phase .and. set_phase_) then
     call X(hamiltonian_base_phase)(hm%hm_base, der, der%mesh%np, ik, .true., hpsib)
     call batch_end(epsib)
     SAFE_DEALLOCATE_P(epsib)
@@ -250,7 +264,7 @@ end subroutine X(hamiltonian_external)
 
 ! ---------------------------------------------------------
 
-subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc)
+subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc, set_phase)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist       !< the index of the state
@@ -259,6 +273,7 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc)
   R_TYPE,   target,    intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
   integer,  optional,  intent(in)    :: terms
   logical,  optional,  intent(in)    :: set_bc
+  logical, optional,     intent(in)    :: set_phase
 
   type(batch_t) :: psib, hpsib
 
@@ -269,7 +284,8 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc)
   call batch_init(hpsib, hm%d%dim, 1)
   call batch_add_state(hpsib, ist, hpsi)
 
-  call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, terms = terms, set_bc = set_bc)
+  call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, terms = terms, set_bc = set_bc, &
+                                     set_phase = set_phase)
 
   call batch_end(psib)
   call batch_end(hpsib)
