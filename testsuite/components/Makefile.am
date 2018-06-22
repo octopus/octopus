@@ -38,6 +38,7 @@ dist_share_DATA =                                  \
 	07-cholesky_serial.test                    \
 	07-cholesky_serial.01-real.inp             \
 	07-cholesky_serial.02-complex.inp          \
+	07-cholesky_serial.03-parindep.inp         \
 	08-mgs.test                                \
 	08-mgs.01-real.inp                         \
 	08-mgs.02-complex.inp                      \
