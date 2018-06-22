@@ -26,18 +26,16 @@ libdftd3_a_SOURCES =            \
 	api.f90                 \
 	common.f90              \
 	core.f90                \
-	pars.F90                \
+	pars.f90                \
 	sizes.f90
 
 dist_dftd3_DATA =               \
 	pars.dat
 
-AM_FCFLAGS = -DSHARE_DIR='"$(pkgdatadir)"'
-
 interface.o: interface.f90 api.o
 api.o: api.f90 sizes.o core.o common.o
 core.o: core.f90 pars.o sizes.o common.o
-pars.o: pars.F90 common.o sizes.o
+pars.o: pars.f90 common.o sizes.o
 
 #the datafile needs to be copied to share/ in the compilation directory for make check to work
 check:
