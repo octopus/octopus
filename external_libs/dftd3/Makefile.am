@@ -39,10 +39,12 @@ api.o: api.f90 sizes.o core.o common.o
 core.o: core.f90 pars.o sizes.o common.o
 pars.o: pars.F90 common.o sizes.o
 
+#the datafile needs to be copied to share/ in the compilation directory for make check to work
 check:
+	mkdir -p $(top_builddir)/share/dftd3/
 	for f in $(dist_dftd3_DATA); do \
-	  if [ ! -e $$f -o $$f -ot $(srcdir)/$$f ]; then \
-	    cp $(srcdir)/$$f $$f; \
+	  if [ ! -e $(top_builddir)/share/dftd3/$$f -o $(top_builddir)/share/dftd3/$$f -ot $(srcdir)/$$f ]; then \
+	    cp $(srcdir)/$$f $(top_builddir)/share/dftd3/$$f; \
 	  fi \
 	done
 
