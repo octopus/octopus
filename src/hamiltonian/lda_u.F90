@@ -72,6 +72,7 @@ module lda_u_oct_m
        lda_u_build_phase_correction,    &
        lda_u_freeze_occ,                &
        lda_u_freeze_u,                  &
+       lda_u_periodic_coulomb_integrals,&
        dlda_u_set_occupations,          &
        zlda_u_set_occupations,          &
        dlda_u_get_occupations,          &
@@ -117,6 +118,8 @@ module lda_u_oct_m
     logical             :: skipSOrbitals      !> Not using s orbitals
     logical             :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
     logical             :: freeze_u           !> U is not recomputed during TD evolution
+    logical             :: basisfromstates    !> We can construct the localized basis from user-defined states
+    integer, allocatable:: basisstates(:)
 
     type(distributed_t) :: orbs_dist
   end type lda_u_t
@@ -144,6 +147,7 @@ contains
   this%skipSOrbitals = .true.
   this%freeze_occ = .false.
   this%freeze_u = .false.
+  this%basisfromstates = .false.
 
   nullify(this%dn)
   nullify(this%zn)
@@ -173,7 +177,8 @@ contains
   type(states_t),            intent(in)    :: st
 
   logical :: complex_coulomb_integrals
-  integer :: ios
+  integer :: ios, is
+  type(block_t) :: blk
 
   PUSH_SUB(lda_u_init)
 
@@ -184,6 +189,19 @@ contains
   this%level = level
   
   call lda_u_write_info(this, stdout)
+
+  !%Variable DFTUBasisFromStates
+  !%Type logical
+  !%Default no
+  !%Section Hamiltonian::DFT+U
+  !%Description
+  !% If set to yes, Octopus will construct the localized basis from
+  !% user-defined states. The states are taken at the Gamma point (or the first k-point of the
+  !% states in the restart_proj folder.
+  !% The states are defined via the block DFTUBasisStates
+  !%End
+  call parse_variable('DFTUBasisFromStates', .false., this%basisfromstates)
+  if(this%basisfromstates) call messages_experimental("DFTUBasisFromStates") 
 
   call orbitalbasis_init(this%basis)
 
@@ -212,56 +230,109 @@ contains
     if(.not.this%SkipSOrbitals) call messages_experimental("SkipSOrbitals")
   end if
 
-  if (states_are_real(st)) then
-    call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
-                             this%skipSOrbitals, this%useAllOrbitals)
-  else
-    call zorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
-                             this%skipSOrbitals, this%useAllOrbitals)
-  end if
-  this%orbsets => this%basis%orbsets
-  this%norbsets = this%basis%norbsets
-  this%maxnorbs = this%basis%maxnorbs
-  this%max_np = this%basis%max_np
-  this%nspins = st%d%nspin
-  this%spin_channels = st%d%spin_channels
-  this%nspecies = geo%nspecies
+  if(.not.this%basisfromstates) then
 
-  !We allocate the necessary ressources
-  if (states_are_real(st)) then
-    call dlda_u_allocate(this, st)
-  else
-    call zlda_u_allocate(this, st)
-  end if
-
-  call distributed_nullify(this%orbs_dist, this%norbsets)
- #ifdef HAVE_MPI
-  call distributed_init(this%orbs_dist, this%norbsets, MPI_COMM_WORLD, "orbsets")
- #endif 
-
-
-  if( this%level == DFT_U_ACBN0 ) then
-
-    complex_coulomb_integrals = .false.
-    do ios = 1, this%norbsets
-        if(this%orbsets(ios)%ndim  > 1) complex_coulomb_integrals = .true.
-    end do
-
-    call messages_info(1)
-    if(.not. complex_coulomb_integrals) then 
-      write(message(1),'(a)')    'Computing the Coulomb integrals of the localized basis.'
-      if (states_are_real(st)) then
-        call dcompute_coulomb_integrals(this, gr%mesh, gr%der)
-      else
-        call zcompute_coulomb_integrals(this, gr%mesh, gr%der)
-      end if
+    if (states_are_real(st)) then
+      call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
+                               this%skipSOrbitals, this%useAllOrbitals)
     else
-      ASSERT(.not.states_are_real(st))
-      write(message(1),'(a)')    'Computing complex Coulomb integrals of the localized basis.'
-      call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st)
+      call zorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
+                             this%skipSOrbitals, this%useAllOrbitals)
     end if
-  end if
+    this%orbsets => this%basis%orbsets
+    this%norbsets = this%basis%norbsets
+    this%maxnorbs = this%basis%maxnorbs
+    this%max_np = this%basis%max_np
+    this%nspins = st%d%nspin
+    this%spin_channels = st%d%spin_channels
+    this%nspecies = geo%nspecies
 
+    !We allocate the necessary ressources
+    if (states_are_real(st)) then
+      call dlda_u_allocate(this, st)
+    else
+      call zlda_u_allocate(this, st)
+    end if
+
+    call distributed_nullify(this%orbs_dist, this%norbsets)
+   #ifdef HAVE_MPI
+    call distributed_init(this%orbs_dist, this%norbsets, MPI_COMM_WORLD, "orbsets")
+   #endif 
+
+
+    if( this%level == DFT_U_ACBN0 ) then
+ 
+      complex_coulomb_integrals = .false.
+      do ios = 1, this%norbsets
+          if(this%orbsets(ios)%ndim  > 1) complex_coulomb_integrals = .true.
+      end do
+
+      call messages_info(1)
+      if(.not. complex_coulomb_integrals) then 
+        write(message(1),'(a)')    'Computing the Coulomb integrals of the localized basis.'
+        if (states_are_real(st)) then
+          call dcompute_coulomb_integrals(this, gr%mesh, gr%der)
+        else
+          call zcompute_coulomb_integrals(this, gr%mesh, gr%der)
+        end if
+      else
+        ASSERT(.not.states_are_real(st))
+        write(message(1),'(a)')    'Computing complex Coulomb integrals of the localized basis.'
+        call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st)
+      end if
+    end if
+
+  else
+
+    !%Variable DFTUBasisStates
+    !%Type block
+    !%Default none
+    !%Section Hamiltonian::DFT+U
+    !%Description
+    !% Each line of this block contains the index of a state to be used to construct the 
+    !% localized basis. See DFTUBasisFromStates for details.
+    !%End
+    if(parse_block('DFTUBasisStates', blk) == 0) then
+      this%norbsets = 1
+      this%maxnorbs = parse_block_n(blk) 
+      if(this%maxnorbs <1) then
+        write(message(1),'(a,i3,a,i3)') 'DFTUBasisStates must contains at least one state.'
+        call messages_fatal(1)
+      end if
+      SAFE_ALLOCATE(this%basisstates(1:this%maxnorbs))
+      do is = 1, this%maxnorbs
+        call parse_block_integer(blk, is-1, 0, this%basisstates(is))
+      end do
+      call parse_block_end(blk)
+    else
+      write(message(1),'(a,i3,a,i3)') 'DFTUBasisStates must be specified if DFTUBasisFromStates=yes'
+      call messages_fatal(1)
+    end if
+
+    if (states_are_real(st)) then
+      call dorbitalbasis_build_empty(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, this%maxnorbs)
+    else
+      call zorbitalbasis_build_empty(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, this%maxnorbs)
+    end if
+
+    this%max_np = gr%mesh%np
+    this%nspins = st%d%nspin
+    this%spin_channels = st%d%spin_channels
+    this%nspecies = 1
+
+    this%orbsets => this%basis%orbsets
+
+    call distributed_nullify(this%orbs_dist, this%norbsets)
+
+
+    !We allocate the necessary ressources
+    if (states_are_real(st)) then
+      call dlda_u_allocate(this, st)
+    else
+      call zlda_u_allocate(this, st)
+    end if
+
+  end if
 
   call messages_print_stress(stdout)
 
@@ -287,6 +358,7 @@ contains
    SAFE_DEALLOCATE_P(this%zcoulomb)
    SAFE_DEALLOCATE_P(this%drenorm_occ)
    SAFE_DEALLOCATE_P(this%zrenorm_occ)
+   SAFE_DEALLOCATE_A(this%basisstates)
 
    nullify(this%orbsets)
    call orbitalbasis_end(this%basis)
@@ -309,6 +381,8 @@ contains
   logical,                   intent(in)    :: has_phase
 
   if(this%level == DFT_U_NONE) return
+  !If we use a basis from states, there is nothing to do 
+  if(this%basisfromstates) return
 
   PUSH_SUB(lda_u_update_basis)
 
@@ -387,6 +461,33 @@ contains
    POP_SUB(lda_u_build_phase_correction)
 
  end subroutine lda_u_build_phase_correction
+
+ subroutine lda_u_periodic_coulomb_integrals(this, st, mesh, der, has_phase)
+   type(lda_u_t),                 intent(inout) :: this
+   type(states_t),                intent(in)    :: st
+   type(mesh_t),                  intent(in)    :: mesh
+   type(derivatives_t),           intent(in)    :: der 
+   logical,                       intent(in)    :: has_phase
+ 
+   if(this%level /= DFT_U_ACBN0) return
+ 
+   PUSH_SUB(lda_u_periodic_coulomb_integrals)
+
+   if(states_are_real(st)) then
+     call dcompute_periodic_coulomb_integrals(this, mesh, der)
+   else
+     call zcompute_periodic_coulomb_integrals(this, mesh, der)
+   end if
+
+  ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
+  ! In case of a laser field, the phase is recomputed in hamiltonian_update
+  if(has_phase) then
+    call lda_u_build_phase_correction(this, mesh%sb, st%d)
+  end if
+
+
+   POP_SUB(lda_u_periodic_coulomb_integrals)
+ end subroutine lda_u_periodic_coulomb_integrals
 
   subroutine lda_u_freeze_occ(this) 
     type(lda_u_t),     intent(inout) :: this

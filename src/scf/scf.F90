@@ -130,11 +130,11 @@ contains
     type(geometry_t),    intent(in)    :: geo
     type(states_t),      intent(in)    :: st
     type(multicomm_t),   intent(in)    :: mc
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_t), intent(inout) :: hm
     FLOAT,   optional,   intent(in)    :: conv_force
 
     FLOAT :: rmin
-    integer :: mixdefault
+    integer :: mixdefault, ierr
     type(type_t) :: mix_type
     
     PUSH_SUB(scf_init)
@@ -364,6 +364,16 @@ contains
       call lda_u_mixer_init_auxmixer(hm%lda_u, scf%lda_u_mix, scf%smix, st)
     end if
     call mix_get_field(scf%smix, scf%mixfield)
+
+    if(hm%lda_u_level /= DFT_U_NONE .and. hm%lda_u%basisfromstates) then
+      call lda_u_loadbasis(hm%lda_u, st, gr%mesh, mc, ierr)
+      if (ierr /= 0) then
+        message(1) = "Unable to load LDA+U basis from selected states."
+        call messages_fatal(1)
+      end if
+      call lda_u_periodic_coulomb_integrals(hm%lda_u, st, gr%mesh, gr%der, associated(hm%hm_base%phase))
+    end if
+
 
     ! now the eigensolver stuff
     call eigensolver_init(scf%eigens, gr, st)

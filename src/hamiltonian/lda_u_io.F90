@@ -27,10 +27,12 @@ module lda_u_io_oct_m
   use grid_oct_m
   use io_oct_m
   use io_function_oct_m
+  use lalg_basic_oct_m
   use lda_u_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use profiling_oct_m
   use restart_oct_m
   use species_oct_m
@@ -49,6 +51,7 @@ module lda_u_io_oct_m
        lda_u_write_U,                   &
        lda_u_write_magnetization,       &
        lda_u_load,                      &
+       lda_u_loadbasis,                 &
        lda_u_dump
 
 contains
@@ -404,5 +407,138 @@ contains
 
     POP_SUB(lda_u_load)
   end subroutine lda_u_load
+
+
+  ! ---------------------------------------------------------
+  subroutine lda_u_loadbasis(lda_u, st, mesh, mc, ierr)
+    type(lda_u_t),        intent(inout) :: lda_u
+    type(states_t),       intent(in)    :: st
+    type(mesh_t),         intent(in)    :: mesh
+    type(multicomm_t),    intent(in)    :: mc
+    integer,              intent(out)   :: ierr
+
+    integer :: err, wfns_file, is, ist, idim, ik
+    type(restart_t) :: restart_gs
+    FLOAT, allocatable   :: dpsi(:)
+    CMPLX, allocatable   :: zpsi(:)
+    character(len=256)   :: lines(3)
+    character(len=256), allocatable :: restart_file(:, :)
+    logical,            allocatable :: restart_file_present(:, :)
+    character(len=12)    :: filename
+    character(len=1)     :: char
+    character(len=50)    :: str
+ 
+
+    PUSH_SUB(lda_u_loadbasis)
+
+    ierr = 0
+
+    if (debug%info) then
+      message(1) = "Debug: Loading LDA+U basis from states."
+      call messages_info(1)
+    end if
+
+    call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, mc, err, mesh=mesh)
+
+    ! open files to read
+    wfns_file  = restart_open(restart_gs, 'wfns')
+    call restart_read(restart_gs, wfns_file, lines, 2, err)
+    if (err /= 0) then
+      ierr = ierr - 2**5
+    else if (states_are_real(st)) then
+      read(lines(2), '(a)') str
+      if (str(2:8) == 'Complex') then
+        message(1) = "Cannot read real states from complex wavefunctions."
+        call messages_fatal(1)
+      else if (str(2:5) /= 'Real') then
+        message(1) = "Restart file 'wfns' does not specify real/complex; cannot check compatibility."
+        call messages_warning(1)
+      end if
+    end if
+    ! complex can be restarted from real, so there is no problem.
+
+    ! If any error occured up to this point then it is not worth continuing,
+    ! as there something fundamentally wrong with the restart files
+    if (err /= 0) then
+      call restart_close(restart_gs, wfns_file)
+      call restart_end(restart_gs)
+      POP_SUB(lda_u_loadbasis)
+      return
+    end if
+
+    if (states_are_real(st)) then
+      SAFE_ALLOCATE(dpsi(1:mesh%np))
+    else
+      SAFE_ALLOCATE(zpsi(1:mesh%np))
+    end if
+
+    SAFE_ALLOCATE(restart_file(1:st%d%dim, 1:st%nst))
+    SAFE_ALLOCATE(restart_file_present(1:st%d%dim, 1:st%nst))
+    restart_file_present = .false.
+
+
+    ! Next we read the list of states from the files. 
+    ! Errors in reading the information of a specific state from the files are ignored
+    ! at this point, because later we will skip reading the wavefunction of that state.
+    do
+      call restart_read(restart_gs, wfns_file, lines, 1, err)
+      if (err == 0) then
+        read(lines(1), '(a)') char
+        if (char == '%') then
+          !We reached the end of the file
+          exit
+        else
+          read(lines(1), *) ik, char, ist, char, idim, char, filename
+        end if
+      end if
+
+      if (any(lda_u%basisstates==ist) .and. ik == 1) then
+        restart_file(idim, ist) = trim(filename)
+        restart_file_present(idim, ist) = .true.
+      end if
+    end do
+    call restart_close(restart_gs, wfns_file)
+
+    !We loop over the states we need
+    do is = 1, lda_u%maxnorbs
+      ist = lda_u%basisstates(is)
+      do idim = 1, st%d%dim
+
+        if (.not. restart_file_present(idim, ist)) then
+          write(message(1), '(a,i,a)') "Cannot read states ", ist, "from the projection folder"
+          call messages_fatal(1)            
+        end if
+
+        if (states_are_real(st)) then
+          call drestart_read_mesh_function(restart_gs, restart_file(idim, ist), mesh, dpsi, err)
+        else
+          call zrestart_read_mesh_function(restart_gs, restart_file(idim, ist), mesh, zpsi, err)
+        end if
+
+        if(states_are_real(st)) then
+          call lalg_copy(mesh%np, dpsi, lda_u%orbsets(1)%dorb(:,idim,is))
+        else
+          call lalg_copy(mesh%np, zpsi, lda_u%orbsets(1)%zorb(:,idim,is))
+        end if
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(dpsi)
+    SAFE_DEALLOCATE_A(zpsi)
+    SAFE_DEALLOCATE_A(restart_file)
+    SAFE_DEALLOCATE_A(restart_file_present)
+
+
+    call restart_end(restart_gs)
+
+    if (debug%info) then
+      message(1) = "Debug: Loading LDA+U basis from states done."
+      call messages_info(1)
+    end if
+
+    POP_SUB(lda_u_loadbasis)
+  end subroutine lda_u_loadbasis
+
+
 
 end module lda_u_io_oct_m

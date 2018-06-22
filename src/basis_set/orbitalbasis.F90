@@ -44,7 +44,9 @@ module orbitalbasis_oct_m
        orbitalbasis_init,              &
        orbitalbasis_end,               &
        dorbitalbasis_build,            &
-       zorbitalbasis_build
+       zorbitalbasis_build,            &
+       dorbitalbasis_build_empty,      &
+       zorbitalbasis_build_empty
 
   type orbitalbasis_t
     type(orbitalset_t), pointer :: orbsets(:)   !> All the orbital sets of the system

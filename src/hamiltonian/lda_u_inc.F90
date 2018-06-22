@@ -99,6 +99,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   R_TYPE  :: renorm_weight
   type(orbitalset_t), pointer :: os
   type(profile_t), save :: prof
+  integer :: spec_ind
 
   call profiling_in(prof, "DFTU_OCC_MATRICES")
   
@@ -142,11 +143,16 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         this%X(renorm_occ)(:,:,:,ist,ik) = R_TOTYPE(M_ZERO)
         do ios = 1, this%norbsets
           os => this%orbsets(ios)
+          if(this%basisfromstates) then
+            spec_ind = 1
+          else
+            spec_ind = species_index(os%spec)
+          end if
           norbs = os%norbs
           do im = 1, norbs 
             do idim = 1, st%d%dim
-              this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik) = &
-               this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik) &
+              this%X(renorm_occ)(spec_ind,os%nn,os%ll,ist,ik) = &
+               this%X(renorm_occ)(spec_ind,os%nn,os%ll,ist,ik) &
                  + abs(dot(idim,im,ios))**2
             end do
           end do
@@ -159,13 +165,18 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         !We can compute the (renormalized) occupation matrices
         do ios = 1, this%norbsets
           os => this%orbsets(ios)
+          if(this%basisfromstates) then
+            spec_ind = 1
+          else
+            spec_ind = species_index(os%spec)
+          end if
           norbs = os%norbs
           do im = 1, norbs
             this%X(n)(1:norbs,im,ispin,ios) = this%X(n)(1:norbs,im,ispin,ios) &
                                          + weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
             !We compute the renomalized occupation matrices
             if(this%level == DFT_U_ACBN0) then
-              renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik)*weight
+              renorm_weight = this%X(renorm_occ)(spec_ind,os%nn,os%ll,ist,ik)*weight
               this%X(n_alt)(1:norbs,im,ispin,ios) = this%X(n_alt)(1:norbs,im,ispin,ios) &
                                          + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
             end if
@@ -177,6 +188,12 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         !We can compute the (renormalized) occupation matrices
         do ios = 1, this%norbsets
           os => this%orbsets(ios)
+          if(this%basisfromstates) then
+            spec_ind = 1
+          else
+            spec_ind = species_index(os%spec)
+          end if
+
           norbs = os%norbs
           do im = 1, norbs
             this%X(n)(1:norbs,im,1,ios) = this%X(n)(1:norbs,im,1,ios) &
@@ -189,7 +206,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
                                       + weight*dot(2,1:norbs,ios)*R_CONJ(dot(1,im,ios))
             !We compute the renomalized occupation matrices
             if(this%level == DFT_U_ACBN0) then
-              renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik)*weight
+              renorm_weight = this%X(renorm_occ)(spec_ind,os%nn,os%ll,ist,ik)*weight
               this%X(n_alt)(1:norbs,im,1,ios) = this%X(n_alt)(1:norbs,im,1,ios) &
                                          + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
               this%X(n_alt)(1:norbs,im,2,ios) = this%X(n_alt)(1:norbs,im,2,ios) &
@@ -615,6 +632,100 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
   POP_SUB(X(compute_coulomb_integrals))
   call profiling_out(prof)
 end subroutine X(compute_coulomb_integrals)
+
+subroutine X(compute_periodic_coulomb_integrals) (this, mesh, der)
+  type(lda_u_t),   intent(inout)  :: this
+  type(mesh_t),       intent(in)  :: mesh
+  type(derivatives_t), intent(in) :: der
+
+  integer :: ist, jst, kst, lst, ijst, klst
+  integer :: norbs, np, ip
+  integer :: idone, ntodo
+  FLOAT, allocatable :: tmp(:), vv(:), nn(:)
+  type(orbitalset_t), pointer :: os
+  type(profile_t), save :: prof
+
+  call profiling_in(prof, "DFTU_PER_COULOMB")
+
+  ASSERT(this%nspins == 1)
+
+  PUSH_SUB(X(compute_periodic_coulomb_integrals))
+
+  SAFE_ALLOCATE(nn(1:mesh%np))
+  SAFE_ALLOCATE(vv(1:mesh%np))
+  SAFE_ALLOCATE(tmp(1:mesh%np))
+
+  SAFE_ALLOCATE(this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs, 1:this%norbsets))
+  this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%norbsets) = M_ZERO
+
+  !Lets counts the number of orbital to treat, to display a progress bar
+  ntodo = 0
+  norbs = this%orbsets(1)%norbs
+  ntodo= ntodo + ((norbs+1)*norbs/2)*((norbs+1)*norbs/2+1)/2
+  idone = 0
+  if(mpi_world%rank == 0) call loct_progress_bar(-1, ntodo)
+
+  os => this%orbsets(1)
+  norbs = os%norbs
+  np = os%sphere%np  
+
+  ijst=0
+  do ist = 1, norbs
+    do jst = 1, norbs
+      if(jst > ist) cycle
+      ijst=ijst+1
+
+      !$omp parallel do
+      do ip=1,np
+        nn(ip)  = real(os%X(orb)(ip,1,ist))*real(os%X(orb)(ip,1,jst))
+      end do
+      !$omp end parallel do    
+
+      !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
+      call dpoisson_solve(psolver, vv, nn, all_nodes=.true.)
+
+      klst=0
+      do kst = 1, norbs
+        do lst = 1, norbs
+          if(lst > kst) cycle
+          klst=klst+1
+          if(klst > ijst) cycle
+
+          !$omp parallel do
+          do ip=1,np
+            tmp(ip) = vv(ip)*real(os%X(orb)(ip,1,lst))*real(os%X(orb)(ip,1,kst))
+          end do
+          !$omp end parallel do
+
+          this%coulomb(ist,jst,kst,lst,1) = dmf_integrate(mesh, tmp)
+
+          if(abs(this%coulomb(ist,jst,kst,lst,1))<CNST(1.0e-12)) then
+            this%coulomb(ist,jst,kst,lst,1) = M_ZERO
+          else
+            this%coulomb(kst,lst,ist,jst,1) = this%coulomb(ist,jst,kst,lst,1)
+            this%coulomb(jst,ist,lst,kst,1) = this%coulomb(ist,jst,kst,lst,1)
+            this%coulomb(lst,kst,jst,ist,1) = this%coulomb(ist,jst,kst,lst,1)
+            this%coulomb(jst,ist,kst,lst,1) = this%coulomb(ist,jst,kst,lst,1)
+            this%coulomb(lst,kst,ist,jst,1) = this%coulomb(ist,jst,kst,lst,1)
+            this%coulomb(ist,jst,lst,kst,1) = this%coulomb(ist,jst,kst,lst,1)
+            this%coulomb(kst,lst,jst,ist,1) = this%coulomb(ist,jst,kst,lst,1)
+          end if
+              
+          !Update the progress bar
+          idone = idone + 1
+          if(mpi_world%rank == 0) call loct_progress_bar(idone, ntodo)
+        end do !lst
+      end do !kst
+    end do !jst
+  end do !ist
+
+  SAFE_DEALLOCATE_A(nn)
+  SAFE_DEALLOCATE_A(vv)
+  SAFE_DEALLOCATE_A(tmp)
+
+  POP_SUB(X(compute_periodic_coulomb_integrals))
+  call profiling_out(prof)
+end subroutine X(compute_periodic_coulomb_integrals)
 
  ! ---------------------------------------------------------
  !> This routine computes [r,V_lda+u].
