@@ -28,9 +28,9 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
   logical,                   intent(in)       :: use_all_orb
   logical, optional,         intent(in)       :: verbose
 
-  integer :: ia, iorb, norb, ntotorb, offset, ios, idim
+  integer :: ia, iorb, norb, offset, ios, idim
   integer ::  hubbardl, ii, nn, ll, mm, work, work2, iorbset
-  FLOAT   :: norm, hubbardj, radius, jj
+  FLOAT   :: norm, hubbardj, jj
   integer :: n_s_orb
   type(orbitalset_t), pointer :: os
   logical :: hasjdependence
@@ -347,8 +347,8 @@ end subroutine X(orbitalbasis_build)
 subroutine X(orbitalbasis_build_empty)(this, geo, mesh, kpt, ndim, nstates, verbose)
   type(orbitalbasis_t),      intent(inout)    :: this
   type(geometry_t), target,  intent(in)       :: geo
-  type(mesh_t), target,      intent(in)       :: mesh
   type(distributed_t),       intent(in)       :: kpt
+  type(mesh_t), target,      intent(in)       :: mesh
   integer,                   intent(in)       :: ndim
   integer,                   intent(in)       :: nstates
   logical, optional,         intent(in)       :: verbose
@@ -367,11 +367,6 @@ subroutine X(orbitalbasis_build_empty)(this, geo, mesh, kpt, ndim, nstates, verb
   end if
 
   ASSERT(nstates > 0)
-
-  if(verbose_) then
-    write(message(1),'(a, i3, a)')    'Found ', 1, ' orbital sets.'
-    call messages_info(1)
-  end if
 
   this%norbsets = 1
   SAFE_ALLOCATE(this%orbsets(1:1))

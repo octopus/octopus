@@ -203,8 +203,6 @@ contains
   call parse_variable('DFTUBasisFromStates', .false., this%basisfromstates)
   if(this%basisfromstates) call messages_experimental("DFTUBasisFromStates") 
 
-  call orbitalbasis_init(this%basis)
-
   if( this%level == DFT_U_ACBN0 ) then
     !%Variable UseAllAtomicOrbitals
     !%Type logical
@@ -231,6 +229,8 @@ contains
   end if
 
   if(.not.this%basisfromstates) then
+
+    call orbitalbasis_init(this%basis)
 
     if (states_are_real(st)) then
       call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
@@ -445,6 +445,10 @@ contains
 
    integer :: ios
  
+   !In this case there is not phase difference, as the basis come from states on the full 
+   !grid and not from spherical meshes around the atoms
+   if(this%basisfromstates) return
+ 
    PUSH_SUB(lda_u_build_phase_correction)
 
    do ios = 1, this%norbsets
@@ -462,27 +466,38 @@ contains
 
  end subroutine lda_u_build_phase_correction
 
- subroutine lda_u_periodic_coulomb_integrals(this, st, mesh, der, has_phase)
+ subroutine lda_u_periodic_coulomb_integrals(this, st, mesh, has_phase)
    type(lda_u_t),                 intent(inout) :: this
    type(states_t),                intent(in)    :: st
    type(mesh_t),                  intent(in)    :: mesh
-   type(derivatives_t),           intent(in)    :: der 
    logical,                       intent(in)    :: has_phase
+
+   integer :: ik, im, idim
  
    if(this%level /= DFT_U_ACBN0) return
+
+   ASSERT(this%basisfromstates)
  
    PUSH_SUB(lda_u_periodic_coulomb_integrals)
 
    if(states_are_real(st)) then
-     call dcompute_periodic_coulomb_integrals(this, mesh, der)
+     call dcompute_periodic_coulomb_integrals(this, mesh)
    else
-     call zcompute_periodic_coulomb_integrals(this, mesh, der)
+     call zcompute_periodic_coulomb_integrals(this, mesh)
    end if
 
   ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
   ! In case of a laser field, the phase is recomputed in hamiltonian_update
   if(has_phase) then
-    call lda_u_build_phase_correction(this, mesh%sb, st%d)
+    ASSERT(states_are_complex(st))
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do im = 1, this%orbsets(1)%norbs
+        do idim = 1, st%d%dim
+          call lalg_copy(mesh%np, this%orbsets(1)%zorb(:,idim, im), &
+                                       this%orbsets(1)%eorb_mesh(:,idim,im,ik))
+        end do
+      end do
+    end do
   end if
 
 

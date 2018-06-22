@@ -75,6 +75,10 @@ contains
 
   PUSH_SUB(orbitalbasis_nullify)
 
+  this%normalize = .true.
+  this%submeshforperiodic = .false.
+  this%orthogonalization = .false.
+
   nullify(this%orbsets)
   nullify(this%global2os)
   nullify(this%os2global)
@@ -83,6 +87,8 @@ contains
   this%maxnorbs = 0
   this%max_np = 0
   this%size = 0
+
+  this%threshold = CNST(0.01)
 
   POP_SUB(orbitalbasis_nullify)
 

@@ -633,10 +633,9 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
   call profiling_out(prof)
 end subroutine X(compute_coulomb_integrals)
 
-subroutine X(compute_periodic_coulomb_integrals) (this, mesh, der)
+subroutine X(compute_periodic_coulomb_integrals) (this, mesh)
   type(lda_u_t),   intent(inout)  :: this
   type(mesh_t),       intent(in)  :: mesh
-  type(derivatives_t), intent(in) :: der
 
   integer :: ist, jst, kst, lst, ijst, klst
   integer :: norbs, np, ip
@@ -667,7 +666,7 @@ subroutine X(compute_periodic_coulomb_integrals) (this, mesh, der)
 
   os => this%orbsets(1)
   norbs = os%norbs
-  np = os%sphere%np  
+  np = mesh%np  
 
   ijst=0
   do ist = 1, norbs
