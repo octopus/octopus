@@ -2,7 +2,7 @@
 
 Test       : Fock-Darwin spectrum
 Program    : octopus
-TestGroups : short-run, finite_systems_2d
+TestGroups : long-run, finite_systems_2d
 Enabled    : Yes
 
 
