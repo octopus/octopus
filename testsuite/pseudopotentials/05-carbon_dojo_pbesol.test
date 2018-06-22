@@ -2,7 +2,7 @@
 
 Test       : Carbon pseudojo PBEsol
 Program    : octopus
-TestGroups : short-run, pseudopotentials
+TestGroups : long-run, pseudopotentials
 Enabled    : Yes
 
 Input: 05-carbon_dojo_pbesol.01-gs.inp
