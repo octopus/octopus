@@ -929,15 +929,16 @@ end subroutine X(states_matrix)
 
 ! -----------------------------------------------------------
 
-subroutine X(states_calc_orth_test)(st, mesh)
+subroutine X(states_calc_orth_test)(st, mesh, sb)
   type(states_t),    intent(inout) :: st
   type(mesh_t),      intent(in)    :: mesh
+  type(simul_box_t), intent(in)    :: sb
   
   PUSH_SUB(X(states_calc_orth_test))
 
   call states_allocate_wfns(st, mesh, wfs_type = R_TYPE_VAL)
 
-  call states_generate_random(st, mesh)
+  call states_generate_random(st, mesh, sb)
 
   message(1) = 'Info: Orthogonalizing random wavefunctions.'
   message(2) = ''

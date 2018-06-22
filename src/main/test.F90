@@ -244,7 +244,7 @@ program oct_test
     call system_init(sys)
 
     call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
-    call states_generate_random(sys%st, sys%gr%mesh)
+    call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
   
     !Initialize external potential
     nullify(subsys_hm)
@@ -296,7 +296,7 @@ program oct_test
     call system_init(sys)
 
     call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
-    call states_generate_random(sys%st, sys%gr%mesh)
+    call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
 
     !Initialize external potential
     nullify(subsys_hm)
@@ -416,13 +416,13 @@ program oct_test
     if(test_type == OPTION__TESTTYPE__ALL .or. test_type == OPTION__TESTTYPE__REAL) then
       message(1) = 'Info: Real wave-functions.'
       call messages_info(1)
-      call dstates_calc_orth_test(sys%st, sys%gr%mesh)
+      call dstates_calc_orth_test(sys%st, sys%gr%mesh, sys%gr%sb)
     end if
 
     if(test_type == OPTION__TESTTYPE__ALL .or. test_type == OPTION__TESTTYPE__COMPLEX) then
       message(1) = 'Info: Complex wave-functions.'
       call messages_info(1)
-      call zstates_calc_orth_test(sys%st, sys%gr%mesh)
+      call zstates_calc_orth_test(sys%st, sys%gr%mesh, sys%gr%sb)
     end if
 
     call system_end(sys)
