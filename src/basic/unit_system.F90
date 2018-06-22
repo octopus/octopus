@@ -115,39 +115,6 @@ contains
     !%Option c               137.035999139
     !%End
     
-    !%Variable UnitsOutput
-    !%Type integer
-    !%Default atomic
-    !%Section Execution::Units
-    !%Description
-    !% This variable selects the units that Octopus use for output.
-    !%
-    !% Atomic units seem to be the preferred system in the atomic and
-    !% molecular physics community. Internally, the code works in
-    !% atomic units. However, for output, some people like
-    !% to use a system based on electron-Volts (eV) for energies
-    !% and Angstroms (&Aring;) for length.
-    !%
-    !% Normally time units are derived from energy and length units,
-    !% so it is measured in <math>\hbar</math>/Hartree or
-    !% <math>\hbar</math>/eV.
-    !%
-    !% Warning 1: All files read on input will also be treated using
-    !% these units, including XYZ geometry files.
-    !%
-    !% Warning 2: Some values are treated in their most common units,
-    !% for example atomic masses (a.m.u.), electron effective masses
-    !% (electron mass), vibrational frequencies
-    !% (cm<sup>-1</sup>) or temperatures (Kelvin). The unit of charge is always
-    !% the electronic charge <i>e</i>.
-    !%
-    !%Option atomic        0
-    !% Atomic units.
-    !%Option ev_angstrom   1
-    !% Electronvolts for energy, Angstroms for length, the rest of the
-    !% units are derived from these and <math>\hbar=1</math>.
-    !%End
-
     if(parse_is_defined('Units') .or. parse_is_defined('Units')) then
       call messages_write("The 'Units' variable is obsolete. Now Octopus always works in atomic", new_line = .true.)
       call messages_write("units. For different units you can use values like 'angstrom', 'eV' ", new_line = .true.)
@@ -157,12 +124,10 @@ contains
 
     call messages_obsolete_variable('Units')
     call messages_obsolete_variable('UnitsInput')
+    call messages_obsolete_variable('UnitsOutput')
 
     cinp = UNITS_ATOMIC
-    
-    call parse_variable('UnitsOutput', UNITS_ATOMIC, cc)
-    if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call messages_input_error('UnitsOutput')
-    cout = cc
+    cout = UNITS_ATOMIC
 
     unit_one%factor = M_ONE
     unit_one%abbrev = '1'
