@@ -3,8 +3,6 @@ FromScratch = yes
 PeriodicDimensions = 2
 ExperimentalFeatures = yes
 
-UnitsOutput = ev_angstrom
-
 MixField = potential
 ExtraStates = 2
 ConvRelDens = 1e-6
