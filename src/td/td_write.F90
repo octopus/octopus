@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -2356,7 +2356,8 @@ contains
     character(len=80) :: aux, dir
     integer :: ik, ikpt, ist, uist, err
     FLOAT :: Nex, weight
-    FLOAT, allocatable :: occ(:,:), Nex_kpt(:)
+    integer :: gs_nst
+    FLOAT, allocatable :: Nex_kpt(:)
     
 
     PUSH_SUB(td_write_n_ex)
@@ -2396,32 +2397,34 @@ contains
 
     end if
 
+    !We only need the occupied GS states
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ist = 1, gs_st%nst
+        if(st%occ(ist, ik)>M_EPSILON) gs_nst = ist
+      end do
+    end do
+
     ! this is required if st%X(psi) is used
     call states_sync(st)
 
-    SAFE_ALLOCATE(projections(1:gs_st%nst, 1:st%nst))
+    SAFE_ALLOCATE(projections(1:gs_nst, 1:st%nst))
      
-    !We need to distribute the occupations
-    SAFE_ALLOCATE(occ(1:st%nst, 1:st%d%nik))
-    occ(1:st%nst, 1:st%d%nik) = CNST(0.0)
-    occ(st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end) = st%occ(st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end)
-    if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, occ, dim = (/st%nst, st%d%nik/))
-    end if 
-
-
     SAFE_ALLOCATE(Nex_kpt(1:st%d%nik)) 
     Nex_kpt = M_ZERO 
     do ik = st%d%kpt%start, st%d%kpt%end
       ikpt = states_dim_get_kpoint_index(st%d, ik)
-      call zstates_calc_projections(gr%mesh, st, gs_st, ik, projections)
-      do ist = 1, gs_st%nst
-        weight = st%d%kweights(ik) * occ(ist, ik)/ st%smear%el_per_state 
+      call zstates_calc_projections(gr%mesh, st, gs_st, ik, projections, gs_nst)
+      do ist = 1, gs_nst
+        weight = st%d%kweights(ik) * st%occ(ist, ik)/ st%smear%el_per_state 
         do uist = st%st_start, st%st_end
-          Nex_kpt(ikpt) = Nex_kpt(ikpt) - weight * occ(uist, ik) * abs(projections(ist, uist))**2
+          Nex_kpt(ikpt) = Nex_kpt(ikpt) - weight * st%occ(uist, ik) * abs(projections(ist, uist))**2
         end do
       end do
-      Nex_kpt(ikpt) = Nex_kpt(ikpt) + st%qtot*st%d%kweights(ik)
+     if(st%d%ispin == SPIN_POLARIZED) then
+       Nex_kpt(ikpt) = Nex_kpt(ikpt) + st%qtot*M_HALF*st%d%kweights(ik)
+     else
+       Nex_kpt(ikpt) = Nex_kpt(ikpt) + st%qtot*st%d%kweights(ik)
+     end if
     end do
 
 #if defined(HAVE_MPI)        
@@ -2443,7 +2446,6 @@ contains
   call io_function_output_global_BZ(outp%how, dir, "n_excited_el_kpt", gr%mesh, Nex_kpt, unit_one, err) 
  
   SAFE_DEALLOCATE_A(projections)
-  SAFE_DEALLOCATE_A(occ)
   SAFE_DEALLOCATE_A(Nex_kpt)
 
   POP_SUB(td_write_n_ex)
@@ -2729,7 +2731,7 @@ contains
     ! perform time-integral over one cycle
     do it=1,nT
       ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
-      call hamiltonian_update(hm,gr%mesh,time=Tcycle+it*dt)
+      call hamiltonian_update(hm,gr%mesh,gr%der%boundaries,time=Tcycle+it*dt)
       ! get hpsi
       call zhamiltonian_apply_all(hm, ks%xc, gr%der, st, hm_st)
 
@@ -2877,7 +2879,7 @@ contains
      end if
   
     ! reset time in Hamiltonian
-    call hamiltonian_update(hm,gr%mesh,time=M_ZERO)
+    call hamiltonian_update(hm,gr%mesh,gr%der%boundaries,time=M_ZERO)
 
     SAFE_DEALLOCATE_A(hmss)
     SAFE_DEALLOCATE_A(psi)

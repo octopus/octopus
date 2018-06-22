@@ -929,15 +929,16 @@ end subroutine X(states_matrix)
 
 ! -----------------------------------------------------------
 
-subroutine X(states_calc_orth_test)(st, mesh)
+subroutine X(states_calc_orth_test)(st, mesh, sb)
   type(states_t),    intent(inout) :: st
   type(mesh_t),      intent(in)    :: mesh
+  type(simul_box_t), intent(in)    :: sb
   
   PUSH_SUB(X(states_calc_orth_test))
 
   call states_allocate_wfns(st, mesh, wfs_type = R_TYPE_VAL)
 
-  call states_generate_random(st, mesh)
+  call states_generate_random(st, mesh, sb)
 
   message(1) = 'Info: Orthogonalizing random wavefunctions.'
   message(2) = ''
@@ -1305,17 +1306,19 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 end subroutine X(states_calc_overlap)
 
 !> This routine computes the projection between two set of states
-subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj)
+subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj, gs_nst)
   type(mesh_t),           intent(in)    :: mesh
   type(states_t),         intent(in)    :: st
   type(states_t),         intent(in)    :: gs_st
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(out)   :: proj(:, :)
+  integer, optional,      intent(in)    :: gs_nst
 
   integer       :: ib, ip
   R_TYPE, allocatable :: psi(:, :, :), gspsi(:, :, :)
   integer :: sp, size, block_size
   type(profile_t), save :: prof
+  integer :: gs_nst_
 
   PUSH_SUB(X(states_calc_projections))
   call profiling_in(prof, "STATES_PROJECTIONS")
@@ -1331,10 +1334,13 @@ subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj)
     block_size = max(20, hardware%l2%size/(2*16*st%nst))
 #endif
 
-    proj(1:gs_st%nst, 1:st%nst) = CNST(0.0)
+   gs_nst_ = gs_st%nst
+   if(present(gs_nst)) gs_nst_ = gs_nst
+
+    proj(1:gs_nst_, 1:st%nst) = CNST(0.0)
     
     SAFE_ALLOCATE(psi(1:st%nst, 1:st%d%dim, 1:block_size))
-    SAFE_ALLOCATE(gspsi(1:gs_st%nst, 1:gs_st%d%dim, 1:block_size))
+    SAFE_ALLOCATE(gspsi(1:gs_nst_, 1:gs_st%d%dim, 1:block_size))
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
@@ -1352,12 +1358,12 @@ subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj)
       if(mesh%use_curvilinear) then
         do ip = 1, size
           psi(1:st%nst, 1:st%d%dim, ip) = psi(1:st%nst, 1:st%d%dim, ip)*mesh%vol_pp(sp + ip - 1)
-          gspsi(1:gs_st%nst, 1:st%d%dim, ip) = gspsi(1:gs_st%nst, 1:st%d%dim, ip)*mesh%vol_pp(sp + ip - 1)
+          gspsi(1:gs_nst_, 1:st%d%dim, ip) = gspsi(1:gs_nst_, 1:st%d%dim, ip)*mesh%vol_pp(sp + ip - 1)
         end do
       end if
 
       call blas_gemm(transa = 'n', transb = 'c',        &
-        m = gs_st%nst, n = st%nst, k = size*st%d%dim,      &
+        m = gs_nst_, n = st%nst, k = size*st%d%dim,      &
         alpha = R_TOTYPE(mesh%volume_element),      &
         a = gspsi(1, 1, 1), lda = ubound(gspsi, dim = 1),   &
         b = psi(1, 1, 1), ldb = ubound(psi, dim = 1), &
@@ -1367,9 +1373,9 @@ subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj)
 
   end if
   
-  call profiling_count_operations((R_ADD + R_MUL)*gs_st%nst*(st%nst - CNST(1.0))*mesh%np)
+  call profiling_count_operations((R_ADD + R_MUL)*gs_nst_*(st%nst - CNST(1.0))*mesh%np)
   
-  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, proj, dim = (/gs_st%nst, st%nst/))
+  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, proj, dim = (/gs_nst_, st%nst/))
   
   call profiling_out(prof)
   POP_SUB(X(states_calc_projections))

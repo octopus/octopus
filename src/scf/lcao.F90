@@ -797,7 +797,7 @@ contains
       end if
 
       ! Randomly generate the initial wavefunctions.
-      call states_generate_random(sys%st, sys%gr%mesh, ist_start_ = st_start_random, normalized = .false.)
+      call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb, ist_start_ = st_start_random, normalized = .false.)
 
       call messages_write('Orthogonalizing wavefunctions.')
       call messages_info()

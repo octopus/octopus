@@ -537,12 +537,16 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_phase
-      integer :: ip, ik
+      integer :: ip, ik, ip_inn, ip_bnd
       FLOAT   :: kpoint(1:MAX_DIM)
 
       PUSH_SUB(hamiltonian_init.init_phase)
 
       SAFE_ALLOCATE(hm%hm_base%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
+      if(.not.accel_is_enabled() .and. .not. gr%mesh%parallel_in_domains) then
+        SAFE_ALLOCATE(hm%hm_base%phase_corr(gr%mesh%np+1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
+        hm%hm_base%phase_corr = M_ONE
+      end if
 
       kpoint(1:gr%sb%dim) = M_ZERO
       do ik = hm%d%kpt%start, hm%d%kpt%end
@@ -550,6 +554,15 @@ contains
         forall (ip = 1:gr%mesh%np_part)
           hm%hm_base%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
         end forall
+
+        if(.not.accel_is_enabled() .and. .not. gr%mesh%parallel_in_domains) then
+          do ip = 1, gr%der%boundaries%nper
+            ip_bnd = gr%der%boundaries%per_points(POINT_BOUNDARY, ip)
+            ip_inn = gr%der%boundaries%per_points(POINT_INNER, ip)
+            hm%hm_base%phase_corr(ip_bnd, ik) = hm%hm_base%phase(ip_bnd, ik)* &
+                                                  conjg(hm%hm_base%phase(ip_inn, ik))
+          end do
+        end if
       end do
 
       if(accel_is_enabled()) then
@@ -584,6 +597,7 @@ contains
     end if
 
     SAFE_DEALLOCATE_P(hm%hm_base%phase)
+    SAFE_DEALLOCATE_A(hm%hm_base%phase_corr)
     SAFE_DEALLOCATE_P(hm%vhartree)
     SAFE_DEALLOCATE_P(hm%vhxc)
     SAFE_DEALLOCATE_P(hm%vxc)
@@ -727,9 +741,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_update(this, mesh, time, Imtime)
+  subroutine hamiltonian_update(this, mesh, boundaries, time, Imtime)
     type(hamiltonian_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
+    type(boundaries_t),  intent(in)    :: boundaries
     FLOAT, optional,     intent(in)    :: time
     FLOAT, optional,     intent(in)    :: Imtime
 
@@ -874,6 +889,7 @@ contains
 
     subroutine build_phase()
       integer :: ik, imat, nmat, max_npoints, offset
+      integer :: ip, ip_bnd, ip_inn
       FLOAT   :: kpoint(1:MAX_DIM)
 
       PUSH_SUB(hamiltonian_update.build_phase)
@@ -898,6 +914,13 @@ contains
           end if
         end if
 
+        if(.not. allocated(this%hm_base%phase_corr)) then
+          if(.not.accel_is_enabled() .and. .not. mesh%parallel_in_domains) then
+            SAFE_ALLOCATE(this%hm_base%phase_corr(mesh%np+1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
+            this%hm_base%phase_corr = M_ONE
+          end if
+        end if
+
         kpoint(1:mesh%sb%dim) = M_ZERO
         do ik = this%d%kpt%start, this%d%kpt%end
           kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, states_dim_get_kpoint_index(this%d, ik))
@@ -906,6 +929,15 @@ contains
             this%hm_base%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(kpoint(1:mesh%sb%dim) &
               + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
           end forall
+          if(.not.accel_is_enabled() .and. .not. mesh%parallel_in_domains) then
+            do ip = 1, boundaries%nper
+              ip_bnd = boundaries%per_points(POINT_BOUNDARY, ip)
+              ip_inn = boundaries%per_points(POINT_INNER, ip)
+              this%hm_base%phase_corr(ip_bnd, ik) = this%hm_base%phase(ip_bnd, ik) &
+                                                    *conjg(this%hm_base%phase(ip_inn, ik))
+            end do
+          end if
+
         end do
         if(accel_is_enabled()) then
           call accel_write_buffer(this%hm_base%buff_phase, mesh%np_part*this%d%kpt%nlocal, this%hm_base%phase)
@@ -971,7 +1003,7 @@ contains
     this%geo => geo
     call epot_generate(this%ep, gr, this%geo, st, this%cmplxscl%space)
     call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep)
-    call hamiltonian_update(this, gr%mesh, time)
+    call hamiltonian_update(this, gr%mesh, gr%der%boundaries, time)
    
     if (this%pcm%run_pcm) then
      !> Generates the real-space PCM potential due to nuclei which do not change

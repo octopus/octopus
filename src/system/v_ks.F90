@@ -1356,9 +1356,9 @@ contains
     end if
 
     if(ks%calc%time_present) then
-      call hamiltonian_update(hm, ks%gr%mesh, time = ks%calc%time)
+      call hamiltonian_update(hm, ks%gr%mesh, ks%gr%der%boundaries, time = ks%calc%time)
     else
-      call hamiltonian_update(hm, ks%gr%mesh)
+      call hamiltonian_update(hm, ks%gr%mesh, ks%gr%der%boundaries)
     end if
 
 
