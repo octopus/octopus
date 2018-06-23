@@ -53,4 +53,4 @@ clean-local:
 
 .PHONY: check
 
-CLEANFILES = *~ *.bak *.mod *.MOD *.il *.d *.pc* ifc*
+CLEANFILES = *~ *.bak *.mod *.MOD *.il *.d *.pc* ifc* $(top_builddir)/share/dftd3/*
