@@ -514,7 +514,7 @@ contains
           call messages_warning()
         end if
           
-        call dftd3_init(ks%vdw_d3, d3_input)
+        call dftd3_init(ks%vdw_d3, d3_input, trim(conf%share)//'/dftd3/pars.dat')
         call dftd3_set_functional(ks%vdw_d3, func = d3func, version = 4, tz = .false.)
 
       case default
