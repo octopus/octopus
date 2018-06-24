@@ -55,6 +55,7 @@ namespace pseudopotential {
     std::string extension = filename.substr(filename.find_last_of(".") + 1);
     std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
 
+    if(extension == "psp8") return pseudopotential::format::PSP8;
     if(extension == "psf") return pseudopotential::format::PSF;
     if(extension == "cpi") return pseudopotential::format::CPI;
     if(extension == "fhi") return pseudopotential::format::FHI;
