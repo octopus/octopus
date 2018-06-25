@@ -165,6 +165,8 @@ namespace pseudopotential {
     }
     
     std::string symbol() const {
+      pseudopotential::element el(atomic_number_);
+      return el.symbol();
     }
 
     int atomic_number() const {
@@ -172,6 +174,8 @@ namespace pseudopotential {
     }
 
     double mass() const {
+      pseudopotential::element el(atomic_number_);
+      return el.mass();
     }
     
     int valence_charge() const {
@@ -337,7 +341,6 @@ namespace pseudopotential {
     std::vector<double> local_potential_;
     bool nlcc_;
     std::vector<double> nlcc_density_;
-    
   };
 
 }
