@@ -28,6 +28,7 @@
 #include "upf1.hpp"
 #include "upf2.hpp"
 #include "psml.hpp"
+#include "psp8.hpp"
 #include "detect_format.hpp"
 
 extern "C" fint FC_FUNC_(pseudo_detect_format, PSEUDO_DETECT_FORMAT)(STR_F_TYPE const filename_f STR_ARG1){
@@ -75,6 +76,9 @@ extern "C" void FC_FUNC_(pseudo_init, PSEUDO_INIT)(pseudopotential::base ** pseu
       break;
     case pseudopotential::format::PSML:
       *pseudo = new pseudopotential::psml(filename);
+      break;
+    case pseudopotential::format::PSP8:
+      *pseudo = new pseudopotential::psp8(filename);
       break;
     default:
       *ierr = fint(pseudopotential::status::UNKNOWN_FORMAT);
