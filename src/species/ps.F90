@@ -452,6 +452,8 @@ contains
       call messages_write(" QSO")
     case(PSEUDO_FORMAT_PSML)
       call messages_write(" PSML")
+    case(PSEUDO_FORMAT_PSP8)
+      call messages_write(" PSP8")
     case(PSEUDO_FORMAT_PSF)
       call messages_write(" PSF")
     case(PSEUDO_FORMAT_CPI)

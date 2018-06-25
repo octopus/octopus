@@ -1,0 +1,278 @@
+#ifndef PSEUDO_PSP8_HPP
+#define PSEUDO_PSP8_HPP
+
+/*
+ Copyright (C) 2018 Xavier Andrade
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU Lesser General Public License as published by
+ the Free Software Foundation; either version 3 of the License, or
+ (at your option) any later version.
+  
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Lesser General Public License for more details.
+  
+ You should have received a copy of the GNU Lesser General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#include <fstream>
+#include <vector>
+#include <cassert>
+#include <sstream>
+#include <iostream>
+#include <cmath>
+
+#include "base.hpp"
+#include "element.hpp"
+
+namespace pseudopotential {
+
+  class psp8 : public pseudopotential::base {
+
+  public:
+
+    psp8(const std::string & filename){
+
+      std::ifstream original_file(filename.c_str());
+      std::string buffer((std::istreambuf_iterator<char>(original_file)), std::istreambuf_iterator<char>());
+      std::replace(buffer.begin(), buffer.end(), 'D', 'E');
+      std::replace(buffer.begin(), buffer.end(), 'd', 'e');
+
+      std::istringstream file(buffer);
+      
+      type_ = pseudopotential::type::KLEINMAN_BYLANDER;
+      
+      // file size
+      file.seekg( 0, std::ios::beg);
+      std::streampos file_size_ = file.tellg();
+      file.seekg( 0, std::ios::end);
+      file_size_ = file.tellg() - file_size_;
+
+      //parse the header
+      file.seekg( 0, std::ios::beg);
+      std::string line;
+
+      //line 1
+      getline(file, description_);
+      std::cout << "description: " << description_ << std::endl;
+
+      //line 2
+      double val;
+      file >> val;
+      atomic_number_ = round(val);
+      file >> val;
+      valence_charge_ = round(val);
+      std::cout << "z = " << atomic_number_ << '\t' << "valence = " << valence_charge_ << std::endl;
+      getline(file, line);
+
+      //line 3
+      int pspcod;
+      file >> pspcod >> ixc_ >> lmax_ >> llocal_ >> mesh_size_;
+      if(pspcod != 8) throw status::FORMAT_NOT_SUPPORTED;
+      std::cout << ixc_ << '\t' << lmax_ << '\t' << llocal_ << '\t' << mesh_size_ << std::endl;
+      getline(file, line);
+
+      //line 4, ignored
+      getline(file, line);
+	    
+      //line 5
+      nprojectors_ = 0;
+      nchannels_ = 0;
+      for(int l = 0; l <= lmax_; l++){
+	int np;
+	file >> np;
+	nprojl_.push_back(np);
+	std::cout << l << "\t" << np << std::endl;
+	nprojectors_ += np;
+	nchannels_ = std::max(nchannels_, np);
+      }
+      std::cout << "nprojectors " << nprojectors_ << std::endl;
+      getline(file, line);
+
+      //line 6: ignored
+      getline(file, line);
+      std::cout << line << std::endl;
+
+      //the projectors and local potential
+      projectors_.resize(lmax_ + 1);
+      ekb_.resize(lmax_ + 1);
+      for(int l = 0; l <= lmax_; l++){
+	projectors_[l].resize(nprojl_[l]);
+	ekb_[l].resize(nprojl_[l]);
+
+	if(l == llocal_){
+	  read_local_potential(file);
+	  continue;
+	}
+	
+	if(nprojl_[l] == 0) continue;
+
+	
+	int read_l;
+	file >> read_l;
+
+	assert(read_l == l);
+
+	std::cout << l << std::endl;
+	
+	for(int iproj = 0; iproj < nprojl_[l]; iproj++){
+	  projectors_[l][iproj].resize(mesh_size_);
+	  file >> ekb_[l][iproj];
+	}
+	getline(file, line);
+
+	
+	for(int ip = 0; ip < mesh_size_; ip++){
+	  int read_ip;
+	  double grid_point;
+	  file>> read_ip >> grid_point;
+
+    	  assert(read_ip == ip + 1);
+
+	  for(int iproj = 0; iproj < nprojl_[l]; iproj++) file >> projectors_[l][iproj][ip];
+	  getline(file, line);
+	}
+
+      }
+
+      // the local potential if it was not read before
+      if(llocal_ > lmax_) read_local_potential(file);
+      
+    }
+
+    pseudopotential::format format() const { return pseudopotential::format::PSP8; }
+    
+    int size() const {
+      return file_size_;
+    };
+
+    std::string description() const {
+      return description_;
+    }
+    
+    std::string symbol() const {
+    }
+
+    int atomic_number() const {
+      return atomic_number_;
+    }
+
+    double mass() const {
+    }
+    
+    int valence_charge() const {
+      return valence_charge_;
+    }
+
+    int llocal() const {
+      return llocal_;
+    }
+
+    int nchannels() const {
+      return nchannels_;
+    }
+    
+    double mesh_spacing() const {
+      return mesh_spacing_;
+    }
+
+    int mesh_size() const {
+      return mesh_size_;
+    }
+    
+    void local_potential(std::vector<double> & potential) const {
+      potential.resize(mesh_size_);
+      assert(mesh_size_ == local_potential_.size());
+      for(int ip = 0; ip < mesh_size_; ip++) potential[ip] = local_potential_[ip];
+    }
+
+    int nprojectors() const {
+      return nprojectors_;
+    }
+    
+    void projector(int l, int i, std::vector<double> & proj) const {
+      proj.clear();
+      if(l > lmax_) return;
+      if(i > nprojl_[l]) return;
+
+      proj.resize(mesh_size_);
+      assert(mesh_size_ == projectors_[l][i].size());
+
+      for(int ip = 0; ip < mesh_size_; ip++) proj[ip] = projectors_[l][i][ip];
+    }
+    
+    double d_ij(int l, int i, int j) const {
+      if(i != j) return 0.0;
+      return ekb_[l][i];
+    }
+
+    bool has_radial_function(int l) const{
+      return false;
+    }
+
+    void radial_function(int l, std::vector<double> & function) const {
+      function.clear();
+    }
+
+    void radial_potential(int l, std::vector<double> & function) const {
+      function.clear();
+    }
+
+    bool has_nlcc() const{
+    }
+
+    void nlcc_density(std::vector<double> & density) const {
+    }
+    
+  private:
+
+    void read_local_potential(std::istream & file){
+      int read_llocal;
+      std::string line;
+      
+      file >> read_llocal;
+
+      std::cout << read_llocal << std::endl;
+      
+      assert(llocal_ == read_llocal);
+      getline(file, line);
+
+      local_potential_.resize(mesh_size_);     
+      for(int ip = 0; ip < mesh_size_; ip++){
+	int read_ip;
+	double grid_point;
+	file>> read_ip >> grid_point >> local_potential_[ip];
+	assert(read_ip == ip + 1);
+	getline(file, line);
+
+	if(ip == 1) {
+	  mesh_spacing_ = grid_point;
+	}
+      }
+      
+    }
+    
+    size_t file_size_;
+    std::string description_;
+    int atomic_number_;
+    int valence_charge_;
+    int ixc_;
+    int llocal_;
+    int mesh_size_;
+    int nchannels_;
+    double mesh_spacing_;
+    std::vector<int> nprojl_;
+    int nprojectors_;
+    std::vector<std::vector<std::vector<double> > > projectors_;
+    std::vector<std::vector<double> > ekb_;
+    std::vector<double> local_potential_;
+    
+  };
+
+}
+
+#endif

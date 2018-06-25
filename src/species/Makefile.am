@@ -56,6 +56,7 @@ noinst_HEADERS =                         \
 	detect_format.hpp                \
 	ps_pspio_inc.F90                 \
 	psml.hpp                         \
+	psp8.hpp                         \
 	qso.hpp                          \
 	share_directory.hpp              \
 	spline.h                         \
