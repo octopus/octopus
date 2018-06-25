@@ -170,6 +170,35 @@ namespace pseudopotential {
       return valence_charge_;
     }
 
+    pseudopotential::exchange exchange() const {
+      if(ixc_ > 0){
+	if(ixc_ == 1) return pseudopotential::exchange::NONE;
+	if(ixc_ >= 2 && ixc_ <= 9) return pseudopotential::exchange::LDA;
+	if(ixc_ == 11 || ixc_ == 12) return pseudopotential::exchange::PBE;
+      }	else {
+	return pseudopotential::exchange(-ixc_);
+      }
+      
+      return pseudopotential::exchange::UNKNOWN;
+    
+    }
+
+    pseudopotential::correlation correlation() const {
+      if(ixc_ > 0){
+	if(ixc_ == 1) return pseudopotential::correlation::LDA_XC_TETER93;
+	if(ixc_ == 2) return pseudopotential::correlation::LDA_PZ;
+	if(ixc_ == 7) return pseudopotential::correlation::LDA_PW;
+	if(ixc_ == 7 || ixc_ == 8) return pseudopotential::correlation::NONE;
+	if(ixc_ == 11) return pseudopotential::correlation::PBE;
+	if(ixc_ == 12) return pseudopotential::correlation::NONE;
+      }	else {
+	return pseudopotential::correlation(-ixc_/1000);
+      }
+      
+      return pseudopotential::correlation::UNKNOWN;
+
+    }
+
     int llocal() const {
       return llocal_;
     }
@@ -232,7 +261,7 @@ namespace pseudopotential {
 
     void nlcc_density(std::vector<double> & density) const {
     }
-    
+
   private:
     void extrapolate_first_point(std::vector<double> & function_) const{
 
