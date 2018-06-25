@@ -290,12 +290,10 @@ contains
 
     call profiling_in(prof, "HIRSHFELD_POSITION_DER")
 
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     if(this%mesh%sb%periodic_dim > 0) then ! periodic case
 
-      if(mpi_grp_is_root(mpi_world)) then
-        call profiling_in(prof, "HIRSHFELD_POSITION_DER")
+      !if(mpi_grp_is_root(mpi_world)) then
+        !call profiling_in(prof, "HIRSHFELD_POSITION_DER")
 
         SAFE_ALLOCATE(grad(1:this%mesh%np, 1:this%mesh%sb%dim))
         SAFE_ALLOCATE(atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
@@ -339,58 +337,55 @@ contains
     
         call periodic_copy_init(pp_i, this%mesh%sb, this%geo%atom(iatom)%x, VDW_TS_extraterm_i*rmax_i)
 
-
         do icell = 1, periodic_copy_num(pp_i)
           atom_density(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
           pos_i(1:this%mesh%sb%dim) = periodic_copy_position(pp_i, this%mesh%sb, icell)
 
+          !print*, 'icell, pos_i, pos initial', icell, pos_i(1:this%mesh%sb%dim),  this%geo%atom(iatom)%x
+
           !We get the non periodized density
           !We need to do it to have the r^3 correctly computed for periodic systems
+          !call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), &
+          !       this%geo%atom(iatom)%x, this%st%d%nspin, atom_density(1:this%mesh%np, 1:this%st%d%nspin))
           call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), &
-                 pos_i, this%st%d%nspin, atom_density)
+                 pos_i, this%st%d%nspin, atom_density(1:this%mesh%np, 1:this%st%d%nspin))
 
-          ttt = 0
-          do ip = 1, this%mesh%np
-            ttt = max(ttt, abs(sum(atom_density(ip, 1:this%st%d%nspin))))
-          end do
-          ttt = 0
+          !ttt = 0
+          !do ip = 1, this%mesh%np
+          !  ttt = max(ttt, abs(sum(atom_density(ip, 1:this%st%d%nspin))))
+          !end do
 
-          if(ttt < 0.0000000000000001) cycle
-          if(mpi_grp_is_root(mpi_world)) then
-            print*, 'condition passed, icell:', icell,  ttt
-          end if
-
+          !print*, 'condition passed, icell:', icell,  ttt, abs(sum(atom_density(1:this%mesh%np, 1:this%st%d%nspin)))
+          !if(ttt < 0.0000000000000001) cycle
           
           call periodic_copy_init(pp_j, this%mesh%sb, pos_i, VDW_TS_extraterm_j*(rmax_j+rmax_i))
 
-          call profiling_in(prof2, "HIRSHFELD_POSITION_DER2")
+          !call profiling_in(prof2, "HIRSHFELD_POSITION_DER2")
 
           do jcell = 1, periodic_copy_num(pp_j)
 
-            pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%mesh%sb, jcell)
+            pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%mesh%sb, jcell) + (this%geo%atom(jatom)%x(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim))
             rij =  sqrt(sum((pos_i(1:this%mesh%sb%dim)-pos_j(1:this%mesh%sb%dim))**2))
 
             if(rij < 1.00000000001*(rmax_j+rmax_i)) then
+             
+              print*, ' icell, jcell, pos_i, pos_j:', icell, jcell, pos_i, pos_j
 
+              atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
               call species_atom_density_derivative_np(this%mesh, this%mesh%sb, this%geo%atom(jatom), &
                    pos_j, this%st%d%spin_channels, &
                    atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
-              ttt = 0
-              do ip = 1, this%mesh%np
-                ttt= max(ttt, abs(sum(atom_derivative(ip, 1:this%st%d%nspin))))
-              end do
-              ttt = 0
-           
-              if(mpi_grp_is_root(mpi_world)) then
-                print*, 'contribution de la celulle jcell', ttt
-              end if
-
-              if(ttt < 0.00000000001) cycle
-
-              !if(mpi_grp_is_root(mpi_world)) then 
-              print*, 'condition passed, icell, jcell:', icell, jcell
+              !ttt = 0
+              !do ip = 1, this%mesh%np
+              !  ttt= max(ttt, abs(sum(atom_derivative(ip, 1:this%st%d%nspin))))
+              !end do          
+              !if(mpi_grp_is_root(mpi_world)) then
+              !  print*, 'contribution de la celulle jcell', ttt
               !end if
 
+              !if(ttt < 0.00000000001) cycle
+              !print*, 'condition passed, icell, jcell:', icell, jcell
+
               do ip = 1, this%mesh%np
                 if(this%total_density(ip)< TOL_HIRSHFELD) cycle
 
@@ -411,76 +406,78 @@ contains
                   end do
                 end if
 
-                if(iatom == jatom .and. icell == jcell) then
+                if(iatom == jatom .and. sum(abs(pos_i(1:this%mesh%sb%dim)- pos_j(1:this%mesh%sb%dim))) < 0.000001) then
                   !Only if we really have the same atoms
-                  if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < TOL_HIRSHFELD)) then
-                    do idir = 1, this%mesh%sb%dim
-                      grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
-                                          *tdensity/this%total_density(ip)*xxi(idir)
-                    end do
-                  end if
-                end if
-              end do
-            else 
-              print*, 'impossible car rij trop grand'
-              call species_atom_density_derivative_np(this%mesh, this%mesh%sb, this%geo%atom(jatom), &
-                   pos_j, this%st%d%spin_channels, &
-                   atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
-
-              do ip = 1, this%mesh%np
-                if(this%total_density(ip)< TOL_HIRSHFELD) cycle
-
-                xxi(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_i(1:this%mesh%sb%dim)
-                rri = sqrt(sum(xxi(1:this%mesh%sb%dim)**2))
-                tdensity = sum(density(ip, 1:this%st%d%nspin))
-                atom_dens = sum(atom_density(ip, 1:this%st%d%nspin))
-
-                tmp = rri**3*atom_dens*tdensity/this%total_density(ip)**2
-
-                xxj(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim)
-                rrj = sqrt(sum(xxj(1:this%mesh%sb%dim)**2))
-                atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin))
-
-
-                if(atom_der > 0.0000000000001 .AND. atom_dens > 0.00000000001) then
-                  print*, 'probleme'
-                end if
-
-                if(rrj > TOL_HIRSHFELD) then
+                  !if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < TOL_HIRSHFELD)) then
+                  print*, 'meme atomes'
                   do idir = 1, this%mesh%sb%dim
-                    grad(ip, idir) = grad(ip, idir) - tmp*atom_der*xxj(idir)/rrj
+                    grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
+                                        *tdensity/this%total_density(ip)*xxi(idir)
                   end do
-                end if
-
-                if(iatom == jatom .and. icell == jcell) then
-                  !Only if we really have the same atoms
-                  if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < TOL_HIRSHFELD)) then
-                    do idir = 1, this%mesh%sb%dim
-                      grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
-                                          *tdensity/this%total_density(ip)*xxi(idir)
-                    end do
-                  end if
+                  !end if
                 end if
               end do
+           ! else 
+           !   print*, 'impossible car rij trop grand'
+           !   atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
+           !   call species_atom_density_derivative_np(this%mesh, this%mesh%sb, this%geo%atom(jatom), &
+           !        pos_j, this%st%d%spin_channels, &
+           !        atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
+
+           !   do ip = 1, this%mesh%np
+           !     if(this%total_density(ip)< TOL_HIRSHFELD) cycle
+
+           !     xxi(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_i(1:this%mesh%sb%dim)
+           !     rri = sqrt(sum(xxi(1:this%mesh%sb%dim)**2))
+           !     tdensity = sum(density(ip, 1:this%st%d%nspin))
+           !     atom_dens = sum(atom_density(ip, 1:this%st%d%nspin))
+
+           !     tmp = rri**3*atom_dens*tdensity/this%total_density(ip)**2
+
+           !     xxj(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim)
+           !     rrj = sqrt(sum(xxj(1:this%mesh%sb%dim)**2))
+           !     atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin))
+
+
+           !     if(atom_der > 0.0000000000001 .AND. atom_dens > 0.00000000001) then
+           !       print*, 'probleme'
+           !    end if
+
+           !    if(rrj > TOL_HIRSHFELD) then
+           !      do idir = 1, this%mesh%sb%dim
+           !     !!!grad(ip, idir) = grad(ip, idir) - tmp*atom_der*xxj(idir)/rrj
+           !      end do
+           !    end if
+
+           !     !if(iatom == jatom .and. icell == jcell) then
+           !    if(iatom == jatom .and. sum(abs(pos_i(1:this%mesh%sb%dim)- pos_j(1:this%mesh%sb%dim))) < 0.000001) then
+
+           !       !Only if we really have the same atoms
+           !      if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < TOL_HIRSHFELD)) then
+           !        do idir = 1, this%mesh%sb%dim
+           !        !!!grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
+           !        !!!                    *tdensity/this%total_density(ip)*xxi(idir)
+           !        end do
+           !      end if
+           !    end if
+           !  end do
             end if
-            call periodic_copy_end(pp_j)
           end do
-        call profiling_out(prof2)
-
+          call periodic_copy_end(pp_j)
         end do
-        print *,'calculate the integral'
+        call periodic_copy_end(pp_i)
+        !print *,'calculate the integral'
         do idir = 1, this%mesh%sb%dim
           !dposition(idir) = dmf_integrate(this%mesh, grad(1:this%mesh%np, idir))/this%free_volume(iatom)
           dposition(idir) = sum(grad(1:this%mesh%np, idir))/this%free_volume(iatom)
         end do
-        call periodic_copy_end(pp_i)
 
         SAFE_DEALLOCATE_A(atom_density)
         SAFE_DEALLOCATE_A(atom_derivative)
         SAFE_DEALLOCATE_A(grad)
 
-        call profiling_out(prof)
-      end if
+        !call profiling_out(prof)
+      !end if
 
     else ! Non periodic case  
 
@@ -525,7 +522,18 @@ contains
         call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), &
                pos_i, this%st%d%nspin, atom_density)
 
-        call profiling_in(prof2, "HIRSHFELD_POSITION_DER2")
+
+        !ttt = 0
+        !do ip = 1, this%mesh%np
+        !  ttt = max(ttt, sum(atom_density(ip, 1:this%st%d%nspin)))
+        !end do
+
+        !if(mpi_grp_is_root(mpi_world)) then
+        !  print*, ttt
+        !end if
+
+
+        !call profiling_in(prof2, "HIRSHFELD_POSITION_DER2")
         do ip = 1, this%mesh%np
           if(this%total_density(ip)< TOL_HIRSHFELD) cycle
 
@@ -548,16 +556,16 @@ contains
 
           if(iatom == jatom)then
             !Only if we really have the same atoms
-            if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < TOL_HIRSHFELD)) then
-              do idir = 1, this%mesh%sb%dim
-                grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
-                                      *tdensity/this%total_density(ip)*xxi(idir)
-              end do
-            end if
+            !if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < TOL_HIRSHFELD)) then
+            do idir = 1, this%mesh%sb%dim
+              grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
+                                    *tdensity/this%total_density(ip)*xxi(idir)
+            end do
+            !end if
           end if
         end do
 
-        call profiling_out(prof2)
+        !call profiling_out(prof2)
 
         SAFE_DEALLOCATE_A(atom_density)
         SAFE_DEALLOCATE_A(atom_derivative)
@@ -568,10 +576,9 @@ contains
       end do
 
       SAFE_DEALLOCATE_A(grad)
-
-      call profiling_out(prof)
-  
     end if
+
+    call profiling_out(prof)
 
     POP_SUB(hirshfeld_position_derivative)
   end subroutine hirshfeld_position_derivative
