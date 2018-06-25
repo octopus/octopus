@@ -58,7 +58,6 @@ namespace pseudopotential {
 
       //line 1
       getline(file, description_);
-      std::cout << "description: " << description_ << std::endl;
 
       //line 2
       double val;
@@ -66,14 +65,12 @@ namespace pseudopotential {
       atomic_number_ = round(val);
       file >> val;
       valence_charge_ = round(val);
-      std::cout << "z = " << atomic_number_ << '\t' << "valence = " << valence_charge_ << std::endl;
       getline(file, line);
 
       //line 3
       int pspcod;
       file >> pspcod >> ixc_ >> lmax_ >> llocal_ >> mesh_size_;
       if(pspcod != 8) throw status::FORMAT_NOT_SUPPORTED;
-      std::cout << ixc_ << '\t' << lmax_ << '\t' << llocal_ << '\t' << mesh_size_ << std::endl;
       getline(file, line);
 
       //line 4
@@ -89,16 +86,13 @@ namespace pseudopotential {
 	int np;
 	file >> np;
 	nprojl_.push_back(np);
-	std::cout << l << "\t" << np << std::endl;
 	nprojectors_ += np;
 	nchannels_ = std::max(nchannels_, np);
       }
-      std::cout << "nprojectors " << nprojectors_ << std::endl;
       getline(file, line);
 
       //line 6: ignored
       getline(file, line);
-      std::cout << line << std::endl;
 
       //the projectors and local potential
       projectors_.resize(lmax_ + 1);
@@ -121,12 +115,9 @@ namespace pseudopotential {
 
 	assert(read_l == l);
 
-	std::cout << l << std::endl;
-	
 	for(int iproj = 0; iproj < nprojl_[l]; iproj++){
 	  projectors_[l][iproj].resize(mesh_size_);
 	  file >> ekb_[l][iproj];
-	  std::cout << ekb_[l][iproj] << std::endl;
 	}
 	getline(file, line);
 
@@ -134,7 +125,7 @@ namespace pseudopotential {
 	for(int ip = 0; ip < mesh_size_; ip++){
 	  int read_ip;
 	  double grid_point;
-	  file>> read_ip >> grid_point;
+	  file >> read_ip >> grid_point;
 
     	  assert(read_ip == ip + 1);
 
@@ -217,6 +208,7 @@ namespace pseudopotential {
     }
 
     int llocal() const {
+      if(llocal_ > lmax_) return -1;
       return llocal_;
     }
 
@@ -311,8 +303,6 @@ namespace pseudopotential {
       
       file >> read_llocal;
 
-      std::cout << read_llocal << std::endl;
-      
       assert(llocal_ == read_llocal);
       getline(file, line);
 
