@@ -104,6 +104,7 @@ namespace pseudopotential {
 	projectors_[l].resize(nprojl_[l]);
 	ekb_[l].resize(nprojl_[l]);
 
+	
 	if(l == llocal_){
 	  read_local_potential(file);
 	  continue;
@@ -122,6 +123,7 @@ namespace pseudopotential {
 	for(int iproj = 0; iproj < nprojl_[l]; iproj++){
 	  projectors_[l][iproj].resize(mesh_size_);
 	  file >> ekb_[l][iproj];
+	  std::cout << ekb_[l][iproj] << std::endl;
 	}
 	getline(file, line);
 
@@ -202,7 +204,10 @@ namespace pseudopotential {
       proj.resize(mesh_size_);
       assert(mesh_size_ == projectors_[l][i].size());
 
-      for(int ip = 0; ip < mesh_size_; ip++) proj[ip] = projectors_[l][i][ip];
+      for(int ip = 1; ip < mesh_size_; ip++) proj[ip] = projectors_[l][i][ip]/(mesh_spacing()*ip);
+
+      extrapolate_first_point(proj);
+      
     }
     
     double d_ij(int l, int i, int j) const {
@@ -229,7 +234,26 @@ namespace pseudopotential {
     }
     
   private:
+    void extrapolate_first_point(std::vector<double> & function_) const{
 
+      assert(function_.size() >= 4);
+
+      double x1 = mesh_spacing();
+      double x2 = 2*mesh_spacing();
+      double x3 = 3*mesh_spacing();
+      double f1 = function_[1];
+      double f2 = function_[2];
+      double f3 = function_[3];
+
+
+      // obtained from:
+      // http://www.wolframalpha.com/input/?i=solve+%7Bb*x1%5E2+%2B+c*x1+%2B+d+%3D%3D+f1,++b*x2%5E2+%2B+c*x2+%2B+d+%3D%3D+f2,+b*x3%5E2+%2B+c*x3+%2B+d+%3D%3D+f3+%7D++for+b,+c,+d
+      
+      function_[0] = f1*x2*x3*(x2 - x3) + f2*x1*x3*(x3 - x1) + f3*x1*x2*(x1 - x2);
+      function_[0] /= (x1 - x2)*(x1 - x3)*(x2 - x3);
+
+    }
+    
     void read_local_potential(std::istream & file){
       int read_llocal;
       std::string line;
