@@ -71,8 +71,8 @@ module ps_oct_m
   
   integer, parameter, public :: INVALID_L = 333
 
-  character(len=4), parameter  :: ps_name(PSEUDO_FORMAT_UPF1:PSEUDO_FORMAT_HGH) = &
-    (/"upf1", "upf2", "qso ", "psml", "psf ", "cpi ", "fhi ", "hgh "/)
+  character(len=4), parameter  :: ps_name(PSEUDO_FORMAT_UPF1:PSEUDO_FORMAT_PSP8) = &
+    (/"upf1", "upf2", "qso ", "psml", "psf ", "cpi ", "fhi ", "hgh ", "psp8"/)
 
   type ps_t
     integer :: projector_type
@@ -408,7 +408,7 @@ contains
       SAFE_ALLOCATE(ps%k    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
       call hgh_load(ps, ps_hgh)
       call hgh_end(ps_hgh)
-    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
+    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML, PSEUDO_FORMAT_PSP8)
       call ps_xml_load(ps, ps_xml)
       call ps_xml_end(ps_xml)
     end select
