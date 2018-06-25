@@ -76,7 +76,10 @@ namespace pseudopotential {
       std::cout << ixc_ << '\t' << lmax_ << '\t' << llocal_ << '\t' << mesh_size_ << std::endl;
       getline(file, line);
 
-      //line 4, ignored
+      //line 4
+      file >> val;
+      file >> val;
+      nlcc_ = (val > 0.0);
       getline(file, line);
 	    
       //line 5
@@ -143,6 +146,20 @@ namespace pseudopotential {
 
       // the local potential if it was not read before
       if(llocal_ > lmax_) read_local_potential(file);
+
+
+      //NLCC
+      if(nlcc_){
+	nlcc_density_.resize(mesh_size_);
+	
+	for(int ip = 0; ip < mesh_size_; ip++){
+	  int read_ip;
+	  double grid_point;
+	  file >> read_ip >> grid_point >> nlcc_density_[ip];
+	  assert(read_ip == ip + 1);
+	  getline(file, line);
+	}
+      }
       
     }
 
@@ -257,12 +274,17 @@ namespace pseudopotential {
     }
 
     bool has_nlcc() const{
+      return nlcc_;
     }
 
     void nlcc_density(std::vector<double> & density) const {
+      density.resize(mesh_size_);
+      assert(mesh_size_ == nlcc_density_.size());
+      for(int ip = 0; ip < mesh_size_; ip++) density[ip] = nlcc_density_[ip]/(4.0*M_PI);
     }
-
+    
   private:
+    
     void extrapolate_first_point(std::vector<double> & function_) const{
 
       assert(function_.size() >= 4);
@@ -323,6 +345,8 @@ namespace pseudopotential {
     std::vector<std::vector<std::vector<double> > > projectors_;
     std::vector<std::vector<double> > ekb_;
     std::vector<double> local_potential_;
+    bool nlcc_;
+    std::vector<double> nlcc_density_;
     
   };
 
