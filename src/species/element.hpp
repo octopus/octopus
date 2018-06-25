@@ -33,8 +33,13 @@ namespace pseudopotential {
   
   class element {
 
-  public:
+  private:
 
+    struct properties;
+    typedef std::map<std::string, properties> map_type;
+    
+  public:
+    
     element(const std::string & symbol = "none"):symbol_(symbol){
       trim(symbol_);
       symbol_[0] = std::toupper(symbol_[0]);
@@ -42,7 +47,7 @@ namespace pseudopotential {
 
       map(); //make sure the map is initialized
     }
-
+    
     bool valid() const {
       return map().find(symbol_) != map().end();
     }
@@ -75,9 +80,9 @@ namespace pseudopotential {
       double vdw_radius_;
     };
     
-    static std::map<std::string, properties> & map(){
+    static map_type & map(){
       
-      static std::map<std::string, properties> map;
+      static map_type map;
 
       if(map.empty()){
 
