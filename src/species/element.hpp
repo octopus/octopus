@@ -47,6 +47,22 @@ namespace pseudopotential {
 
       map(); //make sure the map is initialized
     }
+
+    element(int atomic_number){
+
+      //special case: avoid ambiguity between isotopes
+      if(atomic_number == 1){
+	symbol_ = 'H';
+	return;
+      }
+      
+      for(map_type::iterator it = map().begin(); it != map().end(); ++it){
+	if(it->second.z_ == atomic_number) {
+	  symbol_ = it->first;
+	  break;
+	}
+      }
+    }
     
     bool valid() const {
       return map().find(symbol_) != map().end();
