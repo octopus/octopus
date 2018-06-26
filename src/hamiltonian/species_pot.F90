@@ -311,7 +311,7 @@ contains
     integer,              intent(in)    :: spin_channels
     FLOAT,                intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
     integer :: isp, ip
-    FLOAT :: rr, nrm, rmax
+    FLOAT :: rr, nrm, rmax, r_small
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
 
@@ -330,14 +330,16 @@ contains
         ASSERT(associated(ps%density))
 
         rmax = CNST(0.0)
+        r_small = M_ZERO
+
         do isp = 1, spin_channels
           rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
         end do
-
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = pos)
-          rr = max(rr, r_small)
 
+          rr = max(rr, r_small) 
+           
           do isp = 1, spin_channels
             if(rr >= spline_range_max(ps%density(isp))) cycle
             rho(ip, isp) = rho(ip, isp) + spline_eval(ps%density(isp), rr)
