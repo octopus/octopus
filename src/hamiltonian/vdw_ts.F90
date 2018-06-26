@@ -501,16 +501,8 @@ contains
     end do
 
 
-    !if(mpi_grp_is_root(mpi_world)) then
-    !  do iatom = 1, geo%natoms
-    !    print *,'i initial force', iatom, force_vdw(1:sb%dim,iatom)
-    !  end do
-    !end if
 
     do iatom = 1, geo%natoms
-      !if(mpi_grp_is_root(mpi_world)) then
-      !  print *,'i derivative coeff',  iatom, derivative_coeff(iatom)
-      !end if
       do jatom = 1, geo%natoms
         call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
         !if(mpi_grp_is_root(mpi_world)) then
@@ -519,13 +511,6 @@ contains
         force_vdw(1:sb%dim,jatom)= force_vdw(1:sb%dim,jatom) + derivative_coeff(iatom)*dvadrr(1:sb%dim)  ! geo%atom(jatom)%f_vdw(1:sb%dim) = sum_i coeff_i * dvadrr_ij
       end do
     end do
-
-    !if(mpi_grp_is_root(mpi_world)) then
-    !  do iatom = 1, geo%natoms
-    !    print *,'i with extra f', iatom, force_vdw(1:sb%dim,iatom)
-    !  end do
-    !end if
-
 
     call hirshfeld_end(hirshfeld)
 
