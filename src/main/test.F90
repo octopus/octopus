@@ -23,6 +23,7 @@ program oct_test
   use batch_oct_m
   use batch_ops_oct_m
   use base_hamiltonian_oct_m
+  use boundaries_oct_m
   use calc_mode_par_oct_m
   use command_line_oct_m
   use density_oct_m
@@ -419,7 +420,8 @@ program oct_test
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, hm, sys%st, sys%geo)
 
-    
+   
+    call boundaries_set(sys%gr%der%boundaries, sys%st%group%psib(1, 1)) 
 
     SAFE_ALLOCATE(hpsib)
     call batch_copy(sys%st%group%psib(1, 1), hpsib)
@@ -432,9 +434,9 @@ program oct_test
     do itime = 1, test_param%repetitions
       call batch_set_zero(hpsib)
       if(states_are_real(sys%st)) then
-        call dhamiltonian_apply_batch(hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms)
+        call dhamiltonian_apply_batch(hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
       else
-        call zhamiltonian_apply_batch(hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms)
+        call zhamiltonian_apply_batch(hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
       end if
     end do
 
