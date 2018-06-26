@@ -121,9 +121,12 @@ contains
   subroutine batch_set_zero(this)
     type(batch_t),     intent(inout) :: this
 
+    type(profile_t), save :: prof
     integer :: ist_linear
 
     PUSH_SUB(batch_set_zero)
+
+    call profiling_in(prof, "SET_ZERO")
 
     call batch_pack_was_modified(this)
 
@@ -143,6 +146,8 @@ contains
       end do
 
     end if
+
+    call profiling_out(prof)
 
     POP_SUB(batch_set_zero)
   end subroutine batch_set_zero
