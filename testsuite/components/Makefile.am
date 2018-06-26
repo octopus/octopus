@@ -67,6 +67,8 @@ dist_share_DATA =                                  \
 	19-hgh_soc.01-3d.inp                       \
         19-hgh_soc.test                            \
 	20-dft_u.01-NiO.inp                        \
-	20-dft_u.test
+	20-dft_u.test                              \
+	21-hamiltonian_apply.01-Si.inp             \
+	21-hamiltonian_apply.test
 
 CLEANFILES = *~ *.bak

@@ -25,9 +25,11 @@ program oct_test
   use base_hamiltonian_oct_m
   use calc_mode_par_oct_m
   use command_line_oct_m
+  use density_oct_m
   use derivatives_oct_m
   use epot_oct_m
   use fft_oct_m
+  use hamiltonian_oct_m
   use io_oct_m
   use ion_interaction_oct_m
   use mesh_interpolation_oct_m
@@ -39,6 +41,7 @@ program oct_test
   use profiling_oct_m
   use projector_oct_m
   use restart_oct_m
+  use simul_box_oct_m
   use states_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
@@ -47,9 +50,11 @@ program oct_test
   use types_oct_m
   use unit_system_oct_m
   use utils_oct_m
+  use v_ks_oct_m
   use messages_oct_m
   use multicomm_oct_m
   use XC_F90(lib_m)
+  use xc_oct_m
 
   implicit none
 
@@ -94,6 +99,8 @@ program oct_test
   !% in case of spin-orbit coupling
   !%Option dft_u 7
   !% Tests the DFT+U part of the code for projections on the basis.
+  !%Option hamiltonian_apply 8
+  !% Tests the application of the Hamiltonian, or a part of it
   !%End
   call parse_variable('TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -196,6 +203,8 @@ program oct_test
     call test_projector()
   case(OPTION__TESTMODE__DFT_U)
     call test_dft_u()
+  case(OPTION__TESTMODE__HAMILTONIAN_APPLY)
+    call test_hamiltonian()
   end select
 
   call fft_all_end()
@@ -276,7 +285,6 @@ program oct_test
   ! ---------------------------------------------------------
   subroutine test_dft_u
     type(system_t)      :: sys
-    type(epot_t) :: ep
     type(batch_t), pointer :: epsib
     integer :: itime
     type(base_hamiltonian_t), pointer :: subsys_hm
@@ -288,22 +296,20 @@ program oct_test
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
-    call messages_write('Info: Testing the nonlocal part of the pseudopotential with SOC')
+    call messages_write('Info: Testing some DFT+U routines')
     call messages_new_line()
     call messages_new_line()
     call messages_info()
 
     call system_init(sys)
 
-    call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
+    call states_allocate_wfns(sys%st, sys%gr%mesh)
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    if(sys%st%d%pack_states) call states_pack(sys%st)
 
     !Initialize external potential
     nullify(subsys_hm)
-    call epot_init(ep, sys%gr, sys%geo, SPINORS, 1, .false., subsys_hm, XC_FAMILY_NONE)
-    call epot_generate(ep, sys%gr, sys%geo, sys%st, .false.)
 
-    !Initialize external potential
     SAFE_ALLOCATE(epsib)
     call batch_copy(sys%st%group%psib(1, 1), epsib)
     call batch_copy_data(sys%gr%mesh%np, sys%st%group%psib(1, 1), epsib)
@@ -355,13 +361,106 @@ program oct_test
     call batch_end(epsib)
     SAFE_DEALLOCATE_P(epsib)
     call orbitalbasis_end(basis)
-    call epot_end(ep)
     call states_deallocate_wfns(sys%st)
     call system_end(sys)
 
     POP_SUB(test_dft_u)
   end subroutine test_dft_u
 
+  ! ---------------------------------------------------------
+  subroutine test_hamiltonian
+    type(system_t)      :: sys
+    type(batch_t), pointer :: hpsib
+    integer :: itime, terms
+    type(base_hamiltonian_t), pointer :: subsys_hm
+    type(hamiltonian_t) :: hm
+    type(simul_box_t) :: sb
+
+    PUSH_SUB(test_hamiltonian)
+
+    !%Variable TestHamiltonianApply
+    !%Type integer
+    !%Default term_all
+    !%Section Utilities::oct-test
+    !%Description
+    !% Decides which part of the Hamiltonian is applied.
+    !%Option term_all 0
+    !% Apply the full Hamiltonian.
+    !%Option term_kinetic 1
+    !% Apply only the kinetic operator
+    !%Option term_local_potential 2
+    !% Apply only the local potential.
+    !%Option term_non_local_potential 4
+    !% Apply only the non_local potential.
+    !%End
+    call parse_variable('TestHamiltonianApply', OPTION__TESTMODE__HARTREE, terms)
+    if(terms==0) terms = huge(1)
+
+
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+    call messages_write('Info: Testing the application of the Hamiltonian')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    call system_init(sys)
+
+    call states_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    if(sys%st%d%pack_states) call states_pack(sys%st)
+
+    !Initialize external potential
+    nullify(subsys_hm)
+    call simul_box_init(sb, sys%geo, sys%space)
+    call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
+             sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+    call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
+    call density_calc(sys%st, sys%gr, sys%st%rho)
+    call v_ks_calc(sys%ks, hm, sys%st, sys%geo)
+
+    
+
+    SAFE_ALLOCATE(hpsib)
+    call batch_copy(sys%st%group%psib(1, 1), hpsib)
+
+    if(hamiltonian_apply_packed(hm, sys%gr%der%mesh)) then
+      call batch_pack(sys%st%group%psib(1, 1))
+      call batch_pack(hpsib, copy = .false.)
+    end if
+
+    do itime = 1, test_param%repetitions
+      call batch_set_zero(hpsib)
+      if(states_are_real(sys%st)) then
+        call dhamiltonian_apply_batch(hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms)
+      else
+        call zhamiltonian_apply_batch(hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms)
+      end if
+    end do
+
+    if(hamiltonian_apply_packed(hm, sys%gr%der%mesh)) then
+      call batch_unpack(hpsib)
+    end if
+
+    do itime = 1, hpsib%nst
+      if(states_are_real(sys%st)) then 
+        write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, dmf_nrm2(sys%gr%mesh, sys%st%d%dim, hpsib%states(itime)%dpsi)
+      else
+        write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, sys%st%d%dim, hpsib%states(itime)%zpsi)
+      end if
+      call messages_info(1)
+    end do
+
+
+    call batch_end(hpsib, copy = .false.)
+    SAFE_DEALLOCATE_P(hpsib)
+    call hamiltonian_end(hm)
+    call simul_box_end(sb)
+    call states_deallocate_wfns(sys%st)
+    call system_end(sys)
+
+    POP_SUB(test_hamiltonian)
+  end subroutine test_hamiltonian
 
 
 ! ---------------------------------------------------------
