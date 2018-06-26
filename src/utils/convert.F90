@@ -610,7 +610,8 @@ contains
         spectrum%max_energy = max_energy
         SAFE_ALLOCATE(tdrho_a(0:time_steps, 1, 1))
         no_e = int(spectrum%max_energy / spectrum%energy_step)
-        SAFE_ALLOCATE(wdrho_a(0:no_e, 1, 1))
+        !TODO: use no_e to define dimension of the FT output, BUT not making glibc to complain about it
+        SAFE_ALLOCATE(wdrho_a(0:time_steps, 1, 1))
         !TODO: set system variable common for all the program in 
         !      order to use call kick_init(kick, sy%st%d%nspin, sys%space%dim, sys%geo%periodic_dim)
         call kick_init(kick, 1, mesh%sb%dim, geo%periodic_dim)
@@ -666,7 +667,8 @@ contains
     !For each mesh point, open density file and read corresponding point.  
     if (mpi_world%rank == 0) call loct_progress_bar(-1, mesh%np)
 
-    SAFE_ALLOCATE(point_tmp(1:chunk_size, 0:max(time_steps, no_e)))
+    !TODO: use no_e to define dimension of the FT output, BUT not making glibc to complain about it
+    SAFE_ALLOCATE(point_tmp(1:chunk_size, 0:time_steps))
     read_count = 0
     ! Space
     do i_space = 1, mesh%np
