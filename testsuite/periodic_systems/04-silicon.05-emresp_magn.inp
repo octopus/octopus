@@ -1,5 +1,3 @@
-FromScratch=yes
-
 CalculationMode = em_resp
 ExperimentalFeatures = yes
 
@@ -31,16 +29,17 @@ Spacing = Lsize/7
 KPointsUseSymmetries = yes
 SymmetrizeDensity = yes
 
-
 ExtraStates = 1
 
 %EMFreqs 
-2 | 0.0 | 0.1
+1 | 0.0
 %
 
+LinearSolver = qmr_dotp
 EMEta = 0.01
-EMCalcBornCharges = yes
-BornChargeSumRuleCorrection = no
+KdotPEta = 0.01
+LRTolFinalTol = 1e-4
+EMPerturbationType = magnetic
 
 FilterPotentials = filter_none
 
