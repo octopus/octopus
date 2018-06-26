@@ -36,6 +36,8 @@ dist_share_DATA =                                \
 	04-silicon.01-gs.inp                     \
 	04-silicon.02-kdotp.inp                  \
 	04-silicon.03-emresp.inp                 \
+	04-silicon.04-emresp_mo.inp              \
+	04-silicon.05-emresp_magn.inp            \
 	05-lithium.test                          \
 	05-lithium.01-gs.inp                     \
 	05-lithium.02-td.inp                     \
@@ -44,6 +46,8 @@ dist_share_DATA =                                \
 	06-h2o_pol_lr.01_gs.inp                  \
 	06-h2o_pol_lr.02_kdotp.inp               \
 	06-h2o_pol_lr.03_emresp.inp              \
+	06-h2o_pol_lr.04_emresp_mo.inp           \
+	06-h2o_pol_lr.05_emresp_susc.inp         \
 	06-h2o_pol_lr.test                       \
 	07-tb09.test	                         \
 	07-tb09.01-gs_symm.inp                   \
