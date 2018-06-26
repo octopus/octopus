@@ -229,7 +229,8 @@ contains
     PUSH_SUB(pcm_init)
 
     kick_is_present = kick_present
-    
+
+    pcm%localf = .false.
     pcm%iter = 0
     pcm%update_iter = 1
     pcm%kick_like = .false.

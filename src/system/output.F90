@@ -605,7 +605,7 @@ contains
     !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
     call parse_variable('OutputIterDir', "output_iter", outp%iter_dir)
-    if(outp%what + outp%whatBZ /= 0 .and. outp%output_interval > 0) then
+    if(outp%what + outp%whatBZ + outp%what_lda_u/= 0 .and. outp%output_interval > 0) then
       call io_mkdir(outp%iter_dir)
     end if
     call add_last_slash(outp%iter_dir)

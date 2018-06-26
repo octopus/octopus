@@ -1,0 +1,20 @@
+TestMode = orthogonalization
+
+%Coordinates
+"Na" | 0.0 | 0.0 |  0.0
+%
+
+BoxShape = sphere
+Radius  = 14.0
+Spacing = 0.35
+
+ExtraStates = 8
+
+StatesOrthogonalization = cholesky_serial
+
+TestType = complex
+
+ParDomains = auto
+ParStates = 2
+
+StatesRandomization = par_independent
