@@ -2,7 +2,7 @@
 
 Test       : Frozen - Na2
 Program    : octopus
-TestGroups : short-run, frozen
+TestGroups : long-run, frozen
 Enabled    : Yes
 
 Input: 02-na2.00-output_frozen.inp

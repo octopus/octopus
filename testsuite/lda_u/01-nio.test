@@ -2,7 +2,7 @@
 
 Test       : GGA+U for (AF) bulk NiO crystal
 Program    : octopus
-TestGroups : short-run, periodic_systems, lda_u
+TestGroups : long-run, periodic_systems, lda_u
 Enabled    : Yes
 
 Input      : 01-nio.01-U5-gs.inp

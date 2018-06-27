@@ -4,7 +4,7 @@ Test       : Silicon crystal
 Program    : octopus
 TestGroups : long-run, periodic_systems, symmetries
 Enabled    : Yes
-
+Processors : 4
 Input      : 04-silicon.01-gs.inp
 
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
@@ -117,3 +117,50 @@ match ; Born charge 5 XX w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "In
 # this discrepancy is horrible!
 match ; Born charge diff w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Discrepancy",  3,  5) ;  -2.958955
 match ; Born charge diff w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Discrepancy",  3, 10) ;  -2.356381
+
+Input: 04-silicon.04-emresp_mo.inp
+
+Precision : 0.001
+match ; Susceptibility XX          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 1, 1) ; -6228.875000
+match ; Susceptibility YY          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 2, 2) ; -6228.875000
+match ; Susceptibility ZZ          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 3, 3) ; -6228.875000
+
+match ; Re dielectric constant XX  ; GREPFIELD(em_resp/freq_0.1000/epsilon, "Real", 1, 1) ; 29.052495
+match ; Re dielectric constant YY  ; GREPFIELD(em_resp/freq_0.1000/epsilon, "Real", 2, 2) ; 29.052495
+match ; Re dielectric constant ZZ  ; GREPFIELD(em_resp/freq_0.1000/epsilon, "Real", 3, 3) ; 29.052495
+match ; Im dielectric constant XX  ; GREPFIELD(em_resp/freq_0.1000/epsilon, "Imaginary", 1, 1) ; 14.943258
+match ; Im dielectric constant YY  ; GREPFIELD(em_resp/freq_0.1000/epsilon, "Imaginary", 2, 2) ; 14.943258
+match ; Im dielectric constant ZZ  ; GREPFIELD(em_resp/freq_0.1000/epsilon, "Imaginary", 3, 3) ; 14.943258
+match ; Im dielectric constant av  ; GREPFIELD(em_resp/freq_0.1000/epsilon, "Imaginary", 3, 4) ; 14.943258
+
+match ; Re epsilon at k-point      ; GREPFIELD(em_resp/freq_0.1000/epsilon_k_re, "  3  ", 14) ; 0.49527568E+01
+match ; Re epsilon at k-point      ; GREPFIELD(em_resp/freq_0.1000/epsilon_k_re, "  3  ", 10) ; 0.26530651E+02
+match ; Re epsilon at k-point      ; GREPFIELD(em_resp/freq_0.1000/epsilon_k_re, "  3  ", 11) ; -0.13845557E+01
+match ; Im epsilon at k-point      ; GREPFIELD(em_resp/freq_0.1000/epsilon_k_im, "  2  ", 10) ; 0.73630068E+01
+match ; Im epsilon at k-point      ; GREPFIELD(em_resp/freq_0.1000/epsilon_k_im, "  4  ", 6) ; 0.44500354E+02
+match ; Im epsilon at k-point      ; GREPFIELD(em_resp/freq_0.1000/epsilon_k_im, "  4  ", 7) ; -0.21939421E+02
+
+Precision : 0.5
+match ; Mag.-opt. Re alpha         ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Re alpha', 4) ; 0.26777835E+02
+match ; Mag.-opt. Re alpha         ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Re alpha', 5) ; 0.26777835E+02
+match ; Mag.-opt. Re alpha         ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Re alpha', 6) ; 0.26777835E+02
+match ; Mag.-opt. Re alpha         ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Re alpha', 7) ; 0.26777835E+02
+
+Precision : 0.002
+match ; Mag.-opt. Im epsilon       ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Im epsilon', 7) ; 0.44408627E+01
+match ; Mag.-opt. Im epsilon       ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Im epsilon', 8) ; 0.44408627E+01
+match ; Mag.-opt. Im epsilon       ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Im epsilon', 9) ; 0.44408627E+01
+match ; Mag.-opt. Im epsilon       ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Im epsilon', 10) ; 0.44408627E+01
+
+Precision : 0.001
+match ; Mag.-opt. Re eps at kpt    ; GREPFIELD(em_resp/freq_0.1000/epsilon_mo_k, "  4   ", 8) ; 0.79130645E+01
+match ; Mag.-opt. Im eps at kpt    ; GREPFIELD(em_resp/freq_0.1000/epsilon_mo_k, "  2   ", 11) ; -0.31597025E+00
+match ; Mag.-opt. Im eps at kpt    ; GREPFIELD(em_resp/freq_0.1000/epsilon_mo_k, "  2   ", 10) ; -0.31903447E+00
+
+Input: 04-silicon.05-emresp_magn.inp
+
+Precision : 0.3
+match ; Susceptibility XX          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 1, 1) ; -6185.086006
+match ; Susceptibility YY          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 2, 2) ; -6185.086006
+match ; Susceptibility ZZ          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 3, 3) ; -6185.086006
+

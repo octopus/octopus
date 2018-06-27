@@ -2,7 +2,7 @@
 
 Test       : LOBPCG
 Program    : octopus
-TestGroups : short-run, finite_systems_3d
+TestGroups : long-run, finite_systems_3d
 Enabled    : Yes
 
 # Depending on the context, the LOBPCG routine takes different branches, which

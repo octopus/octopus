@@ -56,6 +56,9 @@ dist_share_DATA =                                  \
 	12_mix_and_match.01-mgo.inp                \
 	12_mix_and_match.test                      \
 	13-U235.01-gs.inp                          \
-        13-U235.test 
+        13-U235.test                               \
+	14-carbon_dojo_psp8.01-gs.inp              \
+	14-carbon_dojo_psp8.pseudo.psp8            \
+	14-carbon_dojo_psp8.test
 
 CLEANFILES = *~ *.bak

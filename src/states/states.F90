@@ -1651,17 +1651,10 @@ contains
 
     PUSH_SUB(states_generate_random)
  
-    if(st%randomization == PAR_INDEPENDENT) then
-      ist_start = optional_default(ist_start_, st%st_start)
-      ist_end = optional_default(ist_end_, st%st_end)
-      ikpt_start = optional_default(ikpt_start_, st%d%kpt%start)
-      ikpt_end = optional_default(ikpt_end_, st%d%kpt%end)
-    else 
-      ist_start = optional_default(ist_start_, 1)
-      ist_end = optional_default(ist_end_, st%nst)
-      ikpt_start = optional_default(ikpt_start_, 1)
-      ikpt_end = optional_default(ikpt_end_, st%d%nik)
-    end if
+    ist_start = optional_default(ist_start_, 1)
+    ist_end = optional_default(ist_end_, st%nst)
+    ikpt_start = optional_default(ikpt_start_, 1)
+    ikpt_end = optional_default(ikpt_end_, st%d%nik)
 
     SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
     if (states_are_complex(st)) then
@@ -1679,8 +1672,8 @@ contains
               call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
             else
               call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
-              if(.not. state_kpt_is_local(st, ist, ik)) cycle
             end if
+            if(.not. state_kpt_is_local(st, ist, ik)) cycle
             if(states_are_complex(st)) then !Gamma point
               forall(ip=1:mesh%np) 
                 zpsi(ip,1) = cmplx(dpsi(ip,1), M_ZERO)
@@ -1694,16 +1687,16 @@ contains
               call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
             else
               call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
-              if(.not. state_kpt_is_local(st, ist, ik)) cycle
             end if
+            if(.not. state_kpt_is_local(st, ist, ik)) cycle
             call states_set_state(st, mesh, ist,  ik, zpsi)
             if(st%have_left_states) then
               if(st%randomization == PAR_INDEPENDENT) then
                 call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
               else
                 call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
-                if(.not. state_kpt_is_local(st, ist, ik)) cycle
               end if
+              if(.not. state_kpt_is_local(st, ist, ik)) cycle
               call states_set_state(st, mesh, ist,  ik, zpsi, left = .true.)
             end if
           end if
@@ -1738,6 +1731,7 @@ contains
                 if(.not. state_kpt_is_local(st, ist, ik)) cycle
               end if
             end if
+            if(.not. state_kpt_is_local(st, ist, ik)) cycle
             ! In this case, the spinors are made of a spatial part times a vector [alpha beta]^T in
             ! spin space (i.e., same spatial part for each spin component). So (alpha, beta)
             ! determines the spin values. The values of (alpha, beta) can be be obtained
