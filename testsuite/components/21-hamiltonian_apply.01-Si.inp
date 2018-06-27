@@ -1,5 +1,5 @@
 TestMode = hamiltonian_apply
-TestRepetitions = 10
+TestRepetitions = 3
 TestHamiltonianApply = term_local_potential
 
 PeriodicDimensions = 3
