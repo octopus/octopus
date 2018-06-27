@@ -86,6 +86,7 @@ module states_calc_oct_m
     dstates_residue,                &
     zstates_residue,                &
     states_calc_momentum,           &
+    states_calc_momentum_fullmat,           &
     dstates_angular_momentum,       &
     zstates_angular_momentum,       &
     dstates_matrix,                 &
@@ -398,6 +399,20 @@ contains
       call zstates_calc_momentum(st, der, momentum)
     end if
   end subroutine states_calc_momentum
+
+  ! -----------------------------------------------------------------------------
+
+  subroutine states_calc_momentum_fullmat(st, der, momentum)
+    type(states_t),      intent(inout) :: st
+    type(derivatives_t), intent(inout) :: der
+    CMPLX,               intent(out)   :: momentum(:,:,:)
+
+    if (states_are_real(st)) then
+      call dstates_calc_momentum_fullmat(st, der, momentum)
+    else
+      call zstates_calc_momentum_fullmat(st, der, momentum)
+    end if
+  end subroutine states_calc_momentum_fullmat
 
 #include "undef.F90"
 #include "real.F90"

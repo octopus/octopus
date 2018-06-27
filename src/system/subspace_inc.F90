@@ -86,12 +86,29 @@ subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
   R_TYPE, allocatable :: hmss(:, :), rdiff(:)
   integer             :: ib, minst, maxst
   type(batch_t)       :: hpsib
+    
+!   integer :: ist,jst
 
   PUSH_SUB(X(subspace_diag_standard))
 
   SAFE_ALLOCATE(hmss(1:st%nst, 1:st%nst))
   
   call X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
+  
+!   do ist=1,st%nst
+!     do jst=1,st%nst
+!       write (123,'(e8.2)',advance='no' ) real(hmss(ist,jst))
+!
+! #ifdef R_TCOMPLEX
+!       write (123,'(a,e8.2)',advance='no' ) '+i',aimag(hmss(ist,jst))
+! #endif
+!       write (123,'(2x)',advance='no' )
+!     end do
+!     write (123,* ) ''
+!   end do
+!   write (123,* ) ''
+!   write (123,* ) ''
+! ! stop
   
   ! Diagonalize the Hamiltonian in the subspace.
   ! only half of hmss has the matrix, but this is what Lapack needs

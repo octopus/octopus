@@ -396,6 +396,9 @@ contains
       call hamiltonian_update(hm, gr%mesh, time = td%dt*td%iter)
     end if
 
+    call floquet_init(sys,hm%F,sys%st%d%dim)
+    call floquet_init_td(sys,hm,st)
+
     call init_wfs()
 
     if(td%iter >= td%max_iter) then
@@ -442,8 +445,6 @@ contains
     if(td%pesv%calc_spm .or. td%pesv%calc_mask .and. fromScratch) then
       call pes_init_write(td%pesv,gr%mesh,st)
     end if
-
-    call floquet_init(sys,hm%F,sys%st%d%dim)
 
     if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) call states_pack(st)
 
@@ -663,13 +664,29 @@ contains
       end if
 
       if (fromScratch) then
-        call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+        
+        if (hm%F%propagate) then 
+          ! load Floquet structure
+          call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
 
-        if(.not. st%only_userdef_istates) then
-          if(ierr == 0) call states_load(restart, st, gr, ierr, label = ": gs")
-          if (ierr /= 0) then
-            message(1) = 'Unable to read ground-state wavefunctions.'
-            call messages_fatal(1)
+          if(.not. st%only_userdef_istates) then
+            if(ierr == 0) call states_load(restart, st, gr, ierr, label = ": floquet")
+            if (ierr /= 0) then
+              message(1) = 'Unable to read equilibrium Floquet wavefunctions.'
+              call messages_fatal(1)
+            end if
+          end if
+          
+        else 
+          ! the usual GS structure
+          call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+
+          if(.not. st%only_userdef_istates) then
+            if(ierr == 0) call states_load(restart, st, gr, ierr, label = ": gs")
+            if (ierr /= 0) then
+              message(1) = 'Unable to read ground-state wavefunctions.'
+              call messages_fatal(1)
+            end if
           end if
         end if
 
@@ -715,6 +732,7 @@ contains
         call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
       end if
 
+
       if(freeze_orbitals > 0) then
         ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
         call states_freeze_orbitals(st, gr, sys%mc, freeze_orbitals)
@@ -748,6 +766,18 @@ contains
       if(freeze_hxc) then 
         write(message(1),'(a)') 'Info: Freezing Hartree and exchange-correlation potentials.'
         call messages_info(1)
+
+        if (hm%F%propagate) then
+          if(td%iter > 1) call messages_not_implemented("TDFreezeHXC with Floquet propagation restart")
+          ! load Floquet structure                                                                                                                                                                                                        
+          call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+        else
+          call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+        end if
+        call states_load_rho(restart, st, gr, ierr)
+        call restart_end(restart)
+        call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
+
         call v_ks_freeze_hxc(sys%ks)
 
         !In this case we should reload GS wavefunctions 
@@ -764,7 +794,10 @@ contains
 #endif
       call hamiltonian_span(hm, minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
       ! initialize Fermi energy
-      call states_fermi(st, gr%mesh)
+      if (.not. hm%F%propagate) then
+         call states_fermi(st, gr%mesh)
+      end if
+            
       call energy_calc_total(hm, gr, st)
 
       POP_SUB(td_run.init_wfs)

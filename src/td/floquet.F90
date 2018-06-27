@@ -48,6 +48,7 @@ module floquet_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use mix_oct_m
   use mpi_lib_oct_m
   use mpi_oct_m
   use multicomm_oct_m
@@ -96,7 +97,8 @@ module floquet_oct_m
        floquet_FBZ_filter,        &
 !        zfloquet_FBZ_subspace_diag, &
 !        dfloquet_FBZ_subspace_diag, &
-       floquet_calc_FBZ_coefficients 
+       floquet_calc_FBZ_coefficients, & 
+       floquet_init_td
 
   integer, public, parameter ::    &
        FLOQUET_NONE            = 0, &      
@@ -124,6 +126,8 @@ contains
     this%sample = .false.
     this%FBZ_solver = .false.
     this%sample_one_only  = .true.
+    this%lambda = M_ZERO
+
 
     !%Variable FloquetBoson
     !%Type flag
@@ -146,7 +150,7 @@ contains
     !%Default non_interacting
     !%Section Floquet
     !%Description
-    !% Types of Floquet analysis performed when TDOutput=td_floquet
+    !% Types of Floquet analysis.
     !%Option none 0
     !%
     !%Option non_interacting 1
@@ -158,6 +162,16 @@ contains
     !%End
 
     call parse_variable('FloquetMode', FLOQUET_NONE, this%mode)
+
+    !%Variable FloquetTimePropagation
+    !%Type logical
+    !%Default no
+    !%Section Floquet
+    !%Description
+    !% Perform time propagation of Floquet states. Makes sense only for FloquetBoson=qed_photon.
+    !%End
+    call parse_variable('FloquetTimePropagation', .false., this%propagate)
+
 
 
     if (this%mode == FLOQUET_NONE) then
@@ -184,6 +198,9 @@ contains
     call messages_print_var_option(stdout, 'FloquetBoson',  this%boson)
 
     call messages_print_var_option(stdout, 'FloquetMode',  this%mode)
+    
+    call messages_print_var_value(stdout,  'Allows time propagation',  this%propagate)
+    
 
     if(this%mode==FLOQUET_FROZEN_PHONON) then
        if(.not.parse_is_defined('IonsTimeDependentDisplacements')) then
@@ -283,7 +300,7 @@ contains
     !%End
     call parse_variable('FloquetFrequency', M_ZERO, this%omega, units_inp%energy)
     call messages_print_var_value(stdout,'Frequency used for Floquet analysis', this%omega)
-    if(this%omega==M_ZERO) then
+    if(this%omega==M_ZERO .and. this%boson/=OPTION__FLOQUETBOSON__QED_PHOTON) then
       message(1) = "Please give a non-zero value for FloquetFrequency"
       call messages_fatal(1)
     endif
@@ -401,21 +418,29 @@ contains
       !% <br>%</tt>
       !%
       !%End
-      this%pol(1:3)=(/M_ONE,M_ZERO,M_ZERO/)
+      this%pol(1:3)=(/M_z1,M_z0,M_z0/)
     
       if(parse_block('FloquetCavityModePolarization', blk) == 0) then
         if(parse_block_cols(blk,0) < 3) call messages_input_error('FloquetCavityModePolarization')
         do idim = 1, 3
-          call parse_block_float(blk, 0, idim - 1, this%pol(idim))
+          call parse_block_cmplx(blk, 0, idim - 1, this%pol(idim))
         end do
       end if
       
-      this%pol(:)=this%pol(:)/sqrt(sum(this%pol(:)**2))
+      this%pol(:)=this%pol(:)/sqrt(sum(abs(this%pol(:))**2))
 
-      write(message(1),'(a,e8.2,a,e8.2,a,e8.2,a)') 'Info: Cavity polarization direction : (',&
-                                         this%pol(1),',', this%pol(2),',',this%pol(3),')'
+      write(message(1),'(3x,a,3(a1,f7.4,a1,f7.4,a1))') 'Info: Cavity polarization direction: ', &
+            '(', real(this%pol(1)), ',', aimag(this%pol(1)), '), ', &
+            '(', real(this%pol(2)), ',', aimag(this%pol(2)), '), ', &
+            '(', real(this%pol(3)), ',', aimag(this%pol(3)), ')'
+
+
+!       write(message(1),'(a,e8.2,a,e8.2,a,e8.2,a,e8.2,a,e8.2,a,e8.2,a)') 'Info: Cavity polarization direction : (',&
+!                                          this%pol(1),',', this%pol(2),',',this%pol(3),')'
       call messages_info(1)
 
+      !Read the scf threshold for the relative density
+      call parse_variable('ConvRelDens', CNST(1e-5), this%conv_rel_dens)
       
       
     end if
@@ -435,11 +460,55 @@ contains
        end do
     end do
     
+        
     call messages_print_stress(stdout)
 
    POP_SUB(floquet_init)
 
   end subroutine floquet_init
+
+
+  subroutine floquet_init_td(sys, hm, dressed_st)
+    type(system_t),      intent(in)    :: sys
+    type(hamiltonian_t), intent(inout) :: hm
+    type(states_t),      intent(inout) :: dressed_st
+
+    type(grid_t),   pointer :: gr
+
+    PUSH_SUB(floquet_init_td)
+
+    gr => sys%gr
+
+    if(hm%F%propagate) then
+      
+      ! Override undressed states initialization
+      ! First: end states
+      call states_deallocate_wfns(dressed_st)
+      call states_end(dressed_st)
+            
+      ! Second: reinitialize the state object with the Floquet dimension
+      dressed_st%floquet_dim = hm%F%floquet_dim
+      dressed_st%floquet_FBZ = hm%F%FBZ_solver
+      call states_init(dressed_st, gr, hm%geo)
+      call kpoints_distribute(dressed_st%d,sys%mc)
+      call states_distribute_nodes(dressed_st,sys%mc)
+      call states_exec_init(dressed_st, sys%mc)
+      call states_allocate_wfns(dressed_st,gr%der%mesh, wfs_type = TYPE_CMPLX)
+      call states_densities_init(dressed_st, sys%gr, sys%geo)
+
+            
+      ! set dimension of Floquet Hamiltonian                                                    
+      hm%d%dim = dressed_st%d%dim
+
+      ! Switch on the Floquet Hamiltonian 
+      hm%F%floquet_apply = .true.
+        
+    end if
+    
+    POP_SUB(floquet_init_td)
+  end subroutine floquet_init_td
+
+
 
   subroutine floquet_hamiltonians_init(this, gr, st, sys)
     type(hamiltonian_t), intent(inout) :: this ! this is not great, as everyhting should be within the floquet_t
@@ -906,22 +975,23 @@ contains
       type(states_t), intent(inout)      :: dressed_st
         
 
-      logical :: converged, have_gs
-      integer :: iter , maxiter, ik, in, im, ist, idim, ierr, nik, dim, nst
-      type(eigensolver_t) :: eigens
+      logical :: converged, converged_elec, have_gs
+      integer :: iter , maxiter, ik, in, im, ist, idim, ierr, nik, dim, nst, is
+      type(eigensolver_t) :: eigens, eigens_elec
       type(restart_t) :: restart
       character(len=80) :: filename
       character(len=80) :: iterstr
       character(len=40) :: msg
       integer :: file
-      integer :: iunit, ii, iatom, idir
-      real(8) :: itime, etime
+      integer :: iunit, ii, iatom, idir, iter_elec
+      real(8) :: itime, etime, rel_dens
 
       type(grid_t),   pointer :: gr
       type(states_t), pointer :: st
-      type(states_t)         :: FBZ_st
+      type(states_t)          :: FBZ_st
+      type(mix_t)             :: smix
         
-      FLOAT, allocatable :: spect(:,:), me(:,:)  
+      FLOAT, allocatable :: spect(:,:), me(:,:), rhoin(:,:,:), rhoout(:,:,:), mixrho(:,:,:), dressed_rhoold(:,:,:), tmp(:)
  
       PUSH_SUB(floquet_hamiltonian_run_solver)
  
@@ -962,10 +1032,19 @@ contains
         call restart_end(restart)
       end if
 
+      call mix_init(smix, gr%fine%der, gr%fine%mesh%np, 1, st%d%nspin)
+      SAFE_ALLOCATE(rhoin(gr%mesh%np,1:1,st%d%nspin))
+      SAFE_ALLOCATE(rhoout(gr%mesh%np,1:1,st%d%nspin))
+      SAFE_ALLOCATE(mixrho(gr%mesh%np,1:1,st%d%nspin))
+      SAFE_ALLOCATE(dressed_rhoold(gr%mesh%np,1:1,st%d%nspin))
+      SAFE_ALLOCATE(tmp(1:gr%fine%mesh%np))
+
       converged=.false.
       maxiter = hm%F%max_solve_iter
       itime = loct_clock()
-      do while(.not.converged.and.iter <= maxiter)
+      dressed_rhoold = M_ZERO
+      rel_dens = M_HUGE
+      do while(.not.converged .and. iter <= maxiter .and. (hm%F%boson==OPTION__FLOQUETBOSON__QED_PHOTON.and.rel_dens>=hm%F%conv_rel_dens))
 
          write(msg,'(a,i5)') 'Iter #', iter         
          call messages_print_stress(stdout, trim(msg))
@@ -979,6 +1058,27 @@ contains
          if (hm%F%calc_occupations) then
            call floquet_calc_occupations(hm, sys, dressed_st, st)
            call density_calc(dressed_st, sys%gr,dressed_st%rho)
+
+           rhoin(1:gr%fine%mesh%np, 1, 1:st%d%nspin) = st%rho(1:gr%fine%mesh%np, 1:st%d%nspin)
+           rhoout(1:gr%fine%mesh%np, 1, 1:st%d%nspin) = dressed_st%rho(1:gr%fine%mesh%np, 1:st%d%nspin)
+
+           if (hm%F%boson==OPTION__FLOQUETBOSON__QED_PHOTON) then
+              !Convergence check on the relative density
+              rel_dens = M_ZERO
+              do is = 1, st%d%nspin
+                tmp = abs(rhoout(1:gr%fine%mesh%np, 1, is) - dressed_rhoold(1:gr%fine%mesh%np, 1, is))
+                rel_dens = rel_dens + dmf_integrate(gr%fine%mesh, tmp)
+              end do
+              rel_dens = rel_dens / st%qtot
+              write(message(1),'(a,es15.8,4a)') 'Relative Density: ', rel_dens, ' [au]'
+              call messages_info(1)
+              dressed_rhoold(1:gr%fine%mesh%np, 1, 1:st%d%nspin) = rhoout(1:gr%fine%mesh%np, 1, 1:st%d%nspin)
+   
+              call dmixing(smix, rhoin, rhoout, mixrho)
+              st%rho(1:gr%fine%mesh%np, 1:st%d%nspin) = mixrho(1:gr%fine%mesh%np, 1, 1:st%d%nspin)
+              dressed_st%rho(1:gr%fine%mesh%np, 1:st%d%nspin) = mixrho(1:gr%fine%mesh%np, 1, 1:st%d%nspin)
+           end if
+
            call v_ks_calc(sys%ks, hm, dressed_st, sys%geo)
            call energy_calc_total(hm, gr, dressed_st, iunit = 0)
            write(message(1),'(a,es15.8,4a)') 'Energy tot: ', units_from_atomic(units_out%energy, hm%energy%total) &
@@ -986,10 +1086,14 @@ contains
            call messages_info(1)
          end if 
 
-         
+
          call smear_find_fermi_energy(dressed_st%smear, dressed_st%eigenval, dressed_st%occ, dressed_st%qtot, &
            dressed_st%d%nik, dressed_st%nst, dressed_st%d%kweights)
-                 
+               
+         ! compute Floquet-spin expectation values
+         if(dressed_st%d%ispin == SPINORS) then
+            call floquet_calc_spin(hm%F,gr%mesh,dressed_st)
+         end if
 
          write(message(1),'(a,i6)') 'Converged eigenvectors: ', sum(eigens%converged(1:st%d%nik))
          call messages_info(1)
@@ -1012,7 +1116,19 @@ contains
              filename = 'bands_occ'!//trim(adjustl(iterstr))
              call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, filename, vec = dressed_st%occ)
            end if
-                     
+
+           if(dressed_st%d%ispin == SPINORS) then
+             filename = 'bands_Sx'
+             call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, &
+                                             filename, vec = dressed_st%spin(1,:,:))
+             filename = 'bands_Sy'
+             call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, &
+                                             filename, vec = dressed_st%spin(2,:,:))
+             filename = 'bands_Sz'
+             call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, gr%sb, &
+                                             filename, vec = dressed_st%spin(3,:,:))
+           end if
+            
          else
                       
            filename = FLOQUET_DIR//'/eigenvalues'!//trim(adjustl(iterstr))
@@ -1023,13 +1139,41 @@ contains
          call restart_init(restart, RESTART_FLOQUET, RESTART_TYPE_DUMP, &
                            sys%mc, ierr, gr%der%mesh)
          call states_dump(restart, dressed_st, gr, ierr, iter)
+         call states_dump_rho(restart,dressed_st, gr, ierr, iter=iter)
          call restart_end(restart)
+
+!         ! Ground State Update for QED
+!         if (hm%F%boson==OPTION__FLOQUETBOSON__QED_PHOTON) then
+!            !switch off floquet hamiltonian                                                           
+!            hm%F%floquet_apply = .false.
+!            hm%d%dim = st%d%dim
+!
+!            call eigensolver_init(eigens_elec, gr, st)
+!            eigens_elec%converged(:) = 0
+!
+!            converged_elec = .false.
+!            iter_elec = 0 
+!            do while(.not.converged_elec.and.iter_elec <= maxiter)
+!
+!               call eigensolver_run(eigens_elec, gr, st, hm, 1, converged_elec)
+!
+!               iter_elec = iter_elec +1 
+!
+!            enddo
+!            
+!            call states_fermi(st, gr%mesh)
+!
+!            hm%d%dim = dressed_st%d%dim
+!            hm%F%floquet_apply = .true.
+!            call eigensolver_end(eigens_elec)
+!         endif
 
 
          iter = iter +1
       end do
 
       call eigensolver_end(eigens)
+      call mix_end(smix)
 
       ! filter the FBZ
       if(.not.hm%F%FBZ_solver .and. hm%F%boson == OPTION__FLOQUETBOSON__CLASSICAL_FLOQUET) then
@@ -1090,6 +1234,11 @@ contains
       
       SAFE_DEALLOCATE_A(spect)
       SAFE_DEALLOCATE_A(me)
+      SAFE_DEALLOCATE_A(rhoin)
+      SAFE_DEALLOCATE_A(rhoout)
+      SAFE_DEALLOCATE_A(mixrho)
+      SAFE_DEALLOCATE_A(dressed_rhoold)
+      SAFE_DEALLOCATE_A(tmp)
       
       POP_SUB(floquet_hamiltonian_run_solver)
 
@@ -1122,7 +1271,50 @@ contains
     !psi_t(1:mesh%np,1:F%spindim)  = M_ONE/zmf_nrm2(mesh,F%spindim,psi_t)*psi_t(1:mesh%np,1:F%spindim) 
 
     end subroutine floquet_td_state
+
+
+    !--------------------------------
+    subroutine floquet_calc_spin(F,mesh,st)
+
+    type(floquet_t) :: F
+    type(mesh_t)    :: mesh
+    type(states_t)  :: st
+    CMPLX, allocatable   :: psi(:,:), temp(:,:)
+
+    integer :: ik, ist,idim, im, imm
+
+    PUSH_SUB(floquet_calc_spin)
+
+    SAFE_ALLOCATE(psi(1:mesh%np,1:st%d%dim))
+    SAFE_ALLOCATE(temp(1:mesh%np,1:F%spindim))
     
+    st%spin = M_ZERO
+
+    do ik=st%d%kpt%start,st%d%kpt%end
+      do ist=st%st_start,st%st_end
+        call states_get_state(st,mesh,ist,ik,psi)
+
+        do im= F%order(1),F%order(2)
+          imm = im - F%order(1) + 1
+          temp = M_ZERO
+          do idim=1,F%spindim
+            temp(1:mesh%np, idim) = psi(1:mesh%np,(imm-1)*F%spindim+idim)
+          end do
+          st%spin(1:3,ist,ik) = st%spin(1:3,ist,ik) + state_spin(mesh,temp)
+        end do
+      end do
+    end do
+
+    if(st%d%kpt%parallel) then
+       call comm_allreduce(st%d%kpt%mpi_grp%comm,  st%spin(:,:,:))
+    end if
+
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(temp)
+
+    POP_SUB(floquet_calc_spin)
+   end subroutine floquet_calc_spin
+
 
     !--------------------------------------------
     ! Occupation strategy wrapper routine 
@@ -1146,7 +1338,7 @@ contains
         end if
 
       case (OPTION__FLOQUETBOSON__QED_PHOTON)
-        call floquet_calc_occupations_norms(hm, sys, dressed_st)
+        call floquet_calc_occupations_sudden(hm, sys, dressed_st)
 
       case (OPTION__FLOQUETBOSON__QED_PHONON)
 
@@ -1266,16 +1458,27 @@ contains
             call states_get_state(gs_st, mesh, ist, ik, psi)
             
             tmp(:) = M_ZERO
-            do idx=hm%F%flat_idx%start, hm%F%flat_idx%end
-               it = hm%F%idx_map(idx,1)
-               im = hm%F%idx_map(idx,2)
-               imm = im - Fdim(1) + 1
+            if (hm%F%boson==OPTION__FLOQUETBOSON__QED_PHOTON) then 
+
                do idim=1,gs_st%d%dim
-                 tmp(idim)  =  tmp(idim) + exp(-M_zI*im*omega*it*dt)/nT * zmf_dotp(mesh, psi(1:mesh%np,idim), &
-                                                                          u_ma(1:mesh%np,(imm-1)*gs_st%d%dim+idim))
+                 tmp(idim)  =  tmp(idim) + zmf_dotp(mesh, psi(1:mesh%np,idim),u_ma(1:mesh%np,idim))
                end do
-               
-            end do
+
+            else
+
+               do idx=hm%F%flat_idx%start, hm%F%flat_idx%end
+                  it = hm%F%idx_map(idx,1)
+                  im = hm%F%idx_map(idx,2)
+                  imm = im - Fdim(1) + 1
+                  do idim=1,gs_st%d%dim
+                    tmp(idim)  =  tmp(idim) + exp(-M_zI*im*omega*it*dt)/nT * zmf_dotp(mesh, psi(1:mesh%np,idim), &
+                                                                             u_ma(1:mesh%np,(imm-1)*gs_st%d%dim+idim))
+                  end do
+                  
+               end do
+
+            end if
+
             if(hm%F%is_parallel) call comm_allreduce(hm%F%mpi_grp%comm, tmp(:))
             
             dressed_st%occ(ia,ik) = dressed_st%occ(ia,ik) + abs(sum(tmp(:)))**2 * gs_st%occ(ist,ik)

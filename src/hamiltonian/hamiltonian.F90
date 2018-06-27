@@ -119,9 +119,10 @@ module hamiltonian_oct_m
     logical :: floquet_apply !< use action of the Floquet Hamiltonian
     integer :: nT, ncycle, interval, count, floquet_dim, spindim, order(2), mode, boson
     integer :: max_solve_iter, iter, init, occ_cut, cf_nsteps
-    logical ::  downfolding, sample, sample_one_only, FBZ_solver
-    FLOAT :: omega, Tcycle, dt, pes_omega, pol(1:MAX_DIM), lambda
+    logical ::  downfolding, sample, sample_one_only, FBZ_solver, propagate
+    FLOAT :: omega, Tcycle, dt, pes_omega, lambda, conv_rel_dens
     FLOAT, pointer :: frozen_distortion(:,:)
+    CMPLX :: pol(1:MAX_DIM)
     logical :: is_parallel 
     logical :: calc_occupations
     logical :: calc_pes    
@@ -537,6 +538,11 @@ contains
         end forall
       end do
 
+      !keep a copy of the phase with only the k-point content
+      !Note: this should depend on hm%F%boson==OPTION__FLOQUETBOSON__QED_PHOTON but its not initialized here
+      SAFE_ALLOCATE(hm%hm_base%phase_only_k(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
+      hm%hm_base%phase_only_k(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end) = hm%hm_base%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end)
+
       if(accel_is_enabled()) then
         call accel_create_buffer(hm%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, gr%mesh%np_part*hm%d%kpt%nlocal)
         call accel_write_buffer(hm%hm_base%buff_phase, gr%mesh%np_part*hm%d%kpt%nlocal, hm%hm_base%phase)
@@ -564,6 +570,9 @@ contains
     end if
 
     SAFE_DEALLOCATE_P(hm%hm_base%phase)
+    if(associated(hm%hm_base%phase_only_k)) then
+      SAFE_DEALLOCATE_P(hm%hm_base%phase_only_k) 
+    end if
     SAFE_DEALLOCATE_P(hm%vhartree)
     SAFE_DEALLOCATE_P(hm%vhxc)
     SAFE_DEALLOCATE_P(hm%vxc)
@@ -968,6 +977,7 @@ contains
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
     if(this%cmplxscl%space .and. accel_is_enabled()) apply = .false.
     if(associated(this%hm_base%phase) .and. accel_is_enabled()) apply = .false.
+    if(this%F%floquet_apply) apply = .false.
     
   end function hamiltonian_apply_packed
 
@@ -1276,12 +1286,13 @@ contains
     type(hamiltonian_t),  intent(in)    :: hm
     type(geometry_t),     intent(in)    :: geo
     integer,              intent(in)    :: ik
-    FLOAT,                intent(in)    :: pol(:)
+    CMPLX,                intent(in)    :: pol(:)
     CMPLX,                intent(in)    :: psi(:,:)
     CMPLX,                intent(out)   :: gppsi(:,:)
 
     integer ::  idir, idim, iatom, ip, ib, ii, ierr, ispin, dim
     CMPLX, allocatable :: gpsi(:, :, :), ppsi(:,:)
+    FLOAT :: kpoint(1:3)
 
     PUSH_SUB(grad_dot_pol)
 
@@ -1300,12 +1311,15 @@ contains
       call boundaries_set(der%boundaries, ppsi(:, idim))
     end do
 
-    if(associated(hm%hm_base%phase)) then 
-      ! Apply the phase that contains both the k-point and vector-potential terms.
+
+    if(simul_box_is_periodic(der%mesh%sb)) then 
+      kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_dim_get_kpoint_index(hm%d, ik))      
+      ! Apply the phase that contains both the k-point.      
       do idim = 1, dim
         !$omp parallel do
         do ip = 1, der%mesh%np_part
-          ppsi(ip, idim) = hm%hm_base%phase(ip, ik)*ppsi(ip, idim)
+           ppsi(ip, idim) = hm%hm_base%phase_only_k(ip, ik)*ppsi(ip, idim)
+!            ppsi(ip, idim) = ppsi(ip, idim) * exp(-M_zI*sum(der%mesh%x(ip, 1:der%mesh%sb%dim)*kpoint(1:der%mesh%sb%dim) ))
         end do
         !$omp end parallel do
       end do
@@ -1342,6 +1356,19 @@ contains
     do idir = 1, der%mesh%sb%dim
        gppsi(1:der%mesh%np,:) = gppsi(1:der%mesh%np,:) + pol(idir) * gpsi(1:der%mesh%np, idir,:)
     end do
+    
+    if(simul_box_is_periodic(der%mesh%sb)) then 
+      ! remove the phase.      
+      do idim = 1, dim
+        !$omp parallel do
+        do ip = 1, der%mesh%np_part
+          gppsi(ip, idim) = conjg(hm%hm_base%phase_only_k(ip, ik))*gppsi(ip, idim)
+!            gppsi(ip, idim) = gppsi(ip, idim) * exp(M_zI*sum(der%mesh%x(ip, 1:der%mesh%sb%dim)*kpoint(1:der%mesh%sb%dim) ))
+        end do
+        !$omp end parallel do
+      end do
+    end if
+    
 
     SAFE_DEALLOCATE_A(gpsi)
     SAFE_DEALLOCATE_A(ppsi)

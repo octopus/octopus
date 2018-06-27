@@ -67,7 +67,8 @@ module output_me_oct_m
     OUTPUT_ME_ANG_MOMENTUM   =   2, &
     OUTPUT_ME_ONE_BODY       =   4, &
     OUTPUT_ME_TWO_BODY       =   8, &
-    OUTPUT_ME_KS_MULTIPOLES  =  16
+    OUTPUT_ME_KS_MULTIPOLES  =  16, &
+    OUTPUT_ME_MOMENTUM_FULLMAT  =  32
 
 contains
   
@@ -99,6 +100,8 @@ contains
     !% Not available with states parallelization.
     !%Option ks_multipoles 16
     !% See <tt>OutputMEMultipoles</tt>. Not available with states parallelization.
+    !%Option momentum_fullmat 32
+    !% Momentum Full Matrix. Filename: <tt>ks_me_momentum_fullmat</tt>.
     !%End
 
     call parse_variable('OutputMatrixElements', 0, this%what)
@@ -153,6 +156,11 @@ contains
     if(iand(this%what, output_me_momentum) /= 0) then
       write(fname,'(2a)') trim(dir), '/ks_me_momentum'
       call output_me_out_momentum(fname, st, gr)
+    end if
+
+    if(iand(this%what, output_me_momentum_fullmat) /= 0) then
+      write(fname,'(2a)') trim(dir), '/ks_me_momentum_fullmat'
+      call output_me_out_momentum_fullmat(fname, st, gr)
     end if
 
     if(iand(this%what, output_me_ang_momentum) /= 0) then
@@ -318,6 +326,96 @@ contains
     POP_SUB(output_me_out_momentum)
   end subroutine output_me_out_momentum
 
+  ! ---------------------------------------------------------
+  subroutine output_me_out_momentum_fullmat(fname, st, gr)
+    character(len=*), intent(in) :: fname
+    type(states_t),   intent(inout) :: st
+    type(grid_t),     intent(inout) :: gr
+
+    integer            :: ik, istl, istr, is, ns, iunit, idir, ncount
+    character(len=80)  :: cspin, str_tmp
+    FLOAT              :: kpoint(1:MAX_DIM)
+    CMPLX, allocatable :: momentum(:,:,:)
+
+    PUSH_SUB(output_me_out_momentum_fullmat)
+
+    SAFE_ALLOCATE(momentum(1:gr%sb%dim, 1:((st%nst)*(st%nst)), 1:st%d%nik))
+
+    call states_calc_momentum_fullmat(st, gr%der, momentum)
+
+    iunit = io_open(fname, action='write')
+
+    ns = 1
+    if(st%d%nspin == 2) ns = 2
+
+    write(message(1),'(a)') 'Momentum of the KS states [a.u.]:'
+    call messages_info(1, iunit)      
+    if (st%d%nik > ns) then
+      message(1) = 'k-points [' // trim(units_abbrev(unit_one/units_out%length)) // ']'
+      call messages_info(1, iunit)
+    end if
+
+    do ik = 1, st%d%nik, ns
+      kpoint = M_ZERO
+      kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
+
+      if(st%d%nik > ns) then
+        write(message(1), '(a,i4, a)') '#k =', ik, ', k = ('
+        do idir = 1, gr%sb%dim
+          write(str_tmp, '(f12.6, a)') units_from_atomic(unit_one/units_out%length, kpoint(idir)), ','
+          message(1) = trim(message(1)) // trim(str_tmp)
+          if(idir == gr%sb%dim) then
+            message(1) = trim(message(1)) // ")"
+          else
+            message(1) = trim(message(1)) // ","
+          end if
+        end do
+        call messages_info(1, iunit)
+      end if
+
+      write(message(1), '(a4,3x,a4,1x,a5)') '#stl','str',' Spin'
+      do idir = 1, gr%sb%dim
+        write(str_tmp, '(a,a1,a,a1,a)') '      Re<p', index2axis(idir), '>      Im<p', index2axis(idir), '>'
+        message(1) = trim(message(1)) // trim(str_tmp)
+      end do
+      write(str_tmp, '(12x,a6,8x,a6)') 'Occ. L', 'Occ. R'
+      message(1) = trim(message(1)) // trim(str_tmp)
+      call messages_info(1, iunit)
+      
+      ncount = M_ONE
+      do istl = 1, st%nst
+        do istr = 1, st%nst
+            do is = 0, ns-1
+           
+              if(is  ==  0) cspin = 'up'
+              if(is  ==  1) cspin = 'dn'
+              if(st%d%ispin  ==  UNPOLARIZED .or. st%d%ispin  ==  SPINORS) cspin = '--'
+              
+              write(message(1), '(i4,3x,i4,3x,a2,1x)') istl, istr, trim(cspin)
+              do idir = 1, gr%sb%dim
+                write(str_tmp, '(f12.6,1x,f12.6)') real(momentum(idir, ncount, ik)), aimag(momentum(idir, ncount, ik))
+                message(1) = trim(message(1)) // trim(str_tmp)
+              end do
+              write(str_tmp, '(3x,f12.6,3x,f12.6)') st%occ(istl, ik+is), st%occ(istr, ik+is)
+              message(1) = trim(message(1)) // trim(str_tmp)
+              call messages_info(1, iunit)
+
+              ncount = ncount + 1
+              
+            end do
+        end do
+      end do
+      
+      write(message(1),'(a)') ''
+      call messages_info(1, iunit)      
+      
+    end do
+    
+    SAFE_DEALLOCATE_A(momentum)
+    call io_close(iunit)
+
+    POP_SUB(output_me_out_momentum_fullmat)
+  end subroutine output_me_out_momentum_fullmat
 
   ! ---------------------------------------------------------
   subroutine output_me_out_ang_momentum(fname, st, gr)
