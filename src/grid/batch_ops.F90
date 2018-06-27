@@ -126,7 +126,7 @@ contains
 
     PUSH_SUB(batch_set_zero)
 
-    call profiling_in(prof, "SET_ZERO")
+    call profiling_in(prof, "BATCH_SET_ZERO")
 
     call batch_pack_was_modified(this)
 
