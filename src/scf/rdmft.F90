@@ -151,11 +151,14 @@ contains
       write(message(1), '(a)') '**********************************************************************'
       write(message(2),'(a, i4)') 'RDM Iteration:', iter
       call messages_info(2)
+do icount = 1, 15
       if (rdm%hf.eqv. .false.) then
 		call scf_occ(rdm, gr, hm, st, energy_occ)
 	  else
 		call scf_occ_NO(rdm, gr, hm, st, energy_occ)
 	  end if
+  if (abs(rdm%occsum-st%qtot) < 0.00001) exit
+end do
       ! Diagonalization of the generalized Fock matrix 
       write(message(1), '(a)') 'Optimization of natural orbitals'
       call messages_info(1)
@@ -601,14 +604,14 @@ contains
         rdm%occsum = rdm%occsum + occin(ist,ik)
       end do
     end do
-
-    do ist = 1, st%nst
-      do ik = 1, st%d%nik
-        occin(ist, ik) = occin(ist,ik)*st%qtot/rdm%occsum
-      end do
-    end do 
-
-    rdm%occsum = st%qtot
+!
+!    do ist = 1, st%nst
+!      do ik = 1, st%d%nik
+!        occin(ist, ik) = occin(ist,ik)*st%qtot/rdm%occsum
+!      end do
+!    end do 
+!
+!    rdm%occsum = st%qtot
 
     st%occ = occin
    
