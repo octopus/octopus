@@ -479,8 +479,7 @@ contains
 
     nullify(scf%mixfield)
 
-    if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
-      call lda_u_mixer_end(scf%lda_u_mix, scf%smix)
+    if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_end(scf%lda_u_mix, scf%smix)
 
 
     POP_SUB(scf_end)
@@ -495,8 +494,7 @@ contains
 
     call mix_clear(scf%smix)
 
-    if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
-      call lda_u_mixer_clear(scf%lda_u_mix, scf%smix)
+    if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_clear(scf%lda_u_mix, scf%smix)
 
     POP_SUB(scf_mix_clear)
   end subroutine scf_mix_clear
@@ -775,8 +773,7 @@ contains
         
       end select
       
-      if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
-        call lda_u_mixer_set_vout(hm%lda_u, scf%lda_u_mix)
+      if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vout(hm%lda_u, scf%lda_u_mix)
  
       evsum_out = states_eigenvalues_sum(st)
 
@@ -982,8 +979,7 @@ contains
             call mixfield_set_vin(scf%mixfield, zrhoin)
         end if
       end select
-      if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
-        call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
+      if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
       evsum_in = evsum_out
       if (scf%conv_abs_force > M_ZERO) then

@@ -111,18 +111,18 @@ contains
    nullify(mixer%dtmp_occ, mixer%ztmp_occ, mixer%tmpU)
 
    if(states_are_real(st)) then
-     SAFE_ALLOCATE(mixer%dtmp_occ(1:mixer%occsize,1))
-     call dlda_u_get_occupations(this, mixer%dtmp_occ(1:mixer%occsize,1))
+     SAFE_ALLOCATE(mixer%dtmp_occ(1:mixer%occsize, 1))
+     call dlda_u_get_occupations(this, mixer%dtmp_occ(1:mixer%occsize, 1))
      call mixfield_set_vin(mixer%mixfield_occ, mixer%dtmp_occ)
    else
-     SAFE_ALLOCATE(mixer%ztmp_occ(1:mixer%occsize,1))
-     call zlda_u_get_occupations(this, mixer%ztmp_occ(1:mixer%occsize,1))
+     SAFE_ALLOCATE(mixer%ztmp_occ(1:mixer%occsize, 1))
+     call zlda_u_get_occupations(this, mixer%ztmp_occ(1:mixer%occsize, 1))
      call mixfield_set_vin(mixer%mixfield_occ, mixer%ztmp_occ)
    end if
 
    if(this%level == DFT_U_ACBN0) then
-     SAFE_ALLOCATE(mixer%tmpU(1:this%norbsets,1))
-     call lda_u_get_effectiveU(this, mixer%tmpU(1:this% norbsets,1))
+     SAFE_ALLOCATE(mixer%tmpU(1:this%norbsets, 1))
+     call lda_u_get_effectiveU(this, mixer%tmpU(1:this% norbsets, 1))
      call mixfield_set_vin(mixer%mixfield_U, mixer%tmpU)
    end if
 
@@ -138,8 +138,7 @@ contains
    PUSH_SUB(lda_u_mixer_clear)
   
    call mixfield_clear(mix_scheme(smix), mixer%mixfield_occ)
-   if( mixer%mixU ) &
-     call mixfield_clear(mix_scheme(smix), mixer%mixfield_U)
+   if( mixer%mixU ) call mixfield_clear(mix_scheme(smix), mixer%mixfield_U)
 
    POP_SUB(lda_u_mixer_clear)
  end subroutine lda_u_mixer_clear
@@ -171,15 +170,15 @@ contains
    PUSH_SUB(lda_u_mixer_set_vout)
 
    if(mixer%realstates) then
-     call dlda_u_get_occupations(this, mixer%dtmp_occ(1:mixer%occsize,1))
+     call dlda_u_get_occupations(this, mixer%dtmp_occ(1:mixer%occsize, 1))
      call mixfield_set_vout(mixer%mixfield_occ, mixer%dtmp_occ)
    else
-     call zlda_u_get_occupations(this, mixer%ztmp_occ(1:mixer%occsize,1))
+     call zlda_u_get_occupations(this, mixer%ztmp_occ(1:mixer%occsize, 1))
      call mixfield_set_vout(mixer%mixfield_occ, mixer%ztmp_occ)
    end if
 
    if(this%level == DFT_U_ACBN0) then
-     call lda_u_get_effectiveU(this, mixer%tmpU(1:this%norbsets,1))
+     call lda_u_get_effectiveU(this, mixer%tmpU(1:this%norbsets, 1))
      call mixfield_set_vout(mixer%mixfield_U, mixer%tmpU)
    end if 
 
@@ -195,15 +194,15 @@ contains
    PUSH_SUB(lda_u_mixer_set_vin)
 
    if(mixer%realstates) then
-     call dlda_u_get_occupations(this, mixer%dtmp_occ(1:mixer%occsize,1))
+     call dlda_u_get_occupations(this, mixer%dtmp_occ(1:mixer%occsize, 1))
      call mixfield_set_vin(mixer%mixfield_occ, mixer%dtmp_occ)
    else
-     call zlda_u_get_occupations(this, mixer%ztmp_occ(1:mixer%occsize,1))
+     call zlda_u_get_occupations(this, mixer%ztmp_occ(1:mixer%occsize, 1))
      call mixfield_set_vin(mixer%mixfield_occ, mixer%ztmp_occ)
    end if
 
    if(this%level == DFT_U_ACBN0) then
-     call lda_u_get_effectiveU(this, mixer%tmpU(1:this%norbsets,1))
+     call lda_u_get_effectiveU(this, mixer%tmpU(1:this%norbsets, 1))
      call mixfield_set_vin(mixer%mixfield_U, mixer%tmpU)
    end if
 
@@ -221,17 +220,17 @@ contains
 
    if(this%level == DFT_U_ACBN0) then
      call mixfield_get_vnew(mixer%mixfield_U, mixer%tmpU)
-     call lda_u_set_effectiveU(this, mixer%tmpU(1:this%norbsets,1))
+     call lda_u_set_effectiveU(this, mixer%tmpU(1:this%norbsets, 1))
    end if
 
 
    if(mixer%realstates) then
      call mixfield_get_vnew(mixer%mixfield_occ, mixer%dtmp_occ)
-     call dlda_u_set_occupations(this, mixer%dtmp_occ(1:mixer%occsize,1))
+     call dlda_u_set_occupations(this, mixer%dtmp_occ(1:mixer%occsize, 1))
      call dlda_u_update_potential(this, st)
    else
      call mixfield_get_vnew(mixer%mixfield_occ, mixer%ztmp_occ)
-     call zlda_u_set_occupations(this, mixer%ztmp_occ(1:mixer%occsize,1))
+     call zlda_u_set_occupations(this, mixer%ztmp_occ(1:mixer%occsize, 1))
      call zlda_u_update_potential(this, st)
    end if
 
