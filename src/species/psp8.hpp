@@ -240,8 +240,9 @@ namespace pseudopotential {
     
     void projector(int l, int i, std::vector<double> & proj) const {
       proj.clear();
+      
       if(l > lmax_) return;
-      if(i > nprojl_[l]) return;
+      if(i >= nprojl_[l]) return;
 
       proj.resize(mesh_size_);
       assert(mesh_size_ == projectors_[l][i].size());
