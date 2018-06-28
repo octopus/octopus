@@ -59,7 +59,7 @@ program oct_convert
 
   type convert_out_t
     integer                  :: what
-    integer                  :: how              !< format of the output
+    integer(8)               :: how              !< format of the output
   end type convert_out_t
 
   type(convert_out_t)   :: outp
