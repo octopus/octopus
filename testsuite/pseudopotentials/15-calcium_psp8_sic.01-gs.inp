@@ -4,13 +4,11 @@ CalculationMode = gs
  'Ca' | 0.0 | 0.0 | 0.0
 %
 
-PseudopotentialSet = pseudodojo_pbe
-
 %Species
  'Ca' | species_pseudo | file | '15-calcium_psp8_sic.20ca_sic.drh'
 %
 
-ExtraStates = 1
+ExtraStates = 3
 
 ExperimentalFeatures = yes
 
@@ -22,5 +20,4 @@ Debug = info
 FromScratch = yes
 
 SICCorrection = sic_amaldi
-
 
