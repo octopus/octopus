@@ -91,9 +91,16 @@ namespace pseudopotential {
       }
       getline(file, line);
 
-      //line 6: ignored
+      //line 6
+      int extension_switch;
+      file >> extension_switch;
       getline(file, line);
 
+      // there is an extra line for spin orbit stuff
+      if(extension_switch == 2) getline(file, line);
+
+      if(extension_switch > 2) throw status::FORMAT_NOT_SUPPORTED;
+      
       //the projectors and local potential
       projectors_.resize(lmax_ + 1);
       ekb_.resize(lmax_ + 1);
