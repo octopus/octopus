@@ -62,6 +62,9 @@ dist_share_DATA =                                  \
 	14-carbon_dojo_psp8.test                   \
 	15-calcium_psp8_sic.01-gs.inp              \
 	15-calcium_psp8_sic.20ca_sic.drh           \
-	15-calcium_psp8_sic.test
+	15-calcium_psp8_sic.test                   \
+	16-platinum_psp8.test                      \
+	16-platinum_psp8.01-gs.inp                 \
+	16-platinum_psp8.78_Pt_r.oncvpsp.psp8
 
 CLEANFILES = *~ *.bak
