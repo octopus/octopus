@@ -37,6 +37,8 @@ namespace pseudopotential {
 
     psp8(const std::string & filename){
 
+      filename_ = filename;
+      
       std::ifstream original_file(filename.c_str());
       std::string buffer((std::istreambuf_iterator<char>(original_file)), std::istreambuf_iterator<char>());
       std::replace(buffer.begin(), buffer.end(), 'D', 'E');
