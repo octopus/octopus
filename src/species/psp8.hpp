@@ -95,7 +95,8 @@ namespace pseudopotential {
       int extension_switch;
       file >> extension_switch;
       getline(file, line);
-
+      has_density_ = extension_switch == 1;
+	
       // there is an extra line for spin orbit stuff
       if(extension_switch == 2) getline(file, line);
 
@@ -158,6 +159,21 @@ namespace pseudopotential {
 	  getline(file, line);
 	}
       }
+
+
+      if(extension_switch == 1){
+
+	density_.resize(mesh_size_);
+	
+	for(int ip = 0; ip < mesh_size_; ip++){
+	  int read_ip;
+	  double grid_point;
+	  file >> read_ip >> grid_point >> density_[ip];
+	  assert(read_ip == ip + 1);
+	  getline(file, line);
+	}
+      }
+
       
     }
 
@@ -288,6 +304,16 @@ namespace pseudopotential {
       for(int ip = 0; ip < mesh_size_; ip++) density[ip] = nlcc_density_[ip]/(4.0*M_PI);
     }
     
+    bool has_density() const{
+      return has_density_;
+    }
+
+    void density(std::vector<double> & density) const {
+      density.resize(mesh_size_);
+      assert(mesh_size_ == density_.size());
+      for(int ip = 0; ip < mesh_size_; ip++) density[ip] = density_[ip]/(4.0*M_PI);
+    }
+    
   private:
     
     void extrapolate_first_point(std::vector<double> & function_) const{
@@ -350,6 +376,9 @@ namespace pseudopotential {
     std::vector<double> local_potential_;
     bool nlcc_;
     std::vector<double> nlcc_density_;
+    bool has_density_;
+    std::vector<double> density_;
+    
   };
 
 }
