@@ -37,6 +37,8 @@ namespace pseudopotential {
 
     psp8(const std::string & filename){
 
+      filename_ = filename;
+      
       std::ifstream original_file(filename.c_str());
       std::string buffer((std::istreambuf_iterator<char>(original_file)), std::istreambuf_iterator<char>());
       std::replace(buffer.begin(), buffer.end(), 'D', 'E');
@@ -91,9 +93,17 @@ namespace pseudopotential {
       }
       getline(file, line);
 
-      //line 6: ignored
+      //line 6
+      int extension_switch;
+      file >> extension_switch;
       getline(file, line);
+      has_density_ = extension_switch == 1;
+	
+      // there is an extra line for spin orbit stuff
+      if(extension_switch == 2) getline(file, line);
 
+      if(extension_switch > 2) throw status::FORMAT_NOT_SUPPORTED;
+      
       //the projectors and local potential
       projectors_.resize(lmax_ + 1);
       ekb_.resize(lmax_ + 1);
@@ -151,6 +161,21 @@ namespace pseudopotential {
 	  getline(file, line);
 	}
       }
+
+
+      if(extension_switch == 1){
+
+	density_.resize(mesh_size_);
+	
+	for(int ip = 0; ip < mesh_size_; ip++){
+	  int read_ip;
+	  double grid_point;
+	  file >> read_ip >> grid_point >> density_[ip];
+	  assert(read_ip == ip + 1);
+	  getline(file, line);
+	}
+      }
+
       
     }
 
@@ -165,6 +190,8 @@ namespace pseudopotential {
     }
     
     std::string symbol() const {
+      pseudopotential::element el(atomic_number_);
+      return el.symbol();
     }
 
     int atomic_number() const {
@@ -172,6 +199,8 @@ namespace pseudopotential {
     }
 
     double mass() const {
+      pseudopotential::element el(atomic_number_);
+      return el.mass();
     }
     
     int valence_charge() const {
@@ -236,8 +265,9 @@ namespace pseudopotential {
     
     void projector(int l, int i, std::vector<double> & proj) const {
       proj.clear();
+      
       if(l > lmax_) return;
-      if(i > nprojl_[l]) return;
+      if(i >= nprojl_[l]) return;
 
       proj.resize(mesh_size_);
       assert(mesh_size_ == projectors_[l][i].size());
@@ -250,6 +280,7 @@ namespace pseudopotential {
     
     double d_ij(int l, int i, int j) const {
       if(i != j) return 0.0;
+      if(i >= nprojl_[l]) return 0.0;
       return ekb_[l][i];
     }
 
@@ -273,6 +304,16 @@ namespace pseudopotential {
       density.resize(mesh_size_);
       assert(mesh_size_ == nlcc_density_.size());
       for(int ip = 0; ip < mesh_size_; ip++) density[ip] = nlcc_density_[ip]/(4.0*M_PI);
+    }
+    
+    bool has_density() const{
+      return has_density_;
+    }
+
+    void density(std::vector<double> & density) const {
+      density.resize(mesh_size_);
+      assert(mesh_size_ == density_.size());
+      for(int ip = 0; ip < mesh_size_; ip++) density[ip] = density_[ip]/(4.0*M_PI);
     }
     
   private:
@@ -337,6 +378,8 @@ namespace pseudopotential {
     std::vector<double> local_potential_;
     bool nlcc_;
     std::vector<double> nlcc_density_;
+    bool has_density_;
+    std::vector<double> density_;
     
   };
 

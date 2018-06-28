@@ -41,6 +41,8 @@ namespace pseudopotential {
       file_(filename.c_str()),
       buffer_((std::istreambuf_iterator<char>(file_)), std::istreambuf_iterator<char>()){
 
+      filename_ = filename;
+      
       buffer_.push_back('\0');
       doc_.parse<0>(&buffer_[0]);
 
@@ -128,7 +130,7 @@ namespace pseudopotential {
     }
     
     std::string symbol() const {
-      return spec_node_->first_attribute("atomic-label")->value();
+      return element::trim(spec_node_->first_attribute("atomic-label")->value());
     }
 
     int atomic_number() const {

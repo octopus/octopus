@@ -23,11 +23,20 @@
 #include <string>
 #include <rapidxml.hpp>
 #include "base.hpp"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 namespace pseudopotential {
 
-  pseudopotential::format detect_format(const std::string & filename){
+  static pseudopotential::format detect_format(const std::string & filename){
 
+    // check that the file is not a directory
+    struct stat file_stat;
+    if(stat(filename.c_str(), &file_stat) == -1) return pseudopotential::format::FILE_NOT_FOUND;
+    if(S_ISDIR(file_stat.st_mode)) return pseudopotential::format::FILE_NOT_FOUND;
+
+    //now open the file
     std::ifstream file(filename.c_str());
 
     if(!file) return pseudopotential::format::FILE_NOT_FOUND;
@@ -56,10 +65,11 @@ namespace pseudopotential {
     std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
 
     if(extension == "psp8") return pseudopotential::format::PSP8;
-    if(extension == "psf") return pseudopotential::format::PSF;
-    if(extension == "cpi") return pseudopotential::format::CPI;
-    if(extension == "fhi") return pseudopotential::format::FHI;
-    if(extension == "hgh") return pseudopotential::format::HGH;
+    if(extension == "drh")  return pseudopotential::format::PSP8;
+    if(extension == "psf")  return pseudopotential::format::PSF;
+    if(extension == "cpi")  return pseudopotential::format::CPI;
+    if(extension == "fhi")  return pseudopotential::format::FHI;
+    if(extension == "hgh")  return pseudopotential::format::HGH;
     
     return pseudopotential::format::UNKNOWN;
   }
