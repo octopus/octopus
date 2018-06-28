@@ -120,7 +120,8 @@ contains
     integer, allocatable     :: rotation(:, :, :)
     real(8), allocatable     :: translation(:, :)
     character(kind=c_char) :: c_symbol(11), c_schoenflies(7) 
-
+    logical :: def_sym_comp
+    
     PUSH_SUB(symmetries_init)
 
     ! if someone cares, they could try to analyze the symmetry point group of the individual species too
@@ -137,16 +138,25 @@ contains
 
     dim4syms = min(3,dim)
 
+    def_sym_comp = (geo%natoms < 100)
+    def_sym_comp = def_sym_comp .and. dim == 3
+    
     !%Variable SymmetriesCompute
     !%Type logical
-    !%Default (natoms < 100) ? true : false
     !%Section Execution::Symmetries
     !%Description
     !% If disabled, <tt>Octopus</tt> will not compute
     !% nor print the symmetries.
+    !%
+    !% By default, symmetries are computed when running in 3
+    !% dimensions for systems with less than 100 atoms.
     !%End
-    call parse_variable('SymmetriesCompute', (geo%natoms < 100), this%symmetries_compute)
+    call parse_variable('SymmetriesCompute', def_sym_comp, this%symmetries_compute)
 
+    if(this%symmetries_compute .and. dim /= 3) then
+      call messages_experimental('symmetries for non 3D systems')
+    end if
+    
     if(this%any_non_spherical .or. .not. this%symmetries_compute) then
       call init_identity()
 
