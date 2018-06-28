@@ -303,7 +303,7 @@ contains
     if(default_pseudopotential_set_id == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL) call messages_experimental('PseudopotentialSet = pseudodojo_pbesol')
     if(default_pseudopotential_set_id == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL_STRINGENT) call messages_experimental('PseudopotentialSet = pseudodojo_pbesol_stringent')
 
-    call pseudo_set_init(default_pseudopotential_set, get_set_filename(default_pseudopotential_set_id), ierr)
+    call pseudo_set_init(default_pseudopotential_set, get_set_directory(default_pseudopotential_set_id), ierr)
     
     POP_SUB(species_init_global)
   end subroutine species_init_global
@@ -621,42 +621,42 @@ contains
 
     ! ---------------------------------------------------------
 
-  character(len=MAX_PATH_LEN) function get_set_filename(set_id) result(filename)
+  character(len=MAX_PATH_LEN) function get_set_directory(set_id) result(filename)
     integer,         intent(in)   :: set_id
 
-    PUSH_SUB(get_set_filename)
+    PUSH_SUB(get_set_directory)
     
     select case(set_id)
     case(OPTION__PSEUDOPOTENTIALSET__STANDARD)
-      filename = trim(conf%share)//'/pseudopotentials/standard.set'
+      filename = trim(conf%share)//'/pseudopotentials/PSF'
     case(OPTION__PSEUDOPOTENTIALSET__SG15)
-      filename = trim(conf%share)//'/pseudopotentials/sg15.set'
+      filename = trim(conf%share)//'/pseudopotentials/quantum-simulation.org/sg15/'
     case(OPTION__PSEUDOPOTENTIALSET__HGH_LDA)
-      filename = trim(conf%share)//'/pseudopotentials/hgh_lda.set'
+      filename = trim(conf%share)//'/pseudopotentials/HGH/lda/'
     case(OPTION__PSEUDOPOTENTIALSET__HGH_LDA_SC)
-      filename = trim(conf%share)//'/pseudopotentials/hgh_lda_sc.set'
+      filename = trim(conf%share)//'/pseudopotentials/HGH/lda_sc/'
     case(OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
-      filename = trim(conf%share)//'/pseudopotentials/hscv_lda.set'
+      filename = trim(conf%share)//'/pseudopotentials/quantum-simulation.org/hscv/lda/'
     case(OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
-      filename = trim(conf%share)//'/pseudopotentials/hscv_pbe.set'
+      filename = trim(conf%share)//'/pseudopotentials/quantum-simulation.org/hscv/pbe/'
     case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA)
-      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_lda.set'
+      filename = trim(conf%share)//'/pseudopotentials/pseudo-dojo.org/nc-sr-04_pw_standard/'
     case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA_STRINGENT)
-      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_lda.set'
+      filename = trim(conf%share)//'/pseudopotentials/pseudo-dojo.org/nc-sr-04_pw_stringent/'
     case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE)
-      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe.set'
+      filename = trim(conf%share)//'/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbe_standard/'
     case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE_STRINGENT)
-      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe_stringent.set'
+      filename = trim(conf%share)//'/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbe_stringent/'
     case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL)
-      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_pbesol.set'
+      filename = trim(conf%share)//'/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbesol_standard/'
     case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL_STRINGENT)
-      filename = trim(conf%share)//'/pseudopotentials/pseudodojo_pbesol_stringent.set'
+      filename = trim(conf%share)//'/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbesol_stringent/'
     case default
       ASSERT(.false.)
     end select
 
-    POP_SUB(get_set_filename)
-  end function get_set_filename
+    POP_SUB(get_set_directory)
+  end function get_set_directory
 
   ! ---------------------------------------------------------
   subroutine species_build(spec, ispin, dim, print_info)
@@ -1881,7 +1881,7 @@ contains
       case(OPTION__SPECIES__SET)
         call check_duplication(OPTION__SPECIES__SET)
         call parse_block_integer(blk, row, icol + 1, spec%pseudopotential_set_id)
-        call pseudo_set_init(spec%pseudopotential_set, get_set_filename(spec%pseudopotential_set_id), ierr)
+        call pseudo_set_init(spec%pseudopotential_set, get_set_directory(spec%pseudopotential_set_id), ierr)
         
       case(OPTION__SPECIES__POTENTIAL_FORMULA)
         call check_duplication(OPTION__SPECIES__POTENTIAL_FORMULA)

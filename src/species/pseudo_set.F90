@@ -48,12 +48,12 @@ module pseudo_set_oct_m
     
     ! -------------------------------------------------
     
-    subroutine pseudo_set_init(pseudo_set, filename, ierr)
+    subroutine pseudo_set_init(pseudo_set, dirname, ierr)
       import :: pseudo_set_t
       implicit none
       
       type(pseudo_set_t), intent(out)   :: pseudo_set
-      character(len=*),   intent(in)    :: filename
+      character(len=*),   intent(in)    :: dirname
       integer,            intent(out)   :: ierr
     end subroutine pseudo_set_init
 
