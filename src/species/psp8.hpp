@@ -255,6 +255,7 @@ namespace pseudopotential {
     
     double d_ij(int l, int i, int j) const {
       if(i != j) return 0.0;
+      if(i >= nprojl_[l]) return 0.0;
       return ekb_[l][i];
     }
 
