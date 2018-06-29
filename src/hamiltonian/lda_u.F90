@@ -375,7 +375,7 @@ contains
 
    do ios = 1, this%norbsets
      call orbitalset_update_phase(this%orbsets(ios), sb, std%kpt, (std%ispin==SPIN_POLARIZED), &
-       vec_pot, vec_pot_var)
+                                        vec_pot, vec_pot_var)
    end do
 
    if(this%basis%orthogonalization) then
