@@ -32,6 +32,7 @@
 #include "qso.hpp"
 #include "upf1.hpp"
 #include "upf2.hpp"
+#include "psp8.hpp"
 
 namespace pseudopotential {
 
@@ -83,6 +84,9 @@ namespace pseudopotential {
 	  break;
 	case pseudopotential::format::PSML:
 	  pseudo = new pseudopotential::psml(fullname, /*uniform_grid = */ true);
+	  break;
+	case pseudopotential::format::PSP8:
+	  pseudo = new pseudopotential::psp8(fullname);
 	  break;
 	default:
 	  continue;
