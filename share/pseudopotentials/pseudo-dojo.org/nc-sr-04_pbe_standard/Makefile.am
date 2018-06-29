@@ -25,6 +25,7 @@ dist_pdpbestd_DATA =                \
 	Al.upf                      \
 	Al.upf.spacing              \
 	Ar.upf                      \
+	Ar.upf.spacing              \
 	As.upf                      \
 	Au.upf                      \
 	Ba.upf                      \
@@ -37,6 +38,7 @@ dist_pdpbestd_DATA =                \
 	Ca.upf                      \
 	Cd.upf                      \
 	Cl.upf                      \
+	Cl.upf.spacing              \
 	Co.upf                      \
 	Cr.upf                      \
 	Cs.upf                      \
@@ -97,6 +99,7 @@ dist_pdpbestd_DATA =                \
 	Sn.upf                      \
 	Sr.upf                      \
 	S.upf                       \
+	S.upf.spacing               \
 	T.upf                       \
 	T.upf.spacing               \
 	Ta.upf                      \
