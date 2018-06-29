@@ -605,7 +605,7 @@ contains
       case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA)
         fname = trim(conf%share)//'/pseudopotentials/pseudodojo_lda.set'
       case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA_STRINGENT)
-        fname = trim(conf%share)//'/pseudopotentials/pseudodojo_lda_stringent.set'
+        fname = trim(conf%share)//'/pseudopotentials/pseudodojo_lda.set'
       case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE)
         fname = trim(conf%share)//'/pseudopotentials/pseudodojo_pbe.set'
       case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE_STRINGENT)
