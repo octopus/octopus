@@ -68,31 +68,38 @@ namespace pseudopotential {
 	
 	if(format == pseudopotential::format::FILE_NOT_FOUND || format == pseudopotential::format::UNKNOWN) continue;
 
-
 	// we open the pseudo just to get the species symbol, this could be done in a better way
 	pseudopotential::base * pseudo = NULL;
- 
+
+	std::string symbol;
+   
 	switch(format){
 	case pseudopotential::format::QSO:
-	  pseudo = new pseudopotential::qso(fullname);
+	  pseudo = new pseudopotential::qso(filename);
 	  break;
 	case pseudopotential::format::UPF1:
-	  pseudo = new pseudopotential::upf1(fullname, /*uniform_grid = */ true);
+	  pseudo = new pseudopotential::upf1(filename, /*uniform_grid = */ true);
 	  break;
 	case pseudopotential::format::UPF2:
-	  pseudo = new pseudopotential::upf2(fullname, /*uniform_grid = */ true);
+	  pseudo = new pseudopotential::upf2(filename, /*uniform_grid = */ true);
 	  break;
 	case pseudopotential::format::PSML:
-	  pseudo = new pseudopotential::psml(fullname, /*uniform_grid = */ true);
+	  pseudo = new pseudopotential::psml(filename, /*uniform_grid = */ true);
 	  break;
 	case pseudopotential::format::PSP8:
-	  pseudo = new pseudopotential::psp8(fullname);
+	  pseudo = new pseudopotential::psp8(filename);
 	  break;
 	default:
-	  continue;
+	  //get the symbol from the name
+	  for(int ii = 0; ii < 3; ii++){
+	    char cc = filename[ii];
+	    bool is_letter = (cc >= 'a' && cc <= 'z') || (cc >= 'A' && cc <= 'Z');
+	    if(!is_letter) break;
+	    symbol.push_back(cc);
+	  }
 	}
-	
-	std::string symbol = pseudo->symbol();
+
+	if(pseudo) symbol = pseudo->symbol();
 	
 	delete pseudo;
 	
