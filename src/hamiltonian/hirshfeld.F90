@@ -278,8 +278,7 @@ contains
     FLOAT,                     intent(out)   :: dposition(:)
 
     integer :: ip, idir, icell, jcell, isp, ipp
-    FLOAT :: atom_dens, atom_der,rri, rrj, tdensity, pos_i(1:MAX_DIM), pos_j(1:MAX_DIM), rmax_i, rmax_j, &
-             VDW_TS_extraterm_i, VDW_TS_extraterm_j, rij
+    FLOAT :: atom_dens, atom_der,rri, rrj, tdensity, pos_i(1:MAX_DIM), pos_j(1:MAX_DIM), rmax_i, rmax_j, rij
     FLOAT, allocatable :: grad(:, :), atom_density(:, :), atom_derivative(:, :)
     type(periodic_copy_t) :: pp_i, pp_j
     type(ps_t), pointer :: ps_i, ps_j
@@ -310,27 +309,6 @@ contains
         rmax_j = max(rmax_j, spline_cutoff_radius(ps_j%density_der(isp), ps_j%projectors_sphere_threshold))
       end do
 
-      !%Variable VDW_TS_extraterm_i
-      !%Type float
-      !%Default 1
-      !%Section Hamiltonian::XC
-      !%Description
-      !% to be converged  
-      !%End
-      call parse_variable('VDW_TS_extraterm_i', CNST(1.0), VDW_TS_extraterm_i)
-
-      !%Variable VDW_TS_extraterm_j
-      !%Type float
-      !%Default 1
-      !%Section Hamiltonian::XC
-      !%Description
-      !% to be converged                                                                         
-      !%End
-      call parse_variable('VDW_TS_extraterm_j', CNST(1.0), VDW_TS_extraterm_j)
-    
-      call periodic_copy_init(pp_i, this%mesh%sb, this%geo%atom(iatom)%x, VDW_TS_extraterm_i*rmax_i)
-
-
       do icell = 1, periodic_copy_num(pp_i)
         atom_density(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
         pos_i(1:this%mesh%sb%dim) = periodic_copy_position(pp_i, this%mesh%sb, icell)
@@ -343,7 +321,7 @@ contains
                                      atom_density(1:this%mesh%np, 1:this%st%d%nspin))
 
         
-        call periodic_copy_init(pp_j, this%mesh%sb, pos_i, VDW_TS_extraterm_j*(rmax_j+rmax_i))
+        call periodic_copy_init(pp_j, this%mesh%sb, pos_i, (rmax_j+rmax_i))
 
         do jcell = 1, periodic_copy_num(pp_j)
 
