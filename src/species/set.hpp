@@ -75,19 +75,19 @@ namespace pseudopotential {
    
 	switch(format){
 	case pseudopotential::format::QSO:
-	  pseudo = new pseudopotential::qso(filename);
+	  pseudo = new pseudopotential::qso(fullname);
 	  break;
 	case pseudopotential::format::UPF1:
-	  pseudo = new pseudopotential::upf1(filename, /*uniform_grid = */ true);
+	  pseudo = new pseudopotential::upf1(fullname, /*uniform_grid = */ true);
 	  break;
 	case pseudopotential::format::UPF2:
-	  pseudo = new pseudopotential::upf2(filename, /*uniform_grid = */ true);
+	  pseudo = new pseudopotential::upf2(fullname, /*uniform_grid = */ true);
 	  break;
 	case pseudopotential::format::PSML:
-	  pseudo = new pseudopotential::psml(filename, /*uniform_grid = */ true);
+	  pseudo = new pseudopotential::psml(fullname, /*uniform_grid = */ true);
 	  break;
 	case pseudopotential::format::PSP8:
-	  pseudo = new pseudopotential::psp8(filename);
+	  pseudo = new pseudopotential::psp8(fullname);
 	  break;
 	default:
 	  //get the symbol from the name
