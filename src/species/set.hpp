@@ -165,7 +165,37 @@ namespace pseudopotential {
     }
     
     double spacing(const element & el) const {
-      return map_.at(el.symbol()).spacing_;
+      double etol = 0.001;
+      
+      std::ifstream file((map_.at(el.symbol()).file_path_ + ".spacing").c_str());
+      if(file) {
+	std::vector<double> spacing;
+	std::vector<double> energy;
+
+	while(true){
+	  double h, e;
+	  std::string line;
+	  file >> h >> e;
+	  getline(file, line);
+	  if(file.eof()) break;
+	  spacing.push_back(h);
+	  energy.push_back(e);
+	}
+
+	double eref = energy[energy.size() - 1];
+	energy[energy.size() - 1] = 0.0;
+	for(int ii = energy.size() - 2; ii >= 0; ii--){
+	  energy[ii] = std::max(energy[ii + 1], fabs(energy[ii] - eref));
+	}
+
+	for(unsigned ii = 0; ii < energy.size(); ii++){
+	  if(energy[ii] < etol) return spacing[ii];
+	}
+	
+	
+      } else {      
+	return map_.at(el.symbol()).spacing_;
+      }
     }
     
     double radius(const element & el) const {
