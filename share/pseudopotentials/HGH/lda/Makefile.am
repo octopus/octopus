@@ -18,29 +18,88 @@
 ## 02110-1301, USA.
 ##
 
-psfdir = $(pkgdatadir)/pseudopotentials/PSF
+hghdir = $(pkgdatadir)/pseudopotentials/HGH
 
-dist_psf_DATA =      \
-	set_defaults \
-	Cd.psf \
-	C.psf  \
-	D.psf  \
-	H.psf  \
-	Li.psf \
-	Na.psf \
-	N.psf  \
-	O.psf  \
-	Se.psf \
-	Si.psf \
-	S.psf  \
-	T.psf  \
-	Ti.psf
+dist_hgh_DATA = \
+	Ag.hgh \
+	Al.hgh \
+	Ar.hgh \
+	As.hgh \
+	At.hgh \
+	Au.hgh \
+	Ba.hgh \
+	Be.hgh \
+	B.hgh \
+	Bi.hgh \
+	Br.hgh \
+	Ca.hgh \
+	Cd.hgh \
+	C.hgh \
+	Cl.hgh \
+	Co.hgh \
+	Cr.hgh \
+	Cs.hgh \
+	Cu.hgh \
+	D.hgh  \
+	Fe.hgh \
+	F.hgh \
+	Ga.hgh \
+	Ge.hgh \
+	He.hgh \
+	Hg.hgh \
+	H.hgh \
+	I.hgh \
+	In.hgh \
+	Ir.hgh \
+	K.hgh \
+	Kr.hgh \
+	Li.hgh \
+	Mg.hgh \
+	Mn.hgh \
+	Mo.hgh \
+	Na.hgh \
+	Nb.hgh \
+	Ne.hgh \
+	N.hgh \
+	Ni.hgh \
+	O.hgh \
+	Os.hgh \
+	Pb.hgh \
+	Pd.hgh \
+	P.hgh \
+	Po.hgh \
+	Pt.hgh \
+	Rb.hgh \
+	Re.hgh \
+	Rh.hgh \
+	Rn.hgh \
+	Ru.hgh \
+	Sb.hgh \
+	Sc.hgh \
+	Se.hgh \
+	S.hgh \
+	Si.hgh \
+	Sn.hgh \
+	Sr.hgh \
+	T.hgh  \
+	Ta.hgh \
+	Tc.hgh \
+	Te.hgh \
+	Ti.hgh \
+	Tl.hgh \
+	V.hgh \
+	W.hgh \
+	Xe.hgh \
+	Y.hgh \
+	Zn.hgh \
+	Zr.hgh
+
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
 # the `distcheck' target) the pseudopotential files have to be accessible
 # in the build tree.
 check:
-	for f in $(dist_psf_DATA); do \
+	for f in $(dist_hgh_DATA); do \
 	  if [ ! -e $$f -o $$f -ot $(srcdir)/$$f ]; then \
 	    cp $(srcdir)/$$f $$f; \
 	  fi \
@@ -51,7 +110,7 @@ check-long: check
 
 clean-local:
 	@if [ -n "$(top_builddir)" -a "$(top_builddir)" != "$(top_srcdir)" ]; then \
-	  rm -f $(dist_psf_DATA); \
+	  rm -f $(dist_hgh_DATA); \
 	fi
 
 .PHONY: check check-short check-long

@@ -36,6 +36,7 @@ dist_pdpwstr_DATA =                            \
 	Cr.upf                                  \
 	C.upf                                   \
 	Cu.upf                                  \
+	D.upf                                   \
 	Fe.upf                                  \
 	F.upf                                   \
 	Ga.upf                                  \
@@ -72,6 +73,7 @@ dist_pdpwstr_DATA =                            \
 	Sn.upf                                  \
 	Sr.upf                                  \
 	S.upf                                   \
+	T.upf                                   \
 	Ta.upf                                  \
 	Tc.upf                                  \
 	Te.upf                                  \
