@@ -23,18 +23,6 @@ SUBDIRS = PSF HGH quantum-simulation.org pseudo-dojo.org
 ppdir = $(pkgdatadir)/pseudopotentials
 
 dist_pp_DATA =                            \
-	standard.set                      \
-	sg15.set                          \
-	hgh_lda.set                       \
-	hgh_lda_sc.set                    \
-	hscv_lda.set                      \
-	hscv_pbe.set                      \
-	pseudodojo_lda.set                \
-	pseudodojo_lda_stringent.set      \
-	pseudodojo_pbe.set                \
-	pseudodojo_pbe_stringent.set      \
-	pseudodojo_pbesol.set             \
-	pseudodojo_pbesol_stringent.set   \
 	elements.dat
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
