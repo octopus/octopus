@@ -599,7 +599,7 @@ contains
     
     if(pseudo_set_has(spec%pseudopotential_set, el)) then
       spec%type = SPECIES_PSEUDO
-      spec%filename = trim(conf%share)//'/pseudopotentials/'//pseudo_set_file_path(spec%pseudopotential_set, el)
+      spec%filename = pseudo_set_file_path(spec%pseudopotential_set, el)
 
       ! these might have been set before
       if(spec%z < 0) spec%z = element_atomic_number(el)
