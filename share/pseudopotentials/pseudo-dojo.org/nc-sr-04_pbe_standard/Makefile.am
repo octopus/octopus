@@ -23,14 +23,17 @@ pdpbestddir = $(pkgdatadir)/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbe_standa
 dist_pdpbestd_DATA =                \
 	Ag.upf                      \
 	Al.upf                      \
+	Al.upf.spacing              \
 	Ar.upf                      \
 	As.upf                      \
 	Au.upf                      \
 	Ba.upf                      \
 	Be.upf                      \
+	Be.upf.spacing              \
 	Bi.upf                      \
 	Br.upf                      \
 	B.upf                       \
+	B.upf.spacing               \
 	Ca.upf                      \
 	Cd.upf                      \
 	Cl.upf                      \
@@ -38,13 +41,16 @@ dist_pdpbestd_DATA =                \
 	Cr.upf                      \
 	Cs.upf                      \
 	C.upf                       \
+	C.upf.spacing               \
 	Cu.upf                      \
 	D.upf                       \
 	Fe.upf                      \
 	F.upf                       \
+	F.upf.spacing               \
 	Ga.upf                      \
 	Ge.upf                      \
 	He.upf                      \
+	He.upf.spacing              \
 	Hf.upf                      \
 	Hg.upf                      \
 	H.upf                       \
@@ -56,6 +62,7 @@ dist_pdpbestd_DATA =                \
 	K.upf                       \
 	La.upf                      \
 	Li.upf                      \
+	Li.upf.spacing              \
 	Lu.upf                      \
 	Mg.upf                      \
 	Mn.upf                      \
@@ -63,10 +70,13 @@ dist_pdpbestd_DATA =                \
 	Na.upf                      \
 	Nb.upf                      \
 	Ne.upf                      \
+	Ne.upf.spacing              \
 	Ni.upf                      \
 	N.upf                       \
+	N.upf.spacing               \
 	Os.upf                      \
 	O.upf                       \
+	O.upf.spacing               \
 	Pb.upf                      \
 	Pd.upf                      \
 	Po.upf                      \
