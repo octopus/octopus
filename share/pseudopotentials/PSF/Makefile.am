@@ -24,6 +24,7 @@ dist_psf_DATA =      \
 	set_defaults \
 	Cd.psf \
 	C.psf  \
+	D.psf  \
 	H.psf  \
 	Li.psf \
 	Na.psf \
@@ -32,6 +33,7 @@ dist_psf_DATA =      \
 	Se.psf \
 	Si.psf \
 	S.psf  \
+	T.psf  \
 	Ti.psf
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use

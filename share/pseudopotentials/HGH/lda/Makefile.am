@@ -40,6 +40,7 @@ dist_hgh_DATA = \
 	Cr.hgh \
 	Cs.hgh \
 	Cu.hgh \
+	D.hgh  \
 	Fe.hgh \
 	F.hgh \
 	Ga.hgh \
@@ -80,6 +81,7 @@ dist_hgh_DATA = \
 	Si.hgh \
 	Sn.hgh \
 	Sr.hgh \
+	T.hgh  \
 	Ta.hgh \
 	Tc.hgh \
 	Te.hgh \
