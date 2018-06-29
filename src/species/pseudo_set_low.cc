@@ -68,8 +68,8 @@ extern "C" fint FC_FUNC_(pseudo_set_llocal, PSEUDO_SET_LLOCAL)
 }
 
 extern "C" double FC_FUNC_(pseudo_set_spacing, PSEUDO_SET_SPACING)
-  (const pseudopotential::set ** pseudo_set, pseudopotential::element **el){
-  return (*pseudo_set)->spacing(**el);
+  (const pseudopotential::set ** pseudo_set, pseudopotential::element **el, double * etol){
+  return (*pseudo_set)->spacing(**el, *etol);
 }
 
 extern "C" double FC_FUNC_(pseudo_set_radius, PSEUDO_SET_RADIUS)

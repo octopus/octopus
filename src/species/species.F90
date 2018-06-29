@@ -175,6 +175,7 @@ module species_oct_m
   logical :: initialized = .false.
   integer :: default_pseudopotential_set_id
   type(pseudo_set_t) :: default_pseudopotential_set
+  real(8) :: energy_tolerance
   
 contains
 
@@ -231,6 +232,18 @@ contains
     initialized = .true.
 
     call share_directory_set(conf%share)    
+      
+    !%Variable PseudopotentialEnergyTolerance
+    !%Type float
+    !%Default 1e-4
+    !%Section System::Species
+    !%Description
+    !% For some pseudopotentials, Octopus can select the convergence
+    !% parameters (spacing and radius) automatically so that the
+    !% discretization error is below a certain threshold. This
+    !% variable controls the value of that threshold.
+    !%End
+    call parse_variable('PseudopotentialEnergyTolerance', CNST(1e-4), energy_tolerance)
     
     !%Variable PseudopotentialSet
     !%Type integer
@@ -605,7 +618,7 @@ contains
       if(spec%z < 0) spec%z = element_atomic_number(el)
       if(spec%user_lmax == INVALID_L) spec%user_lmax = pseudo_set_lmax(spec%pseudopotential_set, el)
       if(spec%user_llocal == INVALID_L) spec%user_llocal = pseudo_set_llocal(spec%pseudopotential_set, el)
-      if(spec%def_h < 0) spec%def_h = pseudo_set_spacing(spec%pseudopotential_set, el)
+      if(spec%def_h < 0) spec%def_h = pseudo_set_spacing(spec%pseudopotential_set, el, energy_tolerance)
       if(spec%def_rsize < 0) spec%def_rsize = pseudo_set_radius(spec%pseudopotential_set, el)
       if(spec%mass < 0) spec%mass = element_mass(el)
       if(spec%vdw_radius < 0) spec%vdw_radius = element_vdw_radius(el)

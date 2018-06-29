@@ -164,9 +164,7 @@ namespace pseudopotential {
       return map_.at(el.symbol()).llocal_;
     }
     
-    double spacing(const element & el) const {
-      double etol = 0.001;
-      
+    double spacing(const element & el, double etol) const {
       std::ifstream file((map_.at(el.symbol()).file_path_ + ".spacing").c_str());
       if(file) {
 	std::vector<double> spacing;
