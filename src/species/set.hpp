@@ -115,6 +115,37 @@ namespace pseudopotential {
 
       }
 
+      std::ifstream defaults_file((dirname + "/set_defaults").c_str() );
+
+      if(defaults_file){
+	std::string line;
+
+	//first line are comments
+	getline(defaults_file, line);
+
+	while(true){
+	  std::string symbol;
+	  defaults_file >> symbol;
+	  if(defaults_file.eof()) break;
+
+	  if(has(symbol)){
+	    int z;
+	    std::string fname;
+	    
+	    defaults_file >> fname;
+	    defaults_file >> z;
+	    defaults_file >> map_[symbol].lmax_;
+	    defaults_file >> map_[symbol].llocal_;
+	    defaults_file >> map_[symbol].spacing_;
+	    defaults_file >> map_[symbol].radius_;
+	  }
+
+	  getline(defaults_file, line);
+	}
+	
+	defaults_file.close();
+      }      
+      
     }
     
     bool has(const element & el) const {
