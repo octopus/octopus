@@ -44,6 +44,7 @@ dist_pdpbestd_DATA =                \
 	C.upf.spacing               \
 	Cu.upf                      \
 	D.upf                       \
+	D.upf.spacing               \
 	Fe.upf                      \
 	F.upf                       \
 	F.upf.spacing               \
@@ -68,6 +69,7 @@ dist_pdpbestd_DATA =                \
 	Mn.upf                      \
 	Mo.upf                      \
 	Na.upf                      \
+	Na.upf.spacing              \
 	Nb.upf                      \
 	Ne.upf                      \
 	Ne.upf.spacing              \
@@ -91,10 +93,12 @@ dist_pdpbestd_DATA =                \
 	Sc.upf                      \
 	Se.upf                      \
 	Si.upf                      \
+	Si.upf.spacing              \
 	Sn.upf                      \
 	Sr.upf                      \
 	S.upf                       \
 	T.upf                       \
+	T.upf.spacing               \
 	Ta.upf                      \
 	Tc.upf                      \
 	Te.upf                      \
