@@ -309,6 +309,8 @@ contains
         rmax_j = max(rmax_j, spline_cutoff_radius(ps_j%density_der(isp), ps_j%projectors_sphere_threshold))
       end do
 
+      call periodic_copy_init(pp_i, this%mesh%sb, this%geo%atom(iatom)%x, rmax_i)
+
       do icell = 1, periodic_copy_num(pp_i)
         atom_density(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
         pos_i(1:this%mesh%sb%dim) = periodic_copy_position(pp_i, this%mesh%sb, icell)
