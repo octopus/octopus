@@ -65,6 +65,7 @@ module geometry_oct_m
     geometry_write_openscad,         &
     geometry_val_charge,             &
     geometry_grid_defaults,          &
+    geometry_grid_defaults_info,     &
     geometry_species_time_dependent, &
     geometry_get_positions,          &
     geometry_set_positions
@@ -911,6 +912,36 @@ contains
 
     POP_SUB(geometry_grid_defaults)
   end subroutine geometry_grid_defaults
+
+  ! ---------------------------------------------------------
+
+  subroutine geometry_grid_defaults_info(geo)
+    type(geometry_t), intent(in) :: geo
+  
+    integer :: ispec
+
+    PUSH_SUB(geometry_grid_defaults_info)
+
+    do ispec = 1, geo%nspecies
+      call messages_write("Species '"//trim(species_label(geo%species(ispec)))//"': spacing = ")
+      if(species_def_h(geo%species(ispec)) > CNST(0.0)) then
+        call messages_write(species_def_h(geo%species(ispec)), fmt = '(f7.3)')
+        call messages_write(" b")
+      else
+        call messages_write(" unknown")
+      end if
+      call messages_write(", radius = ")
+      if(species_def_rsize(geo%species(ispec)) > CNST(0.0)) then
+        call messages_write(species_def_rsize(geo%species(ispec)), fmt = '(f5.1)')
+        call messages_write(" b.")
+      else
+        call messages_write(" unknown.")
+      end if
+      call messages_info()
+    end do
+
+    POP_SUB(geometry_grid_defaults_info)
+  end subroutine geometry_grid_defaults_info
 
   !--------------------------------------------------------------
   subroutine geometry_copy(geo_out, geo_in)
