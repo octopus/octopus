@@ -483,7 +483,7 @@ contains
     type(mpi_grp_t),  intent(in)  :: mpi_grp
     integer,          intent(out) :: ierr
 
-    integer :: iunit
+    integer :: iunit, idir
 
     PUSH_SUB(mesh_write_fingerprint)
 
@@ -498,10 +498,14 @@ contains
       if (mpi_grp_is_root(mpi_grp)) then
         write(iunit, '(a20,i21)')  'box_shape =         ', mesh%sb%box_shape
         if(mesh%sb%box_shape /= HYPERCUBE) then
-          write(iunit, '(a20,i21)')  'np_part_global=     ', mesh%np_part_global
-          write(iunit, '(a20,i21)')  'np_global=          ', mesh%np_global
-          write(iunit, '(a20,i21)')  'algorithm=          ', 1
-          write(iunit, '(a20,i21)')  'checksum=           ', mesh%idx%checksum
+          write(iunit, '(a20,i21)')    'np_part_global=     ', mesh%np_part_global
+          write(iunit, '(a20,i21)')    'np_global=          ', mesh%np_global
+          write(iunit, '(a20,i21)')    'algorithm=          ', 1
+          write(iunit, '(a20,i21)')    'checksum=           ', mesh%idx%checksum
+          write(iunit, '(a20,i21)')    'dimensions=         ', mesh%sb%dim
+          do idir = 1, mesh%sb%dim
+            write(iunit, '(a,i1,a,f21.16)') 'spacing(', idir,')=         ', mesh%spacing(1)
+          end do
         end if
       end if
       call io_close(iunit, grp=mpi_grp)
@@ -526,9 +530,10 @@ contains
     integer,          intent(out) :: ierr
 
     character(len=20)  :: str
-    character(len=100) :: lines(4)
-    integer :: iunit, box_shape, algorithm, err
+    character(len=100) :: lines(5)
+    integer :: iunit, box_shape, algorithm, err, dims, idir
     integer(8) :: checksum
+    FLOAT :: spacing(1:MAX_DIM)
 
     PUSH_SUB(mesh_read_fingerprint)
 
@@ -557,24 +562,36 @@ contains
         call messages_warning(1)
 
       else
-        call iopar_read(mpi_grp, iunit, lines, 4, err)
+        call iopar_read(mpi_grp, iunit, lines, 5, err)
         if (err /= 0) then
-          ierr = ierr + 4
+          ierr = ierr + 5
         else
           read(lines(1), '(a20,i21)')  str, read_np_part
           read(lines(2), '(a20,i21)')  str, read_np
           read(lines(3), '(a20,i21)')  str, algorithm
           read(lines(4), '(a20,i21)')  str, checksum
+          read(lines(5), '(a20,i21)')  str, dims
 
           ASSERT(read_np_part >= read_np)
             
           if (read_np_part == mesh%np_part_global &
                .and. read_np == mesh%np_global &
                .and. algorithm == 1 &
-               .and. checksum == mesh%idx%checksum) then
+               .and. checksum == mesh%idx%checksum &
+               .and. dims == mesh%sb%dim) then
             read_np_part = 0
             read_np = 0
           end if
+
+          call iopar_read(mpi_grp, iunit, lines, dims, err)
+          if (err /= 0) then
+            ierr = ierr + dims
+          else
+            do idir = 1, dims
+              read(lines(idir), '(a20,f21.16)')  str, spacing(idir)
+            end do
+          end if
+          
         end if
 
       end if
