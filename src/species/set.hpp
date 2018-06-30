@@ -186,6 +186,16 @@ namespace pseudopotential {
 	  energy[ii] = std::max(energy[ii + 1], fabs(energy[ii] - eref));
 	}
 
+	{
+	  //make the curve a bit smoother by taking a running average
+	  std::vector<double> e2(energy);
+	  energy[1] = (e2[0] + e2[1] + e2[2])/3.0;
+	  for(unsigned ii = 2; ii < energy.size() - 2; ii++){
+	    energy[ii] = (e2[ii - 2] + e2[ii - 1] + e2[ii] + e2[ii + 1] + e2[ii + 2])/5.0;
+	  }
+	  energy[energy.size() - 2] = (e2[energy.size() - 3] + e2[energy.size() - 2] + e2[energy.size() - 1])/3.0;
+	}
+	
 	for(unsigned ii = 0; ii < energy.size(); ii++){
 	  if(energy[ii] < etol) return spacing[ii];
 	}
