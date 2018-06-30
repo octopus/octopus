@@ -235,7 +235,7 @@ contains
       
     !%Variable PseudopotentialEnergyTolerance
     !%Type float
-    !%Default 0.001
+    !%Default 0.005
     !%Section System::Species
     !%Description
     !% For some pseudopotentials, Octopus can select the convergence
@@ -243,7 +243,7 @@ contains
     !% discretization error is below a certain threshold. This
     !% variable controls the value of that threshold.
     !%End
-    call parse_variable('PseudopotentialEnergyTolerance', CNST(0.001), energy_tolerance)
+    call parse_variable('PseudopotentialEnergyTolerance', CNST(0.005), energy_tolerance)
     
     !%Variable PseudopotentialSet
     !%Type integer
