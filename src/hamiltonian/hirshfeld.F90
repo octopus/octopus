@@ -60,7 +60,7 @@ module hirshfeld_oct_m
 
   end type hirshfeld_t
 
-  real(8), parameter, public :: TOL_HIRSHFELD = CNST(1e-24) ! previous value: 1e-12
+  real(8), parameter, public :: TOL_HIRSHFELD = CNST(1e-24) ! previous value: 1e-12, should be 1e-10, tried with 1e-8, result  a bit different
     
 contains
 
@@ -278,7 +278,8 @@ contains
     FLOAT,                     intent(out)   :: dposition(:)
 
     integer :: ip, idir, icell, jcell, isp, ipp
-    FLOAT :: atom_dens, atom_der,rri, rrj, tdensity, pos_i(1:MAX_DIM), pos_j(1:MAX_DIM), rmax_i, rmax_j, rij
+    FLOAT :: atom_dens, atom_der,rri, rrj, tdensity, pos_i(1:MAX_DIM), pos_j(1:MAX_DIM), rmax_i, rmax_j, &
+             rij, rmax_isqu, rmax_jsqu
     FLOAT, allocatable :: grad(:, :), atom_density(:, :), atom_derivative(:, :)
     type(periodic_copy_t) :: pp_i, pp_j
     type(ps_t), pointer :: ps_i, ps_j
@@ -290,7 +291,7 @@ contains
 
     call profiling_in(prof, "HIRSHFELD_POSITION_DER")
 
-    if(this%mesh%sb%periodic_dim > 0) then ! periodic case
+    !if(this%mesh%sb%periodic_dim > 0) then ! periodic case
 
       SAFE_ALLOCATE(grad(1:this%mesh%np, 1:this%mesh%sb%dim))
       SAFE_ALLOCATE(atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
@@ -309,6 +310,9 @@ contains
         rmax_j = max(rmax_j, spline_cutoff_radius(ps_j%density_der(isp), ps_j%projectors_sphere_threshold))
       end do
 
+      rmax_isqu = rmax_i**2
+      rmax_jsqu = rmax_j**2
+
       call periodic_copy_init(pp_i, this%mesh%sb, this%geo%atom(iatom)%x, rmax_i)
 
       do icell = 1, periodic_copy_num(pp_i)
@@ -323,7 +327,7 @@ contains
                                      atom_density(1:this%mesh%np, 1:this%st%d%nspin))
 
         
-        call periodic_copy_init(pp_j, this%mesh%sb, pos_i, (rmax_j+rmax_i))
+        call periodic_copy_init(pp_j, this%mesh%sb, pos_i, (rmax_j+rmax_i))  ! jcells futher away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
 
         do jcell = 1, periodic_copy_num(pp_j)
 
@@ -331,8 +335,9 @@ contains
                                       (this%geo%atom(jatom)%x(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim))
           rij =  sqrt(sum((pos_i(1:this%mesh%sb%dim)-pos_j(1:this%mesh%sb%dim))**2))
           
-          if(rij < 1.00000000001*(rmax_j+rmax_i)) then
-           
+          if(rij - (rmax_j+rmax_i) < CNST(1e-6)) then ! Or spacing ! Otherwise their are no overlap between atom_density and atom_derivative
+          !if(rij < 1.00000000001*(rmax_j+rmax_i)) then
+ 
             !print*, ' icell, jcell, pos_i, pos_j:', icell, jcell, pos_i, pos_j
             atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
             call species_atom_density_derivative_np(this%mesh, this%mesh%sb, this%geo%atom(jatom), &
@@ -344,14 +349,25 @@ contains
               if(this%total_density(ip)< TOL_HIRSHFELD) cycle
               
               xxi(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_i(1:this%mesh%sb%dim)
-              rri = sqrt(sum(xxi(1:this%mesh%sb%dim)**2))
+              rri =sum(xxi(1:this%mesh%sb%dim)**2)
+
+              if(rri-rmax_isqu > CNST(1e+4)) cycle ! In this case atom_dens = 0
+              !RQ: cette valeur de 1e+4 est bien trop grande, mais au moins on est sure d avoir tout les points important. Il faudrait mettre le spacing
+              ! (j ai teste avec une petite constante, les forces sont tres proches du calcules avec cette cnst enorme, mais quand meme legerement different a cause des point en bordure de cette sphere!)
+
+              xxj(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim)
+              rrj = sum(xxj(1:this%mesh%sb%dim)**2)
+
+              if(rrj-rmax_jsqu > CNST(1e+4)) cycle ! In this case atom_der = 0
+
+              rri = sqrt(rri)
+              rrj = sqrt(rrj)
+              
               tdensity = sum(density(ip, 1:this%st%d%nspin))
               atom_dens = sum(atom_density(ip, 1:this%st%d%nspin))
 
               tmp = rri**3*atom_dens*tdensity/this%total_density(ip)**2
 
-              xxj(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim)
-              rrj = sqrt(sum(xxj(1:this%mesh%sb%dim)**2))
               atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin))
 
               if(rrj > TOL_HIRSHFELD) then
@@ -360,7 +376,9 @@ contains
                 end do
               end if
 
-              if(iatom == jatom .and. sum(abs(pos_i(1:this%mesh%sb%dim)- pos_j(1:this%mesh%sb%dim))) < 0.000001) then
+              !if(iatom == jatom .and. sum(abs(pos_i(1:this%mesh%sb%dim)- pos_j(1:this%mesh%sb%dim))) < 0.000001) then
+              if(iatom == jatom .and. rij < CNST(1e-8)) then
+
                 !Only if we really have the same atoms
                 !if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < TOL_HIRSHFELD)) then
                 do idir = 1, this%mesh%sb%dim
@@ -385,88 +403,88 @@ contains
       SAFE_DEALLOCATE_A(atom_derivative)
       SAFE_DEALLOCATE_A(grad)
 
-    else ! Non periodic case  
+  !  else ! Non periodic case  
 
-      SAFE_ALLOCATE(grad(1:this%mesh%np, 1:this%mesh%sb%dim))
+  !    SAFE_ALLOCATE(grad(1:this%mesh%np, 1:this%mesh%sb%dim))
 
-      dposition(1:this%mesh%sb%dim) = CNST(0.0)
-      grad(1:this%mesh%np, 1:this%mesh%sb%dim) = M_ZERO
-      ps_i => species_ps(this%geo%atom(iatom)%species)
-      ps_j => species_ps(this%geo%atom(jatom)%species)
+  !    dposition(1:this%mesh%sb%dim) = CNST(0.0)
+  !    grad(1:this%mesh%np, 1:this%mesh%sb%dim) = M_ZERO
+  !    ps_i => species_ps(this%geo%atom(iatom)%species)
+  !    ps_j => species_ps(this%geo%atom(jatom)%species)
 
-      rmax_i = CNST(0.0)
-      rmax_j = CNST(0.0)
-      do isp = 1, this%st%d%nspin
-        rmax_i = max(rmax_i, spline_cutoff_radius(ps_i%density(isp), ps_i%projectors_sphere_threshold))
-        rmax_j = max(rmax_j, spline_cutoff_radius(ps_j%density_der(isp), ps_j%projectors_sphere_threshold))
-      end do
-      
-      pos_i(1:this%mesh%sb%dim) = this%geo%atom(iatom)%x(1:this%mesh%sb%dim)
-      pos_j(1:this%mesh%sb%dim) = this%geo%atom(jatom)%x(1:this%mesh%sb%dim)
-      rij =  sqrt(sum((pos_i(1:this%mesh%sb%dim)-pos_j(1:this%mesh%sb%dim))**2))
+  !    rmax_i = CNST(0.0)
+  !    rmax_j = CNST(0.0)
+  !    do isp = 1, this%st%d%nspin
+  !      rmax_i = max(rmax_i, spline_cutoff_radius(ps_i%density(isp), ps_i%projectors_sphere_threshold))
+  !      rmax_j = max(rmax_j, spline_cutoff_radius(ps_j%density_der(isp), ps_j%projectors_sphere_threshold))
+  !    end do
+  !    
+  !    pos_i(1:this%mesh%sb%dim) = this%geo%atom(iatom)%x(1:this%mesh%sb%dim)
+  !    pos_j(1:this%mesh%sb%dim) = this%geo%atom(jatom)%x(1:this%mesh%sb%dim)
+  !    rij =  sqrt(sum((pos_i(1:this%mesh%sb%dim)-pos_j(1:this%mesh%sb%dim))**2))
 
-      if(rij < 1*(rmax_i+rmax_j)) then ! Overlap between atom_derivative and atom_density
+  !    if(rij < 1*(rmax_i+rmax_j)) then ! Overlap between atom_derivative and atom_density
 
-        SAFE_ALLOCATE(atom_density(1:this%mesh%np, 1:this%st%d%nspin))
-        SAFE_ALLOCATE(atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
+  !      SAFE_ALLOCATE(atom_density(1:this%mesh%np, 1:this%st%d%nspin))
+  !      SAFE_ALLOCATE(atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
 
-        atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
-        atom_density(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
+  !      atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
+  !      atom_density(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
 
 
-        !We get the non periodized density
-        !We need to do it to have the r^3 correctly computed for periodic systems
-        call species_atom_density_derivative_np(this%mesh, this%mesh%sb, this%geo%atom(jatom), &
-                                    pos_j, this%st%d%spin_channels, &
-                                    atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
-     
+  !      !We get the non periodized density
+  !      !We need to do it to have the r^3 correctly computed for periodic systems
+  !      call species_atom_density_derivative_np(this%mesh, this%mesh%sb, this%geo%atom(jatom), &
+  !                                  pos_j, this%st%d%spin_channels, &
+  !                                  atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
+  !   
 
-        !We get the non periodized density
-        !We need to do it to have the r^3 correctly computed for periodic systems
-        call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), &
-               pos_i, this%st%d%nspin, atom_density)
+  !      !We get the non periodized density
+  !      !We need to do it to have the r^3 correctly computed for periodic systems
+  !      call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), &
+  !             pos_i, this%st%d%nspin, atom_density)
 
-        do ip = 1, this%mesh%np
-          if(this%total_density(ip)< TOL_HIRSHFELD) cycle
+  !      do ip = 1, this%mesh%np
+  !        if(this%total_density(ip)< TOL_HIRSHFELD) cycle
 
-          xxi(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_i(1:this%mesh%sb%dim)
-          rri = sqrt(sum(xxi(1:this%mesh%sb%dim)**2))
-          tdensity = sum(density(ip, 1:this%st%d%nspin))
-          atom_dens = sum(atom_density(ip, 1:this%st%d%nspin))
+  !        xxi(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_i(1:this%mesh%sb%dim)
+  !        rri = sqrt(sum(xxi(1:this%mesh%sb%dim)**2))
+  !        tdensity = sum(density(ip, 1:this%st%d%nspin))
+  !        atom_dens = sum(atom_density(ip, 1:this%st%d%nspin))
 
-          tmp = rri**3*atom_dens*tdensity/this%total_density(ip)**2
+  !        tmp = rri**3*atom_dens*tdensity/this%total_density(ip)**2
 
-          xxj(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim)
-          rrj = sqrt(sum(xxj(1:this%mesh%sb%dim)**2))
-          atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin))
+  !        xxj(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim)
+  !        rrj = sqrt(sum(xxj(1:this%mesh%sb%dim)**2))
+  !        atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin))
 
-          if(rrj > TOL_HIRSHFELD) then
-            do idir = 1, this%mesh%sb%dim
-              grad(ip, idir) = grad(ip, idir) - tmp*atom_der*xxj(idir)/rrj
-            end do
-          end if
+  !        if(rrj > TOL_HIRSHFELD) then
+  !          do idir = 1, this%mesh%sb%dim
+  !            grad(ip, idir) = grad(ip, idir) - tmp*atom_der*xxj(idir)/rrj
+  !          end do
+  !        end if
 
-          if(iatom == jatom)then
-            !Only if we really have the same atoms
-            !if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < TOL_HIRSHFELD)) then
-            do idir = 1, this%mesh%sb%dim
-              grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
-                                    *tdensity/this%total_density(ip)*xxi(idir)
-            end do
-            !end if
-          end if
-        end do
+  !        if(iatom == jatom)then
+  !          !Only if we really have the same atoms
+  !          !if(all(abs(pos_i(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim)) < TOL_HIRSHFELD)) then
+  !          do idir = 1, this%mesh%sb%dim
+  !            grad(ip, idir) = grad(ip, idir) + (CNST(3.0)*rri*atom_dens + rri**2*atom_der)&
+  !                                  *tdensity/this%total_density(ip)*xxi(idir)
+  !          end do
+  !          !end if
+  !        end if
+  !      end do
 
-        SAFE_DEALLOCATE_A(atom_density)
-        SAFE_DEALLOCATE_A(atom_derivative)
-      end if
+  !      SAFE_DEALLOCATE_A(atom_density)
+  !      SAFE_DEALLOCATE_A(atom_derivative)
+  !    end if
  
-      do idir = 1, this%mesh%sb%dim
-        dposition(idir) = dmf_integrate(this%mesh, grad(1:this%mesh%np, idir))/this%free_volume(iatom)
-      end do
+  !    do idir = 1, this%mesh%sb%dim
+  !      dposition(idir) = dmf_integrate(this%mesh, grad(1:this%mesh%np, idir))/this%free_volume(iatom)
+  !    end do
 
-      SAFE_DEALLOCATE_A(grad)
-    end if
+  !    SAFE_DEALLOCATE_A(grad)
+  !  end if
 
     call profiling_out(prof)
 
