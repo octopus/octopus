@@ -25,11 +25,18 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, dot)
 
   integer :: im, ip, idim, idim_orb
   type(profile_t), save :: prof, prof_reduce
-  R_TYPE, allocatable :: spsi(:)
+  R_TYPE, allocatable :: spsi(:,:)
 
   call profiling_in(prof, "ORBSET_GET_COEFFICIENTS")
 
   PUSH_SUB(X(orbitalset_get_coefficients))
+
+  if(.not.simul_box_is_periodic(os%sphere%mesh%sb) .or. os%submeshforperiodic) then
+    SAFE_ALLOCATE(spsi(1:os%sphere%np, 1:ndim))
+    forall(ip=1:os%sphere%np, idim=1:ndim)
+      spsi(ip,idim) = psi(os%sphere%map(ip), idim)
+    end forall
+  end if
 
   do im = 1, os%norbs
     !If we need to add the phase, we explicitly do the operation using the sphere
@@ -44,16 +51,16 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, dot)
       else
         do idim = 1, ndim
           idim_orb = min(idim,os%ndim)
-          dot(idim, im) = submesh_to_mesh_dotp(os%sphere, os%eorb_submesh(1:os%sphere%np,idim_orb,im,ik),&
-                              psi(1:os%sphere%mesh%np, idim), reduce=.false.)
+          dot(idim, im) = zmf_dotp(os%sphere%mesh, os%eorb_submesh(1:os%sphere%np,idim_orb,im,ik),&
+                              spsi(1:os%sphere%np, idim), reduce=.false., np=os%sphere%np )
         end do
       endif 
 #endif
     else
       do idim = 1, ndim
         idim_orb = min(idim,os%ndim)
-        dot(idim,im) = submesh_to_mesh_dotp(os%sphere, os%X(orb)(1:os%sphere%np,idim_orb,im),&
-                               psi(1:os%sphere%mesh%np, idim), reduce=.false.)
+        dot(idim,im) = X(mf_dotp)(os%sphere%mesh, os%X(orb)(1:os%sphere%np,idim_orb,im),&
+                               spsi(1:os%sphere%np, idim), reduce=.false., np=os%sphere%np)
       end do
     end if
   end do
@@ -63,6 +70,8 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, dot)
     call comm_allreduce(os%sphere%mesh%mpi_grp%comm, dot) 
     call profiling_out(prof_reduce)
   end if
+
+  SAFE_DEALLOCATE_A(spsi)
 
   POP_SUB(X(orbitalset_get_coefficients))
   call profiling_out(prof)
