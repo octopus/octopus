@@ -394,9 +394,9 @@ contains
           rr =  sqrt(rr2)
           rr6 = rr2**3
 
-          if(rr < CNST(1.0e-10)) cycle !To avoid self interaction
+          if(rr < TOL_HIRSHFELD) cycle !To avoid self interaction
 
-          ee = exp(-this%damping*((rr/(this%sr*r0ab(iatom,jatom))) - M_ONE))
+          ee = exp(-this%damping*(rr/(this%sr*r0ab(iatom,jatom)) - M_ONE))
           ff = M_ONE/(M_ONE + ee)
           dee = ee*ff**2
           !Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
