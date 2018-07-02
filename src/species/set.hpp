@@ -115,6 +115,8 @@ namespace pseudopotential {
 
       }
 
+      closedir(dir);
+      
       std::ifstream defaults_file((dirname + "/set_defaults").c_str() );
 
       if(defaults_file){
