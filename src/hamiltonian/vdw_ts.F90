@@ -399,7 +399,7 @@ contains
           ee = exp(-this%damping*(rr/(this%sr*r0ab(iatom,jatom)) - M_ONE))
           ff = M_ONE/(M_ONE + ee)
           dee = ee*ff**2
-          !Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
+          !Calculate the derivative of the damping function with respect to the van der Waals radius.
           dffdr0 =  -this%damping*rr/( this%sr*r0ab(iatom,jatom)**2)*dee
           ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
           deabdrab = c6ab(iatom,jatom)*(this%damping/(this%sr*r0ab(iatom,jatom))*dee - CNST(6.0)*ff/rr)/rr6;
@@ -416,7 +416,7 @@ contains
         end do
       end do
       call periodic_copy_end(pc)
-   end do
+    end do
 
     do iatom = 1, geo%natoms
       do jatom = 1, geo%natoms
