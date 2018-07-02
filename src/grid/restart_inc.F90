@@ -104,7 +104,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   R_TYPE, target,   intent(inout) :: ff(:)
   integer,          intent(out)   :: ierr
 
-  integer :: ip, np, offset, file_size
+  integer :: ip, np, offset, file_size, npoints
   R_TYPE, pointer :: read_ff(:)
   type(profile_t), save :: prof_io
   type(batch_t) :: ffb
@@ -123,7 +123,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   if (restart_has_map(restart) .and. mesh%parallel_in_domains) then 
     ! for the moment we do not do this directly
     call X(io_function_input) (full_filename, mesh, ff(1:mesh%np), ierr, &
-                               map = restart%map)
+                               map = restart%map(1, :))
 
     POP_SUB(X(restart_read_mesh_function))
     return
@@ -184,11 +184,25 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   end if
 
   if (restart_has_map(restart)) then
-    ff(1:mesh%np_global) = M_ZERO
-    do ip = 1, min(np, ubound(restart%map, dim = 1))
-      if (restart%map(ip) > 0) ff(restart%map(ip)) = read_ff(ip)
-    end do
-    
+
+    if(allocated(restart%coeff)) then
+
+      npoints = ubound(restart%map, dim = 1)
+      
+      do ip = 1, mesh%np
+        ff(ip) = CNST(0.0)
+        if(restart%map(1, ip) /= 0) ff(ip) = sum(restart%coeff(1:npoints, ip)*read_ff(restart%map(1:npoints, ip)))
+      end do
+      
+    else
+
+      ff(1:mesh%np_global) = M_ZERO
+      do ip = 1, min(np, ubound(restart%map, dim = 2))
+        if (restart%map(1, ip) > 0) ff(restart%map(1, ip)) = read_ff(ip)
+      end do
+
+    end if
+
     SAFE_DEALLOCATE_P(read_ff)
   end if
 

@@ -520,20 +520,20 @@ contains
   !! filename. If the meshes are equal (same fingerprint) return values
   !! are 0, otherwise it returns the size of the mesh stored.
   !! fingerprint cannot be read, it returns ierr /= 0.
-  subroutine mesh_read_fingerprint(mesh, dir, filename, mpi_grp, read_np_part, read_np, ierr)
+  subroutine mesh_read_fingerprint(mesh, dir, filename, mpi_grp, read_np_part, read_np, spacing, ierr)
     type(mesh_t),     intent(in)  :: mesh
     character(len=*), intent(in)  :: dir
     character(len=*), intent(in)  :: filename
     type(mpi_grp_t),  intent(in)  :: mpi_grp
     integer,          intent(out) :: read_np_part
     integer,          intent(out) :: read_np
+    FLOAT,            intent(out) :: spacing(:)
     integer,          intent(out) :: ierr
 
     character(len=20)  :: str
     character(len=100) :: lines(5)
     integer :: iunit, box_shape, algorithm, err, dims, idir
     integer(8) :: checksum
-    FLOAT :: spacing(1:MAX_DIM)
 
     PUSH_SUB(mesh_read_fingerprint)
 
@@ -587,7 +587,7 @@ contains
           if (err /= 0) then
             ierr = ierr + dims
           else
-            do idir = 1, dims
+            do idir = 1, max(dims, MAX_DIM)
               read(lines(idir), '(a20,f21.16)')  str, spacing(idir)
             end do
           end if
@@ -603,29 +603,30 @@ contains
   end subroutine mesh_read_fingerprint
 
   ! ---------------------------------------------------------
-  subroutine mesh_check_dump_compatibility(mesh, dir, filename, mpi_grp, grid_changed, grid_reordered, map, ierr)
+  subroutine mesh_check_dump_compatibility(mesh, dir, filename, mpi_grp, grid_changed, grid_reordered, map, coeff, ierr)
     type(mesh_t),         intent(in)  :: mesh
     character(len=*),     intent(in)  :: dir
     character(len=*),     intent(in)  :: filename
     type(mpi_grp_t),      intent(in)  :: mpi_grp
     logical,              intent(out) :: grid_changed
     logical,              intent(out) :: grid_reordered
-    integer, pointer,     intent(out) :: map(:)
+    integer, allocatable, intent(out) :: map(:, :)
+    FLOAT,   allocatable, intent(out) :: coeff(:, :)
     integer,              intent(out) :: ierr
 
-    integer :: ip, read_np_part, read_np, xx(MAX_DIM), err
-    integer, allocatable :: read_lxyz(:,:)
+    integer :: ip, read_np_part, read_np, xx(MAX_DIM), err, npoints, lb(1:MAX_DIM), ub(1:MAX_DIM), idir, nm(1:MAX_DIM)
+    integer, allocatable :: read_lxyz(:,:), read_lxyz_inv(:, :, :)
+    FLOAT :: read_spacing(1:MAX_DIM), pos(1:MAX_DIM), d1(1:MAX_DIM), d2(1:MAX_DIM) 
     
     PUSH_SUB(mesh_check_dump_compatibility)
 
     ierr = 0
 
-    nullify(map)
     grid_changed = .false.
     grid_reordered = .false.
 
     ! Read the mesh fingerprint
-    call mesh_read_fingerprint(mesh, dir, filename, mpi_grp, read_np_part, read_np, err)
+    call mesh_read_fingerprint(mesh, dir, filename, mpi_grp, read_np_part, read_np, read_spacing, err)
     if (err /= 0) then
       ierr = ierr + 1
       message(1) = "Unable to read mesh fingerprint from '"//trim(dir)//"/"//trim(filename)//"'."
@@ -653,20 +654,82 @@ contains
           ierr = ierr + 4
           message(1) = "Unable to read index map from '"//trim(dir)//"'."
           call messages_warning(1)
+        else if(any(abs(read_spacing(1:mesh%sb%dim) - mesh%spacing(1:mesh%sb%dim)) > CNST(1e-10))) then
+
+          ! spacing changed, we need to interpolate
+          npoints = 2**mesh%sb%dim
+
+          SAFE_ALLOCATE(map(1:npoints, 1:mesh%np))
+          SAFE_ALLOCATE(coeff(1:npoints, 1:mesh%np))
+
+          lb = 0
+          ub = 0
+          do idir = 1, mesh%sb%dim
+            lb(idir) = minval(read_lxyz(1:read_np, idir))
+            ub(idir) = maxval(read_lxyz(1:read_np, idir))
+          end do
+
+          SAFE_ALLOCATE(read_lxyz_inv(lb(1):ub(1), lb(2):ub(2), lb(3):ub(3)))
+
+          read_lxyz_inv = 0
+          do ip = 1, read_np
+            read_lxyz_inv(read_lxyz(ip, 1), read_lxyz(ip, 2), read_lxyz(ip, 3)) = ip
+          end do
+          
+          do ip = 1, mesh%np
+
+            pos(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)/read_spacing(1:mesh%sb%dim)
+            nm(1:mesh%sb%dim) = floor(pos(1:mesh%sb%dim))
+            d2(1:mesh%sb%dim) = pos(1:mesh%sb%dim) - nm(1:mesh%sb%dim)
+            d1(1:mesh%sb%dim) = CNST(1.0) - d2(1:mesh%sb%dim)
+
+            map(1:npoints, ip) = 0
+            
+            if(any(nm(1:mesh%sb%dim) < lb(1:mesh%sb%dim))) cycle
+            if(any(nm(1:mesh%sb%dim) + 1 > ub(1:mesh%sb%dim))) cycle
+            
+            map(1, ip) = read_lxyz_inv(nm(1)    , nm(2)     , nm(3)    )
+            coeff(1, ip) = d1(1)*d1(2)*d1(3)
+            map(2, ip) = read_lxyz_inv(nm(1) + 1, nm(2)     , nm(3)    )
+            coeff(2, ip) = d2(1)*d1(2)*d1(3)
+            if(mesh%sb%dim > 1) then
+              map(3, ip) = read_lxyz_inv(nm(1)    , nm(2)  + 1, nm(3)    )
+              coeff(3, ip) = d1(1)*d2(2)*d1(3)
+              map(4, ip) = read_lxyz_inv(nm(1) + 1, nm(2)  + 1, nm(3)    )
+              coeff(4, ip) = d2(1)*d2(2)*d1(3)
+            end if
+            if(mesh%sb%dim > 2) then
+              map(5, ip) = read_lxyz_inv(nm(1)    , nm(2)     , nm(3) + 1)
+              coeff(5, ip) = d1(1)*d1(2)*d2(3)
+              map(6, ip) = read_lxyz_inv(nm(1) + 1, nm(2)     , nm(3) + 1)
+              coeff(6, ip) = d2(1)*d1(2)*d2(3)
+              map(7, ip) = read_lxyz_inv(nm(1)    , nm(2)  + 1, nm(3) + 1)
+              coeff(7, ip) = d1(1)*d2(2)*d2(3)              
+              map(8, ip) = read_lxyz_inv(nm(1) + 1, nm(2)  + 1, nm(3) + 1)
+              coeff(8, ip) = d2(1)*d2(2)*d2(3)
+            end if
+
+            if(any(map(1:npoints, ip) == 0)) map(1:npoints, ip) = 0
+            
+          end do
+
+          SAFE_DEALLOCATE_A(read_lxyz_inv)
+          
         else
-          ! generate the map
-          SAFE_ALLOCATE(map(1:read_np))
+          
+          ! no spacing change, we just need to generate the map
+          SAFE_ALLOCATE(map(1:1, 1:read_np))
 
           do ip = 1, read_np
             xx = 0
             xx(1:mesh%sb%dim) = read_lxyz(ip, 1:mesh%sb%dim)
             if (any(xx(1:mesh%sb%dim) < mesh%idx%nr(1, 1:mesh%sb%dim)) .or. &
                  any(xx(1:mesh%sb%dim) > mesh%idx%nr(2, 1:mesh%sb%dim))) then
-              map(ip) = 0
+              map(1, ip) = 0
               grid_reordered = .false.
             else
-              map(ip) = mesh%idx%lxyz_inv(xx(1), xx(2), xx(3))
-              if(map(ip) > mesh%np_global) map(ip) = 0
+              map(1, ip) = mesh%idx%lxyz_inv(xx(1), xx(2), xx(3))
+              if(map(1, ip) > mesh%np_global) map(1, ip) = 0
             end if
           end do
         end if
