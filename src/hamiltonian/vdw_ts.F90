@@ -372,11 +372,12 @@ contains
     !Precomputing some quantities
     do iatom = 1, geo%natoms
       ispecies = species_index(geo%atom(iatom)%species)
-      do jatom = 1, geo%natoms
+      do jatom = iatom, geo%natoms
        jspecies = species_index(geo%atom(jatom)%species)
 
        r0ab(iatom,jatom) = (vol_ratio(iatom)**(M_ONE/CNST(3.0)))*this%r0free(ispecies) &
                           +(vol_ratio(jatom)**(M_ONE/CNST(3.0)))*this%r0free(jspecies)
+       if(iatom /= jatom) r0ab(jatom,iatom) = r0ab(iatom,jatom)
       end do
     end do
 
