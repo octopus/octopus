@@ -1206,7 +1206,7 @@ contains
           SAFE_ALLOCATE(hm%vdw_ts_c6abfree(1:hm%geo%nspecies,1:hm%geo%nspecies))
 
         end if
-        call vdw_ts_copy_deriv_coeff_n(ks%vdw_ts, hm%vdw_ts_r0free, hm%vdw_ts_c6abfree, hm%geo%nspecies)
+        call vdw_ts_copy_deriv_coeff(ks%vdw_ts, hm%vdw_ts_r0free, hm%vdw_ts_c6abfree, hm%geo%nspecies)
       end select
     end if
 

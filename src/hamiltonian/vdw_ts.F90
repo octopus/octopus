@@ -28,12 +28,12 @@ module vdw_ts_oct_m
   use global_oct_m
   use hirshfeld_oct_m
   use ion_interaction_oct_m
-  use io_oct_m !for wrting
+  use io_oct_m
   use io_function_oct_m
   use messages_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
-  use mpi_oct_m ! for writing
+  use mpi_oct_m
   use parser_oct_m 
   use periodic_copy_oct_m
   use profiling_oct_m
@@ -55,7 +55,6 @@ module vdw_ts_oct_m
     vdw_ts_write_c6ab,                    &
     vdw_ts_force_calculate,               &
     vdw_ts_calculate,                     &
-    vdw_ts_copy_deriv_coeff_n,            &
     vdw_ts_copy_deriv_coeff 
   
   type vdw_ts_t
@@ -190,7 +189,7 @@ contains
 
     type(periodic_copy_t) :: pc
     integer :: iatom, jatom, ispecies, jspecies, jcopy, ddimention, ip 
-    FLOAT :: rr, rr2, rr6, dd, sr, dffdrr, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra, deabdrab
+    FLOAT :: rr, rr2, rr6, dd, sr, dffdrr, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra
     FLOAT, allocatable :: coordinates(:,:), vol_ratio(:), dvadens(:), dvadrr(:), & 
                           dr0dvra(:), r0ab(:,:)
     type(hirshfeld_t) :: hirshfeld
@@ -263,17 +262,12 @@ contains
 
             energy = energy -M_HALF*ff*this%c6ab(iatom,jatom)/rr6
 
-            ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
-            deabdrab = this%c6ab(iatom,jatom)*(-this%VDW_dd_parameter/(this%VDW_sr_parameter*r0ab(iatom,jatom))*dee + CNST(6.0)*ff/rr)/rr6;
-      
             ! Derivative of the damping function with respecto to the volume ratio of atom A.
             dffdvra = dffdr0*dr0dvra(iatom); ! Ces termes sont bon
 
             ! Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
             deabdvra = (dffdvra*this%c6ab(iatom,jatom) + ff*vol_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6 
                
-            force(1:sb%dim,iatom)= force(1:sb%dim,iatom) - M_HALF*deabdrab*(geo%atom(iatom)%x(1:sb%dim) -x_j(1:sb%dim))/rr; 
-
             this%derivative_coeff(iatom) = this%derivative_coeff(iatom) + deabdvra;
 
           end do
@@ -321,37 +315,22 @@ contains
     POP_SUB(vdw_ts_calculate)
     end subroutine vdw_ts_calculate
 
-    !------------------------------------------
-
-    subroutine vdw_ts_copy_deriv_coeff(vdw_ts, derivative_coeff, natoms)
-    type(vdw_ts_t),         intent(in) :: vdw_ts
-    FLOAT,                  intent(inout) :: derivative_coeff(:)
-    integer,                intent(in) :: natoms
-
-    PUSH_SUB(vdw_ts_copy_deriv_coeff)
-
-    derivative_coeff(1:natoms)=vdw_ts%derivative_coeff(1:natoms)
-
-    POP_SUB(vdw_ts_copy_deriv_coeff)
-   end subroutine vdw_ts_copy_deriv_coeff
-
-
 
   !------------------------------------------
 
-    subroutine vdw_ts_copy_deriv_coeff_n(vdw_ts, vdw_ts_r0free, vdw_ts_c6abfree, nspecies)
+    subroutine vdw_ts_copy_deriv_coeff(vdw_ts, vdw_ts_r0free, vdw_ts_c6abfree, nspecies)
     type(vdw_ts_t),      intent(in)    :: vdw_ts
     FLOAT,               intent(inout) :: vdw_ts_r0free(:)
     FLOAT,               intent(inout) :: vdw_ts_c6abfree(:,:)
     integer,             intent(in)    :: nspecies
 
-    PUSH_SUB(vdw_ts_copy_deriv_coeff_n)
+    PUSH_SUB(vdw_ts_copy_deriv_coeff)
 
     vdw_ts_r0free(1:nspecies) = vdw_ts%r0free(1:nspecies)
     vdw_ts_c6abfree(1:nspecies,1:nspecies) = vdw_ts%c6abfree(1:nspecies,1:nspecies)
 
-    POP_SUB(vdw_ts_copy_deriv_coeff_n)
-   end subroutine vdw_ts_copy_deriv_coeff_n
+    POP_SUB(vdw_ts_copy_deriv_coeff)
+   end subroutine vdw_ts_copy_deriv_coeff
 
 
 
