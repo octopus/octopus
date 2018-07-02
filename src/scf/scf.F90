@@ -532,7 +532,7 @@ contains
 
     if(ks%theory_level == CLASSICAL) then
       ! calculate forces
-      if(scf%calc_force) call forces_calculate(gr, geo, hm, st)
+      if(scf%calc_force) call forces_calculate(gr, geo, hm, st, ks)
 
       if(gs_run_) then 
         ! output final information
@@ -640,7 +640,7 @@ contains
       SAFE_ALLOCATE(  forcein(1:geo%natoms, 1:gr%sb%dim))
       SAFE_ALLOCATE( forceout(1:geo%natoms, 1:gr%sb%dim))
       SAFE_ALLOCATE(forcediff(1:gr%sb%dim))
-      call forces_calculate(gr, geo, hm, st)
+      call forces_calculate(gr, geo, hm, st, ks)
       do iatom = 1, geo%natoms
         forcein(iatom, 1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
       end do
@@ -768,7 +768,7 @@ contains
 
       ! compute forces only if they are used as convergence criterion
       if (scf%conv_abs_force > M_ZERO) then
-        call forces_calculate(gr, geo, hm, st)
+        call forces_calculate(gr, geo, hm, st, ks)
         scf%abs_force = M_ZERO
         do iatom = 1, geo%natoms
           forceout(iatom,1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
@@ -995,7 +995,7 @@ contains
 
     ! calculate forces
     if(scf%calc_force) then
-      call forces_calculate(gr, geo, hm, st)
+      call forces_calculate(gr, geo, hm, st, ks)
     end if
 
     ! calculate stress

@@ -591,13 +591,13 @@ contains
 
     ! Recalculate forces, update velocities...
     if(update_energy_ .and. ion_dynamics_ions_move(ions) .and. tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) then
-      call forces_calculate(gr, geo, hm, st, abs(nt*dt), dt)
+      call forces_calculate(gr, geo, hm, st, ks, abs(nt*dt), dt)
       call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
       if(generate) call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
       if(iand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-        call forces_calculate(gr, geo, hm, st, abs(nt*dt), dt)
+        call forces_calculate(gr, geo, hm, st, ks, abs(nt*dt), dt)
       end if
     end if
 

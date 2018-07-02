@@ -110,7 +110,7 @@ eigensolver.o : eigensolver.F90 eigen_evolution_inc.F90 eigen_plan_inc.F90 subsp
 elf.o : elf.F90 
 energy_calc.o : energy_calc.F90 energy_calc_inc.F90 
 exponential.o : exponential.F90 
-forces.o : forces.F90 forces_inc.F90 
+forces.o : forces.F90 forces_inc.F90 v_ks.o
 linear_solver.o : linear_solver.F90 linear_solver_inc.F90 preconditioners.o 
 live_config.o : live_config.F90 
 magnetic.o : magnetic.F90 

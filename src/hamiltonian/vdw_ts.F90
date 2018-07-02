@@ -54,8 +54,7 @@ module vdw_ts_oct_m
     vdw_ts_end,                           &
     vdw_ts_write_c6ab,                    &
     vdw_ts_force_calculate,               &
-    vdw_ts_calculate,                     &
-    vdw_ts_copy_deriv_coeff 
+    vdw_ts_calculate
   
   type vdw_ts_t
     FLOAT, allocatable :: c6free(:)        !> Free atomic volumes for each atomic species.
@@ -64,9 +63,9 @@ module vdw_ts_oct_m
     FLOAT, allocatable :: c6abfree(:, :)   !> Free atomic heteronuclear C6 coefficient for each atom pair.
     FLOAT, allocatable :: volfree(:)
     FLOAT, allocatable :: c6ab(:, :)       !> effectif atomic heteronuclear C6 coefficient for each atom pair.
-    FLOAT              :: VDW_cutoff       !> Cutoff value for the calculation of the VdW TS correction in periodic system.
-    FLOAT              :: VDW_dd_parameter !> Parameter for the damping function steepness.
-    FLOAT              :: VDW_sr_parameter !> Parameter for the damping function. Can depend on the XC correction used.
+    FLOAT              :: cutoff           !> Cutoff value for the calculation of the VdW TS correction in periodic system.
+    FLOAT              :: damping          !> Parameter for the damping function steepness.
+    FLOAT              :: sr               !> Parameter for the damping function. Can depend on the XC correction used.
 
     FLOAT, allocatable :: derivative_coeff(:)
   end type vdw_ts_t
@@ -90,30 +89,30 @@ contains
     !%Description
     !% Set the value of the cutoff for the VDW correction in periodic system in the Tkatchenko and Scheffler (vdw_ts) scheme only. 
     !%End
-    call parse_variable('VDW_TS_cutoff', CNST(10.0), this%VDW_cutoff)
+    call parse_variable('VDW_TS_cutoff', CNST(10.0), this%cutoff)
 
 
-    !%Variable VDW_TS_d
+    !%Variable VDW_TS_damping
     !%Type float
     !%Default 20.0
     !%Section Hamiltonian::XC
     !%Description
-    !% Set the value of the d parameter, which adjusts the damping function steepness for the VDW correction in the Tkatchenko and 
-    !% Scheffler (vdw_ts) scheme only. See Equation (12) of Phys. Rev. Lett. 102 073005 (2009). 
+    !% Set the value of the damping function steepness for the VDW correction in the 
+    !% Tkatchenko-Scheffler scheme. See Equation (12) of Phys. Rev. Lett. 102 073005 (2009). 
     !%End
-    call parse_variable('VDW_TS_d', CNST(20.0), this%VDW_dd_parameter)
+    call parse_variable('VDW_TS_damping', CNST(20.0), this%damping)
 
     !%Variable VDW_TS_sr
     !%Type float
     !%Default 0.94
     !%Section Hamiltonian::XC
     !%Description
-    !% Set the value of the sr parameter, which adjusts the damping function for the VDW correction in the Tkatchenko and 
-    !% Scheffler (vdw_ts) scheme only. See Equation (12) of Phys. Rev. Lett. 102 073005 (2009).
+    !% Set the value of the sr parameter in the damping function of the VDW correction in the 
+    !% Tkatchenko-Scheffler scheme. See Equation (12) of Phys. Rev. Lett. 102 073005 (2009).
     !% This parameter depends on the xc functional used. 
     !% The default value is 0.94, which holds for PBE. For PBE0, a value of 0.96 should be used.
     !%End
-    call parse_variable('VDW_TS_sr', CNST(0.94), this%VDW_sr_parameter)
+    call parse_variable('VDW_TS_sr', CNST(0.94), this%sr)
 
 
     SAFE_ALLOCATE(this%c6free(1:geo%nspecies))
@@ -240,7 +239,7 @@ contains
       do jatom = 1, geo%natoms
         jspecies = species_index(geo%atom(jatom)%species)
                 
-        call periodic_copy_init(pc, sb, geo%atom(jatom)%x, this%VDW_cutoff)
+        call periodic_copy_init(pc, sb, geo%atom(jatom)%x, this%cutoff)
         do jcopy = 1, periodic_copy_num(pc) ! one of the periodic copy is the initial atom  
           x_j(1:sb%dim) = periodic_copy_position(pc, sb, jcopy)
           do iatom = 1, geo%natoms
@@ -251,14 +250,14 @@ contains
 
             if(rr < CNST(1.0e-10)) cycle !To avoid self interaction
 
-            ee = exp(- this%VDW_dd_parameter*((rr/( this%VDW_sr_parameter*r0ab(iatom,jatom))) - M_ONE))
+            ee = exp(- this%damping*((rr/( this%sr*r0ab(iatom,jatom))) - M_ONE))
             ff = M_ONE/(M_ONE + ee)
             dee = ee*ff**2
 
             !Calculate the derivative of the damping function with respect to the distance between atoms A and B.
-            dffdrab = ( this%VDW_dd_parameter/( this%VDW_sr_parameter*r0ab(iatom,jatom)))*dee
+            dffdrab = ( this%damping/( this%sr*r0ab(iatom,jatom)))*dee
             !Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
-            dffdr0 =  - this%VDW_dd_parameter*rr/( this%VDW_sr_parameter*r0ab(iatom,jatom)**2)*dee
+            dffdr0 =  - this%damping*rr/( this%sr*r0ab(iatom,jatom)**2)*dee
 
             energy = energy -M_HALF*ff*this%c6ab(iatom,jatom)/rr6
 
@@ -286,7 +285,7 @@ contains
 
       end do
       
-      call f90_vdw_calculate(geo%natoms,  this%VDW_dd_parameter, this%VDW_sr_parameter, zatom(1), coordinates(1, 1), &
+      call f90_vdw_calculate(geo%natoms,  this%damping, this%sr, zatom(1), coordinates(1, 1), &
                              vol_ratio(1), energy, force(1, 1), this%derivative_coeff(1))
 
 
@@ -316,32 +315,11 @@ contains
     end subroutine vdw_ts_calculate
 
 
-  !------------------------------------------
-
-    subroutine vdw_ts_copy_deriv_coeff(vdw_ts, vdw_ts_r0free, vdw_ts_c6abfree, nspecies)
-    type(vdw_ts_t),      intent(in)    :: vdw_ts
-    FLOAT,               intent(inout) :: vdw_ts_r0free(:)
-    FLOAT,               intent(inout) :: vdw_ts_c6abfree(:,:)
-    integer,             intent(in)    :: nspecies
-
-    PUSH_SUB(vdw_ts_copy_deriv_coeff)
-
-    vdw_ts_r0free(1:nspecies) = vdw_ts%r0free(1:nspecies)
-    vdw_ts_c6abfree(1:nspecies,1:nspecies) = vdw_ts%c6abfree(1:nspecies,1:nspecies)
-
-    POP_SUB(vdw_ts_copy_deriv_coeff)
-   end subroutine vdw_ts_copy_deriv_coeff
-
-
-
 
   !------------------------------------------
-
-
-  subroutine vdw_ts_force_calculate(force_vdw, vdw_ts_r0free, vdw_ts_c6abfree, geo, der, sb, st, density)
+  subroutine vdw_ts_force_calculate(this, force_vdw, geo, der, sb, st, density)
+    type(vdw_ts_t),      intent(in)    :: this
     FLOAT,               intent(inout) :: force_vdw(:,:)
-    FLOAT,               intent(in)    :: vdw_ts_r0free(:)
-    FLOAT,               intent(in)    :: vdw_ts_c6abfree(:,:)
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
     type(simul_box_t),   intent(in)    :: sb
@@ -352,8 +330,7 @@ contains
     type(periodic_copy_t) :: pc
 
     integer :: iatom, jatom, ispecies, jspecies, jcopy
-    FLOAT :: rr, rr2, rr6,  dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra, deabdrab, x_j(1:MAX_DIM), & 
-             VDW_cutoff, VDW_dd_parameter, VDW_sr_parameter
+    FLOAT :: rr, rr2, rr6,  dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra, deabdrab, x_j(1:MAX_DIM) 
     FLOAT, allocatable ::  vol_ratio(:), dvadrr(:), dr0dvra(:), r0ab(:,:), derivative_coeff(:), c6ab(:,:)
 
     PUSH_SUB(vdw_ts_force_calculate)
@@ -366,10 +343,6 @@ contains
     SAFE_ALLOCATE(derivative_coeff(1:geo%natoms))
     SAFE_ALLOCATE(c6ab(1:geo%natoms,1:geo%natoms))
 
-
-    call parse_variable('VDW_TS_cutoff', CNST(10.0), VDW_cutoff)
-    call parse_variable('VDW_TS_d', CNST(20.0), VDW_dd_parameter)
-    call parse_variable('VDW_TS_sr', CNST(0.94), VDW_sr_parameter)
 
     force_vdw(1:sb%dim, 1:geo%natoms) = M_ZERO
     derivative_coeff(1:geo%natoms) = M_ZERO
@@ -389,10 +362,10 @@ contains
 
     do iatom = 1, geo%natoms
       ispecies = species_index(geo%atom(iatom)%species)
-      dr0dvra(iatom) = vdw_ts_r0free(ispecies)/(CNST(3.0)*(vol_ratio(iatom)**(M_TWO/CNST(3.0))))
+      dr0dvra(iatom) = this%r0free(ispecies)/(CNST(3.0)*(vol_ratio(iatom)**(M_TWO/CNST(3.0))))
       do jatom = 1, geo%natoms
         jspecies = species_index(geo%atom(jatom)%species)
-        c6ab(iatom,jatom) = vol_ratio(iatom)*vol_ratio(jatom)*vdw_ts_c6abfree(ispecies,jspecies) 
+        c6ab(iatom,jatom) = vol_ratio(iatom)*vol_ratio(jatom)*this%c6abfree(ispecies,jspecies) 
       end do
     end do
 
@@ -402,8 +375,8 @@ contains
       do jatom = 1, geo%natoms
        jspecies = species_index(geo%atom(jatom)%species)
 
-       r0ab(iatom,jatom) = (vol_ratio(iatom)**(M_ONE/CNST(3.0)))*vdw_ts_r0free(ispecies) &
-                          +(vol_ratio(jatom)**(M_ONE/CNST(3.0)))*vdw_ts_r0free(jspecies)
+       r0ab(iatom,jatom) = (vol_ratio(iatom)**(M_ONE/CNST(3.0)))*this%r0free(ispecies) &
+                          +(vol_ratio(jatom)**(M_ONE/CNST(3.0)))*this%r0free(jspecies)
       end do
     end do
 
@@ -411,70 +384,39 @@ contains
     do jatom = 1, geo%natoms
       jspecies = species_index(geo%atom(jatom)%species)
       
-      if(sb%periodic_dim > 0) then ! periodic case
-        call periodic_copy_init(pc, sb, geo%atom(jatom)%x, VDW_cutoff)
-        do jcopy = 1, periodic_copy_num(pc) ! one of the periodic copy is the initial atom  
-          x_j(1:sb%dim) = periodic_copy_position(pc, sb, jcopy)
-          do iatom = 1, geo%natoms
-            ispecies = species_index(geo%atom(iatom)%species)
-            rr2 =  sum( (x_j(1:sb%dim) - geo%atom(iatom)%x(1:sb%dim))**2 )
-            rr =  sqrt(rr2)
-            rr6 = rr2**3
-
-            if(rr < CNST(1.0e-10)) cycle !To avoid self interaction
-
-            ee = exp(- VDW_dd_parameter*((rr/( VDW_sr_parameter*r0ab(iatom,jatom))) - M_ONE))
-            ff = M_ONE/(M_ONE + ee)
-            dee = ee*ff**2
-            !Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
-            dffdr0 =  - VDW_dd_parameter*rr/( VDW_sr_parameter*r0ab(iatom,jatom)**2)*dee
-            ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
-            deabdrab = c6ab(iatom,jatom)*(VDW_dd_parameter/(VDW_sr_parameter*r0ab(iatom,jatom))*dee + CNST(6.0)*ff/rr)/rr6;
-            ! Derivative of the damping function with respecto to the volume ratio of atom A.
-            dffdvra = dffdr0*dr0dvra(iatom); ! Ces termes sont bon
-            ! Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
-            deabdvra = (dffdvra*c6ab(iatom,jatom) + ff*vol_ratio(jatom)*vdw_ts_c6abfree(ispecies, jspecies))/rr6
-
-            force_vdw(1:sb%dim,iatom)= force_vdw(1:sb%dim,iatom) - M_HALF*deabdrab*(geo%atom(iatom)%x(1:sb%dim) -x_j(1:sb%dim))/rr;
-            derivative_coeff(iatom) = derivative_coeff(iatom) + deabdvra;
-          end do
-        end do
-        call periodic_copy_end(pc)
-      else
+      call periodic_copy_init(pc, sb, geo%atom(jatom)%x, this%cutoff)
+      do jcopy = 1, periodic_copy_num(pc) ! one of the periodic copy is the initial atom  
+        x_j(1:sb%dim) = periodic_copy_position(pc, sb, jcopy)
         do iatom = 1, geo%natoms
           ispecies = species_index(geo%atom(iatom)%species)
-          rr2 =  sum( (geo%atom(jatom)%x(1:sb%dim) - geo%atom(iatom)%x(1:sb%dim))**2 )
+          rr2 =  sum( (x_j(1:sb%dim) - geo%atom(iatom)%x(1:sb%dim))**2 )
           rr =  sqrt(rr2)
           rr6 = rr2**3
 
           if(rr < CNST(1.0e-10)) cycle !To avoid self interaction
 
-          ee = exp(- VDW_dd_parameter*((rr/( VDW_sr_parameter*r0ab(iatom,jatom))) - M_ONE))
+          ee = exp(-this%damping*((rr/(this%sr*r0ab(iatom,jatom))) - M_ONE))
           ff = M_ONE/(M_ONE + ee)
           dee = ee*ff**2
           !Calculate the derivative of the damping function with respect to the distance between the van der Waals radius.
-          dffdr0 =  - VDW_dd_parameter*rr/( VDW_sr_parameter*r0ab(iatom,jatom)**2)*dee
+          dffdr0 =  -this%damping*rr/( this%sr*r0ab(iatom,jatom)**2)*dee
           ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
-          deabdrab = c6ab(iatom,jatom)*(VDW_dd_parameter/(VDW_sr_parameter*r0ab(iatom,jatom))*dee + CNST(6.0)*ff/rr)/rr6;
+          deabdrab = c6ab(iatom,jatom)*(this%damping/(this%sr*r0ab(iatom,jatom))*dee + CNST(6.0)*ff/rr)/rr6;
           ! Derivative of the damping function with respecto to the volume ratio of atom A.
           dffdvra = dffdr0*dr0dvra(iatom); ! Ces termes sont bon
           ! Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
-          deabdvra = (dffdvra*c6ab(iatom,jatom) + ff*vol_ratio(jatom)*vdw_ts_c6abfree(ispecies, jspecies))/rr6
+          deabdvra = (dffdvra*c6ab(iatom,jatom) + ff*vol_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6
 
-          force_vdw(1:sb%dim,iatom)= force_vdw(1:sb%dim,iatom) - M_HALF*deabdrab*(geo%atom(iatom)%x(1:sb%dim) -geo%atom(jatom)%x(1:sb%dim))/rr;
+          force_vdw(1:sb%dim,iatom)= force_vdw(1:sb%dim,iatom) - M_HALF*deabdrab*(geo%atom(iatom)%x(1:sb%dim) -x_j(1:sb%dim))/rr;
           derivative_coeff(iatom) = derivative_coeff(iatom) + deabdvra;
         end do
-      end if
-    end do
-
-
+      end do
+      call periodic_copy_end(pc)
+   end do
 
     do iatom = 1, geo%natoms
       do jatom = 1, geo%natoms
         call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
-        !if(mpi_grp_is_root(mpi_world)) then
-        !  print *,'i,j, extra F_ij', jatom, iatom, derivative_coeff(iatom)*dvadrr(1:sb%dim)
-        !end if
         force_vdw(1:sb%dim,jatom)= force_vdw(1:sb%dim,jatom) + derivative_coeff(iatom)*dvadrr(1:sb%dim)  ! geo%atom(jatom)%f_vdw(1:sb%dim) = sum_i coeff_i * dvadrr_ij
       end do
     end do
