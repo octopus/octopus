@@ -503,7 +503,7 @@ void vdw_calculate (const int natoms, const double dd, const double sr, const in
       *energy += -0.5*ff*c6abeff/rr6;
       
       // Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
-      double deabdrab = dffdrab*c6abeff/rr6 + 6.0*ff*c6abeff/rr7;
+      double deabdrab = dffdrab*c6abeff/rr6 - 6.0*ff*c6abeff/rr7;
       
       // Derivative of the AB van der Waals separation with respect to the volume ratio of atom A.
       double dr0dvra = r0_a/(3.0*pow(volume_ratio[ia], 2.0/3.0));
@@ -514,9 +514,9 @@ void vdw_calculate (const int natoms, const double dd, const double sr, const in
       // Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
       double deabdvra = dffdvra*c6abeff/rr6 + ff*volume_ratio[ib]*c6abfree/rr6;
       
-      force[3*ia + 0] += -deabdrab*(coordinates[3*ia + 0] - coordinates[3*ib + 0])/rr;
-      force[3*ia + 1] += -deabdrab*(coordinates[3*ia + 1] - coordinates[3*ib + 1])/rr;
-      force[3*ia + 2] += -deabdrab*(coordinates[3*ia + 2] - coordinates[3*ib + 2])/rr;
+      force[3*ia + 0] += deabdrab*(coordinates[3*ia + 0] - coordinates[3*ib + 0])/rr;
+      force[3*ia + 1] += deabdrab*(coordinates[3*ia + 1] - coordinates[3*ib + 1])/rr;
+      force[3*ia + 2] += deabdrab*(coordinates[3*ia + 2] - coordinates[3*ib + 2])/rr;
       
       derivative_coeff[ia] += deabdvra; 
       
