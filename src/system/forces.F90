@@ -297,7 +297,7 @@ contains
     ! the ion-ion and vdw terms are already calculated
 
     ! If VDW TS is used, an extra term for the force must be computed
-    if (allocated(hm%vdw_ts_r0free)) call vdw_ts_force_calculate_n(hm%ep%vdw_forces, hm%vdw_ts_r0free, hm%vdw_ts_c6abfree, geo, gr%der, gr%sb, st, st%rho)
+    if (allocated(hm%vdw_ts_r0free)) call vdw_ts_force_calculate(hm%ep%vdw_forces, hm%vdw_ts_r0free, hm%vdw_ts_c6abfree, geo, gr%der, gr%sb, st, st%rho)
 
     do iatom = 1, geo%natoms
       geo%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom) + hm%ep%vdw_forces(1:gr%sb%dim, iatom)

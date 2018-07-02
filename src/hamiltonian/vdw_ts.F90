@@ -54,7 +54,6 @@ module vdw_ts_oct_m
     vdw_ts_end,                           &
     vdw_ts_write_c6ab,                    &
     vdw_ts_force_calculate,               &
-    vdw_ts_force_calculate_n,             &
     vdw_ts_calculate,                     &
     vdw_ts_copy_deriv_coeff_n,            &
     vdw_ts_copy_deriv_coeff 
@@ -339,10 +338,6 @@ contains
 
 
   !------------------------------------------
-  !------------------------------------------
-  !------------------------------------------
-  !------------------------------------------
-  !------------------------------------------
 
     subroutine vdw_ts_copy_deriv_coeff_n(vdw_ts, vdw_ts_r0free, vdw_ts_c6abfree, nspecies)
     type(vdw_ts_t),      intent(in)    :: vdw_ts
@@ -362,13 +357,9 @@ contains
 
 
   !------------------------------------------
-  !------------------------------------------
-  !------------------------------------------
-  !------------------------------------------
-  !------------------------------------------
 
 
-  subroutine vdw_ts_force_calculate_n(force_vdw, vdw_ts_r0free, vdw_ts_c6abfree, geo, der, sb, st, density)
+  subroutine vdw_ts_force_calculate(force_vdw, vdw_ts_r0free, vdw_ts_c6abfree, geo, der, sb, st, density)
     FLOAT,               intent(inout) :: force_vdw(:,:)
     FLOAT,               intent(in)    :: vdw_ts_r0free(:)
     FLOAT,               intent(in)    :: vdw_ts_c6abfree(:,:)
@@ -386,10 +377,7 @@ contains
              VDW_cutoff, VDW_dd_parameter, VDW_sr_parameter
     FLOAT, allocatable ::  vol_ratio(:), dvadrr(:), dr0dvra(:), r0ab(:,:), derivative_coeff(:), c6ab(:,:)
 
-
-
-
-    PUSH_SUB(vdw_ts_force_calculate_n)
+    PUSH_SUB(vdw_ts_force_calculate)
 
 
     SAFE_ALLOCATE(vol_ratio(1:geo%natoms))
@@ -521,63 +509,8 @@ contains
     SAFE_DEALLOCATE_A(derivative_coeff)
     SAFE_DEALLOCATE_A(c6ab)
 
-    POP_SUB(vdw_ts_force_calculate_n)
-  end subroutine vdw_ts_force_calculate_n
-
-  !------------------------------------------
-  !------------------------------------------
-  !------------------------------------------
-  !------------------------------------------
-
-
-
-  subroutine vdw_ts_force_calculate(force_vdw, derivative_coeff, geo, der, sb, st, density)
-    FLOAT,               intent(inout) :: force_vdw(:,:)
-    FLOAT,               intent(in)    :: derivative_coeff(:)
-    type(geometry_t),    intent(in)    :: geo
-    type(derivatives_t), intent(in)    :: der
-    type(simul_box_t),   intent(in)    :: sb
-    type(states_t),      intent(in)    :: st
-    FLOAT,               intent(in)    :: density(:, :)
-
-    type(hirshfeld_t) :: hirshfeld
-    integer :: iatom, jatom
-    FLOAT, allocatable :: dvadrr(:)
-   
-    PUSH_SUB(vdw_ts_force_calculate)
-
-    SAFE_ALLOCATE(dvadrr(1:3))
-
-    call hirshfeld_init(hirshfeld, der%mesh, geo, st)
-
-     !if(mpi_grp_is_root(mpi_world)) then
-     !  do iatom = 1, geo%natoms
-     !    print *,'i initial force', iatom, force_vdw(1:sb%dim,iatom)
-     !  end do
-     !end if
-
-    do iatom = 1, geo%natoms
-      do jatom = 1, geo%natoms
-        call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
-        !print *,'i,j, extra F_ij', jatom, iatom, derivative_coeff(iatom)*dvadrr(1:sb%dim)
-        force_vdw(1:sb%dim,jatom)= force_vdw(1:sb%dim,jatom) + derivative_coeff(iatom)*dvadrr(1:sb%dim)  ! geo%atom(jatom)%f_vdw(1:sb%dim) = sum_i coeff_i * dvadrr_ij
-      end do
-    end do
-
-     !if(mpi_grp_is_root(mpi_world)) then
-     !  do iatom = 1, geo%natoms
-     !    print *,'i with extra f', iatom, force_vdw(1:sb%dim,iatom)
-     !  end do
-     !end if
-
-
-    call hirshfeld_end(hirshfeld)
-
-    SAFE_DEALLOCATE_A(dvadrr)
- 
     POP_SUB(vdw_ts_force_calculate)
   end subroutine vdw_ts_force_calculate
-
 
   !------------------------------------------
 
