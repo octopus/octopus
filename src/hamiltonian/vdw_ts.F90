@@ -404,12 +404,15 @@ contains
           ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
           deabdrab = c6ab(iatom,jatom)*(this%damping/(this%sr*r0ab(iatom,jatom))*dee - CNST(6.0)*ff/rr)/rr6;
           ! Derivative of the damping function with respecto to the volume ratio of atom A.
-          dffdvra = dffdr0*dr0dvra(iatom); ! Ces termes sont bon
+          dffdvra = dffdr0*dr0dvra(iatom);
           ! Calculation of the pair-wise partial energy derivative with respect to the volume ratio of atom A.
           deabdvra = (dffdvra*c6ab(iatom,jatom) + ff*vol_ratio(jatom)*this%c6abfree(ispecies, jspecies))/rr6
-
-          force_vdw(1:sb%dim,iatom)= force_vdw(1:sb%dim,iatom) + M_HALF*deabdrab*(geo%atom(iatom)%x(1:sb%dim) -x_j(1:sb%dim))/rr;
+          !Summing for using later
           derivative_coeff(iatom) = derivative_coeff(iatom) + deabdvra;
+
+          ! Calculation of the pair-wise partial energy derivative with respect to the distance between atoms A and B.
+          deabdrab = c6ab(iatom,jatom)*(this%damping/(this%sr*r0ab(iatom,jatom))*dee - CNST(6.0)*ff/rr)/rr6;
+          force_vdw(1:sb%dim,iatom)= force_vdw(1:sb%dim,iatom) + M_HALF*deabdrab*(geo%atom(iatom)%x(1:sb%dim) -x_j(1:sb%dim))/rr;
         end do
       end do
       call periodic_copy_end(pc)

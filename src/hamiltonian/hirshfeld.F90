@@ -268,7 +268,7 @@ contains
   end subroutine hirshfeld_density_derivative
 
   ! -----------------------------------------------
-
+  !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
   subroutine hirshfeld_position_derivative(this, der, iatom, jatom, density, dposition)
     type(hirshfeld_t),         intent(in)    :: this
     type(derivatives_t),       intent(in)    :: der
