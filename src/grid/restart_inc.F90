@@ -104,7 +104,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   R_TYPE, target,   intent(inout) :: ff(:)
   integer,          intent(out)   :: ierr
 
-  integer :: ip, np, offset, file_size, npoints, xlocal, nread
+  integer :: ip, np, file_size, npoints, xlocal, nread
   R_TYPE, pointer :: read_ff(:)
   type(profile_t), save :: prof_io
   type(batch_t) :: ffb
@@ -138,12 +138,6 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
     read_ff => ff
   end if
 
-  offset = 0
-  !in the parallel case, each node reads a part of the file
-  if(mesh%parallel_in_domains) then
-    offset = mesh%vp%xlocal - 1
-  end if
-
   ASSERT(associated(read_ff))
 
   call profiling_in(prof_io, "RESTART_READ_IO")
@@ -159,7 +153,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
     endif
     call io_binary_read_parallel(io_workpath(full_filename), mesh%mpi_grp%comm, xlocal, np, read_ff, ierr)
   else
-    call io_binary_read(io_workpath(full_filename), np, read_ff, ierr, offset = offset)
+    call io_binary_read(io_workpath(full_filename), np, read_ff, ierr)
   end if
 
   call profiling_count_transfers(np, read_ff(1))
