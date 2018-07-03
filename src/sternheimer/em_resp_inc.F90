@@ -467,10 +467,9 @@ end subroutine X(run_sternheimer)
 
 ! ---------------------------------------------------------
 subroutine X(calc_properties_linear)()
-
+  
   PUSH_SUB(em_resp_run.X(calc_properties_linear))
   
-
   if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
     if((.not. em_vars%calc_magnetooptics) .or. ifactor == 1) then 
       ! calculate polarizability
@@ -484,6 +483,20 @@ subroutine X(calc_properties_linear)()
         else
           call X(calc_polarizability_periodic)(sys, em_vars%lr(:, :, ifactor), kdotp_lr(:, 1), &
             em_vars%nsigma, em_vars%alpha(:, :, ifactor), zpol_k = em_vars%alpha_k(:, :, ifactor, :))
+        end if
+        if(em_vars%lrc_kernel) then
+          do idir = 1, gr%sb%dim
+            do idir2 = 1, gr%sb%dim
+              lrc_coef(idir, idir2) = M_ONE/(M_ONE - M_HALF * sys%ks%xc%kernel_lrc_alpha * &
+                (em_vars%alpha(idir, idir, ifactor) + em_vars%alpha(idir2, idir2, ifactor)) / gr%sb%rcell_volume)
+            end do
+          end do
+          do idir = 1, gr%sb%dim
+            do idir2 = 1, gr%sb%dim
+              em_vars%alpha0(idir, idir2, ifactor) = em_vars%alpha(idir, idir2, ifactor)
+              em_vars%alpha(idir, idir2, ifactor) = em_vars%alpha(idir, idir2, ifactor) * lrc_coef(idir, idir2)
+            end do
+          end do 
         end if
       end if
 
@@ -519,6 +532,16 @@ subroutine X(calc_properties_linear)()
               nfactor_ke, em_vars%freq_factor, em_vars%lr(:, :, :), b_lr(:, :), kdotp_lr(:, :), &
               k2_lr(:, :, :), ke_lr(:, :, :, :), kb_lr(:, :, :), -frequency_eta, em_vars%alpha_be(:, :, :), &
               zpol_kout = em_vars%alpha_be_k(:, :, :, :))
+          end if
+          if(em_vars%lrc_kernel) then
+            do idir = 1, gr%sb%dim
+              do idir1 = 1, gr%sb%dim
+                do idir2 = 1, gr%sb%dim
+                  em_vars%alpha_be0(idir, idir1, idir2) = em_vars%alpha_be(idir, idir1, idir2)
+                  em_vars%alpha_be(idir, idir1, idir2) = em_vars%alpha_be(idir, idir1, idir2) * lrc_coef(idir, idir1)
+                end do
+              end do
+            end do
           end if
         end if
         if(iomega == 1) then
