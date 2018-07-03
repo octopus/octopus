@@ -104,7 +104,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   R_TYPE, target,   intent(inout) :: ff(:)
   integer,          intent(out)   :: ierr
 
-  integer :: ip, np, offset, file_size, npoints
+  integer :: ip, np, offset, file_size, npoints, xlocal, nread
   R_TYPE, pointer :: read_ff(:)
   type(profile_t), save :: prof_io
   type(batch_t) :: ffb
@@ -119,23 +119,19 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
 
   nullify(read_ff)
   full_filename = trim(restart%pwd)//'/'//trim(filename)//'.obf'
-  
-  if(restart_has_map(restart) .and. mesh%parallel_in_domains) then 
-    ! for the moment we do not do this directly
-    call X(io_function_input)(full_filename, mesh, ff(1:mesh%np), ierr, map = restart%map(1, :))
-    POP_SUB(X(restart_read_mesh_function))
-    return
-  end if
 
   if (restart_has_map(restart)) then
     call io_binary_get_info(io_workpath(full_filename), np, file_size, ierr)
 
-    if (ierr /= 0) then
+    if (ierr /= 0 .or. np /= restart%mesh_dist%nglobal) then
       POP_SUB(X(restart_read_mesh_function))
       return
     end if
 
     ASSERT(np > 0)
+
+    np = restart%mesh_dist%nlocal
+
     SAFE_ALLOCATE(read_ff(1:np))
   else
     np = mesh%np
@@ -152,17 +148,20 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
 
   call profiling_in(prof_io, "RESTART_READ_IO")
 
-#ifdef HAVE_MPI2
   if(mesh%parallel_in_domains) then
     ! Ensure that xlocal has a proper value
     ASSERT(mesh%vp%xlocal >= 0 .and. mesh%vp%xlocal <= mesh%np_part_global)
-    call io_binary_read_parallel(io_workpath(full_filename), mesh%mpi_grp%comm, mesh%vp%xlocal, np, read_ff, ierr)
+
+    if(restart_has_map(restart)) then
+      xlocal = restart%mesh_dist%start
+    else
+      xlocal = mesh%vp%xlocal
+    endif
+    call io_binary_read_parallel(io_workpath(full_filename), mesh%mpi_grp%comm, xlocal, np, read_ff, ierr)
   else
-#endif
     call io_binary_read(io_workpath(full_filename), np, read_ff, ierr, offset = offset)
-#ifdef HAVE_MPI2
   end if
-#endif
+
   call profiling_count_transfers(np, read_ff(1))
   call profiling_out(prof_io)
 

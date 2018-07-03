@@ -103,7 +103,7 @@ module restart_oct_m
     logical           :: has_mesh  !< If no, mesh info is not written or read, and mesh functions cannot be written or read.
     integer, allocatable :: map(:, :) !< Map between the points of the stored mesh and the mesh used in the current calculations.
     FLOAT,   allocatable :: coeff(:, :)
-    type(distributed_t) :: restart_mesh_dist
+    type(distributed_t) :: mesh_dist
   end type restart_t
 
 
@@ -419,7 +419,7 @@ contains
 
     PUSH_SUB(restart_init)
 
-    call distributed_nullify(restart%restart_mesh_dist)
+    call distributed_nullify(restart%mesh_dist)
     
     ierr = 0
 
@@ -609,7 +609,7 @@ contains
           end if
 
           if(allocated(restart%map) .and. mesh%parallel_in_domains) then
-            call distributed_init(restart%restart_mesh_dist, ubound(restart%map, dim = 2), mesh%mpi_grp%comm)
+            call distributed_init(restart%mesh_dist, ubound(restart%map, dim = 2), mesh%mpi_grp%comm)
           end if
           
         end if
@@ -652,7 +652,7 @@ contains
     restart%data_type = 0
     restart%skip = .true.
 
-    call distributed_end(restart%restart_mesh_dist)
+    call distributed_end(restart%mesh_dist)
     SAFE_DEALLOCATE_A(restart%map)
     SAFE_DEALLOCATE_A(restart%coeff)
     restart%has_mesh = .false.
