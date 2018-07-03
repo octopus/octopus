@@ -120,11 +120,9 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   nullify(read_ff)
   full_filename = trim(restart%pwd)//'/'//trim(filename)//'.obf'
   
-  if (restart_has_map(restart) .and. mesh%parallel_in_domains) then 
+  if(restart_has_map(restart) .and. mesh%parallel_in_domains) then 
     ! for the moment we do not do this directly
-    call X(io_function_input) (full_filename, mesh, ff(1:mesh%np), ierr, &
-                               map = restart%map(1, :))
-
+    call X(io_function_input)(full_filename, mesh, ff(1:mesh%np), ierr, map = restart%map(1, :))
     POP_SUB(X(restart_read_mesh_function))
     return
   end if
@@ -158,8 +156,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   if(mesh%parallel_in_domains) then
     ! Ensure that xlocal has a proper value
     ASSERT(mesh%vp%xlocal >= 0 .and. mesh%vp%xlocal <= mesh%np_part_global)
-    call io_binary_read_parallel(io_workpath(full_filename), mesh%mpi_grp%comm, mesh%vp%xlocal, &
-      np, read_ff, ierr)
+    call io_binary_read_parallel(io_workpath(full_filename), mesh%mpi_grp%comm, mesh%vp%xlocal, np, read_ff, ierr)
   else
 #endif
     call io_binary_read(io_workpath(full_filename), np, read_ff, ierr, offset = offset)

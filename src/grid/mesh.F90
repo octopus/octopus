@@ -709,6 +709,7 @@ contains
               coeff(8, ip) = d2(1)*d2(2)*d2(3)
             end if
 
+            ! some of the required points might not be available
             if(any(map(1:npoints, ip) == 0)) map(1:npoints, ip) = 0
             
           end do
