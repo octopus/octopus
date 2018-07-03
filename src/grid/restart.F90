@@ -21,6 +21,7 @@
 
 module restart_oct_m
   use batch_oct_m
+  use distributed_oct_m
   use global_oct_m
   use index_oct_m
   use io_oct_m
@@ -102,6 +103,7 @@ module restart_oct_m
     logical           :: has_mesh  !< If no, mesh info is not written or read, and mesh functions cannot be written or read.
     integer, allocatable :: map(:, :) !< Map between the points of the stored mesh and the mesh used in the current calculations.
     FLOAT,   allocatable :: coeff(:, :)
+    type(distributed_t) :: restart_mesh_dist
   end type restart_t
 
 
@@ -417,6 +419,8 @@ contains
 
     PUSH_SUB(restart_init)
 
+    call distributed_nullify(restart%restart_mesh_dist)
+    
     ierr = 0
 
     ! Sanity checks
@@ -582,11 +586,14 @@ contains
           ! Print some warnings in case the mesh is compatible, but changed.
           if (grid_changed) then
             if (grid_reordered) then
-              message(1) = "Octopus is attempting to restart from a mesh with a different order of points."
+              call messages_write("Octopus is attempting to restart from a mesh with a different order of points.")
+            else if(allocated(restart%coeff)) then
+              call messages_write("Octopus is attempting to restart from a mesh with a different spacing.", new_line = .true.)
+              call messages_write("Functions will be interpolated.")
             else
-              message(1) = "Octopus is attempting to restart from a different mesh."
+              call messages_write("Octopus is attempting to restart from a different mesh.")
             end if
-            call messages_warning(1)
+            call messages_warning()
           end if
 
           if (present(exact)) then
@@ -600,6 +607,11 @@ contains
           else
             restart%skip = .false.
           end if
+
+          if(allocated(restart%map) .and. mesh%parallel_in_domains) then
+            call distributed_init(restart%restart_mesh_dist, ubound(restart%map, dim = 2), mesh%mpi_grp%comm)
+          end if
+          
         end if
       end if
 
@@ -639,6 +651,8 @@ contains
     restart%type = 0
     restart%data_type = 0
     restart%skip = .true.
+
+    call distributed_end(restart%restart_mesh_dist)
     SAFE_DEALLOCATE_A(restart%map)
     SAFE_DEALLOCATE_A(restart%coeff)
     restart%has_mesh = .false.
