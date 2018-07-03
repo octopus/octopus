@@ -611,7 +611,7 @@ contains
           if(allocated(restart%map) .and. mesh%parallel_in_domains) then
             call distributed_init(restart%mesh_dist, ubound(restart%map, dim = 2), mesh%mpi_grp%comm)
           end if
-          
+
         end if
       end if
 
