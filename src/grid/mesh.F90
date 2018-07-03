@@ -647,7 +647,7 @@ contains
         grid_reordered = (read_np == mesh%np_global)
 
         ! the grid is different, so we read the coordinates.
-        SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:mesh%sb%dim))
+        SAFE_ALLOCATE(read_lxyz(1:read_np_part, 1:MAX_DIM))
         ASSERT(allocated(mesh%idx%lxyz))
         call io_binary_read(trim(io_workpath(dir))//'/lxyz.obf', read_np_part*mesh%sb%dim, read_lxyz, err)
         if (err /= 0) then
@@ -655,7 +655,8 @@ contains
           message(1) = "Unable to read index map from '"//trim(dir)//"'."
           call messages_warning(1)
         else
-          
+
+          read_lxyz(1:read_np_part, mesh%sb%dim + 1:MAX_DIM) = 0
           lb = 0
           ub = 0
           do idir = 1, mesh%sb%dim
