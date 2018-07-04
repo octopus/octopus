@@ -315,34 +315,33 @@ contains
     rmax_isqu = rmax_i**2
     rmax_jsqu = rmax_j**2
 
-    call periodic_copy_init(pp_i, this%mesh%sb, this%geo%atom(iatom)%x, rmax_i)
+    call periodic_copy_init(pp_j, this%mesh%sb, this%geo%atom(jatom)%x, rmax_j)
+    do jcell = 1, periodic_copy_num(pp_j)
 
-    do icell = 1, periodic_copy_num(pp_i)
-      atom_density(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
-      pos_i(1:this%mesh%sb%dim) = periodic_copy_position(pp_i, this%mesh%sb, icell)
+      pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%mesh%sb, jcell)
+      atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
+      call species_atom_density_derivative_np(this%mesh, this%mesh%sb, this%geo%atom(jatom), &
+                                              pos_j, this%st%d%spin_channels, &
+                                              atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
 
-      !We get the non periodized density
-      !We need to do it to have the r^3 correctly computed for periodic systems
-      call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), &
-                                   pos_i, this%st%d%nspin, &
-                                   atom_density(1:this%mesh%np, 1:this%st%d%nspin))
+      call periodic_copy_init(pp_i, this%mesh%sb, pos_j, (rmax_j+rmax_i))  ! jcells futher away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
 
-        
-      call periodic_copy_init(pp_j, this%mesh%sb, pos_i, (rmax_j+rmax_i))  ! jcells futher away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
+      do icell = 1, periodic_copy_num(pp_i)
 
-      do jcell = 1, periodic_copy_num(pp_j)
-
-        pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%mesh%sb, jcell) + &
-                                    (this%geo%atom(jatom)%x(1:this%mesh%sb%dim)-this%geo%atom(iatom)%x(1:this%mesh%sb%dim))
+        pos_i(1:this%mesh%sb%dim) = periodic_copy_position(pp_i, this%mesh%sb, icell) + &
+                                    (this%geo%atom(iatom)%x(1:this%mesh%sb%dim)-this%geo%atom(jatom)%x(1:this%mesh%sb%dim))
         rij =  sqrt(sum((pos_i(1:this%mesh%sb%dim)-pos_j(1:this%mesh%sb%dim))**2))
           
         if(rij - (rmax_j+rmax_i) < TOL_SPACING) then 
  
-          atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
-          call species_atom_density_derivative_np(this%mesh, this%mesh%sb, this%geo%atom(jatom), &
-                                                  pos_j, this%st%d%spin_channels, &
-                                                  atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
-           
+
+          atom_density(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
+
+          !We get the non periodized density
+          !We need to do it to have the r^3 correctly computed for periodic systems
+          call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), &
+                                       pos_i, this%st%d%nspin, &
+                                       atom_density(1:this%mesh%np, 1:this%st%d%nspin))
 
           do ip = 1, this%mesh%np
             if(this%total_density(ip)< TOL_HIRSHFELD) cycle
@@ -383,10 +382,10 @@ contains
             
         end if
       end do
-      call periodic_copy_end(pp_j)
+      call periodic_copy_end(pp_i)
     end do
 
-    call periodic_copy_end(pp_i)
+    call periodic_copy_end(pp_j)
     do idir = 1, this%mesh%sb%dim
       dposition(idir) = dmf_integrate(this%mesh, grad(1:this%mesh%np, idir))/this%free_volume(iatom)
     end do
