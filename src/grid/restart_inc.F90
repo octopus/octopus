@@ -123,14 +123,14 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   if (restart_has_map(restart)) then
     call io_binary_get_info(io_workpath(full_filename), np, file_size, ierr)
 
-    if (ierr /= 0 .or. np /= restart%mesh_dist%nglobal) then
+    ASSERT(np > 0)
+    
+    if(ierr /= 0 .or. (mesh%parallel_in_domains .and. np /= restart%mesh_dist%nglobal)) then
       POP_SUB(X(restart_read_mesh_function))
       return
     end if
 
-    ASSERT(np > 0)
-
-    np = restart%mesh_dist%nlocal
+    if(mesh%parallel_in_domains) np = restart%mesh_dist%nlocal
 
     SAFE_ALLOCATE(read_ff(1:np))
   else
