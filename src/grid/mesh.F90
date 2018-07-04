@@ -504,7 +504,7 @@ contains
           write(iunit, '(a20,i21)')    'checksum=           ', mesh%idx%checksum
           write(iunit, '(a20,i21)')    'dimensions=         ', mesh%sb%dim
           do idir = 1, mesh%sb%dim
-            write(iunit, '(a,i1,a,f21.16)') 'spacing(', idir,')=         ', mesh%spacing(1)
+            write(iunit, '(a,i1,a,f21.16)') 'spacing(', idir,')=         ', mesh%spacing(idir)
           end do
         end if
       end if
@@ -672,7 +672,7 @@ contains
           end do
           
           if(any(abs(read_spacing(1:mesh%sb%dim) - mesh%spacing(1:mesh%sb%dim)) > CNST(1e-10))) then
-            
+
             ! spacing changed, we need to interpolate
             npoints = 2**mesh%sb%dim
             
