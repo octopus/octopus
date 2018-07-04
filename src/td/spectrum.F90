@@ -2127,7 +2127,7 @@ contains
 
 
     ! open files
-    filename = trim('td.general')//trim(fname)
+    filename = trim('td.general/')//trim(fname)
     iunit = io_open(filename, action='read', status='old')      
 
     if(iunit < 0) then
