@@ -2315,7 +2315,7 @@ contains
         energy = energy_step*(ienergy - energy_start)
 
         do ii = 1, energy_function%nst_linear
-          energy_function%states_linear(ii)%dpsi(ienergy) = 0.0
+          energy_function%states_linear(ii)%dpsi(ienergy) = M_ZERO
         end do
 
         select case(transform)

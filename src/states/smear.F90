@@ -619,7 +619,7 @@ contains
     case(SMEAR_SEMICONDUCTOR)
 
     case(SMEAR_FERMI_DIRAC)
-      if(abs(xx) <= 36.0) then
+      if(abs(xx) <= CNST(36.0)) then
         xp = M_ONE / (M_ONE + exp(-xx))
         entropyf = xp * log(xp) + (M_ONE - xp) * log(M_ONE - xp)
       end if

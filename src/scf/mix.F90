@@ -297,7 +297,7 @@ contains
     subroutine init_preconditioner()
 
       integer :: ns, maxp, ip, is
-      FLOAT, parameter :: weight = 50.0
+      FLOAT, parameter :: weight = CNST(50.0)
       
       ! This the mixing preconditioner from GPAW:
       !

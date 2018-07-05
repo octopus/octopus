@@ -964,7 +964,7 @@ contains
     rho = M_ZERO
     do nn = 1, n_gaussians
       do idir = 1, mesh%sb%dim
-        xx(idir, nn) = 0.000 
+        xx(idir, nn) = M_ZERO 
       end do
 
       rr = sqrt(sum(xx(:, nn)*xx(:,nn)))

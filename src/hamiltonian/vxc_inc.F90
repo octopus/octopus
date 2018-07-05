@@ -1074,7 +1074,7 @@ FLOAT function get_qxc(mesh, nxc, density, ncutoff)  result(qxc)
 
   do ip = 1, mesh%np
     if(density(ip) < ncutoff) then
-      nxc2(ip) = 0.0
+      nxc2(ip) = CNST(0.0)
     else
       nxc2(ip) = nxc(ip)
     end if
