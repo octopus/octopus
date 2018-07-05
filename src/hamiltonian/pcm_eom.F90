@@ -167,7 +167,7 @@ module pcm_eom_oct_m
      message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye or Drude-Lorent dielectric models are allowed."
      call messages_fatal(1)
     endif
-    if( deb%tau == M_ZERO ) then
+    if( abs(deb%tau) <= M_EPSILON ) then
      message(1) = "pcm_charges_propagation: EOM-PCM error. Debye EOM-PCM require a non-null Debye relaxation time."
      call messages_fatal(1)
     endif
@@ -644,7 +644,7 @@ module pcm_eom_oct_m
     do i=1,nts_act
      if(fact2(i).lt.M_ZERO) fact2(i)=M_ZERO !< check out
     enddo
-    if (drl%w0.eq.M_ZERO) drl%w0=1.d-8      !< check out
+    if (abs(drl%w0)<=M_EPSILON) drl%w0=1.d-8      !< check out
     fact1(:)=fact2(:)+drl%w0*drl%w0			                                      !< Eq.(19), ibid.
     fact2(:)=sgn_lf*(twopi-sgn*sgn_lf*eigv(:))*drl%aa/fourpi                  !< Eq.(10) down, local field analogous
     Kdiag0(:)=fact2(:)/fact1(:)				                                        !< from Eq.(10) up, ibid.

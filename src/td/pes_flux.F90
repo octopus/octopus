@@ -1277,7 +1277,7 @@ contains
     do isp = isp_start, isp_end
       do idir = 1, mdim
         ! calculate flux only along the surface normal
-        if(this%srfcnrml(idir, isp) == M_ZERO) cycle
+        if(abs(this%srfcnrml(idir, isp)) <= M_EPSILON) cycle
 
         Jk_cub = M_z0
 

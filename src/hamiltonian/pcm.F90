@@ -441,7 +441,7 @@ contains
     call parse_variable('PCMDebyeRelaxTime', M_ZERO, pcm%deb%tau)
     call messages_print_var_value(stdout, "PCMDebyeRelaxTime", pcm%deb%tau)
 
-    if( pcm%eom .and. pcm%which_eps == 'deb' .and. ( pcm%deb%tau == M_ZERO .or. pcm%deb%eps_0 == pcm%deb%eps_d ) ) then
+    if( pcm%eom .and. pcm%which_eps == 'deb' .and. ( abs(pcm%deb%tau) <= M_EPSILON .or. pcm%deb%eps_0 == pcm%deb%eps_d ) ) then
       call messages_write('Sorry, you have set PCMEoM = yes, but you have not included all required Debye model parameters.')
       call messages_new_line()
       call messages_write('You need PCMEpsilonStatic, PCMEpsilonDynamic and PCMDebyeRelaxTime for an EoM TD-PCM run.')        
@@ -451,7 +451,7 @@ contains
       pcm%eom = .false.
     end if
 
-    if( pcm%epsilon_0 == M_ONE ) then
+    if( abs(pcm%epsilon_0-M_ONE) <= M_EPSILON ) then
       if( pcm%eom .and. pcm%which_eps == 'drl' ) then
         message(1) = "PCMEpsilonStatic = 1 is incompatible with a Drude-Lorentz EOM-PCM run."
         call messages_fatal(1)
@@ -629,7 +629,7 @@ contains
     call parse_variable('PCMSmearingFactor', M_ONE, pcm%gaussian_width)
     call messages_print_var_value(stdout, "PCMSmearingFactor", pcm%gaussian_width)
 
-    if (pcm%gaussian_width == M_ZERO) then
+    if (abs(pcm%gaussian_width) <= M_EPSILON) then
       message(1) = "Info: PCM potential will be defined in terms of polarization point charges"
       call messages_info(1)
     else
@@ -2205,7 +2205,7 @@ contains
     dist = dot_product( diff, diff )
     dist = sqrt(dist)
 
-    if  (dist == M_ZERO) then
+    if  (abs(dist) <= M_EPSILON) then
 
       s_diag = M_SD_DIAG*sqrt( M_FOUR*M_Pi/tessi%area )
       s_mat_elem_I = s_diag
@@ -2243,7 +2243,7 @@ contains
     dist = dot_product( diff, diff )
     dist = sqrt(dist)
 
-    if (dist == M_ZERO) then
+    if (abs(dist) <= M_EPSILON) then
       !> Diagonal matrix elements  
       d_diag = M_SD_DIAG*sqrt(M_FOUR*M_Pi*tessi%area)
       d_diag = -d_diag/(M_TWO*tessi%r_sphere)
@@ -2515,7 +2515,7 @@ contains
 
           call subtessera(sfe, nsfe, nesf, nv, pts ,ccc, pp, pp1, area)
 
-          if (area == M_ZERO) cycle
+          if (abs(area) <= M_EPSILON) cycle
 
           xctst(tess_sphere*(its-1) + i_tes)   = pp(1)
           yctst(tess_sphere*(its-1) + i_tes)   = pp(2)
@@ -2529,7 +2529,7 @@ contains
 
       do its = 1, n_tess_sphere*tess_sphere
 
-        if (ast(its) == M_ZERO) cycle
+        if (abs(ast(its)) <= M_EPSILON) cycle
         nn = nn + 1
 
         if (nn > mxts) then !> check the total number of tessera
@@ -2557,13 +2557,13 @@ contains
         band_iter = .true.
 
         loop_ia: do ia = 1, nts-1
-          if (cts(ia)%area == M_ZERO) cycle
+          if (abs(cts(ia)%area) <= M_EPSILON) cycle
           xi = cts(ia)%point(1)
           yi = cts(ia)%point(2)
           zi = cts(ia)%point(3)
 
           loop_ja: do ja = ia+1, nts
-            if (cts(ja)%area == M_ZERO) cycle
+            if (abs(cts(ja)%area) <= M_EPSILON) cycle
             xj = cts(ja)%point(1)
             yj = cts(ja)%point(2)
             zj = cts(ja)%point(3)
@@ -3026,7 +3026,7 @@ contains
 
       dnorm1 = sqrt( dot_product(point_1, point_1) )
 
-      if (dnorm1 == M_ZERO) dnorm1 = M_ONE
+      if (abs(dnorm1) <= M_EPSILON) dnorm1 = M_ONE
 
       point_2(1) = pts(1,nn) - sfe(ns)%x
       point_2(2) = pts(2,nn) - sfe(ns)%y

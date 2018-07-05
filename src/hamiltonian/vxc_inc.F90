@@ -1679,7 +1679,7 @@ subroutine zxc_complex_pbe(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
     t2 = C3 * a2(nn) * rs / (zrho(nn, 1) / dimphase)**2
     yy = -epsc(nn) / gamma
     xx = exp(yy)
-    if (yy.eq.M_ZERO) then
+    if (abs(yy)<=M_EPSILON) then
       AA = M_ZERO
     else
       AA = beta / (gamma * (xx - M_ONE))
@@ -1688,7 +1688,7 @@ subroutine zxc_complex_pbe(der, mesh, ispin, theta, zrho, zvx, zvc, zex, zec)
     num = M_ONE + At2
     denom = num + At2**2
     HH(nn) = log(M_ONE + beta * t2 * num / (denom * gamma))
-    if(yy.eq.M_ZERO) then
+    if(abs(yy)<=M_EPSILON) then
       HH(nn) = M_ZERO
     end if
         

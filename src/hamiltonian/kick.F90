@@ -155,7 +155,7 @@ contains
     nullify(kick%weight)
     kick%function_mode = KICK_FUNCTION_DIPOLE
 
-    if(abs(kick%delta_strength) == M_ZERO) then
+    if(abs(kick%delta_strength) <= M_EPSILON) then
       kick%delta_strength_mode = 0
       kick%pol_equiv_axes = 0
       kick%pol(1:3, 1) = (/ M_ONE, M_ZERO, M_ZERO /)

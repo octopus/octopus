@@ -429,7 +429,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
     else
       nrm2 = X(mf_nrm2)(mesh, st%d%dim, phi)
     end if
-    if(abs(nrm2) == M_ZERO) then
+    if(abs(nrm2) <= M_EPSILON) then
       message(1) = "Wavefunction has zero norm after states_orthogonalize_single; cannot normalize."
       call messages_fatal(1)
     end if

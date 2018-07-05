@@ -808,14 +808,14 @@ contains
         end do
       end if
 
-      if(st%qtot == M_ZERO) then
+      if(abs(st%qtot) <= M_EPSILON) then
         scf%rel_dens = M_HUGE
       else
         scf%rel_dens = scf%abs_dens / st%qtot
       end if
 
       scf%abs_ev = abs(evsum_out - evsum_in)
-      if(abs(evsum_out) == M_ZERO) then
+      if(abs(evsum_out) <= M_EPSILON) then
         scf%rel_ev = M_HUGE
       else
         scf%rel_ev = scf%abs_ev / abs(evsum_out)
