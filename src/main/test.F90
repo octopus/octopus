@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-program oct_test
+module test_oct_m
   use global_oct_m
   use batch_oct_m
   use batch_ops_oct_m
@@ -59,168 +59,152 @@ program oct_test
 
   implicit none
 
-  character(len=256) :: config_str
-  integer :: test_type
-  integer :: test_mode
-  type(test_parameters_t) :: test_param
-  integer :: ierr
- 
-  integer, parameter ::              &
-    XC_FLAGS_NONE = 0
+  type test_t
+    private
+    type(test_parameters_t) :: param
+    integer :: type
+  end type test_t
 
-  call getopt_init(ierr)
-  config_str = trim(get_config_opts()) // trim(get_optional_libraries())
-  if(ierr  ==  0) call getopt_octopus(config_str)
-  call getopt_end()
-
-  call global_init()
-  call calc_mode_par_init()
-  call messages_init()
-
-  call messages_obsolete_variable('WhichTest', 'TestMode')
-
-  !%Variable TestMode
-  !%Type integer
-  !%Default hartree
-  !%Section Utilities::oct-test
-  !%Description
-  !% Decides what kind of test should be performed.
-  !%Option hartree 1
-  !% Tests the Poisson solvers used to calculate the Hartree potential.
-  !%Option derivatives 2
-  !% Tests and benchmarks the implementation of the finite-difference operators, used to calculate derivatives.
-  !%Option orthogonalization 3
-  !% Tests the implementation of the orthogonalization routines.
-  !%Option interpolation 4
-  !% Test the interpolation routines.
-  !%Option ion_interaction 5
-  !% Tests the ion-ion interaction routines.
-  !%Option projector 6
-  !% Tests the code that applies the nonlocal part of the pseudopotentials 
-  !% in case of spin-orbit coupling
-  !%Option dft_u 7
-  !% Tests the DFT+U part of the code for projections on the basis.
-  !%Option hamiltonian_apply 8
-  !% Tests the application of the Hamiltonian, or a part of it
-  !%End
-  call parse_variable('TestMode', OPTION__TESTMODE__HARTREE, test_mode)
-
-  call messages_obsolete_variable('TestDerivatives', 'TestType')
-  call messages_obsolete_variable('TestOrthogonalization', 'TestType')
+  public :: test_run
   
-  !%Variable TestType
-  !%Type integer
-  !%Default all
-  !%Section Utilities::oct-test
-  !%Description
-  !% Decides on what type of values the test should be performed.
-  !%Option real 1
-  !% Test for double-precision real functions.
-  !%Option complex 2
-  !% Test for double-precision complex functions.
-  !%Option real_single 4
-  !% Test for single-precision real functions. (Only implemented for derivatives.)
-  !%Option complex_single 5
-  !% Test for single-precision complex functions. (Only implemented for derivatives.)
-  !%Option all 3
-  !% Tests for double-precision real and complex functions.
-  !%End
-  call parse_variable('TestType', OPTION__TESTTYPE__ALL, test_type)
-  if(test_type < 1 .or. test_type > 5) then
-    message(1) = "Invalid option for TestType."
-    call messages_fatal(1, only_root_writes = .true.)
-  endif
+contains
+
+  ! ---------------------------------------------------------
+  subroutine test_run()
+    type(test_t) :: test
+    integer :: test_mode
+    
+    PUSH_SUB(test_run)
+
+    call messages_obsolete_variable('WhichTest', 'TestMode')
+
+    !%Variable TestMode
+    !%Type integer
+    !%Default hartree
+    !%Section Utilities::oct-test
+    !%Description
+    !% Decides what kind of test should be performed.
+    !%Option hartree 1
+    !% Tests the Poisson solvers used to calculate the Hartree potential.
+    !%Option derivatives 2
+    !% Tests and benchmarks the implementation of the finite-difference operators, used to calculate derivatives.
+    !%Option orthogonalization 3
+    !% Tests the implementation of the orthogonalization routines.
+    !%Option interpolation 4
+    !% Test the interpolation routines.
+    !%Option ion_interaction 5
+    !% Tests the ion-ion interaction routines.
+    !%Option projector 6
+    !% Tests the code that applies the nonlocal part of the pseudopotentials 
+    !% in case of spin-orbit coupling
+    !%Option dft_u 7
+    !% Tests the DFT+U part of the code for projections on the basis.
+    !%Option hamiltonian_apply 8
+    !% Tests the application of the Hamiltonian, or a part of it
+    !%End
+    call parse_variable('TestMode', OPTION__TESTMODE__HARTREE, test_mode)
+
+    call messages_obsolete_variable('TestDerivatives', 'TestType')
+    call messages_obsolete_variable('TestOrthogonalization', 'TestType')
   
-  !%Variable TestRepetitions
-  !%Type integer
-  !%Default 1
-  !%Section Utilities::oct-test
-  !%Description
-  !% This variable controls the behavior of oct-test for performance
-  !% benchmarking purposes. It sets the number of times the
-  !% computational kernel of a test will be executed, in order to
-  !% provide more accurate timings.
-  !%
-  !% Currently this variable is used by the <tt>hartree_test</tt>,
-  !% <tt>derivatives</tt>, and <tt>projector</tt> tests.
-  !%End  
-  call parse_variable('TestRepetitions', 1, test_param%repetitions)
-
-  !%Variable TestMinBlockSize
-  !%Type integer
-  !%Default 1
-  !%Section Utilities::oct-test
-  !%Description
-  !% Some tests can work with multiple blocksizes, in this case of
-  !% range of blocksizes will be tested. This variable sets the lower
-  !% bound of that range.
-  !%
-  !% Currently this variable is only used by the derivatives test.
-  !%End
-  call parse_variable('TestMinBlockSize', 1, test_param%min_blocksize)
-
-  !%Variable TestMaxBlockSize
-  !%Type integer
-  !%Default 128
-  !%Section Utilities::oct-test
-  !%Description
-  !% Some tests can work with multiple blocksizes, in this case of
-  !% range of blocksizes will be tested. This variable sets the lower
-  !% bound of that range.
-  !%
-  !% Currently this variable is only used by the derivatives test.
-  !%End
-  call parse_variable('TestMaxBlockSize', 128, test_param%max_blocksize)
+    !%Variable TestType
+    !%Type integer
+    !%Default all
+    !%Section Utilities::oct-test
+    !%Description
+    !% Decides on what type of values the test should be performed.
+    !%Option real 1
+    !% Test for double-precision real functions.
+    !%Option complex 2
+    !% Test for double-precision complex functions.
+    !%Option real_single 4
+    !% Test for single-precision real functions. (Only implemented for derivatives.)
+    !%Option complex_single 5
+    !% Test for single-precision complex functions. (Only implemented for derivatives.)
+    !%Option all 3
+    !% Tests for double-precision real and complex functions.
+    !%End
+    call parse_variable('TestType', OPTION__TESTTYPE__ALL, test%type)
+    if(test%type < 1 .or. test%type > 5) then
+      message(1) = "Invalid option for TestType."
+      call messages_fatal(1, only_root_writes = .true.)
+    endif
   
-  call io_init()
-  call profiling_init()
+    !%Variable TestRepetitions
+    !%Type integer
+    !%Default 1
+    !%Section Utilities::oct-test
+    !%Description
+    !% This variable controls the behavior of oct-test for performance
+    !% benchmarking purposes. It sets the number of times the
+    !% computational kernel of a test will be executed, in order to
+    !% provide more accurate timings.
+    !%
+    !% Currently this variable is used by the <tt>hartree_test</tt>,
+    !% <tt>derivatives</tt>, and <tt>projector</tt> tests.
+    !%End  
+    call parse_variable('TestRepetitions', 1, test%param%repetitions)
+  
+    !%Variable TestMinBlockSize
+    !%Type integer
+    !%Default 1
+    !%Section Utilities::oct-test
+    !%Description
+    !% Some tests can work with multiple blocksizes, in this case of
+    !% range of blocksizes will be tested. This variable sets the lower
+    !% bound of that range.
+    !%
+    !% Currently this variable is only used by the derivatives test.
+    !%End
+    call parse_variable('TestMinBlockSize', 1, test%param%min_blocksize)
 
-  call print_header()
+    !%Variable TestMaxBlockSize
+    !%Type integer
+    !%Default 128
+    !%Section Utilities::oct-test
+    !%Description
+    !% Some tests can work with multiple blocksizes, in this case of
+    !% range of blocksizes will be tested. This variable sets the lower
+    !% bound of that range.
+    !%
+    !% Currently this variable is only used by the derivatives test.
+    !%End
+    call parse_variable('TestMaxBlockSize', 128, test%param%max_blocksize)
 
-  call messages_print_stress(stdout, "Test mode")
-  call messages_print_var_option(stdout, "TestMode", test_mode)
-  call messages_print_var_option(stdout, "TestType", test_type)
-  call messages_print_var_value(stdout, "TestRepetitions", test_param%repetitions)
-  call messages_print_var_value(stdout, "TestMinBlockSize", test_param%min_blocksize)
-  call messages_print_var_value(stdout, "TestMaxBlockSize", test_param%max_blocksize)
-  call messages_print_stress(stdout)
+    call messages_print_stress(stdout, "Test mode")
+    call messages_print_var_option(stdout, "TestMode", test_mode)
+    call messages_print_var_option(stdout, "TestType", test%type)
+    call messages_print_var_value(stdout, "TestRepetitions", test%param%repetitions)
+    call messages_print_var_value(stdout, "TestMinBlockSize", test%param%min_blocksize)
+    call messages_print_var_value(stdout, "TestMaxBlockSize", test%param%max_blocksize)
+    call messages_print_stress(stdout)
+  
+    select case(test_mode)
+    case(OPTION__TESTMODE__HARTREE)
+      call test_hartree(test)
+    case(OPTION__TESTMODE__DERIVATIVES)
+      call test_derivatives(test)
+    case(OPTION__TESTMODE__ORTHOGONALIZATION)
+      call test_orthogonalization(test)
+    case(OPTION__TESTMODE__INTERPOLATION)
+      call test_interpolation(test)
+    case(OPTION__TESTMODE__ION_INTERACTION)
+      call test_ion_interaction()
+    case(OPTION__TESTMODE__PROJECTOR)
+      call test_projector(test)
+    case(OPTION__TESTMODE__DFT_U)
+      call test_dft_u(test)
+    case(OPTION__TESTMODE__HAMILTONIAN_APPLY)
+      call test_hamiltonian(test)
+    end select
+  
+    POP_SUB(test_run)
+  end subroutine test_run
 
-  call restart_module_init()
-  call fft_all_init()
-  call unit_system_init()
-
-  select case(test_mode)
-  case(OPTION__TESTMODE__HARTREE)
-    call test_hartree()
-  case(OPTION__TESTMODE__DERIVATIVES)
-    call test_derivatives()
-  case(OPTION__TESTMODE__ORTHOGONALIZATION)
-    call test_orthogonalization()
-  case(OPTION__TESTMODE__INTERPOLATION)
-    call test_interpolation()
-  case(OPTION__TESTMODE__ION_INTERACTION)
-    call test_ion_interaction() 
-  case(OPTION__TESTMODE__PROJECTOR)
-    call test_projector()
-  case(OPTION__TESTMODE__DFT_U)
-    call test_dft_u()
-  case(OPTION__TESTMODE__HAMILTONIAN_APPLY)
-    call test_hamiltonian()
-  end select
-
-  call fft_all_end()
-  call profiling_output()
-  call profiling_end()
-  call io_end()
-  call print_date("Calculation ended on ")
-  call messages_end()
-  call calc_mode_par_end()
-  call global_end()
-
-  contains
-
-! ---------------------------------------------------------
-  subroutine test_hartree
+  ! ---------------------------------------------------------
+  subroutine test_hartree(test)
+    type(test_t), intent(in) :: test
+    
     type(system_t) :: sys
 
     PUSH_SUB(test_hartree)
@@ -228,14 +212,16 @@ program oct_test
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
     call system_init(sys)
-    call poisson_test(sys%gr%mesh, test_param)
+    call poisson_test(sys%gr%mesh, test%param)
     call system_end(sys)
 
     POP_SUB(test_hartree)
   end subroutine test_hartree
 
  ! ---------------------------------------------------------
-  subroutine test_projector
+  subroutine test_projector(test)
+    type(test_t), intent(in) :: test
+    
     type(system_t)      :: sys
     type(epot_t) :: ep
     type(batch_t), pointer :: epsib
@@ -265,7 +251,7 @@ program oct_test
     SAFE_ALLOCATE(epsib)
     call batch_copy(sys%st%group%psib(1, 1), epsib)
 
-    do itime = 1, test_param%repetitions
+    do itime = 1, test%param%repetitions
       call zproject_psi_batch(sys%gr%mesh, ep%proj, ep%natoms, 2, &
                                sys%st%group%psib(1, 1), epsib, 1)
     end do
@@ -284,7 +270,9 @@ program oct_test
   end subroutine test_projector
 
   ! ---------------------------------------------------------
-  subroutine test_dft_u
+  subroutine test_dft_u(test)
+    type(test_t), intent(in) :: test
+
     type(system_t)      :: sys
     type(batch_t), pointer :: epsib
     integer :: itime
@@ -330,7 +318,7 @@ program oct_test
       SAFE_ALLOCATE(zdot(1:sys%st%d%dim,1:basis%orbsets(1)%norbs, 1:epsib%nst))
     end if
 
-    do itime = 1, test_param%repetitions
+    do itime = 1, test%param%repetitions
       call batch_set_zero(epsib)
       if(states_are_real(sys%st)) then
         dweight = M_ONE
@@ -369,7 +357,9 @@ program oct_test
   end subroutine test_dft_u
 
   ! ---------------------------------------------------------
-  subroutine test_hamiltonian
+  subroutine test_hamiltonian(test)
+    type(test_t), intent(in) :: test
+    
     type(system_t)      :: sys
     type(batch_t), pointer :: hpsib
     integer :: itime, terms
@@ -431,7 +421,7 @@ program oct_test
       call batch_pack(hpsib, copy = .false.)
     end if
 
-    do itime = 1, test_param%repetitions
+    do itime = 1, test%param%repetitions
       call batch_set_zero(hpsib)
       if(states_are_real(sys%st)) then
         call dhamiltonian_apply_batch(hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
@@ -466,7 +456,9 @@ program oct_test
 
 
 ! ---------------------------------------------------------
-  subroutine test_derivatives()
+  subroutine test_derivatives(test)
+    type(test_t), intent(in) :: test
+    
     type(system_t) :: sys
 
     PUSH_SUB(test_derivatives)
@@ -477,20 +469,20 @@ program oct_test
     message(2) = ''
     call messages_info(2)
 
-    if(test_type == OPTION__TESTTYPE__ALL .or. test_type == OPTION__TESTTYPE__REAL) then
-      call dderivatives_test(sys%gr%der, test_param)
+    if(test%type == OPTION__TESTTYPE__ALL .or. test%type == OPTION__TESTTYPE__REAL) then
+      call dderivatives_test(sys%gr%der, test%param)
     end if
 
-    if(test_type == OPTION__TESTTYPE__ALL .or. test_type == OPTION__TESTTYPE__COMPLEX) then
-      call zderivatives_test(sys%gr%der, test_param)
+    if(test%type == OPTION__TESTTYPE__ALL .or. test%type == OPTION__TESTTYPE__COMPLEX) then
+      call zderivatives_test(sys%gr%der, test%param)
     end if
 
-    if(test_type == OPTION__TESTTYPE__REAL_SINGLE) then
-      call sderivatives_test(sys%gr%der, test_param)
+    if(test%type == OPTION__TESTTYPE__REAL_SINGLE) then
+      call sderivatives_test(sys%gr%der, test%param)
     end if
    
-    if(test_type == OPTION__TESTTYPE__COMPLEX_SINGLE) then
-      call cderivatives_test(sys%gr%der, test_param)
+    if(test%type == OPTION__TESTTYPE__COMPLEX_SINGLE) then
+      call cderivatives_test(sys%gr%der, test%param)
     end if
 
     call system_end(sys)
@@ -500,7 +492,9 @@ program oct_test
 
   ! ---------------------------------------------------------
 
-  subroutine test_orthogonalization()
+  subroutine test_orthogonalization(test)
+    type(test_t), intent(in) :: test
+    
     type(system_t) :: sys
 
     PUSH_SUB(test_orthogonalization)
@@ -514,13 +508,13 @@ program oct_test
     message(2) = ''
     call messages_info(2)
 
-    if(test_type == OPTION__TESTTYPE__ALL .or. test_type == OPTION__TESTTYPE__REAL) then
+    if(test%type == OPTION__TESTTYPE__ALL .or. test%type == OPTION__TESTTYPE__REAL) then
       message(1) = 'Info: Real wave-functions.'
       call messages_info(1)
       call dstates_calc_orth_test(sys%st, sys%gr%mesh, sys%gr%sb)
     end if
 
-    if(test_type == OPTION__TESTTYPE__ALL .or. test_type == OPTION__TESTTYPE__COMPLEX) then
+    if(test%type == OPTION__TESTTYPE__ALL .or. test%type == OPTION__TESTTYPE__COMPLEX) then
       message(1) = 'Info: Complex wave-functions.'
       call messages_info(1)
       call zstates_calc_orth_test(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -533,14 +527,16 @@ program oct_test
 
   ! ---------------------------------------------------------
 
-  subroutine test_interpolation()
+  subroutine test_interpolation(test)
+    type(test_t), intent(in) :: test
+
     type(system_t) :: sys
 
     PUSH_SUB(test_interpolation)
 
     call system_init(sys)
 
-    if(test_type == OPTION__TESTTYPE__ALL .or. test_type == OPTION__TESTTYPE__REAL) then
+    if(test%type == OPTION__TESTTYPE__ALL .or. test%type == OPTION__TESTTYPE__REAL) then
       call messages_write('Info: Testing real interpolation routines')
       call messages_new_line()
       call messages_new_line()
@@ -549,7 +545,7 @@ program oct_test
       call dmesh_interpolation_test(sys%gr%mesh)
     end if
 
-    if(test_type == OPTION__TESTTYPE__ALL .or. test_type == OPTION__TESTTYPE__COMPLEX) then
+    if(test%type == OPTION__TESTTYPE__ALL .or. test%type == OPTION__TESTTYPE__COMPLEX) then
       call messages_new_line()
       call messages_write('Info: Testing complex interpolation routines')
       call messages_new_line()
@@ -582,7 +578,7 @@ program oct_test
   end subroutine test_ion_interaction
   
 
-end program oct_test
+end module test_oct_m
 
 !! Local Variables:
 !! mode: f90
