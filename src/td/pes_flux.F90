@@ -701,7 +701,7 @@ contains
       
       Emin = 0
       Emax = 10 
-      De   = 0.1
+      De   = CNST(0.1)
     
       if(parse_block('PES_Flux_EnergyGrid', blk) == 0) then
 

@@ -537,7 +537,7 @@ contains
           ff(1:gr%mesh%np) = psi_initial(1:gr%mesh%np, 1)*gr%mesh%x(1:gr%mesh%np, icoord)* &
             psi_ist(1:gr%mesh%np, 1)
           osc(icoord)  = dmf_integrate(gr%mesh, ff)
-          osc_strength = osc_strength + 2.0/real(gr%mesh%sb%dim)*transition_energy*abs(osc(icoord))**2.0
+          osc_strength = osc_strength + CNST(2.0)/real(gr%mesh%sb%dim)*transition_energy*abs(osc(icoord))**2
 
         end do
 
