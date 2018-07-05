@@ -47,7 +47,6 @@ module test_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
   use system_oct_m
-  use test_parameters_oct_m
   use types_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -59,11 +58,13 @@ module test_oct_m
 
   implicit none
 
-  type test_t
+  type test_parameters_t
     private
-    type(test_parameters_t) :: param
     integer :: type
-  end type test_t
+    integer :: repetitions
+    integer :: min_blocksize
+    integer :: max_blocksize
+  end type test_parameters_t
 
   public :: test_run
   
@@ -71,7 +72,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine test_run()
-    type(test_t) :: test
+    type(test_parameters_t) :: param
     integer :: test_mode
     
     PUSH_SUB(test_run)
@@ -124,8 +125,8 @@ contains
     !%Option all 3
     !% Tests for double-precision real and complex functions.
     !%End
-    call parse_variable('TestType', OPTION__TESTTYPE__ALL, test%type)
-    if(test%type < 1 .or. test%type > 5) then
+    call parse_variable('TestType', OPTION__TESTTYPE__ALL, param%type)
+    if(param%type < 1 .or. param%type > 5) then
       message(1) = "Invalid option for TestType."
       call messages_fatal(1, only_root_writes = .true.)
     endif
@@ -143,7 +144,7 @@ contains
     !% Currently this variable is used by the <tt>hartree_test</tt>,
     !% <tt>derivatives</tt>, and <tt>projector</tt> tests.
     !%End  
-    call parse_variable('TestRepetitions', 1, test%param%repetitions)
+    call parse_variable('TestRepetitions', 1, param%repetitions)
   
     !%Variable TestMinBlockSize
     !%Type integer
@@ -156,7 +157,7 @@ contains
     !%
     !% Currently this variable is only used by the derivatives test.
     !%End
-    call parse_variable('TestMinBlockSize', 1, test%param%min_blocksize)
+    call parse_variable('TestMinBlockSize', 1, param%min_blocksize)
 
     !%Variable TestMaxBlockSize
     !%Type integer
@@ -169,41 +170,41 @@ contains
     !%
     !% Currently this variable is only used by the derivatives test.
     !%End
-    call parse_variable('TestMaxBlockSize', 128, test%param%max_blocksize)
+    call parse_variable('TestMaxBlockSize', 128, param%max_blocksize)
 
     call messages_print_stress(stdout, "Test mode")
     call messages_print_var_option(stdout, "TestMode", test_mode)
-    call messages_print_var_option(stdout, "TestType", test%type)
-    call messages_print_var_value(stdout, "TestRepetitions", test%param%repetitions)
-    call messages_print_var_value(stdout, "TestMinBlockSize", test%param%min_blocksize)
-    call messages_print_var_value(stdout, "TestMaxBlockSize", test%param%max_blocksize)
+    call messages_print_var_option(stdout, "TestType", param%type)
+    call messages_print_var_value(stdout, "TestRepetitions", param%repetitions)
+    call messages_print_var_value(stdout, "TestMinBlockSize", param%min_blocksize)
+    call messages_print_var_value(stdout, "TestMaxBlockSize", param%max_blocksize)
     call messages_print_stress(stdout)
   
     select case(test_mode)
     case(OPTION__TESTMODE__HARTREE)
-      call test_hartree(test)
+      call test_hartree(param)
     case(OPTION__TESTMODE__DERIVATIVES)
-      call test_derivatives(test)
+      call test_derivatives(param)
     case(OPTION__TESTMODE__ORTHOGONALIZATION)
-      call test_orthogonalization(test)
+      call test_orthogonalization(param)
     case(OPTION__TESTMODE__INTERPOLATION)
-      call test_interpolation(test)
+      call test_interpolation(param)
     case(OPTION__TESTMODE__ION_INTERACTION)
       call test_ion_interaction()
     case(OPTION__TESTMODE__PROJECTOR)
-      call test_projector(test)
+      call test_projector(param)
     case(OPTION__TESTMODE__DFT_U)
-      call test_dft_u(test)
+      call test_dft_u(param)
     case(OPTION__TESTMODE__HAMILTONIAN_APPLY)
-      call test_hamiltonian(test)
+      call test_hamiltonian(param)
     end select
   
     POP_SUB(test_run)
   end subroutine test_run
 
   ! ---------------------------------------------------------
-  subroutine test_hartree(test)
-    type(test_t), intent(in) :: test
+  subroutine test_hartree(param)
+    type(test_parameters_t), intent(in) :: param
     
     type(system_t) :: sys
 
@@ -212,17 +213,17 @@ contains
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
     call system_init(sys)
-    call poisson_test(sys%gr%mesh, test%param)
+    call poisson_test(sys%gr%mesh, param%repetitions)
     call system_end(sys)
 
     POP_SUB(test_hartree)
   end subroutine test_hartree
 
  ! ---------------------------------------------------------
-  subroutine test_projector(test)
-    type(test_t), intent(in) :: test
+  subroutine test_projector(param)
+    type(test_parameters_t), intent(in) :: param
     
-    type(system_t)      :: sys
+    type(system_t) :: sys
     type(epot_t) :: ep
     type(batch_t), pointer :: epsib
     integer :: itime
@@ -251,7 +252,7 @@ contains
     SAFE_ALLOCATE(epsib)
     call batch_copy(sys%st%group%psib(1, 1), epsib)
 
-    do itime = 1, test%param%repetitions
+    do itime = 1, param%repetitions
       call zproject_psi_batch(sys%gr%mesh, ep%proj, ep%natoms, 2, &
                                sys%st%group%psib(1, 1), epsib, 1)
     end do
@@ -270,10 +271,10 @@ contains
   end subroutine test_projector
 
   ! ---------------------------------------------------------
-  subroutine test_dft_u(test)
-    type(test_t), intent(in) :: test
+  subroutine test_dft_u(param)
+    type(test_parameters_t), intent(in) :: param
 
-    type(system_t)      :: sys
+    type(system_t) :: sys
     type(batch_t), pointer :: epsib
     integer :: itime
     type(base_hamiltonian_t), pointer :: subsys_hm
@@ -318,7 +319,7 @@ contains
       SAFE_ALLOCATE(zdot(1:sys%st%d%dim,1:basis%orbsets(1)%norbs, 1:epsib%nst))
     end if
 
-    do itime = 1, test%param%repetitions
+    do itime = 1, param%repetitions
       call batch_set_zero(epsib)
       if(states_are_real(sys%st)) then
         dweight = M_ONE
@@ -357,10 +358,10 @@ contains
   end subroutine test_dft_u
 
   ! ---------------------------------------------------------
-  subroutine test_hamiltonian(test)
-    type(test_t), intent(in) :: test
+  subroutine test_hamiltonian(param)
+    type(test_parameters_t), intent(in) :: param
     
-    type(system_t)      :: sys
+    type(system_t) :: sys
     type(batch_t), pointer :: hpsib
     integer :: itime, terms
     type(base_hamiltonian_t), pointer :: subsys_hm
@@ -421,7 +422,7 @@ contains
       call batch_pack(hpsib, copy = .false.)
     end if
 
-    do itime = 1, test%param%repetitions
+    do itime = 1, param%repetitions
       call batch_set_zero(hpsib)
       if(states_are_real(sys%st)) then
         call dhamiltonian_apply_batch(hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
@@ -456,8 +457,8 @@ contains
 
 
 ! ---------------------------------------------------------
-  subroutine test_derivatives(test)
-    type(test_t), intent(in) :: test
+  subroutine test_derivatives(param)
+    type(test_parameters_t), intent(in) :: param
     
     type(system_t) :: sys
 
@@ -469,20 +470,20 @@ contains
     message(2) = ''
     call messages_info(2)
 
-    if(test%type == OPTION__TESTTYPE__ALL .or. test%type == OPTION__TESTTYPE__REAL) then
-      call dderivatives_test(sys%gr%der, test%param)
+    if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
+      call dderivatives_test(sys%gr%der, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
-    if(test%type == OPTION__TESTTYPE__ALL .or. test%type == OPTION__TESTTYPE__COMPLEX) then
-      call zderivatives_test(sys%gr%der, test%param)
+    if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__COMPLEX) then
+      call zderivatives_test(sys%gr%der, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
-    if(test%type == OPTION__TESTTYPE__REAL_SINGLE) then
-      call sderivatives_test(sys%gr%der, test%param)
+    if(param%type == OPTION__TESTTYPE__REAL_SINGLE) then
+      call sderivatives_test(sys%gr%der, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
    
-    if(test%type == OPTION__TESTTYPE__COMPLEX_SINGLE) then
-      call cderivatives_test(sys%gr%der, test%param)
+    if(param%type == OPTION__TESTTYPE__COMPLEX_SINGLE) then
+      call cderivatives_test(sys%gr%der, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
     call system_end(sys)
@@ -492,8 +493,8 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine test_orthogonalization(test)
-    type(test_t), intent(in) :: test
+  subroutine test_orthogonalization(param)
+    type(test_parameters_t), intent(in) :: param
     
     type(system_t) :: sys
 
@@ -508,13 +509,13 @@ contains
     message(2) = ''
     call messages_info(2)
 
-    if(test%type == OPTION__TESTTYPE__ALL .or. test%type == OPTION__TESTTYPE__REAL) then
+    if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
       message(1) = 'Info: Real wave-functions.'
       call messages_info(1)
       call dstates_calc_orth_test(sys%st, sys%gr%mesh, sys%gr%sb)
     end if
 
-    if(test%type == OPTION__TESTTYPE__ALL .or. test%type == OPTION__TESTTYPE__COMPLEX) then
+    if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__COMPLEX) then
       message(1) = 'Info: Complex wave-functions.'
       call messages_info(1)
       call zstates_calc_orth_test(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -527,8 +528,8 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine test_interpolation(test)
-    type(test_t), intent(in) :: test
+  subroutine test_interpolation(param)
+    type(test_parameters_t), intent(in) :: param
 
     type(system_t) :: sys
 
@@ -536,7 +537,7 @@ contains
 
     call system_init(sys)
 
-    if(test%type == OPTION__TESTTYPE__ALL .or. test%type == OPTION__TESTTYPE__REAL) then
+    if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
       call messages_write('Info: Testing real interpolation routines')
       call messages_new_line()
       call messages_new_line()
@@ -545,7 +546,7 @@ contains
       call dmesh_interpolation_test(sys%gr%mesh)
     end if
 
-    if(test%type == OPTION__TESTTYPE__ALL .or. test%type == OPTION__TESTTYPE__COMPLEX) then
+    if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__COMPLEX) then
       call messages_new_line()
       call messages_write('Info: Testing complex interpolation routines')
       call messages_new_line()

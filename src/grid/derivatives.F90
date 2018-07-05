@@ -41,7 +41,6 @@ module derivatives_oct_m
   use stencil_starplus_oct_m
   use stencil_stargeneral_oct_m
   use stencil_variational_oct_m
-  use test_parameters_oct_m
   use transfer_table_oct_m
   use types_oct_m
   use utils_oct_m
@@ -458,8 +457,6 @@ contains
     character(len=32) :: name
     type(nl_operator_t) :: auxop
     
-!     type(test_parameters_t) :: test_param
-
     PUSH_SUB(derivatives_build)
 
     call boundaries_init(der%boundaries, mesh)
@@ -604,11 +601,7 @@ contains
     end if
 
     ! useful for debug purposes
-!     test_param%repetitions = 1
-!     test_param%min_blocksize = 1
-!     test_param%max_blocksize = 1
-!
-!     call dderivatives_test(der, test_param)
+!     call dderivatives_test(der, 1, 1, 1)
 !     call exit(1)
 
 
