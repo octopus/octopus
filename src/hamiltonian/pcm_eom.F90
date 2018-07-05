@@ -394,7 +394,7 @@ module pcm_eom_oct_m
    !> See subroutine pcm_ief_prop_vv_ief_drl
    f1=dt*(1.d0-dt*0.5d0*drl%gm)
    f2=dt*dt*0.5d0
-   f3=1.d0-dt*drl%gm*(1.d0-dt*0.5*drl%gm)
+   f3=1.d0-dt*drl%gm*(1.d0-dt*M_HALF*drl%gm)
    f4=0.5d0*dt
    f5=drl%gm*f2
 
@@ -711,7 +711,7 @@ module pcm_eom_oct_m
     dist=sqrt(dot_product(diff,diff))
     value=dot_product(cts_act(j)%normal,diff)/dist**3       !< Eq.(5) in Refs.1-2
    else
-    value=-1.0694*sqrt(fourpi*cts_act(i)%area)
+    value=CNST(-1.0694)*sqrt(fourpi*cts_act(i)%area)
     value=value/(M_TWO*cts_act(i)%r_sphere)/cts_act(i)%area !< diagonal part is a bit cumbersome
    endif
 
@@ -733,7 +733,7 @@ module pcm_eom_oct_m
     dist=sqrt(dot_product(diff,diff))
     value=M_ONE/dist					                !< Eq.(5) in Refs.1-2
    else
-    value=1.0694*sqrt(fourpi/cts_act(i)%area) !< diagonal part is a bit cumbersome
+    value=CNST(1.0694)*sqrt(fourpi/cts_act(i)%area) !< diagonal part is a bit cumbersome
    endif
 
    POP_SUB(green_s)
@@ -811,7 +811,7 @@ module pcm_eom_oct_m
    scr2=matmul(matmul(sm12,scr1),sp12)   !< Eq.(10) in Ref.1 (paragraph after Eq.(9), Ref.2)
    do j=1,nts_act
     do i=1,nts_act
-     eigt(i,j)=0.5*(scr2(i,j)+scr2(j,i)) !< re-symmetrizing for numerical reasons
+     eigt(i,j)=M_HALF*(scr2(i,j)+scr2(j,i)) !< re-symmetrizing for numerical reasons
     enddo
    enddo
    call dsyevd(jobz,uplo,nts_act,eigt,nts_act,eigv,work,lwork, &

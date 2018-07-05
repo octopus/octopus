@@ -680,12 +680,12 @@ contains
         !Converting the angles to LatticeVectors
         !See 57_iovars/ingeo.F90 in Abinit for details
         if( abs(angles(1)-angles(2))< tol_angle .and. abs(angles(2)-angles(3))< tol_angle .and.  &
-                 (abs(angles(1)-90.0)+abs(angles(2)-90.0)+abs(angles(3)-90.0))> tol_angle ) then
+                 (abs(angles(1)-CNST(90.0))+abs(angles(2)-CNST(90.0))+abs(angles(3)-CNST(90.0)))> tol_angle ) then
 
           cosang=cos(M_PI*angles(1)/CNST(180.0));
           a2=M_TWO/M_THREE*(M_ONE-cosang);
           aa=sqrt(a2);
-          cc=sqrt(1.0-a2);
+          cc=sqrt(M_ONE-a2);
           sb%rlattice_primitive(1,1) = aa
           sb%rlattice_primitive(2,1) = M_ZERO
           sb%rlattice_primitive(3,1) = cc
