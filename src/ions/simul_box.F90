@@ -454,7 +454,7 @@ contains
           call parse_block_end(blk)
         else if ((parse_is_defined('Lsize'))) then
           call parse_variable('Lsize', -M_ONE, sb%lsize(1), units_inp%length)
-          if(sb%lsize(1)  ==  -M_ONE) then
+          if(abs(sb%lsize(1)+M_ONE)  <=  M_EPSILON) then
             call messages_input_error('Lsize')
           end if
           if(def_rsize > M_ZERO .and. sb%periodic_dim < sb%dim) &
