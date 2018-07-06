@@ -230,7 +230,7 @@ contains
     SAFE_ALLOCATE(laplace(1:gr%der%mesh%np, 1:nspin))
     
     sqrtrho = M_ZERO
-    smalldensity = CNST(5d-6)
+    smalldensity = 5d-6
 
     if(any(target_rho(:,:) < -M_EPSILON)) then
       write(message(1),*) "Target density has negative points. min value = ", minval(target_rho(:,:))
