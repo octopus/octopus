@@ -816,7 +816,13 @@ contains
             scf%abs_force = forcetmp
           end if
         end do
+      else
+        if(outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0 &
+           .and. outp%output_interval /= 0 &
+           .and. gs_run_ .and. mod(iter, outp%output_interval) == 0)  &
+          call forces_calculate(gr, geo, hm, st, vhxc_old)
       end if
+
 
       if(st%qtot == M_ZERO) then
         scf%rel_dens = M_HUGE
