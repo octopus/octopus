@@ -345,7 +345,7 @@ contains
 
     do iatom = 1, geo%natoms
       do idir = 1, gr%mesh%sb%dim
-        geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + force(idir, iatom)
+        geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + force(idir, iatom) + force_scf(idir, iatom)
         geo%atom(iatom)%f_loc(idir) = force_loc(idir, iatom)
         geo%atom(iatom)%f_nl(idir) = force_nl(idir, iatom)
         geo%atom(iatom)%f_u(idir) = force_u(idir, iatom)

@@ -411,7 +411,7 @@ contains
             do idir = 1, mesh%sb%dim
               do isp = 1, spin_channels
                 if(rr >= spline_range_max(ps%density_der(isp))) cycle
-                  drho(ip, isp, idir) = drho(ip, isp, idir) + spline_eval(ps%density_der(isp), rr)*(mesh%x(ip, idir)-pos(idir))/rr
+                drho(ip, isp, idir) = drho(ip, isp, idir) - spline_eval(ps%density_der(isp), rr)*(mesh%x(ip, idir)-pos(idir))/rr
               end do
            end do
           end do

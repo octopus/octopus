@@ -629,7 +629,8 @@ contains
     end if
 
     !We store the Hxc potential for the contribution to the forces
-    if(scf%calc_force .or. scf%conv_abs_force > M_ZERO) then
+    if(scf%calc_force .or. scf%conv_abs_force > M_ZERO &
+        .or. (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) then
       SAFE_ALLOCATE(vhxc_old(1:gr%mesh%np, 1:nspin))
     end if
     
@@ -707,7 +708,8 @@ contains
       scf%energy_diff = hm%energy%total
 
       !Used for the contribution to the forces
-      if(scf%calc_force .or. scf%conv_abs_force > M_ZERO) & 
+      if(scf%calc_force .or. scf%conv_abs_force > M_ZERO .or. &
+          (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) & 
         vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
       
       if(scf%lcao_restricted) then
@@ -820,7 +822,7 @@ contains
         if(outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0 &
            .and. outp%output_interval /= 0 &
            .and. gs_run_ .and. mod(iter, outp%output_interval) == 0)  &
-          call forces_calculate(gr, geo, hm, st, vhxc_old)
+          call forces_calculate(gr, geo, hm, st, vhxc_old=vhxc_old)
       end if
 
 
