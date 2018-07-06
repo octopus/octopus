@@ -425,12 +425,12 @@ contains
         call hamiltonian_epot_generate(hm, gr, geo, st, time = td%iter*td%dt)
       end if
 
-      call forces_calculate(gr, geo, hm, st, td%iter*td%dt, td%dt)
+      call forces_calculate(gr, geo, hm, st, t = td%iter*td%dt, dt = td%dt)
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
       if(bitand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-        call forces_calculate(gr, geo, hm, st, td%iter*td%dt, td%dt)
+        call forces_calculate(gr, geo, hm, st, t = td%iter*td%dt, dt = td%dt)
       end if  
     end if
 
@@ -613,7 +613,7 @@ contains
             call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
           end if
           call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
-          call forces_calculate(gr, geo, hm, st, iter*td%dt, td%dt)
+          call forces_calculate(gr, geo, hm, st, t = iter*td%dt, dt = td%dt)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds")
           call print_header()
         end if

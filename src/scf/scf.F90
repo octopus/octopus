@@ -524,6 +524,7 @@ contains
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:)
+    FLOAT, allocatable :: vhxc_old(:,:)
     FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
     CMPLX, allocatable :: zrhoout(:,:,:), zrhoin(:,:,:)
     type(batch_t), allocatable :: psioutb(:, :)
@@ -627,6 +628,12 @@ contains
       zrhoout = M_z0
     end if
 
+    !We store the Hxc potential for the contribution to the forces
+    if(scf%calc_force .or. scf%conv_abs_force > M_ZERO) then
+      SAFE_ALLOCATE(vhxc_old(1:gr%mesh%np, 1:nspin))
+    end if
+    
+
     select case(scf%mix_field)
     case(OPTION__MIXFIELD__POTENTIAL)
       if(.not. cmplxscl) then
@@ -698,6 +705,10 @@ contains
       scf%eigens%converged = 0
 
       scf%energy_diff = hm%energy%total
+
+      !Used for the contribution to the forces
+      if(scf%calc_force .or. scf%conv_abs_force > M_ZERO) & 
+        vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
       
       if(scf%lcao_restricted) then
         call lcao_init_orbitals(lcao, st, gr, geo)
@@ -770,7 +781,6 @@ contains
             call batch_copy_data(gr%mesh%np, st%group%psib(ib, iqn), psioutb(ib, iqn))
           end do
         end do
-        
       end select
       
       if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vout(hm%lda_u, scf%lda_u_mix)
@@ -796,7 +806,7 @@ contains
 
       ! compute forces only if they are used as convergence criterion
       if (scf%conv_abs_force > M_ZERO) then
-        call forces_calculate(gr, geo, hm, st)
+        call forces_calculate(gr, geo, hm, st, vhxc_old=vhxc_old)
         scf%abs_force = M_ZERO
         do iatom = 1, geo%natoms
           forceout(iatom,1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
@@ -1033,7 +1043,7 @@ contains
     end if
 
     ! calculate forces
-    if(scf%calc_force) call forces_calculate(gr, geo, hm, st)
+    if(scf%calc_force) call forces_calculate(gr, geo, hm, st, vhxc_old=vhxc_old)
 
     ! calculate stress
     if(scf%calc_stress) call stress_calculate(gr, hm, st, geo, ks) 
@@ -1057,6 +1067,8 @@ contains
           vec_pot_var = hm%hm_base%vector_potential)
       end if
     end if
+
+    SAFE_DEALLOCATE_A(vhxc_old)
 
     POP_SUB(scf_run)
 
