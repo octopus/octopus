@@ -446,6 +446,7 @@ contains
 
     diffdensity = M_ONE
     counter = 0
+    imax = 0
 
 
     do while(diffdensity > convdensity .and. counter < max_iter)
