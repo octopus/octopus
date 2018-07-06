@@ -1552,6 +1552,8 @@ contains
 
     stout%packed = stin%packed
 
+    stout%randomization = stin%randomization
+
     POP_SUB(states_copy)
   end subroutine states_copy
 
