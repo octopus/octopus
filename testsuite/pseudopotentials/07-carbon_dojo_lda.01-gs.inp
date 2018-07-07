@@ -27,5 +27,6 @@ ExtraStates = 2
 %
 
 ConvRelDens = 4e-6
+EigensolverTolerance = 4e-7
 
 ExperimentalFeatures = yes

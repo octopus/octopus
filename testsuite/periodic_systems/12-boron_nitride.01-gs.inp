@@ -8,6 +8,7 @@ UnitsOutput = ev_angstrom
 MixField = potential
 ExtraStates = 2
 ConvRelDens = 1e-6
+EigensolverTolerance = 1e-7
 ConvEigenError = yes
 
 XCfunctional = lda_x + lda_c_pw

@@ -28,7 +28,7 @@ LCAODimension = 18
 LCAOMaximumOrbitalRadius = 50
 
 EigenSolver = cg_new
-EigenSolverTolerance = 1e-6
+EigenSolverTolerance = 1e-10
 EigenSolverMaxIter = 20
 
 PoissonSolver = fft

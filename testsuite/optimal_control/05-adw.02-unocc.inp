@@ -29,6 +29,7 @@ TheoryLevel = independent_particles
 %
 
 ConvRelDens = 1.0e-7
+EigenSolverTolerance = 1.0e-8
 
 ExtraStates = 1
 

@@ -37,6 +37,7 @@ ExperimentalFeatures = yes
 
 ExtraStates = 5
 ConvRelDens = 1e-7
+EigensolverTolerance = 1e-8
 
 LCAOStart = lcao_states
 

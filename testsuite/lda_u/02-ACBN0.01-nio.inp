@@ -4,7 +4,7 @@ BoxShape = parallelepiped
 ExperimentalFeatures = yes
 
 EigenSolver = rmmdiis
-#EigenSolverTolerance = 1.0e-9
+EigenSolverTolerance = 1.0e-8
 #EigensolverMaxIter = 50
 ConvRelDens = 1.0e-7
 

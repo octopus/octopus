@@ -21,6 +21,7 @@ TheoryLevel = independent_particles
 %
 
 ConvRelDens = 1e-7
+EigensolverTolerance = 1e-8
 ConvEigenError = yes
 Preconditioner = no
 

@@ -35,6 +35,7 @@ ParDomains = no
 ParStates = auto
 
 ConvRelDens = 1e-6
+EigensolverTolerance = 1e-7
 
 FilterPotentials = filter_none
 

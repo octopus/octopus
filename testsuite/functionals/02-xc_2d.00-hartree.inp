@@ -30,6 +30,7 @@ TheoryLevel = hartree
 SpinComponents = spin_polarized
 
 ConvRelDens = 5e-5
+EigensolverTolerance = 5e-6
 LCAOStart = lcao_none
 
 MixingScheme = linear

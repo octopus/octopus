@@ -31,6 +31,7 @@ TheoryLevel = independent_particles
 ExtraStates = 1
 
 ConvRelDens = 1.0e-8
+EigenSolverTolerance = 1e-9
 
 ProfilingMode = prof_time
 

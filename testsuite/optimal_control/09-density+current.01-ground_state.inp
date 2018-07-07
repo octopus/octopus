@@ -25,6 +25,7 @@ TheoryLevel = independent_particles
 %
 
 ConvRelDens = 1.0e-8
+EigenSolverTolerance = 1.0e-9
 Mixing = 1.0
 MixingScheme = linear
 

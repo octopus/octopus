@@ -22,6 +22,7 @@ EigenSolver = cg_new
 
 Mixing = 0.1
 ConvRelDens = 1e-5
+EigensolverTolerance = 1e-6
 
 FilterPotentials = filter_none
 

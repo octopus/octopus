@@ -30,6 +30,7 @@ EigenSolver = lobpcg
 ExperimentalFeatures = yes
 
 ConvRelDens = 1e-6
+EigensolverTolerance = 1e-7
 
 PoissonSolver = fft
 PoissonFFTKernel = multipole_correction

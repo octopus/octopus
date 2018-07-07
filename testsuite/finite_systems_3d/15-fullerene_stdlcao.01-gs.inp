@@ -9,6 +9,7 @@ Spacing = 0.6
 EigenSolver = rmmdiis
 
 ConvRelDens = 2e-6
+EigensolverTolerance = 2e-7
 
 ExtraStates = 20
 

@@ -8,6 +8,7 @@ ExperimentalFeatures = yes
 
 EigenSolver = rmmdiis
 ConvRelDens = 1.0e-7
+EigensolverTolerance = 1.0e-8
 
 a = 7.8809
 

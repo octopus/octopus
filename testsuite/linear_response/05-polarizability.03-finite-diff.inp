@@ -19,3 +19,4 @@ ExtraStates = 3
 %
 
 ConvRelDens=1e-8
+EigenSolverTolerance=1e-9

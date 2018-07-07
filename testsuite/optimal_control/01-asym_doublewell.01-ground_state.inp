@@ -27,7 +27,7 @@ TheoryLevel = independent_particles
 "AWD1D" | 0
 %
 
-EigenSolverTolerance = 1.0e-6
+EigenSolverTolerance = 1.0e-8
 ConvRelDens = 1.0e-7
 
 

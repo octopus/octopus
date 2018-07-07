@@ -25,8 +25,7 @@ ConvRelDens = 1e-9
 LCAODimension = 18
 
 EigenSolver = cg_new
-EigenSolverTolerance = 1e-6
-
+EigenSolverTolerance = 1e-10
 EigenSolverMaxIter = 20
 
 MaximumIter = 1

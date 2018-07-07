@@ -9,6 +9,7 @@ fromScratch = yes
 
 Spacing = 0.5
 ConvRelDens = 8.0e-8
+EigensolverTolerance = 8e-9
 BoxShape = parallelepiped
 Lsize = 10
 PeriodicDimensions = 3

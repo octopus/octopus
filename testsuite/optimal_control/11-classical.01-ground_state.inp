@@ -25,7 +25,7 @@ ExcessCharge = 3
 
 EigenSolver = plan
 ConvRelDens = 1.0e-12
-EigenSolverTolerance = 1.0e-12
+EigenSolverTolerance = 1.0e-13
 SCFCalculateForces = yes
 
 stime  = 1.0

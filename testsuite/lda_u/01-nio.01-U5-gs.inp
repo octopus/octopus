@@ -63,6 +63,7 @@ KPointsUseTimeReversal = no
 
 ExtraStates = 6
 ConvRelDens = 1e-6
+EigensolverTolerance = 1e-7
 
 AOTruncation = ao_box
 OutputLDA_U = occ_matrices
