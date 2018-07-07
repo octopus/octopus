@@ -503,7 +503,8 @@ contains
  ! Implementation of the term from Chan et al.,  Phys. Rev. B 47, 4771 (1993).
  ! Here we make the approximation that the "atomic densities" are just the one 
  ! from the pseudopotential.  
- ! NTD : No idea if this is good or bad, but this is easy to implement
+ ! NTD : No idea if this is good or bad, but this is easy to implement 
+ !       and works well in practice
 subroutine forces_from_scf(gr, geo, hm, st, force_scf, vhxc_old)
   type(grid_t),                   intent(inout) :: gr
   type(geometry_t),               intent(inout) :: geo
