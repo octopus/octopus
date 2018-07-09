@@ -275,6 +275,7 @@ contains
     integer :: j, iatom, idir
     FLOAT :: x(MAX_DIM), time, global_force(1:MAX_DIM)
     FLOAT, allocatable :: force(:, :), force_loc(:, :), force_nl(:, :), force_u(:, :)
+    FLOAT, allocatable :: force_nlcc(: ,:)
     type(profile_t), save :: forces_prof
 
     call profiling_in(forces_prof, "FORCES")
@@ -292,6 +293,7 @@ contains
       geo%atom(iatom)%f_nl(1:gr%sb%dim) = M_ZERO
       geo%atom(iatom)%f_u(1:gr%sb%dim) = M_ZERO
       geo%atom(iatom)%f_fields(1:gr%sb%dim) = M_ZERO
+      geo%atom(iatom)%f_nlcc(1:gr%sb%dim) = M_ZERO
     end do
 
     ! the ion-ion and vdw terms are already calculated
@@ -315,6 +317,7 @@ contains
     SAFE_ALLOCATE(force_loc(1:gr%mesh%sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_nl(1:gr%mesh%sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_u(1:gr%mesh%sb%dim, 1:geo%natoms)) 
+    SAFE_ALLOCATE(force_nlcc(1:gr%mesh%sb%dim, 1:geo%natoms))
  
     if (states_are_real(st) ) then 
       call dforces_from_potential(gr, geo, hm, st, force, force_loc, force_nl, force_u)
@@ -322,19 +325,26 @@ contains
       call zforces_from_potential(gr, geo, hm, st, force, force_loc, force_nl, force_u)
     end if
 
+    if(associated(st%rho_core)) then
+      call forces_from_nlcc(gr, geo, hm, st, force_nlcc)
+    end if
+
     if(hm%ep%force_total_enforce) then
       call forces_set_total_to_zero(geo, force)
       call forces_set_total_to_zero(geo, force_loc)
       call forces_set_total_to_zero(geo, force_nl)
       call forces_set_total_to_zero(geo, force_u)
+      call forces_set_total_to_zero(geo, force_nlcc)
     end if
 
     do iatom = 1, geo%natoms
       do idir = 1, gr%mesh%sb%dim
-        geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + force(idir, iatom)
+        geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + force(idir, iatom) &
+                                     + force_nlcc(idir, iatom)
         geo%atom(iatom)%f_loc(idir) = force_loc(idir, iatom)
         geo%atom(iatom)%f_nl(idir) = force_nl(idir, iatom)
         geo%atom(iatom)%f_u(idir) = force_u(idir, iatom)
+        geo%atom(iatom)%f_nlcc(idir) = force_nlcc(idir, iatom)
       end do
     end do
 
@@ -342,6 +352,7 @@ contains
     SAFE_DEALLOCATE_A(force_loc)
     SAFE_DEALLOCATE_A(force_nl)
     SAFE_DEALLOCATE_A(force_u)
+    SAFE_DEALLOCATE_A(force_nlcc)
  
     !\todo forces due to the magnetic fields (static and time-dependent)
     if(present(t)) then
@@ -481,6 +492,44 @@ contains
     POP_SUB(forces_write_info)
 
   end subroutine forces_write_info
+
+ ! ----------------------------------------------------------------------
+ ! This routine add the contribution to the forces from the nonlinear core correction
+ ! see Eq. 9 of Kronik et al., J. Chem. Phys. 115, 4322 (2001)
+subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
+  type(grid_t),                   intent(inout) :: gr
+  type(geometry_t),               intent(inout) :: geo
+  type(hamiltonian_t),            intent(in)    :: hm
+  type(states_t),                 intent(inout) :: st
+  FLOAT,                          intent(out)   :: force_nlcc(:, :)
+
+  integer :: is, iatom, idir
+  FLOAT, allocatable :: drho(:,:)
+
+  PUSH_SUB(forces_from_nlcc)
+
+  SAFE_ALLOCATE(drho(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+
+  force_nlcc = M_ZERO
+
+  do iatom = geo%atoms_dist%start, geo%atoms_dist%end
+    call species_get_nlcc_grad(geo%atom(iatom)%species, geo%atom(iatom)%x, gr%mesh, drho)
+
+    do idir = 1, gr%mesh%sb%dim
+      do is = 1, hm%d%spin_channels
+        force_nlcc(idir, iatom) = force_nlcc(idir, iatom) &
+                       -dmf_dotp(gr%mesh, drho(:,idir), hm%vhxc(1:gr%mesh%np, is))/st%d%spin_channels
+      end do
+    end do
+  end do
+
+  SAFE_DEALLOCATE_A(drho)
+
+  if(geo%atoms_dist%parallel) call dforces_gather(geo, force_nlcc)
+
+  POP_SUB(forces_from_nlcc)
+end subroutine forces_from_nlcc
+                                 
 
 #include "undef.F90"
 #include "real.F90"
