@@ -202,6 +202,10 @@ contains
     !% 
     !% <i>N</i> is the total number of electrons in the problem.  A
     !% zero value means do not use this criterion.
+    !%
+    !% If you reduce this value, you should also reduce
+    !% <tt>EigensolverTolerance</tt> to a value of roughly 1/10 of
+    !% <tt>ConvRelDens</tt> to avoid convergence problems.
     !%End
     call parse_variable('ConvRelDens', CNST(1e-5), scf%conv_rel_dens)
 
