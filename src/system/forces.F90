@@ -539,7 +539,8 @@ subroutine forces_from_scf(gr, geo, hm, st, force_scf, vhxc_old)
 
         do idir = 1, gr%mesh%sb%dim
           do is = 1, hm%d%spin_channels
-            force_scf(idir, iatom) = -dmf_dotp(gr%mesh, drho(:,is,idir), dvhxc(:,is))
+            force_scf(idir, iatom) = force_scf(idir, iatom) &
+                                      -dmf_dotp(gr%mesh, drho(:,is,idir), dvhxc(:,is))
           end do
         end do
       end if
