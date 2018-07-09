@@ -174,7 +174,7 @@ contains
     call hamiltonian_not_adjoint(hm)
 
     ! setup the Hamiltonian
-    call density_calc(psi, gr, psi%rho)
+    call density_calc(psi, gr)
     call v_ks_calc(sys%ks, hm, psi, sys%geo, time = M_ZERO)
     call propagator_run_zero_iter(hm, gr, td%tr)
     if(ion_dynamics_ions_move(td%ions)) then
@@ -295,7 +295,7 @@ contains
     call hamiltonian_adjoint(hm)
 
     ! setup the Hamiltonian
-    call density_calc(psi, gr, psi%rho)
+    call density_calc(psi, gr)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
     call propagator_run_zero_iter(hm, gr, td%tr)
 
@@ -388,7 +388,7 @@ contains
     end if
 
     ! setup forward propagation
-    call density_calc(psi, gr, psi%rho)
+    call density_calc(psi, gr)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
     call propagator_run_zero_iter(hm, gr, td%tr)
     call propagator_run_zero_iter(hm, gr, tr_chi)
@@ -431,7 +431,7 @@ contains
     end do
     call update_field(td%max_iter+1, par, gr, hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
 
-    call density_calc(psi, gr, psi%rho)
+    call density_calc(psi, gr)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
 
     if( target_mode(tg) == oct_targetmode_td .or. &
@@ -501,7 +501,7 @@ contains
       call messages_fatal(1)
     end if
 
-    call density_calc(psi, gr, psi%rho)
+    call density_calc(psi, gr)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     call propagator_run_zero_iter(hm, gr, td%tr)
@@ -532,7 +532,7 @@ contains
     td%dt = -td%dt
     call update_field(0, par_chi, gr, hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
 
-    call density_calc(psi, gr, psi%rho)
+    call density_calc(psi, gr)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
 
@@ -610,7 +610,7 @@ contains
 
     SAFE_ALLOCATE(vhxc(1:gr%mesh%np, 1:hm%d%nspin))
 
-    call density_calc(psi, gr, psi%rho)
+    call density_calc(psi, gr)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     call propagator_run_zero_iter(hm, gr, td%tr)
@@ -735,7 +735,7 @@ contains
     call update_hamiltonian_psi(0, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
     call update_field(0, par_chi, gr, hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
 
-    call density_calc(psi, gr, psi%rho)
+    call density_calc(psi, gr)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
 
@@ -818,7 +818,7 @@ contains
     end if
 
     if( hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
-      call density_calc(st, gr, st%rho)
+      call density_calc(st, gr)
       call oct_exchange_set(hm%oct_exchange, st, gr%mesh)
     end if
 
@@ -873,7 +873,7 @@ contains
       end if
     end do
     if(hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
-      call density_calc(st, gr, st%rho)
+      call density_calc(st, gr)
       call v_ks_calc(ks, hm, st, geo)
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     end if

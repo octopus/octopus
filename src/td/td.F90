@@ -607,11 +607,7 @@ contains
             message(1) = "Unable to load TD states."
             call messages_fatal(1)
           end if
-          if(.not. cmplxscl) then
-            call density_calc(st, gr, st%rho)
-          else
-            call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-          end if
+          call density_calc(st, gr, cmplxscl)
           call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
           call forces_calculate(gr, geo, hm, st, iter*td%dt, td%dt)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds")
@@ -714,11 +710,7 @@ contains
 
       if(freeze_orbitals /= 0) call messages_experimental('TDFreezeOrbitals')
 
-      if(.not. cmplxscl) then
-        call density_calc(st, gr, st%rho)
-      else
-        call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-      end if
+      call density_calc(st, gr, cmplxscl)
 
       if(freeze_orbitals > 0) then
         ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
@@ -735,7 +727,7 @@ contains
         call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
         call states_freeze_orbitals(st, gr, sys%mc, n = st%nst-1)
         call v_ks_freeze_hxc(sys%ks)
-        call density_calc(st, gr, st%rho)
+        call density_calc(st, gr)
       else
         ! Normal run.
         call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)

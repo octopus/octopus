@@ -230,21 +230,21 @@ contains
       write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
         ' orbitals have been frozen.', psi%nst, ' will be propagated.'
       call messages_info(1)
-      call density_calc(psi, sys%gr, psi%rho)
+      call density_calc(psi, sys%gr)
       call v_ks_calc(sys%ks, hm, psi, sys%geo, calc_eigenval = .true.)
     elseif(freeze_orbitals < 0) then
       ! This means SAE approximation. We calculate the Hxc first, then freeze all
       ! orbitals minus one.
       write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
       call messages_info(1)
-      call density_calc(psi, sys%gr, psi%rho)
+      call density_calc(psi, sys%gr)
       call v_ks_calc(sys%ks, hm, psi, sys%geo, calc_eigenval = .true.)
       call states_freeze_orbitals(psi, sys%gr, sys%mc, n = psi%nst - 1)
       call v_ks_freeze_hxc(sys%ks)
-      call density_calc(psi, sys%gr, psi%rho)
+      call density_calc(psi, sys%gr)
     else
       ! Normal run.
-      call density_calc(psi, sys%gr, psi%rho)
+      call density_calc(psi, sys%gr)
       call v_ks_calc(sys%ks, hm, psi, sys%geo, calc_eigenval = .true.)
     end if
     

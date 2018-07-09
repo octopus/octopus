@@ -65,7 +65,8 @@ module density_oct_m
     states_freeze_orbitals,           &
     states_total_density,             &
     ddensity_accumulate_grad,         &
-    zdensity_accumulate_grad
+    zdensity_accumulate_grad,         &
+    density_get_total_density
 
   type density_calc_t
     FLOAT,                pointer :: density(:, :)
@@ -373,11 +374,14 @@ contains
 
   ! ---------------------------------------------------------
   !> Computes the density from the orbitals in st. 
-  subroutine density_calc(st, gr, density, Imdensity)
+  !> The density computed here is stored in states and this routine
+  !> must not return the density as an array.
+  !> Indeed this density is not the total density, as it does not contains the 
+  !> nonlinear core correction. This way we prevent user from using the "wrong" density.
+  subroutine density_calc(st, gr, calc_im_rho)
     type(states_t),          intent(inout)  :: st
     type(grid_t),            intent(in)     :: gr
-    FLOAT,                   intent(out)    :: density(:, :)
-    FLOAT, optional,         intent(out)    :: Imdensity(:, :)
+    logical, optional,       intent(in)     :: calc_im_rho
 
     integer :: ik, ib
     type(density_calc_t) :: dens_calc
@@ -385,14 +389,13 @@ contains
 
     PUSH_SUB(density_calc)
 
-    ASSERT(ubound(density, dim = 1) == gr%fine%mesh%np .or. ubound(density, dim = 1) == gr%fine%mesh%np_part)
-
-    cmplxscl = present(Imdensity)
+    cmplxscl = .false.
+    if(present(calc_im_rho)) cmplxscl = calc_im_rho
     
     if (cmplxscl) then
-      call density_calc_init(dens_calc, st, gr, density, Imdensity) 
+      call density_calc_init(dens_calc, st, gr, st%zrho%Re, st%zrho%Im) 
     else
-      call density_calc_init(dens_calc, st, gr, density)
+      call density_calc_init(dens_calc, st, gr, st%rho)
     end if
     
     do ik = st%d%kpt%start, st%d%kpt%end
@@ -409,6 +412,52 @@ contains
 
     POP_SUB(density_calc)
   end subroutine density_calc
+
+  ! ---------------------------------------------------------
+  !> Computes the density from the orbitals in st. 
+  !> This routine 
+  subroutine density_get_total_density(st, gr, rho, Imrho)
+    type(states_t),           intent(inout)  :: st
+    type(grid_t),             intent(in)     :: gr
+    FLOAT,                    intent(out)    :: rho(:,:)
+    FLOAT, optional, pointer, intent(inout)  :: Imrho(:,:)
+
+    integer :: ik, ib
+    type(density_calc_t) :: dens_calc
+    logical :: cmplxscl
+
+    PUSH_SUB(density_get_total_density)
+
+    cmplxscl = .false.
+    if(present(Imrho)) then
+      ASSERT(associated(Imrho))
+      cmplxscl = .true.
+    end if
+
+
+    if (cmplxscl) then
+      call density_calc_init(dens_calc, st, gr, rho, Imrho)
+    else
+      call density_calc_init(dens_calc, st, gr, rho)
+    end if
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ib = st%group%block_start, st%group%block_end
+        if(cmplxscl) then
+          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik), st%psibL(ib, ik))
+        else
+          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
+        end if
+      end do
+    end do
+
+    call density_calc_end(dens_calc)
+
+    call density_add_extra(st, gr%mesh, rho, imrho)
+
+    POP_SUB(density_get_total_density)
+  end subroutine density_get_total_density
+
 
   ! ---------------------------------------------------------
 
@@ -576,9 +625,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> this routine calculates the total electronic density,
-  !! which is the sum of the part coming from the orbitals, the
-  !! non-linear core corrections and the frozen orbitals
+  !> this routine return the total electronic density, adding the 
+  !> nonlinear core correction to the already computed electronic 
+  !> density.
   subroutine states_total_density(st, mesh, rho, Imrho)
     type(states_t),  intent(in)  :: st
     type(mesh_t),    intent(in)  :: mesh
@@ -609,7 +658,43 @@ contains
       forall(ip = 1:mesh%np, is = 1:st%d%nspin)
         rho(ip, is) = density(ip, is)
       end forall
+      call density_add_extra(st, mesh, rho)
+    else
+      forall(ip = 1:mesh%np, is = 1:st%d%nspin)
+        rho(ip, is)   = st%zrho%Re(ip, is)
+        Imrho(ip, is) = st%zrho%Im(ip, is)
+      end forall
+      call density_add_extra(st, mesh, rho, Imrho)
+    end if
 
+    POP_SUB(states_total_density)
+  end subroutine states_total_density
+
+  
+  ! ---------------------------------------------------------
+  !> this routine calculates the total electronic density,
+  !! which is the sum of the part coming from the orbitals, the
+  !! non-linear core corrections and the frozen orbitals
+  !! This routine must not be accessed outiside of this module
+  subroutine density_add_extra(st, mesh, rho, Imrho)
+    type(states_t),  intent(in)  :: st
+    type(mesh_t),    intent(in)  :: mesh
+    FLOAT,           intent(inout) :: rho(:,:)
+    FLOAT, optional, pointer, intent(inout) :: Imrho(:,:)
+
+    FLOAT, dimension(:,:), pointer :: density
+    integer :: is, ip
+    logical :: cmplxscl
+
+    PUSH_SUB(density_add_extra)
+
+    cmplxscl = .false.
+    if(present(Imrho)) then
+      ASSERT(associated(Imrho))
+      cmplxscl = .true.
+    end if
+
+    if(.not. cmplxscl) then
       if(associated(st%rho_core)) then
         forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
           rho(ip, is) = rho(ip, is) + st%rho_core(ip)/st%d%nspin
@@ -624,12 +709,6 @@ contains
       end if
   
     else
-
-      forall(ip = 1:mesh%np, is = 1:st%d%nspin)
-        rho(ip, is)   = st%zrho%Re(ip, is)
-        Imrho(ip, is) = st%zrho%Im(ip, is)
-      end forall
-
       if(associated(st%rho_core)) then
         forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
           rho(ip, is)   = rho(ip, is)   + st%rho_core(ip)/st%d%nspin
@@ -647,8 +726,9 @@ contains
       
     end if
 
-    POP_SUB(states_total_density)
-  end subroutine states_total_density
+    POP_SUB(density_add_extra)
+  end subroutine density_add_extra
+
 
 #include "undef.F90"
 #include "real.F90"

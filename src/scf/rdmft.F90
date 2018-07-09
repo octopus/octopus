@@ -642,7 +642,7 @@ contains
     lambda = M_ZERO
     FO = M_ZERO
     if (rdm%do_basis.eqv..false.) then 
-      call density_calc (st,gr,st%rho)
+      call density_calc (st,gr)
       call v_ks_calc(ks,hm,st,geo)
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     end if
@@ -726,7 +726,7 @@ contains
     smallstep = 1d-10
     thresh = 1d-10
 
-    call density_calc (st, gr, st%rho)
+    call density_calc (st, gr)
     call v_ks_calc(ks, hm, st, geo)
     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
 
@@ -782,7 +782,7 @@ contains
         enddo !jst
         
         !calculate total energy
-        call density_calc (st, gr, st%rho)
+        call density_calc (st, gr)
         call v_ks_calc(ks, hm, st, geo)
         call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
         call rdm_derivatives(rdm, hm, st, gr)
@@ -866,7 +866,7 @@ contains
     pot = M_ZERO
     E_deriv_corr = M_ZERO    
 
-    call density_calc(st, gr, rho_spin)
+    call density_get_total_density(st, gr, rho_spin)
     do ii = 1, hm%d%ispin
       rho(:) = rho_spin(:, ii)
     end do
@@ -956,7 +956,7 @@ contains
       g_h = M_ZERO
     
       !calculate the Lagrange multiplyer lambda matrix on the grid, Eq. (9), Piris and Ugalde, Vol.13, No. 13, J. Comput. Chem.
-      call density_calc(st, gr, rho)
+      call density_get_total_density(st, gr, rho)
       do ist =1, hm%d%ispin
         rho_tot(:) = rho(:, ist)
       end do

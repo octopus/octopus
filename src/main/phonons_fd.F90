@@ -171,7 +171,7 @@ contains
 
         ! first force
         call hamiltonian_epot_generate(hm, gr, geo, st)
-        call density_calc(st, gr, st%rho)
+        call density_calc(st, gr)
         call v_ks_calc(ks, hm, st, geo, calc_eigenval=.true.)
         call energy_calc_total (hm, gr, st)
         call scf_mix_clear(scf)
@@ -187,7 +187,7 @@ contains
 
         ! second force
         call hamiltonian_epot_generate(hm, gr, geo, st)
-        call density_calc(st, gr, st%rho)
+        call density_calc(st, gr)
         call v_ks_calc(ks, hm, st, geo, calc_eigenval=.true.)
         call energy_calc_total(hm, gr, st)
         call scf_mix_clear(scf)

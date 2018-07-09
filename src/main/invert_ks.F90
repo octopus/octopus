@@ -92,7 +92,7 @@ contains
     call hamiltonian_update(hm, sys%gr%mesh, sys%gr%der%boundaries)
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
                          sys%ks%ks_inversion%aux_st, hm, 1)
-    call density_calc(sys%ks%ks_inversion%aux_st, sys%gr, sys%ks%ks_inversion%aux_st%rho)
+    call density_calc(sys%ks%ks_inversion%aux_st, sys%gr)
     
     write(message(1),'(a)') "Calculating KS potential"
     call messages_info(1)
@@ -118,7 +118,7 @@ contains
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
          sys%ks%ks_inversion%aux_st, hm, 1)
     
-    call density_calc(sys%ks%ks_inversion%aux_st, sys%gr, sys%ks%ks_inversion%aux_st%rho)
+    call density_calc(sys%ks%ks_inversion%aux_st, sys%gr)
 
     diffdensity = M_ZERO
     do jj = 1, nspin

@@ -210,11 +210,7 @@ contains
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     end if
 
-    if(.not. hm%cmplxscl%space) then
-      call density_calc(st, gr, st%rho)
-    else
-      call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-    end if
+    call density_calc(st, gr, hm%cmplxscl%space)
 
     POP_SUB(propagator_dt.exponential_midpoint)
   end subroutine exponential_midpoint

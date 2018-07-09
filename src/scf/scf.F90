@@ -736,11 +736,7 @@ contains
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
       ! compute output density, potential (if needed) and eigenvalues sum
-      if(cmplxscl) then
-        call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-      else
-        call density_calc(st, gr, st%rho)
-      end if
+      call density_calc(st, gr, cmplxscl)
 
       if(.not. cmplxscl) then
         rhoout(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
@@ -875,7 +871,7 @@ contains
           end do
         end do
 
-        call density_calc(st, gr, st%rho)
+        call density_calc(st, gr, cmplxscl)
         call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
         
       case(OPTION__MIXFIELD__NONE)

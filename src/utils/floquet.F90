@@ -134,7 +134,7 @@ program oct_floquet
      call messages_fatal(1)
   end if
 
-  call density_calc(st, gr, st%rho)
+  call density_calc(st, gr)
   call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = M_ZERO)
   call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
 

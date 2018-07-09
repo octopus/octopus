@@ -52,7 +52,7 @@
       message(2) = 'supply an "OCTTargetTransformStates" block to create the superposition.'
       call messages_fatal(2)
     end if
-    call density_calc(tg%st, gr, tg%st%rho)
+    call density_calc(tg%st, gr)
     
     POP_SUB(target_init_gstransformation)
   end subroutine target_init_gstransformation

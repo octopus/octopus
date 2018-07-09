@@ -318,7 +318,7 @@ contains
     
     call hamiltonian_update(aux_hm, gr%mesh, gr%der%boundaries)
     call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
-    call density_calc(st, gr, st%rho)
+    call density_calc(st, gr)
 
     SAFE_DEALLOCATE_A(sqrtrho)
     SAFE_DEALLOCATE_A(laplace)
@@ -463,7 +463,7 @@ contains
 
       call hamiltonian_update(aux_hm, gr%mesh, gr%der%boundaries)
       call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
-      call density_calc(st, gr, st%rho)      
+      call density_calc(st, gr)      
 
       ! Iterative inversion with fixed parameters in Stella Verstraete method
       if (method == XC_INV_METHOD_VS_ITER) then
@@ -589,7 +589,7 @@ contains
 
     call hamiltonian_update(aux_hm, gr%mesh, gr%der%boundaries)
     call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
-    call density_calc(st, gr, st%rho)
+    call density_calc(st, gr)
     
     write(message(1),'(a,I8)') "Iterative KS inversion, iterations needed:", counter
     call messages_info(1)
@@ -620,7 +620,7 @@ contains
 
     np = gr%mesh%np
 
-    call density_calc(st, gr, st%rho)
+    call density_calc(st, gr)
     
     if(present(time)) then
       write(message(1),'(A,F18.12)') 'xc_ks_inversion_calc - time:', time

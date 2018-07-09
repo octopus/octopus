@@ -286,7 +286,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! Collect the results.
 
-    call density_calc(st, gr, st%rho)
+    call density_calc(st, gr)
     if(ion_dynamics_ions_move(ions)) then
       do iatom = 1, geo%natoms
         geo%atom(iatom)%x(1:geo%space%dim) = posfinal(:, iatom)
@@ -353,7 +353,7 @@ contains
         call hamiltonian_epot_generate(hm, gr, geo, stphi, time = tau)
       end if
       if(.not.oct_exchange_enabled(hm%oct_exchange)) then
-        call density_calc(stphi, gr, stphi%rho)
+        call density_calc(stphi, gr)
         call v_ks_calc(ks, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), time = tau)
       else
         call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = tau)
@@ -587,7 +587,7 @@ contains
             call states_set_state(st, gr%mesh, ist, ik, k2(:, :, ist, ik))
           end do
         end do
-        call density_calc(st, gr, st%rho)
+        call density_calc(st, gr)
         call v_ks_calc(ks, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
       end if
       if(ion_dynamics_ions_move(ions)) then
@@ -674,11 +674,7 @@ contains
       end do
     end do
 
-    if(.not. hm%cmplxscl%space) then
-      call density_calc(st, gr, st%rho)
-    else
-      call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-    end if
+    call density_calc(st, gr, hm%cmplxscl%space)
 
     SAFE_DEALLOCATE_A(k2)
     SAFE_DEALLOCATE_A(oldk2)
@@ -793,7 +789,7 @@ contains
           call states_set_state(st, gr%mesh, ist, ik, yn1(:, :, ist, ik))
         end do
       end do
-      call density_calc(st, gr, st%rho)
+      call density_calc(st, gr)
       call v_ks_calc(ks, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
@@ -830,7 +826,7 @@ contains
           call states_set_state(st, gr%mesh, ist, ik, yn2(:, :, ist, ik))
         end do
       end do
-      call density_calc(st, gr, st%rho)
+      call density_calc(st, gr)
       call v_ks_calc(ks, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
@@ -948,11 +944,7 @@ contains
       end do
     end do
 
-    if(.not. hm%cmplxscl%space) then
-      call density_calc(st, gr, st%rho)
-    else
-      call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-    end if
+    call density_calc(st, gr, hm%cmplxscl%space)
 
     SAFE_DEALLOCATE_A(rhs1)
     SAFE_DEALLOCATE_A(rhs2)

@@ -154,11 +154,7 @@ contains
       SAFE_DEALLOCATE_A(vhxc_t2)
     end if
 
-    if(.not. hm%cmplxscl%space) then
-      call density_calc(st, gr, st%rho)
-    else
-      call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-    end if
+    call density_calc(st, gr, hm%cmplxscl%space)
 
     POP_SUB(td_etrs)
   end subroutine td_etrs
@@ -270,11 +266,7 @@ contains
         end do
       end do
 
-      if(.not. hm%cmplxscl%space) then
-        call density_calc(st, gr, st%rho)
-      else
-        call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-      end if
+      call density_calc(st, gr, hm%cmplxscl%space)
 
       call v_ks_calc(ks, hm, st, geo, time = time, calc_current = .false.)
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )

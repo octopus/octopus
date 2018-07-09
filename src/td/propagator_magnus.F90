@@ -120,11 +120,7 @@ contains
 
     SAFE_DEALLOCATE_A(psi)
 
-    if(.not. hm%cmplxscl%space) then
-      call density_calc(st, gr, st%rho)
-    else
-      call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-    end if
+    call density_calc(st, gr, hm%cmplxscl%space)
 
     SAFE_DEALLOCATE_A(vaux)
     POP_SUB(propagator_dt.td_magnus)
@@ -193,7 +189,7 @@ contains
       end do
     end do
 
-    call density_calc(st, gr, st%rho)
+    call density_calc(st, gr, hm%cmplxscl%space)
 
     SAFE_DEALLOCATE_A(vhxc1)
     SAFE_DEALLOCATE_A(vhxc2)

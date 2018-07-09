@@ -247,11 +247,7 @@ contains
 
     end if
 
-    if(.not. hm%cmplxscl%space) then
-      call density_calc(st, gr, st%rho)
-    else
-      call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-    end if
+    call density_calc(st, gr, hm%cmplxscl%space)
 
     !restore to time 'time - dt'
     if(ion_dynamics_ions_move(ions)) then

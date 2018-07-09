@@ -114,7 +114,7 @@
           SAFE_DEALLOCATE_A(psi)
           call states_end(tmp_st)
 
-          call density_calc(tg%st, gr, tg%st%rho)
+          call density_calc(tg%st, gr)
           do ip = 1, gr%mesh%np
             tg%rho(ip) = sum(tg%st%rho(ip, 1:tg%st%d%spin_channels))
           end do
