@@ -53,6 +53,10 @@ module distributed_oct_m
     integer, allocatable :: num(:)
     type(mpi_grp_t)      :: mpi_grp
   end type distributed_t
+
+  interface distributed_allgather
+    module procedure ddistributed_allgather, zdistributed_allgather
+  end interface distributed_allgather
   
 contains
 
@@ -207,32 +211,14 @@ contains
     POP_SUB(distributed_end)
   end subroutine distributed_end
 
-  ! --------------------------------------------------------
+#include "undef.F90"
+#include "real.F90"
+#include "distributed_inc.F90"
 
-  subroutine distributed_allgather(this, aa)
-    type(distributed_t), intent(in)    :: this
-    FLOAT,               intent(inout) :: aa(:)
-
-    integer, allocatable :: displs(:)
-
-    if(.not. this%parallel) return
-    
-    PUSH_SUB(distributed_allgather)
-
-    SAFE_ALLOCATE(displs(0:this%mpi_grp%size - 1))
-
-    displs(0:this%mpi_grp%size - 1) = this%range(1, 0:this%mpi_grp%size - 1) - 1
-
-#ifdef HAVE_MPI    
-    call MPI_Allgatherv(MPI_IN_PLACE, this%nlocal, MPI_FLOAT, &
-      aa(1), this%num(0), displs(0), MPI_FLOAT, this%mpi_grp%comm, mpi_err)
-#endif
-    
-    SAFE_DEALLOCATE_A(displs)
-    
-    POP_SUB(distributed_allgather)
-  end subroutine distributed_allgather
-
+#include "undef.F90"
+#include "complex.F90"
+#include "distributed_inc.F90"
+  
 end module distributed_oct_m
 
 

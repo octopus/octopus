@@ -84,6 +84,7 @@ libbasic_a_SOURCES = $(libbasic_c_srcs) $(libbasic_f_srcs)
 noinst_HEADERS =             \
 	accel_inc.F90        \
 	comm_inc.F90         \
+	distributed_inc.F90  \
 	io_binary.h          \
         io_binary_f_inc.F90  \
 	loct_pointer_inc.F90 \
@@ -116,7 +117,7 @@ calc_mode_par.o : calc_mode_par.F90 multicomm.o messages.o global.o
 command_line.o : command_line.F90 
 comm.o : comm.F90 comm_inc.F90 profiling.o types.o mpi.o messages.o global.o 
 debug.o : debug.F90 parser.o global.o 
-distributed.o : distributed.F90 varinfo.o profiling.o parser.o multicomm.o mpi.o messages.o loct.o io.o global.o 
+distributed.o : distributed.F90 distributed_inc.F90 varinfo.o profiling.o parser.o multicomm.o mpi.o messages.o loct.o io.o global.o 
 global.o : global.F90 varinfo.o mpi.o loct.o hardware.o 
 hardware.o : hardware.F90 
 ialist.o : ialist.F90 profiling.o messages.o global.o 
