@@ -130,8 +130,6 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
       return
     end if
 
-    if(mesh%parallel_in_domains) np = restart%mesh_dist%nlocal
-
     SAFE_ALLOCATE(read_ff(1:np))
   else
     np = mesh%np
@@ -151,6 +149,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
     else
       xlocal = mesh%vp%xlocal
     endif
+
     call io_binary_read_parallel(io_workpath(full_filename), mesh%mpi_grp%comm, xlocal, np, read_ff, ierr)
   else
     call io_binary_read(io_workpath(full_filename), np, read_ff, ierr)
@@ -175,6 +174,8 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
 
   if (restart_has_map(restart)) then
 
+    if(mesh%parallel_in_domains) call distributed_allgather(restart%mesh_dist, read_ff)
+    
     if(allocated(restart%coeff)) then
 
       npoints = ubound(restart%map, dim = 1)
