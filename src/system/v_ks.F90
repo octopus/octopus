@@ -860,7 +860,7 @@ contains
         ! remove non-local core corrections
         if(associated(st%rho_core)) then
           forall(ip = 1:ks%gr%fine%mesh%np)
-            ks%calc%total_density(ip) = ks%calc%total_density(ip) - st%rho_core(ip)*ks%calc%amaldi_factor
+            ks%calc%total_density(ip) = ks%calc%total_density(ip) - st%rho_core(ip)*ks%calc%amaldi_factor/st%d%spin_channels
           end forall
         end if
       else
