@@ -1,3 +1,5 @@
+CalculationMode = test
+
 TestMode = dft_u
 TestRepetitions = 10
 
