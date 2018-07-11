@@ -541,7 +541,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
   ASSERT(batch_type(aa) == R_TYPE_VAL)
   packed_on_entry = batch_status(aa) == BATCH_NOT_PACKED
   if (packed_on_entry) then
-    batch_unpack(aa, force=.true.)
+    call batch_unpack(aa, force=.true.)
   end if
 
   if(.not. mesh%parallel_in_domains) then
@@ -727,7 +727,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
   end if
 
   if (packed_on_entry) then
-    batch_pack(aa)
+    call batch_pack(aa)
   end if
   POP_SUB(X(mesh_batch_exchange_points))
 end subroutine X(mesh_batch_exchange_points)
