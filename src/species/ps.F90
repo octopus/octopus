@@ -297,7 +297,7 @@ contains
       end if
 
     case(PSEUDO_FORMAT_HGH)
-      ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
+      ps%pseudo_type   = PSEUDO_TYPE_KLEINMAN_BYLANDER
       ps%projector_type = PROJ_HGH
       
       call hgh_init(ps_hgh, trim(filename))
@@ -489,14 +489,14 @@ contains
     if(ps%pseudo_type == PSEUDO_TYPE_SEMILOCAL) then
       call messages_write("    orbital origin   :")
       select case(ps%file_format)
-      case(PSEUDO_FORMAT_PSF, PSEUDO_FORMAT_HGH)
+      case(PSEUDO_FORMAT_PSF)
         call messages_write(" calculated");
       case default
         call messages_write(" from file");
       end select
       call messages_info()
     end if
-    
+
     call messages_write("    lmax             :")
     call messages_write(ps%lmax, fmt = '(i2)')
     call messages_info()
