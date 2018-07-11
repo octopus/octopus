@@ -18,7 +18,7 @@
 ## 02110-1301, USA.
 ##
 
-hghdir = $(pkgdatadir)/pseudopotentials/HGH
+hghdir = $(pkgdatadir)/pseudopotentials/HGH/lda
 
 dist_hgh_DATA = \
 	Ag.hgh \
