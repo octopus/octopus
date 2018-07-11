@@ -481,8 +481,8 @@ contains
         end if
         ! copy information and adjust units
         do iatom = 1, g_opt%geo%natoms
-          if(all(xyz%atom(iatom)%x(1:g_opt%dim) == M_ZERO &
-                 .or.xyz%atom(iatom)%x(1:g_opt%dim) == M_ONE)) then
+          if(all(abs(xyz%atom(iatom)%x(1:g_opt%dim)) <= M_EPSILON &
+                 .or.abs(xyz%atom(iatom)%x(1:g_opt%dim)-M_ONE) <= M_EPSILON)) then
             g_opt%geo%atom(iatom)%c = xyz%atom(iatom)%x
           else
             write(message(1), '(a)') 'Constrains can only be 0 or 1.'
@@ -748,7 +748,7 @@ contains
       if(gopt%fixed_atom == iatom) cycle
       if(.not. gopt%geo%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
-        if(gopt%geo%atom(iatom)%c(idir) == M_ZERO) then
+        if(abs(gopt%geo%atom(iatom)%c(idir)) <= M_EPSILON) then
           grad(icoord) = -gopt%geo%atom(iatom)%f(idir)
         else
           grad(icoord) = M_ZERO
@@ -776,7 +776,7 @@ contains
       if(gopt%fixed_atom == iatom) cycle      
       if(.not. gopt%geo%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
-        if(gopt%geo%atom(iatom)%c(idir) == M_ZERO) &
+        if(abs(gopt%geo%atom(iatom)%c(idir)) <= M_EPSILON) &
           gopt%geo%atom(iatom)%x(idir) = coords(icoord)
         if(gopt%fixed_atom /= 0) then
           gopt%geo%atom(iatom)%x(idir) = gopt%geo%atom(iatom)%x(idir) + gopt%geo%atom(gopt%fixed_atom)%x(idir)

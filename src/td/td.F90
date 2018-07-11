@@ -830,7 +830,7 @@ contains
 
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
-      if(hm%ep%kick%time  ==  M_ZERO) then
+      if(abs(hm%ep%kick%time)  <=  M_EPSILON) then
         if( .not.hm%pcm%localf ) then
           if(.not. cmplxscl) then
             call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)

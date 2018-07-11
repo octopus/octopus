@@ -719,7 +719,7 @@ contains
       do j = k+1, n
         sumx2 = sumx2 + xx(j)**2
       end do
-      if(sumx2.eq.M_ZERO .and. xx(k).eq. M_ZERO) exit
+      if(abs(sumx2)<=M_EPSILON .and. abs(xx(k))<= M_EPSILON) exit
       if( k < n-1 ) then
         u(k) = atan2(sqrt(sumx2), xx(k))
       else
@@ -1080,7 +1080,7 @@ contains
 
     PUSH_SUB(numder_ridders)
     
-    if(h == M_ZERO) then
+    if(abs(h) <= M_EPSILON) then
       message(1) = "h must be nonzero in numder_ridders"
       call messages_fatal(1)
     end if

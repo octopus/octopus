@@ -446,7 +446,7 @@ contains
 
         ! if this frequency is zero and this is not the first
         ! iteration we do not have to do anything
-        if(iomega > 1 .and. em_vars%freq_factor(ifactor) == M_ZERO) have_to_calculate = .false. 
+        if(iomega > 1 .and. abs(em_vars%freq_factor(ifactor)) <= M_EPSILON) have_to_calculate = .false. 
 
         if(ifactor > 1 .and. (.not. em_vars%calc_magnetooptics)) then 
 

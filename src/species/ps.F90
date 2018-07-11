@@ -1187,7 +1187,7 @@ contains
           do ic = 1, ps_xml%nchannels
             
             do ip = 1, ps%g%nrval
-              kbprojector(ip) = 0.0
+              kbprojector(ip) = M_ZERO
               if(ip <= ps_xml%grid_size) then
                 do jc = 1, ps_xml%nchannels
                   kbprojector(ip) = kbprojector(ip) + matrix(jc, ic)*ps_xml%projector(ip, ll, jc)
@@ -1220,9 +1220,9 @@ contains
           ps%conf%occ(ii, 1) = ps_xml%wf_occ(ii)
         end if
 
-        ps%conf%j(ii) = 0.0
+        ps%conf%j(ii) = M_ZERO
         if(pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
-          ps%conf%j(ii) = 0.5*pseudo_wavefunction_2j(ps_xml%pseudo, ii)
+          ps%conf%j(ii) = M_HALF*pseudo_wavefunction_2j(ps_xml%pseudo, ii)
         end if
 
         do ip = 1, ps%g%nrval
