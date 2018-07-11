@@ -2035,7 +2035,7 @@ contains
 
     case default
       if(.not. parameter_defined(OPTION__SPECIES__MASS)) then
-        spec%mass = 1.0
+        spec%mass = M_ONE
         call messages_write('Info: default mass for species '//trim(spec%label)//':')
         call messages_write(spec%mass)
         call messages_write(' amu.')
@@ -2043,7 +2043,7 @@ contains
       end if
 
       if(.not. parameter_defined(OPTION__SPECIES__VDW_RADIUS)) then
-        spec%vdw_radius = 0.0
+        spec%vdw_radius = M_ZERO
         call messages_write('Info: default mass for species '//trim(spec%label)//':')
         call messages_write(spec%vdw_radius)
         call messages_write(' [b]')

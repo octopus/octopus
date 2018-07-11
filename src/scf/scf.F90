@@ -202,6 +202,10 @@ contains
     !% 
     !% <i>N</i> is the total number of electrons in the problem.  A
     !% zero value means do not use this criterion.
+    !%
+    !% If you reduce this value, you should also reduce
+    !% <tt>EigensolverTolerance</tt> to a value of roughly 1/10 of
+    !% <tt>ConvRelDens</tt> to avoid convergence problems.
     !%End
     call parse_variable('ConvRelDens', CNST(1e-5), scf%conv_rel_dens)
 
@@ -825,15 +829,14 @@ contains
           call forces_calculate(gr, geo, hm, st, vhxc_old=vhxc_old)
       end if
 
-
-      if(st%qtot == M_ZERO) then
+      if(abs(st%qtot) <= M_EPSILON) then
         scf%rel_dens = M_HUGE
       else
         scf%rel_dens = scf%abs_dens / st%qtot
       end if
 
       scf%abs_ev = abs(evsum_out - evsum_in)
-      if(abs(evsum_out) == M_ZERO) then
+      if(abs(evsum_out) <= M_EPSILON) then
         scf%rel_ev = M_HUGE
       else
         scf%rel_ev = scf%abs_ev / abs(evsum_out)

@@ -407,10 +407,10 @@ contains
     f_alpha = CNST(0.99)
     n_min = 5
     f_inc = CNST(1.1)
-    dt_max = 10.0 * dt
+    dt_max = CNST(10.0) * dt
     f_dec = CNST(0.5)
 
-    maxmove = 0.2 * P_Ang 
+    maxmove = CNST(0.2) * P_Ang 
     
     grad = M_ZERO
 
@@ -437,13 +437,13 @@ contains
       end select
 
       if (n_iter /= 1) then 
-        p_value = 0.0
+        p_value = M_ZERO
         do i_tmp = 0, dim/3 - 1
           p_value = p_value - grad(3*i_tmp+1)*vel(3*i_tmp+1) - grad(3*i_tmp+2)*vel(3*i_tmp+2) - grad(3*i_tmp+3)*vel(3*i_tmp+3)
         end do
 
-        if(p_value > 0.0) then
-          vel(1:dim) = (1.0 - alpha) * vel(1:dim) - alpha * grad(1:dim) * lalg_nrm2(dim,vel) / lalg_nrm2(dim,grad)
+        if(p_value > M_ZERO) then
+          vel(1:dim) = (M_ONE - alpha) * vel(1:dim) - alpha * grad(1:dim) * lalg_nrm2(dim,vel) / lalg_nrm2(dim,grad)
           if(p_times > n_min) then
             dt = min(dt * f_inc , dt_max)
             alpha = alpha * f_alpha

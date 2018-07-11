@@ -950,7 +950,7 @@ contains
         select case (st%d%ispin)
         case (UNPOLARIZED, SPIN_POLARIZED)
           do ispin = 1, st%d%nspin
-            if (qsp(ispin) == M_ZERO) cycle
+            if (abs(qsp(ispin)) <= M_EPSILON) cycle
 
             rho = M_ZERO
             vxc_sic = M_ZERO
@@ -1222,7 +1222,7 @@ contains
       SAFE_DEALLOCATE_P(ks%calc%b_ind)
     end if
 
-    if(ks%theory_level == INDEPENDENT_PARTICLES .or. ks%calc%amaldi_factor == M_ZERO) then
+    if(ks%theory_level == INDEPENDENT_PARTICLES .or. abs(ks%calc%amaldi_factor) <= M_EPSILON) then
 
       hm%vhxc = M_ZERO
       hm%energy%intnvxc     = M_ZERO

@@ -2669,7 +2669,7 @@ contains
     !%End
     call parse_variable('TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
     call messages_print_var_value(stdout,'Frequency used for Floquet analysis', omega)
-    if(omega==M_ZERO) then
+    if(abs(omega)<=M_EPSILON) then
        message(1) = "Please give a non-zero value for TDFloquetFrequency"
        call messages_fatal(1)
     endif

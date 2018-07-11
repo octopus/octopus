@@ -1,3 +1,5 @@
+CalculationMode = test
+
 TestMode = hamiltonian_apply
 TestRepetitions = 3
 TestHamiltonianApply = term_local_potential

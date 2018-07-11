@@ -58,7 +58,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
       call species_iwf_j(geo%atom(ia)%species, 1, jj)
       if(abs(jj) > M_EPSILON) hasjdependence = .true.
 
-      if(hasjdependence .and. hubbardj == M_ZERO) then
+      if(hasjdependence .and. abs(hubbardj) <= M_EPSILON) then
         norb = norb+2
       else
         norb = norb+1

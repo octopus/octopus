@@ -549,7 +549,7 @@ subroutine X(linear_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
   ASSERT(.not. st%parallel_in_states)
   do jst = 1, st%nst
     alpha_j = lr_alpha_j(st, jst, ik)
-    if(alpha_j == M_ZERO) cycle
+    if(abs(alpha_j) <= M_EPSILON) cycle
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
 
