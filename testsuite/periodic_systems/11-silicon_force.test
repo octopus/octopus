@@ -95,3 +95,40 @@ match ; Stress (yz)   ; GREPFIELD(static/info, 'T_{ij}', 4, 2) ;  -1.103488E-04
 match ; Stress (zy)   ; GREPFIELD(static/info, 'T_{ij}', 3, 3) ;  -1.104294E-04
 match ; Stress (zx)   ; GREPFIELD(static/info, 'T_{ij}', 2, 3) ;   4.529804E-06
 match ; Stress (xz)   ; GREPFIELD(static/info, 'T_{ij}', 4, 1) ;   4.517699E-06
+
+
+Input      : 12-silicon_force.02-nlcc.inp
+
+match ; Force 1 (x)   ; GREPFIELD(static/info, '1        Si', 3) ; -0.010084
+match ; Force 1 (y)   ; GREPFIELD(static/info, '1        Si', 4) ; -0.024164
+match ; Force 1 (z)   ; GREPFIELD(static/info, '1        Si', 5) ;  0.004387
+
+match ; Force 2 (x)   ; GREPFIELD(static/info, '2        Si', 3) ; -0.038717
+match ; Force 2 (y)   ; GREPFIELD(static/info, '2        Si', 4) ;  0.015356
+match ; Force 2 (z)   ; GREPFIELD(static/info, '2        Si', 5) ;  0.007483
+
+match ; Force 3 (x)   ; GREPFIELD(static/info, '3        Si', 3) ; -0.039494
+match ; Force 3 (y)   ; GREPFIELD(static/info, '3        Si', 4) ; -0.010685
+match ; Force 3 (z)   ; GREPFIELD(static/info, '3        Si', 5) ; -0.017051
+
+match ; Force 4 (x)   ; GREPFIELD(static/info, '4        Si', 3) ;  0.008520
+match ; Force 4 (y)   ; GREPFIELD(static/info, '4        Si', 4) ;  0.014734
+match ; Force 4 (z)   ; GREPFIELD(static/info, '4        Si', 5) ; -0.014143
+
+match ; Force 5 (x)   ; GREPFIELD(static/info, '5        Si', 3) ;  0.035974
+match ; Force 5 (y)   ; GREPFIELD(static/info, '5        Si', 4) ;  0.030096
+match ; Force 5 (z)   ; GREPFIELD(static/info, '5        Si', 5) ;  0.033559
+
+match ; Force 6 (x)   ; GREPFIELD(static/info, '6        Si', 3) ;  0.008332
+match ; Force 6 (y)   ; GREPFIELD(static/info, '6        Si', 4) ; -0.027652
+match ; Force 6 (z)   ; GREPFIELD(static/info, '6        Si', 5) ;  0.029756
+
+match ; Force 7 (x)   ; GREPFIELD(static/info, '7        Si', 3) ; -0.001415
+match ; Force 7 (y)   ; GREPFIELD(static/info, '7        Si', 4) ;  0.031166
+match ; Force 7 (z)   ; GREPFIELD(static/info, '7        Si', 5) ; -0.027760
+
+match ; Force 8 (x)   ; GREPFIELD(static/info, '8        Si', 3) ;  0.032019
+match ; Force 8 (y)   ; GREPFIELD(static/info, '8        Si', 4) ; -0.026040
+match ; Force 8 (z)   ; GREPFIELD(static/info, '8        Si', 5) ; -0.019500
+
+

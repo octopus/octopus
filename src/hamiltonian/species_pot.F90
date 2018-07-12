@@ -675,12 +675,12 @@ contains
       do icell = 1, periodic_copy_num(pp)
         center(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
         do ip = 1, mesh%np
-          call mesh_r(mesh, ip, rr, origin = pos)
+          call mesh_r(mesh, ip, rr, origin = center)
           rr = max(rr, r_small)
 
           do idir = 1, mesh%sb%dim
             if(rr >= spline_range_max(ps%core)) cycle
-              rho_core_grad(ip, idir) = rho_core_grad(ip, idir) - spline_eval(ps%core, rr)*(mesh%x(ip, idir)-pos(idir))/rr
+              rho_core_grad(ip, idir) = rho_core_grad(ip, idir) - spline_eval(ps%core, rr)*(mesh%x(ip, idir)-center(idir))/rr
           end do
         end do
       end do
