@@ -97,7 +97,7 @@ match ; Stress (zx)   ; GREPFIELD(static/info, 'T_{ij}', 2, 3) ;   4.529804E-06
 match ; Stress (xz)   ; GREPFIELD(static/info, 'T_{ij}', 4, 1) ;   4.517699E-06
 
 
-Input      : 12-silicon_force.02-nlcc.inp
+Input      : 11-silicon_force.02-nlcc.inp
 
 match ; Force 1 (x)   ; GREPFIELD(static/info, '1        Si', 3) ; -0.010084
 match ; Force 1 (y)   ; GREPFIELD(static/info, '1        Si', 4) ; -0.024164
