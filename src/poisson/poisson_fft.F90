@@ -23,6 +23,7 @@ module poisson_fft_oct_m
   use cube_oct_m
   use fft_oct_m
   use fourier_space_oct_m
+  use fourier_shell_oct_m
   use geometry_oct_m
   use global_oct_m
   use lalg_basic_oct_m
@@ -174,27 +175,20 @@ contains
   end subroutine get_cutoff
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_gg_transform(gg_in, temp, sb, qq, gg, modg2)
+  subroutine poisson_fft_gg_transform(gg_in, temp, sb, gg, modg2, qq)
     integer,           intent(in)    :: gg_in(:)
     FLOAT,             intent(in)    :: temp(:)
     type(simul_box_t), intent(in)    :: sb
-    FLOAT,             intent(in)    :: qq(:)
     FLOAT,             intent(inout) :: gg(:)
     FLOAT,             intent(out)   :: modg2
-
-!    integer :: idir
+    FLOAT, optional,   intent(in)    :: qq(:)
 
     ! no PUSH_SUB, called too frequently
-
     gg(1:3) = gg_in(1:3)
-    gg(1:sb%periodic_dim) = gg(1:sb%periodic_dim) + qq(1:sb%periodic_dim)
-    gg(1:3) = gg(1:3) * temp(1:3)
+    if(present(qq)) &
+      gg(1:sb%periodic_dim) = gg(1:sb%periodic_dim) + qq(1:sb%periodic_dim)
+    gg(1:3) = gg(1:3)*temp(1:3)
     gg(1:3) = matmul(sb%klattice_primitive(1:3,1:3),gg(1:3))
-! MJV 27 jan 2015 this should not be necessary
-!    do idir = 1, 3
-!      gg(idir) = gg(idir) / lalg_nrm2(3, sb%klattice_primitive(1:3, idir))
-!    end do
-
     modg2 = sum(gg(1:3)**2)
 
   end subroutine poisson_fft_gg_transform
@@ -206,19 +200,23 @@ contains
     type(cube_t),        intent(inout) :: cube
 
     integer :: ix, iy, iz, ixx(3), db(3)
-    FLOAT :: temp(3), modg2
-    FLOAT :: gg(3)
+    FLOAT :: temp(3), modg2, modq2
+    FLOAT :: gg(3), ekin_cutoff
     FLOAT, allocatable :: fft_Coulb_FS(:,:,:)
 
     PUSH_SUB(poisson_fft_build_3d_3d)
 
     db(1:3) = cube%rs_n_global(1:3)
 
+    ekin_cutoff = fourier_shell_cutoff(cube, mesh, any(abs(this%qq(:))>M_EPSILON), dg = temp)
+
     ! store the Fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
     fft_Coulb_FS = M_ZERO
 
-    temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
+    !We get the norm of the q vector
+    ixx(1:3) = 0
+    call poisson_fft_gg_transform(ixx, temp, mesh%sb, gg, modq2, this%qq)
 
     do ix = 1, cube%fs_n_global(1)
       ixx(1) = pad_feq(ix, db(1), .true.)
@@ -227,7 +225,17 @@ contains
         do iz = 1, cube%fs_n_global(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-         call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
+          !In the case of small q, we only modify the G=0 part
+          if(all(abs(this%qq(:)) <CNST(1e-3))) then
+            call poisson_fft_gg_transform(ixx, temp, mesh%sb, gg, modg2)
+            if(abs(modg2)<= M_EPSILON) modg2 = modq2
+          else
+            call poisson_fft_gg_transform(ixx, temp, mesh%sb, gg, modg2, this%qq)
+          end if
+
+          !We only keep close shells
+          if(modg2 - ekin_cutoff > CNST(1e-10)) cycle
+
 #ifdef HAVE_NFFT
          !HH not very elegant
          if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
@@ -301,7 +309,7 @@ contains
         do iz = 1, nfs(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
           
-          call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
+          call poisson_fft_gg_transform(ixx, temp, mesh%sb, gg, modg2, this%qq)
           
           if(abs(modg2) > M_EPSILON) then
             fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
@@ -405,7 +413,7 @@ contains
         do iz = 1, cube%fs_n_global(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-          call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
+          call poisson_fft_gg_transform(ixx, temp, mesh%sb, gg, modg2, this%qq)
 
           if(abs(modg2) > M_EPSILON) then
             gz = abs(gg(3))
@@ -485,7 +493,7 @@ contains
         do iz = 1, db(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-          call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
+          call poisson_fft_gg_transform(ixx, temp, mesh%sb, gg, modg2, this%qq)
 
           if(abs(modg2) > M_EPSILON) then
             gperp = hypot(gg(2), gg(3))
@@ -579,7 +587,7 @@ contains
           iz = cube%fs_istart(3) + lz - 1
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-          call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
+          call poisson_fft_gg_transform(ixx, temp, mesh%sb, gg, modg2, this%qq)
 #ifdef HAVE_NFFT
           !HH
           if(cube%fft%library.eq.FFTLIB_NFFT) then
