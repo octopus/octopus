@@ -218,12 +218,18 @@ contains
     ixx(1:3) = 0
     call poisson_fft_gg_transform(ixx, temp, mesh%sb, gg, modq2, this%qq)
 
+    ! According to the conventions of plane-wave codes, e.g. Quantum ESPRESSO,
+    ! PARATEC, EPM, and BerkeleyGW, if the FFT grid is even, then neither
+    ! nfft/2 nor -nfft/2 should be a valid G-vector component.
     do ix = 1, cube%fs_n_global(1)
       ixx(1) = pad_feq(ix, db(1), .true.)
+      if(2 * ixx(1) == cube%rs_n_global(1)) cycle
       do iy = 1, cube%fs_n_global(2)
         ixx(2) = pad_feq(iy, db(2), .true.)
+        if(2 * ixx(2) == cube%rs_n_global(2)) cycle
         do iz = 1, cube%fs_n_global(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
+           if(2 * ixx(3) == cube%rs_n_global(3)) cycle
 
           !In the case of small q, we only modify the G=0 part
           if(all(abs(this%qq(:)) <CNST(1e-3))) then
