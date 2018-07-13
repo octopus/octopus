@@ -234,7 +234,7 @@ contains
           end if
 
           !We only keep close shells
-          if(modg2 - ekin_cutoff > CNST(1e-10)) cycle
+          if(modg2/M_TWO - ekin_cutoff > CNST(1e-10)) cycle
 
 #ifdef HAVE_NFFT
          !HH not very elegant
