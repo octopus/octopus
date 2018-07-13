@@ -479,7 +479,6 @@ contains
     call parse_variable('HamiltonianApplyPacked', .true., hm%apply_packed)
 
     ! StatesPack not yet implemented for these cases: (see also hamiltonian_apply_packed)
-    if(hm%family_is_mgga_with_exc)  st%d%pack_states = .false.
     if(hm%scissor%apply) st%d%pack_states = .false.
     if(hm%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) st%d%pack_states = .false.
     if(hm%cmplxscl%space .and. accel_is_enabled()) st%d%pack_states = .false.
@@ -1050,8 +1049,8 @@ contains
     !if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
     !if(this%rashba_coupling**2 > M_ZERO) apply = .false.
     !if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
+    !if(this%family_is_mgga_with_exc)  apply = .false.
     ! keep these checks; currently no tests for these in the test suite
-    if(this%family_is_mgga_with_exc)  apply = .false. 
     if(this%scissor%apply) apply = .false.
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
     if(this%cmplxscl%space .and. accel_is_enabled()) apply = .false.
