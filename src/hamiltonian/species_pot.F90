@@ -380,7 +380,7 @@ contains
     type(ps_t), pointer :: ps
     type(periodic_copy_t) :: pp
 
-    PUSH_SUB(species_atom_density_derivative)
+    PUSH_SUB(species_atom_density_grad)
 
     ASSERT(spin_channels == 1 .or. spin_channels == 2)
 
