@@ -1360,22 +1360,29 @@ contains
 
     !%Variable StatesPack
     !%Type logical
-    !%Default no
+    !%Default yes
     !%Section Execution::Optimization
     !%Description
-    !% (Experimental) When set to yes, states are stored in packed
-    !% mode, which improves performance considerably. However this
-    !% is not fully implemented and it might give wrong results.
+    !% When set to yes, states are stored in packed mode, which improves
+    !% performance considerably. Not all parts of the code will profit from
+    !% this, but should nevertheless work regardless of how the states are
+    !% stored.
     !%
     !% If OpenCL is used and this variable is set to yes, Octopus
     !% will store the wave-functions in device (GPU) memory. If
     !% there is not enough memory to store all the wave-functions,
     !% execution will stop with an error.
+    !%
     !% See also the related <tt>HamiltonianApplyPacked</tt> variable.
     !%End
 
-    call parse_variable('StatesPack', .false., st%d%pack_states)
-    if(st%d%pack_states) call messages_experimental('StatesPack')
+    call parse_variable('StatesPack', .true., st%d%pack_states)
+    ! not yet implemented for these cases: (see also hamiltonian_apply_packed)
+    if(this%family_is_mgga_with_exc)  st%d%pack_states = .false. 
+    if(this%scissor%apply) st%d%pack_states = .false.
+    if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) st%d%pack_states = .false.
+    if(this%cmplxscl%space .and. accel_is_enabled()) st%d%pack_states = .false.
+    if(associated(this%hm_base%phase) .and. accel_is_enabled()) st%d%pack_states = .false.
 
     !%Variable StatesOrthogonalization
     !%Type integer

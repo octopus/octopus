@@ -1011,6 +1011,8 @@ contains
     !if(this%rashba_coupling**2 > M_ZERO) apply = .false.
     !if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
     ! keep these checks; currently no tests for these in the test suite
+    ! (if you change something here, change it also at the definition of
+    ! StatesPack)
     if(this%family_is_mgga_with_exc)  apply = .false. 
     if(this%scissor%apply) apply = .false.
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
