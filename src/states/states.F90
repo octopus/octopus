@@ -627,10 +627,6 @@ contains
     call parse_variable('SymmetrizeDensity', gr%sb%kpoints%use_symmetries, st%symmetrize_density)
     call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
 
-    ! Why? Resulting discrepancies can be suspiciously large even at SCF convergence;
-    ! the case of partially periodic systems has not been fully considered.
-    if(st%symmetrize_density) call messages_experimental('SymmetrizeDensity')
-
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_nullify(st%dom_st_proc_grid)
 #endif
@@ -1563,6 +1559,8 @@ contains
 
     stout%packed = stin%packed
 
+    stout%randomization = stin%randomization
+
     POP_SUB(states_copy)
   end subroutine states_copy
 
@@ -1644,9 +1642,10 @@ contains
 
   ! ---------------------------------------------------------
   !> generate a hydrogen s-wavefunction around a random point
-  subroutine states_generate_random(st, mesh, ist_start_, ist_end_, ikpt_start_, ikpt_end_, normalized)
+  subroutine states_generate_random(st, mesh, sb, ist_start_, ist_end_, ikpt_start_, ikpt_end_, normalized)
     type(states_t),    intent(inout) :: st
     type(mesh_t),      intent(in)    :: mesh
+    type(simul_box_t), intent(in)    :: sb
     integer, optional, intent(in)    :: ist_start_
     integer, optional, intent(in)    :: ist_end_
     integer, optional, intent(in)    :: ikpt_start_
@@ -1657,24 +1656,17 @@ contains
     CMPLX   :: alpha, beta
     FLOAT, allocatable :: dpsi(:,  :)
     CMPLX, allocatable :: zpsi(:,  :), zpsi2(:)
+    integer :: ikpoint, ip
 
     PUSH_SUB(states_generate_random)
  
-    if(st%randomization == PAR_INDEPENDENT) then
-      ist_start = optional_default(ist_start_, st%st_start)
-      ist_end = optional_default(ist_end_, st%st_end)
-      ikpt_start = optional_default(ikpt_start_, st%d%kpt%start)
-      ikpt_end = optional_default(ikpt_end_, st%d%kpt%end)
-    else 
-      ist_start = optional_default(ist_start_, 1)
-      ist_end = optional_default(ist_end_, st%nst)
-      ikpt_start = optional_default(ikpt_start_, 1)
-      ikpt_end = optional_default(ikpt_end_, st%d%nik)
-    end if
+    ist_start = optional_default(ist_start_, 1)
+    ist_end = optional_default(ist_end_, st%nst)
+    ikpt_start = optional_default(ikpt_start_, 1)
+    ikpt_end = optional_default(ikpt_end_, st%d%nik)
 
-    if (states_are_real(st)) then
-      SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
-    else
+    SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
+    if (states_are_complex(st)) then
       SAFE_ALLOCATE(zpsi(1:mesh%np, 1:st%d%dim))
     end if
 
@@ -1682,30 +1674,38 @@ contains
     case(UNPOLARIZED, SPIN_POLARIZED)
 
       do ik = ikpt_start, ikpt_end
+        ikpoint = states_dim_get_kpoint_index(st%d, ik)
         do ist = ist_start, ist_end
-          if (states_are_real(st)) then
+          if (states_are_real(st).or.kpoints_point_is_gamma(sb%kpoints, ikpoint)) then
             if(st%randomization == PAR_INDEPENDENT) then
               call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
             else
               call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
-              if(.not. state_kpt_is_local(st, ist, ik)) cycle
             end if
-            call states_set_state(st, mesh, ist,  ik, dpsi)
+            if(.not. state_kpt_is_local(st, ist, ik)) cycle
+            if(states_are_complex(st)) then !Gamma point
+              forall(ip=1:mesh%np) 
+                zpsi(ip,1) = cmplx(dpsi(ip,1), M_ZERO)
+              end forall
+              call states_set_state(st, mesh, ist,  ik, zpsi)
+            else
+              call states_set_state(st, mesh, ist,  ik, dpsi)
+            end if
           else
             if(st%randomization == PAR_INDEPENDENT) then
               call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
             else
               call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
-              if(.not. state_kpt_is_local(st, ist, ik)) cycle
             end if
+            if(.not. state_kpt_is_local(st, ist, ik)) cycle
             call states_set_state(st, mesh, ist,  ik, zpsi)
             if(st%have_left_states) then
               if(st%randomization == PAR_INDEPENDENT) then
                 call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
               else
                 call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
-                if(.not. state_kpt_is_local(st, ist, ik)) cycle
               end if
+              if(.not. state_kpt_is_local(st, ist, ik)) cycle
               call states_set_state(st, mesh, ist,  ik, zpsi, left = .true.)
             end if
           end if
@@ -1719,13 +1719,28 @@ contains
       if(st%fixed_spins) then
 
         do ik = ikpt_start, ikpt_end
+          ikpoint = states_dim_get_kpoint_index(st%d, ik)
           do ist = ist_start, ist_end
-            if(st%randomization == PAR_INDEPENDENT) then
-              call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+            if(kpoints_point_is_gamma(sb%kpoints, ikpoint)) then
+              if(st%randomization == PAR_INDEPENDENT) then
+                call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+              else
+                call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
+                if(.not. state_kpt_is_local(st, ist, ik)) cycle
+              end if
+              forall(ip=1:mesh%np)
+                zpsi(ip,1) = cmplx(dpsi(ip,1), M_ZERO)
+              end forall
+              call states_set_state(st, mesh, ist,  ik, zpsi)
             else
-              call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
-              if(.not. state_kpt_is_local(st, ist, ik)) cycle
+              if(st%randomization == PAR_INDEPENDENT) then
+                call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+              else
+                call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
+                if(.not. state_kpt_is_local(st, ist, ik)) cycle
+              end if
             end if
+            if(.not. state_kpt_is_local(st, ist, ik)) cycle
             ! In this case, the spinors are made of a spatial part times a vector [alpha beta]^T in
             ! spin space (i.e., same spatial part for each spin component). So (alpha, beta)
             ! determines the spin values. The values of (alpha, beta) can be be obtained

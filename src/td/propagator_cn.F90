@@ -127,7 +127,7 @@ contains
       end if
     end if
 
-    call hamiltonian_update(hm, gr%mesh, time = time - dt/M_TWO)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt/M_TWO)
     !We update the occupation matrices
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
@@ -193,7 +193,7 @@ contains
           time, dt, time + dt/M_TWO, hm%vhxc, hm%imvhxc)
       end if
 
-      call hamiltonian_update(hm, gr%mesh, time = time + dt/M_TWO)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time + dt/M_TWO)
       !We update the occupation matrices
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 

@@ -178,6 +178,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl,
   do iq = st%d%kpt%start, st%d%kpt%end
 
     ikpoint = states_dim_get_kpoint_index(st%d, iq)
+    if(st%d%kweights(iq) <= M_EPSILON) cycle
 
     do ib = st%group%block_start, st%group%block_end
       minst = states_block_min(st, ib)

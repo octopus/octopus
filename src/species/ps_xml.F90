@@ -217,7 +217,7 @@ contains
 
     !  checking normalization of the wavefunctions
     do ll = 0, this%lmax
-      nrm = 0.0
+      nrm = M_ZERO
       do ip = 1, this%grid_size
         rr = this%grid(ip)
         nrm = nrm + this%wavefunction(ip, ll)**2*this%weights(ip)*rr**2

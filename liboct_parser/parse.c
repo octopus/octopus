@@ -30,11 +30,12 @@ extern char ** environ;
 
 #include "liboct_parser.h"
 #include "symbols.h"
+#include "gsl_userdef.h"
 
 static FILE *fout;
 static int  disable_write;
 
-#define ROUND(x) ((x)<0 ? (int)(x-0.5) : (int)(x+0.5)) 
+#define ROUND(x) ((x)<0 ? (int64_t)(x-0.5) : (int64_t)(x+0.5)) 
 
 void str_trim(char *in)
 {
@@ -116,6 +117,21 @@ int parse_input(const char *file_in, int set_used)
   length = 40;
   s = (char *)malloc(length + 1);
 
+  long start_pos = ftell(f);
+  
+  do {
+    c = parse_get_line(f, &s, &length);
+    if(strncmp("RandomSeed", s, 10) == 0 ) {
+      parse_result rs;
+      parse_exp(s, &rs);
+      printf("value %ld\n", lround(GSL_REAL(rs.value.c)));
+      gsl_complex_rand_seed(lround(GSL_REAL(rs.value.c)));
+    }
+    
+  } while(c != EOF);
+
+  fseek(f, start_pos, SEEK_SET);
+  
   do{
     c = parse_get_line(f, &s, &length);
     if(*s){
@@ -257,17 +273,17 @@ static void check_is_numerical(const char * name, const symrec * ptr){
 }
 
 
-int parse_int(const char *name, int def)
+int64_t parse_int(const char *name, int64_t def)
 {
   symrec *ptr;
-  int ret;
+  int64_t ret;
 
   ptr = getsym(name);	
   if(ptr){
     check_is_numerical(name, ptr);
     ret = ROUND(GSL_REAL(ptr->value.c));
     if(!disable_write) {
-      fprintf(fout, "%s = %d\n", name, ret);
+      fprintf(fout, "%s = %ld\n", name, ret);
     }
     if(fabs(GSL_IMAG(ptr->value.c)) > 1e-10) {
        fprintf(stderr, "Parser error: complex value passed for integer variable '%s'.\n", name);
@@ -280,7 +296,7 @@ int parse_int(const char *name, int def)
   }else{
     ret = def;
     if(!disable_write) {
-      fprintf(fout, "%s = %d\t\t# default\n", name, ret);
+      fprintf(fout, "%s = %ld\t\t# default\n", name, ret);
     }
   }
   return ret;

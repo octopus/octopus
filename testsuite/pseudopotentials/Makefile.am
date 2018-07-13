@@ -56,6 +56,15 @@ dist_share_DATA =                                  \
 	12_mix_and_match.01-mgo.inp                \
 	12_mix_and_match.test                      \
 	13-U235.01-gs.inp                          \
-        13-U235.test 
+        13-U235.test                               \
+	14-carbon_dojo_psp8.01-gs.inp              \
+	14-carbon_dojo_psp8.pseudo.psp8            \
+	14-carbon_dojo_psp8.test                   \
+	15-calcium_psp8_sic.01-gs.inp              \
+	15-calcium_psp8_sic.20ca_sic.drh           \
+	15-calcium_psp8_sic.test                   \
+	16-platinum_psp8.test                      \
+	16-platinum_psp8.01-gs.inp                 \
+	16-platinum_psp8.78_Pt_r.oncvpsp.psp8
 
 CLEANFILES = *~ *.bak

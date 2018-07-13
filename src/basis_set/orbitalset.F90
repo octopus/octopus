@@ -22,6 +22,7 @@ module orbitalset_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use blas_oct_m
+  use comm_oct_m
   use distributed_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -69,6 +70,7 @@ module orbitalset_oct_m
                                               !> if the sphere cross the border of the box
     FLOAT               :: Ueff               !> The effective U of the simplified rotational invariant form
     FLOAT               :: Ubar, Jbar
+    FLOAT               :: alpha              !> A potential used to constrained occupations, as defined in PRB 71, 035105 (2005)
     FLOAT               :: radius
     type(species_t), pointer :: spec          
 

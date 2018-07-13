@@ -105,12 +105,12 @@ contains
   ! ---------------------------------------------------------
   subroutine io_function_read_how(sb, how, ignore_error)
     type(simul_box_t), intent(in)  :: sb
-    integer,           intent(out) :: how
+    integer(8),        intent(out) :: how
     logical, optional, intent(in)  :: ignore_error !> Ignore error check. Used when called from some external utility.
 
     PUSH_SUB(io_function_read_how)
 
-    how = 0
+    how = 0_8
     
     call messages_obsolete_variable('OutputHow', 'OutputFormat')
     
@@ -220,56 +220,56 @@ contains
 
     ! some modes are not available in some circumstances
     if(sb%dim == 1) then
-      if(iand(how, OPTION__OUTPUTFORMAT__AXIS_Y) /= 0) then
+      if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Y) /= 0) then
         message(1) = "OutputFormat = axis_y not available with Dimensions = 1."
         call messages_fatal(1)
       end if
-      if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Z) /= 0) then
+      if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Z) /= 0) then
         message(1) = "OutputFormat = plane_z not available with Dimensions = 1."
         call messages_fatal(1)
       end if
-      if(iand(how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then
+      if(bitand(how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then
         message(1) = "OutputFormat = xcrysden not available with Dimensions = 1."
         call messages_fatal(1)
       end if
     end if
 
     if(sb%dim <= 2) then
-      if(iand(how, OPTION__OUTPUTFORMAT__AXIS_Z) /= 0) then
+      if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Z) /= 0) then
         message(1) = "OutputFormat = axis_z not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
-      if(iand(how, OPTION__OUTPUTFORMAT__PLANE_X) /= 0) then
+      if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_X) /= 0) then
         message(1) = "OutputFormat = plane_x not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
-      if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) then
+      if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) then
         message(1) = "OutputFormat = plane_y not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
-      if(iand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XY) /= 0) then
+      if(bitand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XY) /= 0) then
         message(1) = "OutputFormat = integrate_xy not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
-      if(iand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XZ) /= 0) then
+      if(bitand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XZ) /= 0) then
         message(1) = "OutputFormat = integrate_xz not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
-      if(iand(how, OPTION__OUTPUTFORMAT__INTEGRATE_YZ) /= 0) then
+      if(bitand(how, OPTION__OUTPUTFORMAT__INTEGRATE_YZ) /= 0) then
         message(1) = "OutputFormat = integrate_yz not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
-      if(iand(how, OPTION__OUTPUTFORMAT__DX) /= 0) then
+      if(bitand(how, OPTION__OUTPUTFORMAT__DX) /= 0) then
         message(1) = "OutputFormat = dx not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
-      if(iand(how, OPTION__OUTPUTFORMAT__CUBE) /= 0) then
+      if(bitand(how, OPTION__OUTPUTFORMAT__CUBE) /= 0) then
         message(1) = "OutputFormat = cube not available with Dimensions <= 2."
         call messages_fatal(1)
       end if
     end if
 
-    if(iand(how, OPTION__OUTPUTFORMAT__OPENSCAD) /= 0) then
+    if(bitand(how, OPTION__OUTPUTFORMAT__OPENSCAD) /= 0) then
       if(sb%dim /= 3) then
         write(message(1),'(a)') "OutputFormat = OpenSCAD only available with Dimensions = 3."
         call messages_fatal(1)
@@ -278,14 +278,14 @@ contains
     endif
     
 #if !defined(HAVE_NETCDF)
-    if (iand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
+    if (bitand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
       message(1) = 'Octopus was compiled without NetCDF support.'
       message(2) = 'It is not possible to write output in NetCDF format.'
       call messages_fatal(2)
     end if
 #endif
 #if !defined(HAVE_ETSF_IO)
-    if (iand(how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
+    if (bitand(how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
       message(1) = 'Octopus was compiled without ETSF_IO support.'
       message(2) = 'It is not possible to write output in ETSF format.'
       call messages_fatal(2)
@@ -300,7 +300,7 @@ contains
   !! call dio_function_output(io_function_fill_how("AxisX_and_PlaneX_and_DX"), &
   !                       ".", "func", mesh, sb, func, M_ONE, ierr)
   ! -------------------------------------------------------------------
-  integer function io_function_fill_how(where) result(how)
+  integer(8) function io_function_fill_how(where) result(how)
     character(len=*), intent(in) :: where
 
     PUSH_SUB(io_function_fill_how)

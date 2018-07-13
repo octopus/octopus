@@ -39,6 +39,7 @@ dist_sg15_DATA =                      \
 	Cr_ONCV_PBE-1.0.upf           \
 	Cs_ONCV_PBE-1.1.upf           \
 	Cu_ONCV_PBE-1.0.upf           \
+	D_ONCV_PBE-1.0.upf            \
 	Fe_ONCV_PBE-1.0.upf           \
 	F_ONCV_PBE-1.0.upf            \
 	Ga_ONCV_PBE-1.0.upf           \
@@ -79,6 +80,7 @@ dist_sg15_DATA =                      \
 	Sn_ONCV_PBE-1.1.upf           \
 	S_ONCV_PBE-1.1.upf            \
 	Sr_ONCV_PBE-1.0.upf           \
+	T_ONCV_PBE-1.0.upf            \
 	Ta_ONCV_PBE-1.0.upf           \
 	Tc_ONCV_PBE-1.0.upf           \
 	Te_ONCV_PBE-1.1.upf           \

@@ -40,7 +40,7 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
   PUSH_SUB(output_states)
 
   nullify(subsys_density, base_density, density)
-  if(iand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
     if(associated(st%subsys_st))then
       call base_states_get(st%subsys_st, subsys_density)
@@ -93,7 +93,7 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
     end if    
   end if
 
-  if(iand(outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
     fn_unit = units_out%length**(1-gr%mesh%sb%dim)
     SAFE_ALLOCATE(polarization(1:gr%fine%mesh%np, 1:gr%sb%dim))
 
@@ -112,7 +112,7 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
     SAFE_DEALLOCATE_A(polarization)
   end if
 
-  if(iand(outp%what, OPTION__OUTPUT__WFS) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__WFS) /= 0) then
     fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
 
     if (states_are_real(st)) then
@@ -163,7 +163,7 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
     SAFE_DEALLOCATE_A(ztmp)
   end if
 
-  if(iand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
     SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
     if (states_are_complex(st)) then
@@ -204,7 +204,7 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
     SAFE_DEALLOCATE_A(ztmp)
   end if
 
-  if(iand(outp%what, OPTION__OUTPUT__KINETIC_ENERGY_DENSITY) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__KINETIC_ENERGY_DENSITY) /= 0) then
     fn_unit = units_out%energy * units_out%length**(-gr%mesh%sb%dim)
     SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
     call states_calc_quantities(gr%der, st, kinetic_energy_density = elf)
@@ -223,17 +223,17 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
     SAFE_DEALLOCATE_A(elf)
   end if
 
-  if(iand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
     call dos_init(dos, st)
     call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh, hm)
     call dos_end(dos)
   end if
 
-  if(iand(outp%what, OPTION__OUTPUT__TPA) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__TPA) /= 0) then
     call states_write_tpa (trim(dir), gr, st)
   end if
 
-  if(iand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .or. iand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
     if (states_are_real(st)) then
       call doutput_modelmb (trim(dir), gr, st, geo, outp)
     else
@@ -259,7 +259,7 @@ subroutine output_current_flow(gr, st, dir, outp)
 
   PUSH_SUB(output_current_flow)
 
-  if(iand(outp%what, OPTION__OUTPUT__J_FLOW) == 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__J_FLOW) == 0) then
     POP_SUB(output_current_flow)
     return
   end if

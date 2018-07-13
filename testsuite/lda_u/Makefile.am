@@ -27,6 +27,7 @@ dist_share_DATA =                                \
             02-ACBN0.02-lif.inp                  \
             02-ACBN0.test                        \
             03-ACBN0_restricted.01-lif.inp       \
+            03-ACBN0_restricted.02-lif_unpacked.inp\
             03-ACBN0_restricted.test             \
             04-ACBN0_isolated.01-H_unpacked.inp  \
             04-ACBN0_isolated.02-H_packed.inp    \

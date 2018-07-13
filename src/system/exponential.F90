@@ -19,6 +19,7 @@
 #include "global.h"
 
 module exponential_oct_m
+  use accel_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use blas_oct_m
@@ -222,7 +223,7 @@ contains
     FLOAT,   optional,   intent(in)    :: Imdeltat !< also needed for cmplxscl\%time
 
     CMPLX   :: timestep
-    logical :: apply_magnus
+    logical :: apply_magnus, phase_correction
     type(profile_t), save :: exp_prof
 
     PUSH_SUB(exponential_apply)
@@ -241,6 +242,10 @@ contains
 
     apply_magnus = .false.
     if(present(vmagnus)) apply_magnus = .true.
+
+    phase_correction = .false.
+    if(associated(hm%hm_base%phase)) phase_correction = .true.
+    if(der%mesh%parallel_in_domains .or. accel_is_enabled()) phase_correction = .false.
 
     ! If we want to use imaginary time, timestep = i*deltat
     ! Otherwise, timestep is simply equal to deltat.
@@ -278,6 +283,12 @@ contains
       end select
     end if
 
+   !We apply the phase only to np points, and the phase for the np+1 to np_part points
+   !will be treated as a phase correction in the Hamiltonian
+    if(phase_correction) then
+      call states_set_phase(hm%d, zpsi, hm%hm_base%phase(1:der%mesh%np, ik), der%mesh%np, .false.)
+    end if
+
     select case(te%exp_method)
     case(EXP_TAYLOR)
       call taylor_series()
@@ -287,6 +298,11 @@ contains
       call cheby()
     end select
 
+    if(phase_correction) then
+      call states_set_phase(hm%d, zpsi, hm%hm_base%phase(1:der%mesh%np, ik), der%mesh%np, .true.)
+    end if
+
+
     call profiling_out(exp_prof)
     POP_SUB(exponential_apply)
 
@@ -294,15 +310,15 @@ contains
 
     ! ---------------------------------------------------------
     subroutine operate(psi, oppsi)
-      CMPLX, intent(inout) :: psi(:, :)
-      CMPLX, intent(inout) :: oppsi(:, :)
+      CMPLX,   intent(inout) :: psi(:, :)
+      CMPLX,   intent(inout) :: oppsi(:, :)
 
       PUSH_SUB(exponential_apply.operate)
 
       if(apply_magnus) then
         call zmagnus(hm, der, psi, oppsi, ik, vmagnus)
         else
-        call zhamiltonian_apply(hm, der, psi, oppsi, ist, ik)
+        call zhamiltonian_apply(hm, der, psi, oppsi, ist, ik, set_phase = .not.phase_correction)
       end if
 
       POP_SUB(exponential_apply.operate)
@@ -353,6 +369,7 @@ contains
       end do
       SAFE_DEALLOCATE_A(zpsi1)
       SAFE_DEALLOCATE_A(hzpsi1)
+
 
       if(present(order)) order = te%exp_order
 

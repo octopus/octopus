@@ -358,6 +358,70 @@ end subroutine X(hamiltonian_base_phase)
 
 ! ---------------------------------------------------------------------------------------
 
+subroutine X(hamiltonian_base_phase_correction)(this, der, iqn, psib, src)
+  type(hamiltonian_base_t),              intent(in)    :: this
+  type(derivatives_t),                   intent(in)    :: der
+  integer,                               intent(in)    :: iqn
+  type(batch_t),                 target, intent(inout) :: psib
+  type(batch_t),       optional, target, intent(in)    :: src
+
+  integer :: ip, ii
+  type(batch_t), pointer :: src_
+  type(profile_t), save :: phase_prof
+
+  PUSH_SUB(X(hamiltonian_base_phase))
+  call profiling_in(phase_prof, "PBC_PHASE_APPLY_CORR")
+
+  call profiling_count_operations(R_MUL*dble(der%boundaries%nper)*psib%nst_linear)
+
+  ASSERT(allocated(this%phase_corr))
+
+  src_ => psib
+  if(present(src)) then
+    src_ => src
+  end if
+
+  !TODO: Implement this for domain parallelization
+  ASSERT(.not.der%mesh%parallel_in_domains)
+
+  select case(batch_status(psib))
+  case(BATCH_PACKED)
+
+    !$omp parallel do
+    do ip = der%mesh%np+1, der%mesh%np_part
+      do ii = 1, psib%nst_linear
+        psib%pack%X(psi)(ii, ip) = this%phase_corr(ip, iqn)*src_%pack%X(psi)(ii, ip)
+      end do
+    end do
+    !$omp end parallel do
+
+
+  case(BATCH_NOT_PACKED)
+
+    !$omp parallel
+    do ii = 1, psib%nst_linear
+      !$omp do
+      do ip =  der%mesh%np+1, der%mesh%np_part
+        psib%states_linear(ii)%X(psi)(ip) = this%phase_corr(ip, iqn)*src_%states_linear(ii)%X(psi)(ip)
+      end do
+      !$omp end do nowait
+    end do
+    !$omp end parallel
+
+
+  case(BATCH_CL_PACKED)
+    call messages_not_implemented("hamiltonian_base_phase_correction with OpenCL")
+  end select
+
+  call batch_pack_was_modified(psib)
+
+  call profiling_out(phase_prof)
+  POP_SUB(X(hamiltonian_base_phase_correction))
+end subroutine X(hamiltonian_base_phase_correction)
+
+
+! ---------------------------------------------------------------------------------------
+
 subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
   type(hamiltonian_base_t),    intent(in)    :: this
   type(derivatives_t),         intent(in)    :: der

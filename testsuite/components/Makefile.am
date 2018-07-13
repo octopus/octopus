@@ -38,6 +38,7 @@ dist_share_DATA =                                  \
 	07-cholesky_serial.test                    \
 	07-cholesky_serial.01-real.inp             \
 	07-cholesky_serial.02-complex.inp          \
+	07-cholesky_serial.03-parindep.inp         \
 	08-mgs.test                                \
 	08-mgs.01-real.inp                         \
 	08-mgs.02-complex.inp                      \
@@ -65,6 +66,10 @@ dist_share_DATA =                                  \
 	18-interpolation.03-3d.inp                 \
 	18-interpolation.test                      \
 	19-hgh_soc.01-3d.inp                       \
-        19-hgh_soc.test
+        19-hgh_soc.test                            \
+	20-dft_u.01-NiO.inp                        \
+	20-dft_u.test                              \
+	21-hamiltonian_apply.01-Si.inp             \
+	21-hamiltonian_apply.test
 
 CLEANFILES = *~ *.bak

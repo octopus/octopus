@@ -2127,8 +2127,8 @@ contains
 
 
     ! open files
-    filename = trim('td.general')//trim(fname)
-    iunit = io_open(filename, action='read', status='old')      
+    filename = trim('td.general/')//trim(fname)
+    iunit = io_open(filename, action='read', status='old', die=.false.)
 
     if(iunit < 0) then
       filename = trim('./')//trim(fname)
@@ -2315,7 +2315,7 @@ contains
         energy = energy_step*(ienergy - energy_start)
 
         do ii = 1, energy_function%nst_linear
-          energy_function%states_linear(ii)%dpsi(ienergy) = 0.0
+          energy_function%states_linear(ii)%dpsi(ienergy) = M_ZERO
         end do
 
         select case(transform)
