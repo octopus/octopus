@@ -1373,12 +1373,6 @@ contains
     !%End
 
     call parse_variable('StatesPack', .true., st%d%pack_states)
-    ! not yet implemented for these cases: (see also hamiltonian_apply_packed)
-    if(this%family_is_mgga_with_exc)  st%d%pack_states = .false. 
-    if(this%scissor%apply) st%d%pack_states = .false.
-    if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) st%d%pack_states = .false.
-    if(this%cmplxscl%space .and. accel_is_enabled()) st%d%pack_states = .false.
-    if(associated(this%hm_base%phase) .and. accel_is_enabled()) st%d%pack_states = .false.
 
     !%Variable StatesOrthogonalization
     !%Type integer

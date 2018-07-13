@@ -478,6 +478,13 @@ contains
     !%End
     call parse_variable('HamiltonianApplyPacked', .true., hm%apply_packed)
 
+    ! StatesPack not yet implemented for these cases: (see also hamiltonian_apply_packed)
+    if(hm%family_is_mgga_with_exc)  st%d%pack_states = .false.
+    if(hm%scissor%apply) st%d%pack_states = .false.
+    if(hm%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) st%d%pack_states = .false.
+    if(hm%cmplxscl%space .and. accel_is_enabled()) st%d%pack_states = .false.
+    if(associated(hm%hm_base%phase) .and. accel_is_enabled()) st%d%pack_states = .false.
+
     external_potentials_present = associated(hm%ep%v_static) .or. &
 				  associated(hm%ep%E_field)  .or. &
 				  associated(hm%ep%lasers)
@@ -1044,8 +1051,6 @@ contains
     !if(this%rashba_coupling**2 > M_ZERO) apply = .false.
     !if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
     ! keep these checks; currently no tests for these in the test suite
-    ! (if you change something here, change it also at the definition of
-    ! StatesPack)
     if(this%family_is_mgga_with_exc)  apply = .false. 
     if(this%scissor%apply) apply = .false.
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
