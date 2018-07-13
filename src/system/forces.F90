@@ -319,10 +319,8 @@ contains
     SAFE_ALLOCATE(force_loc(1:gr%mesh%sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_nl(1:gr%mesh%sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_u(1:gr%mesh%sb%dim, 1:geo%natoms)) 
-    if(present(vhxc_old)) then
-      SAFE_ALLOCATE(force_scf(1:gr%mesh%sb%dim, 1:geo%natoms))
-    end if
- 
+    SAFE_ALLOCATE(force_scf(1:gr%mesh%sb%dim, 1:geo%natoms))
+
     if (states_are_real(st) ) then 
       call dforces_from_potential(gr, geo, hm, st, force, force_loc, force_nl, force_u)
     else
