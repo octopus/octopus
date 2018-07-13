@@ -57,14 +57,18 @@ contains
 
     PUSH_SUB(fourier_shell_cutoff)
 
-    ! FIXME: what about anisotropic spacing?
     dg_(1:3) = M_PI/(cube%rs_n_global(1:3)/2*mesh%spacing(1:3))
     if(present(dg)) dg(1:3) = dg_(1:3)
     if(is_wfn .and. simul_box_is_periodic(mesh%sb)) then
-      fourier_shell_cutoff = (dg_(1)*(cube%rs_n_global(1)/2-2))**2/M_TWO
+      dg_(1:3) = (dg_(1:3)*(cube%rs_n_global(1:3)/2-2))**2/M_TWO
+      dg_(1:3) = matmul(mesh%sb%klattice_primitive(1:3,1:3),dg_(1:3))
+      fourier_shell_cutoff = minval(dg_(1:3))
     else
-      fourier_shell_cutoff = (dg_(1)*(cube%rs_n_global(1)/2))**2/M_TWO
+      dg_(1:3) = (dg_(1:3)*(cube%rs_n_global(1:3)/2))**2/M_TWO
+      dg_(1:3) = matmul(mesh%sb%klattice_primitive(1:3,1:3),dg_(1:3))
+      fourier_shell_cutoff = minval(dg_(1:3))
     end if
+
 
     POP_SUB(fourier_shell_cutoff)
   end function fourier_shell_cutoff
