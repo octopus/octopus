@@ -15,8 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
-
 #include "global.h"
 
 module lda_u_io_oct_m
@@ -517,7 +515,7 @@ contains
       do idim = 1, st%d%dim
 
         if (.not. restart_file_present(idim, ist)) then
-          write(message(1), '(a,i,a)') "Cannot read states ", ist, "from the projection folder"
+          write(message(1), '(a,i3,a)') "Cannot read states ", ist, "from the projection folder"
           call messages_fatal(1)            
         end if
 
