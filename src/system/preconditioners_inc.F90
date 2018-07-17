@@ -228,7 +228,11 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, ik, aa, bb, omega)
     ASSERT(.not. batch_is_packed(aa))
     ASSERT(.not. batch_is_packed(bb))
     do ii = 1, aa%nst
-      call X(preconditioner_apply)(pre, gr, hm, ik, aa%states(ii)%X(psi), bb%states(ii)%X(psi), omega(ii))
+      if (present(omega)) then
+        call X(preconditioner_apply)(pre, gr, hm, ik, aa%states(ii)%X(psi), bb%states(ii)%X(psi), omega(ii))
+      else
+        call X(preconditioner_apply)(pre, gr, hm, ik, aa%states(ii)%X(psi), bb%states(ii)%X(psi))
+      end if
     end do
   end if
 
