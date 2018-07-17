@@ -47,7 +47,8 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
   !
   do ios = 1, this%norbsets
     os => this%orbsets(ios)
-    call X(orbitalset_get_coeff_batch)(os, d%dim, psib, ik, has_phase, dot(1:d%dim,1:os%norbs,1:psib%nst))
+    call X(orbitalset_get_coeff_batch)(os, d%dim, psib, ik, has_phase, this%basisfromstates, &
+                                         dot(1:d%dim,1:os%norbs,1:psib%nst))
     !
     reduced(:,:) = R_TOTYPE(M_ZERO) 
     !
@@ -92,7 +93,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   FLOAT, intent(inout)                 :: lda_u_energy
   CMPLX, pointer, optional             :: phase(:,:) 
 
-  integer :: ios, im, ik, ist, ispin, norbs, ip, idim
+  integer :: ios, im, ik, ist, ispin, norbs, idim
   R_TYPE, allocatable :: psi(:,:) 
   R_TYPE, allocatable :: dot(:,:,:)
   FLOAT   :: weight
@@ -124,7 +125,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
       call states_get_state(st, mesh, ist, ik, psi )
 
       if(present(phase)) then
-  #ifdef R_TCOMPLEX
+#ifdef R_TCOMPLEX
         call states_set_phase(st%d, psi, phase(:,ik), mesh%np, .false.)
 #endif
       end if
@@ -134,9 +135,8 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         !We first compute the matrix elemets <\psi | orb_m>
         !taking into account phase correction if needed 
         call X(orbitalset_get_coefficients)(os, st%d%dim, psi, ik, present(phase), &
-                            dot(1:st%d%dim,1:os%norbs,ios))
+                            this%basisfromstates, dot(1:st%d%dim,1:os%norbs,ios))
       end do !ios
-
 
       !We compute the on-site occupation of the site, if needed 
       if(this%level == DFT_U_ACBN0) then
@@ -415,6 +415,7 @@ subroutine X(compute_ACBNO_U)(this, ios)
 
     end do
     end do
+
     this%orbsets(ios)%Ueff = numU/denomU - numJ/denomJ
     this%orbsets(ios)%Ubar = numU/denomU
     this%orbsets(ios)%Jbar = numJ/denomJ
@@ -633,9 +634,10 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
   call profiling_out(prof)
 end subroutine X(compute_coulomb_integrals)
 
-subroutine X(compute_periodic_coulomb_integrals) (this, mesh)
-  type(lda_u_t),   intent(inout)  :: this
-  type(mesh_t),       intent(in)  :: mesh
+subroutine X(compute_periodic_coulomb_integrals) (this, der, mc)
+  type(lda_u_t),    intent(inout)  :: this
+  type(derivatives_t), intent(in)  :: der
+  type(multicomm_t),   intent(in)  :: mc
 
   integer :: ist, jst, kst, lst, ijst, klst
   integer :: norbs, np, ip
@@ -646,13 +648,14 @@ subroutine X(compute_periodic_coulomb_integrals) (this, mesh)
 
   call profiling_in(prof, "DFTU_PER_COULOMB")
 
-  ASSERT(this%nspins == 1)
+  !At the moment the basis is not spin polarized
+  !ASSERT(this%nspins == 1)
 
   PUSH_SUB(X(compute_periodic_coulomb_integrals))
 
-  SAFE_ALLOCATE(nn(1:mesh%np))
-  SAFE_ALLOCATE(vv(1:mesh%np))
-  SAFE_ALLOCATE(tmp(1:mesh%np))
+  SAFE_ALLOCATE(nn(1:der%mesh%np))
+  SAFE_ALLOCATE(vv(1:der%mesh%np))
+  SAFE_ALLOCATE(tmp(1:der%mesh%np))
 
   SAFE_ALLOCATE(this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs, 1:this%norbsets))
   this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%norbsets) = M_ZERO
@@ -666,7 +669,9 @@ subroutine X(compute_periodic_coulomb_integrals) (this, mesh)
 
   os => this%orbsets(1)
   norbs = os%norbs
-  np = mesh%np  
+  np = der%mesh%np  
+
+  call poisson_init(os%poisson, der, mc, solver=POISSON_DIRECT_SUM) !POISSON_ISF)
 
   ijst=0
   do ist = 1, norbs
@@ -681,7 +686,7 @@ subroutine X(compute_periodic_coulomb_integrals) (this, mesh)
       !$omp end parallel do    
 
       !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
-      call dpoisson_solve(psolver, vv, nn, all_nodes=.true.)
+      call dpoisson_solve(os%poisson, vv, nn, all_nodes=.true.)
 
       klst=0
       do kst = 1, norbs
@@ -696,7 +701,7 @@ subroutine X(compute_periodic_coulomb_integrals) (this, mesh)
           end do
           !$omp end parallel do
 
-          this%coulomb(ist,jst,kst,lst,1) = dmf_integrate(mesh, tmp)
+          this%coulomb(ist,jst,kst,lst,1) = dmf_integrate(der%mesh, tmp)
 
           if(abs(this%coulomb(ist,jst,kst,lst,1))<CNST(1.0e-12)) then
             this%coulomb(ist,jst,kst,lst,1) = M_ZERO
@@ -717,6 +722,8 @@ subroutine X(compute_periodic_coulomb_integrals) (this, mesh)
       end do !kst
     end do !jst
   end do !ist
+
+  call poisson_end(os%poisson)
 
   SAFE_DEALLOCATE_A(nn)
   SAFE_DEALLOCATE_A(vv)
@@ -768,7 +775,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
       !
       os => this%orbsets(ios)
       ! 
-      call X(orbitalset_get_coefficients)(os, d%dim, psi, ik, has_phase, dot)
+      call X(orbitalset_get_coefficients)(os, d%dim, psi, ik, has_phase, this%basisfromstates, dot)
       !
       reduced(:,:) = M_ZERO
       do im = 1, os%norbs
@@ -921,6 +928,8 @@ end subroutine X(compute_periodic_coulomb_integrals)
    FLOAT :: weight
 
    if(this%level == DFT_U_NONE) return
+   !In this casem there is no contribution to the force
+   if(this%basisfromstates) return
 
    PUSH_SUB(X(lda_u_force))
 
@@ -949,7 +958,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
        !We first compute the matrix elemets <\psi | orb_m>
        !taking into account phase correction if needed   
        ! 
-       call X(orbitalset_get_coefficients)(os, st%d%dim, psi, iq, phase, dot)
+       call X(orbitalset_get_coefficients)(os, st%d%dim, psi, iq, phase, this%basisfromstates, dot)
 
        do idir = 1, ndim
          call batch_get_state(grad_psib(idir), ibatch, mesh%np, gpsi)     
@@ -958,7 +967,8 @@ end subroutine X(compute_periodic_coulomb_integrals)
          ! 
          !No phase here, this is already added
 
-         call X(orbitalset_get_coefficients)(os, st%d%dim, gpsi, iq, phase, gdot(1:st%d%dim,1:os%norbs,idir))
+         call X(orbitalset_get_coefficients)(os, st%d%dim, gpsi, iq, phase, &
+                     this%basisfromstates, gdot(1:st%d%dim,1:os%norbs,idir))
 
          if(st%d%ispin /= SPINORS) then
            do im = 1, os%norbs

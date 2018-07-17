@@ -39,6 +39,7 @@ module lda_u_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use orbitalbasis_oct_m
   use orbitalset_oct_m
   use orbitalset_utils_oct_m
@@ -445,7 +446,7 @@ contains
 
    integer :: ios
  
-   !In this case there is not phase difference, as the basis come from states on the full 
+   !In this case there is no phase difference, as the basis come from states on the full 
    !grid and not from spherical meshes around the atoms
    if(this%basisfromstates) return
  
@@ -466,10 +467,11 @@ contains
 
  end subroutine lda_u_build_phase_correction
 
- subroutine lda_u_periodic_coulomb_integrals(this, st, mesh, has_phase)
+ subroutine lda_u_periodic_coulomb_integrals(this, st, der, mc, has_phase)
    type(lda_u_t),                 intent(inout) :: this
    type(states_t),                intent(in)    :: st
-   type(mesh_t),                  intent(in)    :: mesh
+   type(derivatives_t),           intent(in)    :: der
+   type(multicomm_t),             intent(in)    :: mc
    logical,                       intent(in)    :: has_phase
 
    integer :: ik, im, idim
@@ -481,9 +483,9 @@ contains
    PUSH_SUB(lda_u_periodic_coulomb_integrals)
 
    if(states_are_real(st)) then
-     call dcompute_periodic_coulomb_integrals(this, mesh)
+     call dcompute_periodic_coulomb_integrals(this, der, mc)
    else
-     call zcompute_periodic_coulomb_integrals(this, mesh)
+     call zcompute_periodic_coulomb_integrals(this, der, mc)
    end if
 
   ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
@@ -493,7 +495,7 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       do im = 1, this%orbsets(1)%norbs
         do idim = 1, st%d%dim
-          call lalg_copy(mesh%np, this%orbsets(1)%zorb(:,idim, im), &
+          call lalg_copy(der%mesh%np, this%orbsets(1)%zorb(:,idim, im), &
                                        this%orbsets(1)%eorb_mesh(:,idim,im,ik))
         end do
       end do

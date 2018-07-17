@@ -371,7 +371,7 @@ contains
         message(1) = "Unable to load LDA+U basis from selected states."
         call messages_fatal(1)
       end if
-      call lda_u_periodic_coulomb_integrals(hm%lda_u, st, gr%mesh, associated(hm%hm_base%phase))
+      call lda_u_periodic_coulomb_integrals(hm%lda_u, st, gr%der, mc, associated(hm%hm_base%phase))
     end if
 
 

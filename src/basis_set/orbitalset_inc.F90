@@ -15,12 +15,13 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 
-subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, dot)
+subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, basisfromstates, dot)
   type(orbitalset_t),   intent(in) :: os
   integer,              intent(in) :: ndim
   R_TYPE,               intent(in) :: psi(:,:)
   integer,              intent(in) :: ik
   logical,              intent(in) :: has_phase !True if the wavefunction has an associated phase
+  logical,              intent(in) :: basisfromstates
   R_TYPE,            intent(inout) :: dot(:,:)
 
   integer :: im, ip, idim, idim_orb
@@ -50,11 +51,19 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, dot)
       endif 
 #endif
     else
-      do idim = 1, ndim
-        idim_orb = min(idim,os%ndim)
-        dot(idim,im) = submesh_to_mesh_dotp(os%sphere, os%X(orb)(1:os%sphere%np,idim_orb,im),&
+      if(basisfromstates) then
+        do idim = 1, ndim
+          idim_orb = min(idim,os%ndim)
+          dot(idim,im) = X(mf_dotp)(os%sphere%mesh, os%X(orb)(1:os%sphere%mesh%np,idim_orb,im),&
+                              psi(1:os%sphere%mesh%np,idim), reduce=.false.)
+        end do 
+      else
+        do idim = 1, ndim
+          idim_orb = min(idim,os%ndim)
+          dot(idim,im) = submesh_to_mesh_dotp(os%sphere, os%X(orb)(1:os%sphere%np,idim_orb,im),&
                                psi(1:os%sphere%mesh%np, idim), reduce=.false.)
-      end do
+        end do
+      end if
     end if
   end do
 
@@ -69,12 +78,13 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, dot)
 end subroutine X(orbitalset_get_coefficients)
 
 
-subroutine X(orbitalset_get_coeff_batch)(os, ndim, psib, ik, has_phase, dot)
+subroutine X(orbitalset_get_coeff_batch)(os, ndim, psib, ik, has_phase, basisfromstates, dot)
   type(orbitalset_t),   intent(in) :: os
   integer,              intent(in) :: ndim
   type(batch_t),        intent(in) :: psib
   integer,              intent(in) :: ik
   logical,              intent(in) :: has_phase !True if the wavefunction has an associated phase
+  logical,              intent(in) :: basisfromstates
   R_TYPE,            intent(inout) :: dot(:,:,:)
 
   integer :: ist
@@ -88,7 +98,8 @@ subroutine X(orbitalset_get_coeff_batch)(os, ndim, psib, ik, has_phase, dot)
   SAFE_ALLOCATE(psi(1:os%sphere%mesh%np, 1:ndim))
   do ist = 1, psib%nst
     call batch_get_state(psib, ist, os%sphere%mesh%np, psi)
-    call X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, dot(1:ndim,1:os%norbs,ist))
+    call X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, basisfromstates, &
+                                                  dot(1:ndim,1:os%norbs,ist))
   end do
   SAFE_DEALLOCATE_A(psi)
   

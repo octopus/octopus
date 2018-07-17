@@ -328,12 +328,14 @@ program oct_test
       if(states_are_real(sys%st)) then
         dweight = M_ONE
         ddot = M_ZERO
-        call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), 1, .false., ddot)
+        call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), 1, .false., &
+                                           .false., ddot)
         call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib, 1, .false., dweight)
       else
         zweight = M_ONE
         zdot = M_ZERO
-        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), 1, .true., zdot)
+        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), 1, &
+                                           .true., .false., zdot)
         call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, 1, .true., zweight)
       end if
     end do
