@@ -32,6 +32,7 @@ module v_ks_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
+  use hamiltonian_base_oct_m
   use kick_oct_m
   use index_oct_m
   use io_function_oct_m
@@ -382,12 +383,10 @@ contains
         ks%sic_type = SIC_NONE
       end if
 
-      if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
-        call xc_oep_init(ks%oep, ks%xc_family, gr, st)
-      end if
-      if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_init(ks%ks_inversion, gr, geo, st, mc)
-      end if
+      if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) call xc_oep_init(ks%oep, ks%xc_family, gr, st)
+
+      if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) call xc_ks_inversion_init(ks%ks_inversion, gr, geo, st)
+
     end select
 
     ks%frozen_hxc = .false.
@@ -515,7 +514,7 @@ contains
           call messages_warning()
         end if
           
-        call dftd3_init(ks%vdw_d3, d3_input)
+        call dftd3_init(ks%vdw_d3, d3_input, trim(conf%share)//'/dftd3/pars.dat')
         call dftd3_set_functional(ks%vdw_d3, func = d3func, version = 4, tz = .false.)
 
       case default
@@ -951,7 +950,7 @@ contains
         select case (st%d%ispin)
         case (UNPOLARIZED, SPIN_POLARIZED)
           do ispin = 1, st%d%nspin
-            if (qsp(ispin) == M_ZERO) cycle
+            if (abs(qsp(ispin)) <= M_EPSILON) cycle
 
             rho = M_ZERO
             vxc_sic = M_ZERO
@@ -1170,6 +1169,15 @@ contains
             ks%calc%energy%Imintnvxc = ks%calc%energy%Imintnvxc + aimag(ctmp)          
           end if
         end do
+
+        if(states_are_real(st)) then
+          ks%calc%energy%int_dft_u = denergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)
+        else
+          ctmp = zenergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)
+          ks%calc%energy%int_dft_u   = real(ctmp)
+          ks%calc%energy%Imint_dft_u = aimag(ctmp)
+        end if
+
       end if
 
       call profiling_out(prof)
@@ -1214,7 +1222,7 @@ contains
       SAFE_DEALLOCATE_P(ks%calc%b_ind)
     end if
 
-    if(ks%theory_level == INDEPENDENT_PARTICLES .or. ks%calc%amaldi_factor == M_ZERO) then
+    if(ks%theory_level == INDEPENDENT_PARTICLES .or. abs(ks%calc%amaldi_factor) <= M_EPSILON) then
 
       hm%vhxc = M_ZERO
       hm%energy%intnvxc     = M_ZERO
@@ -1348,10 +1356,11 @@ contains
     end if
 
     if(ks%calc%time_present) then
-      call hamiltonian_update(hm, ks%gr%mesh, time = ks%calc%time)
+      call hamiltonian_update(hm, ks%gr%mesh, ks%gr%der%boundaries, time = ks%calc%time)
     else
-      call hamiltonian_update(hm, ks%gr%mesh)
+      call hamiltonian_update(hm, ks%gr%mesh, ks%gr%der%boundaries)
     end if
+
 
     SAFE_DEALLOCATE_P(ks%calc%density)
     SAFE_DEALLOCATE_P(ks%calc%Imdensity)

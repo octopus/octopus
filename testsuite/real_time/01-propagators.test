@@ -54,3 +54,9 @@ Input      : 01-propagators.08-exprk4.inp
 Precision  : 1.0e-6
 match ; Multipoles [step  1] ; LINEFIELD(td.general/multipoles, -21, 4) ;  1.508228999799e-10
 match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -9.571300736633e-02
+
+Processors : 4
+Input      : 01-propagators.09-cfmagnus4.inp
+Precision  : 1.0e-6
+match ; Multipoles [step  1] ; LINEFIELD(td.general/multipoles, -21, 4) ;  1.508228999799e-10
+match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -9.571300736633e-02

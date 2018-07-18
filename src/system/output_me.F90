@@ -357,7 +357,7 @@ contains
           
           write(message(1), '(i4,3x,a2,1x)') ist, trim(cspin)
           do idir = 1, gr%sb%dim
-            write(str_tmp, '(f12.6)') momentum(idir, ist, ik)
+            write(str_tmp, '(f12.6)') momentum(idir, ist, ik+is)
             message(1) = trim(message(1)) // trim(str_tmp)
           end do
           write(str_tmp, '(3x,f12.6)') st%occ(ist, ik+is)

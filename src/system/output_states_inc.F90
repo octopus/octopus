@@ -17,10 +17,11 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine output_states(st, gr, geo, dir, outp)
+subroutine output_states(st, gr, geo, hm, dir, outp)
   type(states_t),         intent(inout) :: st
   type(grid_t),           intent(inout) :: gr
   type(geometry_t),       intent(in)    :: geo
+  type(hamiltonian_t),    intent(in)    :: hm
   character(len=*),       intent(in)    :: dir
   type(output_t),         intent(in)    :: outp
 
@@ -206,7 +207,7 @@ subroutine output_states(st, gr, geo, dir, outp)
   if(bitand(outp%what, OPTION__OUTPUT__KINETIC_ENERGY_DENSITY) /= 0) then
     fn_unit = units_out%energy * units_out%length**(-gr%mesh%sb%dim)
     SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
-    call states_calc_quantities(gr%der, st, kinetic_energy_density = elf)
+    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = elf)
     select case(st%d%ispin)
     case(UNPOLARIZED)
       write(fname, '(a)') 'tau'
@@ -224,7 +225,7 @@ subroutine output_states(st, gr, geo, dir, outp)
 
   if(bitand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
     call dos_init(dos, st)
-    call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh)
+    call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh, hm)
     call dos_end(dos)
   end if
 
@@ -299,7 +300,7 @@ subroutine output_current_flow(gr, st, dir, outp)
 
   if(states_are_complex(st)) then
     SAFE_ALLOCATE(j(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
-    call states_calc_quantities(gr%der, st, paramagnetic_current = j)
+    call states_calc_quantities(gr%der, st, .false., paramagnetic_current = j)
 
     do idir = 1, gr%mesh%sb%dim
       do ip = 1, gr%mesh%np

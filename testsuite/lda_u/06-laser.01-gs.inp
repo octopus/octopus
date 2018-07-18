@@ -1,0 +1,36 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+CalculationMode = gs
+FromScratch = yes
+
+bondlength = 1.7/0.529177
+
+%Species
+ "Na" | species_pseudo | set | standard | hubbard_l | 0 | hubbard_u | 2.0/27.21138
+%
+
+%Coordinates
+"Na" | 0.0 | 0.0 |  bondlength 
+"Na" | 0.0 | 0.0 | -bondlength 
+%
+
+BoxShape = sphere
+Radius  = 8.0/0.529177
+Spacing = 0.3/0.529177
+
+ExcessCharge = 1
+
+ConvRelDens = 5.0e-4
+
+EigenSolverTolerance = 1e-7
+EigenSolverMaxIter = 200
+
+FilterPotentials = filter_none
+
+ParDomains = no
+MixField = density
+
+DFTULevel = dft_u_empirical
+ExperimentalFeatures = yes
+AOThreshold = 0.1
+

@@ -46,6 +46,7 @@ module run_oct_m
   use static_pol_oct_m
   use system_oct_m
   use td_oct_m
+  use test_oct_m
   use unit_system_oct_m
   use unocc_oct_m
   use varinfo_oct_m
@@ -57,7 +58,7 @@ module run_oct_m
   private
   public ::                      &
     run
-  
+
   integer :: calc_mode_id
 
   integer, parameter :: LR = 1, FD = 2
@@ -77,6 +78,7 @@ module run_oct_m
     CM_KDOTP              =  15,  &
     CM_DUMMY              =  17,  &
     CM_INVERTKDS          =  18,  &
+    CM_TEST               =  19,  &
     CM_PULPO_A_FEIRA      =  99
 
 contains
@@ -151,6 +153,16 @@ contains
 
     call unit_system_init()
 
+    if(calc_mode_id == CM_TEST) then
+      call test_run()
+      call fft_all_end()
+#ifdef HAVE_MPI
+      call mpi_debug_statistics()
+#endif
+      POP_SUB(run)
+      return
+    end if
+
     call system_init(sys)
 
     nullify(subsys_hm)
@@ -169,7 +181,8 @@ contains
       end if
     else
       call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
-            sys%ks%xc_family, sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+            sys%ks%xc_family, sys%ks%xc_flags, &
+            family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
 
       if (hm%pcm%run_pcm) then 
         if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
@@ -284,6 +297,7 @@ contains
     
     call hamiltonian_end(hm)
     call system_end(sys)
+
     call fft_all_end()
 
 #ifdef HAVE_MPI

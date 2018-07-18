@@ -30,6 +30,7 @@ extern char ** environ;
 
 #include "liboct_parser.h"
 #include "symbols.h"
+#include "gsl_userdef.h"
 
 static FILE *fout;
 static int  disable_write;
@@ -116,6 +117,21 @@ int parse_input(const char *file_in, int set_used)
   length = 40;
   s = (char *)malloc(length + 1);
 
+  long start_pos = ftell(f);
+  
+  do {
+    c = parse_get_line(f, &s, &length);
+    if(strncmp("RandomSeed", s, 10) == 0 ) {
+      parse_result rs;
+      parse_exp(s, &rs);
+      printf("value %ld\n", lround(GSL_REAL(rs.value.c)));
+      gsl_complex_rand_seed(lround(GSL_REAL(rs.value.c)));
+    }
+    
+  } while(c != EOF);
+
+  fseek(f, start_pos, SEEK_SET);
+  
   do{
     c = parse_get_line(f, &s, &length);
     if(*s){

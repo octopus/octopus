@@ -494,9 +494,8 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
         c = hmss(1, 1), ldc = ubound(hmss, dim = 1))
     end do
 
-#ifdef R_TCOMPLEX
-    hmss(1:st%nst, 1:st%nst) = R_CONJ(hmss(1:st%nst, 1:st%nst))
-#endif
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(hpsi)
 
   end if
   

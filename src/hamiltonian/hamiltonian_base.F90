@@ -22,6 +22,7 @@ module hamiltonian_base_oct_m
   use accel_oct_m
   use batch_oct_m
   use batch_ops_oct_m
+  use boundaries_oct_m
   use blas_oct_m
   use comm_oct_m
   use derivatives_oct_m
@@ -82,6 +83,8 @@ module hamiltonian_base_oct_m
     hamiltonian_base_update,                   &
     dhamiltonian_base_phase,                   &
     zhamiltonian_base_phase,                   &
+    dhamiltonian_base_phase_correction,        &
+    zhamiltonian_base_phase_correction,        &
     dhamiltonian_base_nlocal_force,            &
     zhamiltonian_base_nlocal_force,            &
     projection_t
@@ -122,6 +125,7 @@ module hamiltonian_base_oct_m
     type(accel_mem_t)                    :: buff_projector_phases
     type(accel_mem_t)                    :: buff_mix
     CMPLX, pointer     :: phase(:, :)
+    CMPLX, allocatable :: phase_corr(:,:)
     type(accel_mem_t) :: buff_phase
     integer            :: buff_phase_qn_start
   end type hamiltonian_base_t
@@ -139,7 +143,8 @@ module hamiltonian_base_oct_m
     TERM_NON_LOCAL_POTENTIAL =   4,      &
     TERM_OTHERS              =   8,      &
     TERM_LOCAL_EXTERNAL      =  16,      &
-    TERM_MGGA                =  32
+    TERM_MGGA                =  32,      &
+    TERM_DFT_U               =  64 
 
   integer, parameter, public ::            &
     FIELD_POTENTIAL                = 1,    &

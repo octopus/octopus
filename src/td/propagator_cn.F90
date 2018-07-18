@@ -26,6 +26,7 @@ module propagator_cn_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
+  use lda_u_oct_m
   use loct_pointer_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -126,7 +127,9 @@ contains
       end if
     end if
 
-    call hamiltonian_update(hm, gr%mesh, time = time - dt/M_TWO)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt/M_TWO)
+    !We update the occupation matrices
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
     do ik = st%d%kpt%start, st%d%kpt%end
@@ -190,7 +193,9 @@ contains
           time, dt, time + dt/M_TWO, hm%vhxc, hm%imvhxc)
       end if
 
-      call hamiltonian_update(hm, gr%mesh, time = time + dt/M_TWO)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time + dt/M_TWO)
+      !We update the occupation matrices
+      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
       ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -249,7 +254,9 @@ contains
     end if
 
     !restore to time 'time - dt'
-    if(ion_dynamics_ions_move(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
+    if(ion_dynamics_ions_move(ions)) then
+      call ion_dynamics_restore_state(ions, geo, ions_state)
+    end if
 
     SAFE_DEALLOCATE_A(zpsi_rhs)
     SAFE_DEALLOCATE_A(zpsi)

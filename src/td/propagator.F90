@@ -28,6 +28,7 @@ module propagator_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
+  use lda_u_oct_m
   use loct_pointer_oct_m
   use parser_oct_m
   use mesh_function_oct_m
@@ -251,6 +252,8 @@ contains
     !% Similar, but not identical, to Crank-Nicolson method.
     !%Option expl_runge_kutta4 15
     !% WARNING: EXPERIMENTAL. Explicit RK4 method.
+    !%Option cfmagnus4 16
+    !% WARNING EXPERIMENTAL
     !%End
     call messages_obsolete_variable('TDEvolutionMethod', 'TDPropagator')
 
@@ -317,6 +320,8 @@ contains
       call messages_experimental("QOCT+TDDFT propagator")
     case(PROP_EXPLICIT_RUNGE_KUTTA4)
       call messages_experimental("explicit Runge-Kutta 4 propagator")
+    case(PROP_CFMAGNUS4)
+      call messages_experimental("Commutator-Free Magnus propagator")
     case default
       call messages_input_error('TDPropagator')
     end select
@@ -337,7 +342,12 @@ contains
       end if
     end if
 
-    call potential_interpolation_init(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin, family_is_mgga)
+    select case(tr%method)
+    case(PROP_CFMAGNUS4)
+      call potential_interpolation_init(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin, family_is_mgga, order = 4)
+    case default
+      call potential_interpolation_init(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin, family_is_mgga)
+    end select
 
     call exponential_init(tr%te) ! initialize propagator
 
@@ -568,6 +578,8 @@ contains
       else
         call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo)
       end if
+    case(PROP_CFMAGNUS4)
+      call td_cfmagnus4(ks, hm, gr, st, tr, time, dt, ions, geo, nt)
     end select
 
     generate = .false.
@@ -605,6 +617,9 @@ contains
       call gauge_field_get_force(hm%ep%gfield, gr, st)
       call gauge_field_propagate_vel(hm%ep%gfield, dt)
     end if
+
+    !We update the occupation matrices
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
 
     POP_SUB(propagator_dt)
     call profiling_out(prof)
@@ -665,6 +680,11 @@ contains
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_propagate(hm%ep%gfield, dt, iter*dt)
+    end if
+
+    !TODO: we should update the occupation matrices here 
+    if(hm%lda_u_level /= DFT_U_NONE) then
+      call messages_not_implemented("DFT+U with propagator_dt_bo")  
     end if
 
     call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)

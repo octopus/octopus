@@ -1027,7 +1027,7 @@ contains
         end do
       end do
      
-      if(.not.mesh%use_curvilinear) fu = fu*mesh%volume_element
+      if(.not.mesh%use_curvilinear) fu = fu*mesh%surface_element(d3)
       if(np > 0 ) write(iunit, mformat, iostat=ierr) zz, fu
     end do
 
