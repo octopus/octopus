@@ -598,7 +598,7 @@ contains
     FLOAT, optional,                 intent(in)    :: Imdeltat2
     
     integer :: ii, ist
-    CMPLX, allocatable :: psi(:, :), psi2(:, :)
+    CMPLX, pointer :: psi(:, :), psi2(:, :)
 
     PUSH_SUB(exponential_apply_batch)
 
@@ -615,30 +615,54 @@ contains
 
       if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
 
-      SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:hm%d%dim))
-      if(present(psib2)) then
-        SAFE_ALLOCATE(psi2(1:der%mesh%np_part, 1:hm%d%dim))
+      ! only allocate for packed cases
+      if (batch_status(psib) /= BATCH_NOT_PACKED) then
+        SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:hm%d%dim))
+      end if
+      if (batch_status(psib2) /= BATCH_NOT_PACKED) then
+        if(present(psib2)) then
+          SAFE_ALLOCATE(psi2(1:der%mesh%np_part, 1:hm%d%dim))
+        end if
       end if
 
       do ii = 1, psib%nst
         ist = psib%states(ii)%ist
 
-        call batch_get_state(psib, ii, der%mesh%np, psi)
+        ! avoid copy for the unpacked case, simply set pointer
+        ! -> this should be removed by having batched versions of
+        ! exponential_apply
+        if (batch_status(psib) /= BATCH_NOT_PACKED) then
+          call batch_get_state(psib, ii, der%mesh%np, psi)
+        else
+          psi => psib%states(ii)%zpsi
+        end if
         call exponential_apply(te, der, hm, psi, ist, ik, deltat, Imdeltat = Imdeltat)
-        call batch_set_state(psib, ii, der%mesh%np, psi)
-        
-        if(present(psib2)) then
-          call batch_get_state(psib2, ii, der%mesh%np, psi2)
-          call exponential_apply(te, der, hm, psi2, ist, ik, deltat2, Imdeltat = Imdeltat2)
-          call batch_set_state(psib2, ii, der%mesh%np, psi2)
+        if (batch_status(psib) /= BATCH_NOT_PACKED) then
+          call batch_set_state(psib, ii, der%mesh%np, psi)
         end if
         
-     end do
+        if(present(psib2)) then
+          ! also avoid copying unpacked batches here
+          if (batch_status(psib2) /= BATCH_NOT_PACKED) then
+            call batch_get_state(psib2, ii, der%mesh%np, psi2)
+          else
+            psi2 => psib2%states(ii)%zpsi
+          end if
+          call exponential_apply(te, der, hm, psi2, ist, ik, deltat2, Imdeltat = Imdeltat2)
+          if (batch_status(psib2) /= BATCH_NOT_PACKED) then
+            call batch_set_state(psib2, ii, der%mesh%np, psi2)
+          end if
+        end if
+      end do
 
-     SAFE_DEALLOCATE_A(psi)
-     if(present(psib2)) then
-       SAFE_DEALLOCATE_A(psi2)
-     end if
+      if (batch_status(psib) /= BATCH_NOT_PACKED) then
+        SAFE_DEALLOCATE_P(psi)
+      end if
+      if (batch_status(psib2) /= BATCH_NOT_PACKED) then
+        if(present(psib2)) then
+           SAFE_DEALLOCATE_P(psi2)
+        end if
+      end if
 
    end if
     
@@ -728,7 +752,7 @@ contains
       call profiling_out(prof)
       POP_SUB(exponential_apply_batch.taylor_series_batch)
     end subroutine taylor_series_batch
-    
+
   end subroutine exponential_apply_batch
 
   ! ---------------------------------------------------------
