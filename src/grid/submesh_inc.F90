@@ -330,7 +330,7 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
     !$omp end parallel do
 
   case(BATCH_PACKED)
-    !$omp parallel do private(ist, idim, jdim, jst, is)
+    !$omp parallel do private(ist, idim, jdim, jst, is, ii)
     do ist =  1, min(mm%nst, ubound(factor, 2))
       do idim = 1, mm%dim
         ii = batch_ist_idim_to_linear(mm, (/ist, idim/))
