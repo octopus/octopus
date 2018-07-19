@@ -38,6 +38,7 @@ dist_share_DATA =                                  \
 	07-cholesky_serial.test                    \
 	07-cholesky_serial.01-real.inp             \
 	07-cholesky_serial.02-complex.inp          \
+	07-cholesky_serial.03-parindep.inp         \
 	08-mgs.test                                \
 	08-mgs.01-real.inp                         \
 	08-mgs.02-complex.inp                      \
@@ -63,6 +64,8 @@ dist_share_DATA =                                  \
 	18-interpolation.01-1d.inp                 \
 	18-interpolation.02-2d.inp                 \
 	18-interpolation.03-3d.inp                 \
-	18-interpolation.test
+	18-interpolation.test                      \
+	19-hgh_soc.01-3d.inp                       \
+        19-hgh_soc.test
 
 CLEANFILES = *~ *.bak

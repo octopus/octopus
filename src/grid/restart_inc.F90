@@ -155,12 +155,16 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   call profiling_in(prof_io, "RESTART_READ_IO")
 
 #ifdef HAVE_MPI2
-  ! Ensure that xlocal has a proper value
-  ASSERT(mesh%vp%xlocal >= 0 .and. mesh%vp%xlocal <= mesh%np_part_global)
-  call io_binary_read_parallel(io_workpath(full_filename), mesh%mpi_grp%comm, mesh%vp%xlocal, &
-                               np, read_ff, ierr)
-#else
-  call io_binary_read(io_workpath(full_filename), np, read_ff, ierr, offset = offset)
+  if(mesh%parallel_in_domains) then
+    ! Ensure that xlocal has a proper value
+    ASSERT(mesh%vp%xlocal >= 0 .and. mesh%vp%xlocal <= mesh%np_part_global)
+    call io_binary_read_parallel(io_workpath(full_filename), mesh%mpi_grp%comm, mesh%vp%xlocal, &
+      np, read_ff, ierr)
+  else
+#endif
+    call io_binary_read(io_workpath(full_filename), np, read_ff, ierr, offset = offset)
+#ifdef HAVE_MPI2
+  end if
 #endif
   call profiling_count_transfers(np, read_ff(1))
   call profiling_out(prof_io)

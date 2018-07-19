@@ -2127,8 +2127,8 @@ contains
 
 
     ! open files
-    filename = trim('td.general')//trim(fname)
-    iunit = io_open(filename, action='read', status='old')      
+    filename = trim('td.general/')//trim(fname)
+    iunit = io_open(filename, action='read', status='old', die=.false.)
 
     if(iunit < 0) then
       filename = trim('./')//trim(fname)
@@ -2422,7 +2422,7 @@ contains
     integer,                intent(in) :: energy_steps
     type(kick_t), optional, intent(in) :: kick !< if present, will write itself and nspin
 
-    integer :: is, idir, jdir, ie, ii, info, out_file, rwork
+    integer :: is, idir, jdir, ie, ii, info, out_file
     FLOAT, allocatable :: work(:,:) 
     CMPLX, allocatable :: w(:)
     character(len=20) :: header_string

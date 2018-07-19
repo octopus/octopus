@@ -38,103 +38,77 @@ module element_oct_m
     element_atomic_number
 
   type element_t
-    logical          :: valid
-    integer          :: atomic_number
-    character(len=3) :: symbol
-    FLOAT            :: mass
-    FLOAT            :: vdw_radius
+    integer(8) :: dummy
   end type element_t
+
+  interface
+    
+    ! -------------------------------------------------
+    
+    subroutine element_init(self, symbol)
+      import :: element_t
+      implicit none
+      
+      type(element_t),  intent(out)   :: self
+      character(len=*), intent(in)    :: symbol
+    end subroutine element_init
+
+    ! -------------------------------------------------
+    
+    subroutine element_end(self)
+      import :: element_t
+      implicit none
+
+      type(element_t),   intent(inout) :: self
+    end subroutine element_end
+
+    ! ------------------------------------
+
+    real(8) function element_mass(self)
+      import :: element_t
+      implicit none
+      
+      type(element_t),   intent(in)    :: self
+    end function element_mass
+
+    ! ------------------------------------
+
+    real(8) function element_vdw_radius(self)
+      import :: element_t
+      implicit none
+      
+      type(element_t),   intent(in)    :: self
+    end function element_vdw_radius
+    
+    ! ------------------------------------
+
+    integer function element_atomic_number(self)
+      import :: element_t
+      implicit none
+      
+      type(element_t),   intent(in)    :: self
+    end function element_atomic_number
+
+  end interface
   
+
 contains
 
-  ! -----------------------------------
+  logical function element_valid(self) result(valid)
+    type(element_t),   intent(in)    :: self
 
-  subroutine element_init(this, label)
-    type(element_t),   intent(out)   :: this
-    character(len=*),  intent(in)    :: label
-
-    integer :: iunit, nelement, ii, ilend
-    character(len=MAX_PATH_LEN) :: fname
-
-    PUSH_SUB(element_init)
+    interface
+      integer function element_valid_low(self)
+        import :: element_t
+        implicit none
+        
+        type(element_t),   intent(in)    :: self
+      end function element_valid_low
+    end interface
     
-    do ilend = 1, len(label)
-      if( iachar(label(ilend:ilend)) >= iachar('a') .and. iachar(label(ilend:ilend)) <= iachar('z') ) cycle
-      if( iachar(label(ilend:ilend)) >= iachar('A') .and. iachar(label(ilend:ilend)) <= iachar('Z') ) cycle
-      exit
-    end do
-    ilend = ilend - 1
-          
-    this%valid = .false.
-
-    fname = trim(conf%share)//'/pseudopotentials/elements'
-    
-    nelement = max(0, loct_number_of_lines(fname) - 3) 
-
-    iunit = io_open(trim(conf%share)//'/pseudopotentials/elements', action='read', status='old', die=.false.)
-
-    ! skip comment lines
-    read(iunit, *)
-    read(iunit, *)
-    read(iunit, *)
-
-    do ii = 1, nelement
-      read(iunit, *) this%symbol, this%atomic_number, this%mass, this%vdw_radius
-      if(trim(this%symbol) == label(1:ilend)) then
-        this%valid = .true.
-        exit
-      end if
-    end do
-
-    call io_close(iunit)
-
-    POP_SUB(element_init)
-  end subroutine element_init
-  
-  ! -----------------------------------
-
-  subroutine element_end(this)
-    type(element_t),   intent(inout) :: this
-
-    PUSH_SUB(element_end)
-    
-    this%valid = .false.
-
-    POP_SUB(element_end)
-  end subroutine element_end
-
-  ! ------------------------------------
-
-  pure FLOAT function element_mass(this) result(mass)
-    type(element_t),   intent(in)    :: this
-
-    mass = this%mass
-  end function element_mass
-
-  ! ------------------------------------
-
-  pure FLOAT function element_vdw_radius(this) result(vdw_radius)
-    type(element_t),   intent(in)    :: this
-
-    vdw_radius = this%vdw_radius
-  end function element_vdw_radius
-
-  ! ------------------------------------
-
-  pure logical function element_valid(this) result(valid)
-    type(element_t),   intent(in)    :: this
-
-    valid = this%valid
+    valid = element_valid_low(self) /= 0
   end function element_valid
 
-  ! ------------------------------------
-
-  pure integer function element_atomic_number(this) result(atomic_number)
-    type(element_t),   intent(in)    :: this
-
-    atomic_number = this%atomic_number
-  end function element_atomic_number
-  
 end module element_oct_m
 
 !! Local Variables:

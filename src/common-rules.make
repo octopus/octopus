@@ -28,6 +28,7 @@ FCFLAGS_MODS = \
 	@F90_MODULE_FLAG@$(top_builddir)/src/grid    	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/poisson 	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/frozen      \
+        @F90_MODULE_FLAG@$(top_builddir)/src/basis_set   \
 	@F90_MODULE_FLAG@$(top_builddir)/src/states  	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/system   	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/hamiltonian \
@@ -46,10 +47,12 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/liboct_parser \
         $(GSL_CFLAGS) $(GD_CFLAGS) \
 	@METIS_CFLAGS@ @PARMETIS_CFLAGS@ @CFLAGS_NFFT@ @CFLAGS_FFTW@ @CFLAGS_CUDA@ \
-	-DSHARE_OCTOPUS='"$(pkgdatadir)"'
+	-DSHARE_DIR='"$(pkgdatadir)"'
 
 AM_CCASFLAGS = \
 	-I$(top_builddir)/
+
+AM_CXXFLAGS = -I$(top_srcdir)/external_libs/rapidxml
 
 # ---------------------------------------------------------------
 # Define libraries here.
@@ -62,6 +65,7 @@ octopus_LIBS = \
 	$(top_builddir)/src/scf/libscf.a                 \
 	$(top_builddir)/src/system/libsystem.a           \
 	$(top_builddir)/src/hamiltonian/libhamiltonian.a \
+        $(top_builddir)/src/basis_set/libbasis_set.a     \
 	$(top_builddir)/src/states/libstates.a           \
 	$(top_builddir)/src/frozen/libfrozen.a           \
 	$(top_builddir)/src/poisson/libpoisson.a         \

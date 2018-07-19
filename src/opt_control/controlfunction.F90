@@ -1354,7 +1354,6 @@ contains
     type(controlfunction_t), intent(in)  :: par
     FLOAT,                   intent(out) :: lower_bounds(:)
     FLOAT,                   intent(out) :: upper_bounds(:)
-    integer :: dog
 
     PUSH_SUB(controlfunction_bounds)
 

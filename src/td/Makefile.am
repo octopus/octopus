@@ -80,7 +80,7 @@ propagator_cn.o : propagator_cn.F90 propagator_base.o potential_interpolation.o
 propagator_etrs.o : propagator_etrs.F90 propagator_base.o potential_interpolation.o 
 propagator_expmid.o : propagator_expmid.F90 propagator_base.o potential_interpolation.o 
 propagator.o : propagator.F90 propagator_rk.o propagator_qoct.o propagator_magnus.o propagator_expmid.o propagator_etrs.o propagator_cn.o propagator_base.o potential_interpolation.o 
-propagator_magnus.o : propagator_magnus.F90 propagator_base.o potential_interpolation.o 
+propagator_magnus.o : propagator_magnus.F90 propagator_rk.o propagator_base.o potential_interpolation.o
 propagator_qoct.o : propagator_qoct.F90 propagator_base.o potential_interpolation.o 
 propagator_rk.o : propagator_rk.F90 propagator_base.o potential_interpolation.o 
 spectrum.o : spectrum.F90 

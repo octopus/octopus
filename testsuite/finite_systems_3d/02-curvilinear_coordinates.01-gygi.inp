@@ -4,9 +4,7 @@ FromScratch = yes
 
 CalculationMode = gs
 
-%Species
- "He" | species_pseudo | db_file | "HGH/He.hgh"
-%
+PseudopotentialSet = hgh_lda
 
 %Coordinates
   "He" | 0 | 0 | 0 

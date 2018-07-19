@@ -17,27 +17,35 @@
 !!
 
   ! ---------------------------------------------------------
-  subroutine output_hamiltonian(hm, st, der, dir, outp, geo, grp)
+  subroutine output_hamiltonian(hm, st, der, dir, outp, geo, gr, grp)
     type(hamiltonian_t),       intent(in)    :: hm
     type(states_t),            intent(inout) :: st
     type(derivatives_t),       intent(inout) :: der
     character(len=*),          intent(in)    :: dir
     type(output_t),            intent(in)    :: outp
     type(geometry_t),          intent(in)    :: geo
+    type(grid_t),              intent(in)    :: gr
     type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
 
-    integer :: is, err, idir, ispin
+    integer :: is, err, idir, ispin, ik, ib
     character(len=MAX_PATH_LEN) :: fname
     type(base_potential_iterator_t)        :: iter
     type(base_potential_t),        pointer :: subsys_external
     type(base_hamiltonian_t),      pointer :: subsys_tnadd
     character(len=BASE_POTENTIAL_NAME_LEN) :: name
+
     FLOAT,         dimension(:),   pointer :: xpot
     FLOAT,         dimension(:,:), pointer :: tnadd_potential
     FLOAT, allocatable :: v0(:,:), nxc(:), potential(:)
+    FLOAT, allocatable :: current_kpt(:, :)
+    FLOAT, allocatable :: density_kpt(:), density_tmp(:,:)
+    type(density_calc_t) :: dens_calc
+
     FLOAT, allocatable :: current(:, :, :)
+    FLOAT, allocatable :: gradvh(:, :)
 
     PUSH_SUB(output_hamiltonian)
+   
 
     if(iand(outp%what, OPTION__OUTPUT__POTENTIAL) /= 0) then
       if(hm%cmplxscl%space) then
@@ -52,6 +60,10 @@
 
       if(hm%ep%classical_pot > 0) then
         call dio_function_output(outp%how, dir, "vc", der%mesh, hm%ep%Vclassical, units_out%energy, err, geo = geo, grp = grp)
+      end if
+
+      if(associated(hm%ep%v_static)) then
+        call dio_function_output(outp%how, dir, "vext", der%mesh, hm%ep%v_static, units_out%energy, err, geo = geo, grp = grp)
       end if
 
       nullify(subsys_external, xpot)
@@ -75,11 +87,17 @@
       if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         if (.not. hm%cmplxscl%space) then 
           call dio_function_output(outp%how, dir, 'vh', der%mesh, hm%vhartree, units_out%energy, err, geo = geo, grp = grp)
+          if(outp%gradientpotential) then
+            SAFE_ALLOCATE(gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
+            call dderivatives_grad(der, hm%vhartree(1:der%mesh%np_part), gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
+            call io_function_output_vector(outp%how, dir, 'grad_vh', der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
+                     geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
+            SAFE_DEALLOCATE_A(gradvh)
+          end if
         else
           call zio_function_output(outp%how, dir, 'vh', der%mesh, &
             hm%vhartree(1:der%mesh%np) + M_zI*hm%Imvhartree(1:der%mesh%np), units_out%energy, err, geo = geo, grp = grp)
         end if
-
         nullify(subsys_tnadd, tnadd_potential)
         if(associated(hm%subsys_hm))then
           call base_hamiltonian_get(hm%subsys_hm, "tnadd", subsys_tnadd)
@@ -142,6 +160,32 @@
         nullify(tnadd_potential)
       end if
 
+      !PCM potentials
+      if(hm%theory_level == KOHN_SHAM_DFT .and. hm%pcm%run_pcm ) then
+        if (hm%pcm%solute .and. hm%pcm%localf) then
+          call dio_function_output(outp%how, dir, 'vpcm', der%mesh, hm%pcm%v_e_rs + hm%pcm%v_n_rs + hm%pcm%v_ext_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_sol', der%mesh, hm%pcm%v_e_rs + hm%pcm%v_n_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_e', der%mesh, hm%pcm%v_e_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_n', der%mesh, hm%pcm%v_n_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_ext', der%mesh, hm%pcm%v_ext_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+        else if (hm%pcm%solute .and. .not.hm%pcm%localf) then
+          call dio_function_output(outp%how, dir, 'vpcm_sol', der%mesh, hm%pcm%v_e_rs + hm%pcm%v_n_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_e', der%mesh, hm%pcm%v_e_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+          call dio_function_output(outp%how, dir, 'vpcm_n', der%mesh, hm%pcm%v_n_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+        else if (.not.hm%pcm%solute .and. hm%pcm%localf) then
+          call dio_function_output(outp%how, dir, 'vpcm_ext', der%mesh, hm%pcm%v_ext_rs , & 
+                                   units_out%energy, err, geo = geo, grp = grp)
+        end if
+      end if
+
       if(hm%self_induced_magnetic) then
         ! unit of magnetic field is same as of electric field, and same as force (since e = 1)
         select case(der%mesh%sb%dim)
@@ -155,6 +199,7 @@
         end select
       end if
     end if
+
 
     if(iand(outp%what, OPTION__OUTPUT__XC_DENSITY) /= 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES) then
       SAFE_ALLOCATE(v0(1:der%mesh%np_part, 1))
@@ -199,7 +244,61 @@
         call messages_warning(1)
       end if
     end if
-    
+   
+    if(iand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
+      if(states_are_complex(st)) then
+      
+        SAFE_ALLOCATE(current_kpt(st%d%kpt%start:st%d%kpt%end, der%mesh%sb%dim)) 
+        do ik = st%d%kpt%start,st%d%kpt%end
+          do idir = 1,der%mesh%sb%dim
+            current_kpt(ik,idir) = dmf_integrate(der%mesh, st%current_kpt(:, idir, ik))
+          end do
+        end do
+        write(fname, '(2a)') 'current_kpt'
+        call io_function_output_vector_BZ(outp%how, dir, fname, der%mesh, st%d%kpt, &
+            current_kpt(:, :), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
+            grp = st%st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
+        SAFE_DEALLOCATE_A(current_kpt)
+      else
+        message(1) = 'No current density output for real states since it is identically zero.'
+        call messages_warning(1)
+      end if
+    end if
+
+    if(iand(outp%whatBZ, OPTION__OUTPUT_KPT__DENSITY_KPT) /= 0) then
+      SAFE_ALLOCATE(density_kpt(1:st%d%nik))
+      density_kpt(1:st%d%nik) = M_ZERO
+
+      SAFE_ALLOCATE(density_tmp(1:gr%fine%mesh%np, st%d%nspin))
+
+      !These two conditions should be copied from the density_calc_end routine
+      !We cannot call this routine as we must not symmetrize of reduce on kpoints
+      ASSERT(.not.states_are_packed(st))
+      ASSERT(.not.gr%have_fine_mesh)
+
+      do ik = st%d%kpt%start,st%d%kpt%end
+        call density_calc_init(dens_calc, st, gr, density_tmp)
+        do ib = st%group%block_start, st%group%block_end
+          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
+        end do
+ 
+        density_kpt(ik) = M_ZERO
+        do is = 1, st%d%nspin
+          density_kpt(ik) = density_kpt(ik) + dmf_integrate(der%mesh, density_tmp(:,is))
+        end do
+      end do
+
+   #if defined(HAVE_MPI)        
+      if(st%parallel_in_states .or. st%d%kpt%parallel) then
+        call comm_allreduce(st%st_kpt_mpi_grp%comm, density_kpt)
+      end if
+   #endif  
+
+      call io_function_output_global_BZ(outp%how, dir, "density_kpt", gr%mesh, density_kpt, unit_one, err)
+      SAFE_DEALLOCATE_A(density_tmp)
+      SAFE_DEALLOCATE_A(density_kpt)
+    end if
+ 
     POP_SUB(output_hamiltonian)
   end subroutine output_hamiltonian
 

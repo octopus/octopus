@@ -5,6 +5,8 @@ CalculationMode = td
 FromScratch = yes
 ExperimentalFeatures = yes
 
+PseudopotentialSet = hgh_lda
+
 %Coordinates
 "Cl" | 0.0 | 0.0 | 0.0
 %
@@ -14,10 +16,6 @@ ExcessCharge = -1
 
 ParDomains = 2
 ParStates = 2
-
-%Species
-  'Cl' | species_pseudo | db_file | "HGH/Cl.hgh" 
-%
 
 BoxShape = minimum
 radius = 5.0*angstrom

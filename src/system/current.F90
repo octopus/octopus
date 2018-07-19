@@ -32,6 +32,7 @@ module current_oct_m
   use io_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
+  use lda_u_oct_m
   use logrid_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -129,15 +130,16 @@ contains
   end subroutine current_end
 
   ! ---------------------------------------------------------
-  subroutine current_calculate(this, der, hm, geo, st, current)
+  subroutine current_calculate(this, der, hm, geo, st, current, current_kpt)
     type(current_t),      intent(in)    :: this
     type(derivatives_t),  intent(inout) :: der
     type(hamiltonian_t),  intent(in)    :: hm
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(inout) :: st
     FLOAT,                intent(out)    :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
+    FLOAT, pointer,               intent(inout)    :: current_kpt(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, kpt%start:kpt%end)
 
-    integer :: ik, ist, idir, idim, iatom, ip, ib, ii, ierr, ispin
+    integer :: ik, ist, idir, idim, ip, ib, ii, ispin
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), hpsi(:, :), rhpsi(:, :), rpsi(:, :), hrpsi(:, :)
     FLOAT, allocatable :: symmcurrent(:, :)
     type(profile_t), save :: prof
@@ -153,6 +155,8 @@ contains
 
     ! spin not implemented or tested
     ASSERT(all(ubound(current) == (/der%mesh%np_part, der%mesh%sb%dim, st%d%nspin/)))
+    ASSERT(all(ubound(current_kpt) == (/der%mesh%np_part, der%mesh%sb%dim, st%d%kpt%end/)))
+    ASSERT(all(lbound(current_kpt) == (/1, 1, st%d%kpt%start/)))
 
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
@@ -163,6 +167,7 @@ contains
     SAFE_ALLOCATE(commpsib(1:der%mesh%sb%dim))
 
     current = M_ZERO
+    current_kpt = M_ZERO
 
     select case(this%method)
     case(CURRENT_FAST)
@@ -209,8 +214,8 @@ contains
               if(st%d%ispin /= SPINORS) then
                 !$omp parallel do
                 do ip = 1, der%mesh%np
-                  current(ip, idir, ispin) = current(ip, idir, ispin) + &
-                    ww*aimag(conjg(psi(ip, 1))*hrpsi(ip, 1))
+                  current_kpt(ip, idir, ik) = &
+                    current_kpt(ip, idir, ik) + ww*aimag(conjg(psi(ip, 1))*hrpsi(ip, 1))
                 end do
                 !$omp end parallel do
               else
@@ -278,8 +283,8 @@ contains
               if(st%d%ispin /= SPINORS) then
                 !$omp parallel do
                 do ip = 1, der%mesh%np
-                  current(ip, idir, ispin) = current(ip, idir, ispin) + &
-                    ww*aimag(conjg(psi(ip, 1))*hrpsi(ip, 1) - conjg(psi(ip, 1))*rhpsi(ip, 1))
+                  current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) &
+                    - ww*aimag(conjg(psi(ip, 1))*hrpsi(ip, 1) - conjg(psi(ip, 1))*rhpsi(ip, 1))
                 end do
                 !$omp end parallel do
               else
@@ -352,6 +357,11 @@ contains
             if(hm%scissor%apply) then
               call scissor_commute_r(hm%scissor, der%mesh, ik, psi, gpsi)
             end if
+            
+            if(hm%lda_u_level /= DFT_U_NONE) then
+              call zlda_u_commute_r(hm%lda_u, der%mesh, st%d, ik, ist, psi, gpsi, &
+                              associated(hm%hm_base%phase))
+            end if
 
           end if
 
@@ -361,7 +371,7 @@ contains
             do idir = 1, der%mesh%sb%dim
               !$omp parallel do
               do ip = 1, der%mesh%np
-                current(ip, idir, ispin) = current(ip, idir, ispin) + &
+                current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) + &
                   ww*aimag(conjg(psi(ip, 1))*gpsi(ip, idir, 1))
               end do
               !$omp end parallel do
@@ -391,6 +401,20 @@ contains
 
     end select
 
+    if(st%d%ispin /= SPINORS) then
+      !We sum the current over k-points
+      do ik = st%d%kpt%start, st%d%kpt%end
+        ispin = states_dim_get_spin_index(st%d, ik)
+        do idir = 1, der%mesh%sb%dim
+          !$omp parallel do
+          do ip = 1, der%mesh%np
+            current(ip, idir, ispin) = current(ip, idir, ispin) + current_kpt(ip, idir, ik)
+          end do
+          !$omp end parallel do
+        end do
+      end do 
+    end if
+
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
       ! TODO: this could take dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) to reduce the amount of data copied
       call comm_allreduce(st%st_kpt_mpi_grp%comm, current) 
@@ -400,8 +424,8 @@ contains
       SAFE_ALLOCATE(symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim))
       call symmetrizer_init(symmetrizer, der%mesh)
       do ispin = 1, st%d%nspin
-        call dsymmetrizer_apply(symmetrizer, field_vector = current(:, :, ispin), symmfield_vector = symmcurrent, &
-          suppress_warning = .true.)
+        call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = current(:, :, ispin), &
+          symmfield_vector = symmcurrent, suppress_warning = .true.)
         current(1:der%mesh%np, 1:der%mesh%sb%dim, ispin) = symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim)
       end do
       call symmetrizer_end(symmetrizer)

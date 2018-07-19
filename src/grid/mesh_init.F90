@@ -156,7 +156,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
     end if
   end do
 
-  mesh%idx%ll(:) = mesh%idx%nr(2, :) - mesh%idx%nr(1, :) + 1
+  mesh%idx%ll(1:MAX_DIM) = mesh%idx%nr(2, 1:MAX_DIM) - mesh%idx%nr(1, 1:MAX_DIM) + 1
 
 
   call profiling_out(mesh_init_prof)
@@ -194,8 +194,9 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   call profiling_in(mesh_init_prof, "MESH_INIT")
 
   ! enlarge mesh for boundary points
-  mesh%idx%nr(1,:) = mesh%idx%nr(1,:) - mesh%idx%enlarge(:)
-  mesh%idx%nr(2,:) = mesh%idx%nr(2,:) + mesh%idx%enlarge(:)
+  mesh%idx%nr(1, 1:MAX_DIM) = mesh%idx%nr(1, 1:MAX_DIM) - mesh%idx%enlarge(1:MAX_DIM)
+  mesh%idx%nr(2, 1:MAX_DIM) = mesh%idx%nr(2, 1:MAX_DIM) + mesh%idx%enlarge(1:MAX_DIM)
+  
   if(mesh%idx%is_hypercube) then
     call hypercube_init(mesh%idx%hypercube, sb%dim, mesh%idx%nr, mesh%idx%enlarge(1))
     mesh%np_part_global = hypercube_number_total_points(mesh%idx%hypercube)
@@ -274,6 +275,10 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
           end if
         else ! the usual way: mark both inner and enlargement points
           if (in_box(ix)) then
+
+            ASSERT(all((/ix, iy, iz/) <=  mesh%idx%nr(2, 1:3) - mesh%idx%enlarge(1:3)))
+            ASSERT(all((/ix, iy, iz/) >=  mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3)))
+            
             mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)
             do is = 1, stencil%size
               if(stencil%center == is) cycle
@@ -1009,6 +1014,7 @@ contains
     SAFE_ALLOCATE(mesh%vol_pp(1:np))
 
     forall(ip = 1:np) mesh%vol_pp(ip) = product(mesh%spacing(1:sb%dim))
+
     jj(sb%dim + 1:MAX_DIM) = 0
 
     if(mesh%parallel_in_domains) then
@@ -1163,6 +1169,8 @@ contains
     else
       mesh%volume_element = mesh%vol_pp(1)
     end if
+
+    mesh%surface_element(1:sb%dim) = sb%surface_element(1:sb%dim)
 
     POP_SUB(mesh_init_stage_3.mesh_get_vol_pp)
 

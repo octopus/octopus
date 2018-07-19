@@ -34,7 +34,7 @@ match ; Born charge zz ; LINEFIELD(em_resp_fd/Born_charges, 5, 3) ; 0.004821
 match ; Born charge diff; GREPFIELD(em_resp_fd/Born_charges, "Discrepancy", 3,  4) ; 0.003978
 
 # These values should all be zero by symmetry.
-Precision : 0.7
+Precision : 1.0
 match ; beta xxx ; GREPFIELD(em_resp_fd/beta, "beta xxx", 3); 0.0
-Precision : 0.35
+Precision : 0.5
 match ; beta zxy ; GREPFIELD(em_resp_fd/beta, "beta zxy", 3); 0.0

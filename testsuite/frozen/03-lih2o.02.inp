@@ -11,7 +11,7 @@ Spacing = angstrom*0.3
 ExcessCharge = -1
 PseudopotentialSet = standard
 %Species
-    'Li' | species_pseudo | db_file | 'PSF/Li.psf' 
+    'Li' | species_pseudo   | lmax | 0 | lloc | 0 
 %
 %Coordinates
     'Li' | 0.0 | -2.0*angstrom  | 0.0 | no 
