@@ -2069,10 +2069,11 @@ contains
   !> This function can calculate several quantities that depend on
   !! derivatives of the orbitals from the states and the density.
   !! The quantities to be calculated depend on the arguments passed.
-  subroutine states_calc_quantities(der, st, &
+  subroutine states_calc_quantities(der, st, nlcc, &
     kinetic_energy_density, paramagnetic_current, density_gradient, density_laplacian, gi_kinetic_energy_density)
     type(derivatives_t),     intent(in)    :: der
     type(states_t),          intent(in)    :: st
+    logical,                 intent(in)    :: nlcc
     FLOAT, optional, target, intent(out)   :: kinetic_energy_density(:,:)       !< The kinetic energy density.
     FLOAT, optional, target, intent(out)   :: paramagnetic_current(:,:,:)       !< The paramagnetic current.
     FLOAT, optional,         intent(out)   :: density_gradient(:,:,:)           !< The gradient of the density.
@@ -2264,10 +2265,7 @@ contains
       end do
     end do
 
-    SAFE_DEALLOCATE_A(wf_psi)
     SAFE_DEALLOCATE_A(wf_psi_conj)
-    SAFE_DEALLOCATE_A(gwf_psi)
-    SAFE_DEALLOCATE_A(lwf_psi)
     SAFE_DEALLOCATE_A(abs_wf_psi)
     SAFE_DEALLOCATE_A(abs_gwf_psi)
     SAFE_DEALLOCATE_A(psi_gpsi)
@@ -2317,6 +2315,37 @@ contains
       call symmetrizer_end(symmetrizer)
       SAFE_DEALLOCATE_A(symm) 
     end if
+
+
+    if(associated(st%rho_core) .and. nlcc .and. (present(density_laplacian) .or. present(density_gradient))) then
+       forall(ii=1:der%mesh%np)
+         wf_psi(ii, 1) = st%rho_core(ii)/st%d%spin_channels
+       end forall
+
+       call boundaries_set(der%boundaries, wf_psi(:, 1))
+
+       if(present(density_gradient)) then
+         ! calculate gradient of the NLCC
+         call zderivatives_grad(der, wf_psi(:,1), gwf_psi(:,:,1), set_bc = .false.)
+         do is = 1, st%d%spin_channels
+           density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) + gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim,1)
+         end do
+       end if
+
+       ! calculate the Laplacian of the wavefunction
+       if (present(density_laplacian)) then
+         call zderivatives_lapl(der, wf_psi(:,1), lwf_psi(:,1), set_bc = .false.)
+
+         do is = 1, st%d%spin_channels
+           density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is) + lwf_psi(1:der%mesh%np, 1)
+         end do
+      end if
+    end if
+
+    SAFE_DEALLOCATE_A(wf_psi)
+    SAFE_DEALLOCATE_A(gwf_psi)
+    SAFE_DEALLOCATE_A(lwf_psi)
+
 
     !We compute the gauge-invariant kinetic energy density
     if(present(gi_kinetic_energy_density) .and. st%d%ispin /= SPINORS) then

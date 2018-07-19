@@ -855,7 +855,7 @@ contains
 
     rho = M_ZERO
     call density_calc(st, gr, rho)
-    call states_calc_quantities(gr%der, st, kinetic_energy_density = tau)
+    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = tau)
 
     pressure = M_ZERO
     do is = 1, st%d%spin_channels

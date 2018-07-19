@@ -118,7 +118,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
     do ist = st%st_start, st%st_end
 
       weight = st%d%kweights(ik)*st%occ(ist, ik)     
-      if(weight < CNST(1.0e-6)) cycle
+      if(weight < CNST(1.0e-10)) cycle
  
       call states_get_state(st, mesh, ist, ik, psi )
 
@@ -831,7 +831,7 @@ end subroutine X(compute_coulomb_integrals)
      do ibatch = 1, psib%nst
        ist = psib%states(ibatch)%ist
        weight = st%d%kweights(iq)*st%occ(ist, iq)
-       if(weight < CNST(1.0e-6)) cycle
+       if(weight < CNST(1.0e-10)) cycle
 
        call batch_get_state(psib, ibatch, mesh%np, psi)
        !No phase here, this is already added
