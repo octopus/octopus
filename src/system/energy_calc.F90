@@ -178,7 +178,7 @@ contains
         - hm%energy%pcm_corr + hm%energy%int_ee_pcm + hm%energy%int_en_pcm &
                              + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm &
                              + hm%energy%int_e_ext_pcm + hm%energy%int_n_ext_pcm &
-                             + hm%energy%dft_u -  hm%energy%int_dft_u
+                             + hm%energy%dft_u -  hm%energy%int_dft_u &
                              + hm%energy%pt_exchange
 
       if (cmplxscl) then

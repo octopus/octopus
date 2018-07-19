@@ -112,12 +112,9 @@ contains
     this%ts           = M_ZERO
     this%berry        = M_ZERO
     this%delta_xc     = M_ZERO
-<<<<<<< src/hamiltonian/energy.F90
     this%dft_u        = M_ZERO
     this%int_dft_u    = M_ZERO
-=======
     this%pt_exchange  = M_ZERO
->>>>>>> src/hamiltonian/energy.F90
 
     this%Imtotal       = M_ZERO
     this%Imeigenvalues = M_ZERO
@@ -167,12 +164,9 @@ contains
     eout%ts           = ein%ts
     eout%berry        = ein%berry
     eout%delta_xc     = ein%delta_xc
-<<<<<<< src/hamiltonian/energy.F90
     eout%dft_u        = ein%dft_u
     eout%int_dft_u    = ein%int_dft_u
-=======
     eout%pt_exchange  = ein%pt_exchange
->>>>>>> src/hamiltonian/energy.F90
 
     eout%Imtotal = ein%Imtotal
     eout%Imeigenvalues = ein%Imeigenvalues
