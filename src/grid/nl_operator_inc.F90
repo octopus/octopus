@@ -299,7 +299,7 @@ contains
       
       if(op%cmplx_op) then
 #ifdef R_TCOMPLEX
-        !$omp parallel do private(ll, ist, ii)
+        !$omp parallel do private(ll, ist, ii, nn)
         do ll = 1, nri
           nn = op%nn(ll)
           forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
@@ -310,7 +310,7 @@ contains
         !$omp end parallel do
 #endif
       else
-        !$omp parallel do private(ll, ist, ii)
+        !$omp parallel do private(ll, ist, ii, nn)
         do ll = 1, nri
           nn = op%nn(ll)
           forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
@@ -324,7 +324,7 @@ contains
 
       if(op%cmplx_op) then
 #ifdef R_TCOMPLEX
-        !$omp parallel do private(ll, ist, ii)
+        !$omp parallel do private(ll, ist, ii, nn)
         do ll = 1, nri
           nn = op%nn(ll)
           forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
@@ -335,7 +335,7 @@ contains
         !$omp end parallel do
 #endif
       else
-        !$omp parallel do private(ll, ist, ii)
+        !$omp parallel do private(ll, ist, ii, nn)
         do ll = 1, nri
           nn = op%nn(ll)
           forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
