@@ -918,7 +918,7 @@ contains
       SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
 
       ! the kinetic energy density
-      call states_calc_quantities(gr%der, st, kinetic_energy_density = energy_density)
+      call states_calc_quantities(gr%der, st, .true., kinetic_energy_density = energy_density)
 
       ! the external potential energy density
       forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
