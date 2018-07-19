@@ -615,24 +615,30 @@ contains
 
       if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
 
+      SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:hm%d%dim))
+      if(present(psib2)) then
+        SAFE_ALLOCATE(psi2(1:der%mesh%np_part, 1:hm%d%dim))
+      end if
+
       do ii = 1, psib%nst
         ist = psib%states(ii)%ist
 
-        SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:hm%d%dim))
-        call batch_get_state(psib, ii, der%mesh%np_part, psi)
+        call batch_get_state(psib, ii, der%mesh%np, psi)
         call exponential_apply(te, der, hm, psi, ist, ik, deltat, Imdeltat = Imdeltat)
-        call batch_set_state(psib, ii, der%mesh%np_part, psi)
-        SAFE_DEALLOCATE_A(psi)
+        call batch_set_state(psib, ii, der%mesh%np, psi)
         
         if(present(psib2)) then
-          SAFE_ALLOCATE(psi2(1:der%mesh%np_part, 1:hm%d%dim))
-          call batch_get_state(psib2, ii, der%mesh%np_part, psi2)
+          call batch_get_state(psib2, ii, der%mesh%np, psi2)
           call exponential_apply(te, der, hm, psi2, ist, ik, deltat2, Imdeltat = Imdeltat2)
-          call batch_set_state(psib2, ii, der%mesh%np_part, psi2)
-          SAFE_DEALLOCATE_A(psi2)
+          call batch_set_state(psib2, ii, der%mesh%np, psi2)
         end if
         
      end do
+
+     SAFE_DEALLOCATE_A(psi)
+     if(present(psib2)) then
+       SAFE_DEALLOCATE_A(psi2)
+     end if
 
    end if
     
