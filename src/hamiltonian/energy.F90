@@ -61,6 +61,7 @@ module energy_oct_m
     FLOAT :: delta_xc    !< the XC derivative discontinuity
     FLOAT :: dft_u       !DFT+U contribution
     FLOAT :: int_dft_u !< Int[n v_U]
+    FLOAT :: pt_exchange
 
     !cmplxscl 
     FLOAT :: Imtotal
@@ -113,6 +114,7 @@ contains
     this%delta_xc     = M_ZERO
     this%dft_u        = M_ZERO
     this%int_dft_u    = M_ZERO
+    this%pt_exchange  = M_ZERO
 
     this%Imtotal       = M_ZERO
     this%Imeigenvalues = M_ZERO
@@ -164,6 +166,7 @@ contains
     eout%delta_xc     = ein%delta_xc
     eout%dft_u        = ein%dft_u
     eout%int_dft_u    = ein%int_dft_u
+    eout%pt_exchange  = ein%pt_exchange
 
     eout%Imtotal = ein%Imtotal
     eout%Imeigenvalues = ein%Imeigenvalues

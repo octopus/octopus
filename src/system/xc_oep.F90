@@ -42,6 +42,8 @@ module xc_oep_oct_m
   use xc_oct_m
   use XC_F90(lib_m)
   use xc_functl_oct_m
+  use photon_mode_oct_m
+  use states_calc_oct_m
 
   implicit none
 
@@ -57,11 +59,14 @@ module xc_oep_oct_m
     zoep_x
 
   !> the OEP levels
-  integer, public, parameter :: &
-    XC_OEP_NONE   = 1,          &
-    XC_OEP_SLATER = 2,          &
-    XC_OEP_KLI    = 3,          &
-    XC_OEP_FULL   = 5
+  integer, public, parameter ::  &
+    XC_OEP_NONE   = 1,           &
+    XC_OEP_SLATER = 2,           &
+    XC_OEP_KLI    = 3,           &
+    XC_OEP_FULL   = 5,           &
+    OEP_MIXING_SCHEME_CONST = 1, &
+    OEP_MIXING_SCHEME_DENS  = 2, &
+    OEP_MIXING_SCHEME_BB    = 3
 
   type xc_oep_t
     integer               :: level      !< 0 = no oep, 1 = Slater, 2 = KLI, 4 = full OEP
@@ -75,6 +80,11 @@ module xc_oep_oct_m
     FLOAT,   pointer      :: vxc(:,:), uxc_bar(:,:)
     FLOAT,   pointer      :: dlxc(:, :, :)
     CMPLX,   pointer      :: zlxc(:, :, :)
+    integer               :: mixing_scheme
+    logical               :: has_photons   ! one-photon OEP
+    type(photon_mode_t)   :: pt
+    FLOAT                 :: norm2ss
+    FLOAT,   pointer      :: vxc_old(:,:), ss_old(:)
   end type xc_oep_t
 
   type(profile_t), save ::      &
@@ -127,6 +137,21 @@ contains
     if(.not. varinfo_valid_option('OEPLevel', oep%level)) call messages_input_error('OEPLevel')
 
     if(oep%level /= XC_OEP_NONE) then
+
+      !%Variable Photons
+      !%Type logical
+      !%Default .false.
+      !%Section Hamiltonian::XC
+      !%Description
+      !% Activate the one-photon OEP
+      !%End
+      call messages_obsolete_variable('OEPPtX', 'Photons')
+      call parse_variable('Photons', .false., oep%has_photons)
+      if (oep%has_photons) then
+        call messages_experimental("Photons = yes")
+        call photon_mode_init(oep%pt, gr)
+      end if
+
       if(oep%level == XC_OEP_FULL) then
 
         if(st%d%nspin == SPINORS) &
@@ -143,6 +168,35 @@ contains
         !%End
         call messages_obsolete_variable('OEP_Mixing', 'OEPMixing')
         call parse_variable('OEPMixing', M_ONE, oep%mixing)
+
+        !%Variable OEPMixingScheme
+        !%Type integer
+        !%Default 1.0
+        !%Section Hamiltonian::XC
+        !%Description
+        !%Different Mixing Schemes are possible
+        !%Option OEP_MIXING_SCHEME_CONST 1
+        !%Use a constant
+        !%Reference: S. Kuemmel and J. Perdew, <i>Phys. Rev. Lett.</i> <b>90</b>, 4, 043004 (2003)
+        !%Option OEP_MIXING_SCHEME_DENS 2
+        !%Use the inverse of the electron density
+        !%Reference: S. Kuemmel and J. Perdew, <i>Phys. Rev. B</i> <b>68</b>, 035103 (2003)
+        !%Option OEP_MIXING_SCHEME_BB 3
+        !%Use the Barzilai-Borwein (BB) Method
+        !%Reference: T. W. Hollins, S. J. Clark, K. Refson, and N. I. Gidopoulos, 
+        !%<i>Phys. Rev. B</i> <b>85<\b>, 235126 (2012)
+        !%End
+        call parse_variable('OEPMixingScheme', OEP_MIXING_SCHEME_CONST, oep%mixing_scheme)
+
+        if (oep%mixing_scheme == OEP_MIXING_SCHEME_BB) then
+          SAFE_ALLOCATE(oep%vxc_old(1:gr%mesh%np,st%d%ispin))
+          SAFE_ALLOCATE(oep%ss_old(1:gr%mesh%np))
+          oep%vxc_old(1:gr%mesh%np,1) = M_ZERO
+          oep%ss_old(1:gr%mesh%np) = M_ZERO
+        end if
+
+        oep%norm2ss = M_ZERO
+
       end if
 
      ! this routine is only prepared for finite systems. (Why not?)
@@ -159,10 +213,13 @@ contains
         SAFE_ALLOCATE(oep%vxc(1:gr%mesh%np,1:1))
       end if
       ! when performing full OEP, we need to solve a linear equation
-      if(oep%level == XC_OEP_FULL) then 
+      if((oep%level == XC_OEP_FULL).or.(oep%has_photons)) then 
         call scf_tol_init(oep%scftol, st%qtot, def_maximumiter=10)
         call linear_solver_init(oep%solver, gr, states_are_real(st))
         call lr_init(oep%lr)
+        if(oep%has_photons) then
+          call lr_init(oep%pt%lr)        
+        end if
       end if
 
       ! the linear equation has to be more converged if we are to attain the required precision
@@ -185,10 +242,17 @@ contains
 
     if(oep%level /= XC_OEP_NONE) then
       SAFE_DEALLOCATE_P(oep%vxc)
-
-      if(oep%level == XC_OEP_FULL) then 
+      if((oep%level == XC_OEP_FULL).or.(oep%has_photons)) then
         call lr_dealloc(oep%lr)
+        if(oep%has_photons) then
+          call lr_dealloc(oep%pt%lr)
+        end if
         call linear_solver_end(oep%solver)
+        call photon_mode_end(oep%pt)
+      end if
+      if((oep%level == XC_OEP_FULL).and.(oep%mixing_scheme == OEP_MIXING_SCHEME_BB)) then
+        SAFE_DEALLOCATE_P(oep%vxc_old)
+        SAFE_DEALLOCATE_P(oep%ss_old)
       end if
     end if
 
@@ -306,6 +370,7 @@ contains
 #include "xc_oep_x_inc.F90"
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
+#include "xc_oep_qed_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
@@ -313,6 +378,7 @@ contains
 #include "xc_oep_x_inc.F90"
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
+#include "xc_oep_qed_inc.F90"
 
 #include "undef.F90"
 
