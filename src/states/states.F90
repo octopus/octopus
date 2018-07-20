@@ -2472,7 +2472,11 @@ contains
 
     PUSH_SUB(states_pack)
 
-    ASSERT(.not. st%packed)
+    ! nothing to do, already packed
+    if (st%packed) then
+      POP_SUB(states_pack)
+      return
+    end if
 
     st%packed = .true.
 
