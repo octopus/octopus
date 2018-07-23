@@ -453,7 +453,7 @@ contains
     FLOAT,                intent(out)   :: energy
 
     integer :: ist, icycle, ierr, ik
-    FLOAT ::  sumgi1, sumgi2, sumgim, mu1, mu2, mum, dinterv
+    FLOAT ::  sumgi1, sumgi2, sumgim, mu1, mu2, mum, dinterv, thresh_occ
     FLOAT, allocatable ::  occin(:,:)
     FLOAT, parameter :: smallocc = CNST(0.00001) 
     REAL(8), allocatable ::   theta(:)
@@ -471,6 +471,9 @@ contains
     theta  = M_ZERO
     energy = M_ZERO
     
+    ! threshold on occ nums to avaoid numerical instabilities
+    ! needs to be changed consistently with the same variable in objective_rdmft!!
+	thresh_occ = 1d-14	
     
     !Initialize the occin. Smallocc is used for numerical stability
     
@@ -487,11 +490,11 @@ contains
       end do
     end do
 
-    do ist = 1, st%nst
-      do ik = 1, st%d%nik
-        occin(ist, ik) = occin(ist,ik)*st%qtot/rdm%occsum
-      end do
-    end do 
+!    do ist = 1, st%nst
+!      do ik = 1, st%d%nik
+!        occin(ist, ik) = occin(ist,ik)*st%qtot/rdm%occsum
+!      end do
+!    end do 
 
     rdm%occsum = st%qtot
 
@@ -558,6 +561,13 @@ contains
         mu1 = mum
         sumgi1 = sumgim
       end if
+      
+      ! check occ.num. threshold again after minimization
+      do ist = 1, st%nst
+        st%occ(ist,1) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
+        if (st%occ(ist,1) .LE. thresh_occ ) st%occ(ist,1)=thresh_occ
+      end do
+      
       if(abs(sumgim) < rdm%toler .or. abs((mu1-mu2)*M_HALF) < rdm%toler)  exit
       cycle
     end do
@@ -576,11 +586,11 @@ contains
     call messages_info(1)   
 
     do ist = 1, st%nst
-      write(message(1),'(i4,3x,f11.4)') ist, st%occ(ist, 1)
+      write(message(1),'(i4,3x,f14.12)') ist, st%occ(ist, 1)
       call messages_info(1)
     end do
 
-    write(message(1),'(a,1x,f11.4)') 'Sum of occupation numbers', rdm%occsum
+    write(message(1),'(a,1x,f14.12)') 'Sum of occupation numbers', rdm%occsum
     write(message(2),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
     call messages_info(2)   
 
@@ -600,6 +610,7 @@ contains
       REAL_DOUBLE, intent(inout) :: df(size)
 
       integer :: ist
+      FLOAT   :: thresh_occ, thresh_theta
       FLOAT, allocatable :: dE_dn(:),occ(:)
  
       PUSH_SUB(objective_rdmft)
@@ -610,9 +621,15 @@ contains
       SAFE_ALLOCATE(occ(1:size))
 
       occ = M_ZERO
-
+      
+      ! threshold on occ nums to avaoid numerical instabilities
+      ! needs to be changed consistently with the same variable in objective_rdmft!!
+	  thresh_occ = 1d-14	
+	  thresh_theta = asin(sqrt(thresh_occ/M_TWO))*(M_HALF/M_PI)
+	  
       do ist = 1, size
         occ(ist) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
+		if (occ(ist) .LE. thresh_occ ) occ(ist)=thresh_occ
       end do
       
       rdm%occsum = M_ZERO
@@ -625,7 +642,11 @@ contains
 
       call total_energy_rdm(rdm, occ, objective, dE_dn)
       do ist = 1, size
-        df(ist) = M_FOUR*M_PI*sin(M_FOUR*theta(ist)*M_PI)*(dE_dn(ist)-rdm%mu)
+        if (occ(ist) .LE. thresh_occ ) then
+          df(ist) = M_FOUR*M_PI*sin(M_FOUR*thresh_theta*M_PI)*(dE_dn(ist)-rdm%mu)
+        else
+          df(ist) = M_FOUR*M_PI*sin(M_FOUR*theta(ist)*M_PI)*(dE_dn(ist)-rdm%mu)
+        end if
       end do
       objective = objective - rdm%mu*(rdm%occsum - rdm%qtot)
 
@@ -1148,7 +1169,7 @@ contains
         V_h(ist) = V_h(ist) + occ(jst)*rdm%hartree(ist, jst)
         V_x(ist) = V_x(ist) - sqrt(occ(jst))*rdm%exchange(ist, jst) 
       end do
-      V_x(ist) = V_x(ist)*M_HALF/max(sqrt(occ(ist)), CNST(1.0e-16))
+      V_x(ist) = V_x(ist)*M_HALF/sqrt(occ(ist))
     end do
 
 
