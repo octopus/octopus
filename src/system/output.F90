@@ -293,6 +293,9 @@ contains
     !%Option energy_density bit(32)
     !% Outputs the total energy density to a file called
     !% <tt>energy_density</tt>.
+    !%Option heat_current bit(33)
+    !% Outputs the total heat current density. The output file is
+    !% called <tt>heat_current-</tt>.
     !%End
     call parse_variable('Output', 0, outp%what)
 
@@ -326,10 +329,9 @@ contains
       !   dimensions. The current 1D 1-particle case is simple.
     end if
 
-    if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) then
-      call messages_experimental("'Output = energy_density'")
-    end if
-
+    if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) call messages_experimental("'Output = energy_density'")
+    if(bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) call messages_experimental("'Output = heat_current'")
+    
     if(bitand(outp%what, OPTION__OUTPUT__WFS) /= 0  .or.  bitand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0 ) then
 
       !%Variable OutputWfsNumber
@@ -562,7 +564,7 @@ contains
       call messages_experimental("Frozen output")
     end if
 
-    if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) then
       call v_ks_calculate_current(ks, .true.)
     else
       call v_ks_calculate_current(ks, .false.)

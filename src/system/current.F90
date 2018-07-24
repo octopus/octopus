@@ -551,8 +551,7 @@ contains
   end subroutine current_calculate_mel
 
   ! ---------------------------------------------------------
-  subroutine current_heat_calculate(this, der, hm, geo, st, current)
-    type(current_t),      intent(in)    :: this
+  subroutine current_heat_calculate(der, hm, geo, st, current)
     type(derivatives_t),  intent(inout) :: der
     type(hamiltonian_t),  intent(in)    :: hm
     type(geometry_t),     intent(in)    :: geo
@@ -575,11 +574,7 @@ contains
     SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:ndim, 1:st%d%dim))
     SAFE_ALLOCATE(g2psi(1:der%mesh%np, 1:ndim, 1:ndim, 1:st%d%dim))
 
-    if(associated(st%current)) then
-      current(1:der%mesh%np_part, 1:ndim, 1:st%d%nspin) = st%current(1:der%mesh%np_part, 1:ndim, 1:st%d%nspin)
-    else
-      call curent_calculate(this, der, hm, geo, st, current)
-    end if
+    current(1:der%mesh%np_part, 1:ndim, 1:st%d%nspin) = st%current(1:der%mesh%np_part, 1:ndim, 1:st%d%nspin)
 
     do ip = 1, der%mesh%np_part
       current(ip, 1:ndim, 1:st%d%nspin) = current(ip, 1:ndim, 1:st%d%nspin)*hm%ep%vpsl(ip)
