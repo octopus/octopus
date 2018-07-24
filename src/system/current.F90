@@ -550,10 +550,83 @@ contains
 
   end subroutine current_calculate_mel
 
+  ! ---------------------------------------------------------
+  subroutine current_heat_calculate(this, der, hm, geo, st, current)
+    type(current_t),      intent(in)    :: this
+    type(derivatives_t),  intent(inout) :: der
+    type(hamiltonian_t),  intent(in)    :: hm
+    type(geometry_t),     intent(in)    :: geo
+    type(states_t),       intent(inout) :: st
+    FLOAT,                intent(out)   :: current(:, :, :)
+
+    integer :: ik, ist, idir, idim, ip, ib, ii, ispin, ndim
+    CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), g2psi(:, :, :, :)
+    CMPLX :: tmp
+
+    PUSH_SUB(current_heat_calculate)
+
+    ASSERT(.not. associated(hm%hm_base%phase))
+    ASSERT(simul_box_is_periodic(der%mesh%sb))
+    ASSERT(st%d%dim == 1)
+
+    ndim = der%mesh%sb%dim
+    
+    SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:ndim, 1:st%d%dim))
+    SAFE_ALLOCATE(g2psi(1:der%mesh%np, 1:ndim, 1:ndim, 1:st%d%dim))
+
+    if(associated(st%current)) then
+      current(1:der%mesh%np_part, 1:ndim, 1:st%d%nspin) = st%current(1:der%mesh%np_part, 1:ndim, 1:st%d%nspin)
+    else
+      call curent_calculate(this, der, hm, geo, st, current)
+    end if
+
+    do ip = 1, der%mesh%np_part
+      current(ip, 1:ndim, 1:st%d%nspin) = current(ip, 1:ndim, 1:st%d%nspin)*hm%ep%vpsl(ip)
+    end do
+    
+    do ik = st%d%kpt%start, st%d%kpt%end
+      ispin = states_dim_get_spin_index(st%d, ik)
+      do ist = st%st_start, st%st_end
+        
+        call states_get_state(st, der%mesh, ist, ik, psi)
+        
+          do idim = 1, st%d%dim
+            call boundaries_set(der%boundaries, psi(:, idim))
+          end do
+
+          if(associated(hm%hm_base%phase)) then 
+            call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
+          end if
+
+          do idim = 1, st%d%dim
+            call zderivatives_grad(der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
+          end do
+
+          do idir = 1, ndim
+            do idim = 1, st%d%dim
+              ! this only work for periodic boundary conditions and gamma
+              call zderivatives_grad(der, gpsi(:, idir, idim), g2psi(:, :, idir, idim), set_bc = .true.)
+            end do
+          end do
+
+          do ip = 1, der%mesh%np
+            do idir = 1, ndim
+              tmp = sum(conjg(g2psi(ip, idim, idir, 1:ndim))*gpsi(ip, idim, idir)) - sum(conjg(gpsi(ip, idim, 1:ndim))*g2psi(ip, idim, idir, 1:ndim))
+              tmp = tmp - conjg(gpsi(ip, idim, idir))*sum(g2psi(ip, idim, 1:ndim, 1:ndim)) + sum(conjg(g2psi(ip, idim, 1:ndim, 1:ndim)))*gpsi(ip, idim, idir)
+              
+              current(ip, idir, ispin) = current(ip, idir, ispin) + st%d%kweights(ik)*st%occ(ist, ik)*aimag(tmp)/CNST(8.0)
+            end do
+          end do
+          
+        end do
+      end do
 
 
-
-
+      POP_SUB(current_heat_calculate)
+      
+    end subroutine current_heat_calculate
+    
 
 end module current_oct_m
 
