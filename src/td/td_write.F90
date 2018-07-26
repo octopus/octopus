@@ -22,6 +22,7 @@ module td_write_oct_m
   use io_function_oct_m
   use iso_c_binding
   use comm_oct_m
+  use current_oct_m
   use excited_states_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
@@ -105,7 +106,8 @@ module td_write_oct_m
     OUT_SEPARATE_COORDS  = 22, &
     OUT_SEPARATE_VELOCITY= 23, &
     OUT_SEPARATE_FORCES  = 24, &
-    OUT_MAX         = 24
+    OUT_TOTAL_HEAT_CURRENT = 25, &
+    OUT_MAX              = 25
   
   integer, parameter ::      &
     OUT_DFTU_EFFECTIVE_U = 1, &
@@ -252,7 +254,7 @@ contains
     !% Write the multiple-ionization channels using the KS orbital densities as proposed in  
     !% C. Ullrich, Journal of Molecular Structure: THEOCHEM 501, 315 (2000).
     !%Option total_current bit(16)
-    !% Output the total current.
+    !% Output the total current (average of the current density over the cell).
     !%Option partial_charges bit(17)
     !% Bader and Hirshfeld partial charges. The output file is called 'td.general/partial_charges'.
     !%Option td_kpoint_occup bit(18)                                                                   
@@ -275,6 +277,8 @@ contains
     !% Writes velocities in a separate file.
     !%Option forces_sep bit(23)
     !% Writes forces in a separate file.
+    !%Option total_heat_current bit(24)
+    !% Output the total heat current (average of the heat current density over the cell).
     !%End
 
     default = 2**(OUT_MULTIPOLES - 1) +  2**(OUT_ENERGY - 1)
@@ -604,6 +608,11 @@ contains
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/total_current")))
       end if
 
+      if(writ%out(OUT_TOTAL_CURRENT)%write) then
+        call write_iter_init(writ%out(OUT_TOTAL_CURRENT)%handle, first, &
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/total_heat_current")))
+      end if
+
       if(writ%out(OUT_PARTIAL_CHARGES)%write) then
         call write_iter_init(writ%out(OUT_PARTIAL_CHARGES)%handle, first, &
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/partial_charges")))
@@ -792,6 +801,10 @@ contains
     if(writ%out(OUT_TOTAL_CURRENT)%write) &
       call td_write_total_current(writ%out(OUT_TOTAL_CURRENT)%handle, gr, st, iter)
 
+    if(writ%out(OUT_TOTAL_HEAT_CURRENT)%write) then
+      call td_write_total_heat_current(writ%out(OUT_TOTAL_HEAT_CURRENT)%handle, hm, gr, geo, st, iter)
+    end if
+    
     if(writ%out(OUT_PARTIAL_CHARGES)%write) &
       call td_write_partial_charges(writ%out(OUT_PARTIAL_CHARGES)%handle, writ%partial_charges, gr%fine%mesh, st, geo, iter)
 
@@ -2979,6 +2992,62 @@ contains
       
     POP_SUB(td_write_total_current)
   end subroutine td_write_total_current
+
+  ! ---------------------------------------------------------
+  
+  subroutine td_write_total_heat_current(write_obj, hm, gr, geo, st, iter)
+    type(c_ptr),         intent(inout) :: write_obj
+    type(hamiltonian_t), intent(inout) :: hm
+    type(grid_t),        intent(in)    :: gr
+    type(geometry_t),    intent(in)    :: geo
+    type(states_t),      intent(in)    :: st
+    integer,             intent(in)    :: iter
+
+    integer :: idir, ispin
+    character(len=50) :: aux
+    FLOAT, allocatable :: heat_current(:, :, :)
+    FLOAT :: total_current(1:MAX_DIM)
+
+    PUSH_SUB(td_write_total_current)
+
+    if(mpi_grp_is_root(mpi_world) .and. iter == 0) then
+      call td_write_print_header_init(write_obj)
+
+      ! first line: column names
+      call write_iter_header_start(write_obj)
+      
+      do idir = 1, gr%mesh%sb%dim
+        write(aux, '(a2,i1,a1)') 'Jh(', idir, ')'
+        call write_iter_header(write_obj, aux)
+      end do
+
+      call write_iter_nl(write_obj)
+
+      call td_write_print_header_end(write_obj)
+    end if
+
+    SAFE_ALLOCATE(heat_current(1:gr%mesh%np, 1:gr%sb%dim, 1:st%d%nspin))  
+
+    call current_heat_calculate(gr%der, hm, geo, st, heat_current)
+    
+    if(mpi_grp_is_root(mpi_world)) call write_iter_start(write_obj)
+
+    total_current = CNST(0.0)
+    do idir = 1, gr%sb%dim
+      do ispin = 1, st%d%spin_channels
+        total_current(idir) =  total_current(idir) + dmf_integrate(gr%mesh, heat_current(:, idir, ispin))
+      end do
+      total_current(idir) = units_from_atomic(units_out%energy*units_out%length/units_out%time, total_current(idir))
+    end do
+
+    SAFE_DEALLOCATE_A(heat_current)
+    
+    if(mpi_grp_is_root(mpi_world)) call write_iter_double(write_obj, total_current, gr%mesh%sb%dim)
+  
+    if(mpi_grp_is_root(mpi_world)) call write_iter_nl(write_obj)
+      
+    POP_SUB(td_write_total_current)
+  end subroutine td_write_total_heat_current
 
 
   ! ---------------------------------------------------------

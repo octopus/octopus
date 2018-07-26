@@ -73,7 +73,8 @@ module current_oct_m
     current_init,                         &
     current_end,                          &
     current_calculate,                    &
-    current_calculate_mel
+    current_heat_calculate,               &
+    current_calculate_mel 
 
   integer, parameter, public ::           &
     CURRENT_GRADIENT           = 1,       &
@@ -552,10 +553,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine current_heat_calculate(der, hm, geo, st, current)
-    type(derivatives_t),  intent(inout) :: der
+    type(derivatives_t),  intent(in)    :: der
     type(hamiltonian_t),  intent(in)    :: hm
     type(geometry_t),     intent(in)    :: geo
-    type(states_t),       intent(inout) :: st
+    type(states_t),       intent(in)    :: st
     FLOAT,                intent(out)   :: current(:, :, :)
 
     integer :: ik, ist, idir, idim, ip, ib, ii, ispin, ndim
