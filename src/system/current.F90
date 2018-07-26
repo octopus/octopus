@@ -575,10 +575,8 @@ contains
     SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:ndim, 1:st%d%dim))
     SAFE_ALLOCATE(g2psi(1:der%mesh%np, 1:ndim, 1:ndim, 1:st%d%dim))
 
-    current(1:der%mesh%np_part, 1:ndim, 1:st%d%nspin) = st%current(1:der%mesh%np_part, 1:ndim, 1:st%d%nspin)
-
-    do ip = 1, der%mesh%np_part
-      current(ip, 1:ndim, 1:st%d%nspin) = current(ip, 1:ndim, 1:st%d%nspin)*hm%ep%vpsl(ip)
+    do ip = 1, der%mesh%np
+      current(ip, 1:ndim, 1:st%d%nspin) = st%current(ip, 1:ndim, 1:st%d%nspin)*hm%ep%vpsl(ip)
     end do
     
     do ik = st%d%kpt%start, st%d%kpt%end
@@ -606,10 +604,11 @@ contains
             end do
           end do
 
+          idim = 1
           do ip = 1, der%mesh%np
             do idir = 1, ndim
-              tmp = sum(conjg(g2psi(ip, idim, idir, 1:ndim))*gpsi(ip, idim, idir)) - sum(conjg(gpsi(ip, idim, 1:ndim))*g2psi(ip, idim, idir, 1:ndim))
-              tmp = tmp - conjg(gpsi(ip, idim, idir))*sum(g2psi(ip, idim, 1:ndim, 1:ndim)) + sum(conjg(g2psi(ip, idim, 1:ndim, 1:ndim)))*gpsi(ip, idim, idir)
+              tmp = sum(conjg(g2psi(ip, idir, 1:ndim, idim))*gpsi(ip, idir, idim)) - sum(conjg(gpsi(ip, 1:ndim, idim))*g2psi(ip, idir, 1:ndim, idim))
+              tmp = tmp - conjg(gpsi(ip, idir, idim))*sum(g2psi(ip, 1:ndim, 1:ndim, idim)) + sum(conjg(g2psi(ip, 1:ndim, 1:ndim, idim)))*gpsi(ip, idir, idim)
               
               current(ip, idir, ispin) = current(ip, idir, ispin) + st%d%kweights(ik)*st%occ(ist, ik)*aimag(tmp)/CNST(8.0)
             end do

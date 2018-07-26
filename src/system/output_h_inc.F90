@@ -263,17 +263,17 @@
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) then
-              
-      call current_heat_calculate(der, hm, geo, st, heat_current)
 
+      SAFE_ALLOCATE(heat_current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
+      
+      call current_heat_calculate(der, hm, geo, st, heat_current)
+      
       do is = 1, hm%d%nspin
         if(st%d%nspin == 1) then
           write(fname, '(2a)') 'heat_current'
         else
           write(fname, '(a,i1)') 'heat_current-sp', is
         end if
-        
-        SAFE_ALLOCATE(heat_current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
         
         call io_function_output_vector(outp%how, dir, fname, der%mesh, &
           st%current(:, :, is), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
