@@ -608,8 +608,8 @@ contains
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/total_current")))
       end if
 
-      if(writ%out(OUT_TOTAL_CURRENT)%write) then
-        call write_iter_init(writ%out(OUT_TOTAL_CURRENT)%handle, first, &
+      if(writ%out(OUT_TOTAL_HEAT_CURRENT)%write) then
+        call write_iter_init(writ%out(OUT_TOTAL_HEAT_CURRENT)%handle, first, &
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/total_heat_current")))
       end if
 
@@ -624,7 +624,7 @@ contains
       
     end if
     
-    if(writ%out(OUT_TOTAL_CURRENT)%write) then
+    if(writ%out(OUT_TOTAL_CURRENT)%write .or. writ%out(OUT_TOTAL_HEAT_CURRENT)%write) then
       call v_ks_calculate_current(ks, .true.)
       call v_ks_calc(ks, hm, st, geo, calc_eigenval=.false., time = iter*dt)
     end if
@@ -798,9 +798,10 @@ contains
     if(writ%out(OUT_ION_CH)%write) &
       call td_write_ionch(writ%out(OUT_ION_CH)%handle, gr, st, iter)
 
-    if(writ%out(OUT_TOTAL_CURRENT)%write) &
+    if(writ%out(OUT_TOTAL_CURRENT)%write) then
       call td_write_total_current(writ%out(OUT_TOTAL_CURRENT)%handle, gr, st, iter)
-
+    end if
+    
     if(writ%out(OUT_TOTAL_HEAT_CURRENT)%write) then
       call td_write_total_heat_current(writ%out(OUT_TOTAL_HEAT_CURRENT)%handle, hm, gr, geo, st, iter)
     end if
