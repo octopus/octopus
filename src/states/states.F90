@@ -1389,9 +1389,20 @@ contains
     !%Option cholesky_parallel 2
     !% Cholesky decomposition implemented using
     !% ScaLAPACK. Compatible with states parallelization. (Obsolete synonym: <tt>par_gram_schmidt</tt>)
-    !%Option mgs 3
-    !% Modified Gram-Schmidt orthogonalization.
+    !%Option cgs 3
+    !% Classical Gram-Schmidt (CGS) orthogonalization.
     !% Can be used with domain parallelization but not state parallelization.
+    !% The algorithm is defined in Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005).
+    !%Option mgs 4
+    !% Modified Gram-Schmidt (MGS) orthogonalization.
+    !% Can be used with domain parallelization but not state parallelization.
+    !% The algorithm is defined in Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005).
+    !% This is more precise than the classical Gram-Schmidt but requires many domain communications.
+    !%Option drcgs 5
+    !% Classical Gram-Schmidt orthogonalization with double-step reorthogonalization.
+    !% Can be used with domain parallelization but not state parallelization.
+    !% The algorithm is taken from Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005). 
+    !% According to this reference, this is much more precise than CGS or MGS algorithms. The MGS version seems not to improve much the stability and would require more communications over the domains.
     !%End
 
     default = OPTION__STATESORTHOGONALIZATION__CHOLESKY_SERIAL

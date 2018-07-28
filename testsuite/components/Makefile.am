@@ -39,9 +39,13 @@ dist_share_DATA =                                  \
 	07-cholesky_serial.01-real.inp             \
 	07-cholesky_serial.02-complex.inp          \
 	07-cholesky_serial.03-parindep.inp         \
-	08-mgs.test                                \
-	08-mgs.01-real.inp                         \
-	08-mgs.02-complex.inp                      \
+	08-gs.test                                \
+	08-gs.01-cgs_real.inp                         \
+	08-gs.02-cgs_complex.inp                      \
+        08-gs.03-mgs_real.inp                         \
+        08-gs.04-mgs_complex.inp                      \
+        08-gs.05-drcgs_real.inp                         \
+        08-gs.06-drcgs_complex.inp                      \
 	10-hartree_pfft.test                       \
 	10-hartree_pfft.01-fft.inp                 \
 	10-hartree_pfft.02-fft_corrected.inp       \
