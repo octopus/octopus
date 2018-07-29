@@ -690,8 +690,11 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   end if
 
   if(present(norm)) then
-    ASSERT(normalize)
-    norm = nrm2
+    if(normalize_) then
+      norm = nrm2
+    else
+      norm = X(mf_nrm2)(mesh, dim, phi)
+    end if
   end if
 
   SAFE_DEALLOCATE_A(ss)

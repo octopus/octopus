@@ -519,6 +519,12 @@ contains
           res = abs(hamilt(iter + 1, iter)*abs(expo(iter, 1)))
 
           if(abs(hamilt(iter + 1, iter)) < CNST(1.0e4)*M_EPSILON) exit ! "Happy breakdown"
+          !We normalize only if the norm is non-zero
+          ! see http://www.netlib.org/utk/people/JackDongarra/etemplates/node216.html#alg:arn0
+          do idim = 1, hm%d%dim
+            call lalg_scal(der%mesh%np, M_ONE / hamilt(iter + 1, iter), v(:, idim, iter+1))
+          end do
+           
           if(iter > 3 .and. res < tol) exit
         end do
 
