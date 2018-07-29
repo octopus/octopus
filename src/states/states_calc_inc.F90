@@ -575,7 +575,7 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
       call profiling_count_operations((R_ADD + R_MUL) * mesh%np * dim * 2)
       if(present(overlap)) ss_full(nst) = ss_full(nst) + ss(1)
     end if
-    ss = M_ZERO
+    ss = R_TOTYPE(M_ZERO)
 
     if(.not. mesh%use_curvilinear) then
 
@@ -675,7 +675,7 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   end if
 
   if(normalize_) then
-    nrm2 = X(mf_nrm2)(mesh, dim, phi)
+    nrm2 = R_REAL(X(mf_nrm2)(mesh, dim, phi))
     do idim = 1, dim
       call lalg_scal(mesh%np, M_ONE / nrm2, phi(:, idim))
     end do
@@ -693,7 +693,7 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
     if(normalize_) then
       norm = nrm2
     else
-      norm = X(mf_nrm2)(mesh, dim, phi)
+      norm = R_REAL(X(mf_nrm2)(mesh, dim, phi))
     end if
   end if
 
