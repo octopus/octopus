@@ -63,6 +63,7 @@ module exponential_oct_m
     integer     :: exp_method  !< which method is used to apply the exponential
     FLOAT       :: lanczos_tol !< tolerance for the Lanczos method
     integer     :: exp_order   !< order to which the propagator is expanded
+    integer     :: arnoldi_gs  !< Orthogonalization scheme used for Arnoldi
   end type exponential_t
 
 contains
@@ -165,6 +166,26 @@ contains
 
     end if
 
+    te%arnoldi_gs = OPTION__ARNOLDIORTHOGONALIZATION__CGS
+    if(te%exp_method == EXP_LANCZOS) then
+      !%Variable ArnoldiOrthogonalization
+      !%Type integer
+      !%Section Time-Dependent::Propagation
+      !%Description
+      !% The orthogonalization method used for the Arnoldi procedure.
+      !% Only for TDExponentialMethod = lanczos. 
+      !%Option cgs 3
+      !% Classical Gram-Schmidt (CGS) orthogonalization.
+      !% The algorithm is defined in Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005).
+      !%Option drcgs 5
+      !% Classical Gram-Schmidt orthogonalization with double-step reorthogonalization.
+      !% The algorithm is taken from Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005). 
+      !% According to this reference, this is much more precise than CGS or MGS algorithms.
+      !%End
+      call parse_variable('ArnoldiOrthogonalization', OPTION__ARNOLDIORTHOGONALIZATION__CGS, &
+                              te%arnoldi_gs)
+    end if
+
     POP_SUB(exponential_init)
   end subroutine exponential_init
 
@@ -187,6 +208,7 @@ contains
     teo%exp_method  = tei%exp_method
     teo%lanczos_tol = tei%lanczos_tol
     teo%exp_order   = tei%exp_order
+    teo%arnoldi_gs  = tei%arnoldi_gs 
 
     POP_SUB(exponential_copy)
   end subroutine exponential_copy
@@ -441,6 +463,7 @@ contains
     ! ---------------------------------------------------------
 
     ! ---------------------------------------------------------
+    !TODO: Add a reference
     subroutine lanczos()
       integer ::  iter, l, idim
       CMPLX, allocatable :: hamilt(:,:), v(:,:,:), expo(:,:), tmp(:, :), psi(:, :)
@@ -488,7 +511,8 @@ contains
 
           !orthogonalize against previous vectors
           call zstates_orthogonalization(der%mesh, iter - l + 1, hm%d%dim, v(:, :, l:iter), v(:, :, iter + 1), &
-            normalize = .true., overlap = hamilt(l:iter, iter), norm = hamilt(iter + 1, iter))
+            normalize = .true., overlap = hamilt(l:iter, iter), norm = hamilt(iter + 1, iter), &
+            gs_scheme = te%arnoldi_gs)
 
           call zlalg_exp(iter, pp, hamilt, expo, hamiltonian_hermitian(hm))
 
@@ -546,7 +570,7 @@ contains
             !orthogonalize against previous vectors
             call zstates_orthogonalization(der%mesh, iter - l + 1, hm%d%dim, v(:, :, l:iter), &
               v(:, :, iter + 1), normalize = .true., overlap = hamilt(l:iter, iter), &
-              norm = hamilt(iter + 1, iter))
+              norm = hamilt(iter + 1, iter), gs_scheme = te%arnoldi_gs)
 
             call zlalg_phi(iter, pp, hamilt, expo, hamiltonian_hermitian(hm))
  
