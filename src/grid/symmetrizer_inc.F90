@@ -70,6 +70,7 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
     else
       field_global => field
     end if
+    call X(io_function_output)(bit(15), '.', 'field_before', this%mesh, field, M_ONE, ip )
   end if
 
   if(present(field_vector)) then
@@ -164,6 +165,7 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
         write(message(1),'(a, es12.5)') 'Symmetrization discrepancy ratio (scalar) = ', maxabsdiff / maxabs
         call messages_warning(1)
       end if
+      call X(io_function_output)(bit(15), '.', 'field_after', this%mesh, field, M_ONE, ip )
     end if
     
     if(present(field_vector)) then
