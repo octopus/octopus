@@ -837,7 +837,7 @@ contains
         ot(i) = ot(i) - M_TWO * power * sin(omega*i*dt)
       end do
     case(0)
-      if(omega == M_ZERO) then
+      if(abs(omega) <= M_EPSILON) then
         do i = 0, time_steps
           ot(i) = ot(i) - power * cos(omega*i*dt)
         end do

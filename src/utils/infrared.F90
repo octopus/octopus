@@ -49,7 +49,7 @@
     integer, parameter :: max_freq = 10000
 
     ! Initialize stuff
-    call global_init(is_serial = .true.)		 
+    call global_init(is_serial = .true.)
 
     call getopt_init(ierr)
 
@@ -62,7 +62,7 @@
     call unit_system_init()
 
     !These variables are documented in src/td/spectrum.F90
-    call parse_variable('TDMaximumIter', 1500, max_iter)
+    call parse_variable('TDMaxSteps', 1500, max_iter)
     call parse_variable('PropagationSpectrumStartTime',  M_ZERO, start_time, units_inp%time)
     call parse_variable('PropagationSpectrumEndTime',  -M_ONE, end_time, units_inp%time)
     call parse_variable('PropagationSpectrumMaxEnergy', &
@@ -115,8 +115,6 @@
     call geometry_end(geo)
     call space_end(space)
 
-    SAFE_DEALLOCATE_A(time)
-
     call io_end()
     call messages_end()
     call global_end()
@@ -137,6 +135,9 @@
 
       ini_iter = -1
       iter = 0
+
+      SAFE_ALLOCATE(time(1:max_iter))
+
       do while(.true.)
 
         read(unit = iunit, iostat = ierr, fmt = *) read_iter, time(iter), &

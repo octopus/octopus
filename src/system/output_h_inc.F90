@@ -33,21 +33,18 @@
     type(base_potential_t),        pointer :: subsys_external
     type(base_hamiltonian_t),      pointer :: subsys_tnadd
     character(len=BASE_POTENTIAL_NAME_LEN) :: name
-
     FLOAT,         dimension(:),   pointer :: xpot
     FLOAT,         dimension(:,:), pointer :: tnadd_potential
     FLOAT, allocatable :: v0(:,:), nxc(:), potential(:)
     FLOAT, allocatable :: current_kpt(:, :)
     FLOAT, allocatable :: density_kpt(:), density_tmp(:,:)
     type(density_calc_t) :: dens_calc
-
-    FLOAT, allocatable :: current(:, :, :)
     FLOAT, allocatable :: gradvh(:, :)
 
     PUSH_SUB(output_hamiltonian)
    
 
-    if(iand(outp%what, OPTION__OUTPUT__POTENTIAL) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__POTENTIAL) /= 0) then
       if(hm%cmplxscl%space) then
         call zio_function_output(outp%how, dir, "v0", der%mesh,&
           hm%ep%vpsl + M_zI*hm%ep%Imvpsl, units_out%energy, err, geo = geo, grp = grp)
@@ -87,7 +84,7 @@
       if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         if (.not. hm%cmplxscl%space) then 
           call dio_function_output(outp%how, dir, 'vh', der%mesh, hm%vhartree, units_out%energy, err, geo = geo, grp = grp)
-          if(outp%gradientpotential) then
+          if(bitand(outp%what, OPTION__OUTPUT__POTENTIAL_GRADIENT) /= 0) then
             SAFE_ALLOCATE(gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
             call dderivatives_grad(der, hm%vhartree(1:der%mesh%np_part), gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
             call io_function_output_vector(outp%how, dir, 'grad_vh', der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
@@ -201,7 +198,7 @@
     end if
 
 
-    if(iand(outp%what, OPTION__OUTPUT__XC_DENSITY) /= 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES) then
+    if(bitand(outp%what, OPTION__OUTPUT__XC_DENSITY) /= 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES) then
       SAFE_ALLOCATE(v0(1:der%mesh%np_part, 1))
       SAFE_ALLOCATE(nxc(1:der%mesh%np))
 
@@ -224,7 +221,7 @@
       SAFE_DEALLOCATE_A(nxc)
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       if(states_are_complex(st)) then
         do is = 1, hm%d%nspin
 
@@ -245,7 +242,7 @@
       end if
     end if
    
-    if(iand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
+    if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
       if(states_are_complex(st)) then
       
         SAFE_ALLOCATE(current_kpt(st%d%kpt%start:st%d%kpt%end, der%mesh%sb%dim)) 
@@ -265,7 +262,7 @@
       end if
     end if
 
-    if(iand(outp%whatBZ, OPTION__OUTPUT_KPT__DENSITY_KPT) /= 0) then
+    if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__DENSITY_KPT) /= 0) then
       SAFE_ALLOCATE(density_kpt(1:st%d%nik))
       density_kpt(1:st%d%nik) = M_ZERO
 
@@ -318,7 +315,7 @@
 
     PUSH_SUB(output_scalar_pot)
 
-    if(iand(outp%what, OPTION__OUTPUT__EXTERNAL_TD_POTENTIAL) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__EXTERNAL_TD_POTENTIAL) /= 0) then
       SAFE_ALLOCATE(scalar_pot(1:gr%mesh%np))
       do is = 1, hm%ep%no_lasers
         write(fname, '(a,i1)') 'scalar_pot-', is
@@ -346,7 +343,7 @@
     
     PUSH_SUB(output_kick)
 
-    if(iand(outp%what, OPTION__OUTPUT__DELTA_PERTURBATION) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__DELTA_PERTURBATION) /= 0) then
       SAFE_ALLOCATE(kick_function(1:mesh%np))
       call kick_function_get(mesh, kick, kick_function)
       call zio_function_output(outp%how, dir, "kick_function", mesh, kick_function(:), &

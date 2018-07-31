@@ -22,6 +22,7 @@ module hamiltonian_base_oct_m
   use accel_oct_m
   use batch_oct_m
   use batch_ops_oct_m
+  use boundaries_oct_m
   use blas_oct_m
   use comm_oct_m
   use derivatives_oct_m
@@ -82,6 +83,8 @@ module hamiltonian_base_oct_m
     hamiltonian_base_update,                   &
     dhamiltonian_base_phase,                   &
     zhamiltonian_base_phase,                   &
+    dhamiltonian_base_phase_correction,        &
+    zhamiltonian_base_phase_correction,        &
     dhamiltonian_base_nlocal_force,            &
     zhamiltonian_base_nlocal_force,            &
     projection_t
@@ -122,6 +125,7 @@ module hamiltonian_base_oct_m
     type(accel_mem_t)                    :: buff_projector_phases
     type(accel_mem_t)                    :: buff_mix
     CMPLX, pointer     :: phase(:, :)
+    CMPLX, allocatable :: phase_corr(:,:)
     type(accel_mem_t) :: buff_phase
     integer            :: buff_phase_qn_start
   end type hamiltonian_base_t
@@ -139,7 +143,8 @@ module hamiltonian_base_oct_m
     TERM_NON_LOCAL_POTENTIAL =   4,      &
     TERM_OTHERS              =   8,      &
     TERM_LOCAL_EXTERNAL      =  16,      &
-    TERM_MGGA                =  32
+    TERM_MGGA                =  32,      &
+    TERM_DFT_U               =  64 
 
   integer, parameter, public ::            &
     FIELD_POTENTIAL                = 1,    &
@@ -222,7 +227,7 @@ contains
 
     PUSH_SUB(hamiltonian_base_allocate)
 
-    if(iand(FIELD_POTENTIAL, field) /= 0) then 
+    if(bitand(FIELD_POTENTIAL, field) /= 0) then 
       if(.not. allocated(this%potential)) then
         SAFE_ALLOCATE(this%potential(1:mesh%np, 1:this%nspin))
         this%potential = M_ZERO
@@ -236,21 +241,21 @@ contains
       end if
     end if
 
-    if(iand(FIELD_UNIFORM_VECTOR_POTENTIAL, field) /= 0) then 
+    if(bitand(FIELD_UNIFORM_VECTOR_POTENTIAL, field) /= 0) then 
       if(.not. allocated(this%uniform_vector_potential)) then
         SAFE_ALLOCATE(this%uniform_vector_potential(1:mesh%sb%dim))
         this%uniform_vector_potential = M_ZERO
       end if
     end if
 
-    if(iand(FIELD_VECTOR_POTENTIAL, field) /= 0) then 
+    if(bitand(FIELD_VECTOR_POTENTIAL, field) /= 0) then 
       if(.not. allocated(this%vector_potential)) then
         SAFE_ALLOCATE(this%vector_potential(1:mesh%sb%dim, 1:mesh%np))
         this%vector_potential = M_ZERO
       end if
     end if
 
-    if(iand(FIELD_UNIFORM_MAGNETIC_FIELD, field) /= 0) then 
+    if(bitand(FIELD_UNIFORM_MAGNETIC_FIELD, field) /= 0) then 
       if(.not. allocated(this%uniform_magnetic_field)) then
         SAFE_ALLOCATE(this%uniform_magnetic_field(1:max(mesh%sb%dim, 3)))
         this%uniform_magnetic_field = M_ZERO

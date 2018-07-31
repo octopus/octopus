@@ -36,7 +36,7 @@ module energy_oct_m
   type energy_t
     ! Energies
     FLOAT :: total       !< Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc] 
-                         !!                - 1/2 Int[n^e v_pcm] + 1/2 Int[n^n v_pcm]
+                         !!                - 1/2 Int[n^e v_pcm] + 1/2 Int[n^n v_pcm] - Int[n v_U]
     FLOAT :: eigenvalues !< Sum[Eigenvalues]
     FLOAT :: exchange
     FLOAT :: correlation
@@ -59,6 +59,8 @@ module energy_oct_m
     FLOAT :: ts          !< TS
     FLOAT :: berry       !< Berry energy correction = -mu.E - <Vberry>
     FLOAT :: delta_xc    !< the XC derivative discontinuity
+    FLOAT :: dft_u       !DFT+U contribution
+    FLOAT :: int_dft_u !< Int[n v_U]
 
     !cmplxscl 
     FLOAT :: Imtotal
@@ -72,10 +74,11 @@ module energy_oct_m
     FLOAT :: Imextern
     FLOAT :: Imextern_local
     FLOAT :: Imextern_non_local
+    FLOAT :: Imextern_dft_u
     FLOAT :: Imentropy
     FLOAT :: Imts
     FLOAT :: Imberry
-
+    FLOAT :: Imint_dft_u
   end type energy_t
 
 contains
@@ -108,6 +111,8 @@ contains
     this%ts           = M_ZERO
     this%berry        = M_ZERO
     this%delta_xc     = M_ZERO
+    this%dft_u        = M_ZERO
+    this%int_dft_u    = M_ZERO
 
     this%Imtotal       = M_ZERO
     this%Imeigenvalues = M_ZERO
@@ -123,6 +128,7 @@ contains
     this%Imentropy     = M_ZERO
     this%Imts          = M_ZERO
     this%Imberry       = M_ZERO
+    this%Imint_dft_u   = M_ZERO
 
     POP_SUB(energy_nullify)
   end subroutine energy_nullify
@@ -156,6 +162,8 @@ contains
     eout%ts           = ein%ts
     eout%berry        = ein%berry
     eout%delta_xc     = ein%delta_xc
+    eout%dft_u        = ein%dft_u
+    eout%int_dft_u    = ein%int_dft_u
 
     eout%Imtotal = ein%Imtotal
     eout%Imeigenvalues = ein%Imeigenvalues
@@ -168,10 +176,12 @@ contains
     eout%Imextern = ein%Imextern
     eout%Imextern_local = ein%Imextern_local
     eout%Imextern_non_local = ein%Imextern_non_local
+    eout%Imextern_dft_u = ein%Imextern_dft_u
     eout%Imentropy = ein%Imentropy
     eout%Imts = ein%Imts
     eout%Imberry = ein%Imberry
-
+    eout%Imint_dft_u = Ein%Imint_dft_u
+    
     POP_SUB(energy_copy)
   end subroutine energy_copy
 

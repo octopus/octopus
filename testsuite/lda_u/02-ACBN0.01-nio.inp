@@ -1,0 +1,58 @@
+CalculationMode = gs
+PeriodicDimensions = 3
+BoxShape = parallelepiped
+ExperimentalFeatures = yes
+
+EigenSolver = rmmdiis
+#EigenSolverTolerance = 1.0e-9
+#EigensolverMaxIter = 50
+ConvRelDens = 1.0e-7
+
+a = 7.8809
+%Species
+"Ni" | species_pseudo | hubbard_l | 2 
+%
+PseudopotentialSet = hscv_pbe
+DFTULevel = dft_u_acbn0
+
+%LatticeParameters
+  a | a | a
+%
+%LatticeVectors
+ 0.0 | 1/2 | 1/2
+ 1/2 | 0.0 | 1/2
+ 1.0 | 1.0 | 0.0
+%
+%ReducedCoordinates
+ "Ni" | 0.0 | 0.0 | 0.0
+ "Ni" | 0.0 | 0.0 | 0.5
+ "O"  | 0.5 | 0.5 | 0.25
+ "O"  | 0.5 | 0.5 | 0.75
+%
+
+Spacing = 0.5
+
+FromScratch = yes
+ParDomains = no
+ParKPoints = auto
+
+SpinComponents = polarized
+GuessMagnetDensity = user_defined
+%AtomsMagnetDirection
+ 8.0
+-8.0
+ 0.0
+ 0.0
+%
+
+LCAOStart= lcao_states
+
+%KPointsGrid
+2 | 2 | 1
+%
+
+ExtraStates = 10
+
+FilterPotentials = filter_none
+AOThreshold = 0.05
+OutputLDA_U = occ_matrices + effectiveU

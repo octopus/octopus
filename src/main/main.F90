@@ -99,6 +99,7 @@ program octopus
   !% This calculation mode does nothing. Useful for debugging, testing and benchmarking.  
   !%Option invert_ks 18
   !% Invert the Kohn-Sham equations (experimental).
+  !%Option test 19
   !%Option recipe 99
   !% Prints out a tasty recipe.
   !%End

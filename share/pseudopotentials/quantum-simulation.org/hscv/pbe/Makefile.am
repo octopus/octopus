@@ -99,6 +99,7 @@ dist_pbe_DATA =                           \
 	Sm_HSCV_PBE-1.0.xml               \
 	Sn_HSCV_PBE-1.0.xml               \
 	Sr_HSCV_PBE-1.0.xml               \
+	T_HSCV_PBE-1.0.xml                \
 	Ta_HSCV_PBE-1.0.xml               \
 	Tb_HSCV_PBE-1.0.xml               \
 	Tc_HSCV_PBE-1.0.xml               \

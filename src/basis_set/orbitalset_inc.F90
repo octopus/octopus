@@ -14,8 +14,6 @@
 !! along with this program; if not, write to the Free Software
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
-!!
-!! $Id$
 
 subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, dot)
   type(orbitalset_t),   intent(in) :: os
@@ -26,12 +24,20 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, dot)
   R_TYPE,            intent(inout) :: dot(:,:)
 
   integer :: im, ip, idim, idim_orb
-  type(profile_t), save :: prof
-  R_TYPE, allocatable :: spsi(:)
+  type(profile_t), save :: prof, prof_reduce
+  R_TYPE, allocatable :: spsi(:,:)
 
   call profiling_in(prof, "ORBSET_GET_COEFFICIENTS")
 
   PUSH_SUB(X(orbitalset_get_coefficients))
+
+  if(.not.has_phase .or..not.simul_box_is_periodic(os%sphere%mesh%sb) &
+          .or. os%submeshforperiodic) then
+    SAFE_ALLOCATE(spsi(1:os%sphere%np, 1:ndim))
+    forall(ip=1:os%sphere%np, idim=1:ndim)
+      spsi(ip,idim) = psi(os%sphere%map(ip), idim)
+    end forall
+  end if
 
   do im = 1, os%norbs
     !If we need to add the phase, we explicitly do the operation using the sphere
@@ -41,24 +47,32 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, dot)
         do idim = 1, ndim
           idim_orb = min(idim,os%ndim)
           dot(idim,im) = zmf_dotp(os%sphere%mesh, os%eorb_mesh(1:os%sphere%mesh%np,idim_orb,im,ik),&
-                              psi(1:os%sphere%mesh%np,idim))
+                              psi(1:os%sphere%mesh%np,idim), reduce=.false.)
         end do
       else
         do idim = 1, ndim
           idim_orb = min(idim,os%ndim)
-          dot(idim, im) = submesh_to_mesh_dotp(os%sphere, os%eorb_submesh(1:os%sphere%np,idim_orb,im,ik),&
-                              psi(1:os%sphere%mesh%np, idim))
+          dot(idim, im) = zmf_dotp(os%sphere%mesh, os%eorb_submesh(1:os%sphere%np,idim_orb,im,ik),&
+                              spsi(1:os%sphere%np, idim), reduce=.false., np=os%sphere%np )
         end do
       endif 
 #endif
     else
       do idim = 1, ndim
         idim_orb = min(idim,os%ndim)
-        dot(idim,im) = submesh_to_mesh_dotp(os%sphere, os%X(orb)(1:os%sphere%np,idim_orb,im),&
-                               psi(1:os%sphere%mesh%np, idim))
+        dot(idim,im) = X(mf_dotp)(os%sphere%mesh, os%X(orb)(1:os%sphere%np,idim_orb,im),&
+                               spsi(1:os%sphere%np, idim), reduce=.false., np=os%sphere%np)
       end do
     end if
   end do
+
+  if(os%sphere%mesh%parallel_in_domains) then
+    call profiling_in(prof_reduce, "ORBSET_GET_COEFF_REDUCE")
+    call comm_allreduce(os%sphere%mesh%mpi_grp%comm, dot) 
+    call profiling_out(prof_reduce)
+  end if
+
+  SAFE_DEALLOCATE_A(spsi)
 
   POP_SUB(X(orbitalset_get_coefficients))
   call profiling_out(prof)
@@ -195,17 +209,13 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, weight)
       if(has_phase) then
 #ifdef R_TCOMPLEX
         if(simul_box_is_periodic(os%sphere%mesh%sb) .and. .not. os%submeshforperiodic) then
-          do ist = 1, psib%nst_linear
-            idim = min(batch_linear_to_idim(psib,ist),os%ndim)
-            do sp = 1, os%sphere%mesh%np, block_size
-              ep = sp - 1 + min(block_size, os%sphere%mesh%np - sp + 1)
-              do iorb = 1, os%norbs
-                tmp =  weight(iorb,ist)
-                forall(ip = sp:ep)
-                psib%states_linear(ist)%zpsi(ip) = &
-                   psib%states_linear(ist)%zpsi(ip) + tmp*os%eorb_mesh(ip,idim,iorb,ik)
-                end forall
-              end do
+          do sp = 1, os%sphere%mesh%np, block_size
+            size = min(block_size, os%sphere%mesh%np - sp + 1)
+            do ist = 1, psib%nst_linear
+              idim = min(batch_linear_to_idim(psib,ist),os%ndim)
+              call blas_gemv('N', size, os%norbs, R_TOTYPE(M_ONE), os%eorb_mesh(sp,idim,1,ik), &
+                    os%sphere%mesh%np*os%ndim, weight(1,ist), 1, R_TOTYPE(M_ONE),            & 
+                       psib%states_linear(ist)%zpsi(sp), 1)
             end do
           end do
         else
@@ -213,11 +223,13 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, weight)
           do ist = 1, psib%nst_linear
             idim = min(batch_linear_to_idim(psib,ist),os%ndim)
             sorb(:) = R_TOTYPE(M_ZERO)
-            do iorb = 1, os%norbs
-              tmp = weight(iorb,ist)
-              forall (ip = 1:os%sphere%np)
-                sorb(ip) = sorb(ip) + os%eorb_submesh(ip,idim,iorb,ik)*tmp
-              end forall
+            do sp = 1, os%sphere%np, block_size
+              size = min(block_size, os%sphere%np - sp + 1)
+              ep = sp - 1 + size
+              sorb(sp:ep) = R_TOTYPE(M_ZERO)
+              do iorb = 1, os%norbs
+                call blas_axpy(size, weight(iorb,ist), os%eorb_submesh(sp,idim,iorb,ik), 1, sorb(sp), 1)
+              end do
             end do
             do ip = 1,os%sphere%np
               psib%states_linear(ist)%zpsi(os%sphere%map(ip)) = &
@@ -260,7 +272,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, weight)
                 idim3 = min(batch_linear_to_idim(psib,ist+2), os%ndim)
                 idim4 = min(batch_linear_to_idim(psib,ist+3), os%ndim)
 
-                do ip = sp,ep !1:os%sphere%mesh%np)
+                do ip = sp,ep
                   psib%pack%zpsi(ist,ip) = &
                      psib%pack%zpsi(ist,ip) + weight(iorb,ist)*os%eorb_mesh(ip,idim1,iorb,ik)
                   psib%pack%zpsi(ist+1,ip) = &
@@ -269,16 +281,15 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, weight)
                      psib%pack%zpsi(ist+2,ip) + weight(iorb,ist+2)*os%eorb_mesh(ip,idim3,iorb,ik)
                   psib%pack%zpsi(ist+3,ip) = &
                     psib%pack%zpsi(ist+3,ip) + weight(iorb,ist+3)*os%eorb_mesh(ip,idim4,iorb,ik)
-                end do !forall 
+                end do
               end do
 
               do ist = ist, psib%nst_linear
                 idim = min(batch_linear_to_idim(psib,ist), os%ndim)
-                ! forall(ip = 1:os%sphere%mesh%np)
                 do ip=sp,ep
                   psib%pack%zpsi(ist,ip) = &
                      psib%pack%zpsi(ist,ip) + weight(iorb,ist)*os%eorb_mesh(ip,idim,iorb,ik)
-                end do! forall
+                end do
               end do
             end do
           end do

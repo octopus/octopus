@@ -24,6 +24,7 @@
 #include <cassert>
 #include <sstream>
 #include <iostream>
+#include <cmath>
 
 #include "anygrid.hpp"
 #include "base.hpp"
@@ -38,9 +39,11 @@ namespace pseudopotential {
 
     psml(const std::string & filename, bool uniform_grid = false):
       pseudopotential::anygrid(uniform_grid),
-      file_(filename),
+      file_(filename.c_str()),
       buffer_((std::istreambuf_iterator<char>(file_)), std::istreambuf_iterator<char>()){
 
+      filename_ = filename;
+      
       buffer_.push_back('\0');
       doc_.parse<0>(&buffer_[0]);
 
@@ -128,7 +131,7 @@ namespace pseudopotential {
     }
     
     std::string symbol() const {
-      return spec_node_->first_attribute("atomic-label")->value();
+      return element::trim(spec_node_->first_attribute("atomic-label")->value());
     }
 
     int atomic_number() const {
@@ -280,7 +283,7 @@ namespace pseudopotential {
 	if(l == read_l && ic == read_ic) {
 	  double read_j = value<double>(node->first_attribute("j"));
 	  std::cout << l << " " << ic << " " << read_j <<  std::endl;
-	  return std::lrint(2.0*read_j);
+	  return lrint(2.0*read_j);
 	}
 	node = node->next_sibling("proj");
       }

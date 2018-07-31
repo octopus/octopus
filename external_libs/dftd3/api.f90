@@ -76,9 +76,10 @@ contains
   !!
   !! \param input  Input parameters for the calculator.
   !!
-  subroutine dftd3_init(this, input)
+  subroutine dftd3_init(this, input, datafile)
     type(dftd3_calc), intent(out) :: this
     type(dftd3_input), intent(in) :: input
+    character(len=*),  intent(in) :: datafile
 
     logical, allocatable :: minc6list(:), maxc6list(:)
     logical :: minc6, maxc6
@@ -104,7 +105,7 @@ contains
     
     allocate(this%c6ab(max_elem, max_elem, maxc, maxc, 3))
     allocate(this%mxc(max_elem))
-    call copyc6("", maxc, max_elem, this%c6ab, this%mxc, minc6, minc6list, &
+    call copyc6(datafile, maxc, max_elem, this%c6ab, this%mxc, minc6, minc6list, &
         & maxc6, maxc6list)
     this%rthr = input%cutoff**2
     this%cn_thr = input%cutoff_cn**2

@@ -32,6 +32,7 @@ module current_oct_m
   use io_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
+  use lda_u_oct_m
   use logrid_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -136,7 +137,7 @@ contains
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(inout) :: st
     FLOAT,                intent(out)    :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
-    FLOAT, pointer,       intent(out)    :: current_kpt(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, kpt%start:kpt%end)
+    FLOAT, pointer,               intent(inout)    :: current_kpt(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, kpt%start:kpt%end)
 
     integer :: ik, ist, idir, idim, ip, ib, ii, ispin
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), hpsi(:, :), rhpsi(:, :), rpsi(:, :), hrpsi(:, :)
@@ -154,6 +155,8 @@ contains
 
     ! spin not implemented or tested
     ASSERT(all(ubound(current) == (/der%mesh%np_part, der%mesh%sb%dim, st%d%nspin/)))
+    ASSERT(all(ubound(current_kpt) == (/der%mesh%np_part, der%mesh%sb%dim, st%d%kpt%end/)))
+    ASSERT(all(lbound(current_kpt) == (/1, 1, st%d%kpt%start/)))
 
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
@@ -354,6 +357,11 @@ contains
             if(hm%scissor%apply) then
               call scissor_commute_r(hm%scissor, der%mesh, ik, psi, gpsi)
             end if
+            
+            if(hm%lda_u_level /= DFT_U_NONE) then
+              call zlda_u_commute_r(hm%lda_u, der%mesh, st%d, ik, ist, psi, gpsi, &
+                              associated(hm%hm_base%phase))
+            end if
 
           end if
 
@@ -416,8 +424,8 @@ contains
       SAFE_ALLOCATE(symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim))
       call symmetrizer_init(symmetrizer, der%mesh)
       do ispin = 1, st%d%nspin
-        call dsymmetrizer_apply(symmetrizer, field_vector = current(:, :, ispin), symmfield_vector = symmcurrent, &
-          suppress_warning = .true.)
+        call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = current(:, :, ispin), &
+          symmfield_vector = symmcurrent, suppress_warning = .true.)
         current(1:der%mesh%np, 1:der%mesh%sb%dim, ispin) = symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim)
       end do
       call symmetrizer_end(symmetrizer)

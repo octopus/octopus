@@ -281,7 +281,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine bc_generate_mf(this, mesh, geo, bounds, mf)
-    type(bc_t),               intent(out)   :: this
+    type(bc_t),               intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
     type(geometry_t),         intent(in)    :: geo
     FLOAT,                    intent(in)    :: bounds(1:2)

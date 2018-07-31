@@ -46,6 +46,7 @@ module pseudo_oct_m
     pseudo_grid_weights,                 &
     pseudo_local_potential,              &
     pseudo_projector,                    &
+    pseudo_has_radial_function,          &
     pseudo_radial_function,              &
     pseudo_radial_potential,             &
     pseudo_has_nlcc,                     &
@@ -87,7 +88,8 @@ module pseudo_oct_m
     PSEUDO_FORMAT_PSF                        = 779,   &
     PSEUDO_FORMAT_CPI                        = 780,   &
     PSEUDO_FORMAT_FHI                        = 781,   &
-    PSEUDO_FORMAT_HGH                        = 782
+    PSEUDO_FORMAT_HGH                        = 782,   &
+    PSEUDO_FORMAT_PSP8                       = 783
 
   ! we only define these values here, the specific functionals are
   ! obtained from libxc
@@ -440,7 +442,27 @@ contains
     pseudo_has_total_angular_momentum = (pseudo_has_total_angular_momentum_low(pseudo) /= 0)
     
   end function pseudo_has_total_angular_momentum
+
+  ! -------------------------------------------------
   
+  logical function pseudo_has_radial_function(pseudo, l)
+    type(pseudo_t),   intent(in)      :: pseudo
+    integer,          intent(in)      :: l
+    
+    interface
+      integer function pseudo_has_radial_function_low(pseudo, l)
+        import :: pseudo_t
+        implicit none
+        
+        type(pseudo_t),   intent(in)      :: pseudo
+        integer,          intent(in)      :: l
+      end function pseudo_has_radial_function_low
+    end interface
+    
+    pseudo_has_radial_function = (pseudo_has_radial_function_low(pseudo, l) /= 0)
+    
+  end function pseudo_has_radial_function
+
 end module pseudo_oct_m
 
 !! Local Variables:
