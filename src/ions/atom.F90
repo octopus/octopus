@@ -291,7 +291,7 @@ contains
     read(unit=unit, fmt=frmt) dum, (tmp(i), i=1, dim_)
 
     do i=1, dim_
-      this%x(i) = units_from_atomic(units_out%length_xyz_file, tmp(i))
+      this%x(i) = units_to_atomic(units_out%length_xyz_file, tmp(i))
     end do
  
     POP_SUB(atom_read_xyz)
@@ -419,7 +419,7 @@ contains
     read(unit=unit, fmt=frmt) dum, (tmp, i=1, dim_)
 
     do i=1, dim_
-      this%x(i) = units_from_atomic(units_out%length_xyz_file, tmp(i))
+      this%x(i) = units_to_atomic(units_out%length_xyz_file, tmp(i))
     end do
 
 
