@@ -462,8 +462,10 @@ contains
       !% <br>&nbsp;&nbsp;'O'  | &nbsp;1 | 0 | 0
       !% <br>%</tt>
       !%
-      !% It describes one carbon and one oxygen where the distance along the
-      !% x axis is fixed.
+      !% Coordinates with a constrain value of 0 will be optimized, while
+      !% coordinates with a constrain different from zero will be kept fixed. So,
+      !% in this example the x coordinates of both atoms will remain fixed and the
+      !% distance between the two atoms along the x axis will be constant.
       !%
       !% Note: It is important for the constrains to maintain the ordering 
       !% in which the atoms were defined in the coordinates specifications.
@@ -481,13 +483,11 @@ contains
         end if
         ! copy information and adjust units
         do iatom = 1, g_opt%geo%natoms
-          if(all(xyz%atom(iatom)%x(1:g_opt%dim) == M_ZERO &
-                 .or.xyz%atom(iatom)%x(1:g_opt%dim) == M_ONE)) then
-            g_opt%geo%atom(iatom)%c = xyz%atom(iatom)%x
-          else
-            write(message(1), '(a)') 'Constrains can only be 0 or 1.'
-            call messages_fatal(1)
-          end if
+          where(xyz%atom(iatom)%x == M_ZERO)
+            g_opt%geo%atom(iatom)%c = M_ZERO
+          elsewhere
+            g_opt%geo%atom(iatom)%c = M_ONE
+          end where
         end do
 
         call read_coords_end(xyz)
