@@ -223,15 +223,26 @@ contains
       !Computers and Mathematics with Applications 50, 1069 (2005).
       select case(st%d%orth_method)
       case(OPTION__STATESORTHOGONALIZATION__MGS)
-
-        ! calculate the projections and substract with the on the current state
-        do jst = 1, ist - 1
+        ! renormalize
+        cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
+        do idim = 1, st%d%dim
+          call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
+        end do
+        call states_set_state(st, mesh, ist, ik, psii)
+        ! calculate the projections
+        do jst = ist + 1, nst
           call states_get_state(st, mesh, jst, ik, psij)
-          aa(jst) = X(mf_dotp)(mesh, st%d%dim, psij, psii)
-
+          aa(jst) = X(mf_dotp)(mesh, st%d%dim, psii, psij, reduce = .false.)
+        end do
+        if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = nst)
+ 
+        ! subtract the projections
+        do jst = ist + 1, nst
+          call states_get_state(st, mesh, jst, ik, psij)
           do idim = 1, st%d%dim
-            call lalg_axpy(mesh%np, -aa(jst), psij(:, idim), psii(:, idim))
+            call lalg_axpy(mesh%np, -aa(jst), psii(:, idim), psij(:, idim))
           end do
+          call states_set_state(st, mesh, jst, ik, psij)
         end do
 
       case(OPTION__STATESORTHOGONALIZATION__CGS)
@@ -282,15 +293,17 @@ contains
 
       end select
 
+      !In case of modified Gram-Schmidt, this was done before.
+      if(st%d%orth_method /= OPTION__STATESORTHOGONALIZATION__MGS) then
+        ! renormalize
+        cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
 
-      ! renormalize
-      cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
+        do idim = 1, st%d%dim
+          call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
+        end do
 
-      do idim = 1, st%d%dim
-        call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
-      end do
-
-      call states_set_state(st, mesh, ist, ik, psii)
+        call states_set_state(st, mesh, ist, ik, psii)
+      end if
       
     end do
 

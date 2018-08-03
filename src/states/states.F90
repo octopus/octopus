@@ -1397,7 +1397,6 @@ contains
     !% Modified Gram-Schmidt (MGS) orthogonalization.
     !% Can be used with domain parallelization but not state parallelization.
     !% The algorithm is defined in Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005).
-    !% This is more precise than the classical Gram-Schmidt but requires many domain communications.
     !%Option drcgs 5
     !% Classical Gram-Schmidt orthogonalization with double-step reorthogonalization.
     !% Can be used with domain parallelization but not state parallelization.
