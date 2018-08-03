@@ -155,6 +155,7 @@ module pcm_oct_m
     
     integer                          :: calc_method   !< which method should be used to obtain the pcm potential 
     integer                          :: tess_nn       !< number of tessera center mesh-point nearest neighbors
+    FLOAT                            :: dt            !< time-step of propagation
   end type pcm_t
 
   FLOAT, allocatable :: s_mat_act(:,:) !< S_I matrix 
@@ -186,8 +187,6 @@ module pcm_oct_m
 
   integer, parameter :: CM_GS = 1, &
                         CM_TD = 3
-
-  FLOAT :: dt !< time-step of propagation
 
   integer, parameter :: n_tess_sphere = 60 !< minimum number of tesserae per sphere
 					   !< cannot be changed without changing cav_gen subroutine
@@ -430,7 +429,7 @@ contains
     pcm%deb%eps_d = pcm%epsilon_infty
 
     !< re-parse TDTimeStep to propagate polarization charges
-    call parse_variable('TDTimeStep', M_ZERO, dt, unit = units_inp%time)
+    call parse_variable('TDTimeStep', M_ZERO, pcm%dt, unit = units_inp%time)
 
     !%Variable PCMDebyeRelaxTime
     !%Type float
@@ -1230,9 +1229,9 @@ contains
         if( pcm%eom ) then	!< equation-of-motion propagation
           select case (pcm%which_eps)
             case('drl')
-             call pcm_charges_propagation(pcm%q_e, pcm%v_e, dt, pcm%tess, input_asc_e, 'electron', 'drl', this_drl = pcm%drl)
+             call pcm_charges_propagation(pcm%q_e, pcm%v_e, pcm%dt, pcm%tess, input_asc_e, 'electron', 'drl', this_drl = pcm%drl)
             case default
-             call pcm_charges_propagation(pcm%q_e, pcm%v_e, dt, pcm%tess, input_asc_e, 'electron', 'deb', this_deb = pcm%deb)
+             call pcm_charges_propagation(pcm%q_e, pcm%v_e, pcm%dt, pcm%tess, input_asc_e, 'electron', 'deb', this_deb = pcm%deb)
           end select
           if ( (.not.pcm%localf) .and. not_yet_called ) call pcm_eom_enough_initial(not_yet_called)
           !< total pcm charges due to solute electrons
@@ -1284,9 +1283,9 @@ contains
         if( pcm%eom ) then	!< equation-of-motion propagation
           select case (pcm%which_eps)
             case('drl')
-             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, input_asc_ext, 'external', 'drl', this_drl = pcm%drl)
+             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, pcm%dt, pcm%tess, input_asc_ext, 'external', 'drl',this_drl=pcm%drl)
             case default
-             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, input_asc_ext, 'external', 'deb', this_deb = pcm%deb)
+             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, pcm%dt, pcm%tess, input_asc_ext, 'external', 'deb',this_deb=pcm%deb)
           end select
           if ( (.not.kick_is_present) .and. not_yet_called ) call pcm_eom_enough_initial(not_yet_called)
           !< total pcm charges due to time-dependent external field
@@ -1321,6 +1320,8 @@ contains
     end if
 
     if (calc == PCM_EXTERNAL_PLUS_KICK .or. calc == PCM_KICK) then
+      pcm%q_kick = M_ZERO
+      pcm%v_kick_rs = M_ZERO
       if ( is_time_for_kick ) then
         call pcm_v_cav_li(pcm%v_kick, kick, pcm, mesh)
       else
@@ -1347,9 +1348,9 @@ contains
         !< BEGIN - equation-of-motion propagation
         select case (pcm%which_eps)
           case('drl')
-            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'drl', this_drl = pcm%drl)
+            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, pcm%dt, pcm%tess, input_asc_ext, 'justkick','drl',this_drl=pcm%drl)
           case default
-            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'deb', this_deb = pcm%deb)
+            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, pcm%dt, pcm%tess, input_asc_ext, 'justkick','deb',this_deb=pcm%deb)
         end select
         if ( not_yet_called ) call pcm_eom_enough_initial(not_yet_called)
         pcm%qtot_kick  = sum(pcm%q_kick)
@@ -1366,24 +1367,29 @@ contains
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_kick, pcm%qtot_kick, mesh, pcm%rho_kick)
       call pcm_pot_rs(pcm, pcm%v_kick_rs, pcm%q_kick, pcm%rho_kick, mesh )
       if( .not.pcm%kick_like ) then
-        pcm%q_ext    = pcm%q_ext    + pcm%q_kick
-        pcm%v_ext_rs = pcm%v_ext_rs + pcm%v_kick_rs
+        if ( calc == PCM_EXTERNAL_PLUS_KICK ) then
+          pcm%q_ext    = pcm%q_ext    + pcm%q_kick
+          pcm%v_ext_rs = pcm%v_ext_rs + pcm%v_kick_rs
+        else
+          pcm%q_ext    = pcm%q_kick
+          pcm%v_ext_rs = pcm%v_kick_rs
+        endif
       end if
      
     end if
 
     if ( pcm%solute .and. pcm%localf ) then
-      write(asc_vs_t_unit,*) pcm%iter*dt, pcm%q_n + pcm%q_e + pcm%q_ext
-      write(asc_vs_t_unit_sol,*) pcm%iter*dt, pcm%q_n + pcm%q_e
-      write(asc_vs_t_unit_n,*) pcm%iter*dt, pcm%q_n
-      write(asc_vs_t_unit_e,*) pcm%iter*dt, pcm%q_e
-      write(asc_vs_t_unit_ext,*) pcm%iter*dt, pcm%q_ext
+      write(asc_vs_t_unit,*) pcm%iter*pcm%dt, pcm%q_n + pcm%q_e + pcm%q_ext
+      write(asc_vs_t_unit_sol,*) pcm%iter*pcm%dt, pcm%q_n + pcm%q_e
+      write(asc_vs_t_unit_n,*) pcm%iter*pcm%dt, pcm%q_n
+      write(asc_vs_t_unit_e,*) pcm%iter*pcm%dt, pcm%q_e
+      write(asc_vs_t_unit_ext,*) pcm%iter*pcm%dt, pcm%q_ext
     else if( (.not.pcm%solute) .and. pcm%localf ) then
-      write(asc_vs_t_unit,*) pcm%iter*dt, pcm%q_ext
+      write(asc_vs_t_unit,*) pcm%iter*pcm%dt, pcm%q_ext
     else if( pcm%solute .and. (.not.pcm%localf) ) then
-      write(asc_vs_t_unit,*) pcm%iter*dt, pcm%q_n + pcm%q_e
-      write(asc_vs_t_unit_n,*) pcm%iter*dt, pcm%q_n
-      write(asc_vs_t_unit_e,*) pcm%iter*dt, pcm%q_e
+      write(asc_vs_t_unit,*) pcm%iter*pcm%dt, pcm%q_n + pcm%q_e
+      write(asc_vs_t_unit_n,*) pcm%iter*pcm%dt, pcm%q_n
+      write(asc_vs_t_unit_e,*) pcm%iter*pcm%dt, pcm%q_e
     end if
 
     POP_SUB(pcm_calc_pot_rs)  

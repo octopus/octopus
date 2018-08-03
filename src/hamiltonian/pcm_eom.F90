@@ -664,7 +664,7 @@ module pcm_eom_oct_m
    enddo
    if( which_eom == 'electron' ) then
     matq0=-matmul(scr1,scr4)				                                          !< from Eq.(14) and (18) for eps_0 in Ref.1
-   else if( which_eom == 'external' ) then
+   else if( which_eom == 'external' .or. which_eom == 'justkick' ) then
     matq0_lf=-matmul(scr1,scr4)			                                          !< local field analogous !< not used yet
    endif
    do i=1,nts_act
