@@ -58,19 +58,26 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask) result(dd)
 end function X(mf_integrate)
 
 ! ---------------------------------------------------------
-subroutine X(mf_normalize)(mesh, dim, psi)
+subroutine X(mf_normalize)(mesh, dim, psi, norm)
   type(mesh_t),    intent(in)    :: mesh
   integer,         intent(in)    :: dim
   R_TYPE,          intent(inout) :: psi(:,:)
+  FLOAT, optional, intent(out)   :: norm
 
-  FLOAT   :: norm
+  FLOAT   :: norm_
   integer :: idim, ip
 
   PUSH_SUB(X(mf_normalize))
 
-  norm = X(mf_nrm2) (mesh, dim, psi)
+  norm_ = X(mf_nrm2) (mesh, dim, psi)
 
-  forall (idim = 1:dim, ip = 1:mesh%np) psi(ip, idim) = psi(ip, idim)/norm
+  do idim = 1, dim
+    call lalg_scal(mesh%np, R_TOTYPE(M_ONE / norm_), psi(1:mesh%np, idim))
+  end do
+
+  if(present(norm)) then
+    norm = norm_
+  end if
 
   POP_SUB(X(mf_normalize))
 end subroutine X(mf_normalize)
