@@ -613,25 +613,6 @@ end subroutine X(states_orthogonalization)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_normalize_orbital)(mesh, dim, psi)
-  type(mesh_t),    intent(in)    :: mesh
-  integer,         intent(in)    :: dim
-  R_TYPE,          intent(inout) :: psi(:,:)
-
-  FLOAT   :: norm
-  integer :: idim, ip
-
-  PUSH_SUB(X(states_normalize_orbital))
-
-  norm = X(mf_nrm2) (mesh, dim, psi)
-
-  forall (idim = 1:dim, ip = 1:mesh%np) psi(ip, idim) = psi(ip, idim)/norm
-  
-  POP_SUB(X(states_normalize_orbital))
-end subroutine X(states_normalize_orbital)
-
-
-! ---------------------------------------------------------
 FLOAT function X(states_residue)(mesh, dim, hf, ee, ff) result(rr)
   type(mesh_t),      intent(in)  :: mesh
   integer,           intent(in)  :: dim

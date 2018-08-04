@@ -57,6 +57,25 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask) result(dd)
 
 end function X(mf_integrate)
 
+! ---------------------------------------------------------
+subroutine X(mf_normalize)(mesh, dim, psi)
+  type(mesh_t),    intent(in)    :: mesh
+  integer,         intent(in)    :: dim
+  R_TYPE,          intent(inout) :: psi(:,:)
+
+  FLOAT   :: norm
+  integer :: idim, ip
+
+  PUSH_SUB(X(mf_normalize))
+
+  norm = X(mf_nrm2) (mesh, dim, psi)
+
+  forall (idim = 1:dim, ip = 1:mesh%np) psi(ip, idim) = psi(ip, idim)/norm
+
+  POP_SUB(X(mf_normalize))
+end subroutine X(mf_normalize)
+
+
 
 !> ---------------------------------------------------------
 !! This function returns the dot product between two vectors,
