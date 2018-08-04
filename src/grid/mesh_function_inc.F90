@@ -70,6 +70,10 @@ subroutine X(mf_normalize)(mesh, dim, psi, norm)
   PUSH_SUB(X(mf_normalize))
 
   norm_ = X(mf_nrm2) (mesh, dim, psi)
+  if(abs(norm_) <= M_EPSILON) then
+    message(1) = "Mesh function has zero norm; cannot normalize."
+    call messages_fatal(1)
+  end if
 
   do idim = 1, dim
     call lalg_scal(mesh%np, R_TOTYPE(M_ONE / norm_), psi(1:mesh%np, idim))
