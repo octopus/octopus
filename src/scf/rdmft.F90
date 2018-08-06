@@ -131,7 +131,7 @@ contains
     if(rdm%do_basis.eqv..false.) then
       !stepsize for steepest decent
       SAFE_ALLOCATE(stepsize(1:st%nst))
-      stepsize = 0.1
+      stepsize = CNST(0.1)
       maxcount = 10
     else
       maxcount = 50

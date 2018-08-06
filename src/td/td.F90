@@ -374,10 +374,10 @@ contains
     geo => sys%geo
     st  => sys%st
 
-    if(ion_dynamics_ions_move(td%ions) .and. hm%lda_u_level /= DFT_U_NONE ) call messages_experimental("DFT+U with MoveIons=yes") 
-
     call td_init(td, sys, hm)
 
+    if(ion_dynamics_ions_move(td%ions) .and. hm%lda_u_level /= DFT_U_NONE ) call messages_experimental("DFT+U with MoveIons=yes") 
+    
     ! Allocate wavefunctions during time-propagation
     if(td%dynamics == EHRENFEST) then
       !Note: this is not really clean to do this
@@ -830,7 +830,7 @@ contains
 
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
-      if(hm%ep%kick%time  ==  M_ZERO) then
+      if(abs(hm%ep%kick%time)  <=  M_EPSILON) then
         if( .not.hm%pcm%localf ) then
           if(.not. cmplxscl) then
             call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)

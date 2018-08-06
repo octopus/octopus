@@ -319,7 +319,7 @@ subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
   call quickrnd(iseed, mesh%np, ff(1:mesh%np))
 
   if(optional_default(normalized, .true.)) then
-    rr = X(mf_nrm2)(mesh, ff, reduce = present(shift))
+    rr = X(mf_nrm2)(mesh, ff)
     call lalg_scal(mesh%np, R_TOTYPE(1.0)/rr, ff)
   end if
 

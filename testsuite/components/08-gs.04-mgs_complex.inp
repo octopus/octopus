@@ -1,3 +1,5 @@
+CalculationMode = test
+
 TestMode = orthogonalization
 
 %Coordinates
@@ -12,7 +14,8 @@ ExtraStates = 8
 
 StatesOrthogonalization = mgs
 
-TestType = real
+TestType = complex
+
 
 
 

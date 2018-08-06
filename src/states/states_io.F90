@@ -341,7 +341,7 @@ contains
 
       emin = flat_eigenval(1)
       emax = flat_eigenval(st%d%nik*nst)
-      de = (emax - emin)/(ndiv - 1.0)
+      de = (emax - emin)/(ndiv - M_ONE)
 
       if(de < M_EPSILON) then
         POP_SUB(states_write_eigenvalues.print_dos)
@@ -537,7 +537,7 @@ contains
           ff(1:gr%mesh%np) = psi_initial(1:gr%mesh%np, 1)*gr%mesh%x(1:gr%mesh%np, icoord)* &
             psi_ist(1:gr%mesh%np, 1)
           osc(icoord)  = dmf_integrate(gr%mesh, ff)
-          osc_strength = osc_strength + 2.0/real(gr%mesh%sb%dim)*transition_energy*abs(osc(icoord))**2.0
+          osc_strength = osc_strength + CNST(2.0)/real(gr%mesh%sb%dim)*transition_energy*abs(osc(icoord))**2
 
         end do
 

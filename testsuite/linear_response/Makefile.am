@@ -33,6 +33,7 @@ dist_share_DATA = \
 	02-h2o_pol_lr.02_h2o_dyn_pol.inp         \
 	02-h2o_pol_lr.03_h2o_dyn_pol_cmplx.inp   \
 	02-h2o_pol_lr.04_h2o_susc.inp            \
+	02-h2o_pol_lr.05_h2o_magn_opt.inp        \
 	02-h2o_pol_lr.test                       \
 	03-vdw_sternheimer.01-ground_state.inp   \
 	03-vdw_sternheimer.02-vdw.inp            \

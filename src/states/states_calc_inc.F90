@@ -47,7 +47,8 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
   case(OPTION__STATESORTHOGONALIZATION__CHOLESKY_PARALLEL)
     call cholesky_parallel()
 
-  case(OPTION__STATESORTHOGONALIZATION__MGS)
+  case(OPTION__STATESORTHOGONALIZATION__CGS, OPTION__STATESORTHOGONALIZATION__MGS, &
+       OPTION__STATESORTHOGONALIZATION__DRCGS)
     call mgs()
 
   case default
@@ -196,9 +197,10 @@ contains
 
   subroutine mgs()
 
-    integer :: ist, jst, idim
+    integer :: ist, jst, idim, is
     FLOAT   :: cc
     R_TYPE, allocatable :: aa(:), psii(:, :), psij(:, :)
+    R_TYPE, allocatable :: psii0(:, :)
     
     PUSH_SUB(X(states_orthogonalization_full).mgs)
 
@@ -208,6 +210,7 @@ contains
     end if
 
     SAFE_ALLOCATE(psii(1:mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(psii0(1:mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(psij(1:mesh%np, 1:st%d%dim))
 
     SAFE_ALLOCATE(aa(1:nst))
@@ -215,35 +218,97 @@ contains
     do ist = 1, nst
 
       call states_get_state(st, mesh, ist, ik, psii)
-      
-      ! calculate the projections
-      do jst = 1, ist - 1
-        call states_get_state(st, mesh, jst, ik, psij)
-        aa(jst) = X(mf_dotp)(mesh, st%d%dim, psij, psii, reduce = .false.)
-      end do
 
-      if(mesh%parallel_in_domains .and. ist > 1) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = ist - 1)
-
-      ! subtract the projections
-      do jst = 1, ist - 1
-        call states_get_state(st, mesh, jst, ik, psij)
+      !The different algorithms are given in Giraud et al., 
+      !Computers and Mathematics with Applications 50, 1069 (2005).
+      select case(st%d%orth_method)
+      case(OPTION__STATESORTHOGONALIZATION__MGS)
+        ! renormalize
+        cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
         do idim = 1, st%d%dim
-          call lalg_axpy(mesh%np, -aa(jst), psij(:, idim), psii(:, idim))
+          call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
         end do
-      end do
+        call states_set_state(st, mesh, ist, ik, psii)
+        ! calculate the projections
+        do jst = ist + 1, nst
+          call states_get_state(st, mesh, jst, ik, psij)
+          aa(jst) = X(mf_dotp)(mesh, st%d%dim, psii, psij, reduce = .false.)
+        end do
+        if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = nst)
+ 
+        ! subtract the projections
+        do jst = ist + 1, nst
+          call states_get_state(st, mesh, jst, ik, psij)
+          do idim = 1, st%d%dim
+            call lalg_axpy(mesh%np, -aa(jst), psii(:, idim), psij(:, idim))
+          end do
+          call states_set_state(st, mesh, jst, ik, psij)
+        end do
 
-      ! renormalize
-      cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
+      case(OPTION__STATESORTHOGONALIZATION__CGS)
 
-      do idim = 1, st%d%dim
-        call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
-      end do
+        ! calculate the projections first with the same vector
+        do jst = 1, ist - 1
+          call states_get_state(st, mesh, jst, ik, psij)
+          aa(jst) = X(mf_dotp)(mesh, st%d%dim, psij, psii, reduce = .false.)
+        end do
 
-      call states_set_state(st, mesh, ist, ik, psii)
+        if(mesh%parallel_in_domains .and. ist > 1) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = ist - 1)
+        ! then subtract the projections
+        do jst = 1, ist - 1
+          call states_get_state(st, mesh, jst, ik, psij)
+          do idim = 1, st%d%dim
+            call lalg_axpy(mesh%np, -aa(jst), psij(:, idim), psii(:, idim))
+          end do
+        end do
+
+      case(OPTION__STATESORTHOGONALIZATION__DRCGS)
+
+        !double step reorthogonalization
+        do is = 1, 2
+          if(ist>1) then
+            call states_get_state(st, mesh, ist-1, ik, psii0)
+            aa(1) = X(mf_dotp)(mesh, st%d%dim, psii0, psii)
+            do idim = 1, st%d%dim
+              call lalg_axpy(mesh%np, -aa(1), psii0(:, idim), psii(:, idim))
+            end do
+          end if
+      
+          ! calculate the projections
+          do jst = 1, ist - 1
+            call states_get_state(st, mesh, jst, ik, psij)
+            aa(jst) = X(mf_dotp)(mesh, st%d%dim, psij, psii, reduce = .false.)
+          end do
+
+          if(mesh%parallel_in_domains .and. ist > 1) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = ist - 1)
+
+          ! subtract the projections
+          do jst = 1, ist - 1
+            call states_get_state(st, mesh, jst, ik, psij)
+            do idim = 1, st%d%dim
+              call lalg_axpy(mesh%np, -aa(jst), psij(:, idim), psii(:, idim))
+            end do
+          end do
+        end do
+
+      end select
+
+      !In case of modified Gram-Schmidt, this was done before.
+      if(st%d%orth_method /= OPTION__STATESORTHOGONALIZATION__MGS) then
+        ! renormalize
+        cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
+
+        do idim = 1, st%d%dim
+          call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
+        end do
+
+        call states_set_state(st, mesh, ist, ik, psii)
+      end if
       
     end do
 
     SAFE_DEALLOCATE_A(psii)
+    SAFE_DEALLOCATE_A(psii0)
     SAFE_DEALLOCATE_A(psij)
     SAFE_DEALLOCATE_A(aa)
 
@@ -429,7 +494,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
     else
       nrm2 = X(mf_nrm2)(mesh, st%d%dim, phi)
     end if
-    if(abs(nrm2) == M_ZERO) then
+    if(abs(nrm2) <= M_EPSILON) then
       message(1) = "Wavefunction has zero norm after states_orthogonalize_single; cannot normalize."
       call messages_fatal(1)
     end if

@@ -1183,12 +1183,15 @@ contains
         multipole (:,is) = real(zmultipole(:,is)) ! it should be real anyways 
       end if 
     end do
-    ! FIXME: with cmplxscl we need to think how to treat 
-    ! the ions dipole moment 
-    call geometry_dipole(geo, ionic_dipole)
-    do is = 1, st%d%nspin
-      multipole(2:gr%mesh%sb%dim+1, is) = -ionic_dipole(1:gr%mesh%sb%dim)/st%d%nspin - multipole(2:gr%mesh%sb%dim+1, is)
-    end do
+
+    if (lmax > 0) then
+      ! FIXME: with cmplxscl we need to think how to treat 
+      ! the ions dipole moment 
+      call geometry_dipole(geo, ionic_dipole)
+      do is = 1, st%d%nspin
+        multipole(2:gr%mesh%sb%dim+1, is) = -ionic_dipole(1:gr%mesh%sb%dim)/st%d%nspin - multipole(2:gr%mesh%sb%dim+1, is)
+      end do
+    end if
 
     if(mpi_grp_is_root(mpi_world)) then
       call write_iter_start(out_multip)
@@ -2669,7 +2672,7 @@ contains
     !%End
     call parse_variable('TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
     call messages_print_var_value(stdout,'Frequency used for Floquet analysis', omega)
-    if(omega==M_ZERO) then
+    if(abs(omega)<=M_EPSILON) then
        message(1) = "Please give a non-zero value for TDFloquetFrequency"
        call messages_fatal(1)
     endif

@@ -55,7 +55,6 @@ module poisson_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use submesh_oct_m
-  use test_parameters_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -934,9 +933,9 @@ contains
   !! file by calculating numerically and analytically the Hartree
   !! potential originated by a Gaussian distribution of charge.
   !! This only makes sense for finite systems.
-  subroutine poisson_test(mesh, test_param)
-    type(mesh_t),            intent(in)    :: mesh
-    type(test_parameters_t), intent(in)    :: test_param
+  subroutine poisson_test(mesh, repetitions)
+    type(mesh_t), intent(in) :: mesh
+    integer,      intent(in) :: repetitions
 
     FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), xx(:, :)
     FLOAT :: alpha, beta, rr, delta, ralpha, hartree_nrg_num, &
@@ -972,7 +971,7 @@ contains
     rho = M_ZERO
     do nn = 1, n_gaussians
       do idir = 1, mesh%sb%dim
-        xx(idir, nn) = 0.000 
+        xx(idir, nn) = M_ZERO 
       end do
 
       rr = sqrt(sum(xx(:, nn)*xx(:,nn)))
@@ -1018,7 +1017,7 @@ contains
     end do
 
     ! This calculates the numerical potential
-    do itime = 1, test_param%repetitions
+    do itime = 1, repetitions
       call dpoisson_solve(psolver, vh, rho)
     end do
 

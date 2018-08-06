@@ -2,7 +2,7 @@
 
 Test       : Carbon pseudodojo LDA
 Program    : octopus
-TestGroups : short-run, pseudopotentials
+TestGroups : long-run, pseudopotentials
 Enabled    : Yes
 
 Input: 07-carbon_dojo_lda.01-gs.inp
