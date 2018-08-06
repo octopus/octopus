@@ -364,12 +364,12 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   logical, optional, intent(in)    :: normalize
   logical, optional, intent(inout) :: mask(:)      !< mask(nst)
   R_TYPE,  optional, intent(out)   :: overlap(:) 
-  R_TYPE,  optional, intent(out)   :: norm
+  FLOAT,   optional, intent(out)   :: norm
   FLOAT,   optional, intent(in)    :: theta_fi
   R_TYPE,  optional, intent(in)    :: beta_ij(:)   !< beta_ij(nst)
 
   integer :: ist, idim
-  R_TYPE  :: nrm2
+  FLOAT   :: nrm2
   R_TYPE, allocatable  :: ss(:), psi(:, :)
   type(profile_t), save :: prof
   type(profile_t), save :: reduce_prof

@@ -150,7 +150,7 @@ subroutine X(scdm_localize)(st,mesh,scdm)
   ! normalise SCDM states
   do vv = scdm%st%st_start,scdm%st%st_end
     call states_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
-    call dmf_normalize(mesh, scdm%st%d%dim, temp_state)
+    call X(mf_normalize)(mesh, scdm%st%d%dim, temp_state)
     call states_set_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
   end do
 
