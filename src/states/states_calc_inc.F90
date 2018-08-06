@@ -434,7 +434,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
         call lalg_scal(mesh%np, M_ONE/nrm2, phi(:, idim))
       end do
     else
-      call X(mf_nrm2)(mesh, st%d%dim, phi, nrm2)
+      call X(mf_normalize)(mesh, st%d%dim, phi, nrm2)
     end if
   end if
 
