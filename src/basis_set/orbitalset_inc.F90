@@ -117,12 +117,13 @@ subroutine X(orbitalset_get_coeff_batch)(os, ndim, psib, ik, has_phase, basisfro
   call profiling_out(prof)
 end subroutine X(orbitalset_get_coeff_batch)
 
-subroutine X(orbitalset_add_to_psi)(os, ndim, psi, ik, has_phase, weight)
+subroutine X(orbitalset_add_to_psi)(os, ndim, psi, ik, has_phase, basisfromstates, weight)
   type(orbitalset_t),   intent(in) :: os
   integer,              intent(in) :: ndim
   R_TYPE,            intent(inout) :: psi(:,:)
   integer,              intent(in) :: ik
   logical,              intent(in) :: has_phase !True if the wavefunction has an associated phase
+  logical,              intent(in) :: basisfromstates
   R_TYPE,               intent(in) :: weight(:,:)
 
   integer :: im, ip, idim, idim_orb
@@ -147,23 +148,29 @@ subroutine X(orbitalset_add_to_psi)(os, ndim, psi, ik, has_phase, weight)
         endif
 #endif
       else
-        call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np,idim_orb, im), &
-                                  psi(1:os%sphere%mesh%np,idim), weight(idim,im))
+        if(basisfromstates) then
+          call lalg_axpy(os%sphere%mesh%np, weight(idim,im), os%X(orb)(1:os%sphere%mesh%np,idim_orb,im), &
+                                  psi(1:os%sphere%mesh%np,idim))
+        else
+          call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np,idim_orb, im), &
+                                    psi(1:os%sphere%mesh%np,idim), weight(idim,im))
+        end if
       end if
     end do
   end do
- 
+
   POP_SUB(X(orbitalset_add_to_psi))
   call profiling_out(prof)
 end subroutine X(orbitalset_add_to_psi)
 
 
-subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, weight)
+subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromstates, weight)
   type(orbitalset_t),   intent(in) :: os
   integer,              intent(in) :: ndim
   type(batch_t),     intent(inout) :: psib
   integer,              intent(in) :: ik
   logical,              intent(in) :: has_phase !True if the wavefunction has an associated phase
+  logical,              intent(in) :: basisfromstates
   R_TYPE,               intent(in) :: weight(:,:)
 
   integer :: ip, iorb, ii, ist, idim, bind, idim_orb
@@ -203,8 +210,13 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, weight)
             endif
 #endif
           else
-            call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np, idim_orb, iorb), &
-                                    psi(1:os%sphere%mesh%np,idim), weight(iorb,bind))
+            if(basisfromstates) then
+              call lalg_axpy(os%sphere%mesh%np, weight(iorb,bind), os%X(orb)(1:os%sphere%mesh%np,idim_orb,iorb), &
+                                  psi(1:os%sphere%mesh%np,idim))
+            else
+              call submesh_add_to_mesh(os%sphere, os%X(orb)(1:os%sphere%np, idim_orb, iorb), &
+                                  psi(1:os%sphere%mesh%np,idim), weight(iorb,bind))
+            end if
           end if
         end do !idim
       end do ! iorb
@@ -251,22 +263,34 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, weight)
         end if
 #endif
       else
-        SAFE_ALLOCATE(sorb(1:os%sphere%np))
-        do ist = 1, psib%nst_linear
-          idim = min(batch_linear_to_idim(psib,ist),os%ndim)
-          sorb(:) = R_TOTYPE(M_ZERO)
-          do iorb = 1, os%norbs
-            tmp = weight(iorb,ist)
-            forall (ip = 1:os%sphere%np)
-              sorb(ip) = sorb(ip) + os%X(orb)(ip,idim,iorb)*tmp
-            end forall
+        if(basisfromstates) then
+          do sp = 1, os%sphere%mesh%np, block_size
+            size = min(block_size, os%sphere%mesh%np - sp + 1)
+            do ist = 1, psib%nst_linear
+              idim = min(batch_linear_to_idim(psib,ist),os%ndim)
+              call blas_gemv('N', size, os%norbs, R_TOTYPE(M_ONE), os%X(orb)(sp,idim,1), &
+                    os%sphere%mesh%np*os%ndim, weight(1,ist), 1, R_TOTYPE(M_ONE),            &
+                       psib%states_linear(ist)%X(psi)(sp), 1)
+            end do
+          end do 
+        else
+          SAFE_ALLOCATE(sorb(1:os%sphere%np))
+          do ist = 1, psib%nst_linear
+            idim = min(batch_linear_to_idim(psib,ist),os%ndim)
+            sorb(:) = R_TOTYPE(M_ZERO)
+            do iorb = 1, os%norbs
+              tmp = weight(iorb,ist)
+              forall (ip = 1:os%sphere%np)
+                sorb(ip) = sorb(ip) + os%X(orb)(ip,idim,iorb)*tmp
+              end forall
+            end do
+            do ip = 1,os%sphere%np
+              psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) = &
+                    psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) + sorb(ip)
+            end do
           end do
-          do ip = 1,os%sphere%np
-            psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) = &
-                  psib%states_linear(ist)%X(psi)(os%sphere%map(ip)) + sorb(ip)
-          end do
-        end do
-        SAFE_DEALLOCATE_A(sorb)
+          SAFE_DEALLOCATE_A(sorb)
+        end if
       end if
 
     case(BATCH_PACKED)
@@ -325,22 +349,55 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, weight)
         end if
 #endif
       else
-       SAFE_ALLOCATE(sorb(1:os%sphere%np))
-       do ist = 1, psib%nst_linear
-          idim = min(batch_linear_to_idim(psib,ist), os%ndim)
-          sorb(:) = R_TOTYPE(M_ZERO)
+        if(basisfromstates) then 
           do iorb = 1, os%norbs
-            tmp = weight(iorb,ist)
-            forall (ip = 1:os%sphere%np)
-              sorb(ip) = sorb(ip) + os%X(orb)(ip,idim,iorb)*tmp
-            end forall
+            do sp = 1, os%sphere%mesh%np, block_size
+              ep = sp - 1 + min(block_size, os%sphere%mesh%np - sp + 1)
+              do ist = 1, psib%nst_linear - 4 + 1, 4
+                idim1 = min(batch_linear_to_idim(psib,ist), os%ndim)
+                idim2 = min(batch_linear_to_idim(psib,ist+1), os%ndim)
+                idim3 = min(batch_linear_to_idim(psib,ist+2), os%ndim)
+                idim4 = min(batch_linear_to_idim(psib,ist+3), os%ndim)
+
+                do ip = sp,ep
+                  psib%pack%X(psi)(ist,ip) = &
+                     psib%pack%X(psi)(ist,ip) + weight(iorb,ist)*os%X(orb)(ip,idim1,iorb)
+                  psib%pack%X(psi)(ist+1,ip) = &
+                     psib%pack%X(psi)(ist+1,ip) + weight(iorb,ist+1)*os%X(orb)(ip,idim2,iorb)
+                  psib%pack%X(psi)(ist+2,ip) = &
+                     psib%pack%X(psi)(ist+2,ip) + weight(iorb,ist+2)*os%X(orb)(ip,idim3,iorb)
+                  psib%pack%X(psi)(ist+3,ip) = &
+                    psib%pack%X(psi)(ist+3,ip) + weight(iorb,ist+3)*os%X(orb)(ip,idim4,iorb)
+                end do
+              end do
+
+              do ist = ist, psib%nst_linear
+                idim = min(batch_linear_to_idim(psib,ist), os%ndim)
+                do ip=sp,ep
+                  psib%pack%X(psi)(ist,ip) = &
+                     psib%pack%X(psi)(ist,ip) + weight(iorb,ist)*os%X(orb)(ip,idim,iorb)
+                end do
+              end do
+            end do
           end do
-          do ip = 1,os%sphere%np
-            psib%pack%X(psi)(ist,os%sphere%map(ip)) = psib%pack%X(psi)(ist,os%sphere%map(ip)) &
-                              + sorb(ip)
+        else
+          SAFE_ALLOCATE(sorb(1:os%sphere%np))
+          do ist = 1, psib%nst_linear
+            idim = min(batch_linear_to_idim(psib,ist), os%ndim)
+            sorb(:) = R_TOTYPE(M_ZERO)
+            do iorb = 1, os%norbs
+              tmp = weight(iorb,ist)
+              forall (ip = 1:os%sphere%np)
+                sorb(ip) = sorb(ip) + os%X(orb)(ip,idim,iorb)*tmp
+              end forall
+            end do
+            do ip = 1,os%sphere%np
+              psib%pack%X(psi)(ist,os%sphere%map(ip)) = psib%pack%X(psi)(ist,os%sphere%map(ip)) &
+                                + sorb(ip)
+            end do
           end do
-        end do
-        SAFE_DEALLOCATE_A(sorb)
+          SAFE_DEALLOCATE_A(sorb)
+        end if
       end if
     end select
   end if

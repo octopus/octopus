@@ -326,13 +326,13 @@ contains
         ddot = M_ZERO
         call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), 1, .false., &
                                            .false., ddot)
-        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib, 1, .false., dweight)
+        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib, 1, .false., .false., dweight)
       else
         zweight = M_ONE
         zdot = M_ZERO
         call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), 1, &
                                            .true., .false., zdot)
-        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, 1, .true., zweight)
+        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, 1, .true., .false., zweight)
       end if
     end do
     do itime = 1, epsib%nst

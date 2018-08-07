@@ -72,7 +72,7 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
     end do !ibatch
  
     !We add the orbitals properly weighted to hpsi
-    call X(orbitalset_add_to_batch)(os, d%dim, hpsib, ik, has_phase, reduced)
+    call X(orbitalset_add_to_batch)(os, d%dim, hpsib, ik, has_phase, this%basisfromstates, reduced)
   end do
  
   SAFE_DEALLOCATE_A(dot)
@@ -898,7 +898,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
        end do
 
        call X(orbitalset_add_to_psi)(os, d%dim, gpsi(1:mesh%np,idir,1:d%dim), ik, has_phase, &
-                                         reduced(1:d%dim,1:os%norbs)) 
+                                     this%basisfromstates, reduced(1:d%dim,1:os%norbs)) 
      end do !idir
 
    end do !ios
