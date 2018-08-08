@@ -565,7 +565,6 @@ contains
 
     PUSH_SUB(current_heat_calculate)
 
-    ASSERT(.not. associated(hm%hm_base%phase))
     ASSERT(simul_box_is_periodic(der%mesh%sb))
     ASSERT(st%d%dim == 1)
 
@@ -590,7 +589,7 @@ contains
           end do
 
           if(associated(hm%hm_base%phase)) then 
-            call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
+            call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,  conjugate = .false.)
           end if
 
           do idim = 1, st%d%dim
@@ -598,9 +597,20 @@ contains
           end do
 
           do idir = 1, ndim
+            if(associated(hm%hm_base%phase)) then 
+              call states_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np, conjugate = .true.)
+            end if
+            
             do idim = 1, st%d%dim
-              ! this only work for periodic boundary conditions and gamma
-              call zderivatives_grad(der, gpsi(:, idir, idim), g2psi(:, :, idir, idim), set_bc = .true.)
+              call boundaries_set(der%boundaries, psi(:, idim))
+            end do
+            
+            if(associated(hm%hm_base%phase)) then 
+              call states_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,  conjugate = .false.)
+            end if
+            
+            do idim = 1, st%d%dim
+              call zderivatives_grad(der, gpsi(:, idir, idim), g2psi(:, :, idir, idim), set_bc = .false.)
             end do
           end do
 
