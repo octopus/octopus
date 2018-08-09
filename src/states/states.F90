@@ -563,7 +563,13 @@ contains
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
     st%occ      = M_ZERO
     ! allocate space for formula strings that define user-defined states
-    SAFE_ALLOCATE(st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik))
+    if(parse_is_defined('UserDefinedStates') .or. parse_is_defined('OCTInitialUserdefined') &
+         .or. parse_is_defined('OCTTargetUserdefined')) then
+      SAFE_ALLOCATE(st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik))
+      ! initially we mark all 'formulas' as undefined
+      st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik) = 'undefined'
+    end if
+
     if(st%d%ispin == SPINORS) then
       SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
     else
@@ -587,9 +593,6 @@ contains
     !%End
     call parse_variable('StatesRandomization', PAR_INDEPENDENT, st%randomization)
 
-
-    ! initially we mark all 'formulas' as undefined
-    st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik) = 'undefined'
 
     call states_read_initial_occs(st, excess_charge, gr%sb%kpoints)
     call states_read_initial_spins(st)
