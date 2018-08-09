@@ -830,17 +830,6 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
 
       call profiling_in(prof_scatter, "PROJ_MAT_SCATTER")
 
-  !    if(allocated(this%projector_phases)) then
-  !      !$omp parallel do private(ip, ist, phase)
-  !      do ip = 1, npoints
-  !        phase = conjg(this%projector_phases(ip, imat, ik))
-  !        forall(ist = 1:nst)
-  !          psi(ist, ip) = phase*psi(ist, ip)
-  !        end forall
-  !      end do
-  !      !$omp end parallel do
-  !    end if
-  
       if(.not. allocated(this%projector_phases)) then    
         ! and copy the points from the local buffer to its position
         if(batch_is_packed(vpsib)) then
