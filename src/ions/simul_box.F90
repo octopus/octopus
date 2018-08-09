@@ -1009,8 +1009,8 @@ contains
     if(sb%box_shape == PARALLELEPIPED) then
       write(message(1),'(3a, 99(a, f8.3), a)')     &
         '  Lengths [', trim(units_abbrev(units_out%length)), '] = ',    &
-        '(', (units_from_atomic(units_out%length, sb%lsize(idir)), ',', idir = 1, sb%dim - 1),  &
-        units_from_atomic(units_out%length, sb%lsize(sb%dim)), ')'
+        '(', (units_from_atomic(units_out%length, M_TWO*sb%lsize(idir)), ',', idir = 1, sb%dim - 1),  &
+        units_from_atomic(units_out%length, M_TWO*sb%lsize(sb%dim)), ')'
       call messages_info(1, iunit)
     end if
 
