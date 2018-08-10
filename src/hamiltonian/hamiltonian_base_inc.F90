@@ -853,7 +853,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
       else
         ! and copy the points from the local buffer to its position
         if(batch_is_packed(vpsib)) then
-          !$omp parallel do private(ip, ist)
+          !$omp parallel do private(ip, ist, phase)
           do ip = 1, npoints
             phase = conjg(this%projector_phases(ip, imat, ik))
             forall(ist = 1:nst)
