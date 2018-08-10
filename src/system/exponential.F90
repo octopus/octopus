@@ -28,6 +28,7 @@ module exponential_oct_m
   use global_oct_m
   use hardware_oct_m
   use hamiltonian_oct_m
+  use hamiltonian_base_oct_m
   use fourier_space_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
