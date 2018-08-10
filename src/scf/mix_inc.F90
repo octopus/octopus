@@ -103,7 +103,7 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter)
         smix%X(gamma) = smix%X(gamma) + X(mix_dotp)(smix, smix%mixfield%X(df)(:, i, j, ipos), smix%mixfield%X(df)(:, i, j, ipos))
       end do
     end do
-    smix%X(gamma) = min(CNST(1e-8),sqrt(R_REAL(smix%X(gamma))))
+    smix%X(gamma) = max(CNST(1e-8),sqrt(R_REAL(smix%X(gamma))))
     smix%X(gamma) = M_ONE/smix%X(gamma)
 
     call lalg_scal(d1, d2, d3, smix%X(gamma), smix%mixfield%X(df)(:, :, :, ipos))
