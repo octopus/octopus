@@ -338,7 +338,7 @@ contains
       PUSH_SUB(exponential_apply.operate)
 
       if(apply_magnus) then
-        call zmagnus(hm, der, psi, oppsi, ik, vmagnus)
+        call zmagnus(hm, der, psi, oppsi, ik, vmagnus, set_phase = .not.phase_correction)
         else
         call zhamiltonian_apply(hm, der, psi, oppsi, ist, ik, set_phase = .not.phase_correction)
       end if
