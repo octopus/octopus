@@ -3,7 +3,7 @@
 Test       : Frozen - Kinetic Functionals with spin
 Program    : octopus
 TestGroups : long-run, frozen
-Enabled    : Yes
+Enabled    : No
 
 Input: 07-kf-spin.output.inp
 
