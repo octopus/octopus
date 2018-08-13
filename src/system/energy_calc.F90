@@ -34,6 +34,7 @@ module energy_calc_oct_m
   use hamiltonian_base_oct_m
   use io_oct_m
   use lalg_basic_oct_m
+  use lda_u_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
@@ -128,7 +129,7 @@ contains
         hm%energy%extern_non_local   = real(etmp)
         hm%energy%Imextern_non_local = aimag(etmp)
 
-        hm%energy%extern   = hm%energy%extern_local   + hm%energy%extern_non_local
+        hm%energy%extern   = hm%energy%extern_local   + hm%energy%extern_non_local 
         hm%energy%Imextern = hm%energy%Imextern_local + hm%energy%Imextern_non_local
         
         etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
@@ -176,11 +177,12 @@ contains
         - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation + hm%energy%vdw - hm%energy%intnvxc - evxctau &
         - hm%energy%pcm_corr + hm%energy%int_ee_pcm + hm%energy%int_en_pcm &
                              + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm &
-                             + hm%energy%int_e_ext_pcm + hm%energy%int_n_ext_pcm
+                             + hm%energy%int_e_ext_pcm + hm%energy%int_n_ext_pcm &
+        + hm%energy%dft_u -  hm%energy%int_dft_u
 
       if (cmplxscl) then
         hm%energy%Imtotal = hm%energy%Imeigenvalues - hm%energy%Imhartree + hm%energy%Imexchange + hm%energy%Imcorrelation &
-          - hm%energy%Imintnvxc - Imevxctau
+          - hm%energy%Imintnvxc - Imevxctau - hm%energy%Imint_dft_u
       end if
 
     case(CLASSICAL)
@@ -270,6 +272,13 @@ contains
         write(message(1), '(6x,a, f18.8)')'Berry       = ', units_from_atomic(units_out%energy, hm%energy%berry)
         call messages_info(1, iunit)
       end if  
+      if(hm%lda_u_level /= DFT_U_NONE) then
+        write(message(1), '(6x,a, f18.8)')'Hubbard     = ', units_from_atomic(units_out%energy, hm%energy%dft_u)
+        write(message(2), '(6x,a, f18.8)')'Int[n*v_U]  = ', units_from_atomic(units_out%energy, hm%energy%int_dft_u)
+        if(cmplxscl) write(message(2), '(a, es18.6)') trim(message(2)),&
+                     units_from_atomic(units_out%energy, hm%energy%Imint_dft_u)
+        call messages_info(2, iunit)
+      end if
     end if
 
     POP_SUB(energy_calc_total)

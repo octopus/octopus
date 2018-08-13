@@ -38,3 +38,6 @@ KdotPCalcSecondOrder = yes
 FilterPotentials = filter_none
 
 MixField = density
+
+ParKPoints = auto
+ParDomains = auto

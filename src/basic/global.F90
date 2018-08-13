@@ -40,7 +40,9 @@ module global_oct_m
     optional_default, &
     assert_die,       &
     not_in_openmp,    &
-    operator(+)
+    operator(+),      &
+    bitand
+    
   
   integer, public, parameter :: MAX_PATH_LEN=256
 
@@ -145,6 +147,13 @@ module global_oct_m
   interface operator (+)
     module procedure cat
   end interface operator (+)
+
+  interface bitand
+    module procedure bitand48
+    module procedure bitand84
+    module procedure bitand88
+    module procedure bitand44
+  end interface bitand
   
 contains
 
@@ -274,7 +283,47 @@ FCFLAGS
     cat = str1//str2
     
   end function cat
-  
+
+  ! -----------------------------------------------------------
+
+  integer(8) pure function bitand48(val1, val2)
+    integer(4), intent(in) :: val1
+    integer(8), intent(in) :: val2
+
+    bitand48 = iand(int(val1, 8), val2)
+    
+  end function bitand48
+
+  ! -----------------------------------------------------------
+
+  integer(8) pure function bitand84(val1, val2)
+    integer(8), intent(in) :: val1
+    integer(4), intent(in) :: val2
+
+    bitand84 = iand(val1, int(val2, 8))
+        
+  end function bitand84
+
+  ! -----------------------------------------------------------
+
+  integer(8) pure function bitand88(val1, val2)
+    integer(8), intent(in) :: val1
+    integer(8), intent(in) :: val2
+    
+    bitand88 = iand(val1, val2)
+    
+  end function bitand88
+
+  ! -----------------------------------------------------------
+
+  integer(4) pure function bitand44(val1, val2)
+    integer(4), intent(in) :: val1
+    integer(4), intent(in) :: val2
+    
+    bitand44 = iand(val1, val2)
+    
+  end function bitand44
+
 end module global_oct_m
 
 !! Local Variables:

@@ -150,7 +150,7 @@
       message(1) = "Illegal zero values in PSPIO radial grid"
       call messages_fatal(1)
     end if
-    if (r_tmp(1) == M_ZERO) then
+    if (abs(r_tmp(1)) <= M_EPSILON) then
       ip = 1
     else
       ip = 2

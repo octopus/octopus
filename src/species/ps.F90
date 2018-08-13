@@ -71,8 +71,8 @@ module ps_oct_m
   
   integer, parameter, public :: INVALID_L = 333
 
-  character(len=4), parameter  :: ps_name(PSEUDO_FORMAT_UPF1:PSEUDO_FORMAT_HGH) = &
-    (/"upf1", "upf2", "qso ", "psml", "psf ", "cpi ", "fhi ", "hgh "/)
+  character(len=4), parameter  :: ps_name(PSEUDO_FORMAT_UPF1:PSEUDO_FORMAT_PSP8) = &
+    (/"upf1", "upf2", "qso ", "psml", "psf ", "cpi ", "fhi ", "hgh ", "psp8"/)
 
   type ps_t
     integer :: projector_type
@@ -297,7 +297,7 @@ contains
       end if
 
     case(PSEUDO_FORMAT_HGH)
-      ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
+      ps%pseudo_type   = PSEUDO_TYPE_KLEINMAN_BYLANDER
       ps%projector_type = PROJ_HGH
       
       call hgh_init(ps_hgh, trim(filename))
@@ -311,10 +311,10 @@ contains
       call hgh_process(ps_hgh)
       call logrid_copy(ps_hgh%g, ps%g)
 
-    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
+    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML, PSEUDO_FORMAT_PSP8)
       
       if(.not. xml_warned) then
-        call messages_experimental('XML (QSO, UPF, and PSML) pseudopotential support')
+        call messages_experimental('XML (QSO, UPF, and PSML, PSP8) pseudopotential support')
         xml_warned = .true.
       end if
       
@@ -408,7 +408,7 @@ contains
       SAFE_ALLOCATE(ps%k    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
       call hgh_load(ps, ps_hgh)
       call hgh_end(ps_hgh)
-    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
+    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML, PSEUDO_FORMAT_PSP8)
       call ps_xml_load(ps, ps_xml)
       call ps_xml_end(ps_xml)
     end select
@@ -452,6 +452,8 @@ contains
       call messages_write(" QSO")
     case(PSEUDO_FORMAT_PSML)
       call messages_write(" PSML")
+    case(PSEUDO_FORMAT_PSP8)
+      call messages_write(" PSP8")
     case(PSEUDO_FORMAT_PSF)
       call messages_write(" PSF")
     case(PSEUDO_FORMAT_CPI)
@@ -487,14 +489,14 @@ contains
     if(ps%pseudo_type == PSEUDO_TYPE_SEMILOCAL) then
       call messages_write("    orbital origin   :")
       select case(ps%file_format)
-      case(PSEUDO_FORMAT_PSF, PSEUDO_FORMAT_HGH)
+      case(PSEUDO_FORMAT_PSF)
         call messages_write(" calculated");
       case default
         call messages_write(" from file");
       end select
       call messages_info()
     end if
-    
+
     call messages_write("    lmax             :")
     call messages_write(ps%lmax, fmt = '(i2)')
     call messages_info()
@@ -1193,7 +1195,7 @@ contains
           do ic = 1, ps_xml%nchannels
             
             do ip = 1, ps%g%nrval
-              kbprojector(ip) = 0.0
+              kbprojector(ip) = M_ZERO
               if(ip <= ps_xml%grid_size) then
                 do jc = 1, ps_xml%nchannels
                   kbprojector(ip) = kbprojector(ip) + matrix(jc, ic)*ps_xml%projector(ip, ll, jc)
@@ -1226,9 +1228,9 @@ contains
           ps%conf%occ(ii, 1) = ps_xml%wf_occ(ii)
         end if
 
-        ps%conf%j(ii) = 0.0
+        ps%conf%j(ii) = M_ZERO
         if(pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
-          ps%conf%j(ii) = 0.5*pseudo_wavefunction_2j(ps_xml%pseudo, ii)
+          ps%conf%j(ii) = M_HALF*pseudo_wavefunction_2j(ps_xml%pseudo, ii)
         end if
 
         do ip = 1, ps%g%nrval

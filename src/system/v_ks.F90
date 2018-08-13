@@ -32,6 +32,7 @@ module v_ks_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
+  use hamiltonian_base_oct_m
   use kick_oct_m
   use index_oct_m
   use io_function_oct_m
@@ -307,7 +308,7 @@ contains
     call xc_init(ks%xc, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st%qtot, &
       x_id, c_id, xk_id, ck_id, hartree_fock = ks%theory_level == HARTREE_FOCK)
 
-    if(iand(ks%xc%family, XC_FAMILY_LIBVDWXC) /= 0) then
+    if(bitand(ks%xc%family, XC_FAMILY_LIBVDWXC) /= 0) then
       call libvdwxc_set_geometry(ks%xc%functional(FUNC_C,1)%libvdwxc, gr%mesh)
     end if
 
@@ -318,7 +319,7 @@ contains
       default = KOHN_SHAM_DFT
 
       ! the functional is a hybrid, use Hartree-Fock as theory level by default
-      if(iand(ks%xc_family, XC_FAMILY_HYB_GGA + XC_FAMILY_HYB_MGGA) /= 0) then
+      if(bitand(ks%xc_family, XC_FAMILY_HYB_GGA + XC_FAMILY_HYB_MGGA) /= 0) then
         default = HARTREE_FOCK
       end if
 
@@ -353,7 +354,7 @@ contains
     case(KOHN_SHAM_DFT)
 
       ! check for SIC
-      if(iand(ks%xc_family, XC_FAMILY_LDA + XC_FAMILY_GGA) /= 0) then
+      if(bitand(ks%xc_family, XC_FAMILY_LDA + XC_FAMILY_GGA) /= 0) then
 
         !%Variable SICCorrection
         !%Type integer
@@ -382,12 +383,10 @@ contains
         ks%sic_type = SIC_NONE
       end if
 
-      if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
-        call xc_oep_init(ks%oep, ks%xc_family, gr, st)
-      end if
-      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_init(ks%ks_inversion, gr, geo, st, mc)
-      end if
+      if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) call xc_oep_init(ks%oep, ks%xc_family, gr, st)
+
+      if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) call xc_ks_inversion_init(ks%ks_inversion, gr, geo, st)
+
     end select
 
     ks%frozen_hxc = .false.
@@ -515,7 +514,7 @@ contains
           call messages_warning()
         end if
           
-        call dftd3_init(ks%vdw_d3, d3_input)
+        call dftd3_init(ks%vdw_d3, d3_input, trim(conf%share)//'/dftd3/pars.dat')
         call dftd3_set_functional(ks%vdw_d3, func = d3func, version = 4, tz = .false.)
 
       case default
@@ -597,10 +596,10 @@ contains
 
     select case(ks%theory_level)
     case(KOHN_SHAM_DFT)
-      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
+      if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
         call xc_ks_inversion_end(ks%ks_inversion)
       end if
-      if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+      if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         call xc_oep_end(ks%oep)
       end if
       call xc_end(ks%xc)
@@ -642,10 +641,10 @@ contains
       write(iunit, '(1x)')
       call messages_print_var_option(iunit, 'SICCorrection', ks%sic_type)
 
-      if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+      if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         call xc_oep_write_info(ks%oep, iunit)
       end if
-      if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
+      if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
         call xc_ks_inversion_write_info(ks%ks_inversion, iunit)
       end if
 
@@ -951,7 +950,7 @@ contains
         select case (st%d%ispin)
         case (UNPOLARIZED, SPIN_POLARIZED)
           do ispin = 1, st%d%nspin
-            if (qsp(ispin) == M_ZERO) cycle
+            if (abs(qsp(ispin)) <= M_EPSILON) cycle
 
             rho = M_ZERO
             vxc_sic = M_ZERO
@@ -1072,7 +1071,7 @@ contains
 
       if(ks%theory_level == KOHN_SHAM_DFT) then
         ! The OEP family has to be handled specially
-        if(iand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+        if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_OEP')
           if (states_are_real(st)) then
             call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
@@ -1083,7 +1082,7 @@ contains
           end if
         end if
 
-        if(iand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
+        if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
           if (cmplxscl) call messages_not_implemented('Complex Scaling with XC_FAMILY_KS_INVERSION')
           ! Also treat KS inversion separately (not part of libxc)
           call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, vxc = ks%calc%vxc, time = ks%calc%time)
@@ -1171,6 +1170,15 @@ contains
             ks%calc%energy%Imintnvxc = ks%calc%energy%Imintnvxc + aimag(ctmp)          
           end if
         end do
+
+        if(states_are_real(st)) then
+          ks%calc%energy%int_dft_u = denergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)
+        else
+          ctmp = zenergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)
+          ks%calc%energy%int_dft_u   = real(ctmp)
+          ks%calc%energy%Imint_dft_u = aimag(ctmp)
+        end if
+
       end if
       call profiling_out(prof)
       POP_SUB(v_ks_calc_start.v_a_xc)
@@ -1214,7 +1222,7 @@ contains
       SAFE_DEALLOCATE_P(ks%calc%b_ind)
     end if
 
-    if(ks%theory_level == INDEPENDENT_PARTICLES .or. ks%calc%amaldi_factor == M_ZERO) then
+    if(ks%theory_level == INDEPENDENT_PARTICLES .or. abs(ks%calc%amaldi_factor) <= M_EPSILON) then
 
       hm%vhxc = M_ZERO
       hm%energy%intnvxc     = M_ZERO
@@ -1348,10 +1356,11 @@ contains
     end if
 
     if(ks%calc%time_present) then
-      call hamiltonian_update(hm, ks%gr%mesh, time = ks%calc%time)
+      call hamiltonian_update(hm, ks%gr%mesh, ks%gr%der%boundaries, time = ks%calc%time)
     else
-      call hamiltonian_update(hm, ks%gr%mesh)
+      call hamiltonian_update(hm, ks%gr%mesh, ks%gr%der%boundaries)
     end if
+
 
     SAFE_DEALLOCATE_P(ks%calc%density)
     SAFE_DEALLOCATE_P(ks%calc%Imdensity)

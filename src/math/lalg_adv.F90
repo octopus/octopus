@@ -253,6 +253,8 @@ contains
       SAFE_DEALLOCATE_A(zevalues)
     end if
 
+    SAFE_DEALLOCATE_A(evectors)
+
     POP_SUB(zlalg_exp)
   end subroutine zlalg_exp
 

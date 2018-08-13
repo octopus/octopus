@@ -48,6 +48,7 @@ module atom_oct_m
     FLOAT, dimension(MAX_DIM) :: f_loc    = M_ZERO !< Local electronic part
     FLOAT, dimension(MAX_DIM) :: f_nl     = M_ZERO !< NL electronic part
     FLOAT, dimension(MAX_DIM) :: f_fields = M_ZERO !< Lasers
+    FLOAT, dimension(MAX_DIM) :: f_u      = M_ZERO !< Hubbard forces
   end type atom_t
 
   type, public :: atom_classical_t
@@ -92,6 +93,7 @@ contains
     this%f_loc     = M_ZERO
     this%f_nl      = M_ZERO
     this%f_fields  = M_ZERO
+    this%f_u       = M_ZERO
 
     this%move  = .true.
     if(present(move))this%move=move
@@ -115,6 +117,7 @@ contains
     this%f_loc     = M_ZERO
     this%f_nl      = M_ZERO
     this%f_fields  = M_ZERO    
+    this%f_u       = M_ZERO
 
     this%move  = .true.
 
@@ -152,6 +155,7 @@ contains
     this%f_loc     = M_ZERO
     this%f_nl      = M_ZERO
     this%f_fields  = M_ZERO
+    this%f_u       = M_ZERO
 
     POP_SUB(atom_init_from_data_object)
   end subroutine atom_init_from_data_object
@@ -287,7 +291,7 @@ contains
     read(unit=unit, fmt=frmt) dum, (tmp(i), i=1, dim_)
 
     do i=1, dim_
-      this%x(i) = units_from_atomic(units_out%length_xyz_file, tmp(i))
+      this%x(i) = units_to_atomic(units_out%length_xyz_file, tmp(i))
     end do
  
     POP_SUB(atom_read_xyz)
@@ -415,7 +419,7 @@ contains
     read(unit=unit, fmt=frmt) dum, (tmp, i=1, dim_)
 
     do i=1, dim_
-      this%x(i) = units_from_atomic(units_out%length_xyz_file, tmp(i))
+      this%x(i) = units_to_atomic(units_out%length_xyz_file, tmp(i))
     end do
 
 

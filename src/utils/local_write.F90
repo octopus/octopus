@@ -72,7 +72,7 @@ module local_write_oct_m
   type local_write_t
     private
     type(local_write_prop_t),allocatable :: out(:,:)
-    integer                  :: how              !< how to output
+    integer(8)               :: how              !< how to output
     integer                  :: lmax             !< maximum multipole moment to output
   end type local_write_t
 
@@ -140,7 +140,7 @@ contains
 
     SAFE_ALLOCATE(writ%out(1:LOCAL_OUT_MAX, 1:nd))
     do iout = 1, LOCAL_OUT_MAX
-      writ%out(iout,:)%write = (iand(flags, 2**(iout - 1)) /= 0)
+      writ%out(iout,:)%write = (bitand(flags, 2**(iout - 1)) /= 0)
     end do
 
     call messages_obsolete_variable('LDOutputHow', 'LDOutputFormat')
@@ -300,7 +300,7 @@ contains
     type(hamiltonian_t),  intent(inout) :: hm
     type(v_ks_t),         intent(inout) :: ks
     integer,              intent(in) :: iter
-    integer,              intent(in) :: how
+    integer(8),           intent(in) :: how
 
     integer            :: id, is, ix, ierr
     character(len=120) :: folder, out_name
@@ -537,7 +537,7 @@ contains
     integer,                  intent(in)    :: iter
     integer,                  intent(in)    :: l_start
     logical,                  intent(in)    :: start
-    integer,                  intent(in)    :: how
+    integer(8),               intent(in)    :: how
 
     integer :: id, is, ll, mm, add_lm
     character(len=120) :: aux
@@ -720,7 +720,7 @@ contains
     end if
 
    ! Write multipoles in BILD format
-    if(iand(how, OPTION__OUTPUTFORMAT__BILD) /= 0 .and. mpi_grp_is_root(mpi_world))then
+    if(bitand(how, OPTION__OUTPUTFORMAT__BILD) /= 0 .and. mpi_grp_is_root(mpi_world))then
       !FIXME: to include spin larger than 1.
       is = 1
       do id = 1, nd

@@ -79,17 +79,18 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_excited(tg, gr, dir, geo, outp)
+  subroutine target_output_excited(tg, gr, dir, geo, hm, outp)
     type(target_t), intent(inout) :: tg
     type(grid_t), intent(inout)   :: gr
     character(len=*), intent(in)  :: dir
     type(geometry_t),       intent(in)  :: geo
+    type(hamiltonian_t),    intent(in)  :: hm
     type(output_t),         intent(in)  :: outp
 
     PUSH_SUB(target_output_excited)
     
     call io_mkdir(trim(dir))
-    call output_states(tg%est%st, gr, geo, trim(dir)//'/st', outp)
+    call output_states(tg%est%st, gr, geo, hm, trim(dir)//'/st', outp)
     call excited_states_output(tg%est, trim(dir))
 
     POP_SUB(target_output_excited)
