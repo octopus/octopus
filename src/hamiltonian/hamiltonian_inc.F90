@@ -170,7 +170,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
 
   if(apply_phase .and. set_phase_) then
     call X(hamiltonian_base_phase)(hm%hm_base, der, der%mesh%np, ik, .true., hpsib)
-    call batch_end(epsib)
+    call batch_end(epsib, copy = .false.)
     SAFE_DEALLOCATE_P(epsib)
   end if
 
