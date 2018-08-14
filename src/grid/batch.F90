@@ -322,20 +322,31 @@ contains
 
   !--------------------------------------------------------------
 
-  subroutine batch_copy(bin, bout, pack, copy_data)
+  subroutine batch_copy(bin, bout, pack, copy_data, fill_zeros)
     type(batch_t), target,   intent(in)    :: bin
     type(batch_t),           intent(out)   :: bout
     logical,       optional, intent(in)    :: pack      !< If .false. the new batch will not be packed
     logical,       optional, intent(in)    :: copy_data
+    logical,       optional, intent(in)    :: fill_zeros
     !! If .true. the new batch will be packed
     !! The default is to do the same as bin.
 
     integer :: ii, np
     logical :: pack_
+    logical :: set2zero
 
     PUSH_SUB(batch_copy)
 
     call batch_init_empty(bout, bin%dim, bin%nst)
+
+    set2zero = .true.
+    if(present(fill_zeros)) set2zero = fill_zeros
+    if(present(copy_data)) then
+      if(copy_data) then
+        ASSERT(.not.set2zero)
+        set2zero = .false.
+      end if
+    end if
 
     if(batch_type(bin) == TYPE_FLOAT) then
 
@@ -344,7 +355,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%dpsi, dim = 1))
       end do
 
-      call dbatch_allocate(bout, 1, bin%nst, np)
+      call dbatch_allocate(bout, 1, bin%nst, np, fill_zeros = set2zero)
 
     else if(batch_type(bin) == TYPE_CMPLX) then
       np = 0
@@ -352,7 +363,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%zpsi, dim = 1))
       end do
 
-      call zbatch_allocate(bout, 1, bin%nst, np)
+      call zbatch_allocate(bout, 1, bin%nst, np, fill_zeros = set2zero)
 
     else if(batch_type(bin) == TYPE_FLOAT_SINGLE) then
 
@@ -361,7 +372,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%spsi, dim = 1))
       end do
 
-      call sbatch_allocate(bout, 1, bin%nst, np)
+      call sbatch_allocate(bout, 1, bin%nst, np, fill_zeros = set2zero)
 
     else if(batch_type(bin) == TYPE_CMPLX_SINGLE) then
 
@@ -370,7 +381,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%cpsi, dim = 1))
       end do
 
-      call cbatch_allocate(bout, 1, bin%nst, np)
+      call cbatch_allocate(bout, 1, bin%nst, np, fill_zeros = set2zero)
 
     end if
 
