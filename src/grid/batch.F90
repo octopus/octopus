@@ -343,7 +343,9 @@ contains
     if(present(fill_zeros)) set2zero = fill_zeros
     if(present(copy_data)) then
       if(copy_data) then
-        ASSERT(.not.set2zero)
+        if(present(fill_zeros))then
+          ASSERT(.not.set2zero)
+        end if
         set2zero = .false.
       end if
     end if
