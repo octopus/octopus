@@ -24,6 +24,8 @@ dist_share_DATA =                                                             \
 	01-octopus_basics-getting_started.test                                \
 	01-octopus_basics-getting_started.01-H_atom.inp                       \
 	01-octopus_basics-getting_started.02-H_atom_spin.inp                  \
-	01-octopus_basics-getting_started.03-H_atom_independent_particles.inp
+	01-octopus_basics-getting_started.03-H_atom_independent_particles.inp \
+	02-octopus_basics-basic_input_options.test                            \
+	02-octopus_basics-basic_input_options.01-N_atom.inp                            
 
 CLEANFILES = *~ *.bak
