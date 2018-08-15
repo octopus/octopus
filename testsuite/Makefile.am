@@ -33,7 +33,8 @@ SUBDIRS = \
 	photo_electron   \
 	complex_scaling  \
 	pseudopotentials \
-	frozen           
+	frozen           \
+	tutorials
 
 bin_SCRIPTS = oct-run_regression_test.pl oct-run_testsuite.sh
 
