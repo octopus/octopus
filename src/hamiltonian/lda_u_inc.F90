@@ -649,7 +649,7 @@ subroutine X(compute_periodic_coulomb_integrals) (this, der, mc)
   call profiling_in(prof, "DFTU_PER_COULOMB")
 
   !At the moment the basis is not spin polarized
-  !ASSERT(this%nspins == 1)
+  ASSERT(this%nspins == 1)
 
   PUSH_SUB(X(compute_periodic_coulomb_integrals))
 
