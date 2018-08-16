@@ -27,7 +27,12 @@ dist_share_DATA =                                                             \
 	01-octopus_basics-getting_started.03-H_atom_independent_particles.inp \
 	02-octopus_basics-basic_input_options.test                            \
 	02-octopus_basics-basic_input_options.01-N_atom.inp                   \
+	N.xyz                                                                 \
 	03-octopus_basics-total_energy_convergence.test                       \
-	03-octopus_basics-total_energy_covergence.01-methane.inp
+	03-octopus_basics-total_energy_covergence.01-methane.inp              \
+	04-octopus_basics-visualization.test                                  \
+	04-octopus_basics-visualization.01-benzene.inp                        \
+	benzene.xyz
+
 
 CLEANFILES = *~ *.bak
