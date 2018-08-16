@@ -106,8 +106,8 @@ contains
     end if
     
     if(ierr == PSEUDO_STATUS_FORMAT_NOT_SUPPORTED) then
-      POP_SUB(ps_xml_init)
-      return
+      call messages_write("Pseudopotential file '" // trim(filename) // "' not supported")
+      call messages_fatal()
     end if
 
     this%initialized = .true.

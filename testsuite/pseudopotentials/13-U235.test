@@ -9,8 +9,9 @@ Enabled    : Yes
 #having to specify the pseudopotential file or the set.
 
 Input: 13-U235.01-gs.inp
-Precision: 0.00013
+Precision: 0.00016
 match;  Total energy       ;     GREPFIELD(static/info, 'Total       =', 3) ;   -53.26219401
+Precision: 0.00013
 match;  Ion-ion energy     ;     GREPFIELD(static/info, 'Ion-ion     =', 3) ;   0.00000000
 match;  Eigenvalues sum    ;     GREPFIELD(static/info, 'Eigenvalues =', 3) ;   -18.93948078
 match;  Hartree energy     ;     GREPFIELD(static/info, 'Hartree     =', 3) ;   35.96503699

@@ -1761,8 +1761,8 @@ contains
               zpsi(1:mesh%np, 1) = zpsi(1:mesh%np, 1) - zmf_dotp(mesh, zpsi(:, 1), zpsi2)*zpsi2(1:mesh%np)
             end do
             SAFE_DEALLOCATE_A(zpsi2)
-
-            zpsi(1:mesh%np, 1) = zpsi(1:mesh%np, 1)/zmf_nrm2(mesh, zpsi(:, 1))
+            
+            call zmf_normalize(mesh, 1, zpsi)
             zpsi(1:mesh%np, 2) = zpsi(1:mesh%np, 1)
 
             alpha = TOCMPLX(sqrt(M_HALF + st%spin(3, ist, ik)), M_ZERO)

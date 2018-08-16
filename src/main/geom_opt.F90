@@ -194,7 +194,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_(fromscratch)
-      logical,  intent(in) :: fromscratch
+      logical,  intent(inout) :: fromscratch
 
       logical :: center, does_exist
       integer :: iter, iatom
@@ -506,14 +506,11 @@ contains
 
       if(.not. fromScratch) then
         inquire(file = './last.xyz', exist = does_exist)
-        if(.not. does_exist) then
-          write(message(1), '(a)') "The file last.xyz does not exist. Octopus cannot restart the GO calculation."
-          write(message(2), '(a)') "Please use FromScratch=yes to start the calculation from scratch."
-          call messages_fatal(2)          
-        end if
-        call geometry_read_xyz(g_opt%geo, './last')
+        if(.not. does_exist) fromScratch = .true.
       end if
 
+      if(.not. fromScratch) call geometry_read_xyz(g_opt%geo, './last')
+      
       ! clean out old geom/go.XXXX.xyz files. must be consistent with write_iter_info
       iter = 1
       do
