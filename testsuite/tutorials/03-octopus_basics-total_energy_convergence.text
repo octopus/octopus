@@ -1,0 +1,9 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Octopus basics - Total energy convergence
+Program    : octopus
+TestGroups : short-run, tutorials
+Enabled    : Yes
+
+Input: 03-octopus_basics-total_energy_convergence.01-methane.inp
+match ; Total Energy ; GREPFIELD(static/info, 'Total  ', 3) ; -219.01537542
