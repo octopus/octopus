@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Interpolation
-Program    : oct-test
+Program    : octopus
 TestGroups : short-run, components
 Enabled    : Yes
 

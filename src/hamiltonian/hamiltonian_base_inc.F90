@@ -565,6 +565,8 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   type(accel_kernel_t), save, target :: ker_proj_bra, ker_proj_bra_phase
   type(accel_kernel_t), pointer :: kernel
   R_TYPE, allocatable :: lpsi(:, :)
+
+  integer :: block_size, sp, ep
   
   if(.not. this%apply_projector_matrices) return
 
@@ -641,6 +643,14 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
     return
   end if
 
+  ! This routine uses blocking to optimize cache usage. One block of
+  ! |phi> is loaded in cache L1 and then then we calculate the dot
+  ! product of it with the corresponding blocks of |psi_k>, next we
+  ! load another block and do the same. This way we only have to load
+  ! |psi> from the L2 or memory.
+  block_size = hardware%X(block_size)
+
+
   SAFE_ALLOCATE(projection%X(projection)(1:nst, 1:this%full_projection_size))
   projection%X(projection) = M_ZERO
 
@@ -660,7 +670,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
   SAFE_ALLOCATE(lpsi(1:nst, 1:maxnpoints))
 
-  !$omp parallel do private(imat, pmat, iprojection, npoints, nprojs, iproj, ist, aa, bb, cc, dd, ip, lpsi)
+  !$omp parallel do private(imat, pmat, iprojection, npoints, nprojs, iproj, ist, aa, bb, cc, dd, ip, lpsi, ep, sp)
   do imat = 1, this%nprojector_matrices
     pmat => this%projector_matrices(imat)
     iprojection = ind(imat)
@@ -710,33 +720,35 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
     end if
 
-    do iproj = 1, nprojs
-      
-      do ist = 1, nst - 4 + 1, 4
-        aa = CNST(0.0)
-        bb = CNST(0.0)
-        cc = CNST(0.0)
-        dd = CNST(0.0)
-        do ip = 1, npoints
-          aa = aa + pmat%projectors(ip, iproj)*lpsi(ist    , ip)
-          bb = bb + pmat%projectors(ip, iproj)*lpsi(ist + 1, ip)
-          cc = cc + pmat%projectors(ip, iproj)*lpsi(ist + 2, ip)
-          dd = dd + pmat%projectors(ip, iproj)*lpsi(ist + 3, ip)
+    projection%X(projection)(:,iprojection+1:iprojection+nprojs) = M_ZERO
+    do sp = 1, npoints, block_size
+      ep = sp -1 +  min(block_size, npoints - sp + 1)
+      do iproj = 1, nprojs
+        do ist = 1, nst - 4 + 1, 4
+          aa = CNST(0.0)
+          bb = CNST(0.0)
+          cc = CNST(0.0)
+          dd = CNST(0.0)
+          do ip = sp, ep
+            aa = aa + pmat%projectors(ip, iproj)*lpsi(ist    , ip)
+            bb = bb + pmat%projectors(ip, iproj)*lpsi(ist + 1, ip)
+            cc = cc + pmat%projectors(ip, iproj)*lpsi(ist + 2, ip)
+            dd = dd + pmat%projectors(ip, iproj)*lpsi(ist + 3, ip)
+          end do
+          projection%X(projection)(ist  , iprojection + iproj) = projection%X(projection)(ist  , iprojection + iproj) + pmat%scal(iproj)*aa
+          projection%X(projection)(ist+1, iprojection + iproj) = projection%X(projection)(ist+1, iprojection + iproj) + pmat%scal(iproj)*bb
+          projection%X(projection)(ist+2, iprojection + iproj) = projection%X(projection)(ist+2, iprojection + iproj) + pmat%scal(iproj)*cc
+          projection%X(projection)(ist+3, iprojection + iproj) = projection%X(projection)(ist+3, iprojection + iproj) + pmat%scal(iproj)*dd
         end do
-        projection%X(projection)(ist    , iprojection + iproj) = pmat%scal(iproj)*aa
-        projection%X(projection)(ist + 1, iprojection + iproj) = pmat%scal(iproj)*bb
-        projection%X(projection)(ist + 2, iprojection + iproj) = pmat%scal(iproj)*cc
-        projection%X(projection)(ist + 3, iprojection + iproj) = pmat%scal(iproj)*dd
-      end do
       
-      do ist = ist, nst
-        aa = CNST(0.0)
-        do ip = 1, npoints
-          aa = aa + pmat%projectors(ip, iproj)*lpsi(ist, ip)
+        do ist = ist, nst
+          aa = CNST(0.0)
+          do ip = sp, ep
+            aa = aa + pmat%projectors(ip, iproj)*lpsi(ist, ip)
+          end do
+          projection%X(projection)(ist, iprojection + iproj) = projection%X(projection)(ist, iprojection + iproj) + pmat%scal(iproj)*aa
         end do
-        projection%X(projection)(ist, iprojection + iproj) = pmat%scal(iproj)*aa
       end do
-      
     end do
 
   end do
@@ -830,38 +842,49 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
 
       call profiling_in(prof_scatter, "PROJ_MAT_SCATTER")
 
-      if(allocated(this%projector_phases)) then
-        !$omp parallel do private(ip, ist, phase)
-        do ip = 1, npoints
-          phase = conjg(this%projector_phases(ip, imat, ik))
-          forall(ist = 1:nst)
-            psi(ist, ip) = phase*psi(ist, ip)
-          end forall
-        end do
-        !$omp end parallel do
-      end if
-      
-      ! and copy the points from the local buffer to its position
-      if(batch_is_packed(vpsib)) then
-        !$omp parallel do private(ip, ist)
-        do ip = 1, npoints
-          forall(ist = 1:nst)
-            vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) + psi(ist, ip)
-          end forall
-        end do
-        !$omp end parallel do
-
-        call batch_pack_was_modified(vpsib)
-      else
-        
-        do ist = 1, nst
-          !$omp parallel do
+      if(.not. allocated(this%projector_phases)) then    
+        ! and copy the points from the local buffer to its position
+        if(batch_is_packed(vpsib)) then
+          !$omp parallel do private(ip, ist)
           do ip = 1, npoints
-            vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + psi(ist, ip)
+            forall(ist = 1:nst)
+              vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) + psi(ist, ip)
+            end forall
           end do
           !$omp end parallel do
-        end do
-        
+          call batch_pack_was_modified(vpsib)
+        else
+          do ist = 1, nst
+            !$omp parallel do
+            do ip = 1, npoints
+              vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + psi(ist, ip)
+            end do
+            !$omp end parallel do
+          end do
+        end if
+      else
+        ! and copy the points from the local buffer to its position
+        if(batch_is_packed(vpsib)) then
+          !$omp parallel do private(ip, ist, phase)
+          do ip = 1, npoints
+            phase = conjg(this%projector_phases(ip, imat, ik))
+            forall(ist = 1:nst)
+              vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) &
+                          + psi(ist, ip)*phase
+            end forall
+          end do
+          !$omp end parallel do
+          call batch_pack_was_modified(vpsib)
+        else
+          do ist = 1, nst
+            !$omp parallel do
+            do ip = 1, npoints
+              vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) &
+                  + psi(ist, ip)*conjg(this%projector_phases(ip, imat, ik))
+            end do
+            !$omp end parallel do
+          end do
+        end if
       end if
       call profiling_count_operations(nst*npoints*R_ADD)
       call profiling_out(prof_scatter)

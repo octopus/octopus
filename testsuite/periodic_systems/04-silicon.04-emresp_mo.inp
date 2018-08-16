@@ -35,6 +35,8 @@ ExtraStates = 1
 1 | 0.1
 %
 
+XCKernelLRCAlpha = 0.2
+
 LinearSolver = qmr_dotp
 LRTolInitTol = 1e-4
 LinearSolverMaxIter = 300

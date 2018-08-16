@@ -207,7 +207,7 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
   if(bitand(outp%what, OPTION__OUTPUT__KINETIC_ENERGY_DENSITY) /= 0) then
     fn_unit = units_out%energy * units_out%length**(-gr%mesh%sb%dim)
     SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
-    call states_calc_quantities(gr%der, st, kinetic_energy_density = elf)
+    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = elf)
     select case(st%d%ispin)
     case(UNPOLARIZED)
       write(fname, '(a)') 'tau'
@@ -300,7 +300,7 @@ subroutine output_current_flow(gr, st, dir, outp)
 
   if(states_are_complex(st)) then
     SAFE_ALLOCATE(j(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
-    call states_calc_quantities(gr%der, st, paramagnetic_current = j)
+    call states_calc_quantities(gr%der, st, .false., paramagnetic_current = j)
 
     do idir = 1, gr%mesh%sb%dim
       do ip = 1, gr%mesh%np

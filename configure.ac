@@ -409,6 +409,8 @@ AC_CONFIG_FILES([Makefile
   share/pseudopotentials/Makefile
   share/pseudopotentials/PSF/Makefile
   share/pseudopotentials/HGH/Makefile
+  share/pseudopotentials/HGH/lda/Makefile
+  share/pseudopotentials/HGH/lda_sc/Makefile
   share/pseudopotentials/quantum-simulation.org/Makefile
   share/pseudopotentials/quantum-simulation.org/hscv/Makefile
   share/pseudopotentials/quantum-simulation.org/hscv/lda/Makefile

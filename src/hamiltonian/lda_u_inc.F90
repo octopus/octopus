@@ -47,7 +47,7 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
   !
   do ios = 1, this%norbsets
     os => this%orbsets(ios)
-    call X(orbitalset_get_coeff_batch)(os, d%dim, psib, ik, has_phase, dot(1:d%dim,1:os%norbs,1:psib%nst))
+    call X(orbitalset_get_coeff_batch)(os, d%dim, psib, ik, has_phase, dot(1:d%dim, 1:os%norbs, 1:psib%nst))
     !
     reduced(:,:) = R_TOTYPE(M_ZERO) 
     !
@@ -59,12 +59,12 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
         do imp = 1, os%norbs
           !Note here that V_{mmp} =U/2(delta_{mmp}-2n_{mpm})
           if(d%ispin /= SPINORS) then
-            reduced(im,ibatch) = reduced(im,ibatch) + this%X(V)(im,imp,ispin,ios)*dot(1,imp,ibatch)
+            reduced(im, ibatch) = reduced(im, ibatch) + this%X(V)(im, imp, ispin, ios)*dot(1,imp, ibatch)
           else
-            reduced(im,bind1) = reduced(im,bind1) + this%X(V)(im,imp,1,ios)*dot(1,imp,ibatch)
-            reduced(im,bind1) = reduced(im,bind1) + this%X(V)(im,imp,3,ios)*dot(2,imp,ibatch)
-            reduced(im,bind2) = reduced(im,bind2) + this%X(V)(im,imp,4,ios)*dot(1,imp,ibatch)
-            reduced(im,bind2) = reduced(im,bind2) + this%X(V)(im,imp,2,ios)*dot(2,imp,ibatch)
+            reduced(im, bind1) = reduced(im, bind1) + this%X(V)(im, imp, 1, ios)*dot(1, imp, ibatch)
+            reduced(im, bind1) = reduced(im, bind1) + this%X(V)(im, imp, 3, ios)*dot(2, imp, ibatch)
+            reduced(im, bind2) = reduced(im, bind2) + this%X(V)(im, imp, 4, ios)*dot(1, imp, ibatch)
+            reduced(im, bind2) = reduced(im, bind2) + this%X(V)(im, imp, 2, ios)*dot(2, imp, ibatch)
           end if
         end do
       end do      
@@ -104,11 +104,11 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   
   PUSH_SUB(update_occ_matrices)
 
-  this%X(n)(1:this%maxnorbs,1:this%maxnorbs,1:st%d%nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
+  this%X(n)(1:this%maxnorbs, 1:this%maxnorbs, 1:st%d%nspin, 1:this%norbsets) = R_TOTYPE(M_ZERO)
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(dot(1:st%d%dim,1:this%maxnorbs,1:this%norbsets))
+  SAFE_ALLOCATE(dot(1:st%d%dim, 1:this%maxnorbs, 1:this%norbsets))
   if(this%level == DFT_U_ACBN0) then
-    this%X(n_alt)(1:this%maxnorbs,1:this%maxnorbs,1:st%d%nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
+    this%X(n_alt)(1:this%maxnorbs, 1:this%maxnorbs, 1:st%d%nspin, 1:this%norbsets) = R_TOTYPE(M_ZERO)
   end if
 
   !TODO: use symmetries of the occupation matrices
@@ -118,7 +118,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
     do ist = st%st_start, st%st_end
 
       weight = st%d%kweights(ik)*st%occ(ist, ik)     
-      if(weight < CNST(1.0e-6)) cycle
+      if(weight < CNST(1.0e-10)) cycle
  
       call states_get_state(st, mesh, ist, ik, psi )
 
@@ -133,7 +133,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         !We first compute the matrix elemets <\psi | orb_m>
         !taking into account phase correction if needed 
         call X(orbitalset_get_coefficients)(os, st%d%dim, psi, ik, present(phase), &
-                            dot(1:st%d%dim,1:os%norbs,ios))
+          dot(1:st%d%dim,1:os%norbs,ios))
       end do !ios
 
 
@@ -145,9 +145,9 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
           norbs = os%norbs
           do im = 1, norbs 
             do idim = 1, st%d%dim
-              this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik) = &
-               this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik) &
-                 + abs(dot(idim,im,ios))**2
+              this%X(renorm_occ)(species_index(os%spec), os%nn, os%ll, ist, ik) = &
+                this%X(renorm_occ)(species_index(os%spec), os%nn, os%ll, ist, ik) &
+                + abs(dot(idim, im, ios))**2
             end do
           end do
         end do
@@ -161,13 +161,13 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
           os => this%orbsets(ios)
           norbs = os%norbs
           do im = 1, norbs
-            this%X(n)(1:norbs,im,ispin,ios) = this%X(n)(1:norbs,im,ispin,ios) &
-                                         + weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
+            this%X(n)(1:norbs, im, ispin, ios) = this%X(n)(1:norbs, im, ispin, ios) &
+              + weight*dot(1, 1:norbs, ios)*R_CONJ(dot(1, im, ios))
             !We compute the renomalized occupation matrices
             if(this%level == DFT_U_ACBN0) then
-              renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik)*weight
-              this%X(n_alt)(1:norbs,im,ispin,ios) = this%X(n_alt)(1:norbs,im,ispin,ios) &
-                                         + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
+              renorm_weight = this%X(renorm_occ)(species_index(os%spec), os%nn, os%ll, ist, ik)*weight
+              this%X(n_alt)(1:norbs, im, ispin, ios) = this%X(n_alt)(1:norbs, im, ispin, ios) &
+                + renorm_weight*dot(1, 1:norbs, ios)*R_CONJ(dot(1, im, ios))
             end if
           end do !im
         end do !ios
@@ -179,25 +179,25 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
           os => this%orbsets(ios)
           norbs = os%norbs
           do im = 1, norbs
-            this%X(n)(1:norbs,im,1,ios) = this%X(n)(1:norbs,im,1,ios) &
-                                      + weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
-            this%X(n)(1:norbs,im,2,ios) = this%X(n)(1:norbs,im,2,ios) &
-                                      + weight*dot(2,1:norbs,ios)*R_CONJ(dot(2,im,ios))
-            this%X(n)(1:norbs,im,3,ios) = this%X(n)(1:norbs,im,3,ios) &
-                                      + weight*dot(1,1:norbs,ios)*R_CONJ(dot(2,im,ios))
-            this%X(n)(1:norbs,im,4,ios) = this%X(n)(1:norbs,im,4,ios) &
-                                      + weight*dot(2,1:norbs,ios)*R_CONJ(dot(1,im,ios))
+            this%X(n)(1:norbs, im, 1, ios) = this%X(n)(1:norbs, im, 1, ios) &
+              + weight*dot(1, 1:norbs, ios)*R_CONJ(dot(1, im, ios))
+            this%X(n)(1:norbs, im, 2, ios) = this%X(n)(1:norbs, im, 2, ios) &
+              + weight*dot(2, 1:norbs, ios)*R_CONJ(dot(2, im, ios))
+            this%X(n)(1:norbs, im, 3, ios) = this%X(n)(1:norbs, im, 3, ios) &
+              + weight*dot(1, 1:norbs, ios)*R_CONJ(dot(2, im, ios))
+            this%X(n)(1:norbs, im, 4, ios) = this%X(n)(1:norbs, im, 4, ios) &
+              + weight*dot(2, 1:norbs, ios)*R_CONJ(dot(1, im, ios))
             !We compute the renomalized occupation matrices
             if(this%level == DFT_U_ACBN0) then
               renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik)*weight
-              this%X(n_alt)(1:norbs,im,1,ios) = this%X(n_alt)(1:norbs,im,1,ios) &
-                                         + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
-              this%X(n_alt)(1:norbs,im,2,ios) = this%X(n_alt)(1:norbs,im,2,ios) &
-                                         + renorm_weight*dot(2,1:norbs,ios)*R_CONJ(dot(2,im,ios))
-              this%X(n_alt)(1:norbs,im,3,ios) = this%X(n_alt)(1:norbs,im,3,ios) &
-                                         + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(2,im,ios))
-              this%X(n_alt)(1:norbs,im,4,ios) = this%X(n_alt)(1:norbs,im,4,ios) &
-                                         + renorm_weight*dot(2,1:norbs,ios)*R_CONJ(dot(1,im,ios))
+              this%X(n_alt)(1:norbs, im, 1, ios) = this%X(n_alt)(1:norbs, im, 1, ios) &
+                + renorm_weight*dot(1, 1:norbs, ios)*R_CONJ(dot(1, im, ios))
+              this%X(n_alt)(1:norbs, im, 2, ios) = this%X(n_alt)(1:norbs, im, 2, ios) &
+                + renorm_weight*dot(2, 1:norbs, ios)*R_CONJ(dot(2, im, ios))
+              this%X(n_alt)(1:norbs, im, 3, ios) = this%X(n_alt)(1:norbs, im, 3, ios) &
+                + renorm_weight*dot(1, 1:norbs, ios)*R_CONJ(dot(2, im, ios))
+              this%X(n_alt)(1:norbs, im, 4, ios) = this%X(n_alt)(1:norbs, im, 4, ios) &
+                + renorm_weight*dot(2, 1:norbs, ios)*R_CONJ(dot(1, im, ios))
             end if
           end do !im
         end do !ios 
@@ -258,10 +258,10 @@ subroutine X(compute_dftu_energy)(this, energy, st)
       !TODO: These are matrix operations, that could be optimized
       do im = 1, this%orbsets(ios)%norbs
         do imp = 1, this%orbsets(ios)%norbs
-          energy = energy - CNST(0.5)*this%orbsets(ios)%Ueff*abs(this%X(n)(im,imp,ispin,ios))**2/st%smear%el_per_state
+          energy = energy - CNST(0.5)*this%orbsets(ios)%Ueff*abs(this%X(n)(im, imp, ispin, ios))**2/st%smear%el_per_state
         end do
         if(ispin <= this%spin_channels) &
-          energy = energy + CNST(0.5)*this%orbsets(ios)%Ueff*real(this%X(n)(im,im,ispin,ios))
+          energy = energy + CNST(0.5)*this%orbsets(ios)%Ueff*real(this%X(n)(im, im, ispin, ios))
       end do
     end do
   end do
@@ -831,7 +831,7 @@ end subroutine X(compute_coulomb_integrals)
      do ibatch = 1, psib%nst
        ist = psib%states(ibatch)%ist
        weight = st%d%kweights(iq)*st%occ(ist, iq)
-       if(weight < CNST(1.0e-6)) cycle
+       if(weight < CNST(1.0e-10)) cycle
 
        call batch_get_state(psib, ibatch, mesh%np, psi)
        !No phase here, this is already added

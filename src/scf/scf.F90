@@ -202,6 +202,10 @@ contains
     !% 
     !% <i>N</i> is the total number of electrons in the problem.  A
     !% zero value means do not use this criterion.
+    !%
+    !% If you reduce this value, you should also reduce
+    !% <tt>EigensolverTolerance</tt> to a value of roughly 1/10 of
+    !% <tt>ConvRelDens</tt> to avoid convergence problems.
     !%End
     call parse_variable('ConvRelDens', CNST(1e-5), scf%conv_rel_dens)
 
@@ -479,8 +483,7 @@ contains
 
     nullify(scf%mixfield)
 
-    if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
-      call lda_u_mixer_end(scf%lda_u_mix, scf%smix)
+    if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_end(scf%lda_u_mix, scf%smix)
 
 
     POP_SUB(scf_end)
@@ -495,8 +498,7 @@ contains
 
     call mix_clear(scf%smix)
 
-    if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
-      call lda_u_mixer_clear(scf%lda_u_mix, scf%smix)
+    if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_clear(scf%lda_u_mix, scf%smix)
 
     POP_SUB(scf_mix_clear)
   end subroutine scf_mix_clear
@@ -775,8 +777,7 @@ contains
         
       end select
       
-      if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
-        call lda_u_mixer_set_vout(hm%lda_u, scf%lda_u_mix)
+      if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vout(hm%lda_u, scf%lda_u_mix)
  
       evsum_out = states_eigenvalues_sum(st)
 
@@ -811,14 +812,14 @@ contains
         end do
       end if
 
-      if(st%qtot == M_ZERO) then
+      if(abs(st%qtot) <= M_EPSILON) then
         scf%rel_dens = M_HUGE
       else
         scf%rel_dens = scf%abs_dens / st%qtot
       end if
 
       scf%abs_ev = abs(evsum_out - evsum_in)
-      if(abs(evsum_out) == M_ZERO) then
+      if(abs(evsum_out) <= M_EPSILON) then
         scf%rel_ev = M_HUGE
       else
         scf%rel_ev = scf%abs_ev / abs(evsum_out)
@@ -982,8 +983,7 @@ contains
             call mixfield_set_vin(scf%mixfield, zrhoin)
         end if
       end select
-      if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
-        call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
+      if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
       evsum_in = evsum_out
       if (scf%conv_abs_force > M_ZERO) then

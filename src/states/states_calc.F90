@@ -82,8 +82,6 @@ module states_calc_oct_m
     zstates_orthogonalize_single,   &
     dstates_orthogonalization_full, &
     zstates_orthogonalization_full, &
-    dstates_normalize_orbital,      &
-    zstates_normalize_orbital,      &
     dstates_residue,                &
     zstates_residue,                &
     states_calc_momentum,           &

@@ -297,7 +297,7 @@ contains
       end if
 
     case(PSEUDO_FORMAT_HGH)
-      ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
+      ps%pseudo_type   = PSEUDO_TYPE_KLEINMAN_BYLANDER
       ps%projector_type = PROJ_HGH
       
       call hgh_init(ps_hgh, trim(filename))
@@ -489,14 +489,14 @@ contains
     if(ps%pseudo_type == PSEUDO_TYPE_SEMILOCAL) then
       call messages_write("    orbital origin   :")
       select case(ps%file_format)
-      case(PSEUDO_FORMAT_PSF, PSEUDO_FORMAT_HGH)
+      case(PSEUDO_FORMAT_PSF)
         call messages_write(" calculated");
       case default
         call messages_write(" from file");
       end select
       call messages_info()
     end if
-    
+
     call messages_write("    lmax             :")
     call messages_write(ps%lmax, fmt = '(i2)')
     call messages_info()
@@ -671,6 +671,12 @@ contains
           if(abs(spline_integral(ps%density(ispin))) > CNST(1.0e-12)) then
             rmax = spline_cutoff_radius(ps%density(ispin), ps%projectors_sphere_threshold)
             call spline_filter_mask(ps%density(ispin), 0, rmax, gmax, alpha, gamma)
+            call spline_force_pos(ps%density(ispin))
+          end if
+
+          if(abs(spline_integral(ps%density_der(ispin))) > CNST(1.0e-12)) then
+            rmax = spline_cutoff_radius(ps%density_der(ispin), ps%projectors_sphere_threshold)
+            call spline_filter_mask(ps%density_der(ispin), 0, rmax, gmax, alpha, gamma)
           end if
         end do
       end if
@@ -696,6 +702,8 @@ contains
       if(ps_has_density(ps)) then
         do ispin = 1, ps%ispin
           call spline_filter_bessel(ps%density(ispin), 0, gmax, alpha, beta_fs, rcut, beta_rs)
+          call spline_force_pos(ps%density(ispin))
+          call spline_filter_bessel(ps%density_der(ispin), 0, gmax, alpha, beta_fs, rcut, beta_rs)
         end do
       end if
 
@@ -1187,7 +1195,7 @@ contains
           do ic = 1, ps_xml%nchannels
             
             do ip = 1, ps%g%nrval
-              kbprojector(ip) = 0.0
+              kbprojector(ip) = M_ZERO
               if(ip <= ps_xml%grid_size) then
                 do jc = 1, ps_xml%nchannels
                   kbprojector(ip) = kbprojector(ip) + matrix(jc, ic)*ps_xml%projector(ip, ll, jc)
@@ -1220,9 +1228,9 @@ contains
           ps%conf%occ(ii, 1) = ps_xml%wf_occ(ii)
         end if
 
-        ps%conf%j(ii) = 0.0
+        ps%conf%j(ii) = M_ZERO
         if(pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
-          ps%conf%j(ii) = 0.5*pseudo_wavefunction_2j(ps_xml%pseudo, ii)
+          ps%conf%j(ii) = M_HALF*pseudo_wavefunction_2j(ps_xml%pseudo, ii)
         end if
 
         do ip = 1, ps%g%nrval

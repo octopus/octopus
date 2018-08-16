@@ -285,7 +285,10 @@ program dielectric_function
   SAFE_DEALLOCATE_A(chi)
   SAFE_DEALLOCATE_A(vecpot)
   SAFE_DEALLOCATE_A(vecpot_ref)
-
+  SAFE_DEALLOCATE_A(vecpot0)
+  SAFE_DEALLOCATE_A(ftreal)
+  SAFE_DEALLOCATE_A(ftimag)
+    
   call simul_box_end(sb)
   call geometry_end(geo)
   call space_end(space)

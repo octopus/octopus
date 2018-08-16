@@ -41,6 +41,7 @@ dist_lda_DATA =                           \
 	Cr_HSCV_LDA-1.0.xml               \
 	Cs_HSCV_LDA-1.0.xml               \
 	Cu_HSCV_LDA-1.0.xml               \
+	D_HSCV_LDA-1.0.xml                \
 	Dy_HSCV_LDA-1.0.xml               \
 	Er_HSCV_LDA-1.0.xml               \
 	Eu_HSCV_LDA-1.0.xml               \
@@ -98,6 +99,7 @@ dist_lda_DATA =                           \
 	Sm_HSCV_LDA-1.0.xml               \
 	Sn_HSCV_LDA-1.0.xml               \
 	Sr_HSCV_LDA-1.0.xml               \
+	T_HSCV_LDA-1.0.xml                \
 	Ta_HSCV_LDA-1.0.xml               \
 	Tb_HSCV_LDA-1.0.xml               \
 	Tc_HSCV_LDA-1.0.xml               \

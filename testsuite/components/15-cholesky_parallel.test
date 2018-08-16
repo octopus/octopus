@@ -2,7 +2,7 @@
 
 Test       : Cholesky (parallel) orthogonalization
 Options    : scalapack
-Program    : oct-test
+Program    : octopus
 TestGroups : short-run, components
 Enabled    : Yes
 

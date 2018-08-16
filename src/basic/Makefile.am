@@ -56,7 +56,6 @@ libbasic_f_srcs =                        \
 	sort.F90                         \
 	space.F90                        \
 	string.F90                       \
-	test_parameters.F90              \
 	topology.F90                     \
 	types.F90                        \
 	unit.F90                         \
@@ -146,7 +145,6 @@ profiling.o : profiling.F90 varinfo.o types.o string.o sort.o parser.o mpi.o mes
 sort.o : sort.F90 sort_inc.F90 messages.o global.o 
 space.o : space.F90 parser.o messages.o json.o global.o 
 string.o : string.F90 loct.o 
-test_parameters.o : test_parameters.F90 
 topology.o : topology.F90 utils.o profiling.o parser.o mpi.o messages.o loct.o io.o global.o 
 types.o : types.F90 
 unit.o : unit.F90 global.o 

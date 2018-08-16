@@ -236,8 +236,13 @@ contains
       !%Description
       !% Set to a non-zero value to add a long-range correction for solids to the kernel.
       !% This is the <math>\alpha</math> parameter defined in S. Botti <i>et al.</i>, <i>Phys. Rev. B</i>
-      !% 69, 155112 (2004), which results in multiplying the Hartree term by
-      !% <math>1 - \alpha / 4 \pi</math>. (Experimental)
+      !% 69, 155112 (2004). The <math>\Gamma = \Gamma' = 0</math> term <math>-\alpha/q^2</math> is taken 
+      !% into account by introducing an additional pole to the polarizability (see R. Stubner  
+      !% <i>et al.</i>, <i>Phys. Rev. B</i> 70, 245119 (2004)). The rest of the terms are included by  
+      !% multiplying the Hartree term by <math>1 - \alpha / 4 \pi</math>. The use of non-zero 
+      !% <math>\alpha</math> in combination with <tt>HamiltonianVariation</tt> = <tt>V_ext_only</tt>  
+      !% corresponds to account of only the <math>\Gamma = \Gamma' = 0</math> term. 
+      !% Applicable only to isotropic systems. (Experimental)
       !%End
 
       call parse_variable('XCKernelLRCAlpha', M_ZERO, xcs%kernel_lrc_alpha)

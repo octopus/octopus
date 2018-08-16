@@ -24,7 +24,8 @@
 #include <rapidxml.hpp>
 #include <sstream>
 
-#define MAX_L 10 
+#define MAX_L 10
+#define INVALID_L 333
 
 namespace pseudopotential {
 
@@ -145,7 +146,9 @@ namespace pseudopotential {
     virtual int wavefunction_2j(int ii) const { return 0; } // returns j multiplied by 2
     
   protected:
-
+    
+    std::string filename_;
+    
     template <typename Type>
     static Type value(const rapidxml::xml_base<> * node){
       assert(node);
