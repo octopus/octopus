@@ -29,7 +29,7 @@ dist_share_DATA =                                                             \
 	02-octopus_basics-basic_input_options.01-N_atom.inp                   \
 	N.xyz                                                                 \
 	03-octopus_basics-total_energy_convergence.test                       \
-	03-octopus_basics-total_energy_covergence.01-methane.inp              \
+	03-octopus_basics-total_energy_convergence.01-methane.inp             \
 	04-octopus_basics-visualization.test                                  \
 	04-octopus_basics-visualization.01-benzene.inp                        \
 	benzene.xyz
