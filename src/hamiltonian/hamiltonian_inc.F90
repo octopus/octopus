@@ -673,13 +673,14 @@ end subroutine X(scdm_exchange_operator)
 
 ! ---------------------------------------------------------
 
-subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
+subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus, set_phase)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ik
   R_TYPE,              intent(inout) :: psi(:,:)
   R_TYPE,              intent(out)   :: hpsi(:,:)
   FLOAT,               intent(in)    :: vmagnus(:, :, :)
+  logical, optional,     intent(in)    :: set_phase !< If set to .false. the phase will not be added to the states.
 
   R_TYPE, allocatable :: auxpsi(:, :), aux2psi(:, :)
   integer :: idim, ispin
@@ -695,20 +696,20 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
 
   ispin = states_dim_get_spin_index(hm%d, ik)
 
-  call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_KINETIC)
+  call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_KINETIC, set_phase = set_phase)
 
   do idim = 1, hm%d%dim
     call lalg_copy(der%mesh%np, hpsi(:, idim), auxpsi(:, idim))
   end do
 
-  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL)
+  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
 
   hpsi(1:der%mesh%np, 1) = hpsi(1:der%mesh%np, 1) -  M_zI*vmagnus(1:der%mesh%np, ispin, 1)*auxpsi(1:der%mesh%np, 1)
   auxpsi(1:der%mesh%np, 1) = vmagnus(1:der%mesh%np, ispin, 1)*psi(1:der%mesh%np, 1)
 
-  call X(hamiltonian_apply)(hm, der, auxpsi, aux2psi, ist = 1, ik = ik, terms = TERM_KINETIC)
+  call X(hamiltonian_apply)(hm, der, auxpsi, aux2psi, ist = 1, ik = ik, terms = TERM_KINETIC, set_phase = set_phase)
 
-  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL)
+  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
 
   hpsi(1:der%mesh%np, 1) = hpsi(1:der%mesh%np, 1) + M_zI*aux2psi(1:der%mesh%np, 1)
 
@@ -718,7 +719,7 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
 
   hpsi(1:der%mesh%np, 1) = hpsi(1:der%mesh%np, 1) + vmagnus(1:der%mesh%np, ispin, 2)*psi(1:der%mesh%np, 1)
 
-  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL)
+  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
 
   do idim = 1, hm%d%dim
     call X(vborders)(der, hm, psi(:, idim), hpsi(:, idim))
