@@ -83,8 +83,6 @@ module hamiltonian_base_oct_m
     hamiltonian_base_update,                   &
     dhamiltonian_base_phase,                   &
     zhamiltonian_base_phase,                   &
-    dhamiltonian_base_phase_correction,        &
-    zhamiltonian_base_phase_correction,        &
     dhamiltonian_base_nlocal_force,            &
     zhamiltonian_base_nlocal_force,            &
     projection_t
