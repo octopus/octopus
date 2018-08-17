@@ -66,6 +66,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
 
   if(optional_default(set_bc, .true.)) then
     if(apply_phase .and. .not.set_phase_) then
+      ! apply phase correction while setting boundary -> memory needs to be
+      ! accessed only once
       call boundaries_set(der%boundaries, psib, phase_correction=hm%hm_base%phase_corr(:, ik))
     else
       call boundaries_set(der%boundaries, psib)
@@ -80,14 +82,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
     epsib => psib
   end if
 
-  if(apply_phase) then ! we copy psi to epsi applying the exp(i k.r) phase
-    if(set_phase_) then
-      call X(hamiltonian_base_phase)(hm%hm_base, der, der%mesh%np_part, ik, .false., epsib, src = psib)
-    !else if(optional_default(set_bc, .true.)) then
-      !If we applied the boundary condition, and that there is a phase to be applied, 
-      !we apply the phase condition 
-      !call X(hamiltonian_base_phase_correction)(hm%hm_base, der, ik, epsib, src = psib)
-    end if
+  if(apply_phase .and. set_phase_) then ! we copy psi to epsi applying the exp(i k.r) phase
+    call X(hamiltonian_base_phase)(hm%hm_base, der, der%mesh%np_part, ik, .false., epsib, src = psib)
   end if
 
   if(bitand(TERM_KINETIC, terms_) /= 0) then
