@@ -542,7 +542,7 @@ contains
       PUSH_SUB(hamiltonian_init.init_phase)
 
       SAFE_ALLOCATE(hm%hm_base%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
-      if(.not.accel_is_enabled() .and. .not. gr%mesh%parallel_in_domains) then
+      if(.not.accel_is_enabled()) then
         SAFE_ALLOCATE(hm%hm_base%phase_corr(gr%mesh%np+1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
         hm%hm_base%phase_corr = M_ONE
       end if
@@ -554,7 +554,7 @@ contains
           hm%hm_base%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
         end forall
 
-        if(.not.accel_is_enabled() .and. .not. gr%mesh%parallel_in_domains) then
+        if(.not.accel_is_enabled()) then
           do ip = 1, gr%der%boundaries%nper
             ip_bnd = gr%der%boundaries%per_points(POINT_BOUNDARY, ip)
             ip_inn = gr%der%boundaries%per_points(POINT_INNER, ip)
@@ -914,7 +914,7 @@ contains
         end if
 
         if(.not. allocated(this%hm_base%phase_corr)) then
-          if(.not.accel_is_enabled() .and. .not. mesh%parallel_in_domains) then
+          if(.not.accel_is_enabled()) then
             SAFE_ALLOCATE(this%hm_base%phase_corr(mesh%np+1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
             this%hm_base%phase_corr = M_ONE
           end if
@@ -928,7 +928,7 @@ contains
             this%hm_base%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(kpoint(1:mesh%sb%dim) &
               + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
           end forall
-          if(.not.accel_is_enabled() .and. .not. mesh%parallel_in_domains) then
+          if(.not.accel_is_enabled()) then
             do ip = 1, boundaries%nper
               ip_bnd = boundaries%per_points(POINT_BOUNDARY, ip)
               ip_inn = boundaries%per_points(POINT_INNER, ip)

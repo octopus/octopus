@@ -368,20 +368,21 @@ contains
 
   ! -------------------------------------------------------
 
-  subroutine boundaries_set_batch(this, ffb)
+  subroutine boundaries_set_batch(this, ffb, phase_correction)
     type(boundaries_t), intent(in)    :: this
     type(batch_t),      intent(inout) :: ffb
+    CMPLX, optional,    intent(in)    :: phase_correction(:)
 
     PUSH_SUB(boundaries_set_batch)
     
     if(batch_type(ffb) == TYPE_FLOAT) then 
-      call dboundaries_set_batch(this, ffb)
+      call dboundaries_set_batch(this, ffb, phase_correction)
     else if(batch_type(ffb) == TYPE_CMPLX) then 
-      call zboundaries_set_batch(this, ffb)
+      call zboundaries_set_batch(this, ffb, phase_correction)
     else if(batch_type(ffb) == TYPE_FLOAT_SINGLE) then 
-      call sboundaries_set_batch(this, ffb)
+      call sboundaries_set_batch(this, ffb, phase_correction)
     else if(batch_type(ffb) == TYPE_CMPLX_SINGLE) then 
-      call cboundaries_set_batch(this, ffb)
+      call cboundaries_set_batch(this, ffb, phase_correction)
     else
       ASSERT(.false.)
      end if
