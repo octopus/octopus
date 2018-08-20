@@ -41,10 +41,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
   ! all terms are enabled by default
   terms_ = optional_default(terms, TERM_ALL)
   set_phase_ = optional_default(set_phase, .true.)
-  !At the moment domain parallelization is not supported for the phase correction
-  !OpenCL is also not supported
+  ! OpenCL is not supported for the phase correction at the moment
   if(.not.set_phase_) then
-    if(der%mesh%parallel_in_domains) set_phase_ = .true.
     if(batch_status(psib) == BATCH_CL_PACKED) set_phase_ = .true.
   end if
 

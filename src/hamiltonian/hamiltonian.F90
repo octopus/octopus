@@ -890,6 +890,7 @@ contains
       integer :: ik, imat, nmat, max_npoints, offset
       integer :: ip, ip_bnd, ip_inn
       FLOAT   :: kpoint(1:MAX_DIM)
+      logical :: compute_phase_correction
 
       PUSH_SUB(hamiltonian_update.build_phase)
 
@@ -913,8 +914,9 @@ contains
           end if
         end if
 
+        compute_phase_correction = .not.accel_is_enabled()
         if(.not. allocated(this%hm_base%phase_corr)) then
-          if(.not.accel_is_enabled()) then
+          if(compute_phase_correction) then
             SAFE_ALLOCATE(this%hm_base%phase_corr(mesh%np+1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
             this%hm_base%phase_corr = M_ONE
           end if
@@ -928,7 +930,7 @@ contains
             this%hm_base%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(kpoint(1:mesh%sb%dim) &
               + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
           end forall
-          if(.not.accel_is_enabled()) then
+          if(compute_phase_correction) then
             do ip = 1, boundaries%nper
               ip_bnd = boundaries%per_points(POINT_BOUNDARY, ip)
               ip_inn = boundaries%per_points(POINT_INNER, ip)

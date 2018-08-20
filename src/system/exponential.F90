@@ -268,7 +268,7 @@ contains
 
     phase_correction = .false.
     if(associated(hm%hm_base%phase)) phase_correction = .true.
-    if(der%mesh%parallel_in_domains .or. accel_is_enabled()) phase_correction = .false.
+    if(accel_is_enabled()) phase_correction = .false.
 
     ! If we want to use imaginary time, timestep = i*deltat
     ! Otherwise, timestep is simply equal to deltat.
@@ -648,7 +648,7 @@ contains
     ! check if we only want a phase correction for the boundary points
     phase_correction = .false.
     if(associated(hm%hm_base%phase)) phase_correction = .true.
-    if(der%mesh%parallel_in_domains .or. accel_is_enabled()) phase_correction = .false.
+    if(accel_is_enabled()) phase_correction = .false.
 
     if (te%exp_method == EXP_TAYLOR) then 
      !We apply the phase only to np points, and the phase for the np+1 to np_part points
