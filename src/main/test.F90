@@ -245,8 +245,8 @@ contains
   
     !Initialize external potential
     nullify(subsys_hm)
-    call epot_init(ep, sys%gr, sys%geo, SPINORS, 1, .false., subsys_hm, XC_FAMILY_NONE)
-    call epot_generate(ep, sys%gr, sys%geo, sys%st, .false.)
+    call epot_init(ep, sys%gr, sys%geo, SPINORS, 1, subsys_hm, XC_FAMILY_NONE)
+    call epot_generate(ep, sys%gr, sys%geo, sys%st)
    
     !Initialize external potential
     SAFE_ALLOCATE(epsib)

@@ -392,14 +392,11 @@ contains
     FLOAT,    allocatable :: rho_sphere(:)
     FLOAT, parameter      :: threshold = CNST(1e-6)
     FLOAT                 :: norm_factor
-    logical               :: cmplxscl
     
     PUSH_SUB(species_get_density)
 
     call profiling_in(prof, "SPECIES_DENSITY")
 
-    cmplxscl = present(Imrho)
-    
     select case(species_type(species))
 
     case(SPECIES_PSEUDO, SPECIES_PSPIO)
@@ -412,7 +409,6 @@ contains
       if(sphere%np > 0) call spline_eval_vec(ps%nlr, sphere%np, rho_sphere)
 
       rho(1:mesh%np) = M_ZERO
-      ASSERT(.not.cmplxscl) ! not implemented
 
       ! A small amount of charge is missing with the cutoff, we
       ! renormalize so that the long range potential is exact
@@ -538,7 +534,6 @@ contains
         range = M_TWO * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
 
       rho = M_ZERO
-      if (cmplxscl) Imrho = M_ZERO
       do icell = 1, periodic_copy_num(pp)
         yy(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
         do ip = 1, mesh%np
@@ -553,7 +548,6 @@ contains
             call parse_expression(rerho, imrho1, mesh%sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
           end if
           rho(ip) = rho(ip) - rerho
-          if (cmplxscl) Imrho(ip) = Imrho(ip) - imrho1
         end do
       end do
 
@@ -562,14 +556,8 @@ contains
       end if
       call periodic_copy_end(pp)
 
-      if (cmplxscl) then 
-        rr = M_ONE ! XXXXX normalization
-        rho(1:mesh%np) = rr * rho(1:mesh%np)
-        Imrho(1:mesh%np) = rr * Imrho(1:mesh%np)
-      else
-        rr = species_zval(species) / abs(dmf_integrate(mesh, rho(:)))
-        rho(1:mesh%np) = rr * rho(1:mesh%np)
-      end if
+      rr = species_zval(species) / abs(dmf_integrate(mesh, rho(:)))
+      rho(1:mesh%np) = rr * rho(1:mesh%np)
 
     end select
 

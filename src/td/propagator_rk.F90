@@ -674,11 +674,7 @@ contains
       end do
     end do
 
-    if(.not. hm%cmplxscl%space) then
-      call density_calc(st, gr, st%rho)
-    else
-      call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-    end if
+    call density_calc(st, gr, st%rho)
 
     SAFE_DEALLOCATE_A(k2)
     SAFE_DEALLOCATE_A(oldk2)
@@ -948,11 +944,7 @@ contains
       end do
     end do
 
-    if(.not. hm%cmplxscl%space) then
-      call density_calc(st, gr, st%rho)
-    else
-      call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-    end if
+    call density_calc(st, gr, st%rho)
 
     SAFE_DEALLOCATE_A(rhs1)
     SAFE_DEALLOCATE_A(rhs2)

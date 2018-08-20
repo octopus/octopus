@@ -57,7 +57,6 @@ module xc_oct_m
     xc_end,             &
     xc_write_info,      &
     xc_get_vxc,         &
-    xc_get_vxc_cmplx,   &
     xc_get_fxc,         &
     xc_get_kxc,         &
     xc_is_orbital_dependent, &
