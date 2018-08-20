@@ -536,7 +536,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_phase
-      integer :: ip, ik, ip_inn, ip_bnd
+      integer :: ip, ik, ip_inn, ip_bnd, sp, ip_global, ip_inner
       FLOAT   :: kpoint(1:MAX_DIM)
 
       PUSH_SUB(hamiltonian_init.init_phase)
@@ -555,11 +555,20 @@ contains
         end forall
 
         if(.not.accel_is_enabled()) then
-          do ip = 1, gr%der%boundaries%nper
-            ip_bnd = gr%der%boundaries%per_points(POINT_BOUNDARY, ip)
-            ip_inn = gr%der%boundaries%per_points(POINT_INNER, ip)
-            hm%hm_base%phase_corr(ip_bnd, ik) = hm%hm_base%phase(ip_bnd, ik)* &
-                                                  conjg(hm%hm_base%phase(ip_inn, ik))
+          ! loop over boundary points
+          sp = gr%mesh%np
+          if(gr%mesh%parallel_in_domains) sp = gr%mesh%np + gr%mesh%vp%np_ghost
+          do ip = sp + 1, gr%mesh%np_part
+            !translate to a global point
+            ip_global = ip
+#ifdef HAVE_MPI
+            if(gr%mesh%parallel_in_domains) ip_global = gr%mesh%vp%bndry(ip - sp - 1 + gr%mesh%vp%xbndry)
+#endif
+            ! get corresponding inner point
+            ip_inner = mesh_periodic_point(gr%mesh, ip_global)
+            ! compute phase correction from global coordinate (opposite sign!)
+            hm%hm_base%phase_corr(ip, ik) = hm%hm_base%phase(ip, ik)* &
+              exp(M_zI * sum(mesh_x_global(gr%mesh, ip_inner) * kpoint(1:gr%sb%dim)))
           end do
         end if
       end do
@@ -888,7 +897,7 @@ contains
 
     subroutine build_phase()
       integer :: ik, imat, nmat, max_npoints, offset
-      integer :: ip, ip_bnd, ip_inn
+      integer :: ip, ip_bnd, ip_inn, ip_global, ip_inner, sp
       FLOAT   :: kpoint(1:MAX_DIM)
       logical :: compute_phase_correction
 
@@ -931,11 +940,21 @@ contains
               + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
           end forall
           if(compute_phase_correction) then
-            do ip = 1, boundaries%nper
-              ip_bnd = boundaries%per_points(POINT_BOUNDARY, ip)
-              ip_inn = boundaries%per_points(POINT_INNER, ip)
-              this%hm_base%phase_corr(ip_bnd, ik) = this%hm_base%phase(ip_bnd, ik) &
-                                                    *conjg(this%hm_base%phase(ip_inn, ik))
+            ! loop over boundary points
+            sp = mesh%np
+            if(mesh%parallel_in_domains) sp = mesh%np + mesh%vp%np_ghost
+            do ip = sp + 1, mesh%np_part
+              !translate to a global point
+              ip_global = ip
+  #ifdef HAVE_MPI
+              if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry)
+  #endif
+              ! get corresponding inner point
+              ip_inner = mesh_periodic_point(mesh, ip_global)
+              ! compute phase correction from global coordinate (opposite sign!)
+              this%hm_base%phase_corr(ip, ik) = this%hm_base%phase(ip, ik)* &
+                exp(M_zI * sum(mesh_x_global(mesh, ip_inner) * (kpoint(1:mesh%sb%dim) &
+                  + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
             end do
           end if
 

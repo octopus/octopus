@@ -456,26 +456,55 @@ contains
 
       case(BATCH_NOT_PACKED)
 
-        do ipart = 1, npart
-          do ip = 1, boundaries%nrecv(ipart)
-            ip2 = boundaries%per_recv(ip, ipart)
-            do ist = 1, ffb%nst_linear
-              ffb%states_linear(ist)%X(psi)(ip2) = recvbuffer(ist, ip, ipart)
+        if(.not. present(phase_correction)) then
+          ! do not apply phase correction; phase is set in another step
+          do ipart = 1, npart
+            do ip = 1, boundaries%nrecv(ipart)
+              ip2 = boundaries%per_recv(ip, ipart)
+              do ist = 1, ffb%nst_linear
+                ffb%states_linear(ist)%X(psi)(ip2) = recvbuffer(ist, ip, ipart)
+              end do
             end do
           end do
-        end do
+        else
+          ! apply phase correction when setting the BCs -> avoids unnecessary memory access
+          do ipart = 1, npart
+            do ip = 1, boundaries%nrecv(ipart)
+              ip2 = boundaries%per_recv(ip, ipart)
+              do ist = 1, ffb%nst_linear
+                ffb%states_linear(ist)%X(psi)(ip2) = recvbuffer(ist, ip, ipart) * &
+                  phase_correction(ip2-boundaries%mesh%np)
+              end do
+            end do
+          end do
+        end if
 
       case(BATCH_PACKED)
 
-        do ipart = 1, npart
-          !$omp parallel do private(ip, ip2, ist)
-          do ip = 1, boundaries%nrecv(ipart)
-            ip2 = boundaries%per_recv(ip, ipart)
-            do ist = 1, ffb%nst_linear
-              ffb%pack%X(psi)(ist, ip2) = recvbuffer(ist, ip, ipart)
+        if(.not. present(phase_correction)) then
+          ! do not apply phase correction; phase is set in another step
+          do ipart = 1, npart
+            !$omp parallel do private(ip, ip2, ist)
+            do ip = 1, boundaries%nrecv(ipart)
+              ip2 = boundaries%per_recv(ip, ipart)
+              do ist = 1, ffb%nst_linear
+                ffb%pack%X(psi)(ist, ip2) = recvbuffer(ist, ip, ipart)
+              end do
             end do
           end do
-        end do
+        else
+          ! apply phase correction when setting the BCs -> avoids unnecessary memory access
+          do ipart = 1, npart
+            !$omp parallel do private(ip, ip2, ist)
+            do ip = 1, boundaries%nrecv(ipart)
+              ip2 = boundaries%per_recv(ip, ipart)
+              do ist = 1, ffb%nst_linear
+                ffb%pack%X(psi)(ist, ip2) = recvbuffer(ist, ip, ipart) * &
+                  phase_correction(ip2-boundaries%mesh%np)
+              end do
+            end do
+          end do
+        end if
 
       case(BATCH_CL_PACKED)
         call accel_create_buffer(buff_recv, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, ffb%pack%size(1)*maxrecv*npart)
@@ -520,8 +549,7 @@ contains
           end forall
         end do
       else
-        ! apply phase correction when setting the BCs -> avoids unnecessary
-        ! memory access
+        ! apply phase correction when setting the BCs -> avoids unnecessary memory access
         ASSERT(lbound(phase_correction, 1) == 1)
         ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
         do ist = 1, ffb%nst_linear
@@ -544,8 +572,7 @@ contains
           forall(ist = 1:ffb%nst_linear) ffb%pack%X(psi)(ist, ip_bnd) = ffb%pack%X(psi)(ist, ip_inn)
         end do
       else
-        ! apply phase correction when setting the BCs -> avoids unnecessary
-        ! memory access
+        ! apply phase correction when setting the BCs -> avoids unnecessary memory access
         ASSERT(lbound(phase_correction, 1) == 1)
         ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
         do ip = 1, boundaries%nper

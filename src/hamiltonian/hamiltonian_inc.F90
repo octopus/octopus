@@ -70,6 +70,10 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
     else
       call boundaries_set(der%boundaries, psib)
     end if
+  else
+    ! This should never happen: the phase correction should be always only
+    ! applied when also setting the boundary conditions.
+    ASSERT(.not.(apply_phase .and. .not.set_phase_))
   end if
 
 
