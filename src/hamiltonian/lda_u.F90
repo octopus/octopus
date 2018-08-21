@@ -366,9 +366,11 @@ contains
 
    this%max_np = 0
 
+   if(.not.this%basisfromstates) then
  #ifdef HAVE_MPI
-   call distributed_end(this%orbs_dist)  
+     call distributed_end(this%orbs_dist)  
  #endif
+   end if
 
    POP_SUB(lda_u_end)
  end subroutine lda_u_end
