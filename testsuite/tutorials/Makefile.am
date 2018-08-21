@@ -35,7 +35,10 @@ dist_share_DATA =                                                             \
 	benzene.xyz                                                           \
 	05-octopus_basics-centering_a_geometry.test                           \
 	05-octopus_basics-centering_a_geometry.01-tAB.inp                     \
-	tAB.xyz
+	tAB.xyz                                                               \
+	06-octopus_basics-periodic_systems.test                               \
+	06-octopus_basics-periodic_systems.01-silicon.inp                     \
+	06-octopus_basics-periodic_systems.02-silicon_bandstructure.inp
 
 
 CLEANFILES = *~ *.bak

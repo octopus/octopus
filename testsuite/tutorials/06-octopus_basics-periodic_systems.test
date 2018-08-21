@@ -1,0 +1,14 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Octopus basics - Periodic systems
+Program    : octopus
+TestGroups : short-run, tutorials
+Enabled    : Yes
+
+Input: 06-octopus_basics-periodic_systems.01-silicon.inp
+match ; Total Energy ; GREPFIELD(static/info, 'Total  ', 3) ; -7.92843852
+
+Input: 06-octopus_basics-periodic_systems.02-silicon_bandstructure.inp
+
+
+
