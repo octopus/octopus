@@ -468,6 +468,8 @@ contains
           end do
         else
           ! apply phase correction when setting the BCs -> avoids unnecessary memory access
+          ASSERT(lbound(phase_correction, 1) == 1)
+          ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
           do ipart = 1, npart
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
@@ -494,6 +496,8 @@ contains
           end do
         else
           ! apply phase correction when setting the BCs -> avoids unnecessary memory access
+          ASSERT(lbound(phase_correction, 1) == 1)
+          ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
           do ipart = 1, npart
             !$omp parallel do private(ip, ip2, ist)
             do ip = 1, boundaries%nrecv(ipart)
