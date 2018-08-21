@@ -39,6 +39,7 @@ dist_pdpbestd_DATA =                \
 	Cs.upf                      \
 	C.upf                       \
 	Cu.upf                      \
+	D.upf                       \
 	Fe.upf                      \
 	F.upf                       \
 	Ga.upf                      \
@@ -82,6 +83,7 @@ dist_pdpbestd_DATA =                \
 	Sn.upf                      \
 	Sr.upf                      \
 	S.upf                       \
+	T.upf                       \
 	Ta.upf                      \
 	Tc.upf                      \
 	Te.upf                      \

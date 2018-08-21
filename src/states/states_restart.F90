@@ -289,10 +289,10 @@ contains
               if(st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
                 if (states_are_real(st)) then
                   call drestart_write_mesh_function(restart, filename, gr%mesh, &
-                    lr%ddl_psi(:, idim, ist, ik), err)
+                    lr%ddl_psi(:, idim, ist, ik), err, root = root)
                 else
                   call zrestart_write_mesh_function(restart, filename, gr%mesh, &
-                    lr%zdl_psi(:, idim, ist, ik), err)
+                    lr%zdl_psi(:, idim, ist, ik), err, root = root)
                 end if
               else
                 err = 0
@@ -757,7 +757,7 @@ contains
           do idim = 1, st%d%dim
             if(filled(idim, ist, ik)) cycle
 
-            call states_generate_random(st, gr%mesh, ist, ist, ik, ik)
+            call states_generate_random(st, gr%mesh, gr%sb, ist, ist, ik, ik)
           end do
         end do
       end do
@@ -1159,7 +1159,7 @@ contains
               case(NORMALIZE_NO)
               case(NORMALIZE_YES)
                 call states_get_state(st, mesh, is, ik, zpsi)
-                call zstates_normalize_orbital(mesh, st%d%dim, zpsi)
+                call zmf_normalize(mesh, st%d%dim, zpsi)
                 call states_set_state(st, mesh, is, ik, zpsi)
               case default
                 message(1) = 'The sixth column in UserDefinedStates may either be'

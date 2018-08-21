@@ -19,7 +19,7 @@
 AC_PREREQ(2.59)
 # Note: the version string is written into ETSF_IO files, so when you update
 # this, update the results for test periodic_systems/09-etsf_io.test too.
-AC_INIT([Octopus],[wolfi],[octopus-devel@tddft.org],[octopus])
+AC_INIT([Octopus],[australis],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE
@@ -409,6 +409,8 @@ AC_CONFIG_FILES([Makefile
   share/pseudopotentials/Makefile
   share/pseudopotentials/PSF/Makefile
   share/pseudopotentials/HGH/Makefile
+  share/pseudopotentials/HGH/lda/Makefile
+  share/pseudopotentials/HGH/lda_sc/Makefile
   share/pseudopotentials/quantum-simulation.org/Makefile
   share/pseudopotentials/quantum-simulation.org/hscv/Makefile
   share/pseudopotentials/quantum-simulation.org/hscv/lda/Makefile

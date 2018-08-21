@@ -202,6 +202,10 @@ contains
     !% 
     !% <i>N</i> is the total number of electrons in the problem.  A
     !% zero value means do not use this criterion.
+    !%
+    !% If you reduce this value, you should also reduce
+    !% <tt>EigensolverTolerance</tt> to a value of roughly 1/10 of
+    !% <tt>ConvRelDens</tt> to avoid convergence problems.
     !%End
     call parse_variable('ConvRelDens', CNST(1e-5), scf%conv_rel_dens)
 
@@ -326,7 +330,7 @@ contains
     end if
 
     if(scf%mix_field == OPTION__MIXFIELD__DENSITY &
-      .and. iand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+      .and. bitand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
 
       call messages_write('Input: You have selected to mix the density with OEP or MGGA XC functionals.', new_line = .true.)
       call messages_write('       This might produce convergence problems. Mix the potential instead.')
@@ -479,8 +483,7 @@ contains
 
     nullify(scf%mixfield)
 
-    if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
-      call lda_u_mixer_end(scf%lda_u_mix, scf%smix)
+    if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_end(scf%lda_u_mix, scf%smix)
 
 
     POP_SUB(scf_end)
@@ -495,8 +498,7 @@ contains
 
     call mix_clear(scf%smix)
 
-    if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
-      call lda_u_mixer_clear(scf%lda_u_mix, scf%smix)
+    if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_clear(scf%lda_u_mix, scf%smix)
 
     POP_SUB(scf_mix_clear)
   end subroutine scf_mix_clear
@@ -587,7 +589,7 @@ contains
           message(1) = 'Unable to read Vhxc. Vhxc will be calculated from states.'
           call messages_warning(1)
         else
-          call hamiltonian_update(hm, gr%mesh)
+          call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
         end if
       end if
 
@@ -775,8 +777,7 @@ contains
         
       end select
       
-      if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
-        call lda_u_mixer_set_vout(hm%lda_u, scf%lda_u_mix)
+      if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vout(hm%lda_u, scf%lda_u_mix)
  
       evsum_out = states_eigenvalues_sum(st)
 
@@ -811,14 +812,14 @@ contains
         end do
       end if
 
-      if(st%qtot == M_ZERO) then
+      if(abs(st%qtot) <= M_EPSILON) then
         scf%rel_dens = M_HUGE
       else
         scf%rel_dens = scf%abs_dens / st%qtot
       end if
 
       scf%abs_ev = abs(evsum_out - evsum_in)
-      if(abs(evsum_out) == M_ZERO) then
+      if(abs(evsum_out) <= M_EPSILON) then
         scf%rel_ev = M_HUGE
       else
         scf%rel_ev = scf%abs_ev / abs(evsum_out)
@@ -867,7 +868,7 @@ contains
           call mixfield_get_vnew(scf%mixfield, hm%vhxc, hm%Imvhxc)
         end if
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
-        call hamiltonian_update(hm, gr%mesh)
+        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
         
       case(OPTION__MIXFIELD__STATES)
 
@@ -982,8 +983,7 @@ contains
             call mixfield_set_vin(scf%mixfield, zrhoin)
         end if
       end select
-      if(scf%mix_field /= OPTION__MIXFIELD__STATES) &
-        call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
+      if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
       evsum_in = evsum_out
       if (scf%conv_abs_force > M_ZERO) then
@@ -1005,7 +1005,7 @@ contains
     if(scf%lcao_restricted) call lcao_end(lcao)
 
     if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) &
-        .or. iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
+        .or. bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       call v_ks_calc(ks, hm, st, geo)
     end if
 
@@ -1055,11 +1055,11 @@ contains
     end if
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
-      if(iand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0) &
+      if(bitand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0)  then
         call states_write_bandstructure(STATIC_DIR, st%nst, st, gr%sb, geo, gr%mesh, &
-              hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
-                                vec_pot_var = hm%hm_base%vector_potential)
-      
+          hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
+          vec_pot_var = hm%hm_base%vector_potential)
+      end if
     end if
 
     POP_SUB(scf_run)

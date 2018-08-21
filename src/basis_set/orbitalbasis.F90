@@ -56,7 +56,7 @@ module orbitalbasis_oct_m
     integer, pointer    :: global2os(:,:)     !> Mapping functions
     integer, pointer    :: os2global(:,:)     
 
-    integer             :: truncation         !> Truncation method for the orbitals
+    integer(8)          :: truncation         !> Truncation method for the orbitals
     FLOAT               :: threshold          !> Threshold for orbital truncation
 
     logical             :: normalize          !> Do we normalize the orbitals 
@@ -76,6 +76,11 @@ contains
   nullify(this%orbsets)
   nullify(this%global2os)
   nullify(this%os2global)
+
+  this%norbsets = 0
+  this%maxnorbs = 0
+  this%max_np = 0
+  this%size = 0
 
   POP_SUB(orbitalbasis_nullify)
 
@@ -182,6 +187,7 @@ contains
    do ios = 1, this%norbsets
      call orbitalset_end(this%orbsets(ios))
    end do
+   SAFE_DEALLOCATE_P(this%orbsets)
   
    SAFE_DEALLOCATE_P(this%global2os)
    SAFE_DEALLOCATE_P(this%os2global)

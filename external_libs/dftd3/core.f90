@@ -4684,7 +4684,7 @@ contains
     integer iat,jat,i,n,l,j,k,il,iadr,jadr,nn,kk
     logical special
 
-    call init_pars()
+    call init_pars(fname)
     c6ab=-1
     maxci=0
     ! read file

@@ -797,7 +797,7 @@ contains
       end if
 
       ! Randomly generate the initial wavefunctions.
-      call states_generate_random(sys%st, sys%gr%mesh, ist_start_ = st_start_random, normalized = .false.)
+      call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb, ist_start_ = st_start_random, normalized = .false.)
 
       call messages_write('Orthogonalizing wavefunctions.')
       call messages_info()
@@ -1230,8 +1230,8 @@ contains
         if (lmag > n1 + n2) then
           mag = mag*(n1 + n2)/lmag
           lmag = n1 + n2
-        elseif (lmag == M_ZERO) then
-          if (n1 - n2 == M_ZERO) then
+        elseif (abs(lmag) <= M_EPSILON) then
+          if (abs(n1 - n2) <= M_EPSILON) then
             rho(1:gr%fine%mesh%np, 1:2) = rho(1:gr%fine%mesh%np, 1:2) + atom_rho(1:gr%fine%mesh%np, 1:2)
           else
             atom_rho(:, 1) = (atom_rho(:, 1) + atom_rho(:, 2))/M_TWO
@@ -1261,8 +1261,8 @@ contains
 
         elseif (nspin == 4) then
           theta = acos(mag(3)/lmag)
-          if (mag(1) == M_ZERO) then
-            if (mag(2) == M_ZERO) then
+          if (abs(mag(1)) <= M_EPSILON) then
+            if (abs(mag(2)) <= M_EPSILON) then
               phi = M_ZERO
             elseif (mag(2) < M_ZERO) then
               phi = M_PI*CNST(3.0/2.0)

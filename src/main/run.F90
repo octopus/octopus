@@ -46,6 +46,7 @@ module run_oct_m
   use static_pol_oct_m
   use system_oct_m
   use td_oct_m
+  use test_oct_m
   use unit_system_oct_m
   use unocc_oct_m
   use varinfo_oct_m
@@ -77,6 +78,7 @@ module run_oct_m
     CM_KDOTP              =  15,  &
     CM_DUMMY              =  17,  &
     CM_INVERTKDS          =  18,  &
+    CM_TEST               =  19,  &
     CM_PULPO_A_FEIRA      =  99
 
 contains
@@ -150,6 +152,16 @@ contains
     call fft_all_init()
 
     call unit_system_init()
+
+    if(calc_mode_id == CM_TEST) then
+      call test_run()
+      call fft_all_end()
+#ifdef HAVE_MPI
+      call mpi_debug_statistics()
+#endif
+      POP_SUB(run)
+      return
+    end if
 
     call system_init(sys)
 
@@ -285,6 +297,7 @@ contains
     
     call hamiltonian_end(hm)
     call system_end(sys)
+
     call fft_all_end()
 
 #ifdef HAVE_MPI

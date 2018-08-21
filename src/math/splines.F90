@@ -226,6 +226,7 @@ module splines_oct_m
     spline_der2,     &
     spline_div,      & 
     spline_mult,     & 
+    spline_force_pos, &
     spline_range_min, &
     spline_range_max, &
     spline_cutoff_radius
@@ -979,6 +980,38 @@ contains
 
     POP_SUB(spline_div)
   end subroutine spline_div
+
+    !------------------------------------------------------------
+    !Force all the values of the spline to be positive
+    !------------------------------------------------------------
+  subroutine spline_force_pos(spl)
+    type(spline_t),   intent(inout) :: spl
+
+    integer :: npoints, i
+    real(8), allocatable :: x(:), y(:)
+
+    PUSH_SUB(spline_force_pos)
+
+    npoints = oct_spline_npoints(spl%spl, spl%acc)
+
+    SAFE_ALLOCATE(x(1:npoints))
+    SAFE_ALLOCATE(y(1:npoints))
+
+    call oct_spline_x(spl%spl, spl%acc, x(1))
+    call oct_spline_y(spl%spl, spl%acc, y(1))
+    call oct_spline_end(spl%spl, spl%acc)
+
+    do i = npoints, 1, -1
+      y(i) = max(y(i),M_ZERO)
+    end do
+
+    call spline_fit(npoints, x, y, spl)
+
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(y)
+
+    POP_SUB(spline_force_pos)
+  end subroutine spline_force_pos
 
 
   !------------------------------------------------------------

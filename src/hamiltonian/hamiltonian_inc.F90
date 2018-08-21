@@ -17,7 +17,7 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
+subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, set_phase)
   type(hamiltonian_t),   intent(in)    :: hm
   type(derivatives_t),   intent(in)    :: der
   type(batch_t), target, intent(inout) :: psib
@@ -25,8 +25,9 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
   integer,               intent(in)    :: ik
   integer, optional,     intent(in)    :: terms
   logical, optional,     intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
+  logical, optional,     intent(in)    :: set_phase !< If set to .false. the phase will not be added to the states.
 
-  logical :: apply_phase, pack
+  logical :: apply_phase, pack, set_phase_
   type(batch_t), pointer :: epsib
   type(derivatives_handle_batch_t) :: handle
   integer :: terms_
@@ -39,6 +40,13 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
 
   ! all terms are enabled by default
   terms_ = optional_default(terms, TERM_ALL)
+  set_phase_ = optional_default(set_phase, .true.)
+  !At the moment domain parallelization is not supported for the phase correction
+  !OpenCL is also not supported
+  if(.not.set_phase_) then
+    if(der%mesh%parallel_in_domains) set_phase_ = .true.
+    if(batch_status(psib) == BATCH_CL_PACKED) set_phase_ = .true.
+  end if
 
   ASSERT(batch_is_ok(psib))
   ASSERT(batch_is_ok(hpsib))
@@ -58,7 +66,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
 
   if(optional_default(set_bc, .true.)) call boundaries_set(der%boundaries, psib)
 
-  if(apply_phase) then
+  if(apply_phase .and. set_phase_) then
     SAFE_ALLOCATE(epsib)
     call batch_copy(psib, epsib)
   else
@@ -66,23 +74,29 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
   end if
 
   if(apply_phase) then ! we copy psi to epsi applying the exp(i k.r) phase
-    call X(hamiltonian_base_phase)(hm%hm_base, der, der%mesh%np_part, ik, .false., epsib, src = psib)
+    if(set_phase_) then
+      call X(hamiltonian_base_phase)(hm%hm_base, der, der%mesh%np_part, ik, .false., epsib, src = psib)
+    else if(optional_default(set_bc, .true.)) then
+      !If we applied the boundary condition, and that there is a phase to be applied, 
+      !we apply the phase condition 
+      call X(hamiltonian_base_phase_correction)(hm%hm_base, der, ik, epsib, src = psib)
+    end if
   end if
 
-  if(iand(TERM_KINETIC, terms_) /= 0) then
+  if(bitand(TERM_KINETIC, terms_) /= 0) then
     ASSERT(associated(hm%hm_base%kinetic))
     call profiling_in(prof_kinetic_start, "KINETIC_START")
     call X(derivatives_batch_start)(hm%hm_base%kinetic, der, epsib, hpsib, handle, set_bc = .false., factor = -M_HALF/hm%mass)
     call profiling_out(prof_kinetic_start)
   end if
 
-  if (hm%ep%non_local .and. iand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
+  if (hm%ep%non_local .and. bitand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
     if(hm%hm_base%apply_projector_matrices) then
       call X(hamiltonian_base_nlocal_start)(hm%hm_base, der%mesh, hm%d, ik, epsib, projection)
     end if
   end if
 
-  if(iand(TERM_KINETIC, terms_) /= 0) then
+  if(bitand(TERM_KINETIC, terms_) /= 0) then
     call profiling_in(prof_kinetic_finish, "KINETIC_FINISH")
     call X(derivatives_batch_finish)(handle)
     call profiling_out(prof_kinetic_finish)
@@ -93,14 +107,14 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
   end if
 
   ! apply the local potential
-  if (iand(TERM_LOCAL_POTENTIAL, terms_) /= 0) then
+  if (bitand(TERM_LOCAL_POTENTIAL, terms_) /= 0) then
     call X(hamiltonian_base_local)(hm%hm_base, der%mesh, hm%d, states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
-  else if(iand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
+  else if(bitand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
     call X(hamiltonian_external)(hm, der%mesh, epsib, hpsib)
   end if
 
   ! and the non-local one
-  if (hm%ep%non_local .and. iand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
+  if (hm%ep%non_local .and. bitand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
     if(hm%hm_base%apply_projector_matrices) then
       call X(hamiltonian_base_nlocal_finish)(hm%hm_base, der%mesh, hm%d, ik, projection, hpsib)
     else
@@ -109,16 +123,16 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
     end if
   end if
 
-  if (iand(TERM_OTHERS, terms_) /= 0 .and. hamiltonian_base_has_magnetic(hm%hm_base)) then
+  if (bitand(TERM_OTHERS, terms_) /= 0 .and. hamiltonian_base_has_magnetic(hm%hm_base)) then
     call X(hamiltonian_base_magnetic)(hm%hm_base, der, hm%d, hm%ep, &
              states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   end if
   
-  if (iand(TERM_OTHERS, terms_) /= 0 ) then
+  if (bitand(TERM_OTHERS, terms_) /= 0 ) then
     call X(hamiltonian_base_rashba)(hm%hm_base, der, hm%d, epsib, hpsib)
   end if
 
-  if (iand(TERM_OTHERS, terms_) /= 0) then
+  if (bitand(TERM_OTHERS, terms_) /= 0) then
 
     call profiling_in(prof_exx, "EXCHANGE_OPERATOR")
     select case(hm%theory_level)
@@ -142,11 +156,11 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
     
   end if
 
-  if (iand(TERM_MGGA, terms_) /= 0 .and. hm%family_is_mgga_with_exc) then
+  if (bitand(TERM_MGGA, terms_) /= 0 .and. hm%family_is_mgga_with_exc) then
     call X(h_mgga_terms)(hm, der, ik, epsib, hpsib)
   end if
 
-  if(iand(TERM_OTHERS, terms_) /= 0 .and. hm%scissor%apply) then
+  if(bitand(TERM_OTHERS, terms_) /= 0 .and. hm%scissor%apply) then
     call X(scissor_apply)(hm%scissor, der%mesh, ik, epsib, hpsib)
   end if
 
@@ -154,7 +168,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc)
     call X(lda_u_apply)(hm%lda_u, hm%d, ik, epsib, hpsib, apply_phase)
   end if  
 
-  if(apply_phase) then
+  if(apply_phase .and. set_phase_) then
     call X(hamiltonian_base_phase)(hm%hm_base, der, der%mesh%np, ik, .true., hpsib)
     call batch_end(epsib)
     SAFE_DEALLOCATE_P(epsib)
@@ -250,7 +264,7 @@ end subroutine X(hamiltonian_external)
 
 ! ---------------------------------------------------------
 
-subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc)
+subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc, set_phase)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist       !< the index of the state
@@ -259,6 +273,7 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc)
   R_TYPE,   target,    intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
   integer,  optional,  intent(in)    :: terms
   logical,  optional,  intent(in)    :: set_bc
+  logical, optional,     intent(in)    :: set_phase
 
   type(batch_t) :: psib, hpsib
 
@@ -269,7 +284,8 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc)
   call batch_init(hpsib, hm%d%dim, 1)
   call batch_add_state(hpsib, ist, hpsi)
 
-  call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, terms = terms, set_bc = set_bc)
+  call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, terms = terms, set_bc = set_bc, &
+                                     set_phase = set_phase)
 
   call batch_end(psib)
   call batch_end(hpsib)
@@ -657,13 +673,14 @@ end subroutine X(scdm_exchange_operator)
 
 ! ---------------------------------------------------------
 
-subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
+subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus, set_phase)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ik
   R_TYPE,              intent(inout) :: psi(:,:)
   R_TYPE,              intent(out)   :: hpsi(:,:)
   FLOAT,               intent(in)    :: vmagnus(:, :, :)
+  logical, optional,     intent(in)    :: set_phase !< If set to .false. the phase will not be added to the states.
 
   R_TYPE, allocatable :: auxpsi(:, :), aux2psi(:, :)
   integer :: idim, ispin
@@ -679,20 +696,20 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
 
   ispin = states_dim_get_spin_index(hm%d, ik)
 
-  call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_KINETIC)
+  call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_KINETIC, set_phase = set_phase)
 
   do idim = 1, hm%d%dim
     call lalg_copy(der%mesh%np, hpsi(:, idim), auxpsi(:, idim))
   end do
 
-  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL)
+  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
 
   hpsi(1:der%mesh%np, 1) = hpsi(1:der%mesh%np, 1) -  M_zI*vmagnus(1:der%mesh%np, ispin, 1)*auxpsi(1:der%mesh%np, 1)
   auxpsi(1:der%mesh%np, 1) = vmagnus(1:der%mesh%np, ispin, 1)*psi(1:der%mesh%np, 1)
 
-  call X(hamiltonian_apply)(hm, der, auxpsi, aux2psi, ist = 1, ik = ik, terms = TERM_KINETIC)
+  call X(hamiltonian_apply)(hm, der, auxpsi, aux2psi, ist = 1, ik = ik, terms = TERM_KINETIC, set_phase = set_phase)
 
-  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL)
+  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
 
   hpsi(1:der%mesh%np, 1) = hpsi(1:der%mesh%np, 1) + M_zI*aux2psi(1:der%mesh%np, 1)
 
@@ -702,7 +719,7 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus)
 
   hpsi(1:der%mesh%np, 1) = hpsi(1:der%mesh%np, 1) + vmagnus(1:der%mesh%np, ispin, 2)*psi(1:der%mesh%np, 1)
 
-  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL)
+  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
 
   do idim = 1, hm%d%dim
     call X(vborders)(der, hm, psi(:, idim), hpsi(:, idim))

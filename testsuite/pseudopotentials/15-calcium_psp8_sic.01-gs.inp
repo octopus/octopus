@@ -1,0 +1,23 @@
+CalculationMode = gs
+
+%Coordinates 
+ 'Ca' | 0.0 | 0.0 | 0.0
+%
+
+%Species
+ 'Ca' | species_pseudo | file | '15-calcium_psp8_sic.20ca_sic.drh'
+%
+
+ExtraStates = 3
+
+ExperimentalFeatures = yes
+
+Radius = 5.0
+Spacing = 0.3
+
+Debug = info
+
+FromScratch = yes
+
+SICCorrection = sic_amaldi
+

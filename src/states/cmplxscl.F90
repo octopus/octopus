@@ -93,8 +93,8 @@ contains
       call messages_input_error('ComplexScaling')
     end if
 
-    this%space = iand(cmplxscl_flags, CMPLXSCL_SPACE) /= 0
-    this%time  = iand(cmplxscl_flags, CMPLXSCL_TIME)  /= 0
+    this%space = bitand(cmplxscl_flags, CMPLXSCL_SPACE) /= 0
+    this%time  = bitand(cmplxscl_flags, CMPLXSCL_TIME)  /= 0
 
     if(this%space) then
       !%Variable ComplexScalingTheta

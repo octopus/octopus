@@ -24,6 +24,7 @@
 #include <cctype>
 #include <iostream>
 #include <fstream>
+#include <cstdlib>
 #include <map>
 #include <cstdlib>
 
@@ -33,16 +34,36 @@ namespace pseudopotential {
   
   class element {
 
-  public:
+  private:
 
-    element(const std::string & symbol = "none"):symbol_(symbol){
-      trim(symbol_);
+    struct properties;
+    typedef std::map<std::string, properties> map_type;
+    
+  public:
+    
+    element(const std::string & symbol = "none"):symbol_(trim(symbol)){
       symbol_[0] = std::toupper(symbol_[0]);
       for(unsigned ii = 1; ii < symbol_.size(); ii++) symbol_[ii] = std::tolower(symbol_[ii]);
 
       map(); //make sure the map is initialized
     }
 
+    element(int atomic_number){
+
+      //special case: avoid ambiguity between isotopes
+      if(atomic_number == 1){
+	symbol_ = 'H';
+	return;
+      }
+      
+      for(map_type::iterator it = map().begin(); it != map().end(); ++it){
+	if(it->second.z_ == atomic_number) {
+	  symbol_ = trim(it->first);
+	  break;
+	}
+      }
+    }
+    
     bool valid() const {
       return map().find(symbol_) != map().end();
     }
@@ -75,10 +96,9 @@ namespace pseudopotential {
       double vdw_radius_;
     };
     
-    static std::map<std::string, properties> & map(){
+    static map_type & map(){
       
-      static std::map<std::string, properties> map;
-
+      static map_type map;
       if(map.empty()){
 
 	std::string filename = pseudopotential::share_directory::get() + "/pseudopotentials/elements.dat";
@@ -125,10 +145,14 @@ namespace pseudopotential {
       str.erase(str.find_last_not_of(chars) + 1);
       return str;
     }
- 
-    static std::string & trim(std::string& str, const std::string& chars = "\t\n\v\f\r "){
+
+  public:
+    
+    static std::string trim(std::string str, const std::string& chars = "\t\n\v\f\r "){
       return ltrim(rtrim(str, chars), chars);
     }
+    
+  private:
     
     std::string symbol_;
   

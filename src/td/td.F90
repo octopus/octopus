@@ -374,12 +374,10 @@ contains
     geo => sys%geo
     st  => sys%st
 
-    if(simul_box_is_periodic(gr%mesh%sb)) call messages_experimental('Time propagation for periodic systems')
-
-    if(ion_dynamics_ions_move(td%ions) .and. hm%lda_u_level /= DFT_U_NONE ) call messages_experimental("DFT+U with MoveIons=yes") 
-
     call td_init(td, sys, hm)
 
+    if(ion_dynamics_ions_move(td%ions) .and. hm%lda_u_level /= DFT_U_NONE ) call messages_experimental("DFT+U with MoveIons=yes") 
+    
     ! Allocate wavefunctions during time-propagation
     if(td%dynamics == EHRENFEST) then
       !Note: this is not really clean to do this
@@ -409,7 +407,7 @@ contains
 
       ! initialize the vector field and update the hamiltonian
       call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb, st)
-      call hamiltonian_update(hm, gr%mesh, time = td%dt*td%iter)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = td%dt*td%iter)
     end if
 
     call init_wfs()
@@ -431,7 +429,7 @@ contains
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
-      if(iand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+      if(bitand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
         call forces_calculate(gr, geo, hm, st, td%iter*td%dt, td%dt)
       end if  
     end if
@@ -832,7 +830,7 @@ contains
 
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
-      if(hm%ep%kick%time  ==  M_ZERO) then
+      if(abs(hm%ep%kick%time)  <=  M_EPSILON) then
         if( .not.hm%pcm%localf ) then
           if(.not. cmplxscl) then
             call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
@@ -1112,7 +1110,7 @@ contains
       if (err /= 0) then
         ierr = ierr + 8
       else
-        call hamiltonian_update(hm, gr%mesh, time = td%dt*td%iter)
+        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = td%dt*td%iter)
       end if
     end if
 
