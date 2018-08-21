@@ -21,9 +21,7 @@
 module eigensolver_oct_m
   use batch_oct_m
   use derivatives_oct_m
-  use eigen_arpack_oct_m
   use eigen_cg_oct_m
-  use eigen_feast_oct_m
   use eigen_lobpcg_oct_m
   use eigen_rmmdiis_oct_m
   use energy_calc_oct_m
@@ -67,9 +65,7 @@ module eigensolver_oct_m
     FLOAT   :: tolerance
     integer :: es_maxiter
 
-    type(eigen_arpack_t) :: arpack
-    integer :: arnoldi_vectors
-    FLOAT   :: current_rel_dens_error !< for the arpack solver it is important to base precision on how well density is converged
+    FLOAT   :: current_rel_dens_error
     FLOAT   :: imag_time
 
     !> Stores information about how well it performed.
@@ -81,8 +77,6 @@ module eigensolver_oct_m
     type(preconditioner_t) :: pre
 
     type(subspace_t) :: sdiag
-
-    type(feast_t) :: feast !< Contains data used by FEAST solver (at least a linear solver)
 
     integer :: rmmdiis_minimization_iter
 
@@ -100,8 +94,6 @@ module eigensolver_oct_m
        RS_EVO     =  9,         &
        RS_LOBPCG  =  8,         &
        RS_RMMDIIS = 10,         &
-       RS_ARPACK  = 12,         &
-       RS_FEAST   = 13,         &
        RS_PSD      = 14
   
 contains
@@ -155,10 +147,6 @@ contains
     !% Note: with <tt>unocc</tt>, you will need to stop the calculation
     !% by hand, since the highest states will probably never converge.
     !% Usage with more than one block of states per node is experimental, unfortunately.
-    !%Option arpack 12
-    !% (Experimental) Implicitly Restarted Arnoldi Method. Requires the ARPACK package.
-    !%Option feast 13
-    !% (Experimental) Non-Hermitian FEAST eigensolver. Requires the FEAST package.
     !%Option psd 14
     !% (Experimental) Precondtioned steepest descent optimization of the eigenvectors.
     !%End
@@ -236,50 +224,6 @@ contains
 
       if(gr%mesh%use_curvilinear) call messages_experimental("RMMDIIS eigensolver for curvilinear coordinates")
 
-    case(RS_ARPACK) 
-#if defined(HAVE_ARPACK) 
-
-      !%Variable EigensolverArnoldiVectors 
-      !%Type integer 
-      !%Section SCF::Eigensolver
-      !%Description 
-      !% For <tt>Eigensolver = arpack</tt>, this indicates how many Arnoldi vectors are generated.
-      !% It must satisfy <tt>EigensolverArnoldiVectors</tt> - Number Of Eigenvectors >= 2. 
-      !% See the ARPACK documentation for more details. It will default to  
-      !% twice the number of eigenvectors (which is the number of states) 
-      !%End 
-      call parse_variable('EigensolverArnoldiVectors', 2*st%nst, eigens%arnoldi_vectors) 
-      if(eigens%arnoldi_vectors-st%nst < (M_TWO - st%nst)) call messages_input_error('EigensolverArnoldiVectors') 
-
-      eigens%current_rel_dens_error = -M_ONE ! Negative initial value to signify that no value has been assigned yet
-
-      ! Arpack is not working in some cases, so let us check. 
-      if(st%d%ispin  ==  SPINORS) then 
-        write(message(1), '(a)') 'The ARPACK diagonalizer does not handle spinors (yet).' 
-        write(message(2), '(a)') 'Please provide a different Eigensolver.' 
-        call messages_fatal(2) 
-      end if
-
-      call arpack_init(eigens%arpack, gr, st%nst)
-      call messages_experimental("ARPACK eigensolver")
-
-      !Some default values 
-      default_iter = 500  ! empirical value based upon experience
-      default_tol = M_ZERO ! default is machine precision   
-#else
-      message(1) = "You cannot use Eigensolver = arpack, since the code was not compiled with this option."
-      call messages_fatal(1)
-#endif
-
-    case(RS_FEAST)
-#ifdef HAVE_FEAST
-      call messages_experimental("FEAST eigensolver")
-      call feast_init(eigens%feast, gr, st%nst)
-#else
-      message(1) = "You cannot use Eigensolver = feast, since the code was not compiled with this option."
-      call messages_fatal(1)
-#endif
-
     case(RS_PSD)
       default_iter = 18
       call messages_experimental("preconditioned steepest descent (PSD) eigensolver")
@@ -352,7 +296,7 @@ contains
 
     ! FEAST: subspace diagonalization or not?  I guess not.
     ! But perhaps something could be gained by changing this.
-    call subspace_init(eigens%sdiag, st, no_sd = (eigens%es_type == RS_ARPACK).or.(eigens%es_type == RS_FEAST))
+    call subspace_init(eigens%sdiag, st, no_sd = .false.)
 
     ! print memory requirements
     select case(eigens%es_type)
@@ -399,10 +343,6 @@ contains
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
       call preconditioner_end(eigens%pre)
-
-    case(RS_FEAST)
-      call feast_end(eigens%feast)
-    
     end select
 
     SAFE_DEALLOCATE_P(eigens%converged)
@@ -488,20 +428,13 @@ contains
             call deigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
               eigens%converged(ik), ik, eigens%diff(:, ik), eigens%save_mem)
           end if
-        case(RS_ARPACK)
-          ! We don`t have any tests of this presently and would not like
-          ! to guarantee that it works right now
-          call messages_not_implemented('ARPACK solver for Hermitian problems')
-        case(RS_FEAST)
-          ! same as for ARPACK
-          call messages_not_implemented('FEAST solver for Hermitian problems')
         case(RS_PSD)
           call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
         end select
 
         ! FEAST: subspace diag or not?
         if(st%calc_eigenval) then
-          if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_ARPACK .and. eigens%es_type /= RS_PSD) then
+          if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_PSD) then
             call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           end if
         end if
@@ -536,19 +469,12 @@ contains
             call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
               eigens%converged(ik), ik,  eigens%diff(:, ik), eigens%save_mem)
           end if
-#if defined(HAVE_ARPACK) 
-       	case(RS_ARPACK)
-          call zeigensolver_arpack(eigens%arpack, gr, st, hm, eigens%tolerance, eigens%current_rel_dens_error, maxiter, & 
-            eigens%converged(ik), ik, eigens%diff(:,ik))
-#endif 
-        case(RS_FEAST)
-          call zeigensolver_feast(eigens%feast, gr, st, hm, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_PSD)
           call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
         end select
 
         if(st%calc_eigenval) then
-          if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_ARPACK .and. eigens%es_type /= RS_PSD) then
+          if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_PSD) then
             call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           end if
         end if
