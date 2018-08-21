@@ -1,0 +1,17 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Octopus basics - Time-dependent propagation
+Program    : octopus
+TestGroups : short-run, tutorials
+Enabled    : Yes
+
+Input: 07-octopus_basics-time_dependent_propagation.01-gs.inp
+match ; Total Energy ; GREPFIELD(static/info, 'Total  ', 3) ; -218.78752286
+
+Input: 07-octopus_basics-time_dependent_propagation.02-td.inp
+
+Input: 07-octopus_basics-time_dependent_propagation.03-td_laser.inp
+
+
+
+

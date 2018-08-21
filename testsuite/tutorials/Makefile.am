@@ -38,7 +38,11 @@ dist_share_DATA =                                                             \
 	tAB.xyz                                                               \
 	06-octopus_basics-periodic_systems.test                               \
 	06-octopus_basics-periodic_systems.01-silicon.inp                     \
-	06-octopus_basics-periodic_systems.02-silicon_bandstructure.inp
+	06-octopus_basics-periodic_systems.02-silicon_bandstructure.inp       \
+	07-octopus_basics-time_dependent_propagation.test                     \
+	07-octopus_basics-time_dependent_propagation.01-gs.inp                \
+	07-octopus_basics-time_dependent_propagation.02-td.inp                \
+	07-octopus_basics-time_dependent_propagation.03-td_laser.inp
 
 
 CLEANFILES = *~ *.bak
