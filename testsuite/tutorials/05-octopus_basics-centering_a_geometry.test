@@ -1,0 +1,10 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Octopus basics - Centering a geometry
+Program    : octopus
+TestGroups : short-run, tutorials
+Enabled    : Yes
+
+ExtraFile  : tAB.xyz
+Util       : oct-center-geom
+Input: 05-octopus_basics-centering_a_geometry.01-tAB.inp

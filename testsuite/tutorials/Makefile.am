@@ -32,7 +32,10 @@ dist_share_DATA =                                                             \
 	03-octopus_basics-total_energy_convergence.01-methane.inp             \
 	04-octopus_basics-visualization.test                                  \
 	04-octopus_basics-visualization.01-benzene.inp                        \
-	benzene.xyz
+	benzene.xyz                                                           \
+	05-octopus_basics-centering_a_geometry.test                           \
+	05-octopus_basics-centering_a_geometry.01-tAB.inp                     \
+	tAB.xyz
 
 
 CLEANFILES = *~ *.bak
