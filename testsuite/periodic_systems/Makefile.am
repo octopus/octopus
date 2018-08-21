@@ -67,9 +67,11 @@ dist_share_DATA =                                \
 	13-primitive.test                        \
 	13-primitive.01-diamond.inp              \
 	13-primitive.02-graphene.inp             \
-	14-silicon_doubleshift.01-gs.inp         \
-	14-silicon_doubleshift.02-td.inp         \
-	14-silicon_doubleshift.test              \
+	14-silicon_shifts.01-gs.inp              \
+	14-silicon_shifts.02-td.inp              \
+	14-silicon_shifts.03-delayed_kick.inp    \
+	14-silicon_shifts.04-dielectric_function.inp \
+	14-silicon_shifts.test                   \
 	15-bandstructure.01-gs.inp               \
 	15-bandstructure.02-unocc.inp            \
 	15-bandstructure.test                    \
