@@ -579,6 +579,7 @@ contains
         ! apply phase correction when setting the BCs -> avoids unnecessary memory access
         ASSERT(lbound(phase_correction, 1) == 1)
         ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
+        !$omp parallel do private(ip, ip_bnd, ip_inn, ist)
         do ip = 1, boundaries%nper
           ip_bnd = boundaries%per_points(POINT_BOUNDARY, ip)
           ip_inn = boundaries%per_points(POINT_INNER, ip)
