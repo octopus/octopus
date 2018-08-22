@@ -373,10 +373,9 @@ contains
     call eigensolver_init(scf%eigens, gr, st)
 
     if(preconditioner_is_multigrid(scf%eigens%pre)) then
-      if(.not. associated(gr%mgrid)) then
-        SAFE_ALLOCATE(gr%mgrid)
-        call multigrid_init(gr%mgrid, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc)
-      end if
+      SAFE_ALLOCATE(gr%mgrid_prec)
+      call multigrid_init(gr%mgrid_prec, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc, &
+        used_for_preconditioner=.true.)
     end if
 
     !%Variable SCFinLCAO
