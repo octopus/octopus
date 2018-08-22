@@ -98,6 +98,8 @@ contains
   nullify(this%eorb_submesh)
   nullify(this%eorb_mesh)
 
+  call submesh_null(this%sphere)
+
   call orbitalset_init(this)
 
   POP_SUB(orbitalset_nullify)
