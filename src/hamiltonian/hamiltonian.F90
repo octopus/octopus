@@ -946,9 +946,9 @@ contains
             do ip = sp + 1, mesh%np_part
               !translate to a global point
               ip_global = ip
-  #ifdef HAVE_MPI
+#ifdef HAVE_MPI
               if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry)
-  #endif
+#endif
               ! get corresponding inner point
               ip_inner = mesh_periodic_point(mesh, ip_global)
               ! compute phase correction from global coordinate (opposite sign!)
