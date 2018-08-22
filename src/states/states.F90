@@ -563,7 +563,13 @@ contains
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
     st%occ      = M_ZERO
     ! allocate space for formula strings that define user-defined states
-    SAFE_ALLOCATE(st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik))
+    if(parse_is_defined('UserDefinedStates') .or. parse_is_defined('OCTInitialUserdefined') &
+         .or. parse_is_defined('OCTTargetUserdefined')) then
+      SAFE_ALLOCATE(st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik))
+      ! initially we mark all 'formulas' as undefined
+      st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik) = 'undefined'
+    end if
+
     if(st%d%ispin == SPINORS) then
       SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
     else
@@ -587,9 +593,6 @@ contains
     !%End
     call parse_variable('StatesRandomization', PAR_INDEPENDENT, st%randomization)
 
-
-    ! initially we mark all 'formulas' as undefined
-    st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik) = 'undefined'
 
     call states_read_initial_occs(st, excess_charge, gr%sb%kpoints)
     call states_read_initial_spins(st)
@@ -1389,9 +1392,19 @@ contains
     !%Option cholesky_parallel 2
     !% Cholesky decomposition implemented using
     !% ScaLAPACK. Compatible with states parallelization. (Obsolete synonym: <tt>par_gram_schmidt</tt>)
-    !%Option mgs 3
-    !% Modified Gram-Schmidt orthogonalization.
+    !%Option cgs 3
+    !% Classical Gram-Schmidt (CGS) orthogonalization.
     !% Can be used with domain parallelization but not state parallelization.
+    !% The algorithm is defined in Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005).
+    !%Option mgs 4
+    !% Modified Gram-Schmidt (MGS) orthogonalization.
+    !% Can be used with domain parallelization but not state parallelization.
+    !% The algorithm is defined in Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005).
+    !%Option drcgs 5
+    !% Classical Gram-Schmidt orthogonalization with double-step reorthogonalization.
+    !% Can be used with domain parallelization but not state parallelization.
+    !% The algorithm is taken from Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005). 
+    !% According to this reference, this is much more precise than CGS or MGS algorithms. The MGS version seems not to improve much the stability and would require more communications over the domains.
     !%End
 
     default = OPTION__STATESORTHOGONALIZATION__CHOLESKY_SERIAL
@@ -1748,8 +1761,8 @@ contains
               zpsi(1:mesh%np, 1) = zpsi(1:mesh%np, 1) - zmf_dotp(mesh, zpsi(:, 1), zpsi2)*zpsi2(1:mesh%np)
             end do
             SAFE_DEALLOCATE_A(zpsi2)
-
-            zpsi(1:mesh%np, 1) = zpsi(1:mesh%np, 1)/zmf_nrm2(mesh, zpsi(:, 1))
+            
+            call zmf_normalize(mesh, 1, zpsi)
             zpsi(1:mesh%np, 2) = zpsi(1:mesh%np, 1)
 
             alpha = TOCMPLX(sqrt(M_HALF + st%spin(3, ist, ik)), M_ZERO)
@@ -2068,10 +2081,11 @@ contains
   !> This function can calculate several quantities that depend on
   !! derivatives of the orbitals from the states and the density.
   !! The quantities to be calculated depend on the arguments passed.
-  subroutine states_calc_quantities(der, st, &
+  subroutine states_calc_quantities(der, st, nlcc, &
     kinetic_energy_density, paramagnetic_current, density_gradient, density_laplacian, gi_kinetic_energy_density)
     type(derivatives_t),     intent(in)    :: der
     type(states_t),          intent(in)    :: st
+    logical,                 intent(in)    :: nlcc
     FLOAT, optional, target, intent(out)   :: kinetic_energy_density(:,:)       !< The kinetic energy density.
     FLOAT, optional, target, intent(out)   :: paramagnetic_current(:,:,:)       !< The paramagnetic current.
     FLOAT, optional,         intent(out)   :: density_gradient(:,:,:)           !< The gradient of the density.
@@ -2263,10 +2277,7 @@ contains
       end do
     end do
 
-    SAFE_DEALLOCATE_A(wf_psi)
     SAFE_DEALLOCATE_A(wf_psi_conj)
-    SAFE_DEALLOCATE_A(gwf_psi)
-    SAFE_DEALLOCATE_A(lwf_psi)
     SAFE_DEALLOCATE_A(abs_wf_psi)
     SAFE_DEALLOCATE_A(abs_gwf_psi)
     SAFE_DEALLOCATE_A(psi_gpsi)
@@ -2316,6 +2327,37 @@ contains
       call symmetrizer_end(symmetrizer)
       SAFE_DEALLOCATE_A(symm) 
     end if
+
+
+    if(associated(st%rho_core) .and. nlcc .and. (present(density_laplacian) .or. present(density_gradient))) then
+       forall(ii=1:der%mesh%np)
+         wf_psi(ii, 1) = st%rho_core(ii)/st%d%spin_channels
+       end forall
+
+       call boundaries_set(der%boundaries, wf_psi(:, 1))
+
+       if(present(density_gradient)) then
+         ! calculate gradient of the NLCC
+         call zderivatives_grad(der, wf_psi(:,1), gwf_psi(:,:,1), set_bc = .false.)
+         do is = 1, st%d%spin_channels
+           density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) + gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim,1)
+         end do
+       end if
+
+       ! calculate the Laplacian of the wavefunction
+       if (present(density_laplacian)) then
+         call zderivatives_lapl(der, wf_psi(:,1), lwf_psi(:,1), set_bc = .false.)
+
+         do is = 1, st%d%spin_channels
+           density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is) + lwf_psi(1:der%mesh%np, 1)
+         end do
+      end if
+    end if
+
+    SAFE_DEALLOCATE_A(wf_psi)
+    SAFE_DEALLOCATE_A(gwf_psi)
+    SAFE_DEALLOCATE_A(lwf_psi)
+
 
     !We compute the gauge-invariant kinetic energy density
     if(present(gi_kinetic_energy_density) .and. st%d%ispin /= SPINORS) then

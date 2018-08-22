@@ -86,7 +86,7 @@
               end do
               
               ! normalize orbital
-              call zstates_normalize_orbital(gr%mesh, tg%st%d%dim, zpsi)
+              call zmf_normalize(gr%mesh, tg%st%d%dim, zpsi)
 
               call states_set_state(tg%st, gr%mesh, ist, ik, zpsi)
               

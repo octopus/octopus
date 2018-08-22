@@ -33,15 +33,12 @@
     type(base_potential_t),        pointer :: subsys_external
     type(base_hamiltonian_t),      pointer :: subsys_tnadd
     character(len=BASE_POTENTIAL_NAME_LEN) :: name
-
     FLOAT,         dimension(:),   pointer :: xpot
     FLOAT,         dimension(:,:), pointer :: tnadd_potential
     FLOAT, allocatable :: v0(:,:), nxc(:), potential(:)
     FLOAT, allocatable :: current_kpt(:, :)
     FLOAT, allocatable :: density_kpt(:), density_tmp(:,:)
     type(density_calc_t) :: dens_calc
-
-    FLOAT, allocatable :: current(:, :, :)
     FLOAT, allocatable :: gradvh(:, :)
 
     PUSH_SUB(output_hamiltonian)
