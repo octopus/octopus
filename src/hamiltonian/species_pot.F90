@@ -671,7 +671,7 @@ contains
     if(species_is_ps(species)) then
       ps => species_ps(species)
       rho_core_grad = M_ZERO
-      call periodic_copy_init(pp, mesh%sb, pos, range = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold))
+      call periodic_copy_init(pp, mesh%sb, pos, range = spline_cutoff_radius(ps%core_der, ps%projectors_sphere_threshold))
       do icell = 1, periodic_copy_num(pp)
         center(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
         do ip = 1, mesh%np
@@ -679,8 +679,8 @@ contains
           rr = max(rr, r_small)
 
           do idir = 1, mesh%sb%dim
-            if(rr >= spline_range_max(ps%core)) cycle
-              rho_core_grad(ip, idir) = rho_core_grad(ip, idir) - spline_eval(ps%core, rr)*(mesh%x(ip, idir)-center(idir))/rr
+            if(rr >= spline_range_max(ps%core_der)) cycle
+              rho_core_grad(ip, idir) = rho_core_grad(ip, idir) - spline_eval(ps%core_der, rr)*(mesh%x(ip, idir)-center(idir))/rr
           end do
         end do
       end do
