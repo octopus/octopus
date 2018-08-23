@@ -1470,7 +1470,7 @@ contains
     fn_unit = sqrt(units_out%length**(-mesh%sb%dim))
 
     if(.not.(has_phase .and. .not.this%basis%submeshforperiodic &
-                .and.simul_box_is_periodic(mesh%sb))) then
+           .and.simul_box_is_periodic(mesh%sb)).and. .not. this%basisfromstates) then
       if(states_are_real(st)) then
         SAFE_ALLOCATE(dtmp(1:mesh%np))
       else
@@ -1506,14 +1506,24 @@ contains
                call zio_function_output(outp%how, dir, fname, mesh, tmp, fn_unit, ierr, geo = geo)
               end if
             else
-              if (states_are_real(st)) then
-                dtmp = M_Z0
-                call submesh_add_to_mesh(os%sphere, os%dorb(1:os%sphere%np,idim,im), dtmp)
-                call dio_function_output(outp%how, dir, fname, mesh, dtmp, fn_unit, ierr, geo = geo)
+              if(this%basisfromstates) then
+                if (states_are_real(st)) then
+                  call dio_function_output(outp%how, dir, fname, mesh, &
+                      os%dorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
+                else
+                  call zio_function_output(outp%how, dir, fname, mesh, &
+                      os%zorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
+                end if
               else
-                tmp = M_Z0
-                call submesh_add_to_mesh(os%sphere, os%zorb(1:os%sphere%np,idim,im), tmp)
-                call zio_function_output(outp%how, dir, fname, mesh, tmp, fn_unit, ierr, geo = geo)
+                if (states_are_real(st)) then
+                  dtmp = M_Z0
+                  call submesh_add_to_mesh(os%sphere, os%dorb(1:os%sphere%np,idim,im), dtmp)
+                  call dio_function_output(outp%how, dir, fname, mesh, dtmp, fn_unit, ierr, geo = geo)
+                else
+                  tmp = M_Z0
+                  call submesh_add_to_mesh(os%sphere, os%zorb(1:os%sphere%np,idim,im), tmp)
+                  call zio_function_output(outp%how, dir, fname, mesh, tmp, fn_unit, ierr, geo = geo)
+                end if
               end if
             end if
           end do
@@ -1522,7 +1532,7 @@ contains
     end do
 
     if(.not.(has_phase .and. .not.this%basis%submeshforperiodic &
-               .and.simul_box_is_periodic(mesh%sb))) then
+               .and.simul_box_is_periodic(mesh%sb)).and. .not. this%basisfromstates) then
       SAFE_DEALLOCATE_A(tmp)
       SAFE_DEALLOCATE_A(dtmp)
     end if
