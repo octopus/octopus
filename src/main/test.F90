@@ -425,7 +425,6 @@ contains
     end if
 
     do itime = 1, param%repetitions
-      call batch_set_zero(hpsib)
       if(states_are_real(sys%st)) then
         call dhamiltonian_apply_batch(hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
       else

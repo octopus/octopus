@@ -432,7 +432,6 @@ contains
 
       !TODO: We can save memory here as we only need one array of size np_part and not 4
       SAFE_ALLOCATE(zpsi1(1:der%mesh%np_part, 1:hm%d%dim, 0:2))
-      zpsi1 = M_z0
       do j = te%exp_order - 1, 0, -1
         do idim = 1, hm%d%dim
           call lalg_copy(der%mesh%np, zpsi1(1:np, idim, 1), zpsi1(1:np, idim, 2))
@@ -556,7 +555,6 @@ contains
 
           v(1:der%mesh%np, 1:hm%d%dim, 1) = v(1:der%mesh%np, 1:hm%d%dim, 1)/beta
 
-          psi = M_z0
           ! This is the Lanczos loop...
           do iter = 1, te%exp_order
             !copy v(:, :, n) to an array of size 1:der%mesh%np_part
