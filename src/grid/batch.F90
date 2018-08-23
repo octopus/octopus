@@ -344,7 +344,7 @@ contains
     fill_zeros_ = optional_default(fill_zeros, .not. copy_data_)
 
     ! Make sure we do not request both to copy and fill with zero at the same time
-    ASSERT(copy_data_ .and. fill_zeros_)
+    ASSERT(.not. (copy_data_ .and. fill_zeros_))
 
     if(batch_type(bin) == TYPE_FLOAT) then
 
