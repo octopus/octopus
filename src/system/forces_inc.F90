@@ -184,8 +184,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl,
       minst = states_block_min(st, ib)
       maxst = states_block_max(st, ib)
 
-      call batch_copy(st%group%psib(ib, iq), psib)
-      call batch_copy_data(gr%mesh%np, st%group%psib(ib, iq), psib)
+      call batch_copy(st%group%psib(ib, iq), psib, copy_data = .true.)
 
       ! set the boundary conditions
       call boundaries_set(gr%der%boundaries, psib)

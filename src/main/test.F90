@@ -301,8 +301,7 @@ contains
     nullify(subsys_hm)
 
     SAFE_ALLOCATE(epsib)
-    call batch_copy(sys%st%group%psib(1, 1), epsib)
-    call batch_copy_data(sys%gr%mesh%np, sys%st%group%psib(1, 1), epsib)
+    call batch_copy(sys%st%group%psib(1, 1), epsib, copy_data = .true.)
 
     !Initialize the orbital basis
     call orbitalbasis_init(basis)
