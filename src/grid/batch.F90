@@ -332,23 +332,19 @@ contains
     !! The default is to do the same as bin.
 
     integer :: ii, np
-    logical :: pack_
-    logical :: set2zero
+    logical :: pack_, copy_data_, fill_zeros_
 
     PUSH_SUB(batch_copy)
 
     call batch_init_empty(bout, bin%dim, bin%nst)
 
-    set2zero = .true.
-    if(present(fill_zeros)) set2zero = fill_zeros
-    if(present(copy_data)) then
-      if(copy_data) then
-        if(present(fill_zeros))then
-          ASSERT(.not.set2zero)
-        end if
-        set2zero = .false.
-      end if
-    end if
+    copy_data_ = optional_default(copy_data, .false.)
+
+    ! There is no point in filling with zeros if later we overwrite them by copying
+    fill_zeros_ = optional_default(fill_zeros, .not. copy_data_)
+
+    ! Make sure we do not request both to copy and fill with zero at the same time
+    ASSERT(copy_data_ .and. fill_zeros_)
 
     if(batch_type(bin) == TYPE_FLOAT) then
 
@@ -357,7 +353,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%dpsi, dim = 1))
       end do
 
-      call dbatch_allocate(bout, 1, bin%nst, np, fill_zeros = set2zero)
+      call dbatch_allocate(bout, 1, bin%nst, np, fill_zeros = fill_zeros_)
 
     else if(batch_type(bin) == TYPE_CMPLX) then
       np = 0
@@ -365,7 +361,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%zpsi, dim = 1))
       end do
 
-      call zbatch_allocate(bout, 1, bin%nst, np, fill_zeros = set2zero)
+      call zbatch_allocate(bout, 1, bin%nst, np, fill_zeros = fill_zeros_)
 
     else if(batch_type(bin) == TYPE_FLOAT_SINGLE) then
 
@@ -374,7 +370,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%spsi, dim = 1))
       end do
 
-      call sbatch_allocate(bout, 1, bin%nst, np, fill_zeros = set2zero)
+      call sbatch_allocate(bout, 1, bin%nst, np, fill_zeros = fill_zeros_)
 
     else if(batch_type(bin) == TYPE_CMPLX_SINGLE) then
 
@@ -383,7 +379,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%cpsi, dim = 1))
       end do
 
-      call cbatch_allocate(bout, 1, bin%nst, np, fill_zeros = set2zero)
+      call cbatch_allocate(bout, 1, bin%nst, np, fill_zeros = fill_zeros_)
 
     end if
 
@@ -397,7 +393,7 @@ contains
 
     bout%ist_idim_index(1:bin%nst_linear, 1:bin%ndims) = bin%ist_idim_index(1:bin%nst_linear, 1:bin%ndims)
 
-    if(optional_default(copy_data, .false.)) call batch_copy_data(np, bin, bout)
+    if(copy_data_) call batch_copy_data(np, bin, bout)
     
     POP_SUB(batch_copy)
   end subroutine batch_copy
