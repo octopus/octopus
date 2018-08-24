@@ -65,10 +65,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   g0    = R_TOTYPE(M_ZERO)
   ppsi  = R_TOTYPE(M_ZERO)
 
-  do idim = 1, st%d%dim
-    cg(1:gr%mesh%np_part, idim) = R_TOTYPE(M_ZERO)
-  end do
-
   ! Set the diff to zero, since it is intent(out)
   if(present(diff)) diff(1:st%nst) = M_ZERO
 
