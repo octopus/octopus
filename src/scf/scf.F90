@@ -660,7 +660,7 @@ contains
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call batch_copy(st%group%psib(ib, iqn), psioutb(ib, iqn))
+          call batch_copy(st%group%psib(ib, iqn), psioutb(ib, iqn), fill_zeros = .false.)
         end do
       end do
       

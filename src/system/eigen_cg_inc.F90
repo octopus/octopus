@@ -82,7 +82,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
     call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik)
 
     if(fold_) then
-      psi2 = M_ZERO
       call X(hamiltonian_apply)(hm, gr%der, h_psi, psi2, ist, ik)
       ! h_psi = (H-shift)^2 psi 
       h_psi = psi2 - M_TWO*shift(ist,ik)*h_psi + shift(ist,ik)**2*psi
@@ -170,7 +169,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       call X(hamiltonian_apply)(hm, gr%der, cg, ppsi, ist, ik)
 
       if(fold_) then
-         psi2 = M_ZERO
          call X(hamiltonian_apply)(hm, gr%der, ppsi, psi2, ist, ik)
          ! h_psi = (H-shift)^2 psi
          ppsi = psi2 - M_TWO*shift(ist,ik)*ppsi + shift(ist,ik)**2*cg
@@ -231,7 +229,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
     ! if the folded operator was used, compute the actual eigenvalue
     if(fold_) then
-      h_psi = M_ZERO
       call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik)
       st%eigenval(ist, ik) = X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi, reduce = .true.)
       res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)

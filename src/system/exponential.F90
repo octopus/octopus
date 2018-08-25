@@ -556,7 +556,6 @@ contains
 
           v(1:der%mesh%np, 1:hm%d%dim, 1) = v(1:der%mesh%np, 1:hm%d%dim, 1)/beta
 
-          psi = M_z0
           ! This is the Lanczos loop...
           do iter = 1, te%exp_order
             !copy v(:, :, n) to an array of size 1:der%mesh%np_part

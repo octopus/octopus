@@ -301,8 +301,7 @@ contains
     nullify(subsys_hm)
 
     SAFE_ALLOCATE(epsib)
-    call batch_copy(sys%st%group%psib(1, 1), epsib)
-    call batch_copy_data(sys%gr%mesh%np, sys%st%group%psib(1, 1), epsib)
+    call batch_copy(sys%st%group%psib(1, 1), epsib, copy_data = .true.)
 
     !Initialize the orbital basis
     call orbitalbasis_init(basis)
@@ -425,7 +424,6 @@ contains
     end if
 
     do itime = 1, param%repetitions
-      call batch_set_zero(hpsib)
       if(states_are_real(sys%st)) then
         call dhamiltonian_apply_batch(hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
       else
