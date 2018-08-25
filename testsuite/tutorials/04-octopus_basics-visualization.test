@@ -7,3 +7,4 @@ Enabled    : Yes
 
 ExtraFile  : benzene.xyz
 Input: 04-octopus_basics-visualization.01-benzene.inp
+match ; Total Energy  ; GREPFIELD(static/info, 'Total  ', 3) ; -993.73671676

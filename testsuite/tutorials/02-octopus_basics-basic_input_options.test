@@ -8,8 +8,7 @@ Enabled    : Yes
 ExtraFile  : N.xyz
 Input: 02-octopus_basics-basic_input_options.01-N_atom.inp
 match ; Number of inner points ; GREPFIELD(out, 'inner mesh', 5) ; 89727
+match ; Grid cutoff            ; GREPFIELD(out, 'Grid Cutoff', 5) ; 1160.586810
 match ; Matrix vector products ; GREPFIELD(out, 'Matrix vector products', 4) ; 108
 match ; Converged eigenvectors ; GREPFIELD(out, 'Converged eigenvectors', 3) ; 0
-
-
-
+match ; Total Energy           ; GREPFIELD(static/info, 'Total  ', 3) ; -262.19591792

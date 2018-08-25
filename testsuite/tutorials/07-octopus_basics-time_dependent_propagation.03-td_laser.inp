@@ -13,7 +13,7 @@ CH = 1.097*angstrom
   "H" | -CH/sqrt(3) | CH/sqrt(3) | -CH/sqrt(3)
 %
 
-## NOTE: The total propagation time has been changed from the tutorial to make the run faster ##
+## NOTE: The total propagation time has been changed from 1.0/eV, the value used in the tutorial, to 0.1/eV so that it runs faster ##
 Tf  = 0.1/eV
 dt = 0.002/eV
 
