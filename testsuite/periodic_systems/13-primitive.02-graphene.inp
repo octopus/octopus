@@ -4,9 +4,6 @@ FromScratch = yes
 
 PeriodicDimensions = 2
 
-ParKpoints = auto
-
-
 BoxShape = parallelepiped
 a = 4.65099393883
 
