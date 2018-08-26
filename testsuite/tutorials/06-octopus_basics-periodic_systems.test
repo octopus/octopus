@@ -14,7 +14,7 @@ match ; Total Energy             ; GREPFIELD(static/info, 'Total  ', 3) ; -7.928
 Input: 06-octopus_basics-periodic_systems.02-silicon_converged.inp
 match ; Total Energy             ; GREPFIELD(static/info, 'Total  ', 3) ; -7.93462084
 
-Input: 06-octopus_basics-periodic_systems.03-silicon_bandstructure.inp
+Input: 06-octopus_basics-periodic_systems.03-bandstructure.inp
 match ; k-point 1  - coord. ; LINEFIELD(static/bandstructure,  2,  1) ;  0.00000000
 match ; k-point 1  - kx     ; LINEFIELD(static/bandstructure,  2,  2) ;  0.50000000
 match ; k-point 1  - ky     ; LINEFIELD(static/bandstructure,  2,  3) ;  0.00000000

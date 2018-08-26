@@ -24,7 +24,7 @@ dist_share_DATA =                                                             \
 	01-octopus_basics-getting_started.test                                \
 	01-octopus_basics-getting_started.01-H_atom.inp                       \
 	01-octopus_basics-getting_started.02-H_atom_spin.inp                  \
-	01-octopus_basics-getting_started.03-H_atom_independent_particles.inp \
+	01-octopus_basics-getting_started.03-H_atom_independent.inp \
 	02-octopus_basics-basic_input_options.test                            \
 	02-octopus_basics-basic_input_options.01-N_atom.inp                   \
 	N.xyz                                                                 \
@@ -40,7 +40,7 @@ dist_share_DATA =                                                             \
 	06-octopus_basics-periodic_systems.test                               \
 	06-octopus_basics-periodic_systems.01-silicon.inp                     \
 	06-octopus_basics-periodic_systems.02-silicon_converged.inp           \
-	06-octopus_basics-periodic_systems.03-silicon_bandstructure.inp       \
+	06-octopus_basics-periodic_systems.03-bandstructure.inp       \
 	07-octopus_basics-time_dependent_propagation.test                     \
 	07-octopus_basics-time_dependent_propagation.01-gs.inp                \
 	07-octopus_basics-time_dependent_propagation.02-td.inp                \
