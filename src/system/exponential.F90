@@ -683,6 +683,7 @@ contains
       integer :: st_start, st_end
       type(batch_t) :: psi1b, hpsi1b
       type(profile_t), save :: prof
+      logical :: unpack_at_end
 
       PUSH_SUB(exponential_apply_batch.taylor_series_batch)
       call profiling_in(prof, "EXP_TAYLOR_BATCH")
@@ -701,6 +702,8 @@ contains
       call batch_init(hpsi1b, hm%d%dim, st_start, st_end, hpsi1)
 
       if(hamiltonian_apply_packed(hm, der%mesh)) then
+        ! unpack at end only if the status on entry is unpacked
+        unpack_at_end = batch_status(psib) == BATCH_NOT_PACKED
         call batch_pack(psib)
         if(present(psib2)) call batch_pack(psib2, copy = .false.)
         call batch_pack(psi1b, copy = .false.)
@@ -739,7 +742,7 @@ contains
 
       end do
 
-      if(hamiltonian_apply_packed(hm, der%mesh)) then
+      if(hamiltonian_apply_packed(hm, der%mesh) .and. unpack_at_end) then
         call batch_unpack(psi1b, copy = .false.)
         call batch_unpack(hpsi1b, copy = .false.)
         if(present(psib2)) call batch_unpack(psib2)
