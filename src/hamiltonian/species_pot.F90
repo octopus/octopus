@@ -680,12 +680,11 @@ contains
 
   ! ---------------------------------------------------------
   !> used when the density is not available, or otherwise the Poisson eqn would be used instead
-  subroutine species_get_local(species, mesh, x_atom, vl, Imvl)
+  subroutine species_get_local(species, mesh, x_atom, vl)
     type(species_t), target, intent(in)  :: species
     type(mesh_t),            intent(in)  :: mesh
     FLOAT,                   intent(in)  :: x_atom(:)
     FLOAT,                   intent(out) :: vl(:)
-    FLOAT,         optional, intent(out) :: Imvl(:) !< cmplxscl: imaginary part of the potential
 
     FLOAT :: a1, a2, Rb2 ! for jellium
     FLOAT :: xx(MAX_DIM), r, r2
@@ -723,9 +722,6 @@ contains
           r = units_from_atomic(units_inp%length, r)
           zpot = species_userdef_pot(species, mesh%sb%dim, xx, r)
           vl(ip)   = units_to_atomic(units_inp%energy, real(zpot))
-          if(present(Imvl)) then!cmplxscl
-            Imvl(ip) = units_to_atomic(units_inp%energy, aimag(zpot))            
-          end if
 
         end do
 

@@ -108,13 +108,6 @@ module v_ks_oct_m
     FLOAT,                pointer :: a_ind(:, :)
     FLOAT,                pointer :: b_ind(:, :)
     logical                       :: calc_energy
-    !cmplxscl
-    FLOAT,                pointer :: Imdensity(:, :)
-    FLOAT,                pointer :: Imtotal_density(:)
-    FLOAT,                pointer :: Imvxc(:, :)
-    FLOAT,                pointer :: Imvtau(:, :)
-    FLOAT,                pointer :: Imaxc(:, :, :)
-    FLOAT,                pointer :: Imvberry(:, :)
 
     FLOAT, allocatable :: vdw_forces(:, :)
     type(geometry_t), pointer :: geo
@@ -728,16 +721,13 @@ contains
     ks%calc%calc_energy = optional_default(calc_energy, .true.)
 
     nullify(ks%calc%vberry)
-    nullify(ks%calc%Imvberry) !cmplxscl
     if(associated(hm%vberry)) then
       SAFE_ALLOCATE(ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin))
-      SAFE_ALLOCATE(ks%calc%Imvberry(1:ks%gr%mesh%np, 1:hm%d%nspin)) !cmplxscl
       if(optional_default(calc_berry, .true.)) then
         call berry_potential(st, ks%gr%mesh, hm%ep%E_field, ks%calc%vberry)
       else
         ! before wfns are initialized, cannot calculate this term
         ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = M_ZERO
-        ks%calc%Imvberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = M_ZERO !cmplxscl
       end if
     end if
 

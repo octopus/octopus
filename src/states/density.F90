@@ -131,11 +131,10 @@ contains
 
   ! ---------------------------------------------------
 
-  subroutine density_calc_accumulate(this, ik, psib, psibL)
+  subroutine density_calc_accumulate(this, ik, psib)
     type(density_calc_t),         intent(inout) :: this
     integer,                      intent(in)    :: ik
     type(batch_t),                intent(inout) :: psib
-    type(batch_t), optional,      intent(inout) :: psibL !< Left states
 
     integer :: ist, ip, ispin
     FLOAT   :: nrm
@@ -143,7 +142,6 @@ contains
     CMPLX, allocatable :: psi(:), fpsi(:)
     FLOAT, allocatable :: weight(:), sqpsi(:)
     type(profile_t), save :: prof
-    logical :: cmplxscl
     integer            :: wgsize
     type(accel_mem_t) :: buff_weight
     type(accel_kernel_t), pointer :: kernel
@@ -151,8 +149,6 @@ contains
     PUSH_SUB(density_calc_accumulate)
     call profiling_in(prof, "CALC_DENSITY")
 
-    cmplxscl = associated(this%Imdensity)
-    
     ispin = states_dim_get_spin_index(this%st%d, ik)
 
     SAFE_ALLOCATE(weight(1:psib%nst))
@@ -169,23 +165,12 @@ contains
             end forall
           end do
         else
-          if(cmplxscl) then
-            do ist = 1, psib%nst
-              forall(ip = 1:this%gr%mesh%np)
-                this%density(ip, ispin) = this%density(ip, ispin) + &
-                  weight(ist)*real(psibL%states(ist)%zpsi(ip, 1)*psib%states(ist)%zpsi(ip, 1))
-                this%Imdensity(ip, ispin) = this%Imdensity(ip, ispin) + &
-                  weight(ist)*aimag(psibL%states(ist)%zpsi(ip, 1)*psib%states(ist)%zpsi(ip, 1))
-              end forall
-            end do
-          else
-            do ist = 1, psib%nst
-              forall(ip = 1:this%gr%mesh%np)
-                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                  (real(psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)**2 + aimag(psib%states(ist)%zpsi(ip, 1))**2)
-              end forall
-            end do
-          end if
+          do ist = 1, psib%nst
+            forall(ip = 1:this%gr%mesh%np)
+              this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
+                (real(psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)**2 + aimag(psib%states(ist)%zpsi(ip, 1))**2)
+            end forall
+          end do
         end if
       case(BATCH_PACKED)
         if(states_are_real(this%st)) then
@@ -195,23 +180,12 @@ contains
             end do
           end do
         else
-          if(cmplxscl) then
-            do ip = 1, this%gr%mesh%np
-              do ist = 1, psib%nst
-                this%density(ip, ispin) = this%density(ip, ispin) + &
-                  weight(ist)*real(psibL%pack%zpsi(ist, ip)*psib%pack%zpsi(ist, ip))
-                this%Imdensity(ip, ispin) = this%Imdensity(ip, ispin) + &
-                  weight(ist)*aimag(psibL%pack%zpsi(ist, ip)*psib%pack%zpsi(ist, ip))
-              end do
+          do ip = 1, this%gr%mesh%np
+            do ist = 1, psib%nst
+              this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
+                (real(psib%pack%zpsi(ist, ip), REAL_PRECISION)**2 + aimag(psib%pack%zpsi(ist, ip))**2)
             end do
-          else  
-            do ip = 1, this%gr%mesh%np
-              do ist = 1, psib%nst
-                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                  (real(psib%pack%zpsi(ist, ip), REAL_PRECISION)**2 + aimag(psib%pack%zpsi(ist, ip))**2)
-              end do
-            end do
-          end if
+          end do
         end if
       case(BATCH_CL_PACKED)
         if(.not. this%packed) call density_calc_pack(this)
@@ -244,8 +218,6 @@ contains
       end select
 
     else if(this%gr%have_fine_mesh) then
-
-      ASSERT(.not. cmplxscl)
 
       SAFE_ALLOCATE(psi(1:this%gr%mesh%np_part))
       SAFE_ALLOCATE(fpsi(1:this%gr%fine%mesh%np))

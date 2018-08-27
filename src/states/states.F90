@@ -492,6 +492,7 @@ contains
     conf%target_states_block_size = st%d%block_size
 
     SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
+    st%eigenval = huge(st%eigenval)
 
     ! Periodic systems require complex wavefunctions
     ! but not if it is Gamma-point only

@@ -74,8 +74,8 @@ contains
     type(base_hamiltonian_t), pointer :: subsys_tnadd
     type(base_potential_t),   pointer :: subsys_external
     FLOAT                             :: tnadd_energy, external_energy
-    logical :: full_, cmplxscl
-    FLOAT :: evxctau, Imevxctau
+    logical :: full_
+    FLOAT :: evxctau
     CMPLX :: etmp
 
     PUSH_SUB(energy_calc_total)
@@ -87,7 +87,6 @@ contains
 
     etmp = M_z0
     evxctau = M_ZERO
-    Imevxctau = M_ZERO
     if((full_.or.hm%theory_level==HARTREE.or.hm%theory_level==HARTREE_FOCK) & 
       .and.(hm%theory_level /= CLASSICAL)) then
       if(states_are_real(st)) then
