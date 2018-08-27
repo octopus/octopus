@@ -606,7 +606,7 @@ contains
       maxiter = eigens%es_maxiter
 
       if(st%calc_eigenval) then
-        if(eigens%es_type == RS_RMMDIIS .or. eigens%es_type /= RS_PSD &
+        if(eigens%es_type == RS_RMMDIIS .or. eigens%es_type == RS_PSD &
           .or. (eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES)) then
           
           if (states_are_real(st)) then
