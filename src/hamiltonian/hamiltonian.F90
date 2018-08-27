@@ -1073,7 +1073,6 @@ contains
     SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:gr%sb%dim, 1:dim))
     SAFE_ALLOCATE(dvlocalpsi(1:gr%mesh%np_part, 1:gr%sb%dim, 1:dim))
 
-    vlocalpsi = M_ZERO
     dpsi = M_z0
     dvlocalpsi = M_z0
 

@@ -20,7 +20,7 @@
 
 include $(srcdir)/../common-rules.make
 
-bin_PROGRAMS = octopus octopus_mpi
+bin_PROGRAMS = octopus
 
 octopus_SOURCES =                       \
 	invert_ks.F90                   \
@@ -40,13 +40,7 @@ octopus_LDADD = $(all_LIBS)
 noinst_HEADERS = \
 	casida_inc.F90
 
-octopus_mpi_SOURCES = octopus_mpi.F90
-
-octopus_mpi_LDADD = \
-	$(top_builddir)/src/basic/libbasic.a \
-	$(other_LIBS)
-
-CLEANFILES += octopus oct-test
+CLEANFILES += octopus
 
 # debug files from MacOS gcc with -g
 clean-local :

@@ -920,6 +920,7 @@ contains
 
     integer :: npoints, i
     real(8), allocatable :: x(:), y(:)
+    FLOAT :: exp_arg
 
     PUSH_SUB(spline_cut)
 
@@ -934,7 +935,14 @@ contains
       if(x(i)<cutoff) then
         exit
       end if
-      y(i) = y(i) * exp(-beta*(x(i)/cutoff - CNST(1.0))**2)
+
+      !To avoid underflows
+      exp_arg = -beta*(x(i)/cutoff - CNST(1.0))**2 
+      if( exp_arg > CNST(-100)) then
+        y(i) = y(i) * exp(exp_arg)
+      else
+        y(i) = M_ZERO
+      end if 
     end do
     call spline_fit(npoints, x, y, spl)
 
