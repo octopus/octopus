@@ -28,6 +28,7 @@ module propagator_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
+  use lda_u_oct_m
   use loct_pointer_oct_m
   use parser_oct_m
   use mesh_function_oct_m
@@ -607,7 +608,7 @@ contains
       if(generate) call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
-      if(iand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+      if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
         call forces_calculate(gr, geo, hm, st, abs(nt*dt), dt)
       end if
     end if
@@ -616,6 +617,9 @@ contains
       call gauge_field_get_force(hm%ep%gfield, gr, st)
       call gauge_field_propagate_vel(hm%ep%gfield, dt)
     end if
+
+    !We update the occupation matrices
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
 
     POP_SUB(propagator_dt)
     call profiling_out(prof)
@@ -676,6 +680,11 @@ contains
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_propagate(hm%ep%gfield, dt, iter*dt)
+    end if
+
+    !TODO: we should update the occupation matrices here 
+    if(hm%lda_u_level /= DFT_U_NONE) then
+      call messages_not_implemented("DFT+U with propagator_dt_bo")  
     end if
 
     call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)

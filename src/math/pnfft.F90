@@ -400,7 +400,7 @@ contains
 
     PUSH_SUB(pnfft_set_sp_nodes)
  
-    eps = 1.25 ! the sample nodes must be in [0.5,0.5)
+    eps = CNST(1.25) ! the sample nodes must be in [0.5,0.5)
   
     lo = pnfft%lower_border
     up = pnfft%upper_border

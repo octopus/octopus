@@ -394,7 +394,7 @@ contains
           xx = eigenvalues(ist, ik) - this%e_fermi
           if(xx < M_ZERO) then
             occupations(ist, ik) = this%el_per_state
-          else if(xx == M_ZERO .and. ifermi < this%fermi_count) then
+          else if(abs(xx) <= M_EPSILON .and. ifermi < this%fermi_count) then
             occupations(ist, ik) = this%ef_occ * this%el_per_state
             ifermi = ifermi + 1
           else
@@ -485,7 +485,7 @@ contains
       call messages_fatal(1)
 
     case(SMEAR_SEMICONDUCTOR)
-      if(xx == M_ZERO) &
+      if(abs(xx) <= M_EPSILON) &
         deltaf = this%ef_occ
 
     case(SMEAR_FERMI_DIRAC)
@@ -546,7 +546,7 @@ contains
     case(SMEAR_SEMICONDUCTOR)
       if(xx > M_ZERO) then
         stepf = M_ONE
-      else if(xx == M_ZERO) then
+      else if(abs(xx) <= M_EPSILON) then
         stepf = this%ef_occ
       end if
 
@@ -619,7 +619,7 @@ contains
     case(SMEAR_SEMICONDUCTOR)
 
     case(SMEAR_FERMI_DIRAC)
-      if(abs(xx) <= 36.0) then
+      if(abs(xx) <= CNST(36.0)) then
         xp = M_ONE / (M_ONE + exp(-xx))
         entropyf = xp * log(xp) + (M_ONE - xp) * log(M_ONE - xp)
       end if

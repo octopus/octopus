@@ -15,7 +15,6 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 !!
-!! $Id$
 
 #include "global.h"
 
@@ -23,6 +22,7 @@ module orbitalset_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use blas_oct_m
+  use comm_oct_m
   use distributed_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -56,7 +56,8 @@ module orbitalset_oct_m
        dorbitalset_add_to_batch,       &
        zorbitalset_add_to_batch,       &
        dorbitalset_add_to_psi,         &
-       zorbitalset_add_to_psi
+       zorbitalset_add_to_psi,         &
+       orbitalset_set_jln
 
   type orbitalset_t
     integer             :: nn, ll, ii
@@ -69,11 +70,9 @@ module orbitalset_oct_m
                                               !> if the sphere cross the border of the box
     FLOAT               :: Ueff               !> The effective U of the simplified rotational invariant form
     FLOAT               :: Ubar, Jbar
+    FLOAT               :: alpha              !> A potential used to constrained occupations, as defined in PRB 71, 035105 (2005)
     FLOAT               :: radius
     type(species_t), pointer :: spec          
-
-    FLOAT, pointer      :: dS(:,:,:)             !> Overlap matrix for each orbital with similar orbital on other atomic sites    
-    CMPLX, pointer      :: zS(:,:,:)
 
     FLOAT, pointer      :: dorb(:,:,:) !> The orbital, if real, on the submesh
     CMPLX, pointer      :: zorb(:,:,:) !> The orbital, if complex, on the submesh
@@ -93,13 +92,15 @@ contains
   PUSH_SUB(orbitalset_nullify)
 
   nullify(this%phase)
-  nullify(this%dS)
-  nullify(this%zS)
   nullify(this%spec)
   nullify(this%dorb)
   nullify(this%zorb)
   nullify(this%eorb_submesh)
   nullify(this%eorb_mesh)
+
+  call submesh_null(this%sphere)
+
+  call orbitalset_init(this)
 
   POP_SUB(orbitalset_nullify)
 
@@ -110,19 +111,29 @@ contains
 
   PUSH_SUB(orbitalset_init)
 
+  this%nn = 0
+  this%ll = 0
+  this%jj = M_ONE
+  this%ii = 0
+  this%iatom = 0
+  this%ndim = 1
+ 
+  this%Ueff = M_ZERO
+  this%Ubar = M_ZERO
+  this%Jbar = M_ZERO
+  this%alpha = M_ZERO
+  this%radius = M_ZERO
+
   POP_SUB(orbitalset_init)
  end subroutine orbitalset_init
 
 
  subroutine orbitalset_end(this)
-   implicit none
    type(orbitalset_t), intent(inout) :: this
 
    PUSH_SUB(orbitalset_end)  
 
    SAFE_DEALLOCATE_P(this%phase)
-   SAFE_DEALLOCATE_P(this%dS)
-   SAFE_DEALLOCATE_P(this%zS)
    SAFE_DEALLOCATE_P(this%dorb)
    SAFE_DEALLOCATE_P(this%zorb)
    SAFE_DEALLOCATE_P(this%eorb_submesh)
@@ -132,6 +143,21 @@ contains
    
    POP_SUB(orbitalset_end)
  end subroutine orbitalset_end
+
+ subroutine orbitalset_set_jln(this, jj, ll, nn)
+   type(orbitalset_t), intent(inout) :: this
+   FLOAT,              intent(in)    :: jj
+   integer,            intent(in)    :: ll, nn
+
+   PUSH_SUB(orbitalset_set_jln)
+
+   this%jj = jj
+   this%ll = ll
+   this%nn = nn
+
+   POP_SUB(orbitalset_set_jln)
+ end subroutine orbitalset_set_jln
+
 
   !> Build the phase correction to the global phase in case the orbital crosses the border of the simulaton box
   subroutine orbitalset_update_phase(os, sb, kpt, spin_polarized, vec_pot, vec_pot_var)
@@ -143,7 +169,7 @@ contains
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
     integer :: ns, iq, is, ikpoint, im, idim
-    FLOAT   :: kr, kpoint(1:MAX_DIM)
+    FLOAT   :: kr, kpoint(1:MAX_DIM), dx(1:MAX_DIM)
     integer :: ndim
 
     PUSH_SUB(orbitalset_update_phase)
@@ -168,11 +194,10 @@ contains
       do is = 1, ns
         ! this is only the correction to the global phase, that can
         ! appear if the sphere crossed the boundary of the cell.
-        kr = sum(kpoint(1:ndim)*(os%sphere%x(is, 1:ndim) - os%sphere%mesh%x(os%sphere%map(is), 1:ndim)))
-
+        dx(1:ndim) = os%sphere%x(is, 1:ndim) - os%sphere%mesh%x(os%sphere%map(is), 1:ndim)
+        kr = sum(kpoint(1:ndim)*dx(1:ndim))
         if(present(vec_pot)) then
-          if(allocated(vec_pot)) kr = kr + &
-            sum(vec_pot(1:ndim)*(os%sphere%x(is, 1:ndim)- os%sphere%mesh%x(os%sphere%map(is), 1:ndim)))
+          if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*dx(1:ndim))
         end if
 
         if(present(vec_pot_var)) then

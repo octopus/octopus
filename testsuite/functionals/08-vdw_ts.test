@@ -2,7 +2,7 @@
 
 Test       : Tkatchenko-Scheffler van der Waals correction
 Program    : octopus
-TestGroups : short-run, functionals
+TestGroups : long-run, functionals
 Enabled    : Yes
 
 Input      : 08-vdw_ts.01-gs.inp

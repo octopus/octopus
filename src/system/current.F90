@@ -32,6 +32,7 @@ module current_oct_m
   use io_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
+  use lda_u_oct_m
   use logrid_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -176,7 +177,7 @@ contains
         do ib = st%group%block_start, st%group%block_end
 
           call batch_pack(st%group%psib(ib, ik), copy = .true.)
-          call batch_copy(st%group%psib(ib, ik), epsib)
+          call batch_copy(st%group%psib(ib, ik), epsib, fill_zeros = .false.)
           call boundaries_set(der%boundaries, st%group%psib(ib, ik))
           
           if(associated(hm%hm_base%phase)) then
@@ -253,7 +254,7 @@ contains
 
           call batch_pack(st%group%psib(ib, ik), copy = .true.)
 
-          call batch_copy(st%group%psib(ib, ik), hpsib)
+          call batch_copy(st%group%psib(ib, ik), hpsib, fill_zeros = .false.)
           call batch_copy(st%group%psib(ib, ik), rhpsib)
           call batch_copy(st%group%psib(ib, ik), rpsib)
           call batch_copy(st%group%psib(ib, ik), hrpsib)
@@ -356,6 +357,11 @@ contains
             if(hm%scissor%apply) then
               call scissor_commute_r(hm%scissor, der%mesh, ik, psi, gpsi)
             end if
+            
+            if(hm%lda_u_level /= DFT_U_NONE) then
+              call zlda_u_commute_r(hm%lda_u, der%mesh, st%d, ik, ist, psi, gpsi, &
+                              associated(hm%hm_base%phase))
+            end if
 
           end if
 
@@ -418,8 +424,8 @@ contains
       SAFE_ALLOCATE(symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim))
       call symmetrizer_init(symmetrizer, der%mesh)
       do ispin = 1, st%d%nspin
-        call dsymmetrizer_apply(symmetrizer, field_vector = current(:, :, ispin), symmfield_vector = symmcurrent, &
-          suppress_warning = .true.)
+        call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = current(:, :, ispin), &
+          symmfield_vector = symmcurrent, suppress_warning = .true.)
         current(1:der%mesh%np, 1:der%mesh%sb%dim, ispin) = symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim)
       end do
       call symmetrizer_end(symmetrizer)

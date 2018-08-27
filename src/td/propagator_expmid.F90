@@ -27,6 +27,7 @@ module propagator_expmid_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
+  use lda_u_oct_m
   use math_oct_m
   use messages_oct_m
   use potential_interpolation_oct_m
@@ -102,7 +103,9 @@ contains
         call gauge_field_propagate(hm%ep%gfield, M_HALF*dt,time)
       end if
 
-      call hamiltonian_update(hm, gr%mesh, time = real(zt - zdt/M_z2, REAL_PRECISION), Imtime = aimag(zt - zdt/M_z2  ))
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = real(zt - zdt/M_z2, REAL_PRECISION), Imtime = aimag(zt - zdt/M_z2  ))
+      !We update the occupation matrices
+      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
@@ -135,7 +138,9 @@ contains
         call gauge_field_get_vec_pot_vel(hm%ep%gfield, vecpot_vel)
         call gauge_field_propagate(hm%ep%gfield, M_HALF*dt, time)
       end if
-      call hamiltonian_update(hm, gr%mesh, time = time - M_HALF*dt)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - M_HALF*dt)
+      !We update the occupation matrices
+      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
 
@@ -158,7 +163,9 @@ contains
             time, dt, time+dt/M_TWO, hm%vhxc, hm%imvhxc)
         end if
 
-        call hamiltonian_update(hm, gr%mesh, time = real(zt + zdt/M_z2, REAL_PRECISION), Imtime = aimag(zt + zdt/M_z2  ))
+        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = real(zt + zdt/M_z2, REAL_PRECISION), Imtime = aimag(zt + zdt/M_z2  ))
+        !We update the occupation matrices
+        call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
         do ik = st%d%kpt%start, st%d%kpt%end
           do ib = st%group%block_start, st%group%block_end
@@ -178,7 +185,9 @@ contains
             tr%vksold%Imv_old(:, :, 0:2), time + dt/M_TWO, hm%Imvhxc(:, :))
         end if
 
-        call hamiltonian_update(hm, gr%mesh, time = time + M_HALF*dt)
+        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time + M_HALF*dt)
+        !We update the occupation matrices
+        call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
         do ik = st%d%kpt%start, st%d%kpt%end
           do ib = st%group%block_start, st%group%block_end
@@ -191,12 +200,14 @@ contains
     end if
 
     !restore to time 'time - dt'
-    if(move_ions .and. ion_dynamics_ions_move(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
+    if(move_ions .and. ion_dynamics_ions_move(ions)) then
+      call ion_dynamics_restore_state(ions, geo, ions_state)
+    end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_set_vec_pot(hm%ep%gfield, vecpot)
       call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)
-      call hamiltonian_update(hm, gr%mesh)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     end if
 
     if(.not. hm%cmplxscl%space) then
