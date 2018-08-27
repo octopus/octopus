@@ -37,11 +37,12 @@ program dielectric_function
 
   implicit none
 
-  integer :: in_file, out_file, ii, jj, kk, idir, jdir, ierr
-  integer :: time_steps, energy_steps, istart, iend, ntiter
-  FLOAT   :: dt, tt, ww, n0
+  integer :: in_file, out_file, ref_file, ii, jj, kk, idir, jdir, ierr
+  integer :: time_steps, time_steps_ref, energy_steps, istart, iend, ntiter
+  FLOAT   :: dt, dt_ref, tt, ww, n0
   FLOAT, allocatable :: vecpot(:, :), vecpot0(:), ftreal(:, :), ftimag(:, :)
   CMPLX, allocatable :: dielectric(:, :), chi(:, :), invdielectric(:, :), fullmat(:, :)
+  FLOAT, allocatable :: vecpot_ref(:, :)
   type(spectrum_t)  :: spectrum
   type(block_t)     :: blk
   type(space_t)     :: space
@@ -49,6 +50,8 @@ program dielectric_function
   type(simul_box_t) :: sb
   type(batch_t)     :: vecpotb, ftrealb, ftimagb
   character(len=120) :: header
+  FLOAT :: start_time
+  character(len=MAX_PATH_LEN) :: ref_filename
 
   ! Initialize stuff
   call global_init(is_serial = .true.)
@@ -94,6 +97,9 @@ program dielectric_function
   message(4) = "susceptibility will be wrong."
   call messages_warning(4)
 
+  start_time = spectrum%start_time
+  call parse_variable('GaugeFieldDelay', start_time, spectrum%start_time )
+
   in_file = io_open('td.general/gauge_field', action='read', status='old', die=.false.)
   if(in_file < 0) then 
     message(1) = "Cannot open file '"//trim(io_workpath('td.general/gauge_field'))//"'"
@@ -101,6 +107,40 @@ program dielectric_function
   end if
   call io_skip_header(in_file)
   call spectrum_count_time_steps(in_file, time_steps, dt)
+
+  if(parse_is_defined('GaugeFieldDelay')) then
+    !%Variable TransientAbsorptionReference
+    !%Type string
+    !%Default "."
+    !%Section Utilities::oct-propagation_spectrum
+    !%Description
+    !% In case of delayed kick, the calculation of the transient absorption requires 
+    !% to substract a reference calculation, containing the gauge-field without the kick
+    !% This reference must be computed using GaugeFieldPropagate=yes and to have
+    !% TDOutput = gauge_field.
+    !% This variables defined the directory in which the reference gauge_field field is,
+    !% relative to the current folder
+    !%End
+
+    call parse_variable('TransientAbsorptionReference', '.', ref_filename)
+    ref_file = io_open(trim(ref_filename)//'/gauge_field', action='read', status='old', die=.false.)
+    if(ref_file < 0) then
+      message(1) = "Cannot open reference file '"//trim(io_workpath(ref_filename//'/gauge_field'))//"'"
+      call messages_fatal(1)
+    end if
+    call io_skip_header(ref_file)
+    call spectrum_count_time_steps(ref_file, time_steps_ref, dt_ref)
+    if(time_steps_ref < time_steps) then
+      message(1) = "The reference calculation does not contain enought time steps"
+      call messages_fatal(1)
+    end if
+ 
+    if(dt_ref /= dt) then
+      message(1) = "The time step of the reference calculation is different from the current calculation"
+      call messages_fatal(1)
+    end if
+
+  end if
   
   time_steps = time_steps + 1
 
@@ -113,6 +153,22 @@ program dielectric_function
   end do
 
   call io_close(in_file)
+
+  !We remove the reference
+  if(parse_is_defined('GaugeFieldDelay')) then
+    time_steps_ref = time_steps_ref + 1
+    SAFE_ALLOCATE(vecpot_ref(1:time_steps_ref, space%dim*3))
+    call io_skip_header(ref_file)
+    do ii = 1, time_steps_ref
+      read(ref_file, *) jj, tt, (vecpot_ref(ii, kk), kk = 1, space%dim*3)
+    end do
+    call io_close(ref_file)
+    do ii = 1, time_steps
+      do kk = 1, space%dim*3
+        vecpot(ii, kk) = vecpot(ii, kk) - vecpot_ref(ii, kk)
+      end do
+    end do
+  end if
 
   write(message(1), '(a, i7, a)') "Info: Read ", time_steps, " steps from file '"// &
     trim(io_workpath('td.general/gauge_field'))//"'"
@@ -228,6 +284,7 @@ program dielectric_function
   SAFE_DEALLOCATE_A(invdielectric)
   SAFE_DEALLOCATE_A(chi)
   SAFE_DEALLOCATE_A(vecpot)
+  SAFE_DEALLOCATE_A(vecpot_ref)
   SAFE_DEALLOCATE_A(vecpot0)
   SAFE_DEALLOCATE_A(ftreal)
   SAFE_DEALLOCATE_A(ftimag)

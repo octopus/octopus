@@ -290,13 +290,16 @@ contains
 
     !%Variable PropagationSpectrumDampFactor
     !%Type float
-    !%Default 0.15 au
+    !%Default -1.0
     !%Section Utilities::oct-propagation_spectrum
     !%Description
-    !% If <tt>PropagationSpectrumDampMode = exponential</tt>, the damping parameter of the exponential
+    !% If <tt>PropagationSpectrumDampMode = exponential, gaussian</tt>, the damping parameter of the exponential
     !% is fixed through this variable.
+    !% Default value ensure that the damping function adquires a 0.0001 value at the end of the propagation time.
     !%End
-    call parse_variable('PropagationSpectrumDampFactor', CNST(0.15), spectrum%damp_factor, units_inp%time**(-1))
+    call parse_variable('PropagationSpectrumDampFactor', -M_ONE, spectrum%damp_factor, units_inp%time**(-1))
+
+
     call messages_print_var_value(stdout, 'PropagationSpectrumDampFactor', spectrum%damp_factor, unit = units_out%time**(-1))
 
     !%Variable PropagationSpectrumSigmaDiagonalization
@@ -625,6 +628,17 @@ contains
 
     ! Find out the iteration numbers corresponding to the time limits.
     call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    ! Get default damp factor
+    if (spectrum%damp /= SPECTRUM_DAMP_NONE .and. spectrum%damp /= SPECTRUM_DAMP_POLYNOMIAL &
+         .and. spectrum%damp_factor == -M_ONE) then
+      select case(spectrum%damp)
+        case(SPECTRUM_DAMP_LORENTZIAN)
+          spectrum%damp_factor =  -log(0.0001)/(spectrum%end_time-spectrum%start_time)
+        case(SPECTRUM_DAMP_GAUSSIAN)
+          spectrum%damp_factor =  sqrt(-log(0.0001)/(spectrum%end_time-spectrum%start_time)**2)
+      end select
+      call messages_print_var_value(stdout, 'PropagationSpectrumDampFactor', spectrum%damp_factor, unit = units_out%time**(-1))
+    end if
 
     SAFE_ALLOCATE(dipole(0:time_steps, 1:3, 1:nspin))
     if(cmplxscl) then
@@ -2210,6 +2224,7 @@ contains
 
     ASSERT(batch_is_ok(time_function))
     ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)
+
 
     do itime = time_start, time_end
       time = time_step*(itime-1)
