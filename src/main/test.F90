@@ -301,8 +301,7 @@ contains
     nullify(subsys_hm)
 
     SAFE_ALLOCATE(epsib)
-    call batch_copy(sys%st%group%psib(1, 1), epsib)
-    call batch_copy_data(sys%gr%mesh%np, sys%st%group%psib(1, 1), epsib)
+    call batch_copy(sys%st%group%psib(1, 1), epsib, copy_data = .true.)
 
     !Initialize the orbital basis
     call orbitalbasis_init(basis)
@@ -324,13 +323,15 @@ contains
       if(states_are_real(sys%st)) then
         dweight = M_ONE
         ddot = M_ZERO
-        call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), 1, .false., ddot)
-        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib, 1, .false., dweight)
+        call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), 1, .false., &
+                                           .false., ddot)
+        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib, 1, .false., .false., dweight)
       else
         zweight = M_ONE
         zdot = M_ZERO
-        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), 1, .true., zdot)
-        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, 1, .true., zweight)
+        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), 1, &
+                                           .true., .false., zdot)
+        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, 1, .true., .false., zweight)
       end if
     end do
     do itime = 1, epsib%nst
@@ -423,7 +424,6 @@ contains
     end if
 
     do itime = 1, param%repetitions
-      call batch_set_zero(hpsib)
       if(states_are_real(sys%st)) then
         call dhamiltonian_apply_batch(hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
       else

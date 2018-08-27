@@ -261,6 +261,7 @@ contains
     FLOAT :: excess_charge
     integer :: nempty, ntot, default, nthreads
     integer :: nempty_conv
+    logical :: force
 
     PUSH_SUB(states_init)
 
@@ -585,6 +586,22 @@ contains
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_nullify(st%dom_st_proc_grid)
 #endif
+
+    !%Variable ForceComplex
+    !%Type logical
+    !%Default no
+    !%Section Execution::Debug
+    !%Description
+    !% Normally <tt>Octopus</tt> determines automatically the type necessary
+    !% for the wavefunctions. When set to yes this variable will
+    !% force the use of complex wavefunctions.
+    !%
+    !% Warning: This variable is designed for testing and
+    !% benchmarking and normal users need not use it.
+    !%End
+    call parse_variable('ForceComplex', .false., force)
+
+    if(force) call states_set_complex(st)
 
     st%packed = .false.
 
@@ -988,30 +1005,12 @@ contains
     type(type_t), optional, intent(in)      :: wfs_type
     logical,      optional, intent(in)      :: alloc_Left !< allocate an additional set of wfs to store left eigenstates
 
-    logical :: force
-
     PUSH_SUB(states_allocate_wfns)
 
     if (present(wfs_type)) then
       ASSERT(wfs_type == TYPE_FLOAT .or. wfs_type == TYPE_CMPLX)
       st%priv%wfs_type = wfs_type
     end if
-
-    !%Variable ForceComplex
-    !%Type logical
-    !%Default no
-    !%Section Execution::Debug
-    !%Description
-    !% Normally <tt>Octopus</tt> determines automatically the type necessary
-    !% for the wavefunctions. When set to yes this variable will
-    !% force the use of complex wavefunctions.
-    !%
-    !% Warning: This variable is designed for testing and
-    !% benchmarking and normal users need not use it.
-    !%End
-    call parse_variable('ForceComplex', .false., force)
-
-    if(force) call states_set_complex(st)
 
     call states_init_block(st, mesh)
     call states_set_zero(st)
