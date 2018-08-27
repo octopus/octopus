@@ -126,8 +126,7 @@ module poisson_oct_m
     integer :: nslaves
     FLOAT :: theta !< cmplxscl
     FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
-    FLOAT :: dressed_lambda
-    FLOAT :: dressed_omega
+    FLOAT :: dressed_lambda,dressed_omega,dressed_electrons
     type(poisson_fmm_t)  :: params_fmm
 #ifdef HAVE_MPI2
     integer         :: intercomm
@@ -273,21 +272,35 @@ contains
     if (this%method == POISSON_DRDMFT) then
       !%Variable RDMParamLambda
       !%Type float
-      !%Default 1e-6 Ha !!neds to be changed!
+      !%Default 1e-7 Ha !!needs to be changed!
       !%Section SCF::RDMFT
       !%Description
       !% interaction strength in dressed state formalism.
       !%End
 	  call parse_variable('RDMParamLambda', CNST(1.0e-7), this%dressed_lambda)
+	  print*, 'RDMParamLambda', this%dressed_lambda
 	  
 	  !%Variable RDMParamOmega
       !%Type float
-      !%Default 1e-6 Ha !!neds to be changed!
+      !%Default 1e-7 Ha !!needs to be changed!
       !%Section SCF::RDMFT
       !%Description
       !% mode frequency in dressed state formalism.
       !%End
 	  call parse_variable('RDMParamOmega', CNST(1.0e-7), this%dressed_omega)
+	  print*, 'RDMParamOmega', this%dressed_omega
+	  
+	  !%Variable RDMNoElectrons
+      !%Type float
+      !%Default 2.0
+      !%Section SCF::RDMFT
+      !%Description
+      !% number of active electrons as extra variable, necessary in dressed state formalism. Defined as float
+      !% for better usage later
+      !%End
+	  call parse_variable('RDMNoElectrons', CNST(2.0), this%dressed_electrons)
+	  
+	  print*, 'RDMNoElectrons', this%dressed_electrons
     end if
    
     select case(this%method)
