@@ -1159,7 +1159,7 @@ contains
               case(NORMALIZE_NO)
               case(NORMALIZE_YES)
                 call states_get_state(st, mesh, is, ik, zpsi)
-                call zstates_normalize_orbital(mesh, st%d%dim, zpsi)
+                call zmf_normalize(mesh, st%d%dim, zpsi)
                 call states_set_state(st, mesh, is, ik, zpsi)
               case default
                 message(1) = 'The sixth column in UserDefinedStates may either be'

@@ -429,12 +429,12 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   logical, optional, intent(in)    :: normalize
   logical, optional, intent(inout) :: mask(:)      !< mask(nst)
   R_TYPE,  optional, intent(out)   :: overlap(:) 
-  R_TYPE,  optional, intent(out)   :: norm
+  FLOAT,   optional, intent(out)   :: norm
   FLOAT,   optional, intent(in)    :: theta_fi
   R_TYPE,  optional, intent(in)    :: beta_ij(:)   !< beta_ij(nst)
 
   integer :: ist, idim
-  R_TYPE  :: nrm2
+  FLOAT   :: nrm2
   R_TYPE, allocatable  :: ss(:), psi(:, :)
   type(profile_t), save :: prof
   type(profile_t), save :: reduce_prof
@@ -491,16 +491,16 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   if(optional_default(normalize, .false.)) then
     if (st%cmplxscl%space) then 
       nrm2 = sqrt(X(mf_dotp)(mesh, st%d%dim, phi, phi, dotu = .true.))
+      if(abs(nrm2) <= M_EPSILON) then
+        message(1) = "Wavefunction has zero norm after states_orthogonalize_single; cannot normalize."
+        call messages_fatal(1)
+      end if
+      do idim = 1, st%d%dim
+        call lalg_scal(mesh%np, M_ONE/nrm2, phi(:, idim))
+      end do
     else
-      nrm2 = X(mf_nrm2)(mesh, st%d%dim, phi)
+      call X(mf_normalize)(mesh, st%d%dim, phi, nrm2)
     end if
-    if(abs(nrm2) <= M_EPSILON) then
-      message(1) = "Wavefunction has zero norm after states_orthogonalize_single; cannot normalize."
-      call messages_fatal(1)
-    end if
-    do idim = 1, st%d%dim
-      call lalg_scal(mesh%np, M_ONE/nrm2, phi(:, idim))
-    end do
   end if
 
   if(present(overlap)) then
@@ -688,10 +688,7 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   end if
 
   if(normalize_) then
-    nrm2 = R_REAL(X(mf_nrm2)(mesh, dim, phi))
-    do idim = 1, dim
-      call lalg_scal(mesh%np, M_ONE / nrm2, phi(:, idim))
-    end do
+    call X(mf_normalize)(mesh, dim, phi, nrm2)
   end if
 
   if(present(overlap)) then
@@ -716,25 +713,6 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   POP_SUB(X(states_orthogonalization))
   call profiling_out(prof)
 end subroutine X(states_orthogonalization)
-
-
-! ---------------------------------------------------------
-subroutine X(states_normalize_orbital)(mesh, dim, psi)
-  type(mesh_t),    intent(in)    :: mesh
-  integer,         intent(in)    :: dim
-  R_TYPE,          intent(inout) :: psi(:,:)
-
-  FLOAT   :: norm
-  integer :: idim, ip
-
-  PUSH_SUB(X(states_normalize_orbital))
-
-  norm = X(mf_nrm2) (mesh, dim, psi)
-
-  forall (idim = 1:dim, ip = 1:mesh%np) psi(ip, idim) = psi(ip, idim)/norm
-  
-  POP_SUB(X(states_normalize_orbital))
-end subroutine X(states_normalize_orbital)
 
 
 ! ---------------------------------------------------------

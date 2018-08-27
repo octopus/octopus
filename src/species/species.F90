@@ -303,7 +303,9 @@ contains
     if(default_pseudopotential_set_id == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL) call messages_experimental('PseudopotentialSet = pseudodojo_pbesol')
     if(default_pseudopotential_set_id == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL_STRINGENT) call messages_experimental('PseudopotentialSet = pseudodojo_pbesol_stringent')
 
-    call pseudo_set_init(default_pseudopotential_set, get_set_directory(default_pseudopotential_set_id), ierr)
+    if(default_pseudopotential_set_id /= OPTION__PSEUDOPOTENTIALSET__NONE) then
+      call pseudo_set_init(default_pseudopotential_set, get_set_directory(default_pseudopotential_set_id), ierr)
+    end if
     
     POP_SUB(species_init_global)
   end subroutine species_init_global
@@ -597,7 +599,7 @@ contains
     
     call element_init(el, get_symbol(spec%label))
     
-    if(pseudo_set_has(spec%pseudopotential_set, el)) then
+    if(spec%pseudopotential_set_id /= OPTION__PSEUDOPOTENTIALSET__NONE .and. pseudo_set_has(spec%pseudopotential_set, el)) then
       spec%type = SPECIES_PSEUDO
       spec%filename = pseudo_set_file_path(spec%pseudopotential_set, el)
 
@@ -651,6 +653,8 @@ contains
       filename = trim(conf%share)//'/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbesol_standard/'
     case(OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL_STRINGENT)
       filename = trim(conf%share)//'/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbesol_stringent/'
+    case(OPTION__PSEUDOPOTENTIALSET__NONE)
+      filename = ''
     case default
       ASSERT(.false.)
     end select
