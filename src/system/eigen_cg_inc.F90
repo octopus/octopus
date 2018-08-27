@@ -30,9 +30,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   FLOAT,        optional, intent(out)   :: diff(:) !< (1:st%nst)
   FLOAT,pointer, optional, intent(in)   :: shift(:,:)
 
-  R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), ppsi(:,:), psi(:, :), psi2(:, :), g_prev(:,:)
+  R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
-  FLOAT    :: cg0, e0, res, norm, alpha, beta, dot
+  FLOAT    :: cg0, e0, res, norm, alpha, beta, dot, old_res
   integer  :: ist, iter, maxter, idim, ip, jst, im
   R_TYPE   :: sb(3)
   logical   :: fold_ ! use folded spectrum operator (H-shift)^2
@@ -49,6 +49,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
   maxter = niter
   niter = 0
+  old_res = 10*tol
 
   SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(h_psi(1:gr%mesh%np_part, 1:st%d%dim))
@@ -56,8 +57,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   SAFE_ALLOCATE(    g(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(   g0(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(   g_prev(1:gr%mesh%np_part, 1:st%d%dim))
-  !SAFE_ALLOCATE(   g0(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE( ppsi(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE( h_cg(1:gr%mesh%np_part, 1:st%d%dim))
   if(fold_) then
     SAFE_ALLOCATE( psi2(1:gr%mesh%np_part, 1:st%d%dim))
   end if
@@ -65,7 +65,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   cg    = R_TOTYPE(M_ZERO)
   g     = R_TOTYPE(M_ZERO)
   g0    = R_TOTYPE(M_ZERO)
-  ppsi  = R_TOTYPE(M_ZERO)
+  h_cg  = R_TOTYPE(M_ZERO)
   g_prev = R_TOTYPE(M_ZERO)
 
   ! Set the diff to zero, since it is intent(out)
@@ -75,12 +75,12 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   ASSERT(converged >= 0)
 
   eigenfunction_loop : do ist = converged + 1, st%nst
-  h_psi = R_TOTYPE(M_ZERO)
-  cg    = R_TOTYPE(M_ZERO)
-  g     = R_TOTYPE(M_ZERO)
-  g0    = R_TOTYPE(M_ZERO)
-  ppsi  = R_TOTYPE(M_ZERO)
-  g_prev = R_TOTYPE(M_ZERO)
+    h_psi = R_TOTYPE(M_ZERO)
+    cg    = R_TOTYPE(M_ZERO)
+    g     = R_TOTYPE(M_ZERO)
+    g0    = R_TOTYPE(M_ZERO)
+    h_cg  = R_TOTYPE(M_ZERO)
+    g_prev = R_TOTYPE(M_ZERO)
 
     call states_get_state(st, gr%mesh, ist, ik, psi)
 
@@ -101,47 +101,32 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
     ! Starts iteration for this band
     iter_loop: do iter = 1, maxter
+      ! need to save g from previous iteration for Polak-Ribiere method
       if(iter /= 1) then
         g_prev = g
       else
         g_prev = M_ZERO
       end if
 
-      ! inverse preconditioner....
-      !call  X(preconditioner_apply)(pre, gr, hm, ik, h_psi, g)
-      !call  X(preconditioner_apply)(pre, gr, hm, ik, psi, ppsi)
-      g = h_psi
-      ppsi = psi
+      ! PTA92, eq. 5.10
+      forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+        g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
+      end forall
 
-      es(1) = X(mf_dotp) (gr%mesh, st%d%dim, psi, g, reduce = .false.)
-      es(2) = X(mf_dotp) (gr%mesh, st%d%dim, psi, ppsi, reduce = .false.)
-
-      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%vp%comm, es, dim = 2)
-
-      es(1) = es(1)/es(2)
-
-      do idim = 1, st%d%dim
-        call lalg_axpy(gr%mesh%np, R_TOPREC(-es(1)), ppsi(:, idim), g(:, idim))
-      end do
-
-      ! Orthogonalize to lowest eigenvalues (already calculated)
-      !if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g, normalize = .false.)
-
+      ! PTA92, eq. 5.17
       ! Approximate inverse preconditioner...
       call  X(preconditioner_apply)(pre, gr, hm, ik, g(:,:), g0(:,:))
-      !do idim = 1, st%d%dim
-      !  call lalg_copy(gr%mesh%np, g(:,idim), g0(:, idim))
-      !end do
 
-      dot = X(mf_dotp) (gr%mesh, st%d%dim, ppsi, g0)
+      ! PTA92, eq. 5.18 (following 6 lines)
+      dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, g0)
       ! Orthogonalize to lowest eigenvalues (already calculated)
       if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g0, normalize = .false.)
       do idim = 1, st%d%dim
-        call lalg_axpy(gr%mesh%np, -dot, ppsi(:, idim), g0(:, idim))
+        call lalg_axpy(gr%mesh%np, -dot, psi(:, idim), g0(:, idim))
       end do
 
+      ! dot products needed for conjugate gradient
       gg = X(mf_dotp) (gr%mesh, st%d%dim, g0, g, reduce = .false.)
-
       if(iter /= 1) then
         gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g0, g_prev, reduce = .false.)
       else
@@ -156,60 +141,59 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
         gg  = sb(2)
       end if
 
-      if( abs(gg) < M_EPSILON ) then
-        if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
-        st%eigenval(ist, ik) = es(1) ! is this correct?
-        res = sqrt(abs(gg))
+      !if( abs(gg) < M_EPSILON ) then
+      !  if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
+      !  st%eigenval(ist, ik) = es(1) ! is this correct?
+      !  res = sqrt(abs(gg))
 
-        if(debug%info) then
-          write(message(1), '(a,i4,a,i4,a,i4,a,es12.6,a,i4)') 'Debug: CG Eigensolver - ik', ik, &
-               ' ist ', ist, ' iter ', iter, ' res ', res, " max ", maxter
-          call messages_info(1)
-        end if
-        exit
-      end if
+      !  if(debug%info) then
+      !    write(message(1), '(a,i4,a,i4,a,i4,a,es12.6,a,i4)') 'Debug: CG Eigensolver - ik', ik, &
+      !         ' ist ', ist, ' iter ', iter, ' res ', res, " max ", maxter
+      !    call messages_info(1)
+      !  end if
+      !  exit
+      !end if
 
       ! Starting or following iterations...
       if(iter  ==  1) then
         gg0 = gg
-
         do idim = 1, st%d%dim
           call lalg_copy(gr%mesh%np, g0(:,idim), cg(:, idim))
         end do
       else
+        ! PTA eq. 5.20
         gamma = gg/gg0        ! (Fletcher-Reeves)
+        ! alternative:
         !gamma = (gg - gg1)/gg0   ! (Polack-Ribiere)
+        ! save for next iteration
         gg0 = gg
 
-        norma = gamma*cg0*sin(theta)
-
+        ! PTA92, eq. 5.19
         forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
           cg(ip, idim) = gamma*cg(ip, idim) + g0(ip, idim)
-          !cg(ip, idim) = gamma*cg(ip, idim) + g(ip, idim) - norma*psi(ip, idim)
         end forall
 
+        ! PTA92, eq. 5.21
         norma =  X(mf_dotp) (gr%mesh, st%d%dim, psi, cg)
-
         forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
           cg(ip, idim) = cg(ip, idim) - norma*psi(ip, idim)
         end forall
 
         call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 2*R_MUL))
-
       end if
 
       ! cg contains now the conjugate gradient
-      call X(hamiltonian_apply)(hm, gr%der, cg, ppsi, ist, ik)
+      call X(hamiltonian_apply)(hm, gr%der, cg, h_cg, ist, ik)
 
       if(fold_) then
-         call X(hamiltonian_apply)(hm, gr%der, ppsi, psi2, ist, ik)
+         call X(hamiltonian_apply)(hm, gr%der, h_cg, psi2, ist, ik)
          ! h_psi = (H-shift)^2 psi
-         ppsi = psi2 - M_TWO*shift(ist,ik)*ppsi + shift(ist,ik)**2*cg
+         h_cg = psi2 - M_TWO*shift(ist,ik)*h_cg + shift(ist,ik)**2*cg
       end if
 
       ! Line minimization.
-      a0 = X(mf_dotp) (gr%mesh, st%d%dim, psi, ppsi, reduce = .false.)
-      b0 = X(mf_dotp) (gr%mesh, st%d%dim, cg, ppsi, reduce = .false.)
+      a0 = X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg, reduce = .false.)
+      b0 = X(mf_dotp) (gr%mesh, st%d%dim, cg, h_cg, reduce = .false.)
       cg0 = X(mf_nrm2) (gr%mesh, st%d%dim, cg, reduce = .false.)
 
       if(gr%mesh%parallel_in_domains) then
@@ -237,17 +221,15 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
       ! Choose the minimum solutions.
       if (R_REAL(es(2)) < R_REAL(es(1))) theta = theta + M_PI/M_TWO
-      ! is this consistent with h_psi?
-      !st%eigenval(ist, ik) = min(R_REAL(es(1)), R_REAL(es(2)))
 
       ! Upgrade psi...
       a0 = cos(theta)
       b0 = sin(theta)/cg0
 
+      ! PTA92, eq. 5.38
       forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
         psi(ip, idim) = a0*psi(ip, idim) + b0*cg(ip, idim)
-        ! is this consistent with eigenval?
-        h_psi(ip, idim) = a0*h_psi(ip, idim) + b0*ppsi(ip, idim)
+        h_psi(ip, idim) = a0*h_psi(ip, idim) + b0*h_cg(ip, idim)
       end forall
 
       call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 4*R_MUL))
@@ -265,9 +247,13 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
       ! Test convergence.
       if(res < tol) then
-        if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
-        exit iter_loop
+        ! require residue below tolerance for two consecutive steps
+        if (iter > 1 .and. old_res < tol) then
+          if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
+          exit iter_loop
+        end if
       end if
+      old_res = res
 
     end do iter_loop
 
@@ -298,7 +284,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   SAFE_DEALLOCATE_A(g)
   SAFE_DEALLOCATE_A(g0)
   SAFE_DEALLOCATE_A(cg)
-  SAFE_DEALLOCATE_A(ppsi)
+  SAFE_DEALLOCATE_A(h_cg)
   if(fold_) then
     SAFE_DEALLOCATE_A(psi2)
   end if
