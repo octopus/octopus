@@ -63,7 +63,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
   unpack_at_end = .false.
   if(pack) then
     ! unpack at end only if the status on entry is unpacked
-    unpack_at_end = batch_status(psib) == BATCH_UNPACKED
+    unpack_at_end = batch_status(psib) == BATCH_NOT_PACKED
     call batch_pack(psib)
     call batch_pack(hpsib, copy = .false.)
   end if
