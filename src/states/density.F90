@@ -20,7 +20,6 @@
 
 module density_oct_m
   use accel_oct_m
-  use base_states_oct_m
   use blas_oct_m
   use batch_oct_m
   use batch_ops_oct_m
@@ -543,11 +542,8 @@ contains
     PUSH_SUB(states_total_density)
 
     nullify(density)
-    if(associated(st%subsys_st))then
-      call base_states_get(st%subsys_st, density)
-    else
-      density => st%rho
-    end if
+    !this can be simplified after the removal of frozen
+    density => st%rho
     ASSERT(associated(density))
 
     forall(ip = 1:mesh%np, is = 1:st%d%nspin)

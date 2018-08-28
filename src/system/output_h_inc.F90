@@ -29,10 +29,6 @@
 
     integer :: is, err, idir, ispin, ik, ib
     character(len=MAX_PATH_LEN) :: fname
-    type(base_potential_iterator_t)        :: iter
-    type(base_potential_t),        pointer :: subsys_external
-    type(base_hamiltonian_t),      pointer :: subsys_tnadd
-    character(len=BASE_POTENTIAL_NAME_LEN) :: name
     FLOAT,         dimension(:),   pointer :: xpot
     FLOAT,         dimension(:,:), pointer :: tnadd_potential
     FLOAT, allocatable :: v0(:,:), nxc(:), potential(:)
@@ -58,24 +54,6 @@
         call dio_function_output(outp%how, dir, "vext", der%mesh, hm%ep%v_static, units_out%energy, err, geo = geo, grp = grp)
       end if
 
-      nullify(subsys_external, xpot)
-      if(associated(hm%ep%subsys_external))then
-        call base_potential_init(iter, hm%ep%subsys_external)
-        do
-          nullify(subsys_external, xpot)
-          call base_potential_next(iter, name, subsys_external, err)
-          if(err/=BASE_POTENTIAL_OK)exit
-          ASSERT(associated(subsys_external))
-          call base_potential_get(subsys_external, xpot)
-          ASSERT(associated(xpot))
-          write(fname, "(a,'-',a)") "v0", trim(adjustl(name))
-          call dio_function_output(outp%how, dir, fname, der%mesh, &
-            xpot, units_out%energy, err, geo = geo, grp = grp)
-        end do
-        call base_potential_end(iter)
-        nullify(subsys_external, xpot)
-      end if
-
       if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         call dio_function_output(outp%how, dir, 'vh', der%mesh, hm%vhartree, units_out%energy, err, geo = geo, grp = grp)
         if(bitand(outp%what, OPTION__OUTPUT__POTENTIAL_GRADIENT) /= 0) then
@@ -84,24 +62,6 @@
           call io_function_output_vector(outp%how, dir, 'grad_vh', der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
                    geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
           SAFE_DEALLOCATE_A(gradvh)
-        end if
-        nullify(subsys_tnadd, tnadd_potential)
-        if(associated(hm%subsys_hm))then
-          call base_hamiltonian_get(hm%subsys_hm, "tnadd", subsys_tnadd)
-          ASSERT(associated(subsys_tnadd))
-          call base_hamiltonian_get(subsys_tnadd, nspin=ispin)
-          call base_hamiltonian_get(subsys_tnadd, tnadd_potential)
-          ASSERT(associated(tnadd_potential))
-          nullify(subsys_tnadd)
-          do is = 1, min(ispin, 2)
-            if(ispin == 1) then
-              write(fname, '(a)') 'tnadd'
-            else
-              write(fname, '(a,i1)') 'tnadd-sp', is
-            end if
-            call dio_function_output(outp%how, dir, fname, der%mesh, &
-              tnadd_potential(:,is), units_out%energy, err, geo = geo, grp = grp)
-          end do
         end if
         
         SAFE_ALLOCATE(potential(1:der%mesh%np))

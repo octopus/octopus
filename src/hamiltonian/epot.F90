@@ -20,9 +20,6 @@
 
 module epot_oct_m
   use atom_oct_m
-  use base_hamiltonian_oct_m
-  use base_potential_oct_m
-  use base_term_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use double_grid_oct_m
@@ -57,7 +54,6 @@ module epot_oct_m
   use species_pot_oct_m
   use splines_oct_m
   use spline_filter_oct_m
-  use ssys_external_oct_m
   use states_oct_m
   use states_dim_oct_m
   use submesh_oct_m
@@ -93,9 +89,6 @@ module epot_oct_m
     ! Classical charges:
     integer        :: classical_pot !< how to include the classical charges
     FLOAT, pointer :: Vclassical(:) !< We use it to store the potential of the classical charges
-
-    ! Subsystems external potential.
-    type(base_potential_t), pointer :: subsys_external
 
     ! Ions
     FLOAT,             pointer :: vpsl(:)       !< the local part of the pseudopotentials
@@ -149,17 +142,15 @@ module epot_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init( ep, gr, geo, ispin, nik, subsys_hm, xc_family)
+  subroutine epot_init( ep, gr, geo, ispin, nik, xc_family)
     type(epot_t),                       intent(out)   :: ep
     type(grid_t),                       intent(in)    :: gr
     type(geometry_t),                   intent(inout) :: geo
     integer,                            intent(in)    :: ispin
     integer,                            intent(in)    :: nik
-    type(base_hamiltonian_t), optional, intent(in)    :: subsys_hm
     integer,                            intent(in)    :: xc_family
 
 
-    type(base_term_t), pointer :: subsys_ionic
     integer :: ispec, ip, idir, ia, gauge_2d, ierr
     type(block_t) :: blk
     FLOAT, allocatable :: grx(:)
@@ -197,21 +188,8 @@ contains
       call species_pot_init(geo%species(ispec), mesh_gcutoff(gr%mesh), filter)
     end do
 
-    ! Sets the pointer to the subsystem.
-    nullify(ep%subsys_external)
-    if(present(subsys_hm))then
-      call base_hamiltonian_get(subsys_hm, "external", ep%subsys_external)
-      ASSERT(associated(ep%subsys_external))
-    end if
+    SAFE_ALLOCATE(ep%vpsl(1:gr%mesh%np))
 
-    ! Local part of the pseudopotentials
-    if(associated(ep%subsys_external))then
-      ! Sets the pointer to the subsystems total potential.
-      call base_potential_get(ep%subsys_external, ep%vpsl)
-      ASSERT(associated(ep%vpsl))
-    else
-      SAFE_ALLOCATE(ep%vpsl(1:gr%mesh%np))
-    end if
     ep%vpsl(1:gr%mesh%np) = M_ZERO
 
     ep%classical_pot = 0
@@ -536,14 +514,6 @@ contains
 
     call ion_interaction_init(ep%ion_interaction)
 
-    nullify(subsys_ionic)
-    if(present(subsys_hm))then
-      call base_hamiltonian_get(subsys_hm, "ionic", subsys_ionic)
-      ASSERT(associated(subsys_ionic))
-      call ion_interaction_add_subsys_ionic(ep%ion_interaction, subsys_ionic)
-      nullify(subsys_ionic)
-    end if
-
     !%Variable TDGlobalForce
     !%Type string
     !%Section Time-Dependent
@@ -595,13 +565,7 @@ contains
     SAFE_DEALLOCATE_P(ep%local_potential)
     SAFE_DEALLOCATE_P(ep%fii)
     SAFE_DEALLOCATE_A(ep%vdw_forces)
-
-    if(associated(ep%subsys_external))then
-      nullify(ep%vpsl)
-    else
-      SAFE_DEALLOCATE_P(ep%vpsl)
-    end if
-    nullify(ep%subsys_external)
+    SAFE_DEALLOCATE_P(ep%vpsl)
 
     if(ep%classical_pot > 0) then
       ep%classical_pot = 0
@@ -666,14 +630,8 @@ contains
 
     ! Local part
     nullify(vpsl)
-    if(associated(ep%subsys_external))then
-      ! Sets the vpsl pointer to the "live" part of the subsystem potential.
-      call base_potential_gets(ep%subsys_external, "live", vpsl)
-      ASSERT(associated(vpsl))
-    else
-      ! Sets the vpsl pointer to the total potential.
-      vpsl => ep%vpsl
-    end if
+    !this can be simplified after the removal of frozen
+    vpsl => ep%vpsl
     vpsl = M_ZERO
     if(geo%nlcc) st%rho_core = M_ZERO
 
@@ -770,9 +728,6 @@ contains
     if (ep%classical_pot > 0)   vpsl(1:mesh%np) = vpsl(1:mesh%np) + ep%Vclassical(1:mesh%np)
     if (associated(ep%e_field) .and. sb%periodic_dim < sb%dim) vpsl(1:mesh%np) = vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
 
-    ! Calculates the total potential by summing all the subsystem contributions.
-    if(associated(ep%subsys_external)) call ssys_external_calc(ep%subsys_external)
-  
     POP_SUB(epot_generate)
     call profiling_out(epot_generate_prof)
   end subroutine epot_generate
