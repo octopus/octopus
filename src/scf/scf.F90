@@ -645,6 +645,7 @@ contains
     if(scf%calc_force .or. scf%conv_abs_force > M_ZERO &
         .or. (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) then
       SAFE_ALLOCATE(vhxc_old(1:gr%mesh%np, 1:nspin))
+      vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
     end if
     
 
