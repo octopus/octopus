@@ -31,7 +31,6 @@ SUBDIRS = \
 	optimal_control  \
 	periodic_systems \
 	photo_electron   \
-	complex_scaling  \
 	pseudopotentials \
 	frozen           \
 	tutorials

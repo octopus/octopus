@@ -106,16 +106,9 @@ contains
     SAFE_ALLOCATE(st%node(1:st%nst))
     st%node(:)  = 0
 
-    SAFE_DEALLOCATE_P(st%zeigenval%Re)
-    nullify(st%eigenval)
-    SAFE_ALLOCATE(st%zeigenval%Re(1:st%nst, 1:st%d%nik))
-    st%zeigenval%Re = huge(st%zeigenval%Re)
-    st%eigenval => st%zeigenval%Re
-    if (associated(st%zeigenval%Im)) then
-      SAFE_DEALLOCATE_P(st%zeigenval%Im)
-      SAFE_ALLOCATE(st%zeigenval%Im(1:st%nst, 1:st%d%nik))
-      st%zeigenval%Im = M_ZERO
-    end if
+    SAFE_DEALLOCATE_P(st%eigenval)
+    SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
+    st%eigenval = huge(st%eigenval)
 
     if (present(is_complex)) then
       if ( is_complex ) then
@@ -161,7 +154,7 @@ contains
     integer :: root(1:P_STRATEGY_MAX)
     character(len=MAX_PATH_LEN) :: filename, filename1
     character(len=300) :: lines(3)
-    logical :: lr_wfns_are_associated, should_write, cmplxscl, verbose_
+    logical :: lr_wfns_are_associated, should_write, verbose_
     FLOAT   :: kpoint(1:MAX_DIM)
     FLOAT,  allocatable :: dpsi(:), rff_global(:)
     CMPLX,  allocatable :: zpsi(:), zff_global(:)
@@ -183,9 +176,6 @@ contains
     end if
 
     call profiling_in(prof_write, "RESTART_WRITE")
-
-    cmplxscl = .false.
-    if (associated(st%zeigenval%Im)) cmplxscl = .true.
 
     if (present(lr)) then
       lr_wfns_are_associated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
@@ -243,18 +233,12 @@ contains
           root(P_STRATEGY_DOMAINS) = mod(itot - 1, gr%mesh%mpi_grp%size)
           write(filename,'(i10.10)') itot
           
-          if (st%have_left_states) filename1 = 'L'//trim(filename) !cmplxscl
-
           write(lines(1), '(i8,a,i8,a,i8,3a)') ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
           call restart_write(restart, iunit_wfns, lines, 1, err)
           if (err /= 0) err2(1) = err2(1) + 1
 
           write(lines(1), '(e21.14,a,e21.14)') st%occ(ist,ik), ' | ', st%eigenval(ist, ik)
-          if (cmplxscl) then
-            write(lines(1), '(a,a,e21.14)') trim(lines(1)), ' | ', st%zeigenval%Im(ist, ik)
-          else
-            write(lines(1), '(a,a,e21.14)') trim(lines(1)), ' | ', CNST(0.0)
-          end if
+          write(lines(1), '(a,a,e21.14)') trim(lines(1)), ' | ', CNST(0.0)
           do idir = 1, gr%sb%dim
             write(lines(1), '(a,a,e21.14)') trim(lines(1)), ' | ', kpoint(idir)
           end do
@@ -277,10 +261,6 @@ contains
                 else
                   call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
                   call zrestart_write_mesh_function(restart, filename, gr%mesh, zpsi, err, root = root)
-                  if(st%have_left_states) then!cmplxscl
-                    call states_get_state(st, gr%mesh, idim, ist, ik, zpsi, left = .true.)
-                    call zrestart_write_mesh_function(restart, filename1, gr%mesh, zpsi, err, root = root)
-                  end if
                 end if
               else
                 err = 0
@@ -345,7 +325,7 @@ contains
   !! <0 => Fatal error, or nothing read
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine states_load(restart, st, gr, ierr, iter, lr, lowest_missing, read_left, label, verbose)
+  subroutine states_load(restart, st, gr, ierr, iter, lr, lowest_missing, label, verbose)
     type(restart_t),            intent(in)    :: restart
     type(states_t),             intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
@@ -353,7 +333,6 @@ contains
     integer,          optional, intent(out)   :: iter
     type(lr_t),       optional, intent(inout) :: lr       !< if present, the lr wfs are read instead of the gs wfs
     integer,          optional, intent(out)   :: lowest_missing(:, :) !< all states below this one were read successfully
-    logical,          optional, intent(in)    :: read_left !< if .true. read left states (default is .false.)
     character(len=*), optional, intent(in)    :: label
     logical,          optional, intent(in)    :: verbose
 
@@ -367,7 +346,7 @@ contains
 
     FLOAT                :: my_occ, imev, my_kweight
     logical              :: read_occ, lr_allocated, verbose_
-    logical              :: integral_occs, cmplxscl, read_left_
+    logical              :: integral_occs
     FLOAT, allocatable   :: dpsi(:)
     CMPLX, allocatable   :: zpsi(:), zpsiL(:)
     character(len=256), allocatable :: restart_file(:, :, :)
@@ -396,14 +375,6 @@ contains
     call profiling_in(prof_read, "RESTART_READ")
 
     verbose_ = optional_default(verbose, .true.)
-
-    cmplxscl = .false.
-    if (associated(st%zeigenval%Im)) cmplxscl = .true.
-    
-    read_left_ = optional_default(read_left, .false.)
-    if (read_left_) then
-       ASSERT(st%have_left_states)
-    end if
 
     if (present(label)) then
       label_ = trim(label)
@@ -439,7 +410,6 @@ contains
 
     if(.not. present(lr)) then
       st%eigenval(:, :) = M_ZERO
-      if (cmplxscl) st%zeigenval%Im(:, :) = M_ZERO
       ! to be filled in from reading afterward
     end if
 
@@ -523,9 +493,6 @@ contains
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np))
     else
       SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
-      if(read_left_) then
-        SAFE_ALLOCATE(zpsiL(1:gr%mesh%np))
-      end if
     end if
 
     SAFE_ALLOCATE(restart_file(1:st%d%dim, st%st_start:st%st_end, 1:st%d%nik))
@@ -587,8 +554,6 @@ contains
           restart_file_present(idim, ist, ik) = .false.
         end if
 
-        if (cmplxscl) st%zeigenval%Im(ist, ik) = imev
-
         if (read_occ) then
           st%occ(ist, ik) = my_occ
           integral_occs = integral_occs .and. &
@@ -645,7 +610,6 @@ contains
             call drestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, dpsi, err)
           else
             call zrestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, zpsi, err)
-            if (read_left_) call zrestart_read_mesh_function(restart, 'L'//restart_file(idim, ist, ik), gr%mesh, zpsiL, err)  
           end if
 
           if(states_are_real(st)) then
@@ -657,13 +621,6 @@ contains
           else
             if(.not. present(lr)) then
               call states_set_state(st, gr%mesh, idim, ist, ik, zpsi)
-              if(st%have_left_states) then
-                if(read_left_) then
-                  call states_set_state(st, gr%mesh, idim, ist, ik, zpsiL, left = .true.)
-                else
-                  call states_set_state(st, gr%mesh, idim, ist, ik, zpsi, left = .true.)
-                end if
-              end if  
             else
               call lalg_copy(gr%mesh%np, zpsi, lr%zdl_psi(:, idim, ist, ik))
             end if
@@ -821,13 +778,8 @@ contains
     if (err /= 0) ierr = ierr + 1
 
     if(gr%have_fine_mesh) then
-      if(st%cmplxscl%space) then
-        SAFE_ALLOCATE(zrho(1:gr%mesh%np))
-        SAFE_ALLOCATE(zrho_fine(1:gr%fine%mesh%np))
-      else
-        SAFE_ALLOCATE(rho(1:gr%mesh%np))
-        SAFE_ALLOCATE(rho_fine(1:gr%fine%mesh%np))
-      end if
+      SAFE_ALLOCATE(rho(1:gr%mesh%np))
+      SAFE_ALLOCATE(rho_fine(1:gr%fine%mesh%np))
     end if
 
     err2 = 0
@@ -842,21 +794,11 @@ contains
       if (err /= 0) err2(1) = err2(1) + 1
 
       if(gr%have_fine_mesh)then
-        if(st%cmplxscl%space) then
-          zrho_fine(1:gr%fine%mesh%np) = st%zrho%Re(1:gr%fine%mesh%np,isp) + M_zI*st%zrho%Im(1:gr%fine%mesh%np,isp)
-          call zmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, zrho_fine, zrho, INJECTION)
-          call zrestart_write_mesh_function(restart, filename, gr%mesh, zrho, err)
-        else
-          rho_fine(1:gr%fine%mesh%np) = st%rho(1:gr%fine%mesh%np,isp)
-          call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, rho_fine, rho, INJECTION)
-          call drestart_write_mesh_function(restart, filename, gr%mesh, rho, err)
-        end if
+        rho_fine(1:gr%fine%mesh%np) = st%rho(1:gr%fine%mesh%np,isp)
+        call dmultigrid_fine2coarse(gr%fine%tt, gr%fine%der, gr%mesh, rho_fine, rho, INJECTION)
+        call drestart_write_mesh_function(restart, filename, gr%mesh, rho, err)
       else
-        if(st%cmplxscl%space) then
-          call zrestart_write_mesh_function(restart, filename, gr%mesh, st%zrho%Re(:,isp)+M_zI*st%zrho%Im(:,isp), err)
-        else
-          call drestart_write_mesh_function(restart, filename, gr%mesh, st%rho(:,isp), err)
-        end if
+        call drestart_write_mesh_function(restart, filename, gr%mesh, st%rho(:,isp), err)
       end if
       if (err /= 0) err2(2) = err2(2) + 1
 
@@ -865,13 +807,8 @@ contains
     if (err2(2) /= 0) ierr = ierr + 4
 
     if(gr%have_fine_mesh)then
-      if(st%cmplxscl%space) then
-        SAFE_DEALLOCATE_P(zrho)
-        SAFE_DEALLOCATE_P(zrho_fine)
-      else
-        SAFE_DEALLOCATE_P(rho)
-        SAFE_DEALLOCATE_P(rho_fine)
-      end if
+      SAFE_DEALLOCATE_P(rho)
+      SAFE_DEALLOCATE_P(rho_fine)
     end if
 
     lines(1) = '%'
@@ -905,7 +842,6 @@ contains
     integer              :: err, err2, isp
     character(len=12)    :: filename
     FLOAT, allocatable   :: rho_coarse(:)
-    CMPLX, allocatable   :: zrho(:), zrho_coarse(:)
 
     PUSH_SUB(states_load_rho)
 
@@ -930,12 +866,7 @@ contains
 !   we could read the iteration 'iter' too, not sure if that is useful.
 
     if(gr%have_fine_mesh) then
-      if(st%cmplxscl%space) then
-        SAFE_ALLOCATE(zrho(1:gr%fine%mesh%np))
-        SAFE_ALLOCATE(zrho_coarse(1:gr%mesh%np_part))
-      else
-        SAFE_ALLOCATE(rho_coarse(1:gr%mesh%np_part))
-      end if
+      SAFE_ALLOCATE(rho_coarse(1:gr%mesh%np_part))
     end if
 
     err2 = 0
@@ -949,23 +880,10 @@ contains
 !        read(iunit_rho, '(i8,a,i8,a)') isp, ' | ', st%d%nspin, ' | "'//trim(adjustl(filename))//'"'
 !      end if
       if(gr%have_fine_mesh)then
-        if(st%cmplxscl%space) then
-          call zrestart_read_mesh_function(restart, filename, gr%mesh, zrho_coarse, err)
-          call zmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, zrho_coarse, zrho, order = 2)
-          st%zrho%Re(:,isp) =  real(zrho, REAL_PRECISION)
-          st%zrho%Im(:,isp) = aimag(zrho)
-        else
-          call drestart_read_mesh_function(restart, filename, gr%mesh, rho_coarse, err)
-          call dmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, rho_coarse, st%rho(:,isp), order = 2)
-        end if
+        call drestart_read_mesh_function(restart, filename, gr%mesh, rho_coarse, err)
+        call dmultigrid_coarse2fine(gr%fine%tt, gr%der, gr%fine%mesh, rho_coarse, st%rho(:,isp), order = 2)
       else
-        if(st%cmplxscl%space) then
-          call zrestart_read_mesh_function(restart, filename, gr%mesh, zrho, err)
-          st%zrho%Re(:,isp) =  real(zrho, REAL_PRECISION)
-          st%zrho%Im(:,isp) = aimag(zrho)
-        else
-          call drestart_read_mesh_function(restart, filename, gr%mesh, st%rho(:,isp), err)
-        end if
+        call drestart_read_mesh_function(restart, filename, gr%mesh, st%rho(:,isp), err)
       end if
       if (err /= 0) err2 = err2 + 1
 
@@ -973,14 +891,7 @@ contains
     if (err2 /= 0) ierr = ierr + 1
 
     if(gr%have_fine_mesh)then
-      if(st%cmplxscl%space) then
-         SAFE_DEALLOCATE_A(zrho_coarse)
-      else
-        SAFE_DEALLOCATE_A(rho_coarse)
-      end if
-    end if
-    if(st%cmplxscl%space) then
-      SAFE_DEALLOCATE_A(zrho)
+      SAFE_DEALLOCATE_A(rho_coarse)
     end if
 
     if (debug%info) then
