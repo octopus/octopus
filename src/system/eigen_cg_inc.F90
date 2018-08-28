@@ -32,7 +32,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
-  FLOAT    :: cg0, e0, res, norm, alpha, beta, dot, old_res
+  FLOAT    :: cg0, e0, res, norm, alpha, beta, dot, old_res, old_energy, first_delta_e
   integer  :: ist, iter, maxter, idim, ip, jst, im
   R_TYPE   :: sb(3)
   logical   :: fold_ ! use folded spectrum operator (H-shift)^2
@@ -85,7 +85,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
     call states_get_state(st, gr%mesh, ist, ik, psi)
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
-    if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
+    !if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
 
     ! Calculate starting gradient: |hpsi> = H|psi>
     call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik)
@@ -98,6 +98,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
     ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
     st%eigenval(ist, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi))
+    old_energy = st%eigenval(ist, ik)
+    first_delta_e = M_ZERO
 
     ! Starts iteration for this band
     iter_loop: do iter = 1, maxter
@@ -113,14 +115,20 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
         g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
       end forall
 
+      ! PTA92, eq. 5.12
+      ! Orthogonalize to all states
+      call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g, normalize = .false., against_all=.true.)
+
       ! PTA92, eq. 5.17
       ! Approximate inverse preconditioner...
       call  X(preconditioner_apply)(pre, gr, hm, ik, g(:,:), g0(:,:))
 
       ! PTA92, eq. 5.18 (following 6 lines)
       dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, g0)
+      ! Orthogonalize to all states
+      call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., against_all=.true.)
       ! Orthogonalize to lowest eigenvalues (already calculated)
-      if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g0, normalize = .false.)
+      !if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g0, normalize = .false.)
       do idim = 1, st%d%dim
         call lalg_axpy(gr%mesh%np, -dot, psi(:, idim), g0(:, idim))
       end do
@@ -141,18 +149,18 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
         gg  = sb(2)
       end if
 
-      !if( abs(gg) < M_EPSILON ) then
-      !  if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
-      !  st%eigenval(ist, ik) = es(1) ! is this correct?
-      !  res = sqrt(abs(gg))
+      if( sqrt(abs(gg)) < M_EPSILON ) then
+        if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
+        !st%eigenval(ist, ik) = es(1) ! is this correct?
+        res = sqrt(abs(gg))
 
-      !  if(debug%info) then
-      !    write(message(1), '(a,i4,a,i4,a,i4,a,es12.6,a,i4)') 'Debug: CG Eigensolver - ik', ik, &
-      !         ' ist ', ist, ' iter ', iter, ' res ', res, " max ", maxter
-      !    call messages_info(1)
-      !  end if
-      !  exit
-      !end if
+        if(debug%info) then
+          write(message(1), '(a,i4,a,i4,a,i4,a,es12.6,a,i4)') 'Debug: CG Eigensolver - ik', ik, &
+               ' ist ', ist, ' iter ', iter, ' res ', res, " max ", maxter
+          call messages_info(1)
+        end if
+        exit
+      end if
 
       ! Starting or following iterations...
       if(iter  ==  1) then
@@ -239,11 +247,28 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
       norm = X(mf_nrm2) (gr%mesh, st%d%dim, h_psi)
 
-      if(debug%info) then
+      ! consider change in energy
+      if(iter == 1) then
+        first_delta_e = abs(st%eigenval(ist, ik) - old_energy)
+      end if
+
+      if(debug%info .and. first_delta_e > M_ZERO) then
         write(message(1), '(a,i4,a,i4,a,i4,a,es12.6,a,es12.6,a,i4)') 'Debug: CG Eigensolver - ik', ik, ' ist ', ist, &
-             ' iter ', iter, ' res ', res, ' ', res/norm, " max ", maxter
+             !' iter ', iter, ' res ', res, ' ', res/norm, " max ", maxter
+             ' iter ', iter, ' deltae ', abs(st%eigenval(ist, ik) - old_energy), ' ', abs(st%eigenval(ist, ik) - old_energy)/first_delta_e, " max ", maxter
         call messages_info(1)
       end if
+
+      if(first_delta_e <= 1.1*M_EPSILON) then
+        if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
+        exit iter_loop
+      end if
+      if(iter > 1) then
+        if(abs(st%eigenval(ist, ik) - old_energy) < first_delta_e*R_REAL(1e-1)) then
+          exit iter_loop
+        end if
+      end if
+      old_energy = st%eigenval(ist, ik)
 
       ! Test convergence.
       if(res < tol) then
@@ -264,6 +289,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
     end if
 
+    call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true., against_all=.true.)
     call states_set_state(st, gr%mesh, ist, ik, psi)
 
     niter = niter + iter + 1
