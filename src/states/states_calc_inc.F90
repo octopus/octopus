@@ -420,7 +420,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 end subroutine X(states_trsm)
 
 ! ---------------------------------------------------------
-subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, mask, overlap, norm, Theta_fi, beta_ij)
+subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, mask, overlap, norm, Theta_fi, beta_ij, against_all)
   type(states_t),    intent(in)    :: st
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: nst
@@ -432,25 +432,41 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   FLOAT,   optional, intent(out)   :: norm
   FLOAT,   optional, intent(in)    :: theta_fi
   R_TYPE,  optional, intent(in)    :: beta_ij(:)   !< beta_ij(nst)
+  logical, optional, intent(in)    :: against_all
 
   integer :: ist, idim
   FLOAT   :: nrm2
   R_TYPE, allocatable  :: ss(:), psi(:, :)
   type(profile_t), save :: prof
   type(profile_t), save :: reduce_prof
+  logical :: against_all_
   
   call profiling_in(prof, "GRAM_SCHMIDT")
   PUSH_SUB(X(states_orthogonalize_single))
 
   ASSERT(nst <= st%nst)
   ASSERT(.not. st%parallel_in_states)
+  ! if against_all is set to true, phi is orthogonalized to all other states except nst+1
+  ! (nst + 1 is chosen because this routine is usually called with nst=ist-1 in a loop)
+  against_all_ = optional_default(against_all, .false.)
 
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(ss(1:nst))
+  if(.not.against_all_) then
+    SAFE_ALLOCATE(ss(1:nst))
+  else
+    SAFE_ALLOCATE(ss(1:st%nst))
+  end if
 
   ss = M_ZERO
 
-  do ist = 1, nst
+  do ist = 1, st%nst
+    if(.not.against_all_) then
+      ! orthogonalize against previous states only
+      if(ist > nst) exit
+    else
+      ! orthogonalize against all other states besides nst + 1
+      if(ist == nst + 1) cycle
+    end if
     if(present(mask)) then
       if(mask(ist)) cycle
     end if
@@ -466,7 +482,14 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   end if
 
   if(present(mask)) then
-    do ist = 1, nst
+    do ist = 1, st%nst
+      if(.not.against_all_) then
+        ! orthogonalize against previous states only
+        if(ist > nst) exit
+      else
+        ! orthogonalize against all other states besides nst + 1
+        if(ist == nst + 1) cycle
+      end if
       mask(ist) = (abs(ss(ist)) <= M_EPSILON)
     end do
   end if
@@ -477,7 +500,14 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
     if(theta_fi /= M_ONE) phi(1:mesh%np, 1:st%d%dim) = theta_fi*phi(1:mesh%np, 1:st%d%dim)
   end if
 
-  do ist = 1, nst
+  do ist = 1, st%nst
+    if(.not.against_all_) then
+      ! orthogonalize against previous states only
+      if(ist > nst) exit
+    else
+      ! orthogonalize against all other states besides nst + 1
+      if(ist == nst + 1) cycle
+    end if
     if(present(mask)) then
       if(mask(ist)) cycle
     end if
@@ -504,7 +534,11 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   end if
 
   if(present(overlap)) then
-    overlap(1:nst) = ss(1:nst)
+    if(.not.against_all_) then
+      overlap(1:nst) = ss(1:nst)
+    else
+      overlap(1:st%nst) = ss(1:st%nst)
+    end if
   end if
 
   if(present(norm)) then
