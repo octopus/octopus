@@ -611,7 +611,6 @@ contains
     type(mesh_t),      pointer :: mesh
     type(simul_box_t), pointer :: sb
     type(profile_t), save :: epot_generate_prof
-    FLOAT, dimension(:), pointer :: vpsl
     FLOAT,    allocatable :: density(:)
     FLOAT,    allocatable :: tmp(:)
     type(profile_t), save :: epot_reduce
@@ -629,19 +628,16 @@ contains
     density = M_ZERO
 
     ! Local part
-    nullify(vpsl)
-    !this can be simplified after the removal of frozen
-    vpsl => ep%vpsl
-    vpsl = M_ZERO
+    ep%vpsl = M_ZERO
     if(geo%nlcc) st%rho_core = M_ZERO
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
       if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
       if(geo%nlcc) then
-        call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, vpsl, &
+        call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, &
           rho_core = st%rho_core, density = density)
       else
-        call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, vpsl, density = density)
+        call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, density = density)
       end if
     end do
 
@@ -649,7 +645,7 @@ contains
     if(geo%atoms_dist%parallel) then
       call profiling_in(epot_reduce, "EPOT_REDUCE")
 
-      call comm_allreduce(geo%atoms_dist%mpi_grp%comm, vpsl, dim = gr%mesh%np)
+      call comm_allreduce(geo%atoms_dist%mpi_grp%comm, ep%vpsl, dim = gr%mesh%np)
       if(associated(st%rho_core)) &
         call comm_allreduce(geo%atoms_dist%mpi_grp%comm, st%rho_core, dim = gr%mesh%np)
       if(ep%have_density) &
@@ -661,8 +657,8 @@ contains
       SAFE_ALLOCATE(tmpdensity(1:gr%mesh%np))
       call symmetrizer_init(symmetrizer, gr%mesh)
 
-      call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field = vpsl, symmfield = tmpdensity)
-      vpsl(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
+      call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field = ep%vpsl, symmfield = tmpdensity)
+      ep%vpsl(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
 
       if(associated(st%rho_core)) then
         call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field = st%rho_core, symmfield = tmpdensity)
@@ -685,7 +681,7 @@ contains
       SAFE_ALLOCATE(tmp(1:gr%mesh%np_part))
       if(poisson_solver_is_iterative(ep%poisson_solver)) tmp(1:mesh%np) = M_ZERO
       call dpoisson_solve(ep%poisson_solver, tmp, density)
-      forall(ip = 1:mesh%np) vpsl(ip) = vpsl(ip) + tmp(ip)
+      forall(ip = 1:mesh%np) ep%vpsl(ip) = ep%vpsl(ip) + tmp(ip)
       SAFE_DEALLOCATE_A(tmp)
 
     end if
@@ -725,8 +721,8 @@ contains
     end do
 
     ! add static electric fields
-    if (ep%classical_pot > 0)   vpsl(1:mesh%np) = vpsl(1:mesh%np) + ep%Vclassical(1:mesh%np)
-    if (associated(ep%e_field) .and. sb%periodic_dim < sb%dim) vpsl(1:mesh%np) = vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
+    if (ep%classical_pot > 0)   ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%Vclassical(1:mesh%np)
+    if (associated(ep%e_field) .and. sb%periodic_dim < sb%dim) ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
 
     POP_SUB(epot_generate)
     call profiling_out(epot_generate_prof)

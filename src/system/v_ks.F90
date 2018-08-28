@@ -905,7 +905,6 @@ contains
       CMPLX :: ctmp
       integer :: ispin, iatom
       FLOAT, allocatable :: vvdw(:)
-      FLOAT, dimension(:,:), pointer :: density
       FLOAT, allocatable :: coords(:, :)
       FLOAT :: vdw_stress(1:3, 1:3), latvec(1:3, 1:3)
       integer, allocatable :: atnum(:)
@@ -1026,9 +1025,6 @@ contains
         ! Now we calculate Int[n vxc] = energy%intnvxc
         ks%calc%energy%intnvxc = M_ZERO
 
-        nullify(density)
-        ! this can be simplified after the removal of frozen
-        density => st%rho
         do ispin = 1, hm%d%nspin
           if(ispin <= 2) then
             factor = M_ONE
@@ -1036,7 +1032,7 @@ contains
             factor = M_TWO
           end if
           ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + &
-            factor*dmf_dotp(ks%gr%fine%mesh, density(:, ispin), ks%calc%vxc(:, ispin))
+            factor*dmf_dotp(ks%gr%fine%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin))
         end do
 
         if(states_are_real(st)) then

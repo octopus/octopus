@@ -28,7 +28,6 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
   integer :: ik, ist, idim, idir, is, ierr, ip, nspin
   character(len=MAX_PATH_LEN) :: fname
   type(unit_t) :: fn_unit
-  FLOAT,       dimension(:,:), pointer :: density
   FLOAT, allocatable :: dtmp(:), elf(:,:), polarization(:, :)
   CMPLX, allocatable :: ztmp(:)
   type(dos_t) :: dos
@@ -37,8 +36,6 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
 
   if(bitand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
-    !this can be simplified after the removal of frozen
-    density => st%rho
     do is = 1, st%d%nspin
       if(st%d%nspin == 1) then
         write(fname, '(a)') 'density'
@@ -46,7 +43,7 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
         write(fname, '(a,i1)') 'density-sp', is
       end if
       call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
-        density(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+        st%rho(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     end do
   end if
 
