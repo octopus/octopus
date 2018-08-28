@@ -308,7 +308,7 @@ contains
     FLOAT,                intent(inout) :: drho(:, :) !< (mesh%np, spin_channels)
 
     integer :: isp, ip, icell
-    FLOAT :: rr, pos(1:MAX_DIM)
+    FLOAT :: rr, pos(1:MAX_DIM), range
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
     type(periodic_copy_t) :: pp
@@ -331,8 +331,9 @@ contains
 
       if(ps_has_density(ps)) then
 
-        call periodic_copy_init(pp, sb, atom%x, &
-          range = spline_cutoff_radius(ps%Ur(1, 1), ps%projectors_sphere_threshold))
+        range = spline_cutoff_radius(ps%density(1), ps%projectors_sphere_threshold)
+        if (spin_channels == 2) range = max(range, spline_cutoff_radius(ps%density(2), ps%projectors_sphere_threshold))
+        call periodic_copy_init(pp, sb, atom%x, range = range)
 
         do icell = 1, periodic_copy_num(pp)
           pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
@@ -375,7 +376,7 @@ contains
     FLOAT,                intent(inout) :: drho(:, :, :) !< (mesh%np, spin_channels, dim)
 
     integer :: isp, ip, icell, idir
-    FLOAT :: rr, pos(1:MAX_DIM)
+    FLOAT :: rr, pos(1:MAX_DIM), range
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
     type(periodic_copy_t) :: pp
@@ -398,8 +399,9 @@ contains
 
       if(ps_has_density(ps)) then
 
-        call periodic_copy_init(pp, sb, atom%x, &
-          range = spline_cutoff_radius(ps%Ur(1, 1), ps%projectors_sphere_threshold))
+        range = spline_cutoff_radius(ps%density(1), ps%projectors_sphere_threshold)
+        if (spin_channels == 2) range = max(range, spline_cutoff_radius(ps%density(2), ps%projectors_sphere_threshold))
+        call periodic_copy_init(pp, sb, atom%x, range = range)
 
         do icell = 1, periodic_copy_num(pp)
           pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
