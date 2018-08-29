@@ -460,13 +460,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   ss = M_ZERO
 
   do ist = 1, st%nst
-    if(.not.against_all_) then
-      ! orthogonalize against previous states only
-      if(ist > nst) exit
-    else
-      ! orthogonalize against all other states besides nst + 1
-      if(ist == nst + 1) cycle
-    end if
+    if(skip_this_iteration(ist, nst, against_all_)) cycle
     if(present(mask)) then
       if(mask(ist)) cycle
     end if
@@ -483,13 +477,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
 
   if(present(mask)) then
     do ist = 1, st%nst
-      if(.not.against_all_) then
-        ! orthogonalize against previous states only
-        if(ist > nst) exit
-      else
-        ! orthogonalize against all other states besides nst + 1
-        if(ist == nst + 1) cycle
-      end if
+      if(skip_this_iteration(ist, nst, against_all_)) cycle
       mask(ist) = (abs(ss(ist)) <= M_EPSILON)
     end do
   end if
@@ -501,13 +489,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   end if
 
   do ist = 1, st%nst
-    if(.not.against_all_) then
-      ! orthogonalize against previous states only
-      if(ist > nst) exit
-    else
-      ! orthogonalize against all other states besides nst + 1
-      if(ist == nst + 1) cycle
-    end if
+    if(skip_this_iteration(ist, nst, against_all_)) cycle
     if(present(mask)) then
       if(mask(ist)) cycle
     end if
@@ -552,6 +534,22 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
 
   POP_SUB(X(states_orthogonalize_single))
   call profiling_out(prof)
+
+  contains
+
+    logical function skip_this_iteration(ist, nst, against_all_states)
+      integer, intent(in) :: ist, nst
+      logical, intent(in) :: against_all_states
+
+      skip_this_iteration = .false.
+      if(.not.against_all_states) then
+        ! orthogonalize against previous states only
+        if(ist > nst) skip_this_iteration = .true.
+      else
+        ! orthogonalize against all other states besides nst + 1
+        if(ist == nst + 1) skip_this_iteration = .true.
+      end if
+    end function skip_this_iteration
 end subroutine X(states_orthogonalize_single)
 
 ! ---------------------------------------------------------
