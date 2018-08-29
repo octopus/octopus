@@ -400,9 +400,9 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
 
       ! Check convergence
       res = X(states_residue)(gr%mesh, dim, phi, lambda, psi)
-      norm = X(mf_nrm2)(gr%mesh, dim, phi)
 
       if(debug%info) then
+        norm = X(mf_nrm2)(gr%mesh, dim, phi)
         write(message(1), '(a,i4,a,i4,a,i4,a,es12.6,a,es12.6)') 'Debug: CG New Eigensolver - ik', ik, &
           ' ist ', ist, ' iter ', i + 1, ' res ', res, ' ', res/norm
         call messages_info(1)
