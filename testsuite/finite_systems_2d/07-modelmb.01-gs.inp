@@ -23,7 +23,7 @@ ConvAbsEv = 1e-16
 Eigensolver = cg_new
 EigensolverTolerance = 1e-9
 EigensolverMaxIter = 50
-
+ConvEigenError = yes
 
 b=0.5
 v = 0.9
