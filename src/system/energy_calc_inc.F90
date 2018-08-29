@@ -98,7 +98,7 @@ subroutine X(calculate_expectation_values)(hm, der, st, eigen, terms)
 end subroutine X(calculate_expectation_values)
 
 ! ---------------------------------------------------------
-R_TYPE function X(energy_calc_electronic)(hm, der, st, terms) result(energy)
+FLOAT function X(energy_calc_electronic)(hm, der, st, terms) result(energy)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(inout) :: der
   type(states_t),      intent(inout) :: st

@@ -1071,7 +1071,6 @@ contains
     integer :: is, ll, mm, add_lm
     character(len=120) :: aux
     FLOAT, allocatable :: ionic_dipole(:), multipole(:,:)
-    CMPLX, allocatable :: zmultipole(:,:)
 
     PUSH_SUB(td_write_multipole)
 
@@ -1162,7 +1161,6 @@ contains
 
     SAFE_DEALLOCATE_A(ionic_dipole)
     SAFE_DEALLOCATE_A(multipole)
-    SAFE_DEALLOCATE_A(zmultipole)
     POP_SUB(td_write_multipole)
   end subroutine td_write_multipole
 
