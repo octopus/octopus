@@ -489,7 +489,7 @@ contains
     end if
 
     select case(eigens%es_type)
-    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
+    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
       call preconditioner_init(eigens%pre, gr)
     case default
       call preconditioner_null(eigens%pre)
