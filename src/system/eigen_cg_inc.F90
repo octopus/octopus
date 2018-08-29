@@ -245,7 +245,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       ! todo: need this here?
       st%eigenval(ist, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi))
       res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
-      norm = X(mf_nrm2) (gr%mesh, st%d%dim, h_psi)
+      !norm = X(mf_nrm2) (gr%mesh, st%d%dim, h_psi)
 
       ! consider change in energy
       if(iter == 1) then
