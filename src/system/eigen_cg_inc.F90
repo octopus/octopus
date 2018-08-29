@@ -243,7 +243,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 4*R_MUL))
 
       ! todo: need this here?
-      st%eigenval(ist, ik) = X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi)
+      st%eigenval(ist, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi))
       res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
       norm = X(mf_nrm2) (gr%mesh, st%d%dim, h_psi)
 
@@ -259,12 +259,12 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
         call messages_info(1)
       end if
 
-      if(first_delta_e <= 1.1*M_EPSILON) then
+      if(first_delta_e <= CNST(1.1)*M_EPSILON) then
         if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
         exit iter_loop
       end if
       if(iter > 1) then
-        if(abs(st%eigenval(ist, ik) - old_energy) < first_delta_e*R_REAL(1e-1)) then
+        if(abs(st%eigenval(ist, ik) - old_energy) < first_delta_e*CNST(1e-1)) then
           exit iter_loop
         end if
       end if
