@@ -22,6 +22,7 @@ Enabled    : Yes
 # this calculation seems numerically unstable!
 Input     : 07-sic.01-gs.inp
 
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 Precision : 7e-03
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;   -20.802375655
 Precision : 1e-06

@@ -8,6 +8,7 @@ Enabled    : Yes
 Input      : 03-ACBN0_restricted.01-lif.inp
 
 #Copied from 02-ACBN0.test
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -24.29814169
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  -14.42250723
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -4.44771433
@@ -37,6 +38,7 @@ match ; U2p F   ; LINEFIELD(static/effectiveU, -7, 4) ; 0.473315
 Input      : 03-ACBN0_restricted.02-lif_unpacked.inp
 
 #Copied from 02-ACBN0.test
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -24.29814169
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  -14.42250723
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -4.44771433
