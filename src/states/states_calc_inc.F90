@@ -434,7 +434,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   R_TYPE,  optional, intent(in)    :: beta_ij(:)   !< beta_ij(nst)
   logical, optional, intent(in)    :: against_all
 
-  integer :: ist, idim
+  integer :: ist, idim, length_ss
   FLOAT   :: nrm2
   R_TYPE, allocatable  :: ss(:), psi(:, :)
   type(profile_t), save :: prof
@@ -451,11 +451,11 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   against_all_ = optional_default(against_all, .false.)
 
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
-  if(.not.against_all_) then
-    SAFE_ALLOCATE(ss(1:nst))
-  else
-    SAFE_ALLOCATE(ss(1:st%nst))
+  length_ss = nst
+  if(against_all_) then
+    length_ss = st%nst
   end if
+  SAFE_ALLOCATE(ss(1:length_ss))
 
   ss = M_ZERO
 
@@ -471,7 +471,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
     
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, "GRAM_SCHMIDT_REDUCE")
-    call comm_allreduce(mesh%mpi_grp%comm, ss, dim = nst)
+    call comm_allreduce(mesh%mpi_grp%comm, ss, dim = length_ss)
     call profiling_out(reduce_prof)
   end if
 
@@ -482,7 +482,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
     end do
   end if
 
-  if(present(beta_ij)) ss(1:nst) = ss(1:nst)*beta_ij(1:nst)
+  if(present(beta_ij)) ss(1:length_ss) = ss(1:length_ss)*beta_ij(1:length_ss)
   
   if(present(theta_fi)) then
     if(theta_fi /= M_ONE) phi(1:mesh%np, 1:st%d%dim) = theta_fi*phi(1:mesh%np, 1:st%d%dim)
@@ -516,11 +516,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   end if
 
   if(present(overlap)) then
-    if(.not.against_all_) then
-      overlap(1:nst) = ss(1:nst)
-    else
-      overlap(1:st%nst) = ss(1:st%nst)
-    end if
+    overlap(1:length_ss) = ss(1:length_ss)
   end if
 
   if(present(norm)) then
