@@ -76,7 +76,6 @@ contains
     FLOAT                             :: tnadd_energy, external_energy
     logical :: full_
     FLOAT :: evxctau
-    CMPLX :: etmp
 
     PUSH_SUB(energy_calc_total)
 
@@ -85,7 +84,6 @@ contains
 
     hm%energy%eigenvalues = states_eigenvalues_sum(st)
 
-    etmp = M_z0
     evxctau = M_ZERO
     if((full_.or.hm%theory_level==HARTREE.or.hm%theory_level==HARTREE_FOCK) & 
       .and.(hm%theory_level /= CLASSICAL)) then
@@ -112,20 +110,14 @@ contains
         hm%energy%extern = hm%energy%extern_local + hm%energy%extern_non_local
         evxctau = denergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
       else
-        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
-        hm%energy%kinetic   = real(etmp)
+        hm%energy%kinetic = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
          
-        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
-        hm%energy%extern_local   = real(etmp)
+        hm%energy%extern_local = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
         
-        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
-        hm%energy%extern_non_local   = real(etmp)
-
+        hm%energy%extern_non_local = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
         hm%energy%extern   = hm%energy%extern_local   + hm%energy%extern_non_local 
         
-        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
-     
-        evxctau   = real(etmp)
+        evxctau = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
       end if
     end if
 
