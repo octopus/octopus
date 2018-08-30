@@ -6,8 +6,10 @@ BoxShape = parallelepiped
 
 ExperimentalFeatures = yes
 
-EigenSolver = rmmdiis
-ConvRelDens = 1.0e-7
+EigenSolver = cg_new
+EigensolverMaxIter = 50
+EigensolverTolerance = 1e-7
+ConvRelDens = 1.0e-6
 
 a = 7.8809
 
@@ -58,8 +60,6 @@ LCAOStart= lcao_states
 %
 KPointsUseSymmetries = yes
 KPointsUseTimeReversal = no
-
-ExtraStates = 8
 
 AOTruncation = ao_box
 OutputLDA_U = occ_matrices
