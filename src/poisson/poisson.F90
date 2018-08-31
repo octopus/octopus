@@ -126,7 +126,7 @@ module poisson_oct_m
     integer :: nslaves
     FLOAT :: theta !< cmplxscl
     FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
-    FLOAT :: dressed_lambda,dressed_omega,dressed_electrons
+    FLOAT :: dressed_lambda,dressed_omega,dressed_electrons,dressed_coulomb
     type(poisson_fmm_t)  :: params_fmm
 #ifdef HAVE_MPI2
     integer         :: intercomm
@@ -301,6 +301,19 @@ contains
 	  call parse_variable('RDMNoElectrons', CNST(2.0), this%dressed_electrons)
 	  
 	  print*, 'RDMNoElectrons', this%dressed_electrons
+	  
+	  !%Variable RDMCoulomb
+      !%Type float
+      !%Default 2.0
+      !%Section SCF::RDMFT
+      !%Description
+      !% allows to control the prefactor of the electron electron interaction
+      !%End
+	  call parse_variable('RDMCoulomb', CNST(1.0), this%dressed_coulomb)
+	  
+	  print*, 'RDMCoulomb', this%dressed_coulomb
+	  
+	  
     end if
    
     select case(this%method)
