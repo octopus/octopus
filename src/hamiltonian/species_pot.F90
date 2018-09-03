@@ -56,7 +56,8 @@ module species_pot_oct_m
     species_get_nlcc,               &
     species_get_local,              &
     species_atom_density,           &
-    species_atom_density_derivative
+    species_atom_density_derivative,&
+    species_atom_density_grad
 
   type(mesh_t), pointer :: mesh_p
   FLOAT, allocatable :: rho_p(:)
@@ -307,7 +308,7 @@ contains
     FLOAT,                intent(inout) :: drho(:, :) !< (mesh%np, spin_channels)
 
     integer :: isp, ip, icell
-    FLOAT :: rr, pos(1:MAX_DIM)
+    FLOAT :: rr, pos(1:MAX_DIM), range
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
     type(periodic_copy_t) :: pp
@@ -330,8 +331,9 @@ contains
 
       if(ps_has_density(ps)) then
 
-        call periodic_copy_init(pp, sb, atom%x, &
-          range = spline_cutoff_radius(ps%Ur(1, 1), ps%projectors_sphere_threshold))
+        range = spline_cutoff_radius(ps%density(1), ps%projectors_sphere_threshold)
+        if (spin_channels == 2) range = max(range, spline_cutoff_radius(ps%density(2), ps%projectors_sphere_threshold))
+        call periodic_copy_init(pp, sb, atom%x, range = range)
 
         do icell = 1, periodic_copy_num(pp)
           pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
@@ -363,6 +365,76 @@ contains
 
     POP_SUB(species_atom_density_derivative)
   end subroutine species_atom_density_derivative
+
+  ! ---------------------------------------------------------
+  ! Graident of the atomic density, if available
+  subroutine species_atom_density_grad(mesh, sb, atom, spin_channels, drho)
+    type(mesh_t),         intent(in)    :: mesh
+    type(simul_box_t),    intent(in)    :: sb
+    type(atom_t), target, intent(in)    :: atom
+    integer,              intent(in)    :: spin_channels
+    FLOAT,                intent(inout) :: drho(:, :, :) !< (mesh%np, spin_channels, dim)
+
+    integer :: isp, ip, icell, idir
+    FLOAT :: rr, pos(1:MAX_DIM), range
+    type(species_t), pointer :: species
+    type(ps_t), pointer :: ps
+    type(periodic_copy_t) :: pp
+
+    PUSH_SUB(species_atom_density_grad)
+
+    ASSERT(spin_channels == 1 .or. spin_channels == 2)
+
+    species => atom%species
+    drho = M_ZERO
+
+    ! build density ...
+    select case (species_type(species))
+
+    case (SPECIES_PSEUDO, SPECIES_PSPIO)
+      ! ...from pseudopotentials
+      
+      pos(1:MAX_DIM) = M_ZERO
+      ps => species_ps(species)
+
+      if(ps_has_density(ps)) then
+
+        range = spline_cutoff_radius(ps%density(1), ps%projectors_sphere_threshold)
+        if (spin_channels == 2) range = max(range, spline_cutoff_radius(ps%density(2), ps%projectors_sphere_threshold))
+        call periodic_copy_init(pp, sb, atom%x, range = range)
+
+        do icell = 1, periodic_copy_num(pp)
+          pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
+        
+          do ip = 1, mesh%np
+            call mesh_r(mesh, ip, rr, origin = pos)
+            rr = max(rr, r_small)
+
+            do idir = 1, mesh%sb%dim
+              do isp = 1, spin_channels
+                if(rr >= spline_range_max(ps%density_der(isp))) cycle
+                drho(ip, isp, idir) = drho(ip, isp, idir) - spline_eval(ps%density_der(isp), rr)*(mesh%x(ip, idir)-pos(idir))/rr
+              end do
+           end do
+          end do
+        end do
+  
+        call periodic_copy_end(pp)
+
+      else 
+        call messages_write('The pseudopotential for')
+        call messages_write(species_label(species))
+        call messages_write(' does not contain the density.')
+        call messages_fatal()
+      end if
+      
+    case default
+      call messages_not_implemented('species_atom_density_grad for non-pseudopotential species')
+
+    end select
+
+    POP_SUB(species_atom_density_grad)
+  end subroutine species_atom_density_grad
 
   ! ---------------------------------------------------------
 

@@ -326,13 +326,6 @@ ACX_BLACS
 ACX_SCALAPACK
 ACX_ELPA
 
-dnl check for ARPACK and PARPACK
-ACX_ARPACK
-ACX_PARPACK
-
-dnl check for FEAST
-ACX_FEAST
-
 dnl check for Libfm
 ACX_LIBFM
 
