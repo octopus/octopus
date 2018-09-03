@@ -154,11 +154,7 @@ contains
       SAFE_DEALLOCATE_A(vhxc_t2)
     end if
 
-    if(.not. hm%cmplxscl%space) then
-      call density_calc(st, gr, st%rho)
-    else
-      call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-    end if
+    call density_calc(st, gr, st%rho)
 
     POP_SUB(td_etrs)
   end subroutine td_etrs
@@ -254,7 +250,7 @@ contains
     ! store the state at half iteration
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call batch_copy(st%group%psib(ib, ik), psi2(ib, ik))
+        call batch_copy(st%group%psib(ib, ik), psi2(ib, ik), fill_zeros = .false.)
         if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(psi2(ib, ik), copy = .false.)
         call batch_copy_data(gr%mesh%np, st%group%psib(ib, ik), psi2(ib, ik))
       end do
@@ -270,11 +266,7 @@ contains
         end do
       end do
 
-      if(.not. hm%cmplxscl%space) then
-        call density_calc(st, gr, st%rho)
-      else
-        call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-      end if
+      call density_calc(st, gr, st%rho)
 
       call v_ks_calc(ks, hm, st, geo, time = time, calc_current = .false.)
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
@@ -356,25 +348,11 @@ contains
     if(tr%method == PROP_CAETRS) then
       SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
       if(hm%family_is_mgga_with_exc) then 
-        if(hm%cmplxscl%space) then
-          SAFE_ALLOCATE(Imvold(1:gr%mesh%np, 1:st%d%nspin))
-          call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, &
-                  vold, imvold, vtauold, imvtauold)
-          call lalg_copy(gr%mesh%np, st%d%nspin, Imvold, hm%Imvhxc)
-          call lalg_copy(gr%mesh%np, st%d%nspin, Imvtauold, hm%Imvtau)
-        else
-          call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold, vtau = vtauold)
-        end if
+        call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold, vtau = vtauold)
         call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
         call lalg_copy(gr%mesh%np, st%d%nspin, vtauold, hm%vtau)
       else
-        if(hm%cmplxscl%space) then
-          SAFE_ALLOCATE(Imvold(1:gr%mesh%np, 1:st%d%nspin))
-          call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold, imvold)
-          call lalg_copy(gr%mesh%np, st%d%nspin, Imvold, hm%Imvhxc)
-        else
-          call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold)
-        end if
+        call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold)
         call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
       endif
 

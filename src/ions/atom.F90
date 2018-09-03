@@ -49,6 +49,7 @@ module atom_oct_m
     FLOAT, dimension(MAX_DIM) :: f_nl     = M_ZERO !< NL electronic part
     FLOAT, dimension(MAX_DIM) :: f_fields = M_ZERO !< Lasers
     FLOAT, dimension(MAX_DIM) :: f_u      = M_ZERO !< Hubbard forces
+    FLOAT, dimension(MAX_DIM) :: f_scf    = M_ZERO !< SCF forces
   end type atom_t
 
   type, public :: atom_classical_t

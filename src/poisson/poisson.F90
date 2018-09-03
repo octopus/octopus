@@ -145,13 +145,14 @@ module poisson_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, der, mc, label, theta, qq)
+  subroutine poisson_init(this, der, mc, label, theta, qq, solver)
     type(poisson_t),             intent(out) :: this
     type(derivatives_t), target, intent(in)  :: der
     type(multicomm_t),           intent(in)  :: mc
     character(len=*),  optional, intent(in)  :: label
     FLOAT,             optional, intent(in)  :: theta !< cmplxscl
     FLOAT,             optional, intent(in)  :: qq(:) !< (der%mesh%sb%periodic_dim)
+    integer,           optional, intent(in)  :: solver
 
     logical :: need_cube, isf_data_is_parallel
     integer :: default_solver, default_kernel, box(MAX_DIM), fft_type, fft_library
@@ -261,7 +262,11 @@ contains
 
     if(abs(this%theta) > M_EPSILON .and. der%mesh%sb%dim == 1) default_solver = POISSON_DIRECT_SUM
 
-    call parse_variable('PoissonSolver', default_solver, this%method)
+    if(.not.present(solver)) then
+      call parse_variable('PoissonSolver', default_solver, this%method)
+    else
+      this%method = solver
+    end if
     if(.not.varinfo_valid_option('PoissonSolver', this%method)) call messages_input_error('PoissonSolver')
    
     select case(this%method)
@@ -349,114 +354,117 @@ contains
 
     end if
 
-    if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_DIRECT_SUM) then
-      message(1) = 'A periodic system may not use the direct_sum Poisson solver.'
-      call messages_fatal(1)
-    end if
+    !We assume the developr knows what he is doing by providing the solver option
+    if(.not. present(solver)) then 
+      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_DIRECT_SUM) then
+        message(1) = 'A periodic system may not use the direct_sum Poisson solver.'
+        call messages_fatal(1)
+      end if
 
-    if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_CG_CORRECTED) then
-      message(1) = 'A periodic system may not use the cg_corrected Poisson solver.'
-      call messages_fatal(1)
-    end if
+      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_CG_CORRECTED) then
+        message(1) = 'A periodic system may not use the cg_corrected Poisson solver.'
+        call messages_fatal(1)
+      end if
 
-    if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_CG) then
-      message(1) = 'A periodic system may not use the cg Poisson solver.'
-      call messages_fatal(1)
-    end if
+      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_CG) then
+        message(1) = 'A periodic system may not use the cg Poisson solver.'
+        call messages_fatal(1)
+      end if
 
-    if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_MULTIGRID) then
-      message(1) = 'A periodic system may not use the multigrid Poisson solver.'
-      call messages_fatal(1)
-    end if
+      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_MULTIGRID) then
+        message(1) = 'A periodic system may not use the multigrid Poisson solver.'
+        call messages_fatal(1)
+      end if
 
-    select case(der%mesh%sb%dim)
-    case(1)
+      select case(der%mesh%sb%dim)
+      case(1)
 
-      select case(der%mesh%sb%periodic_dim)
-      case(0)
-        if( (this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM)) then
-          message(1) = 'A finite 1D system may only use fft or direct_sum Poisson solvers.'
+        select case(der%mesh%sb%periodic_dim)
+        case(0)
+          if( (this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM)) then
+            message(1) = 'A finite 1D system may only use fft or direct_sum Poisson solvers.'
+            call messages_fatal(1)
+          end if
+        case(1)
+          if(this%method /= POISSON_FFT) then
+            message(1) = 'A periodic 1D system may only use the fft Poisson solver.'
+            call messages_fatal(1)
+          end if
+        end select
+
+        if(abs(this%theta) > M_EPSILON .and. this%method /= POISSON_DIRECT_SUM) then
+          call messages_not_implemented('Complex scaled 1D soft Coulomb with Poisson solver other than direct_sum')
+        end if
+
+        if(der%mesh%use_curvilinear .and. this%method /= POISSON_DIRECT_SUM) then
+          message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
+          message(2) = 'Poisson solver is direct_sum.'
+          call messages_fatal(2)
+        end if
+
+      case(2)
+
+        if( (this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM) ) then
+          message(1) = 'A 2D system may only use fft or direct_sum Poisson solvers.'
           call messages_fatal(1)
         end if
-      case(1)
-        if(this%method /= POISSON_FFT) then
-          message(1) = 'A periodic 1D system may only use the fft Poisson solver.'
+
+        if(der%mesh%use_curvilinear .and. (this%method /= POISSON_DIRECT_SUM) ) then
+          message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
+          message(2) = 'Poisson solver is direct_sum.'
+          call messages_fatal(2)
+        end if
+
+      case(3)
+      
+        if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FMM) then
+          call messages_not_implemented('FMM for periodic systems')
+        end if
+
+        if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_ISF) then
+          call messages_write('The ISF solver can only be used for finite systems.')
+          call messages_fatal()
+        end if
+
+        if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FFT .and. &
+          this%kernel /= der%mesh%sb%periodic_dim .and. this%kernel >=0 .and. this%kernel <=3) then
+          write(message(1), '(a,i1,a)')'The system is periodic in ', der%mesh%sb%periodic_dim ,' dimension(s),'
+          write(message(2), '(a,i1,a)')'but Poisson solver is set for ', this%kernel, ' dimensions.'
+          call messages_warning(2)
+        end if
+
+        if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FFT .and. &
+          this%kernel == POISSON_FFT_KERNEL_CORRECTED) then
+          write(message(1), '(a,i1,a)')'PoissonFFTKernel = multipole_correction cannot be used for periodic systems.'
           call messages_fatal(1)
+        end if
+
+        if(der%mesh%use_curvilinear .and. (this%method/=POISSON_CG_CORRECTED)) then
+          message(1) = 'If curvilinear coordinates are used, then the only working'
+          message(2) = 'Poisson solver is cg_corrected.'
+          call messages_fatal(2)
+        end if
+
+        if( (der%mesh%sb%box_shape == MINIMUM) .and. (this%method == POISSON_CG_CORRECTED) ) then
+          message(1) = 'When using the "minimum" box shape and the "cg_corrected"'
+          message(2) = 'Poisson solver, we have observed "sometimes" some non-'
+          message(3) = 'negligible error. You may want to check that the "fft" or "cg"'
+          message(4) = 'solver are providing, in your case, the same results.'
+          call messages_warning(4)
+        end if
+
+        if (this%method == POISSON_FMM) then
+          call messages_experimental('FMM Poisson solver')
         end if
       end select
+    end if
 
-      if(abs(this%theta) > M_EPSILON .and. this%method /= POISSON_DIRECT_SUM) then
-        call messages_not_implemented('Complex scaled 1D soft Coulomb with Poisson solver other than direct_sum')
-      end if
-
-      if(der%mesh%use_curvilinear .and. this%method /= POISSON_DIRECT_SUM) then
-        message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
-        message(2) = 'Poisson solver is direct_sum.'
-        call messages_fatal(2)
-      end if
-
-    case(2)
-
-      if( (this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM) ) then
-        message(1) = 'A 2D system may only use fft or direct_sum Poisson solvers.'
-        call messages_fatal(1)
-      end if
-
-      if(der%mesh%use_curvilinear .and. (this%method /= POISSON_DIRECT_SUM) ) then
-        message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
-        message(2) = 'Poisson solver is direct_sum.'
-        call messages_fatal(2)
-      end if
-
-    case(3)
-      
-      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FMM) then
-        call messages_not_implemented('FMM for periodic systems')
-      end if
-
-      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_ISF) then
-        call messages_write('The ISF solver can only be used for finite systems.')
-        call messages_fatal()
-      end if
-
-      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FFT .and. &
-        this%kernel /= der%mesh%sb%periodic_dim .and. this%kernel >=0 .and. this%kernel <=3) then
-        write(message(1), '(a,i1,a)')'The system is periodic in ', der%mesh%sb%periodic_dim ,' dimension(s),'
-        write(message(2), '(a,i1,a)')'but Poisson solver is set for ', this%kernel, ' dimensions.'
-        call messages_warning(2)
-      end if
-
-      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FFT .and. &
-        this%kernel == POISSON_FFT_KERNEL_CORRECTED) then
-        write(message(1), '(a,i1,a)')'PoissonFFTKernel = multipole_correction cannot be used for periodic systems.'
-        call messages_fatal(1)
-      end if
-
-      if(der%mesh%use_curvilinear .and. (this%method/=POISSON_CG_CORRECTED)) then
-        message(1) = 'If curvilinear coordinates are used, then the only working'
-        message(2) = 'Poisson solver is cg_corrected.'
-        call messages_fatal(2)
-      end if
-
-      if( (der%mesh%sb%box_shape == MINIMUM) .and. (this%method == POISSON_CG_CORRECTED) ) then
-        message(1) = 'When using the "minimum" box shape and the "cg_corrected"'
-        message(2) = 'Poisson solver, we have observed "sometimes" some non-'
-        message(3) = 'negligible error. You may want to check that the "fft" or "cg"'
-        message(4) = 'solver are providing, in your case, the same results.'
-        call messages_warning(4)
-      end if
-
-      if (this%method == POISSON_FMM) then
-        call messages_experimental('FMM Poisson solver')
-      end if
-
-      if (this%method == POISSON_LIBISF) then
+    if (this%method == POISSON_LIBISF) then
 #ifndef HAVE_LIBISF
-        message(1)="LIBISF Poisson solver cannot be used since the code was not compiled with LIBISF."
-        call messages_fatal(1)
+      message(1)="LIBISF Poisson solver cannot be used since the code was not compiled with LIBISF."
+      call messages_fatal(1)
 #endif
-      end if
-    end select
+    end if
 
     call messages_print_stress(stdout)
 

@@ -21,7 +21,6 @@
 #include "global.h"
 
 module smear_oct_m
-  use cmplxscl_oct_m
   use global_oct_m
   use kpoints_oct_m
   use loct_math_oct_m
@@ -42,7 +41,6 @@ module smear_oct_m
     smear_copy,                       &
     smear_find_fermi_energy,          &
     smear_fill_occupations,           &
-    smear_occupy_states_by_ordering,  &
     smear_calc_entropy,               &
     smear_delta_function,             &
     smear_step_function,              &
@@ -185,65 +183,6 @@ contains
 
     POP_SUB(smear_copy)
   end subroutine smear_copy
-
-
-  !------------------------------------------------------------------
-  subroutine smear_occupy_states_by_ordering(this, eigenvalues, Imeigenvalues, occupations, &
-    qtot, nik, nst, penalizationfactor)
-    type(smear_t),   intent(inout) :: this
-    FLOAT,           intent(in)    :: eigenvalues(:,:)
-    FLOAT,           intent(in)    :: Imeigenvalues(:,:)
-    FLOAT,           intent(inout) :: occupations(:,:)
-    FLOAT,           intent(in)    :: qtot
-    integer,         intent(in)    :: nik, nst
-    FLOAT,           intent(in)    :: penalizationfactor
-    
-    integer            :: ii, ist, ist1, ist2, qtot_integer
-    FLOAT              :: score1, score2
-    CMPLX, allocatable :: zeigenvalues(:, :)
-
-    PUSH_SUB(smear_occupy_states_by_ordering)
-    if(this%method == SMEAR_FIXED_OCC) then
-      return
-    end if
-
-    SAFE_ALLOCATE(zeigenvalues(1:nst, 1:nik))
-
-    zeigenvalues = eigenvalues + M_zI * Imeigenvalues
-
-    occupations(:, :) = 0
-    qtot_integer = ceiling(qtot)
-
-    if(nik == 2) then
-      ist1 = 1
-      ist2 = 1
-      do ii=1, qtot_integer
-        score1 = cmplxscl_energy_ordering_score(zeigenvalues(ist1, 1), penalizationfactor)
-        score2 = cmplxscl_energy_ordering_score(zeigenvalues(ist2, 2), penalizationfactor)
-        if(score1 < score2) then
-          occupations(ist1, 1) = M_ONE + min(M_ZERO, qtot - ii)
-          ist1 = ist1 + 1
-        else
-          occupations(ist2, 2) = M_ONE + min(M_ZERO, qtot - ii)
-          ist2 = ist2 + 1
-        end if
-      end do
-      this%e_fermi = eigenvalues(ist1, 1)
-    else
-      ASSERT(nik == 1)
-      ist = 1 ! if qtot_integer is zero
-      do ii=1, qtot_integer
-        ist = 1 + (ii - 1) / 2
-        occupations(ist, 1) = occupations(ist, 1) + M_ONE + min(M_ZERO, qtot - ii)
-      end do
-      this%e_fermi = eigenvalues(ist, 1)
-    end if
-
-    ASSERT(abs(sum(occupations) - qtot) < CNST(1E-12))
-
-    SAFE_DEALLOCATE_A(zeigenvalues)
-    POP_SUB(smear_occupy_states_by_ordering)
-  end subroutine smear_occupy_states_by_ordering
 
 
   !--------------------------------------------------

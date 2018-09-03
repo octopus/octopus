@@ -129,7 +129,7 @@ contains
     call states_exec_init(sys%st, sys%mc)
     call elf_init()
 
-    call poisson_init(psolver, sys%gr%der, sys%mc, theta = sys%st%cmplxscl%theta)
+    call poisson_init(psolver, sys%gr%der, sys%mc)
     if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%geo, sys%mc)
 
     call v_ks_init(sys%ks, sys%gr, sys%st, sys%geo, sys%mc)
@@ -281,11 +281,7 @@ contains
 
     calc_eigenval_ = optional_default(calc_eigenval, .true.)
     call states_fermi(sys%st, sys%gr%mesh)
-    if(hm%cmplxscl%space) then
-      call density_calc(sys%st, sys%gr, sys%st%zrho%Re, sys%st%zrho%Im)
-    else
-      call density_calc(sys%st, sys%gr, sys%st%rho)
-    end if
+    call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval = calc_eigenval_) ! get potentials
 
     if(sys%st%restart_reorder_occs .and. .not. sys%st%fromScratch) then
