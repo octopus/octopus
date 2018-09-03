@@ -104,8 +104,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
     call profiling_in(prof_kinetic_finish, "KINETIC_FINISH")
     call X(derivatives_batch_finish)(handle)
     call profiling_out(prof_kinetic_finish)
-
-    if(hm%cmplxscl%space) call batch_scal(der%mesh%np, exp(-M_TWO*M_zI*hm%cmplxscl%theta), hpsib)
   else
     call batch_set_zero(hpsib)
   end if
@@ -224,16 +222,6 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
     vpsl_spin(1:mesh%np, 4) = M_ZERO
   end if
 
-  if(this%cmplxscl%space) then
-    SAFE_ALLOCATE(Imvpsl_spin(1:mesh%np, 1:this%d%nspin))
-    Imvpsl_spin(1:mesh%np, 1) = this%ep%Imvpsl(1:mesh%np)
-    if(this%d%ispin == SPINORS) then
-      Imvpsl_spin(1:mesh%np, 2) = this%ep%Imvpsl(1:mesh%np)
-      Imvpsl_spin(1:mesh%np, 3) = M_ZERO
-      Imvpsl_spin(1:mesh%np, 4) = M_ZERO
-    end if
-  end if
-
   if(batch_status(psib) == BATCH_CL_PACKED) then
     pnp = accel_padded_size(mesh%np)
     call accel_create_buffer(vpsl_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp * this%d%nspin)
@@ -250,18 +238,10 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
 
     call accel_release_buffer(vpsl_buff)
   else
-    if(this%cmplxscl%space) then
-      call X(hamiltonian_base_local_sub)(vpsl_spin, mesh, this%d, 1, &
-        psib, vpsib, Impotential = Imvpsl_spin)
-    else
-      call X(hamiltonian_base_local_sub)(vpsl_spin, mesh, this%d, 1, psib, vpsib)
-    end if
+    call X(hamiltonian_base_local_sub)(vpsl_spin, mesh, this%d, 1, psib, vpsib)
   end if
 
   SAFE_DEALLOCATE_A(vpsl_spin)
-  if(this%cmplxscl%space) then
-    SAFE_DEALLOCATE_A(Imvpsl_spin)
-  end if
 
   POP_SUB(X(hamiltonian_external))
 end subroutine X(hamiltonian_external)
@@ -424,8 +404,6 @@ subroutine X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
 
           call batch_get_state(psi2b, ii, der%mesh%np, psi2)
 
-          if(hm%cmplxscl%space) psi2 = R_CONJ(psi2)
-
           do idim = 1, hm%hf_st%d%dim
             forall(ip = 1:der%mesh%np)
               rho(ip) = rho(ip) + R_CONJ(psi2(ip, idim))*psi(ip, idim)
@@ -501,8 +479,6 @@ subroutine X(exchange_operator_hartree) (hm, der, ik, exx_coef, psib, hpsib)
       rho = R_TOTYPE(M_ZERO)
 
       call states_get_state(hm%hf_st, der%mesh, ist, ik2, psi2)
-
-      if(hm%cmplxscl%space) psi2(1:der%mesh%np, 1:hm%d%dim) = R_CONJ(psi2(1:der%mesh%np, 1:hm%d%dim))
 
       do idim = 1, hm%hf_st%d%dim
         forall(ip = 1:der%mesh%np)

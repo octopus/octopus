@@ -26,7 +26,7 @@ match ; <Sz>       11 ; GREPFIELD(static/info, '11   --', 7) ;  0.1374
 match ; <Sz>       13 ; GREPFIELD(static/info, '13   --', 7) ; -0.1138
 match ; <Sz>       15 ; GREPFIELD(static/info, '15   --', 7) ;  0.4476
 
-match ; Force         ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; 2.546063
+match ; Force         ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; -1.100007
 Precision : default
 
 ExtraFile : 07-spin_orbit_coupling.02-xe-pseudo.upf
@@ -50,5 +50,5 @@ match ; <Sz>       11 ; GREPFIELD(static/info, '11   --', 7) ;  0.1383
 match ; <Sz>       13 ; GREPFIELD(static/info, '13   --', 7) ; -0.1132
 match ; <Sz>       15 ; GREPFIELD(static/info, '15   --', 7) ;  0.4500
 
-match ; Force         ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; 2.556426
+match ; Force         ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; -0.691006
 Precision : default

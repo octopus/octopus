@@ -24,9 +24,7 @@ noinst_LIBRARIES = libsystem.a
 libsystem_f_srcs =                       \
 	current.F90                      \
 	dos.F90                          \
-	eigen_arpack.F90                 \
 	eigen_cg.F90                     \
-	eigen_feast.F90                  \
 	eigen_lobpcg.F90                 \
 	eigen_rmmdiis.F90                \
 	eigensolver.F90                  \
@@ -57,7 +55,6 @@ libsystem_a_SOURCES = $(libsystem_c_srcs) $(libsystem_f_srcs)
 
 # Include files - keep in alphabetical order
 noinst_HEADERS =                         \
-	eigen_arpack_inc.F90             \
 	eigen_cg_inc.F90                 \
 	eigen_evolution_inc.F90          \
 	eigen_lobpcg_inc.F90             \
@@ -101,12 +98,10 @@ depend:
 
 current.o : current.F90 
 dos.o : dos.F90
-eigen_arpack.o : eigen_arpack.F90 eigen_arpack_inc.F90 
 eigen_cg.o : eigen_cg.F90 eigen_cg_inc.F90 preconditioners.o 
-eigen_feast.o : eigen_feast.F90 linear_solver.o 
 eigen_lobpcg.o : eigen_lobpcg.F90 eigen_lobpcg_inc.F90 preconditioners.o 
 eigen_rmmdiis.o : eigen_rmmdiis.F90 eigen_rmmdiis_inc.F90 subspace.o preconditioners.o 
-eigensolver.o : eigensolver.F90 eigen_evolution_inc.F90 eigen_plan_inc.F90 subspace.o preconditioners.o exponential.o energy_calc.o eigen_rmmdiis.o eigen_lobpcg.o eigen_feast.o eigen_cg.o eigen_arpack.o 
+eigensolver.o : eigensolver.F90 eigen_evolution_inc.F90 eigen_plan_inc.F90 subspace.o preconditioners.o exponential.o energy_calc.o eigen_rmmdiis.o eigen_lobpcg.o eigen_cg.o 
 elf.o : elf.F90 
 energy_calc.o : energy_calc.F90 energy_calc_inc.F90 
 exponential.o : exponential.F90 

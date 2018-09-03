@@ -658,14 +658,10 @@ contains
     integer :: ip, im
     FLOAT   :: xx(MAX_DIM)
     FLOAT   :: rkick, ikick, rr, ylm
-    logical :: cmplxscl
 
     integer :: np
 
     PUSH_SUB(kick_function_get)
-
-    cmplxscl = .false.
-    if(present(theta)) cmplxscl = .true.
 
     np = mesh%np
     if(present(to_interpolate)) then
@@ -735,9 +731,6 @@ contains
           kick_function(ip) = sum(mesh%x(ip, 1:mesh%sb%dim) * &
             kick%pol(1:mesh%sb%dim, kick%pol_dir))
         end forall
-        if(cmplxscl) then
-          kick_function(:) = kick_function(:) * exp(M_zI * theta)
-        end if
       end if
     end if
 
@@ -754,15 +747,10 @@ contains
     CMPLX,                intent(out)   :: kick_pcm_function(:)
     FLOAT, optional,      intent(in)    :: theta
 
-    logical :: cmplxscl
-
     CMPLX, allocatable :: kick_function_interpolate(:)
     FLOAT, allocatable :: kick_function_real(:)
 
     PUSH_SUB(kick_pcm_function_get)
-
-    cmplxscl = .false.
-    if(present(theta)) cmplxscl = .true.
 
     kick_pcm_function = M_ZERO
     if ( pcm%localf ) then
@@ -782,7 +770,6 @@ contains
       end if
       if( pcm%kick_like .or. pcm%which_eps == 'deb' ) then
         kick_pcm_function = pcm%v_kick_rs / kick%delta_strength
-        if(cmplxscl) kick_pcm_function = kick_pcm_function * exp(M_zI * theta)
       end if
     end if
 
@@ -805,34 +792,22 @@ contains
     integer :: iqn, ist, idim, ip, ispin, iatom
     CMPLX   :: cc(2), kick_value
     CMPLX, allocatable :: kick_function(:), psi(:, :)
-    logical :: cmplxscl
 
     CMPLX, allocatable :: kick_pcm_function(:)
 
     PUSH_SUB(kick_apply)
 
-    cmplxscl = .false.
-    if(present(theta)) cmplxscl = .true.
-    
     ! The wavefunctions at time delta t read
     ! psi(delta t) = psi(t) exp(i k x)
     delta_strength: if(kick%delta_strength /= M_ZERO) then
 
       SAFE_ALLOCATE(kick_function(1:mesh%np))
-      if(.not. cmplxscl) then
-        call kick_function_get(mesh, kick, kick_function)
-      else
-        call kick_function_get(mesh, kick, kick_function, theta)          
-      end if
+      call kick_function_get(mesh, kick, kick_function, theta)          
 
       ! PCM - computing polarization due to kick
       if( present(pcm) ) then
         SAFE_ALLOCATE(kick_pcm_function(1:mesh%np))
-        if(.not. cmplxscl) then
-          call kick_pcm_function_get(mesh, kick, pcm, kick_pcm_function)
-        else
-          call kick_pcm_function_get(mesh, kick, pcm, kick_pcm_function, theta)        
-        end if
+        call kick_pcm_function_get(mesh, kick, pcm, kick_pcm_function, theta)        
         kick_function = kick_function + kick_pcm_function
       end if
 
