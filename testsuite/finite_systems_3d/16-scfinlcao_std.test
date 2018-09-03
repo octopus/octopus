@@ -38,7 +38,7 @@ match ; Dipole Moment z   ; GREPFIELD(static/info, '<z>', 4) ;   8.06628E-01
 
 match ; Force C  x        ; GREPFIELD(static/info, '1         C', 3) ;  -0.000000
 match ; Force C  z        ; GREPFIELD(static/info, '1         C', 5) ;  -3.717101
-match ; Force Cl y        ; GREPFIELD(static/info, '3        Cl', 4) ;  23.312070
+match ; Force Cl y        ; GREPFIELD(static/info, '3        Cl', 4) ;  23.312227
 
 match ; Bond 1->5 trans x ; GREPFIELD(static/density.scad, '//  Bond 1 -> 5', 2, 1);   -1.367881
 match ; Bond 1->5 rot x   ; GREPFIELD(static/density.scad, '//  Bond 1 -> 5', 2, 2); -108.23

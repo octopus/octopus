@@ -56,16 +56,8 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
       else
         write(fname, '(a,i1)') 'density-sp', is
       end if
-      if(associated(st%zrho%Im)) then !cmplxscl
-        SAFE_ALLOCATE(ztmp(1:gr%fine%mesh%np))
-        forall (ip = 1:gr%fine%mesh%np) ztmp(ip) = st%zrho%Re(ip, is) + M_zI * st%zrho%Im(ip, is)
-        call zio_function_output(outp%how, dir, fname, gr%fine%mesh, &
-          ztmp(:), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
-        SAFE_DEALLOCATE_A(ztmp)
-      else
-        call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
-          density(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
-      end if
+      call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
+        density(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     end do
     if(associated(subsys_density))then
       call base_density_init(iter, subsys_density)
@@ -147,12 +139,6 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
               call states_get_state(st, gr%mesh, idim, ist, ik, ztmp)
               call zio_function_output(outp%how, dir, fname, gr%mesh, ztmp, &
                 fn_unit, ierr, geo = geo)
-              if(st%have_left_states) then
-                fname = 'L'// trim(fname)
-                call states_get_state(st, gr%mesh, idim, ist, ik, ztmp, left = .true.)
-                call zio_function_output(outp%how, dir, fname, gr%mesh, ztmp, &
-                  fn_unit, ierr, geo = geo)                    
-              end if
             end if
           end do
         end do
