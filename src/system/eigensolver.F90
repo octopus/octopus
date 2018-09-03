@@ -90,6 +90,10 @@ module eigensolver_oct_m
     logical :: skip_finite_weight_kpoints
     logical :: folded_spectrum
     FLOAT, pointer   :: spectrum_shift(:,:)
+
+    ! cg options
+    logical :: orthogonalize_to_all
+    integer :: conjugate_direction
   end type eigensolver_t
 
 
@@ -102,7 +106,9 @@ module eigensolver_oct_m
        RS_RMMDIIS = 10,         &
        RS_ARPACK  = 12,         &
        RS_FEAST   = 13,         &
-       RS_PSD      = 14
+       RS_PSD     = 14,         &
+       CG_FR      = 1,          &
+       CG_PR      = 2
   
 contains
 
@@ -342,6 +348,36 @@ contains
     select case(eigens%es_type)
     case(RS_CG_NEW)
     case(RS_CG)
+      !%Variable EigensolverOrthogonalizeAll
+      !%Type logical
+      !%Default no
+      !%Section SCF::Eigensolver
+      !%Description
+      !% Used by the cg solver only.
+      !% During the cg iterations, the current band can be orthogonalized
+      !% against all other bands or only against the lower bands. Orthogonalizing
+      !% against all other bands can improve convergence properties, whereas
+      !% orthogonalizing against lower bands only saves operations.
+      !%End
+      call parse_variable('EigensolverOrthogonalizeAll', .false., eigens%orthogonalize_to_all)
+
+      !%Variable EigensolverConjugateDirection
+      !%Type integer
+      !%Section SCF::Eigensolver
+      !%Description
+      !% Used by the cg solver only.
+      !% The conjugate direction is updated using a certain coefficient to the previous
+      !% direction. This coeffiction can be computed in different ways. The default is
+      !% to use Fletcher-Reeves (FR), an alternative is Polak-Ribiere (PR).
+      !%Option FR 1
+      !% The coefficient for Fletcher-Reeves consists of the current norm of the
+      !% steepest descent vector divided by that of the previous iteration.
+      !%Option PR 2
+      !% For the Polak-Ribiere scheme, a product of the current with the previous
+      !% steepest descent vector is subtracted in the nominator.
+      !%End
+      call parse_variable('EigensolverConjugateDirection', 1, eigens%conjugate_direction)
+
     case(RS_PLAN)
     case(RS_EVO)
       call messages_experimental("imaginary-time evolution eigensolver")
@@ -624,7 +660,9 @@ contains
           call deigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
           call deigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-            eigens%converged(ik), ik, eigens%diff(:, ik))
+            eigens%converged(ik), ik, eigens%diff(:, ik), &
+            orthogonalize_to_all=eigens%orthogonalize_to_all, &
+            conjugate_direction=eigens%conjugate_direction)
         case(RS_PLAN)
           call deigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
@@ -667,10 +705,14 @@ contains
         case(RS_CG)
            if(eigens%folded_spectrum) then
              call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, & 
-                                eigens%diff(:, ik), shift=eigens%spectrum_shift)
+                                eigens%diff(:, ik), shift=eigens%spectrum_shift, &
+                                orthogonalize_to_all=eigens%orthogonalize_to_all, &
+                                conjugate_direction=eigens%conjugate_direction)
            else
               call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
-                                eigens%diff(:, ik))
+                                eigens%diff(:, ik), &
+                                orthogonalize_to_all=eigens%orthogonalize_to_all, &
+                                conjugate_direction=eigens%conjugate_direction)
            end if
         case(RS_PLAN)
           call zeigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
