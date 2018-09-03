@@ -525,7 +525,7 @@ end do
     type(states_t),       intent(inout) :: st
     FLOAT,                intent(out)   :: energy
 
-    integer :: ist
+    integer :: ist,ik
     REAL(8) :: objective
 
     PUSH_SUB(scf_occ_NO)
@@ -545,6 +545,13 @@ end do
     
     call total_energy_rdm(rdm, st%occ(:,1), energy)
 
+    rdm%occsum = M_ZERO
+
+    do ist = 1, st%nst
+      do ik = 1, st%d%nik
+        rdm%occsum = rdm%occsum + st%occ(ist,ik)
+      end do
+    end do
     
     write(message(1),'(a4,5x,a12)')'#st','Occupation'
     call messages_info(1)   
