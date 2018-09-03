@@ -30,7 +30,6 @@
     integer :: is, err, idir, ispin, ik, ib
     character(len=MAX_PATH_LEN) :: fname
     FLOAT,         dimension(:),   pointer :: xpot
-    FLOAT,         dimension(:,:), pointer :: tnadd_potential
     FLOAT, allocatable :: v0(:,:), nxc(:), potential(:)
     FLOAT, allocatable :: current_kpt(:, :)
     FLOAT, allocatable :: density_kpt(:), density_tmp(:,:)
@@ -74,11 +73,7 @@
           call dio_function_output(outp%how, dir, fname, der%mesh, hm%vxc(:, is), units_out%energy, err, geo = geo, grp = grp)
           
           ! finally the full KS potential (without non-local PP contributions)
-          if(associated(tnadd_potential))then
-            potential = hm%ep%vpsl + hm%vhxc(:, is) - tnadd_potential(:, min(is,ispin))
-          else
-            potential = hm%ep%vpsl + hm%vhxc(:, is)
-          end if
+          potential = hm%ep%vpsl + hm%vhxc(:, is)
           if(hm%d%ispin == 1) then
             write(fname, '(a)') 'vks'
           else
@@ -93,7 +88,6 @@
           end if
         end do
         SAFE_DEALLOCATE_A(potential)
-        nullify(tnadd_potential)
       end if
 
       !PCM potentials
