@@ -394,8 +394,6 @@ subroutine poisson_solve_drdmft(this, pot, rho)
 ! 			how to test only poisson routine?
 !			add soft_coulomb_param
 !			message coordinate distribution: 1-electron, 2-photon
-!			curvilinear
-!			parallel
 !           
 
   PUSH_SUB(poisson_solve_drdmft)
