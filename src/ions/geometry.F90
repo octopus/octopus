@@ -24,7 +24,6 @@ module geometry_oct_m
   use distributed_oct_m
   use global_oct_m
   use io_oct_m
-  use json_oct_m
   use loct_pointer_oct_m
   use loct_math_oct_m
   use messages_oct_m
@@ -50,9 +49,7 @@ module geometry_oct_m
     geometry_init,                   &
     geometry_init_xyz,               &
     geometry_init_species,           &
-    geometry_init_from_data_object,  &
     geometry_partition,              &
-    geometry_create_data_object,     &
     geometry_copy,                   &
     geometry_end,                    &
     geometry_dipole,                 &
@@ -424,154 +421,7 @@ contains
   end subroutine geometry_init_interaction
 
   ! ---------------------------------------------------------
-  subroutine geometry_init_from_data_object(this, space, json)
-    type(geometry_t),      intent(out) :: this
-    type(space_t), target, intent(in)  :: space
-    type(json_object_t),   intent(in)  :: json
 
-    type(json_object_t), pointer :: spec, atom
-    type(json_array_t),  pointer :: species, atoms
-    character(len=LABEL_LEN)     :: label
-    integer                      :: i, j, ierr
-
-    PUSH_SUB(geometry_init_from_data_object)
-
-    call geometry_nullify(this)
-    this%space=>space
-    call json_get(json, "nspecies", this%nspecies, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "nspecies" from geometry data object.'
-      call messages_fatal(1)
-      return
-    end if
-    SAFE_ALLOCATE(this%species(1:this%nspecies))
-    call json_get(json, "species", species, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "species" array from geometry data object.'
-      call messages_fatal(1)
-      return
-    end if
-    do i=1, this%nspecies
-      call json_get(species, i, spec, ierr)
-      if(ierr/=JSON_OK)then
-        write(unit=message(1), fmt="(a,i3,a)") &
-          'Could not read the ', i, 'th "species" element from geometry data object.'
-        call messages_fatal(1)
-        return
-      end if
-      call species_init_from_data_object(this%species(i), i, spec)
-    end do
-    call json_get(json, "natoms", this%natoms, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "natoms" from geometry data object.'
-      call messages_fatal(1)
-      return
-    end if
-    SAFE_ALLOCATE(this%atom(1:this%natoms))
-    call json_get(json, "atom", atoms, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "atom" array from geometry data object.'
-      call messages_fatal(1)
-      return
-    end if
-    do i=1, this%natoms
-      call json_get(atoms, i, atom, ierr)
-      if(ierr/=JSON_OK)then
-        write(unit=message(1), fmt="(a,i3,a)") &
-          'Could not read the ', i, 'th "atom" element from geometry data object.'
-        call messages_fatal(1)
-        return
-      end if
-      do j=1, this%nspecies
-        call json_get(atom, "label", label, ierr)
-        if(ierr/=JSON_OK)then
-          write(unit=message(1), fmt="(a,i3,a)") &
-            'Could not read the ', i, 'th "atom" element "label" from geometry data object.'
-          call messages_fatal(1)
-          return
-        end if
-        if(trim(label)==trim(species_label(this%species(j))))then
-          call atom_init_from_data_object(this%atom(i), this%species(j), atom)
-          exit
-        end if
-      end do
-    end do
-    call json_get(json, "ncatoms", this%ncatoms, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "ncatoms" from geometry data object.'
-      call messages_fatal(1)
-      return
-    end if
-    SAFE_ALLOCATE(this%catom(1:this%ncatoms))
-    call json_get(json, "catom", atoms, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "catom" array from geometry data object.'
-      call messages_fatal(1)
-      return
-    end if
-    do i=1, this%ncatoms
-      call json_get(atoms, i, atom, ierr)
-      if(ierr/=JSON_OK)then
-        write(unit=message(1), fmt="(a,i3,a)") &
-          'Could not read the ', i, 'th "catom" from geometry data object.'
-        call messages_fatal(1)
-        return
-      end if
-      call atom_classical_init_from_data_object(this%catom(i), atom)
-    end do
-
-    POP_SUB(geometry_init_from_data_object)
-  end subroutine geometry_init_from_data_object
-
-  ! ---------------------------------------------------------
-  subroutine geometry_create_data_object(this, json)
-    type(geometry_t),    intent(in)  :: this
-    type(json_object_t), intent(out) :: json
-    !
-    type(json_object_t), pointer :: spec, atom
-    type(json_array_t),  pointer :: species, atoms
-    integer                      :: i
-    !
-    PUSH_SUB(geometry_create_data_object)
-    call json_init(json)
-    call json_set(json, "nspecies", this%nspecies)
-    SAFE_ALLOCATE(species)
-    call json_init(species)
-    do i=1, this%nspecies
-      SAFE_ALLOCATE(spec)
-      call species_create_data_object(this%species(i), spec)
-      call json_append(species, spec)
-      nullify(spec)
-    end do
-    call json_set(json, "species", species)
-    nullify(species)
-    call json_set(json, "natoms", this%natoms)
-    SAFE_ALLOCATE(atoms)
-    call json_init(atoms)
-    do i=1, this%natoms
-      SAFE_ALLOCATE(atom)
-      call atom_create_data_object(this%atom(i), atom)
-      call json_append(atoms, atom)
-      nullify(atom)
-    end do
-    call json_set(json, "atom", atoms)
-    nullify(atoms)
-    call json_set(json, "ncatoms", this%ncatoms)
-    SAFE_ALLOCATE(atoms)
-    call json_init(atoms)
-    do i=1, this%ncatoms
-      SAFE_ALLOCATE(atom)
-      call atom_classical_create_data_object(this%catom(i), atom)
-      call json_append(atoms, atom)
-      nullify(atom)
-    end do
-    call json_set(json, "catom", atoms)
-    nullify(atoms)
-    POP_SUB(geometry_create_data_object)
-    return
-  end subroutine geometry_create_data_object
-
-  ! ---------------------------------------------------------
   subroutine geometry_partition(geo, mc)
     type(geometry_t),            intent(inout) :: geo
     type(multicomm_t),           intent(in)    :: mc

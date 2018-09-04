@@ -19,8 +19,6 @@
 #include "global.h"
  
 module v_ks_oct_m
-  use base_hamiltonian_oct_m
-  use base_states_oct_m
   use berry_oct_m
   use current_oct_m
   use density_oct_m
@@ -52,8 +50,6 @@ module v_ks_oct_m
   use pcm_oct_m 
   use simul_box_oct_m
   use species_oct_m
-  use ssys_states_oct_m
-  use ssys_tnadd_oct_m
   use states_oct_m
   use states_dim_oct_m
   use states_parallel_oct_m
@@ -803,8 +799,6 @@ contains
 
       ! get density taking into account non-linear core corrections
       SAFE_ALLOCATE(ks%calc%density(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
-      !> Calculate the subsystems total density.
-      if(associated(st%subsys_st)) call ssys_states_acc(st%subsys_st)
       call states_total_density(st, ks%gr%fine%mesh, ks%calc%density)
 
       ! Amaldi correction
@@ -911,7 +905,6 @@ contains
       CMPLX :: ctmp
       integer :: ispin, iatom
       FLOAT, allocatable :: vvdw(:)
-      FLOAT, dimension(:,:), pointer :: density
       FLOAT, allocatable :: coords(:, :)
       FLOAT :: vdw_stress(1:3, 1:3), latvec(1:3, 1:3)
       integer, allocatable :: atnum(:)
@@ -1032,13 +1025,6 @@ contains
         ! Now we calculate Int[n vxc] = energy%intnvxc
         ks%calc%energy%intnvxc = M_ZERO
 
-        nullify(density)
-        if(associated(st%subsys_st))then
-          call base_states_get(st%subsys_st, density)
-          ASSERT(associated(density))
-        else
-          density => st%rho
-        end if
         do ispin = 1, hm%d%nspin
           if(ispin <= 2) then
             factor = M_ONE
@@ -1046,7 +1032,7 @@ contains
             factor = M_TWO
           end if
           ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + &
-            factor*dmf_dotp(ks%gr%fine%mesh, density(:, ispin), ks%calc%vxc(:, ispin))
+            factor*dmf_dotp(ks%gr%fine%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin))
         end do
 
         if(states_are_real(st)) then
@@ -1069,8 +1055,6 @@ contains
     type(v_ks_t), target, intent(inout) :: ks
     type(hamiltonian_t),  intent(inout) :: hm
 
-    type(base_hamiltonian_t), pointer :: subsys_tnadd
-    FLOAT, dimension(:,:),    pointer :: potential
     integer                           :: ip, ispin
 
     PUSH_SUB(v_ks_calc_finish)
@@ -1154,24 +1138,6 @@ contains
         end if
       end if
       
-      ! Calculate and add subsystem kinetic non-additive term
-      nullify(subsys_tnadd, potential)
-      if(associated(hm%subsys_hm))then
-        call base_hamiltonian_get(hm%subsys_hm, "tnadd", subsys_tnadd)
-        ASSERT(associated(subsys_tnadd))
-        call ssys_tnadd_calc(subsys_tnadd)
-        call base_hamiltonian_get(subsys_tnadd, nspin=ispin)
-        ASSERT(ispin<=hm%d%ispin)
-        call base_hamiltonian_get(subsys_tnadd, potential)
-        ASSERT(associated(potential))
-        nullify(subsys_tnadd)
-        forall (ip = 1:ks%gr%mesh%np) hm%vhxc(ip,1) = hm%vhxc(ip,1) + potential(ip,1)
-        if(hm%d%ispin>UNPOLARIZED)then
-          forall (ip = 1:ks%gr%mesh%np) hm%vhxc(ip,2) = hm%vhxc(ip,2) + potential(ip,ispin)
-        end if
-        nullify(potential)
-      end if
-
       if(hm%d%ispin == SPINORS) then
         forall(ispin = 3:4, ip = 1:ks%gr%mesh%np) hm%vhxc(ip, ispin) = hm%vxc(ip, ispin)
       end if

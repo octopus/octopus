@@ -200,14 +200,8 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
   SAFE_ALLOCATE(vpsl_spin(1:mesh%np, 1:this%d%nspin))
 
   nullify(vpsl)
-  if(associated(this%ep%subsys_external))then
-    ! Sets the vpsl pointer to the "live" part of the subsystem potential.
-    call base_potential_gets(this%ep%subsys_external, "live", vpsl)
-    ASSERT(associated(vpsl))
-  else
-    ! Sets the vpsl pointer to the total potential.
-    vpsl => this%ep%vpsl
-  end if
+  ! Sets the vpsl pointer to the total potential.
+  vpsl => this%ep%vpsl
 
   vpsl_spin(1:mesh%np, 1) = vpsl(1:mesh%np)
   if(this%d%ispin == SPINORS) then

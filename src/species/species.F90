@@ -22,7 +22,6 @@ module species_oct_m
   use global_oct_m
   use iihash_oct_m
   use io_oct_m
-  use json_oct_m
   use loct_oct_m
   use loct_math_oct_m
   use loct_pointer_oct_m
@@ -54,8 +53,6 @@ module species_oct_m
     species_init_global,           &
     species_read_delta,            &
     species_pot_init,              &
-    species_init_from_data_object, &
-    species_create_data_object,    &
     species_type,                  &
     species_label,                 &
     species_index,                 &
@@ -917,92 +914,6 @@ contains
 
     POP_SUB(species_pot_init)
   end subroutine species_pot_init
-  ! ---------------------------------------------------------
-
-  ! ---------------------------------------------------------
-  subroutine species_init_from_data_object(this, index, json)
-    type(species_t),     intent(out) :: this
-    integer,             intent(in)  :: index
-    type(json_object_t), intent(in)  :: json
-
-    integer :: ierr
-
-    PUSH_SUB(species_init_from_data_object)
-
-    if(.not. initialized) call species_init_global()
-
-    call species_nullify(this)
-       
-    this%index=index
-    call json_get(json, "label", this%label, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "label" from species data object.'
-      call messages_fatal(1)
-      return
-    end if
-    call json_get(json, "type", this%type, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "type" from species data object.'
-      call messages_fatal(1)
-      return
-    end if
-    call json_get(json, "z_val", this%z_val, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "z_val" from species data object.'
-      call messages_fatal(1)
-      return
-    end if
-    call json_get(json, "mass", this%mass, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "mass" from species data object.'
-      call messages_fatal(1)
-      return
-    end if
-    call json_get(json, "vdw_radius", this%vdw_radius, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "vdw_radius" from species data object.'
-      call messages_fatal(1)
-      return
-    end if
-    this%has_density=.false.
-    this%potential_formula=""
-    nullify(this%ps)
-    this%nlcc=.false.
-    call json_get(json, "def_rsize", this%def_rsize, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "def_rsize" from species data object.'
-      call messages_fatal(1)
-      return
-    end if
-    this%def_h=-M_ONE
-    this%niwfs=-1
-    nullify(this%iwf_n)
-    nullify(this%iwf_l)
-    nullify(this%iwf_m)
-    nullify(this%iwf_i)
-    nullify(this%iwf_j)
-
-    POP_SUB(species_init_from_data_object)
-  end subroutine species_init_from_data_object
-  ! ---------------------------------------------------------
-
-  ! ---------------------------------------------------------
-  subroutine species_create_data_object(this, json)
-    type(species_t),     intent(in)  :: this
-    type(json_object_t), intent(out) :: json
-
-    PUSH_SUB(species_create_data_object)
-
-    call json_init(json)
-    call json_set(json, "label", trim(adjustl(this%label)))
-    call json_set(json, "type", this%type)
-    call json_set(json, "z_val", this%z_val)
-    call json_set(json, "mass", this%mass)
-    call json_set(json, "vdw_radius", this%vdw_radius)
-    call json_set(json, "def_rsize", this%def_rsize)
-
-    POP_SUB(species_create_data_object)
-  end subroutine species_create_data_object
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------

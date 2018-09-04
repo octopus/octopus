@@ -20,8 +20,6 @@
 
 module hamiltonian_oct_m
   use accel_oct_m
-  use base_hamiltonian_oct_m
-  use base_potential_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use blas_oct_m
@@ -120,7 +118,6 @@ module hamiltonian_oct_m
     type(states_dim_t)       :: d
     type(hamiltonian_base_t) :: hm_base
     type(energy_t), pointer  :: energy
-    type(base_hamiltonian_t), pointer :: subsys_hm    !< Subsystems Hamiltonian.
     type(bc_t)               :: bc      !< boundaries
     FLOAT, pointer :: vhartree(:) !< Hartree potential
     FLOAT, pointer :: vxc(:,:)    !< XC potential
@@ -204,8 +201,7 @@ module hamiltonian_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, xc_flags, &
-        family_is_mgga_with_exc, subsys_hm)
+  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, xc_flags, family_is_mgga_with_exc)
     type(hamiltonian_t),                        intent(out)   :: hm
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
@@ -214,7 +210,6 @@ contains
     integer,                                    intent(in)    :: xc_family
     integer,                                    intent(in)    :: xc_flags
     logical,                                    intent(in)    :: family_is_mgga_with_exc
-    type(base_hamiltonian_t), optional, target, intent(in)    :: subsys_hm
 
     integer :: iline, icol
     integer :: ncols
@@ -275,12 +270,6 @@ contains
 
     call oct_exchange_nullify(hm%oct_exchange)
     
-    nullify(hm%subsys_hm)
-    if(present(subsys_hm))then
-      ! Set Subsystems Hamiltonian pointer.
-      hm%subsys_hm => subsys_hm
-    end if
-
     ! allocate potentials and density of the cores
     ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);
     ! Im(vxc_12) = hm%vxc(:, 4)
@@ -306,7 +295,7 @@ contains
 
     hm%geo => geo
     !Initialize external potential
-    call epot_init(hm%ep, gr, hm%geo, hm%d%ispin, hm%d%nik, subsys_hm,hm%xc_family)
+    call epot_init(hm%ep, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%xc_family)
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, gr%sb)
@@ -552,8 +541,6 @@ contains
 
     call hamiltonian_base_end(hm%hm_base)
 
-    nullify(hm%subsys_hm)
-    
     if(associated(hm%hm_base%phase) .and. accel_is_enabled()) then
       call accel_release_buffer(hm%hm_base%buff_phase)
     end if
