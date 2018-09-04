@@ -151,14 +151,14 @@ contains
       write(message(1), '(a)') '**********************************************************************'
       write(message(2),'(a, i4)') 'RDM Iteration:', iter
       call messages_info(2)
-do icount = 1, 15
+!do icount = 1, 15 ! to make sure that occ_sum is correct, but apparently not necessary, just left it to really see if it is necessary or not
       if (rdm%hf.eqv. .false.) then
 		call scf_occ(rdm, gr, hm, st, energy_occ)
 	  else
 		call scf_occ_NO(rdm, gr, hm, st, energy_occ)
 	  end if
-  if (abs(rdm%occsum-st%qtot) < 0.00001) exit
-end do
+  !if (abs(rdm%occsum-st%qtot) < 0.00001) exit
+!end do
       ! Diagonalization of the generalized Fock matrix 
       write(message(1), '(a)') 'Optimization of natural orbitals'
       call messages_info(1)
