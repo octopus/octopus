@@ -19,10 +19,6 @@
 #include "global.h"
 
 module output_oct_m
-  use base_density_oct_m
-  use base_hamiltonian_oct_m
-  use base_potential_oct_m
-  use base_states_oct_m
   use basins_oct_m
   use batch_oct_m
   use comm_oct_m 
@@ -63,7 +59,6 @@ module output_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
   use orbitalset_oct_m
-  use output_fio_oct_m
   use output_me_oct_m
   use parser_oct_m
   use par_vec_oct_m
@@ -287,8 +282,6 @@ contains
     !% matrix. For the moment the trace is made over the second dimension, and
     !% the code is limited to 2D. The idea is to model <i>N</i> particles in 1D as an
     !% <i>N</i>-dimensional non-interacting problem, then to trace out <i>N</i>-1 coordinates.
-    !%Option frozen_system bit(30)
-    !% Generates input for a frozen calculation.
     !%Option potential_gradient bit(31)
     !% Prints the gradient of the potential.
     !%Option energy_density bit(32)
@@ -555,13 +548,9 @@ contains
 
     ! these kinds of Output do not have a how
     what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS + OPTION__OUTPUT__BERKELEYGW + OPTION__OUTPUT__DOS + &
-      OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW + OPTION__OUTPUT__FROZEN_SYSTEM
+      OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW
     what_no_how_u = OPTION__OUTPUTLDA_U__OCC_MATRICES + OPTION__OUTPUTLDA_U__EFFECTIVEU + &
       OPTION__OUTPUTLDA_U__MAGNETIZATION
-
-    if(bitand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
-      call messages_experimental("Frozen output")
-    end if
 
     if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       call v_ks_calculate_current(ks, .true.)
@@ -717,10 +706,6 @@ contains
       call output_berkeleygw(outp%bgw, dir, st, gr, ks, hm, geo)
     end if
     
-    if(bitand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
-      call output_fio(gr, geo, st, hm, trim(adjustl(dir)), mpi_world)
-    end if
-
     call output_energy_density(hm, ks, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
 
     if(hm%lda_u_level /= DFT_U_NONE) then

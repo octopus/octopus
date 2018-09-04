@@ -576,7 +576,6 @@ contains
     FLOAT   :: dt, ref_dt, energy, ewsum, polsum
     type(kick_t) :: kick, ref_kick
     FLOAT, allocatable :: dipole(:, :, :), ref_dipole(:, :, :), sigma(:, :, :), sf(:, :)
-    FLOAT, allocatable :: Imdipole(:, :, :), Imref_dipole(:, :, :)
     type(unit_system_t) :: file_units, ref_file_units
     type(batch_t) :: dipoleb, sigmab
 

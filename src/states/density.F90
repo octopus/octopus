@@ -20,7 +20,6 @@
 
 module density_oct_m
   use accel_oct_m
-  use base_states_oct_m
   use blas_oct_m
   use batch_oct_m
   use batch_ops_oct_m
@@ -532,38 +531,29 @@ contains
   !> this routine calculates the total electronic density,
   !! which is the sum of the part coming from the orbitals, the
   !! non-linear core corrections and the frozen orbitals
-  subroutine states_total_density(st, mesh, rho)
+  subroutine states_total_density(st, mesh, total_rho)
     type(states_t),  intent(in)  :: st
     type(mesh_t),    intent(in)  :: mesh
-    FLOAT,           intent(out) :: rho(:,:)
+    FLOAT,           intent(out) :: total_rho(:,:)
 
-    FLOAT, dimension(:,:), pointer :: density
     integer :: is, ip
 
     PUSH_SUB(states_total_density)
 
-    nullify(density)
-    if(associated(st%subsys_st))then
-      call base_states_get(st%subsys_st, density)
-    else
-      density => st%rho
-    end if
-    ASSERT(associated(density))
-
     forall(ip = 1:mesh%np, is = 1:st%d%nspin)
-      rho(ip, is) = density(ip, is)
+      total_rho(ip, is) = st%rho(ip, is)
     end forall
 
     if(associated(st%rho_core)) then
       forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
-        rho(ip, is) = rho(ip, is) + st%rho_core(ip)/st%d%spin_channels
+        total_rho(ip, is) = total_rho(ip, is) + st%rho_core(ip)/st%d%spin_channels
       end forall
     end if
 
     ! Add, if it exists, the frozen density from the inner orbitals.
     if(associated(st%frozen_rho)) then
       forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
-        rho(ip, is) = rho(ip, is) + st%frozen_rho(ip, is)
+        total_rho(ip, is) = total_rho(ip, is) + st%frozen_rho(ip, is)
       end forall
     end if
   

@@ -19,8 +19,6 @@
 #include "global.h"
 
 module energy_calc_oct_m
-  use base_hamiltonian_oct_m
-  use base_potential_oct_m
   use batch_oct_m
   use berry_oct_m
   use comm_oct_m
@@ -43,7 +41,6 @@ module energy_calc_oct_m
   use pcm_oct_m
   use simul_box_oct_m
   use smear_oct_m
-  use ssys_external_oct_m
   use states_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -71,12 +68,9 @@ contains
     integer, optional,   intent(in)    :: iunit
     logical, optional,   intent(in)    :: full
 
-    type(base_hamiltonian_t), pointer :: subsys_tnadd
-    type(base_potential_t),   pointer :: subsys_external
     FLOAT                             :: tnadd_energy, external_energy
     logical :: full_
     FLOAT :: evxctau
-    CMPLX :: etmp
 
     PUSH_SUB(energy_calc_total)
 
@@ -85,26 +79,13 @@ contains
 
     hm%energy%eigenvalues = states_eigenvalues_sum(st)
 
-    etmp = M_z0
     evxctau = M_ZERO
-    if((full_.or.hm%theory_level==HARTREE.or.hm%theory_level==HARTREE_FOCK) & 
+    if((full_ .or. hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) & 
       .and.(hm%theory_level /= CLASSICAL)) then
       if(states_are_real(st)) then
 
         tnadd_energy = M_ZERO
         external_energy = M_ZERO
-        nullify(subsys_tnadd, subsys_external)
-        if(associated(hm%subsys_hm))then
-          call base_hamiltonian_get(hm%subsys_hm, "tnadd", subsys_tnadd)
-          ASSERT(associated(subsys_tnadd))
-          call base_hamiltonian_get(subsys_tnadd, energy=tnadd_energy)
-          nullify(subsys_tnadd)
-          call base_hamiltonian_get(hm%subsys_hm, "external", subsys_external)
-          ASSERT(associated(subsys_external))
-          call ssys_external_calc(subsys_external)
-          call ssys_external_get(subsys_external, energy=external_energy, except=(/"live"/))
-          nullify(subsys_external)
-        end if
         
         hm%energy%kinetic  = tnadd_energy + denergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
         hm%energy%extern_local = external_energy + denergy_calc_electronic(hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
@@ -112,20 +93,14 @@ contains
         hm%energy%extern = hm%energy%extern_local + hm%energy%extern_non_local
         evxctau = denergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
       else
-        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
-        hm%energy%kinetic   = real(etmp)
+        hm%energy%kinetic = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
          
-        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
-        hm%energy%extern_local   = real(etmp)
+        hm%energy%extern_local = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
         
-        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
-        hm%energy%extern_non_local   = real(etmp)
-
+        hm%energy%extern_non_local = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
         hm%energy%extern   = hm%energy%extern_local   + hm%energy%extern_non_local 
         
-        etmp = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
-     
-        evxctau   = real(etmp)
+        evxctau = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
       end if
     end if
 
