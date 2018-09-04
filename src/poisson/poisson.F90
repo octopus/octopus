@@ -304,7 +304,7 @@ contains
 	  
 	  !%Variable RDMCoulomb
       !%Type float
-      !%Default 2.0
+      !%Default 1.0
       !%Section SCF::RDMFT
       !%Description
       !% allows to control the prefactor of the electron electron interaction
