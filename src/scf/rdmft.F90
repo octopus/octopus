@@ -226,7 +226,7 @@ end do
           call density_calc (states_save,gr,states_save%rho)
           ! if other quantities besides the densities and the states are need they also have to be recalculated here!
           call states_dump(restart_dump, states_save, gr, ierr, iter=iter) 
-          
+
           if ((conv .or. iter == max_iter)) then
             call states_copy(st, states_save)
           endif
