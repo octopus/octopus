@@ -22,7 +22,6 @@ module test_oct_m
   use global_oct_m
   use batch_oct_m
   use batch_ops_oct_m
-  use base_hamiltonian_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
   use command_line_oct_m
@@ -227,7 +226,6 @@ contains
     type(epot_t) :: ep
     type(batch_t), pointer :: epsib
     integer :: itime
-    type(base_hamiltonian_t), pointer :: subsys_hm
 
     PUSH_SUB(test_projector)
 
@@ -244,9 +242,8 @@ contains
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
   
     !Initialize external potential
-    nullify(subsys_hm)
-    call epot_init(ep, sys%gr, sys%geo, SPINORS, 1, .false., subsys_hm, XC_FAMILY_NONE)
-    call epot_generate(ep, sys%gr, sys%geo, sys%st, .false.)
+    call epot_init(ep, sys%gr, sys%geo, SPINORS, 1, XC_FAMILY_NONE)
+    call epot_generate(ep, sys%gr, sys%geo, sys%st)
    
     !Initialize external potential
     SAFE_ALLOCATE(epsib)
@@ -277,7 +274,6 @@ contains
     type(system_t) :: sys
     type(batch_t), pointer :: epsib
     integer :: itime
-    type(base_hamiltonian_t), pointer :: subsys_hm
     type(orbitalbasis_t) :: basis
     FLOAT, allocatable :: ddot(:,:,:), dweight(:,:)
     CMPLX, allocatable :: zdot(:,:,:), zweight(:,:)
@@ -297,12 +293,9 @@ contains
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
     if(sys%st%d%pack_states) call states_pack(sys%st)
 
-    !Initialize external potential
-    nullify(subsys_hm)
 
     SAFE_ALLOCATE(epsib)
-    call batch_copy(sys%st%group%psib(1, 1), epsib)
-    call batch_copy_data(sys%gr%mesh%np, sys%st%group%psib(1, 1), epsib)
+    call batch_copy(sys%st%group%psib(1, 1), epsib, copy_data = .true.)
 
     !Initialize the orbital basis
     call orbitalbasis_init(basis)
@@ -324,13 +317,15 @@ contains
       if(states_are_real(sys%st)) then
         dweight = M_ONE
         ddot = M_ZERO
-        call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), 1, .false., ddot)
-        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib, 1, .false., dweight)
+        call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), 1, .false., &
+                                           .false., ddot)
+        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib, 1, .false., .false., dweight)
       else
         zweight = M_ONE
         zdot = M_ZERO
-        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), 1, .true., zdot)
-        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, 1, .true., zweight)
+        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), 1, &
+                                           .true., .false., zdot)
+        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, 1, .true., .false., zweight)
       end if
     end do
     do itime = 1, epsib%nst
@@ -364,7 +359,6 @@ contains
     type(system_t) :: sys
     type(batch_t), pointer :: hpsib
     integer :: itime, terms
-    type(base_hamiltonian_t), pointer :: subsys_hm
     type(hamiltonian_t) :: hm
     type(simul_box_t) :: sb
 
@@ -403,7 +397,6 @@ contains
     if(sys%st%d%pack_states) call states_pack(sys%st)
 
     !Initialize external potential
-    nullify(subsys_hm)
     call simul_box_init(sb, sys%geo, sys%space)
     call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
              sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
@@ -423,7 +416,6 @@ contains
     end if
 
     do itime = 1, param%repetitions
-      call batch_set_zero(hpsib)
       if(states_are_real(sys%st)) then
         call dhamiltonian_apply_batch(hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
       else

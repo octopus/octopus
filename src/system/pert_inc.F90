@@ -223,7 +223,6 @@ contains
       SAFE_DEALLOCATE_A(grad)
     else
       SAFE_ALLOCATE(Hxpsi(1:gr%mesh%np,1:hm%d%dim))     
-      Hxpsi(:,:) = M_ZERO
       call X(hamiltonian_apply)(hm,gr%der,f_in_copy(:,:),Hxpsi(:,:),1,ik,set_bc = .false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
@@ -236,7 +235,6 @@ contains
           f_in_copy(ip,idim) = gr%mesh%x(ip,this%dir)*f_in_copy(ip,idim)
         end do
       end do
-      Hxpsi(:,:) = M_ZERO
       call X(hamiltonian_apply)(hm,gr%der, f_in_copy(:,:),Hxpsi(:,:),1,ik,set_bc = .false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
