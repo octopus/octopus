@@ -62,23 +62,6 @@ module energy_oct_m
     FLOAT :: dft_u       !DFT+U contribution
     FLOAT :: int_dft_u !< Int[n v_U]
 
-    !cmplxscl 
-    FLOAT :: Imtotal
-    FLOAT :: Imeigenvalues
-    FLOAT :: Imexchange
-    FLOAT :: Imcorrelation
-    FLOAT :: Imxc_j
-    FLOAT :: Imintnvxc
-    FLOAT :: Imhartree
-    FLOAT :: Imkinetic
-    FLOAT :: Imextern
-    FLOAT :: Imextern_local
-    FLOAT :: Imextern_non_local
-    FLOAT :: Imextern_dft_u
-    FLOAT :: Imentropy
-    FLOAT :: Imts
-    FLOAT :: Imberry
-    FLOAT :: Imint_dft_u
   end type energy_t
 
 contains
@@ -113,22 +96,6 @@ contains
     this%delta_xc     = M_ZERO
     this%dft_u        = M_ZERO
     this%int_dft_u    = M_ZERO
-
-    this%Imtotal       = M_ZERO
-    this%Imeigenvalues = M_ZERO
-    this%Imexchange    = M_ZERO
-    this%Imcorrelation = M_ZERO
-    this%Imxc_j        = M_ZERO
-    this%Imintnvxc     = M_ZERO
-    this%Imhartree     = M_ZERO
-    this%Imkinetic     = M_ZERO
-    this%Imextern      = M_ZERO
-    this%Imextern_local = M_ZERO
-    this%Imextern_non_local = M_ZERO
-    this%Imentropy     = M_ZERO
-    this%Imts          = M_ZERO
-    this%Imberry       = M_ZERO
-    this%Imint_dft_u   = M_ZERO
 
     POP_SUB(energy_nullify)
   end subroutine energy_nullify
@@ -165,23 +132,6 @@ contains
     eout%dft_u        = ein%dft_u
     eout%int_dft_u    = ein%int_dft_u
 
-    eout%Imtotal = ein%Imtotal
-    eout%Imeigenvalues = ein%Imeigenvalues
-    eout%Imexchange = ein%Imexchange
-    eout%Imcorrelation = ein%Imcorrelation
-    eout%Imxc_j = ein%Imxc_j
-    eout%Imintnvxc = ein%Imintnvxc
-    eout%Imhartree = ein%Imhartree
-    eout%Imkinetic = ein%Imkinetic
-    eout%Imextern = ein%Imextern
-    eout%Imextern_local = ein%Imextern_local
-    eout%Imextern_non_local = ein%Imextern_non_local
-    eout%Imextern_dft_u = ein%Imextern_dft_u
-    eout%Imentropy = ein%Imentropy
-    eout%Imts = ein%Imts
-    eout%Imberry = ein%Imberry
-    eout%Imint_dft_u = Ein%Imint_dft_u
-    
     POP_SUB(energy_copy)
   end subroutine energy_copy
 

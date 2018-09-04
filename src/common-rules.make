@@ -27,7 +27,6 @@ FCFLAGS_MODS = \
 	@F90_MODULE_FLAG@$(top_builddir)/src/ions 	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/grid    	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/poisson 	 \
-	@F90_MODULE_FLAG@$(top_builddir)/src/frozen      \
         @F90_MODULE_FLAG@$(top_builddir)/src/basis_set   \
 	@F90_MODULE_FLAG@$(top_builddir)/src/states  	 \
 	@F90_MODULE_FLAG@$(top_builddir)/src/system   	 \
@@ -67,7 +66,6 @@ octopus_LIBS = \
 	$(top_builddir)/src/hamiltonian/libhamiltonian.a \
         $(top_builddir)/src/basis_set/libbasis_set.a     \
 	$(top_builddir)/src/states/libstates.a           \
-	$(top_builddir)/src/frozen/libfrozen.a           \
 	$(top_builddir)/src/poisson/libpoisson.a         \
 	$(top_builddir)/src/grid/libgrid.a               \
 	$(top_builddir)/src/ions/libions.a               \
@@ -107,8 +105,8 @@ endif
 # e.g. ETSF_IO depends on netCDF, ISF depends on LAPACK
 outside_LIBS = @LIBS_PSPIO@ @LIBS_POKE@ @LIBS_ISF@ @LIBS_NFFT@ @LIBS_PNFFT@ @LIBS_PFFT@ \
   @LIBS_SPARSKIT@ @LIBS_ETSF_IO@ @LIBS_NETCDF@ @LIBS_LIBFM@ \
-  @LIBS_BERKELEYGW@ @LIBS_NLOPT@ @LIBS_PARPACK@ @LIBS_ARPACK@ @GD_LIBS@ \
-  @LIBS_PARMETIS@ @LIBS_METIS@ @LIBS_FEAST@ @LIBS_CUDA@ @LIBS_MPI@
+  @LIBS_BERKELEYGW@ @LIBS_NLOPT@ @GD_LIBS@ \
+  @LIBS_PARMETIS@ @LIBS_METIS@ @LIBS_CUDA@ @LIBS_MPI@
 
 other_LIBS = $(external_LIBS) $(scalapack_LIBS) $(outside_LIBS) $(core_LIBS) @CXXLIBS@
 all_LIBS = $(octopus_LIBS) $(other_LIBS)
