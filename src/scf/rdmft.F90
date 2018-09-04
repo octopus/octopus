@@ -674,7 +674,7 @@ contains
       mum = (mu1 + mu2)*M_HALF
       rdm%mu = mum
       theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-      call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.0001, 8), &
+      call minimize_multidim(MINMETHOD_BFGS, st%nst, theta, real(0.05,8), real(0.0001, 8), &
           real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
       sumgim = rdm%occsum - st%qtot
       if (sumgi1*sumgim < M_ZERO) then
