@@ -42,10 +42,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
   ! all terms are enabled by default
   terms_ = optional_default(terms, TERM_ALL)
   set_phase_ = optional_default(set_phase, .true.)
-  !At the moment domain parallelization is not supported for the phase correction
-  !OpenCL is also not supported
+  ! OpenCL is not supported for the phase correction at the moment
   if(.not.set_phase_) then
-    if(der%mesh%parallel_in_domains) set_phase_ = .true.
     if(batch_status(psib) == BATCH_CL_PACKED) set_phase_ = .true.
   end if
 
@@ -68,7 +66,20 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
     call batch_pack(hpsib, copy = .false.)
   end if
 
-  if(optional_default(set_bc, .true.)) call boundaries_set(der%boundaries, psib)
+  if(optional_default(set_bc, .true.)) then
+    if(apply_phase .and. .not.set_phase_) then
+      ! apply phase correction while setting boundary -> memory needs to be
+      ! accessed only once
+      call boundaries_set(der%boundaries, psib, phase_correction=hm%hm_base%phase_corr(:, ik))
+    else
+      call boundaries_set(der%boundaries, psib)
+    end if
+  else
+    ! This should never happen: the phase correction should be always only
+    ! applied when also setting the boundary conditions.
+    ASSERT(.not.(apply_phase .and. .not.set_phase_))
+  end if
+
 
   if(apply_phase .and. set_phase_) then
     SAFE_ALLOCATE(epsib)
@@ -77,14 +88,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
     epsib => psib
   end if
 
-  if(apply_phase) then ! we copy psi to epsi applying the exp(i k.r) phase
-    if(set_phase_) then
-      call X(hamiltonian_base_phase)(hm%hm_base, der, der%mesh%np_part, ik, .false., epsib, src = psib)
-    else if(optional_default(set_bc, .true.)) then
-      !If we applied the boundary condition, and that there is a phase to be applied, 
-      !we apply the phase condition 
-      call X(hamiltonian_base_phase_correction)(hm%hm_base, der, ik, epsib, src = psib)
-    end if
+  if(apply_phase .and. set_phase_) then ! we copy psi to epsi applying the exp(i k.r) phase
+    call X(hamiltonian_base_phase)(hm%hm_base, der, der%mesh%np_part, ik, .false., epsib, src = psib)
   end if
 
   if(bitand(TERM_KINETIC, terms_) /= 0) then
