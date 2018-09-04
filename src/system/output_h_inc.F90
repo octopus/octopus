@@ -45,15 +45,10 @@
    
 
     if(bitand(outp%what, OPTION__OUTPUT__POTENTIAL) /= 0) then
-      if(hm%cmplxscl%space) then
-        call zio_function_output(outp%how, dir, "v0", der%mesh,&
-          hm%ep%vpsl + M_zI*hm%ep%Imvpsl, units_out%energy, err, geo = geo, grp = grp)
-      else  
-        SAFE_ALLOCATE(v0(1:der%mesh%np, 1:hm%d%dim))
-        v0(1:der%mesh%np, 1) = hm%ep%vpsl(1:der%mesh%np)
-        call dio_function_output(outp%how, dir, "v0", der%mesh, v0(:, 1), units_out%energy, err, geo = geo, grp = grp)
-        SAFE_DEALLOCATE_A(v0)
-      end if
+      SAFE_ALLOCATE(v0(1:der%mesh%np, 1:hm%d%dim))
+      v0(1:der%mesh%np, 1) = hm%ep%vpsl(1:der%mesh%np)
+      call dio_function_output(outp%how, dir, "v0", der%mesh, v0(:, 1), units_out%energy, err, geo = geo, grp = grp)
+      SAFE_DEALLOCATE_A(v0)
 
       if(hm%ep%classical_pot > 0) then
         call dio_function_output(outp%how, dir, "vc", der%mesh, hm%ep%Vclassical, units_out%energy, err, geo = geo, grp = grp)
@@ -82,18 +77,13 @@
       end if
 
       if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-        if (.not. hm%cmplxscl%space) then 
-          call dio_function_output(outp%how, dir, 'vh', der%mesh, hm%vhartree, units_out%energy, err, geo = geo, grp = grp)
-          if(bitand(outp%what, OPTION__OUTPUT__POTENTIAL_GRADIENT) /= 0) then
-            SAFE_ALLOCATE(gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
-            call dderivatives_grad(der, hm%vhartree(1:der%mesh%np_part), gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
-            call io_function_output_vector(outp%how, dir, 'grad_vh', der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
-                     geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
-            SAFE_DEALLOCATE_A(gradvh)
-          end if
-        else
-          call zio_function_output(outp%how, dir, 'vh', der%mesh, &
-            hm%vhartree(1:der%mesh%np) + M_zI*hm%Imvhartree(1:der%mesh%np), units_out%energy, err, geo = geo, grp = grp)
+        call dio_function_output(outp%how, dir, 'vh', der%mesh, hm%vhartree, units_out%energy, err, geo = geo, grp = grp)
+        if(bitand(outp%what, OPTION__OUTPUT__POTENTIAL_GRADIENT) /= 0) then
+          SAFE_ALLOCATE(gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
+          call dderivatives_grad(der, hm%vhartree(1:der%mesh%np_part), gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
+          call io_function_output_vector(outp%how, dir, 'grad_vh', der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
+                   geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
+          SAFE_DEALLOCATE_A(gradvh)
         end if
         nullify(subsys_tnadd, tnadd_potential)
         if(associated(hm%subsys_hm))then
@@ -121,12 +111,7 @@
           else
             write(fname, '(a,i1)') 'vxc-sp', is
           end if
-          if(.not. hm%cmplxscl%space) then
-            call dio_function_output(outp%how, dir, fname, der%mesh, hm%vxc(:, is), units_out%energy, err, geo = geo, grp = grp)
-          else
-            call zio_function_output(outp%how, dir, fname, der%mesh, &
-              hm%vxc(:, is) + M_zI *  hm%Imvxc(:, is), units_out%energy, err, geo = geo, grp = grp)
-          end if
+          call dio_function_output(outp%how, dir, fname, der%mesh, hm%vxc(:, is), units_out%energy, err, geo = geo, grp = grp)
           
           ! finally the full KS potential (without non-local PP contributions)
           if(associated(tnadd_potential))then
@@ -143,14 +128,8 @@
             call dio_function_output(outp%how, dir, fname, der%mesh, &
               potential + hm%ep%Vclassical, units_out%energy, err, geo = geo, grp = grp)
           else
-            if(.not. hm%cmplxscl%space) then
-              call dio_function_output(outp%how, dir, fname, der%mesh, &
+            call dio_function_output(outp%how, dir, fname, der%mesh, &
                 potential, units_out%energy, err, geo = geo, grp = grp)
-            else
-              call zio_function_output(outp%how, dir, fname, der%mesh, &
-                potential + M_zI * hm%ep%Imvpsl + M_zI * hm%Imvhxc(:, is), units_out%energy, &
-                err, geo = geo, grp = grp)
-            end if
           end if
         end do
         SAFE_DEALLOCATE_A(potential)

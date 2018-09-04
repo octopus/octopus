@@ -456,7 +456,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
     end if
           
     call states_get_state(st, mesh, ist, iqn, psi)
-    ss(ist) = X(mf_dotp)(mesh, st%d%dim, psi, phi, reduce = .false., dotu = st%cmplxscl%space)
+    ss(ist) = X(mf_dotp)(mesh, st%d%dim, psi, phi, reduce = .false.)
   end do
     
   if(mesh%parallel_in_domains) then
@@ -489,18 +489,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   end do
 
   if(optional_default(normalize, .false.)) then
-    if (st%cmplxscl%space) then 
-      nrm2 = sqrt(X(mf_dotp)(mesh, st%d%dim, phi, phi, dotu = .true.))
-      if(abs(nrm2) <= M_EPSILON) then
-        message(1) = "Wavefunction has zero norm after states_orthogonalize_single; cannot normalize."
-        call messages_fatal(1)
-      end if
-      do idim = 1, st%d%dim
-        call lalg_scal(mesh%np, M_ONE/nrm2, phi(:, idim))
-      end do
-    else
-      call X(mf_normalize)(mesh, st%d%dim, phi, nrm2)
-    end if
+    call X(mf_normalize)(mesh, st%d%dim, phi, nrm2)
   end if
 
   if(present(overlap)) then

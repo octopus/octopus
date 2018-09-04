@@ -448,8 +448,8 @@ AC_CONFIG_FILES([Makefile
   testsuite/periodic_systems/Makefile
   testsuite/photo_electron/Makefile
   testsuite/pseudopotentials/Makefile
-  testsuite/complex_scaling/Makefile
   testsuite/frozen/Makefile
+  testsuite/tutorials/Makefile
   testsuite/symmetries/Makefile])
 AC_CONFIG_FILES([testsuite/oct-run_testsuite.sh], [chmod +x testsuite/oct-run_testsuite.sh])
 AC_CONFIG_FILES([doc/html/varsRightFrame.html])
