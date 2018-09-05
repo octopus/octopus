@@ -33,10 +33,8 @@ libsystem_f_srcs =                       \
 	exponential.F90                  \
 	forces.F90                       \
 	linear_solver.F90                \
-	live_config.F90                  \
 	magnetic.F90                     \
 	output.F90                       \
-	output_fio.F90                   \
 	output_me.F90                    \
 	partial_charges.F90              \
 	pert.F90                         \
@@ -107,17 +105,15 @@ energy_calc.o : energy_calc.F90 energy_calc_inc.F90
 exponential.o : exponential.F90 
 forces.o : forces.F90 forces_inc.F90 
 linear_solver.o : linear_solver.F90 linear_solver_inc.F90 preconditioners.o 
-live_config.o : live_config.F90 
 magnetic.o : magnetic.F90 
-output.o : output.F90 output_modelmb_inc.F90 output_linear_response_inc.F90 output_h_inc.F90 output_states_inc.F90 output_etsf_inc.F90 v_ks.o output_me.o output_fio.o magnetic.o elf.o current.o dos.o 
-output_fio.o : output_fio.F90 
+output.o : output.F90 output_modelmb_inc.F90 output_linear_response_inc.F90 output_h_inc.F90 output_states_inc.F90 output_etsf_inc.F90 v_ks.o output_me.o magnetic.o elf.o current.o dos.o 
 output_me.o : output_me.F90 output_me_inc.F90 
 partial_charges.o : partial_charges.F90 
 pert.o : pert.F90 pert_inc.F90 
 preconditioners.o : preconditioners.F90 preconditioners_inc.F90 
 stress.o : stress.F90 v_ks.o 
 subspace.o : subspace.F90 subspace_inc.F90 preconditioners.o 
-system.o : system.F90 v_ks.o output.o live_config.o energy_calc.o elf.o 
+system.o : system.F90 v_ks.o output.o energy_calc.o elf.o 
 v_ks.o : v_ks.F90 xc_oep.o xc_ks_inversion.o magnetic.o energy_calc.o current.o 
 xc_ks_inversion.o : xc_ks_inversion.F90 eigensolver.o 
 xc_oep.o : xc_oep.F90 xc_oep_inc.F90 xc_oep_sic_inc.F90 xc_oep_x_inc.F90 xc_kli_inc.F90 xc_kli_pauli_inc.F90 linear_solver.o
