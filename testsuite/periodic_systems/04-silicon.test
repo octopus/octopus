@@ -120,11 +120,12 @@ match ; Born charge diff w=0.1 ; GREPFIELD(em_resp/freq_0.1000/Born_charges, "Di
 
 Input: 04-silicon.04-emresp_mo.inp
 
-Precision : 0.001
+Precision : 0.002
 match ; Susceptibility XX          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 1, 1) ; -6228.875102
 match ; Susceptibility YY          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 2, 2) ; -6228.875102
 match ; Susceptibility ZZ          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 3, 3) ; -6228.875102
 
+Precision : 0.001
 match ; Re epsilon XX (LRC)         ; GREPFIELD(em_resp/freq_0.1000/epsilon, "Real", 1, 1) ; 33.951164
 match ; Re epsilon YY (LRC)         ; GREPFIELD(em_resp/freq_0.1000/epsilon, "Real", 2, 2) ; 33.951164
 match ; Re epsilon ZZ (LRC)         ; GREPFIELD(em_resp/freq_0.1000/epsilon, "Real", 3, 3) ; 33.951164

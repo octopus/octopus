@@ -45,6 +45,3 @@ BornChargeSumRuleCorrection = no
 FilterPotentials = filter_none
 
 MixField = density
-
-ParKPoints = auto
-ParDomains = auto

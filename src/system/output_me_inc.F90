@@ -57,7 +57,7 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, ll, mm, ik)
     write(iunit, fmt = '(a)')    '# Units = ['//trim(units_abbrev(units_out%length))//']'
   end if
   
-  SAFE_ALLOCATE(multipole(1:gr%mesh%np_part))
+  SAFE_ALLOCATE(multipole(1:gr%mesh%np))
 
   multipole = M_ZERO
   do ip = 1, gr%mesh%np
@@ -141,7 +141,7 @@ subroutine X(output_me_ks_multipoles2d)(fname, st, gr, dir, ik)
   write(iunit, fmt = '(a,i4)')      '# ik =', ik
   write(iunit, fmt = '(a)')    '# Units = ['//trim(units_abbrev(units_out%length))//']'
   
-  SAFE_ALLOCATE(dipole(1:gr%mesh%np_part))
+  SAFE_ALLOCATE(dipole(1:gr%mesh%np))
 
   dipole = M_ZERO
   do ip = 1, gr%mesh%np
@@ -219,7 +219,7 @@ subroutine X(output_me_ks_multipoles1d)(fname, st, gr, ll, ik)
     write(iunit, fmt = '(a)')    '# Units = ['//trim(units_abbrev(units_out%length))//']'
   end if
   
-  SAFE_ALLOCATE(dipole(1:gr%mesh%np_part))
+  SAFE_ALLOCATE(dipole(1:gr%mesh%np))
 
 
   dipole = M_ZERO

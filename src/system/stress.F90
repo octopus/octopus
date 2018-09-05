@@ -60,7 +60,6 @@ module stress_oct_m
   use poisson_fft_oct_m
   use fft_oct_m
   use fourier_space_oct_m
-  use ssys_states_oct_m
   use double_grid_oct_m
   use submesh_oct_m
   use periodic_copy_oct_m
@@ -158,8 +157,6 @@ contains
       PUSH_SUB(stress.calculate_density)
 
       ! get density taking into account non-linear core corrections
-      !> Calculate the subsystems total density.
-      if(associated(st%subsys_st)) call ssys_states_acc(st%subsys_st)
       call states_total_density(st, ks%gr%fine%mesh, rho)
 
       nullify(rho_total)

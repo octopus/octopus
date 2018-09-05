@@ -27,7 +27,6 @@ Spacing = 0.6
 %
 
 ParDomains = no
-ParKPoints = auto
 
 DFTULevel = dft_u_acbn0
 AOLoewdin = yes
