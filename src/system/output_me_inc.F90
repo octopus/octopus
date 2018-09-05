@@ -260,6 +260,87 @@ subroutine X(output_me_ks_multipoles1d)(fname, st, gr, ll, ik)
   POP_SUB(X(output_me_ks_multipoles1d))
 end subroutine X(output_me_ks_multipoles1d)
 
+! ---------------------------------------------------------
+!> Prints out the dipole matrix elements between KS states.
+!!
+!! It prints the states to the file opened in iunit.
+!!
+! ---------------------------------------------------------
+subroutine X(output_me_dipole)(this, fname, st, gr, hm, ik)
+  type(output_me_t),   intent(in) :: this
+  character(len=*),    intent(in) :: fname
+  type(states_t),      intent(in) :: st
+  type(grid_t),        intent(in) :: gr
+  type(hamiltonian_t), intent(in) :: hm
+  integer,             intent(in) :: ik
+  
+  integer :: ist, jst, ip, iunit, idir
+  R_TYPE :: multip_element(MAX_DIM)
+  R_TYPE, allocatable :: psii(:, :), psij(:, :)
+
+  PUSH_SUB(X(output_me_ks_multipoles))
+
+  ASSERT(.not. st%parallel_in_states)
+  if(st%d%ispin == SPINORS) then
+    call messages_not_implemented("Dipole matrix elements with spinors")
+  end if
+
+
+  SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
+  
+  do idir = 1, gr%sb%dim
+    iunit = io_open(file = trim(fname)//index2axis(idir), action = 'write')
+
+    write(iunit, fmt = '(a)') '# Dipole matrix elements file: <Phi_i | r | Phi_j>' 
+    write(iunit, fmt = '(a,i4)')      '# ik =', ik
+    write(iunit, fmt = '(a)')    '# Units = ['//trim(units_abbrev(units_out%length))//']'
+  
+    do ist = this%st_start, this%st_end
+
+      call states_get_state(st, gr%mesh, ist, ik, psii)
+      if(associated(hm%hm_base%phase)) then
+#if defined(R_TCOMPLEX)
+        call states_set_phase(st%d, psii, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .false.)
+#endif
+      end if
+      do ip=1, gr%mesh%np
+        psii(ip, 1) = psii(ip, 1)*gr%mesh%x(ip, idir)
+      end do
+
+      do jst = this%st_start, this%st_end
+
+        call states_get_state(st, gr%mesh, jst, ik, psij)
+        if(associated(hm%hm_base%phase)) then
+#if defined(R_TCOMPLEX)
+          call states_set_phase(st%d, psij, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .false.)
+#endif
+        end if
+
+        multip_element = X(mf_dotp)(gr%mesh, st%d%dim, psii, psij)
+
+        multip_element = units_from_atomic(units_out%length, multip_element)
+
+        write(iunit, fmt='(f20.12)', advance = 'no') R_REAL(multip_element)
+#if defined(R_TCOMPLEX)
+        write(iunit, fmt='(a1,f20.12)', advance = 'no') ',', R_AIMAG(multip_element)
+#endif
+        write(iunit, fmt='(a)', advance = 'no') '   '
+      end do
+      write(iunit, '(a)') ''
+    end do
+
+    call io_close(iunit)
+
+  end do
+
+  SAFE_DEALLOCATE_A(psii)
+  SAFE_DEALLOCATE_A(psij)
+
+  POP_SUB(X(output_me_dipole))
+end subroutine X(output_me_dipole)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

@@ -60,6 +60,9 @@ module output_me_oct_m
     !! octopole matrix elements (between Kohn-Sham or single-particle orbitals).
     !! In 2D, only the dipole moments are printed.
     integer :: ks_multipoles      
+
+    integer :: st_start !Start index for the output
+    integer :: st_end   !Stop index for the output
   end type output_me_t
 
   integer, parameter, public :: &
@@ -67,14 +70,16 @@ module output_me_oct_m
     OUTPUT_ME_ANG_MOMENTUM   =   2, &
     OUTPUT_ME_ONE_BODY       =   4, &
     OUTPUT_ME_TWO_BODY       =   8, &
-    OUTPUT_ME_KS_MULTIPOLES  =  16
+    OUTPUT_ME_KS_MULTIPOLES  =  16, &
+    OUTPUT_ME_DIPOLE         =  32
 
 contains
   
   ! ---------------------------------------------------------
-  subroutine output_me_init(this, sb)
+  subroutine output_me_init(this, sb, nst)
     type(output_me_t), intent(out) :: this
     type(simul_box_t), intent(in)  :: sb
+    integer,           intent(in)  :: nst
 
     PUSH_SUB(output_me_init)
 
@@ -99,6 +104,8 @@ contains
     !% Not available with states parallelization.
     !%Option ks_multipoles 16
     !% See <tt>OutputMEMultipoles</tt>. Not available with states parallelization.
+    !%Option dipole 32
+    !% Prints the dipole matrix elements.
     !%End
 
     call parse_variable('OutputMatrixElements', 0, this%what)
@@ -131,6 +138,29 @@ contains
       !%End
       call parse_variable('OutputMEMultipoles', 1, this%ks_multipoles)
     end if
+
+    !%Variable OutputMEStart
+    !%Type integer
+    !%Default 1
+    !%Section Output
+    !%Description
+    !% Specifies the state/band index for starting to compute the matrix element.
+    !% So far, this is only used for dipole matrix elements.
+    !%End
+    call parse_variable('OutputMEStart', 1, this%st_start)
+    ASSERT(this%st_start > 0 .and. this%st_start <= nst)
+
+    !%Variable OutputMEEnd
+    !%Type integer
+    !%Default 1
+    !%Section Output
+    !%Description
+    !% Specifies the highest state/band index used to compute the matrix element.
+    !% So far, this is only used for dipole matrix elements.
+    !%End
+    call parse_variable('OutputMEEnd', nst, this%st_end)
+    ASSERT(this%st_end > 0 .and. this%st_end <= nst)
+    ASSERT(this%st_start <= this%st_end)
 
     POP_SUB(output_me_init)
   end subroutine output_me_init
@@ -210,6 +240,20 @@ contains
         end select
       end do
     end if
+
+    if(bitand(this%what, output_me_dipole) /= 0) then
+      ! The content of each file should be clear from the header of each file.
+      do ik = 1, st%d%nik
+        write(fname,'(i4)') ik
+        write(fname,'(a)') trim(dir)//'/ks_me_dipole.k'//trim(adjustl(fname))//'_'
+          if (states_are_real(st)) then
+            call doutput_me_dipole(this, fname, st, gr, hm, ik)
+          else
+            call zoutput_me_dipole(this, fname, st, gr, hm, ik)
+          end if
+      end do
+    end if
+
 
     if(bitand(this%what, output_me_one_body) /= 0) then
       message(1) = "Computing one-body matrix elements"
