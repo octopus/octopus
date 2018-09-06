@@ -10,6 +10,8 @@ Precision : 0.0007
 
 Input      : 07-noncollinear.01-U5-gs.inp
 
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 4
 match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 2
 

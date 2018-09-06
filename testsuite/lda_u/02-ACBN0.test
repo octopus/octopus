@@ -10,6 +10,8 @@ Input      : 02-ACBN0.01-nio.inp
 
 Precision : 0.00015
 
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 4
 
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -286.41433997
@@ -49,6 +51,7 @@ Precision : 0.0001
 
 Input      : 02-ACBN0.02-lif.inp
 
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -24.29814169
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  -14.42250723
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -4.44771433

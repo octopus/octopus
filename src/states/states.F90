@@ -19,8 +19,6 @@
 
 module states_oct_m
   use accel_oct_m
-  use base_density_oct_m
-  use base_states_oct_m
   use blacs_proc_grid_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
@@ -74,7 +72,6 @@ module states_oct_m
     states_priv_t,                    &
     states_init,                      &
     states_look,                      &
-    states_add_substates,             &
     states_densities_init,            &
     states_exec_init,                 &
     states_allocate_wfns,             &
@@ -144,9 +141,6 @@ module states_oct_m
     !> It may be required to "freeze" the deepest orbitals during the evolution; the density
     !! of these orbitals is kept in frozen_rho. It is different from rho_core.
     FLOAT, pointer :: frozen_rho(:, :)
-
-    !> Subsystem states.
-    type(base_states_t), pointer :: subsys_st
 
     logical        :: calc_eigenval
     logical        :: uniform_occ   !< .true. if occupations are equal for all states: no empty states, and no smearing
@@ -236,7 +230,6 @@ contains
     nullify(st%rho, st%current)
     nullify(st%current_kpt)
     nullify(st%rho_core, st%frozen_rho)
-    nullify(st%subsys_st)
     nullify(st%eigenval, st%occ, st%spin)
 
     st%parallel_in_states = .false.
@@ -609,24 +602,6 @@ contains
     POP_SUB(states_init)
   end subroutine states_init
 
-  ! ---------------------------------------------------------
-  !> Sets the pointer to the substates
-  !> must be called before states_densities_init
-  ! ---------------------------------------------------------
-  subroutine states_add_substates(this, st)
-    type(states_t),              intent(inout) :: this
-    type(base_states_t), target, intent(in)    :: st
-
-    PUSH_SUB(states_add_substates)
-
-    !> Substates are not compatible with complex scaling for now.
-    ASSERT(.not.associated(this%subsys_st))
-    this%subsys_st => st
-
-    POP_SUB(states_add_substates)
-  end subroutine states_add_substates
- 
-  ! ---------------------------------------------------------
   !> Reads the 'states' file in the restart directory, and finds out
   !! the nik, dim, and nst contained in it.
   ! ---------------------------------------------------------
@@ -1211,13 +1186,8 @@ contains
 
     PUSH_SUB(states_densities_init)
 
-    if(associated(st%subsys_st))then
-      call base_states_gets(st%subsys_st, "live", st%rho)
-      ASSERT(associated(st%rho))
-    else
-      SAFE_ALLOCATE(st%rho(1:gr%fine%mesh%np_part, 1:st%d%nspin))
-      st%rho = M_ZERO
-    end if
+    SAFE_ALLOCATE(st%rho(1:gr%fine%mesh%np_part, 1:st%d%nspin))
+    st%rho = M_ZERO
 
     if(geo%nlcc) then
       SAFE_ALLOCATE(st%rho_core(1:gr%fine%mesh%np))
@@ -1376,28 +1346,9 @@ contains
 
     stout%only_userdef_istates = stin%only_userdef_istates
 
-    if(associated(stin%subsys_st))then
-      !> Allocate and copy substates.
-      call base_states_new(stout%subsys_st, stin%subsys_st)
-      if(exclude_wfns_)then
-        call base_states_init(stout%subsys_st, stin%subsys_st)
-      else
-        call base_states_copy(stout%subsys_st, stin%subsys_st)
-      end if
-    end if
-
     call loct_pointer_copy(stout%node, stin%node)
 
-    if(.not. exclude_wfns_) then
-      
-      if(associated(stout%subsys_st))then
-        call base_states_gets(stout%subsys_st, "live", stout%rho)
-        ASSERT(associated(stout%rho))
-      else
-        call loct_pointer_copy(stout%rho, stin%rho)
-      end if
-      
-    end if
+    if(.not. exclude_wfns_) call loct_pointer_copy(stout%rho, stin%rho)
 
     stout%calc_eigenval = stin%calc_eigenval
     stout%uniform_occ = stin%uniform_occ
@@ -1481,22 +1432,13 @@ contains
 
     SAFE_DEALLOCATE_A(st%user_def_states)
 
-    if(associated(st%subsys_st))then
-      !subsystems
-      nullify(st%rho)
-    else
-      SAFE_DEALLOCATE_P(st%rho)
-    end if
+    SAFE_DEALLOCATE_P(st%rho)
     SAFE_DEALLOCATE_P(st%eigenval)
 
     SAFE_DEALLOCATE_P(st%current)
     SAFE_DEALLOCATE_P(st%current_kpt)
     SAFE_DEALLOCATE_P(st%rho_core)
     SAFE_DEALLOCATE_P(st%frozen_rho)
-    
-    !> Deallocates or nullifies pointer.
-    call base_states_del(st%subsys_st)
-
     SAFE_DEALLOCATE_P(st%occ)
     SAFE_DEALLOCATE_P(st%spin)
 
@@ -1660,35 +1602,6 @@ contains
   end subroutine states_generate_random
 
   ! ---------------------------------------------------------
-  subroutine substates_set_charge(this, st)
-    type(base_states_t), intent(inout) :: this
-    type(states_t),      intent(in)    :: st
-
-    type(base_density_t), pointer :: dnst
-    FLOAT                         :: chrg, qtot
-    integer                       :: ispn, ik
-
-    PUSH_SUB(substates_set_charge)
-
-    nullify(dnst)
-    call base_states_gets(this, "live", dnst)
-    ASSERT(associated(dnst))
-    qtot = M_ZERO
-    do ispn = 1, st%d%nspin
-      chrg = M_ZERO
-      do ik = 1, st%d%nik
-        if(ispn==states_dim_get_spin_index(st%d, ik))&
-          chrg = chrg + st%d%kweights(ik) * sum(st%occ(:,ik))
-      end do
-      call base_density_set(dnst, chrg, ispn)
-      qtot = qtot + chrg
-    end do
-    ASSERT(.not.abs(M_ONE-min(st%qtot,qtot)/max(st%qtot,qtot))>epsilon(qtot))
-    
-    POP_SUB(substates_set_charge)
-  end subroutine substates_set_charge
-  
-  ! ---------------------------------------------------------
   subroutine states_fermi(st, mesh)
     type(states_t), intent(inout) :: st
     type(mesh_t),   intent(in)    :: mesh
@@ -1721,9 +1634,6 @@ contains
       end if
     end if
 
-    !> Update the charge of the live subsystem.
-    if(associated(st%subsys_st)) call substates_set_charge(st%subsys_st, st)
- 
     if(st%d%ispin == SPINORS) then
       ASSERT(states_are_complex(st))
       
