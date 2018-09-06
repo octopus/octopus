@@ -8,6 +8,7 @@ Enabled    : Yes
 ExtraFile  : 04-carbon_dojo_psml.pseudo.psml
 Input: 04-carbon_dojo_psml.01-gs.inp
 Precision: 0.00011
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -156.14273299
 match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -14.651820
 match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ;   1.000000

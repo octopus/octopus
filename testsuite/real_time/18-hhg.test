@@ -17,6 +17,7 @@ Enabled    : Yes
 # ground state
 Processors : 1
 Input      : 18-hhg.01-gs.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.66977716
 
 # td run

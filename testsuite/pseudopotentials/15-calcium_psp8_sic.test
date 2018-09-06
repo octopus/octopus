@@ -8,6 +8,7 @@ Enabled    : Yes
 ExtraFile  : 15-calcium_psp8_sic.20ca_sic.drh
 Input: 15-calcium_psp8_sic.01-gs.inp
 Precision: 0.00011
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -0.87066025
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  0.00000000
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.57598278
