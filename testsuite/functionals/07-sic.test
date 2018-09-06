@@ -23,14 +23,32 @@ Enabled    : Yes
 Input     : 07-sic.01-gs.inp
 
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
+
+Precision : 0.004
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;   -20.80072316
+
+Precision : default
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;     0.00000000
+
+Precision : 0.002
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;    -5.35947811
+
+Precision : 0.002
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;    18.03828793
+
+Precision : 0.002
 match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -5.88005659
+
+Precision : 0.001
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;    -3.28301371
+
+Precision : default
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;     0.00000000
+
+Precision : 0.002
 match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;     7.80992258
+
+Precision : 0.003
 match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;   -43.36372056
 
 Precision : 5e-04
