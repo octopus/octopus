@@ -9,6 +9,8 @@ Processors : 4
 
 Input      : 13-primitive.01-diamond.inp
 
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -11.47103731
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -10.73490075
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.82653907
@@ -35,6 +37,8 @@ match ; Eigenvalue  3 ; GREPFIELD(static/info,  '#k =  75', 3, 3) ;  0.210684
 match ; Eigenvalue  4 ; GREPFIELD(static/info,  '#k =  75', 3, 4) ;  0.210684
 
 Input      : 13-primitive.02-graphene.inp
+
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -11.45357653
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -19.80012852

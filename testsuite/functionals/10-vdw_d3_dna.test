@@ -10,6 +10,7 @@ Processors : 4
 ExtraFile  : 10-vdw_d3_dna.xyz
 Input      : 10-vdw_d3_dna.01-gs_novdw.inp
 
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 Precision: 0.0001
 match ; van der Waals energy ; GREPFIELD(static/info, 'vanderWaals =', 3) ; 0.0
 Precision: 0.001

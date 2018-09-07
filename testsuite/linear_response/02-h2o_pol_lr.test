@@ -6,6 +6,7 @@ TestGroups : short-run, linear_response
 Enabled    : Yes
 
 Input: 02-h2o_pol_lr.01_h2o_gs.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -16.06685186
 match ; Eigenvalues  ; GREPFIELD(static/info, '1   --', 3) ; -1.167612
 match ; Dipole       ; GREPFIELD(static/info, '<y>', 3) ; 3.65917E-01
