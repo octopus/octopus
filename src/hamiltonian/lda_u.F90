@@ -257,7 +257,8 @@ contains
 
     call distributed_nullify(this%orbs_dist, this%norbsets)
    #ifdef HAVE_MPI
-    call distributed_init(this%orbs_dist, this%norbsets, MPI_COMM_WORLD, "orbsets")
+    if(.not. mesh%parallel_in_domains) &
+      call distributed_init(this%orbs_dist, this%norbsets, MPI_COMM_WORLD, "orbsets")
    #endif 
 
 
