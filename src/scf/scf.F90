@@ -193,7 +193,7 @@ contains
 
     !%Variable ConvRelDens
     !%Type float
-    !%Default 1e-5
+    !%Default 1e-9
     !%Section SCF::Convergence
     !%Description
     !% Relative convergence of the density: 
@@ -207,7 +207,7 @@ contains
     !% <tt>EigensolverTolerance</tt> to a value of roughly 1/10 of
     !% <tt>ConvRelDens</tt> to avoid convergence problems.
     !%End
-    call parse_variable('ConvRelDens', CNST(1e-5), scf%conv_rel_dens)
+    call parse_variable('ConvRelDens', CNST(1e-9), scf%conv_rel_dens)
 
     !%Variable ConvAbsEv
     !%Type float
