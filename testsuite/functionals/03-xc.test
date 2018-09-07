@@ -6,6 +6,7 @@ TestGroups : long-run, functionals
 Enabled    : Yes
 
 Input: 03-xc.01-gs.inp
+match ; SCF convergence                        ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Hartree-Fock energy Total              ; GREPFIELD(static/info, 'Total       =', 3) ; -0.45473695
 match ; Hartree-Fock eigenvalue up             ; GREPFIELD(static/info, '  1   up', 3)      ; -1.128711
 match ; Hartree-Fock eigenvalue dn             ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.683557

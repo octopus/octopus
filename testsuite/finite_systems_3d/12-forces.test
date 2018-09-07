@@ -11,14 +11,17 @@ Enabled    : Yes
 # the force on the atoms.
 
 Input: 12-forces.01-N2_gs.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -19.83069427
 match ; Force        ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; 0.318750
 
 Input: 12-forces.02-N2_gs.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -19.99536317
 match ; Force        ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; 0.037895
 
 Input: 12-forces.03-N2_gs.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -19.49489909
 match ; Force        ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; -2.630955
 

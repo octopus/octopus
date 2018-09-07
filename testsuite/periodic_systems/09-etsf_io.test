@@ -8,6 +8,8 @@ Enabled    : Yes
 
 Input      : 09-etsf_io.01-gs.inp
 
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 2
 
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -31.42700114

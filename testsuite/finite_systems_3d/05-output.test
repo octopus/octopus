@@ -6,6 +6,7 @@ TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
 Input: 05-output.01-gs.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy     ; GREPFIELD(static/info, 'Total       =', 3) ; -11.99584633
 
 #geometry
