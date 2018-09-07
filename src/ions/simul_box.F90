@@ -38,6 +38,7 @@ module simul_box_oct_m
   use space_oct_m
   use species_oct_m
   use string_oct_m
+  use symm_op_oct_m
   use symmetries_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -62,7 +63,8 @@ module simul_box_oct_m
     simul_box_in_box_vec,       &
     simul_box_atoms_in_box,     &
     simul_box_copy,             &
-    simul_box_periodic_atom_in_box
+    simul_box_periodic_atom_in_box, &
+    simul_box_symmetry_check
 
   integer, parameter, public :: &
     SPHERE         = 1,         &
@@ -111,6 +113,7 @@ module simul_box_oct_m
     FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     FLOAT :: klattice          (MAX_DIM,MAX_DIM)   !< reciprocal-lattice vectors
     FLOAT :: volume_element                      !< the volume element in real space
+    FLOAT :: surface_element   (MAX_DIM)         !< surface element in real space
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
     FLOAT :: metric            (MAX_DIM,MAX_DIM) !< metric tensor F matrix following Chelikowski paper PRB 78 075109 (2008)
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
@@ -140,7 +143,6 @@ contains
 
     ! some local stuff
     FLOAT :: def_h, def_rsize
-    integer :: idir
     logical :: only_gamma_kpoint
 
     PUSH_SUB(simul_box_init)
@@ -160,6 +162,8 @@ contains
     ! we need k-points for periodic systems
     only_gamma_kpoint = (sb%periodic_dim == 0)
     call kpoints_init(sb%kpoints, sb%symm, sb%dim, sb%rlattice, sb%klattice, only_gamma_kpoint)
+
+    call simul_box_symmetry_check(sb, geo, sb%kpoints, sb%dim)
 
     POP_SUB(simul_box_init)
 
@@ -285,7 +289,7 @@ contains
       type(block_t) :: blk
 
       FLOAT :: default
-      integer :: default_boxshape
+      integer :: default_boxshape, idir
 #if defined(HAVE_GDLIB)
       logical :: found
       integer :: box_npts
@@ -450,7 +454,7 @@ contains
           call parse_block_end(blk)
         else if ((parse_is_defined('Lsize'))) then
           call parse_variable('Lsize', -M_ONE, sb%lsize(1), units_inp%length)
-          if(sb%lsize(1)  ==  -M_ONE) then
+          if(abs(sb%lsize(1)+M_ONE)  <=  M_EPSILON) then
             call messages_input_error('Lsize')
           end if
           if(def_rsize > M_ZERO .and. sb%periodic_dim < sb%dim) &
@@ -620,7 +624,7 @@ contains
     FLOAT,   optional, intent(in)    :: rlattice_primitive(:,:)
 
     type(block_t) :: blk
-    FLOAT :: norm, cross(1:3), lparams(3)
+    FLOAT :: norm, lparams(3)
     integer :: idim, jdim, ncols
     logical :: has_angles
     FLOAT :: angles(1:MAX_DIM), cosang, a2, aa, cc
@@ -648,7 +652,7 @@ contains
 
       if (parse_block('LatticeParameters', blk) == 0) then
         do idim = 1, sb%dim
-            call parse_block_float(blk, 0, idim - 1, lparams(idim))
+          call parse_block_float(blk, 0, idim - 1, lparams(idim))
         end do
 
         if(parse_block_n(blk) > 1) then ! we have a shift, or even more
@@ -658,7 +662,7 @@ contains
             call messages_fatal(1)
           end if
           do idim = 1, sb%dim
-              call parse_block_float(blk, 1, idim - 1, angles(idim))
+            call parse_block_float(blk, 1, idim - 1, angles(idim))
           end do
           has_angles = .true.
         end if
@@ -675,33 +679,33 @@ contains
       if( has_angles ) then
         !Converting the angles to LatticeVectors
         !See 57_iovars/ingeo.F90 in Abinit for details
-        if( (angles(1)-angles(2))< tol_angle .and. (angles(2)-angles(3))< tol_angle .and.  &
-                 (abs(angles(1)-90.0)+abs(angles(2)-90.0)+abs(angles(3)-90.0))> tol_angle ) then
+        if( abs(angles(1)-angles(2))< tol_angle .and. abs(angles(2)-angles(3))< tol_angle .and.  &
+                 (abs(angles(1)-CNST(90.0))+abs(angles(2)-CNST(90.0))+abs(angles(3)-CNST(90.0)))> tol_angle ) then
 
           cosang=cos(M_PI*angles(1)/CNST(180.0));
           a2=M_TWO/M_THREE*(M_ONE-cosang);
           aa=sqrt(a2);
-          cc=sqrt(1.0-a2);
+          cc=sqrt(M_ONE-a2);
           sb%rlattice_primitive(1,1) = aa
-          sb%rlattice_primitive(1,2) = M_ZERO
-          sb%rlattice_primitive(1,3) = cc
-          sb%rlattice_primitive(2,1) =-M_HALF*aa
+          sb%rlattice_primitive(2,1) = M_ZERO
+          sb%rlattice_primitive(3,1) = cc
+          sb%rlattice_primitive(1,2) =-M_HALF*aa
           sb%rlattice_primitive(2,2) = M_HALF*sqrt(M_THREE)*aa
-          sb%rlattice_primitive(2,3) = cc
-          sb%rlattice_primitive(3,1) =-M_HALF*aa
-          sb%rlattice_primitive(3,2) =-M_HALF*sqrt(M_THREE)*aa
+          sb%rlattice_primitive(3,2) = cc
+          sb%rlattice_primitive(1,3) =-M_HALF*aa
+          sb%rlattice_primitive(2,3) =-M_HALF*sqrt(M_THREE)*aa
           sb%rlattice_primitive(3,3) = cc
         else
           sb%rlattice_primitive(1,1) = M_ONE
-          sb%rlattice_primitive(1,2) = M_ZERO
-          sb%rlattice_primitive(1,3) = M_ZERO
-          sb%rlattice_primitive(2,1) = cos(M_PI*angles(3)/CNST(180.0))
+          sb%rlattice_primitive(2,1) = M_ZERO
+          sb%rlattice_primitive(3,1) = M_ZERO
+          sb%rlattice_primitive(1,2) = cos(M_PI*angles(3)/CNST(180.0))
           sb%rlattice_primitive(2,2) = sin(M_PI*angles(3)/CNST(180.0))
-          sb%rlattice_primitive(2,3) = M_ZERO
-          sb%rlattice_primitive(3,1) = cos(M_PI*angles(2)/CNST(180.0))
-          sb%rlattice_primitive(3,2) = (cos(M_PI*angles(1)/CNST(180.0))-sb%rlattice_primitive(2,1)* sb%rlattice_primitive(3,1))&
+          sb%rlattice_primitive(3,2) = M_ZERO
+          sb%rlattice_primitive(1,3) = cos(M_PI*angles(2)/CNST(180.0))
+          sb%rlattice_primitive(2,3) = (cos(M_PI*angles(1)/CNST(180.0))-sb%rlattice_primitive(1,2)* sb%rlattice_primitive(1,3))&
                                          /sb%rlattice_primitive(2,2) 
-          sb%rlattice_primitive(3,3) = sqrt(M_ONE-sb%rlattice_primitive(3,1)**2-sb%rlattice_primitive(3,2)**2)
+          sb%rlattice_primitive(3,3) = sqrt(M_ONE-sb%rlattice_primitive(1,3)**2-sb%rlattice_primitive(2,3)**2)
         end if
 
         if (parse_is_defined('LatticeVectors')) then
@@ -722,7 +726,7 @@ contains
         !%Default simple cubic
         !%Section Mesh::Simulation Box
         !%Description
-        !% (Experimental) Primitive lattice vectors. Vectors are stored in rows.
+        !% Primitive lattice vectors. Vectors are stored in rows.
         !% Default:
         !% <br><br><tt>%LatticeVectors
         !% <br>&nbsp;&nbsp;1.0 | 0.0 | 0.0
@@ -746,13 +750,9 @@ contains
           if (.not. parse_is_defined('Lsize')) then
             sb%lsize(:) = M_ZERO
             sb%lsize(1:sb%dim) = lparams(1:sb%dim)*M_HALF
-          end if        
+          end if
+        end if
       end if
-    end if
-
-    if(sb%nonorthogonal) &
-      call messages_experimental('Non-orthogonal unit cells')
-
     end if
 
     sb%rlattice = M_ZERO
@@ -769,6 +769,12 @@ contains
     sb%klattice = sb%klattice * M_TWO*M_PI
 
     call reciprocal_lattice(sb%rlattice_primitive, sb%klattice_primitive, sb%volume_element, sb%dim)
+
+    if(sb%dim == 3) then
+      sb%surface_element(1) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 2), sb%rlattice_primitive(1:3, 3))**2)))
+      sb%surface_element(2) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 3), sb%rlattice_primitive(1:3, 1))**2)))
+      sb%surface_element(3) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 1), sb%rlattice_primitive(1:3, 2))**2)))
+    end if
 
     sb%metric = M_ZERO
     sb%metric = matmul(transpose(sb%klattice_primitive), sb%klattice_primitive)
@@ -799,8 +805,7 @@ contains
     logical,           intent(in)    :: warn_if_not
     logical, optional, intent(in)    :: die_if_not
 
-    integer :: iatom, pd, idir
-    FLOAT :: xx(1:MAX_DIM)
+    integer :: iatom, pd
     logical :: die_if_not_
 
     PUSH_SUB(simul_box_atoms_in_box)
@@ -909,11 +914,11 @@ contains
       volume = rv(1, 1)
       kv(1, 1) = M_ONE / rv(1, 1)
     case default ! dim > 3
-      message(1) = "Reciprocal lattice is not correct for dim > 3."
+      message(1) = "Reciprocal lattice for dim > 3 assumes no periodicity."
       call messages_warning(1)
       volume = M_ONE
       do ii = 1, dim
-        kv(ii, ii) = M_ONE
+        kv(ii, ii) = M_ONE/rv(ii,ii)
         !  At least initialize the thing
         volume = volume * sqrt(sum(rv(:, ii)**2))
       end do
@@ -1004,8 +1009,8 @@ contains
     if(sb%box_shape == PARALLELEPIPED) then
       write(message(1),'(3a, 99(a, f8.3), a)')     &
         '  Lengths [', trim(units_abbrev(units_out%length)), '] = ',    &
-        '(', (units_from_atomic(units_out%length, sb%lsize(idir)), ',', idir = 1, sb%dim - 1),  &
-        units_from_atomic(units_out%length, sb%lsize(sb%dim)), ')'
+        '(', (units_from_atomic(units_out%length, M_TWO*sb%lsize(idir)), ',', idir = 1, sb%dim - 1),  &
+        units_from_atomic(units_out%length, M_TWO*sb%lsize(sb%dim)), ')'
       call messages_info(1, iunit)
     end if
 
@@ -1044,7 +1049,6 @@ contains
     integer,           intent(in) :: iunit
 
     integer :: idir1, idir2
-    character(len=12) :: buf
 
     PUSH_SUB(simul_box_write_short_info)
 
@@ -1147,7 +1151,13 @@ contains
     case(CYLINDER)
       do ip = 1, npoints
         rr = sqrt(sum(xx(2:sb%dim, ip)**2))
-        in_box(ip) = (rr <= sb%rsize + DELTA .and. abs(xx(1, ip)) <= sb%xsize + DELTA)
+        in_box(ip) = rr <= sb%rsize + DELTA
+        if(sb%periodic_dim >= 1) then
+          in_box(ip) = in_box(ip) .and. xx(1, ip) >= -sb%xsize - DELTA
+          in_box(ip) = in_box(ip) .and. xx(1, ip) <=  sb%xsize - DELTA
+        else
+          in_box(ip) = in_box(ip) .and. abs(xx(1, ip)) <= sb%xsize + DELTA
+        end if
       end do
 
     case(MINIMUM)
@@ -1588,6 +1598,58 @@ contains
 
     POP_SUB(simul_box_min_distance)
   end function simul_box_min_distance
+
+
+    ! ---------------------------------------------------------
+  subroutine simul_box_symmetry_check(this, geo, kpoints, dim)
+    type(simul_box_t),  intent(in) :: this
+    type(geometry_t),   intent(in) :: geo
+    type(kpoints_t),    intent(in) :: kpoints
+    integer,            intent(in) :: dim
+
+    integer :: iop, iatom, iatom_symm
+    FLOAT :: ratom(1:MAX_DIM)
+
+    PUSH_SUB(simul_box_symmetry_check)
+
+    ! We want to use for instance that
+    !
+    ! \int dr f(Rr) V_iatom(r) \nabla f(R(v)) = R\int dr f(r) V_iatom(R*r) f(r)
+    !
+    ! and that the operator R should map the position of atom
+    ! iatom to the position of some other atom iatom_symm, so that
+    !
+    ! V_iatom(R*r) = V_iatom_symm(r)
+    !
+    do iop = 1, symmetries_number(this%symm)
+      if(iop == symmetries_identity_index(this%symm)) cycle
+
+      do iatom = 1, geo%natoms
+        ratom = M_ZERO
+        if(geo%reduced_coordinates) then
+          ratom(1:this%dim) = symm_op_apply_red(this%symm%ops(iop), geo%atom(iatom)%x)
+        else
+          ratom(1:this%dim) = symm_op_apply_cart(this%symm%ops(iop), geo%atom(iatom)%x)
+        end if
+     
+        call simul_box_periodic_atom_in_box(this, geo, ratom)
+
+        ! find iatom_symm
+        do iatom_symm = 1, geo%natoms
+          if(all(abs(ratom(1:dim) - geo%atom(iatom_symm)%x(1:dim)) < CNST(1.0e-5))) exit
+        end do
+
+        if(iatom_symm > geo%natoms) then
+          write(message(1),'(a,i6)') 'Internal error: could not find symmetric partner for atom number', iatom
+          write(message(2),'(a,i3,a)') 'with symmetry operation number ', iop, '.'
+          call messages_fatal(2)
+        end if
+
+      end do
+    end do
+
+    POP_SUB(simul_box_symmetry_check)
+  end subroutine simul_box_symmetry_check
 
 end module simul_box_oct_m
 

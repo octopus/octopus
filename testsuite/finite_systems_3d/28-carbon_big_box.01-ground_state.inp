@@ -21,3 +21,4 @@ SpinComponents = spin_polarized
  0   | 0   | 0
 %
 
+ParKpoints = no

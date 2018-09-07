@@ -1,0 +1,21 @@
+CalculationMode = gs
+UnitsOutput = eV_Angstrom
+
+radius = 3.5*angstrom
+spacing = 0.18*angstrom
+
+CH = 1.097*angstrom
+%Coordinates
+  "C" |           0 |          0 |           0
+  "H" |  CH/sqrt(3) | CH/sqrt(3) |  CH/sqrt(3)
+  "H" | -CH/sqrt(3) |-CH/sqrt(3) |  CH/sqrt(3)
+  "H" |  CH/sqrt(3) |-CH/sqrt(3) | -CH/sqrt(3)
+  "H" | -CH/sqrt(3) | CH/sqrt(3) | -CH/sqrt(3)
+%
+
+PCMCalculation = true
+PCMCalcMethod = pcm_direct
+PCMStaticEpsilon = 78.39
+
+FromScratch = yes
+ExperimentalFeatures = yes

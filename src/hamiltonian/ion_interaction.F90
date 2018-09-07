@@ -19,7 +19,6 @@
 #include "global.h"
 
 module ion_interaction_oct_m
-  use base_term_oct_m
   use comm_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -33,7 +32,6 @@ module ion_interaction_oct_m
   use ps_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use ssys_ionic_oct_m
   use unit_system_oct_m
 
   implicit none
@@ -43,12 +41,10 @@ module ion_interaction_oct_m
     ion_interaction_t,                &
     ion_interaction_init,             &
     ion_interaction_end,              &
-    ion_interaction_add_subsys_ionic, &
     ion_interaction_calculate,        &
     ion_interaction_test
 
   type ion_interaction_t
-    type(base_term_t), pointer :: subsys_ionic !< Subsystems ionic term.
     FLOAT                      :: alpha
   end type ion_interaction_t
 
@@ -77,8 +73,6 @@ contains
     !%End
     call parse_variable('EwaldAlpha', CNST(0.21), this%alpha)
     
-    nullify(this%subsys_ionic)
-
     POP_SUB(ion_interaction_init)
   end subroutine ion_interaction_init
   
@@ -90,24 +84,9 @@ contains
     PUSH_SUB(ion_interaction_end)
 
     this%alpha = -CNST(1.0)
-    
-    nullify(this%subsys_ionic)
 
     POP_SUB(ion_interaction_end)
   end subroutine ion_interaction_end
-  
-  ! ---------------------------------------------------------
-  
-  subroutine ion_interaction_add_subsys_ionic(this, subsys_ionic)
-    type(ion_interaction_t),   intent(inout) :: this
-    type(base_term_t), target, intent(in)    :: subsys_ionic
-    
-    PUSH_SUB(ion_interaction_add_subsys_ionic)
-    
-    this%subsys_ionic => subsys_ionic
-    
-    POP_SUB(ion_interaction_add_subsys_ionic)
-  end subroutine ion_interaction_add_subsys_ionic
   
   ! ---------------------------------------------------------
   !> For details about this routine, see
@@ -146,11 +125,6 @@ contains
     end if 
 
     energy = M_ZERO
-    if(associated(this%subsys_ionic))then
-      ! Get the subsystems interaction energy.
-      call ssys_ionic_calc(this%subsys_ionic)
-      call ssys_ionic_get(this%subsys_ionic, energy, except=(/"live"/))
-    end if
     force(1:sb%dim, 1:geo%natoms) = M_ZERO
 
     if(simul_box_is_periodic(sb)) then
@@ -186,12 +160,6 @@ contains
           if(.not. in_box(iatom)) cycle
         end if
         
-        if(associated(this%subsys_ionic))then
-          ! Calculate the interaction forces.
-          call ssys_ionic_interaction(this%subsys_ionic, geo%atom(iatom), f, except=(/"live"/) )
-          force(1:sb%dim,iatom) = force(1:sb%dim,iatom) + f(1:sb%dim)
-        end if
-
         spci => geo%atom(iatom)%species
         zi = species_zval(spci)
 
@@ -297,10 +265,7 @@ contains
     FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc, rcut, epseudo
     integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
-    integer :: ix, iy, iz, isph, ss, idim
-    FLOAT   :: gg(1:MAX_DIM), gg2, gx
-    FLOAT   :: factor, charge
-    CMPLX   :: sumatoms, tmp(1:MAX_DIM), aa
+    FLOAT   :: charge
     type(profile_t), save :: prof_short, prof_long
     type(ps_t) :: spec_ps
 
@@ -436,7 +401,7 @@ contains
     FLOAT,                     intent(in)   :: charge
 
     FLOAT :: rcut
-    integer :: iatom, jatom
+    integer :: iatom
     integer :: ix, iy, iz, isph, ss, idim
     FLOAT   :: gg(1:MAX_DIM), gg2, gx
     FLOAT   :: factor
@@ -523,15 +488,12 @@ contains
     FLOAT,                     intent(inout)   :: force(:, :) !< (sb%dim, geo%natoms)
     FLOAT,                     intent(in)   :: charge
 
-    FLOAT :: rcut,rcut_min,rcut_max
+    FLOAT :: rcut
     integer :: iatom, jatom
-    integer :: ix, iy, iz, ix_max, iy_max, ss, idim
+    integer :: ix, iy, ix_max, iy_max, ss
     FLOAT   :: gg(1:MAX_DIM), gg2, gx, gg_abs
     FLOAT   :: factor,factor1,factor2
     FLOAT   :: dz_max, dz_ij, area_cell, erfc
-    CMPLX   :: sumatoms, tmp(1:MAX_DIM), aa
-
-    CMPLX, allocatable :: phase(:)
 
     PUSH_SUB(Ewald_long_2d)
 

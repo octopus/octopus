@@ -20,7 +20,7 @@
 
 include $(srcdir)/../common-rules.make
 
-bin_PROGRAMS = octopus oct-test octopus_mpi
+bin_PROGRAMS = octopus
 
 octopus_SOURCES =                       \
 	invert_ks.F90                   \
@@ -31,35 +31,16 @@ octopus_SOURCES =                       \
 	phonons_fd.F90                  \
 	casida.F90                      \
 	pulpo.F90                       \
+	test.F90                        \
 	run.F90                         \
 	main.F90
 
 octopus_LDADD = $(all_LIBS)
 
-oct_test_SOURCES = test.F90
-oct_test_LDADD = \
-        $(top_builddir)/src/system/libsystem.a           \
-        $(top_builddir)/src/hamiltonian/libhamiltonian.a \
-        $(top_builddir)/src/poisson/libpoisson.a         \
-        $(top_builddir)/src/states/libstates.a           \
-        $(top_builddir)/src/frozen/libfrozen.a           \
-        $(top_builddir)/src/grid/libgrid.a               \
-        $(top_builddir)/src/ions/libions.a               \
-        $(top_builddir)/src/species/libspecies.a         \
-        $(top_builddir)/src/math/libmath.a               \
-        $(top_builddir)/src/basic/libbasic.a \
-        $(other_LIBS)
-
 noinst_HEADERS = \
 	casida_inc.F90
 
-octopus_mpi_SOURCES = octopus_mpi.F90
-
-octopus_mpi_LDADD = \
-	$(top_builddir)/src/basic/libbasic.a \
-	$(other_LIBS)
-
-CLEANFILES += octopus oct-test
+CLEANFILES += octopus
 
 # debug files from MacOS gcc with -g
 clean-local :
@@ -74,7 +55,7 @@ clean-local :
 # dependencies. (For normal compilation of octopus, there is
 # absolutely no need of installing makedepf90).
 depend:
-	@makedepf90 $(octopus_SOURCES) $(oct_test_sources)
+	@makedepf90 $(octopus_SOURCES)
 
 
 # DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
@@ -87,5 +68,6 @@ geom_opt.o : geom_opt.F90
 phonons_fd.o : phonons_fd.F90 
 casida.o : casida.F90 casida_inc.F90 
 pulpo.o : pulpo.F90 
-run.o : run.F90 unocc.o static_pol.o pulpo.o phonons_fd.o memory.o invert_ks.o geom_opt.o casida.o 
+run.o : run.F90 unocc.o static_pol.o pulpo.o phonons_fd.o memory.o invert_ks.o geom_opt.o casida.o test.o
+test.o : test.F90
 main.o : main.F90 run.o 

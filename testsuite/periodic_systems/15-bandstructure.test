@@ -2,12 +2,14 @@
 
 Test       : Band structure calculation
 Program    : octopus
-TestGroups : short-run, periodic_systems
+TestGroups : long-run, periodic_systems
 Enabled    : Yes
 
 Processors : 4
 
 Input      : 15-bandstructure.01-gs.inp
+
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
 match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 64

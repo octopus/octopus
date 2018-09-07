@@ -21,7 +21,6 @@
 module spectrum_oct_m
   use batch_oct_m
   use iso_c_binding
-  use cmplxscl_oct_m
   use compressed_sensing_oct_m
   use fft_oct_m
   use global_oct_m
@@ -62,7 +61,8 @@ module spectrum_oct_m
     spectrum_fix_time_limits,      &
     spectrum_count_time_steps,     &
     spectrum_signal_damp,          &
-    spectrum_fourier_transform
+    spectrum_fourier_transform,    &
+    spectrum_hs_from_current
 
   integer, public, parameter ::    &
     SPECTRUM_DAMP_NONE       = 0,  &
@@ -96,7 +96,6 @@ module spectrum_oct_m
     integer :: spectype            !< spectrum type (absorption, energy loss, or dipole power)
     integer :: method              !< Fourier transform or compressed sensing 
     FLOAT   :: noise               !< the level of noise that is assumed in the time series for compressed sensing 
-    type(cmplxscl_t) :: cmplxscl   !< the complex scaling parameters
     logical :: sigma_diag          !< diagonalize sigma tensor
   end type spectrum_t
 
@@ -120,8 +119,6 @@ contains
 
     PUSH_SUB(spectrum_init)
     
-    call cmplxscl_init(spectrum%cmplxscl)
-
     call messages_print_stress(stdout, "Spectrum Options")
 
     !%Variable PropagationSpectrumType
@@ -229,15 +226,11 @@ contains
     !% frequencies, <i>e.g.</i> for Van der Waals <math>C_6</math> coefficients.
     !% This is the only allowed choice for complex scaling.
     !%End
-    if(spectrum%cmplxscl%space .or. spectrum%cmplxscl%time) then
-      spectrum%transform = SPECTRUM_TRANSFORM_LAPLACE
-    else
-      call parse_variable('PropagationSpectrumTransform', SPECTRUM_TRANSFORM_SIN, spectrum%transform)
-      if(.not.varinfo_valid_option('PropagationSpectrumTransform', spectrum%transform)) then
-        call messages_input_error('PropagationSpectrumTransform')
-      end if
-    call messages_print_var_option(stdout, 'PropagationSpectrumTransform', spectrum%transform)
+    call parse_variable('PropagationSpectrumTransform', SPECTRUM_TRANSFORM_SIN, spectrum%transform)
+    if(.not.varinfo_valid_option('PropagationSpectrumTransform', spectrum%transform)) then
+      call messages_input_error('PropagationSpectrumTransform')
     end if
+    call messages_print_var_option(stdout, 'PropagationSpectrumTransform', spectrum%transform)
 
     !%Variable PropagationSpectrumStartTime
     !%Type float
@@ -289,13 +282,16 @@ contains
 
     !%Variable PropagationSpectrumDampFactor
     !%Type float
-    !%Default 0.15 au
+    !%Default -1.0
     !%Section Utilities::oct-propagation_spectrum
     !%Description
-    !% If <tt>PropagationSpectrumDampMode = exponential</tt>, the damping parameter of the exponential
+    !% If <tt>PropagationSpectrumDampMode = exponential, gaussian</tt>, the damping parameter of the exponential
     !% is fixed through this variable.
+    !% Default value ensure that the damping function adquires a 0.0001 value at the end of the propagation time.
     !%End
-    call parse_variable('PropagationSpectrumDampFactor', CNST(0.15), spectrum%damp_factor, units_inp%time**(-1))
+    call parse_variable('PropagationSpectrumDampFactor', -M_ONE, spectrum%damp_factor, units_inp%time**(-1))
+
+
     call messages_print_var_value(stdout, 'PropagationSpectrumDampFactor', spectrum%damp_factor, unit = units_out%time**(-1))
 
     !%Variable PropagationSpectrumSigmaDiagonalization
@@ -580,15 +576,10 @@ contains
     FLOAT   :: dt, ref_dt, energy, ewsum, polsum
     type(kick_t) :: kick, ref_kick
     FLOAT, allocatable :: dipole(:, :, :), ref_dipole(:, :, :), sigma(:, :, :), sf(:, :)
-    FLOAT, allocatable :: Imdipole(:, :, :), Imref_dipole(:, :, :)
     type(unit_system_t) :: file_units, ref_file_units
     type(batch_t) :: dipoleb, sigmab
-    logical       :: cmplxscl
 
     PUSH_SUB(spectrum_cross_section)
-
-    cmplxscl = .false.
-    if(spectrum%cmplxscl%space .or. spectrum%cmplxscl%time) cmplxscl = .true.
 
     ! This function gives us back the unit connected to the "multipoles" file, the header information,
     ! the number of time steps, and the time step.
@@ -624,36 +615,34 @@ contains
 
     ! Find out the iteration numbers corresponding to the time limits.
     call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    ! Get default damp factor
+    if (spectrum%damp /= SPECTRUM_DAMP_NONE .and. spectrum%damp /= SPECTRUM_DAMP_POLYNOMIAL &
+         .and. spectrum%damp_factor == -M_ONE) then
+      select case(spectrum%damp)
+        case(SPECTRUM_DAMP_LORENTZIAN)
+          spectrum%damp_factor =  -log(0.0001)/(spectrum%end_time-spectrum%start_time)
+        case(SPECTRUM_DAMP_GAUSSIAN)
+          spectrum%damp_factor =  sqrt(-log(0.0001)/(spectrum%end_time-spectrum%start_time)**2)
+      end select
+      call messages_print_var_value(stdout, 'PropagationSpectrumDampFactor', spectrum%damp_factor, unit = units_out%time**(-1))
+    end if
 
     SAFE_ALLOCATE(dipole(0:time_steps, 1:3, 1:nspin))
-    if(cmplxscl) then
-      SAFE_ALLOCATE(Imdipole(0:time_steps, 1:3, 1:nspin))
-      call spectrum_read_dipole(in_file, dipole, Imdipole)
-    else 
-      call spectrum_read_dipole(in_file, dipole)
-    end if
+    call spectrum_read_dipole(in_file, dipole)
 
     if(present(ref_file)) then
       SAFE_ALLOCATE(ref_dipole(0:time_steps, 1:3, 1:nspin))
-      if(cmplxscl) then
-        SAFE_ALLOCATE(Imref_dipole(0:time_steps, 1:3, 1:nspin))
-        call spectrum_read_dipole(ref_file, ref_dipole, Imref_dipole)
-      else 
-        call spectrum_read_dipole(ref_file, ref_dipole)
-      end if
+      call spectrum_read_dipole(ref_file, ref_dipole)
     end if
 
     ! Now subtract the initial dipole.
     if(present(ref_file)) then
       dipole = dipole - ref_dipole
-      if(cmplxscl) Imdipole = Imdipole - Imref_dipole 
     else
       do it = 1, time_steps
         dipole(it, :, :) = dipole(it, :, :) - dipole(0, :, :)
-        if(cmplxscl) Imdipole(it, :, :) = Imdipole(it, :, :) - Imdipole(0, :, :)
       end do
       dipole(0, :, :) = M_ZERO
-      if(cmplxscl) Imdipole(0, :, :) = M_ZERO
     end if
 
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
@@ -663,16 +652,12 @@ contains
     SAFE_ALLOCATE(sigma(0:no_e, 1:3, 1:nspin))
 
 
-    if(cmplxscl) then
-      call batch_init(dipoleb, 3, 1, nspin, dipole + M_zI * Imdipole)
-    else
-      call batch_init(dipoleb, 3, 1, nspin, dipole)
-    end if
+    call batch_init(dipoleb, 3, 1, nspin, dipole)
     call batch_init(sigmab, 3, 1, nspin, sigma)
 
     call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, kick%time, dt, dipoleb)
     call spectrum_fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
-      istart + 1, iend + 1, kick%time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab, spectrum%cmplxscl)
+      istart + 1, iend + 1, kick%time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab)
     
     call batch_end(dipoleb)
     call batch_end(sigmab)
@@ -765,20 +750,16 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine spectrum_read_dipole(in_file, dipole, Imdipole)
+  subroutine spectrum_read_dipole(in_file, dipole)
     integer,           intent(in)    :: in_file
     FLOAT,             intent(out)   :: dipole(0:, :, :)
-    FLOAT, optional,   intent(out)   :: Imdipole(0:, :, :)
 
     integer :: nspin, lmax, time_steps, trash, it, idir, ispin
     FLOAT   :: dt,  dump
     type(kick_t) :: kick
     type(unit_system_t) :: file_units
-    logical   :: cmplxscl
 
     PUSH_SUB(spectrum_read_dipole)
-
-    cmplxscl = present(Imdipole)
 
     ! This function gives us back the unit connected to the "multipoles" file, the header information,
     ! the number of time steps, and the time step.
@@ -788,14 +769,9 @@ contains
     call io_skip_header(in_file)
 
     do it = 0, time_steps
-      if (cmplxscl) then
-        read(in_file, *) trash, dump, (dump, (dipole(it, idir, ispin), Imdipole(it, idir, ispin), idir = 1, 3), ispin = 1, nspin)
-      else 
-        read(in_file, *) trash, dump, (dump, (dipole(it, idir, ispin), idir = 1, 3), ispin = 1, nspin)
-      end if
+      read(in_file, *) trash, dump, (dump, (dipole(it, idir, ispin), idir = 1, 3), ispin = 1, nspin)
     end do
     dipole(:,:,:) = units_to_atomic(file_units%length, dipole(:,:,:))
-    if (cmplxscl) Imdipole(:,:,:) = units_to_atomic(file_units%length, Imdipole(:,:,:))
     
     POP_SUB(spectrum_read_dipole)
 
@@ -1400,7 +1376,7 @@ contains
 
     PUSH_SUB(spectrum_hs_ar_from_acc)
 
-    call spectrum_acc_info(iunit, time_steps, dt)
+    call spectrum_tdfile_info('acceleration', iunit, time_steps, dt)
     call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
 
     ! load dipole from file
@@ -1718,7 +1694,7 @@ contains
 
     PUSH_SUB(spectrum_hs_from_acc)
 
-    call spectrum_acc_info(iunit, time_steps, dt)
+    call spectrum_tdfile_info('acceleration', iunit, time_steps, dt)
     call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
 
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
@@ -1804,6 +1780,109 @@ contains
     POP_SUB(spectrum_hs_from_acc)
   end subroutine spectrum_hs_from_acc
   ! ---------------------------------------------------------
+
+  ! ---------------------------------------------------------
+  subroutine spectrum_hs_from_current(out_file, spectrum, pol, vec, w0)
+    character(len=*), intent(in)    :: out_file
+    type(spectrum_t),     intent(inout) :: spectrum
+    character,        intent(in)    :: pol
+    FLOAT,            intent(in)    :: vec(:)
+    FLOAT,  optional, intent(in)    :: w0
+
+    integer :: istep, jj, iunit, time_steps, istart, iend, ntiter, ierr, no_e, ie
+    FLOAT :: dt, cc(MAX_DIM),vv(MAX_DIM)
+    CMPLX, allocatable :: cur(:)
+    FLOAT, allocatable :: rcur(:), sps(:), spc(:)
+    type(batch_t) :: cur_batch, sps_batch, spc_batch
+
+    PUSH_SUB(spectrum_hs_from_current)
+
+    call spectrum_tdfile_info('total_current', iunit, time_steps, dt)
+    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+
+    if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
+
+    ! load dipole from file
+    SAFE_ALLOCATE(cur(0:time_steps))
+    cur = M_ZERO
+    vv = vec / sqrt(sum(vec(:)**2))  
+    call io_skip_header(iunit)
+
+    do istep = 1, time_steps
+      cc = M_ZERO
+      read(iunit, '(28x,e20.12)', advance = 'no', iostat = ierr) cc(1)
+      ! FIXME: parsing of file depends on how code was compiled (MAX_DIM)!!!
+      jj = 2
+      do while( (ierr == 0) .and. (jj <= MAX_DIM) )
+        read(iunit, '(e20.12)', advance = 'no', iostat = ierr) cc(jj)
+        jj = jj + 1 
+      end do
+      select case(pol)
+      case('x')
+        cur(istep) = cc(1)
+      case('y')
+        cur(istep) = cc(2)
+      case('z')
+        cur(istep) = cc(3)
+      case('+')
+        cur(istep) = (cc(1) + M_zI * cc(2)) / sqrt(M_TWO)
+      case('-')
+        cur(istep) = (cc(1) - M_zI * cc(2)) / sqrt(M_TWO)
+      case('v')
+        cur(istep) = vv(1)*cc(1) + vv(2)*cc(2) + vv(3)*cc(3)
+      end select
+      cur(istep) = units_to_atomic(units_out%velocity, cur(istep))
+    end do
+    close(iunit)
+
+    if(present(w0)) then
+
+      call spectrum_hsfunction_init(dt, istart, iend, time_steps, cur)
+      call spectrum_hs(out_file, spectrum, pol, w0)
+      call spectrum_hsfunction_end()
+
+    else
+
+      SAFE_ALLOCATE(rcur(0:time_steps))
+      rcur = real(cur, REAL_PRECISION)
+
+      no_e = int(spectrum%max_energy / spectrum%energy_step)
+      SAFE_ALLOCATE(sps(0:no_e))
+      SAFE_ALLOCATE(spc(0:no_e))
+      sps = M_ZERO
+      spc = M_ZERO
+
+      call batch_init(cur_batch, 1)
+      call batch_init(sps_batch, 1)
+      call batch_init(spc_batch, 1)
+
+      call batch_add_state(cur_batch, rcur)
+      call batch_add_state(sps_batch, sps)
+      call batch_add_state(spc_batch, spc)
+
+      call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
+        istart + 1, iend + 1, M_ZERO, dt, cur_batch, 1, no_e + 1, spectrum%energy_step, spc_batch)
+      call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
+        istart + 1, iend + 1, M_ZERO, dt, cur_batch, 1, no_e + 1, spectrum%energy_step, sps_batch)
+
+      do ie = 0, no_e
+        sps(ie) = (sps(ie)**2 + spc(ie)**2) * (ie * spectrum%energy_step)**2
+      end do
+
+      call spectrum_hs_output(out_file, spectrum, pol, no_e, sps)   
+
+      call batch_end(cur_batch)
+      call batch_end(sps_batch)
+      call batch_end(spc_batch)
+
+      SAFE_DEALLOCATE_A(rcur)
+
+    end if
+
+    SAFE_DEALLOCATE_A(cur)
+    POP_SUB(spectrum_hs_from_current)
+  end subroutine spectrum_hs_from_current
+
 
   ! ---------------------------------------------------------
   subroutine spectrum_hs(out_file, spectrum, pol, w0)
@@ -2009,20 +2088,28 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine spectrum_acc_info(iunit, time_steps, dt)
+  subroutine spectrum_tdfile_info(fname, iunit, time_steps, dt)
+    character(len=*), intent(in) :: fname
     integer, intent(out) :: iunit, time_steps
     FLOAT,   intent(out) :: dt
 
     integer :: trash
     FLOAT :: t1, t2, dummy
+    character(len=256) :: filename
+    
 
-    PUSH_SUB(spectrum_acc_info)
+    PUSH_SUB(spectrum_tdfile_info)
+
 
     ! open files
-    iunit = io_open('acceleration', action='read', status='old', die=.false.)
+    filename = trim('td.general/')//trim(fname)
+    iunit = io_open(filename, action='read', status='old', die=.false.)
+
     if(iunit < 0) then
-      iunit = io_open('td.general/acceleration', action='read', status='old')
+      filename = trim('./')//trim(fname)
+      iunit = io_open(filename, action='read', status='old')
     end if
+
 
     ! read in dipole
     call io_skip_header(iunit)
@@ -2040,13 +2127,13 @@ contains
     time_steps = time_steps - 1
 
     if(time_steps < 3) then
-      message(1) = "Empty multipole file?"
+      message(1) = "Empty file?"
       call messages_fatal(1)
     end if
 
     rewind(iunit)
-    POP_SUB(spectrum_acc_info)
-  end subroutine spectrum_acc_info
+    POP_SUB(spectrum_tdfile_info)
+  end subroutine spectrum_tdfile_info
 
   
   ! ---------------------------------------------------------
@@ -2098,6 +2185,7 @@ contains
 
     ASSERT(batch_is_ok(time_function))
     ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)
+
 
     do itime = time_start, time_end
       time = time_step*(itime-1)
@@ -2154,7 +2242,7 @@ contains
   !! by \f$ \sin(w*(t-t0)) \f$, and the "exponential" transform is computed by multiplying the real function by
   !! \f$ e(-I*w*t0)*e(-w*t) \f$.
   subroutine spectrum_fourier_transform(method, transform, noise, time_start, time_end, t0, time_step, time_function, &
-    energy_start, energy_end, energy_step, energy_function, cmplxscl)
+    energy_start, energy_end, energy_step, energy_function)
     integer,                  intent(in)    :: method
     integer,                  intent(in)    :: transform
     FLOAT,                    intent(in)    :: noise
@@ -2167,31 +2255,20 @@ contains
     integer,                  intent(in)    :: energy_end
     FLOAT,                    intent(in)    :: energy_step
     type(batch_t),            intent(inout) :: energy_function
-    type(cmplxscl_t), optional, intent(in)    :: cmplxscl
 
     integer :: itime, ienergy, ii
     FLOAT   :: energy!, kernel
     CMPLX :: ez, eidt
     type(compressed_sensing_t) :: cs
-    logical :: cmplxft ! perform complex Fourier Transform?
 
     PUSH_SUB(fourier_transform)
     
-    cmplxft = .false. 
-    if(present(cmplxscl)) then
-      if(cmplxscl%space .or. cmplxscl%time) cmplxft = .true.
-    end if
-
     ASSERT(batch_is_ok(time_function))
     ASSERT(batch_is_ok(energy_function))
     ASSERT(time_function%nst_linear == energy_function%nst_linear)
     ASSERT(batch_status(time_function) == batch_status(energy_function))
     ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)
-    if(cmplxft) then
-      ASSERT(batch_type(time_function) == TYPE_CMPLX)
-    else 
-      ASSERT(batch_type(time_function) == TYPE_FLOAT)
-    end if
+    ASSERT(batch_type(time_function) == TYPE_FLOAT)
     ASSERT(batch_type(energy_function) == TYPE_FLOAT)
 
     select case(method)
@@ -2203,7 +2280,7 @@ contains
         energy = energy_step*(ienergy - energy_start)
 
         do ii = 1, energy_function%nst_linear
-          energy_function%states_linear(ii)%dpsi(ienergy) = 0.0
+          energy_function%states_linear(ii)%dpsi(ienergy) = M_ZERO
         end do
 
         select case(transform)
@@ -2212,11 +2289,6 @@ contains
         ! One can compute the exponential by successive multiplications, instead of calling the sine or
         ! cosine function at each time step.
         case(SPECTRUM_TRANSFORM_SIN)
-          if(cmplxft) then
-            write(message(1),'(a)') 'With complex scaling the only allowed Fourier transform'
-            write(message(2),'(a)') 'is PropagationSpectrumTransform = laplace'
-            call messages_fatal(2)            
-          end if
 
           eidt = exp(M_zI * energy * time_step )
           ez = exp(M_zI * energy * ( (time_start-1)*time_step - t0) )
@@ -2230,11 +2302,6 @@ contains
           end do
 
         case(SPECTRUM_TRANSFORM_COS)
-          if(cmplxft) then
-            write(message(1),'(a)') 'With complex scaling the only allowed Fourier transform'
-            write(message(2),'(a)') 'is PropagationSpectrumTransform = laplace'
-            call messages_fatal(2)            
-          end if
 
           eidt = exp(M_zI * energy * time_step)
           ez = exp(M_zI * energy * ( (time_start-1)*time_step - t0) )
@@ -2249,29 +2316,16 @@ contains
 
         case(SPECTRUM_TRANSFORM_LAPLACE)
         
-          if(cmplxft) then
-            eidt = exp( -energy * time_step * exp(M_zI * cmplxscl%alphaR) + M_zI * cmplxscl%alphaR)
-            ez = exp( -energy * ( (time_start-1)*time_step - t0) )
-            do itime = time_start, time_end
-              do ii = 1, time_function%nst_linear
-                energy_function%states_linear(ii)%dpsi(ienergy) = &
-                  energy_function%states_linear(ii)%dpsi(ienergy) + &
-                  real( time_function%states_linear(ii)%zpsi(itime) * ez, REAL_PRECISION)
-              end do
-              ez = ez * eidt
+          eidt = exp( -energy * time_step)
+          ez = exp( -energy * ( (time_start-1)*time_step - t0) )
+          do itime = time_start, time_end
+            do ii = 1, time_function%nst_linear
+              energy_function%states_linear(ii)%dpsi(ienergy) = &
+                energy_function%states_linear(ii)%dpsi(ienergy) + &
+                real( time_function%states_linear(ii)%dpsi(itime) * ez, REAL_PRECISION)
             end do
-          else
-            eidt = exp( -energy * time_step)
-            ez = exp( -energy * ( (time_start-1)*time_step - t0) )
-            do itime = time_start, time_end
-              do ii = 1, time_function%nst_linear
-                energy_function%states_linear(ii)%dpsi(ienergy) = &
-                  energy_function%states_linear(ii)%dpsi(ienergy) + &
-                  real( time_function%states_linear(ii)%dpsi(itime) * ez, REAL_PRECISION)
-              end do
-              ez = ez * eidt
-            end do
-          end if
+            ez = ez * eidt
+          end do
         end select
 
         ! The total sum must be multiplied by time_step in order to get the integral.
@@ -2310,7 +2364,7 @@ contains
     integer,                intent(in) :: energy_steps
     type(kick_t), optional, intent(in) :: kick !< if present, will write itself and nspin
 
-    integer :: is, idir, jdir, ie, ii, info, out_file, rwork
+    integer :: is, idir, jdir, ie, ii, info, out_file
     FLOAT, allocatable :: work(:,:) 
     CMPLX, allocatable :: w(:)
     character(len=20) :: header_string

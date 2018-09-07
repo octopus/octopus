@@ -19,9 +19,6 @@
 #include "global.h"
 
 module run_oct_m
-  use base_hamiltonian_oct_m
-  use base_handle_oct_m
-  use base_model_oct_m
   use casida_oct_m
   use em_resp_oct_m
   use fft_oct_m
@@ -46,6 +43,7 @@ module run_oct_m
   use static_pol_oct_m
   use system_oct_m
   use td_oct_m
+  use test_oct_m
   use unit_system_oct_m
   use unocc_oct_m
   use varinfo_oct_m
@@ -77,6 +75,7 @@ module run_oct_m
     CM_KDOTP              =  15,  &
     CM_DUMMY              =  17,  &
     CM_INVERTKDS          =  18,  &
+    CM_TEST               =  19,  &
     CM_PULPO_A_FEIRA      =  99
 
 contains
@@ -126,8 +125,6 @@ contains
     type(profile_t), save :: calc_mode_prof
     logical :: fromScratch
 
-    type(base_hamiltonian_t), pointer :: subsys_hm
-
     PUSH_SUB(run)
 
     calc_mode_id = cm
@@ -151,30 +148,25 @@ contains
 
     call unit_system_init()
 
+    if(calc_mode_id == CM_TEST) then
+      call test_run()
+      call fft_all_end()
+#ifdef HAVE_MPI
+      call mpi_debug_statistics()
+#endif
+      POP_SUB(run)
+      return
+    end if
+
     call system_init(sys)
 
-    nullify(subsys_hm)
-    if(associated(sys%subsys_handle))then
-      call subsystems_get(sys%subsys_handle, subsys_hm)
-      ASSERT(associated(subsys_hm))
-      call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
-                       sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin), subsys_hm)
-      nullify(subsys_hm)
-
-      ! At present, PCM calculations in parallel must have ParallelizationStrategy = par_states
-      if (hm%pcm%run_pcm) then 
-        if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
-          call messages_experimental('Parallel in domain calculations with PCM')
-        end if
-      end if
-    else
-      call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
-            sys%ks%xc_family, sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
-
-      if (hm%pcm%run_pcm) then 
-        if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
-          call messages_experimental('Parallel in domain calculations with PCM')
-        end if
+    call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
+      sys%ks%xc_family, sys%ks%xc_flags, &
+      family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+    
+    if (hm%pcm%run_pcm) then 
+      if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
+        call messages_experimental('Parallel in domain calculations with PCM')
       end if
     end if
 
@@ -224,8 +216,12 @@ contains
       case(CM_UNOCC)
         call unocc_run(sys, hm, fromScratch)
       case(CM_TD)
+        if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = td")
         call td_run(sys, hm, fromScratch)
       case(CM_LR_POL)
+        if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = em_resp")
         select case(get_resp_method())
         case(FD)
           call static_pol_run(sys, hm, fromScratch)
@@ -233,10 +229,16 @@ contains
           call em_resp_run(sys, hm, fromScratch)
         end select
       case(CM_VDW)
+         if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = vdw")
         call vdW_run(sys, hm, fromScratch)
       case(CM_GEOM_OPT)
+        if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = go")
         call geom_opt_run(sys, hm, fromScratch)
       case(CM_PHONONS_LR)
+        if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = vib_modes")
         select case(get_resp_method())
         case(FD)
           call phonons_run(sys, hm)
@@ -244,16 +246,24 @@ contains
           call phonons_lr_run(sys, hm, fromscratch)
         end select
       case(CM_OPT_CONTROL)
+        if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = opt_control")
         call opt_control_run(sys, hm)
       case(CM_CASIDA)
+        if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = casida")
         call casida_run(sys, hm, fromScratch)
       case(CM_ONE_SHOT)
         message(1) = "CalculationMode = one_shot is obsolete. Please use gs with MaximumIter = 0."
         call messages_fatal(1)
       case(CM_KDOTP)
+        if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = kdotp")
         call kdotp_lr_run(sys, hm, fromScratch)
       case(CM_DUMMY)
       case(CM_INVERTKDS)
+        if(sys%gr%sb%kpoints%use_symmetries) &
+          call messages_experimental("KPoints symmetries with CalculationMode = invert_ks")
         call invert_ks_run(sys, hm)
       case(CM_PULPO_A_FEIRA)
         ASSERT(.false.) !this is handled before, if we get here, it is an error
@@ -266,6 +276,7 @@ contains
     
     call hamiltonian_end(hm)
     call system_end(sys)
+
     call fft_all_end()
 
 #ifdef HAVE_MPI
@@ -293,25 +304,6 @@ contains
     end subroutine calc_mode_init
 
   end subroutine run
-
-  ! ---------------------------------------------------------
-  subroutine subsystems_get(this, subsys_hm)
-    type(base_handle_t),       intent(in) :: this
-    type(base_hamiltonian_t), pointer     :: subsys_hm
-
-    type(base_model_t), pointer :: subsys_model
-    
-    PUSH_SUB(subsystems_get)
-
-    nullify(subsys_hm, subsys_model)
-    call base_handle_get(this, subsys_model)
-    ASSERT(associated(subsys_model))
-    call base_model_get(subsys_model, subsys_hm)
-    nullify(subsys_model)
-      
-    POP_SUB(subsystems_get)
-  end subroutine subsystems_get
-
 
 end module run_oct_m
 

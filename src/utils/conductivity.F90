@@ -49,10 +49,10 @@
     type(grid_t)     :: gr
     type(states_t)    :: st
     type(batch_t) :: currb, ftcurrb
-    FLOAT :: ww, curtime, currtime, deltat, velcm(1:MAX_DIM), vel0(1:MAX_DIM), current(1:MAX_DIM), integral(1:2), v0, tmp(1:6)
+    FLOAT :: ww, curtime, deltat, velcm(1:MAX_DIM), vel0(1:MAX_DIM), current(1:MAX_DIM), integral(1:2), v0
     integer :: ifreq, max_freq
-    integer :: skip, idir
-    FLOAT, parameter :: inv_ohm_meter = 4599848.1
+    integer :: skip
+    FLOAT, parameter :: inv_ohm_meter = CNST(4599848.1)
     logical :: from_forces
     
     

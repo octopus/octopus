@@ -130,9 +130,9 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out, set_bc)
     apply_kpoint = .false.
 
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part)
-      f_in_copy(ip, idim) = hm%hm_base%phase(ip, ik) * f_in_copy(ip, idim)
-    end forall
+#ifdef R_TCOMPLEX
+    call states_set_phase(hm%d, f_in_copy, hm%hm_base%phase(1:gr%mesh%np_part, ik), gr%mesh%np_part, .false.)
+#endif
   end if
 
   select case(this%pert_type)
@@ -154,9 +154,9 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out, set_bc)
   end select
   
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
-      f_out(ip, idim) = conjg(hm%hm_base%phase(ip, ik)) * f_out(ip, idim)
-    end forall
+#ifdef R_TCOMPLEX
+    call states_set_phase(hm%d, f_out, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .true.)
+#endif
   end if
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
@@ -223,7 +223,6 @@ contains
       SAFE_DEALLOCATE_A(grad)
     else
       SAFE_ALLOCATE(Hxpsi(1:gr%mesh%np,1:hm%d%dim))     
-      Hxpsi(:,:) = M_ZERO
       call X(hamiltonian_apply)(hm,gr%der,f_in_copy(:,:),Hxpsi(:,:),1,ik,set_bc = .false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
@@ -236,7 +235,6 @@ contains
           f_in_copy(ip,idim) = gr%mesh%x(ip,this%dir)*f_in_copy(ip,idim)
         end do
       end do
-      Hxpsi(:,:) = M_ZERO
       call X(hamiltonian_apply)(hm,gr%der, f_in_copy(:,:),Hxpsi(:,:),1,ik,set_bc = .false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
@@ -420,9 +418,9 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   ! kdotp has the perturbation written in terms of the periodic part with the phase
 
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part)
-      f_in_copy(ip, idim) = hm%hm_base%phase(ip, ik)*f_in_copy(ip, idim)
-    end forall
+#ifdef R_TCOMPLEX
+    call states_set_phase(hm%d, f_in_copy, hm%hm_base%phase(1:gr%mesh%np_part, ik), gr%mesh%np_part, .false.)
+#endif
   end if
 
   select case(this%pert_type)
@@ -440,9 +438,9 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   end select
 
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
-      f_out(ip, idim) = conjg(hm%hm_base%phase(ip, ik))*f_out(ip, idim)
-    end forall
+#ifdef R_TCOMPLEX
+    call states_set_phase(hm%d, f_out, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .true.)
+#endif
   end if
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then

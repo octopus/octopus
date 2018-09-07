@@ -184,6 +184,7 @@ contains
 
 
   ! ---------------------------------------------------------
+  !TODO: We should remove this routine and use st%current. NTD
   subroutine calc_physical_current(der, st, jj)
     type(derivatives_t),  intent(in)    :: der
     type(states_t),       intent(inout) :: st
@@ -192,7 +193,7 @@ contains
     PUSH_SUB(calc_physical_current)
 
     ! Paramagnetic contribution to the physical current
-    call states_calc_quantities(der, st, paramagnetic_current = jj)
+    call states_calc_quantities(der, st, .false., paramagnetic_current = jj)
 
     ! \todo
     ! Diamagnetic contribution to the physical current
@@ -228,7 +229,14 @@ contains
     end if
 
     SAFE_ALLOCATE(jj(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
-    call states_calc_quantities(der, st, paramagnetic_current = jj)
+    call states_calc_quantities(der, st, .false., paramagnetic_current = jj)
+
+    !We sum the current for up and down, valid for collinear and noncollinear spins
+    if(st%d%nspin > 1) then
+      do idir = 1, der%mesh%sb%dim
+        jj(:, idir, 1) = jj(:, idir, 1) + jj(:, idir, 2)
+      end do 
+    end if
 
     a_ind = M_ZERO
     do idir = 1, der%mesh%sb%dim

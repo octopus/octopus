@@ -120,15 +120,15 @@ contains
   !-----------------------------------------------------------
   subroutine sternheimer_init(this, sys, hm, wfs_are_cplx, &
     set_ham_var, set_occ_response, set_last_occ_response, occ_response_by_sternheimer, set_default_solver)
-    type(sternheimer_t), intent(out)   :: this
-    type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: hm
-    logical,             intent(in)    :: wfs_are_cplx
-    integer, optional,   intent(in)    :: set_ham_var
-    logical, optional,   intent(in)    :: set_occ_response
-    logical, optional,   intent(in)    :: set_last_occ_response
-    logical, optional,   intent(in)    :: occ_response_by_sternheimer
-    integer, optional,   intent(in)    :: set_default_solver
+    type(sternheimer_t),  intent(out)   :: this
+    type(system_t),       intent(inout) :: sys
+    type(hamiltonian_t),  intent(inout) :: hm
+    logical,              intent(in)    :: wfs_are_cplx
+    integer,    optional, intent(in)    :: set_ham_var
+    logical,    optional, intent(in)    :: set_occ_response
+    logical,    optional, intent(in)    :: set_last_occ_response
+    logical,    optional, intent(in)    :: occ_response_by_sternheimer
+    integer(8), optional, intent(in)    :: set_default_solver
 
     integer :: ham_var
     logical :: default_preorthog
@@ -146,9 +146,9 @@ contains
     end if
 
     if(wfs_are_cplx) then
-      call mix_init(this%mixer, sys%gr%der, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = TYPE_CMPLX)
+      call mix_init(this%mixer, sys%gr%der, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type_= TYPE_CMPLX)
     else
-      call mix_init(this%mixer, sys%gr%der, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = TYPE_FLOAT)
+      call mix_init(this%mixer, sys%gr%der, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type_= TYPE_FLOAT)
     end if
 
     if(present(set_occ_response)) then

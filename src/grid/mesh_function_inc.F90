@@ -31,7 +31,7 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask) result(dd)
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
-  dd = M_ZERO
+  dd = R_TOTYPE(M_ZERO)
   if (mesh%use_curvilinear) then
     do ip = 1, mesh%np
       dd = dd + ff(ip)*mesh%vol_pp(ip)
@@ -56,6 +56,36 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask) result(dd)
   call profiling_out(C_PROFILING_MF_INTEGRATE)
 
 end function X(mf_integrate)
+
+! ---------------------------------------------------------
+subroutine X(mf_normalize)(mesh, dim, psi, norm)
+  type(mesh_t),    intent(in)    :: mesh
+  integer,         intent(in)    :: dim
+  R_TYPE,          intent(inout) :: psi(:,:)
+  FLOAT, optional, intent(out)   :: norm
+
+  FLOAT   :: norm_
+  integer :: idim, ip
+
+  PUSH_SUB(X(mf_normalize))
+
+  norm_ = X(mf_nrm2) (mesh, dim, psi)
+  if(abs(norm_) <= M_EPSILON) then
+    message(1) = "Mesh function has zero norm; cannot normalize."
+    call messages_fatal(1)
+  end if
+
+  do idim = 1, dim
+    call lalg_scal(mesh%np, R_TOTYPE(M_ONE / norm_), psi(1:mesh%np, idim))
+  end do
+
+  if(present(norm)) then
+    norm = norm_
+  end if
+
+  POP_SUB(X(mf_normalize))
+end subroutine X(mf_normalize)
+
 
 
 !> ---------------------------------------------------------
@@ -133,7 +163,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
 #endif
 
   if(mesh%use_curvilinear) then
-    dotp = M_ZERO
+    dotp = R_TOTYPE(M_ZERO)
     ! preprocessor conditionals necessary since blas_dotu only exists for complex input
 #ifdef R_TCOMPLEX
     if (.not. dotu_) then
@@ -188,7 +218,7 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu, np) result(dotp)
      !! no complex conjugation.  Default is false.
   integer, optional, intent(in) :: np
 
-  integer :: idim, np_
+  integer :: idim
 
   PUSH_SUB(X(mf_dotp_2))
 
@@ -300,8 +330,7 @@ subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
   logical, optional, intent(in)  :: normalized !< whether generate states should have norm 1, true by default
   
   integer, save :: iseed = 123
-  integer :: idim, ip
-  R_BASE  :: aa(MAX_DIM), rr
+  R_BASE  :: rr
   type(profile_t), save :: prof
 
   PUSH_SUB(X(mf_random))
@@ -314,13 +343,13 @@ subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
 
   if(present(shift)) then
     !We skip shift times the seed 
-    call shiftseed(iseed, shift, ff(1))
+    call shiftseed(iseed, shift)
   end if
 
   call quickrnd(iseed, mesh%np, ff(1:mesh%np))
 
   if(optional_default(normalized, .true.)) then
-    rr = X(mf_nrm2)(mesh, ff, reduce = present(shift))
+    rr = X(mf_nrm2)(mesh, ff)
     call lalg_scal(mesh%np, R_TOTYPE(1.0)/rr, ff)
   end if
 
@@ -593,26 +622,18 @@ end function X(mf_line_integral_vector)
 !!   multipole(6, is) = Integral [ f * Y_{2, -1} ].
 !! And so on.
 !! -----------------------------------------------------------------------------
-subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th, inside)
+subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, inside)
   type(mesh_t),      intent(in)  :: mesh
   R_TYPE,            intent(in)  :: ff(:)
   integer,           intent(in)  :: lmax
   R_TYPE,            intent(out) :: multipole(:) !< ((lmax + 1)**2)
-  FLOAT, optional,   intent(in)  :: cmplxscl_th !< the space complex scaling angle cmplxscl%theta
   logical, optional, intent(in)  :: inside(:) !< (mesh%np)
 
   integer :: idim, ip, ll, lm, add_lm
   FLOAT   :: xx(MAX_DIM), rr, ylm
   R_TYPE, allocatable :: ff2(:)
-  R_TYPE :: factor
 
   PUSH_SUB(X(mf_multipoles))
-
-  if(abs(optional_default(cmplxscl_th, M_ZERO)) > M_EPSILON) then
-    factor = R_TOPREC(exp(M_zI * cmplxscl_th))
-  else
-    factor = M_ONE
-  endif
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
@@ -623,7 +644,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th, inside)
   
   if(lmax > 0) then
     do idim = 1, 3
-      ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim) * factor
+      ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
       multipole(idim+1) = X(mf_integrate)(mesh, ff2, mask = inside)
     end do
   end if
@@ -635,7 +656,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, cmplxscl_th, inside)
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, coords=xx)
           call loct_ylm(1, xx(1), xx(2), xx(3), ll, lm, ylm)
-          ff2(ip) = ff(ip) * ylm * (rr * factor)**ll
+          ff2(ip) = ff(ip) * ylm * rr**ll
         end do
         multipole(add_lm) = X(mf_integrate)(mesh, ff2, mask = inside)
         add_lm = add_lm + 1
@@ -662,7 +683,6 @@ subroutine X(mf_local_multipoles) (mesh, n_domains, ff, lmax, multipole, inside)
   PUSH_SUB(X(mf_local_multipoles))
 
   do idom = 1, n_domains
-    ! FIXME: should have cmplxscl_theta passed here too.
     call X(mf_multipoles) (mesh, ff, lmax, multipole(:, idom), inside = inside(:, idom))
   end do
 

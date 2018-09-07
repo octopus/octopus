@@ -78,7 +78,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
   ! The term i<[V_l,p]> + i<[V_nl,p]> may be considered as equal but opposite to the
   ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.
   ! Maybe we are forgetting something....
-  call total_force_calculate(gr, geo, hm%ep, st, acc)
+  call total_force_calculate(gr, geo, hm%ep, st, acc, hm%lda_u_level)
 
   ! Adds the laser contribution : i<[V_laser, p]>
   ! WARNING: this ignores the possibility of non-electric td external fields.
@@ -104,7 +104,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
 
       call states_get_state(st, gr%mesh, ist, ik, zpsi)
       
-      call zhamiltonian_apply(hm, gr%der, zpsi, hzpsi, ist, ik, time)
+      call zhamiltonian_apply(hm, gr%der, zpsi, hzpsi, ist, ik)
 
       SAFE_ALLOCATE(xzpsi    (1:gr%mesh%np_part, 1:st%d%dim, 1:3))
       SAFE_ALLOCATE(vnl_xzpsi(1:gr%mesh%np_part, 1:st%d%dim))
@@ -116,7 +116,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
       end do
 
       do j = 1, gr%mesh%sb%dim
-        call zhamiltonian_apply(hm, gr%der, xzpsi(:, :, j), vnl_xzpsi, ist, ik, time, terms = TERM_NON_LOCAL_POTENTIAL)
+        call zhamiltonian_apply(hm, gr%der, xzpsi(:, :, j), vnl_xzpsi, ist, ik, terms = TERM_NON_LOCAL_POTENTIAL)
 
         do idim = 1, st%d%dim
           x(j) = x(j) - 2*st%occ(ist, ik)*real(zmf_dotp(gr%mesh, hzpsi(1:gr%mesh%np, idim), vnl_xzpsi(:, idim)), REAL_PRECISION)
@@ -131,7 +131,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
       end do
 
       do j = 1, gr%mesh%sb%dim
-        call zhamiltonian_apply(hm, gr%der, xzpsi(:, :, j), vnl_xzpsi, ist, ik, time, terms = TERM_NON_LOCAL_POTENTIAL)
+        call zhamiltonian_apply(hm, gr%der, xzpsi(:, :, j), vnl_xzpsi, ist, ik, terms = TERM_NON_LOCAL_POTENTIAL)
 
         do idim = 1, st%d%dim
           x(j) = x(j) + 2*st%occ(ist, ik)*real(zmf_dotp(gr%mesh, zpsi(:, idim), vnl_xzpsi(:, idim)), REAL_PRECISION)

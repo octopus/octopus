@@ -37,8 +37,6 @@ libbasic_f_srcs =                        \
 	io_binary_f.F90                  \
 	io_csv_f.F90                     \
 	io.F90                           \
-	json.F90                         \
-	json_parser.F90                  \
 	kinds.F90                        \
 	loct.F90                         \
 	loct_pointer.F90                 \
@@ -56,15 +54,13 @@ libbasic_f_srcs =                        \
 	sort.F90                         \
 	space.F90                        \
 	string.F90                       \
-	test_parameters.F90              \
 	topology.F90                     \
 	types.F90                        \
 	unit.F90                         \
 	unit_system.F90                  \
 	utils.F90                        \
 	varinfo.F90                      \
-	write_iter.F90                   \
-	xml.F90
+	write_iter.F90
 
 # C/C++ sources - keep in alphabetical order
 libbasic_c_srcs =                        \
@@ -80,8 +76,7 @@ libbasic_c_srcs =                        \
 	sort_low.cc                      \
 	varia.c                          \
 	varinfo_low.c                    \
-	write_iter_low.cc                \
-	xml_low.c
+	write_iter_low.cc
 
 libbasic_a_SOURCES = $(libbasic_c_srcs) $(libbasic_f_srcs)
 
@@ -129,8 +124,6 @@ iihash.o : iihash.F90 profiling.o messages.o global.o ialist.o
 io_binary_f.o : io_binary_f.F90 io_binary_f_inc.F90 io_binary.h profiling.o mpi.o messages.o global.o 
 io_csv_f.o : io_csv_f.F90 io_binary.h messages.o global.o 
 io.o : io.F90 parser.o mpi.o messages.o loct.o global.o debug.o 
-json.o : json.F90 profiling.o messages.o kinds.o global.o 
-json_parser.o : json_parser.F90 profiling.o mpi.o messages.o kinds.o json.o io.o global.o 
 kinds.o : kinds.F90 
 loct.o : loct.F90 
 loct_pointer.o : loct_pointer.F90 loct_pointer_inc.F90 profiling.o messages.o global.o 
@@ -146,14 +139,12 @@ path.o : path.F90 profiling.o messages.o loct.o global.o
 polyhedron.o : polyhedron.F90 profiling.o io.o messages.o global.o 
 profiling.o : profiling.F90 varinfo.o types.o string.o sort.o parser.o mpi.o messages.o loct.o io.o global.o 
 sort.o : sort.F90 sort_inc.F90 messages.o global.o 
-space.o : space.F90 parser.o messages.o json.o global.o 
+space.o : space.F90 parser.o messages.o global.o 
 string.o : string.F90 loct.o 
-test_parameters.o : test_parameters.F90 
 topology.o : topology.F90 utils.o profiling.o parser.o mpi.o messages.o loct.o io.o global.o 
 types.o : types.F90 
 unit.o : unit.F90 global.o 
 unit_system.o : unit_system.F90 varinfo.o unit.o parser.o messages.o io.o global.o 
 utils.o : utils.F90 string.o unit_system.o unit.o mpi.o messages.o loct.o io.o global.o 
 varinfo.o : varinfo.F90 string.o 
-write_iter.o : write_iter.F90 
-xml.o : xml.F90
+write_iter.o : write_iter.F90

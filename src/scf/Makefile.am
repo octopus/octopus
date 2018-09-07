@@ -24,6 +24,7 @@ noinst_LIBRARIES = libscf.a
 libscf_f_srcs =                          \
 	ground_state.F90                 \
 	lcao.F90                         \
+	lda_u_mixer.F90                  \
 	mix.F90                          \
 	mixing_metric.F90                \
 	rdmft.F90                        \
@@ -38,7 +39,6 @@ libscf_a_SOURCES = $(libscf_c_srcs) $(libscf_f_srcs)
 noinst_HEADERS =                         \
 	lcao_inc.F90                     \
 	mix_inc.F90
-
 
 include $(srcdir)/../common-rules.make
 
@@ -58,7 +58,8 @@ depend:
 
 ground_state.o : ground_state.F90 scf.o rdmft.o lcao.o 
 lcao.o : lcao.F90 lcao_inc.F90 
+lda_u_mixer.o : lda_u_mixer.F90 mix.o
 mix.o : mix.F90 mix_inc.F90 
 mixing_metric.o : mixing_metric.F90 
 rdmft.o : rdmft.F90 
-scf.o : scf.F90 mix.o lcao.o
+scf.o : scf.F90 mix.o lcao.o lda_u_mixer.o

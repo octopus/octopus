@@ -27,12 +27,14 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   integer :: ist, jst, idim, sp, block_size, ep, ip, ldaa, ldbb, indb, jndb
   R_TYPE :: ss, tmp1, tmp2
   R_TYPE, allocatable :: dd(:, :)
-  type(profile_t), save :: prof, profgemm, profcomm
-  logical :: use_blas, reduce_, conj
+  logical :: use_blas, conj
   type(accel_mem_t) :: dot_buffer
-  integer            :: ierr
-  type(profile_t), save :: prof_copy, prof_gemmcl
-
+  type(profile_t), save :: prof_copy, prof_gemmcl, prof, profgemm
+#ifdef HAVE_MPI
+  logical :: reduce_
+  type(profile_t), save :: profcomm
+#endif
+  
   PUSH_SUB(X(mesh_batch_dotp_matrix))
   call profiling_in(prof, "DOTP_BATCH")
 
@@ -125,8 +127,8 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
       do ist = 1, aa%nst
         do jst = 1, bb%nst
-          tmp1 = 0.0
-          tmp2 = 0.0
+          tmp1 = M_ZERO
+          tmp2 = M_ZERO
           do ip = 1, mesh%np
             tmp1 = tmp1 + R_CONJ(aa%pack%X(psi)(2*ist - 1, ip))*bb%pack%X(psi)(2*jst - 1, ip)
             tmp2 = tmp2 + R_CONJ(aa%pack%X(psi)(2*ist    , ip))*bb%pack%X(psi)(2*jst    , ip)
@@ -381,12 +383,11 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   logical, optional, intent(in)    :: reduce
   logical, optional, intent(in)    :: cproduct
 
-  integer :: ist, indb, idim, ip, bsize, status
+  integer :: ist, indb, idim, ip, status
   logical :: reduce_, cproduct_
   type(profile_t), save :: prof, profcomm
   R_TYPE, allocatable :: tmp(:), cltmp(:, :)
   type(accel_mem_t)  :: dot_buffer
-  type(profile_t), save :: prof_copy
 
   PUSH_SUB(X(mesh_batch_dotp_vector))
   call profiling_in(prof, "DOTPV_BATCH")
@@ -731,7 +732,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   type(batch_t),           intent(in)    :: aa
   FLOAT,                   intent(out)   :: nrm2(:)
 
-  integer :: ist, idim, indb, ip, status
+  integer :: ist, idim, indb, ip
   R_TYPE :: a0
   FLOAT, allocatable :: scal(:), ssq(:)
   type(accel_mem_t)  :: nrm2_buffer
@@ -763,7 +764,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
       do ip = 1, mesh%np
         do ist = 1, aa%nst_linear
           a0 = aa%pack%X(psi)(ist, ip)
-          if(a0 == R_TOTYPE(M_ZERO)) cycle
+          if(abs(a0) <= M_EPSILON) cycle
           if(scal(ist) < abs(a0)) then
             ssq(ist) = M_ONE + ssq(ist)*(scal(ist)/abs(a0))**2
             scal(ist) = abs(a0)

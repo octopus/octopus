@@ -64,7 +64,6 @@ contains
 
     integer :: i, j, k
     FLOAT :: alpha_, kmax
-    FLOAT, parameter   :: pi2 = M_PI**2
     FLOAT, allocatable :: fp(:)
 
     PUSH_SUB(stencil_variational_coeff_lapl)

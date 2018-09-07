@@ -444,7 +444,7 @@
 
       if( c_associated(dataset_ptr_c)) then
 
-         dset%spglib_error = SPGLIB_SUCCESS
+         dset%spglib_error = 0
 
          call c_f_pointer(dataset_ptr_c , dset_c)
 

@@ -63,7 +63,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   ! Nonetheless, routines containing MPI calls such as X(mesh_to_cube) must be called by all processors.
 
   ! geometry
-  if (iand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
+  if (bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
 
     if(mpi_grp_is_root(mpi_world)) then
       call output_etsf_geometry_dims(geo, gr%sb, geometry_dims, geometry_flags)
@@ -78,7 +78,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   end if
 
   ! density
-  if (iand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
+  if (bitand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
     call dcube_function_alloc_rs(dcube, cf)
 
     call output_etsf_geometry_dims(geo, gr%sb, density_dims, density_flags)
@@ -99,7 +99,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   end if
 
   ! wave-functions
-  if (iand(outp%what, OPTION__OUTPUT__WFS) /= 0) then
+  if (bitand(outp%what, OPTION__OUTPUT__WFS) /= 0) then
 
     if(st%parallel_in_states) &
       call messages_not_implemented("ETSF_IO real-space wavefunctions output parallel in states")
@@ -131,7 +131,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
   end if
 
   ! wave-functions in fourier space
-  if (iand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
+  if (bitand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
 
     if(st%parallel_in_states) &
       call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in states")
@@ -268,8 +268,8 @@ subroutine output_etsf_geometry_write(geo, sb, ncid)
   SAFE_ALLOCATE(geometry%reduced_symmetry_translations(1:3, 1:symmetries_number(sb%symm)))
 
   do isymm = 1, symmetries_number(sb%symm)
-    geometry%reduced_symmetry_matrices(1:3, 1:3, isymm) = symm_op_rotation_matrix(sb%symm%ops(isymm))
-    geometry%reduced_symmetry_translations(1:3, isymm) = symm_op_translation_vector(sb%symm%ops(isymm))
+    geometry%reduced_symmetry_matrices(1:3, 1:3, isymm) = symm_op_rotation_matrix_red(sb%symm%ops(isymm))
+    geometry%reduced_symmetry_translations(1:3, isymm) = symm_op_translation_vector_red(sb%symm%ops(isymm))
   end do
 
   ! The species

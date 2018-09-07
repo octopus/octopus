@@ -1,5 +1,5 @@
 CalculationMode = go
-GOMethod = fire
+
 GOFireMass = 0.01
 ExperimentalFeatures = yes
 
@@ -12,6 +12,7 @@ dist = 3.0
 
 FromScratch = yes
 GOCenter = yes
+GOMaxIter = 5
 
 FilterPotentials = filter_none
 

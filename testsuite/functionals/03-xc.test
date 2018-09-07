@@ -6,6 +6,7 @@ TestGroups : long-run, functionals
 Enabled    : Yes
 
 Input: 03-xc.01-gs.inp
+match ; SCF convergence                        ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Hartree-Fock energy Total              ; GREPFIELD(static/info, 'Total       =', 3) ; -0.45473695
 match ; Hartree-Fock eigenvalue up             ; GREPFIELD(static/info, '  1   up', 3)      ; -1.128711
 match ; Hartree-Fock eigenvalue dn             ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.683557
@@ -18,11 +19,12 @@ match ; lda_x Eigenvalue dn                    ; GREPFIELD(static/info, '  1   d
 match ; lda_x Exchange                         ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.27231872
 match ; lda_x Int[n*v_xc]                      ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.36309178
 
-Input: 03-xc.lda_c_wigner.inp
-match ; lda_c_wigner Eigenvalue up             ; GREPFIELD(static/info, '  1   up', 3)      ; -0.576947
-match ; lda_c_wigner Eigenvalue dn             ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.597370
-match ; lda_c_wigner Correlation               ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.04403771
-match ; lda_c_wigner Int[n*v_xc]               ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.04707102
+# The following test has been disabled as it gives different results when using Libxc 3 and 4.
+#Input: 03-xc.lda_c_wigner.inp
+#match ; lda_c_wigner Eigenvalue up             ; GREPFIELD(static/info, '  1   up', 3)      ; -0.576947
+#match ; lda_c_wigner Eigenvalue dn             ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.597370
+#match ; lda_c_wigner Correlation               ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.04403771
+#match ; lda_c_wigner Int[n*v_xc]               ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.04707102
 
 Input: 03-xc.lda_c_rpa.inp
 match ; lda_c_rpa Eigenvalue up                ; GREPFIELD(static/info, '  1   up', 3)      ; -0.585214
@@ -294,11 +296,12 @@ match ; gga_c_xpbe Eigenvalue dn               ; GREPFIELD(static/info, '  1   d
 match ; gga_c_xpbe Correlation                 ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.01404629
 match ; gga_c_xpbe Int[n*v_xc]                 ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.02022460
 
-Input: 03-xc.gga_c_lm.inp
-match ; gga_c_lm Eigenvalue up                 ; GREPFIELD(static/info, '  1   up', 3)      ; -0.631150
-match ; gga_c_lm Eigenvalue dn                 ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.703583
-match ; gga_c_lm Correlation                   ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.14127086
-match ; gga_c_lm Int[n*v_xc]                   ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.11167594
+# The following test has been disabled as it gives different results when using Libxc 3 and 4.
+#Input: 03-xc.gga_c_lm.inp
+#match ; gga_c_lm Eigenvalue up                 ; GREPFIELD(static/info, '  1   up', 3)      ; -0.631150
+#match ; gga_c_lm Eigenvalue dn                 ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.703583
+#match ; gga_c_lm Correlation                   ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.14127086
+#match ; gga_c_lm Int[n*v_xc]                   ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.11167594
 
 Input: 03-xc.gga_c_pbe_jrgx.inp
 match ; gga_c_pbe_jrgx Eigenvalue up           ; GREPFIELD(static/info, '  1   up', 3)      ; -0.550659
@@ -440,16 +443,3 @@ match ; B3LYP OEP Exchange                     ; GREPFIELD(static/info, 'Exchang
 match ; B3LYP OEP Correlation                  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.27343573
 match ; B3LYP OEP Int[n*v_xc]                  ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.44904268
 match ; B3LYP OEP Total                        ; GREPFIELD(static/info, 'Total       =', 3) ; -0.52588482
-
-Input: 03-xc.m05_fock.inp
-match ; M05 Fock Eigenvalue up                 ; GREPFIELD(static/info, '  1   up', 3)      ;    -0.896390
-match ; M05 Fock Eigenvalue dn                 ; GREPFIELD(static/info, '  1   dn', 3)      ;    -0.822790
-match ; M05 Fock Int[n*v_xc]                   ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.34770959
-match ; M05 Fock Total                         ; GREPFIELD(static/info, 'Total       =', 3) ;    -0.51582444
-
-Input: 03-xc.m05_oep.inp
-match ; M05 OEP Eigenvalue up                  ; GREPFIELD(static/info, '  1   up', 3)      ;    -0.896390
-match ; M05 OEP Eigenvalue dn                  ; GREPFIELD(static/info, '  1   dn', 3)      ;    -0.822790
-match ; M05 OEP Exchange                       ; GREPFIELD(static/info, 'Exchange    =', 3) ;    -0.31394727
-match ; M05 OEP Int[n*v_xc]                    ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.34770959
-match ; M05 OEP Total                          ; GREPFIELD(static/info, 'Total       =', 3) ;    -0.51582444

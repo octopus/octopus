@@ -19,4 +19,13 @@
 ##
 ## $Id$
 
-SUBDIRS = metis-5.1 qshep spglib-1.9.9 fortrancl bpdn yaml-0.1.4
+SUBDIRS =               \
+	metis-5.1       \
+	qshep           \
+	spglib-1.9.9    \
+	fortrancl       \
+	bpdn            \
+	yaml-0.1.4      \
+	dftd3           \
+	rapidxml
+

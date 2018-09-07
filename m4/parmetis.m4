@@ -41,8 +41,10 @@ if test x"$acx_parmetis_ok" != xno; then
     [Directory where ParMETIS library was installed])])
 
   case $with_parmetis_prefix in
+    yes | "") ;;
     no ) acx_parmetis_ok=disabled ;;
-    "") with_parmetis_prefix="/usr" ;;
+    *) LIBS_PARMETIS="-L$with_parmetis_prefix/lib -lparmetis"
+       PARMETIS_CFLAGS="-I$with_parmetis_prefix/include"
   esac
 
   if test x"$acx_parmetis_ok" != xdisabled; then
@@ -51,11 +53,8 @@ if test x"$acx_parmetis_ok" != xno; then
     acx_parmetis_save_CFLAGS="$CFLAGS"
     acx_parmetis_save_LIBS="$LIBS"
 
-    if test "x${PARMETIS_CFLAGS+set}" != xset ; then
-      PARMETIS_CFLAGS="-I$with_parmetis_prefix/include"
-    fi
     if test "x${LIBS_PARMETIS+set}" != xset ; then
-      LIBS_PARMETIS="-L$with_parmetis_prefix/lib -lparmetis"
+      LIBS_PARMETIS="-lparmetis"
     fi
 
     CFLAGS="$CFLAGS $PARMETIS_CFLAGS $METIS_CFLAGS"
