@@ -45,6 +45,8 @@ module submesh_oct_m
     submesh_broadcast,           &    
     submesh_copy,                &
     submesh_get_inv,             &
+    submesh_build_global,        &
+    submesh_end_global,          &
     dsm_integrate,               &
     zsm_integrate,               &
     dsm_integrate_frommesh,      &
@@ -76,6 +78,9 @@ module submesh_oct_m
     type(mesh_t), pointer :: mesh
     logical               :: has_points
     logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point
+    
+    integer               :: np_global      !< total number of points in the entire mesh
+    FLOAT,        pointer :: x_global(:,:)  
   end type submesh_t
   
   interface submesh_add_to_mesh
@@ -102,6 +107,9 @@ contains
     nullify(sm%map)
     nullify(sm%x)
     nullify(sm%mesh)
+
+    sm%np_global = -1
+    nullify(sm%x_global)
 
     POP_SUB(submesh_null)
 
@@ -419,6 +427,70 @@ contains
     overlap = distance + CNST(100.0)*M_EPSILON <= (sm1%radius + sm2%radius)**2
 
   end function submesh_overlap
+
+  ! -------------------------------------------------------------
+
+    subroutine submesh_build_global(this)
+    type(submesh_t),      intent(inout)   :: this
+
+    integer, allocatable :: part_np(:)
+    integer :: ipart, ind, ip
+
+    PUSH_SUB(submesh_build_global)
+
+    if(.not. this%mesh%parallel_in_domains) then
+      this%np_global = this%np
+      this%x_global => this%x
+      POP_SUB(submesh_build global)
+      return
+    end if 
+
+    SAFE_ALLOCATE(part_np(this%mesh%vp%npart))
+    part_np = 0
+    part_np(this%mesh%vp%partno) = this%np
+
+  #if defined(HAVE_MPI)
+    call comm_allreduce(this%mesh%mpi_grp%comm, part_np)
+  #endif 
+    this%np_global = sum(part_np)
+    SAFE_ALLOCATE(this%x_global(1:this%np_global, 1:this%mesh%sb%dim))
+    this%x_global = M_ZERO
+
+    ind = 0
+    do ipart = 1, this%mesh%vp%npart
+      if(ipart == this%mesh%vp%partno) then
+        do ip = 1, this%np
+          this%x_global(ind + ip, 1:this%mesh%sb%dim) = this%x(ip,1:this%mesh%sb%dim)
+        end do
+      end if
+      ind = ind + part_np(ipart)
+    end do 
+
+   #if defined(HAVE_MPI)
+    call comm_allreduce(this%mesh%mpi_grp%comm, this%x_global)
+   #endif 
+
+    SAFE_DEALLOCATE_A(part_np)
+
+    POP_SUB(submesh_build global)
+  end subroutine submesh_build_global
+
+
+  subroutine submesh_end_global(this)
+    type(submesh_t),      intent(inout)   :: this
+
+    PUSH_SUB(submesh_end_global)
+
+    if(this%mesh%parallel_in_domains) then
+      SAFE_DEALLOCATE_P(this%x_global)
+    else
+      nullify(this%x_global)
+    end if
+    this%np_global = -1
+
+    POP_SUB(submesh_end_global)
+  end subroutine submesh_end_global
+
   
   ! -----------------------------------------------------------
   
