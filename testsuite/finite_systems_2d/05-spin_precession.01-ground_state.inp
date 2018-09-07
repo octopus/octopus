@@ -30,5 +30,7 @@ ConvAbsDens = 1e-10
 
 EigenSolverMaxIter = 250
 
+Debug = trace
+
 
 
