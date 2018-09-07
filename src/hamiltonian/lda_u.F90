@@ -240,6 +240,7 @@ contains
     !% of the U, as defined in the ACBN0 functional, is used.
     !%End
     call parse_variable('ACBN0Screening', M_ONE, this%acbn0_screening)
+    call messages_print_var_value(stdout, 'ACBN0Screening', this%acbn0_screening)
   end if
 
   if(.not.this%basisfromstates) then

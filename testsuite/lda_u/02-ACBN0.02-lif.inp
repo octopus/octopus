@@ -50,4 +50,4 @@ AOTruncation = ao_full
 AOThreshold = 0.05
 AONormalize = no
 OutputLDA_U = occ_matrices + effectiveU
-
+ACBN0Screening = 0.5
