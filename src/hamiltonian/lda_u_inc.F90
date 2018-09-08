@@ -585,8 +585,6 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
         !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
         call dpoisson_solve_sm(os%poisson, os%sphere, vv(1:np_sphere), nn(1:np_sphere))
 
-        if(mpi_world%rank == 0) print *, vv(1), nn(1)
-
 
         klst=0
         do kst = 1, norbs
@@ -615,8 +613,6 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
               this%coulomb(kst,lst,jst,ist,ios) = this%coulomb(ist,jst,kst,lst,ios)
             end if
 
-           if(mpi_world%rank == 0) print *, this%coulomb(ist,jst,kst,lst,ios)
-              
           !Update the progress bar
           idone = idone + 1
           if(mpi_world%rank == 0) call loct_progress_bar(idone, ntodo)
