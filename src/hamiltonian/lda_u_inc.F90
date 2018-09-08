@@ -543,9 +543,6 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
 
   PUSH_SUB(X(compute_coulomb_integrals))
 
-  ASSERT(.not. mesh%parallel_in_domains)
-  if(mesh%parallel_in_domains) call messages_not_implemented("Coulomb integrals parallel in domains")
-  
   SAFE_ALLOCATE(nn(1:this%max_np))
   SAFE_ALLOCATE(vv(1:this%max_np))
   SAFE_ALLOCATE(tmp(1:this%max_np))
@@ -562,10 +559,13 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
   idone = 0
   if(mpi_world%rank == 0) call loct_progress_bar(-1, ntodo)
 
+
   do ios = this%orbs_dist%start, this%orbs_dist%end
     os => this%orbsets(ios)
     norbs = os%norbs
     np_sphere = os%sphere%np  
+
+    if(mesh%parallel_in_domains) call submesh_build_global(os%sphere)
 
     call poisson_init_sm(os%poisson, psolver, der, os%sphere) 
  
@@ -584,6 +584,9 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
 
         !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
         call dpoisson_solve_sm(os%poisson, os%sphere, vv(1:np_sphere), nn(1:np_sphere))
+
+        if(mpi_world%rank == 0) print *, vv(1), nn(1)
+
 
         klst=0
         do kst = 1, norbs
@@ -611,6 +614,8 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
               this%coulomb(ist,jst,lst,kst,ios) = this%coulomb(ist,jst,kst,lst,ios)
               this%coulomb(kst,lst,jst,ist,ios) = this%coulomb(ist,jst,kst,lst,ios)
             end if
+
+           if(mpi_world%rank == 0) print *, this%coulomb(ist,jst,kst,lst,ios)
               
           !Update the progress bar
           idone = idone + 1
@@ -620,6 +625,8 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
       end do !jst
     end do !ist
     call poisson_end(os%poisson)
+
+     if(mesh%parallel_in_domains) call submesh_end_global(os%sphere)
   end do !iorb
 
   if(this%orbs_dist%parallel) then

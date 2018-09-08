@@ -81,6 +81,8 @@ module submesh_oct_m
     
     integer               :: np_global      !< total number of points in the entire mesh
     FLOAT,        pointer :: x_global(:,:)  
+    integer,  allocatable :: part_v(:)
+    integer,  allocatable :: global2local(:)
   end type submesh_t
   
   interface submesh_add_to_mesh
@@ -439,8 +441,6 @@ contains
     PUSH_SUB(submesh_build_global)
 
     if(.not. this%mesh%parallel_in_domains) then
-      this%np_global = this%np
-      this%x_global => this%x
       POP_SUB(submesh_build global)
       return
     end if 
@@ -453,14 +453,21 @@ contains
     call comm_allreduce(this%mesh%mpi_grp%comm, part_np)
   #endif 
     this%np_global = sum(part_np)
+    !The 0 index correspond to the local index
     SAFE_ALLOCATE(this%x_global(1:this%np_global, 1:this%mesh%sb%dim))
+    SAFE_ALLOCATE(this%part_v(1:this%np_global))
+    SAFE_ALLOCATE(this%global2local(1:this%np_global))
     this%x_global = M_ZERO
+    this%part_v = 0
+    this%global2local = 0
 
     ind = 0
     do ipart = 1, this%mesh%vp%npart
       if(ipart == this%mesh%vp%partno) then
         do ip = 1, this%np
           this%x_global(ind + ip, 1:this%mesh%sb%dim) = this%x(ip,1:this%mesh%sb%dim)
+          this%part_v(ind+ip) = this%mesh%vp%partno
+          this%global2local(ind+ip) = ip
         end do
       end if
       ind = ind + part_np(ipart)
@@ -468,6 +475,8 @@ contains
 
    #if defined(HAVE_MPI)
     call comm_allreduce(this%mesh%mpi_grp%comm, this%x_global)
+    call comm_allreduce(this%mesh%mpi_grp%comm, this%part_v)
+    call comm_allreduce(this%mesh%mpi_grp%comm, this%global2local)
    #endif 
 
     SAFE_DEALLOCATE_A(part_np)
@@ -487,6 +496,8 @@ contains
       nullify(this%x_global)
     end if
     this%np_global = -1
+    SAFE_DEALLOCATE_A(this%part_v)
+    SAFE_DEALLOCATE_A(this%global2local)
 
     POP_SUB(submesh_end_global)
   end subroutine submesh_end_global
