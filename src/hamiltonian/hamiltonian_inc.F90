@@ -165,7 +165,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
   end if
 
   if(iand(TERM_DFT_U, terms_) /= 0 .and. hm%lda_u_level /= DFT_U_NONE) then
-    call X(lda_u_apply)(hm%lda_u, hm%d, ik, epsib, hpsib, apply_phase)
+    call X(lda_u_apply)(hm%lda_u, hm%d, der%mesh%sb%dim, ik, epsib, hpsib, apply_phase)
   end if  
 
   if(apply_phase .and. set_phase_) then

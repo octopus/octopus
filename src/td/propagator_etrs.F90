@@ -306,6 +306,7 @@ contains
 
     if(hm%lda_u_level /= DFT_U_NONE) then 
       call lda_u_write_U(hm%lda_u, stdout) 
+      call lda_u_write_V(hm%lda_u, stdout)
     end if
 
     ! print an empty line

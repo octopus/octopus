@@ -117,8 +117,14 @@ module lda_u_oct_m
     logical             :: skipSOrbitals      !> Not using s orbitals
     logical             :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
     logical             :: freeze_u           !> U is not recomputed during TD evolution
+    logical             :: intersite          !> intersite V are computed or not
+    FLOAT               :: intersite_radius   !> Maximal distance for considering neighboring atoms
 
     type(distributed_t) :: orbs_dist
+
+    integer             :: maxneighbors       
+    FLOAT, pointer      :: dn_IJ(:,:,:,:,:), dn_alt_IJ(:,:,:,:,:)
+    CMPLX, pointer      :: zn_IJ(:,:,:,:,:), zn_alt_IJ(:,:,:,:,:)
   end type lda_u_t
 
   integer, public, parameter ::        &
@@ -144,6 +150,9 @@ contains
   this%skipSOrbitals = .true.
   this%freeze_occ = .false.
   this%freeze_u = .false.
+  this%intersite = .false.
+  this%intersite_radius = M_ZERO
+  this%maxneighbors = 0
 
   nullify(this%dn)
   nullify(this%zn)
@@ -156,6 +165,10 @@ contains
   nullify(this%drenorm_occ)
   nullify(this%zrenorm_occ)
   nullify(this%orbsets)
+  nullify(this%dn_IJ)
+  nullify(this%zn_IJ)
+  nullify(this%dn_alt_IJ)
+  nullify(this%zn_alt_IJ)
 
   call distributed_nullify(this%orbs_dist, 0)
 
@@ -210,15 +223,51 @@ contains
     !%End
     call parse_variable('SkipSOrbitals', .true., this%skipSOrbitals)   
     if(.not.this%SkipSOrbitals) call messages_experimental("SkipSOrbitals")
+
+    !%Variable ACBN0IntersiteInteraction
+    !%Type logical
+    !%Default no
+    !%Section Hamiltonian::DFT+U
+    !%Description
+    !% If set to yes, Octopus will determine the effective intersite interaction V
+    !% Only available with ACBN0 functional.
+    !% It is strongly recommended to set AOLoewdin=yes when using the option.
+    !%End
+    call parse_variable('ACBN0IntersiteInteraction', .false., this%intersite)
+    if(this%intersite) call messages_experimental("ACBN0IntersiteInteraction")
+    call messages_print_var_value(stdout, 'ACBN0IntersiteInteraction', this%intersite)
+
+    if(this%intersite) then
+
+      !This is a non local operator. To make this working, one probably needs to apply the 
+      ! symmetries to the generalized occupation matrices 
+      if(gr%sb%kpoints%use_symmetries) then
+        call messages_not_implemented("Intersite interaction with kpoint symmetries.")
+      end if
+
+      !%Variable ACBN0IntersiteCutoff
+      !%Type float
+      !%Section Hamiltonian::DFT+U
+      !%Description
+      !% The cutoff radius defining the maximal intersite distance considered.
+      !% Only available with ACBN0 functional with intersite interaction.
+      !%End
+      call parse_variable('ACBN0IntersiteCutoff', M_ZERO, this%intersite_radius, unit = units_inp%length)
+      if(abs(this%intersite_radius) < M_EPSILON) then
+        call messages_write("ACBN0IntersiteCutoff must be greater than 0")
+        call messages_fatal(1)
+      end if
+    end if
   end if
 
-  if (states_are_real(st)) then
+  if(states_are_real(st)) then
     call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
                              this%skipSOrbitals, this%useAllOrbitals)
   else
     call zorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
                              this%skipSOrbitals, this%useAllOrbitals)
   end if
+
   this%orbsets => this%basis%orbsets
   this%norbsets = this%basis%norbsets
   this%maxnorbs = this%basis%maxnorbs
@@ -287,6 +336,10 @@ contains
    SAFE_DEALLOCATE_P(this%zcoulomb)
    SAFE_DEALLOCATE_P(this%drenorm_occ)
    SAFE_DEALLOCATE_P(this%zrenorm_occ)
+   SAFE_DEALLOCATE_P(this%dn_IJ)
+   SAFE_DEALLOCATE_P(this%zn_IJ)
+   SAFE_DEALLOCATE_P(this%dn_alt_IJ)
+   SAFE_DEALLOCATE_P(this%zn_alt_IJ)
 
    nullify(this%orbsets)
    call orbitalbasis_end(this%basis)
@@ -308,6 +361,8 @@ contains
   type(states_t),            intent(in)    :: st
   logical,                   intent(in)    :: has_phase
 
+  integer :: ios, maxorbs, nspin
+
   if(this%level == DFT_U_NONE) return
 
   PUSH_SUB(lda_u_update_basis)
@@ -325,6 +380,35 @@ contains
                              this%skipSOrbitals, this%useAllOrbitals, verbose = .false.)
   end if
   this%orbsets => this%basis%orbsets
+
+  !In case of intersite interaction we need to reconstruct the basis
+  if(this%intersite) then
+    this%maxneighbors = 0
+    do ios = 1, this%norbsets
+      call orbitalset_init_intersite(this%orbsets(ios), ios, gr%sb, geo, gr%der, this%orbsets, &
+            this%norbsets, this%maxnorbs, this%intersite_radius, st%d%kpt, has_phase)
+      this%maxneighbors = max(this%maxneighbors, this%orbsets(ios)%nneighbors)
+    end do
+
+    maxorbs = this%maxnorbs
+    nspin = this%nspins
+
+    if(states_are_real(st)) then
+      SAFE_DEALLOCATE_P(this%dn_IJ)
+      SAFE_ALLOCATE(this%dn_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
+      this%dn_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
+      SAFE_DEALLOCATE_P(this%dn_alt_IJ)
+      SAFE_ALLOCATE(this%dn_alt_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
+      this%dn_alt_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
+    else
+      SAFE_DEALLOCATE_P(this%zn_IJ)
+      SAFE_ALLOCATE(this%zn_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
+      this%zn_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
+      SAFE_DEALLOCATE_P(this%zn_alt_IJ)
+      SAFE_ALLOCATE(this%zn_alt_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
+      this%zn_alt_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
+    end if
+  end if
 
   ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
   ! In case of a laser field, the phase is recomputed in hamiltonian_update

@@ -32,6 +32,7 @@ module orbitalset_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use periodic_copy_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use simul_box_oct_m
@@ -71,6 +72,13 @@ module orbitalset_oct_m
     FLOAT               :: Ueff               !> The effective U of the simplified rotational invariant form
     FLOAT               :: Ubar, Jbar
     FLOAT               :: alpha              !> A potential used to constrained occupations, as defined in PRB 71, 035105 (2005)
+    integer             :: nneighbors         !> Number of neighbouring atoms on which the intersite
+                                              !> interaction is considered
+    FLOAT, allocatable  :: V_IJ(:,:)          !> The list of intersite interaction parameters
+    FLOAT, allocatable  :: coulomb_IJ(:,:,:,:,:) !> Coulomb integrales with neighboring atoms
+    integer, allocatable:: map_os(:)
+    CMPLX, allocatable  :: phase_shift(:,:)
+
     FLOAT               :: radius
     type(species_t), pointer :: spec          
 
@@ -98,6 +106,8 @@ contains
   nullify(this%eorb_submesh)
   nullify(this%eorb_mesh)
 
+  call orbitalset_init(this)
+
   POP_SUB(orbitalset_nullify)
 
  end subroutine orbitalset_nullify
@@ -106,6 +116,9 @@ contains
   type(orbitalset_t),             intent(inout) :: this
 
   PUSH_SUB(orbitalset_init)
+
+  this%iatom = -1
+  this%nneighbors = 0
 
   POP_SUB(orbitalset_init)
  end subroutine orbitalset_init
@@ -123,6 +136,11 @@ contains
    SAFE_DEALLOCATE_P(this%eorb_mesh)
    nullify(this%spec)
    call submesh_end(this%sphere)
+
+   SAFE_DEALLOCATE_A(this%V_IJ)
+   SAFE_DEALLOCATE_A(this%coulomb_IJ)
+   SAFE_DEALLOCATE_A(this%map_os)
+   SAFE_DEALLOCATE_A(this%phase_shift)
    
    POP_SUB(orbitalset_end)
  end subroutine orbitalset_end
@@ -154,6 +172,7 @@ contains
     integer :: ns, iq, is, ikpoint, im, idim
     FLOAT   :: kr, kpoint(1:MAX_DIM), dx(1:MAX_DIM)
     integer :: ndim
+    integer :: inn
 
     PUSH_SUB(orbitalset_update_phase)
 
@@ -210,6 +229,24 @@ contains
           end do
         end do
       endif
+
+
+      if(os%nneighbors > 0) then
+        do inn = 1, os%nneighbors       
+          dx(1:ndim) = os%V_IJ(inn,1:ndim) 
+          kr = sum(kpoint(1:ndim)*dx(1:ndim))
+          if(present(vec_pot)) then
+            if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*dx(1:ndim))
+          end if
+
+          if(present(vec_pot_var)) then
+            call messages_not_implemented('Position dependent vector potential and intersite interaction')
+          end if
+
+          !The sign is different as this is applied on the wavefunction and not the orbitals
+          os%phase_shift(inn, iq) = exp(-M_zI*kr)
+        end do
+      end if
     end do
 
     POP_SUB(orbitalset_update_phase)
