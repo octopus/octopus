@@ -171,7 +171,9 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
     
     end do
 
+#ifdef HAVE_MPI
   end if
+#endif
   
   POP_SUB(dpoisson_solve_direct_sm) 
 end subroutine dpoisson_solve_direct_sm
