@@ -150,7 +150,7 @@ contains
   this%freeze_occ = .false.
   this%freeze_u = .false.
   this%basisfromstates = .false.
-  this%acbn0_screening = .false.
+  this%acbn0_screening = M_ONE
 
   nullify(this%dn)
   nullify(this%zn)
