@@ -588,6 +588,7 @@ sternheimer_f_srcs =                                 \
 	sternheimer/em_resp.F90                      \
 	sternheimer/kdotp_calc.F90                   \
 	sternheimer/kdotp.F90                        \
+	sternheimer/kubo_greenwood.F90               \
 	sternheimer/phonons_lr.F90                   \
 	sternheimer/sternheimer.F90                  \
 	sternheimer/vdw.F90

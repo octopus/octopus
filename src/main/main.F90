@@ -95,11 +95,14 @@ program octopus
   !% Obsolete. Use <tt>gs</tt> with <tt>MaximumIter = 0</tt> instead.
   !%Option kdotp 15
   !% Calculation of effective masses by <math>\vec{k} \cdot \vec{p}</math> perturbation theory (experimental).
+  !%Option kubo_greenwood 16
+  !% Calculation of optical and thermal conductivities using the Kubo-Greenwood formula.
   !%Option dummy 17
   !% This calculation mode does nothing. Useful for debugging, testing and benchmarking.  
   !%Option invert_ks 18
   !% Invert the Kohn-Sham equations (experimental).
   !%Option test 19
+  !% Test mode that checks different components of Octopus.
   !%Option recipe 99
   !% Prints out a tasty recipe.
   !%End

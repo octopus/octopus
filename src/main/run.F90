@@ -27,6 +27,8 @@ module run_oct_m
   use ground_state_oct_m
   use hamiltonian_oct_m
   use invert_ks_oct_m
+  use kubo_greenwood_oct_m
+  use parser_oct_m
   use messages_oct_m
   use mpi_debug_oct_m
   use memory_oct_m
@@ -73,6 +75,7 @@ module run_oct_m
     CM_PHONONS_LR         =  12,  &
     CM_ONE_SHOT           =  14,  &
     CM_KDOTP              =  15,  &
+    CM_KUBO_GREENWOOD     =  16,  &
     CM_DUMMY              =  17,  &
     CM_INVERTKDS          =  18,  &
     CM_TEST               =  19,  &
@@ -259,6 +262,8 @@ contains
         if(sys%gr%sb%kpoints%use_symmetries) &
           call messages_experimental("KPoints symmetries with CalculationMode = kdotp")
         call kdotp_lr_run(sys, hm, fromScratch)
+      case(CM_KUBO_GREENWOOD)
+        call kubo_greenwood_run(sys, hm)
       case(CM_DUMMY)
       case(CM_INVERTKDS)
         if(sys%gr%sb%kpoints%use_symmetries) &
