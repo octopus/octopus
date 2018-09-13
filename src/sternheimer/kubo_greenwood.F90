@@ -22,6 +22,9 @@ module kubo_greenwood_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use messages_oct_m
+  use restart_oct_m
+  use states_oct_m
+  use states_restart_oct_m
   use system_oct_m
   use profiling_oct_m
 
@@ -37,9 +40,24 @@ contains
     type(system_t),       intent(inout) :: sys
     type(hamiltonian_t),  intent(inout) :: hm
 
+    type(restart_t) :: gs_restart
+    integer :: ierr
+    
     PUSH_SUB(kubo_greewood_run)
 
+    call messages_write('Info: Starting Kubo-Greenwood linear-response calculation.')
+    call messages_info()
+    
     call messages_experimental('Kubo Greenwood')
+
+    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh = sys%gr%mesh, exact = .true.)
+    if(ierr == 0) then
+      call states_look_and_load(gs_restart, sys%st, sys%gr)
+      call restart_end(gs_restart)
+    else
+      call messages_write("Cannot find occupied and unoccupied states, a previous ground state calculation is required.")
+      call messages_fatal()
+    end if
     
     POP_SUB(kubo_greewood_run)
   end subroutine kubo_greenwood_run
