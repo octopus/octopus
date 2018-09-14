@@ -81,6 +81,8 @@ dist_share_DATA = \
         17-scfinlcao_alt.test                         \
 	17-scfinlcao_alt.Cl.psf                       \
         17-scfinlcao_alt.01-gs.inp                    \
+	18-preconditioner_poisson.test                \
+	18-preconditioner_poisson.01-poisson.inp      \
 	20-eigensolver.01-lobpcg.inp \
 	20-eigensolver.02-cg.inp \
 	20-eigensolver.03-cg_new.inp \
