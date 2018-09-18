@@ -275,7 +275,7 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, ik)
   integer,             intent(in) :: ik
   
   integer :: ist, jst, ip, iunit, idir
-  R_TYPE :: multip_element(MAX_DIM)
+  R_TYPE :: multip_element
   R_TYPE, allocatable :: psii(:, :), psij(:, :)
 
   PUSH_SUB(X(output_me_ks_multipoles))
@@ -290,6 +290,7 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, ik)
   SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
   
   do idir = 1, gr%sb%dim
+
     iunit = io_open(file = trim(fname)//index2axis(idir), action = 'write')
 
     write(iunit, fmt = '(a)') '# Dipole matrix elements file: <Phi_i | r | Phi_j>' 
@@ -299,11 +300,6 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, ik)
     do ist = this%st_start, this%st_end
 
       call states_get_state(st, gr%mesh, ist, ik, psii)
-      if(associated(hm%hm_base%phase)) then
-#if defined(R_TCOMPLEX)
-        call states_set_phase(st%d, psii, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .false.)
-#endif
-      end if
       do ip=1, gr%mesh%np
         psii(ip, 1) = psii(ip, 1)*gr%mesh%x(ip, idir)
       end do
@@ -311,14 +307,8 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, ik)
       do jst = this%st_start, this%st_end
 
         call states_get_state(st, gr%mesh, jst, ik, psij)
-        if(associated(hm%hm_base%phase)) then
-#if defined(R_TCOMPLEX)
-          call states_set_phase(st%d, psij, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .false.)
-#endif
-        end if
 
         multip_element = X(mf_dotp)(gr%mesh, st%d%dim, psii, psij)
-
         multip_element = units_from_atomic(units_out%length, multip_element)
 
         write(iunit, fmt='(f20.12)', advance = 'no') R_REAL(multip_element)
@@ -329,7 +319,6 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, ik)
       end do
       write(iunit, '(a)') ''
     end do
-
     call io_close(iunit)
 
   end do
