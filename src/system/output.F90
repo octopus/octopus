@@ -494,6 +494,8 @@ contains
     !% For the moment, it only works if a +U is added on one type of orbital per atom. 
     !%Option local_orbitals bit(3)
     !% Outputs the localized orbitals that form the correlated subspace
+    !%Option kanamoriU bit(4)
+    !% Outputs the kanamori interaction parameters U, U' , and J
     !%End
     call parse_variable('OutputLDA_U', 0_8, outp%what_lda_u)
 
@@ -549,7 +551,7 @@ contains
     what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS + OPTION__OUTPUT__BERKELEYGW + OPTION__OUTPUT__DOS + &
       OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW
     what_no_how_u = OPTION__OUTPUTLDA_U__OCC_MATRICES + OPTION__OUTPUTLDA_U__EFFECTIVEU + &
-      OPTION__OUTPUTLDA_U__MAGNETIZATION
+      OPTION__OUTPUTLDA_U__MAGNETIZATION + OPTION__OUTPUTLDA_U__KANAMORIU
 
     if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       call v_ks_calculate_current(ks, .true.)
@@ -714,6 +716,9 @@ contains
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__LOCAL_ORBITALS) /= 0)&
         call output_dftu_orbitals(dir, hm%lda_u, outp, st, gr%mesh, geo, associated(hm%hm_base%phase))
+
+      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
+        call lda_u_write_kanamoriU(dir, st, hm%lda_u)
     end if
 
     call profiling_out(prof)

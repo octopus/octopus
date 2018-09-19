@@ -86,7 +86,8 @@ module lda_u_oct_m
        zlda_u_commute_r,                &
        dlda_u_force,                    &
        zlda_u_force,                    &
-       lda_u_write_info
+       lda_u_write_info,                &
+       compute_ACBNO_U_kanamori
 
 
   type lda_u_t
@@ -507,6 +508,28 @@ contains
 
    POP_SUB(lda_u_periodic_coulomb_integrals)
  end subroutine lda_u_periodic_coulomb_integrals
+
+ subroutine compute_ACBNO_U_kanamori(this, st, kanamori)
+   type(lda_u_t),     intent(in)  :: this
+   type(states_t),    intent(in)  :: st
+   FLOAT,             intent(out) :: kanamori(:,:)
+
+   if(this%nspins == 1) then
+     if(states_are_real(st)) then
+       call dcompute_ACBNO_U_kanamori_restricted(this, kanamori)
+     else
+       call zcompute_ACBNO_U_kanamori_restricted(this, kanamori)
+     end if
+   else
+     if(states_are_real(st)) then
+       call dcompute_ACBNO_U_kanamori(this, kanamori)
+     else
+       call zcompute_ACBNO_U_kanamori(this, kanamori)
+     end if
+   end if
+  
+
+ end subroutine compute_ACBNO_U_kanamori
 
   subroutine lda_u_freeze_occ(this) 
     type(lda_u_t),     intent(inout) :: this
