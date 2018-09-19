@@ -495,7 +495,9 @@ contains
     !%Option local_orbitals bit(3)
     !% Outputs the localized orbitals that form the correlated subspace
     !%Option kanamoriU bit(4)
-    !% Outputs the kanamori interaction parameters U, U' , and J
+    !% Outputs the Kanamori interaction parameters U, U' , and J.
+    !% These parameters are not determined self-consistently, but are taken from the 
+    !% occupation matrices and Coulomb integrals comming from a standard +U calculation.
     !%End
     call parse_variable('OutputLDA_U', 0_8, outp%what_lda_u)
 
