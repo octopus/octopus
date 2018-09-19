@@ -398,10 +398,13 @@ contains
     !% No +U term is not applied.
     !%Option dft_u_empirical 1
     !% An empiricial Hubbard U is added on the orbitals specified in the block species
-    !% with hubbard_l and hubbard_u
+    !% with hubbard_l and hubbard_u.
     !%Option dft_u_acbn0 2
     !% Octopus determines the effective U term using the 
-    !% ACBN0 functional as defined in PRX 5, 011006 (2015)
+    !% ACBN0 functional as defined in PRX 5, 011006 (2015).
+    !%Option dft_u_acbn0_rev 3
+    !% Similar to the dft_u_acbn0 option, but with a different definition
+    !% of the U and J.
     !%End
     call parse_variable('DFTULevel', DFT_U_NONE, hm%lda_u_level)
     call messages_print_var_option(stdout,  'DFTULevel', hm%lda_u_level)

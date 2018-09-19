@@ -1074,7 +1074,7 @@ contains
           call write_magnetic_moments(stdout, gr%mesh, st, geo, scf%lmm_r)
         end if
 
-        if(hm%lda_u_level == DFT_U_ACBN0) then
+        if(hm%lda_u_level == DFT_U_ACBN0 .or. hm%lda_u_level == DFT_U_ACBN0_REV) then
           call lda_u_write_U(hm%lda_u, stdout)
         end if
 
@@ -1172,7 +1172,7 @@ contains
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
 
-      if(hm%lda_u_level == DFT_U_ACBN0) then
+      if(hm%lda_u_level == DFT_U_ACBN0 .or. hm%lda_u_level == DFT_U_ACBN0_REV) then
           call lda_u_write_U(hm%lda_u, iunit)
           if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
         end if 

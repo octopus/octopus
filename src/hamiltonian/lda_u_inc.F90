@@ -109,7 +109,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   this%X(n)(1:this%maxnorbs, 1:this%maxnorbs, 1:st%d%nspin, 1:this%norbsets) = R_TOTYPE(M_ZERO)
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(dot(1:st%d%dim, 1:this%maxnorbs, 1:this%norbsets))
-  if(this%level == DFT_U_ACBN0) then
+  if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
     this%X(n_alt)(1:this%maxnorbs, 1:this%maxnorbs, 1:st%d%nspin, 1:this%norbsets) = R_TOTYPE(M_ZERO)
   end if
 
@@ -139,7 +139,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
       end do !ios
 
       !We compute the on-site occupation of the site, if needed 
-      if(this%level == DFT_U_ACBN0) then
+      if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
         this%X(renorm_occ)(:,:,:,ist,ik) = R_TOTYPE(M_ONE)*(M_ONE-this%acbn0_screening)
         do ios = 1, this%norbsets
           os => this%orbsets(ios)
@@ -175,7 +175,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
             this%X(n)(1:norbs, im, ispin, ios) = this%X(n)(1:norbs, im, ispin, ios) &
               + weight*dot(1, 1:norbs, ios)*R_CONJ(dot(1, im, ios))
             !We compute the renomalized occupation matrices
-            if(this%level == DFT_U_ACBN0) then
+            if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
               renorm_weight = this%X(renorm_occ)(spec_ind,os%nn,os%ll,ist,ik)*weight
               this%X(n_alt)(1:norbs,im,ispin,ios) = this%X(n_alt)(1:norbs,im,ispin,ios) &
                                          + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
@@ -205,7 +205,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
             this%X(n)(1:norbs, im, 4, ios) = this%X(n)(1:norbs, im, 4, ios) &
               + weight*dot(2, 1:norbs, ios)*R_CONJ(dot(1, im, ios))
             !We compute the renomalized occupation matrices
-            if(this%level == DFT_U_ACBN0) then
+            if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
               renorm_weight = this%X(renorm_occ)(spec_ind,os%nn,os%ll,ist,ik)*weight
               this%X(n_alt)(1:norbs,im,1,ios) = this%X(n_alt)(1:norbs,im,1,ios) &
                                          + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
@@ -229,12 +229,12 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
 #if defined(HAVE_MPI)        
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n))
-    if(this%level == DFT_U_ACBN0) &
+    if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) &
       call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n_alt))
   end if
 #endif      
 
-  if(this%level == DFT_U_ACBN0 .and. .not.this%freeze_u) then
+  if((this%level == DFT_U_ACBN0.or. this%level == DFT_U_ACBN0_REV) .and. .not.this%freeze_u) then
     if(this%nspins > 1 ) then
       do ios = 1, this%norbsets
         if(this%orbsets(ios)%ndim  == 1) then
@@ -339,6 +339,7 @@ subroutine X(compute_ACBNO_U)(this, ios)
   
   integer :: im, imp, impp, imppp, ispin1, ispin2, norbs
   FLOAT   :: numU, numJ, denomU, denomJ, tmpU, tmpJ
+  FLOAT   :: correction
 
   PUSH_SUB(compute_ACBNO_U)
 
@@ -349,6 +350,7 @@ subroutine X(compute_ACBNO_U)(this, ios)
   numJ = M_ZERO
   denomU = M_ZERO
   denomJ = M_ZERO
+  correction = M_ZERO
 
   if(norbs > 1) then
 
@@ -414,11 +416,22 @@ subroutine X(compute_ACBNO_U)(this, ios)
       denomU = denomU + tmpU
 
     end do
+
+    if(this%level == DFT_U_ACBN0_REV) then
+      !The U and J of the original paper are ill defined, as they both contains the same 
+      !intraorbital term, which cancels out when one computes U-J.
+      !This term has to be remove from both U and J for these two terms to be analyzed separately.
+      do ispin1 = 1, this%spin_channels
+        correction = correction + real(this%X(n_alt)(im,im,ispin1,ios))**2*this%coulomb(im,im,im,im,ios)
+      end do
+    end if
+
+
     end do
 
-    this%orbsets(ios)%Ueff = numU/denomU - numJ/denomJ
-    this%orbsets(ios)%Ubar = numU/denomU
-    this%orbsets(ios)%Jbar = numJ/denomJ
+    this%orbsets(ios)%Ubar = (numU-correction)/denomU
+    this%orbsets(ios)%Jbar = (numJ-correction)/denomJ
+    this%orbsets(ios)%Ueff = this%orbsets(ios)%Ubar - this%orbsets(ios)%Jbar
  
   else !In the case of s orbitals, the expression is different
     ! sum_{alpha/=beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
@@ -470,6 +483,7 @@ subroutine X(compute_ACBNO_U_restricted)(this)
   
   integer :: ios, im, imp, impp, imppp, norbs
   FLOAT   :: numU, numJ, denomU, denomJ
+  FLOAT   :: correction
 
   PUSH_SUB(compute_ACBNO_U_restricted)
 
@@ -479,6 +493,7 @@ subroutine X(compute_ACBNO_U_restricted)(this)
     numJ = M_ZERO
     denomU = M_ZERO
     denomJ = M_ZERO
+    correction = M_ZERO
 
     if(norbs > 1) then
 
@@ -502,11 +517,19 @@ subroutine X(compute_ACBNO_U_restricted)(this)
         ! sum_{m,mp} N_{m}N_{mp}
         denomU = denomU + real(this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios))
       end do
+
+      if(this%level == DFT_U_ACBN0_REV) then
+        !The U and J of the original paper are ill defined, as they both contains the same 
+        !intraorbital term, which cancels out when one computes U-J.
+        !This term has to be remove from both U and J for these two terms to be analyzed separately.
+        correction = correction + real(this%X(n_alt)(im,im,1,ios))**2*this%coulomb(im,im,im,im,ios)
+      end if
+
       end do
 
-      this%orbsets(ios)%Ueff = M_TWO*numU/denomU - numJ/denomJ
-      this%orbsets(ios)%Ubar = M_TWO*numU/denomU
-      this%orbsets(ios)%Jbar = numJ/denomJ
+      this%orbsets(ios)%Ubar = (M_TWO*numU-correction)/denomU
+      this%orbsets(ios)%Jbar = M_TWO*(numJ-correction)/denomJ
+      this%orbsets(ios)%Ueff = this%orbsets(ios)%Ubar - this%orbsets(ios)%Jbar
  
     else !In the case of s orbitals, the expression is different
       ! P_{mmp}P_{mpp,mppp}(m,mp|mpp,mppp)  
@@ -1059,7 +1082,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
       end do
     end do 
 
-    if(this%level == DFT_U_ACBN0) then
+    if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
       do ios = 1, this%norbsets
         norbs = this%orbsets(ios)%norbs
         do ispin = 1, this%nspins
@@ -1098,7 +1121,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
       end do
     end do
 
-    if(this%level == DFT_U_ACBN0) then
+    if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
       do ios = 1, this%norbsets
         norbs = this%orbsets(ios)%norbs
         do ispin = 1, this%nspins
@@ -1133,7 +1156,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
     this%X(V)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
 
     !In case we use the ab-initio scheme, we need to allocate extra resources
-    if(this%level == DFT_U_ACBN0) then
+    if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
       SAFE_ALLOCATE(this%X(n_alt)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets))
       this%X(n_alt)(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets) = R_TOTYPE(M_ZERO)
       SAFE_ALLOCATE(this%X(renorm_occ)(this%nspecies,0:5,0:(MAX_L-1),st%st_start:st%st_end,st%d%kpt%start:st%d%kpt%end))

@@ -777,7 +777,7 @@ contains
         call lda_u_freeze_u(hm%lda_u)
 
         !In this case we should reload GS wavefunctions
-        if(hm%lda_u_level == DFT_U_ACBN0 .and. .not.fromScratch) then
+        if((hm%lda_u_level == DFT_U_ACBN0 .or. hm%lda_u_level == DFT_U_ACBN0_REV) .and. .not.fromScratch) then
           call restart_init(restart_frozen, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
           call lda_u_load(restart_frozen, hm%lda_u, st, ierr)
           call restart_end(restart_frozen)    

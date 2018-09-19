@@ -143,14 +143,16 @@ subroutine compute_ACBNO_U_noncollinear(this, ios)
 
   integer :: im, imp, impp, imppp, ispin1, ispin2, norbs
   CMPLX   :: numU, numJ, tmpU, tmpJ, denomU, denomJ
+  CMPLX   :: correction
 
   PUSH_SUB(compute_ACBNO_U_noncollinear)
 
   norbs = this%orbsets(ios)%norbs
-  numU = cmplx(M_ZERO,M_ZERO)
-  numJ = cmplx(M_ZERO,M_ZERO)
-  denomU = cmplx(M_ZERO,M_ZERO)
-  denomJ = cmplx(M_ZERO,M_ZERO)
+  numU = M_z0
+  numJ = M_z0
+  denomU = M_z0
+  denomJ = M_z0
+  correction = M_z0
 
   if(norbs > 1) then
 
@@ -212,10 +214,20 @@ subroutine compute_ACBNO_U_noncollinear(this, ios)
       end if
       denomU = denomU + tmpU
     end do
+
+    !The U and J of the original paper are ill defined, as they both contains the same 
+    !intraorbital term, which cancels out when one computes U-J.
+    !This term has to be remove from both U and J for these two terms to be analyzed separately.
+    do ispin1 = 1, this%spin_channels
+      correction = correction + real(this%zn_alt(im,im,ispin1,ios))**2*this%zcoulomb(im,im,im,im,ispin1,ispin1,ios)     
     end do
-    this%orbsets(ios)%Ueff = real(numU)/real(denomU) - real(numJ)/real(denomJ)
-    this%orbsets(ios)%Ubar = real(numU)/real(denomU)
-    this%orbsets(ios)%Jbar = real(numJ)/real(denomJ)
+
+
+    end do
+
+    this%orbsets(ios)%Ubar = real(numU-correction)/denomU
+    this%orbsets(ios)%Jbar = real(numJ-correction)/denomJ
+    this%orbsets(ios)%Ueff = this%orbsets(ios)%Ubar - this%orbsets(ios)%Jbar
 
   else !In the case of s orbitals, the expression is different
     ! sum_{alpha/=beta} P^alpha_{mmp}P^beta_{mpp,mppp}  

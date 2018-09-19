@@ -129,7 +129,8 @@ module lda_u_oct_m
   integer, public, parameter ::        &
     DFT_U_NONE                    = 0, &
     DFT_U_EMPIRICAL               = 1, &
-    DFT_U_ACBN0                   = 2
+    DFT_U_ACBN0                   = 2, &
+    DFT_U_ACBN0_REV               = 3
 
 contains
 
@@ -206,7 +207,7 @@ contains
   call parse_variable('DFTUBasisFromStates', .false., this%basisfromstates)
   if(this%basisfromstates) call messages_experimental("DFTUBasisFromStates") 
 
-  if( this%level == DFT_U_ACBN0 ) then
+  if( this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
     !%Variable UseAllAtomicOrbitals
     !%Type logical
     !%Default no
@@ -275,7 +276,7 @@ contains
    #endif 
 
 
-    if( this%level == DFT_U_ACBN0 ) then
+    if( this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV ) then
  
       complex_coulomb_integrals = .false.
       do ios = 1, this%norbsets
@@ -492,7 +493,7 @@ contains
 
    integer :: ik, im, idim
  
-   if(this%level /= DFT_U_ACBN0) return
+   if(this%level /= DFT_U_ACBN0 .and. this%level /= DFT_U_ACBN0_REV) return
 
    ASSERT(this%basisfromstates)
  

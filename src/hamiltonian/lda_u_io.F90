@@ -90,7 +90,7 @@ contains
    end do !iatom
    call io_close(iunit)
 
-   if(this%level == DFT_U_ACBN0) then
+   if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
      iunit = io_open(trim(dir) // "/renorm_occ_matrices", action='write')
      write(iunit,'(a)') ' Renormalized occupation matrices '
 
@@ -318,7 +318,7 @@ contains
     end if
 
     occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
-    if(this%level == DFT_U_ACBN0) occsize = occsize*2
+    if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) occsize = occsize*2
  
     if (states_are_real(st)) then
       SAFE_ALLOCATE(docc(1:occsize))
@@ -337,7 +337,7 @@ contains
     end if
 
 
-    if(this%level == DFT_U_ACBN0) then
+    if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
       SAFE_ALLOCATE(Ueff(1:this%norbsets))
       Ueff = M_ZERO
       call lda_u_get_effectiveU(this, Ueff(:))
@@ -382,7 +382,7 @@ contains
     end if
 
     !We have to read the effective U first, as we call lda_u_uptade_potential latter
-    if(this%level == DFT_U_ACBN0) then
+    if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
       SAFE_ALLOCATE(Ueff(1:this%norbsets))
       call drestart_read_binary(restart, "lda_u_Ueff", this%norbsets, Ueff, err)
       if (err /= 0) ierr = ierr + 1
@@ -392,7 +392,7 @@ contains
 
 
     occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
-    if(this%level == DFT_U_ACBN0) occsize = occsize*2
+    if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) occsize = occsize*2
 
     if (states_are_real(st)) then
       SAFE_ALLOCATE(docc(1:occsize))

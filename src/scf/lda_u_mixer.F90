@@ -68,7 +68,7 @@ contains
    PUSH_SUB(lda_u_mixer_init_auxmixer)
 
    dim1 = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
-   if(this%level == DFT_U_ACBN0) dim1 = dim1*2
+   if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) dim1 = dim1*2
 
    if(states_are_real(st)) then
      call mixfield_init( smix, mixer%mixfield_occ, dim1, 1, 1, mix_d4(smix), TYPE_FLOAT )
@@ -80,7 +80,7 @@ contains
    call mixfield_clear(mix_scheme(smix), mixer%mixfield_occ)
    call mix_add_auxmixfield(smix, mixer%mixfield_occ)
  
-   if(this%level == DFT_U_ACBN0) then
+   if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
      call mixfield_init( smix, mixer%mixfield_U, this%norbsets, 1, 1,  mix_d4(smix), TYPE_FLOAT )
      call mixfield_clear(mix_scheme(smix), mixer%mixfield_U)
      call mix_add_auxmixfield(smix, mixer%mixfield_U)
@@ -106,7 +106,7 @@ contains
    mixer%apply = .true.
 
    mixer%occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
-   if(this%level == DFT_U_ACBN0) mixer%occsize = mixer%occsize*2
+   if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) mixer%occsize = mixer%occsize*2
 
    nullify(mixer%dtmp_occ, mixer%ztmp_occ, mixer%tmpU)
 
@@ -120,7 +120,7 @@ contains
      call mixfield_set_vin(mixer%mixfield_occ, mixer%ztmp_occ)
    end if
 
-   if(this%level == DFT_U_ACBN0) then
+   if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
      SAFE_ALLOCATE(mixer%tmpU(1:this%norbsets, 1))
      call lda_u_get_effectiveU(this, mixer%tmpU(1:this% norbsets, 1))
      call mixfield_set_vin(mixer%mixfield_U, mixer%tmpU)
@@ -177,7 +177,7 @@ contains
      call mixfield_set_vout(mixer%mixfield_occ, mixer%ztmp_occ)
    end if
 
-   if(this%level == DFT_U_ACBN0) then
+   if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
      call lda_u_get_effectiveU(this, mixer%tmpU(1:this%norbsets, 1))
      call mixfield_set_vout(mixer%mixfield_U, mixer%tmpU)
    end if 
@@ -201,7 +201,7 @@ contains
      call mixfield_set_vin(mixer%mixfield_occ, mixer%ztmp_occ)
    end if
 
-   if(this%level == DFT_U_ACBN0) then
+   if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
      call lda_u_get_effectiveU(this, mixer%tmpU(1:this%norbsets, 1))
      call mixfield_set_vin(mixer%mixfield_U, mixer%tmpU)
    end if
@@ -218,7 +218,7 @@ contains
    if(.not. mixer%apply) return
    PUSH_SUB(lda_u_mixer_get_vnew)
 
-   if(this%level == DFT_U_ACBN0) then
+   if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
      call mixfield_get_vnew(mixer%mixfield_U, mixer%tmpU)
      call lda_u_set_effectiveU(this, mixer%tmpU(1:this%norbsets, 1))
    end if

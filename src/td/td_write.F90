@@ -646,7 +646,8 @@ contains
     !% Writes the effective U for each orbital set as a function of time.
     !%End
     default = 0
-    if(hm%lda_u_level == DFT_U_ACBN0) default = default + 2**(OUT_DFTU_EFFECTIVE_U - 1)
+    if(hm%lda_u_level == DFT_U_ACBN0 .or. hm%lda_u_level == DFT_U_ACBN0_REV) &
+      default = default + 2**(OUT_DFTU_EFFECTIVE_U - 1)
     call parse_variable('TDOutputDFTU', default, flags)
 
     if(.not.varinfo_valid_option('TDOutputDFTU', flags, is_flag = .true.)) &
