@@ -364,12 +364,12 @@ subroutine X(compute_ACBNO_U)(this, ios)
     
         do ispin1 = 1, this%spin_channels
           do ispin2 = 1, this%spin_channels
-            tmpU = tmpU + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios))
+            tmpU = tmpU + R_REAL(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios))
           end do
-          tmpJ = tmpJ + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios))
+          tmpJ = tmpJ + R_REAL(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios))
         end do
         if(this%nspins>this%spin_channels) then !Spinors
-          tmpJ = tmpJ + real(this%X(n_alt)(im,imp,3,ios)*this%X(n_alt)(impp,imppp,4,ios) &
+          tmpJ = tmpJ + R_REAL(this%X(n_alt)(im,imp,3,ios)*this%X(n_alt)(impp,imppp,4,ios) &
                             +this%X(n_alt)(im,imp,4,ios)*this%X(n_alt)(impp,imppp,3,ios))
         end if
         ! These are the numerator of the ACBN0 U and J
@@ -384,11 +384,11 @@ subroutine X(compute_ACBNO_U)(this, ios)
       tmpU = M_ZERO
       if(imp/=im) then
         do ispin1 = 1, this%spin_channels
-          tmpJ = tmpJ + real(this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios))
-          tmpU = tmpU + real(this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios))
+          tmpJ = tmpJ + R_REAL(this%X(n)(im,im,ispin1,ios))*R_REAL(this%X(n)(imp,imp,ispin1,ios))
+          tmpU = tmpU + R_REAL(this%X(n)(im,im,ispin1,ios))*R_REAL(this%X(n)(imp,imp,ispin1,ios))
         end do
         if(this%nspins>this%spin_channels) then !Spinors
-          tmpJ = tmpJ + real(this%X(n)(im,im,3,ios)*this%X(n)(imp,imp,4,ios) &
+          tmpJ = tmpJ + R_REAL(this%X(n)(im,im,3,ios)*this%X(n)(imp,imp,4,ios) &
                             +this%X(n)(im,im,4,ios)*this%X(n)(imp,imp,3,ios))
         end if
       end if
@@ -399,14 +399,14 @@ subroutine X(compute_ACBNO_U)(this, ios)
       do ispin1 = 1, this%spin_channels
         do ispin2 = 1, this%spin_channels
           if(ispin1 /= ispin2) then
-            tmpU = tmpU + real(this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin2,ios))
+            tmpU = tmpU + R_REAL(this%X(n)(im,im,ispin1,ios))*R_REAL(this%X(n)(imp,imp,ispin2,ios))
           end if
         end do
       end do
 
       if(this%nspins>this%spin_channels) then !Spinors
         if(im == imp) then
-          tmpU = tmpU - real(this%X(n)(im,im,3,ios)*this%X(n)(im,im,4,ios) &
+          tmpU = tmpU - R_REAL(this%X(n)(im,im,3,ios)*this%X(n)(im,im,4,ios) &
                             +this%X(n)(im,im,4,ios)*this%X(n)(im,im,3,ios))
         end if
       end if 
@@ -428,14 +428,14 @@ subroutine X(compute_ACBNO_U)(this, ios)
     do ispin1 = 1, this%spin_channels
       do ispin2 = 1, this%spin_channels
         if(ispin1 /= ispin2) then
-          numU = numU + real(this%X(n_alt)(1,1,ispin1,ios)*this%X(n_alt)(1,1,ispin2,ios)) 
-          denomU = denomU + real(this%X(n)(1,1,ispin1,ios)*this%X(n)(1,1,ispin2,ios))
+          numU = numU + R_REAL(this%X(n_alt)(1,1,ispin1,ios))*R_REAL(this%X(n_alt)(1,1,ispin2,ios)) 
+          denomU = denomU + R_REAL(this%X(n)(1,1,ispin1,ios))*R_REAL(this%X(n)(1,1,ispin2,ios))
         end if
       end do
     end do
 
     if(this%nspins>this%spin_channels) then !Spinors
-      denomU = denomU + real(this%X(n)(1,1,3,ios)*this%X(n)(1,1,4,ios) & 
+      denomU = denomU + R_REAL(this%X(n)(1,1,3,ios)*this%X(n)(1,1,4,ios) & 
                             +this%X(n)(1,1,4,ios)*this%X(n)(1,1,3,ios))
     end if
 
@@ -486,21 +486,21 @@ subroutine X(compute_ACBNO_U_restricted)(this)
       do imp = 1,norbs
         do impp = 1, norbs
         do imppp = 1, norbs
-          numU = numU + real(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios)) &
+          numU = numU + R_REAL(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios)) &
                              *this%coulomb(im,imp,impp,imppp,ios)
-          numJ = numJ + real(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios)) &
+          numJ = numJ + R_REAL(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios)) &
                              *this%coulomb(im,imppp,impp,imp,ios)
         end do
         end do
         ! We compute the term
         ! sum_{m,mp/=m} N_{m}N_{mp}
         if(imp/=im) then
-          denomJ = denomJ + real(this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios))
-          denomU = denomU + real(this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios))
+          denomJ = denomJ + R_REAL(this%X(n)(im,im,1,ios))*R_REAL(this%X(n)(imp,imp,1,ios))
+          denomU = denomU + R_REAL(this%X(n)(im,im,1,ios))*R_REAL(this%X(n)(imp,imp,1,ios))
         end if
         ! We compute the term
         ! sum_{m,mp} N_{m}N_{mp}
-        denomU = denomU + real(this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios))
+        denomU = denomU + R_REAL(this%X(n)(im,im,1,ios))*R_REAL(this%X(n)(imp,imp,1,ios))
       end do
       end do
 
@@ -510,11 +510,11 @@ subroutine X(compute_ACBNO_U_restricted)(this)
  
     else !In the case of s orbitals, the expression is different
       ! P_{mmp}P_{mpp,mppp}(m,mp|mpp,mppp)  
-      numU = real(this%X(n_alt)(1,1,1,ios)*this%X(n_alt)(1,1,1,ios))*this%coulomb(1,1,1,1,ios)
+      numU = R_REAL(this%X(n_alt)(1,1,1,ios))**2*this%coulomb(1,1,1,1,ios)
 
       ! We compute the term
       ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
-      denomU = real(this%X(n)(1,1,1,ios)*this%X(n)(1,1,1,ios))
+      denomU = R_REAL(this%X(n)(1,1,1,ios))**2
 
       this%orbsets(ios)%Ueff = 2*numU/denomU
       this%orbsets(ios)%Ubar = 2*numU/denomU
