@@ -147,7 +147,7 @@ namespace pseudopotential {
 	
 	defaults_file.close();
       }      
-      closedir(dir); 
+
     }
     
     bool has(const element & el) const {
