@@ -34,6 +34,10 @@ match ; Occupation F down 2p3 ; LINEFIELD(static/occ_matrices, -1, 5) ; 1.922327
 
 match ; U2p F   ; LINEFIELD(static/effectiveU, -7, 4) ; 0.473315
 
+match ; Kanamori U   ; LINEFIELD(static/kanamoriU, -7, 4) ; 0.823545
+match ; Kanamori Up  ; LINEFIELD(static/kanamoriU, -4, 4) ; 0.744833
+match ; Kanamori J   ; LINEFIELD(static/kanamoriU, -1, 4) ; 0.040195
+
 
 Input      : 03-ACBN0_restricted.02-lif_unpacked.inp
 
@@ -63,4 +67,3 @@ match ; Occupation F down 2p2 ; LINEFIELD(static/occ_matrices, -2, 3) ; 1.922327
 match ; Occupation F down 2p3 ; LINEFIELD(static/occ_matrices, -1, 5) ; 1.92232706
 
 match ; U2p F   ; LINEFIELD(static/effectiveU, -7, 4) ; 0.473315
-

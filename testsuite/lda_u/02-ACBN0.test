@@ -53,7 +53,8 @@ match ; Kanamori U Ni1  ; LINEFIELD(static/kanamoriU, -10, 4) ; 0.857034
 match ; Kanamori U Ni2  ; LINEFIELD(static/kanamoriU, -9, 4) ; 0.857034
 match ; Kanamori Up Ni1 ; LINEFIELD(static/kanamoriU, -6, 4) ; 0.668413
 match ; Kanamori Up Ni2 ; LINEFIELD(static/kanamoriU, -5, 4) ; 0.668413
-
+match ; Kanamori J Ni1  ; LINEFIELD(static/kanamoriU, -2, 4) ; 0.025921
+match ; Kanamori J Ni2  ; LINEFIELD(static/kanamoriU, -1, 4) ; 0.025921
 
 Processors : 4
 Precision : 0.0001
@@ -87,3 +88,8 @@ match ; Occupation F down 2p2 ; LINEFIELD(static/occ_matrices, -2, 3) ; 0.961163
 match ; Occupation F down 2p3 ; LINEFIELD(static/occ_matrices, -1, 5) ; 0.96116353
 
 match ; U2p F   ; LINEFIELD(static/effectiveU, -7, 4) ; 0.473315
+
+match ; Kanamori U   ; LINEFIELD(static/kanamoriU, -7, 4) ; 0.823545
+match ; Kanamori Up  ; LINEFIELD(static/kanamoriU, -4, 4) ; 0.744833
+match ; Kanamori J   ; LINEFIELD(static/kanamoriU, -1, 4) ; 0.040195
+

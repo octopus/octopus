@@ -534,8 +534,8 @@ subroutine X(compute_ACBNO_U_kanamori)(this, kanamori)
   
   integer :: ios, im, imp, impp, imppp, norbs
   integer :: ispin1, ispin2
-  FLOAT   :: numU, numUp, denomU, denomUp
-  FLOAT   :: tmpU, tmpUp
+  FLOAT   :: numU, numUp, numJ, denomU, denomUp, denomJ
+  FLOAT   :: tmpU, tmpUp, tmpJ
 
   PUSH_SUB(compute_ACBNO_U_kanamori)
 
@@ -547,6 +547,8 @@ subroutine X(compute_ACBNO_U_kanamori)(this, kanamori)
     denomU = M_ZERO
     numUp = M_ZERO
     denomUp = M_ZERO
+    numJ = M_ZERO
+    denomJ = M_ZERO
 
     if(norbs > 1) then
 
@@ -556,29 +558,34 @@ subroutine X(compute_ACBNO_U_kanamori)(this, kanamori)
       do imppp = 1, norbs
         tmpU = M_ZERO
         tmpUp = M_ZERO
+        tmpJ = M_ZERO
 
         do ispin1 = 1, this%spin_channels
           do ispin2 = 1, this%spin_channels
-            tmpUp = tmpUp + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios))
+            tmpUp = tmpUp + R_REAL(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios))
             if(ispin1 /= ispin2) then
-               tmpU = tmpU + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios))
+               tmpU = tmpU + R_REAL(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios))
             end if
           end do
+          tmpJ = tmpJ + R_REAL(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios))
         end do
-        ! These are the numerator of the ACBN0 U and J
+
         if(im == imp .and. impp == imppp .and. im == impp) then
           numU = numU + tmpU*this%coulomb(im,imp,impp,imppp,ios)
         else
           numUp = numUp + tmpUp*this%coulomb(im,imp,impp,imppp,ios)
+          numJ = numJ + tmpJ*this%coulomb(im,imppp,impp,imp,ios)
         end if
       end do
       end do
 
       tmpU = M_ZERO
       tmpUp = M_ZERO
+      tmpJ = M_ZERO
       if(imp/=im) then
         do ispin1 = 1, this%spin_channels
-          tmpUp = tmpUp + real(this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios))
+          tmpUp = tmpUp + R_REAL(this%X(n)(im,im,ispin1,ios))*R_REAL(this%X(n)(imp,imp,ispin1,ios))
+          tmpJ = tmpJ   + R_REAL(this%X(n)(im,im,ispin1,ios))*R_REAL(this%X(n)(imp,imp,ispin1,ios))
         end do
       end if
 
@@ -586,9 +593,9 @@ subroutine X(compute_ACBNO_U_kanamori)(this, kanamori)
         do ispin2 = 1, this%spin_channels
           if(ispin1 /= ispin2) then
             if(im /= imp) then
-              tmpUp = tmpUp + real(this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin2,ios))
+              tmpUp = tmpUp + R_REAL(this%X(n)(im,im,ispin1,ios))*R_REAL(this%X(n)(imp,imp,ispin2,ios))
             else
-              tmpU = tmpU + real(this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin2,ios))
+              tmpU = tmpU + R_REAL(this%X(n)(im,im,ispin1,ios))*R_REAL(this%X(n)(imp,imp,ispin2,ios))
             end if
           end if
         end do
@@ -596,13 +603,14 @@ subroutine X(compute_ACBNO_U_kanamori)(this, kanamori)
 
       denomU = denomU + tmpU
       denomUp = denomUp + tmpUp
+      denomJ = denomJ + tmpJ
 
     end do
     end do
 
     kanamori(1,ios) = numU/denomU 
     kanamori(2,ios) = numUp/denomUp
-    kanamori(3,ios) = this%orbsets(ios)%Jbar
+    kanamori(3,ios) = numJ/denomJ
 
   else !In the case of s orbitals, the expression is different
     kanamori(1,ios) = this%orbsets(ios)%Ubar
@@ -624,8 +632,8 @@ subroutine X(compute_ACBNO_U_kanamori_restricted)(this, kanamori)
   FLOAT,         intent(out)      :: kanamori(3)
   
   integer :: ios, im, imp, impp, imppp, norbs
-  FLOAT   :: numU, numUp, denomU, denomUp
-  FLOAT   :: tmpU, tmpUp
+  FLOAT   :: numU, numUp, numJ, denomU, denomUp, denomJ
+  FLOAT   :: tmpU, tmpUp, tmpJ
 
   PUSH_SUB(compute_ACBNO_U_kanamori_restricted)
 
@@ -637,6 +645,8 @@ subroutine X(compute_ACBNO_U_kanamori_restricted)(this, kanamori)
     denomU = M_ZERO
     numUp = M_ZERO
     denomUp = M_ZERO
+    numJ = M_ZERO
+    denomJ = M_ZERO
 
     if(norbs > 1) then
 
@@ -646,23 +656,27 @@ subroutine X(compute_ACBNO_U_kanamori_restricted)(this, kanamori)
       do imppp = 1, norbs
         tmpU = M_ZERO
         tmpUp = M_ZERO
+        tmpJ = M_ZERO
 
-        tmpUp = tmpUp + M_TWO*real(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios))
-        tmpU = tmpU + real(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios))
+        tmpUp = tmpUp + M_TWO*R_REAL(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios))
+        tmpU = tmpU + R_REAL(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios))
+        tmpJ = tmpJ + R_REAL(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios))
 
         ! These are the numerator of the ACBN0 U and J
         if(im == imp .and. impp == imppp .and. im == impp) then
           numU = numU + tmpU*this%coulomb(im,imp,impp,imppp,ios)
         else
           numUp = numUp + tmpUp*this%coulomb(im,imp,impp,imppp,ios)
+          numJ = numJ + tmpU*this%coulomb(im,imppp,impp,imp,ios)
         end if
       end do
       end do
 
       if(im /= imp) then
-        denomUp = denomUp + M_TWO*real(this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios))
+        denomUp = denomUp + M_TWO*R_REAL(this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios))
+        denomJ = denomJ + R_REAL(this%X(n)(im,im,1,ios))*R_REAL(this%X(n)(imp,imp,1,ios))
       else
-        denomU = denomU + real(this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios))
+        denomU = denomU + R_REAL(this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios))
       end if
 
     end do
@@ -670,7 +684,8 @@ subroutine X(compute_ACBNO_U_kanamori_restricted)(this, kanamori)
 
     kanamori(1) = numU/denomU 
     kanamori(2) = numUp/denomUp
-    kanamori(3) = this%orbsets(ios)%Jbar
+    kanamori(3) = numJ/denomJ
+
 
   else !In the case of s orbitals, the expression is different
     kanamori(1) = this%orbsets(ios)%Ubar
