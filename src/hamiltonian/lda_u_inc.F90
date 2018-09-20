@@ -516,8 +516,8 @@ subroutine X(compute_ACBNO_U_restricted)(this)
       ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
       denomU = R_REAL(this%X(n)(1,1,1,ios))**2
 
-      this%orbsets(ios)%Ueff = 2*numU/denomU
-      this%orbsets(ios)%Ubar = 2*numU/denomU
+      this%orbsets(ios)%Ueff = numU/denomU
+      this%orbsets(ios)%Ubar = numU/denomU
       this%orbsets(ios)%Jbar = 0
     end if
   end do
