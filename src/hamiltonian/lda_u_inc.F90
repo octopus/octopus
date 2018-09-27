@@ -369,8 +369,8 @@ subroutine X(compute_ACBNO_U)(this, ios)
           tmpJ = tmpJ + R_REAL(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios))
         end do
         if(this%nspins>this%spin_channels) then !Spinors
-          tmpJ = tmpJ + R_REAL(this%X(n_alt)(im,imp,3,ios)*this%X(n_alt)(impp,imppp,4,ios) &
-                            +this%X(n_alt)(im,imp,4,ios)*this%X(n_alt)(impp,imppp,3,ios))
+          tmpJ = tmpJ + R_REAL(this%X(n_alt)(im,imp,3,ios)*this%X(n_alt)(impp,imppp,4,ios)) &
+                         +R_REAL(this%X(n_alt)(im,imp,4,ios)*this%X(n_alt)(impp,imppp,3,ios))
         end if
         ! These are the numerator of the ACBN0 U and J
         numU = numU + tmpU*this%coulomb(im,imp,impp,imppp,ios)
@@ -388,8 +388,8 @@ subroutine X(compute_ACBNO_U)(this, ios)
           tmpU = tmpU + R_REAL(this%X(n)(im,im,ispin1,ios))*R_REAL(this%X(n)(imp,imp,ispin1,ios))
         end do
         if(this%nspins>this%spin_channels) then !Spinors
-          tmpJ = tmpJ + R_REAL(this%X(n)(im,im,3,ios)*this%X(n)(imp,imp,4,ios) &
-                            +this%X(n)(im,im,4,ios)*this%X(n)(imp,imp,3,ios))
+          tmpJ = tmpJ + R_REAL(this%X(n)(im,im,3,ios)*this%X(n)(imp,imp,4,ios)) &
+                            +R_REAL(this%X(n)(im,im,4,ios)*this%X(n)(imp,imp,3,ios))
         end if
       end if
       denomJ = denomJ + tmpJ
@@ -406,8 +406,8 @@ subroutine X(compute_ACBNO_U)(this, ios)
 
       if(this%nspins>this%spin_channels) then !Spinors
         if(im == imp) then
-          tmpU = tmpU - R_REAL(this%X(n)(im,im,3,ios)*this%X(n)(im,im,4,ios) &
-                            +this%X(n)(im,im,4,ios)*this%X(n)(im,im,3,ios))
+          tmpU = tmpU - R_REAL(this%X(n)(im,im,3,ios)*this%X(n)(im,im,4,ios)) &
+                            +R_REAL(this%X(n)(im,im,4,ios)*this%X(n)(im,im,3,ios))
         end if
       end if 
 
@@ -435,8 +435,8 @@ subroutine X(compute_ACBNO_U)(this, ios)
     end do
 
     if(this%nspins>this%spin_channels) then !Spinors
-      denomU = denomU + R_REAL(this%X(n)(1,1,3,ios)*this%X(n)(1,1,4,ios) & 
-                            +this%X(n)(1,1,4,ios)*this%X(n)(1,1,3,ios))
+      denomU = denomU + R_REAL(this%X(n)(1,1,3,ios)*this%X(n)(1,1,4,ios)) & 
+                            +R_REAL(this%X(n)(1,1,4,ios)*this%X(n)(1,1,3,ios))
     end if
 
     ! We have to be careful in the case of hydrogen atom for instance 
