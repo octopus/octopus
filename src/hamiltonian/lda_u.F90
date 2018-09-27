@@ -121,6 +121,7 @@ module lda_u_oct_m
     logical             :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
     logical             :: freeze_u           !> U is not recomputed during TD evolution
     logical             :: basisfromstates    !> We can construct the localized basis from user-defined states
+    FLOAT               :: acbn0_screening    !> We use or not the screening in the ACBN0 functional
     integer, allocatable:: basisstates(:)
 
     type(distributed_t) :: orbs_dist
@@ -150,6 +151,7 @@ contains
   this%freeze_occ = .false.
   this%freeze_u = .false.
   this%basisfromstates = .false.
+  this%acbn0_screening = M_ONE
 
   nullify(this%dn)
   nullify(this%zn)
@@ -228,6 +230,18 @@ contains
     !%End
     call parse_variable('SkipSOrbitals', .true., this%skipSOrbitals)   
     if(.not.this%SkipSOrbitals) call messages_experimental("SkipSOrbitals")
+
+    !%Variable ACBN0Screening
+    !%Type float
+    !%Default 1.0
+    !%Section Hamiltonian::DFT+U
+    !%Description
+    !% If set to 0, no screening will be included in the ACBN0 functional, and the U 
+    !% will be estimated from bare Hartree-Fock. If set to 1 (default), the full screening
+    !% of the U, as defined in the ACBN0 functional, is used.
+    !%End
+    call parse_variable('ACBN0Screening', M_ONE, this%acbn0_screening)
+    call messages_print_var_value(stdout, 'ACBN0Screening', this%acbn0_screening)
   end if
 
   if(.not.this%basisfromstates) then
