@@ -140,7 +140,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
 
       !We compute the on-site occupation of the site, if needed 
       if(this%level == DFT_U_ACBN0) then
-        this%X(renorm_occ)(:,:,:,ist,ik) = R_TOTYPE(M_ZERO)
+        this%X(renorm_occ)(:,:,:,ist,ik) = R_TOTYPE(M_ONE)*(M_ONE-this%acbn0_screening)
         do ios = 1, this%norbsets
           os => this%orbsets(ios)
           if(this%basisfromstates) then
@@ -153,7 +153,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
             do idim = 1, st%d%dim
               this%X(renorm_occ)(spec_ind,os%nn,os%ll,ist,ik) = &
                this%X(renorm_occ)(spec_ind,os%nn,os%ll,ist,ik) &
-                 + abs(dot(idim,im,ios))**2
+                 + abs(dot(idim,im,ios))**2*this%acbn0_screening
             end do
           end do
         end do
