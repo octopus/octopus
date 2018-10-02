@@ -489,7 +489,7 @@ contains
     end if
 
     select case(eigens%es_type)
-    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
+    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
       call preconditioner_init(eigens%pre, gr)
     case default
       call preconditioner_null(eigens%pre)
@@ -606,7 +606,7 @@ contains
       maxiter = eigens%es_maxiter
 
       if(st%calc_eigenval) then
-        if(eigens%es_type == RS_RMMDIIS .or. eigens%es_type /= RS_PSD &
+        if(eigens%es_type == RS_RMMDIIS .or. eigens%es_type == RS_PSD &
           .or. (eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES)) then
           
           if (states_are_real(st)) then
