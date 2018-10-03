@@ -19,6 +19,7 @@
 #include "global.h"
 
 module output_me_oct_m
+  use boundaries_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -30,6 +31,7 @@ module output_me_oct_m
   use messages_oct_m
   use kpoints_oct_m
   use loct_math_oct_m
+  use lda_u_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
   use parser_oct_m
@@ -40,6 +42,7 @@ module output_me_oct_m
   use states_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
+  use scissor_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -242,14 +245,15 @@ contains
     end if
 
     if(bitand(this%what, output_me_dipole) /= 0) then
+      ASSERT(.not. st%parallel_in_states)
       ! The content of each file should be clear from the header of each file.
-      do ik = 1, st%d%nik
+      do ik = st%d%kpt%start, st%d%kpt%end
         write(fname,'(i4)') ik
         write(fname,'(a)') trim(dir)//'/ks_me_dipole.k'//trim(adjustl(fname))//'_'
           if (states_are_real(st)) then
-            call doutput_me_dipole(this, fname, st, gr, hm, ik)
+            call doutput_me_dipole(this, fname, st, gr, hm, geo, ik)
           else
-            call zoutput_me_dipole(this, fname, st, gr, hm, ik)
+            call zoutput_me_dipole(this, fname, st, gr, hm, geo, ik)
           end if
       end do
     end if
