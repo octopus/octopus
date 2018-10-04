@@ -108,6 +108,12 @@ module messages_oct_m
     module procedure messages_write_logical
   end interface messages_write
 
+
+  interface  messages_print_var_option
+    module procedure messages_print_var_option_4
+    module procedure messages_print_var_option_8
+  end interface messages_print_var_option
+  
   integer :: warnings
   integer :: experimentals
   integer :: current_line
@@ -735,12 +741,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine messages_print_var_option(iunit, var, option, pre)
+  subroutine messages_print_var_option_8(iunit, var, option, pre)
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
-    integer,          intent(in) :: option
+    integer(8),       intent(in) :: option
     character(len=*), intent(in), optional :: pre
 
+    integer :: option4
+
+    option4 = int(option)
+    
     if(.not. mpi_grp_is_root(mpi_world)) return
 
     if(flush_messages) then
@@ -749,23 +759,33 @@ contains
     end if
 
     if(present(pre)) then
-      call varinfo_print_option(iunit, var, option, pre)
+      call varinfo_print_option(iunit, var, option4, pre)
       if(flush_messages) then
-        call varinfo_print_option(iunit_out, var, option, pre)
+        call varinfo_print_option(iunit_out, var, option4, pre)
       end if
     else
-      call varinfo_print_option(iunit, var, option)
+      call varinfo_print_option(iunit, var, option4)
       if(flush_messages) then
-        call varinfo_print_option(iunit_out, var, option, pre)
+        call varinfo_print_option(iunit_out, var, option4, pre)
       end if
     end if
 
     if(flush_messages) then
       close(iunit_out)
     end if
-  end subroutine messages_print_var_option
+  end subroutine messages_print_var_option_8
 
+  ! ---------------------------------------------------------
+  subroutine messages_print_var_option_4(iunit, var, option, pre)
+    integer,          intent(in) :: iunit
+    character(len=*), intent(in) :: var
+    integer(4),       intent(in) :: option
+    character(len=*), intent(in), optional :: pre
 
+    call messages_print_var_option_8(iunit, var, int(option, 8), pre)
+
+  end subroutine messages_print_var_option_4
+  
   ! ---------------------------------------------------------
   subroutine messages_print_stress(iunit, msg)
     integer,                    intent(in) :: iunit

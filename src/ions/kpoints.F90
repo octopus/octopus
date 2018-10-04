@@ -345,7 +345,7 @@ contains
     end if
 
     !Printing the k-point list
-    if( iand(this%method, KPOINTS_MONKH_PACK) /= 0  ) then
+    if( bitand(this%method, KPOINTS_MONKH_PACK) /= 0  ) then
 
       write(message(1),'(a)') ' '
       write(message(2),'(1x,i5,a)') this%reduced%npoints, ' k-points generated from parameters :'
@@ -1488,7 +1488,8 @@ contains
     !We distribute the k-points here for this routine, independently of the rest of the code
     call distributed_nullify(kpt_dist, nk)
  #ifdef HAVE_MPI
-    call distributed_init(kpt_dist, nk, MPI_COMM_WORLD, "kpt_check")
+    if(mpi_world%comm /= -1) &
+      call distributed_init(kpt_dist, nk, MPI_COMM_WORLD, "kpt_check")
  #endif
 
     !A simple map to tell if the k-point as a matching symmetric point or not

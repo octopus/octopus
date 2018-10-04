@@ -699,7 +699,7 @@ contains
     if (rdm%do_basis.eqv..false.) then 
       call density_calc (st,gr,st%rho)
       call v_ks_calc(ks,hm,st,geo)
-      call hamiltonian_update(hm, gr%mesh)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     end if
 
     call construct_f(hm,st,gr,lambda,rdm)
@@ -786,7 +786,7 @@ contains
 
     call density_calc (st, gr, st%rho)
     call v_ks_calc(ks, hm, st, geo)
-    call hamiltonian_update(hm, gr%mesh)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
 
     call rdm_derivatives(rdm, hm, st, gr)
     call total_energy_rdm(rdm, st%occ(:,1), energy)
@@ -850,7 +850,7 @@ contains
       !calculate total energy
       call density_calc (st, gr, st%rho)
       call v_ks_calc(ks, hm, st, geo)
-      call hamiltonian_update(hm, gr%mesh)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
       call rdm_derivatives(rdm, hm, st, gr)
       call total_energy_rdm(rdm, st%occ(:,1), energy)
       !check if step lowers the energy
@@ -867,7 +867,6 @@ contains
           call states_set_state(st, gr%mesh, jst, 1, dpsi)
         enddo
       endif !energy_diff  
-      
       call states_end(states_old)
     enddo !ist
   enddo

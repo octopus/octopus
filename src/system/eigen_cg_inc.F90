@@ -284,7 +284,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
   integer :: nst, dim, ist, maxter, i, conv, ip, idim
   R_TYPE, allocatable :: psi(:,:), phi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
   FLOAT :: ctheta, stheta, ctheta2, stheta2, mu, lambda, dump, &
-    gamma, sol(2), alpha, beta, theta, theta2, res ! Could be complex?
+    gamma, sol(2), alpha, beta, theta, theta2, res, norm
   R_TYPE :: dot
   logical, allocatable :: orthogonal(:)
 
@@ -338,12 +338,13 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
 
       if(mod(i, 5) == 0) orthogonal = .false.
 
-      ! Get H|psi> (through the linear formula)
-      do idim = 1, st%d%dim
-        do ip = 1, gr%mesh%np
-          phi(ip, idim) = ctheta*phi(ip, idim) + stheta*hcgp(ip, idim)
+      if( i >1 ) then ! Get H|psi> (through the linear formula)
+        do idim = 1, st%d%dim
+          do ip = 1, gr%mesh%np
+            phi(ip, idim) = ctheta*phi(ip, idim) + stheta*hcgp(ip, idim)
+          end do
         end do
-      end do
+      end if
 
       ! lambda = <psi|H|psi> = <psi|phi>
       lambda = X(mf_dotp)(gr%mesh, dim, psi, phi)
@@ -373,9 +374,9 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
       if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, sd, normalize = .false., mask = orthogonal)
 
       ! Get conjugate-gradient vector
-      dot = X(mf_nrm2)(gr%mesh, dim, sd)**2
-      gamma = dot/mu
-      mu    = dot
+      dump = X(mf_nrm2)(gr%mesh, dim, sd)**2
+      gamma = dump/mu
+      mu    = dump
 
       do idim = 1, st%d%dim
         do ip = 1, gr%mesh%np
@@ -383,26 +384,22 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
         end do
       end do
 
-      dump = X(mf_dotp)(gr%mesh, dim, psi, cg)
+      dot = X(mf_dotp)(gr%mesh, dim, psi, cg)
 
       do idim = 1, st%d%dim
         do ip = 1, gr%mesh%np
-          cgp(ip, idim) = cg(ip, idim) - dump*psi(ip, idim)
+          cgp(ip, idim) = cg(ip, idim) - dot*psi(ip, idim)
         end do
       end do
 
-      dump = X(mf_nrm2)(gr%mesh, dim, cgp)
-
-      do idim = 1, st%d%dim
-        call lalg_scal(gr%mesh%np, M_ONE/dump, cgp(:, idim))
-      end do
+      norm = X(mf_nrm2)(gr%mesh, dim, cgp)
 
       call X(hamiltonian_apply)(hm, gr%der, cgp, hcgp, ist, ik)
 
       niter = niter + 1
 
-      alpha = -lambda + X(mf_dotp)(gr%mesh, dim, cgp, hcgp)
-      beta  = M_TWO*X(mf_dotp)(gr%mesh, dim, cgp, phi)
+      alpha = -lambda + R_REAL(X(mf_dotp)(gr%mesh, dim, cgp, hcgp))/norm**2
+      beta  = M_TWO*R_REAL(X(mf_dotp)(gr%mesh, dim, cgp, phi))/norm
       theta = M_HALF*atan(-beta/alpha)
       ctheta = cos(theta)
       stheta = sin(theta)
@@ -419,6 +416,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
         stheta = stheta2
         ctheta = ctheta2
       end if
+      stheta = stheta/norm
 
       do idim = 1, st%d%dim
         do ip = 1, gr%mesh%np

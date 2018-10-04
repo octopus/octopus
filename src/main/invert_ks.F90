@@ -89,7 +89,7 @@ contains
       hm%vhxc(1:np, ii) = hm%vhartree(1:np)
     end do
 
-    call hamiltonian_update(hm, sys%gr%mesh)
+    call hamiltonian_update(hm, sys%gr%mesh, sys%gr%der%boundaries)
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
                          sys%ks%ks_inversion%aux_st, hm, 1)
     call density_calc(sys%ks%ks_inversion%aux_st, sys%gr, sys%ks%ks_inversion%aux_st%rho)
@@ -113,7 +113,7 @@ contains
 
     ! output quality of KS inversion
     
-    call hamiltonian_update(hm, sys%gr%mesh)
+    call hamiltonian_update(hm, sys%gr%mesh, sys%gr%der%boundaries)
     
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
          sys%ks%ks_inversion%aux_st, hm, 1)
