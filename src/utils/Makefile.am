@@ -46,7 +46,6 @@ oct_propagation_spectrum_LDADD   = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/basis_set/libbasis_set.a \
                                    $(top_builddir)/src/poisson/libpoisson.a \
                                    $(top_builddir)/src/states/libstates.a \
-                                   $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/grid/libgrid.a \
                                    $(top_builddir)/src/ions/libions.a \
                                    $(top_builddir)/src/species/libspecies.a \
@@ -60,7 +59,6 @@ oct_oscillator_strength_LDADD    = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/basis_set/libbasis_set.a \
                                    $(top_builddir)/src/poisson/libpoisson.a \
                                    $(top_builddir)/src/states/libstates.a \
-                                   $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/grid/libgrid.a \
                                    $(top_builddir)/src/ions/libions.a \
                                    $(top_builddir)/src/species/libspecies.a \
@@ -74,7 +72,6 @@ oct_dielectric_function_LDADD    = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/basis_set/libbasis_set.a \
                                    $(top_builddir)/src/poisson/libpoisson.a \
                                    $(top_builddir)/src/states/libstates.a \
-                                   $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/grid/libgrid.a \
                                    $(top_builddir)/src/ions/libions.a \
                                    $(top_builddir)/src/species/libspecies.a \
@@ -88,7 +85,6 @@ oct_harmonic_spectrum_LDADD      = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/basis_set/libbasis_set.a \
                                    $(top_builddir)/src/poisson/libpoisson.a \
                                    $(top_builddir)/src/states/libstates.a \
-                                   $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/grid/libgrid.a \
                                    $(top_builddir)/src/ions/libions.a \
                                    $(top_builddir)/src/species/libspecies.a \
@@ -102,7 +98,6 @@ oct_photoelectron_spectrum_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
                                    $(top_builddir)/src/basis_set/libbasis_set.a \
                                    $(top_builddir)/src/states/libstates.a \
-                                   $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/poisson/libpoisson.a \
                                    $(top_builddir)/src/grid/libgrid.a \
                                    $(top_builddir)/src/ions/libions.a \
@@ -131,7 +126,6 @@ oct_vibrational_spectrum_LDADD   = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/basis_set/libbasis_set.a \
                                    $(top_builddir)/src/poisson/libpoisson.a \
                                    $(top_builddir)/src/states/libstates.a \
-                                   $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/grid/libgrid.a \
                                    $(top_builddir)/src/ions/libions.a \
                                    $(top_builddir)/src/species/libspecies.a \
@@ -160,7 +154,6 @@ oct_convert_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
                                    $(top_builddir)/src/basis_set/libbasis_set.a \
                                    $(top_builddir)/src/states/libstates.a \
-                                   $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/poisson/libpoisson.a \
                                    $(top_builddir)/src/grid/libgrid.a \
                                    $(top_builddir)/src/ions/libions.a \
@@ -177,7 +170,6 @@ oct_local_multipoles_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
                                    $(top_builddir)/src/basis_set/libbasis_set.a \
                                    $(top_builddir)/src/states/libstates.a \
-                                   $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/poisson/libpoisson.a \
                                    $(top_builddir)/src/grid/libgrid.a \
                                    $(top_builddir)/src/ions/libions.a \
@@ -192,7 +184,6 @@ oct_conductivity_LDADD  = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/basis_set/libbasis_set.a \
                                    $(top_builddir)/src/poisson/libpoisson.a \
                                    $(top_builddir)/src/states/libstates.a \
-                                   $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/grid/libgrid.a \
                                    $(top_builddir)/src/ions/libions.a \
                                    $(top_builddir)/src/species/libspecies.a \
@@ -211,7 +202,6 @@ oct_floquet_LDADD = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/hamiltonian/libhamiltonian.a \
                                    $(top_builddir)/src/basis_set/libbasis_set.a \
                                    $(top_builddir)/src/states/libstates.a \
-                                   $(top_builddir)/src/frozen/libfrozen.a \
                                    $(top_builddir)/src/poisson/libpoisson.a \
                                    $(top_builddir)/src/grid/libgrid.a \
                                    $(top_builddir)/src/ions/libions.a \

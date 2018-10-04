@@ -47,7 +47,8 @@ subroutine X(states_orthogonalization_full)(st, mesh, ik)
   case(OPTION__STATESORTHOGONALIZATION__CHOLESKY_PARALLEL)
     call cholesky_parallel()
 
-  case(OPTION__STATESORTHOGONALIZATION__MGS)
+  case(OPTION__STATESORTHOGONALIZATION__CGS, OPTION__STATESORTHOGONALIZATION__MGS, &
+       OPTION__STATESORTHOGONALIZATION__DRCGS)
     call mgs()
 
   case default
@@ -196,9 +197,10 @@ contains
 
   subroutine mgs()
 
-    integer :: ist, jst, idim
+    integer :: ist, jst, idim, is
     FLOAT   :: cc
     R_TYPE, allocatable :: aa(:), psii(:, :), psij(:, :)
+    R_TYPE, allocatable :: psii0(:, :)
     
     PUSH_SUB(X(states_orthogonalization_full).mgs)
 
@@ -208,6 +210,7 @@ contains
     end if
 
     SAFE_ALLOCATE(psii(1:mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(psii0(1:mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(psij(1:mesh%np, 1:st%d%dim))
 
     SAFE_ALLOCATE(aa(1:nst))
@@ -215,35 +218,97 @@ contains
     do ist = 1, nst
 
       call states_get_state(st, mesh, ist, ik, psii)
-      
-      ! calculate the projections
-      do jst = 1, ist - 1
-        call states_get_state(st, mesh, jst, ik, psij)
-        aa(jst) = X(mf_dotp)(mesh, st%d%dim, psij, psii, reduce = .false.)
-      end do
 
-      if(mesh%parallel_in_domains .and. ist > 1) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = ist - 1)
-
-      ! subtract the projections
-      do jst = 1, ist - 1
-        call states_get_state(st, mesh, jst, ik, psij)
+      !The different algorithms are given in Giraud et al., 
+      !Computers and Mathematics with Applications 50, 1069 (2005).
+      select case(st%d%orth_method)
+      case(OPTION__STATESORTHOGONALIZATION__MGS)
+        ! renormalize
+        cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
         do idim = 1, st%d%dim
-          call lalg_axpy(mesh%np, -aa(jst), psij(:, idim), psii(:, idim))
+          call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
         end do
-      end do
+        call states_set_state(st, mesh, ist, ik, psii)
+        ! calculate the projections
+        do jst = ist + 1, nst
+          call states_get_state(st, mesh, jst, ik, psij)
+          aa(jst) = X(mf_dotp)(mesh, st%d%dim, psii, psij, reduce = .false.)
+        end do
+        if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = nst)
+ 
+        ! subtract the projections
+        do jst = ist + 1, nst
+          call states_get_state(st, mesh, jst, ik, psij)
+          do idim = 1, st%d%dim
+            call lalg_axpy(mesh%np, -aa(jst), psii(:, idim), psij(:, idim))
+          end do
+          call states_set_state(st, mesh, jst, ik, psij)
+        end do
 
-      ! renormalize
-      cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
+      case(OPTION__STATESORTHOGONALIZATION__CGS)
 
-      do idim = 1, st%d%dim
-        call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
-      end do
+        ! calculate the projections first with the same vector
+        do jst = 1, ist - 1
+          call states_get_state(st, mesh, jst, ik, psij)
+          aa(jst) = X(mf_dotp)(mesh, st%d%dim, psij, psii, reduce = .false.)
+        end do
 
-      call states_set_state(st, mesh, ist, ik, psii)
+        if(mesh%parallel_in_domains .and. ist > 1) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = ist - 1)
+        ! then subtract the projections
+        do jst = 1, ist - 1
+          call states_get_state(st, mesh, jst, ik, psij)
+          do idim = 1, st%d%dim
+            call lalg_axpy(mesh%np, -aa(jst), psij(:, idim), psii(:, idim))
+          end do
+        end do
+
+      case(OPTION__STATESORTHOGONALIZATION__DRCGS)
+
+        !double step reorthogonalization
+        do is = 1, 2
+          if(ist>1) then
+            call states_get_state(st, mesh, ist-1, ik, psii0)
+            aa(1) = X(mf_dotp)(mesh, st%d%dim, psii0, psii)
+            do idim = 1, st%d%dim
+              call lalg_axpy(mesh%np, -aa(1), psii0(:, idim), psii(:, idim))
+            end do
+          end if
+      
+          ! calculate the projections
+          do jst = 1, ist - 1
+            call states_get_state(st, mesh, jst, ik, psij)
+            aa(jst) = X(mf_dotp)(mesh, st%d%dim, psij, psii, reduce = .false.)
+          end do
+
+          if(mesh%parallel_in_domains .and. ist > 1) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = ist - 1)
+
+          ! subtract the projections
+          do jst = 1, ist - 1
+            call states_get_state(st, mesh, jst, ik, psij)
+            do idim = 1, st%d%dim
+              call lalg_axpy(mesh%np, -aa(jst), psij(:, idim), psii(:, idim))
+            end do
+          end do
+        end do
+
+      end select
+
+      !In case of modified Gram-Schmidt, this was done before.
+      if(st%d%orth_method /= OPTION__STATESORTHOGONALIZATION__MGS) then
+        ! renormalize
+        cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
+
+        do idim = 1, st%d%dim
+          call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
+        end do
+
+        call states_set_state(st, mesh, ist, ik, psii)
+      end if
       
     end do
 
     SAFE_DEALLOCATE_A(psii)
+    SAFE_DEALLOCATE_A(psii0)
     SAFE_DEALLOCATE_A(psij)
     SAFE_DEALLOCATE_A(aa)
 
@@ -355,7 +420,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 end subroutine X(states_trsm)
 
 ! ---------------------------------------------------------
-subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, mask, overlap, norm, Theta_fi, beta_ij)
+subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, mask, overlap, norm, Theta_fi, beta_ij, against_all)
   type(states_t),    intent(in)    :: st
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: nst
@@ -364,55 +429,67 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   logical, optional, intent(in)    :: normalize
   logical, optional, intent(inout) :: mask(:)      !< mask(nst)
   R_TYPE,  optional, intent(out)   :: overlap(:) 
-  R_TYPE,  optional, intent(out)   :: norm
+  FLOAT,   optional, intent(out)   :: norm
   FLOAT,   optional, intent(in)    :: theta_fi
   R_TYPE,  optional, intent(in)    :: beta_ij(:)   !< beta_ij(nst)
+  logical, optional, intent(in)    :: against_all
 
-  integer :: ist, idim
-  R_TYPE  :: nrm2
+  integer :: ist, idim, length_ss
+  FLOAT   :: nrm2
   R_TYPE, allocatable  :: ss(:), psi(:, :)
   type(profile_t), save :: prof
   type(profile_t), save :: reduce_prof
+  logical :: against_all_
   
   call profiling_in(prof, "GRAM_SCHMIDT")
   PUSH_SUB(X(states_orthogonalize_single))
 
   ASSERT(nst <= st%nst)
   ASSERT(.not. st%parallel_in_states)
+  ! if against_all is set to true, phi is orthogonalized to all other states except nst+1
+  ! (nst + 1 is chosen because this routine is usually called with nst=ist-1 in a loop)
+  against_all_ = optional_default(against_all, .false.)
 
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(ss(1:nst))
+  length_ss = nst
+  if(against_all_) then
+    length_ss = st%nst
+  end if
+  SAFE_ALLOCATE(ss(1:length_ss))
 
   ss = M_ZERO
 
-  do ist = 1, nst
+  do ist = 1, st%nst
+    if(skip_this_iteration(ist, nst, against_all_)) cycle
     if(present(mask)) then
       if(mask(ist)) cycle
     end if
           
     call states_get_state(st, mesh, ist, iqn, psi)
-    ss(ist) = X(mf_dotp)(mesh, st%d%dim, psi, phi, reduce = .false., dotu = st%cmplxscl%space)
+    ss(ist) = X(mf_dotp)(mesh, st%d%dim, psi, phi, reduce = .false.)
   end do
     
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, "GRAM_SCHMIDT_REDUCE")
-    call comm_allreduce(mesh%mpi_grp%comm, ss, dim = nst)
+    call comm_allreduce(mesh%mpi_grp%comm, ss, dim = length_ss)
     call profiling_out(reduce_prof)
   end if
 
   if(present(mask)) then
-    do ist = 1, nst
+    do ist = 1, st%nst
+      if(skip_this_iteration(ist, nst, against_all_)) cycle
       mask(ist) = (abs(ss(ist)) <= M_EPSILON)
     end do
   end if
 
-  if(present(beta_ij)) ss(1:nst) = ss(1:nst)*beta_ij(1:nst)
+  if(present(beta_ij)) ss(1:length_ss) = ss(1:length_ss)*beta_ij(1:length_ss)
   
   if(present(theta_fi)) then
     if(theta_fi /= M_ONE) phi(1:mesh%np, 1:st%d%dim) = theta_fi*phi(1:mesh%np, 1:st%d%dim)
   end if
 
-  do ist = 1, nst
+  do ist = 1, st%nst
+    if(skip_this_iteration(ist, nst, against_all_)) cycle
     if(present(mask)) then
       if(mask(ist)) cycle
     end if
@@ -424,22 +501,11 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   end do
 
   if(optional_default(normalize, .false.)) then
-    if (st%cmplxscl%space) then 
-      nrm2 = sqrt(X(mf_dotp)(mesh, st%d%dim, phi, phi, dotu = .true.))
-    else
-      nrm2 = X(mf_nrm2)(mesh, st%d%dim, phi)
-    end if
-    if(abs(nrm2) <= M_EPSILON) then
-      message(1) = "Wavefunction has zero norm after states_orthogonalize_single; cannot normalize."
-      call messages_fatal(1)
-    end if
-    do idim = 1, st%d%dim
-      call lalg_scal(mesh%np, M_ONE/nrm2, phi(:, idim))
-    end do
+    call X(mf_normalize)(mesh, st%d%dim, phi, nrm2)
   end if
 
   if(present(overlap)) then
-    overlap(1:nst) = ss(1:nst)
+    overlap(1:length_ss) = ss(1:length_ss)
   end if
 
   if(present(norm)) then
@@ -453,6 +519,22 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
 
   POP_SUB(X(states_orthogonalize_single))
   call profiling_out(prof)
+
+  contains
+
+    logical function skip_this_iteration(ist, nst, against_all_states)
+      integer, intent(in) :: ist, nst
+      logical, intent(in) :: against_all_states
+
+      skip_this_iteration = .false.
+      if(.not.against_all_states) then
+        ! orthogonalize against previous states only
+        if(ist > nst) skip_this_iteration = .true.
+      else
+        ! orthogonalize against all other states besides nst + 1
+        if(ist == nst + 1) skip_this_iteration = .true.
+      end if
+    end function skip_this_iteration
 end subroutine X(states_orthogonalize_single)
 
 ! ---------------------------------------------------------
@@ -465,7 +547,7 @@ end subroutine X(states_orthogonalize_single)
 !!   (Theta_Fi - sum_j beta_ij |j><j|Phi> as in De Gironcoli PRB 51, 6774 (1995).
 !! This is used in response for metals
 subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
-  normalize, mask, overlap, norm, Theta_fi, beta_ij)
+  normalize, mask, overlap, norm, Theta_fi, beta_ij, gs_scheme)
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: nst
   integer,           intent(in)    :: dim
@@ -477,14 +559,17 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   R_TYPE,  optional, intent(out)   :: norm
   FLOAT,   optional, intent(in)    :: Theta_Fi
   R_TYPE,  optional, intent(in)    :: beta_ij(:)   !< beta_ij(nst)
+  integer, optional, intent(in)    :: gs_scheme
 
   logical :: normalize_
-  integer :: ist, idim
+  integer :: ist, idim, is
   FLOAT   :: nrm2
-  R_TYPE, allocatable  :: ss(:)
+  R_TYPE, allocatable  :: ss(:), ss_full(:)
   integer :: block_size, size, sp, ep
   type(profile_t), save :: prof
   type(profile_t), save :: reduce_prof
+  logical :: drcgs
+  integer :: nsteps
 
   call profiling_in(prof, "GRAM_SCHMIDT")
   PUSH_SUB(X(states_orthogonalization))
@@ -498,88 +583,118 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
 
   SAFE_ALLOCATE(ss(1:nst))
 
-  ss = M_ZERO
+  ss = R_TOTYPE(M_ZERO)
 
-  if(.not. mesh%use_curvilinear) then
+  drcgs = .false.
+  nsteps = 1
+  if(present(gs_scheme)) then
+    if(gs_scheme == OPTION__ARNOLDIORTHOGONALIZATION__DRCGS) then
+      drcgs = .true.
+      nsteps = 2
+      SAFE_ALLOCATE(ss_full(1:nst))
+      ss_full = R_TOTYPE(M_ZERO)
+    end if
+  end if
+
+  do is = 1, nsteps
+    if(nst>=1 .and. drcgs) then
+      ss(1) = X(mf_dotp)(mesh, dim, psi(:, :, nst), phi)
+      do idim = 1, dim
+        call lalg_axpy(mesh%np, -ss(1), psi(:, idim, nst), phi(:, idim))
+      end do
+      call profiling_count_operations((R_ADD + R_MUL) * mesh%np * dim * 2)
+      if(present(overlap)) ss_full(nst) = ss_full(nst) + ss(1)
+    end if
+    ss = R_TOTYPE(M_ZERO)
+
+    if(.not. mesh%use_curvilinear) then
+
+      do sp = 1, mesh%np, block_size
+        size = min(block_size, mesh%np - sp + 1)
+        do ist = 1, nst
+          do idim = 1, dim
+        
+            if(present(mask)) then
+              if(mask(ist)) cycle
+            end if
+
+            ss(ist) = ss(ist) + blas_dot(size, psi(sp, idim, ist), 1, phi(sp, idim), 1)
+          end do
+        end do
+      end do
+
+      ss = ss * mesh%vol_pp(1)
+
+      call profiling_count_operations((R_ADD + R_MUL) * mesh%np * dim * nst)
+
+    else
+
+      do sp = 1, mesh%np, block_size
+        size = min(block_size, mesh%np - sp + 1)
+        ep = sp - 1 + size
+        do ist = 1, nst
+          do idim = 1, dim
+
+            if(present(mask)) then
+              if(mask(ist)) cycle
+            end if
+
+            ss(ist) = ss(ist) + sum(mesh%vol_pp(sp:ep)*R_CONJ(psi(sp:ep, idim, ist))*phi(sp:ep, idim))
+
+          end do
+        end do
+      end do
+
+      call profiling_count_operations((R_ADD + 2 * R_MUL) * mesh%np * dim * nst)
+
+    end if
+
+    if(mesh%parallel_in_domains) then
+      call profiling_in(reduce_prof, "GRAM_SCHMIDT_REDUCE")
+      call comm_allreduce(mesh%mpi_grp%comm, ss, dim = nst)
+      call profiling_out(reduce_prof)
+    end if
+
+    if(present(mask)) then
+      do ist = 1, nst
+        mask(ist) = (abs(ss(ist)) <= M_EPSILON)
+      end do
+    end if
+
+    if(present(beta_ij))  &
+      ss(:) = ss(:) * beta_ij(:)
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
-      do ist = 1, nst
-        do idim = 1, dim
-        
+
+      if(present(Theta_Fi)) then
+        if(Theta_Fi /= M_ONE) &
+          call blas_scal(size, R_TOTYPE(Theta_Fi), phi(sp, idim), 1)
+      end if
+
+      do idim = 1, dim
+
+        do ist = 1, nst
+
           if(present(mask)) then
             if(mask(ist)) cycle
           end if
 
-          ss(ist) = ss(ist) + blas_dot(size, psi(sp, idim, ist), 1, phi(sp, idim), 1)
+          call blas_axpy(size, -ss(ist), psi(sp, idim, ist), 1, phi(sp, idim), 1)
+
         end do
       end do
     end do
-
-    ss = ss * mesh%vol_pp(1)
 
     call profiling_count_operations((R_ADD + R_MUL) * mesh%np * dim * nst)
 
-  else
-
-    do sp = 1, mesh%np, block_size
-      size = min(block_size, mesh%np - sp + 1)
-      ep = sp - 1 + size
+    !We accumulate the overlap
+    if(drcgs .and. present(overlap)) then
       do ist = 1, nst
-        do idim = 1, dim
-
-          if(present(mask)) then
-            if(mask(ist)) cycle
-          end if
-
-          ss(ist) = ss(ist) + sum(mesh%vol_pp(sp:ep)*R_CONJ(psi(sp:ep, idim, ist))*phi(sp:ep, idim))
-
-        end do
-      end do
-    end do
-
-    call profiling_count_operations((R_ADD + 2 * R_MUL) * mesh%np * dim * nst)
-
-  end if
-
-  if(mesh%parallel_in_domains) then
-    call profiling_in(reduce_prof, "GRAM_SCHMIDT_REDUCE")
-    call comm_allreduce(mesh%mpi_grp%comm, ss, dim = nst)
-    call profiling_out(reduce_prof)
-  end if
-
-  if(present(mask)) then
-    do ist = 1, nst
-      mask(ist) = (abs(ss(ist)) <= M_EPSILON)
-    end do
-  end if
-
-  if(present(beta_ij))  &
-    ss(:) = ss(:) * beta_ij(:)
-
-  do sp = 1, mesh%np, block_size
-    size = min(block_size, mesh%np - sp + 1)
-
-    if(present(Theta_Fi)) then
-      if(Theta_Fi /= M_ONE) &
-        call blas_scal(size, R_TOTYPE(Theta_Fi), phi(sp, idim), 1)
+        ss_full(ist) = ss_full(ist) + ss(ist)
+      end do 
     end if
-
-    do idim = 1, dim
-
-      do ist = 1, nst
-
-        if(present(mask)) then
-          if(mask(ist)) cycle
-        end if
-
-        call blas_axpy(size, -ss(ist), psi(sp, idim, ist), 1, phi(sp, idim), 1)
-
-      end do
-    end do
   end do
-
-  call profiling_count_operations((R_ADD + R_MUL) * mesh%np * dim * nst)
 
   ! the following ifs cannot be given as a single line (without the
   ! then) to avoid a bug in xlf 10.1
@@ -590,45 +705,31 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   end if
 
   if(normalize_) then
-    nrm2 = X(mf_nrm2)(mesh, dim, phi)
-    do idim = 1, dim
-      call lalg_scal(mesh%np, M_ONE / nrm2, phi(:, idim))
-    end do
+    call X(mf_normalize)(mesh, dim, phi, nrm2)
   end if
 
   if(present(overlap)) then
-    overlap(1:nst) = ss(1:nst)
+    if(drcgs) then
+      overlap(1:nst) = ss_full(1:nst)
+    else
+      overlap(1:nst) = ss(1:nst)
+    end if
   end if
 
   if(present(norm)) then
-    ASSERT(normalize)
-    norm = nrm2
+    if(normalize_) then
+      norm = nrm2
+    else
+      norm = R_REAL(X(mf_nrm2)(mesh, dim, phi))
+    end if
   end if
 
   SAFE_DEALLOCATE_A(ss)
+  SAFE_DEALLOCATE_A(ss_full)
 
   POP_SUB(X(states_orthogonalization))
   call profiling_out(prof)
 end subroutine X(states_orthogonalization)
-
-
-! ---------------------------------------------------------
-subroutine X(states_normalize_orbital)(mesh, dim, psi)
-  type(mesh_t),    intent(in)    :: mesh
-  integer,         intent(in)    :: dim
-  R_TYPE,          intent(inout) :: psi(:,:)
-
-  FLOAT   :: norm
-  integer :: idim, ip
-
-  PUSH_SUB(X(states_normalize_orbital))
-
-  norm = X(mf_nrm2) (mesh, dim, psi)
-
-  forall (idim = 1:dim, ip = 1:mesh%np) psi(ip, idim) = psi(ip, idim)/norm
-  
-  POP_SUB(X(states_normalize_orbital))
-end subroutine X(states_normalize_orbital)
 
 
 ! ---------------------------------------------------------

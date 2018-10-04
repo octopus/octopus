@@ -109,13 +109,8 @@ contains
         write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4)')   &
           '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>'
       else
-        if(st%cmplxscl%space) then
-          write(message(1), '(a4,1x,a5,1x,a12,1x,a15,4x,a12)')   &
-            '#st',' Spin',' Eigenvalue', ' Im(Eigenvalue)', 'Occupation'
-        else
-          write(message(1), '(a4,1x,a5,1x,a12,4x,a12)')       &
-            '#st',' Spin',' Eigenvalue', 'Occupation'
-        end if
+        write(message(1), '(a4,1x,a5,1x,a12,4x,a12)')       &
+          '#st',' Spin',' Eigenvalue', 'Occupation'
       end if
       if(present(error)) &
         write(message(1),'(a,a10)') trim(message(1)), ' Error'
@@ -147,14 +142,8 @@ contains
                 units_from_atomic(units_out%energy, st%eigenval(ist, ik)), st%occ(ist, ik), st%spin(1:3, ist, ik)
               if(present(error)) write(tmp_str(3), '(a3,es7.1,a1)')'  (', error(ist, ik), ')'
             else
-              if(st%cmplxscl%space) then !cmplxscl
-                write(tmp_str(2), '(1x,f12.6,3x,f12.6,3x,f12.6)') &
-                  units_from_atomic(units_out%energy, st%zeigenval%Re(ist, ik+is)), &
-                  units_from_atomic(units_out%energy, st%zeigenval%Im(ist, ik+is)), st%occ(ist, ik+is)
-              else
-                write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
-                  units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), st%occ(ist, ik+is)
-              end if
+              write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
+                units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), st%occ(ist, ik+is)
               if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(ist, ik+is), ')'
             end if
             if(present(error)) then
@@ -205,10 +194,6 @@ contains
 
       tmp_str(1) = trim(tmp_str(1))//'  Eigenvalue ['// trim(units_abbrev(units_out%energy)) // ']'
 
-      if(st%cmplxscl%space) then
-        tmp_str(1) = trim(tmp_str(1))//'  Im(Eigenvalue)'
-      end if
-        
       tmp_str(1) = trim(tmp_str(1))//'  Occupation'
 
       if(st%d%ispin  ==  SPINORS) then
@@ -267,24 +252,10 @@ contains
           end if
 
 
-          if(.not. st%cmplxscl%space) then
-
-            if(len(units_abbrev(units_out%energy)) == 1) then
-              write(tmp_str(1), '(2a,f14.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%eigenval(ist, iqn))
-            else
-              write(tmp_str(1), '(2a,f15.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%eigenval(ist, iqn))
-            end if
-
+          if(len(units_abbrev(units_out%energy)) == 1) then
+            write(tmp_str(1), '(2a,f14.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%eigenval(ist, iqn))
           else
-
-            if(len(units_abbrev(units_out%energy)) == 1) then
-              write(tmp_str(1), '(2a,f14.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%zeigenval%Re(ist, iqn))
-            else
-              write(tmp_str(1), '(2a,f15.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%zeigenval%Re(ist, iqn))
-            end if
-
-            write(tmp_str(1), '(2a,f15.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%zeigenval%Im(ist, iqn))
-
+            write(tmp_str(1), '(2a,f15.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%eigenval(ist, iqn))
           end if
 
           write(tmp_str(1), '(2a,f11.6)') trim(tmp_str(1)), ' ', st%occ(ist, iqn)
@@ -818,7 +789,7 @@ contains
             if(ik < st%d%nik-npath+1 ) cycle ! We only want points inside the k-point path
             if(states_are_real(st)) then
               call states_get_state(st, mesh, ist, ik, dpsi )
-              call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., ddot(1:st%d%dim,1:os%norbs))
+              call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., .false., ddot(1:st%d%dim,1:os%norbs))
               do iorb = 1, os%norbs
                 do idim = 1, st%d%dim
                   weight(ik,ist,iorb,norb,ia) = weight(ik,ist,iorb,norb,ia) + abs(ddot(idim,iorb))**2
@@ -830,7 +801,7 @@ contains
                 ! Apply the phase that contains both the k-point and vector-potential terms.
                 call states_set_phase(st%d, zpsi, phase(:,ik), mesh%np, .false.)
               end if
-              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(phase), &
+              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(phase), .false.,&
                                  zdot(1:st%d%dim,1:os%norbs))
               do iorb = 1, os%norbs
                 do idim = 1, st%d%dim

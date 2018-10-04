@@ -35,6 +35,9 @@ ExtraStates = 2
 ExperimentalFeatures = yes
 Output = BerkeleyGW
 
+# BerkeleyGW output is currently not compatible with k-point parallelization
+ParKpoints = no
+
 FilterPotentials = filter_none
 
 MixField = density

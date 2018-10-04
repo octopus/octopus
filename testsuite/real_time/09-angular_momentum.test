@@ -6,6 +6,7 @@ TestGroups : long-run, real_time
 Enabled    : Yes
 
 Input      : 09-angular_momentum.01-gs.inp
+match ; SCF convergence   ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Initial energy    ; GREPFIELD(static/info, 'Total       =', 3) ; -23.18613657
 
 Input      : 09-angular_momentum.02-td_gipaw.inp

@@ -13,6 +13,7 @@ Enabled    : Yes
 # 
 
 Input: 04-jellium.01-ground_state.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy   ; GREPFIELD(static/info, 'Total       =', 3) ; -0.57652032
 match ; Eigenvalue [s] ; GREPFIELD(static/info, '1   --', 3) ; -0.167698
 match ; Eigenvalue [p] ; GREPFIELD(static/info, '2   --', 3) ; -0.122636

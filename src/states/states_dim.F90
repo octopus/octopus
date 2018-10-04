@@ -143,7 +143,7 @@ contains
   logical pure function is_spin_up(ik)
     integer, intent(in) :: ik
 
-    is_spin_up = even(ik)
+    is_spin_up = odd(ik)
 
   end function is_spin_up
 
@@ -153,7 +153,7 @@ contains
   logical pure function is_spin_down(ik)
     integer, intent(in) :: ik
 
-    is_spin_down = odd(ik)
+    is_spin_down = even(ik)
 
   end function is_spin_down
 

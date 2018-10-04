@@ -171,6 +171,9 @@ contains
       if(st%d%nspin == SPINORS) &
         call messages_experimental("OEP with spinors")
 
+      if(st%d%kpt%parallel) &
+        call messages_not_implemented("OEP parallel in spin/k-points")
+
     end if
 
     POP_SUB(xc_oep_init)

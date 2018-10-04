@@ -546,7 +546,7 @@ contains
     type(ps_t),        intent(inout) :: ps
 
     FLOAT, allocatable :: vsr(:), vlr(:), nlr(:)
-    FLOAT :: r
+    FLOAT :: r, exp_arg
     integer :: ii
     
     PUSH_SUB(ps_separate)
@@ -567,7 +567,13 @@ contains
         vlr(ii)  = -ps%z_val*loct_erf(r/(ps%sigma_erf*sqrt(M_TWO)))/r
       end if
       vsr(ii) = spline_eval(ps%vl, r) - vlr(ii)
-      nlr(ii) = -ps%z_val*M_ONE/(ps%sigma_erf*sqrt(M_TWO*M_PI))**3*exp(-M_HALF*r**2/ps%sigma_erf**2)
+
+      exp_arg = -M_HALF*r**2/ps%sigma_erf**2
+      if(exp_arg > CNST(-100)) then
+        nlr(ii) = -ps%z_val*M_ONE/(ps%sigma_erf*sqrt(M_TWO*M_PI))**3*exp(exp_arg)
+      else
+        nlr(ii) = M_ZERO
+      end if
     end do
     
     call spline_init(ps%vlr)
@@ -671,6 +677,12 @@ contains
           if(abs(spline_integral(ps%density(ispin))) > CNST(1.0e-12)) then
             rmax = spline_cutoff_radius(ps%density(ispin), ps%projectors_sphere_threshold)
             call spline_filter_mask(ps%density(ispin), 0, rmax, gmax, alpha, gamma)
+            call spline_force_pos(ps%density(ispin))
+          end if
+
+          if(abs(spline_integral(ps%density_der(ispin))) > CNST(1.0e-12)) then
+            rmax = spline_cutoff_radius(ps%density_der(ispin), ps%projectors_sphere_threshold)
+            call spline_filter_mask(ps%density_der(ispin), 0, rmax, gmax, alpha, gamma)
           end if
         end do
       end if
@@ -696,6 +708,8 @@ contains
       if(ps_has_density(ps)) then
         do ispin = 1, ps%ispin
           call spline_filter_bessel(ps%density(ispin), 0, gmax, alpha, beta_fs, rcut, beta_rs)
+          call spline_force_pos(ps%density(ispin))
+          call spline_filter_bessel(ps%density_der(ispin), 0, gmax, alpha, beta_fs, rcut, beta_rs)
         end do
       end if
 

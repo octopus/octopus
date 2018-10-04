@@ -9,6 +9,7 @@ Enabled    : Yes
 ExtraFile: 10-helium_upf.pbe-mt.UPF
 Input: 10-helium_upf.01-gs_nofilter.inp
 Precision: 0.00011
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;     -2.87062228
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;      0.00000000
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;     -1.15699050
@@ -71,6 +72,7 @@ match ; potential value 416; LINEFIELD(debug/geometry/He/local, 416, 2) ; -0.000
 
 Input: 10-helium_upf.03-gs_filter_bsb.inp
 Precision: 0.00011
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;    -2.84285262
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;     0.00000000
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;    -1.14509434

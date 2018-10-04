@@ -44,7 +44,9 @@ module orbitalbasis_oct_m
        orbitalbasis_init,              &
        orbitalbasis_end,               &
        dorbitalbasis_build,            &
-       zorbitalbasis_build
+       zorbitalbasis_build,            &
+       dorbitalbasis_build_empty,      &
+       zorbitalbasis_build_empty
 
   type orbitalbasis_t
     type(orbitalset_t), pointer :: orbsets(:)   !> All the orbital sets of the system
@@ -73,6 +75,10 @@ contains
 
   PUSH_SUB(orbitalbasis_nullify)
 
+  this%normalize = .true.
+  this%submeshforperiodic = .false.
+  this%orthogonalization = .false.
+
   nullify(this%orbsets)
   nullify(this%global2os)
   nullify(this%os2global)
@@ -81,6 +87,8 @@ contains
   this%maxnorbs = 0
   this%max_np = 0
   this%size = 0
+
+  this%threshold = CNST(0.01)
 
   POP_SUB(orbitalbasis_nullify)
 

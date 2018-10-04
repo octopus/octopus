@@ -195,8 +195,6 @@ contains
     !% Generates output in <a href=http://www.openscad.org>OpenSCAD format</a> for 3D printing.
     !% Available only in 3D.
     !% Produces geometry and isosurface of the field, at <tt>OpenSCADIsovalue</tt>. (Experimental.)
-    !%Option json bit(18)
-    !% Generates output in JSON format.
     !%Option bild bit(19)
     !% Generates output in <a href=http://plato.cgl.ucsf.edu/chimera/docs/UsersGuide/bild.html>BILD format</a>.
     !%Option vtk bit(20)

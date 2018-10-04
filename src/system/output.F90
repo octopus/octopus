@@ -19,10 +19,6 @@
 #include "global.h"
 
 module output_oct_m
-  use base_density_oct_m
-  use base_hamiltonian_oct_m
-  use base_potential_oct_m
-  use base_states_oct_m
   use basins_oct_m
   use batch_oct_m
   use comm_oct_m 
@@ -63,7 +59,6 @@ module output_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
   use orbitalset_oct_m
-  use output_fio_oct_m
   use output_me_oct_m
   use parser_oct_m
   use par_vec_oct_m
@@ -286,10 +281,11 @@ contains
     !% matrix. For the moment the trace is made over the second dimension, and
     !% the code is limited to 2D. The idea is to model <i>N</i> particles in 1D as an
     !% <i>N</i>-dimensional non-interacting problem, then to trace out <i>N</i>-1 coordinates.
-    !%Option frozen_system bit(30)
-    !% Generates input for a frozen calculation.
     !%Option potential_gradient bit(31)
     !% Prints the gradient of the potential.
+    !%Option energy_density bit(32)
+    !% Outputs the total energy density to a file called
+    !% <tt>energy_density</tt>.
     !%End
     call parse_variable('Output', 0, outp%what)
 
@@ -321,6 +317,10 @@ contains
       !   in principle all combinations are interesting, but this means we need to
       !   be able to output density matrices for multiple particles or multiple
       !   dimensions. The current 1D 1-particle case is simple.
+    end if
+
+    if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) then
+      call messages_experimental("'Output = energy_density'")
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__WFS) /= 0  .or.  bitand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0 ) then
@@ -547,13 +547,9 @@ contains
 
     ! these kinds of Output do not have a how
     what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS + OPTION__OUTPUT__BERKELEYGW + OPTION__OUTPUT__DOS + &
-      OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW + OPTION__OUTPUT__FROZEN_SYSTEM
+      OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW
     what_no_how_u = OPTION__OUTPUTLDA_U__OCC_MATRICES + OPTION__OUTPUTLDA_U__EFFECTIVEU + &
       OPTION__OUTPUTLDA_U__MAGNETIZATION
-
-    if(bitand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
-      call messages_experimental("Frozen output")
-    end if
 
     if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
       call v_ks_calculate_current(ks, .true.)
@@ -605,7 +601,7 @@ contains
     !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
     call parse_variable('OutputIterDir', "output_iter", outp%iter_dir)
-    if(outp%what + outp%whatBZ + outp%what_lda_u/= 0 .and. outp%output_interval > 0) then
+    if(outp%what + outp%whatBZ + outp%what_lda_u /= 0 .and. outp%output_interval > 0) then
       call io_mkdir(outp%iter_dir)
     end if
     call add_last_slash(outp%iter_dir)
@@ -704,9 +700,7 @@ contains
       call output_berkeleygw(outp%bgw, dir, st, gr, ks, hm, geo)
     end if
     
-    if(bitand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
-      call output_fio(gr, geo, st, hm, trim(adjustl(dir)), mpi_world)
-    end if
+    call output_energy_density(hm, ks, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
 
     if(hm%lda_u_level /= DFT_U_NONE) then
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCC_MATRICES) /= 0)&
@@ -855,7 +849,7 @@ contains
 
     rho = M_ZERO
     call density_calc(st, gr, rho)
-    call states_calc_quantities(gr%der, st, kinetic_energy_density = tau)
+    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = tau)
 
     pressure = M_ZERO
     do is = 1, st%d%spin_channels
@@ -883,6 +877,71 @@ contains
   end subroutine calc_electronic_pressure
 
 
+  ! ---------------------------------------------------------
+  subroutine output_energy_density(hm, ks, st, der, dir, outp, geo, gr, grp)
+    type(hamiltonian_t),       intent(in)    :: hm
+    type(v_ks_t),              intent(in)    :: ks
+    type(states_t),            intent(inout) :: st
+    type(derivatives_t),       intent(inout) :: der
+    character(len=*),          intent(in)    :: dir
+    type(output_t),            intent(in)    :: outp
+    type(geometry_t),          intent(in)    :: geo
+    type(grid_t),              intent(in)    :: gr
+    type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
+
+    integer :: is, ispin, ierr, ip
+    character(len=MAX_PATH_LEN) :: fname
+    type(unit_t) :: fn_unit
+    FLOAT, allocatable :: energy_density(:, :)
+    FLOAT, allocatable :: ex_density(:)
+    FLOAT, allocatable :: ec_density(:)
+
+    PUSH_SUB(output_hamiltonian)
+   
+    if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) then
+      fn_unit = units_out%energy*units_out%length**(-gr%mesh%sb%dim)
+      SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
+
+      ! the kinetic energy density
+      call states_calc_quantities(gr%der, st, .true., kinetic_energy_density = energy_density)
+
+      ! the external potential energy density
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
+
+      ! the hartree energy density
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
+
+      ! the XC energy density
+      SAFE_ALLOCATE(ex_density(1:gr%mesh%np))
+      SAFE_ALLOCATE(ec_density(1:gr%mesh%np))
+
+      ASSERT(.not. gr%have_fine_mesh)
+
+      call xc_get_vxc(gr%fine%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ex_density = ex_density, ec_density = ec_density)
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
+      
+      SAFE_DEALLOCATE_A(ex_density)
+      SAFE_DEALLOCATE_A(ec_density)
+      
+      select case(st%d%ispin)
+      case(UNPOLARIZED)
+        write(fname, '(a)') 'energy_density'
+        call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+          energy_density(:,1), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+      case(SPIN_POLARIZED, SPINORS)
+        do is = 1, 2
+          write(fname, '(a,i1)') 'energy_density-sp', is
+          call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+            energy_density(:, is), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+        end do
+      end select
+      SAFE_DEALLOCATE_A(energy_density)
+    end if
+ 
+    POP_SUB(output_hamiltonian)
+  end subroutine output_energy_density
+
+  
   ! ---------------------------------------------------------
   subroutine output_berkeleygw_init(nst, bgw, periodic_dim)
     integer,            intent(in)  :: nst
@@ -1396,7 +1455,7 @@ contains
     fn_unit = sqrt(units_out%length**(-mesh%sb%dim))
 
     if(.not.(has_phase .and. .not.this%basis%submeshforperiodic &
-                .and.simul_box_is_periodic(mesh%sb))) then
+           .and.simul_box_is_periodic(mesh%sb)).and. .not. this%basisfromstates) then
       if(states_are_real(st)) then
         SAFE_ALLOCATE(dtmp(1:mesh%np))
       else
@@ -1432,14 +1491,24 @@ contains
                call zio_function_output(outp%how, dir, fname, mesh, tmp, fn_unit, ierr, geo = geo)
               end if
             else
-              if (states_are_real(st)) then
-                dtmp = M_Z0
-                call submesh_add_to_mesh(os%sphere, os%dorb(1:os%sphere%np,idim,im), dtmp)
-                call dio_function_output(outp%how, dir, fname, mesh, dtmp, fn_unit, ierr, geo = geo)
+              if(this%basisfromstates) then
+                if (states_are_real(st)) then
+                  call dio_function_output(outp%how, dir, fname, mesh, &
+                      os%dorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
+                else
+                  call zio_function_output(outp%how, dir, fname, mesh, &
+                      os%zorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
+                end if
               else
-                tmp = M_Z0
-                call submesh_add_to_mesh(os%sphere, os%zorb(1:os%sphere%np,idim,im), tmp)
-                call zio_function_output(outp%how, dir, fname, mesh, tmp, fn_unit, ierr, geo = geo)
+                if (states_are_real(st)) then
+                  dtmp = M_Z0
+                  call submesh_add_to_mesh(os%sphere, os%dorb(1:os%sphere%np,idim,im), dtmp)
+                  call dio_function_output(outp%how, dir, fname, mesh, dtmp, fn_unit, ierr, geo = geo)
+                else
+                  tmp = M_Z0
+                  call submesh_add_to_mesh(os%sphere, os%zorb(1:os%sphere%np,idim,im), tmp)
+                  call zio_function_output(outp%how, dir, fname, mesh, tmp, fn_unit, ierr, geo = geo)
+                end if
               end if
             end if
           end do
@@ -1448,7 +1517,7 @@ contains
     end do
 
     if(.not.(has_phase .and. .not.this%basis%submeshforperiodic &
-               .and.simul_box_is_periodic(mesh%sb))) then
+               .and.simul_box_is_periodic(mesh%sb)).and. .not. this%basisfromstates) then
       SAFE_DEALLOCATE_A(tmp)
       SAFE_DEALLOCATE_A(dtmp)
     end if

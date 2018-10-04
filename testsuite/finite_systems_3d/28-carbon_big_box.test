@@ -7,6 +7,7 @@ Enabled    : Yes
 
 Input: 28-carbon_big_box.01-ground_state.inp
 Precision: 0.0001
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -10.16393580
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 0.00000000
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -9.21324662
