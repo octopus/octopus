@@ -27,12 +27,13 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
   logical, optional,     intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
   logical, optional,     intent(in)    :: set_phase !< If set to .false. the phase will not be added to the states.
 
-  logical :: apply_phase, pack, set_phase_
+  logical :: apply_phase, pack, set_phase_ !, set_occ_
   type(batch_t), pointer :: epsib
   type(derivatives_handle_batch_t) :: handle
   integer :: terms_
   type(projection_t) :: projection
   logical :: copy_at_end
+  FLOAT :: occ_
   
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
   PUSH_SUB(X(hamiltonian_apply_batch))
@@ -156,7 +157,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
       end if
 
     case(RDMFT)
-      call X(rdmft_exchange_operator)(hm, der, ik, epsib, hpsib)
+      call X(rdmft_exchange_operator)(hm, der, ik, epsib, hpsib, occ_)
 
     end select
     call profiling_out(prof_exx)
@@ -247,7 +248,7 @@ end subroutine X(hamiltonian_external)
 
 ! ---------------------------------------------------------
 
-subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc, set_phase)
+subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc, set_phase, set_occ)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist       !< the index of the state
@@ -257,10 +258,14 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc, set
   integer,  optional,  intent(in)    :: terms
   logical,  optional,  intent(in)    :: set_bc
   logical, optional,     intent(in)    :: set_phase
+  logical, optional,   intent(in)    :: set_occ
 
   type(batch_t) :: psib, hpsib
+  logical :: set_occ_
 
   PUSH_SUB(X(hamiltonian_apply))
+  
+  set_occ_ = optional_default(set_occ, .false.)
 
   call batch_init(psib, hm%d%dim, 1)
   call batch_add_state(psib, ist, psi)
@@ -270,11 +275,49 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc, set
   call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, terms = terms, set_bc = set_bc, &
                                      set_phase = set_phase)
 
+! Modifications by Nicole
+
+  ! treat hamiltonians that depend on the index of the orbital
+  if(hm%theory_level == RDMFT .and. set_occ_ .eqv. .true.) then
+    call X(occ_apply)(hpsi, hm%hf_st%occ(ist, ik), terms =  terms)
+  endif 
+
+! End Nicole
+
   call batch_end(psib)
   call batch_end(hpsib)
 
   POP_SUB(X(hamiltonian_apply))
 end subroutine X(hamiltonian_apply)
+
+subroutine X(occ_apply) (hpsi, occ, terms)
+
+  R_TYPE,   target,    intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
+  FLOAT,               intent(in)    :: occ
+  integer,             intent(in)    :: terms
+
+  integer :: terms_
+
+  terms_ = optional_default(terms, TERM_ALL)
+
+  if(terms_ == TERM_ALL) then
+    call messages_write('Scaling with occupation numbers is not linear for all terms in the hamiltonian in RDMFT')
+    call messages_fatal(1)
+  endif
+
+  ! this term is specific for each RDMFT functional
+  if(terms_ == TERM_OTHERS) then
+    ! Mueller functional
+    hpsi = sqrt(occ)*hpsi
+  endif
+
+  ! all other terms in hamiltonian are linear in occupation number
+  if(bitand(TERM_KINETIC, terms_) /= 0 .or. bitand(TERM_LOCAL_POTENTIAL, terms_) /= 0 & 
+    & .or. bitand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0 .or. bitand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
+    hpsi = occ*hpsi
+  endif
+
+end subroutine X(occ_apply)
 
 
 ! ---------------------------------------------------------
@@ -871,12 +914,13 @@ subroutine X(hamiltonian_diagonal) (hm, der, diag, ik)
 end subroutine X(hamiltonian_diagonal)
 
 ! ---------------------------------------------------------
-subroutine X(rdmft_exchange_operator) (hm, der, ik, psib, hpsib)
+subroutine X(rdmft_exchange_operator) (hm, der, ik, psib, hpsib, occ)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ik
   type(batch_t),       intent(inout) :: psib
   type(batch_t),       intent(inout) :: hpsib
+  FLOAT,               intent(in)    :: occ
 
   R_TYPE, allocatable :: rho(:), pot(:), psi1(:,:), hpsi1(:), psi(:, :), hpsi(:, :)
   integer :: jst, ip, ist, ibatch

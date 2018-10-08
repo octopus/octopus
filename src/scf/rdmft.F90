@@ -20,6 +20,7 @@
 
 module rdmft_oct_m
   use density_oct_m
+  use eigen_cg_oct_m
   use eigensolver_oct_m
   use energy_oct_m
   use geometry_oct_m
@@ -64,6 +65,7 @@ module rdmft_oct_m
 
   type rdm_t
     type(states_t) :: psi
+    type(eigensolver_t) :: eigens
     integer  :: max_iter
     integer  :: iter
     integer  :: n_twoint !number of unique two electron integrals
@@ -124,7 +126,6 @@ contains
 
     call rdmft_init() 
    
-
     !set initial values
     energy_old = CNST(1.0e20)
     xpos = M_ZERO 
@@ -134,7 +135,8 @@ contains
     if(rdm%do_basis.eqv..false.) then
       !stepsize for steepest decent
       SAFE_ALLOCATE(stepsize(1:st%nst))
-      maxcount = 1
+      stepsize = 0.1
+      maxcount = 10
     else
       maxcount = 50
     endif
@@ -152,8 +154,8 @@ contains
       call messages_info(1)
       do icount = 1, maxcount !still under investigation how many iterations we need
         if (rdm%do_basis.eqv..false.) then
-          stepsize = 0.1d0
-          call scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
+!          call scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
+		  call scf_orb_cg(rdm, gr, geo, st, ks, hm, energy)
         else
           call scf_orb(rdm, gr, geo, st, ks, hm, energy)
         end if
@@ -878,6 +880,68 @@ contains
     POP_SUB(scf_orb_direct)
 
   end subroutine scf_orb_direct
+
+! New Nicole
+  
+ !-----------------------------------------------------------------
+  ! Minimize the total energy wrt. an orbital by conjugate gradient
+  !-----------------------------------------------------------------
+
+  subroutine scf_orb_cg(rdm, gr, geo, st, ks, hm, energy)
+
+    type(rdm_t),          intent(inout) :: rdm
+    type(grid_t),         intent(inout) :: gr !< grid
+    type(geometry_t),     intent(inout) :: geo !< geometry
+    type(states_t),       intent(inout) :: st !< States
+    type(v_ks_t),         intent(inout) :: ks !< Kohn-Sham
+    type(hamiltonian_t),  intent(inout) :: hm !< Hamiltonian
+    FLOAT,                intent(out)   :: energy    
+
+    type(states_t)     :: states_old
+    integer            :: ik
+    integer            :: maxiter ! maximum number of orbital optimization iterations
+    FLOAT              :: energy_old, energy_diff
+
+    PUSH_SUB(scf_orb_cg)
+ 
+    maxiter = 5
+
+    ! set up hamiltonian and calculate energy
+    call density_calc (st, gr, st%rho)
+    call v_ks_calc(ks, hm, st, geo)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
+    call rdm_derivatives(rdm, hm, st, gr)
+    call total_energy_rdm(rdm, st%occ(:,1), energy)
+
+    ! store energy for later comparison
+    energy_old = energy
+
+write(*,*) energy
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+      call deigensolver_cg2(gr, st, hm, rdm%eigens%pre, rdm%eigens%tolerance, maxiter, &
+            rdm%eigens%converged(ik), ik)!, rdm%eigens%diff(:, ik))
+           
+    ! calculate total energy with new states
+    call density_calc (st, gr, st%rho)
+    call v_ks_calc(ks, hm, st, geo)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
+    call rdm_derivatives(rdm, hm, st, gr)
+    call total_energy_rdm(rdm, st%occ(:,1), energy)
+    
+    write(*,*) energy
+    enddo
+
+    ! check if step lowers the energy
+    energy_diff = energy - energy_old
+
+write(*,*) energy_diff
+
+    POP_SUB(scf_orb_cg)
+
+  end subroutine scf_orb_cg
+  
+!END New Nicole
 
   !--------------------------------------------------------------------
   ! calculate the derivative of the energy with respect to orbital ist
