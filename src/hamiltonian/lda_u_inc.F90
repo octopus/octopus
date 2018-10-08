@@ -346,7 +346,7 @@ subroutine X(compute_dftu_energy)(this, energy, st)
       do im = 1, this%orbsets(ios)%norbs
         do imp = 1, this%orbsets(ios)%norbs
           energy = energy - M_HALF*this%orbsets(ios)%Ueff &
-                                        *abs(this%X(n)(im, imp, ispin, ios))**2/st%smear%el_per_state
+                                        *abs(this%X(n)(im, imp, ispin, ios))**2/st%smear%el_per_state**2
         end do
         if(ispin <= this%spin_channels) &
           energy = energy + M_HALF*this%orbsets(ios)%Ueff*real(this%X(n)(im, im, ispin, ios))
@@ -361,7 +361,7 @@ subroutine X(compute_dftu_energy)(this, energy, st)
         do ispin = 1, this%nspins
           do im = 1, os%norbs
             do imp = 1, this%orbsets(os%map_os(inn))%norbs
-              energy = energy - M_HALF*os%V_IJ(inn,0)/st%smear%el_per_state &
+              energy = energy - M_HALF*os%V_IJ(inn,0)/st%smear%el_per_state**2 &
                                *abs(this%X(n_IJ)(im, imp, ispin, ios, inn))**2
             end do
           end do
