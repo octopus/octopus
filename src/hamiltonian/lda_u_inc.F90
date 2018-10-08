@@ -736,12 +736,12 @@ end subroutine X(compute_periodic_coulomb_integrals)
  ! ---------------------------------------------------------
  !> This routine computes [r,V_lda+u].
  ! ---------------------------------------------------------
- subroutine X(lda_u_commute_r)(this, mesh, d, ik, ist, psi, gpsi, has_phase)
+ subroutine X(lda_u_commute_r)(this, mesh, d, ik, psi, gpsi, has_phase)
    type(lda_u_t),      intent(in) :: this
    type(mesh_t),       intent(in) :: mesh
    type(states_dim_t), intent(in) :: d
    R_TYPE,             intent(in) :: psi(:,:)
-   integer,            intent(in) :: ik, ist
+   integer,            intent(in) :: ik
    R_TYPE,          intent(inout) :: gpsi(:, :, :)
    logical,            intent(in) :: has_phase !True if the wavefunction has an associated phase 
 
