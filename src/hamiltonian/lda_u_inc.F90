@@ -858,27 +858,38 @@ end subroutine X(compute_periodic_coulomb_integrals)
          if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
            do im = 1, os%norbs
              do idim = 1, d%dim
-               dot(idim,im) = X(mf_dotp)(mesh, os%eorb_mesh(1:mesh%np,idim,im,ik),&
+               idim_orb = min(idim,os%ndim)
+               dot(idim,im) = X(mf_dotp)(mesh, os%eorb_mesh(1:mesh%np,idim_orb,im,ik),&
                                epsi(1:mesh%np,idim), reduce = .false.)
              end do
            end do
          else
            do im = 1, os%norbs
              do idim = 1, d%dim
-               dot(idim,im) = X(mf_dotp)(mesh, os%eorb_submesh(1:os%sphere%np,idim,im,ik),&
+               idim_orb = min(idim,os%ndim)
+               dot(idim,im) = X(mf_dotp)(mesh, os%eorb_submesh(1:os%sphere%np,idim_orb,im,ik),&
                                epsi(1:os%sphere%np,idim), reduce = .false., np = os%sphere%np)
              end do
            end do
          end if
 #endif
        else
-         do im = 1, os%norbs
+         if(this%basisfromstates) then
            do idim = 1, d%dim
-             dot(idim,im) = X(mf_dotp)(mesh, os%X(orb)(1:os%sphere%np,idim,im),&
-                               epsi(1:os%sphere%np,idim), reduce = .false., np = os%sphere%np)
+             idim_orb = min(idim,os%ndim)
+             dot(idim,im) = X(mf_dotp)(mesh, os%X(orb)(1:mesh%np,idim_orb,im),&
+                              psi(1:mesh%np,idim), reduce=.false.)
            end do
-         end do
-       end if
+         else
+           do im = 1, os%norbs
+             do idim = 1, d%dim
+               idim_orb = min(idim,os%ndim)
+               dot(idim,im) = X(mf_dotp)(mesh, os%X(orb)(1:os%sphere%np,idim_orb,im),&
+                               epsi(1:os%sphere%np,idim), reduce = .false., np = os%sphere%np)
+             end do
+           end do
+         end if
+      end if
  
       if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, dot) 
  
