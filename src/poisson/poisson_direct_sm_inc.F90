@@ -53,6 +53,10 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
     call messages_fatal(1)
   end select
 
+  if(.not. sm%mesh%use_curvilinear) then
+    prefactor = prefactor / (sm%mesh%volume_element**(M_ONE/dim))
+  end if
+
 #ifdef HAVE_MPI
   if(sm%mesh%parallel_in_domains) then
     ASSERT(sm%np_global > -1) !We have to build the global array before
@@ -64,7 +68,7 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
       if(sm%mesh%use_curvilinear) then
         do jp = 1, sm%np
           if(sm%part_v(ip) == sm%mesh%vp%partno .and. sm%global2local(ip) == jp) then
-            pvec(jp) = rho(jp)*prefactor**(M_ONE - M_ONE/sm%mesh%sb%dim)
+            pvec(jp) = rho(jp)*prefactor**(M_ONE - M_ONE/dim)
           else
             pvec(jp) = rho(jp)/sqrt(sum((xx1(1:dim) -  sm%x(jp, 1:dim))**2))
           end if
@@ -90,11 +94,6 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
   else ! serial mode
 #endif
 
-
-    if(.not. sm%mesh%use_curvilinear) then
-      prefactor = prefactor / (sm%mesh%volume_element**(M_ONE/sm%mesh%sb%dim))
-    end if
-
     do ip = 1, sm%np - 4 + 1, 4
 
       xx1(1:dim) = sm%x(ip    , 1:dim)
@@ -104,10 +103,10 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
       
       if(this%der%mesh%use_curvilinear) then
 
-        aa1 = prefactor*rho(ip    )*sm%mesh%vol_pp(ip    )**(M_ONE - M_ONE/sm%mesh%sb%dim)
-        aa2 = prefactor*rho(ip + 1)*sm%mesh%vol_pp(ip + 1)**(M_ONE - M_ONE/sm%mesh%sb%dim)
-        aa3 = prefactor*rho(ip + 2)*sm%mesh%vol_pp(ip + 2)**(M_ONE - M_ONE/sm%mesh%sb%dim)
-        aa4 = prefactor*rho(ip + 3)*sm%mesh%vol_pp(ip + 3)**(M_ONE - M_ONE/sm%mesh%sb%dim)
+        aa1 = prefactor*rho(ip    )*sm%mesh%vol_pp(ip    )**(M_ONE - M_ONE/dim)
+        aa2 = prefactor*rho(ip + 1)*sm%mesh%vol_pp(ip + 1)**(M_ONE - M_ONE/dim)
+        aa3 = prefactor*rho(ip + 2)*sm%mesh%vol_pp(ip + 2)**(M_ONE - M_ONE/dim)
+        aa4 = prefactor*rho(ip + 3)*sm%mesh%vol_pp(ip + 3)**(M_ONE - M_ONE/dim)
 
         !$omp parallel do reduction(+:aa1,aa2,aa3,aa4) schedule(dynamic,sm%np/nthreads)
         do jp = 1, sm%np
