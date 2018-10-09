@@ -370,6 +370,15 @@ contains
         do ist = 1, st%nst
           rdm%vecnat(ist,ist)= M_ONE
         end do
+      else
+        ! initialize eigensolver
+		call eigensolver_init(rdm%eigens, gr, st)
+!		copied from scf, for the moment probably not necessary
+!		if(preconditioner_is_multigrid(rdm%eigens%pre)) then
+!		  SAFE_ALLOCATE(gr%mgrid_prec)
+!		  call multigrid_init(gr%mgrid_prec, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc, &
+!			used_for_preconditioner=.true.)
+!		end if
       end if
 
       SAFE_ALLOCATE(rdm%eone(1:st%nst))
@@ -416,6 +425,8 @@ contains
         SAFE_DEALLOCATE_A(rdm%vecnat)
         SAFE_DEALLOCATE_A(rdm%Coul)
         SAFE_DEALLOCATE_A(rdm%Exch)
+      else
+        call eigensolver_end(rdm%eigens)
       end if
 
       POP_SUB(scf_rdmft.rdmft_end)
@@ -920,7 +931,9 @@ write(*,*) energy
 
     do ik = st%d%kpt%start, st%d%kpt%end
       call deigensolver_cg2(gr, st, hm, rdm%eigens%pre, rdm%eigens%tolerance, maxiter, &
-            rdm%eigens%converged(ik), ik)!, rdm%eigens%diff(:, ik))
+            rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), &
+            orthogonalize_to_all=rdm%eigens%orthogonalize_to_all, &
+            conjugate_direction=rdm%eigens%conjugate_direction)
            
     ! calculate total energy with new states
     call density_calc (st, gr, st%rho)

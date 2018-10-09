@@ -36,7 +36,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
        CG_PR      = 2
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:)
-!  R_TYPE, allocatable :: h_psi2(:,:), ppsi2(:,:)
+  R_TYPE, allocatable :: h_psi2(:,:), ppsi2(:,:)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   FLOAT    :: cg0, e0, res, norm, alpha, beta, dot, old_res, old_energy, first_delta_e
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
@@ -80,7 +80,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
   ! Start of main loop, which runs over all the eigenvectors searched
   ASSERT(converged >= 0)
-stop
+
   eigenfunction_loop : do ist = converged + 1, st%nst
     h_psi = R_TOTYPE(M_ZERO)
     cg    = R_TOTYPE(M_ZERO)
@@ -97,18 +97,18 @@ stop
 ! Modifications by Nicole
 
     ! Calculate starting gradient: |hpsi> = H|psi>
-!    if(hm%theory_level == RDMFT) then
-!      ! In RDMFT different terms in the hamiltonian scale differently with occupation number
-!      SAFE_ALLOCATE(h_psi2(1:gr%mesh%np_part, 1:st%d%dim))
-!      h_psi2 = R_TOTYPE(M_ZERO)
-!      call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik, terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL &
-!                                & + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)
-!      call X(hamiltonian_apply)(hm, gr%der, psi, h_psi2, ist, ik, terms = TERM_OTHERS, set_occ = .true.)
-!      h_psi = h_psi + h_psi2
-!      SAFE_DEALLOCATE_A(h_psi2)
-!    else 
+    if(hm%theory_level == RDMFT) then
+      ! In RDMFT different terms in the hamiltonian scale differently with occupation number
+      SAFE_ALLOCATE(h_psi2(1:gr%mesh%np_part, 1:st%d%dim))
+      h_psi2 = R_TOTYPE(M_ZERO)
+      call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik, terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL &
+                                & + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)
+      call X(hamiltonian_apply)(hm, gr%der, psi, h_psi2, ist, ik, terms = TERM_OTHERS, set_occ = .true.)
+      h_psi = h_psi + h_psi2
+      SAFE_DEALLOCATE_A(h_psi2)
+    else 
       call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik)
-!    endif
+    endif
 
 ! End Nicole
 
@@ -229,18 +229,18 @@ stop
 ! Modifications by Nicole
 
       ! cg contains now the conjugate gradient
-!      if(hm%theory_level == RDMFT) then
-!        ! In RDMFT different terms in the hamiltonian scale differently with occupation number
-!        SAFE_ALLOCATE(ppsi2(1:gr%mesh%np_part, 1:st%d%dim))
-!        ppsi2  = R_TOTYPE(M_ZERO)
-!        call X(hamiltonian_apply)(hm, gr%der, cg, h_cg, ist, ik, terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL &
-!                                & + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)
-!        call X(hamiltonian_apply)(hm, gr%der, cg, ppsi2, ist, ik, terms = TERM_OTHERS, set_occ = .true.)
-!        h_cg = h_cg + ppsi2
-!        SAFE_DEALLOCATE_A(ppsi2)
-!      else
+      if(hm%theory_level == RDMFT) then
+        ! In RDMFT different terms in the hamiltonian scale differently with occupation number
+        SAFE_ALLOCATE(ppsi2(1:gr%mesh%np_part, 1:st%d%dim))
+        ppsi2  = R_TOTYPE(M_ZERO)
+        call X(hamiltonian_apply)(hm, gr%der, cg, h_cg, ist, ik, terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL &
+                                & + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)
+        call X(hamiltonian_apply)(hm, gr%der, cg, ppsi2, ist, ik, terms = TERM_OTHERS, set_occ = .true.)
+        h_cg = h_cg + ppsi2
+        SAFE_DEALLOCATE_A(ppsi2)
+      else
         call X(hamiltonian_apply)(hm, gr%der, cg, h_cg, ist, ik)
-!      endif
+      endif
 
 ! End Nicole
 
