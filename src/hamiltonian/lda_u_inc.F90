@@ -757,7 +757,8 @@ end subroutine X(compute_periodic_coulomb_integrals)
 
    PUSH_SUB(lda_u_commute_r)
 
-   if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
+   if((simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) &
+       .or. this%basisfromstates) then
      SAFE_ALLOCATE(epsi(1:mesh%np,1:d%dim))
    else
      SAFE_ALLOCATE(epsi(1:this%max_np,1:d%dim))
@@ -822,13 +823,21 @@ end subroutine X(compute_periodic_coulomb_integrals)
             end if
 #endif
             else
-              !$omp parallel do
-              do is = 1, os%sphere%np
-                epsi(is,idim) = os%sphere%x(is,idir)*os%X(orb)(is,idim_orb,im)
-              end do
-              !$omp end parallel do
-              call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,idim), &
+              if(this%basisfromstates) then
+                 !$omp parallel do
+                 do is = 1, mesh%np
+                    epsi(is,idim) = os%sphere%x(is,idir)*os%X(orb)(is,idim_orb,im)
+                 end do
+                 call lalg_axpy(mesh%np, reduced(idim,im), epsi(1:mesh%np,idim), &
+                                  gpsi(1:mesh%np,idir,idim))
+              else
+                !$omp parallel do
+                do is = 1, os%sphere%np
+                  epsi(is,idim) = os%sphere%x(is,idir)*os%X(orb)(is,idim_orb,im)
+                end do
+                call submesh_add_to_mesh(os%sphere, epsi(1:os%sphere%np,idim), &
                                     gpsi(1:mesh%np,idir,idim), reduced(idim,im))
+              end if
             end if
           end do !im
         end do !idim
