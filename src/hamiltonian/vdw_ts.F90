@@ -42,7 +42,7 @@ module vdw_ts_oct_m
   use states_oct_m
   use unit_oct_m
   use unit_system_oct_m
-
+  
   implicit none
 
   private
@@ -216,7 +216,6 @@ contains
       do jatom = 1, geo%natoms
         jspecies = species_index(geo%atom(jatom)%species)
         this%c6ab(iatom,jatom) = vol_ratio(iatom)*vol_ratio(jatom)*this%c6abfree(ispecies,jspecies) !this operation is done again inside the .c part for the non periodic case
-        !print *, 'i,j,c6', iatom, jatom, this%c6ab(iatom,jatom)
       end do
     end do
   

@@ -80,7 +80,7 @@ module output_oct_m
   use varinfo_oct_m
   use v_ks_oct_m
   use vtk_oct_m
-  use vdw_ts_oct_m !!!!!!!!!!!!
+  use vdw_ts_oct_m
 #if defined(HAVE_BERKELEYGW)
   use wfn_rho_vxc_io_m
 #endif
@@ -688,11 +688,6 @@ contains
         call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, write_forces = .true.)
       end if
     end if
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! write the c6ab effective 
-    !select case(ks%vdw_correction)
-    !case(OPTION__VDWCORRECTION__VDW_TS)
-    !  call vdw_write_c6ab(STATIC_DIR,'c6ab_eff', ks%vdw_ts%c6ab)
-    !end select
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
       call output_me(outp%me, dir, st, gr, geo, hm)

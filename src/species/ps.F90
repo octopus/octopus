@@ -1421,7 +1421,7 @@ contains
     end if
 
     SAFE_ALLOCATE(vol(1:ps%g%nrval))
-
+    
     do ip = 1, ps%g%nrval
       rr = ps%g%rofi(ip)
       vol(ip) = CNST(0.0)

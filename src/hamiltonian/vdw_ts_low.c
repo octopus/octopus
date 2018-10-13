@@ -456,6 +456,7 @@ void vdw_calculate (const int natoms, const double dd, const double sr, const in
   int ia;
 
   *energy = 0.0;
+
   // Loop to calculate the pair-wise Van der Waals energy correction.
   for (ia = 0; ia < natoms; ia++) {
 

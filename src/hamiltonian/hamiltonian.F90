@@ -181,7 +181,6 @@ module hamiltonian_oct_m
     integer       :: lda_u_level
 
     logical :: time_zero
-
   end type hamiltonian_t
 
   integer, public, parameter :: &
@@ -590,7 +589,6 @@ contains
     SAFE_DEALLOCATE_P(hm%energy)
      
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
-     
     POP_SUB(hamiltonian_end)
   end subroutine hamiltonian_end
 

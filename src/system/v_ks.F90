@@ -417,7 +417,7 @@ contains
     !% S. Krieg, J. Chem. Phys. 132, 154104 (2010).
     !%End
     call parse_variable('VDWCorrection', OPTION__VDWCORRECTION__NONE, ks%vdw_correction)
-
+    
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
       call messages_experimental('VDWCorrection')
 
@@ -1044,6 +1044,7 @@ contains
         end if
 
       end if
+
       call profiling_out(prof)
       POP_SUB(v_ks_calc_start.v_a_xc)
     end subroutine v_a_xc
