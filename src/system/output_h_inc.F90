@@ -60,6 +60,13 @@
           call dderivatives_grad(der, hm%vhartree(1:der%mesh%np_part), gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
           call io_function_output_vector(outp%how, dir, 'grad_vh', der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
                    geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
+
+          SAFE_ALLOCATE(v0(1:der%mesh%np_part, 1))
+          v0(1:der%mesh%np, 1) = hm%ep%vpsl(1:der%mesh%np)
+          call dderivatives_grad(der, v0(1:der%mesh%np_part, 1), gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
+          call io_function_output_vector(outp%how, dir, 'grad_v0', der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
+                   geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
+          SAFE_DEALLOCATE_A(v0)
           SAFE_DEALLOCATE_A(gradvh)
         end if
         

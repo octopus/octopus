@@ -28,7 +28,6 @@ BoxShape = parallelepiped
 KPointsUseSymmetries = no
 
 ParDomains = no
-ParKPoints = auto
 
 Output = density
 OutputFormat = xcrysden

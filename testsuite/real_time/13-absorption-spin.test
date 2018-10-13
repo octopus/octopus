@@ -7,6 +7,7 @@ Enabled    : Yes
 
 Processors : 1
 Input      : 13-absorption-spin.01-gs.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -6.13619473
 
 Processors : 4
