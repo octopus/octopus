@@ -793,7 +793,7 @@ contains
         if(outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0 &
            .and. outp%output_interval /= 0 &
            .and. gs_run_ .and. mod(iter, outp%output_interval) == 0)  &
-          call forces_calculate(gr, geo, hm, st, vhxc_old=vhxc_old)
+          call forces_calculate(gr, geo, hm, st, ks, vhxc_old=vhxc_old)
       end if
 
       if(abs(st%qtot) <= M_EPSILON) then

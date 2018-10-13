@@ -21,7 +21,6 @@
 #include "global.h"
 
 module vdw_ts_oct_m
-  use base_term_oct_m 
   use comm_oct_m 
   use derivatives_oct_m
   use geometry_oct_m
