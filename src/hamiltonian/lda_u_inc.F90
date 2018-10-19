@@ -47,7 +47,8 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
   !
   do ios = 1, this%norbsets
     os => this%orbsets(ios)
-    call X(orbitalset_get_coeff_batch)(os, d%dim, psib, ik, has_phase, dot(1:d%dim, 1:os%norbs, 1:psib%nst))
+    call X(orbitalset_get_coeff_batch)(os, d%dim, psib, ik, has_phase, this%basisfromstates, &
+                                         dot(1:d%dim,1:os%norbs,1:psib%nst))
     !
     reduced(:,:) = R_TOTYPE(M_ZERO) 
     !
@@ -71,7 +72,7 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
     end do !ibatch
  
     !We add the orbitals properly weighted to hpsi
-    call X(orbitalset_add_to_batch)(os, d%dim, hpsib, ik, has_phase, reduced)
+    call X(orbitalset_add_to_batch)(os, d%dim, hpsib, ik, has_phase, this%basisfromstates, reduced)
   end do
  
   SAFE_DEALLOCATE_A(dot)
@@ -92,13 +93,14 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   FLOAT, intent(inout)                 :: lda_u_energy
   CMPLX, pointer, optional             :: phase(:,:) 
 
-  integer :: ios, im, ik, ist, ispin, norbs, ip, idim
+  integer :: ios, im, ik, ist, ispin, norbs, idim
   R_TYPE, allocatable :: psi(:,:) 
   R_TYPE, allocatable :: dot(:,:,:)
   FLOAT   :: weight
   R_TYPE  :: renorm_weight
   type(orbitalset_t), pointer :: os
   type(profile_t), save :: prof
+  integer :: spec_ind
 
   call profiling_in(prof, "DFTU_OCC_MATRICES")
   
@@ -123,7 +125,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
       call states_get_state(st, mesh, ist, ik, psi )
 
       if(present(phase)) then
-  #ifdef R_TCOMPLEX
+#ifdef R_TCOMPLEX
         call states_set_phase(st%d, psi, phase(:,ik), mesh%np, .false.)
 #endif
       end if
@@ -133,21 +135,25 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         !We first compute the matrix elemets <\psi | orb_m>
         !taking into account phase correction if needed 
         call X(orbitalset_get_coefficients)(os, st%d%dim, psi, ik, present(phase), &
-          dot(1:st%d%dim,1:os%norbs,ios))
+                            this%basisfromstates, dot(1:st%d%dim,1:os%norbs,ios))
       end do !ios
-
 
       !We compute the on-site occupation of the site, if needed 
       if(this%level == DFT_U_ACBN0) then
-        this%X(renorm_occ)(:,:,:,ist,ik) = R_TOTYPE(M_ZERO)
+        this%X(renorm_occ)(:,:,:,ist,ik) = R_TOTYPE(M_ONE)*(M_ONE-this%acbn0_screening)
         do ios = 1, this%norbsets
           os => this%orbsets(ios)
+          if(this%basisfromstates) then
+            spec_ind = 1
+          else
+            spec_ind = species_index(os%spec)
+          end if
           norbs = os%norbs
           do im = 1, norbs 
             do idim = 1, st%d%dim
-              this%X(renorm_occ)(species_index(os%spec), os%nn, os%ll, ist, ik) = &
-                this%X(renorm_occ)(species_index(os%spec), os%nn, os%ll, ist, ik) &
-                + abs(dot(idim, im, ios))**2
+              this%X(renorm_occ)(spec_ind,os%nn,os%ll,ist,ik) = &
+               this%X(renorm_occ)(spec_ind,os%nn,os%ll,ist,ik) &
+                 + abs(dot(idim,im,ios))**2*this%acbn0_screening
             end do
           end do
         end do
@@ -159,15 +165,20 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         !We can compute the (renormalized) occupation matrices
         do ios = 1, this%norbsets
           os => this%orbsets(ios)
+          if(this%basisfromstates) then
+            spec_ind = 1
+          else
+            spec_ind = species_index(os%spec)
+          end if
           norbs = os%norbs
           do im = 1, norbs
             this%X(n)(1:norbs, im, ispin, ios) = this%X(n)(1:norbs, im, ispin, ios) &
               + weight*dot(1, 1:norbs, ios)*R_CONJ(dot(1, im, ios))
             !We compute the renomalized occupation matrices
             if(this%level == DFT_U_ACBN0) then
-              renorm_weight = this%X(renorm_occ)(species_index(os%spec), os%nn, os%ll, ist, ik)*weight
-              this%X(n_alt)(1:norbs, im, ispin, ios) = this%X(n_alt)(1:norbs, im, ispin, ios) &
-                + renorm_weight*dot(1, 1:norbs, ios)*R_CONJ(dot(1, im, ios))
+              renorm_weight = this%X(renorm_occ)(spec_ind,os%nn,os%ll,ist,ik)*weight
+              this%X(n_alt)(1:norbs,im,ispin,ios) = this%X(n_alt)(1:norbs,im,ispin,ios) &
+                                         + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
             end if
           end do !im
         end do !ios
@@ -177,6 +188,12 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         !We can compute the (renormalized) occupation matrices
         do ios = 1, this%norbsets
           os => this%orbsets(ios)
+          if(this%basisfromstates) then
+            spec_ind = 1
+          else
+            spec_ind = species_index(os%spec)
+          end if
+
           norbs = os%norbs
           do im = 1, norbs
             this%X(n)(1:norbs, im, 1, ios) = this%X(n)(1:norbs, im, 1, ios) &
@@ -189,15 +206,15 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
               + weight*dot(2, 1:norbs, ios)*R_CONJ(dot(1, im, ios))
             !We compute the renomalized occupation matrices
             if(this%level == DFT_U_ACBN0) then
-              renorm_weight = this%X(renorm_occ)(species_index(os%spec),os%nn,os%ll,ist,ik)*weight
-              this%X(n_alt)(1:norbs, im, 1, ios) = this%X(n_alt)(1:norbs, im, 1, ios) &
-                + renorm_weight*dot(1, 1:norbs, ios)*R_CONJ(dot(1, im, ios))
-              this%X(n_alt)(1:norbs, im, 2, ios) = this%X(n_alt)(1:norbs, im, 2, ios) &
-                + renorm_weight*dot(2, 1:norbs, ios)*R_CONJ(dot(2, im, ios))
-              this%X(n_alt)(1:norbs, im, 3, ios) = this%X(n_alt)(1:norbs, im, 3, ios) &
-                + renorm_weight*dot(1, 1:norbs, ios)*R_CONJ(dot(2, im, ios))
-              this%X(n_alt)(1:norbs, im, 4, ios) = this%X(n_alt)(1:norbs, im, 4, ios) &
-                + renorm_weight*dot(2, 1:norbs, ios)*R_CONJ(dot(1, im, ios))
+              renorm_weight = this%X(renorm_occ)(spec_ind,os%nn,os%ll,ist,ik)*weight
+              this%X(n_alt)(1:norbs,im,1,ios) = this%X(n_alt)(1:norbs,im,1,ios) &
+                                         + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(1,im,ios))
+              this%X(n_alt)(1:norbs,im,2,ios) = this%X(n_alt)(1:norbs,im,2,ios) &
+                                         + renorm_weight*dot(2,1:norbs,ios)*R_CONJ(dot(2,im,ios))
+              this%X(n_alt)(1:norbs,im,3,ios) = this%X(n_alt)(1:norbs,im,3,ios) &
+                                         + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(2,im,ios))
+              this%X(n_alt)(1:norbs,im,4,ios) = this%X(n_alt)(1:norbs,im,4,ios) &
+                                         + renorm_weight*dot(2,1:norbs,ios)*R_CONJ(dot(1,im,ios))
             end if
           end do !im
         end do !ios 
@@ -347,13 +364,13 @@ subroutine X(compute_ACBNO_U)(this, ios)
     
         do ispin1 = 1, this%spin_channels
           do ispin2 = 1, this%spin_channels
-            tmpU = tmpU + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios))
+            tmpU = tmpU + R_REAL(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin2,ios))
           end do
-          tmpJ = tmpJ + real(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios))
+          tmpJ = tmpJ + R_REAL(this%X(n_alt)(im,imp,ispin1,ios)*this%X(n_alt)(impp,imppp,ispin1,ios))
         end do
         if(this%nspins>this%spin_channels) then !Spinors
-          tmpJ = tmpJ + real(this%X(n_alt)(im,imp,3,ios)*this%X(n_alt)(impp,imppp,4,ios) &
-                            +this%X(n_alt)(im,imp,4,ios)*this%X(n_alt)(impp,imppp,3,ios))
+          tmpJ = tmpJ + R_REAL(this%X(n_alt)(im,imp,3,ios)*this%X(n_alt)(impp,imppp,4,ios)) &
+                         +R_REAL(this%X(n_alt)(im,imp,4,ios)*this%X(n_alt)(impp,imppp,3,ios))
         end if
         ! These are the numerator of the ACBN0 U and J
         numU = numU + tmpU*this%coulomb(im,imp,impp,imppp,ios)
@@ -367,12 +384,12 @@ subroutine X(compute_ACBNO_U)(this, ios)
       tmpU = M_ZERO
       if(imp/=im) then
         do ispin1 = 1, this%spin_channels
-          tmpJ = tmpJ + real(this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios))
-          tmpU = tmpU + real(this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin1,ios))
+          tmpJ = tmpJ + R_REAL(this%X(n)(im,im,ispin1,ios))*R_REAL(this%X(n)(imp,imp,ispin1,ios))
+          tmpU = tmpU + R_REAL(this%X(n)(im,im,ispin1,ios))*R_REAL(this%X(n)(imp,imp,ispin1,ios))
         end do
         if(this%nspins>this%spin_channels) then !Spinors
-          tmpJ = tmpJ + real(this%X(n)(im,im,3,ios)*this%X(n)(imp,imp,4,ios) &
-                            +this%X(n)(im,im,4,ios)*this%X(n)(imp,imp,3,ios))
+          tmpJ = tmpJ + R_REAL(this%X(n)(im,im,3,ios)*this%X(n)(imp,imp,4,ios)) &
+                            +R_REAL(this%X(n)(im,im,4,ios)*this%X(n)(imp,imp,3,ios))
         end if
       end if
       denomJ = denomJ + tmpJ
@@ -382,15 +399,15 @@ subroutine X(compute_ACBNO_U)(this, ios)
       do ispin1 = 1, this%spin_channels
         do ispin2 = 1, this%spin_channels
           if(ispin1 /= ispin2) then
-            tmpU = tmpU + real(this%X(n)(im,im,ispin1,ios)*this%X(n)(imp,imp,ispin2,ios))
+            tmpU = tmpU + R_REAL(this%X(n)(im,im,ispin1,ios))*R_REAL(this%X(n)(imp,imp,ispin2,ios))
           end if
         end do
       end do
 
       if(this%nspins>this%spin_channels) then !Spinors
         if(im == imp) then
-          tmpU = tmpU - real(this%X(n)(im,im,3,ios)*this%X(n)(im,im,4,ios) &
-                            +this%X(n)(im,im,4,ios)*this%X(n)(im,im,3,ios))
+          tmpU = tmpU - R_REAL(this%X(n)(im,im,3,ios)*this%X(n)(im,im,4,ios)) &
+                            +R_REAL(this%X(n)(im,im,4,ios)*this%X(n)(im,im,3,ios))
         end if
       end if 
 
@@ -398,6 +415,7 @@ subroutine X(compute_ACBNO_U)(this, ios)
 
     end do
     end do
+
     this%orbsets(ios)%Ueff = numU/denomU - numJ/denomJ
     this%orbsets(ios)%Ubar = numU/denomU
     this%orbsets(ios)%Jbar = numJ/denomJ
@@ -410,15 +428,15 @@ subroutine X(compute_ACBNO_U)(this, ios)
     do ispin1 = 1, this%spin_channels
       do ispin2 = 1, this%spin_channels
         if(ispin1 /= ispin2) then
-          numU = numU + real(this%X(n_alt)(1,1,ispin1,ios)*this%X(n_alt)(1,1,ispin2,ios)) 
-          denomU = denomU + real(this%X(n)(1,1,ispin1,ios)*this%X(n)(1,1,ispin2,ios))
+          numU = numU + R_REAL(this%X(n_alt)(1,1,ispin1,ios))*R_REAL(this%X(n_alt)(1,1,ispin2,ios)) 
+          denomU = denomU + R_REAL(this%X(n)(1,1,ispin1,ios))*R_REAL(this%X(n)(1,1,ispin2,ios))
         end if
       end do
     end do
 
     if(this%nspins>this%spin_channels) then !Spinors
-      denomU = denomU + real(this%X(n)(1,1,3,ios)*this%X(n)(1,1,4,ios) & 
-                            +this%X(n)(1,1,4,ios)*this%X(n)(1,1,3,ios))
+      denomU = denomU + R_REAL(this%X(n)(1,1,3,ios)*this%X(n)(1,1,4,ios)) & 
+                            +R_REAL(this%X(n)(1,1,4,ios)*this%X(n)(1,1,3,ios))
     end if
 
     ! We have to be careful in the case of hydrogen atom for instance 
@@ -468,21 +486,21 @@ subroutine X(compute_ACBNO_U_restricted)(this)
       do imp = 1,norbs
         do impp = 1, norbs
         do imppp = 1, norbs
-          numU = numU + real(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios)) &
+          numU = numU + R_REAL(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios)) &
                              *this%coulomb(im,imp,impp,imppp,ios)
-          numJ = numJ + real(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios)) &
+          numJ = numJ + R_REAL(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios)) &
                              *this%coulomb(im,imppp,impp,imp,ios)
         end do
         end do
         ! We compute the term
         ! sum_{m,mp/=m} N_{m}N_{mp}
         if(imp/=im) then
-          denomJ = denomJ + real(this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios))
-          denomU = denomU + real(this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios))
+          denomJ = denomJ + R_REAL(this%X(n)(im,im,1,ios))*R_REAL(this%X(n)(imp,imp,1,ios))
+          denomU = denomU + R_REAL(this%X(n)(im,im,1,ios))*R_REAL(this%X(n)(imp,imp,1,ios))
         end if
         ! We compute the term
         ! sum_{m,mp} N_{m}N_{mp}
-        denomU = denomU + real(this%X(n)(im,im,1,ios)*this%X(n)(imp,imp,1,ios))
+        denomU = denomU + R_REAL(this%X(n)(im,im,1,ios))*R_REAL(this%X(n)(imp,imp,1,ios))
       end do
       end do
 
@@ -492,14 +510,14 @@ subroutine X(compute_ACBNO_U_restricted)(this)
  
     else !In the case of s orbitals, the expression is different
       ! P_{mmp}P_{mpp,mppp}(m,mp|mpp,mppp)  
-      numU = real(this%X(n_alt)(1,1,1,ios)*this%X(n_alt)(1,1,1,ios))*this%coulomb(1,1,1,1,ios)
+      numU = R_REAL(this%X(n_alt)(1,1,1,ios))**2*this%coulomb(1,1,1,1,ios)
 
       ! We compute the term
       ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
-      denomU = real(this%X(n)(1,1,1,ios)*this%X(n)(1,1,1,ios))
+      denomU = R_REAL(this%X(n)(1,1,1,ios))**2
 
-      this%orbsets(ios)%Ueff = 2*numU/denomU
-      this%orbsets(ios)%Ubar = 2*numU/denomU
+      this%orbsets(ios)%Ueff = numU/denomU
+      this%orbsets(ios)%Ubar = numU/denomU
       this%orbsets(ios)%Jbar = 0
     end if
   end do
@@ -616,6 +634,105 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
   call profiling_out(prof)
 end subroutine X(compute_coulomb_integrals)
 
+subroutine X(compute_periodic_coulomb_integrals) (this, der, mc)
+  type(lda_u_t),    intent(inout)  :: this
+  type(derivatives_t), intent(in)  :: der
+  type(multicomm_t),   intent(in)  :: mc
+
+  integer :: ist, jst, kst, lst, ijst, klst
+  integer :: norbs, np, ip
+  integer :: idone, ntodo
+  FLOAT, allocatable :: tmp(:), vv(:), nn(:)
+  type(orbitalset_t), pointer :: os
+  type(profile_t), save :: prof
+
+  call profiling_in(prof, "DFTU_PER_COULOMB")
+
+  !At the moment the basis is not spin polarized
+  ASSERT(this%nspins == 1)
+
+  PUSH_SUB(X(compute_periodic_coulomb_integrals))
+
+  SAFE_ALLOCATE(nn(1:der%mesh%np))
+  SAFE_ALLOCATE(vv(1:der%mesh%np))
+  SAFE_ALLOCATE(tmp(1:der%mesh%np))
+
+  SAFE_ALLOCATE(this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs, 1:this%norbsets))
+  this%coulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%norbsets) = M_ZERO
+
+  !Lets counts the number of orbital to treat, to display a progress bar
+  ntodo = 0
+  norbs = this%orbsets(1)%norbs
+  ntodo= ntodo + ((norbs+1)*norbs/2)*((norbs+1)*norbs/2+1)/2
+  idone = 0
+  if(mpi_world%rank == 0) call loct_progress_bar(-1, ntodo)
+
+  os => this%orbsets(1)
+  norbs = os%norbs
+  np = der%mesh%np  
+
+  call poisson_init(os%poisson, der, mc, solver=POISSON_DIRECT_SUM) !POISSON_ISF)
+
+  ijst=0
+  do ist = 1, norbs
+    do jst = 1, norbs
+      if(jst > ist) cycle
+      ijst=ijst+1
+
+      !$omp parallel do
+      do ip=1,np
+        nn(ip)  = real(os%X(orb)(ip,1,ist))*real(os%X(orb)(ip,1,jst))
+      end do
+      !$omp end parallel do    
+
+      !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
+      call dpoisson_solve(os%poisson, vv, nn, all_nodes=.true.)
+
+      klst=0
+      do kst = 1, norbs
+        do lst = 1, norbs
+          if(lst > kst) cycle
+          klst=klst+1
+          if(klst > ijst) cycle
+
+          !$omp parallel do
+          do ip=1,np
+            tmp(ip) = vv(ip)*real(os%X(orb)(ip,1,lst))*real(os%X(orb)(ip,1,kst))
+          end do
+          !$omp end parallel do
+
+          this%coulomb(ist,jst,kst,lst,1) = dmf_integrate(der%mesh, tmp)
+
+          if(abs(this%coulomb(ist,jst,kst,lst,1))<CNST(1.0e-12)) then
+            this%coulomb(ist,jst,kst,lst,1) = M_ZERO
+          else
+            this%coulomb(kst,lst,ist,jst,1) = this%coulomb(ist,jst,kst,lst,1)
+            this%coulomb(jst,ist,lst,kst,1) = this%coulomb(ist,jst,kst,lst,1)
+            this%coulomb(lst,kst,jst,ist,1) = this%coulomb(ist,jst,kst,lst,1)
+            this%coulomb(jst,ist,kst,lst,1) = this%coulomb(ist,jst,kst,lst,1)
+            this%coulomb(lst,kst,ist,jst,1) = this%coulomb(ist,jst,kst,lst,1)
+            this%coulomb(ist,jst,lst,kst,1) = this%coulomb(ist,jst,kst,lst,1)
+            this%coulomb(kst,lst,jst,ist,1) = this%coulomb(ist,jst,kst,lst,1)
+          end if
+              
+          !Update the progress bar
+          idone = idone + 1
+          if(mpi_world%rank == 0) call loct_progress_bar(idone, ntodo)
+        end do !lst
+      end do !kst
+    end do !jst
+  end do !ist
+
+  call poisson_end(os%poisson)
+
+  SAFE_DEALLOCATE_A(nn)
+  SAFE_DEALLOCATE_A(vv)
+  SAFE_DEALLOCATE_A(tmp)
+
+  POP_SUB(X(compute_periodic_coulomb_integrals))
+  call profiling_out(prof)
+end subroutine X(compute_periodic_coulomb_integrals)
+
  ! ---------------------------------------------------------
  !> This routine computes [r,V_lda+u].
  ! ---------------------------------------------------------
@@ -658,7 +775,7 @@ end subroutine X(compute_coulomb_integrals)
       !
       os => this%orbsets(ios)
       ! 
-      call X(orbitalset_get_coefficients)(os, d%dim, psi, ik, has_phase, dot)
+      call X(orbitalset_get_coefficients)(os, d%dim, psi, ik, has_phase, this%basisfromstates, dot)
       !
       reduced(:,:) = M_ZERO
       do im = 1, os%norbs
@@ -781,7 +898,7 @@ end subroutine X(compute_coulomb_integrals)
        end do
 
        call X(orbitalset_add_to_psi)(os, d%dim, gpsi(1:mesh%np,idir,1:d%dim), ik, has_phase, &
-                                         reduced(1:d%dim,1:os%norbs)) 
+                                     this%basisfromstates, reduced(1:d%dim,1:os%norbs)) 
      end do !idir
 
    end do !ios
@@ -811,6 +928,8 @@ end subroutine X(compute_coulomb_integrals)
    FLOAT :: weight
 
    if(this%level == DFT_U_NONE) return
+   !In this casem there is no contribution to the force
+   if(this%basisfromstates) return
 
    PUSH_SUB(X(lda_u_force))
 
@@ -839,7 +958,7 @@ end subroutine X(compute_coulomb_integrals)
        !We first compute the matrix elemets <\psi | orb_m>
        !taking into account phase correction if needed   
        ! 
-       call X(orbitalset_get_coefficients)(os, st%d%dim, psi, iq, phase, dot)
+       call X(orbitalset_get_coefficients)(os, st%d%dim, psi, iq, phase, this%basisfromstates, dot)
 
        do idir = 1, ndim
          call batch_get_state(grad_psib(idir), ibatch, mesh%np, gpsi)     
@@ -848,7 +967,8 @@ end subroutine X(compute_coulomb_integrals)
          ! 
          !No phase here, this is already added
 
-         call X(orbitalset_get_coefficients)(os, st%d%dim, gpsi, iq, phase, gdot(1:st%d%dim,1:os%norbs,idir))
+         call X(orbitalset_get_coefficients)(os, st%d%dim, gpsi, iq, phase, &
+                     this%basisfromstates, gdot(1:st%d%dim,1:os%norbs,idir))
 
          if(st%d%ispin /= SPINORS) then
            do im = 1, os%norbs

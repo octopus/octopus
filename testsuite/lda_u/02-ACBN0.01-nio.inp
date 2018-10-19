@@ -4,8 +4,6 @@ BoxShape = parallelepiped
 ExperimentalFeatures = yes
 
 EigenSolver = rmmdiis
-#EigenSolverTolerance = 1.0e-9
-#EigensolverMaxIter = 50
 ConvRelDens = 1.0e-7
 
 a = 7.8809
@@ -34,7 +32,6 @@ Spacing = 0.5
 
 FromScratch = yes
 ParDomains = no
-ParKPoints = auto
 
 SpinComponents = polarized
 GuessMagnetDensity = user_defined

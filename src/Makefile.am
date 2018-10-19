@@ -26,7 +26,6 @@ SUBDIRS =                \
 	ions             \
 	grid             \
 	poisson          \
-	frozen           \
 	basis_set        \
 	states           \
 	hamiltonian      \
