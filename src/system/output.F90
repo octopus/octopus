@@ -19,10 +19,6 @@
 #include "global.h"
 
 module output_oct_m
-  use base_density_oct_m
-  use base_hamiltonian_oct_m
-  use base_potential_oct_m
-  use base_states_oct_m
   use basins_oct_m
   use batch_oct_m
   use comm_oct_m 
@@ -63,7 +59,6 @@ module output_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
   use orbitalset_oct_m
-  use output_fio_oct_m
   use output_me_oct_m
   use parser_oct_m
   use par_vec_oct_m
@@ -286,8 +281,6 @@ contains
     !% matrix. For the moment the trace is made over the second dimension, and
     !% the code is limited to 2D. The idea is to model <i>N</i> particles in 1D as an
     !% <i>N</i>-dimensional non-interacting problem, then to trace out <i>N</i>-1 coordinates.
-    !%Option frozen_system bit(30)
-    !% Generates input for a frozen calculation.
     !%Option potential_gradient bit(31)
     !% Prints the gradient of the potential.
     !%Option energy_density bit(32)
@@ -556,13 +549,9 @@ contains
 
     ! these kinds of Output do not have a how
     what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS + OPTION__OUTPUT__BERKELEYGW + OPTION__OUTPUT__DOS + &
-      OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW + OPTION__OUTPUT__FROZEN_SYSTEM
+      OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW
     what_no_how_u = OPTION__OUTPUTLDA_U__OCC_MATRICES + OPTION__OUTPUTLDA_U__EFFECTIVEU + &
       OPTION__OUTPUTLDA_U__MAGNETIZATION
-
-    if(bitand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
-      call messages_experimental("Frozen output")
-    end if
 
     if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) then
       call v_ks_calculate_current(ks, .true.)
@@ -614,7 +603,7 @@ contains
     !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
     call parse_variable('OutputIterDir', "output_iter", outp%iter_dir)
-    if(outp%what + outp%whatBZ + outp%what_lda_u/= 0 .and. outp%output_interval > 0) then
+    if(outp%what + outp%whatBZ + outp%what_lda_u /= 0 .and. outp%output_interval > 0) then
       call io_mkdir(outp%iter_dir)
     end if
     call add_last_slash(outp%iter_dir)
@@ -713,10 +702,6 @@ contains
       call output_berkeleygw(outp%bgw, dir, st, gr, ks, hm, geo)
     end if
     
-    if(bitand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
-      call output_fio(gr, geo, st, hm, trim(adjustl(dir)), mpi_world)
-    end if
-
     call output_energy_density(hm, ks, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
 
     if(hm%lda_u_level /= DFT_U_NONE) then
@@ -1472,7 +1457,7 @@ contains
     fn_unit = sqrt(units_out%length**(-mesh%sb%dim))
 
     if(.not.(has_phase .and. .not.this%basis%submeshforperiodic &
-                .and.simul_box_is_periodic(mesh%sb))) then
+           .and.simul_box_is_periodic(mesh%sb)).and. .not. this%basisfromstates) then
       if(states_are_real(st)) then
         SAFE_ALLOCATE(dtmp(1:mesh%np))
       else
@@ -1508,14 +1493,24 @@ contains
                call zio_function_output(outp%how, dir, fname, mesh, tmp, fn_unit, ierr, geo = geo)
               end if
             else
-              if (states_are_real(st)) then
-                dtmp = M_Z0
-                call submesh_add_to_mesh(os%sphere, os%dorb(1:os%sphere%np,idim,im), dtmp)
-                call dio_function_output(outp%how, dir, fname, mesh, dtmp, fn_unit, ierr, geo = geo)
+              if(this%basisfromstates) then
+                if (states_are_real(st)) then
+                  call dio_function_output(outp%how, dir, fname, mesh, &
+                      os%dorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
+                else
+                  call zio_function_output(outp%how, dir, fname, mesh, &
+                      os%zorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
+                end if
               else
-                tmp = M_Z0
-                call submesh_add_to_mesh(os%sphere, os%zorb(1:os%sphere%np,idim,im), tmp)
-                call zio_function_output(outp%how, dir, fname, mesh, tmp, fn_unit, ierr, geo = geo)
+                if (states_are_real(st)) then
+                  dtmp = M_Z0
+                  call submesh_add_to_mesh(os%sphere, os%dorb(1:os%sphere%np,idim,im), dtmp)
+                  call dio_function_output(outp%how, dir, fname, mesh, dtmp, fn_unit, ierr, geo = geo)
+                else
+                  tmp = M_Z0
+                  call submesh_add_to_mesh(os%sphere, os%zorb(1:os%sphere%np,idim,im), tmp)
+                  call zio_function_output(outp%how, dir, fname, mesh, tmp, fn_unit, ierr, geo = geo)
+                end if
               end if
             end if
           end do
@@ -1524,7 +1519,7 @@ contains
     end do
 
     if(.not.(has_phase .and. .not.this%basis%submeshforperiodic &
-               .and.simul_box_is_periodic(mesh%sb))) then
+               .and.simul_box_is_periodic(mesh%sb)).and. .not. this%basisfromstates) then
       SAFE_DEALLOCATE_A(tmp)
       SAFE_DEALLOCATE_A(dtmp)
     end if

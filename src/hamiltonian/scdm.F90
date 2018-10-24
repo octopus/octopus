@@ -23,7 +23,6 @@ module scdm_oct_m
   use batch_ops_oct_m
   use blacs_proc_grid_oct_m
   use blas_oct_m
-  use cmplxscl_oct_m
   use comm_oct_m
   use cube_oct_m
   use cube_function_oct_m
@@ -95,7 +94,6 @@ module scdm_oct_m
     CMPLX, pointer   :: zpsi(:,:)   ! ^
     type(poisson_t)  :: poisson     !< solver used to compute exchange with localized scdm states
     type(poisson_fft_t) :: poisson_fft !< used for above poisson solver
-    type(cmplxscl_t)    :: cmplxscl
 
     logical          :: re_ortho_normalize=.false. !< orthonormalize the scdm states
     logical          :: verbose     !< write info about SCDM procedure
@@ -176,7 +174,6 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   scdm%root = (mpi_world%rank ==0)
   
   scdm%nst   = st%nst
-  scdm%cmplxscl = st%cmplxscl
   
   ! initialize state object for the SCDM states by copying
   call states_copy(scdm%st,st)

@@ -70,9 +70,9 @@ namespace pseudopotential {
       getline(file, line);
 
       //line 3
-      int pspcod;
+      int pspcod = -1;
       file >> pspcod >> ixc_ >> lmax_ >> llocal_ >> mesh_size_;
-      if(pspcod != 8) throw status::FORMAT_NOT_SUPPORTED;
+      if(pspcod != 8) throw status:: UNKNOWN_FORMAT;
       getline(file, line);
 
       //line 4
