@@ -140,7 +140,7 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
   R_TYPE,      intent(out)   :: vnew(:, :, :)
   
   FLOAT, parameter :: w0 = CNST(0.01), ww = M_FIVE
-  integer  :: i, j, k, l
+  integer  :: i, j, k, l, d1aux, d2aux, d3aux
   R_TYPE    :: gamma, determinant
   R_TYPE, allocatable :: beta(:, :), work(:)
 
@@ -149,6 +149,20 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
   if (iter_used == 0) then
     ! linear mixing...
     vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + coeff*f(1:d1, 1:d2, 1:d3)
+
+    do i = 1, this%nauxmixfield
+      d1aux = this%auxmixfield(i)%p%d1
+      d2aux = this%auxmixfield(i)%p%d2
+      d3aux = this%auxmixfield(i)%p%d3
+      if(this%auxmixfield(i)%p%func_type == TYPE_FLOAT) then
+        this%auxmixfield(i)%p%dvnew(1:d1aux, 1:d2aux, 1:d3aux) = (M_ONE-coeff)*this%auxmixfield(i)%p%dvin(1:d1aux, 1:d2aux, 1:d3aux) &
+         + coeff*this%auxmixfield(i)%p%dvout(1:d1aux, 1:d2aux, 1:d3aux) 
+      else
+        this%auxmixfield(i)%p%zvnew(1:d1aux, 1:d2aux, 1:d3aux) = (M_ONE-coeff)*this%auxmixfield(i)%p%zvin(1:d1aux, 1:d2aux, 1:d3aux) &
+         + coeff*this%auxmixfield(i)%p%zvout(1:d1aux, 1:d2aux, 1:d3aux)
+      end if
+    end do
+
     POP_SUB(X(broyden_extrapolation))
     return
   end if
