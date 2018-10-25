@@ -359,7 +359,6 @@ contains
     else if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
       call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     end if
-    call mix_get_field(scf%smix, scf%mixfield)
 
     !If we use LDA+U, we also have do mix it
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
