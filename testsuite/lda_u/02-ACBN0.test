@@ -89,6 +89,6 @@ match ; Occupation F down 2p3 ; LINEFIELD(static/occ_matrices, -1, 5) ; 0.961373
 
 match ; U2p F   ; LINEFIELD(static/effectiveU, -7, 4) ; 0.492803
 
-match ; Kanamori U   ; LINEFIELD(static/kanamoriU, -7, 4) ; 0.823545
-match ; Kanamori Up  ; LINEFIELD(static/kanamoriU, -4, 4) ; 0.744833
-match ; Kanamori J   ; LINEFIELD(static/kanamoriU, -1, 4) ; 0.040195
+match ; Kanamori U   ; LINEFIELD(static/kanamoriU, -7, 4) ; 0.857466
+match ; Kanamori Up  ; LINEFIELD(static/kanamoriU, -4, 4) ; 0.775511
+match ; Kanamori J   ; LINEFIELD(static/kanamoriU, -1, 4) ; 0.041851
