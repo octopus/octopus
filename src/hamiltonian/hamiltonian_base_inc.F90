@@ -145,7 +145,7 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
       ASSERT(mod(psib%nst_linear, 2) == 0)
       !the spinor case is more complicated since it mixes the two components.
       if(pot_is_cmplx)then
-        !$omp parallel do private(psi1, psi2, ist)
+        !$omp parallel do private(psi1, psi2, ist, pot)
         do ip = 1, mesh%np
           do ist = 1, psib%nst_linear, 2
             psi1 = psib%pack%zpsi(ist    , ip)
@@ -1131,7 +1131,7 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
     !    call profiling_count_operations(nprojs*(R_ADD + R_MUL)*npoints + nst*nprojs)
   end do
 
-  !$omp parallel do private(imat, pmat, iprojection, npoints, nprojs, iproj, ist, aa, bb, cc, dd, ip)
+  !$omp parallel do private(imat, pmat, iprojection, npoints, nprojs, iproj, ist, aa, bb, cc, dd, ip, phase)
   do imat = 1, this%nprojector_matrices
     pmat => this%projector_matrices(imat)
     iprojection = ind(imat)
