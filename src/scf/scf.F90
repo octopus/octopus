@@ -359,7 +359,6 @@ contains
     else if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
       call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     end if
-    call mix_get_field(scf%smix, scf%mixfield)
 
     !If we use LDA+U, we also have do mix it
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
@@ -652,11 +651,11 @@ contains
       
     end select
 
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
     !If we use LDA+U, we also have do mix it
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
       call lda_u_mixer_init(hm%lda_u, scf%lda_u_mix, st)
     end if
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
 
     evsum_in = states_eigenvalues_sum(st)
 
