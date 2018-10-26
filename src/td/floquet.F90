@@ -1044,7 +1044,11 @@ contains
       itime = loct_clock()
       dressed_rhoold = M_ZERO
       rel_dens = M_HUGE
-      do while(.not.converged .and. iter <= maxiter .and. (hm%F%boson==OPTION__FLOQUETBOSON__QED_PHOTON.and.rel_dens>=hm%F%conv_rel_dens))
+
+      do while(.not.converged .and. iter <= maxiter) 
+         if (hm%F%boson==OPTION__FLOQUETBOSON__QED_PHOTON  .and. rel_dens<hm%F%conv_rel_dens) then
+            exit
+         end if
 
          write(msg,'(a,i5)') 'Iter #', iter         
          call messages_print_stress(stdout, trim(msg))
@@ -1054,6 +1058,8 @@ contains
          else
            call eigensolver_run(eigens, gr, dressed_st, hm, 1,converged)
          end if
+
+         
          
          if (hm%F%calc_occupations) then
            call floquet_calc_occupations(hm, sys, dressed_st, st)
@@ -1453,7 +1459,7 @@ contains
         do ia=dressed_st%st_start,dressed_st%st_end
           call states_get_state(dressed_st, mesh, ia, ik, u_ma)
           dressed_st%occ(ia,ik) = M_ZERO 
-          
+
           do ist=gs_st%st_start,gs_st%st_end
             call states_get_state(gs_st, mesh, ist, ik, psi)
             
