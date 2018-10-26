@@ -716,7 +716,6 @@ contains
         call batch_pack(hpsi1b, copy = .false.)
       end if
       
-      call batch_copy_data(der%mesh%np, psib, psi1b)
       if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
 
       do iter = 1, te%exp_order
@@ -734,7 +733,11 @@ contains
         !  go haywire on the first step of dynamics (often NaN) and with debugging options
         !  the code stops in ZAXPY below without saying why.
 
-        call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, set_phase = .not.phase_correction)
+        if(iter /= 1) then
+          call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, set_phase = .not.phase_correction)
+        else
+          call zhamiltonian_apply_batch(hm, der, psib, hpsi1b, ik, set_phase = .not.phase_correction)
+        end if
         
         if(zfact_is_real) then
           call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), hpsi1b, psib)
