@@ -22,6 +22,7 @@ noinst_LIBRARIES = libscf.a
 
 # Fortran sources - keep in alphabetical order
 libscf_f_srcs =                          \
+	constrain.F90                    \
 	ground_state.F90                 \
 	lcao.F90                         \
 	lda_u_mixer.F90                  \
@@ -56,10 +57,11 @@ depend:
 
 # DO NOT EDIT DIRECTLY --- use make depend to generate the dependencies and copy-paste the result here
 
+constrain.o : constrain.F90
 ground_state.o : ground_state.F90 scf.o rdmft.o lcao.o 
 lcao.o : lcao.F90 lcao_inc.F90 
 lda_u_mixer.o : lda_u_mixer.F90 mix.o
 mix.o : mix.F90 mix_inc.F90 
 mixing_metric.o : mixing_metric.F90 
 rdmft.o : rdmft.F90 
-scf.o : scf.F90 mix.o lcao.o lda_u_mixer.o
+scf.o : scf.F90 mix.o lcao.o lda_u_mixer.o constrain.o

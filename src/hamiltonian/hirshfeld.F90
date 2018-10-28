@@ -20,6 +20,7 @@
 
 module hirshfeld_oct_m
   use derivatives_oct_m
+  use lalg_basic_oct_m
   use messages_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -77,7 +78,7 @@ contains
     this%total_density = CNST(0.0)
     
     do iatom = 1, geo%natoms
-      call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%nspin, atom_density)
+      call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%spin_channels, atom_density)
 
       forall(ip = 1:this%mesh%np) this%total_density(ip) = this%total_density(ip) + sum(atom_density(ip, 1:st%d%nspin))
       
@@ -113,35 +114,45 @@ contains
 
   ! -----------------------------------------------
   
-  subroutine hirshfeld_charge(this, iatom, density, charge)
+  subroutine hirshfeld_charge(this, iatom, density, charge, atomic_density)
     type(hirshfeld_t),         intent(in)    :: this
     integer,                   intent(in)    :: iatom
     FLOAT,                     intent(in)    :: density(:, :)
     FLOAT,                     intent(out)   :: charge
+    FLOAT, optional,           intent(out)   :: atomic_density(:,:)
 
-    integer :: ip
+    integer :: ip, is
     FLOAT :: dens_ip
-    FLOAT, allocatable :: atom_density(:, :), hirshfeld_density(:)
+    FLOAT, allocatable :: atom_density(:, :), hirshfeld_density(:, :)
     
     PUSH_SUB(hirshfeld_charge)
 
     ASSERT(associated(this%total_density))
     
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
-    SAFE_ALLOCATE(hirshfeld_density(1:this%mesh%np))
+    SAFE_ALLOCATE(hirshfeld_density(1:this%mesh%np, this%st%d%spin_channels))
     
-    call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%nspin, atom_density)
+    call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%spin_channels, atom_density)
 
-    do ip = 1, this%mesh%np
-      dens_ip = sum(atom_density(ip, 1:this%st%d%nspin))
-      if(abs(dens_ip) > CNST(1e-12)) then
-        hirshfeld_density(ip) = sum(density(ip, 1:this%st%d%nspin))*dens_ip/this%total_density(ip)
-      else
-        hirshfeld_density(ip) = CNST(0.0)
-      end if
+    charge = M_ZERO
+    do is = 1, this%st%d%spin_channels
+      do ip = 1, this%mesh%np
+        dens_ip = sum(atom_density(ip, 1:this%st%d%spin_channels))
+        if(abs(dens_ip) > CNST(1e-12)) then
+          hirshfeld_density(ip, is) = density(ip, is)*dens_ip/this%total_density(ip)
+        else
+          hirshfeld_density(ip, is) = CNST(0.0)
+        end if
+      end do
+
+      charge = charge + dmf_integrate(this%mesh, hirshfeld_density(:,is))
     end do
 
-    charge = dmf_integrate(this%mesh, hirshfeld_density)
+    if(present(atomic_density)) then
+      do is = 1, this%st%d%spin_channels
+        call lalg_copy(this%mesh%np, hirshfeld_density(:, is), atomic_density(:,is)) 
+      end do
+    end if
     
     SAFE_DEALLOCATE_A(atom_density)
     SAFE_DEALLOCATE_A(hirshfeld_density)
@@ -168,7 +179,7 @@ contains
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
     SAFE_ALLOCATE(hirshfeld_density(1:this%mesh%np))
     
-    call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%nspin, atom_density)
+    call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%spin_channels, atom_density)
 
     do ip = 1, this%mesh%np
       rr = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - this%geo%atom(iatom)%x(1:this%mesh%sb%dim))**2))
@@ -204,7 +215,7 @@ contains
 
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
     
-    call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%nspin, atom_density)
+    call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%spin_channels, atom_density)
 
     do ip = 1, this%mesh%np
       rr = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - this%geo%atom(iatom)%x(1:this%mesh%sb%dim))**2))
@@ -243,8 +254,8 @@ contains
     SAFE_ALLOCATE(atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
     SAFE_ALLOCATE(grad(1:this%mesh%np, 1:this%mesh%sb%dim))
     
-    call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%nspin, atom_density)
-    call species_atom_density_derivative(this%mesh, this%mesh%sb, this%geo%atom(jatom), this%st%d%nspin, atom_derivative)
+    call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%spin_channels, atom_density)
+    call species_atom_density_derivative(this%mesh, this%mesh%sb, this%geo%atom(jatom), this%st%d%spin_channels, atom_derivative)
 
     dposition(1:this%mesh%sb%dim) = CNST(0.0)
 

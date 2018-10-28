@@ -117,6 +117,7 @@ contains
 
   end subroutine partial_charges_calculate
 
+
   ! ---------------------------------------------------------
 
   subroutine partial_charges_end(this)

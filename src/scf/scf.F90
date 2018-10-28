@@ -22,6 +22,7 @@ module scf_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use berry_oct_m
+  use constrain_oct_m
   use density_oct_m
   use eigensolver_oct_m
   use energy_calc_oct_m
@@ -119,6 +120,7 @@ module scf_oct_m
     integer :: mixdim1
     logical :: forced_finish !< remember if 'touch stop' was triggered earlier.
     type(lda_u_mixer_t) :: lda_u_mix
+    integer :: constrainIter
   end type scf_t
 
 contains
@@ -473,6 +475,19 @@ contains
     call parse_variable('LocalMagneticMomentsSphereRadius', rmin*M_HALF, scf%lmm_r, unit = units_inp%length)
     ! this variable is also used in td/td_write.F90
 
+    !%Variable ConstrainGuessMagneticDensity
+    !%Type integer
+    !%Defulat 0
+    !%Section SCF
+    !%Description
+    !% The local magnetic moments defined by GuessMagnetDensity
+    !% can be constrained.
+    !% This variable controls the number of iterations for which these moments
+    !% are constrained.
+    !%End
+    call parse_variable('ConstrainGuessMagneticDensity', 0, scf%constrainIter)
+
+
     scf%forced_finish = .false.
 
     POP_SUB(scf_init)
@@ -741,6 +756,9 @@ contains
 
       ! compute output density, potential (if needed) and eigenvalues sum
       call density_calc(st, gr, st%rho)
+      if(iter < scf%constrainIter) then
+        call constrain_guess_moment(st, gr, gr%sb, geo)
+      end if
 
       rhoout(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
 
