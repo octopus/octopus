@@ -129,7 +129,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
       ! PTA92, eq. 5.17
       ! Approximate inverse preconditioner...
-      call  X(preconditioner_apply)(pre, gr, hm, ik, g(:,:), g0(:,:))
+      call  X(preconditioner_apply)(pre, gr, hm, ik, g(:,:), g0(:,:), energy=st%eigenval(ist, ik), ist=ist)
 
       ! PTA92, eq. 5.18 (following 6 lines)
       dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, g0)

@@ -25,9 +25,11 @@ module preconditioners_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
+  use hamiltonian_base_oct_m
   use lalg_basic_oct_m
   use parser_oct_m
   use mesh_oct_m
+  use mesh_function_oct_m
   use messages_oct_m
   use multigrid_oct_m
   use nl_operator_oct_m
@@ -39,14 +41,16 @@ module preconditioners_oct_m
 
   implicit none
   private
-  
+
   integer, public, parameter ::     &
     PRE_NONE      = 0,              &
     PRE_FILTER    = 1,              &
     PRE_JACOBI    = 2,              &
     PRE_POISSON   = 3,              &
-    PRE_MULTIGRID = 7
-  
+    PRE_MULTIGRID = 7,              &
+    PRE_ENERGY    = 4,              &
+    PRE_JACOBI2   = 5
+
   public ::                            &
     preconditioner_t,                  &
     preconditioner_init,               &
@@ -64,20 +68,23 @@ module preconditioners_oct_m
 
     type(nl_operator_t) :: op
     FLOAT, pointer      :: diag_lapl(:) !< diagonal of the laplacian
+    FLOAT               :: energy_ratio_factor
+    FLOAT               :: relax_factor
+    integer             :: jacobi_iterations
   end type preconditioner_t
-  
+
 contains
 
-  ! --------------------------------------------------------- 
+  ! ---------------------------------------------------------
   subroutine preconditioner_init(this, gr)
-    type(preconditioner_t), intent(out)    :: this 
+    type(preconditioner_t), intent(out)    :: this
     type(grid_t),           intent(in)     :: gr
 
     FLOAT :: alpha, default_alpha
     FLOAT :: vol
     integer :: default
     integer :: maxp, is, ns, ip, ip2
-    
+
     PUSH_SUB(preconditioner_init)
 
     !%Variable Preconditioner
@@ -100,6 +107,12 @@ contains
     !% the solution of the Poisson equation. This is, of course, very slow.
     !%Option pre_multigrid 7
     !% Multigrid preconditioner.
+    !%Option pre_energy 4
+    !% Use a ratio between the difference of the energy and the potential to the
+    !% kinetic energy for preconditioning. Modeled after Seitsonen et al. (1995),
+    !% Phys. Rev. B 51, 14057
+    !%Option pre_jacobi_double 5
+    !% Precondition applying two Jacobi iterations.
     !%End
 
     if(gr%mesh%use_curvilinear) then
@@ -137,11 +150,11 @@ contains
       !%End
       default_alpha = CNST(0.5)
       if(simul_box_is_periodic(gr%sb)) default_alpha = CNST(0.6)
-      
+
       call parse_variable('PreconditionerFilterFactor', default_alpha, alpha)
 
       call messages_print_var_value(stdout, 'PreconditionerFilterFactor', alpha)
-      
+
       ns = this%op%stencil%size
 
       if (this%op%const_w) then
@@ -164,19 +177,47 @@ contains
           if(gr%mesh%use_curvilinear) this%op%w_re(is, ip) = this%op%w_re(is, ip)*(ns*gr%mesh%vol_pp(ip2)/vol)
         end do
       end do
-      
+
       call nl_operator_update_weights(this%op)
 
-    case(PRE_JACOBI, PRE_MULTIGRID)
+    case(PRE_JACOBI, PRE_JACOBI2)
       SAFE_ALLOCATE(this%diag_lapl(1:gr%mesh%np))
       call derivatives_lapl_diag(gr%der, this%diag_lapl)
       call lalg_scal(gr%mesh%np, -M_HALF, this%diag_lapl(:))
+      !%Variable PreconditionerRelaxFactor
+      !%Type float
+      !%Section SCF::Eigensolver
+      !%Description
+      !% This variable is the relaxation parameter for the double Jacobi
+      !% preconditioner. The default is 2/3; the allowed range is 0 to 1.
+      !%End
+      call parse_variable('PreconditionerRelaxFactor', CNST(2.0)/CNST(3.0), this%relax_factor)
+
+      !%Variable PreconditionerNumberIterations
+      !%Type integer
+      !%Section SCF::Eigensolver
+      !%Description
+      !% This variable is the relaxation number for the double Jacobi
+      !% preconditioner. The default is 1.
+      !%End
+      call parse_variable('PreconditionerNumberIterations', 1, this%jacobi_iterations)
+
+    case(PRE_ENERGY)
+      !%Variable PreconditionerFactor
+      !%Type float
+      !%Section SCF::Eigensolver
+      !%Description
+      !% This variable controls the ratio between the difference of current
+      !% energy and potential to the kinetic energy of the state.
+      !% The default is 0.1
+      !%End
+      call parse_variable('PreconditionerFactor', CNST(0.1), this%energy_ratio_factor)
     end select
 
     POP_SUB(preconditioner_init)
   end subroutine preconditioner_init
 
-  
+
   ! ---------------------------------------------------------
   subroutine preconditioner_null(this)
     type(preconditioner_t), intent(inout) :: this
@@ -190,7 +231,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine preconditioner_end(this)
-    type(preconditioner_t), intent(inout) :: this 
+    type(preconditioner_t), intent(inout) :: this
 
     PUSH_SUB(preconditioner_end)
 
@@ -198,7 +239,7 @@ contains
     case(PRE_FILTER)
       call nl_operator_end(this%op)
 
-    case(PRE_JACOBI, PRE_MULTIGRID)
+    case(PRE_JACOBI, PRE_MULTIGRID, PRE_JACOBI2)
       SAFE_DEALLOCATE_P(this%diag_lapl)
     end select
 

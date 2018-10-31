@@ -16,8 +16,8 @@
 !! 02110-1301, USA.
 !!
 
-! --------------------------------------------------------- 
-subroutine X(preconditioner_apply)(pre, gr, hm, ik, a, b, omega)
+! ---------------------------------------------------------
+subroutine X(preconditioner_apply)(pre, gr, hm, ik, a, b, omega, energy, ist)
   type(preconditioner_t), intent(in)    :: pre
   type(grid_t), target,   intent(in)    :: gr
   type(hamiltonian_t),    intent(in)    :: hm
@@ -25,10 +25,16 @@ subroutine X(preconditioner_apply)(pre, gr, hm, ik, a, b, omega)
   R_TYPE,                 intent(inout) :: a(:,:)
   R_TYPE,                 intent(inout) :: b(:,:)
   R_TYPE,       optional, intent(in)    :: omega
-  
-  integer :: idim
+  FLOAT,        optional, intent(in)    :: energy
+  integer,      optional, intent(in)    :: ist
+
+  integer :: idim, iter
   R_TYPE  :: omega_
   type(profile_t), save :: preconditioner_prof
+  FLOAT :: kinetic_energy, energy_
+  R_TYPE, allocatable :: xx(:,:), xxsq(:,:), tmp(:,:)
+  R_TYPE, allocatable :: a1(:,:), a2(:,:)
+  FLOAT :: jacobi_relax
 
   call profiling_in(preconditioner_prof, "PRECONDITIONER")
   PUSH_SUB(X(preconditioner_apply))
@@ -58,6 +64,54 @@ subroutine X(preconditioner_apply)(pre, gr, hm, ik, a, b, omega)
 
   case(PRE_MULTIGRID)
     call multigrid()
+
+  case(PRE_ENERGY)
+    ! these arguments are necessary for the preconditioner to work
+    ASSERT(present(energy))
+    ASSERT(present(ist))
+    SAFE_ALLOCATE(xx(1:gr%mesh%np, 1:hm%d%dim))
+    SAFE_ALLOCATE(xxsq(1:gr%mesh%np, 1:hm%d%dim))
+    SAFE_ALLOCATE(tmp(1:gr%mesh%np, 1:hm%d%dim))
+
+    ! Calculate kinetic energy
+    call X(hamiltonian_apply)(hm, gr%der, a, tmp, ist, ik, terms=TERM_KINETIC)
+    kinetic_energy = R_REAL(X(mf_dotp) (gr%mesh, hm%d%dim, a, tmp))
+
+    do idim = 1, hm%d%dim
+      ! is the indexing of the potential correct for spinor cases?
+      xx(:,idim) = pre%energy_ratio_factor * abs(energy - hm%vhxc(:,idim)) /&
+        kinetic_energy
+      xxsq(:,idim) = xx(:,idim) * xx(:,idim)
+      tmp(:,idim) = CNST(27.0) + CNST(18.0)*xx(:,idim) + CNST(12.0)*xxsq(:,idim) &
+        + CNST(8.0)*xx(:,idim)*xxsq(:,idim)
+      b(1:gr%mesh%np, idim) = tmp(:,idim) / (tmp(:,idim) + CNST(16.0)*xxsq(:,idim)*xxsq(:,idim)) &
+        * a(1:gr%mesh%np, idim)
+    end do
+
+    SAFE_DEALLOCATE_A(xx)
+    SAFE_DEALLOCATE_A(xxsq)
+    SAFE_DEALLOCATE_A(tmp)
+
+  case(PRE_JACOBI2)
+    SAFE_ALLOCATE(a1(1:gr%mesh%np_part, hm%d%dim))
+    SAFE_ALLOCATE(a2(1:gr%mesh%np_part, hm%d%dim))
+
+    omega_ = M_ZERO
+    jacobi_relax = pre%relax_factor
+
+    do idim = 1, hm%d%dim
+      b(1:gr%mesh%np,idim) = jacobi_relax*a(1:gr%mesh%np,idim)/pre%diag_lapl(1:gr%mesh%np)
+    end do
+    do iter = 1, pre%jacobi_iterations
+      do idim = 1, hm%d%dim
+        call X(derivatives_lapl)(gr%der, b(:, idim), a2(:, idim))
+        b(1:gr%mesh%np,idim) = b(1:gr%mesh%np,idim) + jacobi_relax/pre%diag_lapl(1:gr%mesh%np) &
+          *(CNST(-0.5)*a2(1:gr%mesh%np, idim) + a(1:gr%mesh%np, idim))
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(a1)
+    SAFE_DEALLOCATE_A(a2)
 
   case default
    write(message(1), '(a,i4,a)') "Unknown preconditioner ", pre%which, "."
@@ -102,7 +156,7 @@ contains
     integer :: idim, ip
 
     PUSH_SUB(X(preconditioner_apply).multigrid)
-    
+
     mesh0 => gr%mgrid_prec%level(0)%mesh
     mesh1 => gr%mgrid_prec%level(1)%mesh
     mesh2 => gr%mgrid_prec%level(2)%mesh
@@ -164,14 +218,14 @@ contains
       call X(multigrid_coarse2fine)(gr%mgrid_prec%level(2)%tt, gr%mgrid_prec%level(2)%der, &
         gr%mgrid_prec%level(1)%mesh, d2, t1)
 
-      forall (ip = 1:mesh1%np) 
+      forall (ip = 1:mesh1%np)
         q1(ip) = q1(ip) + t1(ip)
         d1(ip) = d1(ip) - q1(ip)
       end forall
 
       call X(derivatives_lapl)(gr%mgrid_prec%level(1)%der, d1, q1)
 
-      forall (ip = 1:mesh1%np) 
+      forall (ip = 1:mesh1%np)
         q1(ip) = CNST(-0.5)*q1(ip) - r1(ip)
         d1(ip) = d1(ip) - CNST(4.0)*step*q1(ip)
       end forall
@@ -185,7 +239,7 @@ contains
 
       call X(derivatives_lapl)(gr%mgrid_prec%level(0)%der, d0, q0)
 
-      forall (ip = 1:mesh0%np) 
+      forall (ip = 1:mesh0%np)
         q0(ip) = CNST(-0.5)*q0(ip) - a(ip, idim)
         d0(ip) = d0(ip) - step*q0(ip)
         b(ip, idim) = -d0(ip)
