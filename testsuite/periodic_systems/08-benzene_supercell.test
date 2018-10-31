@@ -44,4 +44,5 @@ match ; Eigenvalue 14      ; GREPFIELD(static/info, '14   --', 3) ; -0.133473
 match ; Eigenvalue 15      ; GREPFIELD(static/info, '15   --', 3) ; -0.119519
 match ; Eigenvalue 16      ; GREPFIELD(static/info, '16   --', 3) ;  0.004355
 match ; Eigenvalue 17      ; GREPFIELD(static/info, '17   --', 3) ;  0.059678
+Precision: 0.002
 match ; Eigenvalue 18      ; GREPFIELD(static/info, '18   --', 3) ;  0.064385
