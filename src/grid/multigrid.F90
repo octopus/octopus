@@ -124,14 +124,14 @@ contains
 
       !%Variable MultigridDerivativesOrder
       !%Type integer
-      !%Default 4
+      !%Default 1
       !%Section Mesh::Derivatives
       !%Description
       !% This variable gives the discretization order for the approximation of
       !% the differential operators on the different levels of the multigrid.
       !% For more details, see the variable DerivativesOrder.
       !%End
-      call parse_variable('MultigridDerivativesOrder', 4, order)
+      call parse_variable('MultigridDerivativesOrder', 1, order)
       ! set order to a minimum of 2 for general star stencil, fails otherwise
       ! the parameter DER_STARGENERAL is private to the derivatives module
       if (der%stencil_type == 5) then

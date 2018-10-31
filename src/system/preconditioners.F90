@@ -181,9 +181,9 @@ contains
       !%Section SCF::Eigensolver
       !%Description
       !% This variable is the number of pre-smoothing iterations for the multigrid
-      !% preconditioner. The default is 0.
+      !% preconditioner. The default is 1.
       !%End
-      call parse_variable('PreconditionerIterationsPre', 0, this%NPRE)
+      call parse_variable('PreconditionerIterationsPre', 1, this%NPRE)
 
       !%Variable PreconditionerIterationsMiddle
       !%Type integer
@@ -199,9 +199,9 @@ contains
       !%Section SCF::Eigensolver
       !%Description
       !% This variable is the number of post-smoothing iterations for the multigrid
-      !% preconditioner. The default is 1.
+      !% preconditioner. The default is 2.
       !%End
-      call parse_variable('PreconditionerIterationsPost', 1, this%NPOST)
+      call parse_variable('PreconditionerIterationsPost', 2, this%NPOST)
     end if
 
     POP_SUB(preconditioner_init)
