@@ -174,10 +174,11 @@ contains
   end subroutine derivatives_nullify
 
   ! ---------------------------------------------------------
-  subroutine derivatives_init(der, sb, use_curvilinear)
+  subroutine derivatives_init(der, sb, use_curvilinear, order)
     type(derivatives_t), target, intent(out) :: der
     type(simul_box_t),           intent(in)  :: sb
     logical,                     intent(in)  :: use_curvilinear
+    integer, optional,           intent(in)  :: order
 
     integer :: idir
     integer :: default_stencil
@@ -244,6 +245,10 @@ contains
     !% </ul>
     !%End
     call parse_variable('DerivativesOrder', 4, der%order)
+    ! overwrite order if given as argument
+    if(present(order)) then
+      der%order = order
+    end if
 
 #ifdef HAVE_MPI
     !%Variable ParallelizationOfDerivatives
