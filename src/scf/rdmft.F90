@@ -36,6 +36,8 @@ module rdmft_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use minimizer_oct_m
+use mpi_oct_m
+use mpi_lib_oct_m
   use output_oct_m
   use output_me_oct_m
   use parser_oct_m
@@ -155,7 +157,7 @@ contains
       do icount = 1, maxcount !still under investigation how many iterations we need
         if (rdm%do_basis.eqv..false.) then
 !          call scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
-		  call scf_orb_cg(rdm, gr, geo, st, ks, hm, energy)
+		  call scf_orb_cg(rdm, gr, geo, st, ks, hm, energy) 
         else
           call scf_orb(rdm, gr, geo, st, ks, hm, energy)
         end if
@@ -181,8 +183,12 @@ contains
       
       rel_ener = abs(energy_occ-energy)/abs(energy)
 
-      write(message(1),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+!      write(message(1),'(a,1x,es20.10)') 'Total energy'
+!      call messages_info(1) 
+
+      write(message(1),'(a,1x,es20.10)') 'Total energy', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
       call messages_info(1)
+
       if (rdm%do_basis.eqv..true.) then
         if ((rel_ener < rdm%conv_ener).and.rdm%maxFO < rdm%tolerFO) then
           conv = .true.
@@ -372,7 +378,7 @@ contains
         end do
       else
         ! initialize eigensolver
-		call eigensolver_init(rdm%eigens, gr, st)
+	call eigensolver_init(rdm%eigens, gr, st)
 !		copied from scf, for the moment probably not necessary
 !		if(preconditioner_is_multigrid(rdm%eigens%pre)) then
 !		  SAFE_ALLOCATE(gr%mgrid_prec)
@@ -910,14 +916,22 @@ contains
     FLOAT,                intent(out)   :: energy    
 
     type(states_t)     :: states_old
-    integer            :: ik
-    integer            :: maxiter ! maximum number of orbital optimization iterations
-    FLOAT              :: energy_old, energy_diff
+    integer            :: ik, ist
+    integer            :: maxiter, nstconv_ ! maximum number of orbital optimization iterations
+    FLOAT              :: energy_old, energy_diff, occ_sum, maxFO
+    
+	logical :: conv
+	type(profile_t), save :: prof
 
+	call profiling_in(prof, "EIGEN_SOLVER")
+    
     PUSH_SUB(scf_orb_cg)
- 
-    maxiter = 5
 
+	conv = .false.
+	nstconv_ = st%nst
+ 
+    maxiter = 25
+    
     ! set up hamiltonian and calculate energy
     call density_calc (st, gr, st%rho)
     call v_ks_calc(ks, hm, st, geo)
@@ -928,28 +942,59 @@ contains
     ! store energy for later comparison
     energy_old = energy
 
-write(*,*) energy
+!!!!!!!!!!!!!!!!!!!!!!!!!!
+!	rdm%eigens%converged = 0
+!    call eigensolver_run(rdm%eigens, gr, st, hm, maxiter)
+!!!!!!!!!!!!!!!!!!!!!!!!!
 
     do ik = st%d%kpt%start, st%d%kpt%end
+
+	rdm%eigens%matvec = 0
+	   
+	if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then ! .and. eigensolver_has_progress_bar(rdm%eigens)
+	  call loct_progress_bar(-1, st%lnst*st%d%kpt%nlocal)
+	end if
+    
       call deigensolver_cg2(gr, st, hm, rdm%eigens%pre, rdm%eigens%tolerance, maxiter, &
             rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), &
             orthogonalize_to_all=rdm%eigens%orthogonalize_to_all, &
             conjugate_direction=rdm%eigens%conjugate_direction)
-           
-    ! calculate total energy with new states
-    call density_calc (st, gr, st%rho)
-    call v_ks_calc(ks, hm, st, geo)
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
-    call rdm_derivatives(rdm, hm, st, gr)
-    call total_energy_rdm(rdm, st%occ(:,1), energy)
-    
-    write(*,*) energy
+  
+!	if(st%calc_eigenval .and. .not. rdm%eigens%folded_spectrum) then
+!		! recheck convergence after subspace diagonalization, since states may have reordered
+!		rdm%eigens%converged(ik) = 0
+!		do ist = 1, st%nst
+!		  if(rdm%eigens%diff(ist, ik) < rdm%eigens%tolerance) then
+!			rdm%eigens%converged(ik) = ist
+!		  else
+!			exit
+!		  end if
+!		end do
+!	end if
+
+	rdm%eigens%matvec = rdm%eigens%matvec + maxiter
+  
     enddo
 
-    ! check if step lowers the energy
-    energy_diff = energy - energy_old
+	if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then ! .and. eigensolver_has_progress_bar(eigens)
+	  write(stdout, '(1x)')
+	end if
 
-write(*,*) energy_diff
+	conv = all(rdm%eigens%converged(st%d%kpt%start:st%d%kpt%end) >= nstconv_)
+
+
+	! calculate total energy with new states
+	  call density_calc (st, gr, st%rho)
+	  call v_ks_calc(ks, hm, st, geo)
+	  call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
+	  call rdm_derivatives(rdm, hm, st, gr)
+	  call total_energy_rdm(rdm, st%occ(:,1), energy)
+
+    ! check if step lowers the energy
+     energy_diff = energy - energy_old
+
+print*, "energy", energy
+print*, "energy_diff", energy_diff
 
     POP_SUB(scf_orb_cg)
 
@@ -1080,7 +1125,6 @@ write(*,*) energy_diff
       rho_tot = M_ZERO    
       pot = M_ZERO
       dpsi = M_ZERO
-      dpsi2 = M_ZERO
       g_x = M_ZERO
       g_h = M_ZERO
     
@@ -1109,12 +1153,12 @@ write(*,*) energy_diff
           g_x(iorb, jorb) = sqrt(st%occ(iorb,1))*g_x(iorb, jorb)
         end do
       end do
-      
+  
  
       do jorb = 1,st%nst
         do iorb = 1,st%nst
-	  lambda(jorb,iorb) = st%occ(iorb,1)*lambda(jorb,iorb) + g_h(iorb, jorb)+ g_x(iorb, jorb)
-	end do
+	      lambda(jorb,iorb) = st%occ(iorb,1)*lambda(jorb,iorb)  + g_h(iorb, jorb)+ g_x(iorb, jorb) 
+	    end do
       end do
 
     else ! calculate the same lambda matrix on the basis

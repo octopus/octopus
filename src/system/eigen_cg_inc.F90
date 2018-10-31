@@ -98,12 +98,12 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
     ! Calculate starting gradient: |hpsi> = H|psi>
     if(hm%theory_level == RDMFT) then
-      ! In RDMFT different terms in the hamiltonian scale differently with occupation number
-      SAFE_ALLOCATE(h_psi2(1:gr%mesh%np_part, 1:st%d%dim))
-      h_psi2 = R_TOTYPE(M_ZERO)
-      call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik, terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL &
-                                & + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)
-      call X(hamiltonian_apply)(hm, gr%der, psi, h_psi2, ist, ik, terms = TERM_OTHERS, set_occ = .true.)
+	  ! In RDMFT different terms in the hamiltonian scale differently with occupation number
+	  SAFE_ALLOCATE(h_psi2(1:gr%mesh%np_part, 1:st%d%dim))
+	  h_psi2 = R_TOTYPE(M_ZERO)
+	  call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik, terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL &
+                                & + TERM_LOCAL_POTENTIAL + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)               
+	  call X(hamiltonian_apply)(hm, gr%der, psi, h_psi2, ist, ik, terms = TERM_OTHERS, set_occ = .true.)
       h_psi = h_psi + h_psi2
       SAFE_DEALLOCATE_A(h_psi2)
     else 
@@ -234,9 +234,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
         SAFE_ALLOCATE(ppsi2(1:gr%mesh%np_part, 1:st%d%dim))
         ppsi2  = R_TOTYPE(M_ZERO)
         call X(hamiltonian_apply)(hm, gr%der, cg, h_cg, ist, ik, terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL &
-                                & + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)
-        call X(hamiltonian_apply)(hm, gr%der, cg, ppsi2, ist, ik, terms = TERM_OTHERS, set_occ = .true.)
-        h_cg = h_cg + ppsi2
+                                & + TERM_LOCAL_POTENTIAL + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)                  
+        call X(hamiltonian_apply)(hm, gr%der, cg, ppsi2, ist, ik, terms = TERM_OTHERS, set_occ = .true.)			  !! exchange
+        h_cg = h_cg  + ppsi2
         SAFE_DEALLOCATE_A(ppsi2)
       else
         call X(hamiltonian_apply)(hm, gr%der, cg, h_cg, ist, ik)

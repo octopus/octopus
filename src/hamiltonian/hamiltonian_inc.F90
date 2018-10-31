@@ -275,6 +275,11 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc, set
   call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, terms = terms, set_bc = set_bc, &
                                      set_phase = set_phase)
 
+
+  call batch_end(psib)
+  call batch_end(hpsib)
+  
+
 ! Modifications by Nicole
 
   ! treat hamiltonians that depend on the index of the orbital
@@ -283,9 +288,6 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc, set
   endif 
 
 ! End Nicole
-
-  call batch_end(psib)
-  call batch_end(hpsib)
 
   POP_SUB(X(hamiltonian_apply))
 end subroutine X(hamiltonian_apply)
@@ -312,7 +314,7 @@ subroutine X(occ_apply) (hpsi, occ, terms)
   endif
 
   ! all other terms in hamiltonian are linear in occupation number
-  if(bitand(TERM_KINETIC, terms_) /= 0 .or. bitand(TERM_LOCAL_POTENTIAL, terms_) /= 0 & 
+  if(bitand(TERM_KINETIC, terms_) /= 0  .or. bitand(TERM_LOCAL_POTENTIAL, terms_) /= 0 &
     & .or. bitand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0 .or. bitand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
     hpsi = occ*hpsi
   endif
