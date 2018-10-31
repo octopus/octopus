@@ -512,7 +512,7 @@ contains
       do im = 1, this%orbsets(1)%norbs
         do idim = 1, st%d%dim
           call lalg_copy(der%mesh%np, this%orbsets(1)%zorb(:,idim, im), &
-                                       this%orbsets(1)%eorb_mesh(:,idim,im,ik))
+                                       this%orbsets(1)%eorb_mesh(:,im,idim,ik))
         end do
       end do
     end do

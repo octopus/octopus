@@ -1484,7 +1484,7 @@ contains
             if(has_phase) then
               if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
                call zio_function_output(outp%how, dir, fname, mesh, &
-                  os%eorb_mesh(1:mesh%np,idim,im, ik), fn_unit, ierr, geo = geo)
+                  os%eorb_mesh(1:mesh%np,im,idim,ik), fn_unit, ierr, geo = geo)
               else
                tmp = M_Z0
                call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,idim,im,ik), tmp)

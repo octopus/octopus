@@ -856,9 +856,9 @@ end subroutine X(compute_periodic_coulomb_integrals)
        if(has_phase) then
 #ifdef R_TCOMPLEX
          if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
-           do im = 1, os%norbs
-             do idim = 1, d%dim
-               dot(idim,im) = X(mf_dotp)(mesh, os%eorb_mesh(1:mesh%np,idim,im,ik),&
+           do idim = 1, d%dim
+             do im = 1, os%norbs
+               dot(idim,im) = X(mf_dotp)(mesh, os%eorb_mesh(1:mesh%np,im,idim,ik),&
                                epsi(1:mesh%np,idim), reduce = .false.)
              end do
            end do
