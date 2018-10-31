@@ -24,8 +24,8 @@ match ; k-point 2 (y) ; GREPFIELD(static/info, '#k =   2', 8) ;  0.500000
 match ; k-point 2 (z) ; GREPFIELD(static/info, '#k =   2', 9) ;  0.000000
 #The index are changed for spin
 match ; Eigenvalue  1 up ; GREPFIELD(static/info, '#k =   2', 3, 1) ;  -0.943626
-match ; Eigenvalue  3 up ; GREPFIELD(static/info, '#k =   2', 3, 3) ;  -0.401283
-match ; Eigenvalue  4 up ; GREPFIELD(static/info, '#k =   2', 3, 4) ;  -0.400682
+match ; Eigenvalue  3 up ; GREPFIELD(static/info, '#k =   2', 3, 3) ;  -0.401388
+match ; Eigenvalue  4 up ; GREPFIELD(static/info, '#k =   2', 3, 4) ;  -0.400787
 match ; Eigenvalue  5 up ; GREPFIELD(static/info, '#k =   2', 3, 5) ;   0.283906
 
 #Multiplied by a factor of two
@@ -54,8 +54,8 @@ match ; k-point 2 (y) ; GREPFIELD(static/info, '#k =   2', 8) ;  0.500000
 match ; k-point 2 (z) ; GREPFIELD(static/info, '#k =   2', 9) ;  0.000000
 #The index are changed for spin
 match ; Eigenvalue  1 up ; GREPFIELD(static/info, '#k =   2', 3, 1) ;  -0.943626
-match ; Eigenvalue  3 up ; GREPFIELD(static/info, '#k =   2', 3, 3) ;  -0.401283
-match ; Eigenvalue  4 up ; GREPFIELD(static/info, '#k =   2', 3, 4) ;  -0.400682
+match ; Eigenvalue  3 up ; GREPFIELD(static/info, '#k =   2', 3, 3) ;  -0.401388
+match ; Eigenvalue  4 up ; GREPFIELD(static/info, '#k =   2', 3, 4) ;  -0.400787
 match ; Eigenvalue  5 up ; GREPFIELD(static/info, '#k =   2', 3, 5) ;   0.283906
 
 #Multiplied by a factor of two
