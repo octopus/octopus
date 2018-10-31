@@ -7,7 +7,7 @@ Enabled    : Yes
 
 Input: 07-octopus_basics-time_dependent_propagation.01-gs.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total Energy ; GREPFIELD(static/info, 'Total  ', 3) ; -218.78752286
+match ; Total Energy ; GREPFIELD(static/info, 'Total  ', 3) ; -218.78590399
 
 Input: 07-octopus_basics-time_dependent_propagation.02-td.inp
 match ; Energy iteration  1 ; GREPFIELD(out, ' 1       0.002000', 3) ; -218.785065

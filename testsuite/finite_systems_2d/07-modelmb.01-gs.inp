@@ -18,8 +18,8 @@ acell = 10
 %
 spacing = 0.2
 
-ConvRelDens = 2e-12
-ConvAbsEv = 1e-16
+ConvRelDens = 2e-11
+ConvAbsEv = 1e-15
 EigensolverTolerance = 1e-8
 EigensolverMaxIter = 50
 

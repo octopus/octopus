@@ -13,29 +13,29 @@ Precision : 2.0e-6
 # First start a ground state calculation that uses the mixing of the density
 Input: 06-restart.01-gs_mixrho.inp
 match ; SCF convergence ; GREPCOUNT(workdir/static/info, 'SCF \*not\* converged') ; 1
-match ; Eigenvalue [up] ; GREPFIELD(workdir/static/info, '1   up', 3) ; -0.013820
-match ; Eigenvalue [dn] ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.085148
+match ; Eigenvalue [up] ; GREPFIELD(workdir/static/info, '1   up', 3) ; -0.036354
+match ; Eigenvalue [dn] ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.099701
 
 
 # Now restart the previous calculation reading the states, the density, and the mixing
 Input: 06-restart.02-restart_gs_mixrho.inp
 match ; SCF convergence ; GREPCOUNT(workdir/static/info, 'SCF \*not\* converged') ; 1
-match ; Eigenvalue [up] ; GREPFIELD(workdir/static/info, '1   up', 3) ; -0.014038
-match ; Eigenvalue [dn] ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.085315
+match ; Eigenvalue [up] ; GREPFIELD(workdir/static/info, '1   up', 3) ; -0.029019
+match ; Eigenvalue [dn] ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.095292
 
 
 # Start again a ground state calculation, this time using the mixing of the potential
 Input: 06-restart.03-gs_mixvhxc.inp
 match ; SCF convergence ; GREPCOUNT(workdir/static/info, 'SCF \*not\* converged') ; 1
-match ; Eigenvalue [up] ; GREPFIELD(workdir/static/info, '1   up', 3) ; -0.014101
-match ; Eigenvalue [dn] ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.085397
+match ; Eigenvalue [up] ; GREPFIELD(workdir/static/info, '1   up', 3) ; -0.037000
+match ; Eigenvalue [dn] ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.100160
 
 
 # Now restart the previous calculation reading the states, the potential, and the mixing
 Input: 06-restart.04-restart_gs_mixvhxc.inp
 match ; SCF convergence ; GREPCOUNT(workdir/static/info, 'SCF \*not\* converged') ; 1
-match ; Eigenvalue [up] ; GREPFIELD(workdir/static/info, '1   up', 3) ; -0.014047
-match ; Eigenvalue [dn] ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.085321
+match ; Eigenvalue [up] ; GREPFIELD(workdir/static/info, '1   up', 3) ; -0.021853
+match ; Eigenvalue [dn] ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.091264
 
 
 # Restart the previous calculation reading only the states
