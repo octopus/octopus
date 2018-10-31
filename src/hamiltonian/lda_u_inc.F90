@@ -18,8 +18,9 @@
 !! $Id$
 
 
-subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
+subroutine X(lda_u_apply)(this, d, mesh, ik, psib, hpsib, has_phase)
   type(lda_u_t),      intent(in) :: this
+  type(mesh_t),       intent(in) :: mesh
   integer,            intent(in) :: ik
   type(batch_t),      intent(in) :: psib
   type(batch_t),   intent(inout) :: hpsib
@@ -27,7 +28,7 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
   logical,            intent(in) :: has_phase !True if the wavefunction has an associated phase
 
   integer :: ibatch, ios, imp, im, ispin, bind1, bind2
-  R_TYPE, allocatable :: dot(:,:,:), reduced(:,:)
+  R_TYPE, allocatable :: dot(:,:,:,:), reduced(:,:), psi(:,:)
   type(orbitalset_t), pointer  :: os
   type(profile_t), save :: prof
 
@@ -36,7 +37,8 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
   PUSH_SUB(lda_u_apply)
 
   SAFE_ALLOCATE(reduced(1:this%max_np,1:psib%nst_linear))
-  SAFE_ALLOCATE(dot(1:d%dim,1:this%maxnorbs, 1:psib%nst))
+  SAFE_ALLOCATE(dot(1:d%dim,1:this%maxnorbs, 1:this%norbsets, 1:psib%nst))
+  SAFE_ALLOCATE(psi(1:mesh%np, 1:d%dim))
 
   ispin = states_dim_get_spin_index(d, ik)
 
@@ -45,10 +47,18 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
   !
   ! We first compute <phi m | psi> for all orbitals of the atom
   !
+  do ibatch = 1, psib%nst
+    call batch_get_state(psib, ibatch, mesh%np, psi)
+    do ios = 1, this%norbsets
+      os => this%orbsets(ios)
+      call X(orbitalset_get_coefficients)(os, d%dim, psi, ik, has_phase, this%basisfromstates, &
+                                                  dot(1:d%dim,1:os%norbs,ios,ibatch))
+    end do
+  end do
   do ios = 1, this%norbsets
     os => this%orbsets(ios)
-    call X(orbitalset_get_coeff_batch)(os, d%dim, psib, ik, has_phase, this%basisfromstates, &
-                                         dot(1:d%dim,1:os%norbs,1:psib%nst))
+  !  call X(orbitalset_get_coeff_batch)(os, d%dim, psib, ik, has_phase, this%basisfromstates, &
+  !                                       dot(1:d%dim,1:os%norbs,1:psib%nst))
     !
     reduced(:,:) = R_TOTYPE(M_ZERO) 
     !
@@ -60,12 +70,12 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
         do imp = 1, os%norbs
           !Note here that V_{mmp} =U/2(delta_{mmp}-2n_{mpm})
           if(d%ispin /= SPINORS) then
-            reduced(im, ibatch) = reduced(im, ibatch) + this%X(V)(im, imp, ispin, ios)*dot(1,imp, ibatch)
+            reduced(im, ibatch) = reduced(im, ibatch) + this%X(V)(im, imp, ispin, ios)*dot(1,imp,ios,ibatch)
           else
-            reduced(im, bind1) = reduced(im, bind1) + this%X(V)(im, imp, 1, ios)*dot(1, imp, ibatch)
-            reduced(im, bind1) = reduced(im, bind1) + this%X(V)(im, imp, 3, ios)*dot(2, imp, ibatch)
-            reduced(im, bind2) = reduced(im, bind2) + this%X(V)(im, imp, 4, ios)*dot(1, imp, ibatch)
-            reduced(im, bind2) = reduced(im, bind2) + this%X(V)(im, imp, 2, ios)*dot(2, imp, ibatch)
+            reduced(im, bind1) = reduced(im, bind1) + this%X(V)(im, imp, 1, ios)*dot(1, imp, ios, ibatch)
+            reduced(im, bind1) = reduced(im, bind1) + this%X(V)(im, imp, 3, ios)*dot(2, imp, ios, ibatch)
+            reduced(im, bind2) = reduced(im, bind2) + this%X(V)(im, imp, 4, ios)*dot(1, imp, ios, ibatch)
+            reduced(im, bind2) = reduced(im, bind2) + this%X(V)(im, imp, 2, ios)*dot(2, imp, ios, ibatch)
           end if
         end do
       end do      
@@ -75,6 +85,7 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
     call X(orbitalset_add_to_batch)(os, d%dim, hpsib, ik, has_phase, this%basisfromstates, reduced)
   end do
  
+  SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(dot)
   SAFE_DEALLOCATE_A(reduced)
 
