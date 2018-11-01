@@ -61,6 +61,7 @@ use mpi_lib_oct_m
        assign_eigfunctions,      &
        rdm_t,                    &
        scf_occ,                  &
+       scf_occ_NO,				 &
        scf_orb,                  &
        scf_rdmft,				 &
        set_occ_pinning
@@ -71,7 +72,7 @@ use mpi_lib_oct_m
     integer  :: max_iter
     integer  :: iter
     integer  :: n_twoint !number of unique two electron integrals
-    logical  :: do_basis
+    logical  :: do_basis, hf
     FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO, tolerFO
     FLOAT, allocatable   :: eone(:), eone_int(:,:), twoint(:), hartree(:,:), exchange(:,:), evalues(:)   
     FLOAT, allocatable   :: vecnat(:,:), Coul(:,:,:), Exch(:,:,:) 
@@ -147,10 +148,15 @@ contains
     ! Orbital minimization is according to Piris and Ugalde, Vol. 30, No. 13, J. Comput. Chem. (scf_orb) or
     ! using steepest decent (scf_orb_direct)
     do iter = 1, max_iter
+      ! occupation number minimization
       write(message(1), '(a)') '**********************************************************************'
       write(message(2),'(a, i4)') 'RDM Iteration:', iter
       call messages_info(2)
-      call scf_occ(rdm, gr, hm, st, energy_occ)
+      if (rdm%hf.eqv. .false.) then
+		call scf_occ(rdm, gr, hm, st, energy_occ)
+	  else
+		call scf_occ_NO(rdm, gr, hm, st, energy_occ)
+	  end if
       ! Diagonalization of the generalized Fock matrix 
       write(message(1), '(a)') 'Optimization of natural orbitals'
       call messages_info(1)
@@ -349,6 +355,17 @@ contains
 
       call parse_variable('RDMBasis',.true., rdm%do_basis)
 
+      !%Variable RDMHartreeFock
+      !%Type logical
+      !%Default no 
+      !%Section SCF::RDMFT
+      !%Description
+      !% If true, the code simulates a HF calculation, by omitting the occ.num. optimization
+      !% can be used for test reasons
+      !%End
+
+      call parse_variable('RDMHartreeFock',.false., rdm%hf)
+      
       ! shortcuts
       rdm%gr   => gr
       rdm%st   => st
@@ -462,7 +479,59 @@ contains
 
 
   ! ---------------------------------------------------------
-  
+
+  ! dummy routine for occupation numbers which only calculates the necessary vairables for further use
+  subroutine scf_occ_NO(rdm, gr, hm, st, energy)
+    type(rdm_t),          intent(inout) :: rdm
+    type(grid_t),         intent(inout) :: gr
+    type(hamiltonian_t),  intent(inout) :: hm
+    type(states_t),       intent(inout) :: st
+    FLOAT,                intent(out)   :: energy
+
+    integer :: ist,ik
+    REAL(8) :: objective
+
+    PUSH_SUB(scf_occ_NO)
+
+    write(message(1),'(a)') 'SKIP Optimization of occupation numbers'
+    call messages_info(1)
+    
+    energy = M_ZERO
+    
+    if((rdm%iter == 1).and. (rdm%do_basis.eqv. .true.))  then 
+      call dstates_me_two_body(gr, st, rdm%n_twoint, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
+      call rdm_integrals(rdm,hm,st,gr) 
+      call sum_integrals(rdm)
+    end if
+
+    call rdm_derivatives(rdm, hm, st, gr)
+    
+    call total_energy_rdm(rdm, st%occ(:,1), energy)
+
+    rdm%occsum = M_ZERO
+
+    do ist = 1, st%nst
+      do ik = 1, st%d%nik
+        rdm%occsum = rdm%occsum + st%occ(ist,ik)
+      end do
+    end do
+    
+    write(message(1),'(a4,5x,a12)')'#st','Occupation'
+    call messages_info(1)   
+
+    do ist = 1, st%nst
+      write(message(1),'(i4,3x,f11.4)') ist, st%occ(ist, 1)
+      call messages_info(1)
+    end do
+
+    write(message(1),'(a,1x,f11.4)') 'Sum of occupation numbers', rdm%occsum
+    write(message(2),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+    call messages_info(2)   
+    
+    POP_SUB(scf_occ_NO)
+
+  end subroutine scf_occ_NO
+    
   ! scf for the occupation numbers 
   subroutine scf_occ(rdm, gr, hm, st, energy)
     type(rdm_t),          intent(inout) :: rdm
@@ -1282,7 +1351,6 @@ print*, "energy_diff", energy_diff
     V_h = M_ZERO
     V_x = M_ZERO
      
-
     !Calculate hartree and exchange contribution 
     !This is only for the Mueller functional and has to be changed
     do ist = 1, rdm%st%nst
@@ -1290,7 +1358,7 @@ print*, "energy_diff", energy_diff
         V_h(ist) = V_h(ist) + occ(jst)*rdm%hartree(ist, jst)
         V_x(ist) = V_x(ist) - sqrt(occ(jst))*rdm%exchange(ist, jst) 
       end do
-      V_x(ist) = V_x(ist)*M_HALF/sqrt(occ(ist))
+      V_x(ist) = V_x(ist)*M_HALF/max(sqrt(occ(ist)), CNST(1.0e-16))
     end do
 
 
