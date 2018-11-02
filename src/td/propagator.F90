@@ -397,6 +397,18 @@ contains
     !%End
     call parse_variable('TDSCFThreshold', CNST(1.0e-6), tr%scf_threshold)
 
+    !%Variable TDUseParallelTransportGauge
+    !%Type logical
+    !%Default no
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% (Experimental) Use the parallel transport gauge. Only available
+    !% with the explicit RK4 (TDPropagator = expl_runge_kutta4) propagator.
+    !%End
+    call parse_variable('TDUseParallelTransportGauge', .false., tr%ptg)
+    if(tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) call messages_input_error('TDUseParallelTransportGauge')
+    if(tr%ptg) call messages_experimental("CAETRS propagator")
+
     POP_SUB(propagator_init)
   end subroutine propagator_init
   ! ---------------------------------------------------------
@@ -548,9 +560,9 @@ contains
       call td_qoct_tddft_propagator(hm, ks%xc, gr, st, tr, time, dt, ions, geo)
     case(PROP_EXPLICIT_RUNGE_KUTTA4)
       if(present(qcchi)) then
-        call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi)
+        call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi, use_ptg = tr%ptg)
       else
-        call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo)
+        call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, use_ptg = tr%ptg)
       end if
     case(PROP_CFMAGNUS4)
       call td_cfmagnus4(ks, hm, gr, st, tr, time, dt, ions, geo, nt)

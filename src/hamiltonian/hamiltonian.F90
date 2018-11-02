@@ -181,6 +181,10 @@ module hamiltonian_oct_m
     integer       :: lda_u_level
 
     logical :: time_zero
+
+    logical :: ptg_term = .false.
+    CMPLX, allocatable :: ptgmat(:, :, :)
+    type(states_t) :: ptgst
   end type hamiltonian_t
 
   integer, public, parameter :: &

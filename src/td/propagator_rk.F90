@@ -64,7 +64,7 @@ module propagator_rk_oct_m
   
 contains
   
-  subroutine td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi)
+  subroutine td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi, use_ptg)
     type(v_ks_t), target,            intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
@@ -74,6 +74,7 @@ contains
     type(ion_dynamics_t),            intent(inout) :: ions
     type(geometry_t),                intent(inout) :: geo
     type(opt_control_state_t), optional, target, intent(inout) :: qcchi
+    logical, optional,               intent(in)    :: use_ptg
 
     type(states_t), pointer :: chi
     FLOAT, pointer :: q(:, :), p(:, :)
@@ -359,7 +360,15 @@ contains
         call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = tau)
       end if
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+      if(optional_default(use_ptg, .false.)) then
+        hm%ptg_term = .true.
+        call states_copy(hm%ptgst, stphi)
+      end if
       call zhamiltonian_apply_all(hm, ks%xc, gr%der, stphi, hst)
+      if(optional_default(use_ptg, .false.)) then
+        hm%ptg_term = .false.
+        call states_end(hm%ptgst)
+      end if
     end subroutine f_psi
 
     subroutine f_ions(tau)

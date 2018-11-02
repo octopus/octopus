@@ -55,6 +55,7 @@ module propagator_base_oct_m
     type(sparskit_solver_t), pointer :: tdsk
     integer             :: tdsk_size
     FLOAT               :: scf_threshold
+    logical             :: ptg
   end type propagator_t
 
 end module propagator_base_oct_m

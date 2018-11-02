@@ -285,9 +285,11 @@ subroutine X(hamiltonian_apply_all) (hm, xc, der, st, hst)
   type(states_t),      intent(inout) :: st
   type(states_t),      intent(inout) :: hst
 
-  integer :: ik, ib, ist
-  R_TYPE, allocatable :: psi(:, :)
+  integer :: ik, ib, ist, jst
+  R_TYPE, allocatable :: psi(:, :), hpsi(:, :), psit(:, :)
   CMPLX,  allocatable :: psiall(:, :, :, :)
+
+  type(states_t) :: hst_
   
   PUSH_SUB(X(hamiltonian_apply_all))
 
@@ -319,6 +321,32 @@ subroutine X(hamiltonian_apply_all) (hm, xc, der, st, hst)
 
     SAFE_DEALLOCATE_A(psi)
     
+  end if
+
+  if(hm%ptg_term) then
+    SAFE_ALLOCATE(psi(der%mesh%np_part, 1:hst%d%dim))
+    SAFE_ALLOCATE(psit(der%mesh%np_part, 1:hst%d%dim))
+    SAFE_ALLOCATE(hpsi(der%mesh%np_part, 1:hst%d%dim))
+
+    ! This should be done with zstates_matrix, and taking
+    ! care of parallelization in states.
+    call states_copy(hst_, hst)
+    do ik = 1, st%d%nik
+      do ist = 1, st%nst
+        call states_get_state(hst, der%mesh, ist, ik, hpsi)
+        call states_get_state(hst_, der%mesh, ist, ik, psit)
+        do jst = 1, st%nst
+          call states_get_state(hm%ptgst, der%mesh, jst, ik, psi)
+          hpsi = hpsi - X(mf_dotp)(der%mesh, st%d%dim, psi, psit) * psi
+        end do
+        call states_set_state(hst, der%mesh, ist, ik, hpsi)
+      end do
+    end do
+    call states_end(hst_)
+
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(psit)
+    SAFE_DEALLOCATE_A(hpsi)
   end if
 
   POP_SUB(X(hamiltonian_apply_all))
