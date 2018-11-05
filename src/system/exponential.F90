@@ -534,7 +534,9 @@ contains
         end if
 
         ! zpsi = nrm * V * expo(1:iter, 1) = nrm * V * expo * V^(T) * zpsi
-        call lalg_gemv(der%mesh%np, hm%d%dim, iter, M_z1*beta, v, expo(1:iter, 1), M_z0, zpsi(1:der%mesh%np,:))
+        do idim = 1, hm%d%dim
+           call blas_gemv('N', der%mesh%np, iter, M_z1*beta, v(1,idim,1), der%mesh%np*hm%d%dim, expo(1,1), 1, M_z0, zpsi(1,idim), 1)
+        end do
 
       end if
 
@@ -586,8 +588,9 @@ contains
             call messages_warning(1)
           end if
 
-          call lalg_gemv(der%mesh%np, hm%d%dim, iter, deltat*M_z1*beta, v, expo(1:iter, 1), &
-                            M_z1, zpsi(1:der%mesh%np,:))
+          do idim = 1, hm%d%dim
+            call blas_gemv('N', der%mesh%np, iter, deltat*M_z1*beta, v(1,idim,1), der%mesh%np*hm%d%dim, expo(1,1), 1, M_z1, zpsi(1,idim), 1)
+          end do
 
         end if
       end if
