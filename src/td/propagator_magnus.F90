@@ -181,7 +181,7 @@ contains
     call hamiltonian_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha2, M_TWO * alpha1/) )
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, M_HALF * dt)
+        call exponential_apply_batch(tr%te, gr%der, hm, st, st%group%psib(ib, ik), ik, M_HALF * dt)
       end do
     end do
 
@@ -189,7 +189,7 @@ contains
     call hamiltonian_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha1, M_TWO * alpha2/) )
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, M_HALF * dt)
+        call exponential_apply_batch(tr%te, gr%der, hm, st, st%group%psib(ib, ik), ik, M_HALF * dt)
       end do
     end do
 

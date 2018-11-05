@@ -94,7 +94,7 @@ contains
           if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(zpsib_dt, copy = .false.)
 
           !propagate the state dt/2 and dt, simultaneously, with H(time - dt)
-          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt, &
+          call exponential_apply_batch(tr%te, gr%der, hm, st, st%group%psib(ib, ik), ik, CNST(0.5)*dt, &
             psib2 = zpsib_dt, deltat2 = dt)
 
           !use the dt propagation to calculate the density
@@ -118,7 +118,7 @@ contains
       ! propagate dt/2 with H(time - dt)
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+          call exponential_apply_batch(tr%te, gr%der, hm, st, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
         end do
       end do
 
@@ -145,7 +145,7 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+        call exponential_apply_batch(tr%te, gr%der, hm, st, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
       end do
     end do
 
@@ -210,7 +210,7 @@ contains
         if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(zpsib_dt, copy = .false.)
 
         !propagate the state dt/2 and dt, simultaneously, with H(time - dt)
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt, &
+        call exponential_apply_batch(tr%te, gr%der, hm, st, st%group%psib(ib, ik), ik, CNST(0.5)*dt, &
           psib2 = zpsib_dt, deltat2 = dt)
 
         !use the dt propagation to calculate the density
@@ -266,7 +266,7 @@ contains
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+          call exponential_apply_batch(tr%te, gr%der, hm, st, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
         end do
       end do
 
@@ -388,7 +388,7 @@ contains
     ! propagate half of the time step with H(time - dt)
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+        call exponential_apply_batch(tr%te, gr%der, hm, st, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
       end do
     end do
 
@@ -494,7 +494,7 @@ contains
           call profiling_out(phase_prof)
         end if
 
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+        call exponential_apply_batch(tr%te, gr%der, hm, st, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
         call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
 
       end do

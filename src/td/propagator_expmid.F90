@@ -109,7 +109,7 @@ contains
 
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, &
+          call exponential_apply_batch(tr%te, gr%der, hm, st, st%group%psib(ib, ik), ik, &
             real(zdt, REAL_PRECISION), Imdeltat = aimag(zdt) )
 
         end do
@@ -144,7 +144,7 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
 
-          call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, dt)
+          call exponential_apply_batch(tr%te, gr%der, hm, st, st%group%psib(ib, ik), ik, dt)
 
         end do
       end do
@@ -169,7 +169,7 @@ contains
 
         do ik = st%d%kpt%start, st%d%kpt%end
           do ib = st%group%block_start, st%group%block_end
-            call exponential_apply_batch(tr%te, gr%der, hm, st%psibL(ib, ik), ik,&
+            call exponential_apply_batch(tr%te, gr%der, hm, st, st%psibL(ib, ik), ik,&
               real(-zdt, REAL_PRECISION), Imdeltat = aimag(-zdt) )
           end do
         end do
@@ -191,7 +191,7 @@ contains
 
         do ik = st%d%kpt%start, st%d%kpt%end
           do ib = st%group%block_start, st%group%block_end
-            call exponential_apply_batch(tr%te, gr%der, hm, st%psibL(ib, ik), ik, -dt)
+            call exponential_apply_batch(tr%te, gr%der, hm, st, st%psibL(ib, ik), ik, -dt)
           end do
         end do
 

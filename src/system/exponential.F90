@@ -23,6 +23,7 @@ module exponential_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use blas_oct_m
+  use comm_oct_m
   use cube_function_oct_m
   use derivatives_oct_m
   use global_oct_m
@@ -34,6 +35,7 @@ module exponential_oct_m
   use lalg_basic_oct_m
   use loct_math_oct_m
   use parser_oct_m
+  use mesh_batch_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use profiling_oct_m
@@ -616,10 +618,11 @@ contains
 
   end subroutine exponential_apply
 
-  subroutine exponential_apply_batch(te, der, hm, psib, ik, deltat, Imdeltat, psib2, deltat2, Imdeltat2)
+  subroutine exponential_apply_batch(te, der, hm, st, psib, ik, deltat, Imdeltat, psib2, deltat2, Imdeltat2)
     type(exponential_t),             intent(inout) :: te
     type(derivatives_t),             intent(inout) :: der
     type(hamiltonian_t),             intent(inout) :: hm
+    type(states_t),                  intent(inout) :: st
     integer,                         intent(in)    :: ik
     type(batch_t), target,           intent(inout) :: psib
     FLOAT,                           intent(in)    :: deltat
@@ -653,15 +656,15 @@ contains
     if (te%exp_method == EXP_TAYLOR) then 
      !We apply the phase only to np points, and the phase for the np+1 to np_part points
      !will be treated as a phase correction in the Hamiltonian
-      if(phase_correction) then
-        call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np, ik, .false., psib)
-      end if
+!      if(phase_correction) then
+!        call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np, ik, .false., psib)
+!      end if
 
       call taylor_series_batch()
 
-      if(phase_correction) then
-        call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np, ik, .true., psib)
-      end if
+!      if(phase_correction) then
+!        call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np, ik, .true., psib)
+!      end if
     else
 
       if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
@@ -694,15 +697,26 @@ contains
     
     subroutine taylor_series_batch()
       CMPLX :: zfact, zfact2
-      CMPLX, allocatable :: psi1(:, :, :), hpsi1(:, :, :)
+      CMPLX, allocatable :: psi1(:, :, :), hpsi1(:, :, :), dot(:,:), acc(:,:)
+      CMPLX, allocatable :: psicopy(:,:,:)
       integer :: iter
       logical :: zfact_is_real
       integer :: st_start, st_end
       type(batch_t) :: psi1b, hpsi1b
       type(profile_t), save :: prof
 
+      integer :: ist, ibatch, sp, indb, block_size, idim, ib, ip, size
+      CMPLX :: weight
+
       PUSH_SUB(exponential_apply_batch.taylor_series_batch)
       call profiling_in(prof, "EXP_TAYLOR_BATCH")
+
+#ifdef R_TREAL  
+    block_size = max(40, hardware%l2%size/(2*8*st%nst))
+#else
+    block_size = max(20, hardware%l2%size/(2*16*st%nst))
+#endif
+
 
       SAFE_ALLOCATE(psi1 (1:der%mesh%np_part, 1:hm%d%dim, 1:psib%nst))
       SAFE_ALLOCATE(hpsi1(1:der%mesh%np, 1:hm%d%dim, 1:psib%nst))
@@ -727,6 +741,10 @@ contains
       call batch_copy_data(der%mesh%np, psib, psi1b)
       if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
 
+      SAFE_ALLOCATE(psicopy(1:st%nst, 1:st%d%dim, 1:block_size))
+      SAFE_ALLOCATE(acc(1:psi1b%nst_linear, 1:der%mesh%np))
+      SAFE_ALLOCATE(dot(1:st%nst, 1:hpsi1b%nst))
+     
       do iter = 1, te%exp_order
         if(cmplxscl) then
           zfact = zfact*(-M_zI*(deltat + M_zI * Imdeltat))/iter
@@ -742,8 +760,95 @@ contains
         !  go haywire on the first step of dynamics (often NaN) and with debugging options
         !  the code stops in ZAXPY below without saying why.
 
-        call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, set_phase = .not.phase_correction)
-        
+        call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik )!, set_phase = .not.phase_correction)
+        acc = M_Z0
+        dot = M_Z0
+
+       do sp = 1, der%mesh%np, block_size
+        size = min(block_size, der%mesh%np - sp + 1)
+        psicopy = M_Z0
+
+        do ib = st%group%block_start, st%group%block_end
+          call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy(:,:,:))
+        end do
+    !    if(associated(hm%hm_base%phase)) then
+    !     do ip = sp, sp + size -1
+    !        do idim = 1, st%d%dim
+    !          do ist = st%st_start, st%st_end
+    !            psicopy(ist, idim, ip) = psicopy(ist, idim, ip)*hm%hm_base%phase(ip, ik)
+    !          end do
+    !        end do
+    !      end do
+    !    end if
+
+        if(st%parallel_in_states) call comm_allreduce(st%st_kpt_mpi_grp%comm, psicopy)
+
+        do ip = sp, sp + size -1
+          do ist = 1, st%nst
+            do idim = 1, st%d%dim
+              do ibatch = 1, hpsi1b%nst
+                indb = batch_ist_idim_to_linear(psi1b, (/ibatch, idim/))
+                dot(ist, ibatch) = dot(ist, ibatch) + hpsi1b%pack%zpsi(indb, ip)*conjg(psicopy(ist, idim, ip))
+              end do
+            end do
+          end do
+        end do
+      end do
+
+      !We first get the matrix element <\psi_j|H|\psi_i> with all \psi_j
+!      do iq = st%d%kpt%start, st%d%kpt%end
+!        do ib = st%group%block_start, st%group%block_end
+!          call zmesh_batch_dotp_matrix(der%mesh, st%group%psib(ib, iq), hpsi1b, dot(st%group%block_range(ib,1):st%group%block_range(ib,2),:,iq))
+!        end do
+!      end do
+      if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp%comm, dot)
+!      if(st%parallel_in_states .or. st%d%kpt%parallel) call comm_allreduce(st%st_kpt_mpi_grp%comm, dot)
+
+
+
+      do sp = 1, der%mesh%np, block_size
+        size = min(block_size, der%mesh%np - sp + 1)
+        psicopy = M_Z0
+
+        do ib = st%group%block_start, st%group%block_end
+          call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy(:,:,:))
+        end do
+
+   !     if(associated(hm%hm_base%phase)) then
+   !       do ip = sp, sp + size -1
+   !         do idim = 1, st%d%dim
+   !           do ist = st%st_start, st%st_end
+   !             psicopy(ist, idim, ip) = psicopy(ist, idim, ip)*hm%hm_base%phase(ip, ik)
+   !           end do
+   !         end do
+   !       end do
+   !     end if
+
+        !TODO: Should be a allgather here
+        if(st%parallel_in_states)  call comm_allreduce(st%st_kpt_mpi_grp%comm, psicopy)
+
+        do idim = 1, st%d%dim
+          do ist = 1, st%nst
+            do ibatch = 1, hpsi1b%nst
+              weight = st%occ(ist, ik)*dot(ist, ibatch)/st%smear%el_per_state*st%d%kweights(ik)*der%mesh%volume_element
+              indb = batch_ist_idim_to_linear(hpsi1b, (/ibatch, idim/))
+              do ip = sp, sp + size -1
+                acc(indb, ip) = acc(indb, ip) - psicopy(ist, idim, ip)*weight
+              end do
+            end do
+          end do
+        end do
+      end do
+
+
+        do ip = 1, der%mesh%np
+          do ibatch = 1, hpsi1b%nst_linear
+             hpsi1b%pack%zpsi(ibatch,ip) = hpsi1b%pack%zpsi(ibatch,ip) + acc(ibatch,ip)
+         !   hpsi1b%states_linear(ibatch)%zpsi(ip) =  hpsi1b%states_linear(ibatch)%zpsi(ip) &
+         !         + acc(ibatch,ip) 
+          end do
+        end do 
+
         if(zfact_is_real) then
           call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), hpsi1b, psib)
           if(present(psib2)) call batch_axpy(der%mesh%np, real(zfact2, REAL_PRECISION), hpsi1b, psib2)
@@ -755,6 +860,10 @@ contains
         if(iter /= te%exp_order) call batch_copy_data(der%mesh%np, hpsi1b, psi1b)
 
       end do
+
+      SAFE_DEALLOCATE_A(psicopy)
+      SAFE_DEALLOCATE_A(dot)
+      SAFE_DEALLOCATE_A(acc)
 
       if(hamiltonian_apply_packed(hm, der%mesh)) then
         call batch_unpack(psi1b, copy = .false.)
@@ -770,6 +879,7 @@ contains
 
       SAFE_DEALLOCATE_A(psi1)
       SAFE_DEALLOCATE_A(hpsi1)
+      SAFE_DEALLOCATE_A(dot)
       
       call profiling_out(prof)
       POP_SUB(exponential_apply_batch.taylor_series_batch)

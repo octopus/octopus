@@ -369,7 +369,7 @@ subroutine X(hamiltonian_base_phase_correction)(this, der, iqn, psib, src)
   type(batch_t), pointer :: src_
   type(profile_t), save :: phase_prof
 
-  PUSH_SUB(X(hamiltonian_base_phase))
+  PUSH_SUB(X(hamiltonian_base_phase_correction))
   call profiling_in(phase_prof, "PBC_PHASE_APPLY_CORR")
 
   call profiling_count_operations(R_MUL*dble(der%boundaries%nper)*psib%nst_linear)
