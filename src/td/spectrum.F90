@@ -567,7 +567,7 @@ contains
         average, sqrt(max(anisotropy, M_ZERO))
 
       if (spins_singlet .and. spins_triplet) then
-        average = - M_THIRD * ( pp2(1, 1) + pp2(2, 2) + pp2(3, 3) )
+        average =  M_THIRD * ( pp2(1, 1) + pp2(2, 2) + pp2(3, 3) )
         write(out_file,'(1e20.8)', advance = 'no') average
       end if
 
