@@ -265,6 +265,7 @@ subroutine X(compute_dftu_energy)(this, energy, st)
   type(states_t), intent(in)      :: st 
 
   integer :: ios, imp, im, ispin
+  FLOAT :: Nsigma
 
   PUSH_SUB(compute_dftu_energy)
 
@@ -275,23 +276,27 @@ subroutine X(compute_dftu_energy)(this, energy, st)
       !TODO: These are matrix operations, that could be optimized
       do im = 1, this%orbsets(ios)%norbs
         do imp = 1, this%orbsets(ios)%norbs
-          energy = energy - CNST(0.5)*this%orbsets(ios)%Ueff*abs(this%X(n)(im, imp, ispin, ios))**2/st%smear%el_per_state
+          energy = energy - M_HALF*this%orbsets(ios)%Ueff*abs(this%X(n)(im, imp, ispin, ios))**2/st%smear%el_per_state
         end do
         if(ispin <= this%spin_channels) &
-          energy = energy + CNST(0.5)*this%orbsets(ios)%Ueff*real(this%X(n)(im, im, ispin, ios))
+          energy = energy + M_HALF*this%orbsets(ios)%Ueff*real(this%X(n)(im, im, ispin, ios))
       end do
     end do
   end do
 
+  !See for instance PRB 67, 153106 (2003), Eq.(4)
   if(this%double_couting == DFT_U_AMF) then
     ASSERT(st%d%ispin /= SPINORS)
     do ios = 1, this%norbsets
       do ispin = 1, this%nspins
+        Nsigma = M_ZERO
         do im = 1, this%orbsets(ios)%norbs
-          do imp = 1, this%orbsets(ios)%norbs
-            energy = energy + CNST(0.5)*this%orbsets(ios)%Ueff*abs(this%X(n)(im, imp, ispin, ios))**2/st%smear%el_per_state/this%orbsets(ios)%norbs
-          end do
-          energy = energy - CNST(0.5)*this%orbsets(ios)%Ueff*real(this%X(n)(im, im, ispin, ios))
+          Nsigma = Nsigma + R_REAL(this%X(n)(im,im,ispin,ios))/st%smear%el_per_state
+        end do
+
+        do im = 1, this%orbsets(ios)%norbs
+          energy = energy + M_HALF*this%orbsets(ios)%Ueff*Nsigma*(M_ONE-Nsigma)/this%orbsets(ios)%norbs
+          energy = energy - M_HALF*this%orbsets(ios)%Ueff*R_REAL(this%X(n)(im, im, ispin, ios))
         end do
       end do
     end do
@@ -312,6 +317,7 @@ subroutine X(lda_u_update_potential)(this, st)
 
   integer :: ios, im, ispin, norbs
   type(profile_t), save :: prof
+  FLOAT :: Nsigma
 
   call profiling_in(prof, "DFTU_POTENTIAL")
 
@@ -326,7 +332,7 @@ subroutine X(lda_u_update_potential)(this, st)
         this%X(V)(1:norbs,im,ispin,ios) = - this%orbsets(ios)%Ueff*this%X(n)(1:norbs,im,ispin,ios)/st%smear%el_per_state
         ! Only the diagonal part in spin space (for spinors)
         if(ispin <= this%spin_channels) &
-          this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + CNST(0.5)*this%orbsets(ios)%Ueff
+          this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + M_HALF*this%orbsets(ios)%Ueff
 
         if(this%orbsets(ios)%alpha > CNST(1.0e-6)) then
           this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + this%orbsets(ios)%alpha
@@ -334,13 +340,17 @@ subroutine X(lda_u_update_potential)(this, st)
       end do
     end do
 
+    !See for instance PRB 67, 153106 (2003), Eq.(4)
     if(this%double_couting == DFT_U_AMF) then
       ASSERT(st%d%ispin /= SPINORS)
       do ispin = 1, this%nspins
+        Nsigma = M_ZERO
         do im = 1, norbs
-          this%X(V)(1:norbs,im,ispin,ios) = this%X(V)(1:norbs,im,ispin,ios) + &
-                         + this%orbsets(ios)%Ueff*this%X(n)(1:norbs,im,ispin,ios)/st%smear%el_per_state/norbs
-          this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) - CNST(0.5)*this%orbsets(ios)%Ueff
+          Nsigma = Nsigma + R_REAL(this%X(n)(im,im,ispin,ios))/st%smear%el_per_state
+        end do
+        do im = 1, norbs
+          this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + this%orbsets(ios)%Ueff &
+                            *(Nsigma/norbs - M_HALF)
         end do
       end do
     end if
