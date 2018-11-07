@@ -606,7 +606,6 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
   SAFE_ALLOCATE(lpsi(1:nst, 1:maxnpoints))
 
-  !$omp parallel do private(imat, pmat, iprojection, npoints, nprojs, iproj, ist, aa, bb, cc, dd, ip, lpsi, ep, sp)
   do imat = 1, this%nprojector_matrices
     pmat => this%projector_matrices(imat)
     iprojection = ind(imat)
@@ -618,15 +617,17 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
     if(.not. allocated(this%projector_phases)) then
       if(batch_is_packed(psib)) then
         
+        !$omp parallel do private(ist)
         do ip = 1, npoints
-          do ist = 1, nst
+          forall(ist=1:nst)
             lpsi(ist, ip) = psib%pack%X(psi)(ist, pmat%map(ip))
-          end do
+          end forall
         end do
         
       else
         
         do ist = 1, nst
+          !$omp parallel do
           do ip = 1, npoints
             lpsi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))
           end do
@@ -637,16 +638,17 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
     else
       
       if(batch_is_packed(psib)) then
-
+        !$omp parallel do private(ist)
         do ip = 1, npoints
-          do ist = 1, nst
+          forall(ist = 1:nst)
             lpsi(ist, ip) = psib%pack%X(psi)(ist, pmat%map(ip))*this%projector_phases(ip, imat, ik)
-          end do
+          end forall
         end do
 
       else
 
         do ist = 1, nst
+          !$omp parallel do
           do ip = 1, npoints
             lpsi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))*this%projector_phases(ip, imat, ik)
           end do
