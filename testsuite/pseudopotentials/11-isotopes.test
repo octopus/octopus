@@ -7,6 +7,7 @@ Enabled    : Yes
 
 Input: 11-isotopes.01-deuterium.inp
 Precision: 0.00011
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;     -0.45754215
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;      0.00000000
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;     -0.23270561
@@ -57,6 +58,7 @@ match ; projector value 400; LINEFIELD(debug/geometry/D/nonlocal, 400, 3) ;  0.0
 
 Input: 11-isotopes.02-tritium.inp
 Precision: 0.00011
+match ; SCF convergence    ;     GREPCOUNT(static/info, 'SCF converged') ; 1
 match;  Total energy       ;     GREPFIELD(static/info, 'Total       =', 3) ;   -0.45732156
 match;  Ion-ion energy     ;     GREPFIELD(static/info, 'Ion-ion     =', 3) ;   0.00000000
 match;  Eigenvalues sum    ;     GREPFIELD(static/info, 'Eigenvalues =', 3) ;   -0.23260730

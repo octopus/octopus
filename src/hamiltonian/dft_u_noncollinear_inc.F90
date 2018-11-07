@@ -147,10 +147,10 @@ subroutine compute_ACBNO_U_noncollinear(this, ios)
   PUSH_SUB(compute_ACBNO_U_noncollinear)
 
   norbs = this%orbsets(ios)%norbs
-  numU = cmplx(M_ZERO,M_ZERO)
-  numJ = cmplx(M_ZERO,M_ZERO)
-  denomU = cmplx(M_ZERO,M_ZERO)
-  denomJ = cmplx(M_ZERO,M_ZERO)
+  numU = M_z0
+  numJ = M_z0
+  denomU = M_z0
+  denomJ = M_z0
 
   if(norbs > 1) then
 
@@ -161,8 +161,8 @@ subroutine compute_ACBNO_U_noncollinear(this, ios)
         ! We first compute the terms
         ! sum_{alpha,beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
         ! sum_{alpha} P^alpha_{mmp}P^alpha_{mpp,mppp}
-        tmpU = cmplx(M_ZERO,M_ZERO)
-        tmpJ = cmplx(M_ZERO,M_ZERO)
+        tmpU = M_z0
+        tmpJ = M_z0
 
         do ispin1 = 1, this%spin_channels
           do ispin2 = 1, this%spin_channels
@@ -184,8 +184,8 @@ subroutine compute_ACBNO_U_noncollinear(this, ios)
 
       ! We compute the term
       ! sum_{alpha} sum_{m,mp/=m} N^alpha_{m}N^alpha_{mp}
-      tmpJ = cmplx(M_ZERO,M_ZERO)
-      tmpU = cmplx(M_ZERO,M_ZERO)
+      tmpJ = M_z0
+      tmpU = M_z0
       if(imp/=im) then
         do ispin1 = 1, this%spin_channels
           tmpJ = tmpJ + this%zn(im,im,ispin1,ios)*this%zn(imp,imp,ispin1,ios)
@@ -213,15 +213,15 @@ subroutine compute_ACBNO_U_noncollinear(this, ios)
       denomU = denomU + tmpU
     end do
     end do
-    this%orbsets(ios)%Ueff = real(numU)/real(denomU) - real(numJ)/real(denomJ)
-    this%orbsets(ios)%Ubar = real(numU)/real(denomU)
-    this%orbsets(ios)%Jbar = real(numJ)/real(denomJ)
+    this%orbsets(ios)%Ueff = real(numU, REAL_PRECISION)/real(denomU, REAL_PRECISION) - real(numJ, REAL_PRECISION)/real(denomJ, REAL_PRECISION)
+    this%orbsets(ios)%Ubar = real(numU,REAL_PRECISION)/real(denomU,REAL_PRECISION)
+    this%orbsets(ios)%Jbar = real(numJ,REAL_PRECISION)/real(denomJ,REAL_PRECISION)
 
   else !In the case of s orbitals, the expression is different
     ! sum_{alpha/=beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
     ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
-    numU = cmplx(M_ZERO,M_ZERO)
-    denomU = cmplx(M_ZERO,M_ZERO)
+    numU = M_z0
+    denomU = M_z0
     do ispin1 = 1, this%spin_channels
       do ispin2 = 1, this%spin_channels
         if(ispin1 /= ispin2) then
@@ -236,7 +236,7 @@ subroutine compute_ACBNO_U_noncollinear(this, ios)
 
     ! We have to be careful in the case of hydrogen atom for instance 
     if(abs(denomU)> CNST(1.0e-3)) then
-      this%orbsets(ios)%Ubar = (real(numU)/real(denomU))
+      this%orbsets(ios)%Ubar = (real(numU,REAL_PRECISION)/real(denomU,REAL_PRECISION))
     else
       write(message(1),'(a,a)')' Small denominator value for the s orbital ', this%orbsets(ios)%Ubar
       write(message(2),'(a)')' U is set to zero '

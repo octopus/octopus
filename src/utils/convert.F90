@@ -672,7 +672,7 @@ contains
                                   kick%time, dt, tdrho_b)
         call spectrum_fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
               c_start + 1, c_start + time_steps + 1, kick%time, dt, tdrho_b, e_start + 1, e_end + 1, &
-              spectrum%energy_step, wdrho_b, spectrum%cmplxscl)
+              spectrum%energy_step, wdrho_b)
         call batch_end(tdrho_b)
         call batch_end(wdrho_b)
         do e_point = e_start, e_end

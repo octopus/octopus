@@ -518,6 +518,10 @@ sub run_match_new {
     $shell_command .= " | awk '(NR==$off+1) {printf \$$par[2]}'";
     # if there are multiple occurrences found by grep, we will only be taking the first one via awk
 
+  }elsif($func eq "GREPCOUNT") { # function GREPCOUNT(filename, 're')
+    check_num_args(2, 2, $#par, $func);
+    $shell_command = "grep -c $par[1] $par[0]";
+
   }elsif($func eq "SIZE") { # function SIZE(filename)
     check_num_args(1, 1, $#par, $func);
     $shell_command = "ls -lt $par[0] | awk '{printf \$5}'";

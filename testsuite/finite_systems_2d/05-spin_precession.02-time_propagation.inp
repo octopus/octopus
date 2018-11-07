@@ -55,5 +55,5 @@ TDOutput = energy + multipoles + spin
 
 ExperimentalFeatures = yes
 
-
+Debug = trace
 

@@ -124,6 +124,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine messages_init()
+    logical :: trap_signals
 
     call parser_init()
 
@@ -149,7 +150,20 @@ contains
     warnings = 0
     experimentals = 0
 
-    call trap_segfault()
+    !%Variable DebugTrapSignals
+    !%Type logical
+    !%Section Execution::Debug
+    !%Description
+    !% If true, trap signals to handle them in octopus itself and
+    !% print a custom backtrace. If false, do not trap signals; then,
+    !% core dumps can be produced or gdb can be used to stop at the
+    !% point a signal was produced (e.g. a segmentation fault). This
+    !% variable is enabled if <tt>Debug</tt> is set to trace mode
+    !% (<tt>trace</tt>, <tt>trace_term</tt> or <tt>trace_file</tt>).
+    !%End
+    call parse_variable('DebugTrapSignals', debug%trace, trap_signals)
+
+    if (trap_signals) call trap_segfault()
 
     call messages_reset_lines()
 

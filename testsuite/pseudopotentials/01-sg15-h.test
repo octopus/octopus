@@ -6,6 +6,7 @@ TestGroups : short-run, pseudopotentials
 Enabled    : Yes
 
 Input      : 01-sg15-h.01-gs.inp
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -0.44601230
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.23311726
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.28359181

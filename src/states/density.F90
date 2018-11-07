@@ -20,7 +20,6 @@
 
 module density_oct_m
   use accel_oct_m
-  use base_states_oct_m
   use blas_oct_m
   use batch_oct_m
   use batch_ops_oct_m
@@ -131,11 +130,10 @@ contains
 
   ! ---------------------------------------------------
 
-  subroutine density_calc_accumulate(this, ik, psib, psibL)
+  subroutine density_calc_accumulate(this, ik, psib)
     type(density_calc_t),         intent(inout) :: this
     integer,                      intent(in)    :: ik
     type(batch_t),                intent(inout) :: psib
-    type(batch_t), optional,      intent(inout) :: psibL !< Left states
 
     integer :: ist, ip, ispin
     FLOAT   :: nrm
@@ -143,7 +141,6 @@ contains
     CMPLX, allocatable :: psi(:), fpsi(:)
     FLOAT, allocatable :: weight(:), sqpsi(:)
     type(profile_t), save :: prof
-    logical :: cmplxscl
     integer            :: wgsize
     type(accel_mem_t) :: buff_weight
     type(accel_kernel_t), pointer :: kernel
@@ -151,8 +148,6 @@ contains
     PUSH_SUB(density_calc_accumulate)
     call profiling_in(prof, "CALC_DENSITY")
 
-    cmplxscl = associated(this%Imdensity)
-    
     ispin = states_dim_get_spin_index(this%st%d, ik)
 
     SAFE_ALLOCATE(weight(1:psib%nst))
@@ -169,23 +164,12 @@ contains
             end forall
           end do
         else
-          if(cmplxscl) then
-            do ist = 1, psib%nst
-              forall(ip = 1:this%gr%mesh%np)
-                this%density(ip, ispin) = this%density(ip, ispin) + &
-                  weight(ist)*real(psibL%states(ist)%zpsi(ip, 1)*psib%states(ist)%zpsi(ip, 1))
-                this%Imdensity(ip, ispin) = this%Imdensity(ip, ispin) + &
-                  weight(ist)*aimag(psibL%states(ist)%zpsi(ip, 1)*psib%states(ist)%zpsi(ip, 1))
-              end forall
-            end do
-          else
-            do ist = 1, psib%nst
-              forall(ip = 1:this%gr%mesh%np)
-                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                  (real(psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)**2 + aimag(psib%states(ist)%zpsi(ip, 1))**2)
-              end forall
-            end do
-          end if
+          do ist = 1, psib%nst
+            forall(ip = 1:this%gr%mesh%np)
+              this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
+                (real(psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)**2 + aimag(psib%states(ist)%zpsi(ip, 1))**2)
+            end forall
+          end do
         end if
       case(BATCH_PACKED)
         if(states_are_real(this%st)) then
@@ -195,23 +179,12 @@ contains
             end do
           end do
         else
-          if(cmplxscl) then
-            do ip = 1, this%gr%mesh%np
-              do ist = 1, psib%nst
-                this%density(ip, ispin) = this%density(ip, ispin) + &
-                  weight(ist)*real(psibL%pack%zpsi(ist, ip)*psib%pack%zpsi(ist, ip))
-                this%Imdensity(ip, ispin) = this%Imdensity(ip, ispin) + &
-                  weight(ist)*aimag(psibL%pack%zpsi(ist, ip)*psib%pack%zpsi(ist, ip))
-              end do
+          do ip = 1, this%gr%mesh%np
+            do ist = 1, psib%nst
+              this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
+                (real(psib%pack%zpsi(ist, ip), REAL_PRECISION)**2 + aimag(psib%pack%zpsi(ist, ip))**2)
             end do
-          else  
-            do ip = 1, this%gr%mesh%np
-              do ist = 1, psib%nst
-                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                  (real(psib%pack%zpsi(ist, ip), REAL_PRECISION)**2 + aimag(psib%pack%zpsi(ist, ip))**2)
-              end do
-            end do
-          end if
+          end do
         end if
       case(BATCH_CL_PACKED)
         if(.not. this%packed) call density_calc_pack(this)
@@ -244,8 +217,6 @@ contains
       end select
 
     else if(this%gr%have_fine_mesh) then
-
-      ASSERT(.not. cmplxscl)
 
       SAFE_ALLOCATE(psi(1:this%gr%mesh%np_part))
       SAFE_ALLOCATE(fpsi(1:this%gr%fine%mesh%np))
@@ -373,35 +344,23 @@ contains
 
   ! ---------------------------------------------------------
   !> Computes the density from the orbitals in st. 
-  subroutine density_calc(st, gr, density, Imdensity)
+  subroutine density_calc(st, gr, density)
     type(states_t),          intent(inout)  :: st
     type(grid_t),            intent(in)     :: gr
     FLOAT,                   intent(out)    :: density(:, :)
-    FLOAT, optional,         intent(out)    :: Imdensity(:, :)
 
     integer :: ik, ib
     type(density_calc_t) :: dens_calc
-    logical :: cmplxscl
 
     PUSH_SUB(density_calc)
 
     ASSERT(ubound(density, dim = 1) == gr%fine%mesh%np .or. ubound(density, dim = 1) == gr%fine%mesh%np_part)
 
-    cmplxscl = present(Imdensity)
-    
-    if (cmplxscl) then
-      call density_calc_init(dens_calc, st, gr, density, Imdensity) 
-    else
-      call density_calc_init(dens_calc, st, gr, density)
-    end if
+    call density_calc_init(dens_calc, st, gr, density)
     
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        if(cmplxscl) then
-          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik), st%psibL(ib, ik))
-        else
-          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
-        end if
+        call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
       end do
     end do
 
@@ -548,16 +507,9 @@ contains
       end do
     end do
 
-    SAFE_DEALLOCATE_P(st%zeigenval%Re)
-    nullify(st%eigenval)
-    SAFE_ALLOCATE(st%zeigenval%Re(1:st%nst, 1:st%d%nik))
-    st%zeigenval%Re = huge(st%zeigenval%Re)
-    st%eigenval => st%zeigenval%Re
-    if (associated(st%zeigenval%Im)) then
-      SAFE_DEALLOCATE_P(st%zeigenval%Im)
-      SAFE_ALLOCATE(st%zeigenval%Im(1:st%nst, 1:st%d%nik))
-      st%zeigenval%Im = M_ZERO
-    end if
+    SAFE_DEALLOCATE_P(st%eigenval)
+    SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
+    st%eigenval = huge(st%eigenval)
 
     SAFE_DEALLOCATE_P(st%occ)
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
@@ -579,74 +531,32 @@ contains
   !> this routine calculates the total electronic density,
   !! which is the sum of the part coming from the orbitals, the
   !! non-linear core corrections and the frozen orbitals
-  subroutine states_total_density(st, mesh, rho, Imrho)
+  subroutine states_total_density(st, mesh, total_rho)
     type(states_t),  intent(in)  :: st
     type(mesh_t),    intent(in)  :: mesh
-    FLOAT,           intent(out) :: rho(:,:)
-    FLOAT, optional, pointer, intent(inout) :: Imrho(:,:)
+    FLOAT,           intent(out) :: total_rho(:,:)
 
-    FLOAT, dimension(:,:), pointer :: density
     integer :: is, ip
-    logical :: cmplxscl
 
     PUSH_SUB(states_total_density)
 
-    cmplxscl = .false.
-    if(present(Imrho)) then
-      ASSERT(associated(Imrho))
-      cmplxscl = .true.
-    end if
+    forall(ip = 1:mesh%np, is = 1:st%d%nspin)
+      total_rho(ip, is) = st%rho(ip, is)
+    end forall
 
-    nullify(density)
-    if(associated(st%subsys_st))then
-      call base_states_get(st%subsys_st, density)
-    else
-      density => st%rho
-    end if
-    ASSERT(associated(density))
-
-    if(.not. cmplxscl) then
-      forall(ip = 1:mesh%np, is = 1:st%d%nspin)
-        rho(ip, is) = density(ip, is)
+    if(associated(st%rho_core)) then
+      forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
+        total_rho(ip, is) = total_rho(ip, is) + st%rho_core(ip)/st%d%spin_channels
       end forall
+    end if
 
-      if(associated(st%rho_core)) then
-        forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
-          rho(ip, is) = rho(ip, is) + st%rho_core(ip)/st%d%spin_channels
-        end forall
-      end if
-
-      ! Add, if it exists, the frozen density from the inner orbitals.
-      if(associated(st%frozen_rho)) then
-        forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
-          rho(ip, is) = rho(ip, is) + st%frozen_rho(ip, is)
-        end forall
-      end if
+    ! Add, if it exists, the frozen density from the inner orbitals.
+    if(associated(st%frozen_rho)) then
+      forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
+        total_rho(ip, is) = total_rho(ip, is) + st%frozen_rho(ip, is)
+      end forall
+    end if
   
-    else
-
-      forall(ip = 1:mesh%np, is = 1:st%d%nspin)
-        rho(ip, is)   = st%zrho%Re(ip, is)
-        Imrho(ip, is) = st%zrho%Im(ip, is)
-      end forall
-
-      if(associated(st%rho_core)) then
-        forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
-          rho(ip, is)   = rho(ip, is)   + st%rho_core(ip)/st%d%spin_channels
-          Imrho(ip, is) = Imrho(ip, is) + st%Imrho_core(ip)/st%d%spin_channels    
-        end forall
-      end if
-
-      ! Add, if it exists, the frozen density from the inner orbitals.
-      if(associated(st%frozen_rho)) then
-        forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
-          rho(ip, is) = rho(ip, is) + st%frozen_rho(ip, is)
-          Imrho(ip, is) = Imrho(ip, is) + st%Imfrozen_rho(ip, is)
-        end forall
-      end if
-      
-    end if
-
     POP_SUB(states_total_density)
   end subroutine states_total_density
 

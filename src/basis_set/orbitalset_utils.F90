@@ -26,6 +26,7 @@ module orbitalset_utils_oct_m
   use distributed_oct_m
   use geometry_oct_m
   use global_oct_m
+  use io_function_oct_m
   use loct_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -38,6 +39,7 @@ module orbitalset_utils_oct_m
   use species_oct_m
   use submesh_oct_m
   use types_oct_m  
+  use unit_oct_m
 
  
   implicit none
@@ -97,6 +99,9 @@ contains
     FLOAT, parameter :: TOL_INTERSITE = CNST(1.e-5)
     type(distributed_t) :: dist
 
+    integer :: ierr
+    type(unit_t) :: fn_unit
+
     PUSH_SUB(orbitalset_init_intersite)
 
     call messages_print_stress(stdout, "Intersite Coulomb integrals")
@@ -113,9 +118,9 @@ contains
 
       !We first count first the number of neighboring atoms at a distance max rcut 
       do ios = 1, nos
-        rr = sqrt(sum((os(ios)%sphere%center(1:sb%dim) - xat(1:sb%dim))**2))
+        !rr = sqrt(sum((os(ios)%sphere%center(1:sb%dim) - xat(1:sb%dim))**2))
 
-        call periodic_copy_init(pc, sb, os(ios)%sphere%center(1:sb%dim), rcut+rr)
+        call periodic_copy_init(pc, sb, os(ios)%sphere%center(1:sb%dim), rcut)!+rr)
         do inn = 1, periodic_copy_num(pc)
           xi(1:sb%dim) = periodic_copy_position(pc, sb, inn)
           rr = sqrt( sum( (xi(1:sb%dim) - xat(1:sb%dim))**2 ) )
@@ -124,6 +129,7 @@ contains
           if( rr >rcut + TOL_INTERSITE ) cycle
           !Intra atomic interaction
           if( ios == ind .and. rr < TOL_INTERSITE) cycle
+!          if( ios > ind .and. simul_box_in_box(sb, geo, xi)) cycle
 
           this%nneighbors = this%nneighbors +1
         end do
@@ -142,15 +148,16 @@ contains
  
       this%nneighbors = 0
       do ios = 1, nos
-        rr = sqrt(sum((os(ios)%sphere%center(1:sb%dim) - xat(1:sb%dim))**2))
+   !     rr = sqrt(sum((os(ios)%sphere%center(1:sb%dim) - xat(1:sb%dim))**2))
 
-        call periodic_copy_init(pc, sb, os(ios)%sphere%center(1:sb%dim), rcut+rr)
+        call periodic_copy_init(pc, sb, os(ios)%sphere%center(1:sb%dim), rcut)!+rr)
         do inn = 1, periodic_copy_num(pc)
           xi(1:sb%dim) = periodic_copy_position(pc, sb, inn)
           rr = sqrt( sum( (xi(1:sb%dim) - xat(1:sb%dim))**2 ) )
 
-          if( rr >rcut + TOL_INTERSITE ) cycle
+          if( rr > rcut + TOL_INTERSITE ) cycle
           if( ios == ind .and. rr < TOL_INTERSITE) cycle
+!          if( ios > ind .and. simul_box_in_box(sb, geo, xi)) cycle
 
           this%nneighbors = this%nneighbors +1
 
@@ -166,8 +173,8 @@ contains
       call messages_info(1)
 
 
-      SAFE_ALLOCATE(this%coulomb_IJ(1:this%norbs,1:this%norbs,1:maxnorbs,1:maxnorbs,1:this%nneighbors))
-      this%coulomb_IJ = M_ZERO 
+      SAFE_ALLOCATE(this%coulomb_IIJJ(1:this%norbs,1:this%norbs,1:maxnorbs,1:maxnorbs,1:this%nneighbors))
+      this%coulomb_IIJJ = M_ZERO
 
       call distributed_nullify(dist, this%nneighbors)
       #ifdef HAVE_MPI
@@ -188,7 +195,6 @@ contains
         SAFE_ALLOCATE(orb(1:sm%np, 1:max(this%norbs,os(ios)%norbs),1:2))
         SAFE_ALLOCATE(nn(1:sm%np))
         SAFE_ALLOCATE(vv(1:sm%np))
-        SAFE_ALLOCATE(tmp(1:der%mesh%np))
 
         do ist = 1, this%norbs
           call datomic_orbital_get_submesh(this%spec, sm, this%ii, this%ll, ist-1-this%ll, &
@@ -202,7 +208,6 @@ contains
                 1, orb(1:sm%np, ist,2))
         end do
 
-        SAFE_DEALLOCATE_A(tmp)
         SAFE_ALLOCATE(tmp(1:sm%np))
 
         call poisson_init_sm(this%poisson, psolver, der, sm)
@@ -229,29 +234,42 @@ contains
                 end do
                 !$omp end parallel do
 
-                this%coulomb_IJ(ist,jst,kst,lst,inn) = dsm_integrate(der%mesh, sm, tmp(1:np_sphere))
-                if(abs(this%coulomb_IJ(ist,jst,kst,lst,inn))<CNST(1.0e-12)) then
-                  this%coulomb_IJ(ist,jst,kst,lst,inn) = M_ZERO
+                this%coulomb_IIJJ(ist,jst,kst,lst,inn) = dsm_integrate(der%mesh, sm, tmp(1:np_sphere))
+                if(abs(this%coulomb_IIJJ(ist,jst,kst,lst,inn))<CNST(1.0e-12)) then
+                  this%coulomb_IIJJ(ist,jst,kst,lst,inn) = M_ZERO
                 end if
 
               end do !lst
             end do !kst 
           end do !jst
         end do !ist
+
         call poisson_end(this%poisson)
-        call submesh_end(sm)
 
         SAFE_DEALLOCATE_A(nn)
         SAFE_DEALLOCATE_A(vv)
         SAFE_DEALLOCATE_A(tmp)
+       if(ind == 1.and.inn==1.and.mpi_grp_is_root(mpi_world) ) then
+      SAFE_ALLOCATE(tmp(1:der%mesh%np))
+      tmp = M_ZERO
+      call submesh_add_to_mesh(sm, orb(:,1,1), tmp)
+      call dio_function_output(OPTION__OUTPUTFORMAT__XCRYSDEN, "./", 'orb11', der%mesh, tmp, fn_unit, ierr, geo = geo)
+
+      tmp = M_ZERO
+      call submesh_add_to_mesh(sm, orb(:,1,2), tmp)
+      call dio_function_output(OPTION__OUTPUTFORMAT__XCRYSDEN, "./", 'orb12', der%mesh, tmp, fn_unit, ierr, geo = geo)
+      SAFE_DEALLOCATE_A(tmp)
+     end if
+
+
+        call submesh_end(sm)
         SAFE_DEALLOCATE_A(orb)
       end do !inn
 
       if(dist%parallel) then
-        call comm_allreduce(dist%mpi_grp%comm, this%coulomb_IJ)
+        call comm_allreduce(dist%mpi_grp%comm, this%coulomb_IIJJ)
       end if
       
-
       #ifdef HAVE_MPI
       call distributed_end(dist)
       #endif

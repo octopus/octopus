@@ -75,7 +75,7 @@ module orbitalset_oct_m
     integer             :: nneighbors         !> Number of neighbouring atoms on which the intersite
                                               !> interaction is considered
     FLOAT, allocatable  :: V_IJ(:,:)          !> The list of intersite interaction parameters
-    FLOAT, allocatable  :: coulomb_IJ(:,:,:,:,:) !> Coulomb integrales with neighboring atoms
+    FLOAT, allocatable  :: coulomb_IIJJ(:,:,:,:,:) !> Coulomb integrales with neighboring atoms
     integer, allocatable:: map_os(:)
     CMPLX, allocatable  :: phase_shift(:,:)
 
@@ -106,6 +106,7 @@ contains
   nullify(this%eorb_submesh)
   nullify(this%eorb_mesh)
 
+  call submesh_null(this%sphere)
   call orbitalset_init(this)
 
   POP_SUB(orbitalset_nullify)
@@ -119,6 +120,18 @@ contains
 
   this%iatom = -1
   this%nneighbors = 0
+  this%nn = 0
+  this%ll = 0
+  this%jj = M_ONE
+  this%ii = 0
+  this%iatom = 0
+  this%ndim = 1
+ 
+  this%Ueff = M_ZERO
+  this%Ubar = M_ZERO
+  this%Jbar = M_ZERO
+  this%alpha = M_ZERO
+  this%radius = M_ZERO
 
   POP_SUB(orbitalset_init)
  end subroutine orbitalset_init
@@ -138,7 +151,7 @@ contains
    call submesh_end(this%sphere)
 
    SAFE_DEALLOCATE_A(this%V_IJ)
-   SAFE_DEALLOCATE_A(this%coulomb_IJ)
+   SAFE_DEALLOCATE_A(this%coulomb_IIJJ)
    SAFE_DEALLOCATE_A(this%map_os)
    SAFE_DEALLOCATE_A(this%phase_shift)
    

@@ -18,6 +18,7 @@ Enabled    : Yes
 # since we are not using a gauge-independent energy expression.
 
 Input: 08-laser.01-ground_state.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
 Input: 08-laser.02-length_gauge.inp
 match ;   n(t=0.2) ; LINEFIELD(td.general/multipoles, -1, 2) ; 2.000000000000e-01

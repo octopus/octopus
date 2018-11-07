@@ -23,6 +23,7 @@ Processors: 1
 # since we are not using a gauge-independent energy expression.
 
 Input: 06-laser.01-gs.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
 Input: 06-laser.02-length_gauge.inp
 match ;   n(t=0.2) ; LINEFIELD(td.general/multipoles, -1, 2) ; 2.000000000000e-01

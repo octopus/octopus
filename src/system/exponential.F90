@@ -28,6 +28,7 @@ module exponential_oct_m
   use global_oct_m
   use hardware_oct_m
   use hamiltonian_oct_m
+  use hamiltonian_base_oct_m
   use fourier_space_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
@@ -267,7 +268,7 @@ contains
 
     phase_correction = .false.
     if(associated(hm%hm_base%phase)) phase_correction = .true.
-    if(der%mesh%parallel_in_domains .or. accel_is_enabled()) phase_correction = .false.
+    if(accel_is_enabled()) phase_correction = .false.
 
     ! If we want to use imaginary time, timestep = i*deltat
     ! Otherwise, timestep is simply equal to deltat.
@@ -338,7 +339,7 @@ contains
       PUSH_SUB(exponential_apply.operate)
 
       if(apply_magnus) then
-        call zmagnus(hm, der, psi, oppsi, ik, vmagnus)
+        call zmagnus(hm, der, psi, oppsi, ik, vmagnus, set_phase = .not.phase_correction)
         else
         call zhamiltonian_apply(hm, der, psi, oppsi, ist, ik, set_phase = .not.phase_correction)
       end if
@@ -555,7 +556,6 @@ contains
 
           v(1:der%mesh%np, 1:hm%d%dim, 1) = v(1:der%mesh%np, 1:hm%d%dim, 1)/beta
 
-          psi = M_z0
           ! This is the Lanczos loop...
           do iter = 1, te%exp_order
             !copy v(:, :, n) to an array of size 1:der%mesh%np_part
@@ -630,6 +630,7 @@ contains
     integer :: ii, ist
     CMPLX, pointer :: psi(:, :)
     logical :: cmplxscl
+    logical :: phase_correction
 
     PUSH_SUB(exponential_apply_batch)
 
@@ -643,8 +644,23 @@ contains
       ASSERT(present(Imdeltat2))
     end if
 
+    ! check if we only want a phase correction for the boundary points
+    phase_correction = .false.
+    if(associated(hm%hm_base%phase)) phase_correction = .true.
+    if(accel_is_enabled()) phase_correction = .false.
+
     if (te%exp_method == EXP_TAYLOR) then 
+     !We apply the phase only to np points, and the phase for the np+1 to np_part points
+     !will be treated as a phase correction in the Hamiltonian
+      if(phase_correction) then
+        call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np, ik, .false., psib)
+      end if
+
       call taylor_series_batch()
+
+      if(phase_correction) then
+        call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np, ik, .true., psib)
+      end if
     else
 
       if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
@@ -683,6 +699,7 @@ contains
       integer :: st_start, st_end
       type(batch_t) :: psi1b, hpsi1b
       type(profile_t), save :: prof
+      logical :: copy_at_end
 
       PUSH_SUB(exponential_apply_batch.taylor_series_batch)
       call profiling_in(prof, "EXP_TAYLOR_BATCH")
@@ -701,6 +718,8 @@ contains
       call batch_init(hpsi1b, hm%d%dim, st_start, st_end, hpsi1)
 
       if(hamiltonian_apply_packed(hm, der%mesh)) then
+        ! unpack at end with copying only if the status on entry is unpacked
+        copy_at_end = batch_status(psib) == BATCH_NOT_PACKED
         call batch_pack(psib)
         if(present(psib2)) call batch_pack(psib2, copy = .false.)
         call batch_pack(psi1b, copy = .false.)
@@ -725,7 +744,7 @@ contains
         !  go haywire on the first step of dynamics (often NaN) and with debugging options
         !  the code stops in ZAXPY below without saying why.
 
-        call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik)
+        call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, set_phase = .not.phase_correction)
         
         if(zfact_is_real) then
           call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), hpsi1b, psib)
@@ -742,8 +761,8 @@ contains
       if(hamiltonian_apply_packed(hm, der%mesh)) then
         call batch_unpack(psi1b, copy = .false.)
         call batch_unpack(hpsi1b, copy = .false.)
-        if(present(psib2)) call batch_unpack(psib2)
-        call batch_unpack(psib)
+        if(present(psib2)) call batch_unpack(psib2, copy=copy_at_end)
+        call batch_unpack(psib, copy=copy_at_end)
       end if
 
       call batch_end(hpsi1b)
