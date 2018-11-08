@@ -296,9 +296,9 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
 
     iunit = io_open(file = trim(fname)//index2axis(idir), action = 'write')
 
-    write(iunit) '# Dipole matrix elements file: <Phi_i | r | Phi_j>' 
-    write(iunit, fmt = '(a,i4)')      '# ik =', ik
-    write(iunit)    '# Units = ['//trim(units_abbrev(units_out%length))//']'
+    write(iunit, '(a)') '# Dipole matrix elements file: <Phi_i | r | Phi_j>' 
+    write(iunit, '(a,i4)')      '# ik =', ik
+    write(iunit, '(a)')    '# Units = ['//trim(units_abbrev(units_out%length))//']'
   
     do ist = this%st_start, this%st_end
 
