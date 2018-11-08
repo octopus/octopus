@@ -1195,7 +1195,6 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
 
   ! reduce the projections
   if(mesh%parallel_in_domains) then
-    if(allocated(this%projector_phases)) call messages_not_implemented('Accel commutator with phases')
     call profiling_in(reduce_prof, "COMMUTATOR_REDUCE")
     call comm_allreduce(mesh%mpi_grp%comm, projections)
     call profiling_out(reduce_prof)
