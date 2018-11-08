@@ -108,12 +108,19 @@ contains
     !%Option ks_multipoles 16
     !% See <tt>OutputMEMultipoles</tt>. Not available with states parallelization.
     !%Option dipole 32
-    !% Prints the dipole matrix elements.
+    !% Prints the dipole matrix elements. Not available with states parallelization.
     !%End
 
     call parse_variable('OutputMatrixElements', 0, this%what)
     if(.not.varinfo_valid_option('OutputMatrixElements', this%what, is_flag=.true.)) then
       call messages_input_error('OutputMatrixElements')
+    end if
+
+    if(st%parallel_in_states) then
+      if(bitand(this%what, OUTPUT_ME_TWO_BODY)) &
+        call messages_not_implemented("OutputMatrixElements=two_body is not implemented in states parallelization.")
+      if(bitand(this%what, OUTPUT_ME_DIPOLE)) &
+        call messages_not_implemented("OutputMatrixElements=dipole is not implemented in states parallelization.")
     end if
 
     if(sb%dim /= 2 .and. sb%dim /= 3) this%what = bitand(this%what, not(OUTPUT_ME_ANG_MOMENTUM))
