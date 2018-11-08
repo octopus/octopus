@@ -296,16 +296,16 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
 
     iunit = io_open(file = trim(fname)//index2axis(idir), action = 'write')
 
-    write(iunit, fmt = '(a)') '# Dipole matrix elements file: <Phi_i | r | Phi_j>' 
+    write(iunit) '# Dipole matrix elements file: <Phi_i | r | Phi_j>' 
     write(iunit, fmt = '(a,i4)')      '# ik =', ik
-    write(iunit, fmt = '(a)')    '# Units = ['//trim(units_abbrev(units_out%length))//']'
+    write(iunit)    '# Units = ['//trim(units_abbrev(units_out%length))//']'
   
     do ist = this%st_start, this%st_end
 
       call states_get_state(st, gr%mesh, ist, ik, psii)
 
       if(.not. simul_box_is_periodic(gr%mesh%sb)) then
-        do ip=1, gr%mesh%np
+        do ip = 1, gr%mesh%np
           gpsii(ip, idir, 1) = psii(ip, 1)*gr%mesh%x(ip, idir)
         end do
       else
@@ -329,7 +329,7 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
           do idim = 1, st%d%dim
             !$omp parallel do
             do ip = 1, gr%mesh%np
-              gpsii(ip, idir, idim) = (M_ONE+CNST(2.0)*hm%vtau(ip,ispin))*gpsii(ip, idir, idim)
+              gpsii(ip, idir, idim) = (M_ONE + M_TWO*hm%vtau(ip, ispin))*gpsii(ip, idir, idim)
             end do
             !$omp end parallel do
           end do
@@ -359,10 +359,10 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
 #endif
 
 
-        multip_element = X(mf_dotp)(gr%mesh, st%d%dim, gpsii(:,idir,:), psij)
+        multip_element = X(mf_dotp)(gr%mesh, st%d%dim, gpsii(:, idir, :), psij)
         if(simul_box_is_periodic(gr%mesh%sb)) then
-          if(abs(st%eigenval(ist,ik)-st%eigenval(jst,ik)) > CNST(1e-6)) then  
-            multip_element = multip_element/(M_zI*(st%eigenval(ist,ik)-st%eigenval(jst,ik)))
+          if(abs(st%eigenval(ist, ik) - st%eigenval(jst, ik)) > CNST(1e-6)) then  
+            multip_element = multip_element/(M_zI*(st%eigenval(ist, ik) - st%eigenval(jst, ik)))
           else
             multip_element = R_TOTYPE(M_ZERO)
           end if
@@ -381,6 +381,7 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
 
   end do
 
+  SAFE_DEALLOCATE_A(gpsii)
   SAFE_DEALLOCATE_A(psii)
   SAFE_DEALLOCATE_A(psij)
 
