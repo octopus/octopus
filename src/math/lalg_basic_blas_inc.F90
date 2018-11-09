@@ -502,7 +502,10 @@ TYPE2 function FNAME(nrm2)(n, dx) result(nrm2)
   PUSH_SUB(FNAME(nrm2))
 
   nrm2 = CNST(0.0)
-  if (n < 1) return
+  if (n < 1) then
+    POP_SUB(FNAME(nrm2))
+    return
+  end if
 
   ASSERT(ubound(dx, dim = 1) >= n)
 
