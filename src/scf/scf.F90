@@ -1025,11 +1025,9 @@ contains
       end if
     end if
 
-    !If vdw_ts, write c6para
-    select case(ks%vdw_correction)
-    case(OPTION__VDWCORRECTION__VDW_TS)
+    if( ks%vdw_correction == OPTION__VDWCORRECTION__VDW_TS) then
       call vdw_ts_write_c6ab(ks%vdw_ts, geo, STATIC_DIR, 'c6ab_eff')
-    end select
+    end if
 
     SAFE_DEALLOCATE_A(vhxc_old)
 

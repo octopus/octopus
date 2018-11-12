@@ -490,7 +490,7 @@ void vdw_calculate (const int natoms, const double dd, const double sr, const in
       double c6abfree = num/den;
 
 
-      // Determination of c6ab_effectif, for bonded atoms a and b.
+      // Determination of the effective c6 coefficient.
       double c6abeff = volume_ratio[ia]*volume_ratio[ib]*c6abfree;
       // Determination of the effective radius of atom a.
       double r0ab = cbrt(volume_ratio[ia])*r0_a + cbrt(volume_ratio[ib])*r0_b;

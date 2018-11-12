@@ -908,7 +908,6 @@ contains
       FLOAT, allocatable :: coords(:, :)
       FLOAT :: vdw_stress(1:3, 1:3), latvec(1:3, 1:3)
       integer, allocatable :: atnum(:)
-      type(simul_box_t) :: sb 
 
       PUSH_SUB(v_ks_calc_start.v_a_xc)
       call profiling_in(prof, "XC")

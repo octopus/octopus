@@ -23,8 +23,10 @@ module hirshfeld_oct_m
   use messages_oct_m
   use geometry_oct_m
   use global_oct_m
+  use io_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
+  use mpi_oct_m 
   use periodic_copy_oct_m
   use profiling_oct_m
   use ps_oct_m
@@ -32,9 +34,6 @@ module hirshfeld_oct_m
   use states_oct_m
   use species_oct_m
   use splines_oct_m
-  use mpi_oct_m !for writing
-  use parser_oct_m !for the variable
-  use io_oct_m  !for writing
  
   implicit none
 
@@ -60,7 +59,7 @@ module hirshfeld_oct_m
 
   end type hirshfeld_t
 
-  real(8), parameter, public :: TOL_HIRSHFELD = CNST(1e-9)
+  FLOAT, parameter, public :: TOL_HIRSHFELD = CNST(1e-9)
     
 contains
 
@@ -75,7 +74,7 @@ contains
     FLOAT, allocatable :: atom_density(:, :), atom_density_acc(:)
     type(ps_t), pointer :: ps
     type(periodic_copy_t) :: pp
-    INTEGER :: icell
+    integer :: icell
     type(profile_t), save :: prof
     PUSH_SUB(hirshfeld_init)
 
@@ -324,13 +323,13 @@ contains
                                               pos_j, this%st%d%spin_channels, &
                                               atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
 
-      call periodic_copy_init(pp_i, this%mesh%sb, pos_j, (rmax_j+rmax_i))  ! jcells futher away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
+      call periodic_copy_init(pp_i, this%mesh%sb, pos_j, (rmax_j+rmax_i))  ! jcells further away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
 
       do icell = 1, periodic_copy_num(pp_i)
 
         pos_i(1:this%mesh%sb%dim) = periodic_copy_position(pp_i, this%mesh%sb, icell) + &
-                                    (this%geo%atom(iatom)%x(1:this%mesh%sb%dim)-this%geo%atom(jatom)%x(1:this%mesh%sb%dim))
-        rij =  sqrt(sum((pos_i(1:this%mesh%sb%dim)-pos_j(1:this%mesh%sb%dim))**2))
+                                    (this%geo%atom(iatom)%x(1:this%mesh%sb%dim) - this%geo%atom(jatom)%x(1:this%mesh%sb%dim))
+        rij =  sqrt(sum((pos_i(1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim))**2))
           
         if(rij - (rmax_j+rmax_i) < TOL_SPACING) then 
  
@@ -347,12 +346,12 @@ contains
             if(this%total_density(ip)< TOL_HIRSHFELD) cycle
             
             xxi(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_i(1:this%mesh%sb%dim)
-            rri =sum(xxi(1:this%mesh%sb%dim)**2)
-            if(rri-rmax_isqu > TOL_SPACING) cycle ! In this case atom_dens = 0
+            rri = sum(xxi(1:this%mesh%sb%dim)**2)
+            if(rri - rmax_isqu > TOL_SPACING) cycle ! In this case atom_dens = 0
 
             xxj(1:this%mesh%sb%dim) = this%mesh%x(ip, 1:this%mesh%sb%dim) - pos_j(1:this%mesh%sb%dim)
             rrj = sum(xxj(1:this%mesh%sb%dim)**2)
-            if(rrj-rmax_jsqu > TOL_SPACING) cycle ! In this case atom_der = 0
+            if(rrj - rmax_jsqu > TOL_SPACING) cycle ! In this case atom_der = 0
 
             rri = sqrt(rri)
             rrj = sqrt(rrj)
