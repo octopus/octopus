@@ -492,7 +492,7 @@ contains
     integer :: iatom, jatom
     integer :: ix, iy, ix_max, iy_max, ss
     FLOAT   :: gg(1:MAX_DIM), gg2, gx, gg_abs
-    FLOAT   :: factor,factor1,factor2
+    FLOAT   :: factor,factor1,factor2, coeff
     FLOAT   :: dz_max, dz_ij, area_cell, erfc1, erfc2, tmp_erf
 
     PUSH_SUB(Ewald_long_2d)
@@ -565,7 +565,7 @@ contains
         factor = M_HALF*M_PI/(area_cell*gg_abs)
           
         do iatom = 1, geo%natoms
-          do jatom = 1, geo%natoms
+          do jatom = iatom, geo%natoms
 ! efourier
             gx = gg(1)*(geo%atom(iatom)%x(1)-geo%atom(jatom)%x(1)) &
               + gg(2)*(geo%atom(iatom)%x(2)-geo%atom(jatom)%x(2))
@@ -576,8 +576,14 @@ contains
             erfc2 = M_ONE - loct_erf(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
             factor2 = exp(-gg_abs*dz_ij)*erfc2
 
+            if(iatom == jatom) then
+              coeff = M_ONE
+            else
+              coeff = M_TWO
+            end if
+
             efourier = efourier &
-              + factor &
+              + factor * coeff &
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               * cos(gx)* ( factor1 + factor2)
               
@@ -589,6 +595,11 @@ contains
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               *sin(gx)*(factor1 + factor2)
 
+            force(1:2, jatom) = force(1:2, jatom) &
+              + (CNST(-1.0)* M_TWO*factor )* gg(1:2) &
+              * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
+              *sin(gx)*(factor1 + factor2)
+
             factor1 = exp(gg_abs*dz_ij)*( gg_abs*erfc1 &
               - M_TWO*this%alpha/sqrt(M_PI)*exp(-(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)**2))
             factor2 = exp(-gg_abs*dz_ij)*( gg_abs*erfc2 &
@@ -596,6 +607,10 @@ contains
 
             force(3, iatom) = force(3, iatom) &
               - M_TWO*factor &
+              * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
+              * cos(gx)* ( factor1 - factor2)
+            force(3, jatom) = force(3, jatom) &
+              + M_TWO*factor &
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               * cos(gx)* ( factor1 - factor2)
 
