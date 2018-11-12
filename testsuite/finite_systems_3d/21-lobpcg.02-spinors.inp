@@ -29,6 +29,9 @@ GuessMagnetDensity = user_defined
 %AtomsMagnetDirection
  1.0 | 1.0 | 0.0
 %
+ConstrainGuessMagneticDensity = 2
+EigensolverTolerance = 1.0e-8
+ConvRelDens = 1.0e-7
 
 EigenSolver = lobpcg
 # due to bugs in lobpcg, may fail without next line
