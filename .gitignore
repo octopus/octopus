@@ -201,6 +201,7 @@ semantic.cache
 /src/utils/oct-vibrational_spectrum
 /src/utils/oct-xyz-anim
 /src/utils/oct-floquet
+/src/utils/oct-spin_susceptibility
 /src/utils/*.dSYM
 
 # /testsuite/

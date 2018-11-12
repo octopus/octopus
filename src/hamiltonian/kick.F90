@@ -60,7 +60,8 @@ module kick_oct_m
   integer, public, parameter ::    &
     KICK_DENSITY_MODE        = 0,  &
     KICK_SPIN_MODE           = 1,  &
-    KICK_SPIN_DENSITY_MODE   = 2
+    KICK_SPIN_DENSITY_MODE   = 2,  &
+    KICK_MAGNON_MODE         = 3
 
   integer, public, parameter ::    &
     QKICKMODE_NONE           = 0,  &
@@ -192,11 +193,14 @@ contains
     !% is only possible if the run is done in spin-polarized mode, or with spinors.
     !% This mode is intended for use with symmetries to obtain both of the responses
     !% at once, at described in the reference above.
+    !%Option kick_magnon 3
+    !% Rotates the magnetization.
     !%End
     call parse_variable('TDDeltaStrengthMode', KICK_DENSITY_MODE, kick%delta_strength_mode)
     select case (kick%delta_strength_mode)
     case (KICK_DENSITY_MODE)
     case (KICK_SPIN_MODE, KICK_SPIN_DENSITY_MODE)
+    case (KICK_MAGNON_MODE)
       if (nspin == UNPOLARIZED) call messages_input_error('TDDeltaStrengthMode')
     case default
       call messages_input_error('TDDeltaStrengthMode')
@@ -347,9 +351,11 @@ contains
         kick%pol(1:3, idir) = kick%pol(1:3, idir) / sqrt(sum(kick%pol(1:3, idir)**2))
       end do
 
-      if(any(abs(kick%pol(1:periodic_dim, :)) > M_EPSILON)) then
-        message(1) = "Kick cannot be applied in a periodic direction. Use GaugeVectorField instead."
-        call messages_fatal(1)
+      if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
+        if(any(abs(kick%pol(1:periodic_dim, :)) > M_EPSILON)) then
+          message(1) = "Kick cannot be applied in a periodic direction. Use GaugeVectorField instead."
+          call messages_fatal(1)
+        end if
       end if
 
       !%Variable TDPolarizationWprime
@@ -437,6 +443,11 @@ contains
     end if
 
     kick%qlength = sqrt(sum(kick%qvector(:)**2))
+
+    if(kick%delta_strength_mode == KICK_MAGNON_MODE .and. kick%qkick_mode /= QKICKMODE_EXP) then
+      message(1) = "For magnons, the kick mode must be expnential."
+      call messages_fatal(1)
+     end if
 
     POP_SUB(kick_init)
   end subroutine kick_init
@@ -754,9 +765,9 @@ contains
 
     kick_pcm_function = M_ZERO
     if ( pcm%localf ) then
-    	SAFE_ALLOCATE(kick_function_interpolate(1:mesh%np_part))
+      SAFE_ALLOCATE(kick_function_interpolate(1:mesh%np_part))
       kick_function_interpolate = M_ZERO
-    	call kick_function_get(mesh, kick, kick_function_interpolate, to_interpolate = .true.)
+      call kick_function_get(mesh, kick, kick_function_interpolate, to_interpolate = .true.)
       SAFE_ALLOCATE(kick_function_real(1:mesh%np_part))
       kick_function_real = DREAL(kick_function_interpolate)
       if ( pcm%kick_like .or. pcm%which_eps == 'drl' ) then
@@ -794,6 +805,7 @@ contains
     CMPLX, allocatable :: kick_function(:), psi(:, :)
 
     CMPLX, allocatable :: kick_pcm_function(:)
+    integer :: ns
 
     PUSH_SUB(kick_apply)
 
@@ -830,56 +842,96 @@ contains
       end select
       call messages_info(3)
 
+      ns = 1
+      if(st%d%nspin == 2) ns = 2
+
       SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
 
-      do iqn = st%d%kpt%start, st%d%kpt%end
-        do ist = st%st_start, st%st_end
+      if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
 
-          call states_get_state(st, mesh, ist, iqn, psi)
+        do iqn = st%d%kpt%start, st%d%kpt%end
+          do ist = st%st_start, st%st_end
 
-          select case (kick%delta_strength_mode)
-          case (KICK_DENSITY_MODE)
-            forall(idim = 1:st%d%dim, ip = 1:mesh%np)
-              psi(ip, idim) = exp(M_zI*kick%delta_strength*kick_function(ip))*psi(ip, idim)
-            end forall
+            call states_get_state(st, mesh, ist, iqn, psi)
 
-          case (KICK_SPIN_MODE)
-            ispin = states_dim_get_spin_index(st%d, iqn)
-            do ip = 1, mesh%np
-              kick_value = M_zI*kick%delta_strength*kick_function(ip)
+            select case (kick%delta_strength_mode)
+            case (KICK_DENSITY_MODE)
+              forall(idim = 1:st%d%dim, ip = 1:mesh%np)
+                psi(ip, idim) = exp(M_zI*kick%delta_strength*kick_function(ip))*psi(ip, idim)
+               end forall
+
+            case (KICK_SPIN_MODE)
+              ispin = states_dim_get_spin_index(st%d, iqn)
+              do ip = 1, mesh%np
+                kick_value = M_zI*kick%delta_strength*kick_function(ip)
               
-              cc(1) = exp(kick_value)
-              cc(2) = exp(-kick_value)
+                cc(1) = exp(kick_value)
+                cc(2) = exp(-kick_value)
 
-              select case (st%d%ispin)
-              case (SPIN_POLARIZED)
-                psi(ip, 1) = cc(ispin)*psi(ip, 1)
-              case (SPINORS)
-                psi(ip, 1) = cc(1)*psi(ip, 1)
-                psi(ip, 2) = cc(2)*psi(ip, 2)
-              end select
-            end do
-
-          case (KICK_SPIN_DENSITY_MODE)
-            do ip = 1, mesh%np
-              kick_value = M_zI*kick%delta_strength*kick_function(ip)
-              cc(1) = exp(M_TWO*kick_value)
-
-              select case (st%d%ispin)
-              case (SPIN_POLARIZED)
-                if(is_spin_up(iqn)) then
+                select case (st%d%ispin)
+                case (SPIN_POLARIZED)
+                  psi(ip, 1) = cc(ispin)*psi(ip, 1)
+                case (SPINORS)
                   psi(ip, 1) = cc(1)*psi(ip, 1)
-                end if
-              case (SPINORS)
-                psi(ip, 1) = cc(1)*psi(ip, 1)
+                  psi(ip, 2) = cc(2)*psi(ip, 2)
+                end select
+              end do
+
+            case (KICK_SPIN_DENSITY_MODE)
+              do ip = 1, mesh%np
+                kick_value = M_zI*kick%delta_strength*kick_function(ip)
+                cc(1) = exp(M_TWO*kick_value)
+
+                select case (st%d%ispin)
+                case (SPIN_POLARIZED)
+                  if(is_spin_up(iqn)) then
+                    psi(ip, 1) = cc(1)*psi(ip, 1)
+                  end if
+                case (SPINORS)
+                  psi(ip, 1) = cc(1)*psi(ip, 1)
+                end select
+              end do
+            end select
+
+            call states_set_state(st, mesh, ist, iqn, psi)
+
+          end do
+        end do
+
+      else
+        ASSERT(st%d%ispin==SPINORS)
+
+        do iqn = st%d%kpt%start, st%d%kpt%end, ns
+          do ist = st%st_start, st%st_end
+
+            call states_get_state(st, mesh, ist, iqn, psi)
+
+            do ip = 1, mesh%np
+
+              select case(kick%pol_dir)
+              case(1)
+                cc(1) = real(kick_function(ip), REAL_PRECISION)*psi(ip, 1)
+                cc(2) = real(kick_function(ip), REAL_PRECISION)*psi(ip, 2)
+
+                psi(ip, 1) = (cos(kick%delta_strength)-M_zI*sin(kick%delta_strength)*imag(kick_function(ip)))*psi(ip, 1) &
+                             - sin(kick%delta_strength)*cc(2)
+                psi(ip, 2) =  sin(kick%delta_strength)*cc(1) +  (cos(kick%delta_strength)+M_zI*sin(kick%delta_strength)*imag(kick_function(ip)))*psi(ip, 2)
+              case(2)
+               call messages_not_implemented("Magnon kick for a polarization direction along y.")
+              case(3)
+                cc(1) = M_zI*conjg(kick_function(ip))*psi(ip, 1)
+                cc(2) = M_zI*kick_function(ip)*psi(ip, 2)
+
+                psi(ip, 1) = cos(kick%delta_strength)*psi(ip, 1) -sin(kick%delta_strength)*cc(2)
+                psi(ip, 2) = -sin(kick%delta_strength)*cc(1) + cos(kick%delta_strength)*psi(ip, 2)
               end select
             end do
-          end select
 
-          call states_set_state(st, mesh, ist, iqn, psi)
+            call states_set_state(st, mesh, ist, iqn, psi)
 
+          end do
         end do
-      end do
+      end if
 
       SAFE_DEALLOCATE_A(psi)
 
@@ -887,6 +939,7 @@ contains
       ! Delta v_z = ( Z*e*E_0 / M) = - ( Z*k*\hbar / M)
       ! where M and Z are the ionic mass and charge, respectively.
       if(ion_dynamics_ions_move(ions)  .and. kick%delta_strength /= M_ZERO) then
+        ASSERT(kick%delta_strength_mode /= KICK_MAGNON_MODE)
         do iatom = 1, geo%natoms
           geo%atom(iatom)%v(1:mesh%sb%dim) = geo%atom(iatom)%v(1:mesh%sb%dim) + &
                kick%delta_strength * kick%pol(1:mesh%sb%dim, kick%pol_dir) * &

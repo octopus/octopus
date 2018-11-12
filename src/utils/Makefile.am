@@ -36,7 +36,8 @@ EXTRA_PROGRAMS = oct-propagation_spectrum \
                  oct-convert \
                  oct-local_multipoles \
                  oct-conductivity \
-                 oct-floquet
+                 oct-floquet \
+		 oct-spin_susceptibility
 
 bin_PROGRAMS = @UTILITY_PROGRAMS@
 
@@ -78,6 +79,20 @@ oct_dielectric_function_LDADD    = $(top_builddir)/src/td/libtd.a \
                                    $(top_builddir)/src/math/libmath.a \
                                    $(top_builddir)/src/basic/libbasic.a \
                                    $(other_LIBS)
+
+oct_spin_susceptibility_SOURCES = spin_susceptibility.F90
+oct_spin_susceptibility_LDADD    = $(top_builddir)/src/td/libtd.a \
+                                   $(top_builddir)/src/hamiltonian/libhamiltonian.a \
+                                   $(top_builddir)/src/basis_set/libbasis_set.a \
+                                   $(top_builddir)/src/poisson/libpoisson.a \
+                                   $(top_builddir)/src/states/libstates.a \
+                                   $(top_builddir)/src/grid/libgrid.a \
+                                   $(top_builddir)/src/ions/libions.a \
+                                   $(top_builddir)/src/species/libspecies.a \
+                                   $(top_builddir)/src/math/libmath.a \
+                                   $(top_builddir)/src/basic/libbasic.a \
+                                   $(other_LIBS)
+
 
 oct_harmonic_spectrum_SOURCES = harmonic_spectrum.F90
 oct_harmonic_spectrum_LDADD      = $(top_builddir)/src/td/libtd.a \
@@ -243,3 +258,4 @@ convert.o : convert.F90
 local_multipoles.o : local_multipoles.F90 local_write.o 
 local_write.o : local_write.F90 
 floquet.o : floquet.F90
+spin_susceptibility.o : spin_susceptibility.F90
