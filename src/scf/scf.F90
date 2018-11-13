@@ -447,7 +447,13 @@ contains
     if(scf%calc_partial_charges) call messages_experimental('SCFCalculatePartialCharges')
 
     rmin = geometry_min_distance(geo)
-    if(geo%natoms == 1) rmin = CNST(100.0)
+    if(geo%natoms == 1) then
+      if(simul_box_is_periodic(gr%sb)) then
+        rmin = minval(gr%sb%lsize(1:gr%sb%periodic_dim))
+      else
+        rmin = CNST(100.0)
+      end if
+    end if
 
     !%Variable LocalMagneticMomentsSphereRadius
     !%Type float
@@ -457,7 +463,7 @@ contains
     !% magnetization density in spheres centered around each atom.
     !% This variable controls the radius of the spheres.
     !% The default is half the minimum distance between two atoms
-    !% in the input coordinates, or 100 a.u. if there is only one atom.
+    !% in the input coordinates, or 100 a.u. if there is only one atom (for isolated systems).
     !%End
     call parse_variable('LocalMagneticMomentsSphereRadius', rmin*M_HALF, scf%lmm_r, unit = units_inp%length)
     ! this variable is also used in td/td_write.F90
