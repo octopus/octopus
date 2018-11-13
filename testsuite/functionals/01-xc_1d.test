@@ -6,6 +6,7 @@ TestGroups : short-run, functionals
 Enabled    : Yes
 
 Input: 01-xc_1d.01-wfs-lda.inp
+match ; SCF convergence                          ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; LDA Total Energy                         ; GREPFIELD(static/info, 'Total       =', 3) ; -4.17967691
 match ; LDA Exchange                             ; GREPFIELD(static/info, 'Exchange    =', 3) ; -1.00241236
 match ; LDA Correlation                          ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.04057719
@@ -16,6 +17,7 @@ match ; LDA Eigenvalue 1 dn                      ; GREPFIELD(static/info, '  1  
 match ; LDA Eigenvalue 2 dn                      ; GREPFIELD(static/info, '  2   dn', 3) ; -0.167274
 
 Input: 01-xc_1d.02-wfs-hf.inp
+match ; SCF convergence                          ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Hartree-Fock Total Energy                ; GREPFIELD(static/info, 'Total       =', 3) ; -4.19644929
 match ; Hartree-Fock Eigenvalue 1 up             ; GREPFIELD(static/info, '  1   up', 3) ; -1.071001
 match ; Hartree-Fock Eigenvalue 2 up             ; GREPFIELD(static/info, '  2   up', 3) ; 0.003012

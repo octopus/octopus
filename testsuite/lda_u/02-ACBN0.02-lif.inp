@@ -29,7 +29,6 @@ Spacing = 0.4
 FromScratch = yes
 ParStates = no
 ParDomains = no
-ParKPoints = auto
 
 SpinComponents = polarized
 GuessMagnetDensity = paramagnetic
@@ -50,4 +49,4 @@ AOTruncation = ao_full
 AOThreshold = 0.05
 AONormalize = no
 OutputLDA_U = occ_matrices + effectiveU
-
+ACBN0Screening = 0.5

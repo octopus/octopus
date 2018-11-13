@@ -7,6 +7,8 @@ Enabled    : Yes
 
 Input: 16-sodium_chain_cylinder.01-ground_state.inp
 
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 123
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  16
 
@@ -36,6 +38,8 @@ match ; Bands n=2,k=5; GREPFIELD(static/eigenvalues, '#k =   5', 3, 2) ; -1.1827
 
 
 Input: 16-sodium_chain_cylinder.03-ground_state_disp.inp
+
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 123
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  16

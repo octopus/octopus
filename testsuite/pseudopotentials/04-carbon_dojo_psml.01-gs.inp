@@ -9,6 +9,8 @@ CalculationMode = gs
 FromScratch = yes
 UnitsOutput = ev_angstrom
 
+PseudopotentialSet = none
+
 %Coordinates
 "C" | 0 | 0 | 0
 %

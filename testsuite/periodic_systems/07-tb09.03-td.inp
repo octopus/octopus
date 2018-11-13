@@ -44,7 +44,6 @@ TDTimeStep = 0.02
 TDMaxSteps = 20
 
 ParDomains = no
-ParKPoints = auto
 
 TDEnergyUpdateIter = 5
 

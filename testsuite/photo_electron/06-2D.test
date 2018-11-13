@@ -7,6 +7,7 @@ Enabled    : Yes
 # Na ground state
 Processors : 2
 Input      : 06-2D.01-Na_gs.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.21408824
 
 # Na check velocity map 

@@ -29,7 +29,6 @@ Spacing = 0.4
 FromScratch = yes
 ParStates = no
 ParDomains = no
-ParKPoints = auto
 
 LCAOStart= lcao_states
 
@@ -50,3 +49,4 @@ AOThreshold = 0.05
 AONormalize = no
 AOSubmeshForPeriodic = yes
 OutputLDA_U = occ_matrices + effectiveU
+ACBN0Screening = 0.5

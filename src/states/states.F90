@@ -19,12 +19,9 @@
 
 module states_oct_m
   use accel_oct_m
-  use base_density_oct_m
-  use base_states_oct_m
   use blacs_proc_grid_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
-  use cmplxscl_oct_m
   use comm_oct_m
   use batch_oct_m
   use batch_ops_oct_m
@@ -75,7 +72,6 @@ module states_oct_m
     states_priv_t,                    &
     states_init,                      &
     states_look,                      &
-    states_add_substates,             &
     states_densities_init,            &
     states_exec_init,                 &
     states_allocate_wfns,             &
@@ -108,18 +104,10 @@ module states_oct_m
     states_block_min,                 &
     states_block_max,                 &
     states_block_size,                &
-    zstates_eigenvalues_sum,          &
-    cmplx_array2_t,                   &
     states_count_pairs,               &
     occupied_states,                  &
     states_type,                      &
     states_set_phase
-
-  !>cmplxscl: complex 2D matrices 
-  type cmplx_array2_t    
-    FLOAT, pointer     :: Re(:, :) !< Real components 
-    FLOAT, pointer     :: Im(:, :) !< Imaginary components
-  end type cmplx_array2_t
 
   type states_priv_t
     private
@@ -134,23 +122,6 @@ module states_oct_m
 
     logical                  :: only_userdef_istates  !< only use user-defined states as initial states in propagation
      
-    type(cmplxscl_t)         :: cmplxscl              !< contain the cmplxscl parameters                 
-    !> Pointers to complexified quantities. 
-    !! When we use complex scaling the Hamiltonian is no longer hermitian.
-    !! In this case we have to distinguish between left and right eigenstates of H and
-    !! both density and eigenvalues become complex.
-    !! In order to modify the code to include this changes we allocate the general structures and 
-    !! make the restricted quantities point to a part of the structure.
-    !! For density and eigenvalues we make the old quantities to point to the real part:
-    !! rho => zrho%Re
-    !! eigenval => zeigenval%Re  
-    type(cmplx_array2_t)     :: zrho         !< cmplxscl: the complexified density <psi%zL(:,:,:,:)|psi%zR(:,:,:,:)>
-    type(cmplx_array2_t)     :: zeigenval    !< cmplxscl: the complexified eigenvalues 
-    FLOAT,           pointer :: Imrho_core(:)  
-    FLOAT,           pointer :: Imfrozen_rho(:, :)   
-    type(batch_t),   pointer :: psibL(:, :)  !< Left wave-functions blocks
-    logical                  :: have_left_states
-
     type(states_group_t)     :: group
 
     !> used for the user-defined wavefunctions (they are stored as formula strings)
@@ -170,9 +141,6 @@ module states_oct_m
     !> It may be required to "freeze" the deepest orbitals during the evolution; the density
     !! of these orbitals is kept in frozen_rho. It is different from rho_core.
     FLOAT, pointer :: frozen_rho(:, :)
-
-    !> Subsystem states.
-    type(base_states_t), pointer :: subsys_st
 
     logical        :: calc_eigenval
     logical        :: uniform_occ   !< .true. if occupations are equal for all states: no empty states, and no smearing
@@ -259,17 +227,9 @@ contains
 
     st%priv%wfs_type = TYPE_FLOAT ! By default, calculations use real wavefunctions
 
-    st%cmplxscl%space = .false.
-    !cmplxscl
-    nullify(st%zeigenval%Re, st%zeigenval%Im) 
-    nullify(st%zrho%Re, st%zrho%Im)
-    nullify(st%Imrho_core, st%Imfrozen_rho)
-    nullify(st%psibL)
-
     nullify(st%rho, st%current)
     nullify(st%current_kpt)
     nullify(st%rho_core, st%frozen_rho)
-    nullify(st%subsys_st)
     nullify(st%eigenval, st%occ, st%spin)
 
     st%parallel_in_states = .false.
@@ -294,6 +254,7 @@ contains
     FLOAT :: excess_charge
     integer :: nempty, ntot, default, nthreads
     integer :: nempty_conv
+    logical :: force
 
     PUSH_SUB(states_init)
 
@@ -523,22 +484,8 @@ contains
     st%d%block_size = min(st%d%block_size, st%nst)
     conf%target_states_block_size = st%d%block_size
 
-    !cmplxscl
-    call cmplxscl_init(st%cmplxscl)
-
-    st%have_left_states = .false.
-    
-    if (st%cmplxscl%space) then
-      !Even for gs calculations it requires complex wavefunctions
-      st%priv%wfs_type = TYPE_CMPLX
-      !Allocate imaginary parts of the eigenvalues
-      SAFE_ALLOCATE(st%zeigenval%Im(1:st%nst, 1:st%d%nik))
-      st%zeigenval%Im = M_ZERO
-    end if
-    SAFE_ALLOCATE(st%zeigenval%Re(1:st%nst, 1:st%d%nik))
-    st%zeigenval%Re = huge(st%zeigenval%Re)
-    st%eigenval => st%zeigenval%Re(1:st%nst, 1:st%d%nik) 
-
+    SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
+    st%eigenval = huge(st%eigenval)
 
     ! Periodic systems require complex wavefunctions
     ! but not if it is Gamma-point only
@@ -563,7 +510,13 @@ contains
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
     st%occ      = M_ZERO
     ! allocate space for formula strings that define user-defined states
-    SAFE_ALLOCATE(st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik))
+    if(parse_is_defined('UserDefinedStates') .or. parse_is_defined('OCTInitialUserdefined') &
+         .or. parse_is_defined('OCTTargetUserdefined')) then
+      SAFE_ALLOCATE(st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik))
+      ! initially we mark all 'formulas' as undefined
+      st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik) = 'undefined'
+    end if
+
     if(st%d%ispin == SPINORS) then
       SAFE_ALLOCATE(st%spin(1:3, 1:st%nst, 1:st%d%nik))
     else
@@ -587,9 +540,6 @@ contains
     !%End
     call parse_variable('StatesRandomization', PAR_INDEPENDENT, st%randomization)
 
-
-    ! initially we mark all 'formulas' as undefined
-    st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik) = 'undefined'
 
     call states_read_initial_occs(st, excess_charge, gr%sb%kpoints)
     call states_read_initial_spins(st)
@@ -631,30 +581,27 @@ contains
     call blacs_proc_grid_nullify(st%dom_st_proc_grid)
 #endif
 
+    !%Variable ForceComplex
+    !%Type logical
+    !%Default no
+    !%Section Execution::Debug
+    !%Description
+    !% Normally <tt>Octopus</tt> determines automatically the type necessary
+    !% for the wavefunctions. When set to yes this variable will
+    !% force the use of complex wavefunctions.
+    !%
+    !% Warning: This variable is designed for testing and
+    !% benchmarking and normal users need not use it.
+    !%End
+    call parse_variable('ForceComplex', .false., force)
+
+    if(force) call states_set_complex(st)
+
     st%packed = .false.
 
     POP_SUB(states_init)
   end subroutine states_init
 
-  ! ---------------------------------------------------------
-  !> Sets the pointer to the substates
-  !> must be called before states_densities_init
-  ! ---------------------------------------------------------
-  subroutine states_add_substates(this, st)
-    type(states_t),              intent(inout) :: this
-    type(base_states_t), target, intent(in)    :: st
-
-    PUSH_SUB(states_add_substates)
-
-    !> Substates are not compatible with complex scaling for now.
-    ASSERT(.not.(this%cmplxscl%space.or.this%cmplxscl%time))
-    ASSERT(.not.associated(this%subsys_st))
-    this%subsys_st => st
-
-    POP_SUB(states_add_substates)
-  end subroutine states_add_substates
- 
-  ! ---------------------------------------------------------
   !> Reads the 'states' file in the restart directory, and finds out
   !! the nik, dim, and nst contained in it.
   ! ---------------------------------------------------------
@@ -1034,35 +981,12 @@ contains
     type(type_t), optional, intent(in)      :: wfs_type
     logical,      optional, intent(in)      :: alloc_Left !< allocate an additional set of wfs to store left eigenstates
 
-    logical :: force
-
     PUSH_SUB(states_allocate_wfns)
 
     if (present(wfs_type)) then
       ASSERT(wfs_type == TYPE_FLOAT .or. wfs_type == TYPE_CMPLX)
       st%priv%wfs_type = wfs_type
     end if
-
-    st%have_left_states = optional_default(alloc_Left, .false.) .and. st%cmplxscl%space
-    if(st%have_left_states) then
-      ASSERT(st%priv%wfs_type == TYPE_CMPLX) 
-    end if
-
-    !%Variable ForceComplex
-    !%Type logical
-    !%Default no
-    !%Section Execution::Debug
-    !%Description
-    !% Normally <tt>Octopus</tt> determines automatically the type necessary
-    !% for the wavefunctions. When set to yes this variable will
-    !% force the use of complex wavefunctions.
-    !%
-    !% Warning: This variable is designed for testing and
-    !% benchmarking and normal users need not use it.
-    !%End
-    call parse_variable('ForceComplex', .false., force)
-
-    if(force) call states_set_complex(st)
 
     call states_init_block(st, mesh)
     call states_set_zero(st)
@@ -1131,10 +1055,6 @@ contains
     end do
 
     SAFE_ALLOCATE(st%group%psib(1:st%group%nblocks, st%d%kpt%start:st%d%kpt%end))
-    if(st%have_left_states) then
-      SAFE_ALLOCATE(st%psibL(1:st%group%nblocks, st%d%kpt%start:st%d%kpt%end))
-    end if
-
 
     SAFE_ALLOCATE(st%group%block_is_local(1:st%group%nblocks, st%d%kpt%start:st%d%kpt%end))
     st%group%block_is_local = .false.
@@ -1154,14 +1074,6 @@ contains
           else
             call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
             call zbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
-
-            if(st%have_left_states) then !cmplxscl
-              call batch_init(st%psibL(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-              call zbatch_allocate(st%psibL(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
-            else
-              st%psibL => st%group%psib                           
-            end if
-
           end if
           
         end do
@@ -1206,17 +1118,6 @@ contains
       end do
     end if
     
-!     !cmplxscl
-!     if(st%have_left_states) then
-!       do ib = 1, st%nblocks
-!         do iqn = st%d%kpt%start, st%d%kpt%end
-!           call batch_copy(st%group%psib(ib,iqn), st%psibL(ib,iqn))
-!         end do
-!       end do
-!     else
-!       st%psibL => st%group%psib
-!     end if
-
 !!$!!!!DEBUG
 !!$    ! some debug output that I will keep here for the moment
 !!$    if(mpi_grp_is_root(mpi_world)) then
@@ -1257,18 +1158,12 @@ contains
           do iq = st%d%kpt%start, st%d%kpt%end
             if(st%group%block_is_local(ib, iq)) then
               call batch_end(st%group%psib(ib, iq))
-              if(st%have_left_states) call batch_end(st%psibL(ib, iq)) !cmplxscl
             end if
           end do
        end do
 
        SAFE_DEALLOCATE_P(st%group%psib)
 
-       if(st%have_left_states) then !cmplxscl
-         SAFE_DEALLOCATE_P(st%psibL)
-       else  
-         nullify(st%psibL)
-       end if      
        SAFE_DEALLOCATE_P(st%group%iblock)
        SAFE_DEALLOCATE_P(st%group%block_range)
        SAFE_DEALLOCATE_P(st%group%block_size)
@@ -1291,26 +1186,12 @@ contains
 
     PUSH_SUB(states_densities_init)
 
-    if(associated(st%subsys_st))then
-      call base_states_gets(st%subsys_st, "live", st%zrho%Re)
-      ASSERT(associated(st%zrho%Re))
-    else
-      SAFE_ALLOCATE(st%zrho%Re(1:gr%fine%mesh%np_part, 1:st%d%nspin))
-      st%zrho%Re = M_ZERO
-    end if
-    st%rho => st%zrho%Re
-    if( st%cmplxscl%space) then
-      SAFE_ALLOCATE(st%zrho%Im(1:gr%fine%mesh%np_part, 1:st%d%nspin))
-      st%zrho%Im = M_ZERO
-    end if
+    SAFE_ALLOCATE(st%rho(1:gr%fine%mesh%np_part, 1:st%d%nspin))
+    st%rho = M_ZERO
 
     if(geo%nlcc) then
       SAFE_ALLOCATE(st%rho_core(1:gr%fine%mesh%np))
       st%rho_core(:) = M_ZERO
-      if(st%cmplxscl%space) then
-        SAFE_ALLOCATE(st%Imrho_core(1:gr%fine%mesh%np))
-        st%Imrho_core(:) = M_ZERO
-      end if
     end if
 
     fsize = gr%mesh%np_part*CNST(8.0)*st%d%block_size
@@ -1389,9 +1270,19 @@ contains
     !%Option cholesky_parallel 2
     !% Cholesky decomposition implemented using
     !% ScaLAPACK. Compatible with states parallelization. (Obsolete synonym: <tt>par_gram_schmidt</tt>)
-    !%Option mgs 3
-    !% Modified Gram-Schmidt orthogonalization.
+    !%Option cgs 3
+    !% Classical Gram-Schmidt (CGS) orthogonalization.
     !% Can be used with domain parallelization but not state parallelization.
+    !% The algorithm is defined in Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005).
+    !%Option mgs 4
+    !% Modified Gram-Schmidt (MGS) orthogonalization.
+    !% Can be used with domain parallelization but not state parallelization.
+    !% The algorithm is defined in Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005).
+    !%Option drcgs 5
+    !% Classical Gram-Schmidt orthogonalization with double-step reorthogonalization.
+    !% Can be used with domain parallelization but not state parallelization.
+    !% The algorithm is taken from Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005). 
+    !% According to this reference, this is much more precise than CGS or MGS algorithms. The MGS version seems not to improve much the stability and would require more communications over the domains.
     !%End
 
     default = OPTION__STATESORTHOGONALIZATION__CHOLESKY_SERIAL
@@ -1455,52 +1346,19 @@ contains
 
     stout%only_userdef_istates = stin%only_userdef_istates
 
-    if(associated(stin%subsys_st))then
-      !> Allocate and copy substates.
-      call base_states_new(stout%subsys_st, stin%subsys_st)
-      if(exclude_wfns_)then
-        call base_states_init(stout%subsys_st, stin%subsys_st)
-      else
-        call base_states_copy(stout%subsys_st, stin%subsys_st)
-      end if
-    end if
-
     call loct_pointer_copy(stout%node, stin%node)
 
-    if(.not. exclude_wfns_) then
-      
-      !cmplxscl
-      
-      if(associated(stout%subsys_st))then
-        call base_states_gets(stout%subsys_st, "live", stout%zrho%Re)
-        ASSERT(associated(stout%zrho%Re))
-      else
-        call loct_pointer_copy(stout%zrho%Re, stin%zrho%Re)
-      end if
-      
-      stout%rho => stout%zrho%Re
-
-      if(stin%cmplxscl%space) then
-        call loct_pointer_copy(stout%zrho%Im, stin%zrho%Im)           
-      end if
-
-    end if
+    if(.not. exclude_wfns_) call loct_pointer_copy(stout%rho, stin%rho)
 
     stout%calc_eigenval = stin%calc_eigenval
     stout%uniform_occ = stin%uniform_occ
     
     if(.not. optional_default(exclude_eigenval, .false.)) then
-      call loct_pointer_copy(stout%zeigenval%Re, stin%zeigenval%Re)
-      stout%eigenval => stout%zeigenval%Re
-      if(stin%cmplxscl%space) then
-        call loct_pointer_copy(stout%zeigenval%Im, stin%zeigenval%Im)
-      end if
+      call loct_pointer_copy(stout%eigenval, stin%eigenval)
       call loct_pointer_copy(stout%occ, stin%occ)
       call loct_pointer_copy(stout%spin, stin%spin)
     end if
 
-    stout%have_left_states = stin%have_left_states
-    
     ! the call to init_block is done at the end of this subroutine
     ! it allocates iblock, psib, block_is_local
     stout%group%nblocks = stin%group%nblocks
@@ -1512,10 +1370,6 @@ contains
  
     call loct_pointer_copy(stout%rho_core, stin%rho_core)
     call loct_pointer_copy(stout%frozen_rho, stin%frozen_rho)
-    if(stin%cmplxscl%space) then
-      call loct_pointer_copy(stout%Imrho_core, stin%Imrho_core)
-      call loct_pointer_copy(stout%Imfrozen_rho, stin%Imfrozen_rho)
-    end if
 
     stout%fixed_occ = stin%fixed_occ
     stout%restart_fixed_occ = stin%restart_fixed_occ
@@ -1578,43 +1432,13 @@ contains
 
     SAFE_DEALLOCATE_A(st%user_def_states)
 
-    if(associated(st%subsys_st))then
-      !subsystems
-      nullify(st%rho, st%zrho%Re)
-    else
-      !cmplxscl
-      !NOTE: sometimes these objects are allocated outside this module
-      ! and therefore the correspondence with val => val%Re is broken.
-      ! In this case we check if the pointer val is associated with zval%Re.
-      if(associated(st%rho, target=st%zrho%Re)) then 
-        nullify(st%rho)
-        SAFE_DEALLOCATE_P(st%zrho%Re)       
-      else
-        SAFE_DEALLOCATE_P(st%rho)
-      end if
-    end if
-    if(associated(st%eigenval, target=st%zeigenval%Re)) then 
-      nullify(st%eigenval)
-      SAFE_DEALLOCATE_P(st%zeigenval%Re)
-    else
-      SAFE_DEALLOCATE_P(st%eigenval)
-    end if
-    if(st%cmplxscl%space) then
-      SAFE_DEALLOCATE_P(st%zrho%Im)
-      SAFE_DEALLOCATE_P(st%zeigenval%Im)
-      SAFE_DEALLOCATE_P(st%Imrho_core)
-      SAFE_DEALLOCATE_P(st%Imfrozen_rho)
-    end if
-    
+    SAFE_DEALLOCATE_P(st%rho)
+    SAFE_DEALLOCATE_P(st%eigenval)
 
     SAFE_DEALLOCATE_P(st%current)
     SAFE_DEALLOCATE_P(st%current_kpt)
     SAFE_DEALLOCATE_P(st%rho_core)
     SAFE_DEALLOCATE_P(st%frozen_rho)
-    
-    !> Deallocates or nullifies pointer.
-    call base_states_del(st%subsys_st)
-
     SAFE_DEALLOCATE_P(st%occ)
     SAFE_DEALLOCATE_P(st%spin)
 
@@ -1635,9 +1459,10 @@ contains
 
   ! ---------------------------------------------------------
   !> generate a hydrogen s-wavefunction around a random point
-  subroutine states_generate_random(st, mesh, ist_start_, ist_end_, ikpt_start_, ikpt_end_, normalized)
+  subroutine states_generate_random(st, mesh, sb, ist_start_, ist_end_, ikpt_start_, ikpt_end_, normalized)
     type(states_t),    intent(inout) :: st
     type(mesh_t),      intent(in)    :: mesh
+    type(simul_box_t), intent(in)    :: sb
     integer, optional, intent(in)    :: ist_start_
     integer, optional, intent(in)    :: ist_end_
     integer, optional, intent(in)    :: ikpt_start_
@@ -1648,6 +1473,7 @@ contains
     CMPLX   :: alpha, beta
     FLOAT, allocatable :: dpsi(:,  :)
     CMPLX, allocatable :: zpsi(:,  :), zpsi2(:)
+    integer :: ikpoint, ip
 
     PUSH_SUB(states_generate_random)
  
@@ -1656,9 +1482,8 @@ contains
     ikpt_start = optional_default(ikpt_start_, 1)
     ikpt_end = optional_default(ikpt_end_, st%d%nik)
 
-    if (states_are_real(st)) then
-      SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
-    else
+    SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
+    if (states_are_complex(st)) then
       SAFE_ALLOCATE(zpsi(1:mesh%np, 1:st%d%dim))
     end if
 
@@ -1666,15 +1491,23 @@ contains
     case(UNPOLARIZED, SPIN_POLARIZED)
 
       do ik = ikpt_start, ikpt_end
+        ikpoint = states_dim_get_kpoint_index(st%d, ik)
         do ist = ist_start, ist_end
-          if (states_are_real(st)) then
+          if (states_are_real(st).or.kpoints_point_is_gamma(sb%kpoints, ikpoint)) then
             if(st%randomization == PAR_INDEPENDENT) then
               call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
             else
               call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
             end if
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
-            call states_set_state(st, mesh, ist,  ik, dpsi)
+            if(states_are_complex(st)) then !Gamma point
+              forall(ip=1:mesh%np) 
+                zpsi(ip,1) = cmplx(dpsi(ip,1), M_ZERO)
+              end forall
+              call states_set_state(st, mesh, ist,  ik, zpsi)
+            else
+              call states_set_state(st, mesh, ist,  ik, dpsi)
+            end if
           else
             if(st%randomization == PAR_INDEPENDENT) then
               call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
@@ -1683,15 +1516,6 @@ contains
             end if
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
             call states_set_state(st, mesh, ist,  ik, zpsi)
-            if(st%have_left_states) then
-              if(st%randomization == PAR_INDEPENDENT) then
-                call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
-              else
-                call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
-              end if
-              if(.not. state_kpt_is_local(st, ist, ik)) cycle
-              call states_set_state(st, mesh, ist,  ik, zpsi, left = .true.)
-            end if
           end if
         end do
       end do
@@ -1703,11 +1527,26 @@ contains
       if(st%fixed_spins) then
 
         do ik = ikpt_start, ikpt_end
+          ikpoint = states_dim_get_kpoint_index(st%d, ik)
           do ist = ist_start, ist_end
-            if(st%randomization == PAR_INDEPENDENT) then
-              call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+            if(kpoints_point_is_gamma(sb%kpoints, ikpoint)) then
+              if(st%randomization == PAR_INDEPENDENT) then
+                call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+              else
+                call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
+                if(.not. state_kpt_is_local(st, ist, ik)) cycle
+              end if
+              forall(ip=1:mesh%np)
+                zpsi(ip,1) = cmplx(dpsi(ip,1), M_ZERO)
+              end forall
+              call states_set_state(st, mesh, ist,  ik, zpsi)
             else
-              call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
+              if(st%randomization == PAR_INDEPENDENT) then
+                call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+              else
+                call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
+                if(.not. state_kpt_is_local(st, ist, ik)) cycle
+              end if
             end if
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
             ! In this case, the spinors are made of a spatial part times a vector [alpha beta]^T in
@@ -1724,8 +1563,8 @@ contains
               zpsi(1:mesh%np, 1) = zpsi(1:mesh%np, 1) - zmf_dotp(mesh, zpsi(:, 1), zpsi2)*zpsi2(1:mesh%np)
             end do
             SAFE_DEALLOCATE_A(zpsi2)
-
-            zpsi(1:mesh%np, 1) = zpsi(1:mesh%np, 1)/zmf_nrm2(mesh, zpsi(:, 1))
+            
+            call zmf_normalize(mesh, 1, zpsi)
             zpsi(1:mesh%np, 2) = zpsi(1:mesh%np, 1)
 
             alpha = TOCMPLX(sqrt(M_HALF + st%spin(3, ist, ik)), M_ZERO)
@@ -1763,35 +1602,6 @@ contains
   end subroutine states_generate_random
 
   ! ---------------------------------------------------------
-  subroutine substates_set_charge(this, st)
-    type(base_states_t), intent(inout) :: this
-    type(states_t),      intent(in)    :: st
-
-    type(base_density_t), pointer :: dnst
-    FLOAT                         :: chrg, qtot
-    integer                       :: ispn, ik
-
-    PUSH_SUB(substates_set_charge)
-
-    nullify(dnst)
-    call base_states_gets(this, "live", dnst)
-    ASSERT(associated(dnst))
-    qtot = M_ZERO
-    do ispn = 1, st%d%nspin
-      chrg = M_ZERO
-      do ik = 1, st%d%nik
-        if(ispn==states_dim_get_spin_index(st%d, ik))&
-          chrg = chrg + st%d%kweights(ik) * sum(st%occ(:,ik))
-      end do
-      call base_density_set(dnst, chrg, ispn)
-      qtot = qtot + chrg
-    end do
-    ASSERT(.not.abs(M_ONE-min(st%qtot,qtot)/max(st%qtot,qtot))>epsilon(qtot))
-    
-    POP_SUB(substates_set_charge)
-  end subroutine substates_set_charge
-  
-  ! ---------------------------------------------------------
   subroutine states_fermi(st, mesh)
     type(states_t), intent(inout) :: st
     type(mesh_t),   intent(in)    :: mesh
@@ -1803,19 +1613,12 @@ contains
 
     PUSH_SUB(states_fermi)
 
-    if(st%cmplxscl%space) then
-      call smear_occupy_states_by_ordering(st%smear, st%zeigenval%Re, st%zeigenval%Im, st%occ, st%qtot, &
-        st%d%nik, st%nst, st%cmplxscl%penalizationfactor)
-    else
-      
-      call smear_find_fermi_energy(st%smear, st%eigenval, st%occ, st%qtot, &
-        st%d%nik, st%nst, st%d%kweights)
+    call smear_find_fermi_energy(st%smear, st%eigenval, st%occ, st%qtot, &
+      st%d%nik, st%nst, st%d%kweights)
 
-      call smear_fill_occupations(st%smear, st%eigenval, st%occ, &
-        st%d%nik, st%nst)
+    call smear_fill_occupations(st%smear, st%eigenval, st%occ, &
+      st%d%nik, st%nst)
         
-    end if
-    
     ! check if everything is OK
     charge = M_ZERO
     do ist = 1, st%nst
@@ -1831,9 +1634,6 @@ contains
       end if
     end if
 
-    !> Update the charge of the live subsystem.
-    if(associated(st%subsys_st)) call substates_set_charge(st%subsys_st, st)
- 
     if(st%d%ispin == SPINORS) then
       ASSERT(states_are_complex(st))
       
@@ -1886,33 +1686,6 @@ contains
 
     POP_SUB(states_eigenvalues_sum)
   end function states_eigenvalues_sum
-
-  ! ---------------------------------------------------------
-  !> Same as states_eigenvalues_sum but suitable for cmplxscl
-  function zstates_eigenvalues_sum(st, alt_eig) result(tot)
-    type(states_t),  intent(in) :: st
-    CMPLX, optional, intent(in) :: alt_eig(st%st_start:, st%d%kpt%start:) !< (:st%st_end, :st%d%kpt%end)
-    CMPLX                       :: tot
-
-    integer :: ik
-
-    PUSH_SUB(zstates_eigenvalues_sum)
-
-    tot = M_ZERO
-    do ik = st%d%kpt%start, st%d%kpt%end
-      if(present(alt_eig)) then
-        tot = tot + st%d%kweights(ik) * sum(st%occ(st%st_start:st%st_end, ik) * &
-          (alt_eig(st%st_start:st%st_end, ik)))
-      else
-        tot = tot + st%d%kweights(ik) * sum(st%occ(st%st_start:st%st_end, ik) * &
-          (st%zeigenval%Re(st%st_start:st%st_end, ik) + M_zI * st%zeigenval%Im(st%st_start:st%st_end, ik)))
-      end if
-    end do
-
-    if(st%parallel_in_states .or. st%d%kpt%parallel) call comm_allreduce(st%st_kpt_mpi_grp%comm, tot)
-
-    POP_SUB(zstates_eigenvalues_sum)
-  end function zstates_eigenvalues_sum
 
   ! -------------------------------------------------------
   integer pure function states_spin_channel(ispin, ik, dim)
@@ -2044,10 +1817,11 @@ contains
   !> This function can calculate several quantities that depend on
   !! derivatives of the orbitals from the states and the density.
   !! The quantities to be calculated depend on the arguments passed.
-  subroutine states_calc_quantities(der, st, &
+  subroutine states_calc_quantities(der, st, nlcc, &
     kinetic_energy_density, paramagnetic_current, density_gradient, density_laplacian, gi_kinetic_energy_density)
     type(derivatives_t),     intent(in)    :: der
     type(states_t),          intent(in)    :: st
+    logical,                 intent(in)    :: nlcc
     FLOAT, optional, target, intent(out)   :: kinetic_energy_density(:,:)       !< The kinetic energy density.
     FLOAT, optional, target, intent(out)   :: paramagnetic_current(:,:,:)       !< The paramagnetic current.
     FLOAT, optional,         intent(out)   :: density_gradient(:,:,:)           !< The gradient of the density.
@@ -2239,10 +2013,7 @@ contains
       end do
     end do
 
-    SAFE_DEALLOCATE_A(wf_psi)
     SAFE_DEALLOCATE_A(wf_psi_conj)
-    SAFE_DEALLOCATE_A(gwf_psi)
-    SAFE_DEALLOCATE_A(lwf_psi)
     SAFE_DEALLOCATE_A(abs_wf_psi)
     SAFE_DEALLOCATE_A(abs_gwf_psi)
     SAFE_DEALLOCATE_A(psi_gpsi)
@@ -2292,6 +2063,37 @@ contains
       call symmetrizer_end(symmetrizer)
       SAFE_DEALLOCATE_A(symm) 
     end if
+
+
+    if(associated(st%rho_core) .and. nlcc .and. (present(density_laplacian) .or. present(density_gradient))) then
+       forall(ii=1:der%mesh%np)
+         wf_psi(ii, 1) = st%rho_core(ii)/st%d%spin_channels
+       end forall
+
+       call boundaries_set(der%boundaries, wf_psi(:, 1))
+
+       if(present(density_gradient)) then
+         ! calculate gradient of the NLCC
+         call zderivatives_grad(der, wf_psi(:,1), gwf_psi(:,:,1), set_bc = .false.)
+         do is = 1, st%d%spin_channels
+           density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) + gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim,1)
+         end do
+       end if
+
+       ! calculate the Laplacian of the wavefunction
+       if (present(density_laplacian)) then
+         call zderivatives_lapl(der, wf_psi(:,1), lwf_psi(:,1), set_bc = .false.)
+
+         do is = 1, st%d%spin_channels
+           density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is) + lwf_psi(1:der%mesh%np, 1)
+         end do
+      end if
+    end if
+
+    SAFE_DEALLOCATE_A(wf_psi)
+    SAFE_DEALLOCATE_A(gwf_psi)
+    SAFE_DEALLOCATE_A(lwf_psi)
+
 
     !We compute the gauge-invariant kinetic energy density
     if(present(gi_kinetic_energy_density) .and. st%d%ispin /= SPINORS) then
@@ -2454,7 +2256,6 @@ contains
         end if
         
         call batch_pack(st%group%psib(ib, iqn), copy)
-        if(st%have_left_states)  call batch_pack(st%psibL(ib, iqn), copy)
       end do
     end do qnloop
 
@@ -2478,7 +2279,6 @@ contains
     do iqn = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
         if(batch_is_packed(st%group%psib(ib, iqn))) call batch_unpack(st%group%psib(ib, iqn), copy)
-        if(batch_is_packed(st%group%psib(ib, iqn)) .and. st%have_left_states) call batch_unpack(st%psibL(ib, iqn), copy)        
       end do
     end do
 
@@ -2499,7 +2299,6 @@ contains
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
           call batch_sync(st%group%psib(ib, iqn))
-          if(st%have_left_states) call batch_sync(st%psibL(ib, iqn))
         end do
       end do
 
@@ -2521,10 +2320,6 @@ contains
     write(message(2), '(a,i8)')    'Number of states         = ', st%nst
     write(message(3), '(a,i8)')    'States block-size        = ', st%d%block_size
     call messages_info(3)
-    if(st%have_left_states) then
-      write(message(1), '(a)')    'States have left states'
-      call messages_info(1)
-    end if
 
     call messages_print_stress(stdout)
 
@@ -2551,7 +2346,6 @@ contains
     do iqn = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
         call batch_set_zero(st%group%psib(ib, iqn))
-        if(st%have_left_states) call batch_set_zero(st%psibL(ib, iqn)) 
       end do
     end do
     

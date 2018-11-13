@@ -2,10 +2,12 @@
 
 Test       : GGA+U for (AF) bulk NiO crystal
 Program    : octopus
-TestGroups : short-run, periodic_systems, lda_u
+TestGroups : long-run, periodic_systems, lda_u
 Enabled    : Yes
 
 Input      : 01-nio.01-U5-gs.inp
+
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 8
 match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6 ) ; 4

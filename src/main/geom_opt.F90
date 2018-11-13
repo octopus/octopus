@@ -194,7 +194,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_(fromscratch)
-      logical,  intent(in) :: fromscratch
+      logical,  intent(inout) :: fromscratch
 
       logical :: center, does_exist
       integer :: iter, iatom
@@ -506,14 +506,11 @@ contains
 
       if(.not. fromScratch) then
         inquire(file = './last.xyz', exist = does_exist)
-        if(.not. does_exist) then
-          write(message(1), '(a)') "The file last.xyz does not exist. Octopus cannot restart the GO calculation."
-          write(message(2), '(a)') "Please use FromScratch=yes to start the calculation from scratch."
-          call messages_fatal(2)          
-        end if
-        call geometry_read_xyz(g_opt%geo, './last')
+        if(.not. does_exist) fromScratch = .true.
       end if
 
+      if(.not. fromScratch) call geometry_read_xyz(g_opt%geo, './last')
+      
       ! clean out old geom/go.XXXX.xyz files. must be consistent with write_iter_info
       iter = 1
       do
@@ -653,9 +650,9 @@ contains
     call geometry_write_xyz(g_opt%geo, 'geom/'//trim(c_geom_iter), comment = trim(title))
     call geometry_write_xyz(g_opt%geo, './last')
 
-    if(iand(g_opt%syst%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+    if(bitand(g_opt%syst%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
     write(c_forces_iter, '(a,i4.4)') "forces.", geom_iter
-      if(iand(g_opt%syst%outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
+      if(bitand(g_opt%syst%outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
         call write_bild_forces_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh)
       else
         call write_xsf_geometry_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh, write_forces = .true.)
@@ -748,7 +745,7 @@ contains
       if(gopt%fixed_atom == iatom) cycle
       if(.not. gopt%geo%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
-        if(gopt%geo%atom(iatom)%c(idir) == M_ZERO) then
+        if(abs(gopt%geo%atom(iatom)%c(idir)) <= M_EPSILON) then
           grad(icoord) = -gopt%geo%atom(iatom)%f(idir)
         else
           grad(icoord) = M_ZERO
@@ -776,7 +773,7 @@ contains
       if(gopt%fixed_atom == iatom) cycle      
       if(.not. gopt%geo%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
-        if(gopt%geo%atom(iatom)%c(idir) == M_ZERO) &
+        if(abs(gopt%geo%atom(iatom)%c(idir)) <= M_EPSILON) &
           gopt%geo%atom(iatom)%x(idir) = coords(icoord)
         if(gopt%fixed_atom /= 0) then
           gopt%geo%atom(iatom)%x(idir) = gopt%geo%atom(iatom)%x(idir) + gopt%geo%atom(gopt%fixed_atom)%x(idir)

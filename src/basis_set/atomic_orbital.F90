@@ -58,7 +58,7 @@ contains
     type(geometry_t), target, intent(in)   :: geo
     type(mesh_t),             intent(in)   :: mesh
     integer,                  intent(in)   :: ia, iorb, ispin
-    integer,                  intent(in)   :: truncation
+    integer(8),               intent(in)   :: truncation
     FLOAT,                    intent(in)   :: threshold
 
     type(species_t), pointer :: spec

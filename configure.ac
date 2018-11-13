@@ -19,7 +19,7 @@
 AC_PREREQ(2.59)
 # Note: the version string is written into ETSF_IO files, so when you update
 # this, update the results for test periodic_systems/09-etsf_io.test too.
-AC_INIT([Octopus],[8.3],[octopus-devel@tddft.org],[octopus])
+AC_INIT([Octopus],[australis],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE
@@ -326,13 +326,6 @@ ACX_BLACS
 ACX_SCALAPACK
 ACX_ELPA
 
-dnl check for ARPACK and PARPACK
-ACX_ARPACK
-ACX_PARPACK
-
-dnl check for FEAST
-ACX_FEAST
-
 dnl check for Libfm
 ACX_LIBFM
 
@@ -388,7 +381,6 @@ AC_CONFIG_FILES([Makefile
   src/ions/Makefile
   src/grid/Makefile
   src/poisson/Makefile
-  src/frozen/Makefile
   src/states/Makefile
   src/hamiltonian/Makefile
   src/basis_set/Makefile
@@ -409,6 +401,8 @@ AC_CONFIG_FILES([Makefile
   share/pseudopotentials/Makefile
   share/pseudopotentials/PSF/Makefile
   share/pseudopotentials/HGH/Makefile
+  share/pseudopotentials/HGH/lda/Makefile
+  share/pseudopotentials/HGH/lda_sc/Makefile
   share/pseudopotentials/quantum-simulation.org/Makefile
   share/pseudopotentials/quantum-simulation.org/hscv/Makefile
   share/pseudopotentials/quantum-simulation.org/hscv/lda/Makefile
@@ -446,8 +440,7 @@ AC_CONFIG_FILES([Makefile
   testsuite/periodic_systems/Makefile
   testsuite/photo_electron/Makefile
   testsuite/pseudopotentials/Makefile
-  testsuite/complex_scaling/Makefile
-  testsuite/frozen/Makefile
+  testsuite/tutorials/Makefile
   testsuite/symmetries/Makefile])
 AC_CONFIG_FILES([testsuite/oct-run_testsuite.sh], [chmod +x testsuite/oct-run_testsuite.sh])
 AC_CONFIG_FILES([doc/html/varsRightFrame.html])

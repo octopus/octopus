@@ -1,0 +1,45 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Octopus basics - Periodic systems
+Program    : octopus
+TestGroups : short-run, tutorials
+Enabled    : Yes
+
+Input: 06-octopus_basics-periodic_systems.01-silicon.inp
+match ; SCF convergence          ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Space group              ; GREPFIELD(out,         'Space group No.', 4) ; 227
+match ; Number of k-points       ; GREPFIELD(out,         'k-points generated from parameters', 1) ; 2
+match ; Number of SCF iterations ; GREPFIELD(out,         'Info: SCF converged in', 5) ; 8
+match ; Total Energy             ; GREPFIELD(static/info, 'Total  ', 3) ; -7.92843852
+
+Input: 06-octopus_basics-periodic_systems.02-silicon_converged.inp
+match ; SCF convergence          ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total Energy             ; GREPFIELD(static/info, 'Total  ', 3) ; -7.93462084
+
+Input: 06-octopus_basics-periodic_systems.03-bandstructure.inp
+match ; k-point 1  - coord. ; LINEFIELD(static/bandstructure,  2,  1) ;  0.00000000
+match ; k-point 1  - kx     ; LINEFIELD(static/bandstructure,  2,  2) ;  0.50000000
+match ; k-point 1  - ky     ; LINEFIELD(static/bandstructure,  2,  3) ;  0.00000000
+match ; k-point 1  - kz     ; LINEFIELD(static/bandstructure,  2,  4) ;  0.00000000
+match ; k-point 1  - band 1 ; LINEFIELD(static/bandstructure,  2,  5) ; -0.19984750
+match ; k-point 1  - band 2 ; LINEFIELD(static/bandstructure,  2,  6) ; -0.10463050
+match ; k-point 1  - band 3 ; LINEFIELD(static/bandstructure,  2,  7) ;  0.11059562
+match ; k-point 1  - band 4 ; LINEFIELD(static/bandstructure,  2,  8) ;  0.11059567
+match ; k-point 1  - band 5 ; LINEFIELD(static/bandstructure,  2,  9) ;  0.21320524
+match ; k-point 1  - band 6 ; LINEFIELD(static/bandstructure,  2, 10) ;  0.27708534
+match ; k-point 1  - band 7 ; LINEFIELD(static/bandstructure,  2, 11) ;  0.27708537
+match ; k-point 1  - band 8 ; LINEFIELD(static/bandstructure,  2, 12) ;  0.43517458
+match ; k-point 1  - band 9 ; LINEFIELD(static/bandstructure,  2, 13) ;  0.54466879
+match ; k-point 36 - coord. ; LINEFIELD(static/bandstructure, 37,  1) ;  1.00000000
+match ; k-point 36 - kx     ; LINEFIELD(static/bandstructure, 37,  2) ;  1.00000000
+match ; k-point 36 - ky     ; LINEFIELD(static/bandstructure, 37,  3) ;  1.00000000
+match ; k-point 36 - kz     ; LINEFIELD(static/bandstructure, 37,  4) ;  1.00000000
+match ; k-point 36 - band 1 ; LINEFIELD(static/bandstructure, 37,  5) ; -0.28810122
+match ; k-point 36 - band 2 ; LINEFIELD(static/bandstructure, 37,  6) ;  0.15499521
+match ; k-point 36 - band 3 ; LINEFIELD(static/bandstructure, 37,  7) ;  0.15499529
+match ; k-point 36 - band 4 ; LINEFIELD(static/bandstructure, 37,  8) ;  0.15499529
+match ; k-point 36 - band 5 ; LINEFIELD(static/bandstructure, 37,  9) ;  0.24956226
+match ; k-point 36 - band 6 ; LINEFIELD(static/bandstructure, 37, 10) ;  0.24956230
+match ; k-point 36 - band 7 ; LINEFIELD(static/bandstructure, 37, 11) ;  0.24956231
+match ; k-point 36 - band 8 ; LINEFIELD(static/bandstructure, 37, 12) ;  0.28572829
+match ; k-point 36 - band 9 ; LINEFIELD(static/bandstructure, 37, 13) ;  0.44063029
