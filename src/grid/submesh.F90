@@ -80,7 +80,7 @@ module submesh_oct_m
     logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point
     
     integer               :: np_global      !< total number of points in the entire mesh
-    FLOAT,        pointer :: x_global(:,:)  
+    FLOAT,    allocatable :: x_global(:,:)  
     integer,  allocatable :: part_v(:)
     integer,  allocatable :: global2local(:)
   end type submesh_t
@@ -111,7 +111,6 @@ contains
     nullify(sm%mesh)
 
     sm%np_global = -1
-    nullify(sm%x_global)
 
     POP_SUB(submesh_null)
 
@@ -481,7 +480,7 @@ contains
 
     SAFE_DEALLOCATE_A(part_np)
 
-    POP_SUB(submesh_build global)
+    POP_SUB(submesh_build_global)
   end subroutine submesh_build_global
 
 
@@ -490,11 +489,7 @@ contains
 
     PUSH_SUB(submesh_end_global)
 
-    if(this%mesh%parallel_in_domains) then
-      SAFE_DEALLOCATE_P(this%x_global)
-    else
-      nullify(this%x_global)
-    end if
+    SAFE_DEALLOCATE_A(this%x_global)
     this%np_global = -1
     SAFE_DEALLOCATE_A(this%part_v)
     SAFE_DEALLOCATE_A(this%global2local)

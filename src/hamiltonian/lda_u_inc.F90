@@ -565,7 +565,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
     norbs = os%norbs
     np_sphere = os%sphere%np  
 
-    if(mesh%parallel_in_domains) call submesh_build_global(os%sphere)
+    call submesh_build_global(os%sphere)
 
     call poisson_init_sm(os%poisson, psolver, der, os%sphere) 
  
@@ -622,7 +622,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
     end do !ist
     call poisson_end(os%poisson)
 
-     if(mesh%parallel_in_domains) call submesh_end_global(os%sphere)
+    call submesh_end_global(os%sphere)
   end do !iorb
 
   if(this%orbs_dist%parallel) then
