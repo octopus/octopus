@@ -130,7 +130,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
         gg  = sb(2)
       end if
 
-      if( abs(gg) < M_EPSILON ) then
+      if( sqrt(abs(gg)) < M_EPSILON ) then
         if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
         st%eigenval(ist, ik) = es(1)
         res = sqrt(abs(gg))
