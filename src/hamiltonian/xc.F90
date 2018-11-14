@@ -24,6 +24,8 @@ module xc_oct_m
   use cube_oct_m
   use cube_function_oct_m
   use derivatives_oct_m
+  use epot_oct_m
+  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use index_oct_m

@@ -27,6 +27,7 @@ SUBDIRS =                \
 	grid             \
 	poisson          \
 	basis_set        \
+	projector        \
 	states           \
 	hamiltonian      \
 	system           \

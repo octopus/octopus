@@ -362,10 +362,12 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  FLOAT function target_j1_density(gr, tg, psi) result(j1)
+  FLOAT function target_j1_density(gr, tg, psi, ep, geo) result(j1)
     type(grid_t),     intent(in)    :: gr
     type(target_t),   intent(inout) :: tg
     type(states_t), intent(inout)   :: psi
+    type(epot_t),     intent(in)    :: ep
+    type(geometry_t), intent(in)    :: geo
 
     integer :: ip, maxiter
     FLOAT :: currfunc_tmp
@@ -388,7 +390,7 @@
     if (tg%curr_functional /= oct_no_curr) then
       select case(target_mode(tg))
       case(oct_targetmode_static)
-        currfunc_tmp = jcurr_functional(tg, gr, psi )
+        currfunc_tmp = jcurr_functional(tg, gr, psi, ep, geo)
       case(oct_targetmode_td)
         maxiter = size(tg%td_fitness) - 1
         currfunc_tmp = M_HALF * tg%dt * tg%td_fitness(tg%strt_iter_curr_tg) + & 
@@ -410,11 +412,13 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_chi_density(tg, gr, psi_in, chi_out)
+  subroutine target_chi_density(tg, gr, psi_in, chi_out, ep, geo)
     type(target_t),    intent(inout) :: tg
     type(grid_t),      intent(inout) :: gr
     type(states_t),    intent(inout) :: psi_in
     type(states_t),    intent(inout) :: chi_out
+    type(epot_t),      intent(in)    :: ep
+    type(geometry_t),  intent(in)    :: geo
 
     integer :: no_electrons, ip, ist, ib, ik
     CMPLX, allocatable :: zpsi(:, :)
@@ -477,7 +481,7 @@
 
     if(tg%curr_functional /= oct_no_curr) then
       if (target_mode(tg)  ==  oct_targetmode_static ) then
-        call chi_current(tg, gr, CNST(1.0), psi_in, chi_out)
+        call chi_current(tg, gr, CNST(1.0), psi_in, chi_out, ep, geo)
       end if
     end if 
 
@@ -488,16 +492,18 @@
   ! ---------------------------------------------------------
   !> 
   !!
-  subroutine target_tdcalc_density(tg, gr, psi, time)
+  subroutine target_tdcalc_density(tg, gr, psi, ep, geo, time)
     type(target_t),      intent(inout) :: tg
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: psi
+    type(epot_t),        intent(in)    :: ep
+    type(geometry_t),    intent(in)    :: geo
     integer,             intent(in)    :: time
 
     PUSH_SUB(target_tdcalc_density)
 
     if (time >= tg%strt_iter_curr_tg) then
-      tg%td_fitness(time) = jcurr_functional(tg, gr, psi)
+      tg%td_fitness(time) = jcurr_functional(tg, gr, psi, ep, geo)
     end if 
 
 
@@ -509,10 +515,12 @@
   ! ----------------------------------------------------------------------
   !> Calculates a current functional that may be combined with
   !! other functionals found in function target_j1.
-  FLOAT function jcurr_functional(tg, gr, psi) result(jcurr)
-    type(target_t), intent(in)    :: tg
-    type(grid_t),   intent(in)    :: gr
-    type(states_t), intent(inout) :: psi
+  FLOAT function jcurr_functional(tg, gr, psi, ep, geo) result(jcurr)
+    type(target_t),   intent(in)    :: tg
+    type(grid_t),     intent(in)    :: gr
+    type(states_t),   intent(inout) :: psi
+    type(epot_t),     intent(in)    :: ep
+    type(geometry_t), intent(in)    :: geo
 
     integer :: ip
     FLOAT, allocatable :: semilocal_function(:)
@@ -529,13 +537,15 @@
       semilocal_function = M_ZERO
 
     case(oct_curr_square,oct_curr_square_td)
-      call states_calc_quantities(gr%der, psi, .false., paramagnetic_current=psi%current) 
+      !TODO: The contribution from vtau for MGGAs with exc is ignored 
+      call states_calc_quantities(gr%der, psi, ep%proj, geo, .false., .false., paramagnetic_current=psi%current) 
       do ip = 1, gr%mesh%np
         semilocal_function(ip) =  sum(psi%current(ip, 1:gr%sb%dim, 1)**2)  
       end do
       
     case(oct_max_curr_ring)
-      call states_calc_quantities(gr%der, psi, .false., paramagnetic_current=psi%current) 
+      !TODO: The contribution from vtau for MGGAs with exc is ignored 
+      call states_calc_quantities(gr%der, psi, ep%proj, geo, .false., .false., paramagnetic_current=psi%current) 
 
       if(gr%sb%dim /= M_TWO) then
         call messages_not_implemented('Target for dimension != 2')
@@ -569,12 +579,14 @@
   ! ----------------------------------------------------------------------
   ! Calculates current-specific boundary condition
   !-----------------------------------------------------------------------
- subroutine chi_current(tg, gr, factor, psi_in, chi)
+ subroutine chi_current(tg, gr, factor, psi_in, chi, ep, geo)
     type(target_t),    intent(in)    :: tg
     type(grid_t),      intent(in)    :: gr
     FLOAT,             intent(in)    :: factor
     type(states_t),    intent(inout) :: psi_in
     type(states_t),    intent(inout) :: chi
+    type(epot_t),      intent(in)    :: ep
+    type(geometry_t),  intent(in)    :: geo
 
     CMPLX, allocatable :: grad_psi_in(:,:,:), zpsi(:, :), zchi(:, :)
     FLOAT, allocatable :: div_curr_psi_in(:,:)   
@@ -585,7 +597,8 @@
     SAFE_ALLOCATE(grad_psi_in(1:gr%der%mesh%np_part, 1:gr%der%mesh%sb%dim, 1))
 
     if(target_mode(tg) == oct_targetmode_td ) then 
-      call states_calc_quantities(gr%der, psi_in, .false., paramagnetic_current=psi_in%current) 
+      !TODO: The contribution from vtau for MGGAs with exc is ignored
+      call states_calc_quantities(gr%der, psi_in, ep%proj, geo, .false., .false., paramagnetic_current=psi_in%current) 
     end if
 
     select case(tg%curr_functional)

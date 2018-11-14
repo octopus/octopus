@@ -602,9 +602,9 @@ contains
       if(bitand(sys%outp%what, OPTION__OUTPUT__ELF) /= 0) then 
          
         if(isign == 1) then 
-          call elf_calc(sys%st, sys%gr, elf, elfd)
+          call elf_calc(sys%st, sys%gr, hm%ep, sys%geo, elf, elfd)
         else
-          call elf_calc(sys%st, sys%gr, lr_elf, lr_elfd)
+          call elf_calc(sys%st, sys%gr, hm%ep, sys%geo, lr_elf, lr_elfd)
           
           !numerical derivative
           lr_elf(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = &

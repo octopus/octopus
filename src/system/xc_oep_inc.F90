@@ -81,7 +81,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
 
     ! SIC a la PZ is handled here
     if(apply_sic_pz) then
-      call X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
+      call X(oep_sic) (xcs, gr, st, hm%ep, hm%geo, is, oep, ex, ec)
     end if
     ! calculate uxc_bar for the occupied states
 

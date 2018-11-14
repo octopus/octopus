@@ -1418,9 +1418,9 @@ contains
 
           if(gr%sb%dim == 3 .and. bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
             if(em_vars%nsigma == 1) then
-              call zlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor))
+              call zlr_calc_elf(st, gr, hm%ep, geo, em_vars%lr(idir, 1, ifactor))
             else
-              call zlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
+              call zlr_calc_elf(st, gr, hm%ep, geo, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
             end if
           end if
           do isigma = 1, em_vars%nsigma
@@ -1430,9 +1430,9 @@ contains
 
           if(gr%sb%dim == 3 .and. bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
             if(em_vars%nsigma == 1) then
-              call dlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor))
+              call dlr_calc_elf(st, gr, hm%ep, geo, em_vars%lr(idir, 1, ifactor))
             else
-              call dlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
+              call dlr_calc_elf(st, gr, hm%ep, geo, em_vars%lr(idir, 1, ifactor), em_vars%lr(idir, 2, ifactor))
             end if
           end if
 

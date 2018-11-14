@@ -62,7 +62,6 @@ module epot_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
-  use xc_oct_m
 
   implicit none
 
@@ -142,13 +141,13 @@ module epot_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init( ep, gr, geo, ispin, nik, xc_family)
+  subroutine epot_init( ep, gr, geo, ispin, nik, family_is_mgga)
     type(epot_t),                       intent(out)   :: ep
     type(grid_t),                       intent(in)    :: gr
     type(geometry_t),                   intent(inout) :: geo
     integer,                            intent(in)    :: ispin
     integer,                            intent(in)    :: nik
-    integer,                            intent(in)    :: xc_family
+    logical,                            intent(in)    :: family_is_mgga
 
 
     integer :: ispec, ip, idir, ia, gauge_2d, ierr
@@ -180,7 +179,7 @@ contains
     if(.not.varinfo_valid_option('FilterPotentials', filter)) call messages_input_error('FilterPotentials')
     call messages_print_var_option(stdout, "FilterPotentials", filter)
 
-    if(family_is_mgga(xc_family) .and. filter /= PS_FILTER_NONE) &
+    if(family_is_mgga .and. filter /= PS_FILTER_NONE) &
       call messages_not_implemented("FilterPotentials different from filter_none with MGGA")
 
     if(filter == PS_FILTER_TS) call spline_filter_mask_init()

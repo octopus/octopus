@@ -23,8 +23,10 @@ module elf_oct_m
   use cube_oct_m
   use density_oct_m
   use derivatives_oct_m
+  use epot_oct_m
   use fft_oct_m
   use fourier_space_oct_m
+  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use io_oct_m
@@ -67,9 +69,11 @@ contains
   ! ---------------------------------------------------------
   !> (time-dependent) electron localization function, (TD)ELF.
   ! ---------------------------------------------------------
-  subroutine elf_calc(st, gr, elf, de)
+  subroutine elf_calc(st, gr, ep, geo, elf, de)
     type(states_t),   intent(inout) :: st
     type(grid_t),     intent(inout) :: gr
+    type(epot_t),     intent(in)    :: ep
+    type(geometry_t), intent(in)    :: geo
     !> elf(gr%mesh%np, 1) if st%d%ispin = 1, elf(gr%mesh%np, 3) otherwise.
     !! On output, it should contain the global ELF if st%d%ispin = 1,
     !! otherwise elf(:, 3) contains the global ELF, and 
@@ -100,7 +104,10 @@ contains
     SAFE_ALLOCATE(grho(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
     SAFE_ALLOCATE(  jj(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
 
-    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = kappa, paramagnetic_current = jj, density_gradient = grho)
+    !TODO: Here we should add check for MGGAs with exc
+    !TODO: For TD, we should use the gauge_invariant KED 
+    call states_calc_quantities(gr%der, st, ep%proj, geo, .false., .false., &
+            kinetic_energy_density = kappa, paramagnetic_current = jj, density_gradient = grho)
 
     ! spin-dependent quantities
     if(st%d%ispin == UNPOLARIZED) then

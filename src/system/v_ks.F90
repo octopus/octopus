@@ -784,7 +784,7 @@ contains
     if(hm%self_induced_magnetic) then
       SAFE_ALLOCATE(ks%calc%a_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
       SAFE_ALLOCATE(ks%calc%b_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
-      call magnetic_induced(ks%gr%der, st, ks%calc%a_ind, ks%calc%b_ind)
+      call magnetic_induced(ks%gr%der, st, hm%ep, geo, ks%calc%a_ind, ks%calc%b_ind)
     end if
    
     call profiling_out(prof)
@@ -873,7 +873,7 @@ contains
           rho(:, ispin) = ks%calc%density(:, ispin) / qsp(ispin)
           ! TODO : check for solid:   -minval(st%eigenval(st%nst,:))
           call xc_get_vxc(ks%gr%fine%der, ks%xc, &
-               st, rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), qsp(ispin), &
+               st, hm%ep, hm%geo, rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), qsp(ispin), &
                vxc_sic)
 
           ks%calc%vxc = ks%calc%vxc - vxc_sic
@@ -928,22 +928,22 @@ contains
       ! Get the *local* XC term
       if(ks%calc%calc_energy) then
         if(hm%family_is_mgga_with_exc) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%ep, hm%geo, &
             ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
             ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, vtau = ks%calc%vtau)
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, &
-            st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%ep, hm%geo, &
+            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
             ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
         end if
       else
         if(hm%family_is_mgga_with_exc) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, &
-            st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%ep, hm%geo, &
+            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
             ks%calc%vxc, vtau = ks%calc%vtau)
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, &
-            st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%ep, hm%geo, &
+            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
             ks%calc%vxc)
         end if
       end if

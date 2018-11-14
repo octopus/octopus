@@ -242,7 +242,7 @@ contains
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
   
     !Initialize external potential
-    call epot_init(ep, sys%gr, sys%geo, SPINORS, 1, XC_FAMILY_NONE)
+    call epot_init(ep, sys%gr, sys%geo, SPINORS, 1, .false.)
     call epot_generate(ep, sys%gr, sys%geo, sys%st)
    
     !Initialize external potential

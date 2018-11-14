@@ -22,6 +22,7 @@ module projector_oct_m
   use atom_oct_m
   use batch_oct_m
   use comm_oct_m
+  use distributed_oct_m
   use double_grid_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -42,8 +43,6 @@ module projector_oct_m
   use rkb_projector_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_dim_oct_m
   use submesh_oct_m
   use varinfo_oct_m
 
@@ -189,10 +188,11 @@ contains
 
   !---------------------------------------------
 
-  subroutine projector_init_phases(this, sb, std, vec_pot, vec_pot_var)
+  subroutine projector_init_phases(this, sb, kpt, polarized, vec_pot, vec_pot_var)
     type(projector_t),             intent(inout) :: this
     type(simul_box_t),             intent(in)    :: sb
-    type(states_dim_t),            intent(in)    :: std
+    type(distributed_t),           intent(in)    :: kpt
+    logical,                       intent(in)    :: polarized
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
@@ -206,11 +206,17 @@ contains
     ndim = sb%dim
 
     if(.not. associated(this%phase) .and. ns > 0) then
-      SAFE_ALLOCATE(this%phase(1:ns, std%kpt%start:std%kpt%end))
+      SAFE_ALLOCATE(this%phase(1:ns, kpt%start:kpt%end))
     end if
 
-    do iq = std%kpt%start, std%kpt%end
-      ikpoint = states_dim_get_kpoint_index(std, iq)
+    do iq = kpt%start, kpt%end
+      !This replaces the call to states_dim_get_kpoint_index(std, iq)
+      if(polarized) then
+        ikpoint = 1 + (iq - 1)/2
+      else
+        ikpoint = iq
+      end if
+
 
       ! if this fails, it probably means that sb is not compatible with std
       ASSERT(ikpoint <= kpoints_number(sb%kpoints))

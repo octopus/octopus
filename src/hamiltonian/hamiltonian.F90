@@ -295,7 +295,7 @@ contains
 
     hm%geo => geo
     !Initialize external potential
-    call epot_init(hm%ep, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%xc_family)
+    call epot_init(hm%ep, gr, hm%geo, hm%d%ispin, hm%d%nik, family_is_mgga(hm%xc_family))
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, gr%sb)
@@ -840,7 +840,7 @@ contains
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
         do iatom = 1, this%ep%natoms
-          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, &
+          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d%kpt, this%d%ispin == SPIN_POLARIZED, &
             vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end do
 
@@ -1402,7 +1402,7 @@ contains
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
         do iatom = 1, this%ep%natoms
-          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, &
+          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d%kpt, this%d%ispin == SPIN_POLARIZED, &
             vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end do
 

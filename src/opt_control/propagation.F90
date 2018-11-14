@@ -198,7 +198,7 @@ contains
 
     if(.not.target_move_ions(tg)) call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo)
 
-    call target_tdcalc(tg, hm, gr, sys%geo, psi, 0, td%max_iter)
+    call target_tdcalc(tg, hm, gr, sys%geo, psi, hm%ep, 0, td%max_iter)
 
     if (present(prop)) then
       call oct_prop_dump_states(prop, 0, psi, gr, ierr)
@@ -232,7 +232,7 @@ contains
       if(hm%bc%abtype == MASK_ABSORBING) call zvmask(gr, hm, psi)
 
       ! if td_target
-      call target_tdcalc(tg, hm, gr, sys%geo, psi, istep, td%max_iter)
+      call target_tdcalc(tg, hm, gr, sys%geo, psi, hm%ep, istep, td%max_iter)
 
       ! only write in final run
       if(write_iter_) then
@@ -420,7 +420,7 @@ contains
       call update_hamiltonian_psi(i, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, sys%outp)
-      call target_tdcalc(tg, hm, gr, sys%geo, psi, i, td%max_iter) 
+      call target_tdcalc(tg, hm, gr, sys%geo, psi, hm%ep, i, td%max_iter) 
 
       call oct_prop_dump_states(prop_psi, i, psi, gr, ierr)
       if (ierr /= 0) then
@@ -779,7 +779,7 @@ contains
 
     if(target_mode(tg) == oct_targetmode_td) then
       call states_copy(inh, st)
-      call target_inh(st, gr, tg, abs(td%dt)*iter, inh, iter)
+      call target_inh(st, gr, tg, abs(td%dt)*iter, inh, hm%ep, geo, iter)
       call hamiltonian_set_inh(hm, inh)
       call states_end(inh)
     end if

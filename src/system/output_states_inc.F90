@@ -155,7 +155,7 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
   if(bitand(outp%what, OPTION__OUTPUT__KINETIC_ENERGY_DENSITY) /= 0) then
     fn_unit = units_out%energy * units_out%length**(-gr%mesh%sb%dim)
     SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
-    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = elf)
+    call states_calc_quantities(gr%der, st, hm%ep%proj, geo, .false., .false., kinetic_energy_density = elf)
     select case(st%d%ispin)
     case(UNPOLARIZED)
       write(fname, '(a)') 'tau'
@@ -195,9 +195,10 @@ end subroutine output_states
 
 
 ! ---------------------------------------------------------
-subroutine output_current_flow(gr, st, dir, outp)
+subroutine output_current_flow(gr, st, hm, dir, outp)
   type(grid_t),         intent(inout) :: gr
   type(states_t),       intent(inout) :: st
+  type(hamiltonian_t),  intent(in)    :: hm
   character(len=*),     intent(in)    :: dir
   type(output_t),       intent(in)    :: outp
 
@@ -248,7 +249,8 @@ subroutine output_current_flow(gr, st, dir, outp)
 
   if(states_are_complex(st)) then
     SAFE_ALLOCATE(j(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
-    call states_calc_quantities(gr%der, st, .false., paramagnetic_current = j)
+    !TODO: At the moment this ignores the contribution from vtau for MGGAs with exc
+    call states_calc_quantities(gr%der, st, hm%ep%proj, hm%geo,  .false., .false., paramagnetic_current = j)
 
     do idir = 1, gr%mesh%sb%dim
       do ip = 1, gr%mesh%np

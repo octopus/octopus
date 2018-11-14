@@ -664,7 +664,7 @@ contains
     call output_states(st, gr, geo, hm, dir, outp)
     call output_hamiltonian(hm, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
     call output_localization_funct(st, hm, gr, dir, outp, geo)
-    call output_current_flow(gr, st, dir, outp)
+    call output_current_flow(gr, st, hm, dir, outp)
 
     if(bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
@@ -751,7 +751,7 @@ contains
     if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
       ASSERT(gr%mesh%sb%dim /= 1)
 
-      call elf_calc(st, gr, f_loc)
+      call elf_calc(st, gr, hm%ep, geo, f_loc)
       
       ! output ELF in real space
       if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
@@ -851,7 +851,7 @@ contains
 
     rho = M_ZERO
     call density_calc(st, gr, rho)
-    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = tau)
+    call states_calc_quantities(gr%der, st, hm%ep%proj, hm%geo, .false., .false., kinetic_energy_density = tau)
 
     pressure = M_ZERO
     do is = 1, st%d%spin_channels
@@ -905,7 +905,7 @@ contains
       SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
 
       ! the kinetic energy density
-      call states_calc_quantities(gr%der, st, .true., kinetic_energy_density = energy_density)
+      call states_calc_quantities(gr%der, st, hm%ep%proj, geo, .true., .false., kinetic_energy_density = energy_density)
 
       ! the external potential energy density
       forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
@@ -919,7 +919,8 @@ contains
 
       ASSERT(.not. gr%have_fine_mesh)
 
-      call xc_get_vxc(gr%fine%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ex_density = ex_density, ec_density = ec_density)
+      call xc_get_vxc(gr%fine%der, ks%xc, st, hm%ep, geo, st%rho, st%d%ispin, &
+              -minval(st%eigenval(st%nst,:)), st%qtot, ex_density = ex_density, ec_density = ec_density)
       forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
       
       SAFE_DEALLOCATE_A(ex_density)

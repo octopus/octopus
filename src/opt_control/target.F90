@@ -407,12 +407,13 @@ contains
   !> Calculates, at a given point in time marked by the integer
   !! index, the integrand of the target functional:
   !! <Psi(t)|\hat{O}(t)|Psi(t)>.
-  subroutine target_tdcalc(tg, hm, gr, geo, psi, time, max_time)
+  subroutine target_tdcalc(tg, hm, gr, geo, psi, ep, time, max_time)
     type(target_t),      intent(inout) :: tg
     type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(inout) :: geo
     type(states_t),      intent(inout) :: psi
+    type(epot_t),        intent(in)    :: ep
     integer,             intent(in)    :: time
     integer,             intent(in)    :: max_time
 
@@ -432,7 +433,7 @@ contains
     case(oct_tg_hhg)
       call target_tdcalc_hhg(tg, hm, gr, geo, psi, time)
     case(oct_tg_jdensity)
-      call target_tdcalc_density(tg, gr, psi, time)
+      call target_tdcalc_density(tg, gr, psi, ep, geo, time)
     case default
       message(1) = 'Error in target.target_tdcalc: default.'
       call messages_fatal(1)
@@ -447,12 +448,14 @@ contains
   ! ---------------------------------------------------------------
   !> Calculates the inhomogeneous term that appears in the equation
   !! for chi, and places it into inh.
-  subroutine target_inh(psi, gr, tg, time, inh, iter)
+  subroutine target_inh(psi, gr, tg, time, inh, ep, geo, iter)
     type(states_t),    intent(inout)     :: psi
     type(grid_t),      intent(in)        :: gr
     type(target_t),    intent(inout)     :: tg
     FLOAT,             intent(in)        :: time
     type(states_t),    intent(inout)     :: inh
+    type(epot_t),      intent(in)        :: ep
+    type(geometry_t),  intent(in)        :: geo
     integer,           intent(in)        :: iter
  
     integer :: ik, ist, ip, idim, ib
@@ -516,7 +519,7 @@ contains
       end do
         
       if (abs(nint(time/tg%dt)) >= tg%strt_iter_curr_tg) then
-        call chi_current(tg, gr, CNST(-1.0), psi, inh)
+        call chi_current(tg, gr, CNST(-1.0), psi, inh, ep, geo)
       end if     
 
     case default
@@ -537,11 +540,12 @@ contains
   !! <Psi(T)|\hat{O}|Psi(T) in the time-independent
   !! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
   !! the time-dependent case.
-  FLOAT function target_j1(tg, gr, qcpsi, geo) result(j1)
+  FLOAT function target_j1(tg, gr, qcpsi, geo, ep) result(j1)
     type(target_t), intent(inout)   :: tg
     type(grid_t),   intent(inout)   :: gr
     type(opt_control_state_t), intent(inout)   :: qcpsi
-    type(geometry_t), intent(in), optional :: geo
+    type(geometry_t), intent(in)    :: geo
+    type(epot_t),     intent(in)    :: ep
 
     type(states_t), pointer :: psi
 
@@ -559,7 +563,7 @@ contains
     case(oct_tg_userdefined)
       j1 = target_j1_userdefined(tg, gr, psi)
     case(oct_tg_jdensity)
-      j1 = target_j1_density(gr, tg, psi)
+      j1 = target_j1_density(gr, tg, psi, ep, geo)
     case(oct_tg_local)
       j1 = target_j1_local(gr, tg, psi)
     case(oct_tg_td_local)
@@ -586,12 +590,13 @@ contains
 
   ! ---------------------------------------------------------
   !> Calculate |chi(T)> = \hat{O}(T) |psi(T)>
-  subroutine target_chi(tg, gr, qcpsi_in, qcchi_out, geo)
+  subroutine target_chi(tg, gr, qcpsi_in, qcchi_out, geo, ep)
     type(target_t),    intent(inout) :: tg
     type(grid_t),      intent(inout) :: gr
     type(opt_control_state_t), target, intent(inout) :: qcpsi_in
     type(opt_control_state_t), target, intent(inout) :: qcchi_out
     type(geometry_t),  intent(in)    :: geo
+    type(epot_t),      intent(in)    :: ep
 
     FLOAT, pointer :: q(:, :), p(:, :)
     type(states_t), pointer :: psi_in, chi_out
@@ -611,7 +616,7 @@ contains
     case(oct_tg_userdefined)
       call target_chi_userdefined(tg, gr, psi_in, chi_out)
     case(oct_tg_jdensity)
-      call target_chi_density(tg, gr, psi_in, chi_out)
+      call target_chi_density(tg, gr, psi_in, chi_out, ep, geo)
     case(oct_tg_local)
       call target_chi_local(tg, gr, psi_in, chi_out)
     case(oct_tg_td_local)

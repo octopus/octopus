@@ -16,10 +16,12 @@
 !! 02110-1301, USA.
 !!
 
-subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
+subroutine xc_get_vxc(der, xcs, st, ep, geo, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
   type(states_t),       intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
+  type(epot_t),         intent(in)    :: ep              !< External potential (needed indirectly for MGGAs)
+  type(geometry_t),     intent(in)    :: geo             !< Geometry (needed indirectly for MGGAs)
   FLOAT,                intent(in)    :: rho(:, :)       !< Electronic density 
   integer,              intent(in)    :: ispin           !< Number of spin channels 
   FLOAT,                intent(in)    :: ioniz_pot
@@ -154,10 +156,22 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
       call messages_not_implemented("MGGA with nonlinear core correction")
     end if
 
-    if (xcs%use_gi_ked) then
-      call states_calc_quantities(der, st, .true., gi_kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
+    if(mgga_withexc) then
+      if (xcs%use_gi_ked) then
+        call states_calc_quantities(der, st, ep%proj, geo, .true., .true., vtau = vtau, &
+                 gi_kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
+      else
+        call states_calc_quantities(der, st, ep%proj, geo, .true., .false., vtau = vtau, &
+                 kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
+      end if
     else
-      call states_calc_quantities(der, st, .true., kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
+      if (xcs%use_gi_ked) then
+        call states_calc_quantities(der, st, ep%proj, geo, .true., .false., &
+                gi_kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
+      else
+        call states_calc_quantities(der, st, ep%proj, geo, .true., .false., &
+                kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
+      end if
     end if
 
     if(functl(FUNC_X)%id == XC_MGGA_X_TB09 .and. der%mesh%sb%periodic_dim == 3) then

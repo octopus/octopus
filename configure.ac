@@ -381,6 +381,7 @@ AC_CONFIG_FILES([Makefile
   src/ions/Makefile
   src/grid/Makefile
   src/poisson/Makefile
+  src/projector/Makefile
   src/states/Makefile
   src/hamiltonian/Makefile
   src/basis_set/Makefile
