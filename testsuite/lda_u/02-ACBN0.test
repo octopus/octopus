@@ -77,4 +77,4 @@ match ; Eigenvalue  5 up ; GREPFIELD(static/info, '#k =   2', 3, 9) ;   0.283876
 match ; Occupation F down 2p2 ; LINEFIELD(static/occ_matrices, -2, 3) ; 0.96139929
 match ; Occupation F down 2p3 ; LINEFIELD(static/occ_matrices, -1, 5) ; 0.96139929
 
-match ; U2p F   ; LINEFIELD(static/effectiveU, -7, 4) ;0.473323
+match ; U2p F   ; LINEFIELD(static/effectiveU, -7, 4) ; 0.492816
