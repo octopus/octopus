@@ -112,6 +112,22 @@ noinst_HEADERS +=                  \
 	basic/sort_inc.F90         \
 	basic/varia.h
 
+# Sources in basis_set
+all_f_srcs +=               \
+	basis_set/atomic_orbital.F90   \
+	basis_set/loewdin.F90          \
+	basis_set/orbitalbasis.F90     \
+	basis_set/orbitalset.F90       \
+	basis_set/orbitalset_utils.F90
+
+noinst_HEADERS +=                          \
+	basis_set/atomic_orbital_inc.F90   \
+	basis_set/loewdin_inc.F90          \
+	basis_set/orbitalbasis_inc.F90     \
+	basis_set/orbitalset_inc.F90       \
+	basis_set/orbitalset_utils_inc.F90
+
+
 # Sources in math
 all_f_srcs +=                                 \
 	math/accel_blas.F90                   \
@@ -232,6 +248,7 @@ all_f_srcs +=                                 \
 	ions/periodic_copy.F90                \
 	ions/read_coords.F90                  \
 	ions/simul_box.F90                    \
+	ions/spglib_f08.f90                   \
 	ions/symmetries.F90                   \
 	ions/vibrations.F90                   \
 	ions/xyz_adjust.F90
