@@ -265,7 +265,7 @@ subroutine X(compute_dftu_energy)(this, energy, st)
   type(states_t), intent(in)      :: st 
 
   integer :: ios, imp, im, ispin
-  FLOAT :: Nsigma
+  FLOAT :: nsigma
 
   PUSH_SUB(compute_dftu_energy)
 
@@ -289,13 +289,13 @@ subroutine X(compute_dftu_energy)(this, energy, st)
     ASSERT(st%d%ispin /= SPINORS)
     do ios = 1, this%norbsets
       do ispin = 1, this%nspins
-        Nsigma = M_ZERO
+        nsigma = M_ZERO
         do im = 1, this%orbsets(ios)%norbs
-          Nsigma = Nsigma + R_REAL(this%X(n)(im,im,ispin,ios))/st%smear%el_per_state
+          nsigma = nsigma + R_REAL(this%X(n)(im,im,ispin,ios))/st%smear%el_per_state
         end do
 
         do im = 1, this%orbsets(ios)%norbs
-          energy = energy + M_HALF*this%orbsets(ios)%Ueff*Nsigma*(M_ONE-Nsigma)/this%orbsets(ios)%norbs
+          energy = energy + M_HALF*this%orbsets(ios)%Ueff*nsigma*(M_ONE-nsigma)/this%orbsets(ios)%norbs
           energy = energy - M_HALF*this%orbsets(ios)%Ueff*R_REAL(this%X(n)(im, im, ispin, ios))
         end do
       end do
@@ -317,7 +317,7 @@ subroutine X(lda_u_update_potential)(this, st)
 
   integer :: ios, im, ispin, norbs
   type(profile_t), save :: prof
-  FLOAT :: Nsigma
+  FLOAT :: nsigma
 
   call profiling_in(prof, "DFTU_POTENTIAL")
 
@@ -344,13 +344,13 @@ subroutine X(lda_u_update_potential)(this, st)
     if(this%double_couting == DFT_U_AMF) then
       ASSERT(st%d%ispin /= SPINORS)
       do ispin = 1, this%nspins
-        Nsigma = M_ZERO
+        nsigma = M_ZERO
         do im = 1, norbs
-          Nsigma = Nsigma + R_REAL(this%X(n)(im,im,ispin,ios))/st%smear%el_per_state
+          nsigma = nsigma + R_REAL(this%X(n)(im,im,ispin,ios))/st%smear%el_per_state
         end do
         do im = 1, norbs
           this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + this%orbsets(ios)%Ueff &
-                            *(Nsigma/norbs - M_HALF)
+                            *(nsigma/norbs - M_HALF)
         end do
       end do
     end if

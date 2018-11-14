@@ -217,12 +217,12 @@ contains
   !%Default dft_u_fll
   !%Section Hamiltonian::DFT+U
   !%Description
-  !% (Experimental) This variable selects which DFT+U
+  !% This variable selects which DFT+U
   !% double counting term is used.
   !%Option dft_u_fll 0
   !% (Default) The Fully Localized Limit (FLL)
   !%Option dft_u_amf 1
-  !% Around mean field double counting, as defined in PRB 44, 943 (1991) and PRB 49, 14211 (1994).
+  !% (Experimental) Around mean field double counting, as defined in PRB 44, 943 (1991) and PRB 49, 14211 (1994).
   !%End
   call parse_variable('DFTUDoubleCounting', DFT_U_FLL, this%double_couting)
   call messages_print_var_option(stdout,  'DFTUDoubleCounting', this%double_couting)
