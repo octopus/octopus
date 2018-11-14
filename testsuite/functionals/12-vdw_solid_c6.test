@@ -8,6 +8,7 @@ Enabled    : Yes
 Processors : 3
 Input      : 12-vdw_solid_c6.01-gs_diamond.inp 
 
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -11.32048941
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.55735014
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  1.05336267
@@ -34,6 +35,7 @@ match ; C6 eff  C2-C2   ; GREPFIELD(static/c6ab_eff, '2        2', 3) ; 3.706198
 Processors : 2
 Input      : 12-vdw_solid_c6.02-gs_graphene.inp
 
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -11.33217565
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -3.70853634
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; -11.11134461
