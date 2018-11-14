@@ -61,8 +61,6 @@ all_f_srcs =                                   \
 	basic/io_binary_f.F90                  \
 	basic/io_csv_f.F90                     \
 	basic/io.F90                           \
-	basic/json.F90                         \
-	basic/json_parser.F90                  \
 	basic/kinds.F90                        \
 	basic/loct.F90                         \
 	basic/loct_pointer.F90                 \
@@ -80,7 +78,6 @@ all_f_srcs =                                   \
 	basic/sort.F90                         \
 	basic/space.F90                        \
 	basic/string.F90                       \
-	basic/test_parameters.F90              \
 	basic/topology.F90                     \
 	basic/types.F90                        \
 	basic/unit.F90                         \
@@ -195,23 +192,33 @@ all_f_srcs +=                                    \
 	species/ps_psf.F90                       \
 	species/ps_psf_file.F90                  \
 	species/ps_xml.F90                       \
-	species/ps_upf.F90                       \
 	species/pseudo.F90                       \
+	species/pseudo_set.F90                   \
+	species/share_directory.F90              \
 	species/species.F90
 
 all_c_srcs +=                                    \
-	species/chemical_element.cc              \
+	species/element_low.cc                   \
 	species/pseudo_low.cc                    \
+	species/pseudo_set_low.cc                \
+	species/share_directory_low.cc           \
 	species/spline.cc
 
 noinst_HEADERS +=                                \
+	species/anygrid.hpp                      \
 	species/base.hpp                         \
-	species/chemical_element.hpp             \
+	species/element.hpp                      \
+	species/detect_format.hpp                \
 	species/ps_pspio_inc.F90                 \
 	species/psml.hpp                         \
+	species/psp8.hpp                         \
 	species/qso.hpp                          \
+	species/share_directory.hpp              \
+	species/set.hpp                          \
 	species/spline.h                         \
-	species/upf.hpp
+	species/upf.hpp                          \
+	species/upf1.hpp                         \
+	species/upf2.hpp
 
 
 # Sources in ions
@@ -230,7 +237,6 @@ all_f_srcs +=                                 \
 	ions/xyz_adjust.F90
 
 all_c_srcs +=                                 \
-	ions/spglib_f.c                       \
 	ions/symmetries_finite.c
 
 
@@ -336,84 +342,8 @@ noinst_HEADERS +=                                \
 	poisson/poisson_init_direct_inc.F90      \
 	poisson/solver_1d_solve_inc.F90
 
-# Sources in frozen
-all_f_srcs +=                                   \
-	frozen/base_config.F90                  \
-	frozen/base_density.F90                 \
-	frozen/base_functional.F90              \
-	frozen/base_geometry.F90                \
-	frozen/base_hamiltonian.F90             \
-	frozen/base_handle.F90                  \
-	frozen/base_model.F90                   \
-	frozen/base_potential.F90               \
-	frozen/base_states.F90                  \
-	frozen/base_system.F90                  \
-	frozen/base_term.F90                    \
-	frozen/basis.F90                        \
-	frozen/config_dict.F90                  \
-	frozen/domain.F90                       \
-	frozen/fio_config.F90                   \
-	frozen/fio_curvilinear.F90              \
-	frozen/fio_density.F90                  \
-	frozen/fio_external.F90                 \
-	frozen/fio_geometry.F90                 \
-	frozen/fio_grid.F90                     \
-	frozen/fio_hamiltonian.F90              \
-	frozen/fio_handle.F90                   \
-	frozen/fio_index.F90                    \
-	frozen/fio_mesh.F90                     \
-	frozen/fio_model.F90                    \
-	frozen/fio_simulation.F90               \
-	frozen/fio_simul_box.F90                \
-	frozen/fio_states.F90                   \
-	frozen/fio_system.F90                   \
-	frozen/frozen_config.F90                \
-	frozen/frozen_density.F90               \
-	frozen/frozen_external.F90              \
-	frozen/frozen_hamiltonian.F90           \
-	frozen/frozen_handle.F90                \
-	frozen/frozen_model.F90                 \
-	frozen/frozen_states.F90                \
-	frozen/frozen_system.F90                \
-	frozen/functional.F90                   \
-	frozen/geo_build.F90                    \
-	frozen/geo_intrf.F90                    \
-	frozen/grid_intrf.F90                   \
-	frozen/interface_xc.F90                 \
-	frozen/intrpl.F90                       \
-	frozen/live_geometry.F90                \
-	frozen/live_handle.F90                  \
-	frozen/live_model.F90                   \
-	frozen/live_system.F90                  \
-	frozen/simulation.F90                   \
-	frozen/ssys_config.F90                  \
-	frozen/ssys_density.F90                 \
-	frozen/ssys_external.F90                \
-	frozen/ssys_hamiltonian.F90             \
-	frozen/ssys_handle.F90                  \
-	frozen/ssys_ionic.F90                   \
-	frozen/ssys_model.F90                   \
-	frozen/ssys_states.F90                  \
-	frozen/ssys_system.F90                  \
-	frozen/ssys_tnadd.F90                   \
-	frozen/storage.F90                      \
-	frozen/strng.F90
-
-noinst_HEADERS +=		        \
-	frozen/kfunctionals_list.F90    \
-	frozen/util.h                   \
-	frozen/template.h		\
-	frozen/tsingle_inc.F90		\
-	frozen/tpair_inc.F90		\
-	frozen/tdarr_inc.F90		\
-	frozen/tlist_inc.F90		\
-	frozen/thash_inc.F90		\
-	frozen/tdict_inc.F90		\
-	frozen/iterator_inc.F90
-
 # Sources in states
 all_f_srcs +=                                   \
-	states/cmplxscl.F90                     \
 	states/density.F90                      \
 	states/excited_states.F90               \
 	states/linear_response.F90              \
@@ -461,9 +391,12 @@ all_f_srcs +=                                        \
 	hamiltonian/kb_projector.F90                 \
 	hamiltonian/kick.F90                         \
 	hamiltonian/lasers.F90                       \
+	hamiltonian/lda_u.F90                        \
+	hamiltonian/lda_u_io.F90                     \
 	hamiltonian/libvdwxc.F90                     \
 	hamiltonian/oct_exchange.F90                 \
 	hamiltonian/pcm.F90                          \
+	hamiltonian/pcm_eom.F90                      \
 	hamiltonian/projector.F90                    \
 	hamiltonian/projector_matrix.F90             \
 	hamiltonian/rkb_projector.F90                \
@@ -478,6 +411,7 @@ all_c_srcs +=                                        \
 	hamiltonian/vdw_ts_low.c
 
 noinst_HEADERS +=                                    \
+        hamiltonian/dft_u_noncollinear_inc.F90       \
         hamiltonian/functionals_list.F90             \
         hamiltonian/fxc_inc.F90                      \
 	hamiltonian/hamiltonian_base_inc.F90         \
@@ -486,19 +420,18 @@ noinst_HEADERS +=                                    \
 	hamiltonian/kb_projector_inc.F90             \
 	hamiltonian/kxc_inc.F90                      \
 	hamiltonian/lasers_inc.F90                   \
+	hamiltonian/lda_u_inc.F90                    \
 	hamiltonian/oct_exchange_inc.F90             \
 	hamiltonian/projector_inc.F90                \
 	hamiltonian/scdm_inc.F90                     \
 	hamiltonian/scissor_inc.F90                  \
-	hamiltonian/species_pot_inc.F90              \
 	hamiltonian/vxc_inc.F90
 
 # Sources in system
 all_f_srcs +=                                   \
 	system/current.F90                      \
-	system/eigen_arpack.F90                 \
+	system/dos.F90                          \
 	system/eigen_cg.F90                     \
-	system/eigen_feast.F90                  \
 	system/eigen_lobpcg.F90                 \
 	system/eigen_rmmdiis.F90                \
 	system/eigensolver.F90                  \
@@ -507,10 +440,8 @@ all_f_srcs +=                                   \
 	system/exponential.F90                  \
 	system/forces.F90                       \
 	system/linear_solver.F90                \
-	system/live_config.F90                  \
 	system/magnetic.F90                     \
 	system/output.F90                       \
-	system/output_fio.F90                   \
 	system/output_me.F90                    \
 	system/partial_charges.F90              \
 	system/pert.F90                         \
@@ -523,7 +454,6 @@ all_f_srcs +=                                   \
 	system/xc_oep.F90
 
 noinst_HEADERS +=                               \
-	system/eigen_arpack_inc.F90             \
 	system/eigen_cg_inc.F90                 \
 	system/eigen_evolution_inc.F90          \
 	system/eigen_lobpcg_inc.F90             \
@@ -552,6 +482,7 @@ noinst_HEADERS +=                               \
 all_f_srcs +=                                \
 	scf/ground_state.F90                 \
 	scf/lcao.F90                         \
+	scf/lda_u_mixer.F90                  \
 	scf/mix.F90                          \
 	scf/mixing_metric.F90                \
 	scf/rdmft.F90                        \
@@ -638,9 +569,10 @@ noinst_HEADERS +=                                    \
 
 all_srcs = $(all_f_srcs) $(all_c_srcs)
 
-bin_PROGRAMS = octopus oct-test octopus_mpi
+bin_PROGRAMS = octopus
 
-octopus_f_srcs = main/invert_ks.F90          \
+octopus_f_srcs =                             \
+	main/invert_ks.F90                   \
 	main/memory.F90                      \
 	main/unocc.F90                       \
 	main/static_pol.F90                  \
@@ -648,34 +580,19 @@ octopus_f_srcs = main/invert_ks.F90          \
 	main/phonons_fd.F90                  \
 	main/casida.F90                      \
 	main/pulpo.F90                       \
+	main/test.F90                        \
 	main/run.F90                         \
 	main/main.F90
+
+noinst_HEADERS += \
+	main/casida_inc.F90
 
 octopus_SOURCES = $(octopus_f_srcs) $(all_srcs)
 octopus_LDADD = $(all_LIBS)
 octopus_LINK = $(FCLINK)
 
-oct_test_SOURCES = $(all_srcs) main/test.F90
-oct_test_LDADD = $(all_LIBS)
-oct_test_LINK = $(FCLINK)
 
-noinst_HEADERS += \
-	main/casida_inc.F90
-
-octopus_mpi_SOURCES = $(all_srcs) main/octopus_mpi.F90
-octopus_mpi_LDADD = $(all_LIBS)
-octopus_mpi_LINK = $(FCLINK)
-
-main_f_srcs = main/test.F90 main/octopus_mpi.F90
-
-
-CLEANFILES += octopus oct-test
-
-# debug files from MacOS gcc with -g
-clean-local: clean-fdep
-	rm -rf *.dSYM
-	rm -f include/config_F90.h include/options.h include/defaults.h
-
+CLEANFILES += octopus
 
 EXEEXT =
 
@@ -730,8 +647,9 @@ oct_center_geom_LDADD = $(all_LIBS)
 oct_convert_SOURCES = $(all_srcs) utils/convert.F90
 oct_convert_LINK = $(FCLINK)
 oct_convert_LDADD = $(all_LIBS)
-oct_local_multipoles_SOURCES = $(all_srcs) utils/local_multipoles.F90 \
-                                utils/local_write.F90
+oct_local_multipoles_SOURCES = $(all_srcs) \
+			       utils/local_multipoles.F90 \
+                               utils/local_write.F90
 oct_local_multipoles_LINK = $(FCLINK)
 oct_local_multipoles_LDADD = $(all_LIBS)
 oct_conductivity_SOURCES = $(all_srcs) utils/conductivity.F90
@@ -743,6 +661,12 @@ oct_help_LDADD = $(all_LIBS)
 oct_floquet_SOURCES = $(all_srcs) utils/floquet.F90
 oct_floquet_LINK = $(FCLINK)
 oct_floquet_LDADD = $(all_LIBS)
+
+
+# debug files from MacOS gcc with -g
+clean-local: clean-fdep
+	rm -rf *.dSYM
+	rm -f include/config_F90.h include/options.h include/defaults.h
 
 
 FORTRAN_CPP=@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS)
