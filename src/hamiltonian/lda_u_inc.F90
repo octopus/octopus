@@ -265,6 +265,7 @@ subroutine X(compute_dftu_energy)(this, energy, st)
   type(states_t), intent(in)      :: st 
 
   integer :: ios, imp, im, ispin
+  FLOAT :: nsigma
 
   PUSH_SUB(compute_dftu_energy)
 
@@ -275,13 +276,31 @@ subroutine X(compute_dftu_energy)(this, energy, st)
       !TODO: These are matrix operations, that could be optimized
       do im = 1, this%orbsets(ios)%norbs
         do imp = 1, this%orbsets(ios)%norbs
-          energy = energy - CNST(0.5)*this%orbsets(ios)%Ueff*abs(this%X(n)(im, imp, ispin, ios))**2/st%smear%el_per_state
+          energy = energy - M_HALF*this%orbsets(ios)%Ueff*abs(this%X(n)(im, imp, ispin, ios))**2/st%smear%el_per_state
         end do
         if(ispin <= this%spin_channels) &
-          energy = energy + CNST(0.5)*this%orbsets(ios)%Ueff*real(this%X(n)(im, im, ispin, ios))
+          energy = energy + M_HALF*this%orbsets(ios)%Ueff*real(this%X(n)(im, im, ispin, ios))
       end do
     end do
   end do
+
+  !See for instance PRB 67, 153106 (2003), Eq.(4)
+  if(this%double_couting == DFT_U_AMF) then
+    ASSERT(st%d%ispin /= SPINORS)
+    do ios = 1, this%norbsets
+      do ispin = 1, this%nspins
+        nsigma = M_ZERO
+        do im = 1, this%orbsets(ios)%norbs
+          nsigma = nsigma + R_REAL(this%X(n)(im,im,ispin,ios))/st%smear%el_per_state
+        end do
+
+        do im = 1, this%orbsets(ios)%norbs
+          energy = energy + M_HALF*this%orbsets(ios)%Ueff*nsigma*(M_ONE-nsigma)/this%orbsets(ios)%norbs
+          energy = energy - M_HALF*this%orbsets(ios)%Ueff*R_REAL(this%X(n)(im, im, ispin, ios))
+        end do
+      end do
+    end do
+  end if
 
   POP_SUB(compute_dftu_energy)
 end subroutine X(compute_dftu_energy)
@@ -298,6 +317,7 @@ subroutine X(lda_u_update_potential)(this, st)
 
   integer :: ios, im, ispin, norbs
   type(profile_t), save :: prof
+  FLOAT :: nsigma
 
   call profiling_in(prof, "DFTU_POTENTIAL")
 
@@ -312,14 +332,30 @@ subroutine X(lda_u_update_potential)(this, st)
         this%X(V)(1:norbs,im,ispin,ios) = - this%orbsets(ios)%Ueff*this%X(n)(1:norbs,im,ispin,ios)/st%smear%el_per_state
         ! Only the diagonal part in spin space (for spinors)
         if(ispin <= this%spin_channels) &
-          this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + CNST(0.5)*this%orbsets(ios)%Ueff
+          this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + M_HALF*this%orbsets(ios)%Ueff
 
         if(this%orbsets(ios)%alpha > CNST(1.0e-6)) then
           this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + this%orbsets(ios)%alpha
         end if
       end do
     end do
+
+    !See for instance PRB 67, 153106 (2003), Eq.(4)
+    if(this%double_couting == DFT_U_AMF) then
+      ASSERT(st%d%ispin /= SPINORS)
+      do ispin = 1, this%nspins
+        nsigma = M_ZERO
+        do im = 1, norbs
+          nsigma = nsigma + R_REAL(this%X(n)(im,im,ispin,ios))/st%smear%el_per_state
+        end do
+        do im = 1, norbs
+          this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + this%orbsets(ios)%Ueff &
+                            *(nsigma/norbs - M_HALF)
+        end do
+      end do
+    end if
   end do
+
 
   if(this%orbs_dist%parallel) then
     call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%X(V))
@@ -757,6 +793,10 @@ end subroutine X(compute_periodic_coulomb_integrals)
 
    PUSH_SUB(lda_u_commute_r)
 
+   if(this%double_couting /= DFT_U_FLL) then
+    call messages_not_implemented("AMF double couting and commutator [r,V_u].")
+   end if
+
    if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
      SAFE_ALLOCATE(epsi(1:mesh%np,1:d%dim))
    else
@@ -930,6 +970,10 @@ end subroutine X(compute_periodic_coulomb_integrals)
    if(this%level == DFT_U_NONE) return
    !In this casem there is no contribution to the force
    if(this%basisfromstates) return
+
+   if(this%double_couting /= DFT_U_FLL) then
+    call messages_not_implemented("AMF double couting with forces.")
+   end if
 
    PUSH_SUB(X(lda_u_force))
 

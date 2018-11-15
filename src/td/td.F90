@@ -374,7 +374,9 @@ contains
 
     call td_init(td, sys, hm)
 
-    if(ion_dynamics_ions_move(td%ions) .and. hm%lda_u_level /= DFT_U_NONE ) call messages_experimental("DFT+U with MoveIons=yes") 
+    !In both of these cases, the Schroedinger equation must contain an extra term related to the time-derivative of the ions, aas these two contributions are attached to atoms.
+    if(ion_dynamics_ions_move(td%ions) .and. hm%lda_u_level /= DFT_U_NONE ) call messages_not_implemented("DFT+U with MoveIons=yes") 
+    if(ion_dynamics_ions_move(td%ions) .and. associated(st%rho_core)) call messages_not_implemented("Nonlinear core correction with MoveIons=yes")
     
     ! Allocate wavefunctions during time-propagation
     if(td%dynamics == EHRENFEST) then
