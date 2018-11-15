@@ -359,7 +359,6 @@ contains
     else if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
       call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     end if
-    call mix_get_field(scf%smix, scf%mixfield)
 
     !If we use LDA+U, we also have do mix it
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
@@ -458,7 +457,13 @@ contains
     if(scf%calc_partial_charges) call messages_experimental('SCFCalculatePartialCharges')
 
     rmin = geometry_min_distance(geo)
-    if(geo%natoms == 1) rmin = CNST(100.0)
+    if(geo%natoms == 1) then
+      if(simul_box_is_periodic(gr%sb)) then
+        rmin = minval(gr%sb%lsize(1:gr%sb%periodic_dim))
+      else
+        rmin = CNST(100.0)
+      end if
+    end if
 
     !%Variable LocalMagneticMomentsSphereRadius
     !%Type float
@@ -468,7 +473,7 @@ contains
     !% magnetization density in spheres centered around each atom.
     !% This variable controls the radius of the spheres.
     !% The default is half the minimum distance between two atoms
-    !% in the input coordinates, or 100 a.u. if there is only one atom.
+    !% in the input coordinates, or 100 a.u. if there is only one atom (for isolated systems).
     !%End
     call parse_variable('LocalMagneticMomentsSphereRadius', rmin*M_HALF, scf%lmm_r, unit = units_inp%length)
     ! this variable is also used in td/td_write.F90
@@ -652,11 +657,11 @@ contains
       
     end select
 
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
     !If we use LDA+U, we also have do mix it
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
       call lda_u_mixer_init(hm%lda_u, scf%lda_u_mix, st)
     end if
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
 
     evsum_in = states_eigenvalues_sum(st)
 
