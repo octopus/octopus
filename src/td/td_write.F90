@@ -51,6 +51,7 @@ module td_write_oct_m
   use pert_oct_m
   use profiling_oct_m
   use restart_oct_m
+  use simul_box_oct_m
   use states_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
@@ -336,7 +337,13 @@ contains
     end if
 
     rmin = geometry_min_distance(geo)
-    if(geo%natoms == 1) rmin = CNST(100.0)
+    if(geo%natoms == 1) then 
+      if(simul_box_is_periodic(gr%sb)) then
+        rmin = minval(gr%sb%lsize(1:gr%sb%periodic_dim))
+      else
+        rmin = CNST(100.0)
+      end if
+    end if
 
     ! This variable is documented in scf/scf.F90
     call parse_variable('LocalMagneticMomentsSphereRadius', rmin*M_HALF, writ%lmm_r, units_inp%length)
