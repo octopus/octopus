@@ -505,7 +505,7 @@ contains
     dz_max = M_ZERO
     do iatom = 1, geo%natoms
       do jatom = iatom + 1, geo%natoms
-        dz_max = max(dz_max, abs(geo%atom(iatom)%x(3) - geo%atom(iatom)%x(3)))
+        dz_max = max(dz_max, abs(geo%atom(iatom)%x(3) - geo%atom(jatom)%x(3)))
       end do
     end do
 

@@ -163,7 +163,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   end if
 
   ! calculate |ppsi> += |p><p|psi>
-  !$omp parallel private(ist, ipj, ns, lpsi, ll, mm, ii, idim, is, uvpsi)
+  !$omp parallel private(ist, ipj, ns, lpsi, ll, mm, ii, idim, is, uvpsi, bind)
   SAFE_ALLOCATE(lpsi(1:maxval(pj(1:npj)%sphere%np), 1:dim))
   !$omp do
   do ist = 1, psib%nst

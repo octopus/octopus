@@ -99,8 +99,8 @@ namespace pseudopotential {
       return value<double>(root_node_->first_node("mass"));
     }
     
-    int valence_charge() const {
-      return value<int>(pseudo_node_->first_node("valence_charge"));
+    double valence_charge() const {
+      return value<double>(pseudo_node_->first_node("valence_charge"));
     }
 
     int llocal() const {

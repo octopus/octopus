@@ -414,8 +414,9 @@ contains
 
     nullify(hm%hm_base%phase)
     if (simul_box_is_periodic(gr%sb) .and. &
-        .not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) &
+      .not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) then
       call init_phase()
+    end if
     ! no e^ik phase needed for Gamma-point-only periodic calculations
 
     !%Variable HamiltonianApplyPacked
@@ -589,7 +590,6 @@ contains
     SAFE_DEALLOCATE_P(hm%energy)
      
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
-
     POP_SUB(hamiltonian_end)
   end subroutine hamiltonian_end
 

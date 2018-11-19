@@ -387,9 +387,9 @@ contains
                   !$omp parallel do
                   do ip = 1, mesh%np
                     zpsi(ip, idim) = hm%hm_base%phase(ip, ik)*zpsi(ip, idim)
+                  end do
+                  !$omp end parallel do
                 end do
-                !$omp end parallel do
-              end do
               end if
               call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(hm%hm_base%phase), .false., &
                                  zdot(1:st%d%dim,1:os%norbs))
