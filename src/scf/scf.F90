@@ -73,6 +73,7 @@ module scf_oct_m
   use utils_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
+  use vdw_ts_oct_m
   use xc_functl_oct_m
   use XC_F90(lib_m)
   use stress_oct_m
@@ -559,7 +560,7 @@ contains
 
     if(ks%theory_level == CLASSICAL) then
       ! calculate forces
-      if(scf%calc_force) call forces_calculate(gr, geo, hm, st)
+      if(scf%calc_force) call forces_calculate(gr, geo, hm, st, ks)
 
       if(gs_run_) then 
         ! output final information
@@ -670,7 +671,7 @@ contains
       SAFE_ALLOCATE(  forcein(1:geo%natoms, 1:gr%sb%dim))
       SAFE_ALLOCATE( forceout(1:geo%natoms, 1:gr%sb%dim))
       SAFE_ALLOCATE(forcediff(1:gr%sb%dim))
-      call forces_calculate(gr, geo, hm, st)
+      call forces_calculate(gr, geo, hm, st, ks)
       do iatom = 1, geo%natoms
         forcein(iatom, 1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
       end do
@@ -783,7 +784,7 @@ contains
 
       ! compute forces only if they are used as convergence criterion
       if (scf%conv_abs_force > M_ZERO) then
-        call forces_calculate(gr, geo, hm, st, vhxc_old=vhxc_old)
+        call forces_calculate(gr, geo, hm, st, ks, vhxc_old=vhxc_old)
         scf%abs_force = M_ZERO
         do iatom = 1, geo%natoms
           forceout(iatom,1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
@@ -797,7 +798,7 @@ contains
         if(outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0 &
            .and. outp%output_interval /= 0 &
            .and. gs_run_ .and. mod(iter, outp%output_interval) == 0)  &
-          call forces_calculate(gr, geo, hm, st, vhxc_old=vhxc_old)
+          call forces_calculate(gr, geo, hm, st, ks, vhxc_old=vhxc_old)
       end if
 
       if(abs(st%qtot) <= M_EPSILON) then
@@ -1002,7 +1003,9 @@ contains
     end if
 
     ! calculate forces
-    if(scf%calc_force) call forces_calculate(gr, geo, hm, st, vhxc_old=vhxc_old)
+    if(scf%calc_force) then
+      call forces_calculate(gr, geo, hm, st, ks, vhxc_old=vhxc_old)
+    end if
 
     ! calculate stress
     if(scf%calc_stress) call stress_calculate(gr, hm, st, geo, ks) 
@@ -1025,6 +1028,10 @@ contains
           hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
           vec_pot_var = hm%hm_base%vector_potential)
       end if
+    end if
+
+    if( ks%vdw_correction == OPTION__VDWCORRECTION__VDW_TS) then
+      call vdw_ts_write_c6ab(ks%vdw_ts, geo, STATIC_DIR, 'c6ab_eff')
     end if
 
     SAFE_DEALLOCATE_A(vhxc_old)

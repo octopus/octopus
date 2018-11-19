@@ -80,6 +80,7 @@ module output_oct_m
   use varinfo_oct_m
   use v_ks_oct_m
   use vtk_oct_m
+  use vdw_ts_oct_m
 #if defined(HAVE_BERKELEYGW)
   use wfn_rho_vxc_io_m
 #endif

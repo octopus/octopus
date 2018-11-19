@@ -590,7 +590,6 @@ contains
     SAFE_DEALLOCATE_P(hm%energy)
      
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
-
     POP_SUB(hamiltonian_end)
   end subroutine hamiltonian_end
 
