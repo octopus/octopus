@@ -829,7 +829,7 @@ contains
     subroutine build_phase()
       integer :: ik, imat, nmat, max_npoints, offset
       integer :: ip, ip_bnd, ip_inn, ip_global, ip_inner, sp
-      FLOAT   :: kpoint(1:MAX_DIM)
+      FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
       logical :: compute_phase_correction
 
       PUSH_SUB(hamiltonian_update.build_phase)
@@ -883,8 +883,10 @@ contains
               ! get corresponding inner point
               ip_inner = mesh_periodic_point(mesh, ip_global)
               ! compute phase correction from global coordinate (opposite sign!)
+
+              x_global = mesh_x_global(mesh, ip_inner)
               this%hm_base%phase_corr(ip, ik) = this%hm_base%phase(ip, ik)* &
-                exp(M_zI * sum(mesh_x_global(mesh, ip_inner) * (kpoint(1:mesh%sb%dim) &
+                exp(M_zI * sum(x_global(1:mesh%sb%dim) * (kpoint(1:mesh%sb%dim) &
                   + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
             end do
           end if
