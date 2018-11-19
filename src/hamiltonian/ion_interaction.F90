@@ -492,8 +492,8 @@ contains
     integer :: iatom, jatom
     integer :: ix, iy, ix_max, iy_max, ss
     FLOAT   :: gg(1:MAX_DIM), gg2, gx, gg_abs
-    FLOAT   :: factor,factor1,factor2
-    FLOAT   :: dz_max, dz_ij, area_cell, erfc
+    FLOAT   :: factor,factor1,factor2, coeff
+    FLOAT   :: dz_max, dz_ij, area_cell, erfc1, erfc2, tmp_erf
 
     PUSH_SUB(Ewald_long_2d)
 
@@ -512,8 +512,8 @@ contains
     !get a converged value for the cutoff in g
     rcut = M_TWO*this%alpha*CNST(4.6) + M_TWO*this%alpha**2*dz_max
     do 
-      erfc = M_ONE - loct_erf(this%alpha*dz_max + M_HALF*rcut/this%alpha)
-      if(erfc*exp(rcut*dz_max) < CNST(1e-10))exit
+      erfc1 = M_ONE - loct_erf(this%alpha*dz_max + M_HALF*rcut/this%alpha)
+      if(erfc1*exp(rcut*dz_max) < CNST(1e-10))exit
       rcut = rcut * CNST(1.414)
     end do
 
@@ -531,7 +531,8 @@ contains
 ! efourier
         dz_ij = geo%atom(iatom)%x(3)-geo%atom(jatom)%x(3)
 
-        factor1 = dz_ij*loct_erf(this%alpha*dz_ij)
+        tmp_erf = loct_erf(this%alpha*dz_ij)
+        factor1 = dz_ij*tmp_erf
         factor2 = exp(-(this%alpha*dz_ij)**2)/(this%alpha*sqrt(M_PI))
 
         efourier = efourier - factor&
@@ -542,10 +543,11 @@ contains
         if(iatom == jatom)cycle
         force(3,iatom) = force(3,iatom) - (- M_TWO*factor) &
           * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
-          * loct_erf(this%alpha*dz_ij)
+          * tmp_erf
 
       end do
     end do
+
 
 
     do ix = -ix_max, ix_max
@@ -563,19 +565,25 @@ contains
         factor = M_HALF*M_PI/(area_cell*gg_abs)
           
         do iatom = 1, geo%natoms
-          do jatom = 1, geo%natoms
+          do jatom = iatom, geo%natoms
 ! efourier
             gx = gg(1)*(geo%atom(iatom)%x(1)-geo%atom(jatom)%x(1)) &
               + gg(2)*(geo%atom(iatom)%x(2)-geo%atom(jatom)%x(2))
             dz_ij = geo%atom(iatom)%x(3)-geo%atom(jatom)%x(3)
 
-            erfc = M_ONE - loct_erf(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
-            factor1 = exp(gg_abs*dz_ij)*erfc
-            erfc = M_ONE - loct_erf(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
-            factor2 = exp(-gg_abs*dz_ij)*erfc
+            erfc1 = M_ONE - loct_erf(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
+            factor1 = exp(gg_abs*dz_ij)*erfc1
+            erfc2 = M_ONE - loct_erf(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
+            factor2 = exp(-gg_abs*dz_ij)*erfc2
+
+            if(iatom == jatom) then
+              coeff = M_ONE
+            else
+              coeff = M_TWO
+            end if
 
             efourier = efourier &
-              + factor &
+              + factor * coeff &
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               * cos(gx)* ( factor1 + factor2)
               
@@ -587,15 +595,22 @@ contains
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               *sin(gx)*(factor1 + factor2)
 
-            erfc = M_ONE - loct_erf(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
-            factor1 = exp(gg_abs*dz_ij)*( gg_abs*erfc &
+            force(1:2, jatom) = force(1:2, jatom) &
+              + (CNST(-1.0)* M_TWO*factor )* gg(1:2) &
+              * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
+              *sin(gx)*(factor1 + factor2)
+
+            factor1 = exp(gg_abs*dz_ij)*( gg_abs*erfc1 &
               - M_TWO*this%alpha/sqrt(M_PI)*exp(-(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)**2))
-            erfc = M_ONE - loct_erf(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
-            factor2 = exp(-gg_abs*dz_ij)*( gg_abs*erfc &
+            factor2 = exp(-gg_abs*dz_ij)*( gg_abs*erfc2 &
               - M_TWO*this%alpha/sqrt(M_PI)*exp(-(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)**2))
 
             force(3, iatom) = force(3, iatom) &
               - M_TWO*factor &
+              * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
+              * cos(gx)* ( factor1 - factor2)
+            force(3, jatom) = force(3, jatom) &
+              + M_TWO*factor &
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               * cos(gx)* ( factor1 - factor2)
 
