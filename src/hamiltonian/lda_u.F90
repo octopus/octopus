@@ -120,7 +120,9 @@ module lda_u_oct_m
     logical             :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
     logical             :: freeze_u           !> U is not recomputed during TD evolution
     logical             :: basisfromstates    !> We can construct the localized basis from user-defined states
+    FLOAT               :: acbn0_screening    !> We use or not the screening in the ACBN0 functional
     integer, allocatable:: basisstates(:)
+    integer             :: double_couting     !> Double-couting term 
 
     type(distributed_t) :: orbs_dist
   end type lda_u_t
@@ -129,6 +131,10 @@ module lda_u_oct_m
     DFT_U_NONE                    = 0, &
     DFT_U_EMPIRICAL               = 1, &
     DFT_U_ACBN0                   = 2
+
+  integer, public, parameter ::        &
+    DFT_U_FLL                     = 0, &
+    DFT_U_AMF                     = 1
 
 contains
 
@@ -149,6 +155,8 @@ contains
   this%freeze_occ = .false.
   this%freeze_u = .false.
   this%basisfromstates = .false.
+  this%acbn0_screening = M_ONE
+  this%double_couting = DFT_U_FLL
 
   nullify(this%dn)
   nullify(this%zn)
@@ -204,6 +212,25 @@ contains
   call parse_variable('DFTUBasisFromStates', .false., this%basisfromstates)
   if(this%basisfromstates) call messages_experimental("DFTUBasisFromStates") 
 
+  !%Variable DFTUDoubleCounting
+  !%Type integer
+  !%Default dft_u_fll
+  !%Section Hamiltonian::DFT+U
+  !%Description
+  !% This variable selects which DFT+U
+  !% double counting term is used.
+  !%Option dft_u_fll 0
+  !% (Default) The Fully Localized Limit (FLL)
+  !%Option dft_u_amf 1
+  !% (Experimental) Around mean field double counting, as defined in PRB 44, 943 (1991) and PRB 49, 14211 (1994).
+  !%End
+  call parse_variable('DFTUDoubleCounting', DFT_U_FLL, this%double_couting)
+  call messages_print_var_option(stdout,  'DFTUDoubleCounting', this%double_couting)
+  if(this%double_couting /= DFT_U_FLL) call messages_experimental("DFTUDoubleCounting = dft_u_amf")
+  if(st%d%ispin == SPINORS .and. this%double_couting /= DFT_U_FLL) then
+    call messages_not_implemented("AMF double couting with spinors.")
+  end if
+
   if( this%level == DFT_U_ACBN0 ) then
     !%Variable UseAllAtomicOrbitals
     !%Type logical
@@ -227,6 +254,18 @@ contains
     !%End
     call parse_variable('SkipSOrbitals', .true., this%skipSOrbitals)   
     if(.not.this%SkipSOrbitals) call messages_experimental("SkipSOrbitals")
+
+    !%Variable ACBN0Screening
+    !%Type float
+    !%Default 1.0
+    !%Section Hamiltonian::DFT+U
+    !%Description
+    !% If set to 0, no screening will be included in the ACBN0 functional, and the U 
+    !% will be estimated from bare Hartree-Fock. If set to 1 (default), the full screening
+    !% of the U, as defined in the ACBN0 functional, is used.
+    !%End
+    call parse_variable('ACBN0Screening', M_ONE, this%acbn0_screening)
+    call messages_print_var_value(stdout, 'ACBN0Screening', this%acbn0_screening)
   end if
 
   if(.not.this%basisfromstates) then
@@ -500,7 +539,7 @@ contains
       do im = 1, this%orbsets(1)%norbs
         do idim = 1, st%d%dim
           call lalg_copy(der%mesh%np, this%orbsets(1)%zorb(:,idim, im), &
-                                       this%orbsets(1)%eorb_mesh(:,idim,im,ik))
+                                       this%orbsets(1)%eorb_mesh(:,im,idim,ik))
         end do
       end do
     end do

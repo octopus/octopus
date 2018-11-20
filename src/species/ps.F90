@@ -1414,6 +1414,11 @@ contains
     type(spline_t) :: volspl
     
     PUSH_SUB(ps_density_volume)
+    
+    if (.not. ps_has_density(ps)) then
+       message(1) = "The pseudopotential does not contain an atomic density"
+       call messages_fatal(1)
+    end if
 
     SAFE_ALLOCATE(vol(1:ps%g%nrval))
     
