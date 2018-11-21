@@ -507,6 +507,7 @@ contains
       !% the circumscribed cube of the usual mesh by a factor <tt>DoubleFFTParameter</tt>. See
       !% the section that refers to Poisson equation, and to the local potential for details
       !% [the default value of two is typically good].
+      !% Along the periodic dimensions, the dimensions of the cube are not enlarged.
       !%End
       call parse_variable('DoubleFFTParameter', M_TWO, fft_alpha)
       if (fft_alpha < M_ONE .or. fft_alpha > M_THREE ) then
