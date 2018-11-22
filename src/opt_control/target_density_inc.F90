@@ -538,6 +538,7 @@
 
     case(oct_curr_square,oct_curr_square_td)
       !TODO: The contribution from vtau for MGGAs with exc is ignored 
+      !TODO: There is a phase argument missing here for solids
       call states_calc_quantities(gr%der, psi, ep%proj, geo, .false., .false., paramagnetic_current=psi%current) 
       do ip = 1, gr%mesh%np
         semilocal_function(ip) =  sum(psi%current(ip, 1:gr%sb%dim, 1)**2)  
@@ -545,6 +546,7 @@
       
     case(oct_max_curr_ring)
       !TODO: The contribution from vtau for MGGAs with exc is ignored 
+      !TODO: There is a phase argument missing here for solids
       call states_calc_quantities(gr%der, psi, ep%proj, geo, .false., .false., paramagnetic_current=psi%current) 
 
       if(gr%sb%dim /= M_TWO) then
@@ -598,6 +600,7 @@
 
     if(target_mode(tg) == oct_targetmode_td ) then 
       !TODO: The contribution from vtau for MGGAs with exc is ignored
+      !TODO: There is a phase argument missing here for solids
       call states_calc_quantities(gr%der, psi_in, ep%proj, geo, .false., .false., paramagnetic_current=psi_in%current) 
     end if
 

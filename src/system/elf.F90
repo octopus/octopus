@@ -69,7 +69,7 @@ contains
   ! ---------------------------------------------------------
   !> (time-dependent) electron localization function, (TD)ELF.
   ! ---------------------------------------------------------
-  subroutine elf_calc(st, gr, ep, geo, elf, de)
+  subroutine elf_calc(st, gr, ep, geo, elf, de, phase)
     type(states_t),   intent(inout) :: st
     type(grid_t),     intent(inout) :: gr
     type(epot_t),     intent(in)    :: ep
@@ -79,7 +79,8 @@ contains
     !! otherwise elf(:, 3) contains the global ELF, and 
     !! elf(:, 1) and elf(:, 2) the spin-resolved ELF.
     FLOAT,            intent(inout) :: elf(:,:) 
-    FLOAT,  optional, intent(inout):: de(:,:)
+    FLOAT,  optional, intent(inout) :: de(:,:)
+    CMPLX,  optional, intent(in)    :: phase(:,:)
 
     FLOAT :: factor, D0, dens
     integer :: ip, is, nelfs
@@ -106,7 +107,7 @@ contains
 
     !TODO: Here we should add check for MGGAs with exc
     !TODO: For TD, we should use the gauge_invariant KED 
-    call states_calc_quantities(gr%der, st, ep%proj, geo, .false., .false., &
+    call states_calc_quantities(gr%der, st, ep%proj, geo, .false., .false., phase = phase, &
             kinetic_energy_density = kappa, paramagnetic_current = jj, density_gradient = grho)
 
     ! spin-dependent quantities

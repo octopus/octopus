@@ -751,7 +751,11 @@ contains
     if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
       ASSERT(gr%mesh%sb%dim /= 1)
 
-      call elf_calc(st, gr, hm%ep, geo, f_loc)
+      if(associated(hm%hm_base%phase)) then
+        call elf_calc(st, gr, hm%ep, geo, f_loc, phase = hm%hm_base%phase)
+      else
+        call elf_calc(st, gr, hm%ep, geo, f_loc)
+      end if
       
       ! output ELF in real space
       if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
@@ -851,7 +855,12 @@ contains
 
     rho = M_ZERO
     call density_calc(st, gr, rho)
-    call states_calc_quantities(gr%der, st, hm%ep%proj, hm%geo, .false., .false., kinetic_energy_density = tau)
+    if(associated(hm%hm_base%phase)) then
+      call states_calc_quantities(gr%der, st, hm%ep%proj, hm%geo, .false., .false., &
+              phase = hm%hm_base%phase, kinetic_energy_density = tau)
+    else
+      call states_calc_quantities(gr%der, st, hm%ep%proj, hm%geo, .false., .false., kinetic_energy_density = tau)
+    end if
 
     pressure = M_ZERO
     do is = 1, st%d%spin_channels
@@ -905,7 +914,12 @@ contains
       SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
 
       ! the kinetic energy density
-      call states_calc_quantities(gr%der, st, hm%ep%proj, geo, .true., .false., kinetic_energy_density = energy_density)
+      if(associated(hm%hm_base%phase)) then
+        call states_calc_quantities(gr%der, st, hm%ep%proj, geo, .true., .false., &
+                   phase = hm%hm_base%phase, kinetic_energy_density = energy_density)
+      else
+        call states_calc_quantities(gr%der, st, hm%ep%proj, geo, .true., .false., kinetic_energy_density = energy_density)
+      end if
 
       ! the external potential energy density
       forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)

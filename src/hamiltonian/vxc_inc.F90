@@ -16,7 +16,7 @@
 !! 02110-1301, USA.
 !!
 
-subroutine xc_get_vxc(der, xcs, st, ep, geo, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
+subroutine xc_get_vxc(der, xcs, st, ep, geo, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density, phase)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
   type(states_t),       intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
@@ -33,6 +33,7 @@ subroutine xc_get_vxc(der, xcs, st, ep, geo, rho, ispin, ioniz_pot, qtot, vxc, e
   FLOAT, optional,      intent(inout) :: vtau(:,:)       !< Derivative wrt (two times kinetic energy density)
   FLOAT, optional, target, intent(out)   :: ex_density(:)   !< The exchange energy density
   FLOAT, optional, target, intent(out)   :: ec_density(:)   !< The correlation energy density
+  CMPLX, optional,      intent(in)    :: phase(:,:)      !< The phase of the wavefunctions (needed to compute the KED)
 
   integer, parameter :: N_BLOCK_MAX = 10000
   integer :: n_block
@@ -158,18 +159,18 @@ subroutine xc_get_vxc(der, xcs, st, ep, geo, rho, ispin, ioniz_pot, qtot, vxc, e
 
     if(mgga_withexc) then
       if (xcs%use_gi_ked) then
-        call states_calc_quantities(der, st, ep%proj, geo, .true., .true., vtau = vtau, &
+        call states_calc_quantities(der, st, ep%proj, geo, .true., .true., vtau = vtau, phase = phase, &
                  gi_kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
       else
-        call states_calc_quantities(der, st, ep%proj, geo, .true., .false., vtau = vtau, &
+        call states_calc_quantities(der, st, ep%proj, geo, .true., .false., vtau = vtau, phase = phase, &
                  kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
       end if
     else
       if (xcs%use_gi_ked) then
-        call states_calc_quantities(der, st, ep%proj, geo, .true., .false., &
+        call states_calc_quantities(der, st, ep%proj, geo, .true., .false., phase = phase, &
                 gi_kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
       else
-        call states_calc_quantities(der, st, ep%proj, geo, .true., .false., &
+        call states_calc_quantities(der, st, ep%proj, geo, .true., .false., phase = phase, &
                 kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
       end if
     end if

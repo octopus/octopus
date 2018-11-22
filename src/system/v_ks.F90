@@ -681,7 +681,7 @@ contains
   !! can be modified after the function have been used.
   subroutine v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy, calc_current) 
     type(v_ks_t),            target,   intent(inout) :: ks 
-    type(hamiltonian_t),     target,   intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
+    type(hamiltonian_t),               intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
     type(states_t),                    intent(inout) :: st
     type(geometry_t) ,       target,   intent(in)    :: geo
     FLOAT,                   optional, intent(in)    :: time 
@@ -784,7 +784,11 @@ contains
     if(hm%self_induced_magnetic) then
       SAFE_ALLOCATE(ks%calc%a_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
       SAFE_ALLOCATE(ks%calc%b_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
-      call magnetic_induced(ks%gr%der, st, hm%ep, geo, ks%calc%a_ind, ks%calc%b_ind)
+      if(associated(hm%hm_base%phase)) then
+        call magnetic_induced(ks%gr%der, st, hm%ep, geo, ks%calc%a_ind, ks%calc%b_ind, phase = hm%hm_base%phase)
+      else 
+        call magnetic_induced(ks%gr%der, st, hm%ep, geo, ks%calc%a_ind, ks%calc%b_ind)
+      end if
     end if
    
     call profiling_out(prof)
@@ -928,23 +932,48 @@ contains
       ! Get the *local* XC term
       if(ks%calc%calc_energy) then
         if(hm%family_is_mgga_with_exc) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%ep, hm%geo, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
-            ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, vtau = ks%calc%vtau)
+          if(associated(hm%hm_base%phase)) then
+            call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%ep, hm%geo, &
+              ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
+              ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, &
+              deltaxc = ks%calc%energy%delta_xc, vtau = ks%calc%vtau, phase = hm%hm_base%phase)
+          else
+            call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%ep, hm%geo, &
+              ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
+              ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, vtau = ks%calc%vtau)
+          end if
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%ep, hm%geo, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
-            ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
+          if(associated(hm%hm_base%phase)) then
+            call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%ep, hm%geo, &
+              ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
+              ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, phase = hm%hm_base%phase)
+          else
+            call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%ep, hm%geo, &
+              ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
+              ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
+          end if
         end if
       else
         if(hm%family_is_mgga_with_exc) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%ep, hm%geo, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
-            ks%calc%vxc, vtau = ks%calc%vtau)
+          if(associated(hm%hm_base%phase)) then
+            call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%ep, hm%geo, &
+              ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+              ks%calc%vxc, vtau = ks%calc%vtau, phase = hm%hm_base%phase)
+          else
+            call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%ep, hm%geo, &
+              ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+              ks%calc%vxc, vtau = ks%calc%vtau)
+          end if
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%ep, hm%geo, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
-            ks%calc%vxc)
+          if(associated(hm%hm_base%phase)) then
+            call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%ep, hm%geo, &
+              ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+              ks%calc%vxc, phase = hm%hm_base%phase)
+          else
+            call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%ep, hm%geo, &
+              ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
+              ks%calc%vxc)
+          end if
         end if
       end if
 

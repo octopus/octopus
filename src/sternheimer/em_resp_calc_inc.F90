@@ -70,10 +70,12 @@ subroutine X(lr_calc_elf)(st, gr, ep, geo, lr, lr_m)
   end if
 
   !calculate the gs elf
+  !TODO: There is a phase argument missing here for solids
   call elf_calc(st, gr, ep, geo, elf, de)
 
   !calculate current and its variation
   if(states_are_complex(st)) then 
+    !TODO: There is a phase argument missing here for solids
     call calc_physical_current(gr%der, st, ep, geo, current)
     if(present(lr_m)) then 
       call lr_calc_current(st, gr, lr, lr_m)

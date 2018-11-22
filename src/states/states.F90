@@ -1818,13 +1818,14 @@ contains
   !> This function can calculate several quantities that depend on
   !! derivatives of the orbitals from the states and the density.
   !! The quantities to be calculated depend on the arguments passed.
-  subroutine states_calc_quantities(der, st, proj, geo, nlcc, family_is_mgga_with_exc_mgga, vtau, &
+  subroutine states_calc_quantities(der, st, proj, geo, nlcc, family_is_mgga_with_exc_mgga, vtau, phase, &
     kinetic_energy_density, paramagnetic_current, density_gradient, density_laplacian, gi_kinetic_energy_density)
     type(derivatives_t),        intent(in)    :: der
     type(states_t),             intent(in)    :: st
     type(projector_t), target,  intent(in)    :: proj(:)
     type(geometry_t),           intent(in)    :: geo
     logical,                    intent(in)    :: nlcc
+    CMPLX, optional,            intent(in)    :: phase(:,:)
     logical,                    intent(in)    :: family_is_mgga_with_exc_mgga
     FLOAT, optional,            intent(in)    :: vtau(:,:)
     FLOAT, optional, target,    intent(out)   :: kinetic_energy_density(:,:)       !< The kinetic energy density.
@@ -1837,7 +1838,7 @@ contains
     FLOAT, pointer :: tau(:, :)
     CMPLX, allocatable :: wf_psi(:,:), gwf_psi(:,:,:), wf_psi_conj(:,:), lwf_psi(:,:)
     CMPLX, allocatable :: gwf_psi_corr(:,:,:)
-    FLOAT, allocatable :: abs_wf_psi(:), abs_gwf_psi(:)
+    FLOAT, allocatable :: abs_wf_psi(:), abs_gwf_psi(:), abs_gwf_psi_corr(:)
     CMPLX, allocatable :: psi_gpsi_corr(:)
     CMPLX   :: c_tmp
     integer :: is, ik, ist, i_dim, st_dim, ii, ip 
@@ -1860,9 +1861,14 @@ contains
     SAFE_ALLOCATE(gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
     SAFE_ALLOCATE(abs_wf_psi(1:der%mesh%np))
     SAFE_ALLOCATE(abs_gwf_psi(1:der%mesh%np))
+    SAFE_ALLOCATE(abs_gwf_psi_corr(1:der%mesh%np))
     SAFE_ALLOCATE(psi_gpsi_corr(1:der%mesh%np))
     if(present(density_laplacian)) then
       SAFE_ALLOCATE(lwf_psi(1:der%mesh%np, 1:st%d%dim))
+    end if
+
+    if(simul_box_is_periodic(der%mesh%sb)) then
+      ASSERT(present(phase))
     end if
 
     nullify(tau)
@@ -1882,7 +1888,7 @@ contains
       end if
     end if
 
-    if(associated(jp)) then
+    if(associated(jp) .or. associated(tau)) then
       SAFE_ALLOCATE(gwf_psi_corr(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
     end if
 
@@ -1911,28 +1917,6 @@ contains
           call zderivatives_grad(der, wf_psi(:,st_dim), gwf_psi(:,:,st_dim), set_bc = .false.)
         end do
 
-        if(associated(jp)) then
-          call lalg_copy(der%mesh%np, der%mesh%sb%dim, st%d%dim, gwf_psi, gwf_psi_corr)
- 
-          !A nonlocal contribution from the MGGA potential must be included
-          !This must be done first, as this is like a position-dependent mass 
-          if(family_is_mgga_with_exc_mgga) then
-            ASSERT(present(vtau))
-            do st_dim = 1, st%d%dim
-              do i_dim = 1, der%mesh%sb%dim
-              !$omp parallel do
-              do ip = 1, der%mesh%np
-                gwf_psi_corr(ip, i_dim, st_dim) = (M_ONE+CNST(2.0)*vtau(ip,is))*gwf_psi_corr(ip, i_dim, st_dim)
-              end do
-              !$omp end parallel do
-              end do
-            end do
-          end if
-
-          !A nonlocal contribution from the pseudopotential must be included
-          call zprojector_commute_r_allatoms_alldir(proj, geo, der%mesh, st%d%dim, ik, wf_psi, gwf_psi_corr)
-        end if
-
         ! calculate the Laplacian of the wavefunction
         if (present(density_laplacian)) then
           do st_dim = 1, st%d%dim
@@ -1940,11 +1924,11 @@ contains
           end do
         end if
 
-        ww = st%d%kweights(ik)*st%occ(ist, ik)
-
         !We precompute some quantites, to avoid to compute it many times
         wf_psi_conj(1:der%mesh%np, 1:st%d%dim) = conjg(wf_psi(1:der%mesh%np,1:st%d%dim))
         abs_wf_psi(1:der%mesh%np) = real(wf_psi_conj(1:der%mesh%np, 1)*wf_psi(1:der%mesh%np, 1), REAL_PRECISION)
+         
+        ww = st%d%kweights(ik)*st%occ(ist, ik)
 
         if(present(density_laplacian)) then
           density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is) + &
@@ -1960,12 +1944,48 @@ contains
                  wf_psi(1:der%mesh%np, 1)*conjg(lwf_psi(1:der%mesh%np, 2)))
           end if
         end if
-        
+
+
+
+        if(associated(jp) .or. associated(tau)) then
+          call lalg_copy(der%mesh%np, der%mesh%sb%dim, st%d%dim, gwf_psi, gwf_psi_corr)
+
+          !A nonlocal contribution from the MGGA potential must be included
+          !This must be done first, as this is like a position-dependent mass 
+          if(family_is_mgga_with_exc_mgga) then
+            ASSERT(present(vtau))
+            do st_dim = 1, st%d%dim
+              do i_dim = 1, der%mesh%sb%dim
+              !$omp parallel do
+              do ip = 1, der%mesh%np
+                gwf_psi_corr(ip, i_dim, st_dim) = (M_ONE+CNST(2.0)*vtau(ip,is))*gwf_psi_corr(ip, i_dim, st_dim)
+              end do
+              !$omp end parallel do
+              end do
+            end do
+          end if
+
+          !The nonlocal operator needs to put a phase correction on the wavefunction
+          !So we need to apply the phase and to remove it, in order to compure [r,Vnl]
+          if(present(phase)) then
+            call states_set_phase(st%d, wf_psi, phase(1:der%mesh%np, ik-st%d%kpt%start+1), der%mesh%np, conjugate = .false.)
+          end if
+
+          !A nonlocal contribution from the pseudopotential must be included
+          call zprojector_commute_r_allatoms_alldir(proj, geo, der%mesh, st%d%dim, ik, wf_psi, gwf_psi_corr)
+          if(present(phase)) then
+            call states_set_phase(st%d, wf_psi, phase(1:der%mesh%np, ik-st%d%kpt%start+1), der%mesh%np, conjugate = .true.)
+          end if
+
+        end if
+
+
         do i_dim = 1, der%mesh%sb%dim
 
           !We precompute some quantites, to avoid to compute it many times
           psi_gpsi_corr(1:der%mesh%np) = wf_psi_conj(1:der%mesh%np, 1)*gwf_psi_corr(1:der%mesh%np,i_dim,1)
           abs_gwf_psi(1:der%mesh%np) = real(conjg(gwf_psi(1:der%mesh%np, i_dim, 1))*gwf_psi(1:der%mesh%np, i_dim, 1), REAL_PRECISION)
+          abs_gwf_psi_corr(1:der%mesh%np) = real(conjg(gwf_psi_corr(1:der%mesh%np, i_dim, 1))*gwf_psi_corr(1:der%mesh%np, i_dim, 1), REAL_PRECISION)
 
           if(present(density_gradient)) &
                density_gradient(1:der%mesh%np, i_dim, is) = density_gradient(1:der%mesh%np, i_dim, is) &
@@ -1986,7 +2006,7 @@ contains
 
           if (associated(tau)) then
             tau (1:der%mesh%np, is)   = tau (1:der%mesh%np, is)        + &
-                 ww*(abs_gwf_psi(1:der%mesh%np) + abs(kpoint(i_dim))**2*abs_wf_psi(1:der%mesh%np)  &
+                 ww*(abs_gwf_psi_corr(1:der%mesh%np) + abs(kpoint(i_dim))**2*abs_wf_psi(1:der%mesh%np)  &
                      - M_TWO*aimag(psi_gpsi_corr(1:der%mesh%np))*kpoint(i_dim))
           end if
 
@@ -2048,6 +2068,7 @@ contains
     SAFE_DEALLOCATE_A(wf_psi_conj)
     SAFE_DEALLOCATE_A(abs_wf_psi)
     SAFE_DEALLOCATE_A(abs_gwf_psi)
+    SAFE_DEALLOCATE_A(abs_gwf_psi_corr)
     SAFE_DEALLOCATE_A(psi_gpsi_corr)
     SAFE_DEALLOCATE_A(gwf_psi_corr)
 

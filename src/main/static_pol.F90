@@ -602,9 +602,17 @@ contains
       if(bitand(sys%outp%what, OPTION__OUTPUT__ELF) /= 0) then 
          
         if(isign == 1) then 
-          call elf_calc(sys%st, sys%gr, hm%ep, sys%geo, elf, elfd)
+          if(associated(hm%hm_base%phase)) then
+            call elf_calc(sys%st, sys%gr, hm%ep, sys%geo, elf, elfd, phase = hm%hm_base%phase)
+          else
+            call elf_calc(sys%st, sys%gr, hm%ep, sys%geo, elf, elfd)
+          end if
         else
-          call elf_calc(sys%st, sys%gr, hm%ep, sys%geo, lr_elf, lr_elfd)
+          if(associated(hm%hm_base%phase)) then
+            call elf_calc(sys%st, sys%gr, hm%ep, sys%geo, lr_elf, lr_elfd, phase = hm%hm_base%phase)
+          else 
+            call elf_calc(sys%st, sys%gr, hm%ep, sys%geo, lr_elf, lr_elfd)
+          end if
           
           !numerical derivative
           lr_elf(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = &

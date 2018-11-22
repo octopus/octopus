@@ -186,18 +186,20 @@ contains
 
   ! ---------------------------------------------------------
   !TODO: We should remove this routine and use st%current. NTD
-  subroutine calc_physical_current(der, st, ep, geo, jj)
+  subroutine calc_physical_current(der, st, ep, geo, jj, phase)
     type(derivatives_t),  intent(in)    :: der
     type(states_t),       intent(inout) :: st
     type(epot_t),         intent(in)    :: ep
     type(geometry_t),     intent(in)    :: geo
     FLOAT,                intent(out)   :: jj(:,:,:)
+    CMPLX, optional,      intent(in)    :: phase(:,:)
 
     PUSH_SUB(calc_physical_current)
 
     ! Paramagnetic contribution to the physical current
     !TODO: The case of MGGAs with exc is not properly treated here
-    call states_calc_quantities(der, st, ep%proj, geo, .false., .false., paramagnetic_current = jj)
+    call states_calc_quantities(der, st, ep%proj, geo, .false., .false., &
+                phase = phase, paramagnetic_current = jj)
 
     ! \todo
     ! Diamagnetic contribution to the physical current
@@ -210,7 +212,7 @@ contains
   !> This subroutine receives as input a current, and produces
   !! as an output the vector potential that it induces.
   !! \warning There is probably a problem for 2D. For 1D none of this makes sense?
-  subroutine magnetic_induced(der, st, ep, geo, a_ind, b_ind)
+  subroutine magnetic_induced(der, st, ep, geo, a_ind, b_ind, phase)
     type(derivatives_t),  intent(in)    :: der
     type(states_t),       intent(inout) :: st
     type(epot_t),         intent(in)    :: ep
@@ -219,6 +221,7 @@ contains
     FLOAT,                intent(out)   :: b_ind(:, :)
     !< if der%mesh%sb%dim=3, b_ind(der%mesh%np_part, der%mesh%sb%dim)
     !< if der%mesh%sb%dim=2, b_ind(der%mesh%np_part, 1)
+    CMPLX, optional,      intent(in)    :: phase(:,:)
 
     integer :: idir
     FLOAT, allocatable :: jj(:, :, :)
@@ -236,7 +239,8 @@ contains
 
     SAFE_ALLOCATE(jj(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
     !TODO: The case of MGGAs with exc is not properly treated here
-    call states_calc_quantities(der, st, ep%proj, geo, .false., .false., paramagnetic_current = jj)
+    call states_calc_quantities(der, st, ep%proj, geo, .false., .false., &
+                phase = phase, paramagnetic_current = jj)
 
     !We sum the current for up and down, valid for collinear and noncollinear spins
     if(st%d%nspin > 1) then
