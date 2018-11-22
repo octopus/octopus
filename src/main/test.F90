@@ -250,7 +250,7 @@ contains
     call batch_copy(sys%st%group%psib(1, 1), epsib)
 
     do itime = 1, param%repetitions
-      call zproject_psi_batch(sys%gr%mesh, ep%proj, ep%natoms, 2, &
+      call zproject_psi_batch(sys%gr%mesh, sys%gr%der%boundaries, ep%proj, ep%natoms, 2, &
                                sys%st%group%psib(1, 1), epsib, 1)
     end do
     do itime = 1, epsib%nst

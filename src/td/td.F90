@@ -479,6 +479,9 @@ contains
             call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)
           end if
           call td_write_kick(gr%mesh, hm%ep%kick, sys%outp, geo, iter)
+          !We activate the sprial BC only after the kick, 
+          !to be sure that the first iteration corresponds to the ground state
+          if(gr%der%boundaries%spiralBC) gr%der%boundaries%spiral = .true.
         end if
       end if
 
@@ -658,6 +661,17 @@ contains
         call restart_end(restart)
       end if
 
+      !We activate the sprial BC only after the kick, 
+      !to be sure that the first iteration corresponds to the ground state
+      if(gr%der%boundaries%spiralBC) then
+        if((td%iter-1)*td%dt > hm%ep%kick%time .and. gr%der%boundaries%spiralBC) then
+          gr%der%boundaries%spiral = .true.
+        end if
+        hm%hm_base%spin => st%spin
+        !We fill st%spin
+        call states_fermi(st, gr%mesh) 
+     end if
+
       ! Initialize the occupation matrices and U for LDA+U
       ! This must be called before parsing TDFreezeOccupations and TDFreezeU
       ! in order that the code does properly the initialization.
@@ -740,7 +754,6 @@ contains
       call hamiltonian_span(hm, minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
       ! initialize Fermi energy
       call states_fermi(st, gr%mesh)
-      hm%hm_base%spin => st%spin
       call energy_calc_total(hm, gr, st)
 
       !%Variable TDFreezeDFTUOccupations
@@ -809,11 +822,9 @@ contains
         end if
         call td_write_kick(gr%mesh, hm%ep%kick, sys%outp, geo, 0)
 
-        !We activate the sprial BC only after the kick, 
-        !to be sure that the first iteration correspond to the ground state
+        !We activate the sprial BC only after the kick 
         if(gr%der%boundaries%spiralBC) then
           gr%der%boundaries%spiral = .true.
-      !    call v_ks_calc(sys%ks, hm, st, geo, calc_eigenval = .false., time = M_ZERO, calc_energy = .false.)
         end if
 
       end if

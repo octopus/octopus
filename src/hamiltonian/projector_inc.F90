@@ -19,8 +19,9 @@
 !------------------------------------------------------------------------------
 !> X(project_psi) calculates the action of a projector on the psi wavefunction.
 !! The result is summed up to ppsi
-subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
+subroutine X(project_psi)(mesh, bnd, pj, npj, dim, psi, ppsi, ik)
   type(mesh_t),      intent(in)    :: mesh
+  type(boundaries_t),intent(in)    :: bnd
   type(projector_t), intent(in)    :: pj(:)
   integer,           intent(in)    :: npj
   integer,           intent(in)    :: dim
@@ -37,7 +38,7 @@ subroutine X(project_psi)(mesh, pj, npj, dim, psi, ppsi, ik)
   call batch_init(ppsib, dim, 1)
   call batch_add_state(ppsib, 1, ppsi)
 
-  call X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
+  call X(project_psi_batch)(mesh, bnd, pj, npj, dim, psib, ppsib, ik)
 
   call batch_end(psib)
   call batch_end(ppsib)
@@ -55,8 +56,9 @@ end subroutine X(project_psi)
 !! (reduce_buffer). Then the array is reduced (as it is contiguous
 !! only one reduction is required). Finally |ppsi> += |p><p|psi> is
 !! calculated.
-subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
+subroutine X(project_psi_batch)(mesh, bnd, pj, npj, dim, psib, ppsib, ik)
   type(mesh_t),      intent(in)    :: mesh
+  type(boundaries_t),intent(in)    :: bnd
   type(projector_t), intent(in)    :: pj(:)
   integer,           intent(in)    :: npj
   integer,           intent(in)    :: dim
@@ -74,6 +76,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   call profiling_in(prof, "VNLPSI")
 
   ASSERT(.not.batch_is_packed(psib))
+  ASSERT(.not.bnd%spiral)
 
   ! generate the reduce buffer and related structures
   SAFE_ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L, 1:psib%nst))

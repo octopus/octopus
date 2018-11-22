@@ -368,8 +368,8 @@ subroutine X(hamiltonian_base_phase_spiral)(this, der, psib, ik)
   integer :: ip, ii
   type(profile_t), save :: phase_prof
 
-  PUSH_SUB(X(hamiltonian_base_phase))
-  call profiling_in(phase_prof, "PBC_PHASE_APPLY")
+  PUSH_SUB(X(hamiltonian_base_phase_spiral))
+  call profiling_in(phase_prof, "PBC_PHASE_SPIRAL")
 
   call profiling_count_operations(R_MUL*dble(der%mesh%np_part-der%mesh%np)*psib%nst_linear)
 
