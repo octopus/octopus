@@ -139,7 +139,7 @@ contains
       !stepsize for steepest decent
       SAFE_ALLOCATE(stepsize(1:st%nst))
       stepsize = 0.1
-      maxcount = 10
+      maxcount = 2
     else
       maxcount = 50
     endif
@@ -153,7 +153,7 @@ contains
       write(message(2),'(a, i4)') 'RDM Iteration:', iter
       call messages_info(2)
       if (rdm%hf.eqv. .false.) then
-		call scf_occ(rdm, gr, hm, st, energy_occ)
+			call scf_occ(rdm, gr, hm, st, energy_occ)	
 	  else
 		call scf_occ_NO(rdm, gr, hm, st, energy_occ)
 	  end if
@@ -395,7 +395,7 @@ contains
         end do
       else
         ! initialize eigensolver
-	call eigensolver_init(rdm%eigens, gr, st)
+	    call eigensolver_init(rdm%eigens, gr, st)
 !		copied from scf, for the moment probably not necessary
 !		if(preconditioner_is_multigrid(rdm%eigens%pre)) then
 !		  SAFE_ALLOCATE(gr%mgrid_prec)
@@ -463,9 +463,11 @@ contains
   ! reset occ.num. to 2/0 for test reasons
   subroutine set_occ_pinning(st)
     type(states_t),       intent(inout) :: st
-    FLOAT, allocatable ::  occin(:,:)
+    FLOAT, allocatable ::  occin(:,:), occ(:)
+    integer :: ist
     PUSH_SUB(set_occ_pinning)    
     SAFE_ALLOCATE(occin(1:st%nst, 1:st%d%nik))
+    SAFE_ALLOCATE(occ(1:st%nst))
     
     occin = M_ZERO
     occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
@@ -473,6 +475,13 @@ contains
     where(occin(:,:) > 1) occin(:,:) = st%smear%el_per_state
     
     st%occ = occin
+    
+    ! For hardcoding occupation numbers
+!    occ=M_ZERO
+!    occ=(/1.966127204384, 0.028428180975, 0.004501851603, 0.000764989996, 0.000146467259, 0.000031338136/)
+!    do ist=1, st%nst
+!		st%occ(ist,1)=occ(ist)
+!	end do
     
     POP_SUB(set_occ_pinning)
   end subroutine set_occ_pinning
@@ -495,6 +504,8 @@ contains
 
     write(message(1),'(a)') 'SKIP Optimization of occupation numbers'
     call messages_info(1)
+    
+call set_occ_pinning(st)
     
     energy = M_ZERO
     
@@ -520,11 +531,11 @@ contains
     call messages_info(1)   
 
     do ist = 1, st%nst
-      write(message(1),'(i4,3x,f11.4)') ist, st%occ(ist, 1)
+      write(message(1),'(i4,3x,f11.9)') ist, st%occ(ist, 1)
       call messages_info(1)
     end do
 
-    write(message(1),'(a,1x,f11.4)') 'Sum of occupation numbers', rdm%occsum
+    write(message(1),'(a,1x,f11.9)') 'Sum of occupation numbers', rdm%occsum
     write(message(2),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
     call messages_info(2)   
     
@@ -604,12 +615,12 @@ contains
 
     !use n_j=sin^2(2pi*theta_j) to treat pinned states, minimize for both intial mu
     theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-    call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+    call minimize_multidim(MINMETHOD_BFGS, st%nst, theta, real(0.05,8), real(0.01, 8), &
         real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
     sumgi1 = rdm%occsum - st%qtot
     rdm%mu = mu2
     theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-    call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+    call minimize_multidim(MINMETHOD_BFGS, st%nst, theta, real(0.05,8), real(0.01, 8), &
         real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
     sumgi2 = rdm%occsum - st%qtot
 
@@ -621,7 +632,7 @@ contains
         mu1 = mu1 - dinterv
         rdm%mu = mu1
         theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-        call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+        call minimize_multidim(MINMETHOD_BFGS, st%nst, theta, real(0.05,8), real(0.01, 8), &
             real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
         sumgi1 = rdm%occsum - st%qtot 
       else
@@ -630,7 +641,7 @@ contains
         mu2 = mu2 + dinterv
         rdm%mu = mu2
         theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-        call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.01, 8), &
+        call minimize_multidim(MINMETHOD_BFGS, st%nst, theta, real(0.05,8), real(0.01, 8), &
             real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
         sumgi2 = rdm%occsum - st%qtot 
       end if
@@ -818,6 +829,8 @@ contains
         end do
       end do
     end if
+    
+print*, "maxFO", rdm%maxFO
  
     call lalg_eigensolve(st%nst, FO, rdm%evalues)
     call assign_eigfunctions(st, gr, FO)
@@ -985,9 +998,10 @@ contains
     FLOAT,                intent(out)   :: energy    
 
     type(states_t)     :: states_old
-    integer            :: ik, ist
+    integer            :: ik, ist, jst
     integer            :: maxiter, nstconv_ ! maximum number of orbital optimization iterations
     FLOAT              :: energy_old, energy_diff, occ_sum, maxFO
+FLOAT, allocatable ::  lambda(:,:), FO(:,:)
     
 	logical :: conv
 	type(profile_t), save :: prof
@@ -1012,7 +1026,7 @@ contains
     energy_old = energy
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!
-!	rdm%eigens%converged = 0
+	rdm%eigens%converged = 0
 !    call eigensolver_run(rdm%eigens, gr, st, hm, maxiter)
 !!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -1029,17 +1043,17 @@ contains
             orthogonalize_to_all=rdm%eigens%orthogonalize_to_all, &
             conjugate_direction=rdm%eigens%conjugate_direction)
   
-!	if(st%calc_eigenval .and. .not. rdm%eigens%folded_spectrum) then
-!		! recheck convergence after subspace diagonalization, since states may have reordered
-!		rdm%eigens%converged(ik) = 0
-!		do ist = 1, st%nst
-!		  if(rdm%eigens%diff(ist, ik) < rdm%eigens%tolerance) then
-!			rdm%eigens%converged(ik) = ist
-!		  else
-!			exit
-!		  end if
-!		end do
-!	end if
+	if(st%calc_eigenval .and. .not. rdm%eigens%folded_spectrum) then
+		! recheck convergence after subspace diagonalization, since states may have reordered
+		rdm%eigens%converged(ik) = 0
+		do ist = 1, st%nst
+		  if(rdm%eigens%diff(ist, ik) < rdm%eigens%tolerance) then
+			rdm%eigens%converged(ik) = ist
+		  else
+			exit
+		  end if
+		end do
+	end if
 
 	rdm%eigens%matvec = rdm%eigens%matvec + maxiter
   
@@ -1052,16 +1066,58 @@ contains
 	conv = all(rdm%eigens%converged(st%d%kpt%start:st%d%kpt%end) >= nstconv_)
 
 
+
 	! calculate total energy with new states
 	  call density_calc (st, gr, st%rho)
 	  call v_ks_calc(ks, hm, st, geo)
 	  call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
 	  call rdm_derivatives(rdm, hm, st, gr)
-	  call total_energy_rdm(rdm, st%occ(:,1), energy)
+
+SAFE_ALLOCATE(lambda(1:st%nst,1:st%nst)) 
+SAFE_ALLOCATE(FO(1:st%nst, 1:st%nst))
+lambda = M_ZERO
+FO = M_ZERO
+call construct_f(hm, st, gr, lambda, rdm)
+
+!Set up FO matrix 
+if (rdm%iter==1) then
+  do ist = 1, st%nst
+	do jst = 1, ist
+	  FO(ist, jst) = M_HALF*(lambda(ist, jst) + lambda(jst, ist))
+	  FO(jst, ist) = FO(ist, jst)
+	end do
+  end do
+else
+  do ist = 1, st%nst
+	do jst = 1, ist - 1
+	  FO(jst, ist) = - ( lambda(jst, ist) - lambda(ist ,jst))
+	end do
+  end do
+  rdm%maxFO = maxval(abs(FO))
+  do ist = 1, st%nst
+	FO(ist, ist) = rdm%evalues(ist)
+	do jst = 1, ist-1
+	  if(abs(FO(jst, ist)) > rdm%scale_f) then
+		FO(jst, ist) = rdm%scale_f*FO(jst,ist)/abs(FO(jst, ist))
+	  end if
+	  FO(ist, jst) = FO(jst, ist)
+	end do
+  end do
+end if
+
+!call lalg_eigensolve(st%nst, FO, rdm%evalues)
+!call assign_eigfunctions(st, gr, FO)
+!call rdm_derivatives(rdm, hm, st, gr)
+
+SAFE_DEALLOCATE_A(lambda) 
+SAFE_DEALLOCATE_A(FO)
+
+	call total_energy_rdm(rdm, st%occ(:,1), energy)
 
     ! check if step lowers the energy
      energy_diff = energy - energy_old
 
+print*, "maxFO:", rdm%maxFO
 print*, "energy", energy
 print*, "energy_diff", energy_diff
 
@@ -1109,7 +1165,7 @@ print*, "energy_diff", energy_diff
     pot = M_ZERO
     E_deriv_corr = M_ZERO    
 
-    call density_calc(st, gr, rho_spin)
+    call density_calc(st, gr, rho_spin) !rho=sum_i int_dx n_i psi_i^2 (includes the occupation numbers!)
     do ii = 1, hm%d%ispin
       rho(:) = rho_spin(:, ii)
     end do
@@ -1170,6 +1226,8 @@ print*, "energy_diff", energy_diff
       
     FLOAT, allocatable :: hpsi(:,:), hpsi1(:,:), dpsi(:,:), dpsi2(:,:), fvec(:) 
     FLOAT, allocatable :: g_x(:,:), g_h(:,:), rho(:,:), rho_tot(:), pot(:), fock(:,:,:)
+FLOAT, allocatable :: hppsi(:,:), hppsi1(:,:)
+FLOAT :: energy
     integer :: ist, ip, iorb, jorb, jst
 
     PUSH_SUB(construct_f)
@@ -1196,14 +1254,16 @@ print*, "energy_diff", energy_diff
       dpsi = M_ZERO
       g_x = M_ZERO
       g_h = M_ZERO
-    
+ 
+  
       !calculate the Lagrange multiplyer lambda matrix on the grid, Eq. (9), Piris and Ugalde, Vol. 30, No. 13, J. Comput. Chem.
       call density_calc(st, gr, rho)
       do ist =1, hm%d%ispin
         rho_tot(:) = rho(:, ist)
       end do
-      call dpoisson_solve(psolver, pot, rho_tot, all_nodes=.false.) !the Hartree potential
-    
+
+      call dpoisson_solve(psolver, pot, rho_tot, all_nodes=.false.) !the Hartree potential (actually not necessary to be computed here, can be accessed by hm%vhartree)
+
       do iorb = 1, st%nst
         call states_get_state(st, gr%mesh, iorb, 1, dpsi)
         call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, iorb, 1, &
@@ -1211,18 +1271,18 @@ print*, "energy_diff", energy_diff
         call dhamiltonian_apply(hm, gr%der, dpsi, hpsi1, iorb, 1, &
                               terms = TERM_OTHERS)
         forall (ip=1:gr%mesh%np_part)
-          dpsi(ip,1) = st%occ(iorb, 1)*pot(ip)*dpsi(ip,1)
+           dpsi(ip,1) = st%occ(iorb, 1)*pot(ip)*dpsi(ip,1)
         end forall
+
         do jorb = 1, st%nst  
           call states_get_state(st, gr%mesh, jorb, 1, dpsi2)
           lambda(jorb, iorb) = dmf_dotp(gr%mesh, dpsi2(:,1), hpsi(:,1))
           lambda(iorb, jorb) = lambda(jorb, iorb)
           g_h(iorb, jorb) = dmf_dotp(gr%mesh, dpsi(:,1), dpsi2(:, 1))
           g_x(iorb, jorb) = dmf_dotp(gr%mesh, dpsi2(:,1), hpsi1(:,1))
-          g_x(iorb, jorb) = sqrt(st%occ(iorb,1))*g_x(iorb, jorb)
+          g_x(iorb, jorb) = sqrt(st%occ(iorb,1))*g_x(iorb, jorb)    
         end do
       end do
-  
  
       do jorb = 1,st%nst
         do iorb = 1,st%nst
@@ -1433,7 +1493,10 @@ print*, "energy_diff", energy_diff
       end do
       do ist = 1, st%nst
         call states_get_state(st, gr%mesh, ist, 1, dpsi)
+
+
         rho1(1:gr%mesh%np) = dpsi(1:gr%mesh%np, 1)**2
+
         do jst = ist, st%nst
           rdm%hartree(ist, jst) = dmf_dotp(gr%mesh, rho1, v_ij(:,jst, jst))
           rdm%hartree(jst, ist) = rdm%hartree(ist, jst)
@@ -1443,6 +1506,7 @@ print*, "energy_diff", energy_diff
           rdm%exchange(jst, ist) = rdm%exchange(ist, jst)
         end do
       end do
+
     
       SAFE_DEALLOCATE_A(hpsi)
       SAFE_DEALLOCATE_A(rho)
