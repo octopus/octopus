@@ -970,7 +970,7 @@ contains
 
     !get the atoms` magnetization. This has to be calculated by all nodes
     SAFE_ALLOCATE(lmm(1:3, 1:geo%natoms))
-    call magnetic_local_moments(gr%mesh, st, geo, st%rho, lmm_r, lmm)
+    call magnetic_local_moments(gr%mesh, st, geo, gr%der%boundaries, st%rho, lmm_r, lmm)
 
     if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
 
@@ -1023,7 +1023,7 @@ contains
 
     PUSH_SUB(td_write_trans_mag)
 
-    call magnetic_transverse_magnetization(gr%mesh, st, kick%qvector, kick%pol_dir, tm)
+    call magnetic_transverse_magnetization(gr%mesh, st, gr%der%boundaries, kick%qvector, kick%pol_dir, tm)
 
     if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
 

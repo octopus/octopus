@@ -173,7 +173,7 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
 
   if(bitand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
     call dos_init(dos, st)
-    call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh, hm)
+    call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh, hm, gr%der%boundaries)
     call dos_end(dos)
   end if
 

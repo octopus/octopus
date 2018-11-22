@@ -18,10 +18,11 @@
 
 
   !At the present time this routine can only return atomic orbitals, but this could be generalized
-  subroutine X(orbitalset_utils_getorbitals)(os, geo, mesh)
+  subroutine X(orbitalset_utils_getorbitals)(os, geo, mesh, boundaries)
     type(orbitalset_t),   intent(inout) :: os
     type(geometry_t),        intent(in) :: geo
     type(mesh_t),            intent(in) :: mesh
+    type(boundaries_t),      intent(in) :: boundaries
 
     integer :: iorb
 
@@ -36,7 +37,7 @@
         call messages_info(1)
       end if
       ! We obtain the orbital
-      call X(get_atomic_orbital)(geo, mesh, os%sphere, os%iatom, os%ii, os%ll, os%jj, &
+      call X(get_atomic_orbital)(geo, mesh, os%sphere, boundaries, os%iatom, os%ii, os%ll, os%jj, &
                                               os, iorb, os%radius, os%ndim)
     end do !iorb
 

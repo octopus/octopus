@@ -21,10 +21,11 @@
 !> This routine returns the atomic orbital basis -- provided
 !! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
-subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, radius, d_dim)
+subroutine X(get_atomic_orbital) (geo, mesh, sm, boundaries, iatom, ii, ll, jj, os, orbind, radius, d_dim)
   type(mesh_t),             intent(in)    :: mesh
   type(geometry_t), target, intent(in)    :: geo
   type(submesh_t),          intent(inout) :: sm
+  type(boundaries_t),       intent(in)    :: boundaries
   integer,                  intent(in)    :: iatom, ii, ll
   FLOAT,                    intent(in)    :: jj
   type(orbitalset_t),       intent(inout) :: os
@@ -93,7 +94,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
 
  
     !We initialise the submesh corresponding to the orbital 
-    call submesh_init(sm, mesh%sb, mesh, geo%atom(iatom)%x, radius)
+    call submesh_init(sm, mesh%sb, mesh, boundaries, geo%atom(iatom)%x, radius)
 
   end if
 

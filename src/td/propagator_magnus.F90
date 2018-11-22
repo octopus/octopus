@@ -174,7 +174,7 @@ contains
     call potential_interpolation_interpolate(tr%vksold, 4, time, dt, t2, vhxc2)
 
     hm%vhxc = M_TWO * (alpha2 * vhxc1 + alpha1 * vhxc2)
-    call hamiltonian_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha2, M_TWO * alpha1/) )
+    call hamiltonian_update2(hm, gr%mesh, gr%der%boundaries, (/ t1, t2 /), (/ M_TWO * alpha2, M_TWO * alpha1/) )
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
         call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, M_HALF * dt)
@@ -182,7 +182,7 @@ contains
     end do
 
     hm%vhxc = M_TWO * (alpha1 * vhxc1 + alpha2 * vhxc2)
-    call hamiltonian_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha1, M_TWO * alpha2/) )
+    call hamiltonian_update2(hm, gr%mesh, gr%der%boundaries, (/ t1, t2 /), (/ M_TWO * alpha1, M_TWO * alpha2/) )
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
         call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, M_HALF * dt)

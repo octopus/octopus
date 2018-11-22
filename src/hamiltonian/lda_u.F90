@@ -20,6 +20,7 @@
 
 module lda_u_oct_m
   use atomic_orbital_oct_m
+  use boundaries_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use comm_oct_m
@@ -248,10 +249,10 @@ contains
     call orbitalbasis_init(this%basis)
 
     if (states_are_real(st)) then
-      call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
+      call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, gr%der%boundaries, st%d%dim, &
                                this%skipSOrbitals, this%useAllOrbitals)
     else
-      call zorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
+      call zorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, gr%der%boundaries, st%d%dim, &
                              this%skipSOrbitals, this%useAllOrbitals)
     end if
     this%orbsets => this%basis%orbsets
@@ -409,10 +410,10 @@ contains
 
   !We now reconstruct the basis
   if (states_are_real(st)) then
-    call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
+    call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, gr%der%boundaries, st%d%dim, &
                              this%skipSOrbitals, this%useAllOrbitals, verbose = .false.)
   else
-    call zorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
+    call zorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, gr%der%boundaries, st%d%dim, &
                              this%skipSOrbitals, this%useAllOrbitals, verbose = .false.)
   end if
   this%orbsets => this%basis%orbsets
@@ -420,7 +421,7 @@ contains
   ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
   ! In case of a laser field, the phase is recomputed in hamiltonian_update
   if(has_phase) then
-    call lda_u_build_phase_correction(this, gr%mesh%sb, st%d)
+    call lda_u_build_phase_correction(this, gr%mesh%sb, st%d, gr%der%boundaries)
   end if
 
   POP_SUB(lda_u_update_basis)
@@ -453,14 +454,17 @@ contains
 
 
  !> Build the phase correction to the global phase for all orbitals
- subroutine lda_u_build_phase_correction(this, sb, std, vec_pot, vec_pot_var)
+ subroutine lda_u_build_phase_correction(this, sb, std, boundaries, vec_pot, vec_pot_var)
    type(lda_u_t),                 intent(inout) :: this
    type(simul_box_t),             intent(in)    :: sb 
    type(states_dim_t),            intent(in)    :: std
+   type(boundaries_t),            intent(in)    :: boundaries
    FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
    FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
    integer :: ios
+
+   if(boundaries%spiralBC) call messages_not_implemented("DFT+U with spiral boundary conditions.")
  
    !In this case there is no phase difference, as the basis come from states on the full 
    !grid and not from spherical meshes around the atoms

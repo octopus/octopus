@@ -20,6 +20,7 @@
 
 module states_io_oct_m
   use atomic_orbital_oct_m
+  use boundaries_oct_m
   use comm_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -612,13 +613,14 @@ contains
 
     ! ---------------------------------------------------------
 
-  subroutine states_write_bandstructure(dir, nst, st, sb, geo, mesh, phase, vec_pot, vec_pot_var)
+  subroutine states_write_bandstructure(dir, nst, st, sb, geo, mesh, boundaries, phase, vec_pot, vec_pot_var)
     character(len=*),  intent(in)             :: dir
     integer,           intent(in)             :: nst
     type(states_t),    intent(in)             :: st
     type(simul_box_t), intent(in)             :: sb
     type(geometry_t), target, intent(in)      :: geo
     type(mesh_t),             intent(in)      :: mesh
+    type(boundaries_t),       intent(in)      :: boundaries
     CMPLX, pointer                            :: phase(:, :)
     FLOAT, optional, allocatable, intent(in)  :: vec_pot(:) !< (sb%dim)
     FLOAT, optional, allocatable, intent(in)  :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
@@ -738,7 +740,7 @@ contains
           do iorb = 1, os%norbs
             ! We obtain the orbital
             if(states_are_real(st)) then
-              call dget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
+              call dget_atomic_orbital(geo, mesh, os%sphere, boundaries, ia, os%ii, os%ll, os%jj, &
                                                 os, iorb, os%radius, os%ndim)
               norm = M_ZERO
               do idim = 1, os%ndim
@@ -749,7 +751,7 @@ contains
                 os%dorb(1:os%sphere%np,idim,iorb) =  os%dorb(1:os%sphere%np,idim,iorb)/norm
               end do
             else
-              call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
+              call zget_atomic_orbital(geo, mesh, os%sphere, boundaries, ia, os%ii, os%ll, os%jj, &
                                                 os, iorb, os%radius, os%ndim)
               norm = M_ZERO
               do idim = 1, os%ndim

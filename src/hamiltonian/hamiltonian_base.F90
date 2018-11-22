@@ -83,6 +83,8 @@ module hamiltonian_base_oct_m
     hamiltonian_base_update,                   &
     dhamiltonian_base_phase,                   &
     zhamiltonian_base_phase,                   &
+    dhamiltonian_base_phase_spiral,            &
+    zhamiltonian_base_phase_spiral,            &
     dhamiltonian_base_nlocal_force,            &
     zhamiltonian_base_nlocal_force,            &
     projection_t
@@ -108,7 +110,7 @@ module hamiltonian_base_oct_m
     integer                               :: total_points
     integer                               :: max_nprojs
     logical                               :: projector_mix
-    CMPLX,                    allocatable :: projector_phases(:, :, :)
+    CMPLX,                    allocatable :: projector_phases(:, :, :, :)
     integer,                  allocatable :: projector_to_atom(:)
     integer                               :: nregions
     integer,                  allocatable :: regions(:)
@@ -124,8 +126,10 @@ module hamiltonian_base_oct_m
     type(accel_mem_t)                    :: buff_mix
     CMPLX, pointer     :: phase(:, :)
     CMPLX, allocatable :: phase_corr(:,:)
+    CMPLX, allocatable :: phase_spiral(:, :)
     type(accel_mem_t) :: buff_phase
     integer            :: buff_phase_qn_start
+    FLOAT, pointer     :: spin(:,:,:)
   end type hamiltonian_base_t
 
   type projection_t
@@ -172,6 +176,8 @@ contains
     this%apply_projector_matrices = .false.
     this%nprojector_matrices = 0
 
+    nullify(this%spin)
+
     POP_SUB(hamiltonian_base_init)
   end subroutine hamiltonian_base_init
 
@@ -191,6 +197,8 @@ contains
     SAFE_DEALLOCATE_A(this%uniform_vector_potential)
     SAFE_DEALLOCATE_A(this%uniform_magnetic_field)
     call hamiltonian_base_destroy_proj(this)
+
+    nullify(this%spin)
 
     POP_SUB(hamiltonian_base_end)
   end subroutine hamiltonian_base_end

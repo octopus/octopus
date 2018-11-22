@@ -18,11 +18,12 @@
 ! ---------------------------------------------------------
 !> This routine is an interface for constructing the orbital basis.
 ! ---------------------------------------------------------
-subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all_orb, verbose)
+subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, boundaries, ndim, skip_s_orb, use_all_orb, verbose)
   type(orbitalbasis_t),      intent(inout)    :: this
   type(geometry_t), target,  intent(in)       :: geo
   type(mesh_t),              intent(in)       :: mesh
   type(distributed_t),       intent(in)       :: kpt
+  type(boundaries_t),        intent(in)       :: boundaries
   integer,                   intent(in)       :: ndim
   logical,                   intent(in)       :: skip_s_orb 
   logical,                   intent(in)       :: use_all_orb
@@ -154,7 +155,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
         os%submeshforperiodic = this%submeshforperiodic
         os%spec => geo%atom(ia)%species
         os%iatom = ia
-        call X(orbitalset_utils_getorbitals)(os, geo, mesh)
+        call X(orbitalset_utils_getorbitals)(os, geo, mesh, boundaries)
       else
         !j = l-1/2
         iorbset = iorbset + 1
@@ -179,7 +180,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
         os%submeshforperiodic = this%submeshforperiodic
         os%spec => geo%atom(ia)%species
         os%iatom = ia
-        call X(orbitalset_utils_getorbitals)(os, geo, mesh)
+        call X(orbitalset_utils_getorbitals)(os, geo, mesh, boundaries)
 
         !j = l+1/2
         iorbset = iorbset + 1
@@ -204,7 +205,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
         os%submeshforperiodic = this%submeshforperiodic
         os%spec => geo%atom(ia)%species
         os%iatom = ia
-        call X(orbitalset_utils_getorbitals)(os, geo, mesh)
+        call X(orbitalset_utils_getorbitals)(os, geo, mesh, boundaries)
       end if
     else !use_all_orbitals
       ASSERT(.not.hasjdependence)
@@ -245,7 +246,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
         os%submeshforperiodic = this%submeshforperiodic
         os%spec => geo%atom(ia)%species
         os%iatom = ia
-        call X(orbitalset_utils_getorbitals)(os, geo, mesh)
+        call X(orbitalset_utils_getorbitals)(os, geo, mesh, boundaries)
       end do !norb
       iorbset = iorbset + work
     end if

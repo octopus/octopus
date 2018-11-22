@@ -491,14 +491,36 @@ contains
     subroutine init_phase
       integer :: ip, ik, ip_inn, ip_bnd, sp, ip_global, ip_inner
       FLOAT   :: kpoint(1:MAX_DIM)
+      integer :: idim
 
       PUSH_SUB(hamiltonian_init.init_phase)
 
       SAFE_ALLOCATE(hm%hm_base%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
-      if(.not.accel_is_enabled()) then
+      if(.not.accel_is_enabled() .and. .not. gr%der%boundaries%spiralBC) then
         SAFE_ALLOCATE(hm%hm_base%phase_corr(gr%mesh%np+1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
         hm%hm_base%phase_corr = M_ONE
       end if
+
+      if(gr%der%boundaries%spiralBC) then
+        SAFE_ALLOCATE(hm%hm_base%phase_spiral(gr%mesh%np+1:gr%mesh%np_part, 1:2))
+        ! loop over boundary points
+        sp = gr%mesh%np
+        if(gr%mesh%parallel_in_domains) sp = gr%mesh%np + gr%mesh%vp%np_ghost
+        do ip = sp + 1, gr%mesh%np_part
+          !translate to a global point
+          ip_global = ip
+#ifdef HAVE_MPI
+          if(gr%mesh%parallel_in_domains) ip_global = gr%mesh%vp%bndry(ip - sp - 1 + gr%mesh%vp%xbndry)
+#endif
+          ! get corresponding inner point
+          ip_inner = mesh_periodic_point(gr%mesh, ip_global)
+          hm%hm_base%phase_spiral(ip, 1) = &
+            exp(M_zI * sum((gr%mesh%x(ip, 1:gr%sb%dim)-mesh_x_global(gr%mesh, ip_inner)) * gr%der%boundaries%spiral_q(1:gr%sb%dim)))
+          hm%hm_base%phase_spiral(ip, 2) = &
+            exp(-M_zI * sum((gr%mesh%x(ip, 1:gr%sb%dim)-mesh_x_global(gr%mesh, ip_inner)) * gr%der%boundaries%spiral_q(1:gr%sb%dim)))
+        end do
+      end if
+      
 
       kpoint(1:gr%sb%dim) = M_ZERO
       do ik = hm%d%kpt%start, hm%d%kpt%end
@@ -507,7 +529,7 @@ contains
           hm%hm_base%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
         end forall
 
-        if(.not.accel_is_enabled()) then
+        if(.not.accel_is_enabled() .and. .not. gr%der%boundaries%spiralBC) then
           ! loop over boundary points
           sp = gr%mesh%np
           if(gr%mesh%parallel_in_domains) sp = gr%mesh%np + gr%mesh%vp%np_ghost
@@ -522,6 +544,7 @@ contains
             ! compute phase correction from global coordinate (opposite sign!)
             hm%hm_base%phase_corr(ip, ik) = hm%hm_base%phase(ip, ik)* &
               exp(M_zI * sum(mesh_x_global(gr%mesh, ip_inner) * kpoint(1:gr%sb%dim)))
+
           end do
         end if
       end do
@@ -534,7 +557,7 @@ contains
 
       ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
       if(hm%lda_u_level /= DFT_U_NONE) then
-        call lda_u_build_phase_correction(hm%lda_u, gr%mesh%sb, hm%d )
+        call lda_u_build_phase_correction(hm%lda_u, gr%mesh%sb, hm%d, gr%der%boundaries )
       end if
 
       POP_SUB(hamiltonian_init.init_phase)
@@ -828,10 +851,11 @@ contains
   contains
 
     subroutine build_phase()
-      integer :: ik, imat, nmat, max_npoints, offset
+      integer :: ik, imat, nmat, max_npoints, offset, idim
       integer :: ip, ip_bnd, ip_inn, ip_global, ip_inner, sp
       FLOAT   :: kpoint(1:MAX_DIM)
       logical :: compute_phase_correction
+      integer :: ndim
 
       PUSH_SUB(hamiltonian_update.build_phase)
 
@@ -840,7 +864,7 @@ contains
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
         do iatom = 1, this%ep%natoms
-          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, &
+          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, boundaries, &
             vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end do
 
@@ -855,7 +879,7 @@ contains
           end if
         end if
 
-        compute_phase_correction = .not.accel_is_enabled()
+        compute_phase_correction = .not.accel_is_enabled() .and. .not. boundaries%spiral
         if(.not. allocated(this%hm_base%phase_corr)) then
           if(compute_phase_correction) then
             SAFE_ALLOCATE(this%hm_base%phase_corr(mesh%np+1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
@@ -897,7 +921,7 @@ contains
 
         ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
         if(this%lda_u_level /= DFT_U_NONE) then
-          call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, &
+          call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, boundaries, &
                vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end if
 
@@ -911,7 +935,9 @@ contains
       if(associated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
 
         if(.not. allocated(this%hm_base%projector_phases)) then
-          SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, this%d%kpt%start:this%d%kpt%end))
+          ndim = this%d%dim
+          if(boundaries%spiralBC) ndim = ndim + 1
+          SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, 1:ndim, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_projector_phases, ACCEL_MEM_READ_ONLY, &
               TYPE_CMPLX, this%hm_base%total_points*this%d%kpt%nlocal)
@@ -922,13 +948,17 @@ contains
         do ik = this%d%kpt%start, this%d%kpt%end
           do imat = 1, this%hm_base%nprojector_matrices
             iatom = this%hm_base%projector_to_atom(imat)
-            do ip = 1, this%hm_base%projector_matrices(imat)%npoints
-              this%hm_base%projector_phases(ip, imat, ik) = this%ep%proj(iatom)%phase(ip, ik)
+            ndim = this%d%dim
+            if(boundaries%spiralBC) ndim = ndim + 1
+            do idim = 1, ndim
+              do ip = 1, this%hm_base%projector_matrices(imat)%npoints
+                this%hm_base%projector_phases(ip, imat, idim, ik) = this%ep%proj(iatom)%phase(ip, idim, ik)
+              end do
             end do
 
             if(accel_is_enabled() .and. this%hm_base%projector_matrices(imat)%npoints > 0) then
               call accel_write_buffer(this%hm_base%buff_projector_phases, &
-                this%hm_base%projector_matrices(imat)%npoints, this%hm_base%projector_phases(1:, imat, ik), offset = offset)
+                this%hm_base%projector_matrices(imat)%npoints, this%hm_base%projector_phases(1:, imat, 1, ik), offset = offset)
             end if
             offset = offset + this%hm_base%projector_matrices(imat)%npoints
           end do
@@ -1262,9 +1292,10 @@ contains
   ! CFM4 propagator. It updates the Hamiltonian by considering a
   ! weighted sum of the external potentials at times time(1) and time(2),
   ! weighted by alpha(1) and alpha(2).
-  subroutine hamiltonian_update2(this, mesh, time, mu)
+  subroutine hamiltonian_update2(this, mesh, boundaries, time, mu)
     type(hamiltonian_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
+    type(boundaries_t),  intent(in)    :: boundaries
     FLOAT,               intent(in)    :: time(1:2)
     FLOAT,               intent(in)    :: mu(1:2)
 
@@ -1392,7 +1423,7 @@ contains
   contains
 
     subroutine build_phase()
-      integer :: ik, imat, nmat, max_npoints, offset
+      integer :: ik, imat, nmat, max_npoints, offset, idim
       FLOAT   :: kpoint(1:MAX_DIM)
 
       PUSH_SUB(hamiltonian_update2.build_phase)
@@ -1402,7 +1433,7 @@ contains
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
         do iatom = 1, this%ep%natoms
-          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, &
+          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, boundaries, &
             vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end do
 
@@ -1438,7 +1469,7 @@ contains
       if(associated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
 
         if(.not. allocated(this%hm_base%projector_phases)) then
-          SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, this%d%kpt%start:this%d%kpt%end))
+          SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, 1:this%d%dim, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_projector_phases, ACCEL_MEM_READ_ONLY, &
               TYPE_CMPLX, this%hm_base%total_points*this%d%kpt%nlocal)
@@ -1449,13 +1480,15 @@ contains
         do ik = this%d%kpt%start, this%d%kpt%end
           do imat = 1, this%hm_base%nprojector_matrices
             iatom = this%hm_base%projector_to_atom(imat)
-            do ip = 1, this%hm_base%projector_matrices(imat)%npoints
-              this%hm_base%projector_phases(ip, imat, ik) = this%ep%proj(iatom)%phase(ip, ik)
+            do idim = 1, this%d%dim
+              do ip = 1, this%hm_base%projector_matrices(imat)%npoints
+                this%hm_base%projector_phases(ip, imat, idim, ik) = this%ep%proj(iatom)%phase(ip, idim, ik)
+              end do
             end do
 
             if(accel_is_enabled() .and. this%hm_base%projector_matrices(imat)%npoints > 0) then
               call accel_write_buffer(this%hm_base%buff_projector_phases, &
-                this%hm_base%projector_matrices(imat)%npoints, this%hm_base%projector_phases(1:, imat, ik), offset = offset)
+                this%hm_base%projector_matrices(imat)%npoints, this%hm_base%projector_phases(1:, imat, 1, ik), offset = offset)
             end if
             offset = offset + this%hm_base%projector_matrices(imat)%npoints
           end do

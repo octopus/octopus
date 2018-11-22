@@ -20,6 +20,7 @@
 
 module dos_oct_m
   use atomic_orbital_oct_m
+  use boundaries_oct_m
   use comm_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -140,7 +141,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine dos_write_dos(this, dir, st, sb, geo, mesh, hm)
+  subroutine dos_write_dos(this, dir, st, sb, geo, mesh, hm, boundaries)
     type(dos_t),               intent(in) :: this
     character(len=*),         intent(in) :: dir
     type(states_t),           intent(in) :: st
@@ -148,6 +149,7 @@ contains
     type(geometry_t), target, intent(in) :: geo
     type(mesh_t),             intent(in) :: mesh
     type(hamiltonian_t),      intent(in) :: hm
+    type(boundaries_t),       intent(in) :: boundaries
 
     integer :: ie, ik, ist, is, ns, maxdos
     integer, allocatable :: iunit(:)
@@ -312,7 +314,7 @@ contains
           do work = 1, os%norbs
             ! We obtain the orbital
             if(states_are_real(st)) then
-              call dget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
+              call dget_atomic_orbital(geo, mesh, os%sphere, boundaries, ia, os%ii, os%ll, os%jj, &
                                                 os, work, os%radius, os%ndim)
               norm = M_ZERO
               do idim = 1, os%ndim
@@ -320,7 +322,7 @@ contains
               end do
              norm = sqrt(norm)
             else
-              call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
+              call zget_atomic_orbital(geo, mesh, os%sphere, boundaries, ia, os%ii, os%ll, os%jj, &
                                                 os, work, os%radius, os%ndim)
               norm = M_ZERO
               do idim = 1, os%ndim

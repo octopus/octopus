@@ -23,6 +23,7 @@ module lcao_oct_m
   use atomic_orbital_oct_m
   use batch_oct_m
   use blacs_proc_grid_oct_m
+  use boundaries_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
@@ -731,7 +732,7 @@ contains
 
       if(sys%st%d%ispin > UNPOLARIZED) then
         ASSERT(present(lmm_r))
-        call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, lmm_r)
+        call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, sys%gr%der%boundaries, lmm_r)
       end if
 
       ! set up Hamiltonian (we do not call system_h_setup here because we do not want to
@@ -776,7 +777,7 @@ contains
           call system_h_setup(sys, hm, calc_eigenval = .false.)
           if(sys%st%d%ispin > UNPOLARIZED) then
             ASSERT(present(lmm_r))
-            call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, lmm_r)
+            call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, sys%gr%der%boundaries, lmm_r)
           end if
         end if
       end if
@@ -1009,13 +1010,13 @@ contains
           factor = ps%conf%occ(ii, 1)/(CNST(2.0)*ll + CNST(1.0))
          
           if(states_are_real(st)) then
-            call dget_ao(this, st, gr%mesh, geo, iorb, 1, dorbital, use_psi = .true.)
+            call dget_ao(this, st, gr%mesh, geo, gr%der%boundaries, iorb, 1, dorbital, use_psi = .true.)
             !$omp parallel do
             do ip = 1, gr%mesh%np
               rho(ip, 1) = rho(ip, 1) + factor*dorbital(ip, 1)**2
             end do
           else
-            call zget_ao(this, st, gr%mesh, geo, iorb, 1, zorbital, use_psi = .true.)
+            call zget_ao(this, st, gr%mesh, geo, gr%der%boundaries, iorb, 1, zorbital, use_psi = .true.)
             !$omp parallel do
             do ip = 1, gr%mesh%np
               rho(ip, 1) = rho(ip, 1) + factor*abs(zorbital(ip, 1))**2

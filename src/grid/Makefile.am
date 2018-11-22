@@ -121,7 +121,7 @@ depend:
 basins.o : basins.F90 par_vec.o mesh.o index.o 
 batch.o : batch.F90 batch_inc.F90 
 batch_ops.o : batch_ops.F90 batch_ops_inc.F90 batch.o 
-boundaries.o : boundaries.F90 boundaries_inc.F90 subarray.o par_vec.o mesh.o batch.o 
+boundaries.o : boundaries.F90 boundaries_inc.F90 subarray.o par_vec.o mesh.o batch.o mesh_function.o 
 cube.o : cube.F90 index.o 
 cube_function.o : cube_function.F90 cube_function_inc.F90 par_vec.o partition_transfer.o mesh_cube_parallel_map.o mesh_cube_map.o mesh.o index.o cube.o 
 curv_briggs.o : curv_briggs.F90 
@@ -160,7 +160,7 @@ stencil_stargeneral.o : stencil_stargeneral.F90 stencil.o
 stencil_starplus.o : stencil_starplus.F90 stencil.o 
 stencil_variational.o : stencil_variational.F90 nl_operator.o 
 subarray.o : subarray.F90 subarray_inc.F90 batch.o 
-submesh.o : submesh.F90 submesh_inc.F90 par_vec.o mesh.o batch.o 
+submesh.o : submesh.F90 submesh_inc.F90 par_vec.o mesh.o batch.o boundaries.o 
 symmetrizer.o : symmetrizer.F90 symmetrizer_inc.F90 par_vec.o mesh.o 
 transfer_table.o : transfer_table.F90 
 volume.o : volume.F90 

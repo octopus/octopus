@@ -20,6 +20,7 @@
 
 module td_oct_m
   use global_oct_m
+  use boundaries_oct_m
   use boundary_op_oct_m
   use calc_mode_par_oct_m
   use density_oct_m
@@ -739,6 +740,7 @@ contains
       call hamiltonian_span(hm, minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
       ! initialize Fermi energy
       call states_fermi(st, gr%mesh)
+      hm%hm_base%spin => st%spin
       call energy_calc_total(hm, gr, st)
 
       !%Variable TDFreezeDFTUOccupations
@@ -806,6 +808,14 @@ contains
           call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)
         end if
         call td_write_kick(gr%mesh, hm%ep%kick, sys%outp, geo, 0)
+
+        !We activate the sprial BC only after the kick, 
+        !to be sure that the first iteration correspond to the ground state
+        if(gr%der%boundaries%spiralBC) then
+          gr%der%boundaries%spiral = .true.
+      !    call v_ks_calc(sys%ks, hm, st, geo, calc_eigenval = .false., time = M_ZERO, calc_energy = .false.)
+        end if
+
       end if
       call propagator_run_zero_iter(hm, gr, td%tr)
       if (sys%outp%output_interval > 0) then
