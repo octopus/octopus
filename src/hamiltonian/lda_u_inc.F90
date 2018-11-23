@@ -18,8 +18,9 @@
 !! $Id$
 
 
-subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
+subroutine X(lda_u_apply)(this, d, mesh, ik, psib, hpsib, has_phase)
   type(lda_u_t),      intent(in) :: this
+  type(mesh_t),       intent(in) :: mesh
   integer,            intent(in) :: ik
   type(batch_t),      intent(in) :: psib
   type(batch_t),   intent(inout) :: hpsib
@@ -27,7 +28,7 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
   logical,            intent(in) :: has_phase !True if the wavefunction has an associated phase
 
   integer :: ibatch, ios, imp, im, ispin, bind1, bind2
-  R_TYPE, allocatable :: dot(:,:,:), reduced(:,:)
+  R_TYPE, allocatable :: dot(:,:,:,:), reduced(:,:), psi(:,:)
   type(orbitalset_t), pointer  :: os
   type(profile_t), save :: prof
 
@@ -36,7 +37,8 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
   PUSH_SUB(lda_u_apply)
 
   SAFE_ALLOCATE(reduced(1:this%max_np,1:psib%nst_linear))
-  SAFE_ALLOCATE(dot(1:d%dim,1:this%maxnorbs, 1:psib%nst))
+  SAFE_ALLOCATE(dot(1:d%dim,1:this%maxnorbs, 1:this%norbsets, 1:psib%nst))
+  SAFE_ALLOCATE(psi(1:mesh%np, 1:d%dim))
 
   ispin = states_dim_get_spin_index(d, ik)
 
@@ -45,10 +47,18 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
   !
   ! We first compute <phi m | psi> for all orbitals of the atom
   !
+  do ibatch = 1, psib%nst
+    call batch_get_state(psib, ibatch, mesh%np, psi)
+    do ios = 1, this%norbsets
+      os => this%orbsets(ios)
+      call X(orbitalset_get_coefficients)(os, d%dim, psi, ik, has_phase, this%basisfromstates, &
+                                                  dot(1:d%dim,1:os%norbs,ios,ibatch))
+    end do
+  end do
   do ios = 1, this%norbsets
     os => this%orbsets(ios)
-    call X(orbitalset_get_coeff_batch)(os, d%dim, psib, ik, has_phase, this%basisfromstates, &
-                                         dot(1:d%dim,1:os%norbs,1:psib%nst))
+  !  call X(orbitalset_get_coeff_batch)(os, d%dim, psib, ik, has_phase, this%basisfromstates, &
+  !                                       dot(1:d%dim,1:os%norbs,1:psib%nst))
     !
     reduced(:,:) = R_TOTYPE(M_ZERO) 
     !
@@ -60,12 +70,12 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
         do imp = 1, os%norbs
           !Note here that V_{mmp} =U/2(delta_{mmp}-2n_{mpm})
           if(d%ispin /= SPINORS) then
-            reduced(im, ibatch) = reduced(im, ibatch) + this%X(V)(im, imp, ispin, ios)*dot(1,imp, ibatch)
+            reduced(im, ibatch) = reduced(im, ibatch) + this%X(V)(im, imp, ispin, ios)*dot(1,imp,ios,ibatch)
           else
-            reduced(im, bind1) = reduced(im, bind1) + this%X(V)(im, imp, 1, ios)*dot(1, imp, ibatch)
-            reduced(im, bind1) = reduced(im, bind1) + this%X(V)(im, imp, 3, ios)*dot(2, imp, ibatch)
-            reduced(im, bind2) = reduced(im, bind2) + this%X(V)(im, imp, 4, ios)*dot(1, imp, ibatch)
-            reduced(im, bind2) = reduced(im, bind2) + this%X(V)(im, imp, 2, ios)*dot(2, imp, ibatch)
+            reduced(im, bind1) = reduced(im, bind1) + this%X(V)(im, imp, 1, ios)*dot(1, imp, ios, ibatch)
+            reduced(im, bind1) = reduced(im, bind1) + this%X(V)(im, imp, 3, ios)*dot(2, imp, ios, ibatch)
+            reduced(im, bind2) = reduced(im, bind2) + this%X(V)(im, imp, 4, ios)*dot(1, imp, ios, ibatch)
+            reduced(im, bind2) = reduced(im, bind2) + this%X(V)(im, imp, 2, ios)*dot(2, imp, ios, ibatch)
           end if
         end do
       end do      
@@ -75,6 +85,7 @@ subroutine X(lda_u_apply)(this, d, ik, psib, hpsib, has_phase)
     call X(orbitalset_add_to_batch)(os, d%dim, hpsib, ik, has_phase, this%basisfromstates, reduced)
   end do
  
+  SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(dot)
   SAFE_DEALLOCATE_A(reduced)
 
@@ -265,6 +276,7 @@ subroutine X(compute_dftu_energy)(this, energy, st)
   type(states_t), intent(in)      :: st 
 
   integer :: ios, imp, im, ispin
+  FLOAT :: nsigma
 
   PUSH_SUB(compute_dftu_energy)
 
@@ -275,13 +287,31 @@ subroutine X(compute_dftu_energy)(this, energy, st)
       !TODO: These are matrix operations, that could be optimized
       do im = 1, this%orbsets(ios)%norbs
         do imp = 1, this%orbsets(ios)%norbs
-          energy = energy - CNST(0.5)*this%orbsets(ios)%Ueff*abs(this%X(n)(im, imp, ispin, ios))**2/st%smear%el_per_state
+          energy = energy - M_HALF*this%orbsets(ios)%Ueff*abs(this%X(n)(im, imp, ispin, ios))**2/st%smear%el_per_state
         end do
         if(ispin <= this%spin_channels) &
-          energy = energy + CNST(0.5)*this%orbsets(ios)%Ueff*real(this%X(n)(im, im, ispin, ios))
+          energy = energy + M_HALF*this%orbsets(ios)%Ueff*real(this%X(n)(im, im, ispin, ios))
       end do
     end do
   end do
+
+  !See for instance PRB 67, 153106 (2003), Eq.(4)
+  if(this%double_couting == DFT_U_AMF) then
+    ASSERT(st%d%ispin /= SPINORS)
+    do ios = 1, this%norbsets
+      do ispin = 1, this%nspins
+        nsigma = M_ZERO
+        do im = 1, this%orbsets(ios)%norbs
+          nsigma = nsigma + R_REAL(this%X(n)(im,im,ispin,ios))/st%smear%el_per_state
+        end do
+
+        do im = 1, this%orbsets(ios)%norbs
+          energy = energy + M_HALF*this%orbsets(ios)%Ueff*nsigma*(M_ONE-nsigma)/this%orbsets(ios)%norbs
+          energy = energy - M_HALF*this%orbsets(ios)%Ueff*R_REAL(this%X(n)(im, im, ispin, ios))
+        end do
+      end do
+    end do
+  end if
 
   POP_SUB(compute_dftu_energy)
 end subroutine X(compute_dftu_energy)
@@ -298,6 +328,7 @@ subroutine X(lda_u_update_potential)(this, st)
 
   integer :: ios, im, ispin, norbs
   type(profile_t), save :: prof
+  FLOAT :: nsigma
 
   call profiling_in(prof, "DFTU_POTENTIAL")
 
@@ -312,14 +343,30 @@ subroutine X(lda_u_update_potential)(this, st)
         this%X(V)(1:norbs,im,ispin,ios) = - this%orbsets(ios)%Ueff*this%X(n)(1:norbs,im,ispin,ios)/st%smear%el_per_state
         ! Only the diagonal part in spin space (for spinors)
         if(ispin <= this%spin_channels) &
-          this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + CNST(0.5)*this%orbsets(ios)%Ueff
+          this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + M_HALF*this%orbsets(ios)%Ueff
 
         if(this%orbsets(ios)%alpha > CNST(1.0e-6)) then
           this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + this%orbsets(ios)%alpha
         end if
       end do
     end do
+
+    !See for instance PRB 67, 153106 (2003), Eq.(4)
+    if(this%double_couting == DFT_U_AMF) then
+      ASSERT(st%d%ispin /= SPINORS)
+      do ispin = 1, this%nspins
+        nsigma = M_ZERO
+        do im = 1, norbs
+          nsigma = nsigma + R_REAL(this%X(n)(im,im,ispin,ios))/st%smear%el_per_state
+        end do
+        do im = 1, norbs
+          this%X(V)(im,im,ispin,ios) = this%X(V)(im,im,ispin,ios) + this%orbsets(ios)%Ueff &
+                            *(nsigma/norbs - M_HALF)
+        end do
+      end do
+    end if
   end do
+
 
   if(this%orbs_dist%parallel) then
     call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%X(V))
@@ -543,9 +590,6 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
 
   PUSH_SUB(X(compute_coulomb_integrals))
 
-  ASSERT(.not. mesh%parallel_in_domains)
-  if(mesh%parallel_in_domains) call messages_not_implemented("Coulomb integrals parallel in domains")
-  
   SAFE_ALLOCATE(nn(1:this%max_np))
   SAFE_ALLOCATE(vv(1:this%max_np))
   SAFE_ALLOCATE(tmp(1:this%max_np))
@@ -562,10 +606,13 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
   idone = 0
   if(mpi_world%rank == 0) call loct_progress_bar(-1, ntodo)
 
+
   do ios = this%orbs_dist%start, this%orbs_dist%end
     os => this%orbsets(ios)
     norbs = os%norbs
     np_sphere = os%sphere%np  
+
+    call submesh_build_global(os%sphere)
 
     call poisson_init_sm(os%poisson, psolver, der, os%sphere) 
  
@@ -584,6 +631,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
 
         !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
         call dpoisson_solve_sm(os%poisson, os%sphere, vv(1:np_sphere), nn(1:np_sphere))
+
 
         klst=0
         do kst = 1, norbs
@@ -611,7 +659,7 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
               this%coulomb(ist,jst,lst,kst,ios) = this%coulomb(ist,jst,kst,lst,ios)
               this%coulomb(kst,lst,jst,ist,ios) = this%coulomb(ist,jst,kst,lst,ios)
             end if
-              
+
           !Update the progress bar
           idone = idone + 1
           if(mpi_world%rank == 0) call loct_progress_bar(idone, ntodo)
@@ -620,6 +668,8 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
       end do !jst
     end do !ist
     call poisson_end(os%poisson)
+
+    call submesh_end_global(os%sphere)
   end do !iorb
 
   if(this%orbs_dist%parallel) then
@@ -757,6 +807,10 @@ end subroutine X(compute_periodic_coulomb_integrals)
 
    PUSH_SUB(lda_u_commute_r)
 
+   if(this%double_couting /= DFT_U_FLL) then
+    call messages_not_implemented("AMF double couting and commutator [r,V_u].")
+   end if
+
    if((simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) &
        .or. this%basisfromstates) then
      SAFE_ALLOCATE(epsi(1:mesh%np,1:d%dim))
@@ -868,7 +922,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
            do im = 1, os%norbs
              do idim = 1, d%dim
                idim_orb = min(idim,os%ndim)
-               dot(idim,im) = X(mf_dotp)(mesh, os%eorb_mesh(1:mesh%np,idim_orb,im,ik),&
+               dot(idim,im) = X(mf_dotp)(mesh, os%eorb_mesh(1:mesh%np,im, idim_orb,ik),&
                                epsi(1:mesh%np,idim), reduce = .false.)
              end do
            end do
@@ -950,6 +1004,10 @@ end subroutine X(compute_periodic_coulomb_integrals)
    if(this%level == DFT_U_NONE) return
    !In this casem there is no contribution to the force
    if(this%basisfromstates) return
+
+   if(this%double_couting /= DFT_U_FLL) then
+    call messages_not_implemented("AMF double couting with forces.")
+   end if
 
    PUSH_SUB(X(lda_u_force))
 

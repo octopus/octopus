@@ -467,14 +467,13 @@ contains
     !TODO: Add a reference
     subroutine lanczos()
       integer ::  iter, l, idim
-      CMPLX, allocatable :: hamilt(:,:), v(:,:,:), expo(:,:), tmp(:, :), psi(:, :)
+      CMPLX, allocatable :: hamilt(:,:), v(:,:,:), expo(:,:), psi(:, :)
       FLOAT :: beta, res, tol !, nrm
       CMPLX :: pp
 
       PUSH_SUB(exponential_apply.lanczos)
 
       SAFE_ALLOCATE(     v(1:der%mesh%np, 1:hm%d%dim, 1:te%exp_order+1))
-      SAFE_ALLOCATE(   tmp(1:der%mesh%np, 1:hm%d%dim))
       SAFE_ALLOCATE(hamilt(1:te%exp_order+1, 1:te%exp_order+1))
       SAFE_ALLOCATE(  expo(1:te%exp_order+1, 1:te%exp_order+1))
       SAFE_ALLOCATE(   psi(1:der%mesh%np_part, 1:hm%d%dim))
@@ -535,10 +534,8 @@ contains
         end if
 
         ! zpsi = nrm * V * expo(1:iter, 1) = nrm * V * expo * V^(T) * zpsi
-        call lalg_gemv(der%mesh%np, hm%d%dim, iter, M_z1*beta, v, expo(1:iter, 1), M_z0, tmp)
-
         do idim = 1, hm%d%dim
-          call lalg_copy(der%mesh%np, tmp(:, idim), zpsi(:, idim))
+           call blas_gemv('N', der%mesh%np, iter, M_z1*beta, v(1,idim,1), der%mesh%np*hm%d%dim, expo(1,1), 1, M_z0, zpsi(1,idim), 1)
         end do
 
       end if
@@ -591,13 +588,10 @@ contains
             call messages_warning(1)
           end if
 
-          call lalg_gemv(der%mesh%np, hm%d%dim, iter, M_z1*beta, v, expo(1:iter, 1), M_z0, tmp)
-
           do idim = 1, hm%d%dim
-            call lalg_copy(der%mesh%np, tmp(:, idim), psi(:, idim))
+            call blas_gemv('N', der%mesh%np, iter, deltat*M_z1*beta, v(1,idim,1), der%mesh%np*hm%d%dim, expo(1,1), 1, M_z1, zpsi(1,idim), 1)
           end do
 
-          zpsi = zpsi + deltat*psi
         end if
       end if
 
@@ -606,7 +600,6 @@ contains
       SAFE_DEALLOCATE_A(v)
       SAFE_DEALLOCATE_A(hamilt)
       SAFE_DEALLOCATE_A(expo)
-      SAFE_DEALLOCATE_A(tmp)
       SAFE_DEALLOCATE_A(psi)
 
       POP_SUB(exponential_apply.lanczos)
@@ -726,7 +719,6 @@ contains
         call batch_pack(hpsi1b, copy = .false.)
       end if
       
-      call batch_copy_data(der%mesh%np, psib, psi1b)
       if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
 
       do iter = 1, te%exp_order
@@ -744,7 +736,11 @@ contains
         !  go haywire on the first step of dynamics (often NaN) and with debugging options
         !  the code stops in ZAXPY below without saying why.
 
-        call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, set_phase = .not.phase_correction)
+        if(iter /= 1) then
+          call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, set_phase = .not.phase_correction)
+        else
+          call zhamiltonian_apply_batch(hm, der, psib, hpsi1b, ik, set_phase = .not.phase_correction)
+        end if
         
         if(zfact_is_real) then
           call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), hpsi1b, psib)

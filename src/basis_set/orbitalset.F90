@@ -209,11 +209,11 @@ contains
 
       if(simul_box_is_periodic(sb) .and. .not. os%submeshforperiodic) then
         !We now compute the so-called Bloch sum of the localized orbitals
-        do im = 1, os%norbs
-          os%eorb_mesh(:,:,im,iq) = M_Z0
-          do idim = 1, os%ndim
+        os%eorb_mesh(:,:,:,iq) = M_Z0
+        do idim = 1, os%ndim
+          do im = 1, os%norbs
             do is = 1, ns
-              os%eorb_mesh(os%sphere%map(is),idim,im,iq) = os%eorb_mesh(os%sphere%map(is),idim,im,iq) &
+              os%eorb_mesh(os%sphere%map(is),im,idim,iq) = os%eorb_mesh(os%sphere%map(is),im,idim,iq) &
                                                         + os%zorb(is,idim,im)*os%phase(is, iq)
             end do
           end do
