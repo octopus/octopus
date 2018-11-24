@@ -258,8 +258,10 @@ contains
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, coords=xx)
           expqr = exp(M_zI*sum(xx(1:mesh%sb%dim)*qq(1:mesh%sb%dim)))
-          tmp(ip,1) = M_TWO*conjg(expqr)*md(ip,1)
-          tmp(ip,2) = M_TWO*expqr*md(ip, 1)
+       !   tmp(ip,1) = M_TWO*conjg(expqr)*md(ip,1)
+       !   tmp(ip,2) = M_TWO*expqr*md(ip, 1)
+          tmp(ip,1) = expqr*(md(ip,1) + M_zI*md(ip, 2))
+          tmp(ip,2) = conjg(expqr)*(md(ip,1) - M_zI*md(ip, 2))
         end do
       end if
     end select
