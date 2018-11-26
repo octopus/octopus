@@ -42,7 +42,7 @@ Usage: oct-run_regression_test.pl [options]
     -p        preserve working directories
     -l        copy output log to current directory
     -m        run matches only (assumes there are work directories)
-    -r        print into a .json files
+    -r        print a report into a .json files
 
 Exit codes:
     0         all tests passed
