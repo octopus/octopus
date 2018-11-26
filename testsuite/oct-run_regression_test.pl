@@ -42,6 +42,7 @@ Usage: oct-run_regression_test.pl [options]
     -p        preserve working directories
     -l        copy output log to current directory
     -m        run matches only (assumes there are work directories)
+    -r        print into a .json files
 
 Exit codes:
     0         all tests passed
@@ -86,7 +87,8 @@ if(-t STDOUT) {
 if (not @ARGV) { usage; }
 
 $opt_f = "";
-getopts("nlvhD:c:f:spm");
+$opt_r = "";
+getopts("nlvhD:c:f:spm:r:");
 
 # avoid warnings 'used only once: possible typo'
 $useless = $opt_h;
@@ -193,6 +195,27 @@ if (!$opt_m) {
 
 # testsuite
 open(TESTSUITE, "<".$opt_f ) or die255("Cannot open testsuite file '$opt_f'.");
+if($opt_r) { 
+  if( -e $opt_r) {
+    open(JSON,"+<$opt_r") or die;
+    while (<JSON>) {
+      if (eof(JSON)) {
+         seek(JSON,-(length("}\n}\n")),2) or die;
+         truncate(JSON,tell(JSON)) or die;
+      }
+    }
+    close JSON;
+
+    open(JSON, ">>$opt_r" );
+    print JSON "},\n        {\n"; 
+  } else {
+  open(JSON, ">>$opt_r" ); 
+  print JSON "{\n";
+  }
+}
+
+$firstmatch = 0;
+$firstinp = 0;
 
 while ($_ = <TESTSUITE>) {
 
@@ -220,6 +243,7 @@ while ($_ = <TESTSUITE>) {
 	  print "Workdir will be saved.\n";
       }
       print "Using test file  : $opt_f \n";
+      if($opt_r) { print JSON "	\"$opt_f\": {\n"; }
 
     } elsif ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
       %test = ();
@@ -307,12 +331,25 @@ while ($_ = <TESTSUITE>) {
       elsif ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
 	  # FIXME: enforce this is "serial" or numeric
 	  $np = $1;
+          if($opt_r) { print JSON "      	\"Processors\": \"$np\","; }
       }
 
       elsif ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
 
         $input_base = $1;
         $input_file = dirname($opt_f) . "/" . $input_base;
+
+        if($opt_r) {
+      	  if( $firstinp == 0 ) {
+  	    print JSON "		\"$input_file\": \{\n";
+              $firstinp = 1;
+          } else {
+              print JSON "}\n		  \]\n		\},\n";
+              print JSON "                \"$input_file\": \{\n";
+          }
+          $firstmatch = 0;
+        }
+
       
 	if ( $opt_m ) {
 	    print "\n\nFor input file : $input_file\n\n";
@@ -415,6 +452,12 @@ while ($_ = <TESTSUITE>) {
       } 
 
       elsif ( $_ =~ /^match/ ) {
+        if($opt_r) {
+          if($firstmatch == 0) {
+            print JSON "		  \"matches\" : [\n";
+            print JSON "			{";
+          }
+        }
 	  # FIXME: should we do matches even when execution failed?
 	  if (!$opt_n && $return_value == 0) {
 	      if(run_match_new($_)){
@@ -427,6 +470,7 @@ while ($_ = <TESTSUITE>) {
 		  $failures++;
 	      }
 	  }
+        $firstmatch++;
       } else {
 	  die255("Unknown command '$_'.");
       }
@@ -439,6 +483,10 @@ if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
 
 print "\n";
 close(TESTSUITE);
+if($opt_r) { 
+  print JSON "}\n		  ]\n		}\n	}\n}\n";
+  close(JSON);
+}
 
 print "Status: ".$failures." failures\n";
 
@@ -472,9 +520,15 @@ sub run_match_new {
     $par[$params] =~ s/\s*$//;
   }
 
+  if($opt_r) {
+    if($firstmatch > 0) { print JSON "},\n                  	{"; }
+  }
+
+
   if($func eq "SHELL"){ # function SHELL(shell code)
     check_num_args(1, 1, $#par, $func);
     $shell_command = $par[0];
+    if($opt_r) { print JSON "\"type\": \"SHELL\", \"Argument\": \"$shell_command\", ";}
 
   }elsif($func eq "LINE") { # function LINE(filename, line, column)
     check_num_args(3, 3, $#par, $func);
@@ -486,6 +540,8 @@ sub run_match_new {
     }
     $shell_command .= " | cut -b $par[2]-";
 
+    if($opt_r) { print JSON "\"type\": \"LINE\", \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"], ";}
+
   }elsif($func eq "LINEFIELD") { # function LINE(filename, line, field)
     check_num_args(3, 3, $#par, $func);
     if($par[1] < 0) { # negative number means from end of file
@@ -494,6 +550,7 @@ sub run_match_new {
     } else {
       $shell_command = "awk '(NR==$par[1]) {printf \$$par[2]}' $par[0]";
     }
+    if($opt_r) { print JSON "\"type\": \"LINEFIELD\", \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"], ";}
 
   }elsif($func eq "GREP") { # function GREP(filename, 're', column <, [offset>])
     check_num_args(3, 4, $#par, $func);
@@ -505,6 +562,7 @@ sub run_match_new {
     # -a means even if the file is considered binary due to a stray funny character, it will work
     $shell_command = "grep -a -A$off $par[1] $par[0] | awk '(NR==$off+1)'";
     $shell_command .= " | cut -b $par[2]-";
+    if($opt_r) { print JSON "\"type\": \"GREP\", \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"], ";}
 
   }elsif($func eq "GREPFIELD") { # function GREPFIELD(filename, 're', field <, [offset>])
     check_num_args(3, 4, $#par, $func);
@@ -517,14 +575,17 @@ sub run_match_new {
     $shell_command = "grep -a -A$off $par[1] $par[0]";
     $shell_command .= " | awk '(NR==$off+1) {printf \$$par[2]}'";
     # if there are multiple occurrences found by grep, we will only be taking the first one via awk
+    if($opt_r) { print JSON "\"type\": \"GREPFIELD\", \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"], ";}
 
   }elsif($func eq "GREPCOUNT") { # function GREPCOUNT(filename, 're')
     check_num_args(2, 2, $#par, $func);
     $shell_command = "grep -c $par[1] $par[0]";
+    if($opt_r) { print JSON "\"type\": \"GREPCOUNT\", \"Argument\": [\"$par[0]\", \"$par[1]\"], ";}
 
   }elsif($func eq "SIZE") { # function SIZE(filename)
     check_num_args(1, 1, $#par, $func);
     $shell_command = "ls -lt $par[0] | awk '{printf \$5}'";
+    if($opt_r) { print JSON "\"type\": \"SIZE\", \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"], ";}
 
   }else{ # error
     printf STDERR "ERROR: Unknown command '$func'\n";
@@ -548,6 +609,7 @@ sub run_match_new {
   } else {
       $value = "";
   }
+  if($opt_r) { print JSON "\"value\": \"$value\", \"reference\": \"$ref_value\", \"precision\": \"$precnum\"";}
 
   if(length($value) == 0) {
       print STDERR "ERROR: Match command returned nothing: $shell_command\n";
