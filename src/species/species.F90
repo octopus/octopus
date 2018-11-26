@@ -1280,37 +1280,43 @@ contains
     FLOAT,             intent(in)  :: x(:)
     integer,           intent(in)  :: l, lm, i
     FLOAT,             intent(out) :: uV
-    FLOAT,             intent(out) :: duV(:)
+    FLOAT, optional,   intent(out) :: duV(:)
 
     FLOAT :: r, uVr0, duvr0, ylm, gylm(1:3)
     FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqrt(3/(4*pi))
 
     ! no push_sub because this function is called very frequently
 
+    ASSERT(species_is_ps(spec))
+
     r = sqrt(sum(x(1:3)**2))
 
     uVr0  = spline_eval(spec%ps%kb(l, i), r)
-    duVr0 = spline_eval(spec%ps%dkb(l, i), r)
 
-    gylm = M_ZERO
-
-    call grylmr(x(1), x(2), x(3), l, lm, ylm, grylm = gylm)
-    uv = uvr0*ylm
-    if(r >= r_small) then
-      duv(1:3) = duvr0*ylm*x(1:3)/r + uvr0*gylm(1:3)
-    else
-      if(l == 1) then
-        duv = M_ZERO
-        if(lm == -1) then
-          duv(2) = -ylmconst*duvr0
-        else if(lm == 0) then
-          duv(3) =  ylmconst*duvr0
-        else if(lm == 1) then
-          duv(1) = -ylmconst*duvr0
-        end if
+    if(present(duV)) then
+      duVr0 = spline_eval(spec%ps%dkb(l, i), r)
+      gylm = M_ZERO
+      call grylmr(x(1), x(2), x(3), l, lm, ylm, grylm = gylm)
+      uv = uvr0*ylm
+      if(r >= r_small) then
+        duv(1:3) = duvr0*ylm*x(1:3)/r + uvr0*gylm(1:3)
       else
-        duv = M_ZERO
-      end if
+        if(l == 1) then
+          duv = M_ZERO
+          if(lm == -1) then
+            duv(2) = -ylmconst*duvr0
+          else if(lm == 0) then
+            duv(3) =  ylmconst*duvr0
+          else if(lm == 1) then
+            duv(1) = -ylmconst*duvr0
+          end if
+        else
+          duv = M_ZERO
+        end if
+      end if   
+    else
+      call grylmr(x(1), x(2), x(3), l, lm, ylm)
+      uv = uvr0*ylm
     end if
 
   end subroutine species_real_nl_projector
