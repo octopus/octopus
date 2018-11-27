@@ -457,8 +457,9 @@ contains
     call spectrum_cross_section_tensor_write(out_file, sigma, nspin, spectrum%energy_step, energy_steps, kick)
 
     ! Diagonalize sigma tensor
-    if (spectrum%sigma_diag) &
-    call spectrum_sigma_diagonalize(sigma, nspin, spectrum%energy_step, energy_steps, kick)
+    if (spectrum%sigma_diag) then
+      call spectrum_sigma_diagonalize(sigma, nspin, spectrum%energy_step, energy_steps, kick)
+    end if
 
     SAFE_DEALLOCATE_A(sigma)
     SAFE_DEALLOCATE_A(sigmap)
