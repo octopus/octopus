@@ -225,7 +225,7 @@ contains
     integer,             intent(in)    :: jxyz(:)
     integer,             intent(in)    :: jxyz_inv(:)
     FLOAT,               intent(in)    :: vv
-    FLOAT,               intent(inout) :: vs(0:)
+    FLOAT,               intent(inout) :: vs(:)
     
     integer :: start(1:3), pp, qq, rr
     integer :: ll, mm, nn, ip, is2
@@ -268,9 +268,10 @@ contains
           !map the global point to a local point
           if (mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
 #endif
-          if (ip == 0) cycle
-          is2 = jxyz_inv(ip)
-          vs(is2) = vs(is2) + this%co(ll)*this%co(mm)*this%co(nn)*vv
+          if (ip > 0) then
+            is2 = jxyz_inv(ip)
+            if(is2 > 0) vs(is2) = vs(is2) + this%co(ll)*this%co(mm)*this%co(nn)*vv
+          end if
           rr = rr + kk
         end do
         qq = qq + jj
