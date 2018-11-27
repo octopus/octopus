@@ -1040,13 +1040,16 @@ contains
           factors(iorb) = ps%conf%occ(ii, 1)/(CNST(2.0)*ll + CNST(1.0))
         end do
 
-        !$omp parallel do private(ip, aa)
+        !$omp parallel do private(ip, aa, iorb) 
         do ip = 1, this%sphere(iatom)%np
           aa = CNST(0.0)
           do iorb = 1, this%norb_atom(iatom)/this%mult
             aa = aa + factors(iorb)*this%orbitals(iatom)%states_linear(iorb)%dpsi(ip)**2
           end do
+          !Due to the mapping function, more than one task could write to the same point in the array
+          !$omp critical
           rho(this%sphere(iatom)%map(ip), 1) = aa
+          !$omp end critical
         end do
 
         SAFE_DEALLOCATE_A(factors)
