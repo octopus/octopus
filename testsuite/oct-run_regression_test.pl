@@ -228,7 +228,7 @@ while ($_ = <TESTSUITE>) {
       print "Using test file  : $opt_f \n";
       $basename =  basename($opt_f);
       $basedir = basename(dirname($opt_f));
-      if($opt_r) { print YAML "- \"$basedir/$basename\": \n"; }
+      if($opt_r) { print YAML "\"$basedir/$basename\": \n"; }
 
     } elsif ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
       %test = ();
