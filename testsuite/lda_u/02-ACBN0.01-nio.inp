@@ -52,4 +52,4 @@ ExtraStates = 10
 
 FilterPotentials = filter_none
 AOThreshold = 0.05
-OutputLDA_U = occ_matrices + effectiveU
+OutputLDA_U = occ_matrices + effectiveU + kanamoriU
