@@ -178,7 +178,7 @@ fi
 test_index=0
 
 if [ "$report" == "yes" ]; then
-  rm $json`                      
+  `rm $json`                      
 fi
 
 for y in $tests; do
@@ -263,7 +263,7 @@ while getopts "hnlp:d:cg:q:r:" opt ; do
 	c) cleanup="yes";;
 	g) test_groups="$OPTARG";;
 	q) test_groups="$OPTARG"; query="yes";;
-        r) json="$OPTARG"; report="yes";;
+	r) json="$OPTARG"; report="yes";;
         ?) echo "Error parsing arguments" 1>&2; exit 1;;
     esac
 done
