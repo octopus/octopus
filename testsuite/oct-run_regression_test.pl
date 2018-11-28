@@ -132,22 +132,22 @@ if(!$opt_s) {
     chomp($mpiexec);
 
     if( "$mpiexec" eq "" ) { 
-	print "No mpiexec found: running in serial.\n\n";
+        print "No mpiexec found: running in serial.\n\n";
     } else {
 # mpiexec without arguments (to check if it is available)
-	$mpiexec_raw = $mpiexec;
-	$mpiexec_raw =~ s/\ (.*)//;
-	if ( ! -e "$mpiexec_raw" ) {
-	    print "mpiexec command ($mpiexec_raw) does not exist: running in serial.\n\n";
-	    $mpiexec = "";
-	} elsif( ! -x "$mpiexec_raw" ) {
-	    print "mpiexec command ($mpiexec_raw) is not executable: running in serial.\n\n";
-	    $mpiexec = "";
-	} else {
+        $mpiexec_raw = $mpiexec;
+        $mpiexec_raw =~ s/\ (.*)//;
+        if ( ! -e "$mpiexec_raw" ) {
+            print "mpiexec command ($mpiexec_raw) does not exist: running in serial.\n\n";
+            $mpiexec = "";
+        } elsif( ! -x "$mpiexec_raw" ) {
+            print "mpiexec command ($mpiexec_raw) is not executable: running in serial.\n\n";
+            $mpiexec = "";
+        } else {
 # default number of processors is 1
-	    $np = 1;
-	    $is_parallel = 1;
-	}
+            $np = 1;
+            $is_parallel = 1;
+        }
     }
 } else {
     $mpiexec = "";
@@ -218,12 +218,12 @@ while ($_ = <TESTSUITE>) {
     if ( $_ =~ /^Test\s*:\s*(.*)\s*$/) {
       $test{"name"} = $1;
       if($test{"name"} eq "") {
-	  die255("No name was provided with Test tag.");
+          die255("No name was provided with Test tag.");
       }
       print "$color_start{blue} ***** $test{\"name\"} ***** $color_end{blue} \n\n";
       print "Using workdir    : $workdir\n";
       if($opt_p) {
-	  print "Workdir will be saved.\n";
+          print "Workdir will be saved.\n";
       }
       print "Using test file  : $opt_f \n";
       $basename =  basename($opt_f);
@@ -237,94 +237,94 @@ while ($_ = <TESTSUITE>) {
       $enabled =~ s/\s*$//;
       $test{"enabled"} = $enabled;
 
-      if($opt_r) { print YAML "	enable: $enabled\n";}
+      if($opt_r) { print YAML "        enable: $enabled\n";}
 
       if ( $enabled eq "No") {
           print STDERR "Test disabled: skipping test\n\n";
-	  skip_exit();
+          skip_exit();
       } elsif ( $enabled ne "Yes") {
-	  if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
-	  die255("Unknown option 'Enabled = $enabled' in testsuite file.");
+          if (!$opt_p && !$opt_m) { system ("rm -rf $workdir"); }
+          die255("Unknown option 'Enabled = $enabled' in testsuite file.");
       }
 
     } elsif ( $_ =~ /^Options\s*:\s*(.*)\s*$/) {
         $options_required = $1;
-	# note: we could implement Options by baking this into the script via configure...
+        # note: we could implement Options by baking this into the script via configure...
 
-        if($opt_r) { print YAML "	options: $options_required\n";}
-	
+        if($opt_r) { print YAML "        options: $options_required\n";}
+        
     } elsif ( $_ =~ /^Options_MPI\s*:\s*(.*)\s*$/) {
         if ($is_parallel && $np ne "serial") {
-	    $options_required_mpi = $1;
-	    $options_are_mpi = 1;
-            if($opt_r) { print YAML "	options_mpi: $options_required_mpi\n";}
-	}
+            $options_required_mpi = $1;
+            $options_are_mpi = 1;
+            if($opt_r) { print YAML "        options_mpi: $options_required_mpi\n";}
+        }
 
     } elsif ( $_ =~ /^Program\s*:\s*(.*)\s*$/) {
-	$command = "$exec_directory/$1";
+        $command = "$exec_directory/$1";
 
-	# FIXME: should we do this for a dry-run?
-	if( ! -x "$command") {
-	  $command = "$exec_directory/../utils/$1";
-	}	
-	if( ! -x $command) {
-	    die255("Executable '$1' not available.");
+        # FIXME: should we do this for a dry-run?
+        if( ! -x "$command") {
+          $command = "$exec_directory/../utils/$1";
+        }        
+        if( ! -x $command) {
+            die255("Executable '$1' not available.");
         }
         $basecommand = basename($command);
-        if($opt_r) { print YAML "	command: $basecommand\n";}
+        if($opt_r) { print YAML "        command: $basecommand\n";}
 
-	$options_available = `$command -c`;
-	chomp($options_available);
-	if($is_parallel && $options_available !~ "mpi") {
-	    print "Running in serial since executable was not compiled with MPI.\n";
-	    $is_parallel = 0;
-	    $options_are_mpi = 0;
-	}
+        $options_available = `$command -c`;
+        chomp($options_available);
+        if($is_parallel && $options_available !~ "mpi") {
+            print "Running in serial since executable was not compiled with MPI.\n";
+            $is_parallel = 0;
+            $options_are_mpi = 0;
+        }
 
-	if($options_are_mpi) {
-	    $options_required = $options_required_mpi;
-	}
+        if($options_are_mpi) {
+            $options_required = $options_required_mpi;
+        }
 
-	if(length($options_required) > 0) {
-	    # check if the executable was compiled with the required options
-	    foreach my $option (split(/;/, $options_required)){
-		if(" $options_available " !~ " $option ") {
-		    print "\nSkipping test: executable does not have the required option '$option'";
-		    if($options_are_mpi) {
-			print " for MPI";
-		    }
-		    print ".\n";
-		    print "Executable: $command\n";
-		    print "Available options: $options_available\n\n";
-		    skip_exit();
-		}
-	    }
-	}
-	# FIXME: import Options to BGW version
+        if(length($options_required) > 0) {
+            # check if the executable was compiled with the required options
+            foreach my $option (split(/;/, $options_required)){
+                if(" $options_available " !~ " $option ") {
+                    print "\nSkipping test: executable does not have the required option '$option'";
+                    if($options_are_mpi) {
+                        print " for MPI";
+                    }
+                    print ".\n";
+                    print "Executable: $command\n";
+                    print "Available options: $options_available\n\n";
+                    skip_exit();
+                }
+            }
+        }
+        # FIXME: import Options to BGW version
     } elsif ( $_ =~ /^TestGroups\s*:\s*(.*)\s*$/) {
         # handled by oct-run_testsuite.sh
-        if($opt_r) { print YAML "	testgroup: $1\n";}
+        if($opt_r) { print YAML "        testgroup: $1\n";}
     } else {
       if ( $enabled eq "") {
-	die255("Testsuite file must set Enabled tag before another (except Test, Program, Options, TestGroups).");
+        die255("Testsuite file must set Enabled tag before another (except Test, Program, Options, TestGroups).");
       }
 
       if ( $_ =~ /^Util\s*:\s*(.*)\s*$/) {
-	$np = "serial";
-	$command = "$exec_directory/$1";
-	if( ! -x "$command") {
-	  $command = "$exec_directory/../utils/$1";
-	}
-        if($opt_r) { print YAML "	util: $1\n";}
+        $np = "serial";
+        $command = "$exec_directory/$1";
+        if( ! -x "$command") {
+          $command = "$exec_directory/../utils/$1";
+        }
+        if($opt_r) { print YAML "        util: $1\n";}
 
-	if( ! -x "$command") {
-	    die255("Cannot find utility '$1'.");
-	}
+        if( ! -x "$command") {
+            die255("Cannot find utility '$1'.");
+        }
       }
 
       elsif ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
-	  # FIXME: enforce this is "serial" or numeric
-	  $np = $1;
+          # FIXME: enforce this is "serial" or numeric
+          $np = $1;
       }
 
       elsif ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
@@ -336,23 +336,23 @@ while ($_ = <TESTSUITE>) {
         { 
           $basename =  basename($input_file);
           $basedir = basename(dirname($input_file));
-          print YAML "	input:\n                name: \"$basedir/$basename\"\n";
-          print YAML " 		processors: $np\n";
+          print YAML "        input:\n                name: \"$basedir/$basename\"\n";
+          print YAML "                processors: $np\n";
         }
 
       
-	if ( $opt_m ) {
-	    print "\n\nFor input file : $input_file\n\n";
-	    $return_value = 0;
-	    # FIXME: this works from outer directory, but not in archived subdirectories.
-	    $matchdir = "$workdir/$input_base";
-	} else {
+        if ( $opt_m ) {
+            print "\n\nFor input file : $input_file\n\n";
+            $return_value = 0;
+            # FIXME: this works from outer directory, but not in archived subdirectories.
+            $matchdir = "$workdir/$input_base";
+        } else {
           if( -f $input_file ) {
             print "\nUsing input file : $input_file\n";
             $cp_return = system("cp $input_file $workdir/inp");
-	    if($cp_return != 0) {
-		die255("Copy failed (cp $input_file $workdir/inp)\n");
-	    }
+            if($cp_return != 0) {
+                die255("Copy failed (cp $input_file $workdir/inp)\n");
+            }
             # Ensure that the input file is writable so that it can
             # be overwritten by the next test.
             $mode = (stat "$workdir/inp")[2];
@@ -361,79 +361,79 @@ while ($_ = <TESTSUITE>) {
             die255("Could not find input file '$input_file'.");
           }
       
-	  # serial or MPI run?
-	  if ( $is_parallel && $np ne "serial") {
+          # serial or MPI run?
+          if ( $is_parallel && $np ne "serial") {
             if("$global_np" ne "") {
-		$np = $global_np;
+                $np = $global_np;
             }
-	    if ("$mpiexec" =~ /ibrun/) { # used by SGE parallel environment
-		$specify_np = "";
-		$my_nslots = "MY_NSLOTS=$np";
-	    } elsif ("$mpiexec" =~ /runjob/) { # used by BlueGene
-		$specify_np = "--np $np --exe";
-		$my_nslots = "";
-	    } elsif ("$mpiexec" =~ /poe/) { # used by IBM PE 
-		$specify_np = ""; 
-		$my_nslots = "MP_PROCS=$np"; 
-	    } else { # for mpirun and Cray's aprun
-		$specify_np = "-n $np";
-		$my_nslots = "";
-	    }
-	    $command_line = "cd $workdir; $my_nslots $mpiexec $specify_np $machinelist $aexec $command > out";
-	  } else {
-	      $command_line = "cd $workdir; $aexec $command > out ";
-	  }
+            if ("$mpiexec" =~ /ibrun/) { # used by SGE parallel environment
+                $specify_np = "";
+                $my_nslots = "MY_NSLOTS=$np";
+            } elsif ("$mpiexec" =~ /runjob/) { # used by BlueGene
+                $specify_np = "--np $np --exe";
+                $my_nslots = "";
+            } elsif ("$mpiexec" =~ /poe/) { # used by IBM PE 
+                $specify_np = ""; 
+                $my_nslots = "MP_PROCS=$np"; 
+            } else { # for mpirun and Cray's aprun
+                $specify_np = "-n $np";
+                $my_nslots = "";
+            }
+            $command_line = "cd $workdir; $my_nslots $mpiexec $specify_np $machinelist $aexec $command > out";
+          } else {
+              $command_line = "cd $workdir; $aexec $command > out ";
+          }
 
-	  # MPI implementations generally permit using more tasks than actual cores, and running tests this way makes it likely for developers to find race conditions.
-	  if($np ne "serial") {
-	      if($np > 4) {
-		  print "Note: this run calls for more than the standard maximum of 4 MPI tasks.\n";
-	      }
-	  }
+          # MPI implementations generally permit using more tasks than actual cores, and running tests this way makes it likely for developers to find race conditions.
+          if($np ne "serial") {
+              if($np > 4) {
+                  print "Note: this run calls for more than the standard maximum of 4 MPI tasks.\n";
+              }
+          }
 
-	  print "Executing: " . $command_line . "\n";
+          print "Executing: " . $command_line . "\n";
 
-	  if ( !$opt_n ) {
-	    $test_start = [gettimeofday];
-	    $return_value = system("$command_line");
-	    $test_end   = [gettimeofday];
+          if ( !$opt_n ) {
+            $test_start = [gettimeofday];
+            $return_value = system("$command_line");
+            $test_end   = [gettimeofday];
 
-	    $elapsed = tv_interval($test_start, $test_end);
-	    printf("\tElapsed time: %8.1f s\n\n", $elapsed);
+            $elapsed = tv_interval($test_start, $test_end);
+            printf("\tElapsed time: %8.1f s\n\n", $elapsed);
 
-	    if($return_value == 0) {
-	      printf "%-40s%s", " Execution", ": \t [ $color_start{green}  OK  $color_end{green} ] \n";
-	      
-	    } else {
-	      print "Test run failed with exit code $return_value.\n";
-	      print "These are the last lines of output:\n\n";
-	      print "----------------------------------------\n";
-	      system("tail -20 $workdir/out");
-	      print "----------------------------------------\n\n";
+            if($return_value == 0) {
+              printf "%-40s%s", " Execution", ": \t [ $color_start{green}  OK  $color_end{green} ] \n";
+              
+            } else {
+              print "Test run failed with exit code $return_value.\n";
+              print "These are the last lines of output:\n\n";
+              print "----------------------------------------\n";
+              system("tail -20 $workdir/out");
+              print "----------------------------------------\n\n";
 
-	      printf "%-40s%s", " Execution", ": \t [ $color_start{red} FAIL $color_end{red} ] \n\n";
+              printf "%-40s%s", " Execution", ": \t [ $color_start{red} FAIL $color_end{red} ] \n\n";
 
-	      $failures++;
-	      $test_succeeded = 0;  
-	    }
-	    $test{"run"} = 1;
-	  }
+              $failures++;
+              $test_succeeded = 0;  
+            }
+            $test{"run"} = 1;
+          }
 
-	  # copy all files of this run to archive directory with the name of the
-	  # current input file
-	  mkdir "$workdir/$input_base";
-	  @wfiles = `ls -d $workdir/* | grep -v inp`;
-	  $workfiles = join("",@wfiles);
-	  $workfiles =~ s/\n/ /g;
-	  $cp_return = system("cp -r $workfiles $workdir/inp $workdir/$input_base");
-	  if($cp_return != 0) {
-	      die255("Copy failed (cp -r $workfiles $workdir/inp $workdir/$input_base)\n");
-	  }
-	}
+          # copy all files of this run to archive directory with the name of the
+          # current input file
+          mkdir "$workdir/$input_base";
+          @wfiles = `ls -d $workdir/* | grep -v inp`;
+          $workfiles = join("",@wfiles);
+          $workfiles =~ s/\n/ /g;
+          $cp_return = system("cp -r $workfiles $workdir/inp $workdir/$input_base");
+          if($cp_return != 0) {
+              die255("Copy failed (cp -r $workfiles $workdir/inp $workdir/$input_base)\n");
+          }
+        }
       }
 
       elsif ( $_ =~ /^Precision\s*:\s*(.*)\s*$/) {
-	set_precision($1);
+        set_precision($1);
       }
 
       elsif ( $_ =~ /^ExtraFile\s*:\s*(.*)\s*$/) {
@@ -443,20 +443,20 @@ while ($_ = <TESTSUITE>) {
 
       elsif ( $_ =~ /^match/ ) {
         if($opt_r) { print YAML "                matches:\n"; }
-	  # FIXME: should we do matches even when execution failed?
-	  if (!$opt_n && $return_value == 0) {
-	      if(run_match_new($_)){
-		  printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
-		  if ($opt_v) { print_hline(); }
-	      } else {
-		  printf "%-40s%s", "$name", ":\t [ $color_start{red} FAIL $color_end{red} ] \n";
-		  print_hline();
-		  $test_succeeded = 0;
-		  $failures++;
-	      }
-	  }
+          # FIXME: should we do matches even when execution failed?
+          if (!$opt_n && $return_value == 0) {
+              if(run_match_new($_)){
+                  printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
+                  if ($opt_v) { print_hline(); }
+              } else {
+                  printf "%-40s%s", "$name", ":\t [ $color_start{red} FAIL $color_end{red} ] \n";
+                  print_hline();
+                  $test_succeeded = 0;
+                  $failures++;
+              }
+          }
       } else {
-	  die255("Unknown command '$_'.");
+          die255("Unknown command '$_'.");
       }
     }
 
@@ -523,8 +523,8 @@ sub run_match_new {
 
     if($opt_r) 
     {
-      print YAML "		   - \"type\": \"LINE\"\n";
-      print YAML "		   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
+      print YAML "                   - \"type\": \"LINE\"\n";
+      print YAML "                   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
     }
 
   }elsif($func eq "LINEFIELD") { # function LINE(filename, line, field)
@@ -537,28 +537,28 @@ sub run_match_new {
     }
     if($opt_r) 
     { 
-      print YAML "                 - \"type\": \"LINEFIELD\"\n";
-      print YAML "                 - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
+      print YAML "                   - \"type\": \"LINEFIELD\"\n";
+      print YAML "                   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
     }
 
 
   }elsif($func eq "GREP") { # function GREP(filename, 're', column <, [offset>])
     check_num_args(3, 4, $#par, $func);
     if($#par == 3) {
-	$off = $par[3];
+        $off = $par[3];
     } else {
-	$off = 0;
+        $off = 0;
     }
     # -a means even if the file is considered binary due to a stray funny character, it will work
     $shell_command = "grep -a -A$off $par[1] $par[0] | awk '(NR==$off+1)'";
     $shell_command .= " | cut -b $par[2]-";
     if($opt_r)
     {
-      print YAML "		   - \"type\": \"GREP\"\n" ;
+      print YAML "                   - \"type\": \"GREP\"\n" ;
       if($#par == 3) {
-        print YAML "		   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\", \"$par[3]\"]\n";
+        print YAML "                   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\", \"$par[3]\"]\n";
       } else {
-        print YAML "		   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
+        print YAML "                   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
       }
     }
 
@@ -566,9 +566,9 @@ sub run_match_new {
   }elsif($func eq "GREPFIELD") { # function GREPFIELD(filename, 're', field <, [offset>])
     check_num_args(3, 4, $#par, $func);
     if($#par == 3) {
-	$off = $par[3];
+        $off = $par[3];
     } else {
-	$off = 0;
+        $off = 0;
     }
     # -a means even if the file is considered binary due to a stray funny character, it will work
     $shell_command = "grep -a -A$off $par[1] $par[0]";
@@ -577,11 +577,11 @@ sub run_match_new {
 
     if($opt_r)
     {
-      print YAML "		   - \"type\": \"GREPFIELD\"\n";
+      print YAML "                   - \"type\": \"GREPFIELD\"\n";
       if($#par == 3) {
-        print YAML "		   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\", \"$par[3]\"]\n";   
+        print YAML "                   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\", \"$par[3]\"]\n";   
       } else {
-        print YAML "		   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
+        print YAML "                   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
       }
     }
 
@@ -590,8 +590,8 @@ sub run_match_new {
     $shell_command = "grep -c $par[1] $par[0]";
     if($opt_r)
     {
-      print YAML "		   - \"type\": \"GREPCOUNT\"\n";
-      print YAML "		   - \"Argument\": [\"$par[0]\", \"$par[1]\"]\n";
+      print YAML "                   - \"type\": \"GREPCOUNT\"\n";
+      print YAML "                   - \"Argument\": [\"$par[0]\", \"$par[1]\"]\n";
     }
 
   }elsif($func eq "SIZE") { # function SIZE(filename)
@@ -599,8 +599,8 @@ sub run_match_new {
     $shell_command = "ls -lt $par[0] | awk '{printf \$5}'";
     if($opt_r)
     {
-      print YAML "		   - \"type\": \"SIZE\"\n";
-      print YAML "		   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
+      print YAML "                   - \"type\": \"SIZE\"\n";
+      print YAML "                   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
     }
 
   }else{ # error
@@ -627,9 +627,9 @@ sub run_match_new {
   }
   if($opt_r)
   {
-     print YAML "		   - \"value\": $value\n";
-     print YAML "		   - \"reference\": $ref_value\n";
-     print YAML "		   - \"precision\": $precnum\n";
+     print YAML "                   - \"value\": $value\n";
+     print YAML "                   - \"reference\": $ref_value\n";
+     print YAML "                   - \"precision\": $precnum\n";
   }
 
   if(length($value) == 0) {
@@ -677,9 +677,9 @@ sub print_hline {
 # return value of environment variable (specified by string argument), or "" if not set
 sub get_env {
     if(exists($ENV{$_[0]})) {
-	return $ENV{$_[0]};
+        return $ENV{$_[0]};
     } else {
-	return "";
+        return "";
     }
 }
 
@@ -691,10 +691,10 @@ sub check_num_args {
     my $func_name      = $_[3];
 
     if($given_num_args < $min_num_args) {
-	die255("$func_name given $given_num_args argument(s) but needs at least $min_num_args.");
+        die255("$func_name given $given_num_args argument(s) but needs at least $min_num_args.");
     }
     if($given_num_args > $max_num_args) {
-	die255("$func_name given $given_num_args argument(s) but can take no more than $max_num_args.");
+        die255("$func_name given $given_num_args argument(s) but can take no more than $max_num_args.");
     }
 }
 
@@ -707,11 +707,11 @@ sub die255 {
 sub skip_exit {
     if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
     if($failures == 0) {
-	print "Status: skipped\n";
-	exit 254
+        print "Status: skipped\n";
+        exit 254
     } else {
-	print "Status: ".$failures." failures\n";
-	exit $failures;
-	# if a previous step has failed, mark as failed not skipped
+        print "Status: ".$failures." failures\n";
+        exit $failures;
+        # if a previous step has failed, mark as failed not skipped
     }
 }
