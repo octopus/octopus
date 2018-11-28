@@ -42,7 +42,7 @@ Usage: oct-run_regression_test.pl [options]
     -p        preserve working directories
     -l        copy output log to current directory
     -m        run matches only (assumes there are work directories)
-    -r        print a report into a .json files
+    -r        print a report into a YAML files
 
 Exit codes:
     0         all tests passed
@@ -196,26 +196,9 @@ if (!$opt_m) {
 # testsuite
 open(TESTSUITE, "<".$opt_f ) or die255("Cannot open testsuite file '$opt_f'.");
 if($opt_r) { 
-  if( -e $opt_r) {
-    open(JSON,"+<$opt_r") or die;
-    while (<JSON>) {
-      if (eof(JSON)) {
-         seek(JSON,-(length("}\n}\n")),2) or die;
-         truncate(JSON,tell(JSON)) or die;
-      }
-    }
-    close JSON;
-
-    open(JSON, ">>$opt_r" );
-    print JSON "},\n        {\n"; 
-  } else {
-  open(JSON, ">>$opt_r" ); 
-  print JSON "{\n";
-  }
+  open(YAML, ">$opt_r" ) or die255("Could not create '$opt_r'."); 
 }
 
-$firstmatch = 0;
-$firstinp = 0;
 
 while ($_ = <TESTSUITE>) {
 
@@ -243,7 +226,9 @@ while ($_ = <TESTSUITE>) {
 	  print "Workdir will be saved.\n";
       }
       print "Using test file  : $opt_f \n";
-      if($opt_r) { print JSON "	\"$opt_f\": {\n"; }
+      $basename =  basename($opt_f);
+      $basedir = basename(dirname($opt_f));
+      if($opt_r) { print YAML "- \"$basedir/$basename\": \n"; }
 
     } elsif ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
       %test = ();
@@ -251,6 +236,8 @@ while ($_ = <TESTSUITE>) {
       $enabled =~ s/^\s*//;
       $enabled =~ s/\s*$//;
       $test{"enabled"} = $enabled;
+
+      if($opt_r) { print YAML "	enable: $enabled\n";}
 
       if ( $enabled eq "No") {
           print STDERR "Test disabled: skipping test\n\n";
@@ -263,11 +250,14 @@ while ($_ = <TESTSUITE>) {
     } elsif ( $_ =~ /^Options\s*:\s*(.*)\s*$/) {
         $options_required = $1;
 	# note: we could implement Options by baking this into the script via configure...
+
+        if($opt_r) { print YAML "	options: $options_required\n";}
 	
     } elsif ( $_ =~ /^Options_MPI\s*:\s*(.*)\s*$/) {
         if ($is_parallel && $np ne "serial") {
 	    $options_required_mpi = $1;
 	    $options_are_mpi = 1;
+            if($opt_r) { print YAML "	options_mpi: $options_required_mpi\n";}
 	}
 
     } elsif ( $_ =~ /^Program\s*:\s*(.*)\s*$/) {
@@ -280,6 +270,8 @@ while ($_ = <TESTSUITE>) {
 	if( ! -x $command) {
 	    die255("Executable '$1' not available.");
         }
+        $basecommand = basename($command);
+        if($opt_r) { print YAML "	command: $basecommand\n";}
 
 	$options_available = `$command -c`;
 	chomp($options_available);
@@ -309,8 +301,9 @@ while ($_ = <TESTSUITE>) {
 	    }
 	}
 	# FIXME: import Options to BGW version
-    } elsif ( $_ =~ /^TestGroups\s*:/) {
+    } elsif ( $_ =~ /^TestGroups\s*:\s*(.*)\s*$/) {
         # handled by oct-run_testsuite.sh
+        if($opt_r) { print YAML "	testgroup: $1\n";}
     } else {
       if ( $enabled eq "") {
 	die255("Testsuite file must set Enabled tag before another (except Test, Program, Options, TestGroups).");
@@ -322,6 +315,7 @@ while ($_ = <TESTSUITE>) {
 	if( ! -x "$command") {
 	  $command = "$exec_directory/../utils/$1";
 	}
+        if($opt_r) { print YAML "	util: $1\n";}
 
 	if( ! -x "$command") {
 	    die255("Cannot find utility '$1'.");
@@ -331,7 +325,6 @@ while ($_ = <TESTSUITE>) {
       elsif ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
 	  # FIXME: enforce this is "serial" or numeric
 	  $np = $1;
-          if($opt_r) { print JSON "      	\"Processors\": \"$np\","; }
       }
 
       elsif ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
@@ -339,15 +332,12 @@ while ($_ = <TESTSUITE>) {
         $input_base = $1;
         $input_file = dirname($opt_f) . "/" . $input_base;
 
-        if($opt_r) {
-      	  if( $firstinp == 0 ) {
-  	    print JSON "		\"$input_file\": \{\n";
-              $firstinp = 1;
-          } else {
-              print JSON "}\n		  \]\n		\},\n";
-              print JSON "                \"$input_file\": \{\n";
-          }
-          $firstmatch = 0;
+        if($opt_r) 
+        { 
+          $basename =  basename($input_file);
+          $basedir = basename(dirname($input_file));
+          print YAML "	input:\n                name: \"$basedir/$basename\"\n";
+          print YAML " 		processors: $np\n";
         }
 
       
@@ -452,12 +442,7 @@ while ($_ = <TESTSUITE>) {
       } 
 
       elsif ( $_ =~ /^match/ ) {
-        if($opt_r) {
-          if($firstmatch == 0) {
-            print JSON "		  \"matches\" : [\n";
-            print JSON "			{";
-          }
-        }
+        if($opt_r) { print YAML "                matches:\n"; }
 	  # FIXME: should we do matches even when execution failed?
 	  if (!$opt_n && $return_value == 0) {
 	      if(run_match_new($_)){
@@ -470,7 +455,6 @@ while ($_ = <TESTSUITE>) {
 		  $failures++;
 	      }
 	  }
-        $firstmatch++;
       } else {
 	  die255("Unknown command '$_'.");
       }
@@ -483,10 +467,6 @@ if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
 
 print "\n";
 close(TESTSUITE);
-if($opt_r) { 
-  print JSON "}\n		  ]\n		}\n	}\n}\n";
-  close(JSON);
-}
 
 print "Status: ".$failures." failures\n";
 
@@ -520,15 +500,16 @@ sub run_match_new {
     $par[$params] =~ s/\s*$//;
   }
 
-  if($opt_r) {
-    if($firstmatch > 0) { print JSON "},\n                  	{"; }
-  }
-
 
   if($func eq "SHELL"){ # function SHELL(shell code)
     check_num_args(1, 1, $#par, $func);
     $shell_command = $par[0];
-    if($opt_r) { print JSON "\"type\": \"SHELL\", \"Argument\": \"$shell_command\", ";}
+    if($opt_r) 
+    { 
+      print YAML "                 - \"type\": \"SHELL\"\n"; 
+      print YAML "                 - \"Argument\": [\"$shell_command\"]\n";
+    }
+
 
   }elsif($func eq "LINE") { # function LINE(filename, line, column)
     check_num_args(3, 3, $#par, $func);
@@ -540,7 +521,11 @@ sub run_match_new {
     }
     $shell_command .= " | cut -b $par[2]-";
 
-    if($opt_r) { print JSON "\"type\": \"LINE\", \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"], ";}
+    if($opt_r) 
+    {
+      print YAML "		   - \"type\": \"LINE\"\n";
+      print YAML "		   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
+    }
 
   }elsif($func eq "LINEFIELD") { # function LINE(filename, line, field)
     check_num_args(3, 3, $#par, $func);
@@ -550,7 +535,12 @@ sub run_match_new {
     } else {
       $shell_command = "awk '(NR==$par[1]) {printf \$$par[2]}' $par[0]";
     }
-    if($opt_r) { print JSON "\"type\": \"LINEFIELD\", \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"], ";}
+    if($opt_r) 
+    { 
+      print YAML "                 - \"type\": \"LINEFIELD\"\n";
+      print YAML "                 - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
+    }
+
 
   }elsif($func eq "GREP") { # function GREP(filename, 're', column <, [offset>])
     check_num_args(3, 4, $#par, $func);
@@ -562,7 +552,16 @@ sub run_match_new {
     # -a means even if the file is considered binary due to a stray funny character, it will work
     $shell_command = "grep -a -A$off $par[1] $par[0] | awk '(NR==$off+1)'";
     $shell_command .= " | cut -b $par[2]-";
-    if($opt_r) { print JSON "\"type\": \"GREP\", \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"], ";}
+    if($opt_r)
+    {
+      print YAML "		   - \"type\": \"GREP\"\n" ;
+      if($#par == 3) {
+        print YAML "		   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\", \"$par[3]\"]\n";
+      } else {
+        print YAML "		   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
+      }
+    }
+
 
   }elsif($func eq "GREPFIELD") { # function GREPFIELD(filename, 're', field <, [offset>])
     check_num_args(3, 4, $#par, $func);
@@ -575,17 +574,34 @@ sub run_match_new {
     $shell_command = "grep -a -A$off $par[1] $par[0]";
     $shell_command .= " | awk '(NR==$off+1) {printf \$$par[2]}'";
     # if there are multiple occurrences found by grep, we will only be taking the first one via awk
-    if($opt_r) { print JSON "\"type\": \"GREPFIELD\", \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"], ";}
+
+    if($opt_r)
+    {
+      print YAML "		   - \"type\": \"GREPFIELD\"\n";
+      if($#par == 3) {
+        print YAML "		   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\", \"$par[3]\"]\n";   
+      } else {
+        print YAML "		   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
+      }
+    }
 
   }elsif($func eq "GREPCOUNT") { # function GREPCOUNT(filename, 're')
     check_num_args(2, 2, $#par, $func);
     $shell_command = "grep -c $par[1] $par[0]";
-    if($opt_r) { print JSON "\"type\": \"GREPCOUNT\", \"Argument\": [\"$par[0]\", \"$par[1]\"], ";}
+    if($opt_r)
+    {
+      print YAML "		   - \"type\": \"GREPCOUNT\"\n";
+      print YAML "		   - \"Argument\": [\"$par[0]\", \"$par[1]\"]\n";
+    }
 
   }elsif($func eq "SIZE") { # function SIZE(filename)
     check_num_args(1, 1, $#par, $func);
     $shell_command = "ls -lt $par[0] | awk '{printf \$5}'";
-    if($opt_r) { print JSON "\"type\": \"SIZE\", \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"], ";}
+    if($opt_r)
+    {
+      print YAML "		   - \"type\": \"SIZE\"\n";
+      print YAML "		   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
+    }
 
   }else{ # error
     printf STDERR "ERROR: Unknown command '$func'\n";
@@ -609,7 +625,12 @@ sub run_match_new {
   } else {
       $value = "";
   }
-  if($opt_r) { print JSON "\"value\": \"$value\", \"reference\": \"$ref_value\", \"precision\": \"$precnum\"";}
+  if($opt_r)
+  {
+     print YAML "		   - \"value\": $value\n";
+     print YAML "		   - \"reference\": $ref_value\n";
+     print YAML "		   - \"precision\": $precnum\n";
+  }
 
   if(length($value) == 0) {
       print STDERR "ERROR: Match command returned nothing: $shell_command\n";

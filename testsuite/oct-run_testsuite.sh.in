@@ -53,7 +53,7 @@ Usage: oct-run_testsuite.sh [options]
      -l            local run
      -p PREFIX     installation prefix [default: /usr]
      -c            delete all .log files and work directories after the run
-     -r            name of the JSON report
+     -r            name of the YAML report
 
 Report bugs to <octopus-devel@tddft.org>.
 EOF
@@ -178,7 +178,9 @@ fi
 test_index=0
 
 if [ "$report" == "yes" ]; then
-  `rm $json`                      
+  if [ -f "$yaml" ]; then
+    `rm $yaml`                      
+  fi
 fi
 
 for y in $tests; do
@@ -197,7 +199,7 @@ for y in $tests; do
     if [ "$dry_run" == "yes" ]; then
       if [ "$report" == "yes" ]; then
 	echo "	$runtest_directory/oct-run_regression_test.pl -l $opt_n \
-	     $preserve_opt -D $bin_directory -f $y-r $json > ${ybase}.log 2>&1 &"
+	     $preserve_opt -D $bin_directory -f $y -r ${ybase}.yaml > ${ybase}.log 2>&1 &"
       else
         echo "  $runtest_directory/oct-run_regression_test.pl -l $opt_n \
              $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &"
@@ -205,7 +207,7 @@ for y in $tests; do
     fi
     if [ "$report" == "yes" ]; then
       $runtest_directory/oct-run_regression_test.pl -l $opt_n \
-          $preserve_opt -D $bin_directory -f $y -r $json> ${ybase}.log 2>&1 &
+          $preserve_opt -D $bin_directory -f $y -r ${ybase}.yaml > ${ybase}.log 2>&1 &
     else
       $runtest_directory/oct-run_regression_test.pl -l $opt_n \
         $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &
@@ -232,6 +234,12 @@ if [ $failed_tests -gt 0 ]; then
 	cat $l
     done
 
+fi
+
+if [ "$report" == "yes" ]; then
+ `cat *.yaml > ${yaml}_tmp`
+ `rm *.yaml`;
+ `mv ${yaml}_tmp $yaml`;
 fi
 }
 
@@ -263,7 +271,7 @@ while getopts "hnlp:d:cg:q:r:" opt ; do
 	c) cleanup="yes";;
 	g) test_groups="$OPTARG";;
 	q) test_groups="$OPTARG"; query="yes";;
-	r) json="$OPTARG"; report="yes";;
+	r) yaml="$OPTARG"; report="yes";;
         ?) echo "Error parsing arguments" 1>&2; exit 1;;
     esac
 done
