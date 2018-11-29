@@ -49,7 +49,4 @@ AOThreshold = 0.05
 AONormalize = no
 AOSubmeshForPeriodic = yes
 OutputLDA_U = occ_matrices + effectiveU
-
-ConvRelDens = 1e-6
-ConvAbsEv = 1e-6
-EigensolverTolerance = 1e-7
+ACBN0Screening = 0.5

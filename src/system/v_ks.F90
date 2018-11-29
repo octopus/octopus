@@ -435,7 +435,7 @@ contains
         !%End
         call parse_variable('VDWSelfConsistent', .true., ks%vdw_self_consistent)
 
-        call vdw_ts_init(ks%vdw_ts, geo, gr%fine%der, st)
+        call vdw_ts_init(ks%vdw_ts, geo, gr%fine%der)
 
       case(OPTION__VDWCORRECTION__VDW_D3)
         ks%vdw_self_consistent = .false.
@@ -908,7 +908,7 @@ contains
       FLOAT, allocatable :: coords(:, :)
       FLOAT :: vdw_stress(1:3, 1:3), latvec(1:3, 1:3)
       integer, allocatable :: atnum(:)
-      
+
       PUSH_SUB(v_ks_calc_start.v_a_xc)
       call profiling_in(prof, "XC")
 
@@ -980,8 +980,8 @@ contains
 
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
-          call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
-
+          call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, ks%gr%sb, st, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
+           
         case(OPTION__VDWCORRECTION__VDW_D3)
 
           SAFE_ALLOCATE(coords(1:3, geo%natoms))
