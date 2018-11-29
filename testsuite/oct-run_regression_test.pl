@@ -21,9 +21,11 @@
 use warnings;
 use Getopt::Std;
 use File::Basename;
-use Fcntl ':mode';
+use File::Spec;
+use Fcntl qw(:mode :flock);
 use Time::HiRes qw(gettimeofday tv_interval);
 use Scalar::Util qw(looks_like_number);
+use YAML 'Dump';
 
 sub usage {
 
@@ -195,10 +197,9 @@ if (!$opt_m) {
 
 # testsuite
 open(TESTSUITE, "<".$opt_f ) or die255("Cannot open testsuite file '$opt_f'.");
-if($opt_r) { 
-  open(YAML, ">$opt_r" ) or die255("Could not create '$opt_r'."); 
-}
 
+
+my (%report, $r_match_report, $r_matches_array, $r_input_report);
 
 while ($_ = <TESTSUITE>) {
 
@@ -227,8 +228,11 @@ while ($_ = <TESTSUITE>) {
       }
       print "Using test file  : $opt_f \n";
       $basename =  basename($opt_f);
-      $basedir = basename(dirname($opt_f));
-      if($opt_r) { print YAML "\"$basedir/$basename\": \n"; }
+      $basedir = basename(dirname(File::Spec->rel2abs($opt_f)));
+      if($opt_r) {
+        $testname = "$basedir/$basename";
+        $report{$testname} = {"input" => {}};
+      }
 
     } elsif ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
       %test = ();
@@ -236,8 +240,7 @@ while ($_ = <TESTSUITE>) {
       $enabled =~ s/^\s*//;
       $enabled =~ s/\s*$//;
       $test{"enabled"} = $enabled;
-
-      if($opt_r) { print YAML "        enable: $enabled\n";}
+      $report{$testname}{"enabled"} = $enabled;
 
       if ( $enabled eq "No") {
           print STDERR "Test disabled: skipping test\n\n";
@@ -250,14 +253,13 @@ while ($_ = <TESTSUITE>) {
     } elsif ( $_ =~ /^Options\s*:\s*(.*)\s*$/) {
         $options_required = $1;
         # note: we could implement Options by baking this into the script via configure...
-
-        if($opt_r) { print YAML "        options: $options_required\n";}
+        $report{$testname}{"options"} = $options_required;
         
     } elsif ( $_ =~ /^Options_MPI\s*:\s*(.*)\s*$/) {
         if ($is_parallel && $np ne "serial") {
             $options_required_mpi = $1;
             $options_are_mpi = 1;
-            if($opt_r) { print YAML "        options_mpi: $options_required_mpi\n";}
+            $report{$testname}{"options_mpi"} = $options_required_mpi;
         }
 
     } elsif ( $_ =~ /^Program\s*:\s*(.*)\s*$/) {
@@ -271,7 +273,7 @@ while ($_ = <TESTSUITE>) {
             die255("Executable '$1' not available.");
         }
         $basecommand = basename($command);
-        if($opt_r) { print YAML "        command: $basecommand\n";}
+        $report{$testname}{"command"} = $basecommand;
 
         $options_available = `$command -c`;
         chomp($options_available);
@@ -302,12 +304,14 @@ while ($_ = <TESTSUITE>) {
         }
         # FIXME: import Options to BGW version
     } elsif ( $_ =~ /^TestGroups\s*:\s*(.*)\s*$/) {
-        # handled by oct-run_testsuite.sh
-        if($opt_r) { print YAML "        testgroup: $1\n";}
+      # handled by oct-run_testsuite.sh
+      my @groups = split(/[;,]\s*/, $1);        
+      $report{$testname}{"testgroups"} = \@groups;
     } else {
       if ( $enabled eq "") {
         die255("Testsuite file must set Enabled tag before another (except Test, Program, Options, TestGroups).");
-      }
+      }      
+      
 
       if ( $_ =~ /^Util\s*:\s*(.*)\s*$/) {
         $np = "serial";
@@ -315,8 +319,8 @@ while ($_ = <TESTSUITE>) {
         if( ! -x "$command") {
           $command = "$exec_directory/../utils/$1";
         }
-        if($opt_r) { print YAML "        util: $1\n";}
-
+        $report{$testname}{"util"} = $1;
+        
         if( ! -x "$command") {
             die255("Cannot find utility '$1'.");
         }
@@ -328,18 +332,21 @@ while ($_ = <TESTSUITE>) {
       }
 
       elsif ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
-
         $input_base = $1;
         $input_file = dirname($opt_f) . "/" . $input_base;
 
-        if($opt_r) 
-        { 
-          $basename =  basename($input_file);
-          $basedir = basename(dirname($input_file));
-          print YAML "        input:\n                name: \"$basedir/$basename\"\n";
-          print YAML "                processors: $np\n";
+        my %input_report;
+        $r_input_report = \%input_report;          
+        $report{$testname}{"input"}{basename($input_file)} = \%input_report;
+          
+        my @matches_array;
+        $r_matches_array = \@matches_array;
+        $input_report{"matches"} = \@matches_array;
+        if($is_parallel) {
+          $input_report{"processors"} = $np;
+        } else {
+          $input_report{"processors"} = 1;
         }
-
       
         if ( $opt_m ) {
             print "\n\nFor input file : $input_file\n\n";
@@ -442,19 +449,24 @@ while ($_ = <TESTSUITE>) {
       } 
 
       elsif ( $_ =~ /^match/ ) {
-        if($opt_r) { print YAML "                matches:\n"; }
-          # FIXME: should we do matches even when execution failed?
-          if (!$opt_n && $return_value == 0) {
-              if(run_match_new($_)){
-                  printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
-                  if ($opt_v) { print_hline(); }
-              } else {
-                  printf "%-40s%s", "$name", ":\t [ $color_start{red} FAIL $color_end{red} ] \n";
-                  print_hline();
-                  $test_succeeded = 0;
-                  $failures++;
-              }
+        # FIXME: should we do matches even when execution failed?
+
+        my %match_report;
+        $r_match_report = \%match_report;
+        push( @{$r_matches_array}, $r_match_report);
+
+          
+        if (!$opt_n && $return_value == 0) {
+          if(run_match_new($_)){
+            printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
+            if ($opt_v) { print_hline(); }
+          } else {
+            printf "%-40s%s", "$name", ":\t [ $color_start{red} FAIL $color_end{red} ] \n";
+            print_hline();
+            $test_succeeded = 0;
+            $failures++;
           }
+        }
       } else {
           die255("Unknown command '$_'.");
       }
@@ -469,6 +481,14 @@ print "\n";
 close(TESTSUITE);
 
 print "Status: ".$failures." failures\n";
+
+if($opt_r) { 
+  open(YAML, ">>$opt_r" ) or die255("Could not create '$opt_r'.");
+  flock(YAML, LOCK_EX) or die "Cannot lock file - $opt_r!\n";
+  print YAML Dump(\%report);
+  close(YAML);
+}
+
 
 exit $failures;
 
@@ -500,16 +520,12 @@ sub run_match_new {
     $par[$params] =~ s/\s*$//;
   }
 
-
+  $r_match_report->{"type"} = $func;
+  $r_match_report->{"arguments"} = \@par;
+  
   if($func eq "SHELL"){ # function SHELL(shell code)
     check_num_args(1, 1, $#par, $func);
     $shell_command = $par[0];
-    if($opt_r) 
-    { 
-      print YAML "                 - \"type\": \"SHELL\"\n"; 
-      print YAML "                 - \"Argument\": [\"$shell_command\"]\n";
-    }
-
 
   }elsif($func eq "LINE") { # function LINE(filename, line, column)
     check_num_args(3, 3, $#par, $func);
@@ -521,12 +537,6 @@ sub run_match_new {
     }
     $shell_command .= " | cut -b $par[2]-";
 
-    if($opt_r) 
-    {
-      print YAML "                   - \"type\": \"LINE\"\n";
-      print YAML "                   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
-    }
-
   }elsif($func eq "LINEFIELD") { # function LINE(filename, line, field)
     check_num_args(3, 3, $#par, $func);
     if($par[1] < 0) { # negative number means from end of file
@@ -535,12 +545,6 @@ sub run_match_new {
     } else {
       $shell_command = "awk '(NR==$par[1]) {printf \$$par[2]}' $par[0]";
     }
-    if($opt_r) 
-    { 
-      print YAML "                   - \"type\": \"LINEFIELD\"\n";
-      print YAML "                   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
-    }
-
 
   }elsif($func eq "GREP") { # function GREP(filename, 're', column <, [offset>])
     check_num_args(3, 4, $#par, $func);
@@ -552,16 +556,6 @@ sub run_match_new {
     # -a means even if the file is considered binary due to a stray funny character, it will work
     $shell_command = "grep -a -A$off $par[1] $par[0] | awk '(NR==$off+1)'";
     $shell_command .= " | cut -b $par[2]-";
-    if($opt_r)
-    {
-      print YAML "                   - \"type\": \"GREP\"\n" ;
-      if($#par == 3) {
-        print YAML "                   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\", \"$par[3]\"]\n";
-      } else {
-        print YAML "                   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
-      }
-    }
-
 
   }elsif($func eq "GREPFIELD") { # function GREPFIELD(filename, 're', field <, [offset>])
     check_num_args(3, 4, $#par, $func);
@@ -575,33 +569,13 @@ sub run_match_new {
     $shell_command .= " | awk '(NR==$off+1) {printf \$$par[2]}'";
     # if there are multiple occurrences found by grep, we will only be taking the first one via awk
 
-    if($opt_r)
-    {
-      print YAML "                   - \"type\": \"GREPFIELD\"\n";
-      if($#par == 3) {
-        print YAML "                   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\", \"$par[3]\"]\n";   
-      } else {
-        print YAML "                   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
-      }
-    }
-
   }elsif($func eq "GREPCOUNT") { # function GREPCOUNT(filename, 're')
     check_num_args(2, 2, $#par, $func);
     $shell_command = "grep -c $par[1] $par[0]";
-    if($opt_r)
-    {
-      print YAML "                   - \"type\": \"GREPCOUNT\"\n";
-      print YAML "                   - \"Argument\": [\"$par[0]\", \"$par[1]\"]\n";
-    }
 
   }elsif($func eq "SIZE") { # function SIZE(filename)
     check_num_args(1, 1, $#par, $func);
     $shell_command = "ls -lt $par[0] | awk '{printf \$5}'";
-    if($opt_r)
-    {
-      print YAML "                   - \"type\": \"SIZE\"\n";
-      print YAML "                   - \"Argument\": [\"$par[0]\", \"$par[1]\", \"$par[2]\"]\n";
-    }
 
   }else{ # error
     printf STDERR "ERROR: Unknown command '$func'\n";
@@ -625,12 +599,10 @@ sub run_match_new {
   } else {
       $value = "";
   }
-  if($opt_r)
-  {
-     print YAML "                   - \"value\": $value\n";
-     print YAML "                   - \"reference\": $ref_value\n";
-     print YAML "                   - \"precision\": $precnum\n";
-  }
+  $r_match_report->{"value"} = $value;
+  $r_match_report->{"name"} = $name;
+  $r_match_report->{"reference"} = $ref_value;
+  $r_match_report->{"precision"} = $precnum;
 
   if(length($value) == 0) {
       print STDERR "ERROR: Match command returned nothing: $shell_command\n";
