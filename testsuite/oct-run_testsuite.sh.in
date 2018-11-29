@@ -199,7 +199,7 @@ for y in $tests; do
     if [ "$dry_run" == "yes" ]; then
       if [ "$report" == "yes" ]; then
 	echo "	$runtest_directory/oct-run_regression_test.pl -l $opt_n \
-	     $preserve_opt -D $bin_directory -f $y -r ${ybase}.yaml > ${ybase}.log 2>&1 &"
+	     $preserve_opt -D $bin_directory -f $y -r ${yaml}.yaml > ${ybase}.log 2>&1 &"
       else
         echo "  $runtest_directory/oct-run_regression_test.pl -l $opt_n \
              $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &"
@@ -207,7 +207,7 @@ for y in $tests; do
     fi
     if [ "$report" == "yes" ]; then
       $runtest_directory/oct-run_regression_test.pl -l $opt_n \
-          $preserve_opt -D $bin_directory -f $y -r ${ybase}.yaml > ${ybase}.log 2>&1 &
+          $preserve_opt -D $bin_directory -f $y -r ${yaml}.yaml > ${ybase}.log 2>&1 &
     else
       $runtest_directory/oct-run_regression_test.pl -l $opt_n \
         $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &
@@ -236,11 +236,6 @@ if [ $failed_tests -gt 0 ]; then
 
 fi
 
-if [ "$report" == "yes" ]; then
- `cat *.yaml > ${yaml}_tmp`
- `rm *.yaml`;
- `mv ${yaml}_tmp $yaml`;
-fi
 }
 
 
