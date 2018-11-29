@@ -229,10 +229,8 @@ while ($_ = <TESTSUITE>) {
       print "Using test file  : $opt_f \n";
       $basename =  basename($opt_f);
       $basedir = basename(dirname(File::Spec->rel2abs($opt_f)));
-      if($opt_r) {
-        $testname = "$basedir/$basename";
-        $report{$testname} = {"input" => {}};
-      }
+      $testname = "$basedir/$basename";
+      $report{$testname} = {"input" => {}};
 
     } elsif ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
       %test = ();
