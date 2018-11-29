@@ -433,7 +433,6 @@ contains
     ! StatesPack not yet implemented for these cases: (see also hamiltonian_apply_packed)
     if(hm%scissor%apply) st%d%pack_states = .false.
     if(hm%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) st%d%pack_states = .false.
-    if(hm%cmplxscl%space .and. accel_is_enabled()) st%d%pack_states = .false.
     if(associated(hm%hm_base%phase) .and. accel_is_enabled()) st%d%pack_states = .false.
 
     external_potentials_present = associated(hm%ep%v_static) .or. &
