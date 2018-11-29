@@ -66,8 +66,8 @@ check-base: $(bin_SCRIPTS)
 	@base=`basename "$(top_builddir)/share"` && \
 	dir=`dirname "$(top_builddir)/share"` && \
 	sharedir="`(cd \"$$dir\" 2> /dev/null && pwd || echo \"$$dir\")`/$$base" && \
-	[ -z "$(CHECK_REPORT)" ] && OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite.sh -c -d $(srcdir) -l || \
-	OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite.sh -c -d $(srcdir) -l -r $(CHECK_REPORT)
+	[ -z "$(CHECK_REPORT)" ] && OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite.sh -c -d $(srcdir) -l $(CHECKOPTS) || \
+	OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite.sh -c -d $(srcdir) -l $(CHECKOPTS) -r $(CHECK_REPORT)
 
 # Delete temporary working directories from testsuite runs, if they are older than MINTIME (in minutes)
 MINTIME=600
