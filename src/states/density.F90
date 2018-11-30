@@ -438,7 +438,7 @@ contains
     ASSERT(.not. st%parallel_in_states)
 
     if(.not.associated(st%frozen_rho)) then
-      SAFE_ALLOCATE(st%frozen_rho(1:gr%mesh%np, 1:st%d%dim))
+      SAFE_ALLOCATE(st%frozen_rho(1:gr%mesh%np, 1:st%d%nspin))
     end if
 
     call density_calc_init(dens_calc, st, gr, st%frozen_rho)
