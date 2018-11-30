@@ -113,8 +113,10 @@ define newline
 endef
 
 
+ifneq ($(NODEP),1)
 ifneq ($(call is_clean),1)
 include $(_f90_depfile)
+endif
 endif
 
 # $1 program
