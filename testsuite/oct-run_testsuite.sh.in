@@ -262,7 +262,7 @@ echo " to more than two hours."
 echo
 
 if [ "${local_run}" == "yes" ]; then
-    bin_directory=`pwd`/../src/main
+    bin_directory=`pwd`/../src
 else
     bin_directory=$prefix/bin
 fi

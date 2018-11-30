@@ -5,8 +5,6 @@ my $ndebug      = $ARGV[1] eq "no";
 my $nline_num   = $ARGV[2] eq "no";
 my $nf90_forall = $ARGV[3] eq "no";
 
-my $tmpfile = "/tmp/oct_preprocess.$$";
-
 #regular expression to match opening and closing parentesis
 my $NestedGuts = qr{
   (?{ local $d=0 }) # Set depth to 0
@@ -21,7 +19,6 @@ my $NestedGuts = qr{
 }x;
 
 open(IN,  "<$fin");
-open(OUT, ">$tmpfile");
 
 my $ncount_forall;
 
@@ -45,7 +42,7 @@ while($_ = <IN>)
 
   if($nf90_forall){
       if(m/^\s*forall\s*\(($NestedGuts)\)\s*(.*)$/xi){
-	  print OUT "! preprocessed forall\n";
+	  print "! preprocessed forall\n";
 	  my $i;
 	  my $str  = $1;
 	  my $body = $2;
@@ -65,12 +62,12 @@ while($_ = <IN>)
 	  for($i=0; $i<$ncount_forall; $i++){
 	      $loops[$i] =~ s/:/,/g;
 	      $loops[$i] =~ s/#comma#/,/;
-	      print OUT "do ", $loops[$i], "\n";
+	      print "do ", $loops[$i], "\n";
 	  }
 	  if($body){
-	      print OUT "$body\n";
+	      print "$body\n";
 	      for($i=0; $i<$ncount_forall; $i++){
-		  print OUT "end do\n";
+		  print "end do\n";
 	      }
 	  }
 	  next;
@@ -78,14 +75,12 @@ while($_ = <IN>)
       if(m/^\s*end\s+forall/i){
 	  my $i;
 	  for($i=0; $i<$ncount_forall; $i++){
-	      print OUT "end do\n";
+	      print "end do\n";
 	  }
 	  next;
       }
   }
-  print OUT;
+  print;
 }
 
 close(IN);
-close(OUT);
-`mv -f $tmpfile $fin`;
