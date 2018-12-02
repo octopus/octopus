@@ -391,8 +391,8 @@ contains
     integer,              intent(in)    :: spin_channels
     FLOAT,                intent(inout) :: drho(:, :) !< (mesh%np, spin_channels)
 
-    integer :: isp, ip, icell
-    FLOAT :: rr, pos(1:MAX_DIM), range
+    integer :: icell
+    FLOAT :: pos(1:MAX_DIM), range
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
     type(periodic_copy_t) :: pp
@@ -421,7 +421,7 @@ contains
 
         do icell = 1, periodic_copy_num(pp)
           pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
-          call species_atom_density_derivative_np(mesh, sb, atom, pos, spin_channels,  drho)
+          call species_atom_density_derivative_np(mesh, atom, pos, spin_channels,  drho)
         end do
   
         call periodic_copy_end(pp)
@@ -435,9 +435,8 @@ contains
     POP_SUB(species_atom_density_derivative)
   end subroutine species_atom_density_derivative
 
-  subroutine species_atom_density_derivative_np(mesh, sb, atom, pos, spin_channels,  drho)
+  subroutine species_atom_density_derivative_np(mesh, atom, pos, spin_channels,  drho)
     type(mesh_t),         intent(in)    :: mesh
-    type(simul_box_t),    intent(in)    :: sb
     type(atom_t),         intent(in)    :: atom
     FLOAT,                intent(in)    :: pos(:)
     integer,              intent(in)    :: spin_channels
@@ -548,12 +547,11 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine species_get_density(species, pos, mesh, rho, Imrho)
+  subroutine species_get_density(species, pos, mesh, rho)
     type(species_t),    target, intent(in)  :: species
     FLOAT,                      intent(in)  :: pos(:)
     type(mesh_t),       target, intent(in)  :: mesh
     FLOAT,                      intent(out) :: rho(:)
-    FLOAT, optional,            intent(out) :: Imrho(:)
 
     type(root_solver_t) :: rs
     logical :: conv
