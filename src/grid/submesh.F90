@@ -283,6 +283,17 @@ contains
 
     forall(ip = 1:this%np_part) this%x(ip, 0:sb%dim) = xtmp(order(ip), 0:sb%dim)
 
+    if(bnd%spiralBC) then
+      this%spiral = .true.
+      SAFE_ALLOCATE(this%phase_spiral(1:this%np))
+      do ip = 1, this%np
+        this%phase_spiral(ip) = exp(+M_zI*sum((this%x(ip,1:sb%dim)-mesh%x(this%map(ip),1:sb%dim))*bnd%spiral_q(1:sb%dim)))
+      end do
+    else
+      nullify(this%phase_spiral)
+    end if
+
+
     !check whether points overlap
     
     this%overlap = .false.
@@ -293,14 +304,6 @@ contains
       end if
     end do
 
-    if(bnd%spiralBC) then
-      this%spiral = .true.
-      SAFE_ALLOCATE(this%phase_spiral(1:this%np))  
-      do ip = 1, this%np
-        this%phase_spiral(ip) = exp(+M_zI*sum((this%x(ip,1:sb%dim)-mesh%x(this%map(ip),1:sb%dim))*bnd%spiral_q(1:sb%dim)))
-      end do
-    end if
-    
     SAFE_DEALLOCATE_A(order)
     SAFE_DEALLOCATE_A(xtmp)
 
