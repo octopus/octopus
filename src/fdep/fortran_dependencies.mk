@@ -130,14 +130,22 @@ define newline
 endef
 
 
-ifneq ($(NODEP),1)
+# ignore the dependencies for cleaning
 ifneq ($(call is_clean),1)
+# always include the dependencies for include statements
+include $(_f90_depincfile)
+
+ifeq ($(NODEP),1)
+# If NODEP is set to 1, only include module dependencies if none of the targets
+# in PROGRAMS or LTLIBRARIES is available. This ensures that a complete build
+# happened before ignoring dependencies due to modules.
+ifeq ($(wildcard $(PROGRAMS) $(LTLIBRARIES)),)
 include $(_f90_depmodfile)
 endif
+else
+# if NODEP is not set to 1, always include module dependencies
+include $(_f90_depmodfile)
 endif
-
-ifneq ($(call is_clean),1)
-include $(_f90_depincfile)
 endif
 
 # $1 program
