@@ -93,7 +93,7 @@ $(call modinfo_name,$1,$2,$3,inc): $1 $(dir $1)$(am__dirstamp) ${HEADERS_DEP} | 
 	$(call _f90_verbose,F90 INC  [$3] $$<) cat $$< | \
 	  grep -i -o '^ *# *include [^!]*' | \
 	  sed 's-^[[:space:]]*#[[:space:]]*include[[:space:]]*-$(top_srcdir)/src/*/-;' | \
-	  tr -d \<\>\" | sort | uniq > $$@ || true
+	  tr -d \" | grep -v \< | sort | uniq > $$@ || true
 
 endef
 
