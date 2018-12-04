@@ -714,7 +714,13 @@ contains
       !%End
       call parse_variable('TDFreezeOrbitals', 0, freeze_orbitals)
 
-      if(freeze_orbitals /= 0) call messages_experimental('TDFreezeOrbitals')
+      if(freeze_orbitals /= 0) then
+        call messages_experimental('TDFreezeOrbitals')
+        if(family_is_mgga(sys%ks%xc_family)) then
+          call messages_not_implemented('TDFreezeOrbitals with MGGAs')
+        end if
+      end if
+
 
       if(.not. cmplxscl) then
         call density_calc(st, gr, st%rho)
