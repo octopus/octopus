@@ -141,6 +141,8 @@ ifeq ($(NODEP),1)
 # happened before ignoring dependencies due to modules.
 ifeq ($(wildcard $(PROGRAMS) $(LTLIBRARIES)),)
 include $(_f90_depmodfile)
+else
+$(warning Ignoring Fortran module dependencies. If the compilation fails, please recompile without NODEP)
 endif
 else
 # if NODEP is not set to 1, always include module dependencies
