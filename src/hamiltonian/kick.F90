@@ -86,6 +86,7 @@ module kick_oct_m
     !> The strength, and strength "mode".
     integer, private  :: delta_strength_mode
     FLOAT             :: delta_strength
+    FLOAT, allocatable :: delta_strength_block(:)
     !> In case we use a normal dipole kick:
     FLOAT             :: pol(MAX_DIM, MAX_DIM)
     integer           :: pol_dir
