@@ -136,15 +136,7 @@ module epot_oct_m
 contains
 
   ! ---------------------------------------------------------
-<<<<<<< HEAD
-<<<<<<< HEAD
   subroutine epot_init(ep, namespace, gr, geo, psolver, ispin, nik, xc_family, mc)
-=======
-  subroutine epot_init( ep, gr, geo, ispin, nik, xc_family)
->>>>>>> babf0796e... add partial kick block
-=======
-  subroutine epot_init( ep, gr, geo, ispin, nik, xc_family, st)
->>>>>>> 0737f83d0... add optional type(states_t) in kick_apply, use logical array
     type(epot_t),                       intent(out)   :: ep
     type(namespace_t),                  intent(in)    :: namespace
     type(grid_t),                       intent(in)    :: gr
@@ -153,15 +145,7 @@ contains
     integer,                            intent(in)    :: ispin
     integer,                            intent(in)    :: nik
     integer,                            intent(in)    :: xc_family
-<<<<<<< HEAD
-<<<<<<< HEAD
     type(multicomm_t),                  intent(in)    :: mc
-=======
->>>>>>> babf0796e... add partial kick block
-
-=======
-    type(states_t),      optional,      intent(in)    :: st
->>>>>>> 0737f83d0... add optional type(states_t) in kick_apply, use logical array
 
     integer :: ispec, ia, ierr
     integer :: filter
@@ -244,15 +228,7 @@ contains
     ! lasers
     call laser_init(ep%lasers, namespace, ep%no_lasers, gr%mesh)
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     call kick_init(ep%kick, namespace, gr%mesh%sb, ispin)
-=======
-    call kick_init(ep%kick, ispin, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim)
->>>>>>> babf0796e... add partial kick block
-=======
-    call kick_init(ep%kick, ispin, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st)
->>>>>>> 0737f83d0... add optional type(states_t) in kick_apply, use logical array
 
     ! No more "UserDefinedTDPotential" from this version on.
     call messages_obsolete_variable(namespace, 'UserDefinedTDPotential', 'TDExternalFields')

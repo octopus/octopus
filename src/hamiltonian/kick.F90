@@ -646,6 +646,8 @@ contains
       call messages_fatal(1, namespace=namespace)
     end if
 
+    SAFE_ALLOCATE(kick%delta_strength_block(1:nst))
+
     POP_SUB(kick_init)
   end subroutine kick_init
 
@@ -715,10 +717,15 @@ contains
     kick%qkick_mode = QKICKMODE_NONE
     kick%easy_axis(1:MAX_DIM) = M_ZERO
 
+<<<<<<< HEAD
     if (kick%TDPartialKick_mode) then
       SAFE_DEALLOCATE_A(kick%TDKick_list_elec)
     end if
     
+=======
+    SAFE_DEALLOCATE_A(kick%delta_strength_block)
+
+>>>>>>> 2fe659f57... Added an array to hold the orbital-dependent kick constants.
     POP_SUB(kick_end)
   end subroutine kick_end
 
