@@ -93,7 +93,7 @@ $(call modinfo_name,$1,$2,$3,inc): $1 $(dir $1)$(am__dirstamp) ${HEADERS_DEP} | 
 	$(call _f90_verbose,F90 INC  [$3] $$<) cat $$< | \
 	  grep -i -o '^ *# *include [^!]*' | \
 	  sed 's-^[[:space:]]*#[[:space:]]*include[[:space:]]*-$(top_srcdir)/src/*/-;' | \
-	  tr -d \<\>\" | sort | uniq > $$@ || true
+	  tr -d \" | grep -v \< | sort | uniq > $$@ || true
 
 endef
 
@@ -130,14 +130,24 @@ define newline
 endef
 
 
-ifneq ($(NODEP),1)
+# ignore the dependencies for cleaning
 ifneq ($(call is_clean),1)
+# always include the dependencies for include statements
+include $(_f90_depincfile)
+
+ifeq ($(NODEP),1)
+# If NODEP is set to 1, only include module dependencies if none of the targets
+# in PROGRAMS or LTLIBRARIES is available. This ensures that a complete build
+# happened before ignoring dependencies due to modules.
+ifeq ($(wildcard $(PROGRAMS) $(LTLIBRARIES)),)
+include $(_f90_depmodfile)
+else
+$(warning Ignoring Fortran module dependencies. If the compilation fails, please recompile without NODEP)
+endif
+else
+# if NODEP is not set to 1, always include module dependencies
 include $(_f90_depmodfile)
 endif
-endif
-
-ifneq ($(call is_clean),1)
-include $(_f90_depincfile)
 endif
 
 # $1 program
