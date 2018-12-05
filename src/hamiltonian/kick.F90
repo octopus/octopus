@@ -614,6 +614,8 @@ contains
       call messages_fatal(1, namespace=namespace)
     end if
 
+    SAFE_ALLOCATE(kick%delta_strength_block(1:nst))
+
     POP_SUB(kick_init)
   end subroutine kick_init
 
@@ -682,6 +684,8 @@ contains
     kick%n_multipoles = 0
     kick%qkick_mode = QKICKMODE_NONE
     kick%easy_axis(1:MAX_DIM) = M_ZERO
+
+    SAFE_DEALLOCATE_A(kick%delta_strength_block)
 
     POP_SUB(kick_end)
   end subroutine kick_end

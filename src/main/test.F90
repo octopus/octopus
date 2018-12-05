@@ -279,7 +279,6 @@ contains
     !Initialize external potential
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
 
-
     !Initialize external potential
     SAFE_ALLOCATE(epsib)
     call sys%st%group%psib(1, 1)%copy_to(epsib)
