@@ -699,7 +699,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, bnd, ik, psib, proj
       end if
 
     else
-      if(.not. bnd%spiral) then 
+       if(.not. bnd%spiral) then 
         if(batch_is_packed(psib)) then
           !$omp parallel do private(ist)
           do ip = 1, npoints

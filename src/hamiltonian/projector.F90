@@ -241,7 +241,7 @@ contains
           end if
 
           if(bnd%spiralBC .and. idim > 1) then
-            kr = kr - (2*(idim-1)-3)*sum(bnd%spiral_q(1:ndim)*(this%sphere%x(is, 1:ndim) -this%sphere%mesh%x(this%sphere%map(is), 1:ndim)))
+            kr = kr + (2*(idim-1)-3)*sum(bnd%spiral_q(1:ndim)*(this%sphere%x(is, 1:ndim) -this%sphere%mesh%x(this%sphere%map(is), 1:ndim)))
           end if
 
           this%phase(is, idim, iq) = exp(-M_zI*kr)

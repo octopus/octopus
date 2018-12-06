@@ -93,7 +93,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
   end if
 
   !Apply the spiral BC if needed
-  if(der%boundaries%spiral) then
+  if(der%boundaries%spiral .and. apply_phase) then
     call X(hamiltonian_base_phase_spiral)(hm%hm_base, der, epsib, ik)
   end if
 

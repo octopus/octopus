@@ -670,7 +670,7 @@ contains
         hm%hm_base%spin => st%spin
         !We fill st%spin
         call states_fermi(st, gr%mesh) 
-     end if
+      end if
 
       ! Initialize the occupation matrices and U for LDA+U
       ! This must be called before parsing TDFreezeOccupations and TDFreezeU
