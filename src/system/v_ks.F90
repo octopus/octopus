@@ -963,7 +963,7 @@ contains
                  st, rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), qsp(ispin), &
                  vxc_sic)
 
-            ks%calc%vxc = ks%calc%vxc - vxc_sic
+            ks%calc%vxc(:,ispin) = ks%calc%vxc(:,ispin) - vxc_sic(:,ispin)
           end do
 
         case (SPINORS)
