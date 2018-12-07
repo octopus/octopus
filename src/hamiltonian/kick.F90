@@ -919,8 +919,8 @@ contains
               case(2)
                call messages_not_implemented("Magnon kick for a polarization direction along y.")
               case(3)
-                cc(1) = M_zI*conjg(kick_function(ip))*psi(ip, 1)
-                cc(2) = M_zI*kick_function(ip)*psi(ip, 2)
+                cc(1) = M_zI*kick_function(ip)*psi(ip, 1)
+                cc(2) = M_zI*conjg(kick_function(ip))*psi(ip, 2)
 
                 psi(ip, 1) = cos(kick%delta_strength)*psi(ip, 1) -sin(kick%delta_strength)*cc(2)
                 psi(ip, 2) = -sin(kick%delta_strength)*cc(1) + cos(kick%delta_strength)*psi(ip, 2)
