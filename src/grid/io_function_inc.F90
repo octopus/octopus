@@ -858,7 +858,7 @@ subroutine X(io_function_output_global) (how, dir, fname, namespace, mesh, ff, u
     call out_xcrysden(.false.)
 #endif
   end if
-  if(iand(how, OPTION__OUTPUTFORMAT__SPACE_LINEAR)       /= 0) call out_space_linear(sys)
+  if(iand(how, OPTION__OUTPUTFORMAT__SPACE_LINEAR)       /= 0) call out_space_linear()
   if(bitand(how, OPTION__OUTPUTFORMAT__CUBE)       /= 0) call out_cube()
 
   if(bitand(how, OPTION__OUTPUTFORMAT__MATLAB) /= 0) then
@@ -1316,7 +1316,7 @@ contains
   ! loop (ix)
   !    loop(iy)
   !       loop(iz)
-  subroutine out_space_linear(sys)
+  subroutine out_space_linear()
 !    type(system_t), target, intent(inout) :: sys
 
     integer :: ix, iy, iz, idir, idir2, iatom
@@ -1325,7 +1325,6 @@ contains
     type(cube_t) :: cube
     type(cube_function_t) :: cf
     character(len=8) :: fmt
-!    type(states_t),   pointer :: st !< mark: added by Wandong Yu try to locate the complex wavefunctions
     
     PUSH_SUB(X(io_function_output_global).out_space_linear)
 
@@ -1362,7 +1361,6 @@ contains
       write(iunit, '(i5,4f12.6)') int(species_z(geo%atom(iatom)%species)),  M_ZERO, &
         (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir)), idir = 1, 3)
    end do
-    call states_allocate_wfns(st, sys%gr%mesh, TYPE_CMPLX)
     do ix = 1, cube%rs_n_global(1)
       do iy = 1, cube%rs_n_global(2)
         do iz = 1, cube%rs_n_global(3)
@@ -1376,7 +1374,6 @@ contains
 
     call X(cube_function_free_RS)(cube, cf)
     call cube_end(cube)
-    call states_deallocate_wfns(st, sys%gr%mesh, TYPE_CMPLX)
 
     POP_SUB(X(io_function_output_global).out_space_linear)
 
