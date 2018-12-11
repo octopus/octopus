@@ -1319,12 +1319,14 @@ contains
   subroutine out_space_linear()
 !    type(system_t), target, intent(inout) :: sys
 
-    integer :: ix, iy, iz, idir, idir2, iatom
+    integer :: ix, iy, iz, idir, idir2, iatom, ist
     integer :: int_unit(3)
     FLOAT   :: offset(MAX_DIM)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
     character(len=8) :: fmt
+    FLOAT, pointer :: dpsi(:,:)
+    CMPLX, pointer :: zpsi(:,:)
     
     PUSH_SUB(X(io_function_output_global).out_space_linear)
 
@@ -1361,7 +1363,20 @@ contains
       write(iunit, '(i5,4f12.6)') int(species_z(geo%atom(iatom)%species)),  M_ZERO, &
         (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir)), idir = 1, 3)
    end do
-    do ix = 1, cube%rs_n_global(1)
+
+
+   do is = 1, st%nst
+      do ist = 1, st%d%nspin
+         if(states_are_real(st)) then
+           call states_get_state(st, gr%mesh, ist, 1, dpsi(:, :))
+         else
+           call states_get_state(st, gr%mesh, 1, ist, 1, zpsi(:, ist))
+         end if
+      end do
+   end do
+   
+
+   do ix = 1, cube%rs_n_global(1)
       do iy = 1, cube%rs_n_global(2)
         do iz = 1, cube%rs_n_global(3)
            write(iunit,'(2es14.6)') units_from_atomic(unit, R_REAL(cf%X(RS)(ix, iy, iz))), &
