@@ -569,7 +569,8 @@ sub run_match_new {
 
     } elsif ($func eq "GREPCOUNT") { # function GREPCOUNT(filename, 're')
         check_num_args(2, 2, $#par, $func);
-        $shell_command = "grep -c $par[1] $par[0]";
+        # unfortunately grep returns an error code if it finds zero matches, so we make sure the command always returns true
+        $shell_command = "grep -c $par[1] $par[0] || :";
 
     } elsif ($func eq "SIZE") { # function SIZE(filename)
         check_num_args(1, 1, $#par, $func);
@@ -582,7 +583,7 @@ sub run_match_new {
 
     # 'set -e; set -o pipefail' (bash 3 only) would make the whole pipe series give an error if any step does;
     # otherwise the error comes only if the last step failed.
-    $value = qx(cd $matchdir && $shell_command);
+    $value = qx(cd $matchdir && $shell_command);    
     # Perl gives error code shifted, for some reason.
     $exit_code = $? >> 8;
     if ($exit_code) {
