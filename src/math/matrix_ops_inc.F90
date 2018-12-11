@@ -101,8 +101,10 @@ subroutine X(matrix_gather)(this, bsize, proc_grid, submatrix)
   do ip1 = 1, proc_grid%nprow      
     do ip2 = 1, proc_grid%npcol
 
+#ifdef HAVE_SCALAPACK
       nr1r = numroc(this%dim(1), bsize(1), ip1 - 1, 0, proc_grid%nprow)
       nr2r = numroc(this%dim(2), bsize(2), ip2 - 1, 0, proc_grid%npcol)
+#endif
 
       if(nr1r == 0 .or. nr2r == 0) cycle
 
