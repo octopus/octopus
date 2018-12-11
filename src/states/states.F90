@@ -2277,15 +2277,15 @@ contains
 
     PUSH_SUB(states_unpack)
 
-    ASSERT(st%packed)
+    if(st%packed) then
+      st%packed = .false.
 
-    st%packed = .false.
-
-    do iqn = st%d%kpt%start, st%d%kpt%end
-      do ib = st%group%block_start, st%group%block_end
-        if(batch_is_packed(st%group%psib(ib, iqn))) call batch_unpack(st%group%psib(ib, iqn), copy)
+      do iqn = st%d%kpt%start, st%d%kpt%end
+        do ib = st%group%block_start, st%group%block_end
+          if(batch_is_packed(st%group%psib(ib, iqn))) call batch_unpack(st%group%psib(ib, iqn), copy)
+        end do
       end do
-    end do
+    end if
 
     POP_SUB(states_unpack)
   end subroutine states_unpack
