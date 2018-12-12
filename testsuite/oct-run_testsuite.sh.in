@@ -53,6 +53,7 @@ Usage: oct-run_testsuite.sh [options]
      -l            local run
      -p PREFIX     installation prefix [default: /usr]
      -c            delete all .log files and work directories after the run
+     -r            name of the YAML report
 
 Report bugs to <octopus-devel@tddft.org>.
 EOF
@@ -77,22 +78,18 @@ function find_tests() {
 }
 
 function queue {
-	OCT_QUEUE="$OCT_QUEUE $1 "
-	OUTLIST="$OUTLIST $2 "
-	NUM=$(($NUM+1))
+    OCT_QUEUE="$OCT_QUEUE $1 "
+    OUTLIST="$OUTLIST $2 "
+    NUM=$(($NUM+1))
 }
 
 function inqueue {
-  if [ $OCT_TEST_NJOBS -gt 1 ]
-  then
-    printf "In execution: $OUTLIST\n"
-  fi
-  if [ $failed_tests -gt 0 ]
-  then
-      printf "Failed tests: $failed_tests\n"
-  fi
-  printf "\n"
-
+    if [ $OCT_TEST_NJOBS -gt 1 ]
+    then
+        printf "In execution: $OUTLIST\n\n"
+    else
+        printf "\n"
+    fi
 }
 
 
@@ -101,33 +98,33 @@ function checkqueue {
 
     still_waiting=1;
     while [ $still_waiting = 1 ]; do
-      # find first test in queue which has finished
-      for (( ijob=1; ijob <= $NUM; ijob++ )); do
-	testpid=`echo $OCT_QUEUE | cut -f $ijob -d " "`
-        test_name=`echo $OUTLIST | cut -f $ijob -d " "`
-	#echo "checking $test_name $testpid"
-        ps -p $testpid > /dev/null;
-	# is this pid still running?
-        if [ $? -ne 0 ]; then
-	  still_waiting=0;
-	  # remove it from the queue
-
-          if [ $NUM -eq 1 ]; then
-            OCT_QUEUE=
-	    OUTLIST=
-          elif [ $ijob -eq 1 ]; then
-            OCT_QUEUE=`echo $OCT_QUEUE | cut -f 2- -d " "`
-	    OUTLIST=`  echo $OUTLIST   | cut -f 2- -d " "`
-          else
-	    # cut will not accept 0 as an index
-            OCT_QUEUE=`echo $OCT_QUEUE | cut -f -$((ijob-1)),$((ijob+1))- -d " "`
-	    OUTLIST=`  echo $OUTLIST   | cut -f -$((ijob-1)),$((ijob+1))- -d " "`
-          fi
-          NUM=$(($NUM-1))
-          break;
-        fi
-      done
-      sleep 0.1s;
+        # find first test in queue which has finished
+        for (( ijob=1; ijob <= $NUM; ijob++ )); do
+	    testpid=`echo $OCT_QUEUE | cut -f $ijob -d " "`
+            test_name=`echo $OUTLIST | cut -f $ijob -d " "`
+	    #echo "checking $test_name $testpid"
+            ps -p $testpid > /dev/null;
+	    # is this pid still running?
+            if [ $? -ne 0 ]; then
+	        still_waiting=0;
+	        # remove it from the queue
+                
+                if [ $NUM -eq 1 ]; then
+                    OCT_QUEUE=
+	            OUTLIST=
+                elif [ $ijob -eq 1 ]; then
+                    OCT_QUEUE=`echo $OCT_QUEUE | cut -f 2- -d " "`
+	            OUTLIST=`  echo $OUTLIST   | cut -f 2- -d " "`
+                else
+	            # cut will not accept 0 as an index
+                    OCT_QUEUE=`echo $OCT_QUEUE | cut -f -$((ijob-1)),$((ijob+1))- -d " "`
+	            OUTLIST=`  echo $OUTLIST   | cut -f -$((ijob-1)),$((ijob+1))- -d " "`
+                fi
+                NUM=$(($NUM-1))
+                break;
+            fi
+        done
+        sleep 0.1s;
     done
 
     logfile=`basename $test_name .test`.log
@@ -167,7 +164,7 @@ function run_testsuite() {
 
 tests="$1"
 if [ -n "$test_groups" ]; then
-echo "Test groups: $test_groups"
+    echo "Test groups: $test_groups"
 fi
 echo ""
 
@@ -179,6 +176,12 @@ else
 fi
 
 test_index=0
+
+if [ "$report" == "yes" ]; then
+    if [ -f "$yaml" ]; then
+        `rm $yaml`                      
+    fi
+fi
 
 for y in $tests; do
     total_tests=$((total_tests + 1))
@@ -194,11 +197,21 @@ for y in $tests; do
     echo Starting test $test_index: $test_name
 
     if [ "$dry_run" == "yes" ]; then
-	echo "	$runtest_directory/oct-run_regression_test.pl -l $opt_n \
-	     $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &"
+        if [ "$report" == "yes" ]; then
+	    echo "	$runtest_directory/oct-run_regression_test.pl -l $opt_n \
+	        $preserve_opt -D $bin_directory -f $y -r ${yaml}.yaml > ${ybase}.log 2>&1 &"
+        else
+            echo "  $runtest_directory/oct-run_regression_test.pl -l $opt_n \
+                $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &"
+        fi 
     fi
-    $runtest_directory/oct-run_regression_test.pl -l $opt_n \
-        $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &
+    if [ "$report" == "yes" ]; then
+        $runtest_directory/oct-run_regression_test.pl -l $opt_n \
+            $preserve_opt -D $bin_directory -f $y -r ${yaml}.yaml > ${ybase}.log 2>&1 &
+    else
+        $runtest_directory/oct-run_regression_test.pl -l $opt_n \
+            $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &
+    fi
     ppid=$!
     queue $ppid $test_name
 	
@@ -222,13 +235,14 @@ if [ $failed_tests -gt 0 ]; then
     done
 
 fi
+
 }
 
 
 function trap_kill() {
- kill $OCT_QUEUE > /dev/null 2>&1
- echo "Killed"
- exit 1
+    kill $OCT_QUEUE > /dev/null 2>&1
+    echo "Killed"
+    exit 1
 }
 
 # Show usage info if no args at all.
@@ -242,7 +256,7 @@ cleanup="no"
 test_groups=""
 dry_run="no"
 
-while getopts "hnlp:d:cg:q:" opt ; do
+while getopts "hnlp:d:cg:q:r:" opt ; do
     case "$opt" in
         h) usage;;
         n) dry_run="yes";; 
@@ -252,6 +266,7 @@ while getopts "hnlp:d:cg:q:" opt ; do
 	c) cleanup="yes";;
 	g) test_groups="$OPTARG";;
 	q) test_groups="$OPTARG"; query="yes";;
+	r) yaml="$OPTARG"; report="yes";;
         ?) echo "Error parsing arguments" 1>&2; exit 1;;
     esac
 done
@@ -266,7 +281,7 @@ echo " to more than two hours."
 echo
 
 if [ "${local_run}" == "yes" ]; then
-    bin_directory=`pwd`/../src/main
+    bin_directory=`pwd`/../src
 else
     bin_directory=$prefix/bin
 fi
