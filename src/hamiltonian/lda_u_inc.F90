@@ -513,17 +513,17 @@ subroutine X(compute_ACBNO_U_restricted)(this)
         ! We compute the term
         ! sum_{m,mp} N_{m}N_{mp}
         denomU = denomU + R_REAL(this%X(n)(im,im,1,ios))*R_REAL(this%X(n)(imp,imp,1,ios))
-      end do
-      end do
 
-      if(this%rot_inv) then
-        !Rotationally invariance term
-        !sum_{m,mp/=m} n^alpha_{mmp}n^alpha_{mpm}
-        if(imp/=im) then
-          denomJ = denomJ + R_REAL(this%X(n)(im,imp,1,ios)*this%X(n)(imp,im,1,ios))
-          denomU = denomU + R_REAL(this%X(n)(im,imp,1,ios)*this%X(n)(imp,im,1,ios))
+        if(this%rot_inv) then
+          !Rotationally invariance term
+          !sum_{m,mp/=m} n^alpha_{mmp}n^alpha_{mpm}
+          if(imp/=im) then
+            denomJ = denomJ + R_REAL(this%X(n)(im,imp,1,ios)*this%X(n)(imp,im,1,ios))
+            denomU = denomU + R_REAL(this%X(n)(im,imp,1,ios)*this%X(n)(imp,im,1,ios))
+          end if
         end if
-      end if
+      end do
+      end do
 
       this%orbsets(ios)%Ueff = M_TWO*numU/denomU - numJ/denomJ
       this%orbsets(ios)%Ubar = M_TWO*numU/denomU
