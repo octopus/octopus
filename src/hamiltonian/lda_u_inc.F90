@@ -306,7 +306,7 @@ subroutine X(compute_dftu_energy)(this, energy, st)
         end do
 
         do im = 1, this%orbsets(ios)%norbs
-          energy = energy + M_HALF*this%orbsets(ios)%Ueff*nsigma*(M_ONE-nsigma)/this%orbsets(ios)%norbs
+          energy = energy + M_HALF*this%orbsets(ios)%Ueff*nsigma*(M_ONE-nsigma/this%orbsets(ios)%norbs)
           energy = energy - M_HALF*this%orbsets(ios)%Ueff*R_REAL(this%X(n)(im, im, ispin, ios))
         end do
       end do
