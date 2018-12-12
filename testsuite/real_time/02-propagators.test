@@ -13,23 +13,23 @@ Processors : 1
 Input      : 02-propagators.01-gs.inp
 Precision  : 1.0e-6
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -11.003530715
+match ; Initial energy  ; GREPFIELD(static/info, 'Total       =', 3) ; -11.00357066
 
 Processors : 4
 Input      : 02-propagators.02-cnsparskit.inp
 Precision  : 1.0e-6
-match ; Forces [step  1] ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.17008915222385
-match ; Forces [step 20] ; LINEFIELD(td.general/coordinates, -1, 15) ;  0.1458998393478
+match ; Forces [step  1]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.1700959852788
+match ; Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.14589759882095
 
 Processors : 4
 Input      : 02-propagators.03-rungekutta2.inp
 Precision  : 1.0e-6
-match ; Forces [step  1] ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.17008915222385
-match ; Forces [step 20] ; LINEFIELD(td.general/coordinates, -1, 15) ;  0.1459098720553
+match ; Forces [step  1]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.1700959852788
+match ; Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.145907620285
 
 Processors : 4
 Input      : 02-propagators.04-rungekutta4.inp
 Precision  : 1.0e-6
-match ; Forces [step  1] ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.17008915222385 
-match ; Forces [step 20] ; LINEFIELD(td.general/coordinates, -1, 15) ;  0.14591124458305
+match ; Forces [step  1]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.1700959852788
+match ; Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.1459090064827
 
