@@ -25,7 +25,6 @@ use File::Spec;
 use Fcntl qw(:mode :flock);
 use Time::HiRes qw(gettimeofday tv_interval);
 use Scalar::Util qw(looks_like_number);
-use YAML 'Dump';
 
 sub usage {
 
@@ -480,11 +479,12 @@ close(TESTSUITE);
 
 print "Status: ".$failures." failures\n";
 
-if($opt_r) { 
-    open(YAML, ">>$opt_r" ) or die255("Could not create '$opt_r'.");
-    flock(YAML, LOCK_EX) or die "Cannot lock file - $opt_r!\n";
-    print YAML Dump(\%report);
-    close(YAML);
+if($opt_r) {
+    use YAML 'Dump';
+    open(YML, ">>$opt_r" ) or die255("Could not create '$opt_r'.");
+    flock(YML, LOCK_EX) or die "Cannot lock file - $opt_r!\n";
+    print YML YAML::Dump(\%report);
+    close(YML);
 }
 
 
