@@ -496,7 +496,7 @@ contains
       PUSH_SUB(hamiltonian_init.init_phase)
 
       SAFE_ALLOCATE(hm%hm_base%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
-      if(.not.accel_is_enabled() .and. .not. gr%der%boundaries%spiralBC) then
+      if(.not.accel_is_enabled()) then
         SAFE_ALLOCATE(hm%hm_base%phase_corr(gr%mesh%np+1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
         hm%hm_base%phase_corr = M_ONE
       end if
@@ -529,7 +529,7 @@ contains
           hm%hm_base%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
         end forall
 
-        if(.not.accel_is_enabled() .and. .not. gr%der%boundaries%spiralBC) then
+        if(.not.accel_is_enabled()) then
           ! loop over boundary points
           sp = gr%mesh%np
           if(gr%mesh%parallel_in_domains) sp = gr%mesh%np + gr%mesh%vp%np_ghost
@@ -879,7 +879,7 @@ contains
           end if
         end if
 
-        compute_phase_correction = .not.accel_is_enabled() .and. .not. boundaries%spiral
+        compute_phase_correction = .not.accel_is_enabled()
         if(.not. allocated(this%hm_base%phase_corr)) then
           if(compute_phase_correction) then
             SAFE_ALLOCATE(this%hm_base%phase_corr(mesh%np+1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
