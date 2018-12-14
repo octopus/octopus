@@ -32,6 +32,9 @@ match ; Eigenvalue  5 ; GREPFIELD(static/info, '#k =   2', 3, 5) ;   0.283876
 match ; Occupation F down 2p2 ; LINEFIELD(static/occ_matrices, -2, 3) ; 1.92279858
 match ; Occupation F down 2p3 ; LINEFIELD(static/occ_matrices, -1, 5) ; 1.92279858
 
+match ; Kanamori U   ; LINEFIELD(static/kanamoriU, -7, 4) ; 0.857466
+match ; Kanamori Up  ; LINEFIELD(static/kanamoriU, -4, 4) ; 0.775511
+match ; Kanamori J   ; LINEFIELD(static/kanamoriU, -1, 4) ; 0.041851
 match ; U2p F   ; LINEFIELD(static/effectiveU, -7, 4) ; 0.492816
 
 Input      : 03-ACBN0_restricted.02-lif_unpacked.inp
@@ -62,5 +65,4 @@ match ; Occupation F down 2p2 ; LINEFIELD(static/occ_matrices, -2, 3) ; 1.922798
 match ; Occupation F down 2p3 ; LINEFIELD(static/occ_matrices, -1, 5) ; 1.92279858
 
 match ; U2p F   ; LINEFIELD(static/effectiveU, -7, 4) ; 0.492816
-
 

@@ -365,7 +365,7 @@ contains
     subroutine f_ions(tau)
       FLOAT, intent(in) :: tau
 
-      call forces_calculate(gr, geo, hm, stphi, t = tau,dt =  dt)
+      call forces_calculate(gr, geo, hm, stphi, ks, t = tau, dt = dt)
       do iatom = 1, geo%natoms
         posk(:, iatom) = dt * vel(:, iatom)
         velk(:, iatom) = dt * geo%atom(iatom)%f(1:geo%space%dim) / species_mass(geo%atom(iatom)%species)
