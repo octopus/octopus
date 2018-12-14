@@ -529,7 +529,7 @@ subroutine pes_flux_map_from_states_pln(this, restart, st, ll, pesP, krng, Lp, i
       if(st%d%ispin /= SPINORS) then 
 
         do idim = 1, st%d%dim
-          itot = ist + (ik-1) * st%nst +  (idim-1) * st%nst * st%d%kpt%nglobal
+          itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
           call pes_flux_map_from_state_1(restart, itot, this%nkpnts, psiG1)
         
 !           if (itot == 1) then
@@ -565,10 +565,10 @@ subroutine pes_flux_map_from_states_pln(this, restart, st, ll, pesP, krng, Lp, i
         end do
       else ! SPINORS
         idim = 1
-        itot = ist + (ik-1) * st%nst +  (idim-1) * st%nst * st%d%kpt%nglobal
+        itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
         call pes_flux_map_from_state_1(restart, itot, this%nkpnts, psiG1)
         idim = 2
-        itot = ist + (ik-1) * st%nst +  (idim-1) * st%nst * st%d%kpt%nglobal
+        itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
         call pes_flux_map_from_state_1(restart, itot, this%nkpnts, psiG2)
             
         do i1=1, ll(1)
@@ -776,7 +776,7 @@ subroutine pes_flux_map_from_states_sph(this, restart, st, ll, pesP, krng, Lp, i
       if(st%d%ispin /= SPINORS) then 
 
         do idim = 1, st%d%dim
-          itot = ist + (ik-1) * st%nst +  (idim-1) * st%nst * st%d%kpt%nglobal
+          itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
           call pes_flux_map_from_state_2(restart, itot, this%nkpnts, psiG1)
         
           do i1=1, this%nk
@@ -793,10 +793,10 @@ subroutine pes_flux_map_from_states_sph(this, restart, st, ll, pesP, krng, Lp, i
         end do
       else ! SPINORS
         idim = 1
-        itot = ist + (ik-1) * st%nst +  (idim-1) * st%nst * st%d%kpt%nglobal
+        itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
         call pes_flux_map_from_state_2(restart, itot, this%nkpnts, psiG1)
         idim = 2
-        itot = ist + (ik-1) * st%nst +  (idim-1) * st%nst * st%d%kpt%nglobal
+        itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
         call pes_flux_map_from_state_2(restart, itot, this%nkpnts, psiG2)
             
         do i1=1, this%nk
