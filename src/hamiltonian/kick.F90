@@ -449,6 +449,38 @@ contains
 
     end if
 
+    !%Variable TDPartialKick
+    !%Type block
+    !%Section Time-Dependent::Response
+    !%Description
+    !% When a pluse is used to kick the system, this block
+    !% defines in which atom or electron the field will be applied.
+    !% By setting this block, one can writes clearly the way to boost the system.
+    !% If the block is not set in the inp file, the sudden pluse kicks the
+    !% whole system. Once the block is put in, Octopus will kick the listed atoms or
+    !% electrons.
+    !%End
+    if(parse_block('TDPartialKick', blk, check_varinfo_=.false.)==0) then
+
+      kick%TDPartialKick_mode = .true.
+
+      n_rows = parse_block_n(blk)
+      SAFE_ALLOCATE(kick%TDKick_list_elec(1:n_rows))
+      kick%TDKick_list_elec(1:n_rows) = M_ZERO
+
+      do irow = 1, n_rows
+          idir = 0
+          call parse_block_integer(blk, irow - 1, idir, kick%TDKick_list_elec(irow))
+          if ( kick%TDKick_list_elec(irow) < 0 ) call messages_input_error('TDPartialKick')
+      end do
+      call parse_block_end(blk)
+
+    else
+
+      kick%TDPartialKick_mode = .false.
+
+    end if
+write(*,*) 'hahahahaha', kick%TDKick_list_elec, size(kick%TDKick_list_elec)
     !%Variable TDMomentumTransfer
     !%Type block
     !%Section Time-Dependent::Response
@@ -646,8 +678,6 @@ contains
       call messages_fatal(1, namespace=namespace)
     end if
 
-    SAFE_ALLOCATE(kick%delta_strength_block(1:nst))
-
     POP_SUB(kick_init)
   end subroutine kick_init
 
@@ -717,15 +747,12 @@ contains
     kick%qkick_mode = QKICKMODE_NONE
     kick%easy_axis(1:MAX_DIM) = M_ZERO
 
-<<<<<<< HEAD
     if (kick%TDPartialKick_mode) then
       SAFE_DEALLOCATE_A(kick%TDKick_list_elec)
     end if
     
-=======
     SAFE_DEALLOCATE_A(kick%delta_strength_block)
 
->>>>>>> 2fe659f57... Added an array to hold the orbital-dependent kick constants.
     POP_SUB(kick_end)
   end subroutine kick_end
 
