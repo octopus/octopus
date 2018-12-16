@@ -136,7 +136,11 @@ module epot_oct_m
 contains
 
   ! ---------------------------------------------------------
+<<<<<<< HEAD
   subroutine epot_init(ep, namespace, gr, geo, psolver, ispin, nik, xc_family, mc)
+=======
+  subroutine epot_init( ep, gr, geo, ispin, nik, xc_family)
+>>>>>>> babf0796e... add partial kick block
     type(epot_t),                       intent(out)   :: ep
     type(namespace_t),                  intent(in)    :: namespace
     type(grid_t),                       intent(in)    :: gr
@@ -145,7 +149,10 @@ contains
     integer,                            intent(in)    :: ispin
     integer,                            intent(in)    :: nik
     integer,                            intent(in)    :: xc_family
+<<<<<<< HEAD
     type(multicomm_t),                  intent(in)    :: mc
+=======
+>>>>>>> babf0796e... add partial kick block
 
 
     integer :: ispec, ia, ierr
@@ -229,7 +236,11 @@ contains
     ! lasers
     call laser_init(ep%lasers, namespace, ep%no_lasers, gr%mesh)
 
+<<<<<<< HEAD
     call kick_init(ep%kick, namespace, gr%mesh%sb, ispin)
+=======
+    call kick_init(ep%kick, ispin, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim)
+>>>>>>> babf0796e... add partial kick block
 
     ! No more "UserDefinedTDPotential" from this version on.
     call messages_obsolete_variable(namespace, 'UserDefinedTDPotential', 'TDExternalFields')
