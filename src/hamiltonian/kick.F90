@@ -115,37 +115,19 @@ module kick_oct_m
     integer              :: qkick_mode
     integer              :: qbessel_l, qbessel_m
     !> In case we use a general function
-<<<<<<< HEAD
     integer              :: function_mode
     character(len=200), private:: user_defined_function
   end type kick_t
-=======
-    integer           :: function_mode
-    character(len=200):: user_defined_function
-    !FLOAT, allocatable :: TDKick_list_atom(:, :)
-    !FLOAT, allocatable :: TDKick_list_elec(:, :)
-    INTEGER, allocatable :: TDKick_list_elec(:)
-    logical           :: TDPartialKick_mode
- end type kick_t
->>>>>>> babf0796e... add partial kick block
 
 contains
 
   ! ---------------------------------------------------------
-<<<<<<< HEAD
   subroutine kick_init(kick, namespace, sb, nspin)
     type(kick_t),      intent(out) :: kick
     type(namespace_t), intent(in)  :: namespace
     type(simul_box_t), intent(in)  :: sb
     integer,           intent(in)  :: nspin
-=======
-  subroutine kick_init(kick, nspin, dim, periodic_dim)
-    type(kick_t), intent(out) :: kick
-    integer,      intent(in)  :: nspin
-    integer,      intent(in)  :: dim
-    integer,      intent(in)  :: periodic_dim
->>>>>>> babf0796e... add partial kick block
-
+    
     type(block_t) :: blk
     integer :: n_rows, irow, idir, iop, iq, iqx, iqy, iqz
     FLOAT :: norm, dot
@@ -449,15 +431,16 @@ contains
     if(parse_block('TDPartialKick', blk, check_varinfo_=.false.)==0) then
 
       kick%TDPartialKick_mode = .true.
-
+write(*,*) 'sgf;shuf;aheufgew;fwe before safe_allocate ', kick%TDPartialKick_mode
+      SAFE_ALLOCATE(kick%TDKick_list_elec(1:st%nst))
+      forall(irow = 1:st%nst) kick%TDKick_list_elec(irow) = .false.
       n_rows = parse_block_n(blk)
-      SAFE_ALLOCATE(kick%TDKick_list_elec(1:n_rows))
-      kick%TDKick_list_elec(1:n_rows) = M_ZERO
-
+write(*,*) 'hahahahaha before reading numbers', kick%TDKick_list_elec, size(kick%TDKick_list_elec)      
       do irow = 1, n_rows
+          tpk_index = 0
           idir = 0
-          call parse_block_integer(blk, irow - 1, idir, kick%TDKick_list_elec(irow))
-          if ( kick%TDKick_list_elec(irow) < 0 ) call messages_input_error('TDPartialKick')
+          call parse_block_integer(blk, irow - 1, idir, tpk_index)
+          kick%TDKick_list_elec(tpk_index) = .true.
       end do
       call parse_block_end(blk)
 
@@ -1059,7 +1042,6 @@ write(*,*) 'hahahahaha', kick%TDKick_list_elec, size(kick%TDKick_list_elec)
     integer :: iqn, ist, idim, ip, ispin, iatom, ik_dim
     CMPLX   :: cc(2), kick_value
     CMPLX, allocatable :: kick_function(:), psi(:, :)
-    logical :: jk_list
     
     CMPLX, allocatable :: kick_pcm_function(:)
     integer :: ns, iq
@@ -1108,7 +1090,6 @@ write(*,*) 'hahahahaha', kick%TDKick_list_elec, size(kick%TDKick_list_elec)
 
       SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
 
-<<<<<<< HEAD
       if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
 
         do iqn = st%d%kpt%start, st%d%kpt%end
@@ -1131,43 +1112,6 @@ write(*,*) 'hahahahaha', kick%TDKick_list_elec, size(kick%TDKick_list_elec)
                 cc(1) = exp(kick_value)
                 cc(2) = exp(-kick_value)
 
-=======
-      do iqn = st%d%kpt%start, st%d%kpt%end
-        do ist = st%st_start, st%st_end
-
-          if (kick%TDPartialKick_mode .eqv. .true.) then
-            jk_list = .false.
-            do ik_dim = 1, size(kick%TDKick_list_elec)
-              if (ist .eq. kick%TDKick_list_elec(ik_dim)) then
-                 jk_list = .true.
-                 write(message(1),*) 'Info: kicked the KS orbital:  ',&
-                      ist, '    iqn from st%d%kpt%start', iqn 
-!         ist, st%st_start, st%st_end, ik_dim, iqn, size(kick%TDKick_list_elec)
-                 call messages_info(1)
-              end if
-            end do
-          else
-            jk_list = .true.
-          end if
-
-          if (jk_list .eqv. .true.) then
-            call states_get_state(st, mesh, ist, iqn, psi)
-  
-            select case (kick%delta_strength_mode)
-            case (KICK_DENSITY_MODE)
-              forall(idim = 1:st%d%dim, ip = 1:mesh%np)
-                psi(ip, idim) = exp(M_zI*kick%delta_strength*kick_function(ip))*psi(ip, idim)
-              end forall
-  
-            case (KICK_SPIN_MODE)
-              ispin = states_dim_get_spin_index(st%d, iqn)
-              do ip = 1, mesh%np
-                kick_value = M_zI*kick%delta_strength*kick_function(ip)
-                
-                cc(1) = exp(kick_value)
-                cc(2) = exp(-kick_value)
-  
->>>>>>> babf0796e... add partial kick block
                 select case (st%d%ispin)
                 case (SPIN_POLARIZED)
                   psi(ip, 1) = cc(ispin)*psi(ip, 1)
@@ -1176,20 +1120,12 @@ write(*,*) 'hahahahaha', kick%TDKick_list_elec, size(kick%TDKick_list_elec)
                   psi(ip, 2) = cc(2)*psi(ip, 2)
                 end select
               end do
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> babf0796e... add partial kick block
             case (KICK_SPIN_DENSITY_MODE)
               do ip = 1, mesh%np
                 kick_value = M_zI*kick%delta_strength*kick_function(ip)
                 cc(1) = exp(M_TWO*kick_value)
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> babf0796e... add partial kick block
                 select case (st%d%ispin)
                 case (SPIN_POLARIZED)
                   if(is_spin_up(iqn)) then
@@ -1200,16 +1136,10 @@ write(*,*) 'hahahahaha', kick%TDKick_list_elec, size(kick%TDKick_list_elec)
                 end select
               end do
             end select
-<<<<<<< HEAD
 
             call states_elec_set_state(st, mesh, ist, iqn, psi)
 
           end do
-=======
-  
-            call states_set_state(st, mesh, ist, iqn, psi)
-          end if
->>>>>>> babf0796e... add partial kick block
         end do
 
       else
@@ -1308,13 +1238,8 @@ write(*,*) 'hahahahaha', kick%TDKick_list_elec, size(kick%TDKick_list_elec)
       ! The nuclear velocities will be changed by
       ! Delta v_z = ( Z*e*E_0 / M) = - ( Z*k*\hbar / M)
       ! where M and Z are the ionic mass and charge, respectively.
-<<<<<<< HEAD
       if(ion_dynamics_ions_move(ions)  .and. kick%delta_strength /= M_ZERO) then
         if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
-=======
-      if (kick%TDPartialKick_mode .eqv. .false.) then
-        if(ion_dynamics_ions_move(ions)  .and. kick%delta_strength /= M_ZERO) then
->>>>>>> babf0796e... add partial kick block
           do iatom = 1, geo%natoms
             geo%atom(iatom)%v(1:mesh%sb%dim) = geo%atom(iatom)%v(1:mesh%sb%dim) + &
                  kick%delta_strength * kick%pol(1:mesh%sb%dim, kick%pol_dir) * &
@@ -1322,12 +1247,7 @@ write(*,*) 'hahahahaha', kick%TDKick_list_elec, size(kick%TDKick_list_elec)
                  species_mass(geo%atom(iatom)%species)
           end do
         end if
-<<<<<<< HEAD
-=======
-      else
-        message(1) = "Info: Kick function does not apply on atoms"
-        call messages_info(1)      
->>>>>>> babf0796e... add partial kick block
+
       end if
 
       SAFE_DEALLOCATE_A(kick_function)
