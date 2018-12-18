@@ -463,15 +463,16 @@ contains
     if(parse_block('TDPartialKick', blk, check_varinfo_=.false.)==0) then
 
       kick%TDPartialKick_mode = .true.
-
+write(*,*) 'sgf;shuf;aheufgew;fwe before safe_allocate ', kick%TDPartialKick_mode
+      SAFE_ALLOCATE(kick%TDKick_list_elec(1:st%nst))
+      forall(irow = 1:st%nst) kick%TDKick_list_elec(irow) = .false.
       n_rows = parse_block_n(blk)
-      SAFE_ALLOCATE(kick%TDKick_list_elec(1:n_rows))
-      kick%TDKick_list_elec(1:n_rows) = M_ZERO
-
+write(*,*) 'hahahahaha before reading numbers', kick%TDKick_list_elec, size(kick%TDKick_list_elec)      
       do irow = 1, n_rows
+          tpk_index = 0
           idir = 0
-          call parse_block_integer(blk, irow - 1, idir, kick%TDKick_list_elec(irow))
-          if ( kick%TDKick_list_elec(irow) < 0 ) call messages_input_error('TDPartialKick')
+          call parse_block_integer(blk, irow - 1, idir, tpk_index)
+          kick%TDKick_list_elec(tpk_index) = .true.
       end do
       call parse_block_end(blk)
 
@@ -1077,10 +1078,15 @@ write(*,*) 'hahahahaha', kick%TDKick_list_elec, size(kick%TDKick_list_elec)
     CMPLX, allocatable :: kick_function(:), psi(:, :)
     
     CMPLX, allocatable :: kick_pcm_function(:)
+<<<<<<< HEAD
     integer :: ns, iq
     FLOAT :: uvec(MAX_DIM), vvec(MAX_DIM), Gvec(MAX_DIM,MAX_DIM)
     FLOAT :: xx(MAX_DIM), rr
 
+=======
+    logical :: jk_list
+    
+>>>>>>> 0737f83d0... add optional type(states_t) in kick_apply, use logical array
     PUSH_SUB(kick_apply)
 
     ! The wavefunctions at time delta t read
@@ -1123,12 +1129,33 @@ write(*,*) 'hahahahaha', kick%TDKick_list_elec, size(kick%TDKick_list_elec)
 
       SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
 
+<<<<<<< HEAD
       if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
 
         do iqn = st%d%kpt%start, st%d%kpt%end
           do ist = st%st_start, st%st_end
             call states_elec_get_state(st, mesh, ist, iqn, psi)
 
+=======
+      do iqn = st%d%kpt%start, st%d%kpt%end
+        do ist = st%st_start, st%st_end
+
+          if (kick%TDPartialKick_mode) then
+            jk_list = .false.
+            if (kick%TDKick_list_elec(ist)) then
+              jk_list = .true.
+              write(message(1),'(a,I10,a,I10)') 'Info: kicked the KS orbital:  ',&
+                   ist, '  Hamiltonian Block(kpt)', iqn
+              call messages_info(1)
+            end if
+          else
+            jk_list = .true.
+          end if
+
+          if (jk_list) then
+            call states_get_state(st, mesh, ist, iqn, psi)
+  
+>>>>>>> 0737f83d0... add optional type(states_t) in kick_apply, use logical array
             select case (kick%delta_strength_mode)
             case (KICK_DENSITY_MODE)
               do idim = 1, st%d%dim
@@ -1271,8 +1298,16 @@ write(*,*) 'hahahahaha', kick%TDKick_list_elec, size(kick%TDKick_list_elec)
       ! The nuclear velocities will be changed by
       ! Delta v_z = ( Z*e*E_0 / M) = - ( Z*k*\hbar / M)
       ! where M and Z are the ionic mass and charge, respectively.
+<<<<<<< HEAD
       if(ion_dynamics_ions_move(ions)  .and. kick%delta_strength /= M_ZERO) then
         if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
+=======
+      if (kick%TDPartialKick_mode) then
+        message(1) = "Info: Kick function does not apply on atoms"
+        call messages_info(1)      
+      else
+        if(ion_dynamics_ions_move(ions)  .and. kick%delta_strength /= M_ZERO) then
+>>>>>>> 0737f83d0... add optional type(states_t) in kick_apply, use logical array
           do iatom = 1, geo%natoms
             geo%atom(iatom)%v(1:mesh%sb%dim) = geo%atom(iatom)%v(1:mesh%sb%dim) + &
                  kick%delta_strength * kick%pol(1:mesh%sb%dim, kick%pol_dir) * &
@@ -1280,8 +1315,12 @@ write(*,*) 'hahahahaha', kick%TDKick_list_elec, size(kick%TDKick_list_elec)
                  species_mass(geo%atom(iatom)%species)
           end do
         end if
+<<<<<<< HEAD
 
       end if
+=======
+     end if
+>>>>>>> 0737f83d0... add optional type(states_t) in kick_apply, use logical array
 
       SAFE_DEALLOCATE_A(kick_function)
     end if delta_strength
