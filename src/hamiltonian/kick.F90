@@ -463,11 +463,10 @@ contains
     if(parse_block('TDPartialKick', blk, check_varinfo_=.false.)==0) then
 
       kick%TDPartialKick_mode = .true.
-write(*,*) 'sgf;shuf;aheufgew;fwe before safe_allocate ', kick%TDPartialKick_mode
       SAFE_ALLOCATE(kick%TDKick_list_elec(1:st%nst))
       forall(irow = 1:st%nst) kick%TDKick_list_elec(irow) = .false.
       n_rows = parse_block_n(blk)
-write(*,*) 'hahahahaha before reading numbers', kick%TDKick_list_elec, size(kick%TDKick_list_elec)      
+      
       do irow = 1, n_rows
           tpk_index = 0
           idir = 0
@@ -481,7 +480,7 @@ write(*,*) 'hahahahaha before reading numbers', kick%TDKick_list_elec, size(kick
       kick%TDPartialKick_mode = .false.
 
     end if
-write(*,*) 'hahahahaha', kick%TDKick_list_elec, size(kick%TDKick_list_elec)
+
     !%Variable TDMomentumTransfer
     !%Type block
     !%Section Time-Dependent::Response
@@ -1145,7 +1144,7 @@ write(*,*) 'hahahahaha', kick%TDKick_list_elec, size(kick%TDKick_list_elec)
             if (kick%TDKick_list_elec(ist)) then
               jk_list = .true.
               write(message(1),'(a,I10,a,I10)') 'Info: kicked the KS orbital:  ',&
-                   ist, '  Hamiltonian Block(kpt)', iqn
+                   ist, ';  Hamiltonian Block(kpt)', iqn
               call messages_info(1)
             end if
           else
