@@ -152,6 +152,7 @@ contains
       
       call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil)
 
+      call derivatives_nullify(mgrid%level(i)%der)
       call derivatives_init(mgrid%level(i)%der, mesh%sb, cv%method /= CURV_METHOD_UNIFORM)
 
       call mesh_init_stage_3(mgrid%level(i)%mesh, stencil, mc, parent = mgrid%level(i - 1)%mesh)
