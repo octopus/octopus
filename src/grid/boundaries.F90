@@ -167,7 +167,7 @@ contains
       !%Default no
       !%Section Grid
       !%Description
-      !% (Experimental) If set to yes, Octopus will apply spin-siaral boundary conditions.
+      !% (Experimental) If set to yes, Octopus will apply spin-spiral boundary conditions.
       !% The momentum of the spin spiral is defined by the variable 
       !% <tt>TDMomentumTransfer</tt> 
       !%End
