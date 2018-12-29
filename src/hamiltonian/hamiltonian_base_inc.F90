@@ -383,10 +383,10 @@ subroutine X(hamiltonian_base_phase_spiral)(this, der, psib, ik)
 
     !$omp parallel do private(ip, ii)
     do ip = der%mesh%np + 1, der%mesh%np_part
-      do ii = 1, psib%nst_linear
-        if(this%spin(3,batch_linear_to_ist(psib, ii),ik)>0 .and.  batch_linear_to_idim(psib, ii) == 2) then
-          psib%pack%X(psi)(ii, ip) = psib%pack%X(psi)(ii, ip)*this%phase_spiral(ip, 1)
-        else if(this%spin(3,batch_linear_to_ist(psib, ii),ik)<0 .and.  batch_linear_to_idim(psib, ii) == 1) then
+      do ii = 1, psib%nst_linear, 2
+        if(this%spin(3,batch_linear_to_ist(psib, ii),ik)>0) then
+          psib%pack%X(psi)(ii+1, ip) = psib%pack%X(psi)(ii+1, ip)*this%phase_spiral(ip, 1)
+        else
           psib%pack%X(psi)(ii, ip) = psib%pack%X(psi)(ii, ip)*this%phase_spiral(ip, 2)
         end if
       end do
@@ -396,16 +396,20 @@ subroutine X(hamiltonian_base_phase_spiral)(this, der, psib, ik)
   case(BATCH_NOT_PACKED)
 
     !$omp parallel private(ii, ip)
-    do ii = 1, psib%nst_linear
-      !$omp do
-      do ip = der%mesh%np + 1, der%mesh%np_part
-        if(this%spin(3,batch_linear_to_ist(psib, ii),ik)>0 .and.  batch_linear_to_idim(psib, ii) == 2) then
-          psib%states_linear(ii)%X(psi)(ip) = psib%states_linear(ii)%X(psi)(ip)*this%phase_spiral(ip, 1)
-        else if(this%spin(3,batch_linear_to_ist(psib, ii),ik)<0 .and.  batch_linear_to_idim(psib, ii) == 1) then
+    do ii = 1, psib%nst_linear, 2
+      if(this%spin(3,batch_linear_to_ist(psib, ii),ik)>0) then
+        !$omp do
+        do ip = der%mesh%np + 1, der%mesh%np_part
+          psib%states_linear(ii+1)%X(psi)(ip) = psib%states_linear(ii+1)%X(psi)(ip)*this%phase_spiral(ip, 1)
+        end do
+        !$omp end do nowait
+      else
+        !$omp do
+        do ip = der%mesh%np + 1, der%mesh%np_part
           psib%states_linear(ii)%X(psi)(ip) = psib%states_linear(ii)%X(psi)(ip)*this%phase_spiral(ip, 2)
-        end if
-      end do
-      !$omp end do nowait
+        end do
+        !$omp end do nowait
+      end if
     end do
     !$omp end parallel
 
