@@ -52,7 +52,10 @@ subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, s
 
   ASSERT(handle%ff%nst_linear == handle%opff%nst_linear)
 
-  if(optional_default(set_bc, .true.)) call boundaries_set(der%boundaries, ff)
+  if(optional_default(set_bc, .true.)) then
+    call boundaries_set(der%boundaries, ff)
+    ASSERT(.not. der%boundaries%spiral)
+  end if
 
 #ifdef HAVE_MPI
 
