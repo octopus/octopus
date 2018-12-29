@@ -385,7 +385,7 @@ contains
     end if
 
     ! for non-dipole, it is more complicated to check whether it is actually in the periodic direction
-    if(periodic_dim > 0) then
+    if(periodic_dim > 0 .and. kick%delta_strength_mode /= KICK_MAGNON_MODE) then
       message(1) = "Kicks cannot be applied correctly in periodic directions."
       call messages_warning(1)
     end if
