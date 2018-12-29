@@ -563,7 +563,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, bnd, ik, psib, proj
   integer, allocatable :: ind(:)
   R_TYPE :: aa, bb, cc, dd
   type(projector_matrix_t), pointer :: pmat
-  integer :: padnprojs, wgsize, lnprojs, size
+  integer :: padnprojs, wgsize, lnprojs, size, idim
   type(profile_t), save :: cl_prof
   type(accel_kernel_t), save, target :: ker_proj_bra, ker_proj_bra_phase
   type(accel_kernel_t), pointer :: kernel
@@ -740,16 +740,17 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, bnd, ik, psib, proj
        else
 
          do ist = 1, nst
+           if(this%spin(3,batch_linear_to_ist(psib, ist),ik)>0 .and. batch_linear_to_idim(psib, ist)==2) then
+             idim = 2
+           else if(this%spin(3,batch_linear_to_ist(psib, ist),ik)<0 .and. batch_linear_to_idim(psib, ist)==1) then
+             idim = 3
+           else
+             idim = 1
+           end if
            !$omp parallel do
            do ip = 1, npoints
-             if(this%spin(3,batch_linear_to_ist(psib, ist),ik)>0 .and.  batch_linear_to_idim(psib, ist) == 2) then
-               lpsi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))*this%projector_phases(ip, imat, 2, ik)
-             else if(this%spin(3,batch_linear_to_ist(psib, ist),ik)<0 .and.  batch_linear_to_idim(psib, ist) == 1) then
-               lpsi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))*this%projector_phases(ip, imat, 3, ik)
-             else
-               lpsi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))*this%projector_phases(ip, imat, 1, ik)
-              end if
-            end do
+             lpsi(ist, ip) = psib%states_linear(ist)%X(psi)(pmat%map(ip))*this%projector_phases(ip, imat, idim, ik)
+           end do
          end do
 
         end if
@@ -913,13 +914,13 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, bnd, ik, projectio
                 if(this%spin(3,batch_linear_to_ist(vpsib, ist),ik)>0 .and. batch_linear_to_idim(vpsib, ist)==2) then
                   vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) &
                               + psi(ist, ip)*conjg(this%projector_phases(ip, imat, 2, ik))
-               else if(this%spin(3,batch_linear_to_ist(vpsib, ist),ik)<0 .and. batch_linear_to_idim(vpsib, ist)==1) then
-                 vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) &
+                else if(this%spin(3,batch_linear_to_ist(vpsib, ist),ik)<0 .and. batch_linear_to_idim(vpsib, ist)==1) then
+                  vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) &
                               + psi(ist, ip)*conjg(this%projector_phases(ip, imat, 3, ik))
-               else
+                else
                   vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) &
                               + psi(ist, ip)*conjg(this%projector_phases(ip, imat, 1, ik))
-               end if
+                end if
               end do
             end do
             !$omp end parallel do
