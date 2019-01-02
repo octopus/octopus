@@ -61,6 +61,7 @@ module energy_oct_m
     FLOAT :: delta_xc    !< the XC derivative discontinuity
     FLOAT :: dft_u       !DFT+U contribution
     FLOAT :: int_dft_u !< Int[n v_U]
+    FLOAT :: intnvstatic !< Int[n v_static} (static electric field)
 
   end type energy_t
 
@@ -96,6 +97,7 @@ contains
     this%delta_xc     = M_ZERO
     this%dft_u        = M_ZERO
     this%int_dft_u    = M_ZERO
+    this%intnvstatic  = M_ZERO
 
     POP_SUB(energy_nullify)
   end subroutine energy_nullify
@@ -131,6 +133,7 @@ contains
     eout%delta_xc     = ein%delta_xc
     eout%dft_u        = ein%dft_u
     eout%int_dft_u    = ein%int_dft_u
+    eout%intnvstatic  = ein%intnvstatic
 
     POP_SUB(energy_copy)
   end subroutine energy_copy

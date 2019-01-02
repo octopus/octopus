@@ -126,7 +126,7 @@ contains
     case(HARTREE_FOCK)
       hm%energy%total = hm%ep%eii + &
         M_HALF*(hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern - hm%energy%intnvxc - evxctau) &
-        + hm%energy%correlation + hm%energy%vdw
+        + hm%energy%correlation + hm%energy%vdw - hm%energy%intnvstatic
 
       ! FIXME: pcm terms are only added to total energy in DFT case
       
@@ -136,7 +136,7 @@ contains
         - hm%energy%pcm_corr + hm%energy%int_ee_pcm + hm%energy%int_en_pcm &
                              + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm &
                              + hm%energy%int_e_ext_pcm + hm%energy%int_n_ext_pcm &
-        + hm%energy%dft_u -  hm%energy%int_dft_u
+        + hm%energy%dft_u -  hm%energy%int_dft_u - hm%energy%intnvstatic
 
    end select 
     
