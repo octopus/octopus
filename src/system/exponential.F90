@@ -658,8 +658,8 @@ contains
       if (batch_status(psib) /= BATCH_NOT_PACKED) then
         SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:hm%d%dim))
       end if
-      if (batch_status(psib2) /= BATCH_NOT_PACKED) then
-        if(present(psib2)) then
+      if(present(psib2)) then
+        if (batch_status(psib2) /= BATCH_NOT_PACKED) then
           SAFE_ALLOCATE(psi2(1:der%mesh%np_part, 1:hm%d%dim))
         end if
       end if
@@ -697,8 +697,8 @@ contains
       if (batch_status(psib) /= BATCH_NOT_PACKED) then
         SAFE_DEALLOCATE_P(psi)
       end if
-      if (batch_status(psib2) /= BATCH_NOT_PACKED) then
-        if(present(psib2)) then
+      if(present(psib2)) then
+        if (batch_status(psib2) /= BATCH_NOT_PACKED) then
            SAFE_DEALLOCATE_P(psi2)
         end if
       end if
