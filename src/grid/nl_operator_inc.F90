@@ -299,26 +299,28 @@ contains
       
       if(op%cmplx_op) then
 #ifdef R_TCOMPLEX
-      !$omp parallel do private(ll, ist, ii, nn)
-      do ll = 1, nri
-        nn = op%nn(ll)
-        forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%states_linear(ist)%X(psi)(ii) = factor_*sum(TOCMPLX(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * &
-            fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
-        end forall
-      end do
-      !$omp end parallel do
+        !$omp parallel do private(ll, ist, ii, nn)
+        do ll = 1, nri
+          nn = op%nn(ll)
+          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
+            fo%states_linear(ist)%X(psi)(ii) = factor_*sum(TOCMPLX(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * &
+              fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+          end forall
+        end do
+        !$omp end parallel do
 #endif
-    else
-      !$omp parallel do private(ll, ist, ii, nn)
-      do ll = 1, nri
-        nn = op%nn(ll)
-        forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%states_linear(ist)%X(psi)(ii) = factor_*sum(op%w_re(1:nn, ii)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
-        end forall
-      end do
-      !$omp end parallel do
-    end if
+      else
+        !$omp parallel do private(ll, ist, ii, nn)
+        do ll = 1, nri
+          nn = op%nn(ll)
+          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
+            fo%states_linear(ist)%X(psi)(ii) = factor_*sum(op%w_re(1:nn, ii)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+          end forall
+        end do
+        !$omp end parallel do
+      end if
+
+    case(BATCH_PACKED)
 
       if(op%cmplx_op) then
 #ifdef R_TCOMPLEX
