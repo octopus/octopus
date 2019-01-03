@@ -431,10 +431,8 @@ contains
     !%End
     call parse_variable('HamiltonianApplyPacked', .true., hm%apply_packed)
 
-    ! StatesPack not yet implemented for these cases: (see also hamiltonian_apply_packed)
-    if(hm%scissor%apply) st%d%pack_states = .false.
-    if(hm%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) st%d%pack_states = .false.
-    if(associated(hm%hm_base%phase) .and. accel_is_enabled()) st%d%pack_states = .false.
+    ! StatesPack not yet implemented for some cases, see hamiltonian_apply_packed
+    st%d%pack_states = hamiltonian_apply_packed(hm, gr%mesh)
 
     external_potentials_present = associated(hm%ep%v_static) .or. &
 				  associated(hm%ep%E_field)  .or. &
