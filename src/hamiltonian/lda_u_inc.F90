@@ -17,12 +17,13 @@
 !!
 
 
-subroutine X(lda_u_apply)(this, d, ndim, ik, psib, hpsib, has_phase)
+subroutine X(lda_u_apply)(this, d, ndim, sb, ik, psib, hpsib, has_phase)
   type(lda_u_t),      intent(in) :: this
   integer,            intent(in) :: ik, ndim
   type(batch_t),      intent(in) :: psib
   type(batch_t),   intent(inout) :: hpsib
   type(states_dim_t), intent(in) :: d
+  type(simul_box_t),  intent(in) :: sb
   logical,            intent(in) :: has_phase !True if the wavefunction has an associated phase
 
   integer :: ibatch, ios, imp, im, ispin, bind1, bind2, inn, ios2
@@ -87,17 +88,21 @@ subroutine X(lda_u_apply)(this, d, ndim, ik, psib, hpsib, has_phase)
 
       !Loop over nearest neighbors
       do inn = 1, os%nneighbors
-!        reduced = R_TOTYPE(M_ZERO)
-        ios2 = os%map_os(inn)
+
+        ios2 = os%map_os(inn) 
 
         do ibatch = 1, psib%nst
           do im = 1,os%norbs
             do imp = 1, this%orbsets(ios2)%norbs
               if(has_phase) then
-!                reduced(im, ibatch,ios) = reduced(im,ibatch,ios) - dot(1,imp,ibatch,ios2)*R_REAL(os%phase_shift(inn, ik))*this%X(n_IJ)(im,imp,ispin,ios,inn)*M_HALF*os%V_IJ(inn,0)/el_per_state
-!                reduced(imp, ibatch,ios2) = reduced(imp,ibatch,ios2) - dot(1, im, ibatch,ios)*R_REAL(R_CONJ(os%phase_shift(inn, ik)))*R_CONJ(this%X(n_IJ)(im,imp,ispin,ios,inn))*M_HALF*os%V_IJ(inn,0)/el_per_state
+!                reduced(im, ibatch,ios) = reduced(im,ibatch,ios) - dot(1,imp,ibatch,ios2)*R_CONJ(os%phase_shift(inn, ik))*this%X(n_IJ)(im,imp,ispin,ios,inn)*os%V_IJ(inn,0)*M_HALF/el_per_state
+!                reduced(imp, ibatch,ios2) = reduced(imp,ibatch,ios2) - dot(1, im, ibatch,ios)*os%phase_shift(inn, ik)*R_CONJ(this%X(n_IJ)(im,imp,ispin,ios,inn))*M_HALF*os%V_IJ(inn,0)/el_per_state
 !                reduced(im, ibatch,ios) = reduced(im,ibatch,ios) - dot(1,imp,ibatch,ios2)*os%phase_shift(inn, ik)*R_CONJ(this%X(n_IJ)(im,imp,ispin,ios,inn))*os%V_IJ(inn,0)/el_per_state
-                reduced(im, ibatch,ios) = reduced(im,ibatch,ios) - dot(1,imp,ibatch,ios2)*this%X(n_IJ)(im,imp,ispin,ios,inn)*os%V_IJ(inn,0)/el_per_state*os%phase_shift(inn, ik)
+!                reduced(im, ibatch,ios) = reduced(im,ibatch,ios) - dot(1,imp,ibatch,ios2)*this%X(n_IJ)(im,imp,ispin,ios,inn)*os%V_IJ(inn,0)/el_per_state*os%phase_shift(inn, ik)
+                reduced(im, ibatch,ios) = reduced(im,ibatch,ios) - dot(1,imp,ibatch,ios2)*os%phase_shift(inn, ik) &
+                         *this%X(n_IJ)(im,imp,ispin,ios,inn)*M_HALF*os%V_IJ(inn,0)/el_per_state
+                reduced(imp, ibatch,ios2) = reduced(imp,ibatch,ios2) - dot(1, im, ibatch,ios)*R_CONJ(os%phase_shift(inn, ik)) &
+                         *R_CONJ(this%X(n_IJ)(im,imp,ispin,ios,inn))*M_HALF*os%V_IJ(inn,0)/el_per_state
 
               else 
                 reduced(im, ibatch,ios) = reduced(im,ibatch,ios) - dot(1,imp,ibatch,ios2) &
@@ -139,7 +144,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
 
   integer :: ios, im, ik, ist, ispin, norbs, idim, inn, im2, ios2
   R_TYPE, allocatable :: psi(:,:) 
-  R_TYPE, allocatable :: dot(:,:,:), dot2(:,:)
+  R_TYPE, allocatable :: dot(:,:,:)
   FLOAT   :: weight
   R_TYPE  :: renorm_weight
   type(orbitalset_t), pointer :: os, os2
@@ -156,7 +161,6 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
   if(this%level == DFT_U_ACBN0) then
     this%X(n_alt)(1:this%maxnorbs, 1:this%maxnorbs, 1:st%d%nspin, 1:this%norbsets) = R_TOTYPE(M_ZERO)
     if(this%intersite) then
-      SAFE_ALLOCATE(dot2(1:st%d%dim, 1:this%maxnorbs))
       this%X(n_IJ)(1:this%maxnorbs, 1:this%maxnorbs, 1:st%d%nspin, &
                      1:this%norbsets, 1:this%maxneighbors) = R_TOTYPE(M_ZERO)
       this%X(n_alt_IJ)(1:this%maxnorbs, 1:this%maxnorbs, 1:st%d%nspin, &
@@ -316,15 +320,6 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
     end if
   end if
 #endif      
-
- if(mpi_grp_is_root(mpi_world))  then
-   do ios = 1, this%norbsets !orbsets(1)%nneighbors
-   do inn = 1, this%orbsets(1)%nneighbors
-     print *, this%X(n_IJ)(:,:,1,ios,inn)
-     print *, ''
-   end do
-   end do
- end if
 
   if(this%level == DFT_U_ACBN0 .and. .not.this%freeze_u) then
     if(this%nspins > 1 ) then
@@ -622,7 +617,7 @@ subroutine X(compute_ACBNO_U_restricted)(this)
       this%orbsets(ios)%Ueff = M_TWO*numU/denomU - numJ/denomJ
       this%orbsets(ios)%Ubar = M_TWO*numU/denomU
       this%orbsets(ios)%Jbar = numJ/denomJ
- 
+
     else !In the case of s orbitals, the expression is different
       ! P_{mmp}P_{mpp,mppp}(m,mp|mpp,mppp)  
       numU = R_REAL(this%X(n_alt)(1,1,1,ios))**2*this%coulomb(1,1,1,1,ios)
@@ -729,29 +724,28 @@ subroutine X(compute_ACBNO_V_restricted)(this)
 
       do im = 1, norbs
       do imp = 1,norbs
+       !imp = im
         do impp = 1, norbs2
         do imppp = 1, norbs2
-          numV = numV + (M_TWO*R_REAL(this%X(n_alt)(imp,im,1,ios)*this%X(n_alt)(imppp,impp,1,ios2))   &
-               - R_REAL(this%X(n_alt_IJ)(imp,impp,1,ios,inn)*R_CONJ(this%X(n_alt_IJ)(im,imppp,1,ios,inn))))&
+        ! imppp = impp
+          numV = numV + (M_TWO*R_REAL(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios2))   &
+               - R_REAL(this%X(n_alt_IJ)(im,imppp,1,ios,inn)*this%X(n_alt_IJ)(imp,impp,1,ios,inn)))&
                          *this%orbsets(ios)%coulomb_IIJJ(im,imp,impp,imppp,inn)
         end do
         end do
       end do
-      end do
 
-      do im = 1, norbs
       do imp = 1,norbs2
         ! We compute the term
         ! sum_{m,mp} ( 2*N_{m}N_{mp} - n_{mmp}n_{mpm})
         denomV = denomV + M_TWO*R_REAL(this%X(n)(im,im,1,ios))*R_REAL(this%X(n)(imp,imp,1,ios2)) &
-                        - abs(this%X(n_IJ)(im,imp,1,ios,inn))**2
+                        - this%X(n_IJ)(im,imp,1,ios,inn)*R_CONJ(this%X(n_IJ)(im,imp,1,ios,inn))
       end do
       end do
 
-      print *, ios, inn, numV, denomV
       this%orbsets(ios)%V_IJ(inn,0) = numV/denomV
-    end do
-  end do
+    end do !inn
+  end do !ios
 
   POP_SUB(compute_ACBNO_V_restricted)  
 end subroutine X(compute_ACBNO_V_restricted)

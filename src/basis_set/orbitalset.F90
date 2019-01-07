@@ -209,7 +209,7 @@ contains
       do is = 1, ns
         ! this is only the correction to the global phase, that can
         ! appear if the sphere crossed the boundary of the cell.
-        dx(1:ndim) = os%sphere%x(is, 1:ndim) - os%sphere%mesh%x(os%sphere%map(is), 1:ndim)
+        dx(1:ndim) = os%sphere%x(is, 1:ndim) - os%sphere%mesh%x(os%sphere%map(is), 1:ndim) + os%sphere%center(1:ndim)
         kr = sum(kpoint(1:ndim)*dx(1:ndim))
         if(present(vec_pot)) then
           if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*dx(1:ndim))
@@ -246,7 +246,7 @@ contains
 
       if(os%nneighbors > 0) then
         do inn = 1, os%nneighbors       
-          dx(1:ndim) = os%V_IJ(inn,1:ndim) 
+          dx(1:ndim) = os%V_IJ(inn,1:ndim)
           kr = sum(kpoint(1:ndim)*dx(1:ndim))
           if(present(vec_pot)) then
             if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*dx(1:ndim))
@@ -261,6 +261,7 @@ contains
         end do
       end if
     end do
+
 
     POP_SUB(orbitalset_update_phase)
   end subroutine orbitalset_update_phase

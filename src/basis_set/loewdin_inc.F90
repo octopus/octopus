@@ -47,6 +47,7 @@
 
      !We compute S^{-1/2} from S
      call lalg_eigensolve(basis%size, overlap, eigenval)
+     if(debug%info) call X(print_matrix)(basis, 'eigenvec', overlap, ik)
      overlap2 = R_CONJ(transpose(overlap))
      do is = 1, basis%size
        eigenval(is) = M_ONE/sqrt(eigenval(is))
@@ -66,7 +67,7 @@
          iorb2 = basis%global2os(2,ind2)
          os2 => basis%orbsets(ios2)
          ns = os2%sphere%np
-         if(abs(overlap(ind2,ind)) < CNST(1e-6)) cycle
+  !       if(abs(overlap(ind2,ind)) < CNST(1e-6)) cycle
          do idim = 1, os%ndim
            do is = 1, ns
              os%eorb_mesh(os2%sphere%map(is),idim,iorb,ik) &
@@ -106,7 +107,7 @@
   integer,                 intent(in)   :: ik
 
   integer :: ios, ios2, iorb, iorb2
-  integer :: ind, ind2
+  integer :: ind, ind2, idim
   type(orbitalset_t), pointer :: os, os2
 
   PUSH_SUB(X(loewdin_overlap))
@@ -124,9 +125,16 @@
 
       if(simul_box_is_periodic(os%sphere%mesh%sb))then
  #ifdef R_TCOMPLEX
-        overlap(ind,ind2) = zmf_dotp(os%sphere%mesh, os%ndim, &
+!        overlap(ind,ind2) = R_TOTYPE(M_ZERO)
+!        do idim = 1, os%ndim
+!          overlap(ind,ind2) = overlap(ind,ind2) + submesh_to_mesh_dotp(os%sphere, &
+!                       os%X(orb)(:,idim,iorb), os2%eorb_mesh(:,idim,iorb2,ik))
+!        end do
+
+         overlap(ind,ind2) = zmf_dotp(os%sphere%mesh, os%ndim, &
                        os%eorb_mesh(:,:,iorb,ik), os2%eorb_mesh(:,:,iorb2,ik))
-        if(abs(overlap(ind,ind2)) < CNST(1.0e-6)) overlap(ind,ind2) = R_TOTYPE(M_ZERO)
+         
+!        if(abs(overlap(ind,ind2)) < CNST(1.0e-6)) overlap(ind,ind2) = R_TOTYPE(M_ZERO)
  #endif
       else
         call messages_not_implemented("Lowdin orthogonalization with submeshes.")
@@ -134,7 +142,7 @@
     end do !ind2
   end do !ind
 
-  !Thre overlap matric is Hermitian
+  !The overlap matric is Hermitian
   do ind = 1, basis%size
     do ind2 = 1, ind-1
       overlap(ind,ind2) = R_CONJ(overlap(ind2, ind))

@@ -362,7 +362,7 @@ contains
   ! --------------------------------------------------------------
   !This routine shifts the center of a submesh, without changing the grid points
   subroutine submesh_shift_center(this, sb, newcenter)
-    type(submesh_t),      intent(inout)  :: this !< valgrind objects to intent(out) due to the initializations above
+    type(submesh_t),      intent(inout)  :: this 
     type(simul_box_t),    intent(in)     :: sb
     FLOAT,                intent(in)     :: newcenter(:)
     
