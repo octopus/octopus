@@ -38,7 +38,6 @@ module debug_oct_m
     logical :: trace_term
     logical :: trace_file
     logical :: extra_checks
-    logical :: likwid
     integer :: bits    
   end type debug_t
 
@@ -73,8 +72,6 @@ contains
     !%Option extra_checks 16
     !% This enables Octopus to perform some extra checks, to ensure
     !% code correctness, that might be too costly for regular runs.
-    !%Option likwid 32
-    !% Enable instrumentation using LIKWID.
     !%End
     call parse_variable('Debug', OPTION__DEBUG__NO, this%bits)
 
@@ -98,7 +95,6 @@ contains
     this%trace      = .true.
     this%trace_term = .true.
     this%trace_file = .true.
-    this%likwid     = .true.
     
   end subroutine debug_enable
 
@@ -121,7 +117,6 @@ contains
     this%trace_file   = (bitand(this%bits, OPTION__DEBUG__TRACE_FILE)   /= 0)
     this%trace        = (bitand(this%bits, OPTION__DEBUG__TRACE)        /= 0) .or. this%trace_term .or. this%trace_file
     this%extra_checks = (bitand(this%bits, OPTION__DEBUG__EXTRA_CHECKS) /= 0) .or. this%trace_term .or. this%trace_file
-    this%likwid       = (bitand(this%bits, OPTION__DEBUG__LIKWID)       /= 0)
 
   end subroutine from_bits
   

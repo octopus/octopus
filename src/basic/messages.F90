@@ -167,12 +167,6 @@ contains
 
     call messages_reset_lines()
 
-    if(debug%likwid) then
-#ifdef HAVE_LIKWID
-      call likwid_markerInit()
-#endif
-    end if
-
   end subroutine messages_init
 
   ! ---------------------------------------------------------
@@ -232,12 +226,6 @@ contains
       write(iunit_out, '(a, i9)') "experimental      = ", experimentals
       close(iunit_out)
  
-    end if
-
-    if(debug%likwid) then
-#ifdef HAVE_LIKWID
-      call likwid_markerClose()
-#endif
     end if
 
     call parser_end()
@@ -1008,12 +996,6 @@ contains
       call push_sub_write(stderr)
     end if
 
-    if(debug%likwid) then
-#ifdef HAVE_LIKWID
-      call likwid_markerStartRegion(sub_name)
-#endif
-    end if
-
   contains
 
     subroutine push_sub_write(iunit_out)
@@ -1080,12 +1062,6 @@ contains
       call pop_sub_write(stderr)
     end if
 
-    if(debug%likwid) then
-#ifdef HAVE_LIKWID
-      call likwid_markerStopRegion(sub_name)
-#endif
-    end if
-    
     no_sub_stack = no_sub_stack - 1
 
   contains
