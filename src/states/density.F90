@@ -304,10 +304,16 @@ contains
         if(this%gr%have_fine_mesh) then
            SAFE_ALLOCATE(fdensity(1:this%gr%fine%mesh%np))
            call dmultigrid_coarse2fine(this%gr%fine%tt, this%gr%der, this%gr%fine%mesh, tmpdensity, fdensity, order = 2)
-           forall(ip = 1:this%gr%fine%mesh%np) this%density(ip, ispin) = this%density(ip, ispin) + fdensity(ip)
+
+           do ip = 1, this%gr%fine%mesh%np
+             this%density(ip, ispin) = this%density(ip, ispin) + fdensity(ip)
+           end do
+
            SAFE_DEALLOCATE_A(fdensity)
         else
-           forall(ip = 1:this%gr%mesh%np) this%density(ip, ispin) = this%density(ip, ispin) + tmpdensity(ip)
+          do ip = 1, this%gr%mesh%np
+            this%density(ip, ispin) = this%density(ip, ispin) + tmpdensity(ip)
+          end do
         end if
 
       end do
