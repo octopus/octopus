@@ -61,9 +61,9 @@ use mpi_lib_oct_m
        assign_eigfunctions,      &
        rdm_t,                    &
        scf_occ,                  &
-       scf_occ_NO,				 &
+       scf_occ_NO,				 			 &
        scf_orb,                  &
-       scf_rdmft,				 &
+       scf_rdmft,				 				 &
        set_occ_pinning
 
   type rdm_t
@@ -139,7 +139,7 @@ contains
       !stepsize for steepest decent
       SAFE_ALLOCATE(stepsize(1:st%nst))
       stepsize = 0.1
-      maxcount = 2
+      maxcount = 1
     else
       maxcount = 50
     endif
@@ -163,7 +163,7 @@ contains
       do icount = 1, maxcount !still under investigation how many iterations we need
         if (rdm%do_basis.eqv..false.) then
 !          call scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
-		  call scf_orb_cg(rdm, gr, geo, st, ks, hm, energy) 
+					call scf_orb_cg(rdm, gr, geo, st, ks, hm, energy) 
         else
           call scf_orb(rdm, gr, geo, st, ks, hm, energy)
         end if
@@ -188,9 +188,6 @@ contains
       xpos = M_ZERO
       
       rel_ener = abs(energy_occ-energy)/abs(energy)
-
-!      write(message(1),'(a,1x,es20.10)') 'Total energy'
-!      call messages_info(1) 
 
       write(message(1),'(a,1x,es20.10)') 'Total energy', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
       call messages_info(1)
@@ -395,7 +392,7 @@ contains
         end do
       else
         ! initialize eigensolver
-	    call eigensolver_init(rdm%eigens, gr, st)
+				call eigensolver_init(rdm%eigens, gr, st)
 !		copied from scf, for the moment probably not necessary
 !		if(preconditioner_is_multigrid(rdm%eigens%pre)) then
 !		  SAFE_ALLOCATE(gr%mgrid_prec)
@@ -490,6 +487,7 @@ contains
   ! ---------------------------------------------------------
 
   ! dummy routine for occupation numbers which only calculates the necessary vairables for further use
+  ! used in Hartree-Fock mode
   subroutine scf_occ_NO(rdm, gr, hm, st, energy)
     type(rdm_t),          intent(inout) :: rdm
     type(grid_t),         intent(inout) :: gr
@@ -505,7 +503,7 @@ contains
     write(message(1),'(a)') 'SKIP Optimization of occupation numbers'
     call messages_info(1)
     
-call set_occ_pinning(st)
+		call set_occ_pinning(st)
     
     energy = M_ZERO
     
@@ -847,7 +845,7 @@ print*, "maxFO", rdm%maxFO
 
  
   !---------------------------------------------------------------
-  ! Minimize the total energy wrt. an orbital by steepest descent
+  ! Minimize the total energy wrt. an orbital by steepest descent (NOT WORKING, WILL BE REMOVED LATER)
   !---------------------------------------------------------------
 
   subroutine scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
@@ -980,8 +978,6 @@ print*, "maxFO", rdm%maxFO
     POP_SUB(scf_orb_direct)
 
   end subroutine scf_orb_direct
-
-! New Nicole
   
  !-----------------------------------------------------------------
   ! Minimize the total energy wrt. an orbital by conjugate gradient
@@ -1001,17 +997,21 @@ print*, "maxFO", rdm%maxFO
     integer            :: ik, ist, jst
     integer            :: maxiter, nstconv_ ! maximum number of orbital optimization iterations
     FLOAT              :: energy_old, energy_diff, occ_sum, maxFO
-FLOAT, allocatable ::  lambda(:,:), FO(:,:)
+		FLOAT, allocatable ::  lambda(:,:), FO(:,:)
     
-	logical :: conv
-	type(profile_t), save :: prof
+		logical :: conv
+		type(profile_t), save :: prof
 
-	call profiling_in(prof, "EIGEN_SOLVER")
+		call profiling_in(prof, "EIGEN_SOLVER") ! necessary?
     
     PUSH_SUB(scf_orb_cg)
-
-	conv = .false.
-	nstconv_ = st%nst
+    
+    SAFE_ALLOCATE(lambda(1:st%nst,1:st%nst)) 
+		SAFE_ALLOCATE(FO(1:st%nst, 1:st%nst))
+		
+		!parameters for cg_solver
+		conv = .false.
+		nstconv_ = st%nst
  
     maxiter = 25
     
@@ -1025,107 +1025,75 @@ FLOAT, allocatable ::  lambda(:,:), FO(:,:)
     ! store energy for later comparison
     energy_old = energy
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!
-	rdm%eigens%converged = 0
-!    call eigensolver_run(rdm%eigens, gr, st, hm, maxiter)
-!!!!!!!!!!!!!!!!!!!!!!!!!
-
+		rdm%eigens%converged = 0
     do ik = st%d%kpt%start, st%d%kpt%end
-
-	rdm%eigens%matvec = 0
-	   
-	if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then ! .and. eigensolver_has_progress_bar(rdm%eigens)
-	  call loct_progress_bar(-1, st%lnst*st%d%kpt%nlocal)
-	end if
-    
+			rdm%eigens%matvec = 0  ! necessary?
+			! shall we use the progress bar?
+			if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then 
+				call loct_progress_bar(-1, st%lnst*st%d%kpt%nlocal)
+			end if
+			!! For RDMFT, needs to be called with: orthogonalize_to_all=.true.
       call deigensolver_cg2(gr, st, hm, rdm%eigens%pre, rdm%eigens%tolerance, maxiter, &
             rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), &
-            orthogonalize_to_all=rdm%eigens%orthogonalize_to_all, &
+            orthogonalize_to_all=.false., &
             conjugate_direction=rdm%eigens%conjugate_direction)
   
-	if(st%calc_eigenval .and. .not. rdm%eigens%folded_spectrum) then
-		! recheck convergence after subspace diagonalization, since states may have reordered
-		rdm%eigens%converged(ik) = 0
-		do ist = 1, st%nst
-		  if(rdm%eigens%diff(ist, ik) < rdm%eigens%tolerance) then
-			rdm%eigens%converged(ik) = ist
-		  else
-			exit
-		  end if
-		end do
-	end if
+			if(st%calc_eigenval .and. .not. rdm%eigens%folded_spectrum) then
+				! recheck convergence after subspace diagonalization, since states may have reordered (copied from eigensolver_run)
+				rdm%eigens%converged(ik) = 0
+				do ist = 1, st%nst
+					if(rdm%eigens%diff(ist, ik) < rdm%eigens%tolerance) then
+					rdm%eigens%converged(ik) = ist
+					else
+					exit
+					end if
+				end do
+			end if
 
-	rdm%eigens%matvec = rdm%eigens%matvec + maxiter
-  
+			rdm%eigens%matvec = rdm%eigens%matvec + maxiter ! necessary?  
     enddo
+		
+		! For debug
+		if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
+			write(stdout, '(1x)')
+		end if
 
-	if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then ! .and. eigensolver_has_progress_bar(eigens)
-	  write(stdout, '(1x)')
-	end if
+		conv = all(rdm%eigens%converged(st%d%kpt%start:st%d%kpt%end) >= nstconv_)
 
-	conv = all(rdm%eigens%converged(st%d%kpt%start:st%d%kpt%end) >= nstconv_)
-
-
-
-	! calculate total energy with new states
+		! calculate total energy with new states
 	  call density_calc (st, gr, st%rho)
 	  call v_ks_calc(ks, hm, st, geo)
 	  call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
 	  call rdm_derivatives(rdm, hm, st, gr)
+		
+		! clauculate FO operator to check Hermiticity of lagrange multiplier matrix (lambda)
+		lambda = M_ZERO
+		FO = M_ZERO
+		call construct_f(hm, st, gr, lambda, rdm)
 
-SAFE_ALLOCATE(lambda(1:st%nst,1:st%nst)) 
-SAFE_ALLOCATE(FO(1:st%nst, 1:st%nst))
-lambda = M_ZERO
-FO = M_ZERO
-call construct_f(hm, st, gr, lambda, rdm)
+		!Set up FO matrix to check maxFO
+		do ist = 1, st%nst
+			do jst = 1, ist - 1
+				FO(jst, ist) = - ( lambda(jst, ist) - lambda(ist ,jst))
+			end do
+		end do
+		rdm%maxFO = maxval(abs(FO))
 
-!Set up FO matrix 
-if (rdm%iter==1) then
-  do ist = 1, st%nst
-	do jst = 1, ist
-	  FO(ist, jst) = M_HALF*(lambda(ist, jst) + lambda(jst, ist))
-	  FO(jst, ist) = FO(ist, jst)
-	end do
-  end do
-else
-  do ist = 1, st%nst
-	do jst = 1, ist - 1
-	  FO(jst, ist) = - ( lambda(jst, ist) - lambda(ist ,jst))
-	end do
-  end do
-  rdm%maxFO = maxval(abs(FO))
-  do ist = 1, st%nst
-	FO(ist, ist) = rdm%evalues(ist)
-	do jst = 1, ist-1
-	  if(abs(FO(jst, ist)) > rdm%scale_f) then
-		FO(jst, ist) = rdm%scale_f*FO(jst,ist)/abs(FO(jst, ist))
-	  end if
-	  FO(ist, jst) = FO(jst, ist)
-	end do
-  end do
-end if
+		call total_energy_rdm(rdm, st%occ(:,1), energy)
 
-!call lalg_eigensolve(st%nst, FO, rdm%evalues)
-!call assign_eigfunctions(st, gr, FO)
-!call rdm_derivatives(rdm, hm, st, gr)
+    ! check if step lowers the energy (later to be removed?)
+    energy_diff = energy - energy_old
 
-SAFE_DEALLOCATE_A(lambda) 
-SAFE_DEALLOCATE_A(FO)
+		print*, "maxFO:", rdm%maxFO
+		print*, "energy_diff", energy_diff
 
-	call total_energy_rdm(rdm, st%occ(:,1), energy)
-
-    ! check if step lowers the energy
-     energy_diff = energy - energy_old
-
-print*, "maxFO:", rdm%maxFO
-print*, "energy", energy
-print*, "energy_diff", energy_diff
+		SAFE_DEALLOCATE_A(lambda) 
+		SAFE_DEALLOCATE_A(FO)
 
     POP_SUB(scf_orb_cg)
 
   end subroutine scf_orb_cg
   
-!END New Nicole
 
   !--------------------------------------------------------------------
   ! calculate the derivative of the energy with respect to orbital ist
@@ -1226,8 +1194,6 @@ print*, "energy_diff", energy_diff
       
     FLOAT, allocatable :: hpsi(:,:), hpsi1(:,:), dpsi(:,:), dpsi2(:,:), fvec(:) 
     FLOAT, allocatable :: g_x(:,:), g_h(:,:), rho(:,:), rho_tot(:), pot(:), fock(:,:,:)
-FLOAT, allocatable :: hppsi(:,:), hppsi1(:,:)
-FLOAT :: energy
     integer :: ist, ip, iorb, jorb, jst
 
     PUSH_SUB(construct_f)
@@ -1349,7 +1315,7 @@ FLOAT :: energy
    
   ! ----------------------------------------
   
-  ! finds the new states after the minimization of the orbitals
+  ! finds the new states after the minimization of the orbitals (Piris method)
   subroutine assign_eigfunctions(st, gr, lambda)
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
