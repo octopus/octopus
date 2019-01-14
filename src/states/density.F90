@@ -114,7 +114,7 @@ contains
   ! ---------------------------------------------------
 
   subroutine density_calc_pack(this)
-    type(density_calc_t),           intent(out)   :: this
+    type(density_calc_t),           intent(inout)   :: this
 
     PUSH_SUB(density_calc_pack)
     
