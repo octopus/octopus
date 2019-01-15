@@ -206,24 +206,60 @@ contains
 
     nn = op%stencil%size
 
-    if(op%cmplx_op) then
-      ASSERT(.not. (batch_is_packed(fi) .or. batch_is_packed(fo)))
+    select case(batch_status(fi))
 
+    case(BATCH_CL_PACKED)
+
+      ASSERT(.false.)
+      
+    case(BATCH_NOT_PACKED)
+      
+      if(op%cmplx_op) then
+        
 #ifdef R_TCOMPLEX
-      !$omp parallel do private(ll, ist, ii)
-      do ll = 1, nri
-        do ii = imin(ll) + 1, imax(ll)
-          do ist = 1, fi%nst_linear 
-            fo%states_linear(ist)%X(psi)(ii) = sum(TOCMPLX(wre(1:nn), wim(1:nn))*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+        !$omp parallel do private(ll, ist, ii)
+        do ll = 1, nri
+          do ii = imin(ll) + 1, imax(ll)
+            do ist = 1, fi%nst_linear 
+              fo%states_linear(ist)%X(psi)(ii) = sum(TOCMPLX(wre(1:nn), wim(1:nn))*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+            end do
           end do
         end do
-      end do
-      !$omp end parallel do
+        !$omp end parallel do
 #endif
 
-    else
+      else
+        
+        !$omp parallel do private(ll, ist, ii)
+        do ll = 1, nri
+          do ii = imin(ll) + 1, imax(ll)
+            do ist = 1, fi%nst_linear
+              fo%states_linear(ist)%X(psi)(ii) = sum(wre(1:nn)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+            end do
+          end do
+        end do
+        !$omp end parallel do
 
-      if(batch_is_packed(fi)) then
+      end if
+
+    case(BATCH_PACKED)
+
+      if(op%cmplx_op) then
+        
+#ifdef R_TCOMPLEX
+        !$omp parallel do private(ll, ist, ii)
+        do ll = 1, nri
+          do ii = imin(ll) + 1, imax(ll)
+            do ist = 1, fi%nst_linear 
+              fo%pack%X(psi)(ist, ii) = sum(TOCMPLX(wre(1:nn), wim(1:nn))*fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
+            end do
+          end do
+        end do
+        !$omp end parallel do
+#endif
+
+      else
+        
         ASSERT(allocated(fo%pack%X(psi)))
         !$omp parallel do private(ll, ist, ii)
         do ll = 1, nri
@@ -234,19 +270,10 @@ contains
           end do
         end do
         !$omp end parallel do
-      else   
-        !$omp parallel do private(ll, ist, ii)
-        do ll = 1, nri
-          do ii = imin(ll) + 1, imax(ll)
-            do ist = 1, fi%nst_linear
-              fo%states_linear(ist)%X(psi)(ii) = sum(wre(1:nn)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
-            end do
-          end do
-        end do
-        !$omp end parallel do
-      end if
 
-    end if
+      end if
+        
+    end select
 
     POP_SUB(X(nl_operator_operate_batch).operate_const_weights)
   end subroutine operate_const_weights
@@ -259,34 +286,67 @@ contains
 
     PUSH_SUB(X(nl_operator_operate_batch).operate_non_const_weights)
 
-    ASSERT(.not. (batch_is_packed(fi) .or. batch_is_packed(fo)))
-
     factor_ = M_ONE
     if(present(factor)) factor_ = factor
 
-    if(op%cmplx_op) then
-#ifdef R_TCOMPLEX
-      !$omp parallel do private(ll, ist, ii, nn)
-      do ll = 1, nri
-        nn = op%nn(ll)
-        forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%states_linear(ist)%X(psi)(ii) = factor_*sum(TOCMPLX(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * &
-            fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
-        end forall
-      end do
-      !$omp end parallel do
-#endif
-    else
-      !$omp parallel do private(ll, ist, ii, nn)
-      do ll = 1, nri
-        nn = op%nn(ll)
-        forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%states_linear(ist)%X(psi)(ii) = factor_*sum(op%w_re(1:nn, ii)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
-        end forall
-      end do
-      !$omp end parallel do
-    end if
+    select case(batch_status(fi))
 
+    case(BATCH_CL_PACKED)
+
+      ASSERT(.false.)
+      
+    case(BATCH_NOT_PACKED)
+      
+      if(op%cmplx_op) then
+#ifdef R_TCOMPLEX
+        !$omp parallel do private(ll, ist, ii, nn)
+        do ll = 1, nri
+          nn = op%nn(ll)
+          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
+            fo%states_linear(ist)%X(psi)(ii) = factor_*sum(TOCMPLX(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * &
+              fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+          end forall
+        end do
+        !$omp end parallel do
+#endif
+      else
+        !$omp parallel do private(ll, ist, ii, nn)
+        do ll = 1, nri
+          nn = op%nn(ll)
+          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
+            fo%states_linear(ist)%X(psi)(ii) = factor_*sum(op%w_re(1:nn, ii)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+          end forall
+        end do
+        !$omp end parallel do
+      end if
+
+    case(BATCH_PACKED)
+
+      if(op%cmplx_op) then
+#ifdef R_TCOMPLEX
+        !$omp parallel do private(ll, ist, ii, nn)
+        do ll = 1, nri
+          nn = op%nn(ll)
+          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
+            fo%pack%X(psi)(ist, ii) = factor_*sum(TOCMPLX(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * &
+              fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
+          end forall
+        end do
+        !$omp end parallel do
+#endif
+      else
+        !$omp parallel do private(ll, ist, ii, nn)
+        do ll = 1, nri
+          nn = op%nn(ll)
+          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
+            fo%pack%X(psi)(ist, ii) = factor_*sum(op%w_re(1:nn, ii)*fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
+          end forall
+        end do
+        !$omp end parallel do
+      end if
+      
+    end select
+      
     POP_SUB(X(nl_operator_operate_batch).operate_non_const_weights)
   end subroutine operate_non_const_weights
 

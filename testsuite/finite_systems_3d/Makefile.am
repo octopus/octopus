@@ -71,8 +71,8 @@ dist_share_DATA = \
 	13-full_potential_hydrogen.01-gs.inp \
 	13-full_potential_hydrogen.02-gs-cg.inp \
 	13-full_potential_hydrogen.test \
-	14-fullerene_packed.test                      \
-	14-fullerene_packed.01-gs.inp                 \
+	14-fullerene_unpacked.test                      \
+	14-fullerene_unpacked.01-gs.inp                 \
 	15-fullerene_stdlcao.test                     \
 	15-fullerene_stdlcao.01-gs.inp                \
         16-scfinlcao_std.test                         \
