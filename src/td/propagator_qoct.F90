@@ -79,11 +79,7 @@ contains
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
     call exponential_apply_all(tr%te, gr%der, hm, xc, st, dt)
 
-    if(.not. hm%cmplxscl%space) then
-      call density_calc(st, gr, st%rho)
-    else
-      call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-    end if
+    call density_calc(st, gr, st%rho)
 
     !restore to time 'time - dt'
     if(ion_dynamics_ions_move(ions)) then

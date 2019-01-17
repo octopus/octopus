@@ -2,7 +2,7 @@
 
 Test       : Hartree pfft
 Options    : pfft
-Program    : oct-test
+Program    : octopus
 TestGroups : short-run, components
 Enabled    : Yes
 

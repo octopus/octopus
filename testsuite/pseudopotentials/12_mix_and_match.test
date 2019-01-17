@@ -7,6 +7,7 @@ Enabled    : Yes
 
 Input: 12_mix_and_match.01-mgo.inp
 Precision: 0.00011
+match ; SCF convergence    ;     GREPCOUNT(static/info, 'SCF converged') ; 1
 match;  Total energy       ;	 GREPFIELD(static/info, 'Total       =', 3) ;	-75.27909809
 match;  Ion-ion energy     ;	 GREPFIELD(static/info, 'Ion-ion     =', 3) ;	17.31223147
 match;  Eigenvalues sum    ;	 GREPFIELD(static/info, 'Eigenvalues =', 3) ;	-19.13984972

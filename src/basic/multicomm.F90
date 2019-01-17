@@ -238,7 +238,7 @@ contains
 
     !%Variable ParKPoints
     !%Type integer
-    !%Default no
+    !%Default auto
     !%Section Execution::Parallelization
     !%Description
     !% This variable controls the number of processors used for the
@@ -542,7 +542,8 @@ contains
         call messages_fatal(2, only_root_writes = .true.)
       end if
 
-      if(any(index_range(1:P_STRATEGY_MAX) / real_group_sizes(1:P_STRATEGY_MAX) < min_range(1:P_STRATEGY_MAX))) then
+      if(any(index_range(1:P_STRATEGY_MAX) / real_group_sizes(1:P_STRATEGY_MAX) < min_range(1:P_STRATEGY_MAX) .and. &
+             real_group_sizes(1:P_STRATEGY_MAX) >  1)) then
         message(1) = "I have fewer elements in a parallel group than recommended."
         message(2) = "Maybe you should reduce the number of nodes."
         call messages_warning(2)

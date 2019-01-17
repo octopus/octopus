@@ -195,8 +195,6 @@ contains
     !% Generates output in <a href=http://www.openscad.org>OpenSCAD format</a> for 3D printing.
     !% Available only in 3D.
     !% Produces geometry and isosurface of the field, at <tt>OpenSCADIsovalue</tt>. (Experimental.)
-    !%Option json bit(18)
-    !% Generates output in JSON format.
     !%Option bild bit(19)
     !% Generates output in <a href=http://plato.cgl.ucsf.edu/chimera/docs/UsersGuide/bild.html>BILD format</a>.
     !%Option vtk bit(20)
@@ -509,7 +507,7 @@ contains
 
       do idir = 1, mesh%sb%dim
         write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, &
-          mesh%sb%rlattice(idir2, idir)), idir2 = 1, mesh%sb%dim)
+          mesh%sb%rlattice(idir, idir2)), idir2 = 1, mesh%sb%dim)
       end do
 
       write(iunit, '(a)') 'PRIMCOORD'//trim(index_str)

@@ -83,8 +83,6 @@ module hamiltonian_base_oct_m
     hamiltonian_base_update,                   &
     dhamiltonian_base_phase,                   &
     zhamiltonian_base_phase,                   &
-    dhamiltonian_base_phase_correction,        &
-    zhamiltonian_base_phase_correction,        &
     dhamiltonian_base_nlocal_force,            &
     zhamiltonian_base_nlocal_force,            &
     projection_t
@@ -99,7 +97,7 @@ module hamiltonian_base_oct_m
     type(nl_operator_t),      pointer     :: kinetic
     type(projector_matrix_t), allocatable :: projector_matrices(:) 
     FLOAT,                    allocatable :: potential(:, :)
-    FLOAT,                    allocatable :: Impotential(:, :)!cmplxscl
+    FLOAT,                    allocatable :: Impotential(:, :)
     FLOAT,                    allocatable :: uniform_magnetic_field(:)
     FLOAT,                    allocatable :: uniform_vector_potential(:)
     FLOAT,                    allocatable :: vector_potential(:, :)
@@ -188,7 +186,7 @@ contains
     end if
     
     SAFE_DEALLOCATE_A(this%potential)
-    SAFE_DEALLOCATE_A(this%Impotential)!cmplxscl
+    SAFE_DEALLOCATE_A(this%Impotential)
     SAFE_DEALLOCATE_A(this%vector_potential)
     SAFE_DEALLOCATE_A(this%uniform_vector_potential)
     SAFE_DEALLOCATE_A(this%uniform_magnetic_field)
@@ -208,7 +206,7 @@ contains
     PUSH_SUB(hamiltonian_clear)
 
     if(allocated(this%potential))                this%potential = M_ZERO
-    if(allocated(this%Impotential))              this%Impotential = M_ZERO!cmplxscl
+    if(allocated(this%Impotential))              this%Impotential = M_ZERO
     if(allocated(this%uniform_vector_potential)) this%uniform_vector_potential = M_ZERO
     if(allocated(this%vector_potential))         this%vector_potential = M_ZERO
     if(allocated(this%uniform_magnetic_field))   this%uniform_magnetic_field = M_ZERO

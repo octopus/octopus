@@ -11,6 +11,7 @@ Enabled    : Yes
 #   * spinors
 
 Input: 21-lobpcg.01-spin_polarized.inp
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -146.74150377
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 0.00000000
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -38.58624314
@@ -34,6 +35,7 @@ match ; mz             ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) 
 
 Input: 21-lobpcg.02-spinors.inp
 Precision : 0.00011
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -141.78882842
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 0.00000000
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -43.94163200
@@ -42,6 +44,7 @@ match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -46
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -30.77251312
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -4.56275297
 match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 61.84478448
+Precision : 0.00014
 match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -277.03941862
 
 Precision : 0.001

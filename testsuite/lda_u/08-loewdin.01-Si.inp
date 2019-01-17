@@ -27,9 +27,10 @@ Spacing = 0.6
 %
 
 ParDomains = no
-ParKPoints = auto
 
 DFTULevel = dft_u_acbn0
+DFTUDoubleCounting = dft_u_amf
+SCFCalculateForces = no
 AOLoewdin = yes
 UseAllAtomicOrbitals = yes
 OutputLDA_U = occ_matrices + effectiveU

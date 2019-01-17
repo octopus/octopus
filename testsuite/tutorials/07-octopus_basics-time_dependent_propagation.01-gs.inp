@@ -1,0 +1,21 @@
+CalculationMode = gs
+UnitsOutput = eV_Angstrom
+
+Radius = 3.5*angstrom
+Spacing = 0.18*angstrom
+
+CH = 1.097*angstrom
+%Coordinates
+  "C" |           0 |          0 |           0
+  "H" |  CH/sqrt(3) | CH/sqrt(3) |  CH/sqrt(3)
+  "H" | -CH/sqrt(3) |-CH/sqrt(3) |  CH/sqrt(3)
+  "H" |  CH/sqrt(3) |-CH/sqrt(3) | -CH/sqrt(3)
+  "H" | -CH/sqrt(3) | CH/sqrt(3) | -CH/sqrt(3)
+%
+
+Tf  = 0.1/eV
+dt = 0.002/eV
+
+TDPropagator = aetrs
+TDMaxSteps = Tf/dt
+TDTimeStep = dt

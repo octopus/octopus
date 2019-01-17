@@ -122,7 +122,7 @@ contains
 
    if(this%level == DFT_U_ACBN0) then
      SAFE_ALLOCATE(mixer%tmpU(1:this%norbsets, 1))
-     call lda_u_get_effectiveU(this, mixer%tmpU(1:this% norbsets, 1))
+     call lda_u_get_effectiveU(this, mixer%tmpU(1:this%norbsets, 1))
      call mixfield_set_vin(mixer%mixfield_U, mixer%tmpU)
    end if
 

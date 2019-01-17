@@ -86,6 +86,10 @@ module em_resp_oct_m
     logical :: calc_hyperpol
     CMPLX   :: alpha(MAX_DIM, MAX_DIM, 3)        !< the linear polarizability
     CMPLX   :: alpha_be(MAX_DIM, MAX_DIM, MAX_DIM) !< the magneto-optical response
+    CMPLX   :: alpha0(MAX_DIM, MAX_DIM, 3)        !< the linear polarizability without G = G' = 0 term
+                                                  !! of the LRC kernel
+    CMPLX   :: alpha_be0(MAX_DIM, MAX_DIM, MAX_DIM) !< the magneto-optical response without G = G' = 0
+                                                  !! term of the LRC kernel
     CMPLX   :: beta (MAX_DIM, MAX_DIM, MAX_DIM)  !< first hyperpolarizability
 
     CMPLX   :: chi_para(MAX_DIM, MAX_DIM)     !< The paramagnetic part of the susceptibility
@@ -104,7 +108,8 @@ module em_resp_oct_m
     logical :: magnetooptics_nohvar              !< whether to consider corrections to exchange-correlation 
                                                  !! and Hartree terms for magnetic perturbations in magneto-optics
     logical :: kpt_output                        !< whether to include in the output contributions of different 
-                                                 !! k-points to dielectric constant     
+                                                 !! k-points to dielectric constant  
+    logical :: lrc_kernel                        !< whether the LRC kernel is used   
 
   end type em_resp_t
 
@@ -127,7 +132,7 @@ contains
     type(lr_t), allocatable :: ke_lr(:, :, :, :)
     type(pert_t)            :: pert_kdotp, pert2_none, pert_b
 
-    integer :: sigma, sigma_alt, ndim, idir, idir2, ierr, iomega, ifactor, nsigma_eff, ipert
+    integer :: sigma, sigma_alt, ndim, idir, idir1, idir2, ierr, iomega, ifactor, nsigma_eff, ipert
     integer :: ierr_e(3), ierr_e2(3), nfactor_ke
     character(len=100) :: dirname_output, str_tmp
     logical :: complex_response, have_to_calculate, use_kdotp, opp_freq, &
@@ -135,7 +140,7 @@ contains
 
     FLOAT :: closest_omega, last_omega, frequency
     FLOAT, allocatable :: dl_eig(:,:,:)
-    CMPLX :: frequency_eta, frequency_zero
+    CMPLX :: frequency_eta, frequency_zero, lrc_coef(MAX_DIM, MAX_DIM)
     type(restart_t) :: gs_restart, restart_load, restart_dump, kdotp_restart
     integer, parameter :: PB = 1, PK2 = 2, PKB = 3, PKE = 4, PE = 5
 
@@ -153,6 +158,14 @@ contains
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC .and. &
       any(abs(em_vars%omega(1:em_vars%nomega)) > M_EPSILON)) then
       call messages_not_implemented('Dynamical magnetic response')
+    end if
+
+    em_vars%lrc_kernel = .false.
+    if(abs(sys%ks%xc%kernel_lrc_alpha) > M_EPSILON) em_vars%lrc_kernel = .true.
+
+    if(em_vars%lrc_kernel .and. gr%sb%periodic_dim < gr%sb%dim) then
+      message(1) = 'The use of the LRC kernel for non-periodic dimensions makes no sense.'
+      call messages_warning(1)
     end if
 
     complex_wfs = states_are_complex(sys%st)
@@ -280,7 +293,7 @@ contains
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
       em_vars%nsigma = 1
       if(use_kdotp) call messages_experimental("Magnetic perturbation for periodic systems")
-    end if
+    end if  
 
     if(em_vars%calc_magnetooptics .or. &
       (pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC)) then
@@ -306,11 +319,11 @@ contains
 
         if(gr%sb%periodic_dim < gr%sb%dim) then
           if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-            message(2) = "All directions should be periodic for magnetic perturbations with kdotp."
+            message(1) = "All directions should be periodic for magnetic perturbations with kdotp."
           else
-            message(2) = "All directions should be periodic for magnetooptics with kdotp."
+            message(1) = "All directions should be periodic for magnetooptics with kdotp."
           end if
-          call messages_fatal(2)
+          call messages_fatal(1)
         end if
         if(.not. complex_response) then
           do idir = 1,gr%sb%dim
@@ -342,11 +355,17 @@ contains
       ! otherwise, use default, which is hartree + fxc
     end if
 
+    if(em_vars%lrc_kernel .and. (.not. sternheimer_add_hartree(sh)) &
+      .and. (.not. sternheimer_add_fxc(sh))) then
+      message(1) = "Only the G = G'= 0 term of the LRC kernel is taken into account."
+      call messages_warning(1)
+    end if   
+        
+
     if(mpi_grp_is_root(mpi_world)) then
       call info()
       call io_mkdir(EM_RESP_DIR) ! output
     end if
-
 
     allocate_rho_em = sternheimer_add_fxc(sh) .or. sternheimer_add_hartree(sh)
     do ifactor = 1, em_vars%nfactor
@@ -427,7 +446,7 @@ contains
 
         ! if this frequency is zero and this is not the first
         ! iteration we do not have to do anything
-        if(iomega > 1 .and. em_vars%freq_factor(ifactor) == M_ZERO) have_to_calculate = .false. 
+        if(iomega > 1 .and. abs(em_vars%freq_factor(ifactor)) <= M_EPSILON) have_to_calculate = .false. 
 
         if(ifactor > 1 .and. (.not. em_vars%calc_magnetooptics)) then 
 
@@ -1158,6 +1177,23 @@ contains
       write(iunit, '(a)') '# Imaginary part of dielectric constant'
       call output_tensor(iunit, aimag(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
 
+      if(em_vars%lrc_kernel) then
+        write(iunit, '(a)')
+        write(iunit, '(a)') '# Without G = G'' = 0 term of the LRC kernel'
+
+        epsilon(1:gr%sb%dim, 1:gr%sb%dim) = &
+          4 * M_PI * em_vars%alpha0(1:gr%sb%dim, 1:gr%sb%dim, ifactor) / gr%sb%rcell_volume
+        do idir = 1, gr%sb%dim
+          epsilon(idir, idir) = epsilon(idir, idir) + M_ONE
+        end do
+
+        write(iunit, '(a)') '# Real part of dielectric constant'
+        call output_tensor(iunit, real(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
+        write(iunit, '(a)')
+        write(iunit, '(a)') '# Imaginary part of dielectric constant'
+        call output_tensor(iunit, aimag(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
+      end if
+
       call io_close(iunit)
 
       if(em_vars%kpt_output) then
@@ -1522,8 +1558,54 @@ contains
       do idir = 1, gr%sb%dim + 1
         write(iunit, '(e20.8)', advance = 'no') aimag(epsilon_m(idir))
       end do
-      write(iunit, *)      
+      write(iunit, *)
+
+      if(em_vars%lrc_kernel) then
+        write(iunit, '(a)')   
+        write(iunit, '(a)') '# Without the G = G'' = 0 term of the LRC kernel'
       
+        diff(:) = M_ZERO
+        epsilon_m(:) = M_ZERO
+        do idir = 1, gr%sb%dim 
+          diff(idir) = M_HALF * (em_vars%alpha_be0(magn_dir(idir, 1), magn_dir(idir, 2), idir) - &
+            em_vars%alpha_be0(magn_dir(idir, 2), magn_dir(idir, 1), idir))
+
+          epsilon_m(idir) = 4 * M_PI * diff(idir) / gr%sb%rcell_volume
+        end do
+        diff(4) =(diff(1) + diff(2) + diff(3)) / M_THREE
+        epsilon_m(4) = 4 * M_PI * diff(4) / gr%sb%rcell_volume
+
+        write(iunit, '(a1, a25)', advance = 'no') '#', str_center(" ", 25)
+        write(iunit, '(a20)', advance = 'no') str_center("   yz,x = -zy,x", 20)
+        write(iunit, '(a20)', advance = 'no') str_center("   zx,y = -xz,y", 20)
+        write(iunit, '(a20)', advance = 'no') str_center("   xy,z = -yx,z", 20)
+        write(iunit, '(a20)', advance = 'no') str_center(" Average", 20)
+        write(iunit, *)
+ 
+        write(iunit, '(a25)', advance = 'no') str_center("Re alpha [a.u.]", 25)
+        do idir = 1, gr%sb%dim + 1 
+          write(iunit, '(e20.8)', advance = 'no') real(diff(idir))
+        end do
+        write(iunit, *)
+
+        write(iunit, '(a25)', advance = 'no') str_center("Im alpha [a.u.]", 25)
+        do idir = 1, gr%sb%dim + 1
+          write(iunit, '(e20.8)', advance = 'no') aimag(diff(idir))
+        end do
+        write(iunit, *)
+
+        write(iunit, '(a25)', advance = 'no') str_center("Re epsilon (B = 1 a.u.)", 25)
+        do idir = 1, gr%sb%dim + 1
+          write(iunit, '(e20.8)', advance = 'no') real(epsilon_m(idir))
+        end do
+        write(iunit, *)
+
+        write(iunit, '(a25)', advance = 'no') str_center("Im epsilon (B = 1 a.u.)", 25)
+        do idir = 1, gr%sb%dim + 1
+          write(iunit, '(e20.8)', advance = 'no') aimag(epsilon_m(idir))
+        end do
+        write(iunit, *)
+      end if      
       call io_close(iunit)
 
       if(em_vars%kpt_output) then

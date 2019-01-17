@@ -1040,13 +1040,16 @@ contains
           factors(iorb) = ps%conf%occ(ii, 1)/(CNST(2.0)*ll + CNST(1.0))
         end do
 
-        !$omp parallel do private(ip, aa)
+        !$omp parallel do private(ip, aa, iorb) 
         do ip = 1, this%sphere(iatom)%np
           aa = CNST(0.0)
           do iorb = 1, this%norb_atom(iatom)/this%mult
             aa = aa + factors(iorb)*this%orbitals(iatom)%states_linear(iorb)%dpsi(ip)**2
           end do
+          !Due to the mapping function, more than one task could write to the same point in the array
+          !$omp critical
           rho(this%sphere(iatom)%map(ip), 1) = aa
+          !$omp end critical
         end do
 
         SAFE_DEALLOCATE_A(factors)
@@ -1230,8 +1233,8 @@ contains
         if (lmag > n1 + n2) then
           mag = mag*(n1 + n2)/lmag
           lmag = n1 + n2
-        elseif (lmag == M_ZERO) then
-          if (n1 - n2 == M_ZERO) then
+        elseif (abs(lmag) <= M_EPSILON) then
+          if (abs(n1 - n2) <= M_EPSILON) then
             rho(1:gr%fine%mesh%np, 1:2) = rho(1:gr%fine%mesh%np, 1:2) + atom_rho(1:gr%fine%mesh%np, 1:2)
           else
             atom_rho(:, 1) = (atom_rho(:, 1) + atom_rho(:, 2))/M_TWO
@@ -1261,8 +1264,8 @@ contains
 
         elseif (nspin == 4) then
           theta = acos(mag(3)/lmag)
-          if (mag(1) == M_ZERO) then
-            if (mag(2) == M_ZERO) then
+          if (abs(mag(1)) <= M_EPSILON) then
+            if (abs(mag(2)) <= M_EPSILON) then
               phi = M_ZERO
             elseif (mag(2) < M_ZERO) then
               phi = M_PI*CNST(3.0/2.0)

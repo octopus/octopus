@@ -8,6 +8,7 @@ Enabled    : Yes
 ExtraFile: 08-carbon_fhi.01-C.fhi
 Input: 08-carbon_fhi.01-gs.inp
 Precision: 0.00011
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -146.81452282
 match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -14.467194
 match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ; 1.000000

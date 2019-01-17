@@ -14,3 +14,6 @@ ExtraStates = 3
 Output = pol_density
 OutputFormat = xcrysden
 
+
+Debug = trace
+

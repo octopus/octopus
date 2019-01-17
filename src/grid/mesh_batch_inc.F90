@@ -127,8 +127,8 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
       do ist = 1, aa%nst
         do jst = 1, bb%nst
-          tmp1 = 0.0
-          tmp2 = 0.0
+          tmp1 = M_ZERO
+          tmp2 = M_ZERO
           do ip = 1, mesh%np
             tmp1 = tmp1 + R_CONJ(aa%pack%X(psi)(2*ist - 1, ip))*bb%pack%X(psi)(2*jst - 1, ip)
             tmp2 = tmp2 + R_CONJ(aa%pack%X(psi)(2*ist    , ip))*bb%pack%X(psi)(2*jst    , ip)
@@ -523,6 +523,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
   type(batch_t),     intent(inout) :: aa              !< A batch which contains the mesh functions whose points will be exchanged.
   integer, optional, intent(in)    :: forward_map(:)  !< A map which gives the destination of the value each point.
   logical, optional, intent(in)    :: backward_map    !< A map which gives the source of the value of each point.
+  logical :: packed_on_entry
 
 #ifdef HAVE_MPI
   integer :: ip, ipg, npart, ipart, ist, pos, nstl, np_points, np_inner, np_bndry
@@ -538,7 +539,10 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
   ASSERT(present(backward_map) .neqv. present(forward_map))
   ASSERT(batch_type(aa) == R_TYPE_VAL)
-  ASSERT(batch_status(aa) == BATCH_NOT_PACKED)
+  packed_on_entry = batch_status(aa) == BATCH_NOT_PACKED
+  if (packed_on_entry) then
+    call batch_unpack(aa, force=.true.)
+  end if
 
   if(.not. mesh%parallel_in_domains) then
     message(1) = "Not implemented for the serial case. Really, only in parallel."
@@ -722,6 +726,9 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 #endif
   end if
 
+  if (packed_on_entry) then
+    call batch_pack(aa)
+  end if
   POP_SUB(X(mesh_batch_exchange_points))
 end subroutine X(mesh_batch_exchange_points)
 
@@ -764,7 +771,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
       do ip = 1, mesh%np
         do ist = 1, aa%nst_linear
           a0 = aa%pack%X(psi)(ist, ip)
-          if(a0 == R_TOTYPE(M_ZERO)) cycle
+          if(abs(a0) <= M_EPSILON) cycle
           if(scal(ist) < abs(a0)) then
             ssq(ist) = M_ONE + ssq(ist)*(scal(ist)/abs(a0))**2
             scal(ist) = abs(a0)

@@ -42,7 +42,6 @@ Spacing = 0.5
 FromScratch = yes
 ParStates = no
 ParDomains = no
-ParKPoints = auto
 
 SpinComponents = polarized
 GuessMagnetDensity = user_defined

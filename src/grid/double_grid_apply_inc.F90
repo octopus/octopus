@@ -29,7 +29,6 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
 
   FLOAT :: r, xx(1:MAX_DIM)
   FLOAT :: vv
-  FLOAT :: tmp(1:3)
 
   integer :: is
   integer :: ii, jj, kk

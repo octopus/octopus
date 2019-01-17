@@ -202,7 +202,7 @@
     theta = x
     call controlfunction_set_theta(par_, theta)
 
-    if(oct%delta == M_ZERO) then
+    if(abs(oct%delta) <= M_EPSILON) then
       ! We only need the value of the target functional.
       call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)

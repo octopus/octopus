@@ -98,6 +98,10 @@ contains
   nullify(this%eorb_submesh)
   nullify(this%eorb_mesh)
 
+  call submesh_null(this%sphere)
+
+  call orbitalset_init(this)
+
   POP_SUB(orbitalset_nullify)
 
  end subroutine orbitalset_nullify
@@ -106,6 +110,19 @@ contains
   type(orbitalset_t),             intent(inout) :: this
 
   PUSH_SUB(orbitalset_init)
+
+  this%nn = 0
+  this%ll = 0
+  this%jj = M_ONE
+  this%ii = 0
+  this%iatom = 0
+  this%ndim = 1
+ 
+  this%Ueff = M_ZERO
+  this%Ubar = M_ZERO
+  this%Jbar = M_ZERO
+  this%alpha = M_ZERO
+  this%radius = M_ZERO
 
   POP_SUB(orbitalset_init)
  end subroutine orbitalset_init
@@ -192,11 +209,11 @@ contains
 
       if(simul_box_is_periodic(sb) .and. .not. os%submeshforperiodic) then
         !We now compute the so-called Bloch sum of the localized orbitals
-        do im = 1, os%norbs
-          os%eorb_mesh(:,:,im,iq) = M_Z0
-          do idim = 1, os%ndim
+        os%eorb_mesh(:,:,:,iq) = M_Z0
+        do idim = 1, os%ndim
+          do im = 1, os%norbs
             do is = 1, ns
-              os%eorb_mesh(os%sphere%map(is),idim,im,iq) = os%eorb_mesh(os%sphere%map(is),idim,im,iq) &
+              os%eorb_mesh(os%sphere%map(is),im,idim,iq) = os%eorb_mesh(os%sphere%map(is),im,idim,iq) &
                                                         + os%zorb(is,idim,im)*os%phase(is, iq)
             end do
           end do

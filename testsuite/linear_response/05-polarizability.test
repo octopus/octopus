@@ -7,6 +7,7 @@ Enabled    : Yes
 
 
 Input: 05-polarizability.01-gs.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy   ; GREPFIELD(static/info, 'Total       =', 3) ; -11.40181959
 # due to the perversity of Methfessel-Paxton, occupations can be outside [0,2] and entropy can be negative
 match ; Free energy    ; GREPFIELD(static/info, 'Free        =', 3) ; -11.32459745
