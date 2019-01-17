@@ -157,7 +157,7 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(map<string, CUm
   int major = 0, minor = 0;
   CUDA_SAFE_CALL(cuDeviceComputeCapability(&major, &minor, **device));
 
-  char compute_version[2];
+  char compute_version[3];
   sprintf(compute_version, "%.1d%.1d", major, minor);
 
   string all_flags = "--gpu-architecture=compute_" + string(compute_version)
