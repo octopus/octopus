@@ -36,12 +36,7 @@ include/config_F90.h: $(top_builddir)/config.h
 	$(MKDIR_P) include # required for VPATH functionality
 	grep '^#define' $^ > include/config_F90.h
 
-include/options.h:
-	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
-
-include/defaults.h: include/fortran_types.h include/vectors.h
-	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
-
+# include/options.h and include/defaults.h rules are after the source declaration
 
 # Fortran and C sources - keep in alphabetical order for each folder
 # Sources in basic
@@ -585,6 +580,12 @@ noinst_HEADERS +=                                    \
 
 
 all_srcs = $(all_f_srcs) $(all_c_srcs)
+
+include/options.h: $(all_f_srcs) $(noinst_HEADERS)
+	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
+
+include/defaults.h: $(all_f_srcs) $(noinst_HEADERS)
+	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
 bin_PROGRAMS = octopus
 
