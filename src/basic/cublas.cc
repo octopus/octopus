@@ -39,6 +39,8 @@ typedef std::complex<double> cuDoubleComplex;
 
 #define CUBLAS_SAFE_CALL(x) cublas_safe_call(#x, x)
 
+#ifdef HAVE_CUDA
+
 static cublasStatus_t cublas_safe_call(const char * call, cublasStatus_t safe_call_result){
   if(safe_call_result != CUBLAS_STATUS_SUCCESS){
 
@@ -82,6 +84,8 @@ static cublasStatus_t cublas_safe_call(const char * call, cublasStatus_t safe_ca
   }
   return safe_call_result;
 }
+
+#endif
 
 extern "C" void FC_FUNC_(cublas_init, CUBLAS_INIT)(cublasHandle_t ** handle){
 #ifdef HAVE_CUDA
