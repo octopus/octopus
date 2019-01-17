@@ -41,7 +41,7 @@ typedef std::complex<double> cuDoubleComplex;
   do {                                                            \
     cublasStatus_t safe_call_result = x;                          \
     if(safe_call_result != CUBLAS_STATUS_SUCCESS) {               \
-      std::cerr << "\nerror: " #x " failed with error\n";	  \
+      std::cerr << "\nerror: " #x " failed with error " << safe_call_result << "\n"; \
       exit(1);                                                    \
     }                                                             \
   } while(0)
