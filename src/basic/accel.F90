@@ -269,13 +269,12 @@ contains
     !%Variable DisableOpenCL
     !%Type logical
     !%Default yes
-    !%Section Execution::OpenCL
+    !%Section Execution::Accel
     !%Description
     !% If Octopus was compiled with OpenCL support, it will try to
     !% initialize and use an OpenCL device. By setting this variable
     !% to <tt>yes</tt> you tell Octopus not to use OpenCL.
     !%End
-
 #ifdef HAVE_ACCEL
     default = .false.
 #else
@@ -299,7 +298,7 @@ contains
     !%Variable OpenCLPlatform
     !%Type integer
     !%Default 0
-    !%Section Execution::OpenCL
+    !%Section Execution::Accel
     !%Description
     !% This variable selects the OpenCL platform that Octopus will
     !% use. You can give an explicit platform number or use one of
@@ -319,7 +318,7 @@ contains
     !%Variable OpenCLDevice
     !%Type integer
     !%Default gpu
-    !%Section Execution::OpenCL
+    !%Section Execution::Accel
     !%Description
     !% This variable selects the OpenCL device that Octopus will
     !% use. You can specify one of the options below or a numerical
@@ -555,12 +554,11 @@ contains
     !%Variable OpenCLBenchmark
     !%Type logical
     !%Default no
-    !%Section Execution::OpenCL
+    !%Section Execution::Accel
     !%Description
     !% If this variable is set to yes, Octopus will run some
     !% routines to benchmark the performance of the OpenCL device.
     !%End
-
     call parse_variable('OpenCLBenchmark', .false., run_benchmark)
 
     if(run_benchmark) then
