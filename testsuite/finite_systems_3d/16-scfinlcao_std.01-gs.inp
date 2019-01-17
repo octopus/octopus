@@ -38,4 +38,4 @@ SCFCalculatePartialCharges = yes
 ExperimentalFeatures = yes
 
 #We need to disable OpenCL as the OpenSCAD file changes considerably for small numerical differences
-DisableOpenCL = yes
+DisableAccel = yes

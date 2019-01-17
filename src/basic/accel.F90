@@ -266,23 +266,24 @@ contains
 
     buffer_alloc_count = 0
 
-    !%Variable DisableOpenCL
+    !%Variable DisableAccel    
     !%Type logical
     !%Default yes
     !%Section Execution::Accel
     !%Description
-    !% If Octopus was compiled with OpenCL support, it will try to
-    !% initialize and use an OpenCL device. By setting this variable
-    !% to <tt>yes</tt> you tell Octopus not to use OpenCL.
+    !% If Octopus was compiled with OpenCL or CUDA support, it will
+    !% try to initialize and use an accelerator device. By setting this
+    !% variable to <tt>yes</tt> you force Octopus not to use an accelerator even it is available.
     !%End
+    call messages_obsolete_variable('DisableOpenCL', 'DisableAccel')
 #ifdef HAVE_ACCEL
     default = .false.
 #else
     default = .true.
 #endif
-    call parse_variable('DisableOpenCL', default, disable)
+    call parse_variable('DisableAccel', default, disable)
     accel%enabled = .not. disable
-
+    
 #ifndef HAVE_ACCEL
     if(accel%enabled) then
       message(1) = 'Octopus was compiled without OpenCL or Cuda support.'
