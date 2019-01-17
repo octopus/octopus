@@ -212,8 +212,29 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(map<string, CUm
 
   *module = new CUmodule;
 
-  CUDA_SAFE_CALL(cuModuleLoadDataEx(*module, ptx, 0, 0, 0));
+  const int num_options = 2;
+  CUjit_option options[num_options];
+  void * option_values[num_options];
 
+  unsigned log_size = 4096;
+  char log_buffer[log_size];
+  
+  options[0] = CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES;
+  option_values[0] = (void *) (long)log_size;
+
+  options[1] = CU_JIT_ERROR_LOG_BUFFER;
+  option_values[1] = (void *) log_buffer;
+  
+  CUresult result = cuModuleLoadDataEx(*module, ptx, num_options, options, option_values);
+
+  if(result != CUDA_SUCCESS){
+    std::cerr << log_buffer << std::endl;
+    const char *msg;
+    cuGetErrorName(result, &msg);
+    std::cerr << "\nerror: cuModuleLoadDataEx failed with error " << msg << '\n';
+    exit(1);
+  }
+      
   delete [] ptx;
 
   (**module_map)[map_descriptor] = *module;
