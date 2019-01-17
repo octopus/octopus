@@ -127,13 +127,9 @@ contains
 
     auto_int = 1;
     if(present(automatic)) then
-      if(automatic) then
-        auto_int = 1
-      else
-        auto_int = 0
-      end if
+      if(.not. automatic) auto_int = 0
     end if
-    
+
     call pseudo_set_init_low(pseudo_set, dirname, auto_int, ierr)
     
   end subroutine pseudo_set_init

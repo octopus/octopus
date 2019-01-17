@@ -241,9 +241,13 @@ contains
     !%Description
     !% (Experimental) This enables a new automatic method for
     !% determining the best parameters for the pseudopotential
-    !% (spacing and radius).
+    !% (spacing and radius). For the moment, only the spacing can be
+    !% adjusted for a few pseudopotentials.
+    !%
+    !% This does not affect Octopus fixed parameters for the standard
+    !% pseudopotential set.
     !%End
-    call parse_variable('PseudopotentialEnergyTolerance', .false., automatic)
+    call parse_variable('PseudopotentialAutomaticParameters', .false., automatic)
     
     if(automatic) call messages_experimental('PseudopotentialAutomaticParameters')
     
