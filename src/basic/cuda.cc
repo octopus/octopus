@@ -155,7 +155,8 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(map<string, CUm
   NVRTC_SAFE_CALL(nvrtcCreateProgram(&prog, source.c_str(), "kernel_include.c", 0, NULL, NULL));
 
   int major = 0, minor = 0;
-  CUDA_SAFE_CALL(cuDeviceComputeCapability(&major, &minor, **device));
+  CUDA_SAFE_CALL(cuDeviceGetAttribute(&major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, **device));
+  CUDA_SAFE_CALL(cuDeviceGetAttribute(&minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, **device));
 
   char compute_version[3];
   sprintf(compute_version, "%.1d%.1d", major, minor);
@@ -383,7 +384,8 @@ extern "C" void FC_FUNC_(cuda_device_name, CUDA_DEVICE_NAME)(CUdevice ** device,
 extern "C" void FC_FUNC_(cuda_device_capability, CUDA_DEVICE_CAPABILITY)(CUdevice ** device, fint * major, fint * minor){
 #ifdef HAVE_CUDA
   int cmajor = 0, cminor = 0;
-  CUDA_SAFE_CALL(cuDeviceComputeCapability(&cmajor, &cminor, **device));
+  CUDA_SAFE_CALL(cuDeviceGetAttribute(&cmajor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, **device));
+  CUDA_SAFE_CALL(cuDeviceGetAttribute(&cminor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, **device));
   *major = cmajor;
   *minor = cminor;
 #endif
