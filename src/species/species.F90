@@ -176,6 +176,7 @@ module species_oct_m
   integer :: default_pseudopotential_set_id
   type(pseudo_set_t) :: default_pseudopotential_set
   real(8) :: energy_tolerance
+  logical :: automatic
   
 contains
 
@@ -232,7 +233,20 @@ contains
     initialized = .true.
 
     call share_directory_set(conf%share)    
-      
+
+    !%Variable PseudopotentialAutomaticParameters
+    !%Type logical
+    !%Default false
+    !%Section System::Species
+    !%Description
+    !% (Experimental) This enables a new automatic method for
+    !% determining the best parameters for the pseudopotential
+    !% (spacing and radius).
+    !%End
+    call parse_variable('PseudopotentialEnergyTolerance', .false., automatic)
+    
+    if(automatic) call messages_experimental('PseudopotentialAutomaticParameters')
+    
     !%Variable PseudopotentialEnergyTolerance
     !%Type float
     !%Default 0.005
@@ -316,7 +330,7 @@ contains
     if(default_pseudopotential_set_id == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL) call messages_experimental('PseudopotentialSet = pseudodojo_pbesol')
     if(default_pseudopotential_set_id == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL_STRINGENT) call messages_experimental('PseudopotentialSet = pseudodojo_pbesol_stringent')
 
-    call pseudo_set_init(default_pseudopotential_set, get_set_directory(default_pseudopotential_set_id), ierr)
+    call pseudo_set_init(default_pseudopotential_set, get_set_directory(default_pseudopotential_set_id), ierr, automatic)
     
     POP_SUB(species_init_global)
   end subroutine species_init_global
@@ -1894,7 +1908,7 @@ contains
       case(OPTION__SPECIES__SET)
         call check_duplication(OPTION__SPECIES__SET)
         call parse_block_integer(blk, row, icol + 1, spec%pseudopotential_set_id)
-        call pseudo_set_init(spec%pseudopotential_set, get_set_directory(spec%pseudopotential_set_id), ierr)
+        call pseudo_set_init(spec%pseudopotential_set, get_set_directory(spec%pseudopotential_set_id), ierr, automatic)
         
       case(OPTION__SPECIES__POTENTIAL_FORMULA)
         call check_duplication(OPTION__SPECIES__POTENTIAL_FORMULA)

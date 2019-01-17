@@ -48,13 +48,17 @@ namespace pseudopotential {
       double radius_;
     };
 
-    typedef std::map<std::string, element_values> element_map;
     
+    typedef std::map<std::string, element_values> element_map;
+
     element_map map_;
+    bool automatic_;
     
   public:
     
-    set(const std::string & dirname){
+    set(const std::string & dirname, const bool automatic = true):
+      automatic_(automatic){
+      
       DIR * dir = opendir(dirname.c_str());
 
       struct dirent *ent;
@@ -166,7 +170,7 @@ namespace pseudopotential {
     
     double spacing(const element & el, double etol) const {
       std::ifstream file((map_.at(el.symbol()).file_path_ + ".spacing").c_str());
-      if(file) {
+      if(automatic_ && file) {
 	std::vector<double> spacing;
 	std::vector<double> energy;
 

@@ -28,15 +28,15 @@
 
 #include "element.hpp"
 
-extern "C" void FC_FUNC_(pseudo_set_init, PSEUDO_SET_INIT)
-  (pseudopotential::set ** pseudo_set, STR_F_TYPE const filename_f, fint * ierr STR_ARG1){
+extern "C" void FC_FUNC_(pseudo_set_init_low, PSEUDO_SET_INIT_LOW)
+  (pseudopotential::set ** pseudo_set, STR_F_TYPE const filename_f, const fint * automatic, fint * ierr STR_ARG1){
 
   *ierr = 0;
   
   char * filename_c;
   TO_C_STR1(filename_f, filename_c);
 
-  *pseudo_set = new pseudopotential::set(filename_c);
+  *pseudo_set = new pseudopotential::set(filename_c, bool(*automatic));
   assert(*pseudo_set);
 
   free(filename_c);
