@@ -97,7 +97,6 @@ dist_share_DATA = \
 	22-preconditioner.01-none.inp                \
 	22-preconditioner.02-filter.inp              \
 	22-preconditioner.03-jacobi.inp              \
-	22-preconditioner.04-poisson.inp             \
 	22-preconditioner.05-multigrid.inp           \
 	23-go-na2.test                               \
 	23-go-na2.01-steep.inp                       \
