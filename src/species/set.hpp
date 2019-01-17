@@ -199,7 +199,7 @@ namespace pseudopotential {
 	  }
 	  energy[energy.size() - 2] = (e2[energy.size() - 3] + e2[energy.size() - 2] + e2[energy.size() - 1])/3.0;
 	}
-	
+
 	for(unsigned ii = 0; ii < energy.size(); ii++){
 	  if(energy[ii] < etol) return spacing[ii];
 	}
