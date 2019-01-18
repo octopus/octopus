@@ -51,6 +51,7 @@ dist_pdpbestd_DATA =                \
 	F.upf                       \
 	F.upf.spacing               \
 	Ga.upf                      \
+	Ga.upf.spacing              \
 	Ge.upf                      \
 	He.upf                      \
 	He.upf.spacing              \
