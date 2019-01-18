@@ -13,3 +13,5 @@ PseudopotentialAutomaticParameters = yes
 Radius = 6.00
 
 SpinComponents = spin_polarized
+
+FromScratch = yes
