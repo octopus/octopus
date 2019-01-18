@@ -23,8 +23,8 @@ Precision: 0.00011
 match ; Spacing x          ; GREPFIELD(static/info, 'Spacing \[b\]', 5) ; 0.395
 match ; Spacing y          ; GREPFIELD(static/info, 'Spacing \[b\]', 6) ; 0.395
 match ; Spacing z          ; GREPFIELD(static/info, 'Spacing \[b\]', 7) ; 0.395
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -7.13371497
-match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -1.834809
-match ; Eigenvalue   [1dn] ; GREPFIELD(static/info, '1   dn', 3) ; -1.850408
-match ; Eigenvalue   [2up] ; GREPFIELD(static/info, '2   up', 3) ;  0.042348
-match ; Eigenvalue   [2dn] ; GREPFIELD(static/info, '2   dn', 3) ; -0.066453
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -7.13813773
+match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -1.847585
+match ; Eigenvalue   [1dn] ; GREPFIELD(static/info, '1   dn', 3) ; -1.836721
+match ; Eigenvalue   [2up] ; GREPFIELD(static/info, '2   up', 3) ; -0.065616
+match ; Eigenvalue   [2dn] ; GREPFIELD(static/info, '2   dn', 3) ;  0.043083
