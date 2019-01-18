@@ -14,5 +14,3 @@ PseudopotentialEnergyTolerance = 0.03
 
 Radius = 6.00
 
-SpinComponents = spin_polarized
-
