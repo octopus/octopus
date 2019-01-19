@@ -239,8 +239,8 @@ contains
     !% <ul>
     !% <li> <tt>stencil_star</tt>: <math>2 O d + 1</math>
     !% <li> <tt>stencil_cube</tt>: <math>(2 O + 1)^d</math>
-    !% <li> <tt>stencil_starplus</tt>: <math>2 O d + 1 + n</math> with <i>n</i> being 12
-    !% in 2D and 44 in 3D.
+    !% <li> <tt>stencil_starplus</tt>: <math>2 O d + 1 + n</math> with <i>n</i> being 8
+    !% in 2D and 24 in 3D.
     !% </ul>
     !%End
     call parse_variable('DerivativesOrder', 4, der%order)
@@ -563,7 +563,7 @@ contains
       end do
 
       der%op(der%dim+1)%stencil%npoly = der%op(der%dim+1)%stencil%size &
-           + 2*der%order*(2*der%order-2)*der%op(der%dim+1)%stencil%stargeneral%narms
+           + der%order*(2*der%order-1)*der%op(der%dim+1)%stencil%stargeneral%narms
 
       SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(der%dim+1)%stencil%npoly))
       SAFE_ALLOCATE(rhs(1:der%op(der%dim+1)%stencil%size, 1:1))

@@ -29,7 +29,6 @@ module geometry_oct_m
   use messages_oct_m
   use multicomm_oct_m
   use mpi_oct_m
-  use openscad_oct_m
   use parser_oct_m
   use profiling_oct_m
   use read_coords_oct_m
@@ -59,9 +58,9 @@ module geometry_oct_m
     cm_vel,                          &
     geometry_write_xyz,              &
     geometry_read_xyz,               &
-    geometry_write_openscad,         &
     geometry_val_charge,             &
     geometry_grid_defaults,          &
+    geometry_grid_defaults_info,     &
     geometry_species_time_dependent, &
     geometry_get_positions,          &
     geometry_set_positions
@@ -144,6 +143,8 @@ contains
 
     geo%space => space
 
+    call species_init_global()
+    
     ! initialize geometry
     call geometry_init_xyz(geo)
     call geometry_init_species(geo, print_info=print_info)
@@ -453,6 +454,8 @@ contains
     SAFE_DEALLOCATE_P(geo%species)
     geo%nspecies=0
 
+    call species_end_global()
+    
     POP_SUB(geometry_end)
   end subroutine geometry_end
 
@@ -645,73 +648,8 @@ contains
     POP_SUB(geometry_read_xyz)
   end subroutine geometry_read_xyz
 
-
   ! ---------------------------------------------------------
-  subroutine geometry_write_openscad(geo, fname, cad_file)
-    type(geometry_t),                        intent(in)    :: geo
-    character(len=*),      optional,         intent(in)    :: fname
-    type(openscad_file_t), optional, target, intent(inout) :: cad_file
 
-    type(openscad_file_t), pointer :: cad_file_
-    integer :: iatom, jatom
-    FLOAT :: max_bond_length
-    character(len=12) :: numi, numj
-
-    FLOAT, parameter :: hydrogen_radius = CNST(0.4)
-    FLOAT, parameter :: atom_radius = CNST(0.7)
-    FLOAT, parameter :: bond_radius = CNST(0.3)
-    FLOAT, parameter :: hydrogen_max_bond_length = CNST(3.0)
-    FLOAT, parameter :: other_max_bond_length = CNST(3.5)
-
-    ASSERT(.not. present(cad_file) .eqv. present(fname))
-
-    PUSH_SUB(geometry_write_openscad)
-    
-    if(.not. present(cad_file)) then
-      SAFE_ALLOCATE(cad_file_)
-      call openscad_file_init(cad_file_, trim(fname)//'.scad')
-    else
-      cad_file_ => cad_file
-    end if
-
-    call openscad_file_define_variable(cad_file_, "hydrogen_radius", hydrogen_radius)
-    call openscad_file_define_variable(cad_file_, "atom_radius", atom_radius)
-    call openscad_file_define_variable(cad_file_, "bond_radius", bond_radius)
-
-    do iatom = 1, geo%natoms
-
-      write(numi, '(i12)') iatom
-      call openscad_file_comment(cad_file_, 'Atom '//trim(adjustl(numi))//': '//trim(species_label(geo%atom(iatom)%species)))
-
-      if(abs(species_z(geo%atom(iatom)%species)-M_ONE) <= M_EPSILON) then
-        call openscad_file_sphere(cad_file_, geo%atom(iatom)%x(1:3), radius_variable = "hydrogen_radius")
-        max_bond_length = hydrogen_max_bond_length
-      else
-        call openscad_file_sphere(cad_file_, geo%atom(iatom)%x(1:3), radius_variable = "atom_radius")
-        max_bond_length = other_max_bond_length
-      end if
-
-      do jatom = iatom + 1, geo%natoms
-        if(sum((geo%atom(iatom)%x(1:3) - geo%atom(jatom)%x(1:3))**2) > max_bond_length**2) cycle
-
-        write(numj, '(i12)') jatom
-        call openscad_file_comment(cad_file_, '  Bond '//trim(adjustl(numi))//' -> '//trim(adjustl(numj)))
-
-        call openscad_file_bond(cad_file_, geo%atom(iatom)%x(1:3), geo%atom(jatom)%x(1:3), radius_variable = "bond_radius")
-      end do
-
-    end do
-
-    if(.not. present(cad_file)) then
-      call openscad_file_end(cad_file_)
-      SAFE_DEALLOCATE_P(cad_file_)
-    end if
-
-    POP_SUB(geometry_write_openscad)
-  end subroutine geometry_write_openscad
-
-
-  ! ---------------------------------------------------------
   subroutine geometry_val_charge(geo, val_charge)
     type(geometry_t), intent(in) :: geo
     FLOAT,           intent(out) :: val_charge
@@ -761,6 +699,36 @@ contains
 
     POP_SUB(geometry_grid_defaults)
   end subroutine geometry_grid_defaults
+
+  ! ---------------------------------------------------------
+
+  subroutine geometry_grid_defaults_info(geo)
+    type(geometry_t), intent(in) :: geo
+  
+    integer :: ispec
+
+    PUSH_SUB(geometry_grid_defaults_info)
+
+    do ispec = 1, geo%nspecies
+      call messages_write("Species '"//trim(species_label(geo%species(ispec)))//"': spacing = ")
+      if(species_def_h(geo%species(ispec)) > CNST(0.0)) then
+        call messages_write(species_def_h(geo%species(ispec)), fmt = '(f7.3)')
+        call messages_write(" b")
+      else
+        call messages_write(" unknown")
+      end if
+      call messages_write(", radius = ")
+      if(species_def_rsize(geo%species(ispec)) > CNST(0.0)) then
+        call messages_write(species_def_rsize(geo%species(ispec)), fmt = '(f5.1)')
+        call messages_write(" b.")
+      else
+        call messages_write(" unknown.")
+      end if
+      call messages_info()
+    end do
+
+    POP_SUB(geometry_grid_defaults_info)
+  end subroutine geometry_grid_defaults_info
 
   !--------------------------------------------------------------
   subroutine geometry_copy(geo_out, geo_in)

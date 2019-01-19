@@ -51,6 +51,7 @@ module species_oct_m
     species_read,                  &
     species_build,                 &
     species_init_global,           &
+    species_end_global,            &
     species_read_delta,            &
     species_pot_init,              &
     species_type,                  &
@@ -161,6 +162,7 @@ module species_oct_m
     integer :: user_lmax          !< For the TM pseudos, user defined lmax 
     integer :: user_llocal        !< For the TM pseudos, used defined llocal
     integer :: pseudopotential_set_id !< to which set this pseudopotential belongs
+    logical :: pseudopotential_set_initialized
     type(pseudo_set_t) :: pseudopotential_set
   end type species_t
 
@@ -172,6 +174,8 @@ module species_oct_m
   logical :: initialized = .false.
   integer :: default_pseudopotential_set_id
   type(pseudo_set_t) :: default_pseudopotential_set
+  real(8) :: energy_tolerance
+  logical :: automatic
   
 contains
 
@@ -214,6 +218,8 @@ contains
     this%user_lmax   = INVALID_L
     this%user_llocal = INVALID_L
     this%pseudopotential_set_id = OPTION__PSEUDOPOTENTIALSET__NONE
+    this%pseudopotential_set_initialized = .false.
+    call pseudo_set_nullify(this%pseudopotential_set)
     
     POP_SUB(species_nullify)
   end subroutine species_nullify
@@ -228,6 +234,35 @@ contains
     initialized = .true.
 
     call share_directory_set(conf%share)    
+
+    !%Variable PseudopotentialAutomaticParameters
+    !%Type logical
+    !%Default false
+    !%Section System::Species
+    !%Description
+    !% (Experimental) This enables a new automatic method for
+    !% determining the best parameters for the pseudopotential
+    !% (spacing and radius). For the moment, only the spacing can be
+    !% adjusted for a few pseudopotentials.
+    !%
+    !% This does not affect Octopus fixed parameters for the standard
+    !% pseudopotential set.
+    !%End
+    call parse_variable('PseudopotentialAutomaticParameters', .false., automatic)
+    
+    if(automatic) call messages_experimental('PseudopotentialAutomaticParameters')
+    
+    !%Variable PseudopotentialEnergyTolerance
+    !%Type float
+    !%Default 0.005
+    !%Section System::Species
+    !%Description
+    !% For some pseudopotentials, Octopus can select the convergence
+    !% parameters (spacing and radius) automatically so that the
+    !% discretization error is below a certain threshold. This
+    !% variable controls the value of that threshold.
+    !%End
+    call parse_variable('PseudopotentialEnergyTolerance', CNST(0.005), energy_tolerance)
     
     !%Variable PseudopotentialSet
     !%Type integer
@@ -301,12 +336,26 @@ contains
     if(default_pseudopotential_set_id == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL_STRINGENT) call messages_experimental('PseudopotentialSet = pseudodojo_pbesol_stringent')
 
     if(default_pseudopotential_set_id /= OPTION__PSEUDOPOTENTIALSET__NONE) then
-      call pseudo_set_init(default_pseudopotential_set, get_set_directory(default_pseudopotential_set_id), ierr)
+      call pseudo_set_init(default_pseudopotential_set, get_set_directory(default_pseudopotential_set_id), ierr, automatic)
+    else
+      call pseudo_set_nullify(default_pseudopotential_set)
     end if
-    
+
     POP_SUB(species_init_global)
   end subroutine species_init_global
-  
+
+  ! ---------------------------------------------------------
+
+  subroutine species_end_global()
+    integer :: ierr
+    
+    PUSH_SUB(species_end_global)
+
+    call pseudo_set_end(default_pseudopotential_set)
+    
+    POP_SUB(species_end_global)
+  end subroutine species_end_global
+
   ! ---------------------------------------------------------
   !> Initializes a species object. This should be the
   !! first routine to be called (before species_read and species_build).
@@ -320,7 +369,7 @@ contains
 
     PUSH_SUB(species_init)
     
-    if(.not. initialized) call species_init_global()
+    ASSERT(initialized)
 
     call species_nullify(this)
     this%label = trim(label)
@@ -604,7 +653,7 @@ contains
       if(spec%z < 0) spec%z = element_atomic_number(el)
       if(spec%user_lmax == INVALID_L) spec%user_lmax = pseudo_set_lmax(spec%pseudopotential_set, el)
       if(spec%user_llocal == INVALID_L) spec%user_llocal = pseudo_set_llocal(spec%pseudopotential_set, el)
-      if(spec%def_h < 0) spec%def_h = pseudo_set_spacing(spec%pseudopotential_set, el)
+      if(spec%def_h < 0) spec%def_h = pseudo_set_spacing(spec%pseudopotential_set, el, energy_tolerance)
       if(spec%def_rsize < 0) spec%def_rsize = pseudo_set_radius(spec%pseudopotential_set, el)
       if(spec%mass < 0) spec%mass = element_mass(el)
       if(spec%vdw_radius < 0) spec%vdw_radius = element_vdw_radius(el)
@@ -1468,6 +1517,8 @@ contains
     
     PUSH_SUB(species_end_species)
 
+    if(spec%pseudopotential_set_initialized) call pseudo_set_end(spec%pseudopotential_set)
+    
     if (species_is_ps(spec)) then 
       if(associated(spec%ps)) then 
         call ps_end(spec%ps)
@@ -1802,7 +1853,8 @@ contains
       case(OPTION__SPECIES__SET)
         call check_duplication(OPTION__SPECIES__SET)
         call parse_block_integer(blk, row, icol + 1, spec%pseudopotential_set_id)
-        call pseudo_set_init(spec%pseudopotential_set, get_set_directory(spec%pseudopotential_set_id), ierr)
+        spec%pseudopotential_set_initialized = .true.
+        call pseudo_set_init(spec%pseudopotential_set, get_set_directory(spec%pseudopotential_set_id), ierr, automatic)
         
       case(OPTION__SPECIES__POTENTIAL_FORMULA)
         call check_duplication(OPTION__SPECIES__POTENTIAL_FORMULA)
