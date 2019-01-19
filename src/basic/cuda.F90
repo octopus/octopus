@@ -28,17 +28,29 @@ module cuda_oct_m
   implicit none
 
   private
-  public ::                    &
-    cuda_init,                 &
-    cuda_end,                  &
-    cuda_mem_alloc,            &
-    cuda_module_map_init,      &
-    cuda_module_map_end,       &
-    cuda_build_program,        &
-    cuda_create_kernel,        &
-    cuda_release_module,       &
-    cuda_release_kernel
-  
+  public ::                             &
+    cuda_init,                          &
+    cuda_end,                           &
+    cuda_module_map_init,               &
+    cuda_module_map_end,                &
+    cuda_build_program,                 &
+    cuda_create_kernel,                 &
+    cuda_release_module,                &
+    cuda_release_kernel,                &
+    cuda_device_max_threads_per_block,  &
+    cuda_device_total_memory,           &
+    cuda_device_shared_memory,          &
+    cuda_mem_alloc,                     &
+    cuda_mem_free,                      &
+    cuda_alloc_arg_array,               &
+    cuda_free_arg_array,                &
+    cuda_kernel_set_arg_buffer,         &
+    cuda_context_synchronize,           &
+    cuda_launch_kernel,                 &
+    cuda_device_name,                   &
+    cuda_device_capability,             &
+    cuda_driver_version
+
   interface
 
     subroutine cuda_init(context, device)
@@ -119,6 +131,36 @@ module cuda_oct_m
     end subroutine cuda_release_kernel
     
     ! -------------------------------------------------
+
+    subroutine cuda_device_max_threads_per_block(device, max_threads)
+      use iso_c_binding
+      implicit none
+      
+      type(c_ptr),      intent(inout) :: device
+      integer,          intent(out)   :: max_threads
+    end subroutine cuda_device_max_threads_per_block
+
+    ! -------------------------------------------------
+
+    subroutine cuda_device_total_memory(device, total_memory)
+      use iso_c_binding
+      implicit none
+      
+      type(c_ptr),      intent(inout) :: device
+      integer(8),       intent(out)   :: total_memory
+    end subroutine cuda_device_total_memory
+
+    ! -------------------------------------------------
+
+    subroutine cuda_device_shared_memory(device, shared_memory)
+      use iso_c_binding
+      implicit none
+      
+      type(c_ptr),      intent(inout) :: device
+      integer(8),       intent(out)   :: shared_memory
+    end subroutine cuda_device_shared_memory
+    
+    ! -------------------------------------------------
     
     subroutine cuda_mem_alloc(cuda_ptr, size)
       use iso_c_binding
@@ -127,7 +169,94 @@ module cuda_oct_m
       type(c_ptr), intent(inout) :: cuda_ptr
       integer(8),  intent(in)    :: size
     end subroutine cuda_mem_alloc
+
+    ! -------------------------------------------------
     
+    subroutine cuda_mem_free(cuda_ptr)
+      use iso_c_binding
+      implicit none
+      
+      type(c_ptr), intent(inout) :: cuda_ptr
+    end subroutine cuda_mem_free
+    
+    ! -------------------------------------------------
+    
+    subroutine cuda_alloc_arg_array(arg_array)
+      use iso_c_binding
+      implicit none
+      
+      type(c_ptr), intent(inout) :: arg_array
+    end subroutine cuda_alloc_arg_array
+
+    ! -------------------------------------------------
+    
+    subroutine cuda_free_arg_array(arg_array)
+      use iso_c_binding
+      implicit none
+      
+      type(c_ptr), intent(inout) :: arg_array
+    end subroutine cuda_free_arg_array
+
+    ! -------------------------------------------------
+    
+    subroutine cuda_kernel_set_arg_buffer(arg_array, cuda_ptr, arg_index)
+      use iso_c_binding
+      implicit none
+      
+      type(c_ptr), intent(inout) :: arg_array
+      type(c_ptr), intent(in)    :: cuda_ptr
+      integer,     intent(in)    :: arg_index      
+    end subroutine cuda_kernel_set_arg_buffer
+
+    ! -------------------------------------------------
+    
+    subroutine cuda_context_synchronize()
+      implicit none
+    end subroutine cuda_context_synchronize
+
+    ! -------------------------------------------------
+        
+    subroutine cuda_launch_kernel(kernel, griddim, blockdim, shared_mem, arg_array)
+      use iso_c_binding
+      implicit none
+      
+      type(c_ptr), intent(inout) :: kernel
+      integer(8),  intent(in)    :: griddim
+      integer(8),  intent(in)    :: blockdim
+      integer(8),  intent(in)    :: shared_mem
+      type(c_ptr), intent(inout) :: arg_array
+    end subroutine cuda_launch_kernel
+
+    ! -------------------------------------------------
+
+    subroutine cuda_device_name(device, name)
+      use iso_c_binding
+      implicit none
+      
+      type(c_ptr),      intent(inout) :: device
+      character(len=*), intent(inout) :: name
+    end subroutine cuda_device_name
+
+    ! -------------------------------------------------
+
+    subroutine cuda_device_capability(device, major, minor)
+      use iso_c_binding
+      implicit none
+      
+      type(c_ptr),      intent(inout) :: device
+      integer,          intent(out)   :: major
+      integer,          intent(out)   :: minor
+    end subroutine cuda_device_capability
+    
+    ! -------------------------------------------------
+
+    subroutine cuda_driver_version(version)
+      use iso_c_binding
+      implicit none
+      
+      integer,       intent(out)   :: version
+    end subroutine cuda_driver_version
+
   end interface
   
 end module cuda_oct_m

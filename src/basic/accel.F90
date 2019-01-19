@@ -605,6 +605,7 @@ contains
 
     subroutine device_info()
       integer(8) :: val, val2
+      integer :: major, minor, version
       character(len=256) :: val_str
       
       PUSH_SUB(accel_init.device_info)
@@ -654,12 +655,12 @@ contains
       call messages_new_line()
       
 #ifdef HAVE_CUDA
-      call cuda_device_capability(accel%device%cuda_device, val, val2)
+      call cuda_device_capability(accel%device%cuda_device, major, minor)
 #endif
       call messages_write('      Cuda capabilities      :')
-      call messages_write(val, fmt = '(i2)')
+      call messages_write(major, fmt = '(i2)')
       call messages_write('.')
-      call messages_write(val2, fmt = '(i1)')
+      call messages_write(minor, fmt = '(i1)')
       call messages_new_line()
 
       ! VERSION
@@ -668,9 +669,9 @@ contains
       call messages_write('      Driver version         : '//trim(val_str))
 #endif
 #ifdef HAVE_CUDA
-      call cuda_driver_version(val)
+      call cuda_driver_version(version)
       call messages_write('      Driver version         : ')
-      call messages_write(val)
+      call messages_write(version)
 #endif
       call messages_new_line()
 

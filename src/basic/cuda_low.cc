@@ -392,7 +392,7 @@ extern "C" void FC_FUNC_(cuda_launch_kernel, CUDA_LAUNCH_KERNEL)
 #endif
 }
 
-extern "C" void FC_FUNC_(cuda_device_name, CUDA_DEVICE_NAME)(CUdevice ** device, STR_F_TYPE const name STR_ARG1){
+extern "C" void FC_FUNC_(cuda_device_name, CUDA_DEVICE_NAME)(CUdevice ** device, STR_F_TYPE name STR_ARG1){
 #ifdef HAVE_CUDA
   char devicename[200];
   CUDA_SAFE_CALL(cuDeviceGetName(devicename, sizeof(devicename), **device));
