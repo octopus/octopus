@@ -667,7 +667,6 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
     
     call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
 
-#if 0
     call accel_set_kernel_arg(X(unpack), 0, this%pack%size(1))
     call accel_set_kernel_arg(X(unpack), 1, np)
     call accel_set_kernel_arg(X(unpack), 2, ist - 1)
@@ -677,7 +676,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
     call accel_kernel_run(X(unpack), (/1, this%pack%size(2)/), (/1, accel_max_workgroup_size()/))
 
     call accel_finish()
-#endif
+
     call accel_read_buffer(tmp, np, psi)
 
     call accel_release_buffer(tmp)
