@@ -47,6 +47,7 @@ all_f_srcs =                                   \
 	basic/calc_mode_par.F90                \
 	basic/command_line.F90                 \
 	basic/comm.F90                         \
+	basic/cuda.F90                         \
 	basic/debug.F90                        \
 	basic/distributed.F90                  \
 	basic/global.F90                       \
@@ -81,7 +82,7 @@ all_f_srcs =                                   \
 
 all_c_srcs =                                   \
 	basic/cublas.cc                        \
-	basic/cuda.cc                          \
+	basic/cuda_low.cc                      \
 	basic/getopt_f.c                       \
 	basic/io_binary.c                      \
 	basic/io_csv.c                         \

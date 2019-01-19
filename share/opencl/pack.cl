@@ -50,7 +50,7 @@ __kernel void dunpack(const int nst,
   const int ist2 = get_global_id(0);
   const int ip = get_global_id(1);
 
-  if(ip < np) dest[ip + ist2*get_global_size(1)] = src[ist + ist2 + ip*nst];
+  //  if(ip < np) dest[ip + ist2*get_global_size(1)] = src[ist + ist2 + ip*nst];
 }
 
 __kernel void zunpack(const int nst,
@@ -61,7 +61,7 @@ __kernel void zunpack(const int nst,
   const int ist2 = get_global_id(0);
   const int ip = get_global_id(1);
 
-  if(ip < np) dest[ip + ist2*get_global_size(1)] = src[ist + ist2 + ip*nst];
+  //  if(ip < np) dest[ip + ist2*get_global_size(1)] = src[ist + ist2 + ip*nst];
 }
 
 

@@ -33,6 +33,7 @@ module accel_oct_m
 #ifdef HAVE_CLBLAS
   use clblas
 #endif
+  use cuda_oct_m
 #ifdef HAVE_CLFFT
   use clfft
 #endif
