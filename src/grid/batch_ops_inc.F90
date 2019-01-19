@@ -521,7 +521,8 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
   integer :: ip
   type(profile_t), save :: prof
   type(accel_mem_t) :: tmp
-
+  FLOAT, allocatable :: zpsi(:)
+  
   call profiling_in(prof, "BATCH_SET_STATE")
 
   PUSH_SUB(X(batch_set_state1))
@@ -548,15 +549,35 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
       forall(ip = 1:np) this%pack%zpsi(ist, ip) = psi(ip)
     end if
   case(BATCH_CL_PACKED)
-    call accel_create_buffer(tmp, ACCEL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
 
-    call accel_write_buffer(tmp, np, psi)
+    call accel_create_buffer(tmp, ACCEL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
+    
+    if(batch_type(this) /= R_TYPE_VAL) then
+
+      ! this is not ideal, we should do the conversion on the GPU, so
+      ! that we copy half of the data there
+      
+      SAFE_ALLOCATE(zpsi(1:np))
+
+      do ip = 1, np
+        zpsi(ip) = psi(ip)
+      end do
+      
+      call accel_write_buffer(tmp, np, zpsi)
+
+      SAFE_DEALLOCATE_A(zpsi)
+      
+    else
+      call accel_write_buffer(tmp, np, psi)
+    end if
+
 
     ! now call an opencl kernel to rearrange the data
     call accel_set_kernel_arg(X(pack), 0, this%pack%size(1))
-    call accel_set_kernel_arg(X(pack), 1, ist - 1)
-    call accel_set_kernel_arg(X(pack), 2, tmp)
-    call accel_set_kernel_arg(X(pack), 3, this%pack%buffer)
+    call accel_set_kernel_arg(X(pack), 1, np)
+    call accel_set_kernel_arg(X(pack), 2, ist - 1)
+    call accel_set_kernel_arg(X(pack), 3, tmp)
+    call accel_set_kernel_arg(X(pack), 4, this%pack%buffer)
     
     call accel_kernel_run(X(pack), (/this%pack%size(2), 1/), (/accel_max_workgroup_size(), 1/))
     
@@ -617,6 +638,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
   integer :: ip
   type(profile_t), save :: prof 
   type(accel_mem_t) :: tmp
+  FLOAT, allocatable :: dpsi(:)
 
   PUSH_SUB(X(batch_get_state1))
 
@@ -661,21 +683,62 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
     end if
 
   case(BATCH_CL_PACKED)
-    call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
 
-    call accel_set_kernel_arg(X(unpack), 0, this%pack%size(1))
-    call accel_set_kernel_arg(X(unpack), 1, ist - 1)
-    call accel_set_kernel_arg(X(unpack), 2, this%pack%buffer)
-    call accel_set_kernel_arg(X(unpack), 3, tmp)
+    ASSERT(np <= this%pack%size(2))
 
-    call accel_kernel_run(X(unpack), (/1, this%pack%size(2)/), (/1, accel_max_workgroup_size()/))
+    if(batch_type(this) == R_TYPE_VAL) then
 
-    call accel_finish()
+      call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
+      
+      call accel_set_kernel_arg(X(unpack), 0, this%pack%size(1))
+      call accel_set_kernel_arg(X(unpack), 1, np)
+      call accel_set_kernel_arg(X(unpack), 2, ist - 1)
+      call accel_set_kernel_arg(X(unpack), 3, this%pack%buffer)
+      call accel_set_kernel_arg(X(unpack), 4, tmp)
+      
+      call accel_kernel_run(X(unpack), (/1, this%pack%size(2)/), (/1, accel_max_workgroup_size()/))
+      
+      call accel_finish()
+      
+      call accel_read_buffer(tmp, np, psi)
 
-    call accel_read_buffer(tmp, np, psi)
+      call accel_release_buffer(tmp)
 
-    call accel_release_buffer(tmp)
-    
+    else
+
+      ! the output buffer is complex, we get it as real
+      
+      ASSERT(batch_type(this) == TYPE_FLOAT)
+      ASSERT(R_TYPE_VAL == TYPE_CMPLX)
+      
+      call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
+      
+      call accel_set_kernel_arg(dunpack, 0, this%pack%size(1))
+      call accel_set_kernel_arg(dunpack, 1, np)
+      call accel_set_kernel_arg(dunpack, 2, ist - 1)
+      call accel_set_kernel_arg(dunpack, 3, this%pack%buffer)
+      call accel_set_kernel_arg(dunpack, 4, tmp)
+      
+      call accel_kernel_run(dunpack, (/1, this%pack%size(2)/), (/1, accel_max_workgroup_size()/))
+      
+      SAFE_ALLOCATE(dpsi(1:np))
+      
+      call accel_finish()
+
+      call accel_read_buffer(tmp, np, dpsi)
+
+      ! and convert to complex on the cpu
+      
+      do ip = 1, np
+        psi(ip) = dpsi(ip)
+      end do
+
+      SAFE_DEALLOCATE_A(dpsi)
+
+      call accel_release_buffer(tmp)
+      
+    end if
+      
   end select
 
   call profiling_out(prof)

@@ -771,9 +771,10 @@ contains
 
         ! now call an opencl kernel to rearrange the data
         call accel_set_kernel_arg(kernel, 0, this%pack%size(1))
-        call accel_set_kernel_arg(kernel, 1, ist - 1)
-        call accel_set_kernel_arg(kernel, 2, tmp)
-        call accel_set_kernel_arg(kernel, 3, this%pack%buffer)
+        call accel_set_kernel_arg(kernel, 1, this%pack%size(2))
+        call accel_set_kernel_arg(kernel, 2, ist - 1)
+        call accel_set_kernel_arg(kernel, 3, tmp)
+        call accel_set_kernel_arg(kernel, 4, this%pack%buffer)
 
         call profiling_in(prof_pack, "CL_PACK")
         call accel_kernel_run(kernel, (/this%pack%size(2), unroll/), (/accel_max_workgroup_size()/unroll, unroll/))
@@ -832,9 +833,10 @@ contains
 
       do ist = 1, this%nst_linear, unroll
         call accel_set_kernel_arg(kernel, 0, this%pack%size(1))
-        call accel_set_kernel_arg(kernel, 1, ist - 1)
-        call accel_set_kernel_arg(kernel, 2, this%pack%buffer)
-        call accel_set_kernel_arg(kernel, 3, tmp)
+        call accel_set_kernel_arg(kernel, 1, this%pack%size(2))
+        call accel_set_kernel_arg(kernel, 2, ist - 1)
+        call accel_set_kernel_arg(kernel, 3, this%pack%buffer)
+        call accel_set_kernel_arg(kernel, 4, tmp)
 
         call profiling_in(prof_unpack, "CL_UNPACK")
         call accel_kernel_run(kernel, (/unroll, this%pack%size(2)/), (/unroll, accel_max_workgroup_size()/unroll/))

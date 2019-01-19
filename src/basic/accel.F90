@@ -33,6 +33,7 @@ module accel_oct_m
 #ifdef HAVE_CLBLAS
   use clblas
 #endif
+  use cuda_oct_m
 #ifdef HAVE_CLFFT
   use clfft
 #endif
@@ -266,24 +267,24 @@ contains
 
     buffer_alloc_count = 0
 
-    !%Variable DisableOpenCL
+    !%Variable DisableAccel    
     !%Type logical
     !%Default yes
-    !%Section Execution::OpenCL
+    !%Section Execution::Accel
     !%Description
-    !% If Octopus was compiled with OpenCL support, it will try to
-    !% initialize and use an OpenCL device. By setting this variable
-    !% to <tt>yes</tt> you tell Octopus not to use OpenCL.
+    !% If Octopus was compiled with OpenCL or CUDA support, it will
+    !% try to initialize and use an accelerator device. By setting this
+    !% variable to <tt>yes</tt> you force Octopus not to use an accelerator even it is available.
     !%End
-
+    call messages_obsolete_variable('DisableOpenCL', 'DisableAccel')
 #ifdef HAVE_ACCEL
     default = .false.
 #else
     default = .true.
 #endif
-    call parse_variable('DisableOpenCL', default, disable)
+    call parse_variable('DisableAccel', default, disable)
     accel%enabled = .not. disable
-
+    
 #ifndef HAVE_ACCEL
     if(accel%enabled) then
       message(1) = 'Octopus was compiled without OpenCL or Cuda support.'
@@ -299,7 +300,7 @@ contains
     !%Variable OpenCLPlatform
     !%Type integer
     !%Default 0
-    !%Section Execution::OpenCL
+    !%Section Execution::Accel
     !%Description
     !% This variable selects the OpenCL platform that Octopus will
     !% use. You can give an explicit platform number or use one of
@@ -319,7 +320,7 @@ contains
     !%Variable OpenCLDevice
     !%Type integer
     !%Default gpu
-    !%Section Execution::OpenCL
+    !%Section Execution::Accel
     !%Description
     !% This variable selects the OpenCL device that Octopus will
     !% use. You can specify one of the options below or a numerical
@@ -555,12 +556,11 @@ contains
     !%Variable OpenCLBenchmark
     !%Type logical
     !%Default no
-    !%Section Execution::OpenCL
+    !%Section Execution::Accel
     !%Description
     !% If this variable is set to yes, Octopus will run some
     !% routines to benchmark the performance of the OpenCL device.
     !%End
-
     call parse_variable('OpenCLBenchmark', .false., run_benchmark)
 
     if(run_benchmark) then
@@ -605,6 +605,7 @@ contains
 
     subroutine device_info()
       integer(8) :: val, val2
+      integer :: major, minor, version
       character(len=256) :: val_str
       
       PUSH_SUB(accel_init.device_info)
@@ -654,12 +655,12 @@ contains
       call messages_new_line()
       
 #ifdef HAVE_CUDA
-      call cuda_device_capability(accel%device%cuda_device, val, val2)
+      call cuda_device_capability(accel%device%cuda_device, major, minor)
 #endif
       call messages_write('      Cuda capabilities      :')
-      call messages_write(val, fmt = '(i2)')
+      call messages_write(major, fmt = '(i2)')
       call messages_write('.')
-      call messages_write(val2, fmt = '(i1)')
+      call messages_write(minor, fmt = '(i1)')
       call messages_new_line()
 
       ! VERSION
@@ -668,9 +669,9 @@ contains
       call messages_write('      Driver version         : '//trim(val_str))
 #endif
 #ifdef HAVE_CUDA
-      call cuda_driver_version(val)
+      call cuda_driver_version(version)
       call messages_write('      Driver version         : ')
-      call messages_write(val)
+      call messages_write(version)
 #endif
       call messages_new_line()
 
@@ -868,7 +869,7 @@ contains
     type(accel_mem_t),  intent(inout) :: this
     integer,            intent(in)    :: flags
     type(type_t),       intent(in)    :: type
-    integer(8),            intent(in)    :: size
+    integer(8),         intent(in)    :: size
 
     integer(8) :: fsize
     integer :: ierr
