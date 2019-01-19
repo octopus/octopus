@@ -554,9 +554,10 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
 
     ! now call an opencl kernel to rearrange the data
     call accel_set_kernel_arg(X(pack), 0, this%pack%size(1))
-    call accel_set_kernel_arg(X(pack), 1, ist - 1)
-    call accel_set_kernel_arg(X(pack), 2, tmp)
-    call accel_set_kernel_arg(X(pack), 3, this%pack%buffer)
+    call accel_set_kernel_arg(X(pack), 1, np)
+    call accel_set_kernel_arg(X(pack), 2, ist - 1)
+    call accel_set_kernel_arg(X(pack), 3, tmp)
+    call accel_set_kernel_arg(X(pack), 4, this%pack%buffer)
     
     call accel_kernel_run(X(pack), (/this%pack%size(2), 1/), (/accel_max_workgroup_size(), 1/))
     
@@ -664,9 +665,10 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
     call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
 
     call accel_set_kernel_arg(X(unpack), 0, this%pack%size(1))
-    call accel_set_kernel_arg(X(unpack), 1, ist - 1)
-    call accel_set_kernel_arg(X(unpack), 2, this%pack%buffer)
-    call accel_set_kernel_arg(X(unpack), 3, tmp)
+    call accel_set_kernel_arg(X(unpack), 1, np)
+    call accel_set_kernel_arg(X(unpack), 2, ist - 1)
+    call accel_set_kernel_arg(X(unpack), 3, this%pack%buffer)
+    call accel_set_kernel_arg(X(unpack), 4, tmp)
 
     call accel_kernel_run(X(unpack), (/1, this%pack%size(2)/), (/1, accel_max_workgroup_size()/))
 
