@@ -867,7 +867,7 @@ contains
     type(accel_mem_t),  intent(inout) :: this
     integer,            intent(in)    :: flags
     type(type_t),       intent(in)    :: type
-    integer(8),            intent(in)    :: size
+    integer(8),         intent(in)    :: size
 
     integer(8) :: fsize
     integer :: ierr
