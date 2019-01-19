@@ -662,6 +662,9 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
     end if
 
   case(BATCH_CL_PACKED)
+
+    ASSERT(np <= this%pack%size(2))
+    
     call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
 
     call accel_set_kernel_arg(X(unpack), 0, this%pack%size(1))
