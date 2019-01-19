@@ -14,3 +14,8 @@ PseudopotentialEnergyTolerance = 0.03
 
 Radius = 6.00
 
+TotalStates = 5
+
+FromScratch = yes
+
+EigenSilver = cg_new
