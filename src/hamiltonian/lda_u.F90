@@ -86,7 +86,8 @@ module lda_u_oct_m
        zlda_u_commute_r,                &
        dlda_u_force,                    &
        zlda_u_force,                    &
-       lda_u_write_info
+       lda_u_write_info,                &
+       compute_ACBNO_U_kanamori
 
 
   type lda_u_t
@@ -124,6 +125,7 @@ module lda_u_oct_m
     logical             :: basisfromstates    !> We can construct the localized basis from user-defined states
     FLOAT               :: acbn0_screening    !> We use or not the screening in the ACBN0 functional
     integer, allocatable:: basisstates(:)
+    integer             :: double_couting     !> Double-couting term 
 
     type(distributed_t) :: orbs_dist
 
@@ -136,6 +138,10 @@ module lda_u_oct_m
     DFT_U_NONE                    = 0, &
     DFT_U_EMPIRICAL               = 1, &
     DFT_U_ACBN0                   = 2
+
+  integer, public, parameter ::        &
+    DFT_U_FLL                     = 0, &
+    DFT_U_AMF                     = 1
 
 contains
 
@@ -160,6 +166,7 @@ contains
   this%maxneighbors = 0
   this%basisfromstates = .false.
   this%acbn0_screening = M_ONE
+  this%double_couting = DFT_U_FLL
 
   nullify(this%dn)
   nullify(this%zn)
@@ -218,6 +225,25 @@ contains
   !%End
   call parse_variable('DFTUBasisFromStates', .false., this%basisfromstates)
   if(this%basisfromstates) call messages_experimental("DFTUBasisFromStates") 
+
+  !%Variable DFTUDoubleCounting
+  !%Type integer
+  !%Default dft_u_fll
+  !%Section Hamiltonian::DFT+U
+  !%Description
+  !% This variable selects which DFT+U
+  !% double counting term is used.
+  !%Option dft_u_fll 0
+  !% (Default) The Fully Localized Limit (FLL)
+  !%Option dft_u_amf 1
+  !% (Experimental) Around mean field double counting, as defined in PRB 44, 943 (1991) and PRB 49, 14211 (1994).
+  !%End
+  call parse_variable('DFTUDoubleCounting', DFT_U_FLL, this%double_couting)
+  call messages_print_var_option(stdout,  'DFTUDoubleCounting', this%double_couting)
+  if(this%double_couting /= DFT_U_FLL) call messages_experimental("DFTUDoubleCounting = dft_u_amf")
+  if(st%d%ispin == SPINORS .and. this%double_couting /= DFT_U_FLL) then
+    call messages_not_implemented("AMF double couting with spinors.")
+  end if
 
   if( this%level == DFT_U_ACBN0 ) then
     !%Variable UseAllAtomicOrbitals
@@ -319,7 +345,9 @@ contains
 
     call distributed_nullify(this%orbs_dist, this%norbsets)
    #ifdef HAVE_MPI
-    call distributed_init(this%orbs_dist, this%norbsets, MPI_COMM_WORLD, "orbsets")
+    if(.not. gr%mesh%parallel_in_domains) then
+      call distributed_init(this%orbs_dist, this%norbsets, MPI_COMM_WORLD, "orbsets")
+    end if
    #endif 
 
 
@@ -595,7 +623,7 @@ contains
       do im = 1, this%orbsets(1)%norbs
         do idim = 1, st%d%dim
           call lalg_copy(der%mesh%np, this%orbsets(1)%zorb(:,idim, im), &
-                                       this%orbsets(1)%eorb_mesh(:,idim,im,ik))
+                                       this%orbsets(1)%eorb_mesh(:,im,idim,ik))
         end do
       end do
     end do
@@ -604,6 +632,28 @@ contains
 
    POP_SUB(lda_u_periodic_coulomb_integrals)
  end subroutine lda_u_periodic_coulomb_integrals
+
+ subroutine compute_ACBNO_U_kanamori(this, st, kanamori)
+   type(lda_u_t),     intent(in)  :: this
+   type(states_t),    intent(in)  :: st
+   FLOAT,             intent(out) :: kanamori(:,:)
+
+   if(this%nspins == 1) then
+     if(states_are_real(st)) then
+       call dcompute_ACBNO_U_kanamori_restricted(this, kanamori)
+     else
+       call zcompute_ACBNO_U_kanamori_restricted(this, kanamori)
+     end if
+   else
+     if(states_are_real(st)) then
+       call dcompute_ACBNO_U_kanamori(this, kanamori)
+     else
+       call zcompute_ACBNO_U_kanamori(this, kanamori)
+     end if
+   end if
+  
+
+ end subroutine compute_ACBNO_U_kanamori
 
   subroutine lda_u_freeze_occ(this) 
     type(lda_u_t),     intent(inout) :: this

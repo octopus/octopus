@@ -65,8 +65,7 @@ namespace pseudopotential {
       double val;
       file >> val;
       atomic_number_ = round(val);
-      file >> val;
-      valence_charge_ = round(val);
+      file >> valence_charge_;
       getline(file, line);
 
       //line 3
@@ -203,7 +202,7 @@ namespace pseudopotential {
       return el.mass();
     }
     
-    int valence_charge() const {
+    double valence_charge() const {
       return valence_charge_;
     }
 
@@ -365,7 +364,7 @@ namespace pseudopotential {
     size_t file_size_;
     std::string description_;
     int atomic_number_;
-    int valence_charge_;
+    double valence_charge_;
     int ixc_;
     int llocal_;
     int mesh_size_;

@@ -374,7 +374,9 @@ contains
 
     call td_init(td, sys, hm)
 
-    if(ion_dynamics_ions_move(td%ions) .and. hm%lda_u_level /= DFT_U_NONE ) call messages_experimental("DFT+U with MoveIons=yes") 
+    !In both of these cases, the Schroedinger equation must contain an extra term related to the time-derivative of the ions, aas these two contributions are attached to atoms.
+    if(ion_dynamics_ions_move(td%ions) .and. hm%lda_u_level /= DFT_U_NONE ) call messages_not_implemented("DFT+U with MoveIons=yes") 
+    if(ion_dynamics_ions_move(td%ions) .and. associated(st%rho_core)) call messages_not_implemented("Nonlinear core correction with MoveIons=yes")
     
     ! Allocate wavefunctions during time-propagation
     if(td%dynamics == EHRENFEST) then
@@ -423,12 +425,12 @@ contains
         call hamiltonian_epot_generate(hm, gr, geo, st, time = td%iter*td%dt)
       end if
 
-      call forces_calculate(gr, geo, hm, st, t = td%iter*td%dt, dt = td%dt)
+      call forces_calculate(gr, geo, hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
       if(bitand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-        call forces_calculate(gr, geo, hm, st, t = td%iter*td%dt, dt = td%dt)
+        call forces_calculate(gr, geo, hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
       end if  
     end if
 
@@ -586,7 +588,7 @@ contains
           end if
           call density_calc(st, gr, st%rho)
           call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
-          call forces_calculate(gr, geo, hm, st, t = iter*td%dt, dt = td%dt)
+          call forces_calculate(gr, geo, hm, st, sys%ks, t = iter*td%dt, dt = td%dt)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds")
           call print_header()
         end if

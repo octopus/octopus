@@ -452,12 +452,14 @@ contains
         sigma(:, :, ie, is) = matmul( transpose(ip), matmul(sigmap(:, :, ie, is), ip) )
       end do
     end do
-    ! Diagonalize sigma tensor
-    if (spectrum%sigma_diag) &
-    call spectrum_sigma_diagonalize(sigma, nspin, spectrum%energy_step, energy_steps, kick)
 
     ! Finally, write down the result
     call spectrum_cross_section_tensor_write(out_file, sigma, nspin, spectrum%energy_step, energy_steps, kick)
+
+    ! Diagonalize sigma tensor
+    if (spectrum%sigma_diag) then
+      call spectrum_sigma_diagonalize(sigma, nspin, spectrum%energy_step, energy_steps, kick)
+    end if
 
     SAFE_DEALLOCATE_A(sigma)
     SAFE_DEALLOCATE_A(sigmap)
@@ -481,23 +483,32 @@ contains
 
     integer :: is, idir, jdir, ie, ii
     FLOAT :: average, anisotropy
-    FLOAT, allocatable :: pp(:,:), ip(:,:)
-    logical :: spins_subtract
+    FLOAT, allocatable :: pp(:,:), pp2(:,:), ip(:,:)
+    logical :: spins_singlet, spins_triplet
     character(len=20) :: header_string
 
     PUSH_SUB(spectrum_cross_section_tensor_write)
 
+    spins_singlet = .true.
+    spins_triplet = .false.
     if(present(kick)) then
       write(out_file, '(a15,i2)')      '# nspin        ', nspin
       call kick_write(kick, out_file)
-      spins_subtract = (kick%delta_strength_mode == KICK_SPIN_MODE)
-    else
-      spins_subtract = .false.
+      select case(kick%delta_strength_mode)
+      case (KICK_SPIN_MODE)
+        spins_triplet = .true.
+        spins_singlet = .false.
+      case (KICK_SPIN_DENSITY_MODE)
+        spins_triplet = .true.
+      end select
     end if
 
     write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
     write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
     write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
+    if (spins_triplet .and. spins_singlet) then
+      write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma-]", 20)
+    end if
     do is = 1, nspin
       do idir = 1, 3
         do jdir = 1, 3
@@ -508,6 +519,9 @@ contains
     end do
     write(out_file, '(1x)')
     write(out_file, '(a1,a20)', advance = 'no') '#', str_center('[' // trim(units_abbrev(units_out%energy)) // ']', 20)
+    if (spins_triplet .and. spins_singlet) then
+      write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+    end if
     do ii = 1, 2 + nspin * 9
       write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
     end do
@@ -527,21 +541,22 @@ contains
     ! more different that the eigenvalues are, the larger the anisotropy is.
 
     SAFE_ALLOCATE(pp(1:3, 1:3))
+    if (spins_triplet .and. spins_singlet) SAFE_ALLOCATE(pp2(1:3, 1:3))
     SAFE_ALLOCATE(ip(1:3, 1:3))
 
     do ie = 0, energy_steps
 
-      pp = M_ZERO
-      pp(:, :) = pp(:, :) + sigma(:, :, ie, 1)
+      pp(:, :) = sigma(:, :, ie, 1)
       if (nspin >= 2) then
-        if (spins_subtract) then
+        if (spins_singlet .and. spins_triplet) then
+          pp2(:, :) = pp(:, :) - sigma(:, :, ie, 2)
+          pp(:, :)  = pp(:, :) + sigma(:, :, ie, 2)
+        elseif (spins_triplet .and. .not.spins_singlet) then
           pp(:, :) = pp(:, :) - sigma(:, :, ie, 2)
-        else
+        elseif (spins_singlet .and. .not.spins_triplet) then
           pp(:, :) = pp(:, :) + sigma(:, :, ie, 2)
         end if
       end if
-      average = M_THIRD * ( pp(1, 1) + pp(2, 2) + pp(3, 3) )
-      ip = matmul(pp, pp)
 
       average = M_THIRD * ( pp(1, 1) + pp(2, 2) + pp(3, 3) )
       ip = matmul(pp, pp)
@@ -551,6 +566,12 @@ contains
       ! they have been read from the "cross_section_vector.x", where they are already in the proper units.
       write(out_file,'(3e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * energy_step)), &
         average, sqrt(max(anisotropy, M_ZERO))
+
+      if (spins_singlet .and. spins_triplet) then
+        average =  M_THIRD * ( pp2(1, 1) + pp2(2, 2) + pp2(3, 3) )
+        write(out_file,'(1e20.8)', advance = 'no') average
+      end if
+
       do is = 1, nspin
         write(out_file,'(9e20.8)', advance = 'no') sigma(1:3, 1:3, ie, is)
       end do
@@ -558,6 +579,9 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(pp)
+    if (spins_triplet .and. spins_singlet) then 
+      SAFE_DEALLOCATE_A(pp2)
+    end if
     SAFE_DEALLOCATE_A(ip)
     POP_SUB(spectrum_cross_section_tensor_write)
   end subroutine spectrum_cross_section_tensor_write
@@ -2277,7 +2301,7 @@ contains
 
       do ienergy = energy_start, energy_end
 
-        energy = energy_step*(ienergy - energy_start)
+        energy = energy_step*(ienergy - 1)
 
         do ii = 1, energy_function%nst_linear
           energy_function%states_linear(ii)%dpsi(ienergy) = M_ZERO
@@ -2364,62 +2388,176 @@ contains
     integer,                intent(in) :: energy_steps
     type(kick_t), optional, intent(in) :: kick !< if present, will write itself and nspin
 
-    integer :: is, idir, jdir, ie, ii, info, out_file
+    integer :: is, idir, jdir, ie, ii, info, out_file, out_file_t
     FLOAT, allocatable :: work(:,:) 
     CMPLX, allocatable :: w(:)
     character(len=20) :: header_string
+    logical :: spins_singlet, spins_triplet, symmetrize
+    FLOAT, allocatable :: pp(:,:), pp2(:,:)
 
     PUSH_SUB(spectrum_sigma_diagonalize)
 
-    out_file = io_open('cross_section_diagonal-sigma', action='write')
+    
+    !%Variable PropagationSpectrumSymmetrizeSigma
+    !%Type logical
+    !%Default .false.
+    !%Section Utilities::oct-propagation_spectrum
+    !%Description
+    !% The polarizablity tensor has to be real and symmetric. Due to numerical accuracy, 
+    !% that is not extricly conserved when computing it from different time-propations.
+    !% If <tt>PropagationSpectrumSymmetrizeSigma = yes</tt>, the polarizability tensor is
+    !% symmetrized before its diagonalizied.
+    !% This variable is only used if the cross_section_tensor is computed. 
+    !%End
+    call parse_variable('PropagationSpectrumSymmetrizeSigma', .false., symmetrize)
+    call messages_print_var_value(stdout, 'PropagationSpectrumSymmetrizeSigma', symmetrize)
+
+    spins_singlet = .true.
+    spins_triplet = .false.
+    if(present(kick)) then
+      select case(kick%delta_strength_mode)
+      case (KICK_SPIN_MODE)
+        spins_triplet = .true.
+        spins_singlet = .false.
+      case (KICK_SPIN_DENSITY_MODE)
+        spins_triplet = .true.
+      end select
+    end if
+    
+    if (spins_singlet .and. spins_triplet) then
+      out_file = io_open('cross_section_diagonal-sigma_s', action='write')
+      out_file_t = io_open('cross_section_diagonal-sigma_t', action='write')
+    else
+      out_file = io_open('cross_section_diagonal-sigma', action='write')
+    end if
 
     write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
-    do is = 1, nspin
-      do idir = 1, 3
-        write(out_file, '(a20)', advance = 'no') str_center("Real part", 20)
-        write(out_file, '(a20)', advance = 'no') str_center("Imaginary part", 20)
-        do jdir = 1, 3
-          write(header_string,'(a7,i1,a1,i1,a1,i1,a1)') 'vector(', idir, ',', jdir, ',', is, ')'
-          write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
-        end do
+    do idir = 1, 3
+      write(out_file, '(a20)', advance = 'no') str_center("Real part", 20)
+      if (.not.symmetrize) write(out_file, '(a20)', advance = 'no') str_center("Imaginary part", 20)
+      do jdir = 1, 3
+        write(header_string,'(a7,i1,a1,i1,a1,i1,a1)') 'vector(', idir, ',', jdir, ',', is, ')'
+        write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
       end do
     end do
     write(out_file, '(1x)')
     write(out_file, '(a1,a20)', advance = 'no') '#', str_center('[' // trim(units_abbrev(units_out%energy)) // ']', 20)
 
-    do ii = 1, nspin 
-      do idir = 1, 3
-        write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
-        write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
-        do jdir = 1, 3
-          write(out_file, '(a20)', advance = 'no')  str_center('[ - ]', 20)
-        end do
+    do idir = 1, 3
+      write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+      if (.not.symmetrize) write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+      do jdir = 1, 3
+        write(out_file, '(a20)', advance = 'no')  str_center('[ - ]', 20)
       end do
     end do
     write(out_file, '(1x)')
 
+    if (spins_singlet .and. spins_triplet) then
+      write(out_file_t, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
+      do idir = 1, 3
+        write(out_file_t, '(a20)', advance = 'no') str_center("Real part", 20)
+        if (.not.symmetrize) write(out_file_t, '(a20)', advance = 'no') str_center("Imaginary part", 20)
+        do jdir = 1, 3
+          write(header_string,'(a7,i1,a1,i1,a1,i1,a1)') 'vector(', idir, ',', jdir, ',', is, ')'
+          write(out_file_t, '(a20)', advance = 'no') str_center(trim(header_string), 20)
+        end do
+      end do
+      write(out_file_t, '(1x)')
+      write(out_file_t, '(a1,a20)', advance = 'no') '#', str_center('[' // trim(units_abbrev(units_out%energy)) // ']', 20)
+     
+      do idir = 1, 3
+        write(out_file_t, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+        if(.not.symmetrize) write(out_file_t, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+        do jdir = 1, 3
+          write(out_file_t, '(a20)', advance = 'no')  str_center('[ - ]', 20)
+        end do
+      end do
+      write(out_file_t, '(1x)')
+    end if
+
+    SAFE_ALLOCATE(pp(1:3, 1:3))
+    if (spins_triplet .and. spins_singlet) SAFE_ALLOCATE(pp2(1:3, 1:3))
     SAFE_ALLOCATE(w(1:3))
     SAFE_ALLOCATE(work(1:3, 1:3))
     do ie = 0, energy_steps
-      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * energy_step))
-      do is = 1, nspin
-        work(1:3, 1:3) = sigma(1:3, 1:3, ie, is)
-        call lalg_eigensolve_nonh(3, work, w, err_code = info, sort_eigenvectors = .true.)
+
+      pp(:, :) = sigma(:, :, ie, 1)
+      if (nspin >= 2) then
+        if (spins_singlet .and. spins_triplet) then
+          pp2(:, :) = pp(:, :) - sigma(:, :, ie, 2)
+          pp(:, :)  = pp(:, :) + sigma(:, :, ie, 2)
+        elseif (spins_triplet .and. .not.spins_singlet) then
+          pp(:, :) = pp(:, :) - sigma(:, :, ie, 2)
+        elseif (spins_singlet .and. .not.spins_triplet) then
+          pp(:, :) = pp(:, :) + sigma(:, :, ie, 2)
+        end if
+      end if
+
+      if (symmetrize) then
+        do idir = 1, 3
+          do jdir = idir + 1, 3
+            pp(idir, jdir) = (pp(idir, jdir) + pp(jdir, idir) )/2.
+            pp(jdir, idir) = pp(idir, jdir)
+          end do 
+        end do
+      end if
+
+      work(1:3, 1:3) = pp(1:3, 1:3)
+      call lalg_eigensolve_nonh(3, work, w, err_code = info, sort_eigenvectors = .true.)
       ! Note that the cross-section elements do not have to be transformed to the proper units, since
       ! they have been read from the "cross_section_vector.x", where they are already in the proper units.
-        do idir = 3, 1, -1
+
+      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * energy_step))
+      do idir = 3, 1, -1
+        if (symmetrize) then
+          write(out_file,'(2e20.8)', advance = 'no') real(w(idir))
+        else
           write(out_file,'(2e20.8)', advance = 'no') w(idir)
+        end if
+      
+        do jdir = 1, 3
+          write(out_file,'(e20.8)', advance = 'no') work(jdir, idir)
+        end do
+      end do 
+      write(out_file, '(1x)')
+
+      if (spins_singlet .and. spins_triplet) then
+        if (symmetrize) then
+          do idir = 1, 3
+            do jdir = idir + 1, 3
+              pp2(idir, jdir) = (pp2(idir, jdir) + pp2(jdir, idir) )/2.
+              pp2(jdir, idir) = pp2(idir, jdir)
+            end do 
+          end do
+        end if
+        work(1:3, 1:3) = -pp2(1:3, 1:3)
+        call lalg_eigensolve_nonh(3, work, w, err_code = info, sort_eigenvectors = .true.)
+        ! Note that the cross-section elements do not have to be transformed to the proper units, since
+        ! they have been read from the "cross_section_vector.x", where they are already in the proper units.
+      
+        write(out_file_t,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * energy_step))
+        do idir = 3, 1, -1
+          if (symmetrize) then
+            write(out_file_t,'(2e20.8)', advance = 'no') real(w(idir))
+          else
+            write(out_file_t,'(2e20.8)', advance = 'no') w(idir)
+          end if
         
           do jdir = 1, 3
-            write(out_file,'(e20.8)', advance = 'no') work(jdir, idir)
+            write(out_file_t,'(e20.8)', advance = 'no') work(jdir, idir)
           end do
         end do 
-        write(out_file, '(1x)')
-      end do
+        write(out_file_t, '(1x)')
+      end if
     end do
 
     call io_close(out_file)
 
+    SAFE_DEALLOCATE_A(pp)
+    if (spins_triplet .and. spins_singlet) then 
+      SAFE_DEALLOCATE_A(pp2)
+      call io_close(out_file_t)
+    end if
     SAFE_DEALLOCATE_A(w)
     SAFE_DEALLOCATE_A(work)
 

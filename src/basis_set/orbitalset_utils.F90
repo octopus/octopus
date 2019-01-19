@@ -128,10 +128,6 @@ contains
           if( rr >rcut + TOL_INTERSITE ) cycle
           !Intra atomic interaction
           if( ios == ind .and. rr < TOL_INTERSITE) cycle
-!          if( ios > ind .and. simul_box_in_box(sb, geo, xi)) cycle
- !         if( ios > ind .and.  sqrt( sum( (xi(1:sb%dim) - os(ios)%sphere%center(1:sb%dim))**2 ) ) < TOL_INTERSITE) cycle
-
-
 
           this%nneighbors = this%nneighbors +1
         end do
@@ -157,7 +153,6 @@ contains
 
           if( rr > rcut + TOL_INTERSITE ) cycle
           if( ios == ind .and. rr < TOL_INTERSITE) cycle
-!          if( ios > ind .and.  sqrt( sum( (xi(1:sb%dim) - os(ios)%sphere%center(1:sb%dim))**2 ) )< TOL_INTERSITE) cycle
 
           this%nneighbors = this%nneighbors +1
 
@@ -214,8 +209,8 @@ contains
         np_sphere = sm%np
 
         do ist = 1, this%norbs
-          do jst = 1, this%norbs
-        !    jst = ist
+       !   do jst = 1, this%norbs
+            jst = ist
 
             !$omp parallel do
             do ip=1,np_sphere
@@ -227,8 +222,8 @@ contains
             call dpoisson_solve_sm(this%poisson, sm, vv(1:np_sphere), nn(1:np_sphere))
 
             do kst = 1, os(ios)%norbs
-              do lst = 1, os(ios)%norbs
-            !    lst = kst
+         !     do lst = 1, os(ios)%norbs
+                lst = kst
 
                 !$omp parallel do
                 do ip=1,np_sphere
@@ -241,9 +236,9 @@ contains
                   this%coulomb_IIJJ(ist,jst,kst,lst,inn) = M_ZERO
                 end if
 
-              end do !lst
+          !    end do !lst
             end do !kst 
-          end do !jst
+         ! end do !jst
         end do !ist
 
         call poisson_end(this%poisson)
@@ -251,18 +246,6 @@ contains
         SAFE_DEALLOCATE_A(nn)
         SAFE_DEALLOCATE_A(vv)
         SAFE_DEALLOCATE_A(tmp)
-!       if(ind == 1.and.inn==1.and.mpi_grp_is_root(mpi_world) ) then
-!      SAFE_ALLOCATE(tmp(1:der%mesh%np))
-!      tmp = M_ZERO
-!      call submesh_add_to_mesh(sm, orb(:,1,1), tmp)
-!      call dio_function_output(OPTION__OUTPUTFORMAT__XCRYSDEN, "./", 'orb11', der%mesh, tmp, fn_unit, ierr, geo = geo)
-!
-!      tmp = M_ZERO
-!      call submesh_add_to_mesh(sm, orb(:,1,2), tmp)
-!      call dio_function_output(OPTION__OUTPUTFORMAT__XCRYSDEN, "./", 'orb12', der%mesh, tmp, fn_unit, ierr, geo = geo)
-!      SAFE_DEALLOCATE_A(tmp)
-!     end if
-
 
         call submesh_end(sm)
         SAFE_DEALLOCATE_A(orb)
