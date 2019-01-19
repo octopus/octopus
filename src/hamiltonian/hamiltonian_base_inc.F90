@@ -366,8 +366,7 @@ subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
   type(batch_t), target,       intent(inout) :: vpsib
 
   integer :: ist, idim, ip
-  R_TYPE, pointer :: psi(:, :), vpsi(:, :)
-  R_TYPE, allocatable :: grad(:, :, :)
+  R_TYPE, allocatable :: psi(:, :), vpsi(:, :), grad(:, :, :)
   PUSH_SUB(X(hamiltonian_base_rashba))
 
   if(abs(this%rashba_coupling) < M_EPSILON) then
@@ -376,12 +375,14 @@ subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
   end if
   ASSERT(std%ispin == SPINORS)
   ASSERT(der%mesh%sb%dim == 2)
-  
+
+  SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:std%dim))
+  SAFE_ALLOCATE(vpsi(1:der%mesh%np, 1:std%dim))
   SAFE_ALLOCATE(grad(1:der%mesh%np, 1:der%mesh%sb%dim, 1:std%dim))
 
   do ist = 1, psib%nst
-    psi  => psib%states(ist)%X(psi)
-    vpsi => vpsib%states(ist)%X(psi)
+    call batch_get_state(psib, ist, der%mesh%np_part, psi)
+    call batch_get_state(vpsib, ist, der%mesh%np, vpsi)
 
     do idim = 1, std%dim
       call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
@@ -403,9 +404,12 @@ subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
         this%rashba_coupling*( grad(ip, 1, 1) + M_zI*grad(ip, 2, 1) )
     end forall
 
+    call batch_set_state(vpsib, ist, der%mesh%np, vpsi)
   end do
   
   SAFE_DEALLOCATE_A(grad)
+  SAFE_DEALLOCATE_A(vpsi)
+  SAFE_DEALLOCATE_A(psi)
   
   POP_SUB(X(hamiltonian_base_rashba))
 end subroutine X(hamiltonian_base_rashba)
@@ -422,8 +426,7 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
   type(batch_t), target,       intent(inout) :: vpsib
 
   integer :: ist, idim, ip
-  R_TYPE, pointer :: psi(:, :), vpsi(:, :)
-  R_TYPE, allocatable :: grad(:, :, :)
+  R_TYPE, allocatable :: psi(:, :), vpsi(:, :), grad(:, :, :)
   FLOAT :: cc, b2, bb(1:MAX_DIM)
   CMPLX :: b12
 
@@ -432,11 +435,13 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
   call profiling_in(prof_magnetic, "MAGNETIC")
   PUSH_SUB(X(hamiltonian_base_magnetic))
 
+  SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:std%dim))
+  SAFE_ALLOCATE(vpsi(1:der%mesh%np, 1:std%dim))
   SAFE_ALLOCATE(grad(1:der%mesh%np, 1:der%mesh%sb%dim, 1:std%dim))
 
   do ist = 1, psib%nst
-    psi  => psib%states(ist)%X(psi)
-    vpsi => vpsib%states(ist)%X(psi)
+    call batch_get_state(psib, ist, der%mesh%np_part, psi)
+    call batch_get_state(vpsib, ist, der%mesh%np, vpsi)
 
     do idim = 1, std%dim
       call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
@@ -473,9 +478,13 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
         
       end select
     end if
+
+    call batch_set_state(vpsib, ist, der%mesh%np, vpsi)
   end do
   
   SAFE_DEALLOCATE_A(grad)
+  SAFE_DEALLOCATE_A(vpsi)
+  SAFE_DEALLOCATE_A(psi)
   
   POP_SUB(X(hamiltonian_base_magnetic))
   call profiling_out(prof_magnetic)

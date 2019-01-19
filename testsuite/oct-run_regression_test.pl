@@ -481,7 +481,7 @@ close(TESTSUITE);
 print "Status: ".$failures." failures\n";
 
 if($opt_r) {
-    use YAML 'Dump';
+    require YAML;
     open(YML, ">>$opt_r" ) or die255("Could not create '$opt_r'.");
     flock(YML, LOCK_EX) or die "Cannot lock file - $opt_r!\n";
     print YML YAML::Dump(\%report);

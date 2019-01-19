@@ -523,6 +523,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
   type(batch_t),     intent(inout) :: aa              !< A batch which contains the mesh functions whose points will be exchanged.
   integer, optional, intent(in)    :: forward_map(:)  !< A map which gives the destination of the value each point.
   logical, optional, intent(in)    :: backward_map    !< A map which gives the source of the value of each point.
+  logical :: packed_on_entry
 
 #ifdef HAVE_MPI
   integer :: ip, ipg, npart, ipart, ist, pos, nstl, np_points, np_inner, np_bndry
@@ -538,7 +539,10 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
   ASSERT(present(backward_map) .neqv. present(forward_map))
   ASSERT(batch_type(aa) == R_TYPE_VAL)
-  ASSERT(batch_status(aa) == BATCH_NOT_PACKED)
+  packed_on_entry = batch_status(aa) == BATCH_NOT_PACKED
+  if (packed_on_entry) then
+    call batch_unpack(aa, force=.true.)
+  end if
 
   if(.not. mesh%parallel_in_domains) then
     message(1) = "Not implemented for the serial case. Really, only in parallel."
@@ -722,6 +726,9 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 #endif
   end if
 
+  if (packed_on_entry) then
+    call batch_pack(aa)
+  end if
   POP_SUB(X(mesh_batch_exchange_points))
 end subroutine X(mesh_batch_exchange_points)
 

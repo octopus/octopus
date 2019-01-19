@@ -313,17 +313,16 @@ contains
 
       end if
 
-      !%Variable XCParallel
+      !%Variable ParallelXC
       !%Type logical
-      !%Default false
+      !%Default true
       !%Section Execution::Parallelization
       !%Description
-      !% (Experimental) When enabled, additional parallelization
+      !% When enabled, additional parallelization
       !% will be used for the calculation of the XC functional.
       !%End
-      call parse_variable('XCParallel', .false., xcs%parallel)
-
-      if(xcs%parallel) call messages_experimental('XCParallel')
+      call messages_obsolete_variable('XCParallel', 'ParallelXC')
+      call parse_variable('ParallelXC', .true., xcs%parallel)
       
       POP_SUB(xc_init.parse)
     end subroutine parse

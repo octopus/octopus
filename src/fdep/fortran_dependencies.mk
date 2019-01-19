@@ -166,12 +166,12 @@ endef
 
 # gather dependencies for module files
 $(_f90_depmodfile): $(top_srcdir)/src/fdep/fortran_dependencies.pl $(foreach p,$(_f90_targets),$(_$p_use_mods) $(_$p_def_mods))
-	$(call _f90_verbose,F90 DEPS $@)echo -n > $@;
+	$(call _f90_verbose,F90 DEPS $@)echo > $@;
 	$(foreach p,$(_f90_targets),$(call program_module_dependencies,$p))
 
 # gather dependencies for includes
 $(_f90_depincfile): $(top_srcdir)/src/fdep/fortran_dependencies.pl $(foreach p,$(_f90_targets),$(_$p_inc_mods))
-	$(call _f90_verbose,F90 INCS $@)echo -n > $@;
+	$(call _f90_verbose,F90 INCS $@)echo > $@;
 	$(foreach p,$(_f90_targets),$(call program_include_dependencies,$p))
 
 $(_f90_depdir):

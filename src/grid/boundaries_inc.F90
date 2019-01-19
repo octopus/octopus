@@ -290,13 +290,16 @@ contains
     integer :: ist, ip
     integer :: ii, jj, kk, ix, iy, iz, dx, dy, dz, i_lev
     FLOAT :: weight
-    R_TYPE, pointer :: ff(:)
+    R_TYPE, allocatable :: ff(:)
 
     PUSH_SUB(X(boundaries_set_batch).multiresolution)
 
+#ifndef SINGLE_PRECISION
+    SAFE_ALLOCATE(ff(1:boundaries%mesh%np_part))
+    
     do ist = 1, ffb%nst_linear
-      ff => ffb%states_linear(ist)%X(psi)
-
+      call batch_get_state(ffb, ist, boundaries%mesh%np_part, ff)
+      
       do ip = bndry_start, bndry_end
         ix = boundaries%mesh%idx%lxyz(ip, 1)
         iy = boundaries%mesh%idx%lxyz(ip, 2)
@@ -327,8 +330,15 @@ contains
         end if
 
       end do ! ip
+
+      call batch_set_state(ffb, ist, boundaries%mesh%np_part, ff)
     end do ! ist
 
+    SAFE_DEALLOCATE_A(ff)
+#else
+    ASSERT(.false.)
+#endif
+    
     POP_SUB(X(boundaries_set_batch).multiresolution)
   end subroutine multiresolution
 
