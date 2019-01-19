@@ -548,6 +548,9 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
       forall(ip = 1:np) this%pack%zpsi(ist, ip) = psi(ip)
     end if
   case(BATCH_CL_PACKED)
+
+    ASSERT(batch_type(this) == R_TYPE_VAL)
+    
     call accel_create_buffer(tmp, ACCEL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
 
     call accel_write_buffer(tmp, np, psi)
@@ -618,6 +621,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
   integer :: ip
   type(profile_t), save :: prof 
   type(accel_mem_t) :: tmp
+  FLOAT, allocatable :: dpsi(:)
 
   PUSH_SUB(X(batch_get_state1))
 
@@ -664,23 +668,58 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
   case(BATCH_CL_PACKED)
 
     ASSERT(np <= this%pack%size(2))
-    
-    call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
 
-    call accel_set_kernel_arg(X(unpack), 0, this%pack%size(1))
-    call accel_set_kernel_arg(X(unpack), 1, np)
-    call accel_set_kernel_arg(X(unpack), 2, ist - 1)
-    call accel_set_kernel_arg(X(unpack), 3, this%pack%buffer)
-    call accel_set_kernel_arg(X(unpack), 4, tmp)
+    if(batch_type(this) == R_TYPE_VAL) then
 
-    call accel_kernel_run(X(unpack), (/1, this%pack%size(2)/), (/1, accel_max_workgroup_size()/))
+      call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
+      
+      call accel_set_kernel_arg(X(unpack), 0, this%pack%size(1))
+      call accel_set_kernel_arg(X(unpack), 1, np)
+      call accel_set_kernel_arg(X(unpack), 2, ist - 1)
+      call accel_set_kernel_arg(X(unpack), 3, this%pack%buffer)
+      call accel_set_kernel_arg(X(unpack), 4, tmp)
+      
+      call accel_kernel_run(X(unpack), (/1, this%pack%size(2)/), (/1, accel_max_workgroup_size()/))
+      
+      call accel_finish()
+      
+      call accel_read_buffer(tmp, np, psi)
 
-    call accel_finish()
+      call accel_release_buffer(tmp)
 
-    call accel_read_buffer(tmp, np, psi)
+    else
 
-    call accel_release_buffer(tmp)
-    
+      ! the output buffer is complex, we get it as real
+      
+      ASSERT(batch_type(this) == TYPE_FLOAT)
+      ASSERT(R_TYPE_VAL == TYPE_CMPLX)
+      
+      call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
+      
+      call accel_set_kernel_arg(dunpack, 0, this%pack%size(1))
+      call accel_set_kernel_arg(dunpack, 1, np)
+      call accel_set_kernel_arg(dunpack, 2, ist - 1)
+      call accel_set_kernel_arg(dunpack, 3, this%pack%buffer)
+      call accel_set_kernel_arg(dunpack, 4, tmp)
+      
+      call accel_kernel_run(dunpack, (/1, this%pack%size(2)/), (/1, accel_max_workgroup_size()/))
+      
+      SAFE_ALLOCATE(dpsi(1:np))
+      
+      call accel_finish()
+
+      call accel_read_buffer(tmp, np, dpsi)
+
+      ! and convert to complex on the cpu
+      
+      do ip = 1, np
+        psi(ip) = dpsi(ip)
+      end do
+
+      call accel_release_buffer(tmp)
+      
+    end if
+      
   end select
 
   call profiling_out(prof)
