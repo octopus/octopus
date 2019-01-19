@@ -145,6 +145,8 @@ contains
 
     geo%space => space
 
+    call species_init_global()
+    
     ! initialize geometry
     call geometry_init_xyz(geo)
     call geometry_init_species(geo, print_info=print_info)
@@ -454,6 +456,8 @@ contains
     SAFE_DEALLOCATE_P(geo%species)
     geo%nspecies=0
 
+    call species_end_global()
+    
     POP_SUB(geometry_end)
   end subroutine geometry_end
 

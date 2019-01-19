@@ -42,8 +42,15 @@ extern "C" void FC_FUNC_(pseudo_set_init_low, PSEUDO_SET_INIT_LOW)
   free(filename_c);
 }
 
+extern "C" void FC_FUNC_(pseudo_set_nullify, PSEUDO_SET_NULLIFY)(pseudopotential::set ** pseudo_set){
+  *pseudo_set = NULL;
+}
+
 extern "C" void FC_FUNC_(pseudo_set_end, PSEUDO_SET_END)(pseudopotential::set ** pseudo_set){
-  delete *pseudo_set;
+  if(*pseudo_set){
+    delete *pseudo_set;
+    *pseudo_set = NULL;
+  }
 }
 
 extern "C" fint FC_FUNC_(pseudo_set_has_low, PSEUDO_SET_HAS_LOW)

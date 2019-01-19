@@ -51,6 +51,7 @@ module species_oct_m
     species_read,                  &
     species_build,                 &
     species_init_global,           &
+    species_end_global,            &
     species_read_delta,            &
     species_pot_init,              &
     species_type,                  &
@@ -161,6 +162,7 @@ module species_oct_m
     integer :: user_lmax          !< For the TM pseudos, user defined lmax 
     integer :: user_llocal        !< For the TM pseudos, used defined llocal
     integer :: pseudopotential_set_id !< to which set this pseudopotential belongs
+    logical :: pseudopotential_set_initialized
     type(pseudo_set_t) :: pseudopotential_set
   end type species_t
 
@@ -216,6 +218,8 @@ contains
     this%user_lmax   = INVALID_L
     this%user_llocal = INVALID_L
     this%pseudopotential_set_id = OPTION__PSEUDOPOTENTIALSET__NONE
+    this%pseudopotential_set_initialized = .false.
+    call pseudo_set_nullify(this%pseudopotential_set)
     
     POP_SUB(species_nullify)
   end subroutine species_nullify
@@ -333,11 +337,25 @@ contains
 
     if(default_pseudopotential_set_id /= OPTION__PSEUDOPOTENTIALSET__NONE) then
       call pseudo_set_init(default_pseudopotential_set, get_set_directory(default_pseudopotential_set_id), ierr, automatic)
+    else
+      call pseudo_set_nullify(default_pseudopotential_set)
     end if
 
     POP_SUB(species_init_global)
   end subroutine species_init_global
-  
+
+  ! ---------------------------------------------------------
+
+  subroutine species_end_global()
+    integer :: ierr
+    
+    PUSH_SUB(species_end_global)
+
+    call pseudo_set_end(default_pseudopotential_set)
+    
+    POP_SUB(species_end_global)
+  end subroutine species_end_global
+
   ! ---------------------------------------------------------
   !> Initializes a species object. This should be the
   !! first routine to be called (before species_read and species_build).
@@ -351,7 +369,7 @@ contains
 
     PUSH_SUB(species_init)
     
-    if(.not. initialized) call species_init_global()
+    ASSERT(initialized)
 
     call species_nullify(this)
     this%label = trim(label)
@@ -1499,6 +1517,8 @@ contains
     
     PUSH_SUB(species_end_species)
 
+    if(spec%pseudopotential_set_initialized) call pseudo_set_end(spec%pseudopotential_set)
+    
     if (species_is_ps(spec)) then 
       if(associated(spec%ps)) then 
         call ps_end(spec%ps)
@@ -1833,6 +1853,7 @@ contains
       case(OPTION__SPECIES__SET)
         call check_duplication(OPTION__SPECIES__SET)
         call parse_block_integer(blk, row, icol + 1, spec%pseudopotential_set_id)
+        spec%pseudopotential_set_initialized = .true.
         call pseudo_set_init(spec%pseudopotential_set, get_set_directory(spec%pseudopotential_set_id), ierr, automatic)
         
       case(OPTION__SPECIES__POTENTIAL_FORMULA)

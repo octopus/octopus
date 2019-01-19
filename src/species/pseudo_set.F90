@@ -31,6 +31,7 @@ module pseudo_set_oct_m
   public ::                                  &
     pseudo_set_t,                            &
     pseudo_set_init,                         &
+    pseudo_set_nullify,                      &
     pseudo_set_end,                          &
     pseudo_set_has,                          &
     pseudo_set_file_path,                    &
@@ -45,6 +46,13 @@ module pseudo_set_oct_m
   end type pseudo_set_t
 
   interface
+    
+    subroutine pseudo_set_nullify(pseudo_set)
+      import :: pseudo_set_t
+      implicit none
+
+      type(pseudo_set_t),   intent(inout) :: pseudo_set
+    end subroutine pseudo_set_nullify
     
     ! -------------------------------------------------
     
