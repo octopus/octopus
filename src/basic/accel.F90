@@ -1058,7 +1058,7 @@ contains
 
 #ifdef HAVE_CUDA
     gsizes(1:3) = gsizes(1:3)/lsizes(1:3)
-    
+
     ASSERT(gsizes(1) < 2_8**31 - 1_8)
     ASSERT(all(gsizes(2:3) <= 65535_8))
     
@@ -1722,11 +1722,11 @@ contains
     integer, intent(in) :: dim
 
 #ifdef HAVE_OPENCL
-    size = HUGE(size)
+    size = 2_8**30
 #endif
 #ifdef HAVE_CUDA
-    if(dim == 1) size = 2_8**31 - 1_8
-    size = 65535
+    if(dim == 1) size = 2_8**30
+    size = 32768
 #endif
   end function accel_max_size_per_dim
 
