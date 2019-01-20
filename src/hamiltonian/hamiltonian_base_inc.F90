@@ -54,7 +54,7 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
   FLOAT, optional,              intent(in)    :: Impotential(:,:)
   type(accel_mem_t), optional, intent(in)    :: potential_opencl
 
-  integer :: ist, ip
+  integer :: ist, ip, dim2, dim3
   R_TYPE, pointer :: psi(:, :), vpsi(:, :)
   R_TYPE  :: psi1, psi2
   FLOAT   :: vv, Imvv
@@ -93,7 +93,10 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
 
       localsize = accel_kernel_workgroup_size(kernel_vpsi)/psib%pack%size_real(1)
 
-      call accel_kernel_run(kernel_vpsi, (/psib%pack%size_real(1), pnp/), (/psib%pack%size_real(1), localsize/))
+      dim3 = mesh%np/(accel_max_size_per_dim(2)*localsize) + 1
+      dim2 = min(accel_max_size_per_dim(2)*localsize, pad(mesh%np, localsize))
+
+      call accel_kernel_run(kernel_vpsi, (/psib%pack%size_real(1), dim2, dim3/), (/psib%pack%size_real(1), localsize, 1/))
 
     case(SPINORS)
       call accel_set_kernel_arg(kernel_vpsi_spinors, 0, mesh%np)
