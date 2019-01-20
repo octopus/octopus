@@ -998,7 +998,7 @@ subroutine batch_copy_data(np, xx, yy)
   type(batch_t),     intent(in)    :: xx
   type(batch_t),     intent(inout) :: yy
 
-  integer :: ist
+  integer :: ist, dim2, dim3
   type(profile_t), save :: prof
   integer :: localsize
 
@@ -1018,7 +1018,11 @@ subroutine batch_copy_data(np, xx, yy)
     call accel_set_kernel_arg(kernel_copy, 4, log2(yy%pack%size_real(1)))
     
     localsize = accel_kernel_workgroup_size(kernel_copy)/yy%pack%size_real(1)
-    call accel_kernel_run(kernel_copy, (/yy%pack%size_real(1), pad(np, localsize)/), (/yy%pack%size_real(1), localsize/))
+
+    dim3 = np/(accel_max_size_per_dim(2)*localsize) + 1
+    dim2 = min(accel_max_size_per_dim(2)*localsize, pad(np, localsize))
+    
+    call accel_kernel_run(kernel_copy, (/yy%pack%size_real(1), dim2, dim3/), (/yy%pack%size_real(1), localsize, 1/))
     
     call accel_finish()
 
