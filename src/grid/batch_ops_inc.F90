@@ -686,10 +686,10 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
 
     ASSERT(np <= this%pack%size(2))
 
+    call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
+    
     if(batch_type(this) == R_TYPE_VAL) then
 
-      call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
-      
       call accel_set_kernel_arg(X(unpack), 0, this%pack%size(1))
       call accel_set_kernel_arg(X(unpack), 1, np)
       call accel_set_kernel_arg(X(unpack), 2, ist - 1)
@@ -702,16 +702,12 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
       
       call accel_read_buffer(tmp, np, psi)
 
-      call accel_release_buffer(tmp)
-
     else
 
       ! the output buffer is complex, we get it as real
       
       ASSERT(batch_type(this) == TYPE_FLOAT)
       ASSERT(R_TYPE_VAL == TYPE_CMPLX)
-      
-      call accel_create_buffer(tmp, ACCEL_MEM_WRITE_ONLY, batch_type(this), this%pack%size(2))
       
       call accel_set_kernel_arg(dunpack, 0, this%pack%size(1))
       call accel_set_kernel_arg(dunpack, 1, np)
@@ -735,10 +731,10 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
 
       SAFE_DEALLOCATE_A(dpsi)
 
-      call accel_release_buffer(tmp)
-      
     end if
-      
+
+    call accel_release_buffer(tmp)
+    
   end select
 
   call profiling_out(prof)
