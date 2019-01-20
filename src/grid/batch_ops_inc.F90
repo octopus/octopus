@@ -60,7 +60,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
   ASSERT(batch_status(xx) == batch_status(yy))
 
   select case(batch_status(xx))
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
     if(batch_type(yy) == TYPE_FLOAT) then
 
       call accel_set_kernel_arg(kernel_daxpy, 0, np)
@@ -167,7 +167,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   end do
 
   select case(batch_status(xx))
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
     call accel_kernel_start_call(kernel, 'axpy.cl', TOSTRING(X(axpy_vec)), &
       flags = '-D' + R_TYPE_CL)
 
@@ -305,7 +305,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   end do
   
   select case(batch_status(xx))
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
     if(batch_type(xx) == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
       size_factor = 2
       SAFE_ALLOCATE(aa_linear_double(1:2*xx%pack%size(1)))
@@ -417,7 +417,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   end do
 
   select case(batch_status(xx))
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
     if(batch_type(yy) == TYPE_CMPLX .and. R_TYPE_VAL == TYPE_FLOAT) then
       size_factor = 2
       SAFE_ALLOCATE(aa_linear_double(1:2*yy%pack%size(1)))
@@ -568,7 +568,7 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
     else
       forall(ip = 1:np) this%pack%zpsi(ist, ip) = psi(ip)
     end if
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
 
     call accel_create_buffer(tmp, ACCEL_MEM_READ_ONLY, batch_type(this), this%pack%size(2))
     
@@ -702,7 +702,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
       !$omp end parallel do
     end if
 
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
 
     ASSERT(np <= this%pack%size(2))
 
@@ -865,7 +865,7 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
 
     end if
 
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
     call messages_not_implemented('batch_get_points for CL packed batches')
   end select
 
@@ -944,7 +944,7 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
 
     end if
 
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
     call messages_not_implemented('batch_set_points for CL packed batches')
   end select
 
@@ -980,7 +980,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
   ASSERT(batch_status(xx) == batch_status(yy))
 
   select case(batch_status(yy))
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
 
 #if defined(R_TREAL)
 

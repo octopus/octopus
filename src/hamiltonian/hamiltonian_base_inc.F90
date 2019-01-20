@@ -26,7 +26,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
 
   PUSH_SUB(X(hamiltonian_base_local))
 
-  if(batch_status(psib) == BATCH_CL_PACKED) then
+  if(batch_status(psib) == BATCH_DEVICE_PACKED) then
     ASSERT(.not. allocated(this%Impotential))
     call X(hamiltonian_base_local_sub)(this%potential, mesh, std, ispin, &
       psib, vpsib, potential_opencl = this%potential_opencl)
@@ -75,7 +75,7 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
   end if
 
   select case(batch_status(psib))
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
     ASSERT(.not. pot_is_cmplx) ! not implemented
 
     pnp = accel_padded_size(mesh%np)
@@ -329,7 +329,7 @@ subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
 
     end if
 
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
     call accel_kernel_start_call(ker_phase, 'phase.cl', 'phase_hamiltonian')
 
     if(conjugate) then

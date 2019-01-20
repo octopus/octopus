@@ -143,9 +143,9 @@ module batch_oct_m
   end interface batch_add_state
 
   integer, public, parameter :: &
-    BATCH_NOT_PACKED = 0,       &
-    BATCH_PACKED     = 1,       &
-    BATCH_CL_PACKED  = 2
+    BATCH_NOT_PACKED     = 0,   &
+    BATCH_PACKED         = 1,   &
+    BATCH_DEVICE_PACKED  = 2
 
   integer, parameter :: CL_PACK_MAX_BUFFER_SIZE = 4 !< this value controls the size (in number of wave-functions)
                                                     !! of the buffer used to copy states to the opencl device.
@@ -494,7 +494,7 @@ contains
       if(type_is_complex(batch_type(this))) this%pack%size_real(1) = 2*this%pack%size_real(1)
 
       if(accel_is_enabled()) then
-        this%status = BATCH_CL_PACKED
+        this%status = BATCH_DEVICE_PACKED
         call accel_create_buffer(this%pack%buffer, ACCEL_MEM_READ_WRITE, batch_type(this), product(this%pack%size))
       else
         this%status = BATCH_PACKED
@@ -1010,7 +1010,7 @@ subroutine batch_copy_data(np, xx, yy)
   ASSERT(batch_status(xx) == batch_status(yy))
 
   select case(batch_status(xx))
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
     call accel_set_kernel_arg(kernel_copy, 0, np)
     call accel_set_kernel_arg(kernel_copy, 1, xx%pack%buffer)
     call accel_set_kernel_arg(kernel_copy, 2, log2(xx%pack%size_real(1)))

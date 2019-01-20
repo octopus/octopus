@@ -131,7 +131,7 @@ contains
     call batch_pack_was_modified(this)
 
     select case(batch_status(this))
-    case(BATCH_CL_PACKED)
+    case(BATCH_DEVICE_PACKED)
       call accel_set_buffer_to_zero(this%pack%buffer, batch_type(this), product(this%pack%size))
 
     case(BATCH_PACKED)
@@ -179,7 +179,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
   case(BATCH_NOT_PACKED, BATCH_PACKED)
     call messages_not_implemented('batch_get_points_cl for non-CL batches')
 
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
 
     tsize = types_get_size(batch_type(this))/types_get_size(TYPE_FLOAT)
     offset = batch_linear_to_ist(this, 1) - 1
@@ -225,7 +225,7 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
   case(BATCH_NOT_PACKED, BATCH_PACKED)
     call messages_not_implemented('batch_get_points_cl for non-CL batches')
 
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
 
     tsize = types_get_size(batch_type(this))&
       /types_get_size(TYPE_FLOAT)

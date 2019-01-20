@@ -208,7 +208,7 @@ contains
 
     select case(batch_status(fi))
 
-    case(BATCH_CL_PACKED)
+    case(BATCH_DEVICE_PACKED)
 
       ASSERT(.false.)
       
@@ -291,7 +291,7 @@ contains
 
     select case(batch_status(fi))
 
-    case(BATCH_CL_PACKED)
+    case(BATCH_DEVICE_PACKED)
 
       ASSERT(.false.)
       
