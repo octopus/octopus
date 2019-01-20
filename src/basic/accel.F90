@@ -79,7 +79,8 @@ module accel_oct_m
     clblas_print_error,           &
     clfft_print_error,            &
     accel_local_memory_size,      &
-    accel_global_memory_size
+    accel_global_memory_size,     &
+    accel_max_size_per_dim
   
 #ifdef HAVE_OPENCL
   integer, public, parameter ::                 &
@@ -1716,6 +1717,20 @@ contains
   end function accel_local_memory_size
 
   !--------------------------------------------------------------
+
+  integer(8) pure function accel_max_size_per_dim(dim) result(size)
+    integer, intent(in) :: dim
+
+#ifdef HAVE_OPENCL
+    size = HUGE(size)
+#endif
+#ifdef HAVE_CUDA
+    if(dim == 1) size = 2_8**31 - 1_8
+    size = 65535
+#endif
+  end function accel_max_size_per_dim
+
+  ! ------------------------------------------------------
   
 #include "undef.F90"
 #include "real.F90"
