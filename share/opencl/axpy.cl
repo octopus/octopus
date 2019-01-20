@@ -22,13 +22,14 @@
 #include <cl_complex.h>
 #include <cl_rtype.h>
 
-__kernel void X(axpy)(const rtype aa,
+__kernel void X(axpy)(const int np,
+		      const rtype aa,
 		      const __global rtype * restrict xx, const int ldxx,
 		      __global rtype * restrict yy, const int ldyy){
   int ist = get_global_id(0);
-  int ip = get_global_id(1);
-
-  yy[(ip<<ldyy) + ist] += MUL(aa, xx[(ip<<ldxx) + ist]);
+  int ip = get_global_id(1) + get_global_size(1)*get_global_id(2);
+  
+  if(ip < np) yy[(ip<<ldyy) + ist] += MUL(aa, xx[(ip<<ldxx) + ist]);
 
 }
 

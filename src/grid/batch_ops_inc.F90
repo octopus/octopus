@@ -44,7 +44,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
   type(batch_t),     intent(in)    :: xx
   type(batch_t),     intent(inout) :: yy
 
-  integer :: ist
+  integer :: ist, dim2, dim3
   integer :: localsize
   CMPLX :: zaa
 
@@ -63,25 +63,35 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
   case(BATCH_CL_PACKED)
     if(batch_type(yy) == TYPE_FLOAT) then
 
-      call accel_set_kernel_arg(kernel_daxpy, 0, aa)
-      call accel_set_kernel_arg(kernel_daxpy, 1, xx%pack%buffer)
-      call accel_set_kernel_arg(kernel_daxpy, 2, log2(xx%pack%size(1)))
-      call accel_set_kernel_arg(kernel_daxpy, 3, yy%pack%buffer)
-      call accel_set_kernel_arg(kernel_daxpy, 4, log2(yy%pack%size(1)))
+      call accel_set_kernel_arg(kernel_daxpy, 0, np)
+      call accel_set_kernel_arg(kernel_daxpy, 1, aa)
+      call accel_set_kernel_arg(kernel_daxpy, 2, xx%pack%buffer)
+      call accel_set_kernel_arg(kernel_daxpy, 3, log2(xx%pack%size(1)))
+      call accel_set_kernel_arg(kernel_daxpy, 4, yy%pack%buffer)
+      call accel_set_kernel_arg(kernel_daxpy, 5, log2(yy%pack%size(1)))
+
+      localsize = accel_kernel_workgroup_size(kernel_daxpy)/yy%pack%size(1)
       
-      localsize = accel_max_workgroup_size()
-      call accel_kernel_run(kernel_daxpy, (/yy%pack%size(1), pad(np, localsize)/), (/yy%pack%size(1), localsize/yy%pack%size(1)/))
+      dim3 = np/(accel_max_size_per_dim(2)*localsize) + 1
+      dim2 = min(accel_max_size_per_dim(2)*localsize, pad(np, localsize))
+
+      call accel_kernel_run(kernel_daxpy, (/yy%pack%size(1), dim2, dim3/), (/yy%pack%size(1), localsize, 1/))
       
     else
       zaa = aa
-      call accel_set_kernel_arg(kernel_zaxpy, 0, zaa)
-      call accel_set_kernel_arg(kernel_zaxpy, 1, xx%pack%buffer)
-      call accel_set_kernel_arg(kernel_zaxpy, 2, log2(xx%pack%size(1)))
-      call accel_set_kernel_arg(kernel_zaxpy, 3, yy%pack%buffer)
-      call accel_set_kernel_arg(kernel_zaxpy, 4, log2(yy%pack%size(1)))
+      call accel_set_kernel_arg(kernel_zaxpy, 0, np)
+      call accel_set_kernel_arg(kernel_zaxpy, 1, zaa)
+      call accel_set_kernel_arg(kernel_zaxpy, 2, xx%pack%buffer)
+      call accel_set_kernel_arg(kernel_zaxpy, 3, log2(xx%pack%size(1)))
+      call accel_set_kernel_arg(kernel_zaxpy, 4, yy%pack%buffer)
+      call accel_set_kernel_arg(kernel_zaxpy, 5, log2(yy%pack%size(1)))
+
+      localsize = accel_kernel_workgroup_size(kernel_zaxpy)/yy%pack%size(1)
+
+      dim3 = np/(accel_max_size_per_dim(2)*localsize) + 1
+      dim2 = min(accel_max_size_per_dim(2)*localsize, pad(np, localsize))
       
-      localsize = accel_max_workgroup_size()
-      call accel_kernel_run(kernel_zaxpy, (/yy%pack%size(1), pad(np, localsize)/), (/yy%pack%size(1), localsize/yy%pack%size(1)/))
+      call accel_kernel_run(kernel_zaxpy, (/yy%pack%size(1), dim2, dim3/), (/yy%pack%size(1), localsize, 1/))
 
     end if
 
