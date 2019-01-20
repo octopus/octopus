@@ -1718,14 +1718,14 @@ contains
 
   !--------------------------------------------------------------
 
-  integer(8) pure function accel_max_size_per_dim(dim) result(size)
+  integer pure function accel_max_size_per_dim(dim) result(size)
     integer, intent(in) :: dim
 
 #ifdef HAVE_OPENCL
-    size = 2_8**30
+    size = 2**30
 #endif
 #ifdef HAVE_CUDA
-    if(dim == 1) size = 2_8**30
+    if(dim == 1) size = 2**30
     size = 32768
 #endif
   end function accel_max_size_per_dim
