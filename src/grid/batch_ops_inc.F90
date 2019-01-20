@@ -126,7 +126,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   integer, optional, intent(in)    :: a_start
   logical, optional, intent(in)    :: a_full
 
-  integer :: ist, ip, effsize, iaa
+  integer :: ist, ip, effsize, iaa, dim2, dim3
   R_TYPE, allocatable     :: aa_linear(:)
   integer :: localsize
   integer :: size_factor
@@ -185,8 +185,11 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
     call accel_set_kernel_arg(kernel, 5, log2(yy%pack%size(1)*size_factor))
 
     localsize = accel_kernel_workgroup_size(kernel)/(yy%pack%size(1)*size_factor)
-    call accel_kernel_run(kernel, (/yy%pack%size(1)*size_factor, pad(np, localsize)/), &
-      (/yy%pack%size(1)*size_factor, localsize/))
+
+    dim3 = np/(accel_max_size_per_dim(2)*localsize) + 1
+    dim2 = min(accel_max_size_per_dim(2)*localsize, pad(np, localsize))
+    
+    call accel_kernel_run(kernel, (/yy%pack%size(1)*size_factor, dim2, dim3/), (/yy%pack%size(1)*size_factor, localsize, 1/))
 
     call accel_finish()
 

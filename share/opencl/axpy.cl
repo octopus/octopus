@@ -38,7 +38,7 @@ __kernel void X(axpy_vec)(const int np,
 			  __global rtype * restrict yy, const int ldyy){
   
   int ist = get_global_id(0);
-  int ip = get_global_id(1);
+  int ip = get_global_id(1) + get_global_size(1)*get_global_id(2);
   
   if(ip < np) yy[(ip<<ldyy) + ist] += MUL(aa[ist], xx[(ip<<ldxx) + ist]);
 
