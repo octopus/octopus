@@ -44,13 +44,14 @@ __kernel void X(axpy_vec)(const int np,
 
 }
 
-__kernel void X(scal_vec)(const __constant rtype * restrict aa, 
+__kernel void X(scal_vec)(const int np,
+			  const __constant rtype * restrict aa, 
 			  __global rtype * restrict xx, const int ldxx){
   
   int ist = get_global_id(0);
-  int ip = get_global_id(1);
+  int ip = get_global_id(1) + get_global_size(1)*get_global_id(2);
   
-  xx[(ip<<ldxx) + ist] = MUL(aa[ist], xx[(ip<<ldxx) + ist]);
+  if(ip < np) xx[(ip<<ldxx) + ist] = MUL(aa[ist], xx[(ip<<ldxx) + ist]);
 
 }
 
