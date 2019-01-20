@@ -32,14 +32,15 @@ __kernel void X(axpy)(const rtype aa,
 
 }
 
-__kernel void X(axpy_vec)(const __constant rtype * restrict aa, 
+__kernel void X(axpy_vec)(const int np,
+			  const __constant rtype * restrict aa, 
 			  const __global rtype * restrict xx, const int ldxx,
 			  __global rtype * restrict yy, const int ldyy){
   
   int ist = get_global_id(0);
   int ip = get_global_id(1);
   
-  yy[(ip<<ldyy) + ist] += MUL(aa[ist], xx[(ip<<ldxx) + ist]);
+  if(ip < np) yy[(ip<<ldyy) + ist] += MUL(aa[ist], xx[(ip<<ldxx) + ist]);
 
 }
 

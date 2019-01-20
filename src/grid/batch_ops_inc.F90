@@ -177,15 +177,16 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
       call accel_write_buffer(aa_buffer, yy%pack%size(1), aa_linear)
     end if
 
-    call accel_set_kernel_arg(kernel, 0, aa_buffer)
-    call accel_set_kernel_arg(kernel, 1, xx%pack%buffer)
-    call accel_set_kernel_arg(kernel, 2, log2(xx%pack%size(1)*size_factor))
-    call accel_set_kernel_arg(kernel, 3, yy%pack%buffer)
-    call accel_set_kernel_arg(kernel, 4, log2(yy%pack%size(1)*size_factor))
+    call accel_set_kernel_arg(kernel, 0, np)
+    call accel_set_kernel_arg(kernel, 1, aa_buffer)
+    call accel_set_kernel_arg(kernel, 2, xx%pack%buffer)
+    call accel_set_kernel_arg(kernel, 3, log2(xx%pack%size(1)*size_factor))
+    call accel_set_kernel_arg(kernel, 4, yy%pack%buffer)
+    call accel_set_kernel_arg(kernel, 5, log2(yy%pack%size(1)*size_factor))
 
-    localsize = accel_max_workgroup_size()
+    localsize = accel_kernel_workgroup_size(kernel)/(yy%pack%size(1)*size_factor)
     call accel_kernel_run(kernel, (/yy%pack%size(1)*size_factor, pad(np, localsize)/), &
-      (/yy%pack%size(1)*size_factor, localsize/(yy%pack%size(1)*size_factor)/))
+      (/yy%pack%size(1)*size_factor, localsize/))
 
     call accel_finish()
 
