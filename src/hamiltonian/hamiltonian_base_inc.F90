@@ -60,7 +60,7 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
   FLOAT   :: vv, Imvv
   R_TYPE  :: pot(1:4) 
   logical :: pot_is_cmplx
-  integer :: pnp, iprange
+  integer :: pnp, localsize
 
   call profiling_in(prof_vlpsi, "VLPSI")
   PUSH_SUB(X(hamiltonian_base_local_sub))
@@ -91,9 +91,9 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
       call accel_set_kernel_arg(kernel_vpsi, 5, vpsib%pack%buffer)
       call accel_set_kernel_arg(kernel_vpsi, 6, log2(vpsib%pack%size_real(1)))
 
-      iprange = accel_max_workgroup_size()/psib%pack%size_real(1)
+      localsize = accel_kernel_workgroup_size(kernel_vpsi)/psib%pack%size_real(1)
 
-      call accel_kernel_run(kernel_vpsi, (/psib%pack%size_real(1), pnp/), (/psib%pack%size_real(1), iprange/))
+      call accel_kernel_run(kernel_vpsi, (/psib%pack%size_real(1), pnp/), (/psib%pack%size_real(1), localsize/))
 
     case(SPINORS)
       call accel_set_kernel_arg(kernel_vpsi_spinors, 0, mesh%np)
