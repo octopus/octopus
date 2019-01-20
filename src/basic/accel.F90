@@ -1485,15 +1485,18 @@ contains
 
     if(nval > 0) then
       
-      nval_real = nval*types_get_size(type)/8
-      offset_real = optional_default(offset, 0)*types_get_size(type)/8
+      nval_real = nval*(types_get_size(type)/8)
+      offset_real = optional_default(offset, 0)*(types_get_size(type)/8)
+      
+      ASSERT(nval_real > 0)
       
       call accel_set_kernel_arg(set_zero, 0, nval_real)
       call accel_set_kernel_arg(set_zero, 1, offset_real)
       call accel_set_kernel_arg(set_zero, 2, buffer)
       
       bsize = accel_kernel_workgroup_size(set_zero)
-      
+
+           
       call accel_kernel_run(set_zero, (/ opencl_pad(nval_real, bsize) /), (/ bsize /))
       call accel_finish()
 
