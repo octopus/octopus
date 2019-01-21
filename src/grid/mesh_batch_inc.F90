@@ -139,7 +139,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
     end if
 
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
     ASSERT(.not. mesh%use_curvilinear)
 
     call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
@@ -172,7 +172,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     
   end select
 
-  if(batch_status(aa) /= BATCH_CL_PACKED) then
+  if(batch_status(aa) /= BATCH_DEVICE_PACKED) then
     if(mesh%use_curvilinear) then
       call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
     else
@@ -473,7 +473,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
 
     SAFE_DEALLOCATE_A(tmp)
 
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
 
     call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack%size(1))
 
@@ -806,7 +806,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
       end do
     end do
 
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
 
     ASSERT(.not. mesh%use_curvilinear)
 

@@ -186,7 +186,7 @@ contains
             end do
           end do
         end if
-      case(BATCH_CL_PACKED)
+      case(BATCH_DEVICE_PACKED)
         if(.not. this%packed) call density_calc_pack(this)
 
         if(states_are_real(this%st)) then

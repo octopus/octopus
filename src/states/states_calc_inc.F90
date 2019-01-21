@@ -465,7 +465,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
         ibind = batch_inv_index(batch, (/ist, idim/)) 
         ss(ist) = ss(ist) + X(mf_dotp)(mesh, batch%states_linear(ibind)%X(psi), phi(:,idim), reduce = .false.)
       end do
-    case(BATCH_PACKED, BATCH_CL_PACKED)
+    case(BATCH_PACKED, BATCH_DEVICE_PACKED)
       !Not properly implemented
       !We need to reorder the operations is these two cases
       call states_get_state(st, mesh, ist, iqn, psi)
@@ -503,7 +503,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
         ibind = batch_inv_index(batch, (/ist, idim/))
         call blas_axpy(mesh%np, -ss(ist), batch%states_linear(ibind)%X(psi)(1), 1, phi(1, idim), 1)
       end do
-    case(BATCH_PACKED, BATCH_CL_PACKED)
+    case(BATCH_PACKED, BATCH_DEVICE_PACKED)
       !Not properly implemented
       !We need to reorder the operations is these two cases
       call states_get_state(st, mesh, ist, iqn, psi)

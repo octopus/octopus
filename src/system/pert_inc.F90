@@ -76,7 +76,7 @@ contains
         end do
       end do
 
-    case(BATCH_CL_PACKED)
+    case(BATCH_DEVICE_PACKED)
       
       ASSERT(.false.)
 
