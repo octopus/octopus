@@ -7,6 +7,8 @@ FromScratch = yes
 Dimensions = 1
 PeriodicDimensions = 1
 
+EigenSolver = cg_new
+
 ExtraStates = 4
 
 TheoryLevel = independent_particles

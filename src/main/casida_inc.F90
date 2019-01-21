@@ -1,3 +1,4 @@
+
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !! Copyright (C) 2011-2013 D. Strubbe
 !! Copyright (C) 2017-2018 J. Flick
@@ -548,6 +549,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
           bufferz(1:mesh%np) = bufferz(1:mesh%np) + &
               buffer(1:mesh%np)*cas%pt%lambda_array(ii)*cas%pt%pol_array(ii,3)
       end do
+
     end if
 
     do jb_local = 1, cas%nb_rows
@@ -915,7 +917,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   SAFE_DEALLOCATE_P(cas%X(w2))
   
   if(cas%calc_forces_scf) then
-    call forces_calculate(sys%gr, sys%geo, hm, st)
+    call forces_calculate(sys%gr, sys%geo, hm, st, sys%ks)
     do ia = 1, cas%n_pairs
       do iatom = 1, sys%geo%natoms
         do idir = 1, sys%gr%sb%dim

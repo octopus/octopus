@@ -1,0 +1,39 @@
+CalculationMode = td
+UnitsOutput = eV_Angstrom
+
+Radius = 3.5*angstrom
+Spacing = 0.18*angstrom
+
+CH = 1.097*angstrom
+%Coordinates
+  "C" |           0 |          0 |           0
+  "H" |  CH/sqrt(3) | CH/sqrt(3) |  CH/sqrt(3)
+  "H" | -CH/sqrt(3) |-CH/sqrt(3) |  CH/sqrt(3)
+  "H" |  CH/sqrt(3) |-CH/sqrt(3) | -CH/sqrt(3)
+  "H" | -CH/sqrt(3) | CH/sqrt(3) | -CH/sqrt(3)
+%
+
+## NOTE: The total propagation time has been changed from 1.0/eV, the value used in the tutorial, to 0.1/eV so that it runs faster ##
+Tf  = 0.1/eV
+dt = 0.002/eV
+
+TDPropagator = aetrs
+TDMaxSteps = Tf/dt
+TDTimeStep = dt
+
+FromScratch = yes
+
+amplitude = 1*eV/angstrom
+omega = 18.0*eV
+tau0 = 0.5/eV
+t0 = tau0
+
+%TDExternalFields
+  electric_field | 1 | 0 | 0 | omega | "envelope_cos"
+%
+
+%TDFunctions
+  "envelope_cos" | tdf_cosinoidal | amplitude | tau0 | t0
+%
+
+TDOutput = laser + multipoles

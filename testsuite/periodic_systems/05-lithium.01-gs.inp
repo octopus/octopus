@@ -14,7 +14,7 @@ Spacing = a/10
 %
 
 %Species
- 'Li' | species_pseudo | lmax | 2 | lloc | 0 | db_file | "PSF/Li.psf"
+ 'Li' | species_pseudo | lmax | 2 | lloc | 0  
 %
 
 BoxShape = parallelepiped
@@ -28,7 +28,6 @@ BoxShape = parallelepiped
 KPointsUseSymmetries = no
 
 ParDomains = no
-ParKPoints = auto
 
 Output = density
 OutputFormat = xcrysden

@@ -140,10 +140,8 @@ contains
     FLOAT              :: offset(MAX_DIM)       ! offset for border
     integer            :: stst, stend, kptst, kptend, sdim, mdim, pdim
     integer            :: imdim
-    integer            :: isp, ikp
+    integer            :: isp
     integer            :: il, ik
-    integer            :: ikk, ith, iph, iomk
-    FLOAT              :: kmax, kact, thetak, phik, kpoint(1:3)
 
     FLOAT, allocatable :: k_dot_aux(:)
     integer            :: nstepsphir, nstepsthetar
@@ -549,8 +547,8 @@ contains
 
     integer           :: mdim, pdim
     integer           :: kptst, kptend  
-    integer           :: isp, ikp, ikpt, ibz1, ibz2
-    integer           :: il, ll, mm, idim
+    integer           :: ikp, ikpt, ibz1, ibz2
+    integer           :: ll, mm, idim
     integer           :: ikk, ith, iph, iomk
     FLOAT             :: kmax, kmin, kact, thetak, phik
     type(block_t)     :: blk
@@ -703,7 +701,7 @@ contains
       
       Emin = 0
       Emax = 10 
-      De   = 0.1
+      De   = CNST(0.1)
     
       if(parse_block('PES_Flux_EnergyGrid', blk) == 0) then
 
@@ -1279,7 +1277,7 @@ contains
     do isp = isp_start, isp_end
       do idir = 1, mdim
         ! calculate flux only along the surface normal
-        if(this%srfcnrml(idir, isp) == M_ZERO) cycle
+        if(abs(this%srfcnrml(idir, isp)) <= M_EPSILON) cycle
 
         Jk_cub = M_z0
 

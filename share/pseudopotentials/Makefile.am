@@ -18,17 +18,12 @@
 ## 02110-1301, USA.
 ##
 
-SUBDIRS = PSF HGH extra sg15 hscv
+SUBDIRS = PSF HGH quantum-simulation.org pseudo-dojo.org
 
 ppdir = $(pkgdatadir)/pseudopotentials
 
-dist_pp_DATA =           \
-	standard.set     \
-	sg15.set         \
-	hgh_lda.set      \
-	hscv_lda.set     \
-	hscv_pbe.set     \
-	elements
+dist_pp_DATA =                            \
+	elements.dat
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use
 # the `distcheck' target) the pseudopotential files have to be accessible

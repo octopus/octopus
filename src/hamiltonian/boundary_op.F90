@@ -281,13 +281,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine bc_generate_mf(this, mesh, geo, bounds, mf)
-    type(bc_t),               intent(out)   :: this
+    type(bc_t),               intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
     type(geometry_t),         intent(in)    :: geo
     FLOAT,                    intent(in)    :: bounds(1:2)
     FLOAT,                    intent(inout) :: mf(:)
 
-    integer :: ip, dir, ierr
+    integer :: ip, dir
     FLOAT   :: width
     FLOAT   :: xx(1:MAX_DIM), rr, dd, ddv(1:MAX_DIM), tmp(1:MAX_DIM)
 

@@ -40,7 +40,8 @@ module propagator_base_oct_m
     PROP_CAETRS                  = 12, &
     PROP_RUNGE_KUTTA4            = 13, &
     PROP_RUNGE_KUTTA2            = 14, & 
-    PROP_EXPLICIT_RUNGE_KUTTA4   = 15
+    PROP_EXPLICIT_RUNGE_KUTTA4   = 15, &
+    PROP_CFMAGNUS4               = 16
 
   type propagator_t
     integer             :: method           !< Which evolution method to use.

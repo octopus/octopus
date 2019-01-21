@@ -129,10 +129,11 @@ module profiling_oct_m
     module procedure dprofiling_count_operations
   end interface profiling_count_operations
  
-  integer, parameter, public  ::   &
+  integer, parameter, public  ::  &
        PROFILING_TIME        = 1, &
        PROFILING_MEMORY      = 2, &
-       PROFILING_MEMORY_FULL = 4
+       PROFILING_MEMORY_FULL = 4, &
+       PROFILING_LIKWID      = 8
 
   integer, parameter :: MAX_MEMORY_VARS = 25
 
@@ -204,6 +205,8 @@ contains
     !%Option prof_memory_full 4
     !% As well as the time and summary memory information, a
     !% log is reported of every allocation and deallocation.
+    !%Option likwid 8
+    !% Enable instrumentation using LIKWID.
     !%End
 
     call parse_variable('ProfilingMode', 0, prof_vars%mode)
@@ -231,12 +234,12 @@ contains
 
     call get_output_dir()
 
-    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then
+    if(bitand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then
       prof_vars%mode = ior(prof_vars%mode, PROFILING_MEMORY)
     end if
 
     ! initialize memory profiling
-    if(iand(prof_vars%mode, PROFILING_MEMORY) /= 0) then
+    if(bitand(prof_vars%mode, PROFILING_MEMORY) /= 0) then
       prof_vars%alloc_count   = 0
       prof_vars%dealloc_count = 0
 
@@ -261,7 +264,7 @@ contains
       prof_vars%memory_limit = int(ii, 8)*1024
     end if
 
-    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then
+    if(bitand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then
       ! make sure output directory is available before other processes try to write there
 #ifdef HAVE_MPI
       call MPI_Barrier(mpi_world%comm, mpi_err)
@@ -275,6 +278,12 @@ contains
     ! initialize time profiling
     prof_vars%last_profile = 0
     nullify(prof_vars%current%p)
+
+    if(bitand(prof_vars%mode, PROFILING_LIKWID) /= 0) then
+#ifdef HAVE_LIKWID
+      call likwid_markerInit()
+#endif
+    end if
 
     call profiling_in(C_PROFILING_COMPLETE_RUN, 'COMPLETE_RUN')
 
@@ -318,7 +327,7 @@ contains
       prof_vars%profile_list(ii)%p%initialized = .false.
     end do
 
-    if(iand(prof_vars%mode, PROFILING_MEMORY) /= 0) then
+    if(bitand(prof_vars%mode, PROFILING_MEMORY) /= 0) then
       call messages_print_stress(stdout, "Memory profiling information")
       write(message(1), '(a,i10)') 'Number of   allocations = ', prof_vars%alloc_count
       write(message(2), '(a,i10)') 'Number of deallocations = ', prof_vars%dealloc_count
@@ -348,8 +357,14 @@ contains
       end if
     end if
 
-    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then
+    if(bitand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then
       call io_close(prof_vars%mem_iunit)
+    end if
+
+    if(bitand(prof_vars%mode, PROFILING_LIKWID) /= 0) then
+#ifdef HAVE_LIKWID
+      call likwid_markerClose()
+#endif
     end if
 
     POP_SUB(profiling_end)
@@ -451,6 +466,13 @@ contains
 
     this%exclude = optional_default(exclude, .false.)
 
+    if(bitand(prof_vars%mode, PROFILING_LIKWID) /= 0) then
+#ifdef HAVE_LIKWID
+      call likwid_markerStartRegion(trim(label))
+#endif
+    end if
+
+
   end subroutine profiling_in
 
 
@@ -507,6 +529,13 @@ contains
     else
       nullify(prof_vars%current%p)
     end if
+
+    if(bitand(prof_vars%mode, PROFILING_LIKWID) /= 0) then
+#ifdef HAVE_LIKWID
+      call likwid_markerStopRegion(trim(this%label))
+#endif
+    end if
+
 
   end subroutine profiling_out
 
@@ -952,7 +981,7 @@ contains
     prof_vars%alloc_count  = prof_vars%alloc_count + 1
     prof_vars%total_memory = prof_vars%total_memory + size
 
-    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then 
+    if(bitand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then 
       call profiling_memory_log('A ', var, file, line, size)
     end if
 
@@ -1017,7 +1046,7 @@ contains
     prof_vars%dealloc_count  = prof_vars%dealloc_count + 1
     prof_vars%total_memory   = prof_vars%total_memory - size
 
-    if(iand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then 
+    if(bitand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then 
       call profiling_memory_log('D ', var, file, line, -size)
     end if
 

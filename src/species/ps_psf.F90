@@ -35,7 +35,8 @@ module ps_psf_oct_m
     ps_psf_t,       &
     ps_psf_init,    &
     ps_psf_end,     &
-    ps_psf_process
+    ps_psf_process, &
+    ps_psf_get_eigen
 
   type ps_psf_t
 
@@ -81,10 +82,6 @@ contains
       call messages_fatal(1)
     end if
     
-    message(1) = "Reading pseudopotential from file:"
-    write(message(2), '(6x,3a)') "'", trim(fullpath), "'"
-    call messages_info(2)
-
     if(ascii) then
       iunit = io_open(fullpath, action='read', form='formatted', status='old')
     else
@@ -238,8 +235,27 @@ contains
 
     POP_SUB(psf_process)
   end subroutine ps_psf_process
+  
+  ! ---------------------------------------------------------
+  subroutine ps_psf_get_eigen(ps_psf, eigen)
+    type(ps_psf_t), intent(in)  :: ps_psf
+    FLOAT,          intent(out) :: eigen(:,:)
 
+    integer :: i
+    
+    PUSH_SUB(ps_psf_get_eigen)
 
+    do i = 1, ps_psf%conf%p
+      if (ps_psf%ispin == 1) then
+        eigen(i, 1) = ps_psf%eigen(i, 1)
+      else
+        eigen(i, 1:2) = ps_psf%eigen(i, 2:3)
+      end if        
+    end do
+      
+    POP_SUB(ps_psf_get_eigen)
+  end subroutine ps_psf_get_eigen
+    
   ! ---------------------------------------------------------
   subroutine solve_schroedinger(psf_file, g, conf, ispin, rphi, eigen)
     type(ps_psf_file_t), intent(inout) :: psf_file
@@ -260,10 +276,6 @@ contains
     REAL_DOUBLE, allocatable :: s(:), hato(:), gg(:), y(:)
 
     PUSH_SUB(solve_schroedinger)
-
-    ! Let us be a bit informative.
-    message(1) = '      Calculating atomic pseudo-eigenfunctions for species ' // psf_file%namatm // '....'
-    call messages_info(1)
 
     ! Allocation.
     SAFE_ALLOCATE(s   (1:g%nrval))
@@ -310,7 +322,7 @@ contains
         vtot = psf_file%vps(ir, l) + ve(ir, 1) + dble((l-1)*l)/(g%rofi(ir)**2)
         hato(ir) = vtot*s(ir) + a2b4
       end do
-      hato(1) = linear_extrapolate(g%rofi(1), g%rofi(2), g%rofi(3), TOFLOAT(hato(2)), TOFLOAT(hato(3)))
+      hato(1) = first_point_extrapolate(g%rofi, hato)
 
       nnode = 1
       nprin = l
@@ -354,7 +366,7 @@ contains
               vtot = psf_file%vps(ir, l) + ve(ir, is) + dble((l-1)*l)/(g%rofi(ir)**2)
               hato(ir) = vtot*s(ir) + a2b4
             end do
-            hato(1) = linear_extrapolate(g%rofi(1), g%rofi(2), g%rofi(3), TOFLOAT(hato(2)), TOFLOAT(hato(3)))
+            hato(1) = first_point_extrapolate(g%rofi, hato)
 
             nnode = 1
             nprin = l
@@ -457,7 +469,7 @@ contains
         vtot = ps_grid%vlocal(ir) + ve(ir) + dble((l-1)*l)/(g%rofi(ir)**2)
         hato(ir) = vtot*s(ir) + a2b4
       end do
-      hato(1) = linear_extrapolate(g%rofi(1), g%rofi(2), g%rofi(3), TOFLOAT(hato(2)), TOFLOAT(hato(3)))
+      hato(1) = first_point_extrapolate(g%rofi, hato)
 
       do nnode = 1, 2
         nprin = l

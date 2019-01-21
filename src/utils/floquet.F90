@@ -67,24 +67,20 @@ program oct_floquet
 
   implicit none
 
-  character(len=256) :: config_str
-  integer :: inp_calc_mode, ierr
-  type(block_t) :: blk
+  integer :: ierr
 
   type(system_t) :: sys
   type(simul_box_t) :: sb
   type(hamiltonian_t) :: hm
   type(states_t) :: st
   type(grid_t)   :: gr
-  CMPLX, allocatable :: hmss(:,:), psi(:,:,:), hpsi(:,:,:), temp_state1(:,:), temp_state2(:,:)
+  CMPLX, allocatable :: hmss(:,:), psi(:,:,:), hpsi(:,:,:), temp_state1(:,:)
   CMPLX, allocatable :: HFloquet(:,:,:), HFloq_eff(:,:), temp(:,:)
   FLOAT, allocatable :: eigenval(:), bands(:,:)
   character(len=80) :: filename
-  integer :: it, nT, ik, ist, jst, in, im, inm, file, idim, nik, ik_count
+  integer :: it, nT, ik, ist, in, im, file, idim, nik, ik_count
   integer :: Forder, Fdim, m0, n0, n1, nst, ii, jj, lim_nst
   FLOAT :: dt, Tcycle,omega
-  integer :: ispin, ip
-  FLOAT :: time, time_step
   logical :: downfolding = .false.
   type(mesh_t) :: mesh
   type(restart_t) :: restart
@@ -118,7 +114,7 @@ program oct_floquet
   call hamiltonian_init(hm, gr, sys%geo, st, sys%ks%theory_level, sys%ks%xc_family, sys%ks%xc_flags, &
               family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
   call hamiltonian_epot_generate(hm, gr, sys%geo, st, time=M_ZERO)
-  call hamiltonian_update(hm, gr%mesh, time = M_ZERO)
+  call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
 
   call states_allocate_wfns(st, gr%mesh)
   ! not sure this is needed ...
@@ -128,7 +124,7 @@ program oct_floquet
 
      ! initialize the vector field and update the hamiltonian     
      call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb, st)
-     call hamiltonian_update(hm, gr%mesh, time = M_ZERO)
+     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
   end if
 
   call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
@@ -140,7 +136,7 @@ program oct_floquet
 
   call density_calc(st, gr, st%rho)
   call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = M_ZERO)
-  call hamiltonian_update(hm, gr%mesh, time = M_ZERO)
+  call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
 
   call floquet_init()
 
@@ -176,7 +172,7 @@ contains
       ! variables documented in td/td_write.F90
       call parse_variable('TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
       call messages_print_var_value(stdout,'Frequency used for Floquet analysis', omega)
-      if(omega==M_ZERO) then
+      if(abs(omega)<=M_EPSILON) then
          message(1) = "Please give a non-zero value for TDFloquetFrequency"
          call messages_fatal(1)
       endif
@@ -239,7 +235,7 @@ contains
     ! perform time-integral over one cycle
     do it=1,nT
       ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
-      call hamiltonian_update(hm,gr%mesh,time=Tcycle+it*dt)
+      call hamiltonian_update(hm,gr%mesh, gr%der%boundaries,time=Tcycle+it*dt)
       ! get hpsi
       call zhamiltonian_apply_all(hm, sys%ks%xc, gr%der, st, hm_st)
 
@@ -388,7 +384,7 @@ contains
      end if
   
     ! reset time in Hamiltonian
-    call hamiltonian_update(hm,gr%mesh,time=M_ZERO)
+    call hamiltonian_update(hm,gr%mesh, gr%der%boundaries,time=M_ZERO)
 
     SAFE_DEALLOCATE_A(hmss)
     SAFE_DEALLOCATE_A(psi)

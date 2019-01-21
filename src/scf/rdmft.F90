@@ -131,7 +131,7 @@ contains
     if(rdm%do_basis.eqv..false.) then
       !stepsize for steepest decent
       SAFE_ALLOCATE(stepsize(1:st%nst))
-      stepsize = 0.1
+      stepsize = CNST(0.1)
       maxcount = 10
     else
       maxcount = 50
@@ -420,7 +420,7 @@ contains
 
     integer :: ist, icycle, ierr, ik
     FLOAT ::  sumgi1, sumgi2, sumgim, mu1, mu2, mum, dinterv
-    FLOAT, allocatable ::  occin(:,:),dE_dn(:), occ(:)
+    FLOAT, allocatable ::  occin(:,:)
     FLOAT, parameter :: smallocc = CNST(0.00001) 
     REAL(8), allocatable ::   theta(:)
     REAL(8) :: objective
@@ -644,7 +644,7 @@ contains
     if (rdm%do_basis.eqv..false.) then 
       call density_calc (st,gr,st%rho)
       call v_ks_calc(ks,hm,st,geo)
-      call hamiltonian_update(hm, gr%mesh)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     end if
 
     call construct_f(hm,st,gr,lambda,rdm)
@@ -728,7 +728,7 @@ contains
 
     call density_calc (st, gr, st%rho)
     call v_ks_calc(ks, hm, st, geo)
-    call hamiltonian_update(hm, gr%mesh)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
 
     call rdm_derivatives(rdm, hm, st, gr)
     call total_energy_rdm(rdm, st%occ(:,1), energy)
@@ -784,7 +784,7 @@ contains
         !calculate total energy
         call density_calc (st, gr, st%rho)
         call v_ks_calc(ks, hm, st, geo)
-        call hamiltonian_update(hm, gr%mesh)
+        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
         call rdm_derivatives(rdm, hm, st, gr)
         call total_energy_rdm(rdm, st%occ(:,1), energy)
 
@@ -927,8 +927,7 @@ contains
       
     FLOAT, allocatable :: hpsi(:,:), hpsi1(:,:), dpsi(:,:), dpsi2(:,:), fvec(:) 
     FLOAT, allocatable :: g_x(:,:), g_h(:,:), rho(:,:), rho_tot(:), pot(:), fock(:,:,:)
-    FLOAT :: dd
-    integer :: ist, jst, ip, iorb, jorb
+    integer :: ist, ip, iorb, jorb, jst
 
     PUSH_SUB(construct_f)
 
@@ -1056,7 +1055,6 @@ contains
     
     integer :: iqn, iorb, jorb, ist
     FLOAT, allocatable :: vecnat_new(:,:)
-    FLOAT :: dd
 
     PUSH_SUB(assign_eigenfunctions)
 
