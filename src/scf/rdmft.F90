@@ -72,9 +72,8 @@ module rdmft_oct_m
 
     logical  :: dressed, hf
     FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO, tolerFO
-	!FLOAT    :: param_lamda,param_omega
     FLOAT, allocatable   :: eone(:), eone_int(:,:), twoint(:), hartree(:,:), exchange(:,:), evalues(:)  
-    FLOAT, allocatable   :: eone_kin(:), eone_int_kin(:,:) 
+    FLOAT, allocatable   :: eone_kin(:), eone_int_kin(:,:)								! used for kinetic energy calculation
     FLOAT, allocatable   :: vecnat(:,:), Coul(:,:,:), Exch(:,:,:) 
     integer, allocatable :: i_index(:), j_index(:), k_index(:), l_index(:) 
 
@@ -151,14 +150,12 @@ contains
       write(message(1), '(a)') '**********************************************************************'
       write(message(2),'(a, i4)') 'RDM Iteration:', iter
       call messages_info(2)
-do icount = 1, 15
-      if (rdm%hf.eqv. .false.) then
-		call scf_occ(rdm, gr, hm, st, energy_occ)
+		if (rdm%hf.eqv. .false.) then
+			call scf_occ(rdm, gr, hm, st, energy_occ)
 	  else
-		call scf_occ_NO(rdm, gr, hm, st, energy_occ)
+			call scf_occ_NO(rdm, gr, hm, st, energy_occ)
 	  end if
-  if (abs(rdm%occsum-st%qtot) < 0.00001) exit
-end do
+
       ! Diagonalization of the generalized Fock matrix 
       write(message(1), '(a)') 'Optimization of natural orbitals'
       call messages_info(1)
@@ -370,44 +367,18 @@ end do
       !%Default no 
       !%Section SCF::RDMFT
       !%Description
-      !% If true, the code simulates a HF calculation, by omitting the occ.num. optimization
-      !% can be used for test reasons
+      !% If true, the code performs a HF calculation by omitting the occ.num. optimization.
+      !% This can be used as alternative to slow standard HF implementation
       !%End
 
       call parse_variable('RDMHartreeFock',.false., rdm%hf)
 	  
-!	  !%Variable RDMParamLambda
-!      !%Type float
-!      !%Default 1e-6 Ha !!neds to be changed!
-!      !%Section SCF::RDMFT
-!      !%Description
-!      !% interaction strength in dressed state formalism.
-!      !%End
-
-!!      call parse_variable('RDMParamLambda', CNST(1.0e-7), rdm%param_lamda)
-      
-!      !%Variable RDMParamOmega
-!      !%Type float
-!      !%Default 1e-6 Ha !!neds to be changed!
-!      !%Section SCF::RDMFT
-!      !%Description
-!      !% mode frequency in dressed state formalism.
-!      !%End
-
-!      call parse_variable('RDMParamOmega', CNST(1.0e-7), rdm%param_omega)
       
       if (rdm%dressed) then
         if (psolver%method .ne. POISSON_DRDMFT) then
-          message(1) = "dressed state formalism need PoissoSolver = POISSON_DRDMFT"
+          message(1) = "dressed state formalism needs PoissonSolver = POISSON_DRDMFT"
           call messages_fatal(1)
         end if
-        
-!        if (rdm%do_basis.eqv..true.) then
-!          message(1) = "dressed state formalism works (probably) not with basis set implementation"
-!          message(2) = "instead RDMBasis=no needs to be set"
-!          call messages_fatal(1)
-!        end if
-
       end if
 
       ! shortcuts
@@ -584,6 +555,8 @@ end do
     REAL(8), allocatable ::   theta(:)
     REAL(8) :: objective
 
+FLOAT, allocatable :: dE_dn(:)
+
     PUSH_SUB(scf_occ)
 
     write(message(1),'(a)') 'Optimization of occupation numbers'
@@ -611,14 +584,6 @@ end do
         rdm%occsum = rdm%occsum + occin(ist,ik)
       end do
     end do
-!
-!    do ist = 1, st%nst
-!      do ik = 1, st%d%nik
-!        occin(ist, ik) = occin(ist,ik)*st%qtot/rdm%occsum
-!      end do
-!    end do 
-!
-!    rdm%occsum = st%qtot
 
     st%occ = occin
    
@@ -674,9 +639,10 @@ end do
       mum = (mu1 + mu2)*M_HALF
       rdm%mu = mum
       theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-      call minimize_multidim(MINMETHOD_BFGS2, st%nst, theta, real(0.05,8), real(0.0001, 8), &
+      call minimize_multidim(MINMETHOD_BFGS, st%nst, theta, real(0.05,8), real(0.0001, 8), &
           real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
       sumgim = rdm%occsum - st%qtot
+      
       if (sumgi1*sumgim < M_ZERO) then
         mu2 = mum
       else
@@ -1307,7 +1273,7 @@ end do
 !end do
 !print*,'exchange=', energy
 
-energy=M_ZERO
+!energy=M_ZERO
 	
     !Total energy calculation without nuclei interaction  
     do ist = 1, rdm%st%nst
@@ -1365,9 +1331,15 @@ energy=M_ZERO
       !derivative of one-electron energy with respect to the natural orbitals occupation number
       do ist = 1, st%nst
         call states_get_state(st, gr%mesh, ist, 1, dpsi)
+        ! calculate one-body energy
         call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &
                               terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
         rdm%eone(ist) = dmf_dotp(gr%mesh, dpsi(:, 1), hpsi(:, 1))
+        ! calculate only kinetic energy		
+				call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &		
+																			terms = TERM_KINETIC )		
+				rdm%eone_int_kin(jst, ist) = dmf_dotp(gr%mesh, dpsi2(:, 1), hpsi(:, 1))		
+				rdm%eone_int_kin(ist, jst) = rdm%eone_int_kin(jst, ist) 
       end do
 
       !integrals used for the hartree and exchange parts of the total energy and their derivatives
@@ -1459,12 +1431,6 @@ energy=M_ZERO
                               terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
         rdm%eone_int(jst, ist) = dmf_dotp(gr%mesh, dpsi2(:, 1), hpsi(:, 1))
         rdm%eone_int(ist, jst) = rdm%eone_int(jst, ist)
-        
-! write kinetic energy
-call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &
-                              terms = TERM_KINETIC )
-rdm%eone_int_kin(jst, ist) = dmf_dotp(gr%mesh, dpsi2(:, 1), hpsi(:, 1))
-rdm%eone_int_kin(ist, jst) = rdm%eone_int_kin(jst, ist) 
       end do
     end do
 
