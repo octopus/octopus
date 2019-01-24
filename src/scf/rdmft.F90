@@ -529,6 +529,11 @@ contains
 				end if
 				write(iunit, '(1x)')
 				
+				if (rdm%dressed) then
+					write(iunit, '(a)')'Dressed state calculation'
+				end if
+				write(iunit, '(1x)')
+				
         ! scf information
         if(conv) then
           write(iunit, '(a, i4, a)')'SCF converged in ', iter, ' iterations'
