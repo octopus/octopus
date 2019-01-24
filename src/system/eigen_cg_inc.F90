@@ -180,7 +180,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 					h_cg= R_TOTYPE(M_ZERO)
 					
 					forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-						cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_lam(ip, idim) 
+						cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_lam(ip, idim) !! works also with -lam
 					end forall
 					
 				end do

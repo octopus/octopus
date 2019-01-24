@@ -28,6 +28,8 @@ module rdmft_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use hamiltonian_base_oct_m
+  use io_oct_m
+  use io_function_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
@@ -266,7 +268,7 @@ contains
       write(message(2),'(a,es20.10)')  'The total energy is ', units_from_atomic(units_out%energy,energy + hm%ep%eii)
       call messages_info(2)
       if(gs_run_) then 
-        !call scf_write_static(STATIC_DIR, "info") !NH can we turn this on?
+        call scf_write_static(STATIC_DIR, "info") !NH can we turn this on?
         call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
       end if
     else
@@ -452,6 +454,100 @@ contains
       POP_SUB(scf_rdmft.rdmft_end)
 
     end subroutine rdmft_end
+    
+   	! ---------------------------------------------------------
+    subroutine scf_write_static(dir, fname)
+      character(len=*), intent(in) :: dir, fname
+
+      integer :: iunit, ist
+
+      PUSH_SUB(scf_rdmft.scf_write_static)
+
+      if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
+        call io_mkdir(dir)
+        iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
+
+        call grid_write_info(gr, geo, iunit)
+ 
+				! do we need that?
+!        call symmetries_write_info(gr%mesh%sb%symm, gr%sb%dim, gr%sb%periodic_dim, iunit)
+
+				! k-point version not yet implemented
+!        if(simul_box_is_periodic(gr%sb)) then
+!          call kpoints_write_info(gr%mesh%sb%kpoints, iunit)
+!          write(iunit,'(1x)')
+!        end if
+
+        call v_ks_write_info(ks, iunit)
+				
+				if (rdm%do_basis) then
+					write(iunit, '(a)')'Orbital optimization with [basis set]'
+				else
+					write(iunit, '(a)')'Orbital optimization with [conjugated gradiens]'
+				end if
+				write(iunit, '(1x)')
+				
+				if (rdm%hf) then
+					write(iunit, '(a)')'Hartree Fock calculation'
+				end if
+				write(iunit, '(1x)')
+				
+        ! scf information
+        if(conv) then
+          write(iunit, '(a, i4, a)')'SCF converged in ', iter, ' iterations'
+        else
+          write(iunit, '(a)') 'SCF *not* converged!'
+        end if
+        write(iunit, '(1x)')
+
+				!maybe usefull to have something similar? At least for the cg solver this would make sense
+!        if(any(scf%eigens%converged < st%nst) .and. .not. scf%lcao_restricted) then
+!          write(iunit,'(a)') 'Some of the states are not fully converged!'
+!        end if
+	
+				 ! also this could be useful in terms of the single-particle Hamiltonian
+!        call states_write_eigenvalues(iunit, st%nst, st, gr%sb)
+!        write(iunit, '(1x)')
+
+        write(iunit, '(3a,es20.10)') 'Total Energy [', trim(units_abbrev(units_out%energy)), ']:', &
+					units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+				write(iunit,'(a,1x,f14.12)') 'Sum of occupation numbers:', rdm%occsum
+      else
+        iunit = 0
+      end if
+
+!      call energy_calc_total(hm, gr, st, iunit, full = .true.)
+
+
+!      if(scf%calc_dipole) then
+!        call calc_dipole(dipole)
+!        call write_dipole(iunit, dipole)
+!      end if
+
+      if(mpi_grp_is_root(mpi_world)) then
+        if(max_iter > 0) then
+          write(iunit, '(a)') 'Convergence:'
+          write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'maxFO = ', rdm%maxFO
+          write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_ener = ', rel_ener
+          write(iunit,'(1x)')
+        end if
+        ! otherwise, these values are uninitialized, and unknown.
+      end if
+
+			if(mpi_grp_is_root(mpi_world)) then
+				write(iunit,'(a)') 'Natural occupation numbers:'
+        write(iunit,'(a4,5x,a12)')'#st','Occupation'  
+				do ist = 1, st%nst
+					write(iunit,'(i4,3x,f14.12)') ist, st%occ(ist, 1)
+				end do
+      end if
+      
+      if(mpi_grp_is_root(mpi_world)) then
+        call io_close(iunit)
+      end if
+      
+      POP_SUB(scf_rdmft.scf_write_static)
+    end subroutine scf_write_static 
 
   end subroutine scf_rdmft
 
@@ -1668,8 +1764,6 @@ print*, "maxFO", rdm%maxFO
     POP_SUB(sum_integrals)
  
   end subroutine sum_integrals
-
-
 
 end module rdmft_oct_m
 
