@@ -28,6 +28,7 @@ module propagator_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
+  use lda_u_oct_m
   use loct_pointer_oct_m
   use parser_oct_m
   use mesh_function_oct_m
@@ -144,12 +145,8 @@ contains
     logical,             intent(in)    :: have_fields 
     logical,             intent(in)    :: family_is_mgga
 
-    logical :: cmplxscl
-    
     PUSH_SUB(propagator_init)
     
-    cmplxscl = st%cmplxscl%space
-
     call propagator_nullify(tr)
 
     !%Variable TDPropagator
@@ -251,6 +248,8 @@ contains
     !% Similar, but not identical, to Crank-Nicolson method.
     !%Option expl_runge_kutta4 15
     !% WARNING: EXPERIMENTAL. Explicit RK4 method.
+    !%Option cfmagnus4 16
+    !% WARNING EXPERIMENTAL
     !%End
     call messages_obsolete_variable('TDEvolutionMethod', 'TDPropagator')
 
@@ -317,6 +316,8 @@ contains
       call messages_experimental("QOCT+TDDFT propagator")
     case(PROP_EXPLICIT_RUNGE_KUTTA4)
       call messages_experimental("explicit Runge-Kutta 4 propagator")
+    case(PROP_CFMAGNUS4)
+      call messages_experimental("Commutator-Free Magnus propagator")
     case default
       call messages_input_error('TDPropagator')
     end select
@@ -337,7 +338,12 @@ contains
       end if
     end if
 
-    call potential_interpolation_init(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin, family_is_mgga)
+    select case(tr%method)
+    case(PROP_CFMAGNUS4)
+      call potential_interpolation_init(tr%vksold, gr%mesh%np, st%d%nspin, family_is_mgga, order = 4)
+    case default
+      call potential_interpolation_init(tr%vksold, gr%mesh%np, st%d%nspin, family_is_mgga)
+    end select
 
     call exponential_init(tr%te) ! initialize propagator
 
@@ -461,21 +467,11 @@ contains
     PUSH_SUB(propagator_run_zero_iter)
 
     if(hm%family_is_mgga_with_exc) then
-      if(hm%cmplxscl%space) then
-        call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
-                hm%vhxc, hm%imvhxc, hm%vtau, hm%imvtau)   
-      else
-        call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
-                hm%vhxc, vtau = hm%vtau)   
-      end if
+      call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
+              hm%vhxc, vtau = hm%vtau)   
     else
-      if(hm%cmplxscl%space) then
-        call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
-                hm%vhxc, hm%imvhxc)   
-      else
-        call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
+      call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
                 hm%vhxc)
-      end if
     end if
 
     POP_SUB(propagator_run_zero_iter)
@@ -504,7 +500,7 @@ contains
     logical,              optional,  intent(in)    :: update_energy
     type(opt_control_state_t), optional, target, intent(inout) :: qcchi
 
-    logical :: cmplxscl, generate, update_energy_
+    logical :: generate, update_energy_
     type(profile_t), save :: prof
 
     call profiling_in(prof, "TD_PROPAGATOR")
@@ -512,24 +508,12 @@ contains
 
     update_energy_ = optional_default(update_energy, .true.)
 
-    cmplxscl = hm%cmplxscl%space
-
     if(hm%family_is_mgga_with_exc) then
-      if(cmplxscl) then
-        call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
-                hm%vhxc, hm%imvhxc, hm%vtau, hm%imvtau)
-      else
-        call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
+      call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
                 hm%vhxc, vtau = hm%vtau)
-      end if
     else
-      if(cmplxscl) then
-        call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
-                hm%vhxc, hm%imvhxc)
-      else
-        call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
+      call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
                 hm%vhxc)
-      end if
     end if
 
     ! to work on SCDM states we rotate the states in st to the localized SCDM,
@@ -568,6 +552,8 @@ contains
       else
         call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo)
       end if
+    case(PROP_CFMAGNUS4)
+      call td_cfmagnus4(ks, hm, gr, st, tr, time, dt, ions, geo, nt)
     end select
 
     generate = .false.
@@ -591,13 +577,13 @@ contains
 
     ! Recalculate forces, update velocities...
     if(update_energy_ .and. ion_dynamics_ions_move(ions) .and. tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) then
-      call forces_calculate(gr, geo, hm, st, abs(nt*dt), dt)
+      call forces_calculate(gr, geo, hm, st, t = abs(nt*dt), dt = dt)
       call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
       if(generate) call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
-      if(iand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-        call forces_calculate(gr, geo, hm, st, abs(nt*dt), dt)
+      if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+        call forces_calculate(gr, geo, hm, st, t = abs(nt*dt), dt = dt)
       end if
     end if
 
@@ -605,6 +591,9 @@ contains
       call gauge_field_get_force(hm%ep%gfield, gr, st)
       call gauge_field_propagate_vel(hm%ep%gfield, dt)
     end if
+
+    !We update the occupation matrices
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
 
     POP_SUB(propagator_dt)
     call profiling_out(prof)
@@ -665,6 +654,11 @@ contains
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_propagate(hm%ep%gfield, dt, iter*dt)
+    end if
+
+    !TODO: we should update the occupation matrices here 
+    if(hm%lda_u_level /= DFT_U_NONE) then
+      call messages_not_implemented("DFT+U with propagator_dt_bo")  
     end if
 
     call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)

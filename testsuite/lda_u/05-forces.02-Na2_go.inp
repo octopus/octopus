@@ -1,0 +1,30 @@
+CalculationMode = go
+GOMethod = fire
+GOFireMass = 0.01
+ExperimentalFeatures = yes
+
+dist = 3.0
+
+%Species
+ "Na" | species_pseudo | set | standard | hubbard_l | 0 | hubbard_u | 2.0/27.21138 
+%
+
+%Coordinates
+'Na'  | 0 | 0 | -dist 
+'Na'  | 0 | 0 |  dist 
+%
+
+Radius = 7
+Spacing = 0.5
+
+FromScratch = yes
+GOCenter = yes
+
+FilterPotentials = filter_none
+
+MixField = density
+
+DFTULevel = dft_u_empirical
+AOThreshold = 0.05
+AONormalize = no
+

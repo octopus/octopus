@@ -628,7 +628,7 @@ contains
 
     PUSH_SUB(tdf_zerofourier_to_numerical)
 
-    ASSERT(f%valww(1) == M_ZERO)
+    ASSERT(abs(f%valww(1)) <= M_EPSILON)
     call tdf_fourier_to_numerical(f)
 
     POP_SUB(tdf_zerofourier_to_numerical)
@@ -1084,7 +1084,7 @@ contains
     case(TDF_FOURIER_SERIES)
       fg = dot_product(f%valww, g%valww)
     case(TDF_ZERO_FOURIER)
-      ASSERT(f%valww(1) == M_ZERO)
+      ASSERT(abs(f%valww(1)) <= M_EPSILON)
       fg = dot_product(f%valww, g%valww)
     case default
       do i = 1, f%niter + 1

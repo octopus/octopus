@@ -2,7 +2,7 @@
 
 Test       : LOBPCG
 Program    : octopus
-TestGroups : short-run, finite_systems_3d
+TestGroups : long-run, finite_systems_3d
 Enabled    : Yes
 
 # Depending on the context, the LOBPCG routine takes different branches, which
@@ -11,6 +11,7 @@ Enabled    : Yes
 #   * spinors
 
 Input: 21-lobpcg.01-spin_polarized.inp
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -146.74150377
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 0.00000000
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -38.58624314
@@ -34,6 +35,7 @@ match ; mz             ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) 
 
 Input: 21-lobpcg.02-spinors.inp
 Precision : 0.00011
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -141.78882842
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 0.00000000
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -43.94163200

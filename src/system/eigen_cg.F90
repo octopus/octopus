@@ -23,6 +23,7 @@ module eigen_cg_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
+  use hamiltonian_base_oct_m
   use io_oct_m
   use lalg_basic_oct_m
   use lalg_adv_oct_m

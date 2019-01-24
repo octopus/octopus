@@ -934,10 +934,10 @@ end subroutine X(bi_conjugate_gradients)
     if ( out_iterations ) iterations = 0 
 
     ! Check optional input arrays:
-    x = 0.
+    x = M_ZERO
     if ( present(x0) ) x = x0
       
-    U = 0.
+    U = M_ZERO
     inispace =  present(U0)
     if ( inispace ) U = U0
 
@@ -962,7 +962,7 @@ end subroutine X(bi_conjugate_gradients)
         message(1) = 'Second dimension of H incompatible, with first'
         call messages_fatal(1)
       end if
-      H = 0.
+      H = M_ZERO
     end if
 
     ! compute initial residual, set absolute tolerance
@@ -999,21 +999,21 @@ end subroutine X(bi_conjugate_gradients)
          end do
          P(:,:,j) = P(:,:,j)/dfrob_norm(P(:,:,j))
       end do
-      kappa = 0.7
+      kappa = CNST(0.7)
     elseif ( method == 2 ) then
     ! P is piecewise constant, minimum residual for omega
-      kappa = 0.
+      kappa = M_ZERO
     elseif ( method == 3 ) then
       !if ( s /= 1 ) stop "s=1 is required for variant bicgstab"
       ASSERT( s .ne. 1 )
       allocate( R0(n,nrhs) )
       R0 = r
-      kappa = 0.
+      kappa = M_ZERO
     endif
 
     ! Initialize local variables:
-    M = 0.
-    om = 1.
+    M = M_ZERO
+    om = M_ONE
     iter = 0
     info = -1
     jj = 0
@@ -1151,7 +1151,7 @@ end subroutine X(bi_conjugate_gradients)
         i = mod(jj,n_omega)
         if ( i == 0 ) i = n_omega
         om = omega(i)
-      elseif ( kappa == 0. ) then
+      elseif ( abs(kappa) <= M_EPSILON  ) then
 
         ! Minimal residual (same as in Bi-CGSTAB):
         om = X(trace_dot)(t,r)/X(trace_dot)(t,t)
@@ -1272,7 +1272,7 @@ end subroutine X(bi_conjugate_gradients)
         up(s) = N
 
         do i = 1,s
-          v(i)  = 0.
+          v(i)  = M_ZERO
           do j = 1, nrhs
             v(i) = v(i) + sum( w(low(i):up(i),j) )
           end do

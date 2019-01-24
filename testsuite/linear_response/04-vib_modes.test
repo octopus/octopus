@@ -8,6 +8,7 @@ Enabled    : Yes
 Processors : 4
 
 Input: 04-vib_modes.01-ground_state.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total Energy   ; GREPFIELD(static/info, 'Total       =', 3) ; -0.76459856
 match ; Eigenvalues    ; GREPFIELD(static/info, '1   --', 3) ;        -0.141240
 Precision : 0.00011

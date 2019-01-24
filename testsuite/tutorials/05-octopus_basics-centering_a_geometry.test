@@ -1,0 +1,16 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Octopus basics - Centering a geometry
+Program    : octopus
+TestGroups : short-run, tutorials
+Enabled    : Yes
+
+ExtraFile  : tAB.xyz
+Util       : oct-center-geom
+Input: 05-octopus_basics-centering_a_geometry.01-tAB.inp
+match ; Primary axis x   ; GREPFIELD(out, 'primary   axis', 4) ;  0.707107
+match ; Primary axis y   ; GREPFIELD(out, 'primary   axis', 5) ;  0.565686
+match ; Primary axis z   ; GREPFIELD(out, 'primary   axis', 6) ;  0.424264
+match ; Secondary axis x ; GREPFIELD(out, 'secondary axis', 4) ; -0.624695
+match ; Secondary axis y ; GREPFIELD(out, 'secondary axis', 5) ;  0.780869
+match ; Secondary axis z ; GREPFIELD(out, 'secondary axis', 6) ; -0.000000

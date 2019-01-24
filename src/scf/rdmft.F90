@@ -20,6 +20,7 @@
 
 module rdmft_oct_m
   use density_oct_m
+  use eigen_cg_oct_m
   use eigensolver_oct_m
   use energy_oct_m
   use geometry_oct_m
@@ -35,6 +36,8 @@ module rdmft_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use minimizer_oct_m
+use mpi_oct_m
+use mpi_lib_oct_m
   use output_oct_m
   use output_me_oct_m
   use parser_oct_m
@@ -59,18 +62,18 @@ module rdmft_oct_m
        rdm_t,                    &
        scf_occ,                  &
        scf_orb,                  &
-       scf_rdmft,				 &
-       scf_occ_NO,				 &
+       scf_rdmft,				 				 &
+       scf_occ_NO,				 			 &
        set_occ_pinning
 
   type rdm_t
     type(states_t) :: psi
+    type(eigensolver_t) :: eigens
     integer  :: max_iter
     integer  :: iter
     integer  :: n_twoint !number of unique two electron integrals
-    logical  :: do_basis
-
-    logical  :: dressed, hf
+    logical  :: do_basis, hf
+    logical  :: dressed
     FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO, tolerFO
     FLOAT, allocatable   :: eone(:), eone_int(:,:), twoint(:), hartree(:,:), exchange(:,:), evalues(:)  
     FLOAT, allocatable   :: eone_kin(:), eone_int_kin(:,:)								! used for kinetic energy calculation
@@ -128,7 +131,6 @@ contains
 
     call rdmft_init() 
    
-
     !set initial values
     energy_old = CNST(1.0e20)
     xpos = M_ZERO 
@@ -138,7 +140,8 @@ contains
     if(rdm%do_basis.eqv..false.) then
       !stepsize for steepest decent
       SAFE_ALLOCATE(stepsize(1:st%nst))
-      maxcount = 1
+      stepsize = 0.1
+      maxcount = 10
     else
       maxcount = 50
     endif
@@ -147,6 +150,7 @@ contains
     ! Orbital minimization is according to Piris and Ugalde, Vol. 30, No. 13, J. Comput. Chem. (scf_orb) or
     ! using steepest decent (scf_orb_direct)
     do iter = 1, max_iter
+      ! occupation number minimization
       write(message(1), '(a)') '**********************************************************************'
       write(message(2),'(a, i4)') 'RDM Iteration:', iter
       call messages_info(2)
@@ -155,14 +159,13 @@ contains
 	  else
 			call scf_occ_NO(rdm, gr, hm, st, energy_occ)
 	  end if
-
       ! Diagonalization of the generalized Fock matrix 
       write(message(1), '(a)') 'Optimization of natural orbitals'
       call messages_info(1)
       do icount = 1, maxcount !still under investigation how many iterations we need
         if (rdm%do_basis.eqv..false.) then
-          stepsize = 0.1d0
-          call scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
+!          call scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
+		  call scf_orb_cg(rdm, gr, geo, st, ks, hm, energy) 
         else
           call scf_orb(rdm, gr, geo, st, ks, hm, energy)
         end if
@@ -188,8 +191,12 @@ contains
       
       rel_ener = abs(energy_occ-energy)/abs(energy)
 
-      write(message(1),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+!      write(message(1),'(a,1x,es20.10)') 'Total energy'
+!      call messages_info(1) 
+
+      write(message(1),'(a,1x,es20.10)') 'Total energy', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
       call messages_info(1)
+
       if (rdm%do_basis.eqv..true.) then
         if ((rel_ener < rdm%conv_ener).and.rdm%maxFO < rdm%tolerFO) then
           conv = .true.
@@ -223,7 +230,6 @@ contains
           call density_calc (states_save,gr,states_save%rho)
           ! if other quantities besides the densities and the states are need they also have to be recalculated here!
           call states_dump(restart_dump, states_save, gr, ierr, iter=iter) 
-          
           if ((conv .or. iter == max_iter)) then
             call states_copy(st, states_save)
           endif
@@ -381,6 +387,17 @@ contains
         end if
       end if
 
+      !%Variable RDMHartreeFock
+      !%Type logical
+      !%Default no 
+      !%Section SCF::RDMFT
+      !%Description
+      !% If true, the code simulates a HF calculation, by omitting the occ.num. optimization
+      !% can be used for test reasons
+      !%End
+
+      call parse_variable('RDMHartreeFock',.false., rdm%hf)
+      
       ! shortcuts
       rdm%gr   => gr
       rdm%st   => st
@@ -409,6 +426,15 @@ contains
         do ist = 1, st%nst
           rdm%vecnat(ist,ist)= M_ONE
         end do
+      else
+        ! initialize eigensolver
+	call eigensolver_init(rdm%eigens, gr, st)
+!		copied from scf, for the moment probably not necessary
+!		if(preconditioner_is_multigrid(rdm%eigens%pre)) then
+!		  SAFE_ALLOCATE(gr%mgrid_prec)
+!		  call multigrid_init(gr%mgrid_prec, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc, &
+!			used_for_preconditioner=.true.)
+!		end if
       end if
 
       SAFE_ALLOCATE(rdm%eone(1:st%nst))
@@ -458,6 +484,8 @@ contains
         SAFE_DEALLOCATE_A(rdm%vecnat)
         SAFE_DEALLOCATE_A(rdm%Coul)
         SAFE_DEALLOCATE_A(rdm%Exch)
+      else
+        call eigensolver_end(rdm%eigens)
       end if
 
       POP_SUB(scf_rdmft.rdmft_end)
@@ -487,8 +515,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  
-   ! dummy routine for occupation numbers which only calculates the necessary vairables for further use
+   ! dummy routine for occupation numbers which only calculates the necessary variables for further use
   subroutine scf_occ_NO(rdm, gr, hm, st, energy)
     type(rdm_t),          intent(inout) :: rdm
     type(grid_t),         intent(inout) :: gr
@@ -539,7 +566,7 @@ contains
     POP_SUB(scf_occ_NO)
 
   end subroutine scf_occ_NO
-  
+
   ! scf for the occupation numbers 
   subroutine scf_occ(rdm, gr, hm, st, energy)
     type(rdm_t),          intent(inout) :: rdm
@@ -549,13 +576,11 @@ contains
     FLOAT,                intent(out)   :: energy
 
     integer :: ist, icycle, ierr, ik
-    FLOAT ::  sumgi1, sumgi2, sumgim, mu1, mu2, mum, dinterv
+    FLOAT ::  sumgi1, sumgi2, sumgim, mu1, mu2, mum, dinterv, thresh_occ
     FLOAT, allocatable ::  occin(:,:)
     FLOAT, parameter :: smallocc = CNST(0.00001) 
     REAL(8), allocatable ::   theta(:)
     REAL(8) :: objective
-
-FLOAT, allocatable :: dE_dn(:)
 
     PUSH_SUB(scf_occ)
 
@@ -569,6 +594,9 @@ FLOAT, allocatable :: dE_dn(:)
     theta  = M_ZERO
     energy = M_ZERO
     
+    ! threshold on occ nums to avaoid numerical instabilities
+    ! needs to be changed consistently with the same variable in objective_rdmft!!
+	thresh_occ = 1d-14	
     
     !Initialize the occin. Smallocc is used for numerical stability
 
@@ -584,6 +612,8 @@ FLOAT, allocatable :: dE_dn(:)
         rdm%occsum = rdm%occsum + occin(ist,ik)
       end do
     end do
+
+    rdm%occsum = st%qtot
 
     st%occ = occin
    
@@ -649,6 +679,13 @@ FLOAT, allocatable :: dE_dn(:)
         mu1 = mum
         sumgi1 = sumgim
       end if
+      
+      ! check occ.num. threshold again after minimization
+      do ist = 1, st%nst
+        st%occ(ist,1) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
+        if (st%occ(ist,1) .LE. thresh_occ ) st%occ(ist,1)=thresh_occ
+      end do
+      
       if(abs(sumgim) < rdm%toler .or. abs((mu1-mu2)*M_HALF) < rdm%toler)  exit
       cycle
     end do
@@ -660,18 +697,19 @@ FLOAT, allocatable :: dE_dn(:)
     do ist = 1, st%nst
       st%occ(ist, 1) = st%smear%el_per_state*sin(theta(ist)*M_PI*M_TWO)**2
     end do
- 
+    
+    objective = objective + rdm%mu*(rdm%occsum - rdm%qtot)
     energy = objective
     
     write(message(1),'(a4,5x,a12)')'#st','Occupation'
     call messages_info(1)   
 
     do ist = 1, st%nst
-      write(message(1),'(i4,3x,f11.8)') ist, st%occ(ist, 1)
+      write(message(1),'(i4,3x,f14.12)') ist, st%occ(ist, 1)
       call messages_info(1)
     end do
 
-    write(message(1),'(a,1x,f11.4)') 'Sum of occupation numbers', rdm%occsum
+    write(message(1),'(a,1x,f14.12)') 'Sum of occupation numbers', rdm%occsum
     write(message(2),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
     call messages_info(2)   
 
@@ -691,6 +729,7 @@ FLOAT, allocatable :: dE_dn(:)
       REAL_DOUBLE, intent(inout) :: df(size)
 
       integer :: ist
+      FLOAT   :: thresh_occ, thresh_theta
       FLOAT, allocatable :: dE_dn(:),occ(:)
  
       PUSH_SUB(objective_rdmft)
@@ -701,9 +740,15 @@ FLOAT, allocatable :: dE_dn(:)
       SAFE_ALLOCATE(occ(1:size))
 
       occ = M_ZERO
-
+      
+      ! threshold on occ nums to avaoid numerical instabilities
+      ! needs to be changed consistently with the same variable in objective_rdmft!!
+	  thresh_occ = 1d-14	
+	  thresh_theta = asin(sqrt(thresh_occ/M_TWO))*(M_HALF/M_PI)
+	  
       do ist = 1, size
         occ(ist) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
+		if (occ(ist) .LE. thresh_occ ) occ(ist)=thresh_occ
       end do
       
       rdm%occsum = M_ZERO
@@ -716,7 +761,11 @@ FLOAT, allocatable :: dE_dn(:)
 
       call total_energy_rdm(rdm, occ, objective, dE_dn)
       do ist = 1, size
-        df(ist) = M_FOUR*M_PI*sin(M_FOUR*theta(ist)*M_PI)*(dE_dn(ist)-rdm%mu)
+        if (occ(ist) .LE. thresh_occ ) then
+          df(ist) = M_FOUR*M_PI*sin(M_FOUR*thresh_theta*M_PI)*(dE_dn(ist)-rdm%mu)
+        else
+          df(ist) = M_FOUR*M_PI*sin(M_FOUR*theta(ist)*M_PI)*(dE_dn(ist)-rdm%mu)
+        end if
       end do
       objective = objective - rdm%mu*(rdm%occsum - rdm%qtot)
 
@@ -769,7 +818,7 @@ FLOAT, allocatable :: dE_dn(:)
     if (rdm%do_basis.eqv..false.) then 
       call density_calc (st,gr,st%rho)
       call v_ks_calc(ks,hm,st,geo)
-      call hamiltonian_update(hm, gr%mesh)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     end if
 
     call construct_f(hm,st,gr,lambda,rdm)
@@ -856,7 +905,7 @@ FLOAT, allocatable :: dE_dn(:)
 
     call density_calc (st, gr, st%rho)
     call v_ks_calc(ks, hm, st, geo)
-    call hamiltonian_update(hm, gr%mesh)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
 
     call rdm_derivatives(rdm, hm, st, gr)
     call total_energy_rdm(rdm, st%occ(:,1), energy)
@@ -920,7 +969,7 @@ FLOAT, allocatable :: dE_dn(:)
       !calculate total energy
       call density_calc (st, gr, st%rho)
       call v_ks_calc(ks, hm, st, geo)
-      call hamiltonian_update(hm, gr%mesh)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
       call rdm_derivatives(rdm, hm, st, gr)
       call total_energy_rdm(rdm, st%occ(:,1), energy)
       !check if step lowers the energy
@@ -937,7 +986,6 @@ FLOAT, allocatable :: dE_dn(:)
           call states_set_state(st, gr%mesh, jst, 1, dpsi)
         enddo
       endif !energy_diff  
-      
       call states_end(states_old)
     enddo !ist
   enddo
@@ -949,6 +997,109 @@ FLOAT, allocatable :: dE_dn(:)
     POP_SUB(scf_orb_direct)
 
   end subroutine scf_orb_direct
+
+! New Nicole
+  
+ !-----------------------------------------------------------------
+  ! Minimize the total energy wrt. an orbital by conjugate gradient
+  !-----------------------------------------------------------------
+
+  subroutine scf_orb_cg(rdm, gr, geo, st, ks, hm, energy)
+
+    type(rdm_t),          intent(inout) :: rdm
+    type(grid_t),         intent(inout) :: gr !< grid
+    type(geometry_t),     intent(inout) :: geo !< geometry
+    type(states_t),       intent(inout) :: st !< States
+    type(v_ks_t),         intent(inout) :: ks !< Kohn-Sham
+    type(hamiltonian_t),  intent(inout) :: hm !< Hamiltonian
+    FLOAT,                intent(out)   :: energy    
+
+    type(states_t)     :: states_old
+    integer            :: ik, ist
+    integer            :: maxiter, nstconv_ ! maximum number of orbital optimization iterations
+    FLOAT              :: energy_old, energy_diff, occ_sum, maxFO
+    
+	logical :: conv
+	type(profile_t), save :: prof
+
+	call profiling_in(prof, "EIGEN_SOLVER")
+    
+    PUSH_SUB(scf_orb_cg)
+
+	conv = .false.
+	nstconv_ = st%nst
+ 
+    maxiter = 25
+    
+    ! set up hamiltonian and calculate energy
+    call density_calc (st, gr, st%rho)
+    call v_ks_calc(ks, hm, st, geo)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
+    call rdm_derivatives(rdm, hm, st, gr)
+    call total_energy_rdm(rdm, st%occ(:,1), energy)
+
+    ! store energy for later comparison
+    energy_old = energy
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!
+!	rdm%eigens%converged = 0
+!    call eigensolver_run(rdm%eigens, gr, st, hm, maxiter)
+!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+
+	rdm%eigens%matvec = 0
+	   
+	if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then ! .and. eigensolver_has_progress_bar(rdm%eigens)
+	  call loct_progress_bar(-1, st%lnst*st%d%kpt%nlocal)
+	end if
+    
+      call deigensolver_cg2(gr, st, hm, rdm%eigens%pre, rdm%eigens%tolerance, maxiter, &
+            rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), &
+            orthogonalize_to_all=rdm%eigens%orthogonalize_to_all, &
+            conjugate_direction=rdm%eigens%conjugate_direction)
+  
+!	if(st%calc_eigenval .and. .not. rdm%eigens%folded_spectrum) then
+!		! recheck convergence after subspace diagonalization, since states may have reordered
+!		rdm%eigens%converged(ik) = 0
+!		do ist = 1, st%nst
+!		  if(rdm%eigens%diff(ist, ik) < rdm%eigens%tolerance) then
+!			rdm%eigens%converged(ik) = ist
+!		  else
+!			exit
+!		  end if
+!		end do
+!	end if
+
+	rdm%eigens%matvec = rdm%eigens%matvec + maxiter
+  
+    enddo
+
+	if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then ! .and. eigensolver_has_progress_bar(eigens)
+	  write(stdout, '(1x)')
+	end if
+
+	conv = all(rdm%eigens%converged(st%d%kpt%start:st%d%kpt%end) >= nstconv_)
+
+
+	! calculate total energy with new states
+	  call density_calc (st, gr, st%rho)
+	  call v_ks_calc(ks, hm, st, geo)
+	  call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
+	  call rdm_derivatives(rdm, hm, st, gr)
+	  call total_energy_rdm(rdm, st%occ(:,1), energy)
+
+    ! check if step lowers the energy
+     energy_diff = energy - energy_old
+
+print*, "energy", energy
+print*, "energy_diff", energy_diff
+
+    POP_SUB(scf_orb_cg)
+
+  end subroutine scf_orb_cg
+  
+!END New Nicole
 
   !--------------------------------------------------------------------
   ! calculate the derivative of the energy with respect to orbital ist
@@ -1073,7 +1224,6 @@ FLOAT, allocatable :: dE_dn(:)
       rho_tot = M_ZERO    
       pot = M_ZERO
       dpsi = M_ZERO
-      dpsi2 = M_ZERO
       g_x = M_ZERO
       g_h = M_ZERO
     
@@ -1102,12 +1252,12 @@ FLOAT, allocatable :: dE_dn(:)
           g_x(iorb, jorb) = sqrt(st%occ(iorb,1))*g_x(iorb, jorb)
         end do
       end do
-      
+  
  
       do jorb = 1,st%nst
         do iorb = 1,st%nst
-	  lambda(jorb,iorb) = st%occ(iorb,1)*lambda(jorb,iorb) + g_h(iorb, jorb)+ g_x(iorb, jorb)
-	end do
+	      lambda(jorb,iorb) = st%occ(iorb,1)*lambda(jorb,iorb)  + g_h(iorb, jorb)+ g_x(iorb, jorb) 
+	    end do
       end do
 
     else ! calculate the same lambda matrix on the basis
@@ -1230,7 +1380,6 @@ FLOAT, allocatable :: dE_dn(:)
     energy = M_ZERO
     V_h = M_ZERO
     V_x = M_ZERO
-    
 
     !Calculate hartree and exchange contribution 
     !This is only for the Mueller functional and has to be changed

@@ -9,6 +9,8 @@ Processors : 4
 
 Input      : 12-boron_nitride.01-gs.inp
 
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+
 match ; Total k-points     ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 4
 match ; Reduced k-points   ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 4
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 187

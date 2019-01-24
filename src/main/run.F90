@@ -19,9 +19,6 @@
 #include "global.h"
 
 module run_oct_m
-  use base_hamiltonian_oct_m
-  use base_handle_oct_m
-  use base_model_oct_m
   use casida_oct_m
   use em_resp_oct_m
   use fft_oct_m
@@ -46,6 +43,7 @@ module run_oct_m
   use static_pol_oct_m
   use system_oct_m
   use td_oct_m
+  use test_oct_m
   use unit_system_oct_m
   use unocc_oct_m
   use varinfo_oct_m
@@ -57,7 +55,7 @@ module run_oct_m
   private
   public ::                      &
     run
-  
+
   integer :: calc_mode_id
 
   integer, parameter :: LR = 1, FD = 2
@@ -77,6 +75,7 @@ module run_oct_m
     CM_KDOTP              =  15,  &
     CM_DUMMY              =  17,  &
     CM_INVERTKDS          =  18,  &
+    CM_TEST               =  19,  &
     CM_PULPO_A_FEIRA      =  99
 
 contains
@@ -126,8 +125,6 @@ contains
     type(profile_t), save :: calc_mode_prof
     logical :: fromScratch
 
-    type(base_hamiltonian_t), pointer :: subsys_hm
-
     PUSH_SUB(run)
 
     calc_mode_id = cm
@@ -151,30 +148,25 @@ contains
 
     call unit_system_init()
 
+    if(calc_mode_id == CM_TEST) then
+      call test_run()
+      call fft_all_end()
+#ifdef HAVE_MPI
+      call mpi_debug_statistics()
+#endif
+      POP_SUB(run)
+      return
+    end if
+
     call system_init(sys)
 
-    nullify(subsys_hm)
-    if(associated(sys%subsys_handle))then
-      call subsystems_get(sys%subsys_handle, subsys_hm)
-      ASSERT(associated(subsys_hm))
-      call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
-                       sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin), subsys_hm)
-      nullify(subsys_hm)
-
-      ! At present, PCM calculations in parallel must have ParallelizationStrategy = par_states
-      if (hm%pcm%run_pcm) then 
-        if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
-          call messages_experimental('Parallel in domain calculations with PCM')
-        end if
-      end if
-    else
-      call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
-            sys%ks%xc_family, sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
-
-      if (hm%pcm%run_pcm) then 
-        if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
-          call messages_experimental('Parallel in domain calculations with PCM')
-        end if
+    call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
+      sys%ks%xc_family, sys%ks%xc_flags, &
+      family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+    
+    if (hm%pcm%run_pcm) then 
+      if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
+        call messages_experimental('Parallel in domain calculations with PCM')
       end if
     end if
 
@@ -284,6 +276,7 @@ contains
     
     call hamiltonian_end(hm)
     call system_end(sys)
+
     call fft_all_end()
 
 #ifdef HAVE_MPI
@@ -311,25 +304,6 @@ contains
     end subroutine calc_mode_init
 
   end subroutine run
-
-  ! ---------------------------------------------------------
-  subroutine subsystems_get(this, subsys_hm)
-    type(base_handle_t),       intent(in) :: this
-    type(base_hamiltonian_t), pointer     :: subsys_hm
-
-    type(base_model_t), pointer :: subsys_model
-    
-    PUSH_SUB(subsystems_get)
-
-    nullify(subsys_hm, subsys_model)
-    call base_handle_get(this, subsys_model)
-    ASSERT(associated(subsys_model))
-    call base_model_get(subsys_model, subsys_hm)
-    nullify(subsys_model)
-      
-    POP_SUB(subsystems_get)
-  end subroutine subsystems_get
-
 
 end module run_oct_m
 

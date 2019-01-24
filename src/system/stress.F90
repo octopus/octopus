@@ -60,7 +60,6 @@ module stress_oct_m
   use poisson_fft_oct_m
   use fft_oct_m
   use fourier_space_oct_m
-  use ssys_states_oct_m
   use double_grid_oct_m
   use submesh_oct_m
   use periodic_copy_oct_m
@@ -97,13 +96,14 @@ contains
     type(v_ks_t),              intent(inout) :: ks !< Kohn-Sham
     type(profile_t), save :: stress_prof
     FLOAT :: stress(3,3) ! stress tensor in Cartecian coordinate
-    FLOAT :: stress_KE(3,3),stress_Hartree(3,3),stress_xc(3,3) ! temporal
-    FLOAT :: stress_ps(3,3),stress_Ewald(3,3)
+    FLOAT :: stress_KE(3,3), stress_Hartree(3,3), stress_xc(3,3) ! temporal
+    FLOAT :: stress_ps(3,3), stress_Ewald(3,3)
 
 
     call profiling_in(stress_prof, "STRESS")
     PUSH_SUB(stress_calculate)
 
+    SAFE_ALLOCATE(rho(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
 
     if(gr%der%mesh%sb%kpoints%use_symmetries) then
       write(message(1), '(a)') "Symmetry operation is not implemented in stress calculation."
@@ -129,17 +129,22 @@ contains
     ! Stress from pseudopotentials
     call stress_from_pseudo(gr, hm, st, geo, ks, stress, stress_ps)
     
-! Stress from Ewald summation
+    ! Stress from Ewald summation
     call stress_from_Ewald_sum(gr, geo, hm, stress, stress_Ewald)
     
 
     ! Stress from kinetic energy of ion
     ! Stress from ion-field interaction
 
-! Sign changed to fit conventional definition    
+    ! Sign changed to fit conventional definition    
     stress = - stress
     
     gr%sb%stress_tensor(1:3,1:3) = stress(1:3,1:3)
+
+    SAFE_DEALLOCATE_A(FourPi_G2)
+    SAFE_DEALLOCATE_A(Gvec)
+    SAFE_DEALLOCATE_A(Gvec_G)
+    SAFE_DEALLOCATE_P(rho)
     
     POP_SUB(stress_calculate)
     call profiling_out(stress_prof)
@@ -152,9 +157,6 @@ contains
       PUSH_SUB(stress.calculate_density)
 
       ! get density taking into account non-linear core corrections
-      SAFE_ALLOCATE(rho(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
-      !> Calculate the subsystems total density.
-      if(associated(st%subsys_st)) call ssys_states_acc(st%subsys_st)
       call states_total_density(st, ks%gr%fine%mesh, rho)
 
       nullify(rho_total)
@@ -178,7 +180,7 @@ contains
          total_density_alloc = .false.
          rho_total => rho(:, 1)
       end if
-      
+
       POP_SUB(stress.calculate_density)
     end subroutine calculate_density
     ! -------------------------------------------------------  
@@ -257,7 +259,10 @@ contains
          call messages_fatal(1)
       case default
          ASSERT(.false.)
-      end select
+       end select
+
+       call cube_function_free_fs(cube, cf)
+       call dcube_function_free_rs(cube, cf)
     
     end subroutine density_rs2fs
 

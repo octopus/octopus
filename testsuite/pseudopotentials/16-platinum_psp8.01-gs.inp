@@ -1,0 +1,27 @@
+CalculationMode = gs
+
+%Coordinates 
+ 'Pt' | 0.0 | 0.0 | 0.0
+%
+
+%Species
+ 'Pt' | species_pseudo | file | '16-platinum_psp8.78_Pt_r.oncvpsp.psp8'
+%
+
+ExperimentalFeatures = yes
+
+Radius = 5.0
+Spacing = 0.32
+
+FromScratch = yes
+
+ExtraStates = 4
+
+Smearing = 0.1*eV
+SmearingFunction = fermi_dirac
+
+EigenSolver = rmmdiis
+
+PreconditionerFilterFactor=0.6
+
+ConvRelDens = 1e-07

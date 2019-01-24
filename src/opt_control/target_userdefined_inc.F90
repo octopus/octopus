@@ -86,7 +86,7 @@
               end do
               
               ! normalize orbital
-              call zstates_normalize_orbital(gr%mesh, tg%st%d%dim, zpsi)
+              call zmf_normalize(gr%mesh, tg%st%d%dim, zpsi)
 
               call states_set_state(tg%st, gr%mesh, ist, ik, zpsi)
               
@@ -117,16 +117,17 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_userdefined(tg, gr, dir, geo, outp)
+  subroutine target_output_userdefined(tg, gr, dir, geo, hm, outp)
     type(target_t), intent(inout) :: tg
     type(grid_t), intent(inout)   :: gr
     character(len=*), intent(in)  :: dir
     type(geometry_t),       intent(in)  :: geo
+    type(hamiltonian_t),    intent(in)  :: hm
     type(output_t),         intent(in)  :: outp
     PUSH_SUB(target_output_userdefined)
     
     call io_mkdir(trim(dir))
-    call output_states(tg%st, gr, geo, trim(dir), outp)
+    call output_states(tg%st, gr, geo, hm, trim(dir), outp)
 
     POP_SUB(target_output_userdefined)
   end subroutine target_output_userdefined

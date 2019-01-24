@@ -63,6 +63,7 @@ module grid_oct_m
     type(derivatives_t)         :: der
     type(curvilinear_t)         :: cv
     type(multigrid_t), pointer  :: mgrid
+    type(multigrid_t), pointer  :: mgrid_prec  ! the multigrid object for the preconditioner
     type(double_grid_t)         :: dgrid
     logical                     :: have_fine_mesh
     type(stencil_t)             :: stencil

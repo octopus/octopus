@@ -2,7 +2,6 @@
 
 module atom_oct_m
   use global_oct_m
-  use json_oct_m
   use messages_oct_m
   use profiling_oct_m
   use species_oct_m
@@ -14,9 +13,7 @@ module atom_oct_m
   private
   public ::                               &
     atom_init,                            &
-    atom_init_from_data_object,           &
     atom_end,                             &
-    atom_create_data_object,              &
     atom_get_label,                       &
     atom_set_species,                     &
     atom_get_species,                     &
@@ -25,9 +22,7 @@ module atom_oct_m
     atom_write_xyz,                       &
     atom_read_xyz,                        &
     atom_classical_init,                  &
-    atom_classical_init_from_data_object, &
     atom_classical_end,                   &
-    atom_classical_create_data_object,    &
     atom_classical_get_label,             &
     atom_classical_write_xyz,             &
     atom_classical_read_xyz
@@ -48,6 +43,8 @@ module atom_oct_m
     FLOAT, dimension(MAX_DIM) :: f_loc    = M_ZERO !< Local electronic part
     FLOAT, dimension(MAX_DIM) :: f_nl     = M_ZERO !< NL electronic part
     FLOAT, dimension(MAX_DIM) :: f_fields = M_ZERO !< Lasers
+    FLOAT, dimension(MAX_DIM) :: f_u      = M_ZERO !< Hubbard forces
+    FLOAT, dimension(MAX_DIM) :: f_scf    = M_ZERO !< SCF forces
   end type atom_t
 
   type, public :: atom_classical_t
@@ -92,6 +89,7 @@ contains
     this%f_loc     = M_ZERO
     this%f_nl      = M_ZERO
     this%f_fields  = M_ZERO
+    this%f_u       = M_ZERO
 
     this%move  = .true.
     if(present(move))this%move=move
@@ -115,62 +113,14 @@ contains
     this%f_loc     = M_ZERO
     this%f_nl      = M_ZERO
     this%f_fields  = M_ZERO    
+    this%f_u       = M_ZERO
 
     this%move  = .true.
 
   end subroutine atom_end
 
   ! ---------------------------------------------------------
-  subroutine atom_init_from_data_object(this, species, json)
-    type(atom_t),            intent(out) :: this
-    type(species_t), target, intent(in)  :: species
-    type(json_object_t),     intent(in)  :: json
 
-    integer :: ierr
-
-    PUSH_SUB(atom_init_from_data_object)
-
-    call json_get(json, "label", this%label, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "label" from atom data object.'
-      call messages_fatal(1)
-    end if
-    ASSERT(atom_get_label(this)==species_label(species))
-    this%species=>species
-    call json_get(json, "x", this%x, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "x" (coordinates) from atom data object.'
-      call messages_fatal(1)
-    end if
-    this%v=M_ZERO
-    this%f=M_ZERO
-    this%c=M_ZERO
-    this%move=.true.
-
-    this%f_ii      = M_ZERO
-    this%f_vdw     = M_ZERO
-    this%f_loc     = M_ZERO
-    this%f_nl      = M_ZERO
-    this%f_fields  = M_ZERO
-
-    POP_SUB(atom_init_from_data_object)
-  end subroutine atom_init_from_data_object
-
-  ! ---------------------------------------------------------
-  subroutine atom_create_data_object(this, json)
-    type(atom_t),        intent(in)  :: this
-    type(json_object_t), intent(out) :: json
-
-    PUSH_SUB(atom_create_data_object)
-
-    call json_init(json)
-    call json_set(json, "label", trim(adjustl(this%label)))
-    call json_set(json, "x", this%x)
-
-    POP_SUB(atom_create_data_object)
-  end subroutine atom_create_data_object
-
-  ! ---------------------------------------------------------
   pure function atom_get_label(this) result(label)
     type(atom_t), intent(in) :: this
 
@@ -287,7 +237,7 @@ contains
     read(unit=unit, fmt=frmt) dum, (tmp(i), i=1, dim_)
 
     do i=1, dim_
-      this%x(i) = units_from_atomic(units_out%length_xyz_file, tmp(i))
+      this%x(i) = units_to_atomic(units_out%length_xyz_file, tmp(i))
     end do
  
     POP_SUB(atom_read_xyz)
@@ -323,51 +273,6 @@ contains
     this%charge = M_ZERO
 
   end subroutine atom_classical_end
-
-  ! ---------------------------------------------------------
-  subroutine atom_classical_init_from_data_object(this, json)
-    type(atom_classical_t), intent(out) :: this
-    type(json_object_t),    intent(in)  :: json
-
-    integer :: ierr
-
-    PUSH_SUB(atom_classical_init_from_data_object)
-
-    call json_get(json, "label", this%label, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "label" from atom classical data object.'
-      call messages_fatal(1)
-    end if
-    call json_get(json, "x", this%x, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "x" (coordinates) from atom classical data object.'
-      call messages_fatal(1)
-    end if
-    this%v=M_ZERO
-    this%f=M_ZERO
-    call json_get(json, "charge", this%charge, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "charge" from atom classical data object.'
-      call messages_fatal(1)
-    end if
-    POP_SUB(atom_classical_init_from_data_object)
-
-  end subroutine atom_classical_init_from_data_object
-
-  ! ---------------------------------------------------------
-  subroutine atom_classical_create_data_object(this, json)
-    type(atom_classical_t), intent(in)  :: this
-    type(json_object_t),    intent(out) :: json
-
-    PUSH_SUB(atom_classical_create_data_object)
-
-    call json_init(json)
-    call json_set(json, "label", trim(adjustl(this%label)))
-    call json_set(json, "x", this%x)
-    call json_set(json, "charge", this%charge)
-
-    POP_SUB(atom_classical_create_data_object)
-  end subroutine atom_classical_create_data_object
 
   ! ---------------------------------------------------------
   pure function atom_classical_get_label(this) result(label)
@@ -415,7 +320,7 @@ contains
     read(unit=unit, fmt=frmt) dum, (tmp, i=1, dim_)
 
     do i=1, dim_
-      this%x(i) = units_from_atomic(units_out%length_xyz_file, tmp(i))
+      this%x(i) = units_to_atomic(units_out%length_xyz_file, tmp(i))
     end do
 
 

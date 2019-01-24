@@ -10,6 +10,7 @@ Processors : 1
 # there is only one state, so we cannot use state parallelization
 Input: 02-curvilinear_coordinates.01-gygi.inp
 
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -2.86805481
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 0.00000000
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -1.15215173
