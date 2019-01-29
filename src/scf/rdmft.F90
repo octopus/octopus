@@ -148,7 +148,7 @@ contains
     
     ! Start the actual minimization, first step is minimization of occupation numbers
     ! Orbital minimization is according to Piris and Ugalde, Vol. 30, No. 13, J. Comput. Chem. (scf_orb) or
-    ! using steepest decent (scf_orb_direct)
+    ! using conjugated gradient (scf_orb_cg)
     do iter = 1, max_iter
       ! occupation number minimization
       write(message(1), '(a)') '**********************************************************************'
@@ -204,20 +204,19 @@ contains
         end if
       endif
  
-      if (rdm%toler > 1e-4) rdm%toler = rdm%toler*1e-1 !Is this still okay or does it restrict the possible convergence?
+      if (rdm%toler > 1e-4) rdm%toler = rdm%toler*1e-1 !Is this still okay or does it restrict the possible convergence? FB: Does this makes sense at all?
 
       ! save restart information
       if ((conv .or. (modulo(iter, outp%restart_write_interval) == 0) &
         .or. iter == max_iter)) then
         if(rdm%do_basis .eqv. .true.) then
-          call states_copy(states_initial, st)
           call states_copy(states_save, st)
           SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
           SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
           do iorb = 1, st%nst
           dpsi = M_ZERO
             do ist = 1, st%nst
-              call states_get_state(states_initial, gr%mesh, ist, 1, dpsi2)
+							 call states_get_state(st, gr%mesh, ist, 1, dpsi2)
               forall(ip=1:gr%mesh%np_part)
                 dpsi(ip,1) = dpsi(ip,1) + rdm%vecnat(ist, iorb)*dpsi2(ip,1)
               end forall
@@ -225,20 +224,19 @@ contains
             call states_set_state(states_save, gr%mesh, iorb, 1, dpsi)
           enddo
           call density_calc (states_save,gr,states_save%rho)
-          ! if other quantities besides the densities and the states are need they also have to be recalculated here!
+          ! if other quantities besides the densities and the states are needed they also have to be recalculated here!
           call states_dump(restart_dump, states_save, gr, ierr, iter=iter) 
 
           if ((conv .or. iter == max_iter)) then
             call states_copy(st, states_save)
           endif
         
-          call states_end(states_initial)
           call states_end(states_save)
 		  
           SAFE_DEALLOCATE_A(dpsi)
           SAFE_DEALLOCATE_A(dpsi2)
         else
-		  call states_dump(restart_dump, st, gr, ierr, iter=iter) 
+					call states_dump(restart_dump, st, gr, ierr, iter=iter) 
         endif
          
         if (ierr /= 0) then
@@ -268,7 +266,7 @@ contains
       write(message(2),'(a,es20.10)')  'The total energy is ', units_from_atomic(units_out%energy,energy + hm%ep%eii)
       call messages_info(2)
       if(gs_run_) then 
-        call scf_write_static(STATIC_DIR, "info") !NH can we turn this on?
+        call scf_write_static(STATIC_DIR, "info")
         call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
       end if
     else
@@ -1548,6 +1546,8 @@ print*, "maxFO", rdm%maxFO
       end do
 
       !integrals used for the hartree and exchange parts of the total energy and their derivatives
+      ! maybe better to let that be done from the lower level routines like hamiltonian apply?
+      ! only used to calculate total energy
       do is = 1, nspin_
         do jdm = 1, st%d%dim
           call doep_x(gr%der, st, is, jdm, lxc, ex, 1.d0, v_ij)
