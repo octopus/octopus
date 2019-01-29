@@ -20,6 +20,7 @@
 
 module rdmft_oct_m
   use density_oct_m
+  use derivatives_oct_m
   use eigen_cg_oct_m
   use eigensolver_oct_m
   use energy_oct_m
@@ -38,8 +39,8 @@ module rdmft_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use minimizer_oct_m
-use mpi_oct_m
-use mpi_lib_oct_m
+	use mpi_oct_m
+	use mpi_lib_oct_m
   use output_oct_m
   use output_me_oct_m
   use parser_oct_m
@@ -76,6 +77,7 @@ use mpi_lib_oct_m
     integer  :: n_twoint !number of unique two electron integrals
     logical  :: do_basis, hf
     logical  :: dressed
+    FLOAT		 :: dressed_omega, dressed_lambda
     FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO, tolerFO
     FLOAT, allocatable   :: eone(:), eone_int(:,:), twoint(:), hartree(:,:), exchange(:,:), evalues(:)  
     FLOAT, allocatable   :: eone_kin(:), eone_int_kin(:,:)								! used for kinetic energy calculation
@@ -368,6 +370,26 @@ contains
 
       call parse_variable('RDMDressedState',.false., rdm%dressed)
       
+			!%Variable RDMParamLambda
+      !%Type float
+      !%Default 0.0
+      !%Section SCF::RDMFT
+      !%Description
+      !% Interaction strength in dressed state formalism
+      !%End
+
+      call parse_variable('RDMParamLambda', M_ZERO, rdm%dressed_lambda)
+      
+      !%Variable RDMParamOmega
+      !%Type float
+      !%Default 0.0
+      !%Section SCF::RDMFT
+      !%Description
+      !% Mode frequency in dressed state formalism
+      !%End
+
+      call parse_variable('RDMParamOmega', M_ZERO, rdm%dressed_omega)
+      
       !%Variable RDMHartreeFock
       !%Type logical
       !%Default no 
@@ -497,6 +519,7 @@ contains
       character(len=*), intent(in) :: dir, fname
 
       integer :: iunit, ist
+      FLOAT :: photon_number
 
       PUSH_SUB(scf_rdmft.scf_write_static)
 
@@ -560,11 +583,7 @@ contains
 
 !      call energy_calc_total(hm, gr, st, iunit, full = .true.)
 
-
-!      if(scf%calc_dipole) then
-!        call calc_dipole(dipole)
-!        call write_dipole(iunit, dipole)
-!      end if
+			call calc_photon_number(photon_number)
 
       if(mpi_grp_is_root(mpi_world)) then
         if(max_iter > 0) then
@@ -590,6 +609,91 @@ contains
       
       POP_SUB(scf_rdmft.scf_write_static)
     end subroutine scf_write_static 
+    
+        ! ---------------------------------------------------------
+    subroutine calc_photon_number(photon_number)
+      FLOAT, intent(out) :: photon_number
+
+      integer :: ist, ip
+      FLOAT 	:: qq, q_square_exp
+!      FLOAT :: e_dip(MAX_DIM + 1, st%d%nspin), n_dip(MAX_DIM), nquantumpol
+			FLOAT, allocatable :: psi(:, :)
+			FLOAT, allocatable :: grad_psi(:, :), grad_square_psi (:,:)
+			FLOAT, allocatable :: photon_number_state (:)
+
+      PUSH_SUB(scf_rdmft.calc_photon_number)
+      
+      SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
+      SAFE_ALLOCATE(grad_psi(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
+      SAFE_ALLOCATE(grad_square_psi(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
+			SAFE_ALLOCATE(photon_number_state(1:st%nst))
+
+      photon_number = M_ZERO
+       
+      
+      do ist = 1, st%nst
+				call states_get_state(st, gr%mesh, ist, 1, psi)
+        call dderivatives_grad(gr%der, psi(:, 1), grad_psi(:, :), ghost_update = .true., set_bc = .false.)
+        call dderivatives_grad(gr%der, grad_psi(:, 2), grad_square_psi(:, :), ghost_update = .true., set_bc = .false.)
+!print*, "gr%mesh%np_part", gr%mesh%np_part, "gr%mesh%np", gr%mesh%np, "st%d%dim", st%d%dim, "gr%mesh%sb%dim", gr%mesh%sb%dim
+!        print*,"psi", psi(:,1)
+!        print*,"grad_psi(:,2)", grad_psi(:,2)
+!        print*,"grad_square_psi(:,2)", grad_square_psi(:,2)
+        photon_number_state(ist) = -0.5*dmf_dotp(gr%mesh, psi(:,1), grad_square_psi(:,2))
+        q_square_exp = M_ZERO
+				do ip = 1, gr%mesh%np
+					qq = gr%mesh%x(ip, 2)
+					qq = qq * qq
+					q_square_exp = q_square_exp + psi(ip,1)*psi(ip,1)*qq ! shoudl be R_CONJ for first psi, but does not work ...
+        end do
+        photon_number_state(ist)  = photon_number_state(ist) / rdm%dressed_omega + 0.5 * rdm%dressed_omega  * q_square_exp
+        photon_number =  photon_number + st%occ(ist,1)*photon_number_state(ist)
+			end do
+			
+			photon_number = photon_number - 0.5
+			
+			print*, "photon_number_state", photon_number_state
+			print*, "photon_number", photon_number
+	
+      SAFE_DEALLOCATE_A(psi)
+			SAFE_DEALLOCATE_A(grad_psi)
+			SAFE_DEALLOCATE_A(photon_number_state)
+
+      POP_SUB(scf_rdmft.calc_photon_number)
+    end subroutine calc_photon_number
+
+
+    ! ---------------------------------------------------------
+!    subroutine write_dipole(iunit, dipole)
+!      integer, intent(in) :: iunit
+!      FLOAT,   intent(in) :: dipole(:)
+
+!      PUSH_SUB(scf_run.write_dipole)
+
+!      if(mpi_grp_is_root(mpi_world)) then
+!        call output_dipole(iunit, dipole, gr%mesh%sb%dim)
+
+!        if (simul_box_is_periodic(gr%sb)) then
+!          write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."
+!          write(iunit, '(a)') "Single-point Berry's phase method only accurate for large supercells."
+
+!          if (gr%sb%kpoints%full%npoints > 1) then
+!            write(iunit, '(a)') &
+!              "WARNING: Single-point Berry's phase method for dipole should not be used when there is more than one k-point."
+!            write(iunit, '(a)') &
+!              "Instead, finite differences on k-points (not yet implemented) are needed."
+!          end if
+
+!          if(.not. smear_is_semiconducting(st%smear)) then
+!            write(iunit, '(a)') "Single-point Berry's phase dipole calculation not correct without integer occupations."
+!          end if
+!        end if
+
+!        write(iunit, *)
+!      end if
+
+!      POP_SUB(scf_run.write_dipole)
+!    end subroutine write_dipole
 
   end subroutine scf_rdmft
 
@@ -1608,15 +1712,16 @@ print*, "maxFO", rdm%maxFO
       !derivative of one-electron energy with respect to the natural orbitals occupation number
       do ist = 1, st%nst
         call states_get_state(st, gr%mesh, ist, 1, dpsi)
+        
         ! calculate one-body energy
         call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &
                               terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
         rdm%eone(ist) = dmf_dotp(gr%mesh, dpsi(:, 1), hpsi(:, 1))
+        
         ! calculate only kinetic energy		
 				call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &		
 																			terms = TERM_KINETIC )		
-				rdm%eone_int_kin(jst, ist) = dmf_dotp(gr%mesh, dpsi2(:, 1), hpsi(:, 1))		
-				rdm%eone_int_kin(ist, jst) = rdm%eone_int_kin(jst, ist) 
+				rdm%eone_kin(ist) = dmf_dotp(gr%mesh, dpsi(:, 1), hpsi(:, 1))		
       end do
 
       !integrals used for the hartree and exchange parts of the total energy and their derivatives
@@ -1684,7 +1789,7 @@ print*, "maxFO", rdm%maxFO
   end subroutine rdm_derivatives
   
   ! --------------------------------------------
-  !calculates the one electron integrals in the basis of the initial orbitals
+  !calculates the one electron integrals in the basis of the initial orbitals (only for Piris method!)
   subroutine rdm_integrals(rdm, hm, st, gr)
     type(rdm_t),          intent(inout) :: rdm
     type(hamiltonian_t),  intent(in)    :: hm 
@@ -1708,10 +1813,17 @@ print*, "maxFO", rdm%maxFO
       call states_get_state(st, gr%mesh, ist, 1, dpsi)
       do jst = ist, st%nst
         call states_get_state(st, gr%mesh, jst, 1, dpsi2)
+        ! calculate one-body integrals
         call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &
                               terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
         rdm%eone_int(jst, ist) = dmf_dotp(gr%mesh, dpsi2(:, 1), hpsi(:, 1))
         rdm%eone_int(ist, jst) = rdm%eone_int(jst, ist)
+        
+        ! calculate only kinetic integrals		
+				call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &		
+																			terms = TERM_KINETIC )		
+				rdm%eone_int_kin(jst, ist) = dmf_dotp(gr%mesh, dpsi2(:, 1), hpsi(:, 1))		
+				rdm%eone_int_kin(ist, jst) = rdm%eone_int_kin(jst, ist) 
       end do
     end do
 
