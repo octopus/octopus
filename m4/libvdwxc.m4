@@ -43,7 +43,7 @@ AC_DEFUN([ACX_LIBVDWXC],
   LIBS="$LIBS_LIBVDWXC $acx_libvdwxc_save_LIBS"
   AC_LINK_IFELSE($libvdwxc_program, [acx_libvdwxc_ok=yes], [acx_libvdwxc_ok=no])
 
-  AC_MSG_RESULT([$acx_libvdwxc_ok ($FCFLAGS_LIBVDWXC $LIBS_LIBVDWXC -lvdwxcfort)])
+  AC_MSG_RESULT([$acx_libvdwxc_ok ($FCFLAGS_LIBVDWXC $LIBS_LIBVDWXC)])
 
   if test x"$acx_libvdwxc_ok" = xyes; then
     AC_DEFINE(HAVE_LIBVDWXC, 1, [Define if LIBVDWXC is available])
