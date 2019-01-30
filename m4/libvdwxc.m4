@@ -35,14 +35,12 @@ AC_DEFUN([ACX_LIBVDWXC],
   FCFLAGS="$FCFLAGS_LIBVDWXC $acx_libvdwxc_save_FCFLAGS"
 
   if test ! -z "$with_libvdwxc_prefix"; then
-    LIBS_LIBVDWXC="-L$with_libvdwxc_prefix/lib"
+    LIBS_LIBVDWXC="-L$with_libvdwxc_prefix/lib -lvdwxcfort"
   else
-    LIBS_LIBVDWXC=""
+    LIBS_LIBVDWXC="-lvdwxcfort"
   fi
 
-  dnl We do not append -lvdwxc at the end, as we might need to prefix other libraries
-
-  LIBS="$LIBS_LIBVDWXC -lvdwxcfort $acx_libvdwxc_save_LIBS"
+  LIBS="$LIBS_LIBVDWXC $acx_libvdwxc_save_LIBS"
   AC_LINK_IFELSE($libvdwxc_program, [acx_libvdwxc_ok=yes], [acx_libvdwxc_ok=no])
 
   AC_MSG_RESULT([$acx_libvdwxc_ok ($FCFLAGS_LIBVDWXC $LIBS_LIBVDWXC -lvdwxcfort)])
@@ -54,8 +52,7 @@ AC_DEFUN([ACX_LIBVDWXC],
                  *** Will compile without libvdwxc support])
   fi
 
-  LIBS_LIBVDWXC="$LIBS_LIBVDWXC -lvdwxcfort"
-
+  AC_SUBST(FCFLAGS_LIBVDWXC)
   AC_SUBST(LIBS_LIBVDWXC)
 
   FCFLAGS="$acx_libvdwxc_save_FCFLAGS"
