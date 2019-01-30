@@ -206,24 +206,60 @@ contains
 
     nn = op%stencil%size
 
-    if(op%cmplx_op) then
-      ASSERT(.not. (batch_is_packed(fi) .or. batch_is_packed(fo)))
+    select case(batch_status(fi))
 
+    case(BATCH_DEVICE_PACKED)
+
+      ASSERT(.false.)
+      
+    case(BATCH_NOT_PACKED)
+      
+      if(op%cmplx_op) then
+        
 #ifdef R_TCOMPLEX
-      !$omp parallel do private(ll, ist, ii)
-      do ll = 1, nri
-        do ii = imin(ll) + 1, imax(ll)
-          do ist = 1, fi%nst_linear 
-            fo%states_linear(ist)%X(psi)(ii) = sum(TOCMPLX(wre(1:nn), wim(1:nn))*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+        !$omp parallel do private(ll, ist, ii)
+        do ll = 1, nri
+          do ii = imin(ll) + 1, imax(ll)
+            do ist = 1, fi%nst_linear 
+              fo%states_linear(ist)%X(psi)(ii) = sum(TOCMPLX(wre(1:nn), wim(1:nn))*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+            end do
           end do
         end do
-      end do
-      !$omp end parallel do
+        !$omp end parallel do
 #endif
 
-    else
+      else
+        
+        !$omp parallel do private(ll, ist, ii)
+        do ll = 1, nri
+          do ii = imin(ll) + 1, imax(ll)
+            do ist = 1, fi%nst_linear
+              fo%states_linear(ist)%X(psi)(ii) = sum(wre(1:nn)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+            end do
+          end do
+        end do
+        !$omp end parallel do
 
-      if(batch_is_packed(fi)) then
+      end if
+
+    case(BATCH_PACKED)
+
+      if(op%cmplx_op) then
+        
+#ifdef R_TCOMPLEX
+        !$omp parallel do private(ll, ist, ii)
+        do ll = 1, nri
+          do ii = imin(ll) + 1, imax(ll)
+            do ist = 1, fi%nst_linear 
+              fo%pack%X(psi)(ist, ii) = sum(TOCMPLX(wre(1:nn), wim(1:nn))*fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
+            end do
+          end do
+        end do
+        !$omp end parallel do
+#endif
+
+      else
+        
         ASSERT(allocated(fo%pack%X(psi)))
         !$omp parallel do private(ll, ist, ii)
         do ll = 1, nri
@@ -234,19 +270,10 @@ contains
           end do
         end do
         !$omp end parallel do
-      else   
-        !$omp parallel do private(ll, ist, ii)
-        do ll = 1, nri
-          do ii = imin(ll) + 1, imax(ll)
-            do ist = 1, fi%nst_linear
-              fo%states_linear(ist)%X(psi)(ii) = sum(wre(1:nn)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
-            end do
-          end do
-        end do
-        !$omp end parallel do
-      end if
 
-    end if
+      end if
+        
+    end select
 
     POP_SUB(X(nl_operator_operate_batch).operate_const_weights)
   end subroutine operate_const_weights
@@ -259,40 +286,73 @@ contains
 
     PUSH_SUB(X(nl_operator_operate_batch).operate_non_const_weights)
 
-    ASSERT(.not. (batch_is_packed(fi) .or. batch_is_packed(fo)))
-
     factor_ = M_ONE
     if(present(factor)) factor_ = factor
 
-    if(op%cmplx_op) then
-#ifdef R_TCOMPLEX
-      !$omp parallel do private(ll, ist, ii, nn)
-      do ll = 1, nri
-        nn = op%nn(ll)
-        forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%states_linear(ist)%X(psi)(ii) = factor_*sum(TOCMPLX(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * &
-            fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
-        end forall
-      end do
-      !$omp end parallel do
-#endif
-    else
-      !$omp parallel do private(ll, ist, ii, nn)
-      do ll = 1, nri
-        nn = op%nn(ll)
-        forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%states_linear(ist)%X(psi)(ii) = factor_*sum(op%w_re(1:nn, ii)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
-        end forall
-      end do
-      !$omp end parallel do
-    end if
+    select case(batch_status(fi))
 
+    case(BATCH_DEVICE_PACKED)
+
+      ASSERT(.false.)
+      
+    case(BATCH_NOT_PACKED)
+      
+      if(op%cmplx_op) then
+#ifdef R_TCOMPLEX
+        !$omp parallel do private(ll, ist, ii, nn)
+        do ll = 1, nri
+          nn = op%nn(ll)
+          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
+            fo%states_linear(ist)%X(psi)(ii) = factor_*sum(TOCMPLX(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * &
+              fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+          end forall
+        end do
+        !$omp end parallel do
+#endif
+      else
+        !$omp parallel do private(ll, ist, ii, nn)
+        do ll = 1, nri
+          nn = op%nn(ll)
+          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
+            fo%states_linear(ist)%X(psi)(ii) = factor_*sum(op%w_re(1:nn, ii)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+          end forall
+        end do
+        !$omp end parallel do
+      end if
+
+    case(BATCH_PACKED)
+
+      if(op%cmplx_op) then
+#ifdef R_TCOMPLEX
+        !$omp parallel do private(ll, ist, ii, nn)
+        do ll = 1, nri
+          nn = op%nn(ll)
+          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
+            fo%pack%X(psi)(ist, ii) = factor_*sum(TOCMPLX(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * &
+              fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
+          end forall
+        end do
+        !$omp end parallel do
+#endif
+      else
+        !$omp parallel do private(ll, ist, ii, nn)
+        do ll = 1, nri
+          nn = op%nn(ll)
+          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
+            fo%pack%X(psi)(ist, ii) = factor_*sum(op%w_re(1:nn, ii)*fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
+          end forall
+        end do
+        !$omp end parallel do
+      end if
+      
+    end select
+      
     POP_SUB(X(nl_operator_operate_batch).operate_non_const_weights)
   end subroutine operate_non_const_weights
 
   ! ------------------------------------------
   subroutine operate_opencl()
-    integer    :: pnri, bsize, isize, ist, eff_size, iarg, npoints
+    integer    :: pnri, bsize, isize, localsize, ist, eff_size, iarg, npoints, dim2, dim3
     integer(8) :: local_mem_size
     type(accel_mem_t) :: buff_weights
     type(profile_t), save :: prof
@@ -332,6 +392,7 @@ contains
       call accel_kernel_run(kernel_operate, (/eff_size, pnri/), (/eff_size, bsize/eff_size/))
 
     case(OP_MAP)
+
       call accel_set_kernel_arg(kernel_operate, 0, op%mesh%np)
       call accel_set_kernel_arg(kernel_operate, 1, op%buff_ri)
       call accel_set_kernel_arg(kernel_operate, 2, op%buff_map)
@@ -364,9 +425,9 @@ contains
       
       if(accel_use_shared_mem()) then
         local_mem_size = accel_local_memory_size()
-        isize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
-        isize = isize - mod(isize, eff_size)
-        bsize = eff_size*isize
+        localsize = int(dble(local_mem_size)/(op%stencil%size*types_get_size(TYPE_INTEGER)))
+        localsize = localsize - mod(localsize, eff_size)
+        bsize = eff_size*localsize
         bsize = min(accel_kernel_workgroup_size(kernel_operate), bsize)
       else
         bsize = accel_kernel_workgroup_size(kernel_operate)
@@ -377,22 +438,25 @@ contains
         call messages_fatal(1)
       end if
 
-      isize = bsize/eff_size
+      localsize = bsize/eff_size
 
-      ASSERT(isize > 0)
+      ASSERT(localsize > 0)
 
       if(accel_use_shared_mem()) then
-        ASSERT(isize*op%stencil%size*types_get_size(TYPE_INTEGER) <= local_mem_size)
+        ASSERT(localsize*op%stencil%size*types_get_size(TYPE_INTEGER) <= local_mem_size)
 
         iarg = iarg + 1
-        call accel_set_kernel_arg(kernel_operate, iarg, TYPE_INTEGER, isize*op%stencil%size)
+        call accel_set_kernel_arg(kernel_operate, iarg, TYPE_INTEGER, localsize*op%stencil%size)
       end if
 
-      call accel_kernel_run(kernel_operate, (/eff_size, pad(op%mesh%np, bsize)/), (/eff_size, isize/))
+      dim3 = op%mesh%np/(accel_max_size_per_dim(2)*localsize) + 1
+      dim2 = min(accel_max_size_per_dim(2)*localsize, pad(op%mesh%np, localsize))
 
-      call profiling_count_transfers(npoints*(op%stencil%size + 2), isize)
+      call accel_kernel_run(kernel_operate, (/eff_size, dim2, dim3/), (/eff_size, localsize, 1/))
+
+      call profiling_count_transfers(npoints*(op%stencil%size + 2), localsize)
       call profiling_count_transfers(fi%nst_linear*npoints*(op%stencil%size + 1), R_TOTYPE(M_ONE))
-
+      
     case(OP_NOMAP)
       ASSERT(points_ == OP_ALL)
 

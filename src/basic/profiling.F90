@@ -129,10 +129,11 @@ module profiling_oct_m
     module procedure dprofiling_count_operations
   end interface profiling_count_operations
  
-  integer, parameter, public  ::   &
+  integer, parameter, public  ::  &
        PROFILING_TIME        = 1, &
        PROFILING_MEMORY      = 2, &
-       PROFILING_MEMORY_FULL = 4
+       PROFILING_MEMORY_FULL = 4, &
+       PROFILING_LIKWID      = 8
 
   integer, parameter :: MAX_MEMORY_VARS = 25
 
@@ -204,6 +205,8 @@ contains
     !%Option prof_memory_full 4
     !% As well as the time and summary memory information, a
     !% log is reported of every allocation and deallocation.
+    !%Option likwid 8
+    !% Enable instrumentation using LIKWID.
     !%End
 
     call parse_variable('ProfilingMode', 0, prof_vars%mode)
@@ -275,6 +278,12 @@ contains
     ! initialize time profiling
     prof_vars%last_profile = 0
     nullify(prof_vars%current%p)
+
+    if(bitand(prof_vars%mode, PROFILING_LIKWID) /= 0) then
+#ifdef HAVE_LIKWID
+      call likwid_markerInit()
+#endif
+    end if
 
     call profiling_in(C_PROFILING_COMPLETE_RUN, 'COMPLETE_RUN')
 
@@ -350,6 +359,12 @@ contains
 
     if(bitand(prof_vars%mode, PROFILING_MEMORY_FULL) /= 0) then
       call io_close(prof_vars%mem_iunit)
+    end if
+
+    if(bitand(prof_vars%mode, PROFILING_LIKWID) /= 0) then
+#ifdef HAVE_LIKWID
+      call likwid_markerClose()
+#endif
     end if
 
     POP_SUB(profiling_end)
@@ -451,6 +466,13 @@ contains
 
     this%exclude = optional_default(exclude, .false.)
 
+    if(bitand(prof_vars%mode, PROFILING_LIKWID) /= 0) then
+#ifdef HAVE_LIKWID
+      call likwid_markerStartRegion(trim(label))
+#endif
+    end if
+
+
   end subroutine profiling_in
 
 
@@ -507,6 +529,13 @@ contains
     else
       nullify(prof_vars%current%p)
     end if
+
+    if(bitand(prof_vars%mode, PROFILING_LIKWID) /= 0) then
+#ifdef HAVE_LIKWID
+      call likwid_markerStopRegion(trim(this%label))
+#endif
+    end if
+
 
   end subroutine profiling_out
 

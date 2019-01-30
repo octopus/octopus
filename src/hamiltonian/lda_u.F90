@@ -123,6 +123,7 @@ module lda_u_oct_m
     logical             :: basisfromstates    !> We can construct the localized basis from user-defined states
     FLOAT               :: acbn0_screening    !> We use or not the screening in the ACBN0 functional
     integer, allocatable:: basisstates(:)
+    logical             :: rot_inv            !> Use a rotationally invariant formula for U and J (ACBN0 case)
     integer             :: double_couting     !> Double-couting term 
 
     type(distributed_t) :: orbs_dist
@@ -157,6 +158,7 @@ contains
   this%freeze_u = .false.
   this%basisfromstates = .false.
   this%acbn0_screening = M_ONE
+  this%rot_inv = .false.
   this%double_couting = DFT_U_FLL
 
   nullify(this%dn)
@@ -267,6 +269,19 @@ contains
     !%End
     call parse_variable('ACBN0Screening', M_ONE, this%acbn0_screening)
     call messages_print_var_value(stdout, 'ACBN0Screening', this%acbn0_screening)
+
+    !%Variable ACBN0RotationallyInvariant
+    !%Type logical
+    !%Section Hamiltonian::DFT+U
+    !%Description
+    !% If set to yes, Octopus will use for U and J a formula which is rotationally invariant.
+    !% This is different from the original formula for U and J.
+    !% This is activated by default, except in the case of spinors, as this is not yet implemented in this case.
+    !%End
+    call parse_variable('ACBN0RotationallyInvariant', st%d%ispin /= SPINORS, this%rot_inv)
+    call messages_print_var_value(stdout, 'ACBN0RotationallyInvariant', this%rot_inv)
+    if(st%d%ispin == SPINORS ) call messages_not_implemented("Rotationally invariant ACBN0 with spinors.")
+
   end if
 
   if(.not.this%basisfromstates) then

@@ -621,8 +621,7 @@ contains
     FLOAT, optional,                 intent(in)    :: Imdeltat2
     
     integer :: ii, ist
-    CMPLX, pointer :: psi(:, :)
-    logical :: cmplxscl
+    CMPLX, pointer :: psi(:, :), psi2(:, :)
     logical :: phase_correction
 
     PUSH_SUB(exponential_apply_batch)
@@ -630,10 +629,7 @@ contains
     ASSERT(batch_type(psib) == TYPE_CMPLX)
     ASSERT(present(psib2) .eqv. present(deltat2))
     
-    cmplxscl = .false.
-    if(present(Imdeltat)) cmplxscl = .true. 
-
-    if(cmplxscl .and. present(psib2)) then
+    if(present(Imdeltat) .and. present(psib2)) then
       ASSERT(present(Imdeltat2))
     end if
 
@@ -657,30 +653,59 @@ contains
     else
 
       if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
-      
-      do ii = 1, psib%nst
-        psi  => psib%states(ii)%zpsi
-        ist  =  psib%states(ii)%ist
 
-        if (cmplxscl) then
-          call exponential_apply(te, der, hm, psi, ist, ik, deltat, Imdeltat = Imdeltat)
-        else 
-          call exponential_apply(te, der, hm, psi, ist, ik, deltat)
+      ! only allocate for packed cases
+      if (batch_status(psib) /= BATCH_NOT_PACKED) then
+        SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:hm%d%dim))
+      end if
+      if(present(psib2)) then
+        if (batch_status(psib2) /= BATCH_NOT_PACKED) then
+          SAFE_ALLOCATE(psi2(1:der%mesh%np_part, 1:hm%d%dim))
         end if
+      end if
 
-        if(present(psib2)) then
-          if (cmplxscl) then
-            call exponential_apply(te, der, hm, psib2%states(ii)%zpsi, ist, ik, deltat2, Imdeltat = Imdeltat2)
-          else 
-            call exponential_apply(te, der, hm, psib2%states(ii)%zpsi, ist, ik, deltat2)
-          end if
+      do ii = 1, psib%nst
+        ist = psib%states(ii)%ist
+
+        ! avoid copy for the unpacked case, simply set pointer
+        ! -> this should be removed by having batched versions of
+        ! exponential_apply
+        if (batch_status(psib) /= BATCH_NOT_PACKED) then
+          call batch_get_state(psib, ii, der%mesh%np, psi)
+        else
+          psi => psib%states(ii)%zpsi
+        end if
+        call exponential_apply(te, der, hm, psi, ist, ik, deltat, Imdeltat = Imdeltat)
+        if (batch_status(psib) /= BATCH_NOT_PACKED) then
+          call batch_set_state(psib, ii, der%mesh%np, psi)
         end if
         
+        if(present(psib2)) then
+          ! also avoid copying unpacked batches here
+          if (batch_status(psib2) /= BATCH_NOT_PACKED) then
+            call batch_get_state(psib2, ii, der%mesh%np, psi2)
+          else
+            psi2 => psib2%states(ii)%zpsi
+          end if
+          call exponential_apply(te, der, hm, psi2, ist, ik, deltat2, Imdeltat = Imdeltat2)
+          if (batch_status(psib2) /= BATCH_NOT_PACKED) then
+            call batch_set_state(psib2, ii, der%mesh%np, psi2)
+          end if
+        end if
       end do
 
-    end if
+      if (batch_status(psib) /= BATCH_NOT_PACKED) then
+        SAFE_DEALLOCATE_P(psi)
+      end if
+      if(present(psib2)) then
+        if (batch_status(psib2) /= BATCH_NOT_PACKED) then
+           SAFE_DEALLOCATE_P(psi2)
+        end if
+      end if
+
+   end if
     
-    POP_SUB(exponential_apply_batch)
+   POP_SUB(exponential_apply_batch)
 
   contains
     
@@ -722,7 +747,7 @@ contains
       if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
 
       do iter = 1, te%exp_order
-        if(cmplxscl) then
+        if(present(Imdeltat2)) then
           zfact = zfact*(-M_zI*(deltat + M_zI * Imdeltat))/iter
           if(present(deltat2)) zfact2 = zfact2*(-M_zI*(deltat2 + M_zI * Imdeltat2))/iter
           zfact_is_real = .false.
@@ -772,7 +797,7 @@ contains
       call profiling_out(prof)
       POP_SUB(exponential_apply_batch.taylor_series_batch)
     end subroutine taylor_series_batch
-    
+
   end subroutine exponential_apply_batch
 
   ! ---------------------------------------------------------

@@ -431,6 +431,9 @@ contains
     !%End
     call parse_variable('HamiltonianApplyPacked', .true., hm%apply_packed)
 
+    ! StatesPack not yet implemented for some cases, see hamiltonian_apply_packed
+    st%d%pack_states = hamiltonian_apply_packed(hm, gr%mesh)
+
     external_potentials_present = associated(hm%ep%v_static) .or. &
 				  associated(hm%ep%E_field)  .or. &
 				  associated(hm%ep%lasers)
@@ -994,11 +997,13 @@ contains
     type(mesh_t),          intent(in) :: mesh
 
     apply = this%apply_packed
-    if(mesh%use_curvilinear) apply = .false.
-    if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
-    if(this%rashba_coupling**2 > M_ZERO) apply = .false.
-    if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
-    if(this%family_is_mgga_with_exc)  apply = .false. 
+    ! comment these out; they are tested in the test suite
+    !if(mesh%use_curvilinear) apply = .false.
+    !if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
+    !if(this%rashba_coupling**2 > M_ZERO) apply = .false.
+    !if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
+    !if(this%family_is_mgga_with_exc)  apply = .false.
+    ! keep these checks; currently no tests for these in the test suite
     if(this%scissor%apply) apply = .false.
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
     if(associated(this%hm_base%phase) .and. accel_is_enabled()) apply = .false.

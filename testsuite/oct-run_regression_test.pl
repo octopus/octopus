@@ -25,7 +25,6 @@ use File::Spec;
 use Fcntl qw(:mode :flock);
 use Time::HiRes qw(gettimeofday tv_interval);
 use Scalar::Util qw(looks_like_number);
-use YAML 'Dump';
 
 sub usage {
 
@@ -408,6 +407,7 @@ while ($_ = <TESTSUITE>) {
 
                     if($return_value == 0) {
                         printf "%-40s%s", " Execution", ": \t [ $color_start{green}  OK  $color_end{green} ] \n";
+                        $input_report{"execution"} = "success";
               
                     } else {
                         print "Test run failed with exit code $return_value.\n";
@@ -417,6 +417,7 @@ while ($_ = <TESTSUITE>) {
                         print "----------------------------------------\n\n";
 
                         printf "%-40s%s", " Execution", ": \t [ $color_start{red} FAIL $color_end{red} ] \n\n";
+                        $input_report{"execution"} = "fail";
 
                         $failures++;
                         $test_succeeded = 0;  
@@ -451,10 +452,9 @@ while ($_ = <TESTSUITE>) {
 
             my %match_report;
             $r_match_report = \%match_report;
-            push( @{$r_matches_array}, $r_match_report);
-
           
             if (!$opt_n && $return_value == 0) {
+                push( @{$r_matches_array}, $r_match_report);
                 if(run_match_new($_)){
                     printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
                     if ($opt_v) { print_hline(); }
@@ -480,11 +480,12 @@ close(TESTSUITE);
 
 print "Status: ".$failures." failures\n";
 
-if($opt_r) { 
-    open(YAML, ">>$opt_r" ) or die255("Could not create '$opt_r'.");
-    flock(YAML, LOCK_EX) or die "Cannot lock file - $opt_r!\n";
-    print YAML Dump(\%report);
-    close(YAML);
+if($opt_r) {
+    require YAML;
+    open(YML, ">>$opt_r" ) or die255("Could not create '$opt_r'.");
+    flock(YML, LOCK_EX) or die "Cannot lock file - $opt_r!\n";
+    print YML YAML::Dump(\%report);
+    close(YML);
 }
 
 
