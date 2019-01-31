@@ -50,7 +50,7 @@ scalapack_LIBS = @LIBS_ELPA@ @LIBS_SCALAPACK@ @LIBS_BLACS@
 core_LIBS = \
 	@LIBS_FFTW@  @LIBS_LAPACK@ @LIBS_BLAS@                     \
 	$(top_builddir)/liboct_parser/liboct_parser.a \
-	@GSL_LIBS@ @LIBS_LIBXC@ @FCEXTRALIBS@
+	@GSL_LIBS@ @LIBS_LIBXC@ @LIBS_LIBVDWXC@ @FCEXTRALIBS@
 
 external_LIBS = \
 	$(top_builddir)/external_libs/qshep/libqshep.a                  \
@@ -60,7 +60,7 @@ external_LIBS = \
 	$(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.a
 # we should not have libyaml here if we used an external one...
 
-FCFLAGS_MODS += @FCFLAGS_LIBXC@ @FCFLAGS_PSPIO@ @FCFLAGS_ISF@ @FCFLAGS_FFTW@ @FCFLAGS_PFFT@ @FCFLAGS_PNFFT@ @FCFLAGS_NETCDF@ @FCFLAGS_ETSF_IO@ @FCFLAGS_BERKELEYGW@ @FCFLAGS_NLOPT@ @FCFLAGS_LIBFM@ @FCFLAGS_ELPA@ @FCFLAGS_POKE@ @FCFLAGS_LIKWID@
+FCFLAGS_MODS += @FCFLAGS_LIBXC@ @FCFLAGS_LIBVDWXC@ @FCFLAGS_PSPIO@ @FCFLAGS_ISF@ @FCFLAGS_FFTW@ @FCFLAGS_PFFT@ @FCFLAGS_PNFFT@ @FCFLAGS_NETCDF@ @FCFLAGS_ETSF_IO@ @FCFLAGS_BERKELEYGW@ @FCFLAGS_NLOPT@ @FCFLAGS_LIBFM@ @FCFLAGS_ELPA@ @FCFLAGS_POKE@ @FCFLAGS_LIKWID@
 
 if COMPILE_OPENCL
   external_LIBS += $(top_builddir)/external_libs/fortrancl/libfortrancl.a @LIBS_CLBLAS@ @LIBS_CLFFT@ @CL_LIBS@
