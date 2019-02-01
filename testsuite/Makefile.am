@@ -26,9 +26,6 @@ SUBDIRS = \
 	functionals      \
 	real_time        \
         symmetries       \
-	linear_response  \
-        lda_u            \
-	optimal_control  \
 	periodic_systems \
 	photo_electron   \
 	pseudopotentials \
