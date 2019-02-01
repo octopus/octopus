@@ -617,7 +617,7 @@ EXTRA_PROGRAMS = pulpito-help
 
 bin_PROGRAMS += @UTILITY_PROGRAMS@
 
-pulpito_help_SOURCES = $(all_srcs) utils/help.F90
+pulpito_help_SOURCES = $(all_srcs) main/help.F90
 pulpito_help_LINK = $(FCLINK)
 pulpito_help_LDADD = $(all_LIBS)
 
