@@ -71,37 +71,9 @@ program octopus
   !% Decides what kind of calculation is to be performed.
   !%Option gs 01
   !% Calculation of the ground state.
-  !%Option unocc 02
-  !% Calculation of unoccupied/virtual KS states. Can also be used for a non-self-consistent
-  !% calculation of states at arbitrary k-points, if <tt>density.obf</tt> from <tt>gs</tt>
-  !% is provided in the <tt>restart/gs</tt> directory.
   !%Option td 03
   !% Time-dependent calculation (experimental for periodic systems).
-  !%Option go 05
-  !% Optimization of the geometry.
-  !%Option opt_control 07
-  !% Optimal control.
-  !%Option em_resp 08
-  !% Calculation of the electromagnetic response: electric
-  !% polarizabilities and hyperpolarizabilities and magnetic
-  !% susceptibilities (experimental for periodic systems).
-  !%Option casida 09
-  !% Excitations via Casida linear-response TDDFT; for finite systems only.
-  !%Option vdw 11
-  !% Calculate van der Waals coefficients.
-  !%Option vib_modes 12
-  !% Calculation of the vibrational modes.
-  !%Option one_shot 14
-  !% Obsolete. Use <tt>gs</tt> with <tt>MaximumIter = 0</tt> instead.
-  !%Option kdotp 15
-  !% Calculation of effective masses by <math>\vec{k} \cdot \vec{p}</math> perturbation theory (experimental).
-  !%Option dummy 17
-  !% This calculation mode does nothing. Useful for debugging, testing and benchmarking.  
-  !%Option invert_ks 18
-  !% Invert the Kohn-Sham equations (experimental).
   !%Option test 19
-  !%Option recipe 99
-  !% Prints out a tasty recipe.
   !%End
   if(parse_block('CalculationMode', blk) == 0) then
     call messages_write('The datasets mode has been deprecated,', new_line = .true.)
