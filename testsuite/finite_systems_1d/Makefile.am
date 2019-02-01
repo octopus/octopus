@@ -22,8 +22,6 @@ sharedir = $(pkgdatadir)/testsuite/finite_systems_1d
 
 dist_share_DATA = \
 	01-hydrogen.01-ground_state.inp \
-	01-hydrogen.02-excited_state.inp \
-	01-hydrogen.03-dummy.inp \
 	01-hydrogen.test \
 	02-neon_mpi.01-ground_state-IP_par_domains.inp \
 	02-neon_mpi.02-ground_state-kli_par_domains.inp \
@@ -31,7 +29,6 @@ dist_share_DATA = \
 	02-neon_mpi.test \
 	09-morse.test \
 	09-morse.01-gs.inp \
-	09-morse.02-unocc.inp \
 	09-morse.03-td.inp 
 
 CLEANFILES = *~ *.bak

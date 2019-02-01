@@ -38,8 +38,6 @@ dist_share_DATA = \
 	03-magnetic.06-td-spinors.inp                  \
 	05-output.test                                 \
 	05-output.01-gs.inp                            \
-	05-output.02-convert.inp                       \
-	05-output.03-convert-op.inp                    \
 	06-restart.01-gs_mixrho.inp                    \
 	06-restart.02-restart_gs_mixrho.inp            \
 	06-restart.03-gs_mixvhxc.inp                   \
@@ -115,7 +113,6 @@ dist_share_DATA = \
         29-pcm_chlorine_anion.02-td_prop.inp      \
         29-pcm_chlorine_anion.test \
         30-local_multipoles.01-gs.inp \
-        30-local_multipoles.02-multipoles.inp \
         30-local_multipoles.test                     \
 	31-acetylene_b3lyp.test                      \
 	31-acetylene_b3lyp.01-gs.inp

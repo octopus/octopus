@@ -64,7 +64,6 @@ dist_share_DATA =                      \
 	10-bomd.01-gs.inp                      \
 	10-bomd.02-td.inp                      \
 	10-bomd.03-td_restart.inp              \
-        10-bomd.04-xyz-anim.inp                \
 	11-tdmagnetic.test                     \
 	11-tdmagnetic.01-gs.inp                \
 	11-tdmagnetic.02-unocc.inp             \
@@ -73,11 +72,6 @@ dist_share_DATA =                      \
 	12-absorption.01-gs.inp                \
 	12-absorption.02-td.inp                \
 	12-absorption.03-td-restart.inp        \
-	12-absorption.04-spectrum.inp          \
-        12-absorption.05-spectrum_compressed_sensing.inp \
-        12-absorption.06-power_spectrum.inp    \
-        12-absorption.07-spectrum_cosine.inp   \
-        12-absorption.08-spectrum_exp.inp      \
 	13-absorption-spin.test                \
 	13-absorption-spin.01-gs.inp           \
 	13-absorption-spin.02-td.inp           \
@@ -97,7 +91,6 @@ dist_share_DATA =                      \
         15-crank_nicolson.02-kick.inp          \
         17-absorption-spin_symmetry.01-gs.inp \
         17-absorption-spin_symmetry.02-td.inp \
-        17-absorption-spin_symmetry.03-spectrum.inp \
         16-sparskit.test                 \
         16-sparskit.01-gs.inp            \
         16-sparskit.02-kick.inp          \
@@ -105,7 +98,6 @@ dist_share_DATA =                      \
         18-hhg.test \
         18-hhg.01-gs.inp \
         18-hhg.02-td.inp \
-        18-hhg.03-hs.inp \
         19-td_move_ions.test              \
         19-td_move_ions.01-gs.inp         \
         19-td_move_ions.02-td.inp         \
