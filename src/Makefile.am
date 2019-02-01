@@ -586,9 +586,9 @@ include/options.h: $(all_f_srcs) $(noinst_HEADERS)
 include/defaults.h: $(all_f_srcs) $(noinst_HEADERS)
 	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
-bin_PROGRAMS = octopus
+bin_PROGRAMS = pulpito
 
-octopus_f_srcs =                             \
+pulpito_f_srcs =                             \
 	main/invert_ks.F90                   \
 	main/memory.F90                      \
 	main/unocc.F90                       \
@@ -604,81 +604,22 @@ octopus_f_srcs =                             \
 noinst_HEADERS += \
 	main/casida_inc.F90
 
-octopus_SOURCES = $(octopus_f_srcs) $(all_srcs)
-octopus_LDADD = $(all_LIBS)
-octopus_LINK = $(FCLINK)
+pulpito_SOURCES = $(pulpito_f_srcs) $(all_srcs)
+pulpito_LDADD = $(all_LIBS)
+pulpito_LINK = $(FCLINK)
 
 
-CLEANFILES += octopus
+CLEANFILES += pulpito
 
 EXEEXT =
 
-EXTRA_PROGRAMS = oct-propagation_spectrum \
-	         oct-harmonic-spectrum \
-                 oct-casida_spectrum      \
-                 oct-vibrational_spectrum \
-                 oct-infrared_spectrum    \
-                 oct-xyz-anim \
-                 oct-center-geom \
-                 oct-help \
-                 oct-oscillator-strength \
-                 oct-dielectric-function \
-                 oct-photoelectron_spectrum \
-                 oct-convert \
-                 oct-local_multipoles \
-                 oct-conductivity \
-                 oct-floquet
+EXTRA_PROGRAMS = pulpito-help
 
 bin_PROGRAMS += @UTILITY_PROGRAMS@
 
-oct_propagation_spectrum_SOURCES = $(all_srcs) utils/propagation_spectrum.F90
-oct_propagation_spectrum_LINK = $(FCLINK)
-oct_propagation_spectrum_LDADD = $(all_LIBS)
-oct_oscillator_strength_SOURCES = $(all_srcs) utils/oscillator_strength.F90
-oct_oscillator_strength_LINK = $(FCLINK)
-oct_oscillator_strength_LDADD = $(all_LIBS)
-oct_dielectric_function_SOURCES = $(all_srcs) utils/dielectric_function.F90
-oct_dielectric_function_LINK = $(FCLINK)
-oct_dielectric_function_LDADD = $(all_LIBS)
-oct_harmonic_spectrum_SOURCES = $(all_srcs) utils/harmonic_spectrum.F90
-oct_harmonic_spectrum_LINK = $(FCLINK)
-oct_harmonic_spectrum_LDADD = $(all_LIBS)
-oct_photoelectron_spectrum_SOURCES = $(all_srcs) utils/photoelectron_spectrum.F90
-oct_photoelectron_spectrum_LINK = $(FCLINK)
-oct_photoelectron_spectrum_LDADD = $(all_LIBS)
-oct_xyz_anim_SOURCES = $(all_srcs) utils/xyzanim.F90
-oct_xyz_anim_LINK = $(FCLINK)
-oct_xyz_anim_LDADD = $(all_LIBS)
-oct_casida_spectrum_SOURCES = $(all_srcs) utils/casida_spectrum.F90
-oct_casida_spectrum_LINK = $(FCLINK)
-oct_casida_spectrum_LDADD = $(all_LIBS)
-oct_vibrational_spectrum_SOURCES = $(all_srcs) utils/vibrational.F90
-oct_vibrational_spectrum_LINK = $(FCLINK)
-oct_vibrational_spectrum_LDADD = $(all_LIBS)
-oct_infrared_spectrum_SOURCES = $(all_srcs) utils/infrared.F90
-oct_infrared_spectrum_LINK = $(FCLINK)
-oct_infrared_spectrum_LDADD = $(all_LIBS)
-oct_center_geom_SOURCES = $(all_srcs) utils/centergeom.F90
-oct_center_geom_LINK = $(FCLINK)
-oct_center_geom_LDADD = $(all_LIBS)
-oct_convert_SOURCES = $(all_srcs) utils/convert.F90
-oct_convert_LINK = $(FCLINK)
-oct_convert_LDADD = $(all_LIBS)
-oct_local_multipoles_SOURCES = $(all_srcs) \
-			       utils/local_multipoles.F90 \
-                               utils/local_write.F90
-oct_local_multipoles_LINK = $(FCLINK)
-oct_local_multipoles_LDADD = $(all_LIBS)
-oct_conductivity_SOURCES = $(all_srcs) utils/conductivity.F90
-oct_conductivity_LINK = $(FCLINK)
-oct_conductivity_LDADD = $(all_LIBS)
-oct_help_SOURCES = $(all_srcs) utils/help.F90
-oct_help_LINK = $(FCLINK)
-oct_help_LDADD = $(all_LIBS)
-oct_floquet_SOURCES = $(all_srcs) utils/floquet.F90
-oct_floquet_LINK = $(FCLINK)
-oct_floquet_LDADD = $(all_LIBS)
-
+pulpito_help_SOURCES = $(all_srcs) utils/help.F90
+pulpito_help_LINK = $(FCLINK)
+pulpito_help_LDADD = $(all_LIBS)
 
 # debug files from MacOS gcc with -g
 clean-local: clean-fdep
