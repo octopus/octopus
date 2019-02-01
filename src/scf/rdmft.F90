@@ -518,8 +518,11 @@ contains
 
       integer :: iunit, ist
       FLOAT :: photon_number
+      FLOAT, allocatable :: photon_number_state (:)
 
       PUSH_SUB(scf_rdmft.scf_write_static)
+      
+      SAFE_ALLOCATE(photon_number_state(1:st%nst))
 
       if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
         call io_mkdir(dir)
@@ -581,7 +584,10 @@ contains
 
 !      call energy_calc_total(hm, gr, st, iunit, full = .true.)
 
-			call calc_photon_number(photon_number)
+			call calc_photon_number(photon_number_state,photon_number)
+			if(mpi_grp_is_root(mpi_world)) then
+				write(iunit,'(a,1x,f14.12)') 'Total mode occupation:', photon_number
+			end if
 
       if(mpi_grp_is_root(mpi_world)) then
         if(max_iter > 0) then
@@ -595,9 +601,9 @@ contains
 
 			if(mpi_grp_is_root(mpi_world)) then
 				write(iunit,'(a)') 'Natural occupation numbers:'
-        write(iunit,'(a4,5x,a12)')'#st','Occupation'  
+        write(iunit,'(a4,5x,a12,5x,a12)')'#st','Occupation', 'Mode Occ.'
 				do ist = 1, st%nst
-					write(iunit,'(i4,3x,f14.12)') ist, st%occ(ist, 1)
+					write(iunit,'(i4,3x,f14.12,3x,f14.12)') ist, st%occ(ist, 1), photon_number_state(ist)
 				end do
       end if
       
@@ -605,93 +611,65 @@ contains
         call io_close(iunit)
       end if
       
+      SAFE_DEALLOCATE_A(photon_number_state)
+      
       POP_SUB(scf_rdmft.scf_write_static)
     end subroutine scf_write_static 
     
         ! ---------------------------------------------------------
-    subroutine calc_photon_number(photon_number)
+    subroutine calc_photon_number(photon_number_state,photon_number)
       FLOAT, intent(out) :: photon_number
+      FLOAT, intent(out) :: photon_number_state (st%nst)
 
       integer :: ist, ip
       FLOAT 	:: qq, q_square_exp
-!      FLOAT :: e_dip(MAX_DIM + 1, st%d%nspin), n_dip(MAX_DIM), nquantumpol
 			FLOAT, allocatable :: psi(:, :)
 			FLOAT, allocatable :: grad_psi(:, :), grad_square_psi (:,:)
-			FLOAT, allocatable :: photon_number_state (:)
 
       PUSH_SUB(scf_rdmft.calc_photon_number)
       
       SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
       SAFE_ALLOCATE(grad_psi(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
       SAFE_ALLOCATE(grad_square_psi(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
-			SAFE_ALLOCATE(photon_number_state(1:st%nst))
 
       photon_number = M_ZERO
        
       
       do ist = 1, st%nst
 				call states_get_state(st, gr%mesh, ist, 1, psi)
+				
+				! <phi(ist)|d^2/dq^2|phi(ist)> ~= <phi(ist)| d/dq (d/dq|phi(ist)>)   at the moment not possible to calculate Laplacian only for one coordinate
         call dderivatives_grad(gr%der, psi(:, 1), grad_psi(:, :), ghost_update = .true., set_bc = .false.)
         call dderivatives_grad(gr%der, grad_psi(:, 2), grad_square_psi(:, :), ghost_update = .true., set_bc = .false.)
-!print*, "gr%mesh%np_part", gr%mesh%np_part, "gr%mesh%np", gr%mesh%np, "st%d%dim", st%d%dim, "gr%mesh%sb%dim", gr%mesh%sb%dim
-!        print*,"psi", psi(:,1)
-!        print*,"grad_psi(:,2)", grad_psi(:,2)
-!        print*,"grad_square_psi(:,2)", grad_square_psi(:,2)
         photon_number_state(ist) = -0.5*dmf_dotp(gr%mesh, psi(:,1), grad_square_psi(:,2))
+        
+        ! <phi(ist)|q^2|psi(ist)>
         q_square_exp = M_ZERO
 				do ip = 1, gr%mesh%np
 					qq = gr%mesh%x(ip, 2)
 					qq = qq * qq
-					q_square_exp = q_square_exp + psi(ip,1)*psi(ip,1)*qq ! shoudl be R_CONJ for first psi, but does not work ...
+					q_square_exp = q_square_exp + psi(ip,1)*psi(ip,1)*qq*gr%mesh%volume_element ! shoudl be R_CONJ for first psi, but does not work ...
         end do
+!        print*, "ist", ist, "q_square_exp", q_square_exp, "-1/2 d^2/dq^2", photon_number_state(ist)
+        
+        !! N_phot(ist)=( <phi_i|H_ph|phi_i>/omega - 0.5 ) / N_elec
+        !! with <phi_i|H_ph|phi_i>=-0.5* <phi(ist)|d^2/dq^2|phi(ist)> + 0.5*omega <phi(ist)|q^2|psi(ist)>
         photon_number_state(ist)  = photon_number_state(ist) / rdm%dressed_omega + 0.5 * rdm%dressed_omega  * q_square_exp
-        photon_number =  photon_number + st%occ(ist,1)*photon_number_state(ist)
+        photon_number_state(ist) = photon_number_state(ist) - 0.5
+        !! N_phot_total= sum_ist occ_ist*N_phot(ist)
+        photon_number =  photon_number + ( photon_number_state(ist) + 0.5 )*st%occ(ist,1) ! 0.5 must be added again to do the normalization due to the total charge correctly
 			end do
 			
-			photon_number = photon_number - 0.5
+			photon_number =  photon_number  / st%smear%el_per_state - 0.5 ! we calculate the photon number for every electron, so we need to dived by the total charge
 			
-			print*, "photon_number_state", photon_number_state
-			print*, "photon_number", photon_number
+!			print*, "photon_number_state", photon_number_state
+			print*, "The total mode occupation is: ", photon_number
 	
       SAFE_DEALLOCATE_A(psi)
 			SAFE_DEALLOCATE_A(grad_psi)
-			SAFE_DEALLOCATE_A(photon_number_state)
 
       POP_SUB(scf_rdmft.calc_photon_number)
     end subroutine calc_photon_number
-
-
-    ! ---------------------------------------------------------
-!    subroutine write_dipole(iunit, dipole)
-!      integer, intent(in) :: iunit
-!      FLOAT,   intent(in) :: dipole(:)
-
-!      PUSH_SUB(scf_run.write_dipole)
-
-!      if(mpi_grp_is_root(mpi_world)) then
-!        call output_dipole(iunit, dipole, gr%mesh%sb%dim)
-
-!        if (simul_box_is_periodic(gr%sb)) then
-!          write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."
-!          write(iunit, '(a)') "Single-point Berry's phase method only accurate for large supercells."
-
-!          if (gr%sb%kpoints%full%npoints > 1) then
-!            write(iunit, '(a)') &
-!              "WARNING: Single-point Berry's phase method for dipole should not be used when there is more than one k-point."
-!            write(iunit, '(a)') &
-!              "Instead, finite differences on k-points (not yet implemented) are needed."
-!          end if
-
-!          if(.not. smear_is_semiconducting(st%smear)) then
-!            write(iunit, '(a)') "Single-point Berry's phase dipole calculation not correct without integer occupations."
-!          end if
-!        end if
-
-!        write(iunit, *)
-!      end if
-
-!      POP_SUB(scf_run.write_dipole)
-!    end subroutine write_dipole
 
   end subroutine scf_rdmft
 
