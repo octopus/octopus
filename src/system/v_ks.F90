@@ -59,7 +59,6 @@ module v_ks_oct_m
   use xc_oct_m
   use XC_F90(lib_m)
   use xc_functl_oct_m
-  use xc_ks_inversion_oct_m
   use xc_OEP_oct_m
 
   ! from the dftd3 library
@@ -119,7 +118,6 @@ module v_ks_oct_m
     integer                  :: sic_type   !< what kind of self-interaction correction to apply
     type(xc_t)               :: xc
     type(xc_OEP_t)           :: oep
-    type(xc_ks_inversion_t)  :: ks_inversion
     type(poisson_t), pointer :: hartree_solver
     logical                  :: new_hartree
     type(grid_t), pointer    :: gr
@@ -374,8 +372,6 @@ contains
 
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) call xc_oep_init(ks%oep, ks%xc_family, gr, st)
 
-      if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) call xc_ks_inversion_init(ks%ks_inversion, gr, geo, st)
-
     end select
 
     ks%frozen_hxc = .false.
@@ -584,9 +580,6 @@ contains
 
     select case(ks%theory_level)
     case(KOHN_SHAM_DFT)
-      if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_end(ks%ks_inversion)
-      end if
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         call xc_oep_end(ks%oep)
       end if
@@ -631,9 +624,6 @@ contains
 
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         call xc_oep_write_info(ks%oep, iunit)
-      end if
-      if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_write_info(ks%ks_inversion, iunit)
       end if
 
     end select
@@ -964,10 +954,6 @@ contains
           end if
         end if
 
-        if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-          ! Also treat KS inversion separately (not part of libxc)
-          call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, vxc = ks%calc%vxc, time = ks%calc%time)
-        end if
       end if
 
       if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then

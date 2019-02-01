@@ -17,8 +17,6 @@
 ##
 
 AC_PREREQ(2.59)
-# Note: the version string is written into ETSF_IO files, so when you update
-# this, update the results for test periodic_systems/09-etsf_io.test too.
 AC_INIT([Octopus],[australis],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
@@ -303,12 +301,6 @@ ACX_PNFFT
 
 dnl check for NETCDF
 ACX_NETCDF
-
-dnl check for ETSF_IO
-ACX_ETSF_IO
-
-dnl check for BerkeleyGW
-ACX_BERKELEYGW
 
 dnl check for SPARSKIT
 ACX_SPARSKIT

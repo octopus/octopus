@@ -19,7 +19,6 @@
 #include "global.h"
 
 module run_oct_m
-  use em_resp_oct_m
   use fft_oct_m
   use global_oct_m
   use ground_state_oct_m
@@ -36,7 +35,6 @@ module run_oct_m
   use test_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
-  use vdw_oct_m
   use xc_oct_m
 
   implicit none

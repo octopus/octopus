@@ -46,5 +46,5 @@ k=1.0
 "electron"      | 1 | 3
 %
 
-Output = mmb_den + mmb_wfs + density
+Output = density
 OutputFormat = plane_z + axis_x

@@ -181,14 +181,6 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
     call states_write_tpa (trim(dir), gr, st)
   end if
 
-  if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
-    if (states_are_real(st)) then
-      call doutput_modelmb (trim(dir), gr, st, geo, outp)
-    else
-      call zoutput_modelmb (trim(dir), gr, st, geo, outp)
-    end if
-  end if
-
   POP_SUB(output_states)
 
 end subroutine output_states
