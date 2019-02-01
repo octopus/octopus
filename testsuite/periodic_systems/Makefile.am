@@ -22,15 +22,11 @@ sharedir = $(pkgdatadir)/testsuite/periodic_systems
 
 dist_share_DATA =                                \
 	01-free_electrons.01-ground_state.inp    \
-	01-free_electrons.02-unocc.inp           \
 	01-free_electrons.test                   \
 	02-cosine_potential.01-ground_state.inp  \
-	02-cosine_potential.02-unocc.inp         \
 	02-cosine_potential.test                 \
 	03-sodium_chain.01-ground_state.inp      \
-	03-sodium_chain.02-unocc.inp             \
 	03-sodium_chain.03-ground_state_disp.inp \
-	03-sodium_chain.04-unocc_disp.inp        \
 	03-sodium_chain.test                     \
 	04-silicon.test                          \
 	04-silicon.01-gs.inp                     \
@@ -42,7 +38,6 @@ dist_share_DATA =                                \
 	05-lithium.01-gs.inp                     \
 	05-lithium.02-td.inp                     \
 	05-lithium.03-td-restart.inp             \
-	05-lithium.04-dielectric_function.inp    \
 	06-h2o_pol_lr.01_gs.inp                  \
 	06-h2o_pol_lr.02_kdotp.inp               \
 	06-h2o_pol_lr.03_emresp.inp              \

@@ -55,16 +55,12 @@ dist_share_DATA =                                  \
 	12-hartree_direct_3d.01.inp                \
 	13-hartree_3d_mg.test                      \
 	13-hartree_3d_mg.01-multigrid.inp          \
-	14-center-geom.test                        \
-	14-center-geom.01-run.inp                  \
 	15-cholesky_parallel.test                  \
 	15-cholesky_parallel.01-real.inp           \
 	15-cholesky_parallel.02-complex.inp        \
 	16-hartree_3d_libisf.test                  \
 	16-hartree_3d_libisf.01-libisf.inp         \
 	16-hartree_3d_libisf.02-libisf.inp         \
-	17-recipe.inp                              \
-        17-recipe.test                             \
 	18-interpolation.01-1d.inp                 \
 	18-interpolation.02-2d.inp                 \
 	18-interpolation.03-3d.inp                 \

@@ -22,23 +22,6 @@ match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.735
 match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 1.63722611
 match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; 8.02907381
 
-Input: 03-sodium_chain.02-unocc.inp
-
-match ; Bands n=1,k=1; GREPFIELD(static/eigenvalues, '#k =   1', 3, 1) ; -3.648665
-match ; Bands n=1,k=2; GREPFIELD(static/eigenvalues, '#k =   2', 3, 1) ; -3.552680
-match ; Bands n=1,k=3; GREPFIELD(static/eigenvalues, '#k =   3', 3, 1) ; -3.265611
-match ; Bands n=1,k=4; GREPFIELD(static/eigenvalues, '#k =   4', 3, 1) ; -2.790168
-match ; Bands n=1,k=5; GREPFIELD(static/eigenvalues, '#k =   5', 3, 1) ; -2.131471
-match ; Bands n=1,k=6; GREPFIELD(static/eigenvalues, '#k =   6', 3, 1) ; -1.368819
-
-match ; Bands n=2,k=1; GREPFIELD(static/eigenvalues, '#k =   1', 3, 2) ; -1.236858
-match ; Bands n=2,k=2; GREPFIELD(static/eigenvalues, '#k =   2', 3, 2) ; -1.145312
-match ; Bands n=2,k=3; GREPFIELD(static/eigenvalues, '#k =   3', 3, 2) ; -0.870795
-match ; Bands n=2,k=4; GREPFIELD(static/eigenvalues, '#k =   4', 3, 2) ; -0.413928
-match ; Bands n=2,k=5; GREPFIELD(static/eigenvalues, '#k =   5', 3, 2) ; -0.281684
-match ; Bands n=2,k=6; GREPFIELD(static/eigenvalues, '#k =   6', 3, 2) ; -1.210780
-
-
 # The same, except the atom has been moved by a lattice vector.
 Input: 03-sodium_chain.03-ground_state_disp.inp
 
@@ -54,19 +37,3 @@ match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -2.359
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.73526315
 match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 1.63722611
 match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; 8.02907381
-
-Input: 03-sodium_chain.04-unocc_disp.inp
-
-match ; Bands n=1,k=1; GREPFIELD(static/eigenvalues, '#k =   1', 3, 1) ; -3.648665
-match ; Bands n=1,k=2; GREPFIELD(static/eigenvalues, '#k =   2', 3, 1) ; -3.552680
-match ; Bands n=1,k=3; GREPFIELD(static/eigenvalues, '#k =   3', 3, 1) ; -3.265611
-match ; Bands n=1,k=4; GREPFIELD(static/eigenvalues, '#k =   4', 3, 1) ; -2.790168
-match ; Bands n=1,k=5; GREPFIELD(static/eigenvalues, '#k =   5', 3, 1) ; -2.131471
-match ; Bands n=1,k=6; GREPFIELD(static/eigenvalues, '#k =   6', 3, 1) ; -1.368821
-
-match ; Bands n=2,k=1; GREPFIELD(static/eigenvalues, '#k =   1', 3, 2) ; -1.236859
-match ; Bands n=2,k=2; GREPFIELD(static/eigenvalues, '#k =   2', 3, 2) ; -1.145312
-match ; Bands n=2,k=3; GREPFIELD(static/eigenvalues, '#k =   3', 3, 2) ; -0.870795
-match ; Bands n=2,k=4; GREPFIELD(static/eigenvalues, '#k =   4', 3, 2) ; -0.413928
-match ; Bands n=2,k=5; GREPFIELD(static/eigenvalues, '#k =   5', 3, 2) ; -0.281683
-match ; Bands n=2,k=6; GREPFIELD(static/eigenvalues, '#k =   6', 3, 2) ; -1.210777
