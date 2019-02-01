@@ -60,7 +60,7 @@ external_LIBS = \
 	$(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.a
 # we should not have libyaml here if we used an external one...
 
-FCFLAGS_MODS += @FCFLAGS_LIBXC@ @FCFLAGS_PSPIO@ @FCFLAGS_ISF@ @FCFLAGS_FFTW@ @FCFLAGS_PFFT@ @FCFLAGS_NETCDF@ @FCFLAGS_LIBFM@ @FCFLAGS_ELPA@ @FCFLAGS_LIKWID@
+FCFLAGS_MODS += @FCFLAGS_LIBXC@ @FCFLAGS_ISF@ @FCFLAGS_FFTW@ @FCFLAGS_PFFT@ @FCFLAGS_LIBFM@ @FCFLAGS_ELPA@ @FCFLAGS_LIKWID@
 
 if COMPILE_OPENCL
   external_LIBS += $(top_builddir)/external_libs/fortrancl/libfortrancl.a @LIBS_CLBLAS@ @LIBS_CLFFT@ @CL_LIBS@

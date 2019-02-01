@@ -501,11 +501,6 @@ noinst_HEADERS +=                            \
 
 # Sources in td
 all_f_srcs +=                               \
-	td/pes.F90                          \
-	td/pes_flux.F90                     \
-	td/pes_mask.F90                     \
-	td/pes_out.F90                      \
-	td/pes_spm.F90                      \
 	td/potential_interpolation.F90      \
 	td/propagator_base.F90              \
 	td/propagator_cn.F90                \
@@ -519,10 +514,6 @@ all_f_srcs +=                               \
 	td/td_calc.F90                      \
 	td/td.F90                           \
 	td/td_write.F90
-
-noinst_HEADERS +=                           \
-	td/pes_mask_out_inc.F90             \
-	td/pes_flux_out_inc.F90
 
 all_srcs = $(all_f_srcs) $(all_c_srcs)
 

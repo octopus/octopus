@@ -41,7 +41,6 @@ module td_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
   use parser_oct_m
-  use pes_oct_m
   use poisson_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
@@ -90,8 +89,6 @@ module td_oct_m
     integer              :: max_iter       !< maximum number of iterations to perform
     integer              :: iter           !< the actual iteration
     logical              :: recalculate_gs !< Recalculate ground-state along the evolution.
-
-    type(pes_t)          :: pesv
 
     FLOAT                :: mu
     integer              :: dynamics
@@ -243,8 +240,6 @@ contains
       call messages_fatal(2)
     end if
 
-    ! now the photoelectron stuff
-    call pes_init(td%pesv, sys%gr%mesh, sys%gr%sb, sys%st, sys%outp%restart_write_interval, hm, td%max_iter, td%dt)
 
     !%Variable TDDynamics
     !%Type integer
@@ -338,7 +333,6 @@ contains
 
     PUSH_SUB(td_end)
 
-    call pes_end(td%pesv)
     call propagator_end(td%tr)  ! clean the evolution method
     call ion_dynamics_end(td%ions)
 
@@ -457,10 +451,6 @@ contains
     call messages_print_stress(stdout, "Time-Dependent Simulation")
     call print_header()
 
-    if(td%pesv%calc_spm .or. td%pesv%calc_mask .and. fromScratch) then
-      call pes_init_write(td%pesv,gr%mesh,st)
-    end if
-
     if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) call states_pack(st)
 
     etime = loct_clock()
@@ -498,10 +488,6 @@ contains
 
       !Apply mask absorbing boundaries
       if(hm%bc%abtype == MASK_ABSORBING) call zvmask(gr, hm, st) 
-
-      !Photoelectron stuff 
-      if(td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) &
-        call pes_calc(td%pesv, gr%mesh, st, td%dt, iter, gr, hm)
 
       call td_write_iter(write_handler, sys%outp, gr, st, hm, geo, hm%ep%kick, td%dt, sys%ks, iter)
 
@@ -572,8 +558,6 @@ contains
           message(1) = "Unable to write time-dependent restart information."
           call messages_warning(1)
         end if
-
-        call pes_output(td%pesv, gr%mesh, st, iter, sys%outp, td%dt, gr, geo)
 
         if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
@@ -1005,9 +989,6 @@ contains
     call potential_interpolation_dump(td%tr%vksold, restart, gr, st%d%nspin, err2)
     if (err2 /= 0) ierr = ierr + 2
 
-    call pes_dump(restart, td%pesv, st, gr%mesh, err)
-    if (err /= 0) ierr = ierr + 4
-
     ! Gauge field restart
     if (gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_dump(restart, hm%ep%gfield, ierr)
@@ -1056,12 +1037,6 @@ contains
     call potential_interpolation_load(td%tr%vksold, restart, gr, st%d%nspin, err2)
 
     if (err2 /= 0) ierr = ierr + 2
-
-    ! read PES restart
-    if (td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) then
-      call pes_load(restart, td%pesv, st, gr%mesh, err)
-      if (err /= 0) ierr = ierr + 4
-    end if
 
     ! Gauge field restart
     if (gauge_field_is_applied(hm%ep%gfield)) then

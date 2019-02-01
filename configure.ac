@@ -394,7 +394,6 @@ AC_CONFIG_FILES([Makefile
   testsuite/functionals/Makefile
   testsuite/real_time/Makefile
   testsuite/periodic_systems/Makefile
-  testsuite/photo_electron/Makefile
   testsuite/pseudopotentials/Makefile
   testsuite/tutorials/Makefile
   testsuite/symmetries/Makefile])
