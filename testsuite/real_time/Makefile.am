@@ -27,15 +27,6 @@ dist_share_DATA =                      \
 	01-propagators.03-etrs.inp \
 	01-propagators.04-aetrs.inp \
 	01-propagators.05-caetrs.inp \
-	01-propagators.06-cn.inp \
-	01-propagators.07-magnus.inp \
-	01-propagators.08-exprk4.inp \
-        01-propagators.09-cfmagnus4.inp \
-	02-propagators.test \
-	02-propagators.01-gs.inp \
-	02-propagators.02-cnsparskit.inp \
-	02-propagators.03-rungekutta2.inp \
-	02-propagators.04-rungekutta4.inp \
 	03-td_self_consistent.test                                    \
 	03-td_self_consistent.01-gs.inp                               \
 	03-td_self_consistent.02-etrs.inp                             \
@@ -86,9 +77,6 @@ dist_share_DATA =                      \
 	14-absorption-spinors.03-td-restart.inp   \
 	14-absorption-spinors.04-spectrum.inp     \
         14-absorption-spinors.05-spectrum_compressed_sensing.inp \
-        15-crank_nicolson.test                 \
-        15-crank_nicolson.01-gs.inp            \
-        15-crank_nicolson.02-kick.inp          \
         17-absorption-spin_symmetry.01-gs.inp \
         17-absorption-spin_symmetry.02-td.inp \
         16-sparskit.test                 \

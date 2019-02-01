@@ -28,7 +28,6 @@ module propagator_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
-  use lda_u_oct_m
   use loct_pointer_oct_m
   use parser_oct_m
   use mesh_function_oct_m
@@ -40,12 +39,8 @@ module propagator_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
-  use propagator_cn_oct_m
   use propagator_etrs_oct_m
   use propagator_expmid_oct_m
-  use propagator_magnus_oct_m
-  use propagator_qoct_oct_m
-  use propagator_rk_oct_m
   use scdm_oct_m
   use scf_oct_m
   use sparskit_oct_m
@@ -239,15 +234,6 @@ contains
     !% dealing with problem with very high-frequency time-dependence.
     !% It is still in a experimental state; we are not yet sure of when it is
     !% advantageous.
-    !%Option qoct_tddft_propagator 10
-    !% WARNING: EXPERIMENTAL
-    !%Option runge_kutta4 13
-    !% WARNING: EXPERIMENTAL. Implicit Gauss-Legendre 4th order Runge-Kutta.
-    !%Option runge_kutta2 14
-    !% WARNING: EXPERIMENTAL. Implicit 2nd order Runge-Kutta (trapezoidal rule).
-    !% Similar, but not identical, to Crank-Nicolson method.
-    !%Option expl_runge_kutta4 15
-    !% WARNING: EXPERIMENTAL. Explicit RK4 method.
     !%Option cfmagnus4 16
     !% WARNING EXPERIMENTAL
     !%End
@@ -262,62 +248,6 @@ contains
     case(PROP_CAETRS)
       call messages_experimental("CAETRS propagator")
     case(PROP_EXPONENTIAL_MIDPOINT)
-    case(PROP_CRANK_NICOLSON)
-      ! set up pointer for zmf_dotu_aux, zmf_nrm2_aux
-      call mesh_init_mesh_aux(gr%mesh)
-    case(PROP_RUNGE_KUTTA4)
-#ifdef HAVE_SPARSKIT
-      ! set up pointer for zmf_dotu_aux, zmf_nrm2_aux
-      call mesh_init_mesh_aux(gr%mesh)
-      sp_distdot_mode = 3
-      tr%tdsk_size = 2 * st%d%dim * gr%mesh%np * (st%st_end - st%st_start + 1) * (st%d%kpt%end - st%d%kpt%start + 1)
-      SAFE_ALLOCATE(tr%tdsk)
-      call sparskit_solver_init(tr%tdsk_size, tr%tdsk, .true.)
-#else
-      message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
-      message(2) = 'library is required if the "runge_kutta4" propagator is selected.'
-      message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
-      call messages_fatal(3)
-#endif
-      call messages_experimental("Runge-Kutta 4 propagator")
-    case(PROP_RUNGE_KUTTA2)
-#ifdef HAVE_SPARSKIT
-      ! set up pointer for zmf_dotu_aux, zmf_nrm2_aux
-      call mesh_init_mesh_aux(gr%mesh)
-      sp_distdot_mode = 2
-      tr%tdsk_size = st%d%dim * gr%mesh%np * (st%st_end - st%st_start + 1) * (st%d%kpt%end - st%d%kpt%start + 1)
-      SAFE_ALLOCATE(tr%tdsk)
-      call sparskit_solver_init(tr%tdsk_size, tr%tdsk, .true.)
-#else
-      message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
-      message(2) = 'library is required if the "runge_kutta2" propagator is selected.'
-      message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
-      call messages_fatal(3)
-#endif
-      call messages_experimental("Runge-Kutta 2 propagator")
-    case(PROP_CRANK_NICOLSON_SPARSKIT)
-#ifdef HAVE_SPARSKIT
-      ! set up pointer for zmf_dotu_aux
-      call mesh_init_mesh_aux(gr%mesh)
-      sp_distdot_mode = 1
-      tr%tdsk_size = st%d%dim*gr%mesh%np
-      SAFE_ALLOCATE(tr%tdsk)
-      call sparskit_solver_init(st%d%dim*gr%mesh%np, tr%tdsk, .true.)
-#else
-      message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
-      message(2) = 'library is required if the "crank_nicolson_sparskit" propagator is selected.'
-      message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
-      call messages_fatal(3)
-#endif
-    case(PROP_MAGNUS)
-      call messages_experimental("Magnus propagator")
-      SAFE_ALLOCATE(tr%vmagnus(1:gr%mesh%np, 1:st%d%nspin, 1:2))
-    case(PROP_QOCT_TDDFT_PROPAGATOR)
-      call messages_experimental("QOCT+TDDFT propagator")
-    case(PROP_EXPLICIT_RUNGE_KUTTA4)
-      call messages_experimental("explicit Runge-Kutta 4 propagator")
-    case(PROP_CFMAGNUS4)
-      call messages_experimental("Commutator-Free Magnus propagator")
     case default
       call messages_input_error('TDPropagator')
     end select
@@ -326,21 +256,13 @@ contains
     if(have_fields) then
       if(tr%method /= PROP_ETRS .and.    &
          tr%method /= PROP_AETRS .and. &
-         tr%method /= PROP_EXPONENTIAL_MIDPOINT .and. &
-         tr%method /= PROP_QOCT_TDDFT_PROPAGATOR .and. &
-         tr%method /= PROP_CRANK_NICOLSON .and. &
-         tr%method /= PROP_RUNGE_KUTTA4 .and. &
-         tr%method /= PROP_EXPLICIT_RUNGE_KUTTA4 .and. &
-         tr%method /= PROP_RUNGE_KUTTA2 .and. &
-         tr%method /= PROP_CRANK_NICOLSON_SPARSKIT ) then
+         tr%method /= PROP_EXPONENTIAL_MIDPOINT) then
         message(1) = "To move the ions or put in a gauge field, use the etrs, aetrs or exp_mid propagators." 
         call messages_fatal(1)
       end if
     end if
 
     select case(tr%method)
-    case(PROP_CFMAGNUS4)
-      call potential_interpolation_init(tr%vksold, gr%mesh%np, st%d%nspin, family_is_mgga, order = 4)
     case default
       call potential_interpolation_init(tr%vksold, gr%mesh%np, st%d%nspin, family_is_mgga)
     end select
@@ -534,26 +456,6 @@ contains
       call td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
     case(PROP_EXPONENTIAL_MIDPOINT)
       call exponential_midpoint(hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
-    case(PROP_CRANK_NICOLSON)
-      call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .false.)
-    case(PROP_RUNGE_KUTTA4)
-      call td_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo)
-    case(PROP_RUNGE_KUTTA2)
-      call td_runge_kutta2(ks, hm, gr, st, tr, time, dt, ions, geo)
-    case(PROP_CRANK_NICOLSON_SPARSKIT)
-      call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .true.)
-    case(PROP_MAGNUS)
-      call td_magnus(hm, gr, st, tr, time, dt)
-    case(PROP_QOCT_TDDFT_PROPAGATOR)
-      call td_qoct_tddft_propagator(hm, ks%xc, gr, st, tr, time, dt, ions, geo)
-    case(PROP_EXPLICIT_RUNGE_KUTTA4)
-      if(present(qcchi)) then
-        call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi)
-      else
-        call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo)
-      end if
-    case(PROP_CFMAGNUS4)
-      call td_cfmagnus4(ks, hm, gr, st, tr, time, dt, ions, geo, nt)
     end select
 
     generate = .false.
@@ -591,9 +493,6 @@ contains
       call gauge_field_get_force(hm%ep%gfield, gr, st)
       call gauge_field_propagate_vel(hm%ep%gfield, dt)
     end if
-
-    !We update the occupation matrices
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
 
     POP_SUB(propagator_dt)
     call profiling_out(prof)
@@ -654,11 +553,6 @@ contains
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_propagate(hm%ep%gfield, dt, iter*dt)
-    end if
-
-    !TODO: we should update the occupation matrices here 
-    if(hm%lda_u_level /= DFT_U_NONE) then
-      call messages_not_implemented("DFT+U with propagator_dt_bo")  
     end if
 
     call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)

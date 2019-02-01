@@ -503,13 +503,9 @@ noinst_HEADERS +=                            \
 all_f_srcs +=                               \
 	td/potential_interpolation.F90      \
 	td/propagator_base.F90              \
-	td/propagator_cn.F90                \
 	td/propagator_etrs.F90              \
 	td/propagator_expmid.F90            \
 	td/propagator.F90                   \
-	td/propagator_magnus.F90            \
-	td/propagator_qoct.F90              \
-	td/propagator_rk.F90                \
 	td/td_calc.F90                      \
 	td/td.F90                           \
 	td/td_write.F90
