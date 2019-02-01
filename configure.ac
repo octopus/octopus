@@ -291,23 +291,6 @@ ACX_FFTW
 dnl check for PFFT
 ACX_PFFT
 
-dnl check for NFFT
-AC_LANG_PUSH(C)
-ACX_NFFT
-AC_LANG_POP(C)
-
-dnl check for PNFFT
-ACX_PNFFT
-
-dnl check for NETCDF
-ACX_NETCDF
-
-dnl check for SPARSKIT
-ACX_SPARSKIT
-
-dnl check for NLOPT
-ACX_NLOPT
-  
 dnl check for Fortran MPI support
 if test x"$enable_mpi" != x"no"; then
   ACX_MPI([], AC_MSG_ERROR([could not compile an MPI test program]))
@@ -326,13 +309,6 @@ ACX_LIBFM
 dnl check for ISF included from version 1.7.6 of BigDFT
 ACX_ISF
 AM_CONDITIONAL(COMPILE_ISF, test x${HAVE_COMP_ISF} = x1)
-
-dnl check for PSPIO
-ACX_PSPIO
-
-dnl check for the Poke library to solve the Poisson equation
-dnl http://www.e-cam2020.eu:10080/ESL/poke
-ACX_POKE
 
 dnl check for compiled METIS5 and ParMETIS (also checks METIS in the same path)
 AC_LANG_PUSH(C)
