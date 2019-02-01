@@ -27,7 +27,6 @@ SUBDIRS = \
 	real_time        \
         symmetries       \
 	periodic_systems \
-	photo_electron   \
 	pseudopotentials \
 	tutorials
 

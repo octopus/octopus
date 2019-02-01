@@ -510,7 +510,6 @@ all_f_srcs +=                               \
 	td/propagator_magnus.F90            \
 	td/propagator_qoct.F90              \
 	td/propagator_rk.F90                \
-	td/spectrum.F90                     \
 	td/td_calc.F90                      \
 	td/td.F90                           \
 	td/td_write.F90
