@@ -529,55 +529,6 @@ noinst_HEADERS +=                           \
 	td/pes_mask_out_inc.F90             \
 	td/pes_flux_out_inc.F90
 
-
-# Sources in opt_control
-all_f_srcs +=                                        \
-	opt_control/controlfunction.F90              \
-	opt_control/filter.F90                       \
-	opt_control/initst.F90                       \
-	opt_control/opt_control.F90                  \
-	opt_control/opt_control_global.F90           \
-	opt_control/opt_control_iter.F90             \
-	opt_control/propagation.F90                  \
-	opt_control/target.F90
-
-noinst_HEADERS +=                                    \
-	opt_control/check_input_inc.F90              \
-	opt_control/controlfunction_trans_inc.F90    \
-	opt_control/finalcheck_inc.F90               \
-	opt_control/opt_control_c_inc.F90            \
-	opt_control/target_classical_inc.F90         \
-	opt_control/target_density_inc.F90           \
-	opt_control/target_excited_inc.F90           \
-	opt_control/target_exclude_inc.F90           \
-	opt_control/target_groundstate_inc.F90       \
-	opt_control/target_gstransformation_inc.F90  \
-	opt_control/target_hhg_inc.F90               \
-	opt_control/target_local_inc.F90             \
-	opt_control/target_spin_inc.F90              \
-	opt_control/target_tdlocal_inc.F90           \
-	opt_control/target_userdefined_inc.F90       \
-	opt_control/target_velocity_inc.F90
-
-
-# Sources in sternheimer
-all_f_srcs +=                                        \
-	sternheimer/em_resp_calc.F90                 \
-	sternheimer/em_resp.F90                      \
-	sternheimer/kdotp_calc.F90                   \
-	sternheimer/kdotp.F90                        \
-	sternheimer/phonons_lr.F90                   \
-	sternheimer/sternheimer.F90                  \
-	sternheimer/vdw.F90
-
-noinst_HEADERS +=                                    \
-	sternheimer/em_resp_calc_inc.F90             \
-	sternheimer/em_resp_inc.F90                  \
-	sternheimer/kdotp_calc_inc.F90               \
-	sternheimer/phonons_lr_inc.F90               \
-	sternheimer/sternheimer_inc.F90
-
-
 all_srcs = $(all_f_srcs) $(all_c_srcs)
 
 include/options.h: $(all_f_srcs) $(noinst_HEADERS)
