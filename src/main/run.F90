@@ -19,33 +19,22 @@
 #include "global.h"
 
 module run_oct_m
-  use casida_oct_m
   use em_resp_oct_m
   use fft_oct_m
-  use geom_opt_oct_m
   use global_oct_m
   use ground_state_oct_m
   use hamiltonian_oct_m
-  use invert_ks_oct_m
   use parser_oct_m
   use messages_oct_m
   use mpi_debug_oct_m
-  use memory_oct_m
   use multicomm_oct_m
-  use opt_control_oct_m
-  use phonons_fd_oct_m
-  use phonons_lr_oct_m
   use poisson_oct_m
-  use kdotp_oct_m
   use profiling_oct_m
-  use pulpo_oct_m
   use restart_oct_m
-  use static_pol_oct_m
   use system_oct_m
   use td_oct_m
   use test_oct_m
   use unit_system_oct_m
-  use unocc_oct_m
   use varinfo_oct_m
   use vdw_oct_m
   use xc_oct_m
@@ -63,20 +52,8 @@ module run_oct_m
   integer, public, parameter ::   &
     CM_NONE               =   0,  &
     CM_GS                 =   1,  &
-    CM_UNOCC              =   2,  &
     CM_TD                 =   3,  &
-    CM_GEOM_OPT           =   5,  &
-    CM_OPT_CONTROL        =   7,  &
-    CM_LR_POL             =   8,  &
-    CM_CASIDA             =   9,  &
-    CM_VDW                =  11,  &
-    CM_PHONONS_LR         =  12,  &
-    CM_ONE_SHOT           =  14,  &
-    CM_KDOTP              =  15,  &
-    CM_DUMMY              =  17,  &
-    CM_INVERTKDS          =  18,  &
-    CM_TEST               =  19,  &
-    CM_PULPO_A_FEIRA      =  99
+    CM_TEST               =  19
 
 contains
 
@@ -135,12 +112,6 @@ contains
 
     call calc_mode_init()
 
-    if(calc_mode_id == CM_PULPO_A_FEIRA) then
-      call pulpo_print()
-      POP_SUB(run)
-      return
-    end if
-
     call restart_module_init()
 
     ! initialize FFTs
@@ -170,18 +141,12 @@ contains
       end if
     end if
 
-    call messages_print_stress(stdout, 'Approximate memory requirements')
-    call memory_run(sys)
-    call messages_print_stress(stdout)
-
-    if(calc_mode_id /= CM_DUMMY) then
-      message(1) = "Info: Generating external potential"
-      call messages_info(1)
-      call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
-      message(1) = "      done."
-      call messages_info(1)
-    end if
-
+    message(1) = "Info: Generating external potential"
+    call messages_info(1)
+    call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
+    message(1) = "      done."
+    call messages_info(1)
+    
     if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
       call poisson_async_init(sys%ks%hartree_solver, sys%mc)
       ! slave nodes do not call the calculation routine
@@ -213,60 +178,10 @@ contains
       select case(calc_mode_id)
       case(CM_GS)
         call ground_state_run(sys, hm, fromScratch)
-      case(CM_UNOCC)
-        call unocc_run(sys, hm, fromScratch)
       case(CM_TD)
         if(sys%gr%sb%kpoints%use_symmetries) &
           call messages_experimental("KPoints symmetries with CalculationMode = td")
         call td_run(sys, hm, fromScratch)
-      case(CM_LR_POL)
-        if(sys%gr%sb%kpoints%use_symmetries) &
-          call messages_experimental("KPoints symmetries with CalculationMode = em_resp")
-        select case(get_resp_method())
-        case(FD)
-          call static_pol_run(sys, hm, fromScratch)
-        case(LR)
-          call em_resp_run(sys, hm, fromScratch)
-        end select
-      case(CM_VDW)
-         if(sys%gr%sb%kpoints%use_symmetries) &
-          call messages_experimental("KPoints symmetries with CalculationMode = vdw")
-        call vdW_run(sys, hm, fromScratch)
-      case(CM_GEOM_OPT)
-        if(sys%gr%sb%kpoints%use_symmetries) &
-          call messages_experimental("KPoints symmetries with CalculationMode = go")
-        call geom_opt_run(sys, hm, fromScratch)
-      case(CM_PHONONS_LR)
-        if(sys%gr%sb%kpoints%use_symmetries) &
-          call messages_experimental("KPoints symmetries with CalculationMode = vib_modes")
-        select case(get_resp_method())
-        case(FD)
-          call phonons_run(sys, hm)
-        case(LR)
-          call phonons_lr_run(sys, hm, fromscratch)
-        end select
-      case(CM_OPT_CONTROL)
-        if(sys%gr%sb%kpoints%use_symmetries) &
-          call messages_experimental("KPoints symmetries with CalculationMode = opt_control")
-        call opt_control_run(sys, hm)
-      case(CM_CASIDA)
-        if(sys%gr%sb%kpoints%use_symmetries) &
-          call messages_experimental("KPoints symmetries with CalculationMode = casida")
-        call casida_run(sys, hm, fromScratch)
-      case(CM_ONE_SHOT)
-        message(1) = "CalculationMode = one_shot is obsolete. Please use gs with MaximumIter = 0."
-        call messages_fatal(1)
-      case(CM_KDOTP)
-        if(sys%gr%sb%kpoints%use_symmetries) &
-          call messages_experimental("KPoints symmetries with CalculationMode = kdotp")
-        call kdotp_lr_run(sys, hm, fromScratch)
-      case(CM_DUMMY)
-      case(CM_INVERTKDS)
-        if(sys%gr%sb%kpoints%use_symmetries) &
-          call messages_experimental("KPoints symmetries with CalculationMode = invert_ks")
-        call invert_ks_run(sys, hm)
-      case(CM_PULPO_A_FEIRA)
-        ASSERT(.false.) !this is handled before, if we get here, it is an error
       end select
 
       call profiling_out(calc_mode_prof)
@@ -292,12 +207,10 @@ contains
       PUSH_SUB(calc_mode_init)
 
       select case(calc_mode_id)
-      case(CM_GS, CM_GEOM_OPT, CM_UNOCC)
+      case(CM_GS)
         call ground_state_run_init()
       case(CM_TD)
         call td_run_init()
-      case(CM_CASIDA)
-        call casida_run_init()
       end select
 
       POP_SUB(calc_mode_init)

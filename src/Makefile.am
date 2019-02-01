@@ -589,20 +589,9 @@ include/defaults.h: $(all_f_srcs) $(noinst_HEADERS)
 bin_PROGRAMS = pulpito
 
 pulpito_f_srcs =                             \
-	main/invert_ks.F90                   \
-	main/memory.F90                      \
-	main/unocc.F90                       \
-	main/static_pol.F90                  \
-	main/geom_opt.F90                    \
-	main/phonons_fd.F90                  \
-	main/casida.F90                      \
-	main/pulpo.F90                       \
 	main/test.F90                        \
 	main/run.F90                         \
 	main/main.F90
-
-noinst_HEADERS += \
-	main/casida_inc.F90
 
 pulpito_SOURCES = $(pulpito_f_srcs) $(all_srcs)
 pulpito_LDADD = $(all_LIBS)
