@@ -2,7 +2,7 @@
 
 Test       : Hartree OpenCL
 Options    : clamdfft
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, components
 Enabled    : Yes
 

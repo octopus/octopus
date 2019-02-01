@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Self-consistent time propagation
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, real_time
 Enabled    : Yes
 

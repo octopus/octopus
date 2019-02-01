@@ -6,11 +6,11 @@
 # equal, except for few numerical differences (proagation scheme, etc), with the 
 # calculation presented in S. C. Rae et al., Phys. Rev. A. 50, 1946 (1994). That was one
 # of the first HHG spectra computed, shortly after the high harmonics from atomic gases
-# were discovered. The results obtained with octopus are similar to the ones shown in 
+# were discovered. The results obtained with pulpito are similar to the ones shown in 
 # Fig. 2(a) of that paper.
 
 Test       : High harmonic generation
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, real_time
 Enabled    : Yes
 

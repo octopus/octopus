@@ -2,7 +2,7 @@
 
 Test       : Corrected approximated enforced time-reversal symmetry propagator
 Options_MPI : mpi2
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, real_time
 Enabled    : Yes
 

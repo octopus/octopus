@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : 1D-Helium
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, finite_systems_2d
 Enabled    : Yes
 

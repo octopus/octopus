@@ -2,7 +2,7 @@
 
 Test       : BerkeleyGW
 Options    : berkeleygw
-Program    : octopus
+Program    : pulpito
 TestGroups : long-run, periodic_systems
 Enabled    : Yes
 

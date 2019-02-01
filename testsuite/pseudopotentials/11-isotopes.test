@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Isotopes
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, pseudopotentials
 Enabled    : Yes
 

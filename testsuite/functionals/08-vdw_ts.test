@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Tkatchenko-Scheffler van der Waals correction
-Program    : octopus
+Program    : pulpito
 TestGroups : long-run, functionals
 Enabled    : Yes
 

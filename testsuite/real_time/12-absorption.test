@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Absorption spectrum
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, real_time
 Enabled    : Yes
 

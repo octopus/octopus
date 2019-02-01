@@ -2,7 +2,7 @@
 # $Id: 09-vdw_ts_sc.test 14491 2015-08-01 06:07:14Z xavier $
 
 Test       : DFT-D3 functional test
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, functionals
 Enabled    : Yes
 

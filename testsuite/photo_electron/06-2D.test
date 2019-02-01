@@ -1,5 +1,5 @@
 Test       : Photoelectron in 2D
-Program    : octopus
+Program    : pulpito
 TestGroups : long-run, photo_electron
 Enabled    : Yes
 

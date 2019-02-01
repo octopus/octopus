@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Time-Dependent Polarizable Continuum Model (PCM) with non-equilibrium effects
-Program    : octopus
+Program    : pulpito
 TestGroups : long-run, finite_systems_3d
 Enabled    : Yes
 Processors : 4

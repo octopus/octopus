@@ -2,7 +2,7 @@
 
 Test       : Hartree LIBISF
 Options    : libisf
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, components
 Enabled    : Yes
 

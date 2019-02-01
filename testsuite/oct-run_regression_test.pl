@@ -176,7 +176,7 @@ if (!$opt_m) {
     my $name = $opt_f;
     $name =~ s/\.\.\///g;
     $name =~ s/\//-/g;
-    $workdir = tempdir("$tempdirpath/octopus" . "-" . $name . ".XXXXXX");
+    $workdir = tempdir("$tempdirpath/pulpito" . "-" . $name . ".XXXXXX");
     chomp($workdir);
 
     system ("rm -rf $workdir");

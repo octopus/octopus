@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Uranium 235
-Program    : octopus
+Program    : pulpito
 TestGroups : long-run, pseudopotentials
 Enabled    : Yes
 

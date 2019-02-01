@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : 1D-Neon - MPI
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, finite_systems_1d
 Enabled    : Yes
 

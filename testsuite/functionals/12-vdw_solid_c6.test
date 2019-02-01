@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Tkatchenko-Scheffler van der Waals correction (self-consistent) in solids 
-Program    : octopus
+Program    : pulpito
 TestGroups : functionals, long-run, VDW_test
 Enabled    : Yes
 

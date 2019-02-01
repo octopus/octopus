@@ -2,7 +2,7 @@
 
 Test       : Hartree pfft
 Options    : pfft
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, components
 Enabled    : Yes
 

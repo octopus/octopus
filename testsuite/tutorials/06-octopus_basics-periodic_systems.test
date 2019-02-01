@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Octopus basics - Periodic systems
-Program    : octopus
+Program    : pulpito
 TestGroups : long-run, tutorials
 Enabled    : Yes
 

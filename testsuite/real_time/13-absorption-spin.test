@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Absorption spectrum (spin-polarized)
-Program    : octopus
+Program    : pulpito
 TestGroups : long-run, real_time
 Enabled    : Yes
 
@@ -106,7 +106,7 @@ match ; Static polarizability ; GREPFIELD(cross_section_vector.1, 'Static polari
 #match ; Sigma       6 ; LINE(cross_section_tensor, 163, 21); 0.72994915E-01
 #match ; Anisotropy  6 ; LINE(cross_section_tensor, 163, 41); 0.14135404E+00
 
-Program : octopus
+Program : pulpito
 Processors : 4
 Input      : 13-absorption-spin.06-td_spinkick.inp
 match ; Energy [step   1] ; LINEFIELD(td.general/energy, -101, 3) ; -6.136196726297e+00

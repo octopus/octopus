@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Triclinic symmetries
-Program    : octopus
+Program    : pulpito
 TestGroups : long-run, periodic_systems, symmetries
 Enabled    : Yes
 

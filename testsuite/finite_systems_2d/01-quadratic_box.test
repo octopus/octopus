@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Quadratic Box
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, finite_systems_2d
 Enabled    : Yes
 

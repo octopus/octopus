@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Water in Supercell
-Program    : octopus
+Program    : pulpito
 TestGroups : long-run, periodic_systems
 Enabled    : Yes
 

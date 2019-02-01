@@ -1,6 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 Test       : Cu2 HGH 
-Program    : octopus
+Program    : pulpito
 TestGroups : long-run, pseudopotentials
 Enabled    : Yes
 

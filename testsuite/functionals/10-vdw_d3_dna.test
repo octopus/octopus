@@ -2,7 +2,7 @@
 # $Id$
 
 Test       : DFT-D3 DNA
-Program    : octopus
+Program    : pulpito
 TestGroups : long-run, functionals
 Enabled    : Yes
 

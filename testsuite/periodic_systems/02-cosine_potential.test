@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Cosine Potential in 1D
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, periodic_systems
 Enabled    : Yes
 

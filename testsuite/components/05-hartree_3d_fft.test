@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Hartree FFT
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, components
 Enabled    : Yes
 

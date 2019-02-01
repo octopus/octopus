@@ -2,7 +2,7 @@
 
 Test       : Propagators (requiring SPARSKIT)
 Options    : sparskit
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, real_time
 Enabled    : Yes
 

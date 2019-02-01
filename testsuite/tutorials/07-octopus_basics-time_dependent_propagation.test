@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Octopus basics - Time-dependent propagation
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, tutorials
 Enabled    : Yes
 

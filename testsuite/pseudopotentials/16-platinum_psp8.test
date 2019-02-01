@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Platinum PSP8 
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, pseudopotentials
 Enabled    : Yes
 

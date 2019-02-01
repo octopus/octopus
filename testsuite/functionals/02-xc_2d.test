@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : XC 2D
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, functionals
 Enabled    : Yes
 
@@ -34,7 +34,7 @@ match ; Hartree eigenvalue 2 dn                  ; GREPFIELD(static/info, '  2  
 
 # Results for 8-electron quantum dots, provided in the paper, can
 # also be approximately reproduced. I do not put a test because it
-# would be too slow. In fact, the results provided by octopus are
+# would be too slow. In fact, the results provided by pulpito are
 # lower in energy and closer to the Quantum Monte Carlo numbers, which
 # could be due to the use of an underconverged basis set in the paper.
 

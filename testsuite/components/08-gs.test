@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Gram-Schmidt orthogonalization
-Program    : octopus
+Program    : pulpito
 TestGroups : long-run, components
 Enabled    : Yes
 

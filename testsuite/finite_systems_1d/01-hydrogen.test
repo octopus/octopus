@@ -1,18 +1,18 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : 1D-Hydrogen
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run; finite_systems_1d
 Enabled    : Yes
 
 # This test calculates a one-dimensional model for Hydrogen, considering
 # a soft-Coulomb nucleus-electron interaction. It calculates the ground-state
 # in a first run, and then the first nine excited states in the "unocc" mode.
-# It is about the simplest thing one can do with octopus...
+# It is about the simplest thing one can do with pulpito...
 #
 # It is a replication of the calculation presented in Table I of
 # [J. Javanainen, J. H. Eberly and Q. Su, Phys. Rev. A 38, 3430 (1998)].
-# The numbers provided in that Table should match the values that octopus
+# The numbers provided in that Table should match the values that pulpito
 # prints in the static/eigenvalues file.
 
 Input: 01-hydrogen.01-ground_state.inp

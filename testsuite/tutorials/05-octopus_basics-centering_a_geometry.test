@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Octopus basics - Centering a geometry
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, tutorials
 Enabled    : Yes
 

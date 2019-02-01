@@ -1,6 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 Test       : Forces
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 

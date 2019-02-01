@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Biot-Savart law
-Program    : octopus
+Program    : pulpito
 TestGroups : long-run, finite_systems_2d
 Enabled    : Yes
 

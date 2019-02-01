@@ -2,7 +2,7 @@
 
 Test       : Born-Oppenheimer Molecular Dynamics
 Options_MPI: scalapack
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, real_time
 Enabled    : Yes
 

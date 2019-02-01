@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Morse potential
-Program    : octopus
+Program    : pulpito
 TestGroups : short-run, finite_systems_1d
 Enabled    : Yes
 
