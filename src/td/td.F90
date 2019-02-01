@@ -38,7 +38,6 @@ module td_oct_m
   use lda_u_io_oct_m
   use loct_oct_m
   use loct_math_oct_m
-  use modelmb_exchange_syms_oct_m
   use mpi_oct_m
   use parser_oct_m
   use poisson_oct_m
@@ -544,9 +543,6 @@ contains
       if((sys%outp%output_interval > 0 .and. mod(iter, sys%outp%output_interval) == 0) .or. &
         iter == td%max_iter .or. stopping) then ! output
         ! TODO this now overwrites wf inside st. If this is not wanted need to add an optional overwrite=no flag
-        if (st%modelmbparticles%nparticle > 0) then
-          call modelmb_sym_all_states (gr, st, geo)
-        end if
         call td_write_output(write_handler, gr, st, hm, sys%ks, sys%outp, geo, iter, td%dt)
       end if
 

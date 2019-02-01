@@ -23,7 +23,6 @@ module td_write_oct_m
   use iso_c_binding
   use comm_oct_m
   use current_oct_m
-  use excited_states_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -86,7 +85,6 @@ module td_write_oct_m
     OUT_MULTIPOLES  =  1, &
     OUT_ANGULAR     =  2, &
     OUT_SPIN        =  3, &
-    OUT_POPULATIONS =  4, &
     OUT_COORDS      =  5, &
     OUT_ACC         =  6, & 
     OUT_LASER       =  7, &
@@ -126,7 +124,6 @@ module td_write_oct_m
     !! calculate the projections(s) onto it.
     type(states_t) :: gs_st    
     integer        :: n_excited_states  !< number of excited states onto which the projections are calculated.
-    type(excited_states_t), pointer :: excited_st(:) !< The excited states.
     type(partial_charges_t) :: partial_charges
     integer :: compute_interval     !< Compute every compute_interval
   end type td_write_t
@@ -202,13 +199,6 @@ contains
     !%Option spin bit(2)
     !% (Experimental) Outputs the expectation value of the spin, which can be used to calculate magnetic
     !% circular dichroism.
-    !%Option populations bit(3)
-    !% (Experimental) Outputs the projection of the time-dependent
-    !% Kohn-Sham Slater determinant onto the ground state (or
-    !% approximations to the excited states) to the file
-    !% <tt>td.general/populations</tt>. Note that the calculation of
-    !% populations is expensive in memory and computer time, so it
-    !% should only be used if it is really needed. See <tt>TDExcitedStatesToProject</tt>.
     !%Option geometry bit(4)
     !% If set (and if the atoms are allowed to move), outputs the coordinates, velocities,
     !% and forces of the atoms to the the file <tt>td.general/coordinates</tt>. On by default if <tt>MoveIons = yes</tt>.
@@ -298,7 +288,6 @@ contains
 
     ! experimental stuff
     if(writ%out(OUT_SPIN)%write) call messages_experimental('TDOutput = spin')
-    if(writ%out(OUT_POPULATIONS)%write) call messages_experimental('TDOutput = populations')
     if(writ%out(OUT_PROJ)%write) call messages_experimental('TDOutput = td_occup')
     if(writ%out(OUT_ION_CH)%write) call messages_experimental('TDOutput = ionization_channels')
     if(writ%out(OUT_PARTIAL_CHARGES)%write) call messages_experimental('TDOutput = partial_charges')
@@ -348,8 +337,7 @@ contains
     ! This variable is documented in scf/scf.F90
     call parse_variable('LocalMagneticMomentsSphereRadius', rmin*M_HALF, writ%lmm_r, units_inp%length)
 
-    if(writ%out(OUT_PROJ)%write .or. writ%out(OUT_POPULATIONS)%write &
-      .or.writ%out(OUT_KP_PROJ)%write .or. writ%out(OUT_N_EX)%write) then
+    if(writ%out(OUT_PROJ)%write .or.writ%out(OUT_KP_PROJ)%write .or. writ%out(OUT_N_EX)%write) then
       if (.not.writ%out(OUT_KP_PROJ)%write.and. &
           .not.writ%out(OUT_N_EX)%write.and. &
           (st%parallel_in_states.or.st%d%kpt%parallel)) then
@@ -383,25 +371,7 @@ contains
           call messages_fatal(1)
         end if
  
-        ! do this only when not calculating populations, since all states are needed then
-        if(.not. writ%out(OUT_POPULATIONS)%write) then
-          ! We will store the ground-state Kohn-Sham system for all processors.
-          !%Variable TDProjStateStart
-          !%Type integer
-          !%Default 1
-          !%Section Time-Dependent::TD Output
-          !%Description
-          !% To be used with <tt>TDOutput = td_occup</tt>. Not available if <tt>TDOutput = populations</tt>.
-          !% Only output projections to states above <tt>TDProjStateStart</tt>. Usually one is only interested
-          !% in particle-hole projections around the HOMO, so there is no need to calculate (and store)
-          !% the projections of all TD states onto all static states. This sets a lower limit. The upper limit
-          !% is set by the number of states in the propagation and the number of unoccupied states
-          !% available.
-          !%End
-          call parse_variable('TDProjStateStart', 1, writ%gs_st%st_start)
-        else
-           writ%gs_st%st_start = 1
-        end if
+        writ%gs_st%st_start = 1
        
         ! allocate memory
         SAFE_ALLOCATE(writ%gs_st%occ(1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
@@ -428,58 +398,6 @@ contains
       call restart_end(restart_gs)
     end if
  
-    ! Build the excited states...
-    if(writ%out(OUT_POPULATIONS)%write) then
-      !%Variable TDExcitedStatesToProject
-      !%Type block
-      !%Section Time-Dependent::TD Output
-      !%Description
-      !% <b>[WARNING: This is a *very* experimental feature]</b>
-      !% To be used with <tt>TDOutput = populations</tt>.
-      !% The population of the excited states
-      !% (as defined by <Phi_I|Phi(t)> where |Phi(t)> is the many-body time-dependent state at
-      !% time <i>t</i>, and |Phi_I> is the excited state of interest) can be approximated -- it is not clear 
-      !% how well -- by substituting for those real many-body states the time-dependent Kohn-Sham
-      !% determinant and some modification of the Kohn-Sham ground-state determinant (<i>e.g.</i>,
-      !% a simple HOMO-LUMO substitution, or the Casida ansatz for excited states in linear-response
-      !% theory. If you set <tt>TDOutput</tt> to contain <tt>populations</tt>, you may ask for these approximated
-      !% populations for a number of excited states, which will be described in the files specified
-      !% in this block: each line should be the name of a file that contains one excited state.
-      !%
-      !% This file structure is the one written by the casida run mode, in the files in the directory <tt>*_excitations</tt>.
-      !% The file describes the "promotions" from occupied
-      !% to unoccupied levels that change the initial Slater determinant
-      !% structure specified in ground_state. These promotions are a set
-      !% of electron-hole pairs. Each line in the file, after an optional header, has four
-      !% columns:
-      !%
-      !% <i>i  a  <math>\sigma</math> weight</i>
-      !% 
-      !% where <i>i</i> should be an occupied state, <i>a</i> an unoccupied one, and <math>\sigma</math>
-      !% the spin of the corresponding orbital. This pair is then associated with a
-      !% creation-annihilation pair <math>a^{\dagger}_{a,\sigma} a_{i,\sigma}</math>, so that the
-      !% excited state will be a linear combination in the form:
-      !% 
-      !% <math>\left|{\rm ExcitedState}\right> =
-      !% \sum weight(i,a,\sigma) a^{\dagger}_{a,\sigma} a_{i,\sigma} \left|{\rm GroundState}\right></math>
-      !%
-      !% where <i>weight</i> is the number in the fourth column.
-      !% These weights should be normalized to one; otherwise the routine
-      !% will normalize them, and write a warning.
-      !%End
-      if(parse_block('TDExcitedStatesToProject', blk) == 0) then
-        writ%n_excited_states = parse_block_n(blk)
-        SAFE_ALLOCATE(writ%excited_st(1:writ%n_excited_states))
-        do ist = 1, writ%n_excited_states
-          call parse_block_string(blk, ist-1, 0, filename)
-          call excited_states_init(writ%excited_st(ist), writ%gs_st, trim(filename)) 
-        end do
-      else
-        writ%n_excited_states = 0
-        nullify(writ%excited_st)
-      end if
-    end if
-
     !%Variable TDOutputComputeInterval
     !%Type integer
     !%Default 50
@@ -556,10 +474,6 @@ contains
       if(writ%out(OUT_TEMPERATURE)%write) &
         call write_iter_init(writ%out(OUT_TEMPERATURE)%handle, first, &
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/temperature")))
-
-      if(writ%out(OUT_POPULATIONS)%write) &
-        call write_iter_init(writ%out(OUT_POPULATIONS)%handle, first, &
-          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/populations")))
 
       if(writ%out(OUT_ACC)%write) &
         call write_iter_init(writ%out(OUT_ACC)%handle, first, &
@@ -701,15 +615,7 @@ contains
       end do
     end if
 
-    if( writ%out(OUT_POPULATIONS)%write ) then
-      do ist = 1, writ%n_excited_states
-        call excited_states_kill(writ%excited_st(ist))
-      end do
-      writ%n_excited_states = 0
-    end if
-
-    if(writ%out(OUT_PROJ)%write.or.writ%out(OUT_POPULATIONS)%write &
-       .or. writ%out(OUT_N_EX)%write) then
+    if(writ%out(OUT_PROJ)%write .or. writ%out(OUT_N_EX)%write) then
       call states_end(writ%gs_st)
     end if
 
@@ -778,10 +684,6 @@ contains
 
     if(writ%out(OUT_TEMPERATURE)%write) &
       call td_write_temperature(writ%out(OUT_TEMPERATURE)%handle, geo, iter)
-
-    if(writ%out(OUT_POPULATIONS)%write) &
-      call td_write_populations(writ%out(OUT_POPULATIONS)%handle, gr%mesh, st, &
-        writ, dt, iter)
 
     if(writ%out(OUT_ACC)%write) &
       call td_write_acc(writ%out(OUT_ACC)%handle, gr, geo, st, hm, dt, iter)
@@ -1483,83 +1385,6 @@ contains
 
     POP_SUB(td_write_temperature)
   end subroutine td_write_temperature
-
-
-  ! ---------------------------------------------------------
-  subroutine td_write_populations(out_populations, mesh, st, writ, dt, iter)
-    type(c_ptr),            intent(inout) :: out_populations
-    type(mesh_t),           intent(in)    :: mesh
-    type(states_t),         intent(inout) :: st
-    type(td_write_t),       intent(in)    :: writ
-    FLOAT,                  intent(in)    :: dt
-    integer,                intent(in)    :: iter
- 
-    integer :: ist
-    character(len=6) :: excited_name
-    CMPLX :: gsp
-    CMPLX, allocatable :: excited_state_p(:)
-    CMPLX, allocatable :: dotprodmatrix(:, :, :)
-
-
-    PUSH_SUB(td_write_populations)
-
-    ! this is required if st%X(psi) is used
-    call states_sync(st)
-
-    SAFE_ALLOCATE(dotprodmatrix(1:writ%gs_st%nst, 1:st%nst, 1:st%d%nik))
-    call zstates_matrix(mesh, writ%gs_st, st, dotprodmatrix)
-
-    ! all processors calculate the projection
-    gsp = zstates_mpdotp(mesh, writ%gs_st, st, dotprodmatrix)
-
-    if(writ%n_excited_states > 0) then
-      SAFE_ALLOCATE(excited_state_p(1:writ%n_excited_states))
-      do ist = 1, writ%n_excited_states
-        excited_state_p(ist) = zstates_mpdotp(mesh, writ%excited_st(ist), st, dotprodmatrix)
-      end do
-    end if
-
-    if(mpi_grp_is_root(mpi_world)) then
-      if(iter == 0) then
-        call td_write_print_header_init(out_populations)
-
-        ! first line -> column names
-        call write_iter_header_start(out_populations)
-        call write_iter_header(out_populations, 'Re<Phi_gs|Phi(t)>')
-        call write_iter_header(out_populations, 'Im<Phi_gs|Phi(t)>')
-        do ist = 1, writ%n_excited_states
-          write(excited_name,'(a2,i3,a1)') 'P(', ist,')'
-          call write_iter_header(out_populations, 'Re<'//excited_name//'|Phi(t)>')
-          call write_iter_header(out_populations, 'Im<'//excited_name//'|Phi(t)>')
-        end do
-        call write_iter_nl(out_populations)
-
-        ! second line -> units
-        call write_iter_string(out_populations, '#[Iter n.]')
-        call write_iter_header(out_populations, '[' // trim(units_abbrev(units_out%time)) // ']')
-        call write_iter_nl(out_populations)
-
-        call td_write_print_header_end(out_populations)
-      end if
-
-      ! cannot call write_iter_start, for the step is not 1
-      call write_iter_int(out_populations, iter, 1)
-      call write_iter_double(out_populations, units_from_atomic(units_out%time, iter*dt),  1)
-      call write_iter_double(out_populations, real(gsp),  1)
-      call write_iter_double(out_populations, aimag(gsp), 1)
-      do ist = 1, writ%n_excited_states
-        call write_iter_double(out_populations, real(excited_state_p(ist)),  1)
-        call write_iter_double(out_populations, aimag(excited_state_p(ist)), 1)
-      end do
-      call write_iter_nl(out_populations)
-    end if
-
-    if(writ%n_excited_states > 0) then
-      SAFE_DEALLOCATE_A(excited_state_p)
-    end if
-    SAFE_DEALLOCATE_A(dotprodmatrix)
-    POP_SUB(td_write_populations)
-  end subroutine td_write_populations
 
 
   ! ---------------------------------------------------------

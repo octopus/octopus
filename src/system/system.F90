@@ -31,7 +31,6 @@ module system_oct_m
   use io_function_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use modelmb_particles_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use output_oct_m
@@ -95,7 +94,6 @@ contains
     call grid_init_stage_1(sys%gr, sys%geo)
     ! if independent particles in N dimensions are being used, need to initialize them
     !  after masses are set to 1 in grid_init_stage_1 -> derivatives_init
-    call modelmb_copy_masses (sys%st%modelmbparticles, sys%gr%der%masses)
 
     call parallel_init()
 

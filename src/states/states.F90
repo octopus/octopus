@@ -42,7 +42,6 @@ module states_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use modelmb_particles_oct_m
   use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
   use mpi_lib_oct_m
   use multicomm_oct_m
@@ -160,11 +159,6 @@ module states_oct_m
     logical        :: fromScratch
     type(smear_t)  :: smear         ! smearing of the electronic occupations
 
-    type(modelmb_particle_t) :: modelmbparticles
-    integer,pointer:: mmb_nspindown(:,:) !< number of down spins in the selected Young diagram for each type and state
-    integer,pointer:: mmb_iyoung(:,:)    !< index of the selected Young diagram for each type and state
-    FLOAT, pointer :: mmb_proj(:)        !< projection of the state onto the chosen Young diagram
-
     !> This is stuff needed for the parallelization in states.
     logical                     :: parallel_in_states !< Am I parallel in states?
     type(mpi_grp_t)             :: mpi_grp            !< The MPI group related to the parallelization in states.
@@ -220,10 +214,6 @@ contains
     call distributed_nullify(st%dist)
     
     st%d%orth_method = 0
-    call modelmb_particles_nullify(st%modelmbparticles)
-    nullify(st%mmb_nspindown)
-    nullify(st%mmb_iyoung)
-    nullify(st%mmb_proj)
 
     st%priv%wfs_type = TYPE_FLOAT ! By default, calculations use real wavefunctions
 
@@ -554,17 +544,6 @@ contains
     st%parallel_in_states = .false.
 
     call distributed_nullify(st%d%kpt, st%d%nik)
-
-    call modelmb_particles_init (st%modelmbparticles,gr)
-    if (st%modelmbparticles%nparticle > 0) then
-      ! FIXME: check why this is not initialized properly in the test, or why it is written out when not initialized
-      SAFE_ALLOCATE(st%mmb_nspindown(1:st%modelmbparticles%ntype_of_particle, 1:st%nst))
-      st%mmb_nspindown(:,:) = -1
-      SAFE_ALLOCATE(st%mmb_iyoung(1:st%modelmbparticles%ntype_of_particle, 1:st%nst))
-      st%mmb_iyoung(:,:) = -1
-      SAFE_ALLOCATE(st%mmb_proj(1:st%nst))
-      st%mmb_proj(:) = M_ZERO
-    end if
 
     !%Variable SymmetrizeDensity
     !%Type logical
@@ -1335,13 +1314,6 @@ contains
 
     call states_dim_copy(stout%d, stin%d)
 
-    call modelmb_particles_copy(stout%modelmbparticles, stin%modelmbparticles)
-    if (stin%modelmbparticles%nparticle > 0) then
-      call loct_pointer_copy(stout%mmb_nspindown, stin%mmb_nspindown)
-      call loct_pointer_copy(stout%mmb_iyoung, stin%mmb_iyoung)
-      call loct_pointer_copy(stout%mmb_proj, stin%mmb_proj)
-    end if
-
     stout%priv%wfs_type = stin%priv%wfs_type
     stout%nst           = stin%nst
 
@@ -1420,13 +1392,6 @@ contains
     PUSH_SUB(states_end)
 
     call states_dim_end(st%d)
-
-    if (st%modelmbparticles%nparticle > 0) then
-      SAFE_DEALLOCATE_P(st%mmb_nspindown)
-      SAFE_DEALLOCATE_P(st%mmb_iyoung)
-      SAFE_DEALLOCATE_P(st%mmb_proj)
-    end if
-    call modelmb_particles_end(st%modelmbparticles)
 
     ! this deallocates dpsi, zpsi, psib, iblock, iblock
     call states_deallocate_wfns(st)

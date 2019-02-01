@@ -33,7 +33,6 @@ module propagator_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use multicomm_oct_m
-  use opt_control_state_oct_m
   use output_oct_m
   use poisson_oct_m
   use potential_interpolation_oct_m
@@ -405,7 +404,7 @@ contains
   !! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
   subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, ionic_scale, nt, ions, geo, outp, &
-    scsteps, update_energy, qcchi)
+    scsteps, update_energy)
     type(v_ks_t), target,            intent(inout) :: ks
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
@@ -420,7 +419,6 @@ contains
     type(output_t),                  intent(in)    :: outp
     integer,              optional,  intent(out)   :: scsteps
     logical,              optional,  intent(in)    :: update_energy
-    type(opt_control_state_t), optional, target, intent(inout) :: qcchi
 
     logical :: generate, update_energy_
     type(profile_t), save :: prof
