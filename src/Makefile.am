@@ -383,8 +383,6 @@ all_f_srcs +=                                        \
 	hamiltonian/lasers.F90                       \
 	hamiltonian/libvdwxc.F90                     \
 	hamiltonian/oct_exchange.F90                 \
-	hamiltonian/pcm.F90                          \
-	hamiltonian/pcm_eom.F90                      \
 	hamiltonian/projector.F90                    \
 	hamiltonian/projector_matrix.F90             \
 	hamiltonian/rkb_projector.F90                \

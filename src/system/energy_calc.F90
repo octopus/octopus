@@ -37,7 +37,6 @@ module energy_calc_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use profiling_oct_m
-  use pcm_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use states_oct_m
@@ -103,19 +102,6 @@ contains
       end if
     end if
 
-    if (hm%pcm%run_pcm) then
-      hm%pcm%counter = hm%pcm%counter + 1
-      if (hm%pcm%localf) then
-        call pcm_elect_energy(hm%geo, hm%pcm, hm%energy%int_ee_pcm, hm%energy%int_en_pcm, &
-                                              hm%energy%int_ne_pcm, hm%energy%int_nn_pcm, &
-                                              E_int_e_ext = hm%energy%int_e_ext_pcm,      &
-                                              E_int_n_ext = hm%energy%int_n_ext_pcm       )
-      else
-        call pcm_elect_energy(hm%geo, hm%pcm, hm%energy%int_ee_pcm, hm%energy%int_en_pcm, &
-                                              hm%energy%int_ne_pcm, hm%energy%int_nn_pcm  )
-      end if
-    end if
-
     select case(hm%theory_level)
     case(INDEPENDENT_PARTICLES)
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues
@@ -128,15 +114,9 @@ contains
         M_HALF*(hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern - hm%energy%intnvxc - evxctau) &
         + hm%energy%correlation + hm%energy%vdw
 
-      ! FIXME: pcm terms are only added to total energy in DFT case
-      
     case(KOHN_SHAM_DFT)
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues &
-        - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation + hm%energy%vdw - hm%energy%intnvxc - evxctau &
-        - hm%energy%pcm_corr + hm%energy%int_ee_pcm + hm%energy%int_en_pcm &
-                             + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm &
-                             + hm%energy%int_e_ext_pcm + hm%energy%int_n_ext_pcm &
-        + hm%energy%dft_u -  hm%energy%int_dft_u
+        - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation + hm%energy%vdw - hm%energy%intnvxc - evxctau
 
     case(CLASSICAL)
       st%eigenval           = M_ZERO
@@ -183,20 +163,6 @@ contains
       write(message(10), '(6x,a, f18.8)')'-TS         = ', -units_from_atomic(units_out%energy, hm%energy%TS)
       call messages_info(10, iunit)
       
-      if (hm%pcm%run_pcm) then
-          write(message(1),'(6x,a, f18.8)')'E_e-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_ee_pcm + &
-                                                                                                  hm%energy%int_en_pcm + &
-                                                                                                  hm%energy%int_e_ext_pcm )
-          write(message(2),'(6x,a, f18.8)')'E_n-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_nn_pcm + &
-                                                                                                  hm%energy%int_ne_pcm + &
-                                                                                                  hm%energy%int_n_ext_pcm )
-          write(message(3),'(6x,a, f18.8)')'E_M-solvent = ',  units_from_atomic(units_out%energy, &
-                                                                             hm%energy%int_ee_pcm + hm%energy%int_en_pcm + &
-                                                                             hm%energy%int_nn_pcm + hm%energy%int_ne_pcm + &
-                                                                          hm%energy%int_e_ext_pcm + hm%energy%int_n_ext_pcm )
-          call messages_info(3, iunit)
-      end if
-
       if(full_) then
         write(message(1), '(6x,a, f18.8)')'Kinetic     = ', units_from_atomic(units_out%energy, hm%energy%kinetic)
         write(message(2), '(6x,a, f18.8)')'External    = ', units_from_atomic(units_out%energy, hm%energy%extern)

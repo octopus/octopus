@@ -107,9 +107,6 @@ dist_share_DATA = \
 	25-multiresolution.test \
 	27-fine_mesh.test                            \
 	27-fine_mesh.01-gs.inp \
-        29-pcm_chlorine_anion.01-ground_state.inp \
-        29-pcm_chlorine_anion.02-td_prop.inp      \
-        29-pcm_chlorine_anion.test \
         30-local_multipoles.01-gs.inp \
         30-local_multipoles.test                     \
 	31-acetylene_b3lyp.test                      \

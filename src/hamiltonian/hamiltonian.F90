@@ -52,7 +52,6 @@ module hamiltonian_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
-  use pcm_oct_m
   use restart_oct_m
   use scdm_oct_m
   use scissor_oct_m
@@ -139,7 +138,6 @@ module hamiltonian_oct_m
     logical :: family_is_mgga_with_exc !< obtained from sys%ks
 
     type(epot_t) :: ep         !< handles the external potential
-    type(pcm_t)  :: pcm        !< handles pcm variables
  
     !> absorbing boundaries
     logical :: adjoint
@@ -410,9 +408,6 @@ contains
 
     kick_present = hm%ep%kick%delta_strength /= M_ZERO
 
-    call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM  
-    if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT")
-    
     !%Variable SCDM_EXX
     !%Type logical
     !%Default no
@@ -557,7 +552,6 @@ contains
 
     SAFE_DEALLOCATE_P(hm%energy)
      
-    if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
     POP_SUB(hamiltonian_end)
   end subroutine hamiltonian_end
 
@@ -691,21 +685,6 @@ contains
     do ispin = 1, this%d%nspin
       if(ispin <= 2) then
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
-        !> Adds PCM contributions
-        if (this%pcm%run_pcm) then
-          if (this%pcm%solute) then
-            forall (ip = 1:mesh%np)  
-              this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
-                this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
-            end forall
-          end if
-          if (this%pcm%localf) then
-            forall (ip = 1:mesh%np)  
-              this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
-                this%pcm%v_ext_rs(ip)
-            end forall
-          end if 
-        end if
 
         if(this%bc%abtype == IMAGINARY_ABSORBING) then
           forall (ip = 1:mesh%np)
@@ -715,9 +694,7 @@ contains
 
       else !Spinors 
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
-          
       end if
-
 
     end do
 
@@ -919,20 +896,6 @@ contains
     call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep)
     call hamiltonian_update(this, gr%mesh, gr%der%boundaries, time)
    
-    if (this%pcm%run_pcm) then
-     !> Generates the real-space PCM potential due to nuclei which do not change
-     !! during the SCF calculation.
-     if (this%pcm%solute) &
-       call pcm_calc_pot_rs(this%pcm, gr%mesh, geo = geo)
-
-      !> Local field effects due to static electrostatic potentials (if they were).
-      !! The laser and the kick are included in subroutine v_ks_hartree (module v_ks).
-      !  Interpolation is needed, hence gr%mesh%np_part -> 1:gr%mesh%np
-      if( this%pcm%localf .and. associated(this%ep%v_static)) &
-        call pcm_calc_pot_rs(this%pcm, gr%mesh, v_ext = this%ep%v_ext(1:gr%mesh%np_part))
-
-    end if
-
     POP_SUB(hamiltonian_epot_generate)
   end subroutine hamiltonian_epot_generate
 
@@ -1254,13 +1217,6 @@ contains
     do ispin = 1, this%d%nspin
       if(ispin <= 2) then
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
-        !> Adds PCM contributions
-        if (this%pcm%run_pcm) then
-          forall (ip = 1:mesh%np)
-            this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
-              this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
-          end forall
-        end if
 
         if(this%bc%abtype == IMAGINARY_ABSORBING) then
           forall (ip = 1:mesh%np)

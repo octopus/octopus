@@ -36,7 +36,6 @@ module energy_oct_m
   type energy_t
     ! Energies
     FLOAT :: total       !< Total energy E = Eii + Sum[Eigenvalues] - U + Ex + Ec - Int[n v_xc] 
-                         !!                - 1/2 Int[n^e v_pcm] + 1/2 Int[n^n v_pcm] - Int[n v_U]
     FLOAT :: eigenvalues !< Sum[Eigenvalues]
     FLOAT :: exchange
     FLOAT :: correlation
@@ -44,13 +43,6 @@ module energy_oct_m
     FLOAT :: xc_j
     FLOAT :: intnvxc     !< Int[n vxc]
     FLOAT :: hartree     !< Hartree      U = (1/2)*Int [n v_Hartree]
-    FLOAT :: int_ee_pcm  !< 1/2 [v_Hartree]*[q_pcm_e] dot product of vectors of dimension n_tesserae
-    FLOAT :: int_en_pcm  !< 1/2 [v_Hartree]*[q_pcm_n] 
-    FLOAT :: int_ne_pcm  !< 1/2 [v_n]*[q_pcm_e] 
-    FLOAT :: int_nn_pcm  !< 1/2 [v_n]*[q_pcm_n]
-    FLOAT :: int_e_ext_pcm  !< [v_Hartree]*[q_pcm_ext]
-    FLOAT :: int_n_ext_pcm  !< [v_n]*[q_pcm_ext]
-    FLOAT :: pcm_corr    !< Int[n (v_e_rs + v_n_rs)]
     FLOAT :: kinetic     !< Kinetic energy of the non-interacting (KS) system of electrons
     FLOAT :: extern      !< External     V = <Phi|V|Phi> = Int[n v] (if no non-local pseudos exist)
     FLOAT :: extern_local !< The local part of the external energy ( Int[n v] )
@@ -59,9 +51,6 @@ module energy_oct_m
     FLOAT :: ts          !< TS
     FLOAT :: berry       !< Berry energy correction = -mu.E - <Vberry>
     FLOAT :: delta_xc    !< the XC derivative discontinuity
-    FLOAT :: dft_u       !DFT+U contribution
-    FLOAT :: int_dft_u !< Int[n v_U]
-
   end type energy_t
 
 contains
@@ -79,13 +68,6 @@ contains
     this%xc_j         = M_ZERO
     this%intnvxc      = M_ZERO
     this%hartree      = M_ZERO
-    this%int_ee_pcm   = M_ZERO
-    this%int_en_pcm   = M_ZERO
-    this%int_ne_pcm   = M_ZERO
-    this%int_nn_pcm   = M_ZERO
-    this%int_e_ext_pcm   = M_ZERO
-    this%int_n_ext_pcm   = M_ZERO
-    this%pcm_corr     = M_ZERO
     this%kinetic      = M_ZERO
     this%extern       = M_ZERO
     this%extern_local = M_ZERO
@@ -94,8 +76,6 @@ contains
     this%ts           = M_ZERO
     this%berry        = M_ZERO
     this%delta_xc     = M_ZERO
-    this%dft_u        = M_ZERO
-    this%int_dft_u    = M_ZERO
 
     POP_SUB(energy_nullify)
   end subroutine energy_nullify
@@ -114,13 +94,6 @@ contains
     eout%xc_j         = ein%xc_j
     eout%intnvxc      = ein%intnvxc
     eout%hartree      = ein%hartree
-    eout%int_ee_pcm   = ein%int_ee_pcm
-    eout%int_en_pcm   = ein%int_en_pcm
-    eout%int_nn_pcm   = ein%int_nn_pcm
-    eout%int_ne_pcm   = ein%int_ne_pcm
-    eout%int_e_ext_pcm   = ein%int_e_ext_pcm
-    eout%int_n_ext_pcm   = ein%int_n_ext_pcm
-    eout%pcm_corr     = ein%pcm_corr
     eout%kinetic      = ein%kinetic
     eout%extern       = ein%extern
     eout%extern_local = ein%extern_local
@@ -129,8 +102,6 @@ contains
     eout%ts           = ein%ts
     eout%berry        = ein%berry
     eout%delta_xc     = ein%delta_xc
-    eout%dft_u        = ein%dft_u
-    eout%int_dft_u    = ein%int_dft_u
 
     POP_SUB(energy_copy)
   end subroutine energy_copy

@@ -447,11 +447,7 @@ contains
 
       if(iter > 1) then
         if( ((iter-1)*td%dt <= hm%ep%kick%time) .and. (iter*td%dt > hm%ep%kick%time) ) then
-          if( .not.hm%pcm%kick_like ) then
-            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
-          else
-            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)
-          end if
+          call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
           call td_write_kick(gr%mesh, hm%ep%kick, sys%outp, geo, iter)
         end if
       end if
@@ -715,11 +711,7 @@ contains
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
       if(abs(hm%ep%kick%time)  <=  M_EPSILON) then
-        if( .not.hm%pcm%localf ) then
-          call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
-        else
-          call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)
-        end if
+        call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
         call td_write_kick(gr%mesh, hm%ep%kick, sys%outp, geo, 0)
       end if
       call propagator_run_zero_iter(hm, gr, td%tr)

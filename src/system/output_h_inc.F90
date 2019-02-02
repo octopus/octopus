@@ -97,32 +97,6 @@
         SAFE_DEALLOCATE_A(potential)
       end if
 
-      !PCM potentials
-      if(hm%theory_level == KOHN_SHAM_DFT .and. hm%pcm%run_pcm ) then
-        if (hm%pcm%solute .and. hm%pcm%localf) then
-          call dio_function_output(outp%how, dir, 'vpcm', der%mesh, hm%pcm%v_e_rs + hm%pcm%v_n_rs + hm%pcm%v_ext_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
-          call dio_function_output(outp%how, dir, 'vpcm_sol', der%mesh, hm%pcm%v_e_rs + hm%pcm%v_n_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
-          call dio_function_output(outp%how, dir, 'vpcm_e', der%mesh, hm%pcm%v_e_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
-          call dio_function_output(outp%how, dir, 'vpcm_n', der%mesh, hm%pcm%v_n_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
-          call dio_function_output(outp%how, dir, 'vpcm_ext', der%mesh, hm%pcm%v_ext_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
-        else if (hm%pcm%solute .and. .not.hm%pcm%localf) then
-          call dio_function_output(outp%how, dir, 'vpcm_sol', der%mesh, hm%pcm%v_e_rs + hm%pcm%v_n_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
-          call dio_function_output(outp%how, dir, 'vpcm_e', der%mesh, hm%pcm%v_e_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
-          call dio_function_output(outp%how, dir, 'vpcm_n', der%mesh, hm%pcm%v_n_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
-        else if (.not.hm%pcm%solute .and. hm%pcm%localf) then
-          call dio_function_output(outp%how, dir, 'vpcm_ext', der%mesh, hm%pcm%v_ext_rs , & 
-                                   units_out%energy, err, geo = geo, grp = grp)
-        end if
-      end if
-
       if(hm%self_induced_magnetic) then
         ! unit of magnetic field is same as of electric field, and same as force (since e = 1)
         select case(der%mesh%sb%dim)
