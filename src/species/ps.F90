@@ -33,9 +33,6 @@ module ps_oct_m
   use ps_hgh_oct_m
   use ps_xml_oct_m
   use ps_in_grid_oct_m
-#ifdef HAVE_PSPIO
-  use fpspio_m
-#endif
   use ps_psf_oct_m
   use pseudo_oct_m
   use splines_oct_m
@@ -46,7 +43,6 @@ module ps_oct_m
   public ::                     &
     ps_t,                       &
     ps_init,                    &
-    ps_pspio_init,              &
     ps_separate,                &
     ps_filter,                  &
     ps_getradius,               &
@@ -1440,8 +1436,6 @@ contains
     POP_SUB(ps_density_volume)
   end function ps_density_volume
   
-#include "ps_pspio_inc.F90"
- 
 end module ps_oct_m
 
 !! Local Variables:

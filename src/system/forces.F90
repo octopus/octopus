@@ -534,18 +534,16 @@ subroutine forces_from_scf(gr, geo, hm, st, force_scf, vhxc_old)
   force_scf = M_ZERO
 
   do iatom = geo%atoms_dist%start, geo%atoms_dist%end
-    if(species_type(geo%atom(iatom)%species) == SPECIES_PSEUDO .or. &
-        species_type(geo%atom(iatom)%species) ==  SPECIES_PSPIO ) then
-
+    if(species_type(geo%atom(iatom)%species) == SPECIES_PSEUDO) then
       if(ps_has_density(species_ps(geo%atom(iatom)%species))) then
-
+        
         call species_atom_density_grad(gr%mesh, gr%mesh%sb, geo%atom(iatom), &
                  hm%d%spin_channels, drho)
-
+        
         do idir = 1, gr%mesh%sb%dim
           do is = 1, hm%d%spin_channels
             force_scf(idir, iatom) = force_scf(idir, iatom) &
-                                      -dmf_dotp(gr%mesh, drho(:,is,idir), dvhxc(:,is))
+              -dmf_dotp(gr%mesh, drho(:,is,idir), dvhxc(:,is))
           end do
         end do
       end if

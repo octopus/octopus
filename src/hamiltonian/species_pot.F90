@@ -208,7 +208,7 @@ contains
         end do
       end if
 
-    case (SPECIES_PSEUDO, SPECIES_PSPIO)
+    case (SPECIES_PSEUDO)
       ! ...from pseudopotentials
       
       pos(1:MAX_DIM) = M_ZERO
@@ -302,7 +302,7 @@ contains
     species => atom%species
     ps => species_ps(species)
     select case (species_type(species))
-    case (SPECIES_PSEUDO, SPECIES_PSPIO)
+    case (SPECIES_PSEUDO)
       ! ...from pseudopotentials
 
       if(ps_has_density(ps)) then
@@ -386,7 +386,7 @@ contains
     ! build density ...
     select case (species_type(species))
 
-    case (SPECIES_PSEUDO, SPECIES_PSPIO)
+    case (SPECIES_PSEUDO)
       ! ...from pseudopotentials
       
       pos(1:MAX_DIM) = M_ZERO
@@ -479,7 +479,7 @@ contains
     ! build density ...
     select case (species_type(species))
 
-    case (SPECIES_PSEUDO, SPECIES_PSPIO)
+    case (SPECIES_PSEUDO)
       ! ...from pseudopotentials
       
       pos(1:MAX_DIM) = M_ZERO
@@ -558,7 +558,7 @@ contains
 
     select case(species_type(species))
 
-    case(SPECIES_PSEUDO, SPECIES_PSPIO)
+    case(SPECIES_PSEUDO)
       ps => species_ps(species)
 
       call submesh_init(sphere, mesh%sb, mesh, pos, spline_cutoff_radius(ps%nlr, threshold))
@@ -919,7 +919,7 @@ contains
 
         end do
 
-      case(SPECIES_PSEUDO, SPECIES_PSPIO)
+      case(SPECIES_PSEUDO)
        
         ps => species_ps(species)
 

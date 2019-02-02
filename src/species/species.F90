@@ -103,7 +103,6 @@ module species_oct_m
     SPECIES_JELLIUM_CHARGE_DENSITY = 129,   & !< jellium volume read from file
     SPECIES_FROZEN         = 5,             & !< frozen species.
     SPECIES_PSEUDO         = 7,             & !< pseudopotential
-    SPECIES_PSPIO          = 110,           & !< pseudopotential parsed by pspio library
     SPECIES_USDEF          = 123,           & !< user-defined function for local potential
     SPECIES_FULL_GAUSSIAN  = 124,           & !< full-potential atom
     SPECIES_CHARGE_DENSITY = 125,           & !< user-defined function for charge density
@@ -422,7 +421,6 @@ contains
     !% detected by the file extension: UPF (<tt>.upf</tt>), PSF (SIESTA, <tt>.psf</tt>), FHI (ABINIT 6, <tt>.fhi</tt>),
     !% CPI (Fritz-Haber, <tt>.cpi</tt>), QSO (quantum-simulation.org, for Qbox, <tt>.xml</tt>),
     !% HGH (Hartwigsen-Goedecker-Hutter, <tt>.hgh</tt>).
-    !% PSPIO format can also be used via <tt>species_pspio</tt> if that library is linked.
     !% Note: pseudopotentials may only be used in 3D.
     !%
     !% The format of this block is the following: The first field is a
@@ -470,10 +468,6 @@ contains
     !% <tt>lmax</tt> and <tt>lloc</tt>, if that is the case the
     !% parameters will be ignored.
     !%
-    !%Option species_pspio  -110
-    !% (experimental) Alternative method to read pseudopotentials
-    !% using the PSPIO library. This species uses the same parameters
-    !% as <tt>species_pseudo</tt>.
     !%Option species_user_defined -123
     !% Species with user-defined potential. The potential for the
     !% species is defined by the formula given by the <tt>potential_formula</tt>
@@ -740,15 +734,11 @@ contains
       spec%niwfs = species_closed_shell_size(2*nint(spec%z_val+M_HALF))
       spec%omega = CNST(0.1)
 
-    case(SPECIES_PSEUDO, SPECIES_PSPIO)
+    case(SPECIES_PSEUDO)
 
       ! allocate structure
       SAFE_ALLOCATE(spec%ps)
-      if(spec%type == SPECIES_PSPIO) then
-        call ps_pspio_init(spec%ps, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
-      else
-        call ps_init(spec%ps, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
-      end if
+      call ps_init(spec%ps, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
       spec%z_val = spec%ps%z_val
       spec%nlcc = spec%ps%nlcc
       spec%niwfs = ps_bound_niwfs(spec%ps)
@@ -1210,7 +1200,7 @@ contains
   logical pure function species_is_ps(spec)
     type(species_t), intent(in) :: spec
     
-    species_is_ps = spec%type == SPECIES_PSEUDO .or. spec%type == SPECIES_PSPIO
+    species_is_ps = spec%type == SPECIES_PSEUDO
  
   end function species_is_ps
 
@@ -1721,8 +1711,6 @@ contains
 
     case(SPECIES_PSEUDO)
 
-    case(SPECIES_PSPIO) ! a pseudopotential file to be handled by the pspio library
-
     case default
       call messages_input_error('Species', "Unknown type for species '"//trim(spec%label)//"'")
     end select
@@ -1755,7 +1743,7 @@ contains
         call check_duplication(OPTION__SPECIES__LMAX)
         call parse_block_integer(blk, row, icol + 1, spec%user_lmax)
 
-        if(spec%type /= SPECIES_PSEUDO .and. spec%type /= SPECIES_PSPIO) then
+        if(spec%type /= SPECIES_PSEUDO) then
           call messages_input_error('Species', &
             "The 'lmax' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")          
         end if
@@ -1768,7 +1756,7 @@ contains
         call check_duplication(OPTION__SPECIES__LLOC)
         call parse_block_integer(blk, row, icol + 1, spec%user_llocal)
 
-        if(spec%type /= SPECIES_PSEUDO .and. spec%type /= SPECIES_PSPIO) then
+        if(spec%type /= SPECIES_PSEUDO) then
           call messages_input_error('Species', &
             "The 'lloc' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")          
         end if
@@ -1781,7 +1769,7 @@ contains
         call check_duplication(OPTION__SPECIES__HUBBARD_L)
         call parse_block_integer(blk, row, icol + 1, spec%hubbard_l)
 
-        if(spec%type /= SPECIES_PSEUDO .and. spec%type /= SPECIES_PSPIO) then
+        if(spec%type /= SPECIES_PSEUDO) then
           call messages_input_error('Species', &
             "The 'hubbard_l' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")
         end if
@@ -1948,10 +1936,10 @@ contains
     end if
     
     select case(spec%type)
-    case(SPECIES_PSEUDO, SPECIES_PSPIO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
+    case(SPECIES_PSEUDO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
 
-      if( (spec%type == SPECIES_PSEUDO .or. spec%type == SPECIES_PSPIO) &
-        .and. .not. (parameter_defined(OPTION__SPECIES__FILE) .or. parameter_defined(OPTION__SPECIES__DB_FILE))) then
+      if( spec%type == SPECIES_PSEUDO .and. &
+        .not. (parameter_defined(OPTION__SPECIES__FILE) .or. parameter_defined(OPTION__SPECIES__DB_FILE))) then
         ! we need to read the species from the pseudopotential set
 
         !if the set was not defined, use the default set
