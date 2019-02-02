@@ -68,7 +68,6 @@ module scf_oct_m
   use utils_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
-  use vdw_ts_oct_m
   use xc_functl_oct_m
   use XC_F90(lib_m)
   use stress_oct_m
@@ -900,8 +899,7 @@ contains
 
     if(scf%lcao_restricted) call lcao_end(lcao)
 
-    if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) &
-        .or. bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
+    if(scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) then
       call v_ks_calc(ks, hm, st, geo)
     end if
 
@@ -948,10 +946,6 @@ contains
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
       call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
-    end if
-
-    if( ks%vdw_correction == OPTION__VDWCORRECTION__VDW_TS) then
-      call vdw_ts_write_c6ab(ks%vdw_ts, geo, STATIC_DIR, 'c6ab_eff')
     end if
 
     SAFE_DEALLOCATE_A(vhxc_old)

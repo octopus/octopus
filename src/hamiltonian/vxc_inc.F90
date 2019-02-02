@@ -68,7 +68,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
   integer :: ib, ip, isp, families, ixc, spin_channels, is, idir, ipstart, ipend
   FLOAT   :: rr, energy(1:2)
-  logical :: gga, mgga, mgga_withexc, libvdwxc
+  logical :: gga, mgga, mgga_withexc
   type(profile_t), save :: prof, prof_libxc
   logical :: calc_energy
   type(xc_functl_t), pointer :: functl(:)
@@ -95,7 +95,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   end if
 
   ! is there anything to do ?
-  families = XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC
+  families = XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA
   if(bitand(xcs%family, families) == 0) then
     POP_SUB(xc_get_vxc)
     call profiling_out(prof)
@@ -115,13 +115,6 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   if(mgga) then
     ASSERT(gga)
   end if
-
-  ! libvdwxc counts as a GGA because it needs the density gradient.
-  ! However it only calls libxc for LDA correlation and therefore
-  ! never initializes l_vsigma in the libxc space/functional loop.
-  ! Thus, it must never use l_vsigma!!  libvdwxc adds its own gradient
-  ! corrections from the nonlocal part afterwards.
-  libvdwxc = bitand(xcs%family, XC_FAMILY_LIBVDWXC) /= 0
 
   !Read the spin channels
   spin_channels = functl(FUNC_X)%spin_channels
@@ -191,7 +184,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
       if(calc_energy .and. bitand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0) then
         ! we get the xc energy and potential
         select case(functl(ixc)%family)
-        case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
+        case(XC_FAMILY_LDA)
           call XC_F90(lda_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_zk(1), l_dedd(1,1))
 
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
@@ -211,7 +204,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         l_zk(:) = M_ZERO
 
         select case(functl(ixc)%family)
-        case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
+        case(XC_FAMILY_LDA)
           call XC_F90(lda_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_dedd(1,1))
 
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
@@ -294,7 +287,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
         SAFE_DEALLOCATE_A(unp_dedd)
       end if
 
-      if(family_is_gga(functl(ixc)%family).and.functl(ixc)%family /= XC_FAMILY_LIBVDWXC) then
+      if(family_is_gga(functl(ixc)%family)) then
         do ib = 1, n_block
           dedgd(ib + ip - 1,:,1) = dedgd(ib + ip - 1,:,1) + M_TWO*l_vsigma(1, ib)*gdens(ib + ip - 1,:,1)
           if(ispin /= UNPOLARIZED) then
@@ -376,13 +369,6 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
     call distributed_end(distribution)
   end if
 
-  if(functl(FUNC_C)%family == XC_FAMILY_LIBVDWXC) then
-    functl(FUNC_C)%libvdwxc%energy = M_ZERO
-    call libvdwxc_calculate(functl(FUNC_C)%libvdwxc, dens, gdens, dedd, dedgd)
-    if(present(ec)) then
-      ec = ec + functl(FUNC_C)%libvdwxc%energy
-    end if
-  end if
 
   ! Definition of tau in libxc is different, so we need to divide vtau by a factor of two
   if (present(vtau) .and. mgga_withexc) vtau = vtau / M_TWO
@@ -835,8 +821,7 @@ end subroutine xc_get_vxc
   pure logical function family_is_gga(family)
     integer, intent(in) :: family
 
-    family_is_gga = bitand(family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + &
-      XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC) /= 0
+    family_is_gga = bitand(family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
   end function  family_is_gga
 
   pure logical function family_is_mgga(family)

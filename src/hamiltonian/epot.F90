@@ -121,7 +121,6 @@ module epot_oct_m
     !> the ion-ion energy and force
     FLOAT          :: eii
     FLOAT, pointer :: fii(:, :)
-    FLOAT, allocatable :: vdw_forces(:, :)
     
     real(4), pointer :: local_potential(:,:)
     logical          :: local_potential_precalculated
@@ -489,9 +488,6 @@ contains
     SAFE_ALLOCATE(ep%fii(1:gr%sb%dim, 1:geo%natoms))
     ep%fii = M_ZERO
 
-    SAFE_ALLOCATE(ep%vdw_forces(1:gr%sb%dim, 1:geo%natoms))
-    ep%vdw_forces = M_ZERO
-
     call gauge_field_nullify(ep%gfield)
 
     nullify(ep%local_potential)
@@ -564,7 +560,6 @@ contains
 
     SAFE_DEALLOCATE_P(ep%local_potential)
     SAFE_DEALLOCATE_P(ep%fii)
-    SAFE_DEALLOCATE_A(ep%vdw_forces)
     SAFE_DEALLOCATE_P(ep%vpsl)
 
     if(ep%classical_pot > 0) then

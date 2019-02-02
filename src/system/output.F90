@@ -71,7 +71,6 @@ module output_oct_m
   use varinfo_oct_m
   use v_ks_oct_m
   use vtk_oct_m
-  use vdw_ts_oct_m
   use young_oct_m
   use xc_oct_m
 
@@ -165,9 +164,6 @@ contains
     !% if point charges were defined in the PDB file (see <tt>PDBCoordinates</tt>), they will be output
     !% in the file <tt>geometry_classical.xyz</tt>.
     !% If <tt>OutputFormat = xcrysden</tt>, a file called <tt>geometry.xsf</tt> is written.
-    !%Option current bit(5)
-    !% Outputs the total current density. The output file is called <tt>current-</tt>.
-    !% For linear response, the filename is <tt>lr_current-</tt>.
     !%Option ELF bit(6)
     !% Outputs electron localization function (ELF). The output file is called <tt>elf-</tt>,
     !% or <tt>lr_elf-</tt> in linear response, in which case the associated function D is also written,

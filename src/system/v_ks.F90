@@ -36,7 +36,6 @@ module v_ks_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
-  use libvdwxc_oct_m
   use magnetic_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -54,15 +53,11 @@ module v_ks_oct_m
   use states_parallel_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
-  use vdw_ts_oct_m
   use xc_oct_m
   use XC_F90(lib_m)
   use xc_functl_oct_m
   use xc_OEP_oct_m
 
-  ! from the dftd3 library
-  use dftd3_api
-  
   implicit none
 
   private
@@ -103,7 +98,6 @@ module v_ks_oct_m
     FLOAT,                pointer :: b_ind(:, :)
     logical                       :: calc_energy
 
-    FLOAT, allocatable :: vdw_forces(:, :)
     type(geometry_t), pointer :: geo
   end type v_ks_calc_t
 
@@ -123,10 +117,6 @@ module v_ks_oct_m
     type(v_ks_calc_t)        :: calc
     logical                  :: calculate_current
     type(current_t)          :: current_calculator
-    integer                  :: vdw_correction
-    logical                  :: vdw_self_consistent
-    type(vdw_ts_t)           :: vdw_ts
-    type(dftd3_calc)         :: vdw_d3
     logical                  :: include_td_field
   end type v_ks_t
 
@@ -142,8 +132,6 @@ contains
 
     integer :: x_id, c_id, xk_id, ck_id, default, val, iatom
     logical :: parsed_theory_level
-    type(dftd3_input) :: d3_input
-    character(len=20) :: d3func_def, d3func
     integer :: pseudo_x_functional, pseudo_c_functional
     
     PUSH_SUB(v_ks_init)
@@ -292,10 +280,6 @@ contains
     call xc_init(ks%xc, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st%qtot, &
       x_id, c_id, xk_id, ck_id, hartree_fock = ks%theory_level == HARTREE_FOCK)
 
-    if(bitand(ks%xc%family, XC_FAMILY_LIBVDWXC) /= 0) then
-      call libvdwxc_set_geometry(ks%xc%functional(FUNC_C,1)%libvdwxc, gr%mesh)
-    end if
-
     ks%xc_family = ks%xc%family
     ks%xc_flags  = ks%xc%flags 
 
@@ -392,120 +376,6 @@ contains
     !The value of ks%calculate_current is set to false or true by Output    
     call current_init(ks%current_calculator)
     
-    !%Variable VDWCorrection
-    !%Type integer
-    !%Default no
-    !%Section Hamiltonian::XC
-    !%Description
-    !% (Experimental) This variable selects which van der Waals
-    !% correction to apply to the correlation functional.
-    !%Option none 0
-    !% No correction is applied.
-    !%Option vdw_ts 1
-    !% The scheme of Tkatchenko and Scheffler, Phys. Rev. Lett. 102
-    !% 073005 (2009).
-    !%Option vdw_d3 3
-    !% The DFT-D3 scheme of S. Grimme, J. Antony, S. Ehrlich, and
-    !% S. Krieg, J. Chem. Phys. 132, 154104 (2010).
-    !%End
-    call parse_variable('VDWCorrection', OPTION__VDWCORRECTION__NONE, ks%vdw_correction)
-    
-    if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
-      call messages_experimental('VDWCorrection')
-
-      select case(ks%vdw_correction)
-      case(OPTION__VDWCORRECTION__VDW_TS)
-
-        !%Variable VDWSelfConsistent
-        !%Type logical
-        !%Default yes
-        !%Section Hamiltonian::XC
-        !%Description
-        !% This variable controls whether the VDW correction is applied
-        !% self-consistently, the default, or just as a correction to
-        !% the total energy. This option only works with vdw_ts.
-        !%End
-        call parse_variable('VDWSelfConsistent', .true., ks%vdw_self_consistent)
-
-        call vdw_ts_init(ks%vdw_ts, geo, gr%fine%der)
-
-      case(OPTION__VDWCORRECTION__VDW_D3)
-        ks%vdw_self_consistent = .false.
-
-        if(ks%gr%sb%dim /= 3) then
-          call messages_write('vdw_d3 can only be used in 3-dimensional systems')
-          call messages_fatal()
-        end if
-        
-        do iatom = 1, geo%natoms
-          if(.not. species_represents_real_atom(geo%atom(iatom)%species)) then
-            call messages_write('vdw_d3 is not implemented when non-atomic species are present')
-            call messages_fatal()
-          end if
-        end do
-         
-        d3func_def = ''
-
-        ! The list of valid values can be found in 'external_libs/dftd3/core.f90'.
-        ! For the moment I include the most common ones.
-        if(x_id == OPTION__XCFUNCTIONAL__GGA_X_B88 .and. c_id*1000 == OPTION__XCFUNCTIONAL__GGA_C_LYP) &
-          d3func_def = 'b-lyp'
-        if(x_id == OPTION__XCFUNCTIONAL__GGA_X_PBE .and. c_id*1000 == OPTION__XCFUNCTIONAL__GGA_C_PBE) &
-          d3func_def = 'pbe'
-        if(x_id == OPTION__XCFUNCTIONAL__GGA_X_PBE_SOL .and. c_id*1000 == OPTION__XCFUNCTIONAL__GGA_C_PBE_SOL) &
-          d3func_def = 'pbesol'
-        if(c_id*1000 == OPTION__XCFUNCTIONAL__HYB_GGA_XC_B3LYP) &
-          d3func_def = 'b3-lyp'
-        if(c_id*1000 == OPTION__XCFUNCTIONAL__HYB_GGA_XC_PBEH) &
-          d3func_def = 'pbe0'
-
-        !%Variable VDWD3Functional
-        !%Type string
-        !%Section Hamiltonian::XC
-        !%Description
-        !% (Experimental) You can use this variable to override the
-        !% parametrization used by the DFT-D3 van deer Waals
-        !% correction. Normally you need not set this variable, as the
-        !% proper value will be selected by Octopus (if available).
-        !%
-        !% This variable takes a string value, the valid values can
-        !% be found in the source file 'external_libs/dftd3/core.f90'.
-        !% For example you can use:
-        !%
-        !%  VDWD3Functional = 'pbe'
-        !%
-        !%End
-        if(parse_is_defined('VDWD3Functional')) call messages_experimental('VDWD3Functional')
-        call parse_variable('VDWD3Functional', d3func_def, d3func)
-        
-        if(d3func == '') then
-          call messages_write('Cannot find  a matching parametrization  of DFT-D3 for the current')
-          call messages_new_line()
-          call messages_write('XCFunctional.  Please select a different XCFunctional, or select a')
-          call messages_new_line()
-          call messages_write('functional for DFT-D3 using the <tt>VDWD3Functional</tt> variable.')
-          call messages_fatal()
-        end if
-
-        if(ks%gr%sb%periodic_dim /= 0 .and. ks%gr%sb%periodic_dim /= 3) then
-          call messages_write('For partially periodic systems,  the vdw_d3 interaction is assumed')
-          call messages_new_line()
-          call messages_write('to be periodic in three dimensions.')
-          call messages_warning()
-        end if
-          
-        call dftd3_init(ks%vdw_d3, d3_input, trim(conf%share)//'/dftd3/pars.dat')
-        call dftd3_set_functional(ks%vdw_d3, func = d3func, version = 4, tz = .false.)
-
-      case default
-        ASSERT(.false.)
-      end select
-      
-    else
-      ks%vdw_self_consistent = .false.
-    end if
-    
-    
     POP_SUB(v_ks_init)
 
   contains
@@ -567,11 +437,6 @@ contains
 
     PUSH_SUB(v_ks_end)
     
-    select case(ks%vdw_correction)
-    case(OPTION__VDWCORRECTION__VDW_TS)
-      call vdw_ts_end(ks%vdw_ts)
-    end select
-
     call current_end(ks%current_calculator)
 
     select case(ks%theory_level)
@@ -890,9 +755,8 @@ contains
       FLOAT :: factor
       CMPLX :: ctmp
       integer :: ispin, iatom
-      FLOAT, allocatable :: vvdw(:)
       FLOAT, allocatable :: coords(:, :)
-      FLOAT :: vdw_stress(1:3, 1:3), latvec(1:3, 1:3)
+      FLOAT :: latvec(1:3, 1:3)
       integer, allocatable :: atnum(:)
 
       PUSH_SUB(v_ks_calc_start.v_a_xc)
@@ -952,57 +816,6 @@ contains
 
       end if
 
-      if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
-        ASSERT(geo%space%dim == 3)
-        
-        SAFE_ALLOCATE(vvdw(1:ks%gr%fine%mesh%np))
-        SAFE_ALLOCATE(ks%calc%vdw_forces(1:geo%space%dim, 1:geo%natoms))
-
-        select case(ks%vdw_correction)
-
-        case(OPTION__VDWCORRECTION__VDW_TS)
-          vvdw = CNST(0.0)
-          call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, ks%gr%sb, st, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
-           
-        case(OPTION__VDWCORRECTION__VDW_D3)
-
-          SAFE_ALLOCATE(coords(1:3, geo%natoms))
-          SAFE_ALLOCATE(atnum(geo%natoms))
-
-          do iatom = 1, geo%natoms
-            atnum(iatom) = nint(species_z(geo%atom(iatom)%species))
-            coords(1:3, iatom) = geo%atom(iatom)%x(1:3)
-          end do
-          
-          if(simul_box_is_periodic(ks%gr%sb)) then
-            latvec(1:3, 1:3) = ks%gr%sb%rlattice(1:3, 1:3) !make a copy as rlattice goes up to MAX_DIM
-            call dftd3_pbc_dispersion(ks%vdw_d3, coords, atnum, latvec, ks%calc%energy%vdw, ks%calc%vdw_forces, vdw_stress)
-          else
-            call dftd3_dispersion(ks%vdw_d3, coords, atnum, ks%calc%energy%vdw, ks%calc%vdw_forces)
-          end if
-
-          SAFE_DEALLOCATE_A(coords)
-          SAFE_DEALLOCATE_A(atnum)
-          
-        case default
-          ASSERT(.false.)
-          
-        end select
-        
-        if(ks%vdw_self_consistent) then
-          do ispin = 1, hm%d%nspin
-            ks%calc%vxc(1:ks%gr%fine%mesh%np, ispin) = ks%calc%vxc(1:ks%gr%fine%mesh%np, ispin) + vvdw(1:ks%gr%fine%mesh%np)
-          end do
-        end if
-        
-        SAFE_DEALLOCATE_A(vvdw)    
-        
-      else
-
-        ks%calc%energy%vdw = CNST(0.0)
-
-      end if
-      
       if(ks%calc%calc_energy) then
         ! Now we calculate Int[n vxc] = energy%intnvxc
         ks%calc%energy%intnvxc = M_ZERO
@@ -1137,13 +950,6 @@ contains
         end select
       end if
       
-    end if
-
-    if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
-      hm%ep%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms) = ks%calc%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms)
-      SAFE_DEALLOCATE_A(ks%calc%vdw_forces)
-    else
-      hm%ep%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms) = CNST(0.0)      
     end if
 
     if(ks%calc%time_present) then

@@ -39,7 +39,6 @@ module atom_oct_m
 
     !Components of the force
     FLOAT, dimension(MAX_DIM) :: f_ii     = M_ZERO !< Ion-Ion part
-    FLOAT, dimension(MAX_DIM) :: f_vdw    = M_ZERO !< Van der Waals part
     FLOAT, dimension(MAX_DIM) :: f_loc    = M_ZERO !< Local electronic part
     FLOAT, dimension(MAX_DIM) :: f_nl     = M_ZERO !< NL electronic part
     FLOAT, dimension(MAX_DIM) :: f_fields = M_ZERO !< Lasers
@@ -85,7 +84,6 @@ contains
     this%c     = 0
 
     this%f_ii      = M_ZERO
-    this%f_vdw     = M_ZERO
     this%f_loc     = M_ZERO
     this%f_nl      = M_ZERO
     this%f_fields  = M_ZERO
@@ -109,7 +107,6 @@ contains
     this%c     = 0
 
     this%f_ii      = M_ZERO
-    this%f_vdw     = M_ZERO
     this%f_loc     = M_ZERO
     this%f_nl      = M_ZERO
     this%f_fields  = M_ZERO    

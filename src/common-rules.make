@@ -22,7 +22,6 @@
 
 FCFLAGS_MODS = \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/bpdn      \
-	@F90_MODULE_FLAG@$(top_builddir)/external_libs/dftd3     \
 	@F90_MODULE_FLAG@$(top_builddir)/external_libs/spglib-1.9.9/src/
 
 AM_CPPFLAGS = \
@@ -56,7 +55,6 @@ external_LIBS = \
 	$(top_builddir)/external_libs/qshep/libqshep.a                  \
 	$(top_builddir)/external_libs/spglib-1.9.9/src/libsymspg.a      \
 	$(top_builddir)/external_libs/bpdn/libbpdn.a                    \
-	$(top_builddir)/external_libs/dftd3/libdftd3.a                  \
 	$(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.a
 # we should not have libyaml here if we used an external one...
 
