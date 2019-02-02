@@ -206,9 +206,6 @@ contains
     !% files will be called <tt>tau-sp1</tt> and <tt>tau-sp2</tt>, if the spin-resolved kinetic
     !% energy density is produced (runs in spin-polarized and spinors mode), or
     !% only <tt>tau</tt> if the run is in spin-unpolarized mode.
-    !%Option tpa bit(17)
-    !% Outputs transition-potential approximation (TPA) matrix elements, using <math>\vec{q}</math>-vector specified
-    !% by <tt>MomentumTransfer</tt>.
     !%Option forces bit(18)
     !% Outputs file <tt>forces.xsf</tt> containing structure and forces on the atoms as 
     !% a vector associated with each atom, which can be visualized with XCrySDen.
@@ -230,12 +227,6 @@ contains
     !% Outputs the (scalar) time-dependent potential.
     !%Option potential_gradient bit(31)
     !% Prints the gradient of the potential.
-    !%Option energy_density bit(32)
-    !% Outputs the total energy density to a file called
-    !% <tt>energy_density</tt>.
-    !%Option heat_current bit(33)
-    !% Outputs the total heat current density. The output file is
-    !% called <tt>heat_current-</tt>.
     !%End
     call parse_variable('Output', 0, outp%what)
 
@@ -252,9 +243,6 @@ contains
       call messages_input_error('Output')
     end if
 
-    if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) call messages_experimental("'Output = energy_density'")
-    if(bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) call messages_experimental("'Output = heat_current'")
-    
     if(bitand(outp%what, OPTION__OUTPUT__WFS) /= 0  .or.  bitand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0 ) then
 
       !%Variable OutputWfsNumber
@@ -444,14 +432,7 @@ contains
     end if
 
     ! these kinds of Output do not have a how
-    what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS + OPTION__OUTPUT__TPA + OPTION__OUTPUT__J_FLOW
-
-    if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) then
-      call v_ks_calculate_current(ks, .true.)
-    else
-      call v_ks_calculate_current(ks, .false.)
-    end if
-
+    what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS + OPTION__OUTPUT__J_FLOW
    
     !%Variable Output_KPT
     !%Type flag
@@ -583,8 +564,6 @@ contains
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
       call output_me(outp%me, dir, st, gr, geo, hm)
     end if
-
-    call output_energy_density(hm, ks, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
 
     call profiling_out(prof)
     POP_SUB(output_all)
@@ -745,71 +724,6 @@ contains
 
     POP_SUB(calc_electronic_pressure)
   end subroutine calc_electronic_pressure
-
-
-  ! ---------------------------------------------------------
-  subroutine output_energy_density(hm, ks, st, der, dir, outp, geo, gr, grp)
-    type(hamiltonian_t),       intent(in)    :: hm
-    type(v_ks_t),              intent(in)    :: ks
-    type(states_t),            intent(inout) :: st
-    type(derivatives_t),       intent(inout) :: der
-    character(len=*),          intent(in)    :: dir
-    type(output_t),            intent(in)    :: outp
-    type(geometry_t),          intent(in)    :: geo
-    type(grid_t),              intent(in)    :: gr
-    type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
-
-    integer :: is, ispin, ierr, ip
-    character(len=MAX_PATH_LEN) :: fname
-    type(unit_t) :: fn_unit
-    FLOAT, allocatable :: energy_density(:, :)
-    FLOAT, allocatable :: ex_density(:)
-    FLOAT, allocatable :: ec_density(:)
-
-    PUSH_SUB(output_hamiltonian)
-   
-    if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) then
-      fn_unit = units_out%energy*units_out%length**(-gr%mesh%sb%dim)
-      SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
-
-      ! the kinetic energy density
-      call states_calc_quantities(gr%der, st, .true., kinetic_energy_density = energy_density)
-
-      ! the external potential energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
-
-      ! the hartree energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
-
-      ! the XC energy density
-      SAFE_ALLOCATE(ex_density(1:gr%mesh%np))
-      SAFE_ALLOCATE(ec_density(1:gr%mesh%np))
-
-      ASSERT(.not. gr%have_fine_mesh)
-
-      call xc_get_vxc(gr%fine%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ex_density = ex_density, ec_density = ec_density)
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
-      
-      SAFE_DEALLOCATE_A(ex_density)
-      SAFE_DEALLOCATE_A(ec_density)
-      
-      select case(st%d%ispin)
-      case(UNPOLARIZED)
-        write(fname, '(a)') 'energy_density'
-        call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-          energy_density(:,1), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
-      case(SPIN_POLARIZED, SPINORS)
-        do is = 1, 2
-          write(fname, '(a,i1)') 'energy_density-sp', is
-          call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-            energy_density(:, is), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
-        end do
-      end select
-      SAFE_DEALLOCATE_A(energy_density)
-    end if
- 
-    POP_SUB(output_hamiltonian)
-  end subroutine output_energy_density
 
 #include "output_states_inc.F90"
 

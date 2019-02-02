@@ -170,10 +170,6 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
     SAFE_DEALLOCATE_A(elf)
   end if
 
-  if(bitand(outp%what, OPTION__OUTPUT__TPA) /= 0) then
-    call states_write_tpa (trim(dir), gr, st)
-  end if
-
   POP_SUB(output_states)
 
 end subroutine output_states
