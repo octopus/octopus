@@ -232,7 +232,7 @@ contains
   !! \phi(x) = (e^x - 1)/x
   !! \f]
   ! ---------------------------------------------------------
-  subroutine exponential_apply(te, der, hm, zpsi, ist, ik, deltat, order, vmagnus, imag_time, Imdeltat)
+  subroutine exponential_apply(te, der, hm, zpsi, ist, ik, deltat, order, imag_time, Imdeltat)
     type(exponential_t), intent(inout) :: te
     type(derivatives_t), intent(in)    :: der
     type(hamiltonian_t), intent(in)    :: hm
@@ -241,12 +241,11 @@ contains
     CMPLX,               intent(inout) :: zpsi(:, :)
     FLOAT,               intent(in)    :: deltat
     integer, optional,   intent(inout) :: order
-    FLOAT,   optional,   intent(in)    :: vmagnus(der%mesh%np, hm%d%nspin, 2)
     logical, optional,   intent(in)    :: imag_time
     FLOAT,   optional,   intent(in)    :: Imdeltat !< also needed for cmplxscl\%time
 
     CMPLX   :: timestep
-    logical :: apply_magnus, phase_correction
+    logical :: phase_correction
     type(profile_t), save :: exp_prof
 
     PUSH_SUB(exponential_apply)
@@ -262,9 +261,6 @@ contains
     ! auxiliary way, in order to compute (1-hm(t)*deltat)|zpsi>.
     ! This should be cleaned up.
     !_ASSERT(.not.(hamiltonian_inh_term(hm) .and. (te%exp_method /= EXP_LANCZOS)))
-
-    apply_magnus = .false.
-    if(present(vmagnus)) apply_magnus = .true.
 
     phase_correction = .false.
     if(associated(hm%hm_base%phase)) phase_correction = .true.
@@ -338,11 +334,7 @@ contains
 
       PUSH_SUB(exponential_apply.operate)
 
-      if(apply_magnus) then
-        call zmagnus(hm, der, psi, oppsi, ik, vmagnus, set_phase = .not.phase_correction)
-        else
-        call zhamiltonian_apply(hm, der, psi, oppsi, ist, ik, set_phase = .not.phase_correction)
-      end if
+      call zhamiltonian_apply(hm, der, psi, oppsi, ist, ik, set_phase = .not.phase_correction)
 
       POP_SUB(exponential_apply.operate)
     end subroutine operate

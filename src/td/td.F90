@@ -42,7 +42,6 @@ module td_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use restart_oct_m
-  use scdm_oct_m
   use scf_oct_m
   use scissor_oct_m
   use simul_box_oct_m
@@ -372,12 +371,6 @@ contains
       call scf_init(td%scf, sys%gr, sys%geo, sys%st, sys%mc, hm)
     end if
 
-    if(hm%scdm_EXX) then
-      call scdm_init(st,gr%der,psolver%cube, hm%scdm,operate_on_scdm=.true.)
-      ! make sure scdm is constructed as soon as it is needed
-      scdm_is_local = .false.
-    end if
-    
     if (gauge_field_is_applied(hm%ep%gfield)) then
       !if the gauge field is applied, we need to tell v_ks to calculate the current
       call v_ks_calculate_current(sys%ks, .true.)
@@ -451,9 +444,6 @@ contains
           call td_write_kick(gr%mesh, hm%ep%kick, sys%outp, geo, iter)
         end if
       end if
-
-      ! in case use scdm localized states for exact exchange and request a new localization             
-      if(hm%scdm_EXX) scdm_is_local = .false.
 
       ! time iterate the system, one time step.
       select case(td%dynamics)

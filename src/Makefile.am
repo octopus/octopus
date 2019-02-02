@@ -377,11 +377,9 @@ all_f_srcs +=                                        \
 	hamiltonian/kick.F90                         \
 	hamiltonian/lasers.F90                       \
 	hamiltonian/libvdwxc.F90                     \
-	hamiltonian/oct_exchange.F90                 \
 	hamiltonian/projector.F90                    \
 	hamiltonian/projector_matrix.F90             \
 	hamiltonian/rkb_projector.F90                \
-	hamiltonian/scdm.F90                         \
 	hamiltonian/scf_tol.F90                      \
 	hamiltonian/scissor.F90                      \
 	hamiltonian/species_pot.F90                  \
@@ -400,9 +398,7 @@ noinst_HEADERS +=                                    \
 	hamiltonian/kb_projector_inc.F90             \
 	hamiltonian/kxc_inc.F90                      \
 	hamiltonian/lasers_inc.F90                   \
-	hamiltonian/oct_exchange_inc.F90             \
 	hamiltonian/projector_inc.F90                \
-	hamiltonian/scdm_inc.F90                     \
 	hamiltonian/scissor_inc.F90                  \
 	hamiltonian/vxc_inc.F90
 

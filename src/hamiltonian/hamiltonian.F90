@@ -46,14 +46,12 @@ module hamiltonian_oct_m
   use messages_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
-  use oct_exchange_oct_m
   use parser_oct_m
   use par_vec_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
   use restart_oct_m
-  use scdm_oct_m
   use scissor_oct_m
   use simul_box_oct_m
   use smear_oct_m
@@ -85,8 +83,6 @@ module hamiltonian_oct_m
     zhamiltonian_apply_batch,        &
     dhamiltonian_diagonal,           &
     zhamiltonian_diagonal,           &
-    dmagnus,                         &
-    zmagnus,                         &
     dvmask,                          &
     zvmask,                          &
     hamiltonian_inh_term,            &
@@ -102,13 +98,10 @@ module hamiltonian_oct_m
     hamiltonian_apply_packed,        &
     dexchange_operator_single,       &
     zexchange_operator_single,       &
-    dscdm_exchange_operator,         &
-    zscdm_exchange_operator,         &
     zhamiltonian_dervexternal,       &
     zhamiltonian_apply_atom,         &
     hamiltonian_dump_vhxc,           &
-    hamiltonian_load_vhxc,           &
-    zoct_exchange_operator
+    hamiltonian_load_vhxc
 
   type hamiltonian_t
     !> The Hamiltonian must know what are the "dimensions" of the spaces,
@@ -153,16 +146,10 @@ module hamiltonian_oct_m
 
     !> For the Hartree-Fock Hamiltonian, the Fock operator depends on the states.
     type(states_t), pointer :: hf_st
-    !> use the SCDM method to compute the action of the Fock operator
-    logical :: scdm_EXX
-
+    
     !> There may be an "inhomogeneous", "source", or "forcing" term (useful for the OCT formalism)
     logical :: inh_term
     type(states_t) :: inh_st
-
-    !> There may also be a exchange-like term, similar to the one necessary for time-dependent
-    !! Hartree Fock, also useful only for the OCT equations
-    type(oct_exchange_t) :: oct_exchange
 
     type(scissor_t) :: scissor
 
@@ -171,7 +158,6 @@ module hamiltonian_oct_m
     
     !> For the Rashba spin-orbit coupling
     FLOAT :: rashba_coupling
-    type(scdm_t)  :: scdm
 
     logical :: time_zero
   end type hamiltonian_t
@@ -188,7 +174,7 @@ module hamiltonian_oct_m
     CLASSICAL             = 5
   
   type(profile_t), save :: prof_hamiltonian, prof_kinetic_start, prof_kinetic_finish
-  type(profile_t), save :: prof_exx_scdm, prof_exx
+  type(profile_t), save :: prof_exx
 
 contains
 
@@ -260,8 +246,6 @@ contains
     SAFE_ALLOCATE(hm%energy)
     call energy_nullify(hm%energy)
 
-    call oct_exchange_nullify(hm%oct_exchange)
-    
     ! allocate potentials and density of the cores
     ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);
     ! Im(vxc_12) = hm%vxc(:, 4)
@@ -375,7 +359,6 @@ contains
     nullify(hm%hf_st)
 
     hm%inh_term = .false.
-    call oct_exchange_remove(hm%oct_exchange)
 
     hm%adjoint = .false.
 
@@ -406,24 +389,6 @@ contains
 				  associated(hm%ep%lasers)
 
     kick_present = hm%ep%kick%delta_strength /= M_ZERO
-
-    !%Variable SCDM_EXX
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian
-    !%Description
-    !% If set to yes, and <tt>TheoryLevel = hartree_fock</tt>,
-    !% the Fock operator for exact exchange will be applied with the SCDM method.
-    !%End
-    call parse_variable('scdm_EXX', .false., hm%scdm_EXX)
-    if(hm%scdm_EXX) then
-      call messages_experimental("SCDM method for exact exchange")
-      if(hm%theory_level /= HARTREE_FOCK) then
-        call messages_not_implemented("SCDM for exact exchange in OEP (TheoryLevel = dft)")
-      end if
-       message(1) = "Info: Using SCDM for exact exchange"
-       call messages_info(1)
-    end if
 
     if(hm%theory_level == HARTREE_FOCK .and. st%parallel_in_states) then
 #ifdef HAVE_MPI2
@@ -561,8 +526,7 @@ contains
     type(hamiltonian_t), intent(in) :: hm
 
     PUSH_SUB(hamiltonian_hermitian)
-    hamiltonian_hermitian = .not.((hm%bc%abtype == IMAGINARY_ABSORBING) .or. &
-                                  oct_exchange_enabled(hm%oct_exchange))
+    hamiltonian_hermitian = hm%bc%abtype /= IMAGINARY_ABSORBING
 
     POP_SUB(hamiltonian_hermitian)
   end function hamiltonian_hermitian
