@@ -132,8 +132,7 @@ contains
     !%Section Hamiltonian::Poisson::Multigrid
     !%Description
     !% Method used to solve the linear system approximately in each grid for the
-    !% multigrid procedure that solves Poisson equation. Default is <tt>gauss_seidel</tt>,
-    !% unless curvilinear coordinates are used, in which case the default is <tt>gauss_jacobi</tt>.
+    !% multigrid procedure that solves Poisson equation. The default is <tt>gauss_seidel</tt>.
     !%Option gauss_seidel 1
     !% Gauss-Seidel.
     !%Option gauss_jacobi 2
@@ -141,11 +140,7 @@ contains
     !%Option gauss_jacobi2 3
     !% Alternative implementation of Gauss-Jacobi.
     !%End
-    if ( mesh%use_curvilinear ) then
-      call parse_variable('PoissonSolverMGRelaxationMethod', GAUSS_JACOBI, this%relaxation_method)
-    else
-      call parse_variable('PoissonSolverMGRelaxationMethod', GAUSS_SEIDEL, this%relaxation_method)
-    end if
+    call parse_variable('PoissonSolverMGRelaxationMethod', GAUSS_SEIDEL, this%relaxation_method)
 
     if(.not.varinfo_valid_option('PoissonSolverMGRelaxationMethod', this%relaxation_method)) &
       call messages_input_error('PoissonSolverMGRelaxationMethod')

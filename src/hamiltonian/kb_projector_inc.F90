@@ -74,27 +74,13 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
 
   uvpsi(1:dim, 1:kb_p%n_c) = M_ZERO
 
-  if(mesh%use_curvilinear) then
-
-    do idim = 1, dim
-      do ic = 1, kb_p%n_c
-        do is = 1, ns
-          uvpsi(idim, ic) = uvpsi(idim, ic) + (kb_p%p(is, ic)*psi(is, idim))*mesh%vol_pp(sm%map(is))
-        end do
+  do idim = 1, dim
+    do ic = 1, kb_p%n_c
+      do is = 1, ns
+        uvpsi(idim, ic) = uvpsi(idim, ic) + psi(is, idim)*kb_p%p(is, ic)
       end do
     end do
-
-  else
-
-    do idim = 1, dim
-      do ic = 1, kb_p%n_c
-        do is = 1, ns
-          uvpsi(idim, ic) = uvpsi(idim, ic) + psi(is, idim)*kb_p%p(is, ic)
-        end do
-      end do
-    end do
-
-  end if
+  end do
 
   uvpsi(1:dim, 1:kb_p%n_c) = uvpsi(1:dim, 1:kb_p%n_c)*mesh%volume_element
 

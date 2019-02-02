@@ -479,12 +479,6 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
         call states_parallel_gather(st, (/st%d%dim, size/), hpsi)
       end if
       
-      if(der%mesh%use_curvilinear) then
-        do ip = 1, size
-          psi(1:st%nst, 1:st%d%dim, ip) = psi(1:st%nst, 1:st%d%dim, ip)*der%mesh%vol_pp(sp + ip - 1)
-        end do
-      end if
-
       call blas_gemm(transa = 'n', transb = 'c',        &
         m = st%nst, n = st%nst, k = size*st%d%dim,      &
         alpha = R_TOTYPE(der%mesh%volume_element),      &

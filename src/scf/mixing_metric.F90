@@ -53,8 +53,6 @@ contains
 
     PUSH_SUB(mixing_metric_init)
 
-    ASSERT(.not. der%mesh%use_curvilinear)
-
     der_ptr => der
 
     ! This is the metric operator used by GPAW:
@@ -67,7 +65,7 @@ contains
     call nl_operator_init(op, "Mix metric")
     call stencil_cube_get_lapl(op%stencil, der%mesh%sb%dim, 1)
     
-    call nl_operator_build(der%mesh, op, der%mesh%np, const_w = .not. der%mesh%use_curvilinear)
+    call nl_operator_build(der%mesh, op, der%mesh%np)
 
     if (op%const_w) then
       maxp = 1

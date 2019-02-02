@@ -222,8 +222,6 @@ contains
 
       call parse_variable('EigensolverSaveMemory', .false., eigens%save_mem)
 
-      if(gr%mesh%use_curvilinear) call messages_experimental("RMMDIIS eigensolver for curvilinear coordinates")
-
     case(RS_PSD)
       default_iter = 18
       call messages_experimental("preconditioned steepest descent (PSD) eigensolver")

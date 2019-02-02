@@ -54,17 +54,6 @@ dist_share_DATA =                                \
 	11-silicon_force.01-gs.inp               \
 	12-boron_nitride.test                    \
 	12-boron_nitride.01-gs.inp               \
-	13-primitive.test                        \
-	13-primitive.01-diamond.inp              \
-	13-primitive.02-graphene.inp             \
-	14-silicon_shifts.01-gs.inp              \
-	14-silicon_shifts.02-td.inp              \
-	14-silicon_shifts.03-delayed_kick.inp    \
-	14-silicon_shifts.04-dielectric_function.inp \
-	14-silicon_shifts.test                   \
-	15-bandstructure.01-gs.inp               \
-	15-bandstructure.02-unocc.inp            \
-	15-bandstructure.test                    \
 	16-sodium_chain_cylinder.01-ground_state.inp      \
 	16-sodium_chain_cylinder.02-unocc.inp             \
 	16-sodium_chain_cylinder.03-ground_state_disp.inp \

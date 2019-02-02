@@ -87,55 +87,30 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   n_s = hgh_p%n_s
   uvpsi = M_ZERO
 
-  if(mesh%use_curvilinear) then
-
-    SAFE_ALLOCATE(bra(1:n_s, 1:3))
-    bra = M_ZERO
-
-    do jj = 1, 3
-      if(reltype == 1) then
-        bra(1:n_s, jj) = R_CONJ(hgh_p%X(p)(1:n_s, jj))*mesh%vol_pp(sm%map(1:n_s))
-      else
-        bra(1:n_s, jj) = hgh_p%dp(1:n_s, jj)*mesh%vol_pp(sm%map(1:n_s))
-      endif
-    end do
-
-    do idim = 1, dim
+  if(reltype == 1) then
+    do sp = 1, n_s, block_size
+      ep = sp - 1 + min(block_size, n_s - sp + 1)
+      size = min(block_size, n_s - sp + 1)
       do jj = 1, 3
-        uvpsi(idim, jj) = sum(psi(1:n_s, idim)*bra(1:n_s, jj))
+        do idim = 1, dim
+#ifdef R_TCOMPLEX
+          uvpsi(idim, jj) = uvpsi(idim, jj) + blas_dot(size, hgh_p%zp(sp, jj), 1, psi(sp, idim), 1)*mesh%volume_element
+#endif
+        end do
       end do
     end do
-
-    SAFE_DEALLOCATE_A(bra)
-
   else
-
-    if(reltype == 1) then
-      do sp = 1, n_s, block_size
-        ep = sp - 1 + min(block_size, n_s - sp + 1)
-        size = min(block_size, n_s - sp + 1)
-        do jj = 1, 3
-          do idim = 1, dim
-#ifdef R_TCOMPLEX
-            uvpsi(idim, jj) = uvpsi(idim, jj) + blas_dot(size, hgh_p%zp(sp, jj), 1, psi(sp, idim), 1)*mesh%volume_element
-#endif
-          end do
+    do sp = 1, n_s, block_size
+      ep = sp - 1 + min(block_size, n_s - sp + 1)
+      size = min(block_size, n_s - sp + 1)
+      do jj = 1, 3
+        do idim = 1, dim
+          uvpsi(idim, jj) = uvpsi(idim, jj) + sum(psi(sp:ep, idim)*hgh_p%dp(sp:ep, jj))*mesh%volume_element
         end do
       end do
-    else
-      do sp = 1, n_s, block_size
-        ep = sp - 1 + min(block_size, n_s - sp + 1)
-        size = min(block_size, n_s - sp + 1)
-        do jj = 1, 3
-          do idim = 1, dim
-            uvpsi(idim, jj) = uvpsi(idim, jj) + sum(psi(sp:ep, idim)*hgh_p%dp(sp:ep, jj))*mesh%volume_element
-          end do
-        end do
-      end do
-    end if
-
+    end do
   end if
-
+  
   call profiling_out(prof)
 
 end subroutine X(hgh_project_bra)

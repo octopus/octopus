@@ -259,10 +259,6 @@ all_f_srcs +=                                 \
 	grid/boundaries.F90                   \
 	grid/cube.F90                         \
 	grid/cube_function.F90                \
-	grid/curv_briggs.F90                  \
-	grid/curv_gygi.F90                    \
-	grid/curvilinear.F90                  \
-	grid/curv_modine.F90                  \
 	grid/derivatives.F90                  \
 	grid/double_grid.F90                  \
 	grid/fourier_shell.F90                \
@@ -279,7 +275,6 @@ all_f_srcs +=                                 \
 	grid/mesh_init.F90                    \
 	grid/mesh_interpolation.F90           \
 	grid/mesh_partition.F90               \
-	grid/modelmb_1part.F90                \
 	grid/multigrid.F90                    \
 	grid/nl_operator.F90                  \
 	grid/operate_f.F90                    \
@@ -287,7 +282,6 @@ all_f_srcs +=                                 \
 	grid/partition_transfer.F90           \
 	grid/par_vec.F90                      \
 	grid/restart.F90                      \
-	grid/sphericalmesh.F90                \
 	grid/stencil_cube.F90                 \
 	grid/stencil.F90                      \
 	grid/stencil_star.F90                 \

@@ -192,21 +192,13 @@
             ! translate to a local index
             if(fine_der%mesh%parallel_in_domains) fn = vec_global2local(fine_der%mesh%vp, fn, fine_der%mesh%vp%partno)
 #endif
-            if(fine_der%mesh%use_curvilinear) then
-              f_coarse(nn) = f_coarse(nn) + weight(di, dj, dk)*f_fine(fn)*fine_der%mesh%vol_pp(fn)
-            else
-              f_coarse(nn) = f_coarse(nn) + weight(di, dj, dk)*f_fine(fn)*fine_der%mesh%vol_pp(1)
-            end if
+            f_coarse(nn) = f_coarse(nn) + weight(di, dj, dk)*f_fine(fn)*fine_der%mesh%volume_element
 
           end do
         end do
       end do
 
-      if(fine_der%mesh%use_curvilinear) then
-        f_coarse(nn) = f_coarse(nn)/coarse_mesh%vol_pp(nn)
-      else
-        f_coarse(nn) = f_coarse(nn)/coarse_mesh%vol_pp(1)
-      end if
+      f_coarse(nn) = f_coarse(nn)/coarse_mesh%volume_element
     end do
 
     call profiling_count_operations(tt%n_coarse*(27*3 + 1))

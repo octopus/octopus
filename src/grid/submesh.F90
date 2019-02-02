@@ -557,25 +557,20 @@ contains
   
     dotp = cmplx(M_ZERO, M_ZERO)
   
-    if(this%mesh%use_curvilinear) then
-      do is = 1, this%np
-        dotp = dotp + this%mesh%vol_pp(this%map(is))*phi(this%map(is))*conjg(sphi(is))
+    
+    m = mod(this%np,4)
+    do ip = 1, m
+      dotp = dotp + phi(this%map(ip))*conjg(sphi(ip))
+    end do
+    if( this%np.ge.4) then
+      do ip = m+1, this%np, 4
+        dotp = dotp + phi(this%map(ip))*conjg(sphi(ip))     &
+          + phi(this%map(ip+1))*conjg(sphi(ip+1)) &
+          + phi(this%map(ip+2))*conjg(sphi(ip+2)) &
+          + phi(this%map(ip+3))*conjg(sphi(ip+3))
       end do
-    else
-      m = mod(this%np,4)
-      do ip = 1, m
-        dotp = dotp + phi(this%map(ip))*conjg(sphi(ip))
-      end do
-      if( this%np.ge.4) then
-        do ip = m+1, this%np, 4
-          dotp = dotp + phi(this%map(ip))*conjg(sphi(ip))     &
-                      + phi(this%map(ip+1))*conjg(sphi(ip+1)) &
-                      + phi(this%map(ip+2))*conjg(sphi(ip+2)) &
-                      + phi(this%map(ip+3))*conjg(sphi(ip+3))
-        end do
-      end if
-        dotp = dotp*this%mesh%vol_pp(1)
     end if
+    dotp = dotp*this%mesh%vol_pp(1)
   
     if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) then
       call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")

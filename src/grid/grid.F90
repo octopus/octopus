@@ -20,7 +20,6 @@
 
 module grid_oct_m
   use cube_oct_m
-  use curvilinear_oct_m
   use derivatives_oct_m
   use double_grid_oct_m
   use geometry_oct_m
@@ -61,7 +60,6 @@ module grid_oct_m
     type(mesh_t)                :: mesh
     type(multigrid_level_t)     :: fine
     type(derivatives_t)         :: der
-    type(curvilinear_t)         :: cv
     type(multigrid_t), pointer  :: mgrid
     type(multigrid_t), pointer  :: mgrid_prec  ! the multigrid object for the preconditioner
     type(double_grid_t)         :: dgrid
@@ -133,15 +131,12 @@ contains
     !% quality of the discretization: smaller spacing gives more
     !% precise results but increased computational cost.
     !%
-    !% When using curvilinear coordinates, this is a canonical spacing
-    !% that will be changed locally by the transformation. In periodic
-    !% directions, your spacing may be slightly different than what
-    !% you request here, since the box size must be an integer
-    !% multiple of the spacing.
+    !% In periodic directions, your spacing may be slightly different
+    !% than what you request here, since the box size must be an
+    !% integer multiple of the spacing.
     !%
-    !% The default value is defined by the species if only default pseudopotentials are used
-    !% or by the image resolution if <tt>BoxShape = box_image</tt>. Otherwise, there is
-    !% no default.
+    !% The default value is defined by the species if only default pseudopotentials are used.
+    !% Otherwise, there is no default.
     !%
     !% It is possible to have a different spacing in each one of the Cartesian directions
     !% if we define <tt>Spacing</tt> as block of the form
@@ -194,11 +189,8 @@ contains
       end if
     end do
 
-    ! initialize curvilinear coordinates
-    call curvilinear_init(gr%cv, gr%sb, geo, grid_spacing)
-
     ! initialize derivatives
-    call derivatives_init(gr%der, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+    call derivatives_init(gr%der, gr%sb)
 
     call double_grid_init(gr%dgrid, gr%sb)
 
@@ -208,7 +200,7 @@ contains
     enlarge = max(enlarge, gr%der%n_ghost)
 
     ! now we generate the mesh and the derivatives
-    call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, grid_spacing, enlarge)
+    call mesh_init_stage_1(gr%mesh, gr%sb, grid_spacing, enlarge)
 
     ! the stencil used to generate the grid is a union of a cube (for
     ! multigrid) and the Laplacian.
@@ -216,7 +208,7 @@ contains
     call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
     call stencil_end(cube)
 
-    call mesh_init_stage_2(gr%mesh, gr%sb, geo, gr%cv, gr%stencil)
+    call mesh_init_stage_2(gr%mesh, gr%sb, geo, gr%stencil)
 
     POP_SUB(grid_init_stage_1)
 
@@ -253,9 +245,9 @@ contains
       SAFE_ALLOCATE(gr%fine%mesh)
       SAFE_ALLOCATE(gr%fine%der)
       
-      call multigrid_mesh_double(geo, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
+      call multigrid_mesh_double(geo, gr%mesh, gr%fine%mesh, gr%stencil)
       
-      call derivatives_init(gr%fine%der, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+      call derivatives_init(gr%fine%der, gr%mesh%sb)
       
       call mesh_init_stage_3(gr%fine%mesh, gr%stencil, mc)
       
@@ -311,7 +303,6 @@ contains
     call double_grid_end(gr%dgrid)
 
     call derivatives_end(gr%der)
-    call curvilinear_end(gr%cv)
     call mesh_end(gr%mesh)
 
     if(associated(gr%mgrid)) then
@@ -353,10 +344,6 @@ contains
     call messages_info(1, iunit)
     call mesh_write_info(gr%fine%mesh, iunit)
 
-    if (gr%mesh%use_curvilinear) then
-      call curvilinear_write_info(gr%cv, iunit)
-    end if
-    
     call messages_print_stress(iunit)
 
     POP_SUB(grid_write_info)
@@ -372,7 +359,7 @@ contains
     PUSH_SUB(grid_create_multigrid)
 
     SAFE_ALLOCATE(gr%mgrid)
-    call multigrid_init(gr%mgrid, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
+    call multigrid_init(gr%mgrid, geo, gr%mesh, gr%der, gr%stencil, mc)
 
     POP_SUB(grid_create_multigrid)
   end subroutine grid_create_multigrid

@@ -324,17 +324,10 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
 
     energy(1:2) = CNST(0.0)
     
-    if(der%mesh%use_curvilinear) then
-      do ip = ipstart, ipend
-        energy(1) = energy(1) + ex_per_vol(ip)*der%mesh%vol_pp(ip)
-        energy(2) = energy(2) + ec_per_vol(ip)*der%mesh%vol_pp(ip)
-      end do
-    else
-      do ip = ipstart, ipend
-        energy(1) = energy(1) + ex_per_vol(ip)
-        energy(2) = energy(2) + ec_per_vol(ip)
-      end do
-    end if
+    do ip = ipstart, ipend
+      energy(1) = energy(1) + ex_per_vol(ip)
+      energy(2) = energy(2) + ec_per_vol(ip)
+    end do
     
     energy(1:2) = energy(1:2)*der%mesh%volume_element
 

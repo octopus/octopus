@@ -20,7 +20,6 @@
 
 module double_grid_oct_m
 
-  use curvilinear_oct_m
   use geometry_oct_m
   use global_oct_m
   use math_oct_m

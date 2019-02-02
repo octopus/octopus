@@ -304,12 +304,11 @@ contains
       !   https://wiki.fysik.dtu.dk/gpaw/documentation/densitymix/densitymix.html
       !
 
-      ASSERT(.not. der%mesh%use_curvilinear)
       ASSERT(der%mesh%sb%dim == 3)
       
       call nl_operator_init(smix%preconditioner, "Mixing preconditioner")
       call stencil_cube_get_lapl(smix%preconditioner%stencil, der%mesh%sb%dim, 1)
-      call nl_operator_build(der%mesh, smix%preconditioner, der%mesh%np, const_w = .not. der%mesh%use_curvilinear)
+      call nl_operator_build(der%mesh, smix%preconditioner, der%mesh%np)
       
       ns = smix%preconditioner%stencil%size
 

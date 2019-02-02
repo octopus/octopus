@@ -32,11 +32,7 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask) result(dd)
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
   dd = R_TOTYPE(M_ZERO)
-  if (mesh%use_curvilinear) then
-    do ip = 1, mesh%np
-      dd = dd + ff(ip)*mesh%vol_pp(ip)
-    end do
-  else if (present(mask)) then
+  if (present(mask)) then
     dd = sum(ff(1:mesh%np), mask=mask(1:mesh%np))
   else
     do ip = 1, mesh%np
@@ -161,37 +157,17 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
 #ifdef R_TCOMPLEX
   dotu_ = optional_default(dotu, .false.)
 #endif
-
-  if(mesh%use_curvilinear) then
-    dotp = R_TOTYPE(M_ZERO)
-    ! preprocessor conditionals necessary since blas_dotu only exists for complex input
+  
 #ifdef R_TCOMPLEX
-    if (.not. dotu_) then
+  if (.not. dotu_) then
 #endif
-      do ip = 1, np_
-        dotp = dotp + mesh%vol_pp(ip)*f1(ip)*f2(ip)
-      end do
+    dotp = blas_dot(np_, f1(1), 1, f2(1), 1)
 #ifdef R_TCOMPLEX
-    else
-      do ip = 1, np_
-        dotp = dotp + mesh%vol_pp(ip)*R_CONJ(f1(ip))*f2(ip)
-      end do
-    end if
-#endif
-    call profiling_count_operations(np_*(2*R_ADD + R_MUL))
   else
-#ifdef R_TCOMPLEX
-    if (.not. dotu_) then
-#endif
-      dotp = blas_dot(np_, f1(1), 1, f2(1), 1)
-#ifdef R_TCOMPLEX
-    else
-      dotp = blas_dotu(np_, f1(1), 1, f2(1), 1)
-    end if
-#endif
-    call profiling_count_operations(np_*(R_ADD + R_MUL))
-
+    dotp = blas_dotu(np_, f1(1), 1, f2(1), 1)
   end if
+#endif
+  call profiling_count_operations(np_*(R_ADD + R_MUL))
 
   dotp = dotp*mesh%volume_element
 
@@ -250,14 +226,7 @@ FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
   call profiling_in(C_PROFILING_MF_NRM2, "MF_NRM2")
   PUSH_SUB(X(mf_nrm2_1))
 
-  if(mesh%use_curvilinear) then
-    SAFE_ALLOCATE(ll(1:mesh%np))
-    ll(1:mesh%np) = ff(1:mesh%np)*sqrt(mesh%vol_pp(1:mesh%np))
-    nrm2 = lalg_nrm2(mesh%np, ll)
-    SAFE_DEALLOCATE_A(ll)
-  else
-    nrm2 = lalg_nrm2(mesh%np, ff)
-  end if
+  nrm2 = lalg_nrm2(mesh%np, ff)
 
   nrm2 = nrm2*sqrt(mesh%volume_element)
 

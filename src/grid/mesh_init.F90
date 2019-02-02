@@ -21,7 +21,6 @@
 module mesh_init_oct_m
   use checksum_interface_oct_m
   use cube_oct_m
-  use curvilinear_oct_m
   use geometry_oct_m
   use global_oct_m
   use hypercube_oct_m
@@ -60,10 +59,9 @@ module mesh_init_oct_m
 contains
 
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
+subroutine mesh_init_stage_1(mesh, sb, spacing, enlarge)
   type(mesh_t),                intent(inout) :: mesh
   type(simul_box_t),   target, intent(in)    :: sb
-  type(curvilinear_t), target, intent(in)    :: cv
   FLOAT,                       intent(in)    :: spacing(1:MAX_DIM)
   integer,                     intent(in)    :: enlarge(MAX_DIM)
 
@@ -75,18 +73,11 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
   call profiling_in(mesh_init_prof, "MESH_INIT")
 
   mesh%sb => sb     ! keep an internal pointer
-  mesh%spacing = spacing ! this number can change in the following
-  mesh%use_curvilinear = cv%method /= CURV_METHOD_UNIFORM
-  mesh%cv => cv
-
-  ! multiresolution requires the curvilinear coordinates machinery
-  mesh%use_curvilinear = mesh%use_curvilinear .or. sb%mr_flag
+  mesh%spacing = spacing 
 
   mesh%idx%dim = sb%dim
   mesh%idx%is_hypercube = sb%box_shape == HYPERCUBE
   mesh%idx%enlarge = enlarge
-
-  if(sb%mr_flag) mesh%idx%enlarge = mesh%idx%enlarge*(2**sb%hr_area%num_radii)
 
   ! adjust nr
   mesh%idx%nr = 0
@@ -98,12 +89,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
     do while(.not.out)
       jj = jj + 1
       chi(idir) = real(jj, REAL_PRECISION)*mesh%spacing(idir)
-      if ( mesh%use_curvilinear ) then
-        call curvilinear_chi2x(sb, cv, chi(1:sb%dim), x(1:sb%dim))
-        out = (x(idir) > nearest(sb%lsize(idir), M_ONE))
-      else
-        out = (chi(idir) > nearest(sb%lsize(idir), M_ONE))
-      end if
+      out = (chi(idir) > nearest(sb%lsize(idir), M_ONE))
     end do
     mesh%idx%nr(2, idir) = jj - 1
   end do
@@ -167,11 +153,10 @@ end subroutine mesh_init_stage_1
 !> This subroutine checks if every grid point belongs to the internal
 !! mesh, based on the global lxyz_inv matrix. Afterwards, it counts
 !! how many points has the mesh and the enlargement.
-subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
+subroutine mesh_init_stage_2(mesh, sb, geo, stencil)
   type(mesh_t),        intent(inout) :: mesh
   type(simul_box_t),   intent(in)    :: sb
   type(geometry_t),    intent(in)    :: geo
-  type(curvilinear_t), intent(in)    :: cv
   type(stencil_t),     intent(in)    :: stencil
 
   integer :: il, ik, ix, iy, iz, is
@@ -247,49 +232,29 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
       chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2)
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
         chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1)
-        call curvilinear_chi2x(sb, cv, chi(:), xx(:, ix))
+        xx(1:mesh%sb%dim, ix) = chi(1:mesh%sb%dim) 
       end do
 
       call simul_box_in_box_vec(sb, geo, mesh%idx%nr(2,1) - mesh%idx%nr(1,1) + 1, xx, in_box)
 
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-        ! With multiresolution, only inner (not enlargement) points are marked now
-        if(sb%mr_flag) then
-          if (in_box(ix) ) then
-            ! First check: is the point beyond the multiresolution areas
-            n_mod = 2**sb%hr_area%num_radii
-            if (sum((xx(:,ix)-sb%hr_area%center(:))**2) > sb%hr_area%radius(sb%hr_area%num_radii)**2 .and. &
-                 mod(ix, n_mod) == 0 .and. mod(iy, n_mod) == 0 .and. mod(iz,n_mod) == 0) then
-              mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)
-            end if
-            ! Other option: must be inside the multiresolution area and satisfy coordinate index conditions
-            if(.not.btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) then
-              do i_lev = 1,sb%hr_area%num_radii
-                n_mod = 2**(i_lev-1)
-                if( sum((xx(:,ix)-sb%hr_area%center(:))**2) < sb%hr_area%radius(i_lev)**2 + DELTA .and. &
-                    mod(ix, n_mod) == 0 .and. mod(iy, n_mod) == 0 .and. mod(iz,n_mod) == 0) then
-                  mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix,iy, iz), INNER_POINT)
-                end if
-              end do
-            end if
-          end if
-        else ! the usual way: mark both inner and enlargement points
-          if (in_box(ix)) then
-
-            ASSERT(all((/ix, iy, iz/) <=  mesh%idx%nr(2, 1:3) - mesh%idx%enlarge(1:3)))
-            ASSERT(all((/ix, iy, iz/) >=  mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3)))
-            
-            mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)
-            do is = 1, stencil%size
-              if(stencil%center == is) cycle
-              ii = ix + stencil%points(1, is)
-              jj = iy + stencil%points(2, is)
-              kk = iz + stencil%points(3, is)
-              if(any((/ii, jj, kk/) < mesh%idx%nr(1, 1:3)) .or. any((/ii, jj, kk/) >  mesh%idx%nr(2, 1:3))) cycle
-              mesh%idx%lxyz_inv(ii, jj, kk) = ibset(mesh%idx%lxyz_inv(ii, jj, kk), ENLARGEMENT_POINT)
-            end do
-          end if
+        
+        if (in_box(ix)) then
+          
+          ASSERT(all((/ix, iy, iz/) <=  mesh%idx%nr(2, 1:3) - mesh%idx%enlarge(1:3)))
+          ASSERT(all((/ix, iy, iz/) >=  mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3)))
+          
+          mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)
+          do is = 1, stencil%size
+            if(stencil%center == is) cycle
+            ii = ix + stencil%points(1, is)
+            jj = iy + stencil%points(2, is)
+            kk = iz + stencil%points(3, is)
+            if(any((/ii, jj, kk/) < mesh%idx%nr(1, 1:3)) .or. any((/ii, jj, kk/) >  mesh%idx%nr(2, 1:3))) cycle
+            mesh%idx%lxyz_inv(ii, jj, kk) = ibset(mesh%idx%lxyz_inv(ii, jj, kk), ENLARGEMENT_POINT)
+          end do
         end if
+
       end do
     end do
   end do
@@ -631,7 +596,7 @@ contains
 #ifdef HAVE_MPI
                   if(.not. mesh%parallel_in_domains) then
 #endif
-                    call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
+                    xx(1:mesh%sb%dim) = chi(1:mesh%sb%dim)
                     mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)
 #ifdef HAVE_MPI
                   end if
@@ -695,7 +660,7 @@ contains
           chi(2) = real(iy, REAL_PRECISION)*mesh%spacing(2)
           chi(3) = real(iz, REAL_PRECISION)*mesh%spacing(3)
 
-          call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
+          xx(1:3) = chi(1:3)
           mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)
 #ifdef HAVE_MPI
         end if
@@ -760,7 +725,7 @@ contains
               chi(2) = real(iy, REAL_PRECISION)*mesh%spacing(2)
               chi(3) = real(iz, REAL_PRECISION)*mesh%spacing(3)
 
-              call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
+              xx(1:3) = chi(1:3)
               mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)
 #ifdef HAVE_MPI
             end if
@@ -1009,7 +974,6 @@ contains
     PUSH_SUB(mesh_init_stage_3.mesh_get_vol_pp)
 
     np = 1
-    if(mesh%use_curvilinear) np = mesh%np_part
 
     SAFE_ALLOCATE(mesh%vol_pp(1:np))
 
@@ -1024,151 +988,19 @@ contains
         kk = mesh%vp%local(mesh%vp%xlocal + ip - 1)
         call index_to_coords(mesh%idx, kk, jj)
         chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
-        mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, :), chi(1:sb%dim))
       end do
 
-      if(mesh%use_curvilinear) then
-        ! Do the ghost points.
-        do ip = 1, mesh%vp%np_ghost
-          kk = mesh%vp%ghost(mesh%vp%xghost + ip - 1)
-          call index_to_coords(mesh%idx, kk, jj)
-          chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
-          mesh%vol_pp(ip + mesh%np) = &
-            mesh%vol_pp(ip + mesh%np)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip + mesh%np, :), chi(1:sb%dim))
-        end do
-        ! Do the boundary points.
-        do ip = 1, mesh%vp%np_bndry
-          kk = mesh%vp%bndry(mesh%vp%xbndry + ip - 1)
-          call index_to_coords(mesh%idx, kk, jj)
-          chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
-          mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost) = &
-            mesh%vol_pp(ip+mesh%np+mesh%vp%np_ghost) &
-            *curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip+mesh%np+mesh%vp%np_ghost, :), chi(1:sb%dim))
-        end do
-      end if
 #endif
     else ! serial mode
 
-      if(mesh%sb%mr_flag) then
-
-        message(1) = 'Info: Point volumes are calculated by solving interpolation coefficients for the intermediate points.'
-        call messages_info(1)
-
-        ! The following interpolation routine is essentially the same as in the calculation of the Laplacian
-
-        nn = 2*mesh%sb%hr_area%interp%order
-
-        SAFE_ALLOCATE(ww(1:nn))
-        SAFE_ALLOCATE(pos(1:nn))
-        SAFE_ALLOCATE(posi(1:nn))
-
-        do ii = 1, mesh%sb%hr_area%interp%order
-          posi(ii) = 1 + 2*(ii - 1)
-          posi(mesh%sb%hr_area%interp%order + ii) = -posi(ii)
-          pos(ii) =  posi(ii)
-          pos(mesh%sb%hr_area%interp%order + ii) = -pos(ii)
-        end do
-
-        call interpolation_coefficients(nn, pos, M_ZERO, ww)
-
-        ! volumes are initialized even for the intermediate points
-        nr(:,:) = mesh%idx%nr(:,:)
-        SAFE_ALLOCATE(vol_tmp(nr(1,1):nr(2,1),nr(1,2):nr(2,2),nr(1,3):nr(2,3)))
-        vol_tmp(:,:,:) = product(mesh%spacing(1:sb%dim))
-
-        ! The idea is that in the first i_lev loop we find intermediate
-        ! points that are odd, i.e. at least one of their indices cannot
-        ! be divided by 2 (note that then n_mod=2**1=1).
-        !
-        ! In the second loop we accept only those intermediate points that
-        ! have at least one index that cannot be divided by 4. This
-        ! rules out some even points that were included in the first loop.
-        !
-        ! This continues until the last resolution level. In each step
-        ! the point volumes of the neighboring points area modified.
-
-        do i_lev = 1, sb%hr_area%num_radii
-
-          write (message(1),'(a,I2,a,I2)') 'Info: Point volume calculation at stage ',i_lev,'/',sb%hr_area%num_radii
-          call messages_info(1)
-
-          ! loop through _all_ the points
-          do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-            do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-              do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
- 
-                ! Skip ordinary points
-                if(mesh%idx%lxyz_inv(ix,iy,iz) > 0 .and. &
-                     mesh%idx%lxyz_inv(ix,iy,iz) <= mesh%np) cycle
-
-                ! Is it the kind of intermediate point we are looking for?
-                n_mod = 2**i_lev
-                dx = abs(mod(ix, n_mod))
-                dy = abs(mod(iy, n_mod))
-                dz = abs(mod(iz, n_mod))
-                if(dx+dy+dz == 0) cycle
-
-                if(abs(vol_tmp(ix, iy, iz)) < DELTA) cycle
-
-                ! The present point (ix,iy,iz) is an intermediate one. When
-                ! calculating integrals, the value of the integrand is
-                ! interpolated from the neighboring ones, i.e. the values of
-                ! the neighboring points are added up with different weights.
-                ! The following loop goes through the neighboring points and
-                ! modifies their weights, i.e. their volumes.
-
-                do lii = 1, nn
-                  do ljj = 1, nn
-                    do lkk = 1, nn
-                      newi = ix + posi(lii)*dx
-                      newj = iy + posi(ljj)*dy
-                      newk = iz + posi(lkk)*dz
-                      if(any((/newi, newj, newk/) <  mesh%idx%nr(1, 1:3)) .or. &
-                         any((/newi, newj, newk/) >  mesh%idx%nr(2, 1:3))) cycle
-                      vol_tmp(newi, newj, newk) = vol_tmp(newi, newj, newk) + &
-                         vol_tmp(ix, iy, iz) * ww(lii)*ww(ljj)*ww(lkk)
-                    end do
-                  end do
-                end do
-                vol_tmp(ix, iy, iz) = M_ZERO
-              end do
-            end do
-          end do
-
-        end do
-
-        ! the volumes are now in vol_tmp table. Move them to vol_pp
-        do ip = 1, mesh%np
-          ix = mesh%idx%lxyz(ip, 1)
-          iy = mesh%idx%lxyz(ip, 2)
-          iz = mesh%idx%lxyz(ip, 3)
-          mesh%vol_pp(ip) = vol_tmp(ix,iy,iz)
-        end do
-       
-        write (message(1),'(a,F26.12)') 'Info: Point volume calculation finished. Total volume :',sum(mesh%vol_pp(1:mesh%np))
-        call messages_info(1)
-
-        SAFE_DEALLOCATE_A(ww)
-        SAFE_DEALLOCATE_A(pos)
-        SAFE_DEALLOCATE_A(posi)
-        SAFE_DEALLOCATE_A(vol_tmp)
-
-      else ! no multiresolution
-
-        do ip = 1, np
-          call index_to_coords(mesh%idx, ip, jj)
-          chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
-          mesh%vol_pp(ip) = mesh%vol_pp(ip)*curvilinear_det_Jac(sb, mesh%cv, mesh%x(ip, 1:sb%dim), chi(1:sb%dim))
-        end do
-
-      end if
+      do ip = 1, np
+        call index_to_coords(mesh%idx, ip, jj)
+        chi(1:sb%dim) = jj(1:sb%dim)*mesh%spacing(1:sb%dim)
+      end do
+      
     end if
 
-    if(mesh%use_curvilinear) then
-      mesh%volume_element = CNST(1.0)
-    else
-      mesh%volume_element = mesh%vol_pp(1)
-    end if
+    mesh%volume_element = mesh%vol_pp(1)
 
     mesh%surface_element(1:sb%dim) = sb%surface_element(1:sb%dim)
 

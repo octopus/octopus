@@ -435,7 +435,6 @@ subroutine X(scdm_rrqr)(st, scdm, mesh, nst,root, jpvt)
   PUSH_SUB(X(scdm_rrqr))
   call profiling_in(prof_scdm_QR,"SCDM_QR")
 
-  ASSERT(.not. mesh%use_curvilinear)
   ASSERT(nst == st%nst)
 
   lnst = st%lnst

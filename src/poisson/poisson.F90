@@ -204,7 +204,7 @@ contains
     !% or <a href=http://arxiv.org/abs/1211.2092>arXiV</a>.
     !% Defaults:
     !% <br> 1D and 2D: <tt>fft</tt>.
-    !% <br> 3D: <tt>cg_corrected</tt> if curvilinear, <tt>isf</tt> if not periodic, <tt>fft</tt> if periodic.
+    !% <br> 3D: <tt>isf</tt> if not periodic, <tt>fft</tt> if periodic.
     !%Option NoPoisson -99
     !% Do not use a Poisson solver at all.
     !%Option FMM -4
@@ -248,17 +248,6 @@ contains
     ! enough to cause problems with the tests.
     ! if(accel_is_enabled()) default_solver = POISSON_FFT
 #endif
-
-    if(der%mesh%use_curvilinear) then
-      select case(der%mesh%sb%dim)
-      case(1)
-        default_solver = POISSON_DIRECT_SUM
-      case(2)
-        default_solver = POISSON_DIRECT_SUM
-      case(3)
-        default_solver = POISSON_CG_CORRECTED
-      end select
-    end if
 
     if(abs(this%theta) > M_EPSILON .and. der%mesh%sb%dim == 1) default_solver = POISSON_DIRECT_SUM
 
@@ -396,11 +385,6 @@ contains
           call messages_not_implemented('Complex scaled 1D soft Coulomb with Poisson solver other than direct_sum')
         end if
 
-        if(der%mesh%use_curvilinear .and. this%method /= POISSON_DIRECT_SUM) then
-          message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
-          message(2) = 'Poisson solver is direct_sum.'
-          call messages_fatal(2)
-        end if
 
       case(2)
 
@@ -409,11 +393,6 @@ contains
           call messages_fatal(1)
         end if
 
-        if(der%mesh%use_curvilinear .and. (this%method /= POISSON_DIRECT_SUM) ) then
-          message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
-          message(2) = 'Poisson solver is direct_sum.'
-          call messages_fatal(2)
-        end if
 
       case(3)
       
@@ -437,12 +416,6 @@ contains
           this%kernel == POISSON_FFT_KERNEL_CORRECTED) then
           write(message(1), '(a,i1,a)')'PoissonFFTKernel = multipole_correction cannot be used for periodic systems.'
           call messages_fatal(1)
-        end if
-
-        if(der%mesh%use_curvilinear .and. (this%method/=POISSON_CG_CORRECTED)) then
-          message(1) = 'If curvilinear coordinates are used, then the only working'
-          message(2) = 'Poisson solver is cg_corrected.'
-          call messages_fatal(2)
         end if
 
         if( (der%mesh%sb%box_shape == MINIMUM) .and. (this%method == POISSON_CG_CORRECTED) ) then
@@ -915,10 +888,6 @@ contains
 
     default_solver = POISSON_DIRECT_SUM 
     this%method = default_solver
-
-    if(der%mesh%use_curvilinear) then
-      call messages_not_implemented("lda+u with curvilinear mesh")    
-    end if
 
     this%kernel = POISSON_FFT_KERNEL_NONE
 

@@ -381,7 +381,7 @@ contains
 
     if(preconditioner_is_multigrid(scf%eigens%pre)) then
       SAFE_ALLOCATE(gr%mgrid_prec)
-      call multigrid_init(gr%mgrid_prec, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc, &
+      call multigrid_init(gr%mgrid_prec, geo, gr%mesh, gr%der, gr%stencil, mc, &
         used_for_preconditioner=.true.)
     end if
 

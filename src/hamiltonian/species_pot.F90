@@ -20,7 +20,6 @@
 
 module species_pot_oct_m
   use atom_oct_m
-  use curvilinear_oct_m
   use double_grid_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -172,23 +171,13 @@ contains
       if(in_points > 0) then
         ! This probably should be done inside the mesh_function_oct_m module.
  
-        if (mesh%use_curvilinear) then
-          do ip = 1, mesh%np
-            call mesh_r(mesh, ip, rr, origin = atom%x)
-            if(rr <= species_jradius(species)) then
-              rho(ip, 1:spin_channels) = species_zval(species) /   &
-                (mesh%vol_pp(ip)*real(in_points*spin_channels, REAL_PRECISION))
-            end if
-          end do
-        else
-          do ip = 1, mesh%np
-            call mesh_r(mesh, ip, rr, origin = atom%x)
-            if(rr <= species_jradius(species)) then
-              rho(ip, 1:spin_channels) = species_zval(species) /   &
-                (mesh%vol_pp(1)*real(in_points*spin_channels, REAL_PRECISION))
-            end if
-          end do
-        end if
+        do ip = 1, mesh%np
+          call mesh_r(mesh, ip, rr, origin = atom%x)
+          if(rr <= species_jradius(species)) then
+            rho(ip, 1:spin_channels) = species_zval(species) /   &
+              (mesh%vol_pp(1)*real(in_points*spin_channels, REAL_PRECISION))
+          end if
+        end do
       end if
 
     case (SPECIES_JELLIUM_SLAB) ! ... from jellium slab
@@ -210,23 +199,13 @@ contains
       if(in_points > 0) then
         ! This probably should be done inside the mesh_function_oct_m module.
 
-        if (mesh%use_curvilinear) then
-          do ip = 1, mesh%np
-            rr = abs( mesh%x( ip, 3 ) )
-            if( rr <= species_jthick(species)/M_TWO ) then
-              rho(ip, 1:spin_channels) = species_zval(species) /   &
-                (mesh%vol_pp(ip)*real(in_points*spin_channels, REAL_PRECISION))
-            end if
-          end do
-        else
-          do ip = 1, mesh%np
-            rr = abs( mesh%x( ip, 3 ) )
-            if( rr <= species_jthick(species)/M_TWO ) then
-              rho(ip, 1:spin_channels) = species_zval(species) /   &
-                (mesh%vol_pp(1)*real(in_points*spin_channels, REAL_PRECISION))
-            end if
-          end do
-        end if
+        do ip = 1, mesh%np
+          rr = abs( mesh%x( ip, 3 ) )
+          if( rr <= species_jthick(species)/M_TWO ) then
+            rho(ip, 1:spin_channels) = species_zval(species) /   &
+              (mesh%vol_pp(1)*real(in_points*spin_channels, REAL_PRECISION))
+          end if
+        end do
       end if
 
     case (SPECIES_PSEUDO, SPECIES_PSPIO)
@@ -556,7 +535,7 @@ contains
     type(root_solver_t) :: rs
     logical :: conv
     integer :: dim
-    FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
+    FLOAT   :: x(1:MAX_DIM+1), startval(MAX_DIM + 1)
     FLOAT   :: delta, alpha, beta, xx(MAX_DIM), yy(MAX_DIM), rr, imrho1, rerho
     FLOAT   :: dist2, dist2_min
     integer :: icell, ipos, ip
@@ -633,13 +612,7 @@ contains
       end if
 #endif
 
-      if(have_point) then
-        if(mesh%use_curvilinear) then
-          rho(ipos) = -species_z(species)/mesh%vol_pp(ipos)
-        else
-          rho(ipos) = -species_z(species)/mesh%vol_pp(1)
-        end if
-      end if
+      if(have_point) rho(ipos) = -species_z(species)/mesh%volume_element
 
       write(message(1), '(3a,f5.2,3a)') &
         "Info: species_full_delta species ", trim(species_label(species)), &
@@ -667,8 +640,6 @@ contains
       mesh_p => mesh
       pos_p = pos
 
-      ! Initial guess.
-      call curvilinear_x2chi(mesh%sb, mesh%cv, pos, chi0)
       delta   = mesh%spacing(1)
       alpha   = sqrt(M_TWO)*species_sigma(species)*delta
       alpha_p = alpha  ! global copy of alpha

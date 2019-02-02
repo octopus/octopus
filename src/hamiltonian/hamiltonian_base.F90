@@ -461,7 +461,6 @@ contains
     end do
 
     if(epot%reltype /= NOREL) this%apply_projector_matrices = .false.
-    if(mesh%use_curvilinear)  this%apply_projector_matrices = .false.
 
     if(.not. this%apply_projector_matrices) then
       SAFE_DEALLOCATE_A(order)

@@ -174,10 +174,9 @@ contains
   end subroutine derivatives_nullify
 
   ! ---------------------------------------------------------
-  subroutine derivatives_init(der, sb, use_curvilinear)
+  subroutine derivatives_init(der, sb)
     type(derivatives_t), target, intent(out) :: der
     type(simul_box_t),           intent(in)  :: sb
-    logical,                     intent(in)  :: use_curvilinear
 
     integer :: idir
     integer :: default_stencil
@@ -196,9 +195,6 @@ contains
     !% each point in the mesh, are the neighboring points used in the
     !% expression of the differential operator.
     !%
-    !% If curvilinear coordinates are to be used, then only the <tt>stencil_starplus</tt>
-    !% or the <tt>stencil_cube</tt> may be used. We only recommend the <tt>stencil_starplus</tt>,
-    !% since the cube typically needs far too much memory.
     !%Option stencil_star 1
     !% A star around each point (<i>i.e.</i>, only points on the axis).
     !%Option stencil_variational 2
@@ -211,7 +207,6 @@ contains
     !% The general star. Default for non-orthogonal grids.
     !%End
     default_stencil = DER_STAR
-    if(use_curvilinear) default_stencil = DER_STARPLUS
     if(sb%nonorthogonal) default_stencil = DER_STARGENERAL
 
     call parse_variable('DerivativesStencil', default_stencil, der%stencil_type)
@@ -219,7 +214,6 @@ contains
     if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) call messages_input_error('DerivativesStencil')
     call messages_print_var_option(stdout, "DerivativesStencil", der%stencil_type)
 
-    if(use_curvilinear  .and.  der%stencil_type < DER_CUBE) call messages_input_error('DerivativesStencil')
     if(der%stencil_type == DER_VARIATIONAL) then
       call parse_variable('DerivativesLaplacianFilter', M_ONE, der%lapl_cutoff)
     end if
@@ -463,15 +457,11 @@ contains
 
     ASSERT(associated(der%op))
     ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARGENERAL)
-    ASSERT(.not.(der%stencil_type==DER_VARIATIONAL .and. mesh%use_curvilinear))
 
     der%mesh => mesh    ! make a pointer to the underlying mesh
 
     const_w_  = .true.
     cmplx_op_ = .false.
-
-    ! need non-constant weights for curvilinear and scattering meshes
-    if(mesh%use_curvilinear) const_w_ = .false.
 
     der%np_zero_bc = 0
 
@@ -580,31 +570,6 @@ contains
 
     end select
     
-    
-
-    ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-self-adjoint
-    if(mesh%use_curvilinear .and. (.not. der%mesh%sb%mr_flag)) then
-      do i = 1, der%dim
-        call nl_operator_init(auxop, "auxop")
-        call nl_operator_skewadjoint(der%grad(i), auxop, der%mesh)
-
-        call nl_operator_end(der%grad(i))
-        call nl_operator_copy(der%grad(i), auxop)
-        call nl_operator_end(auxop)
-      end do
-      call nl_operator_init(auxop, "auxop")
-      call nl_operator_selfadjoint(der%lapl, auxop, der%mesh)
-
-      call nl_operator_end(der%lapl)
-      call nl_operator_copy(der%lapl, auxop)
-      call nl_operator_end(auxop)
-    end if
-
-    ! useful for debug purposes
-!     call dderivatives_test(der, 1, 1, 1)
-!     call exit(1)
-
-
     POP_SUB(derivatives_build)
 
   contains
@@ -700,14 +665,10 @@ contains
       mat(1,:) = M_ONE
       ! i indexes the point in the stencil
       do i = 1, op(1)%stencil%size
-        if(mesh%use_curvilinear) then
-          forall(j = 1:dim) x(j) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), j) - mesh%x(p, j)
-        else
-          forall(j = 1:dim) x(j) = real(op(1)%stencil%points(j, i), REAL_PRECISION)*mesh%spacing(j)
-          ! TODO : this internal if clause is inefficient - the condition is determined globally
-          if (mesh%sb%nonorthogonal .and. .not. optional_default(force_orthogonal, .false.))  & 
-              x(1:dim) = matmul(mesh%sb%rlattice_primitive(1:dim,1:dim), x(1:dim))
-        end if
+        forall(j = 1:dim) x(j) = real(op(1)%stencil%points(j, i), REAL_PRECISION)*mesh%spacing(j)
+        ! TODO : this internal if clause is inefficient - the condition is determined globally
+        if (mesh%sb%nonorthogonal .and. .not. optional_default(force_orthogonal, .false.))  & 
+          x(1:dim) = matmul(mesh%sb%rlattice_primitive(1:dim,1:dim), x(1:dim))
                          
 ! NB: these masses are applied on the cartesian directions. Should add a check for non-orthogonal axes
         forall(j = 1:dim) x(j) = x(j)*sqrt(masses(j))

@@ -604,47 +604,23 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
     end if
     ss = R_TOTYPE(M_ZERO)
 
-    if(.not. mesh%use_curvilinear) then
-
-      do sp = 1, mesh%np, block_size
-        size = min(block_size, mesh%np - sp + 1)
-        do ist = 1, nst
-          do idim = 1, dim
-        
-            if(present(mask)) then
-              if(mask(ist)) cycle
-            end if
-
-            ss(ist) = ss(ist) + blas_dot(size, psi(sp, idim, ist), 1, phi(sp, idim), 1)
-          end do
+    do sp = 1, mesh%np, block_size
+      size = min(block_size, mesh%np - sp + 1)
+      do ist = 1, nst
+        do idim = 1, dim
+          
+          if(present(mask)) then
+            if(mask(ist)) cycle
+          end if
+          
+          ss(ist) = ss(ist) + blas_dot(size, psi(sp, idim, ist), 1, phi(sp, idim), 1)
         end do
       end do
-
-      ss = ss * mesh%vol_pp(1)
-
-      call profiling_count_operations((R_ADD + R_MUL) * mesh%np * dim * nst)
-
-    else
-
-      do sp = 1, mesh%np, block_size
-        size = min(block_size, mesh%np - sp + 1)
-        ep = sp - 1 + size
-        do ist = 1, nst
-          do idim = 1, dim
-
-            if(present(mask)) then
-              if(mask(ist)) cycle
-            end if
-
-            ss(ist) = ss(ist) + sum(mesh%vol_pp(sp:ep)*R_CONJ(psi(sp:ep, idim, ist))*phi(sp:ep, idim))
-
-          end do
-        end do
-      end do
-
-      call profiling_count_operations((R_ADD + 2 * R_MUL) * mesh%np * dim * nst)
-
-    end if
+    end do
+    
+    ss = ss*mesh%volume_element
+    
+    call profiling_count_operations((R_ADD + R_MUL) * mesh%np * dim * nst)
 
     if(mesh%parallel_in_domains) then
       call profiling_in(reduce_prof, "GRAM_SCHMIDT_REDUCE")
@@ -1291,13 +1267,6 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 
       if(st%parallel_in_states) call states_parallel_gather(st, (/st%d%dim, size/), psi)
       
-      if(mesh%use_curvilinear) then
-        do ip = sp, sp + size - 1
-          vol = sqrt(mesh%vol_pp(ip))
-          psi(1:st%nst, 1:st%d%dim, ip) = psi(1:st%nst, 1:st%d%dim, ip)*vol
-        end do
-      end if
-
       call blas_herk(uplo = 'u', trans = 'n',              &
         n = st%nst, k = size*st%d%dim,                     &
         alpha = mesh%volume_element,                       &
@@ -1453,13 +1422,6 @@ subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj, gs_nst)
         call states_parallel_gather(gs_st, (/st%d%dim, size/), gspsi)
       end if
       
-      if(mesh%use_curvilinear) then
-        do ip = 1, size
-          psi(1:st%nst, 1:st%d%dim, ip) = psi(1:st%nst, 1:st%d%dim, ip)*mesh%vol_pp(sp + ip - 1)
-          gspsi(1:gs_nst_, 1:st%d%dim, ip) = gspsi(1:gs_nst_, 1:st%d%dim, ip)*mesh%vol_pp(sp + ip - 1)
-        end do
-      end if
-
       call blas_gemm(transa = 'n', transb = 'c',        &
         m = gs_nst_, n = st%nst, k = size*st%d%dim,      &
         alpha = R_TOTYPE(mesh%volume_element),      &

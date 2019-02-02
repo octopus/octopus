@@ -191,28 +191,14 @@ contains
 
     n_s = rkb_p%n_s
 
-    if(mesh%use_curvilinear) then
-      SAFE_ALLOCATE(bra(1:n_s, 1:2))
-      bra(1:n_s, 1) = rkb_p%bra(1:n_s, 1)*mesh%vol_pp(sm%map(1:n_s))
-      bra(1:n_s, 2) = rkb_p%bra(1:n_s, 2)*mesh%vol_pp(sm%map(1:n_s))
-      do idim = 1, 2
-        do is = 1, n_s
-          uvpsi(idim, 1) = uvpsi(idim, 1) + psi(is, idim)*bra(is, 1)
-          uvpsi(idim, 2) = uvpsi(idim, 2) + psi(is, idim)*bra(is, 2)
-        end do
+    do idim = 1, 2
+      do is = 1, n_s
+        uvpsi(idim, 1) = uvpsi(idim, 1) + psi(is, idim)*rkb_p%bra(is, 1)
+        uvpsi(idim, 2) = uvpsi(idim, 2) + psi(is, idim)*rkb_p%bra(is, 2)
       end do
-      SAFE_DEALLOCATE_A(bra)
-    else
-      do idim = 1, 2
-        do is = 1, n_s
-          uvpsi(idim, 1) = uvpsi(idim, 1) + psi(is, idim)*rkb_p%bra(is, 1)
-          uvpsi(idim, 2) = uvpsi(idim, 2) + psi(is, idim)*rkb_p%bra(is, 2)
-        end do
-        uvpsi(idim, 1) = uvpsi(idim, 1)*mesh%volume_element
-        uvpsi(idim, 2) = uvpsi(idim, 2)*mesh%volume_element
-      end do
-    end if
-
+      uvpsi(idim, 1) = uvpsi(idim, 1)*mesh%volume_element
+      uvpsi(idim, 2) = uvpsi(idim, 2)*mesh%volume_element
+    end do
 
     SAFE_DEALLOCATE_A(bra)
 #ifndef HAVE_OPENMP

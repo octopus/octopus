@@ -19,7 +19,6 @@
 #include "global.h"
 
 module mesh_oct_m
-  use curvilinear_oct_m
   use geometry_oct_m
   use global_oct_m
   use hypercube_oct_m
@@ -79,9 +78,7 @@ module mesh_oct_m
   !! These four are defined for all the points the node is responsible for.
   type mesh_t
     type(simul_box_t),   pointer :: sb  !< simulation box
-    type(curvilinear_t), pointer :: cv  
     type(index_t)                :: idx 
-    logical :: use_curvilinear
     
     FLOAT :: spacing(MAX_DIM)         !< the (constant) spacing between the points
     
@@ -771,7 +768,7 @@ contains
       chi(1:mesh%sb%dim) = ix(1:mesh%sb%dim) * mesh%spacing(1:mesh%sb%dim)
       chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
       xx = M_ZERO ! this initialization is required by gfortran 4.4 or we get NaNs
-      call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
+      xx(1:mesh%sb%dim) = chi(1:mesh%sb%dim)
       xx(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
     else
       xx(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM)
@@ -784,9 +781,7 @@ contains
   logical pure function mesh_compact_boundaries(mesh) result(cb)
     type(mesh_t),       intent(in) :: mesh
     
-    cb = .not. mesh%use_curvilinear .and. &
-         .not. mesh%parallel_in_domains .and.  &
-         simul_box_has_zero_bc(mesh%sb)
+    cb = .not. mesh%parallel_in_domains .and. simul_box_has_zero_bc(mesh%sb)
 
   end function mesh_compact_boundaries
 

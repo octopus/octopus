@@ -86,8 +86,7 @@ contains
     !%Description
     !% Which preconditioner to use in order to solve the Kohn-Sham
     !% equations or the linear-response equations. The default is
-    !% pre_filter, except for curvilinear coordinates, where no
-    !% preconditioner is applied by default.
+    !% pre_filter.
     !%Option no 0
     !% Do not apply preconditioner.
     !%Option pre_filter 1
@@ -102,11 +101,7 @@ contains
     !% Multigrid preconditioner.
     !%End
 
-    if(gr%mesh%use_curvilinear) then
-      default = PRE_NONE
-    else
-      default = PRE_FILTER
-    end if
+    default = PRE_FILTER
 
     call parse_variable('Preconditioner', default, this%which)
     if(.not.varinfo_valid_option('Preconditioner', this%which)) &
@@ -118,7 +113,7 @@ contains
       ! the smoothing has a star stencil like the laplacian
       call nl_operator_init(this%op, "Preconditioner")
       call stencil_star_get_lapl(this%op%stencil, gr%mesh%sb%dim, 1)
-      call nl_operator_build(gr%mesh, this%op, gr%mesh%np, const_w = .not. gr%mesh%use_curvilinear)
+      call nl_operator_build(gr%mesh, this%op, gr%mesh%np)
 
       !%Variable PreconditionerFilterFactor
       !%Type float
@@ -152,8 +147,6 @@ contains
 
       do ip = 1,maxp
 
-        if(gr%mesh%use_curvilinear) vol = sum(gr%mesh%vol_pp(ip + this%op%ri(1:ns, this%op%rimap(ip))))
-
         do is = 1, ns
           if(is /= this%op%stencil%center) then
             this%op%w_re(is, ip) = M_HALF*(M_ONE - alpha)/gr%mesh%sb%dim
@@ -161,7 +154,6 @@ contains
             this%op%w_re(is, ip) = alpha
           end if
           ip2 = ip + this%op%ri(is, this%op%rimap(ip))
-          if(gr%mesh%use_curvilinear) this%op%w_re(is, ip) = this%op%w_re(is, ip)*(ns*gr%mesh%vol_pp(ip2)/vol)
         end do
       end do
       

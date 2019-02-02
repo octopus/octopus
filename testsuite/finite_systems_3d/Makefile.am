@@ -25,8 +25,6 @@ dist_share_DATA = \
 	01-carbon_atom.02-psf_l1.inp \
 	01-carbon_atom.03-ground_state_double_grid.inp \
 	01-carbon_atom.test \
-	02-curvilinear_coordinates.01-gygi.inp \
-	02-curvilinear_coordinates.test \
 	04-jellium.01-ground_state.inp \
 	04-jellium.test \
 	03-magnetic.test                               \

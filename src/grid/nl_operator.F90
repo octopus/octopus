@@ -381,7 +381,7 @@ contains
     ! store values in structure
     op%np       = np
     op%mesh     => mesh
-    op%const_w  = .false.
+    op%const_w  = .true.
     op%cmplx_op = .false.
     if(present(const_w )) op%const_w  = const_w
     if(present(cmplx_op)) op%cmplx_op = cmplx_op
@@ -506,13 +506,6 @@ contains
         op%rimap     = 0
         op%rimap_inv = 0
         current      = 0
-
-        ! the sizes
-        if(mesh%use_curvilinear) then
-          SAFE_ALLOCATE(op%nn(1:op%nri))
-          ! for the moment all the sizes are the same
-          op%nn = op%stencil%size
-        end if
       end if
 
     end do

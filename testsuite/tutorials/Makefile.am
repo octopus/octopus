@@ -34,10 +34,6 @@ dist_share_DATA =                                                             \
 	04-octopus_basics-visualization.test                                  \
 	04-octopus_basics-visualization.01-benzene.inp                        \
 	benzene.xyz                                                           \
-	06-octopus_basics-periodic_systems.test                               \
-	06-octopus_basics-periodic_systems.01-silicon.inp                     \
-	06-octopus_basics-periodic_systems.02-silicon_converged.inp           \
-	06-octopus_basics-periodic_systems.03-bandstructure.inp       \
 	07-octopus_basics-time_dependent_propagation.test                     \
 	07-octopus_basics-time_dependent_propagation.01-gs.inp                \
 	07-octopus_basics-time_dependent_propagation.02-td.inp                \

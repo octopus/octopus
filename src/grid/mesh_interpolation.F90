@@ -64,8 +64,6 @@ contains
     
     PUSH_SUB(mesh_interpolation_init)
 
-    ASSERT(.not. mesh%use_curvilinear)
-    
     this%mesh => mesh
 
     POP_SUB(mesh_interpolation_init)

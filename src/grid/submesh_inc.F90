@@ -30,17 +30,15 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff) result(res)
   ASSERT(present(ff) .or. sm%np  ==  0)
 
   if(sm%np > 0) then
-    if (mesh%use_curvilinear) then
-      res = sum(ff(1:sm%np)*mesh%vol_pp(sm%map(1:sm%np)) )
-    else
-      res = R_TOTYPE(M_ZERO)
-      !$omp parallel do reduction(+:res)
-      do is = 1, sm%np
-        res = res+ff(is)
-      end do
-      !$omp end parallel do
-      res=res*mesh%volume_element
-    end if
+
+    res = R_TOTYPE(M_ZERO)
+    !$omp parallel do reduction(+:res)
+    do is = 1, sm%np
+      res = res+ff(is)
+    end do
+    !$omp end parallel do
+    res=res*mesh%volume_element
+
   else
     res = M_ZERO
   end if
@@ -65,11 +63,7 @@ R_TYPE function X(sm_integrate_frommesh)(mesh, sm, ff) result(res)
   ASSERT(present(ff) .or. sm%np  ==  0)
 
   if(sm%np > 0) then
-    if (mesh%use_curvilinear) then
-      res = sum(ff(sm%map(1:sm%np))*mesh%vol_pp(sm%map(1:sm%np)) )
-    else
-      res = sum(ff(sm%map(1:sm%np)))*mesh%volume_element
-    end if
+    res = sum(ff(sm%map(1:sm%np)))*mesh%volume_element
   else
     res = M_ZERO
   end if
@@ -209,14 +203,7 @@ FLOAT function X(sm_nrm2)(sm, ff, reduce) result(nrm2)
   call profiling_in(C_PROFILING_SM_NRM2, "SM_NRM2")
   PUSH_SUB(X(sm_nrm2))
 
-  if(sm%mesh%use_curvilinear) then
-    SAFE_ALLOCATE(ll(1:sm%np))
-    ll(1:sm%np) = ff(1:sm%np)*sqrt(sm%mesh%vol_pp(sm%map(1:sm%np)))
-    nrm2 = lalg_nrm2(sm%np, ll)
-    SAFE_DEALLOCATE_A(ll)
-  else
-    nrm2 = lalg_nrm2(sm%np, ff)
-  end if
+  nrm2 = lalg_nrm2(sm%np, ff)
 
   nrm2 = nrm2*sqrt(sm%mesh%volume_element)
 
@@ -248,25 +235,19 @@ R_TYPE function X(dsubmesh_to_mesh_dotp)(this, sphi, phi, reduce) result(dotp)
 
   dotp = R_TOTYPE(M_ZERO)
 
-  if(this%mesh%use_curvilinear) then
-    do is = 1, this%np
-      dotp = dotp + this%mesh%vol_pp(this%map(is))*phi(this%map(is))*sphi(is)
+  m = mod(this%np,4)
+  do ip = 1, m
+    dotp = dotp + phi(this%map(ip))*sphi(ip)
+  end do
+  if( this%np.ge.4) then
+    do ip = m+1, this%np, 4
+      dotp = dotp + phi(this%map(ip))*sphi(ip) &
+        + phi(this%map(ip+1))*sphi(ip+1) &
+        + phi(this%map(ip+2))*sphi(ip+2) &
+        + phi(this%map(ip+3))*sphi(ip+3)
     end do
-  else
-    m = mod(this%np,4)
-    do ip = 1, m
-      dotp = dotp + phi(this%map(ip))*sphi(ip)
-    end do
-    if( this%np.ge.4) then
-      do ip = m+1, this%np, 4
-        dotp = dotp + phi(this%map(ip))*sphi(ip) &
-                    + phi(this%map(ip+1))*sphi(ip+1) &
-                    + phi(this%map(ip+2))*sphi(ip+2) &
-                    + phi(this%map(ip+3))*sphi(ip+3)
-      end do
-    end if
-    dotp = dotp*this%mesh%vol_pp(1)
   end if
+  dotp = dotp*this%mesh%vol_pp(1)
 
   if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) &
     call comm_allreduce(this%mesh%vp%comm, dotp)
@@ -437,81 +418,41 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
   ASSERT(.not. batch_is_packed(ss))
   ASSERT(.not. batch_is_packed(mm))
 
-  if(this%mesh%use_curvilinear) then
-
-    do ist = 1, ss%nst
-      do jst = 1, mm%nst
-        dotp = R_TOTYPE(M_ZERO)
-        do idim = 1, ss%dim
-          jdim = min(idim, ss%dim)
-
-          if(associated(ss%states(ist)%dpsi)) then
-
-            do is = 1, this%np
-              dotp = dotp + this%mesh%vol_pp(this%map(is))*&
-                R_CONJ(mm%states(jst)%X(psi)(this%map(is), idim))*&
-                ss%states(ist)%dpsi(is, jdim)
-            end do
-
-          else
-
+  !$omp parallel do private(ist, jst, dotp, idim, jdim, is)
+  do ist = 1, ss%nst
+    do jst = 1, mm%nst
+      dotp = R_TOTYPE(M_ZERO)
+      
+      do idim = 1, mm%dim
+        jdim = min(idim, ss%dim)
+        
+        if(associated(ss%states(ist)%dpsi)) then
+          do is = 1, this%np
+            dotp = dotp + &
+              R_CONJ(mm%states(jst)%X(psi)(this%map(is), idim))*&
+              ss%states(ist)%dpsi(is, jdim)
+          end do
+        else
+          
 #ifdef R_TCOMPLEX
-            do is = 1, this%np
-              dotp = dotp + this%mesh%vol_pp(this%map(is))*&
-                R_CONJ(mm%states(jst)%X(psi)(this%map(is), idim))*&
-                ss%states(ist)%zpsi(is, jdim)
-            end do
+          do is = 1, this%np
+            dotp = dotp + &
+              R_CONJ(mm%states(jst)%X(psi)(this%map(is), idim))*&
+              ss%states(ist)%zpsi(is, jdim)
+          end do
 #else
-            message(1) = "Internal error: cannot call dsubmesh_batch_dotp_matrix with complex batch ss"
-            call messages_fatal(1)
+          message(1) = "Internal error: cannot call dsubmesh_batch_dotp_matrix with complex batch ss"
+          call messages_fatal(1)
 #endif
-
-          end if
-        end do
-
-        dot(ist, jst) = dotp
+          
+        end if
+        
       end do
+      
+      dot(jst, ist) = dotp*this%mesh%volume_element
     end do
+  end do
     
-  else
-
-    !$omp parallel do private(ist, jst, dotp, idim, jdim, is)
-    do ist = 1, ss%nst
-      do jst = 1, mm%nst
-        dotp = R_TOTYPE(M_ZERO)
-
-        do idim = 1, mm%dim
-          jdim = min(idim, ss%dim)
-
-          if(associated(ss%states(ist)%dpsi)) then
-            do is = 1, this%np
-              dotp = dotp + &
-                R_CONJ(mm%states(jst)%X(psi)(this%map(is), idim))*&
-                ss%states(ist)%dpsi(is, jdim)
-            end do
-          else
-
-#ifdef R_TCOMPLEX
-            do is = 1, this%np
-              dotp = dotp + &
-                R_CONJ(mm%states(jst)%X(psi)(this%map(is), idim))*&
-                ss%states(ist)%zpsi(is, jdim)
-            end do
-#else
-            message(1) = "Internal error: cannot call dsubmesh_batch_dotp_matrix with complex batch ss"
-            call messages_fatal(1)
-#endif
-
-          end if
-
-        end do
-
-        dot(jst, ist) = dotp*this%mesh%volume_element
-      end do
-    end do
-    
-  end if
-
 #if defined(HAVE_MPI)
   if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) then
     call comm_allreduce(this%mesh%mpi_grp%comm, dot, dim = (/mm%nst, ss%nst/))

@@ -1015,18 +1015,14 @@ contains
          
           if(ip <= np_max .and. ip > 0) then
             xx = units_from_atomic(units_out%length, mesh_x_global(mesh, ip))
-            if(mesh%use_curvilinear) then
-              fu = fu + units_from_atomic(unit, ff(ip))*mesh%vol_pp(ip)
-            else
-              fu = fu + units_from_atomic(unit, ff(ip))
-            end if
+            fu = fu + units_from_atomic(unit, ff(ip))
             zz = xx(d3)
             np = np + 1
           end if
         end do
       end do
      
-      if(.not.mesh%use_curvilinear) fu = fu*mesh%surface_element(d3)
+      fu = fu*mesh%surface_element(d3)
       if(np > 0 ) write(iunit, mformat, iostat=ierr) zz, fu
     end do
 
