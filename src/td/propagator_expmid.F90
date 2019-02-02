@@ -27,7 +27,6 @@ module propagator_expmid_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
-  use lda_u_oct_m
   use math_oct_m
   use messages_oct_m
   use potential_interpolation_oct_m
@@ -90,7 +89,6 @@ contains
     end if
     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - M_HALF*dt)
     !We update the occupation matrices
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
 

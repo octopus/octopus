@@ -35,9 +35,6 @@ module scf_oct_m
   use io_function_oct_m
   use kpoints_oct_m
   use lcao_oct_m
-  use lda_u_oct_m
-  use lda_u_io_oct_m
-  use lda_u_mixer_oct_m
   use loct_oct_m
   use magnetic_oct_m
   use math_oct_m
@@ -118,7 +115,6 @@ module scf_oct_m
     type(eigensolver_t) :: eigens
     integer :: mixdim1
     logical :: forced_finish !< remember if 'touch stop' was triggered earlier.
-    type(lda_u_mixer_t) :: lda_u_mix
   end type scf_t
 
 contains
@@ -360,21 +356,7 @@ contains
       call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     end if
 
-    !If we use LDA+U, we also have do mix it
-    if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
-      call lda_u_mixer_init_auxmixer(hm%lda_u, scf%lda_u_mix, scf%smix, st)
-    end if
     call mix_get_field(scf%smix, scf%mixfield)
-
-    if(hm%lda_u_level /= DFT_U_NONE .and. hm%lda_u%basisfromstates) then
-      call lda_u_loadbasis(hm%lda_u, st, gr%mesh, mc, ierr)
-      if (ierr /= 0) then
-        message(1) = "Unable to load LDA+U basis from selected states."
-        call messages_fatal(1)
-      end if
-      call lda_u_periodic_coulomb_integrals(hm%lda_u, st, gr%der, mc, associated(hm%hm_base%phase))
-    end if
-
 
     ! now the eigensolver stuff
     call eigensolver_init(scf%eigens, gr, st)
@@ -495,9 +477,6 @@ contains
 
     nullify(scf%mixfield)
 
-    if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_end(scf%lda_u_mix, scf%smix)
-
-
     POP_SUB(scf_end)
   end subroutine scf_end
 
@@ -509,8 +488,6 @@ contains
     PUSH_SUB(scf_mix_clear)
 
     call mix_clear(scf%smix)
-
-    if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_clear(scf%lda_u_mix, scf%smix)
 
     POP_SUB(scf_mix_clear)
   end subroutine scf_mix_clear
@@ -616,13 +593,6 @@ contains
         end if
       end if
 
-      if(hm%lda_u_level /= DFT_U_NONE) then
-        call lda_u_load(restart_load, hm%lda_u, st, ierr) 
-        if (ierr /= 0) then
-          message(1) = "Unable to read LDA+U information. LDA+U data will be calculated from states."
-          call messages_warning(1)
-        end if
-      end if 
     end if
 
     SAFE_ALLOCATE(rhoout(1:gr%fine%mesh%np, 1:1, 1:nspin))
@@ -656,12 +626,6 @@ contains
       end do
       
     end select
-
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
-    !If we use LDA+U, we also have do mix it
-    if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
-      call lda_u_mixer_init(hm%lda_u, scf%lda_u_mix, st)
-    end if
 
     evsum_in = states_eigenvalues_sum(st)
 
@@ -742,7 +706,6 @@ contains
 
       ! occupations
       call states_fermi(st, gr%mesh)
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
       ! compute output density, potential (if needed) and eigenvalues sum
       call density_calc(st, gr, st%rho)
@@ -764,8 +727,6 @@ contains
         end do
       end select
       
-      if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vout(hm%lda_u, scf%lda_u_mix)
- 
       evsum_out = states_eigenvalues_sum(st)
 
       ! recalculate total energy
@@ -841,13 +802,11 @@ contains
             minval(st%rho(1:gr%fine%mesh%np, 1:st%d%spin_channels))
           call messages_warning(1)
         end if
-        call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
         call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
       case (OPTION__MIXFIELD__POTENTIAL)
         ! mix input and output potentials
         call mixing(scf%smix)
         call mixfield_get_vnew(scf%mixfield, hm%vhxc)
-        call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
         call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
         
       case(OPTION__MIXFIELD__STATES)
@@ -887,14 +846,6 @@ contains
             call messages_warning(1)
           end if
 
-          if(hm%lda_u_level /= DFT_U_NONE) then
-            call lda_u_dump(restart_dump, hm%lda_u, st, ierr, iter=iter)
-            if (ierr /= 0) then
-              message(1) = 'Unable to write LDA+U information.'
-              call messages_warning(1)
-            end if
-          end if
-
           select case (scf%mix_field)
           case (OPTION__MIXFIELD__DENSITY)
             call mix_dump(restart_dump, scf%smix, gr%fine%mesh, ierr)
@@ -931,12 +882,6 @@ contains
         exit
       end if
 
-      if((outp%what+outp%what_lda_u+outp%whatBZ)/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
-        .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
-        write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
-        call output_all(outp, gr, geo, st, hm, ks, dirname)
-      end if
-
       ! save information for the next iteration
       rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
 
@@ -946,7 +891,6 @@ contains
         case (OPTION__MIXFIELD__DENSITY)
           call mixfield_set_vin(scf%mixfield, rhoin)
       end select
-      if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
       evsum_in = evsum_out
       if (scf%conv_abs_force > M_ZERO) then
@@ -1017,14 +961,6 @@ contains
       call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
     end if
 
-    if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
-      if(bitand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0)  then
-        call states_write_bandstructure(STATIC_DIR, st%nst, st, gr%sb, geo, gr%mesh, &
-          hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
-          vec_pot_var = hm%hm_base%vector_potential)
-      end if
-    end if
-
     if( ks%vdw_correction == OPTION__VDWCORRECTION__VDW_TS) then
       call vdw_ts_write_c6ab(ks%vdw_ts, geo, STATIC_DIR, 'c6ab_eff')
     end if
@@ -1079,10 +1015,6 @@ contains
 
         if(st%d%ispin > UNPOLARIZED) then
           call write_magnetic_moments(stdout, gr%mesh, st, geo, scf%lmm_r)
-        end if
-
-        if(hm%lda_u_level == DFT_U_ACBN0) then
-          call lda_u_write_U(hm%lda_u, stdout)
         end if
 
         write(message(1),'(a)') ''
@@ -1178,11 +1110,6 @@ contains
         call write_magnetic_moments(iunit, gr%mesh, st, geo, scf%lmm_r)
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
-
-      if(hm%lda_u_level == DFT_U_ACBN0) then
-          call lda_u_write_U(hm%lda_u, iunit)
-          if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
-        end if 
 
       if(scf%calc_dipole) then
         call calc_dipole(dipole)

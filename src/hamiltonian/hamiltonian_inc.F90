@@ -170,10 +170,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
     call X(scissor_apply)(hm%scissor, der%mesh, ik, epsib, hpsib)
   end if
 
-  if(iand(TERM_DFT_U, terms_) /= 0 .and. hm%lda_u_level /= DFT_U_NONE) then
-    call X(lda_u_apply)(hm%lda_u, hm%d, der%mesh, ik, epsib, hpsib, apply_phase)
-  end if  
-
   if(apply_phase .and. set_phase_) then
     call X(hamiltonian_base_phase)(hm%hm_base, der, der%mesh%np, ik, .true., hpsib)
     call batch_end(epsib, copy = .false.)

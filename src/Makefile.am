@@ -109,18 +109,11 @@ noinst_HEADERS +=                  \
 # Sources in basis_set
 all_f_srcs +=               \
 	basis_set/atomic_orbital.F90   \
-	basis_set/loewdin.F90          \
-	basis_set/orbitalbasis.F90     \
-	basis_set/orbitalset.F90       \
-	basis_set/orbitalset_utils.F90
+	basis_set/orbitalset.F90
 
 noinst_HEADERS +=                          \
 	basis_set/atomic_orbital_inc.F90   \
-	basis_set/loewdin_inc.F90          \
-	basis_set/orbitalbasis_inc.F90     \
-	basis_set/orbitalset_inc.F90       \
-	basis_set/orbitalset_utils_inc.F90
-
+	basis_set/orbitalset_inc.F90
 
 # Sources in math
 all_f_srcs +=                                 \
@@ -388,8 +381,6 @@ all_f_srcs +=                                        \
 	hamiltonian/kb_projector.F90                 \
 	hamiltonian/kick.F90                         \
 	hamiltonian/lasers.F90                       \
-	hamiltonian/lda_u.F90                        \
-	hamiltonian/lda_u_io.F90                     \
 	hamiltonian/libvdwxc.F90                     \
 	hamiltonian/oct_exchange.F90                 \
 	hamiltonian/pcm.F90                          \
@@ -408,7 +399,6 @@ all_c_srcs +=                                        \
 	hamiltonian/vdw_ts_low.c
 
 noinst_HEADERS +=                                    \
-        hamiltonian/dft_u_noncollinear_inc.F90       \
         hamiltonian/functionals_list.F90             \
         hamiltonian/fxc_inc.F90                      \
 	hamiltonian/hamiltonian_base_inc.F90         \
@@ -417,7 +407,6 @@ noinst_HEADERS +=                                    \
 	hamiltonian/kb_projector_inc.F90             \
 	hamiltonian/kxc_inc.F90                      \
 	hamiltonian/lasers_inc.F90                   \
-	hamiltonian/lda_u_inc.F90                    \
 	hamiltonian/oct_exchange_inc.F90             \
 	hamiltonian/projector_inc.F90                \
 	hamiltonian/scdm_inc.F90                     \
@@ -427,7 +416,6 @@ noinst_HEADERS +=                                    \
 # Sources in system
 all_f_srcs +=                                   \
 	system/current.F90                      \
-	system/dos.F90                          \
 	system/eigen_cg.F90                     \
 	system/eigen_lobpcg.F90                 \
 	system/eigen_rmmdiis.F90                \
@@ -474,7 +462,6 @@ noinst_HEADERS +=                               \
 all_f_srcs +=                                \
 	scf/ground_state.F90                 \
 	scf/lcao.F90                         \
-	scf/lda_u_mixer.F90                  \
 	scf/mix.F90                          \
 	scf/mixing_metric.F90                \
 	scf/rdmft.F90                        \

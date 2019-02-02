@@ -34,8 +34,6 @@ module test_oct_m
   use ion_interaction_oct_m
   use mesh_interpolation_oct_m
   use mesh_function_oct_m
-  use orbitalbasis_oct_m
-  use orbitalset_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -97,8 +95,6 @@ contains
     !%Option projector 6
     !% Tests the code that applies the nonlocal part of the pseudopotentials 
     !% in case of spin-orbit coupling
-    !%Option dft_u 7
-    !% Tests the DFT+U part of the code for projections on the basis.
     !%Option hamiltonian_apply 8
     !% Tests the application of the Hamiltonian, or a part of it
     !%End
@@ -192,8 +188,6 @@ contains
       call test_ion_interaction()
     case(OPTION__TESTMODE__PROJECTOR)
       call test_projector(param)
-    case(OPTION__TESTMODE__DFT_U)
-      call test_dft_u(param)
     case(OPTION__TESTMODE__HAMILTONIAN_APPLY)
       call test_hamiltonian(param)
     end select
@@ -266,94 +260,6 @@ contains
 
     POP_SUB(test_projector)
   end subroutine test_projector
-
-  ! ---------------------------------------------------------
-  subroutine test_dft_u(param)
-    type(test_parameters_t), intent(in) :: param
-
-    type(system_t) :: sys
-    type(batch_t), pointer :: epsib
-    integer :: itime
-    type(orbitalbasis_t) :: basis
-    FLOAT, allocatable :: ddot(:,:,:), dweight(:,:)
-    CMPLX, allocatable :: zdot(:,:,:), zweight(:,:)
-
-    PUSH_SUB(test_dft_u)
-
-    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-
-    call messages_write('Info: Testing some DFT+U routines')
-    call messages_new_line()
-    call messages_new_line()
-    call messages_info()
-
-    call system_init(sys)
-
-    call states_allocate_wfns(sys%st, sys%gr%mesh)
-    call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
-    if(sys%st%d%pack_states) call states_pack(sys%st)
-
-
-    SAFE_ALLOCATE(epsib)
-    call batch_copy(sys%st%group%psib(1, 1), epsib, copy_data = .true.)
-
-    !Initialize the orbital basis
-    call orbitalbasis_init(basis)
-    if (states_are_real(sys%st)) then
-      call dorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, &
-                                .false., .false.)
-      SAFE_ALLOCATE(dweight(1:basis%orbsets(1)%sphere%np,1:epsib%nst_linear))
-      SAFE_ALLOCATE(ddot(1:sys%st%d%dim,1:basis%orbsets(1)%norbs, 1:epsib%nst))
-    else
-      call zorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, &
-                                .false., .false.)
-      call orbitalset_update_phase(basis%orbsets(1), sys%gr%sb, sys%st%d%kpt, (sys%st%d%ispin==SPIN_POLARIZED))
-      SAFE_ALLOCATE(zweight(1:basis%orbsets(1)%sphere%np,1:epsib%nst_linear))
-      SAFE_ALLOCATE(zdot(1:sys%st%d%dim,1:basis%orbsets(1)%norbs, 1:epsib%nst))
-    end if
-
-    do itime = 1, param%repetitions
-      call batch_set_zero(epsib)
-      if(states_are_real(sys%st)) then
-        dweight = M_ONE
-        ddot = M_ZERO
-        call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), 1, .false., &
-                                           .false., ddot)
-        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib, 1, .false., .false., dweight)
-      else
-        zweight = M_ONE
-        zdot = M_ZERO
-        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), 1, &
-                                           .true., .false., zdot)
-        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, 1, .true., .false., zweight)
-      end if
-    end do
-
-    call batch_sync(epsib)
-
-    do itime = 1, epsib%nst
-      if(states_are_real(sys%st)) then 
-        write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, dmf_nrm2(sys%gr%mesh, sys%st%d%dim, epsib%states(itime)%dpsi)
-      else
-        write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, sys%st%d%dim, epsib%states(itime)%zpsi)
-      end if
-      call messages_info(1)
-    end do
-
-
-    SAFE_DEALLOCATE_A(dweight)
-    SAFE_DEALLOCATE_A(zweight)
-    SAFE_DEALLOCATE_A(ddot)
-    SAFE_DEALLOCATE_A(zdot)
-
-    call batch_end(epsib)
-    SAFE_DEALLOCATE_P(epsib)
-    call orbitalbasis_end(basis)
-    call states_deallocate_wfns(sys%st)
-    call system_end(sys)
-
-    POP_SUB(test_dft_u)
-  end subroutine test_dft_u
 
   ! ---------------------------------------------------------
   subroutine test_hamiltonian(param)

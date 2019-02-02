@@ -25,12 +25,10 @@ module dos_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use io_oct_m
-  use lda_u_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
   use orbitalset_oct_m
-  use orbitalset_utils_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
