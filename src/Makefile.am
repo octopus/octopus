@@ -240,10 +240,6 @@ all_f_srcs +=                                 \
 	ions/vibrations.F90                   \
 	ions/xyz_adjust.F90
 
-all_c_srcs +=                                 \
-	ions/symmetries_finite.c
-
-
 # Sources in grid
 all_f_srcs +=                                 \
 	grid/basins.F90                       \

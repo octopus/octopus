@@ -140,16 +140,17 @@ contains
 
     def_sym_comp = (geo%natoms < 100)
     def_sym_comp = def_sym_comp .and. dim == 3
+    def_sym_comp = def_sym_comp .and. periodic_dim > 0
     
     !%Variable SymmetriesCompute
     !%Type logical
     !%Section Execution::Symmetries
     !%Description
-    !% If disabled, <tt>Octopus</tt> will not compute
+    !% If disabled, <tt>Pulpito</tt> will not compute
     !% nor print the symmetries.
     !%
-    !% By default, symmetries are computed when running in 3
-    !% dimensions for systems with less than 100 atoms.
+    !% By default, symmetries are computed for periodic systems when
+    !% running in 3 dimensions for systems with less than 100 atoms.
     !%End
     call parse_variable('SymmetriesCompute', def_sym_comp, this%symmetries_compute)
 
@@ -184,12 +185,6 @@ contains
           typs(iatom) = species_index(geo%atom(iatom)%species)
         end forall
 
-        if (this%symmetries_compute) then
-          call symmetries_finite_init(geo%natoms, typs(1), position(1, 1), verbosity, point_group)
-          call symmetries_finite_get_group_name(point_group, this%group_name)
-          call symmetries_finite_get_group_elements(point_group, this%group_elements)
-          call symmetries_finite_end()
-        end if
         SAFE_DEALLOCATE_A(position)
         SAFE_DEALLOCATE_A(typs)
       end if
