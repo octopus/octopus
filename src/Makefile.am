@@ -458,7 +458,6 @@ all_f_srcs +=                                \
 	scf/lcao.F90                         \
 	scf/mix.F90                          \
 	scf/mixing_metric.F90                \
-	scf/rdmft.F90                        \
 	scf/scf.F90
 
 noinst_HEADERS +=                            \

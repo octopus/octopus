@@ -154,9 +154,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
         call X(exchange_operator)(hm, der, ik, hm%exx_coef, epsib, hpsib)
       end if
 
-    case(RDMFT)
-      call X(rdmft_exchange_operator)(hm, der, ik, epsib, hpsib)
-
     end select
     call profiling_out(prof_exx)
     
@@ -864,70 +861,6 @@ subroutine X(hamiltonian_diagonal) (hm, der, diag, ik)
 
   POP_SUB(X(hamiltonian_diagonal))
 end subroutine X(hamiltonian_diagonal)
-
-! ---------------------------------------------------------
-subroutine X(rdmft_exchange_operator) (hm, der, ik, psib, hpsib)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(in)    :: der
-  integer,             intent(in)    :: ik
-  type(batch_t),       intent(inout) :: psib
-  type(batch_t),       intent(inout) :: hpsib
-
-  R_TYPE, allocatable :: rho(:), pot(:), psi1(:,:), hpsi1(:), psi(:, :), hpsi(:, :)
-  integer :: jst, ip, ist, ibatch
-
-  PUSH_SUB(X(rdmft_exchange_operator))
-
-  if(der%mesh%sb%kpoints%reduced%npoints > 1) call messages_not_implemented("exchange operator with k-points")
-
-  SAFE_ALLOCATE(psi(1:der%mesh%np, 1:hm%d%dim))
-  SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:hm%d%dim))
-  SAFE_ALLOCATE(rho(1:der%mesh%np))
-  SAFE_ALLOCATE(pot(1:der%mesh%np))
-  SAFE_ALLOCATE(psi1(1:der%mesh%np,1:hm%d%dim))
-  SAFE_ALLOCATE(hpsi1(1:der%mesh%np))
-
-  do ibatch = 1, psib%nst
-    ist = psib%states(ibatch)%ist
-    call batch_get_state(psib, ibatch, der%mesh%np, psi)
-    call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
-
-    hpsi1 = R_TOTYPE(M_ZERO)
-
-    do jst = 1,hm%hf_st%nst
-      pot = R_TOTYPE(M_ZERO)
-      psi1 = M_ZERO
-      rho = R_TOTYPE(M_ZERO)
-      call states_get_state(hm%hf_st, der%mesh, jst, 1 , psi1)
-      forall(ip = 1:der%mesh%np)
-        rho(ip) =  R_CONJ(psi(ip, 1))*psi1(ip, 1)
-      end forall
-      call X(poisson_solve)(psolver, pot, rho)
-      forall(ip = 1:der%mesh%np)
-        pot(ip) = pot(ip)*R_CONJ(psi1(ip, 1))*sqrt(hm%hf_st%occ(jst, 1)) !Mueller functional
-      end forall
-      forall(ip = 1:der%mesh%np)
-        hpsi1(ip) = hpsi1(ip) - pot(ip)
-      end forall
-    end do
-
-    forall(ip = 1:der%mesh%np)
-      hpsi(ip, hm%d%ispin) = hpsi1(ip)
-    end forall
-
-    call batch_set_state(hpsib, ibatch, der%mesh%np, hpsi)
-
-  end do
-
-  SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(hpsi)
-  SAFE_DEALLOCATE_A(rho)
-  SAFE_DEALLOCATE_A(pot)
-  SAFE_DEALLOCATE_A(psi1)
-  SAFE_DEALLOCATE_A(hpsi1)
-
-  POP_SUB(X(rdmft_exchange_operator))
-end subroutine X(rdmft_exchange_operator)
 
 !! Local Variables:
 !! mode: f90

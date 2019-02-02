@@ -182,8 +182,6 @@ contains
     !%Option classical 5
     !% (Experimental) Only the classical interaction between ions is
     !% considered. This is mainly for testing.
-    !%Option rdmft 7 
-    !% (Experimental) Reduced Density Matrix functional theory.
     !%End
     
     ks%xc_family = XC_FAMILY_NONE
@@ -319,7 +317,6 @@ contains
     call messages_obsolete_variable('HartreeFock', 'TheoryLevel')
 
     if(ks%theory_level == CLASSICAL) call messages_experimental('Classical theory level')
-    if(ks%theory_level == RDMFT ) call messages_experimental('RDMFT theory level')
     
     select case(ks%theory_level)
     case(INDEPENDENT_PARTICLES)
@@ -748,7 +745,7 @@ contains
         call dpoisson_solve_start(ks%hartree_solver, ks%calc%total_density)
       end if
 
-      if(ks%theory_level /= HARTREE .and. ks%theory_level /= RDMFT) call v_a_xc(hm)
+      if(ks%theory_level /= HARTREE) call v_a_xc(hm)
     else
       ks%calc%total_density_alloc = .false.
     end if
@@ -759,7 +756,7 @@ contains
     end if
 
     nullify(ks%calc%hf_st) 
-    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
+    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK) then
       SAFE_ALLOCATE(ks%calc%hf_st)
       call states_copy(ks%calc%hf_st, st)
       if(st%parallel_in_states) call states_parallel_remote_access_start(ks%calc%hf_st)
@@ -1071,7 +1068,7 @@ contains
       hm%energy%correlation = M_ZERO
     else
 
-      if(ks%theory_level /= HARTREE .and. ks%theory_level /= RDMFT ) then 
+      if(ks%theory_level /= HARTREE) then 
         if(ks%gr%have_fine_mesh) then
           do ispin = 1, hm%d%nspin
             call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, &
@@ -1121,7 +1118,7 @@ contains
       end if
 
       ! Note: this includes hybrids calculated with the Fock operator instead of OEP 
-      if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
+      if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK) then
 
         ! swap the states object
         if(associated(hm%hf_st)) then
@@ -1136,8 +1133,6 @@ contains
         case(HARTREE_FOCK)
           hm%exx_coef = ks%xc%exx_coef
         case(HARTREE)
-          hm%exx_coef = M_ONE
-        case(RDMFT) 
           hm%exx_coef = M_ONE
         end select
       end if

@@ -31,7 +31,6 @@ module ground_state_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use parser_oct_m
-  use rdmft_oct_m
   use restart_oct_m
   use scf_oct_m
   use simul_box_oct_m
@@ -95,9 +94,7 @@ contains
 
     if(.not. fromScratch) then
       ! load wavefunctions
-      ! in RDMFT we need the full ground state
-      call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, &
-                        mesh=sys%gr%mesh, exact = (sys%ks%theory_level == RDMFT))
+      call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact = .false.)
       if(ierr == 0) &
         call states_load(restart_load, sys%st, sys%gr, ierr)
 
@@ -115,14 +112,7 @@ contains
     call scf_init(scfv, sys%gr, sys%geo, sys%st, sys%mc, hm)
 
     if(fromScratch) then
-      if(sys%ks%theory_level == RDMFT) then
-        call messages_write("RDMFT calculations cannot be started FromScratch")
-        call messages_new_line()
-        call messages_write("Run a DFT calculation with XCFunctional = oep_x first")
-        call messages_fatal()
-      else
-        call lcao_run(sys, hm, lmm_r = scfv%lmm_r)
-      end if
+      call lcao_run(sys, hm, lmm_r = scfv%lmm_r)
     else
       ! setup Hamiltonian
       call messages_write('Info: Setting up Hamiltonian.')
@@ -142,17 +132,12 @@ contains
 
     if(sys%st%d%pack_states) call states_pack(sys%st)
     
-    ! self-consistency for occupation numbers and natural orbitals in RDMFT
-    if(sys%ks%theory_level == RDMFT) then 
-      call scf_rdmft(sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, scfv%max_iter, restart_dump)
+    if(.not. fromScratch) then
+      call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, &
+        restart_load=restart_load, restart_dump=restart_dump)
+      call restart_end(restart_load)
     else
-      if(.not. fromScratch) then
-        call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, &
-                     restart_load=restart_load, restart_dump=restart_dump)
-        call restart_end(restart_load)
-      else
-        call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, restart_dump=restart_dump)
-      end if
+      call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, restart_dump=restart_dump)
     end if
 
     call scf_end(scfv)
