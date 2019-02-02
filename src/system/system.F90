@@ -35,7 +35,6 @@ module system_oct_m
   use multicomm_oct_m
   use output_oct_m
   use parser_oct_m
-  use pcm_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use space_oct_m
