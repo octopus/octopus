@@ -139,11 +139,7 @@ contains
       
       ns = this%op%stencil%size
 
-      if (this%op%const_w) then
-        maxp = 1
-      else
-        maxp = gr%mesh%np
-      end if
+      maxp = 1
 
       do ip = 1,maxp
 

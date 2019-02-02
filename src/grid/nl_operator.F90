@@ -85,14 +85,12 @@ module nl_operator_oct_m
   type nl_operator_t
     type(stencil_t)       :: stencil
     type(mesh_t), pointer :: mesh      !< pointer to the underlying mesh
-    integer, pointer      :: nn(:)     !< the size of the stencil at each point (for curvilinear coordinates)
     integer               :: np        !< number of points in mesh
     !> When running in parallel mode, the next three arrays are unique on each node.
     integer, pointer  :: index(:,:)    !< index of the points. Unique on each parallel process.
     FLOAT,   pointer  :: w_re(:,:)     !< weightsp, real part. Unique on each parallel process.
     FLOAT,   pointer  :: w_im(:,:)     !< weightsp, imaginary part. Unique on each parallel process.
 
-    logical               :: const_w   !< are the weights independent of index i
     logical               :: cmplx_op  !< .true. if we have also imaginary weights
 
     character(len=40) :: label
@@ -301,7 +299,6 @@ contains
     nullify(op%mesh, op%index, op%w_re, op%w_im, op%ri, op%rimap, op%rimap_inv)
     nullify(op%inner%imin, op%inner%imax, op%inner%ri)
     nullify(op%outer%imin, op%outer%imax, op%outer%ri)
-    nullify(op%nn)
 
     op%label = label
 
@@ -323,12 +320,10 @@ contains
     opo%np           =  opi%np
     opo%mesh         => opi%mesh
 
-    call loct_pointer_copy(opo%nn, opi%nn)
     call loct_pointer_copy(opo%index, opi%index)
     call loct_pointer_copy(opo%w_re, opi%w_re)
     call loct_pointer_copy(opo%w_im, opi%w_im)
 
-    opo%const_w   = opi%const_w
     opo%cmplx_op  = opi%cmplx_op
 
     opo%nri       =  opi%nri
@@ -355,11 +350,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_build(mesh, op, np, const_w, cmplx_op)
+  subroutine nl_operator_build(mesh, op, np, cmplx_op)
     type(mesh_t), target, intent(in)    :: mesh
     type(nl_operator_t),  intent(inout) :: op
     integer,              intent(in)    :: np       !< Number of (local) points.
-    logical, optional,    intent(in)    :: const_w  !< are the weights constant (independent of the point)
     logical, optional,    intent(in)    :: cmplx_op !< do we have complex weights?
 
     integer :: ii, jj, p1(MAX_DIM), time, current, size
@@ -372,39 +366,21 @@ contains
     
     PUSH_SUB(nl_operator_build)
 
-    if(mesh%parallel_in_domains .and. .not. const_w) then
-      call messages_experimental('Domain parallelization with curvilinear coordinates')
-    end if
-
     ASSERT(np > 0)
 
     ! store values in structure
     op%np       = np
     op%mesh     => mesh
-    op%const_w  = .true.
     op%cmplx_op = .false.
-    if(present(const_w )) op%const_w  = const_w
     if(present(cmplx_op)) op%cmplx_op = cmplx_op
 
-    ! allocate weights op%w
-    if(op%const_w) then
-      SAFE_ALLOCATE(op%w_re(1:op%stencil%size, 1:1))
-      if (op%cmplx_op) then
-        SAFE_ALLOCATE(op%w_im(1:op%stencil%size, 1:1))
-      end if
-      if(debug%info) then
-        message(1) = 'Info: nl_operator_build: working with constant weights.'
-        call messages_info(1)
-      end if
-    else
-      SAFE_ALLOCATE(op%w_re(1:op%stencil%size, 1:op%np))
-      if (op%cmplx_op) then
-        SAFE_ALLOCATE(op%w_im(1:op%stencil%size, 1:op%np))
-      end if
-      if(debug%info) then
-        message(1) = 'Info: nl_operator_build: working with non-constant weights.'
-        call messages_info(1)
-      end if
+    SAFE_ALLOCATE(op%w_re(1:op%stencil%size, 1:op%np))
+    if (op%cmplx_op) then
+      SAFE_ALLOCATE(op%w_im(1:op%stencil%size, 1:op%np))
+    end if
+    if(debug%info) then
+      message(1) = 'Info: nl_operator_build: working with non-constant weights.'
+      call messages_info(1)
     end if
 
     ! set initially to zero
@@ -583,7 +559,7 @@ contains
       
     end if
 
-    if(accel_is_enabled() .and. op%const_w) then
+    if(accel_is_enabled()) then
 
       write(flags, '(i5)') op%stencil%size
       flags='-DNDIM=3 -DSTENCIL_SIZE='//trim(adjustl(flags))
@@ -744,13 +720,8 @@ contains
           do lp = 1, op%stencil%size
             kp = nl_operator_get_index(op, lp, index)
             if( kp == ip ) then
-              if(.not.op%const_w) then
-                opt%w_re(jp, ip) = op%w_re(lp, index)
-                if (op%cmplx_op) opt%w_im(jp, ip) = op%w_im(lp, index)
-              else
-                opt%w_re(jp, 1) = op%w_re(lp, 1)
-                if (op%cmplx_op) opt%w_im(jp, 1) = op%w_im(lp, 1)
-              end if
+              opt%w_re(jp, 1) = op%w_re(lp, 1)
+              if (op%cmplx_op) opt%w_im(jp, 1) = op%w_im(lp, 1)
             end if
           end do
         end if
@@ -803,14 +774,8 @@ contains
           do lp = 1, op%stencil%size
             kp = nl_operator_get_index(opg, lp, index)
             if( kp == ip ) then
-              if(.not.op%const_w) then
-                opgt%w_re(jp, ip) = M_HALF*opg%w_re(jp, ip) - M_HALF*(vol_pp(index)/vol_pp(ip))*opg%w_re(lp, index)
-                if (op%cmplx_op) &
-                   opgt%w_im(jp, ip) = M_HALF*opg%w_im(jp, ip) - M_HALF*(vol_pp(index)/vol_pp(ip))*opg%w_im(lp, index)
-              else
-                opgt%w_re(jp, 1) = opg%w_re(lp, 1)
-                if (op%cmplx_op) opgt%w_im(jp, 1) = opg%w_im(lp, 1)
-              end if
+              opgt%w_re(jp, 1) = opg%w_re(lp, 1)
+              if (op%cmplx_op) opgt%w_im(jp, 1) = opg%w_im(lp, 1)
             end if
           end do
         end if
@@ -882,14 +847,8 @@ contains
           do lp = 1, op%stencil%size
             kp = nl_operator_get_index(opg, lp, index)
             if( kp == ip ) then
-              if(.not.op%const_w) then
-                opgt%w_re(jp, ip) = M_HALF*opg%w_re(jp, ip) + M_HALF*(vol_pp(index)/vol_pp(ip))*opg%w_re(lp, index)
-                if (op%cmplx_op) &
-                  opgt%w_im(jp, ip) = M_HALF*opg%w_im(jp, ip) + M_HALF*(vol_pp(index)/vol_pp(ip))*opg%w_im(lp, index)
-              else
-                opgt%w_re(jp, 1) = opg%w_re(lp, 1)
-                if (op%cmplx_op) opgt%w_im(jp, 1) = opg%w_im(lp, 1)
-              end if
+              opgt%w_re(jp, 1) = opg%w_re(lp, 1)
+              if (op%cmplx_op) opgt%w_im(jp, 1) = opg%w_im(lp, 1)
             end if
           end do
         end if
@@ -937,14 +896,6 @@ contains
     ! op%w_im.
     call nl_operator_common_copy(op, opg)
 
-    ! Weights have to be collected only if they are not constant.
-    if(.not.op%const_w) then
-      do ip = 1, op%stencil%size
-        call vec_allgather(op%mesh%vp, opg%w_re(ip, :), op%w_re(ip, :))
-        if(op%cmplx_op) call vec_allgather(op%mesh%vp, opg%w_im(ip, :), op%w_im(ip, :))
-      end do
-    end if
-
     POP_SUB(nl_operator_allgather)
 
   end subroutine nl_operator_allgather
@@ -970,29 +921,18 @@ contains
 
     call stencil_copy(op%stencil, opg%stencil)
 
-    if(op%const_w) then
-      SAFE_ALLOCATE(opg%w_re(1:op%stencil%size, 1:1))
-      if(op%cmplx_op) then
-        SAFE_ALLOCATE(opg%w_im(1:op%stencil%size, 1:1))
-      end if
-    else
-      SAFE_ALLOCATE(opg%w_re(1:op%stencil%size, 1:op%mesh%np_global))
-      if(op%cmplx_op) then
-        SAFE_ALLOCATE(opg%w_im(1:op%stencil%size, 1:op%mesh%np_global))
-      end if
+    SAFE_ALLOCATE(opg%w_re(1:op%stencil%size, 1:1))
+    if(op%cmplx_op) then
+      SAFE_ALLOCATE(opg%w_im(1:op%stencil%size, 1:1))
     end if
+
     opg%mesh     => op%mesh
     opg%np       =  op%mesh%np_global
     opg%cmplx_op =  op%cmplx_op
-    opg%const_w  =  op%const_w
     opg%nri      =  op%nri
-    if(op%const_w) then
-      opg%w_re = op%w_re
-      if(op%cmplx_op) then
-        opg%w_im = op%w_im
-      end if
-    end if
-
+    opg%w_re = op%w_re
+    if(op%cmplx_op) opg%w_im = op%w_im
+      
     POP_SUB(nl_operator_common_copy)
 
   end subroutine nl_operator_common_copy
@@ -1037,7 +977,7 @@ contains
 
     PUSH_SUB(nl_operator_end)
 
-    if(accel_is_enabled() .and. op%const_w) then
+    if(accel_is_enabled()) then
 
       call accel_release_buffer(op%buff_ri)
       select case(function_opencl)
@@ -1077,7 +1017,6 @@ contains
     SAFE_DEALLOCATE_P(op%ri)
     SAFE_DEALLOCATE_P(op%rimap)
     SAFE_DEALLOCATE_P(op%rimap_inv)
-    SAFE_DEALLOCATE_P(op%nn)
 
     call stencil_end(op%stencil)
 

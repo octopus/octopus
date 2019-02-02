@@ -447,7 +447,7 @@ contains
     integer, allocatable :: polynomials(:,:)
     FLOAT,   allocatable :: rhs(:,:)
     integer :: i
-    logical :: const_w_, cmplx_op_
+    logical :: cmplx_op_
     character(len=32) :: name
     type(nl_operator_t) :: auxop
     
@@ -460,14 +460,13 @@ contains
 
     der%mesh => mesh    ! make a pointer to the underlying mesh
 
-    const_w_  = .true.
     cmplx_op_ = .false.
 
     der%np_zero_bc = 0
 
     ! build operators
     do i = 1, der%dim+1
-      call nl_operator_build(mesh, der%op(i), der%mesh%np, const_w = const_w_, cmplx_op = cmplx_op_)
+      call nl_operator_build(mesh, der%op(i), der%mesh%np, cmplx_op = cmplx_op_)
       der%np_zero_bc = max(der%np_zero_bc, nl_operator_np_zero_bc(der%op(i)))
     end do
 
@@ -657,8 +656,7 @@ contains
     powers(:,:) = M_ZERO
     powers(:,0) = M_ONE
 
-    p_max = op(1)%np
-    if(op(1)%const_w) p_max = 1
+    p_max = 1
 
     do p = 1, p_max
       ! first polynomial is just a constant

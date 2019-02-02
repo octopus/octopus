@@ -86,30 +86,26 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   end if
 #endif
 
-  if(op%const_w) then
-    SAFE_ALLOCATE(wre(1:op%stencil%size))
-
-    wre(1:op%stencil%size) = op%w_re(:, 1)
-
+  SAFE_ALLOCATE(wre(1:op%stencil%size))
+  
+  wre(1:op%stencil%size) = op%w_re(:, 1)
+  
+  if(op%cmplx_op) then
+    SAFE_ALLOCATE(wim(1:op%stencil%size))
+    wim(1:op%stencil%size) = op%w_im(1:op%stencil%size, 1)
+  end if
+  
+  if(present(factor)) then
+    wre(1:op%stencil%size) = wre(1:op%stencil%size)*factor
     if(op%cmplx_op) then
-      SAFE_ALLOCATE(wim(1:op%stencil%size))
-      wim(1:op%stencil%size) = op%w_im(1:op%stencil%size, 1)
-    end if
-    
-    if(present(factor)) then
-      wre(1:op%stencil%size) = wre(1:op%stencil%size)*factor
-      if(op%cmplx_op) then
-        wim(1:op%stencil%size) = wim(1:op%stencil%size)*factor
-      end if
+      wim(1:op%stencil%size) = wim(1:op%stencil%size)*factor
     end if
   end if
 
   use_opencl = .false.
   
   if(nri > 0) then
-    if(.not.op%const_w) then
-      call operate_non_const_weights()
-    else if(op%cmplx_op) then
+    if(op%cmplx_op) then
       call operate_const_weights()
     else if(accel_is_enabled() .and. batch_is_packed(fi) .and. batch_is_packed(fo)) then
       use_opencl = .true.
@@ -278,79 +274,8 @@ contains
     POP_SUB(X(nl_operator_operate_batch).operate_const_weights)
   end subroutine operate_const_weights
 
-
-  ! ---------------------------------------------------------
-  subroutine operate_non_const_weights()
-    integer :: nn, ll, ii, ist
-    FLOAT :: factor_
-
-    PUSH_SUB(X(nl_operator_operate_batch).operate_non_const_weights)
-
-    factor_ = M_ONE
-    if(present(factor)) factor_ = factor
-
-    select case(batch_status(fi))
-
-    case(BATCH_DEVICE_PACKED)
-
-      ASSERT(.false.)
-      
-    case(BATCH_NOT_PACKED)
-      
-      if(op%cmplx_op) then
-#ifdef R_TCOMPLEX
-        !$omp parallel do private(ll, ist, ii, nn)
-        do ll = 1, nri
-          nn = op%nn(ll)
-          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-            fo%states_linear(ist)%X(psi)(ii) = factor_*sum(TOCMPLX(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * &
-              fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
-          end forall
-        end do
-        !$omp end parallel do
-#endif
-      else
-        !$omp parallel do private(ll, ist, ii, nn)
-        do ll = 1, nri
-          nn = op%nn(ll)
-          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-            fo%states_linear(ist)%X(psi)(ii) = factor_*sum(op%w_re(1:nn, ii)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
-          end forall
-        end do
-        !$omp end parallel do
-      end if
-
-    case(BATCH_PACKED)
-
-      if(op%cmplx_op) then
-#ifdef R_TCOMPLEX
-        !$omp parallel do private(ll, ist, ii, nn)
-        do ll = 1, nri
-          nn = op%nn(ll)
-          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-            fo%pack%X(psi)(ist, ii) = factor_*sum(TOCMPLX(op%w_re(1:nn, ii), op%w_im(1:nn, ii)) * &
-              fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
-          end forall
-        end do
-        !$omp end parallel do
-#endif
-      else
-        !$omp parallel do private(ll, ist, ii, nn)
-        do ll = 1, nri
-          nn = op%nn(ll)
-          forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-            fo%pack%X(psi)(ist, ii) = factor_*sum(op%w_re(1:nn, ii)*fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
-          end forall
-        end do
-        !$omp end parallel do
-      end if
-      
-    end select
-      
-    POP_SUB(X(nl_operator_operate_batch).operate_non_const_weights)
-  end subroutine operate_non_const_weights
-
   ! ------------------------------------------
+
   subroutine operate_opencl()
     integer    :: pnri, bsize, isize, localsize, ist, eff_size, iarg, npoints, dim2, dim3
     integer(8) :: local_mem_size
@@ -563,21 +488,13 @@ subroutine X(nl_operator_operate_diag)(op, fo)
   
   if(op%cmplx_op) then
 #ifdef R_TCOMPLEX
-    if(op%const_w) then
-      fo(1:op%np) = TOCMPLX(op%w_re(op%stencil%center, 1), op%w_im(op%stencil%center, 1))
-    else
-      fo(1:op%np) = TOCMPLX(op%w_re(op%stencil%center, 1:op%np), op%w_im(op%stencil%center, 1:op%np))
-    end if
+    fo(1:op%np) = TOCMPLX(op%w_re(op%stencil%center, 1), op%w_im(op%stencil%center, 1))
 #else
     message(1) = "nl_operator_operate_diag: cannot express complex operator in real output."
     call messages_fatal(1)
 #endif
   else
-    if(op%const_w) then
-      fo(1:op%np) = op%w_re(op%stencil%center, 1)
-    else
-      fo(1:op%np) = op%w_re(op%stencil%center, 1:op%np)
-    end if
+    fo(1:op%np) = op%w_re(op%stencil%center, 1)
   end if
   
   POP_SUB(X(nl_operator_operate_diag))

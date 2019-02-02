@@ -67,11 +67,7 @@ contains
     
     call nl_operator_build(der%mesh, op, der%mesh%np)
 
-    if (op%const_w) then
-      maxp = 1
-    else
-      maxp = der%mesh%np
-    end if
+    maxp = 1
     
     do ip = 1, maxp
       

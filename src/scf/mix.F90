@@ -312,11 +312,7 @@ contains
       
       ns = smix%preconditioner%stencil%size
 
-      if (smix%preconditioner%const_w) then
-        maxp = 1
-      else
-        maxp = der%mesh%np
-      end if
+      maxp = 1
 
       do ip = 1, maxp
 
