@@ -338,7 +338,6 @@ noinst_HEADERS +=                                \
 # Sources in states
 all_f_srcs +=                                   \
 	states/density.F90                      \
-	states/linear_response.F90              \
 	states/physics_op.F90                   \
 	states/smear.F90                        \
 	states/states_block.F90                 \
@@ -352,7 +351,6 @@ all_f_srcs +=                                   \
 
 noinst_HEADERS +=                               \
 	states/density_inc.F90                  \
-	states/linear_response_inc.F90          \
 	states/physics_op_inc.F90               \
 	states/states_block_inc.F90             \
 	states/states_calc_inc.F90              \

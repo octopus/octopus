@@ -25,7 +25,6 @@ module states_restart_oct_m
   use io_function_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
-  use linear_response_oct_m
   use loct_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -138,14 +137,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_dump(restart, st, gr, ierr, iter, lr, st_start_writing, verbose)
+  subroutine states_dump(restart, st, gr, ierr, iter, st_start_writing, verbose)
     type(restart_t),      intent(in)  :: restart
     type(states_t),       intent(in)  :: st
     type(grid_t),         intent(in)  :: gr
     integer,              intent(out) :: ierr
     integer,    optional, intent(in)  :: iter
-    !> if this next argument is present, the lr wfs are stored instead of the gs wfs
-    type(lr_t), optional, intent(in)  :: lr
     integer,    optional, intent(in)  :: st_start_writing
     logical,    optional, intent(in)  :: verbose
 
@@ -154,7 +151,7 @@ contains
     integer :: root(1:P_STRATEGY_MAX)
     character(len=MAX_PATH_LEN) :: filename, filename1
     character(len=300) :: lines(3)
-    logical :: lr_wfns_are_associated, should_write, verbose_
+    logical :: should_write, verbose_
     FLOAT   :: kpoint(1:MAX_DIM)
     FLOAT,  allocatable :: dpsi(:), rff_global(:)
     CMPLX,  allocatable :: zpsi(:), zff_global(:)
@@ -176,12 +173,6 @@ contains
     end if
 
     call profiling_in(prof_write, "RESTART_WRITE")
-
-    if (present(lr)) then
-      lr_wfns_are_associated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
-        (associated(lr%zdl_psi) .and. states_are_complex(st))
-      ASSERT(lr_wfns_are_associated)
-    end if
 
     call restart_block_signals()
 
@@ -253,30 +244,16 @@ contains
           end if
 
           if (should_write) then
-            if (.not. present(lr)) then
-              if(st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
-                if (states_are_real(st)) then
-                  call states_get_state(st, gr%mesh, idim, ist, ik, dpsi)
-                  call drestart_write_mesh_function(restart, filename, gr%mesh, dpsi, err, root = root)
-                else
-                  call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
-                  call zrestart_write_mesh_function(restart, filename, gr%mesh, zpsi, err, root = root)
-                end if
+            if(st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
+              if (states_are_real(st)) then
+                call states_get_state(st, gr%mesh, idim, ist, ik, dpsi)
+                call drestart_write_mesh_function(restart, filename, gr%mesh, dpsi, err, root = root)
               else
-                err = 0
+                call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
+                call zrestart_write_mesh_function(restart, filename, gr%mesh, zpsi, err, root = root)
               end if
             else
-              if(st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
-                if (states_are_real(st)) then
-                  call drestart_write_mesh_function(restart, filename, gr%mesh, &
-                    lr%ddl_psi(:, idim, ist, ik), err, root = root)
-                else
-                  call zrestart_write_mesh_function(restart, filename, gr%mesh, &
-                    lr%zdl_psi(:, idim, ist, ik), err, root = root)
-                end if
-              else
-                err = 0
-              end if
+              err = 0
             end if
             if (err /= 0) err2(2) = err2(2) + 1
           end if
@@ -325,13 +302,12 @@ contains
   !! <0 => Fatal error, or nothing read
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine states_load(restart, st, gr, ierr, iter, lr, lowest_missing, label, verbose)
+  subroutine states_load(restart, st, gr, ierr, iter, lowest_missing, label, verbose)
     type(restart_t),            intent(in)    :: restart
     type(states_t),             intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
     integer,                    intent(out)   :: ierr
     integer,          optional, intent(out)   :: iter
-    type(lr_t),       optional, intent(inout) :: lr       !< if present, the lr wfs are read instead of the gs wfs
     integer,          optional, intent(out)   :: lowest_missing(:, :) !< all states below this one were read successfully
     character(len=*), optional, intent(in)    :: label
     logical,          optional, intent(in)    :: verbose
@@ -345,7 +321,7 @@ contains
     character(len=50)    :: str
 
     FLOAT                :: my_occ, imev, my_kweight
-    logical              :: read_occ, lr_allocated, verbose_
+    logical              :: read_occ, verbose_
     logical              :: integral_occs
     FLOAT, allocatable   :: dpsi(:)
     CMPLX, allocatable   :: zpsi(:), zpsiL(:)
@@ -379,11 +355,7 @@ contains
     if (present(label)) then
       label_ = trim(label)
     else
-      if (present(lr)) then
-        label_ = " for linear response"
-      else
-        label_ = ""
-      end if
+      label_ = ""
     end if
 
     message(1) = 'Info: Reading states'
@@ -393,9 +365,7 @@ contains
     message(1) = trim(message(1)) // "."
     if(verbose_) call print_date(trim(message(1))//' ')
 
-    if(.not. present(lr)) then
-      st%fromScratch = .false. ! obviously, we are using restart info
-    end if
+    st%fromScratch = .false. ! obviously, we are using restart info
 
     ! If one restarts a GS calculation changing the %Occupations block, one
     ! cannot read the occupations, otherwise these overwrite the ones from
@@ -408,21 +378,12 @@ contains
       read_occ = .not. st%fixed_occ
     end if
 
-    if(.not. present(lr)) then
-      st%eigenval(:, :) = M_ZERO
-      ! to be filled in from reading afterward
-    end if
+    st%eigenval(:, :) = M_ZERO
+    ! to be filled in from reading afterward
 
-    if (.not. present(lr) .and. read_occ) then
+    if (read_occ) then
       st%occ(:, :) = M_ZERO
       ! to be filled in from reading afterward
-    end if
-
-    ! sanity check
-    if (present(lr)) then
-      lr_allocated = (associated(lr%ddl_psi) .and. states_are_real(st)) .or. &
-        (associated(lr%zdl_psi) .and. states_are_complex(st))
-      ASSERT(lr_allocated)
     end if
 
     states_file  = restart_open(restart, 'states')
@@ -527,38 +488,37 @@ contains
       end if
 
       call restart_read(restart, occ_file, lines, 1, err)
-      if (.not. present(lr)) then ! do not read eigenvalues or occupations when reading linear response
-        ! # occupations | eigenvalue[a.u.] | Im(eigenvalue) [a.u.] | k-points | k-weights | filename | ik | ist | idim
 
-        if (err == 0) then
-          read(lines(1), *) my_occ, char, st%eigenval(ist, ik), char, imev, char, &
-               (read_kpoint(idir), char, idir = 1, gr%sb%dim), my_kweight
-          ! we do not want to read the k-weights, we have already set them appropriately
-        else
+      ! # occupations | eigenvalue[a.u.] | Im(eigenvalue) [a.u.] | k-points | k-weights | filename | ik | ist | idim
+      
+      if (err == 0) then
+        read(lines(1), *) my_occ, char, st%eigenval(ist, ik), char, imev, char, &
+          (read_kpoint(idir), char, idir = 1, gr%sb%dim), my_kweight
+        ! we do not want to read the k-weights, we have already set them appropriately
+      else
           ! There is a problem with this states information, so we skip it.
-          restart_file_present(idim, ist, ik) = .false.
-          cycle
+        restart_file_present(idim, ist, ik) = .false.
+        cycle
+      end if
+      
+      kpoint(1:gr%sb%dim) = &
+        kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .true.)
+      ! FIXME: maybe should ignore ik and just try to match actual vector k-points?
+      if (any(abs(kpoint(1:gr%sb%dim) - read_kpoint(1:gr%sb%dim)) > CNST(1e-12))) then
+        ! write only once for each k-point so as not to be too verbose
+        if (ist == 1) then
+          write(message(1),'(a,i6)') 'Incompatible restart information: k-point mismatch for ik ', ik
+          write(message(2),'(a,99f18.12)') '  Expected : ', kpoint(1:gr%sb%dim)
+          write(message(3),'(a,99f18.12)') '  Read     : ', read_kpoint(1:gr%sb%dim)
+          call messages_warning(3)
         end if
-
-        kpoint(1:gr%sb%dim) = &
-          kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(st%d, ik), absolute_coordinates = .true.)
-        ! FIXME: maybe should ignore ik and just try to match actual vector k-points?
-        if (any(abs(kpoint(1:gr%sb%dim) - read_kpoint(1:gr%sb%dim)) > CNST(1e-12))) then
-          ! write only once for each k-point so as not to be too verbose
-          if (ist == 1) then
-            write(message(1),'(a,i6)') 'Incompatible restart information: k-point mismatch for ik ', ik
-            write(message(2),'(a,99f18.12)') '  Expected : ', kpoint(1:gr%sb%dim)
-            write(message(3),'(a,99f18.12)') '  Read     : ', read_kpoint(1:gr%sb%dim)
-            call messages_warning(3)
-          end if
-          restart_file_present(idim, ist, ik) = .false.
-        end if
-
-        if (read_occ) then
-          st%occ(ist, ik) = my_occ
-          integral_occs = integral_occs .and. &
-               abs((st%occ(ist, ik) - st%smear%el_per_state) * st%occ(ist, ik))  <=  M_EPSILON
-        end if
+        restart_file_present(idim, ist, ik) = .false.
+      end if
+      
+      if (read_occ) then
+        st%occ(ist, ik) = my_occ
+        integral_occs = integral_occs .and. &
+          abs((st%occ(ist, ik) - st%smear%el_per_state) * st%occ(ist, ik))  <=  M_EPSILON
       end if
     end do
 
@@ -613,19 +573,10 @@ contains
           end if
 
           if(states_are_real(st)) then
-            if(.not. present(lr)) then
-              call states_set_state(st, gr%mesh, idim, ist, ik, dpsi)
-            else
-              call lalg_copy(gr%mesh%np, dpsi, lr%ddl_psi(:, idim, ist, ik))
-            end if
+            call states_set_state(st, gr%mesh, idim, ist, ik, dpsi)
           else
-            if(.not. present(lr)) then
-              call states_set_state(st, gr%mesh, idim, ist, ik, zpsi)
-            else
-              call lalg_copy(gr%mesh%np, zpsi, lr%zdl_psi(:, idim, ist, ik))
-            end if
+            call states_set_state(st, gr%mesh, idim, ist, ik, zpsi)
           end if
-
 
           if (err == 0) then
             filled(idim, ist, ik) = .true.
@@ -671,8 +622,7 @@ contains
     end if
 #endif
 
-    if (.not. present(lr)) call fill_random()
-    ! it is better to initialize lr wfns to zero
+    call fill_random()
 
     SAFE_DEALLOCATE_A(filled)
 
@@ -684,11 +634,8 @@ contains
       end if
       ! otherwise ierr = 0 would mean either all was read correctly, or nothing at all was read!
 
-      if(.not. present(lr)) then
-        write(str, '(a,i5)') 'Reading states.'
-      else
-        write(str, '(a,i5)') 'Reading states information for linear response.'
-      end if
+      write(str, '(a,i5)') 'Reading states.'
+      
       call messages_print_stress(stdout, trim(str))
       write(message(1),'(a,i6,a,i6,a)') 'Only ', iread,' files out of ', &
            st%nst * st%d%nik * st%d%dim, ' could be read.'

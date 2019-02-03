@@ -34,7 +34,6 @@ module epot_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
-  use linear_response_oct_m
   use loct_math_oct_m
   use logrid_oct_m
   use mesh_oct_m

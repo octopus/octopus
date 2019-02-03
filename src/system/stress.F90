@@ -37,7 +37,6 @@ module stress_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
-  use linear_response_oct_m
   use loct_math_oct_m
   use math_oct_m
   use mesh_oct_m

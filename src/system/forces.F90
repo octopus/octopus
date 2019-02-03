@@ -38,7 +38,6 @@ module forces_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
-  use linear_response_oct_m
   use loct_math_oct_m
   use math_oct_m
   use mesh_oct_m
@@ -68,10 +67,6 @@ module forces_oct_m
     forces_calculate,          &
     dforces_from_potential,    &
     zforces_from_potential,    &
-    dforces_derivative,        &
-    zforces_derivative,        &
-    dforces_born_charges,      &
-    zforces_born_charges,      &
     total_force_calculate,     &
     forces_costate_calculate,  &
     forces_write_info
