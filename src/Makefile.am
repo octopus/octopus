@@ -408,7 +408,6 @@ all_f_srcs +=                                   \
 	system/energy_calc.F90                  \
 	system/exponential.F90                  \
 	system/forces.F90                       \
-	system/linear_solver.F90                \
 	system/magnetic.F90                     \
 	system/output.F90                       \
 	system/output_me.F90                    \
@@ -418,8 +417,7 @@ all_f_srcs +=                                   \
 	system/stress.F90                       \
 	system/subspace.F90                     \
 	system/system.F90                       \
-	system/v_ks.F90                         \
-	system/xc_oep.F90
+	system/v_ks.F90
 
 noinst_HEADERS +=                               \
 	system/eigen_cg_inc.F90                 \
@@ -429,18 +427,12 @@ noinst_HEADERS +=                               \
 	system/eigen_rmmdiis_inc.F90            \
 	system/energy_calc_inc.F90              \
 	system/forces_inc.F90                   \
-	system/linear_solver_inc.F90            \
 	system/output_h_inc.F90                 \
 	system/output_me_inc.F90                \
 	system/output_states_inc.F90            \
 	system/pert_inc.F90                     \
 	system/preconditioners_inc.F90          \
-	system/subspace_inc.F90                 \
-	system/xc_kli_inc.F90                   \
-	system/xc_kli_pauli_inc.F90             \
-	system/xc_oep_inc.F90                   \
-	system/xc_oep_sic_inc.F90               \
-	system/xc_oep_x_inc.F90
+	system/subspace_inc.F90
 
 # Sources in scf
 all_f_srcs +=                                \

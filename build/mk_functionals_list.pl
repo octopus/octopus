@@ -98,27 +98,6 @@ while($_ = <IN>){
   }
 }
 print OUT <<EOF;
-!%Option oep_x                    901
-!% OEP: Exact exchange (not from libxc).
-!%Option ks_inversion             801
-!% Inversion of KS potential (not from libxc).
-!%Option lda_xc_cmplx             701
-!% Complex-scaled LDA exchange and correlation (not from libxc).
-!%Option pbe_xc_cmplx             702
-!% Complex-scaled PBE exchange and correlation (not from libxc).
-!%Option lb94_xc_cmplx            703
-!% Complex-scaled LB94 exchange and correlation (not from libxc).
-!%Option rdmft_xc_m               601
-!% RDMFT Mueller functional (not from libxc).
-!%Option xc_half_hartree          917
-!% Half-Hartree exchange for two electrons (supports complex scaling) (not from libxc).
-!% Defined by <math>v_{xc}(r) = v_H(r) / 2</math>.
-!%Option vdw_c_vdwdf      918000
-!% van der Waals density functional vdW-DF correlation from libvdwxc (not from libxc).  Use with gga_x_pbe_r.
-!%Option vdw_c_vdwdf2     919000
-!% van der Waals density functional vdW-DF2 correlation from libvdwxc (not from libxc).  Use with gga_x_rpw86.
-!%Option vdw_c_vdwdfcx    920000
-!% van der Waals density functional vdW-DF-CX correlation from libvdwxc (not from libxc).  Use with gga_x_lv_rpw86.
 !%Option none                       0
 !% Exchange and correlation set to zero (not from libxc).
 !%End

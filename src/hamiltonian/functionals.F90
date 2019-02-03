@@ -38,24 +38,6 @@ module xc_functl_oct_m
     xc_functl_end,              &
     xc_functl_write_info
 
-
-  !> This adds to the constants defined in libxc. But since in that module
-  !! the OEP functionals are not included, it is better to put it here.
-  integer, public, parameter :: &
-    XC_KS_INVERSION = 801,      &  !< inversion of Kohn-Sham potential
-    XC_OEP_X = 901,             &  !< Exact exchange
-    XC_LDA_XC_CMPLX = 701,      &  !< complex-scaled LDA exchange and correlation
-    XC_PBE_XC_CMPLX = 702,      &  !< complex-scaled PBE exchange and correlation
-    XC_LB94_XC_CMPLX = 703,     &  !< complex-scaled LB94 exchange and correlation
-    XC_HALF_HARTREE = 917,      &  !< half-Hartree exchange for two electrons (supports complex scaling)
-    XC_RDMFT_XC_M = 601            !< RDMFT Mueller functional
-
-  !> declaring 'family' constants for 'functionals' not handled by libxc
-  !! careful not to use a value defined in libxc for another family!
-  integer, public, parameter :: &
-    XC_FAMILY_KS_INVERSION = 1024, &
-    XC_FAMILY_RDMFT = 2048
-
 #ifndef HAVE_LIBXC_HYB_MGGA
   integer, public, parameter :: XC_FAMILY_HYB_MGGA = 64
 #endif
@@ -124,46 +106,10 @@ contains
       functl%family = XC_F90(family_from_id)(functl%id)
       ! this also ensures it is actually a functional defined by the linked version of libxc
 
-      if(functl%family == XC_FAMILY_UNKNOWN) then
-        if(functl%id == XC_OEP_X) then
-          functl%family = XC_FAMILY_OEP
-        else if (functl%id == XC_KS_INVERSION) then
-          functl%family = XC_FAMILY_KS_INVERSION
-        else if (functl%id == XC_LDA_XC_CMPLX) then
-          call messages_experimental("complex-scaled LDA exchange and correlation")
-          functl%family = XC_FAMILY_LDA
-        else if(functl%id == XC_HALF_HARTREE) then
-          call messages_experimental("half-Hartree exchange")
-          functl%family = XC_FAMILY_LDA ! XXX not really
-        else if(functl%id == XC_PBE_XC_CMPLX) then
-          call messages_experimental("complex-scaled PBE exchange and correlation")
-          functl%family = XC_FAMILY_GGA
-        else if(functl%id == XC_LB94_XC_CMPLX) then
-          call messages_experimental("complex-scaled LB94 exchange and correlation")
-          functl%family = XC_FAMILY_GGA
-        else if (functl%id == XC_RDMFT_XC_M) then
-          functl%family = XC_FAMILY_RDMFT
-        else
-          call messages_input_error('XCFunctional', 'Unknown functional')
-        end if
-      end if
+      if(functl%family == XC_FAMILY_UNKNOWN) call messages_input_error('XCFunctional', 'Unknown functional')
     end if
 
-    if(functl%family == XC_FAMILY_OEP) then
-      functl%type = XC_EXCHANGE
-
-    else if(functl%family == XC_FAMILY_KS_INVERSION .or. functl%family == XC_FAMILY_RDMFT) then
-      functl%type = XC_EXCHANGE_CORRELATION
-
-    else if(functl%id == XC_LDA_XC_CMPLX &
-      .or. functl%id == XC_PBE_XC_CMPLX &
-      .or. functl%id == XC_LB94_XC_CMPLX) then
-      functl%type = XC_EXCHANGE_CORRELATION
-
-    else if(functl%id == XC_HALF_HARTREE) then
-      functl%type = XC_EXCHANGE_CORRELATION
-
-    else if(functl%family  ==  XC_FAMILY_NONE) then
+    if(functl%family  ==  XC_FAMILY_NONE) then
       functl%type = -1
       functl%flags = 0
 
@@ -328,12 +274,7 @@ contains
 
     PUSH_SUB(xc_functl_end)
 
-    if(functl%family /= XC_FAMILY_NONE .and. functl%family /= XC_FAMILY_OEP .and. &
-      functl%family /= XC_FAMILY_KS_INVERSION .and. &
-      functl%id /= XC_LDA_XC_CMPLX .and. functl%id /= XC_HALF_HARTREE .and. &
-      functl%id /= XC_PBE_XC_CMPLX .and. functl%id /= XC_LB94_XC_CMPLX) then
-      call XC_F90(func_end)(functl%conf)
-    end if
+    if(functl%family /= XC_FAMILY_NONE) call XC_F90(func_end)(functl%conf)
 
     POP_SUB(xc_functl_end)
   end subroutine xc_functl_end
@@ -352,48 +293,7 @@ contains
     
     PUSH_SUB(xc_functl_write_info)
 
-    if(functl%family == XC_FAMILY_OEP) then
-      ! this is handled separately
-
-      select case(functl%id)
-      case(XC_OEP_X)
-        write(message(1), '(2x,a)') 'Exchange'
-        write(message(2), '(4x,a)') 'Exact exchange'
-        call messages_info(2, iunit)
-      end select
-
-    else if(functl%family == XC_FAMILY_KS_INVERSION) then
-      ! this is handled separately
-      select case(functl%id)
-      case(XC_KS_INVERSION)
-        write(message(1), '(2x,a)') 'Exchange-Correlation:'
-        write(message(2), '(4x,a)') '  KS Inversion'
-        call messages_info(2, iunit)
-      end select
-
-    else if(functl%id == XC_LDA_XC_CMPLX) then
-      ! this is handled separately for the moment
-      ! we will include it in libxc when done with the tests
-      write(message(1), '(2x,a)') 'Exchange-Correlation:'
-      write(message(2), '(4x,a)') 'Complex-scaled LDA'
-      call messages_info(2, iunit)
-
-    else if(functl%id == XC_HALF_HARTREE) then
-      write(message(1), '(2x,a)') 'Exchange-Correlation:'
-      write(message(2), '(4x,a)') 'Half-Hartree two-electron exchange'
-      call messages_info(2, iunit)
-
-    else if(functl%id == XC_PBE_XC_CMPLX) then
-      write(message(1), '(2x,a)') 'Exchange-Correlation:'
-      write(message(2), '(4x,a)') 'Complex-scaled PBE'
-      call messages_info(2, iunit)
-
-    else if(functl%id == XC_LB94_XC_CMPLX) then
-      write(message(1), '(2x,a)') 'Exchange-Correlation:'
-      write(message(2), '(4x,a)') 'Complex-scaled LB94'
-      call messages_info(2, iunit)
-      
-    else if(functl%family /= XC_FAMILY_NONE) then ! all the other families
+    if(functl%family /= XC_FAMILY_NONE) then ! all the other families
       select case(functl%type)
       case(XC_EXCHANGE)
         write(message(1), '(2x,a)') 'Exchange'

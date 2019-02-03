@@ -75,7 +75,6 @@ module v_ks_oct_m
 
   integer, parameter, public :: &
     SIC_NONE   = 1,     &  !< no self-interaction correction
-    SIC_PZ     = 2,     &  !< Perdew-Zunger SIC (OEP way)
     SIC_AMALDI = 3,     &  !< Amaldi correction term
     SIC_ADSIC  = 4         !< Averaged density SIC
 
@@ -110,7 +109,6 @@ module v_ks_oct_m
     integer                  :: xc_flags   !< the XC flags
     integer                  :: sic_type   !< what kind of self-interaction correction to apply
     type(xc_t)               :: xc
-    type(xc_OEP_t)           :: oep
     type(poisson_t), pointer :: hartree_solver
     logical                  :: new_hartree
     type(grid_t), pointer    :: gr
@@ -332,8 +330,6 @@ contains
         !% this correction will be applied to the functional chosen by <tt>XCFunctional</tt>.
         !%Option sic_none 1
         !% No self-interaction correction.
-        !%Option sic_pz 2
-        !% Perdew-Zunger SIC, handled by the OEP technique.
         !%Option sic_amaldi 3
         !% Amaldi correction term.
         !%Option sic_adsic 4
@@ -343,14 +339,9 @@ contains
         call parse_variable('SICCorrection', sic_none, ks%sic_type)
         if(.not. varinfo_valid_option('SICCorrection', ks%sic_type)) call messages_input_error('SICCorrection')
 
-        ! Perdew-Zunger corrections
-        if(ks%sic_type == SIC_PZ) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)
-
       else
         ks%sic_type = SIC_NONE
       end if
-
-      if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) call xc_oep_init(ks%oep, ks%xc_family, gr, st)
 
     end select
 
@@ -441,9 +432,6 @@ contains
 
     select case(ks%theory_level)
     case(KOHN_SHAM_DFT)
-      if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
-        call xc_oep_end(ks%oep)
-      end if
       call xc_end(ks%xc)
     case(HARTREE_FOCK)      
       call xc_end(ks%xc)
@@ -482,10 +470,6 @@ contains
 
       write(iunit, '(1x)')
       call messages_print_var_option(iunit, 'SICCorrection', ks%sic_type)
-
-      if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
-        call xc_oep_write_info(ks%oep, iunit)
-      end if
 
     end select
 
@@ -800,20 +784,6 @@ contains
 
       if (ks%sic_type == SIC_ADSIC) then
         call add_adsic(hm)
-      end if
-
-      if(ks%theory_level == KOHN_SHAM_DFT) then
-        ! The OEP family has to be handled specially
-        if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
-          if (states_are_real(st)) then
-            call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
-                  ks%gr, hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
-          else
-            call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
-                  ks%gr, hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
-          end if
-        end if
-
       end if
 
       if(ks%calc%calc_energy) then

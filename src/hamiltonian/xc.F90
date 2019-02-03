@@ -170,18 +170,16 @@ contains
     ! Take care of hybrid functionals (they appear in the correlation functional)
     xcs%exx_coef = M_ZERO
     ll =  (hartree_fock) &
-      .or.(xcs%functional(FUNC_X,1)%id == XC_OEP_X) &
       .or.(bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0) &
       .or.(bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0)
     if(ll) then
-      if((xcs%functional(FUNC_X,1)%id /= 0).and.(xcs%functional(FUNC_X,1)%id /= XC_OEP_X)) then
+      if(xcs%functional(FUNC_X,1)%id /= 0) then
         message(1) = "You cannot use an exchange functional when performing"
         message(2) = "a Hartree-Fock calculation or using a hybrid functional."
         call messages_fatal(2)
       end if
 
-      if(periodic_dim == ndim) &
-        call messages_experimental("Fock operator (Hartree-Fock, OEP, hybrids) in fully periodic systems")
+      if(periodic_dim == ndim) call messages_experimental("Fock operator (Hartree-Fock, hybrids) in fully periodic systems")
 
       ! get the mixing coefficient for hybrids
       if(bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0 .or. &
@@ -192,10 +190,6 @@ contains
         xcs%exx_coef = M_ONE
       end if
 
-      ! reset certain variables
-      xcs%functional(FUNC_X,1)%family = XC_FAMILY_OEP
-      xcs%functional(FUNC_X,1)%id     = XC_OEP_X
-      xcs%family             = ior(xcs%family, XC_FAMILY_OEP)
     end if
 
     if (bitand(xcs%family, XC_FAMILY_LCA) /= 0) &
@@ -355,9 +349,7 @@ contains
 
     PUSH_SUB(xc_is_orbital_dependent)
 
-    xc_is_orbital_dependent = xcs%exx_coef /= M_ZERO .or. &
-      bitand(xcs%functional(FUNC_X,1)%family, XC_FAMILY_OEP) /= 0 .or. &
-      bitand(xcs%family, XC_FAMILY_MGGA) /= 0
+    xc_is_orbital_dependent = xcs%exx_coef /= M_ZERO .or. bitand(xcs%family, XC_FAMILY_MGGA) /= 0
 
     POP_SUB(xc_is_orbital_dependent)
   end function xc_is_orbital_dependent

@@ -16,18 +16,3 @@ match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -87.55795211
 match ; Eigenvalue  5 ; GREPFIELD(static/info, ' 5   -- ',  3) ; -3.987813
 match ; Eigenvalue  6 ; GREPFIELD(static/info, ' 6   -- ',  3) ; -3.088058
-
-Input      : 02-neon_mpi.02-ground_state-kli_par_domains.inp
-Precision  : 0.0004
-match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -61.03815
-# there can be disturbingly large run-to-run variation of this number
-match ; Eigenvalue  5 ; GREPFIELD(static/info, ' 5   -- ',  3) ; -0.051170
-match ; Eigenvalue  6 ; GREPFIELD(static/info, ' 6   -- ',  3) ; -0.035719
-
-# now we start a td calculation parallel in states on 5 processors
-Processors : 5
-Input      : 02-neon_mpi.03-td_calc-kli_par_states.inp
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -61.03815
-match ; Eigenvalue  5 ; GREPFIELD(static/info, ' 5   -- ',  3) ; -0.051170
-match ; Eigenvalue  6 ; GREPFIELD(static/info, ' 6   -- ',  3) ; -0.035719

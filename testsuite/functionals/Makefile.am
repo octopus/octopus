@@ -24,7 +24,6 @@ dist_share_DATA =                                  \
 	01-xc_1d.test                              \
 	01-xc_1d.01-wfs-lda.inp                    \
 	01-xc_1d.02-wfs-hf.inp                     \
-	01-xc_1d.oep_kli.inp                       \
 	01-xc_1d.lda_csc.inp                       \
 	02-xc_2d.test                              \
 	02-xc_2d.00-hartree.inp                    \
@@ -35,11 +34,8 @@ dist_share_DATA =                                  \
         02-xc_2d.gga_pbe.inp                       \
         02-xc_2d.lda_amgb.inp                      \
         02-xc_2d.gga_b86_mgc.inp                   \
-	01-xc_1d.oep_exx.inp                       \
         03-xc.test                                 \
         03-xc.01-gs.inp                            \
-        03-xc.exx.inp                              \
-        03-xc.kli.inp                              \
         03-xc.lda_c_vbh.inp                        \
         03-xc.lda_c_rpa.inp                        \
         03-xc.lda_c_pw.inp                         \
@@ -103,19 +99,8 @@ dist_share_DATA =                                  \
         03-xc.gga_x_rpbe.inp                       \
         03-xc.gga_x_wc.inp                         \
         03-xc.gga_x_xpbe.inp                       \
-        03-xc.sic_pz.inp                           \
         03-xc.pbe0_fock.inp                        \
-        03-xc.pbe0_oep.inp                         \
         03-xc.b3lyp_fock.inp                       \
-        03-xc.b3lyp_oep.inp                        \
-	04-oep.01-jellium-lsda.inp                 \
-	04-oep.02-jellium-exx_kli.inp              \
-	04-oep.03-jellium-full_exx.inp             \
-	04-oep.test                                \
-        06-rdmft.01-lda.inp                        \
-        06-rdmft.02-gs.inp                         \
-        06-rdmft.03-gs_grid.inp                    \
-        06-rdmft.test                              \
 	07-sic.01-gs.inp                           \
 	07-sic.test
 

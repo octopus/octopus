@@ -393,25 +393,6 @@ match ; gga_xc_pbelyp1w Eigenvalue dn          ; GREPFIELD(static/info, '  1   d
 match ; gga_xc_pbelyp1w Correlation            ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.33476946
 match ; gga_xc_pbelyp1w Int[n*v_xc]            ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.42800185
 
-Input: 03-xc.kli.inp
-match ; OEP KLI Eigenvalue up                  ; GREPFIELD(static/info, '  1   up', 3)      ; -1.128711
-match ; OEP KLI Eigenvalue dn                  ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.683557
-match ; OEP KLI Exchange                       ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.25285983
-match ; OEP KLI Int[n*v_xc]                    ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.50571990
-
-Input: 03-xc.exx.inp
-match ; EXX Eigenvalue up                      ; GREPFIELD(static/info, '  1   up', 3)      ; -1.128711
-match ; EXX Eigenvalue dn                      ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.683557
-match ; OEP Exact Exchange                     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.25285983
-match ; OEP EXX Int[n*v_xc]                    ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.50571990
-
-Input: 03-xc.sic_pz.inp
-match ; OEP SIC Eigenvalue up                  ; GREPFIELD(static/info, '  1   up', 3)      ; -1.136275
-match ; OEP SIC Eigenvalue dn                  ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.741113
-match ; OEP SIC Exchange                       ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.25286090
-match ; OEP SIC Correlation                    ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.01534592
-match ; OEP SIC Int[n*v_xc]                    ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.52328211
-
 Input: 03-xc.pbe0_fock.inp
 match ; PBE0 Fock Eigenvalue up                ; GREPFIELD(static/info, '  1   up', 3)      ; -1.024800
 match ; PBE0 Fock Eigenvalue dn                ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.820952
@@ -419,14 +400,6 @@ match ; PBE0 Fock Eigenvalue dn                ; GREPFIELD(static/info, '  1   d
 match ; PBE0 Fock Correlation                  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.25213281
 match ; PBE0 Fock Int[n*v_xc]                  ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.32363998
 match ; PBE0 Fock Total                        ; GREPFIELD(static/info, 'Total       =', 3) ; -0.51722491
-
-Input: 03-xc.pbe0_oep.inp
-match ; PBE0 OEP Eigenvalue up                 ; GREPFIELD(static/info, '  1   up', 3)      ; -1.024800
-match ; PBE0 OEP Eigenvalue dn                 ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.820952
-match ; PBE0 OEP Exchange                      ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.06321499
-match ; PBE0 OEP Correlation                   ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.25213281
-match ; PBE0 OEP Int[n*v_xc]                   ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.45006996
-match ; PBE0 OEP Total                         ; GREPFIELD(static/info, 'Total       =', 3) ; -0.51722491
 
 Input: 03-xc.b3lyp_fock.inp
 match ; B3LYP Fock Eigenvalue up               ; GREPFIELD(static/info, '  1   up', 3)      ; -1.019251
