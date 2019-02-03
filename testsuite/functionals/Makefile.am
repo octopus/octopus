@@ -100,8 +100,6 @@ dist_share_DATA =                                  \
         03-xc.gga_x_wc.inp                         \
         03-xc.gga_x_xpbe.inp                       \
         03-xc.pbe0_fock.inp                        \
-        03-xc.b3lyp_fock.inp                       \
-	07-sic.01-gs.inp                           \
-	07-sic.test
+        03-xc.b3lyp_fock.inp
 
 CLEANFILES = *~ *.bak

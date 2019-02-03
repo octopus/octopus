@@ -82,16 +82,8 @@ dist_share_DATA = \
 	22-preconditioner.02-filter.inp              \
 	22-preconditioner.03-jacobi.inp              \
 	22-preconditioner.05-multigrid.inp           \
-	23-go-na2.test                               \
-	23-go-na2.01-steep.inp                       \
-	23-go-na2.02-simplex.inp                     \
-	23-go-na2.03-fire.inp                        \
-	23-go-na2.04-fire_restart.inp                \
-        23-go-na2.05-constrains.inp                  \
 	24-o2-spin.test                              \
 	24-o2-spin.01-gs.inp \
-	25-multiresolution.01-Hatom.inp \
-	25-multiresolution.test \
 	27-fine_mesh.test                            \
 	27-fine_mesh.01-gs.inp \
         30-local_multipoles.01-gs.inp \
