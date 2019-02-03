@@ -162,9 +162,6 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
               call zkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, lpsi(1:ns, 1:dim), reduce_buffer(1:dim, ii:))
             end if
 #endif
-          case(PROJ_HGH)
-            call X(hgh_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, pj(ipj)%reltype, &
-              lpsi(1:ns, 1:dim), reduce_buffer(1:dim, ii:))
           end select
         end do ! mm
       end do ! ll
@@ -211,17 +208,6 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 #endif
           end select
         end do ! mm
- 
-        if(pj(ipj)%type == PROJ_HGH) then
-          SAFE_ALLOCATE(uvpsi(1:dim, 1:3, -ll:ll))
-          do mm = -ll,ll
-            ii = ireduce(ipj, ll, mm, ist)
-            uvpsi(1:dim, 1:3, mm) = reduce_buffer(1:dim, ii:ii+2)
-          end do
-          call X(hgh_project_ket)(pj(ipj)%hgh_p(ll, :), ll, pj(ipj)%lmax, dim, &
-              pj(ipj)%reltype, uvpsi(1:dim, 1:3, -ll:ll), lpsi(1:ns, 1:dim))
-          SAFE_DEALLOCATE_A(uvpsi)
-        end if
       end do ! ll
 
     !  print *, ll, lpsi(1, 1:dim)  
@@ -371,9 +357,6 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi)
       end select
   
     end do
-    if(pj%type == PROJ_HGH) then
-      call X(hgh_project)(mesh, pj%sphere, pj%hgh_p(ll, :), ll, pj%lmax, dim, psi, ppsi, pj%reltype)
-    end if
   end do
 
   POP_SUB(X(project_sphere))

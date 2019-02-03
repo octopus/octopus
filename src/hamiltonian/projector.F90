@@ -26,7 +26,6 @@ module projector_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hgh_projector_oct_m
   use io_oct_m
   use kb_projector_oct_m
   use kpoints_oct_m
@@ -83,8 +82,6 @@ module projector_oct_m
   !! subroutine) depends on the type of the projector. 
   !!
   !! There are four different types: 
-  !! - local -> a local operator
-  !! - HGH projector -> "normal"
   !! - normal Kleinman-Bylander projector (no spin-orbit)
   !! - relativistic Kleinman-Bylander projector (includes spin-orbit)
 
@@ -101,7 +98,6 @@ module projector_oct_m
 
     !> Only one of the following structures should be used at once
     !! The one to be used depends on the value of type variable
-    type(hgh_projector_t), pointer :: hgh_p(:, :) => null()
     type(kb_projector_t),  pointer :: kb_p(:, :)  => null()
     type(rkb_projector_t), pointer :: rkb_p(:, :) => null()
     CMPLX,                 pointer :: phase(:, :) => null()
@@ -180,8 +176,6 @@ contains
       p%nprojections = dim*ps%kbc
     case(PROJ_RKB)
       p%nprojections = 4
-    case(PROJ_HGH)
-      p%nprojections = 3
     end select
 
     POP_SUB(projector_init)
@@ -255,16 +249,6 @@ contains
 
     select case (p%type)
 
-    case (PROJ_HGH)
-      SAFE_ALLOCATE(p%hgh_p(0:p%lmax, -p%lmax:p%lmax))
-      do ll = 0, p%lmax
-        if(ll == p%lloc) cycle
-        do mm = -ll, ll
-          call hgh_projector_null(p%hgh_p(ll, mm))
-          call hgh_projector_init(p%hgh_p(ll, mm), p%sphere, p%reltype, a, ll, mm, so_strength)
-        end do
-      end do
-
     case (PROJ_KB)
       SAFE_ALLOCATE(p%kb_p(0:p%lmax, -p%lmax:p%lmax))
       do ll = 0, p%lmax
@@ -307,15 +291,6 @@ contains
     call submesh_end(p%sphere)
 
     select case(p%type)
-    case(PROJ_HGH)
-      do ll = 0, p%lmax
-        if(ll == p%lloc) cycle
-        do mm = -ll, ll
-          call hgh_projector_end(p%hgh_p(ll, mm))
-        end do
-      end do
-      SAFE_DEALLOCATE_P(p%hgh_p)
-
     case(PROJ_KB)
       do ll = 0, p%lmax
         if(ll == p%lloc) cycle

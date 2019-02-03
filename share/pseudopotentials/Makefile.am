@@ -18,7 +18,7 @@
 ## 02110-1301, USA.
 ##
 
-SUBDIRS = PSF HGH quantum-simulation.org pseudo-dojo.org
+SUBDIRS = PSF quantum-simulation.org pseudo-dojo.org
 
 ppdir = $(pkgdatadir)/pseudopotentials
 

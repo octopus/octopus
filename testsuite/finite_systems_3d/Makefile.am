@@ -44,19 +44,6 @@ dist_share_DATA = \
 	06-restart.06-td_calc.inp                      \
 	06-restart.07-restart_td_calc.inp              \
 	06-restart.test                                \
-	07-spin_orbit_coupling.01-hgh.inp              \
-	07-spin_orbit_coupling.02-rkb.inp              \
-	07-spin_orbit_coupling.02-xe-pseudo.upf        \
-	07-spin_orbit_coupling.test                    \
-	08-spin_orbit_coupling_full.01-hgh.inp         \
-	08-spin_orbit_coupling_full.02-rkb.inp         \
-        08-spin_orbit_coupling_full.03-unocc.inp       \
-	08-spin_orbit_coupling_full.Xe.UPF             \
-	08-spin_orbit_coupling_full.test               \
-	09-spinors.01-ground_state.inp                 \
-	09-spinors.02-rmmdiis.inp                      \
-	09-spinors.03-rmmdiis_extra_states.inp         \
-	09-spinors.test                                \
 	10-fullerene.test                              \
 	10-fullerene.01-gs.inp                         \
 	10-fullerene.geometry.xyz                      \

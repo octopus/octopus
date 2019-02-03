@@ -288,12 +288,6 @@ contains
     !% PBE pseudopotentials. Ref: M. Schlipf and F. Gygi, <i>Comp. Phys. Commun.</i> <b>196</b>, 36 (2015).
     !% This set provides pseudopotentials for elements up to Z = 83
     !% (Bi), excluding Lanthanides.
-    !%Option hgh_lda 3
-    !% The set of Hartwigsen-Goedecker-Hutter LDA pseudopotentials for elements from H to Rn.
-    !% Ref: C. Hartwigsen, S. Goedecker, and J. Hutter, <i>Phys. Rev. B</i> <b>58</b>, 3641 (1998).
-    !%Option hgh_lda_sc 31
-    !% The semicore set of Hartwigsen-Goedecker-Hutter LDA pseudopotentials.
-    !% Ref: C. Hartwigsen, S. Goedecker, and J. Hutter, <i>Phys. Rev. B</i> <b>58</b>, 3641 (1998).
     !%Option hscv_lda 4
     !% (experimental) The set of Hamann-Schlueter-Chiang-Vanderbilt (HSCV) potentials
     !% for LDA exchange and correlation downloaded from http://fpmd.ucdavis.edu/potentials/index.htm.
@@ -346,7 +340,6 @@ contains
   ! ---------------------------------------------------------
 
   subroutine species_end_global()
-    integer :: ierr
     
     PUSH_SUB(species_end_global)
 
@@ -419,8 +412,7 @@ contains
     !% href='http://octopus-code.org/wiki/Pseudopotentials'>
     !% octopus homepage</a> or from other sources. Supported norm-conserving pseudopotential formats are
     !% detected by the file extension: UPF (<tt>.upf</tt>), PSF (SIESTA, <tt>.psf</tt>), FHI (ABINIT 6, <tt>.fhi</tt>),
-    !% CPI (Fritz-Haber, <tt>.cpi</tt>), QSO (quantum-simulation.org, for Qbox, <tt>.xml</tt>),
-    !% HGH (Hartwigsen-Goedecker-Hutter, <tt>.hgh</tt>).
+    !% CPI (Fritz-Haber, <tt>.cpi</tt>), QSO (quantum-simulation.org, for Qbox, <tt>.xml</tt>).
     !% Note: pseudopotentials may only be used in 3D.
     !%
     !% The format of this block is the following: The first field is a
@@ -438,7 +430,7 @@ contains
     !%
     !% <tt>%Species
     !% <br>&nbsp;&nbsp;'O'       | species_pseudo         | file | 'O.psf' | lmax |  1 | lloc | 1
-    !% <br>&nbsp;&nbsp;'H'       | species_pseudo         | file | '../H.hgh'
+    !% <br>&nbsp;&nbsp;'H'       | species_pseudo         | file | '../H.upf'
     !% <br>&nbsp;&nbsp;'Xe'      | species_pseudo         | set | pseudojo_pbe_stringent
     !% <br>&nbsp;&nbsp;'C'       | species_pseudo         | file | "carbon.xml"
     !% <br>&nbsp;&nbsp;'jlm'     | species_jellium        | jellium_radius | 5.0
@@ -673,10 +665,6 @@ contains
       filename = trim(conf%share)//'/pseudopotentials/PSF'
     case(OPTION__PSEUDOPOTENTIALSET__SG15)
       filename = trim(conf%share)//'/pseudopotentials/quantum-simulation.org/sg15/'
-    case(OPTION__PSEUDOPOTENTIALSET__HGH_LDA)
-      filename = trim(conf%share)//'/pseudopotentials/HGH/lda/'
-    case(OPTION__PSEUDOPOTENTIALSET__HGH_LDA_SC)
-      filename = trim(conf%share)//'/pseudopotentials/HGH/lda_sc/'
     case(OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
       filename = trim(conf%share)//'/pseudopotentials/quantum-simulation.org/hscv/lda/'
     case(OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
@@ -1217,8 +1205,6 @@ contains
         select case(spec%pseudopotential_set_id)
         case(                                     &
           OPTION__PSEUDOPOTENTIALSET__STANDARD,   &
-          OPTION__PSEUDOPOTENTIALSET__HGH_LDA,    &
-          OPTION__PSEUDOPOTENTIALSET__HGH_LDA_SC, &
           OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
           
           species_x_functional = OPTION__XCFUNCTIONAL__LDA_X
@@ -1247,8 +1233,6 @@ contains
         select case(spec%pseudopotential_set_id)
         case(                                     &
           OPTION__PSEUDOPOTENTIALSET__STANDARD,   &
-          OPTION__PSEUDOPOTENTIALSET__HGH_LDA,    &
-          OPTION__PSEUDOPOTENTIALSET__HGH_LDA_SC, &
           OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
           
           species_c_functional = OPTION__XCFUNCTIONAL__LDA_C_PZ_MOD/1000

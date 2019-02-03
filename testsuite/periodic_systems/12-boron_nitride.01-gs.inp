@@ -36,7 +36,7 @@ ParDomains = no
 %
 
 %Species
- 'B' | species_pseudo | set | hgh_lda
+ 'B' | species_pseudo | set | pseudodojo_lda
 %
 
 %Coordinates

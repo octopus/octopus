@@ -190,7 +190,6 @@ all_f_srcs +=                                    \
 	species/ps.F90                           \
 	species/ps_fhi.F90                       \
 	species/ps_fhi_file.F90                  \
-	species/ps_hgh.F90                       \
 	species/ps_in_grid.F90                   \
 	species/ps_psf.F90                       \
 	species/ps_psf_file.F90                  \
@@ -368,7 +367,6 @@ all_f_srcs +=                                        \
 	hamiltonian/gauge_field.F90                  \
 	hamiltonian/hamiltonian_base.F90             \
 	hamiltonian/hamiltonian.F90                  \
-	hamiltonian/hgh_projector.F90                \
 	hamiltonian/hirshfeld.F90                    \
 	hamiltonian/ion_interaction.F90              \
 	hamiltonian/kb_projector.F90                 \
@@ -387,7 +385,6 @@ noinst_HEADERS +=                                    \
         hamiltonian/fxc_inc.F90                      \
 	hamiltonian/hamiltonian_base_inc.F90         \
 	hamiltonian/hamiltonian_inc.F90              \
-	hamiltonian/hgh_projector_inc.F90            \
 	hamiltonian/kb_projector_inc.F90             \
 	hamiltonian/kxc_inc.F90                      \
 	hamiltonian/lasers_inc.F90                   \

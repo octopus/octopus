@@ -33,7 +33,6 @@ module hamiltonian_base_oct_m
   use hardware_oct_m
   use io_oct_m
   use kb_projector_oct_m
-  use hgh_projector_oct_m
   use lalg_basic_oct_m
   use math_oct_m
   use mesh_oct_m
@@ -363,7 +362,6 @@ contains
     logical :: overlap
     type(projector_matrix_t), pointer :: pmat
     type(kb_projector_t),     pointer :: kb_p
-    type(hgh_projector_t),    pointer :: hgh_p
     type(profile_t), save :: color_prof
 
     PUSH_SUB(hamiltonian_base_build_proj)
@@ -450,7 +448,7 @@ contains
     do iorder = 1, epot%natoms
       iatom = order(iorder)
 
-      if(projector_is(epot%proj(iatom), PROJ_KB) .or. projector_is(epot%proj(iatom), PROJ_HGH)) then
+      if(projector_is(epot%proj(iatom), PROJ_KB)) then
         INCR(this%nprojector_matrices, 1)
         this%apply_projector_matrices = .true.
       else if(.not. projector_is_null(epot%proj(iatom))) then
@@ -526,48 +524,6 @@ contains
             end do
           end do
 
-        else if(projector_is(epot%proj(iatom), PROJ_HGH)) then
-
-          this%projector_mix = .true.
-          
-          ! count the number of projectors for this matrix
-          nmat = 0
-          do ll = 0, lmax
-            if (ll == lloc) cycle
-            do mm = -ll, ll
-              nmat = nmat + 3
-            end do
-          end do
-          
-          call projector_matrix_allocate(pmat, epot%proj(iatom)%sphere%np, nmat, has_mix_matrix = .true.)
-
-          ! generate the matrix
-          pmat%projectors = M_ZERO
-          pmat%mix = M_ZERO
-          
-          imat = 1
-          do ll = 0, lmax
-            if (ll == lloc) cycle
-            do mm = -ll, ll
-              hgh_p =>  epot%proj(iatom)%hgh_p(ll, mm)
-
-              ! HGH pseudos mix different components, so we need to
-              ! generate a matrix that mixes the projections
-              do ic = 1, 3
-                do jc = 1, 3
-                  pmat%mix(imat - 1 + ic, imat - 1 + jc) = hgh_p%h(ic, jc)
-                end do
-              end do
-              
-              do ic = 1, 3
-                forall(ip = 1:pmat%npoints) pmat%projectors(ip, imat) = hgh_p%dp(ip, ic)
-                pmat%scal(imat) = mesh%volume_element
-                INCR(imat, 1)
-              end do
-              
-            end do
-          end do
-          
         else
           cycle          
         end if
