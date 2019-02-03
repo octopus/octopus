@@ -35,10 +35,6 @@ dist_share_DATA =                                \
 	05-lithium.02-td.inp                     \
 	05-lithium.03-td-restart.inp             \
 	06-h2o_pol_lr.01_gs.inp                  \
-	06-h2o_pol_lr.02_kdotp.inp               \
-	06-h2o_pol_lr.03_emresp.inp              \
-	06-h2o_pol_lr.04_emresp_mo.inp           \
-	06-h2o_pol_lr.05_emresp_susc.inp         \
 	06-h2o_pol_lr.test                       \
 	07-tb09.test	                         \
 	07-tb09.01-gs_symm.inp                   \
