@@ -24,7 +24,6 @@ SUBDIRS =               \
 	qshep           \
 	spglib-1.9.9    \
 	fortrancl       \
-	bpdn            \
 	yaml-0.1.4      \
 	rapidxml
 

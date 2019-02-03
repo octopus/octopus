@@ -342,7 +342,6 @@ AC_CONFIG_FILES([Makefile
   external_libs/metis-5.1/libmetis/Makefile
   external_libs/qshep/Makefile
   external_libs/fortrancl/Makefile
-  external_libs/bpdn/Makefile
   external_libs/yaml-0.1.4/Makefile
   external_libs/yaml-0.1.4/include/Makefile
   external_libs/yaml-0.1.4/src/Makefile

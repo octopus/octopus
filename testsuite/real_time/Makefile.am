@@ -46,18 +46,12 @@ dist_share_DATA =                      \
 	08-laser.02-length_gauge.inp   \
 	08-laser.03-velocity_gauge.inp         \
 	08-laser.04-velocity_gauge_cheby.inp   \
-	09-angular_momentum.test               \
-	09-angular_momentum.01-gs.inp          \
-	09-angular_momentum.02-td_gipaw.inp    \
-	09-angular_momentum.03-td_icl.inp      \
-        09-angular_momentum.04-rotatory_strength.inp \
 	10-bomd.test                           \
 	10-bomd.01-gs.inp                      \
 	10-bomd.02-td.inp                      \
 	10-bomd.03-td_restart.inp              \
 	11-tdmagnetic.test                     \
 	11-tdmagnetic.01-gs.inp                \
-	11-tdmagnetic.02-unocc.inp             \
 	11-tdmagnetic.03-td.inp                \
 	12-absorption.test                     \
 	12-absorption.01-gs.inp                \
@@ -67,16 +61,7 @@ dist_share_DATA =                      \
 	13-absorption-spin.01-gs.inp           \
 	13-absorption-spin.02-td.inp           \
 	13-absorption-spin.03-td-restart.inp   \
-	13-absorption-spin.04-spectrum.inp     \
-        13-absorption-spin.05-spectrum_compressed_sensing.inp \
 	13-absorption-spin.06-td_spinkick.inp  \
-	13-absorption-spin.07-spectrum_triplet.inp \
-	14-absorption-spinors.test                \
-	14-absorption-spinors.01-gs.inp           \
-	14-absorption-spinors.02-td.inp           \
-	14-absorption-spinors.03-td-restart.inp   \
-	14-absorption-spinors.04-spectrum.inp     \
-        14-absorption-spinors.05-spectrum_compressed_sensing.inp \
         17-absorption-spin_symmetry.01-gs.inp \
         17-absorption-spin_symmetry.02-td.inp \
         17-absorption-spin_symmetry.test \

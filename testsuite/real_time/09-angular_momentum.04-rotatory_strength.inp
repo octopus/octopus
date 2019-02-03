@@ -1,7 +1,0 @@
-# -*- coding: utf-8 mode: shell-script -*-
-
-PropagationSpectrumType = RotatoryStrength
-
-FilterPotentials = filter_none
-
-MixField = density
