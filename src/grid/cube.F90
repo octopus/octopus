@@ -28,10 +28,8 @@ module cube_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
-  use nfft_oct_m
   use parser_oct_m
   use pfft_oct_m
-  use pnfft_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use varinfo_oct_m
@@ -197,7 +195,7 @@ contains
     end if
 
     ! Note: later we set parallel_in_domains if blocksize is given, too
-    cube%parallel_in_domains = (fft_library_ == FFTLIB_PFFT .or. fft_library_ == FFTLIB_PNFFT)
+    cube%parallel_in_domains = (fft_library_ == FFTLIB_PFFT)
     if (present(blocksize)) then
       ASSERT(present(need_partition).and.need_partition)
       ASSERT(fft_library_ == FFTLIB_NONE)
@@ -249,20 +247,11 @@ contains
         call cube_init_coords(cube, tp_enlarge_, spacing, fft_library_)
       end if
 
-      if(fft_library_ == FFTLIB_NFFT .or. fft_library_ == FFTLIB_PNFFT) then
-        call fft_init_stage1(cube%fft, cube%Lrs, cube%rs_n_global)
-        !set local dimensions after stage1 - needed for PNFFT
-        call fft_get_dims(cube%fft, cube%rs_n_global, cube%fs_n_global, cube%rs_n, cube%fs_n, &
-             cube%rs_istart, cube%fs_istart)
-      end if
-
     end if
 
     if(present(spacing) .and. .not. associated(cube%Lrs)) then
       call cube_init_coords(cube, tp_enlarge_, spacing, fft_library_)
     end if
-
-
     
     cube%center(1:3) = cube%rs_n_global(1:3)/2 + 1
     
@@ -276,7 +265,7 @@ contains
       cube%has_cube_mapping = .false.
     end if
     if (cube%has_cube_mapping) then
-      call cube_do_mapping(cube, fs = fft_library_ == FFTLIB_PNFFT)
+      call cube_do_mapping(cube, fs = .false.)
     end if
 
     if (cube%parallel_in_domains) call cube_partition_messages_debug(cube)
@@ -317,30 +306,6 @@ contains
     type(cube_t), intent(inout) :: cube
     integer,      intent(in)    :: fft_library
     
-    PUSH_SUB(cube_tp_fft_defaults)
-    select case (fft_library)
-      case (FFTLIB_NFFT)
-#ifdef HAVE_NFFT    
-        !Set NFFT defaults to values that gives good performance for two-point enlargement
-        !These values are overridden by the NFFT options in the input file 
-        cube%fft%nfft%set_defaults = .true.
-        cube%fft%nfft%guru = .true.
-        cube%fft%nfft%mm = 2 
-        cube%fft%nfft%sigma = CNST(1.1)
-        cube%fft%nfft%precompute = NFFT_PRE_PSI
-#endif
-
-      case (FFTLIB_PNFFT)
-#ifdef HAVE_PNFFT    
-        cube%fft%pnfft%set_defaults = .true.
-        cube%fft%pnfft%m = 2 
-        cube%fft%pnfft%sigma = CNST(1.1)
-#endif
-      case default 
-      !do nothing  
-    end select
-    
-    POP_SUB(cube_tp_fft_defaults)
   end subroutine cube_tp_fft_defaults
 
 
@@ -389,15 +354,7 @@ contains
         temp = M_TWO * M_PI / (nn(idim) * spacing(idim))
 !temp = M_PI / (nn * spacing(1))
         do ii = 1, nn(idim)
-          if (fft_library == FFTLIB_NFFT .or. fft_library == FFTLIB_PNFFT ) then
-            !The Fourier space is shrunk by the tp_enlarge factor
-            !cube%Lfs(ii, 1:3) = (ii - nn/2 - 1)*temp/tp_enlarge
-!HH NOTE:
-!not sure this is the right general factor
-            cube%Lfs(ii, idim) = (ii - nn(idim)/2 - 1)*temp/tp_enlarge(idim)
-          else
-            cube%Lfs(ii, idim) = pad_feq(ii,nn(idim), .true.) * temp
-          end if
+          cube%Lfs(ii, idim) = pad_feq(ii,nn(idim), .true.) * temp
         end do
       end do
     end if

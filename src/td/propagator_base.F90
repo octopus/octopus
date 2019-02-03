@@ -21,7 +21,6 @@
 module propagator_base_oct_m
   use exponential_oct_m
   use potential_interpolation_oct_m
-  use sparskit_oct_m
   
   implicit none
 
@@ -33,15 +32,7 @@ module propagator_base_oct_m
     PROP_ETRS                    = 2,  &
     PROP_AETRS                   = 3,  &
     PROP_EXPONENTIAL_MIDPOINT    = 4,  &
-    PROP_CRANK_NICOLSON          = 5,  &
-    PROP_CRANK_NICOLSON_SPARSKIT = 6,  &
-    PROP_MAGNUS                  = 7,  &
-    PROP_QOCT_TDDFT_PROPAGATOR   = 10, &
-    PROP_CAETRS                  = 12, &
-    PROP_RUNGE_KUTTA4            = 13, &
-    PROP_RUNGE_KUTTA2            = 14, & 
-    PROP_EXPLICIT_RUNGE_KUTTA4   = 15, &
-    PROP_CFMAGNUS4               = 16
+    PROP_CAETRS                  = 12
 
   type propagator_t
     integer             :: method           !< Which evolution method to use.
@@ -49,10 +40,8 @@ module propagator_base_oct_m
     !> Storage of the KS potential of previous iterations.
     type(potential_interpolation_t) :: vksold
     !> Auxiliary function to store the Magnus potentials.
-    FLOAT, pointer      :: vmagnus(:, :, :) => null() 
     integer             :: scf_propagation_steps 
     logical             :: first
-    type(sparskit_solver_t), pointer :: tdsk
     integer             :: tdsk_size
     FLOAT               :: scf_threshold
   end type propagator_t

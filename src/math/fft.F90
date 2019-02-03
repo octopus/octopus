@@ -38,14 +38,12 @@ module fft_oct_m
   use loct_math_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use nfft_oct_m
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
   use omp_lib
 #endif
   use parser_oct_m
   use pfft_oct_m
   use pfft_params_oct_m
-  use pnfft_oct_m
   use profiling_oct_m
   use types_oct_m
   use unit_system_oct_m
@@ -59,7 +57,6 @@ module fft_oct_m
     fft_all_init,      &
     fft_all_end,       &
     fft_init,          &
-    fft_init_stage1,   &
     fft_end,           &
     fft_copy,          &
     fft_get_dims,      &
@@ -89,9 +86,7 @@ module fft_oct_m
        FFTLIB_NONE  = 0, &
        FFTLIB_FFTW  = 1, &
        FFTLIB_PFFT  = 2, &
-       FFTLIB_ACCEL = 3, &
-       FFTLIB_NFFT  = 4, &
-       FFTLIB_PNFFT = 5
+       FFTLIB_ACCEL = 3
        
   integer, parameter :: &
     FFT_MAX  = 10, &
@@ -130,12 +125,6 @@ module fft_oct_m
 #endif
     type(c_ptr)           :: cuda_plan_fw
     type(c_ptr)           :: cuda_plan_bw
-#ifdef HAVE_NFFT
-    type(nfft_t) :: nfft 
-#endif
-#ifdef HAVE_PNFFT
-    type(pnfft_t) :: pnfft 
-#endif
 
   end type fft_t
 
@@ -345,25 +334,6 @@ contains
         library_ = FFTLIB_FFTW
       end if
       
-    case (FFTLIB_NFFT)
-            
-      do ii = 1, fft_dim
-        !NFFT likes even grids
-        !The underlying FFT grids are optimized inside the nfft_init routine
-        if(int(nn(ii)/2)*2 /= nn(ii) .and. (fft_optimize .and. optimize(ii)) )&
-          nn(ii)=nn(ii)+1 
-      end do 
-
-    case (FFTLIB_PNFFT)
-          
-      do ii = 1, fft_dim
-        !also PNFFT likes even grids
-        if(int(nn(ii)/2)*2 /= nn(ii)) nn(ii)=nn(ii)+1 
-      end do 
-          
-      if(fft_dim < 3) &
-          call messages_not_implemented('PNFFT support for dimension < 3')
-                    
     case default
 
       if(fft_dim < 3 .and. library_ == FFTLIB_PFFT) &
@@ -388,10 +358,7 @@ contains
     do ii = FFT_MAX, 1, -1
       if(fft_refs(ii) /= FFT_NULL) then
         if(all(nn(1:dim) == fft_array(ii)%rs_n_global(1:dim)) .and. type == fft_array(ii)%type &
-             .and. library_ == fft_array(ii)%library .and. library_ /= FFTLIB_NFFT &
-             .and. library_ /= FFTLIB_PNFFT ) then
-             ! NFFT and PNFFT plans are always allocated from scratch since they 
-             ! are very likely to be different
+             .and. library_ == fft_array(ii)%library) then
           this = fft_array(ii)              ! return a copy
           fft_refs(ii) = fft_refs(ii) + 1  ! increment the ref count
           if (present(mpi_comm)) mpi_comm = fft_array(ii)%comm ! also return the MPI communicator
@@ -436,13 +403,6 @@ contains
         message(3) = "Please check it."
         call messages_fatal(3)
       end if
-#endif
-
-    case (FFTLIB_PNFFT)
-#ifdef HAVE_PNFFT
-
-      call pnfft_init_procmesh(fft_array(jj)%pnfft, mpi_grp_, fft_array(jj)%comm) 
-
 #endif
 
     case default
@@ -503,22 +463,6 @@ contains
       fft_array(jj)%rs_istart = 1
       fft_array(jj)%fs_istart = 1
 
-    case(FFTLIB_NFFT)
-      fft_array(jj)%fs_n_global = fft_array(jj)%rs_n_global
-      fft_array(jj)%rs_n = fft_array(jj)%rs_n_global
-      fft_array(jj)%fs_n = fft_array(jj)%fs_n_global
-      fft_array(jj)%rs_istart = 1
-      fft_array(jj)%fs_istart = 1
-    
-    case(FFTLIB_PNFFT)       
-      fft_array(jj)%fs_n_global = fft_array(jj)%rs_n_global
-      fft_array(jj)%rs_n = fft_array(jj)%rs_n_global
-      fft_array(jj)%fs_n = fft_array(jj)%fs_n_global
-      fft_array(jj)%rs_istart = 1
-      fft_array(jj)%fs_istart = 1
-      ! indices partition is performed together with the plan preparation
-
-
     end select
 
     ! Prepare plans
@@ -528,13 +472,6 @@ contains
            type == FFT_REAL, FFTW_FORWARD, fft_prepare_plan+FFTW_UNALIGNED)
       call fftw_prepare_plan(fft_array(jj)%planb, fft_dim, fft_array(jj)%rs_n_global, &
            type == FFT_REAL, FFTW_BACKWARD, fft_prepare_plan+FFTW_UNALIGNED)
-
-    case(FFTLIB_NFFT)
-#ifdef HAVE_NFFT
-     call nfft_copy_info(this%nfft,fft_array(jj)%nfft) !copy default parameters set in the calling routine 
-     call nfft_init(fft_array(jj)%nfft, fft_array(jj)%rs_n_global, &
-                    fft_dim, fft_array(jj)%rs_n_global , type, optimize = .true.)
-#endif
 
     case (FFTLIB_PFFT)
 #ifdef HAVE_PFFT     
@@ -549,29 +486,6 @@ contains
         call pfft_prepare_plan_c2c(fft_array(jj)%planb, fft_array(jj)%rs_n_global, fft_array(jj)%fs_data, &
              fft_array(jj)%zrs_data, FFTW_BACKWARD, fft_prepare_plan, mpi_comm)
       end if
-#endif
-    case (FFTLIB_PNFFT)
-#ifdef HAVE_PNFFT     
-      call pnfft_copy_params(this%pnfft,fft_array(jj)%pnfft) ! pass default parameters like in NFFT
-
-      ! NOTE:
-      ! PNFFT (likewise NFFT) breaks the symmetry between real space and Fourier space
-      ! by allowing the possibility to have an unstructured grid in rs and by 
-      ! using different parallelizations (the rs is transposed w.r.t. fs).
-      ! Octopus, in fourier_space_m, uses the convention for which the mapping 
-      ! between rs and fs is done with a forward transform (and fs->rs with backward).
-      ! This is exactly the opposite of the definitions used by all the libraries 
-      ! performing FFTs (PNFFT and NFFT included) [see e.g. M. Frigo, and S. G. Johnson, Proc. 
-      ! IEEE 93, 216-231 (2005)].
-      ! While this leads to no problem on ordinary ffts where fs and rs can be exchanged 
-      ! it does makes a fundamental difference for PNFFT (for some reason I don`t know NFFT 
-      ! is still symmetric).
-      ! Therefore, in order to perform rs->fs tranforms with PNFFT one should use the 
-      ! backward transform.     
-
-      call pnfft_init_plan(fft_array(jj)%pnfft, mpi_comm, fft_array(jj)%fs_n_global, &
-           fft_array(jj)%fs_n, fft_array(jj)%fs_istart, fft_array(jj)%rs_n, fft_array(jj)%rs_istart)
-      
 #endif
 
     case(FFTLIB_ACCEL)
@@ -713,29 +627,26 @@ contains
     
     this = fft_array(jj)
 
-    ! Write information
-    if (.not. (library_ == FFTLIB_NFFT .or. library_ == FFTLIB_PNFFT)) then
-      call messages_write('Info: FFT grid dimensions       =')
-      do idir = 1, dim
-        call messages_write(fft_array(jj)%rs_n_global(idir))
-        if(idir < dim) call messages_write(" x ")
-      end do
+    call messages_write('Info: FFT grid dimensions       =')
+    do idir = 1, dim
+      call messages_write(fft_array(jj)%rs_n_global(idir))
+      if(idir < dim) call messages_write(" x ")
+    end do
+    call messages_new_line()
+    
+    call messages_write('      Total grid size           =')
+    call messages_write(product(fft_array(jj)%rs_n_global(1:dim)))
+    call messages_write(' (')
+    call messages_write(product(fft_array(jj)%rs_n_global(1:dim))*CNST(8.0), units = unit_megabytes, fmt = '(f6.1)')
+    call messages_write(' )')
+    if(any(nn(1:fft_dim) /= nn_temp(1:fft_dim))) then
       call messages_new_line()
-
-      call messages_write('      Total grid size           =')
-      call messages_write(product(fft_array(jj)%rs_n_global(1:dim)))
-      call messages_write(' (')
-      call messages_write(product(fft_array(jj)%rs_n_global(1:dim))*CNST(8.0), units = unit_megabytes, fmt = '(f6.1)')
-      call messages_write(' )')
-      if(any(nn(1:fft_dim) /= nn_temp(1:fft_dim))) then
-        call messages_new_line()
-        call messages_write('      Inefficient FFT grid. A better grid would be: ')
-        do idir = 1, fft_dim
-          call messages_write(nn_temp(idir))
-        end do
-      end if
-      call messages_info()
+      call messages_write('      Inefficient FFT grid. A better grid would be: ')
+      do idir = 1, fft_dim
+        call messages_write(nn_temp(idir))
+      end do
     end if
+    call messages_info()
     
     select case (library_)
     case (FFTLIB_PFFT)
@@ -747,69 +658,11 @@ contains
       write(message(6),'(a, i9)') " The size of integer is = ", C_INTPTR_T
       call messages_info(6)
 
-    case (FFTLIB_PNFFT)
-      call messages_write("Info: FFT library = PNFFT")
-      call messages_info()
-#ifdef HAVE_PNFFT
-      call pnfft_write_info(fft_array(jj)%pnfft)
-#endif
-
-    case (FFTLIB_NFFT)
-    call messages_write("Info: FFT library = NFFT")
-    call messages_info()
-#ifdef HAVE_NFFT
-      call nfft_write_info(fft_array(jj)%nfft)
-#endif
-
     end select
 
     POP_SUB(fft_init)
   end subroutine fft_init
   
-  ! ---------------------------------------------------------
-  !> Some fft-libraries (only NFFT for the moment) need an additional 
-  !! precomputation stage that depends on the spatial grid whose size 
-  !! may change after fft_init
-  subroutine fft_init_stage1(this, XX, nn)
-    type(fft_t),       intent(inout) :: this     !< FFT data type
-    !> NFFT spatial nodes on x-axis XX(:,1), y-axis XX(:,2),
-    !! and z-axis XX(:,3) 
-    FLOAT,             intent(in)    :: XX(:,:)  
-    integer, optional, intent(in)    :: nn(:)  
- 
-    integer :: slot
-
-    PUSH_SUB(fft_init_stage1)
-
-    ASSERT(size(XX,2) == 3)
-
-    slot = this%slot
-    select case (fft_array(slot)%library)
-    case (FFTLIB_FFTW)
-    !Do nothing 
-    case (FFTLIB_NFFT)
-#ifdef HAVE_NFFT
-      ASSERT(present(nn))
-      call nfft_precompute(fft_array(slot)%nfft, &
-          XX(1:nn(1),1), XX(1:nn(2),2), XX(1:nn(3),3)) 
-#endif
-    case (FFTLIB_PFFT)
-    !Do nothing 
-    case(FFTLIB_ACCEL)
-    !Do nothing 
-    case(FFTLIB_PNFFT)
-#ifdef HAVE_PNFFT
-      call pnfft_set_sp_nodes(fft_array(slot)%pnfft, XX)
-#endif
-    case default
-      call messages_write('Invalid FFT library.')
-      call messages_fatal()
-    end select
-
-
-
-    POP_SUB(fft_init_stage1)
-  end subroutine fft_init_stage1
   ! ---------------------------------------------------------
   subroutine fft_end(this)
     type(fft_t), intent(inout) :: this
@@ -850,16 +703,6 @@ contains
 #ifdef HAVE_CLFFT
           call clfftDestroyPlan(fft_array(ii)%cl_plan_fw, status)
           call clfftDestroyPlan(fft_array(ii)%cl_plan_bw, status)
-#endif
-
-#ifdef HAVE_NFFT
-        case(FFTLIB_NFFT)
-        call nfft_end(fft_array(ii)%nfft)
-#endif
-
-#ifdef HAVE_PNFFT
-        case(FFTLIB_PNFFT)
-        call pnfft_end(fft_array(ii)%pnfft)
 #endif
         end select
         fft_refs(ii) = FFT_NULL

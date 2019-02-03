@@ -41,7 +41,6 @@ module propagator_oct_m
   use propagator_etrs_oct_m
   use propagator_expmid_oct_m
   use scf_oct_m
-  use sparskit_oct_m
   use states_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
@@ -72,11 +71,8 @@ contains
     !this%method
     !call exponential_nullify(this%te)
     call potential_interpolation_nullify(this%vksold)
-    this%vmagnus => null() 
     !this%scf_propagation_steps 
     !this%first
-
-    nullify(this%tdsk)
 
     POP_SUB(propagator_nullify)
   end subroutine propagator_nullify
@@ -91,30 +87,6 @@ contains
     
     call propagator_nullify(tro)
     tro%method = tri%method
-
-    select case(tro%method)
-    case(PROP_MAGNUS)
-      call loct_pointer_copy(tro%vmagnus, tri%vmagnus)
-
-    case(PROP_CRANK_NICOLSON_SPARSKIT)
-      SAFE_ALLOCATE(tro%tdsk)
-      tro%tdsk_size = tri%tdsk_size
-#ifdef HAVE_SPARSKIT
-      call sparskit_solver_init(tro%tdsk_size, tro%tdsk, .true.)
-#endif
-    case(PROP_RUNGE_KUTTA4)
-      SAFE_ALLOCATE(tro%tdsk)
-      tro%tdsk_size = tri%tdsk_size
-#ifdef HAVE_SPARSKIT
-      call sparskit_solver_init(tro%tdsk_size, tro%tdsk, .true.)
-#endif
-    case(PROP_RUNGE_KUTTA2)
-      SAFE_ALLOCATE(tro%tdsk)
-      tro%tdsk_size = tri%tdsk_size
-#ifdef HAVE_SPARSKIT
-      call sparskit_solver_init(tro%tdsk_size, tro%tdsk, .true.)
-#endif
-    end select
 
     call potential_interpolation_copy(tro%vksold, tri%vksold)
 
@@ -359,18 +331,6 @@ contains
     PUSH_SUB(propagator_end)
 
     call potential_interpolation_end(tr%vksold)
-
-    select case(tr%method)
-    case(PROP_MAGNUS)
-      ASSERT(associated(tr%vmagnus))
-      SAFE_DEALLOCATE_P(tr%vmagnus)
-#ifdef HAVE_SPARSKIT
-    case(PROP_RUNGE_KUTTA4, PROP_RUNGE_KUTTA2, PROP_CRANK_NICOLSON_SPARSKIT)
-      call sparskit_solver_end(tr%tdsk)
-      SAFE_DEALLOCATE_P(tr%tdsk)
-#endif
-    end select
-    
     call exponential_end(tr%te)       ! clean propagator method
 
     POP_SUB(propagator_end)
@@ -471,7 +431,7 @@ contains
     if(update_energy_) call energy_calc_total(hm, gr, st, iunit = -1)
 
     ! Recalculate forces, update velocities...
-    if(update_energy_ .and. ion_dynamics_ions_move(ions) .and. tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) then
+    if(update_energy_ .and. ion_dynamics_ions_move(ions)) then
       call forces_calculate(gr, geo, hm, st, ks, t = abs(nt*dt), dt = dt)
       call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
       if(generate) call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
@@ -509,7 +469,7 @@ contains
     type(propagator_t), intent(in) :: tr
 
     select case(tr%method)
-    case(PROP_ETRS, PROP_AETRS, PROP_CAETRS, PROP_EXPLICIT_RUNGE_KUTTA4)
+    case(PROP_ETRS, PROP_AETRS, PROP_CAETRS)
       propagated = .true.
     case default
       propagated = .false.

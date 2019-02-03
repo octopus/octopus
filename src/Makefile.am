@@ -120,7 +120,6 @@ all_f_srcs +=                                 \
 	math/accel_blas.F90                   \
 	math/blas.F90                         \
 	math/checksum_interface.F90           \
-	math/compressed_sensing.F90           \
 	math/fft.F90                          \
 	math/fftw.F90                         \
 	math/gauss_legendre.F90               \
@@ -133,19 +132,16 @@ all_f_srcs +=                                 \
 	math/matrix_ops.F90                   \
 	math/metis.F90                        \
 	math/minimizer.F90                    \
-	math/nfft.F90                         \
 	math/ode_solver.F90                   \
 	math/pblas.F90                        \
 	math/permutations.F90                 \
 	math/pfft.F90                         \
-	math/pnfft.F90                        \
 	math/qshep.F90                        \
 	math/quickrnd.F90                     \
 	math/root_solver.F90                  \
 	math/scalapack.F90                    \
 	math/sgfft.F90                        \
 	math/solvers.F90                      \
-	math/sparskit.F90                     \
 	math/spline_filter.F90                \
 	math/splines.F90                      \
 	math/symm_op.F90                      \
@@ -159,7 +155,6 @@ all_c_srcs +=                                 \
 	math/fftw_low.c                       \
 	math/metis_f.c                        \
 	math/minimizer_low.c                  \
-	math/nfft_f.c                         \
 	math/oct_gsl_f.c                      \
 	math/spline_low.cc                    \
 	math/ylm.c
@@ -172,11 +167,8 @@ noinst_HEADERS +=                             \
 	math/math_inc.F90                     \
 	math/matrix_inc.F90                   \
 	math/matrix_ops_inc.F90               \
-	math/nfft_inc.F90                     \
 	math/ode_solver_inc.F90               \
-	math/pnfft_inc.F90                    \
 	math/root_solver_inc.F90              \
-	math/sparskit_inc.F90                 \
 	math/solvers_inc.F90                  \
 	math/symm_op_inc.F90
 
