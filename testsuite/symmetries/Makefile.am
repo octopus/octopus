@@ -25,11 +25,6 @@ dist_share_DATA =                          \
 	03-orthorombic.02-spg17.inp     \
 	03-orthorombic.03-spg18.inp     \
 	03-orthorombic.04-spg19.inp     \
-	03-orthorombic.05-spg20.inp     \
-	03-orthorombic.06-spg21.inp     \
-	03-orthorombic.07-spg22.inp     \
-	03-orthorombic.08-spg23.inp     \
-	03-orthorombic.09-spg24.inp     \
 	03-orthorombic.10-spg25.inp     \
 	03-orthorombic.11-spg26.inp     \
 	03-orthorombic.12-spg27.inp     \
@@ -40,18 +35,6 @@ dist_share_DATA =                          \
 	03-orthorombic.17-spg32.inp     \
 	03-orthorombic.18-spg33.inp     \
 	03-orthorombic.19-spg34.inp     \
-	03-orthorombic.20-spg35.inp     \
-	03-orthorombic.21-spg36.inp     \
-	03-orthorombic.22-spg37.inp     \
-	03-orthorombic.23-spg38.inp     \
-	03-orthorombic.24-spg39.inp     \
-	03-orthorombic.25-spg40.inp     \
-	03-orthorombic.26-spg41.inp     \
-	03-orthorombic.27-spg42.inp     \
-	03-orthorombic.28-spg43.inp     \
-	03-orthorombic.29-spg44.inp     \
-	03-orthorombic.30-spg45.inp     \
-	03-orthorombic.31-spg46.inp     \
 	03-orthorombic.32-spg47.inp     \
 	03-orthorombic.33-spg48.inp     \
 	03-orthorombic.34-spg49.inp     \
@@ -68,18 +51,6 @@ dist_share_DATA =                          \
 	03-orthorombic.45-spg60.inp     \
 	03-orthorombic.46-spg61.inp     \
 	03-orthorombic.47-spg62.inp     \
-	03-orthorombic.48-spg63.inp     \
-	03-orthorombic.49-spg64.inp     \
-	03-orthorombic.50-spg65.inp     \
-	03-orthorombic.51-spg66.inp     \
-	03-orthorombic.52-spg67.inp     \
-	03-orthorombic.53-spg68.inp     \
-	03-orthorombic.54-spg69.inp     \
-	03-orthorombic.55-spg70.inp     \
-	03-orthorombic.56-spg71.inp     \
-	03-orthorombic.57-spg72.inp     \
-	03-orthorombic.58-spg73.inp     \
-	03-orthorombic.59-spg74.inp     \
 	03-orthorombic.test                   \
 	06-cubic.01-spg195.inp           \
 	06-cubic.02-spg196.inp           \
