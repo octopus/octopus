@@ -171,8 +171,8 @@ contains
 
     call hardware_init()
 
-    ! Get the environment variable OCTOPUS_SHARE that overrides SHARE_DIR/share/octopus.
-    call loct_getenv("OCTOPUS_SHARE", share)
+    ! Get the environment variable OCTOPUS_SHARE that overrides SHARE_DIR/share/pulpito.
+    call loct_getenv("PULPITO_SHARE", share)
 
     if(share /= "") then
       conf%share = trim(share)

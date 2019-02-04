@@ -17,7 +17,7 @@
 ##
 
 AC_PREREQ(2.59)
-AC_INIT([Octopus],[australis],[octopus-devel@tddft.org],[octopus])
+AC_INIT([Pulpito],[australis],[octopus-devel@tddft.org],[pulpito])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([subdir-objects])
@@ -106,7 +106,7 @@ dnl This part of the configuration file tries to sort out what needs to be built
 dnl In particular, the code can be compiled in debug mode,
 dnl and with OpenMP threads.
 
-dnl these are the --enable/--disable possible in octopus
+dnl these are the --enable/--disable possible in pulpito
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--disable-debug], [debug mode]), [DEBUG=${enableval}])
 AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp], [Multi-threaded parallel version using OpenMP from Fortran]))
 AC_ARG_ENABLE(openmp_simd, AS_HELP_STRING([--enable-openmp_simd], [OpenMP SIMD from Fortran]))
@@ -245,14 +245,14 @@ fi
 
 dnl debug mode
 if test x"${DEBUG}" = x"no" ; then
-  AC_DEFINE(NDEBUG, yes, [octopus compiled without debug mode])
+  AC_DEFINE(NDEBUG, yes, [pulpito compiled without debug mode])
 fi
 AC_SUBST(DEBUG)
 
 UTILITY_PROGRAMS='$(EXTRA_PROGRAMS)'
 AC_SUBST(UTILITY_PROGRAMS)
 
-AC_ARG_WITH(max-dim, [  --with-max-dim=NDIM     maximum number of dimensions Octopus can use;
+AC_ARG_WITH(max-dim, [  --with-max-dim=NDIM     maximum number of dimensions Pulpito can use;
                           the default is 3 (other values are experimental), must be >= 3],
   [maxdim=$withval], [maxdim=3])
 

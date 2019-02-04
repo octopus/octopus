@@ -204,16 +204,13 @@ contains
 
     ! Let us print the version
     message(1) = ""
-    message(2) = str_center("Running octopus", 70)
+    message(2) = str_center("Running pulpito", 70)
     message(3) = ""
     call messages_info(3)
 
-    message(1) = &
-         "Version                : " // trim(conf%version)
-    message(2) = &
-         "Commit                 : "// trim(conf%git_commit)
-    message(3) = &
-         "Build time             : "// trim(conf%build_time)
+    message(1) = "Version                : " // trim(conf%version)
+    message(2) = "Commit                 : "// trim(conf%git_commit)
+    message(3) = "Build time             : "// trim(conf%build_time)
     call messages_info(3)
 
     message(1) = 'Configuration options  : ' // trim(get_config_opts())
@@ -222,17 +219,14 @@ contains
     message(3) = 'Architecture           : ' + TOSTRING(OCT_ARCH)
     call messages_info(3)
 
-    message(1) = &
-         "C compiler             : "//trim(conf%cc)
-    message(2) = &
-         "C compiler flags       : "//trim(conf%cflags)
+    message(1) = "C compiler             : "//trim(conf%cc)
+    message(2) = "C compiler flags       : "//trim(conf%cflags)
 #ifdef HAVE_FC_COMPILER_VERSION
     message(3) = "Fortran compiler       : "//trim(conf%fc) //" ("//compiler_version()//")"
 #else
     message(3) = "Fortran compiler       : "//trim(conf%fc)
 #endif
-    message(4) = &
-         "Fortran compiler flags : "//trim(conf%fcflags)
+    message(4) = "Fortran compiler flags : "//trim(conf%fcflags)
     call messages_info(4)
 
     message(1) = ""
