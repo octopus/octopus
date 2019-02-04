@@ -300,18 +300,12 @@ ACX_BLACS
 ACX_SCALAPACK
 ACX_ELPA
 
-dnl check for ISF included from version 1.7.6 of BigDFT
-ACX_ISF
-AM_CONDITIONAL(COMPILE_ISF, test x${HAVE_COMP_ISF} = x1)
-
 dnl check for compiled METIS5 and ParMETIS (also checks METIS in the same path)
 AC_LANG_PUSH(C)
 ACX_PATH_METIS
 ACX_PATH_PARMETIS
 AC_LANG_POP(C)
 AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_COMP_METIS} = x1)
-
-ACX_YAML
 
 dnl performance analysis using the likwid marker API
 ACX_LIKWID
@@ -335,9 +329,6 @@ AC_CONFIG_FILES([Makefile
   external_libs/metis-5.1/GKlib/Makefile
   external_libs/metis-5.1/libmetis/Makefile
   external_libs/fortrancl/Makefile
-  external_libs/yaml-0.1.4/Makefile
-  external_libs/yaml-0.1.4/include/Makefile
-  external_libs/yaml-0.1.4/src/Makefile
   external_libs/rapidxml/Makefile
   liboct_parser/Makefile
   src/Makefile

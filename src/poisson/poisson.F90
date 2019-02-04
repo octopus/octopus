@@ -250,8 +250,6 @@ contains
       str = "multigrid"
     case (POISSON_ISF)
       str = "interpolating scaling functions"
-    case (POISSON_LIBISF)
-      str = "interpolating scaling functions (from BigDFT)"
     case (POISSON_NO)
       str = "no Poisson solver - Hartree set to 0"
     end select
@@ -400,27 +398,16 @@ contains
       end select
     end if
 
-    if (this%method == POISSON_LIBISF) then
-#ifndef HAVE_LIBISF
-      message(1)="LIBISF Poisson solver cannot be used since the code was not compiled with LIBISF."
-      call messages_fatal(1)
-#endif
-    end if
-
     call messages_print_stress(stdout)
 
     ! Now that we know the method, we check if we need a cube and its dimentions
     need_cube = .false.
     fft_type = FFT_REAL
 
-    if (this%method == POISSON_ISF .or. this%method == POISSON_LIBISF) then
+    if (this%method == POISSON_ISF) then
       fft_type = FFT_NONE
       box(:) = der%mesh%idx%ll(:)
       need_cube = .true.
-    end if
-
-    if (this%method == POISSON_LIBISF .and. multicomm_have_slaves(mc)) then
-      call messages_not_implemented('Task parallelization with LibISF Poisson solver')
     end if
 
     if ( multicomm_strategy_is_parallel(mc, P_STRATEGY_KPOINTS) ) then
@@ -543,10 +530,6 @@ contains
 
     case(POISSON_ISF)
       call poisson_isf_end(this%isf_solver)
-      has_cube = .true.
-
-    case(POISSON_LIBISF)
-      call poisson_libisf_end(this%libisf_solver)
       has_cube = .true.
 
     case(POISSON_NO)
@@ -757,15 +740,6 @@ contains
     case(POISSON_ISF)
       call poisson_isf_solve(this%isf_solver, der%mesh, this%cube, pot, rho, all_nodes_value)
      
-
-    case(POISSON_LIBISF)
-      if (this%libisf_solver%datacode == "G") then
-        ! Global version
-        call poisson_libisf_global_solve(this%libisf_solver, der%mesh, this%cube, pot, rho)
-      else ! "D" Distributed version
-        call poisson_libisf_parallel_solve(this%libisf_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map)
-      end if
-
     case(POISSON_NO)
       call poisson_no_solve(this%no_solver, der%mesh, this%cube, pot, rho)
     end select

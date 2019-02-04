@@ -23,6 +23,5 @@ SUBDIRS =               \
 	metis-5.1       \
 	spglib-1.9.9    \
 	fortrancl       \
-	yaml-0.1.4      \
 	rapidxml
 

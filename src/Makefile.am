@@ -302,7 +302,6 @@ all_f_srcs +=                                    \
 	poisson/poisson.F90                      \
 	poisson/poisson_fft.F90                  \
 	poisson/poisson_isf.F90                  \
-	poisson/poisson_libisf.F90               \
 	poisson/poisson_multigrid.F90            \
 	poisson/poisson_no.F90                   \
 	poisson/scaling_function.F90
