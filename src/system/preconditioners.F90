@@ -42,17 +42,13 @@ module preconditioners_oct_m
   
   integer, public, parameter ::     &
     PRE_NONE      = 0,              &
-    PRE_FILTER    = 1,              &
-    PRE_JACOBI    = 2,              &
-    PRE_POISSON   = 3,              &
-    PRE_MULTIGRID = 7
+    PRE_FILTER    = 1
   
   public ::                            &
     preconditioner_t,                  &
     preconditioner_init,               &
     preconditioner_null,               &
     preconditioner_end,                &
-    preconditioner_is_multigrid,       &
     dpreconditioner_apply,             &
     zpreconditioner_apply,             &
     dpreconditioner_apply_batch,       &
@@ -91,14 +87,6 @@ contains
     !% Do not apply preconditioner.
     !%Option pre_filter 1
     !% Filter preconditioner.
-    !%Option pre_jacobi 2
-    !% Jacobi preconditioner. Only the local part of the pseudopotential is used.
-    !% Not very helpful.
-    !%Option pre_poisson 3
-    !% Uses the full Laplacian as preconditioner. The inverse is calculated through
-    !% the solution of the Poisson equation. This is, of course, very slow.
-    !%Option pre_multigrid 7
-    !% Multigrid preconditioner.
     !%End
 
     default = PRE_FILTER
@@ -154,11 +142,6 @@ contains
       end do
       
       call nl_operator_update_weights(this%op)
-
-    case(PRE_JACOBI, PRE_MULTIGRID)
-      SAFE_ALLOCATE(this%diag_lapl(1:gr%mesh%np))
-      call derivatives_lapl_diag(gr%der, this%diag_lapl)
-      call lalg_scal(gr%mesh%np, -M_HALF, this%diag_lapl(:))
     end select
 
     POP_SUB(preconditioner_init)
@@ -185,22 +168,11 @@ contains
     select case(this%which)
     case(PRE_FILTER)
       call nl_operator_end(this%op)
-
-    case(PRE_JACOBI, PRE_MULTIGRID)
-      SAFE_DEALLOCATE_P(this%diag_lapl)
     end select
 
     call preconditioner_null(this)
     POP_SUB(preconditioner_end)
   end subroutine preconditioner_end
-
-
-  ! ---------------------------------------------------------
-  logical pure function preconditioner_is_multigrid(this) result(req)
-    type(preconditioner_t), intent(in) :: this
-
-    req = (this%which == PRE_MULTIGRID)
-  end function preconditioner_is_multigrid
 
   ! ---------------------------------------------------------
   subroutine preconditioner_obsolete_variables(old_prefix, new_prefix)

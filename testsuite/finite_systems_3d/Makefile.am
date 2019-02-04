@@ -56,8 +56,6 @@ dist_share_DATA = \
         17-scfinlcao_alt.test                         \
 	17-scfinlcao_alt.Cl.psf                       \
         17-scfinlcao_alt.01-gs.inp                    \
-	18-preconditioner_poisson.test                \
-	18-preconditioner_poisson.01-poisson.inp      \
 	20-eigensolver.01-lobpcg.inp \
 	20-eigensolver.02-cg.inp \
 	20-eigensolver.03-cg_new.inp \
@@ -71,9 +69,6 @@ dist_share_DATA = \
 	21-lobpcg.test \
 	22-preconditioner.test                       \
 	22-preconditioner.01-none.inp                \
-	22-preconditioner.02-filter.inp              \
-	22-preconditioner.03-jacobi.inp              \
-	22-preconditioner.05-multigrid.inp           \
 	24-o2-spin.test                              \
 	24-o2-spin.01-gs.inp \
 	27-fine_mesh.test                            \

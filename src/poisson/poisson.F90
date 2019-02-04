@@ -48,7 +48,6 @@ module poisson_oct_m
   use poisson_corrections_oct_m
   use poisson_isf_oct_m
   use poisson_fft_oct_m
-  use poisson_libisf_oct_m
   use poisson_multigrid_oct_m
   use poisson_no_oct_m
   use profiling_oct_m
@@ -91,7 +90,6 @@ module poisson_oct_m
     POISSON_CG_CORRECTED  =  6,         &
     POISSON_MULTIGRID     =  7,         &
     POISSON_ISF           =  8,         &
-    POISSON_LIBISF        = 10,         &
     POISSON_NO            = -99,        &
     POISSON_NULL          = -999
   
@@ -107,7 +105,6 @@ module poisson_oct_m
     logical :: all_nodes_default
     type(poisson_corr_t) :: corrector
     type(poisson_isf_t)  :: isf_solver
-    type(poisson_libisf_t) :: libisf_solver
     type(poisson_no_t) :: no_solver
     integer :: nslaves
     FLOAT :: theta !< cmplxscl
@@ -137,7 +134,7 @@ contains
     FLOAT,             optional, intent(in)  :: qq(:) !< (der%mesh%sb%periodic_dim)
     integer,           optional, intent(in)  :: solver
 
-    logical :: need_cube, isf_data_is_parallel
+    logical :: need_cube
     integer :: default_solver, default_kernel, box(MAX_DIM), fft_type, fft_library
     FLOAT :: fft_alpha
     character(len=60) :: str
@@ -206,14 +203,6 @@ contains
     !% Multigrid method (only for finite systems).
     !%Option isf 8
     !% Interpolating Scaling Functions Poisson solver (only for finite systems).
-    !%Option libisf 10
-    !% Meant to be exactly the same as Interpolating
-    !% Scaling Functions (isf) Poisson solver, but using an external
-    !% library, taken from BigDFT 1.7.6. Only for finite systems.
-    !% Parallelization in k-points requires <tt>PoissonSolverISFParallelData</tt> = no. Examples of the compilation can be
-    !% found in <a href=http://octopus-code.org/wiki/Manual:Specific_architectures>Octopus</a>
-    !% and <a href=http://bigdft.org/Wiki/index.php?title=Installation#Building_the_Poisson_Solver_library_only>
-    !% BigDFT</a> documentation. Tested with the version bigdft-1.7.6.
     !%End
 
     default_solver = POISSON_FFT
@@ -411,11 +400,6 @@ contains
     end if
 
     if ( multicomm_strategy_is_parallel(mc, P_STRATEGY_KPOINTS) ) then
-      ! Documentation in poisson_libisf.F90
-      call parse_variable('PoissonSolverISFParallelData', .true., isf_data_is_parallel)
-      if ( this%method == POISSON_LIBISF .and. isf_data_is_parallel ) then
-        call messages_not_implemented("k-point parallelization with LibISF Poisson solver and PoissonSolverISFParallelData = yes")
-      end if
       if ( this%method == POISSON_FFT .and. fft_library == FFTLIB_PFFT ) then
         call messages_not_implemented("k-point parallelization with PFFT library for Poisson solver")
       end if

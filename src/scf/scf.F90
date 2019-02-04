@@ -352,12 +352,6 @@ contains
     ! now the eigensolver stuff
     call eigensolver_init(scf%eigens, gr, st)
 
-    if(preconditioner_is_multigrid(scf%eigens%pre)) then
-      SAFE_ALLOCATE(gr%mgrid_prec)
-      call multigrid_init(gr%mgrid_prec, geo, gr%mesh, gr%der, gr%stencil, mc, &
-        used_for_preconditioner=.true.)
-    end if
-
     !%Variable SCFinLCAO
     !%Type logical
     !%Default no

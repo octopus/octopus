@@ -27,9 +27,7 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
   PUSH_SUB(poisson_kernel_init)
 
   select case(this%method)
-  case(POISSON_DIRECT_SUM, POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED)
-    valid_solver = .true.
-  case(POISSON_MULTIGRID, POISSON_ISF, POISSON_LIBISF)
+  case(POISSON_DIRECT_SUM, POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED, POISSON_MULTIGRID, POISSON_ISF)
     valid_solver = .true.
   case(POISSON_NO)
     write(message(1),'(a)')'Info: you have elected to not use a Poisson solver.'
