@@ -2,6 +2,8 @@ CalculationMode=td
 ExperimentalFeatures = yes
 FromScratch=no
 
+RestartFixedOccupations = yes
+
 ## Cell ##
 
 TheoryLevel = independent_particles
