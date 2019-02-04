@@ -37,7 +37,6 @@ module species_pot_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use ps_oct_m
-  use root_solver_oct_m
   use simul_box_oct_m
   use species_oct_m
   use splines_oct_m
@@ -98,7 +97,7 @@ contains
 
     ! build density ...
     select case (species_type(species))
-    case (SPECIES_FROM_FILE, SPECIES_USDEF, SPECIES_SOFT_COULOMB, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN) ! ... from userdef
+    case (SPECIES_FROM_FILE, SPECIES_USDEF, SPECIES_SOFT_COULOMB, SPECIES_FULL_DELTA) ! ... from userdef
       do isp = 1, spin_channels
         rho(1:mesh%np, isp) = M_ONE
         x = (species_zval(species)/real(spin_channels, REAL_PRECISION)) / dmf_integrate(mesh, rho(:, isp))
@@ -532,7 +531,6 @@ contains
     type(mesh_t),       target, intent(in)  :: mesh
     FLOAT,                      intent(out) :: rho(:)
 
-    type(root_solver_t) :: rs
     logical :: conv
     integer :: dim
     FLOAT   :: x(1:MAX_DIM+1), startval(MAX_DIM + 1)
@@ -619,60 +617,6 @@ contains
         " atom displaced ", units_from_atomic(units_out%length, sqrt(dist2_min)), &
         " [ ", trim(units_abbrev(units_out%length)), " ]"
       call messages_info(1)
-
-    case(SPECIES_FULL_GAUSSIAN)
-
-      ! periodic copies are not considered in this routine
-      if(simul_box_is_periodic(mesh%sb)) then
-        call messages_experimental("species_full_gaussian for periodic systems")
-      end if
-
-      ! --------------------------------------------------------------
-      ! Constructs density for an all-electron atom with the procedure
-      ! sketched in Modine et al. [Phys. Rev. B 55, 10289 (1997)],
-      ! section II.B
-      ! --------------------------------------------------------------
-      dim = mesh%sb%dim
-
-      SAFE_ALLOCATE(rho_p(1:mesh%np))
-      SAFE_ALLOCATE(grho_p(1:mesh%np, 1:dim+1))
-
-      mesh_p => mesh
-      pos_p = pos
-
-      delta   = mesh%spacing(1)
-      alpha   = sqrt(M_TWO)*species_sigma(species)*delta
-      alpha_p = alpha  ! global copy of alpha
-      beta    = M_ONE
-
-      ! the first dim variables are the position of the delta function
-      startval(1:dim) = CNST(1.0)
-
-      ! the dim+1 variable is the normalization of the delta function
-      startval(dim+1) = beta
-
-      ! get a better estimate for beta
-      call getrho(startval)
-      beta = M_ONE / dmf_integrate(mesh, rho_p)
-      startval(dim+1) = beta
-
-      ! solve equation
-      call root_solver_init(rs, dim+1, &
-        solver_type=ROOT_NEWTON, maxiter=500, abs_tolerance=CNST(1.0e-10))
-      call droot_solver_run(rs, func, x, conv, startval=startval)
-
-      if(.not.conv) then
-        write(message(1),'(a)') 'Internal error in species_get_density.'
-        call messages_fatal(1)
-      end if
-
-      ! we want a charge of -Z
-      rho = -species_z(species)*rho_p
-
-      nullify(mesh_p)
-      SAFE_DEALLOCATE_A(grho_p)
-      SAFE_DEALLOCATE_A(rho_p)
-
 
     case(SPECIES_CHARGE_DENSITY, SPECIES_JELLIUM_CHARGE_DENSITY)
 
@@ -934,7 +878,7 @@ contains
 
         nullify(ps)
         
-      case(SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN, SPECIES_CHARGE_DENSITY, SPECIES_JELLIUM_CHARGE_DENSITY)
+      case(SPECIES_FULL_DELTA, SPECIES_CHARGE_DENSITY, SPECIES_JELLIUM_CHARGE_DENSITY)
         vl(1:mesh%np) = M_ZERO
         
       end select

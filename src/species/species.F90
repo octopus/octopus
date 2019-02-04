@@ -71,7 +71,6 @@ module species_oct_m
     species_hubbard_u,             &
     species_hubbard_j,             &
     species_hubbard_alpha,         &
-    species_sigma,                 &
     species_omega,                 &
     species_mass,                  &
     species_vdw_radius,            &
@@ -104,7 +103,6 @@ module species_oct_m
     SPECIES_FROZEN         = 5,             & !< frozen species.
     SPECIES_PSEUDO         = 7,             & !< pseudopotential
     SPECIES_USDEF          = 123,           & !< user-defined function for local potential
-    SPECIES_FULL_GAUSSIAN  = 124,           & !< full-potential atom
     SPECIES_CHARGE_DENSITY = 125,           & !< user-defined function for charge density
     SPECIES_FROM_FILE      = 126,           &
     SPECIES_FULL_DELTA     = 127,           & !< full-potential atom
@@ -124,13 +122,10 @@ module species_oct_m
 
     logical :: has_density            !< true if the species has an electronic density
 
-
     character(len=1024) :: potential_formula !< for the user-defined potential
     FLOAT :: omega                  !< harmonic frequency for Hermite polynomials
 
-
     character(len=MAX_PATH_LEN) :: filename !< for the potential read from a file.
-
 
     FLOAT :: jradius              !< jellium stuff
     FLOAT :: jthick               !< jellium stuff
@@ -140,15 +135,9 @@ module species_oct_m
     type(ps_t), pointer :: ps
     logical             :: nlcc   !< true if we have non-local core corrections
 
-
-    FLOAT :: sigma                !< If we have an all-electron atom:
-
-
     character(len=200) :: density_formula !< If we have a charge distribution creating the potential:
 
-
     FLOAT :: def_rsize, def_h     !< the default values for the atomic radius and  spacing
-
 
     integer :: niwfs              !< The number of initial wavefunctions
     integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :), iwf_n(:, :) !< i, n, l, m as a function of iorb and ispin
@@ -200,7 +189,6 @@ contains
     this%jthick=M_ZERO
     nullify(this%ps)
     this%nlcc=.false.
-    this%sigma=M_ZERO
     this%density_formula=""
     this%def_rsize = CNST(-1.0)
     this%def_h = CNST(-1.0)
@@ -222,7 +210,6 @@ contains
     
     POP_SUB(species_nullify)
   end subroutine species_nullify
-
 
   ! ---------------------------------------------------------
   subroutine species_init_global()
@@ -369,8 +356,6 @@ contains
 
     POP_SUB(species_init)
   end subroutine species_init
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   !> Reads the information (from the input file) about a species_t variable, initializing
@@ -437,7 +422,6 @@ contains
     !% <br>&nbsp;&nbsp;'rho'     | species_charge_density | density_formula | "exp(-r/a)" | mass | 17.0 | valence | 6
     !% <br>&nbsp;&nbsp;'udf'     | species_user_defined   | potential_formula | "1/2*r^2" | valence | 8
     !% <br>&nbsp;&nbsp;'He_all'  | species_full_delta
-    !% <br>&nbsp;&nbsp;'H_all'   | species_full_gaussian  |  gaussian_width |  0.2
     !% <br>&nbsp;&nbsp;'Li1D'    | species_soft_coulomb   |  softening | 1.5 | valence | 3
     !% <br>%</tt>
     !%Option species_pseudo  -7
@@ -486,23 +470,6 @@ contains
     !% Full atomic potential represented by a delta charge
     !% distribution. The atom will be displaced to the nearest grid
     !% point. The atomic number is determined from the name of the species.
-    !%Option species_full_gaussian   -124
-    !% A full-potential atom is defined by a Gaussian accumulation of
-    !% positive charge (distorted if curvilinear coordinates are
-    !% used), in the form:
-    !%
-    !% <math>q(r) = z \beta \exp[ - (\vec{r}-\vec{r_0})^2 / (\sqrt{2} \delta \sigma) ] </math>
-    !%
-    !% <math>\beta</math> is chosen in order to maintain proper
-    !% normalization (the integral of <math>q</math> should sum up to
-    !% <math>z</math>). <math>\delta</math> is the grid spacing (the
-    !% grid spacing in the first dimension, to be precise).
-    !% <math>\vec{r_0}</math> is calculated in such a way that the the
-    !% first moment of <math>q(r)/z</math> is equal to the atomic
-    !% position. For a precise description, see N. A. Modine,
-    !% <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997). The width of the
-    !% Gaussian is set by parameter <tt>gaussian_width</tt>. The
-    !% atomic number is determined from the name of the species.
     !%Option species_from_file  -126
     !% The potential is read from a file. Accepted file formats, detected by extension: obf, ncdf and csv.
     !% The
@@ -540,10 +507,6 @@ contains
     !% For a <tt>species_pseudo</tt>, get the pseudopotential from a
     !% particular set. This flag must be followed with one of the
     !% valid values for the variable <tt>PseudopotentialSet</tt>.
-    !%Option gaussian_width -10008
-    !% The width of the Gaussian (in units of spacing) used to represent
-    !% the nuclear charge for <tt>species_full_gaussian</tt>. If not present,
-    !% the default is 0.25.
     !%Option softening -10009
     !% The softening parameter <i>a</i> for <tt>species_soft_coulomb</tt> in units of length.
     !%Option file -10010
@@ -786,7 +749,7 @@ contains
       spec%niwfs = 2*nint(spec%z_val+M_HALF)
       spec%omega = CNST(0.1)
 
-    case(SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
+    case(SPECIES_FULL_DELTA)
       spec%has_density = .true.
       if(print_info_) then
         write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is an all-electron atom.'
@@ -848,7 +811,6 @@ contains
     spec%type = SPECIES_FULL_DELTA
     spec%z     = zz
     spec%z_val = zz
-    spec%sigma = CNST(0.25)
 
     POP_SUB(species_read_delta)
   end subroutine species_read_delta
@@ -1029,79 +991,54 @@ contains
     type(species_t), intent(in) :: spec
     species_def_h = spec%def_h
   end function species_def_h
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   FLOAT pure function species_jradius(spec)
     type(species_t), intent(in) :: spec
     species_jradius = spec%jradius
   end function species_jradius
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   FLOAT pure function species_jthick(spec)
     type(species_t), intent(in) :: spec
     species_jthick = spec%jthick
   end function species_jthick
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  FLOAT pure function species_sigma(spec)
-    type(species_t), intent(in) :: spec
-    species_sigma = spec%sigma
-  end function species_sigma
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   FLOAT pure function species_omega(spec)
     type(species_t), intent(in) :: spec
     species_omega = spec%omega
   end function species_omega
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   FLOAT pure function species_mass(spec)
     type(species_t), intent(in) :: spec
     species_mass = spec%mass
   end function species_mass
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   FLOAT pure function species_vdw_radius(spec)
     type(species_t), intent(in) :: spec
     species_vdw_radius = spec%vdw_radius
   end function species_vdw_radius
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   character(len=200) pure function species_rho_string(spec)
     type(species_t), intent(in) :: spec
     species_rho_string = trim(spec%density_formula)
   end function species_rho_string
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   character(len=200) pure function species_filename(spec)
     type(species_t), intent(in) :: spec
     species_filename = trim(spec%filename)
   end function species_filename
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   integer pure function species_niwfs(spec)
     type(species_t), intent(in) :: spec
     species_niwfs = spec%niwfs
   end function species_niwfs
-  ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   integer pure function species_hubbard_l(spec)
@@ -1116,22 +1053,18 @@ contains
     type(species_t), intent(in) :: spec
     species_hubbard_u = spec%hubbard_u
   end function species_hubbard_u
-  ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   FLOAT pure function species_hubbard_j(spec)
     type(species_t), intent(in) :: spec
     species_hubbard_j = spec%hubbard_j
   end function species_hubbard_j
-  ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   FLOAT pure function species_hubbard_alpha(spec)
     type(species_t), intent(in) :: spec
     species_hubbard_alpha = spec%hubbard_alpha
   end function species_hubbard_alpha
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   pure subroutine species_iwf_ilm(spec, j, is, i, l, m)
@@ -1143,9 +1076,8 @@ contains
     l = spec%iwf_l(j, is)
     m = spec%iwf_m(j, is)
   end subroutine species_iwf_ilm
-  ! ---------------------------------------------------------
 
-   ! ---------------------------------------------------------
+  ! ---------------------------------------------------------
   pure subroutine species_iwf_n(spec, j, is, n)
     type(species_t), intent(in) :: spec
     integer, intent(in)         :: j, is
@@ -1153,7 +1085,6 @@ contains
 
     n = spec%iwf_n(j, is)
   end subroutine species_iwf_n
-  ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   pure subroutine species_iwf_j(spec, iorb, j)
@@ -1163,8 +1094,6 @@ contains
 
     j = spec%iwf_j(iorb)
   end subroutine species_iwf_j
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   CMPLX function species_userdef_pot(spec, dim, xx, r)
@@ -1181,8 +1110,6 @@ contains
 
     POP_SUB(species_userdef_pot)
   end function species_userdef_pot
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   logical pure function species_is_ps(spec)
@@ -1252,10 +1179,7 @@ contains
   logical elemental function species_is_full(spec)
     type(species_t), intent(in) :: spec
     
-    species_is_full = &
-         ( spec%type == SPECIES_FULL_GAUSSIAN) .or. &
-         ( spec%type == SPECIES_FULL_DELTA)
-    
+    species_is_full = spec%type == SPECIES_FULL_DELTA
   end function species_is_full
 
   ! ---------------------------------------------------------
@@ -1463,7 +1387,6 @@ contains
     !>   call ps_copy(this%ps, that%ps)
     !> end if
     this%nlcc=that%nlcc
-    this%sigma=that%sigma
     this%density_formula=that%density_formula
     this%def_rsize=that%def_rsize
     this%def_h=that%def_h
@@ -1688,8 +1611,7 @@ contains
         
     case(SPECIES_JELLIUM_SLAB)
 
-    case(SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
-      spec%sigma = CNST(0.25)
+    case(SPECIES_FULL_DELTA)
 
     case(SPECIES_CHARGE_DENSITY, SPECIES_JELLIUM_CHARGE_DENSITY)
 
@@ -1797,14 +1719,6 @@ contains
           call messages_input_error('Species', 'jellium_radius can only be used with species_jellium')
         end if
         
-      case(OPTION__SPECIES__GAUSSIAN_WIDTH)
-        call check_duplication(OPTION__SPECIES__GAUSSIAN_WIDTH)
-        call parse_block_float(blk, row, icol + 1, spec%sigma)
-        if(spec%sigma <= M_ZERO) call messages_input_error('Species', 'gaussian_width must be positive')
-        if(spec%type /= SPECIES_FULL_GAUSSIAN) then
-          call messages_input_error('Species', 'gaussian_width can only be used with species_full_gaussian')
-        end if
-
       case(OPTION__SPECIES__SOFTENING)
         call check_duplication(OPTION__SPECIES__SOFTENING)
         call parse_block_float(blk, row, icol + 1, spec%sc_alpha)
@@ -1920,7 +1834,7 @@ contains
     end if
     
     select case(spec%type)
-    case(SPECIES_PSEUDO, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN)
+    case(SPECIES_PSEUDO, SPECIES_FULL_DELTA)
 
       if( spec%type == SPECIES_PSEUDO .and. &
         .not. (parameter_defined(OPTION__SPECIES__FILE) .or. parameter_defined(OPTION__SPECIES__DB_FILE))) then
@@ -1950,9 +1864,7 @@ contains
 
       spec%z = element_atomic_number(element)
 
-      if(spec%type == SPECIES_FULL_DELTA .or. spec%type == SPECIES_FULL_GAUSSIAN) then
-        spec%z_val = spec%z
-      end if
+      if(spec%type == SPECIES_FULL_DELTA) spec%z_val = spec%z
         
       if(spec%mass < CNST(0.0)) then
         spec%mass = element_mass(element)

@@ -129,12 +129,10 @@ all_f_srcs +=                                 \
 	math/matrix_ops.F90                   \
 	math/metis.F90                        \
 	math/minimizer.F90                    \
-	math/ode_solver.F90                   \
 	math/pblas.F90                        \
 	math/permutations.F90                 \
 	math/pfft.F90                         \
 	math/quickrnd.F90                     \
-	math/root_solver.F90                  \
 	math/scalapack.F90                    \
 	math/sgfft.F90                        \
 	math/solvers.F90                      \
@@ -163,8 +161,6 @@ noinst_HEADERS +=                             \
 	math/math_inc.F90                     \
 	math/matrix_inc.F90                   \
 	math/matrix_ops_inc.F90               \
-	math/ode_solver_inc.F90               \
-	math/root_solver_inc.F90              \
 	math/solvers_inc.F90                  \
 	math/symm_op_inc.F90
 

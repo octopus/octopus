@@ -44,7 +44,6 @@ dist_share_DATA = \
         12-forces.02-N2_gs.inp \
         12-forces.03-N2_gs.inp \
 	12-forces.test \
-	13-full_potential_hydrogen.01-gs.inp \
 	13-full_potential_hydrogen.02-gs-cg.inp \
 	13-full_potential_hydrogen.test \
 	14-fullerene_unpacked.test                      \
