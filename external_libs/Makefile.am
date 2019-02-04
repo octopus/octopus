@@ -21,7 +21,6 @@
 
 SUBDIRS =               \
 	metis-5.1       \
-	qshep           \
 	spglib-1.9.9    \
 	fortrancl       \
 	yaml-0.1.4      \

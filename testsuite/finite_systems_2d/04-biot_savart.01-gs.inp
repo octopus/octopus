@@ -37,13 +37,6 @@ Output = density + potential
 OutputFormat = axis_y
 FlushMessages = yes
 
-%CurrentThroughPlane
-  0 | 0
-  1 | 0
-  0.1
-  0 | 70
-%
-
 CalculateSelfInducedMagneticField = yes
 
 LCAOStart = no

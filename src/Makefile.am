@@ -136,7 +136,6 @@ all_f_srcs +=                                 \
 	math/pblas.F90                        \
 	math/permutations.F90                 \
 	math/pfft.F90                         \
-	math/qshep.F90                        \
 	math/quickrnd.F90                     \
 	math/root_solver.F90                  \
 	math/scalapack.F90                    \

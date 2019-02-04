@@ -52,7 +52,6 @@ core_LIBS = \
 	@GSL_LIBS@ @LIBS_LIBXC@ @FCEXTRALIBS@
 
 external_LIBS = \
-	$(top_builddir)/external_libs/qshep/libqshep.a                  \
 	$(top_builddir)/external_libs/spglib-1.9.9/src/libsymspg.a      \
 	$(top_builddir)/external_libs/bpdn/libbpdn.a                    \
 	$(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.a

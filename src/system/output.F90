@@ -83,7 +83,6 @@ module output_oct_m
     output_states,       &
     output_hamiltonian,  &
     output_all,          &
-    output_current_flow, &
     output_kick,         &
     output_scalar_pot
 
@@ -101,15 +100,8 @@ module output_oct_m
     logical :: duringscf
     character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
     character(len=MAX_PATH_LEN) :: iter_dir  !< The folder name, if information will be output while iterating.
-
-    type(mesh_plane_t) :: plane    !< This is to calculate the current flow across a plane
-    type(mesh_line_t)  :: line     !< or through a line (in 2D)
-
   end type output_t
 
-  integer(8), parameter, public ::              &
-    OPTION__OUTPUT__J_FLOW          =     32768
-  
 contains
 
   subroutine output_init(outp, sb, nst, ks)
@@ -255,125 +247,6 @@ contains
       call parse_variable('OutputWfsNumber', default, outp%wfs_list)
     end if
 
-    if(parse_block('CurrentThroughPlane', blk) == 0) then
-      outp%what = ior(outp%what, OPTION__OUTPUT__J_FLOW)
-
-      !%Variable CurrentThroughPlane
-      !%Type block
-      !%Section Output
-      !%Description
-      !% The code can calculate current
-      !% traversing a user-defined portion of a plane, as specified by this block.
-      !% A small plain-text file <tt>current-flow</tt> will be written containing this information.
-      !% Only available for 1D, 2D, or 3D.
-      !% In the format below, <tt>origin</tt> is a point in the plane.
-      !% <tt>u</tt> and <tt>v</tt> are the (dimensionless) vectors defining the plane;
-      !% they will be normalized. <tt>spacing</tt> is the fineness of the mesh
-      !% on the plane. Integers <tt>nu</tt> and <tt>mu</tt> are the length and
-      !% width of the portion of the plane, in units of <tt>spacing</tt>.
-      !% Thus, the grid points included in the plane are
-      !% <tt>x_ij = origin + i*spacing*u + j*spacing*v</tt>,
-      !% for <tt>nu <= i <= mu</tt> and <tt>nv <= j <= mv</tt>.
-      !% Analogously, in the 2D case, the current flow is calculated through a line;
-      !% in the 1D case, the current flow is calculated through a point. Note that the spacing
-      !% can differ from the one used in the main calculation; an interpolation will be performed.
-      !%
-      !% Example (3D):
-      !%
-      !% <tt>%CurrentThroughPlane
-      !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 0.0  # origin
-      !% <br>&nbsp;&nbsp; 0.0 | 1.0 | 0.0  # u
-      !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 1.0  # v
-      !% <br>&nbsp;&nbsp; 0.2              # spacing
-      !% <br>&nbsp;&nbsp; 0 | 50           # nu | mu
-      !% <br>&nbsp;&nbsp; -50 | 50         # nv | mv
-      !% <br>%</tt>
-      !%
-      !% Example (2D):
-      !%
-      !% <tt>%CurrentThroughPlane
-      !% <br>&nbsp;&nbsp; 0.0 | 0.0        # origin
-      !% <br>&nbsp;&nbsp; 1.0 | 0.0        # u
-      !% <br>&nbsp;&nbsp; 0.2              # spacing
-      !% <br>&nbsp;&nbsp; 0 | 50           # nu | mu
-      !% <br>%</tt>
-      !%
-      !% Example (1D):
-      !%
-      !% <tt>%CurrentThroughPlane
-      !% <br>&nbsp;&nbsp; 0.0              # origin
-      !% <br>%</tt>
-      !%
-      !%End
-        
-      select case(sb%dim)
-      case(3)
-
-        call parse_block_float(blk, 0, 0, outp%plane%origin(1), units_inp%length)
-        call parse_block_float(blk, 0, 1, outp%plane%origin(2), units_inp%length)
-        call parse_block_float(blk, 0, 2, outp%plane%origin(3), units_inp%length)
-        call parse_block_float(blk, 1, 0, outp%plane%u(1))
-        call parse_block_float(blk, 1, 1, outp%plane%u(2))
-        call parse_block_float(blk, 1, 2, outp%plane%u(3))
-        call parse_block_float(blk, 2, 0, outp%plane%v(1))
-        call parse_block_float(blk, 2, 1, outp%plane%v(2))
-        call parse_block_float(blk, 2, 2, outp%plane%v(3))
-        call parse_block_float(blk, 3, 0, outp%plane%spacing, units_inp%length)
-        call parse_block_integer(blk, 4, 0, outp%plane%nu)
-        call parse_block_integer(blk, 4, 1, outp%plane%mu)
-        call parse_block_integer(blk, 5, 0, outp%plane%nv)
-        call parse_block_integer(blk, 5, 1, outp%plane%mv)
-
-        norm = sqrt(sum(outp%plane%u(1:3)**2))
-        if(norm < M_EPSILON) then
-          write(message(1), '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
-          call messages_fatal(1)
-        end if
-        outp%plane%u(1:3) = outp%plane%u(1:3) / norm
-
-        norm = sqrt(sum(outp%plane%v(1:3)**2))
-        if(norm < M_EPSILON) then
-          write(message(1), '(a)') 'v-vector for CurrentThroughPlane cannot have norm zero.'
-          call messages_fatal(1)
-        end if
-        outp%plane%v(1:3) = outp%plane%v(1:3) / norm
-
-        outp%plane%n(1) = outp%plane%u(2)*outp%plane%v(3) - outp%plane%u(3)*outp%plane%v(2)
-        outp%plane%n(2) = outp%plane%u(3)*outp%plane%v(1) - outp%plane%u(1)*outp%plane%v(3)
-        outp%plane%n(3) = outp%plane%u(1)*outp%plane%v(2) - outp%plane%u(2)*outp%plane%v(1)
-
-      case(2)
-
-        call parse_block_float(blk, 0, 0, outp%line%origin(1), units_inp%length)
-        call parse_block_float(blk, 0, 1, outp%line%origin(2), units_inp%length)
-        call parse_block_float(blk, 1, 0, outp%line%u(1))
-        call parse_block_float(blk, 1, 1, outp%line%u(2))
-        call parse_block_float(blk, 2, 0, outp%line%spacing, units_inp%length)
-        call parse_block_integer(blk, 3, 0, outp%line%nu)
-        call parse_block_integer(blk, 3, 1, outp%line%mu)
-
-        norm = sqrt(sum(outp%line%u(1:2)**2))
-        if(norm < M_EPSILON) then
-          write(message(1), '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
-          call messages_fatal(1)
-        end if
-        outp%line%u(1:2) = outp%line%u(1:2) / norm
-
-        outp%line%n(1) = -outp%line%u(2)
-        outp%line%n(2) =  outp%line%u(1)
-
-      case(1)
-
-        call parse_block_float(blk, 0, 0, outp%line%origin(1), units_inp%length)
-
-      case default
-
-        call messages_not_implemented("CurrentThroughPlane for 4D or higher")
-
-      end select
-      call parse_block_end(blk)
-    end if
-
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
       call output_me_init(outp%me, sb)
     end if
@@ -427,7 +300,7 @@ contains
     end if
 
     ! these kinds of Output do not have a how
-    what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS + OPTION__OUTPUT__J_FLOW
+    what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS
    
     !%Variable Output_KPT
     !%Type flag
@@ -533,7 +406,6 @@ contains
     call output_states(st, gr, geo, hm, dir, outp)
     call output_hamiltonian(hm, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
     call output_localization_funct(st, hm, gr, dir, outp, geo)
-    call output_current_flow(gr, st, dir, outp)
 
     if(bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
