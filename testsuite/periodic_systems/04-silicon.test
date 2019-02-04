@@ -69,10 +69,3 @@ match ; crystal  14 4  ; LINEFIELD(static/crystal.xyz, 16, 4) ;  0.0
 match ; crystal  70 1  ; LINEFIELD(static/crystal.xyz, 72, 2) ; -15.3
 match ; crystal  70 2  ; LINEFIELD(static/crystal.xyz, 72, 3) ; -5.1
 match ; crystal  70 3  ; LINEFIELD(static/crystal.xyz, 72, 4) ;  10.2
-
-match ; DOS E Fermi    ; LINEFIELD(static/total-dos-efermi.dat, 2, 1);   0.139406
-match ; DOS energy 2   ; LINEFIELD(static/total-dos.dat,   2, 1);       -0.404230
-match ; DOS value  2   ; LINEFIELD(static/total-dos.dat,   2, 2);        0.472034
-match ; DOS energy 442 ; LINEFIELD(static/total-dos.dat, 442, 1);        0.250698
-match ; DOS value  442 ; LINEFIELD(static/total-dos.dat, 442, 2);        1.858955
-

@@ -33,7 +33,7 @@ P_c = 137.036
   0 | 0 | P_c*0.0001
 %
 
-Output = density + current + potential
+Output = density + potential
 OutputFormat = axis_y
 FlushMessages = yes
 
