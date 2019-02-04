@@ -29,7 +29,7 @@
 !!              2 : file could not be successfully opened. \n
 !!              3 : file opened, but error reading. \n
 !!              4 : The number of points/mesh dimensions do not coincide. \n
-!!              5 : Format or NetCDF error (one or several warnings are written) \n
+!!              5 : Format error (one or several warnings are written) \n
 !! ierr = 0 => Success. \n
 !! ierr < 0 => Success, but some kind of type conversion was necessary. The value
 !!             of ierr is then: \n
@@ -107,14 +107,6 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
   type(cube_t) :: cube
   type(cube_function_t) :: cf
   
-#if defined(HAVE_NETCDF)
-  character(len=512) :: file
-  integer :: ncid, status
-  integer :: function_kind
-#if defined(R_TCOMPLEX)
-  type(cube_function_t) :: re, im
-#endif
-#endif
   R_TYPE, pointer :: read_ff(:)
 
   call profiling_in(read_prof, "DISK_READ")
@@ -122,41 +114,7 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
 
   ierr = 0
 
-#if defined(HAVE_NETCDF)
-  function_kind = X(output_kind)*kind(ff(1)) ! +4 for real, single; +8 for real, double;
-  ! -4 for complex, single, -8 for real, double
-#endif
-
   select case(trim(io_get_extension(filename)))
-#if defined(HAVE_NETCDF)
-  case("ncdf")
-    ASSERT(.not. present(map))
-    file = io_workpath(filename)
-    status = nf90_open(trim(file), NF90_WRITE, ncid)
-    if(status /= NF90_NOERR) then
-      ierr = 2
-    else
-      call cube_init(cube, mesh%idx%ll, mesh%sb)
-      call cube_function_null(cf)
-      call X(cube_function_alloc_RS)(cube, cf)
-#if defined(R_TCOMPLEX)
-      call cube_function_null(re)
-      call cube_function_null(im)
-      call dcube_function_alloc_RS(cube, re)
-      call dcube_function_alloc_RS(cube, im)
-      call read_netcdf()
-      cf%zRS = re%dRS + M_zI*im%dRS
-      call X(cube_to_mesh) (cube, cf, mesh, ff)
-      call dcube_function_free_RS(cube, re)
-      call dcube_function_free_RS(cube, im)
-#else
-      call read_netcdf()
-      call X(cube_to_mesh)(cube, cf, mesh, ff)
-#endif
-      call X(cube_function_free_RS)(cube, cf)
-      call cube_end(cube)
-    end if
-#endif
   case("obf")
 
     if(present(map)) then
@@ -190,146 +148,10 @@ subroutine X(io_function_input_global)(filename, mesh, ff, ierr, map)
 
   POP_SUB(X(io_function_input_global))
   call profiling_out(read_prof)
-
-#if defined(HAVE_NETCDF)
-
-contains
-
-  ! ---------------------------------------------------------
-  subroutine read_netcdf()
-    integer :: data_id, data_im_id, &
-      dim_data_id(MAX_DIM), ndim(MAX_DIM), xtype, file_kind
-    FLOAT, allocatable :: xx(:, :, :)
-
-    PUSH_SUB(X(io_function_input_global).read_netcdf)
-
-    !Inquire about dimensions
-    if(status == NF90_NOERR) then
-      status = nf90_inq_dimid (ncid, "dim_1", dim_data_id(1))
-      call ncdf_error('nf90_inq_dimid', status, file, ierr)
-    end if
-
-    if(status == NF90_NOERR) then
-      status = nf90_inq_dimid (ncid, "dim_2", dim_data_id(2))
-      call ncdf_error('nf90_inq_dimid', status, file, ierr)
-    end if
-
-    if(status == NF90_NOERR) then
-      status = nf90_inq_dimid (ncid, "dim_3", dim_data_id(3))
-      call ncdf_error('nf90_inq_dimid', status, file, ierr)
-    end if
-
-    if(status == NF90_NOERR) then
-      status = nf90_inquire_dimension (ncid, dim_data_id(1), len = ndim(3))
-      call ncdf_error('nf90_inquire_dimension', status, file, ierr)
-    end if
-    if(status == NF90_NOERR) then
-      status = nf90_inquire_dimension (ncid, dim_data_id(2), len = ndim(2))
-      call ncdf_error('nf90_inquire_dimension', status, file, ierr)
-    end if
-    if(status == NF90_NOERR) then
-      status = nf90_inquire_dimension (ncid, dim_data_id(3), len = ndim(1))
-      call ncdf_error('nf90_inquire_dimension', status, file, ierr)
-    end if
-    if((ndim(1) /= cube%rs_n_global(1)) .or. &
-      (ndim(2) /= cube%rs_n_global(2)) .or. &
-      (ndim(3) /= cube%rs_n_global(3))) then
-      ierr = 12
-      POP_SUB(X(io_function_input_global).read_netcdf)
-      return
-    end if
-
-    if(status == NF90_NOERR) then
-      status = nf90_inq_varid (ncid, "rdata", data_id)
-      call ncdf_error('nf90_inq_varid', status, file, ierr)
-    end if
-    status = nf90_inq_varid(ncid, "idata", data_im_id)
-    if(status == 0) then
-      file_kind = -1
-    else
-      file_kind = 1
-    end if
-    status = 0
-
-    if(status == NF90_NOERR) then
-      status = nf90_inquire_variable (ncid, data_id, xtype = xtype)
-      call ncdf_error('nf90_inquire_variable', status, file, ierr)
-    end if
-
-    if(xtype == NF90_FLOAT) then
-      file_kind = file_kind*4
-    else
-      file_kind = file_kind*8
-    end if
-    if(file_kind /= function_kind) then
-      select case(file_kind)
-      case(4)
-        ierr = -1
-      case(-4)
-        ierr = -2
-      case(8)
-        ierr = -3
-      case(-8)
-        ierr = -4
-      end select
-    end if
-
-    SAFE_ALLOCATE(xx(1:cube%rs_n_global(3), 1:cube%rs_n_global(2), 1:cube%rs_n_global(1)))
-#if defined(R_TCOMPLEX)
-    if(status == NF90_NOERR) then
-      select case(mesh%sb%dim)
-      case(1)
-        status = nf90_get_var (ncid, data_id, xx(1, 1, :))
-      case(2)
-        status = nf90_get_var (ncid, data_id, xx(1, :, :))
-      case(3)
-        status = nf90_get_var (ncid, data_id, xx)
-      end select
-      call transpose3(xx, re%dRS)
-      call ncdf_error('nf90_get_var', status, file, ierr)
-    end if
-    if(file_kind<0) then
-      if(status == NF90_NOERR) then
-        select case(mesh%sb%dim)
-        case(1)
-          status = nf90_get_var (ncid, data_im_id, xx(1, 1, :))
-        case(2)
-          status = nf90_get_var (ncid, data_im_id, xx(1, :, :))
-        case(3)
-          status = nf90_get_var (ncid, data_im_id, xx)
-        end select
-        call transpose3(xx, im%dRS)
-        call ncdf_error('nf90_get_var', status, file, ierr)
-      end if
-    else
-      im%dRS = M_ZERO
-    end if
-#else
-    if(status == NF90_NOERR) then
-      select case(mesh%sb%dim)
-      case(1)
-        status = nf90_get_var (ncid, data_id, xx(1, 1, :))
-      case(2)
-        status = nf90_get_var (ncid, data_id, xx(1, :, :))
-      case(3)
-        status = nf90_get_var (ncid, data_id, xx)
-      end select
-      call transpose3(xx, cf%dRS)
-      call ncdf_error('nf90_get_var', status, file, ierr)
-    end if
-#endif
-    SAFE_DEALLOCATE_A(xx)
-
-    status = nf90_close(ncid)
-    POP_SUB(X(io_function_input_global).read_netcdf)
-  end subroutine read_netcdf
-
-#endif
-
 end subroutine X(io_function_input_global)
 
-
 ! ---------------------------------------------------------
+
 subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, unit, ierr, &
   geo, grp, root, is_global, vector_dim_labels)
   integer(8),                 intent(in)  :: how
@@ -762,9 +584,6 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
     end if
   end if
 
-#if defined(HAVE_NETCDF)
-  if(bitand(how, OPTION__OUTPUTFORMAT__NETCDF)     /= 0) call out_netcdf()
-#endif
   if(bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0) call out_vtk()
 
   POP_SUB(X(io_function_output_global))
@@ -1313,38 +1132,6 @@ contains
     POP_SUB(X(io_function_output_global).out_xcrysden)
   end subroutine out_xcrysden
 
-
-#if defined(HAVE_NETCDF)
-  ! ---------------------------------------------------------
-  subroutine out_netcdf()
-
-    type(cube_t) :: cube
-    type(cube_function_t) :: cf
-
-    PUSH_SUB(X(io_function_output_global).out_netcdf)
-
-    ! put values in a nice cube
-    call cube_init(cube, mesh%idx%ll, mesh%sb)
-    call cube_function_null(cf)
-    call X(cube_function_alloc_RS) (cube, cf)
-    call X(mesh_to_cube) (mesh, ff, cube, cf)
-
-    filename = io_workpath(trim(dir)//'/'//trim(fname)//".ncdf")
-
-     
-    call X(out_cf_netcdf)(filename, ierr, cf, cube, mesh%sb%dim, & 
-      units_from_atomic(units_out%length, mesh%spacing), .true., unit)
-
-    call X(cube_function_free_RS)(cube, cf)
-    call cube_end(cube)
-
-    POP_SUB(X(io_function_output_global).out_netcdf)
-  end subroutine out_netcdf
-
-
-
-#endif /*defined(HAVE_NETCDF)*/
- 
   ! ---------------------------------------------------------
 
   subroutine out_vtk()
@@ -1433,12 +1220,7 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, mesh, ff, unit, ier
   if(bitand(how, OPTION__OUTPUTFORMAT__DX)         /= 0) call messages_not_implemented("Outpur_KPT with format dx")
   if(bitand(how, OPTION__OUTPUTFORMAT__XCRYSDEN)   /= 0) call messages_not_implemented("Outpur_KPT with format xcrysden")
   if(bitand(how, OPTION__OUTPUTFORMAT__CUBE)       /= 0) call messages_not_implemented("Outpur_KPT with format cube")
-
   if(bitand(how, OPTION__OUTPUTFORMAT__MATLAB) /= 0) call messages_not_implemented("Outpur_KPT with format matlab")
-
-#if defined(HAVE_NETCDF)
-  if(bitand(how, OPTION__OUTPUTFORMAT__NETCDF)     /= 0) call messages_not_implemented("Outpur_KPT with format netcdf")
-#endif
   if(bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0) call messages_not_implemented("Outpur_KPT with format vtk")
 
   POP_SUB(X(io_function_output_global_BZ))
@@ -1526,192 +1308,6 @@ function X(interpolate_isolevel)(mesh, ff, isosurface_value, ip1, ip2) result(po
   end if
 
 end function X(interpolate_isolevel)
- 
-
-#if defined(HAVE_NETCDF)
-  ! --------------------------------------------------------- 
-  !>  Writes a cube_function in netcdf format
-  ! ---------------------------------------------------------
-  subroutine X(out_cf_netcdf)(filename, ierr, cf, cube, sb_dim, spacing, transpose, unit)
-    character(len=*),      intent(in) :: filename        !< the file name
-    integer,               intent(out):: ierr            !< error message   
-    type(cube_function_t), intent(in) :: cf              !< the cube_function to be written 
-    type(cube_t),          intent(in) :: cube            !< the underlying cube mesh
-    integer,               intent(in) :: sb_dim          !< the simulation box dimensions aka sb%dim
-    FLOAT,                 intent(in) :: spacing(:)      !< the mesh spacing already converted to units_out
-    logical,               intent(in) :: transpose       !< whether we want the function cf(x,y,z) to be saved as cf(z,y,x)
-    type(unit_t),          intent(in) :: unit            !< unit of data in cf
-
-    integer :: ncid, status, data_id, pos_id, dim_min
-    integer :: dim_data_id(3), dim_pos_id(2)
-
-    REAL_SINGLE :: pos(2, 3)
-    FLOAT, allocatable :: xx(:, :, :)
-    
-#if defined(R_TCOMPLEX)
-    integer :: data_im_id
-#endif
-
-    PUSH_SUB(X(out_cf_netcdf))
-
-    ierr = 0
-
-    status = nf90_create(trim(filename), NF90_CLOBBER, ncid)
-    if(status /= NF90_NOERR) then
-      ierr = 2
-      POP_SUB(X(out_cf_netcdf))
-      return
-    end if
-
-    ! dimensions
-    if(status == NF90_NOERR) then
-      status = nf90_def_dim (ncid, "dim_1", cube%rs_n_global(3), dim_data_id(1))
-      call ncdf_error('nf90_def_dim', status, filename, ierr)
-    end if
-
-    if(status == NF90_NOERR) then
-      status = nf90_def_dim (ncid, "dim_2", cube%rs_n_global(2), dim_data_id(2))
-      call ncdf_error('nf90_def_dim', status, filename, ierr)
-    end if
-
-    if(status == NF90_NOERR) then
-      status = nf90_def_dim (ncid, "dim_3", cube%rs_n_global(1), dim_data_id(3))
-      call ncdf_error('nf90_der_dim', status, filename, ierr)
-    end if
-
-    if(status == NF90_NOERR) then
-      status = nf90_def_dim (ncid, "pos_1", 2, dim_pos_id(1))
-      call ncdf_error('nf90_def_dim', status, filename, ierr)
-    end if
-
-    if(status == NF90_NOERR) then
-      status = nf90_def_dim (ncid, "pos_2", 3, dim_pos_id(2))
-      call ncdf_error('nf90_def_dim', status, filename, ierr)
-    end if
-
-    dim_min = 3 - sb_dim + 1
-
-    if(status == NF90_NOERR) then
-      status = nf90_def_var (ncid, "rdata", NF90_DOUBLE, dim_data_id(dim_min:3), data_id)
-      call ncdf_error('nf90_def_var', status, filename, ierr)
-    end if
-#if defined(R_TCOMPLEX)
-    if(status == NF90_NOERR) then
-      status = nf90_def_var (ncid, "idata", NF90_DOUBLE, dim_data_id(dim_min:3), data_im_id)
-      call ncdf_error('nf90_def_var', status, filename, ierr)
-    end if
-#endif
-    if(status == NF90_NOERR) then
-      status = nf90_def_var (ncid, "pos", NF90_FLOAT,  dim_pos_id,  pos_id)
-      call ncdf_error('nf90_def_var', status, filename, ierr)
-    end if
-
-    ! attributes
-    if(status == NF90_NOERR) then
-      status = nf90_put_att (ncid, data_id, "field", "rdata, scalar")
-      call ncdf_error('nf90_put_att', status, filename, ierr)
-    end if
-    if(status == NF90_NOERR) then
-      status = nf90_put_att (ncid, data_id, "positions", "pos, regular")
-      call ncdf_error('nf90_put_att', status, filename, ierr)
-    end if
-#if defined(R_TCOMPLEX)
-    if(status == NF90_NOERR) then
-      status = nf90_put_att (ncid, data_im_id, "field", "idata, scalar")
-      call ncdf_error('nf90_put_att', status, filename, ierr)
-    end if
-    if(status == NF90_NOERR) then
-      status = nf90_put_att (ncid, data_im_id, "positions", "pos, regular")
-      call ncdf_error('nf90_put_att', status, filename, ierr)
-    end if
-#endif
-
-    ! end definitions
-    status = nf90_enddef (ncid)
-
-    ! FIXME: needs explicit casts to single-precision. Why single-precision anyway?
-    ! data
-    pos(:,:) = M_ZERO
-    pos(1, 1:sb_dim) = &
-      real( - (cube%rs_n_global(1:sb_dim) - 1)/2*spacing(1:sb_dim), 4)
-    pos(2, 1:sb_dim) = real(spacing(1:sb_dim), 4)
-
-    if(status == NF90_NOERR) then
-      status = nf90_put_var (ncid, pos_id, pos(:,:))
-      call ncdf_error('nf90_put_var', status, filename, ierr)
-    end if
-
-    SAFE_ALLOCATE(xx(1:cube%rs_n_global(3), 1:cube%rs_n_global(2), 1:cube%rs_n_global(1)))
-#if defined(R_TCOMPLEX)
-    if(status == NF90_NOERR) then
-      if (transpose) then
-        call transpose3(real(cf%X(RS), REAL_PRECISION), xx)
-      else
-        xx = real(cf%X(RS), REAL_PRECISION)
-      end if
-      xx = units_from_atomic(unit, xx)
-      call write_variable(ncid, data_id, status, sb_dim, xx)
-      call ncdf_error('nf90_put_var', status, filename, ierr)
-    end if
-    if(status == NF90_NOERR) then
-      if ( transpose ) then
-        call transpose3(aimag(cf%X(RS)), xx)
-      else
-        xx = aimag(cf%X(RS))
-      end if
-      xx = units_from_atomic(unit, xx)
-      call write_variable(ncid, data_im_id, status, sb_dim, xx)
-      call ncdf_error('nf90_put_var', status, filename, ierr)
-    end if
-#else
-    if(status == NF90_NOERR) then
-      if ( transpose ) then 
-        call transpose3(cf%X(RS), xx)
-      else             
-        xx=cf%X(RS)
-      end if
-      xx = units_from_atomic(unit, xx)
-      call write_variable(ncid, data_id, status, sb_dim, xx)
-      call ncdf_error('nf90_put_var', status, filename, ierr)
-    end if
-#endif
-    SAFE_DEALLOCATE_A(xx)
-
-    ! close
-    status = nf90_close(ncid)
-
-    POP_SUB(X(out_cf_netcdf))
-    
-    contains
-
-      ! ---------------------------------------------------------
-      subroutine write_variable(ncid, data_id, status, sb_dim, xx)
-        integer, intent(in)  :: ncid, data_id
-        integer, intent(out) :: status
-        integer, intent(in)  :: sb_dim
-        FLOAT,   intent(in)  :: xx(:,:,:)
-
-        PUSH_SUB(X(out_cf_netcdf).write_variable)
-
-        select case(sb_dim)
-        case(1)
-          status = nf90_put_var (ncid, data_id, xx(1,1,:))
-        case(2)
-          status = nf90_put_var (ncid, data_id, xx(1,:,:))
-        case(3)
-          status = nf90_put_var (ncid, data_id, xx)
-        end select
-        
-        POP_SUB(X(out_cf_netcdf).write_variable)
-      end subroutine write_variable
-
-  end subroutine X(out_cf_netcdf)
-
-
-
-#endif /*defined(HAVE_NETCDF)*/
-
-
 
 !! Local Variables:
 !! mode: f90

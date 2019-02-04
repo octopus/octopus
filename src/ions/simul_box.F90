@@ -290,10 +290,6 @@ contains
 
       FLOAT :: default
       integer :: default_boxshape, idir
-#if defined(HAVE_GDLIB)
-      logical :: found
-      integer :: box_npts
-#endif
 
       PUSH_SUB(simul_box_init.read_box)
       ! Read box shape.
@@ -319,13 +315,6 @@ contains
       !%Option parallelepiped 4
       !% The simulation box will be a parallelepiped whose dimensions are taken from
       !% the variable <tt>Lsize</tt>.
-      !%Option box_image 5
-      !% The simulation box will be defined through an image, specified with <tt>BoxShapeImage</tt>.
-      !% White (RGB = 255,255,255) means that the point
-      !% is contained in the simulation box, while any other color means that the point is out.
-      !% The image will be scaled to fit <tt>Lsize</tt>, while its resolution will define the default <tt>Spacing</tt>.
-      !% The actual box may be slightly larger than <tt>Lsize</tt> to ensure one grid point = one pixel for
-      !% default <tt>Spacing</tt>.
       !%Option user_defined 77
       !% The shape of the simulation box will be read from the variable <tt>BoxShapeUsDef</tt>.
       !%Option hypercube 6
@@ -470,59 +459,6 @@ contains
           message(1) = "Ignoring lattice vectors from XSF file."
           call messages_warning(1)
         end if
-      end if
-
-      ! read in image for box_image
-      if(sb%box_shape == BOX_IMAGE) then
-
-        !%Variable BoxShapeImage
-        !%Type string
-        !%Section Mesh::Simulation Box
-        !%Description
-        !% Name of the file that contains the image that defines the simulation box
-        !% when <tt>BoxShape = box_image</tt>. No default. Will search in current
-        !% directory and <tt>OCTOPUS-HOME/share/</tt>.
-        !%End
-#if defined(HAVE_GDLIB)
-        call parse_variable('BoxShapeImage', '', sb%filename)
-        if(trim(sb%filename) == "") then
-          message(1) = "Must specify BoxShapeImage if BoxShape = box_image."
-          call messages_fatal(1)
-        end if
-
-        ! Find out the file and read it.
-        inquire(file=trim(sb%filename), exist=found)
-        if(.not. found) then
-          message(1) = "Could not find file '" // trim(sb%filename) // "' for BoxShape = box_image."
-
-          sb%filename = trim(conf%share) // '/' // trim(sb%filename)
-          inquire(file=trim(sb%filename), exist=found)
-          
-          if(.not. found) call messages_fatal(1)
-        end if
-
-        sb%image = loct_gdimage_create_from(sb%filename)
-        if(.not.c_associated(sb%image)) then
-          message(1) = "Could not open file '" // trim(sb%filename) // "' for BoxShape = box_image."
-          call messages_fatal(1)
-        end if
-        sb%image_size(1) = loct_gdImage_SX(sb%image)
-        sb%image_size(2) = loct_gdImage_SY(sb%image)
-
-        ! adjust Lsize if necessary to ensure that one grid point = one pixel
-        do idir = 1, 2
-          box_npts = sb%image_size(idir)
-          if((idir >  sb%periodic_dim .and. even(sb%image_size(idir))) .or. &
-             (idir <= sb%periodic_dim .and.  odd(sb%image_size(idir)))) then
-            box_npts = box_npts + 1
-            sb%lsize(idir) = sb%lsize(idir) * box_npts / sb%image_size(idir)
-          end if
-        end do
-#else
-        message(1) = "To use 'BoxShape = box_image', you have to compile Octopus"
-        message(2) = "with GD library support."
-        call messages_fatal(2)
-#endif
       end if
 
       ! read in box shape for user-defined boxes
@@ -947,11 +883,6 @@ contains
     SAFE_DEALLOCATE_P(sb%hr_area%interp%ww)
     SAFE_DEALLOCATE_P(sb%hr_area%interp%posi)
 
-#ifdef HAVE_GDLIB
-    if(sb%box_shape == BOX_IMAGE) &
-      call loct_gdImageDestroy(sb%image)
-#endif
-
     POP_SUB(simul_box_end)
   end subroutine simul_box_end
 
@@ -1127,10 +1058,6 @@ contains
     integer, allocatable :: nlist(:)
     integer, pointer :: list(:, :)
 
-#if defined(HAVE_GDLIB)
-    integer :: red, green, blue, ix, iy
-#endif
-
     ! no push_sub because this function is called very frequently
     SAFE_ALLOCATE(xx(1:sb%dim, 1:npoints))
     xx = M_ZERO
@@ -1217,20 +1144,6 @@ contains
       forall(ip = 1:npoints)
         in_box(ip) = all(xx(1:sb%dim, ip) >= llimit(1:sb%dim) .and. xx(1:sb%dim, ip) <= ulimit(1:sb%dim))
       end forall
-
-#if defined(HAVE_GDLIB)
-! Why the minus sign for y? Explanation: http://biolinx.bios.niu.edu/bios546/gd_mod.htm
-! For reasons that probably made sense to someone at some time, computer graphic coordinates are not the same
-! as in standard graphing. ... The top left corner of the screen is (0,0).
-
-    case(BOX_IMAGE)
-      do ip = 1, npoints
-        ix = nint(( xx(1, ip) + sb%lsize(1)) * sb%image_size(1) / (M_TWO * sb%lsize(1)))
-        iy = nint((-xx(2, ip) + sb%lsize(2)) * sb%image_size(2) / (M_TWO * sb%lsize(2)))
-        call loct_gdimage_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
-        in_box(ip) = (red == 255) .and. (green == 255) .and. (blue == 255)
-      end do
-#endif
 
     case(BOX_USDEF)
       ! is it inside the user-given boundaries?

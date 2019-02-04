@@ -38,8 +38,6 @@ dist_share_DATA = \
 	04-biot_savart.test \
 	05-spin_precession.test \
 	05-spin_precession.01-ground_state.inp \
-	05-spin_precession.02-time_propagation.inp \
-        08-gdlib.test \
-        08-gdlib.01-gs.inp
+	05-spin_precession.02-time_propagation.inp
 
 CLEANFILES = *~ *.bak

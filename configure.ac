@@ -280,9 +280,6 @@ dnl check for GSL
 AC_LANG_PUSH(C)
 AX_PATH_GSL
 
-dnl check for GD library
-ACX_GDLIB
-
 AC_LANG_POP(C)
 
 dnl check for FFTW

@@ -159,17 +159,6 @@ contains
       if(def_h > M_ZERO) call messages_check_def(grid_spacing(1), .true., def_h, 'Spacing', units_out%length)
     end if
 
-#if defined(HAVE_GDLIB)
-    if(gr%sb%box_shape == BOX_IMAGE) then 
-      do idir = 1, gr%sb%dim
-        ! default grid_spacing is determined from lsize and the size of the image
-        if(grid_spacing(idir) < M_ZERO) then
-          grid_spacing(idir) = M_TWO*gr%sb%lsize(idir)/real(gr%sb%image_size(idir), REAL_PRECISION)
-        end if
-      end do
-    end if
-#endif
-
     do idir = 1, gr%sb%dim
       if(grid_spacing(idir) < M_EPSILON) then
         if(def_h > M_ZERO .and. def_h < huge(def_h)) then

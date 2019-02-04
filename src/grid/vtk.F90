@@ -26,7 +26,6 @@ module vtk_oct_m
   use index_oct_m
   use io_oct_m
   use io_binary_oct_m
-  use io_csv_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m

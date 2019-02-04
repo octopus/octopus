@@ -55,7 +55,6 @@ all_f_srcs =                                   \
 	basic/ialist.F90                       \
 	basic/iihash.F90                       \
 	basic/io_binary_f.F90                  \
-	basic/io_csv_f.F90                     \
 	basic/io.F90                           \
 	basic/kinds.F90                        \
 	basic/loct.F90                         \
@@ -85,9 +84,7 @@ all_c_srcs =                                   \
 	basic/cuda_low.cc                      \
 	basic/getopt_f.c                       \
 	basic/io_binary.c                      \
-	basic/io_csv.c                         \
 	basic/oct_f.c                          \
-	basic/oct_gdlib_f.c                    \
 	basic/recipes.c                        \
 	basic/signals.c                        \
 	basic/sort_low.cc                      \

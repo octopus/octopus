@@ -28,15 +28,11 @@ module io_function_oct_m
   use index_oct_m
   use io_oct_m
   use io_binary_oct_m
-  use io_csv_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
   use mpi_debug_oct_m
-#if defined(HAVE_NETCDF)
-  use netcdf
-#endif
   use par_vec_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -67,12 +63,6 @@ module io_function_oct_m
     zio_function_output_global,   &
     io_function_output_vector_BZ, &
     io_function_output_global_BZ
-
-#if defined(HAVE_NETCDF)
- public ::                        &
-    dout_cf_netcdf,               &
-    zout_cf_netcdf
-#endif
 
   !> doutput_kind => real variables; zoutput_kind => complex variables.
   integer, parameter, private ::  &
@@ -141,10 +131,6 @@ contains
     !% For printing three-dimensional information, the open-source program
     !% visualization tool <a href=http://www.opendx.org>OpenDX</a> can be used. The string
     !% <tt>.dx</tt> is appended to previous file names. Available only in 3D.
-    !%Option netcdf bit(7)
-    !% Outputs in <a href=http://www.unidata.ucar.edu/packages/netcdf>NetCDF</a> format. This file
-    !% can then be read, for example, by OpenDX. The string <tt>.ncdf</tt> is appended to previous file names.
-    !% Requires the NetCDF library. Only writes the real part of complex functions.
     !%Option mesh_index bit(8)
     !% Generates output files of a given quantity (density, wavefunctions, ...) which include
     !% the internal numbering of mesh points. Since this mode produces large datafiles this is only 
@@ -261,21 +247,6 @@ contains
       end if
     end if
 
-#if !defined(HAVE_NETCDF)
-    if (bitand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
-      message(1) = 'Octopus was compiled without NetCDF support.'
-      message(2) = 'It is not possible to write output in NetCDF format.'
-      call messages_fatal(2)
-    end if
-#endif
-#if !defined(HAVE_ETSF_IO)
-    if (bitand(how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
-      message(1) = 'Octopus was compiled without ETSF_IO support.'
-      message(2) = 'It is not possible to write output in ETSF format.'
-      call messages_fatal(2)
-    end if
-#endif
-
     POP_SUB(io_function_read_how)
   end subroutine io_function_read_how
 
@@ -305,9 +276,6 @@ contains
     if(index(where, "Binary")    /= 0) how = ior(how, OPTION__OUTPUTFORMAT__BINARY)
     if(index(where, "MeshIndex") /= 0) how = ior(how, OPTION__OUTPUTFORMAT__MESH_INDEX)
     if(index(where, "XYZ")       /= 0) how = ior(how, OPTION__OUTPUTFORMAT__XYZ)
-#if defined(HAVE_NETCDF)
-    if(index(where, "NETCDF")    /= 0) how = ior(how, OPTION__OUTPUTFORMAT__NETCDF)
-#endif
     if(index(where, "Cube")      /= 0) how = ior(how, OPTION__OUTPUTFORMAT__CUBE)
     if(index(where, "VTK")       /= 0) how = ior(how, OPTION__OUTPUTFORMAT__VTK)
 
@@ -514,33 +482,8 @@ contains
     POP_SUB(write_xsf_geometry)
   end subroutine write_xsf_geometry
 
-
-#if defined(HAVE_NETCDF)
   ! ---------------------------------------------------------
-  subroutine ncdf_error(func, status, filename, ierr)
-    character(len=*), intent(in)    :: func
-    integer,          intent(in)    :: status
-    character(len=*), intent(in)    :: filename
-    integer,          intent(inout) :: ierr
 
-    PUSH_SUB(ncdf_error)
-
-    if(status  ==  NF90_NOERR) then
-    POP_SUB(ncdf_error)
-      return
-    end if
-
-    write(message(1),'(3a)') "NETCDF error in function '" , trim(func) , "'"
-    write(message(2),'(3a)') "(reading/writing ", trim(filename) , ")"
-    write(message(3), '(6x,a,a)')'Error code = ', trim(nf90_strerror(status))
-    call messages_warning(3)
-    ierr = 5
-
-    POP_SUB(ncdf_error)
-  end subroutine ncdf_error
-#endif
-
-  ! ---------------------------------------------------------
   subroutine transpose3(in, out)
     FLOAT, intent(in)  :: in(:, :, :)
     FLOAT, intent(out) :: out(:, :, :)
