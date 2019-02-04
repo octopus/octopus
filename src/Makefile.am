@@ -309,7 +309,6 @@ all_f_srcs +=                                    \
 	poisson/poisson_cutoff.F90               \
 	poisson/poisson.F90                      \
 	poisson/poisson_fft.F90                  \
-	poisson/poisson_fmm.F90                  \
 	poisson/poisson_isf.F90                  \
 	poisson/poisson_libisf.F90               \
 	poisson/poisson_multigrid.F90            \

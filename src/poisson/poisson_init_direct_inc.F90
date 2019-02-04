@@ -27,9 +27,9 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
   PUSH_SUB(poisson_kernel_init)
 
   select case(this%method)
-  case(POISSON_DIRECT_SUM, POISSON_FMM, POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED)
+  case(POISSON_DIRECT_SUM, POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED)
     valid_solver = .true.
-  case(POISSON_MULTIGRID, POISSON_ISF, POISSON_LIBISF, POISSON_POKE)
+  case(POISSON_MULTIGRID, POISSON_ISF, POISSON_LIBISF)
     valid_solver = .true.
   case(POISSON_NO)
     write(message(1),'(a)')'Info: you have elected to not use a Poisson solver.'
@@ -120,8 +120,6 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
   end if
 
   select case(this%method)
-  case(POISSON_FMM)
-    call poisson_fmm_init(this%params_fmm, this%der, all_nodes_comm)
 
   case(POISSON_CG)
     call parse_variable('PoissonSolverMaxMultipole', 4, maxl)

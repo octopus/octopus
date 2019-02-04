@@ -303,9 +303,6 @@ ACX_BLACS
 ACX_SCALAPACK
 ACX_ELPA
 
-dnl check for Libfm
-ACX_LIBFM
-
 dnl check for ISF included from version 1.7.6 of BigDFT
 ACX_ISF
 AM_CONDITIONAL(COMPILE_ISF, test x${HAVE_COMP_ISF} = x1)

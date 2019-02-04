@@ -58,7 +58,7 @@ external_LIBS = \
 	$(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.a
 # we should not have libyaml here if we used an external one...
 
-FCFLAGS_MODS += @FCFLAGS_LIBXC@ @FCFLAGS_ISF@ @FCFLAGS_FFTW@ @FCFLAGS_PFFT@ @FCFLAGS_LIBFM@ @FCFLAGS_ELPA@ @FCFLAGS_LIKWID@
+FCFLAGS_MODS += @FCFLAGS_LIBXC@ @FCFLAGS_ISF@ @FCFLAGS_FFTW@ @FCFLAGS_PFFT@ @FCFLAGS_ELPA@ @FCFLAGS_LIKWID@
 
 if COMPILE_OPENCL
   external_LIBS += $(top_builddir)/external_libs/fortrancl/libfortrancl.a @LIBS_CLBLAS@ @LIBS_CLFFT@ @CL_LIBS@
@@ -73,7 +73,7 @@ endif
 
 # These must be arranged so if LIB1 depends on LIB2, LIB1 must occur before LIB2.
 # e.g. ETSF_IO depends on netCDF, ISF depends on LAPACK
-outside_LIBS = @LIBS_ISF@ @LIBS_PFFT@ @LIBS_LIBFM@ @GD_LIBS@ \
+outside_LIBS = @LIBS_ISF@ @LIBS_PFFT@ @GD_LIBS@ \
   @LIBS_PARMETIS@ @LIBS_METIS@ @LIBS_LIKWID@ @LIBS_CUDA@ @LIBS_MPI@
 
 other_LIBS = $(external_LIBS) $(scalapack_LIBS) $(outside_LIBS) $(core_LIBS) @CXXLIBS@

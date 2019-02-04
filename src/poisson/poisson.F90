@@ -48,7 +48,6 @@ module poisson_oct_m
   use poisson_corrections_oct_m
   use poisson_isf_oct_m
   use poisson_fft_oct_m
-  use poisson_fmm_oct_m
   use poisson_libisf_oct_m
   use poisson_multigrid_oct_m
   use poisson_no_oct_m
@@ -59,16 +58,11 @@ module poisson_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
 
-#ifdef HAVE_POKE
-  use poke
-#endif
-  
   implicit none
 
   private
   public ::                      &
     poisson_t,                   &
-    poisson_fmm_t,               &
     poisson_get_solver,          &
     poisson_get_qpoint,          &
     poisson_init,                &
@@ -92,14 +86,12 @@ module poisson_oct_m
 
   integer, public, parameter ::         &
     POISSON_DIRECT_SUM    = -1,         &
-    POISSON_FMM           = -4,         &
     POISSON_FFT           =  0,         &
     POISSON_CG            =  5,         &
     POISSON_CG_CORRECTED  =  6,         &
     POISSON_MULTIGRID     =  7,         &
     POISSON_ISF           =  8,         &
     POISSON_LIBISF        = 10,         &
-    POISSON_POKE          = 11,         &
     POISSON_NO            = -99,        &
     POISSON_NULL          = -999
   
@@ -120,15 +112,10 @@ module poisson_oct_m
     integer :: nslaves
     FLOAT :: theta !< cmplxscl
     FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
-    type(poisson_fmm_t)  :: params_fmm
 #ifdef HAVE_MPI2
     integer         :: intercomm
     type(mpi_grp_t) :: local_grp
     logical         :: root
-#endif
-#ifdef HAVE_POKE
-    type(PokeGrid)   :: poke_grid
-    type(PokeSolver) :: poke_solver
 #endif
   end type poisson_t
 
@@ -203,8 +190,6 @@ contains
     !% <br> 3D: <tt>isf</tt> if not periodic, <tt>fft</tt> if periodic.
     !%Option NoPoisson -99
     !% Do not use a Poisson solver at all.
-    !%Option FMM -4
-    !% (Experimental) Fast multipole method. Requires FMM library.
     !%Option direct_sum -1                                      
     !% Direct evaluation of the Hartree potential (only for finite systems).
     !%Option fft 0
@@ -229,8 +214,6 @@ contains
     !% found in <a href=http://octopus-code.org/wiki/Manual:Specific_architectures>Octopus</a>
     !% and <a href=http://bigdft.org/Wiki/index.php?title=Installation#Building_the_Poisson_Solver_library_only>
     !% BigDFT</a> documentation. Tested with the version bigdft-1.7.6.
-    !%Option poke 11
-    !% (Experimental) Solver from the Poke library.
     !%End
 
     default_solver = POISSON_FFT
@@ -257,8 +240,6 @@ contains
     select case(this%method)
     case (POISSON_DIRECT_SUM)
       str = "direct sum"
-    case (POISSON_FMM)
-      str = "fast multipole method"
     case (POISSON_FFT)
       str = "fast Fourier transform"
     case (POISSON_CG)
@@ -273,8 +254,6 @@ contains
       str = "interpolating scaling functions (from BigDFT)"
     case (POISSON_NO)
       str = "no Poisson solver - Hartree set to 0"
-    case (POISSON_POKE)
-      str = "Poke library"
     end select
     write(message(1),'(a,a,a)') "The chosen Poisson solver is '", trim(str), "'"
     call messages_info(1)
@@ -392,10 +371,6 @@ contains
 
       case(3)
       
-        if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FMM) then
-          call messages_not_implemented('FMM for periodic systems')
-        end if
-
         if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_ISF) then
           call messages_write('The ISF solver can only be used for finite systems.')
           call messages_fatal()
@@ -422,9 +397,6 @@ contains
           call messages_warning(4)
         end if
 
-        if (this%method == POISSON_FMM) then
-          call messages_experimental('FMM Poisson solver')
-        end if
       end select
     end if
 
@@ -532,20 +504,6 @@ contains
 
     end if
 
-    if(this%method == POISSON_POKE) then
-#ifndef HAVE_POKE
-      call messages_write('Octopus was compiled without Poke support, you cannot use', new_line = .true.)
-      call messages_write("  'PoissonSolver = poke'. ")
-      call messages_fatal()
-#endif
-
-      call messages_experimental('Poke library')
-      ASSERT(der%mesh%sb%dim == 3)
-      box(1:der%mesh%sb%dim) = der%mesh%idx%ll(1:der%mesh%sb%dim)
-      need_cube = .true.
-      fft_type = FFTLIB_NONE
-    end if
-
     ! Create the cube
     if (need_cube) then
       call cube_init(this%cube, box, der%mesh%sb, fft_type = fft_type, verbose = .true., &
@@ -555,20 +513,6 @@ contains
       end if
     end if
 
-    if(this%method == POISSON_POKE) then
-
-#ifdef HAVE_POKE      
-      this%poke_grid = PokeGrid(der%mesh%spacing, this%cube%rs_n)
-      if(der%mesh%sb%periodic_dim > 0) then
-        call this%poke_grid%set_boundaries(POKE_BOUNDARIES_PERIODIC)
-      else
-        call this%poke_grid%set_boundaries(POKE_BOUNDARIES_FREE)
-      end if
-      this%poke_solver = PokeSolver(this%poke_grid)
-      call this%poke_solver%build()
-#endif
-    end if
-    
     call poisson_kernel_init(this, mc%master_comm)
 
     POP_SUB(poisson_init)
@@ -605,18 +549,9 @@ contains
       call poisson_libisf_end(this%libisf_solver)
       has_cube = .true.
 
-    case(POISSON_FMM)
-      call poisson_fmm_end(this%params_fmm)
-
     case(POISSON_NO)
       call poisson_no_end(this%no_solver)
 
-    case(POISSON_POKE)
-#ifdef HAVE_POKE
-      call this%poke_grid%end()
-      call this%poke_solver%end()
-#endif
-      
     end select
     this%method = POISSON_NULL
 
@@ -784,9 +719,6 @@ contains
         call messages_fatal(1)
       end select
 
-    case(POISSON_FMM)
-      call poisson_fmm_solve(this%params_fmm, this%der, pot, rho)
-     
     case(POISSON_CG)
       call poisson_cg1(der, this%corrector, pot, rho)
 
@@ -834,19 +766,6 @@ contains
         call poisson_libisf_parallel_solve(this%libisf_solver, der%mesh, this%cube, pot, rho, this%mesh_cube_map)
       end if
 
-    case(POISSON_POKE)
-      call cube_function_null(crho)
-      call cube_function_null(cpot)
-      call dcube_function_alloc_RS(this%cube, crho)
-      call dcube_function_alloc_RS(this%cube, cpot)
-      call dmesh_to_cube(der%mesh, rho, this%cube, crho)
-#if HAVE_POKE
-      call this%poke_solver%solve(crho%drs, cpot%drs)
-#endif
-      call dcube_to_mesh(this%cube, cpot, der%mesh, pot)
-      call dcube_function_free_RS(this%cube, crho)
-      call dcube_function_free_RS(this%cube, cpot)
-      
     case(POISSON_NO)
       call poisson_no_solve(this%no_solver, der%mesh, this%cube, pot, rho)
     end select
