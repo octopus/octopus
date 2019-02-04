@@ -53,41 +53,20 @@ dist_share_DATA =                          \
 	03-orthorombic.47-spg62.inp     \
 	03-orthorombic.test                   \
 	06-cubic.01-spg195.inp           \
-	06-cubic.02-spg196.inp           \
-	06-cubic.03-spg197.inp           \
 	06-cubic.04-spg198.inp           \
-	06-cubic.05-spg199.inp           \
 	06-cubic.06-spg200.inp           \
 	06-cubic.07-spg201.inp           \
-	06-cubic.08-spg202.inp           \
-	06-cubic.09-spg203.inp           \
-	06-cubic.10-spg204.inp           \
 	06-cubic.11-spg205.inp           \
-	06-cubic.12-spg206.inp           \
 	06-cubic.13-spg207.inp           \
 	06-cubic.14-spg208.inp           \
-	06-cubic.15-spg209.inp           \
-	06-cubic.16-spg210.inp           \
-	06-cubic.17-spg211.inp           \
 	06-cubic.18-spg212.inp           \
 	06-cubic.19-spg213.inp           \
-	06-cubic.20-spg214.inp           \
 	06-cubic.21-spg215.inp           \
-	06-cubic.22-spg216.inp           \
-	06-cubic.23-spg217.inp           \
 	06-cubic.24-spg218.inp           \
-	06-cubic.25-spg219.inp           \
-	06-cubic.26-spg220.inp           \
 	06-cubic.27-spg221.inp           \
 	06-cubic.28-spg222.inp           \
 	06-cubic.29-spg223.inp           \
 	06-cubic.30-spg224.inp           \
-	06-cubic.31-spg225.inp           \
-	06-cubic.32-spg226.inp           \
-	06-cubic.33-spg227.inp           \
-	06-cubic.34-spg228.inp           \
-	06-cubic.35-spg229.inp           \
-	06-cubic.36-spg230.inp           \
 	06-cubic.test
 
 CLEANFILES = *~ *.bak
