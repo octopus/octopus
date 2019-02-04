@@ -372,11 +372,9 @@ all_f_srcs +=                                        \
 
 noinst_HEADERS +=                                    \
         hamiltonian/functionals_list.F90             \
-        hamiltonian/fxc_inc.F90                      \
 	hamiltonian/hamiltonian_base_inc.F90         \
 	hamiltonian/hamiltonian_inc.F90              \
 	hamiltonian/kb_projector_inc.F90             \
-	hamiltonian/kxc_inc.F90                      \
 	hamiltonian/lasers_inc.F90                   \
 	hamiltonian/projector_inc.F90                \
 	hamiltonian/scissor_inc.F90                  \

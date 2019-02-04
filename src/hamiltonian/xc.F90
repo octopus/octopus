@@ -56,8 +56,6 @@ module xc_oct_m
     xc_end,             &
     xc_write_info,      &
     xc_get_vxc,         &
-    xc_get_fxc,         &
-    xc_get_kxc,         &
     xc_is_orbital_dependent, &
     family_is_gga,      &
     family_is_mgga,     &
@@ -356,8 +354,6 @@ contains
 
 
 #include "vxc_inc.F90"
-#include "fxc_inc.F90"
-#include "kxc_inc.F90"
 
 end module xc_oct_m
 
