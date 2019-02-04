@@ -54,7 +54,6 @@ module poisson_oct_m
   use poisson_no_oct_m
   use profiling_oct_m
   use simul_box_oct_m
-  use submesh_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -73,12 +72,9 @@ module poisson_oct_m
     poisson_get_solver,          &
     poisson_get_qpoint,          &
     poisson_init,                &
-    poisson_init_sm,             &
     poisson_kernel_reinit,       &
     dpoisson_solve,              &
     zpoisson_solve,              &
-    dpoisson_solve_sm,           &
-    zpoisson_solve_sm,           &
     poisson_solve_batch,         &
     poisson_solver_is_iterative, &
     poisson_solver_has_free_bc,  &
@@ -859,44 +855,6 @@ contains
     call profiling_out(prof)
   end subroutine dpoisson_solve
 
-    !-----------------------------------------------------------------
-
-    !-----------------------------------------------------------------
-  subroutine poisson_init_sm(this, main, der, sm)
-    type(poisson_t),             intent(out) :: this
-    type(poisson_t),             intent(in)  :: main
-    type(derivatives_t), target, intent(in)  :: der
-    type(submesh_t),           intent(in)    :: sm
-
-    logical :: need_cube
-    integer :: default_solver
-
-    if(this%method /= POISSON_NULL) return ! already initialized
-
-    PUSH_SUB(poisson_init_sm)
-
-    this%theta = M_ZERO
-
-    this%nslaves = 0
-    this%der => der
-
-    this%qq = M_ZERO
-
-#ifdef HAVE_MPI
-    this%all_nodes_default = main%all_nodes_default
-#endif
-
-    default_solver = POISSON_DIRECT_SUM 
-    this%method = default_solver
-
-    this%kernel = POISSON_FFT_KERNEL_NONE
-
-    ! Now that we know the method, we check if we need a cube and its dimentions
-    need_cube = .false.
-
-    POP_SUB(poisson_init_sm)
-  end subroutine poisson_init_sm
-
   !-----------------------------------------------------------------
   !> This routine checks the Hartree solver selected in the input
   !! file by calculating numerically and analytically the Hartree
@@ -1218,7 +1176,6 @@ contains
   end function poisson_is_async
 
 #include "poisson_init_direct_inc.F90"
-#include "poisson_direct_sm_inc.F90"
 
 #include "undef.F90"
 #include "real.F90"

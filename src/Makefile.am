@@ -322,7 +322,6 @@ all_c_srcs +=                                    \
 noinst_HEADERS +=                                \
 	poisson/lazy_8_inc.F90                   \
 	poisson/poisson_inc.F90                  \
-	poisson/poisson_direct_sm_inc.F90        \
 	poisson/poisson_init_direct_inc.F90      \
 	poisson/solver_1d_solve_inc.F90
 
