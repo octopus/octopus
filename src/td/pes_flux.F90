@@ -1080,7 +1080,7 @@ contains
   end subroutine pes_flux_reciprocal_mesh_gen
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_calc(this, mesh, st, gr, hm, iter, dt)
+  subroutine pes_flux_calc(this, mesh, st, gr, hm, iter, dt, stopping)
     type(pes_flux_t),    intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(states_t),      intent(inout) :: st
@@ -1088,6 +1088,7 @@ contains
     type(hamiltonian_t), intent(in)    :: hm
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
+    logical,             intent(in)    :: stopping
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
     integer            :: ist, ik, isdim, imdim
@@ -1180,7 +1181,7 @@ contains
       SAFE_DEALLOCATE_A(psi)
       SAFE_DEALLOCATE_A(gpsi)
 
-      if(this%itstep == this%tdsteps .or. mod(iter, this%save_iter) == 0 .or. iter == this%max_iter) then
+      if(this%itstep == this%tdsteps .or. mod(iter, this%save_iter) == 0 .or. iter == this%max_iter .or. stopping) then
         if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
           call pes_flux_integrate_cub(this, mesh, st, dt)
         else

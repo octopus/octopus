@@ -1360,6 +1360,8 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
             SAFE_DEALLOCATE_P(psi1)
 
           end if
+        else 
+          err = 0  
         end if
 
         if (err /= 0) ierr = ierr + 1
@@ -1415,20 +1417,13 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
   integer,             intent(out)   :: ierr
 
   integer          :: stst, stend, kptst, kptend, sdim, mdim
-  integer          :: ist, ik, isdim, itot
+  integer          :: ist, ik, idim, itot
   integer          :: err
   character(len=128) :: filename
 
   CMPLX, pointer    :: psi1(:), psi2(:,:)
 
   PUSH_SUB(pes_flux_load)
-
-  stst   = st%st_start
-  stend  = st%st_end
-  kptst  = st%d%kpt%start
-  kptend = st%d%kpt%end
-  sdim   = st%d%dim
-  mdim   = mesh%sb%dim
 
   if(restart_skip(restart)) then
     ierr = -1
@@ -1441,43 +1436,56 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
     call messages_info(1)
   end if
 
-  do ik = kptst, kptend
-    do ist = stst, stend
-      do isdim = 1, sdim
-        itot = ist + (ik-1) * st%nst+  (isdim-1) * st%nst*st%d%kpt%nglobal
-
+  
+  ierr = 0
+  itot = 1
+  do ik = 1, st%d%nik
+    do ist = 1, st%nst
+      do idim = 1, st%d%dim
         write(filename,'(a,i10.10)') "pesflux1.", itot
 
-        if(this%shape == M_SPHERICAL) then
-          SAFE_ALLOCATE(psi2(1:this%nk, 1:this%nstepsomegak))
-          call zrestart_read_binary(restart, filename, this%nk * this%nstepsomegak, psi2(:,:), err)
-          this%spctramp_sph(ist, isdim, ik, :, :) = psi2(:, :)
-          SAFE_DEALLOCATE_P(psi2)
-            
+        if (st%st_start <= ist .and. ist <= st%st_end .and. st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
+          if(this%shape == M_SPHERICAL) then
+            SAFE_ALLOCATE(psi2(1:this%nk, 1:this%nstepsomegak))
+            call zrestart_read_binary(restart, filename, this%nk * this%nstepsomegak, psi2(:,:), err)
+            this%spctramp_sph(ist, idim, ik, :, :) = psi2(:, :)
+            SAFE_DEALLOCATE_P(psi2)
+          
+          else
+            SAFE_ALLOCATE(psi1(1:this%nkpnts))
+            call zrestart_read_binary(restart, filename, this%nkpnts, psi1(:), err)
+            this%spctramp_cub(ist, idim, ik, :) =  psi1(:)
+            SAFE_DEALLOCATE_P(psi1)
+
+          end if
         else
-          SAFE_ALLOCATE(psi1(1:this%nkpnts))
-          call zrestart_read_binary(restart, filename, this%nkpnts, psi1(:), err)
-          this%spctramp_cub(ist, isdim, ik, :) =  psi1(:)
-          SAFE_DEALLOCATE_P(psi1)
-
+          err = 0  
         end if
-        if (err /= 0) ierr = ierr + 1
-
+        
+        if (err /= 0) ierr = ierr + 1        
+        itot = itot + 1
       end do
     end do
-    
-    if(this%shape == M_PLANES) then
-      write(filename,'(a,i5.5)') "pesflux4-kpt", ik
-      
-      SAFE_ALLOCATE(psi1(this%nkpnts))
-      call zrestart_read_binary(restart, filename, this%nkpnts, psi1(:), err)
-      this%conjgphase_prev_cub(:,ik)=psi1(:)
-      SAFE_DEALLOCATE_P(psi1)
-
-      if (err /= 0) ierr = ierr + 1
-    end if
-        
   end do
+
+
+  if(this%shape == M_PLANES) then
+    do ik = 1, st%d%nik
+      write(filename,'(a,i5.5)') "pesflux4-kpt", ik      
+    
+      if (st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
+        SAFE_ALLOCATE(psi1(this%nkpnts))
+        call zrestart_read_binary(restart, filename, this%nkpnts, psi1(:), err)
+        this%conjgphase_prev_cub(:,ik)=psi1(:)
+        SAFE_DEALLOCATE_P(psi1)
+      else
+        err = 0
+      end if
+      if (err /= 0) ierr = ierr + 1
+    end do
+  end if
+
+
 
   if(this%shape == M_SPHERICAL) then
     call zrestart_read_binary(restart, 'pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph, err)
@@ -1491,6 +1499,12 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
     message(1) = "Debug: Reading pes_flux restart done."
     call messages_info(1)
   end if
+  
+  #ifdef HAVE_MPI
+      call MPI_Barrier(mpi_world%comm, mpi_err)
+      if(mpi_err /= 0) ierr = ierr + 3
+  #endif
+  
 
   POP_SUB(pes_flux_load)
 end subroutine pes_flux_load
