@@ -29,4 +29,3 @@ Spacing = LSize/11
 FromScratch = yes
 
 ProfilingMode = prof_memory
-SCFCalculateDipole = yes

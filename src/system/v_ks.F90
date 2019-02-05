@@ -19,7 +19,6 @@
 #include "global.h"
  
 module v_ks_oct_m
-  use berry_oct_m
   use current_oct_m
   use density_oct_m
   use derivatives_oct_m
@@ -90,7 +89,6 @@ module v_ks_oct_m
     FLOAT,                pointer :: vxc(:, :)
     FLOAT,                pointer :: vtau(:, :)
     FLOAT,                pointer :: axc(:, :, :)
-    FLOAT,                pointer :: vberry(:, :)
     logical                       :: calc_energy
     type(geometry_t),     pointer :: geo
   end type v_ks_calc_t
@@ -476,14 +474,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine v_ks_calc(ks, hm, st, geo, calc_eigenval, time, calc_berry, calc_energy, calc_current)
+  subroutine v_ks_calc(ks, hm, st, geo, calc_eigenval, time, calc_energy, calc_current)
     type(v_ks_t),               intent(inout) :: ks
     type(hamiltonian_t),        intent(inout) :: hm
     type(states_t),             intent(inout) :: st
     type(geometry_t),           intent(in)    :: geo
     logical,          optional, intent(in)    :: calc_eigenval
     FLOAT,            optional, intent(in)    :: time
-    logical,          optional, intent(in)    :: calc_berry !< use this before wfns initialized
     logical,          optional, intent(in)    :: calc_energy
     logical,          optional, intent(in)    :: calc_current
 
@@ -493,7 +490,7 @@ contains
 
     calc_current_ = optional_default(calc_current, .true.)
 
-    call v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy, calc_current_)
+    call v_ks_calc_start(ks, hm, st, geo, time, calc_energy, calc_current_)
     call v_ks_calc_finish(ks, hm)
 
     if(optional_default(calc_eigenval, .false.)) then
@@ -509,13 +506,12 @@ contains
   !! potential. The routine v_ks_calc_finish must be called to finish
   !! the calculation. The argument hm is not modified. The argument st
   !! can be modified after the function have been used.
-  subroutine v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy, calc_current) 
+  subroutine v_ks_calc_start(ks, hm, st, geo, time, calc_energy, calc_current) 
     type(v_ks_t),            target,   intent(inout) :: ks 
     type(hamiltonian_t),     target,   intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
     type(states_t),                    intent(inout) :: st
     type(geometry_t) ,       target,   intent(in)    :: geo
     FLOAT,                   optional, intent(in)    :: time 
-    logical,                 optional, intent(in)    :: calc_berry !< Use this before wfns initialized.
     logical,                 optional, intent(in)    :: calc_energy
     logical,                 optional, intent(in)    :: calc_current
 
@@ -545,17 +541,6 @@ contains
     end if
 
     ks%calc%calc_energy = optional_default(calc_energy, .true.)
-
-    nullify(ks%calc%vberry)
-    if(associated(hm%vberry)) then
-      SAFE_ALLOCATE(ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin))
-      if(optional_default(calc_berry, .true.)) then
-        call berry_potential(st, ks%gr%mesh, hm%ep%E_field, ks%calc%vberry)
-      else
-        ! before wfns are initialized, cannot calculate this term
-        ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = M_ZERO
-      end if
-    end if
 
     ! If the Hxc term is frozen, there is nothing more to do (WARNING: MISSING ks%calc%energy%intnvxc)
     if(ks%frozen_hxc) then      
@@ -813,11 +798,6 @@ contains
     SAFE_DEALLOCATE_P(hm%energy)
     hm%energy => ks%calc%energy
 
-    if(associated(hm%vberry)) then
-      hm%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin)
-      SAFE_DEALLOCATE_P(ks%calc%vberry)
-    end if
-
     if(ks%theory_level == INDEPENDENT_PARTICLES .or. abs(ks%calc%amaldi_factor) <= M_EPSILON) then
 
       hm%vhxc = M_ZERO
@@ -861,15 +841,9 @@ contains
       ! Build Hartree + XC potential
      
       forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vxc(ip, 1) + hm%vhartree(ip)
-      if(associated(hm%vberry)) then
-        forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + hm%vberry(ip, 1)
-      end if
 
       if(hm%d%ispin > UNPOLARIZED) then
         forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 2) = hm%vxc(ip, 2) + hm%vhartree(ip)
-        if(associated(hm%vberry)) then
-          forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 2) = hm%vhxc(ip, 2) + hm%vberry(ip, 2)
-        end if
       end if
       
       if(hm%d%ispin == SPINORS) then

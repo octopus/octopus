@@ -22,7 +22,6 @@ module forces_oct_m
   use accel_oct_m
   use batch_oct_m
   use batch_ops_oct_m
-  use born_charges_oct_m
   use boundaries_oct_m
   use comm_oct_m
   use density_oct_m

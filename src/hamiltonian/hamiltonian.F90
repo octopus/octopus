@@ -52,7 +52,6 @@ module hamiltonian_oct_m
   use profiling_oct_m
   use projector_oct_m
   use restart_oct_m
-  use scissor_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use species_oct_m
@@ -112,10 +111,9 @@ module hamiltonian_oct_m
     type(bc_t)               :: bc      !< boundaries
     FLOAT, pointer :: vhartree(:) !< Hartree potential
     FLOAT, pointer :: vxc(:,:)    !< XC potential
-    FLOAT, pointer :: vhxc(:,:)   !< XC potential + Hartree potential + Berry potential
+    FLOAT, pointer :: vhxc(:,:)   !< XC potential + Hartree potential
     FLOAT, pointer :: axc(:,:,:)  !< XC vector potential divided by c
     FLOAT, pointer :: vtau(:,:)   !< Derivative of e_XC w.r.t. tau
-    FLOAT, pointer :: vberry(:,:) !< Berry phase potential from external E_field
 
     type(geometry_t), pointer :: geo
     FLOAT :: exx_coef !< how much of EXX to mix
@@ -145,8 +143,6 @@ module hamiltonian_oct_m
     !> There may be an "inhomogeneous", "source", or "forcing" term (useful for the OCT formalism)
     logical :: inh_term
     type(states_t) :: inh_st
-
-    type(scissor_t) :: scissor
 
     FLOAT :: current_time
     logical :: apply_packed  !< This is initialized by the StatesPack variable.
@@ -271,15 +267,6 @@ contains
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, gr%sb)
 
-    nullify(hm%vberry)
-    if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb) .and. .not. gauge_field_is_applied(hm%ep%gfield)) then
-      ! only need vberry if there is a field in a periodic direction
-      ! and we are not setting a gauge field
-      if(any(abs(hm%ep%E_field(1:gr%sb%periodic_dim)) > M_EPSILON)) then
-        SAFE_ALLOCATE(hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
-      end if
-    end if
-
     !Static magnetic field requires complex wavefunctions
     !Static magnetic field or rashba spin-orbit interaction requires complex wavefunctions
     if (associated(hm%ep%B_field) .or. &
@@ -374,8 +361,6 @@ contains
     call parse_variable('TimeZero', .false., hm%time_zero)
     if(hm%time_zero) call messages_experimental('TimeZero')
 
-    call scissor_nullify(hm%scissor)
-
     call profiling_out(prof)
     POP_SUB(hamiltonian_init)
 
@@ -452,7 +437,6 @@ contains
     SAFE_DEALLOCATE_P(hm%vhxc)
     SAFE_DEALLOCATE_P(hm%vxc)
     SAFE_DEALLOCATE_P(hm%axc)
-    SAFE_DEALLOCATE_P(hm%vberry)
     
     if(hm%family_is_mgga_with_exc) then
       SAFE_DEALLOCATE_P(hm%vtau)
@@ -464,8 +448,6 @@ contains
     call bc_end(hm%bc)
 
     call states_dim_end(hm%d) 
-
-    if(hm%scissor%apply) call scissor_end(hm%scissor)
 
     ! this is a bit ugly, hf_st is initialized in v_ks_calc but deallocated here.
     if(associated(hm%hf_st))  then
@@ -838,13 +820,11 @@ contains
 
     apply = this%apply_packed
     ! comment these out; they are tested in the test suite
-    !if(mesh%use_curvilinear) apply = .false.
+    
     !if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
-    !if(this%rashba_coupling**2 > M_ZERO) apply = .false.
     !if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
     !if(this%family_is_mgga_with_exc)  apply = .false.
     ! keep these checks; currently no tests for these in the test suite
-    if(this%scissor%apply) apply = .false.
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
     if(associated(this%hm_base%phase) .and. accel_is_enabled()) apply = .false.
     

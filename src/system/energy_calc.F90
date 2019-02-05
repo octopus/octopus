@@ -20,7 +20,6 @@
 
 module energy_calc_oct_m
   use batch_oct_m
-  use berry_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use energy_oct_m
@@ -137,14 +136,6 @@ contains
       hm%energy%total = hm%energy%total + gauge_field_get_energy(hm%ep%gfield, gr%sb)
     end if
 
-    if(associated(hm%vberry)) then
-      hm%energy%berry = berry_energy_correction(st, gr%mesh, &
-        hm%ep%E_field(1:gr%sb%periodic_dim), hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
-      hm%energy%total = hm%energy%total + hm%energy%berry
-    else
-      hm%energy%berry = M_ZERO
-    end if
-
     if (optional_default(iunit, -1) > 0) then
       write(message(1), '(6x,a, f18.8)')'Total       = ', units_from_atomic(units_out%energy, hm%energy%total)
       write(message(2), '(6x,a, f18.8)')'Free        = ', units_from_atomic(units_out%energy, hm%energy%total - hm%energy%TS)
@@ -168,10 +159,6 @@ contains
         write(message(3), '(6x,a, f18.8)')'Non-local   = ', units_from_atomic(units_out%energy, hm%energy%extern_non_local)
         call messages_info(3, iunit)
       end if
-      if(associated(hm%vberry) .and. simul_box_is_periodic(gr%sb)) then
-        write(message(1), '(6x,a, f18.8)')'Berry       = ', units_from_atomic(units_out%energy, hm%energy%berry)
-        call messages_info(1, iunit)
-      end if  
 
     end if
 

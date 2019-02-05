@@ -733,7 +733,7 @@ contains
       call messages_info(1)
 
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.false., calc_berry=.false.)
+      call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.false.)
       ! eigenvalues have nevertheless to be initialized to something
       sys%st%eigenval = M_ZERO
 

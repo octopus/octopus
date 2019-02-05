@@ -15,10 +15,6 @@ match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;
 
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
-match ; Dipole x     ; GREPFIELD(static/info, '<x>', 3)       ;   0.0
-match ; Dipole y     ; GREPFIELD(static/info, '<y>', 3)       ;   0.0
-match ; Dipole z     ; GREPFIELD(static/info, '<z>', 3)       ;   0.0
-
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -37.06105918
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -10.90038704
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 31.45568767

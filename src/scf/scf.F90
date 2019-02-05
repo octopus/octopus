@@ -21,7 +21,6 @@
 module scf_oct_m
   use batch_oct_m
   use batch_ops_oct_m
-  use berry_oct_m
   use density_oct_m
   use eigensolver_oct_m
   use energy_calc_oct_m
@@ -87,7 +86,6 @@ module scf_oct_m
   !> some variables used for the SCF cycle
   type scf_t
     integer :: max_iter   !< maximum number of SCF iterations
-    integer :: max_iter_berry  !< max number of electronic iterations before updating density, for Berry potential
 
     ! several convergence criteria
     FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev, conv_abs_force
@@ -138,21 +136,6 @@ contains
     !%End
     call parse_variable('MaximumIter', 200, scf%max_iter)
 
-    !%Variable MaximumIterBerry
-    !%Type integer
-    !%Default 10
-    !%Section SCF::Convergence
-    !%Description
-    !% Maximum number of iterations for the Berry potential, within each SCF iteration.
-    !% Only applies if a <tt>StaticElectricField</tt> is applied in a periodic direction.
-    !% The code will move on to the next SCF iteration even if convergence
-    !% has not been achieved. -1 means unlimited.
-    !%End
-    if(associated(hm%vberry)) then
-      call parse_variable('MaximumIterBerry', 10, scf%max_iter_berry)
-      if(scf%max_iter_berry < 0) scf%max_iter_berry = huge(scf%max_iter_berry)
-    end if
-    
     !%Variable ConvEnergy
     !%Type float
     !%Default 0.0
@@ -385,14 +368,9 @@ contains
     !%Description
     !% This variable controls whether the dipole is calculated at the
     !% end of a self-consistent iteration. For finite systems the
-    !% default is yes. For periodic systems the default is no, unless
-    !% an electric field is being applied in a periodic direction.
-    !% The single-point Berry`s phase approximation is used for
-    !% periodic directions. Ref:
-    !% E Yaschenko, L Fu, L Resca, and R Resta, <i>Phys. Rev. B</i> <b>58</b>, 1222-1229 (1998).
+    !% default is yes.
     !%End
     call parse_variable('SCFCalculateDipole', .not. simul_box_is_periodic(gr%sb), scf%calc_dipole)
-    if(associated(hm%vberry)) scf%calc_dipole = .true.
 
     rmin = geometry_min_distance(geo)
     if(geo%natoms == 1) then
@@ -452,8 +430,8 @@ contains
     type(restart_t), optional, intent(in)    :: restart_load
     type(restart_t), optional, intent(in)    :: restart_dump
 
-    logical :: finish, gs_run_, berry_conv
-    integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
+    logical :: finish, gs_run_
+    integer :: iter, is, iatom, nspin, ierr, idir, verbosity_, ib, iqn
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
     real(8) :: etime, itime
     character(len=MAX_PATH_LEN) :: dirname
@@ -616,32 +594,8 @@ contains
         call lcao_init_orbitals(lcao, st, gr, geo)
         call lcao_wf(lcao, st, gr, geo, hm)
       else
-        if(associated(hm%vberry)) then
-          ks%frozen_hxc = .true.
-          do iberry = 1, scf%max_iter_berry
-            scf%eigens%converged = 0
-            call eigensolver_run(scf%eigens, gr, st, hm, iter)
-
-            call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
-
-            dipole_prev = dipole
-            call calc_dipole(dipole)
-            write(message(1),'(a,9f12.6)') 'Dipole = ', dipole(1:gr%sb%dim)
-            call messages_info(1)
-
-            berry_conv = .true.
-            do idir = 1, gr%sb%periodic_dim
-              berry_conv = berry_conv .and. &
-                (abs((dipole(idir) - dipole_prev(idir)) / dipole_prev(idir)) < CNST(1e-5) &
-                .or. abs(dipole(idir) - dipole_prev(idir)) < CNST(1e-5))
-            end do
-            if(berry_conv) exit
-          end do
-          ks%frozen_hxc = .false.
-        else
-          scf%eigens%converged = 0
-          call eigensolver_run(scf%eigens, gr, st, hm, iter)
-        end if
+        scf%eigens%converged = 0
+        call eigensolver_run(scf%eigens, gr, st, hm, iter)
       end if
 
       ! occupations
@@ -940,11 +894,6 @@ contains
           call states_write_eigenvalues(stdout, st%nst, st, gr%sb, compact = .true.)
         end if
 
-        if(associated(hm%vberry)) then
-          call calc_dipole(dipole)
-          call write_dipole(stdout, dipole)
-        end if
-
         write(message(1),'(a)') ''
         write(message(2),'(a,i5,a,f14.2)') 'Elapsed time for SCF step ', iter,':', etime
         call messages_info(2)
@@ -1084,19 +1033,8 @@ contains
       call geometry_dipole(geo, n_dip)
 
       do idir = 1, gr%sb%dim
-        ! in periodic directions use single-point Berry`s phase calculation
-        if(idir  <=  gr%sb%periodic_dim) then
-          dipole(idir) = -n_dip(idir) - berry_dipole(st, gr%mesh, idir)
-
-          ! use quantum of polarization to reduce to smallest possible magnitude
-          nquantumpol = NINT(dipole(idir)/(CNST(2.0)*gr%sb%lsize(idir)))
-          dipole(idir) = dipole(idir) - nquantumpol * (CNST(2.0) * gr%sb%lsize(idir))
-
-          ! in aperiodic directions use normal dipole formula
-        else
-          e_dip(idir + 1, 1) = sum(e_dip(idir + 1, :))
-          dipole(idir) = -n_dip(idir) - e_dip(idir + 1, 1)
-        end if
+        e_dip(idir + 1, 1) = sum(e_dip(idir + 1, :))
+        dipole(idir) = -n_dip(idir) - e_dip(idir + 1, 1)
       end do
 
       POP_SUB(scf_run.calc_dipole)
@@ -1112,23 +1050,6 @@ contains
 
       if(mpi_grp_is_root(mpi_world)) then
         call output_dipole(iunit, dipole, gr%mesh%sb%dim)
-
-        if (simul_box_is_periodic(gr%sb)) then
-          write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."
-          write(iunit, '(a)') "Single-point Berry's phase method only accurate for large supercells."
-
-          if (gr%sb%kpoints%full%npoints > 1) then
-            write(iunit, '(a)') &
-              "WARNING: Single-point Berry's phase method for dipole should not be used when there is more than one k-point."
-            write(iunit, '(a)') &
-              "Instead, finite differences on k-points (not yet implemented) are needed."
-          end if
-
-          if(.not. smear_is_semiconducting(st%smear)) then
-            write(iunit, '(a)') "Single-point Berry's phase dipole calculation not correct without integer occupations."
-          end if
-        end if
-
         write(iunit, *)
       end if
 

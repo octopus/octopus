@@ -48,7 +48,6 @@ module energy_oct_m
     FLOAT :: extern_non_local !< The part of the external energy coming from the non-local part of the pseudos
     FLOAT :: entropy
     FLOAT :: ts          !< TS
-    FLOAT :: berry       !< Berry energy correction = -mu.E - <Vberry>
     FLOAT :: delta_xc    !< the XC derivative discontinuity
   end type energy_t
 
@@ -72,7 +71,6 @@ contains
     this%extern_non_local = M_ZERO
     this%entropy      = M_ZERO
     this%ts           = M_ZERO
-    this%berry        = M_ZERO
     this%delta_xc     = M_ZERO
 
     POP_SUB(energy_nullify)
@@ -97,7 +95,6 @@ contains
     eout%extern_non_local = ein%extern_non_local
     eout%entropy      = ein%entropy
     eout%ts           = ein%ts
-    eout%berry        = ein%berry
     eout%delta_xc     = ein%delta_xc
 
     POP_SUB(energy_copy)

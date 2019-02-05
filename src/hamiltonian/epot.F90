@@ -246,8 +246,6 @@ contains
     !% by setting the block <tt>StaticElectricField</tt>.
     !% The three possible components of the block (which should only have one
     !% line) are the three components of the electric field vector.
-    !% It can be applied in a periodic direction of a large supercell via
-    !% the single-point Berry phase.
     !%End
     nullify(ep%E_field, ep%v_static)
     if(parse_block('StaticElectricField', blk)==0) then
@@ -256,13 +254,8 @@ contains
         call parse_block_float(blk, 0, idir - 1, ep%E_field(idir), units_inp%energy / units_inp%length)
 
         if(idir <= gr%sb%periodic_dim .and. abs(ep%E_field(idir)) > M_EPSILON) then
-          message(1) = "Applying StaticElectricField in a periodic direction is only accurate for large supercells."
-          if(nik == 1) then
-            call messages_warning(1)
-          else
-            message(2) = "Single-point Berry phase is not appropriate when k-point sampling is needed."
-            call messages_warning(2)
-          end if
+          call messages_write("Cannot apply an electric field in a periodic system.")
+          call messages_fatal()
         end if
       end do
       call parse_block_end(blk)
