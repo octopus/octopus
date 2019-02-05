@@ -360,7 +360,7 @@ contains
     !% default is yes, unless the system only has user-defined
     !% species.
     !%End
-    call parse_variable('SCFCalculateForces', .not. geo%only_user_def, scf%calc_force)
+    call parse_variable('SCFCalculateForces', .true., scf%calc_force)
     
     !%Variable SCFCalculateDipole
     !%Type logical

@@ -62,29 +62,18 @@ module species_oct_m
     species_ps,                    &
     species_zval,                  &
     species_z,                     &
-    species_sc_alpha,              &
     species_def_rsize,             &
     species_def_h,                 &
-    species_jradius,               &
-    species_jthick,                &
-    species_hubbard_l,             &
-    species_hubbard_u,             &
-    species_hubbard_j,             &
-    species_hubbard_alpha,         &
-    species_omega,                 &
     species_mass,                  &
     species_vdw_radius,            &
-    species_rho_string,            &
     species_filename,              &
     species_niwfs,                 &
     species_iwf_ilm,               &
     species_iwf_n,                 &
     species_iwf_j,                 &
-    species_userdef_pot,           &
     species_is_ps,                 &
     species_is_full,               &
     species_is_local,              &
-    species_represents_real_atom,  &
     species_real_nl_projector,     &
     species_nl_projector,          &
     species_get_iwf_radius,        &
@@ -97,16 +86,8 @@ module species_oct_m
   integer, public, parameter :: LABEL_LEN=15
 
   integer, public, parameter ::  &
-    SPECIES_JELLIUM        = 3,             & !< jellium sphere.
-    SPECIES_JELLIUM_SLAB   = 4,             & !< jellium slab.
-    SPECIES_JELLIUM_CHARGE_DENSITY = 129,   & !< jellium volume read from file
-    SPECIES_FROZEN         = 5,             & !< frozen species.
     SPECIES_PSEUDO         = 7,             & !< pseudopotential
-    SPECIES_USDEF          = 123,           & !< user-defined function for local potential
-    SPECIES_CHARGE_DENSITY = 125,           & !< user-defined function for charge density
-    SPECIES_FROM_FILE      = 126,           &
-    SPECIES_FULL_DELTA     = 127,           & !< full-potential atom
-    SPECIES_SOFT_COULOMB   = 128              !< soft-Coulomb potential
+    SPECIES_FULL_DELTA     = 127
 
   type species_t
     private
@@ -119,34 +100,14 @@ module species_oct_m
                                       !< minus the core charge in the case of the pseudopotentials
     FLOAT   :: mass                   !< mass, in atomic mass units (!= atomic units of mass)
     FLOAT   :: vdw_radius             !< vdw radius, in atomic length units.
-
     logical :: has_density            !< true if the species has an electronic density
-
-    character(len=1024) :: potential_formula !< for the user-defined potential
-    FLOAT :: omega                  !< harmonic frequency for Hermite polynomials
-
-    character(len=MAX_PATH_LEN) :: filename !< for the potential read from a file.
-
-    FLOAT :: jradius              !< jellium stuff
-    FLOAT :: jthick               !< jellium stuff
-
-    FLOAT :: sc_alpha                !< the soft-Coulomb parameter
-
+    character(len=MAX_PATH_LEN) :: filename !< for the pseudopotential file
     type(ps_t), pointer :: ps
     logical             :: nlcc   !< true if we have non-local core corrections
-
-    character(len=200) :: density_formula !< If we have a charge distribution creating the potential:
-
     FLOAT :: def_rsize, def_h     !< the default values for the atomic radius and  spacing
-
     integer :: niwfs              !< The number of initial wavefunctions
     integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :), iwf_n(:, :) !< i, n, l, m as a function of iorb and ispin
     FLOAT, pointer :: iwf_j(:)    !< j as a function of iorb
-
-    integer :: hubbard_l          !< For the LDA+U, the angular momentum for the applied U
-    FLOAT   :: hubbard_U          !< For the LDA+U, the effective U
-    FLOAT   :: hubbard_j          !< For the LDA+U, j (l-1/2 or l+1/2)
-    FLOAT   :: hubbard_alpha      !< For the LDA+U, a potential contraining the occupations
     integer :: user_lmax          !< For the TM pseudos, user defined lmax 
     integer :: user_llocal        !< For the TM pseudos, used defined llocal
     integer :: pseudopotential_set_id !< to which set this pseudopotential belongs
@@ -182,14 +143,8 @@ contains
     this%mass = CNST(-1.0)
     this%vdw_radius = CNST(-1.0)
     this%has_density=.false.
-    this%potential_formula=""
-    this%omega=M_ZERO
-    this%filename=""
-    this%jradius=M_ZERO
-    this%jthick=M_ZERO
     nullify(this%ps)
     this%nlcc=.false.
-    this%density_formula=""
     this%def_rsize = CNST(-1.0)
     this%def_h = CNST(-1.0)
     this%niwfs=-1
@@ -198,10 +153,6 @@ contains
     nullify(this%iwf_i)
     nullify(this%iwf_n)
     nullify(this%iwf_j)
-    this%hubbard_l=-1
-    this%hubbard_U=M_ZERO
-    this%hubbard_j=M_ZERO
-    this%hubbard_alpha = M_ZERO
     this%user_lmax   = INVALID_L
     this%user_llocal = INVALID_L
     this%pseudopotential_set_id = OPTION__PSEUDOPOTENTIALSET__NONE
@@ -336,7 +287,7 @@ contains
   end subroutine species_end_global
 
   ! ---------------------------------------------------------
-  !> Initializes a species object. This should be the
+  !> Initializes a species objects. This should be the
   !! first routine to be called (before species_read and species_build).
   !! The label argument must match one of the labels given in the %Species block
   !! in the input file or one of the labels in the defaults file.
@@ -375,7 +326,6 @@ contains
     spec%nlcc      = .false.   ! without non-local core corrections
     spec%def_h     = -M_ONE    ! not defined
     spec%def_rsize = -M_ONE    ! not defined
-    spec%potential_formula  = ""
     spec%pseudopotential_set_id = OPTION__PSEUDOPOTENTIALSET__NONE
     read_data   = 0
 
@@ -419,11 +369,7 @@ contains
     !% <br>&nbsp;&nbsp;'H'       | species_pseudo         | file | '../H.upf'
     !% <br>&nbsp;&nbsp;'Xe'      | species_pseudo         | set | pseudojo_pbe_stringent
     !% <br>&nbsp;&nbsp;'C'       | species_pseudo         | file | "carbon.xml"
-    !% <br>&nbsp;&nbsp;'jlm'     | species_jellium        | jellium_radius | 5.0
-    !% <br>&nbsp;&nbsp;'rho'     | species_charge_density | density_formula | "exp(-r/a)" | mass | 17.0 | valence | 6
-    !% <br>&nbsp;&nbsp;'udf'     | species_user_defined   | potential_formula | "1/2*r^2" | valence | 8
     !% <br>&nbsp;&nbsp;'He_all'  | species_full_delta
-    !% <br>&nbsp;&nbsp;'Li1D'    | species_soft_coulomb   |  softening | 1.5 | valence | 3
     !% <br>%</tt>
     !%Option species_pseudo  -7
     !% The species is a pseudopotential. How to get the
@@ -445,46 +391,10 @@ contains
     !% <tt>lmax</tt> and <tt>lloc</tt>, if that is the case the
     !% parameters will be ignored.
     !%
-    !%Option species_user_defined -123
-    !% Species with user-defined potential. The potential for the
-    !% species is defined by the formula given by the <tt>potential_formula</tt>
-    !% parameter.
-    !% The
-    !% <tt>valence</tt> parameter determines the number of electrons
-    !% associated with the species. By default, a valence of 0 is assumed.
-    !%Option species_charge_density -125
-    !% The potential for this species is created from the distribution
-    !% of charge given by the <tt>density_formula</tt> parameter.
-    !% The
-    !% <tt>valence</tt> parameter determines the number of electrons
-    !% associated with the species. By default, a valence of 0 is assumed.
-    !%Option species_point  -3
-    !%Option species_jellium  -3
-    !% Jellium sphere.
-    !% The charge associated with this species must be given by the <tt>valence</tt> parameter.
-    !%Option species_jellium_slab  -4
-    !% A slab of jellium that extends across the simulation box in the
-    !% <i>xy</i>-plane. The dimension along the <i>z</i> direction is
-    !% determined by the required parameter <tt>thickness</tt>.
-    !% The charge associated with this species must be given by the <tt>valence</tt> parameter.    
     !%Option species_full_delta   -127
     !% Full atomic potential represented by a delta charge
     !% distribution. The atom will be displaced to the nearest grid
     !% point. The atomic number is determined from the name of the species.
-    !%Option species_from_file  -126
-    !% The potential is read from a file. Accepted file formats, detected by extension: obf, ncdf and csv.
-    !% The
-    !% <tt>valence</tt> parameter determines the number of electrons
-    !% associated with the species. By default, a valence of 0 is assumed.
-    !%Option species_soft_coulomb -128
-    !% The potential is a soft-Coulomb function, <i>i.e.</i> a function in the form:
-    !%
-    !% <math>v(r) = - z_{val} / \sqrt{a^2 + r^2}</math>
-    !%
-    !% The value of <i>a</i> should be given by the mandatory <tt>softening</tt> parameter.
-    !% The charge associated with this species must be given by the <tt>valence</tt> parameter.
-    !%Option species_jellium_charge_density -129
-    !% The parameter is the name of a volume block specifying the shape of the jellium.
     !%Option min_radius -10001
     !% The minimum radius of the box that will be used for this species.
     !%Option max_spacing -10002
@@ -501,40 +411,16 @@ contains
     !%Option valence -10006
     !% The number of electrons of the species. It is set automatically for pseudopotentials,
     !% but is mandatory for other species.
-    !%Option jellium_radius -10007
-    !% The radius of the sphere for <tt>species_jellium</tt>. If this value is not specified,
-    !% the default of 0.5 bohr is used.
     !%Option set -10017
     !% For a <tt>species_pseudo</tt>, get the pseudopotential from a
     !% particular set. This flag must be followed with one of the
     !% valid values for the variable <tt>PseudopotentialSet</tt>.
-    !%Option softening -10009
-    !% The softening parameter <i>a</i> for <tt>species_soft_coulomb</tt> in units of length.
     !%Option file -10010
     !% The path for the file that describes the species.
     !%Option db_file -10011
     !% Obsolete. Use the <tt>set</tt> option of the <tt>PseudopotentialSet</tt> variable instead.
-    !%Option potential_formula -10012
-    !% Mathematical expression that defines the potential for <tt>species_user_defined</tt>. You can use
-    !% any of the <i>x</i>, <i>y</i>, <i>z</i> or <i>r</i> variables.
-    !%Option density_formula -10013
-    !% Mathematical expression that defines the charge density for <tt>species_charge_density</tt>. You can use
-    !% any of the <i>x</i>, <i>y</i>, <i>z</i> or <i>r</i> variables.
-    !%Option thickness -10014
-    !% The thickness of the slab for species_jellium_slab. Must be positive.
     !%Option vdw_radius -10015
     !% The van der Waals radius that will be used for this species.
-    !%Option volume -10016
-    !% Name of a volume block
-    !%Option hubbard_l -10018
-    !% The angular-momentum for which the effective U will be applied.
-    !%Option hubbard_u -10019
-    !% The effective U that will be used for the LDA+U calculations.
-    !%Option hubbard_j -10020
-    !% The value of j (hubbard_l-1/2 or hubbard_l+1/2) on which the effective U is applied.
-    !%Option hubbard_alpha -10021
-    !% The strength of the potential constraining the occupations of the localized subspace
-    !% as defined in PRB 71, 035105 (2005)
     !%End
 
     call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
@@ -678,14 +564,6 @@ contains
     spec%has_density = .false.
 
     select case(spec%type)
-    case(SPECIES_SOFT_COULOMB)
-      if(print_info_) then
-        write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a soft-Coulomb potential.'
-        call messages_info(1)
-      end if
-      spec%niwfs = species_closed_shell_size(2*nint(spec%z_val+M_HALF))
-      spec%omega = CNST(0.1)
-
     case(SPECIES_PSEUDO)
 
       ! allocate structure
@@ -699,57 +577,6 @@ contains
       spec%user_lmax = INVALID_L
       spec%user_llocal = INVALID_L
 
-    case(SPECIES_USDEF)
-      if(print_info_) then
-        write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a user-defined potential.'
-        i = min(237, len_trim(spec%potential_formula)-1) ! I subtract 1 to avoid the non-printable C "end-of-string" character.
-        write(message(2),'(a,a)')      '   Potential = ', trim(spec%potential_formula(1:i))
-        if(len(trim(spec%potential_formula)) > 237) then
-          message(2) = trim(message(2))//'...'
-        end if
-        call messages_info(2)
-      end if
-      spec%niwfs = int(max(2*spec%z_val, CNST(1.0)))
-
-      xx    = M_ZERO
-      xx(1) = CNST(0.01)
-      rr    = sqrt(sum(xx**2))
-      call parse_expression(pot_re, pot_im, MAX_DIM, xx, rr, M_ZERO, spec%potential_formula)
-      spec%omega = sqrt( abs(M_TWO / CNST(1.0e-4) * pot_re )) ! why...?
-      ! To avoid problems with constant potentials.
-      if(spec%omega <= M_ZERO) spec%omega = CNST(0.1) 
-
-    case(SPECIES_FROM_FILE)
-      if(print_info_) then
-        write(message(1),'(a)') 'Species read from file "'//trim(spec%filename)//'".'
-        call messages_info(1)
-      end if
-      spec%niwfs = 2*nint(spec%z_val+M_HALF)
-      spec%omega = CNST(0.1)
-
-    case(SPECIES_JELLIUM)
-      if(print_info_) then
-        write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a jellium sphere / approximated point particle.'
-        write(message(2),'(a,f11.6)')  '   Valence charge = ', spec%z_val
-        write(message(3),'(a,f11.6)')  '   Radius [a.u]   = ', spec%jradius
-        write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', spec%jradius * spec%z_val ** (-M_ONE/M_THREE)
-        call messages_info(4)
-      end if
-      spec%niwfs = species_closed_shell_size(2*nint(spec%z_val+M_HALF))
-      spec%omega = CNST(0.1)
-
-    case(SPECIES_JELLIUM_SLAB)
-      if(print_info_) then
-        write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a jellium slab.'
-        write(message(2),'(a,f11.6)')  '   Valence charge  = ', spec%z_val
-        write(message(3),'(a,f11.6)')  '   Thickness [a.u] = ', spec%jthick
-        !write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', ( M_THREE /( M_FOUR *M_PI ) &
-        !& *spec%z_val /( *sb%lsize(1) *sb%lsize(2) ) )**(1.0/3.0) 
-        call messages_info(3)
-      end if
-      spec%niwfs = 2*nint(spec%z_val+M_HALF)
-      spec%omega = CNST(0.1)
-
     case(SPECIES_FULL_DELTA)
       spec%has_density = .true.
       if(print_info_) then
@@ -760,22 +587,7 @@ contains
         call messages_info(4)
       end if
       spec%niwfs = species_closed_shell_size(2*nint(spec%z_val+M_HALF))
-      spec%omega = spec%z_val
 
-    case(SPECIES_CHARGE_DENSITY, SPECIES_JELLIUM_CHARGE_DENSITY)
-      spec%niwfs = int(max(2*spec%z_val, CNST(1.0)))
-      spec%omega = spec%z_val
-      spec%has_density = .true.
-      if(print_info_) then
-        write(message(1),'(a,a,a)')    'Species "', trim(spec%label), '" is a distribution of charge:'
-        if(spec%type == SPECIES_CHARGE_DENSITY) then
-           write(message(2),'(a,a)')   '   rho = ', trim(spec%density_formula)
-        else
-           write(message(2),'(a,a,a)') '   rho is enclosed in volume defined by the "', trim(spec%density_formula), '" block'
-        end if
-        write(message(3),'(a,f11.6)')  '   Z = ', spec%z_val
-        call messages_info(3)
-      end if
     case default
       call messages_input_error('Species', 'Unknown species type')
     end select
@@ -904,47 +716,36 @@ contains
 
     POP_SUB(species_pot_init)
   end subroutine species_pot_init
-  ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   integer pure function species_type(spec)
     type(species_t), intent(in) :: spec
     species_type = spec%type
   end function species_type
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   character(len=LABEL_LEN) pure function species_label(spec)
     type(species_t), intent(in) :: spec
     species_label = trim(spec%label)
   end function species_label
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   integer pure function species_index(spec)
     type(species_t), intent(in) :: spec
     species_index = spec%index
   end function species_index
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   logical pure function species_has_nlcc(spec)
     type(species_t), intent(in) :: spec
     species_has_nlcc = spec%nlcc
   end function species_has_nlcc
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   logical pure function species_has_density(spec)
     type(species_t), intent(in) :: spec
     species_has_density = spec%has_density
   end function species_has_density
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   function species_ps(spec)
@@ -952,64 +753,30 @@ contains
     type(species_t), intent(in) :: spec
     species_ps => spec%ps
   end function species_ps
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  FLOAT pure function species_sc_alpha(spec)
-    type(species_t), intent(in) :: spec
-    species_sc_alpha = spec%sc_alpha
-  end function species_sc_alpha
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   FLOAT pure function species_zval(spec)
     type(species_t), intent(in) :: spec
     species_zval = spec%z_val
   end function species_zval
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   FLOAT pure function species_z(spec)
     type(species_t), intent(in) :: spec
     species_z = spec%z
   end function species_z
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   FLOAT pure function species_def_rsize(spec)
     type(species_t), intent(in) :: spec
     species_def_rsize = spec%def_rsize
   end function species_def_rsize
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   FLOAT pure function species_def_h(spec)
     type(species_t), intent(in) :: spec
     species_def_h = spec%def_h
   end function species_def_h
-
-  ! ---------------------------------------------------------
-  FLOAT pure function species_jradius(spec)
-    type(species_t), intent(in) :: spec
-    species_jradius = spec%jradius
-  end function species_jradius
-
-  ! ---------------------------------------------------------
-  FLOAT pure function species_jthick(spec)
-    type(species_t), intent(in) :: spec
-    species_jthick = spec%jthick
-  end function species_jthick
-
-  ! ---------------------------------------------------------
-  FLOAT pure function species_omega(spec)
-    type(species_t), intent(in) :: spec
-    species_omega = spec%omega
-  end function species_omega
 
   ! ---------------------------------------------------------
   FLOAT pure function species_mass(spec)
@@ -1024,12 +791,6 @@ contains
   end function species_vdw_radius
 
   ! ---------------------------------------------------------
-  character(len=200) pure function species_rho_string(spec)
-    type(species_t), intent(in) :: spec
-    species_rho_string = trim(spec%density_formula)
-  end function species_rho_string
-
-  ! ---------------------------------------------------------
   character(len=200) pure function species_filename(spec)
     type(species_t), intent(in) :: spec
     species_filename = trim(spec%filename)
@@ -1040,32 +801,6 @@ contains
     type(species_t), intent(in) :: spec
     species_niwfs = spec%niwfs
   end function species_niwfs
-
-  ! ---------------------------------------------------------
-  integer pure function species_hubbard_l(spec)
-    type(species_t), intent(in) :: spec
-    species_hubbard_l = spec%hubbard_l
-  end function species_hubbard_l
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  FLOAT pure function species_hubbard_u(spec)
-    type(species_t), intent(in) :: spec
-    species_hubbard_u = spec%hubbard_u
-  end function species_hubbard_u
-
-  ! ---------------------------------------------------------
-  FLOAT pure function species_hubbard_j(spec)
-    type(species_t), intent(in) :: spec
-    species_hubbard_j = spec%hubbard_j
-  end function species_hubbard_j
-
-  ! ---------------------------------------------------------
-  FLOAT pure function species_hubbard_alpha(spec)
-    type(species_t), intent(in) :: spec
-    species_hubbard_alpha = spec%hubbard_alpha
-  end function species_hubbard_alpha
 
   ! ---------------------------------------------------------
   pure subroutine species_iwf_ilm(spec, j, is, i, l, m)
@@ -1095,22 +830,6 @@ contains
 
     j = spec%iwf_j(iorb)
   end subroutine species_iwf_j
-
-  ! ---------------------------------------------------------
-  CMPLX function species_userdef_pot(spec, dim, xx, r)
-    type(species_t),   intent(in) :: spec
-    integer,           intent(in) :: dim
-    FLOAT,             intent(in) :: xx(1:MAX_DIM), r
-
-    FLOAT :: pot_re, pot_im
-
-    PUSH_SUB(species_userdef_pot)
-    
-    call parse_expression(pot_re, pot_im, dim, xx, r, M_ZERO, spec%potential_formula)
-    species_userdef_pot = pot_re + M_zI * pot_im  
-
-    POP_SUB(species_userdef_pot)
-  end function species_userdef_pot
 
   ! ---------------------------------------------------------
   logical pure function species_is_ps(spec)
@@ -1199,26 +918,6 @@ contains
 
     POP_SUB(species_is_local)
   end function species_is_local
-  ! ---------------------------------------------------------
-
-  logical function species_represents_real_atom(spec)
-    type(species_t), intent(in) :: spec
-    
-    integer :: type
-    species_represents_real_atom = .true.
-
-    ! NO PUSH_SUB, called too often
-    
-    type = species_type(spec)
-    species_represents_real_atom =                    &
-         type /= SPECIES_USDEF                        &
-         .and. type /= SPECIES_CHARGE_DENSITY         &
-         .and. type /= SPECIES_FROM_FILE              &
-         .and. type /= SPECIES_JELLIUM_CHARGE_DENSITY &
-         .and. type /= SPECIES_JELLIUM                &
-         .and. type /= SPECIES_JELLIUM_SLAB
-    
-  end function species_represents_real_atom
 
   ! ---------------------------------------------------------
   !> This routine returns the non-local projector and its
@@ -1268,8 +967,6 @@ contains
     end if
 
   end subroutine species_real_nl_projector
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   !> This routine returns the non-local projector, built using
@@ -1298,7 +995,6 @@ contains
 
     POP_SUB(species_nl_projector)
   end subroutine species_nl_projector
-  ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   !> Return radius outside which orbital is less than threshold value 0.001
@@ -1321,20 +1017,12 @@ contains
     if(species_is_ps(spec)) then
       ASSERT(ii <= spec%ps%conf%p)
       radius = spline_cutoff_radius(spec%ps%ur(ii, is), threshold_)
-    else if(species_represents_real_atom(spec)) then
-      radius = -ii*log(threshold_)/spec%Z_val
     else
-      radius = sqrt(-M_TWO*log(threshold_)/spec%omega)
+      radius = -ii*log(threshold_)/spec%Z_val
     end if
-
-    ! The values for hydrogenic and harmonic-oscillator wavefunctions
-    ! come from taking the exponential part (i.e. the one that controls
-    ! the asymptotic behavior at large r), and setting it equal to
-    ! the threshold.
 
     POP_SUB(species_get_iwf_radius)
   end function species_get_iwf_radius
-  ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   !> Return radius of the pseudopotential if this is a pseudo, zero otherwise
@@ -1351,8 +1039,6 @@ contains
 
     POP_SUB(species_get_ps_radius)
   end function species_get_ps_radius
-  ! ---------------------------------------------------------
-
 
   ! ---------------------------------------------------------
   subroutine species_copy(this, that, index)
@@ -1375,11 +1061,7 @@ contains
     this%mass=that%mass
     this%vdw_radius=that%vdw_radius
     this%has_density=that%has_density
-    this%potential_formula=that%potential_formula
-    this%omega=that%omega
     this%filename=that%filename
-    this%jradius=that%jradius
-    this%jthick=that%jthick
     nullify(this%ps)
     !> To be implemented.
     !> ps_t has no copy procedure.
@@ -1388,7 +1070,6 @@ contains
     !>   call ps_copy(this%ps, that%ps)
     !> end if
     this%nlcc=that%nlcc
-    this%density_formula=that%density_formula
     this%def_rsize=that%def_rsize
     this%def_h=that%def_h
     this%niwfs=that%niwfs
@@ -1398,10 +1079,6 @@ contains
     call loct_pointer_copy(this%iwf_m, that%iwf_m)
     call loct_pointer_copy(this%iwf_i, that%iwf_i)
     call loct_pointer_copy(this%iwf_j, that%iwf_j)
-    this%hubbard_l=that%hubbard_l
-    this%hubbard_U=that%hubbard_U
-    this%hubbard_alpha=that%hubbard_alpha
-    this%hubbard_j=that%hubbard_j
     this%user_lmax=that%user_lmax
     this%user_llocal=that%user_llocal
 
@@ -1448,14 +1125,9 @@ contains
 
     POP_SUB(species_end_array)
   end subroutine species_end_array
-  ! ---------------------------------------------------------
-
-
-
-
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Private procedures
+  ! Private procedures
 
   ! ---------------------------------------------------------
   subroutine species_debug(dir, spec)
@@ -1482,29 +1154,15 @@ contains
     write(iunit, '(a,i3)')    'Index  = ', spec%index
     write(iunit, '(2a)')      'Label  = ', trim(spec%label)
     write(iunit, '(a,i3)')    'Type   = ', spec%type
-    if (spec%type /= SPECIES_USDEF ) write(iunit, '(a,f15.2)') 'z      = ', spec%z
-    if (spec%type == SPECIES_FROM_FILE) then
-      write(iunit,'(a)')      'Species read from file "'//trim(spec%filename)//'".'
-    end if
+    write(iunit, '(a,f15.2)') 'z      = ', spec%z
     write(iunit, '(a,f15.2)') 'z_val  = ', spec%z_val
     write(iunit, '(a,f15.2)') 'mass = ', spec%mass
     write(iunit, '(a,f15.2)') 'vdw_radius = ', spec%vdw_radius
     bool = species_is_local(spec)
     write(iunit, '(a,l1)')    'local  = ', bool
-    write(iunit, '(2a)')      'usdef  = ', trim(spec%potential_formula)
-    if (spec%type == SPECIES_JELLIUM) then
-      write(iunit, '(a,f15.2)') 'jradius= ', spec%jradius
-    end if
-    if (spec%type == SPECIES_JELLIUM_SLAB) then
-      write(iunit, '(a,f15.2)') 'jthick= ', spec%jthick
-    end if
     write(iunit, '(a,l1)')    'nlcc   = ', spec%nlcc
     write(iunit, '(a,f15.2)') 'def_rsize = ', spec%def_rsize
     write(iunit, '(a,f15.2)') 'def_h = ', spec%def_h
-    write(iunit, '(a,i3)')    'hubbard_l = ', spec%hubbard_l
-    write(iunit, '(a,f15.2)') 'hubbard_U = ', spec%hubbard_U
-    write(iunit, '(a,f15.2)') 'hubbard_j = ', spec%hubbard_j
-    write(iunit, '(a,f15.2)') 'hubbard_alpha = ', spec%hubbard_alpha
 
     if(species_is_ps(spec)) then
        if(debug%info) call ps_debug(spec%ps, trim(dirname))
@@ -1600,24 +1258,7 @@ contains
     spec%Z=M_ZERO
 
     select case(spec%type)
-
-    case(SPECIES_SOFT_COULOMB)
-
-    case(SPECIES_USDEF) ! user-defined
-
-    case(SPECIES_FROM_FILE)
-
-    case(SPECIES_JELLIUM)
-      spec%jradius = CNST(0.5)
-        
-    case(SPECIES_JELLIUM_SLAB)
-
-    case(SPECIES_FULL_DELTA)
-
-    case(SPECIES_CHARGE_DENSITY, SPECIES_JELLIUM_CHARGE_DENSITY)
-
-    case(SPECIES_PSEUDO)
-
+    case(SPECIES_FULL_DELTA, SPECIES_PSEUDO)
     case default
       call messages_input_error('Species', "Unknown type for species '"//trim(spec%label)//"'")
     end select
@@ -1625,8 +1266,6 @@ contains
     spec%mass = -CNST(1.0)
     spec%vdw_radius = -CNST(1.0)
     spec%z_val = -CNST(1.0)
-    spec%sc_alpha = -CNST(1.0)
-    spec%jthick = -CNST(1.0)
     
     call iihash_init(read_parameters, 11)
     
@@ -1672,36 +1311,6 @@ contains
           call messages_input_error('Species', "The 'lloc' parameter in species "//trim(spec%label)//" cannot be negative")
         end if
 
-      case(OPTION__SPECIES__HUBBARD_L)
-        call check_duplication(OPTION__SPECIES__HUBBARD_L)
-        call parse_block_integer(blk, row, icol + 1, spec%hubbard_l)
-
-        if(spec%type /= SPECIES_PSEUDO) then
-          call messages_input_error('Species', &
-            "The 'hubbard_l' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")
-        end if
-
-        if(spec%hubbard_l < 0) then
-          call messages_input_error('Species', "The 'hubbard_l' parameter in species "//trim(spec%label)//" cannot be negative")
-        end if
-
-     case(OPTION__SPECIES__HUBBARD_U)
-        call check_duplication(OPTION__SPECIES__HUBBARD_U)
-        call parse_block_float(blk, row, icol + 1, spec%hubbard_u, unit = units_inp%energy)
-
-     case(OPTION__SPECIES__HUBBARD_ALPHA)
-        call check_duplication(OPTION__SPECIES__HUBBARD_ALPHA)
-        call parse_block_float(blk, row, icol + 1, spec%hubbard_alpha, unit = units_inp%energy)
-
-     case(OPTION__SPECIES__HUBBARD_J)
-        call check_duplication(OPTION__SPECIES__HUBBARD_J)
-        call parse_block_float(blk, row, icol + 1, spec%hubbard_j)
-
-        if(abs(spec%hubbard_j-spec%hubbard_l) /= M_HALF) then
-          call messages_input_error('Species', "The 'hubbard_j' parameter in species "//trim(spec%label)//" can only be hubbard_l +/- 1/2")
-        end if
-
-
       case(OPTION__SPECIES__MASS)
         call check_duplication(OPTION__SPECIES__MASS)
         call parse_block_float(blk, row, icol + 1, spec%mass, unit = units_inp%mass)
@@ -1710,23 +1319,6 @@ contains
         call check_duplication(OPTION__SPECIES__VALENCE)
         call parse_block_float(blk, row, icol + 1, spec%z_val)
         spec%z = spec%z_val
-
-      case(OPTION__SPECIES__JELLIUM_RADIUS)
-        call check_duplication(OPTION__SPECIES__JELLIUM_RADIUS)
-        call parse_block_float(blk, row, icol + 1, spec%jradius)
-        spec%jradius = units_to_atomic(units_inp%length, spec%jradius)
-        if(spec%jradius <= M_ZERO) call messages_input_error('Species', 'jellium_radius must be positive')
-        if(spec%type /= SPECIES_JELLIUM) then
-          call messages_input_error('Species', 'jellium_radius can only be used with species_jellium')
-        end if
-        
-      case(OPTION__SPECIES__SOFTENING)
-        call check_duplication(OPTION__SPECIES__SOFTENING)
-        call parse_block_float(blk, row, icol + 1, spec%sc_alpha)
-        spec%sc_alpha = units_to_atomic(units_inp%length, spec%sc_alpha)**2
-        if(spec%type /= SPECIES_SOFT_COULOMB) then
-          call messages_input_error('Species', 'softening can only be used with species_soft_coulomb')
-        end if
 
       case(OPTION__SPECIES__FILE)
         call check_duplication(OPTION__SPECIES__FILE)
@@ -1742,47 +1334,7 @@ contains
         call parse_block_integer(blk, row, icol + 1, spec%pseudopotential_set_id)
         spec%pseudopotential_set_initialized = .true.
         call pseudo_set_init(spec%pseudopotential_set, get_set_directory(spec%pseudopotential_set_id), ierr, automatic)
-        
-      case(OPTION__SPECIES__POTENTIAL_FORMULA)
-        call check_duplication(OPTION__SPECIES__POTENTIAL_FORMULA)
-        call parse_block_string(blk, row, icol + 1, spec%potential_formula)
-        call conv_to_C_string(spec%potential_formula)
-
-        if(spec%type /= SPECIES_USDEF) then
-          call messages_input_error('Species', 'potential_formula can only be used with species_user_defined')
-        end if
-
-      case(OPTION__SPECIES__VOLUME)
-        call check_duplication(OPTION__SPECIES__VOLUME)
-        call parse_block_string(blk, row, icol + 1, spec%density_formula)
-        call conv_to_C_string(spec%density_formula)
-
-        if(spec%type /= SPECIES_JELLIUM_CHARGE_DENSITY) then
-          call messages_input_error('Species', 'volume can only be used with species_jellium_charge_density')
-        end if
-
-      case(OPTION__SPECIES__DENSITY_FORMULA)
-        call check_duplication(OPTION__SPECIES__DENSITY_FORMULA)
-        call parse_block_string(blk, row, icol + 1, spec%density_formula)
-        call conv_to_C_string(spec%density_formula)
-              
-        if(spec%type /= SPECIES_CHARGE_DENSITY) then
-          call messages_input_error('Species', 'density_formula can only be used with species_charge_density')
-        end if
-
-      case(OPTION__SPECIES__THICKNESS)
-        call check_duplication(OPTION__SPECIES__THICKNESS)
-        call parse_block_float(blk, row, icol + 1, spec%jthick) ! thickness of the jellium slab
-
-        if(spec%jthick <= M_ZERO) call messages_input_error('Species', &
-          'the value of the thickness parameter in species '//trim(spec%label)//' must be positive.')
-
-        spec%jthick = units_to_atomic(units_inp%length, spec%jthick) ! units conversion
-
-        if(spec%type /= SPECIES_JELLIUM_SLAB) then
-          call messages_input_error('Species', 'thickness can only be used with species_jellium_slab')
-        end if
-        
+                
       case(OPTION__SPECIES__VDW_RADIUS)
         call check_duplication(OPTION__SPECIES__VDW_RADIUS)
         call parse_block_float(blk, row, icol + 1, spec%vdw_radius, unit = units_inp%length)
@@ -1796,44 +1348,13 @@ contains
     end do
     ! CHECK THAT WHAT WE PARSED MAKES SENSE
     
-    if(spec%type == SPECIES_SOFT_COULOMB .and. .not. parameter_defined(OPTION__SPECIES__SOFTENING)) then
-      call messages_input_error('Species', &
-        "The 'softening' parameter is missing for species "//trim(spec%label))
-    end if
-
-    if(spec%type == SPECIES_USDEF .and. .not. parameter_defined(OPTION__SPECIES__POTENTIAL_FORMULA)) then
-      call messages_input_error('Species', &
-        "The 'potential_formula' parameter is missing for species '"//trim(spec%label)//"'")
-    end if
-
-    if(spec%type == SPECIES_CHARGE_DENSITY .and. .not. parameter_defined(OPTION__SPECIES__DENSITY_FORMULA)) then
-      call messages_input_error('Species', &
-        "The 'density_formula' parameter is missing for species '"//trim(spec%label)//"'")
-    end if
-    
-    if(spec%type == SPECIES_FROM_FILE &
-      .and. .not. (parameter_defined(OPTION__SPECIES__FILE) .or. parameter_defined(OPTION__SPECIES__DB_FILE))) then
-      call messages_input_error('Species', &
-        "The 'file' or 'db_file' parameter is missing for species '"//trim(spec%label)//"'")
-    end if
-
-    if(spec%type == SPECIES_JELLIUM_SLAB .and. .not. parameter_defined(OPTION__SPECIES__THICKNESS)) then
-      call messages_input_error('Species', &
-        "The 'thickness' parameter is missing for species '"//trim(spec%label)//"'")
-    end if
-
-    if(spec%type == SPECIES_JELLIUM_CHARGE_DENSITY .and. .not. parameter_defined(OPTION__SPECIES__VOLUME)) then
-      call messages_input_error('Species', &
-        "The 'volume' parameter is missing for species '"//trim(spec%label)//"'")
-    end if
-
     if(parameter_defined(OPTION__SPECIES__LMAX) .and. parameter_defined(OPTION__SPECIES__LLOC)) then
       if(spec%user_llocal > spec%user_lmax) then
         call messages_input_error('Species', &
           "the 'lloc' parameter cannot be larger than the 'lmax' parameter in species "//trim(spec%label))
       end if
     end if
-    
+
     select case(spec%type)
     case(SPECIES_PSEUDO, SPECIES_FULL_DELTA)
 
@@ -1907,16 +1428,6 @@ contains
         call messages_write(' [b]')
         call messages_info()
       end if
-
-      if(.not. parameter_defined(OPTION__SPECIES__VALENCE)) then
-        if(spec%type == SPECIES_USDEF .or. spec%type == SPECIES_CHARGE_DENSITY .or. spec%type == SPECIES_FROM_FILE) then
-          spec%z_val = CNST(0.0)
-        else
-          call messages_input_error('Species', &
-            "The 'valence' parameter is missing for species '"//trim(spec%label)//"'")
-        end if
-      end if
-      
     end select
 
     call iihash_end(read_parameters)
@@ -1990,7 +1501,7 @@ contains
         end do
       end do
 
-    else if(species_represents_real_atom(spec) .and. dim == 3) then
+    else 
 
       do is = 1, ispin
         n = 1
@@ -2010,106 +1521,6 @@ contains
         end do
       end do
 
-    else
-
-      select case(dim)
-      case(1)
-        do is = 1, ispin
-          do i = 1, spec%niwfs
-            spec%iwf_i(i, is) = i
-            spec%iwf_n(i, is) = 0
-            spec%iwf_l(i, is) = 0
-            spec%iwf_m(i, is) = 0
-            spec%iwf_j(i) = M_ZERO
-          end do
-        end do
-
-      case(2)
-        do is = 1, ispin
-          i = 1; n1 = 1; n2 = 1
-          do
-            spec%iwf_i(i, is) = n1
-            spec%iwf_n(i, is) = 1 
-            spec%iwf_l(i, is) = n2
-            spec%iwf_m(i, is) = 0
-            spec%iwf_j(i) = M_ZERO
-            i = i + 1; if(i>spec%niwfs) exit
-
-            spec%iwf_i(i, is) = n1+1
-            spec%iwf_n(i, is) = 1
-            spec%iwf_l(i, is) = n2
-            spec%iwf_m(i, is) = 0
-            spec%iwf_j(i) = M_ZERO
-            i = i + 1; if(i>spec%niwfs) exit
-
-            spec%iwf_i(i, is) = n1
-            spec%iwf_n(i, is) = 1
-            spec%iwf_l(i, is) = n2+1
-            spec%iwf_m(i, is) = 0
-            spec%iwf_j(i) = M_ZERO
-            i = i + 1; if(i>spec%niwfs) exit
-
-            n1 = n1 + 1; n2 = n2 + 1
-          end do
-        end do
-
-      case(3)
-        do is = 1, ispin
-          i = 1; n1 = 1; n2 = 1; n3 = 1
-          do
-            spec%iwf_i(i, is) = n1
-            spec%iwf_n(i, is) = 1
-            spec%iwf_l(i, is) = n2
-            spec%iwf_m(i, is) = n3
-            spec%iwf_j(i) = M_ZERO
-            i = i + 1; if(i>spec%niwfs) exit
-
-            spec%iwf_i(i, is) = n1+1
-            spec%iwf_n(i, is) = 1
-            spec%iwf_l(i, is) = n2
-            spec%iwf_m(i, is) = n3
-            spec%iwf_j(i) = M_ZERO
-            i = i + 1; if(i>spec%niwfs) exit
-
-            spec%iwf_i(i, is) = n1
-            spec%iwf_n(i, is) = 1
-            spec%iwf_l(i, is) = n2+1
-            spec%iwf_m(i, is) = 0
-            spec%iwf_j(i) = M_ZERO
-            i = i + 1; if(i>spec%niwfs) exit
-
-            spec%iwf_i(i, is) = n1
-            spec%iwf_n(i, is) = 1
-            spec%iwf_l(i, is) = n2
-            spec%iwf_m(i, is) = n3+1
-            spec%iwf_j(i) = M_ZERO
-            i = i + 1; if(i>spec%niwfs) exit
-
-            spec%iwf_i(i, is) = n1+1
-            spec%iwf_n(i, is) = 1
-            spec%iwf_l(i, is) = n2+1
-            spec%iwf_m(i, is) = n3
-            spec%iwf_j(i) = M_ZERO
-            i = i + 1; if(i>spec%niwfs) exit
-
-            spec%iwf_i(i, is) = n1+1
-            spec%iwf_n(i, is) = 1
-            spec%iwf_l(i, is) = n2
-            spec%iwf_m(i, is) = n3+1
-            spec%iwf_j(i) = M_ZERO
-            i = i + 1; if(i>spec%niwfs) exit
-
-            spec%iwf_i(i, is) = n1
-            spec%iwf_n(i, is) = 1
-            spec%iwf_l(i, is) = n2+1
-            spec%iwf_m(i, is) = n3+1
-            spec%iwf_j(i) = M_ZERO
-            i = i + 1; if(i>spec%niwfs) exit
-
-            n1 = n1 + 1; n2 = n2 + 1; n3 = n3 + 1
-          end do
-        end do
-      end select
     end if
 
     POP_SUB(species_iwf_fix_qn)

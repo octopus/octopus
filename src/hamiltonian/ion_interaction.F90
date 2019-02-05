@@ -132,13 +132,7 @@ contains
       ASSERT(geo%ncatoms==0)
 
       spci => geo%atom(1)%species
-      ! This depends on the area, but we should check if it is fully consistent.        
-      if( species_type(spci) == SPECIES_JELLIUM_SLAB ) then
-        energy = energy + &
-          M_PI*species_zval(spci)**2/(M_FOUR*sb%lsize(1)*sb%lsize(2))*(sb%lsize(3) - species_jthick(spci)/M_THREE)
-      else
-        call ion_interaction_periodic(this, geo, sb, energy, force, energy_components, force_components)
-      end if
+      call ion_interaction_periodic(this, geo, sb, energy, force, energy_components, force_components)
 
     else
       
@@ -163,16 +157,6 @@ contains
         spci => geo%atom(iatom)%species
         zi = species_zval(spci)
 
-        select case(species_type(spci))
-        case(SPECIES_JELLIUM)
-          energy = energy + (M_THREE/M_FIVE)*zi**2/species_jradius(spci)
-          ! The part depending on the simulation sphere is neglected
-          
-        case(SPECIES_JELLIUM_SLAB)
-          energy = energy - M_PI*zi**2/(M_FOUR*sb%lsize(1)*sb%lsize(2))*species_jthick(spci)/M_THREE
-          ! The part depending on the simulation box transverse dimension is neglected
-        end select
-        
         do jatom = iatom + 1, geo%natoms
 
           if(ignore_external_ions) then
@@ -289,7 +273,6 @@ contains
     
     ! the short-range part is calculated directly
     do iatom = geo%atoms_dist%start, geo%atoms_dist%end
-      if (.not. species_represents_real_atom(geo%atom(iatom)%species)) cycle
       zi = species_zval(geo%atom(iatom)%species)
 
       call periodic_copy_init(pc, sb, geo%atom(iatom)%x, rcut)

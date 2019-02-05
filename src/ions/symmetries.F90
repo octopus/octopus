@@ -54,7 +54,6 @@ module symmetries_oct_m
     integer                  :: nops
     FLOAT                    :: breakdir(1:3)
     integer                  :: space_group
-    logical                  :: any_non_spherical
     logical                  :: symmetries_compute
     character(len=6)         :: group_name
     character(len=30)        :: group_elements
@@ -108,7 +107,7 @@ contains
     FLOAT,               intent(in)  :: klattice(:, :)
 
     integer :: max_size, dim4syms
-    integer :: idir, iatom, iop, verbosity, point_group
+    integer :: idir, iatom, iop, verbosity
     real(8) :: lattice(1:3, 1:3)
     real(8), allocatable :: position(:, :)
     integer, allocatable :: typs(:)
@@ -123,18 +122,6 @@ contains
     logical :: def_sym_comp
     
     PUSH_SUB(symmetries_init)
-
-    ! if someone cares, they could try to analyze the symmetry point group of the individual species too
-    this%any_non_spherical = .false.
-    do iatom = 1, geo%natoms
-      this%any_non_spherical = this%any_non_spherical                   .or. &
-        species_type(geo%atom(iatom)%species) == SPECIES_USDEF          .or. &
-        species_type(geo%atom(iatom)%species) == SPECIES_JELLIUM_SLAB   .or. &
-        species_type(geo%atom(iatom)%species) == SPECIES_CHARGE_DENSITY .or. &
-        species_type(geo%atom(iatom)%species) == SPECIES_FROM_FILE      .or. &
-        species_type(geo%atom(iatom)%species) == SPECIES_FROZEN
-      if(this%any_non_spherical)exit
-    end do
 
     dim4syms = min(3,dim)
 
@@ -154,13 +141,8 @@ contains
     !%End
     call parse_variable('SymmetriesCompute', def_sym_comp, this%symmetries_compute)
 
-    if(this%symmetries_compute .and. dim /= 3) then
-      call messages_experimental('symmetries for non 3D systems')
-    end if
-    
-    if(this%any_non_spherical .or. .not. this%symmetries_compute) then
+    if(.not. this%symmetries_compute) then
       call init_identity()
-
       POP_SUB(symmetries_init)
       return
     end if
@@ -495,12 +477,6 @@ contains
     PUSH_SUB(symmetries_write_info)
     
     call messages_print_stress(iunit, 'Symmetries')
-
-    if(this%any_non_spherical) then
-      message(1) = "Symmetries are disabled since non-spherically symmetric species may be present."
-      call messages_info(1,iunit = iunit)
-      call messages_print_stress(iunit)
-    end if
 
     if(.not. this%symmetries_compute) then
       message(1) = "Symmetries have been disabled by SymmetriesCompute = false."

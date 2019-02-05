@@ -169,8 +169,7 @@ contains
     ! The initial LCAO calculation is done by default if we have species representing atoms.
     ! Otherwise, it is not the default value and has to be enforced in the input file.
     mode_default = OPTION__LCAOSTART__LCAO_FULL
-    if(geo%only_user_def) mode_default = OPTION__LCAOSTART__LCAO_NONE
-    
+
     !%Variable LCAOStart
     !%Type integer
     !%Section SCF::LCAO

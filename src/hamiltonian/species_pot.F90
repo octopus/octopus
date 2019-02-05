@@ -97,115 +97,12 @@ contains
 
     ! build density ...
     select case (species_type(species))
-    case (SPECIES_FROM_FILE, SPECIES_USDEF, SPECIES_SOFT_COULOMB, SPECIES_FULL_DELTA) ! ... from userdef
+    case (SPECIES_FULL_DELTA) ! ... from userdef
       do isp = 1, spin_channels
         rho(1:mesh%np, isp) = M_ONE
         x = (species_zval(species)/real(spin_channels, REAL_PRECISION)) / dmf_integrate(mesh, rho(:, isp))
         rho(1:mesh%np, isp) = x * rho(1:mesh%np, isp)
       end do
-
-    case (SPECIES_CHARGE_DENSITY, SPECIES_JELLIUM_CHARGE_DENSITY)
-      ! We put, for the electron density, the same as the positive density that 
-      ! creates the external potential.
-      ! This code is repeated in get_density, and should therefore be cleaned!!!!!
-
-       if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-          call volume_init(volume)
-          call volume_read_from_block(volume, trim(species_rho_string(species)))
-       end if
-
-      call periodic_copy_init(pp, sb, spread(M_ZERO, dim=1, ncopies = sb%dim), &
-        range = M_TWO * maxval(sb%lsize(1:sb%dim)))
-
-      rho = M_ZERO
-      do icell = 1, periodic_copy_num(pp)
-        yy(1:sb%dim) = periodic_copy_position(pp, sb, icell)
-        do ip = 1, mesh%np
-          call mesh_r(mesh, ip, rr, origin = atom%x, coords = xx)
-          xx(1:sb%dim) = xx(1:sb%dim) + yy(1:sb%dim)
-          rr = sqrt(dot_product(xx(1:sb%dim), xx(1:sb%dim)))
-          
-          rerho = M_ZERO
-          if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-             if(volume_in_volume(sb, volume, xx, rr)) rerho = M_ONE
-          else
-             call parse_expression(rerho, imrho, sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
-          end if
-          rho(ip, 1) = rho(ip, 1) + rerho
-       end do
-      end do
-
-      if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-         call volume_end(volume)
-      end if
-      call periodic_copy_end(pp)
-
-      if(spin_channels > 1) then
-        rho(:, 1) = M_HALF*rho(:, 1)
-        rho(:, 2) = rho(:, 1)
-      end if
-
-      ! rescale to match the valence charge
-      do isp = 1, spin_channels
-        x = species_zval(species) / dmf_integrate(mesh, rho(:, isp))
-        rho(1:mesh%np, isp) = x * rho(1:mesh%np, isp)
-      end do
-
-    case (SPECIES_JELLIUM) ! ... from jellium
-      in_points = 0
-      do ip = 1, mesh%np
-        call mesh_r(mesh, ip, rr, origin = atom%x)
-        if(rr <= species_jradius(species)) then
-          in_points = in_points + 1
-        end if
-      end do
-
-#if defined(HAVE_MPI)
-      if(mesh%parallel_in_domains) then
-        call MPI_Allreduce(in_points, in_points_red, 1, MPI_INTEGER, MPI_SUM, mesh%vp%comm, mpi_err)
-        in_points = in_points_red
-      end if
-#endif
-
-      if(in_points > 0) then
-        ! This probably should be done inside the mesh_function_oct_m module.
- 
-        do ip = 1, mesh%np
-          call mesh_r(mesh, ip, rr, origin = atom%x)
-          if(rr <= species_jradius(species)) then
-            rho(ip, 1:spin_channels) = species_zval(species) /   &
-              (mesh%vol_pp(1)*real(in_points*spin_channels, REAL_PRECISION))
-          end if
-        end do
-      end if
-
-    case (SPECIES_JELLIUM_SLAB) ! ... from jellium slab
-      in_points = 0
-      do ip = 1, mesh%np
-        rr = abs( mesh%x( ip, 3 ) )
-        if( rr <= species_jthick(species)/M_TWO ) then
-          in_points = in_points + 1
-        end if
-      end do
-
-#if defined(HAVE_MPI)
-      if(mesh%parallel_in_domains) then
-        call MPI_Allreduce(in_points, in_points_red, 1, MPI_INTEGER, MPI_SUM, mesh%vp%comm, mpi_err)
-        in_points = in_points_red
-      end if
-#endif
-
-      if(in_points > 0) then
-        ! This probably should be done inside the mesh_function_oct_m module.
-
-        do ip = 1, mesh%np
-          rr = abs( mesh%x( ip, 3 ) )
-          if( rr <= species_jthick(species)/M_TWO ) then
-            rho(ip, 1:spin_channels) = species_zval(species) /   &
-              (mesh%vol_pp(1)*real(in_points*spin_channels, REAL_PRECISION))
-          end if
-        end do
-      end if
 
     case (SPECIES_PSEUDO)
       ! ...from pseudopotentials
@@ -618,42 +515,6 @@ contains
         " [ ", trim(units_abbrev(units_out%length)), " ]"
       call messages_info(1)
 
-    case(SPECIES_CHARGE_DENSITY, SPECIES_JELLIUM_CHARGE_DENSITY)
-
-      if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-        call volume_init(volume)
-        call volume_read_from_block(volume, trim(species_rho_string(species)))
-      end if
-       
-      call periodic_copy_init(pp, mesh%sb, spread(M_ZERO, dim=1, ncopies = mesh%sb%dim), &
-        range = M_TWO * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
-
-      rho = M_ZERO
-      do icell = 1, periodic_copy_num(pp)
-        yy(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
-        do ip = 1, mesh%np
-          call mesh_r(mesh, ip, rr, origin = pos, coords = xx)
-          xx(1:mesh%sb%dim) = xx(1:mesh%sb%dim) + yy(1:mesh%sb%dim)
-          rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
-
-          rerho = M_ZERO
-          if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-            if(volume_in_volume(mesh%sb, volume, xx, rr)) rerho = M_ONE
-          else
-            call parse_expression(rerho, imrho1, mesh%sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
-          end if
-          rho(ip) = rho(ip) - rerho
-        end do
-      end do
-
-      if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-         call volume_end(volume)
-      end if
-      call periodic_copy_end(pp)
-
-      rr = species_zval(species) / abs(dmf_integrate(mesh, rho(:)))
-      rho(1:mesh%np) = rr * rho(1:mesh%np)
-
     end select
 
     call profiling_out(prof)
@@ -794,75 +655,6 @@ contains
     call profiling_in(prof, "SPECIES_GET_LOCAL")
 
       select case(species_type(species))
-
-      case(SPECIES_SOFT_COULOMB)
-
-        do ip = 1, mesh%np
-          xx(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
-          r2 = sum(xx(1:mesh%sb%dim)**2)
-          vl(ip) = -species_zval(species)/sqrt(r2+species_sc_alpha(species))
-        end do
-
-      case(SPECIES_USDEF)
-
-        do ip = 1, mesh%np
-          
-          xx = M_ZERO
-          xx(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
-          r = sqrt(sum(xx(1:mesh%sb%dim)**2))
-          
-          ! Note that as the spec%user_def is in input units, we have to convert
-          ! the units back and forth
-          forall(idim = 1:mesh%sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
-          r = units_from_atomic(units_inp%length, r)
-          zpot = species_userdef_pot(species, mesh%sb%dim, xx, r)
-          vl(ip)   = units_to_atomic(units_inp%energy, real(zpot))
-
-        end do
-
-
-      case(SPECIES_FROM_FILE)
-
-        call dio_function_input(trim(species_filename(species)), mesh, vl, err)
-        if(err /= 0) then
-          write(message(1), '(a)')    'Error loading file '//trim(species_filename(species))//'.'
-          write(message(2), '(a,i4)') 'Error code returned = ', err
-          call messages_fatal(2)
-        end if
-
-      case(SPECIES_JELLIUM)
-        a1 = species_z(species)/(M_TWO*species_jradius(species)**3)
-        a2 = species_z(species)/species_jradius(species)
-        Rb2= species_jradius(species)**2
-        
-        do ip = 1, mesh%np
-          
-          xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
-          r = sqrt(sum(xx(1:mesh%sb%dim)**2))
-          
-          if(r <= species_jradius(species)) then
-            vl(ip) = (a1*(r*r - Rb2) - a2)
-          else
-            vl(ip) = -species_z(species)/r
-          end if
-          
-        end do
-      
-      case(SPECIES_JELLIUM_SLAB)
-        a1 = M_TWO *M_PI * species_z(species)/ (M_FOUR *mesh%sb%lsize(1) *mesh%sb%lsize(2) )
-
-        do ip = 1, mesh%np
-
-          r = abs( mesh%x(ip, 3 ) )
-
-          if(r <= species_jthick(species)/M_TWO ) then
-            vl(ip) = a1 *( r*r/species_jthick(species) + species_jthick(species)/M_FOUR )
-          else
-            vl(ip) = a1 *r
-          end if
-
-        end do
-
       case(SPECIES_PSEUDO)
        
         ps => species_ps(species)
@@ -878,7 +670,7 @@ contains
 
         nullify(ps)
         
-      case(SPECIES_FULL_DELTA, SPECIES_CHARGE_DENSITY, SPECIES_JELLIUM_CHARGE_DENSITY)
+      case(SPECIES_FULL_DELTA)
         vl(1:mesh%np) = M_ZERO
         
       end select

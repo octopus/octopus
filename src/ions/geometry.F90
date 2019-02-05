@@ -85,7 +85,6 @@ module geometry_oct_m
     integer :: nspecies
     type(species_t), pointer :: species(:)
 
-    logical :: only_user_def        !< Do we want to treat only user-defined species?
     logical :: species_time_dependent !< For time-dependent user defined species
 
     FLOAT :: kinetic_energy         !< the ion kinetic energy
@@ -119,7 +118,6 @@ contains
     this%natoms=0
     this%ncatoms=0
     this%nspecies=0
-    this%only_user_def=.false.
     this%species_time_dependent=.false.
     this%kinetic_energy=M_ZERO
     this%nlpp=.false.
@@ -225,7 +223,7 @@ contains
     type(geometry_t),  intent(inout) :: geo
     logical, optional, intent(in)    :: print_info
 
-    logical :: print_info_, spec_user_defined
+    logical :: print_info_
     integer :: i, j, k, ispin
 
     PUSH_SUB(geometry_init_species)
@@ -248,7 +246,6 @@ contains
 
     ! Now, read the data.
     k = 0
-    geo%only_user_def = .true.
     atoms2: do i = 1, geo%natoms
       do j = 1, i - 1
         if(atom_same_species(geo%atom(j), geo%atom(i))) cycle atoms2
@@ -256,13 +253,6 @@ contains
       k = k + 1
       call species_init(geo%species(k), atom_get_label(geo%atom(j)), k)
       call species_read(geo%species(k))
-      ! these are the species which do not represent atoms
-      geo%only_user_def = geo%only_user_def .and. .not. species_represents_real_atom(geo%species(k))
-      
-      if(species_is_ps(geo%species(k)) .and. geo%space%dim /= 3) then
-        message(1) = "Pseudopotentials may only be used with Dimensions = 3."
-        call messages_fatal(1)
-      end if
     end do atoms2
 
     ! Reads the spin components. This is read here, as well as in states_init,
@@ -279,26 +269,6 @@ contains
     end do
     if(print_info_) then
       call messages_print_stress(stdout)
-    end if
-
-    !%Variable SpeciesTimeDependent
-    !%Type logical
-    !%Default no
-    !%Section System::Species
-    !%Description
-    !% When this variable is set, the potential defined in the block <tt>Species</tt> is calculated
-    !% and applied to the Hamiltonian at each time step. You must have at least one <tt>species_user_defined</tt>
-    !% type of species to use this.
-    !%End
-    call parse_variable('SpeciesTimeDependent', .false., geo%species_time_dependent)
-    ! we must have at least one user defined species in order to have time dependency
-    do i = 1,geo%nspecies
-      if(species_type(geo%species(i)) == SPECIES_USDEF) then
-        spec_user_defined = .true.
-      end if
-    end do
-    if (geo%species_time_dependent .and. .not. spec_user_defined) then
-      call messages_input_error('SpeciesTimeDependent')
     end if
 
     !  assign species
@@ -491,27 +461,20 @@ contains
 
   !> Beware: this is wrong for periodic systems. Use simul_box_min_distance instead.
   ! ---------------------------------------------------------
-  FLOAT function geometry_min_distance(geo, real_atoms_only) result(rmin)
+  FLOAT function geometry_min_distance(geo) result(rmin)
     type(geometry_t),  intent(in) :: geo
-    logical, optional, intent(in) :: real_atoms_only
 
     integer :: i, j
     FLOAT   :: r
-    logical :: real_atoms_only_
     type(species_t), pointer :: species
 
     PUSH_SUB(geometry_min_distance)
 
-    real_atoms_only_ = .false.
-    if(present(real_atoms_only)) real_atoms_only_ = real_atoms_only
-
     rmin = huge(rmin)
     do i = 1, geo%natoms
       call atom_get_species(geo%atom(i), species)
-      if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
       do j = i + 1, geo%natoms
         call atom_get_species(geo%atom(i), species)
-        if(real_atoms_only_ .and. .not. species_represents_real_atom(species)) cycle
         r = atom_distance(geo%atom(i), geo%atom(j))
         if(r < rmin) then
           rmin = r
@@ -751,7 +714,6 @@ contains
     SAFE_ALLOCATE(geo_out%species(1:geo_out%nspecies))
     geo_out%species = geo_in%species
 
-    geo_out%only_user_def     = geo_in%only_user_def
     geo_out%kinetic_energy    = geo_in%kinetic_energy
     geo_out%nlpp              = geo_in%nlpp
     geo_out%nlcc              = geo_in%nlcc
