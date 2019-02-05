@@ -21,10 +21,6 @@
 sharedir = $(pkgdatadir)/testsuite/periodic_systems
 
 dist_share_DATA =                                \
-	01-free_electrons.01-ground_state.inp    \
-	01-free_electrons.test                   \
-	02-cosine_potential.01-ground_state.inp  \
-	02-cosine_potential.test                 \
 	03-sodium_chain.01-ground_state.inp      \
 	03-sodium_chain.03-ground_state_disp.inp \
 	03-sodium_chain.test                     \

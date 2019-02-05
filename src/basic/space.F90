@@ -54,29 +54,15 @@ module space_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine space_init(this, dim)
+  subroutine space_init(this)
     type(space_t),     intent(inout) :: this
-    integer, optional, intent(in)    :: dim
 
-    PUSH_SUB(space_init_simple)
+    PUSH_SUB(space_init)
     
-    if(present(dim))then
-      this%dim=dim
-    else
-      !%Variable Dimensions
-      !%Type integer
-      !%Section System
-      !%Default 3
-      !%Description
-      !% <tt>Octopus</tt> can run in 1, 2 or 3 dimensions, depending on the value of this
-      !% variable (or more, if configured with <tt>--with-max-dim=4</tt> or higher).
-      !% Note that not all input variables may be available in all cases.
-      !%End
-      call parse_variable('Dimensions', default_ndim, this%dim)
-    end if
-    if((this%dim>MAX_DIM).or.(this%dim<1)) call messages_input_error('Dimensions')
+    this%dim = 3
+    call messages_obsolete_variable('Dimensions')
 
-    POP_SUB(space_init_simple)
+    POP_SUB(space_init)
   end subroutine space_init
 
   ! ---------------------------------------------------------

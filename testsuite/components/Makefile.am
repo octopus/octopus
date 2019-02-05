@@ -21,11 +21,6 @@
 sharedir = $(pkgdatadir)/testsuite/components
 
 dist_share_DATA =                                  \
-	01-derivatives_1d.test                     \
-	01-derivatives_1d.01.inp                   \
-	01-derivatives_1d.02-fortran.inp           \
-	02-derivatives_2d.test                     \
-	02-derivatives_2d.01.inp                   \
 	03-derivatives_3d.test                     \
 	03-derivatives_3d.01.inp                   \
 	04-hartree_3d_cg.test                      \
@@ -61,8 +56,6 @@ dist_share_DATA =                                  \
 	16-hartree_3d_libisf.test                  \
 	16-hartree_3d_libisf.01-libisf.inp         \
 	16-hartree_3d_libisf.02-libisf.inp         \
-	18-interpolation.01-1d.inp                 \
-	18-interpolation.02-2d.inp                 \
 	18-interpolation.03-3d.inp                 \
 	18-interpolation.test
 

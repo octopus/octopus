@@ -2,7 +2,6 @@
 
 UnitsOutput = ev_angstrom
 
-Dimensions = 3
 PeriodicDimensions = 1
 
 CalculationMode = gs
