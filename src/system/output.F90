@@ -67,7 +67,6 @@ module output_oct_m
   use varinfo_oct_m
   use v_ks_oct_m
   use vtk_oct_m
-  use young_oct_m
   use xc_oct_m
 
   implicit none

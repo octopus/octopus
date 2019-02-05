@@ -45,7 +45,6 @@ Execution.html: RUN_SCRIPT
 Calculation_Modes.html: RUN_SCRIPT
 Hamiltonian.html: RUN_SCRIPT
 Linear_Response.html: RUN_SCRIPT
-Math.html: RUN_SCRIPT
 Mesh.html: RUN_SCRIPT
 Output.html: RUN_SCRIPT
 SCF.html: RUN_SCRIPT

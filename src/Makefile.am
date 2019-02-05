@@ -119,18 +119,13 @@ all_f_srcs +=                                 \
 	math/checksum_interface.F90           \
 	math/fft.F90                          \
 	math/fftw.F90                         \
-	math/gauss_legendre.F90               \
 	math/lalg_adv.F90                     \
 	math/lalg_basic.F90                   \
 	math/lapack.F90                       \
 	math/loct_math.F90                    \
 	math/math.F90                         \
-	math/matrix.F90                       \
-	math/matrix_ops.F90                   \
 	math/metis.F90                        \
-	math/minimizer.F90                    \
 	math/pblas.F90                        \
-	math/permutations.F90                 \
 	math/pfft.F90                         \
 	math/quickrnd.F90                     \
 	math/scalapack.F90                    \
@@ -139,8 +134,7 @@ all_f_srcs +=                                 \
 	math/spline_filter.F90                \
 	math/splines.F90                      \
 	math/symm_op.F90                      \
-	math/tdfunction.F90                   \
-	math/young.F90
+	math/tdfunction.F90
 
 all_c_srcs +=                                 \
 	math/checksum.c                       \
@@ -148,7 +142,6 @@ all_c_srcs +=                                 \
 	math/dablas.c                         \
 	math/fftw_low.c                       \
 	math/metis_f.c                        \
-	math/minimizer_low.c                  \
 	math/oct_gsl_f.c                      \
 	math/spline_low.cc                    \
 	math/ylm.c
@@ -159,8 +152,6 @@ noinst_HEADERS +=                             \
 	math/lalg_basic_blas_inc.F90          \
 	math/lalg_adv_lapack_inc.F90          \
 	math/math_inc.F90                     \
-	math/matrix_inc.F90                   \
-	math/matrix_ops_inc.F90               \
 	math/solvers_inc.F90                  \
 	math/symm_op_inc.F90
 
