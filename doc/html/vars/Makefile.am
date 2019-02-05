@@ -28,7 +28,6 @@ dist_doc_DATA = \
 	Calculation_Modes.html \
 	Hamiltonian.html \
 	Linear_Response.html \
-	Math.html \
 	Mesh.html \
 	Output.html \
 	SCF.html \
