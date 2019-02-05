@@ -18,11 +18,12 @@
 
 ! ---------------------------------------------------------
 !> conjugate-gradients method.
-subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff, shift, orthogonalize_to_all, conjugate_direction)
+subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, diff, shift, orthogonalize_to_all, conjugate_direction)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
   type(preconditioner_t), intent(in)    :: pre
+  type(xc_t),             intent(in)    :: xc
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged
@@ -39,18 +40,41 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   FLOAT    :: cg0, e0, res, norm, alpha, beta, dot, old_res, old_energy, first_delta_e
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
-  integer  :: ist, iter, maxter, idim, ip, jst, im
+  FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :)
+  FLOAT    :: integral_hartree, integral_xc
+  integer  :: ist, iter, maxter, idim, ip, jst, im, isp, ixc
   R_TYPE   :: sb(3)
-  logical   :: fold_ ! use folded spectrum operator (H-shift)^2
+  logical  :: fold_ ! use folded spectrum operator (H-shift)^2
+  logical  :: add_xc_term
 
   PUSH_SUB(X(eigensolver_cg2))
 
-  ! if the optional shift argument is present, assume we are computing a folded spectrum 
+  ! if the optional shift argument is present, assume we are computing a folded spectrum
   fold_ =  present(shift)
 
   ! make sure the passed optional pointer is allocated
   if(fold_) then
     ASSERT(associated(shift))
+  end if
+
+  ! do we add the XC term? needs derivatives of the XC functional
+  add_xc_term = .true.
+  if(st%d%ispin == UNPOLARIZED) then
+    isp = 1
+  else
+    isp = 2
+  end if
+  do ixc = 1, 2
+    if(bitand(xc%kernel(ixc, isp)%flags, XC_FLAGS_HAVE_FXC) == 0) then
+      add_xc_term = .false.
+    end if
+  end do
+  if(bitand(xc%kernel_family, XC_FAMILY_LDA) == 0) then
+    add_xc_term = .false.
+  end if
+  ! TODO: extend to spinors
+  if(st%d%ispin == SPINORS) then
+    add_xc_term = .false.
   end if
 
   maxter = niter
@@ -62,8 +86,15 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   SAFE_ALLOCATE(   cg(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(    g(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(   g0(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(   g_prev(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(g_prev(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE( h_cg(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(  chi(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(omega(1:gr%mesh%np_part, 1:st%d%dim))
+  if(st%d%ispin == UNPOLARIZED) then
+    SAFE_ALLOCATE(fxc(1:gr%mesh%np, 1:1, 1:1))
+  else if(st%d%ispin == SPIN_POLARIZED) then
+    SAFE_ALLOCATE(fxc(1:gr%mesh%np, 1:2, 1:2))
+  end if
   if(fold_) then
     SAFE_ALLOCATE( psi2(1:gr%mesh%np_part, 1:st%d%dim))
   end if
@@ -98,7 +129,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 
     if(fold_) then
       call X(hamiltonian_apply)(hm, gr%der, h_psi, psi2, ist, ik)
-      ! h_psi = (H-shift)^2 psi 
+      ! h_psi = (H-shift)^2 psi
       h_psi = psi2 - M_TWO*shift(ist,ik)*h_psi + shift(ist,ik)**2*psi
     end if
 
@@ -170,7 +201,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
         res = sqrt(abs(gg))
 
         if(debug%info) then
-          write(message(1), '(a,i4,a,i4,a,i4,a,es12.6,a,i4)') 'Debug: CG Eigensolver - ik', ik, &
+          write(message(1), '(a,i4,a,i4,a,i4,a,es13.6,a,i4)') 'Debug: CG Eigensolver - ik', ik, &
                ' ist ', ist, ' iter ', iter, ' res ', res, " max ", maxter
           call messages_info(1)
         end if
@@ -243,6 +274,33 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       !es(1) = M_HALF*((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) + e0 + b0)
       !es(2) = -M_HALF*((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) - (e0 + b0))
       alpha = M_TWO * R_REAL(e0 - b0)
+
+      ! more terms here, see PTA92 eqs 5.31, 5.32, 5.33, 5.36
+      ! Hartree term
+      forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+        chi(ip, idim) = M_TWO * R_REAL(R_CONJ(cg(ip, idim)/cg0) * psi(ip, idim))
+      end forall
+      call dpoisson_solve(psolver, omega(:, 1), chi(:, 1), all_nodes = .false.)
+      integral_hartree = dmf_dotp(gr%mesh, st%d%dim, chi, omega)
+
+      ! exchange term
+      ! TODO: adapt to different spin cases
+      if(add_xc_term) then
+        fxc = M_ZERO
+        call xc_get_fxc(xc, gr%mesh, st%rho, st%d%ispin, fxc)
+        integral_xc = dmf_dotp(gr%mesh, st%d%dim, fxc(:, :, 1), chi(:, :)**2)
+      else
+        integral_xc = M_ZERO
+      end if
+
+      write(message(1), '(a,3i,a,3es12.5)') 'Debug: ik, ist, iter: ', ik, ist, iter, '- alpha, hartree, xc:', alpha, integral_hartree, integral_xc
+      call messages_info(1)
+
+      ! add additional terms to alpha (alpha is -d2e/dtheta2 from eq. 5.31)
+      ! TODO: multiply prefactor by k-point weight
+      alpha = alpha - st%occ(ist, 1) * (integral_hartree + integral_xc)
+
+
       beta = R_REAL(a0) * M_HALF
       theta = atan(beta/alpha)*M_HALF
       stheta = sin(theta)
@@ -339,6 +397,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
   SAFE_DEALLOCATE_A(g0)
   SAFE_DEALLOCATE_A(cg)
   SAFE_DEALLOCATE_A(h_cg)
+  SAFE_DEALLOCATE_A(chi)
+  SAFE_DEALLOCATE_A(omega)
+  SAFE_DEALLOCATE_A(fxc)
   if(fold_) then
     SAFE_DEALLOCATE_A(psi2)
   end if
@@ -431,7 +492,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
 
       if(debug%info) then
         norm = X(mf_nrm2)(gr%mesh, dim, phi)
-        write(message(1), '(a,i4,a,i4,a,i4,a,es12.6,a,es12.6)') 'Debug: CG New Eigensolver - ik', ik, &
+        write(message(1), '(a,i4,a,i4,a,i4,a,es13.6,a,es13.6)') 'Debug: CG New Eigensolver - ik', ik, &
           ' ist ', ist, ' iter ', i + 1, ' res ', res, ' ', res/norm
         call messages_info(1)
       end if

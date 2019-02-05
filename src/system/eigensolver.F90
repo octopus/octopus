@@ -49,6 +49,7 @@ module eigensolver_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -77,6 +78,8 @@ module eigensolver_oct_m
     type(preconditioner_t) :: pre
 
     type(subspace_t) :: sdiag
+
+    type(xc_t) :: xc
 
     integer :: rmmdiis_minimization_iter
 
@@ -107,10 +110,11 @@ module eigensolver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_init(eigens, gr, st)
+  subroutine eigensolver_init(eigens, gr, st, xc)
     type(eigensolver_t), intent(out)   :: eigens
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(in)    :: st
+    type(xc_t),          intent(in)    :: xc
 
     integer :: default_iter, default_es
     FLOAT   :: default_tol
@@ -368,6 +372,9 @@ contains
     call parse_variable('EigensolverSkipKpoints', .false., eigens%skip_finite_weight_kpoints)
     call messages_print_var_value(stdout,'EigensolverSkipKpoints',  eigens%skip_finite_weight_kpoints)
 
+    ! set KS object
+    eigens%xc = xc
+
     POP_SUB(eigensolver_init)
   end subroutine eigensolver_init
 
@@ -448,7 +455,7 @@ contains
         case(RS_CG_NEW)
           call deigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
-          call deigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
+          call deigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), &
             orthogonalize_to_all=eigens%orthogonalize_to_all, &
             conjugate_direction=eigens%conjugate_direction)
@@ -486,12 +493,12 @@ contains
           call zeigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
            if(eigens%folded_spectrum) then
-             call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, & 
+             call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, & 
                                 eigens%diff(:, ik), shift=eigens%spectrum_shift, &
                                 orthogonalize_to_all=eigens%orthogonalize_to_all, &
                                 conjugate_direction=eigens%conjugate_direction)
            else
-              call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
+              call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
                                 eigens%diff(:, ik), &
                                 orthogonalize_to_all=eigens%orthogonalize_to_all, &
                                 conjugate_direction=eigens%conjugate_direction)
