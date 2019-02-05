@@ -147,9 +147,6 @@ module hamiltonian_oct_m
     FLOAT :: current_time
     logical :: apply_packed  !< This is initialized by the StatesPack variable.
     
-    !> For the Rashba spin-orbit coupling
-    FLOAT :: rashba_coupling
-
     logical :: time_zero
   end type hamiltonian_t
 
@@ -210,26 +207,7 @@ contains
     !%End
     call parse_variable('ParticleMass', M_ONE, hm%mass)
 
-    !%Variable RashbaSpinOrbitCoupling
-    !%Type float
-    !%Default 0.0
-    !%Section Hamiltonian
-    !%Description
-    !% (Experimental.) For systems described in 2D (electrons confined to 2D in semiconductor structures), one
-    !% may add the Bychkov-Rashba spin-orbit coupling term [Bychkov and Rashba, <i>J. Phys. C: Solid
-    !% State Phys.</i> <b>17</b>, 6031 (1984)]. This variable determines the strength
-    !% of this perturbation, and has dimensions of energy times length.
-    !%End
-    call parse_variable('RashbaSpinOrbitCoupling', M_ZERO, hm%rashba_coupling, units_inp%energy * units_inp%length)
-    if(parse_is_defined('RashbaSpinOrbitCoupling')) then
-      if(gr%sb%dim .ne. 2) then
-        write(message(1),'(a)') 'Rashba spin-orbit coupling can only be used for two-dimensional systems.'
-        call messages_fatal(1)
-      end if
-      call messages_experimental('RashbaSpinOrbitCoupling')
-    end if
-
-    call hamiltonian_base_init(hm%hm_base, hm%d%nspin, hm%mass, hm%rashba_coupling)
+    call hamiltonian_base_init(hm%hm_base, hm%d%nspin, hm%mass)
 
     ASSERT(associated(gr%der%lapl))
     hm%hm_base%kinetic => gr%der%lapl
@@ -267,11 +245,8 @@ contains
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, gr%sb)
 
-    !Static magnetic field requires complex wavefunctions
-    !Static magnetic field or rashba spin-orbit interaction requires complex wavefunctions
-    if (associated(hm%ep%B_field) .or. &
-      gauge_field_is_applied(hm%ep%gfield) .or. &
-      parse_is_defined('RashbaSpinOrbitCoupling')) call states_set_complex(st)
+    !Static magnetic field or gauge field requires complex wavefunctions
+    if (associated(hm%ep%B_field) .or. gauge_field_is_applied(hm%ep%gfield)) call states_set_complex(st)
 
     ! Boundaries
     call bc_init(hm%bc, gr%mesh, gr%mesh%sb, hm%geo)

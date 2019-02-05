@@ -134,10 +134,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
              states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
   end if
   
-  if (bitand(TERM_OTHERS, terms_) /= 0 ) then
-    call X(hamiltonian_base_rashba)(hm%hm_base, der, hm%d, epsib, hpsib)
-  end if
-
   if (bitand(TERM_OTHERS, terms_) /= 0) then
 
     call profiling_in(prof_exx, "EXCHANGE_OPERATOR")

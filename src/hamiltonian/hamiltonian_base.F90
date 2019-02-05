@@ -65,8 +65,6 @@ module hamiltonian_base_oct_m
     zhamiltonian_base_local_sub,               &
     dhamiltonian_base_magnetic,                &
     zhamiltonian_base_magnetic,                &
-    dhamiltonian_base_rashba,                  &
-    zhamiltonian_base_rashba,                  &
     dhamiltonian_base_nlocal_start,            &
     zhamiltonian_base_nlocal_start,            &
     dhamiltonian_base_nlocal_finish,           &
@@ -92,7 +90,6 @@ module hamiltonian_base_oct_m
   type hamiltonian_base_t
     integer                               :: nspin
     FLOAT                                 :: mass  !< Needed to compute the magnetic terms, if the mass is not one.
-    FLOAT                                 :: rashba_coupling
     type(nl_operator_t),      pointer     :: kinetic
     type(projector_matrix_t), allocatable :: projector_matrices(:) 
     FLOAT,                    allocatable :: potential(:, :)
@@ -155,17 +152,15 @@ module hamiltonian_base_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_base_init(this, nspin, mass, rashba_coupling)
+  subroutine hamiltonian_base_init(this, nspin, mass)
     type(hamiltonian_base_t), intent(inout) :: this
     integer,                  intent(in)    :: nspin
     FLOAT,                    intent(in)    :: mass
-    FLOAT,                    intent(in)    :: rashba_coupling
 
     PUSH_SUB(hamiltonian_base_init)
 
     this%nspin = nspin
     this%mass  = mass
-    this%rashba_coupling = rashba_coupling
 
     this%apply_projector_matrices = .false.
     this%nprojector_matrices = 0

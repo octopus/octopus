@@ -359,64 +359,6 @@ subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
   POP_SUB(X(hamiltonian_base_phase))
 end subroutine X(hamiltonian_base_phase)
 
-! ---------------------------------------------------------------------------------------
-
-subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
-  type(hamiltonian_base_t),    intent(in)    :: this
-  type(derivatives_t),         intent(in)    :: der
-  type(states_dim_t),          intent(in)    :: std
-  type(batch_t), target,       intent(in)    :: psib
-  type(batch_t), target,       intent(inout) :: vpsib
-
-  integer :: ist, idim, ip
-  R_TYPE, allocatable :: psi(:, :), vpsi(:, :), grad(:, :, :)
-  PUSH_SUB(X(hamiltonian_base_rashba))
-
-  if(abs(this%rashba_coupling) < M_EPSILON) then
-    POP_SUB(X(hamiltonian_base_rashba))
-    return
-  end if
-  ASSERT(std%ispin == SPINORS)
-  ASSERT(der%mesh%sb%dim == 2)
-
-  SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:std%dim))
-  SAFE_ALLOCATE(vpsi(1:der%mesh%np, 1:std%dim))
-  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:der%mesh%sb%dim, 1:std%dim))
-
-  do ist = 1, psib%nst
-    call batch_get_state(psib, ist, der%mesh%np_part, psi)
-    call batch_get_state(vpsib, ist, der%mesh%np, vpsi)
-
-    do idim = 1, std%dim
-      call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
-    end do
- 
-    if(allocated(this%vector_potential)) then
-      forall(ip = 1:der%mesh%np)
-        vpsi(ip, 1) = vpsi(ip, 1) + &
-          (this%rashba_coupling) * (this%vector_potential(2, ip) + M_zI * this%vector_potential(1, ip)) * psi(ip, 2)
-        vpsi(ip, 2) = vpsi(ip, 2) + &
-          (this%rashba_coupling) * (this%vector_potential(2, ip) - M_zI * this%vector_potential(1, ip)) * psi(ip, 1)
-      end forall
-    end if
-
-    forall(ip = 1:der%mesh%np)
-      vpsi(ip, 1) = vpsi(ip, 1) - &
-        this%rashba_coupling*( grad(ip, 1, 2) - M_zI*grad(ip, 2, 2) )
-      vpsi(ip, 2) = vpsi(ip, 2) + &
-        this%rashba_coupling*( grad(ip, 1, 1) + M_zI*grad(ip, 2, 1) )
-    end forall
-
-    call batch_set_state(vpsib, ist, der%mesh%np, vpsi)
-  end do
-  
-  SAFE_DEALLOCATE_A(grad)
-  SAFE_DEALLOCATE_A(vpsi)
-  SAFE_DEALLOCATE_A(psi)
-  
-  POP_SUB(X(hamiltonian_base_rashba))
-end subroutine X(hamiltonian_base_rashba)
-
 ! -----------------------------------------------------------------------------
 
 subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
