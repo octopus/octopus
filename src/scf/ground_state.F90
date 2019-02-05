@@ -112,7 +112,7 @@ contains
     call scf_init(scfv, sys%gr, sys%geo, sys%st, sys%mc, hm)
 
     if(fromScratch) then
-      call lcao_run(sys, hm, lmm_r = scfv%lmm_r)
+      call lcao_run(sys, hm)
     else
       ! setup Hamiltonian
       call messages_write('Info: Setting up Hamiltonian.')

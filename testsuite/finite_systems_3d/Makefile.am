@@ -56,7 +56,6 @@ dist_share_DATA = \
         17-scfinlcao_alt.test                         \
 	17-scfinlcao_alt.Cl.psf                       \
         17-scfinlcao_alt.01-gs.inp                    \
-	20-eigensolver.01-lobpcg.inp \
 	20-eigensolver.02-cg.inp \
 	20-eigensolver.03-cg_new.inp \
 	20-eigensolver.04-plan.inp \
@@ -64,9 +63,6 @@ dist_share_DATA = \
 	20-eigensolver.06-rmmdiis.inp \
 	20-eigensolver.07-psd.inp \
 	20-eigensolver.test \
-	21-lobpcg.01-spin_polarized.inp \
-	21-lobpcg.02-spinors.inp \
-	21-lobpcg.test \
 	22-preconditioner.test                       \
 	22-preconditioner.01-none.inp                \
 	24-o2-spin.test                              \

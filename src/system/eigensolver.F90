@@ -22,7 +22,6 @@ module eigensolver_oct_m
   use batch_oct_m
   use derivatives_oct_m
   use eigen_cg_oct_m
-  use eigen_lobpcg_oct_m
   use eigen_rmmdiis_oct_m
   use energy_calc_oct_m
   use exponential_oct_m
@@ -92,7 +91,6 @@ module eigensolver_oct_m
        RS_CG      =  5,         &
        RS_CG_NEW  =  6,         &
        RS_EVO     =  9,         &
-       RS_LOBPCG  =  8,         &
        RS_RMMDIIS = 10,         &
        RS_PSD      = 14
   
@@ -116,8 +114,7 @@ contains
     !%Description
     !% Which eigensolver to use to obtain the lowest eigenvalues and
     !% eigenfunctions of the Kohn-Sham Hamiltonian. The default is
-    !% conjugate gradients (<tt>cg</tt>), except that when parallelization in states is
-    !% enabled, the default is <tt>lobpcg</tt>.
+    !% conjugate gradients (<tt>cg</tt>).
     !%Option cg 5
     !% Conjugate-gradients algorithm.
     !%Option plan 11
@@ -129,12 +126,6 @@ contains
     !% Ref: Jiang et al., <i>Phys. Rev. B</i> <b>68</b>, 165337 (2003)
     !%Option evolution 9
     !% (Experimental) Propagation in imaginary time.
-    !%Option lobpcg 8
-    !% (Experimental) Locally optimal block-preconditioned
-    !% conjugate-gradient algorithm. Ref: A. Knyazev, Toward the
-    !% Optimal Preconditioned Eigensolver: Locally Optimal Block
-    !% Preconditioned Conjugate Gradient Method, <i>SIAM Journal on
-    !% Scientific Computing</i>, 23(2):517-541, 2001.  
     !%Option rmmdiis 10 
     !% Residual minimization scheme, direct inversion in the
     !% iterative subspace eigensolver, based on the implementation of
@@ -151,11 +142,7 @@ contains
     !% (Experimental) Precondtioned steepest descent optimization of the eigenvectors.
     !%End
 
-    if(st%parallel_in_states) then
-      default_es = RS_LOBPCG
-    else
-      default_es = RS_CG
-    end if
+    default_es = RS_CG
 
     call parse_variable('Eigensolver', default_es, eigens%es_type)
 
@@ -164,9 +151,6 @@ contains
       message(2) = "Please use the lobpcg, psd, or rmmdiis eigensolvers."
       call messages_fatal(2)
     end if
-
-    if(eigens%es_type == RS_LOBPCG .and. st%group%block_start /= st%group%block_end) &
-      call messages_experimental("lobpcg eigensolver with more than one block per node")
 
     call messages_obsolete_variable('EigensolverVerbose')
     call messages_obsolete_variable('EigensolverSubspaceDiag', 'SubspaceDiagonalization')
@@ -192,7 +176,6 @@ contains
       !%End
       call parse_variable('EigensolverImaginaryTime', CNST(10.0), eigens%imag_time)
       if(eigens%imag_time <= M_ZERO) call messages_input_error('EigensolverImaginaryTime')
-    case(RS_LOBPCG)
     case(RS_RMMDIIS)
       default_iter = 3
 
@@ -278,7 +261,7 @@ contains
     end if
 
     select case(eigens%es_type)
-    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
+    case(RS_PLAN, RS_CG, RS_RMMDIIS, RS_PSD)
       call preconditioner_init(eigens%pre, gr)
     case default
       call preconditioner_null(eigens%pre)
@@ -339,7 +322,7 @@ contains
     PUSH_SUB(eigensolver_end)
 
     select case(eigens%es_type)
-    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
+    case(RS_PLAN, RS_CG, RS_RMMDIIS, RS_PSD)
       call preconditioner_end(eigens%pre)
     end select
 
@@ -415,9 +398,6 @@ contains
         case(RS_EVO)
           call deigensolver_evolution(gr, st, hm, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
-        case(RS_LOBPCG)
-          call deigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-            eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
         case(RS_RMMDIIS)
           if(iter <= eigens%rmmdiis_minimization_iter) then
             maxiter = 2
@@ -456,9 +436,6 @@ contains
         case(RS_EVO)
           call zeigensolver_evolution(gr, st, hm, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
-        case(RS_LOBPCG)
-          call zeigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-            eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
         case(RS_RMMDIIS)
           if(iter <= eigens%rmmdiis_minimization_iter) then
             maxiter = 2
@@ -548,7 +525,7 @@ contains
     par_stat = .false.
 
     select case(this%es_type)
-    case(RS_RMMDIIS, RS_LOBPCG, RS_PSD)
+    case(RS_RMMDIIS, RS_PSD)
       par_stat = .true.
     end select
 
@@ -565,7 +542,7 @@ contains
     has = .false.
 
     select case(this%es_type)
-    case(RS_RMMDIIS, RS_CG, RS_CG_NEW, RS_LOBPCG)
+    case(RS_RMMDIIS, RS_CG, RS_CG_NEW)
       has = .true.
     end select
 

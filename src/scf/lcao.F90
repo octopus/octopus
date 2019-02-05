@@ -686,11 +686,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_run(sys, hm, st_start, lmm_r)
+  subroutine lcao_run(sys, hm, st_start)
     type(system_t),      intent(inout) :: sys
     type(hamiltonian_t), intent(inout) :: hm
     integer, optional,   intent(in)    :: st_start !< use for unoccupied-states run
-    FLOAT,   optional,   intent(in)    :: lmm_r !< used only if not present(st_start)
 
     type(lcao_t) :: lcao
     integer :: st_start_random

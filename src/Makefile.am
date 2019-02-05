@@ -315,7 +315,6 @@ all_f_srcs +=                                   \
 	states/density.F90                      \
 	states/physics_op.F90                   \
 	states/smear.F90                        \
-	states/states_block.F90                 \
 	states/states_calc.F90                  \
 	states/states_dim.F90                   \
 	states/states.F90                       \
@@ -327,7 +326,6 @@ all_f_srcs +=                                   \
 noinst_HEADERS +=                               \
 	states/density_inc.F90                  \
 	states/physics_op_inc.F90               \
-	states/states_block_inc.F90             \
 	states/states_calc_inc.F90              \
 	states/states_inc.F90                   \
 	states/states_parallel_inc.F90
@@ -343,7 +341,6 @@ all_f_srcs +=                                        \
 	hamiltonian/gauge_field.F90                  \
 	hamiltonian/hamiltonian_base.F90             \
 	hamiltonian/hamiltonian.F90                  \
-	hamiltonian/hirshfeld.F90                    \
 	hamiltonian/ion_interaction.F90              \
 	hamiltonian/kb_projector.F90                 \
 	hamiltonian/kick.F90                         \
@@ -370,7 +367,6 @@ noinst_HEADERS +=                                    \
 all_f_srcs +=                                   \
 	system/current.F90                      \
 	system/eigen_cg.F90                     \
-	system/eigen_lobpcg.F90                 \
 	system/eigen_rmmdiis.F90                \
 	system/eigensolver.F90                  \
 	system/energy_calc.F90                  \
@@ -386,7 +382,6 @@ all_f_srcs +=                                   \
 noinst_HEADERS +=                               \
 	system/eigen_cg_inc.F90                 \
 	system/eigen_evolution_inc.F90          \
-	system/eigen_lobpcg_inc.F90             \
 	system/eigen_plan_inc.F90               \
 	system/eigen_rmmdiis_inc.F90            \
 	system/energy_calc_inc.F90              \
