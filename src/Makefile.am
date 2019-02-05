@@ -56,7 +56,6 @@ all_f_srcs =                                   \
 	basic/iihash.F90                       \
 	basic/io_binary_f.F90                  \
 	basic/io.F90                           \
-	basic/kinds.F90                        \
 	basic/loct.F90                         \
 	basic/loct_pointer.F90                 \
 	basic/lookup.F90                       \
@@ -66,12 +65,10 @@ all_f_srcs =                                   \
 	basic/mpi_lib.F90                      \
 	basic/multicomm.F90                    \
 	basic/parser.F90                       \
-	basic/path.F90                         \
 	basic/profiling.F90                    \
 	basic/sort.F90                         \
 	basic/space.F90                        \
 	basic/string.F90                       \
-	basic/topology.F90                     \
 	basic/types.F90                        \
 	basic/unit.F90                         \
 	basic/unit_system.F90                  \
