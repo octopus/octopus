@@ -23,7 +23,5 @@ ParStates = auto
 
 FilterPotentials = filter_none
 
-SCFCalculatePartialCharges = yes
-
 ExperimentalFeatures = yes
 MixField = density

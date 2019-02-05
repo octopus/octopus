@@ -96,45 +96,8 @@
         end do
         SAFE_DEALLOCATE_A(potential)
       end if
-
-      if(hm%self_induced_magnetic) then
-        ! unit of magnetic field is same as of electric field, and same as force (since e = 1)
-        select case(der%mesh%sb%dim)
-        case(3)
-          do idir = 1, der%mesh%sb%dim
-            call dio_function_output(outp%how, dir, 'Bind_'//index2axis(idir), der%mesh, hm%b_ind(:, idir), &
-              units_out%force, err, geo = geo, grp = grp)
-          end do
-        case(2)
-          call dio_function_output(outp%how, dir, 'Bind_z', der%mesh, hm%b_ind(:, 1), units_out%force, err, geo = geo, grp = grp)
-        end select
-      end if
     end if
 
-
-    if(bitand(outp%what, OPTION__OUTPUT__XC_DENSITY) /= 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES) then
-      SAFE_ALLOCATE(v0(1:der%mesh%np_part, 1))
-      SAFE_ALLOCATE(nxc(1:der%mesh%np))
-
-      do is = 1, min(hm%d%ispin, 2)
-        if(hm%d%ispin == 1) then
-          write(fname, '(a)') 'nxc'
-        else
-          write(fname, '(a,i1)') 'nxc-sp', is
-        end if
-                
-        v0(1:der%mesh%np, 1) = hm%vxc(1:der%mesh%np, is)
-
-        call dderivatives_lapl(der, v0(:, 1), nxc)
-
-        call dio_function_output(outp%how, dir, fname, der%mesh, nxc, units_out%energy, err, geo = geo, grp = grp)
-        
-      end do
-
-      SAFE_DEALLOCATE_A(v0)
-      SAFE_DEALLOCATE_A(nxc)
-    end if
-   
     if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
       if(states_are_complex(st)) then
       

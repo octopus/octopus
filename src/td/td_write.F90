@@ -36,7 +36,6 @@ module td_write_oct_m
   use lalg_adv_oct_m
   use loct_oct_m
   use loct_math_oct_m
-  use magnetic_oct_m
   use math_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
@@ -80,12 +79,10 @@ module td_write_oct_m
 
   integer, parameter ::   &
     OUT_MULTIPOLES  =  1, &
-    OUT_SPIN        =  3, &
     OUT_COORDS      =  5, &
     OUT_ACC         =  6, & 
     OUT_LASER       =  7, &
     OUT_ENERGY      =  8, &
-    OUT_MAGNETS     = 10, &
     OUT_GAUGE_FIELD = 11, &
     OUT_TEMPERATURE = 12, &
     OUT_FTCHD       = 13, &
@@ -103,7 +100,6 @@ module td_write_oct_m
     type(td_write_prop_t) :: out(OUT_MAX)
 
     integer        :: lmax     !< maximum multipole moment to output
-    FLOAT          :: lmm_r    !< radius of the sphere used to compute the local magnetic moments
     !> The states_type where the ground state is stored, in order to
     !! calculate the projections(s) onto it.
     type(states_t) :: gs_st    
@@ -176,9 +172,6 @@ contains
     !% Outputs the (electric) multipole moments of the density to the file <tt>td.general/multipoles</tt>.
     !% This is required to, <i>e.g.</i>, calculate optical absorption spectra of finite systems. The
     !% maximum value of <math>l</math> can be set with the variable <tt>TDMultipoleLmax</tt>.
-    !%Option spin bit(2)
-    !% (Experimental) Outputs the expectation value of the spin, which can be used to calculate magnetic
-    !% circular dichroism.
     !%Option geometry bit(4)
     !% If set (and if the atoms are allowed to move), outputs the coordinates, velocities,
     !% and forces of the atoms to the the file <tt>td.general/coordinates</tt>. On by default if <tt>MoveIons = yes</tt>.
@@ -192,9 +185,6 @@ contains
     !%Option energy bit(7)
     !% If set, <tt>octopus</tt> outputs the different components of the energy
     !% to the file <tt>td.general/energy</tt>. Will be zero except for every <tt>TDEnergyUpdateIter</tt> iterations.
-    !%Option local_mag_moments bit(9)
-    !% If set, outputs the local magnetic moments, integrated in sphere centered around each atom.
-    !% The radius of the sphere can be set with <tt>LocalMagneticMomentsSphereRadius</tt>.
     !%Option gauge_field bit(10)
     !% If set, outputs the vector gauge field corresponding to a spatially uniform (but time-dependent) 
     !% external electrical potential. This is only useful in a time-dependent periodic run.
@@ -238,9 +228,6 @@ contains
       writ%out(iout)%write = (bitand(flags, 2**(iout - 1)) /= 0)
     end do
 
-    ! experimental stuff
-    if(writ%out(OUT_SPIN)%write) call messages_experimental('TDOutput = spin')
-
     !%Variable TDMultipoleLmax
     !%Type integer
     !%Default 1
@@ -271,9 +258,6 @@ contains
         rmin = CNST(100.0)
       end if
     end if
-
-    ! This variable is documented in scf/scf.F90
-    call parse_variable('LocalMagneticMomentsSphereRadius', rmin*M_HALF, writ%lmm_r, units_inp%length)
 
     !%Variable TDOutputComputeInterval
     !%Type integer
@@ -319,14 +303,6 @@ contains
         call write_iter_init(writ%out(OUT_FTCHD)%handle, &
           first, units_from_atomic(units_out%time, dt), trim(io_workpath(filename)))
       end if  
-
-      if(writ%out(OUT_SPIN)%write) &
-        call write_iter_init(writ%out(OUT_SPIN)%handle, first, &
-          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/spin")))
-
-      if(writ%out(OUT_MAGNETS)%write) &
-        call write_iter_init(writ%out(OUT_MAGNETS)%handle, first, &
-          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/magnetic_moments")))
 
       if(writ%out(OUT_COORDS)%write) &
         call write_iter_init(writ%out(OUT_COORDS)%handle, first, &
@@ -438,12 +414,6 @@ contains
     if(writ%out(OUT_FTCHD)%write) &
       call td_write_ftchd(writ%out(OUT_FTCHD)%handle, gr, st, kick, iter)
 
-    if(writ%out(OUT_SPIN)%write) &
-      call td_write_spin(writ%out(OUT_SPIN)%handle, gr, st, iter)
-
-    if(writ%out(OUT_MAGNETS)%write) &
-      call td_write_local_magnetic_moments(writ%out(OUT_MAGNETS)%handle, gr, st, geo, writ%lmm_r, iter)
-
     if(writ%out(OUT_COORDS)%write) &
       call td_write_coordinates(writ%out(OUT_COORDS)%handle, gr, geo, iter)
 
@@ -549,116 +519,6 @@ contains
     call profiling_out(prof)
     POP_SUB(td_write_output)
   end subroutine td_write_output
-
-  ! ---------------------------------------------------------
-  subroutine td_write_spin(out_spin, gr, st, iter)
-    type(c_ptr), intent(inout)       :: out_spin
-    type(grid_t),      intent(inout) :: gr
-    type(states_t),    intent(in)    :: st
-    integer,           intent(in)    :: iter
-
-    character(len=130) :: aux
-    FLOAT :: spin(3)
-
-    PUSH_SUB(td_write_spin)
-
-    ! The expectation value of the spin operator is half the total magnetic moment
-    ! This has to be calculated by all nodes
-    call magnetic_moment(gr%mesh, st, st%rho, spin)
-    spin = M_HALF*spin
-
-    if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
-
-      if(iter ==0) then
-        call td_write_print_header_init(out_spin)
-
-        !second line -> columns name
-        call write_iter_header_start(out_spin)
-        if (st%d%ispin == SPINORS) then
-          write(aux, '(a2,18x)') 'Sx'
-          call write_iter_header(out_spin, aux)
-          write(aux, '(a2,18x)') 'Sy'
-          call write_iter_header(out_spin, aux)
-        end if
-        write(aux, '(a2,18x)') 'Sz'
-        call write_iter_header(out_spin, aux)
-        call write_iter_nl(out_spin)
-
-        call td_write_print_header_end(out_spin)
-      end if
-
-      call write_iter_start(out_spin)
-      select case (st%d%ispin)
-      case (SPIN_POLARIZED)
-         call write_iter_double(out_spin, spin(3), 1)
-      case (SPINORS)
-        call write_iter_double(out_spin, spin(1:3), 3)
-      end select
-      call write_iter_nl(out_spin)
-
-    end if
-
-    POP_SUB(td_write_spin)
-  end subroutine td_write_spin
-
-
-  ! ---------------------------------------------------------
-  subroutine td_write_local_magnetic_moments(out_magnets, gr, st, geo, lmm_r, iter)
-    type(c_ptr),              intent(inout) :: out_magnets
-    type(grid_t),             intent(inout) :: gr
-    type(states_t),           intent(in)    :: st
-    type(geometry_t),         intent(in)    :: geo
-    FLOAT,                    intent(in)    :: lmm_r
-    integer,                  intent(in)    :: iter
-
-    integer :: ia
-    character(len=50) :: aux
-    FLOAT, allocatable :: lmm(:,:)
-
-    PUSH_SUB(td_write_local_magnetic_moments)
-
-    !get the atoms` magnetization. This has to be calculated by all nodes
-    SAFE_ALLOCATE(lmm(1:3, 1:geo%natoms))
-    call magnetic_local_moments(gr%mesh, st, geo, st%rho, lmm_r, lmm)
-
-    if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
-
-      if(iter ==0) then
-        call td_write_print_header_init(out_magnets)
-
-        !second line -> columns name
-        call write_iter_header_start(out_magnets)
-        do ia = 1, geo%natoms
-          if (st%d%ispin == SPINORS) then
-            write(aux, '(a2,i2.2,16x)') 'mx', ia
-            call write_iter_header(out_magnets, aux)
-            write(aux, '(a2,i2.2,16x)') 'my', ia
-            call write_iter_header(out_magnets, aux)
-          end if
-          write(aux, '(a2,i2.2,16x)') 'mz', ia
-          call write_iter_header(out_magnets, aux)
-        end do
-        call write_iter_nl(out_magnets)
-
-        call td_write_print_header_end(out_magnets)
-      end if
-
-      call write_iter_start(out_magnets)
-      do ia = 1, geo%natoms
-        select case (st%d%ispin)
-        case (SPIN_POLARIZED)
-          call write_iter_double(out_magnets, lmm(3, ia), 1)
-        case (SPINORS)
-          call write_iter_double(out_magnets, lmm(1:3, ia), 3)
-        end select
-      end do
-      call write_iter_nl(out_magnets)
-      SAFE_DEALLOCATE_A(lmm)
-    end if
-
-    POP_SUB(td_write_local_magnetic_moments)
-  end subroutine td_write_local_magnetic_moments
-
 
   ! ---------------------------------------------------------
   !> Subroutine to write multipoles to the corresponding file

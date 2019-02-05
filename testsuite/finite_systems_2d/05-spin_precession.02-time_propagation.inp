@@ -51,7 +51,7 @@ TDTimeStep = dt
 Output = density
 OutputFormat = xcrysden
 OutputInterval = 25
-TDOutput = energy + multipoles + spin
+TDOutput = energy + multipoles
 
 ExperimentalFeatures = yes
 

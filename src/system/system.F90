@@ -22,7 +22,6 @@ module system_oct_m
   use accel_oct_m
   use calc_mode_par_oct_m
   use density_oct_m
-  use elf_oct_m
   use energy_calc_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -103,7 +102,6 @@ contains
     call output_init(sys%outp, sys%gr%sb, sys%st%nst, sys%ks)
     call states_densities_init(sys%st, sys%gr, sys%geo)
     call states_exec_init(sys%st, sys%mc)
-    call elf_init()
 
     call poisson_init(psolver, sys%gr%der, sys%mc)
     if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%geo, sys%mc)

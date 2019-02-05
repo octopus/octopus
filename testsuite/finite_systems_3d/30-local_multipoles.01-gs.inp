@@ -8,8 +8,6 @@ CalculationMode = gs
 Radius = 10.
 Spacing = 0.4
 
-SCFCalculatePartialCharges = yes
-
 ExperimentalFeatures = yes
 
 MixField = density

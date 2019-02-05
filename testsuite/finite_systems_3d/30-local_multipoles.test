@@ -17,5 +17,4 @@ match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;    -0.
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;    -0.09393256
 match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;     1.05670421
 match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;    -3.52993397 
-match ; Partial charge  1  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 1.000
 

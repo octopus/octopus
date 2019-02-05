@@ -26,7 +26,5 @@ ConvRelDens = 0.08
 TDExponentialMethod = lanczos
 TDExpOrder = 100
 
-SCFCalculatePartialCharges = yes
-
 ExperimentalFeatures = yes
 

@@ -43,9 +43,3 @@ match ; Force Cl y        ; GREPFIELD(static/info, '3        Cl', 4) ;  23.31222
 
 match ; MATLAB point 1    ; LINEFIELD(static/density.z=0.matlab, 22, 28); 1.23255040284864
 match ; MATLAB point 2    ; LINEFIELD(static/density.z=0.matlab, 42, 30); 0.02499576752910
-
-match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 3.972
-match ; Partial charge  2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)  ; 0.932
-match ; Partial charge  3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4)  ; 7.032
-match ; Partial charge  4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5)  ; 7.032
-match ; Partial charge  5 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 6)  ; 7.032

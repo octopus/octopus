@@ -36,7 +36,6 @@ module scf_oct_m
   use kpoints_oct_m
   use lcao_oct_m
   use loct_oct_m
-  use magnetic_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
@@ -48,7 +47,6 @@ module scf_oct_m
   use multigrid_oct_m
   use multicomm_oct_m
   use parser_oct_m
-  use partial_charges_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -91,8 +89,6 @@ module scf_oct_m
     integer :: max_iter   !< maximum number of SCF iterations
     integer :: max_iter_berry  !< max number of electronic iterations before updating density, for Berry potential
 
-    FLOAT :: lmm_r
-
     ! several convergence criteria
     FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev, conv_abs_force
     FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev, abs_force
@@ -105,7 +101,6 @@ module scf_oct_m
     logical :: lcao_restricted
     logical :: calc_force
     logical :: calc_dipole
-    logical :: calc_partial_charges
     type(mix_t) :: smix
     type(mixfield_t), pointer :: mixfield
     type(eigensolver_t) :: eigens
@@ -399,17 +394,6 @@ contains
     call parse_variable('SCFCalculateDipole', .not. simul_box_is_periodic(gr%sb), scf%calc_dipole)
     if(associated(hm%vberry)) scf%calc_dipole = .true.
 
-    !%Variable SCFCalculatePartialCharges
-    !%Type logical
-    !%Default no
-    !%Section SCF
-    !%Description
-    !% (Experimental) This variable controls whether partial charges
-    !% are calculated at the end of a self-consistent iteration.
-    !%End
-    call parse_variable('SCFCalculatePartialCharges', .false., scf%calc_partial_charges)
-    if(scf%calc_partial_charges) call messages_experimental('SCFCalculatePartialCharges')
-
     rmin = geometry_min_distance(geo)
     if(geo%natoms == 1) then
       if(simul_box_is_periodic(gr%sb)) then
@@ -418,19 +402,6 @@ contains
         rmin = CNST(100.0)
       end if
     end if
-
-    !%Variable LocalMagneticMomentsSphereRadius
-    !%Type float
-    !%Section Output
-    !%Description
-    !% The local magnetic moments are calculated by integrating the
-    !% magnetization density in spheres centered around each atom.
-    !% This variable controls the radius of the spheres.
-    !% The default is half the minimum distance between two atoms
-    !% in the input coordinates, or 100 a.u. if there is only one atom (for isolated systems).
-    !%End
-    call parse_variable('LocalMagneticMomentsSphereRadius', rmin*M_HALF, scf%lmm_r, unit = units_inp%length)
-    ! this variable is also used in td/td_write.F90
 
     scf%forced_finish = .false.
 
@@ -974,10 +945,6 @@ contains
           call write_dipole(stdout, dipole)
         end if
 
-        if(st%d%ispin > UNPOLARIZED) then
-          call write_magnetic_moments(stdout, gr%mesh, st, geo, scf%lmm_r)
-        end if
-
         write(message(1),'(a)') ''
         write(message(2),'(a,i5,a,f14.2)') 'Elapsed time for SCF step ', iter,':', etime
         call messages_info(2)
@@ -1023,9 +990,7 @@ contains
     subroutine scf_write_static(dir, fname)
       character(len=*), intent(in) :: dir, fname
 
-      type(partial_charges_t) :: partial_charges
       integer :: iunit, idir, iatom, ii
-      FLOAT, allocatable :: hirshfeld_charges(:)
 
       PUSH_SUB(scf_run.scf_write_static)
 
@@ -1067,10 +1032,6 @@ contains
       call energy_calc_total(hm, gr, st, iunit, full = .true.)
 
       if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
-      if(st%d%ispin > UNPOLARIZED) then
-        call write_magnetic_moments(iunit, gr%mesh, st, geo, scf%lmm_r)
-        if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
-      end if
 
       if(scf%calc_dipole) then
         call calc_dipole(dipole)
@@ -1094,29 +1055,6 @@ contains
         ! otherwise, these values are uninitialized, and unknown.
 
         if(scf%calc_force) call forces_write_info(iunit, geo, gr%sb, dir)
-
-      end if
-
-      if(scf%calc_partial_charges) then
-        SAFE_ALLOCATE(hirshfeld_charges(1:geo%natoms))
-
-        call partial_charges_init(partial_charges)
-        call partial_charges_calculate(partial_charges, gr%fine%mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
-        call partial_charges_end(partial_charges)
-
-        if(mpi_grp_is_root(mpi_world)) then
-
-          write(iunit,'(a)') 'Partial ionic charges'
-          write(iunit,'(a)') ' Ion                     Hirshfeld'
-
-          do iatom = 1, geo%natoms
-            write(iunit,'(i4,a10,f16.3)') iatom, trim(species_label(geo%atom(iatom)%species)), hirshfeld_charges(iatom)
-
-          end do
-
-        end if
-
-        SAFE_DEALLOCATE_A(hirshfeld_charges)
 
       end if
 

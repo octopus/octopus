@@ -31,8 +31,6 @@ match ; Eigenvalue 3 dn; GREPFIELD(static/info, ' 3   dn', 3) ; -3.682145
 match ; Eigenvalue 4 up; GREPFIELD(static/info, ' 4   up', 3) ; -6.187145
 match ; Eigenvalue 4 dn; GREPFIELD(static/info, ' 4   dn', 3) ; -3.682145
 
-match ; mz             ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 2.00000
-
 Input: 21-lobpcg.02-spinors.inp
 Precision : 0.00011
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
@@ -61,9 +59,5 @@ match ; <Sx> 5        ; GREPFIELD(static/info, '5   --', 5) ; 0.3000
 match ; <Sy> 5        ; GREPFIELD(static/info, '5   --', 6) ; 0.3000
 match ; <Sz> 5        ; GREPFIELD(static/info, '5   --', 7) ; -0.2645
 
-Precision : 0.005
-match ; mx             ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 1.200124
-match ; my             ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 1.200124
-match ; mz             ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; -1.058020
 # This differs significantly from the initial magnetization.
 # It is due to the small radius and large spacing.

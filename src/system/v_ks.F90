@@ -36,7 +36,6 @@ module v_ks_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
-  use magnetic_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -92,11 +91,8 @@ module v_ks_oct_m
     FLOAT,                pointer :: vtau(:, :)
     FLOAT,                pointer :: axc(:, :, :)
     FLOAT,                pointer :: vberry(:, :)
-    FLOAT,                pointer :: a_ind(:, :)
-    FLOAT,                pointer :: b_ind(:, :)
     logical                       :: calc_energy
-
-    type(geometry_t), pointer :: geo
+    type(geometry_t),     pointer :: geo
   end type v_ks_calc_t
 
   type v_ks_t
@@ -609,17 +605,6 @@ contains
       call states_copy(ks%calc%hf_st, st)
       if(st%parallel_in_states) call states_parallel_remote_access_start(ks%calc%hf_st)
     end if
-
-    ! Calculate the vector potential induced by the electronic current.
-    ! WARNING: calculating the self-induced magnetic field here only makes
-    ! sense if it is going to be used in the Hamiltonian, which does not happen
-    ! now. Otherwise one could just calculate it at the end of the calculation.
-    nullify(ks%calc%a_ind, ks%calc%b_ind)
-    if(hm%self_induced_magnetic) then
-      SAFE_ALLOCATE(ks%calc%a_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
-      SAFE_ALLOCATE(ks%calc%b_ind(1:ks%gr%mesh%np_part, 1:ks%gr%sb%dim))
-      call magnetic_induced(ks%gr%der, st, ks%calc%a_ind, ks%calc%b_ind)
-    end if
    
     call profiling_out(prof)
     POP_SUB(v_ks_calc_start)
@@ -831,14 +816,6 @@ contains
     if(associated(hm%vberry)) then
       hm%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin) = ks%calc%vberry(1:ks%gr%mesh%np, 1:hm%d%nspin)
       SAFE_DEALLOCATE_P(ks%calc%vberry)
-    end if
-
-    if(hm%self_induced_magnetic) then
-      hm%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim) = ks%calc%a_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim)
-      hm%b_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim) = ks%calc%b_ind(1:ks%gr%mesh%np, 1:ks%gr%sb%dim)
-
-      SAFE_DEALLOCATE_P(ks%calc%a_ind)
-      SAFE_DEALLOCATE_P(ks%calc%b_ind)
     end if
 
     if(ks%theory_level == INDEPENDENT_PARTICLES .or. abs(ks%calc%amaldi_factor) <= M_EPSILON) then

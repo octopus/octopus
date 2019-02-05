@@ -19,7 +19,6 @@
 #include "global.h"
 
 module output_oct_m
-  use basins_oct_m
   use batch_oct_m
   use comm_oct_m 
   use cube_function_oct_m
@@ -27,7 +26,6 @@ module output_oct_m
   use current_oct_m
   use density_oct_m
   use derivatives_oct_m
-  use elf_oct_m
   use fft_oct_m
   use fourier_shell_oct_m
   use fourier_space_oct_m
@@ -42,7 +40,6 @@ module output_oct_m
   use lasers_oct_m
   use loct_oct_m
   use loct_math_oct_m
-  use magnetic_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
@@ -155,19 +152,6 @@ contains
     !% if point charges were defined in the PDB file (see <tt>PDBCoordinates</tt>), they will be output
     !% in the file <tt>geometry_classical.xyz</tt>.
     !% If <tt>OutputFormat = xcrysden</tt>, a file called <tt>geometry.xsf</tt> is written.
-    !%Option ELF bit(6)
-    !% Outputs electron localization function (ELF). The output file is called <tt>elf-</tt>,
-    !% or <tt>lr_elf-</tt> in linear response, in which case the associated function D is also written,
-    !% as <tt>lr_elf_D-</tt>. Only in 2D and 3D.
-    !%Option ELF_basins bit(7)
-    !% Outputs basins of attraction of the ELF. The output file is called
-    !% <tt>elf_rs_basins.info</tt>. Only in 2D and 3D.
-    !%Option Bader bit(9)
-    !% Outputs Laplacian of the density which shows lone pairs, bonded charge concentrations
-    !% and regions subject to electrophilic or nucleophilic attack.
-    !% See RF Bader, <i>Atoms in Molecules: A Quantum Theory</i> (Oxford Univ. Press, Oxford, 1990).
-    !%Option el_pressure bit(10)
-    !% Outputs electronic pressure. See Tao, Vignale, and Tokatly, <i>Phys Rev Lett</i> <b>100</b>, 206405 (2008).
     !%Option matrix_elements bit(11)
     !% Outputs a series of matrix elements of the Kohn-Sham states. What is output can
     !% be controlled by the <tt>OutputMatrixElements</tt> variable.
@@ -196,18 +180,6 @@ contains
     !%Option forces bit(18)
     !% Outputs file <tt>forces.xsf</tt> containing structure and forces on the atoms as 
     !% a vector associated with each atom, which can be visualized with XCrySDen.
-    !%Option xc_density bit(20)
-    !% Outputs the XC density, which is the charge density that
-    !% generates the XC potential. (This is <math>-1/4\pi</math> times
-    !% the Laplacian of the XC potential). The files are called <tt>nxc</tt>.
-    !%Option PES_wfs bit(21)
-    !% Outputs the photoelectron wavefunctions. The file name is <tt>pes_wfs-</tt>  
-    !% plus the orbital number.
-    !%Option PES_density bit(22)
-    !% Outputs the photolectron density. Output file is <tt>pes_dens-</tt> plus spin species if
-    !% spin-polarized calculation is performed. 
-    !%Option PES bit(23)
-    !% Outputs the time-dependent photoelectron spectrum.
     !%Option delta_perturbation bit(25)
     !% Outputs the "kick", or time-delta perturbation applied to compute optical response in real time.
     !%Option external_td_potential bit(26)
@@ -216,15 +188,6 @@ contains
     !% Prints the gradient of the potential.
     !%End
     call parse_variable('Output', 0, outp%what)
-
-    ! cannot calculate the ELF in 1D
-    if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
-       if(sb%dim /= 2 .and. sb%dim /= 3) then
-         outp%what = bitand(outp%what, not(OPTION__OUTPUT__ELF + OPTION__OUTPUT__ELF_BASINS))
-         write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
-         call messages_warning(1)
-       end if
-    end if
 
     if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
       call messages_input_error('Output')
@@ -405,7 +368,6 @@ contains
     
     call output_states(st, gr, geo, hm, dir, outp)
     call output_hamiltonian(hm, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
-    call output_localization_funct(st, hm, gr, dir, outp, geo)
 
     if(bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
@@ -435,162 +397,6 @@ contains
     call profiling_out(prof)
     POP_SUB(output_all)
   end subroutine output_all
-
-
-  ! ---------------------------------------------------------
-  subroutine output_localization_funct(st, hm, gr, dir, outp, geo)
-    type(states_t),         intent(inout) :: st
-    type(hamiltonian_t),    intent(in)    :: hm
-    type(grid_t),           intent(inout) :: gr
-    character(len=*),       intent(in)    :: dir
-    type(output_t),         intent(in)    :: outp
-    type(geometry_t),       intent(in)    :: geo
-
-    FLOAT, allocatable :: f_loc(:,:)
-    character(len=256) :: fname
-    integer :: is, ierr, imax
-    type(mpi_grp_t) :: mpi_grp
-
-    PUSH_SUB(output_localization_funct)
-    
-    mpi_grp = st%dom_st_kpt_mpi_grp
-
-    ! if SPIN_POLARIZED, the ELF contains one extra channel: the total ELF
-    imax = st%d%nspin
-    if(st%d%ispin == SPIN_POLARIZED) imax = 3
-
-    SAFE_ALLOCATE(f_loc(1:gr%mesh%np, 1:imax))
-
-    ! First the ELF in real space
-    if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
-      ASSERT(gr%mesh%sb%dim /= 1)
-
-      call elf_calc(st, gr, f_loc)
-      
-      ! output ELF in real space
-      if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
-        write(fname, '(a)') 'elf_rs'
-        call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-          f_loc(:,imax), unit_one, ierr, geo = geo, grp = mpi_grp)
-        ! this quantity is dimensionless
-
-        if(st%d%ispin /= UNPOLARIZED) then
-          do is = 1, 2
-            write(fname, '(a,i1)') 'elf_rs-sp', is
-            call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-              f_loc(:, is), unit_one, ierr, geo = geo, grp = mpi_grp)
-            ! this quantity is dimensionless
-          end do
-        end if
-      end if
-
-      if(bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) &
-        call out_basins(f_loc(:,1), "elf_rs_basins")
-    end if
-
-    ! Now Bader analysis
-    if(bitand(outp%what, OPTION__OUTPUT__BADER) /= 0) then
-      do is = 1, st%d%nspin
-        call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
-        write(fname, '(a,i1)') 'bader-sp', is
-        call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-          f_loc(:,is), units_out%length**(-2 - gr%sb%dim), ierr, &
-          geo = geo, grp = mpi_grp)
-
-        write(fname, '(a,i1)') 'bader_basins-sp', is
-        call out_basins(f_loc(:,1), fname)
-      end do
-    end if
-
-    ! Now the pressure
-    if(bitand(outp%what, OPTION__OUTPUT__EL_PRESSURE) /= 0) then
-      call calc_electronic_pressure(st, hm, gr, f_loc(:,1))
-      call dio_function_output(outp%how, dir, "el_pressure", gr%mesh, &
-        f_loc(:,1), unit_one, ierr, geo = geo, grp = mpi_grp)
-      ! this quantity is dimensionless
-    end if
-
-    SAFE_DEALLOCATE_A(f_loc)
-
-    POP_SUB(output_localization_funct)
-
-  contains
-    ! ---------------------------------------------------------
-    subroutine out_basins(ff, filename)
-      FLOAT,            intent(in)    :: ff(:)
-      character(len=*), intent(in)    :: filename
-
-      character(len=256) :: fname
-      type(basins_t)     :: basins
-      integer            :: iunit
-
-      PUSH_SUB(output_localization_funct.out_basins)
-
-      call basins_init(basins, gr%mesh)
-      call basins_analyze(basins, gr%mesh, ff(:), st%rho, CNST(0.01))
-
-      call dio_function_output(outp%how, dir, trim(filename), gr%mesh, &
-        real(basins%map, REAL_PRECISION), unit_one, ierr, geo = geo, grp = mpi_grp)
-      ! this quantity is dimensionless
-
-      write(fname,'(4a)') trim(dir), '/', trim(filename), '.info'
-      iunit = io_open(file=trim(fname), action = 'write')
-      call basins_write(basins, gr%mesh, iunit)
-      call io_close(iunit)
-
-      call basins_end(basins)
-
-      POP_SUB(output_localization_funct.out_basins)
-    end subroutine out_basins
-
-  end subroutine output_localization_funct
-
-  
-  ! ---------------------------------------------------------
-  subroutine calc_electronic_pressure(st, hm, gr, pressure)
-    type(states_t),         intent(inout) :: st
-    type(hamiltonian_t),    intent(in)    :: hm
-    type(grid_t),           intent(inout) :: gr
-    FLOAT,                  intent(out)   :: pressure(:)
-
-    FLOAT, allocatable :: rho(:,:), lrho(:), tau(:,:)
-    FLOAT   :: p_tf, dens
-    integer :: is, ii
-
-    PUSH_SUB(calc_electronic_pressure)
-
-    SAFE_ALLOCATE( rho(1:gr%mesh%np_part, 1:st%d%nspin))
-    SAFE_ALLOCATE(lrho(1:gr%mesh%np))
-    SAFE_ALLOCATE( tau(1:gr%mesh%np, 1:st%d%nspin))
-
-    rho = M_ZERO
-    call density_calc(st, gr, rho)
-    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = tau)
-
-    pressure = M_ZERO
-    do is = 1, st%d%spin_channels
-      lrho = M_ZERO
-      call dderivatives_lapl(gr%der, rho(:, is), lrho)
-
-      pressure(:) = pressure(:) + &
-        tau(:, is)/M_THREE - lrho(:)/M_FOUR
-    end do
-
-    do ii = 1, gr%mesh%np
-      dens = sum(rho(ii,1:st%d%spin_channels))
-
-      p_tf = M_TWO/M_FIVE*(M_THREE*M_PI**2)**(M_TWO/M_THREE)* &
-        dens**(M_FIVE/M_THREE)
-
-      ! add XC pressure
-      pressure(ii) = pressure(ii) + (dens*hm%vxc(ii,1) - hm%energy%exchange - hm%energy%correlation)
-
-      pressure(ii) = pressure(ii)/p_tf
-      pressure(ii) = M_HALF*(M_ONE + pressure(ii)/sqrt(M_ONE + pressure(ii)**2))
-    end do
-
-    POP_SUB(calc_electronic_pressure)
-  end subroutine calc_electronic_pressure
 
 #include "output_states_inc.F90"
 

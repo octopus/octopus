@@ -220,7 +220,6 @@ all_f_srcs +=                                 \
 
 # Sources in grid
 all_f_srcs +=                                 \
-	grid/basins.F90                       \
 	grid/batch.F90                        \
 	grid/batch_ops.F90                    \
 	grid/boundaries.F90                   \
@@ -374,14 +373,11 @@ all_f_srcs +=                                   \
 	system/eigen_lobpcg.F90                 \
 	system/eigen_rmmdiis.F90                \
 	system/eigensolver.F90                  \
-	system/elf.F90                          \
 	system/energy_calc.F90                  \
 	system/exponential.F90                  \
 	system/forces.F90                       \
-	system/magnetic.F90                     \
 	system/output.F90                       \
 	system/output_me.F90                    \
-	system/partial_charges.F90              \
 	system/preconditioners.F90              \
 	system/subspace.F90                     \
 	system/system.F90                       \

@@ -120,11 +120,6 @@ module hamiltonian_oct_m
     type(geometry_t), pointer :: geo
     FLOAT :: exx_coef !< how much of EXX to mix
 
-    !> The self-induced vector potential and magnetic field
-    logical :: self_induced_magnetic
-    FLOAT, pointer :: a_ind(:, :)
-    FLOAT, pointer :: b_ind(:, :)
-
     integer :: theory_level    !< copied from sys%ks
     integer :: xc_family       !< copied from sys%ks
     integer :: xc_flags        !< copied from sys%ks
@@ -290,39 +285,6 @@ contains
     if (associated(hm%ep%B_field) .or. &
       gauge_field_is_applied(hm%ep%gfield) .or. &
       parse_is_defined('RashbaSpinOrbitCoupling')) call states_set_complex(st)
-
-    call parse_variable('CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
-    !%Variable CalculateSelfInducedMagneticField
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian
-    !%Description
-    !% The existence of an electronic current implies the creation of a self-induced magnetic
-    !% field, which may in turn back-react on the system. Of course, a fully consistent treatment
-    !% of this kind of effect should be done in QED theory, but we will attempt a first
-    !% approximation to the problem by considering the lowest-order relativistic terms
-    !% plugged into the normal Hamiltonian equations (spin-other-orbit coupling terms, etc.).
-    !% For the moment being, none of this is done, but a first step is taken by calculating
-    !% the induced magnetic field of a system that has a current, by considering the magnetostatic
-    !% approximation and Biot-Savart law:
-    !%
-    !% <math> \nabla^2 \vec{A} + 4\pi\alpha \vec{J} = 0</math>
-    !%
-    !% <math> \vec{B} = \vec{\nabla} \times \vec{A}</math>
-    !%
-    !% If <tt>CalculateSelfInducedMagneticField</tt> is set to yes, this <i>B</i> field is
-    !% calculated at the end of a <tt>gs</tt> calculation (nothing is done -- yet -- in the <tt>td</tt>case)
-    !% and printed out, if the <tt>Output</tt> variable contains the <tt>potential</tt> keyword (the prefix
-    !% of the output files is <tt>Bind</tt>).
-    !%End
-    if(hm%self_induced_magnetic) then
-      SAFE_ALLOCATE(hm%a_ind(1:gr%mesh%np_part, 1:gr%sb%dim))
-      SAFE_ALLOCATE(hm%b_ind(1:gr%mesh%np_part, 1:gr%sb%dim))
-
-      !(for dim = we could save some memory, but it is better to keep it simple)
-    else
-      nullify(hm%a_ind, hm%b_ind)
-    end if
 
     ! Boundaries
     call bc_init(hm%bc, gr%mesh, gr%mesh%sb, hm%geo)
@@ -491,8 +453,6 @@ contains
     SAFE_DEALLOCATE_P(hm%vxc)
     SAFE_DEALLOCATE_P(hm%axc)
     SAFE_DEALLOCATE_P(hm%vberry)
-    SAFE_DEALLOCATE_P(hm%a_ind)
-    SAFE_DEALLOCATE_P(hm%b_ind)
     
     if(hm%family_is_mgga_with_exc) then
       SAFE_DEALLOCATE_P(hm%vtau)

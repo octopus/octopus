@@ -33,6 +33,4 @@ ExperimentalFeatures = yes
 Output = geometry + density
 OutputFormat = matlab + plane_z
 
-SCFCalculatePartialCharges = yes
-
 ExperimentalFeatures = yes

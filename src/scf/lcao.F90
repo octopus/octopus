@@ -33,7 +33,6 @@ module lcao_oct_m
   use lalg_basic_oct_m
   use lapack_oct_m
   use loct_oct_m
-  use magnetic_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -729,11 +728,6 @@ contains
       call lcao_guess_density(lcao, sys%st, sys%gr, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
         sys%st%d%spin_channels, sys%st%rho)
 
-      if(sys%st%d%ispin > UNPOLARIZED) then
-        ASSERT(present(lmm_r))
-        call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, lmm_r)
-      end if
-
       ! set up Hamiltonian (we do not call system_h_setup here because we do not want to
       ! overwrite the guess density)
       message(1) = 'Info: Setting up Hamiltonian.'
@@ -772,13 +766,7 @@ contains
         call states_write_eigenvalues(stdout, min(sys%st%nst, lcao%norbs), sys%st, sys%gr%sb)
 
         ! Update the density and the Hamiltonian
-        if (lcao%mode == OPTION__LCAOSTART__LCAO_FULL) then
-          call system_h_setup(sys, hm, calc_eigenval = .false.)
-          if(sys%st%d%ispin > UNPOLARIZED) then
-            ASSERT(present(lmm_r))
-            call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, lmm_r)
-          end if
-        end if
+        if (lcao%mode == OPTION__LCAOSTART__LCAO_FULL) call system_h_setup(sys, hm, calc_eigenval = .false.)
       end if
     end if
 
@@ -1114,9 +1102,12 @@ contains
       !% vector has the same direction as a vector provided by the user. In this case,
       !% the <tt>AtomsMagnetDirection</tt> block has to be set.
       !%End
-      call parse_variable('GuessMagnetDensity', INITRHO_FERROMAGNETIC, gmd_opt)
-      if(.not.varinfo_valid_option('GuessMagnetDensity', gmd_opt)) call messages_input_error('GuessMagnetDensity')
-      call messages_print_var_option(stdout, 'GuessMagnetDensity', gmd_opt)
+      call parse_variable('GuessMagnetDensity', INITRHO_FERROMAGNETIC&
+        &, gmd_opt)
+      if(.not.varinfo_valid_option('GuessMagnetDensity', gmd_opt))&
+        & call messages_input_error('GuessMagnetDensity')
+      call messages_print_var_option(stdout, 'GuessMagnetDensity',&
+        & gmd_opt)
     end if
 
     rho = M_ZERO
@@ -1127,13 +1118,16 @@ contains
       parallelized_in_atoms = .true.
 
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call lcao_atom_density(this, st, gr, sb, geo, ia, spin_channels, atom_rho)
-        rho(1:gr%fine%mesh%np, 1:spin_channels) = rho(1:gr%fine%mesh%np, 1:spin_channels) + &
-                                                  atom_rho(1:gr%fine%mesh%np, 1:spin_channels)
+        call lcao_atom_density(this, st, gr, sb, geo, ia,&
+          & spin_channels, atom_rho)
+        rho(1:gr%fine%mesh%np, 1:spin_channels) = rho(1:gr%fine%mesh&
+          &%np, 1:spin_channels) + atom_rho(1:gr%fine%mesh%np,&
+          & 1:spin_channels)
       end do
 
       if (spin_channels == 2) then
-        rho(1:gr%fine%mesh%np, 1) = M_HALF*(sum(rho(1:gr%fine%mesh%np, 1:2), dim=2))
+        rho(1:gr%fine%mesh%np, 1) = M_HALF*(sum(rho(1:gr%fine%mesh%np&
+          &, 1:2), dim=2))
         rho(1:gr%fine%mesh%np, 2) = rho(1:gr%fine%mesh%np, 1)
       end if
 
@@ -1145,8 +1139,10 @@ contains
       atom_rho = M_ZERO
       rho = M_ZERO
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call lcao_atom_density(this, st, gr, sb, geo, ia, 2, atom_rho(1:gr%fine%mesh%np, 1:2))
-        rho(1:gr%fine%mesh%np, 1:2) = rho(1:gr%fine%mesh%np, 1:2) + atom_rho(1:gr%fine%mesh%np, 1:2)
+        call lcao_atom_density(this, st, gr, sb, geo, ia, 2,&
+          & atom_rho(1:gr%fine%mesh%np, 1:2))
+        rho(1:gr%fine%mesh%np, 1:2) = rho(1:gr%fine%mesh%np, 1:2) +&
+          & atom_rho(1:gr%fine%mesh%np, 1:2)
       end do
 
     case (INITRHO_RANDOM) ! Randomly oriented spins
@@ -1158,24 +1154,33 @@ contains
           call quickrnd(iseed, rnd)
           rnd = rnd - M_HALF
           if (rnd > M_ZERO) then
-            rho(1:gr%fine%mesh%np, 1:2) = rho(1:gr%fine%mesh%np, 1:2) + atom_rho(1:gr%fine%mesh%np, 1:2)
+            rho(1:gr%fine%mesh%np, 1:2) = rho(1:gr%fine%mesh%np, 1:2)&
+              & + atom_rho(1:gr%fine%mesh%np, 1:2)
           else
-            rho(1:gr%fine%mesh%np, 1) = rho(1:gr%fine%mesh%np, 1) + atom_rho(1:gr%fine%mesh%np, 2)
-            rho(1:gr%fine%mesh%np, 2) = rho(1:gr%fine%mesh%np, 2) + atom_rho(1:gr%fine%mesh%np, 1)
+            rho(1:gr%fine%mesh%np, 1) = rho(1:gr%fine%mesh%np, 1) +&
+              & atom_rho(1:gr%fine%mesh%np, 2)
+            rho(1:gr%fine%mesh%np, 2) = rho(1:gr%fine%mesh%np, 2) +&
+              & atom_rho(1:gr%fine%mesh%np, 1)
           end if
         elseif (nspin == 4) then
           call quickrnd(iseed, phi)
           call quickrnd(iseed, theta)
           phi = phi*M_TWO*M_PI
           theta = theta*M_PI
-          rho(1:gr%fine%mesh%np, 1) = rho(1:gr%fine%mesh%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:gr%fine%mesh%np, 1) &
-            + sin(theta/M_TWO)**2*atom_rho(1:gr%fine%mesh%np, 2)
-          rho(1:gr%fine%mesh%np, 2) = rho(1:gr%fine%mesh%np, 2) + sin(theta/M_TWO)**2*atom_rho(1:gr%fine%mesh%np, 1) &
-            + cos(theta/M_TWO)**2*atom_rho(1:gr%fine%mesh%np, 2)
-          rho(1:gr%fine%mesh%np, 3) = rho(1:gr%fine%mesh%np, 3) + cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)* &
-            (atom_rho(1:gr%fine%mesh%np, 1) - atom_rho(1:gr%fine%mesh%np, 2))
-          rho(1:gr%fine%mesh%np, 4) = rho(1:gr%fine%mesh%np, 4) - cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)* &
-            (atom_rho(1:gr%fine%mesh%np, 1) - atom_rho(1:gr%fine%mesh%np, 2))
+          rho(1:gr%fine%mesh%np, 1) = rho(1:gr%fine%mesh%np, 1) +&
+            & cos(theta/M_TWO)**2*atom_rho(1:gr%fine%mesh%np, 1) +&
+            & sin(theta/M_TWO)**2*atom_rho(1:gr%fine%mesh%np, 2)
+          rho(1:gr%fine%mesh%np, 2) = rho(1:gr%fine%mesh%np, 2) +&
+            & sin(theta/M_TWO)**2*atom_rho(1:gr%fine%mesh%np, 1) +&
+            & cos(theta/M_TWO)**2*atom_rho(1:gr%fine%mesh%np, 2)
+          rho(1:gr%fine%mesh%np, 3) = rho(1:gr%fine%mesh%np, 3) +&
+            & cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)*&
+            & (atom_rho(1:gr%fine%mesh%np, 1) - atom_rho(1:gr%fine&
+            &%mesh%np, 2))
+          rho(1:gr%fine%mesh%np, 4) = rho(1:gr%fine%mesh%np, 4) -&
+            & cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)*&
+            & (atom_rho(1:gr%fine%mesh%np, 1) - atom_rho(1:gr%fine&
+            &%mesh%np, 2))
         end if
       end do
 
