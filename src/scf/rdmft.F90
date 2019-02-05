@@ -622,7 +622,7 @@ contains
       FLOAT, intent(out) :: photon_number_state (st%nst)
 
       integer :: ist, ip
-      FLOAT 	:: qq, q_square_exp
+      FLOAT 	:: qq, q_square_exp, laplace_exp
 			FLOAT, allocatable :: psi(:, :)
 			FLOAT, allocatable :: grad_psi(:, :), grad_square_psi (:,:)
 
@@ -638,10 +638,14 @@ contains
       do ist = 1, st%nst
 				call states_get_state(st, gr%mesh, ist, 1, psi)
 				
+				grad_psi = M_ZERO
+				grad_square_psi = M_ZERO
+				laplace_exp = M_ZERO
+				
 				! <phi(ist)|d^2/dq^2|phi(ist)> ~= <phi(ist)| d/dq (d/dq|phi(ist)>)   at the moment not possible to calculate Laplacian only for one coordinate
         call dderivatives_grad(gr%der, psi(:, 1), grad_psi(:, :), ghost_update = .true., set_bc = .false.)
         call dderivatives_grad(gr%der, grad_psi(:, 2), grad_square_psi(:, :), ghost_update = .true., set_bc = .false.)
-        photon_number_state(ist) = -0.5*dmf_dotp(gr%mesh, psi(:,1), grad_square_psi(:,2))
+        laplace_exp = dmf_dotp(gr%mesh, psi(:,1), grad_square_psi(:,2))
         
         ! <phi(ist)|q^2|psi(ist)>
         q_square_exp = M_ZERO
@@ -650,19 +654,20 @@ contains
 					qq = qq * qq
 					q_square_exp = q_square_exp + psi(ip,1)*psi(ip,1)*qq*gr%mesh%volume_element ! shoudl be R_CONJ for first psi, but does not work ...
         end do
-!        print*, "ist", ist, "q_square_exp", q_square_exp, "-1/2 d^2/dq^2", photon_number_state(ist)
+        print*, "ist", ist, "q_square_exp", q_square_exp, "laplace_exp", laplace_exp
         
         !! N_phot(ist)=( <phi_i|H_ph|phi_i>/omega - 0.5 ) / N_elec
         !! with <phi_i|H_ph|phi_i>=-0.5* <phi(ist)|d^2/dq^2|phi(ist)> + 0.5*omega <phi(ist)|q^2|psi(ist)>
-        photon_number_state(ist)  = photon_number_state(ist) / rdm%dressed_omega + 0.5 * rdm%dressed_omega  * q_square_exp
+        photon_number_state(ist)  = -0.5*laplace_exp / rdm%dressed_omega + 0.5 * rdm%dressed_omega  * q_square_exp
         photon_number_state(ist) = photon_number_state(ist) - 0.5
+        
         !! N_phot_total= sum_ist occ_ist*N_phot(ist)
         photon_number =  photon_number + ( photon_number_state(ist) + 0.5 )*st%occ(ist,1) ! 0.5 must be added again to do the normalization due to the total charge correctly
 			end do
 			
 			photon_number =  photon_number  / st%smear%el_per_state - 0.5 ! we calculate the photon number for every electron, so we need to dived by the total charge
 			
-!			print*, "photon_number_state", photon_number_state
+			print*, "photon_number_state", photon_number_state
 			print*, "The total mode occupation is: ", photon_number
 	
       SAFE_DEALLOCATE_A(psi)
