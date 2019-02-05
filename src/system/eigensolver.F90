@@ -91,6 +91,7 @@ module eigensolver_oct_m
     ! cg options
     logical :: orthogonalize_to_all
     integer :: conjugate_direction
+    logical :: additional_terms
   end type eigensolver_t
 
 
@@ -218,6 +219,16 @@ contains
       !% steepest descent vector is subtracted in the nominator.
       !%End
       call parse_variable('EigensolverConjugateDirection', 1, eigens%conjugate_direction)
+
+      !%Variable EigensolverAdditionalTerms
+      !%Type logical
+      !%Section SCF::Eigensolver
+      !%Default no
+      !%Description
+      !% Used by the cg solver only.
+      !% Add additional terms during the line minimization, see PTA92, eq. 5.31ff.
+      !%End
+      call parse_variable('EigensolverAdditionalTerms', .false., eigens%additional_terms)
 
     case(RS_PLAN)
     case(RS_EVO)
@@ -458,7 +469,8 @@ contains
           call deigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), &
             orthogonalize_to_all=eigens%orthogonalize_to_all, &
-            conjugate_direction=eigens%conjugate_direction)
+            conjugate_direction=eigens%conjugate_direction, &
+            additional_terms=eigens%additional_terms)
         case(RS_PLAN)
           call deigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
@@ -496,12 +508,16 @@ contains
              call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, & 
                                 eigens%diff(:, ik), shift=eigens%spectrum_shift, &
                                 orthogonalize_to_all=eigens%orthogonalize_to_all, &
-                                conjugate_direction=eigens%conjugate_direction)
+                                conjugate_direction=eigens%conjugate_direction, &
+                                additional_terms=eigens%additional_terms)
+
            else
               call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
                                 eigens%diff(:, ik), &
                                 orthogonalize_to_all=eigens%orthogonalize_to_all, &
-                                conjugate_direction=eigens%conjugate_direction)
+                                conjugate_direction=eigens%conjugate_direction, &
+                                additional_terms=eigens%additional_terms)
+
            end if
         case(RS_PLAN)
           call zeigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &

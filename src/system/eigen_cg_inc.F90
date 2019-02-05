@@ -18,7 +18,7 @@
 
 ! ---------------------------------------------------------
 !> conjugate-gradients method.
-subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, diff, shift, orthogonalize_to_all, conjugate_direction)
+subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, diff, shift, orthogonalize_to_all, conjugate_direction, additional_terms)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
@@ -32,6 +32,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   FLOAT,pointer, optional, intent(in)   :: shift(:,:)
   logical, optional,      intent(in)    :: orthogonalize_to_all
   integer, optional,      intent(in)    :: conjugate_direction
+  logical, optional,      intent(in)    :: additional_terms
   integer, parameter :: &
        CG_FR      = 1,   &
        CG_PR      = 2
@@ -275,30 +276,32 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       !es(2) = -M_HALF*((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) - (e0 + b0))
       alpha = M_TWO * R_REAL(e0 - b0)
 
-      ! more terms here, see PTA92 eqs 5.31, 5.32, 5.33, 5.36
-      ! Hartree term
-      forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-        chi(ip, idim) = M_TWO * R_REAL(R_CONJ(cg(ip, idim)/cg0) * psi(ip, idim))
-      end forall
-      call dpoisson_solve(psolver, omega(:, 1), chi(:, 1), all_nodes = .false.)
-      integral_hartree = dmf_dotp(gr%mesh, st%d%dim, chi, omega)
+      if (optional_default(additional_terms, .false.)) then
+        ! more terms here, see PTA92 eqs 5.31, 5.32, 5.33, 5.36
+        ! Hartree term
+        forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+          chi(ip, idim) = M_TWO * R_REAL(R_CONJ(cg(ip, idim)/cg0) * psi(ip, idim))
+        end forall
+        call dpoisson_solve(psolver, omega(:, 1), chi(:, 1), all_nodes = .false.)
+        integral_hartree = dmf_dotp(gr%mesh, st%d%dim, chi, omega)
 
-      ! exchange term
-      ! TODO: adapt to different spin cases
-      if(add_xc_term) then
-        fxc = M_ZERO
-        call xc_get_fxc(xc, gr%mesh, st%rho, st%d%ispin, fxc)
-        integral_xc = dmf_dotp(gr%mesh, st%d%dim, fxc(:, :, 1), chi(:, :)**2)
-      else
-        integral_xc = M_ZERO
+        ! exchange term
+        ! TODO: adapt to different spin cases
+        if(add_xc_term) then
+          fxc = M_ZERO
+          call xc_get_fxc(xc, gr%mesh, st%rho, st%d%ispin, fxc)
+          integral_xc = dmf_dotp(gr%mesh, st%d%dim, fxc(:, :, 1), chi(:, :)**2)
+        else
+          integral_xc = M_ZERO
+        end if
+
+        write(message(1), '(a,3i,a,3es12.5)') 'Debug: ik, ist, iter: ', ik, ist, iter, '- alpha, hartree, xc:', alpha, integral_hartree, integral_xc
+        call messages_info(1)
+
+        ! add additional terms to alpha (alpha is -d2e/dtheta2 from eq. 5.31)
+        ! TODO: multiply prefactor by k-point weight
+        alpha = alpha - st%occ(ist, 1) * (integral_hartree + integral_xc)
       end if
-
-      write(message(1), '(a,3i,a,3es12.5)') 'Debug: ik, ist, iter: ', ik, ist, iter, '- alpha, hartree, xc:', alpha, integral_hartree, integral_xc
-      call messages_info(1)
-
-      ! add additional terms to alpha (alpha is -d2e/dtheta2 from eq. 5.31)
-      ! TODO: multiply prefactor by k-point weight
-      alpha = alpha - st%occ(ist, 1) * (integral_hartree + integral_xc)
 
 
       beta = R_REAL(a0) * M_HALF
