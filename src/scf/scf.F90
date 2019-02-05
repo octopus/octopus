@@ -73,6 +73,7 @@ module scf_oct_m
   use utils_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
+  use vdw_ts_oct_m
   use xc_functl_oct_m
   use XC_F90(lib_m)
   use stress_oct_m
@@ -130,11 +131,11 @@ contains
     type(geometry_t),    intent(in)    :: geo
     type(states_t),      intent(in)    :: st
     type(multicomm_t),   intent(in)    :: mc
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_t), intent(inout) :: hm
     FLOAT,   optional,   intent(in)    :: conv_force
 
     FLOAT :: rmin
-    integer :: mixdefault
+    integer :: mixdefault, ierr
     type(type_t) :: mix_type
     
     PUSH_SUB(scf_init)
@@ -353,15 +354,12 @@ contains
     end select
 
     mix_type = TYPE_FLOAT
-    if(st%cmplxscl%space) mix_type = TYPE_CMPLX
-    
 
     if(scf%mix_field == OPTION__MIXFIELD__DENSITY) then
       call mix_init(scf%smix, gr%fine%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     else if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
       call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     end if
-    call mix_get_field(scf%smix, scf%mixfield)
 
     !If we use LDA+U, we also have do mix it
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
@@ -369,14 +367,23 @@ contains
     end if
     call mix_get_field(scf%smix, scf%mixfield)
 
+    if(hm%lda_u_level /= DFT_U_NONE .and. hm%lda_u%basisfromstates) then
+      call lda_u_loadbasis(hm%lda_u, st, gr%mesh, mc, ierr)
+      if (ierr /= 0) then
+        message(1) = "Unable to load LDA+U basis from selected states."
+        call messages_fatal(1)
+      end if
+      call lda_u_periodic_coulomb_integrals(hm%lda_u, st, gr%der, mc, associated(hm%hm_base%phase))
+    end if
+
+
     ! now the eigensolver stuff
     call eigensolver_init(scf%eigens, gr, st)
 
     if(preconditioner_is_multigrid(scf%eigens%pre)) then
-      if(.not. associated(gr%mgrid)) then
-        SAFE_ALLOCATE(gr%mgrid)
-        call multigrid_init(gr%mgrid, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc)
-      end if
+      SAFE_ALLOCATE(gr%mgrid_prec)
+      call multigrid_init(gr%mgrid_prec, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc, &
+        used_for_preconditioner=.true.)
     end if
 
     !%Variable SCFinLCAO
@@ -451,7 +458,13 @@ contains
     if(scf%calc_partial_charges) call messages_experimental('SCFCalculatePartialCharges')
 
     rmin = geometry_min_distance(geo)
-    if(geo%natoms == 1) rmin = CNST(100.0)
+    if(geo%natoms == 1) then
+      if(simul_box_is_periodic(gr%sb)) then
+        rmin = minval(gr%sb%lsize(1:gr%sb%periodic_dim))
+      else
+        rmin = CNST(100.0)
+      end if
+    end if
 
     !%Variable LocalMagneticMomentsSphereRadius
     !%Type float
@@ -461,7 +474,7 @@ contains
     !% magnetization density in spheres centered around each atom.
     !% This variable controls the radius of the spheres.
     !% The default is half the minimum distance between two atoms
-    !% in the input coordinates, or 100 a.u. if there is only one atom.
+    !% in the input coordinates, or 100 a.u. if there is only one atom (for isolated systems).
     !%End
     call parse_variable('LocalMagneticMomentsSphereRadius', rmin*M_HALF, scf%lmm_r, unit = units_inp%length)
     ! this variable is also used in td/td_write.F90
@@ -520,7 +533,7 @@ contains
     type(restart_t), optional, intent(in)    :: restart_load
     type(restart_t), optional, intent(in)    :: restart_dump
 
-    logical :: finish, gs_run_, berry_conv, cmplxscl
+    logical :: finish, gs_run_, berry_conv
     integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
     real(8) :: etime, itime
@@ -528,8 +541,8 @@ contains
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:)
+    FLOAT, allocatable :: vhxc_old(:,:)
     FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
-    CMPLX, allocatable :: zrhoout(:,:,:), zrhoin(:,:,:)
     type(batch_t), allocatable :: psioutb(:, :)
     
     PUSH_SUB(scf_run)
@@ -539,8 +552,6 @@ contains
       call messages_fatal(1, only_root_writes = .true.)
     end if
 
-    cmplxscl = st%cmplxscl%space
-
     gs_run_ = .true.
     if(present(gs_run)) gs_run_ = gs_run
 
@@ -549,7 +560,7 @@ contains
 
     if(ks%theory_level == CLASSICAL) then
       ! calculate forces
-      if(scf%calc_force) call forces_calculate(gr, geo, hm, st)
+      if(scf%calc_force) call forces_calculate(gr, geo, hm, st, ks)
 
       if(gs_run_) then 
         ! output final information
@@ -615,35 +626,25 @@ contains
       end if 
     end if
 
-    if(.not. cmplxscl) then      
-      SAFE_ALLOCATE(rhoout(1:gr%fine%mesh%np, 1:1, 1:nspin))
-      SAFE_ALLOCATE(rhoin (1:gr%fine%mesh%np, 1:1, 1:nspin))
+    SAFE_ALLOCATE(rhoout(1:gr%fine%mesh%np, 1:1, 1:nspin))
+    SAFE_ALLOCATE(rhoin (1:gr%fine%mesh%np, 1:1, 1:nspin))
 
-      rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
-      rhoout = M_ZERO
-    else
+    rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
+    rhoout = M_ZERO
 
-      SAFE_ALLOCATE(zrhoout(1:gr%fine%mesh%np, 1:1, 1:nspin))
-      SAFE_ALLOCATE(zrhoin (1:gr%fine%mesh%np, 1:1, 1:nspin))
-
-      zrhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) &
-        + M_zI * st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)
-      zrhoout = M_z0
+    !We store the Hxc potential for the contribution to the forces
+    if(scf%calc_force .or. scf%conv_abs_force > M_ZERO &
+        .or. (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) then
+      SAFE_ALLOCATE(vhxc_old(1:gr%mesh%np, 1:nspin))
+      vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
     end if
+    
 
     select case(scf%mix_field)
     case(OPTION__MIXFIELD__POTENTIAL)
-      if(.not. cmplxscl) then
-        call mixfield_set_vin(scf%mixfield, hm%vhxc)
-      else
-        call mixfield_set_vin(scf%mixfield, hm%vhxc, hm%Imvhxc)
-      end if
+      call mixfield_set_vin(scf%mixfield, hm%vhxc)
     case(OPTION__MIXFIELD__DENSITY)
-      if(.not. cmplxscl) then
-        call mixfield_set_vin(scf%mixfield, rhoin)
-      else
-        call mixfield_set_vin(scf%mixfield, zrhoin)
-      end if
+      call mixfield_set_vin(scf%mixfield, rhoin)
 
     case(OPTION__MIXFIELD__STATES)
 
@@ -651,17 +652,17 @@ contains
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call batch_copy(st%group%psib(ib, iqn), psioutb(ib, iqn))
+          call batch_copy(st%group%psib(ib, iqn), psioutb(ib, iqn), fill_zeros = .false.)
         end do
       end do
       
     end select
 
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
     !If we use LDA+U, we also have do mix it
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
       call lda_u_mixer_init(hm%lda_u, scf%lda_u_mix, st)
     end if
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
 
     evsum_in = states_eigenvalues_sum(st)
 
@@ -670,7 +671,7 @@ contains
       SAFE_ALLOCATE(  forcein(1:geo%natoms, 1:gr%sb%dim))
       SAFE_ALLOCATE( forceout(1:geo%natoms, 1:gr%sb%dim))
       SAFE_ALLOCATE(forcediff(1:gr%sb%dim))
-      call forces_calculate(gr, geo, hm, st)
+      call forces_calculate(gr, geo, hm, st, ks)
       do iatom = 1, geo%natoms
         forcein(iatom, 1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
       end do
@@ -702,6 +703,11 @@ contains
       scf%eigens%converged = 0
 
       scf%energy_diff = hm%energy%total
+
+      !Used for the contribution to the forces
+      if(scf%calc_force .or. scf%conv_abs_force > M_ZERO .or. &
+          (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) & 
+        vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
       
       if(scf%lcao_restricted) then
         call lcao_init_orbitals(lcao, st, gr, geo)
@@ -740,33 +746,16 @@ contains
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
       ! compute output density, potential (if needed) and eigenvalues sum
-      if(cmplxscl) then
-        call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-      else
-        call density_calc(st, gr, st%rho)
-      end if
+      call density_calc(st, gr, st%rho)
 
-      if(.not. cmplxscl) then
-        rhoout(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
-      else
-        zrhoout(1:gr%fine%mesh%np, 1, 1:nspin) = st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) +&
-          M_zI * st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)
-      end if
+      rhoout(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
 
       select case(scf%mix_field)
       case(OPTION__MIXFIELD__POTENTIAL)
         call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
-        if(.not. cmplxscl) then
-          call mixfield_set_vout(scf%mixfield, hm%vhxc)
-        else
-          call mixfield_set_vout(scf%mixfield, hm%vhxc, hm%Imvhxc)
-        end if
+        call mixfield_set_vout(scf%mixfield, hm%vhxc)
       case (OPTION__MIXFIELD__DENSITY)
-        if(.not. cmplxscl) then
-          call mixfield_set_vout(scf%mixfield, rhoout)
-        else
-          call mixfield_set_vout(scf%mixfield, zrhoout)
-        end if
+        call mixfield_set_vout(scf%mixfield, rhoout)
       case(OPTION__MIXFIELD__STATES)
 
         do iqn = st%d%kpt%start, st%d%kpt%end
@@ -774,7 +763,6 @@ contains
             call batch_copy_data(gr%mesh%np, st%group%psib(ib, iqn), psioutb(ib, iqn))
           end do
         end do
-        
       end select
       
       if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vout(hm%lda_u, scf%lda_u_mix)
@@ -789,18 +777,14 @@ contains
       scf%abs_dens = M_ZERO
       SAFE_ALLOCATE(tmp(1:gr%fine%mesh%np))
       do is = 1, nspin
-        if(.not. cmplxscl) then
-          tmp = abs(rhoin(1:gr%fine%mesh%np, 1, is) - rhoout(1:gr%fine%mesh%np, 1, is))
-        else
-          tmp = abs(zrhoin(1:gr%fine%mesh%np, 1, is) - zrhoout(1:gr%fine%mesh%np, 1, is))
-        end if
+        tmp = abs(rhoin(1:gr%fine%mesh%np, 1, is) - rhoout(1:gr%fine%mesh%np, 1, is))
         scf%abs_dens = scf%abs_dens + dmf_integrate(gr%fine%mesh, tmp)
       end do
       SAFE_DEALLOCATE_A(tmp)
 
       ! compute forces only if they are used as convergence criterion
       if (scf%conv_abs_force > M_ZERO) then
-        call forces_calculate(gr, geo, hm, st)
+        call forces_calculate(gr, geo, hm, st, ks, vhxc_old=vhxc_old)
         scf%abs_force = M_ZERO
         do iatom = 1, geo%natoms
           forceout(iatom,1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
@@ -810,6 +794,11 @@ contains
             scf%abs_force = forcetmp
           end if
         end do
+      else
+        if(outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0 &
+           .and. outp%output_interval /= 0 &
+           .and. gs_run_ .and. mod(iter, outp%output_interval) == 0)  &
+          call forces_calculate(gr, geo, hm, st, ks, vhxc_old=vhxc_old)
       end if
 
       if(abs(st%qtot) <= M_EPSILON) then
@@ -846,27 +835,19 @@ contains
       case (OPTION__MIXFIELD__DENSITY)
         ! mix input and output densities and compute new potential
         call mixing(scf%smix)
-        if(.not. cmplxscl) then
-          call mixfield_get_vnew(scf%mixfield, st%rho)
-          ! for spinors, having components 3 or 4 be negative is not unphysical
-          if(minval(st%rho(1:gr%fine%mesh%np, 1:st%d%spin_channels)) < -CNST(1e-6)) then
-            write(message(1),*) 'Negative density after mixing. Minimum value = ', &
-              minval(st%rho(1:gr%fine%mesh%np, 1:st%d%spin_channels))
-            call messages_warning(1)
-          end if
-        else
-          call mixfield_get_vnew(scf%mixfield, st%zrho%Re, st%zrho%Im)
+        call mixfield_get_vnew(scf%mixfield, st%rho)
+        ! for spinors, having components 3 or 4 be negative is not unphysical
+        if(minval(st%rho(1:gr%fine%mesh%np, 1:st%d%spin_channels)) < -CNST(1e-6)) then
+          write(message(1),*) 'Negative density after mixing. Minimum value = ', &
+            minval(st%rho(1:gr%fine%mesh%np, 1:st%d%spin_channels))
+          call messages_warning(1)
         end if
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
         call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
       case (OPTION__MIXFIELD__POTENTIAL)
         ! mix input and output potentials
         call mixing(scf%smix)
-        if(.not. cmplxscl) then
-          call mixfield_get_vnew(scf%mixfield, hm%vhxc)
-        else
-          call mixfield_get_vnew(scf%mixfield, hm%vhxc, hm%Imvhxc)
-        end if
+        call mixfield_get_vnew(scf%mixfield, hm%vhxc)
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
         call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
         
@@ -962,26 +943,13 @@ contains
       end if
 
       ! save information for the next iteration
-      if(.not. cmplxscl) then
-        rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
-      else
-        zrhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%zrho%Re(1:gr%fine%mesh%np, 1:nspin) +&
-          M_zI * st%zrho%Im(1:gr%fine%mesh%np, 1:nspin)  
-      end if
+      rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
 
       select case(scf%mix_field)
         case(OPTION__MIXFIELD__POTENTIAL)
-          if(.not. cmplxscl) then
-            call mixfield_set_vin(scf%mixfield, hm%vhxc(1:gr%mesh%np, 1:nspin))
-          else
-            call mixfield_set_vin(scf%mixfield, hm%vhxc(1:gr%mesh%np, 1:nspin), hm%Imvhxc(1:gr%mesh%np, 1:nspin))
-          end if
+          call mixfield_set_vin(scf%mixfield, hm%vhxc(1:gr%mesh%np, 1:nspin))
         case (OPTION__MIXFIELD__DENSITY)
-          if(.not. cmplxscl) then
-            call mixfield_set_vin(scf%mixfield, rhoin)
-          else
-            call mixfield_set_vin(scf%mixfield, zrhoin)
-        end if
+          call mixfield_set_vin(scf%mixfield, rhoin)
       end select
       if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
@@ -1023,8 +991,6 @@ contains
 
     SAFE_DEALLOCATE_A(rhoout)
     SAFE_DEALLOCATE_A(rhoin)
-    SAFE_DEALLOCATE_A(zrhoout)
-    SAFE_DEALLOCATE_A(zrhoin)
 
     if(scf%max_iter > 0 .and. any(scf%eigens%converged < st%nst) .and. .not. scf%lcao_restricted) then
       write(message(1),'(a)') 'Some of the states are not fully converged!'
@@ -1037,7 +1003,9 @@ contains
     end if
 
     ! calculate forces
-    if(scf%calc_force) call forces_calculate(gr, geo, hm, st)
+    if(scf%calc_force) then
+      call forces_calculate(gr, geo, hm, st, ks, vhxc_old=vhxc_old)
+    end if
 
     ! calculate stress
     if(scf%calc_stress) call stress_calculate(gr, hm, st, geo, ks) 
@@ -1062,6 +1030,12 @@ contains
       end if
     end if
 
+    if( ks%vdw_correction == OPTION__VDWCORRECTION__VDW_TS) then
+      call vdw_ts_write_c6ab(ks%vdw_ts, geo, STATIC_DIR, 'c6ab_eff')
+    end if
+
+    SAFE_DEALLOCATE_A(vhxc_old)
+
     POP_SUB(scf_run)
 
   contains
@@ -1081,17 +1055,10 @@ contains
 
         write(str, '(a,i5)') 'SCF CYCLE ITER #' ,iter
         call messages_print_stress(stdout, trim(str))
-        if(cmplxscl) then
-          write(message(1),'(a,es15.8,2(a,es9.2))') ' Re(etot) = ', units_from_atomic(units_out%energy, hm%energy%total), &
-            ' abs_ev   = ', units_from_atomic(units_out%energy, scf%abs_ev), ' rel_ev   = ', scf%rel_ev
-          write(message(2),'(a,es15.8,2(a,es9.2))') ' Im(etot) = ', units_from_atomic(units_out%energy, hm%energy%Imtotal), &
-            ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
-        else
-          write(message(1),'(a,es15.8,2(a,es9.2))') ' etot  = ', units_from_atomic(units_out%energy, hm%energy%total), &
-            ' abs_ev   = ', units_from_atomic(units_out%energy, scf%abs_ev), ' rel_ev   = ', scf%rel_ev
-          write(message(2),'(a,es15.2,2(a,es9.2))') &
-            ' ediff = ', scf%energy_diff, ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
-        end if
+        write(message(1),'(a,es15.8,2(a,es9.2))') ' etot  = ', units_from_atomic(units_out%energy, hm%energy%total), &
+          ' abs_ev   = ', units_from_atomic(units_out%energy, scf%abs_ev), ' rel_ev   = ', scf%rel_ev
+        write(message(2),'(a,es15.2,2(a,es9.2))') &
+          ' ediff = ', scf%energy_diff, ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
         ! write info about forces only if they are used as convergence criteria
         if (scf%conv_abs_force > M_ZERO) then
           write(message(3),'(23x,a,es9.2)') &
@@ -1203,12 +1170,6 @@ contains
 
         call states_write_eigenvalues(iunit, st%nst, st, gr%sb)
         write(iunit, '(1x)')
-
-        if(cmplxscl .and. hm%energy%Imtotal < M_ZERO) then
-          write(message(1), '(3a,es18.6)') 'Lifetime [', trim(units_abbrev(units_out%time)), '] = ', & 
-            units_from_atomic(units_out%time, - M_ONE/(M_TWO * hm%energy%Imtotal))
-          call messages_info(1, iunit)
-        end if
 
         write(iunit, '(3a)') 'Energy [', trim(units_abbrev(units_out%energy)), ']:'
       else

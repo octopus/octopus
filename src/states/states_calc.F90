@@ -27,7 +27,6 @@ module states_calc_oct_m
   use blacs_oct_m
   use blacs_proc_grid_oct_m
   use iso_c_binding
-  use cmplxscl_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use geometry_oct_m
@@ -92,7 +91,6 @@ module states_calc_oct_m
     dstates_calc_overlap,           &
     zstates_calc_overlap,           &
     states_orthogonalize_cproduct,  &
-    states_sort_complex,            &
     dstates_calc_projections,       &
     zstates_calc_projections,       &
     dstates_me_one_body,            &
@@ -141,8 +139,6 @@ contains
     ASSERT(st%d%dim == 1)
     SAFE_ALLOCATE(psi(1:mesh%np_part, 1))
    
-    ASSERT(st%cmplxscl%space .eqv. .true.)
-
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = 1, st%nst
         call states_get_state(st, mesh, ist, ik, psi)
@@ -220,57 +216,6 @@ contains
     POP_SUB(reorder_states_by_args)
   end subroutine reorder_states_by_args
 
-
-  subroutine states_sort_complex(mesh, st, diff, scores)
-    type(mesh_t),        intent(in)    :: mesh
-    type(states_t),      intent(inout) :: st
-    FLOAT,               intent(inout) :: diff(:,:) !< eigenstates convergence error
-    FLOAT,               intent(in)    :: scores(:)
-
-    integer              :: ik, ist, idim
-    integer, allocatable :: st_index(:)
-    FLOAT, allocatable   :: diff_copy(:,:)
-    FLOAT, allocatable   :: buf(:)
-    CMPLX, allocatable   :: cbuf(:)
-    
-    PUSH_SUB(states_sort_complex)
-    
-    SAFE_ALLOCATE(st_index(1:st%nst))
-    SAFE_ALLOCATE(cbuf(1:st%nst))
-    SAFE_ALLOCATE(buf(1:st%nst))
-    SAFE_ALLOCATE(diff_copy(1:size(diff,1),1:size(diff,2)))
-
-    diff_copy = diff
-
-    do ik = st%d%kpt%start, st%d%kpt%end
-      cbuf(:) = (st%zeigenval%Re(:, ik) + M_zI * st%zeigenval%Im(:, ik))
-      buf(:) = scores(:)
-
-      call sort(buf, st_index)
-      if (mpi_grp_is_root(mpi_world)) then
-        write(message(1), *) 'Permutation of states'
-        write(message(2), *) st_index
-        call messages_info(2)
-      end if
-      
-      do ist=1, st%nst !reorder the eigenstates error accordingly
-        diff(ist, ik) = diff_copy(st_index(ist),ik)
-        st%zeigenval%Re(ist, ik) = real(cbuf(st_index(ist)))
-        st%zeigenval%Im(ist, ik) = aimag(cbuf(st_index(ist)))
-      end do
-    
-      do idim=1, st%d%dim
-        call reorder_states_by_args(st, mesh, st_index, ik)
-      end do
-    end do
-    
-    SAFE_DEALLOCATE_A(st_index)
-    SAFE_DEALLOCATE_A(diff_copy)
-    SAFE_DEALLOCATE_A(buf)
-    SAFE_DEALLOCATE_A(cbuf)
-    
-    POP_SUB(states_sort_complex)
-  end subroutine states_sort_complex
 
   ! -------------------------------------------------------
   subroutine states_degeneracy_matrix(sb, st, dir)

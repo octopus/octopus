@@ -9,6 +9,7 @@ Enabled    : Yes
 #having to specify the pseudopotential file or the set.
 
 Input: 13-U235.01-gs.inp
+match ; SCF convergence    ;     GREPCOUNT(static/info, 'SCF converged') ; 1
 Precision: 0.00016
 match;  Total energy       ;     GREPFIELD(static/info, 'Total       =', 3) ;   -53.26219401
 Precision: 0.00013

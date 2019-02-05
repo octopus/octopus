@@ -6,13 +6,15 @@ BoxShape = parallelepiped
 
 ExperimentalFeatures = yes
 
-EigenSolver = rmmdiis
-ConvRelDens = 1.0e-7
+EigenSolver = cg_new
+EigensolverMaxIter = 50
+EigensolverTolerance = 1e-8
+ConvRelDens = 1.0e-6
 
 a = 7.8809
 
 %Species
-"Ni" | species_pseudo | hubbard_l | 2 | hubbard_u | 5.0/27.21138
+"Ni" | species_pseudo | hubbard_l | 2 | hubbard_u | 7.0/27.21138
 %
 DFTULevel = dft_u_empirical
 
@@ -38,9 +40,7 @@ PseudopotentialSet=hscv_pbe
 Spacing = 0.5
 
 FromScratch = yes
-ParStates = no
 ParDomains = no
-ParKPoints = auto
 
 SpinComponents = spinors
 GuessMagnetDensity = user_defined
@@ -58,8 +58,6 @@ LCAOStart= lcao_states
 %
 KPointsUseSymmetries = yes
 KPointsUseTimeReversal = no
-
-ExtraStates = 8
 
 AOTruncation = ao_box
 OutputLDA_U = occ_matrices

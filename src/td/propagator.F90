@@ -145,12 +145,8 @@ contains
     logical,             intent(in)    :: have_fields 
     logical,             intent(in)    :: family_is_mgga
 
-    logical :: cmplxscl
-    
     PUSH_SUB(propagator_init)
     
-    cmplxscl = st%cmplxscl%space
-
     call propagator_nullify(tr)
 
     !%Variable TDPropagator
@@ -344,9 +340,9 @@ contains
 
     select case(tr%method)
     case(PROP_CFMAGNUS4)
-      call potential_interpolation_init(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin, family_is_mgga, order = 4)
+      call potential_interpolation_init(tr%vksold, gr%mesh%np, st%d%nspin, family_is_mgga, order = 4)
     case default
-      call potential_interpolation_init(tr%vksold, cmplxscl, gr%mesh%np, st%d%nspin, family_is_mgga)
+      call potential_interpolation_init(tr%vksold, gr%mesh%np, st%d%nspin, family_is_mgga)
     end select
 
     call exponential_init(tr%te) ! initialize propagator
@@ -471,21 +467,11 @@ contains
     PUSH_SUB(propagator_run_zero_iter)
 
     if(hm%family_is_mgga_with_exc) then
-      if(hm%cmplxscl%space) then
-        call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
-                hm%vhxc, hm%imvhxc, hm%vtau, hm%imvtau)   
-      else
-        call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
-                hm%vhxc, vtau = hm%vtau)   
-      end if
+      call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
+              hm%vhxc, vtau = hm%vtau)   
     else
-      if(hm%cmplxscl%space) then
-        call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
-                hm%vhxc, hm%imvhxc)   
-      else
-        call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
+      call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
                 hm%vhxc)
-      end if
     end if
 
     POP_SUB(propagator_run_zero_iter)
@@ -514,7 +500,7 @@ contains
     logical,              optional,  intent(in)    :: update_energy
     type(opt_control_state_t), optional, target, intent(inout) :: qcchi
 
-    logical :: cmplxscl, generate, update_energy_
+    logical :: generate, update_energy_
     type(profile_t), save :: prof
 
     call profiling_in(prof, "TD_PROPAGATOR")
@@ -522,24 +508,12 @@ contains
 
     update_energy_ = optional_default(update_energy, .true.)
 
-    cmplxscl = hm%cmplxscl%space
-
     if(hm%family_is_mgga_with_exc) then
-      if(cmplxscl) then
-        call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
-                hm%vhxc, hm%imvhxc, hm%vtau, hm%imvtau)
-      else
-        call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
+      call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
                 hm%vhxc, vtau = hm%vtau)
-      end if
     else
-      if(cmplxscl) then
-        call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
-                hm%vhxc, hm%imvhxc)
-      else
-        call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
+      call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
                 hm%vhxc)
-      end if
     end if
 
     ! to work on SCDM states we rotate the states in st to the localized SCDM,
@@ -603,13 +577,13 @@ contains
 
     ! Recalculate forces, update velocities...
     if(update_energy_ .and. ion_dynamics_ions_move(ions) .and. tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) then
-      call forces_calculate(gr, geo, hm, st, abs(nt*dt), dt)
+      call forces_calculate(gr, geo, hm, st, ks, t = abs(nt*dt), dt = dt)
       call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
       if(generate) call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
       if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-        call forces_calculate(gr, geo, hm, st, abs(nt*dt), dt)
+        call forces_calculate(gr, geo, hm, st, ks, t = abs(nt*dt), dt = dt)
       end if
     end if
 

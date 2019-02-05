@@ -433,11 +433,12 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   FLOAT,   optional, intent(in)    :: theta_fi
   R_TYPE,  optional, intent(in)    :: beta_ij(:)   !< beta_ij(nst)
 
-  integer :: ist, idim
+  integer :: ist, idim, ibind
   FLOAT   :: nrm2
   R_TYPE, allocatable  :: ss(:), psi(:, :)
   type(profile_t), save :: prof
   type(profile_t), save :: reduce_prof
+  type(batch_t), pointer :: batch
   
   call profiling_in(prof, "GRAM_SCHMIDT")
   PUSH_SUB(X(states_orthogonalize_single))
@@ -454,9 +455,22 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
     if(present(mask)) then
       if(mask(ist)) cycle
     end if
-          
-    call states_get_state(st, mesh, ist, iqn, psi)
-    ss(ist) = X(mf_dotp)(mesh, st%d%dim, psi, phi, reduce = .false., dotu = st%cmplxscl%space)
+ 
+    !To understand this, one should look at states_get_states and batch_get_states routines 
+    batch => st%group%psib(st%group%iblock(ist, iqn), iqn)
+    select case(batch_status(batch))
+    case(BATCH_NOT_PACKED)
+      ss(ist) = R_TOTYPE(M_ZERO)
+      do idim = 1, st%d%dim
+        ibind = batch_inv_index(batch, (/ist, idim/)) 
+        ss(ist) = ss(ist) + X(mf_dotp)(mesh, batch%states_linear(ibind)%X(psi), phi(:,idim), reduce = .false.)
+      end do
+    case(BATCH_PACKED, BATCH_DEVICE_PACKED)
+      !Not properly implemented
+      !We need to reorder the operations is these two cases
+      call states_get_state(st, mesh, ist, iqn, psi)
+      ss(ist) = X(mf_dotp)(mesh, st%d%dim, psi, phi, reduce = .false.)
+    end select
   end do
     
   if(mesh%parallel_in_domains) then
@@ -482,25 +496,25 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
       if(mask(ist)) cycle
     end if
     
-    call states_get_state(st, mesh, ist, iqn, psi)
-    do idim = 1, st%d%dim
-      call blas_axpy(mesh%np, -ss(ist), psi(1, idim), 1, phi(1, idim), 1)
-    end do
+    batch => st%group%psib(st%group%iblock(ist, iqn), iqn)
+    select case(batch_status(batch))
+    case(BATCH_NOT_PACKED)
+      do idim = 1, st%d%dim
+        ibind = batch_inv_index(batch, (/ist, idim/))
+        call blas_axpy(mesh%np, -ss(ist), batch%states_linear(ibind)%X(psi)(1), 1, phi(1, idim), 1)
+      end do
+    case(BATCH_PACKED, BATCH_DEVICE_PACKED)
+      !Not properly implemented
+      !We need to reorder the operations is these two cases
+      call states_get_state(st, mesh, ist, iqn, psi)
+      do idim = 1, st%d%dim
+        call blas_axpy(mesh%np, -ss(ist), psi(1, idim), 1, phi(1, idim), 1)
+      end do
+    end select
   end do
 
   if(optional_default(normalize, .false.)) then
-    if (st%cmplxscl%space) then 
-      nrm2 = sqrt(X(mf_dotp)(mesh, st%d%dim, phi, phi, dotu = .true.))
-      if(abs(nrm2) <= M_EPSILON) then
-        message(1) = "Wavefunction has zero norm after states_orthogonalize_single; cannot normalize."
-        call messages_fatal(1)
-      end if
-      do idim = 1, st%d%dim
-        call lalg_scal(mesh%np, M_ONE/nrm2, phi(:, idim))
-      end do
-    else
-      call X(mf_normalize)(mesh, st%d%dim, phi, nrm2)
-    end if
+    call X(mf_normalize)(mesh, st%d%dim, phi, nrm2)
   end if
 
   if(present(overlap)) then

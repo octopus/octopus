@@ -29,31 +29,21 @@
 
     integer :: is, err, idir, ispin, ik, ib
     character(len=MAX_PATH_LEN) :: fname
-    type(base_potential_iterator_t)        :: iter
-    type(base_potential_t),        pointer :: subsys_external
-    type(base_hamiltonian_t),      pointer :: subsys_tnadd
-    character(len=BASE_POTENTIAL_NAME_LEN) :: name
     FLOAT,         dimension(:),   pointer :: xpot
-    FLOAT,         dimension(:,:), pointer :: tnadd_potential
     FLOAT, allocatable :: v0(:,:), nxc(:), potential(:)
     FLOAT, allocatable :: current_kpt(:, :)
     FLOAT, allocatable :: density_kpt(:), density_tmp(:,:)
     type(density_calc_t) :: dens_calc
-    FLOAT, allocatable :: gradvh(:, :)
+    FLOAT, allocatable :: gradvh(:, :), heat_current(:, :, :)
 
     PUSH_SUB(output_hamiltonian)
    
 
     if(bitand(outp%what, OPTION__OUTPUT__POTENTIAL) /= 0) then
-      if(hm%cmplxscl%space) then
-        call zio_function_output(outp%how, dir, "v0", der%mesh,&
-          hm%ep%vpsl + M_zI*hm%ep%Imvpsl, units_out%energy, err, geo = geo, grp = grp)
-      else  
-        SAFE_ALLOCATE(v0(1:der%mesh%np, 1:hm%d%dim))
-        v0(1:der%mesh%np, 1) = hm%ep%vpsl(1:der%mesh%np)
-        call dio_function_output(outp%how, dir, "v0", der%mesh, v0(:, 1), units_out%energy, err, geo = geo, grp = grp)
-        SAFE_DEALLOCATE_A(v0)
-      end if
+      SAFE_ALLOCATE(v0(1:der%mesh%np, 1:hm%d%dim))
+      v0(1:der%mesh%np, 1) = hm%ep%vpsl(1:der%mesh%np)
+      call dio_function_output(outp%how, dir, "v0", der%mesh, v0(:, 1), units_out%energy, err, geo = geo, grp = grp)
+      SAFE_DEALLOCATE_A(v0)
 
       if(hm%ep%classical_pot > 0) then
         call dio_function_output(outp%how, dir, "vc", der%mesh, hm%ep%Vclassical, units_out%energy, err, geo = geo, grp = grp)
@@ -63,55 +53,21 @@
         call dio_function_output(outp%how, dir, "vext", der%mesh, hm%ep%v_static, units_out%energy, err, geo = geo, grp = grp)
       end if
 
-      nullify(subsys_external, xpot)
-      if(associated(hm%ep%subsys_external))then
-        call base_potential_init(iter, hm%ep%subsys_external)
-        do
-          nullify(subsys_external, xpot)
-          call base_potential_next(iter, name, subsys_external, err)
-          if(err/=BASE_POTENTIAL_OK)exit
-          ASSERT(associated(subsys_external))
-          call base_potential_get(subsys_external, xpot)
-          ASSERT(associated(xpot))
-          write(fname, "(a,'-',a)") "v0", trim(adjustl(name))
-          call dio_function_output(outp%how, dir, fname, der%mesh, &
-            xpot, units_out%energy, err, geo = geo, grp = grp)
-        end do
-        call base_potential_end(iter)
-        nullify(subsys_external, xpot)
-      end if
-
       if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-        if (.not. hm%cmplxscl%space) then 
-          call dio_function_output(outp%how, dir, 'vh', der%mesh, hm%vhartree, units_out%energy, err, geo = geo, grp = grp)
-          if(bitand(outp%what, OPTION__OUTPUT__POTENTIAL_GRADIENT) /= 0) then
-            SAFE_ALLOCATE(gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
-            call dderivatives_grad(der, hm%vhartree(1:der%mesh%np_part), gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
-            call io_function_output_vector(outp%how, dir, 'grad_vh', der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
-                     geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
-            SAFE_DEALLOCATE_A(gradvh)
-          end if
-        else
-          call zio_function_output(outp%how, dir, 'vh', der%mesh, &
-            hm%vhartree(1:der%mesh%np) + M_zI*hm%Imvhartree(1:der%mesh%np), units_out%energy, err, geo = geo, grp = grp)
-        end if
-        nullify(subsys_tnadd, tnadd_potential)
-        if(associated(hm%subsys_hm))then
-          call base_hamiltonian_get(hm%subsys_hm, "tnadd", subsys_tnadd)
-          ASSERT(associated(subsys_tnadd))
-          call base_hamiltonian_get(subsys_tnadd, nspin=ispin)
-          call base_hamiltonian_get(subsys_tnadd, tnadd_potential)
-          ASSERT(associated(tnadd_potential))
-          nullify(subsys_tnadd)
-          do is = 1, min(ispin, 2)
-            if(ispin == 1) then
-              write(fname, '(a)') 'tnadd'
-            else
-              write(fname, '(a,i1)') 'tnadd-sp', is
-            end if
-            call dio_function_output(outp%how, dir, fname, der%mesh, &
-              tnadd_potential(:,is), units_out%energy, err, geo = geo, grp = grp)
-          end do
+        call dio_function_output(outp%how, dir, 'vh', der%mesh, hm%vhartree, units_out%energy, err, geo = geo, grp = grp)
+        if(bitand(outp%what, OPTION__OUTPUT__POTENTIAL_GRADIENT) /= 0) then
+          SAFE_ALLOCATE(gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
+          call dderivatives_grad(der, hm%vhartree(1:der%mesh%np_part), gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
+          call io_function_output_vector(outp%how, dir, 'grad_vh', der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
+                   geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
+
+          SAFE_ALLOCATE(v0(1:der%mesh%np_part, 1))
+          v0(1:der%mesh%np, 1) = hm%ep%vpsl(1:der%mesh%np)
+          call dderivatives_grad(der, v0(1:der%mesh%np_part, 1), gradvh(1:der%mesh%np, 1:der%mesh%sb%dim))
+          call io_function_output_vector(outp%how, dir, 'grad_v0', der%mesh, gradvh(:, :), der%mesh%sb%dim, units_out%force, err,&
+                   geo = geo, grp = grp, vector_dim_labels = (/'x', 'y', 'z'/))
+          SAFE_DEALLOCATE_A(v0)
+          SAFE_DEALLOCATE_A(gradvh)
         end if
         
         SAFE_ALLOCATE(potential(1:der%mesh%np))
@@ -121,19 +77,10 @@
           else
             write(fname, '(a,i1)') 'vxc-sp', is
           end if
-          if(.not. hm%cmplxscl%space) then
-            call dio_function_output(outp%how, dir, fname, der%mesh, hm%vxc(:, is), units_out%energy, err, geo = geo, grp = grp)
-          else
-            call zio_function_output(outp%how, dir, fname, der%mesh, &
-              hm%vxc(:, is) + M_zI *  hm%Imvxc(:, is), units_out%energy, err, geo = geo, grp = grp)
-          end if
+          call dio_function_output(outp%how, dir, fname, der%mesh, hm%vxc(:, is), units_out%energy, err, geo = geo, grp = grp)
           
           ! finally the full KS potential (without non-local PP contributions)
-          if(associated(tnadd_potential))then
-            potential = hm%ep%vpsl + hm%vhxc(:, is) - tnadd_potential(:, min(is,ispin))
-          else
-            potential = hm%ep%vpsl + hm%vhxc(:, is)
-          end if
+          potential = hm%ep%vpsl + hm%vhxc(:, is)
           if(hm%d%ispin == 1) then
             write(fname, '(a)') 'vks'
           else
@@ -143,18 +90,11 @@
             call dio_function_output(outp%how, dir, fname, der%mesh, &
               potential + hm%ep%Vclassical, units_out%energy, err, geo = geo, grp = grp)
           else
-            if(.not. hm%cmplxscl%space) then
-              call dio_function_output(outp%how, dir, fname, der%mesh, &
+            call dio_function_output(outp%how, dir, fname, der%mesh, &
                 potential, units_out%energy, err, geo = geo, grp = grp)
-            else
-              call zio_function_output(outp%how, dir, fname, der%mesh, &
-                potential + M_zI * hm%ep%Imvpsl + M_zI * hm%Imvhxc(:, is), units_out%energy, &
-                err, geo = geo, grp = grp)
-            end if
           end if
         end do
         SAFE_DEALLOCATE_A(potential)
-        nullify(tnadd_potential)
       end if
 
       !PCM potentials
@@ -262,6 +202,27 @@
       end if
     end if
 
+    if(bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) then
+
+      SAFE_ALLOCATE(heat_current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin))
+      
+      call current_heat_calculate(der, hm, geo, st, heat_current)
+      
+      do is = 1, hm%d%nspin
+        if(st%d%nspin == 1) then
+          write(fname, '(2a)') 'heat_current'
+        else
+          write(fname, '(a,i1)') 'heat_current-sp', is
+        end if
+        
+        call io_function_output_vector(outp%how, dir, fname, der%mesh, &
+          st%current(:, :, is), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
+          geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
+        
+        SAFE_DEALLOCATE_A(heat_current)
+      end do
+    end if
+    
     if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__DENSITY_KPT) /= 0) then
       SAFE_ALLOCATE(density_kpt(1:st%d%nik))
       density_kpt(1:st%d%nik) = M_ZERO

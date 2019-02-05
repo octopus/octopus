@@ -22,7 +22,7 @@ AC_PREREQ(2.59)
 AC_INIT([Octopus],[australis],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([subdir-objects])
 
 AC_CONFIG_HEADERS([config.h])
 
@@ -37,6 +37,7 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
+AC_PROG_MKDIR_P
 
 dnl check whether mpi is enabled
 AC_ARG_ENABLE(mpi, AS_HELP_STRING([--enable-mpi(=PATH)], [Parallel version. For ancient versions of MPI, you may need to specify PATH for MPI libs.]))
@@ -62,6 +63,7 @@ fi
 
 AC_PROG_CC($octopus_default_cc)
 AC_PROG_CC_C99
+AM_PROG_CC_C_O
 
 AC_PROG_CXX
 AX_CXX_COMPILE_STDCXX([11], [noext], [mandatory])
@@ -326,13 +328,6 @@ ACX_BLACS
 ACX_SCALAPACK
 ACX_ELPA
 
-dnl check for ARPACK and PARPACK
-ACX_ARPACK
-ACX_PARPACK
-
-dnl check for FEAST
-ACX_FEAST
-
 dnl check for Libfm
 ACX_LIBFM
 
@@ -356,7 +351,13 @@ AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_COMP_METIS} = x1)
 
 ACX_YAML
 
+dnl performance analysis using the likwid marker API
+ACX_LIKWID
+
 AC_SUBST(FCEXTRALIBS)
+
+m4_include([src/fdep/fortran_dependencies.m4])
+FDEP_F90_GNU_MAKE_DEPS
 
 ACX_OCTOPUS_COMPILATION_INFO
 
@@ -381,24 +382,6 @@ AC_CONFIG_FILES([Makefile
   external_libs/rapidxml/Makefile
   liboct_parser/Makefile
   src/Makefile
-  src/include/Makefile
-  src/basic/Makefile
-  src/math/Makefile
-  src/species/Makefile
-  src/ions/Makefile
-  src/grid/Makefile
-  src/poisson/Makefile
-  src/frozen/Makefile
-  src/states/Makefile
-  src/hamiltonian/Makefile
-  src/basis_set/Makefile
-  src/system/Makefile
-  src/scf/Makefile
-  src/td/Makefile
-  src/opt_control/Makefile
-  src/sternheimer/Makefile
-  src/main/Makefile
-  src/utils/Makefile
   scripts/Makefile
   doc/Makefile
   doc/html/Makefile
@@ -448,8 +431,7 @@ AC_CONFIG_FILES([Makefile
   testsuite/periodic_systems/Makefile
   testsuite/photo_electron/Makefile
   testsuite/pseudopotentials/Makefile
-  testsuite/complex_scaling/Makefile
-  testsuite/frozen/Makefile
+  testsuite/tutorials/Makefile
   testsuite/symmetries/Makefile])
 AC_CONFIG_FILES([testsuite/oct-run_testsuite.sh], [chmod +x testsuite/oct-run_testsuite.sh])
 AC_CONFIG_FILES([doc/html/varsRightFrame.html])

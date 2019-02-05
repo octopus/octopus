@@ -7,6 +7,7 @@ Enabled    : Yes
 
 
 Input: 07-spin_orbit_coupling.01-hgh.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF \*not\* converged') ; 1
 match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -28.175360
 match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -27.240714
 match ; Eigenvalue  5 ; GREPFIELD(static/info, ' 5   --', 3) ; -17.891692
@@ -26,11 +27,12 @@ match ; <Sz>       11 ; GREPFIELD(static/info, '11   --', 7) ;  0.1374
 match ; <Sz>       13 ; GREPFIELD(static/info, '13   --', 7) ; -0.1138
 match ; <Sz>       15 ; GREPFIELD(static/info, '15   --', 7) ;  0.4476
 
-match ; Force         ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; 2.546063
+match ; Force         ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; -1.100007
 Precision : default
 
 ExtraFile : 07-spin_orbit_coupling.02-xe-pseudo.upf
 Input: 07-spin_orbit_coupling.02-rkb.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF \*not\* converged') ; 1
 match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -27.453161
 match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -26.499540
 match ; Eigenvalue  5 ; GREPFIELD(static/info, ' 5   --', 3) ; -17.319167
@@ -50,5 +52,5 @@ match ; <Sz>       11 ; GREPFIELD(static/info, '11   --', 7) ;  0.1383
 match ; <Sz>       13 ; GREPFIELD(static/info, '13   --', 7) ; -0.1132
 match ; <Sz>       15 ; GREPFIELD(static/info, '15   --', 7) ;  0.4500
 
-match ; Force         ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; 2.556426
+match ; Force         ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; -0.691006
 Precision : default

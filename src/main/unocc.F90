@@ -182,11 +182,7 @@ contains
       message(1) = "Unable to read density: Building density from wavefunctions."
       call messages_info(1)
 
-      if(.not. hm%cmplxscl%space) then
-        call density_calc(sys%st, sys%gr, sys%st%rho)
-      else
-        call density_calc(sys%st, sys%gr, sys%st%zrho%Re, sys%st%zrho%Im)
-      end if
+      call density_calc(sys%st, sys%gr, sys%st%rho)
     end if
 
     if (states_are_real(sys%st)) then

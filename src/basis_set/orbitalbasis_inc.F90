@@ -28,9 +28,9 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
   logical,                   intent(in)       :: use_all_orb
   logical, optional,         intent(in)       :: verbose
 
-  integer :: ia, iorb, norb, ntotorb, offset, ios, idim
+  integer :: ia, iorb, norb, offset, ios, idim
   integer ::  hubbardl, ii, nn, ll, mm, work, work2, iorbset
-  FLOAT   :: norm, hubbardj, radius, jj
+  FLOAT   :: norm, hubbardj, jj
   integer :: n_s_orb
   type(orbitalset_t), pointer :: os
   logical :: hasjdependence
@@ -93,7 +93,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
   end if
 
   if(norb == 0) then
-    write(message(1),'(a)')  'No orbital sets found. Please check your input file.'
+    write(message(1),'(a)')  'No orbital set found. Please check your input file.'
     call messages_fatal(1)
   end if
 
@@ -288,7 +288,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
     SAFE_ALLOCATE(os%phase(1:os%sphere%np, kpt%start:kpt%end))
     os%phase(:,:) = M_ZERO
     if(simul_box_is_periodic(mesh%sb) .and. .not. this%submeshforperiodic) then 
-      SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%ndim, 1:os%norbs, kpt%start:kpt%end))
+      SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%norbs, 1:os%ndim, kpt%start:kpt%end))
       os%eorb_mesh(:,:,:,:) = M_ZERO
     else
       SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, kpt%start:kpt%end))
@@ -340,3 +340,82 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
 
 end subroutine X(orbitalbasis_build)
 
+
+! ---------------------------------------------------------
+!> This routine constructd an empty orbital basis.
+! ---------------------------------------------------------
+subroutine X(orbitalbasis_build_empty)(this, geo, mesh, kpt, ndim, nstates, verbose)
+  type(orbitalbasis_t),      intent(inout)    :: this
+  type(geometry_t), target,  intent(in)       :: geo
+  type(distributed_t),       intent(in)       :: kpt
+  type(mesh_t), target,      intent(in)       :: mesh
+  integer,                   intent(in)       :: ndim
+  integer,                   intent(in)       :: nstates
+  logical, optional,         intent(in)       :: verbose
+
+  integer :: is, ios, iorb, offset
+  type(orbitalset_t), pointer :: os
+  logical :: verbose_
+
+  PUSH_SUB(X(orbitalbasis_build_empty))
+
+  verbose_ = optional_default(verbose,.true.)
+
+  if(verbose_) then
+    write(message(1),'(a)')    'Building an empty LDA+U orbital basis.'
+    call messages_info(1)
+  end if
+
+  ASSERT(nstates > 0)
+
+  this%norbsets = 1
+  SAFE_ALLOCATE(this%orbsets(1:1))
+  call orbitalset_nullify(this%orbsets(1))
+  os => this%orbsets(1)
+  os%ii = -1
+  os%radius = M_ZERO
+  os%ndim = ndim
+  os%norbs = nstates
+  os%Ueff = M_ZERO
+  os%alpha = M_ZERO
+  os%submeshforperiodic = .false.
+  os%sphere%mesh => mesh
+  nullify(os%spec)
+  os%iatom = -1
+  do is = 1, nstates
+    SAFE_ALLOCATE(os%X(orb)(1:mesh%np,1:os%ndim,1:os%norbs))
+    os%X(orb)(:,:,:) = R_TOTYPE(M_ZERO)
+  end do
+
+  this%maxnorbs = nstates
+  this%max_np = mesh%np 
+
+  nullify(os%phase)
+  ! In case of complex wavefunction, we allocate the array for the phase correction
+#ifdef R_TCOMPLEX
+  SAFE_ALLOCATE(os%phase(1:mesh%np, kpt%start:kpt%end))
+  os%phase(:,:) = M_ZERO
+  SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%norbs, 1:os%ndim, kpt%start:kpt%end))
+  os%eorb_mesh(:,:,:,:) = M_ZERO
+#endif
+
+  this%size = nstates
+  do ios = 1, this%norbsets
+    this%size = this%size + this%orbsets(ios)%norbs
+  end do
+
+  SAFE_ALLOCATE(this%global2os(2,this%size))
+  SAFE_ALLOCATE(this%os2global(this%norbsets, this%maxnorbs))
+  offset = 1
+  do ios = 1, this%norbsets
+    do iorb = 1, this%orbsets(ios)%norbs
+      this%global2os(1,offset) = ios
+      this%global2os(2,offset) = iorb
+      this%os2global(ios, iorb) = offset
+      offset = offset + 1
+    end do
+  end do
+
+  POP_SUB(X(orbitalbasis_build_empty))
+
+end subroutine X(orbitalbasis_build_empty)

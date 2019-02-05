@@ -179,7 +179,7 @@ contains
     call propagator_run_zero_iter(hm, gr, td%tr)
     if(ion_dynamics_ions_move(td%ions)) then
       call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = M_ZERO)
-      call forces_calculate(gr, sys%geo, hm, psi, M_ZERO, td%dt)
+      call forces_calculate(gr, sys%geo, hm, psi, sys%ks, t = M_ZERO, dt = td%dt)
     end if
 
 
@@ -624,7 +624,8 @@ contains
 
     call states_copy(st_ref, psi)
 
-    if(ion_dynamics_ions_move(td%ions)) call forces_calculate(gr, sys%geo, hm, psi, td%max_iter*abs(td%dt), td%dt)
+    if(ion_dynamics_ions_move(td%ions)) &
+      call forces_calculate(gr, sys%geo, hm, psi, sys%ks, t = td%max_iter*abs(td%dt), dt = td%dt)
 
     message(1) = "Info: Backward propagation."
     call messages_info(1)
@@ -701,7 +702,7 @@ contains
         if(ion_dynamics_ions_move(td%ions)) then
           call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_final)
           call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = abs((i-1)*td%dt))
-          call forces_calculate(gr, sys%geo, hm, psi, abs((i-1)*td%dt), td%dt)
+          call forces_calculate(gr, sys%geo, hm, psi, sys%ks, t = abs((i-1)*td%dt), dt = td%dt)
           call forces_costate_calculate(gr, sys%geo, hm, psi, chi, fnew, q)
           call ion_dynamics_verlet_step2(sys%geo, p, fold, fnew, td%dt)
           SAFE_DEALLOCATE_A(fold)

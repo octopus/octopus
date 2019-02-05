@@ -21,7 +21,6 @@
 module space_oct_m
 
   use global_oct_m
-  use json_oct_m
   use messages_oct_m
   use parser_oct_m
 
@@ -35,7 +34,6 @@ module space_oct_m
   public ::                   &
     space_t,                  &
     space_init,               &
-    space_create_data_object, &
     space_copy,               &
     space_end
 
@@ -53,15 +51,10 @@ module space_oct_m
     module procedure space_not_equal
   end interface operator(/=)
 
-  interface space_init
-    module procedure space_init_simple
-    module procedure space_init_data_object
-  end interface space_init
-
 contains
 
   ! ---------------------------------------------------------
-  subroutine space_init_simple(this, dim)
+  subroutine space_init(this, dim)
     type(space_t),     intent(inout) :: this
     integer, optional, intent(in)    :: dim
 
@@ -84,36 +77,7 @@ contains
     if((this%dim>MAX_DIM).or.(this%dim<1)) call messages_input_error('Dimensions')
 
     POP_SUB(space_init_simple)
-  end subroutine space_init_simple
-
-  ! ---------------------------------------------------------
-  subroutine space_init_data_object(this, config)
-    type(space_t),       intent(out) :: this
-    type(json_object_t), intent(in)  :: config
-
-    integer :: ndim, ierr
-
-    PUSH_SUB(space_init_data_object)
-    
-    call json_get(config, "dimensions", ndim, ierr=ierr)
-    if(ierr/=JSON_OK)ndim=default_ndim
-    call space_init_simple(this, ndim)
-
-    POP_SUB(space_init_data_object)
-  end subroutine space_init_data_object
-
-  ! ---------------------------------------------------------
-  subroutine space_create_data_object(this, config)
-    type(space_t),       intent(in)  :: this
-    type(json_object_t), intent(out) :: config
-
-    PUSH_SUB(space_create_data_object)
-    
-    call json_init(config)
-    call json_set(config, "dimensions", this%dim)
-
-    POP_SUB(space_create_data_object)
-  end subroutine space_create_data_object
+  end subroutine space_init
 
   ! ---------------------------------------------------------
   elemental subroutine space_copy(this_out, this_in)

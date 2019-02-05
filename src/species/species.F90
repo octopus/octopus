@@ -22,7 +22,6 @@ module species_oct_m
   use global_oct_m
   use iihash_oct_m
   use io_oct_m
-  use json_oct_m
   use loct_oct_m
   use loct_math_oct_m
   use loct_pointer_oct_m
@@ -52,10 +51,9 @@ module species_oct_m
     species_read,                  &
     species_build,                 &
     species_init_global,           &
+    species_end_global,            &
     species_read_delta,            &
     species_pot_init,              &
-    species_init_from_data_object, &
-    species_create_data_object,    &
     species_type,                  &
     species_label,                 &
     species_index,                 &
@@ -164,6 +162,7 @@ module species_oct_m
     integer :: user_lmax          !< For the TM pseudos, user defined lmax 
     integer :: user_llocal        !< For the TM pseudos, used defined llocal
     integer :: pseudopotential_set_id !< to which set this pseudopotential belongs
+    logical :: pseudopotential_set_initialized
     type(pseudo_set_t) :: pseudopotential_set
   end type species_t
 
@@ -175,6 +174,8 @@ module species_oct_m
   logical :: initialized = .false.
   integer :: default_pseudopotential_set_id
   type(pseudo_set_t) :: default_pseudopotential_set
+  real(8) :: energy_tolerance
+  logical :: automatic
   
 contains
 
@@ -217,6 +218,8 @@ contains
     this%user_lmax   = INVALID_L
     this%user_llocal = INVALID_L
     this%pseudopotential_set_id = OPTION__PSEUDOPOTENTIALSET__NONE
+    this%pseudopotential_set_initialized = .false.
+    call pseudo_set_nullify(this%pseudopotential_set)
     
     POP_SUB(species_nullify)
   end subroutine species_nullify
@@ -231,6 +234,35 @@ contains
     initialized = .true.
 
     call share_directory_set(conf%share)    
+
+    !%Variable PseudopotentialAutomaticParameters
+    !%Type logical
+    !%Default false
+    !%Section System::Species
+    !%Description
+    !% (Experimental) This enables a new automatic method for
+    !% determining the best parameters for the pseudopotential
+    !% (spacing and radius). For the moment, only the spacing can be
+    !% adjusted for a few pseudopotentials.
+    !%
+    !% This does not affect Octopus fixed parameters for the standard
+    !% pseudopotential set.
+    !%End
+    call parse_variable('PseudopotentialAutomaticParameters', .false., automatic)
+    
+    if(automatic) call messages_experimental('PseudopotentialAutomaticParameters')
+    
+    !%Variable PseudopotentialEnergyTolerance
+    !%Type float
+    !%Default 0.005
+    !%Section System::Species
+    !%Description
+    !% For some pseudopotentials, Octopus can select the convergence
+    !% parameters (spacing and radius) automatically so that the
+    !% discretization error is below a certain threshold. This
+    !% variable controls the value of that threshold.
+    !%End
+    call parse_variable('PseudopotentialEnergyTolerance', CNST(0.005), energy_tolerance)
     
     !%Variable PseudopotentialSet
     !%Type integer
@@ -304,12 +336,26 @@ contains
     if(default_pseudopotential_set_id == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL_STRINGENT) call messages_experimental('PseudopotentialSet = pseudodojo_pbesol_stringent')
 
     if(default_pseudopotential_set_id /= OPTION__PSEUDOPOTENTIALSET__NONE) then
-      call pseudo_set_init(default_pseudopotential_set, get_set_directory(default_pseudopotential_set_id), ierr)
+      call pseudo_set_init(default_pseudopotential_set, get_set_directory(default_pseudopotential_set_id), ierr, automatic)
+    else
+      call pseudo_set_nullify(default_pseudopotential_set)
     end if
-    
+
     POP_SUB(species_init_global)
   end subroutine species_init_global
-  
+
+  ! ---------------------------------------------------------
+
+  subroutine species_end_global()
+    integer :: ierr
+    
+    PUSH_SUB(species_end_global)
+
+    call pseudo_set_end(default_pseudopotential_set)
+    
+    POP_SUB(species_end_global)
+  end subroutine species_end_global
+
   ! ---------------------------------------------------------
   !> Initializes a species object. This should be the
   !! first routine to be called (before species_read and species_build).
@@ -323,7 +369,7 @@ contains
 
     PUSH_SUB(species_init)
     
-    if(.not. initialized) call species_init_global()
+    ASSERT(initialized)
 
     call species_nullify(this)
     this%label = trim(label)
@@ -607,7 +653,7 @@ contains
       if(spec%z < 0) spec%z = element_atomic_number(el)
       if(spec%user_lmax == INVALID_L) spec%user_lmax = pseudo_set_lmax(spec%pseudopotential_set, el)
       if(spec%user_llocal == INVALID_L) spec%user_llocal = pseudo_set_llocal(spec%pseudopotential_set, el)
-      if(spec%def_h < 0) spec%def_h = pseudo_set_spacing(spec%pseudopotential_set, el)
+      if(spec%def_h < 0) spec%def_h = pseudo_set_spacing(spec%pseudopotential_set, el, energy_tolerance)
       if(spec%def_rsize < 0) spec%def_rsize = pseudo_set_radius(spec%pseudopotential_set, el)
       if(spec%mass < 0) spec%mass = element_mass(el)
       if(spec%vdw_radius < 0) spec%vdw_radius = element_vdw_radius(el)
@@ -917,92 +963,6 @@ contains
 
     POP_SUB(species_pot_init)
   end subroutine species_pot_init
-  ! ---------------------------------------------------------
-
-  ! ---------------------------------------------------------
-  subroutine species_init_from_data_object(this, index, json)
-    type(species_t),     intent(out) :: this
-    integer,             intent(in)  :: index
-    type(json_object_t), intent(in)  :: json
-
-    integer :: ierr
-
-    PUSH_SUB(species_init_from_data_object)
-
-    if(.not. initialized) call species_init_global()
-
-    call species_nullify(this)
-       
-    this%index=index
-    call json_get(json, "label", this%label, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "label" from species data object.'
-      call messages_fatal(1)
-      return
-    end if
-    call json_get(json, "type", this%type, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "type" from species data object.'
-      call messages_fatal(1)
-      return
-    end if
-    call json_get(json, "z_val", this%z_val, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "z_val" from species data object.'
-      call messages_fatal(1)
-      return
-    end if
-    call json_get(json, "mass", this%mass, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "mass" from species data object.'
-      call messages_fatal(1)
-      return
-    end if
-    call json_get(json, "vdw_radius", this%vdw_radius, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "vdw_radius" from species data object.'
-      call messages_fatal(1)
-      return
-    end if
-    this%has_density=.false.
-    this%potential_formula=""
-    nullify(this%ps)
-    this%nlcc=.false.
-    call json_get(json, "def_rsize", this%def_rsize, ierr)
-    if(ierr/=JSON_OK)then
-      message(1) = 'Could not read "def_rsize" from species data object.'
-      call messages_fatal(1)
-      return
-    end if
-    this%def_h=-M_ONE
-    this%niwfs=-1
-    nullify(this%iwf_n)
-    nullify(this%iwf_l)
-    nullify(this%iwf_m)
-    nullify(this%iwf_i)
-    nullify(this%iwf_j)
-
-    POP_SUB(species_init_from_data_object)
-  end subroutine species_init_from_data_object
-  ! ---------------------------------------------------------
-
-  ! ---------------------------------------------------------
-  subroutine species_create_data_object(this, json)
-    type(species_t),     intent(in)  :: this
-    type(json_object_t), intent(out) :: json
-
-    PUSH_SUB(species_create_data_object)
-
-    call json_init(json)
-    call json_set(json, "label", trim(adjustl(this%label)))
-    call json_set(json, "type", this%type)
-    call json_set(json, "z_val", this%z_val)
-    call json_set(json, "mass", this%mass)
-    call json_set(json, "vdw_radius", this%vdw_radius)
-    call json_set(json, "def_rsize", this%def_rsize)
-
-    POP_SUB(species_create_data_object)
-  end subroutine species_create_data_object
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
@@ -1369,37 +1329,43 @@ contains
     FLOAT,             intent(in)  :: x(:)
     integer,           intent(in)  :: l, lm, i
     FLOAT,             intent(out) :: uV
-    FLOAT,             intent(out) :: duV(:)
+    FLOAT, optional,   intent(out) :: duV(:)
 
     FLOAT :: r, uVr0, duvr0, ylm, gylm(1:3)
     FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqrt(3/(4*pi))
 
     ! no push_sub because this function is called very frequently
 
+    ASSERT(species_is_ps(spec))
+
     r = sqrt(sum(x(1:3)**2))
 
     uVr0  = spline_eval(spec%ps%kb(l, i), r)
-    duVr0 = spline_eval(spec%ps%dkb(l, i), r)
 
-    gylm = M_ZERO
-
-    call grylmr(x(1), x(2), x(3), l, lm, ylm, grylm = gylm)
-    uv = uvr0*ylm
-    if(r >= r_small) then
-      duv(1:3) = duvr0*ylm*x(1:3)/r + uvr0*gylm(1:3)
-    else
-      if(l == 1) then
-        duv = M_ZERO
-        if(lm == -1) then
-          duv(2) = -ylmconst*duvr0
-        else if(lm == 0) then
-          duv(3) =  ylmconst*duvr0
-        else if(lm == 1) then
-          duv(1) = -ylmconst*duvr0
-        end if
+    if(present(duV)) then
+      duVr0 = spline_eval(spec%ps%dkb(l, i), r)
+      gylm = M_ZERO
+      call grylmr(x(1), x(2), x(3), l, lm, ylm, grylm = gylm)
+      uv = uvr0*ylm
+      if(r >= r_small) then
+        duv(1:3) = duvr0*ylm*x(1:3)/r + uvr0*gylm(1:3)
       else
-        duv = M_ZERO
-      end if
+        if(l == 1) then
+          duv = M_ZERO
+          if(lm == -1) then
+            duv(2) = -ylmconst*duvr0
+          else if(lm == 0) then
+            duv(3) =  ylmconst*duvr0
+          else if(lm == 1) then
+            duv(1) = -ylmconst*duvr0
+          end if
+        else
+          duv = M_ZERO
+        end if
+      end if   
+    else
+      call grylmr(x(1), x(2), x(3), l, lm, ylm)
+      uv = uvr0*ylm
     end if
 
   end subroutine species_real_nl_projector
@@ -1551,6 +1517,8 @@ contains
     
     PUSH_SUB(species_end_species)
 
+    if(spec%pseudopotential_set_initialized) call pseudo_set_end(spec%pseudopotential_set)
+    
     if (species_is_ps(spec)) then 
       if(associated(spec%ps)) then 
         call ps_end(spec%ps)
@@ -1885,7 +1853,8 @@ contains
       case(OPTION__SPECIES__SET)
         call check_duplication(OPTION__SPECIES__SET)
         call parse_block_integer(blk, row, icol + 1, spec%pseudopotential_set_id)
-        call pseudo_set_init(spec%pseudopotential_set, get_set_directory(spec%pseudopotential_set_id), ierr)
+        spec%pseudopotential_set_initialized = .true.
+        call pseudo_set_init(spec%pseudopotential_set, get_set_directory(spec%pseudopotential_set_id), ierr, automatic)
         
       case(OPTION__SPECIES__POTENTIAL_FORMULA)
         call check_duplication(OPTION__SPECIES__POTENTIAL_FORMULA)
