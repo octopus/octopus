@@ -45,7 +45,6 @@ module td_write_oct_m
   use mpi_lib_oct_m
   use multicomm_oct_m
   use parser_oct_m
-  use pert_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
@@ -81,7 +80,6 @@ module td_write_oct_m
 
   integer, parameter ::   &
     OUT_MULTIPOLES  =  1, &
-    OUT_ANGULAR     =  2, &
     OUT_SPIN        =  3, &
     OUT_COORDS      =  5, &
     OUT_ACC         =  6, & 
@@ -94,7 +92,6 @@ module td_write_oct_m
     OUT_VEL         = 14, &
     OUT_EIGS        = 15, &
     OUT_TOTAL_CURRENT = 17, &
-    OUT_KP_PROJ     = 19, &
     OUT_SEPARATE_COORDS  = 22, &
     OUT_SEPARATE_VELOCITY= 23, &
     OUT_SEPARATE_FORCES  = 24, &
@@ -179,9 +176,6 @@ contains
     !% Outputs the (electric) multipole moments of the density to the file <tt>td.general/multipoles</tt>.
     !% This is required to, <i>e.g.</i>, calculate optical absorption spectra of finite systems. The
     !% maximum value of <math>l</math> can be set with the variable <tt>TDMultipoleLmax</tt>.
-    !%Option angular bit(1)
-    !% Outputs the orbital angular momentum of the system to <tt>td.general/angular</tt>, which can be used to calculate circular
-    !% dichroism.
     !%Option spin bit(2)
     !% (Experimental) Outputs the expectation value of the spin, which can be used to calculate magnetic
     !% circular dichroism.
@@ -222,11 +216,6 @@ contains
     !% Write the KS eigenvalues. 
     !%Option total_current bit(16)
     !% Output the total current (average of the current density over the cell).
-    !%Option td_kpoint_occup bit(18)                                                                   
-    !% Project propagated Kohn-Sham states to the states at t=0 given in the directory 
-    !% restart_proj (see %RestartOptions). This is an alternative to the option
-    !% td_occup, with a formating more suitable for k-points and works only in 
-    !% k- and/or state parallelization
     !%Option coordinates_sep bit(21)
     !% Writes geometries in a separate file.
     !%Option velocities_sep bit(22)
@@ -251,7 +240,6 @@ contains
 
     ! experimental stuff
     if(writ%out(OUT_SPIN)%write) call messages_experimental('TDOutput = spin')
-    if(writ%out(OUT_KP_PROJ)%write) call messages_experimental('TDOutput = td_kpoint_occup')
 
     !%Variable TDMultipoleLmax
     !%Type integer
@@ -332,10 +320,6 @@ contains
           first, units_from_atomic(units_out%time, dt), trim(io_workpath(filename)))
       end if  
 
-      if(writ%out(OUT_ANGULAR)%write) &
-        call write_iter_init(writ%out(OUT_ANGULAR)%handle, first, &
-          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/angular")))
-
       if(writ%out(OUT_SPIN)%write) &
         call write_iter_init(writ%out(OUT_SPIN)%handle, first, &
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/spin")))
@@ -383,23 +367,18 @@ contains
         end if
       end if
 
-
       if(writ%out(OUT_ENERGY)%write) &
         call write_iter_init(writ%out(OUT_ENERGY)%handle, first, &
-          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/energy")))
-
-      if(writ%out(OUT_KP_PROJ)%write) &
-        call write_iter_init(writ%out(OUT_KP_PROJ)%handle, first, &
-          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/projections")))
-
+        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/energy")))
+      
       if(writ%out(OUT_GAUGE_FIELD)%write) &
         call write_iter_init(writ%out(OUT_GAUGE_FIELD)%handle, &
         first, units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/gauge_field")))
-        
+      
       if(writ%out(OUT_EIGS)%write) &
         call write_iter_init(writ%out(OUT_EIGS)%handle, first, &
-          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/eigenvalues")))
-
+        units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/eigenvalues")))
+      
       if(writ%out(OUT_TOTAL_CURRENT)%write) then
         call write_iter_init(writ%out(OUT_TOTAL_CURRENT)%handle, first, &
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/total_current")))
@@ -459,17 +438,11 @@ contains
     if(writ%out(OUT_FTCHD)%write) &
       call td_write_ftchd(writ%out(OUT_FTCHD)%handle, gr, st, kick, iter)
 
-    if(writ%out(OUT_ANGULAR)%write) &
-      call td_write_angular(writ%out(OUT_ANGULAR)%handle, gr, geo, hm, st, kick, iter)
-
     if(writ%out(OUT_SPIN)%write) &
       call td_write_spin(writ%out(OUT_SPIN)%handle, gr, st, iter)
 
     if(writ%out(OUT_MAGNETS)%write) &
       call td_write_local_magnetic_moments(writ%out(OUT_MAGNETS)%handle, gr, st, geo, writ%lmm_r, iter)
-
-    if(writ%out(OUT_KP_PROJ)%write) &
-      call td_write_proj_kp(writ%out(OUT_KP_PROJ)%handle,hm, gr, st, writ%gs_st, iter)
 
     if(writ%out(OUT_COORDS)%write) &
       call td_write_coordinates(writ%out(OUT_COORDS)%handle, gr, geo, iter)
@@ -685,78 +658,6 @@ contains
 
     POP_SUB(td_write_local_magnetic_moments)
   end subroutine td_write_local_magnetic_moments
-
-
-  ! ---------------------------------------------------------
-  subroutine td_write_angular(out_angular, gr, geo, hm, st, kick, iter)
-    type(c_ptr),            intent(inout) :: out_angular
-    type(grid_t),           intent(inout) :: gr
-    type(geometry_t),       intent(inout) :: geo
-    type(hamiltonian_t),    intent(inout) :: hm
-    type(states_t),         intent(inout) :: st
-    type(kick_t),           intent(in)    :: kick
-    integer,                intent(in)    :: iter
-
-    integer :: idir
-    character(len=130) :: aux
-    FLOAT :: angular(MAX_DIM)
-    type(pert_t)        :: angular_momentum
-
-    PUSH_SUB(td_write_angular)
-
-    call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
-
-    ! this is required if st%X(psi) is used
-    call states_sync(st)
-
-    do idir = 1, 3
-       call pert_setup_dir(angular_momentum, idir)
-       !we have to multiply by 2, because the perturbation returns L/2
-       angular(idir) = M_TWO*real(zpert_states_expectation_value(angular_momentum, gr, geo, hm, st), REAL_PRECISION)
-    end do
-
-    call pert_end(angular_momentum)
-
-    if(mpi_grp_is_root(mpi_world)) then ! Only first node outputs
-
-      if(iter ==0) then
-        call td_write_print_header_init(out_angular)
-
-        write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
-        call write_iter_string(out_angular, aux)
-        call write_iter_nl(out_angular)
-
-        call kick_write(kick, out = out_angular)
-
-        !second line -> columns name
-        call write_iter_header_start(out_angular)
-        write(aux, '(a4,18x)') '<Lx>'
-        call write_iter_header(out_angular, aux)
-        write(aux, '(a4,18x)') '<Ly>'
-        call write_iter_header(out_angular, aux)
-        write(aux, '(a4,18x)') '<Lz>'
-        call write_iter_header(out_angular, aux)
-        call write_iter_nl(out_angular)
-
-        !third line -> should hold the units.
-        call write_iter_string(out_angular, '#[Iter n.]')
-        call write_iter_header(out_angular, '[' // trim(units_abbrev(units_out%time)) // ']')
-        call write_iter_header(out_angular, '[hbar]')
-        call write_iter_header(out_angular, '[hbar]')
-        call write_iter_header(out_angular, '[hbar]')
-        call write_iter_nl(out_angular)
-
-        call td_write_print_header_end(out_angular)
-      end if
-
-      call write_iter_start(out_angular)
-      call write_iter_double(out_angular, angular(1:3), 3)
-      call write_iter_nl(out_angular)
-
-    end if
-
-    POP_SUB(td_write_angular)
-  end subroutine td_write_angular
 
 
   ! ---------------------------------------------------------
@@ -1583,110 +1484,6 @@ contains
     POP_SUB(td_write_gauge_field)
     
   end subroutine td_write_gauge_field
-
-  ! --------------------------------------------------------------------
-  
-  subroutine td_write_proj_kp(out_proj_kp, hm,gr, st, gs_st, iter)
-    type(c_ptr),       intent(inout) :: out_proj_kp
-    type(hamiltonian_t), intent(inout)  :: hm
-    type(grid_t),      intent(inout) :: gr
-    type(states_t),    intent(in)    :: st
-    type(states_t),    intent(inout) :: gs_st
-    integer,           intent(in)    :: iter
-
-    CMPLX, allocatable :: proj(:,:), psi(:,:,:), gs_psi(:,:,:), temp_state(:,:)
-    character(len=80) :: filename1, filename2
-    integer :: ik,ist, jst, file, idim, nk_proj
-    type(mesh_t) :: mesh
-
-    PUSH_SUB(td_write_proj_kp)
-
-    ! this is slow, so we don`t do it every step
-    if(.not.mod(iter,50) == 0) then
-       POP_SUB(td_write_proj_kp)
-       return
-    end if
-
-    mesh = gr%der%mesh
-
-    write(filename1,'(I10)') iter
-    filename1 = 'td.general/projections_iter_'//trim(adjustl(filename1))
-    file = 9845623
-    
-    SAFE_ALLOCATE(proj(1:gs_st%nst, 1:gs_st%nst))
-    SAFE_ALLOCATE(psi(1:gs_st%nst,1:gs_st%d%dim,1:mesh%np))
-    SAFE_ALLOCATE(gs_psi(1:gs_st%nst,1:gs_st%d%dim,1:mesh%np))
-    SAFE_ALLOCATE(temp_state(1:mesh%np,1:gs_st%d%dim))
-    
-    ! Project only k-points that have a zero weight.
-    ! Why? It is unlikely that one is interested in the projections 
-    ! of the Monkhorst-Pack kpoints, but instead we assume that
-    ! the user has specified a k-path with zero weights
-    nk_proj = gr%sb%kpoints%nik_skip
-
-    do ik=gr%sb%kpoints%reduced%npoints-nk_proj+1,gr%sb%kpoints%reduced%npoints
-      ! reset arrays
-      psi(1:gs_st%nst, 1:gs_st%d%dim, 1:mesh%np)= M_ZERO
-      gs_psi(1:gs_st%nst, 1:gs_st%d%dim, 1:mesh%np)= M_ZERO
-      ! open file for writing
-      if(mpi_world%rank==0) then
-        write(filename2,'(I10)') ik
-        filename2 = trim(adjustl(filename1))//'_ik_'//trim(adjustl(filename2))
-        open(unit=file,file=filename2)
-      end if
-      ! get all states at ik that are locally stored (ground state and td-states)
-      do ist=gs_st%st_start,gs_st%st_end
-        if(state_kpt_is_local(gs_st, ist, ik)) then
-          call states_get_state(st, mesh, ist, ik,temp_state )
-          do idim=1,gs_st%d%dim
-            psi(ist,idim,1:mesh%np) =  temp_state(1:mesh%np,idim)
-          end do
-          call states_get_state(gs_st, mesh, ist, ik,temp_state )
-          do idim=1,gs_st%d%dim
-            gs_psi(ist,idim,1:mesh%np) =  temp_state(1:mesh%np,idim)
-          end do
-        end if
-      end do
-      ! collect states at ik from all processes in one array
-      call comm_allreduce(mpi_world%comm, psi)
-      call comm_allreduce(mpi_world%comm, gs_psi)
-       
-      ! compute the overlaps as a matrix product
-      proj(1:gs_st%nst,1:gs_st%nst) = M_ZERO
-      call zgemm('n',                               &
-                 'c',                               &
-                 gs_st%nst,                         &
-                 gs_st%nst,                         &
-                 mesh%np_global*gs_st%d%dim,        &
-                 cmplx(mesh%volume_element,kind=8), &
-                 psi(1, 1, 1),                      &
-                 ubound(psi, dim = 1),              &
-                 gs_psi(1, 1, 1),                   &
-                 ubound(gs_psi, dim = 1),           &
-                 cmplx(0.,kind=8),                  &
-                 proj(1, 1),                        &
-                 ubound(proj, dim = 1))
-
-      ! write to file 
-      if(mpi_world%rank==0) then
-        do ist=1,gs_st%nst
-          do jst=1,gs_st%nst
-            write(file,'(I3,1x,I3,1x,e12.6,1x,e12.6,2x)') ist, jst, proj(ist,jst)
-          end do
-        end do
-        close(file)
-      end if
-
-  end do! ik            
-
-  SAFE_DEALLOCATE_A(proj)
-  SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(gs_psi)
-  SAFE_DEALLOCATE_A(temp_state)
-     
-  POP_SUB(td_write_proj_kp)
-
-  end subroutine td_write_proj_kp
 
   ! ---------------------------------------------------------
   subroutine td_write_total_current(out_total_current, gr, st, iter)

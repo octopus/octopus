@@ -382,9 +382,7 @@ all_f_srcs +=                                   \
 	system/output.F90                       \
 	system/output_me.F90                    \
 	system/partial_charges.F90              \
-	system/pert.F90                         \
 	system/preconditioners.F90              \
-	system/stress.F90                       \
 	system/subspace.F90                     \
 	system/system.F90                       \
 	system/v_ks.F90
@@ -400,7 +398,6 @@ noinst_HEADERS +=                               \
 	system/output_h_inc.F90                 \
 	system/output_me_inc.F90                \
 	system/output_states_inc.F90            \
-	system/pert_inc.F90                     \
 	system/preconditioners_inc.F90          \
 	system/subspace_inc.F90
 

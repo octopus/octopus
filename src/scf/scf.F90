@@ -70,7 +70,6 @@ module scf_oct_m
   use varinfo_oct_m
   use xc_functl_oct_m
   use XC_F90(lib_m)
-  use stress_oct_m
   
   implicit none
 
@@ -105,7 +104,6 @@ module scf_oct_m
     integer :: mix_field
     logical :: lcao_restricted
     logical :: calc_force
-    logical :: calc_stress
     logical :: calc_dipole
     logical :: calc_partial_charges
     type(mix_t) :: smix
@@ -385,17 +383,6 @@ contains
     !% species.
     !%End
     call parse_variable('SCFCalculateForces', .not. geo%only_user_def, scf%calc_force)
-
-
-    !%Variable SCFCalculateStress
-    !%Type logical
-    !%Section SCF
-    !%Description
-    !% This variable controls whether the stress on the lattice is
-    !% calculated at the end of a self-consistent iteration. The
-    !% default is no.
-    !%End
-    call parse_variable('SCFCalculateStress', .false. , scf%calc_stress)
     
     !%Variable SCFCalculateDipole
     !%Type logical
@@ -927,9 +914,6 @@ contains
       call forces_calculate(gr, geo, hm, st, ks, vhxc_old=vhxc_old)
     end if
 
-    ! calculate stress
-    if(scf%calc_stress) call stress_calculate(gr, hm, st, geo, ks) 
-    
     if(scf%max_iter == 0) then
       call energy_calc_eigenvalues(hm, gr%der, st)
       call states_fermi(st, gr%mesh)
@@ -1111,14 +1095,6 @@ contains
 
         if(scf%calc_force) call forces_write_info(iunit, geo, gr%sb, dir)
 
-        if(scf%calc_stress) then
-           write(iunit,'(a)') "Stress tensor [H/b^3]"
-           write(iunit,'(a9,2x,3a18)')"T_{ij}","x","y","z"
-           write(iunit,'(a9,2x,3es18.6)')"x", gr%sb%stress_tensor(1,1:3)
-           write(iunit,'(a9,2x,3es18.6)')"y", gr%sb%stress_tensor(2,1:3)
-           write(iunit,'(a9,2x,3es18.6)')"z", gr%sb%stress_tensor(3,1:3)
-        end if
-        
       end if
 
       if(scf%calc_partial_charges) then
