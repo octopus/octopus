@@ -141,7 +141,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     ! Starts iteration for this band
     iter_loop: do iter = 1, maxter
       ! need to save g from previous iteration for Polak-Ribiere method
-      if(conjugate_direction == CG_PR) then
+      if(optional_default(conjugate_direction, CG_FR) == CG_PR) then
         if(iter /= 1) then
           g_prev = g
         else
@@ -178,7 +178,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       ! dot products needed for conjugate gradient
       gg = X(mf_dotp) (gr%mesh, st%d%dim, g0, g, reduce = .false.)
-      if(conjugate_direction == CG_PR) then
+      if(optional_default(conjugate_direction, CG_FR) == CG_PR) then
         ! only needed for Polak-Ribiere
         if(iter /= 1) then
           gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g0, g_prev, reduce = .false.)
