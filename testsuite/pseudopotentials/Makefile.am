@@ -35,12 +35,6 @@ dist_share_DATA =                                  \
 	06-carbon_dojo_pbe.test                    \
 	07-carbon_dojo_lda.01-gs.inp               \
 	07-carbon_dojo_lda.test                    \
-	08-carbon_fhi.01-gs.inp                    \
-	08-carbon_fhi.01-C.fhi                     \
-	08-carbon_fhi.test                         \
-	09-carbon_cpi.01-gs.inp                    \
-	09-carbon_cpi.C.cpi                        \
-	09-carbon_cpi.test                         \
 	10-helium_upf.test                         \
 	10-helium_upf.pbe-mt.UPF                   \
 	10-helium_upf.01-gs_nofilter.inp           \

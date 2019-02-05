@@ -394,10 +394,11 @@ contains
     !% <tt>PseudopotentialSet</tt> variable.
     !%
     !% Additional pseudopotentials can be downloaded from the <a
-    !% href='http://octopus-code.org/wiki/Pseudopotentials'>
-    !% octopus homepage</a> or from other sources. Supported norm-conserving pseudopotential formats are
-    !% detected by the file extension: UPF (<tt>.upf</tt>), PSF (SIESTA, <tt>.psf</tt>), FHI (ABINIT 6, <tt>.fhi</tt>),
-    !% CPI (Fritz-Haber, <tt>.cpi</tt>), QSO (quantum-simulation.org, for Qbox, <tt>.xml</tt>).
+    !% href='http://octopus-code.org/wiki/Pseudopotentials'> octopus
+    !% homepage</a> or from other sources. Supported norm-conserving
+    !% pseudopotential formats are detected by the file extension: UPF
+    !% (<tt>.upf</tt>), PSF (SIESTA, <tt>.psf</tt>), QSO
+    !% (quantum-simulation.org, for Qbox, <tt>.xml</tt>).
     !% Note: pseudopotentials may only be used in 3D.
     !%
     !% The format of this block is the following: The first field is a

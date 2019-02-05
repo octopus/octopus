@@ -28,8 +28,6 @@ module ps_oct_m
   use logrid_oct_m
   use messages_oct_m
   use profiling_oct_m
-  use ps_cpi_oct_m
-  use ps_fhi_oct_m
   use ps_xml_oct_m
   use ps_in_grid_oct_m
   use ps_psf_oct_m
@@ -145,8 +143,6 @@ contains
     
     integer :: l, ii, ll, is, ierr
     type(ps_psf_t) :: ps_psf !< SIESTA pseudopotential
-    type(ps_cpi_t) :: ps_cpi !< Fritz-Haber pseudopotential
-    type(ps_fhi_t) :: ps_fhi !< Fritz-Haber pseudopotential (from abinit)
     type(ps_xml_t) :: ps_xml !< For xml based pseudopotentials
     logical, save :: xml_warned = .false.
     FLOAT, allocatable :: eigen(:, :)  !< eigenvalues    
@@ -239,56 +235,6 @@ contains
       call ps_psf_process(ps_psf, ps%lmax, ps%llocal)
       call logrid_copy(ps_psf%ps_grid%g, ps%g)
 
-    case(PSEUDO_FORMAT_CPI, PSEUDO_FORMAT_FHI)
-      ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
-      
-      call valconf_null(ps%conf)
-
-      if(ps%file_format == PSEUDO_FORMAT_CPI) then
-        call ps_cpi_init(ps_cpi, trim(filename))
-        ps%conf%p      = ps_cpi%ps_grid%no_l_channels
-      else
-        call ps_fhi_init(ps_fhi, trim(filename))
-        ps%conf%p      = ps_fhi%ps_grid%no_l_channels
-      end if
-
-      ps%conf%z      = nint(z)
-      ps%conf%symbol = label(1:2)
-      ps%conf%type   = 1
-      do l = 1, ps%conf%p
-        ps%conf%l(l) = l - 1
-      end do
-
-      ps%z      = z
-      ps%kbc    = 1     ! only one projector per angular momentum
-
-      ps%lmax  = ps%conf%p - 1
-
-      if(user_lmax /= INVALID_L) then
-        ps%lmax = min(ps%lmax, user_lmax) ! Maybe the file does not have enough components.
-        if(user_lmax /= ps%lmax) then
-          message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
-          call messages_fatal(1)
-        end if
-      end if
-
-      if(ps%lmax == 0) ps%llocal = 0 ! Vanderbilt is not acceptable if ps%lmax == 0.
-
-      ! the local part of the pseudo
-      if(user_llocal == INVALID_L) then
-        ps%llocal = 0
-      else
-        ps%llocal = user_llocal
-      end if
-      
-      if(ps%file_format == PSEUDO_FORMAT_CPI) then
-        call ps_cpi_process(ps_cpi, ps%llocal)
-        call logrid_copy(ps_cpi%ps_grid%g, ps%g)
-      else
-        call ps_fhi_process(ps_fhi, ps%lmax, ps%llocal)
-        call logrid_copy(ps_fhi%ps_grid%g, ps%g)
-      end if
-
     case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML, PSEUDO_FORMAT_PSP8)
       
       if(.not. xml_warned) then
@@ -375,12 +321,6 @@ contains
       call ps_psf_get_eigen(ps_psf, eigen)
       call ps_grid_load(ps, ps_psf%ps_grid)
       call ps_psf_end(ps_psf)
-    case(PSEUDO_FORMAT_CPI)
-      call ps_grid_load(ps, ps_cpi%ps_grid)
-      call ps_cpi_end(ps_cpi)
-    case(PSEUDO_FORMAT_FHI)
-      call ps_grid_load(ps, ps_fhi%ps_grid)
-      call ps_fhi_end(ps_fhi)
     case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML, PSEUDO_FORMAT_PSP8)
       call ps_xml_load(ps, ps_xml)
       call ps_xml_end(ps_xml)
@@ -429,10 +369,6 @@ contains
       call messages_write(" PSP8")
     case(PSEUDO_FORMAT_PSF)
       call messages_write(" PSF")
-    case(PSEUDO_FORMAT_CPI)
-      call messages_write(" CPI")
-    case(PSEUDO_FORMAT_FHI)
-      call messages_write(" FHI")
     end select
     call messages_new_line()
 

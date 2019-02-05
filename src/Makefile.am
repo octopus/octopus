@@ -169,11 +169,7 @@ all_f_srcs +=                                    \
 	species/atomic.F90                       \
 	species/element.F90                      \
 	species/logrid.F90                       \
-	species/ps_cpi.F90                       \
-	species/ps_cpi_file.F90                  \
 	species/ps.F90                           \
-	species/ps_fhi.F90                       \
-	species/ps_fhi_file.F90                  \
 	species/ps_in_grid.F90                   \
 	species/ps_psf.F90                       \
 	species/ps_psf_file.F90                  \
