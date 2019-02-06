@@ -353,13 +353,6 @@ AC_CONFIG_FILES([Makefile
   share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pbesol_stringent/Makefile
   share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pw_standard/Makefile
   share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pw_stringent/Makefile
-  share/recipes/Makefile
-  share/recipes/da/Makefile
-  share/recipes/de/Makefile
-  share/recipes/en/Makefile
-  share/recipes/es/Makefile
-  share/recipes/it/Makefile
-  share/recipes/eu/Makefile
   share/util/Makefile
   share/opencl/Makefile
   share/quadrature/Makefile

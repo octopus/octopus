@@ -18,7 +18,7 @@
 ## 02110-1301, USA.
 ##
 
-SUBDIRS = pseudopotentials recipes util opencl quadrature
+SUBDIRS = pseudopotentials util opencl quadrature
 
 dta1dir = $(pkgdatadir)
 dist_dta1_DATA = logo                 \

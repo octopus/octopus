@@ -82,7 +82,6 @@ all_c_srcs =                                   \
 	basic/getopt_f.c                       \
 	basic/io_binary.c                      \
 	basic/oct_f.c                          \
-	basic/recipes.c                        \
 	basic/signals.c                        \
 	basic/sort_low.cc                      \
 	basic/varia.c                          \
