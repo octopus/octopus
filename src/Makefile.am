@@ -497,6 +497,7 @@ noinst_HEADERS +=                               \
 
 # Sources in scf
 all_f_srcs +=                                \
+	scf/constrain.F90                    \
 	scf/ground_state.F90                 \
 	scf/lcao.F90                         \
 	scf/lda_u_mixer.F90                  \
