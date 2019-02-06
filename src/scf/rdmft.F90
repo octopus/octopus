@@ -648,13 +648,8 @@ contains
         laplace_exp = dmf_dotp(gr%mesh, psi(:,1), grad_square_psi(:,2))
         
         ! <phi(ist)|q^2|psi(ist)>
-        q_square_exp = M_ZERO
-				do ip = 1, gr%mesh%np
-					qq = gr%mesh%x(ip, 2)
-					qq = qq * qq
-					q_square_exp = q_square_exp + psi(ip,1)*psi(ip,1)*qq*gr%mesh%volume_element ! shoudl be R_CONJ for first psi, but does not work ...
-        end do
-        print*, "ist", ist, "q_square_exp", q_square_exp, "laplace_exp", laplace_exp
+        psi(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1)*gr%mesh%x(1:gr%mesh%np, 2)
+        q_square_exp = dmf_nrm2(gr%mesh, psi(:,1))
         
         !! N_phot(ist)=( <phi_i|H_ph|phi_i>/omega - 0.5 ) / N_elec
         !! with <phi_i|H_ph|phi_i>=-0.5* <phi(ist)|d^2/dq^2|phi(ist)> + 0.5*omega <phi(ist)|q^2|psi(ist)>
