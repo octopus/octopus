@@ -383,10 +383,6 @@ contains
       call forces_calculate(gr, geo, hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
-    else
-      if(bitand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-        call forces_calculate(gr, geo, hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
-      end if  
     end if
 
     call td_write_init(write_handler, sys%outp, gr, st, hm, geo, sys%ks, &

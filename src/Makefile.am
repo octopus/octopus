@@ -243,7 +243,6 @@ all_f_srcs +=                                 \
 	grid/submesh.F90                      \
 	grid/symmetrizer.F90                  \
 	grid/transfer_table.F90               \
-	grid/volume.F90                       \
 	grid/vtk.F90
 
 all_c_srcs +=                                 \
@@ -353,7 +352,6 @@ all_f_srcs +=                                   \
 	system/exponential.F90                  \
 	system/forces.F90                       \
 	system/output.F90                       \
-	system/output_me.F90                    \
 	system/preconditioners.F90              \
 	system/subspace.F90                     \
 	system/system.F90                       \
@@ -367,7 +365,6 @@ noinst_HEADERS +=                               \
 	system/energy_calc_inc.F90              \
 	system/forces_inc.F90                   \
 	system/output_h_inc.F90                 \
-	system/output_me_inc.F90                \
 	system/output_states_inc.F90            \
 	system/preconditioners_inc.F90          \
 	system/subspace_inc.F90

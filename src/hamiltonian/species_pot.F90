@@ -44,7 +44,6 @@ module species_pot_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
-  use volume_oct_m
 
   implicit none
 
@@ -81,7 +80,6 @@ contains
     FLOAT :: xx(MAX_DIM), yy(MAX_DIM), rerho, imrho
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
-    type(volume_t) :: volume
 
 #if defined(HAVE_MPI)
     integer :: in_points_red
@@ -436,7 +434,6 @@ contains
     integer :: icell, ipos, ip
     type(periodic_copy_t) :: pp
     type(ps_t), pointer :: ps
-    type(volume_t) :: volume
     logical :: have_point
 #ifdef HAVE_MPI
     real(8) :: local_min(2), global_min(2)

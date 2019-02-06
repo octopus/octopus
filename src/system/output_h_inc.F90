@@ -97,60 +97,6 @@
         SAFE_DEALLOCATE_A(potential)
       end if
     end if
-
-    if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
-      if(states_are_complex(st)) then
-      
-        SAFE_ALLOCATE(current_kpt(st%d%kpt%start:st%d%kpt%end, der%mesh%sb%dim)) 
-        do ik = st%d%kpt%start,st%d%kpt%end
-          do idir = 1,der%mesh%sb%dim
-            current_kpt(ik,idir) = dmf_integrate(der%mesh, st%current_kpt(:, idir, ik))
-          end do
-        end do
-        write(fname, '(2a)') 'current_kpt'
-        call io_function_output_vector_BZ(outp%how, dir, fname, der%mesh, st%d%kpt, &
-            current_kpt(:, :), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
-            grp = st%st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
-        SAFE_DEALLOCATE_A(current_kpt)
-      else
-        message(1) = 'No current density output for real states since it is identically zero.'
-        call messages_warning(1)
-      end if
-    end if
-
-    if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__DENSITY_KPT) /= 0) then
-      SAFE_ALLOCATE(density_kpt(1:st%d%nik))
-      density_kpt(1:st%d%nik) = M_ZERO
-
-      SAFE_ALLOCATE(density_tmp(1:gr%fine%mesh%np, st%d%nspin))
-
-      !These two conditions should be copied from the density_calc_end routine
-      !We cannot call this routine as we must not symmetrize of reduce on kpoints
-      ASSERT(.not.states_are_packed(st))
-      ASSERT(.not.gr%have_fine_mesh)
-
-      do ik = st%d%kpt%start,st%d%kpt%end
-        call density_calc_init(dens_calc, st, gr, density_tmp)
-        do ib = st%group%block_start, st%group%block_end
-          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
-        end do
- 
-        density_kpt(ik) = M_ZERO
-        do is = 1, st%d%nspin
-          density_kpt(ik) = density_kpt(ik) + dmf_integrate(der%mesh, density_tmp(:,is))
-        end do
-      end do
-
-   #if defined(HAVE_MPI)        
-      if(st%parallel_in_states .or. st%d%kpt%parallel) then
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, density_kpt)
-      end if
-   #endif  
-
-      call io_function_output_global_BZ(outp%how, dir, "density_kpt", gr%mesh, density_kpt, unit_one, err)
-      SAFE_DEALLOCATE_A(density_tmp)
-      SAFE_DEALLOCATE_A(density_kpt)
-    end if
  
     POP_SUB(output_hamiltonian)
   end subroutine output_hamiltonian

@@ -46,7 +46,6 @@ module output_oct_m
   use messages_oct_m
   use mpi_oct_m
   use orbitalset_oct_m
-  use output_me_oct_m
   use parser_oct_m
   use par_vec_oct_m
   use periodic_copy_oct_m
@@ -85,11 +84,7 @@ module output_oct_m
   type output_t
     !> General output variables:
     integer(8) :: what                !< what to output
-    integer(8) :: whatBZ              !< what to output - for k-point resolved output
     integer(8) :: how                 !< how to output
-
-    type(output_me_t) :: me        !< this handles the output of matrix elements
-
     !> These variables fine-tune the output for some of the possible output options:
     integer :: output_interval     !< output every iter
     integer :: restart_write_interval
@@ -109,7 +104,6 @@ contains
     type(block_t) :: blk
     FLOAT :: norm
     character(len=80) :: nst_string, default
-    integer :: what_no_how
 
     PUSH_SUB(output_init)
 
@@ -151,9 +145,6 @@ contains
     !% if point charges were defined in the PDB file (see <tt>PDBCoordinates</tt>), they will be output
     !% in the file <tt>geometry_classical.xyz</tt>.
     !% If <tt>OutputFormat = xcrysden</tt>, a file called <tt>geometry.xsf</tt> is written.
-    !%Option matrix_elements bit(11)
-    !% Outputs a series of matrix elements of the Kohn-Sham states. What is output can
-    !% be controlled by the <tt>OutputMatrixElements</tt> variable.
     !%Option pol_density bit(12)
     !% Outputs dipole-moment density <tt>dipole_density-</tt>, or polarizability density <tt>alpha_density-</tt>
     !% in linear response. If <tt>ResponseMethod = finite_differences</tt>, the hyperpolarizability density
@@ -176,9 +167,6 @@ contains
     !% files will be called <tt>tau-sp1</tt> and <tt>tau-sp2</tt>, if the spin-resolved kinetic
     !% energy density is produced (runs in spin-polarized and spinors mode), or
     !% only <tt>tau</tt> if the run is in spin-unpolarized mode.
-    !%Option forces bit(18)
-    !% Outputs file <tt>forces.xsf</tt> containing structure and forces on the atoms as 
-    !% a vector associated with each atom, which can be visualized with XCrySDen.
     !%Option delta_perturbation bit(25)
     !% Outputs the "kick", or time-delta perturbation applied to compute optical response in real time.
     !%Option external_td_potential bit(26)
@@ -207,10 +195,6 @@ contains
       write(nst_string,'(i6)') nst
       write(default,'(a,a)') "1-", trim(adjustl(nst_string))
       call parse_variable('OutputWfsNumber', default, outp%wfs_list)
-    end if
-
-    if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me_init(outp%me, sb)
     end if
 
     !%Variable OutputInterval
@@ -261,64 +245,29 @@ contains
       call messages_fatal(1)
     end if
 
-    ! these kinds of Output do not have a how
-    what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS
-   
-    !%Variable Output_KPT
-    !%Type flag
-    !%Default none
-    !%Section Output
-    !%Description
-    !% Specifies what to print. The output files are written at the end of the run into the output directory for the
-    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
-    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
-    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
-    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
-    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
-    !% the options below. Indices in the filename are labelled as follows:
-    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
-    !% There is no tag for directions, given as a letter. The perturbation direction is always
-    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
-    !% Example: <tt>current_kpt</tt>
-    !%Option current_kpt  bit(0)
-    !% Outputs the current density resolved in momentum space. The output file is called <tt>current_kpt-</tt>.
-    !%Option density_kpt bit(1)
-    !% Outputs the electronic density resolved in momentum space. 
-    !%End
-    call parse_variable('Output_KPT', 0_8, outp%whatBZ)
-
-    if(.not.varinfo_valid_option('Output_KPT', outp%whatBZ, is_flag=.true.)) then
-      call messages_input_error('Output_KPT')
-    end if
-
-    if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
-     call v_ks_calculate_current(ks, .true.) 
-    end if
-
     !%Variable OutputIterDir
     !%Default "output_iter"
     !%Type string
     !%Section Output
     !%Description
     !% The name of the directory where <tt>Octopus</tt> stores information
-    !% such as the density, forces, etc. requested by variable <tt>Output</tt>
+    !% such as the density, current, etc. requested by variable <tt>Output</tt>
     !% in the format specified by <tt>OutputFormat</tt>.
     !% This information is written while iterating <tt>CalculationMode = gs</tt>, <tt>unocc</tt>, or <tt>td</tt>,
     !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
     call parse_variable('OutputIterDir', "output_iter", outp%iter_dir)
-    if(outp%what + outp%whatBZ /= 0 .and. outp%output_interval > 0) then
+    if(outp%what /= 0 .and. outp%output_interval > 0) then
       call io_mkdir(outp%iter_dir)
     end if
     call add_last_slash(outp%iter_dir)
 
     ! we are using a what that has a how.
-    if(bitand(outp%what, not(what_no_how)) /= 0 .or. outp%whatBZ /= 0) then
+    if(outp%what /= 0) then
       call io_function_read_how(sb, outp%how)
     else
       outp%how = 0
     end if
-
 
     POP_SUB(output_init)
   end subroutine output_init
@@ -369,28 +318,13 @@ contains
     call output_hamiltonian(hm, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
 
     if(bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
-      if(bitand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
-        call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh)
-      end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
         call geometry_write_xyz(geo, trim(dir)//'/geometry')
         if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir)
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
         call vtk_output_geometry(trim(dir)//'/geometry', geo)
-      end if     
-    end if
-
-    if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-      if(bitand(outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
-        call write_bild_forces_file(dir, "forces", geo, gr%mesh)
-      else
-        call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, write_forces = .true.)
       end if
-    end if
-
-    if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me(outp%me, dir, st, gr, geo, hm)
     end if
 
     call profiling_out(prof)

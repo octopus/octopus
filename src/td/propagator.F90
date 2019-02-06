@@ -436,10 +436,6 @@ contains
       call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
       if(generate) call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
-    else
-      if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-        call forces_calculate(gr, geo, hm, st, ks, t = abs(nt*dt), dt = dt)
-      end if
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
