@@ -90,7 +90,6 @@ module hamiltonian_base_oct_m
     type(projector_matrix_t), allocatable :: projector_matrices(:) 
     FLOAT,                    allocatable :: potential(:, :)
     FLOAT,                    allocatable :: Impotential(:, :)
-    FLOAT,                    allocatable :: uniform_magnetic_field(:)
     FLOAT,                    allocatable :: uniform_vector_potential(:)
     FLOAT,                    allocatable :: vector_potential(:, :)
     integer                               :: nprojector_matrices
@@ -138,11 +137,10 @@ module hamiltonian_base_oct_m
   integer, parameter, public ::            &
     FIELD_POTENTIAL                = 1,    &
     FIELD_VECTOR_POTENTIAL         = 2,    &
-    FIELD_UNIFORM_VECTOR_POTENTIAL = 4,    &
-    FIELD_UNIFORM_MAGNETIC_FIELD   = 8
+    FIELD_UNIFORM_VECTOR_POTENTIAL = 4
   
 
-  type(profile_t), save :: prof_vnlpsi_start, prof_vnlpsi_finish, prof_magnetic, prof_vlpsi, prof_gather, prof_scatter, &
+  type(profile_t), save :: prof_vnlpsi_start, prof_vnlpsi_finish, prof_vlpsi, prof_gather, prof_scatter, &
     prof_matelement, prof_matelement_gather, prof_matelement_reduce
 
 contains
@@ -176,7 +174,6 @@ contains
     SAFE_DEALLOCATE_A(this%Impotential)
     SAFE_DEALLOCATE_A(this%vector_potential)
     SAFE_DEALLOCATE_A(this%uniform_vector_potential)
-    SAFE_DEALLOCATE_A(this%uniform_magnetic_field)
     call hamiltonian_base_destroy_proj(this)
 
     POP_SUB(hamiltonian_base_end)
@@ -196,7 +193,6 @@ contains
     if(allocated(this%Impotential))              this%Impotential = M_ZERO
     if(allocated(this%uniform_vector_potential)) this%uniform_vector_potential = M_ZERO
     if(allocated(this%vector_potential))         this%vector_potential = M_ZERO
-    if(allocated(this%uniform_magnetic_field))   this%uniform_magnetic_field = M_ZERO
 
     POP_SUB(hamiltonian_clear)
   end subroutine hamiltonian_base_clear
@@ -237,13 +233,6 @@ contains
       if(.not. allocated(this%vector_potential)) then
         SAFE_ALLOCATE(this%vector_potential(1:mesh%sb%dim, 1:mesh%np))
         this%vector_potential = M_ZERO
-      end if
-    end if
-
-    if(bitand(FIELD_UNIFORM_MAGNETIC_FIELD, field) /= 0) then 
-      if(.not. allocated(this%uniform_magnetic_field)) then
-        SAFE_ALLOCATE(this%uniform_magnetic_field(1:max(mesh%sb%dim, 3)))
-        this%uniform_magnetic_field = M_ZERO
       end if
     end if
 

@@ -215,7 +215,6 @@ contains
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, gr%sb)
 
-    !Static magnetic field or gauge field requires complex wavefunctions
     if (gauge_field_is_applied(hm%ep%gfield)) call states_set_complex(st)
 
     ! Boundaries
@@ -490,19 +489,6 @@ contains
           do ispin = 1, this%d%spin_channels
             call laser_potential(this%ep%lasers(ilaser), mesh,  this%hm_base%potential(:, ispin), time_)
           end do
-        case(E_FIELD_MAGNETIC)
-          call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL + FIELD_UNIFORM_MAGNETIC_FIELD, &
-            .false.)
-          ! get the vector potential
-          SAFE_ALLOCATE(vp(1:mesh%np, 1:mesh%sb%dim))
-          vp(1:mesh%np, 1:mesh%sb%dim) = M_ZERO
-          call laser_vector_potential(this%ep%lasers(ilaser), mesh, vp, time_)
-          forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np)
-            this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) - vp(ip, idir)/P_C
-          end forall
-          ! and the magnetic field
-          call laser_field(this%ep%lasers(ilaser), this%hm_base%uniform_magnetic_field(1:mesh%sb%dim), time_)
-          SAFE_DEALLOCATE_A(vp)
         case(E_FIELD_VECTOR_POTENTIAL)
           call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, .false.)
           ! get the uniform vector potential associated with a magnetic field
@@ -683,7 +669,6 @@ contains
     apply = this%apply_packed
     ! comment these out; they are tested in the test suite
     
-    !if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
     !if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
     !if(this%family_is_mgga_with_exc)  apply = .false.
     ! keep these checks; currently no tests for these in the test suite
