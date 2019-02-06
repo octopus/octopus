@@ -51,7 +51,6 @@ module lcao_oct_m
   use states_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
-  use states_io_oct_m
   use submesh_oct_m
   use system_oct_m
   use unit_oct_m

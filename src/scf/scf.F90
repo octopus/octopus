@@ -56,7 +56,6 @@ module scf_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
   use states_group_oct_m
-  use states_io_oct_m
   use states_restart_oct_m
   use symmetries_oct_m
   use types_oct_m

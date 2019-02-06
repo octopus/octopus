@@ -297,19 +297,16 @@ noinst_HEADERS +=                                \
 # Sources in states
 all_f_srcs +=                                   \
 	states/density.F90                      \
-	states/physics_op.F90                   \
 	states/smear.F90                        \
 	states/states_calc.F90                  \
 	states/states_dim.F90                   \
 	states/states.F90                       \
 	states/states_group.F90                 \
-	states/states_io.F90                    \
 	states/states_parallel.F90              \
 	states/states_restart.F90
 
 noinst_HEADERS +=                               \
 	states/density_inc.F90                  \
-	states/physics_op_inc.F90               \
 	states/states_calc_inc.F90              \
 	states/states_inc.F90                   \
 	states/states_parallel_inc.F90
