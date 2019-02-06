@@ -514,14 +514,6 @@ contains
         iunit = 0
       end if
 
-!      call energy_calc_total(hm, gr, st, iunit, full = .true.)
-
-
-!      if(scf%calc_dipole) then
-!        call calc_dipole(dipole)
-!        call write_dipole(iunit, dipole)
-!      end if
-
       if(mpi_grp_is_root(mpi_world)) then
         if(max_iter > 0) then
           write(iunit, '(a)') 'Convergence:'
@@ -649,7 +641,9 @@ contains
     FLOAT, parameter :: smallocc = CNST(0.00001) 
     REAL(8), allocatable ::   theta(:)
     REAL(8) :: objective
+    type(profile_t), save :: prof_occ
 
+		call profiling_in(prof_occ, "SCF_OCC")
     PUSH_SUB(scf_occ)
 
     write(message(1),'(a)') 'Optimization of occupation numbers'
@@ -789,6 +783,7 @@ contains
     SAFE_DEALLOCATE_A(occin)
     SAFE_DEALLOCATE_A(theta)
     POP_SUB(scf_occ)
+    call profiling_out(prof_occ)
 
   end subroutine scf_occ
 
@@ -879,7 +874,9 @@ contains
     
     integer :: ist, jst
     FLOAT, allocatable ::  lambda(:,:), FO(:,:)
+    type(profile_t), save :: prof_orb_basis
     
+    call profiling_in(prof_orb_basis, "SCF_ORB_BASIS")
     PUSH_SUB(scf_orb)
 
     !matrix of Lagrange Multipliers from  Equation (8), Piris and Ugalde, Vol. 30, No. 13, J. Comput. Chem. 
@@ -934,6 +931,7 @@ print*, "maxFO", rdm%maxFO
     SAFE_DEALLOCATE_A(FO) 
 
     POP_SUB(scf_orb)
+    call profiling_out(prof_orb_basis)
 
   end subroutine scf_orb
 
@@ -1094,9 +1092,9 @@ print*, "maxFO", rdm%maxFO
 		FLOAT, allocatable ::  lambda(:,:), FO(:,:)
     
 		logical :: conv
-		type(profile_t), save :: prof
+		type(profile_t), save :: prof_orb_cg
 
-		call profiling_in(prof, "EIGEN_SOLVER") ! necessary?
+		call profiling_in(prof_orb_cg, "CG")
     
     PUSH_SUB(scf_orb_cg)
     
@@ -1109,15 +1107,16 @@ print*, "maxFO", rdm%maxFO
  
     maxiter = 25
     
-    ! set up hamiltonian and calculate energy
-    call density_calc (st, gr, st%rho)
-    call v_ks_calc(ks, hm, st, geo)
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
-    call rdm_derivatives(rdm, hm, st, gr)
-    call total_energy_rdm(rdm, st%occ(:,1), energy)
+! FB: We do the energy comparison already in scf_rdmft, here we put it only for test reasons I reckon
+!    ! set up hamiltonian and calculate energy
+!    call density_calc (st, gr, st%rho)
+!    call v_ks_calc(ks, hm, st, geo)
+!    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
+!    call rdm_derivatives(rdm, hm, st, gr)
+!    call total_energy_rdm(rdm, st%occ(:,1), energy)
 
-    ! store energy for later comparison
-    energy_old = energy
+!    ! store energy for later comparison
+!    energy_old = energy
 
 		rdm%eigens%converged = 0
     do ik = st%d%kpt%start, st%d%kpt%end
@@ -1159,6 +1158,8 @@ print*, "maxFO", rdm%maxFO
 	  call v_ks_calc(ks, hm, st, geo)
 	  call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
 	  call rdm_derivatives(rdm, hm, st, gr)
+	  
+	  call total_energy_rdm(rdm, st%occ(:,1), energy)
 		
 		! clauculate FO operator to check Hermiticity of lagrange multiplier matrix (lambda)
 		lambda = M_ZERO
@@ -1173,19 +1174,19 @@ print*, "maxFO", rdm%maxFO
 		end do
 		rdm%maxFO = maxval(abs(FO))
 
-		call total_energy_rdm(rdm, st%occ(:,1), energy)
-
-    ! check if step lowers the energy (later to be removed?)
-    energy_diff = energy - energy_old
+!    ! check if step lowers the energy (later to be removed?)
+!    energy_diff = energy - energy_old
 
 		print*, "maxFO:", rdm%maxFO
-		print*, "energy_diff", energy_diff
+!		print*, "energy_diff", energy_diff
 
 		SAFE_DEALLOCATE_A(lambda) 
 		SAFE_DEALLOCATE_A(FO)
 
     POP_SUB(scf_orb_cg)
 
+		call profiling_out(prof_orb_cg)
+		
   end subroutine scf_orb_cg
   
 
@@ -1523,6 +1524,7 @@ print*, "maxFO", rdm%maxFO
     nspin_ = min(st%d%nspin, 2)
    
     if (rdm%do_basis.eqv..false.) then 
+			! FB: can this be calculated smarter if we use cg (that actually calculates hamiltonian_apply several times? 
       SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
       SAFE_ALLOCATE(rho1(1:gr%mesh%np))
       SAFE_ALLOCATE(rho(1:gr%mesh%np))
