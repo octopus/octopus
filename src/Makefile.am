@@ -282,7 +282,6 @@ all_f_srcs +=                                    \
 	poisson/poisson_fft.F90                  \
 	poisson/poisson_isf.F90                  \
 	poisson/poisson_multigrid.F90            \
-	poisson/poisson_no.F90                   \
 	poisson/scaling_function.F90
 
 all_c_srcs +=                                    \
@@ -290,9 +289,7 @@ all_c_srcs +=                                    \
 
 noinst_HEADERS +=                                \
 	poisson/lazy_8_inc.F90                   \
-	poisson/poisson_inc.F90                  \
-	poisson/poisson_init_direct_inc.F90      \
-	poisson/solver_1d_solve_inc.F90
+	poisson/poisson_inc.F90
 
 # Sources in states
 all_f_srcs +=                                   \

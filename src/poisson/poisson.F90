@@ -84,13 +84,11 @@ module poisson_oct_m
     poisson_is_async
 
   integer, public, parameter ::         &
-    POISSON_DIRECT_SUM    = -1,         &
     POISSON_FFT           =  0,         &
     POISSON_CG            =  5,         &
     POISSON_CG_CORRECTED  =  6,         &
     POISSON_MULTIGRID     =  7,         &
     POISSON_ISF           =  8,         &
-    POISSON_NO            = -99,        &
     POISSON_NULL          = -999
   
   type poisson_t
@@ -101,13 +99,10 @@ module poisson_oct_m
     type(mesh_cube_parallel_map_t) :: mesh_cube_map
     type(mg_solver_t) :: mg
     type(poisson_fft_t) :: fft_solver
-    FLOAT   :: poisson_soft_coulomb_param
     logical :: all_nodes_default
     type(poisson_corr_t) :: corrector
     type(poisson_isf_t)  :: isf_solver
-    type(poisson_no_t) :: no_solver
     integer :: nslaves
-    FLOAT :: theta !< cmplxscl
     FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
 #ifdef HAVE_MPI2
     integer         :: intercomm
@@ -125,12 +120,11 @@ module poisson_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, der, mc, label, theta, qq, solver)
+  subroutine poisson_init(this, der, mc, label, qq, solver)
     type(poisson_t),             intent(out) :: this
     type(derivatives_t), target, intent(in)  :: der
     type(multicomm_t),           intent(in)  :: mc
     character(len=*),  optional, intent(in)  :: label
-    FLOAT,             optional, intent(in)  :: theta !< cmplxscl
     FLOAT,             optional, intent(in)  :: qq(:) !< (der%mesh%sb%periodic_dim)
     integer,           optional, intent(in)  :: solver
 
@@ -142,8 +136,6 @@ contains
     if(this%method /= POISSON_NULL) return ! already initialized
 
     PUSH_SUB(poisson_init)
-
-    this%theta = optional_default(theta, M_ZERO)
 
     str = "Hartree"
     if(present(label)) str = trim(str) // trim(label)
@@ -179,16 +171,7 @@ contains
     !%Description
     !% Defines which method to use to solve the Poisson equation. Some incompatibilities apply depending on
     !% dimensionality, periodicity, etc.
-    !% For a comparison of the accuracy and performance of the methods in Octopus, see P Garcia-Risue&ntilde;o, 
-    !% J Alberdi-Rodriguez <i>et al.</i>, <i>J. Comp. Chem.</i> <b>35</b>, 427-444 (2014)
-    !% or <a href=http://arxiv.org/abs/1211.2092>arXiV</a>.
-    !% Defaults:
-    !% <br> 1D and 2D: <tt>fft</tt>.
-    !% <br> 3D: <tt>isf</tt> if not periodic, <tt>fft</tt> if periodic.
-    !%Option NoPoisson -99
-    !% Do not use a Poisson solver at all.
-    !%Option direct_sum -1                                      
-    !% Direct evaluation of the Hartree potential (only for finite systems).
+    !% Defaults: <br> 3D: <tt>isf</tt> if not periodic, <tt>fft</tt> if periodic.
     !%Option fft 0
     !% The Poisson equation is solved using FFTs. A cutoff technique
     !% for the Poisson kernel is selected so the proper boundary
@@ -206,18 +189,14 @@ contains
     !%End
 
     default_solver = POISSON_FFT
+    if(der%mesh%sb%periodic_dim == 0) default_solver = POISSON_ISF
 
-    if(der%mesh%sb%dim == 3 .and. der%mesh%sb%periodic_dim == 0) default_solver = POISSON_ISF
     
-    if(der%mesh%sb%dim > 3) default_solver = POISSON_CG_CORRECTED
-
 #ifdef HAVE_CLFFT
     ! this is disabled, since the difference between solvers are big
     ! enough to cause problems with the tests.
     ! if(accel_is_enabled()) default_solver = POISSON_FFT
 #endif
-
-    if(abs(this%theta) > M_EPSILON .and. der%mesh%sb%dim == 1) default_solver = POISSON_DIRECT_SUM
 
     if(.not.present(solver)) then
       call parse_variable('PoissonSolver', default_solver, this%method)
@@ -227,8 +206,6 @@ contains
     if(.not.varinfo_valid_option('PoissonSolver', this%method)) call messages_input_error('PoissonSolver')
    
     select case(this%method)
-    case (POISSON_DIRECT_SUM)
-      str = "direct sum"
     case (POISSON_FFT)
       str = "fast Fourier transform"
     case (POISSON_CG)
@@ -239,8 +216,6 @@ contains
       str = "multigrid"
     case (POISSON_ISF)
       str = "interpolating scaling functions"
-    case (POISSON_NO)
-      str = "no Poisson solver - Hartree set to 0"
     end select
     write(message(1),'(a,a,a)') "The chosen Poisson solver is '", trim(str), "'"
     call messages_info(1)
@@ -305,13 +280,7 @@ contains
 
     end if
 
-    !We assume the developr knows what he is doing by providing the solver option
     if(.not. present(solver)) then 
-      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_DIRECT_SUM) then
-        message(1) = 'A periodic system may not use the direct_sum Poisson solver.'
-        call messages_fatal(1)
-      end if
-
       if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_CG_CORRECTED) then
         message(1) = 'A periodic system may not use the cg_corrected Poisson solver.'
         call messages_fatal(1)
@@ -327,64 +296,31 @@ contains
         call messages_fatal(1)
       end if
 
-      select case(der%mesh%sb%dim)
-      case(1)
-
-        select case(der%mesh%sb%periodic_dim)
-        case(0)
-          if( (this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM)) then
-            message(1) = 'A finite 1D system may only use fft or direct_sum Poisson solvers.'
-            call messages_fatal(1)
-          end if
-        case(1)
-          if(this%method /= POISSON_FFT) then
-            message(1) = 'A periodic 1D system may only use the fft Poisson solver.'
-            call messages_fatal(1)
-          end if
-        end select
-
-        if(abs(this%theta) > M_EPSILON .and. this%method /= POISSON_DIRECT_SUM) then
-          call messages_not_implemented('Complex scaled 1D soft Coulomb with Poisson solver other than direct_sum')
-        end if
-
-
-      case(2)
-
-        if( (this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM) ) then
-          message(1) = 'A 2D system may only use fft or direct_sum Poisson solvers.'
-          call messages_fatal(1)
-        end if
-
-
-      case(3)
+      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_ISF) then
+        call messages_write('The ISF solver can only be used for finite systems.')
+        call messages_fatal()
+      end if
       
-        if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_ISF) then
-          call messages_write('The ISF solver can only be used for finite systems.')
-          call messages_fatal()
-        end if
-
-        if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FFT .and. &
-          this%kernel /= der%mesh%sb%periodic_dim .and. this%kernel >=0 .and. this%kernel <=3) then
-          write(message(1), '(a,i1,a)')'The system is periodic in ', der%mesh%sb%periodic_dim ,' dimension(s),'
-          write(message(2), '(a,i1,a)')'but Poisson solver is set for ', this%kernel, ' dimensions.'
-          call messages_warning(2)
-        end if
-
-        if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FFT .and. &
-          this%kernel == POISSON_FFT_KERNEL_CORRECTED) then
-          write(message(1), '(a,i1,a)')'PoissonFFTKernel = multipole_correction cannot be used for periodic systems.'
-          call messages_fatal(1)
-        end if
-
-        if( (der%mesh%sb%box_shape == MINIMUM) .and. (this%method == POISSON_CG_CORRECTED) ) then
-          message(1) = 'When using the "minimum" box shape and the "cg_corrected"'
-          message(2) = 'Poisson solver, we have observed "sometimes" some non-'
-          message(3) = 'negligible error. You may want to check that the "fft" or "cg"'
-          message(4) = 'solver are providing, in your case, the same results.'
-          call messages_warning(4)
-        end if
-
-      end select
+      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FFT .and. &
+        this%kernel /= der%mesh%sb%periodic_dim .and. this%kernel >=0 .and. this%kernel <=3) then
+        write(message(1), '(a,i1,a)')'The system is periodic in ', der%mesh%sb%periodic_dim ,' dimension(s),'
+        write(message(2), '(a,i1,a)')'but Poisson solver is set for ', this%kernel, ' dimensions.'
+        call messages_warning(2)
+      end if
+      
+      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_FFT .and. &
+        this%kernel == POISSON_FFT_KERNEL_CORRECTED) then
+        write(message(1), '(a,i1,a)')'PoissonFFTKernel = multipole_correction cannot be used for periodic systems.'
+        call messages_fatal(1)
+      end if
+      
+      if( (der%mesh%sb%box_shape == MINIMUM) .and. (this%method == POISSON_CG_CORRECTED) ) then
+        message(1) = 'When using the "minimum" box shape and the "cg_corrected"'
+        message(2) = 'Poisson solver, we have observed "sometimes" some non-'
+        message(3) = 'negligible error. You may want to check that the "fft" or "cg"'
+        message(4) = 'solver are providing, in your case, the same results.'
+        call messages_warning(4)
+      end if
     end if
 
     call messages_print_stress(stdout)
@@ -428,51 +364,23 @@ contains
         call messages_fatal(2)
       end if
 
-      if (der%mesh%sb%dim /= 3 .and. fft_library == FFTLIB_PFFT) then
-        call messages_not_implemented('PFFT support for dimensionality other than 3')
-      end if
       if (der%mesh%sb%periodic_dim /= 0 .and. fft_library == FFTLIB_PFFT) then
         call messages_not_implemented('PFFT support for periodic systems')
       end if
 
-      select case (der%mesh%sb%dim)
-
-      case (1)
-        select case(this%kernel)
-        case(POISSON_FFT_KERNEL_SPH)
-          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
-        case(POISSON_FFT_KERNEL_NOCUT)
-          box = der%mesh%idx%ll
-        end select
-
-      case (2)
-        select case(this%kernel)
-        case(POISSON_FFT_KERNEL_SPH)
-          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
-          box(1:2) = maxval(box)
-        case(POISSON_FFT_KERNEL_CYL)
-          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
-        case(POISSON_FFT_KERNEL_NOCUT)
-          box(:) = der%mesh%idx%ll(:)
-        end select
-
-      case (3)
-        select case(this%kernel)
-        case(POISSON_FFT_KERNEL_SPH) 
-          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
-          box(:) = maxval(box)
-        case(POISSON_FFT_KERNEL_CYL) 
-          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
-          box(2) = maxval(box(2:3)) ! max of finite directions
-          box(3) = maxval(box(2:3)) ! max of finite directions
-        case(POISSON_FFT_KERNEL_CORRECTED)
-          box(:) = der%mesh%idx%ll(:)
-        case(POISSON_FFT_KERNEL_PLA, POISSON_FFT_KERNEL_NOCUT)
-          call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
-        end select
-
+      select case(this%kernel)
+      case(POISSON_FFT_KERNEL_SPH) 
+        call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
+        box(:) = maxval(box)
+      case(POISSON_FFT_KERNEL_CYL) 
+        call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
+        box(2) = maxval(box(2:3)) ! max of finite directions
+        box(3) = maxval(box(2:3)) ! max of finite directions
+      case(POISSON_FFT_KERNEL_CORRECTED)
+        box(:) = der%mesh%idx%ll(:)
+      case(POISSON_FFT_KERNEL_PLA, POISSON_FFT_KERNEL_NOCUT)
+        call mesh_double_box(der%mesh%sb, der%mesh, fft_alpha, box)
       end select
-
     end if
 
     ! Create the cube
@@ -515,9 +423,6 @@ contains
     case(POISSON_ISF)
       call poisson_isf_end(this%isf_solver)
       has_cube = .true.
-
-    case(POISSON_NO)
-      call poisson_no_end(this%no_solver)
 
     end select
     this%method = POISSON_NULL
@@ -594,12 +499,7 @@ contains
 
     ASSERT(this%method /= POISSON_NULL)
 
-    if(this%der%mesh%sb%dim == 1 .and. this%method == POISSON_DIRECT_SUM) then
-      call zpoisson1d_solve_direct(this, pot, rho)
-    else
-      call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value)
-    end if
-    if(abs(this%theta) > M_EPSILON) pot = pot * exp(-M_zI * this%theta)
+    call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value)
 
     POP_SUB(zpoisson_solve)
   end subroutine zpoisson_solve
@@ -673,19 +573,6 @@ contains
     ASSERT(this%method /= POISSON_NULL)
       
     select case(this%method)
-    case(POISSON_DIRECT_SUM)
-      select case(this%der%mesh%sb%dim)
-      case(1)
-        call dpoisson1d_solve_direct(this, pot, rho)
-      case(2)
-        call poisson_solve_direct(this, pot, rho)
-      case(3)
-        call poisson_solve_direct(this, pot, rho)
-      case default
-        message(1) = "Direct sum Poisson solver only available for 1, 2, or 3 dimensions."
-        call messages_fatal(1)
-      end select
-
     case(POISSON_CG)
       call poisson_cg1(der, this%corrector, pot, rho)
 
@@ -724,8 +611,6 @@ contains
     case(POISSON_ISF)
       call poisson_isf_solve(this%isf_solver, der%mesh, this%cube, pot, rho, all_nodes_value)
      
-    case(POISSON_NO)
-      call poisson_no_solve(this%no_solver, der%mesh, this%cube, pot, rho)
     end select
 
     POP_SUB(dpoisson_solve)
@@ -1051,17 +936,163 @@ contains
     async = (this%nslaves > 0)
 
   end function poisson_is_async
+  
+  ! ---------------------------------------------------------
+  subroutine poisson_kernel_init(this, all_nodes_comm)
+    type(poisson_t),  intent(inout) :: this
+    integer,          intent(in)    :: all_nodes_comm
 
-#include "poisson_init_direct_inc.F90"
+    integer :: maxl, iter
+    logical :: valid_solver
+
+    PUSH_SUB(poisson_kernel_init)
+
+    select case(this%method)
+    case(POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED, POISSON_MULTIGRID, POISSON_ISF)
+      valid_solver = .true.
+    case default
+      valid_solver = .false.
+    end select
+
+    ASSERT(valid_solver)
+
+    !%Variable PoissonSolverMaxMultipole
+    !%Type integer
+    !%Section Hamiltonian::Poisson
+    !%Description
+    !% Order of the multipolar expansion for boundary corrections. 
+    !%
+    !% The Poisson solvers <tt>multigrid</tt>, <tt>cg</tt>, and <tt>cg_corrected</tt>
+    !% (and <tt>fft</tt> with <tt>PoissonFFTKernel = multipole_correction</tt>)
+    !% do a multipolar expansion of the given
+    !% charge density, such that <math>\rho = \rho_{multip.expansion}+\Delta
+    !% \rho</math>. The Hartree potential due to the <math>\rho_{multip.expansion}</math> is
+    !% calculated analytically, while the Hartree potential due to <math>\Delta \rho</math>
+    !% is calculated with either a multigrid or cg solver.
+    !% The order of the multipolar expansion is set by this variable.
+    !%
+    !% Default is 4 for <tt>PoissonSolver = cg_corrected</tt> and <tt>multigrid</tt>, and 2
+    !% for <tt>fft</tt> with <tt>PoissonFFTKernel = multipole_correction</tt>.
+    !%End
+
+    !%Variable PoissonSolverMaxIter
+    !%Type integer
+    !%Section Hamiltonian::Poisson
+    !%Default 400
+    !%Description
+    !% The maximum number of iterations for conjugate-gradient
+    !% Poisson solvers.
+    !%End
+
+    !%Variable PoissonSolverThreshold
+    !%Type float
+    !%Section Hamiltonian::Poisson
+    !%Default 1e-5
+    !%Description
+    !% The tolerance for the Poisson solution, used by the <tt>cg</tt>,
+    !% <tt>cg_corrected</tt>, and <tt>multigrid</tt> solvers.
+    !%End
+
+    !! This variable is disabled for the moment
+    !!
+    !!Variable PoissonSolverIncreaseBox
+    !!Type logical
+    !!Section Hamiltonian::Poisson
+    !!Description
+    !! (experimental) If the selected Poisson solver is
+    !! <tt>cg_corrected</tt> the boundary conditions have to be
+    !! calculated by means of performing a multipole
+    !! expansion. Unfortunately, if the charge distribution is not
+    !! contained in a simulation box of approximately spherical shape,
+    !! the error can be quite large. Good cases are the spherical box,
+    !! the parallelepiped when all dimensions are of similar magnitude,
+    !! or the cylinder when the height is not too different to the
+    !! diameter of the base. Bad cases are the rest, including the
+    !! <tt>minimum</tt> box, when the geometry of the molecule is not
+    !! compact enough.
+    !!
+    !! In order to cure this problem, the Hartree problem may be solved
+    !! in an auxiliary simulation box, which will contain the original
+    !! one, but which will be a sphere.  This implies some extra
+    !! computational effort -- since the density and potential have to
+    !! be transferred between boxes -- and extra memory consumption --
+    !! since a new grid has to be stored.
+    !!End
+
+    select case(this%method)
+
+    case(POISSON_CG)
+      call parse_variable('PoissonSolverMaxMultipole', 4, maxl)
+      write(message(1),'(a,i2)')'Info: Boundary conditions fixed up to L =',  maxl
+      call messages_info(1)
+      call parse_variable('PoissonSolverMaxIter', 400, iter)
+      call parse_variable('PoissonSolverThreshold', CNST(1.0e-6), threshold)
+      call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
+      call poisson_cg_init(threshold, iter)
+
+    case(POISSON_CG_CORRECTED)
+      call parse_variable('PoissonSolverMaxMultipole', 4, maxl)
+      call parse_variable('PoissonSolverMaxIter', 400, iter)
+      call parse_variable('PoissonSolverThreshold', CNST(1.0e-6), threshold)
+      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
+      call messages_info(1)
+      call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
+      call poisson_cg_init(threshold, iter)
+
+    case(POISSON_MULTIGRID)
+      call parse_variable('PoissonSolverMaxMultipole', 4, maxl)
+      call parse_variable('PoissonSolverThreshold', CNST(1.0e-6), threshold)
+      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
+      call messages_info(1)
+
+      call poisson_multigrid_init(this%mg, this%der%mesh, maxl, threshold)
+
+    case(POISSON_ISF)
+      call poisson_isf_init(this%isf_solver, this%der%mesh, this%cube, all_nodes_comm, init_world = this%all_nodes_default)
+
+    case(POISSON_FFT)
+      call poisson_fft_init(this%fft_solver, this%der%mesh, this%cube, this%kernel, qq = this%qq)
+      ! soft parameter has no effect unless in 1D
+
+      if (this%kernel == POISSON_FFT_KERNEL_CORRECTED) then
+        call parse_variable('PoissonSolverMaxMultipole', 2, maxl)
+        write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
+        call messages_info(1)
+        call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
+      end if
+
+    end select
+
+    POP_SUB(poisson_kernel_init)
+  end subroutine poisson_kernel_init
+
+  !-----------------------------------------------------------------
+  subroutine poisson_kernel_reinit(this, qq)
+    type(poisson_t), intent(inout) :: this
+    FLOAT,           intent(in)    :: qq(:)
+
+    PUSH_SUB(poisson_kernel_reinit)
+
+    select case(this%method)
+    case(POISSON_FFT)
+      if(any(abs(this%qq(1:this%der%mesh%sb%periodic_dim) - qq(1:this%der%mesh%sb%periodic_dim)) > M_EPSILON)) then
+        this%qq(1:this%der%mesh%sb%periodic_dim) = qq(1:this%der%mesh%sb%periodic_dim)
+        call poisson_fft_end(this%fft_solver)
+        call poisson_fft_init(this%fft_solver, this%der%mesh, this%cube, this%kernel, qq = this%qq)
+      end if
+    case default
+      call messages_not_implemented("poisson_kernel_reinit with other methods than FFT")
+    end select
+
+    POP_SUB(poisson_kernel_reinit)
+  end subroutine poisson_kernel_reinit
 
 #include "undef.F90"
 #include "real.F90"
 #include "poisson_inc.F90"
-#include "solver_1d_solve_inc.F90"
 #include "undef.F90"
 #include "complex.F90"
 #include "poisson_inc.F90"
-#include "solver_1d_solve_inc.F90"
 
 end module poisson_oct_m
 

@@ -542,7 +542,7 @@ contains
       integer :: ierr, freeze_orbitals
       FLOAT :: x
       logical :: freeze_hxc
-      type(restart_t) :: restart, restart_frozen
+      type(restart_t) :: restart
 
       PUSH_SUB(td_run.init_wfs)
 

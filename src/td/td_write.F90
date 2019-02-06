@@ -45,7 +45,6 @@ module td_write_oct_m
   use multicomm_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use restart_oct_m
   use simul_box_oct_m
   use states_oct_m
   use states_calc_oct_m
@@ -149,7 +148,6 @@ contains
     integer :: ierr, first, ii, ist, jj, kk, flags, iout, default
     type(block_t) :: blk
     character(len=100) :: filename
-    type(restart_t) :: restart_gs
 
     PUSH_SUB(td_write_init)
 
