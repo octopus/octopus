@@ -12,12 +12,10 @@ Spacing = 0.5
   "H" | 0 | 0 | 0
 %
 
-Output = density + geometry + wfs + potential + forces + potential_gradient
-OutputFormat = axis_x + plane_x + dx + xyz + xcrysden + mesh_index
+Output = density + geometry + wfs + potential + potential_gradient
+OutputFormat = axis_x + plane_x + xyz + mesh_index
 OutputInterval = 4
 OutputDuringSCF = yes
-# for Bader parallel in domains
-ExperimentalFeatures = yes
 
 FilterPotentials = filter_none
 

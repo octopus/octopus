@@ -31,6 +31,6 @@ XCFunctional = gga_x_pbe + gga_c_pbe
 SCFinLCAO = yes
 ExperimentalFeatures = yes
 Output = geometry + density
-OutputFormat = matlab + plane_z
+OutputFormat = plane_z
 
 ExperimentalFeatures = yes

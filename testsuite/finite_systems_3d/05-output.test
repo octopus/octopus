@@ -13,13 +13,6 @@ match ; Total energy     ; GREPFIELD(static/info, 'Total       =', 3) ; -11.9958
 Precision : 0.0001
 match ; Geometry         ; LINEFIELD(static/geometry.xyz, 3, 3) ; 0.000000
 
-# DX output
-match ; DX Origin        ; LINEFIELD(static/density.dx, 2, 2) ; -2.645886
-match ; DX Delta         ; LINEFIELD(static/density.dx, 3, 2) ; 0.264589
-Precision : 0.000000001
-match ; DX value 1       ; LINEFIELD(static/density.dx, 1195, 1) ; 0.000166985354390
-match ; DX value 2       ; LINEFIELD(static/density.dx, 1489, 1) ; 0.001133461985917
-
 #axis output
 Precision : 0.0001
 match ; Axis pos 1       ; LINEFIELD(static/density.y\=0\,z\=0, 2, 1) ; -2.64588604295000
@@ -47,17 +40,4 @@ match ; Plane value 30   ; LINEFIELD(static/density.x\=0,  29, 3) ; 1.8976346164
 match ; Plane value 295  ; LINEFIELD(static/density.x\=0, 294, 3) ; 6.06673423715878E-003
 match ; Plane value 10 Grad-y v0 ; LINEFIELD(static/grad_v0-y.x\=0,   9, 3) ; -1.42667157278682E+001
 
-
-#xcrysden
-match ; XCrySDen geometry; LINEFIELD(static/geometry.xsf, 2, 3) ; 2.645886
-match ; XCrySDen wf 1    ; LINEFIELD(static/wf-st0001.xsf, 2, 3) ; 2.645886
-match ; XCrySDen wf 2    ; LINEFIELD(static/wf-st0001.xsf, 8, 1) ; 5.291772
-Precision : 0.000001
-match ; XCrySDen wf 3    ; LINEFIELD(static/wf-st0001.xsf, 8087, 1) ; 0.010543843731284
-match ; XCrySDen wf 4    ; LINEFIELD(static/wf-st0001.xsf, 8546, 1) ; 0.007238401100039
-
-#bader: only works in serial currently
-#match ; Num. Bader basins  ; GREPFIELD(static/bader_basins-sp1.info, "Number of basins =", 5) ;  6
-#match ; Basin 1 volume     ; GREPFIELD(static/bader_basins-sp1.info, "volume =",           3) ; 13.577424
-#match ; Basin 1 population ; GREPFIELD(static/bader_basins-sp1.info, "population =",       3) ;  0.227759
 

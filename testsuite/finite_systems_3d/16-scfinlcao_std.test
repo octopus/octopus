@@ -40,6 +40,3 @@ match ; Dipole Moment z   ; GREPFIELD(static/info, '<z>', 4) ;   8.06628E-01
 match ; Force C  x        ; GREPFIELD(static/info, '1         C', 3) ;  -0.000000
 match ; Force C  z        ; GREPFIELD(static/info, '1         C', 5) ;  -3.717101
 match ; Force Cl y        ; GREPFIELD(static/info, '3        Cl', 4) ;  23.312227
-
-match ; MATLAB point 1    ; LINEFIELD(static/density.z=0.matlab, 22, 28); 1.23255040284864
-match ; MATLAB point 2    ; LINEFIELD(static/density.z=0.matlab, 42, 30); 0.02499576752910
