@@ -121,11 +121,6 @@ module hamiltonian_oct_m
     FLOAT :: spectral_middle_point
     FLOAT :: spectral_half_span
 
-    !> Mass of the particle (in most cases, mass = 1, electron mass)
-    FLOAT :: mass
-    !> anisotropic scaling factor for the mass: different along x,y,z etc...
-    FLOAT :: mass_scaling(MAX_DIM)
-
     !> For the Hartree-Fock Hamiltonian, the Fock operator depends on the states.
     type(states_t), pointer :: hf_st
     
@@ -182,19 +177,7 @@ contains
     hm%family_is_mgga_with_exc = family_is_mgga_with_exc
     call states_dim_copy(hm%d, st%d)
 
-    !%Variable ParticleMass
-    !%Type float
-    !%Default 1.0
-    !%Section Hamiltonian
-    !%Description
-    !% It is possible to make calculations for a particle with a mass
-    !% different from one (atomic unit of mass, or mass of the electron).
-    !% This is useful to describe non-electronic systems, or for
-    !% esoteric purposes.
-    !%End
-    call parse_variable('ParticleMass', M_ONE, hm%mass)
-
-    call hamiltonian_base_init(hm%hm_base, hm%d%nspin, hm%mass)
+    call hamiltonian_base_init(hm%hm_base, hm%d%nspin)
 
     ASSERT(associated(gr%der%lapl))
     hm%hm_base%kinetic => gr%der%lapl
@@ -237,35 +220,6 @@ contains
 
     ! Boundaries
     call bc_init(hm%bc, gr%mesh, gr%mesh%sb, hm%geo)
-
-    !%Variable MassScaling
-    !%Type block
-    !%Section Hamiltonian
-    !%Description
-    !% Scaling factor for anisotropic masses (different masses along each
-    !% geometric direction).
-    !%
-    !% <tt>%MassScaling
-    !% <br>&nbsp;&nbsp;1.0 | 1800.0 | 1800.0
-    !% <br>%</tt>
-    !%
-    !% would fix the mass of the particles to be 1800 along the <i>y</i> and <i>z</i>
-    !% directions. This can be useful, <i>e.g.</i>, to simulate 3 particles in 1D,
-    !% in this case an electron and 2 protons.
-    !%
-    !%End
-    hm%mass_scaling(1:gr%sb%dim) = M_ONE
-    if(parse_block('MassScaling', blk) == 0) then
-        ncols = parse_block_cols(blk, 0)
-        if(ncols > gr%sb%dim) then
-          call messages_input_error("MassScaling")
-        end if
-        iline = 1 ! just deal with 1 line - should be generalized
-        do icol = 1, ncols
-          call parse_block_float(blk, iline - 1, icol - 1, hm%mass_scaling(icol))
-        end do
-        call parse_block_end(blk)
-    end if
 
     nullify(hm%hf_st)
 

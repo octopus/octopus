@@ -394,9 +394,8 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
  
     if(allocated(this%vector_potential)) then
       forall (idim = 1:std%dim, ip = 1:der%mesh%np)
-        vpsi(ip, idim) = vpsi(ip, idim) + (M_HALF / this%mass) * &
-          sum(this%vector_potential(1:der%mesh%sb%dim, ip)**2)*psi(ip, idim) &
-          + (M_ONE / this%mass) * M_zI*dot_product(this%vector_potential(1:der%mesh%sb%dim, ip), grad(ip, 1:der%mesh%sb%dim, idim))
+        vpsi(ip, idim) = vpsi(ip, idim) + M_HALF*sum(this%vector_potential(1:der%mesh%sb%dim, ip)**2)*psi(ip, idim) &
+          + M_zI*dot_product(this%vector_potential(1:der%mesh%sb%dim, ip), grad(ip, 1:der%mesh%sb%dim, idim))
       end forall
     end if
 

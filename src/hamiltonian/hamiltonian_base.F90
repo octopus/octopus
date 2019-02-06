@@ -89,7 +89,6 @@ module hamiltonian_base_oct_m
 
   type hamiltonian_base_t
     integer                               :: nspin
-    FLOAT                                 :: mass  !< Needed to compute the magnetic terms, if the mass is not one.
     type(nl_operator_t),      pointer     :: kinetic
     type(projector_matrix_t), allocatable :: projector_matrices(:) 
     FLOAT,                    allocatable :: potential(:, :)
@@ -152,15 +151,13 @@ module hamiltonian_base_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_base_init(this, nspin, mass)
+  subroutine hamiltonian_base_init(this, nspin)
     type(hamiltonian_base_t), intent(inout) :: this
     integer,                  intent(in)    :: nspin
-    FLOAT,                    intent(in)    :: mass
 
     PUSH_SUB(hamiltonian_base_init)
 
     this%nspin = nspin
-    this%mass  = mass
 
     this%apply_projector_matrices = .false.
     this%nprojector_matrices = 0
