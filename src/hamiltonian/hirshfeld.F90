@@ -88,7 +88,7 @@ contains
     SAFE_ALLOCATE(this%total_density(1:this%mesh%np))
     SAFE_ALLOCATE(this%free_volume(1:geo%natoms))
     SAFE_ALLOCATE(this%free_vol_r3(1:geo%natoms,1:this%mesh%np))
-    SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
+    SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%spin_channels))
     SAFE_ALLOCATE(atom_density_acc(1:this%mesh%np))
 
     this%total_density = CNST(0.0)
@@ -98,7 +98,7 @@ contains
       atom_density_acc(1:this%mesh%np) = M_ZERO
 
       rmax = CNST(0.0)
-      do isp = 1, this%st%d%nspin
+      do isp = 1, this%st%d%spin_channels
         rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
       end do
 
@@ -108,13 +108,13 @@ contains
         pos(1:this%mesh%sb%dim) = periodic_copy_position(pp, this%mesh%sb, icell) 
         !We get the non periodized density
         !We need to do it to have the r^3 correctly computed for periodic systems
-        call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), pos, this%st%d%nspin, atom_density)
+        call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), pos, this%st%d%spin_channels, atom_density)
 
-        forall(ip = 1:this%mesh%np) this%total_density(ip) = this%total_density(ip) + sum(atom_density(ip, 1:st%d%nspin))
+        forall(ip = 1:this%mesh%np) this%total_density(ip) = this%total_density(ip) + sum(atom_density(ip, 1:st%d%spin_channels))
       
         do ip = 1, this%mesh%np
           rr = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - pos(1:this%mesh%sb%dim))**2))
-          atom_density_acc(ip) = atom_density_acc(ip) + sum(atom_density(ip, 1:this%st%d%nspin))*rr**3  
+          atom_density_acc(ip) = atom_density_acc(ip) + sum(atom_density(ip, 1:this%st%d%spin_channels))*rr**3  
         end do
       end do
       call periodic_copy_end(pp)
@@ -168,7 +168,7 @@ contains
 
     ASSERT(associated(this%total_density))
     
-    SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
+    SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%spin_channels))
     SAFE_ALLOCATE(hirshfeld_density(1:this%mesh%np, this%st%d%spin_channels))
     
     call species_atom_density(this%mesh, this%mesh%sb, this%geo%atom(iatom), this%st%d%spin_channels, atom_density)
@@ -221,12 +221,12 @@ contains
 
     ASSERT(associated(this%total_density))
     
-    SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
+    SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%spin_channels))
     SAFE_ALLOCATE(hirshfeld_density(1:this%mesh%np))
     
     do ip = 1, this%mesh%np
       if( this%total_density(ip) > TOL_HIRSHFELD) then
-        hirshfeld_density(ip) = this%free_vol_r3(iatom,ip)*sum(density(ip, 1:this%st%d%nspin))/this%total_density(ip)
+        hirshfeld_density(ip) = this%free_vol_r3(iatom,ip)*sum(density(ip, 1:this%st%d%spin_channels))/this%total_density(ip)
       else
         hirshfeld_density(ip) = CNST(0.0)
       end if
@@ -258,7 +258,7 @@ contains
 
     call profiling_in(prof, "HIRSHFELD_DENSITY_DER")
 
-    SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
+    SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%spin_channels))
     
     do ip = 1, this%mesh%np
 
@@ -305,8 +305,8 @@ contains
 
 
     SAFE_ALLOCATE(grad(1:this%mesh%np, 1:this%mesh%sb%dim))
-    SAFE_ALLOCATE(atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
-    SAFE_ALLOCATE(atom_density(1:this%mesh%np, 1:this%st%d%nspin))
+    SAFE_ALLOCATE(atom_derivative(1:this%mesh%np, 1:this%st%d%spin_channels))
+    SAFE_ALLOCATE(atom_density(1:this%mesh%np, 1:this%st%d%spin_channels))
 
     dposition(1:this%mesh%sb%dim) = M_ZERO
     grad(1:this%mesh%np, 1:this%mesh%sb%dim) = M_ZERO
@@ -316,7 +316,7 @@ contains
 
     rmax_i = CNST(0.0)
     rmax_j = CNST(0.0)
-    do isp = 1, this%st%d%nspin
+    do isp = 1, this%st%d%spin_channels
       rmax_i = max(rmax_i, spline_cutoff_radius(ps_i%density(isp), ps_i%projectors_sphere_threshold))
       rmax_j = max(rmax_j, spline_cutoff_radius(ps_j%density_der(isp), ps_j%projectors_sphere_threshold))
     end do
@@ -328,10 +328,10 @@ contains
     do jcell = 1, periodic_copy_num(pp_j)
 
       pos_j(1:this%mesh%sb%dim) = periodic_copy_position(pp_j, this%mesh%sb, jcell)
-      atom_derivative(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
+      atom_derivative(1:this%mesh%np, 1:this%st%d%spin_channels) = M_ZERO
       call species_atom_density_derivative_np(this%mesh, this%geo%atom(jatom), &
                                               pos_j, this%st%d%spin_channels, &
-                                              atom_derivative(1:this%mesh%np, 1:this%st%d%nspin))
+                                              atom_derivative(1:this%mesh%np, 1:this%st%d%spin_channels))
 
       call periodic_copy_init(pp_i, this%mesh%sb, pos_j, (rmax_j+rmax_i))  ! jcells further away from this distance cannot respect the following 'if' condition with respect to the i atom in this icell
 
@@ -344,13 +344,13 @@ contains
         if(rij - (rmax_j+rmax_i) < TOL_SPACING) then 
  
 
-          atom_density(1:this%mesh%np, 1:this%st%d%nspin) = M_ZERO
+          atom_density(1:this%mesh%np, 1:this%st%d%spin_channels) = M_ZERO
 
           !We get the non periodized density
           !We need to do it to have the r^3 correctly computed for periodic systems
           call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), &
-                                       pos_i, this%st%d%nspin, &
-                                       atom_density(1:this%mesh%np, 1:this%st%d%nspin))
+                                       pos_i, this%st%d%spin_channels, &
+                                       atom_density(1:this%mesh%np, 1:this%st%d%spin_channels))
 
           do ip = 1, this%mesh%np
             if(this%total_density(ip)< TOL_HIRSHFELD) cycle
@@ -366,12 +366,12 @@ contains
             rri = sqrt(rri)
             rrj = sqrt(rrj)
               
-            tdensity = sum(density(ip, 1:this%st%d%nspin))
-            atom_dens = sum(atom_density(ip, 1:this%st%d%nspin))
+            tdensity = sum(density(ip, 1:this%st%d%spin_channels))
+            atom_dens = sum(atom_density(ip, 1:this%st%d%spin_channels))
 
             tmp = rri**3*atom_dens*tdensity/this%total_density(ip)**2
 
-            atom_der = sum(atom_derivative(ip, 1:this%st%d%nspin))
+            atom_der = sum(atom_derivative(ip, 1:this%st%d%spin_channels))
 
             if(rrj > TOL_HIRSHFELD) then
               do idir = 1, this%mesh%sb%dim
