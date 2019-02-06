@@ -700,11 +700,6 @@ contains
 
     PUSH_SUB(lcao_run)
 
-    if(sys%ks%theory_level == CLASSICAL) then
-      POP_SUB(lcao_run) 
-      return
-    end if
-
     if (present(st_start)) then
       ! If we are doing unocc calculation, do not mess with the correct eigenvalues
       ! of the occupied states.
