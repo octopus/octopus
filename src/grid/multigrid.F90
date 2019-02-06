@@ -347,7 +347,6 @@ contains
     PUSH_SUB(multigrid_mesh_half)
 
     mesh_out%sb               => mesh_in%sb
-    mesh_out%idx%is_hypercube =  mesh_in%idx%is_hypercube
     mesh_out%idx%dim          =  mesh_in%idx%dim
 
     mesh_out%spacing(:)  = 2*mesh_in%spacing(:)
@@ -371,7 +370,6 @@ contains
     PUSH_SUB(multigrid_mesh_double)
 
     mesh_out%sb             => mesh_in%sb
-    mesh_out%idx%is_hypercube =  mesh_in%idx%is_hypercube
     mesh_out%idx%dim          =  mesh_in%idx%dim
 
     mesh_out%spacing(:)  = M_HALF*mesh_in%spacing(:)

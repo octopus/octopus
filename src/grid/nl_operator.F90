@@ -408,12 +408,7 @@ contains
 
         do jj = 1, op%stencil%size
           ! Get global index of p1 plus current stencil point.
-          if(mesh%sb%mr_flag) then
-            st1(jj) = index_from_coords(mesh%idx, &
-                 p1(1:MAX_DIM) + mesh%resolution(p1(1), p1(2), p1(3))*op%stencil%points(1:MAX_DIM, jj))
-          else
-            st1(jj) = index_from_coords(mesh%idx, p1(1:MAX_DIM) + op%stencil%points(1:MAX_DIM, jj))
-          end if
+          st1(jj) = index_from_coords(mesh%idx, p1(1:MAX_DIM) + op%stencil%points(1:MAX_DIM, jj))
           
           if(mesh%parallel_in_domains) then
             ! When running parallel, translate this global

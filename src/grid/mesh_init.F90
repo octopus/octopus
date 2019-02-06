@@ -76,7 +76,6 @@ subroutine mesh_init_stage_1(mesh, sb, spacing, enlarge)
   mesh%spacing = spacing 
 
   mesh%idx%dim = sb%dim
-  mesh%idx%is_hypercube = sb%box_shape == HYPERCUBE
   mesh%idx%enlarge = enlarge
 
   ! adjust nr
@@ -182,24 +181,10 @@ subroutine mesh_init_stage_2(mesh, sb, geo, stencil)
   mesh%idx%nr(1, 1:MAX_DIM) = mesh%idx%nr(1, 1:MAX_DIM) - mesh%idx%enlarge(1:MAX_DIM)
   mesh%idx%nr(2, 1:MAX_DIM) = mesh%idx%nr(2, 1:MAX_DIM) + mesh%idx%enlarge(1:MAX_DIM)
   
-  if(mesh%idx%is_hypercube) then
-    call hypercube_init(mesh%idx%hypercube, sb%dim, mesh%idx%nr, mesh%idx%enlarge(1))
-    mesh%np_part_global = hypercube_number_total_points(mesh%idx%hypercube)
-    mesh%np_global      = hypercube_number_inner_points(mesh%idx%hypercube)
-    call profiling_out(mesh_init_prof)
-    POP_SUB(mesh_init_stage_2)
-    return
-  end if
-
   nr = mesh%idx%nr
 
   ! allocate the xyz arrays
   SAFE_ALLOCATE(mesh%idx%lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
-
-  if(sb%mr_flag) then 
-    SAFE_ALLOCATE(mesh%resolution(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
-    mesh%resolution(:,:,:) = 0
-  end if
 
   mesh%idx%lxyz_inv(:,:,:) = 0
   res = 1
@@ -279,66 +264,6 @@ subroutine mesh_init_stage_2(mesh, sb, geo, stencil)
   SAFE_DEALLOCATE_A(xx)
   SAFE_DEALLOCATE_A(in_box)
 
-  if(sb%mr_flag) then
-    ! Calculate the resolution for each point and label the enlargement points
-    do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-      chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3)
-      do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-        chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2)
-        do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-          chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1)
-           ! skip if not inner point
-          if(.not.btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) cycle
-          res = -1
-          res_counter = 0
-          do while(.true.)
-            res_counter = res_counter + 1
-            ! loop through Cartesian axes (both directions)
-            do j_counter = 1,6
-              select case(j_counter)
-                case(1)
-                  jx=ix-res_counter; jy=iy; jz=iz
-                case(2)
-                  jx=ix+res_counter; jy=iy; jz=iz
-                case(3)
-                  jx=ix; jy=iy-res_counter; jz=iz
-                case(4)
-                  jx=ix; jy=iy+res_counter; jz=iz
-                case(5)
-                  jx=ix; jy=iy; jz=iz-res_counter
-                case(6)
-                  jx=ix; jy=iy; jz=iz+res_counter
-              end select
-              if(any((/jx, jy, jz/) < mesh%idx%nr(1, 1:3)) .or. &
-                 any((/jx, jy, jz/) > mesh%idx%nr(2, 1:3))) cycle
-              ! exit after finding neighboring inner point
-              if(btest(mesh%idx%lxyz_inv(jx, jy, jz), INNER_POINT)) then
-                res = res_counter
-                exit
-              end if
-            end do
-            if(res /= -1) exit
-          end do
-          mesh%resolution(ix, iy, iz) = res
-          ! mark the enlargement points
-          do is = 1, stencil%size
-            if(stencil%center == is) cycle
-            ii = ix + res*stencil%points(1, is)
-            jj = iy + res*stencil%points(2, is)
-            kk = iz + res*stencil%points(3, is)
-            if(any((/ii, jj, kk/) < mesh%idx%nr(1, 1:3)) .or. any((/ii, jj, kk/) >  mesh%idx%nr(2, 1:3))) cycle
-            mesh%idx%lxyz_inv(ii, jj, kk) = ibset(mesh%idx%lxyz_inv(ii, jj, kk), ENLARGEMENT_POINT)
-            ! If the point is not an inner point, and if its resolution can be decreased, do it now
-            if(.not. btest(mesh%idx%lxyz_inv(ii, jj, kk), INNER_POINT)) then
-              if(mesh%resolution(ii, jj, kk) == 0 .or. mesh%resolution(ii, jj, kk) > res) &
-                   mesh%resolution(ii, jj, kk) = res
-            end if
-          end do
-        end do
-      end do
-    end do
-  end if
-
   ! count the points
   il = 0
   ik = 0
@@ -355,49 +280,6 @@ subroutine mesh_init_stage_2(mesh, sb, geo, stencil)
 
   ASSERT(mesh%np_global > 0)
   ASSERT(mesh%np_part_global > 0)
-
-  ! Errors occur during actual calculation if resolution interfaces are too close to each other. The
-  ! following routine checks that everything will be ok.
-  if(sb%mr_flag) then
-    ! loop through all interpolation points and check that all points used for interpolation exist
-    do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-      do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-        do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-
-          i_lev = mesh%resolution(ix,iy,iz)
-
-          ! include enlargement points that are neither inner points nor outer boundary points.
-          if( .not. btest(mesh%idx%lxyz_inv(ix, iy, iz),ENLARGEMENT_POINT)) cycle
-          if(  btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) cycle
-          if(  i_lev == 2**mesh%sb%hr_area%num_radii ) cycle
-
-          ! the value of point (ix,iy,iz) is going to be interpolated
-          dx = abs(mod(ix, 2**(i_lev)))
-          dy = abs(mod(iy, 2**(i_lev)))
-          dz = abs(mod(iz, 2**(i_lev)))
-          do ii = 1, mesh%sb%hr_area%interp%nn
-            do jj = 1, mesh%sb%hr_area%interp%nn
-              do kk = 1, mesh%sb%hr_area%interp%nn
-                newi = ix + mesh%sb%hr_area%interp%posi(ii)*dx
-                newj = iy + mesh%sb%hr_area%interp%posi(jj)*dy
-                newk = iz + mesh%sb%hr_area%interp%posi(kk)*dz
-                if(any((/newi, newj, newk/) <  mesh%idx%nr(1, 1:3)) .or. &
-                   any((/newi, newj, newk/) >  mesh%idx%nr(2, 1:3)) .or. &
-                   mesh%idx%lxyz_inv(newi,newj,newk) == 0) then
-
-                     message(1) = 'Multiresolution radii are too close to each other (or outer boundary)'
-                     write(message(2),'(7I4)') ix,iy,iz,newi,newj,newk,mesh%resolution(ix,iy,iz)
-                     call messages_fatal(2)
-                end if
-              end do
-            end do
-          end do
- 
-        end do
-      end do
-    end do
-
-  end if
 
   call profiling_out(mesh_init_prof)
   POP_SUB(mesh_init_stage_2)
@@ -431,13 +313,7 @@ subroutine mesh_init_stage_3(mesh, stencil, mc, parent)
     SAFE_ALLOCATE(mesh%x(1:mesh%np_part_global, 1:MAX_DIM))
   end if
   
-  if(.not. mesh%idx%is_hypercube) then
-    call create_x_lxyz()
-  else if(.not. mesh%parallel_in_domains) then
-    do ip = 1, mesh%np_part_global
-      mesh%x(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip, force=.true.)
-    end do
-  end if
+  call create_x_lxyz()
 
   mesh%mpi_grp = mpi_grp 
   

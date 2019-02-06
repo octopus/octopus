@@ -381,7 +381,7 @@ contains
       end if
       grout%sb%lsize(1)        = grout%sb%xsize
       grout%sb%lsize(2:grout%sb%dim) = grout%sb%rsize
-    case(PARALLELEPIPED, MINIMUM, BOX_IMAGE, BOX_USDEF)
+    case(PARALLELEPIPED, MINIMUM)
       grout%sb%box_shape = SPHERE
       grout%sb%rsize = sqrt( sum(grout%sb%lsize(:)**2) )
       grout%sb%lsize(1:grout%sb%dim) = grout%sb%rsize

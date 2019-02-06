@@ -51,7 +51,6 @@ module simul_box_oct_m
     simul_box_t,                &
     simul_box_init,             &
     simul_box_lookup_init,      &
-    simul_box_interp_init,      &
     simul_box_dump,             &
     simul_box_load,             &
     simul_box_end,              &
@@ -70,11 +69,7 @@ module simul_box_oct_m
     SPHERE         = 1,         &
     CYLINDER       = 2,         &
     MINIMUM        = 3,         &
-    PARALLELEPIPED = 4,         &
-    BOX_IMAGE      = 5,         &
-    HYPERCUBE      = 6,         &
-    BOX_USDEF      = 77
-  !< BOX_USDEF shares a number with other 'user_defined' input file options.
+    PARALLELEPIPED = 4
 
   type, public :: interp_t
     integer          :: nn, order  !< interpolation points and order
@@ -82,32 +77,13 @@ module simul_box_oct_m
     integer, pointer :: posi(:)    !< positions
   end type interp_t
 
-
-  type, public :: multiresolution_t
-    type(interp_t) :: interp          !< interpolation points
-    integer        :: num_areas       !< number of multiresolution areas
-    integer        :: num_radii       !< number of radii (resolution borders)
-    FLOAT, pointer :: radius(:)       !< radius of the high-resolution area
-    FLOAT          :: center(MAX_DIM) !< central point
-  end type multiresolution_t
-
   type simul_box_t
     type(symmetries_t) :: symm
-    !> 1->sphere, 2->cylinder, 3->sphere around each atom,
-    !! 4->parallelepiped (orthonormal, up to now).
     integer  :: box_shape   
-
     FLOAT :: rsize          !< the radius of the sphere or of the cylinder
     FLOAT :: xsize          !< the length of the cylinder in the x-direction
     FLOAT :: lsize(MAX_DIM) !< half of the length of the parallelepiped in each direction.
-
     type(lookup_t)        :: atom_lookup
-
-    character(len=1024) :: user_def !< for the user-defined box
-
-    logical :: mr_flag                 !< .true. when using multiresolution
-    type(multiresolution_t) :: hr_area !< high-resolution areas
-
     FLOAT :: rlattice_primitive(MAX_DIM,MAX_DIM)   !< lattice primitive vectors
     FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   !< lattice vectors
     FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
@@ -118,17 +94,9 @@ module simul_box_oct_m
     FLOAT :: metric            (MAX_DIM,MAX_DIM) !< metric tensor F matrix following Chelikowski paper PRB 78 075109 (2008)
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     logical :: nonorthogonal
-    
     type(kpoints_t) :: kpoints                   !< the k-points
-
     integer :: dim
     integer :: periodic_dim
-
-    !> for the box defined through an image
-    integer             :: image_size(1:2)
-    type(c_ptr)         :: image
-    character(len=200)  :: filename
-
   end type simul_box_t
 
   character(len=22), parameter :: dump_tag = '*** simul_box_dump ***'
@@ -218,68 +186,6 @@ contains
         call messages_warning()
       end if
 
-      !%Variable MultiResolutionArea
-      !%Type block
-      !%Section Mesh
-      !%Description
-      !% (Experimental) Multiresolution regions are set with this
-      !% parameter. The first three numbers define the central
-      !% point of the region, and the following ones set
-      !% the radii where resolution changes (measured from the
-      !% central point).
-      !% NOTE: currently, only one area can be set up, and only works in 3D, and in serial.
-      !%End
-
-      if(parse_block('MultiResolutionArea', blk) == 0) then
-
-        call messages_experimental('Multi-resolution')
-
-        if(sb%dim /= 3) call messages_not_implemented('multi-resolution for dim != 3')
-
-        ! number of areas
-        sb%hr_area%num_areas = parse_block_n(blk)
-
-        ! number of radii
-        sb%hr_area%num_radii = parse_block_cols(blk, 0) - sb%dim
-
-        sb%hr_area%center = M_ZERO
-
-        ! the central point
-        do idir = 1, sb%dim
-          call parse_block_float(blk, 0, idir - 1, sb%hr_area%center(idir))
-        end do
-
-        if (sb%hr_area%num_areas /= 1) call messages_input_error('MultiResolutionArea')
-
-        ! the radii
-        SAFE_ALLOCATE(sb%hr_area%radius(1:sb%hr_area%num_radii))
-        do irad = 1, sb%hr_area%num_radii
-          call parse_block_float(blk, 0, sb%dim + irad - 1, sb%hr_area%radius(irad))
-          sb%hr_area%radius(irad) = units_to_atomic(units_inp%length, sb%hr_area%radius(irad))
-        end do
-        call parse_block_end(blk)
-
-        ! Create interpolation points (posi) and weights (ww)
-
-        !%Variable MultiResolutionInterpolationOrder
-        !%Type integer
-        !%Default 5
-        !%Section Mesh
-        !%Description
-        !% The interpolation order in the multiresolution approach (with <tt>MultiResolutionArea</tt>).
-        !%End
-        call messages_obsolete_variable('MR_InterpolationOrder', 'MultiResolutionInterpolationOrder')
-        call parse_variable('MultiResolutionInterpolationOrder', 5, order)
-        call simul_box_interp_init(sb, order)
-
-        sb%mr_flag = .true.
-      else
-        nullify(sb%hr_area%radius)
-        nullify(sb%hr_area%interp%posi)
-        nullify(sb%hr_area%interp%ww)
-        sb%mr_flag = .false.
-      end if
-
       POP_SUB(simul_box_init.read_misc)
     end subroutine read_misc
 
@@ -315,13 +221,6 @@ contains
       !%Option parallelepiped 4
       !% The simulation box will be a parallelepiped whose dimensions are taken from
       !% the variable <tt>Lsize</tt>.
-      !%Option user_defined 77
-      !% The shape of the simulation box will be read from the variable <tt>BoxShapeUsDef</tt>.
-      !%Option hypercube 6
-      !% (experimental) The simulation box will be a hypercube or
-      !% hyperparallelepiped. This is equivalent to the
-      !% <tt>parallelepiped</tt> box but it can work with an arbitrary
-      !% number of dimensions.
       !%End
 
       if(simul_box_is_periodic(sb)) then
@@ -332,7 +231,7 @@ contains
       call parse_variable('BoxShape', default_boxshape, sb%box_shape)
       if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call messages_input_error('BoxShape')
       select case(sb%box_shape)
-      case(SPHERE, MINIMUM, BOX_USDEF)
+      case(SPHERE, MINIMUM)
         if(sb%dim > 1 .and. simul_box_is_periodic(sb)) call messages_input_error('BoxShape')
       case(CYLINDER)
         if(sb%dim == 2) then
@@ -341,20 +240,6 @@ contains
         end if
         if(sb%periodic_dim > 1) call messages_input_error('BoxShape')
       end select
-
-      ! ignore box_shape in 1D
-      if(sb%dim == 1 .and. sb%box_shape /= PARALLELEPIPED .and. sb%box_shape /= HYPERCUBE) &
-        sb%box_shape = SPHERE
-
-      ! Cannot use images in 1D or 3D
-      if(sb%dim /= 2 .and. sb%box_shape == BOX_IMAGE) call messages_input_error('BoxShape')
-
-      if(sb%dim > 3 .and. sb%box_shape /= HYPERCUBE) then
-        message(1) = "For more than 3 dimensions, you can only use the hypercubic box."
-        call messages_fatal(1)
-        ! FIXME: why not a hypersphere as another option?
-        ! Also, hypercube should be unified with parallepiped.
-      end if
 
       sb%rsize = -M_ONE
       !%Variable Radius
@@ -407,8 +292,7 @@ contains
       end if
 
       sb%lsize = M_ZERO
-      if(sb%box_shape == PARALLELEPIPED .or. sb%box_shape == HYPERCUBE .or. &
-         sb%box_shape == BOX_IMAGE .or. sb%box_shape == BOX_USDEF) then
+      if(sb%box_shape == PARALLELEPIPED) then
 
         !%Variable Lsize
         !%Type block
@@ -461,22 +345,6 @@ contains
         end if
       end if
 
-      ! read in box shape for user-defined boxes
-      if(sb%box_shape == BOX_USDEF) then
-
-        !%Variable BoxShapeUsDef
-        !%Type string
-        !%Section Mesh::Simulation Box
-        !%Description
-        !% Boolean expression that defines the interior of the simulation box. For example,
-        !% <tt>BoxShapeUsDef = "(sqrt(x^2+y^2) <= 4) && z>-2 && z<2"</tt> defines a cylinder
-        !% with axis parallel to the <i>z</i>-axis.
-        !%End
-
-        call parse_variable('BoxShapeUsDef', 'x^2+y^2+z^2 < 4', sb%user_def)
-        call conv_to_C_string(sb%user_def)
-      end if
-
       ! fill in lsize structure
       select case(sb%box_shape)
       case(SPHERE)
@@ -493,8 +361,6 @@ contains
           end if
         end do
       end select
-
-      call messages_obsolete_variable('BoxOffset')
       
       POP_SUB(simul_box_init.read_box)
     end subroutine read_box
@@ -523,36 +389,6 @@ contains
     POP_SUB(simul_box_lookup_init)
     return
   end subroutine simul_box_lookup_init
-
-  ! ------------------------------------------------------------
-  subroutine simul_box_interp_init(this, order)
-    type(simul_box_t), intent(inout) :: this
-    integer,           intent(in)    :: order
-    !
-    FLOAT, allocatable, dimension(:) :: pos
-    integer                          :: ii
-    !
-    PUSH_SUB(simul_box_interp_init)
-    this%hr_area%interp%order=order
-    if(this%hr_area%interp%order<=0) then
-      message(1) = "The value for MultiResolutionInterpolationOrder must be > 0."
-      call messages_fatal(1)
-    end if
-    this%hr_area%interp%nn=2*this%hr_area%interp%order
-    SAFE_ALLOCATE(pos(1:this%hr_area%interp%nn))
-    SAFE_ALLOCATE(this%hr_area%interp%ww(1:this%hr_area%interp%nn))
-    SAFE_ALLOCATE(this%hr_area%interp%posi(1:this%hr_area%interp%nn))
-    do ii = 1, this%hr_area%interp%order
-      this%hr_area%interp%posi(ii)=1+2*(ii-1)
-      this%hr_area%interp%posi(this%hr_area%interp%order+ii)=-this%hr_area%interp%posi(ii)
-      pos(ii)=this%hr_area%interp%posi(ii)
-      pos(this%hr_area%interp%order+ii)=-pos(ii)
-    end do
-    call interpolation_coefficients(this%hr_area%interp%nn, pos, M_ZERO, this%hr_area%interp%ww)
-    SAFE_DEALLOCATE_A(pos)
-    POP_SUB(simul_box_interp_init)
-    return
-  end subroutine simul_box_interp_init
 
   !--------------------------------------------------------------
   subroutine simul_box_build_lattice(sb, rlattice_primitive)
@@ -879,10 +715,6 @@ contains
     call lookup_end(sb%atom_lookup)
     call kpoints_end(sb%kpoints)
 
-    SAFE_DEALLOCATE_P(sb%hr_area%radius)
-    SAFE_DEALLOCATE_P(sb%hr_area%interp%ww)
-    SAFE_DEALLOCATE_P(sb%hr_area%interp%posi)
-
     POP_SUB(simul_box_end)
   end subroutine simul_box_end
 
@@ -906,18 +738,10 @@ contains
     PUSH_SUB(simul_box_write_info)
 
     write(message(1),'(a)') 'Simulation Box:'
-    if(sb%box_shape  ==  BOX_USDEF) then
-      write(message(2), '(a)') '  Type = user-defined'
-    else if(sb%box_shape == BOX_IMAGE) then
-      write(message(2), '(3a,i6,a,i6)') '  Type = defined by image "', trim(sb%filename), '", ', &
-        sb%image_size(1), ' x ', sb%image_size(2)
-    else
-      write(message(2), '(2a)') '  Type = ', trim(bs(sb%box_shape))
-    end if
+    write(message(2), '(2a)') '  Type = ', trim(bs(sb%box_shape))
     call messages_info(2, iunit)
 
-    if(sb%box_shape == SPHERE .or. sb%box_shape == CYLINDER &
-      .or. (sb%box_shape == MINIMUM .and. sb%rsize > M_ZERO)) then
+    if(sb%box_shape == SPHERE .or. sb%box_shape == CYLINDER .or. (sb%box_shape == MINIMUM .and. sb%rsize > M_ZERO)) then
       write(message(1), '(3a,f7.3)') '  Radius  [', trim(units_abbrev(units_out%length)), '] = ', &
         units_from_atomic(units_out%length, sb%rsize)
       call messages_info(1, iunit)
@@ -1007,12 +831,6 @@ contains
           write(iunit, '(a)', advance='no') ', '
         end if
       end do
-    case(BOX_IMAGE)
-      write(iunit, '(a)', advance='no') 'box_image; BoxShapeImage = '//trim(sb%filename)
-    case(HYPERCUBE)
-      write(iunit, '(a)', advance='no') 'hypercube'  ! add parameters?
-    case(BOX_USDEF)
-      write(iunit, '(a)', advance='no') 'user_defined; BoxShapeUsDef = "'//trim(sb%user_def)//'"'
     end select
 
     write(iunit, '()')
@@ -1136,7 +954,7 @@ contains
       SAFE_DEALLOCATE_A(nlist)
       SAFE_DEALLOCATE_P(list)
 
-    case(PARALLELEPIPED, HYPERCUBE) 
+    case(PARALLELEPIPED) 
       llimit(1:sb%dim) = -sb%lsize(1:sb%dim) - DELTA
       ulimit(1:sb%dim) =  sb%lsize(1:sb%dim) + DELTA
       ulimit(1:sb%periodic_dim)  = sb%lsize(1:sb%periodic_dim) - DELTA
@@ -1145,20 +963,6 @@ contains
         in_box(ip) = all(xx(1:sb%dim, ip) >= llimit(1:sb%dim) .and. xx(1:sb%dim, ip) <= ulimit(1:sb%dim))
       end forall
 
-    case(BOX_USDEF)
-      ! is it inside the user-given boundaries?
-      do ip = 1, npoints
-        in_box(ip) =  all(xx(1:sb%dim, ip) >= -sb%lsize(1:sb%dim) - DELTA) &
-          .and. all(xx(1:sb%dim, ip) <= sb%lsize(1:sb%dim) + DELTA)
-
-        ! and inside the simulation box?
-        do idir = 1, sb%dim
-          xx(idir, ip) = units_from_atomic(units_inp%length, xx(idir, ip))
-        end do
-        rr = sqrt(sum(xx(1:sb%dim, ip)**2))
-        call parse_expression(re, im, sb%dim, xx(:, ip), rr, M_ZERO, sb%user_def)
-        in_box(ip) = in_box(ip) .and. (re /= M_ZERO)
-      end do
     end select
 
     SAFE_DEALLOCATE_A(xx)
@@ -1221,22 +1025,7 @@ contains
           write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
         case(PARALLELEPIPED)
           write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
-        case(BOX_USDEF)
-          write(iunit, '(a20,99e22.14)') 'lsize=              ', sb%lsize(1:sb%dim)
-          write(iunit, '(a20,a1024)')    'user_def=           ', sb%user_def
         end select
-        write(iunit, '(a20,99e22.14)')   'box_offset=         ', (M_ZERO, idir = 1, sb%dim)
-        write(iunit, '(a20,l7)')         'mr_flag=            ', sb%mr_flag
-        if(sb%mr_flag) then
-          write(iunit, '(a20,i4)')       'num_areas=         ',sb%hr_area%num_areas
-          write(iunit, '(a20,i4)')       'num_radii=         ',sb%hr_area%num_radii
-          do idir = 1, sb%hr_area%num_radii
-            write(iunit, '(a10,i2.2,a9,e22.14)') 'mr_radius_', idir, '=        ',sb%hr_area%radius(idir)
-          end do
-          do idir = 1, sb%dim
-            write(iunit, '(a7,i1,a13,e22.14)')   'center(', idir, ')=           ',sb%hr_area%center(idir)
-          end do
-        end if
         do idir = 1, sb%dim
           write(iunit, '(a9,i1,a11,99e22.14)')   'rlattice(', idir, ')=         ', &
                sb%rlattice_primitive(1:sb%dim, idir)
@@ -1314,63 +1103,8 @@ contains
           else
             read(lines(1), *) str, sb%lsize(1:sb%dim)
           end if
-        case(BOX_USDEF)
-          call iopar_read(mpi_grp, iunit, lines, 2, err)
-          if (err /= 0) then
-            ierr = ierr + 2**6
-          else
-            read(lines(1), *) str, sb%lsize(1:sb%dim)
-            read(lines(2), *) str, sb%user_def
-          end if
         end select
- 
-        sb%mr_flag = .false.
-        call iopar_read(mpi_grp, iunit, lines, 2, err)
-        if (err /= 0) then
-          ierr = ierr + 2**7
-        else
-          ! lines(1) was sb%box_offset, now removed
-          read(lines(2),'(a20,l7)') str, sb%mr_flag
-        end if
-
         SAFE_DEALLOCATE_A(lines)
-
-        if (sb%mr_flag) then
-          SAFE_ALLOCATE(lines(1:2))
-          call iopar_read(mpi_grp, iunit, lines, 2, err)
-          if (err /= 0) then
-            ierr = ierr + 2**8
-          else
-            read(lines(1),*) str, sb%hr_area%num_areas
-            read(lines(2),*) str, sb%hr_area%num_radii
-          end if
-          SAFE_DEALLOCATE_A(lines)
-
-          SAFE_ALLOCATE(sb%hr_area%radius(1:sb%hr_area%num_radii))
-          SAFE_ALLOCATE(lines(1:sb%hr_area%num_radii))
-          sb%hr_area%num_radii = 0
-          call iopar_read(mpi_grp, iunit, lines, sb%hr_area%num_radii, err)
-          if (err /= 0) then
-            ierr = ierr + 2**9
-          else
-            do il = 1, sb%hr_area%num_radii
-              read(lines(1),*) str, sb%hr_area%radius(il)
-            end do
-          end if
-          SAFE_DEALLOCATE_A(lines)
-
-          SAFE_ALLOCATE(lines(1:sb%dim))
-          call iopar_read(mpi_grp, iunit, lines, sb%dim, err)
-          if (err /= 0) then
-            ierr = ierr + 2**10
-          else
-            do idim = 1, sb%dim
-              read(lines(1), *) str, sb%hr_area%center(idim)
-            end do
-          end if
-          SAFE_DEALLOCATE_A(lines)
-        end if
-
 
         SAFE_ALLOCATE(lines(1:sb%dim))
         call iopar_read(mpi_grp, iunit, lines, sb%dim, err)
@@ -1407,8 +1141,6 @@ contains
     sbout%rsize                   = sbin%rsize
     sbout%xsize                   = sbin%xsize
     sbout%lsize                   = sbin%lsize
-    sbout%image                   = sbin%image
-    sbout%user_def                = sbin%user_def
     sbout%rlattice                = sbin%rlattice
     sbout%rlattice_primitive      = sbin%rlattice_primitive
     sbout%klattice                = sbin%klattice
@@ -1416,17 +1148,8 @@ contains
     sbout%volume_element          = sbin%volume_element
     sbout%dim                     = sbin%dim
     sbout%periodic_dim            = sbin%periodic_dim
-    sbout%mr_flag                 = sbin%mr_flag
-    sbout%hr_area%num_areas       = sbin%hr_area%num_areas
-    sbout%hr_area%num_radii       = sbin%hr_area%num_radii
-    sbout%hr_area%center(1:sbin%dim)=sbin%hr_area%center(1:sbin%dim)
 
     call kpoints_copy(sbin%kpoints, sbout%kpoints)
-
-    if(sbout%mr_flag) then
-      SAFE_ALLOCATE(sbout%hr_area%radius(1:sbout%hr_area%num_radii))
-      sbout%hr_area%radius(1:sbout%hr_area%num_radii) = sbin%hr_area%radius(1:sbout%hr_area%num_radii)
-    end if
 
     call lookup_copy(sbin%atom_lookup, sbout%atom_lookup)
 

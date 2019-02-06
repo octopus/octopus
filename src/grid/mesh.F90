@@ -21,7 +21,6 @@
 module mesh_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hypercube_oct_m
   use index_oct_m
   use io_oct_m
   use io_binary_oct_m
@@ -268,7 +267,7 @@ contains
         if(is_on_border) dist = dd
       end do
 
-    case(PARALLELEPIPED, HYPERCUBE)
+    case(PARALLELEPIPED)
       call mesh_r(mesh, ip, rr, coords=xx)
       do idir = mesh%sb%periodic_dim+1, mesh%sb%dim
         dd = abs(xx(idir)) - (mesh%sb%lsize(idir) - width)
@@ -278,11 +277,6 @@ contains
         end if
       end do
       dist = sqrt(dist)
-
-    case(BOX_IMAGE, BOX_USDEF)
-    ! not implemented
-      dist = -1 
-
     end select
     
     ! This may happen if the point is on more than one border at the same time.
@@ -466,12 +460,10 @@ contains
     else
       if (mpi_grp_is_root(mpi_grp)) then
         write(iunit, '(a20,i21)')  'box_shape =         ', mesh%sb%box_shape
-        if(mesh%sb%box_shape /= HYPERCUBE) then
-          write(iunit, '(a20,i21)')  'np_part_global=     ', mesh%np_part_global
-          write(iunit, '(a20,i21)')  'np_global=          ', mesh%np_global
-          write(iunit, '(a20,i21)')  'algorithm=          ', 1
-          write(iunit, '(a20,i21)')  'checksum=           ', mesh%idx%checksum
-        end if
+        write(iunit, '(a20,i21)')  'np_part_global=     ', mesh%np_part_global
+        write(iunit, '(a20,i21)')  'np_global=          ', mesh%np_global
+        write(iunit, '(a20,i21)')  'algorithm=          ', 1
+        write(iunit, '(a20,i21)')  'checksum=           ', mesh%idx%checksum
       end if
       call io_close(iunit, grp=mpi_grp)
     end if
@@ -520,30 +512,23 @@ contains
         read(lines(1), '(a20,i21)')  str, box_shape
       end if
 
-      if (box_shape == HYPERCUBE) then
-        ! We have a hypercube: we will assume everything is OK...
-        message(1) = "Simulation box is a hypercube: unable to check mesh compatibility."
-        call messages_warning(1)
-
+      call iopar_read(mpi_grp, iunit, lines, 4, err)
+      if (err /= 0) then
+        ierr = ierr + 4
       else
-        call iopar_read(mpi_grp, iunit, lines, 4, err)
-        if (err /= 0) then
-          ierr = ierr + 4
-        else
-          read(lines(1), '(a20,i21)')  str, read_np_part
-          read(lines(2), '(a20,i21)')  str, read_np
-          read(lines(3), '(a20,i21)')  str, algorithm
-          read(lines(4), '(a20,i21)')  str, checksum
-
-          ASSERT(read_np_part >= read_np)
-            
-          if (read_np_part == mesh%np_part_global &
-               .and. read_np == mesh%np_global &
-               .and. algorithm == 1 &
-               .and. checksum == mesh%idx%checksum) then
-            read_np_part = 0
-            read_np = 0
-          end if
+        read(lines(1), '(a20,i21)')  str, read_np_part
+        read(lines(2), '(a20,i21)')  str, read_np
+        read(lines(3), '(a20,i21)')  str, algorithm
+        read(lines(4), '(a20,i21)')  str, checksum
+        
+        ASSERT(read_np_part >= read_np)
+        
+        if (read_np_part == mesh%np_part_global &
+          .and. read_np == mesh%np_global &
+          .and. algorithm == 1 &
+          .and. checksum == mesh%idx%checksum) then
+          read_np_part = 0
+          read_np = 0
         end if
 
       end if
@@ -588,7 +573,7 @@ contains
         ! We can only check the compatibility of two meshes that have different fingerprints if we also
         ! have the simulation box. In the case we do not, we will assume that the fingerprint is enough.
         ierr = ierr + 2
-      else if (mesh%sb%box_shape /= HYPERCUBE) then
+      else
 
         grid_changed = .true.
 
@@ -638,8 +623,6 @@ contains
     PUSH_SUB(mesh_end)
 
     call mesh_cube_map_end(mesh%cube_map)
-
-    if(mesh%idx%is_hypercube) call hypercube_end(mesh%idx%hypercube)
 
     SAFE_DEALLOCATE_A(mesh%resolution)
     SAFE_DEALLOCATE_A(mesh%idx%lxyz)
@@ -698,10 +681,6 @@ contains
     
     ! lxyz_inv
     memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
-    ! resolution
-    if(mesh%sb%mr_flag) then
-      memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
-    end if
     ! lxyz
     memory = memory + SIZEOF_UNSIGNED_INT * dble(mesh%np_part_global) * MAX_DIM
 

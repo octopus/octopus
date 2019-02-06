@@ -202,9 +202,7 @@ all_f_srcs +=                                 \
 	ions/read_coords.F90                  \
 	ions/simul_box.F90                    \
 	ions/spglib_f08.f90                   \
-	ions/symmetries.F90                   \
-	ions/vibrations.F90                   \
-	ions/xyz_adjust.F90
+	ions/symmetries.F90
 
 # Sources in grid
 all_f_srcs +=                                 \
@@ -218,7 +216,6 @@ all_f_srcs +=                                 \
 	grid/fourier_shell.F90                \
 	grid/fourier_space.F90                \
 	grid/grid.F90                         \
-	grid/hypercube.F90                    \
 	grid/index.F90                        \
 	grid/io_function.F90                  \
 	grid/mesh_batch.F90                   \
