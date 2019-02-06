@@ -139,9 +139,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
     call profiling_in(prof_exx, "EXCHANGE_OPERATOR")
     select case(hm%theory_level)
 
-    case(HARTREE)
-      call X(exchange_operator_hartree)(hm, der, ik, hm%exx_coef, epsib, hpsib)
-
     case(HARTREE_FOCK)
       call X(exchange_operator)(hm, der, ik, hm%exx_coef, epsib, hpsib)
 
@@ -255,59 +252,6 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc, set
   POP_SUB(X(hamiltonian_apply))
 end subroutine X(hamiltonian_apply)
 
-
-! ---------------------------------------------------------
-subroutine X(hamiltonian_apply_all) (hm, xc, der, st, hst)
-  type(hamiltonian_t), intent(inout) :: hm
-  type(xc_t),          intent(in)    :: xc
-  type(derivatives_t), intent(inout) :: der
-  type(states_t),      intent(inout) :: st
-  type(states_t),      intent(inout) :: hst
-
-  integer :: ik, ib, ist
-  R_TYPE, allocatable :: psi(:, :)
-  CMPLX,  allocatable :: psiall(:, :, :, :)
-  
-  PUSH_SUB(X(hamiltonian_apply_all))
-
-  do ik = st%d%kpt%start, st%d%kpt%end
-    do ib = st%group%block_start, st%group%block_end
-      call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), ik)
-    end do
-  end do
-
-  POP_SUB(X(hamiltonian_apply_all))
-end subroutine X(hamiltonian_apply_all)
-
-
-! ---------------------------------------------------------
-
-subroutine X(exchange_operator_single)(hm, der, ist, ik, exx_coef, psi, hpsi)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(in)    :: der
-  integer,             intent(in)    :: ist
-  integer,             intent(in)    :: ik
-  FLOAT,               intent(in)    :: exx_coef
-  R_TYPE,              intent(inout) :: psi(:, :)
-  R_TYPE,              intent(inout) :: hpsi(:, :)
-
-  type(batch_t) :: psib, hpsib
-
-  PUSH_SUB(X(exchange_operator_single))
-
-  call batch_init(psib, hm%d%dim, 1)
-  call batch_add_state(psib, ist, psi)
-  call batch_init(hpsib, hm%d%dim, 1)
-  call batch_add_state(hpsib, ist, hpsi)
-
-  call X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
-
-  call batch_end(psib)
-  call batch_end(hpsib)
-
-  POP_SUB(X(exchange_operator_single))
-end subroutine X(exchange_operator_single)
-
 ! ---------------------------------------------------------
 
 subroutine X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
@@ -396,96 +340,6 @@ end subroutine X(exchange_operator)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_hartree) (hm, der, ik, exx_coef, psib, hpsib)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(in)    :: der
-  integer,             intent(in)    :: ik
-  FLOAT,               intent(in)    :: exx_coef
-  type(batch_t),       intent(inout) :: psib
-  type(batch_t),       intent(inout) :: hpsib
-
-  integer :: ibatch, ip, idim, ik2, ist
-  FLOAT   :: ff
-  R_TYPE, allocatable :: rho(:), pot(:), psi2(:, :), psi(:, :), hpsi(:, :)
-
-  PUSH_SUB(X(exchange_operator))
-
-  if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
-  if(hm%hf_st%parallel_in_states) call messages_not_implemented("exchange operator parallel in states")
-
-  SAFE_ALLOCATE(psi(1:der%mesh%np, 1:hm%d%dim))
-  SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:hm%d%dim))
-  SAFE_ALLOCATE(rho(1:der%mesh%np))
-  SAFE_ALLOCATE(pot(1:der%mesh%np))
-  SAFE_ALLOCATE(psi2(1:der%mesh%np, 1:hm%d%dim))
-
-  do ibatch = 1, psib%nst
-    ist = psib%states(ibatch)%ist
-    call batch_get_state(psib, ibatch, der%mesh%np, psi)
-    call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
-    
-    do ik2 = 1, hm%d%nik
-      if(states_dim_get_spin_index(hm%d, ik2) /= states_dim_get_spin_index(hm%d, ik)) cycle
-
-      if(hm%hf_st%occ(ist, ik2) < M_EPSILON) cycle
-
-      pot = R_TOTYPE(M_ZERO)
-      rho = R_TOTYPE(M_ZERO)
-
-      call states_get_state(hm%hf_st, der%mesh, ist, ik2, psi2)
-
-      do idim = 1, hm%hf_st%d%dim
-        forall(ip = 1:der%mesh%np)
-          rho(ip) = rho(ip) + R_CONJ(psi2(ip, idim))*psi(ip, idim)
-        end forall
-      end do
-
-      call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
-
-      ff = hm%hf_st%occ(ist, ik2)
-      if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff
-
-      do idim = 1, hm%hf_st%d%dim
-        forall(ip = 1:der%mesh%np)
-          hpsi(ip, idim) = hpsi(ip, idim) - exx_coef*ff*psi2(ip, idim)*pot(ip)
-        end forall
-      end do
-
-    end do
-
-    call batch_set_state(hpsib, ibatch, der%mesh%np, hpsi)
-    
-  end do
-
-  SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(hpsi)
-  SAFE_DEALLOCATE_A(rho)
-  SAFE_DEALLOCATE_A(pot)
-  SAFE_DEALLOCATE_A(psi2)
-
-  POP_SUB(X(exchange_operator))
-end subroutine X(exchange_operator_hartree)
-
-! ---------------------------------------------------------
-subroutine X(vborders) (der, hm, psi, hpsi)
-  type(derivatives_t), intent(in)    :: der
-  type(hamiltonian_t), intent(in)    :: hm
-  R_TYPE,              intent(in)    :: psi(:)
-  R_TYPE,              intent(inout) :: hpsi(:)
-
-  integer :: ip
-
-  PUSH_SUB(X(vborders))
-
-  if(hm%bc%abtype == IMAGINARY_ABSORBING) then
-    forall(ip = 1:der%mesh%np) hpsi(ip) = hpsi(ip) + M_zI*hm%bc%mf(ip)*psi(ip)
-  end if
-   
-  POP_SUB(X(vborders))
-end subroutine X(vborders)
-
-
-! ---------------------------------------------------------
 subroutine X(h_mgga_terms) (hm, der, ik, psib, hpsib)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
@@ -584,47 +438,6 @@ subroutine X(vmask) (gr, hm, st)
 
   POP_SUB(X(vmask))
 end subroutine X(vmask)
-
-
-! ---------------------------------------------------------
-subroutine X(hamiltonian_diagonal) (hm, der, diag, ik)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(out)   :: diag(:,:) !< hpsi(gr%mesh%np, hm%d%dim)
-  integer,             intent(in)    :: ik
-
-  integer :: idim, ip, ispin
-
-  FLOAT, allocatable  :: ldiag(:)
-
-  PUSH_SUB(X(hamiltonian_diagonal))
-
-  SAFE_ALLOCATE(ldiag(1:der%mesh%np))
-
-  diag = M_ZERO
-
-  call derivatives_lapl_diag(der, ldiag)
-
-  do idim = 1, hm%d%dim
-    diag(1:der%mesh%np, idim) = -M_HALF/hm%mass*ldiag(1:der%mesh%np)
-  end do
-
-  select case(hm%d%ispin)
-
-  case(UNPOLARIZED, SPIN_POLARIZED)
-    ispin = states_dim_get_spin_index(hm%d, ik)
-    diag(1:der%mesh%np, 1) = diag(1:der%mesh%np, 1) + hm%vhxc(1:der%mesh%np, ispin) + hm%ep%vpsl(1:der%mesh%np)
-
-  case(SPINORS)
-    do ip = 1, der%mesh%np
-      diag(ip, 1) = diag(ip, 1) + hm%vhxc(ip, 1) + hm%ep%vpsl(ip)
-      diag(ip, 2) = diag(ip, 2) + hm%vhxc(ip, 2) + hm%ep%vpsl(ip)
-    end do
-
-  end select
-
-  POP_SUB(X(hamiltonian_diagonal))
-end subroutine X(hamiltonian_diagonal)
 
 !! Local Variables:
 !! mode: f90

@@ -49,7 +49,6 @@ module poisson_oct_m
   use poisson_isf_oct_m
   use poisson_fft_oct_m
   use poisson_multigrid_oct_m
-  use poisson_no_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use types_oct_m

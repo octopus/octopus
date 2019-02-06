@@ -52,8 +52,7 @@ module exponential_oct_m
     exponential_copy,            &
     exponential_end,             &
     exponential_apply_batch,     &
-    exponential_apply,           &
-    exponential_apply_all
+    exponential_apply
 
   integer, public, parameter ::  &
     EXP_LANCZOS            = 2,  &
@@ -223,14 +222,6 @@ contains
   !! \f[
   !! \exp{ \Delta t*hm(t)}|\psi_z>  <-- |\psi_z>
   !! \f]
-  !! If the Hamiltonian contains an inhomogeneous term, the operation is:
-  !! \f[
-  !! \exp{-i*\Delta t*hm(t)}|\psi_z> + \Delta t*\phi{-i*\Delta t*hm(t)}|\psi_z>  <-- |\psi_z>
-  !! \f]
-  !! where:
-  !! \f[
-  !! \phi(x) = (e^x - 1)/x
-  !! \f]
   ! ---------------------------------------------------------
   subroutine exponential_apply(te, der, hm, zpsi, ist, ik, deltat, order, imag_time, Imdeltat)
     type(exponential_t), intent(inout) :: te
@@ -242,7 +233,7 @@ contains
     FLOAT,               intent(in)    :: deltat
     integer, optional,   intent(inout) :: order
     logical, optional,   intent(in)    :: imag_time
-    FLOAT,   optional,   intent(in)    :: Imdeltat !< also needed for cmplxscl\%time
+    FLOAT,   optional,   intent(in)    :: Imdeltat 
 
     CMPLX   :: timestep
     logical :: phase_correction
@@ -260,7 +251,6 @@ contains
     ! However, I disconnect this check, because this routine is sometimes called in an
     ! auxiliary way, in order to compute (1-hm(t)*deltat)|zpsi>.
     ! This should be cleaned up.
-    !_ASSERT(.not.(hamiltonian_inh_term(hm) .and. (te%exp_method /= EXP_LANCZOS)))
 
     phase_correction = .false.
     if(associated(hm%hm_base%phase)) phase_correction = .true.
@@ -453,10 +443,9 @@ contains
 
       POP_SUB(exponential_apply.cheby)
     end subroutine cheby
-    ! ---------------------------------------------------------
 
     ! ---------------------------------------------------------
-    !TODO: Add a reference
+
     subroutine lanczos()
       integer ::  iter, l, idim
       CMPLX, allocatable :: hamilt(:,:), v(:,:,:), expo(:,:), psi(:, :)
@@ -532,62 +521,6 @@ contains
 
       end if
 
-      ! We have an inhomogeneous term.
-      if( hamiltonian_inh_term(hm) ) then
-
-        call states_get_state(hm%inh_st, der%mesh, ist, ik, v(:, :, 1))
-        beta = zmf_nrm2(der%mesh, hm%d%dim, v(:, :, 1))
-
-        if(beta > CNST(1.0e-12)) then
-
-          hamilt = M_z0
-          expo = M_z0
-
-          v(1:der%mesh%np, 1:hm%d%dim, 1) = v(1:der%mesh%np, 1:hm%d%dim, 1)/beta
-
-          ! This is the Lanczos loop...
-          do iter = 1, te%exp_order
-            !copy v(:, :, n) to an array of size 1:der%mesh%np_part
-            do idim = 1, hm%d%dim
-              call lalg_copy(der%mesh%np, v(:, idim, iter), psi(:, idim))
-            end do
-
-            !to apply the Hamiltonian
-            call operate(psi, v(:, :, iter + 1))
-  
-
-            if(hamiltonian_hermitian(hm)) then
-              l = max(1, iter - 1)
-            else
-              l = 1
-            end if
-
-            !orthogonalize against previous vectors
-            call zstates_orthogonalization(der%mesh, iter - l + 1, hm%d%dim, v(:, :, l:iter), &
-              v(:, :, iter + 1), normalize = .true., overlap = hamilt(l:iter, iter), &
-              norm = hamilt(iter + 1, iter), gs_scheme = te%arnoldi_gs)
-
-            call zlalg_phi(iter, pp, hamilt, expo, hamiltonian_hermitian(hm))
- 
-            res = abs(hamilt(iter + 1, iter)*abs(expo(iter, 1)))
-
-            if(abs(hamilt(iter + 1, iter)) < CNST(1.0e4)*M_EPSILON) exit ! "Happy breakdown"
-            if(iter > 3 .and. res < tol) exit
-          end do
-
-          if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
-            write(message(1),'(a,es9.2)') 'Lanczos exponential expansion did not converge: ', res
-            call messages_warning(1)
-          end if
-
-          do idim = 1, hm%d%dim
-            call blas_gemv('N', der%mesh%np, iter, deltat*M_z1*beta, v(1,idim,1), der%mesh%np*hm%d%dim, expo(1,1), 1, M_z1, zpsi(1,idim), 1)
-          end do
-
-        end if
-      end if
-
-
       if(present(order)) order = te%exp_order
       SAFE_DEALLOCATE_A(v)
       SAFE_DEALLOCATE_A(hamilt)
@@ -596,9 +529,10 @@ contains
 
       POP_SUB(exponential_apply.lanczos)
     end subroutine lanczos
-    ! ---------------------------------------------------------
 
   end subroutine exponential_apply
+
+  ! ---------------------------------------------------------
 
   subroutine exponential_apply_batch(te, der, hm, psib, ik, deltat, Imdeltat, psib2, deltat2, Imdeltat2)
     type(exponential_t),             intent(inout) :: te
@@ -791,99 +725,6 @@ contains
     end subroutine taylor_series_batch
 
   end subroutine exponential_apply_batch
-
-  ! ---------------------------------------------------------
-  !> Note that this routine not only computes the exponential, but
-  !! also an extra term if there is a inhomogeneous term in the
-  !! Hamiltonian hm.
-  subroutine exponential_apply_all(te, der, hm, xc, st, deltat, order)
-    type(exponential_t), intent(inout) :: te
-    type(derivatives_t), intent(inout) :: der
-    type(hamiltonian_t), intent(inout) :: hm
-    type(xc_t),          intent(in)    :: xc
-    type(states_t),      intent(inout) :: st
-    FLOAT,               intent(in)    :: deltat
-    integer, optional,   intent(inout) :: order
-
-    integer :: ik, ib, i
-    FLOAT :: zfact
-
-    type(states_t) :: st1, hst1
-
-    PUSH_SUB(exponential_apply_all)
-
-    ASSERT(te%exp_method  ==  EXP_TAYLOR)
-
-    call states_copy(st1, st)
-    call states_copy(hst1, st)
-
-    zfact = M_ONE
-    do i = 1, te%exp_order
-      zfact = zfact * deltat / i
-      
-      if (i == 1) then
-        call zhamiltonian_apply_all(hm, xc, der, st, hst1)
-      else
-        call zhamiltonian_apply_all(hm, xc, der, st1, hst1)
-      end if
-
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%group%block_start, st%group%block_end
-            call batch_set_zero(st1%group%psib(ib, ik))
-            call batch_axpy(der%mesh%np, -M_zI, hst1%group%psib(ib, ik), st1%group%psib(ib, ik))
-            call batch_axpy(der%mesh%np, zfact, st1%group%psib(ib, ik), st%group%psib(ib, ik))
-        end do
-      end do
-
-    end do
-    ! End of Taylor expansion loop.
-
-    call states_end(st1)
-    call states_end(hst1)
-
-    ! We now add the inhomogeneous part, if present.
-    if(hamiltonian_inh_term(hm)) then
-      !write(*, *) 'Now we apply the inhomogeneous term...'
-
-      call states_copy(st1, hm%inh_st)
-      call states_copy(hst1, hm%inh_st)
-
-
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%group%block_start, st%group%block_end
-          call batch_axpy(der%mesh%np, deltat, st1%group%psib(ib, ik), st%group%psib(ib, ik))
-        end do
-      end do
-
-      zfact = M_ONE
-      do i = 1, te%exp_order
-        zfact = zfact * deltat / (i+1)
-      
-        if (i == 1) then
-          call zhamiltonian_apply_all(hm, xc, der, hm%inh_st, hst1)
-        else
-          call zhamiltonian_apply_all(hm, xc, der, st1, hst1)
-        end if
-
-        do ik = st%d%kpt%start, st%d%kpt%end
-          do ib = st%group%block_start, st%group%block_end
-            call batch_set_zero(st1%group%psib(ib, ik))
-            call batch_axpy(der%mesh%np, -M_zI, hst1%group%psib(ib, ik), st1%group%psib(ib, ik))
-            call batch_axpy(der%mesh%np, deltat * zfact, st1%group%psib(ib, ik), st%group%psib(ib, ik))
-          end do
-        end do
-
-      end do
-
-      call states_end(st1)
-      call states_end(hst1)
-
-    end if
-
-    if(present(order)) order = te%exp_order*st%d%nik*st%nst ! This should be the correct number
-
-    POP_SUB(exponential_apply_all)
-  end subroutine exponential_apply_all
 
 end module exponential_oct_m
 

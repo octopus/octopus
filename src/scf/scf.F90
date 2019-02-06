@@ -454,20 +454,6 @@ contains
     verbosity_ = VERB_FULL
     if(present(verbosity)) verbosity_ = verbosity
 
-    if(ks%theory_level == CLASSICAL) then
-      ! calculate forces
-      if(scf%calc_force) call forces_calculate(gr, geo, hm, st, ks)
-
-      if(gs_run_) then 
-        ! output final information
-        call scf_write_static(STATIC_DIR, "info")
-        call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
-      end if
-
-      POP_SUB(scf_run)
-      return
-    end if
-
     if(scf%lcao_restricted) then
       call lcao_init(lcao, gr, geo, st)
       if(.not. lcao_is_available(lcao)) then

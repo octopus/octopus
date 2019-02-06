@@ -143,10 +143,6 @@ contains
     !% Particles will be considered as independent, <i>i.e.</i> as non-interacting.
     !% This mode is mainly used for testing purposes, as the code is usually 
     !% much faster with <tt>independent_particles</tt>.
-    !%Option hartree 1
-    !% Calculation within the Hartree method (experimental). Note that, contrary to popular
-    !% belief, the Hartree potential is self-interaction-free. Therefore, this run 
-    !% mode will not yield the same result as <tt>dft</tt> without exchange-correlation.
     !%Option hartree_fock 3
     !% This is the traditional Hartree-Fock scheme. Like the Hartree scheme, it is fully
     !% self-interaction-free. This mode is extremely slow. It is often more convenient
@@ -158,9 +154,6 @@ contains
     !% This is the default density-functional theory scheme. Note that you can also use 
     !% hybrids in this scheme, but they will be handled the "DFT" way, <i>i.e.</i>, solving the
     !% OEP equation.
-    !%Option classical 5
-    !% (Experimental) Only the classical interaction between ions is
-    !% considered. This is mainly for testing.
     !%End
     
     ks%xc_family = XC_FAMILY_NONE
@@ -291,17 +284,9 @@ contains
     call messages_obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
     call messages_obsolete_variable('HartreeFock', 'TheoryLevel')
 
-    if(ks%theory_level == CLASSICAL) call messages_experimental('Classical theory level')
-    
     select case(ks%theory_level)
     case(INDEPENDENT_PARTICLES)
       ks%sic_type = SIC_NONE
-    case(HARTREE)
-      call messages_experimental("Hartree theory level")
-      if(gr%mesh%sb%periodic_dim == gr%mesh%sb%dim) &
-        call messages_experimental("Hartree in fully periodic system")
-      if(gr%mesh%sb%kpoints%full%npoints > 1) &
-        call messages_not_implemented("Hartree with k-points")
 
     case(HARTREE_FOCK)
       if(gr%mesh%sb%kpoints%full%npoints > 1) &
@@ -574,7 +559,7 @@ contains
         call dpoisson_solve_start(ks%hartree_solver, ks%calc%total_density)
       end if
 
-      if(ks%theory_level /= HARTREE) call v_a_xc(hm)
+      call v_a_xc(hm)
     else
       ks%calc%total_density_alloc = .false.
     end if
@@ -585,7 +570,7 @@ contains
     end if
 
     nullify(ks%calc%hf_st) 
-    if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK) then
+    if(ks%theory_level == HARTREE_FOCK) then
       SAFE_ALLOCATE(ks%calc%hf_st)
       call states_copy(ks%calc%hf_st, st)
       if(st%parallel_in_states) call states_parallel_remote_access_start(ks%calc%hf_st)
@@ -806,40 +791,30 @@ contains
       hm%energy%exchange    = M_ZERO
       hm%energy%correlation = M_ZERO
     else
-
-      if(ks%theory_level /= HARTREE) then 
-        if(ks%gr%have_fine_mesh) then
-          do ispin = 1, hm%d%nspin
-            call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, &
-              ks%calc%vxc(:, ispin), hm%vxc(:, ispin), INJECTION)
-            ! some debugging output that I will keep here for the moment, XA
-            !          call dio_function_output(1, "./", "vxc_fine", ks%gr%fine%mesh, vxc(:, ispin), unit_one, ierr)
-            !          call dio_function_output(1, "./", "vxc_coarse", ks%gr%mesh, hm%vxc(:, ispin), unit_one, ierr)
-          end do
-          SAFE_DEALLOCATE_P(ks%calc%vxc)
-        else
-          ! just change the pointer to avoid the copy
-          SAFE_DEALLOCATE_P(hm%vxc)
-          hm%vxc => ks%calc%vxc
-        end if
-
-        if(hm%family_is_mgga_with_exc) then
-          do ispin = 1, hm%d%nspin
-            call lalg_copy(ks%gr%fine%mesh%np, ks%calc%vtau(:, ispin), hm%vtau(:, ispin))
-          end do
-          SAFE_DEALLOCATE_P(ks%calc%vtau)
-        end if
-
+      
+      if(ks%gr%have_fine_mesh) then
+        do ispin = 1, hm%d%nspin
+          call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, &
+            ks%calc%vxc(:, ispin), hm%vxc(:, ispin), INJECTION)
+        end do
+        SAFE_DEALLOCATE_P(ks%calc%vxc)
       else
-        hm%vxc = M_ZERO
+        ! just change the pointer to avoid the copy
+        SAFE_DEALLOCATE_P(hm%vxc)
+        hm%vxc => ks%calc%vxc
       end if
-
+      
+      if(hm%family_is_mgga_with_exc) then
+        do ispin = 1, hm%d%nspin
+          call lalg_copy(ks%gr%fine%mesh%np, ks%calc%vtau(:, ispin), hm%vtau(:, ispin))
+        end do
+        SAFE_DEALLOCATE_P(ks%calc%vtau)
+      end if
+      
       hm%energy%hartree = M_ZERO
       call v_ks_hartree(ks, hm)
 
-
       ! Build Hartree + XC potential
-     
       forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vxc(ip, 1) + hm%vhartree(ip)
 
       if(hm%d%ispin > UNPOLARIZED) then
@@ -851,7 +826,7 @@ contains
       end if
 
       ! Note: this includes hybrids calculated with the Fock operator instead of OEP 
-      if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK) then
+      if(ks%theory_level == HARTREE_FOCK) then
 
         ! swap the states object
         if(associated(hm%hf_st)) then
@@ -865,8 +840,6 @@ contains
         select case(ks%theory_level)
         case(HARTREE_FOCK)
           hm%exx_coef = ks%xc%exx_coef
-        case(HARTREE)
-          hm%exx_coef = M_ONE
         end select
       end if
       

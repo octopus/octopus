@@ -77,8 +77,7 @@ contains
     hm%energy%eigenvalues = states_eigenvalues_sum(st)
 
     evxctau = M_ZERO
-    if((full_ .or. hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) & 
-      .and.(hm%theory_level /= CLASSICAL)) then
+    if(full_ .or. hm%theory_level == HARTREE_FOCK) then
       if(states_are_real(st)) then
 
         tnadd_energy = M_ZERO
@@ -105,9 +104,6 @@ contains
     case(INDEPENDENT_PARTICLES)
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues
        
-    case(HARTREE)
-      hm%energy%total = hm%ep%eii + M_HALF * (hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern)
-      
     case(HARTREE_FOCK)
       hm%energy%total = hm%ep%eii + &
         M_HALF*(hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern - hm%energy%intnvxc - evxctau) &
@@ -116,13 +112,6 @@ contains
     case(KOHN_SHAM_DFT)
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues &
         - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation - hm%energy%intnvxc - evxctau
-
-    case(CLASSICAL)
-      st%eigenval           = M_ZERO
-      hm%energy%eigenvalues = M_ZERO
-      hm%energy%kinetic     = M_ZERO
-      hm%energy%extern      = hm%ep%eii
-      hm%energy%total       = hm%ep%eii
    end select 
     
     hm%energy%entropy = smear_calc_entropy(st%smear, st%eigenval, st%d%nik, st%nst, st%d%kweights, st%occ)
