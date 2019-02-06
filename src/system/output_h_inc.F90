@@ -45,10 +45,6 @@
       call dio_function_output(outp%how, dir, "v0", der%mesh, v0(:, 1), units_out%energy, err, geo = geo, grp = grp)
       SAFE_DEALLOCATE_A(v0)
 
-      if(hm%ep%classical_pot > 0) then
-        call dio_function_output(outp%how, dir, "vc", der%mesh, hm%ep%Vclassical, units_out%energy, err, geo = geo, grp = grp)
-      end if
-
       if(associated(hm%ep%v_static)) then
         call dio_function_output(outp%how, dir, "vext", der%mesh, hm%ep%v_static, units_out%energy, err, geo = geo, grp = grp)
       end if
@@ -86,13 +82,7 @@
           else
             write(fname, '(a,i1)') 'vks-sp', is
           end if
-          if (hm%ep%classical_pot > 0) then
-            call dio_function_output(outp%how, dir, fname, der%mesh, &
-              potential + hm%ep%Vclassical, units_out%energy, err, geo = geo, grp = grp)
-          else
-            call dio_function_output(outp%how, dir, fname, der%mesh, &
-                potential, units_out%energy, err, geo = geo, grp = grp)
-          end if
+          call dio_function_output(outp%how, dir, fname, der%mesh, potential, units_out%energy, err, geo = geo, grp = grp)
         end do
         SAFE_DEALLOCATE_A(potential)
       end if

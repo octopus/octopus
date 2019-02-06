@@ -42,11 +42,9 @@ module read_coords_oct_m
   !> for read_coords_info::file_type
   integer, public, parameter :: &
     READ_COORDS_ERR      = 0,      &
-    READ_COORDS_PDB      = 1,      &
     READ_COORDS_XYZ      = 2,      &
     READ_COORDS_INP      = 3,      &
-    READ_COORDS_REDUCED  = 4,      &
-    READ_COORDS_XSF      = 5
+    READ_COORDS_REDUCED  = 4
 
   !> for read_coords_info::flags
   integer, public, parameter :: &
@@ -117,75 +115,14 @@ contains
     type(read_coords_info), intent(inout) :: gf
     type(space_t),          intent(in)    :: space
 
-    integer :: ia, ncol, iunit, jdir, int_one, nsteps, istep, step_to_use
+    integer :: ia, ncol, iunit, jdir
     type(block_t) :: blk
     character(len=256) :: str
     logical :: done
-    FLOAT :: latvec(MAX_DIM, MAX_DIM)
 
     PUSH_SUB(read_coords_read)
 
     done = .false.
-
-    !%Variable PDBCoordinates
-    !%Type string
-    !%Section System::Coordinates
-    !%Description
-    !% If this variable is present, the program tries to read the atomic coordinates
-    !% from the file specified by its value. The PDB (<a href=http://www.rcsb.org/pdb>Protein Data Bank</a>)
-    !% format is quite complicated, and it goes 
-    !% well beyond the scope of this manual. You can find a comprehensive
-    !% description <a href=http://www.wwpdb.org/docs.html>here</a>.
-    !% From the plethora of instructions defined in the PDB standard, <tt>Octopus</tt>
-    !% only reads two, <tt>ATOM</tt> and <tt>HETATOM</tt>. From these fields, it reads:
-    !% <ul>
-    !% <li> columns 13-16: The species; in fact <tt>Octopus</tt> only cares about the
-    !% first letter - <tt>CA</tt> and <tt>CB</tt> will both refer to carbon - so elements whose
-    !% chemical symbol has more than one letter cannot be represented in this way.
-    !% So, if you want to run mercury (Hg), please use one of the other methods
-    !% to input the coordinates.
-    !% <li> columns 18-21: The residue. Ignored.
-    !% <li> columns 31-54: The Cartesian coordinates. The Fortran format is <tt>(3f8.3)</tt>.</li>
-    !% <li> columns 61-65: Classical charge of the atom. Required if reading classical atoms, ignored otherwise.
-    !% The Fortran format is <tt>(f6.2)</tt>.</li>
-    !% </ul>
-    !% NOTE: The coordinates are treated in the units specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>.
-    !%End
-
-    !%Variable PDBClassical
-    !%Type string
-    !%Section System::Coordinates
-    !%Description
-    !% If this variable is present, the program tries to read the atomic coordinates for classical atoms.
-    !% from the file specified by its value. The same as <tt>PDBCoordinates</tt>, except that the
-    !% classical charge colum must be present. The interaction from the
-    !% classical atoms is specified by <tt>ClassicalPotential</tt>, for QM/MM calculations.
-    !% Not available in periodic systems.
-    !%End
-
-    if(parse_is_defined('PDB'//trim(what))) then
-      call check_duplicated(done)
-
-      gf%source = READ_COORDS_PDB
-      gf%flags = ior(gf%flags, XYZ_FLAGS_RESIDUE)
-      gf%flags = ior(gf%flags, XYZ_FLAGS_CHARGE)
-
-      ! no default, since we do not do this unless the input tag is present
-      call parse_variable('PDB'//trim(what), '', str)
-
-      message(1) = "Reading " // trim(what) // " from " // trim(str)
-      call messages_info(1)
-
-      iunit = io_open(str, action='read')
-      call read_coords_read_PDB(what, iunit, gf)
-      call io_close(iunit)
-    end if
-
-    ! PDB is the only acceptable format for classical atoms.
-    if(trim(what) == "Classical") then
-      POP_SUB(read_coords_read)
-      return
-    end if
 
     !%Variable XYZCoordinates
     !%Type string
@@ -228,148 +165,6 @@ contains
 
       SAFE_ALLOCATE(gf%atom(1:gf%n))
 
-      do ia = 1, gf%n
-        read(iunit,*) gf%atom(ia)%label, gf%atom(ia)%x(1:space%dim)
-      end do
-
-      call io_close(iunit)
-    end if
-
-    !%Variable XSFCoordinates
-    !%Type string
-    !%Section System::Coordinates
-    !%Description
-    !% Another option besides PDB and XYZ coordinates formats is XSF, as <a href=http://www.xcrysden.org/doc/XSF.html>defined</a>
-    !% by the XCrySDen visualization program. Specify the filename with this variable.
-    !% <tt>PeriodicDimensions</tt> will be set based on the first line
-    !% (<tt>CRYSTAL</tt>, <tt>SLAB</tt>, <tt>POLYMER</tt>, or <tt>MOLECULE</tt>),
-    !% and <tt>Lsize</tt> will be set based on the lattice vectors, for compatible values of <tt>BoxShape</tt>.
-    !% The file should not contain <tt>ATOMS</tt>, <tt>CONVVEC</tt>, or <tt>PRIMCOORD</tt>.
-    !% NOTE: The coordinates are treated in the units specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>.
-    !%End
-
-    if(parse_is_defined('XSF'//trim(what))) then ! read an xsf file
-      call check_duplicated(done)
-
-      gf%source = READ_COORDS_XSF
-      ! no default, since we do not do this unless the input tag is present
-      call parse_variable('XSF'//trim(what), '', str)
-
-      message(1) = "Reading " // trim(what) // " from " // trim(str)
-      call messages_info(1)
-
-      iunit = io_open(str, status='old', action='read')
-
-      read(iunit, '(a256)') str
-      if(str(1:9) == 'ANIMSTEPS') then
-        read(str(10:), *) nsteps
-        read(iunit, *) str
-
-        !%Variable XSFCoordinatesAnimStep
-        !%Type integer
-        !%Default 1
-        !%Section System::Coordinates
-        !%Description
-        !% If an animated file is given with <tt>XSFCoordinates</tt>, this variable selects which animation step
-        !% will be used. The <tt>PRIMVEC</tt> block must be written for each step.
-        !%End
-        call parse_variable('XSFCoordinatesAnimStep', 1, step_to_use)
-        if(step_to_use < 1) then
-          message(1) = "XSFCoordinatesAnimStep must be > 0."
-          call messages_fatal(1)
-        else if(step_to_use > nsteps) then
-          write(message(1),'(a,i9)') "XSFCoordinatesAnimStep must be <= available number of steps ", nsteps
-          call messages_fatal(1)
-        end if
-        write(message(1),'(a,i9,a,i9)') 'Using animation step ', step_to_use, ' out of ', nsteps
-        call messages_info(1)
-      else
-        nsteps = 0
-        step_to_use = 1
-      end if
-
-      ! periodicity = 'CRYSTAL', 'SLAB', 'POLYMER', 'MOLECULE'
-      select case(trim(str))
-      case('CRYSTAL')
-        gf%periodic_dim = 3
-      case('SLAB')
-        gf%periodic_dim = 2
-      case('POLYMER')
-        gf%periodic_dim = 1
-      case('MOLECULE')
-        gf%periodic_dim = 0
-      case('ATOMS')
-        call messages_not_implemented("Input from XSF file beginning with ATOMS")
-      case default
-        write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of CRYSTAL/SLAB/POLYMER/MOLECULE.'
-        call messages_fatal(1)
-      end select
-
-      do istep = 1, step_to_use - 1
-        read(iunit, *) ! PRIMVEC
-        do jdir = 1, space%dim
-          read(iunit, *) ! lattice vectors
-        end do
-        read(iunit, *) ! PRIMCOORD istep
-        read(iunit, *) gf%n, int_one
-        do ia = 1, gf%n
-          read(iunit, *) ! atoms
-        end do
-      end do
-
-      read(iunit, '(a256)') str
-      if(str(1:7) /= 'PRIMVEC') then
-        write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of "PRIMVEC".'
-        call messages_warning(1)
-      end if
-      if(nsteps > 0) then
-        read(str(8:), *) istep
-        if(istep /= step_to_use) then
-          write(message(1), '(a,i9,a,i9)') 'Found PRIMVEC index ', istep, ' instead of ', step_to_use
-          call messages_fatal(1)
-        end if
-      end if
-
-      latvec(:,:) = M_ZERO
-      do jdir = 1, space%dim
-        read(iunit, *) latvec(1:space%dim, jdir)
-        gf%lsize(jdir) = M_HALF * units_to_atomic(units_inp%length, latvec(jdir, jdir))
-        latvec(jdir, jdir) = M_ZERO
-      end do
-      if(any(abs(latvec(1:space%dim, 1:space%dim)) > M_EPSILON)) then
-        message(1) = 'XSF file has non-orthogonal lattice vectors. Only orthogonal is supported.'
-        call messages_fatal(1)
-      end if
-      if(any(gf%lsize(1:space%dim) < M_EPSILON)) then
-        message(1) = "XSF file must have positive lattice vectors."
-        call messages_fatal(1)
-      end if
-
-      read(iunit, '(a256)') str
-      if(str(1:9) /= 'PRIMCOORD') then
-        write(message(1),'(3a)') 'Line in file was "', trim(str), '" instead of "PRIMCOORD".'
-        call messages_warning(1)
-      end if
-      if(nsteps > 0) then
-        read(str(10:), *) istep
-        if(istep /= step_to_use) then
-          write(message(1), '(a,i9,a,i9)') 'Found PRIMCOORD index ', istep, ' instead of ', step_to_use
-          call messages_fatal(1)
-        end if
-      end if
-
-      read(iunit, *) gf%n, int_one
-      if(gf%n <= 0) then
-        write(message(1),'(a,i6)') "Invalid number of atoms ", gf%n
-        call messages_fatal(1)
-      end if
-      if(int_one /= 1) then
-        write(message(1),'(a,i6,a)') 'Number in file was ', int_one, ' instead of 1.'
-        call messages_warning(1)
-      end if
-      SAFE_ALLOCATE(gf%atom(1:gf%n))
-
-      ! TODO: add support for velocities as vectors here?
       do ia = 1, gf%n
         read(iunit,*) gf%atom(ia)%label, gf%atom(ia)%x(1:space%dim)
       end do
@@ -524,60 +319,6 @@ contains
     end subroutine check_duplicated
 
   end subroutine read_coords_read
-
-
-  ! ---------------------------------------------------------
-  subroutine read_coords_read_PDB(what, iunit, gf)
-    character(len=*),    intent(in)    :: what
-    integer,             intent(in)    :: iunit
-    type(read_coords_info), intent(inout) :: gf
-
-    character(len=80) :: record
-    character(len=6)  :: record_name
-    integer :: na
-
-    PUSH_SUB(read_coords_read_PDB)
-
-    ! TODO: read the specification of the crystal structure.
-    
-    ! First count number of atoms
-    rewind(iunit)
-    do
-      read(iunit, '(a80)', err=990, end=990) record
-      read(record, '(a6)') record_name
-      if(trim(record_name) == 'ATOM' .or. trim(record_name) == 'HETATOM') then
-        gf%n = gf%n + 1
-      end if
-    end do
-990 continue
-
-    SAFE_ALLOCATE(gf%atom(1:gf%n))
-
-    ! read in the data
-    rewind(iunit)
-    na = 1
-    do
-      read(iunit, '(a80)', err=991, end=991) record
-      read(record, '(a6)') record_name
-      if(trim(record_name) == 'ATOM' .or. trim(record_name) == 'HETATOM') then
-        read(record, '(12x,a4,1x,a3)') gf%atom(na)%label, gf%atom(na)%residue
-        call str_trim(gf%atom(na)%label)
-        gf%atom(na)%label = gf%atom(na)%label(1:1)
-        call str_trim(gf%atom(na)%residue)
-
-        if(trim(what) == 'Classical') then
-          read(record, '(30x,3f8.3,6x,f5.2)') gf%atom(na)%x(1:3), gf%atom(na)%charge
-        else
-          read(record, '(30x,3f8.3)') gf%atom(na)%x(1:3)
-        end if
-
-        na = na + 1
-      end if
-    end do
-991 continue
-
-    POP_SUB(read_coords_read_PDB)
-  end subroutine read_coords_read_PDB
 
 end module read_coords_oct_m
 

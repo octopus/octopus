@@ -91,11 +91,10 @@ contains
   ! ---------------------------------------------------------
   !> For details about this routine, see
   !! http://octopus-code.org/wiki/Developers:Ion-Ion_interaction
-  subroutine ion_interaction_calculate(this, geo, sb, ignore_external_ions, energy, force, energy_components, force_components)
+  subroutine ion_interaction_calculate(this, geo, sb, energy, force, energy_components, force_components)
     type(ion_interaction_t),  intent(inout) :: this
     type(geometry_t), target, intent(in)    :: geo
     type(simul_box_t),        intent(in)    :: sb
-    logical,                  intent(in)    :: ignore_external_ions
     FLOAT,                    intent(out)   :: energy
     FLOAT,                    intent(out)   :: force(:, :)
     FLOAT, optional,          intent(out)   :: energy_components(:)
@@ -103,10 +102,9 @@ contains
     
     FLOAT, allocatable:: r(:), f(:)
     FLOAT :: rr, dd, zi, zj, epsilon, sigma
-    integer :: iatom, jatom, natom, iindex, jindex
+    integer :: iatom, jatom, iindex, jindex
     type(species_t), pointer :: spci, spcj
     type(profile_t), save :: ion_ion_prof
-    logical,  allocatable :: in_box(:)
 
     PUSH_SUB(ion_interaction_calculate)
     call profiling_in(ion_ion_prof, "ION_ION_INTERACTION")
@@ -129,39 +127,17 @@ contains
 
     if(simul_box_is_periodic(sb)) then
 
-      ASSERT(geo%ncatoms==0)
-
       spci => geo%atom(1)%species
       call ion_interaction_periodic(this, geo, sb, energy, force, energy_components, force_components)
 
     else
-      
-      natom = geo%natoms + geo%ncatoms
 
-      if(ignore_external_ions) then
-        SAFE_ALLOCATE(in_box(1:natom))
-        do iatom = 1, geo%natoms
-          in_box(iatom) = simul_box_in_box(sb, geo, geo%atom(iatom)%x)
-        end do
-        do iatom = 1, geo%ncatoms
-          in_box(geo%natoms + iatom) = simul_box_in_box(sb, geo, geo%catom(iatom)%x)
-        end do
-      end if
-      
       ! only interaction inside the cell
       do iatom = 1, geo%natoms
-        if(ignore_external_ions) then
-          if(.not. in_box(iatom)) cycle
-        end if
-        
         spci => geo%atom(iatom)%species
         zi = species_zval(spci)
 
         do jatom = iatom + 1, geo%natoms
-
-          if(ignore_external_ions) then
-            if(.not. in_box(jatom)) cycle
-          end if
           
           spcj => geo%atom(jatom)%species
 
@@ -183,32 +159,8 @@ contains
         end do !jatom
       end do !iatom
       
-      do iatom = 1, geo%natoms
-
-        if(ignore_external_ions) then
-          if(.not. in_box(iatom)) cycle
-        end if
-        
-        do jatom = 1, geo%ncatoms
-          if(ignore_external_ions .and. .not. in_box(geo%natoms + jatom)) cycle
-          
-          r(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim) - geo%catom(jatom)%x(1:sb%dim)
-          rr = sqrt(sum(r**2))
-
-          zi = species_zval(geo%atom(iatom)%species)
-          zj = geo%catom(jatom)%charge
-          !the force
-          dd = zi*zj/rr
-          force(1:sb%dim,iatom) = force(1:sb%dim,iatom) + (dd/rr*2)*r(1:sb%dim)
-          !energy
-          energy = energy + dd
-          
-        end do !jatom
-      end do !iatom
-      
     end if
 
-    SAFE_DEALLOCATE_A(in_box)
     SAFE_DEALLOCATE_A(r)
     SAFE_DEALLOCATE_A(f)
     
@@ -606,7 +558,7 @@ contains
     SAFE_ALLOCATE(force(1:sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_components(1:sb%dim, 1:geo%natoms, ION_NUM_COMPONENTS))
     
-    call ion_interaction_calculate(ion_interaction, geo, sb, .false., energy, force, &
+    call ion_interaction_calculate(ion_interaction, geo, sb, energy, force, &
       energy_components = energy_components, force_components = force_components)
 
     call messages_write('Ionic energy        =')

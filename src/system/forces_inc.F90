@@ -76,12 +76,6 @@ subroutine X(forces_from_local_potential)(gr, geo, ep, gdensity, force)
   SAFE_ALLOCATE(zvloc(1:gr%mesh%np))
   
   do iatom = geo%atoms_dist%start, geo%atoms_dist%end
-
-    if(.not.simul_box_in_box(gr%mesh%sb, geo, geo%atom(iatom)%x) .and. ep%ignore_external_ions) then
-      force(1:gr%mesh%sb%dim, iatom) = M_ZERO
-      cycle
-    end if
-    
     vloc(1:gr%mesh%np) = M_ZERO
     call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, vloc)
 
@@ -90,7 +84,6 @@ subroutine X(forces_from_local_potential)(gr, geo, ep, gdensity, force)
     do idir = 1, gr%mesh%sb%dim
       force(idir, iatom) = -X(mf_dotp)(gr%mesh, zvloc, gdensity(:, idir))
     end do
-
   end do
 
   if(geo%atoms_dist%parallel) call X(forces_gather)(geo, force)

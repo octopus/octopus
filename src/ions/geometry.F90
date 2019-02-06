@@ -69,8 +69,6 @@ module geometry_oct_m
     type(space_t), pointer :: space
     integer                :: natoms
     type(atom_t), pointer  :: atom(:)
-    integer :: ncatoms              !< For QM+MM calculations
-    type(atom_classical_t), pointer :: catom(:)
     integer :: nspecies
     type(species_t), pointer :: species(:)
     logical :: species_time_dependent !< For time-dependent user defined species
@@ -93,9 +91,8 @@ contains
 
     PUSH_SUB(geometry_nullify)
 
-    nullify(this%space, this%atom, this%catom, this%species)
+    nullify(this%space, this%atom, this%species)
     this%natoms=0
-    this%ncatoms=0
     this%nspecies=0
     this%species_time_dependent=.false.
     this%kinetic_energy=M_ZERO
@@ -168,29 +165,6 @@ contains
     geo%lsize(:) = xyz%lsize(:)
 
     call read_coords_end(xyz)
-
-    ! load positions of the classical atoms, if any
-    call read_coords_init(xyz)
-    nullify(geo%catom)
-    geo%ncatoms = 0
-    call read_coords_read('Classical', xyz, geo%space)
-    if(xyz%source /= READ_COORDS_ERR) then ! found classical atoms
-      if(.not. bitand(xyz%flags, XYZ_FLAGS_CHARGE) /= 0) then
-        message(1) = "Need to know charge for the classical atoms."
-        message(2) = "Please use a .pdb"
-        call messages_fatal(2)
-      end if
-      geo%ncatoms = xyz%n
-      write(message(1), '(a,i8)') 'Info: Number of classical atoms = ', geo%ncatoms
-      call messages_info(1)
-      if(geo%ncatoms>0)then
-        SAFE_ALLOCATE(geo%catom(1:geo%ncatoms))
-        do ia = 1, geo%ncatoms
-          call atom_classical_init(geo%catom(ia), xyz%atom(ia)%label, xyz%atom(ia)%x, xyz%atom(ia)%charge)
-        end do
-      end if
-      call read_coords_end(xyz)
-    end if
 
     POP_SUB(geometry_init_xyz)
   end subroutine geometry_init_xyz
@@ -294,8 +268,6 @@ contains
 
     SAFE_DEALLOCATE_P(geo%atom)
     geo%natoms=0
-    SAFE_DEALLOCATE_P(geo%catom)
-    geo%ncatoms=0
 
     call species_end(geo%nspecies, geo%species)
     SAFE_DEALLOCATE_P(geo%species)
@@ -439,16 +411,6 @@ contains
     end do
     call io_close(iunit)
 
-    if(geo%ncatoms > 0) then
-      iunit = io_open(trim(fname)//'_classical.xyz', action='write', position=position)
-      write(iunit, '(i4)') geo%ncatoms
-      write(iunit, '(1x)')
-      do iatom = 1, geo%ncatoms
-        call atom_classical_write_xyz(geo%catom(iatom), geo%space%dim, iunit)
-      end do
-      call io_close(iunit)
-    end if
-
     POP_SUB(atom_write_xyz)
   end subroutine geometry_write_xyz
 
@@ -474,16 +436,6 @@ contains
       call atom_read_xyz(geo%atom(iatom), geo%space%dim, iunit)
     end do
     call io_close(iunit)
-
-    if(geo%ncatoms > 0) then
-      iunit = io_open(trim(fname)//'_classical.xyz', action='read', position='rewind')
-      read(iunit, '(i4)') geo%ncatoms
-      read(iunit, *)
-      do iatom = 1, geo%ncatoms
-        call atom_classical_read_xyz(geo%catom(iatom), geo%space%dim, iunit)
-      end do
-      call io_close(iunit)
-    end if
 
     POP_SUB(geometry_read_xyz)
   end subroutine geometry_read_xyz
@@ -580,12 +532,6 @@ contains
     geo_out%natoms = geo_in%natoms
     SAFE_ALLOCATE(geo_out%atom(1:geo_out%natoms))
     geo_out%atom = geo_in%atom
-
-    geo_out%ncatoms = geo_in%ncatoms
-    SAFE_ALLOCATE(geo_out%catom(1:geo_out%ncatoms))
-    if(geo_in%ncatoms > 0) then
-      geo_out%catom(1:geo_out%ncatoms) = geo_in%catom(1:geo_in%ncatoms)
-    end if
 
     geo_out%nspecies = geo_in%nspecies
     SAFE_ALLOCATE(geo_out%species(1:geo_out%nspecies))
