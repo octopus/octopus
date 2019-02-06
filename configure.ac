@@ -355,7 +355,6 @@ AC_CONFIG_FILES([Makefile
   share/pseudopotentials/pseudo-dojo.org/nc-sr-04_pw_stringent/Makefile
   share/util/Makefile
   share/opencl/Makefile
-  share/quadrature/Makefile
   build/Makefile
   build/octopus.spec
   testsuite/Makefile
