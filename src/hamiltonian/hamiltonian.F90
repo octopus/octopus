@@ -216,7 +216,7 @@ contains
     call gauge_field_init(hm%ep%gfield, gr%sb)
 
     !Static magnetic field or gauge field requires complex wavefunctions
-    if (associated(hm%ep%B_field) .or. gauge_field_is_applied(hm%ep%gfield)) call states_set_complex(st)
+    if (gauge_field_is_applied(hm%ep%gfield)) call states_set_complex(st)
 
     ! Boundaries
     call bc_init(hm%bc, gr%mesh, gr%mesh%sb, hm%geo)
@@ -527,22 +527,6 @@ contains
           this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) - time_*this%ep%e_field(1:mesh%sb%periodic_dim)
       end if
       
-    end if
-
-    ! the vector potential of a static magnetic field
-    if(associated(this%ep%a_static)) then
-      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL, .false.)
-      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np)
-        this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) + this%ep%a_static(ip, idir)
-      end forall
-    end if
-
-    ! and the static magnetic field
-    if(associated(this%ep%b_field)) then
-      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_MAGNETIC_FIELD, .false.)
-      forall (idir = 1:3)
-        this%hm_base%uniform_magnetic_field(idir) = this%hm_base%uniform_magnetic_field(idir) + this%ep%b_field(idir)
-      end forall
     end if
 
     call hamiltonian_base_update(this%hm_base, mesh)

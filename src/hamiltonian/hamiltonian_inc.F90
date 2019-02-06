@@ -129,11 +129,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
     end if
   end if
 
-  if (bitand(TERM_OTHERS, terms_) /= 0 .and. hamiltonian_base_has_magnetic(hm%hm_base)) then
-    call X(hamiltonian_base_magnetic)(hm%hm_base, der, hm%d, hm%ep, &
-             states_dim_get_spin_index(hm%d, ik), epsib, hpsib)
-  end if
-  
   if (bitand(TERM_OTHERS, terms_) /= 0) then
 
     call profiling_in(prof_exx, "EXCHANGE_OPERATOR")

@@ -63,15 +63,12 @@ module hamiltonian_base_oct_m
     zhamiltonian_base_local,                   &
     dhamiltonian_base_local_sub,               &
     zhamiltonian_base_local_sub,               &
-    dhamiltonian_base_magnetic,                &
-    zhamiltonian_base_magnetic,                &
     dhamiltonian_base_nlocal_start,            &
     zhamiltonian_base_nlocal_start,            &
     dhamiltonian_base_nlocal_finish,           &
     zhamiltonian_base_nlocal_finish,           &
     dhamiltonian_base_nlocal_position_commutator, &
     zhamiltonian_base_nlocal_position_commutator, &
-    hamiltonian_base_has_magnetic,             &
     hamiltonian_base_init,                     &
     hamiltonian_base_end,                      &
     hamiltonian_base_allocate,                 &
@@ -675,16 +672,6 @@ contains
 
   end subroutine hamiltonian_base_build_proj
     
-  ! ----------------------------------------------------------------------------------
-
-  logical pure function hamiltonian_base_has_magnetic(this) result(has_magnetic)
-    type(hamiltonian_base_t), intent(in) :: this
-    
-    has_magnetic = allocated(this%vector_potential) &
-      .or. allocated(this%uniform_magnetic_field)
-    
-  end function hamiltonian_base_has_magnetic
-
 #include "undef.F90"
 #include "real.F90"
 #include "hamiltonian_base_inc.F90"
