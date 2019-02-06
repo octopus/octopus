@@ -23,7 +23,6 @@ module mesh_init_oct_m
   use cube_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hypercube_oct_m
   use index_oct_m
   use io_oct_m
   use loct_oct_m

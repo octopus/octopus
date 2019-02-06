@@ -25,7 +25,6 @@ module mesh_function_oct_m
   use cube_function_oct_m
   use global_oct_m
   use hardware_oct_m
-  use hypercube_oct_m
   use index_oct_m
   use lalg_basic_oct_m
   use loct_math_oct_m

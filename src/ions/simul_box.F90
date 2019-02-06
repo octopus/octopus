@@ -298,8 +298,7 @@ contains
         !%Type block
         !%Section Mesh::Simulation Box
         !%Description
-        !% If <tt>BoxShape</tt> is <tt>parallelepiped</tt>, <tt>hypercube</tt>,
-        !% <tt>box_image</tt>, or <tt>user_defined</tt>, this is a
+        !% If <tt>BoxShape</tt> is <tt>parallelepiped</tt>,this is a
         !% block of the form:
         !%
         !% <tt>%Lsize
@@ -725,13 +724,11 @@ contains
     type(geometry_t),  intent(in) :: geo
     integer,           intent(in) :: iunit
 
-    character(len=15), parameter :: bs(6) = (/ &
+    character(len=15), parameter :: bs(4) = (/ &
       'sphere        ', &
       'cylinder      ', &
       'minimum       ', &
-      'parallelepiped', &
-      'image-defined ', &
-      'hypercube     '/)
+      'parallelepiped'/)
 
     integer :: idir, idir2, ispec
 
