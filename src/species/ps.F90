@@ -48,8 +48,7 @@ module ps_oct_m
     ps_niwfs,                   &
     ps_bound_niwfs,             &
     ps_end,                     &
-    ps_has_density,             &
-    ps_density_volume
+    ps_has_density
   
   integer, parameter, public :: &
     PS_FILTER_NONE = 0,         &
@@ -1223,42 +1222,6 @@ contains
     has_density = ps%has_density
 
   end function ps_has_density
-  
-  !---------------------------------------
-  FLOAT function ps_density_volume(ps) result(volume)
-    type(ps_t), intent(in) :: ps
-
-    integer :: ip, ispin
-    FLOAT :: rr
-    FLOAT, allocatable ::vol(:)
-    type(spline_t) :: volspl
-    
-    PUSH_SUB(ps_density_volume)
-    
-    if (.not. ps_has_density(ps)) then
-       message(1) = "The pseudopotential does not contain an atomic density"
-       call messages_fatal(1)
-    end if
-
-    SAFE_ALLOCATE(vol(1:ps%g%nrval))
-    
-    do ip = 1, ps%g%nrval
-      rr = ps%g%rofi(ip)
-      vol(ip) = CNST(0.0)
-      do ispin = 1, ps%ispin
-        vol(ip) = vol(ip) + spline_eval(ps%density(ispin), rr)*CNST(4.0)*M_PI*rr**5
-      end do
-    end do
-
-    call spline_init(volspl)
-    call spline_fit(ps%g%nrval, ps%g%rofi, vol, volspl)
-    volume = spline_integral(volspl)
-    call spline_end(volspl)
-
-    SAFE_DEALLOCATE_A(vol)
-    
-    POP_SUB(ps_density_volume)
-  end function ps_density_volume
   
 end module ps_oct_m
 
