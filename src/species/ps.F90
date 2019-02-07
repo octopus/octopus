@@ -195,7 +195,8 @@ contains
     end if
 
     if(ps%file_format == PSEUDO_FORMAT_UNKNOWN) then
-      call messages_write("Cannot determine the pseudopotential type for species '"//trim(label)//"' from", new_line = .true.)
+      call messages_write("Cannot determine the pseudopotential type for species '"//trim(label)//"' from", &
+                          new_line = .true.)
       call messages_write("file '"//trim(filename)//"'.")
       call messages_fatal()
     end if
@@ -228,7 +229,8 @@ contains
       if(user_lmax /= INVALID_L) then
         ps%lmax = min(ps%lmax, user_lmax) ! Maybe the file does not have enough components.
         if(user_lmax /= ps%lmax) then
-          message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
+          message(1) = "lmax in Species block for " // trim(label) // &
+                       " is larger than number available in pseudopotential."
           call messages_fatal(1)
         end if
       end if
@@ -274,7 +276,8 @@ contains
       if(user_lmax /= INVALID_L) then
         ps%lmax = min(ps%lmax, user_lmax) ! Maybe the file does not have enough components.
         if(user_lmax /= ps%lmax) then
-          message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
+          message(1) = "lmax in Species block for " // trim(label) // &
+                       " is larger than number available in pseudopotential."
           call messages_fatal(1)
         end if
       end if
@@ -789,7 +792,8 @@ contains
 
     write(iunit,'(/,a)')    'orbitals:'
     do j = 1, ps%conf%p
-      write(iunit,'(1x,a,i2,3x,a,i2,3x,a,f5.1,3x,a,l1)') 'n = ', ps%conf%n(j), 'l = ', ps%conf%l(j), 'j = ', ps%conf%j(j), 'bound = ', all(ps%bound(j,:))
+      write(iunit,'(1x,a,i2,3x,a,i2,3x,a,f5.1,3x,a,l1)') 'n = ', ps%conf%n(j), 'l = ', ps%conf%l(j), &
+                                                         'j = ', ps%conf%j(j), 'bound = ', all(ps%bound(j,:))
     end do
 
     
@@ -1170,7 +1174,8 @@ contains
       if(pseudo_nprojectors(ps_xml%pseudo) > 0) then
         do ll = 0, ps_xml%lmax
 
-          if(is_diagonal(ps_xml%nchannels, ps_xml%dij(ll, :, :)) .or. pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
+          if (is_diagonal(ps_xml%nchannels, ps_xml%dij(ll, :, :)) .or. &
+              pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
             matrix = CNST(0.0)
             forall(ic = 1:ps_xml%nchannels)
               eigenvalues(ic) = ps_xml%dij(ll, ic, ic)

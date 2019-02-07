@@ -287,16 +287,27 @@ contains
 
     call parse_variable('PseudopotentialSet', OPTION__PSEUDOPOTENTIALSET__STANDARD, pseudo_set)
     call messages_print_var_option(stdout, 'PseudopotentialSet', pseudo_set)
-    if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__NONE) call messages_experimental('PseudopotentialSet = none')
-    if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__HSCV_LDA) call messages_experimental('PseudopotentialSet = hscv_lda')
-    if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__HSCV_PBE) call messages_experimental('PseudopotentialSet = hscv_pbe')
-    if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA) call messages_experimental('PseudopotentialSet = pseudodojo_lda')
-    if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA_STRINGENT) call messages_experimental('PseudopotentialSet = pseudodojo_lda_stringent')
-    if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE) call messages_experimental('PseudopotentialSet = pseudodojo_pbe')
-    if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE_STRINGENT) call messages_experimental('PseudopotentialSet = pseudodojo_pbe_stringent')
-    if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL) call messages_experimental('PseudopotentialSet = pseudodojo_pbesol')
-    if(pseudo_set == OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL_STRINGENT) call messages_experimental('PseudopotentialSet = pseudodojo_pbesol_stringent')
-    
+    select case (pseudo_set)
+    case (OPTION__PSEUDOPOTENTIALSET__NONE)
+      call messages_experimental('PseudopotentialSet = none')
+    case (OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
+      call messages_experimental('PseudopotentialSet = hscv_lda')
+    case (OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
+      call messages_experimental('PseudopotentialSet = hscv_pbe')
+    case (OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA)
+      call messages_experimental('PseudopotentialSet = pseudodojo_lda')
+    case (OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_LDA_STRINGENT)
+      call messages_experimental('PseudopotentialSet = pseudodojo_lda_stringent')
+    case (OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE)
+      call messages_experimental('PseudopotentialSet = pseudodojo_pbe')
+    case (OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBE_STRINGENT)
+      call messages_experimental('PseudopotentialSet = pseudodojo_pbe_stringent')
+    case (OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL)
+      call messages_experimental('PseudopotentialSet = pseudodojo_pbesol')
+    case (OPTION__PSEUDOPOTENTIALSET__PSEUDODOJO_PBESOL_STRINGENT)
+      call messages_experimental('PseudopotentialSet = pseudodojo_pbesol_stringent')
+    end select
+
     POP_SUB(species_init_global)
   end subroutine species_init_global
   
@@ -729,7 +740,8 @@ contains
 
     case(SPECIES_JELLIUM)
       if(print_info_) then
-        write(message(1),'(a,a,a)')    'Species "',trim(spec%label),'" is a jellium sphere / approximated point particle.'
+        write(message(1),'(a,a,a)')    'Species "', trim(spec%label), &
+                                       '" is a jellium sphere / approximated point particle.'
         write(message(2),'(a,f11.6)')  '   Valence charge = ', spec%z_val
         write(message(3),'(a,f11.6)')  '   Radius [a.u]   = ', spec%jradius
         write(message(4),'(a,f11.6)')  '   Rs [a.u]       = ', spec%jradius * spec%z_val ** (-M_ONE/M_THREE)
@@ -769,9 +781,10 @@ contains
       if(print_info_) then
         write(message(1),'(a,a,a)')    'Species "', trim(spec%label), '" is a distribution of charge:'
         if(spec%type == SPECIES_CHARGE_DENSITY) then
-           write(message(2),'(a,a)')   '   rho = ', trim(spec%density_formula)
+          write(message(2),'(a,a)')   '   rho = ', trim(spec%density_formula)
         else
-           write(message(2),'(a,a,a)') '   rho is enclosed in volume defined by the "', trim(spec%density_formula), '" block'
+          write(message(2),'(a,a,a)') '   rho is enclosed in volume defined by the "', &
+                                      trim(spec%density_formula), '" block'
         end if
         write(message(3),'(a,f11.6)')  '   Z = ', spec%z_val
         call messages_info(3)
@@ -1253,7 +1266,8 @@ contains
       ! if we do not know, try the pseudpotential set
       if(species_x_functional == PSEUDO_EXCHANGE_UNKNOWN) then
         select case(spec%pseudopotential_set)
-        case(OPTION__PSEUDOPOTENTIALSET__STANDARD, OPTION__PSEUDOPOTENTIALSET__HGH_LDA, OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
+        case(OPTION__PSEUDOPOTENTIALSET__STANDARD, OPTION__PSEUDOPOTENTIALSET__HGH_LDA, &
+             OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
           species_x_functional = OPTION__XCFUNCTIONAL__LDA_X
         case(OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
           species_x_functional = OPTION__XCFUNCTIONAL__GGA_X_PBE
@@ -1277,7 +1291,8 @@ contains
       ! if we do not know, try the pseudpotential set
       if(species_c_functional == PSEUDO_CORRELATION_UNKNOWN) then
         select case(spec%pseudopotential_set)
-        case(OPTION__PSEUDOPOTENTIALSET__STANDARD, OPTION__PSEUDOPOTENTIALSET__HGH_LDA, OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
+        case(OPTION__PSEUDOPOTENTIALSET__STANDARD, OPTION__PSEUDOPOTENTIALSET__HGH_LDA, &
+             OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
           species_c_functional = OPTION__XCFUNCTIONAL__LDA_C_PZ_MOD/1000
         case(OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)
           species_c_functional = OPTION__XCFUNCTIONAL__GGA_C_PBE/1000
@@ -1765,11 +1780,12 @@ contains
 
         if(spec%type /= SPECIES_PSEUDO .and. spec%type /= SPECIES_PSPIO) then
           call messages_input_error('Species', &
-            "The 'lmax' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")          
+            "The 'lmax' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")
         end if
         
         if(spec%user_lmax < 0) then
-          call messages_input_error('Species', "The 'lmax' parameter in species "//trim(spec%label)//" cannot be negative")
+          call messages_input_error('Species', &
+                                    "The 'lmax' parameter in species "//trim(spec%label)//" cannot be negative")
         end if
 
       case(OPTION__SPECIES__LLOC)
@@ -1778,11 +1794,12 @@ contains
 
         if(spec%type /= SPECIES_PSEUDO .and. spec%type /= SPECIES_PSPIO) then
           call messages_input_error('Species', &
-            "The 'lloc' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")          
+            "The 'lloc' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")
         end if
 
         if(spec%user_llocal < 0) then
-          call messages_input_error('Species', "The 'lloc' parameter in species "//trim(spec%label)//" cannot be negative")
+          call messages_input_error('Species', &
+                                    "The 'lloc' parameter in species "//trim(spec%label)//" cannot be negative")
         end if
 
       case(OPTION__SPECIES__HUBBARD_L)
@@ -1795,7 +1812,8 @@ contains
         end if
 
         if(spec%hubbard_l < 0) then
-          call messages_input_error('Species', "The 'hubbard_l' parameter in species "//trim(spec%label)//" cannot be negative")
+          call messages_input_error('Species', &
+                                    "The 'hubbard_l' parameter in species "//trim(spec%label)//" cannot be negative")
         end if
 
      case(OPTION__SPECIES__HUBBARD_U)
@@ -1811,7 +1829,8 @@ contains
         call parse_block_float(blk, row, icol + 1, spec%hubbard_j)
 
         if(abs(spec%hubbard_j-spec%hubbard_l) /= M_HALF) then
-          call messages_input_error('Species', "The 'hubbard_j' parameter in species "//trim(spec%label)//" can only be hubbard_l +/- 1/2")
+          call messages_input_error('Species', "The 'hubbard_j' parameter in species "// &
+                                    trim(spec%label)//" can only be hubbard_l +/- 1/2")
         end if
 
 
@@ -1997,7 +2016,8 @@ contains
         spec%vdw_radius = element_vdw_radius(element)
         if(spec%vdw_radius < CNST(0.0)) then
           spec%vdw_radius = CNST(0.0)
-          call messages_write("The default vdW radius for species '"//trim(spec%label)//"' is not defined.", new_line = .true.)
+          call messages_write("The default vdW radius for species '"//trim(spec%label)//"' is not defined.", &
+                              new_line = .true.)
           call messages_write("You can specify the vdW radius in %Species block.")
           call messages_warning()
         end if
@@ -2027,7 +2047,8 @@ contains
       end if
 
       if(.not. parameter_defined(OPTION__SPECIES__VALENCE)) then
-        if(spec%type == SPECIES_USDEF .or. spec%type == SPECIES_CHARGE_DENSITY .or. spec%type == SPECIES_FROM_FILE) then
+        if(spec%type == SPECIES_USDEF .or. spec%type == SPECIES_CHARGE_DENSITY .or. &
+          spec%type == SPECIES_FROM_FILE) then
           spec%z_val = CNST(0.0)
         else
           call messages_input_error('Species', &
