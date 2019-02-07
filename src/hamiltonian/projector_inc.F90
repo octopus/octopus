@@ -149,20 +149,8 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
       do ll = 0, pj(ipj)%lmax
         if (ll == pj(ipj)%lloc) cycle
         do mm = -ll, ll
-
           ii = ireduce(ipj, ll, mm, ist)
-          select case(pj(ipj)%type)
-          case(PROJ_KB)
-            call X(kb_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, lpsi(1:ns, 1:dim), reduce_buffer(1:dim, ii:))
-          case(PROJ_RKB)
-#ifdef R_TCOMPLEX
-            if(ll /= 0) then
-              call rkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p(ll, mm), lpsi(1:ns, 1:dim), reduce_buffer(1:dim, ii:))
-            else
-              call zkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, lpsi(1:ns, 1:dim), reduce_buffer(1:dim, ii:))
-            end if
-#endif
-          end select
+          call X(kb_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, lpsi(1:ns, 1:dim), reduce_buffer(1:dim, ii:))
         end do ! mm
       end do ! ll
 
@@ -194,24 +182,10 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
         if (ll == pj(ipj)%lloc) cycle
         do mm = -ll, ll
           ii = ireduce(ipj, ll, mm, ist)
-
-          select case(pj(ipj)%type)
-          case(PROJ_KB)
-            call X(kb_project_ket)(pj(ipj)%kb_p(ll, mm), dim, reduce_buffer(1:dim, ii:), lpsi(1:ns, 1:dim))
-          case(PROJ_RKB)
-#ifdef R_TCOMPLEX
-            if(ll /= 0) then
-              call rkb_project_ket(pj(ipj)%rkb_p(ll, mm), reduce_buffer(1:dim, ii:), lpsi(1:ns, 1:dim))
-            else
-              call zkb_project_ket(pj(ipj)%kb_p(1, 1), dim, reduce_buffer(1:dim, ii:), lpsi(1:ns, 1:dim))
-            end if
-#endif
-          end select
+          call X(kb_project_ket)(pj(ipj)%kb_p(ll, mm), dim, reduce_buffer(1:dim, ii:), lpsi(1:ns, 1:dim))
         end do ! mm
       end do ! ll
 
-    !  print *, ll, lpsi(1, 1:dim)  
-  
       !put the result back in the complete grid
       select case(batch_status(psib))
       case(BATCH_NOT_PACKED)
@@ -342,20 +316,7 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi)
   do ll = 0, pj%lmax
     if (ll == pj%lloc) cycle
     do mm = -ll, ll
-      
-      select case (pj%type)
-      case (PROJ_KB)
-        call X(kb_project)(mesh, pj%sphere, pj%kb_p(ll, mm), dim, psi, ppsi)
-      case (PROJ_RKB)
-#ifdef R_TCOMPLEX
-        if(ll /= 0) then
-          call rkb_project(mesh, pj%sphere, pj%rkb_p(ll, mm), psi, ppsi)
-        else
-          call zkb_project(mesh, pj%sphere, pj%kb_p(1, 1), dim, psi, ppsi)
-        end if
-#endif
-      end select
-  
+      call X(kb_project)(mesh, pj%sphere, pj%kb_p(ll, mm), dim, psi, ppsi)
     end do
   end do
 

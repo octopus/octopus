@@ -38,7 +38,6 @@ module projector_oct_m
   use multicomm_oct_m
   use profiling_oct_m
   use ps_oct_m
-  use rkb_projector_oct_m
   use simul_box_oct_m
   use species_oct_m
   use states_oct_m
@@ -91,15 +90,8 @@ module projector_oct_m
     integer :: lmax
     integer :: lloc
     integer :: nik
-    integer :: reltype
-
     type(submesh_t)  :: sphere
-    
-
-    !> Only one of the following structures should be used at once
-    !! The one to be used depends on the value of type variable
     type(kb_projector_t),  pointer :: kb_p(:, :)  => null()
-    type(rkb_projector_t), pointer :: rkb_p(:, :) => null()
     CMPLX,                 pointer :: phase(:, :) => null()
   end type projector_t
 
@@ -134,12 +126,11 @@ contains
   end function projector_is
 
   !---------------------------------------------------------
-  subroutine projector_init(p, mesh, atm, dim, reltype)
+  subroutine projector_init(p, mesh, atm, dim)
     type(projector_t),    intent(inout) :: p
     type(mesh_t),         intent(in)    :: mesh
     type(atom_t), target, intent(in)    :: atm
     integer,              intent(in)    :: dim
-    integer,              intent(in)    :: reltype
 
     type(ps_t), pointer :: ps
     
@@ -149,7 +140,6 @@ contains
     ps => species_ps(atm%species)
 
     nullify(p%phase)
-    p%reltype = reltype
     p%lmax = ps%lmax
 
     if(ps%local) then
@@ -159,24 +149,8 @@ contains
     end if
 
     p%lloc = ps%llocal
-
     p%type = ps%projector_type
-
-    if(p%type == PROJ_KB .and. reltype == 1) then
-      if(ps%kbc == 2) then
-        p%type = PROJ_RKB
-      else
-        call messages_write("Spin-orbit coupling for species '"//trim(species_label(atm%species))//" is not available.")
-        call messages_warning()
-      end if
-    end if
-    
-    select case(p%type)
-    case(PROJ_KB)
-      p%nprojections = dim*ps%kbc
-    case(PROJ_RKB)
-      p%nprojections = 4
-    end select
+    p%nprojections = dim*ps%kbc
 
     POP_SUB(projector_init)
   end subroutine projector_init
@@ -232,19 +206,16 @@ contains
   end subroutine projector_init_phases
 
   !---------------------------------------------------------
-  subroutine projector_build(p, gr, a, so_strength)
+  subroutine projector_build(p, gr, a)
     type(projector_t), intent(inout) :: p
     type(grid_t),      intent(in)    :: gr
     type(atom_t),      intent(in)    :: a
-    FLOAT,             intent(in)    :: so_strength
 
     integer :: ll, mm
 
     PUSH_SUB(projector_build)
 
-    select case (p%type)
-
-    case (PROJ_KB)
+    if(p%type == PROJ_KB) then
       SAFE_ALLOCATE(p%kb_p(0:p%lmax, -p%lmax:p%lmax))
       do ll = 0, p%lmax
         if(ll == p%lloc) cycle
@@ -253,24 +224,7 @@ contains
           call kb_projector_init(p%kb_p(ll, mm), p%sphere, gr, a, ll, mm)
         end do
       end do
-
-    case (PROJ_RKB)
-      SAFE_ALLOCATE(p%rkb_p(1:p%lmax, -p%lmax:p%lmax))
-      do ll = 1, p%lmax
-        if(ll == p%lloc) cycle
-        do mm = -ll, ll
-          call rkb_projector_null(p%rkb_p(ll, mm))
-          call rkb_projector_init(p%rkb_p(ll, mm), p%sphere, a, ll, mm, so_strength)
-        end do
-      end do
-      ! for rkb, l = 0 is a normal kb
-      if(p%lloc /= 0) then
-        SAFE_ALLOCATE(p%kb_p(1:1, 1:1))
-        call kb_projector_null(p%kb_p(1, 1))
-        call kb_projector_init(p%kb_p(1, 1), p%sphere, gr, a, 0, 0)
-      end if
-
-    end select
+    end if
 
     POP_SUB(projector_build)
   end subroutine projector_build
@@ -285,8 +239,7 @@ contains
 
     call submesh_end(p%sphere)
 
-    select case(p%type)
-    case(PROJ_KB)
+    if(p%type == PROJ_KB) then
       do ll = 0, p%lmax
         if(ll == p%lloc) cycle
         do mm = -ll, ll
@@ -294,21 +247,7 @@ contains
         end do
       end do
       SAFE_DEALLOCATE_P(p%kb_p)
-
-    case(PROJ_RKB)
-      do ll = 1, p%lmax
-        if(ll == p%lloc) cycle
-        do mm = -ll, ll
-          call rkb_projector_end(p%rkb_p(ll, mm))
-        end do
-      end do
-      SAFE_DEALLOCATE_P(p%rkb_p)
-      if(p%lloc /= 0) then
-        call kb_projector_end(p%kb_p(1, 1))
-        SAFE_DEALLOCATE_P(p%kb_p)
-      end if
-
-    end select
+    end if
     
     p%type = PROJ_NONE
 

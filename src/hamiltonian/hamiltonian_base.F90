@@ -402,8 +402,6 @@ contains
       end if
     end do
 
-    if(epot%reltype /= NOREL) this%apply_projector_matrices = .false.
-
     if(.not. this%apply_projector_matrices) then
       SAFE_DEALLOCATE_A(order)
       SAFE_DEALLOCATE_A(head)
@@ -411,7 +409,6 @@ contains
       POP_SUB(hamiltonian_base_build_proj)
       return
     end if
-
 
     SAFE_ALLOCATE(this%projector_matrices(1:this%nprojector_matrices))
     SAFE_ALLOCATE(this%regions(1:this%nprojector_matrices + 1))

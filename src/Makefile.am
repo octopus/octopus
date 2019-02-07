@@ -322,7 +322,6 @@ all_f_srcs +=                                        \
 	hamiltonian/lasers.F90                       \
 	hamiltonian/projector.F90                    \
 	hamiltonian/projector_matrix.F90             \
-	hamiltonian/rkb_projector.F90                \
 	hamiltonian/species_pot.F90                  \
 	hamiltonian/xc.F90
 

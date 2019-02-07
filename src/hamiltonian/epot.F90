@@ -75,10 +75,6 @@ module epot_oct_m
     epot_precalc_local_potential,  &
     epot_global_force
 
-  integer, public, parameter :: &
-    NOREL      = 0,             &
-    SPIN_ORBIT = 1
-
   type epot_t
     ! Ions
     FLOAT,             pointer :: vpsl(:)       !< the local part of the pseudopotentials
@@ -93,11 +89,8 @@ module epot_oct_m
     FLOAT, pointer         :: v_static(:)          !< static scalar potential
     FLOAT, allocatable     :: v_ext(:)             !< static scalar potential - 1:gr%mesh%np_part
     type(gauge_field_t)    :: gfield               !< the time-dependent gauge field
-    integer                :: reltype              !< type of relativistic correction to use
     !> The possible kick
     type(kick_t) :: kick
-    !> SO prefactor (1.0 = normal SO, 0.0 = no SO)
-    FLOAT :: so_strength
     !> the ion-ion energy and force
     FLOAT          :: eii
     FLOAT, pointer :: fii(:, :)
@@ -211,43 +204,6 @@ contains
           ep%v_ext(ip) = sum(gr%mesh%x(ip, gr%sb%periodic_dim + 1:gr%sb%dim) * ep%E_field(gr%sb%periodic_dim + 1:gr%sb%dim))
         end forall
       end if
-    end if
-    
-    !%Variable RelativisticCorrection
-    !%Type integer
-    !%Default non_relativistic
-    !%Section Hamiltonian
-    !%Description
-    !% The default value means that <i>no</i> relativistic correction is used. To
-    !% include spin-orbit coupling turn <tt>RelativisticCorrection</tt> to <tt>spin_orbit</tt> 
-    !% (this will only work if <tt>SpinComponents</tt> has been set to <tt>non_collinear</tt>, which ensures
-    !% the use of spinors).
-    !%Option non_relativistic 0
-    !% No relativistic corrections.
-    !%Option spin_orbit 1
-    !% Spin-orbit.
-    !%End
-    call parse_variable('RelativisticCorrection', NOREL, ep%reltype)
-    if(.not.varinfo_valid_option('RelativisticCorrection', ep%reltype)) call messages_input_error('RelativisticCorrection')
-    if (ispin /= SPINORS .and. ep%reltype == SPIN_ORBIT) then
-      message(1) = "The spin-orbit term can only be applied when using spinors."
-      call messages_fatal(1)
-    end if
-
-    call messages_print_var_option(stdout, "RelativisticCorrection", ep%reltype)
-
-    !%Variable SOStrength
-    !%Type float
-    !%Default 1.0
-    !%Section Hamiltonian
-    !%Description
-    !% Tuning of the spin-orbit coupling strength: setting this value to zero turns off spin-orbit terms in
-    !% the Hamiltonian, and setting it to one corresponds to full spin-orbit.
-    !%End
-    if (ep%reltype == SPIN_ORBIT) then
-      call parse_variable('SOStrength', M_ONE, ep%so_strength)
-    else
-      ep%so_strength = M_ONE
     end if
 
     !%Variable ForceTotalEnforce
@@ -464,7 +420,7 @@ contains
       if(.not. species_is_ps(atm%species)) cycle
       if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x)) cycle
       call projector_end(ep%proj(ia))
-      call projector_init(ep%proj(ia), gr%mesh, atm, st%d%dim, ep%reltype)
+      call projector_init(ep%proj(ia), gr%mesh, atm, st%d%dim)
     end do
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
@@ -484,7 +440,7 @@ contains
     
     do ia = 1, geo%natoms
       atm => geo%atom(ia)
-      call projector_build(ep%proj(ia), gr, atm, ep%so_strength)
+      call projector_build(ep%proj(ia), gr, atm)
       if(.not. projector_is(ep%proj(ia), PROJ_NONE)) ep%non_local = .true.
     end do
 
