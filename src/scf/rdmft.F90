@@ -192,7 +192,8 @@ contains
       rel_ener = abs(energy_occ-energy)/abs(energy)
 
       write(message(1),'(a,1x,es20.10)') 'Total energy', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
-      call messages_info(1)
+      write(message(2),'(a,1x,es20.10)') 'Relative difference', rel_ener
+      call messages_info(2)
 
       if (rdm%do_basis.eqv..true.) then
         if ((rel_ener < rdm%conv_ener).and.rdm%maxFO < rdm%tolerFO) then
