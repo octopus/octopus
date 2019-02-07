@@ -180,9 +180,7 @@ contains
   end subroutine cholesky_parallel
 end subroutine X(states_orthogonalization_full)
 
-
 ! ---------------------------------------------------------
-
 subroutine X(states_trsm)(st, mesh, ik, ss)
   type(states_t),         intent(inout) :: st
   type(mesh_t),           intent(in)    :: mesh
@@ -567,7 +565,6 @@ subroutine X(states_orthogonalization)(mesh, nst, dim, psi, phi,  &
   call profiling_out(prof)
 end subroutine X(states_orthogonalization)
 
-
 ! ---------------------------------------------------------
 FLOAT function X(states_residue)(mesh, dim, hf, ee, ff) result(rr)
   type(mesh_t),      intent(in)  :: mesh
@@ -599,211 +596,7 @@ FLOAT function X(states_residue)(mesh, dim, hf, ee, ff) result(rr)
 
 end function X(states_residue)
 
-
-! ---------------------------------------------------------
-!> The routine calculates the expectation value of the momentum 
-!! operator
-!! <p> = < phi*(ist, k) | -i \nabla | phi(ist, ik) >
-!!
-! ---------------------------------------------------------
-subroutine X(states_calc_momentum)(st, der, momentum)
-  type(states_t),      intent(inout) :: st
-  type(derivatives_t), intent(inout) :: der
-  FLOAT,               intent(out)   :: momentum(:,:,:)
-
-  integer             :: idim, ist, ik, idir
-  CMPLX               :: expect_val_p
-  R_TYPE, allocatable :: psi(:, :), grad(:,:,:)
-  FLOAT               :: kpoint(1:MAX_DIM)  
-#if defined(HAVE_MPI)
-  integer             :: tmp
-  FLOAT, allocatable  :: lmomentum(:), gmomentum(:)
-  FLOAT, allocatable  :: lmom(:, :, :)
-  integer             :: kstart, kend, kn, ndim
-#endif
-
-  PUSH_SUB(X(states_calc_momentum))
-
-  SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(grad(1:der%mesh%np, 1:st%d%dim, 1:der%mesh%sb%dim))
-
-  do ik = st%d%kpt%start, st%d%kpt%end
-    do ist = st%st_start, st%st_end
-
-      call states_get_state(st, der%mesh, ist, ik, psi)
-
-      do idim = 1, st%d%dim
-        call X(derivatives_grad)(der, psi(:, idim), grad(:, idim, 1:der%mesh%sb%dim))
-      end do
-
-      do idir = 1, der%mesh%sb%dim
-        ! since the expectation value of the momentum operator is real
-        ! for square integrable wfns this integral should be purely imaginary 
-        ! for complex wfns but real for real wfns (see case distinction below)
-        expect_val_p = X(mf_dotp)(der%mesh, st%d%dim, psi, grad(:, :, idir))
-
-        ! In the case of real wavefunctions we do not include the 
-        ! -i prefactor of p = -i \nabla
-        if (states_are_real(st)) then
-          momentum(idir, ist, ik) = real( expect_val_p )
-        else
-          momentum(idir, ist, ik) = real( -M_zI*expect_val_p )
-        end if
-      end do
-
-      ! have to add the momentum vector in the case of periodic systems, 
-      ! since psi contains only u_k
-      kpoint = M_ZERO
-      kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
-      forall(idir = 1:der%mesh%sb%periodic_dim) momentum(idir, ist, ik) = momentum(idir, ist, ik) + kpoint(idir)
-
-    end do
-
-    ! Exchange momenta in the parallel case.
-#if defined(HAVE_MPI)
-    if(st%parallel_in_states) then
-      SAFE_ALLOCATE(lmomentum(1:st%lnst))
-      SAFE_ALLOCATE(gmomentum(1:st%nst))
-
-      do idir = 1, der%mesh%sb%dim
-        lmomentum(1:st%lnst) = momentum(idir, st%st_start:st%st_end, ik)
-        call lmpi_gen_allgatherv(st%lnst, lmomentum, tmp, gmomentum, st%mpi_grp)
-        momentum(idir, 1:st%nst, ik) = gmomentum(1:st%nst)
-      end do
-
-      SAFE_DEALLOCATE_A(lmomentum)
-      SAFE_DEALLOCATE_A(gmomentum)
-    end if
-#endif
-  end do
-
-#if defined(HAVE_MPI)
-  if(st%d%kpt%parallel) then
-    kstart = st%d%kpt%start
-    kend = st%d%kpt%end
-    kn = st%d%kpt%nlocal
-    ndim = ubound(momentum, dim = 1)
-    
-    ASSERT(.not. st%parallel_in_states)
-    
-    SAFE_ALLOCATE(lmom(1:ndim, 1:st%nst, 1:kn))
-    
-    lmom(1:ndim, 1:st%nst, 1:kn) = momentum(1:ndim, 1:st%nst, kstart:kend)
-    
-    call MPI_Allgatherv(lmom(1, 1, 1), ndim*st%nst*kn, MPI_FLOAT, &
-      momentum, st%d%kpt%num(:)*st%nst*ndim, (st%d%kpt%range(1, :) - 1)*st%nst*ndim, MPI_FLOAT, &
-      st%d%kpt%mpi_grp%comm, mpi_err)
-    
-    SAFE_DEALLOCATE_A(lmom)
-  end if
-#endif  
-
-  SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(grad)
-
-  POP_SUB(X(states_calc_momentum))
-end subroutine X(states_calc_momentum)
-
-! ---------------------------------------------------------
-subroutine X(states_matrix)(mesh, st1, st2, aa)
-  type(mesh_t),   intent(in)  :: mesh
-  type(states_t), intent(in)  :: st1, st2
-  R_TYPE,         intent(out) :: aa(:, :, :)
-
-  integer :: ii, jj, dim, ik
-  R_TYPE, allocatable :: psi1(:, :), psi2(:, :)
-#if defined(HAVE_MPI)
-  R_TYPE, allocatable :: phi2(:, :)
-  integer :: kk, ll, ist
-  integer :: status(MPI_STATUS_SIZE)
-  integer :: request
-#endif
-
-  PUSH_SUB(X(states_matrix))
-
-  dim = st1%d%dim
-
-  SAFE_ALLOCATE(psi1(1:mesh%np, 1:st1%d%dim))
-  SAFE_ALLOCATE(psi2(1:mesh%np, 1:st1%d%dim))
-
-  do ik = st1%d%kpt%start, st1%d%kpt%end
-
-    if(st1%parallel_in_states) then
-
-#if defined(HAVE_MPI)
-      call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
-      ! Each process sends the states in st2 to the rest of the processes.
-      do ist = st1%st_start, st1%st_end
-        call states_get_state(st2, mesh, ist, ik, psi2)
-        do jj = 0, st1%mpi_grp%size - 1
-          if(st1%mpi_grp%rank /= jj) then
-            call MPI_Isend(psi2(1, 1), st1%d%dim*mesh%np, R_MPITYPE, jj, ist, st1%mpi_grp%comm, request, mpi_err)
-          end if
-        end do
-      end do
-
-      ! Processes are received, and then the matrix elements are calculated.
-      SAFE_ALLOCATE(phi2(1:mesh%np, 1:st1%d%dim))
-      do jj = 1, st2%nst
-
-        ll = st1%node(jj)
-
-        if(ll /= st1%mpi_grp%rank) then
-          call MPI_Irecv(phi2(1, 1), st1%d%dim*mesh%np, R_MPITYPE, ll, jj, st1%mpi_grp%comm, request, mpi_err)
-          call MPI_Wait(request, status, mpi_err)
-        else
-          call states_get_state(st2, mesh, jj, ik, phi2)
-        end if
-
-        do ist = st1%st_start, st1%st_end
-          call states_get_state(st1, mesh, ist, ik, psi1)
-          aa(ist, jj, ik) = X(mf_dotp)(mesh, dim, psi1, phi2)
-        end do
-
-      end do
-      SAFE_DEALLOCATE_A(phi2)
-
-      ! Each process holds some lines of the matrix. So it is broadcasted (All processes
-      ! should get the whole matrix)
-      call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
-      do ii = 1, st1%nst
-        kk = st1%node(ii)
-        do jj = 1, st2%nst
-          call MPI_Bcast(aa(ii, jj, ik), 1, R_MPITYPE, kk, st1%mpi_grp%comm, mpi_err)
-        end do
-      end do
-#else
-      write(message(1), '(a)') 'Internal error at Xstates_matrix'
-      call messages_fatal(1)
-#endif
-
-    else
-
-      do ii = st1%st_start, st1%st_end
-
-        call states_get_state(st1, mesh, ii, ik, psi1)
-
-        do jj = st2%st_start, st2%st_end
-
-          call states_get_state(st2, mesh, jj, ik, psi2)
-
-          aa(ii, jj, ik) = X(mf_dotp)(mesh, dim, psi1, psi2)
-
-        end do
-      end do
-
-    end if
-
-  end do
-
-  SAFE_DEALLOCATE_A(psi1)
-  SAFE_DEALLOCATE_A(psi2)    
-
-  POP_SUB(X(states_matrix))
-end subroutine X(states_matrix)
-
 ! -----------------------------------------------------------
-
 subroutine X(states_calc_orth_test)(st, mesh, sb)
   type(states_t),    intent(inout) :: st
   type(mesh_t),      intent(in)    :: mesh
@@ -921,7 +714,6 @@ contains
 end subroutine X(states_calc_orth_test)
 
 ! ---------------------------------------------------------
-
 subroutine X(states_rotate)(mesh, st, uu, ik)
   type(mesh_t),      intent(in)    :: mesh
   type(states_t),    intent(inout) :: st
@@ -1027,7 +819,6 @@ subroutine X(states_rotate)(mesh, st, uu, ik)
 end subroutine X(states_rotate)
 
 ! ---------------------------------------------------------
-
 subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
   type(states_t),    intent(inout) :: st
   type(mesh_t),      intent(in)    :: mesh
@@ -1158,90 +949,10 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 
   end if
 
-! Debug output
-!#ifndef R_TREAL
-!  do ist = 1, st%nst
-!    do jst = 1, st%nst
-!      write(12, '(e12.6,a,e12.6,a)', advance = 'no') real(overlap(ist, jst)), ' ',  aimag(overlap(ist, jst)), ' '
-!    end do
-!      write(12, *) ' ' 
-!  end do
-!#endif
-
   call profiling_out(prof)
 
   POP_SUB(X(states_calc_overlap))
 end subroutine X(states_calc_overlap)
-
-!> This routine computes the projection between two set of states
-subroutine X(states_calc_projections)(mesh, st, gs_st, ik, proj, gs_nst)
-  type(mesh_t),           intent(in)    :: mesh
-  type(states_t),         intent(in)    :: st
-  type(states_t),         intent(in)    :: gs_st
-  integer,                intent(in)    :: ik
-  R_TYPE,                 intent(out)   :: proj(:, :)
-  integer, optional,      intent(in)    :: gs_nst
-
-  integer       :: ib, ip
-  R_TYPE, allocatable :: psi(:, :, :), gspsi(:, :, :)
-  integer :: sp, size, block_size
-  type(profile_t), save :: prof
-  integer :: gs_nst_
-
-  PUSH_SUB(X(states_calc_projections))
-  call profiling_in(prof, "STATES_PROJECTIONS")
-
-  if(states_are_packed(st) .and. accel_is_enabled()) then
-   message(1) = "states_calc_projections is not implemented with packed states or accel."
-   call messages_fatal(1) 
-  else
-
-#ifdef R_TREAL  
-    block_size = max(40, hardware%l2%size/(2*8*st%nst))
-#else
-    block_size = max(20, hardware%l2%size/(2*16*st%nst))
-#endif
-
-   gs_nst_ = gs_st%nst
-   if(present(gs_nst)) gs_nst_ = gs_nst
-
-    proj(1:gs_nst_, 1:st%nst) = CNST(0.0)
-    
-    SAFE_ALLOCATE(psi(1:st%nst, 1:st%d%dim, 1:block_size))
-    SAFE_ALLOCATE(gspsi(1:gs_nst_, 1:gs_st%d%dim, 1:block_size))
-
-    do sp = 1, mesh%np, block_size
-      size = min(block_size, mesh%np - sp + 1)
-      
-      do ib = st%group%block_start, st%group%block_end
-        call batch_get_points(st%group%psib(ib, ik),  sp, sp + size - 1, psi)
-        call batch_get_points(gs_st%group%psib(ib,ik), sp, sp + size - 1, gspsi)
-      end do
-
-      if(st%parallel_in_states) then
-        call states_parallel_gather(st, (/st%d%dim, size/), psi)
-        call states_parallel_gather(gs_st, (/st%d%dim, size/), gspsi)
-      end if
-      
-      call blas_gemm(transa = 'n', transb = 'c',        &
-        m = gs_nst_, n = st%nst, k = size*st%d%dim,      &
-        alpha = R_TOTYPE(mesh%volume_element),      &
-        a = gspsi(1, 1, 1), lda = ubound(gspsi, dim = 1),   &
-        b = psi(1, 1, 1), ldb = ubound(psi, dim = 1), &
-        beta = R_TOTYPE(CNST(1.0)),                     & 
-        c = proj(1, 1), ldc = ubound(proj, dim = 1))
-    end do
-
-  end if
-  
-  call profiling_count_operations((R_ADD + R_MUL)*gs_nst_*(st%nst - CNST(1.0))*mesh%np)
-  
-  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, proj, dim = (/gs_nst_, st%nst/))
-  
-  call profiling_out(prof)
-  POP_SUB(X(states_calc_projections))
-
-end subroutine X(states_calc_projections)
 
 !! Local Variables:
 !! mode: f90

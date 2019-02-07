@@ -379,7 +379,6 @@ all_f_srcs +=                               \
 	td/propagator_etrs.F90              \
 	td/propagator_expmid.F90            \
 	td/propagator.F90                   \
-	td/td_calc.F90                      \
 	td/td.F90                           \
 	td/td_write.F90
 
