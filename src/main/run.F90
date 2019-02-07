@@ -129,9 +129,7 @@ contains
 
     call system_init(sys)
 
-    call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
-      sys%ks%xc_family, sys%ks%xc_flags, &
-      family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+    call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, sys%ks%xc_flags)
     
     message(1) = "Info: Generating external potential"
     call messages_info(1)

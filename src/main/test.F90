@@ -307,12 +307,10 @@ contains
 
     !Initialize external potential
     call simul_box_init(sb, sys%geo, sys%space)
-    call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
-             sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+    call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, sys%ks%xc_flags)
     call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, hm, sys%st, sys%geo)
-
    
     call boundaries_set(sys%gr%der%boundaries, sys%st%group%psib(1, 1)) 
 

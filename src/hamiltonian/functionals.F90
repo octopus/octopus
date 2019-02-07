@@ -132,42 +132,12 @@ contains
         call messages_fatal(2)
       end if
 
-      ok = bitand(functl%flags, XC_FLAGS_1D) /= 0
-      if((ndim /= 1).and.ok) then
-        message(1) = 'Specified functional is only allowed in 1D.'
-        call messages_fatal(1)
-      end if
-      if(ndim==1.and.(.not.ok)) then
-        message(1) = 'Cannot use the specified functionals in 1D.'
-        call messages_fatal(1)
-      end if
-
-      ok = bitand(functl%flags, XC_FLAGS_2D) /= 0
-      if((ndim /= 2).and.ok) then
-        message(1) = 'Specified functional is only allowed in 2D.'
-        call messages_fatal(1)
-      end if
-      if(ndim==2.and.(.not.ok)) then
-        message(1) = 'Cannot use the specified functionals in 2D.'
-        call messages_fatal(1)
-      end if
-
-      ok = bitand(functl%flags, XC_FLAGS_3D) /= 0
-      if((ndim /= 3).and.ok) then
-        message(1) = 'Specified functional is only allowed in 3D.'
-        call messages_fatal(1)
-      end if
-      if(ndim==3.and.(.not.ok)) then
+      if(bitand(functl%flags, XC_FLAGS_3D) == 0) then 
         message(1) = 'Cannot use the specified functionals in 3D.'
         call messages_fatal(1)
       end if
     end if
     
-!    XC_NON_RELATIVISTIC     =   0
-!    XC_RELATIVISTIC         =   1
-
-    ! FIXME: aren`t there other parameters that can or should be set?
-    ! special parameters that have to be configured
     select case(functl%id)
       ! FIXME: aren`t there other Xalpha functionals?
     case(XC_LDA_C_XALPHA)
@@ -188,55 +158,6 @@ contains
       call XC_F90(lda_c_xalpha_set_par)(functl%conf, alpha)
 #endif
       
-      ! FIXME: doesn`t this apply to other 1D functionals?
-    case(XC_LDA_X_1D, XC_LDA_C_1D_CSC)
-      !%Variable Interaction1D
-      !%Type integer
-      !%Default interaction_soft_coulomb
-      !%Section Hamiltonian::XC
-      !%Description
-      !% When running in 1D, one has to soften the Coulomb interaction. This softening
-      !% is not unique, and several possibilities exist in the literature.
-      !%Option interaction_exp_screened 0
-      !% Exponentially screened Coulomb interaction.
-      !% See, <i>e.g.</i>, M Casula, S Sorella, and G Senatore, <i>Phys. Rev. B</i> <b>74</b>, 245427 (2006).
-      !%Option interaction_soft_coulomb 1
-      !% Soft Coulomb interaction of the form <math>1/\sqrt{x^2 + \alpha^2}</math>.
-      !%End
-      call messages_obsolete_variable('SoftInteraction1D_alpha', 'Interaction1D')
-      call parse_variable('Interaction1D', INT_SOFT_COULOMB, interact_1d)
-
-      !%Variable Interaction1DScreening
-      !%Type float
-      !%Default 1.0
-      !%Section Hamiltonian::XC
-      !%Description
-      !% Defines the screening parameter <math>\alpha</math> of the softened Coulomb interaction
-      !% when running in 1D.
-      !%End
-      call messages_obsolete_variable('SoftInteraction1D_alpha', 'Interaction1DScreening')
-      call parse_variable('Interaction1DScreening', M_ONE, alpha)
-#ifdef HAVE_LIBXC4
-      parameters(1) = real(interact_1d, REAL_PRECISION)
-      parameters(2) = alpha
-      call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
-#else
-      if(functl%id == XC_LDA_X_1D) then
-        call XC_F90(lda_x_1d_set_par)(functl%conf, interact_1d, alpha)
-      else
-        call XC_F90(lda_c_1d_csc_set_par)(functl%conf, interact_1d, alpha)
-      end if
-#endif
-      
-    case(XC_LDA_C_2D_PRM)
-#ifdef HAVE_LIBXC4
-      parameters(1) = nel
-      call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
-#else
-      call XC_F90(lda_c_2d_prm_set_par)(functl%conf, nel)
-#endif
-      
-    ! FIXME: libxc has XC_GGA_X_LBM, isn`t that the modified one?
     case(XC_GGA_X_LB)
       !%Variable LB94_modified
       !%Type logical

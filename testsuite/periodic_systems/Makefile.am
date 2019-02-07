@@ -32,10 +32,6 @@ dist_share_DATA =                                \
 	05-lithium.03-td-restart.inp             \
 	06-h2o_pol_lr.01_gs.inp                  \
 	06-h2o_pol_lr.test                       \
-	07-tb09.test	                         \
-	07-tb09.01-gs_symm.inp                   \
-	07-tb09.02-gs_nosymm.inp                 \
-	07-tb09.03-td.inp                        \
 	08-benzene_supercell.test                \
 	08-benzene_supercell.01-gs.inp           \
 	11-silicon_force.test                    \

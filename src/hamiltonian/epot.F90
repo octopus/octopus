@@ -153,9 +153,6 @@ contains
     if(.not.varinfo_valid_option('FilterPotentials', filter)) call messages_input_error('FilterPotentials')
     call messages_print_var_option(stdout, "FilterPotentials", filter)
 
-    if(family_is_mgga(xc_family) .and. filter /= PS_FILTER_NONE) &
-      call messages_not_implemented("FilterPotentials different from filter_none with MGGA")
-
     if(filter == PS_FILTER_TS) call spline_filter_mask_init()
     do ispec = 1, geo%nspecies
       call species_pot_init(geo%species(ispec), mesh_gcutoff(gr%mesh), filter)

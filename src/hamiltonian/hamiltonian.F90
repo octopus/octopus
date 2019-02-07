@@ -102,7 +102,6 @@ module hamiltonian_oct_m
     FLOAT, pointer :: vxc(:,:)    !< XC potential
     FLOAT, pointer :: vhxc(:,:)   !< XC potential + Hartree potential
     FLOAT, pointer :: axc(:,:,:)  !< XC vector potential divided by c
-    FLOAT, pointer :: vtau(:,:)   !< Derivative of e_XC w.r.t. tau
 
     type(geometry_t), pointer :: geo
     FLOAT :: exx_coef !< how much of EXX to mix
@@ -110,7 +109,6 @@ module hamiltonian_oct_m
     integer :: theory_level    !< copied from sys%ks
     integer :: xc_family       !< copied from sys%ks
     integer :: xc_flags        !< copied from sys%ks
-    logical :: family_is_mgga_with_exc !< obtained from sys%ks
 
     type(epot_t) :: ep         !< handles the external potential
  
@@ -149,7 +147,7 @@ module hamiltonian_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, xc_flags, family_is_mgga_with_exc)
+  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, xc_flags)
     type(hamiltonian_t),                        intent(out)   :: hm
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
@@ -157,7 +155,6 @@ contains
     integer,                                    intent(in)    :: theory_level
     integer,                                    intent(in)    :: xc_family
     integer,                                    intent(in)    :: xc_flags
-    logical,                                    intent(in)    :: family_is_mgga_with_exc
 
     integer :: iline, icol
     integer :: ncols
@@ -174,7 +171,6 @@ contains
     hm%theory_level = theory_level
     hm%xc_family    = xc_family
     hm%xc_flags     = xc_flags
-    hm%family_is_mgga_with_exc = family_is_mgga_with_exc
     call states_dim_copy(hm%d, st%d)
 
     call hamiltonian_base_init(hm%hm_base, hm%d%nspin)
@@ -191,7 +187,7 @@ contains
     SAFE_ALLOCATE(hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin))
     hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin) = M_ZERO
 
-    nullify(hm%vhartree, hm%vxc, hm%vtau, hm%axc)
+    nullify(hm%vhartree, hm%vxc, hm%axc)
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
 
       SAFE_ALLOCATE(hm%vhartree(1:gr%mesh%np_part))
@@ -199,14 +195,7 @@ contains
 
       SAFE_ALLOCATE(hm%vxc(1:gr%mesh%np, 1:hm%d%nspin))
       hm%vxc=M_ZERO
-
-      if(hm%family_is_mgga_with_exc) then
-        SAFE_ALLOCATE(hm%vtau(1:gr%mesh%np, 1:hm%d%nspin))
-        hm%vtau=M_ZERO
-      end if
-
     end if
-
 
     hm%geo => geo
     !Initialize external potential
@@ -353,10 +342,6 @@ contains
     SAFE_DEALLOCATE_P(hm%vxc)
     SAFE_DEALLOCATE_P(hm%axc)
     
-    if(hm%family_is_mgga_with_exc) then
-      SAFE_DEALLOCATE_P(hm%vtau)
-    end if
-
     call epot_end(hm%ep)
     nullify(hm%geo)
 
@@ -669,7 +654,6 @@ contains
     ! comment these out; they are tested in the test suite
     
     !if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
-    !if(this%family_is_mgga_with_exc)  apply = .false.
     ! keep these checks; currently no tests for these in the test suite
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
     if(associated(this%hm_base%phase) .and. accel_is_enabled()) apply = .false.
@@ -757,36 +741,6 @@ contains
     call restart_write(restart, iunit, lines, 1, err)
     if (err /= 0) ierr = ierr + 4
 
-    ! MGGAs and hybrid MGGAs have an extra term that also needs to be dumped
-    if (hm%family_is_mgga_with_exc) then
-      lines(1) = '#     #spin    #nspin    filename'
-      lines(2) = '%vtau'
-      call restart_write(restart, iunit, lines, 2, err)
-      if (err /= 0) ierr = ierr + 8
-
-      err2 = 0
-      do isp = 1, hm%d%nspin
-        if (hm%d%nspin == 1) then
-          write(filename, fmt='(a)') 'vtau'
-        else
-          write(filename, fmt='(a,i1)') 'vtau-sp', isp
-        end if
-        write(lines(1), '(i8,a,i8,a)') isp, ' | ', hm%d%nspin, ' | "'//trim(adjustl(filename))//'"'
-        call restart_write(restart, iunit, lines, 1, err)
-        if (err /= 0) err2(1) = err2(1) + 16
-
-        call drestart_write_mesh_function(restart, filename, mesh, hm%vtau(:,isp), err)
-        if (err /= 0) err2(1) = err2(1) + 1
-
-      end do
-      if (err2(1) /= 0) ierr = ierr + 32
-      if (err2(2) /= 0) ierr = ierr + 64
-
-      lines(1) = '%'
-      call restart_write(restart, iunit, lines, 1, err)
-      if (err /= 0) ierr = ierr + 128
-    end if
-
     call restart_close(restart, iunit)
 
     if (debug%info) then
@@ -837,24 +791,6 @@ contains
 
     end do
     if (err2 /= 0) ierr = ierr + 1
-
-    ! MGGAs and hybrid MGGAs have an extra term that also needs to be read
-    err2 = 0
-    if (hm%family_is_mgga_with_exc) then
-      do isp = 1, hm%d%nspin
-        if (hm%d%nspin == 1) then
-          write(filename, fmt='(a)') 'vtau'
-        else
-          write(filename, fmt='(a,i1)') 'vtau-sp', isp
-        end if
-
-        call drestart_read_mesh_function(restart, filename, mesh, hm%vtau(:,isp), err)
-        if (err /= 0) err2 = err2 + 1
-
-      end do
-
-      if (err2 /= 0) ierr = ierr + 2
-    end if
 
     if (debug%info) then
       message(1) = "Debug: Reading Vhxc restart done."

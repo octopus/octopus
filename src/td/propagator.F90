@@ -100,7 +100,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine propagator_init(gr, st, tr, have_fields, family_is_mgga)
+  subroutine propagator_init(gr, st, tr, have_fields)
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(in)    :: st
     type(propagator_t),  intent(inout) :: tr
@@ -108,7 +108,6 @@ contains
     !! that must be propagated (currently ions
     !! or a gauge field).
     logical,             intent(in)    :: have_fields 
-    logical,             intent(in)    :: family_is_mgga
 
     PUSH_SUB(propagator_init)
     
@@ -232,11 +231,7 @@ contains
       end if
     end if
 
-    select case(tr%method)
-    case default
-      call potential_interpolation_init(tr%vksold, gr%mesh%np, st%d%nspin, family_is_mgga)
-    end select
-
+    call potential_interpolation_init(tr%vksold, gr%mesh%np, st%d%nspin)
     call exponential_init(tr%te) ! initialize propagator
 
     call messages_obsolete_variable('TDSelfConsistentSteps', 'TDStepsWithSelfConsistency')
@@ -346,13 +341,7 @@ contains
 
     PUSH_SUB(propagator_run_zero_iter)
 
-    if(hm%family_is_mgga_with_exc) then
-      call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
-              hm%vhxc, vtau = hm%vtau)   
-    else
-      call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
-                hm%vhxc)
-    end if
+    call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, hm%vhxc)
 
     POP_SUB(propagator_run_zero_iter)
   end subroutine propagator_run_zero_iter
@@ -387,21 +376,14 @@ contains
 
     update_energy_ = optional_default(update_energy, .true.)
 
-    if(hm%family_is_mgga_with_exc) then
-      call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
-                hm%vhxc, vtau = hm%vtau)
-    else
-      call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
-                hm%vhxc)
-    end if
+    call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, hm%vhxc)
 
     if(present(scsteps)) scsteps = 1
    
     select case(tr%method)
     case(PROP_ETRS)
       if(self_consistent_step()) then
-        call td_etrs_sc(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, tr%scf_threshold, &
-           scsteps)
+        call td_etrs_sc(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, tr%scf_threshold, scsteps)
       else
         call td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
       end if

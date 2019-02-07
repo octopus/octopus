@@ -87,7 +87,6 @@ module v_ks_oct_m
     type(energy_t),       pointer :: energy
     type(states_t),       pointer :: hf_st
     FLOAT,                pointer :: vxc(:, :)
-    FLOAT,                pointer :: vtau(:, :)
     FLOAT,                pointer :: axc(:, :, :)
     logical                       :: calc_energy
     type(geometry_t),     pointer :: geo
@@ -549,7 +548,7 @@ contains
     if(ks%sic_type == SIC_AMALDI) ks%calc%amaldi_factor = (st%qtot - M_ONE)/st%qtot
 
     nullify(ks%calc%density, ks%calc%total_density)
-    nullify(ks%calc%vxc, ks%calc%vtau, ks%calc%axc)
+    nullify(ks%calc%vxc, ks%calc%axc)
 
     if(ks%theory_level /= INDEPENDENT_PARTICLES .and. ks%calc%amaldi_factor /= M_ZERO) then
 
@@ -628,9 +627,6 @@ contains
       
       PUSH_SUB(add_adsic)
       
-      if(family_is_mgga(hm%xc_family)) then
-        call messages_not_implemented('ADSIC with MGGAs')
-      end if
       if (st%d%ispin == SPINORS) then
         call messages_not_implemented('ADSIC with non-collinear spin')      
       end if
@@ -707,38 +703,17 @@ contains
       SAFE_ALLOCATE(ks%calc%vxc(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
       ks%calc%vxc = M_ZERO
 
-      nullify(ks%calc%vtau)
-      if(hm%family_is_mgga_with_exc) then
-        SAFE_ALLOCATE(ks%calc%vtau(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
-        ks%calc%vtau = M_ZERO
-      end if
-
       ! Get the *local* XC term
       if(ks%calc%calc_energy) then
-        if(hm%family_is_mgga_with_exc) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
-            ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, vtau = ks%calc%vtau)
-        else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, &
-            st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
-            ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
-        end if
+        call xc_get_vxc(ks%gr%fine%der, ks%xc, &
+          st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
+          ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
       else
-        if(hm%family_is_mgga_with_exc) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, &
-            st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
-            ks%calc%vxc, vtau = ks%calc%vtau)
-        else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, &
-            st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, &
-            ks%calc%vxc)
-        end if
+        call xc_get_vxc(ks%gr%fine%der, ks%xc, &
+          st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc)
       end if
 
-      if (ks%sic_type == SIC_ADSIC) then
-        call add_adsic(hm)
-      end if
+      if (ks%sic_type == SIC_ADSIC) call add_adsic(hm)
 
       if(ks%calc%calc_energy) then
         ! Now we calculate Int[n vxc] = energy%intnvxc
@@ -753,7 +728,6 @@ contains
           ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + &
             factor*dmf_dotp(ks%gr%fine%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin))
         end do
-
       end if
 
       call profiling_out(prof)
@@ -804,13 +778,6 @@ contains
         hm%vxc => ks%calc%vxc
       end if
       
-      if(hm%family_is_mgga_with_exc) then
-        do ispin = 1, hm%d%nspin
-          call lalg_copy(ks%gr%fine%mesh%np, ks%calc%vtau(:, ispin), hm%vtau(:, ispin))
-        end do
-        SAFE_DEALLOCATE_P(ks%calc%vtau)
-      end if
-      
       hm%energy%hartree = M_ZERO
       call v_ks_hartree(ks, hm)
 
@@ -827,7 +794,6 @@ contains
 
       ! Note: this includes hybrids calculated with the Fock operator instead of OEP 
       if(ks%theory_level == HARTREE_FOCK) then
-
         ! swap the states object
         if(associated(hm%hf_st)) then
           if(hm%hf_st%parallel_in_states) call states_parallel_remote_access_stop(hm%hf_st)
@@ -842,7 +808,6 @@ contains
           hm%exx_coef = ks%xc%exx_coef
         end select
       end if
-      
     end if
 
     if(ks%calc%time_present) then
@@ -850,7 +815,6 @@ contains
     else
       call hamiltonian_update(hm, ks%gr%mesh, ks%gr%der%boundaries)
     end if
-
 
     SAFE_DEALLOCATE_P(ks%calc%density)
     if(ks%calc%total_density_alloc) then
@@ -877,11 +841,8 @@ contains
     CMPLX, allocatable :: kick(:)
     FLOAT, allocatable :: kick_real(:)
     integer :: ii
-
     integer :: asc_unit_test
-
     FLOAT :: dt
-
     logical :: kick_time
 
     PUSH_SUB(v_ks_hartree)

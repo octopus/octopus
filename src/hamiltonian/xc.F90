@@ -57,10 +57,7 @@ module xc_oct_m
     xc_write_info,      &
     xc_get_vxc,         &
     xc_is_orbital_dependent, &
-    family_is_gga,      &
-    family_is_mgga,     &
-    family_is_mgga_with_exc   
-
+    family_is_gga
 
   type xc_t
     integer :: family                   !< the families present
@@ -142,8 +139,17 @@ contains
     xcs%flags  = 0
     xcs%kernel_family = 0
 
-    call parse()
-
+    !%Variable ParallelXC
+    !%Type logical
+    !%Default true
+    !%Section Execution::Parallelization
+    !%Description
+    !% When enabled, additional parallelization
+    !% will be used for the calculation of the XC functional.
+    !%End
+    call messages_obsolete_variable('XCParallel', 'ParallelXC')
+    call parse_variable('ParallelXC', .true., xcs%parallel)
+        
     !we also need XC functionals that do not depend on the current
     !get both spin-polarized and unpolarized
     do isp = 1, 2
@@ -161,9 +167,6 @@ contains
 
     xcs%flags = ior(xcs%flags, xcs%functional(FUNC_X,1)%flags)
     xcs%flags = ior(xcs%flags, xcs%functional(FUNC_C,1)%flags)
-
-    xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(FUNC_X,1)%family)
-    xcs%kernel_family = ior(xcs%kernel_family, xcs%kernel(FUNC_C,1)%family)
 
     ! Take care of hybrid functionals (they appear in the correlation functional)
     xcs%exx_coef = M_ZERO
@@ -190,134 +193,16 @@ contains
 
     end if
 
-    if (bitand(xcs%family, XC_FAMILY_LCA) /= 0) &
-      call messages_not_implemented("LCA current functionals") ! not even in libxc!
-
     call messages_obsolete_variable('MGGAimplementation')
     call messages_obsolete_variable('CurrentInTau', 'XCUseGaugeIndependentKED')
 
-    if(family_is_mgga(xcs%family)) then
-      !%Variable XCUseGaugeIndependentKED
-      !%Type logical
-      !%Default yes
-      !%Section Hamiltonian::XC
-      !%Description
-      !% If true, when evaluating the XC functional, a term including the (paramagnetic or total) current
-      !% is added to the kinetic-energy density such as to make it gauge-independent.
-      !% Applies only to meta-GGA (and hybrid meta-GGA) functionals.
-      !%End
-      call parse_variable('XCUseGaugeIndependentKED', .true., xcs%use_gi_ked)
+    if(bitand(xcs%functional(FUNC_X,1)%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0 .or. &
+      bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+      call messages_write('MGGA functionals are not available in pulpito, use Octopus')
+      call messages_fatal()
     end if
 
     POP_SUB(xc_init)
-
-  contains 
-
-    subroutine parse()
-
-      PUSH_SUB(xc_init.parse)
-
-      ! the values of x_id,  c_id, xk_id, and c_id are read outside the routine
-      
-      !%Variable XCKernelLRCAlpha
-      !%Type float
-      !%Default 0.0
-      !%Section Hamiltonian::XC
-      !%Description
-      !% Set to a non-zero value to add a long-range correction for solids to the kernel.
-      !% This is the <math>\alpha</math> parameter defined in S. Botti <i>et al.</i>, <i>Phys. Rev. B</i>
-      !% 69, 155112 (2004). The <math>\Gamma = \Gamma` = 0</math> term <math>-\alpha/q^2</math> is taken 
-      !% into account by introducing an additional pole to the polarizability (see R. Stubner  
-      !% <i>et al.</i>, <i>Phys. Rev. B</i> 70, 245119 (2004)). The rest of the terms are included by  
-      !% multiplying the Hartree term by <math>1 - \alpha / 4 \pi</math>. The use of non-zero 
-      !% <math>\alpha</math> in combination with <tt>HamiltonianVariation</tt> = <tt>V_ext_only</tt>  
-      !% corresponds to account of only the <math>\Gamma = \Gamma` = 0</math> term. 
-      !% Applicable only to isotropic systems. (Experimental)
-      !%End
-
-      call parse_variable('XCKernelLRCAlpha', M_ZERO, xcs%kernel_lrc_alpha)
-      if(abs(xcs%kernel_lrc_alpha) > M_EPSILON) &
-        call messages_experimental("Long-range correction to kernel")
-
-      !%Variable XCDensityCorrection
-      !%Type integer
-      !%Default none
-      !%Section Hamiltonian::XC::DensityCorrection
-      !%Description
-      !% This variable controls the long-range correction of the XC
-      !% potential using the <a href=http://arxiv.org/abs/1107.4339>XC density representation</a>.
-      !%Option none 0
-      !% No correction is applied.
-      !%Option long_range_x 1
-      !% The correction is applied to the exchange potential.
-      !%End
-      call parse_variable('XCDensityCorrection', LR_NONE, xcs%xc_density_correction)
-
-      if(xcs%xc_density_correction /= LR_NONE) then 
-        call messages_experimental('XC density correction')
-
-        !%Variable XCDensityCorrectionOptimize
-        !%Type logical
-        !%Default true
-        !%Section Hamiltonian::XC::DensityCorrection
-        !%Description
-        !% When enabled, the density cutoff will be
-        !% optimized to replicate the boundary conditions of the exact
-        !% XC potential. If the variable is set to no, the value of
-        !% the cutoff must be given by the <tt>XCDensityCorrectionCutoff</tt>
-        !% variable.
-        !%End
-        call parse_variable('XCDensityCorrectionOptimize', .true., xcs%xcd_optimize_cutoff)
-
-        !%Variable XCDensityCorrectionCutoff
-        !%Type float
-        !%Default 0.0
-        !%Section Hamiltonian::XC::DensityCorrection
-        !%Description
-        !% The value of the cutoff applied to the XC density.
-        !%End
-        call parse_variable('XCDensityCorrectionCutoff', CNST(0.0), xcs%xcd_ncutoff)
-
-        !%Variable XCDensityCorrectionMinimum
-        !%Type logical
-        !%Default true
-        !%Section Hamiltonian::XC::DensityCorrection
-        !%Description
-        !% When enabled, the cutoff optimization will
-        !% return the first minimum of the <math>q_{xc}</math> function if it does
-        !% not find a value of -1 (<a href=http://arxiv.org/abs/1107.4339>details</a>).
-        !% This is required for atoms or small
-        !% molecules, but may cause numerical problems.
-        !%End
-        call parse_variable('XCDensityCorrectionMinimum', .true., xcs%xcd_minimum)
-
-        !%Variable XCDensityCorrectionNormalize
-        !%Type logical
-        !%Default true
-        !%Section Hamiltonian::XC::DensityCorrection
-        !%Description
-        !% When enabled, the correction will be
-        !% normalized to reproduce the exact boundary conditions of
-        !% the XC potential.
-        !%End
-        call parse_variable('XCDensityCorrectionNormalize', .true., xcs%xcd_normalize)
-
-      end if
-
-      !%Variable ParallelXC
-      !%Type logical
-      !%Default true
-      !%Section Execution::Parallelization
-      !%Description
-      !% When enabled, additional parallelization
-      !% will be used for the calculation of the XC functional.
-      !%End
-      call messages_obsolete_variable('XCParallel', 'ParallelXC')
-      call parse_variable('ParallelXC', .true., xcs%parallel)
-      
-      POP_SUB(xc_init.parse)
-    end subroutine parse
-
   end subroutine xc_init
 
 
@@ -351,7 +236,6 @@ contains
 
     POP_SUB(xc_is_orbital_dependent)
   end function xc_is_orbital_dependent
-
 
 #include "vxc_inc.F90"
 

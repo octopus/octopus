@@ -336,14 +336,8 @@ contains
 
     if(tr%method == PROP_CAETRS) then
       SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
-      if(hm%family_is_mgga_with_exc) then 
-        call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold, vtau = vtauold)
-        call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
-        call lalg_copy(gr%mesh%np, st%d%nspin, vtauold, hm%vtau)
-      else
-        call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold)
-        call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
-      endif
+      call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold)
+      call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
 
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt)
       !We update the occupation matrices
@@ -361,33 +355,16 @@ contains
     if(tr%method == PROP_CAETRS) then
       call v_ks_calc_finish(ks, hm)
 
-      if(hm%family_is_mgga_with_exc) then 
-        !TODO: This does not support complex scaling for the apparently
-        call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc, vtau = hm%vtau)
-        call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
-           tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
-        call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
-           tr%vksold%vtau_old(:, :, 1:3), time, tr%vksold%vtau_old(:, :, 0))
-        forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np)
-          vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
-          vtauold(ip, ispin) =  CNST(0.5)*dt*(hm%vtau(ip, ispin) - vtauold(ip, ispin))
-        end forall      
-      else
-        !TODO: This does not support complex scaling for the apparently
-        call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc)
-        call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
-           tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
-
-        forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np)
-          vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
-        end forall
-      end if
+      call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc)
+      call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
+        tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
+      
+      forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np)
+        vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
+      end forall
 
       ! copy vold to a cl buffer
       if(accel_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
-        if(hm%family_is_mgga_with_exc) then
-          call messages_not_implemented('CAETRS propagator with accel and MGGA with energy functionals')
-        end if
         pnp = accel_padded_size(gr%mesh%np)
         call accel_create_buffer(phase_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp*st%d%nspin)
         ASSERT(ubound(vold, dim = 1) == gr%mesh%np)
@@ -398,13 +375,8 @@ contains
 
     end if
 
-    !TODO: This does not support complex scaling for the apparently
-    if(hm%family_is_mgga_with_exc) then
-      call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc, vtau = hm%vtau)
-    else
-      call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc)
-    end if
-
+    call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc)
+    
     ! move the ions to time t
     if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)

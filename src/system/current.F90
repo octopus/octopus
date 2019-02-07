@@ -335,23 +335,8 @@ contains
           end do
           
           if(this%method == CURRENT_GRADIENT_CORR) then
-            !A nonlocal contribution from the MGGA potential must be included
-            !This must be done first, as this is like a position-dependent mass 
-            if(hm%family_is_mgga_with_exc) then
-              do idim = 1, st%d%dim
-                do idir = 1, der%mesh%sb%dim
-                  !$omp parallel do
-                  do ip = 1, der%mesh%np
-                    gpsi(ip, idir, idim) = (M_ONE+CNST(2.0)*hm%vtau(ip,ispin))*gpsi(ip, idir, idim)
-                  end do
-                  !$omp end parallel do
-                end do
-              end do 
-            end if
-           
             !A nonlocal contribution from the pseudopotential must be included
             call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, st%d%dim, ik, psi, gpsi)                 
-           
           end if
 
           ww = st%d%kweights(ik)*st%occ(ist, ik)

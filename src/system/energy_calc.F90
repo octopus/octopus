@@ -67,7 +67,6 @@ contains
 
     FLOAT                             :: tnadd_energy, external_energy
     logical :: full_
-    FLOAT :: evxctau
 
     PUSH_SUB(energy_calc_total)
 
@@ -76,7 +75,6 @@ contains
 
     hm%energy%eigenvalues = states_eigenvalues_sum(st)
 
-    evxctau = M_ZERO
     if(full_ .or. hm%theory_level == HARTREE_FOCK) then
       if(states_are_real(st)) then
 
@@ -87,7 +85,6 @@ contains
         hm%energy%extern_local = external_energy + denergy_calc_electronic(hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
         hm%energy%extern_non_local   = denergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
         hm%energy%extern = hm%energy%extern_local + hm%energy%extern_non_local
-        evxctau = denergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
       else
         hm%energy%kinetic = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
          
@@ -95,8 +92,6 @@ contains
         
         hm%energy%extern_non_local = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
         hm%energy%extern   = hm%energy%extern_local   + hm%energy%extern_non_local 
-        
-        evxctau = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
       end if
     end if
 
@@ -106,12 +101,12 @@ contains
        
     case(HARTREE_FOCK)
       hm%energy%total = hm%ep%eii + &
-        M_HALF*(hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern - hm%energy%intnvxc - evxctau) &
+        M_HALF*(hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern - hm%energy%intnvxc) &
         + hm%energy%correlation
 
     case(KOHN_SHAM_DFT)
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues &
-        - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation - hm%energy%intnvxc - evxctau
+        - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation - hm%energy%intnvxc
    end select 
     
     hm%energy%entropy = smear_calc_entropy(st%smear, st%eigenval, st%d%nik, st%nst, st%d%kweights, st%occ)
@@ -134,7 +129,7 @@ contains
       write(message(1), '(6x,a, f18.8)')'Ion-ion     = ', units_from_atomic(units_out%energy, hm%ep%eii)
       write(message(2), '(6x,a, f18.8)')'Eigenvalues = ', units_from_atomic(units_out%energy, hm%energy%eigenvalues)
       write(message(3), '(6x,a, f18.8)')'Hartree     = ', units_from_atomic(units_out%energy, hm%energy%hartree)
-      write(message(4), '(6x,a, f18.8)')'Int[n*v_xc] = ', units_from_atomic(units_out%energy, hm%energy%intnvxc + evxctau)
+      write(message(4), '(6x,a, f18.8)')'Int[n*v_xc] = ', units_from_atomic(units_out%energy, hm%energy%intnvxc)
       write(message(5), '(6x,a, f18.8)')'Exchange    = ', units_from_atomic(units_out%energy, hm%energy%exchange)
       write(message(6), '(6x,a, f18.8)')'Correlation = ', units_from_atomic(units_out%energy, hm%energy%correlation)
       write(message(8), '(6x,a, f18.8)')'Delta XC    = ', units_from_atomic(units_out%energy, hm%energy%delta_xc)
