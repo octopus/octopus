@@ -1510,7 +1510,7 @@ contains
     !> To be implemented.
     !> ps_t has no copy procedure.
     !> if(associated(that%ps))then
-    !>   SAFE_ALLOCATE(this%ps)
+    !>   allocate(this%ps)
     !>   call ps_copy(this%ps, that%ps)
     !> end if
     this%nlcc=that%nlcc
