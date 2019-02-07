@@ -35,34 +35,6 @@ __kernel void vpsi(const int offset,
 
 }
 
-__kernel void vpsi_spinors(const int np,
-			   __global double const * restrict vv, const int ldvv,
-			   __global double2 const * restrict psi, const int ldpsi,
-			   __global double2 * restrict vpsi, const int ldvpsi){
-  const int ist = 2*get_global_id(0);
-  const int ip = get_global_id(1);
-  
-  if(ip < np){
-
-    const double vi1 = vv[         ip];
-    const double vi2 = vv[ldvv   + ip];
-    const double vi3 = vv[2*ldvv + ip];
-    const double vi4 = vv[3*ldvv + ip];
-    
-    const double2 psi1 = psi[ip*ldpsi + ist];
-    const double2 psi2 = psi[ip*ldpsi + ist + 1];
-
-#ifdef CUDA
-    vpsi[ip*ldvpsi + ist] += vi1*psi1 + double2(vi3*psi2.x - vi4*psi2.y, vi3*psi2.y + vi4*psi2.x);
-    vpsi[ip*ldvpsi + ist + 1] += vi2*psi2 + double2(vi3*psi1.x + vi4*psi1.y, vi3*psi1.y - vi4*psi1.x);
-#else
-    vpsi[ip*ldvpsi + ist] += vi1*psi1 + (double2)(vi3*psi2.x - vi4*psi2.y, vi3*psi2.y + vi4*psi2.x);
-    vpsi[ip*ldvpsi + ist + 1] += vi2*psi2 + (double2)(vi3*psi1.x + vi4*psi1.y, vi3*psi1.y - vi4*psi1.x);
-#endif
-
-  }
-}
-
 /*
  Local Variables:
  mode: c

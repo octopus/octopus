@@ -332,8 +332,7 @@ noinst_HEADERS +=                                    \
 	hamiltonian/hamiltonian_inc.F90              \
 	hamiltonian/kb_projector_inc.F90             \
 	hamiltonian/lasers_inc.F90                   \
-	hamiltonian/projector_inc.F90                \
-	hamiltonian/vxc_inc.F90
+	hamiltonian/projector_inc.F90
 
 # Sources in system
 all_f_srcs +=                                   \

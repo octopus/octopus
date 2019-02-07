@@ -65,6 +65,8 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
   call profiling_in(prof_vlpsi, "VLPSI")
   PUSH_SUB(X(hamiltonian_base_local_sub))
 
+  ASSERT(std%ispin /= SPINORS)
+
   pot_is_cmplx = .false.
   if(present(Impotential)) pot_is_cmplx = .true.
 
@@ -80,38 +82,20 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
 
     pnp = accel_padded_size(mesh%np)
 
-    select case(std%ispin)
+    call accel_set_kernel_arg(kernel_vpsi, 0, pnp*(ispin - 1))
+    call accel_set_kernel_arg(kernel_vpsi, 1, mesh%np)
+    call accel_set_kernel_arg(kernel_vpsi, 2, potential_opencl)
+    call accel_set_kernel_arg(kernel_vpsi, 3, psib%pack%buffer)
+    call accel_set_kernel_arg(kernel_vpsi, 4, log2(psib%pack%size_real(1)))
+    call accel_set_kernel_arg(kernel_vpsi, 5, vpsib%pack%buffer)
+    call accel_set_kernel_arg(kernel_vpsi, 6, log2(vpsib%pack%size_real(1)))
 
-    case(UNPOLARIZED, SPIN_POLARIZED)
-      call accel_set_kernel_arg(kernel_vpsi, 0, pnp*(ispin - 1))
-      call accel_set_kernel_arg(kernel_vpsi, 1, mesh%np)
-      call accel_set_kernel_arg(kernel_vpsi, 2, potential_opencl)
-      call accel_set_kernel_arg(kernel_vpsi, 3, psib%pack%buffer)
-      call accel_set_kernel_arg(kernel_vpsi, 4, log2(psib%pack%size_real(1)))
-      call accel_set_kernel_arg(kernel_vpsi, 5, vpsib%pack%buffer)
-      call accel_set_kernel_arg(kernel_vpsi, 6, log2(vpsib%pack%size_real(1)))
+    localsize = accel_kernel_workgroup_size(kernel_vpsi)/psib%pack%size_real(1)
 
-      localsize = accel_kernel_workgroup_size(kernel_vpsi)/psib%pack%size_real(1)
+    dim3 = mesh%np/(accel_max_size_per_dim(2)*localsize) + 1
+    dim2 = min(accel_max_size_per_dim(2)*localsize, pad(mesh%np, localsize))
 
-      dim3 = mesh%np/(accel_max_size_per_dim(2)*localsize) + 1
-      dim2 = min(accel_max_size_per_dim(2)*localsize, pad(mesh%np, localsize))
-
-      call accel_kernel_run(kernel_vpsi, (/psib%pack%size_real(1), dim2, dim3/), (/psib%pack%size_real(1), localsize, 1/))
-
-    case(SPINORS)
-      call accel_set_kernel_arg(kernel_vpsi_spinors, 0, mesh%np)
-      call accel_set_kernel_arg(kernel_vpsi_spinors, 1, potential_opencl)
-      call accel_set_kernel_arg(kernel_vpsi_spinors, 2, pnp)
-      call accel_set_kernel_arg(kernel_vpsi_spinors, 3, psib%pack%buffer)
-      call accel_set_kernel_arg(kernel_vpsi_spinors, 4, psib%pack%size(1))
-      call accel_set_kernel_arg(kernel_vpsi_spinors, 5, vpsib%pack%buffer)
-      call accel_set_kernel_arg(kernel_vpsi_spinors, 6, vpsib%pack%size(1))
-
-      call accel_kernel_run(kernel_vpsi_spinors, (/psib%pack%size(1)/2, pnp/), &
-        (/psib%pack%size(1)/2, 2*accel_max_workgroup_size()/psib%pack%size(1)/))
-
-    end select
-
+    call accel_kernel_run(kernel_vpsi, (/psib%pack%size_real(1), dim2, dim3/), (/psib%pack%size_real(1), localsize, 1/))
     call accel_finish()
 
     call profiling_count_operations((R_MUL*psib%nst)*mesh%np)
@@ -119,126 +103,51 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
     call profiling_count_transfers(mesh%np*psib%nst, R_TOTYPE(M_ONE))
 
   case(BATCH_PACKED)
-
-    select case(std%ispin)
-    case(UNPOLARIZED, SPIN_POLARIZED)
-      if(pot_is_cmplx)then
-        do ip = 1, mesh%np
-          vv = potential(ip, ispin)
-          Imvv = Impotential(ip, ispin)
-          forall (ist = 1:psib%nst_linear)
-            vpsib%pack%X(psi)(ist, ip) = vpsib%pack%X(psi)(ist, ip) + (vv+M_zI*Imvv)*psib%pack%X(psi)(ist, ip)
-          end forall
-        end do
-      else
-        !$omp parallel do private(vv, ist)
-        do ip = 1, mesh%np
-          vv = potential(ip, ispin)
-          forall (ist = 1:psib%nst_linear)
-            vpsib%pack%X(psi)(ist, ip) = vpsib%pack%X(psi)(ist, ip) + vv*psib%pack%X(psi)(ist, ip)
-          end forall
-        end do
-        !$omp end parallel do
-      end if
-      call profiling_count_operations((2*R_ADD*psib%nst_linear)*mesh%np)
-      call profiling_count_transfers(mesh%np, M_ONE)
-      call profiling_count_transfers(mesh%np*psib%nst_linear, R_TOTYPE(M_ONE))
-
-    case(SPINORS)
-      ASSERT(mod(psib%nst_linear, 2) == 0)
-      !the spinor case is more complicated since it mixes the two components.
-      if(pot_is_cmplx)then
-        !$omp parallel do private(psi1, psi2, ist, pot)
-        do ip = 1, mesh%np
-          do ist = 1, psib%nst_linear, 2
-            psi1 = psib%pack%zpsi(ist    , ip)
-            psi2 = psib%pack%zpsi(ist + 1, ip)
-            pot(1:4) = potential(ip, 1:4) + M_zI * Impotential(ip, 1:4)
-            vpsib%pack%zpsi(ist    , ip) = vpsib%pack%zpsi(ist    , ip) + &
-                   pot(1)*psi1 + (pot(3) + M_zI*pot(4))*psi2
-            vpsib%pack%zpsi(ist + 1, ip) = vpsib%pack%zpsi(ist + 1, ip) + &
-                   pot(2)*psi2 + (pot(3) - M_zI*pot(4))*psi1            
-          end do
-        end do
-        !$omp end parallel do
-                
-      else
-        !$omp parallel do private(psi1, psi2, ist)
-        do ip = 1, mesh%np
-          do ist = 1, psib%nst_linear, 2
-            psi1 = psib%pack%zpsi(ist    , ip)
-            psi2 = psib%pack%zpsi(ist + 1, ip)
-            vpsib%pack%zpsi(ist    , ip) = vpsib%pack%zpsi(ist    , ip) + &
-              potential(ip, 1)*psi1 + (potential(ip, 3) + M_zI*potential(ip, 4))*psi2
-            vpsib%pack%zpsi(ist + 1, ip) = vpsib%pack%zpsi(ist + 1, ip) + &
-              potential(ip, 2)*psi2 + (potential(ip, 3) - M_zI*potential(ip, 4))*psi1            
-          end do
-        end do
-        !$omp end parallel do
-      end if
-      
-      call profiling_count_operations((6*R_ADD + 2*R_MUL)*mesh%np*psib%nst)
-
-    end select
+    if(pot_is_cmplx)then
+      do ip = 1, mesh%np
+        vv = potential(ip, ispin)
+        Imvv = Impotential(ip, ispin)
+        forall (ist = 1:psib%nst_linear)
+          vpsib%pack%X(psi)(ist, ip) = vpsib%pack%X(psi)(ist, ip) + (vv+M_zI*Imvv)*psib%pack%X(psi)(ist, ip)
+        end forall
+      end do
+    else
+      !$omp parallel do private(vv, ist)
+      do ip = 1, mesh%np
+        vv = potential(ip, ispin)
+        forall (ist = 1:psib%nst_linear)
+          vpsib%pack%X(psi)(ist, ip) = vpsib%pack%X(psi)(ist, ip) + vv*psib%pack%X(psi)(ist, ip)
+        end forall
+      end do
+      !$omp end parallel do
+    end if
+    call profiling_count_operations((2*R_ADD*psib%nst_linear)*mesh%np)
+    call profiling_count_transfers(mesh%np, M_ONE)
+    call profiling_count_transfers(mesh%np*psib%nst_linear, R_TOTYPE(M_ONE))
+    call profiling_count_operations((6*R_ADD + 2*R_MUL)*mesh%np*psib%nst)
 
   case(BATCH_NOT_PACKED)
+    if(pot_is_cmplx)then
+      do ist = 1, psib%nst
+        forall (ip = 1:mesh%np)
+          vpsib%states(ist)%X(psi)(ip, 1) = vpsib%states(ist)%X(psi)(ip, 1) + &
+            (potential(ip, ispin)+ M_zI*Impotential(ip, ispin)) * psib%states(ist)%X(psi)(ip, 1) 
+        end forall
+      end do
+    else
+      !$omp parallel do private(ip)
+      do ist = 1, psib%nst
+        forall (ip = 1:mesh%np)
+          vpsib%states(ist)%X(psi)(ip, 1) = vpsib%states(ist)%X(psi)(ip, 1) + &
+            potential(ip, ispin) * psib%states(ist)%X(psi)(ip, 1)
+        end forall
+      end do
+      !$omp end parallel do
+    end if
 
-    select case(std%ispin)
-    case(UNPOLARIZED, SPIN_POLARIZED)
-      if(pot_is_cmplx)then
-        do ist = 1, psib%nst
-          forall (ip = 1:mesh%np)
-            vpsib%states(ist)%X(psi)(ip, 1) = vpsib%states(ist)%X(psi)(ip, 1) + &
-              (potential(ip, ispin)+ M_zI*Impotential(ip, ispin)) * psib%states(ist)%X(psi)(ip, 1) 
-          end forall
-        end do
-      else
-        !$omp parallel do private(ip)
-        do ist = 1, psib%nst
-          forall (ip = 1:mesh%np)
-            vpsib%states(ist)%X(psi)(ip, 1) = vpsib%states(ist)%X(psi)(ip, 1) + &
-              potential(ip, ispin) * psib%states(ist)%X(psi)(ip, 1)
-          end forall
-        end do
-        !$omp end parallel do
-      end if
-
-      call profiling_count_operations((2*R_ADD*psib%nst)*mesh%np)
-      call profiling_count_transfers(mesh%np, M_ONE)
-      call profiling_count_transfers(mesh%np*psib%nst, R_TOTYPE(M_ONE))
-
-    case(SPINORS)
-      !the spinor case is more complicated since it mixes the two components.
-      if (pot_is_cmplx) then
-        do ist = 1, psib%nst
-          psi  => psib%states(ist)%X(psi)
-          vpsi => vpsib%states(ist)%X(psi)
-          
-          do ip = 1, mesh%np
-            pot(1:4) = potential(ip, 1:4) + M_zI * Impotential(ip, 1:4)
-            vpsi(ip, 1) = vpsi(ip, 1) + pot(1)*psi(ip, 1) + &
-                          (pot(3) + M_zI*pot(4))*psi(ip, 2)
-            vpsi(ip, 2) = vpsi(ip, 2) + pot(2)*psi(ip, 2) + &
-                          (pot(3) - M_zI*pot(4))*psi(ip, 1)
-          end do
-        end do
-        
-      else
-        do ist = 1, psib%nst
-          psi  => psib%states(ist)%X(psi)
-          vpsi => vpsib%states(ist)%X(psi)
-
-          forall(ip = 1:mesh%np)
-            vpsi(ip, 1) = vpsi(ip, 1) + potential(ip, 1)*psi(ip, 1) + &
-              (potential(ip, 3) + M_zI*potential(ip, 4))*psi(ip, 2)
-            vpsi(ip, 2) = vpsi(ip, 2) + potential(ip, 2)*psi(ip, 2) + &
-              (potential(ip, 3) - M_zI*potential(ip, 4))*psi(ip, 1)
-          end forall
-        end do
-      end if
-      call profiling_count_operations((6*R_ADD + 2*R_MUL)*mesh%np*psib%nst)
-
-    end select
+    call profiling_count_operations((2*R_ADD*psib%nst)*mesh%np)
+    call profiling_count_transfers(mesh%np, M_ONE)
+    call profiling_count_transfers(mesh%np*psib%nst, R_TOTYPE(M_ONE))
 
   end select
 
