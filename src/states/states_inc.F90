@@ -35,7 +35,6 @@ subroutine X(states_get_state2)(st, mesh, ist, iqn, psi)
 end subroutine X(states_get_state2)
 
 ! ------------------------------------------------------------
-
 subroutine X(states_get_state1)(st, mesh, idim, ist, iqn, psi)
   type(states_t),    intent(in)    :: st
   type(mesh_t),      intent(in)    :: mesh
@@ -52,7 +51,6 @@ subroutine X(states_get_state1)(st, mesh, idim, ist, iqn, psi)
 end subroutine X(states_get_state1)
 
 ! ------------------------------------------------------------
-
 subroutine X(states_get_state4)(st, mesh, psi)
   type(states_t),    intent(in)    :: st
   type(mesh_t),      intent(in)    :: mesh
@@ -128,7 +126,6 @@ subroutine X(states_set_state1)(st, mesh, idim, ist, iqn, psi)
 end subroutine X(states_set_state1)
 
 ! ------------------------------------------------------------
-
 subroutine X(states_set_state3)(st, mesh, iqn, psi)
   type(states_t),    intent(inout) :: st
   type(mesh_t),      intent(in)    :: mesh
@@ -147,7 +144,6 @@ subroutine X(states_set_state3)(st, mesh, iqn, psi)
 end subroutine X(states_set_state3)
 
 ! ------------------------------------------------------------
-
 subroutine X(states_set_state4)(st, mesh, psi)
   type(states_t),    intent(inout) :: st
   type(mesh_t),      intent(in)    :: mesh
@@ -167,10 +163,8 @@ subroutine X(states_set_state4)(st, mesh, psi)
 end subroutine X(states_set_state4)
 
 ! ------------------------------------------------------------
-
 !> Returns the value of all the states in the range of points
 !> [start_point:end_point].
-
 subroutine X(states_get_points1)(st, start_point, end_point, iqn, psi)
   type(states_t),    intent(in)    :: st
   integer,           intent(in)    :: start_point
@@ -190,11 +184,8 @@ subroutine X(states_get_points1)(st, start_point, end_point, iqn, psi)
 end subroutine X(states_get_points1)
 
 ! ------------------------------------------------------------
-! ------------------------------------------------------------
-
 !> Returns the value of all the states in the range of points
 !> [start_point:end_point].
-
 subroutine X(states_get_points2)(st, start_point, end_point, psi)
   type(states_t),    intent(in)    :: st
   integer,           intent(in)    :: start_point

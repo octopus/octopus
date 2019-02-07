@@ -84,7 +84,6 @@ module states_oct_m
     states_fermi,                     &
     states_eigenvalues_sum,           &
     states_spin_channel,              &
-    states_calc_quantities,           &
     state_is_local,                   &
     state_kpt_is_local,               &
     states_distribute_nodes,          &
@@ -104,8 +103,6 @@ module states_oct_m
     states_block_min,                 &
     states_block_max,                 &
     states_block_size,                &
-    states_count_pairs,               &
-    occupied_states,                  &
     states_type,                      &
     states_write_eigenvalues,         &
     states_set_phase
@@ -534,7 +531,6 @@ contains
 
 
     call states_read_initial_occs(st, excess_charge, gr%sb%kpoints)
-    call states_read_initial_spins(st)
 
     st%st_start = 1
     st%st_end = st%nst
@@ -881,79 +877,6 @@ contains
     POP_SUB(states_read_initial_occs)
   end subroutine states_read_initial_occs
 
-
-  ! ---------------------------------------------------------
-  !> Reads, if present, the "InitialSpins" block. This is only
-  !! done in spinors mode; otherwise the routine does nothing. The
-  !! resulting spins are placed onto the st\%spin pointer. The boolean
-  !! st\%fixed_spins is set to true if (and only if) the InitialSpins
-  !! block is present.
-  subroutine states_read_initial_spins(st)
-    type(states_t), intent(inout) :: st
-
-    integer :: i, j
-    type(block_t) :: blk
-
-    PUSH_SUB(states_read_initial_spins)
-
-    st%fixed_spins = .false.
-    if(st%d%ispin /= SPINORS) then
-      POP_SUB(states_read_initial_spins)
-      return
-    end if
-
-    !%Variable InitialSpins
-    !%Type block
-    !%Section States
-    !%Description
-    !% The spin character of the initial random guesses for the spinors can
-    !% be fixed by making use of this block. Note that this will not "fix" the
-    !% the spins during the calculation (this cannot be done in spinors mode, in
-    !% being able to change the spins is why the spinors mode exists in the first
-    !% place).
-    !%
-    !% This block is meaningless and ignored if the run is not in spinors mode
-    !% (<tt>SpinComponents = spinors</tt>).
-    !%
-    !% The structure of the block is very simple: each column contains the desired
-    !% <math>\left< S_x \right>, \left< S_y \right>, \left< S_z \right> </math> for each spinor.
-    !% If the calculation is for a periodic system
-    !% and there is more than one <i>k</i>-point, the spins of all the <i>k</i>-points are
-    !% the same.
-    !%
-    !% For example, if we have two spinors, and we want one in the <math>S_x</math> "down" state,
-    !% and another one in the <math>S_x</math> "up" state:
-    !%
-    !% <tt>%InitialSpins
-    !% <br>&nbsp;&nbsp;&nbsp; 0.5 | 0.0 | 0.0
-    !% <br>&nbsp;&nbsp; -0.5 | 0.0 | 0.0
-    !% <br>%</tt>
-    !%
-    !% WARNING: if the calculation is for a system described by pseudopotentials (as
-    !% opposed to user-defined potentials or model systems), this option is
-    !% meaningless since the random spinors are overwritten by the atomic orbitals.
-    !%
-    !% This constraint must be fulfilled:
-    !% <br><math> \left< S_x \right>^2 + \left< S_y \right>^2 + \left< S_z \right>^2 = \frac{1}{4} </math>
-    !%End
-    spin_fix: if(parse_block('InitialSpins', blk)==0) then
-      do i = 1, st%nst
-        do j = 1, 3
-          call parse_block_float(blk, i-1, j-1, st%spin(j, i, 1))
-        end do
-        if( abs(sum(st%spin(1:3, i, 1)**2) - M_FOURTH) > CNST(1.0e-6)) call messages_input_error('InitialSpins')
-      end do
-      call parse_block_end(blk)
-      st%fixed_spins = .true.
-      do i = 2, st%d%nik
-        st%spin(:, :, i) = st%spin(:, :, 1)
-      end do
-    end if spin_fix
-
-    POP_SUB(states_read_initial_spins)
-  end subroutine states_read_initial_spins
-
-
   ! ---------------------------------------------------------
   !> Allocates the KS wavefunctions defined within a states_t structure.
   subroutine states_allocate_wfns(st, mesh, wfs_type, alloc_Left)
@@ -1099,34 +1022,12 @@ contains
       end do
     end if
 
-!!$!!!!DEBUG
-!!$    ! some debug output that I will keep here for the moment
-!!$    if(mpi_grp_is_root(mpi_world)) then
-!!$      print*, "NST       ", st%nst
-!!$      print*, "BLOCKSIZE ", st%d%block_size
-!!$      print*, "NBLOCKS   ", st%group%nblocks
-!!$
-!!$      print*, "==============="
-!!$      do ist = 1, st%nst
-!!$        print*, st%node(ist), ist, st%group%iblock(ist, 1)
-!!$      end do
-!!$      print*, "==============="
-!!$
-!!$      do ib = 1, st%group%nblocks
-!!$        print*, ib, bstart(ib), bend(ib)
-!!$      end do
-!!$
-!!$    end if
-!!$!!!!ENDOFDEBUG
-
     SAFE_DEALLOCATE_A(bstart)
     SAFE_DEALLOCATE_A(bend)
     POP_SUB(states_init_block)
   end subroutine states_init_block
 
-
   ! ---------------------------------------------------------
-  !> Deallocates the KS wavefunctions defined within a states_t structure.
   subroutine states_deallocate_wfns(st)
     type(states_t), intent(inout) :: st
 
@@ -1155,7 +1056,6 @@ contains
 
     POP_SUB(states_deallocate_wfns)
   end subroutine states_deallocate_wfns
-
 
   ! ---------------------------------------------------------
   subroutine states_densities_init(st, gr, geo)
@@ -1266,7 +1166,6 @@ contains
     !% The algorithm is taken from Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005). 
     !% According to this reference, this is much more precise than CGS or MGS algorithms. The MGS version seems not to improve much the stability and would require more communications over the domains.
     !%End
-
     default = OPTION__STATESORTHOGONALIZATION__CHOLESKY_SERIAL
 #ifdef HAVE_SCALAPACK
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
@@ -1297,7 +1196,6 @@ contains
 
     POP_SUB(states_exec_init)
   end subroutine states_exec_init
-
 
   ! ---------------------------------------------------------
   subroutine states_copy(stout, stin, exclude_wfns, exclude_eigenval)
@@ -1385,7 +1283,6 @@ contains
 
     POP_SUB(states_copy)
   end subroutine states_copy
-
 
   ! ---------------------------------------------------------
   subroutine states_end(st)
@@ -1627,9 +1524,7 @@ contains
     POP_SUB(states_fermi)
   end subroutine states_fermi
 
-
   ! ---------------------------------------------------------
-  !> function to calculate the eigenvalues sum using occupations as weights
   function states_eigenvalues_sum(st, alt_eig) result(tot)
     type(states_t),  intent(in) :: st
     FLOAT, optional, intent(in) :: alt_eig(st%st_start:, st%d%kpt%start:) !< (:st%st_end, :st%d%kpt%end)
@@ -1667,7 +1562,6 @@ contains
     end select
 
   end function states_spin_channel
-
 
   ! ---------------------------------------------------------
   subroutine states_distribute_nodes(st, mc)
@@ -1741,7 +1635,6 @@ contains
     POP_SUB(states_distribute_nodes)
   end subroutine states_distribute_nodes
 
-
   ! ---------------------------------------------------------
   subroutine states_set_complex(st)
     type(states_t),    intent(inout) :: st
@@ -1757,363 +1650,21 @@ contains
     type(states_t),    intent(in) :: st
 
     wac = (st%priv%wfs_type == TYPE_CMPLX)
-
   end function states_are_complex
-
 
   ! ---------------------------------------------------------
   pure logical function states_are_real(st) result (war)
     type(states_t),    intent(in) :: st
 
     war = (st%priv%wfs_type == TYPE_FLOAT)
-
   end function states_are_real
 
   ! ---------------------------------------------------------
-
-
   pure type(type_t) function states_type(st)
     type(states_t),    intent(in) :: st
 
     states_type = st%priv%wfs_type
-
   end function states_type
-
-
-  ! ---------------------------------------------------------
-  !
-  !> This function can calculate several quantities that depend on
-  !! derivatives of the orbitals from the states and the density.
-  !! The quantities to be calculated depend on the arguments passed.
-  subroutine states_calc_quantities(der, st, nlcc, &
-    kinetic_energy_density, paramagnetic_current, density_gradient, density_laplacian, gi_kinetic_energy_density)
-    type(derivatives_t),     intent(in)    :: der
-    type(states_t),          intent(in)    :: st
-    logical,                 intent(in)    :: nlcc
-    FLOAT, optional, target, intent(out)   :: kinetic_energy_density(:,:)       !< The kinetic energy density.
-    FLOAT, optional, target, intent(out)   :: paramagnetic_current(:,:,:)       !< The paramagnetic current.
-    FLOAT, optional,         intent(out)   :: density_gradient(:,:,:)           !< The gradient of the density.
-    FLOAT, optional,         intent(out)   :: density_laplacian(:,:)            !< The Laplacian of the density.
-    FLOAT, optional,         intent(out)   :: gi_kinetic_energy_density(:,:)    !< The gauge-invariant kinetic energy density.
-
-    FLOAT, pointer :: jp(:, :, :)
-    FLOAT, pointer :: tau(:, :)
-    CMPLX, allocatable :: wf_psi(:,:), gwf_psi(:,:,:), wf_psi_conj(:,:), lwf_psi(:,:)
-    FLOAT, allocatable :: abs_wf_psi(:), abs_gwf_psi(:)
-    CMPLX, allocatable :: psi_gpsi(:)
-    CMPLX   :: c_tmp
-    integer :: is, ik, ist, i_dim, st_dim, ii
-    FLOAT   :: ww, kpoint(1:MAX_DIM)
-    logical :: something_to_do
-    FLOAT, allocatable :: symm(:, :)
-    type(symmetrizer_t) :: symmetrizer
-    type(profile_t), save :: prof
-
-    call profiling_in(prof, "STATES_CALC_QUANTITIES")
-
-    PUSH_SUB(states_calc_quantities)
-
-    something_to_do = present(kinetic_energy_density) .or. present(gi_kinetic_energy_density) .or. &
-      present(paramagnetic_current) .or. present(density_gradient) .or. present(density_laplacian)
-    ASSERT(something_to_do)
-
-    SAFE_ALLOCATE( wf_psi(1:der%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE( wf_psi_conj(1:der%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
-    SAFE_ALLOCATE(abs_wf_psi(1:der%mesh%np))
-    SAFE_ALLOCATE(abs_gwf_psi(1:der%mesh%np))
-    SAFE_ALLOCATE(psi_gpsi(1:der%mesh%np))
-    if(present(density_laplacian)) then
-      SAFE_ALLOCATE(lwf_psi(1:der%mesh%np, 1:st%d%dim))
-    end if
-
-    nullify(tau)
-    if(present(kinetic_energy_density)) tau => kinetic_energy_density
-
-    nullify(jp)
-    if(present(paramagnetic_current)) jp => paramagnetic_current
-
-    ! for the gauge-invariant kinetic energy density we need the
-    ! current and the kinetic energy density
-    if(present(gi_kinetic_energy_density)) then
-      if(.not. present(paramagnetic_current) .and. states_are_complex(st)) then
-        SAFE_ALLOCATE(jp(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%nspin))
-      end if
-      if(.not. present(kinetic_energy_density)) then
-        SAFE_ALLOCATE(tau(1:der%mesh%np, 1:st%d%nspin))
-      end if
-    end if
-
-    if(associated(tau)) tau = M_ZERO
-    if(associated(jp)) jp = M_ZERO
-    if(present(density_gradient)) density_gradient(:,:,:) = M_ZERO
-    if(present(density_laplacian)) density_laplacian(:,:) = M_ZERO
-    if(present(gi_kinetic_energy_density)) gi_kinetic_energy_density = M_ZERO
-
-    do ik = st%d%kpt%start, st%d%kpt%end
-
-      kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
-      is = states_dim_get_spin_index(st%d, ik)
-
-      do ist = st%st_start, st%st_end
-
-        ! all calculations will be done with complex wavefunctions
-        call states_get_state(st, der%mesh, ist, ik, wf_psi)
-
-        do st_dim = 1, st%d%dim
-          call boundaries_set(der%boundaries, wf_psi(:, st_dim))
-        end do
-
-        ! calculate gradient of the wavefunction
-        do st_dim = 1, st%d%dim
-          call zderivatives_grad(der, wf_psi(:,st_dim), gwf_psi(:,:,st_dim), set_bc = .false.)
-        end do
-
-        ! calculate the Laplacian of the wavefunction
-        if (present(density_laplacian)) then
-          do st_dim = 1, st%d%dim
-            call zderivatives_lapl(der, wf_psi(:,st_dim), lwf_psi(:,st_dim), set_bc = .false.)
-          end do
-        end if
-
-        ww = st%d%kweights(ik)*st%occ(ist, ik)
-
-        !We precompute some quantites, to avoid to compute it many times
-        wf_psi_conj(1:der%mesh%np, 1:st%d%dim) = conjg(wf_psi(1:der%mesh%np,1:st%d%dim))
-        abs_wf_psi(1:der%mesh%np) = real(wf_psi_conj(1:der%mesh%np, 1)*wf_psi(1:der%mesh%np, 1))
-
-        if(present(density_laplacian)) then
-          density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is) + &
-            ww*M_TWO*real(wf_psi_conj(1:der%mesh%np, 1)*lwf_psi(1:der%mesh%np, 1))
-          if(st%d%ispin == SPINORS) then
-            density_laplacian(1:der%mesh%np, 2) = density_laplacian(1:der%mesh%np, 2) + &
-              ww*M_TWO*real(wf_psi_conj(1:der%mesh%np, 2)*lwf_psi(1:der%mesh%np, 2))
-            density_laplacian(1:der%mesh%np, 3) = density_laplacian(1:der%mesh%np, 3) + &
-              ww*real (lwf_psi(1:der%mesh%np, 1)*wf_psi_conj(1:der%mesh%np, 2) + &
-              wf_psi(1:der%mesh%np, 1)*conjg(lwf_psi(1:der%mesh%np, 2)))
-            density_laplacian(1:der%mesh%np, 4) = density_laplacian(1:der%mesh%np, 4) + &
-              ww*aimag(lwf_psi(1:der%mesh%np, 1)*wf_psi_conj(1:der%mesh%np, 2) + &
-              wf_psi(1:der%mesh%np, 1)*conjg(lwf_psi(1:der%mesh%np, 2)))
-          end if
-        end if
-
-        do i_dim = 1, der%mesh%sb%dim
-
-          !We precompute some quantites, to avoid to compute it many times
-          psi_gpsi(1:der%mesh%np) = wf_psi_conj(1:der%mesh%np, 1)*gwf_psi(1:der%mesh%np,i_dim,1)
-          abs_gwf_psi(1:der%mesh%np) = real(conjg(gwf_psi(1:der%mesh%np, i_dim, 1))*gwf_psi(1:der%mesh%np, i_dim, 1))
-
-          if(present(density_gradient)) &
-            density_gradient(1:der%mesh%np, i_dim, is) = density_gradient(1:der%mesh%np, i_dim, is) &
-            + ww*M_TWO*real(psi_gpsi(1:der%mesh%np))
-          if(present(density_laplacian)) &
-            density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is)             &
-            + ww*M_TWO*abs_gwf_psi(1:der%mesh%np)
-
-          if(associated(jp)) then
-            if (.not.(states_are_real(st))) then
-              jp(1:der%mesh%np, i_dim, is) = jp(1:der%mesh%np, i_dim, is) + &
-                ww*aimag(psi_gpsi(1:der%mesh%np)) &
-                - ww*abs_wf_psi(1:der%mesh%np)*kpoint(i_dim)
-            else
-              jp(1:der%mesh%np, i_dim, is) = M_ZERO
-            end if
-          end if
-
-          if (associated(tau)) then
-            tau (1:der%mesh%np, is)   = tau (1:der%mesh%np, is)        + &
-              ww*(abs_gwf_psi(1:der%mesh%np) + abs(kpoint(i_dim))**2*abs_wf_psi(1:der%mesh%np)  &
-              - M_TWO*aimag(psi_gpsi(1:der%mesh%np))*kpoint(i_dim))
-          end if
-
-          if(st%d%ispin == SPINORS) then
-            if(present(density_gradient)) then
-              density_gradient(1:der%mesh%np, i_dim, 2) = density_gradient(1:der%mesh%np, i_dim, 2) + &
-                ww*M_TWO*real(wf_psi_conj(1:der%mesh%np, 2)*gwf_psi(1:der%mesh%np, i_dim, 2))
-              density_gradient(1:der%mesh%np, i_dim, 3) = density_gradient(1:der%mesh%np, i_dim, 3) + ww* &
-                real (gwf_psi(1:der%mesh%np, i_dim, 1)*wf_psi_conj(1:der%mesh%np, 2) + &
-                wf_psi(1:der%mesh%np, 1)*conjg(gwf_psi(1:der%mesh%np, i_dim, 2)))
-              density_gradient(1:der%mesh%np, i_dim, 4) = density_gradient(1:der%mesh%np, i_dim, 4) + ww* &
-                aimag(gwf_psi(1:der%mesh%np, i_dim, 1)*wf_psi_conj(1:der%mesh%np, 2) + &
-                wf_psi(1:der%mesh%np, 1)*conjg(gwf_psi(1:der%mesh%np, i_dim, 2)))
-            end if
-
-            if(present(density_laplacian)) then
-              density_laplacian(1:der%mesh%np, 2) = density_laplacian(1:der%mesh%np, 2)         + &
-                ww*M_TWO*real(conjg(gwf_psi(1:der%mesh%np, i_dim, 2))*gwf_psi(1:der%mesh%np, i_dim, 2))
-              density_laplacian(1:der%mesh%np, 3) = density_laplacian(1:der%mesh%np, 3)         + &
-                ww*M_TWO*real (gwf_psi(1:der%mesh%np, i_dim, 1)*conjg(gwf_psi(1:der%mesh%np, i_dim, 2)))
-              density_laplacian(1:der%mesh%np, 4) = density_laplacian(1:der%mesh%np, 4)         + &
-                ww*M_TWO*aimag(gwf_psi(1:der%mesh%np, i_dim, 1)*conjg(gwf_psi(1:der%mesh%np, i_dim, 2)))
-            end if
-
-            ! the expression for the paramagnetic current with spinors is
-            !     j = ( jp(1)             jp(3) + i jp(4) )
-            !         (-jp(3) + i jp(4)   jp(2)           )
-            if(associated(jp)) then
-              jp(1:der%mesh%np, i_dim, 2) = jp(1:der%mesh%np, i_dim, 2) + &
-                ww*aimag(wf_psi_conj(1:der%mesh%np, 2)*gwf_psi(1:der%mesh%np, i_dim, 2))
-              do ii = 1, der%mesh%np
-                c_tmp = wf_psi_conj(ii, 1)*gwf_psi(ii, i_dim, 2) - wf_psi(ii, 2)*conjg(gwf_psi(ii, i_dim, 1))
-                jp(ii, i_dim, 3) = jp(ii, i_dim, 3) + ww* real(c_tmp)
-                jp(ii, i_dim, 4) = jp(ii, i_dim, 4) + ww*aimag(c_tmp)
-              end do
-            end if
-
-            ! the expression for the paramagnetic current with spinors is
-            !     t = ( tau(1)              tau(3) + i tau(4) )
-            !         ( tau(3) - i tau(4)   tau(2)            )
-            if(associated(tau)) then
-              tau (1:der%mesh%np, 2) = tau (1:der%mesh%np, 2) + ww*abs(gwf_psi(1:der%mesh%np, i_dim, 2))**2
-              do ii = 1, der%mesh%np
-                c_tmp = conjg(gwf_psi(ii, i_dim, 1))*gwf_psi(ii, i_dim, 2)
-                tau(ii, 3) = tau(ii, 3) + ww* real(c_tmp)
-                tau(ii, 4) = tau(ii, 4) + ww*aimag(c_tmp)
-              end do
-            end if
-
-            ASSERT(.not. present(gi_kinetic_energy_density))
-
-          end if !SPINORS
-
-        end do
-
-      end do
-    end do
-
-    SAFE_DEALLOCATE_A(wf_psi_conj)
-    SAFE_DEALLOCATE_A(abs_wf_psi)
-    SAFE_DEALLOCATE_A(abs_gwf_psi)
-    SAFE_DEALLOCATE_A(psi_gpsi)
-
-    if(.not. present(gi_kinetic_energy_density)) then
-      if(.not. present(paramagnetic_current)) then
-        SAFE_DEALLOCATE_P(jp)
-      end if
-      if(.not. present(kinetic_energy_density)) then
-        SAFE_DEALLOCATE_P(tau)
-      end if
-    end if
-
-    if(st%parallel_in_states .or. st%d%kpt%parallel) call reduce_all(st%st_kpt_mpi_grp)
-
-    ! We have to symmetrize everything as they are calculated from the
-    ! wavefunctions.
-    ! This must be done before compute the gauge-invariant kinetic energy density 
-    if(st%symmetrize_density) then
-      SAFE_ALLOCATE(symm(1:der%mesh%np, 1:der%mesh%sb%dim))
-      call symmetrizer_init(symmetrizer, der%mesh)
-      do is = 1, st%d%nspin
-        if(associated(tau)) then
-          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field = tau(:, is), symmfield = symm(:,1), &
-            suppress_warning = .true.)
-          tau(1:der%mesh%np, is) = symm(1:der%mesh%np,1)
-        end if
-
-        if(present(density_laplacian)) then
-          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field = density_laplacian(:, is), symmfield = symm(:,1), &
-            suppress_warning = .true.)
-          density_laplacian(1:der%mesh%np, is) = symm(1:der%mesh%np,1)
-        end if
-
-        if(associated(jp)) then 
-          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = jp(:, :, is), symmfield_vector = symm, &
-            suppress_warning = .true.)
-          jp(1:der%mesh%np, 1:der%mesh%sb%dim, is) = symm(1:der%mesh%np, 1:der%mesh%sb%dim)
-        end if
-
-        if(present(density_gradient)) then
-          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = density_gradient(:, :, is), &
-            symmfield_vector = symm, suppress_warning = .true.)
-          density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = symm(1:der%mesh%np, 1:der%mesh%sb%dim)
-        end if
-      end do
-      call symmetrizer_end(symmetrizer)
-      SAFE_DEALLOCATE_A(symm) 
-    end if
-
-
-    if(associated(st%rho_core) .and. nlcc .and. (present(density_laplacian) .or. present(density_gradient))) then
-      forall(ii=1:der%mesh%np)
-        wf_psi(ii, 1) = st%rho_core(ii)/st%d%spin_channels
-      end forall
-
-      call boundaries_set(der%boundaries, wf_psi(:, 1))
-
-      if(present(density_gradient)) then
-        ! calculate gradient of the NLCC
-        call zderivatives_grad(der, wf_psi(:,1), gwf_psi(:,:,1), set_bc = .false.)
-        do is = 1, st%d%spin_channels
-          density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) + gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim,1)
-        end do
-      end if
-
-      ! calculate the Laplacian of the wavefunction
-      if (present(density_laplacian)) then
-        call zderivatives_lapl(der, wf_psi(:,1), lwf_psi(:,1), set_bc = .false.)
-
-        do is = 1, st%d%spin_channels
-          density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is) + lwf_psi(1:der%mesh%np, 1)
-        end do
-      end if
-    end if
-
-    SAFE_DEALLOCATE_A(wf_psi)
-    SAFE_DEALLOCATE_A(gwf_psi)
-    SAFE_DEALLOCATE_A(lwf_psi)
-
-
-    !We compute the gauge-invariant kinetic energy density
-    if(present(gi_kinetic_energy_density) .and. st%d%ispin /= SPINORS) then
-      do is = 1, st%d%nspin
-        ASSERT(associated(tau))
-        gi_kinetic_energy_density(1:der%mesh%np, is) = tau(1:der%mesh%np, is)
-        if(states_are_complex(st)) then
-          ASSERT(associated(jp))
-          do ii = 1, der%mesh%np
-            if(st%rho(ii, is) < CNST(1.0e-7)) cycle
-            gi_kinetic_energy_density(ii, is) = &
-              gi_kinetic_energy_density(ii, is) - sum(jp(ii,1:der%mesh%sb%dim, is)**2)/st%rho(ii, is)
-          end do
-        end if
-      end do
-    end if
-
-    if(.not. present(kinetic_energy_density)) then
-      SAFE_DEALLOCATE_P(tau)
-    end if
-    if(.not. present(paramagnetic_current)) then
-      SAFE_DEALLOCATE_P(jp)
-    end if
-
-
-    POP_SUB(states_calc_quantities)
-
-    call profiling_out(prof)
-
-  contains
-
-    subroutine reduce_all(grp)
-      type(mpi_grp_t), intent(in)  :: grp
-
-      PUSH_SUB(states_calc_quantities.reduce_all)
-
-      if(associated(tau)) call comm_allreduce(grp%comm, tau, dim = (/der%mesh%np, st%d%nspin/))
-
-      if (present(density_laplacian)) call comm_allreduce(grp%comm, density_laplacian, dim = (/der%mesh%np, st%d%nspin/))
-
-      do is = 1, st%d%nspin
-        if(associated(jp)) call comm_allreduce(grp%comm, jp(:, :, is), dim = (/der%mesh%np, der%mesh%sb%dim/))
-
-        if(present(density_gradient)) &
-          call comm_allreduce(grp%comm, density_gradient(:, :, is), dim = (/der%mesh%np, der%mesh%sb%dim/))
-      end do
-
-      POP_SUB(states_calc_quantities.reduce_all)
-    end subroutine reduce_all
-
-  end subroutine states_calc_quantities
-
 
   ! ---------------------------------------------------------
   function state_spin(mesh, f1) result(spin)
@@ -2161,9 +1712,7 @@ contains
     POP_SUB(state_kpt_is_local)
   end function state_kpt_is_local
 
-
   ! ---------------------------------------------------------
-
   real(8) function states_wfns_memory(st, mesh) result(memory)
     type(states_t), intent(in) :: st
     type(mesh_t),   intent(in) :: mesh
@@ -2178,7 +1727,6 @@ contains
   end function states_wfns_memory
 
   ! ---------------------------------------------------------
-
   subroutine states_pack(st, copy)
     type(states_t),    intent(inout) :: st
     logical, optional, intent(in)    :: copy
@@ -2235,7 +1783,6 @@ contains
   end subroutine states_pack
 
   ! ------------------------------------------------------------
-
   subroutine states_unpack(st, copy)
     type(states_t),    intent(inout) :: st
     logical, optional, intent(in)    :: copy
@@ -2258,7 +1805,6 @@ contains
   end subroutine states_unpack
 
   ! ------------------------------------------------------------
-
   subroutine states_sync(st)
     type(states_t),    intent(inout) :: st
 
@@ -2280,7 +1826,6 @@ contains
   end subroutine states_sync
 
   ! -----------------------------------------------------------
-
   subroutine states_write_info(st)
     type(states_t),    intent(in) :: st
 
@@ -2299,7 +1844,6 @@ contains
   end subroutine states_write_info
 
   ! -----------------------------------------------------------
-
   logical pure function states_are_packed(st) result(packed)
     type(states_t),    intent(in) :: st
 
@@ -2307,7 +1851,6 @@ contains
   end function states_are_packed
 
   ! ------------------------------------------------------------
-
   subroutine states_set_zero(st)
     type(states_t),    intent(inout) :: st
 
@@ -2325,7 +1868,6 @@ contains
   end subroutine states_set_zero
 
   ! ------------------------------------------------------------
-
   integer pure function states_block_min(st, ib) result(range)
     type(states_t),    intent(in) :: st
     integer,           intent(in) :: ib
@@ -2343,189 +1885,12 @@ contains
   end function states_block_max
 
   ! ------------------------------------------------------------
-
   integer pure function states_block_size(st, ib) result(size)
     type(states_t),    intent(in) :: st
     integer,           intent(in) :: ib
 
     size = st%group%block_size(ib)
   end function states_block_size
-
-  ! ---------------------------------------------------------
-  !> number of occupied-unoccipied pairs for Casida
-  subroutine states_count_pairs(st, n_pairs, n_occ, n_unocc, is_included, is_frac_occ)
-    type(states_t),    intent(in)  :: st
-    integer,           intent(out) :: n_pairs
-    integer,           intent(out) :: n_occ(:)   !< nik
-    integer,           intent(out) :: n_unocc(:) !< nik
-    logical, pointer,  intent(out) :: is_included(:,:,:) !< (max(n_occ), max(n_unocc), st%d%nik)
-    logical,           intent(out) :: is_frac_occ !< are there fractional occupations?
-
-    integer :: ik, ist, ast, n_filled, n_partially_filled, n_half_filled
-    character(len=80) :: nst_string, default, wfn_list
-    FLOAT :: energy_window
-
-    PUSH_SUB(states_count_pairs)
-
-    is_frac_occ = .false.
-    do ik = 1, st%d%nik
-      call occupied_states(st, ik, n_filled, n_partially_filled, n_half_filled)
-      if(n_partially_filled > 0 .or. n_half_filled > 0) is_frac_occ = .true.
-      n_occ(ik) = n_filled + n_partially_filled + n_half_filled
-      n_unocc(ik) = st%nst - n_filled
-      ! when we implement occupations, partially occupied levels need to be counted as both occ and unocc.
-    end do
-
-    !%Variable CasidaKSEnergyWindow
-    !%Type float
-    !%Section Linear Response::Casida
-    !%Description
-    !% An alternative to <tt>CasidaKohnShamStates</tt> for specifying which occupied-unoccupied
-    !% transitions will be used: all those whose eigenvalue differences are less than this
-    !% number will be included. If a value less than 0 is supplied, this criterion will not be used.
-    !%End
-
-    call parse_variable('CasidaKSEnergyWindow', -M_ONE, energy_window, units_inp%energy)
-
-    !%Variable CasidaKohnShamStates
-    !%Type string
-    !%Section Linear Response::Casida
-    !%Default all states
-    !%Description
-    !% The calculation of the excitation spectrum of a system in the Casida frequency-domain
-    !% formulation of linear-response time-dependent density functional theory (TDDFT)
-    !% implies the use of a basis set of occupied/unoccupied Kohn-Sham orbitals. This
-    !% basis set should, in principle, include all pairs formed by all occupied states,
-    !% and an infinite number of unoccupied states. In practice, one has to truncate this
-    !% basis set, selecting a number of occupied and unoccupied states that will form the
-    !% pairs. These states are specified with this variable. If there are, say, 15 occupied
-    !% states, and one sets this variable to the value "10-18", this means that occupied
-    !% states from 10 to 15, and unoccupied states from 16 to 18 will be considered.
-    !%
-    !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
-    !% valid. You should include a non-zero number of unoccupied states and a non-zero number
-    !% of occupied states.
-    !%End
-
-    n_pairs = 0
-    SAFE_ALLOCATE(is_included(maxval(n_occ), minval(n_occ) + 1:st%nst , st%d%nik))
-    is_included(:,:,:) = .false.
-
-    if(energy_window < M_ZERO) then
-      write(nst_string,'(i6)') st%nst
-      write(default,'(a,a)') "1-", trim(adjustl(nst_string))
-      call parse_variable('CasidaKohnShamStates', default, wfn_list)
-
-      write(message(1),'(a,a)') "Info: States that form the basis: ", trim(wfn_list)
-      call messages_info(1)
-
-      ! count pairs
-      n_pairs = 0
-      do ik = 1, st%d%nik
-        do ast = n_occ(ik) + 1, st%nst
-          if(loct_isinstringlist(ast, wfn_list)) then
-            do ist = 1, n_occ(ik)
-              if(loct_isinstringlist(ist, wfn_list)) then
-                n_pairs = n_pairs + 1
-                is_included(ist, ast, ik) = .true.
-              end if
-            end do
-          end if
-        end do
-      end do
-
-    else ! using CasidaKSEnergyWindow
-
-      write(message(1),'(a,f12.6,a)') "Info: including transitions with energy < ", &
-        units_from_atomic(units_out%energy, energy_window), trim(units_abbrev(units_out%energy))
-      call messages_info(1)
-
-      ! count pairs
-      n_pairs = 0
-      do ik = 1, st%d%nik
-        do ast = n_occ(ik) + 1, st%nst
-          do ist = 1, n_occ(ik)
-            if(st%eigenval(ast, ik) - st%eigenval(ist, ik) < energy_window) then
-              n_pairs = n_pairs + 1
-              is_included(ist, ast, ik) = .true.
-            end if
-          end do
-        end do
-      end do
-
-    end if
-
-    POP_SUB(states_count_pairs)
-  end subroutine states_count_pairs
-
-  ! ---------------------------------------------------------
-  !> Returns information about which single-particle orbitals are
-  !! occupied or not in a _many-particle_ state st:
-  !!   n_filled are the number of orbitals that are totally filled
-  !!            (the occupation number is two, if ispin = UNPOLARIZED,
-  !!            or it is one in the other cases).
-  !!   n_half_filled is only meaningful if ispin = UNPOLARIZED. It 
-  !!            is the number of orbitals where there is only one 
-  !!            electron in the orbital.
-  !!   n_partially_filled is the number of orbitals that are neither filled,
-  !!            half-filled, nor empty.
-  !! The integer arrays filled, partially_filled and half_filled point
-  !!   to the indices where the filled, partially filled and half_filled
-  !!   orbitals are, respectively.
-  subroutine occupied_states(st, ik, n_filled, n_partially_filled, n_half_filled, &
-    filled, partially_filled, half_filled)
-    type(states_t),    intent(in)  :: st
-    integer,           intent(in)  :: ik
-    integer,           intent(out) :: n_filled, n_partially_filled, n_half_filled
-    integer, optional, intent(out) :: filled(:), partially_filled(:), half_filled(:)
-
-    integer :: ist
-    FLOAT, parameter :: M_THRESHOLD = CNST(1.0e-6)
-
-    PUSH_SUB(occupied_states)
-
-    if(present(filled))           filled(:) = 0
-    if(present(partially_filled)) partially_filled(:) = 0
-    if(present(half_filled))      half_filled(:) = 0
-    n_filled = 0
-    n_partially_filled = 0
-    n_half_filled = 0
-
-    select case(st%d%ispin)
-    case(UNPOLARIZED)
-      do ist = 1, st%nst
-        if(abs(st%occ(ist, ik) - M_TWO) < M_THRESHOLD) then
-          n_filled = n_filled + 1
-          if(present(filled)) filled(n_filled) = ist
-        elseif(abs(st%occ(ist, ik) - M_ONE) < M_THRESHOLD) then
-          n_half_filled = n_half_filled + 1
-          if(present(half_filled)) half_filled(n_half_filled) = ist
-        elseif(st%occ(ist, ik) > M_THRESHOLD ) then
-          n_partially_filled = n_partially_filled + 1
-          if(present(partially_filled)) partially_filled(n_partially_filled) = ist
-        elseif(abs(st%occ(ist, ik)) > M_THRESHOLD ) then
-          write(message(1),*) 'Internal error in occupied_states: Illegal occupation value ', st%occ(ist, ik)
-          call messages_fatal(1)
-        end if
-      end do
-    case(SPIN_POLARIZED, SPINORS)
-      do ist = 1, st%nst
-        if(abs(st%occ(ist, ik)-M_ONE) < M_THRESHOLD) then
-          n_filled = n_filled + 1
-          if(present(filled)) filled(n_filled) = ist
-        elseif(st%occ(ist, ik) > M_THRESHOLD ) then
-          n_partially_filled = n_partially_filled + 1
-          if(present(partially_filled)) partially_filled(n_partially_filled) = ist
-        elseif(abs(st%occ(ist, ik)) > M_THRESHOLD ) then
-          write(message(1),*) 'Internal error in occupied_states: Illegal occupation value ', st%occ(ist, ik)
-          call messages_fatal(1)
-        end if
-      end do
-    end select
-
-    POP_SUB(occupied_states)
-  end subroutine occupied_states
-
 
   ! ------------------------------------------------------------
   subroutine states_set_phase(st_d, psi, phase, np, conjugate)
@@ -2560,11 +1925,9 @@ contains
     end if
 
     POP_SUB(states_set_phase)
-
-  end subroutine  states_set_phase
+  end subroutine states_set_phase
 
   !-------------------------------------------------
-
   subroutine states_write_eigenvalues(iunit, nst, st, sb, error, st_start, compact)
     integer,           intent(in) :: iunit, nst
     type(states_t),    intent(in) :: st
@@ -2593,14 +1956,12 @@ contains
     if(present(st_start)) st_start_ = st_start
     ASSERT(nst <= st%nst)
 
-
     if(.not. mpi_grp_is_root(mpi_world)) then
       POP_SUB(states_write_eigenvalues)
       return
     end if
 
     if(.not. optional_default(compact, .false.)) then
-
       ns = 1
       if(st%d%nspin == 2) ns = 2
 
@@ -2786,11 +2147,7 @@ contains
       end do
 
       SAFE_DEALLOCATE_A(flat_indices)
-
-      if(nst*st%d%nik > 1) call print_dos()
-
       SAFE_DEALLOCATE_A(flat_eigenval)
-
     end if
 
     if(st%smear%method /= SMEAR_SEMICONDUCTOR .and. st%smear%method /= SMEAR_FIXED_OCC) then
@@ -2800,71 +2157,6 @@ contains
     end if
 
     POP_SUB(states_write_eigenvalues)
-
-  contains
-
-    subroutine print_dos()
-
-      integer, parameter :: ndiv = 70, height = 10
-      integer :: histogram(1:ndiv), iev, ien, iline, maxhist, ife
-      character(len=ndiv) :: line
-      FLOAT :: emin, emax, de
-
-      PUSH_SUB(states_write_eigenvalues.print_dos)
-
-      emin = flat_eigenval(1)
-      emax = flat_eigenval(st%d%nik*nst)
-      de = (emax - emin)/(ndiv - M_ONE)
-
-      if(de < M_EPSILON) then
-        POP_SUB(states_write_eigenvalues.print_dos)
-        return
-      end if
-
-      ife = nint((st%smear%e_fermi - emin)/de) + 1
-
-      histogram = 0
-      do iev = 1, st%d%nik*nst
-        ien = nint((flat_eigenval(iev) - emin)/de) + 1
-        ASSERT(ien >= 1)
-        ASSERT(ien <= ndiv)
-        histogram(ien) = histogram(ien) + 1
-      end do
-
-      !normalize
-      if(maxval(histogram) > height) then
-        maxhist = maxval(histogram)
-        do ien = 1, ndiv
-          histogram(ien) = (histogram(ien)*height)/maxhist
-        end do
-      end if
-
-      call messages_new_line()
-      call messages_write('Density of states:')
-      call messages_new_line()
-      call messages_info()
-
-      !print histogram
-      do iline = height, 1, -1
-        do ien = 1, ndiv
-          if(histogram(ien) >= iline) then
-            call messages_write('%')
-          else
-            call messages_write('-')
-          end if
-        end do
-        call messages_info()
-      end do
-
-      line(1:ndiv) = ' '
-      line(ife:ife) = '^'
-      call messages_write(line)
-      call messages_new_line()
-      call messages_info()
-
-      POP_SUB(states_write_eigenvalues.print_dos)
-    end subroutine print_dos
-
   end subroutine states_write_eigenvalues
 
 #include "undef.F90"

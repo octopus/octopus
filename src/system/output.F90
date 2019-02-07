@@ -150,21 +150,6 @@ contains
     !%Option mesh_r bit(13)
     !% Outputs values of the coordinates over the grid. Files
     !% will be called <tt>mesh_r-</tt> followed by the direction.
-    !%Option kinetic_energy_density bit(14)
-    !% Outputs kinetic-energy density, defined as:
-    !%
-    !% <math>\tau_\sigma(\vec{r}) = \sum_{i=1}^{N_\sigma} 
-    !%  \left| \vec{\nabla} \phi_{i\sigma}(\vec{r}) \right|^2\,. </math>
-    !%
-    !% The index <math>\sigma</math> is the spin index for the spin-polarized case,
-    !% or if you are using spinors. For spin-unpolarized calculations, you
-    !% get the total kinetic-energy density. The previous expression assumes full 
-    !% or null occupations. If fractional occupation numbers, each term in the sum
-    !% is weighted by the occupation. Also, if we are working with an infinite 
-    !% system, all <i>k</i>-points are summed up, with their corresponding weights. The
-    !% files will be called <tt>tau-sp1</tt> and <tt>tau-sp2</tt>, if the spin-resolved kinetic
-    !% energy density is produced (runs in spin-polarized and spinors mode), or
-    !% only <tt>tau</tt> if the run is in spin-unpolarized mode.
     !%Option delta_perturbation bit(25)
     !% Outputs the "kick", or time-delta perturbation applied to compute optical response in real time.
     !%Option external_td_potential bit(26)
@@ -330,7 +315,6 @@ contains
   end subroutine output_all
 
 #include "output_states_inc.F90"
-
 #include "output_h_inc.F90"
 
 end module output_oct_m

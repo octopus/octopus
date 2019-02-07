@@ -151,27 +151,7 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
     SAFE_DEALLOCATE_A(ztmp)
   end if
 
-  if(bitand(outp%what, OPTION__OUTPUT__KINETIC_ENERGY_DENSITY) /= 0) then
-    fn_unit = units_out%energy * units_out%length**(-gr%mesh%sb%dim)
-    SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
-    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = elf)
-    select case(st%d%ispin)
-    case(UNPOLARIZED)
-      write(fname, '(a)') 'tau'
-      call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-        elf(:,1), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
-    case(SPIN_POLARIZED, SPINORS)
-      do is = 1, 2
-        write(fname, '(a,i1)') 'tau-sp', is
-        call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-          elf(:, is), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
-      end do
-    end select
-    SAFE_DEALLOCATE_A(elf)
-  end if
-
   POP_SUB(output_states)
-
 end subroutine output_states
 
 !! Local Variables:
