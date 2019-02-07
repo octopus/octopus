@@ -51,16 +51,14 @@ module photon_mode_oct_m
     photon_mode_end
 
   type photon_mode_t
-    FLOAT                 :: ex                   ! photon exchange energy
-    FLOAT                 :: pt_number            ! number of photons in mode
-    FLOAT, pointer        :: correlator(:,:)      ! correlation function <n(r)(ad+a)>
-    type(lr_t)            :: lr         !< to solve the equation H psi = b
     integer               :: nmodes
     FLOAT, pointer        :: omega_array(:), lambda_array(:)  ! frequencies and interaction strength
-    FLOAT, pointer        :: pol_array(:,:)             ! polarization of the photon field
-    FLOAT, pointer        :: pol_dipole_array(:,:)      ! polarization*dipole operator
-    FLOAT, pointer        :: q0_array(:)
-    FLOAT, pointer        :: p0_array(:)
+    FLOAT, pointer        :: pol_array(:,:)                   ! polarization of the photon field
+    FLOAT, pointer        :: pol_dipole_array(:,:)            ! polarization*dipole operator
+    FLOAT                 :: ex                               ! photon exchange energy
+    FLOAT                 :: pt_number            ! number of photons in mode
+    FLOAT, pointer        :: correlator(:,:)      ! correlation function <n(r)(ad+a)>
+    type(lr_t)            :: lr                   !< to solve the equation H psi = b
   end type photon_mode_t
 
 contains
@@ -81,11 +79,13 @@ contains
     !%Description
     !% Syntax:
     !%PhotonModes
-    !%omega1 | lambda 1| PolX1 | PolY1 | PolZ1 | q0 | p0
+    !%omega1 | lambda1| PolX1 | PolY1 | PolZ1
     !%...
     !%
     !%End
-    !% frequency, coupling strength, pol in (x,y,z), q(t0), p(t0)
+    !% frequency of the cavity mode
+    !% coupling strength
+    !% polarization of the cavity mode in (x,y,z) direction
 
     this%nmodes = 0
     if(parse_block('PhotonModes', blk) == 0) then
@@ -105,12 +105,6 @@ contains
           this%pol_dipole_array(1:gr%mesh%np,ii) = this%pol_array(ii,1)*gr%mesh%x(1:gr%mesh%np, 1) &
                                         + this%pol_array(ii,2)*gr%mesh%x(1:gr%mesh%np, 2) &
                                         + this%pol_array(ii,3)*gr%mesh%x(1:gr%mesh%np, 3)
-          if (ncols > 5) then
-            SAFE_ALLOCATE(this%q0_array(1:this%nmodes))
-            SAFE_ALLOCATE(this%p0_array(1:this%nmodes))
-            call parse_block_float(blk, ii-1, 5, this%q0_array(ii))   !row, column
-            call parse_block_float(blk, ii-1, 6, this%p0_array(ii))   !row, column
-          end if
        end do
       call parse_block_end(blk)
     else
@@ -141,9 +135,6 @@ contains
 
     SAFE_DEALLOCATE_P(this%pol_array)
     SAFE_DEALLOCATE_P(this%pol_dipole_array)
-
-    SAFE_DEALLOCATE_P(this%q0_array)
-    SAFE_DEALLOCATE_P(this%p0_array)
 
     POP_SUB(photon_mode_end)
   end subroutine photon_mode_end
