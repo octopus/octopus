@@ -537,8 +537,7 @@ contains
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
         do iatom = 1, this%ep%natoms
-          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, &
-            vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
+          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, vec_pot = this%hm_base%uniform_vector_potential)
         end do
 
         call profiling_out(prof_phases)

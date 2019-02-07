@@ -91,7 +91,6 @@ module hamiltonian_base_oct_m
     FLOAT,                    allocatable :: potential(:, :)
     FLOAT,                    allocatable :: Impotential(:, :)
     FLOAT,                    allocatable :: uniform_vector_potential(:)
-    FLOAT,                    allocatable :: vector_potential(:, :)
     integer                               :: nprojector_matrices
     logical                               :: apply_projector_matrices
     integer                               :: full_projection_size
@@ -172,7 +171,6 @@ contains
     
     SAFE_DEALLOCATE_A(this%potential)
     SAFE_DEALLOCATE_A(this%Impotential)
-    SAFE_DEALLOCATE_A(this%vector_potential)
     SAFE_DEALLOCATE_A(this%uniform_vector_potential)
     call hamiltonian_base_destroy_proj(this)
 
@@ -192,7 +190,6 @@ contains
     if(allocated(this%potential))                this%potential = M_ZERO
     if(allocated(this%Impotential))              this%Impotential = M_ZERO
     if(allocated(this%uniform_vector_potential)) this%uniform_vector_potential = M_ZERO
-    if(allocated(this%vector_potential))         this%vector_potential = M_ZERO
 
     POP_SUB(hamiltonian_clear)
   end subroutine hamiltonian_base_clear
@@ -229,13 +226,6 @@ contains
       end if
     end if
 
-    if(bitand(FIELD_VECTOR_POTENTIAL, field) /= 0) then 
-      if(.not. allocated(this%vector_potential)) then
-        SAFE_ALLOCATE(this%vector_potential(1:mesh%sb%dim, 1:mesh%np))
-        this%vector_potential = M_ZERO
-      end if
-    end if
-
     POP_SUB(hamiltonian_base_allocate)
   end subroutine hamiltonian_base_allocate
 
@@ -254,10 +244,6 @@ contains
 
     PUSH_SUB(hamiltonian_base_update)
 
-    if(allocated(this%uniform_vector_potential) .and. allocated(this%vector_potential)) then
-      call unify_vector_potentials()
-    end if
-
     if(allocated(this%potential) .and. accel_is_enabled()) then
 
       offset = 0
@@ -269,25 +255,6 @@ contains
     end if
 
     POP_SUB(hamiltonian_base_update)
-
-  contains
-
-    subroutine unify_vector_potentials()
-      integer :: idir, ip
-
-      PUSH_SUB(hamiltonian_base_update.unify_vector_potentials)
-      
-      ! copy the uniform vector potential onto the non-uniform one
-      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
-        this%vector_potential(idir, ip) = &
-          this%vector_potential(idir, ip) + this%uniform_vector_potential(idir)
-      end forall
-      
-      ! and deallocate
-      SAFE_DEALLOCATE_A(this%uniform_vector_potential)
-      POP_SUB(hamiltonian_base_update.unify_vector_potentials)      
-    end subroutine unify_vector_potentials
-
   end subroutine hamiltonian_base_update
   
   !--------------------------------------------------------
