@@ -191,9 +191,10 @@ contains
       
       rel_ener = abs(energy_occ-energy)/abs(energy)
 
-      write(message(1),'(a,1x,es20.10)') 'Total energy', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
-      write(message(2),'(a,1x,es20.10)') 'Relative difference', rel_ener
-      call messages_info(2)
+      write(message(1),'(a,es20.10)') 'Total energy:', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+      write(message(2),'(a,2x,es20.10)') 'Relative: ', rel_ener
+      write(message(3),'(a,5x,es20.10)') 'Max F0:', rdm%maxFO
+      call messages_info(3)
 
       if (rdm%do_basis.eqv..true.) then
         if ((rel_ener < rdm%conv_ener).and.rdm%maxFO < rdm%tolerFO) then
@@ -1178,7 +1179,7 @@ print*, "maxFO", rdm%maxFO
 !    ! check if step lowers the energy (later to be removed?)
 !    energy_diff = energy - energy_old
 
-		print*, "maxFO:", rdm%maxFO
+!		print*, "maxFO:", rdm%maxFO
 !		print*, "energy_diff", energy_diff
 
 		SAFE_DEALLOCATE_A(lambda) 
