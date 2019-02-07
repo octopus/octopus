@@ -1143,34 +1143,17 @@ contains
     !% The full orthogonalization method used by some
     !% eigensolvers. The default is <tt>cholesky_serial</tt>, except with state
     !% parallelization, the default is <tt>cholesky_parallel</tt>.
-    !%Option gram_schmidt 1
     !%Option cholesky_serial 1
     !% Cholesky decomposition implemented using
     !% BLAS/LAPACK. Can be used with domain parallelization but not
     !% state parallelization. (Obsolete synonym: <tt>gram_schmidt</tt>)
-    !%Option par_gram_schmidt 1
     !%Option cholesky_parallel 2
     !% Cholesky decomposition implemented using
     !% ScaLAPACK. Compatible with states parallelization. (Obsolete synonym: <tt>par_gram_schmidt</tt>)
-    !%Option cgs 3
-    !% Classical Gram-Schmidt (CGS) orthogonalization.
-    !% Can be used with domain parallelization but not state parallelization.
-    !% The algorithm is defined in Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005).
-    !%Option mgs 4
-    !% Modified Gram-Schmidt (MGS) orthogonalization.
-    !% Can be used with domain parallelization but not state parallelization.
-    !% The algorithm is defined in Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005).
-    !%Option drcgs 5
-    !% Classical Gram-Schmidt orthogonalization with double-step reorthogonalization.
-    !% Can be used with domain parallelization but not state parallelization.
-    !% The algorithm is taken from Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005). 
-    !% According to this reference, this is much more precise than CGS or MGS algorithms. The MGS version seems not to improve much the stability and would require more communications over the domains.
     !%End
     default = OPTION__STATESORTHOGONALIZATION__CHOLESKY_SERIAL
 #ifdef HAVE_SCALAPACK
-    if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
-      default = OPTION__STATESORTHOGONALIZATION__CHOLESKY_PARALLEL
-    end if
+    if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) default = OPTION__STATESORTHOGONALIZATION__CHOLESKY_PARALLEL
 #endif
 
     call parse_variable('StatesOrthogonalization', default, st%d%orth_method)
