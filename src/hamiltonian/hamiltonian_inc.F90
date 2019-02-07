@@ -122,24 +122,13 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
 
   ! and the non-local one
   if (hm%ep%non_local .and. bitand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
-    if(hm%hm_base%apply_projector_matrices) then
-      call X(hamiltonian_base_nlocal_finish)(hm%hm_base, der%mesh, hm%d, ik, projection, hpsib)
-    else
-      call X(project_psi_batch)(der%mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib, ik)
-    end if
+    call X(hamiltonian_base_nlocal_finish)(hm%hm_base, der%mesh, hm%d, ik, projection, hpsib)
   end if
 
-  if (bitand(TERM_OTHERS, terms_) /= 0) then
-
+  if (bitand(TERM_OTHERS, terms_) /= 0 .and. hm%theory_level == HARTREE_FOCK) then
     call profiling_in(prof_exx, "EXCHANGE_OPERATOR")
-    select case(hm%theory_level)
-
-    case(HARTREE_FOCK)
-      call X(exchange_operator)(hm, der, ik, hm%exx_coef, epsib, hpsib)
-
-    end select
+    call X(exchange_operator)(hm, der, ik, hm%exx_coef, epsib, hpsib)
     call profiling_out(prof_exx)
-    
   end if
 
   if(apply_phase .and. set_phase_) then

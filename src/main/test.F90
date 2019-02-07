@@ -92,9 +92,6 @@ contains
     !% Test the interpolation routines.
     !%Option ion_interaction 5
     !% Tests the ion-ion interaction routines.
-    !%Option projector 6
-    !% Tests the code that applies the nonlocal part of the pseudopotentials 
-    !% in case of spin-orbit coupling
     !%Option hamiltonian_apply 8
     !% Tests the application of the Hamiltonian, or a part of it
     !%End
@@ -186,8 +183,6 @@ contains
       call test_interpolation(param)
     case(OPTION__TESTMODE__ION_INTERACTION)
       call test_ion_interaction()
-    case(OPTION__TESTMODE__PROJECTOR)
-      call test_projector(param)
     case(OPTION__TESTMODE__HAMILTONIAN_APPLY)
       call test_hamiltonian(param)
     end select
@@ -211,55 +206,6 @@ contains
 
     POP_SUB(test_hartree)
   end subroutine test_hartree
-
- ! ---------------------------------------------------------
-  subroutine test_projector(param)
-    type(test_parameters_t), intent(in) :: param
-    
-    type(system_t) :: sys
-    type(epot_t) :: ep
-    type(batch_t), pointer :: epsib
-    integer :: itime
-
-    PUSH_SUB(test_projector)
-
-    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-
-    call messages_write('Info: Testing the nonlocal part of the pseudopotential with SOC')
-    call messages_new_line()
-    call messages_new_line()
-    call messages_info()
-
-    call system_init(sys)
-
-    call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
-    call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
-  
-    !Initialize external potential
-    call epot_init(ep, sys%gr, sys%geo, SPINORS, 1, XC_FAMILY_NONE)
-    call epot_generate(ep, sys%gr, sys%geo, sys%st)
-   
-    !Initialize external potential
-    SAFE_ALLOCATE(epsib)
-    call batch_copy(sys%st%group%psib(1, 1), epsib)
-
-    do itime = 1, param%repetitions
-      call zproject_psi_batch(sys%gr%mesh, ep%proj, ep%natoms, 2, &
-                               sys%st%group%psib(1, 1), epsib, 1)
-    end do
-    do itime = 1, epsib%nst
-      write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, 2, epsib%states(itime)%zpsi)
-      call messages_info(1)
-    end do
-
-    call batch_end(epsib)
-    SAFE_DEALLOCATE_P(epsib)
-    call epot_end(ep)
-    call states_deallocate_wfns(sys%st)
-    call system_end(sys)
-
-    POP_SUB(test_projector)
-  end subroutine test_projector
 
   ! ---------------------------------------------------------
   subroutine test_hamiltonian(param)

@@ -57,20 +57,8 @@ module projector_oct_m
     projector_init_phases,     &
     projector_build,           &
     projector_end,             &
-    dproject_psi,              &
-    zproject_psi,              &
-    dproject_psi_batch,        &
-    zproject_psi_batch,        &
-    dproject_sphere,           &
-    zproject_sphere,           &
     dprojector_matrix_element, &
-    zprojector_matrix_element, &
-    dprojector_commute_r,      &
-    zprojector_commute_r,      &
-    dprojector_commute_r_allatoms_alldir, &
-    zprojector_commute_r_allatoms_alldir, &
-    dr_project_psi,            &
-    zr_project_psi
+    zprojector_matrix_element
   
   integer, parameter :: MAX_NPROJECTIONS = 4
   integer, parameter :: MAX_L = 5
