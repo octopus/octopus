@@ -43,11 +43,9 @@ subroutine X(forces_gather)(geo, force)
     force_local(1:geo%space%dim, 1:geo%atoms_dist%nlocal) = force(1:geo%space%dim, geo%atoms_dist%start:geo%atoms_dist%end)
   end if
 
-#ifdef HAVE_MPI  
-  call MPI_Allgatherv(&
-    force_local(1, 1), geo%space%dim*geo%atoms_dist%nlocal, R_MPITYPE, &
-    force(1, 1), recv_count(1), recv_displ(1), R_MPITYPE, &
-    geo%atoms_dist%mpi_grp%comm, mpi_err)
+#ifdef HAVE_MPI
+  call MPI_Allgatherv(force_local(1, 1), geo%space%dim*geo%atoms_dist%nlocal, R_MPITYPE, &
+    force(1, 1), recv_count(1), recv_displ(1), R_MPITYPE, geo%atoms_dist%mpi_grp%comm, mpi_err)
 #endif
   
   SAFE_DEALLOCATE_A(recv_count)
@@ -332,7 +330,6 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl,
    end if
  end if
  
-#if defined(HAVE_MPI)
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call profiling_in(prof_comm, "FORCES_COMM")
     call comm_allreduce(st%st_kpt_mpi_grp%comm, force_nl)
@@ -340,7 +337,6 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl,
     call comm_allreduce(st%st_kpt_mpi_grp%comm, grad_rho)
     call profiling_out(prof_comm)
   end if
-#endif
 
   ! We convert the gradient of the density to cartesian coordinates before symmetrization
   ! as the two operation do not commute
@@ -463,14 +459,12 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x)
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(grad_psi)
 
-#if defined(HAVE_MPI)
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call profiling_in(prof_comm, "FORCES_COMM")
     call comm_allreduce(st%st_kpt_mpi_grp%comm, force)
     call comm_allreduce(st%st_kpt_mpi_grp%comm, grad_rho)
     call profiling_out(prof_comm)
   end if
-#endif
 
   call dtotal_force_from_local_potential(gr, ep, grad_rho, x)
 

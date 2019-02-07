@@ -63,15 +63,6 @@ module projector_oct_m
   integer, parameter :: MAX_NPROJECTIONS = 4
   integer, parameter :: MAX_L = 5
 
-  !> The projector data type is intended to hold the local and
-  !! non-local parts of the pseudopotentials. The definition of the
-  !! action of a projector (which is done through the X(project)
-  !! subroutine) depends on the type of the projector. 
-  !!
-  !! There are four different types: 
-  !! - normal Kleinman-Bylander projector (no spin-orbit)
-  !! - relativistic Kleinman-Bylander projector (includes spin-orbit)
-
   type projector_t
     integer :: type = PROJ_NONE
     integer :: nprojections
@@ -97,16 +88,14 @@ contains
     POP_SUB(projector_null)
 
   end subroutine projector_null
-  !---------------------------------------------------------
-
 
   !---------------------------------------------------------
   logical elemental function projector_is_null(p)
     type(projector_t), intent(in) :: p
     projector_is_null = (p%type == PROJ_NONE)
   end function projector_is_null
+  
   !---------------------------------------------------------
-
   logical elemental function projector_is(p, type)
     type(projector_t), intent(in) :: p
     integer,           intent(in) :: type
@@ -144,7 +133,6 @@ contains
   end subroutine projector_init
 
   !---------------------------------------------
-
   subroutine projector_init_phases(this, sb, std, vec_pot)
     type(projector_t),             intent(inout) :: this
     type(simul_box_t),             intent(in)    :: sb
