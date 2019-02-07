@@ -150,6 +150,10 @@ contains
       if (oep%has_photons) then
         call messages_experimental("Photons = yes")
         call photon_mode_init(oep%pt, gr)
+        if (oep%pt%nmodes > 1) then
+          call messages_write('Photon OEP is only working for a single photon mode!')
+          call messages_fatal()
+        end if
       end if
 
       if(oep%level == XC_OEP_FULL) then

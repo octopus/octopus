@@ -51,15 +51,12 @@ module photon_mode_oct_m
     photon_mode_end
 
   type photon_mode_t
-    FLOAT                 :: omega, lambda        ! omega and lambda for photons
-    FLOAT                 :: pol_x, pol_y, pol_z  ! polarization of the photon field
     FLOAT                 :: ex                   ! photon exchange energy
     FLOAT                 :: pt_number            ! number of photons in mode
-    FLOAT, pointer        :: pol_dipole(:,:)      ! polarization*dipole operator
     FLOAT, pointer        :: correlator(:,:)      ! correlation function <n(r)(ad+a)>
     type(lr_t)            :: lr         !< to solve the equation H psi = b
     integer               :: nmodes
-    FLOAT, pointer        :: omega_array(:), lambda_array(:)  ! the arrays are only temporary, later merge, OEP has to be adapted
+    FLOAT, pointer        :: omega_array(:), lambda_array(:)  ! frequencies and interaction strength
     FLOAT, pointer        :: pol_array(:,:)             ! polarization of the photon field
     FLOAT, pointer        :: pol_dipole_array(:,:)      ! polarization*dipole operator
     FLOAT, pointer        :: q0_array(:)
@@ -89,20 +86,17 @@ contains
     !%
     !%End
     !% frequency, coupling strength, pol in (x,y,z), q(t0), p(t0)
-    ! todo extend to more modes and put defaults
+
     this%nmodes = 0
     if(parse_block('PhotonModes', blk) == 0) then
-!       write(*,*) this%nmodes
 
        this%nmodes = parse_block_n(blk)
-!       write(*,*) this%nmodes
        SAFE_ALLOCATE(this%omega_array(1:this%nmodes))
        SAFE_ALLOCATE(this%lambda_array(1:this%nmodes))
        SAFE_ALLOCATE(this%pol_array(1:this%nmodes,3))
        SAFE_ALLOCATE(this%pol_dipole_array(1:gr%mesh%np,1:this%nmodes))
        do ii = 1, this%nmodes
           ncols = parse_block_cols(blk, ii-1)
-!          write(*,*) ncols
           call parse_block_float(blk, ii-1, 0, this%omega_array(ii))   !row, column
           call parse_block_float(blk, ii-1, 1, this%lambda_array(ii))  !row, column
           call parse_block_float(blk, ii-1, 2, this%pol_array(ii,1))   !row, column
@@ -118,58 +112,10 @@ contains
             call parse_block_float(blk, ii-1, 6, this%p0_array(ii))   !row, column
           end if
        end do
-!       call parse_block_float(blk, 0, 0, this%omega)   !row, column
-!       call parse_block_float(blk, 0, 1, this%lambda)  !row, column
-!       call parse_block_float(blk, 0, 2, this%pol_x)   !row, column
-!       call parse_block_float(blk, 0, 3, this%pol_y)   !row, column
-!       call parse_block_float(blk, 0, 4, this%pol_z)   !row, column
       call parse_block_end(blk)
     else
-      !The following syntax is depreciated, but still in for downwards compatibility, Todo remove
-      !%Variable OEPOmega
-      !%Type float
-      !%Default 1.0
-      !%Section Hamiltonian::XC
-      !%Description
-      !% Frequency of the single photon mode
-      !%End
-      call parse_variable('OEPOmega', M_ONE, this%omega)
-
-      !%Variable OEPLambda
-      !%Type float
-      !%Default 0.01
-      !%Section Hamiltonian::XC
-      !%Description
-      !% Electron-photon coupling strenght of the single photon mode
-      !%End
-      call parse_variable('OEPLambda', CNST(1e-2), this%lambda)
-
-      !%Variable OEPPolX
-      !%Type float
-      !%Default 1.0
-      !%Section Hamiltonian::XC
-      !%Description
-      !% polarization component of photon field in x-direction
-      !%End
-      call parse_variable('OEPPolX', M_ONE, this%pol_x)
-
-      !%Variable OEPPolY
-      !%Type float
-      !%Default 0.0
-      !%Section Hamiltonian::XC
-      !%Description
-      !% polarization component of photon field in y-direction
-      !%End
-      call parse_variable('OEPPolY', M_ZERO, this%pol_y)
-
-      !%Variable OEPPolZ
-      !%Type float
-      !%Default 0.0
-      !%Section Hamiltonian::XC
-      !%Description
-      !% polarization component of photon field in z-direction
-      !%End
-      call parse_variable('OEPPolZ', M_ZERO, this%pol_z)
+      call messages_write('You need to specify the photon modes!')
+      call messages_fatal()
     end if
 
     this%ex = M_ZERO
@@ -177,11 +123,6 @@ contains
 
     SAFE_ALLOCATE(this%correlator(1:gr%mesh%np,1))
     this%correlator = M_ZERO
-
-    SAFE_ALLOCATE(this%pol_dipole(1:gr%mesh%np,1))
-    this%pol_dipole(1:gr%mesh%np,1) = this%pol_x*gr%mesh%x(1:gr%mesh%np, 1) &
-                                        + this%pol_y*gr%mesh%x(1:gr%mesh%np, 2) &
-                                        + this%pol_z*gr%mesh%x(1:gr%mesh%np, 3)
 
     POP_SUB(photon_mode_init)
   end subroutine photon_mode_init
@@ -193,7 +134,6 @@ contains
 
     PUSH_SUB(photon_mode_end)
 
-    SAFE_DEALLOCATE_P(this%pol_dipole)
     SAFE_DEALLOCATE_P(this%correlator)
 
     SAFE_DEALLOCATE_P(this%omega_array)
