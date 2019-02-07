@@ -27,7 +27,6 @@ module output_oct_m
   use density_oct_m
   use derivatives_oct_m
   use fft_oct_m
-  use fourier_shell_oct_m
   use fourier_space_oct_m
   use geometry_oct_m
   use global_oct_m

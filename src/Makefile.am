@@ -212,7 +212,6 @@ all_f_srcs +=                                 \
 	grid/cube_function.F90                \
 	grid/derivatives.F90                  \
 	grid/double_grid.F90                  \
-	grid/fourier_shell.F90                \
 	grid/fourier_space.F90                \
 	grid/grid.F90                         \
 	grid/index.F90                        \
