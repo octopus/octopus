@@ -193,15 +193,12 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
       ! initialize to something non-zero
       oep%pt%lr%X(dl_psi)(:,:, :, :) = M_ZERO
     end if
-  !write(*,*) oep%has_photons, oep%mixing_density, oep%pt%omega, oep%pt%lambda
     call X(xc_oep_pt_phi)(gr, hm, st, is, oep, phi1)
   end if
 
   ! fix xc potential (needed for Hpsi)
   vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np) + oep%vxc(1:gr%mesh%np,is)
 
-!   oep%lr%X(dl_psi)(:,:, :, :) = M_ZERO
-  
   do iter = 1, oep%scftol%max_iter
     ! iteration over all states
     ss = M_ZERO
