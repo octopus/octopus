@@ -42,9 +42,9 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
   SAFE_ALLOCATE(nn(1:this%max_np,st%d%dim))
   SAFE_ALLOCATE(vv(1:this%max_np,st%d%dim))
   SAFE_ALLOCATE(tmp(1:this%max_np))
-
-  SAFE_ALLOCATE(this%zcoulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:st%d%dim, 1:st%d%dim, 1:this%norbsets))
-  this%zcoulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:st%d%dim,1:st%d%dim,1:this%norbsets) = M_ZERO
+  SAFE_ALLOCATE(this%zcoulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:st%d%dim,1:st%d%dim,1:this%norbsets))
+  this%zcoulomb(1:this%maxnorbs, 1:this%maxnorbs, 1:this%maxnorbs, 1:this%maxnorbs, &
+                1:st%d%dim, 1:st%d%dim, 1:this%norbsets) = M_ZERO
 
   !Lets counts the number of orbital to treat, to display a progress bar
   ntodo = 0
