@@ -102,10 +102,7 @@ contains
     call output_init(sys%outp, sys%gr%sb, sys%st%nst, sys%ks)
     call states_densities_init(sys%st, sys%gr, sys%geo)
     call states_exec_init(sys%st, sys%mc)
-
     call poisson_init(psolver, sys%gr%der, sys%mc)
-    if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%geo, sys%mc)
-
     call v_ks_init(sys%ks, sys%gr, sys%st, sys%geo, sys%mc)
 
     call profiling_out(prof)

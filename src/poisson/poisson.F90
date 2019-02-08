@@ -48,7 +48,6 @@ module poisson_oct_m
   use poisson_corrections_oct_m
   use poisson_isf_oct_m
   use poisson_fft_oct_m
-  use poisson_multigrid_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use types_oct_m
@@ -72,7 +71,6 @@ module poisson_oct_m
     poisson_solver_has_free_bc,  &
     poisson_end,                 &
     poisson_test,                &
-    poisson_is_multigrid,        &
     poisson_slave_work,          &
     poisson_async_init,          &
     poisson_async_end,           &
@@ -86,7 +84,6 @@ module poisson_oct_m
     POISSON_FFT           =  0,         &
     POISSON_CG            =  5,         &
     POISSON_CG_CORRECTED  =  6,         &
-    POISSON_MULTIGRID     =  7,         &
     POISSON_ISF           =  8,         &
     POISSON_NULL          = -999
   
@@ -96,7 +93,6 @@ module poisson_oct_m
     integer           :: kernel
     type(cube_t)      :: cube
     type(mesh_cube_parallel_map_t) :: mesh_cube_map
-    type(mg_solver_t) :: mg
     type(poisson_fft_t) :: fft_solver
     logical :: all_nodes_default
     type(poisson_corr_t) :: corrector
@@ -181,12 +177,9 @@ contains
     !% Conjugate gradients (only for finite systems).
     !%Option cg_corrected 6
     !% Conjugate gradients, corrected for boundary conditions (only for finite systems).
-    !%Option multigrid 7
-    !% Multigrid method (only for finite systems).
     !%Option isf 8
     !% Interpolating Scaling Functions Poisson solver (only for finite systems).
     !%End
-
     default_solver = POISSON_FFT
     if(der%mesh%sb%periodic_dim == 0) default_solver = POISSON_ISF
 
@@ -211,8 +204,6 @@ contains
       str = "conjugate gradients"
     case (POISSON_CG_CORRECTED)
       str = "conjugate gradients, corrected"
-    case (POISSON_MULTIGRID)
-      str = "multigrid"
     case (POISSON_ISF)
       str = "interpolating scaling functions"
     end select
@@ -287,11 +278,6 @@ contains
 
       if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_CG) then
         message(1) = 'A periodic system may not use the cg Poisson solver.'
-        call messages_fatal(1)
-      end if
-
-      if(der%mesh%sb%periodic_dim > 0 .and. this%method == POISSON_MULTIGRID) then
-        message(1) = 'A periodic system may not use the multigrid Poisson solver.'
         call messages_fatal(1)
       end if
 
@@ -415,9 +401,6 @@ contains
     case(POISSON_CG_CORRECTED, POISSON_CG)
       call poisson_cg_end()
       call poisson_corrections_end(this%corrector)
-
-    case(POISSON_MULTIGRID)
-      call poisson_multigrid_end(this%mg)
 
     case(POISSON_ISF)
       call poisson_isf_end(this%isf_solver)
@@ -587,9 +570,6 @@ contains
      
       SAFE_DEALLOCATE_A(rho_corrected)
       SAFE_DEALLOCATE_A(vh_correction)
-
-    case(POISSON_MULTIGRID)
-      call poisson_multigrid_solver(this%mg, der, pot, rho)
 
     case(POISSON_FFT)
       if(this%kernel /= POISSON_FFT_KERNEL_CORRECTED) then
@@ -780,20 +760,10 @@ contains
   logical pure function poisson_solver_is_iterative(this) result(iterative)
     type(poisson_t), intent(in) :: this
 
-    iterative = this%method == POISSON_CG .or. this%method == POISSON_CG_CORRECTED .or. this%method == POISSON_MULTIGRID
+    iterative = this%method == POISSON_CG .or. this%method == POISSON_CG_CORRECTED
   end function poisson_solver_is_iterative
 
   ! -----------------------------------------------------------------
-
-  logical pure function poisson_is_multigrid(this) result(is_multigrid)
-    type(poisson_t), intent(in) :: this
-    
-    is_multigrid = (this%method == POISSON_MULTIGRID)
-    
-  end function poisson_is_multigrid
-
-  ! -----------------------------------------------------------------
-
   logical pure function poisson_solver_has_free_bc(this) result(free_bc)
     type(poisson_t), intent(in) :: this
     
@@ -947,7 +917,7 @@ contains
     PUSH_SUB(poisson_kernel_init)
 
     select case(this%method)
-    case(POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED, POISSON_MULTIGRID, POISSON_ISF)
+    case(POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED, POISSON_ISF)
       valid_solver = .true.
     case default
       valid_solver = .false.
@@ -989,7 +959,7 @@ contains
     !%Default 1e-5
     !%Description
     !% The tolerance for the Poisson solution, used by the <tt>cg</tt>,
-    !% <tt>cg_corrected</tt>, and <tt>multigrid</tt> solvers.
+    !% <tt>cg_corrected</tt>.
     !%End
 
     !! This variable is disabled for the moment
@@ -1037,14 +1007,6 @@ contains
       call messages_info(1)
       call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
       call poisson_cg_init(threshold, iter)
-
-    case(POISSON_MULTIGRID)
-      call parse_variable('PoissonSolverMaxMultipole', 4, maxl)
-      call parse_variable('PoissonSolverThreshold', CNST(1.0e-6), threshold)
-      write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
-      call messages_info(1)
-
-      call poisson_multigrid_init(this%mg, this%der%mesh, maxl, threshold)
 
     case(POISSON_ISF)
       call poisson_isf_init(this%isf_solver, this%der%mesh, this%cube, all_nodes_comm, init_world = this%all_nodes_default)

@@ -39,8 +39,6 @@ dist_share_DATA =                                  \
 	10-hartree_pfft.02-fft_corrected.inp       \
 	11-hartree_cl.test                         \
 	11-hartree_cl.01-fft.inp                   \
-	13-hartree_3d_mg.test                      \
-	13-hartree_3d_mg.01-multigrid.inp          \
 	15-cholesky_parallel.test                  \
 	15-cholesky_parallel.01-real.inp           \
 	15-cholesky_parallel.02-complex.inp        \
