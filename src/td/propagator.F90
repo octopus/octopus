@@ -415,8 +415,7 @@ contains
     ! Recalculate forces, update velocities...
     if(update_energy_ .and. ion_dynamics_ions_move(ions)) then
       call forces_calculate(gr, geo, hm, st, ks, t = abs(nt*dt), dt = dt)
-      call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
-      if(generate) call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
+      call ion_dynamics_propagate_vel(ions, geo)
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     end if
 
