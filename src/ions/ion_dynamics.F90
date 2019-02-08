@@ -32,7 +32,6 @@ module ion_dynamics_oct_m
   use read_coords_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use tdfunction_oct_m
   use profiling_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -59,14 +58,6 @@ module ion_dynamics_oct_m
     ion_dynamics_verlet_step1,             &
     ion_dynamics_verlet_step2
 
-  type ion_td_displacement_t
-    private
-    logical     :: move
-    type(tdf_t) :: fx 
-    type(tdf_t) :: fy 
-    type(tdf_t) :: fz       
-  end type ion_td_displacement_t
-
   type ion_dynamics_t
     private
     logical          :: move_ions
@@ -92,11 +83,10 @@ contains
     type(ion_dynamics_t), intent(out)   :: this
     type(geometry_t),     intent(inout) :: geo
 
-    integer :: i, j, iatom, ierr
+    integer :: i, j
     FLOAT   :: x(MAX_DIM), temperature, sigma, kin1, kin2
     type(c_ptr) :: random_gen_pointer
     type(read_coords_info) :: xyz
-    character(len=100)  :: temp_function_name
     logical :: have_velocities
 
     PUSH_SUB(ion_dynamics_init)

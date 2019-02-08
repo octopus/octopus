@@ -56,7 +56,6 @@ module epot_oct_m
   use states_dim_oct_m
   use submesh_oct_m
   use symmetrizer_oct_m
-  use tdfunction_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
@@ -71,9 +70,8 @@ module epot_oct_m
     epot_end,                      &
     epot_generate,                 &
     epot_local_potential,          &
-    epot_precalc_local_potential,  &
-    epot_global_force
-
+    epot_precalc_local_potential
+  
   type epot_t
     ! Ions
     FLOAT,             pointer :: vpsl(:)       !< the local part of the pseudopotentials
@@ -97,9 +95,6 @@ module epot_oct_m
     type(poisson_t), pointer :: poisson_solver
     logical :: force_total_enforce
     type(ion_interaction_t) :: ion_interaction
-    !> variables for external forces over the ions
-    logical     :: global_force
-    type(tdf_t) :: global_force_function
   end type epot_t
 
 contains
@@ -244,37 +239,6 @@ contains
     end if
 
     call ion_interaction_init(ep%ion_interaction)
-
-    !%Variable TDGlobalForce
-    !%Type string
-    !%Section Time-Dependent
-    !%Description
-    !% If this variable is set, a global time-dependent force will be
-    !% applied to the ions in the x direction during a time-dependent
-    !% run. This variable defines the base name of the force, that
-    !% should be defined in the <tt>TDFunctions</tt> block. This force
-    !% does not affect the electrons directly.
-    !%End
-
-    if(parse_is_defined('TDGlobalForce')) then
-
-      ep%global_force = .true.
-
-      call parse_variable('TDGlobalForce', 'none', function_name)
-      call tdf_read(ep%global_force_function, trim(function_name), ierr)
-
-      if(ierr /= 0) then
-        call messages_write("You have enabled the GlobalForce option but Octopus could not find")
-        call messages_write("the '"//trim(function_name)//"' function in the TDFunctions block.")
-        call messages_fatal()
-      end if
-
-    else
-
-      ep%global_force = .false.
-
-    end if
-    
 
     POP_SUB(epot_init)
   end subroutine epot_init
@@ -583,25 +547,6 @@ contains
     SAFE_DEALLOCATE_A(tmp)
     POP_SUB(epot_precalc_local_potential)
   end subroutine epot_precalc_local_potential
-
-  ! ---------------------------------------------------------
-  
-  subroutine epot_global_force(ep, geo, time, force)
-    type(epot_t),         intent(inout) :: ep
-    type(geometry_t),     intent(in)    :: geo
-    FLOAT,                intent(in)    :: time
-    FLOAT,                intent(out)   :: force(:)
-
-    PUSH_SUB(epot_global_force)
-
-    force(1:geo%space%dim) = CNST(0.0)
-
-    if(ep%global_force) then
-      force(1) = units_to_atomic(units_inp%force, tdf(ep%global_force_function, time))
-    end if
-
-    POP_SUB(epot_global_force)
-  end subroutine epot_global_force
 
 end module epot_oct_m
 

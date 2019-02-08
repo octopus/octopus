@@ -129,8 +129,7 @@ all_f_srcs +=                                 \
 	math/solvers.F90                      \
 	math/spline_filter.F90                \
 	math/splines.F90                      \
-	math/symm_op.F90                      \
-	math/tdfunction.F90
+	math/symm_op.F90
 
 all_c_srcs +=                                 \
 	math/checksum.c                       \

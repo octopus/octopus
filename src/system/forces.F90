@@ -110,7 +110,7 @@ contains
     FLOAT,     optional, intent(in)    :: dt
 
     integer :: j, iatom, idir
-    FLOAT :: x(MAX_DIM), time, global_force(1:MAX_DIM)
+    FLOAT :: x(MAX_DIM), time
     FLOAT, allocatable :: force(:, :), force_loc(:, :), force_nl(:, :), force_u(:, :)
     FLOAT, allocatable :: force_scf(:, :)
     type(profile_t), save :: forces_prof
@@ -136,16 +136,6 @@ contains
       geo%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
       geo%atom(iatom)%f_ii(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
     end do
-
-    if(present(t)) then
-      call epot_global_force(hm%ep, geo, time, global_force)
-
-      ! the ion-ion term is already calculated
-      do iatom = 1, geo%natoms
-        geo%atom(iatom)%f(1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim) + global_force(1:gr%sb%dim)
-        geo%atom(iatom)%f_ii(1:gr%sb%dim) = geo%atom(iatom)%f_ii(1:gr%sb%dim) + global_force(1:gr%sb%dim)
-      end do
-    end if
 
     SAFE_ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_loc(1:gr%mesh%sb%dim, 1:geo%natoms))

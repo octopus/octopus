@@ -44,7 +44,6 @@ module gauge_field_oct_m
   use symmetries_oct_m
   use symmetrizer_oct_m
   use symm_op_oct_m
-  use tdfunction_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
