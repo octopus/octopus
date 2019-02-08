@@ -33,7 +33,6 @@ module epot_oct_m
   use kick_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
-  use lasers_oct_m
   use loct_math_oct_m
   use logrid_oct_m
   use mesh_oct_m
@@ -83,8 +82,6 @@ module epot_oct_m
     logical                    :: non_local
     integer                    :: natoms
     ! External e-m fields
-    integer                :: no_lasers            !< number of laser pulses used
-    type(laser_t), pointer :: lasers(:)            !< lasers stuff
     FLOAT,         pointer :: E_field(:)           !< static electric field
     FLOAT, pointer         :: v_static(:)          !< static scalar potential
     FLOAT, allocatable     :: v_ext(:)             !< static scalar potential - 1:gr%mesh%np_part
@@ -154,9 +151,6 @@ contains
     SAFE_ALLOCATE(ep%vpsl(1:gr%mesh%np))
 
     ep%vpsl(1:gr%mesh%np) = M_ZERO
-
-    ! lasers
-    call laser_init(ep%no_lasers, ep%lasers, gr%mesh)
 
     call kick_init(ep%kick, ispin, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim)
 
@@ -304,9 +298,6 @@ contains
     SAFE_DEALLOCATE_P(ep%vpsl)
 
     call kick_end(ep%kick)
-
-    ! the external laser
-    call laser_end(ep%no_lasers, ep%lasers)
 
     ! the macroscopic fields
     SAFE_DEALLOCATE_P(ep%E_field)

@@ -318,7 +318,6 @@ all_f_srcs +=                                        \
 	hamiltonian/ion_interaction.F90              \
 	hamiltonian/kb_projector.F90                 \
 	hamiltonian/kick.F90                         \
-	hamiltonian/lasers.F90                       \
 	hamiltonian/projector.F90                    \
 	hamiltonian/projector_matrix.F90             \
 	hamiltonian/species_pot.F90                  \
@@ -329,7 +328,6 @@ noinst_HEADERS +=                                    \
 	hamiltonian/hamiltonian_base_inc.F90         \
 	hamiltonian/hamiltonian_inc.F90              \
 	hamiltonian/kb_projector_inc.F90             \
-	hamiltonian/lasers_inc.F90                   \
 	hamiltonian/projector_inc.F90
 
 # Sources in system

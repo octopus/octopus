@@ -36,7 +36,6 @@ module output_oct_m
   use io_function_oct_m
   use kick_oct_m
   use kpoints_oct_m
-  use lasers_oct_m
   use loct_oct_m
   use loct_math_oct_m
   use mesh_oct_m
@@ -76,9 +75,8 @@ module output_oct_m
     output_states,       &
     output_hamiltonian,  &
     output_all,          &
-    output_kick,         &
-    output_scalar_pot
-
+    output_kick
+  
   type output_t
     !> General output variables:
     integer(8) :: what                !< what to output

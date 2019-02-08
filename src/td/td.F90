@@ -33,7 +33,6 @@ module td_oct_m
   use io_oct_m
   use ion_dynamics_oct_m
   use kick_oct_m
-  use lasers_oct_m
   use loct_oct_m
   use loct_math_oct_m
   use mpi_oct_m
@@ -271,11 +270,6 @@ contains
     call parse_variable('RecalculateGSDuringEvolution', .false., td%recalculate_gs)
 
     call propagator_init(sys%gr, sys%st, td%tr, ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield))
-    if(hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
-      call messages_print_stress(stdout, "Time-dependent external fields")
-      call laser_write_info(hm%ep%lasers, stdout, td%dt, td%max_iter)
-      call messages_print_stress(stdout)
-    end if
 
     !%Variable TDEnergyUpdateIter
     !%Type integer

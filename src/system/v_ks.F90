@@ -34,7 +34,6 @@ module v_ks_oct_m
   use index_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
-  use lasers_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m

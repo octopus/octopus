@@ -91,37 +91,6 @@
     POP_SUB(output_hamiltonian)
   end subroutine output_hamiltonian
 
-
-  ! ---------------------------------------------------------
-  subroutine output_scalar_pot(outp, gr, geo, hm, dir, time)
-    type(grid_t),         intent(inout) :: gr
-    type(geometry_t),     intent(in)    :: geo
-    type(hamiltonian_t),  intent(inout) :: hm
-    type(output_t),       intent(in)    :: outp
-    character(len=*),     intent(in)    :: dir
-    FLOAT, optional,      intent(in)    :: time
-
-    integer :: is, err
-    character(len=80) :: fname
-    FLOAT, allocatable :: scalar_pot(:)
-
-    PUSH_SUB(output_scalar_pot)
-
-    if(bitand(outp%what, OPTION__OUTPUT__EXTERNAL_TD_POTENTIAL) /= 0) then
-      SAFE_ALLOCATE(scalar_pot(1:gr%mesh%np))
-      do is = 1, hm%ep%no_lasers
-        write(fname, '(a,i1)') 'scalar_pot-', is
-        scalar_pot = M_ZERO
-        call laser_potential(hm%ep%lasers(is), gr%mesh, scalar_pot, time=time)
-        call dio_function_output(outp%how, dir, fname, gr%mesh, scalar_pot, units_out%energy, err, geo = geo)
-      end do
-      SAFE_DEALLOCATE_A(scalar_pot)
-    end if
-
-    POP_SUB(output_scalar_pot)
-  end subroutine output_scalar_pot
-
-
   ! ---------------------------------------------------------
   subroutine output_kick(outp, mesh, geo, kick, dir)
     type(mesh_t),     intent(in) :: mesh

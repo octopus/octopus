@@ -36,8 +36,6 @@ dist_share_DATA =                                                             \
 	benzene.xyz                                                           \
 	07-octopus_basics-time_dependent_propagation.test                     \
 	07-octopus_basics-time_dependent_propagation.01-gs.inp                \
-	07-octopus_basics-time_dependent_propagation.02-td.inp                \
-	07-octopus_basics-time_dependent_propagation.03-td_laser.inp
-
+	07-octopus_basics-time_dependent_propagation.02-td.inp
 
 CLEANFILES = *~ *.bak

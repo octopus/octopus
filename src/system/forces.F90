@@ -36,7 +36,6 @@ module forces_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
-  use lasers_oct_m
   use loct_math_oct_m
   use math_oct_m
   use mesh_oct_m
@@ -190,44 +189,6 @@ contains
     SAFE_DEALLOCATE_A(force_u)
     SAFE_DEALLOCATE_A(force_scf)
  
-    !\todo forces due to the magnetic fields (static and time-dependent)
-    if(present(t)) then
-      do j = 1, hm%ep%no_lasers
-        select case(laser_kind(hm%ep%lasers(j)))
-        case(E_FIELD_ELECTRIC)
-          x(1:gr%sb%dim) = M_ZERO
-          call laser_field(hm%ep%lasers(j), x(1:gr%sb%dim), t)
-          do iatom = 1, geo%natoms
-            ! Here the proton charge is +1, since the electric field has the usual sign.
-            geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) &
-             + species_zval(geo%atom(iatom)%species)*x(1:gr%mesh%sb%dim)
-            geo%atom(iatom)%f_fields(1:gr%mesh%sb%dim) = species_zval(geo%atom(iatom)%species)*x(1:gr%mesh%sb%dim)
-          end do
-    
-        case(E_FIELD_VECTOR_POTENTIAL)
-          ! Forces are correctly calculated only if the time-dependent
-          ! vector potential has no spatial dependence.
-          ! The full force taking account of the spatial dependence of A should be:
-          ! F = q [- dA/dt + v x \nabla x A]
-
-          x(1:gr%sb%dim) = M_ZERO
-          call laser_electric_field(hm%ep%lasers(j), x(1:gr%sb%dim), t, dt) !convert in E field (E = -dA/ c dt)
-          do iatom = 1, geo%natoms
-            ! Also here the proton charge is +1
-            geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) &
-             + species_zval(geo%atom(iatom)%species)*x(1:gr%mesh%sb%dim)
-            geo%atom(iatom)%f_fields(1:gr%mesh%sb%dim) = geo%atom(iatom)%f_fields(1:gr%mesh%sb%dim) &
-               + species_zval(geo%atom(iatom)%species)*x(1:gr%mesh%sb%dim)
-          end do
-
-        case(E_FIELD_MAGNETIC, E_FIELD_SCALAR_POTENTIAL)
-          write(message(1),'(a)') 'The forces are currently not properly calculated if time-dependent'
-          write(message(2),'(a)') 'magnetic fields are present.'
-          call messages_fatal(2)
-        end select
-      end do
-    end if
-
     if(associated(hm%ep%E_field)) then
       do iatom = 1, geo%natoms
         ! Here the proton charge is +1, since the electric field has the usual sign.

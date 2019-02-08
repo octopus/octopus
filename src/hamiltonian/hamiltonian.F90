@@ -39,7 +39,6 @@ module hamiltonian_oct_m
   use io_function_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
-  use lasers_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -237,10 +236,7 @@ contains
     ! StatesPack not yet implemented for some cases, see hamiltonian_apply_packed
     st%d%pack_states = hamiltonian_apply_packed(hm, gr%mesh)
 
-    external_potentials_present = associated(hm%ep%v_static) .or. &
-				  associated(hm%ep%E_field)  .or. &
-				  associated(hm%ep%lasers)
-
+    external_potentials_present = associated(hm%ep%v_static) .or. associated(hm%ep%E_field)
     kick_present = hm%ep%kick%delta_strength /= M_ZERO
 
     if(hm%theory_level == HARTREE_FOCK .and. st%parallel_in_states) then
@@ -321,7 +317,6 @@ contains
     end subroutine init_phase
 
   end subroutine hamiltonian_init
-
   
   ! ---------------------------------------------------------
   subroutine hamiltonian_end(hm)
@@ -445,12 +440,9 @@ contains
     call hamiltonian_base_clear(this%hm_base)
 
     ! the xc, hartree and external potentials
-    call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_POTENTIAL, &
-      complex_potential = this%bc%abtype == IMAGINARY_ABSORBING)
-
+    call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_POTENTIAL, complex_potential = this%bc%abtype == IMAGINARY_ABSORBING)
 
     do ispin = 1, this%d%nspin
-      if(ispin <= 2) then
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
 
         if(this%bc%abtype == IMAGINARY_ABSORBING) then
@@ -458,47 +450,7 @@ contains
             this%hm_base%Impotential(ip, ispin) = this%hm_base%Impotential(ip, ispin) + this%bc%mf(ip)
           end forall
         end if
-
-      else !Spinors 
-        forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
-      end if
-
     end do
-
-    ! the lasers
-    if (present(time) .or. this%time_zero) then
-
-      do ilaser = 1, this%ep%no_lasers
-        select case(laser_kind(this%ep%lasers(ilaser)))
-        case(E_FIELD_SCALAR_POTENTIAL, E_FIELD_ELECTRIC)
-          do ispin = 1, this%d%spin_channels
-            call laser_potential(this%ep%lasers(ilaser), mesh,  this%hm_base%potential(:, ispin), time_)
-          end do
-        case(E_FIELD_VECTOR_POTENTIAL)
-          call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, .false.)
-          ! get the uniform vector potential associated with a magnetic field
-          aa = M_ZERO
-          call laser_field(this%ep%lasers(ilaser), aa(1:mesh%sb%dim), time_)
-          this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim) &
-            - aa(1:mesh%sb%dim)/P_C
-        end select
-      end do
-
-      ! the gauge field
-      if(gauge_field_is_applied(this%ep%gfield)) then
-        call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, .false.)
-        call gauge_field_get_vec_pot(this%ep%gfield, aa)
-        this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim)  &
-          - aa(1:mesh%sb%dim)/P_c
-      end if
-
-      ! the electric field for a periodic system through the gauge field
-      if(associated(this%ep%e_field) .and. gauge_field_is_applied(this%ep%gfield)) then
-        this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) = &
-          this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) - time_*this%ep%e_field(1:mesh%sb%periodic_dim)
-      end if
-      
-    end if
 
     call hamiltonian_base_update(this%hm_base, mesh)
 
@@ -506,7 +458,6 @@ contains
 
     call profiling_out(prof)
     POP_SUB(hamiltonian_update)
-
   contains
 
     subroutine build_phase()
@@ -617,7 +568,6 @@ contains
 
   end subroutine hamiltonian_update
 
-
   ! ---------------------------------------------------------
   subroutine hamiltonian_epot_generate(this, gr, geo, st, time)
     type(hamiltonian_t),      intent(inout) :: this
@@ -637,7 +587,6 @@ contains
   end subroutine hamiltonian_epot_generate
 
   ! -----------------------------------------------------------------
-
   FLOAT function hamiltonian_get_time(this) result(time)
     type(hamiltonian_t),   intent(inout) :: this
 
@@ -645,7 +594,6 @@ contains
   end function hamiltonian_get_time
 
   ! -----------------------------------------------------------------
-
   logical pure function hamiltonian_apply_packed(this, mesh) result(apply)
     type(hamiltonian_t),   intent(in) :: this
     type(mesh_t),          intent(in) :: mesh
@@ -685,7 +633,6 @@ contains
     SAFE_DEALLOCATE_A(vlocal)
     POP_SUB(zhamiltonian_apply_atom)
   end subroutine zhamiltonian_apply_atom
-
 
   ! -----------------------------------------------------------------
   subroutine hamiltonian_dump_vhxc(restart, hm, mesh, ierr)
@@ -751,7 +698,6 @@ contains
     POP_SUB(hamiltonian_dump_vhxc)
   end subroutine hamiltonian_dump_vhxc
 
-
   ! ---------------------------------------------------------
   subroutine hamiltonian_load_vhxc(restart, hm, mesh, ierr)
     type(restart_t),     intent(in)    :: restart
@@ -799,7 +745,6 @@ contains
 
     POP_SUB(hamiltonian_load_vhxc)
   end subroutine hamiltonian_load_vhxc
-
 
 #include "undef.F90"
 #include "real.F90"
