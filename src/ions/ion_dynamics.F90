@@ -74,14 +74,8 @@ module ion_dynamics_oct_m
     integer          :: thermostat
     FLOAT            :: dt
     FLOAT            :: current_temperature
-
     FLOAT, pointer   :: oldforce(:, :)
-
-    !> the old positions for Verlet (used for the Nose-Hoover)
-    FLOAT, pointer :: old_pos(:, :)    
-    logical :: drive_ions  
-    type(ion_td_displacement_t), pointer ::  td_displacements(:) !> Time-dependent displacements driving the ions
-    type(geometry_t), pointer :: geo_t0
+    FLOAT, pointer   :: old_pos(:, :)    
   end type ion_dynamics_t
 
   type ion_state_t
@@ -105,16 +99,11 @@ contains
     character(len=100)  :: temp_function_name
     logical :: have_velocities
 
-    type(block_t)      :: blk
-    integer            :: ndisp
-    character(len=200) :: expression
-
     PUSH_SUB(ion_dynamics_init)
 
     nullify(this%oldforce)
 
     have_velocities = .false.
-    this%drive_ions = .false.
 
     !%Variable IonsConstantVelocity
     !%Type logical
@@ -131,70 +120,8 @@ contains
     if(this%constant_velocity) then
       call messages_experimental('IonsConstantVelocity')
       have_velocities = .true.
-      this%drive_ions = .true.
     end if
-    
-    !%Variable IonsTimeDependentDisplacements
-    !%Type block
-    !%Section Time-Dependent::Propagation
-    !%Description
-    !% (Experimental) This variable allows you to specify a
-    !% time-dependent function describing the displacement of the ions
-    !% from their equilibrium position: <math>r(t) = r_0 + \Delta
-    !% r(t)</math>.  Specify the displacements dx(t), dy(t), dz(t) as
-    !% follows, for some or all of the atoms:
-    !% 
-    !% <tt>%IonsTimeDependentDisplacements
-    !% <br>&nbsp;&nbsp; atom_index | "dx(t)" | "dy(t)" | "dz(t)"
-    !% <br>%</tt>
-    !%
-    !% The displacement functions are time-dependent functions and should match one
-    !% of the function names given in the first column of the <tt>TDFunctions</tt> block.
-    !% If this block is set, the ions will not be affected by any forces.
-    !%End
-
-    
-    ndisp = 0
-    if(parse_block('IonsTimeDependentDisplacements', blk) == 0) then
-      call messages_experimental("IonsTimeDependentDisplacements")
-      ndisp= parse_block_n(blk)
-      SAFE_ALLOCATE(this%td_displacements(1:geo%natoms))
-      this%td_displacements(1:geo%natoms)%move = .false.
-      if (ndisp > 0) this%drive_ions =.true.
-      
-      do i = 1, ndisp
-        call parse_block_integer(blk, i-1, 0, iatom)
-        this%td_displacements(iatom)%move = .true.
         
-        call parse_block_string(blk, i-1, 1, expression)
-        call tdf_read(this%td_displacements(iatom)%fx, trim(expression), ierr)
-        if (ierr /= 0) then            
-          write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
-          call messages_warning(1)
-        end if
-        
-        
-        call parse_block_string(blk, i-1, 2, expression)
-        call tdf_read(this%td_displacements(iatom)%fy, trim(expression), ierr)
-        if (ierr /= 0) then            
-          write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
-          call messages_warning(1)
-        end if
-        
-        call parse_block_string(blk, i-1, 3, expression)
-        call tdf_read(this%td_displacements(iatom)%fz, trim(expression), ierr)
-        if (ierr /= 0) then            
-          write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
-          call messages_warning(1)
-        end if
-        
-      end do
-      
-      SAFE_ALLOCATE(this%geo_t0)
-      call geometry_copy(this%geo_t0, geo)
-      
-    end if
-    
     !%Variable RandomVelocityTemp
     !%Type float
     !%Default 0.0
@@ -356,14 +283,6 @@ contains
     PUSH_SUB(ion_dynamics_end)
     SAFE_DEALLOCATE_P(this%oldforce)
 
-    if (this%drive_ions .and. associated(this%td_displacements) ) then
-      if (any (this%td_displacements(1:this%geo_t0%natoms)%move)) then
-        ! geometry end cannot be called here, otherwise the species are destroyed twice
-        ! call geometry_end(this%geo_t0)
-      end if
-      SAFE_DEALLOCATE_P(this%td_displacements)
-    end if
-
     POP_SUB(ion_dynamics_end)
   end subroutine ion_dynamics_end
 
@@ -392,32 +311,10 @@ contains
     do iatom = 1, geo%natoms
       if(.not. geo%atom(iatom)%move) cycle
       
-      if(.not. this%drive_ions) then
-        
-        geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) &
-          + dt*geo%atom(iatom)%v(1:geo%space%dim) + &
-          M_HALF*dt**2 / species_mass(geo%atom(iatom)%species) * geo%atom(iatom)%f(1:geo%space%dim)
-        
-        this%oldforce(1:geo%space%dim, iatom) = geo%atom(iatom)%f(1:geo%space%dim)
-        
-      else
-        if(this%constant_velocity) then
-          geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) &
-            + dt*geo%atom(iatom)%v(1:geo%space%dim)
-        end if
-        
-        
-        if (this%td_displacements(iatom)%move) then
-          
-          DR(1:3)=(/TOFLOAT(tdf(this%td_displacements(iatom)%fx,time)), &
-            TOFLOAT(tdf(this%td_displacements(iatom)%fy,time)), &
-            TOFLOAT(tdf(this%td_displacements(iatom)%fz,time)) /)
-          
-          geo%atom(iatom)%x(1:geo%space%dim) = this%geo_t0%atom(iatom)%x(1:geo%space%dim) + DR(1:geo%space%dim)
-        end if
-        
-      end if
-        
+      geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) &
+        + dt*geo%atom(iatom)%v(1:geo%space%dim) + &
+        M_HALF*dt**2 / species_mass(geo%atom(iatom)%species) * geo%atom(iatom)%f(1:geo%space%dim)
+      this%oldforce(1:geo%space%dim, iatom) = geo%atom(iatom)%f(1:geo%space%dim)
     end do
 
     call simul_box_atoms_in_box(sb, geo, .false.)
@@ -431,10 +328,8 @@ contains
     type(geometry_t),     intent(inout) :: geo
 
     integer :: iatom
-    FLOAT   :: scal
 
     if(.not. ion_dynamics_ions_move(this)) return
-    if(this%drive_ions) return
 
     PUSH_SUB(ion_dynamics_propagate_vel)
 
