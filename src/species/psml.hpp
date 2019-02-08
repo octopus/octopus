@@ -140,8 +140,8 @@ namespace pseudopotential {
       return el.mass();
     }
     
-    int valence_charge() const {
-      return value<int>(spec_node_->first_node("valence-configuration")->first_attribute("total-valence-charge"));
+    double valence_charge() const {
+      return value<double>(spec_node_->first_node("valence-configuration")->first_attribute("total-valence-charge"));
     }
 
     int llocal() const {
