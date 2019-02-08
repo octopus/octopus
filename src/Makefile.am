@@ -222,7 +222,6 @@ all_f_srcs +=                                 \
 	grid/mesh_init.F90                    \
 	grid/mesh_interpolation.F90           \
 	grid/mesh_partition.F90               \
-	grid/multigrid.F90                    \
 	grid/nl_operator.F90                  \
 	grid/operate_f.F90                    \
 	grid/partition.F90                    \
@@ -238,7 +237,6 @@ all_f_srcs +=                                 \
 	grid/subarray.F90                     \
 	grid/submesh.F90                      \
 	grid/symmetrizer.F90                  \
-	grid/transfer_table.F90               \
 	grid/vtk.F90
 
 all_c_srcs +=                                 \
@@ -257,7 +255,6 @@ noinst_HEADERS +=                             \
 	grid/mesh_batch_inc.F90               \
 	grid/mesh_function_inc.F90            \
 	grid/mesh_interpolation_inc.F90       \
-	grid/multigrid_inc.F90                \
 	grid/nl_operator_inc.F90              \
 	grid/operate_inc.c                    \
 	grid/partition_transfer_inc.F90       \

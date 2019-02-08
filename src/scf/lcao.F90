@@ -966,14 +966,12 @@ contains
 
     use_stored_orbitals = species_is_ps(geo%atom(iatom)%species) &
       .and. states_are_real(st) .and. spin_channels == 1 .and. lcao_is_available(this) &
-      .and. st%d%dim == 1 .and. .not. gr%have_fine_mesh
+      .and. st%d%dim == 1
 
     ps => species_ps(geo%atom(iatom)%species)
 
     ! we can use the orbitals we already have calculated
     if(use_stored_orbitals) then
-      ASSERT(.not. gr%have_fine_mesh)
-
       if(.not. this%alternative) then
         
         if(states_are_real(st)) then
@@ -1037,7 +1035,7 @@ contains
       end if
 
     else
-      call species_atom_density(gr%fine%mesh, sb, geo%atom(iatom), spin_channels, rho)
+      call species_atom_density(gr%mesh, sb, geo%atom(iatom), spin_channels, rho)
     end if
 
     POP_SUB(lcao_atom_density)
@@ -1105,40 +1103,34 @@ contains
     rho = M_ZERO
     select case (gmd_opt)
     case (INITRHO_PARAMAGNETIC)
-      SAFE_ALLOCATE(atom_rho(1:gr%fine%mesh%np, 1:spin_channels))
+      SAFE_ALLOCATE(atom_rho(1:gr%mesh%np, 1:spin_channels))
 
       parallelized_in_atoms = .true.
 
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call lcao_atom_density(this, st, gr, sb, geo, ia,&
-          & spin_channels, atom_rho)
-        rho(1:gr%fine%mesh%np, 1:spin_channels) = rho(1:gr%fine%mesh&
-          &%np, 1:spin_channels) + atom_rho(1:gr%fine%mesh%np,&
-          & 1:spin_channels)
+        call lcao_atom_density(this, st, gr, sb, geo, ia, spin_channels, atom_rho)
+        rho(1:gr%mesh%np, 1:spin_channels) = rho(1:gr%mesh%np, 1:spin_channels) + atom_rho(1:gr%mesh%np, 1:spin_channels)
       end do
 
       if (spin_channels == 2) then
-        rho(1:gr%fine%mesh%np, 1) = M_HALF*(sum(rho(1:gr%fine%mesh%np&
-          &, 1:2), dim=2))
-        rho(1:gr%fine%mesh%np, 2) = rho(1:gr%fine%mesh%np, 1)
+        rho(1:gr%mesh%np, 1) = M_HALF*(sum(rho(1:gr%mesh%np, 1:2), dim=2))
+        rho(1:gr%mesh%np, 2) = rho(1:gr%mesh%np, 1)
       end if
 
     case (INITRHO_FERROMAGNETIC)
-      SAFE_ALLOCATE(atom_rho(1:gr%fine%mesh%np, 1:2))
+      SAFE_ALLOCATE(atom_rho(1:gr%mesh%np, 1:2))
 
       parallelized_in_atoms = .true.
 
       atom_rho = M_ZERO
       rho = M_ZERO
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call lcao_atom_density(this, st, gr, sb, geo, ia, 2,&
-          & atom_rho(1:gr%fine%mesh%np, 1:2))
-        rho(1:gr%fine%mesh%np, 1:2) = rho(1:gr%fine%mesh%np, 1:2) +&
-          & atom_rho(1:gr%fine%mesh%np, 1:2)
+        call lcao_atom_density(this, st, gr, sb, geo, ia, 2,atom_rho(1:gr%mesh%np, 1:2))
+        rho(1:gr%mesh%np, 1:2) = rho(1:gr%mesh%np, 1:2) + atom_rho(1:gr%mesh%np, 1:2)
       end do
 
     case (INITRHO_RANDOM) ! Randomly oriented spins
-      SAFE_ALLOCATE(atom_rho(1:gr%fine%mesh%np, 1:2))
+      SAFE_ALLOCATE(atom_rho(1:gr%mesh%np, 1:2))
       do ia = 1, geo%natoms
         call lcao_atom_density(this, st, gr, sb, geo, ia, 2, atom_rho)
 
@@ -1146,33 +1138,24 @@ contains
           call quickrnd(iseed, rnd)
           rnd = rnd - M_HALF
           if (rnd > M_ZERO) then
-            rho(1:gr%fine%mesh%np, 1:2) = rho(1:gr%fine%mesh%np, 1:2)&
-              & + atom_rho(1:gr%fine%mesh%np, 1:2)
+            rho(1:gr%mesh%np, 1:2) = rho(1:gr%mesh%np, 1:2) + atom_rho(1:gr%mesh%np, 1:2)
           else
-            rho(1:gr%fine%mesh%np, 1) = rho(1:gr%fine%mesh%np, 1) +&
-              & atom_rho(1:gr%fine%mesh%np, 2)
-            rho(1:gr%fine%mesh%np, 2) = rho(1:gr%fine%mesh%np, 2) +&
-              & atom_rho(1:gr%fine%mesh%np, 1)
+            rho(1:gr%mesh%np, 1) = rho(1:gr%mesh%np, 1) + atom_rho(1:gr%mesh%np, 2)
+            rho(1:gr%mesh%np, 2) = rho(1:gr%mesh%np, 2) + atom_rho(1:gr%mesh%np, 1)
           end if
         elseif (nspin == 4) then
           call quickrnd(iseed, phi)
           call quickrnd(iseed, theta)
           phi = phi*M_TWO*M_PI
           theta = theta*M_PI
-          rho(1:gr%fine%mesh%np, 1) = rho(1:gr%fine%mesh%np, 1) +&
-            & cos(theta/M_TWO)**2*atom_rho(1:gr%fine%mesh%np, 1) +&
-            & sin(theta/M_TWO)**2*atom_rho(1:gr%fine%mesh%np, 2)
-          rho(1:gr%fine%mesh%np, 2) = rho(1:gr%fine%mesh%np, 2) +&
-            & sin(theta/M_TWO)**2*atom_rho(1:gr%fine%mesh%np, 1) +&
-            & cos(theta/M_TWO)**2*atom_rho(1:gr%fine%mesh%np, 2)
-          rho(1:gr%fine%mesh%np, 3) = rho(1:gr%fine%mesh%np, 3) +&
-            & cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)*&
-            & (atom_rho(1:gr%fine%mesh%np, 1) - atom_rho(1:gr%fine&
-            &%mesh%np, 2))
-          rho(1:gr%fine%mesh%np, 4) = rho(1:gr%fine%mesh%np, 4) -&
-            & cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)*&
-            & (atom_rho(1:gr%fine%mesh%np, 1) - atom_rho(1:gr%fine&
-            &%mesh%np, 2))
+          rho(1:gr%mesh%np, 1) = rho(1:gr%mesh%np, 1) + &
+            cos(theta/M_TWO)**2*atom_rho(1:gr%mesh%np, 1) + sin(theta/M_TWO)**2*atom_rho(1:gr%mesh%np, 2)
+          rho(1:gr%mesh%np, 2) = rho(1:gr%mesh%np, 2) + &
+            sin(theta/M_TWO)**2*atom_rho(1:gr%mesh%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:gr%mesh%np, 2)
+          rho(1:gr%mesh%np, 3) = rho(1:gr%mesh%np, 3) + &
+            cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)*(atom_rho(1:gr%mesh%np, 1) - atom_rho(1:gr%mesh%np, 2))
+          rho(1:gr%mesh%np, 4) = rho(1:gr%mesh%np, 4) - &
+            cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)*(atom_rho(1:gr%mesh%np, 1) - atom_rho(1:gr%mesh%np, 2))
         end if
       end do
 
@@ -1207,7 +1190,7 @@ contains
         call messages_fatal(1)
       end if
 
-      SAFE_ALLOCATE(atom_rho(1:gr%fine%mesh%np, 1:2))
+      SAFE_ALLOCATE(atom_rho(1:gr%mesh%np, 1:2))
       do ia = 1, geo%natoms
         !Read from AtomsMagnetDirection block 
         if (nspin == 2) then
@@ -1225,18 +1208,18 @@ contains
         call lcao_atom_density(this, st, gr, sb, geo, ia, 2, atom_rho)
 
         !Scale magnetization density
-        n1 = dmf_integrate(gr%fine%mesh, atom_rho(:, 1))
-        n2 = dmf_integrate(gr%fine%mesh, atom_rho(:, 2))
+        n1 = dmf_integrate(gr%mesh, atom_rho(:, 1))
+        n2 = dmf_integrate(gr%mesh, atom_rho(:, 2))
         if (lmag > n1 + n2) then
           mag = mag*(n1 + n2)/lmag
           lmag = n1 + n2
         elseif (abs(lmag) <= M_EPSILON) then
           if (abs(n1 - n2) <= M_EPSILON) then
-            rho(1:gr%fine%mesh%np, 1:2) = rho(1:gr%fine%mesh%np, 1:2) + atom_rho(1:gr%fine%mesh%np, 1:2)
+            rho(1:gr%mesh%np, 1:2) = rho(1:gr%mesh%np, 1:2) + atom_rho(1:gr%mesh%np, 1:2)
           else
             atom_rho(:, 1) = (atom_rho(:, 1) + atom_rho(:, 2))/M_TWO
-            rho(1:gr%fine%mesh%np, 1) = rho(1:gr%fine%mesh%np, 1) + atom_rho(1:gr%fine%mesh%np, 1)
-            rho(1:gr%fine%mesh%np, 2) = rho(1:gr%fine%mesh%np, 2) + atom_rho(1:gr%fine%mesh%np, 1)
+            rho(1:gr%mesh%np, 1) = rho(1:gr%mesh%np, 1) + atom_rho(1:gr%mesh%np, 1)
+            rho(1:gr%mesh%np, 2) = rho(1:gr%mesh%np, 2) + atom_rho(1:gr%mesh%np, 1)
           end if
           cycle
         end if
@@ -1253,10 +1236,10 @@ contains
         !Rotate magnetization density
         if (nspin == 2) then
           if (mag(1) > M_ZERO) then
-            rho(1:gr%fine%mesh%np, 1:2) = rho(1:gr%fine%mesh%np, 1:2) + atom_rho(1:gr%fine%mesh%np, 1:2)
+            rho(1:gr%mesh%np, 1:2) = rho(1:gr%mesh%np, 1:2) + atom_rho(1:gr%mesh%np, 1:2)
           else
-            rho(1:gr%fine%mesh%np, 1) = rho(1:gr%fine%mesh%np, 1) + atom_rho(1:gr%fine%mesh%np, 2)
-            rho(1:gr%fine%mesh%np, 2) = rho(1:gr%fine%mesh%np, 2) + atom_rho(1:gr%fine%mesh%np, 1)
+            rho(1:gr%mesh%np, 1) = rho(1:gr%mesh%np, 1) + atom_rho(1:gr%mesh%np, 2)
+            rho(1:gr%mesh%np, 2) = rho(1:gr%mesh%np, 2) + atom_rho(1:gr%mesh%np, 1)
           end if
 
         elseif (nspin == 4) then
@@ -1277,29 +1260,26 @@ contains
             end if
           end if
 
-          rho(1:gr%fine%mesh%np, 1) = rho(1:gr%fine%mesh%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:gr%fine%mesh%np, 1) &
-            + sin(theta/M_TWO)**2*atom_rho(1:gr%fine%mesh%np, 2)
-          rho(1:gr%fine%mesh%np, 2) = rho(1:gr%fine%mesh%np, 2) + sin(theta/M_TWO)**2*atom_rho(1:gr%fine%mesh%np, 1) &
-               + cos(theta/M_TWO)**2*atom_rho(1:gr%fine%mesh%np, 2)
-          rho(1:gr%fine%mesh%np, 3) = rho(1:gr%fine%mesh%np, 3) + cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)* &
-            (atom_rho(1:gr%fine%mesh%np, 1) - atom_rho(1:gr%fine%mesh%np, 2))
-          rho(1:gr%fine%mesh%np, 4) = rho(1:gr%fine%mesh%np, 4) - cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)* &
-            (atom_rho(1:gr%fine%mesh%np, 1) - atom_rho(1:gr%fine%mesh%np, 2))
+          rho(1:gr%mesh%np, 1) = rho(1:gr%mesh%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:gr%mesh%np, 1) &
+            + sin(theta/M_TWO)**2*atom_rho(1:gr%mesh%np, 2)
+          rho(1:gr%mesh%np, 2) = rho(1:gr%mesh%np, 2) + sin(theta/M_TWO)**2*atom_rho(1:gr%mesh%np, 1) &
+               + cos(theta/M_TWO)**2*atom_rho(1:gr%mesh%np, 2)
+          rho(1:gr%mesh%np, 3) = rho(1:gr%mesh%np, 3) + &
+            cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)*(atom_rho(1:gr%mesh%np, 1) - atom_rho(1:gr%mesh%np, 2))
+          rho(1:gr%mesh%np, 4) = rho(1:gr%mesh%np, 4) - &
+            cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)*(atom_rho(1:gr%mesh%np, 1) - atom_rho(1:gr%mesh%np, 2))
         end if
       end do
 
       call parse_block_end(blk)
-
     end select
-
 
 #ifdef HAVE_MPI
     if(geo%atoms_dist%parallel .and. parallelized_in_atoms) then
       ! NOTE: if random or user_defined are made parallelized in atoms, below should be st%d%nspin instead of spin_channels
       do is = 1, spin_channels
-        atom_rho(1:gr%fine%mesh%np, 1) = rho(1:gr%fine%mesh%np, is)
-        call MPI_Allreduce(atom_rho(1, 1), rho(1, is), gr%fine%mesh%np, &
-          MPI_FLOAT, MPI_SUM, geo%atoms_dist%mpi_grp%comm, mpi_err)
+        atom_rho(1:gr%mesh%np, 1) = rho(1:gr%mesh%np, is)
+        call MPI_Allreduce(atom_rho(1, 1), rho(1, is), gr%mesh%np, MPI_FLOAT, MPI_SUM, geo%atoms_dist%mpi_grp%comm, mpi_err)
       end do
     end if
 #endif
@@ -1307,7 +1287,7 @@ contains
     ! we now renormalize the density (necessary if we have a charged system)
     rr = M_ZERO
     do is = 1, spin_channels
-      rr = rr + dmf_integrate(gr%fine%mesh, rho(:, is))
+      rr = rr + dmf_integrate(gr%mesh, rho(:, is))
     end do
 
     write(message(1),'(a,f13.6)')'Info: Unnormalized total charge = ', rr
@@ -1319,7 +1299,7 @@ contains
     end if
     rr = M_ZERO
     do is = 1, spin_channels
-      rr = rr + dmf_integrate(gr%fine%mesh, rho(:, is))
+      rr = rr + dmf_integrate(gr%mesh, rho(:, is))
     end do
 
     write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', rr

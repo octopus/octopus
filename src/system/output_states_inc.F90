@@ -41,24 +41,24 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
       else
         write(fname, '(a,i1)') 'density-sp', is
       end if
-      call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
+      call dio_function_output(outp%how, dir, fname, gr%mesh, &
         st%rho(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     end do
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
     fn_unit = units_out%length**(1-gr%mesh%sb%dim)
-    SAFE_ALLOCATE(polarization(1:gr%fine%mesh%np, 1:gr%sb%dim))
+    SAFE_ALLOCATE(polarization(1:gr%mesh%np, 1:gr%sb%dim))
 
     do is = 1, st%d%nspin
-      forall(ip = 1:gr%fine%mesh%np, idir = 1:gr%sb%dim) polarization(ip, idir) = st%rho(ip, is)*gr%fine%mesh%x(ip, idir)
+      forall(ip = 1:gr%mesh%np, idir = 1:gr%sb%dim) polarization(ip, idir) = st%rho(ip, is)*gr%mesh%x(ip, idir)
 
       if(st%d%nspin == 1) then
         write(fname, '(a)') 'dipole_density'
       else
         write(fname, '(a,i1)') 'dipole_density-sp', is
       end if
-      call io_function_output_vector(outp%how, dir, fname, gr%fine%mesh, polarization, gr%sb%dim, fn_unit, ierr, &
+      call io_function_output_vector(outp%how, dir, fname, gr%mesh, polarization, gr%sb%dim, fn_unit, ierr, &
         geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
     end do
     

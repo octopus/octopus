@@ -38,7 +38,6 @@ module v_ks_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
-  use multigrid_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -327,15 +326,7 @@ contains
 
     ks%new_hartree = .false.
     nullify(ks%hartree_solver)
-    if(ks%theory_level /= INDEPENDENT_PARTICLES) then
-      if(gr%have_fine_mesh) then
-        ks%new_hartree = .true.
-        SAFE_ALLOCATE(ks%hartree_solver)
-        call poisson_init(ks%hartree_solver, gr%fine%der, mc, label = " (fine mesh)")
-      else
-        ks%hartree_solver => psolver
-      end if
-    end if
+    if(ks%theory_level /= INDEPENDENT_PARTICLES) ks%hartree_solver => psolver
 
     ks%gr => gr
     ks%calc%calculating = .false.
@@ -344,7 +335,6 @@ contains
     call current_init(ks%current_calculator)
     
     POP_SUB(v_ks_init)
-
   contains
 
     subroutine get_functional_from_pseudos(x_functional, c_functional)
@@ -585,8 +575,8 @@ contains
       PUSH_SUB(v_ks_calc_start.calculate_density)
 
       ! get density taking into account non-linear core corrections
-      SAFE_ALLOCATE(ks%calc%density(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
-      call states_total_density(st, ks%gr%fine%mesh, ks%calc%density)
+      SAFE_ALLOCATE(ks%calc%density(1:ks%gr%mesh%np, 1:st%d%nspin))
+      call states_total_density(st, ks%gr%mesh, ks%calc%density)
 
       ! Amaldi correction
       if(ks%sic_type == SIC_AMALDI) &
@@ -596,15 +586,15 @@ contains
       if(associated(st%rho_core) .or. hm%d%spin_channels > 1) then
         ks%calc%total_density_alloc = .true.
 
-        SAFE_ALLOCATE(ks%calc%total_density(1:ks%gr%fine%mesh%np))
+        SAFE_ALLOCATE(ks%calc%total_density(1:ks%gr%mesh%np))
 
-        forall(ip = 1:ks%gr%fine%mesh%np)
+        forall(ip = 1:ks%gr%mesh%np)
           ks%calc%total_density(ip) = sum(ks%calc%density(ip, 1:hm%d%spin_channels))
         end forall
 
         ! remove non-local core corrections
         if(associated(st%rho_core)) then
-          forall(ip = 1:ks%gr%fine%mesh%np)
+          forall(ip = 1:ks%gr%mesh%np)
             ks%calc%total_density(ip) = ks%calc%total_density(ip) - st%rho_core(ip)*ks%calc%amaldi_factor
           end forall
         end if
@@ -630,9 +620,9 @@ contains
         call messages_not_implemented('ADSIC with non-collinear spin')      
       end if
 
-      SAFE_ALLOCATE(vxc_sic(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
+      SAFE_ALLOCATE(vxc_sic(1:ks%gr%mesh%np, 1:st%d%nspin))
       SAFE_ALLOCATE(vh_sic(1:ks%gr%mesh%np))
-      SAFE_ALLOCATE(rho(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
+      SAFE_ALLOCATE(rho(1:ks%gr%mesh%np, 1:st%d%nspin))
       SAFE_ALLOCATE(qsp(1:st%d%nspin))
       
       vxc_sic = M_ZERO
@@ -656,7 +646,7 @@ contains
 
           rho(:, ispin) = ks%calc%density(:, ispin) / qsp(ispin)
           ! TODO : check for solid:   -minval(st%eigenval(st%nst,:))
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, &
+          call xc_get_vxc(ks%gr%der, ks%xc, &
                st, rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), qsp(ispin), &
                vxc_sic)
 
@@ -699,16 +689,16 @@ contains
       ks%calc%energy%correlation = M_ZERO
       ks%calc%energy%xc_j = M_ZERO
 
-      SAFE_ALLOCATE(ks%calc%vxc(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
+      SAFE_ALLOCATE(ks%calc%vxc(1:ks%gr%mesh%np, 1:st%d%nspin))
       ks%calc%vxc = M_ZERO
 
       ! Get the *local* XC term
       if(ks%calc%calc_energy) then
-        call xc_get_vxc(ks%gr%fine%der, ks%xc, &
+        call xc_get_vxc(ks%gr%der, ks%xc, &
           st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc, &
           ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
       else
-        call xc_get_vxc(ks%gr%fine%der, ks%xc, &
+        call xc_get_vxc(ks%gr%der, ks%xc, &
           st, ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ks%calc%vxc)
       end if
 
@@ -725,7 +715,7 @@ contains
             factor = M_TWO
           end if
           ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + &
-            factor*dmf_dotp(ks%gr%fine%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin))
+            factor*dmf_dotp(ks%gr%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin))
         end do
       end if
 
@@ -764,19 +754,8 @@ contains
       hm%energy%exchange    = M_ZERO
       hm%energy%correlation = M_ZERO
     else
-      
-      if(ks%gr%have_fine_mesh) then
-        do ispin = 1, hm%d%nspin
-          call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, &
-            ks%calc%vxc(:, ispin), hm%vxc(:, ispin), INJECTION)
-        end do
-        SAFE_DEALLOCATE_P(ks%calc%vxc)
-      else
-        ! just change the pointer to avoid the copy
-        SAFE_DEALLOCATE_P(hm%vxc)
-        hm%vxc => ks%calc%vxc
-      end if
-      
+      SAFE_DEALLOCATE_P(hm%vxc)
+      hm%vxc => ks%calc%vxc
       hm%energy%hartree = M_ZERO
       call v_ks_hartree(ks, hm)
 
@@ -848,12 +827,7 @@ contains
 
     ASSERT(associated(ks%hartree_solver))
 
-    if(.not. ks%gr%have_fine_mesh) then
-      pot => hm%vhartree
-    else
-      SAFE_ALLOCATE(pot(1:ks%gr%fine%mesh%np_part))
-      pot = M_ZERO
-    end if
+    pot => hm%vhartree
 
     if(.not. poisson_is_async(ks%hartree_solver)) then
       ! solve the Poisson equation
@@ -865,18 +839,7 @@ contains
     
     if(ks%calc%calc_energy) then
       ! Get the Hartree energy
-      hm%energy%hartree = M_HALF*dmf_dotp(ks%gr%fine%mesh, ks%calc%total_density, pot)
-    end if
-
-    if(ks%gr%have_fine_mesh) then
-      ! we use injection to transfer to the fine grid, we cannot use
-      ! restriction since the boundary conditions are not zero for the
-      ! Hartree potential (and for some XC functionals).
-      call dmultigrid_fine2coarse(ks%gr%fine%tt, ks%gr%fine%der, ks%gr%mesh, pot, hm%vhartree, INJECTION)
-      ! some debugging output that I will keep here for the moment, XA
-      !      call dio_function_output(1, "./", "vh_fine", ks%gr%fine%mesh, pot, unit_one, is)
-      !      call dio_function_output(1, "./", "vh_coarse", ks%gr%mesh, hm%vhartree, unit_one, is)
-      SAFE_DEALLOCATE_P(pot)
+      hm%energy%hartree = M_HALF*dmf_dotp(ks%gr%mesh, ks%calc%total_density, pot)
     end if
 
     POP_SUB(v_ks_hartree)

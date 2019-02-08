@@ -39,7 +39,6 @@ module epot_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use multigrid_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
   use poisson_oct_m

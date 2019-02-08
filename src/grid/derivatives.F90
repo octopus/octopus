@@ -41,17 +41,9 @@ module derivatives_oct_m
   use stencil_starplus_oct_m
   use stencil_stargeneral_oct_m
   use stencil_variational_oct_m
-  use transfer_table_oct_m
   use types_oct_m
   use utils_oct_m
   use varinfo_oct_m
-
-!   debug purposes 
-!   use io_binary_oct_m
-!   use io_function_oct_m
-!   use io_oct_m
-!   use unit_oct_m
-!   use unit_system_oct_m
   
   implicit none
 
@@ -124,13 +116,7 @@ module derivatives_oct_m
     type(nl_operator_t), pointer :: grad(:)
 
     integer                      :: n_ghost(MAX_DIM)   !< ghost points to add in each dimension
-#if defined(HAVE_MPI)
     integer                      :: comm_method 
-#endif
-    type(derivatives_t),    pointer :: finer
-    type(derivatives_t),    pointer :: coarser
-    type(transfer_table_t), pointer :: to_finer
-    type(transfer_table_t), pointer :: to_coarser
   end type derivatives_t
 
   type derivatives_handle_batch_t
@@ -151,7 +137,6 @@ module derivatives_oct_m
 
 contains
 
-  ! ---------------------------------------------------------
   elemental subroutine derivatives_nullify(this)
     type(derivatives_t), intent(out) :: this
 
@@ -165,12 +150,7 @@ contains
     this%lapl_cutoff = M_ZERO
     nullify(this%op, this%lapl, this%grad)
     this%n_ghost = 0
-#if defined(HAVE_MPI)
     this%comm_method = 0
-#endif
-    nullify(this%finer, this%coarser)
-    nullify(this%to_finer, this%to_coarser)
-
   end subroutine derivatives_nullify
 
   ! ---------------------------------------------------------
@@ -278,14 +258,8 @@ contains
       der%n_ghost(idir) = maxval(abs(der%lapl%stencil%points(idir, :)))
     end do
 
-    nullify(der%coarser)
-    nullify(der%finer)
-    nullify(der%to_coarser)
-    nullify(der%to_finer)
-
     POP_SUB(derivatives_init)
   end subroutine derivatives_init
-
 
   ! ---------------------------------------------------------
   subroutine derivatives_end(der)
@@ -304,16 +278,10 @@ contains
     SAFE_DEALLOCATE_P(der%op)
     nullify(der%lapl, der%grad)
 
-    nullify(der%coarser)
-    nullify(der%finer)
-    nullify(der%to_coarser)
-    nullify(der%to_finer)
-
     call boundaries_end(der%boundaries)
 
     POP_SUB(derivatives_end)
   end subroutine derivatives_end
-
 
   ! ---------------------------------------------------------
   !> Returns maximum extension of the stencil in spatial direction
@@ -339,7 +307,6 @@ contains
       
     POP_SUB(stencil_extent)
   end function derivatives_stencil_extent
-
 
   ! ---------------------------------------------------------
   subroutine derivatives_get_stencil_lapl(der, sb)
@@ -367,9 +334,7 @@ contains
     end select
 
     POP_SUB(derivatives_get_stencil_lapl)
-
   end subroutine derivatives_get_stencil_lapl
-
 
   ! ---------------------------------------------------------
   !> Returns the diagonal elements of the Laplacian, needed for preconditioning
@@ -385,15 +350,12 @@ contains
     call dnl_operator_operate_diag(der%lapl, lapl)
 
     POP_SUB(derivatives_lapl_diag)
-
   end subroutine derivatives_lapl_diag
-
 
   ! ---------------------------------------------------------
   subroutine derivatives_get_stencil_grad(der)
     type(derivatives_t), intent(inout) :: der
-      
-
+    
     integer  :: ii
     character :: dir_label
 
@@ -423,9 +385,7 @@ contains
     end do
 
     POP_SUB(derivatives_get_stencil_grad)
-
   end subroutine derivatives_get_stencil_grad
-
 
   ! ---------------------------------------------------------
   subroutine derivatives_update(der, mesh)
@@ -570,7 +530,6 @@ contains
     end select
     
     POP_SUB(derivatives_build)
-
   contains
 
     ! ---------------------------------------------------------
@@ -624,7 +583,6 @@ contains
     end subroutine get_rhs_grad
 
   end subroutine derivatives_build
-
 
   ! ---------------------------------------------------------
   subroutine derivatives_make_discretization(dim, mesh, masses, pol, rhs, nderiv, op, name, force_orthogonal)
@@ -722,7 +680,6 @@ contains
     POP_SUB(derivatives_make_discretization)
   end subroutine derivatives_make_discretization
 
-#ifdef HAVE_MPI    
   ! ---------------------------------------------------------
   logical function derivatives_overlap(this) result(overlap)
     type(derivatives_t), intent(in) :: this
@@ -733,7 +690,6 @@ contains
 
     POP_SUB(derivatives_overlap)
   end function derivatives_overlap
-#endif
   
 #include "undef.F90"
 #include "real.F90"

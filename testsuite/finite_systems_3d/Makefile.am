@@ -65,8 +65,6 @@ dist_share_DATA = \
 	22-preconditioner.01-none.inp                \
 	24-o2-spin.test                              \
 	24-o2-spin.01-gs.inp \
-	27-fine_mesh.test                            \
-	27-fine_mesh.01-gs.inp \
         30-local_multipoles.01-gs.inp \
         30-local_multipoles.test                     \
 	31-acetylene_b3lyp.test                      \

@@ -64,7 +64,6 @@ subroutine X(derivatives_batch_start)(op, der, ff, opff, handle, ghost_update, s
   POP_SUB(X(derivatives_batch_start))
 end subroutine X(derivatives_batch_start)
 
-
 ! ---------------------------------------------------------
 subroutine X(derivatives_batch_finish)(handle)
   type(derivatives_handle_batch_t), intent(inout) :: handle
@@ -110,7 +109,6 @@ subroutine X(derivatives_batch_finish)(handle)
   POP_SUB(X(derivatives_batch_finish))
 end subroutine X(derivatives_batch_finish)
 
-
 ! ---------------------------------------------------------
 subroutine X(derivatives_batch_perform)(op, der, ff, opff, ghost_update, set_bc, factor)
   type(nl_operator_t), intent(in)    :: op
@@ -131,7 +129,6 @@ subroutine X(derivatives_batch_perform)(op, der, ff, opff, ghost_update, set_bc,
   POP_SUB(X(derivatives_batch_perform))
 
 end subroutine X(derivatives_batch_perform)
-
 
 ! ---------------------------------------------------------
 !> Now the simplified interfaces
@@ -168,7 +165,6 @@ subroutine X(derivatives_perform)(op, der, ff, op_ff, ghost_update, set_bc, fact
 
 end subroutine X(derivatives_perform)
 
-
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl)(der, ff, op_ff, ghost_update, set_bc)
   type(derivatives_t),       intent(in)    :: der
@@ -183,7 +179,6 @@ subroutine X(derivatives_lapl)(der, ff, op_ff, ghost_update, set_bc)
         
   POP_SUB(X(derivatives_lapl))
 end subroutine X(derivatives_lapl)
-
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
@@ -221,7 +216,6 @@ subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
   call profiling_out(gradient_prof)
   POP_SUB(X(derivatives_grad))
 end subroutine X(derivatives_grad)
-
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
@@ -270,8 +264,6 @@ subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
   call profiling_out(divergence_prof)
   POP_SUB(X(derivatives_div))
 end subroutine X(derivatives_div)
-
-
 
 ! ---------------------------------------------------------
 subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
@@ -330,9 +322,7 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
   POP_SUB(X(derivatives_curl))
 end subroutine X(derivatives_curl)
 
-
 ! ----------------------------------------------------------
-
 subroutine X(derivatives_test)(this, repetitions, min_blocksize, max_blocksize)
   type(derivatives_t), intent(in) :: this
   integer,             intent(in) :: repetitions
@@ -464,9 +454,7 @@ subroutine X(derivatives_test)(this, repetitions, min_blocksize, max_blocksize)
 
   SAFE_DEALLOCATE_A(ff)
   SAFE_DEALLOCATE_A(opff)
-
 end subroutine X(derivatives_test)
-
 
 !! Local Variables:
 !! mode: f90

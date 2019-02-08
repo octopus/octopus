@@ -31,7 +31,6 @@ module grid_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
-  use multigrid_oct_m
   use nl_operator_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -52,18 +51,13 @@ module grid_oct_m
     grid_init_stage_2,     &
     grid_end,              &
     grid_write_info,       &
-    grid_create_multigrid, &
     grid_create_largergrid
 
   type grid_t
     type(simul_box_t)           :: sb
     type(mesh_t)                :: mesh
-    type(multigrid_level_t)     :: fine
     type(derivatives_t)         :: der
-    type(multigrid_t), pointer  :: mgrid
-    type(multigrid_t), pointer  :: mgrid_prec  ! the multigrid object for the preconditioner
     type(double_grid_t)         :: dgrid
-    logical                     :: have_fine_mesh
     type(stencil_t)             :: stencil
   end type grid_t
 
@@ -99,23 +93,6 @@ contains
     FLOAT :: grid_spacing(1:MAX_DIM)
 
     PUSH_SUB(grid_init_stage_1)
-
-    !%Variable UseFineMesh
-    !%Type logical
-    !%Default no
-    !%Section Mesh
-    !%Description
-    !% If enabled, <tt>Octopus</tt> will use a finer mesh for the calculation
-    !% of the forces or other sensitive quantities.
-    !% Experimental, and incompatible with domain-parallelization.
-    !%End
-    if (gr%sb%dim == 3) then 
-      call parse_variable('UseFineMesh', .false., gr%have_fine_mesh)
-    else
-      gr%have_fine_mesh = .false.
-    end if
-
-    if(gr%have_fine_mesh) call messages_experimental("UseFineMesh")
 
     call geometry_grid_defaults(geo, def_h, def_rsize)
     call geometry_grid_defaults_info(geo)
@@ -203,7 +180,6 @@ contains
 
   end subroutine grid_init_stage_1
 
-
   !-------------------------------------------------------------------
   subroutine grid_init_stage_2(gr, mc, geo)
     type(grid_t), target, intent(inout) :: gr
@@ -215,58 +191,14 @@ contains
     call mesh_init_stage_3(gr%mesh, gr%stencil, mc)
 
     call nl_operator_global_init()
-    if(gr%have_fine_mesh) then
-      message(1) = "Info: coarse mesh"
-      call messages_info(1)
-    end if
     call derivatives_build(gr%der, gr%mesh)
-
-    ! initialize a finer mesh to hold the density, for this we use the
-    ! multigrid routines
-    
-    if(gr%have_fine_mesh) then
-
-      if(gr%mesh%parallel_in_domains) then
-        message(1) = 'UseFineMesh does not work with domain parallelization.'
-        call messages_fatal(1)
-      end if
-
-      SAFE_ALLOCATE(gr%fine%mesh)
-      SAFE_ALLOCATE(gr%fine%der)
-      
-      call multigrid_mesh_double(geo, gr%mesh, gr%fine%mesh, gr%stencil)
-      
-      call derivatives_init(gr%fine%der, gr%mesh%sb)
-      
-      call mesh_init_stage_3(gr%fine%mesh, gr%stencil, mc)
-      
-      call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
-      
-      message(1) = "Info: fine mesh"
-      call messages_info(1)
-      call derivatives_build(gr%fine%der, gr%fine%mesh)
-
-      gr%fine%der%coarser => gr%der
-      gr%der%finer =>  gr%fine%der
-      gr%fine%der%to_coarser => gr%fine%tt
-      gr%der%to_finer => gr%fine%tt
-
-    else
-      gr%fine%mesh => gr%mesh
-      gr%fine%der => gr%der
-    end if
-
     call mesh_check_symmetries(gr%mesh, gr%mesh%sb)
-
-    ! multigrids are not initialized by default
-    nullify(gr%mgrid)
 
     ! print info concerning the grid
     call grid_write_info(gr, geo, stdout)
 
     POP_SUB(grid_init_stage_2)
   end subroutine grid_init_stage_2
-
 
   !-------------------------------------------------------------------
   subroutine grid_end(gr)
@@ -275,35 +207,13 @@ contains
     PUSH_SUB(grid_end)
 
     call nl_operator_global_end()
-
-    if(gr%have_fine_mesh) then
-      call derivatives_end(gr%fine%der)
-      call mesh_end(gr%fine%mesh)
-      SAFE_DEALLOCATE_P(gr%fine%mesh)
-      SAFE_DEALLOCATE_P(gr%fine%der)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_coarse)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine1)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine2)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine4)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine8)
-      SAFE_DEALLOCATE_P(gr%fine%tt%fine_i)
-    end if
-
     call double_grid_end(gr%dgrid)
-
     call derivatives_end(gr%der)
     call mesh_end(gr%mesh)
-
-    if(associated(gr%mgrid)) then
-      call multigrid_end(gr%mgrid)
-      SAFE_DEALLOCATE_P(gr%mgrid)
-    end if
-
     call stencil_end(gr%stencil)
 
     POP_SUB(grid_end)
   end subroutine grid_end
-
 
   !-------------------------------------------------------------------
   subroutine grid_write_info(gr, geo, iunit)
@@ -322,37 +232,13 @@ contains
     call messages_print_stress(iunit, "Grid")
     call simul_box_write_info(gr%sb, geo, iunit)
 
-    if(gr%have_fine_mesh) then
-      message(1) = "Wave-functions mesh:"
-      call messages_info(1, iunit)
-      call mesh_write_info(gr%mesh, iunit)
-      message(1) = "Density mesh:"
-    else
-      message(1) = "Main mesh:"
-    end if
+    message(1) = "Main mesh:"
     call messages_info(1, iunit)
-    call mesh_write_info(gr%fine%mesh, iunit)
-
+    call mesh_write_info(gr%mesh, iunit)
     call messages_print_stress(iunit)
 
     POP_SUB(grid_write_info)
   end subroutine grid_write_info
-
-
-  !-------------------------------------------------------------------
-  subroutine grid_create_multigrid(gr, geo, mc)
-    type(grid_t),      intent(inout) :: gr
-    type(geometry_t),  intent(in)    :: geo
-    type(multicomm_t), intent(in)    :: mc
-
-    PUSH_SUB(grid_create_multigrid)
-
-    SAFE_ALLOCATE(gr%mgrid)
-    call multigrid_init(gr%mgrid, geo, gr%mesh, gr%der, gr%stencil, mc)
-
-    POP_SUB(grid_create_multigrid)
-  end subroutine grid_create_multigrid
-
 
   !-------------------------------------------------------------------
   subroutine grid_create_largergrid(grin, geo, mc, grout)
@@ -391,15 +277,9 @@ contains
     end select
 
     call stencil_copy(grin%stencil, grout%stencil)
-
     call grid_init_stage_1(grout, geo)
-
     call mesh_init_stage_3(grout%mesh, grout%stencil, mc)
-
     call derivatives_build(grout%der, grout%mesh)
-
-    ! multigrids are not initialized by default
-    nullify(grout%mgrid)
 
     POP_SUB(grid_create_largergrid)
   end subroutine grid_create_largergrid

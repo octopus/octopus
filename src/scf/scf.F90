@@ -43,7 +43,6 @@ module scf_oct_m
   use mix_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
-  use multigrid_oct_m
   use multicomm_oct_m
   use parser_oct_m
   use preconditioners_oct_m
@@ -107,7 +106,6 @@ module scf_oct_m
 
 contains
 
-  ! ---------------------------------------------------------
   subroutine scf_init(scf, gr, geo, st, mc, hm, conv_force)
     type(scf_t),         intent(inout) :: scf
     type(grid_t),        intent(inout) :: gr
@@ -308,7 +306,7 @@ contains
     case(OPTION__MIXFIELD__POTENTIAL)
       scf%mixdim1 = gr%mesh%np
     case(OPTION__MIXFIELD__DENSITY)
-      scf%mixdim1 = gr%fine%mesh%np
+      scf%mixdim1 = gr%mesh%np
     case(OPTION__MIXFIELD__STATES)
       ! we do not really need the mixer, except for the value of the mixing coefficient
       scf%mixdim1 = 1
@@ -317,7 +315,7 @@ contains
     mix_type = TYPE_FLOAT
 
     if(scf%mix_field == OPTION__MIXFIELD__DENSITY) then
-      call mix_init(scf%smix, gr%fine%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
+      call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     else if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
       call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     end if
@@ -348,7 +346,6 @@ contains
         call messages_fatal(1)
       end if
     end if
-
 
     !%Variable SCFCalculateForces
     !%Type logical
@@ -385,7 +382,6 @@ contains
     POP_SUB(scf_init)
   end subroutine scf_init
 
-
   ! ---------------------------------------------------------
   subroutine scf_end(scf)
     type(scf_t), intent(inout) :: scf
@@ -400,7 +396,6 @@ contains
     POP_SUB(scf_end)
   end subroutine scf_end
 
-
   ! ---------------------------------------------------------
   subroutine scf_mix_clear(scf)
     type(scf_t), intent(inout) :: scf
@@ -411,7 +406,6 @@ contains
 
     POP_SUB(scf_mix_clear)
   end subroutine scf_mix_clear
-
 
   ! ---------------------------------------------------------
   subroutine scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run, verbosity, iters_done, restart_load, restart_dump)
@@ -489,7 +483,7 @@ contains
       if (restart_has_flag(restart_load, RESTART_FLAG_MIX)) then
         select case (scf%mix_field)
         case (OPTION__MIXFIELD__DENSITY)
-          call mix_load(restart_load, scf%smix, gr%fine%mesh, ierr)
+          call mix_load(restart_load, scf%smix, gr%mesh, ierr)
         case (OPTION__MIXFIELD__POTENTIAL)
           call mix_load(restart_load, scf%smix, gr%mesh, ierr)
         end select
@@ -501,10 +495,10 @@ contains
 
     end if
 
-    SAFE_ALLOCATE(rhoout(1:gr%fine%mesh%np, 1:1, 1:nspin))
-    SAFE_ALLOCATE(rhoin (1:gr%fine%mesh%np, 1:1, 1:nspin))
+    SAFE_ALLOCATE(rhoout(1:gr%mesh%np, 1:1, 1:nspin))
+    SAFE_ALLOCATE(rhoin (1:gr%mesh%np, 1:1, 1:nspin))
 
-    rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
+    rhoin(1:gr%mesh%np, 1, 1:nspin) = st%rho(1:gr%mesh%np, 1:nspin)
     rhoout = M_ZERO
 
     !We store the Hxc potential for the contribution to the forces
@@ -585,7 +579,7 @@ contains
       ! compute output density, potential (if needed) and eigenvalues sum
       call density_calc(st, gr, st%rho)
 
-      rhoout(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
+      rhoout(1:gr%mesh%np, 1, 1:nspin) = st%rho(1:gr%mesh%np, 1:nspin)
 
       select case(scf%mix_field)
       case(OPTION__MIXFIELD__POTENTIAL)
@@ -610,10 +604,10 @@ contains
       ! compute convergence criteria
       scf%energy_diff = hm%energy%total - scf%energy_diff
       scf%abs_dens = M_ZERO
-      SAFE_ALLOCATE(tmp(1:gr%fine%mesh%np))
+      SAFE_ALLOCATE(tmp(1:gr%mesh%np))
       do is = 1, nspin
-        tmp = abs(rhoin(1:gr%fine%mesh%np, 1, is) - rhoout(1:gr%fine%mesh%np, 1, is))
-        scf%abs_dens = scf%abs_dens + dmf_integrate(gr%fine%mesh, tmp)
+        tmp = abs(rhoin(1:gr%mesh%np, 1, is) - rhoout(1:gr%mesh%np, 1, is))
+        scf%abs_dens = scf%abs_dens + dmf_integrate(gr%mesh, tmp)
       end do
       SAFE_DEALLOCATE_A(tmp)
 
@@ -667,9 +661,9 @@ contains
         call mixing(scf%smix)
         call mixfield_get_vnew(scf%mixfield, st%rho)
         ! for spinors, having components 3 or 4 be negative is not unphysical
-        if(minval(st%rho(1:gr%fine%mesh%np, 1:st%d%spin_channels)) < -CNST(1e-6)) then
+        if(minval(st%rho(1:gr%mesh%np, 1:st%d%spin_channels)) < -CNST(1e-6)) then
           write(message(1),*) 'Negative density after mixing. Minimum value = ', &
-            minval(st%rho(1:gr%fine%mesh%np, 1:st%d%spin_channels))
+            minval(st%rho(1:gr%mesh%np, 1:st%d%spin_channels))
           call messages_warning(1)
         end if
         call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
@@ -718,7 +712,7 @@ contains
 
           select case (scf%mix_field)
           case (OPTION__MIXFIELD__DENSITY)
-            call mix_dump(restart_dump, scf%smix, gr%fine%mesh, ierr)
+            call mix_dump(restart_dump, scf%smix, gr%mesh, ierr)
             if (ierr /= 0) then
               message(1) = 'Unable to write mixing information.'
               call messages_warning(1)
@@ -753,7 +747,7 @@ contains
       end if
 
       ! save information for the next iteration
-      rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
+      rhoin(1:gr%mesh%np, 1, 1:nspin) = st%rho(1:gr%mesh%np, 1:nspin)
 
       select case(scf%mix_field)
         case(OPTION__MIXFIELD__POTENTIAL)
@@ -832,7 +826,6 @@ contains
     POP_SUB(scf_run)
 
   contains
-
 
     ! ---------------------------------------------------------
     subroutine scf_write_iter()
@@ -990,7 +983,6 @@ contains
       POP_SUB(scf_run.scf_write_static)
     end subroutine scf_write_static
 
-
     ! ---------------------------------------------------------
     subroutine calc_dipole(dipole)
       FLOAT, intent(out) :: dipole(:)
@@ -1003,7 +995,7 @@ contains
       dipole(1:MAX_DIM) = M_ZERO
 
       do ispin = 1, st%d%nspin
-        call dmf_multipoles(gr%fine%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
+        call dmf_multipoles(gr%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
       end do
 
       call geometry_dipole(geo, n_dip)
@@ -1015,7 +1007,6 @@ contains
 
       POP_SUB(scf_run.calc_dipole)
     end subroutine calc_dipole
-
 
     ! ---------------------------------------------------------
     subroutine write_dipole(iunit, dipole)
@@ -1033,7 +1024,6 @@ contains
     end subroutine write_dipole
 
     ! -----------------------------------------------------
-    
     subroutine create_convergence_file(dir, fname)
       character(len=*), intent(in) :: dir
       character(len=*), intent(in) :: fname
@@ -1065,7 +1055,6 @@ contains
     end subroutine create_convergence_file
 
     ! -----------------------------------------------------
-    
     subroutine write_convergence_file(dir, fname)
       character(len=*), intent(in) :: dir
       character(len=*), intent(in) :: fname
@@ -1089,7 +1078,6 @@ contains
       end if
       
     end subroutine write_convergence_file
-    
   end subroutine scf_run
 
 end module scf_oct_m

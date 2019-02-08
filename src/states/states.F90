@@ -185,7 +185,6 @@ module states_oct_m
     PAR_INDEPENDENT = 1,              &
     PAR_DEPENDENT   = 2
 
-
   interface states_get_state
     module procedure dstates_get_state1, zstates_get_state1, dstates_get_state2, zstates_get_state2
     module procedure dstates_get_state3, zstates_get_state3, dstates_get_state4, zstates_get_state4
@@ -1067,11 +1066,11 @@ contains
 
     PUSH_SUB(states_densities_init)
 
-    SAFE_ALLOCATE(st%rho(1:gr%fine%mesh%np_part, 1:st%d%nspin))
+    SAFE_ALLOCATE(st%rho(1:gr%mesh%np_part, 1:st%d%nspin))
     st%rho = M_ZERO
 
     if(geo%nlcc) then
-      SAFE_ALLOCATE(st%rho_core(1:gr%fine%mesh%np))
+      SAFE_ALLOCATE(st%rho_core(1:gr%mesh%np))
       st%rho_core(:) = M_ZERO
     end if
 
@@ -1496,12 +1495,7 @@ contains
       end do
       SAFE_DEALLOCATE_A(zpsi)
 
-#if defined(HAVE_MPI)        
-      if(st%parallel_in_states .or. st%d%kpt%parallel) then
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, st%spin)
-      end if
-#endif      
-
+      if(st%parallel_in_states .or. st%d%kpt%parallel) call comm_allreduce(st%st_kpt_mpi_grp%comm, st%spin)
     end if
 
     POP_SUB(states_fermi)
