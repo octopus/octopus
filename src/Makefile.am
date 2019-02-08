@@ -192,7 +192,6 @@ noinst_HEADERS +=                                \
 all_f_srcs +=                                 \
 	ions/atom.F90                         \
 	ions/box.F90                          \
-	ions/box_union.F90                    \
 	ions/geometry.F90                     \
 	ions/ion_dynamics.F90                 \
 	ions/kpoints.F90                      \

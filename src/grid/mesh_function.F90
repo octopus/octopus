@@ -36,7 +36,6 @@ module mesh_function_oct_m
   use profiling_oct_m
   use quickrnd_oct_m
   use splines_oct_m
-  use box_union_oct_m
 
   implicit none
 

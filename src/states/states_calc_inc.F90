@@ -830,7 +830,6 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
   integer :: ist, jst
 #endif
   type(profile_t), save :: prof
-  FLOAT :: vol
   R_TYPE, allocatable :: psi(:, :, :)
   type(accel_mem_t) :: psi_buffer, overlap_buffer
 
