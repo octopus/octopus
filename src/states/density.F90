@@ -370,52 +370,36 @@ contains
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim, 1))
     
-#if defined(HAVE_MPI) 
-
     if(staux%parallel_in_states) then
       do ik = st%d%kpt%start, st%d%kpt%end
         do ist = staux%st_start, staux%st_end
           if(ist <= n) cycle
           if(.not.state_is_local(st, ist-n)) then
-
             call states_get_state(staux, gr%mesh, ist, ik, psi(:, :, 1))
-
+#if defined(HAVE_MPI) 
             ! I think this can cause a deadlock. XA
             call MPI_Send(psi(1, 1, 1), gr%mesh%np_part*st%d%dim, MPI_CMPLX, staux%node(ist), ist, &
               st%mpi_grp%comm, mpi_err)
-
             call MPI_Recv(psi(1, 1, 1), gr%mesh%np_part*st%d%dim, MPI_CMPLX, st%node(ist - n), &
               ist, st%mpi_grp%comm, status, mpi_err)
-
+#endif
             call states_set_state(st, gr%mesh, ist - n, ik, psi(:, :, 1))
-            
           else
             call states_get_state(staux, gr%mesh, ist, ik, psi(:, :, 1))
             call states_set_state(st, gr%mesh, ist - n, ik, psi(:, :, 1))
           end if
-   
+          
         end do
       end do
-   else
-     do ik = st%d%kpt%start, st%d%kpt%end
-       do ist = staux%st_start, staux%st_end
-         if(ist <= n) cycle
-         call states_get_state(staux, gr%mesh, ist, ik, psi(:, :, 1))
-         call states_set_state(st, gr%mesh, ist - n, ik, psi(:, :, 1))
-       end do
-     end do
-   end if
-
-#else
-
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        call states_get_state(staux, gr%mesh, ist + n, ik, psi(:, :, 1))
-        call states_set_state(st, gr%mesh, ist, ik, psi(:, :, 1))
+    else
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ist = staux%st_start, staux%st_end
+          if(ist <= n) cycle
+          call states_get_state(staux, gr%mesh, ist, ik, psi(:, :, 1))
+          call states_set_state(st, gr%mesh, ist - n, ik, psi(:, :, 1))
+        end do
       end do
-    end do
-
-#endif
+    end if
 
     SAFE_DEALLOCATE_A(psi)
     
