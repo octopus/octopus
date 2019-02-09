@@ -237,6 +237,58 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu, np) result(dotp)
 
 end function X(mf_dotp_2)
 
+! ---------------------------------------------------------
+!This routine computes the dot product of a function f2 with a set a mesh functions f1
+!By combining several dot products, we can reuse the function f2 and call GEMV blas routine
+!In the case of curvilinear mesh, we just call the regular functions
+subroutine X(mf_batch_dotp)(mesh, f1, nfunc, f2, dotp, reduce, dotu, np)
+  type(mesh_t),      intent(in) :: mesh
+  R_TYPE,            intent(in) :: f1(:,:), f2(:)
+  integer,           intent(in) :: nfunc
+  R_TYPE,           intent(out) :: dotp(:)
+  logical, optional, intent(in) :: reduce
+  logical, optional, intent(in) :: dotu
+     !< if true, use lalg_dotu instead of lalg_dot;
+     !! no complex conjugation.  Default is false.
+  integer, optional, intent(in) :: np
+
+  
+  type(profile_t), save :: prof
+  integer             :: ib, np_
+
+  PUSH_SUB(X(mf_batch_dotp))
+
+  call profiling_in(prof, "MF_DOTP")
+
+  np_ = optional_default(np, mesh%np)
+
+  ASSERT(ubound(f1, dim=2) >= nfunc)
+  ASSERT(ubound(f1, dim = 1) == np_ .or. ubound(f1, dim = 1) == mesh%np_part)
+  ASSERT(ubound(f2, dim = 1) == np_ .or. ubound(f2, dim = 1) == mesh%np_part)
+
+  dotp(1:nfunc) = R_TOTYPE(M_ZERO)
+
+  if(mesh%use_curvilinear) then
+    do ib = 1, nfunc
+      dotp(ib) = X(mf_dotp_1)(mesh, f1(:,ib), f2, reduce, dotu, np)
+    end do
+  else
+   call blas_gemv('C',  np_, nfunc, R_TOTYPE(mesh%volume_element), &
+               f1(1, 1), np_, f2(1), 1, R_TOTYPE(M_ZERO), dotp(1), 1) 
+  end if  
+  
+  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
+    call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
+    call comm_allreduce(mesh%vp%comm, dotp)
+    call profiling_out(C_PROFILING_MF_REDUCE)
+  end if
+
+  call profiling_out(prof)
+
+  POP_SUB(X(mf_batch_dotp))
+
+end subroutine  X(mf_batch_dotp)
+
 
 ! ---------------------------------------------------------
 !> this function returns the the norm of a vector

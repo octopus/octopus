@@ -27,6 +27,7 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, basisfro
   integer :: im, ip, idim, idim_orb
   type(profile_t), save :: prof, prof_reduce
   R_TYPE, allocatable :: spsi(:,:)
+  R_TYPE, allocatable :: temp(:)
 
   call profiling_in(prof, "ORBSET_GET_COEFFICIENTS")
 
@@ -46,13 +47,14 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, basisfro
   if(has_phase) then
 #ifdef R_TCOMPLEX
     if(simul_box_is_periodic(os%sphere%mesh%sb) .and. .not. os%submeshforperiodic) then
+      SAFE_ALLOCATE(temp(1:os%norbs))
       do idim = 1, ndim
         idim_orb = min(idim,os%ndim)
-        do im = 1, os%norbs
-          dot(idim,im) = zmf_dotp(os%sphere%mesh, os%eorb_mesh(1:os%sphere%mesh%np,im,idim_orb,ik),&
-                              psi(1:os%sphere%mesh%np,idim), reduce=.false.)
-        end do
+        call X(mf_batch_dotp)(os%sphere%mesh, os%eorb_mesh(:, :, idim_orb, ik), &
+                                os%norbs, psi(:,idim), temp, reduce = .false.)
+        dot(idim,1:os%norbs) = temp(1:os%norbs)
       end do
+      SAFE_DEALLOCATE_A(temp)
     else
       do im = 1, os%norbs
         do idim = 1, ndim

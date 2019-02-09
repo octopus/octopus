@@ -83,7 +83,9 @@ module mesh_function_oct_m
     dmf_nrm2_aux,          &
     zmf_nrm2_aux,          &
     dmf_normalize,         &
-    zmf_normalize
+    zmf_normalize,         &
+    dmf_batch_dotp,        &
+    zmf_batch_dotp
 
   ! These variables are to be used by the "distdot" function, that is outside the module
   ! but inside this file.
