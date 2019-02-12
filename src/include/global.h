@@ -32,17 +32,23 @@
 #endif
 
 
-! If the compiler accepts line number markers, then "CARDINAL" will
-! put them.  Otherwise, just a new line. Note that the "cardinal" and
-! "newline" words are substituted by the program preprocess.pl by the
-! ampersand and by a real new line just before compilation.
+! If the compiler accepts line number markers, then "CARDINAL" and "ACARDINAL"
+! will put them.  Otherwise, just a new line or a ampersand plus a new line.
+! These macros should be used in macros that span several lines. They should by
+! put immedialty before a line where a compilation error might occur and at the
+! end of the macro.
+! Note that the "cardinal" and "newline" words are substituted by the program
+! preprocess.pl by the ampersand and by a real new line just before compilation.
 #if defined(LONG_LINES)
 #  define CARDINAL
+#  define ACARDINAL
 #else
 #  if defined(F90_ACCEPTS_LINE_NUMBERS)
-#    define CARDINAL _newline_\cardinal __LINE__ __FILE__
+#    define CARDINAL _newline_\cardinal __LINE__ __FILE__ _newline_
+#    define ACARDINAL _anl_\cardinal __LINE__ __FILE__ _newline_
 #  else
 #    define CARDINAL _newline_
+#    define ACARDINAL _anl_
 #  endif
 #endif
 
@@ -77,20 +83,22 @@
 #  define SAFE_ALLOCATE(x) allocate(x)
 
 #  define SAFE_DEALLOCATE_P(x) \
-  if(associated(x)) then; _newline_ \
-    deallocate(x);        _newline_ \
+  if(associated(x)) then; CARDINAL \
+    deallocate(x);        CARDINAL \
     nullify(x);           _newline_ \
-  end if
+  end if; \
+  CARDINAL
 #  define SAFE_DEALLOCATE_A(x) \
-  if(allocated(x)) then; _newline_ \
+  if(allocated(x)) then; CARDINAL \
     deallocate(x);       _newline_ \
-  end if
+  end if; \
+  CARDINAL
 
 #else
 #  define SAFE_ALLOCATE(x)			\
-  allocate( _anl_ x, _anl_ stat=global_alloc_err); _newline_ \
+  allocate( ACARDINAL x, _anl_ stat=global_alloc_err); \
   if(not_in_openmp() .and. iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) _anl_ \
-  global_sizeof = SIZEOF( _anl_ x _anl_ ); _newline_	\
+  global_sizeof = SIZEOF( ACARDINAL x _anl_ ); \
   if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
     call profiling_memory_allocate(_anl_ TOSTRING(x), _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
   if(global_alloc_err.ne.0) _anl_ \
@@ -98,23 +106,26 @@
   CARDINAL
 
 #  define MY_DEALLOCATE(x) \
-  global_sizeof = SIZEOF(x); _newline_ \
+  global_sizeof = SIZEOF(x); \
+  CARDINAL \
   deallocate(x, stat=global_alloc_err); _newline_ \
   if(not_in_openmp() .and. iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
     call profiling_memory_deallocate(TOSTRING(x), _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
   if(global_alloc_err.ne.0) _anl_ \
-    call dealloc_error(global_sizeof, _anl_ __FILE__, _anl_ __LINE__); \
-  CARDINAL
+    call dealloc_error(global_sizeof, _anl_ __FILE__, _anl_ __LINE__)
 
 #  define SAFE_DEALLOCATE_P(x) \
   if(associated(x)) then; _newline_ \
     MY_DEALLOCATE(x);     _newline_ \
     nullify(x);           _newline_ \
-  end if
+  end if; \
+  CARDINAL
+
 #  define SAFE_DEALLOCATE_A(x) \
   if(allocated(x)) then;  _newline_ \
     MY_DEALLOCATE(x);     _newline_ \
-  end if
+  end if; \
+  CARDINAL
 
 #endif
 
@@ -169,13 +180,15 @@
     if(not_in_openmp()) then; _newline_ \
       call push_sub(__FILE__+"." _anl_ +TOSTRING(routine)); _newline_ \
     endif; _newline_ \
-  endif
+  endif; \
+  CARDINAL
 #define POP_SUB(routine) \
   if(debug%trace) then; _newline_ \
     if(not_in_openmp()) then; _newline_ \
       call pop_sub(__FILE__+"." _anl_ +TOSTRING(routine)); _newline_ \
     endif; _newline_ \
-  endif
+  endif; \
+  CARDINAL
 
 ! the leading dimension of the array
 #define LD(a) ubound(a,dim=1)
