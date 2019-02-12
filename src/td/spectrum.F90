@@ -2445,7 +2445,9 @@ contains
 
     do idir = 1, 3
       write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
-      if (.not.symmetrize) write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+      if (.not.symmetrize) then
+        write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+      end if
       do jdir = 1, 3
         write(out_file, '(a20)', advance = 'no')  str_center('[ - ]', 20)
       end do
@@ -2467,7 +2469,9 @@ contains
      
       do idir = 1, 3
         write(out_file_t, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
-        if(.not.symmetrize) write(out_file_t, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+        if(.not.symmetrize) then
+          write(out_file_t, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+        end if
         do jdir = 1, 3
           write(out_file_t, '(a20)', advance = 'no')  str_center('[ - ]', 20)
         end do
