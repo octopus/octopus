@@ -59,8 +59,8 @@
 ! assert_die is in the global_m module.
 #if !defined(NDEBUG)
 #  define ASSERT(expr)  \
-  if(.not.(expr)) _anl_ \
-     call assert_die(TOSTRING(expr), _anl_ __FILE__, _anl_  __LINE__) \
+  if(.not.(expr)) ACARDINAL \
+     call assert_die(TOSTRING(expr), ACARDINAL __FILE__, ACARDINAL  __LINE__) \
   CARDINAL
 #else
 #  define ASSERT(expr)
@@ -85,45 +85,45 @@
 #  define SAFE_DEALLOCATE_P(x) \
   if(associated(x)) then; CARDINAL \
     deallocate(x);        CARDINAL \
-    nullify(x);           _newline_ \
+    nullify(x);           CARDINAL \
   end if; \
   CARDINAL
 #  define SAFE_DEALLOCATE_A(x) \
   if(allocated(x)) then; CARDINAL \
-    deallocate(x);       _newline_ \
+    deallocate(x);       CARDINAL \
   end if; \
   CARDINAL
 
 #else
 #  define SAFE_ALLOCATE(x)			\
-  allocate( ACARDINAL x, _anl_ stat=global_alloc_err); \
-  if(not_in_openmp() .and. iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) _anl_ \
-  global_sizeof = SIZEOF( ACARDINAL x _anl_ ); \
-  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
-    call profiling_memory_allocate(_anl_ TOSTRING(x), _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
-  if(global_alloc_err.ne.0) _anl_ \
-    call alloc_error(global_sizeof, _anl_ __FILE__, _anl_ __LINE__); \
+  allocate( ACARDINAL x, ACARDINAL stat=global_alloc_err); CARDINAL \
+  if(not_in_openmp() .and. iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) ACARDINAL \
+  global_sizeof = SIZEOF( ACARDINAL x ACARDINAL ); CARDINAL \
+  if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) ACARDINAL \
+    call profiling_memory_allocate(ACARDINAL TOSTRING(x), ACARDINAL __FILE__, ACARDINAL __LINE__, ACARDINAL global_sizeof); CARDINAL \
+  if(global_alloc_err.ne.0) ACARDINAL \
+    call alloc_error(global_sizeof, ACARDINAL __FILE__, ACARDINAL __LINE__); \
   CARDINAL
 
 #  define MY_DEALLOCATE(x) \
   global_sizeof = SIZEOF(x); \
   CARDINAL \
-  deallocate(x, stat=global_alloc_err); _newline_ \
-  if(not_in_openmp() .and. iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
-    call profiling_memory_deallocate(TOSTRING(x), _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
-  if(global_alloc_err.ne.0) _anl_ \
-    call dealloc_error(global_sizeof, _anl_ __FILE__, _anl_ __LINE__)
+  deallocate(x, stat=global_alloc_err); CARDINAL \
+  if(not_in_openmp() .and. iand(prof_vars%mode, PROFILING_MEMORY).ne.0) ACARDINAL \
+    call profiling_memory_deallocate(TOSTRING(x), ACARDINAL __FILE__, ACARDINAL __LINE__, ACARDINAL global_sizeof); CARDINAL \
+  if(global_alloc_err.ne.0) ACARDINAL \
+    call dealloc_error(global_sizeof, ACARDINAL __FILE__, ACARDINAL __LINE__)
 
 #  define SAFE_DEALLOCATE_P(x) \
-  if(associated(x)) then; _newline_ \
-    MY_DEALLOCATE(x);     _newline_ \
-    nullify(x);           _newline_ \
+  if(associated(x)) then; CARDINAL \
+    MY_DEALLOCATE(x);     CARDINAL \
+    nullify(x);           CARDINAL \
   end if; \
   CARDINAL
 
 #  define SAFE_DEALLOCATE_A(x) \
-  if(allocated(x)) then;  _newline_ \
-    MY_DEALLOCATE(x);     _newline_ \
+  if(allocated(x)) then;  CARDINAL \
+    MY_DEALLOCATE(x);     CARDINAL \
   end if; \
   CARDINAL
 
@@ -176,18 +176,14 @@
 ! pieces of code that call the push_sub and pop_sub routines defined
 ! in the messages_m module.
 #define PUSH_SUB(routine) \
-  if(debug%trace) then; _newline_ \
-    if(not_in_openmp()) then; _newline_ \
-      call push_sub(__FILE__+"." _anl_ +TOSTRING(routine)); _newline_ \
-    endif; _newline_ \
-  endif; \
+  if(debug%trace) then; if(not_in_openmp()) then; CARDINAL \
+      call push_sub(__FILE__+"." ACARDINAL +TOSTRING(routine)); CARDINAL \
+  endif; endif; \
   CARDINAL
 #define POP_SUB(routine) \
-  if(debug%trace) then; _newline_ \
-    if(not_in_openmp()) then; _newline_ \
-      call pop_sub(__FILE__+"." _anl_ +TOSTRING(routine)); _newline_ \
-    endif; _newline_ \
-  endif; \
+  if(debug%trace) then; if(not_in_openmp()) then; CARDINAL \
+      call pop_sub(__FILE__+"." ACARDINAL +TOSTRING(routine)); CARDINAL \
+  endif; endif; \
   CARDINAL
 
 ! the leading dimension of the array
