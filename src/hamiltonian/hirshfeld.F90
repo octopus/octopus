@@ -98,7 +98,7 @@ contains
       atom_density_acc(1:this%mesh%np) = M_ZERO
 
       rmax = CNST(0.0)
-      do isp = 1, this%st%d%spin_channels
+      do isp = 1, ps%ispin
         rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
       end do
 
@@ -316,8 +316,10 @@ contains
 
     rmax_i = CNST(0.0)
     rmax_j = CNST(0.0)
-    do isp = 1, this%st%d%spin_channels
+    do isp = 1, ps_i%ispin
       rmax_i = max(rmax_i, spline_cutoff_radius(ps_i%density(isp), ps_i%projectors_sphere_threshold))
+    end do
+    do isp = 1, ps_j%ispin
       rmax_j = max(rmax_j, spline_cutoff_radius(ps_j%density_der(isp), ps_j%projectors_sphere_threshold))
     end do
 
