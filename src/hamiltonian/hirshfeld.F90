@@ -97,6 +97,12 @@ contains
       ps => species_ps(this%geo%atom(iatom)%species)
       atom_density_acc(1:this%mesh%np) = M_ZERO
 
+      if(.not.ps_has_density(ps)) then
+        write(message(1),'(a,a,a)') "The pseudopotential for the species ", ps%label, "does not have density."
+        write(message(2),'(a)') "Hirshfeld based methods (vdW TS, constrained magnetic density,...) could not be used."
+        call messages_fatal(2) 
+      end if
+
       rmax = CNST(0.0)
       do isp = 1, ps%ispin
         rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
