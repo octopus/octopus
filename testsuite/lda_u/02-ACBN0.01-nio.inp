@@ -41,7 +41,6 @@ GuessMagnetDensity = user_defined
  0.0
  0.0
 %
-ConstrainGuessMagneticDensity = 5
 
 LCAOStart= lcao_states
 
