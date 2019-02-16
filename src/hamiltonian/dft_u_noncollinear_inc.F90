@@ -42,9 +42,9 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
   SAFE_ALLOCATE(nn(1:this%max_np,st%d%dim))
   SAFE_ALLOCATE(vv(1:this%max_np,st%d%dim))
   SAFE_ALLOCATE(tmp(1:this%max_np))
-
-  SAFE_ALLOCATE(this%zcoulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:st%d%dim, 1:st%d%dim, 1:this%norbsets))
-  this%zcoulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:st%d%dim,1:st%d%dim,1:this%norbsets) = M_ZERO
+  SAFE_ALLOCATE(this%zcoulomb(1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:this%maxnorbs,1:st%d%dim,1:st%d%dim,1:this%norbsets))
+  this%zcoulomb(1:this%maxnorbs, 1:this%maxnorbs, 1:this%maxnorbs, 1:this%maxnorbs, &
+                1:st%d%dim, 1:st%d%dim, 1:this%norbsets) = M_ZERO
 
   !Lets counts the number of orbital to treat, to display a progress bar
   ntodo = 0
@@ -163,8 +163,8 @@ subroutine compute_ACBNO_U_noncollinear(this, ios)
         ! We first compute the terms
         ! sum_{alpha,beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
         ! sum_{alpha} P^alpha_{mmp}P^alpha_{mpp,mppp}
-        tmpU = cmplx(M_ZERO,M_ZERO)
-        tmpJ = cmplx(M_ZERO,M_ZERO)
+        tmpU = M_z0
+        tmpJ = M_z0
 
         do ispin1 = 1, this%spin_channels
           do ispin2 = 1, this%spin_channels
@@ -186,8 +186,8 @@ subroutine compute_ACBNO_U_noncollinear(this, ios)
 
       ! We compute the term
       ! sum_{alpha} sum_{m,mp/=m} N^alpha_{m}N^alpha_{mp}
-      tmpJ = cmplx(M_ZERO,M_ZERO)
-      tmpU = cmplx(M_ZERO,M_ZERO)
+      tmpJ = M_z0
+      tmpU = M_z0
       if(imp/=im) then
         do ispin1 = 1, this%spin_channels
           tmpJ = tmpJ + this%zn(im,im,ispin1,ios)*this%zn(imp,imp,ispin1,ios)
@@ -219,21 +219,21 @@ subroutine compute_ACBNO_U_noncollinear(this, ios)
     !intraorbital term, which cancels out when one computes U-J.
     !This term has to be remove from both U and J for these two terms to be analyzed separately.
     do ispin1 = 1, this%spin_channels
-      correction = correction + real(this%zn_alt(im,im,ispin1,ios))**2*this%zcoulomb(im,im,im,im,ispin1,ispin1,ios)     
+      correction = correction + real(this%zn_alt(im,im,ispin1,ios),REAL_PRECISION)**2*this%zcoulomb(im,im,im,im,ispin1,ispin1,ios)     
     end do
 
 
     end do
 
-    this%orbsets(ios)%Ubar = real(numU-correction)/denomU
-    this%orbsets(ios)%Jbar = real(numJ-correction)/denomJ
+    this%orbsets(ios)%Ubar = real(numU-correction,REAL_PRECISION)/denomU
+    this%orbsets(ios)%Jbar = real(numJ-correction,REAL_PRECISION)/denomJ
     this%orbsets(ios)%Ueff = this%orbsets(ios)%Ubar - this%orbsets(ios)%Jbar
 
   else !In the case of s orbitals, the expression is different
     ! sum_{alpha/=beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
     ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
-    numU = cmplx(M_ZERO,M_ZERO)
-    denomU = cmplx(M_ZERO,M_ZERO)
+    numU = M_z0
+    denomU = M_z0
     do ispin1 = 1, this%spin_channels
       do ispin2 = 1, this%spin_channels
         if(ispin1 /= ispin2) then
@@ -248,7 +248,7 @@ subroutine compute_ACBNO_U_noncollinear(this, ios)
 
     ! We have to be careful in the case of hydrogen atom for instance 
     if(abs(denomU)> CNST(1.0e-3)) then
-      this%orbsets(ios)%Ubar = (real(numU)/real(denomU))
+      this%orbsets(ios)%Ubar = (real(numU,REAL_PRECISION)/real(denomU,REAL_PRECISION))
     else
       write(message(1),'(a,a)')' Small denominator value for the s orbital ', this%orbsets(ios)%Ubar
       write(message(2),'(a)')' U is set to zero '

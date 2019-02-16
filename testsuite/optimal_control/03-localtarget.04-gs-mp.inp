@@ -34,5 +34,5 @@ ConvRelDens = 1.0e-8
 
 ProfilingMode = prof_time
 
-DisableOpenCL = yes
+DisableAccel = yes
 

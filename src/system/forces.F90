@@ -60,6 +60,9 @@ module forces_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
+  use v_ks_oct_m
+  use vdw_ts_oct_m
+
 
   implicit none
 
@@ -265,11 +268,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine forces_calculate(gr, geo, hm, st, vhxc_old, t, dt)
+  subroutine forces_calculate(gr, geo, hm, st, ks, vhxc_old, t, dt)
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(inout) :: geo
     type(hamiltonian_t), intent(inout) :: hm
     type(states_t),      intent(inout) :: st
+    type(v_ks_t),        intent(in)      :: ks
     FLOAT,     optional, intent(in)    :: vhxc_old(:,:)
     FLOAT,     optional, intent(in)    :: t
     FLOAT,     optional, intent(in)    :: dt
@@ -299,6 +303,11 @@ contains
     end do
 
     ! the ion-ion and vdw terms are already calculated
+    ! if we use vdw TS, we need to compute it now
+    if (ks%vdw_correction == OPTION__VDWCORRECTION__VDW_TS ) then
+      call vdw_ts_force_calculate(ks%vdw_ts, hm%ep%vdw_forces, geo, gr%der, gr%sb, st, st%rho)
+    end if
+
     do iatom = 1, geo%natoms
       geo%atom(iatom)%f(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom) + hm%ep%vdw_forces(1:gr%sb%dim, iatom)
       geo%atom(iatom)%f_ii(1:gr%sb%dim) = hm%ep%fii(1:gr%sb%dim, iatom)
@@ -479,7 +488,8 @@ contains
 
 
     iunit2 = io_open(trim(dir)//'/forces', action='write', position='asis')
-    write(iunit2,'(a)') ' # Total force (x,y,z) Ion-Ion (x,y,z) VdW (x,y,z) Local (x,y,z) NL (x,y,z) Fields (x,y,z) Hubbard(x,y,z) SCF(x,y,z)'
+    write(iunit2,'(a)') &
+      ' # Total force (x,y,z) Ion-Ion (x,y,z) VdW (x,y,z) Local (x,y,z) NL (x,y,z) Fields (x,y,z) Hubbard(x,y,z) SCF(x,y,z)'
     do iatom = 1, geo%natoms
        write(iunit2,'(i4,a10,24e15.6)') iatom, trim(species_label(geo%atom(iatom)%species)), &
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, sb%dim), &

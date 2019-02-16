@@ -20,13 +20,14 @@
 
 #include <cl_global.h>
 
-__kernel void copy(const __global double * restrict xx, const int ldxx,
+__kernel void copy(const int np,
+		   const __global double * restrict xx, const int ldxx,
 		   __global double * restrict yy, const int ldyy){
   
   int ist = get_global_id(0);
-  int ip = get_global_id(1);
+  int ip = get_global_id(1) + get_global_size(1)*get_global_id(2);
   
-  yy[(ip<<ldyy) + ist] = xx[(ip<<ldxx) + ist];
+  if(ip < np) yy[(ip<<ldyy) + ist] = xx[(ip<<ldxx) + ist];
 
 }
 

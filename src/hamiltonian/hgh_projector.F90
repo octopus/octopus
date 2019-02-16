@@ -86,7 +86,7 @@ contains
     FLOAT,                 intent(in)    :: so_strength
 
     integer :: is, i
-    FLOAT :: v, dv(1:3), x(1:3)
+    FLOAT :: v, x(1:3)
     type(ps_t), pointer :: ps
 
     PUSH_SUB(hgh_projector_init)
@@ -99,7 +99,7 @@ contains
         x(1:3) = sm%x(is, 1:3)
 
         do i = 1, 3
-          call species_real_nl_projector(a%species, x, l, lm, i, v, dv)
+          call species_real_nl_projector(a%species, x, l, lm, i, v)
           hgh_p%dp (is, i) = v
         end do
       end do

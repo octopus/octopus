@@ -2,7 +2,7 @@
 
 Test       : Non-linear core corrections
 Program    : octopus
-TestGroups : short-run, pseudpotentials
+TestGroups : short-run, pseudopotentials
 Enabled    : Yes
 
 ExtraFile : 03-nlcc.F.UPF

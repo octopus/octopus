@@ -48,5 +48,5 @@ UseAllAtomicOrbitals = yes
 AOTruncation = ao_full
 AOThreshold = 0.05
 AONormalize = no
-OutputLDA_U = occ_matrices + effectiveU
+OutputLDA_U = occ_matrices + effectiveU + kanamoriU
 ACBN0Screening = 0.5
