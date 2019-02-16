@@ -208,7 +208,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
 
   call batch_pack_was_modified(psib)
 
-  if(os%sphere%mesh%use_curvilinear .or. batch_status(psib) == BATCH_CL_PACKED) then
+  if(os%sphere%mesh%use_curvilinear .or. batch_status(psib) == BATCH_DEVICE_PACKED) then
     !
     SAFE_ALLOCATE(psi(1:os%sphere%mesh%np, 1:ndim))
     do ist = 1, psib%nst

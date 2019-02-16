@@ -9,7 +9,7 @@ $(subst -,_,$(subst .,_,$1))
 endef
 
 _f90_verbose = $(_f90_verbose_$(V))
-_f90_verbose_ = $(_f90_verbose_$(AM_DEFAULT_VERBOSITY))
+_f90_verbose_ := $(_f90_verbose_$(AM_DEFAULT_VERBOSITY))
 _f90_verbose_0 = @echo "  $1";
 _f90_only_verbose = $(_f90_only_verbose_$(V))
 _f90_only_verbose_ = @
@@ -51,7 +51,8 @@ $(if $(filter $1,$(subst -,_,$(PROGRAMS))),o,lo)
 endef
 
 _f90_depdir=$(builddir)/.fortran_dependencies
-_f90_depfile = $(_f90_depdir)/dependencies.mk
+_f90_depmodfile = $(_f90_depdir)/dependencies_modules.mk
+_f90_depincfile = $(_f90_depdir)/dependencies_includes.mk
 
 # $1 source file
 # $2 stem
@@ -86,6 +87,19 @@ endef
 # $1 source_file
 # $2 stem
 # $3 program
+define module_inc_target
+$(eval _inc_mods += $(call modinfo_name,$1,$2,$3,inc))
+$(call modinfo_name,$1,$2,$3,inc): $1 $(dir $1)$(am__dirstamp) ${HEADERS_DEP} | $(_f90_depdir)/$(dir $1)
+	$(call _f90_verbose,F90 INC  [$3] $$<) cat $$< | \
+	  grep -i -o '^ *# *include [^!]*' | \
+	  sed 's-^[[:space:]]*#[[:space:]]*include[[:space:]]*-$(top_srcdir)/src/*/-;' | \
+	  tr -d \" | grep -v \< | sort | uniq > $$@ || true
+
+endef
+
+# $1 source_file
+# $2 stem
+# $3 program
 # only call the use and def targets once, not for each program
 define module_targets
 $(eval _$(3)_use_mods += $(call modinfo_name,$1,$2,$3,use))
@@ -93,6 +107,9 @@ $(if $(findstring $(call modinfo_name,$1,$2,$3,use),$(_use_mods)),,$(call module
 
 $(eval _$(3)_def_mods += $(call modinfo_name,$1,$2,$3,def))
 $(if $(findstring $(call modinfo_name,$1,$2,$3,def),$(_def_mods)),,$(call module_def_target,$1,$2,$3))
+
+$(eval _$(3)_inc_mods += $(call modinfo_name,$1,$2,$3,inc))
+$(if $(findstring $(call modinfo_name,$1,$2,$3,inc),$(_inc_mods)),,$(call module_inc_target,$1,$2,$3))
 endef
 $(foreach p,$(_f90_targets),$(if $(call is_per_target,$p),$(foreach s,$(call fortran_sources,$p),$(eval $(call module_targets,$s,$p-,$p))),$(foreach s,$(call fortran_sources,$p),$(eval $(call module_targets,$s,,$p)))))
 
@@ -113,20 +130,49 @@ define newline
 endef
 
 
+# ignore the dependencies for cleaning
 ifneq ($(call is_clean),1)
-include $(_f90_depfile)
+# always include the dependencies for include statements
+include $(_f90_depincfile)
+
+ifeq ($(NODEP),1)
+# If NODEP is set to 1, only include module dependencies if none of the targets
+# in PROGRAMS or LTLIBRARIES is available. This ensures that a complete build
+# happened before ignoring dependencies due to modules.
+ifeq ($(wildcard $(PROGRAMS) $(LTLIBRARIES)),)
+include $(_f90_depmodfile)
+else
+$(warning Ignoring Fortran module dependencies. If the compilation fails, please recompile without NODEP)
+endif
+else
+# if NODEP is not set to 1, always include module dependencies
+include $(_f90_depmodfile)
+endif
 endif
 
 # $1 program
-define program_dependencies
+define program_module_dependencies
 	$(_f90_only_verbose){ $(foreach argument,$(_$p_use_mods) $(_$p_def_mods) $(foreach l,$(call recursive_lib_deps,$p),$(_$l_use_mods) $(_$l_def_mods)),echo $(argument); ) true; } | \
-	$(top_srcdir)/src/fdep/fortran_dependencies.pl $p >> $@ || { rm $@; exit 1; }
+	$(top_srcdir)/src/fdep/fortran_dependencies.pl mod $p >> $@ || { rm $@; exit 1; }
 
 endef
 
-$(_f90_depfile): $(top_srcdir)/src/fdep/fortran_dependencies.pl $(foreach p,$(_f90_targets),$(_$p_use_mods) $(_$p_def_mods))
-	$(call _f90_verbose,F90 DEPS $@)echo -n > $@;
-	$(foreach p,$(_f90_targets),$(call program_dependencies,$p))
+# $1 program
+define program_include_dependencies
+	$(_f90_only_verbose){ $(foreach argument,$(_$p_inc_mods) $(foreach l,$(call recursive_lib_deps,$p),$(_$l_inc_mods)),echo $(argument); ) true; } | \
+	$(top_srcdir)/src/fdep/fortran_dependencies.pl inc $p >> $@ || { rm $@; exit 1; }
+
+endef
+
+# gather dependencies for module files
+$(_f90_depmodfile): $(top_srcdir)/src/fdep/fortran_dependencies.pl $(foreach p,$(_f90_targets),$(_$p_use_mods) $(_$p_def_mods))
+	$(call _f90_verbose,F90 DEPS $@)echo > $@;
+	$(foreach p,$(_f90_targets),$(call program_module_dependencies,$p))
+
+# gather dependencies for includes
+$(_f90_depincfile): $(top_srcdir)/src/fdep/fortran_dependencies.pl $(foreach p,$(_f90_targets),$(_$p_inc_mods))
+	$(call _f90_verbose,F90 INCS $@)echo > $@;
+	$(foreach p,$(_f90_targets),$(call program_include_dependencies,$p))
 
 $(_f90_depdir):
 	@mkdir $@

@@ -498,7 +498,7 @@ contains
     !%Option local_orbitals bit(3)
     !% Outputs the localized orbitals that form the correlated subspace
     !%Option kanamoriU bit(4)
-    !% Outputs the Kanamori interaction parameters U, U' , and J.
+    !% Outputs the Kanamori interaction parameters U, U`, and J.
     !% These parameters are not determined self-consistently, but are taken from the 
     !% occupation matrices and Coulomb integrals comming from a standard +U calculation.
     !%End
@@ -678,9 +678,6 @@ contains
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
         call geometry_write_xyz(geo, trim(dir)//'/geometry')
         if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir)
-      end if
-      if(bitand(outp%how, OPTION__OUTPUTFORMAT__OPENSCAD) /= 0) then
-        call geometry_write_openscad(geo, trim(dir)//'/geometry')
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
         call vtk_output_geometry(trim(dir)//'/geometry', geo)
@@ -916,10 +913,14 @@ contains
       call states_calc_quantities(gr%der, st, .true., kinetic_energy_density = energy_density)
 
       ! the external potential energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
+        energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
+      end forall
 
       ! the hartree energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
+        energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
+      end forall
 
       ! the XC energy density
       SAFE_ALLOCATE(ex_density(1:gr%mesh%np))
@@ -927,9 +928,12 @@ contains
 
       ASSERT(.not. gr%have_fine_mesh)
 
-      call xc_get_vxc(gr%fine%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ex_density = ex_density, ec_density = ec_density)
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
-      
+      call xc_get_vxc(gr%fine%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), &
+                      st%qtot, ex_density = ex_density, ec_density = ec_density)
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
+        energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
+      end forall
+
       SAFE_DEALLOCATE_A(ex_density)
       SAFE_DEALLOCATE_A(ec_density)
       

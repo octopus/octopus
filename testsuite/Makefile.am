@@ -57,7 +57,11 @@ check-dryrun: $(bin_SCRIPTS)
 
 check-wrapper: $(bin_SCRIPTS)
 	@if test "x$(SKIP_CHECK)" == "x"; then \
-	    $(MAKE) check-base; \
+	    if test "x$(CHECK_REPORT)" == "x"; then \
+	        CHECKREPORTOPTS="" $(MAKE) check-base; \
+	    else \
+	        CHECKREPORTOPTS="-r $(CHECK_REPORT)" $(MAKE) check-base; \
+	    fi \
 	else \
             $(MAKE) check-dryrun; \
 	fi
@@ -66,7 +70,7 @@ check-base: $(bin_SCRIPTS)
 	@base=`basename "$(top_builddir)/share"` && \
 	dir=`dirname "$(top_builddir)/share"` && \
 	sharedir="`(cd \"$$dir\" 2> /dev/null && pwd || echo \"$$dir\")`/$$base" && \
-	OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite.sh -c -d $(srcdir) -l $(CHECKOPTS)
+	OCTOPUS_SHARE=$$sharedir ./oct-run_testsuite.sh -c -d $(srcdir) -l $(CHECKOPTS) $(CHECKREPORTOPTS)
 
 # Delete temporary working directories from testsuite runs, if they are older than MINTIME (in minutes)
 MINTIME=600

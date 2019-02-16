@@ -351,6 +351,9 @@ AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_COMP_METIS} = x1)
 
 ACX_YAML
 
+dnl performance analysis using the likwid marker API
+ACX_LIKWID
+
 AC_SUBST(FCEXTRALIBS)
 
 m4_include([src/fdep/fortran_dependencies.m4])

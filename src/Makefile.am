@@ -36,12 +36,7 @@ include/config_F90.h: $(top_builddir)/config.h
 	$(MKDIR_P) include # required for VPATH functionality
 	grep '^#define' $^ > include/config_F90.h
 
-include/options.h:
-	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
-
-include/defaults.h: include/fortran_types.h include/vectors.h
-	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
-
+# include/options.h and include/defaults.h rules are after the source declaration
 
 # Fortran and C sources - keep in alphabetical order for each folder
 # Sources in basic
@@ -52,6 +47,7 @@ all_f_srcs =                                   \
 	basic/calc_mode_par.F90                \
 	basic/command_line.F90                 \
 	basic/comm.F90                         \
+	basic/cuda.F90                         \
 	basic/debug.F90                        \
 	basic/distributed.F90                  \
 	basic/global.F90                       \
@@ -70,10 +66,8 @@ all_f_srcs =                                   \
 	basic/mpi.F90                          \
 	basic/mpi_lib.F90                      \
 	basic/multicomm.F90                    \
-	basic/openscad.F90                     \
 	basic/parser.F90                       \
 	basic/path.F90                         \
-	basic/polyhedron.F90                   \
 	basic/profiling.F90                    \
 	basic/sort.F90                         \
 	basic/space.F90                        \
@@ -88,7 +82,7 @@ all_f_srcs =                                   \
 
 all_c_srcs =                                   \
 	basic/cublas.cc                        \
-	basic/cuda.cc                          \
+	basic/cuda_low.cc                      \
 	basic/getopt_f.c                       \
 	basic/io_binary.c                      \
 	basic/io_csv.c                         \
@@ -586,6 +580,12 @@ noinst_HEADERS +=                                    \
 
 
 all_srcs = $(all_f_srcs) $(all_c_srcs)
+
+include/options.h: $(all_f_srcs) $(noinst_HEADERS)
+	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
+
+include/defaults.h: $(all_f_srcs) $(noinst_HEADERS)
+	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
 bin_PROGRAMS = octopus
 

@@ -69,12 +69,14 @@ How does fdep solve this problem technically?
 
 
   More specifically, the perl-script fortran_dependencies.pl is run by make to
-  create a file .fortran_dependencies/dependencies.mk, which is then included.
+  create two files .fortran_dependencies/dependencies_modules.mk and
+  .fortran_dependencies/dependencies_includes.mk, which are then included.
   To do this, first every source file (for every defined program and library)
   is scanned for lines with "module" or "use" statements. These are saved in
   two additional files (.use_mods and .def_mods) per source file and contain
-  lists of defined and required modules. The perl script then reads these in
-  and produces the appropriate rules.
+  lists of defined and required modules. Moreover, the source files are scanned
+  for "include" statements which are saved in additional files (.inc_mods). The
+  perl script then reads these in and produces the appropriate rules. 
 
 
 Drawbacks
