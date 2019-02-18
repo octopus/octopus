@@ -152,18 +152,18 @@ contains
 
     !%Variable DebugTrapSignals
     !%Type logical
-    !%Default yes
     !%Section Execution::Debug
     !%Description
-    !% If true, traps signals to handle them in octopus itself and print a
-    !% custom backtrace. If false, do not trap signals; then, core dumps
-    !% can be produced or gdb can be used to stop at the point a signal was
-    !% produced (e.g. a segmentation fault).
+    !% If true, trap signals to handle them in octopus itself and
+    !% print a custom backtrace. If false, do not trap signals; then,
+    !% core dumps can be produced or gdb can be used to stop at the
+    !% point a signal was produced (e.g. a segmentation fault). This
+    !% variable is enabled if <tt>Debug</tt> is set to trace mode
+    !% (<tt>trace</tt>, <tt>trace_term</tt> or <tt>trace_file</tt>).
     !%End
-    call parse_variable('DebugTrapSignals', .true., trap_signals)
-    if (trap_signals) then
-      call trap_segfault()
-    end if
+    call parse_variable('DebugTrapSignals', debug%trace, trap_signals)
+
+    if (trap_signals) call trap_segfault()
 
     call messages_reset_lines()
 
@@ -1061,7 +1061,7 @@ contains
       ! write to stderr if we are node 0
       call pop_sub_write(stderr)
     end if
-    
+
     no_sub_stack = no_sub_stack - 1
 
   contains

@@ -190,10 +190,10 @@ contains
     
     call blacs_proc_grid_init(proc_grid, this%mpi_grp, procdim = (/np1, np2/))
 
+#ifdef HAVE_SCALAPACK
     nr1 = max(1, numroc(this%dim(1), nb1, proc_grid%myrow, 0, proc_grid%nprow))
     nr2 = max(1, numroc(this%dim(2), nb2, proc_grid%mycol, 0, proc_grid%npcol))
 
-#ifdef HAVE_SCALAPACK
     call descinit(desc(1), this%dim(1), this%dim(2), nb1, nb2, 0, 0, proc_grid%context, nr1, info)
 
     if(matrix_type(this) == TYPE_FLOAT) then

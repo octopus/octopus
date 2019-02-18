@@ -45,7 +45,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
   set_phase_ = optional_default(set_phase, .true.)
   ! OpenCL is not supported for the phase correction at the moment
   if(.not.set_phase_) then
-    if(batch_status(psib) == BATCH_CL_PACKED) set_phase_ = .true.
+    if(batch_status(psib) == BATCH_DEVICE_PACKED) set_phase_ = .true.
   end if
 
   ASSERT(batch_is_ok(psib))
@@ -126,7 +126,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
     if(hm%hm_base%apply_projector_matrices) then
       call X(hamiltonian_base_nlocal_finish)(hm%hm_base, der%mesh, hm%d, ik, projection, hpsib)
     else
-      ASSERT(.not. batch_is_packed(hpsib))
       call X(project_psi_batch)(der%mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib, ik)
     end if
   end if
@@ -173,7 +172,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
   end if
 
   if(iand(TERM_DFT_U, terms_) /= 0 .and. hm%lda_u_level /= DFT_U_NONE) then
-    call X(lda_u_apply)(hm%lda_u, hm%d, ik, epsib, hpsib, apply_phase)
+    call X(lda_u_apply)(hm%lda_u, hm%d, der%mesh, ik, epsib, hpsib, apply_phase)
   end if  
 
   if(apply_phase .and. set_phase_) then
@@ -222,7 +221,7 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
     vpsl_spin(1:mesh%np, 4) = M_ZERO
   end if
 
-  if(batch_status(psib) == BATCH_CL_PACKED) then
+  if(batch_status(psib) == BATCH_DEVICE_PACKED) then
     pnp = accel_padded_size(mesh%np)
     call accel_create_buffer(vpsl_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp * this%d%nspin)
     call accel_write_buffer(vpsl_buff, mesh%np, vpsl)
@@ -726,14 +725,18 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus, set_phase)
     call lalg_copy(der%mesh%np, hpsi(:, idim), auxpsi(:, idim))
   end do
 
-  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
+  if (hm%ep%non_local) then
+    call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
+  end if
 
   hpsi(1:der%mesh%np, 1) = hpsi(1:der%mesh%np, 1) -  M_zI*vmagnus(1:der%mesh%np, ispin, 1)*auxpsi(1:der%mesh%np, 1)
   auxpsi(1:der%mesh%np, 1) = vmagnus(1:der%mesh%np, ispin, 1)*psi(1:der%mesh%np, 1)
 
   call X(hamiltonian_apply)(hm, der, auxpsi, aux2psi, ist = 1, ik = ik, terms = TERM_KINETIC, set_phase = set_phase)
 
-  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
+  if (hm%ep%non_local) then
+    call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
+  end if
 
   hpsi(1:der%mesh%np, 1) = hpsi(1:der%mesh%np, 1) + M_zI*aux2psi(1:der%mesh%np, 1)
 
@@ -743,7 +746,9 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus, set_phase)
 
   hpsi(1:der%mesh%np, 1) = hpsi(1:der%mesh%np, 1) + vmagnus(1:der%mesh%np, ispin, 2)*psi(1:der%mesh%np, 1)
 
-  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
+  if (hm%ep%non_local) then
+    call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
+  end if
 
   do idim = 1, hm%d%dim
     call X(vborders)(der, hm, psi(:, idim), hpsi(:, idim))

@@ -238,7 +238,7 @@ contains
 
     !%Variable ParKPoints
     !%Type integer
-    !%Default no
+    !%Default auto
     !%Section Execution::Parallelization
     !%Description
     !% This variable controls the number of processors used for the

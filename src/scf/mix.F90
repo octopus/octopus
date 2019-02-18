@@ -868,7 +868,7 @@ contains
 
     PUSH_SUB(mixfield_get_ddvnew)
 
-    re(1:mixfield%d1, 1:mixfield%d3) =  real(mixfield%zvnew(1:mixfield%d1, 1, 1:mixfield%d3))
+    re(1:mixfield%d1, 1:mixfield%d3) =  real(mixfield%zvnew(1:mixfield%d1, 1, 1:mixfield%d3), REAL_PRECISION)
     im(1:mixfield%d1, 1:mixfield%d3) = aimag(mixfield%zvnew(1:mixfield%d1, 1, 1:mixfield%d3))
 
     POP_SUB(mixfield_get_ddvnew)

@@ -182,9 +182,6 @@ contains
     !% This is the default density-functional theory scheme. Note that you can also use 
     !% hybrids in this scheme, but they will be handled the "DFT" way, <i>i.e.</i>, solving the
     !% OEP equation.
-    !%Option classical 5
-    !% (Experimental) Only the classical interaction between ions is
-    !% considered. This is mainly for testing.
     !%Option rdmft 7 
     !% (Experimental) Reduced Density Matrix functional theory.
     !%End
@@ -321,7 +318,6 @@ contains
     call messages_obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
     call messages_obsolete_variable('HartreeFock', 'TheoryLevel')
 
-    if(ks%theory_level == CLASSICAL) call messages_experimental('Classical theory level')
     if(ks%theory_level == RDMFT ) call messages_experimental('RDMFT theory level')
     
     select case(ks%theory_level)
@@ -435,7 +431,7 @@ contains
         !%End
         call parse_variable('VDWSelfConsistent', .true., ks%vdw_self_consistent)
 
-        call vdw_ts_init(ks%vdw_ts, geo, gr%fine%der, st)
+        call vdw_ts_init(ks%vdw_ts, geo, gr%fine%der)
 
       case(OPTION__VDWCORRECTION__VDW_D3)
         ks%vdw_self_consistent = .false.
@@ -908,7 +904,7 @@ contains
       FLOAT, allocatable :: coords(:, :)
       FLOAT :: vdw_stress(1:3, 1:3), latvec(1:3, 1:3)
       integer, allocatable :: atnum(:)
-      
+
       PUSH_SUB(v_ks_calc_start.v_a_xc)
       call profiling_in(prof, "XC")
 
@@ -980,8 +976,8 @@ contains
 
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
-          call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
-
+          call vdw_ts_calculate(ks%vdw_ts, geo, ks%gr%der, ks%gr%sb, st, st%rho, ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
+           
         case(OPTION__VDWCORRECTION__VDW_D3)
 
           SAFE_ALLOCATE(coords(1:3, geo%natoms))

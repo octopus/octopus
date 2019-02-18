@@ -72,7 +72,7 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
       
     end do
       
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
     call accel_create_buffer(grad_rho_buff, ACCEL_MEM_WRITE_ONLY, TYPE_FLOAT, gr%mesh%np*gr%sb%dim)
 
     SAFE_ALLOCATE(weights(1:psib%pack%size(1)))

@@ -212,6 +212,7 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, ik, aa, bb, omega)
 
   integer :: ii
   type(profile_t), save :: prof
+  R_TYPE, allocatable :: psia(:, :), psib(:, :)
 
   PUSH_SUB(X(preconditioner_apply_batch))
   call profiling_in(prof, 'PRECONDITIONER_BATCH')
@@ -225,15 +226,19 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, ik, aa, bb, omega)
     call batch_copy_data(gr%der%mesh%np, aa, bb)
 
   else
-    ASSERT(.not. batch_is_packed(aa))
-    ASSERT(.not. batch_is_packed(bb))
+    SAFE_ALLOCATE(psia(1:gr%mesh%np, 1:hm%d%dim))
+    SAFE_ALLOCATE(psib(1:gr%mesh%np, 1:hm%d%dim))
     do ii = 1, aa%nst
+      call batch_get_state(aa, ii, gr%mesh%np, psia)
       if (present(omega)) then
-        call X(preconditioner_apply)(pre, gr, hm, ik, aa%states(ii)%X(psi), bb%states(ii)%X(psi), omega(ii))
+        call X(preconditioner_apply)(pre, gr, hm, ik, psia, psib, omega(ii))
       else
-        call X(preconditioner_apply)(pre, gr, hm, ik, aa%states(ii)%X(psi), bb%states(ii)%X(psi))
+        call X(preconditioner_apply)(pre, gr, hm, ik, psia, psib)
       end if
+      call batch_set_state(bb, ii, gr%mesh%np, psib)
     end do
+    SAFE_DEALLOCATE_A(psia)
+    SAFE_DEALLOCATE_A(psib)
   end if
 
   call profiling_out(prof)
