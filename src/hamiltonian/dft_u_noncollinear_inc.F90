@@ -213,7 +213,8 @@ subroutine compute_ACBNO_U_noncollinear(this, ios)
       denomU = denomU + tmpU
     end do
     end do
-    this%orbsets(ios)%Ueff = real(numU, REAL_PRECISION)/real(denomU, REAL_PRECISION) - real(numJ, REAL_PRECISION)/real(denomJ, REAL_PRECISION)
+    this%orbsets(ios)%Ueff = real(numU, REAL_PRECISION)/real(denomU, REAL_PRECISION) - &
+                             real(numJ, REAL_PRECISION)/real(denomJ, REAL_PRECISION)
     this%orbsets(ios)%Ubar = real(numU,REAL_PRECISION)/real(denomU,REAL_PRECISION)
     this%orbsets(ios)%Jbar = real(numJ,REAL_PRECISION)/real(denomJ,REAL_PRECISION)
 
