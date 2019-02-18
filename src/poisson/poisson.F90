@@ -274,50 +274,53 @@ contains
     if(.not.varinfo_valid_option('PoissonSolver', this%method)) call messages_input_error('PoissonSolver')
     
     if (this%method == POISSON_DRDMFT) then
-      !%Variable RDMParamLambda
-      !%Type float
-      !%Default 1e-7 Ha !!needs to be changed!
-      !%Section SCF::RDMFT
-      !%Description
-      !% interaction strength in dressed state formalism.
-      !%End
-	  call parse_variable('RDMParamLambda', CNST(1.0e-7), this%dressed_lambda)
-	  print*, 'RDMParamLambda', this%dressed_lambda
-	  
-	  !%Variable RDMParamOmega
-      !%Type float
-      !%Default 1e-7 Ha !!needs to be changed!
-      !%Section SCF::RDMFT
-      !%Description
-      !% mode frequency in dressed state formalism.
-      !%End
-	  call parse_variable('RDMParamOmega', CNST(1.0e-7), this%dressed_omega)
-	  print*, 'RDMParamOmega', this%dressed_omega
-	  
-	  !%Variable RDMNoElectrons
-      !%Type float
-      !%Default 2.0
-      !%Section SCF::RDMFT
-      !%Description
-      !% number of active electrons as extra variable, necessary in dressed state formalism. Defined as float
-      !% for better usage later
-      !%End
-	  call parse_variable('RDMNoElectrons', CNST(2.0), this%dressed_electrons)
-	  
-	  print*, 'RDMNoElectrons', this%dressed_electrons
-	  
-	  !%Variable RDMCoulomb
-      !%Type float
-      !%Default 1.0
-      !%Section SCF::RDMFT
-      !%Description
-      !% allows to control the prefactor of the electron electron interaction
-      !%End
-	  call parse_variable('RDMCoulomb', CNST(1.0), this%dressed_coulomb)
-	  
-	  print*, 'RDMCoulomb', this%dressed_coulomb
-	  
-	  
+				!%Variable RDMParamLambda
+				!%Type float
+				!%Default 1e-7 Ha !!needs to be changed!
+				!%Section SCF::RDMFT
+				!%Description
+				!% interaction strength in dressed state formalism.
+				!%End
+			call parse_variable('RDMParamLambda', CNST(1.0e-7), this%dressed_lambda)
+		 
+			
+			!%Variable RDMParamOmega
+				!%Type float
+				!%Default 1e-7 Ha !!needs to be changed!
+				!%Section SCF::RDMFT
+				!%Description
+				!% mode frequency in dressed state formalism.
+				!%End
+			call parse_variable('RDMParamOmega', CNST(1.0e-7), this%dressed_omega)
+
+			
+			!%Variable RDMNoElectrons
+				!%Type float
+				!%Default 2.0
+				!%Section SCF::RDMFT
+				!%Description
+				!% number of active electrons as extra variable, necessary in dressed state formalism. Defined as float
+				!% for better usage later
+				!%End
+			call parse_variable('RDMNoElectrons', CNST(2.0), this%dressed_electrons)
+
+			
+			!%Variable RDMCoulomb
+				!%Type float
+				!%Default 1.0
+				!%Section SCF::RDMFT
+				!%Description
+				!% allows to control the prefactor of the electron electron interaction
+				!%End
+			call parse_variable('RDMCoulomb', CNST(1.0), this%dressed_coulomb)
+
+			
+			write(message(1),'(a,1x,f14.12)') 'RDMParamLambda', this%dressed_lambda
+			write(message(2),'(a,1x,f14.12)') 'RDMParamOmega', this%dressed_omega
+			write(message(3),'(a,1x,f14.12)') 'RDMNoElectrons', this%dressed_electrons
+			write(message(4),'(a,1x,f14.12)') 'RDMCoulomb', this%dressed_coulomb
+			call messages_info(4) 
+			
     end if
    
     select case(this%method)

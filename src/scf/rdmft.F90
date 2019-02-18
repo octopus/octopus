@@ -77,7 +77,7 @@ module rdmft_oct_m
     integer  :: n_twoint !number of unique two electron integrals
     logical  :: do_basis, hf
     logical  :: dressed
-    FLOAT		 :: dressed_omega, dressed_lambda
+    FLOAT		 :: dressed_omega, dressed_lambda, dressed_electrons, dressed_coulomb
     FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO, tolerFO
     FLOAT, allocatable   :: eone(:), eone_int(:,:), twoint(:), hartree(:,:), exchange(:,:), evalues(:)  
     FLOAT, allocatable   :: eone_kin(:), eone_int_kin(:,:)								! used for kinetic energy calculation
@@ -254,6 +254,7 @@ contains
       if(outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
+        call scf_write_static(dirname, "info")
         call output_all(outp, gr, geo, st, hm, ks, dirname)
       end if
 
@@ -296,11 +297,11 @@ contains
 
       PUSH_SUB(scf_rdmft.rdmft_init)  
 
-      if(st%nst < st%qtot + 1) then   
-        message(1) = "Too few states to run RDMFT calculation"
-        message(2) = "Number of states should be at least the number of electrons plus one"
-        call messages_fatal(2)
-      end if
+!      if(st%nst < st%qtot + 1) then   
+!        message(1) = "Too few states to run RDMFT calculation"
+!        message(2) = "Number of states should be at least the number of electrons plus one"
+!        call messages_fatal(2)
+!      end if
    
       if (states_are_complex(st)) then
         call messages_not_implemented("Complex states for RDMFT")
@@ -389,6 +390,26 @@ contains
       !%End
 
       call parse_variable('RDMParamOmega', M_ZERO, rdm%dressed_omega)
+      
+			!%Variable RDMNoElectrons
+			!%Type float
+			!%Default 2.0
+			!%Section SCF::RDMFT
+			!%Description
+			!% number of active electrons as extra variable, necessary in dressed state formalism. Defined as float
+			!% for better usage later
+			!%End
+			call parse_variable('RDMNoElectrons', CNST(2.0), rdm%dressed_electrons)
+
+			
+		  !%Variable RDMCoulomb
+			!%Type float
+			!%Default 1.0
+			!%Section SCF::RDMFT
+			!%Description
+			!% allows to control the prefactor of the electron electron interaction
+			!%End
+			call parse_variable('RDMCoulomb', CNST(1.0), rdm%dressed_coulomb)
       
       !%Variable RDMHartreeFock
       !%Type logical
@@ -557,6 +578,10 @@ contains
 				
 				if (rdm%dressed) then
 					write(iunit, '(a)')'Dressed state calculation'
+					write(iunit, '(a,5x,f14.12)') 'RDMParamLambda:', rdm%dressed_lambda
+					write(iunit, '(a,5x,f14.12)') 'RDMParamOmega:', rdm%dressed_omega
+					write(iunit, '(a,5x,f14.12)') 'RDMNoElectrons:', rdm%dressed_electrons
+					write(iunit, '(a,5x,f14.12)') 'RDMCoulomb:', rdm%dressed_coulomb
 				end if
 				write(iunit, '(1x)')
 				
@@ -568,12 +593,11 @@ contains
         end if
         write(iunit, '(1x)')
 
-				!maybe usefull to have something similar? At least for the cg solver this would make sense
 !        if(any(scf%eigens%converged < st%nst) .and. .not. scf%lcao_restricted) then
 !          write(iunit,'(a)') 'Some of the states are not fully converged!'
 !        end if
 	
-				 ! also this could be useful in terms of the single-particle Hamiltonian
+				 ! FB: this could be useful in terms of the single-particle Hamiltonian?
 !        call states_write_eigenvalues(iunit, st%nst, st, gr%sb)
 !        write(iunit, '(1x)')
 
@@ -601,11 +625,20 @@ contains
 
 			if(mpi_grp_is_root(mpi_world)) then
 				write(iunit,'(a)') 'Natural occupation numbers:'
-        write(iunit,'(a4,5x,a12,5x,a12)')'#st','Occupation', 'Mode Occ.'
-				do ist = 1, st%nst
-					write(iunit,'(i4,3x,f14.12,3x,f14.12)') ist, st%occ(ist, 1), photon_number_state(ist)
-				end do
+				if (rdm%do_basis) then
+					! for Piris implementation, we cannot deifferentiate between the convergences of different states
+					write(iunit,'(a4,5x,a12,5x,a12,5x,a12)')'#st','Occupation', 'Mode Occ.'
+					do ist = 1, st%nst
+						write(iunit,'(i4,3x,f14.12,3x,f14.12,3x,f14.12)') ist, st%occ(ist, 1), photon_number_state(ist)
+					end do
+				else
+					write(iunit,'(a4,5x,a12,5x,a12,5x,a12)')'#st','conv','Occupation', 'Mode Occ.'
+					do ist = 1, st%nst
+						write(iunit,'(i4,3x,f14.12,3x,f14.12,3x,f14.12)') ist, rdm%eigens%diff(ist, 1), st%occ(ist, 1), photon_number_state(ist)
+					end do
+				end if
       end if
+      
       
       if(mpi_grp_is_root(mpi_world)) then
         call io_close(iunit)
@@ -1256,18 +1289,19 @@ print*, "maxFO", rdm%maxFO
             rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), &
             orthogonalize_to_all=.false., &
             conjugate_direction=rdm%eigens%conjugate_direction)
-  
-			if(st%calc_eigenval .and. .not. rdm%eigens%folded_spectrum) then
-				! recheck convergence after subspace diagonalization, since states may have reordered (copied from eigensolver_run)
-				rdm%eigens%converged(ik) = 0
-				do ist = 1, st%nst
-					if(rdm%eigens%diff(ist, ik) < rdm%eigens%tolerance) then
-					rdm%eigens%converged(ik) = ist
-					else
-					exit
-					end if
-				end do
-			end if
+
+! 		FB: subspace diagonalization not possible for ground state right?    
+!			if(st%calc_eigenval .and. .not. rdm%eigens%folded_spectrum) then
+!				! recheck convergence after subspace diagonalization, since states may have reordered (copied from eigensolver_run)
+!				rdm%eigens%converged(ik) = 0
+!				do ist = 1, st%nst
+!					if(rdm%eigens%diff(ist, ik) < rdm%eigens%tolerance) then
+!					rdm%eigens%converged(ik) = ist
+!					else
+!					exit
+!					end if
+!				end do
+!			end if
 
 			rdm%eigens%matvec = rdm%eigens%matvec + maxiter ! necessary?  
     enddo

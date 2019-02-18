@@ -389,9 +389,7 @@ subroutine poisson_solve_drdmft(this, pot, rho)
 ! WARNING: experimental feature
 ! first implementation to integrate the dressed state RDM formalism in octopus
 ! MUST BE USED WITH PoissonSolver=POISSON_DRDMFT!!!!!!
-! MPI still not working
 ! TODO: 	prefactor?
-! 			how to test only poisson routine?
 !			add soft_coulomb_param
 !			message coordinate distribution: 1-electron, 2-photon
 !           
