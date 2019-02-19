@@ -699,7 +699,7 @@ contains
         photon_number =  photon_number + ( photon_number_state(ist) + 0.5 )*st%occ(ist,1) ! 0.5 must be added again to do the normalization due to the total charge correctly
 			end do
 			
-			photon_number =  photon_number - st%qtot
+			photon_number =  photon_number - st%qtot/2
 			
 !			write(message(1),'(a,1x,f14.12)') 'Total mode occupation:', photon_number
 !			write(message(2),'(a,1x,f14.12,1x,f14.12)') 'Mode occupation of NO 1 and 2:', photon_number_state(:2)
@@ -1084,8 +1084,6 @@ contains
         end do
       end do
     end if
-    
-print*, "maxFO", rdm%maxFO
  
     call lalg_eigensolve(st%nst, FO, rdm%evalues)
     call assign_eigfunctions(st, gr, FO)
@@ -1275,14 +1273,14 @@ print*, "maxFO", rdm%maxFO
     
 ! FB: We do the energy comparison already in scf_rdmft, here we put it only for test reasons I reckon
 !    ! set up hamiltonian and calculate energy
-!    call density_calc (st, gr, st%rho)
-!    call v_ks_calc(ks, hm, st, geo)
-!    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
-!    call rdm_derivatives(rdm, hm, st, gr)
-!    call total_energy_rdm(rdm, st%occ(:,1), energy)
+    call density_calc (st, gr, st%rho)
+    call v_ks_calc(ks, hm, st, geo)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
+    call rdm_derivatives(rdm, hm, st, gr)
+    call total_energy_rdm(rdm, st%occ(:,1), energy)
 
-!    ! store energy for later comparison
-!    energy_old = energy
+    ! store energy for later comparison
+    energy_old = energy
 
 		rdm%eigens%converged = 0
     do ik = st%d%kpt%start, st%d%kpt%end
