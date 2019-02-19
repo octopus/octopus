@@ -544,7 +544,7 @@ subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
     do idir = 1, gr%mesh%sb%dim
       do is = 1, hm%d%spin_channels
         force_nlcc(idir, iatom) = force_nlcc(idir, iatom) &
-                       -dmf_dotp(gr%mesh, drho(:,idir), hm%vhxc(1:gr%mesh%np, is))/st%d%spin_channels
+                       -dmf_dotp(gr%mesh, drho(:,idir), hm%vxc(1:gr%mesh%np, is))/st%d%spin_channels
       end do
     end do
   end do
