@@ -518,7 +518,6 @@ contains
 
   end subroutine forces_write_info
 
-<<<<<<< src/system/forces.F90
  ! ----------------------------------------------------------------------
  ! This routine add the contribution to the forces from the nonlinear core correction
  ! see Eq. 9 of Kronik et al., J. Chem. Phys. 115, 4322 (2001)
