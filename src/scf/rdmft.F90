@@ -693,10 +693,11 @@ contains
         photon_number =  photon_number + ( photon_number_state(ist) + 0.5 )*st%occ(ist,1) ! 0.5 must be added again to do the normalization due to the total charge correctly
 			end do
 			
-			photon_number =  photon_number  / st%smear%el_per_state - 0.5 ! we calculate the photon number for every electron, so we need to dived by the total charge
+			photon_number =  photon_number - 0.5
 			
-			print*, "photon_number_state", photon_number_state
-			print*, "The total mode occupation is: ", photon_number
+!			write(message(1),'(a,1x,f14.12)') 'Total mode occupation:', photon_number
+!			write(message(2),'(a,1x,f14.12,1x,f14.12)') 'Mode occupation of NO 1 and 2:', photon_number_state(:2)
+!			call messages_info(2)
 	
       SAFE_DEALLOCATE_A(psi)
 			SAFE_DEALLOCATE_A(grad_psi)
