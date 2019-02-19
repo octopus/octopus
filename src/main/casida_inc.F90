@@ -611,9 +611,9 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
           end if
 
           ! now the exchange part
-          integrand(1:mesh%np) = rho_i(1:mesh%np)*rho_j(1:mesh%np)* &
+          integrand(1:mesh%np) = rho_i(1:mesh%np)* &
             xc(1:mesh%np, cas%pair(ia)%kk, cas%pair(jb)%kk)
-          mtxel_xc = X(mf_integrate)(mesh, integrand)
+          mtxel_xc = X(mf_dotp)(mesh, rho_j(:), integrand(:))
 
           mtxel_vm = M_ZERO
           if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
