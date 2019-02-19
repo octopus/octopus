@@ -80,6 +80,7 @@ module output_oct_m
   use varinfo_oct_m
   use v_ks_oct_m
   use vtk_oct_m
+  use vdw_ts_oct_m
 #if defined(HAVE_BERKELEYGW)
   use wfn_rho_vxc_io_m
 #endif
@@ -286,6 +287,9 @@ contains
     !%Option energy_density bit(32)
     !% Outputs the total energy density to a file called
     !% <tt>energy_density</tt>.
+    !%Option heat_current bit(33)
+    !% Outputs the total heat current density. The output file is
+    !% called <tt>heat_current-</tt>.
     !%End
     call parse_variable('Output', 0, outp%what)
 
@@ -319,10 +323,9 @@ contains
       !   dimensions. The current 1D 1-particle case is simple.
     end if
 
-    if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) then
-      call messages_experimental("'Output = energy_density'")
-    end if
-
+    if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) call messages_experimental("'Output = energy_density'")
+    if(bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) call messages_experimental("'Output = heat_current'")
+    
     if(bitand(outp%what, OPTION__OUTPUT__WFS) /= 0  .or.  bitand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0 ) then
 
       !%Variable OutputWfsNumber
@@ -494,6 +497,10 @@ contains
     !% For the moment, it only works if a +U is added on one type of orbital per atom. 
     !%Option local_orbitals bit(3)
     !% Outputs the localized orbitals that form the correlated subspace
+    !%Option kanamoriU bit(4)
+    !% Outputs the Kanamori interaction parameters U, U`, and J.
+    !% These parameters are not determined self-consistently, but are taken from the 
+    !% occupation matrices and Coulomb integrals comming from a standard +U calculation.
     !%End
     call parse_variable('OutputLDA_U', 0_8, outp%what_lda_u)
 
@@ -549,9 +556,9 @@ contains
     what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS + OPTION__OUTPUT__BERKELEYGW + OPTION__OUTPUT__DOS + &
       OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW
     what_no_how_u = OPTION__OUTPUTLDA_U__OCC_MATRICES + OPTION__OUTPUTLDA_U__EFFECTIVEU + &
-      OPTION__OUTPUTLDA_U__MAGNETIZATION
+      OPTION__OUTPUTLDA_U__MAGNETIZATION + OPTION__OUTPUTLDA_U__KANAMORIU
 
-    if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) then
       call v_ks_calculate_current(ks, .true.)
     else
       call v_ks_calculate_current(ks, .false.)
@@ -672,9 +679,6 @@ contains
         call geometry_write_xyz(geo, trim(dir)//'/geometry')
         if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir)
       end if
-      if(bitand(outp%how, OPTION__OUTPUTFORMAT__OPENSCAD) /= 0) then
-        call geometry_write_openscad(geo, trim(dir)//'/geometry')
-      end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
         call vtk_output_geometry(trim(dir)//'/geometry', geo)
       end if     
@@ -714,6 +718,9 @@ contains
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__LOCAL_ORBITALS) /= 0)&
         call output_dftu_orbitals(dir, hm%lda_u, outp, st, gr%mesh, geo, associated(hm%hm_base%phase))
+
+      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
+        call lda_u_write_kanamoriU(dir, st, hm%lda_u)
     end if
 
     call profiling_out(prof)
@@ -906,10 +913,14 @@ contains
       call states_calc_quantities(gr%der, st, .true., kinetic_energy_density = energy_density)
 
       ! the external potential energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
+        energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
+      end forall
 
       ! the hartree energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
+        energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
+      end forall
 
       ! the XC energy density
       SAFE_ALLOCATE(ex_density(1:gr%mesh%np))
@@ -917,9 +928,12 @@ contains
 
       ASSERT(.not. gr%have_fine_mesh)
 
-      call xc_get_vxc(gr%fine%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ex_density = ex_density, ec_density = ec_density)
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
-      
+      call xc_get_vxc(gr%fine%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), &
+                      st%qtot, ex_density = ex_density, ec_density = ec_density)
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
+        energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
+      end forall
+
       SAFE_DEALLOCATE_A(ex_density)
       SAFE_DEALLOCATE_A(ec_density)
       
@@ -1484,7 +1498,7 @@ contains
             if(has_phase) then
               if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
                call zio_function_output(outp%how, dir, fname, mesh, &
-                  os%eorb_mesh(1:mesh%np,idim,im, ik), fn_unit, ierr, geo = geo)
+                  os%eorb_mesh(1:mesh%np,im,idim,ik), fn_unit, ierr, geo = geo)
               else
                tmp = M_Z0
                call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,idim,im,ik), tmp)

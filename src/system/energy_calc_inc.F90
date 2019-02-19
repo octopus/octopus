@@ -28,12 +28,6 @@ subroutine X(calculate_eigenvalues)(hm, der, st)
 
   PUSH_SUB(X(calculate_eigenvalues))
   
-  if(hm%theory_level == CLASSICAL) then
-    st%eigenval = M_ZERO
-    POP_SUB(X(calculate_eigenvalues))
-    return
-  end if
-
   if(debug%info) then
     write(message(1), '(a)') 'Debug: Calculating eigenvalues.'
     call messages_info(1)

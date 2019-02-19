@@ -20,9 +20,10 @@ spacing = 0.2
 
 ConvRelDens = 2e-12
 ConvAbsEv = 1e-16
-EigensolverTolerance = 1e-8
+Eigensolver = cg_new
+EigensolverTolerance = 1e-9
 EigensolverMaxIter = 50
-
+ConvEigenError = yes
 
 b=0.5
 v = 0.9
