@@ -541,11 +541,13 @@ contains
 
       integer :: iunit, ist
       FLOAT :: photon_number
-      FLOAT, allocatable :: photon_number_state (:)
+      FLOAT, allocatable :: photon_number_state (:), ekin_state (:), epot_state (:)
 
       PUSH_SUB(scf_rdmft.scf_write_static)
       
       SAFE_ALLOCATE(photon_number_state(1:st%nst))
+      SAFE_ALLOCATE(ekin_state(1:st%nst))
+      SAFE_ALLOCATE(epot_state(1:st%nst))
 
       if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
         call io_mkdir(dir)
@@ -608,7 +610,7 @@ contains
         iunit = 0
       end if
 
-			call calc_photon_number(photon_number_state,photon_number)
+			call calc_photon_number(photon_number_state,photon_number,ekin_state,epot_state)
 			if(mpi_grp_is_root(mpi_world)) then
 				write(iunit,'(a,1x,f14.12)') 'Total mode occupation:', photon_number
 			end if
@@ -627,14 +629,14 @@ contains
 				write(iunit,'(a)') 'Natural occupation numbers:'
 				if (rdm%do_basis) then
 					! for Piris implementation, we cannot deifferentiate between the convergences of different states
-					write(iunit,'(a4,5x,a12,5x,a12,5x,a12)')'#st','Occupation', 'Mode Occ.'
+					write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','Occupation', 'Mode Occ.', '-1/2d^2/dq^2', '1/2w^2q^2'
 					do ist = 1, st%nst
-						write(iunit,'(i4,3x,f14.12,3x,f14.12,3x,f14.12)') ist, st%occ(ist, 1), photon_number_state(ist)
+						write(iunit,'(i4,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12)') ist, st%occ(ist, 1), photon_number_state(ist), ekin_state(ist), epot_state(ist)
 					end do
 				else
-					write(iunit,'(a4,5x,a12,5x,a12,5x,a12)')'#st','conv','Occupation', 'Mode Occ.'
+					write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','conv','Occupation', 'Mode Occ.', '-1/2d^2/dq^2', '1/2w^2q^2'
 					do ist = 1, st%nst
-						write(iunit,'(i4,3x,f14.12,3x,f14.12,3x,f14.12)') ist, rdm%eigens%diff(ist, 1), st%occ(ist, 1), photon_number_state(ist)
+						write(iunit,'(i4,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12)') ist, rdm%eigens%diff(ist, 1), st%occ(ist, 1), photon_number_state(ist), ekin_state(ist), epot_state(ist)
 					end do
 				end if
       end if
@@ -645,14 +647,16 @@ contains
       end if
       
       SAFE_DEALLOCATE_A(photon_number_state)
+      SAFE_DEALLOCATE_A(ekin_state)
+      SAFE_DEALLOCATE_A(epot_state)
       
       POP_SUB(scf_rdmft.scf_write_static)
     end subroutine scf_write_static 
     
         ! ---------------------------------------------------------
-    subroutine calc_photon_number(photon_number_state,photon_number)
+    subroutine calc_photon_number(photon_number_state,photon_number,ekin_state,epot_state)
       FLOAT, intent(out) :: photon_number
-      FLOAT, intent(out) :: photon_number_state (st%nst)
+      FLOAT, intent(out) :: photon_number_state (st%nst), ekin_state (st%nst), epot_state (st%nst)
 
       integer :: ist, ip
       FLOAT 	:: qq, q_square_exp, laplace_exp
@@ -679,10 +683,12 @@ contains
         call dderivatives_grad(gr%der, psi(:, 1), grad_psi(:, :), ghost_update = .true., set_bc = .false.)
         call dderivatives_grad(gr%der, grad_psi(:, 2), grad_square_psi(:, :), ghost_update = .true., set_bc = .false.)
         laplace_exp = dmf_dotp(gr%mesh, psi(:,1), grad_square_psi(:,2))
+        ekin_state(ist) = -0.5*laplace_exp
         
         ! <phi(ist)|q^2|psi(ist)>
         psi(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1)*gr%mesh%x(1:gr%mesh%np, 2)
         q_square_exp = dmf_nrm2(gr%mesh, psi(:,1))
+        epot_state(ist) = 0.5 * rdm%dressed_omega * rdm%dressed_omega * q_square_exp
         
         !! N_phot(ist)=( <phi_i|H_ph|phi_i>/omega - 0.5 ) / N_elec
         !! with <phi_i|H_ph|phi_i>=-0.5* <phi(ist)|d^2/dq^2|phi(ist)> + 0.5*omega <phi(ist)|q^2|psi(ist)>
@@ -693,7 +699,7 @@ contains
         photon_number =  photon_number + ( photon_number_state(ist) + 0.5 )*st%occ(ist,1) ! 0.5 must be added again to do the normalization due to the total charge correctly
 			end do
 			
-			photon_number =  photon_number - 0.5
+			photon_number =  photon_number - st%qtot
 			
 !			write(message(1),'(a,1x,f14.12)') 'Total mode occupation:', photon_number
 !			write(message(2),'(a,1x,f14.12,1x,f14.12)') 'Mode occupation of NO 1 and 2:', photon_number_state(:2)
@@ -1288,7 +1294,7 @@ print*, "maxFO", rdm%maxFO
 			!! For RDMFT, needs to be called with: orthogonalize_to_all=.true.
       call deigensolver_cg2(gr, st, hm, rdm%eigens%pre, rdm%eigens%tolerance, maxiter, &
             rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), &
-            orthogonalize_to_all=.false., &
+            orthogonalize_to_all=.true., &
             conjugate_direction=rdm%eigens%conjugate_direction)
 
 ! 		FB: subspace diagonalization not possible for ground state right?    
@@ -1682,7 +1688,7 @@ print*, "maxFO", rdm%maxFO
                       + M_HALF*occ(ist)*V_h(ist) & 
                       + occ(ist)*V_x(ist)
     end do
-    
+ 
 
 
 
