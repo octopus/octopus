@@ -660,12 +660,13 @@ contains
 
       integer :: ist, ip
       FLOAT 	:: qq, q_square_exp, laplace_exp
-			FLOAT, allocatable :: psi(:, :)
+			FLOAT, allocatable :: psi(:, :), psi_q_square(:,:)
 			FLOAT, allocatable :: grad_psi(:, :), grad_square_psi (:,:)
 
       PUSH_SUB(scf_rdmft.calc_photon_number)
       
       SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
+      SAFE_ALLOCATE(psi_q_square(1:gr%mesh%np_part, 1:st%d%dim))
       SAFE_ALLOCATE(grad_psi(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
       SAFE_ALLOCATE(grad_square_psi(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
 
@@ -685,9 +686,9 @@ contains
         laplace_exp = dmf_dotp(gr%mesh, psi(:,1), grad_square_psi(:,2))
         ekin_state(ist) = -0.5*laplace_exp
         
-        ! <phi(ist)|q^2|psi(ist)>
-        psi(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1)*gr%mesh%x(1:gr%mesh%np, 2)
-        q_square_exp = dmf_nrm2(gr%mesh, psi(:,1))
+        ! <phi(ist)|q^2|psi(ist)>= |q|psi(ist)>|^2
+        psi_q_square(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1)* gr%mesh%x(1:gr%mesh%np, 2) * gr%mesh%x(1:gr%mesh%np, 2)
+        q_square_exp = dmf_dotp(gr%mesh, psi(:,1),psi_q_square(:,1))
         epot_state(ist) = 0.5 * rdm%dressed_omega * rdm%dressed_omega * q_square_exp
         
         !! N_phot(ist)=( <phi_i|H_ph|phi_i>/omega - 0.5 ) / N_elec
