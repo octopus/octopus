@@ -453,7 +453,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
   type(profile_t), save :: prof
 
-  R_TYPE, allocatable :: rho_i(:), rho_j(:), integrand(:)
+  R_TYPE, allocatable :: rho_i(:), rho_j(:), integrand(:,:)
   FLOAT :: coeff_vh
   integer :: iimode
   FLOAT, allocatable  :: deltav(:)
@@ -515,7 +515,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
   SAFE_ALLOCATE(rho_i(1:mesh%np))
   SAFE_ALLOCATE(rho_j(1:mesh%np))
-  SAFE_ALLOCATE(integrand(1:mesh%np))
+  SAFE_ALLOCATE(integrand(1:mesh%np, 1:cas%nik))
   SAFE_ALLOCATE(X(pot)(1:mesh%np))
   SAFE_ALLOCATE(buffer(1:mesh%np))
   SAFE_ALLOCATE(bufferx(1:mesh%np))
@@ -575,6 +575,10 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
           end if
         end if
 
+        do ii = 1, cas%nik
+            integrand(1:mesh%np, ii) = rho_j(1:mesh%np)*xc(1:mesh%np, ii, cas%pair(jb)%kk)
+        end do
+
         ! take care of not computing elements twice for the symmetric matrix
         ia_length = cas%n_pairs / 2
         if(mod(cas%n_pairs, 2) == 0 .and. jb > cas%n_pairs/2) then
@@ -616,9 +620,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
           end if
 
           ! now the exchange part
-          integrand(1:mesh%np) = rho_i(1:mesh%np)* &
-            xc(1:mesh%np, cas%pair(ia)%kk, cas%pair(jb)%kk)
-          mtxel_xc = X(mf_dotp)(mesh, rho_j(:), integrand(:))
+          mtxel_xc = X(mf_dotp)(mesh, rho_i(:), integrand(:, cas%pair(ia)%kk))
 
           mtxel_vm = M_ZERO
           if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
