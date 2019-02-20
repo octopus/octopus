@@ -600,7 +600,12 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
           ! ---------------------------------------------------------
           !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
-          call X(casida_get_rho)(st, mesh, cas%pair(ia)%a, cas%pair(ia)%i, cas%pair(ia)%kk, rho_i)
+          if (jb /= ia) then
+            call X(casida_get_rho)(st, mesh, cas%pair(ia)%a, cas%pair(ia)%i, cas%pair(ia)%kk, rho_i)
+          else
+            !> no need to get rho twice
+            rho_i(1:mesh%np) = rho_j(1:mesh%np)
+          end if
 
           !  first the Hartree part
           if(.not. is_forces_ .and. abs(coeff_vh) > M_EPSILON) then
