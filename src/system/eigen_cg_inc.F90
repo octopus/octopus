@@ -296,7 +296,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
           integral_xc = M_ZERO
         end if
 
-        write(message(1), '(a,3i,a,3es12.5)') 'Debug: ik, ist, iter: ', ik, ist, iter, '- alpha, hartree, xc:', alpha, &
+        write(message(1), '(a,i3,a,3es12.5)') 'Debug: ik, ist, iter: ', ik, ist, iter, '- alpha, hartree, xc:', alpha, &
                                               integral_hartree, integral_xc
         call messages_info(1)
 
