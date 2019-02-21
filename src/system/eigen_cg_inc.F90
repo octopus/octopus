@@ -18,7 +18,8 @@
 
 ! ---------------------------------------------------------
 !> conjugate-gradients method.
-subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, diff, shift, orthogonalize_to_all, conjugate_direction, additional_terms)
+subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, diff, shift, orthogonalize_to_all, &
+  conjugate_direction, additional_terms)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
@@ -295,7 +296,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
           integral_xc = M_ZERO
         end if
 
-        write(message(1), '(a,3i,a,3es12.5)') 'Debug: ik, ist, iter: ', ik, ist, iter, '- alpha, hartree, xc:', alpha, integral_hartree, integral_xc
+        write(message(1), '(a,3i,a,3es12.5)') 'Debug: ik, ist, iter: ', ik, ist, iter, '- alpha, hartree, xc:', alpha, &
+                                              integral_hartree, integral_xc
         call messages_info(1)
 
         ! add additional terms to alpha (alpha is -d2e/dtheta2 from eq. 5.31)
@@ -342,7 +344,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       if(debug%info .and. first_delta_e > M_ZERO) then
         write(message(1), '(a,i4,a,i4,a,i4,a,es12.5,a,es12.5,a,i4)') 'Debug: CG Eigensolver - ik', ik, ' ist ', ist, &
              !' iter ', iter, ' res ', res, ' ', res/norm, " max ", maxter
-             ' iter ', iter, ' deltae ', abs(st%eigenval(ist, ik) - old_energy), ' ', abs(st%eigenval(ist, ik) - old_energy)/first_delta_e, " max ", maxter
+             ' iter ', iter, ' deltae ', abs(st%eigenval(ist, ik) - old_energy), ' ', &
+             abs(st%eigenval(ist, ik) - old_energy)/first_delta_e, " max ", maxter
         call messages_info(1)
       end if
 
