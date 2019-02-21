@@ -434,7 +434,6 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   R_TYPE,  optional, intent(in)    :: beta_ij(:)   !< beta_ij(nst)
   logical, optional, intent(in)    :: against_all
 
-
   integer :: ist, idim, length_ss, ibind
   FLOAT   :: nrm2
   R_TYPE, allocatable  :: ss(:), psi(:, :)

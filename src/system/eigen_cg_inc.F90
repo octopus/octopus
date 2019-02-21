@@ -223,7 +223,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 !				end do
 				
 				forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-					g(ip, idim) = h_psi(ip, idim) - cg_vec_lam(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
+					g(ip, idim) = h_psi(ip, idim) - cg_vec_lam(ip, idim) - lam_conj(jst)*psi(ip, idim)
 				end forall
 
 			else ! no RDMFT
@@ -345,7 +345,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
       a0 = X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg, reduce = .false.)
       b0 = X(mf_dotp) (gr%mesh, st%d%dim, cg, h_cg, reduce = .false.)
       cg0 = X(mf_nrm2) (gr%mesh, st%d%dim, cg, reduce = .false.)
-print*, "ist", ist, "iter", iter, "cg0", cg0
 
       if(gr%mesh%parallel_in_domains) then
         sb(1) = a0
