@@ -77,7 +77,7 @@ typedef int CUdeviceptr;
 
 using namespace std;
 
-extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice ** device){
+extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice ** device, fint * device_number){
 
 #ifdef HAVE_CUDA
   CUDA_SAFE_CALL(cuInit(0));
@@ -95,15 +95,13 @@ extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice **
   }
   
 #ifndef HAVE_MPI
-  CUDA_SAFE_CALL(cuDeviceGet(*device, 0));
+  *device_number = 0;
 #else
   int rank, idevice, ierr;
   ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  idevice = rank % ndevices;
-  cout << "Rank " << rank << " using device " << idevice << std::endl;
-
-  CUDA_SAFE_CALL(cuDeviceGet(*device, idevice));
+  *device_number = rank % ndevices;
 #endif
+  CUDA_SAFE_CALL(cuDeviceGet(*device, *device_number));
 
   CUDA_SAFE_CALL(cuCtxCreate(*context, 0, **device));
 

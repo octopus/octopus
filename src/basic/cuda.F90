@@ -49,12 +49,13 @@ module cuda_oct_m
 
   interface
 
-    subroutine cuda_init(context, device)
+    subroutine cuda_init(context, device, device_number)
       use iso_c_binding
       implicit none
       
       type(c_ptr), intent(inout) :: context
       type(c_ptr), intent(inout) :: device
+      integer,     intent(out)   :: device_number
     end subroutine cuda_init
     
     ! -------------------------------------------------
