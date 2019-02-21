@@ -576,7 +576,7 @@ contains
     SAFE_ALLOCATE(g2psi(1:der%mesh%np, 1:ndim, 1:ndim, 1:st%d%dim))
     
     do ip = 1, der%mesh%np
-       current(ip, 1:ndim, 1:st%d%nspin) = st%current(ip, 1:ndim, 1:st%d%nspin)*hm%ep%vpsl(ip)
+      current(ip, 1:ndim, 1:st%d%nspin) = st%current(ip, 1:ndim, 1:st%d%nspin)*hm%ep%vpsl(ip)
     end do
     
     
@@ -586,53 +586,56 @@ contains
         
         call states_get_state(st, der%mesh, ist, ik, psi)
         do idim = 1, st%d%dim
-            call boundaries_set(der%boundaries, psi(:, idim))
-          end do
+          call boundaries_set(der%boundaries, psi(:, idim))
+        end do
 
+        if(associated(hm%hm_base%phase)) then 
+          call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,  conjugate = .false.)
+        end if
+
+        do idim = 1, st%d%dim
+          call zderivatives_grad(der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
+        end do
+        do idir = 1, ndim
           if(associated(hm%hm_base%phase)) then 
-            call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,  conjugate = .false.)
+            call states_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np, conjugate = .true.)
           end if
-
-          do idim = 1, st%d%dim
-            call zderivatives_grad(der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
-          end do
-          do idir = 1, ndim
-            if(associated(hm%hm_base%phase)) then 
-              call states_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np, conjugate = .true.)
-            end if
             
-            !do idim = 1, st%d%dim
-            !  call boundaries_set(der%boundaries, psi(:, idim))
-            !end do
+          !do idim = 1, st%d%dim
+          !  call boundaries_set(der%boundaries, psi(:, idim))
+          !end do
            
-            do idim = 1, st%d%dim
-              call boundaries_set(der%boundaries, gpsi(:,idir, idim))
-            end do
+          do idim = 1, st%d%dim
+            call boundaries_set(der%boundaries, gpsi(:,idir, idim))
+          end do
             
-            if(associated(hm%hm_base%phase)) then 
-              call states_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,  conjugate = .false.)
-            end if
+          if(associated(hm%hm_base%phase)) then 
+            call states_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), &
+                                  der%mesh%np_part,  conjugate = .false.)
+          end if
             
-            do idim = 1, st%d%dim
-              call zderivatives_grad(der, gpsi(:, idir, idim), g2psi(:, :, idir, idim), set_bc = .false.)
-            end do
-         end do
-         idim = 1
-         do ip = 1, der%mesh%np
-             do idir = 1, ndim
-                !tmp = sum(conjg(g2psi(ip, idir, 1:ndim, idim))*gpsi(ip, idir, idim)) - sum(conjg(gpsi(ip, 1:ndim, idim))*g2psi(ip, idir, 1:ndim, idim))
-                tmp = sum(conjg(g2psi(ip, 1:ndim, idir, idim))*gpsi(ip, 1:ndim, idim)) - sum(conjg(gpsi(ip, 1:ndim, idim))*g2psi(ip, 1:ndim, idir, idim))
-                tmp = tmp - conjg(gpsi(ip, idir, idim))*sum(g2psi(ip, 1:ndim, 1:ndim, idim)) + sum(conjg(g2psi(ip, 1:ndim, 1:ndim, idim)))*gpsi(ip, idir, idim)
-                current(ip, idir, ispin) = current(ip, idir, ispin) + st%d%kweights(ik)*st%occ(ist, ik)*aimag(tmp)/CNST(8.0)
-             end do
+          do idim = 1, st%d%dim
+            call zderivatives_grad(der, gpsi(:, idir, idim), g2psi(:, :, idir, idim), set_bc = .false.)
+          end do
+        end do
+        idim = 1
+        do ip = 1, der%mesh%np
+          do idir = 1, ndim
+            !tmp = sum(conjg(g2psi(ip, idir, 1:ndim, idim))*gpsi(ip, idir, idim)) - sum(conjg(gpsi(ip, 1:ndim, idim))*g2psi(ip, idir, 1:ndim, idim))
+            tmp = sum(conjg(g2psi(ip, 1:ndim, idir, idim))*gpsi(ip, 1:ndim, idim)) - &
+                  sum(conjg(gpsi(ip, 1:ndim, idim))*g2psi(ip, 1:ndim, idir, idim))
+            tmp = tmp - conjg(gpsi(ip, idir, idim))*sum(g2psi(ip, 1:ndim, 1:ndim, idim)) + &
+                  sum(conjg(g2psi(ip, 1:ndim, 1:ndim, idim)))*gpsi(ip, idir, idim)
+            current(ip, idir, ispin) = current(ip, idir, ispin) + st%d%kweights(ik)*st%occ(ist, ik)*aimag(tmp)/CNST(8.0)
           end do
         end do
       end do
+    end do
 
 
-      POP_SUB(current_heat_calculate)
+    POP_SUB(current_heat_calculate)
       
-    end subroutine current_heat_calculate
+  end subroutine current_heat_calculate
     
 
 end module current_oct_m
