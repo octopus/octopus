@@ -307,7 +307,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       end if
 
 
-      beta = R_REAL(a0) * M_HALF
+      beta = R_REAL(a0) * M_TWO
       theta = atan(beta/alpha)*M_HALF
       stheta = sin(theta)
       ctheta = cos(theta)
