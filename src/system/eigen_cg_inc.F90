@@ -43,7 +43,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   FLOAT    :: cg0, e0, res, norm, alpha, beta, dot, old_res, old_energy, first_delta_e
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
   FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :)
-  FLOAT    :: integral_hartree, integral_xc, volume
+  FLOAT    :: integral_hartree, integral_xc
   integer  :: ist, iter, maxter, idim, ip, jst, im, isp, ixc
   R_TYPE   :: sb(3)
   logical  :: fold_ ! use folded spectrum operator (H-shift)^2
@@ -108,9 +108,10 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   g_prev = R_TOTYPE(M_ZERO)
 
   if (optional_default(additional_terms, .false.)) then
-    cg = R_TOTYPE(M_ONE)
-    volume = R_REAL(X(mf_integrate)(gr%mesh, cg(:, 1)))
-    cg = R_TOTYPE(M_ZERO)
+    if(add_xc_term) then
+      fxc = M_ZERO
+      call xc_get_fxc(xc, gr%mesh, st%rho, st%d%ispin, fxc)
+    end if
   end if
 
   ! Set the diff to zero, since it is intent(out)
@@ -295,8 +296,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         ! exchange term
         ! TODO: adapt to different spin cases
         if(add_xc_term) then
-          fxc = M_ZERO
-          call xc_get_fxc(xc, gr%mesh, st%rho, st%d%ispin, fxc)
           integral_xc = dmf_dotp(gr%mesh, st%d%dim, fxc(:, :, 1), chi(:, :)**2)
         else
           integral_xc = M_ZERO
@@ -304,7 +303,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
         ! add additional terms to alpha (alpha is -d2e/dtheta2 from eq. 5.31)
         alpha = alpha - st%d%kweights(ik)*st%occ(ist, 1)/st%smear%el_per_state * &
-          (integral_hartree + integral_xc) / volume**2
+          (integral_hartree + integral_xc) / gr%sb%rcell_volume**2
       end if
 
 
