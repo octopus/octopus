@@ -43,7 +43,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   FLOAT    :: cg0, e0, res, norm, alpha, beta, dot, old_res, old_energy, first_delta_e
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
   FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :)
-  FLOAT    :: integral_hartree, integral_xc
+  FLOAT    :: integral_hartree, integral_xc, volume
   integer  :: ist, iter, maxter, idim, ip, jst, im, isp, ixc
   R_TYPE   :: sb(3)
   logical  :: fold_ ! use folded spectrum operator (H-shift)^2
@@ -106,6 +106,12 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   g0    = R_TOTYPE(M_ZERO)
   h_cg  = R_TOTYPE(M_ZERO)
   g_prev = R_TOTYPE(M_ZERO)
+
+  if (optional_default(additional_terms, .false.)) then
+    cg = R_TOTYPE(M_ONE)
+    volume = R_REAL(X(mf_integrate)(gr%mesh, cg(:, 1)))
+    cg = R_TOTYPE(M_ZERO)
+  end if
 
   ! Set the diff to zero, since it is intent(out)
   if(present(diff)) diff(1:st%nst) = M_ZERO
@@ -296,13 +302,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
           integral_xc = M_ZERO
         end if
 
-        write(message(1), '(a,i3,a,3es12.5)') 'Debug: ik, ist, iter: ', ik, ist, iter, '- alpha, hartree, xc:', alpha, &
-                                              integral_hartree, integral_xc
-        call messages_info(1)
-
         ! add additional terms to alpha (alpha is -d2e/dtheta2 from eq. 5.31)
-        ! TODO: multiply prefactor by k-point weight
-        alpha = alpha - st%occ(ist, 1) * (integral_hartree + integral_xc)
+        alpha = alpha - st%d%kweights(ik)*st%occ(ist, 1)/st%smear%el_per_state * &
+          (integral_hartree + integral_xc) / volume**2
       end if
 
 
