@@ -1443,11 +1443,11 @@ subroutine X(casida_write)(cas, sys)
       end do
     end if
   end if
-  
-  !if(cas%use_scalapack) then
-  !  call X(write_distributed_matrix)(cas, cas%X(mat), &
-  !    CASIDA_DIR//trim(theory_name(cas))//"_matrix")
-  !end if
+
+  if(cas%use_scalapack .and. .not. cas%parallel_in_domains) then
+    call X(write_distributed_matrix)(cas, cas%X(mat), &
+      CASIDA_DIR//trim(theory_name(cas))//"_matrix")
+  end if
 
   ! Output the norm files always in photon mode
   if(cas%has_photons) then
