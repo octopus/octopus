@@ -141,6 +141,7 @@ module casida_oct_m
     integer           :: avg_order      !< Quadrature order for directional averaging (Gauss-Legendre scheme) 
 
     logical           :: parallel_in_eh_pairs
+    logical           :: parallel_in_domains
     logical           :: use_scalapack
     type(mpi_grp_t)   :: mpi_grp
     logical           :: fromScratch
@@ -625,6 +626,7 @@ contains
     else
       call mpi_grp_init(cas%mpi_grp, -1)
     end if
+    cas%parallel_in_domains = multicomm_strategy_is_parallel(sys%mc, P_STRATEGY_DOMAINS)
 
     if(cas%use_scalapack .and. .not. cas%parallel_in_eh_pairs) then
       message(1) = "ScaLAPACK layout requested, but 'Other' parallelization strategy not available."
