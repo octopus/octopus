@@ -48,6 +48,8 @@ AC_DEFUN([ACX_LIBVDWXC],
   if test x"$acx_libvdwxc_ok" = xyes; then
     AC_DEFINE(HAVE_LIBVDWXC, 1, [Define if LIBVDWXC is available])
   else
+    LIBS_LIBVDWXC=""
+    FCFLAGS_LIBVDWXC=""
     AC_MSG_WARN([Could not find libvdwxc library.
                  *** Will compile without libvdwxc support])
   fi
