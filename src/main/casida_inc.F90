@@ -438,6 +438,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   integer :: ia_local, jb_local
   integer :: maxcount, actual, counter
   R_TYPE :: mtxel_vh, mtxel_xc, mtxel_vm
+  R_TYPE :: rhobufferx, rhobuffery, rhobufferz
   logical :: is_forces_
   R_TYPE, allocatable :: xx(:)
   R_TYPE, allocatable :: X(pot)(:)
@@ -577,8 +578,14 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
         ! compute part of fxc, spin-resolved
         do ii = 1, cas%nik
-            integrand_xc(1:mesh%np, ii) = rho_j(1:mesh%np)*xc(1:mesh%np, ii, cas%pair(jb)%kk)
+          integrand_xc(1:mesh%np, ii) = rho_j(1:mesh%np)*xc(1:mesh%np, ii, cas%pair(jb)%kk)
         end do
+
+        if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+          rhobufferx = X(mf_integrate)(mesh, rho_j(1:mesh%np)*mesh%x(1:mesh%np, 1))
+          rhobuffery = X(mf_integrate)(mesh, rho_j(1:mesh%np)*mesh%x(1:mesh%np, 2))
+          rhobufferz = X(mf_integrate)(mesh, rho_j(1:mesh%np)*mesh%x(1:mesh%np, 3))
+        end if
 
         ! take care of not computing elements twice for the symmetric matrix
         ia_length = cas%n_pairs / 2
@@ -626,14 +633,11 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
           mtxel_vm = M_ZERO
           if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
             ! buffer is precomputed once before double loop
-              mtxel_vm = mtxel_vm + &
-              (X(mf_integrate)(mesh, rho_i(1:mesh%np)*bufferx(1:mesh%np))* &
-               X(mf_integrate)(mesh, rho_j(1:mesh%np)*mesh%x(1:mesh%np, 1)) + &
-               X(mf_integrate)(mesh, rho_i(1:mesh%np)*buffery(1:mesh%np))* &
-               X(mf_integrate)(mesh, rho_j(1:mesh%np)*mesh%x(1:mesh%np, 2)) + &
-               X(mf_integrate)(mesh, rho_i(1:mesh%np)*bufferz(1:mesh%np))* &
-               X(mf_integrate)(mesh, rho_j(1:mesh%np)*mesh%x(1:mesh%np, 3)))
-            end if
+            mtxel_vm = mtxel_vm + &
+            rhobufferx * X(mf_dotp)(mesh, rho_i(:), bufferx(:)) + &
+            rhobuffery * X(mf_dotp)(mesh, rho_i(:), buffery(:)) + &
+            rhobufferz * X(mf_dotp)(mesh, rho_i(:), bufferz(:))
+          end if
 
           matrix(jb_local, ia_local) = mtxel_vh + mtxel_xc + mtxel_vm
           if(.not. cas%use_scalapack) then
