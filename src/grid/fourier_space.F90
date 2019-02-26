@@ -51,9 +51,7 @@ module fourier_space_oct_m
     dfourier_space_op_apply,    &
     zfourier_space_op_init,     &
     zfourier_space_op_apply,    &
-    fourier_space_op_end,       &
-    dfourier_to_mesh,           &
-    zfourier_to_mesh
+    fourier_space_op_end
 
   type fourier_space_op_t
     private

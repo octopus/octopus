@@ -8,13 +8,13 @@ ExperimentalFeatures = yes
 
 EigenSolver = cg_new
 EigensolverMaxIter = 50
-EigensolverTolerance = 1e-7
+EigensolverTolerance = 1e-8
 ConvRelDens = 1.0e-6
 
 a = 7.8809
 
 %Species
-"Ni" | species_pseudo | hubbard_l | 2 | hubbard_u | 5.0/27.21138
+"Ni" | species_pseudo | hubbard_l | 2 | hubbard_u | 7.0/27.21138
 %
 DFTULevel = dft_u_empirical
 
@@ -40,7 +40,6 @@ PseudopotentialSet=hscv_pbe
 Spacing = 0.5
 
 FromScratch = yes
-ParStates = no
 ParDomains = no
 
 SpinComponents = spinors

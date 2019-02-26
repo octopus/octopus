@@ -44,6 +44,7 @@ match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -46
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -30.77251312
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -4.56275297
 match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 61.84478448
+Precision : 0.00014
 match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -277.03941862
 
 Precision : 0.001
