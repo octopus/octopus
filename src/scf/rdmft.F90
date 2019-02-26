@@ -38,8 +38,8 @@ module rdmft_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use minimizer_oct_m
-use mpi_oct_m
-use mpi_lib_oct_m
+	use mpi_oct_m
+	use mpi_lib_oct_m
   use output_oct_m
   use output_me_oct_m
   use parser_oct_m
@@ -193,8 +193,12 @@ contains
 
       write(message(1),'(a,es20.10)') 'Total energy:', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
       write(message(2),'(a,2x,es20.10)') 'Relative: ', rel_ener
-      write(message(3),'(a,5x,es20.10)') 'Max F0:', rdm%maxFO
-      call messages_info(3)
+      call messages_info(2)
+      if (rdm%hf.eqv. .false.) then
+				write(message(1),'(a,5x,es20.10)') 'Max F0:', rdm%maxFO
+				call messages_info(1)
+			end if
+
 
       if (rdm%do_basis.eqv..true.) then
         if ((rel_ener < rdm%conv_ener).and.rdm%maxFO < rdm%tolerFO) then
