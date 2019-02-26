@@ -1585,43 +1585,67 @@ contains
 
       FBZ_st%coeff(:,:) = M_z0
 
-      do ik=FBZ_st%d%kpt%start,FBZ_st%d%kpt%end
-        rhs(:,:) = M_z0
-        matba(:,:) = M_z0
-        
-        do ib=FBZ_st%st_start,FBZ_st%st_end
-          !print *,'test info', ik, ib, FBZ_st%d%kpt%start, FBZ_st%d%kpt%end,FBZ_st%st_start,FBZ_st%st_end
-          call states_get_state(FBZ_st, mesh, ib, ik, u_m)
-          call floquet_td_state(hm%F,mesh,u_m,FBZ_st%eigenval(ib,ik),time,Fpsi_b)
+!       do ik=FBZ_st%d%kpt%start,FBZ_st%d%kpt%end
+!         rhs(:,:) = M_z0
+!         matba(:,:) = M_z0
+!
+!         do ib=FBZ_st%st_start,FBZ_st%st_end
+!           !print *,'test info', ik, ib, FBZ_st%d%kpt%start, FBZ_st%d%kpt%end,FBZ_st%st_start,FBZ_st%st_end
+!           call states_get_state(FBZ_st, mesh, ib, ik, u_m)
+!           call floquet_td_state(hm%F,mesh,u_m,FBZ_st%eigenval(ib,ik),time,Fpsi_b)
+!
+!           do ia=1,FBZ_st%nst
+!             call states_get_state(FBZ_st, mesh, ia, ik, u_m)
+!             call floquet_td_state(hm%F,mesh,u_m,FBZ_st%eigenval(ia,ik),time,Fpsi_a)
+!             do idim=1,hm%F%spindim
+!               matba(ib,ia) = matba(ib,ia) + zmf_dotp(mesh, Fpsi_b(1:mesh%np,idim), Fpsi_a(1:mesh%np,idim))
+!             end do
+!
+!           end do !ia
+!
+!           do ist=1,ref_st%nst
+!             call states_get_state(ref_st, mesh, ist, ik, psi)
+!             do idim=1,hm%F%spindim
+!               rhs(1,ib) = rhs(1,ib) + ref_st%occ(ist,ik)*zmf_dotp(mesh, Fpsi_b(1:mesh%np,idim), psi(1:mesh%np,idim))
+!             end do
+!
+!           end do! ist
+!         end do !ib
+!         if(FBZ_st%parallel_in_states)  then
+!           call comm_allreduce(FBZ_st%mpi_grp%comm, rhs)
+!           call comm_allreduce(FBZ_st%mpi_grp%comm, matba)
+!         end if
+!
+!
+!         ! solve coefficient system
+!         call lalg_linsyssolve(FBZ_st%nst, 1, matba, rhs, sol)
+!         FBZ_st%coeff(:,ik) = sol(1,:)
+!
+!       end do! ik
 
-          do ia=1,FBZ_st%nst
-            call states_get_state(FBZ_st, mesh, ia, ik, u_m)
-            call floquet_td_state(hm%F,mesh,u_m,FBZ_st%eigenval(ia,ik),time,Fpsi_a)
-            do idim=1,hm%F%spindim
-              matba(ib,ia) = matba(ib,ia) + zmf_dotp(mesh, Fpsi_b(1:mesh%np,idim), Fpsi_a(1:mesh%np,idim))
-            end do
-            
-          end do !ia
-          
+      !TD Floquet states are orthogonal 
+      ! \phi_i(t)= \sum_a f_a^i\psi_a(t)
+      ! fa=sum_i f_a^i
+      do ik=FBZ_st%d%kpt%start,FBZ_st%d%kpt%end
+  
+        do ia=FBZ_st%st_start,FBZ_st%st_end
+          !print *,'test info', ik, ib, FBZ_st%d%kpt%start, FBZ_st%d%kpt%end,FBZ_st%st_start,FBZ_st%st_end
+          call states_get_state(FBZ_st, mesh, ia, ik, u_m)
+          call floquet_td_state(hm%F,mesh,u_m,FBZ_st%eigenval(ia,ik),time,Fpsi_a)
+    
           do ist=1,ref_st%nst
             call states_get_state(ref_st, mesh, ist, ik, psi)
             do idim=1,hm%F%spindim
-              rhs(1,ib) = rhs(1,ib) + ref_st%occ(ist,ik)*zmf_dotp(mesh, Fpsi_b(1:mesh%np,idim), psi(1:mesh%np,idim))
+              FBZ_st%coeff(:,ik) = FBZ_st%coeff(:,ik) + ref_st%occ(ist,ik)*zmf_dotp(mesh, Fpsi_a(1:mesh%np,idim), psi(1:mesh%np,idim))
             end do           
 
           end do! ist
-        end do !ib
-        if(FBZ_st%parallel_in_states)  then 
-          call comm_allreduce(FBZ_st%mpi_grp%comm, rhs) 
-          call comm_allreduce(FBZ_st%mpi_grp%comm, matba) 
-        end if
-        
-        
-        ! solve coefficient system
-        call lalg_linsyssolve(FBZ_st%nst, 1, matba, rhs, sol)
-        FBZ_st%coeff(:,ik) = sol(1,:)
-        
+        end do !ia
+  
       end do! ik
+
+
+
       
       
       if(FBZ_st%parallel_in_states .or. FBZ_st%d%kpt%parallel) then
