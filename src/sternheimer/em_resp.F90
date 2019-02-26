@@ -86,9 +86,9 @@ module em_resp_oct_m
     logical :: calc_hyperpol
     CMPLX   :: alpha(MAX_DIM, MAX_DIM, 3)        !< the linear polarizability
     CMPLX   :: alpha_be(MAX_DIM, MAX_DIM, MAX_DIM) !< the magneto-optical response
-    CMPLX   :: alpha0(MAX_DIM, MAX_DIM, 3)        !< the linear polarizability without G = G' = 0 term
+    CMPLX   :: alpha0(MAX_DIM, MAX_DIM, 3)        !< the linear polarizability without G = G` = 0 term
                                                   !! of the LRC kernel
-    CMPLX   :: alpha_be0(MAX_DIM, MAX_DIM, MAX_DIM) !< the magneto-optical response without G = G' = 0
+    CMPLX   :: alpha_be0(MAX_DIM, MAX_DIM, MAX_DIM) !< the magneto-optical response without G = G` = 0
                                                   !! term of the LRC kernel
     CMPLX   :: beta (MAX_DIM, MAX_DIM, MAX_DIM)  !< first hyperpolarizability
 

@@ -1061,7 +1061,7 @@ contains
       ! write to stderr if we are node 0
       call pop_sub_write(stderr)
     end if
-    
+
     no_sub_stack = no_sub_stack - 1
 
   contains

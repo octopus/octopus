@@ -41,7 +41,9 @@
     implicit none
 
     integer :: iunit, ierr, ii, jj, iter, read_iter, ntime, nvel, ivel
-    FLOAT, allocatable :: time(:), velocities(:, :), total_current(:, :), ftcurr(:, :, :), curr(:, :, :), heat_current(:,:), ftheatcurr(:,:,:), heatcurr(:,:,:)
+    FLOAT, allocatable :: time(:), velocities(:, :)
+    FLOAT, allocatable :: total_current(:, :), ftcurr(:, :, :), curr(:, :, :)
+    FLOAT, allocatable :: heat_current(:,:), ftheatcurr(:,:,:), heatcurr(:,:,:)
     type(geometry_t)  :: geo 
     type(space_t)     :: space
     type(simul_box_t) :: sb
