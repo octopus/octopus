@@ -1636,7 +1636,7 @@ contains
           do ist=1,ref_st%nst
             call states_get_state(ref_st, mesh, ist, ik, psi)
             do idim=1,hm%F%spindim
-              FBZ_st%coeff(:,ik) = FBZ_st%coeff(:,ik) + ref_st%occ(ist,ik)*zmf_dotp(mesh, Fpsi_a(1:mesh%np,idim), psi(1:mesh%np,idim))
+              FBZ_st%coeff(ia,ik) = FBZ_st%coeff(ia,ik) + ref_st%occ(ist,ik)*zmf_dotp(mesh, Fpsi_a(1:mesh%np,idim), psi(1:mesh%np,idim))
             end do           
 
           end do! ist
