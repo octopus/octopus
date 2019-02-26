@@ -95,6 +95,8 @@ program floquet_observables
 
   type(fobs_t)         :: obs
 
+  integer              :: iter
+  FLOAT                :: time, time_step
 
   call getopt_init(ierr)
   if(ierr /= 0) then
@@ -417,48 +419,57 @@ program floquet_observables
     call messages_write('Output FBZ bands.')
     call messages_info()
     
+    call get_FBZ_st(dressed_st, FBZ_st)     
+     
+    call states_allocate_wfns(bare_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
 
-     call get_FBZ_st(dressed_st, FBZ_st)     
+    time = M_ZERO
+    call messages_write('Reading td-state to calculate coefficients.')
+    call messages_info()
+    call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+    if(ierr == 0) call states_load(restart, bare_st, sys%gr, ierr, iter=iter, label = ": td")
+    if (ierr /= 0) then
+      message(1) = 'Unable to read time-dependent wavefunctions.'
+      call messages_warning(1)
+    end if
+    if(ierr==0) then
+      call parse_variable('TDTimeStep', M_ZERO, time_step, unit = units_inp%time)
+      if(time_step == M_ZERO) then
+         message(1) = 'Did not find time-step in Floquet init, please give a value for TDTimeStep'
+        call messages_fatal(1)
+      end if
+      time = time_step*iter     
+    end if
+    call restart_end(restart)
+    if(ierr/=0) then
+      ierr = 0
+      call messages_write('Reading gs-states to calculate coefficients.')
+      call messages_info()
+      call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+      if(ierr == 0) call states_load(restart, bare_st, sys%gr, ierr)
+      if (ierr /= 0) then
+        message(1) = 'Unable to read ground-state wavefunctions.'
+        call messages_fatal(1)
+      end if
+      call restart_end(restart)
+    end if
+       
      
-     call states_allocate_wfns(bare_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
-
-     call messages_write('Reading td-state to calculate coefficients.')
-     call messages_info()
-     call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-     if(ierr == 0) call states_load(restart, bare_st, sys%gr, ierr)
-     if (ierr /= 0) then
-        message(1) = 'Unable to read time-dependent wavefunctions.'
-        call messages_warning(1)
-     end if
-     call restart_end(restart)
-     if(ierr/=0) then
-       ierr = 0
-       call messages_write('Reading gs-states to calculate coefficients.')
-       call messages_info()
-       call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-       if(ierr == 0) call states_load(restart, bare_st, sys%gr, ierr)
-       if (ierr /= 0) then
-          message(1) = 'Unable to read ground-state wavefunctions.'
-          call messages_fatal(1)
-       end if
-       call restart_end(restart)
-     end if
+    call floquet_calc_FBZ_coefficients(hm, sys, FBZ_st, bare_st, time)
      
-     call floquet_calc_FBZ_coefficients(hm, sys, FBZ_st, bare_st, M_ZERO)
+    if (simul_box_is_periodic(sys%gr%sb) .and. kpoints_have_zero_weight_path(sys%gr%sb%kpoints)) then
+      filename = 'FBZ_bands_occ'
+      call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = FBZ_st%occ)
+      filename = 'FBZ_bands_coeff_Re'
+      call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = Real(FBZ_st%coeff))
+      filename = 'FBZ_bands_coeff_Im'
+      call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = Aimag(FBZ_st%coeff))
+    else
+      filename = trim(FLOQUET_DIR)//'FBZ_eigenvalues'
+      call states_write_eigenvalues(filename, FBZ_st%nst, FBZ_st, sys%gr%sb)
+    end if
      
-     if (simul_box_is_periodic(sys%gr%sb) .and. kpoints_have_zero_weight_path(sys%gr%sb%kpoints)) then
-       filename = 'FBZ_bands_occ'
-       call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = FBZ_st%occ)
-       filename = 'FBZ_bands_coeff_Re'
-       call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = Real(FBZ_st%coeff))
-       filename = 'FBZ_bands_coeff_Im'
-       call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = Aimag(FBZ_st%coeff))
-     else
-       filename = trim(FLOQUET_DIR)//'FBZ_eigenvalues'
-       call states_write_eigenvalues(filename, FBZ_st%nst, FBZ_st, sys%gr%sb)
-     end if
-     
-     call states_end(FBZ_st)
+    call states_end(FBZ_st)
     
   end if
 
