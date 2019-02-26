@@ -5,6 +5,7 @@
 !  * Functions that start with libvdwxc_ are public, to be called from other parts of Octopus.
 !  * Interfaces that start with vdwxc_ are actual functions of libvdwxc.
 
+
 module libvdwxc_oct_m
   use cube_oct_m
   use cube_function_oct_m
@@ -53,69 +54,7 @@ module libvdwxc_oct_m
   end type libvdwxc_t
 
 #ifdef HAVE_LIBVDWXC
-  ! These interfaces correspond to functions in libvdwxc
-  interface
-    subroutine vdwxc_new(functional, vdw)
-      integer,          intent(in)  :: functional
-      integer, pointer, intent(out) :: vdw
-    end subroutine vdwxc_new
-  end interface
-
-  interface
-    subroutine vdwxc_print(vdw)
-      integer, pointer, intent(in) :: vdw
-    end subroutine vdwxc_print
-  end interface
-
-  interface
-    subroutine vdwxc_calculate(vdw, rho, sigma, dedn, dedsigma, energy)
-      integer, pointer, intent(inout) :: vdw
-      real(8),          intent(in)    :: rho(:,:,:)
-      real(8),          intent(in)    :: sigma(:,:,:)
-      real(8),          intent(inout) :: dedn(:,:,:)
-      real(8),          intent(inout) :: dedsigma(:,:,:)
-      real(8),          intent(inout) :: energy
-    end subroutine vdwxc_calculate
-  end interface
-
-  interface
-    subroutine vdwxc_set_unit_cell(vdw, nx, ny, nz, C00, C01, C02, &
-      C10, C11, C12, C20, C21, C22)
-      integer, pointer, intent(inout) :: vdw
-      integer,          intent(in)    :: nx, ny, nz
-      real(8),          intent(in)    :: C00, C01, C02, C10, C11, C12, C20, C21, C22
-    end subroutine vdwxc_set_unit_cell
-  end interface
-
-  interface
-    subroutine vdwxc_init_serial(vdw)
-      integer, pointer, intent(inout) :: vdw
-    end subroutine vdwxc_init_serial
-  end interface
-
-#ifdef HAVE_MPI
-  interface
-    subroutine vdwxc_init_mpi(vdw, comm)
-      integer, pointer, intent(inout) :: vdw
-      integer,          intent(in)    :: comm
-    end subroutine vdwxc_init_mpi
-  end interface
-
-  interface
-    subroutine vdwxc_init_pfft(vdw, comm, ncpu1, ncpu2)
-      integer, pointer, intent(inout) :: vdw
-      integer,          intent(in)    :: comm
-      integer,          intent(in)    :: ncpu1
-      integer,          intent(in)    :: ncpu2
-    end subroutine vdwxc_init_pfft
-  end interface
-#endif
-
-  interface
-    subroutine vdwxc_finalize(vdw)
-      integer, pointer, intent(inout) :: vdw
-    end subroutine vdwxc_finalize
-  end interface
+  include "vdwxcfort.f90"
 #endif
 
 contains
@@ -254,8 +193,12 @@ contains
     if(libvdwxc_mode == LIBVDWXC_MODE_SERIAL) then
       call vdwxc_init_serial(this%libvdwxc_ptr)
     else
-#ifdef HAVE_MPI
+#ifdef HAVE_LIBVDWXC_MPI
       call vdwxc_init_mpi(this%libvdwxc_ptr, mesh%mpi_grp%comm)
+#else
+      message(1) = "libvdwxc was not compiled with MPI"
+      message(2) = "Recompile libvdwxc with MPI for vdW with domain decomposition"
+      call messages_fatal(2)
 #endif
     end if
     call vdwxc_print(this%libvdwxc_ptr)
@@ -279,7 +222,7 @@ contains
 #ifdef HAVE_MPI
     integer :: ierr
 #endif
-    
+
     PUSH_SUB(libvdwxc_calculate)
 
     ASSERT(size(rho, 2) == 1)
