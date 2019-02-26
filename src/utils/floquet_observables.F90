@@ -90,7 +90,7 @@ program floquet_observables
   character(len=512)   :: filename, str, str2
   integer              :: ist, ispin  
   type(states_t)          :: dressed_st 
-  type(states_t), pointer ::    gs_st
+  type(states_t), pointer :: bare_st
   type(states_t)         :: FBZ_st
 
   type(fobs_t)         :: obs
@@ -99,7 +99,7 @@ program floquet_observables
   call getopt_init(ierr)
   if(ierr /= 0) then
     message(1) = "Your Fortran compiler doesn't support command-line arguments;"
-    message(2) = "the oct-photoelectron-spectrum command is not available."
+    message(2) = "the oct-floquet-observables command is not available."
     call messages_fatal(2)
   end if
 
@@ -125,7 +125,7 @@ program floquet_observables
                         sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
 
   call floquet_init(sys,hm%F,sys%st%d%dim)
-  gs_st => sys%st
+  bare_st => sys%st
 
   dressed_st%floquet_dim = hm%F%floquet_dim
   dressed_st%floquet_FBZ = hm%F%FBZ_solver
@@ -185,16 +185,16 @@ program floquet_observables
          call messages_info()
          
          ! get groundstate states
-         call states_allocate_wfns(gs_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
+         call states_allocate_wfns(bare_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
          call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-         if(ierr == 0) call states_load(restart, gs_st, sys%gr, ierr)
+         if(ierr == 0) call states_load(restart, bare_st, sys%gr, ierr)
          if (ierr /= 0) then
             message(1) = 'Unable to read ground-state wavefunctions.'
             call messages_fatal(1)
          end if
          call restart_end(restart)
          
-         call floquet_calc_FBZ_coefficients(hm, sys, dressed_st, gs_st, M_ZERO)
+         call floquet_calc_FBZ_coefficients(hm, sys, dressed_st, bare_st, M_ZERO)
          call states_write_eigenvalues(stdout, dressed_st%nst, dressed_st, sys%gr%sb, &
                                        compact = .true.)     
        end if 
@@ -343,7 +343,7 @@ program floquet_observables
     call messages_write('Calculate td-spin of Floquet eigenstates.')
     call messages_info()
 
-    if(gs_st%d%dim /=2 ) then
+    if(bare_st%d%dim /=2 ) then
       call messages_write('Need spin resolved calculation')
       call messages_fatal()
     end if
@@ -380,15 +380,15 @@ program floquet_observables
     if (hm%F%FBZ_solver .eqv..false. .and. obs%fc_method == OPTION__FLOQUETCONDUCTIVITYMETHOD__F_FBZ) then
       call get_FBZ_st(dressed_st, FBZ_st)
      ! get groundstate states
-      call states_allocate_wfns(gs_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
+      call states_allocate_wfns(bare_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
       call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-      if(ierr == 0) call states_load(restart, gs_st, sys%gr, ierr)
+      if(ierr == 0) call states_load(restart, bare_st, sys%gr, ierr)
       if (ierr /= 0) then
          message(1) = 'Unable to read ground-state wavefunctions.'
          call messages_fatal(1)
       end if
       call restart_end(restart)
-      call floquet_calc_FBZ_coefficients(hm, sys, FBZ_st, gs_st, M_ZERO)
+      call floquet_calc_FBZ_coefficients(hm, sys, FBZ_st, bare_st, M_ZERO)
       call calc_floquet_conductivity(FBZ_st)
     else if (hm%F%FBZ_solver .eqv. .false. .and. obs%fc_method == OPTION__FLOQUETCONDUCTIVITYMETHOD__F_FBZ21) then
       call get_FBZ_st(dressed_st, FBZ_st)
@@ -417,38 +417,42 @@ program floquet_observables
     call messages_write('Output FBZ bands.')
     call messages_info()
     
-    ! filter the FBZ
-     ! this triggers FBZ allocation 
-     hm%F%FBZ_solver = .true.
-!      call floquet_init_dressed_wfs(hm, sys, FBZ_st, fromScratch=.true.)
+
+     call get_FBZ_st(dressed_st, FBZ_st)     
      
-    !init FBZ states
-     dressed_st%floquet_dim = hm%F%floquet_dim
-     dressed_st%floquet_FBZ = hm%F%FBZ_solver
-     call states_init(FBZ_st, sys%gr, sys%geo)
-     call kpoints_distribute(FBZ_st%d,sys%mc)
-     call states_distribute_nodes(FBZ_st,sys%mc)
-     call states_exec_init(FBZ_st, sys%mc)
-     call states_allocate_wfns(FBZ_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
-     
-     
-     ! get groundstate density
-     call states_allocate_wfns(gs_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
-     call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-     if(ierr == 0) call states_load(restart, gs_st, sys%gr, ierr)
+     call states_allocate_wfns(bare_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
+
+     call messages_write('Reading td-state to calculate coefficients.')
+     call messages_info()
+     call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+     if(ierr == 0) call states_load(restart, bare_st, sys%gr, ierr)
      if (ierr /= 0) then
-        message(1) = 'Unable to read ground-state wavefunctions.'
-        call messages_fatal(1)
+        message(1) = 'Unable to read time-dependent wavefunctions.'
+        call messages_warning(1)
      end if
      call restart_end(restart)
+     if(ierr/=0) then
+       ierr = 0
+       call messages_write('Reading gs-states to calculate coefficients.')
+       call messages_info()
+       call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+       if(ierr == 0) call states_load(restart, bare_st, sys%gr, ierr)
+       if (ierr /= 0) then
+          message(1) = 'Unable to read ground-state wavefunctions.'
+          call messages_fatal(1)
+       end if
+       call restart_end(restart)
+     end if
      
-     ! reset flag
-     hm%F%FBZ_solver = .false.
-     call floquet_FBZ_filter(sys, hm, dressed_st, FBZ_st)
-     call floquet_calc_FBZ_coefficients(hm, sys, FBZ_st, gs_st, M_ZERO)
+     call floquet_calc_FBZ_coefficients(hm, sys, FBZ_st, bare_st, M_ZERO)
+     
      if (simul_box_is_periodic(sys%gr%sb) .and. kpoints_have_zero_weight_path(sys%gr%sb%kpoints)) then
-       filename = 'FBZ_bands'
+       filename = 'FBZ_bands_occ'
        call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = FBZ_st%occ)
+       filename = 'FBZ_bands_coeff_Re'
+       call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = Real(FBZ_st%coeff))
+       filename = 'FBZ_bands_coeff_Im'
+       call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = Aimag(FBZ_st%coeff))
      else
        filename = trim(FLOQUET_DIR)//'FBZ_eigenvalues'
        call states_write_eigenvalues(filename, FBZ_st%nst, FBZ_st, sys%gr%sb)
@@ -479,16 +483,16 @@ contains
       call states_init(FBZ_st, sys%gr, sys%geo)
       ! print *, 'FBZ_st dim t', FBZ_st%d%dim, dressed_st%d%dim, sys%st%d%dim
       call floquet_init_dressed_wfs(hm, sys, FBZ_st, fromScratch=.false.)
-      ! reset flag                                                                                                                                                     
+      ! reset flag
       hm%F%FBZ_solver = .false.
       call floquet_FBZ_filter(sys, hm, dressed_st, FBZ_st)
-      if (simul_box_is_periodic(sys%gr%sb) .and. kpoints_have_zero_weight_path(sys%gr%sb%kpoints)) then
-        filename = 'filtered_bands'
-        call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = FBZ_st%occ)
-      else
-        filename = trim(FLOQUET_DIR)//'filtered_eigenvalues'
-        call states_write_eigenvalues(filename, FBZ_st%nst, FBZ_st, sys%gr%sb)
-      end if
+!       if (simul_box_is_periodic(sys%gr%sb) .and. kpoints_have_zero_weight_path(sys%gr%sb%kpoints)) then
+!         filename = 'filtered_bands'
+!         call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = FBZ_st%occ)
+!       else
+!         filename = trim(FLOQUET_DIR)//'filtered_eigenvalues'
+!         call states_write_eigenvalues(filename, FBZ_st%nst, FBZ_st, sys%gr%sb)
+!       end if
     end if
     POP_SUB(get_FBZ_st)
   end subroutine get_FBZ_st 
@@ -1694,15 +1698,15 @@ contains
 
     ! re-calculate occupations in case 
     if(hm%F%occ_cut > 0) then
-       call states_allocate_wfns(gs_st,gr%der%mesh, wfs_type = TYPE_CMPLX)
+       call states_allocate_wfns(bare_st,gr%der%mesh, wfs_type = TYPE_CMPLX)
        call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
-       if(ierr == 0) call states_load(restart, gs_st, gr, ierr)
+       if(ierr == 0) call states_load(restart, bare_st, gr, ierr)
        if (ierr /= 0) then
           message(1) = 'Unable to read ground-state wavefunctions.'
           call messages_fatal(1)
        end if
        call restart_end(restart)
-       call floquet_calc_occupations(hm, sys, dressed_st, gs_st)
+       call floquet_calc_occupations(hm, sys, dressed_st, bare_st)
     end if
 
     filename = FLOQUET_DIR//'/floquet_forces'
@@ -1741,9 +1745,9 @@ contains
     SAFE_ALLOCATE(rhoF(1:gr%mesh%np,1))
 
     ! get groundstate density
-    call states_allocate_wfns(gs_st,gr%der%mesh, wfs_type = TYPE_CMPLX)
+    call states_allocate_wfns(bare_st,gr%der%mesh, wfs_type = TYPE_CMPLX)
     call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
-    if(ierr == 0) call states_load(restart, gs_st, gr, ierr)
+    if(ierr == 0) call states_load(restart, bare_st, gr, ierr)
     if (ierr /= 0) then
        message(1) = 'Unable to read ground-state wavefunctions.'
        call messages_fatal(1)
@@ -1751,7 +1755,7 @@ contains
     call restart_end(restart)
 
     rho = M_ZERO
-    call density_calc(gs_st, gr,rho)
+    call density_calc(bare_st, gr,rho)
 
     ! get Floquet density
     rhoF = M_ZERO
