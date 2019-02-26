@@ -197,8 +197,11 @@ contains
 
       write(message(1),'(a,es20.10)') 'Total energy:', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
       write(message(2),'(a,2x,es20.10)') 'Relative: ', rel_ener
-      write(message(3),'(a,5x,es20.10)') 'Max F0:', rdm%maxFO
-      call messages_info(3)
+      call messages_info(2)
+      if (rdm%hf.eqv. .false.) then
+				write(message(1),'(a,5x,es20.10)') 'Max F0:', rdm%maxFO
+				call messages_info(1)
+			end if
 
       if (rdm%do_basis.eqv..true.) then
         if ((rel_ener < rdm%conv_ener).and.rdm%maxFO < rdm%tolerFO) then
@@ -1327,23 +1330,26 @@ contains
 	  
 	  call total_energy_rdm(rdm, st%occ(:,1), energy)
 		
-		! clauculate FO operator to check Hermiticity of lagrange multiplier matrix (lambda)
-		lambda = M_ZERO
-		FO = M_ZERO
-		call construct_f(hm, st, gr, lambda, rdm)
+		if (rdm%hf.eqv. .false.) then
+			! calculate FO operator to check Hermiticity of lagrange multiplier matrix (lambda)
+			lambda = M_ZERO
+			FO = M_ZERO
+			call construct_f(hm, st, gr, lambda, rdm)
 
-		!Set up FO matrix to check maxFO
-		do ist = 1, st%nst
-			do jst = 1, ist - 1
-				FO(jst, ist) = - ( lambda(jst, ist) - lambda(ist ,jst))
+			!Set up FO matrix to check maxFO
+			do ist = 1, st%nst
+				do jst = 1, ist - 1
+					FO(jst, ist) = - ( lambda(jst, ist) - lambda(ist ,jst))
+				end do
 			end do
-		end do
-		rdm%maxFO = maxval(abs(FO))
+			rdm%maxFO = maxval(abs(FO))
+!			print*, "maxFO:", rdm%maxFO
+		end if
 
-!    ! check if step lowers the energy (later to be removed?)
-!    energy_diff = energy - energy_old
+	!    ! check if step lowers the energy (later to be removed?)
+	!    energy_diff = energy - energy_old
 
-!		print*, "maxFO:", rdm%maxFO
+
 !		print*, "energy_diff", energy_diff
 
 		SAFE_DEALLOCATE_A(lambda) 

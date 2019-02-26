@@ -171,7 +171,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 					
 					! cg_vec including lambda but leaving out the diagonal part that needs to be adpated every iteration (note that only psi changes but lambda remains constant)
 					forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-						cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_lam(ip, idim) !! works also with -lam
+						cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(ist)*psi_lam(ip, idim) !! works also with -lam
 					end forall	
 				end if
 			end do
@@ -219,12 +219,12 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 !					end if						
 				
 !					forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-!						cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_lam(ip, idim) !! works also with -lam
+!						cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_lam(ip, idim)
 !					end forall	
 !				end do
 				
 				forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-					g(ip, idim) = h_psi(ip, idim) - cg_vec_lam(ip, idim) - lam_conj(jst)*psi(ip, idim)
+					g(ip, idim) = h_psi(ip, idim) - cg_vec_lam(ip, idim) - lam_conj(ist)*psi(ip, idim)
 				end forall
 
 			else ! no RDMFT
@@ -487,6 +487,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 		SAFE_DEALLOCATE_A(cg_vec_lam)
 		SAFE_DEALLOCATE_A(lam)
 		SAFE_DEALLOCATE_A(lam_conj)
+		SAFE_DEALLOCATE_A(cg_phi)
 		SAFE_DEALLOCATE_A(ppsi2)
 	end if
 ! End Nicole
