@@ -1274,7 +1274,7 @@ contains
     psi_t(1:mesh%np,:) = exp(-M_zI*F_eval*time)* psi_t(1:mesh%np,:)
 
     ! normalize td-state
-    !psi_t(1:mesh%np,1:F%spindim)  = M_ONE/zmf_nrm2(mesh,F%spindim,psi_t)*psi_t(1:mesh%np,1:F%spindim) 
+!     psi_t(1:mesh%np,1:F%spindim)  = psi_t(1:mesh%np,1:F%spindim)/zmf_nrm2(mesh,F%spindim,psi_t)
 
     end subroutine floquet_td_state
 
@@ -1629,7 +1629,7 @@ contains
       do ik=FBZ_st%d%kpt%start,FBZ_st%d%kpt%end
   
         do ia=FBZ_st%st_start,FBZ_st%st_end
-          !print *,'test info', ik, ib, FBZ_st%d%kpt%start, FBZ_st%d%kpt%end,FBZ_st%st_start,FBZ_st%st_end
+          !print *,'test info', ik, ia, FBZ_st%d%kpt%start, FBZ_st%d%kpt%end,FBZ_st%st_start,FBZ_st%st_end
           call states_get_state(FBZ_st, mesh, ia, ik, u_m)
           call floquet_td_state(hm%F,mesh,u_m,FBZ_st%eigenval(ia,ik),time,Fpsi_a)
     
@@ -1652,7 +1652,7 @@ contains
         call comm_allreduce(FBZ_st%st_kpt_mpi_grp%comm,  FBZ_st%coeff)
       end if
 
-      FBZ_st%occ(:,:) =  abs(FBZ_st%coeff(:,:))**2
+      FBZ_st%occ(:,:) =  abs(FBZ_st%coeff(:,:))
       
       
       SAFE_DEALLOCATE_A(psi)
