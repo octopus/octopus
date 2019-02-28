@@ -49,10 +49,6 @@ typedef int CUdeviceptr;
 
 #include <fortran_types.h>
 
-#ifdef HAVE_MPI
-#include <mpi.h>
-#endif
-
 #define NVRTC_SAFE_CALL(x)                                        \
   do {                                                            \
     nvrtcResult result = x;                                       \
@@ -77,7 +73,7 @@ typedef int CUdeviceptr;
 
 using namespace std;
 
-extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice ** device, fint * device_number){
+extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice ** device, fint * device_number, fint * rank){
 
 #ifdef HAVE_CUDA
   CUDA_SAFE_CALL(cuInit(0));
@@ -94,13 +90,7 @@ extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice **
     exit(1);
   }
   
-#ifndef HAVE_MPI
-  *device_number = 0;
-#else
-  int rank, idevice, ierr;
-  ierr = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  *device_number = rank % ndevices;
-#endif
+  *device_number = *rank % ndevices;
   CUDA_SAFE_CALL(cuDeviceGet(*device, *device_number));
 
   CUDA_SAFE_CALL(cuCtxCreate(*context, 0, **device));
