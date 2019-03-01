@@ -187,30 +187,14 @@ contains
           iindex = species_index(spci)
           jindex = species_index(spcj)
           
-          select case(geo%ionic_interaction_type(iindex, jindex))
-          case(INTERACTION_COULOMB)
-            zj = species_zval(spcj)
-            !the force
-            dd = zi*zj/rr
-            f(1:sb%dim) = (dd/rr**2)*r(1:sb%dim)
-            force(1:sb%dim,iatom) = force(1:sb%dim,iatom) + f(1:sb%dim)
-            force(1:sb%dim,jatom) = force(1:sb%dim,jatom) - f(1:sb%dim)
-            !energy
-            energy=energy + dd
-
-          case(INTERACTION_LJ)
-            epsilon= geo%ionic_interaction_parameter(LJ_EPSILON, iindex, jindex)
-            sigma  = geo%ionic_interaction_parameter(LJ_SIGMA,   iindex, jindex)
-            dd = (sigma/rr)**6
-
-            !the force
-            f(1:sb%dim) = (CNST(24.0)*epsilon*(dd/rr**2)*(CNST(2.0)*dd - M_ONE))*r
-            force(1:sb%dim, iatom) = force(1:sb%dim,iatom) + f(1:sb%dim)
-            force(1:sb%dim, jatom) = force(1:sb%dim,jatom) - f(1:sb%dim)
-
-            !energy
-            energy = energy + CNST(4.0)*epsilon*dd*(dd - M_ONE)
-          end select
+          zj = species_zval(spcj)
+          !the force
+          dd = zi*zj/rr
+          f(1:sb%dim) = (dd/rr**2)*r(1:sb%dim)
+          force(1:sb%dim,iatom) = force(1:sb%dim,iatom) + f(1:sb%dim)
+          force(1:sb%dim,jatom) = force(1:sb%dim,jatom) - f(1:sb%dim)
+          !energy
+          energy=energy + dd
           
         end do !jatom
       end do !iatom
@@ -222,13 +206,11 @@ contains
         end if
         
         do jatom = 1, geo%ncatoms
-          if(ignore_external_ions) then
-            if(.not. in_box(geo%natoms+jatom)) cycle
-          end if
+          if(ignore_external_ions .and. .not. in_box(geo%natoms + jatom)) cycle
           
           r(1:sb%dim) = geo%atom(iatom)%x(1:sb%dim) - geo%catom(jatom)%x(1:sb%dim)
           rr = sqrt(sum(r**2))
-          !INTERACTION_COULOMB
+
           zi = species_zval(geo%atom(iatom)%species)
           zj = geo%catom(jatom)%charge
           !the force
@@ -270,11 +252,6 @@ contains
     type(ps_t) :: spec_ps
 
     PUSH_SUB(ion_interaction_periodic)
-
-    if(any(geo%ionic_interaction_type /= INTERACTION_COULOMB)) then
-      message(1) = "Cannot calculate non-Coulombic interaction for periodic systems."
-      call messages_fatal(1)
-    end if
 
     ereal = M_ZERO
 

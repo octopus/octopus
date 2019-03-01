@@ -155,9 +155,11 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
     end if
 
     if (xcs%use_gi_ked) then
-      call states_calc_quantities(der, st, .true., gi_kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
+      call states_calc_quantities(der, st, .true., gi_kinetic_energy_density = tau, &
+                                  density_gradient = gdens, density_laplacian = ldens)
     else
-      call states_calc_quantities(der, st, .true., kinetic_energy_density = tau, density_gradient = gdens, density_laplacian = ldens)
+      call states_calc_quantities(der, st, .true., kinetic_energy_density = tau, &
+ density_gradient = gdens, density_laplacian = ldens)
     end if
 
     if(functl(FUNC_X)%id == XC_MGGA_X_TB09 .and. der%mesh%sb%periodic_dim == 3) then

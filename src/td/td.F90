@@ -374,10 +374,6 @@ contains
 
     call td_init(td, sys, hm)
 
-    !In both of these cases, the Schroedinger equation must contain an extra term related to the time-derivative of the ions, aas these two contributions are attached to atoms.
-    if(ion_dynamics_ions_move(td%ions) .and. hm%lda_u_level /= DFT_U_NONE ) call messages_not_implemented("DFT+U with MoveIons=yes") 
-    if(ion_dynamics_ions_move(td%ions) .and. associated(st%rho_core)) call messages_not_implemented("Nonlinear core correction with MoveIons=yes")
-    
     ! Allocate wavefunctions during time-propagation
     if(td%dynamics == EHRENFEST) then
       !Note: this is not really clean to do this
@@ -435,7 +431,8 @@ contains
     end if
 
     call td_write_init(write_handler, sys%outp, gr, st, hm, geo, sys%ks, &
-      ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt, sys%mc)
+      ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), &
+      hm%ep%kick, td%iter, td%max_iter, td%dt, sys%mc)
 
     if(td%scissor > M_EPSILON) then
       call scissor_init(hm%scissor, st, gr, hm%d, td%scissor, sys%mc)
@@ -489,8 +486,8 @@ contains
       ! time iterate the system, one time step.
       select case(td%dynamics)
       case(EHRENFEST)
-        call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%energy_update_iter*td%mu, iter, td%ions, geo, sys%outp,&
-          scsteps = scsteps, &
+        call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%energy_update_iter*td%mu, &
+          iter, td%ions, geo, sys%outp, scsteps = scsteps, &
           update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
       case(BO)
         call propagator_dt_bo(td%scf, gr, sys%ks, st, hm, geo, sys%mc, sys%outp, iter, td%dt, td%ions, scsteps)
@@ -687,7 +684,13 @@ contains
       !%End
       call parse_variable('TDFreezeOrbitals', 0, freeze_orbitals)
 
-      if(freeze_orbitals /= 0) call messages_experimental('TDFreezeOrbitals')
+      if(freeze_orbitals /= 0) then
+        call messages_experimental('TDFreezeOrbitals')
+        if(family_is_mgga(sys%ks%xc_family)) then
+          call messages_not_implemented('TDFreezeOrbitals with MGGAs')
+        end if
+      end if
+
 
       call density_calc(st, gr, st%rho)
 
