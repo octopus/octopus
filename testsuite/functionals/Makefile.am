@@ -134,7 +134,9 @@ dist_share_DATA =                                  \
 	11-vdw_d3.01-gs.inp                        \
         12-vdw_solid_c6.test                       \
         12-vdw_solid_c6.01-gs_diamond.inp          \
-        12-vdw_solid_c6.02-gs_graphene.inp
+        12-vdw_solid_c6.02-gs_graphene.inp         \
+    13-vdw_df_cx_h2o.inp                       \
+    13-vdw_df_cx_h2o.test
 
 
 CLEANFILES = *~ *.bak

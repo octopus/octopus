@@ -1,0 +1,11 @@
+Test       : vdW-DF-cx with libvdwxc - H2O
+Program    : octopus
+Options    : libvdwxc
+TestGroups : short-run, functionals, libvdwxc
+Enabled    : Yes
+
+Input      : 13-vdw_df_cx_h2o.inp
+
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -17.11611752
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.80140067
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.38368351
