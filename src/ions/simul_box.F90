@@ -652,7 +652,7 @@ contains
 
       if (parse_block('LatticeParameters', blk) == 0) then
         do idim = 1, sb%dim
-            call parse_block_float(blk, 0, idim - 1, lparams(idim))
+          call parse_block_float(blk, 0, idim - 1, lparams(idim))
         end do
 
         if(parse_block_n(blk) > 1) then ! we have a shift, or even more
@@ -662,7 +662,7 @@ contains
             call messages_fatal(1)
           end if
           do idim = 1, sb%dim
-              call parse_block_float(blk, 1, idim - 1, angles(idim))
+            call parse_block_float(blk, 1, idim - 1, angles(idim))
           end do
           has_angles = .true.
         end if
@@ -726,7 +726,7 @@ contains
         !%Default simple cubic
         !%Section Mesh::Simulation Box
         !%Description
-        !% (Experimental) Primitive lattice vectors. Vectors are stored in rows.
+        !% Primitive lattice vectors. Vectors are stored in rows.
         !% Default:
         !% <br><br><tt>%LatticeVectors
         !% <br>&nbsp;&nbsp;1.0 | 0.0 | 0.0
@@ -750,12 +750,9 @@ contains
           if (.not. parse_is_defined('Lsize')) then
             sb%lsize(:) = M_ZERO
             sb%lsize(1:sb%dim) = lparams(1:sb%dim)*M_HALF
-          end if        
+          end if
+        end if
       end if
-    end if
-
-    if(sb%nonorthogonal) &
-      call messages_experimental('Non-orthogonal unit cells')
     end if
 
     sb%rlattice = M_ZERO
@@ -1012,8 +1009,8 @@ contains
     if(sb%box_shape == PARALLELEPIPED) then
       write(message(1),'(3a, 99(a, f8.3), a)')     &
         '  Lengths [', trim(units_abbrev(units_out%length)), '] = ',    &
-        '(', (units_from_atomic(units_out%length, sb%lsize(idir)), ',', idir = 1, sb%dim - 1),  &
-        units_from_atomic(units_out%length, sb%lsize(sb%dim)), ')'
+        '(', (units_from_atomic(units_out%length, M_TWO*sb%lsize(idir)), ',', idir = 1, sb%dim - 1),  &
+        units_from_atomic(units_out%length, M_TWO*sb%lsize(sb%dim)), ')'
       call messages_info(1, iunit)
     end if
 
@@ -1154,7 +1151,13 @@ contains
     case(CYLINDER)
       do ip = 1, npoints
         rr = sqrt(sum(xx(2:sb%dim, ip)**2))
-        in_box(ip) = (rr <= sb%rsize + DELTA .and. abs(xx(1, ip)) <= sb%xsize + DELTA)
+        in_box(ip) = rr <= sb%rsize + DELTA
+        if(sb%periodic_dim >= 1) then
+          in_box(ip) = in_box(ip) .and. xx(1, ip) >= -sb%xsize - DELTA
+          in_box(ip) = in_box(ip) .and. xx(1, ip) <=  sb%xsize - DELTA
+        else
+          in_box(ip) = in_box(ip) .and. abs(xx(1, ip)) <= sb%xsize + DELTA
+        end if
       end do
 
     case(MINIMUM)

@@ -292,8 +292,6 @@ contains
     !%End
     default_timereversal = this%use_symmetries .and. .not. symmetries_have_break_dir(symm)
     call parse_variable('KPointsUseTimeReversal', default_timereversal, this%use_time_reversal)
-    if(this%use_time_reversal) &
-      call messages_experimental("KPointsUseTimeReversal")
 
     !We determine the method used to define k-point
     this%method = 0
@@ -1488,7 +1486,8 @@ contains
     !We distribute the k-points here for this routine, independently of the rest of the code
     call distributed_nullify(kpt_dist, nk)
  #ifdef HAVE_MPI
-    call distributed_init(kpt_dist, nk, MPI_COMM_WORLD, "kpt_check")
+    if(mpi_world%comm /= -1) &
+      call distributed_init(kpt_dist, nk, MPI_COMM_WORLD, "kpt_check")
  #endif
 
     !A simple map to tell if the k-point as a matching symmetric point or not

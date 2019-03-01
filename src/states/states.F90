@@ -627,10 +627,6 @@ contains
     call parse_variable('SymmetrizeDensity', gr%sb%kpoints%use_symmetries, st%symmetrize_density)
     call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
 
-    ! Why? Resulting discrepancies can be suspiciously large even at SCF convergence;
-    ! the case of partially periodic systems has not been fully considered.
-    if(st%symmetrize_density) call messages_experimental('SymmetrizeDensity')
-
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_nullify(st%dom_st_proc_grid)
 #endif
@@ -1556,6 +1552,8 @@ contains
 
     stout%packed = stin%packed
 
+    stout%randomization = stin%randomization
+
     POP_SUB(states_copy)
   end subroutine states_copy
 
@@ -1653,17 +1651,10 @@ contains
 
     PUSH_SUB(states_generate_random)
  
-    if(st%randomization == PAR_INDEPENDENT) then
-      ist_start = optional_default(ist_start_, st%st_start)
-      ist_end = optional_default(ist_end_, st%st_end)
-      ikpt_start = optional_default(ikpt_start_, st%d%kpt%start)
-      ikpt_end = optional_default(ikpt_end_, st%d%kpt%end)
-    else 
-      ist_start = optional_default(ist_start_, 1)
-      ist_end = optional_default(ist_end_, st%nst)
-      ikpt_start = optional_default(ikpt_start_, 1)
-      ikpt_end = optional_default(ikpt_end_, st%d%nik)
-    end if
+    ist_start = optional_default(ist_start_, 1)
+    ist_end = optional_default(ist_end_, st%nst)
+    ikpt_start = optional_default(ikpt_start_, 1)
+    ikpt_end = optional_default(ikpt_end_, st%d%nik)
 
     if (states_are_real(st)) then
       SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
@@ -1681,24 +1672,24 @@ contains
               call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
             else
               call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
-              if(.not. state_kpt_is_local(st, ist, ik)) cycle
             end if
+            if(.not. state_kpt_is_local(st, ist, ik)) cycle
             call states_set_state(st, mesh, ist,  ik, dpsi)
           else
             if(st%randomization == PAR_INDEPENDENT) then
               call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
             else
               call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
-              if(.not. state_kpt_is_local(st, ist, ik)) cycle
             end if
+            if(.not. state_kpt_is_local(st, ist, ik)) cycle
             call states_set_state(st, mesh, ist,  ik, zpsi)
             if(st%have_left_states) then
               if(st%randomization == PAR_INDEPENDENT) then
                 call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
               else
                 call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
-                if(.not. state_kpt_is_local(st, ist, ik)) cycle
               end if
+              if(.not. state_kpt_is_local(st, ist, ik)) cycle
               call states_set_state(st, mesh, ist,  ik, zpsi, left = .true.)
             end if
           end if
@@ -1717,8 +1708,8 @@ contains
               call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
             else
               call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
-              if(.not. state_kpt_is_local(st, ist, ik)) cycle
             end if
+            if(.not. state_kpt_is_local(st, ist, ik)) cycle
             ! In this case, the spinors are made of a spatial part times a vector [alpha beta]^T in
             ! spin space (i.e., same spatial part for each spin component). So (alpha, beta)
             ! determines the spin values. The values of (alpha, beta) can be be obtained
@@ -2275,25 +2266,25 @@ contains
       call symmetrizer_init(symmetrizer, der%mesh)
       do is = 1, st%d%nspin
         if(associated(tau)) then
-          call dsymmetrizer_apply(symmetrizer, field = tau(:, is), symmfield = symm(:,1), &
+          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field = tau(:, is), symmfield = symm(:,1), &
             suppress_warning = .true.)
           tau(1:der%mesh%np, is) = symm(1:der%mesh%np,1)
         end if
 
         if(present(density_laplacian)) then
-          call dsymmetrizer_apply(symmetrizer, field = density_laplacian(:, is), symmfield = symm(:,1), &
+          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field = density_laplacian(:, is), symmfield = symm(:,1), &
             suppress_warning = .true.)
           density_laplacian(1:der%mesh%np, is) = symm(1:der%mesh%np,1)
         end if
 
         if(associated(jp)) then 
-          call dsymmetrizer_apply(symmetrizer, field_vector = jp(:, :, is), symmfield_vector = symm, &
+          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = jp(:, :, is), symmfield_vector = symm, &
             suppress_warning = .true.)
           jp(1:der%mesh%np, 1:der%mesh%sb%dim, is) = symm(1:der%mesh%np, 1:der%mesh%sb%dim)
         end if
  
         if(present(density_gradient)) then
-          call dsymmetrizer_apply(symmetrizer, field_vector = density_gradient(:, :, is), &
+          call dsymmetrizer_apply(symmetrizer, der%mesh%np, field_vector = density_gradient(:, :, is), &
             symmfield_vector = symm, suppress_warning = .true.)
           density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = symm(1:der%mesh%np, 1:der%mesh%sb%dim)
         end if   

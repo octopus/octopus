@@ -95,11 +95,15 @@ contains
   ! ---------------------------------------------------------
   subroutine mpi_mod_end()
 
+#ifdef HAVE_SCALAPACK
+    call blacs_exit(1)
+#endif
+
 #if defined(HAVE_MPI)
     ! end MPI, if we started it
     if(mpi_world%comm /= -1) call MPI_Finalize(mpi_err)
 #endif 
- 
+
   end subroutine mpi_mod_end
 
 

@@ -27,8 +27,8 @@
 #  define _newline_
 #  define _anl_
 #else
-#  define _newline_    \newline
-#  define _anl_      & \newline
+#  define _newline_ \newline
+#  define _anl_ & \newline
 #endif
 
 
@@ -79,9 +79,9 @@
 #  define SAFE_DEALLOCATE_A(x) if(allocated(x)) then; deallocate(x); end if
 #else
 #  define SAFE_ALLOCATE(x)			\
-  allocate(x, stat=global_alloc_err); _newline_ \
+  allocate( _anl_ x, _anl_ stat=global_alloc_err); _newline_ \
   if(not_in_openmp() .and. iand(prof_vars%mode, PROFILING_MEMORY).ne.0 .or. global_alloc_err.ne.0) _anl_ \
-  global_sizeof = SIZEOF(x); _newline_	\
+  global_sizeof = SIZEOF( _anl_ x _anl_ ); _newline_	\
   if(iand(prof_vars%mode, PROFILING_MEMORY).ne.0) _anl_ \
     call profiling_memory_allocate(_anl_ TOSTRING(x), _anl_ __FILE__, _anl_ __LINE__, _anl_ global_sizeof); _newline_ \
   if(global_alloc_err.ne.0) _anl_ \

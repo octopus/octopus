@@ -269,9 +269,9 @@ contains
       end if
       
       if(states_are_real(st)) then
-        call dforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv)
+        call dforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv, hm%lda_u_level)
       else
-        call zforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv)
+        call zforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv, hm%lda_u_level)
       end if
 
       do jmat = 1, vib%num_modes

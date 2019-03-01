@@ -78,7 +78,7 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
   ! The term i<[V_l,p]> + i<[V_nl,p]> may be considered as equal but opposite to the
   ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.
   ! Maybe we are forgetting something....
-  call total_force_calculate(gr, geo, hm%ep, st, acc)
+  call total_force_calculate(gr, geo, hm%ep, st, acc, hm%lda_u_level)
 
   ! Adds the laser contribution : i<[V_laser, p]>
   ! WARNING: this ignores the possibility of non-electric td external fields.

@@ -286,7 +286,7 @@ contains
     FLOAT, optional,   intent(inout) :: vtau(:, :)
     FLOAT, optional,   intent(inout) :: imvtau(:, :)
 
-    PUSH_SUB(potential_interpolation_set)
+    PUSH_SUB(potential_interpolation_get)
 
     call lalg_copy(np, nspin, potential_interpolation%v_old(:, :, i), vhxc)
     
@@ -302,7 +302,7 @@ contains
       call lalg_copy(np, nspin, potential_interpolation%imvtau_old(:, :, i), imvtau)
     end if
 
-    POP_SUB(potential_interpolation_set)
+    POP_SUB(potential_interpolation_get)
   end subroutine potential_interpolation_get
   ! ---------------------------------------------------------
 

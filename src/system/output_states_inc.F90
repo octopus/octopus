@@ -17,10 +17,11 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine output_states(st, gr, geo, dir, outp)
+subroutine output_states(st, gr, geo, hm, dir, outp)
   type(states_t),         intent(inout) :: st
   type(grid_t),           intent(inout) :: gr
   type(geometry_t),       intent(in)    :: geo
+  type(hamiltonian_t),    intent(in)    :: hm
   character(len=*),       intent(in)    :: dir
   type(output_t),         intent(in)    :: outp
 
@@ -211,12 +212,12 @@ subroutine output_states(st, gr, geo, dir, outp)
     case(UNPOLARIZED)
       write(fname, '(a)') 'tau'
       call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-        elf(:,1), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+        elf(:,1), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     case(SPIN_POLARIZED, SPINORS)
       do is = 1, 2
         write(fname, '(a,i1)') 'tau-sp', is
         call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-          elf(:, is), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+          elf(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
       end do
     end select
     SAFE_DEALLOCATE_A(elf)
@@ -224,7 +225,7 @@ subroutine output_states(st, gr, geo, dir, outp)
 
   if(iand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
     call dos_init(dos, st)
-    call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh)
+    call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh, hm)
     call dos_end(dos)
   end if
 

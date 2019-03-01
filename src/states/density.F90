@@ -358,7 +358,8 @@ contains
       call symmetrizer_init(symmetrizer, this%gr%fine%mesh)
 
       do ispin = 1, this%st%d%nspin
-        call dsymmetrizer_apply(symmetrizer, field = this%density(:, ispin), symmfield = tmpdensity)
+        call dsymmetrizer_apply(symmetrizer, this%gr%fine%mesh%np, field = this%density(:, ispin), &
+                                 symmfield = tmpdensity)
         this%density(1:this%gr%fine%mesh%np, ispin) = tmpdensity(1:this%gr%fine%mesh%np)
       end do
 
@@ -437,7 +438,7 @@ contains
     ASSERT(.not. st%parallel_in_states)
 
     if(.not.associated(st%frozen_rho)) then
-      SAFE_ALLOCATE(st%frozen_rho(1:gr%mesh%np, 1:st%d%dim))
+      SAFE_ALLOCATE(st%frozen_rho(1:gr%mesh%np, 1:st%d%nspin))
     end if
 
     call density_calc_init(dens_calc, st, gr, st%frozen_rho)
@@ -611,7 +612,7 @@ contains
 
       if(associated(st%rho_core)) then
         forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
-          rho(ip, is) = rho(ip, is) + st%rho_core(ip)/st%d%nspin
+          rho(ip, is) = rho(ip, is) + st%rho_core(ip)/st%d%spin_channels
         end forall
       end if
 
@@ -631,8 +632,8 @@ contains
 
       if(associated(st%rho_core)) then
         forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
-          rho(ip, is)   = rho(ip, is)   + st%rho_core(ip)/st%d%nspin
-          Imrho(ip, is) = Imrho(ip, is) + st%Imrho_core(ip)/st%d%nspin          
+          rho(ip, is)   = rho(ip, is)   + st%rho_core(ip)/st%d%spin_channels
+          Imrho(ip, is) = Imrho(ip, is) + st%Imrho_core(ip)/st%d%spin_channels    
         end forall
       end if
 
