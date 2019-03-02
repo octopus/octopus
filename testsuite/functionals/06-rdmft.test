@@ -9,8 +9,9 @@ Processors: 4
 
 Input: 06-rdmft.01-lda.inp
 match ; SCF convergence               ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; LDA energy                    ; GREPFIELD(static/info, 'Total       =', 3) ; -1.31460614
-match ; LDA eigenvalue                ; GREPFIELD(static/info, '  1   --', 3) ; -0.445053
+match ; LDA energy                    ; GREPFIELD(static/info, 'Total       =', 3) ; -1.303893105
+match ; LDA eigenvalue                ; GREPFIELD(static/info, '  1   --', 3) ; -0.441105
+
 
 Input: 06-rdmft.02-gs.inp
 Precision: 0.0011
