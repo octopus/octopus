@@ -19,7 +19,7 @@ match ; DX Delta         ; LINEFIELD(static/density.dx, 3, 2) ; 0.264589
 Precision : 0.000000001
 
 match ; DX value 1       ; LINEFIELD(static/density.dx, 1195, 1) ; 0.000166968968088
-match   DX value 2       ; LINEFIELD(static/density.dx, 1489, 1) ; 0.001133494249038
+match ; DX value 2       ; LINEFIELD(static/density.dx, 1489, 1) ; 0.001133494249038
 
 #axis output
 Precision : 0.0001
