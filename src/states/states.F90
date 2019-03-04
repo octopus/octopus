@@ -1262,12 +1262,10 @@ contains
     !% The full orthogonalization method used by some
     !% eigensolvers. The default is <tt>cholesky_serial</tt>, except with state
     !% parallelization, the default is <tt>cholesky_parallel</tt>.
-    !%Option gram_schmidt 1
     !%Option cholesky_serial 1
     !% Cholesky decomposition implemented using
     !% BLAS/LAPACK. Can be used with domain parallelization but not
     !% state parallelization. (Obsolete synonym: <tt>gram_schmidt</tt>)
-    !%Option par_gram_schmidt 1
     !%Option cholesky_parallel 2
     !% Cholesky decomposition implemented using
     !% ScaLAPACK. Compatible with states parallelization. (Obsolete synonym: <tt>par_gram_schmidt</tt>)
