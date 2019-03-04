@@ -117,18 +117,19 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
     if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
 
 ! Modifications RDMFT
-    ! Calculate starting gradient: |hpsi> = H|psi>
+!    ! Calculate starting gradient: |hpsi> = H|psi>
     if(hm%theory_level == RDMFT) then
-	  ! In RDMFT some terms in the hamiltonian scale differently with occupation number
-	  SAFE_ALLOCATE(h_psi2(1:gr%mesh%np_part, 1:st%d%dim))
+!	  ! In RDMFT some terms in the hamiltonian scale differently with occupation number
+!	  SAFE_ALLOCATE(h_psi2(1:gr%mesh%np_part, 1:st%d%dim))
 	  
-	  h_psi2 = R_TOTYPE(M_ZERO)
-	  call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik, terms = TERM_KINETIC &
-                                & + TERM_LOCAL_POTENTIAL + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)         !! 1-body+hartree ( hartree and external included in TERM_LOCAL_POTENTIAL)                                 
-	  call X(hamiltonian_apply)(hm, gr%der, psi, h_psi2, ist, ik, terms = TERM_OTHERS, set_occ = .true.)	   !! exchange
-		h_psi = h_psi + h_psi2
+!	  h_psi2 = R_TOTYPE(M_ZERO)
+!	  call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik, terms = TERM_KINETIC &
+!                                & + TERM_LOCAL_POTENTIAL + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)         !! 1-body+hartree ( hartree and external included in TERM_LOCAL_POTENTIAL)                                 
+!	  call X(hamiltonian_apply)(hm, gr%der, psi, h_psi2, ist, ik, terms = TERM_OTHERS, set_occ = .true.)	   !! exchange
+!		h_psi = h_psi + h_psi2
 		
-		SAFE_DEALLOCATE_A(h_psi2)
+!		SAFE_DEALLOCATE_A(h_psi2)
+			call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik, set_occ = .true.)
     else 
       call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik)
     endif
