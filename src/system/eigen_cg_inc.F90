@@ -323,14 +323,14 @@ subroutine X(eigensolver_cg2) (gr, st, hm, pre, tol, niter, converged, ik, diff,
 ! Modifications RDMFT
       ! cg contains now the conjugate gradient
       if(hm%theory_level == RDMFT) then
-        ! In RDMFT different terms in the hamiltonian scale differently with occupation number
-        ppsi2  = R_TOTYPE(M_ZERO)
+!        ! In RDMFT different terms in the hamiltonian scale differently with occupation number
+!        ppsi2  = R_TOTYPE(M_ZERO)
         
-        call X(hamiltonian_apply)(hm, gr%der, cg, h_cg, ist, ik, terms = TERM_KINETIC &
-                                & + TERM_LOCAL_POTENTIAL + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)                !! 1-body+hartree ( hartree and external included in TERM_LOCAL_POTENTIAL) 
-        call X(hamiltonian_apply)(hm, gr%der, cg, ppsi2, ist, ik, terms = TERM_OTHERS, set_occ = .true.)			 ! exchange
-        h_cg = h_cg  + ppsi2
-        
+!        call X(hamiltonian_apply)(hm, gr%der, cg, h_cg, ist, ik, terms = TERM_KINETIC &
+!                                & + TERM_LOCAL_POTENTIAL + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)                !! 1-body+hartree ( hartree and external included in TERM_LOCAL_POTENTIAL) 
+!        call X(hamiltonian_apply)(hm, gr%der, cg, ppsi2, ist, ik, terms = TERM_OTHERS, set_occ = .true.)			 ! exchange
+!        h_cg = h_cg  + ppsi2
+        call X(hamiltonian_apply)(hm, gr%der, cg, h_cg, ist, ik, set_occ = .true.)
       else
         call X(hamiltonian_apply)(hm, gr%der, cg, h_cg, ist, ik)
       endif
