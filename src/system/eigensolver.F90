@@ -105,8 +105,8 @@ module eigensolver_oct_m
        RS_ARPACK  = 12,         &
        RS_FEAST   = 13,         &
        RS_PSD     = 14,         &
-       CG_FR      = 1,          &
-       CG_PR      = 2
+       CG_FLETCHER  = 1,        &
+       CG_POLAK     = 2
   
 contains
 
@@ -190,7 +190,7 @@ contains
     select case(eigens%es_type)
     case(RS_CG_NEW)
     case(RS_CG)
-      !%Variable EigensolverOrthogonalizeAll
+      !%Variable CGOrthogonalizeAll
       !%Type logical
       !%Default no
       !%Section SCF::Eigensolver
@@ -201,9 +201,9 @@ contains
       !% against all other bands can improve convergence properties, whereas
       !% orthogonalizing against lower bands only saves operations.
       !%End
-      call parse_variable('EigensolverOrthogonalizeAll', .false., eigens%orthogonalize_to_all)
+      call parse_variable('CGOrthogonalizeAll', .false., eigens%orthogonalize_to_all)
 
-      !%Variable EigensolverConjugateDirection
+      !%Variable CGDirection
       !%Type integer
       !%Section SCF::Eigensolver
       !%Description
@@ -211,16 +211,16 @@ contains
       !% The conjugate direction is updated using a certain coefficient to the previous
       !% direction. This coeffiction can be computed in different ways. The default is
       !% to use Fletcher-Reeves (FR), an alternative is Polak-Ribiere (PR).
-      !%Option FR 1
+      !%Option FLETCHER 1
       !% The coefficient for Fletcher-Reeves consists of the current norm of the
       !% steepest descent vector divided by that of the previous iteration.
-      !%Option PR 2
+      !%Option POLAK 2
       !% For the Polak-Ribiere scheme, a product of the current with the previous
       !% steepest descent vector is subtracted in the nominator.
       !%End
-      call parse_variable('EigensolverConjugateDirection', 1, eigens%conjugate_direction)
+      call parse_variable('CGDirection', CG_FLETCHER, eigens%conjugate_direction)
 
-      !%Variable EigensolverAdditionalTerms
+      !%Variable CGAdditionalTerms
       !%Type logical
       !%Section SCF::Eigensolver
       !%Default no
@@ -228,7 +228,7 @@ contains
       !% Used by the cg solver only.
       !% Add additional terms during the line minimization, see PTA92, eq. 5.31ff.
       !%End
-      call parse_variable('EigensolverAdditionalTerms', .false., eigens%additional_terms)
+      call parse_variable('CGAdditionalTerms', .false., eigens%additional_terms)
 
     case(RS_PLAN)
     case(RS_EVO)
