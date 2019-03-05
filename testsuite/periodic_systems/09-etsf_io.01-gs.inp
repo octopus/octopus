@@ -33,6 +33,9 @@ Output = wfs + wfs_fourier + density + geometry
 OutputFormat = etsf + netcdf
 OutputWfsNumber = "3-4"
 
+# ETSF_IO output is currently not compatible with k-point parallelization
+ParKpoints = no
+
 FilterPotentials = filter_none
 
 MixField = density

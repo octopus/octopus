@@ -100,7 +100,8 @@ contains
     SAFE_ALLOCATE(grho(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
     SAFE_ALLOCATE(  jj(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
 
-    call states_calc_quantities(gr%der, st, kinetic_energy_density = kappa, paramagnetic_current = jj, density_gradient = grho)
+    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = kappa, &
+                                paramagnetic_current = jj, density_gradient = grho)
 
     ! spin-dependent quantities
     if(st%d%ispin == UNPOLARIZED) then

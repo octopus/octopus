@@ -7,6 +7,8 @@ Enabled    : Yes
 
 Input: 02-cosine_potential.01-ground_state.inp
 
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 6
 
 #These matches are disabled since the ion-ion energy calculation is wrong

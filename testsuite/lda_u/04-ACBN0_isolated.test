@@ -5,8 +5,11 @@ Program    : octopus
 TestGroups : short-run, finite_systems_3d, lda_u
 Enabled    : Yes
 
+Processors : 4
+
 Input      : 04-ACBN0_isolated.01-H_unpacked.inp
 
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -0.47409386
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -0.55614049
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   0.30809758
@@ -30,6 +33,7 @@ match ; U  ; LINEFIELD(static/effectiveU, -4, 4) ; 0.613357
 
 Input      : 04-ACBN0_isolated.02-H_packed.inp
 
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -0.47409386
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -0.55614049
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   0.30809758

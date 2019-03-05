@@ -73,7 +73,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   PUSH_SUB(X(project_psi_batch))
   call profiling_in(prof, "VNLPSI")
 
-  ASSERT(.not.batch_is_packed(psib))
+  ASSERT(batch_status(psib) /= BATCH_DEVICE_PACKED)
 
   ! generate the reduce buffer and related structures
   SAFE_ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L, 1:psib%nst))
@@ -114,19 +114,37 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
       if(ns < 1) cycle
 
       ! copy psi to the small spherical grid
-      do idim = 1, dim
-        bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
-        if(associated(pj(ipj)%phase)) then
-          forall (is = 1:ns) 
-            lpsi(is, idim) = psib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, ik)
-          end forall
-        else
-          forall (is = 1:ns) 
-            lpsi(is, idim) = psib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is))
-          end forall
-        end if
-      end do
+      select case(batch_status(psib))
+      case(BATCH_NOT_PACKED)
+        do idim = 1, dim
+          bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+          if(associated(pj(ipj)%phase)) then
+            forall (is = 1:ns) 
+              lpsi(is, idim) = psib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, ik)
+            end forall
+          else
+            forall (is = 1:ns) 
+              lpsi(is, idim) = psib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is))
+            end forall
+          end if
+        end do
 
+      case(BATCH_PACKED)
+        do idim = 1, dim
+          bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+          if(associated(pj(ipj)%phase)) then
+            forall (is = 1:ns) 
+              lpsi(is, idim) = psib%pack%X(psi)(bind, pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, ik)
+            end forall
+          else
+            forall (is = 1:ns) 
+              lpsi(is, idim) = psib%pack%X(psi)(bind, pj(ipj)%sphere%map(is))
+            end forall
+          end if
+        end do
+
+      end select
+        
       ! apply the projectors for each angular momentum component
       do ll = 0, pj(ipj)%lmax
         if (ll == pj(ipj)%lloc) cycle
@@ -209,21 +227,41 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
     !  print *, ll, lpsi(1, 1:dim)  
   
       !put the result back in the complete grid
-      do idim = 1, dim
-        bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
-        if(associated(pj(ipj)%phase)) then
-          forall (is = 1:ns)
-            ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) = &
-              ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, ik))
-          end forall
-        else
-          forall (is = 1:ns) 
-            ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) = &
-              ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) + lpsi(is, idim)
-          end forall
-        end if
-      end do
+      select case(batch_status(psib))
+      case(BATCH_NOT_PACKED)
+        do idim = 1, dim
+          bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+          if(associated(pj(ipj)%phase)) then
+            forall (is = 1:ns)
+              ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) = &
+                ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, ik))
+            end forall
+          else
+            forall (is = 1:ns) 
+              ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) = &
+                ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) + lpsi(is, idim)
+            end forall
+          end if
+        end do
 
+      case(BATCH_PACKED)
+        do idim = 1, dim
+          bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+          if(associated(pj(ipj)%phase)) then
+            forall (is = 1:ns)
+              ppsib%pack%X(psi)(bind, pj(ipj)%sphere%map(is)) = &
+                ppsib%pack%X(psi)(bind, pj(ipj)%sphere%map(is)) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, ik))
+            end forall
+          else
+            forall (is = 1:ns) 
+              ppsib%pack%X(psi)(bind, pj(ipj)%sphere%map(is)) = &
+                ppsib%pack%X(psi)(bind, pj(ipj)%sphere%map(is)) + lpsi(is, idim)
+            end forall
+          end if
+        end do
+        
+      end select
+        
     end do ! ipj
   end do ! ist
   !$omp end do nowait

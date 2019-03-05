@@ -168,7 +168,7 @@ module pcm_eom_oct_m
      message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye or Drude-Lorent dielectric models are allowed."
      call messages_fatal(1)
     endif
-    if( deb%tau == M_ZERO ) then
+    if( abs(deb%tau) <= M_EPSILON ) then
      message(1) = "pcm_charges_propagation: EOM-PCM error. Debye EOM-PCM require a non-null Debye relaxation time."
      call messages_fatal(1)
     endif
@@ -395,7 +395,7 @@ module pcm_eom_oct_m
    !> See subroutine pcm_ief_prop_vv_ief_drl
    f1=dt*(1.d0-dt*0.5d0*drl%gm)
    f2=dt*dt*0.5d0
-   f3=1.d0-dt*drl%gm*(1.d0-dt*0.5*drl%gm)
+   f3=1.d0-dt*drl%gm*(1.d0-dt*M_HALF*drl%gm)
    f4=0.5d0*dt
    f5=drl%gm*f2
 
@@ -639,7 +639,7 @@ module pcm_eom_oct_m
     do i=1,nts_act
      if(fact2(i).lt.M_ZERO) fact2(i)=M_ZERO !< check out
     enddo
-    if (drl%w0.eq.M_ZERO) drl%w0=1.d-8      !< check out
+    if (abs(drl%w0)<=M_EPSILON) drl%w0=1.d-8      !< check out
     fact1(:)=fact2(:)+drl%w0*drl%w0			                                      !< Eq.(19), ibid.
     fact2(:)=sgn_lf*(twopi-sgn*sgn_lf*eigv(:))*drl%aa/fourpi                  !< Eq.(10) down, local field analogous
     Kdiag0(:)=fact2(:)/fact1(:)				                                        !< from Eq.(10) up, ibid.
@@ -706,7 +706,7 @@ module pcm_eom_oct_m
     dist=sqrt(dot_product(diff,diff))
     value=dot_product(cts_act(j)%normal,diff)/dist**3       !< Eq.(5) in Refs.1-2
    else
-    value=-1.0694*sqrt(fourpi*cts_act(i)%area)
+    value=CNST(-1.0694)*sqrt(fourpi*cts_act(i)%area)
     value=value/(M_TWO*cts_act(i)%r_sphere)/cts_act(i)%area !< diagonal part is a bit cumbersome
    endif
 
@@ -728,7 +728,7 @@ module pcm_eom_oct_m
     dist=sqrt(dot_product(diff,diff))
     value=M_ONE/dist					                !< Eq.(5) in Refs.1-2
    else
-    value=1.0694*sqrt(fourpi/cts_act(i)%area) !< diagonal part is a bit cumbersome
+    value=CNST(1.0694)*sqrt(fourpi/cts_act(i)%area) !< diagonal part is a bit cumbersome
    endif
 
    POP_SUB(green_s)
@@ -806,7 +806,7 @@ module pcm_eom_oct_m
    scr2=matmul(matmul(sm12,scr1),sp12)   !< Eq.(10) in Ref.1 (paragraph after Eq.(9), Ref.2)
    do j=1,nts_act
     do i=1,nts_act
-     eigt(i,j)=0.5*(scr2(i,j)+scr2(j,i)) !< re-symmetrizing for numerical reasons
+     eigt(i,j)=M_HALF*(scr2(i,j)+scr2(j,i)) !< re-symmetrizing for numerical reasons
     enddo
    enddo
    call dsyevd(jobz,uplo,nts_act,eigt,nts_act,eigv,work,lwork, &

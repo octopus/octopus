@@ -43,6 +43,8 @@ namespace pseudopotential {
       file_(filename.c_str()),
       buffer_((std::istreambuf_iterator<char>(file_)), std::istreambuf_iterator<char>()){
 
+      filename_ = filename;
+      
       buffer_.push_back('\0');
       doc_.parse<0>(&buffer_[0]);
       
@@ -55,6 +57,7 @@ namespace pseudopotential {
       getline(header, line);
       
       header >> symbol_;
+      symbol_ = element::trim(symbol_);
       getline(header, line);
       
       std::string pseudo_type;

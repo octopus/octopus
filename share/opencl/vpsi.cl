@@ -27,7 +27,7 @@ __kernel void vpsi(const int offset,
 		   __global double * restrict vpsi, const int ldvpsi){
 
   const int ist = get_global_id(0);
-  const int ip  = get_global_id(1);
+  const int ip  = get_global_id(1) + get_global_size(1)*get_global_id(2);
 
   if(ip < np){
     vpsi[(ip<<ldvpsi) + ist] += vv[offset + ip]*psi[(ip<<ldpsi) + ist];

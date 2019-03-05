@@ -265,7 +265,7 @@ contains
         j = j - 1
         read(line, *, iostat = iostat) params%rc(k), (params%h(k, i, i), i = 1, j)
       end do
-      if(params%rc(k) == M_ZERO) exit kloop
+      if(abs(params%rc(k)) <= M_EPSILON) exit kloop
       read(unit, '(a)') line
       iostat = 1
       j = 4

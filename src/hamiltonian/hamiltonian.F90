@@ -20,14 +20,11 @@
 
 module hamiltonian_oct_m
   use accel_oct_m
-  use base_hamiltonian_oct_m
-  use base_potential_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use blas_oct_m
   use boundaries_oct_m
   use boundary_op_oct_m
-  use cmplxscl_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use energy_oct_m
@@ -121,7 +118,6 @@ module hamiltonian_oct_m
     type(states_dim_t)       :: d
     type(hamiltonian_base_t) :: hm_base
     type(energy_t), pointer  :: energy
-    type(base_hamiltonian_t), pointer :: subsys_hm    !< Subsystems Hamiltonian.
     type(bc_t)               :: bc      !< boundaries
     FLOAT, pointer :: vhartree(:) !< Hartree potential
     FLOAT, pointer :: vxc(:,:)    !< XC potential
@@ -129,11 +125,6 @@ module hamiltonian_oct_m
     FLOAT, pointer :: axc(:,:,:)  !< XC vector potential divided by c
     FLOAT, pointer :: vtau(:,:)   !< Derivative of e_XC w.r.t. tau
     FLOAT, pointer :: vberry(:,:) !< Berry phase potential from external E_field
-    !>cmplxscl: imaginary parts of the potentials
-    FLOAT, pointer :: Imvhartree(:) !< Hartree potential
-    FLOAT, pointer :: Imvxc(:,:)    !< XC potential
-    FLOAT, pointer :: Imvhxc(:,:)   !< XC potential + Hartree potential + Berry potential
-    FLOAT, pointer :: Imvtau(:,:)   !< Derivative of e_XC w.r.t. tau
 
     type(geometry_t), pointer :: geo
     FLOAT :: exx_coef !< how much of EXX to mix
@@ -179,13 +170,8 @@ module hamiltonian_oct_m
     type(scissor_t) :: scissor
 
     FLOAT :: current_time
-    FLOAT :: Imcurrent_time  !< needed when cmplxscl%time = .true.
     logical :: apply_packed  !< This is initialized by the StatesPack variable.
     
-    !> If we use a complex-scaled Hamiltonian by complexifying the spatial coordinate with 
-    !> the transformation r -> r*exp(i*theta)      
-    type(cmplxscl_t) :: cmplxscl  !< complex scaling parameters
-
     !> For the Rashba spin-orbit coupling
     FLOAT :: rashba_coupling
     type(scdm_t)  :: scdm
@@ -206,7 +192,6 @@ module hamiltonian_oct_m
     HARTREE               = 1, &
     HARTREE_FOCK          = 3, &
     KOHN_SHAM_DFT         = 4, &
-    CLASSICAL             = 5, &
     RDMFT                 = 7
 
   type(profile_t), save :: prof_hamiltonian, prof_kinetic_start, prof_kinetic_finish
@@ -215,8 +200,7 @@ module hamiltonian_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, xc_flags, &
-        family_is_mgga_with_exc, subsys_hm)
+  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, xc_flags, family_is_mgga_with_exc)
     type(hamiltonian_t),                        intent(out)   :: hm
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
@@ -225,7 +209,6 @@ contains
     integer,                                    intent(in)    :: xc_family
     integer,                                    intent(in)    :: xc_flags
     logical,                                    intent(in)    :: family_is_mgga_with_exc
-    type(base_hamiltonian_t), optional, target, intent(in)    :: subsys_hm
 
     integer :: iline, icol
     integer :: ncols
@@ -286,16 +269,6 @@ contains
 
     call oct_exchange_nullify(hm%oct_exchange)
     
-    !cmplxscl: copy cmplxscl initialized in states.F90
-    call cmplxscl_copy(st%cmplxscl, hm%cmplxscl)
-
-    nullify(hm%subsys_hm)
-    if(present(subsys_hm))then
-      ! Set Subsystems Hamiltonian pointer.
-      ASSERT(.not.hm%cmplxscl%space)
-      hm%subsys_hm => subsys_hm
-    end if
-
     ! allocate potentials and density of the cores
     ! In the case of spinors, vxc_11 = hm%vxc(:, 1), vxc_22 = hm%vxc(:, 2), Re(vxc_12) = hm%vxc(:. 3);
     ! Im(vxc_12) = hm%vxc(:, 4)
@@ -318,32 +291,10 @@ contains
 
     end if
 
-    nullify(hm%Imvhxc, hm%Imvhartree, hm%Imvxc, hm%Imvtau)
-
-    if(hm%cmplxscl%space) then
-      
-      SAFE_ALLOCATE(hm%Imvhxc(1:gr%mesh%np, 1:hm%d%nspin))
-      hm%Imvhxc(1:gr%mesh%np, 1:hm%d%nspin) = M_ZERO
-
-      if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-
-        SAFE_ALLOCATE(hm%Imvhartree(1:gr%mesh%np))
-        hm%Imvhartree=M_ZERO
-
-        SAFE_ALLOCATE(hm%Imvxc(1:gr%mesh%np, 1:hm%d%nspin))
-        hm%Imvxc=M_ZERO
-
-        if(hm%family_is_mgga_with_exc) then
-          SAFE_ALLOCATE(hm%Imvtau(1:gr%mesh%np, 1:hm%d%nspin))
-          hm%Imvtau=M_ZERO
-        end if
-      end if
-      
-    end if
 
     hm%geo => geo
     !Initialize external potential
-    call epot_init(hm%ep, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%cmplxscl%space, subsys_hm,hm%xc_family)
+    call epot_init(hm%ep, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%xc_family)
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, gr%sb)
@@ -462,8 +413,9 @@ contains
 
     nullify(hm%hm_base%phase)
     if (simul_box_is_periodic(gr%sb) .and. &
-        .not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) &
+      .not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) then
       call init_phase()
+    end if
     ! no e^ik phase needed for Gamma-point-only periodic calculations
 
     !%Variable HamiltonianApplyPacked
@@ -477,6 +429,9 @@ contains
     !% See also the related <tt>StatesPack</tt> variable.
     !%End
     call parse_variable('HamiltonianApplyPacked', .true., hm%apply_packed)
+
+    ! StatesPack not yet implemented for some cases, see hamiltonian_apply_packed
+    st%d%pack_states = hamiltonian_apply_packed(hm, gr%mesh)
 
     external_potentials_present = associated(hm%ep%v_static) .or. &
 				  associated(hm%ep%E_field)  .or. &
@@ -536,12 +491,16 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_phase
-      integer :: ip, ik
-      FLOAT   :: kpoint(1:MAX_DIM)
+      integer :: ip, ik, ip_inn, ip_bnd, sp, ip_global, ip_inner
+      FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
 
       PUSH_SUB(hamiltonian_init.init_phase)
 
       SAFE_ALLOCATE(hm%hm_base%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
+      if(.not.accel_is_enabled()) then
+        SAFE_ALLOCATE(hm%hm_base%phase_corr(gr%mesh%np+1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
+        hm%hm_base%phase_corr = M_ONE
+      end if
 
       kpoint(1:gr%sb%dim) = M_ZERO
       do ik = hm%d%kpt%start, hm%d%kpt%end
@@ -549,6 +508,26 @@ contains
         forall (ip = 1:gr%mesh%np_part)
           hm%hm_base%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
         end forall
+
+        if(.not.accel_is_enabled()) then
+          ! loop over boundary points
+          sp = gr%mesh%np
+          if(gr%mesh%parallel_in_domains) sp = gr%mesh%np + gr%mesh%vp%np_ghost
+          do ip = sp + 1, gr%mesh%np_part
+            !translate to a global point
+            ip_global = ip
+#ifdef HAVE_MPI
+            if(gr%mesh%parallel_in_domains) ip_global = gr%mesh%vp%bndry(ip - sp - 1 + gr%mesh%vp%xbndry)
+#endif
+            ! get corresponding inner point
+            ip_inner = mesh_periodic_point(gr%mesh, ip_global)
+
+            ! compute phase correction from global coordinate (opposite sign!)
+            x_global = mesh_x_global(gr%mesh, ip_inner)
+            hm%hm_base%phase_corr(ip, ik) = hm%hm_base%phase(ip, ik)* &
+              exp(M_zI * sum(x_global(1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
+          end do
+        end if
       end do
 
       if(accel_is_enabled()) then
@@ -576,13 +555,12 @@ contains
 
     call hamiltonian_base_end(hm%hm_base)
 
-    nullify(hm%subsys_hm)
-    
     if(associated(hm%hm_base%phase) .and. accel_is_enabled()) then
       call accel_release_buffer(hm%hm_base%buff_phase)
     end if
 
     SAFE_DEALLOCATE_P(hm%hm_base%phase)
+    SAFE_DEALLOCATE_A(hm%hm_base%phase_corr)
     SAFE_DEALLOCATE_P(hm%vhartree)
     SAFE_DEALLOCATE_P(hm%vhxc)
     SAFE_DEALLOCATE_P(hm%vxc)
@@ -590,11 +568,6 @@ contains
     SAFE_DEALLOCATE_P(hm%vberry)
     SAFE_DEALLOCATE_P(hm%a_ind)
     SAFE_DEALLOCATE_P(hm%b_ind)
-    !cmplxscl
-    SAFE_DEALLOCATE_P(hm%Imvhartree)
-    SAFE_DEALLOCATE_P(hm%Imvhxc)
-    SAFE_DEALLOCATE_P(hm%Imvxc)
-    SAFE_DEALLOCATE_P(hm%Imvtau)
     
     if(hm%family_is_mgga_with_exc) then
       SAFE_DEALLOCATE_P(hm%vtau)
@@ -621,7 +594,6 @@ contains
     SAFE_DEALLOCATE_P(hm%energy)
      
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
-
     POP_SUB(hamiltonian_end)
   end subroutine hamiltonian_end
 
@@ -633,8 +605,7 @@ contains
 
     PUSH_SUB(hamiltonian_hermitian)
     hamiltonian_hermitian = .not.((hm%bc%abtype == IMAGINARY_ABSORBING) .or. &
-                                  oct_exchange_enabled(hm%oct_exchange)     .or. &
-                                  hm%cmplxscl%space)
+                                  oct_exchange_enabled(hm%oct_exchange))
 
     POP_SUB(hamiltonian_hermitian)
   end function hamiltonian_hermitian
@@ -726,11 +697,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_update(this, mesh, time, Imtime)
+  subroutine hamiltonian_update(this, mesh, boundaries, time)
     type(hamiltonian_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
+    type(boundaries_t),  intent(in)    :: boundaries
     FLOAT, optional,     intent(in)    :: time
-    FLOAT, optional,     intent(in)    :: Imtime
 
     integer :: ispin, ip, idir, iatom, ilaser
     type(profile_t), save :: prof, prof_phases
@@ -741,9 +712,7 @@ contains
     call profiling_in(prof, "HAMILTONIAN_UPDATE")
 
     this%current_time = M_ZERO
-    this%Imcurrent_time = M_ZERO !cmplxscl
     if(present(time)) this%current_time = time
-    if(present(Imtime)) this%Imcurrent_time = Imtime !cmplxscl
 
     time_ = optional_default(time, CNST(0.0))
 
@@ -752,7 +721,7 @@ contains
 
     ! the xc, hartree and external potentials
     call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_POTENTIAL, &
-      complex_potential = this%cmplxscl%space .or. this%bc%abtype == IMAGINARY_ABSORBING)
+      complex_potential = this%bc%abtype == IMAGINARY_ABSORBING)
 
 
     do ispin = 1, this%d%nspin
@@ -774,13 +743,6 @@ contains
           end if 
         end if
 
-        if(this%cmplxscl%space) then
-          forall (ip = 1:mesh%np)
-            this%hm_base%Impotential(ip, ispin) = &
-              this%hm_base%Impotential(ip, ispin) + this%Imvhxc(ip, ispin) +  this%ep%Imvpsl(ip)
-          end forall
-        end if
-        
         if(this%bc%abtype == IMAGINARY_ABSORBING) then
           forall (ip = 1:mesh%np)
             this%hm_base%Impotential(ip, ispin) = this%hm_base%Impotential(ip, ispin) + this%bc%mf(ip)
@@ -789,9 +751,6 @@ contains
 
       else !Spinors 
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
-        if(this%cmplxscl%space) then
-          forall (ip = 1:mesh%np) this%hm_base%Impotential(ip, ispin) = this%Imvhxc(ip, ispin)
-        end if
           
       end if
 
@@ -809,7 +768,7 @@ contains
           end do
         case(E_FIELD_MAGNETIC)
           call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL + FIELD_UNIFORM_MAGNETIC_FIELD, &
-            this%cmplxscl%space)
+            .false.)
           ! get the vector potential
           SAFE_ALLOCATE(vp(1:mesh%np, 1:mesh%sb%dim))
           vp(1:mesh%np, 1:mesh%sb%dim) = M_ZERO
@@ -821,7 +780,7 @@ contains
           call laser_field(this%ep%lasers(ilaser), this%hm_base%uniform_magnetic_field(1:mesh%sb%dim), time_)
           SAFE_DEALLOCATE_A(vp)
         case(E_FIELD_VECTOR_POTENTIAL)
-          call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, this%cmplxscl%space)
+          call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, .false.)
           ! get the uniform vector potential associated with a magnetic field
           aa = M_ZERO
           call laser_field(this%ep%lasers(ilaser), aa(1:mesh%sb%dim), time_)
@@ -832,7 +791,7 @@ contains
 
       ! the gauge field
       if(gauge_field_is_applied(this%ep%gfield)) then
-        call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, this%cmplxscl%space)
+        call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, .false.)
         call gauge_field_get_vec_pot(this%ep%gfield, aa)
         this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim)  &
           - aa(1:mesh%sb%dim)/P_c
@@ -848,7 +807,7 @@ contains
 
     ! the vector potential of a static magnetic field
     if(associated(this%ep%a_static)) then
-      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL, this%cmplxscl%space)
+      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL, .false.)
       forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np)
         this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) + this%ep%a_static(ip, idir)
       end forall
@@ -856,7 +815,7 @@ contains
 
     ! and the static magnetic field
     if(associated(this%ep%b_field)) then
-      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_MAGNETIC_FIELD, this%cmplxscl%space)
+      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_MAGNETIC_FIELD, .false.)
       forall (idir = 1:3)
         this%hm_base%uniform_magnetic_field(idir) = this%hm_base%uniform_magnetic_field(idir) + this%ep%b_field(idir)
       end forall
@@ -873,7 +832,9 @@ contains
 
     subroutine build_phase()
       integer :: ik, imat, nmat, max_npoints, offset
-      FLOAT   :: kpoint(1:MAX_DIM)
+      integer :: ip, ip_bnd, ip_inn, ip_global, ip_inner, sp
+      FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
+      logical :: compute_phase_correction
 
       PUSH_SUB(hamiltonian_update.build_phase)
 
@@ -897,6 +858,14 @@ contains
           end if
         end if
 
+        compute_phase_correction = .not.accel_is_enabled()
+        if(.not. allocated(this%hm_base%phase_corr)) then
+          if(compute_phase_correction) then
+            SAFE_ALLOCATE(this%hm_base%phase_corr(mesh%np+1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
+            this%hm_base%phase_corr = M_ONE
+          end if
+        end if
+
         kpoint(1:mesh%sb%dim) = M_ZERO
         do ik = this%d%kpt%start, this%d%kpt%end
           kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, states_dim_get_kpoint_index(this%d, ik))
@@ -905,6 +874,27 @@ contains
             this%hm_base%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(kpoint(1:mesh%sb%dim) &
               + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
           end forall
+          if(compute_phase_correction) then
+            ! loop over boundary points
+            sp = mesh%np
+            if(mesh%parallel_in_domains) sp = mesh%np + mesh%vp%np_ghost
+            do ip = sp + 1, mesh%np_part
+              !translate to a global point
+              ip_global = ip
+#ifdef HAVE_MPI
+              if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry)
+#endif
+              ! get corresponding inner point
+              ip_inner = mesh_periodic_point(mesh, ip_global)
+
+              ! compute phase correction from global coordinate (opposite sign!)
+              x_global = mesh_x_global(mesh, ip_inner)
+              this%hm_base%phase_corr(ip, ik) = this%hm_base%phase(ip, ik)* &
+                exp(M_zI * sum(x_global(1:mesh%sb%dim) * (kpoint(1:mesh%sb%dim) &
+                  + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
+            end do
+          end if
+
         end do
         if(accel_is_enabled()) then
           call accel_write_buffer(this%hm_base%buff_phase, mesh%np_part*this%d%kpt%nlocal, this%hm_base%phase)
@@ -968,9 +958,9 @@ contains
     PUSH_SUB(hamiltonian_epot_generate)
 
     this%geo => geo
-    call epot_generate(this%ep, gr, this%geo, st, this%cmplxscl%space)
+    call epot_generate(this%ep, gr, this%geo, st)
     call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep)
-    call hamiltonian_update(this, gr%mesh, time)
+    call hamiltonian_update(this, gr%mesh, gr%der%boundaries, time)
    
     if (this%pcm%run_pcm) then
      !> Generates the real-space PCM potential due to nuclei which do not change
@@ -1006,14 +996,15 @@ contains
     type(mesh_t),          intent(in) :: mesh
 
     apply = this%apply_packed
-    if(mesh%use_curvilinear) apply = .false.
-    if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
-    if(this%rashba_coupling**2 > M_ZERO) apply = .false.
-    if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
-    if(this%family_is_mgga_with_exc)  apply = .false. 
+    ! comment these out; they are tested in the test suite
+    !if(mesh%use_curvilinear) apply = .false.
+    !if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
+    !if(this%rashba_coupling**2 > M_ZERO) apply = .false.
+    !if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
+    !if(this%family_is_mgga_with_exc)  apply = .false.
+    ! keep these checks; currently no tests for these in the test suite
     if(this%scissor%apply) apply = .false.
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
-    if(this%cmplxscl%space .and. accel_is_enabled()) apply = .false.
     if(associated(this%hm_base%phase) .and. accel_is_enabled()) apply = .false.
     
   end function hamiltonian_apply_packed
@@ -1040,7 +1031,6 @@ contains
     SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:gr%sb%dim, 1:dim))
     SAFE_ALLOCATE(dvlocalpsi(1:gr%mesh%np_part, 1:gr%sb%dim, 1:dim))
 
-    vlocalpsi = M_ZERO
     dpsi = M_z0
     dvlocalpsi = M_z0
 
@@ -1156,11 +1146,7 @@ contains
       call restart_write(restart, iunit, lines, 1, err)
       if (err /= 0) err2(1) = err2(1) + 1
 
-      if (hm%cmplxscl%space) then
-        call zrestart_write_mesh_function(restart, filename, mesh, hm%vhxc(:,isp) + M_zI*hm%imvhxc(:,isp), err)
-      else
-        call drestart_write_mesh_function(restart, filename, mesh, hm%vhxc(:,isp), err)
-      end if
+      call drestart_write_mesh_function(restart, filename, mesh, hm%vhxc(:,isp), err)
       if (err /= 0) err2(2) = err2(2) + 1
 
     end do
@@ -1189,11 +1175,7 @@ contains
         call restart_write(restart, iunit, lines, 1, err)
         if (err /= 0) err2(1) = err2(1) + 16
 
-        if (hm%cmplxscl%space) then
-          call zrestart_write_mesh_function(restart, filename, mesh, hm%vtau(:,isp) + M_zI*hm%imvtau(:,isp), err)
-        else
-          call drestart_write_mesh_function(restart, filename, mesh, hm%vtau(:,isp), err)
-        end if
+        call drestart_write_mesh_function(restart, filename, mesh, hm%vtau(:,isp), err)
         if (err /= 0) err2(1) = err2(1) + 1
 
       end do
@@ -1242,10 +1224,6 @@ contains
       call messages_info(1)
     end if
 
-    if (hm%cmplxscl%space) then
-      SAFE_ALLOCATE(zv(1:mesh%np))
-    end if
-
     err2 = 0
     do isp = 1, hm%d%nspin
       if (hm%d%nspin==1) then
@@ -1254,13 +1232,7 @@ contains
         write(filename, fmt='(a,i1)') 'vhxc-sp', isp
       end if
 
-      if (hm%cmplxscl%space) then
-        call zrestart_read_mesh_function(restart, filename, mesh, zv, err)
-        hm%vhxc(:,isp) =  real(zv, REAL_PRECISION)
-        hm%imvhxc(:,isp) = aimag(zv)
-      else
-        call drestart_read_mesh_function(restart, filename, mesh, hm%vhxc(:,isp), err)
-      end if
+      call drestart_read_mesh_function(restart, filename, mesh, hm%vhxc(:,isp), err)
       if (err /= 0) err2 = err2 + 1
 
     end do
@@ -1276,22 +1248,12 @@ contains
           write(filename, fmt='(a,i1)') 'vtau-sp', isp
         end if
 
-        if (hm%cmplxscl%space) then
-          call zrestart_read_mesh_function(restart, filename, mesh, zv, err)
-          hm%vtau(:,isp) =  real(zv, REAL_PRECISION)
-          hm%imvtau(:,isp) = aimag(zv)
-        else
-          call drestart_read_mesh_function(restart, filename, mesh, hm%vtau(:,isp), err)
-        end if
+        call drestart_read_mesh_function(restart, filename, mesh, hm%vtau(:,isp), err)
         if (err /= 0) err2 = err2 + 1
 
       end do
 
       if (err2 /= 0) ierr = ierr + 2
-    end if
-
-    if (hm%cmplxscl%space) then
-      SAFE_DEALLOCATE_A(zv)
     end if
 
     if (debug%info) then
@@ -1307,12 +1269,11 @@ contains
   ! CFM4 propagator. It updates the Hamiltonian by considering a
   ! weighted sum of the external potentials at times time(1) and time(2),
   ! weighted by alpha(1) and alpha(2).
-  subroutine hamiltonian_update2(this, mesh, time, mu,  Imtime)
+  subroutine hamiltonian_update2(this, mesh, time, mu)
     type(hamiltonian_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     FLOAT,               intent(in)    :: time(1:2)
     FLOAT,               intent(in)    :: mu(1:2)
-    FLOAT, optional,     intent(in)    :: Imtime(1:2)
 
     integer :: ispin, ip, idir, iatom, ilaser, itime
     type(profile_t), save :: prof, prof_phases
@@ -1325,16 +1286,14 @@ contains
     call profiling_in(prof, "HAMILTONIAN_UPDATE")
 
     this%current_time = M_ZERO
-    this%Imcurrent_time = M_ZERO !cmplxscl
     this%current_time = time(1)
-    if(present(Imtime)) this%Imcurrent_time = Imtime(1) !cmplxscl
 
     ! set everything to zero
     call hamiltonian_base_clear(this%hm_base)
 
     ! the xc, hartree and external potentials
     call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_POTENTIAL, &
-      complex_potential = this%cmplxscl%space .or. this%bc%abtype == IMAGINARY_ABSORBING)
+      complex_potential = this%bc%abtype == IMAGINARY_ABSORBING)
 
 
     do ispin = 1, this%d%nspin
@@ -1356,13 +1315,6 @@ contains
           end if
         end if
 
-        if(this%cmplxscl%space) then
-          forall (ip = 1:mesh%np)
-            this%hm_base%Impotential(ip, ispin) = &
-              this%hm_base%Impotential(ip, ispin) + this%Imvhxc(ip, ispin) +  this%ep%Imvpsl(ip)
-          end forall
-        end if
-
         if(this%bc%abtype == IMAGINARY_ABSORBING) then
           forall (ip = 1:mesh%np)
             this%hm_base%Impotential(ip, ispin) = this%hm_base%Impotential(ip, ispin) + this%bc%mf(ip)
@@ -1371,10 +1323,6 @@ contains
 
       else !Spinors
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
-        if(this%cmplxscl%space) then
-          forall (ip = 1:mesh%np) this%hm_base%Impotential(ip, ispin) = this%Imvhxc(ip, ispin)
-        end if
-
       end if
 
 
@@ -1395,8 +1343,7 @@ contains
           end do
           SAFE_DEALLOCATE_A(velectric)
         case(E_FIELD_MAGNETIC)
-          call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL + FIELD_UNIFORM_MAGNETIC_FIELD, &
-            this%cmplxscl%space)
+          call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL + FIELD_UNIFORM_MAGNETIC_FIELD, .false.)
           ! get the vector potential
           SAFE_ALLOCATE(vp(1:mesh%np, 1:mesh%sb%dim))
           vp(1:mesh%np, 1:mesh%sb%dim) = M_ZERO
@@ -1409,7 +1356,7 @@ contains
           call laser_field(this%ep%lasers(ilaser), this%hm_base%uniform_magnetic_field(1:mesh%sb%dim), time_)
           SAFE_DEALLOCATE_A(vp)
         case(E_FIELD_VECTOR_POTENTIAL)
-          call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, this%cmplxscl%space)
+          call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, .false.)
           ! get the uniform vector potential associated with a magnetic field
           aa = M_ZERO
           call laser_field(this%ep%lasers(ilaser), aa(1:mesh%sb%dim), time_)
@@ -1420,7 +1367,7 @@ contains
 
       ! the gauge field
       if(gauge_field_is_applied(this%ep%gfield)) then
-        call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, this%cmplxscl%space)
+        call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, .false.)
         call gauge_field_get_vec_pot(this%ep%gfield, aa)
         this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim)  &
           - aa(1:mesh%sb%dim)/P_c
@@ -1436,7 +1383,7 @@ contains
 
     ! the vector potential of a static magnetic field
     if(associated(this%ep%a_static)) then
-      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL, this%cmplxscl%space)
+      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_VECTOR_POTENTIAL, .false.)
       forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np)
         this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) + this%ep%a_static(ip, idir)
       end forall
@@ -1444,7 +1391,7 @@ contains
 
     ! and the static magnetic field
     if(associated(this%ep%b_field)) then
-      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_MAGNETIC_FIELD, this%cmplxscl%space)
+      call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_MAGNETIC_FIELD, .false.)
       forall (idir = 1:3)
         this%hm_base%uniform_magnetic_field(idir) = this%hm_base%uniform_magnetic_field(idir) + this%ep%b_field(idir)
       end forall

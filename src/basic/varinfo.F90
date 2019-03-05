@@ -35,6 +35,11 @@ module varinfo_oct_m
     varinfo_option,       &
     varinfo_exists
 
+  interface varinfo_valid_option
+    module procedure varinfo_valid_option_8
+    module procedure varinfo_valid_option_4
+  end interface varinfo_valid_option
+  
   interface
     subroutine varinfo_init(filename)
       implicit none
@@ -71,7 +76,7 @@ module varinfo_oct_m
       implicit none
       type(c_ptr), intent(in)  :: opt
       type(c_ptr), intent(out) :: name
-      integer,     intent(out) :: val
+      integer(8),  intent(out) :: val
       type(c_ptr), intent(out) :: desc
     end subroutine varinfo_opt_getinfo
 
@@ -106,7 +111,7 @@ contains
     integer,optional, intent(out):: ierr
 
     type(c_ptr) :: handle, opt, name, type, default, section, desc
-    integer :: val
+    integer(8) :: val
     logical :: first
 
     call varinfo_getvar(var, handle)
@@ -151,13 +156,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  logical function varinfo_valid_option(var, option, is_flag) result(l)
+  logical function varinfo_valid_option_8(var, option, is_flag) result(l)
     character(len=*),  intent(in) :: var
-    integer,           intent(in) :: option
+    integer(8),        intent(in) :: option
     logical, optional, intent(in) :: is_flag
 
     type(c_ptr) :: handle, opt, name, desc
-    integer :: val, option_
+    integer(8) :: val, option_
     logical :: is_flag_
 
     is_flag_ = .false.
@@ -191,8 +196,18 @@ contains
 
     if(is_flag_ .and. (option_ == 0)) l = .true.
 
-  end function varinfo_valid_option
+  end function varinfo_valid_option_8
 
+  ! ---------------------------------------------------------
+  
+  logical function varinfo_valid_option_4(var, option, is_flag) result(l)
+    character(len=*),  intent(in) :: var
+    integer,           intent(in) :: option
+    logical, optional, intent(in) :: is_flag
+
+    l = varinfo_valid_option_8(var, int(option, 8), is_flag)
+    
+  end function varinfo_valid_option_4
 
   ! ---------------------------------------------------------
   subroutine varinfo_print_option(iunit, var, option, pre)
@@ -202,7 +217,7 @@ contains
     character(len=*), intent(in), optional :: pre
 
     type(c_ptr) :: handle, opt, name, desc
-    integer :: val
+    integer(8) :: val
     logical :: option_found
     
     call varinfo_getvar(var, handle)
@@ -219,7 +234,7 @@ contains
 
       call varinfo_opt_getinfo(opt, name, val, desc)
 
-      if(val == option) then
+      if(val == int(option, 8)) then
         option_found = .true.
         exit
       endif
