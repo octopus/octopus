@@ -171,13 +171,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       ! PTA92, eq. 5.18 (following 6 lines)
       dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, g0)
-      if(optional_default(orthogonalize_to_all, .false.)) then
-        ! Orthogonalize to all states
-        call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., against_all=.true.)
-      else
-        ! Orthogonalize to lowest eigenvalues (already calculated)
-        if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g0, normalize = .false.)
-      end if
+      ! orthogonalize against previous or all states, depending on the optional argument orthogonalize_to_all
+      call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., &
+        against_all=optional_default(orthogonalize_to_all, .false.))
 
       do idim = 1, st%d%dim
         call lalg_axpy(gr%mesh%np, -dot, psi(:, idim), g0(:, idim))
