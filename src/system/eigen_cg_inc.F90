@@ -163,10 +163,11 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       ! PTA92, eq. 5.12
       ! Orthogonalize to all states -> not needed for good convergence
+      ! uncomment the following line for exactly following PTA92
       !call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g, normalize = .false., against_all=.true.)
 
       ! PTA92, eq. 5.17
-      ! Approximate inverse preconditioner...
+      ! Approximate inverse preconditioner
       call  X(preconditioner_apply)(pre, gr, hm, ik, g(:,:), g0(:,:))
 
       ! PTA92, eq. 5.18 (following 6 lines)
@@ -236,6 +237,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         end forall
 
         ! PTA92, eq. 5.21
+        ! cg is not normalized here, but cg0 is computed further down and
+        ! the corresponding coefficients are then divided by cg0
         norma =  X(mf_dotp) (gr%mesh, st%d%dim, psi, cg)
         forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
           cg(ip, idim) = cg(ip, idim) - norma*psi(ip, idim)
@@ -272,10 +275,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       a0 = M_TWO * a0 / cg0
       b0 = b0/cg0**2
       e0 = st%eigenval(ist, ik)
-      ! old way of computing the angle
-      !theta = atan(R_REAL(a0/(e0 - b0)))/M_TWO
-      !es(1) = M_HALF*((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) + e0 + b0)
-      !es(2) = -M_HALF*((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) - (e0 + b0))
       alpha = M_TWO * R_REAL(e0 - b0)
 
       if (optional_default(additional_terms, .false.)) then
@@ -338,7 +337,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       if(debug%info .and. first_delta_e > M_ZERO) then
         write(message(1), '(a,i4,a,i4,a,i4,a,es12.5,a,es12.5,a,i4)') 'Debug: CG Eigensolver - ik', ik, ' ist ', ist, &
-             !' iter ', iter, ' res ', res, ' ', res/norm, " max ", maxter
              ' iter ', iter, ' deltae ', abs(st%eigenval(ist, ik) - old_energy), ' ', &
              abs(st%eigenval(ist, ik) - old_energy)/first_delta_e, " max ", maxter
         call messages_info(1)
