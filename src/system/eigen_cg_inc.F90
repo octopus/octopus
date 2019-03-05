@@ -272,9 +272,10 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         call comm_allreduce(gr%mesh%vp%comm, sb, dim = 3)
         a0 = sb(1)
         b0 = sb(2)
-        ! compute norm of cg here
-        cg0 = sqrt(sb(3))
+        cg0 = sb(3)
       end if
+      ! compute norm of cg here
+      cg0 = sqrt(cg0)
 
       ! missing terms here? compare eq. 5.31
       a0 = M_TWO * a0 / cg0
