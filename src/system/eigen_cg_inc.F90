@@ -43,7 +43,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   FLOAT    :: cg0, e0, res, norm, alpha, beta, dot, old_res, old_energy, first_delta_e
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
   FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :)
-  FLOAT    :: integral_hartree, integral_xc
+  FLOAT    :: integral_hartree, integral_xc, tmp
   integer  :: ist, iter, maxter, idim, ip, jst, im, isp, ixc
   R_TYPE   :: sb(3)
   logical  :: fold_ ! use folded spectrum operator (H-shift)^2
@@ -232,17 +232,21 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         gg0 = gg
 
         ! PTA92, eq. 5.19
-        forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-          cg(ip, idim) = gamma*cg(ip, idim) + g0(ip, idim)
-        end forall
+        do idim = 1, st%d%dim
+          forall (ip = 1:gr%mesh%np)
+            cg(ip, idim) = gamma*cg(ip, idim) + g0(ip, idim)
+          end forall
+        end do
 
         ! PTA92, eq. 5.21
         ! cg is not normalized here, but cg0 is computed further down and
         ! the corresponding coefficients are then divided by cg0
         norma =  X(mf_dotp) (gr%mesh, st%d%dim, psi, cg)
-        forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-          cg(ip, idim) = cg(ip, idim) - norma*psi(ip, idim)
-        end forall
+        do idim = 1, st%d%dim
+          forall (ip = 1:gr%mesh%np)
+            cg(ip, idim) = cg(ip, idim) - norma*psi(ip, idim)
+          end forall
+        end do
 
         call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 2*R_MUL))
       end if
@@ -259,15 +263,16 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       ! Line minimization.
       a0 = X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg, reduce = .false.)
       b0 = X(mf_dotp) (gr%mesh, st%d%dim, cg, h_cg, reduce = .false.)
-      cg0 = X(mf_nrm2) (gr%mesh, st%d%dim, cg, reduce = .false.)
+      cg0 = X(mf_dotp) (gr%mesh, st%d%dim, cg, cg, reduce = .false.)
 
       if(gr%mesh%parallel_in_domains) then
         sb(1) = a0
         sb(2) = b0
-        sb(3) = cg0**2
+        sb(3) = cg0
         call comm_allreduce(gr%mesh%vp%comm, sb, dim = 3)
         a0 = sb(1)
         b0 = sb(2)
+        ! compute norm of cg here
         cg0 = sqrt(sb(3))
       end if
 
@@ -280,9 +285,12 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       if (optional_default(additional_terms, .false.)) then
         ! more terms here, see PTA92 eqs 5.31, 5.32, 5.33, 5.36
         ! Hartree term
-        forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-          chi(ip, idim) = M_TWO * R_REAL(R_CONJ(cg(ip, idim)/cg0) * psi(ip, idim))
-        end forall
+        tmp = M_TWO/cg0
+        do idim = 1, st%d%dim
+          forall (ip = 1:gr%mesh%np)
+            chi(ip, idim) = tmp * R_REAL(R_CONJ(cg(ip, idim)) * psi(ip, idim))
+          end forall
+        end do
         call dpoisson_solve(psolver, omega(:, 1), chi(:, 1), all_nodes = .false.)
         integral_hartree = dmf_dotp(gr%mesh, st%d%dim, chi, omega)
 
@@ -305,13 +313,13 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       stheta = sin(theta)
       ctheta = cos(theta)
       es(1) = alpha * (M_HALF - stheta**2) + beta*M_TWO*stheta*ctheta
-      stheta2 = sin(theta + M_PI/M_TWO)
-      ctheta2 = cos(theta + M_PI/M_TWO)
+      stheta2 = sin(theta + M_PI*M_HALF)
+      ctheta2 = cos(theta + M_PI*M_HALF)
       es(2) = alpha * (M_HALF - stheta2**2) + beta*M_TWO*stheta2*ctheta2
 
       ! Choose the minimum solutions.
       if (R_REAL(es(2)) < R_REAL(es(1))) then
-        theta = theta + M_PI/M_TWO
+        theta = theta + M_PI*M_HALF
         a0 = ctheta2
         b0 = stheta2/cg0
       else
@@ -320,10 +328,12 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       end if
 
       ! PTA92, eq. 5.38
-      forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-        psi(ip, idim) = a0*psi(ip, idim) + b0*cg(ip, idim)
-        h_psi(ip, idim) = a0*h_psi(ip, idim) + b0*h_cg(ip, idim)
-      end forall
+      do idim = 1, st%d%dim
+        forall (ip = 1:gr%mesh%np)
+          psi(ip, idim) = a0*psi(ip, idim) + b0*cg(ip, idim)
+          h_psi(ip, idim) = a0*h_psi(ip, idim) + b0*h_cg(ip, idim)
+        end forall
+      end do
 
       call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 4*R_MUL))
 
