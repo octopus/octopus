@@ -60,7 +60,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   end if
 
   ! do we add the XC term? needs derivatives of the XC functional
-  add_xc_term = .true.
+  add_xc_term = optional_default(additional_terms, .false.)
   if(st%d%ispin == UNPOLARIZED) then
     isp = 1
   else
@@ -107,11 +107,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   h_cg  = R_TOTYPE(M_ZERO)
   g_prev = R_TOTYPE(M_ZERO)
 
-  if (optional_default(additional_terms, .false.)) then
-    if(add_xc_term) then
-      fxc = M_ZERO
-      call xc_get_fxc(xc, gr%mesh, st%rho, st%d%ispin, fxc)
-    end if
+  if(add_xc_term) then
+    fxc = M_ZERO
+    call xc_get_fxc(xc, gr%mesh, st%rho, st%d%ispin, fxc)
   end if
 
   ! Set the diff to zero, since it is intent(out)
