@@ -1265,10 +1265,10 @@ contains
     !%Option cholesky_serial 1
     !% Cholesky decomposition implemented using
     !% BLAS/LAPACK. Can be used with domain parallelization but not
-    !% state parallelization. (Obsolete synonym: <tt>gram_schmidt</tt>)
+    !% state parallelization.
     !%Option cholesky_parallel 2
     !% Cholesky decomposition implemented using
-    !% ScaLAPACK. Compatible with states parallelization. (Obsolete synonym: <tt>par_gram_schmidt</tt>)
+    !% ScaLAPACK. Compatible with states parallelization.
     !%Option cgs 3
     !% Classical Gram-Schmidt (CGS) orthogonalization.
     !% Can be used with domain parallelization but not state parallelization.
