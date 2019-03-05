@@ -457,6 +457,16 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
     length_ss = st%nst
   end if
   SAFE_ALLOCATE(ss(1:length_ss))
+  ! Check length of optional arguments
+  if(present(mask)) then
+    ASSERT(ubound(mask, dim=1) >= length_ss)
+  end if
+  if(present(overlap)) then
+    ASSERT(ubound(overlap, dim=1) >= length_ss)
+  end if
+  if(present(beta_ij)) then
+    ASSERT(ubound(beta_ij, dim=1) >= length_ss)
+  end if
 
   ss = M_ZERO
 
