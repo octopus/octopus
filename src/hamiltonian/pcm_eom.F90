@@ -544,6 +544,9 @@ module pcm_eom_oct_m
    if( allocated(matqd) ) then
     SAFE_DEALLOCATE_A(matqd)
    endif
+   if( allocated(matq0_lf) ) then
+    SAFE_DEALLOCATE_A(matq0_lf)
+   endif
    if( allocated(matqd_lf) ) then
     SAFE_DEALLOCATE_A(matqd_lf)
    endif
