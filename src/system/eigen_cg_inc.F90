@@ -342,12 +342,13 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         call messages_info(1)
       end if
 
-      if(first_delta_e <= CNST(2.0)*M_EPSILON) then
-        if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
-        exit iter_loop
-      end if
       if(iter > 1) then
         if(abs(st%eigenval(ist, ik) - old_energy) < first_delta_e*CNST(1e-1)) then
+          exit iter_loop
+        end if
+      else
+        if(first_delta_e <= CNST(2.0)*M_EPSILON) then
+          if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
           exit iter_loop
         end if
       end if
