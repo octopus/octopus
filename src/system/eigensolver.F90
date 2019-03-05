@@ -79,7 +79,7 @@ module eigensolver_oct_m
 
     type(subspace_t) :: sdiag
 
-    type(xc_t) :: xc
+    type(xc_t), pointer :: xc
 
     integer :: rmmdiis_minimization_iter
 
@@ -115,7 +115,7 @@ contains
     type(eigensolver_t), intent(out)   :: eigens
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(in)    :: st
-    type(xc_t),          intent(in)    :: xc
+    type(xc_t), target,  intent(in)    :: xc
 
     integer :: default_iter, default_es
     FLOAT   :: default_tol
@@ -384,7 +384,7 @@ contains
     call messages_print_var_value(stdout,'EigensolverSkipKpoints',  eigens%skip_finite_weight_kpoints)
 
     ! set KS object
-    eigens%xc = xc
+    eigens%xc => xc
 
     POP_SUB(eigensolver_init)
   end subroutine eigensolver_init
