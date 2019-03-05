@@ -108,6 +108,7 @@ module ps_oct_m
 
     logical :: nlcc    !< .true. if the pseudo has non-linear core corrections.
     type(spline_t) :: core !< normalization \int dr 4 pi r^2 rho(r) = N
+    type(spline_t) :: core_der !< derivative of the core correction
 
 
     !LONG-RANGE PART OF THE LOCAL POTENTIAL
@@ -388,6 +389,7 @@ contains
     call spline_init(ps%dkb)
     call spline_init(ps%vl)
     call spline_init(ps%core)
+    call spline_init(ps%core_der)
     call spline_init(ps%density)
     call spline_init(ps%density_der)
 
@@ -420,6 +422,10 @@ contains
       do is = 1, ps%ispin
         call spline_der(ps%density(is), ps%density_der(is))
       end do
+    end if
+
+    if(ps%nlcc) then
+      call spline_der(ps%core, ps%core_der)
     end if
 
     call ps_check_bound(ps, eigen)
@@ -905,6 +911,7 @@ contains
 
     call spline_end(ps%vl)
     call spline_end(ps%core)
+    call spline_end(ps%core_der)
 
     if(associated(ps%density)) call spline_end(ps%density)
     if(associated(ps%density_der)) call spline_end(ps%density_der)
