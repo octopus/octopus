@@ -47,7 +47,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   integer  :: ist, iter, maxter, idim, ip, jst, im, isp, ixc
   R_TYPE   :: sb(3)
   logical  :: fold_ ! use folded spectrum operator (H-shift)^2
-  logical  :: add_xc_term
+  logical  :: orthogonalize_to_all_, conjugate_direction_, additional_terms_, add_xc_term
 
   PUSH_SUB(X(eigensolver_cg2))
 
@@ -59,8 +59,11 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     ASSERT(associated(shift))
   end if
 
+  orthogonalize_to_all_ = optional_default(orthogonalize_to_all, .false.)
+  conjugate_direction_ = optional_default(conjugate_direction, CG_FLETCHER)
   ! do we add the XC term? needs derivatives of the XC functional
-  add_xc_term = optional_default(additional_terms, .false.)
+  additional_terms_ = optional_default(additional_terms, .false.)
+  add_xc_term = additional_terms_
   if(st%d%ispin == UNPOLARIZED) then
     isp = 1
   else
@@ -148,7 +151,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     ! Starts iteration for this band
     iter_loop: do iter = 1, maxter
       ! need to save g from previous iteration for Polak-Ribiere method
-      if(optional_default(conjugate_direction, CG_FLETCHER) == CG_POLAK) then
+      if(conjugate_direction_ == CG_POLAK) then
         if(iter /= 1) then
           g_prev = g
         else
@@ -174,7 +177,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, g0)
       ! orthogonalize against previous or all states, depending on the optional argument orthogonalize_to_all
       call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., &
-        against_all=optional_default(orthogonalize_to_all, .false.))
+        against_all=orthogonalize_to_all_)
 
       do idim = 1, st%d%dim
         call lalg_axpy(gr%mesh%np, -dot, psi(:, idim), g0(:, idim))
@@ -182,7 +185,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       ! dot products needed for conjugate gradient
       gg = X(mf_dotp) (gr%mesh, st%d%dim, g0, g, reduce = .false.)
-      if(optional_default(conjugate_direction, CG_FLETCHER) == CG_POLAK) then
+      if(conjugate_direction_ == CG_POLAK) then
         ! only needed for Polak-Ribiere
         if(iter /= 1) then
           gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g0, g_prev, reduce = .false.)
@@ -218,7 +221,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
           call lalg_copy(gr%mesh%np, g0(:, idim), cg(:, idim))
         end do
       else
-        select case (optional_default(conjugate_direction, CG_FLETCHER))
+        select case (conjugate_direction_)
         case (CG_FLETCHER)
           ! PTA eq. 5.20
           gamma = gg/gg0        ! (Fletcher-Reeves)
@@ -282,7 +285,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       e0 = st%eigenval(ist, ik)
       alpha = M_TWO * R_REAL(e0 - b0)
 
-      if (optional_default(additional_terms, .false.)) then
+      if (additional_terms_) then
         ! more terms here, see PTA92 eqs 5.31, 5.32, 5.33, 5.36
         ! Hartree term
         tmp = M_TWO/cg0
