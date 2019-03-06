@@ -22,7 +22,9 @@ match ; Hubbard energy     ; GREPFIELD(static/info, 'Hubbard     =', 3) ;   0.00
 match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -0.556140
 match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ; 1.000000
 match ; Eigenvalue   [1dn] ; GREPFIELD(static/info, '1   dn', 3) ; 0.104612
-match ; Eigenvalue   [2up] ; GREPFIELD(static/info, '2   up', 3) ; 0.10499255
+Precision: 0.00072
+match ;  Eigenvalue   [2up]  ; GREPFIELD(static/info, '2   up', 3) ; 0.1051265
+Precision: 0.0001
 match ; Eigenvalue   [2dn] ; GREPFIELD(static/info, '2   dn', 3) ; 0.140371
 
 
@@ -46,7 +48,9 @@ match ; Hubbard energy     ; GREPFIELD(static/info, 'Hubbard     =', 3) ;   0.00
 match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -0.556140
 match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ; 1.000000
 match ; Eigenvalue   [1dn] ; GREPFIELD(static/info, '1   dn', 3) ; 0.104612
-match ; Eigenvalue   [2up] ; GREPFIELD(static/info, '2   up', 3) ; 0.10499255
+Precision: 0.00072
+match ;  Eigenvalue   [2up]  ; GREPFIELD(static/info, '2   up', 3) ; 0.1051265
+Precision: 0.0001
 match ; Eigenvalue   [2dn] ; GREPFIELD(static/info, '2   dn', 3) ; 0.140371
 
 

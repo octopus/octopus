@@ -126,7 +126,7 @@ match ; Energy 10 z ; LINEFIELD(dipole_power, 113, 4) ; 0.61450976E-31
 Util       : oct-propagation_spectrum
 Input      : 12-absorption.07-spectrum_cosine.inp
 
-Precision : 2.0e-7
+Precision : 2.2e-7
 
 match ; Energy      1 ; LINEFIELD(cross_section_tensor, -91, 1) ; 1.0
 match ; Sigma       1 ; LINEFIELD(cross_section_tensor, -91, 2) ; 0.12499047E+00

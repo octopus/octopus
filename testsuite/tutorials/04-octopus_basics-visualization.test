@@ -4,6 +4,7 @@ Test       : Octopus basics - Total energy convergence
 Program    : octopus
 TestGroups : short-run, tutorials
 Enabled    : Yes
+Precision  : 0.05
 
 ExtraFile  : benzene.xyz
 Input: 04-octopus_basics-visualization.01-benzene.inp

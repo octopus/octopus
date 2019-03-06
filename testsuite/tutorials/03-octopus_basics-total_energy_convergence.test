@@ -4,6 +4,7 @@ Test       : Octopus basics - Total energy convergence
 Program    : octopus
 TestGroups : short-run, tutorials
 Enabled    : Yes
+Precision  : 0.005
 
 ExtraFile  : N.xyz
 Input: 03-octopus_basics-total_energy_convergence.01-N_atom.inp
