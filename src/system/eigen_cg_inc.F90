@@ -201,7 +201,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       if( sqrt(abs(gg)) < M_EPSILON ) then
         if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
-        !st%eigenval(ist, ik) = es(1) ! is this correct?
         res = sqrt(abs(gg))
 
         if(debug%info) then
