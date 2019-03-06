@@ -18,7 +18,7 @@ Spacing = 0.25*angstrom
 %
 
 EigenSolver = cg
-CGDirection = PR
+CGDirection = 2
 
 FilterPotentials = filter_none
 
