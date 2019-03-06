@@ -47,7 +47,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   integer  :: ist, iter, maxter, idim, ip, jst, im, isp, ixc
   R_TYPE   :: sb(3)
   logical  :: fold_ ! use folded spectrum operator (H-shift)^2
-  logical  :: orthogonalize_to_all_, conjugate_direction_, additional_terms_, add_xc_term
+  logical  :: orthogonalize_to_all_, additional_terms_, add_xc_term
+  integer  :: conjugate_direction_
 
   PUSH_SUB(X(eigensolver_cg2))
 
