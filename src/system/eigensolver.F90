@@ -229,7 +229,9 @@ contains
       !% Add additional terms during the line minimization, see PTA92, eq. 5.31ff.
       !%End
       call parse_variable('CGAdditionalTerms', .false., eigens%additional_terms)
-      if(eigens%additional_terms) call messages_experimental("The additional terms for the CG eigensolver are not tested for all cases.")
+      if(eigens%additional_terms) then
+        call messages_experimental("The additional terms for the CG eigensolver are not tested for all cases.")
+      end if
 
     case(RS_PLAN)
     case(RS_EVO)
