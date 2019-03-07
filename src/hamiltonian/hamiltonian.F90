@@ -433,9 +433,7 @@ contains
     ! StatesPack not yet implemented for some cases, see hamiltonian_apply_packed
     st%d%pack_states = hamiltonian_apply_packed(hm, gr%mesh)
 
-    external_potentials_present = associated(hm%ep%v_static) .or. &
-				  associated(hm%ep%E_field)  .or. &
-				  ( hm%ep%no_lasers /= 0 )
+    external_potentials_present = epot_have_external_potentials(hm%ep)
 
     kick_present = hm%ep%kick%delta_strength /= M_ZERO
 

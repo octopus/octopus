@@ -1208,6 +1208,8 @@ contains
 
     logical :: kick_time
 
+    logical :: laser_present, kick_present
+
     PUSH_SUB(v_ks_hartree)
 
     ASSERT(associated(ks%hartree_solver))
@@ -1240,7 +1242,9 @@ contains
       !! Static potentials are included in subroutine hamiltonian_epot_generate (module hamiltonian).
       !! The sign convention for typical potentials and kick are different...
       if( hm%pcm%localf .and. ks%calc%time_present ) then
-        if ( hm%ep%no_lasers /= 0 .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< external potential and kick
+        laser_present = epot_have_lasers( hm%ep )
+        kick_present  = epot_have_kick(   hm%ep )
+        if ( laser_present .and. kick_present ) then !< external potential and kick
           SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
           SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part)) 
           SAFE_ALLOCATE(kick_real(1:ks%gr%mesh%np_part))
@@ -1261,7 +1265,7 @@ contains
           SAFE_DEALLOCATE_A(potx)
           SAFE_DEALLOCATE_A(kick)
           SAFE_DEALLOCATE_A(kick_real)
-        else if ( hm%ep%no_lasers /= 0 .and. hm%ep%kick%delta_strength == M_ZERO ) then !< just external potential
+        else if ( laser_present .and. .not.kick_present ) then !< just external potential
           SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
           potx = M_ZERO    
           do ii = 1, hm%ep%no_lasers        
@@ -1269,7 +1273,7 @@ contains
           end do
           call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, time_present = ks%calc%time_present)
           SAFE_DEALLOCATE_A(potx)
-        else if ( hm%ep%no_lasers == 0 .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< just kick
+        else if ( .not.laser_present .and. kick_present ) then !< just kick
           SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part))
           SAFE_ALLOCATE(kick_real(1:ks%gr%mesh%np_part))
           kick = M_ZERO
