@@ -8,14 +8,20 @@ Enabled    : Yes
 #Here the reference values should be copied from the calculation without symmetries
 Input : 09-symmetrization_gga.01-spg143_sym.inp
 
+Precision: 0.0005
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -0.14155810
+Precision: 0.0001
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -0.13210182
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.13727092
+Precision: 0.0006
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.03005284
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.43813657
+Precision: 0.0001
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.09086107
+Precision: 0.0008
 match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  0.37375260
 match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  0.11557096
+Precision: 0.0001
 
 match ; Eigenvalue [  k=1, n=1   ] ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.137418
 match ; Eigenvalue [  k=1, n=2   ] ; GREPFIELD(static/info, '#k =   1', 3, 2) ;  0.072838
