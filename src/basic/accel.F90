@@ -346,7 +346,11 @@ contains
     call messages_print_stress(stdout, "GPU acceleration")
 
 #ifdef HAVE_CUDA
-    call cuda_init(accel%context%cuda_context, accel%device%cuda_device)
+    call cuda_init(accel%context%cuda_context, accel%device%cuda_device, idevice, base_grp%rank)
+#ifdef HAVE_MPI
+    write(message(1), '(A, I5.5, A, I5.5)') "Rank ", base_grp%rank, " uses device number ", idevice
+    call messages_info(1, all_nodes = .true.)
+#endif
 
     ! no shared mem support in our cuda interface (for the moment)
     accel%shared_mem = .true.
