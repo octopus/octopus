@@ -435,7 +435,7 @@ contains
 
     external_potentials_present = associated(hm%ep%v_static) .or. &
 				  associated(hm%ep%E_field)  .or. &
-				  associated(hm%ep%lasers)
+				  ( hm%ep%no_lasers /= 0 )
 
     kick_present = hm%ep%kick%delta_strength /= M_ZERO
 
