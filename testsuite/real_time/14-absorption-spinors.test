@@ -34,44 +34,44 @@ match ; Static polarizability ; GREPFIELD(cross_section_vector.1, 'Static polari
 Precision : 1e-6
 
 match ; Energy      1 ; LINEFIELD(cross_section_tensor, -91, 1) ; 1
-match ; Sigma       1 ; LINEFIELD(cross_section_tensor, -91, 2) ; 0.56262246E-01
-match ; Anisotropy  1 ; LINEFIELD(cross_section_tensor, -91, 3) ; 0.63749563E-01
+match ; Sigma       1 ; LINEFIELD(cross_section_tensor, -91, 2) ; 0.56266582E-01
+match ; Anisotropy  1 ; LINEFIELD(cross_section_tensor, -91, 3) ; 0.63757279E-01
 
 match ; Energy      2 ; LINEFIELD(cross_section_tensor, -81, 1) ; 2
-match ; Sigma       2 ; LINEFIELD(cross_section_tensor, -81, 2) ; 0.19590014E+00
-match ; Anisotropy  2 ; LINEFIELD(cross_section_tensor, -81, 3) ; 0.21108654E+00
+match ; Sigma       2 ; LINEFIELD(cross_section_tensor, -81, 2) ; 0.19591182E+00
+match ; Anisotropy  2 ; LINEFIELD(cross_section_tensor, -81, 3) ; 0.21110669E+00
 
 match ; Energy      3 ; LINEFIELD(cross_section_tensor, -71, 1) ; 3
-match ; Sigma       3 ; LINEFIELD(cross_section_tensor, -71, 2) ; 0.33562815E+00
-match ; Anisotropy  3 ; LINEFIELD(cross_section_tensor, -71, 3) ; 0.33924867E+00
+match ; Sigma       3 ; LINEFIELD(cross_section_tensor, -71, 2) ; 0.33564059E+00
+match ; Anisotropy  3 ; LINEFIELD(cross_section_tensor, -71, 3) ; 0.33926895E+00
 
 match ; Energy      4 ; LINEFIELD(cross_section_tensor, -61, 1) ; 4
-match ; Sigma       4 ; LINEFIELD(cross_section_tensor, -61, 2) ; 0.37638515E+00
-match ; Anisotropy  4 ; LINEFIELD(cross_section_tensor, -61, 3) ; 0.35724004E+00
+match ; Sigma       4 ; LINEFIELD(cross_section_tensor, -61, 2) ; 0.37639023E+00
+match ; Anisotropy  4 ; LINEFIELD(cross_section_tensor, -61, 3) ; 0.35724758E+00
 
 match ; Energy      5 ; LINEFIELD(cross_section_tensor, -51, 1) ; 5
-match ; Sigma       5 ; LINEFIELD(cross_section_tensor, -51, 2) ; 0.28303228E+00
-match ; Anisotropy  5 ; LINEFIELD(cross_section_tensor, -51, 3) ; 0.25442801E+00
+match ; Sigma       5 ; LINEFIELD(cross_section_tensor, -51, 2) ; 0.28302913E+00
+match ; Anisotropy  5 ; LINEFIELD(cross_section_tensor, -51, 3) ; 0.25442390E+00
 
 match ; Energy      6 ; LINEFIELD(cross_section_tensor, -41, 1) ; 6
-match ; Sigma       6 ; LINEFIELD(cross_section_tensor, -41, 2) ; 0.12588107E+00
-match ; Anisotropy  6 ; LINEFIELD(cross_section_tensor, -41, 3) ; 0.10913460E+00
+match ; Sigma       6 ; LINEFIELD(cross_section_tensor, -41, 2) ; 0.12587504E+00
+match ; Anisotropy  6 ; LINEFIELD(cross_section_tensor, -41, 3) ; 0.10912890E+00
 
 match ; Energy      7 ; LINEFIELD(cross_section_tensor, -31, 1) ; 7
-match ; Sigma       7 ; LINEFIELD(cross_section_tensor, -31, 2) ; 0.15078273E-01
-match ; Anisotropy  7 ; LINEFIELD(cross_section_tensor, -31, 3) ; 0.15953157E-01
+match ; Sigma       7 ; LINEFIELD(cross_section_tensor, -31, 2) ; 0.15073517E-01
+match ; Anisotropy  7 ; LINEFIELD(cross_section_tensor, -31, 3) ; 0.15954404E-01
 
 match ; Energy      8 ; LINEFIELD(cross_section_tensor, -21, 1) ; 8
-match ; Sigma       8 ; LINEFIELD(cross_section_tensor, -21, 2) ; -0.69135580E-02
-match ; Anisotropy  8 ; LINEFIELD(cross_section_tensor, -21, 3) ; 0.90474119E-02
+match ; Sigma       8 ; LINEFIELD(cross_section_tensor, -21, 2) ; -0.69173722E-02
+match ; Anisotropy  8 ; LINEFIELD(cross_section_tensor, -21, 3) ; 0.90447591E-02
 
 match ; Energy      9 ; LINEFIELD(cross_section_tensor, -11, 1) ; 9
-match ; Sigma       9 ; LINEFIELD(cross_section_tensor, -11, 2) ; 0.13472071E-01
-match ; Anisotropy  9 ; LINEFIELD(cross_section_tensor, -11, 3) ; 0.20671602E-01
+match ; Sigma       9 ; LINEFIELD(cross_section_tensor, -11, 2) ; 0.13467468E-01
+match ; Anisotropy  9 ; LINEFIELD(cross_section_tensor, -11, 3) ; 0.20662814E-01
 
 match ; Energy     10 ; LINEFIELD(cross_section_tensor,  -1, 1) ; 10
-match ; Sigma      10 ; LINEFIELD(cross_section_tensor,  -1, 2) ; 0.18987257E-01
-match ; Anisotropy 10 ; LINEFIELD(cross_section_tensor,  -1, 3) ; 0.19639092E-01
+match ; Sigma      10 ; LINEFIELD(cross_section_tensor,  -1, 2) ; 0.18981971E-01
+match ; Anisotropy 10 ; LINEFIELD(cross_section_tensor,  -1, 3) ; 0.19630267E-01
 
 Util       : oct-propagation_spectrum
 Input      : 14-absorption-spinors.05-spectrum_compressed_sensing.inp

@@ -20,6 +20,8 @@ Spacing = 0.25*angstrom
 EigenSolver = cg
 CGDirection = polak
 
+FilterPotentials = filter_none
+
 SCFCalculatePartialCharges = yes
 
 ExperimentalFeatures = yes

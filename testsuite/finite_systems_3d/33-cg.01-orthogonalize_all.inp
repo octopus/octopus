@@ -20,6 +20,8 @@ Spacing = 0.25*angstrom
 EigenSolver = cg
 CGOrthogonalizeAll = true
 
+FilterPotentials = filter_none
+
 SCFCalculatePartialCharges = yes
 
 ExperimentalFeatures = yes
