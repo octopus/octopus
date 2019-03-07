@@ -104,9 +104,7 @@ module eigensolver_oct_m
        RS_RMMDIIS = 10,         &
        RS_ARPACK  = 12,         &
        RS_FEAST   = 13,         &
-       RS_PSD     = 14,         &
-       CG_FLETCHER  = 1,        &
-       CG_POLAK     = 2
+       RS_PSD     = 14
   
 contains
 
@@ -211,14 +209,14 @@ contains
       !% The conjugate direction is updated using a certain coefficient to the previous
       !% direction. This coeffiction can be computed in different ways. The default is
       !% to use Fletcher-Reeves (FR), an alternative is Polak-Ribiere (PR).
-      !%Option FLETCHER 1
+      !%Option fletcher 1
       !% The coefficient for Fletcher-Reeves consists of the current norm of the
       !% steepest descent vector divided by that of the previous iteration.
-      !%Option POLAK 2
+      !%Option polak 2
       !% For the Polak-Ribiere scheme, a product of the current with the previous
       !% steepest descent vector is subtracted in the nominator.
       !%End
-      call parse_variable('CGDirection', CG_FLETCHER, eigens%conjugate_direction)
+      call parse_variable('CGDirection', OPTION__CGDIRECTION__FLETCHER, eigens%conjugate_direction)
 
       !%Variable CGAdditionalTerms
       !%Type logical
@@ -227,6 +225,7 @@ contains
       !%Description
       !% Used by the cg solver only.
       !% Add additional terms during the line minimization, see PTA92, eq. 5.31ff.
+      !% This feature is still experimental.
       !%End
       call parse_variable('CGAdditionalTerms', .false., eigens%additional_terms)
       if(eigens%additional_terms) then

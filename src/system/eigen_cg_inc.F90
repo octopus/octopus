@@ -34,9 +34,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   logical, optional,      intent(in)    :: orthogonalize_to_all
   integer, optional,      intent(in)    :: conjugate_direction
   logical, optional,      intent(in)    :: additional_terms
-  integer, parameter ::   &
-       CG_FLETCHER   = 1, &
-       CG_POLAK      = 2
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
@@ -61,7 +58,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   end if
 
   orthogonalize_to_all_ = optional_default(orthogonalize_to_all, .false.)
-  conjugate_direction_ = optional_default(conjugate_direction, CG_FLETCHER)
+  conjugate_direction_ = optional_default(conjugate_direction, OPTION__CGDIRECTION__FLETCHER)
   ! do we add the XC term? needs derivatives of the XC functional
   additional_terms_ = optional_default(additional_terms, .false.)
   add_xc_term = additional_terms_
@@ -152,7 +149,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     ! Starts iteration for this band
     iter_loop: do iter = 1, maxter
       ! need to save g from previous iteration for Polak-Ribiere method
-      if(conjugate_direction_ == CG_POLAK) then
+      if(conjugate_direction_ == OPTION__CGDIRECTION__POLAK) then
         if(iter /= 1) then
           g_prev = g
         else
@@ -186,7 +183,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       ! dot products needed for conjugate gradient
       gg = X(mf_dotp) (gr%mesh, st%d%dim, g0, g, reduce = .false.)
-      if(conjugate_direction_ == CG_POLAK) then
+      if(conjugate_direction_ == OPTION__CGDIRECTION__POLAK) then
         ! only needed for Polak-Ribiere
         if(iter /= 1) then
           gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g0, g_prev, reduce = .false.)
@@ -223,10 +220,10 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         end do
       else
         select case (conjugate_direction_)
-        case (CG_FLETCHER)
+        case (OPTION__CGDIRECTION__FLETCHER)
           ! PTA eq. 5.20
           gamma = gg/gg0        ! (Fletcher-Reeves)
-        case (CG_POLAK)
+        case (OPTION__CGDIRECTION__POLAK)
           gamma = (gg - gg1)/gg0   ! (Polack-Ribiere)
         case default
           call messages_input_error('Conjugate Direction')
