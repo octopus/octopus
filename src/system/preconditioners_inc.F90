@@ -138,10 +138,10 @@ contains
       ! move to level  1
       call X(multigrid_fine2coarse)(gr%mgrid_prec%level(1)%tt, gr%mgrid_prec%level(0)%der, &
         gr%mgrid_prec%level(1)%mesh, a(:,idim), r1, FULLWEIGHT)
+      ! r1 has the opposite sign of r2 to avoid an unnecessary operation in the first step
 
       forall (ip = 1:mesh1%np)
-        r1(ip) = -r1(ip)
-        d1(ip) = CNST(4.0)*step*r1(ip)
+        d1(ip) = -CNST(4.0)*step*r1(ip)
       end forall
 
       ! pre-smoothing
@@ -149,14 +149,15 @@ contains
         call X(derivatives_lapl)(gr%mgrid_prec%level(1)%der, d1, q1)
 
         forall (ip = 1:mesh1%np)
-          q1(ip) = CNST(-0.5)*q1(ip) - r1(ip)
+          q1(ip) = CNST(-0.5)*q1(ip) + r1(ip)
           d1(ip) = d1(ip) - CNST(4.0)*step*q1(ip)
         end forall
       end do
 
       call X(derivatives_lapl)(gr%mgrid_prec%level(1)%der, d1, q1)
 
-      forall (ip = 1:mesh1%np) q1(ip) = CNST(-0.5)*q1(ip) - r1(ip)
+      call lalg_axpy(mesh1%np, -M_HALF, q1, r1)
+
 
       ! move to level  2
       call X(multigrid_fine2coarse)(gr%mgrid_prec%level(2)%tt, gr%mgrid_prec%level(1)%der, &
@@ -187,7 +188,7 @@ contains
         call X(derivatives_lapl)(gr%mgrid_prec%level(1)%der, d1, q1)
 
         forall (ip = 1:mesh1%np)
-          q1(ip) = CNST(-0.5)*q1(ip) - r1(ip)
+          q1(ip) = CNST(-0.5)*q1(ip) + r1(ip)
           d1(ip) = d1(ip) - CNST(4.0)*step*q1(ip)
         end forall
       end do
