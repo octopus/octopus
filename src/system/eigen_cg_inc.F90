@@ -58,7 +58,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   end if
 
   orthogonalize_to_all_ = optional_default(orthogonalize_to_all, .false.)
-  conjugate_direction_ = optional_default(conjugate_direction, OPTION__CGDIRECTION__FLETCHER)
+  conjugate_direction_ = optional_default(conjugate_direction, int(OPTION__CGDIRECTION__FLETCHER, 4))
   ! do we add the XC term? needs derivatives of the XC functional
   additional_terms_ = optional_default(additional_terms, .false.)
   add_xc_term = additional_terms_
