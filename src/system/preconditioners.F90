@@ -64,7 +64,7 @@ module preconditioners_oct_m
 
     type(nl_operator_t) :: op
     FLOAT, pointer      :: diag_lapl(:) !< diagonal of the laplacian
-    integer             :: NPRE = 0, NPOST = 1, NMIDDLE = 2
+    integer             :: npre, npost, nmiddle
   end type preconditioner_t
 
 contains
@@ -183,7 +183,7 @@ contains
       !% This variable is the number of pre-smoothing iterations for the multigrid
       !% preconditioner. The default is 1.
       !%End
-      call parse_variable('PreconditionerIterationsPre', 1, this%NPRE)
+      call parse_variable('PreconditionerIterationsPre', 1, this%npre)
 
       !%Variable PreconditionerIterationsMiddle
       !%Type integer
@@ -192,7 +192,7 @@ contains
       !% This variable is the number of smoothing iterations on the coarsest grid for the multigrid
       !% preconditioner. The default is 1.
       !%End
-      call parse_variable('PreconditionerIterationsMiddle', 1, this%NMIDDLE)
+      call parse_variable('PreconditionerIterationsMiddle', 1, this%nmiddle)
 
       !%Variable PreconditionerIterationsPost
       !%Type integer
@@ -201,7 +201,7 @@ contains
       !% This variable is the number of post-smoothing iterations for the multigrid
       !% preconditioner. The default is 2.
       !%End
-      call parse_variable('PreconditionerIterationsPost', 2, this%NPOST)
+      call parse_variable('PreconditionerIterationsPost', 2, this%npost)
     end if
 
     POP_SUB(preconditioner_init)

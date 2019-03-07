@@ -145,7 +145,7 @@ contains
       end forall
 
       ! pre-smoothing
-      do j = 1, pre%NPRE
+      do j = 1, pre%npre
         call X(derivatives_lapl)(gr%mgrid_prec%level(1)%der, d1, q1)
 
         forall (ip = 1:mesh1%np)
@@ -165,7 +165,7 @@ contains
       forall (ip = 1:mesh2%np) d2(ip) = CNST(16.0)*step*r2(ip)
 
       ! Jacobi steps on coarsest grid
-      do j = 1, pre%NMIDDLE
+      do j = 1, pre%nmiddle
         call X(derivatives_lapl)(gr%mgrid_prec%level(2)%der, d2, q2)
 
         forall (ip = 1:mesh2%np)
@@ -183,7 +183,7 @@ contains
       end forall
 
       ! post-smoothing
-      do j = 1, pre%NPOST
+      do j = 1, pre%npost
         call X(derivatives_lapl)(gr%mgrid_prec%level(1)%der, d1, q1)
 
         forall (ip = 1:mesh1%np)
@@ -199,7 +199,7 @@ contains
       forall (ip = 1:mesh0%np) d0(ip) = - q0(ip)
 
       ! post-smoothing
-      do j = 1, pre%NPOST
+      do j = 1, pre%npost
         call X(derivatives_lapl)(gr%mgrid_prec%level(0)%der, d0, q0)
 
         forall (ip = 1:mesh0%np)
