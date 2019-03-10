@@ -383,9 +383,10 @@ contains
     type(multicomm_t), intent(in)    :: mc
     integer,           intent(in)    :: n
 
-    integer :: ist, ik, ib, nblock
+    integer :: ist, istaux, istep, ik, ib, nblock
+    integer :: nodeto, nodefr, nsend, nreceiv
     type(states_t) :: staux
-    CMPLX, allocatable :: psi(:, :, :)
+    CMPLX, allocatable :: psi(:, :, :), rec_buffer(:,:)
     type(batch_t)  :: psib
     type(density_calc_t) :: dens_calc
 #ifdef HAVE_MPI
@@ -400,7 +401,7 @@ contains
       call messages_fatal(2)
     end if
 
-    ASSERT(.not. st%parallel_in_states)
+    ASSERT(states_are_complex(st))
 
     if(.not.associated(st%frozen_rho)) then
       SAFE_ALLOCATE(st%frozen_rho(1:gr%mesh%np, 1:st%d%nspin))
@@ -409,15 +410,16 @@ contains
     call density_calc_init(dens_calc, st, gr, st%frozen_rho)
 
     do ik = st%d%kpt%start, st%d%kpt%end
-      if(n < st%st_start .or. n > st%st_end) cycle
+      if(n < st%st_start) cycle
 
       do ib =  st%group%block_start, st%group%block_end
+        !We can use the full batch 
         if(states_block_max(st, ib) <= n) then
 
           call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
           if(states_block_max(st, ib) == n) exit
 
-        else 
+        else !Here we only use a part of this batch 
 
           nblock = n - states_block_min(st, ib) + 1
 
@@ -441,6 +443,8 @@ contains
 
     call density_calc_end(dens_calc)
 
+    print *, st%frozen_rho(100,1)
+
     call states_copy(staux, st)
 
     st%nst = st%nst - n
@@ -450,55 +454,72 @@ contains
     call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim, 1))
-    
-#if defined(HAVE_MPI) 
+    SAFE_ALLOCATE(rec_buffer(1:gr%mesh%np, 1:st%d%dim))
 
     if(staux%parallel_in_states) then
+#if defined(HAVE_MPI) 
+
       do ik = st%d%kpt%start, st%d%kpt%end
+        !We cound how many states we have to send, and how many we  will receive
+        nsend = 0
         do ist = staux%st_start, staux%st_end
-          if(ist <= n) cycle
-          if(.not.state_is_local(st, ist-n)) then
+          if(ist > n) nsend = nsend + 1
+        end do
+        nreceiv = st%st_end-st%st_start+1
 
-            call states_get_state(staux, gr%mesh, ist, ik, psi(:, :, 1))
+        ist = st%st_start
+        istaux = max(staux%st_start, 1+n)
 
-            ! I think this can cause a deadlock. XA
-            call MPI_Send(psi(1, 1, 1), gr%mesh%np_part*st%d%dim, MPI_CMPLX, staux%node(ist), ist, &
-              st%mpi_grp%comm, mpi_err)
-
-            call MPI_Recv(psi(1, 1, 1), gr%mesh%np_part*st%d%dim, MPI_CMPLX, st%node(ist - n), &
-              ist, st%mpi_grp%comm, status, mpi_err)
-
-            call states_set_state(st, gr%mesh, ist - n, ik, psi(:, :, 1))
-            
-          else
-            call states_get_state(staux, gr%mesh, ist, ik, psi(:, :, 1))
-            call states_set_state(st, gr%mesh, ist - n, ik, psi(:, :, 1))
+        do istep = 1, max(nsend,nreceiv)+n
+          if(ist==istaux) then
+            nodeto = st%node(istaux-n)
+            nodefr = staux%node(ist)
+          else 
+            nodeto = st%node(istaux-n)
+            nodefr = staux%node(ist+n)
           end if
+
+          !Local copy
+          if(nsend >0 .and. nreceiv>0 .and. nodeto == nodefr .and. nodefr == mpi_world%rank) then
+            call states_get_state(staux, gr%mesh, istaux, ik, psi(:, :, 1))
+            call states_set_state(st, gr%mesh, istaux-n, ik, psi(:, :, 1))            
+            ist = ist + 1
+            istaux = istaux + 1
+            nsend = nsend -1
+            nreceiv= nreceiv-1
+          else
+            if(nsend > 0 .and. nodeto /= mpi_world%rank) then
+              call states_get_state(staux, gr%mesh, istaux, ik, psi(:, :, 1))
+              call MPI_Send(psi(1, 1, 1), gr%mesh%np*st%d%dim, MPI_CMPLX, nodeto, istaux-n, &
+                    st%mpi_grp%comm, mpi_err)
+              istaux = istaux+1
+              nsend = nsend -1
+            end if          
+
+            if(nreceiv > 0 .and. nodefr /= mpi_world%rank) then
+              call MPI_Recv(rec_buffer(1, 1), gr%mesh%np*st%d%dim, MPI_CMPLX, nodefr, &
+                 ist, st%mpi_grp%comm, status, mpi_err)
+              call states_set_state(st, gr%mesh, ist, ik, rec_buffer(:, :))
+              ist = ist + 1
+              nreceiv= nreceiv-1
+            end if
+          end if
+        end do
+  
+      end do
+#endif
    
+    else
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ist = st%st_start, st%st_end
+          call states_get_state(staux, gr%mesh, ist + n, ik, psi(:, :, 1))
+          call states_set_state(st, gr%mesh, ist, ik, psi(:, :, 1))
         end do
       end do
-   else
-     do ik = st%d%kpt%start, st%d%kpt%end
-       do ist = staux%st_start, staux%st_end
-         if(ist <= n) cycle
-         call states_get_state(staux, gr%mesh, ist, ik, psi(:, :, 1))
-         call states_set_state(st, gr%mesh, ist - n, ik, psi(:, :, 1))
-       end do
-     end do
-   end if
-
-#else
-
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        call states_get_state(staux, gr%mesh, ist + n, ik, psi(:, :, 1))
-        call states_set_state(st, gr%mesh, ist, ik, psi(:, :, 1))
-      end do
-    end do
-
-#endif
+    end if
 
     SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(rec_buffer)
     
     ! Change the smearing method by fixing the occupations to 
     ! that of the ground-state such that the unfrozen states inherit 
