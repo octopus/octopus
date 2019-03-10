@@ -561,7 +561,7 @@ contains
 
     !TODO: set system variable common for all the program in 
     !      order to use call kick_init(kick, sy%st%d%nspin, sys%space%dim, sys%geo%periodic_dim)
-    call kick_init(kick, 1, mesh%sb%dim, geo%periodic_dim)
+    call kick_init(kick, mesh%sb, 1, mesh%sb%dim, geo%periodic_dim)
 
     e_start = nint(min_energy / dw)
     e_end   = nint(max_energy / dw)

@@ -669,18 +669,6 @@ contains
         hm%hm_base%spin => st%spin
         !We fill st%spin
         call states_fermi(st, gr%mesh) 
-
-        if(st%symmetrize_density .or. gr%sb%kpoints%use_symmetries) then
-          message(1) = 'Symmetrization or k-point symmetries cannot be used with spiral boundary conditions.'
-          call messages_fatal(1)
-        end if
-      end if
-
-      if(hm%ep%kick%qlength > M_EPSILON) then
-        if(st%symmetrize_density .or. gr%sb%kpoints%use_symmetries) then
-          message(1) = 'Symmetrization or k-point symmetries cannot be used in case of kick with a finite momentum.'
-          call messages_fatal(1)
-        end if
       end if
 
       ! Initialize the occupation matrices and U for LDA+U

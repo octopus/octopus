@@ -318,7 +318,7 @@ contains
       call messages_experimental('Bader volumes in oct-local_multipoles')
     end if
 
-    call kick_init(kick,  sys%st%d%ispin, sys%gr%mesh%sb%dim, sys%gr%mesh%sb%periodic_dim )
+    call kick_init(kick, sys%gr%mesh%sb, sys%st%d%ispin, sys%gr%mesh%sb%dim, sys%gr%mesh%sb%periodic_dim )
     call local_write_init(local%writ, local%nd, local%lab, 0, dt)
 
     !TODO: initialize hamiltonian if needed: check for LDOuput = energy or potential, using local_write_check_hm(local%writ)

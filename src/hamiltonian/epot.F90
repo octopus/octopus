@@ -234,7 +234,7 @@ contains
     ! lasers
     call laser_init(ep%no_lasers, ep%lasers, gr%mesh)
 
-    call kick_init(ep%kick, ispin, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim)
+    call kick_init(ep%kick, gr%mesh%sb, ispin, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim)
 
     ! No more "UserDefinedTDPotential" from this version on.
     call messages_obsolete_variable('UserDefinedTDPotential', 'TDExternalFields')

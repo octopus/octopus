@@ -24,6 +24,7 @@ module kick_oct_m
   use global_oct_m
   use io_oct_m
   use ion_dynamics_oct_m
+  use kpoints_oct_m
   use loct_math_oct_m
   use math_oct_m
   use mesh_oct_m
@@ -32,8 +33,11 @@ module kick_oct_m
   use pcm_oct_m
   use profiling_oct_m
   use species_oct_m
+  use simul_box_oct_m
   use states_oct_m
   use states_dim_oct_m
+  use symm_op_oct_m
+  use symmetries_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use write_iter_oct_m
@@ -108,14 +112,15 @@ module kick_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine kick_init(kick, nspin, dim, periodic_dim)
-    type(kick_t), intent(out) :: kick
-    integer,      intent(in)  :: nspin
-    integer,      intent(in)  :: dim
-    integer,      intent(in)  :: periodic_dim
+  subroutine kick_init(kick, sb, nspin, dim, periodic_dim)
+    type(kick_t),   intent(out) :: kick
+    type(simul_box_t), intent(in) :: sb
+    integer,        intent(in)  :: nspin
+    integer,        intent(in)  :: dim
+    integer,        intent(in)  :: periodic_dim
 
     type(block_t) :: blk
-    integer :: n_rows, irow, idir
+    integer :: n_rows, irow, idir, iop
 
     PUSH_SUB(kick_init)
 
@@ -437,6 +442,18 @@ contains
       end if
 
       call parse_block_end(blk)
+
+      if(sb%kpoints%use_symmetries) then
+        do iop = 1, symmetries_number(sb%symm)
+          if(iop == symmetries_identity_index(sb%symm)) cycle
+          if(.not. symm_op_invariant_cart(sb%symm%ops(iop), kick%qvector, CNST(1e-5))) then
+            message(1) = "The TDMomentumTransfer breaks (at least) one of the symmetries used to reduce the k-points."
+            message(2) = "Set SymmetryBreakDir equal to TDMomemtumTransfer."
+            call messages_fatal(2)
+          end if
+        end do
+      end if
+
     else
       kick%qkick_mode = QKICKMODE_NONE
       kick%qvector(:) = M_ZERO
