@@ -289,7 +289,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, boundaries, ndim, skip_s_
     SAFE_ALLOCATE(os%phase(1:os%sphere%np, kpt%start:kpt%end))
     os%phase(:,:) = M_ZERO
     if(simul_box_is_periodic(mesh%sb) .and. .not. this%submeshforperiodic) then 
-      SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%ndim, 1:os%norbs, kpt%start:kpt%end))
+      SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%norbs, 1:os%ndim, kpt%start:kpt%end))
       os%eorb_mesh(:,:,:,:) = M_ZERO
     else
       SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, kpt%start:kpt%end))
@@ -396,7 +396,7 @@ subroutine X(orbitalbasis_build_empty)(this, geo, mesh, kpt, ndim, nstates, verb
 #ifdef R_TCOMPLEX
   SAFE_ALLOCATE(os%phase(1:mesh%np, kpt%start:kpt%end))
   os%phase(:,:) = M_ZERO
-  SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%ndim, 1:os%norbs, kpt%start:kpt%end))
+  SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%norbs, 1:os%ndim, kpt%start:kpt%end))
   os%eorb_mesh(:,:,:,:) = M_ZERO
 #endif
 

@@ -86,8 +86,8 @@ module projector_oct_m
   !! There are four different types: 
   !! - local -> a local operator
   !! - HGH projector -> "normal"
-  !! - Kleinman-Bylander projector (no spin-orbit) -> "relativistic"
-  !! - Kleinman-Bylander projector (includes spin-orbit)
+  !! - normal Kleinman-Bylander projector (no spin-orbit)
+  !! - relativistic Kleinman-Bylander projector (includes spin-orbit)
 
   type projector_t
     integer :: type = PROJ_NONE

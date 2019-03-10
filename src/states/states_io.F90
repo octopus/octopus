@@ -284,10 +284,9 @@ contains
         
       end do
       
-      SAFE_DEALLOCATE_A(flat_indices)
-
       if(nst*st%d%nik > 1) call print_dos()
 
+      SAFE_DEALLOCATE_A(flat_indices)
       SAFE_DEALLOCATE_A(flat_eigenval)
 
     end if
@@ -306,6 +305,7 @@ contains
 
       integer, parameter :: ndiv = 70, height = 10
       integer :: histogram(1:ndiv), iev, ien, iline, maxhist, ife
+      FLOAT :: dhistogram(1:ndiv)
       character(len=ndiv) :: line
       FLOAT :: emin, emax, de
       
@@ -323,18 +323,21 @@ contains
       ife = nint((st%smear%e_fermi - emin)/de) + 1
 
       histogram = 0
+      dhistogram = M_ZERO
       do iev = 1, st%d%nik*nst
         ien = nint((flat_eigenval(iev) - emin)/de) + 1
         ASSERT(ien >= 1)
         ASSERT(ien <= ndiv)
-        histogram(ien) = histogram(ien) + 1
+        dhistogram(ien) = dhistogram(ien) + st%d%kweights(flat_indices(1, iev))*sb%kpoints%full%npoints
       end do
 
+      print *, maxval(dhistogram)
+
       !normalize
-      if(maxval(histogram) > height) then
-        maxhist = maxval(histogram)
+      if(maxval(dhistogram) > real(height)) then
+        maxhist = nint(maxval(dhistogram))
         do ien = 1, ndiv
-          histogram(ien) = (histogram(ien)*height)/maxhist
+          histogram(ien) = nint((dhistogram(ien)*height)/maxhist)
         end do
       end if
 
@@ -363,7 +366,7 @@ contains
 
       POP_SUB(states_write_eigenvalues.print_dos)
     end subroutine print_dos
-    
+ 
   end subroutine states_write_eigenvalues
 
   ! ---------------------------------------------------------
@@ -770,7 +773,7 @@ contains
             SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
             os%phase(:,:) = M_ZERO
             if(simul_box_is_periodic(mesh%sb) .and. .not. os%submeshforperiodic) then
-              SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
+              SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%norbs, 1:os%ndim, st%d%kpt%start:st%d%kpt%end))
               os%eorb_mesh(:,:,:,:) = M_ZERO
             else
               SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))

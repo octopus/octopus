@@ -26,7 +26,7 @@ subroutine X(hamiltonian_base_local)(this, mesh, std, ispin, psib, vpsib)
 
   PUSH_SUB(X(hamiltonian_base_local))
 
-  if(batch_status(psib) == BATCH_CL_PACKED) then
+  if(batch_status(psib) == BATCH_DEVICE_PACKED) then
     ASSERT(.not. allocated(this%Impotential))
     call X(hamiltonian_base_local_sub)(this%potential, mesh, std, ispin, &
       psib, vpsib, potential_opencl = this%potential_opencl)
@@ -55,13 +55,13 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
   FLOAT, optional,              intent(in)    :: Impotential(:,:)
   type(accel_mem_t), optional,  intent(in)    :: potential_opencl
 
-  integer :: ist, ip
+  integer :: ist, ip, dim2, dim3
   R_TYPE, pointer :: psi(:, :), vpsi(:, :)
   R_TYPE  :: psi1, psi2
   FLOAT   :: vv, Imvv
   R_TYPE  :: pot(1:4) 
   logical :: pot_is_cmplx
-  integer :: pnp, iprange
+  integer :: pnp, localsize
 
   call profiling_in(prof_vlpsi, "VLPSI")
   PUSH_SUB(X(hamiltonian_base_local_sub))
@@ -76,7 +76,7 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
   end if
 
   select case(batch_status(psib))
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
     ASSERT(.not. pot_is_cmplx) ! not implemented
 
     pnp = accel_padded_size(mesh%np)
@@ -92,9 +92,12 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
       call accel_set_kernel_arg(kernel_vpsi, 5, vpsib%pack%buffer)
       call accel_set_kernel_arg(kernel_vpsi, 6, log2(vpsib%pack%size_real(1)))
 
-      iprange = accel_max_workgroup_size()/psib%pack%size_real(1)
+      localsize = accel_kernel_workgroup_size(kernel_vpsi)/psib%pack%size_real(1)
 
-      call accel_kernel_run(kernel_vpsi, (/psib%pack%size_real(1), pnp/), (/psib%pack%size_real(1), iprange/))
+      dim3 = mesh%np/(accel_max_size_per_dim(2)*localsize) + 1
+      dim2 = min(accel_max_size_per_dim(2)*localsize, pad(mesh%np, localsize))
+
+      call accel_kernel_run(kernel_vpsi, (/psib%pack%size_real(1), dim2, dim3/), (/psib%pack%size_real(1), localsize, 1/))
 
     case(SPINORS)
       call accel_set_kernel_arg(kernel_vpsi_spinors, 0, mesh%np)
@@ -146,7 +149,7 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
       ASSERT(mod(psib%nst_linear, 2) == 0)
       !the spinor case is more complicated since it mixes the two components.
       if(pot_is_cmplx)then
-        !$omp parallel do private(psi1, psi2, ist)
+        !$omp parallel do private(psi1, psi2, ist, pot)
         do ip = 1, mesh%np
           do ist = 1, psib%nst_linear, 2
             psi1 = psib%pack%zpsi(ist    , ip)
@@ -327,7 +330,7 @@ subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
 
     end if
 
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
     call accel_kernel_start_call(ker_phase, 'phase.cl', 'phase_hamiltonian')
 
     if(conjugate) then
@@ -374,7 +377,7 @@ subroutine X(hamiltonian_base_phase_spiral)(this, der, psib, ik)
   call profiling_count_operations(R_MUL*dble(der%mesh%np_part-der%mesh%np)*psib%nst_linear)
 
 
-  ASSERT(.not. batch_status(psib) == BATCH_CL_PACKED)
+  ASSERT(.not. batch_status(psib) == BATCH_DEVICE_PACKED)
 
   ASSERT(der%boundaries%spiral)
 
@@ -432,8 +435,7 @@ subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
   type(batch_t), target,       intent(inout) :: vpsib
 
   integer :: ist, idim, ip
-  R_TYPE, pointer :: psi(:, :), vpsi(:, :)
-  R_TYPE, allocatable :: grad(:, :, :)
+  R_TYPE, allocatable :: psi(:, :), vpsi(:, :), grad(:, :, :)
   PUSH_SUB(X(hamiltonian_base_rashba))
 
   if(abs(this%rashba_coupling) < M_EPSILON) then
@@ -442,12 +444,14 @@ subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
   end if
   ASSERT(std%ispin == SPINORS)
   ASSERT(der%mesh%sb%dim == 2)
-  
+
+  SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:std%dim))
+  SAFE_ALLOCATE(vpsi(1:der%mesh%np, 1:std%dim))
   SAFE_ALLOCATE(grad(1:der%mesh%np, 1:der%mesh%sb%dim, 1:std%dim))
 
   do ist = 1, psib%nst
-    psi  => psib%states(ist)%X(psi)
-    vpsi => vpsib%states(ist)%X(psi)
+    call batch_get_state(psib, ist, der%mesh%np_part, psi)
+    call batch_get_state(vpsib, ist, der%mesh%np, vpsi)
 
     do idim = 1, std%dim
       call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
@@ -469,9 +473,12 @@ subroutine X(hamiltonian_base_rashba)(this, der, std, psib, vpsib)
         this%rashba_coupling*( grad(ip, 1, 1) + M_zI*grad(ip, 2, 1) )
     end forall
 
+    call batch_set_state(vpsib, ist, der%mesh%np, vpsi)
   end do
   
   SAFE_DEALLOCATE_A(grad)
+  SAFE_DEALLOCATE_A(vpsi)
+  SAFE_DEALLOCATE_A(psi)
   
   POP_SUB(X(hamiltonian_base_rashba))
 end subroutine X(hamiltonian_base_rashba)
@@ -488,8 +495,7 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
   type(batch_t), target,       intent(inout) :: vpsib
 
   integer :: ist, idim, ip
-  R_TYPE, pointer :: psi(:, :), vpsi(:, :)
-  R_TYPE, allocatable :: grad(:, :, :)
+  R_TYPE, allocatable :: psi(:, :), vpsi(:, :), grad(:, :, :)
   FLOAT :: cc, b2, bb(1:MAX_DIM)
   CMPLX :: b12
 
@@ -498,11 +504,13 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
   call profiling_in(prof_magnetic, "MAGNETIC")
   PUSH_SUB(X(hamiltonian_base_magnetic))
 
+  SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:std%dim))
+  SAFE_ALLOCATE(vpsi(1:der%mesh%np, 1:std%dim))
   SAFE_ALLOCATE(grad(1:der%mesh%np, 1:der%mesh%sb%dim, 1:std%dim))
 
   do ist = 1, psib%nst
-    psi  => psib%states(ist)%X(psi)
-    vpsi => vpsib%states(ist)%X(psi)
+    call batch_get_state(psib, ist, der%mesh%np_part, psi)
+    call batch_get_state(vpsib, ist, der%mesh%np, vpsi)
 
     do idim = 1, std%dim
       call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
@@ -539,9 +547,13 @@ subroutine X(hamiltonian_base_magnetic)(this, der, std, ep, ispin, psib, vpsib)
         
       end select
     end if
+
+    call batch_set_state(vpsib, ist, der%mesh%np, vpsi)
   end do
   
   SAFE_DEALLOCATE_A(grad)
+  SAFE_DEALLOCATE_A(vpsi)
+  SAFE_DEALLOCATE_A(psi)
   
   POP_SUB(X(hamiltonian_base_magnetic))
   call profiling_out(prof_magnetic)
@@ -1281,7 +1293,7 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
     !    call profiling_count_operations(nprojs*(R_ADD + R_MUL)*npoints + nst*nprojs)
   end do
 
-  !$omp parallel do private(imat, pmat, iprojection, npoints, nprojs, iproj, ist, aa, bb, cc, dd, ip)
+  !$omp parallel do private(imat, pmat, iprojection, npoints, nprojs, iproj, ist, aa, bb, cc, dd, ip, phase)
   do imat = 1, this%nprojector_matrices
     pmat => this%projector_matrices(imat)
     iprojection = ind(imat)

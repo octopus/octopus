@@ -22,6 +22,8 @@ config.h.in
 build-aux
 build-stamp
 semantic.cache
+*.gcno
+*.gcda
 
 # /
 /bin

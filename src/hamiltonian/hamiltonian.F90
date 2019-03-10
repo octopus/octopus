@@ -192,7 +192,6 @@ module hamiltonian_oct_m
     HARTREE               = 1, &
     HARTREE_FOCK          = 3, &
     KOHN_SHAM_DFT         = 4, &
-    CLASSICAL             = 5, &
     RDMFT                 = 7
 
   type(profile_t), save :: prof_hamiltonian, prof_kinetic_start, prof_kinetic_finish
@@ -431,6 +430,9 @@ contains
     !%End
     call parse_variable('HamiltonianApplyPacked', .true., hm%apply_packed)
 
+    ! StatesPack not yet implemented for some cases, see hamiltonian_apply_packed
+    st%d%pack_states = hamiltonian_apply_packed(hm, gr%mesh)
+
     external_potentials_present = associated(hm%ep%v_static) .or. &
 				  associated(hm%ep%E_field)  .or. &
 				  associated(hm%ep%lasers)
@@ -490,8 +492,8 @@ contains
     ! ---------------------------------------------------------
     subroutine init_phase
       integer :: ip, ik, ip_inn, ip_bnd, sp, ip_global, ip_inner
-      FLOAT   :: kpoint(1:MAX_DIM)
       integer :: idim
+      FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
 
       PUSH_SUB(hamiltonian_init.init_phase)
 
@@ -514,10 +516,11 @@ contains
 #endif
           ! get corresponding inner point
           ip_inner = mesh_periodic_point(gr%mesh, ip_global)
+          x_global = mesh_x_global(gr%mesh, ip_inner)
           hm%hm_base%phase_spiral(ip, 1) = &
-            exp(M_zI * sum((gr%mesh%x(ip, 1:gr%sb%dim)-mesh_x_global(gr%mesh, ip_inner)) * gr%der%boundaries%spiral_q(1:gr%sb%dim)))
+            exp(M_zI * sum((gr%mesh%x(ip, 1:gr%sb%dim)-x_global(1:gr%sb%dim)) * gr%der%boundaries%spiral_q(1:gr%sb%dim)))
           hm%hm_base%phase_spiral(ip, 2) = &
-            exp(-M_zI * sum((gr%mesh%x(ip, 1:gr%sb%dim)-mesh_x_global(gr%mesh, ip_inner)) * gr%der%boundaries%spiral_q(1:gr%sb%dim)))
+            exp(-M_zI * sum((gr%mesh%x(ip, 1:gr%sb%dim)-x_global(1:gr%sb%dim)) * gr%der%boundaries%spiral_q(1:gr%sb%dim)))
         end do
       end if
       
@@ -541,10 +544,11 @@ contains
 #endif
             ! get corresponding inner point
             ip_inner = mesh_periodic_point(gr%mesh, ip_global)
-            ! compute phase correction from global coordinate (opposite sign!)
-            hm%hm_base%phase_corr(ip, ik) = hm%hm_base%phase(ip, ik)* &
-              exp(M_zI * sum(mesh_x_global(gr%mesh, ip_inner) * kpoint(1:gr%sb%dim)))
 
+            ! compute phase correction from global coordinate (opposite sign!)
+            x_global = mesh_x_global(gr%mesh, ip_inner)
+            hm%hm_base%phase_corr(ip, ik) = hm%hm_base%phase(ip, ik)* &
+              exp(M_zI * sum(x_global(1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
           end do
         end if
       end do
@@ -613,7 +617,6 @@ contains
     SAFE_DEALLOCATE_P(hm%energy)
      
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
-
     POP_SUB(hamiltonian_end)
   end subroutine hamiltonian_end
 
@@ -853,7 +856,7 @@ contains
     subroutine build_phase()
       integer :: ik, imat, nmat, max_npoints, offset, idim
       integer :: ip, ip_bnd, ip_inn, ip_global, ip_inner, sp
-      FLOAT   :: kpoint(1:MAX_DIM)
+      FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
       logical :: compute_phase_correction
       integer :: ndim
 
@@ -907,9 +910,11 @@ contains
 #endif
               ! get corresponding inner point
               ip_inner = mesh_periodic_point(mesh, ip_global)
+
               ! compute phase correction from global coordinate (opposite sign!)
+              x_global = mesh_x_global(mesh, ip_inner)
               this%hm_base%phase_corr(ip, ik) = this%hm_base%phase(ip, ik)* &
-                exp(M_zI * sum(mesh_x_global(mesh, ip_inner) * (kpoint(1:mesh%sb%dim) &
+                exp(M_zI * sum(x_global(1:mesh%sb%dim) * (kpoint(1:mesh%sb%dim) &
                   + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
             end do
           end if
@@ -1021,11 +1026,13 @@ contains
     type(mesh_t),          intent(in) :: mesh
 
     apply = this%apply_packed
-    if(mesh%use_curvilinear) apply = .false.
-    if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
-    if(this%rashba_coupling**2 > M_ZERO) apply = .false.
-    if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
-    if(this%family_is_mgga_with_exc)  apply = .false. 
+    ! comment these out; they are tested in the test suite
+    !if(mesh%use_curvilinear) apply = .false.
+    !if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
+    !if(this%rashba_coupling**2 > M_ZERO) apply = .false.
+    !if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
+    !if(this%family_is_mgga_with_exc)  apply = .false.
+    ! keep these checks; currently no tests for these in the test suite
     if(this%scissor%apply) apply = .false.
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
     if(associated(this%hm_base%phase) .and. accel_is_enabled()) apply = .false.

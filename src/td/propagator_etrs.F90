@@ -458,7 +458,7 @@ contains
                 st%group%psib(ib, ik)%pack%zpsi(ist, ip) = st%group%psib(ib, ik)%pack%zpsi(ist, ip)*phase
               end forall
             end do
-          case(BATCH_CL_PACKED)
+          case(BATCH_DEVICE_PACKED)
             call accel_set_kernel_arg(kernel_phase, 0, pnp*(ispin - 1))
             call accel_set_kernel_arg(kernel_phase, 1, phase_buff)
             call accel_set_kernel_arg(kernel_phase, 2, st%group%psib(ib, ik)%pack%buffer)

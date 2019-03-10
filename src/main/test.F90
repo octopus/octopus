@@ -328,6 +328,9 @@ contains
         call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, 1, .true., .false., zweight)
       end if
     end do
+
+    call batch_sync(epsib)
+
     do itime = 1, epsib%nst
       if(states_are_real(sys%st)) then 
         write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, dmf_nrm2(sys%gr%mesh, sys%st%d%dim, epsib%states(itime)%dpsi)
@@ -426,6 +429,8 @@ contains
     if(hamiltonian_apply_packed(hm, sys%gr%der%mesh)) then
       call batch_unpack(hpsib)
     end if
+
+    call batch_sync(hpsib)
 
     do itime = 1, hpsib%nst
       if(states_are_real(sys%st)) then 

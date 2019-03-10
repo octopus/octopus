@@ -146,8 +146,7 @@ contains
     FLOAT, allocatable :: vhxc1(:, :), vhxc2(:, :)
 
     if(ion_dynamics_ions_move(ions) .or. gauge_field_is_applied(hm%ep%gfield)) then
-      message(1) = "The commutator-free Magnus expansion can't be used &
-                    &with moving ions or gauge fields"
+      message(1) = "The commutator-free Magnus expansion cannot be used with moving ions or gauge fields"
       call messages_fatal(1)
     end if
 

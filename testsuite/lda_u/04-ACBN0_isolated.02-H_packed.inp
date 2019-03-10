@@ -8,8 +8,6 @@ ExperimentalFeatures = yes
 Radius = 7
 
 FromScratch = yes
-ParStates = no
-ParDomains = no
 
 LCAOStart= lcao_states
 
