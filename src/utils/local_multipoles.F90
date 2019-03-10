@@ -691,7 +691,7 @@ contains
     lcl%inside = .false.
     do ip = 1 , sys%gr%mesh%np
       do id = 1, lcl%nd
-        if (iand(int(inside(ip)), 2**id) /= 0) lcl%inside(ip,id) = .true.
+        if (bitand(int(inside(ip)), 2**id) /= 0) lcl%inside(ip,id) = .true.
       end do
     end do
 
@@ -710,7 +710,8 @@ contains
     type(local_domain_t),   intent(inout) :: lcl
     FLOAT,                  intent(in)    :: ff(:)
     
-    integer             :: how, id, ip, iunit, ierr
+    integer(8)          :: how
+    integer             :: id, ip, iunit, ierr
     type(basins_t)      :: basins
     FLOAT, allocatable  :: ff2(:,:)
     logical             :: extra_write
@@ -810,7 +811,8 @@ contains
     integer,           intent(in)    :: dsh(:)
     logical,           intent(out)   :: inside(:,:)
 
-    integer               :: how, ia, ib, id, ierr, ip, ix, rankmin
+    integer(8)            :: how
+    integer               :: ia, ib, id, ierr, ip, ix, rankmin
     integer               :: max_check
     integer, allocatable  :: dunit(:), domain_map(:,:), ion_map(:)
     FLOAT                 :: dmin, dd

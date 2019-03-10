@@ -9,6 +9,7 @@ Enabled    : Yes
 Processors : 1
 Input      : 03-td_self_consistent.01-gs.inp
 Precision  : 1.0e-6
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -10.60764719
 
 Processors : 4

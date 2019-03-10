@@ -9,7 +9,7 @@ ExperimentalFeatures = yes
 EigenSolver = cg_new
 EigensolverMaxIter = 50
 EigensolverTolerance = 1e-8
-ConvRelDens = 5.0e-6
+ConvRelDens = 1.0e-6
 
 a = 7.8809
 
@@ -41,7 +41,6 @@ Spacing = 0.5
 
 FromScratch = yes
 ParDomains = no
-ParKPoints = auto
 
 SpinComponents = spinors
 GuessMagnetDensity = user_defined

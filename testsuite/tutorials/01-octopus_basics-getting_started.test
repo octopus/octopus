@@ -1,0 +1,23 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Octopus basics - Getting started
+Program    : octopus
+TestGroups : short-run, tutorials
+Enabled    : Yes
+
+Input: 01-octopus_basics-getting_started.01-H_atom.inp
+match ; SCF convergence          ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Number of SCF iterations ; GREPFIELD(static/info, 'SCF converged in', 4) ; 5
+match ; Eigenvalue               ; GREPFIELD(static/info, '1   --', 3)           ; -0.233013
+match ; Total Energy             ; GREPFIELD(static/info, 'Total  ', 3)          ; -0.44637705
+
+Input: 01-octopus_basics-getting_started.02-H_atom_spin.inp
+match ; SCF convergence          ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Eigenvalue               ; GREPFIELD(static/info, '1   up', 3)  ; -0.269073
+match ; Total Energy             ; GREPFIELD(static/info, 'Total  ', 3) ; -0.47941382
+
+Input: 01-octopus_basics-getting_started.03-H_atom_independent.inp
+match ; SCF convergence          ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Eigenvalue               ; GREPFIELD(static/info, '1   --', 3)  ; -0.500891
+match ; Total Energy             ; GREPFIELD(static/info, 'Total  ', 3) ; -0.50089081
+

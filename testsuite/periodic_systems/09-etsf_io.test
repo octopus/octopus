@@ -8,6 +8,8 @@ Enabled    : Yes
 
 Input      : 09-etsf_io.01-gs.inp
 
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 2
 
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -31.42700114
@@ -42,10 +44,10 @@ match ; Eigenvalue 18 ; GREPFIELD(static/info, '#k =   2', 3, 18) ; 0.217481
 # Note that the sizes unfortunately depend on the length of the PACKAGE_STRING for
 # the current version of octopus, and must be updated when that changes.
 
-match ; density-etsf.nc  ; SIZE(static/density-etsf.nc)  ;   25776
-match ; geometry-etsf.nc ; SIZE(static/geometry-etsf.nc) ;    3708
-match ; wfs-etsf.nc      ; SIZE(static/wfs-etsf.nc)      ; 1585316
-match ; wfs-pw-etsf.nc   ; SIZE(static/wfs-pw-etsf.nc)   ;  836064
+match ; density-etsf.nc  ; SIZE(static/density-etsf.nc)  ;   25780
+match ; geometry-etsf.nc ; SIZE(static/geometry-etsf.nc) ;    3712
+match ; wfs-etsf.nc      ; SIZE(static/wfs-etsf.nc)      ; 1585320
+match ; wfs-pw-etsf.nc   ; SIZE(static/wfs-pw-etsf.nc)   ;  836068
 
 match ; density.ncdf     ; SIZE(static/density.ncdf)        ;   22248
 match ; netcdf wfn 3     ; SIZE(static/wf-k001-st0003.ncdf) ;   44320

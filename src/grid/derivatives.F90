@@ -41,7 +41,6 @@ module derivatives_oct_m
   use stencil_starplus_oct_m
   use stencil_stargeneral_oct_m
   use stencil_variational_oct_m
-  use test_parameters_oct_m
   use transfer_table_oct_m
   use types_oct_m
   use utils_oct_m
@@ -240,8 +239,8 @@ contains
     !% <ul>
     !% <li> <tt>stencil_star</tt>: <math>2 O d + 1</math>
     !% <li> <tt>stencil_cube</tt>: <math>(2 O + 1)^d</math>
-    !% <li> <tt>stencil_starplus</tt>: <math>2 O d + 1 + n</math> with <i>n</i> being 12
-    !% in 2D and 44 in 3D.
+    !% <li> <tt>stencil_starplus</tt>: <math>2 O d + 1 + n</math> with <i>n</i> being 8
+    !% in 2D and 24 in 3D.
     !% </ul>
     !%End
     call parse_variable('DerivativesOrder', 4, der%order)
@@ -458,8 +457,6 @@ contains
     character(len=32) :: name
     type(nl_operator_t) :: auxop
     
-!     type(test_parameters_t) :: test_param
-
     PUSH_SUB(derivatives_build)
 
     call boundaries_init(der%boundaries, mesh)
@@ -566,7 +563,7 @@ contains
       end do
 
       der%op(der%dim+1)%stencil%npoly = der%op(der%dim+1)%stencil%size &
-           + 2*der%order*(2*der%order-2)*der%op(der%dim+1)%stencil%stargeneral%narms
+           + der%order*(2*der%order-1)*der%op(der%dim+1)%stencil%stargeneral%narms
 
       SAFE_ALLOCATE(polynomials(1:der%dim, 1:der%op(der%dim+1)%stencil%npoly))
       SAFE_ALLOCATE(rhs(1:der%op(der%dim+1)%stencil%size, 1:1))
@@ -604,11 +601,7 @@ contains
     end if
 
     ! useful for debug purposes
-!     test_param%repetitions = 1
-!     test_param%min_blocksize = 1
-!     test_param%max_blocksize = 1
-!
-!     call dderivatives_test(der, test_param)
+!     call dderivatives_test(der, 1, 1, 1)
 !     call exit(1)
 
 

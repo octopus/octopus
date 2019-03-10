@@ -186,7 +186,7 @@ contains
     
     do ipar = 1, P_STRATEGY_MAX
       default(ipar) = PAR_NO
-      if(iand(default_mask, ibset(0, ipar - 1)) /= 0) then
+      if(bitand(default_mask, ibset(0, ipar - 1)) /= 0) then
         default(ipar) = PAR_AUTO
       end if
     end do
@@ -238,7 +238,7 @@ contains
 
     !%Variable ParKPoints
     !%Type integer
-    !%Default no
+    !%Default auto
     !%Section Execution::Parallelization
     !%Description
     !% This variable controls the number of processors used for the
@@ -365,19 +365,19 @@ contains
           end if
         end do
 
-        if(mc%par_strategy /= iand(mc%par_strategy, parallel_mask)) then
+        if(mc%par_strategy /= bitand(mc%par_strategy, parallel_mask)) then
           call messages_write('Parallelization strategies unavailable for this run mode are being discarded.')
           call messages_warning()
         end if
         
-        mc%par_strategy = iand(mc%par_strategy, parallel_mask)
+        mc%par_strategy = bitand(mc%par_strategy, parallel_mask)
         
         if(mc%par_strategy == P_STRATEGY_SERIAL) then
           message(1) = "More than one node is available, but this run mode cannot run with the requested parallelization."
           message(2) = "Please select a parallelization strategy compatible with"
           jj = 2
           do ii = 1, n_par_types
-            if(iand(parallel_mask, 2**(ii - 1)) /= 0) then
+            if(bitand(parallel_mask, 2**(ii - 1)) /= 0) then
               jj = jj + 1
               write(message(jj), '(2a)') "  -> ", par_types(ii)
             end if
@@ -542,7 +542,8 @@ contains
         call messages_fatal(2, only_root_writes = .true.)
       end if
 
-      if(any(index_range(1:P_STRATEGY_MAX) / real_group_sizes(1:P_STRATEGY_MAX) < min_range(1:P_STRATEGY_MAX))) then
+      if(any(index_range(1:P_STRATEGY_MAX) / real_group_sizes(1:P_STRATEGY_MAX) < min_range(1:P_STRATEGY_MAX) .and. &
+             real_group_sizes(1:P_STRATEGY_MAX) >  1)) then
         message(1) = "I have fewer elements in a parallel group than recommended."
         message(2) = "Maybe you should reduce the number of nodes."
         call messages_warning(2)
@@ -790,7 +791,7 @@ contains
     type(multicomm_t), intent(in) :: mc
     integer,           intent(in) :: level
 
-    rr = iand(mc%par_strategy, 2**(level - 1)) /= 0
+    rr = bitand(mc%par_strategy, 2**(level - 1)) /= 0
 
   end function multicomm_strategy_is_parallel
 
