@@ -27,6 +27,7 @@ dist_share_DATA =                                \
             02-ACBN0.02-lif.inp                  \
             02-ACBN0.test                        \
             03-ACBN0_restricted.01-lif.inp       \
+            03-ACBN0_restricted.02-lif_unpacked.inp\
             03-ACBN0_restricted.test             \
             04-ACBN0_isolated.01-H_unpacked.inp  \
             04-ACBN0_isolated.02-H_packed.inp    \
@@ -41,6 +42,10 @@ dist_share_DATA =                                \
 	    07-noncollinear.01-U5-gs.inp         \
             07-noncollinear.test                 \
 	    08-loewdin.01-Si.inp                 \
-	    08-loewdin.test 
+	    08-loewdin.test                      \
+	    09-basis_from_states.01-lda.inp      \
+	    09-basis_from_states.02-acbn0.inp    \
+	    09-basis_from_states.fhi             \
+	    09-basis_from_states.test 
 
 CLEANFILES = *~ *.bak

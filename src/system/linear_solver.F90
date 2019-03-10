@@ -84,7 +84,7 @@ contains
     type(linear_solver_t),  intent(out)   :: this
     type(grid_t),           intent(in)    :: gr
     logical,                intent(in)    :: states_are_real !< for choosing solver
-    integer, optional,      intent(in)    :: def_solver
+    integer(8), optional,   intent(in)    :: def_solver
 
     integer :: fsolver
     integer :: defsolver_ 

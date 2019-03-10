@@ -178,13 +178,13 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl,
   do iq = st%d%kpt%start, st%d%kpt%end
 
     ikpoint = states_dim_get_kpoint_index(st%d, iq)
+    if(st%d%kweights(iq) <= M_EPSILON) cycle
 
     do ib = st%group%block_start, st%group%block_end
       minst = states_block_min(st, ib)
       maxst = states_block_max(st, ib)
 
-      call batch_copy(st%group%psib(ib, iq), psib)
-      call batch_copy_data(gr%mesh%np, st%group%psib(ib, iq), psib)
+      call batch_copy(st%group%psib(ib, iq), psib, copy_data = .true.)
 
       ! set the boundary conditions
       call boundaries_set(gr%der%boundaries, psib)

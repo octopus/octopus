@@ -6,6 +6,7 @@ TestGroups : short-run, linear_response
 Enabled    : Yes
 
 Input: 02-h2o_pol_lr.01_h2o_gs.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -16.06685186
 match ; Eigenvalues  ; GREPFIELD(static/info, '1   --', 3) ; -1.167612
 match ; Dipole       ; GREPFIELD(static/info, '<y>', 3) ; 3.65917E-01
@@ -67,3 +68,22 @@ Precision : 0.001
 match; Paramagnetic susceptibility ; LINEFIELD(em_resp/freq_0.0000/susceptibility, 5, 3) ; 30.003216
 match; Diamagnetic susceptibility  ; LINEFIELD(em_resp/freq_0.0000/susceptibility, 11, 3) ; -215.363250
 match; Total susceptibility        ; LINEFIELD(em_resp/freq_0.0000/susceptibility, 17, 3) ; -185.360035
+
+Input: 02-h2o_pol_lr.05_h2o_magn_opt.inp
+Precision : 0.001
+match ; Polarizability XX w=0.0    ; LINEFIELD(em_resp/freq_0.0000/alpha, 2, 1) ; 15.241499
+match ; Polarizability YY w=0.0    ; LINEFIELD(em_resp/freq_0.0000/alpha, 3, 2) ; 12.328297
+match ; Polarizability ZZ w=0.0    ; LINEFIELD(em_resp/freq_0.0000/alpha, 4, 3) ; 23.105756
+match ; Polarizability XX w=0.1    ; LINEFIELD(em_resp/freq_0.1000/alpha, 2, 1) ; 15.933970
+match ; Polarizability YY w=0.1    ; LINEFIELD(em_resp/freq_0.1000/alpha, 3, 2) ; 12.849773
+match ; Polarizability ZZ w=0.1    ; LINEFIELD(em_resp/freq_0.1000/alpha, 4, 3) ; 29.441091
+
+Precision : 0.00001
+match ; Mag.-opt. Re alpha w=0.0   ; GREPFIELD(em_resp/freq_0.0000/alpha_mo, 'Re alpha', 4) ; -0.37818360E-02
+match ; Mag.-opt. av Re w=0.0      ; GREPFIELD(em_resp/freq_0.0000/alpha_mo, 'Re alpha', 7) ; -0.48816670E-02 
+match ; Mag.-opt. Re eps w=0.0     ; GREPFIELD(em_resp/freq_0.0000/alpha_mo, 'Re epsilon', 7) ; -0.10777214E-04
+match ; Mag.-opt. Re alpha w=0.1   ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Re alpha', 4) ; -0.22068077E-02
+match ; Mag.-opt. av Im w=0.1      ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Im alpha', 7) ; 0.55214813E-01
+match ; Mag.-opt. Re eps w=0.1     ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Re epsilon', 8) ; -0.36387449E-04
+match ; Mag.-opt. Im eps w=0.1     ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Im epsilon', 9) ;  0.12637596E-03
+

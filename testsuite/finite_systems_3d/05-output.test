@@ -6,6 +6,7 @@ TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
 
 Input: 05-output.01-gs.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy     ; GREPFIELD(static/info, 'Total       =', 3) ; -11.99584633
 
 #geometry
@@ -44,6 +45,8 @@ Precision : 0.000000001
 match ; Plane value 10   ; LINEFIELD(static/density.x\=0,   9, 3) ; 2.23494456545324E-005
 match ; Plane value 30   ; LINEFIELD(static/density.x\=0,  29, 3) ; 1.89763461646455E-004
 match ; Plane value 295  ; LINEFIELD(static/density.x\=0, 294, 3) ; 6.06673423715878E-003
+match ; Plane value 10 Grad-y v0 ; LINEFIELD(static/grad_v0-y.x\=0,   9, 3) ; -1.42667157278682E+001
+
 
 #xcrysden
 match ; XCrySDen geometry; LINEFIELD(static/geometry.xsf, 2, 3) ; 2.645886

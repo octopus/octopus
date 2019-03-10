@@ -196,7 +196,7 @@ contains
 
     call parse_variable('GaugeFieldDelay', M_ZERO, this%kicktime)
 
-    if(this%kicktime == M_ZERO) then
+    if(abs(this%kicktime) <= M_EPSILON) then
        this%vecpot(1:this%ndim) = this%vecpot_kick(1:this%ndim)
     endif
 

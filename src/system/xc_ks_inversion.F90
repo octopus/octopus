@@ -161,7 +161,7 @@ contains
       
       ! initialize auxiliary random wavefunctions
       call states_allocate_wfns(ks_inv%aux_st, gr%mesh)
-      call states_generate_random(ks_inv%aux_st, gr%mesh)      
+      call states_generate_random(ks_inv%aux_st, gr%mesh, gr%sb)      
 
       ! initialize densities, hamiltonian and eigensolver
       call states_densities_init(ks_inv%aux_st, gr, geo)
@@ -274,24 +274,24 @@ contains
       do ii = 1, nspin
         do jj = 1, asym1
           call mesh_r(gr%mesh, jj, rr)
-          aux_hm%vxc(jj, ii) = -1.0/sqrt(rr**2 + 1.0)
+          aux_hm%vxc(jj, ii) = -M_ONE/sqrt(rr**2 + M_ONE)
         end do
      
         ! calculate constant shift for correct asymptotics and shift accordingly
         call mesh_r(gr%mesh, asym1+1, rr)
-        shift  = aux_hm%vxc(asym1+1, ii) + 1.0/sqrt(rr**2 + 1.0)
+        shift  = aux_hm%vxc(asym1+1, ii) + M_ONE/sqrt(rr**2 + M_ONE)
         do jj = asym1+1, asym2-1
           aux_hm%vxc(jj,ii) = aux_hm%vxc(jj, ii) - shift
         end do
   
         call mesh_r(gr%mesh, asym2-1, rr)
-        shift  = aux_hm%vxc(asym2-1, ii) + 1.0/sqrt(rr**2 + 1.0)
+        shift  = aux_hm%vxc(asym2-1, ii) + M_ONE/sqrt(rr**2 + M_ONE)
         do jj = 1, asym2-1
           aux_hm%vxc(jj,ii) = aux_hm%vxc(jj, ii) - shift
         end do
         do jj = asym2, np
           call mesh_r(gr%mesh, jj, rr)
-          aux_hm%vxc(jj, ii) = -1.0/sqrt(rr**2 + 1.0)
+          aux_hm%vxc(jj, ii) = -M_ONE/sqrt(rr**2 + M_ONE)
         end do
       end do 
     end if !apply asymptotic correction
@@ -316,7 +316,7 @@ contains
       aux_hm%vhxc(:,ii) = aux_hm%vxc(:,ii) + aux_hm%vhartree(1:np)
     end do
     
-    call hamiltonian_update(aux_hm, gr%mesh)
+    call hamiltonian_update(aux_hm, gr%mesh, gr%der%boundaries)
     call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
     call density_calc(st, gr, st%rho)
 
@@ -461,7 +461,7 @@ contains
              ".", "rho"//fname, gr%mesh, st%rho(:,1), units_out%length**(-gr%sb%dim), ierr)
       end if
 
-      call hamiltonian_update(aux_hm, gr%mesh)
+      call hamiltonian_update(aux_hm, gr%mesh, gr%der%boundaries)
       call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
       call density_calc(st, gr, st%rho)      
 
@@ -547,7 +547,7 @@ contains
         do jj = 1, int(np/2)
           if(target_rho(jj,ii) < convdensity*CNST(10.0)) then
             call mesh_r(gr%mesh, jj, rr)
-            vhxc(jj, ii) = (st%qtot-1.0)/sqrt(rr**2 + 1.0)
+            vhxc(jj, ii) = (st%qtot-M_ONE)/sqrt(rr**2 + M_ONE)
             asym1 = jj
           end if
           if(target_rho(np-jj+1, ii) < convdensity*CNST(10.0)) then
@@ -557,21 +557,21 @@ contains
      
         ! calculate constant shift for correct asymptotics and shift accordingly
         call mesh_r(gr%mesh, asym1+1, rr)
-        shift  = vhxc(asym1+1, ii) - (st%qtot-1.0)/sqrt(rr**2 + 1.0)
+        shift  = vhxc(asym1+1, ii) - (st%qtot-M_ONE)/sqrt(rr**2 + M_ONE)
 !TODO: parallelize these loops over np
         do jj = asym1+1, asym2-1
           vhxc(jj,ii) = vhxc(jj, ii) - shift
         end do
   
         call mesh_r(gr%mesh, asym2-1, rr)
-        shift  = vhxc(asym2-1, ii) - (st%qtot-1.0)/sqrt(rr**2 + 1.0)
+        shift  = vhxc(asym2-1, ii) - (st%qtot-M_ONE)/sqrt(rr**2 + M_ONE)
 !TODO: parallelize these loops over np
         do jj = 1, asym2-1
           vhxc(jj,ii) = vhxc(jj, ii) - shift
         end do
         do jj = asym2, np
           call mesh_r(gr%mesh, jj, rr)
-          vhxc(jj, ii) = (st%qtot-1.0)/sqrt(rr**2 + 1.0)
+          vhxc(jj, ii) = (st%qtot-M_ONE)/sqrt(rr**2 + M_ONE)
         end do
       end do
     end if
@@ -587,7 +587,7 @@ contains
 
     !calculate final density
 
-    call hamiltonian_update(aux_hm, gr%mesh)
+    call hamiltonian_update(aux_hm, gr%mesh, gr%der%boundaries)
     call eigensolver_run(eigensolver, gr, st, aux_hm, 1)
     call density_calc(st, gr, st%rho)
     

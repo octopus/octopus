@@ -20,10 +20,6 @@
 
 module system_oct_m
   use accel_oct_m
-  use base_handle_oct_m
-  use base_model_oct_m
-  use base_states_oct_m
-  use base_system_oct_m
   use calc_mode_par_oct_m
   use density_oct_m
   use elf_oct_m
@@ -33,8 +29,6 @@ module system_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use io_function_oct_m
-  use json_oct_m
-  use live_config_oct_m
   use mesh_oct_m
   use messages_oct_m
   use modelmb_particles_oct_m
@@ -49,8 +43,6 @@ module system_oct_m
   use species_oct_m
   use simul_box_oct_m
   use sort_oct_m
-  use ssys_config_oct_m
-  use ssys_handle_oct_m
   use states_oct_m
   use states_dim_oct_m
   use unit_oct_m
@@ -71,7 +63,6 @@ module system_oct_m
     type(geometry_t)             :: geo
     type(grid_t),        pointer :: gr    !< the mesh
     type(states_t),      pointer :: st    !< the states
-    type(base_handle_t), pointer :: subsys_handle !< the Subsystems handle pointer.
     type(v_ks_t)                 :: ks    !< the Kohn-Sham potentials
     type(output_t)               :: outp  !< the output
     type(multicomm_t)            :: mc    !< index and domain communicators
@@ -83,7 +74,6 @@ contains
   subroutine system_init(sys)
     type(system_t), intent(out)   :: sys
 
-    type(base_states_t), pointer :: subsys_states
 
     type(profile_t), save :: prof
     PUSH_SUB(system_init)
@@ -114,22 +104,11 @@ contains
     call states_distribute_nodes(sys%st, sys%mc)
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
     call output_init(sys%outp, sys%gr%sb, sys%st%nst, sys%ks)
-
-    nullify(sys%subsys_handle, subsys_states)
-    if(ssys_config_use())then
-      SAFE_ALLOCATE(sys%subsys_handle)
-      call subsystems_init(sys%subsys_handle, sys%st, sys%gr, sys%geo, sys%space)
-      call subsystems_get(sys%subsys_handle, subsys_states)
-      ASSERT(associated(subsys_states))
-      call states_add_substates(sys%st, subsys_states)
-      nullify(subsys_states)
-    end if
-
     call states_densities_init(sys%st, sys%gr, sys%geo)
     call states_exec_init(sys%st, sys%mc)
     call elf_init()
 
-    call poisson_init(psolver, sys%gr%der, sys%mc, theta = sys%st%cmplxscl%theta)
+    call poisson_init(psolver, sys%gr%der, sys%mc)
     if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%geo, sys%mc)
 
     call v_ks_init(sys%ks, sys%gr, sys%st, sys%geo, sys%mc)
@@ -162,73 +141,6 @@ contains
   end subroutine system_init
 
   !----------------------------------------------------------
-  subroutine subsystems_init(this, st, grid, geo, space)
-    type(base_handle_t), intent(out) :: this
-    type(states_t),      intent(in)  :: st
-    type(grid_t),        intent(in)  :: grid
-    type(geometry_t),    intent(in)  :: geo
-    type(space_t),       intent(in)  :: space
-
-    type(json_object_t), pointer :: ssys_config, live_config
-
-    PUSH_SUB(subsystems_init)
-
-    nullify(ssys_config, live_config)
-    SAFE_ALLOCATE(ssys_config)
-    call ssys_config_parse(ssys_config, st%d%nspin, space%dim)
-    SAFE_ALLOCATE(live_config)
-    call live_config_parse(live_config, st, space)
-    call ssys_config_add(ssys_config, live_config)
-    nullify(live_config)
-    call ssys_handle_init(this, geo, ssys_config)
-    call ssys_handle_start(this, grid)
-    nullify(ssys_config)
-
-    POP_SUB(subsystems_init)
-  end subroutine subsystems_init
-
-  !----------------------------------------------------------
-  subroutine subsystems_get(this, subsys_states)
-    type(base_handle_t),  intent(in) :: this
-    type(base_states_t), pointer     :: subsys_states
-
-    type(base_model_t),  pointer :: subsys_model
-    type(base_system_t), pointer :: subsys_system
-
-    PUSH_SUB(subsystems_get)
-
-    nullify(subsys_states, subsys_model, subsys_system)
-    call base_handle_get(this, subsys_model)
-    ASSERT(associated(subsys_model))
-    call base_model_get(subsys_model, subsys_system)
-    ASSERT(associated(subsys_system))
-    nullify(subsys_model)
-    call base_system_get(subsys_system, subsys_states)
-    nullify(subsys_system)
-
-    POP_SUB(subsystems_get)
-  end subroutine subsystems_get
-
-  !----------------------------------------------------------
-  subroutine subsystems_end(this)
-    type(base_handle_t), intent(inout) :: this
-
-    type(json_object_t), pointer :: config
-
-    PUSH_SUB(subsystems_end)
-
-    nullify(config)
-    call base_handle_get(this, config)
-    ASSERT(associated(config))
-    call ssys_handle_end(this)
-    call json_end(config)
-    SAFE_DEALLOCATE_P(config)
-    nullify(config)
-
-    POP_SUB(subsystems_end)
-  end subroutine subsystems_end
-
-  !----------------------------------------------------------
   subroutine system_end(sys)
     type(system_t), intent(inout) :: sys
 
@@ -245,12 +157,6 @@ contains
       call states_end(sys%st)
       SAFE_DEALLOCATE_P(sys%st)
     end if
-
-    if(associated(sys%subsys_handle))then
-      call subsystems_end(sys%subsys_handle)
-      SAFE_DEALLOCATE_P(sys%subsys_handle)
-    end if
-    nullify(sys%subsys_handle)
 
     call geometry_end(sys%geo)
     call simul_box_end(sys%gr%sb)
@@ -281,11 +187,7 @@ contains
 
     calc_eigenval_ = optional_default(calc_eigenval, .true.)
     call states_fermi(sys%st, sys%gr%mesh)
-    if(hm%cmplxscl%space) then
-      call density_calc(sys%st, sys%gr, sys%st%zrho%Re, sys%st%zrho%Im)
-    else
-      call density_calc(sys%st, sys%gr, sys%st%rho)
-    end if
+    call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval = calc_eigenval_) ! get potentials
 
     if(sys%st%restart_reorder_occs .and. .not. sys%st%fromScratch) then

@@ -225,7 +225,7 @@ contains
     integer,             intent(in)    :: jxyz(:)
     integer,             intent(in)    :: jxyz_inv(:)
     FLOAT,               intent(in)    :: vv
-    FLOAT,               intent(inout) :: vs(0:)
+    FLOAT,               intent(inout) :: vs(:)
     
     integer :: start(1:3), pp, qq, rr
     integer :: ll, mm, nn, ip, is2
@@ -233,8 +233,8 @@ contains
     ! no push_sub, threadsafe function
     
     ip = jxyz(is)
-#ifdef HAVE_MPI                    
     if (mesh%parallel_in_domains) then
+#ifdef HAVE_MPI                    
       !map the local point to a global point
       if (ip <= mesh%np) then
         !inner points
@@ -249,8 +249,8 @@ contains
         ip = ip - 1 - (mesh%np + mesh%vp%np_ghost) + mesh%vp%xbndry
         ip = mesh%vp%bndry(ip)
       end if
-    end if
 #endif
+    end if
     
     start(1:3) = mesh%idx%lxyz(ip, 1:3) + this%interpolation_min * (/ii, jj, kk/)
     
@@ -268,9 +268,10 @@ contains
           !map the global point to a local point
           if (mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
 #endif
-          if (ip == 0) cycle
-          is2 = jxyz_inv(ip)
-          vs(is2) = vs(is2) + this%co(ll)*this%co(mm)*this%co(nn)*vv
+          if (ip > 0) then
+            is2 = jxyz_inv(ip)
+            if(is2 > 0) vs(is2) = vs(is2) + this%co(ll)*this%co(mm)*this%co(nn)*vv
+          end if
           rr = rr + kk
         end do
         qq = qq + jj
@@ -294,7 +295,7 @@ contains
 #define profiler double_grid_nonlocal_prof
 #define profiler_label "DOUBLE_GRID_NL"
 #define double_grid_apply double_grid_apply_non_local
-#define calc_pot(vv) call species_real_nl_projector(spec, xx, l, lm, ic, vv, tmp)
+#define calc_pot(vv) call species_real_nl_projector(spec, xx, l, lm, ic, vv)
 
 #include "double_grid_apply_inc.F90"
 

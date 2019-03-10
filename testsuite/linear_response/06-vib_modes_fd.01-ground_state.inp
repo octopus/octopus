@@ -13,3 +13,5 @@ Radius = 6
   "Li" | 0 | 0 | 3.058523
 %
 MixField = density
+
+Debug = trace

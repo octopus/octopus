@@ -70,7 +70,7 @@ __kernel void operate_map(const int np,
   
   const int ist = get_global_id(0);
   const int nst = get_global_size(0);
-  const int ipd = get_global_id(1);
+  const int ipd = get_global_id(1) + get_global_size(1)*get_global_id(2);
   const int lip = get_local_id(1);
     
 #ifdef INDIRECT

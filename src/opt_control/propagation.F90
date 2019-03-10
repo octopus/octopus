@@ -179,7 +179,7 @@ contains
     call propagator_run_zero_iter(hm, gr, td%tr)
     if(ion_dynamics_ions_move(td%ions)) then
       call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = M_ZERO)
-      call forces_calculate(gr, sys%geo, hm, psi, M_ZERO, td%dt)
+      call forces_calculate(gr, sys%geo, hm, psi, sys%ks, t = M_ZERO, dt = td%dt)
     end if
 
 
@@ -411,14 +411,14 @@ contains
     do i = 1, td%max_iter
       call update_field(i, par, gr, hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
       call update_hamiltonian_chi(i, gr, sys%ks, hm, td, tg, par_chi, sys%geo, psi2)
-      call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, sys%outp)
       if(aux_fwd_propagation) then
         call update_hamiltonian_psi(i, gr, sys%ks, hm, td, tg, par_prev, psi2, sys%geo)
         call propagator_dt(sys%ks, hm, gr, psi2, tr_psi2, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, sys%outp)
       end if
       call update_hamiltonian_psi(i, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
-      call hamiltonian_update(hm, gr%mesh, time = (i - 1)*td%dt)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = (i - 1)*td%dt)
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, sys%outp)
       call target_tdcalc(tg, hm, gr, sys%geo, psi, i, td%max_iter) 
 
@@ -503,7 +503,7 @@ contains
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
-    call hamiltonian_update(hm, gr%mesh)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     call propagator_run_zero_iter(hm, gr, td%tr)
     call propagator_run_zero_iter(hm, gr, tr_chi)
 
@@ -518,7 +518,7 @@ contains
       call oct_prop_check(prop_psi, psi, gr, i)
       call update_field(i, par_chi, gr, hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, gr, sys%ks, hm, td, tg, par_chi, sys%geo, psi)
-      call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, i-1, td%ions, sys%geo, sys%outp)
       call oct_prop_dump_states(prop_chi, i-1, chi, gr, ierr)
       if (ierr /= 0) then
@@ -526,7 +526,7 @@ contains
         call messages_warning(1)
       end if
       call update_hamiltonian_psi(i-1, gr, sys%ks, hm, td, tg, par, psi, sys%geo)
-      call hamiltonian_update(hm, gr%mesh, time = abs(i*td%dt))
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = abs(i*td%dt))
       call propagator_dt(sys%ks, hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, td%ions, sys%geo, sys%outp)
     end do
     td%dt = -td%dt
@@ -534,7 +534,7 @@ contains
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
-    call hamiltonian_update(hm, gr%mesh)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
 
     call controlfunction_to_basis(par_chi)
     call states_end(psi)
@@ -612,7 +612,7 @@ contains
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
-    call hamiltonian_update(hm, gr%mesh)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     call propagator_run_zero_iter(hm, gr, td%tr)
     call propagator_run_zero_iter(hm, gr, tr_chi)
     td%dt = -td%dt
@@ -624,7 +624,8 @@ contains
 
     call states_copy(st_ref, psi)
 
-    if(ion_dynamics_ions_move(td%ions)) call forces_calculate(gr, sys%geo, hm, psi, td%max_iter*abs(td%dt), td%dt)
+    if(ion_dynamics_ions_move(td%ions)) &
+      call forces_calculate(gr, sys%geo, hm, psi, sys%ks, t = td%max_iter*abs(td%dt), dt = td%dt)
 
     message(1) = "Info: Backward propagation."
     call messages_info(1)
@@ -701,7 +702,7 @@ contains
         if(ion_dynamics_ions_move(td%ions)) then
           call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_final)
           call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = abs((i-1)*td%dt))
-          call forces_calculate(gr, sys%geo, hm, psi, abs((i-1)*td%dt), td%dt)
+          call forces_calculate(gr, sys%geo, hm, psi, sys%ks, t = abs((i-1)*td%dt), dt = td%dt)
           call forces_costate_calculate(gr, sys%geo, hm, psi, chi, fnew, q)
           call ion_dynamics_verlet_step2(sys%geo, p, fold, fnew, td%dt)
           SAFE_DEALLOCATE_A(fold)
@@ -737,7 +738,7 @@ contains
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, hm, psi, sys%geo)
-    call hamiltonian_update(hm, gr%mesh)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
 
     call propagator_end(tr_chi)
 
@@ -875,7 +876,7 @@ contains
     if(hm%theory_level /= INDEPENDENT_PARTICLES .and. (.not.ks%frozen_hxc) ) then
       call density_calc(st, gr, st%rho)
       call v_ks_calc(ks, hm, st, geo)
-      call hamiltonian_update(hm, gr%mesh)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     end if
 
     POP_SUB(update_hamiltonian_psi)

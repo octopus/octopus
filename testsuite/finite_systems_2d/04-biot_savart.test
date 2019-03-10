@@ -21,5 +21,6 @@ Enabled    : Yes
 # is 0.0002731 au, quite close to the value produced by the test.
 
 Input: 04-biot_savart.01-gs.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Current flow                  ; GREPFIELD(static/current-flow, '# Flow', 5) ; -0.180741589461E-01
 match ; Magnetic Field at loop center ; LINEFIELD(static/Bind_z.x=0\,z=0, 87, 2) ; 2.81319023461392E-004
