@@ -91,11 +91,12 @@ module xc_ks_inversion_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_init(ks_inv, gr, geo, st)
+  subroutine xc_ks_inversion_init(ks_inv, gr, geo, st, xc)
     type(xc_ks_inversion_t), intent(out)   :: ks_inv
     type(grid_t),            intent(inout) :: gr
     type(geometry_t),        intent(inout) :: geo
     type(states_t),          intent(in)    :: st
+    type(xc_t),              intent(in)    :: xc
 
     PUSH_SUB(xc_ks_inversion_init)
 
@@ -167,7 +168,7 @@ contains
       call states_densities_init(ks_inv%aux_st, gr, geo)
       call hamiltonian_init(ks_inv%aux_hm, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, &
                             XC_FAMILY_NONE, XC_FLAGS_NONE, .false.)
-      call eigensolver_init(ks_inv%eigensolver, gr, ks_inv%aux_st)
+      call eigensolver_init(ks_inv%eigensolver, gr, ks_inv%aux_st, xc)
     end if
 
     POP_SUB(xc_ks_inversion_init)

@@ -388,7 +388,7 @@ contains
       end if 
     else
       call states_allocate_wfns(st, gr%mesh)
-      call scf_init(td%scf, sys%gr, sys%geo, sys%st, sys%mc, hm)
+      call scf_init(td%scf, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks)
     end if
 
     if(hm%scdm_EXX) then
