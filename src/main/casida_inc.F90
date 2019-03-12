@@ -1497,7 +1497,9 @@ subroutine X(casida_write)(cas, sys)
   end if
 
   ! Calculate and write the transition densities
-  call X(get_transition_densities)(cas, sys)
+  if(cas%trandens /= "0") then
+    call X(get_transition_densities)(cas, sys)
+  end if
 
   POP_SUB(X(casida_write))
 end subroutine X(casida_write)
