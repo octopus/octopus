@@ -21,6 +21,7 @@ module libvdwxc_oct_m
   use parser_oct_m
   use pfft_oct_m
   use profiling_oct_m
+  use simul_box_oct_m
   use unit_system_oct_m
 
   implicit none
@@ -111,7 +112,7 @@ contains
     else if(this%functional == 2) then
       write(message(2), '(4x,a)') 'vdW-DF2 from libvdwxc'
     else if(this%functional == 3) then
-      write(message(2), '(4x,a)') 'vdW-DF-CX from libvdwxc'
+      write(message(2), '(4x,a)') 'vdW-DF-cx from libvdwxc'
     else
       write(message(2), '(4x,a)') 'unknown libvdwxc functional'
     end if
@@ -184,11 +185,19 @@ contains
     ! Therefore we cannot use the PFFT stuff without a frightful mess.
 
 #ifdef HAVE_LIBVDWXC
-    call vdwxc_set_unit_cell(this%libvdwxc_ptr, &
-      this%cube%rs_n_global(3), this%cube%rs_n_global(2), this%cube%rs_n_global(1), &
-      mesh%sb%rlattice(3, 3), mesh%sb%rlattice(2, 3), mesh%sb%rlattice(1, 3), &
-      mesh%sb%rlattice(3, 2), mesh%sb%rlattice(2, 2), mesh%sb%rlattice(1, 2), &
-      mesh%sb%rlattice(3, 1), mesh%sb%rlattice(2, 1), mesh%sb%rlattice(1, 1))
+    if(mesh%sb%box_shape == PARALLELEPIPED) then
+      call vdwxc_set_unit_cell(this%libvdwxc_ptr, &
+        this%cube%rs_n_global(3), this%cube%rs_n_global(2), this%cube%rs_n_global(1), &
+        mesh%sb%rlattice(3, 3), mesh%sb%rlattice(2, 3), mesh%sb%rlattice(1, 3), &
+        mesh%sb%rlattice(3, 2), mesh%sb%rlattice(2, 2), mesh%sb%rlattice(1, 2), &
+        mesh%sb%rlattice(3, 1), mesh%sb%rlattice(2, 1), mesh%sb%rlattice(1, 1))
+    else
+      call vdwxc_set_unit_cell(this%libvdwxc_ptr, &
+        this%cube%rs_n_global(3), this%cube%rs_n_global(2), this%cube%rs_n_global(1), &
+        mesh%spacing(3) * this%cube%rs_n_global(3), 0.0_8, 0.0_8, &
+        0.0_8, mesh%spacing(2) * this%cube%rs_n_global(2), 0.0_8, &
+        0.0_8, 0.0_8, mesh%spacing(1) * this%cube%rs_n_global(1))
+    end if
 
     if(libvdwxc_mode == LIBVDWXC_MODE_SERIAL) then
       call vdwxc_init_serial(this%libvdwxc_ptr)
