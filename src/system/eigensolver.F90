@@ -197,7 +197,7 @@ contains
       !% During the cg iterations, the current band can be orthogonalized
       !% against all other bands or only against the lower bands. Orthogonalizing
       !% against all other bands can improve convergence properties, whereas
-      !% orthogonalizing against lower bands only saves operations.
+      !% orthogonalizing against lower bands needs less operations.
       !%End
       call parse_variable('CGOrthogonalizeAll', .false., eigens%orthogonalize_to_all)
 
@@ -225,6 +225,8 @@ contains
       !%Description
       !% Used by the cg solver only.
       !% Add additional terms during the line minimization, see PTA92, eq. 5.31ff.
+      !% These terms can improve convergence for some systems, but they are quite costly.
+      !% If you experience convergence problems, you might try out this option.
       !% This feature is still experimental.
       !%End
       call parse_variable('CGAdditionalTerms', .false., eigens%additional_terms)

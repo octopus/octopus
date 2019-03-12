@@ -57,6 +57,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     ASSERT(associated(shift))
   end if
 
+  ! get the optional arguments for CG options
   orthogonalize_to_all_ = optional_default(orthogonalize_to_all, .false.)
   conjugate_direction_ = optional_default(conjugate_direction, int(OPTION__CGDIRECTION__FLETCHER, 4))
   ! do we add the XC term? needs derivatives of the XC functional
@@ -108,6 +109,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   h_cg  = R_TOTYPE(M_ZERO)
   g_prev = R_TOTYPE(M_ZERO)
 
+  ! get derivative once here -> the density does not change in the loop
   if(add_xc_term) then
     fxc = M_ZERO
     call xc_get_fxc(xc, gr%mesh, st%rho, st%d%ispin, fxc)
@@ -119,6 +121,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   ! Start of main loop, which runs over all the eigenvectors searched
   ASSERT(converged >= 0)
 
+  ! The steps in this loop follow closely the algorithm from
+  ! Payne et al. (1992), Rev. Mod. Phys. 64, 4, section V.B
   eigenfunction_loop : do ist = converged + 1, st%nst
     h_psi = R_TOTYPE(M_ZERO)
     cg    = R_TOTYPE(M_ZERO)
@@ -171,7 +175,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       ! Approximate inverse preconditioner
       call  X(preconditioner_apply)(pre, gr, hm, ik, g(:,:), g0(:,:))
 
-      ! PTA92, eq. 5.18 (following 6 lines)
+      ! PTA92, eq. 5.18
       dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, g0)
       ! orthogonalize against previous or all states, depending on the optional argument orthogonalize_to_all
       call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., &
@@ -260,7 +264,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
          h_cg = psi2 - M_TWO*shift(ist,ik)*h_cg + shift(ist,ik)**2*cg
       end if
 
-      ! Line minimization.
+      ! Line minimization (eq. 5.23 to 5.38)
       a0 = X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg, reduce = .false.)
       b0 = X(mf_dotp) (gr%mesh, st%d%dim, cg, h_cg, reduce = .false.)
       cg0 = X(mf_dotp) (gr%mesh, st%d%dim, cg, cg, reduce = .false.)
@@ -277,7 +281,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       ! compute norm of cg here
       cg0 = sqrt(cg0)
 
-      ! missing terms here? compare eq. 5.31
+      ! compare eq. 5.31
       a0 = M_TWO * a0 / cg0
       b0 = b0/cg0**2
       e0 = st%eigenval(ist, ik)
@@ -354,6 +358,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       end if
 
       if(iter > 1) then
+        ! This criterion is discussed in Sec. V.B.6
         if(abs(st%eigenval(ist, ik) - old_energy) < first_delta_e*CNST(1e-1)) then
           exit iter_loop
         end if
