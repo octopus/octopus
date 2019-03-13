@@ -1232,6 +1232,7 @@ contains
     type(multicomm_t), intent(in)    :: mc
 
     integer :: default
+    logical :: pack_default
 
     PUSH_SUB(states_exec_init)
 
@@ -1251,9 +1252,15 @@ contains
     !% execution will stop with an error.
     !%
     !% See also the related <tt>HamiltonianApplyPacked</tt> variable.
+    !%
+    !% The default is yes except when using OpenCL.
     !%End
 
-    call parse_variable('StatesPack', .true., st%d%pack_states)
+    pack_default = .true.
+    if(accel_is_enabled()) then
+      pack_default = .false.
+    end if
+    call parse_variable('StatesPack', pack_default, st%d%pack_states)
 
     !%Variable StatesOrthogonalization
     !%Type integer

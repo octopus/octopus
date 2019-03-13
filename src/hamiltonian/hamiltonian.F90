@@ -431,7 +431,9 @@ contains
     call parse_variable('HamiltonianApplyPacked', .true., hm%apply_packed)
 
     ! StatesPack not yet implemented for some cases, see hamiltonian_apply_packed
-    st%d%pack_states = hamiltonian_apply_packed(hm, gr%mesh)
+    if(st%d%pack_states) then
+      st%d%pack_states = hamiltonian_apply_packed(hm, gr%mesh)
+    end if
 
     external_potentials_present = associated(hm%ep%v_static) .or. &
 				  associated(hm%ep%E_field)  .or. &
