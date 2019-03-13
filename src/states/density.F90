@@ -443,8 +443,6 @@ contains
 
     call density_calc_end(dens_calc)
 
-    print *, st%frozen_rho(100,1)
-
     call states_copy(staux, st)
 
     st%nst = st%nst - n
