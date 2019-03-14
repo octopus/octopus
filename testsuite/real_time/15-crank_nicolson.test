@@ -42,6 +42,7 @@ match ; Dipole [step 20] ; LINEFIELD(td.general/multipoles, -1, 4) ; -1.30019031
 
 #Values below are compied from 15-crank_nicolson.03-freeze_domains.inp
 Input      : 15-crank_nicolson.04-freeze_states.inp
+Processors: 2 #There is only two states to distribute
 match ; Energy [step  1] ; LINEFIELD(td.general/energy, -21, 3) ; -2.146262580885e+01
 match ; Energy [step  5] ; LINEFIELD(td.general/energy, -16, 3) ; -1.012099363552e+01
 match ; Energy [step 10] ; LINEFIELD(td.general/energy, -11, 3) ; -1.010224144402e+01
