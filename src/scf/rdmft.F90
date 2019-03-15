@@ -924,8 +924,6 @@ contains
         end do
       end do
     end if
-    
-print*, "maxFO", rdm%maxFO
  
     call lalg_eigensolve(st%nst, FO, rdm%evalues)
     call assign_eigfunctions(st, gr, FO)
