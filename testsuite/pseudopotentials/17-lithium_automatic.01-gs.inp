@@ -1,0 +1,17 @@
+PseudopotentialSet = pseudodojo_pbe
+
+CalculationMode = gs
+
+%Coordinates
+ 'Li' | 0.0 | 0.0 | 0.0
+%
+
+ExperimentalFeatures = yes
+
+PseudopotentialAutomaticParameters = yes
+
+Radius = 6.00
+
+SpinComponents = spin_polarized
+
+FromScratch = yes

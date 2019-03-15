@@ -65,6 +65,9 @@ dist_share_DATA =                                  \
 	15-calcium_psp8_sic.test                   \
 	16-platinum_psp8.test                      \
 	16-platinum_psp8.01-gs.inp                 \
-	16-platinum_psp8.78_Pt_r.oncvpsp.psp8
+	16-platinum_psp8.78_Pt_r.oncvpsp.psp8      \
+	17-lithium_automatic.01-gs.inp             \
+	17-lithium_automatic.02-gs_tol.inp         \
+	17-lithium_automatic.test
 
 CLEANFILES = *~ *.bak

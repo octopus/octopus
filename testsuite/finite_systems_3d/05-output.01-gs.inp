@@ -12,7 +12,7 @@ Spacing = 0.5
   "H" | 0 | 0 | 0
 %
 
-Output = density + geometry + wfs + bader + potential + forces + el_pressure + ELF
+Output = density + geometry + wfs + bader + potential + forces + el_pressure + ELF + potential_gradient
 OutputFormat = axis_x + plane_x + dx + xyz + xcrysden + mesh_index
 OutputInterval = 4
 OutputDuringSCF = yes

@@ -194,8 +194,8 @@ namespace pseudopotential {
       return el.mass();
     }
     
-    int valence_charge() const {
-      return value<int>(root_node_->first_node("PP_HEADER")->first_attribute("z_valence"));
+    double valence_charge() const {
+      return value<double>(root_node_->first_node("PP_HEADER")->first_attribute("z_valence"));
     }
 
     pseudopotential::exchange exchange() const {

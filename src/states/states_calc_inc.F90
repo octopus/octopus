@@ -420,7 +420,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 end subroutine X(states_trsm)
 
 ! ---------------------------------------------------------
-subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, mask, overlap, norm, Theta_fi, beta_ij)
+subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, mask, overlap, norm, Theta_fi, beta_ij, against_all)
   type(states_t),    intent(in)    :: st
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: nst
@@ -432,60 +432,107 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   FLOAT,   optional, intent(out)   :: norm
   FLOAT,   optional, intent(in)    :: theta_fi
   R_TYPE,  optional, intent(in)    :: beta_ij(:)   !< beta_ij(nst)
+  logical, optional, intent(in)    :: against_all
 
-  integer :: ist, idim
+  integer :: ist, idim, length_ss, ibind
   FLOAT   :: nrm2
   R_TYPE, allocatable  :: ss(:), psi(:, :)
   type(profile_t), save :: prof
   type(profile_t), save :: reduce_prof
+  logical :: against_all_
+  type(batch_t), pointer :: batch
   
   call profiling_in(prof, "GRAM_SCHMIDT")
   PUSH_SUB(X(states_orthogonalize_single))
 
   ASSERT(nst <= st%nst)
   ASSERT(.not. st%parallel_in_states)
+  ! if against_all is set to true, phi is orthogonalized to all other states except nst+1
+  ! (nst + 1 is chosen because this routine is usually called with nst=ist-1 in a loop)
+  against_all_ = optional_default(against_all, .false.)
 
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(ss(1:nst))
+  length_ss = nst
+  if(against_all_) then
+    length_ss = st%nst
+  end if
+  SAFE_ALLOCATE(ss(1:length_ss))
+  ! Check length of optional arguments
+  if(present(mask)) then
+    ASSERT(ubound(mask, dim=1) >= length_ss)
+  end if
+  if(present(overlap)) then
+    ASSERT(ubound(overlap, dim=1) >= length_ss)
+  end if
+  if(present(beta_ij)) then
+    ASSERT(ubound(beta_ij, dim=1) >= length_ss)
+  end if
 
   ss = M_ZERO
 
-  do ist = 1, nst
+  do ist = 1, st%nst
+    if(skip_this_iteration(ist, nst, against_all_)) cycle
     if(present(mask)) then
       if(mask(ist)) cycle
     end if
-          
-    call states_get_state(st, mesh, ist, iqn, psi)
-    ss(ist) = X(mf_dotp)(mesh, st%d%dim, psi, phi, reduce = .false.)
+ 
+    !To understand this, one should look at states_get_states and batch_get_states routines 
+    batch => st%group%psib(st%group%iblock(ist, iqn), iqn)
+    select case(batch_status(batch))
+    case(BATCH_NOT_PACKED)
+      ss(ist) = R_TOTYPE(M_ZERO)
+      do idim = 1, st%d%dim
+        ibind = batch_inv_index(batch, (/ist, idim/)) 
+        ss(ist) = ss(ist) + X(mf_dotp)(mesh, batch%states_linear(ibind)%X(psi), phi(:,idim), reduce = .false.)
+      end do
+    case(BATCH_PACKED, BATCH_DEVICE_PACKED)
+      !Not properly implemented
+      !We need to reorder the operations is these two cases
+      call states_get_state(st, mesh, ist, iqn, psi)
+      ss(ist) = X(mf_dotp)(mesh, st%d%dim, psi, phi, reduce = .false.)
+    end select
   end do
     
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, "GRAM_SCHMIDT_REDUCE")
-    call comm_allreduce(mesh%mpi_grp%comm, ss, dim = nst)
+    call comm_allreduce(mesh%mpi_grp%comm, ss, dim = length_ss)
     call profiling_out(reduce_prof)
   end if
 
   if(present(mask)) then
-    do ist = 1, nst
+    do ist = 1, st%nst
+      if(skip_this_iteration(ist, nst, against_all_)) cycle
       mask(ist) = (abs(ss(ist)) <= M_EPSILON)
     end do
   end if
 
-  if(present(beta_ij)) ss(1:nst) = ss(1:nst)*beta_ij(1:nst)
+  if(present(beta_ij)) ss(1:length_ss) = ss(1:length_ss)*beta_ij(1:length_ss)
   
   if(present(theta_fi)) then
     if(theta_fi /= M_ONE) phi(1:mesh%np, 1:st%d%dim) = theta_fi*phi(1:mesh%np, 1:st%d%dim)
   end if
 
-  do ist = 1, nst
+  do ist = 1, st%nst
+    if(skip_this_iteration(ist, nst, against_all_)) cycle
     if(present(mask)) then
       if(mask(ist)) cycle
     end if
     
-    call states_get_state(st, mesh, ist, iqn, psi)
-    do idim = 1, st%d%dim
-      call blas_axpy(mesh%np, -ss(ist), psi(1, idim), 1, phi(1, idim), 1)
-    end do
+    batch => st%group%psib(st%group%iblock(ist, iqn), iqn)
+    select case(batch_status(batch))
+    case(BATCH_NOT_PACKED)
+      do idim = 1, st%d%dim
+        ibind = batch_inv_index(batch, (/ist, idim/))
+        call blas_axpy(mesh%np, -ss(ist), batch%states_linear(ibind)%X(psi)(1), 1, phi(1, idim), 1)
+      end do
+    case(BATCH_PACKED, BATCH_DEVICE_PACKED)
+      !Not properly implemented
+      !We need to reorder the operations is these two cases
+      call states_get_state(st, mesh, ist, iqn, psi)
+      do idim = 1, st%d%dim
+        call blas_axpy(mesh%np, -ss(ist), psi(1, idim), 1, phi(1, idim), 1)
+      end do
+    end select
   end do
 
   if(optional_default(normalize, .false.)) then
@@ -493,7 +540,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   end if
 
   if(present(overlap)) then
-    overlap(1:nst) = ss(1:nst)
+    overlap(1:length_ss) = ss(1:length_ss)
   end if
 
   if(present(norm)) then
@@ -507,6 +554,22 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
 
   POP_SUB(X(states_orthogonalize_single))
   call profiling_out(prof)
+
+  contains
+
+    logical function skip_this_iteration(ist, nst, against_all_states)
+      integer, intent(in) :: ist, nst
+      logical, intent(in) :: against_all_states
+
+      skip_this_iteration = .false.
+      if(.not.against_all_states) then
+        ! orthogonalize against previous states only
+        if(ist > nst) skip_this_iteration = .true.
+      else
+        ! orthogonalize against all other states besides nst + 1
+        if(ist == nst + 1) skip_this_iteration = .true.
+      end if
+    end function skip_this_iteration
 end subroutine X(states_orthogonalize_single)
 
 ! ---------------------------------------------------------

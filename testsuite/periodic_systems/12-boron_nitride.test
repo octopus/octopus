@@ -9,11 +9,14 @@ Processors : 4
 
 Input      : 12-boron_nitride.01-gs.inp
 
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+
 match ; Total k-points     ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 4
 match ; Reduced k-points   ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 4
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 187
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;   4
 
+Precision: 0.0005
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -699.52845898
 match ; Free energy        ; GREPFIELD(static/info, 'Free        =', 3) ; -699.52845898
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -1086.63818887
@@ -23,6 +26,7 @@ match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -174.8
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -24.25113390
 match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  516.48043651
 match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  593.97787549
+Precision: 0.0001
 match ; Entropy            ; GREPFIELD(static/info, 'Entropy     =', 3) ;    0.0
 match ; Fermi energy       ; GREPFIELD(static/info, 'Fermi energy =', 4);   -1.383535
 

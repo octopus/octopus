@@ -130,13 +130,18 @@ contains
 
     call batch_pack_was_modified(this)
 
-    if(batch_is_packed(this) .and. accel_is_enabled()) then
+    select case(batch_status(this))
+    case(BATCH_DEVICE_PACKED)
       call accel_set_buffer_to_zero(this%pack%buffer, batch_type(this), product(this%pack%size))
-    else if(batch_is_packed(this) .and. batch_type(this) == TYPE_FLOAT) then
-      this%pack%dpsi = M_ZERO
-    else if(batch_is_packed(this) .and. batch_type(this) == TYPE_CMPLX) then
-      this%pack%zpsi = M_z0
-    else
+
+    case(BATCH_PACKED)
+      if(batch_type(this) == TYPE_FLOAT) then
+        this%pack%dpsi = M_ZERO
+      else
+        this%pack%zpsi = M_z0
+      end if
+
+    case(BATCH_NOT_PACKED)
       do ist_linear = 1, this%nst_linear
         if(associated(this%states_linear(ist_linear)%dpsi)) then
           this%states_linear(ist_linear)%dpsi = M_ZERO
@@ -145,7 +150,10 @@ contains
         end if
       end do
 
-    end if
+    case default
+      ASSERT(.false.)
+      
+    end select
 
     call profiling_out(prof)
 
@@ -171,7 +179,7 @@ subroutine batch_get_points_cl(this, sp, ep, psi, ldpsi)
   case(BATCH_NOT_PACKED, BATCH_PACKED)
     call messages_not_implemented('batch_get_points_cl for non-CL batches')
 
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
 
     tsize = types_get_size(batch_type(this))/types_get_size(TYPE_FLOAT)
     offset = batch_linear_to_ist(this, 1) - 1
@@ -217,7 +225,7 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
   case(BATCH_NOT_PACKED, BATCH_PACKED)
     call messages_not_implemented('batch_get_points_cl for non-CL batches')
 
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
 
     tsize = types_get_size(batch_type(this))&
       /types_get_size(TYPE_FLOAT)

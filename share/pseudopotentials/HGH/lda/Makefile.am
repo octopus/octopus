@@ -35,6 +35,7 @@ dist_hgh_DATA = \
 	Ca.hgh \
 	Cd.hgh \
 	C.hgh \
+	C.hgh.spacing \
 	Cl.hgh \
 	Co.hgh \
 	Cr.hgh \
@@ -46,6 +47,7 @@ dist_hgh_DATA = \
 	Ga.hgh \
 	Ge.hgh \
 	He.hgh \
+	He.hgh.spacing \
 	Hg.hgh \
 	H.hgh \
 	I.hgh \
@@ -61,6 +63,7 @@ dist_hgh_DATA = \
 	Nb.hgh \
 	Ne.hgh \
 	N.hgh \
+	N.hgh.spacing \
 	Ni.hgh \
 	O.hgh \
 	Os.hgh \
