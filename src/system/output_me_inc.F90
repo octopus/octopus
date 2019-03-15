@@ -276,7 +276,7 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
   integer,             intent(in) :: ik
   
   integer :: ist, jst, ip, iunit, idir, idim, ispin
-  R_TYPE :: multip_element
+  FLOAT :: multip_element
   R_TYPE, allocatable :: psii(:, :), psij(:, :), gpsii(:,:,:)
 
   PUSH_SUB(X(output_me_dipole))
@@ -362,17 +362,14 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
         multip_element = X(mf_dotp)(gr%mesh, st%d%dim, gpsii(:, idir, :), psij)
         if(simul_box_is_periodic(gr%mesh%sb)) then
           if(abs(st%eigenval(ist, ik) - st%eigenval(jst, ik)) > CNST(1e-6)) then  
-            multip_element = multip_element/(M_zI*(st%eigenval(ist, ik) - st%eigenval(jst, ik)))
+            multip_element = -multip_element/((st%eigenval(ist, ik) - st%eigenval(jst, ik)))
           else
             multip_element = R_TOTYPE(M_ZERO)
           end if
         end if
         multip_element = units_from_atomic(units_out%length, multip_element)
 
-        write(iunit, fmt='(f20.12)', advance = 'no') R_REAL(multip_element)
-#if defined(R_TCOMPLEX)
-        write(iunit, fmt='(f20.12)', advance = 'no') R_AIMAG(multip_element)
-#endif
+        write(iunit, fmt='(f20.12)', advance = 'no') multip_element
         write(iunit, fmt='(a)', advance = 'no') '   '
       end do
       write(iunit, '(a)') ''

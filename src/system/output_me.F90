@@ -79,9 +79,10 @@ module output_me_oct_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine output_me_init(this, sb, nst)
+  subroutine output_me_init(this, sb, st, nst)
     type(output_me_t), intent(out) :: this
     type(simul_box_t), intent(in)  :: sb
+    type(states_t),    intent(in)  :: st
     integer,           intent(in)  :: nst
 
     PUSH_SUB(output_me_init)
@@ -96,6 +97,8 @@ contains
     !% The output files go into the <tt>static</tt> directory, except when
     !% running a time-dependent simulation, when the directory <tt>td.XXXXXXX</tt> is used.
     !% Example: "momentum + ks_multipoles"
+    !% It is possible to specify only compute the matrix elements for some of the states
+    !% using the variables <tt>OutptMEStart</tt> and <tt>OutputMEEnd</tt>.
     !%Option momentum 1
     !% Momentum. Filename: <tt>ks_me_momentum</tt>.
     !%Option ang_momentum 2

@@ -149,9 +149,10 @@ module output_oct_m
   
 contains
 
-  subroutine output_init(outp, sb, nst, ks)
+  subroutine output_init(outp, sb, st, nst, ks)
     type(output_t),       intent(out)   :: outp
     type(simul_box_t),    intent(in)    :: sb
+    type(states_t),       intent(in)    :: st
     integer,              intent(in)    :: nst
     type(v_ks_t),         intent(inout) :: ks
 
@@ -460,7 +461,7 @@ contains
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me_init(outp%me, sb, nst)
+      call output_me_init(outp%me, sb, st, nst)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then

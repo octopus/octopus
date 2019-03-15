@@ -36,7 +36,10 @@ SymmetrizeDensity = yes
 ExtraStates = 1
 ConvRelDens = 1e-7
 
-Output = geometry + dos
+Output = geometry + dos + matrix_elements
+OutputMatrixElements = dipole
+OutputMEStart = 14
+OutputMEEnd = 16
 OutputFormat = xyz
 
 FilterPotentials = filter_none
