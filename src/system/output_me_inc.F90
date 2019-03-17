@@ -369,7 +369,10 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
         end if
         multip_element = units_from_atomic(units_out%length, multip_element)
 
-        write(iunit, fmt='(f20.12)', advance = 'no') multip_element
+        write(iunit, fmt='(f20.12)', advance = 'no') R_REAL(multip_element)
+#if defined(R_TCOMPLEX)
+        write(iunit, fmt='(f20.12)', advance = 'no') R_AIMAG(multip_element)
+#endif
         write(iunit, fmt='(a)', advance = 'no') '   '
       end do
       write(iunit, '(a)') ''
