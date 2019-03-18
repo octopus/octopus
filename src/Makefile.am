@@ -70,7 +70,6 @@ all_f_srcs =                                   \
 	basic/sort.F90                         \
 	basic/space.F90                        \
 	basic/string.F90                       \
-	basic/topology.F90                     \
 	basic/types.F90                        \
 	basic/unit.F90                         \
 	basic/unit_system.F90                  \
