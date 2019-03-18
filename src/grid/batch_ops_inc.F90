@@ -16,26 +16,6 @@
 !! 02110-1301, USA.
 !!
 
-!--------------------------------------------------------------
-
-subroutine X(batch_set)(this, np, psi)
-  type(batch_t),  intent(inout) :: this
-  integer,        intent(in)    :: np
-  R_TYPE,         intent(in)    :: psi(:, :, :)
-
-  integer :: ist, idim
-
-  PUSH_SUB(X(batch_set))
-
-  do ist = 1, this%nst
-    do idim = 1, this%dim
-      call lalg_copy(np, psi(:, idim, ist), this%states(ist)%X(psi)(:, idim))
-    end do
-  end do
-
-  POP_SUB(X(batch_set))
-end subroutine X(batch_set)
-
 ! --------------------------------------------------------------
 
 subroutine X(batch_axpy_const)(np, aa, xx, yy)

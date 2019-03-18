@@ -38,7 +38,6 @@ module batch_ops_oct_m
 
   private
   public ::                         &
-    batch_set,                      &
     batch_set_zero,                 &
     batch_axpy,                     &
     batch_scal,                     &
@@ -49,11 +48,6 @@ module batch_ops_oct_m
     batch_set_points,               &
     batch_points_block_size,        &
     batch_mul
-
-  interface batch_set
-    module procedure dbatch_set
-    module procedure zbatch_set
-  end interface batch_set
 
   interface batch_axpy
     module procedure dbatch_axpy_const
