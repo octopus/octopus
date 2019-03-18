@@ -62,10 +62,12 @@ AC_DEFUN([ACX_ELPA],
 
   FCFLAGS="$FCFLAGS_ELPA $acx_elpa_save_FCFLAGS"
 
-  if test ! -z "$with_elpa_prefix"; then
-    LIBS_ELPA="-L$with_elpa_prefix/lib -lelpa"
-  else
-    LIBS_ELPA="-lelpa"
+  if test x"$LIBS_ELPA" = x; then
+    if test ! -z "$with_elpa_prefix"; then
+      LIBS_ELPA="-L$with_elpa_prefix/lib -lelpa"
+    else
+      LIBS_ELPA="-lelpa"
+    fi
   fi
 
   LIBS="$LIBS_ELPA $acx_elpa_save_LIBS $LIBS_LAPACK $LIBS_BLAS"

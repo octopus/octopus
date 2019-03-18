@@ -6,15 +6,20 @@ Enabled    : Yes
 
 Input: 02-cu2_hgh.01_gs.inp
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3)    ;  -82.840004665
+Precision: 0.00015704700000398477
+match ; Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -82.84002777
+Precision: 0.0001
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3)    ;   30.25000000
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3)    ;   -5.93938787
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3)    ;  111.143186725
 match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ;  -16.79836539
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3)    ;  -11.484334095
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3)    ;   -1.321453045
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3)    ;   95.04123684
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3)    ; -306.468618785
+Precision: 0.0002
+match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 95.04137266000001
+Precision: 0.00014760350000813107
+match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -306.46877519500003
+Precision: 0.0001
 
 match ; Eigenvalue  1      ; GREPFIELD(static/info, '  1   --', 3)        ; -0.413231
 match ; Eigenvalue  2      ; GREPFIELD(static/info, '  2   --', 3)        ; -0.3158625
@@ -46,8 +51,11 @@ match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3)    ;  11
 match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ;  -16.76377157
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3)    ;  -11.45924579
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3)    ;   -1.32037701
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3)    ;   94.74022675
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3)    ; -305.90145035
+Precision: 0.00012602150000446956
+match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 94.740261695
+Precision: 0.00017300799999588892
+match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -305.90147608
+Precision: 0.0001
 
 match ; Eigenvalue  1      ; GREPFIELD(static/info, '  1   --', 3)        ; -0.423513
 match ; Eigenvalue  2      ; GREPFIELD(static/info, '  2   --', 3)        ; -0.355178

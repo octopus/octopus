@@ -1232,6 +1232,7 @@ contains
     type(multicomm_t), intent(in)    :: mc
 
     integer :: default
+    logical :: pack_default
 
     PUSH_SUB(states_exec_init)
 
@@ -1251,9 +1252,15 @@ contains
     !% execution will stop with an error.
     !%
     !% See also the related <tt>HamiltonianApplyPacked</tt> variable.
+    !%
+    !% The default is yes except when using OpenCL.
     !%End
 
-    call parse_variable('StatesPack', .true., st%d%pack_states)
+    pack_default = .true.
+    if(accel_is_enabled()) then
+      pack_default = .false.
+    end if
+    call parse_variable('StatesPack', pack_default, st%d%pack_states)
 
     !%Variable StatesOrthogonalization
     !%Type integer
@@ -1262,15 +1269,13 @@ contains
     !% The full orthogonalization method used by some
     !% eigensolvers. The default is <tt>cholesky_serial</tt>, except with state
     !% parallelization, the default is <tt>cholesky_parallel</tt>.
-    !%Option gram_schmidt 1
     !%Option cholesky_serial 1
     !% Cholesky decomposition implemented using
     !% BLAS/LAPACK. Can be used with domain parallelization but not
-    !% state parallelization. (Obsolete synonym: <tt>gram_schmidt</tt>)
-    !%Option par_gram_schmidt 1
+    !% state parallelization.
     !%Option cholesky_parallel 2
     !% Cholesky decomposition implemented using
-    !% ScaLAPACK. Compatible with states parallelization. (Obsolete synonym: <tt>par_gram_schmidt</tt>)
+    !% ScaLAPACK. Compatible with states parallelization.
     !%Option cgs 3
     !% Classical Gram-Schmidt (CGS) orthogonalization.
     !% Can be used with domain parallelization but not state parallelization.

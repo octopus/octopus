@@ -124,7 +124,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
     ! one we selected. We choose the size that has the spacing closest
     ! to the requested one.
     do delta = -1, 1
-      spacing_new(delta) = CNST(2.0)*sb%lsize(idir)/real(2*mesh%idx%nr(2, idir) + 1 - delta) 
+      spacing_new(delta) = CNST(2.0)*sb%lsize(idir)/real(2*mesh%idx%nr(2, idir) + 1 - delta, REAL_PRECISION)
       spacing_new(delta) = abs(spacing_new(delta) - spacing(idir))
     end do
 
@@ -133,7 +133,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
     ASSERT(delta >= -1) 
     ASSERT(delta <=  1) 
 
-    mesh%spacing(idir) = CNST(2.0)*sb%lsize(idir)/real(2*mesh%idx%nr(2, idir) + 1 - delta)
+    mesh%spacing(idir) = CNST(2.0)*sb%lsize(idir)/real(2*mesh%idx%nr(2, idir) + 1 - delta, REAL_PRECISION)
 
     ! we need to adjust the grid by adding or removing one point
     if(delta == -1) then
