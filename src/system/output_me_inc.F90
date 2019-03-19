@@ -276,7 +276,7 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
   integer,             intent(in) :: ik
   
   integer :: ist, jst, ip, iunit, idir, idim, ispin
-  FLOAT :: multip_element
+  R_TYPE :: multip_element
   R_TYPE, allocatable :: psii(:, :), psij(:, :), gpsii(:,:,:)
 
   PUSH_SUB(X(output_me_dipole))
@@ -344,7 +344,7 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
         end if
 
         if(hm%lda_u_level /= DFT_U_NONE) then
-          call X(lda_u_commute_r)(hm%lda_u, gr%mesh, st%d, ik, ist, psii, gpsii, &
+          call X(lda_u_commute_r)(hm%lda_u, gr%mesh, st%d, ik, psii, gpsii, &
                             associated(hm%hm_base%phase))
         end if
       end if
