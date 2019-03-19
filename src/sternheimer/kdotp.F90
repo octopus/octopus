@@ -383,9 +383,16 @@ contains
         call messages_not_implemented('KdotPOccupiedSolutionMethod = sum_over_states for non-semiconducting smearing')
       end if
 
+      !%Variable DegeneracyThreshold
+      !%Type float
+      !%Default 1e-5
+      !%Section States
+      !%Description
+      !% States with energy <math>E_i</math> and <math>E_j</math> will be considered degenerate
+      !% if <math> \left| E_i - E_j \right| < </math><tt>DegeneracyThreshold</tt>.
+      !%End
       call parse_variable('DegeneracyThreshold', units_from_atomic(units_inp%energy, CNST(1e-5)), kdotp_vars%degen_thres)
       kdotp_vars%degen_thres = units_to_atomic(units_inp%energy, kdotp_vars%degen_thres)
-      ! Note: this variable is defined in src/states_calc.F90, in states_degeneracy_matrix
 
       !%Variable KdotPEta
       !%Type float

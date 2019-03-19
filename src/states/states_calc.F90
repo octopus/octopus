@@ -71,7 +71,6 @@ module states_calc_oct_m
 
   public ::                         &
     states_orthogonalize,           &
-    states_degeneracy_matrix,       &
     states_rotate,                  &
     dstates_calc_orth_test,         &
     zstates_calc_orth_test,         &
@@ -123,123 +122,6 @@ contains
 
     POP_SUB(states_orthogonalize)
   end subroutine states_orthogonalize
-
-
-  ! -------------------------------------------------------
-  subroutine states_degeneracy_matrix(sb, st, dir)
-    type(simul_box_t), intent(in) :: sb
-    type(states_t),    intent(in) :: st
-    character(len=*),  intent(in) :: dir
-
-    integer :: idir, is, js, inst, inik, iunit
-    integer, allocatable :: eindex(:,:), sindex(:)
-    integer, allocatable :: degeneracy_matrix(:, :)
-    FLOAT,   allocatable :: eigenval_sorted(:)
-    FLOAT :: degen_thres, evis, evjs, kpoint(1:MAX_DIM)
-
-    PUSH_SUB(states_degeneracy_matrix)
-
-    SAFE_ALLOCATE(eigenval_sorted(1:st%nst*st%d%nik))
-    SAFE_ALLOCATE(         sindex(1:st%nst*st%d%nik))
-    SAFE_ALLOCATE(      eindex(1:2, 1:st%nst*st%d%nik))
-    SAFE_ALLOCATE(degeneracy_matrix(1:st%nst*st%d%nik, 1:st%nst*st%d%nik))
-
-    ! convert double index "inst, inik" to single index "is"
-    ! and keep mapping array
-    is = 1
-    do inst = 1, st%nst
-      do inik = 1, st%d%nik
-        eigenval_sorted(is) = st%eigenval(inst, inik)        
-        eindex(1, is) = inst
-        eindex(2, is) = inik
-        is = is + 1
-      end do
-    end do
-
-    ! sort eigenvalues
-    call sort(eigenval_sorted, sindex)
-
-    !%Variable DegeneracyThreshold
-    !%Type float
-    !%Default 1e-5
-    !%Section States
-    !%Description
-    !% States with energy <math>E_i</math> and <math>E_j</math> will be considered degenerate
-    !% if <math> \left| E_i - E_j \right| < </math><tt>DegeneracyThreshold</tt>.
-    !%End
-    call parse_variable('DegeneracyThreshold', units_from_atomic(units_inp%energy, CNST(1e-5)), degen_thres)
-    degen_thres = units_to_atomic(units_inp%energy, degen_thres)
-
-    ! setup degeneracy matrix. the matrix summarizes the degeneracy relations 
-    ! among the states
-    degeneracy_matrix = 0
-
-    do is = 1, st%nst*st%d%nik
-      do js = 1, st%nst*st%d%nik
-
-        ! a state is always degenerate to itself
-        if ( is == js ) cycle
-
-        evis = st%eigenval(eindex(1, sindex(is)), eindex(2, sindex(is)))
-        evjs = st%eigenval(eindex(1, sindex(js)), eindex(2, sindex(js)))
-
-        ! is evjs in the "evis plus minus threshold" bracket?
-        if( (evjs > evis - degen_thres).and.(evjs < evis + degen_thres) ) then
-          ! mark forward scattering states with +1 and backward scattering
-          ! states with -1
-          !WARNING: IS THIS REALLY NECESSARY? - have to calculate momentum
-          degeneracy_matrix(is, js) = 1
-          !degeneracy_matrix(is, js) = &
-          !  sign(1, st%momentum(1, eindex(1, sindex(js)), eindex(2, sindex(js))))
-        end if
-
-      end do
-    end do
-
-    ! write matrix
-    iunit = io_open(trim(dir)//'degeneracy_matrix', action='write')
-    if(mpi_grp_is_root(mpi_world)) then
-      write(iunit, '(a)', advance='no') '# index  '
-      do idir = 1, sb%dim
-        write(iunit, '(2a)', advance='no') 'k', index2axis(idir)
-      end do
-      write(iunit, '(a)') ' eigenvalue  degeneracy matrix'
-
-      do is = 1, st%nst*st%d%nik
-        write(iunit, '(i6,4e24.16,32767i3)') is, &
-          kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, eindex(2, sindex(is)))), &
-          eigenval_sorted(is), (degeneracy_matrix(is, js), js = 1, st%nst*st%d%nik)
-        write(iunit, '(i6)', advance='no') is
-        kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, eindex(2, sindex(is))))
-        do idir = 1, sb%dim
-          write(iunit, '(e24.16)', advance='no') kpoint(idir)
-        end do
-        write(iunit, '(e24.16)', advance='no') eigenval_sorted(is)
-        do js = 1, st%nst * st%d%nik
-          write(iunit, '(i3)') degeneracy_matrix(is, js)
-        end do
-      end do
-    end if
-    if(iunit > 0) call io_close(iunit)
-
-    ! write index vectors
-    iunit = io_open(trim(dir)//'/index_vectors', action='write')    
-    if(mpi_grp_is_root(mpi_world)) then
-      write(iunit, '(a)') '# index  sindex  eindex1 eindex2'
-
-      do is = 1, st%nst*st%d%nik
-        write(iunit,'(4i6)') is, sindex(is), eindex(1, sindex(is)), eindex(2, sindex(is))
-      end do
-    end if
-    if(iunit > 0) call io_close(iunit)
-
-    SAFE_DEALLOCATE_A(eigenval_sorted)
-    SAFE_DEALLOCATE_A(sindex)
-    SAFE_DEALLOCATE_A(eindex)
-    SAFE_DEALLOCATE_A(degeneracy_matrix)
-
-    POP_SUB(states_degeneracy_matrix)
-  end subroutine states_degeneracy_matrix
 
   ! -----------------------------------------------------------------------------
 
