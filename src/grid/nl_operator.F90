@@ -53,7 +53,6 @@ module nl_operator_oct_m
     nl_operator_init,           &
     nl_operator_copy,           &
     nl_operator_build,          &
-    nl_operator_transpose,      &
     dnl_operator_operate,       &
     znl_operator_operate,       &
     snl_operator_operate,           &
@@ -729,43 +728,6 @@ contains
     POP_SUB(nl_operator_update_weights)
 
   end subroutine nl_operator_update_weights
-
-  ! ---------------------------------------------------------
-  subroutine nl_operator_transpose(op, opt)
-    type(nl_operator_t), intent(in)  :: op
-    type(nl_operator_t), intent(out) :: opt
-
-    integer :: ip, jp, kp, lp, index
-
-    PUSH_SUB(nl_operator_transpose)
-
-    call nl_operator_copy(opt, op)
-
-    opt%label = trim(op%label)//' transposed'
-    opt%w_re = M_ZERO
-    if (op%cmplx_op) opt%w_im = M_ZERO
-    do ip = 1, op%np
-      do jp = 1, op%stencil%size
-        index = nl_operator_get_index(op, jp, ip)
-        if(index <= op%np) then
-          do lp = 1, op%stencil%size
-            kp = nl_operator_get_index(op, lp, index)
-            if( kp == ip ) then
-              if(.not.op%const_w) then
-                opt%w_re(jp, ip) = op%w_re(lp, index)
-                if (op%cmplx_op) opt%w_im(jp, ip) = op%w_im(lp, index)
-              else
-                opt%w_re(jp, 1) = op%w_re(lp, 1)
-                if (op%cmplx_op) opt%w_im(jp, 1) = op%w_im(lp, 1)
-              end if
-            end if
-          end do
-        end if
-      end do
-    end do
-
-    POP_SUB(nl_operator_transpose)
-  end subroutine nl_operator_transpose
 
   ! ---------------------------------------------------------
   !> opt has to be initialised and built.
