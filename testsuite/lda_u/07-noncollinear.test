@@ -3,7 +3,7 @@
 Test       : GGA+U for (AF) bulk NiO crystal with noncollinear spins
 Program    : octopus
 TestGroups : long-run, periodic_systems, lda_u
-Enabled    : No
+Enabled    : Yes
 
 Processors : 2
 Precision : 0.0007
