@@ -83,7 +83,6 @@ module states_oct_m
     states_generate_random,           &
     states_fermi,                     &
     states_eigenvalues_sum,           &
-    states_spin_channel,              &
     states_calc_quantities,           &
     state_is_local,                   &
     state_kpt_is_local,               &
@@ -1692,19 +1691,6 @@ contains
 
     POP_SUB(states_eigenvalues_sum)
   end function states_eigenvalues_sum
-
-  ! -------------------------------------------------------
-  integer pure function states_spin_channel(ispin, ik, dim)
-    integer, intent(in) :: ispin, ik, dim
-
-    select case(ispin)
-    case(1); states_spin_channel = 1
-    case(2); states_spin_channel = mod(ik+1, 2)+1
-    case(3); states_spin_channel = dim
-    case default; states_spin_channel = -1
-    end select
-
-  end function states_spin_channel
 
 
   ! ---------------------------------------------------------
