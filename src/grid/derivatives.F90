@@ -61,7 +61,6 @@ module derivatives_oct_m
     derivatives_init,                   &
     derivatives_end,                    &
     derivatives_build,                  &
-    derivatives_stencil_extent,         &
     derivatives_handle_batch_t,         &
     dderivatives_test,                  &
     zderivatives_test,                  &
@@ -301,32 +300,6 @@ contains
 
     POP_SUB(derivatives_end)
   end subroutine derivatives_end
-
-
-  ! ---------------------------------------------------------
-  !> Returns maximum extension of the stencil in spatial direction
-  !! dir = 1, 2, 3 for a given derivative der.
-  integer function derivatives_stencil_extent(der, dir) result(extent)
-    type(derivatives_t), intent(in) :: der
-    integer,             intent(in) :: dir
-
-    PUSH_SUB(stencil_extent)
-
-    select case(der%stencil_type)
-      case(DER_STAR)
-        extent = stencil_star_extent(dir, der%order)
-      case(DER_VARIATIONAL)
-        extent = stencil_variational_extent(dir, der%order)
-      case(DER_CUBE)
-        extent = stencil_cube_extent(dir, der%order)
-      case(DER_STARPLUS)
-        extent = stencil_cube_extent(dir, der%order)
-      case(DER_STARGENERAL)
-        extent = stencil_cube_extent(dir, der%order)
-      end select
-      
-    POP_SUB(stencil_extent)
-  end function derivatives_stencil_extent
 
 
   ! ---------------------------------------------------------
