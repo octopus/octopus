@@ -144,7 +144,6 @@ module pcm_eom_oct_m
    if(firsttime) then
     dt=this_dt
     nts_act=size(this_cts_act)
-    write(*,*) "Number of tesserae", nts_act
     if (size(q_t) /= nts_act) then
       message(1) = "pcm_charges_propagation: Number of tesserae do not coincide with size of PCM charges array."
       call messages_fatal(1)     

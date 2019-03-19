@@ -938,11 +938,13 @@ contains
   logical function epot_have_lasers(ep)
     type(epot_t), intent(in)  :: ep
 
+    PUSH_SUB(epot_have_lasers)
+
     epot_have_lasers = .false.
 
     if( ep%no_lasers /= 0 ) epot_have_lasers = .true.
 
-    return
+    POP_SUB(epot_have_lasers)
 
   end function epot_have_lasers
 
@@ -951,11 +953,13 @@ contains
   logical function epot_have_kick(ep)
     type(epot_t), intent(in)  :: ep
 
+    PUSH_SUB(epot_have_kick)
+
     epot_have_kick = .false.
 
     if( ep%kick%delta_strength /= M_ZERO ) epot_have_kick = .true.
 
-    return
+    POP_SUB(epot_have_kick)
 
   end function epot_have_kick
 
@@ -964,11 +968,13 @@ contains
   logical function epot_have_external_potentials(ep)
     type(epot_t), intent(in)  :: ep
 
+    PUSH_SUB(epot_have_external_potentials)
+
     epot_have_external_potentials =  .false.
 
     if( associated(ep%v_static) .or. associated(ep%E_field) .or. epot_have_lasers(ep) ) epot_have_external_potentials = .true.
 
-    return
+    POP_SUB(epot_have_external_potentials)
 
   end function epot_have_external_potentials
 

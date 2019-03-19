@@ -435,7 +435,7 @@ contains
 
     external_potentials_present = epot_have_external_potentials(hm%ep)
 
-    kick_present = hm%ep%kick%delta_strength /= M_ZERO
+    kick_present = epot_have_kick(hm%ep)
 
     call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM  
     if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT")
