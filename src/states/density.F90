@@ -383,7 +383,7 @@ contains
     type(multicomm_t), intent(in)    :: mc
     integer,           intent(in)    :: n
 
-    integer :: ist, istaux, istep, ik, ib, nblock
+    integer :: ist, istep, ik, ib, nblock, st_min
     integer :: nodeto, nodefr, nsend, nreceiv
     type(states_t) :: staux
     CMPLX, allocatable :: psi(:, :, :), rec_buffer(:,:)
@@ -443,8 +443,6 @@ contains
 
     call density_calc_end(dens_calc)
 
-    print *, st%frozen_rho(100,1)
-
     call states_copy(staux, st)
 
     st%nst = st%nst - n
@@ -467,46 +465,40 @@ contains
         end do
         nreceiv = st%st_end-st%st_start+1
 
-        ist = st%st_start
-        istaux = max(staux%st_start, 1+n)
-
-        do istep = 1, max(nsend,nreceiv)+n
-          if(ist==istaux) then
-            nodeto = st%node(istaux-n)
-            nodefr = staux%node(ist)
-          else 
-            nodeto = st%node(istaux-n)
-            nodefr = staux%node(ist+n)
-          end if
+        st_min = min(max(staux%st_start-n, 1),st%st_start)
+ 
+        do ist = st_min, st%st_end
+          nodeto = -1
+          nodefr = -1
+          if(nsend > 0 .and. ist+n <= staux%st_end) nodeto = st%node(ist)
+          if(nreceiv > 0 .and. ist >= st%st_start) nodefr = staux%node(ist+n)
 
           !Local copy
-          if(nsend >0 .and. nreceiv>0 .and. nodeto == nodefr .and. nodefr == mpi_world%rank) then
-            call states_get_state(staux, gr%mesh, istaux, ik, psi(:, :, 1))
-            call states_set_state(st, gr%mesh, istaux-n, ik, psi(:, :, 1))            
-            ist = ist + 1
-            istaux = istaux + 1
+          if(nsend >0 .and. nreceiv>0 .and. nodeto == nodefr .and. nodefr == st%mpi_grp%rank) then
+            call states_get_state(staux, gr%mesh, ist+n, ik, psi(:, :, 1))
+            call states_set_state(st, gr%mesh, ist, ik, psi(:, :, 1))            
             nsend = nsend -1
             nreceiv= nreceiv-1
           else
-            if(nsend > 0 .and. nodeto /= mpi_world%rank) then
-              call states_get_state(staux, gr%mesh, istaux, ik, psi(:, :, 1))
-              call MPI_Send(psi(1, 1, 1), gr%mesh%np*st%d%dim, MPI_CMPLX, nodeto, istaux-n, &
+            if(nsend > 0 .and. nodeto > -1 .and. nodeto /= st%mpi_grp%rank) then
+              call states_get_state(staux, gr%mesh, ist+n, ik, psi(:, :, 1))
+              call MPI_Send(psi(1, 1, 1), gr%mesh%np*st%d%dim, MPI_CMPLX, nodeto, ist, &
                     st%mpi_grp%comm, mpi_err)
-              istaux = istaux+1
               nsend = nsend -1
             end if          
 
-            if(nreceiv > 0 .and. nodefr /= mpi_world%rank) then
+            if(nreceiv > 0 .and. nodefr > -1 .and. nodefr /= st%mpi_grp%rank) then
               call MPI_Recv(rec_buffer(1, 1), gr%mesh%np*st%d%dim, MPI_CMPLX, nodefr, &
                  ist, st%mpi_grp%comm, status, mpi_err)
               call states_set_state(st, gr%mesh, ist, ik, rec_buffer(:, :))
-              ist = ist + 1
               nreceiv= nreceiv-1
             end if
           end if
         end do
-  
       end do
+
+      ! Add a barrier to ensure that the process are synchronized
+      call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
    
     else
