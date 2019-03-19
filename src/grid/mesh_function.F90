@@ -49,10 +49,6 @@ module mesh_function_oct_m
     zmf_integrate,         &
     smf_integrate,         &
     cmf_integrate,         &
-    dmf_add,               &
-    zmf_add,               &
-    smf_add,               &
-    cmf_add,               &    
     dmf_dotp,              &
     zmf_dotp,              &
     smf_dotp,              &
