@@ -51,8 +51,6 @@ module mesh_batch_oct_m
     zmesh_batch_dotp_vector,        &
     dmesh_batch_dotp_self,          &
     zmesh_batch_dotp_self,          &
-    dmesh_batch_rotate,             &
-    zmesh_batch_rotate,             &
     dmesh_batch_exchange_points,    &
     zmesh_batch_exchange_points,    &
     mesh_batch_nrm2
