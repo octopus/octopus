@@ -31,7 +31,6 @@ module stencil_star_oct_m
   private
   public ::                        &
     stencil_star_size_lapl,        &
-    stencil_star_extent,           &
     stencil_star_get_lapl,         &
     stencil_star_polynomials_lapl, &
     stencil_star_coeff_lapl,       &
@@ -54,21 +53,6 @@ contains
     POP_SUB(stencil_star_size_lapl)
   end function stencil_star_size_lapl
 
-
-  ! ---------------------------------------------------------
-  !> Returns maximum extension of the stencil in spatial direction
-  !! dir = 1, 2, 3 for a given discretization order.
-  integer function stencil_star_extent(dir, order)
-    integer, intent(in) :: dir
-    integer, intent(in) :: order
-
-    PUSH_SUB(stencil_star_extent)
-
-    stencil_star_extent = order
-
-    POP_SUB(stencil_star_extent)
-  end function stencil_star_extent
-  
 
   ! ---------------------------------------------------------
   subroutine stencil_star_get_lapl(this, dim, order)
