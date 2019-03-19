@@ -42,7 +42,6 @@ module potential_interpolation_oct_m
     potential_interpolation_new,                  &
     potential_interpolation_set,                  &
     potential_interpolation_get,                  &
-    potential_interpolation_diff,                 &
     potential_interpolation_interpolate,          &
     potential_interpolation_dump,                 &
     potential_interpolation_load
@@ -294,35 +293,6 @@ contains
 
     POP_SUB(potential_interpolation_get)
   end subroutine potential_interpolation_get
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  subroutine potential_interpolation_diff(vksold, gr, nspin, vhxc, i, diff)
-    type(potential_interpolation_t), intent(inout) :: vksold
-    type(grid_t),      intent(in)    :: gr
-    integer,           intent(in)    :: nspin
-    FLOAT,             intent(inout) :: vhxc(:, :)
-    integer,           intent(in)    :: i
-    FLOAT,             intent(out)   :: diff
-
-    integer :: is
-    FLOAT :: d
-    FLOAT, allocatable :: dtmp(:)
-    PUSH_SUB(potential_interpolation_diff)
-
-    SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
-
-    diff = M_ZERO
-    do is = 1, nspin
-      dtmp(1:gr%mesh%np) = vhxc(1:gr%mesh%np, is) - vksold%v_old(1:gr%mesh%np, is, i)
-      d = dmf_nrm2(gr%mesh, dtmp)
-      if(d > diff) diff = d
-    end do
-
-    SAFE_DEALLOCATE_A(dtmp)
-    POP_SUB(potential_interpolation_diff)
-  end subroutine potential_interpolation_diff
   ! ---------------------------------------------------------
 
 
