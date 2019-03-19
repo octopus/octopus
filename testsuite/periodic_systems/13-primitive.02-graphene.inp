@@ -33,6 +33,7 @@ ExtraStates = 2
 SmearingFunction = fermi_dirac
 Smearing = 0.001
 
+ConvAbsEv = 1e-5
 
 
 %KPointsReduced

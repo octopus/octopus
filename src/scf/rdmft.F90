@@ -398,8 +398,8 @@ contains
         end do
       else
         ! initialize eigensolver
-				call eigensolver_init(rdm%eigens, gr, st)
-!		copied from scf, for the moment probably not necessary
+				call eigensolver_init(rdm%eigens, gr, st, ks%xc)
+!		copied from scf, precondiitoner not yet implemented for cg with rdmft
 !		if(preconditioner_is_multigrid(rdm%eigens%pre)) then
 !		  SAFE_ALLOCATE(gr%mgrid_prec)
 !		  call multigrid_init(gr%mgrid_prec, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc, &
@@ -1130,10 +1130,12 @@ contains
 				call loct_progress_bar(-1, st%lnst*st%d%kpt%nlocal)
 			end if
 			!! For RDMFT, needs to be called with: orthogonalize_to_all=.true.
-      call deigensolver_cg2(gr, st, hm, rdm%eigens%pre, rdm%eigens%tolerance, maxiter, &
+			!!																		additional_terms=.false.
+      call deigensolver_cg2(gr, st, hm, rdm%eigens%xc, rdm%eigens%pre, rdm%eigens%tolerance, maxiter, &
             rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), &
             orthogonalize_to_all=.false., &
-            conjugate_direction=rdm%eigens%conjugate_direction)
+            conjugate_direction=rdm%eigens%conjugate_direction, &
+            additional_terms=.false.)
   
 			if(st%calc_eigenval .and. .not. rdm%eigens%folded_spectrum) then
 				! recheck convergence after subspace diagonalization, since states may have reordered (copied from eigensolver_run)

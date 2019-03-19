@@ -15,8 +15,8 @@ match;  Hartree energy     ;	 GREPFIELD(static/info, 'Hartree     =', 3) ;	76.89
 match;  Int[n*v_xc]        ;	 GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ;	-14.40894290
 match;  Exchange energy    ;	 GREPFIELD(static/info, 'Exchange    =', 3) ;	-9.94940641
 match;  Correlation energy ;	 GREPFIELD(static/info, 'Correlation =', 3) ;	-1.01858366
-match;  Kinetic energy     ;	 GREPFIELD(static/info, 'Kinetic     =', 3) ;	43.84640188
-match;  External energy    ;	 GREPFIELD(static/info, 'External    =', 3) ;	-202.36216653
+match;  Kinetic energy     ;	 GREPFIELD(static/info, 'Kinetic     =', 3) ;	43.84655523
+match;  External energy    ;	 GREPFIELD(static/info, 'External    =', 3) ;	-202.36230525
 match;  Eigenvalue 1       ;	 GREPFIELD(static/info, '  1   --', 3) ;	-2.968350
 match;  Eigenvalue 2       ;	 GREPFIELD(static/info, '  2   --', 3) ;	-1.789029
 match;  Eigenvalue 3       ;	 GREPFIELD(static/info, '  3   --', 3) ;	-1.789029
