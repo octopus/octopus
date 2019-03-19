@@ -284,7 +284,6 @@ all_f_srcs +=                                 \
 	grid/partition_transfer.F90           \
 	grid/par_vec.F90                      \
 	grid/restart.F90                      \
-	grid/sphericalmesh.F90                \
 	grid/stencil_cube.F90                 \
 	grid/stencil.F90                      \
 	grid/stencil_star.F90                 \
