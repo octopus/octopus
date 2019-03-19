@@ -149,7 +149,7 @@ contains
     character(len=256) :: fname
     FLOAT, allocatable :: doneint(:), dtwoint(:)
     CMPLX, allocatable :: zoneint(:), ztwoint(:)
-    integer, allocatable :: iindex(:), jindex(:), kindex(:), lindex(:)
+    integer, allocatable :: iindex(:,:), jindex(:,:), kindex(:,:), lindex(:,:)
     
     PUSH_SUB(output_me)
 
@@ -215,8 +215,8 @@ contains
       message(1) = "Computing one-body matrix elements"
       call messages_info(1)
 
-      ASSERT(.not. st%parallel_in_states)
-      if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
+      if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=one_body with states parallelization")
+      if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=one_body with k-points parallelization")
       if(hm%family_is_mgga_with_exc) &
       call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
       ! how to do this properly? states_matrix
@@ -224,21 +224,21 @@ contains
 
       id = st%nst*(st%nst+1)/2
 
-      SAFE_ALLOCATE(iindex(1:id))
-      SAFE_ALLOCATE(jindex(1:id))
+      SAFE_ALLOCATE(iindex(1:id,1:1))
+      SAFE_ALLOCATE(jindex(1:id,1:1))
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(doneint(1:id))
-        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, doneint)
+        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), doneint)
         do ll = 1, id
-          write(iunit, *) iindex(ll), jindex(ll), doneint(ll)
+          write(iunit, *) iindex(ll,1), jindex(ll,1), doneint(ll)
         enddo
         SAFE_DEALLOCATE_A(doneint)
       else
         SAFE_ALLOCATE(zoneint(1:id))
-        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, zoneint)
+        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), zoneint)
         do ll = 1, id
-          write(iunit, *) iindex(ll), jindex(ll), zoneint(ll)
+          write(iunit, *) iindex(ll,1), jindex(ll,1), zoneint(ll)
         enddo
         SAFE_DEALLOCATE_A(zoneint)
       end if
@@ -254,28 +254,29 @@ contains
       call messages_info(1)
 
       ASSERT(.not. st%parallel_in_states)
-      if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
+      if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body with states parallelization")
+      if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization")
       ! how to do this properly? states_matrix
       iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
 
-      id = st%nst*(st%nst+1)*(st%nst**2+st%nst+2)/8
-      SAFE_ALLOCATE(iindex(1:id))
-      SAFE_ALLOCATE(jindex(1:id))
-      SAFE_ALLOCATE(kindex(1:id))
-      SAFE_ALLOCATE(lindex(1:id))
+      id = st%d%nik*st%nst*(st%d%nik*st%nst+1)*(st%d%nik**2*st%nst**2+st%d%nik*st%nst+2)/8
+      SAFE_ALLOCATE(iindex(1:id, 1:2))
+      SAFE_ALLOCATE(jindex(1:id, 1:2))
+      SAFE_ALLOCATE(kindex(1:id, 1:2))
+      SAFE_ALLOCATE(lindex(1:id, 1:2))
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(dtwoint(1:id))
-        call dstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, dtwoint)
+        call dstates_me_two_body(gr, st, st%st_start, st%st_end, iindex, jindex, kindex, lindex, dtwoint)
         do ll = 1, id
-          write(iunit, *) iindex(ll), jindex(ll), kindex(ll), lindex(ll), dtwoint(ll)
+          write(iunit, *) iindex(ll,1:2), jindex(ll,1:2), kindex(ll,1:2), lindex(ll,1:2), dtwoint(ll)
         enddo
         SAFE_DEALLOCATE_A(dtwoint)
       else
         SAFE_ALLOCATE(ztwoint(1:id))
-        call zstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, ztwoint)
+        call zstates_me_two_body(gr, st, st%st_start, st%st_end, iindex, jindex, kindex, lindex, ztwoint)
         do ll = 1, id
-          write(iunit, *) iindex(ll), jindex(ll), kindex(ll), lindex(ll), ztwoint(ll)
+          write(iunit, *) iindex(ll,1:2), jindex(ll,1:2), kindex(ll,1:2), lindex(ll,1:2), ztwoint(ll)
         enddo
         SAFE_DEALLOCATE_A(ztwoint)
       end if

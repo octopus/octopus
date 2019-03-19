@@ -70,7 +70,7 @@ module rdmft_oct_m
     FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO
     FLOAT, allocatable   :: eone(:), eone_int(:,:), twoint(:), hartree(:,:), exchange(:,:), evalues(:)   
     FLOAT, allocatable   :: vecnat(:,:), Coul(:,:,:), Exch(:,:,:) 
-    integer, allocatable :: i_index(:), j_index(:), k_index(:), l_index(:) 
+    integer, allocatable :: i_index(:,:), j_index(:,:), k_index(:,:), l_index(:,:) 
 
     !>shortcuts
     type(states_t),   pointer :: st
@@ -335,10 +335,10 @@ contains
         rdm%n_twoint = st%nst*(st%nst+1)*(st%nst**2+st%nst+2)/8 
         SAFE_ALLOCATE(rdm%eone_int(1:st%nst, 1:st%nst))
         SAFE_ALLOCATE(rdm%twoint(1:rdm%n_twoint))
-        SAFE_ALLOCATE(rdm%i_index(1:rdm%n_twoint))
-        SAFE_ALLOCATE(rdm%j_index(1:rdm%n_twoint))
-        SAFE_ALLOCATE(rdm%k_index(1:rdm%n_twoint))
-        SAFE_ALLOCATE(rdm%l_index(1:rdm%n_twoint))
+        SAFE_ALLOCATE(rdm%i_index(1:rdm%n_twoint,1:2))
+        SAFE_ALLOCATE(rdm%j_index(1:rdm%n_twoint,1:2))
+        SAFE_ALLOCATE(rdm%k_index(1:rdm%n_twoint,1:2))
+        SAFE_ALLOCATE(rdm%l_index(1:rdm%n_twoint,1:2))
         SAFE_ALLOCATE(rdm%vecnat(1:st%nst, 1:st%nst))
         SAFE_ALLOCATE(rdm%Coul(1:rdm%st%nst, 1:rdm%st%nst, 1:rdm%st%nst))
         SAFE_ALLOCATE(rdm%Exch(1:rdm%st%nst, 1:rdm%st%nst, 1:rdm%st%nst))
@@ -464,7 +464,7 @@ contains
     st%occ = occin
     
     if((rdm%iter == 1).and. (rdm%do_basis.eqv. .true.))  then 
-      call dstates_me_two_body(gr, st, rdm%n_twoint, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
+      call dstates_me_two_body(gr, st, st%st_start, st%st_end, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
       call rdm_integrals(rdm,hm,st,gr) 
       call sum_integrals(rdm)
     end if
@@ -1311,10 +1311,10 @@ contains
 
     do icount = 1, rdm%n_twoint
 
-      ist = rdm%i_index(icount) 
-      jst = rdm%j_index(icount) 
-      kst = rdm%k_index(icount) 
-      lst = rdm%l_index(icount) 
+      ist = rdm%i_index(icount,1) 
+      jst = rdm%j_index(icount,1) 
+      kst = rdm%k_index(icount,1) 
+      lst = rdm%l_index(icount,1) 
 
       two_int = rdm%twoint(icount)
          
