@@ -191,11 +191,11 @@ contains
       
       rel_ener = abs(energy_occ-energy)/abs(energy)
 
-      write(message(1),'(a,es20.10)') 'Total energy:', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
-      write(message(2),'(a,2x,es20.10)') 'Relative: ', rel_ener
+      write(message(1),'(a,es20.10)') 'Total energy orb', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+      write(message(2),'(a,2x,es20.10)') 'Relative ', rel_ener
       call messages_info(2)
       if (rdm%hf.eqv. .false.) then
-				write(message(1),'(a,5x,es20.10)') 'Max F0:', rdm%maxFO
+				write(message(1),'(a,5x,es20.10)') 'Max F0', rdm%maxFO
 				call messages_info(1)
 			end if
 
@@ -626,7 +626,7 @@ contains
     end do
 
     write(message(1),'(a,1x,f11.9)') 'Sum of occupation numbers', rdm%occsum
-    write(message(2),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+    write(message(2),'(a,es20.10)') 'Total energy occ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
     call messages_info(2)   
     
     POP_SUB(scf_occ_NO)

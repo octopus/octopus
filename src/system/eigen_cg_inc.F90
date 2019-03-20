@@ -195,14 +195,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 					lam(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_lam, h_psi))
 					
 					! calculate <phi_i|H|phi_j>=lam_ij
-					ppsi2  = R_TOTYPE(M_ZERO)
-					call X(hamiltonian_apply)(hm, gr%der, psi_lam, h_cg, jst, ik, terms = TERM_KINETIC &
-																	& + TERM_LOCAL_POTENTIAL + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)                !! 1-body+hartree ( hartree and external included in TERM_LOCAL_POTENTIAL) 
-					call X(hamiltonian_apply)(hm, gr%der, psi_lam, ppsi2, jst, ik, terms = TERM_OTHERS, set_occ = .true.)			 ! exchange
-					h_cg = h_cg  + ppsi2
-					
+					call X(hamiltonian_apply)(hm, gr%der, psi_lam, h_cg, jst, ik, set_occ = .true.)
 					lam_conj(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
-					
 					h_cg= R_TOTYPE(M_ZERO)
 			
 					forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
@@ -232,32 +226,23 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 !				cg_vec_lam = R_TOTYPE(M_ZERO) 
 !				do jst = 1, st%nst
 !					if (jst == ist) then
-!!						psi_lam = psi
-						
 !						lam(jst) = st%eigenval(ist, ik)
 !						lam_conj(jst) = st%eigenval(ist, ik)
-!!						h_cg = h_psi
 !					else
 !						call states_get_state(st, gr%mesh, jst, ik, psi_lam)
 						
 !						! calculate <phi_j|H|phi_i>	=lam_ji
 !						lam(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_lam, h_psi))
 						
-!						! calculate <phi_i|H|phi_j>=lam_ij
-!						ppsi2  = R_TOTYPE(M_ZERO)
-!						call X(hamiltonian_apply)(hm, gr%der, psi_lam, h_cg, jst, ik, terms = TERM_KINETIC &
-!																		& + TERM_LOCAL_POTENTIAL + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)                !! 1-body+hartree ( hartree and external included in TERM_LOCAL_POTENTIAL) 
-!						call X(hamiltonian_apply)(hm, gr%der, psi_lam, ppsi2, jst, ik, terms = TERM_OTHERS, set_occ = .true.)			 ! exchange
-!						h_cg = h_cg  + ppsi2
-
+!  					! calculate <phi_i|H|phi_j>=lam_ij
+!						call X(hamiltonian_apply)(hm, gr%der, psi_lam, h_cg, jst, ik, set_occ = .true.)
 !						lam_conj(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
-				
 !						h_cg= R_TOTYPE(M_ZERO)
-!					end if						
 				
-!					forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-!						cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_lam(ip, idim) !! works also with -lam
-!					end forall	
+!						forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+!							cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_lam(ip, idim) !! works also with -lam
+!						end forall	
+!					end if
 !				end do
 				
 				forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
