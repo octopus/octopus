@@ -34,8 +34,13 @@ subroutine X(mixing)(smix, vin, vout, vnew)
   case (OPTION__MIXINGSCHEME__LINEAR)
     call X(mixing_linear)(smix%coeff, smix%mixfield%d1, smix%mixfield%d2, smix%mixfield%d3, vin, vout, vnew)
     do ii = 1, smix%nauxmixfield
-      call X(mixing_linear)(smix%coeff, smix%auxmixfield(ii)%p%d1, smix%auxmixfield(ii)%p%d2, smix%auxmixfield(ii)%p%d3, &
-                                  smix%auxmixfield(ii)%p%X(vin), smix%auxmixfield(ii)%p%X(vout), smix%auxmixfield(ii)%p%X(vnew))
+      if(smix%auxmixfield(ii)%p%func_type == TYPE_FLOAT) then
+        call dmixing_linear(smix%coeff, smix%auxmixfield(ii)%p%d1, smix%auxmixfield(ii)%p%d2, smix%auxmixfield(ii)%p%d3, &
+                            smix%auxmixfield(ii)%p%dvin, smix%auxmixfield(ii)%p%dvout, smix%auxmixfield(ii)%p%dvnew)
+      else
+        call zmixing_linear(smix%coeff, smix%auxmixfield(ii)%p%d1, smix%auxmixfield(ii)%p%d2, smix%auxmixfield(ii)%p%d3, &
+                            smix%auxmixfield(ii)%p%zvin, smix%auxmixfield(ii)%p%zvout, smix%auxmixfield(ii)%p%zvnew)
+      end if
     end do
  
   case (OPTION__MIXINGSCHEME__BROYDEN)
