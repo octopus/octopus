@@ -139,7 +139,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
     end if
 
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
     ASSERT(.not. mesh%use_curvilinear)
 
     call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
@@ -172,7 +172,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     
   end select
 
-  if(batch_status(aa) /= BATCH_CL_PACKED) then
+  if(batch_status(aa) /= BATCH_DEVICE_PACKED) then
     if(mesh%use_curvilinear) then
       call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
     else
@@ -473,7 +473,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
 
     SAFE_DEALLOCATE_A(tmp)
 
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
 
     call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack%size(1))
 
@@ -523,6 +523,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
   type(batch_t),     intent(inout) :: aa              !< A batch which contains the mesh functions whose points will be exchanged.
   integer, optional, intent(in)    :: forward_map(:)  !< A map which gives the destination of the value each point.
   logical, optional, intent(in)    :: backward_map    !< A map which gives the source of the value of each point.
+  logical :: packed_on_entry
 
 #ifdef HAVE_MPI
   integer :: ip, ipg, npart, ipart, ist, pos, nstl, np_points, np_inner, np_bndry
@@ -538,7 +539,10 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 
   ASSERT(present(backward_map) .neqv. present(forward_map))
   ASSERT(batch_type(aa) == R_TYPE_VAL)
-  ASSERT(batch_status(aa) == BATCH_NOT_PACKED)
+  packed_on_entry = batch_status(aa) == BATCH_NOT_PACKED
+  if (packed_on_entry) then
+    call batch_unpack(aa, force=.true.)
+  end if
 
   if(.not. mesh%parallel_in_domains) then
     message(1) = "Not implemented for the serial case. Really, only in parallel."
@@ -722,6 +726,9 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 #endif
   end if
 
+  if (packed_on_entry) then
+    call batch_pack(aa)
+  end if
   POP_SUB(X(mesh_batch_exchange_points))
 end subroutine X(mesh_batch_exchange_points)
 
@@ -799,7 +806,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
       end do
     end do
 
-  case(BATCH_CL_PACKED)
+  case(BATCH_DEVICE_PACKED)
 
     ASSERT(.not. mesh%use_curvilinear)
 

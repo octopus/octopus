@@ -31,11 +31,8 @@ XCFunctional = gga_x_pbe + gga_c_pbe
 SCFinLCAO = yes
 ExperimentalFeatures = yes
 Output = geometry + density
-OutputFormat = openscad + matlab + plane_z
+OutputFormat = matlab + plane_z
 
 SCFCalculatePartialCharges = yes
 
 ExperimentalFeatures = yes
-
-#We need to disable OpenCL as the OpenSCAD file changes considerably for small numerical differences
-DisableOpenCL = yes

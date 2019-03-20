@@ -82,4 +82,4 @@ electric_field | 1 | 0 | 0 | 0.0 | "envelope_function"
 
 ProfilingMode = prof_time
 
-DisableOpenCL = yes
+DisableAccel = yes

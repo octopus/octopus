@@ -36,8 +36,12 @@ module eigen_cg_oct_m
   use mpi_lib_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
+  use poisson_oct_m
   use states_oct_m
   use states_calc_oct_m
+  use states_dim_oct_m
+  use xc_oct_m
+  use XC_F90(lib_m)
 
   implicit none
 

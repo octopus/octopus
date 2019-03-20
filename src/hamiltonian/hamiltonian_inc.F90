@@ -17,7 +17,7 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, set_phase)
+subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, set_phase, occ)
   type(hamiltonian_t),   intent(in)    :: hm
   type(derivatives_t),   intent(in)    :: der
   type(batch_t), target, intent(inout) :: psib
@@ -26,14 +26,14 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
   integer, optional,     intent(in)    :: terms
   logical, optional,     intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
   logical, optional,     intent(in)    :: set_phase !< If set to .false. the phase will not be added to the states.
+  FLOAT, optional, 			 intent(in)    :: occ !< Occupation of current state, used for RDMFT
 
-  logical :: apply_phase, pack, set_phase_ !, set_occ_
+  logical :: apply_phase, pack, set_phase_ , set_occ
   type(batch_t), pointer :: epsib
   type(derivatives_handle_batch_t) :: handle
   integer :: terms_
   type(projection_t) :: projection
   logical :: copy_at_end
-  FLOAT :: occ_
   
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
   PUSH_SUB(X(hamiltonian_apply_batch))
@@ -42,10 +42,16 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
 
   ! all terms are enabled by default
   terms_ = optional_default(terms, TERM_ALL)
-  set_phase_ = optional_default(set_phase, .true.)
+  set_phase_ = optional_default(set_phase, .true.)	
   ! OpenCL is not supported for the phase correction at the moment
   if(.not.set_phase_) then
-    if(batch_status(psib) == BATCH_CL_PACKED) set_phase_ = .true.
+    if(batch_status(psib) == BATCH_DEVICE_PACKED) set_phase_ = .true.
+  end if
+  
+  if(present(occ)) then
+    set_occ = .true.
+  else
+		set_occ = .false.
   end if
 
   ASSERT(batch_is_ok(psib))
@@ -126,10 +132,16 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
     if(hm%hm_base%apply_projector_matrices) then
       call X(hamiltonian_base_nlocal_finish)(hm%hm_base, der%mesh, hm%d, ik, projection, hpsib)
     else
-      ASSERT(.not. batch_is_packed(hpsib))
       call X(project_psi_batch)(der%mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib, ik)
     end if
   end if
+  
+  ! multiply with occupation number
+  ! ideally this should be done in all the sub parts of hamiltonian_apply to avoid using get and set state one time more than necessary
+	! hwoever, this would mean to change many standard routines, which is also not optimal
+  if(hm%theory_level == RDMFT .and. set_occ .eqv. .true.) then
+			call X(occ_apply)(hm, der, hpsib, occ, terms_)
+	endif
 
   if (bitand(TERM_OTHERS, terms_) /= 0 .and. hamiltonian_base_has_magnetic(hm%hm_base)) then
     call X(hamiltonian_base_magnetic)(hm%hm_base, der, hm%d, hm%ep, &
@@ -157,8 +169,8 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
       end if
 
     case(RDMFT)
-      call X(rdmft_exchange_operator)(hm, der, ik, epsib, hpsib, occ_)
-
+			 call X(exchange_operator)(hm, der, ik, hm%exx_coef, epsib, hpsib, occ)
+!      call X(rdmft_exchange_operator)(hm, der, ik, epsib, hpsib, occ_)
     end select
     call profiling_out(prof_exx)
     
@@ -173,7 +185,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
   end if
 
   if(iand(TERM_DFT_U, terms_) /= 0 .and. hm%lda_u_level /= DFT_U_NONE) then
-    call X(lda_u_apply)(hm%lda_u, hm%d, ik, epsib, hpsib, apply_phase)
+    call X(lda_u_apply)(hm%lda_u, hm%d, der%mesh, ik, epsib, hpsib, apply_phase)
   end if  
 
   if(apply_phase .and. set_phase_) then
@@ -222,7 +234,7 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
     vpsl_spin(1:mesh%np, 4) = M_ZERO
   end if
 
-  if(batch_status(psib) == BATCH_CL_PACKED) then
+  if(batch_status(psib) == BATCH_DEVICE_PACKED) then
     pnp = accel_padded_size(mesh%np)
     call accel_create_buffer(vpsl_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp * this%d%nspin)
     call accel_write_buffer(vpsl_buff, mesh%np, vpsl)
@@ -272,8 +284,14 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc, set
   call batch_init(hpsib, hm%d%dim, 1)
   call batch_add_state(hpsib, ist, hpsi)
 
-  call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, terms = terms, set_bc = set_bc, &
-                                     set_phase = set_phase)
+
+	if(hm%theory_level == RDMFT .and. set_occ_ .eqv. .true.) then
+		call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, terms = terms, set_bc = set_bc, &
+                                     set_phase = set_phase, occ = hm%hf_st%occ(ist, ik))
+	else ! standard case
+		call X(hamiltonian_apply_batch)(hm, der, psib, hpsib, ik, terms = terms, set_bc = set_bc, &
+																			 set_phase = set_phase)
+  end if
 
 
   call batch_end(psib)
@@ -283,41 +301,77 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc, set
 ! Modifications by Nicole
 
   ! treat hamiltonians that depend on the index of the orbital
-  if(hm%theory_level == RDMFT .and. set_occ_ .eqv. .true.) then
-    call X(occ_apply)(hpsi, hm%hf_st%occ(ist, ik), terms =  terms)
-  endif 
+!  if(hm%theory_level == RDMFT .and. set_occ_ .eqv. .true.) then
+!    call X(occ_apply)(hpsi, hm%hf_st%occ(ist, ik), terms =  terms)
+!  endif 
 
 ! End Nicole
 
   POP_SUB(X(hamiltonian_apply))
 end subroutine X(hamiltonian_apply)
 
-subroutine X(occ_apply) (hpsi, occ, terms)
+!subroutine X(occ_apply) (hpsib, occ, terms)
 
-  R_TYPE,   target,    intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
-  FLOAT,               intent(in)    :: occ
+!  R_TYPE,   target,    intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
+!  FLOAT,               intent(in)    :: occ
+!  integer,             intent(in)    :: terms
+	
+!  terms_ = optional_default(terms, TERM_ALL)
+
+!  if(terms_ == TERM_ALL) then
+!    call messages_write('Scaling with occupation numbers is not linear for all terms in the hamiltonian in RDMFT')
+!    call messages_fatal(1)
+!  endif
+
+!  ! this term is specific for each RDMFT functional
+!  if(terms_ == TERM_OTHERS) then
+!    ! Mueller functional
+!    hpsi = sqrt(occ)*hpsi
+!  endif
+
+!  ! all other terms in hamiltonian are linear in occupation number
+!  if(bitand(TERM_KINETIC, terms_) /= 0  .or. bitand(TERM_LOCAL_POTENTIAL, terms_) /= 0 &
+!    & .or. bitand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0 .or. bitand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
+!    hpsi = occ*hpsi
+!  endif
+
+!end subroutine X(occ_apply)
+
+subroutine X(occ_apply) (hm, der, hpsib, occ, terms)
+  type(hamiltonian_t), intent(in) :: hm
+  type(derivatives_t), intent(in) :: der
+	type(batch_t),       intent(inout) :: hpsib
+  FLOAT,              intent(in)    :: occ
   integer,             intent(in)    :: terms
-
-  integer :: terms_
-
-  terms_ = optional_default(terms, TERM_ALL)
-
-  if(terms_ == TERM_ALL) then
-    call messages_write('Scaling with occupation numbers is not linear for all terms in the hamiltonian in RDMFT')
-    call messages_fatal(1)
-  endif
-
-  ! this term is specific for each RDMFT functional
-  if(terms_ == TERM_OTHERS) then
-    ! Mueller functional
-    hpsi = sqrt(occ)*hpsi
-  endif
-
-  ! all other terms in hamiltonian are linear in occupation number
-  if(bitand(TERM_KINETIC, terms_) /= 0  .or. bitand(TERM_LOCAL_POTENTIAL, terms_) /= 0 &
-    & .or. bitand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0 .or. bitand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
-    hpsi = occ*hpsi
-  endif
+	
+	R_TYPE, allocatable :: hpsi(:, :)
+	integer :: ibatch
+	
+	PUSH_SUB(X(occ_apply))
+	
+	SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:hm%d%dim))
+	
+	do ibatch = 1, hpsib%nst
+		call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
+		
+!		! this term is specific for each RDMFT functional
+!		if(terms == TERM_OTHERS) then
+!			! Mueller functional
+!			hpsi = sqrt(occ)*hpsi
+!		endif
+		
+		! all other terms in hamiltonian are linear in occupation number
+		if(bitand(TERM_KINETIC, terms) /= 0  .or. bitand(TERM_LOCAL_POTENTIAL, terms) /= 0 &
+			& .or. bitand(TERM_NON_LOCAL_POTENTIAL, terms) /= 0 .or. bitand(TERM_LOCAL_EXTERNAL, terms) /= 0) then	
+			hpsi = occ*hpsi
+		end if
+		
+		call batch_set_state(hpsib, ibatch, der%mesh%np, hpsi)
+	end do
+	
+	SAFE_DEALLOCATE_A(hpsi)
+	
+	POP_SUB(X(occ_apply))
 
 end subroutine X(occ_apply)
 
@@ -400,13 +454,14 @@ end subroutine X(exchange_operator_single)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
+subroutine X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib, occ)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ik
   FLOAT,               intent(in)    :: exx_coef
   type(batch_t),       intent(inout) :: psib
   type(batch_t),       intent(inout) :: hpsib
+  FLOAT, optional,   intent(in)    :: occ
 
   integer :: ibatch, jst, ip, idim, ik2, ib, ii, ist
   type(batch_t), pointer :: psi2b
@@ -455,9 +510,17 @@ subroutine X(exchange_operator)(hm, der, ik, exx_coef, psib, hpsib)
           end do
 
           call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
-
-          ff = hm%hf_st%occ(jst, ik2)
-          if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff
+					
+					if (hm%theory_level /= RDMFT ) then
+						ff = hm%hf_st%occ(jst, ik2)
+						if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff
+					else ! RDMFT
+						if(present(occ)) then
+							ff = sqrt(occ)*sqrt(hm%hf_st%occ(jst, 1)) ! Mueller functional
+						else
+							ff = sqrt(hm%hf_st%occ(jst, 1)) ! Mueller functional
+						end if
+					end if
 
           do idim = 1, hm%hf_st%d%dim
             forall(ip = 1:der%mesh%np)
@@ -726,14 +789,18 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus, set_phase)
     call lalg_copy(der%mesh%np, hpsi(:, idim), auxpsi(:, idim))
   end do
 
-  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
+  if (hm%ep%non_local) then
+    call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
+  end if
 
   hpsi(1:der%mesh%np, 1) = hpsi(1:der%mesh%np, 1) -  M_zI*vmagnus(1:der%mesh%np, ispin, 1)*auxpsi(1:der%mesh%np, 1)
   auxpsi(1:der%mesh%np, 1) = vmagnus(1:der%mesh%np, ispin, 1)*psi(1:der%mesh%np, 1)
 
   call X(hamiltonian_apply)(hm, der, auxpsi, aux2psi, ist = 1, ik = ik, terms = TERM_KINETIC, set_phase = set_phase)
 
-  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
+  if (hm%ep%non_local) then
+    call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
+  end if
 
   hpsi(1:der%mesh%np, 1) = hpsi(1:der%mesh%np, 1) + M_zI*aux2psi(1:der%mesh%np, 1)
 
@@ -743,7 +810,9 @@ subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus, set_phase)
 
   hpsi(1:der%mesh%np, 1) = hpsi(1:der%mesh%np, 1) + vmagnus(1:der%mesh%np, ispin, 2)*psi(1:der%mesh%np, 1)
 
-  if (hm%ep%non_local) call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
+  if (hm%ep%non_local) then
+    call X(hamiltonian_apply)(hm, der, psi, hpsi, ist = 1, ik = ik, terms = TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
+  end if
 
   do idim = 1, hm%d%dim
     call X(vborders)(der, hm, psi(:, idim), hpsi(:, idim))
@@ -915,70 +984,70 @@ subroutine X(hamiltonian_diagonal) (hm, der, diag, ik)
   POP_SUB(X(hamiltonian_diagonal))
 end subroutine X(hamiltonian_diagonal)
 
-! ---------------------------------------------------------
-subroutine X(rdmft_exchange_operator) (hm, der, ik, psib, hpsib, occ)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(in)    :: der
-  integer,             intent(in)    :: ik
-  type(batch_t),       intent(inout) :: psib
-  type(batch_t),       intent(inout) :: hpsib
-  FLOAT,               intent(in)    :: occ
+!! ---------------------------------------------------------
+!subroutine X(rdmft_exchange_operator) (hm, der, ik, psib, hpsib, occ)
+!  type(hamiltonian_t), intent(in)    :: hm
+!  type(derivatives_t), intent(in)    :: der
+!  integer,             intent(in)    :: ik
+!  type(batch_t),       intent(inout) :: psib
+!  type(batch_t),       intent(inout) :: hpsib
+!  FLOAT,               intent(in)    :: occ
 
-  R_TYPE, allocatable :: rho(:), pot(:), psi1(:,:), hpsi1(:), psi(:, :), hpsi(:, :)
-  integer :: jst, ip, ist, ibatch
+!  R_TYPE, allocatable :: rho(:), pot(:), psi1(:,:), hpsi1(:), psi(:, :), hpsi(:, :)
+!  integer :: jst, ip, ist, ibatch
 
-  PUSH_SUB(X(rdmft_exchange_operator))
+!  PUSH_SUB(X(rdmft_exchange_operator))
 
-  if(der%mesh%sb%kpoints%reduced%npoints > 1) call messages_not_implemented("exchange operator with k-points")
+!  if(der%mesh%sb%kpoints%reduced%npoints > 1) call messages_not_implemented("exchange operator with k-points")
 
-  SAFE_ALLOCATE(psi(1:der%mesh%np, 1:hm%d%dim))
-  SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:hm%d%dim))
-  SAFE_ALLOCATE(rho(1:der%mesh%np))
-  SAFE_ALLOCATE(pot(1:der%mesh%np))
-  SAFE_ALLOCATE(psi1(1:der%mesh%np,1:hm%d%dim))
-  SAFE_ALLOCATE(hpsi1(1:der%mesh%np))
+!  SAFE_ALLOCATE(psi(1:der%mesh%np, 1:hm%d%dim))
+!  SAFE_ALLOCATE(hpsi(1:der%mesh%np, 1:hm%d%dim))
+!  SAFE_ALLOCATE(rho(1:der%mesh%np))
+!  SAFE_ALLOCATE(pot(1:der%mesh%np))
+!  SAFE_ALLOCATE(psi1(1:der%mesh%np,1:hm%d%dim))
+!  SAFE_ALLOCATE(hpsi1(1:der%mesh%np))
 
-  do ibatch = 1, psib%nst
-    ist = psib%states(ibatch)%ist
-    call batch_get_state(psib, ibatch, der%mesh%np, psi)
-    call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
+!  do ibatch = 1, psib%nst
+!    ist = psib%states(ibatch)%ist
+!    call batch_get_state(psib, ibatch, der%mesh%np, psi)
+!    call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
 
-    hpsi1 = R_TOTYPE(M_ZERO)
+!    hpsi1 = R_TOTYPE(M_ZERO)
 
-    do jst = 1,hm%hf_st%nst
-      pot = R_TOTYPE(M_ZERO)
-      psi1 = M_ZERO
-      rho = R_TOTYPE(M_ZERO)
-      call states_get_state(hm%hf_st, der%mesh, jst, 1 , psi1)
-      forall(ip = 1:der%mesh%np)
-        rho(ip) =  R_CONJ(psi(ip, 1))*psi1(ip, 1)
-      end forall
-      call X(poisson_solve)(psolver, pot, rho)
-      forall(ip = 1:der%mesh%np)
-        pot(ip) = pot(ip)*R_CONJ(psi1(ip, 1))*sqrt(hm%hf_st%occ(jst, 1)) !Mueller functional
-      end forall
-      forall(ip = 1:der%mesh%np)
-        hpsi1(ip) = hpsi1(ip) - pot(ip)
-      end forall
-    end do
+!    do jst = 1,hm%hf_st%nst
+!      pot = R_TOTYPE(M_ZERO)
+!      psi1 = M_ZERO
+!      rho = R_TOTYPE(M_ZERO)
+!      call states_get_state(hm%hf_st, der%mesh, jst, 1 , psi1)
+!      forall(ip = 1:der%mesh%np)
+!        rho(ip) =  R_CONJ(psi(ip, 1))*psi1(ip, 1)
+!      end forall
+!      call X(poisson_solve)(psolver, pot, rho)
+!      forall(ip = 1:der%mesh%np)
+!        pot(ip) = pot(ip)*R_CONJ(psi1(ip, 1))*sqrt(hm%hf_st%occ(jst, 1)) !Mueller functional
+!      end forall
+!      forall(ip = 1:der%mesh%np)
+!        hpsi1(ip) = hpsi1(ip) - pot(ip)
+!      end forall
+!    end do
 
-    forall(ip = 1:der%mesh%np)
-      hpsi(ip, hm%d%ispin) = hpsi1(ip)
-    end forall
+!    forall(ip = 1:der%mesh%np)
+!      hpsi(ip, hm%d%ispin) = hpsi1(ip)
+!    end forall
 
-    call batch_set_state(hpsib, ibatch, der%mesh%np, hpsi)
+!    call batch_set_state(hpsib, ibatch, der%mesh%np, hpsi)
 
-  end do
+!  end do
 
-  SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(hpsi)
-  SAFE_DEALLOCATE_A(rho)
-  SAFE_DEALLOCATE_A(pot)
-  SAFE_DEALLOCATE_A(psi1)
-  SAFE_DEALLOCATE_A(hpsi1)
+!  SAFE_DEALLOCATE_A(psi)
+!  SAFE_DEALLOCATE_A(hpsi)
+!  SAFE_DEALLOCATE_A(rho)
+!  SAFE_DEALLOCATE_A(pot)
+!  SAFE_DEALLOCATE_A(psi1)
+!  SAFE_DEALLOCATE_A(hpsi1)
 
-  POP_SUB(X(rdmft_exchange_operator))
-end subroutine X(rdmft_exchange_operator)
+!  POP_SUB(X(rdmft_exchange_operator))
+!end subroutine X(rdmft_exchange_operator)
 
 !! Local Variables:
 !! mode: f90

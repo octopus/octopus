@@ -112,7 +112,7 @@ contains
 
     call write_canonicalized_xyz_file("exec", "initial_coordinates", sys%geo, sys%gr%mesh)
 
-    call scf_init(scfv, sys%gr, sys%geo, sys%st, sys%mc, hm)
+    call scf_init(scfv, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks)
 
     if(fromScratch) then
       if(sys%ks%theory_level == RDMFT) then

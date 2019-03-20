@@ -195,13 +195,14 @@ contains
       
       rel_ener = abs(energy_occ-energy)/abs(energy)
 
-      write(message(1),'(a,es20.10)') 'Total energy:', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
-      write(message(2),'(a,2x,es20.10)') 'Relative: ', rel_ener
+      write(message(1),'(a,es20.10)') 'Total energy orb', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+      write(message(2),'(a,2x,es20.10)') 'Relative ', rel_ener
       call messages_info(2)
       if (rdm%hf.eqv. .false.) then
-				write(message(1),'(a,5x,es20.10)') 'Max F0:', rdm%maxFO
+				write(message(1),'(a,5x,es20.10)') 'Max F0', rdm%maxFO
 				call messages_info(1)
 			end if
+
 
       if (rdm%do_basis.eqv..true.) then
         if ((rel_ener < rdm%conv_ener).and.rdm%maxFO < rdm%tolerFO) then
@@ -474,8 +475,8 @@ contains
         end do
       else
         ! initialize eigensolver
-				call eigensolver_init(rdm%eigens, gr, st)
-!		copied from scf, for the moment probably not necessary
+				call eigensolver_init(rdm%eigens, gr, st, ks%xc)
+!		copied from scf, precondiitoner not yet implemented for cg with rdmft
 !		if(preconditioner_is_multigrid(rdm%eigens%pre)) then
 !		  SAFE_ALLOCATE(gr%mgrid_prec)
 !		  call multigrid_init(gr%mgrid_prec, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc, &
@@ -795,7 +796,7 @@ contains
     end do
 
     write(message(1),'(a,1x,f11.9)') 'Sum of occupation numbers', rdm%occsum
-    write(message(2),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+    write(message(2),'(a,es20.10)') 'Total energy occ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
     call messages_info(2)   
     
     POP_SUB(scf_occ_NO)
@@ -1294,23 +1295,24 @@ contains
 				call loct_progress_bar(-1, st%lnst*st%d%kpt%nlocal)
 			end if
 			!! For RDMFT, needs to be called with: orthogonalize_to_all=.true.
-      call deigensolver_cg2(gr, st, hm, rdm%eigens%pre, rdm%eigens%tolerance, maxiter, &
+			!!																		additional_terms=.false.
+      call deigensolver_cg2(gr, st, hm, rdm%eigens%xc, rdm%eigens%pre, rdm%eigens%tolerance, maxiter, &
             rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), &
-            orthogonalize_to_all=.true., &
-            conjugate_direction=rdm%eigens%conjugate_direction)
-
-! 		FB: subspace diagonalization not possible for ground state right?    
-!			if(st%calc_eigenval .and. .not. rdm%eigens%folded_spectrum) then
-!				! recheck convergence after subspace diagonalization, since states may have reordered (copied from eigensolver_run)
-!				rdm%eigens%converged(ik) = 0
-!				do ist = 1, st%nst
-!					if(rdm%eigens%diff(ist, ik) < rdm%eigens%tolerance) then
-!					rdm%eigens%converged(ik) = ist
-!					else
-!					exit
-!					end if
-!				end do
-!			end if
+            orthogonalize_to_all=.false., &
+            conjugate_direction=rdm%eigens%conjugate_direction, &
+            additional_terms=.false.)
+  
+			if(st%calc_eigenval .and. .not. rdm%eigens%folded_spectrum) then
+				! recheck convergence after subspace diagonalization, since states may have reordered (copied from eigensolver_run)
+				rdm%eigens%converged(ik) = 0
+				do ist = 1, st%nst
+					if(rdm%eigens%diff(ist, ik) < rdm%eigens%tolerance) then
+					rdm%eigens%converged(ik) = ist
+					else
+					exit
+					end if
+				end do
+			end if
 
 			rdm%eigens%matvec = rdm%eigens%matvec + maxiter ! necessary?  
     enddo
@@ -1412,16 +1414,17 @@ contains
     call states_get_state(st, gr%mesh, ist, 1, dpsi)
 
     call dhamiltonian_apply(hm, gr%der, dpsi, hpsi1, ist, 1, &
-                            & terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
+                            & terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)
     call dhamiltonian_apply(hm, gr%der, dpsi, hpsi2, ist, 1, &
-                            & terms = TERM_OTHERS)
+                            & terms = TERM_OTHERS, set_occ = .true.)
       
     !bare derivative wrt. state ist   
     forall(ip=1:gr%mesh%np_part)
-      E_deriv(ip) = st%occ(ist, 1)*(hpsi1(ip, 1) + pot(ip)*dpsi(ip, 1)) 
+!      E_deriv(ip) = st%occ(ist, 1)*(hpsi1(ip, 1) + pot(ip)*dpsi(ip, 1)) 
+			E_deriv(ip) = hpsi1(ip, 1) + pot(ip)*dpsi(ip, 1)
      
       !only for the Mueller functional
-      E_deriv(ip) = E_deriv(ip) + sqrt(st%occ(ist, 1))*hpsi2(ip, 1)
+      E_deriv(ip) = E_deriv(ip) + hpsi2(ip, 1)
     end forall
 
     norm = sqrt(dmf_dotp(gr%mesh, E_deriv, E_deriv))
@@ -1500,11 +1503,12 @@ contains
       do iorb = 1, st%nst
         call states_get_state(st, gr%mesh, iorb, 1, dpsi)
         call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, iorb, 1, &
-                             terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
+                             terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)
         call dhamiltonian_apply(hm, gr%der, dpsi, hpsi1, iorb, 1, &
-                              terms = TERM_OTHERS)
+                              terms = TERM_OTHERS, set_occ = .true.)
         forall (ip=1:gr%mesh%np_part)
-           dpsi(ip,1) = st%occ(iorb, 1)*pot(ip)*dpsi(ip,1)
+!           dpsi(ip,1) = st%occ(iorb, 1)*pot(ip)*dpsi(ip,1)
+					dpsi(ip,1) = pot(ip)*dpsi(ip,1)
         end forall
 
         do jorb = 1, st%nst  
@@ -1513,13 +1517,15 @@ contains
           lambda(iorb, jorb) = lambda(jorb, iorb)
           g_h(iorb, jorb) = dmf_dotp(gr%mesh, dpsi(:,1), dpsi2(:, 1))
           g_x(iorb, jorb) = dmf_dotp(gr%mesh, dpsi2(:,1), hpsi1(:,1))
-          g_x(iorb, jorb) = sqrt(st%occ(iorb,1))*g_x(iorb, jorb)    
+!          g_x(iorb, jorb) = sqrt(st%occ(iorb,1))*g_x(iorb, jorb)   
+					g_x(iorb, jorb) = g_x(iorb, jorb)
         end do
       end do
  
       do jorb = 1,st%nst
         do iorb = 1,st%nst
-	      lambda(jorb,iorb) = st%occ(iorb,1)*lambda(jorb,iorb)  + g_h(iorb, jorb)+ g_x(iorb, jorb) 
+!	      lambda(jorb,iorb) = st%occ(iorb,1)*lambda(jorb,iorb)  + g_h(iorb, jorb)+ g_x(iorb, jorb) 
+	      lambda(jorb,iorb) = lambda(jorb,iorb)  + g_h(iorb, jorb)+ g_x(iorb, jorb) 
 	    end do
       end do
 
@@ -1726,7 +1732,7 @@ contains
     nspin_ = min(st%d%nspin, 2)
    
     if (rdm%do_basis.eqv..false.) then 
-			! FB: can this be calculated smarter if we use cg (that actually calculates hamiltonian_apply several times? 
+			! FB: can this be calculated smarter if we use cg (that actually calculates hamiltonian_apply several times)? 
       SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
       SAFE_ALLOCATE(rho1(1:gr%mesh%np))
       SAFE_ALLOCATE(rho(1:gr%mesh%np))

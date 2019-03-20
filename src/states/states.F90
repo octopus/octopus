@@ -1237,22 +1237,23 @@ contains
 
     !%Variable StatesPack
     !%Type logical
-    !%Default no
+    !%Default yes
     !%Section Execution::Optimization
     !%Description
-    !% (Experimental) When set to yes, states are stored in packed
-    !% mode, which improves performance considerably. However this
-    !% is not fully implemented and it might give wrong results.
+    !% When set to yes, states are stored in packed mode, which improves
+    !% performance considerably. Not all parts of the code will profit from
+    !% this, but should nevertheless work regardless of how the states are
+    !% stored.
     !%
     !% If OpenCL is used and this variable is set to yes, Octopus
     !% will store the wave-functions in device (GPU) memory. If
     !% there is not enough memory to store all the wave-functions,
     !% execution will stop with an error.
+    !%
     !% See also the related <tt>HamiltonianApplyPacked</tt> variable.
     !%End
 
-    call parse_variable('StatesPack', .false., st%d%pack_states)
-    if(st%d%pack_states) call messages_experimental('StatesPack')
+    call parse_variable('StatesPack', .true., st%d%pack_states)
 
     !%Variable StatesOrthogonalization
     !%Type integer
@@ -1261,15 +1262,13 @@ contains
     !% The full orthogonalization method used by some
     !% eigensolvers. The default is <tt>cholesky_serial</tt>, except with state
     !% parallelization, the default is <tt>cholesky_parallel</tt>.
-    !%Option gram_schmidt 1
     !%Option cholesky_serial 1
     !% Cholesky decomposition implemented using
     !% BLAS/LAPACK. Can be used with domain parallelization but not
-    !% state parallelization. (Obsolete synonym: <tt>gram_schmidt</tt>)
-    !%Option par_gram_schmidt 1
+    !% state parallelization.
     !%Option cholesky_parallel 2
     !% Cholesky decomposition implemented using
-    !% ScaLAPACK. Compatible with states parallelization. (Obsolete synonym: <tt>par_gram_schmidt</tt>)
+    !% ScaLAPACK. Compatible with states parallelization.
     !%Option cgs 3
     !% Classical Gram-Schmidt (CGS) orthogonalization.
     !% Can be used with domain parallelization but not state parallelization.
@@ -2076,7 +2075,8 @@ contains
          ! calculate gradient of the NLCC
          call zderivatives_grad(der, wf_psi(:,1), gwf_psi(:,:,1), set_bc = .false.)
          do is = 1, st%d%spin_channels
-           density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) + gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim,1)
+           density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) + &
+                                                                    gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim,1)
          end do
        end if
 
@@ -2220,7 +2220,11 @@ contains
 
     PUSH_SUB(states_pack)
 
-    ASSERT(.not. st%packed)
+    ! nothing to do, already packed
+    if (st%packed) then
+      POP_SUB(states_pack)
+      return
+    end if
 
     st%packed = .true.
 
@@ -2272,15 +2276,15 @@ contains
 
     PUSH_SUB(states_unpack)
 
-    ASSERT(st%packed)
+    if(st%packed) then
+      st%packed = .false.
 
-    st%packed = .false.
-
-    do iqn = st%d%kpt%start, st%d%kpt%end
-      do ib = st%group%block_start, st%group%block_end
-        if(batch_is_packed(st%group%psib(ib, iqn))) call batch_unpack(st%group%psib(ib, iqn), copy)
+      do iqn = st%d%kpt%start, st%d%kpt%end
+        do ib = st%group%block_start, st%group%block_end
+          if(batch_is_packed(st%group%psib(ib, iqn))) call batch_unpack(st%group%psib(ib, iqn), copy)
+        end do
       end do
-    end do
+    end if
 
     POP_SUB(states_unpack)
   end subroutine states_unpack

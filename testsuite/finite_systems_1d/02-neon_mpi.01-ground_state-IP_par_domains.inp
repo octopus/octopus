@@ -20,6 +20,8 @@ TheoryLevel = independent_particles
   "Neon1D" | 0
 %
 
+Debug = trace
+
 ConvRelDens = 1e-7
 ConvEigenError = yes
 Preconditioner = no

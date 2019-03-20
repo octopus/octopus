@@ -17,8 +17,9 @@ match ; Geometry         ; LINEFIELD(static/geometry.xyz, 3, 3) ; 0.000000
 match ; DX Origin        ; LINEFIELD(static/density.dx, 2, 2) ; -2.645886
 match ; DX Delta         ; LINEFIELD(static/density.dx, 3, 2) ; 0.264589
 Precision : 0.000000001
-match ; DX value 1       ; LINEFIELD(static/density.dx, 1195, 1) ; 0.000166985354390
-match ; DX value 2       ; LINEFIELD(static/density.dx, 1489, 1) ; 0.001133461985917
+
+match ; DX value 1       ; LINEFIELD(static/density.dx, 1195, 1) ; 0.000166968968088
+match ; DX value 2       ; LINEFIELD(static/density.dx, 1489, 1) ; 0.001133494249038
 
 #axis output
 Precision : 0.0001
@@ -27,7 +28,7 @@ match ; Axis pos 9       ; LINEFIELD(static/density.y\=0\,z\=0, 10, 1) ; -0.5291
 match ; Axis pos 17      ; LINEFIELD(static/density.y\=0\,z\=0, 18, 1) ; 1.58753162577000
 
 Precision : 0.000000001
-match ; Axis value 1     ; LINEFIELD(static/density.y\=0\,z\=0, 2, 2) ; 2.91564834138072E-006
+match ; Axis value 1     ; LINEFIELD(static/density.y\=0\,z\=0, 2, 2) ; 2.8892613364589004e-06
 Precision : 0.000001
 match ; Axis value 9     ; LINEFIELD(static/density.y\=0\,z\=0, 10, 2) ; 2.75939509225883E-001
 match ; Axis value 17    ; LINEFIELD(static/density.y\=0\,z\=0, 18, 2) ; 6.57093245587566E-003
@@ -42,9 +43,12 @@ match ; Plane pos 295 Y  ; LINEFIELD(static/density.x\=0, 294, 1) ;  1.587531625
 match ; Plane pos 295 Z  ; LINEFIELD(static/density.x\=0, 294, 2) ;  2.64588604295000E-001
 
 Precision : 0.000000001
-match ; Plane value 10   ; LINEFIELD(static/density.x\=0,   9, 3) ; 2.23494456545324E-005
-match ; Plane value 30   ; LINEFIELD(static/density.x\=0,  29, 3) ; 1.89763461646455E-004
-match ; Plane value 295  ; LINEFIELD(static/density.x\=0, 294, 3) ; 6.06673423715878E-003
+
+match ; Plane value 10   ; LINEFIELD(static/density.x\=0,   9, 3) ; 2.232625020320845e-05
+match ; Plane value 30   ; LINEFIELD(static/density.x\=0,  29, 3) ; 0.00018975105780283852
+match ; Plane value 295  ; LINEFIELD(static/density.x\=0, 294, 3) ; 0.006066776054841265
+match ; Plane value 10 Grad-y v0 ; LINEFIELD(static/grad_v0-y.x\=0,   9, 3) ; -1.42667157278682E+001
+
 
 #xcrysden
 match ; XCrySDen geometry; LINEFIELD(static/geometry.xsf, 2, 3) ; 2.645886
@@ -71,5 +75,5 @@ Program : oct-convert
 Input : 05-output.03-convert-op.inp
 Precision : 1.0e-9
 match ; Convert to dx (header)     ; GREPFIELD(convert/density.dx, 'origin', 2, 0) ; -5.000000
-match ; Convert to dx (line 513)   ; LINEFIELD(convert/density.dx, 671, 1) ; 0.000244204088835
-match ; Convert to dx (line 29355) ; LINEFIELD(convert/density.dx, 9048, 1) ; 0.000007289118012
+match ; Convert to dx (line 513)   ; LINEFIELD(convert/density.dx, 671, 1) ; 0.00024413844361
+match ; Convert to dx (line 29355) ; LINEFIELD(convert/density.dx, 9048, 1) ; 7.223153341e-06

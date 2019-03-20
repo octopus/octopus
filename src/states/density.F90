@@ -114,7 +114,7 @@ contains
   ! ---------------------------------------------------
 
   subroutine density_calc_pack(this)
-    type(density_calc_t),           intent(out)   :: this
+    type(density_calc_t),           intent(inout)   :: this
 
     PUSH_SUB(density_calc_pack)
     
@@ -186,7 +186,7 @@ contains
             end do
           end do
         end if
-      case(BATCH_CL_PACKED)
+      case(BATCH_DEVICE_PACKED)
         if(.not. this%packed) call density_calc_pack(this)
 
         if(states_are_real(this%st)) then
@@ -304,10 +304,16 @@ contains
         if(this%gr%have_fine_mesh) then
            SAFE_ALLOCATE(fdensity(1:this%gr%fine%mesh%np))
            call dmultigrid_coarse2fine(this%gr%fine%tt, this%gr%der, this%gr%fine%mesh, tmpdensity, fdensity, order = 2)
-           forall(ip = 1:this%gr%fine%mesh%np) this%density(ip, ispin) = this%density(ip, ispin) + fdensity(ip)
+
+           do ip = 1, this%gr%fine%mesh%np
+             this%density(ip, ispin) = this%density(ip, ispin) + fdensity(ip)
+           end do
+
            SAFE_DEALLOCATE_A(fdensity)
         else
-           forall(ip = 1:this%gr%mesh%np) this%density(ip, ispin) = this%density(ip, ispin) + tmpdensity(ip)
+          do ip = 1, this%gr%mesh%np
+            this%density(ip, ispin) = this%density(ip, ispin) + tmpdensity(ip)
+          end do
         end if
 
       end do
@@ -397,7 +403,7 @@ contains
     ASSERT(.not. st%parallel_in_states)
 
     if(.not.associated(st%frozen_rho)) then
-      SAFE_ALLOCATE(st%frozen_rho(1:gr%mesh%np, 1:st%d%dim))
+      SAFE_ALLOCATE(st%frozen_rho(1:gr%mesh%np, 1:st%d%nspin))
     end if
 
     call density_calc_init(dens_calc, st, gr, st%frozen_rho)
