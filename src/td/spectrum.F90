@@ -693,7 +693,7 @@ contains
       ! since the dielectric function is complex as well, we need to compute both the real and imaginary part of the polarizability
       call spectrum_times_pcm_epsilon(pcm, dipole, sigma, nspin, spectrum, istart, iend, kick%time, dt, no_e)
 
-      write(out_file,'(a55)') "Cross-section spectrum contains full local field effects."
+      write(out_file,'(a57)') "Cross-section spectrum contains full local field effects."
 
     else
 

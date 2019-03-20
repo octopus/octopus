@@ -27,9 +27,9 @@ Processors : 1
 Input      : 20-local-field-absorption.02-td_prop_eom.inp
 
 Precision: 0.0001
-match ; Energy    ;  LINE(cross_section_vector, 47, 1)    ; 0.22000000E+00
-match ; Strength  ;  LINE(cross_section_vector, 47, 86)   ; 0.43037030E-04
-match ; Energy   ;  LINE(cross_section_vector, 981, 1)   ; 0.95600000E+01
-match ; Strength ;  LINE(cross_section_vector, 981, 86)  ; 0.22186655E-01
-match ; Energy   ;  LINE(cross_section_vector, 1921, 1)   ; 0.18960000E+02
-match ; Strength ;  LINE(cross_section_vector, 1921, 86)  ; 0.43645146E-01
+match ; Energy    ;  LINE(cross_section_vector, 48, 1)    ; 0.22000000E+00
+match ; Strength  ;  LINE(cross_section_vector, 48, 86)   ; 0.43037030E-04
+match ; Energy   ;  LINE(cross_section_vector, 982, 1)   ; 0.95600000E+01
+match ; Strength ;  LINE(cross_section_vector, 982, 86)  ; 0.22186655E-01
+match ; Energy   ;  LINE(cross_section_vector, 1922, 1)   ; 0.18960000E+02
+match ; Strength ;  LINE(cross_section_vector, 1922, 86)  ; 0.43645146E-01
