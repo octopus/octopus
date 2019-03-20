@@ -1602,9 +1602,10 @@ contains
   end subroutine states_generate_random
 
   ! ---------------------------------------------------------
-  subroutine states_fermi(st, mesh)
+  subroutine states_fermi(st, mesh, compute_spin)
     type(states_t), intent(inout) :: st
     type(mesh_t),   intent(in)    :: mesh
+    logical, optional, intent(in) :: compute_spin
 
     !> Local variables.
     integer            :: ist, ik
@@ -1634,7 +1635,7 @@ contains
       end if
     end if
 
-    if(st%d%ispin == SPINORS) then
+    if(st%d%ispin == SPINORS .and. optional_default(compute_spin,.true.)) then
       ASSERT(states_are_complex(st))
       
       st%spin(:,:,:) = M_ZERO

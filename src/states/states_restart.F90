@@ -59,7 +59,9 @@ module states_restart_oct_m
     states_load,                    &
     states_dump_rho,                &
     states_load_rho,                &
-    states_read_user_def_orbitals
+    states_read_user_def_orbitals,  &
+    states_dump_spin,               &
+    states_load_spin
 
 contains
 
@@ -1096,6 +1098,128 @@ contains
 
     POP_SUB(states_read_user_def_orbitals)
   end subroutine states_read_user_def_orbitals
+
+  ! ---------------------------------------------------------
+  subroutine states_dump_spin(restart, st, gr, ierr)
+    type(restart_t),      intent(in)  :: restart
+    type(states_t),       intent(in)  :: st
+    type(grid_t),         intent(in)  :: gr
+    integer,              intent(out) :: ierr
+
+    integer :: iunit_spin
+    integer :: err, err2(2), ik, idir, ist
+    character(len=300) :: lines(3)
+
+    PUSH_SUB(states_dump_spin)
+
+    ierr = 0
+
+    if(restart_skip(restart)) then
+      POP_SUB(states_dump_spin)
+      return
+    end if
+
+    call profiling_in(prof_write, "RESTART_WRITE_SPIN")
+
+    call restart_block_signals()
+
+    iunit_spin = restart_open(restart, 'spin')
+    lines(1) = '#     #k-point            #st       #spin(x) spin(y) spin(z)'
+    call restart_write(restart, iunit_spin, lines, 1, err)
+    if (err /= 0) ierr = ierr + 1
+
+    err2 = 0
+    do ik = 1, st%d%nik
+      do ist = 1, st%nst
+        write(lines(1), '(i8,a,i8,3(a,f18.12))') ik, ' | ', ist, ' | ', &
+                            st%spin(1,ist,ik), ' | ', st%spin(2,ist,ik),' | ', st%spin(3,ist,ik)
+        call restart_write(restart, iunit_spin, lines, 1, err)
+        if (err /= 0) err2(1) = err2(1) + 1
+      end do ! st%nst
+    end do ! st%d%nik
+    lines(1) = '%'
+    call restart_write(restart, iunit_spin, lines, 1, err)
+    if (err2(1) /= 0) ierr = ierr + 8
+    if (err2(2) /= 0) ierr = ierr + 16
+
+    call restart_close(restart, iunit_spin)
+
+    call restart_unblock_signals()
+
+    call profiling_out(prof_write)
+    POP_SUB(states_dump_spin)
+  end subroutine states_dump_spin
+
+
+
+
+  ! ---------------------------------------------------------
+  !> returns in ierr:
+  !! <0 => Fatal error, or nothing read
+  !! =0 => read all wavefunctions
+  !! >0 => could only read ierr wavefunctions
+  subroutine states_load_spin(restart, st, gr, ierr)
+    type(restart_t),            intent(in)    :: restart
+    type(states_t),             intent(inout) :: st
+    type(grid_t),               intent(in)    :: gr
+    integer,                    intent(out)   :: ierr
+
+    integer              :: spin_file, err, ik, ist
+    character(len=256)   :: lines(3)
+    FLOAT                :: spin(3)
+    character(len=1)     :: char
+
+    
+    PUSH_SUB(states_load_spin)
+
+    ierr = 0
+
+    if (restart_skip(restart)) then
+      ierr = -1
+      POP_SUB(states_load_spin)
+      return
+    end if
+
+    call profiling_in(prof_read, "RESTART_READ_SPIN")
+
+    ! open files to read
+    spin_file = restart_open(restart, 'spin')
+    ! Skip two lines.
+    call restart_read(restart, spin_file, lines, 2, err)
+    if (err /= 0) ierr = ierr - 2**7
+
+    ! If any error occured up to this point then it is not worth continuing,
+    ! as there something fundamentally wrong with the restart files
+    if (ierr /= 0) then
+      call restart_close(restart, spin_file)
+      call profiling_out(prof_read)
+      POP_SUB(states_load_spin)
+      return
+    end if
+
+    ! Next we read the list of states from the files. 
+    ! Errors in reading the information of a specific state from the files are ignored
+    ! at this point, because later we will skip reading the wavefunction of that state.
+    do
+      call restart_read(restart, spin_file, lines, 1, err)
+      read(lines(1), '(a)') char
+      if (char == '%') then
+          !We reached the end of the file
+          exit
+        else
+        read(lines(1), *) ik, char, ist, char,  spin(1), char, spin(2), char, spin(3)
+      end if
+
+      if (err /= 0) cycle
+
+      st%spin(1:3, ist, ik) = spin(1:3)
+    end do
+
+    call restart_close(restart, spin_file)
+
+    call profiling_out(prof_read)
+    POP_SUB(states_load_spin)
+ end subroutine states_load_spin
 
 end module states_restart_oct_m
 

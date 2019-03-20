@@ -667,8 +667,8 @@ contains
           gr%der%boundaries%spiral = .true.
         end if
         hm%hm_base%spin => st%spin
-        !We fill st%spin
-        call states_fermi(st, gr%mesh) 
+        !We fill st%spin. In case of restart, we read it in td_load
+        if(fromScratch) call states_fermi(st, gr%mesh) 
       end if
 
       ! Initialize the occupation matrices and U for LDA+U
@@ -758,7 +758,7 @@ contains
 #endif
       call hamiltonian_span(hm, minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
       ! initialize Fermi energy
-      call states_fermi(st, gr%mesh)
+      call states_fermi(st, gr%mesh, compute_spin = .not. gr%der%boundaries%spiralBC)
       call energy_calc_total(hm, gr, st)
 
       !%Variable TDFreezeDFTUOccupations
@@ -1037,6 +1037,11 @@ contains
       call gauge_field_dump(restart, hm%ep%gfield, ierr)
     end if
 
+    if(gr%der%boundaries%spiralBC) then
+      call states_dump_spin(restart, st, gr, err)
+      if(err /= 0) ierr = ierr + 8
+    end if
+
     if (debug%info) then
       message(1) = "Debug: Writing td restart done."
       call messages_info(1)
@@ -1095,6 +1100,13 @@ contains
       else
         call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = td%dt*td%iter)
       end if
+    end if
+
+    if(gr%der%boundaries%spiralBC) then
+      call states_load_spin(restart, st, gr, err)
+      !To ensure back compatibility, if the file is not present, we use the 
+      !current states to get the spins
+      if(err /= 0) call states_fermi(st, gr%mesh)
     end if
 
     if (debug%info) then
