@@ -627,7 +627,8 @@ EXTRA_PROGRAMS = oct-propagation_spectrum \
                  oct-convert \
                  oct-local_multipoles \
                  oct-conductivity \
-                 oct-floquet
+                 oct-floquet \
+                 oct-spin_susceptibility
 
 bin_PROGRAMS += @UTILITY_PROGRAMS@
 
@@ -678,6 +679,10 @@ oct_help_LDADD = $(all_LIBS)
 oct_floquet_SOURCES = $(all_srcs) utils/floquet.F90
 oct_floquet_LINK = $(FCLINK)
 oct_floquet_LDADD = $(all_LIBS)
+oct_spin_susceptibility_SOURCES = $(all_srcs) utils/spin_susceptibility.F90
+oct_spin_susceptibility_LINK = $(FCLINK)
+oct_spin_susceptibility_LDADD = $(all_LIBS)
+
 
 
 # debug files from MacOS gcc with -g
