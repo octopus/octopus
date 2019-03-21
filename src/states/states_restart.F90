@@ -1185,7 +1185,7 @@ contains
     ! open files to read
     spin_file = restart_open(restart, 'spin')
     ! Skip two lines.
-    call restart_read(restart, spin_file, lines, 2, err)
+    call restart_read(restart, spin_file, lines, 1, err)
     if (err /= 0) ierr = ierr - 2**7
 
     ! If any error occured up to this point then it is not worth continuing,
