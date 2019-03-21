@@ -120,9 +120,9 @@ contains
     end if
 
     if(st%parallel_in_states) then
-      if(bitand(this%what, OUTPUT_ME_TWO_BODY)) &
+      if(bitand(this%what, OUTPUT_ME_TWO_BODY) /= 0) &
         call messages_not_implemented("OutputMatrixElements=two_body is not implemented in states parallelization.")
-      if(bitand(this%what, OUTPUT_ME_DIPOLE)) &
+      if(bitand(this%what, OUTPUT_ME_DIPOLE) /= 0) &
         call messages_not_implemented("OutputMatrixElements=dipole is not implemented in states parallelization.")
     end if
 
