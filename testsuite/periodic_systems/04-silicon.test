@@ -76,8 +76,8 @@ match ; DOS value  2   ; LINEFIELD(static/total-dos.dat,   2, 2);        0.47203
 match ; DOS energy 442 ; LINEFIELD(static/total-dos.dat, 442, 1);        0.250698
 match ; DOS value  442 ; LINEFIELD(static/total-dos.dat, 442, 2);        1.858955
 
-match ; dipole 14-16 Re  ; LINEFIELD(static/ks_me_dipole.k1_x, 6, 1);     -0.028909362839
-match ; dipole 14-16 Im  ; LINEFIELD(static/ks_me_dipole.k1_x, 6, 2);     -0.583558601264
+match ; dipole 14-16 Re  ; LINEFIELD(static/ks_me_dipole.k1_x, 6, 1);     -0.445072119324
+match ; dipole 14-16 Im  ; LINEFIELD(static/ks_me_dipole.k1_x, 6, 2);      0.765401667903
 
 
 
