@@ -112,6 +112,8 @@ contains
     !% See <tt>OutputMEMultipoles</tt>. Not available with states parallelization.
     !%Option dipole 32
     !% Prints the dipole matrix elements. Not available with states parallelization.
+    !% For periodic systems, the intraband terms (dipole matrix elements between degenerated states)
+    !% are set to zero.
     !%End
 
     call parse_variable('OutputMatrixElements', 0, this%what)
