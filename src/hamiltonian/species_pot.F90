@@ -486,7 +486,7 @@ contains
     FLOAT,                intent(inout) :: drho(:, :, :) !< (mesh%np, spin_channels, dim)
 
     integer :: isp, ip, icell, idir
-    FLOAT :: rr, pos(1:MAX_DIM), range
+    FLOAT :: rr, pos(1:MAX_DIM), range, spline
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
     type(periodic_copy_t) :: pp
@@ -520,10 +520,12 @@ contains
             call mesh_r(mesh, ip, rr, origin = pos)
             rr = max(rr, r_small)
 
-            do idir = 1, mesh%sb%dim
-              do isp = 1, spin_channels
-                if(rr >= spline_range_max(ps%density_der(isp))) cycle
-                drho(ip, isp, idir) = drho(ip, isp, idir) - spline_eval(ps%density_der(isp), rr)*(mesh%x(ip, idir)-pos(idir))/rr
+            do isp = 1, spin_channels
+              if(rr >= spline_range_max(ps%density_der(isp))) cycle
+              spline = spline_eval(ps%density_der(isp), rr)
+
+              do idir = 1, mesh%sb%dim
+                drho(ip, isp, idir) = drho(ip, isp, idir) - spline*(mesh%x(ip, idir)-pos(idir))/rr
               end do
            end do
           end do
