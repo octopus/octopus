@@ -828,7 +828,7 @@ contains
     type(mesh_t),            intent(in)  :: mesh
     FLOAT,                   intent(out) :: rho_core_grad(:,:)
 
-    FLOAT :: center(MAX_DIM), rr
+    FLOAT :: center(MAX_DIM), rr, spline
     integer :: icell, ip, idir
     type(periodic_copy_t) :: pp
     type(ps_t), pointer :: ps
@@ -845,10 +845,11 @@ contains
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = center)
           rr = max(rr, r_small)
+          if(rr >= spline_range_max(ps%core_der)) cycle
+          spline = spline_eval(ps%core_der, rr)
 
           do idir = 1, mesh%sb%dim
-            if(rr >= spline_range_max(ps%core_der)) cycle
-              rho_core_grad(ip, idir) = rho_core_grad(ip, idir) - spline_eval(ps%core_der, rr)*(mesh%x(ip, idir)-center(idir))/rr
+            rho_core_grad(ip, idir) = rho_core_grad(ip, idir) - spline*(mesh%x(ip, idir)-center(idir))/rr
           end do
         end do
       end do
