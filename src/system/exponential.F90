@@ -65,6 +65,10 @@ module exponential_oct_m
     FLOAT       :: lanczos_tol !< tolerance for the Lanczos method
     integer     :: exp_order   !< order to which the propagator is expanded
     integer     :: arnoldi_gs  !< Orthogonalization scheme used for Arnoldi
+    ! these are variables needed for temporary storage -> avoid allocation in each time step
+    type(batch_t) :: psi1b, hpsi1b
+    CMPLX, allocatable :: psi1(:, :, :), hpsi1(:, :, :)
+    logical     :: batches_initialized, batches_packed
   end type exponential_t
 
 contains
@@ -187,6 +191,9 @@ contains
                               te%arnoldi_gs)
     end if
 
+    te%batches_initialized = .false.
+    te%batches_packed = .false.
+
     POP_SUB(exponential_init)
   end subroutine exponential_init
 
@@ -195,6 +202,12 @@ contains
     type(exponential_t), intent(inout) :: te
 
     PUSH_SUB(exponential_end)
+
+    ! deallocate temporary batches and arrays
+    call batch_end(te%hpsi1b, copy=.false.)
+    call batch_end(te%psi1b, copy=.false.)
+    SAFE_DEALLOCATE_A(te%psi1)
+    SAFE_DEALLOCATE_A(te%hpsi1)
 
     POP_SUB(exponential_end)
   end subroutine exponential_end
@@ -712,37 +725,27 @@ contains
     
     subroutine taylor_series_batch()
       CMPLX :: zfact, zfact2
-      CMPLX, allocatable :: psi1(:, :, :), hpsi1(:, :, :)
       integer :: iter
       logical :: zfact_is_real
-      integer :: st_start, st_end
-      type(batch_t) :: psi1b, hpsi1b
       type(profile_t), save :: prof
       logical :: copy_at_end
 
       PUSH_SUB(exponential_apply_batch.taylor_series_batch)
       call profiling_in(prof, "EXP_TAYLOR_BATCH")
 
-      SAFE_ALLOCATE(psi1 (1:der%mesh%np_part, 1:hm%d%dim, 1:psib%nst))
-      SAFE_ALLOCATE(hpsi1(1:der%mesh%np, 1:hm%d%dim, 1:psib%nst))
-
-      st_start = psib%states(1)%ist
-      st_end = psib%states(psib%nst)%ist
+      call initialize_temporary_batches()
 
       zfact = M_z1
       zfact2 = M_z1
       zfact_is_real = .true.
-
-      call batch_init(psi1b, hm%d%dim, st_start, st_end, psi1)
-      call batch_init(hpsi1b, hm%d%dim, st_start, st_end, hpsi1)
 
       if(hamiltonian_apply_packed(hm, der%mesh)) then
         ! unpack at end with copying only if the status on entry is unpacked
         copy_at_end = batch_status(psib) == BATCH_NOT_PACKED
         call batch_pack(psib)
         if(present(psib2)) call batch_pack(psib2, copy = .false.)
-        call batch_pack(psi1b, copy = .false.)
-        call batch_pack(hpsi1b, copy = .false.)
+        call batch_pack(te%psi1b, copy = .false.)
+        call batch_pack(te%hpsi1b, copy = .false.)
       end if
       
       if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
@@ -763,41 +766,88 @@ contains
         !  the code stops in ZAXPY below without saying why.
 
         if(iter /= 1) then
-          call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, set_phase = .not.phase_correction)
+          call zhamiltonian_apply_batch(hm, der, te%psi1b, te%hpsi1b, ik, set_phase = .not.phase_correction)
         else
-          call zhamiltonian_apply_batch(hm, der, psib, hpsi1b, ik, set_phase = .not.phase_correction)
+          call zhamiltonian_apply_batch(hm, der, psib, te%hpsi1b, ik, set_phase = .not.phase_correction)
         end if
         
         if(zfact_is_real) then
-          call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), hpsi1b, psib)
-          if(present(psib2)) call batch_axpy(der%mesh%np, real(zfact2, REAL_PRECISION), hpsi1b, psib2)
+          call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), te%hpsi1b, psib)
+          if(present(psib2)) call batch_axpy(der%mesh%np, real(zfact2, REAL_PRECISION), te%hpsi1b, psib2)
         else
-          call batch_axpy(der%mesh%np, zfact, hpsi1b, psib)
-          if(present(psib2)) call batch_axpy(der%mesh%np, zfact2, hpsi1b, psib2)
+          call batch_axpy(der%mesh%np, zfact, te%hpsi1b, psib)
+          if(present(psib2)) call batch_axpy(der%mesh%np, zfact2, te%hpsi1b, psib2)
         end if
 
-        if(iter /= te%exp_order) call batch_copy_data(der%mesh%np, hpsi1b, psi1b)
+        if(iter /= te%exp_order) call batch_copy_data(der%mesh%np, te%hpsi1b, te%psi1b)
 
       end do
 
       if(hamiltonian_apply_packed(hm, der%mesh)) then
-        call batch_unpack(psi1b, copy = .false.)
-        call batch_unpack(hpsi1b, copy = .false.)
+        call batch_unpack(te%psi1b, copy = .false.)
+        call batch_unpack(te%hpsi1b, copy = .false.)
         if(present(psib2)) call batch_unpack(psib2, copy=copy_at_end)
         call batch_unpack(psib, copy=copy_at_end)
       end if
 
-      call batch_end(hpsi1b)
-      call batch_end(psi1b)
-
       call profiling_count_operations(psib%nst*hm%d%dim*dble(der%mesh%np)*te%exp_order*CNST(6.0))
-
-      SAFE_DEALLOCATE_A(psi1)
-      SAFE_DEALLOCATE_A(hpsi1)
       
       call profiling_out(prof)
       POP_SUB(exponential_apply_batch.taylor_series_batch)
+
     end subroutine taylor_series_batch
+
+    subroutine initialize_temporary_batches()
+      logical :: reinitialize
+      integer :: initial_size(2)
+      ! This routine initializes temporary batches. If their size changes,
+      ! they are reinitialized.
+      if(.not. te%batches_initialized) then
+        call init_batches()
+        te%batches_initialized = .true.
+        if(batch_is_packed(te%psi1b)) then
+          initial_size = te%psi1b%pack%size
+        end if
+      else
+        if(.not.batch_is_packed(te%psi1b)) then
+          reinitialize = .true.
+        else
+          reinitialize = any(te%psi1b%pack%size - psib%pack%size /= 0)
+        end if
+        if (reinitialize) then
+          call end_batches()
+          call init_batches()
+        else
+          ! override previous values, is ok because it is used packed
+          te%psi1b%nst = psib%nst
+          te%hpsi1b%nst = psib%nst
+          te%psi1b%nst_linear = psib%nst_linear
+          te%hpsi1b%nst_linear = psib%nst_linear
+        end if
+      end if
+    end subroutine initialize_temporary_batches
+
+    subroutine init_batches()
+      SAFE_ALLOCATE(te%psi1 (1:der%mesh%np_part, 1:hm%d%dim, 1:psib%nst))
+      SAFE_ALLOCATE(te%hpsi1(1:der%mesh%np, 1:hm%d%dim, 1:psib%nst))
+
+      call batch_init(te%psi1b, hm%d%dim, psib%states(1)%ist, psib%states(psib%nst)%ist, te%psi1)
+      call batch_init(te%hpsi1b, hm%d%dim, psib%states(1)%ist, psib%states(psib%nst)%ist, te%hpsi1)
+      ! pack the batch -> store on device for GPU version, avoids data transfers
+      if(hamiltonian_apply_packed(hm, der%mesh)) then
+        te%batches_packed = .true.
+        call batch_pack(te%psi1b, copy = .false.)
+        call batch_pack(te%hpsi1b, copy = .false.)
+      end if
+    end subroutine init_batches
+
+    subroutine end_batches()
+      ! deallocate temporary batches and arrays
+      call batch_end(te%hpsi1b, copy=.false.)
+      call batch_end(te%psi1b, copy=.false.)
+      SAFE_DEALLOCATE_A(te%psi1)
+      SAFE_DEALLOCATE_A(te%hpsi1)
+    end subroutine end_batches
 
   end subroutine exponential_apply_batch
 
