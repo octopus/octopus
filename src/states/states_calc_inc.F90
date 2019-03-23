@@ -1616,39 +1616,60 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
   nst = (st_max-st_min+1)*st%d%nik
 
   do ist_global = 1, nst
-    ist = mod(ist_global, st%d%nik)
-    ikpt = ist_global-ist*st%d%nik
-    print *, ist_global, ist, ikpt
+    if(st%d%nik == 1) then
+      ist = ist_global
+      ikpt = 1
+    else
+      ist = mod(ist_global-1, st%d%nik) +1
+      ikpt = (ist_global-ist)/st%d%nik+1
+    end if
 
     call states_get_state(st, gr%mesh, ist+st_min-1, ikpt, psii)
 
     do jst_global = 1, nst
-      jst = mod(jst_global, st%d%nik)
-      jkpt = jst_global-jst*st%d%nik
+      if(st%d%nik == 1) then
+        jst = jst_global
+        jkpt = 1
+      else
+        jst = mod(jst_global-1, st%d%nik) +1
+        jkpt = (jst_global-jst)/st%d%nik+1
+      end if
+
       if(jst > ist) cycle
       ijst=ijst+1
 
-      call states_get_state(st, gr%mesh, jst+st_min-1, ikpt, psij)
+      call states_get_state(st, gr%mesh, jst+st_min-1, jkpt, psij)
 
       nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np, 1))*psij(1:gr%mesh%np, 1)
       call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
 
       klst=0
       do kst_global = 1, nst
-       kst = mod(kst_global, st%d%nik)
-       kkpt = kst_global-kst*st%d%nik
+        if(st%d%nik == 1) then
+          kst = kst_global
+          kkpt = 1
+        else
+          kst = mod(kst_global-1, st%d%nik) +1
+          kkpt = (kst_global-kst)/st%d%nik+1
+        end if
+
  
         call states_get_state(st, gr%mesh, kst+st_min-1, kkpt, psik)
 
         do lst_global = 1, nst
-          lst = mod(lst_global, st%d%nik)
-          lkpt = lst_global-lst*st%d%nik
+          if(st%d%nik == 1) then
+            lst = lst_global
+            lkpt = 1
+          else
+            lst = mod(lst_global-1, st%d%nik) +1
+            lkpt = (lst_global-lst)/st%d%nik+1
+          end if
 
           if(lst > kst) cycle
           klst=klst+1
           if(klst > ijst) cycle
 
-          call states_get_state(st, gr%mesh, lst+st_min-1, kkpt, psil)
+          call states_get_state(st, gr%mesh, lst+st_min-1, lkpt, psil)
 
           psil(1:gr%mesh%np, 1) = vv(1:gr%mesh%np)*psik(1:gr%mesh%np, 1)*R_CONJ(psil(1:gr%mesh%np, 1))
 

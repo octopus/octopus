@@ -464,7 +464,7 @@ contains
     st%occ = occin
     
     if((rdm%iter == 1).and. (rdm%do_basis.eqv. .true.))  then 
-      call dstates_me_two_body(gr, st, st%st_start, st%st_end, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
+      call dstates_me_two_body(gr, st, 1, st%nst, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
       call rdm_integrals(rdm,hm,st,gr) 
       call sum_integrals(rdm)
     end if
