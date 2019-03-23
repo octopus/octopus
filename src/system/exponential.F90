@@ -248,7 +248,7 @@ contains
   subroutine exponential_apply(te, der, hm, zpsi, ist, ik, deltat, order, vmagnus, imag_time, Imdeltat)
     type(exponential_t), intent(inout) :: te
     type(derivatives_t), intent(in)    :: der
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_t), intent(inout) :: hm
     integer,             intent(in)    :: ist
     integer,             intent(in)    :: ik
     CMPLX,               intent(inout) :: zpsi(:, :)

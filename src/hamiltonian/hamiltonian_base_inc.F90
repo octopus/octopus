@@ -501,7 +501,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   type(states_dim_t),               intent(in)    :: std
   integer,                          intent(in)    :: ik
   type(batch_t),                    intent(in)    :: psib
-  type(projection_t),               intent(out)   :: projection
+  type(projection_t),               intent(inout) :: projection
 
   integer :: ist, ip, iproj, imat, nreal, iprojection
   integer :: npoints, nprojs, nst, maxnpoints
@@ -515,6 +515,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   R_TYPE, allocatable :: lpsi(:, :)
 
   integer :: block_size, sp, ep
+  logical :: reinitialize
   
   if(.not. this%apply_projector_matrices) return
 
@@ -530,8 +531,17 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
   if(batch_is_packed(psib) .and. accel_is_enabled()) then
 
-    call accel_create_buffer(projection%buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
-      this%full_projection_size*psib%pack%size_real(1))
+    ! reinitialize the buffer on the GPU if we need more space
+    reinitialize = projection%buff_projection%size < this%full_projection_size*psib%pack%size_real(1)
+    if (.not. this%projection%initialized) then
+      call accel_create_buffer(projection%buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
+        this%full_projection_size*psib%pack%size_real(1))
+      projection%initialized = .true.
+    else if (reinitialize) then
+      call accel_release_buffer(projection%buff_projection)
+      call accel_create_buffer(projection%buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
+        this%full_projection_size*psib%pack%size_real(1))
+    end if
 
     call profiling_in(cl_prof, "CL_PROJ_BRA")
 
@@ -734,7 +744,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
     end if
 
     call finish_opencl()
-    call accel_release_buffer(projection%buff_projection)
+    ! The deallocation of projection%buff_projection happens now in hamiltonian_base_end
     
     POP_SUB(X(hamiltonian_base_nlocal_finish))
     call profiling_out(prof_vnlpsi_finish)

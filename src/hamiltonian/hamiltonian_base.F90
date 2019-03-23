@@ -87,6 +87,13 @@ module hamiltonian_base_oct_m
     zhamiltonian_base_nlocal_force,            &
     projection_t
 
+  type projection_t
+    FLOAT, allocatable     :: dprojection(:, :)
+    CMPLX, allocatable     :: zprojection(:, :)
+    type(accel_mem_t)     :: buff_projection
+    logical :: initialized
+  end type projection_t
+
   !> This object stores and applies an electromagnetic potential that
   !! can be represented by different types of potentials.
 
@@ -126,13 +133,10 @@ module hamiltonian_base_oct_m
     CMPLX, allocatable :: phase_corr(:,:)
     type(accel_mem_t) :: buff_phase
     integer            :: buff_phase_qn_start
-  end type hamiltonian_base_t
 
-  type projection_t
-    FLOAT, allocatable     :: dprojection(:, :)
-    CMPLX, allocatable     :: zprojection(:, :)
-    type(accel_mem_t)     :: buff_projection
-  end type projection_t
+    ! this variable is only allocated once
+    type(projection_t) :: projection
+  end type hamiltonian_base_t
 
   integer, parameter, public ::          &
     TERM_ALL                 = HUGE(1),  &
@@ -172,6 +176,8 @@ contains
     this%apply_projector_matrices = .false.
     this%nprojector_matrices = 0
 
+    this%projection%initialized = .false.
+
     POP_SUB(hamiltonian_base_init)
   end subroutine hamiltonian_base_init
 
@@ -183,6 +189,11 @@ contains
 
     if(allocated(this%potential) .and. accel_is_enabled()) then
       call accel_release_buffer(this%potential_opencl)
+    end if
+
+    ! deallocate buffer on GPU
+    if (this%projection%initialized .and. accel_is_enabled()) then
+      call accel_release_buffer(this%projection%buff_projection)
     end if
     
     SAFE_DEALLOCATE_A(this%potential)

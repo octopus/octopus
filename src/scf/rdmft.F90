@@ -919,7 +919,7 @@ contains
   ! ----------------------------------------
   ! constructs the Lagrange multiplyers needed for the orbital minimization
   subroutine construct_f(hm, st, gr, lambda, rdm)
-    type(hamiltonian_t),  intent(in) :: hm
+    type(hamiltonian_t),  intent(inout) :: hm
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in) :: gr
     FLOAT,                intent(out):: lambda(:,:) !< (1:st%nst, 1:st%nst)
@@ -1144,7 +1144,7 @@ contains
   ! calculates the derivatives of the energy terms with respect to the occupation numbers
   subroutine rdm_derivatives(rdm, hm, st, gr)
     type(rdm_t),          intent(inout) :: rdm
-    type(hamiltonian_t),  intent(in)    :: hm 
+    type(hamiltonian_t),  intent(inout) :: hm
     type(states_t),       intent(in)    :: st 
     type(grid_t),         intent(inout) :: gr
     
@@ -1246,7 +1246,7 @@ contains
   !calculates the one electron integrals in the basis of the initial orbitals
   subroutine rdm_integrals(rdm, hm, st, gr)
     type(rdm_t),          intent(inout) :: rdm
-    type(hamiltonian_t),  intent(in)    :: hm 
+    type(hamiltonian_t),  intent(inout) :: hm
     type(states_t),       intent(in)    :: st 
     type(grid_t),         intent(inout) :: gr
     

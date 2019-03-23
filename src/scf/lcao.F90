@@ -859,7 +859,7 @@ contains
     type(states_t),      intent(inout) :: st
     type(grid_t),        intent(inout) :: gr
     type(geometry_t),    intent(in)    :: geo
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_t), intent(inout) :: hm
     integer, optional,   intent(in)    :: start
 
     integer :: start_

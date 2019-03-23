@@ -22,7 +22,7 @@
 ! ---------------------------------------------------------
 subroutine X(linear_solver_solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response)
   type(linear_solver_t), target, intent(inout) :: this
-  type(hamiltonian_t),   target, intent(in)    :: hm
+  type(hamiltonian_t),   target, intent(inout) :: hm
   type(grid_t),          target, intent(in)    :: gr
   type(states_t),        target, intent(in)    :: st
   integer,                       intent(in)    :: ist
@@ -111,7 +111,7 @@ end subroutine X(linear_solver_solve_HXeY)
 
 subroutine X(linear_solver_solve_HXeY_batch) (this, hm, gr, st, ik, xb, yb, shift, tol, residue, iter_used, occ_response)
   type(linear_solver_t), target, intent(inout) :: this
-  type(hamiltonian_t),   target, intent(in)    :: hm
+  type(hamiltonian_t),   target, intent(inout) :: hm
   type(grid_t),          target, intent(in)    :: gr
   type(states_t),        target, intent(in)    :: st
   integer,                       intent(in)    :: ik
@@ -150,7 +150,7 @@ end subroutine X(linear_solver_solve_HXeY_batch)
 !> Conjugate gradients
 subroutine X(linear_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
   type(linear_solver_t), intent(inout) :: ls
-  type(hamiltonian_t),   intent(in)    :: hm
+  type(hamiltonian_t),   intent(inout) :: hm
   type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
@@ -232,7 +232,7 @@ end subroutine X(linear_solver_cg)
 !> released by M. B. van Gizjen [http://ta.twi.tudelft.nl/nw/users/gijzen/IDR.html].
 subroutine X(linear_solver_idrs) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
   type(linear_solver_t), intent(inout) :: ls
-  type(hamiltonian_t),   intent(in)    :: hm
+  type(hamiltonian_t),   intent(inout) :: hm
   type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
@@ -281,7 +281,7 @@ end subroutine X(linear_solver_idrs)
 !! see http://math.nist.gov/iml++/bicgstab.h.txt
 subroutine X(linear_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response)
   type(linear_solver_t), intent(inout) :: ls
-  type(hamiltonian_t),   intent(in)    :: hm
+  type(hamiltonian_t),   intent(inout) :: hm
   type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
@@ -423,7 +423,7 @@ end subroutine X(linear_solver_bicgstab)
 ! ---------------------------------------------------------
 subroutine X(linear_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
   type(linear_solver_t), intent(inout) :: ls
-  type(hamiltonian_t),   intent(in)    :: hm
+  type(hamiltonian_t),   intent(inout) :: hm
   type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
@@ -517,7 +517,7 @@ end subroutine X(linear_solver_multigrid)
 ! ---------------------------------------------------------
 !> This routine applies the operator hx = [H (+ Q) + shift] x
 subroutine X(linear_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
-  type(hamiltonian_t),   intent(in)    :: hm
+  type(hamiltonian_t),   intent(inout) :: hm
   type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
@@ -570,7 +570,7 @@ end subroutine X(linear_solver_operator)
 
 ! ---------------------------------------------------------
 subroutine X(linear_solver_operator_batch) (hm, gr, st, ik, shift, xb, hxb)
-  type(hamiltonian_t),   intent(in)    :: hm
+  type(hamiltonian_t),   intent(inout) :: hm
   type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ik
@@ -705,7 +705,7 @@ end subroutine X(linear_solver_preconditioner)
 
 ! ---------------------------------------------------------
 subroutine X(linear_solver_sos) (hm, gr, st, ist, ik, x, y, shift, residue, iter_used)
-  type(hamiltonian_t),            intent(in)    :: hm
+  type(hamiltonian_t),            intent(inout) :: hm
   type(grid_t),                   intent(in)    :: gr
   type(states_t),                 intent(in)    :: st
   integer,                        intent(in)    :: ist
@@ -766,7 +766,7 @@ end subroutine X(linear_solver_sos)
 !! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
 subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_used, residue, threshold)
   type(linear_solver_t), intent(inout) :: this
-  type(hamiltonian_t),   intent(in)    :: hm
+  type(hamiltonian_t),   intent(inout) :: hm
   type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ik

@@ -18,7 +18,7 @@
 
 ! ---------------------------------------------------------
 subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, set_phase)
-  type(hamiltonian_t),   intent(in)    :: hm
+  type(hamiltonian_t),   intent(inout) :: hm
   type(derivatives_t),   intent(in)    :: der
   type(batch_t), target, intent(inout) :: psib
   type(batch_t), target, intent(inout) :: hpsib
@@ -31,7 +31,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
   type(batch_t), pointer :: epsib
   type(derivatives_handle_batch_t) :: handle
   integer :: terms_
-  type(projection_t) :: projection
   logical :: copy_at_end
   
   call profiling_in(prof_hamiltonian, "HAMILTONIAN")
@@ -101,7 +100,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
 
   if (hm%ep%non_local .and. bitand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
     if(hm%hm_base%apply_projector_matrices) then
-      call X(hamiltonian_base_nlocal_start)(hm%hm_base, der%mesh, hm%d, ik, epsib, projection)
+      call X(hamiltonian_base_nlocal_start)(hm%hm_base, der%mesh, hm%d, ik, epsib, hm%hm_base%projection)
     end if
   end if
 
@@ -123,7 +122,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
   ! and the non-local one
   if (hm%ep%non_local .and. bitand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0) then
     if(hm%hm_base%apply_projector_matrices) then
-      call X(hamiltonian_base_nlocal_finish)(hm%hm_base, der%mesh, hm%d, ik, projection, hpsib)
+      call X(hamiltonian_base_nlocal_finish)(hm%hm_base, der%mesh, hm%d, ik, hm%hm_base%projection, hpsib)
     else
       call X(project_psi_batch)(der%mesh, hm%ep%proj, hm%ep%natoms, hm%d%dim, epsib, hpsib, ik)
     end if
@@ -247,7 +246,7 @@ end subroutine X(hamiltonian_external)
 ! ---------------------------------------------------------
 
 subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc, set_phase)
-  type(hamiltonian_t), intent(in)    :: hm
+  type(hamiltonian_t), intent(inout) :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ist       !< the index of the state
   integer,             intent(in)    :: ik        !< the index of the k-point
@@ -652,7 +651,7 @@ end subroutine X(scdm_exchange_operator)
 ! ---------------------------------------------------------
 
 subroutine X(magnus) (hm, der, psi, hpsi, ik, vmagnus, set_phase)
-  type(hamiltonian_t), intent(in)    :: hm
+  type(hamiltonian_t), intent(inout) :: hm
   type(derivatives_t), intent(in)    :: der
   integer,             intent(in)    :: ik
   R_TYPE,              intent(inout) :: psi(:,:)
