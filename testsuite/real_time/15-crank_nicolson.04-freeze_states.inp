@@ -17,7 +17,7 @@ TDMaxSteps = 20
 
 TDPropagator = crank_nicolson
 
-ParDomains = no
+ParDomains = auto
 ParStates = auto
 
 FromScratch = yes
