@@ -63,6 +63,7 @@ module grid_oct_m
     type(derivatives_t)         :: der
     type(curvilinear_t)         :: cv
     type(multigrid_t), pointer  :: mgrid
+    type(multigrid_t), pointer  :: mgrid_prec  ! the multigrid object for the preconditioner
     type(double_grid_t)         :: dgrid
     logical                     :: have_fine_mesh
     type(stencil_t)             :: stencil
@@ -119,7 +120,8 @@ contains
     if(gr%have_fine_mesh) call messages_experimental("UseFineMesh")
 
     call geometry_grid_defaults(geo, def_h, def_rsize)
-
+    call geometry_grid_defaults_info(geo)
+    
     ! initialize to -1
     grid_spacing = -M_ONE
 

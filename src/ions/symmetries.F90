@@ -511,6 +511,7 @@ contains
       message(1) = "Symmetries have been disabled by SymmetriesCompute = false."
       call messages_info(1,iunit = iunit)
       call messages_print_stress(iunit)
+      POP_SUB(symmetries_write_info)
       return
     end if
 

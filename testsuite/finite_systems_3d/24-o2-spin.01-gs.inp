@@ -15,7 +15,6 @@ Spacing = 0.55
 Radius = 6
 
 ParDomains = no
-ParKPoints = auto
 
 #For future reference: PoissonSolverISFParallelData = no
 

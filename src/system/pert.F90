@@ -20,6 +20,7 @@
 
 module pert_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use boundaries_oct_m
   use comm_oct_m
   use derivatives_oct_m

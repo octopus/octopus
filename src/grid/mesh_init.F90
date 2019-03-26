@@ -1106,7 +1106,7 @@ contains
                 dx = abs(mod(ix, n_mod))
                 dy = abs(mod(iy, n_mod))
                 dz = abs(mod(iz, n_mod))
-                if(dx+dy+dz == M_ZERO) cycle
+                if(dx+dy+dz == 0) cycle
 
                 if(abs(vol_tmp(ix, iy, iz)) < DELTA) cycle
 

@@ -37,11 +37,8 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
 
   FLOAT :: eig
   integer :: is, ist, ixc, nspin_, isp, idm, jdm
-  integer, save :: itera = 0
   logical, save :: first = .true.
   R_TYPE, allocatable :: psi(:)
-  if ((.not.st%fromscratch).and.(itera==0)) &
-  itera = itera + 1
 
   if(oep%level == XC_OEP_NONE) return
 
@@ -54,6 +51,9 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   SAFE_ALLOCATE(oep%eigen_index(1:st%nst))
   SAFE_ALLOCATE(oep%X(lxc)(1:gr%mesh%np, st%st_start:st%st_end, 1:nspin_))
   SAFE_ALLOCATE(oep%uxc_bar(1:st%nst, 1:nspin_))
+
+  if ((.not.st%fromscratch).and.(first)) &
+    first = .false.
 
   ! this part handles the (pure) orbital functionals
   oep%X(lxc) = M_ZERO
@@ -128,9 +128,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
           call X(xc_oep_solve)(gr, hm, st, is, vxc(:,is), oep)
         end if
         if (is == nspin_) &
-        itera = itera+1
-        if (itera>1) &
-        first = .false.
+          first = .false.
         vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np,1)
       end if
     end do spin2
@@ -209,15 +207,6 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
       vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np, 1))
       bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, 1) - (vxc_bar - oep%uxc_bar(ist, is)))* &
         R_CONJ(psi(:, 1)) + oep%X(lxc)(1:gr%mesh%np, ist, is)
-
-      if ((oep%eigen_n == 0) .AND. (st%occ(st%st_start, is) == 1)) then
-        if (min(st%d%nspin, 2) == 2) then
-          if ((st%occ(st%st_start, 1)+st%occ(st%st_start, 2)) == 1) &
-          write(*,*) ' OEP is not self-interaction corrected - please use KLI or more than one electron'
-        else 
-          write(*,*) ' OEP is not self-interaction corrected - please use KLI or more than one electron'
-        end if
-      end if
 
       if (oep%has_photons) &
         call X(xc_oep_pt_rhs)(gr, st, is, oep, phi1, ist, bb)

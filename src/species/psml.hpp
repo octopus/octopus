@@ -24,6 +24,7 @@
 #include <cassert>
 #include <sstream>
 #include <iostream>
+#include <cmath>
 
 #include "anygrid.hpp"
 #include "base.hpp"
@@ -41,6 +42,8 @@ namespace pseudopotential {
       file_(filename.c_str()),
       buffer_((std::istreambuf_iterator<char>(file_)), std::istreambuf_iterator<char>()){
 
+      filename_ = filename;
+      
       buffer_.push_back('\0');
       doc_.parse<0>(&buffer_[0]);
 
@@ -128,7 +131,7 @@ namespace pseudopotential {
     }
     
     std::string symbol() const {
-      return spec_node_->first_attribute("atomic-label")->value();
+      return element::trim(spec_node_->first_attribute("atomic-label")->value());
     }
 
     int atomic_number() const {
@@ -140,8 +143,8 @@ namespace pseudopotential {
       return el.mass();
     }
     
-    int valence_charge() const {
-      return value<int>(spec_node_->first_node("valence-configuration")->first_attribute("total-valence-charge"));
+    double valence_charge() const {
+      return value<double>(spec_node_->first_node("valence-configuration")->first_attribute("total-valence-charge"));
     }
 
     int llocal() const {

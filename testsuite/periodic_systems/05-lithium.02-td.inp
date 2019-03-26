@@ -37,7 +37,6 @@ TDMaxSteps = 20
 ExperimentalFeatures = yes
 
 ParDomains = no
-ParKPoints = auto
 
 TDEnergyUpdateIter = 5
 

@@ -67,6 +67,7 @@ contains
     
     this%def_par_mask = 0
     this%def_par_mask = ibset(this%def_par_mask, P_STRATEGY_DOMAINS - 1)
+    this%def_par_mask = ibset(this%def_par_mask, P_STRATEGY_KPOINTS - 1)
     
     this%scalapack_compat = .false.
   end subroutine calc_mode_par_init

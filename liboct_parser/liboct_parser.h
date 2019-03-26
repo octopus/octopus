@@ -22,6 +22,7 @@
 #define _LIB_OCT_H
 
 #include <gsl/gsl_complex.h>
+#include <stdint.h>
 
 int         parse_init   (const char *file_out, const int *mpiv_node);
 int         parse_input  (const char *file_in, int set_used);
@@ -29,7 +30,7 @@ void        parse_environment  (const char *file_in);
 void        parse_end    (void);
 
 int         parse_isdef  (const char *name);
-int         parse_int    (const char *name, int def);
+int64_t     parse_int    (const char *name, int64_t def);
 double      parse_double (const char *name, double def);
 gsl_complex parse_complex(const char *name, gsl_complex def);
 char       *parse_string (const char *name, char *def);

@@ -76,5 +76,5 @@ electric_field | 1 | 0 | 0 | freq1 | "envelope_function"
 "envelope_function" | tdf_cw | ampl
 %
 
-DisableOpenCL = yes
+DisableAccel = yes
 

@@ -24,7 +24,8 @@
 #include <rapidxml.hpp>
 #include <sstream>
 
-#define MAX_L 10 
+#define MAX_L 10
+#define INVALID_L 333
 
 namespace pseudopotential {
 
@@ -55,7 +56,8 @@ namespace pseudopotential {
     PSF                        = 779,
     CPI                        = 780,
     FHI                        = 781,
-    HGH                        = 782
+    HGH                        = 782,
+    PSP8                       = 783
   };
 
   // these values match libxc convention
@@ -73,7 +75,9 @@ namespace pseudopotential {
     UNKNOWN                    =  -2,
     ANY                        =  -1,
     NONE                       =   0,
+    LDA_PZ                     =   9,
     LDA_PW                     =  12,
+    LDA_XC_TETER93             =  20,
     PBE                        = 130,
     PBE_SOL                    = 133,
     LYP                        = 131
@@ -94,7 +98,7 @@ namespace pseudopotential {
     virtual std::string symbol() const = 0;
     virtual int atomic_number() const = 0;
     virtual double mass() const = 0;
-    virtual int valence_charge() const = 0;
+    virtual double valence_charge() const = 0;
     virtual int llocal() const = 0;
     virtual int nchannels() const = 0;
     virtual double mesh_spacing() const = 0;
@@ -142,7 +146,9 @@ namespace pseudopotential {
     virtual int wavefunction_2j(int ii) const { return 0; } // returns j multiplied by 2
     
   protected:
-
+    
+    std::string filename_;
+    
     template <typename Type>
     static Type value(const rapidxml::xml_base<> * node){
       assert(node);

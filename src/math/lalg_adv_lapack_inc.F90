@@ -191,6 +191,9 @@ subroutine X(eigensolve_nonh)(n, a, e, err_code, side, sort_eigenvectors)
   end if
 
   lwork = -1
+  ! Initializing info, if not it can cause that the geev query mode fails.
+  ! Besides, if info is not initialized valgrind complains about it. 
+  info = 0
   ! A bug in the query mode of zgeev demands that the working array has to be larger than 1
   ! problem here is that a value is written somewhere into the array whether it is
   ! allocated or not. I noticed that it happens (hopefully) always at an index which

@@ -30,7 +30,6 @@ KPointsUseSymmetries = yes
 SymmetrizeDensity = yes
 
 ParDomains = no
-ParKPoints = auto
 
 %KPointsGrid
   2 | 2 | 1

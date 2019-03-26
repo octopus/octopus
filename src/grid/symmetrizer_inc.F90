@@ -241,7 +241,7 @@ subroutine X(symmetrize_magneto_optics_cart)(symm, tensor)
   tensor_symm(:,:,:) = M_ZERO
   
   do iop = 1, nops
-    rot = symm_op_rotation_matrix_cart(symm%ops(iop))
+    rot = symm_op_rotation_matrix_red(symm%ops(iop))
     det = abs(rot(1,1) * rot(2,2) * rot(3,3)) + abs(rot(1,2) * rot(2,3) * rot(3,1)) &
       + abs(rot(1,3) * rot(2,1) * rot(3,2)) - abs(rot(1,1) * rot(2,3) * rot(3,2)) &
       - abs(rot(1,2) * rot(2,1) * rot(3,3)) - abs(rot(1,3) * rot(2,2) * rot(3,1))

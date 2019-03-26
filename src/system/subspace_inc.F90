@@ -115,7 +115,7 @@ subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
       minst = states_block_min(st, ib)
       maxst = states_block_max(st, ib)
 
-      call batch_copy(st%group%psib(ib, ik), hpsib)
+      call batch_copy(st%group%psib(ib, ik), hpsib, fill_zeros = .false.)
 
       call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik)
       call batch_axpy(der%mesh%np, -eigenval, st%group%psib(ib, ik), hpsib)
@@ -389,7 +389,7 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
   SAFE_ALLOCATE(hpsib(st%group%block_start:st%group%block_end))
   
   do ib = st%group%block_start, st%group%block_end
-    call batch_copy(st%group%psib(ib, ik), hpsib(ib))
+    call batch_copy(st%group%psib(ib, ik), hpsib(ib), fill_zeros= .false.)
     call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib(ib), ik)
   end do
   
@@ -493,10 +493,6 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
         beta = R_TOTYPE(CNST(1.0)),                     & 
         c = hmss(1, 1), ldc = ubound(hmss, dim = 1))
     end do
-
-#ifdef R_TCOMPLEX
-    hmss(1:st%nst, 1:st%nst) = R_CONJ(hmss(1:st%nst, 1:st%nst))
-#endif
 
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(hpsi)

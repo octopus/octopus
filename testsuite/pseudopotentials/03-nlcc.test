@@ -2,11 +2,12 @@
 
 Test       : Non-linear core corrections
 Program    : octopus
-TestGroups : short-run, pseudpotentials
+TestGroups : short-run, pseudopotentials
 Enabled    : Yes
 
 ExtraFile : 03-nlcc.F.UPF
 Input      : 03-nlcc.01-Fatom.inp
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -26.97584803
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -4.20331421
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 21.24593966
