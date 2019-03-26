@@ -129,11 +129,9 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
         end if
         if (is == nspin_) &
         itera = itera+1
-        if (is < nspin_) &
-        ec = 0
         if (itera>1) &
         first = .false.
-        vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np,is)
+        vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np,1)
       end if
     end do spin2
   end if
@@ -197,7 +195,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   end if
 
   ! fix xc potential (needed for Hpsi)
-  vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np) + oep%vxc(1:gr%mesh%np,is)
+  vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np) + oep%vxc(1:gr%mesh%np,1)
 
   do iter = 1, oep%scftol%max_iter
     ! iteration over all states
@@ -208,8 +206,8 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
       call states_get_state(st, gr%mesh, ist, is, psi)
 
       ! evaluate right-hand side
-      vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np, is))
-      bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, is) - (vxc_bar - oep%uxc_bar(ist, is)))* &
+      vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np, 1))
+      bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, 1) - (vxc_bar - oep%uxc_bar(ist, is)))* &
         R_CONJ(psi(:, 1)) + oep%X(lxc)(1:gr%mesh%np, ist, is)
 
       if ((oep%eigen_n == 0) .AND. (st%occ(st%st_start, is) == 1)) then
@@ -219,8 +217,6 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
         else 
           write(*,*) ' OEP is not self-interaction corrected - please use KLI or more than one electron'
         end if
-        ! single_electron_correction = 2.0
-        ! bb(1:gr%mesh%np, 1) = bb(1:gr%mesh%np, 1)*single_electron_correction
       end if
 
       if (oep%has_photons) &
@@ -254,29 +250,30 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
 
 
     if ((oep%mixing_scheme == OEP_MIXING_SCHEME_CONST)) then
-      oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)
+      oep%vxc(1:gr%mesh%np,1) = oep%vxc(1:gr%mesh%np,1) + oep%mixing*ss(1:gr%mesh%np)
     else if (oep%mixing_scheme == OEP_MIXING_SCHEME_DENS) then
-      oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)/st%rho(1:gr%mesh%np,is)
+      oep%vxc(1:gr%mesh%np,1) = oep%vxc(1:gr%mesh%np,1) + oep%mixing*ss(1:gr%mesh%np)/st%rho(1:gr%mesh%np,is)
     else if (oep%mixing_scheme == OEP_MIXING_SCHEME_BB) then
       if (dmf_nrm2(gr%mesh, oep%vxc_old(1:gr%mesh%np,is)) > M_EPSILON ) then ! do not do it for the first run
-        oep%mixing = -dmf_dotp(gr%mesh, oep%vxc(1:gr%mesh%np,is) - oep%vxc_old(1:gr%mesh%np,is), ss - oep%ss_old) &
+        oep%mixing = -dmf_dotp(gr%mesh, oep%vxc(1:gr%mesh%np,1) - oep%vxc_old(1:gr%mesh%np,is), ss - oep%ss_old) &
           / dmf_dotp(gr%mesh, ss - oep%ss_old, ss - oep%ss_old)
       end if
+
       write(message(1), '(a,es14.6,a,es14.8)') "Info: oep%mixing:", oep%mixing, " norm2ss: ", dmf_nrm2(gr%mesh, ss)
       call messages_info(1)
 
-      oep%vxc_old(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is)
+      oep%vxc_old(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,1)
       oep%ss_old(1:gr%mesh%np) = ss(1:gr%mesh%np)
-      oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)
+      oep%vxc(1:gr%mesh%np,1) = oep%vxc(1:gr%mesh%np,1) + oep%mixing*ss(1:gr%mesh%np)
     end if
 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
         call states_get_state(st, gr%mesh, ist, is, psi)
-        vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np,is))
+        vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np,1))
         if (oep%has_photons) &
           call X(xc_oep_pt_uxcbar)(gr, st, is, oep, phi1(:,:,ist), ist, vxc_bar)
-        oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) - (vxc_bar - oep%uxc_bar(ist,is))
+        oep%vxc(1:gr%mesh%np,1) = oep%vxc(1:gr%mesh%np,1) - (vxc_bar - oep%uxc_bar(ist,is))
       end if
     end do
 

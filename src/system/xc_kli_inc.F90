@@ -30,7 +30,6 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
   integer :: ist, ip, jst, eigen_n, kssi, kssj, proc
   FLOAT, allocatable :: rho_sigma(:), v_bar_S(:), sqphi(:, :, :), dd(:)
   FLOAT, allocatable :: Ma(:,:), xx(:,:), yy(:,:)
-  FLOAT :: single_electron_correction
   R_TYPE, allocatable :: psi(:, :), bb(:,:)
   R_TYPE, allocatable :: phi1(:,:,:)
   
@@ -45,12 +44,6 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
   SAFE_ALLOCATE(rho_sigma(1:mesh%np))
   SAFE_ALLOCATE(sqphi(1:mesh%np, 1:st%d%dim, 1:st%nst))
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
-  single_electron_correction = M_ONE
-
-  if(.not. st%parallel_in_states) then
-    if ((oep%eigen_n == 0) .AND. (st%occ(st%st_start, is) == 1) .AND. (min(st%d%nspin, 2) == 1)) &
-    single_electron_correction = 2.0 ! 0.5*0.5 for single electron so that coulomb x-kli cancels coulombic Hartree and vks - v0 = 0 for a single electron! - but we get the correct orbitals for our photonic potential
-  end if
 
   if (oep%has_photons) then
     SAFE_ALLOCATE(phi1(1:gr%mesh%np,1:st%d%dim,1:st%nst))
@@ -87,7 +80,7 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
 
   ! Comparing to KLI paper 1990, oep%vxc corresponds to V_{x \sigma}^S in Eq. 8
   ! The n_{i \sigma} in Eq. 8 is partitioned in this code into \psi^{*} (included in lxc) and \psi (explicitly below)
-  
+
   oep%vxc(1:mesh%np, 1) = CNST(0.0)
 
   do ist = st%st_start, st%st_end
@@ -97,15 +90,14 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
       bb(:,1) = oep%X(lxc)(1:gr%mesh%np, ist, is)
       if (ist/=(oep%eigen_n + 1)) &
       bb(:,1) = bb(:,1) - oep%uxc_bar(ist, is)*R_CONJ(psi(:, 1))
-      bb(:,1) = bb(:,1)*single_electron_correction
       if (.not.first) then
         call X(xc_oep_pt_rhs)(gr, st, is, oep, phi1, ist, bb)
       end if
-      oep%vxc(:, is) = oep%vxc(:, is) + oep%socc*st%occ(ist, is)*bb(:,1)*psi(:,1)
+      oep%vxc(:, 1) = oep%vxc(:, 1) + oep%socc*st%occ(ist, is)*bb(:,1)*psi(:,1)
     else
       do ip = 1, mesh%np
-        oep%vxc(ip, is) = oep%vxc(ip, is) + &
-        oep%socc*st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))*single_electron_correction
+        oep%vxc(ip, 1) = oep%vxc(ip, 1) + &
+        oep%socc*st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))
       end do
     end if
   end do
