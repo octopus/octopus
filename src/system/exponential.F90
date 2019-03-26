@@ -66,9 +66,10 @@ module exponential_oct_m
     integer     :: exp_order   !< order to which the propagator is expanded
     integer     :: arnoldi_gs  !< Orthogonalization scheme used for Arnoldi
     ! these are variables needed for temporary storage -> avoid allocation in each time step
+    logical     :: batches_initialized, batches_packed
+    integer     :: tmp_nst, tmp_nst_linear
     type(batch_t) :: psi1b, hpsi1b
     CMPLX, allocatable :: psi1(:, :, :), hpsi1(:, :, :)
-    logical     :: batches_initialized, batches_packed
   end type exponential_t
 
 contains
@@ -204,10 +205,15 @@ contains
     PUSH_SUB(exponential_end)
 
     ! deallocate temporary batches and arrays
+    te%psi1b%nst = te%tmp_nst
+    te%psi1b%nst_linear = te%tmp_nst_linear
     call batch_end(te%hpsi1b, copy=.false.)
+    te%hpsi1b%nst = te%tmp_nst
+    te%hpsi1b%nst_linear = te%tmp_nst_linear
     call batch_end(te%psi1b, copy=.false.)
     SAFE_DEALLOCATE_A(te%psi1)
     SAFE_DEALLOCATE_A(te%hpsi1)
+    te%batches_initialized = .false.
 
     POP_SUB(exponential_end)
   end subroutine exponential_end
@@ -642,6 +648,7 @@ contains
 
     ASSERT(batch_type(psib) == TYPE_CMPLX)
     ASSERT(present(psib2) .eqv. present(deltat2))
+
     
     if(present(Imdeltat) .and. present(psib2)) then
       ASSERT(present(Imdeltat2))
@@ -799,17 +806,12 @@ contains
 
     subroutine initialize_temporary_batches()
       logical :: reinitialize
-      integer :: initial_size(2)
       ! This routine initializes temporary batches. If their size changes,
       ! they are reinitialized.
       if(.not. te%batches_initialized) then
         call init_batches()
-        te%batches_initialized = .true.
-        if(batch_is_packed(te%psi1b)) then
-          initial_size = te%psi1b%pack%size
-        end if
       else
-        if(.not.batch_is_packed(te%psi1b)) then
+        if(.not.batch_is_packed(psib)) then
           reinitialize = .true.
         else
           reinitialize = any(te%psi1b%pack%size - psib%pack%size /= 0)
@@ -829,24 +831,38 @@ contains
 
     subroutine init_batches()
       SAFE_ALLOCATE(te%psi1 (1:der%mesh%np_part, 1:hm%d%dim, 1:psib%nst))
-      SAFE_ALLOCATE(te%hpsi1(1:der%mesh%np, 1:hm%d%dim, 1:psib%nst))
+      SAFE_ALLOCATE(te%hpsi1(1:der%mesh%np_part, 1:hm%d%dim, 1:psib%nst))
 
       call batch_init(te%psi1b, hm%d%dim, psib%states(1)%ist, psib%states(psib%nst)%ist, te%psi1)
       call batch_init(te%hpsi1b, hm%d%dim, psib%states(1)%ist, psib%states(psib%nst)%ist, te%hpsi1)
       ! pack the batch -> store on device for GPU version, avoids data transfers
-      if(hamiltonian_apply_packed(hm, der%mesh)) then
+      if(batch_is_packed(psib)) then
         te%batches_packed = .true.
         call batch_pack(te%psi1b, copy = .false.)
         call batch_pack(te%hpsi1b, copy = .false.)
       end if
+      te%tmp_nst = te%psi1b%nst
+      te%tmp_nst_linear = te%psi1b%nst_linear
+      te%batches_initialized = .true.
+
     end subroutine init_batches
 
     subroutine end_batches()
       ! deallocate temporary batches and arrays
+      if(te%batches_packed) then
+        call batch_unpack(te%psi1b, copy = .false.)
+        call batch_unpack(te%hpsi1b, copy = .false.)
+        te%batches_packed = .false.
+      end if
+      te%psi1b%nst = te%tmp_nst
+      te%psi1b%nst_linear = te%tmp_nst_linear
       call batch_end(te%hpsi1b, copy=.false.)
+      te%hpsi1b%nst = te%tmp_nst
+      te%hpsi1b%nst_linear = te%tmp_nst_linear
       call batch_end(te%psi1b, copy=.false.)
       SAFE_DEALLOCATE_A(te%psi1)
       SAFE_DEALLOCATE_A(te%hpsi1)
+      te%batches_initialized = .false.
     end subroutine end_batches
 
   end subroutine exponential_apply_batch
