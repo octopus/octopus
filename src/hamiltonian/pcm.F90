@@ -185,8 +185,6 @@ module pcm_oct_m
   integer, parameter :: N_TESS_SPHERE = 60 !< minimum number of tesserae per sphere
 					                                 !< cannot be changed without changing cav_gen subroutine
 
-  integer :: asc_vs_t_unit, asc_vs_t_unit_sol, asc_vs_t_unit_n, asc_vs_t_unit_e, asc_vs_t_unit_ext
-
 contains
 
 
@@ -1111,18 +1109,6 @@ contains
     pcm%deltaQ_e = M_ZERO
     pcm%deltaQ_n = M_ZERO
 
-
-    asc_vs_t_unit = io_open(PCM_DIR//'ASC_vs_t.dat', action='write')
-    if ( pcm%solute .and. pcm%localf ) then
-     asc_vs_t_unit_sol = io_open(PCM_DIR//'ASC_sol_vs_t.dat', action='write')
-     asc_vs_t_unit_n = io_open(PCM_DIR//'ASC_n_vs_t.dat', action='write')
-     asc_vs_t_unit_e = io_open(PCM_DIR//'ASC_e_vs_t.dat', action='write')
-     asc_vs_t_unit_ext = io_open(PCM_DIR//'ASC_ext_vs_t.dat', action='write')
-    else if( pcm%solute .and. (.not.pcm%localf) ) then
-     asc_vs_t_unit_n = io_open(PCM_DIR//'ASC_n_vs_t.dat', action='write')
-     asc_vs_t_unit_e = io_open(PCM_DIR//'ASC_e_vs_t.dat', action='write')
-    end if
-
     POP_SUB(pcm_init)
   end subroutine pcm_init
 
@@ -1152,6 +1138,13 @@ contains
     logical :: after_kick = .false.
 
     logical :: td_calc_mode = .false.
+
+    integer :: asc_vs_t_unit_e
+
+    character(len=23) :: asc_vs_t_unit_format
+    character(len=16) :: asc_vs_t_unit_format_tail
+
+    integer :: ia
 
     PUSH_SUB(pcm_calc_pot_rs)  
     
@@ -1355,18 +1348,14 @@ contains
      
     end if
 
-    if ( pcm%solute .and. pcm%localf ) then
-      write(asc_vs_t_unit,*) pcm%iter*pcm%dt, pcm%q_n + pcm%q_e + pcm%q_ext
-      write(asc_vs_t_unit_sol,*) pcm%iter*pcm%dt, pcm%q_n + pcm%q_e
-      write(asc_vs_t_unit_n,*) pcm%iter*pcm%dt, pcm%q_n
-      write(asc_vs_t_unit_e,*) pcm%iter*pcm%dt, pcm%q_e
-      write(asc_vs_t_unit_ext,*) pcm%iter*pcm%dt, pcm%q_ext
-    else if( (.not.pcm%solute) .and. pcm%localf ) then
-      write(asc_vs_t_unit,*) pcm%iter*pcm%dt, pcm%q_ext
-    else if( pcm%solute .and. (.not.pcm%localf) ) then
-      write(asc_vs_t_unit,*) pcm%iter*pcm%dt, pcm%q_n + pcm%q_e
-      write(asc_vs_t_unit_n,*) pcm%iter*pcm%dt, pcm%q_n
-      write(asc_vs_t_unit_e,*) pcm%iter*pcm%dt, pcm%q_e
+    write (asc_vs_t_unit_format_tail, fmt='(I5,A11)') pcm%n_tesserae,'(1X,F14.8))'
+    write (asc_vs_t_unit_format, fmt='(A)') '(F14.8,'//trim(adjustl(asc_vs_t_unit_format_tail))
+
+    if ( pcm%solute .and. pcm%localf .and. td_calc_mode .and. calc .eq. PCM_ELECTRONS ) then
+      asc_vs_t_unit_e = io_open(PCM_DIR//'ASC_e_vs_t.dat', action='write', position='append', form='formatted')
+      write(asc_vs_t_unit_e,fmt=trim(adjustl(asc_vs_t_unit_format))) pcm%iter*pcm%dt, &
+       ( pcm%q_e(ia) , ia=1,pcm%n_tesserae )
+      call io_close(asc_vs_t_unit_e)
     end if
 
     POP_SUB(pcm_calc_pot_rs)  
@@ -3160,17 +3149,6 @@ contains
         write(asc_unit_test_ext,*) pcm%tess(ia)%point, pcm%q_ext(ia), ia
       end do
       call io_close(asc_unit_test_ext)
-    end if
-
-    call io_close(asc_vs_t_unit)
-    if ( pcm%solute .and. pcm%localf ) then
-     call io_close(asc_vs_t_unit_sol)
-     call io_close(asc_vs_t_unit_n)
-     call io_close(asc_vs_t_unit_e)
-     call io_close(asc_vs_t_unit_ext)
-    else if( pcm%solute .and. (.not.pcm%localf) ) then
-     call io_close(asc_vs_t_unit_n)
-     call io_close(asc_vs_t_unit_e)
     end if
 
     SAFE_DEALLOCATE_A(pcm%spheres)
