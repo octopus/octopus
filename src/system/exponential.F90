@@ -66,10 +66,9 @@ module exponential_oct_m
     integer     :: exp_order   !< order to which the propagator is expanded
     integer     :: arnoldi_gs  !< Orthogonalization scheme used for Arnoldi
     ! these are variables needed for temporary storage -> avoid allocation in each time step
+    type(batch_t) :: psi1b, hpsi1b
     logical     :: batches_initialized, batches_packed
     integer     :: tmp_nst, tmp_nst_linear
-    type(batch_t) :: psi1b, hpsi1b
-    CMPLX, allocatable :: psi1(:, :, :), hpsi1(:, :, :)
   end type exponential_t
 
 contains
@@ -194,6 +193,8 @@ contains
 
     te%batches_initialized = .false.
     te%batches_packed = .false.
+    te%tmp_nst = -1
+    te%tmp_nst_linear = -1
 
     POP_SUB(exponential_init)
   end subroutine exponential_init
@@ -205,15 +206,16 @@ contains
     PUSH_SUB(exponential_end)
 
     ! deallocate temporary batches and arrays
-    te%psi1b%nst = te%tmp_nst
-    te%psi1b%nst_linear = te%tmp_nst_linear
-    call batch_end(te%hpsi1b, copy=.false.)
-    te%hpsi1b%nst = te%tmp_nst
-    te%hpsi1b%nst_linear = te%tmp_nst_linear
-    call batch_end(te%psi1b, copy=.false.)
-    SAFE_DEALLOCATE_A(te%psi1)
-    SAFE_DEALLOCATE_A(te%hpsi1)
-    te%batches_initialized = .false.
+    if(te%batches_initialized) then
+      te%psi1b%nst = te%tmp_nst
+      te%psi1b%nst_linear = te%tmp_nst_linear
+      call batch_end(te%hpsi1b, copy=.false.)
+      te%hpsi1b%nst = te%tmp_nst
+      te%hpsi1b%nst_linear = te%tmp_nst_linear
+      call batch_end(te%psi1b, copy=.false.)
+      te%batches_initialized = .false.
+      te%batches_packed = .false.
+    end if
 
     POP_SUB(exponential_end)
   end subroutine exponential_end
@@ -229,6 +231,11 @@ contains
     teo%lanczos_tol = tei%lanczos_tol
     teo%exp_order   = tei%exp_order
     teo%arnoldi_gs  = tei%arnoldi_gs 
+
+    teo%batches_initialized = .false.
+    teo%batches_packed = .false.
+    teo%tmp_nst = -1
+    teo%tmp_nst_linear = -1
 
     POP_SUB(exponential_copy)
   end subroutine exponential_copy
@@ -830,11 +837,8 @@ contains
     end subroutine initialize_temporary_batches
 
     subroutine init_batches()
-      SAFE_ALLOCATE(te%psi1 (1:der%mesh%np_part, 1:hm%d%dim, 1:psib%nst))
-      SAFE_ALLOCATE(te%hpsi1(1:der%mesh%np_part, 1:hm%d%dim, 1:psib%nst))
-
-      call batch_init(te%psi1b, hm%d%dim, psib%states(1)%ist, psib%states(psib%nst)%ist, te%psi1)
-      call batch_init(te%hpsi1b, hm%d%dim, psib%states(1)%ist, psib%states(psib%nst)%ist, te%hpsi1)
+      call batch_copy(psib, te%psi1b, copy_data=.false.)
+      call batch_copy(psib, te%hpsi1b, copy_data=.false.)
       ! pack the batch -> store on device for GPU version, avoids data transfers
       if(batch_is_packed(psib)) then
         te%batches_packed = .true.
@@ -860,8 +864,6 @@ contains
       te%hpsi1b%nst = te%tmp_nst
       te%hpsi1b%nst_linear = te%tmp_nst_linear
       call batch_end(te%psi1b, copy=.false.)
-      SAFE_DEALLOCATE_A(te%psi1)
-      SAFE_DEALLOCATE_A(te%hpsi1)
       te%batches_initialized = .false.
     end subroutine end_batches
 
