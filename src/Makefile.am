@@ -697,11 +697,11 @@ oct_photoelectron_spectrum_SOURCES = $(td_srcs) $(scf_srcs) $(system_srcs) $(ham
 				utils/photoelectron_spectrum.F90
 oct_photoelectron_spectrum_LINK = $(FCLINK)
 oct_photoelectron_spectrum_LDADD = $(all_LIBS)
-oct_xyz_anim_SOURCES = $(ions_srcs) $(species_srcs) $(math_srcs) $(basic_srcs) \
+oct_xyz_anim_SOURCES = $(grid_srcs) $(ions_srcs) $(species_srcs) $(math_srcs) $(basic_srcs) \
 		utils/xyzanim.F90
 oct_xyz_anim_LINK = $(FCLINK)
 oct_xyz_anim_LDADD = $(all_LIBS)
-oct_casida_spectrum_SOURCES = $(ions_srcs) $(species_srcs) $(math_srcs) $(basic_srcs) \
+oct_casida_spectrum_SOURCES = $(grid_srcs) $(ions_srcs) $(species_srcs) $(math_srcs) $(basic_srcs) \
 			utils/casida_spectrum.F90
 oct_casida_spectrum_LINK = $(FCLINK)
 oct_casida_spectrum_LDADD = $(all_LIBS)
@@ -715,7 +715,7 @@ oct_infrared_spectrum_SOURCES = $(grid_srcs) $(ions_srcs) $(species_srcs) $(math
 				utils/infrared.F90
 oct_infrared_spectrum_LINK = $(FCLINK)
 oct_infrared_spectrum_LDADD = $(all_LIBS)
-oct_center_geom_SOURCES = $(ions_srcs) $(species_srcs) $(math_srcs) $(basic_srcs) \
+oct_center_geom_SOURCES = $(grid_srcs) $(ions_srcs) $(species_srcs) $(math_srcs) $(basic_srcs) \
 			  utils/centergeom.F90
 oct_center_geom_LINK = $(FCLINK)
 oct_center_geom_LDADD = $(all_LIBS)
