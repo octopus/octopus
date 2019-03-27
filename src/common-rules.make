@@ -76,14 +76,12 @@ endif
 # These must be arranged so if LIB1 depends on LIB2, LIB1 must occur before LIB2.
 # e.g. ETSF_IO depends on netCDF, ISF depends on LAPACK
 outside_LIBS = @LIBS_PSPIO@ @LIBS_POKE@ @LIBS_ISF@ @LIBS_NFFT@ @LIBS_PNFFT@ @LIBS_PFFT@ \
-  @LIBS_ETSF_IO@ @LIBS_NETCDF@ @LIBS_LIBFM@ \
+  @LIBS_SPARSKIT@ @LIBS_ETSF_IO@ @LIBS_NETCDF@ @LIBS_LIBFM@ \
   @LIBS_BERKELEYGW@ @LIBS_NLOPT@ @GD_LIBS@ \
   @LIBS_PARMETIS@ @LIBS_METIS@ @LIBS_LIKWID@ @LIBS_CUDA@ @LIBS_MPI@
 
 other_LIBS = $(external_LIBS) $(scalapack_LIBS) $(outside_LIBS) $(core_LIBS) @CXXLIBS@
 all_LIBS = $(octopus_LIBS) $(other_LIBS)
-
-LDFLAGS += @LIBS_SPARSKIT@
 
 # ---------------------------------------------------------------
 # How to compile F90 files.
