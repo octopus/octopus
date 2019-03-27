@@ -18,14 +18,10 @@
 #include "global.h"
 
 module pcm_eom_oct_m
-  use comm_oct_m
   use global_oct_m
   use io_oct_m
   use messages_oct_m
   use profiling_oct_m
-  
-  ! to output debug info
-  use io_function_oct_m
 
   private
   public :: pcm_charges_propagation, pcm_eom_enough_initial, pcm_eom_end, pcm_tessera_t, debye_param_t, drude_param_t 

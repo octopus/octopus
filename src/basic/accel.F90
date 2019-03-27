@@ -38,7 +38,6 @@ module accel_oct_m
   use clfft
 #endif
   use global_oct_m
-  use io_oct_m
   use iso_c_binding
   use loct_oct_m
   use messages_oct_m

@@ -24,7 +24,6 @@ module potential_interpolation_oct_m
   use lalg_basic_oct_m
   use loct_pointer_oct_m
   use math_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
   use profiling_oct_m
   use restart_oct_m

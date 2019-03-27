@@ -19,6 +19,7 @@
 #include "global.h"
 
 module matrix_ops_oct_m
+  use blacs_oct_m
   use blacs_proc_grid_oct_m
   use global_oct_m
   use lapack_oct_m

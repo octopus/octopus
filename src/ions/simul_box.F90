@@ -21,7 +21,6 @@
 
 module simul_box_oct_m
   use atom_oct_m
-  use blas_oct_m
   use iso_c_binding
   use geometry_oct_m
   use global_oct_m

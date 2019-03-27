@@ -26,14 +26,10 @@ module states_io_oct_m
   use grid_oct_m
   use io_oct_m
   use kpoints_oct_m
-  use lalg_basic_oct_m
-  use loct_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
-  use mpi_lib_oct_m
+  use mpi_oct_m
   use orbitalset_oct_m
   use orbitalset_utils_oct_m
   use parser_oct_m
@@ -48,7 +44,6 @@ module states_io_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
-  use varinfo_oct_m
 
   implicit none
 

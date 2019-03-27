@@ -27,12 +27,12 @@ module run_oct_m
   use ground_state_oct_m
   use hamiltonian_oct_m
   use invert_ks_oct_m
-  use parser_oct_m
   use messages_oct_m
   use mpi_debug_oct_m
   use memory_oct_m
   use multicomm_oct_m
   use opt_control_oct_m
+  use parser_oct_m
   use phonons_fd_oct_m
   use phonons_lr_oct_m
   use poisson_oct_m

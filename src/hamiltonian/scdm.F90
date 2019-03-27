@@ -19,50 +19,33 @@
 #include "global.h"
 
 module scdm_oct_m
-  use batch_oct_m
-  use batch_ops_oct_m
   use blacs_proc_grid_oct_m
-  use blas_oct_m
+  use blacs_oct_m
   use comm_oct_m
   use cube_oct_m
-  use cube_function_oct_m
   use derivatives_oct_m
   use fft_oct_m
-  use nfft_oct_m
-  use geometry_oct_m
   use global_oct_m
-  use grid_oct_m
-  use hardware_oct_m
   use index_oct_m
-  use io_oct_m
-  use io_function_oct_m
-  use kpoints_oct_m
-  use lalg_basic_oct_m
-  use math_oct_m
+  use lalg_adv_oct_m
   use mesh_oct_m
   use mesh_cube_map_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use mpi_lib_oct_m
   use multicomm_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use poisson_oct_m
   use poisson_fft_oct_m
   use profiling_oct_m
+  use scalapack_oct_m
   use simul_box_oct_m
-  use smear_oct_m
   use states_oct_m
-  use states_calc_oct_m
   use states_dim_oct_m
   use states_parallel_oct_m
-  use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
-  use xc_oct_m
-  use XC_F90(lib_m)
 
   implicit none
 

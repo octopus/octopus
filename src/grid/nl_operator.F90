@@ -22,20 +22,17 @@ module nl_operator_oct_m
   use accel_oct_m
   use batch_oct_m
   use boundaries_oct_m
-  use iso_c_binding
   use global_oct_m
-  use io_oct_m
+  use index_oct_m
+  use iso_c_binding
   use loct_pointer_oct_m
   use math_oct_m
-  use index_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use multicomm_oct_m
   use mpi_oct_m
   use operate_f_oct_m
   use par_vec_oct_m
   use parser_oct_m
-  use partition_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use stencil_oct_m

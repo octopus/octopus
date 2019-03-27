@@ -21,16 +21,12 @@
 module oct_exchange_oct_m
   use derivatives_oct_m
   use global_oct_m
-  use grid_oct_m
   use mesh_oct_m
   use messages_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use states_oct_m
   use states_dim_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
-  use varinfo_oct_m
   use xc_oct_m
 
   implicit none

@@ -35,7 +35,6 @@
 #include "global.h"
 
 module unit_oct_m
-  use global_oct_m
 
   implicit none
 

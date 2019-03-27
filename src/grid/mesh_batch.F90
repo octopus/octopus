@@ -27,10 +27,7 @@ module mesh_batch_oct_m
   use comm_oct_m
   use global_oct_m
   use hardware_oct_m
-  use index_oct_m
   use lalg_basic_oct_m
-  use loct_math_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m

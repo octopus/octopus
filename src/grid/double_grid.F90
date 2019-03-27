@@ -19,15 +19,10 @@
 #include "global.h"
 
 module double_grid_oct_m
-
-  use curvilinear_oct_m
-  use geometry_oct_m
   use global_oct_m
   use math_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use mesh_function_oct_m
-  use loct_oct_m
   use parser_oct_m
   use par_vec_oct_m
   use profiling_oct_m

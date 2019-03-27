@@ -25,15 +25,13 @@ module v_ks_oct_m
   use derivatives_oct_m
   use energy_oct_m
   use energy_calc_oct_m
-  use epot_oct_m 
+  use epot_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use hamiltonian_base_oct_m
   use kick_oct_m
-  use index_oct_m
-  use io_function_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
   use libvdwxc_oct_m
@@ -47,13 +45,12 @@ module v_ks_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use pseudo_oct_m
-  use pcm_oct_m 
+  use pcm_oct_m
   use simul_box_oct_m
   use species_oct_m
   use states_oct_m
   use states_dim_oct_m
   use states_parallel_oct_m
-  use unit_system_oct_m
   use varinfo_oct_m
   use vdw_ts_oct_m
   use xc_oct_m

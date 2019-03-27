@@ -25,8 +25,6 @@ module grid_oct_m
   use double_grid_oct_m
   use geometry_oct_m
   use global_oct_m
-  use index_oct_m
-  use io_oct_m
   use mesh_oct_m
   use mesh_init_oct_m
   use messages_oct_m

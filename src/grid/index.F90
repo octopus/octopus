@@ -25,7 +25,6 @@ module index_oct_m
   use io_binary_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use simul_box_oct_m
 
   implicit none
 

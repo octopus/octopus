@@ -20,14 +20,11 @@
 
 module mesh_init_oct_m
   use checksum_interface_oct_m
-  use cube_oct_m
   use curvilinear_oct_m
   use geometry_oct_m
   use global_oct_m
   use hypercube_oct_m
   use index_oct_m
-  use io_oct_m
-  use loct_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_cube_map_oct_m
@@ -42,7 +39,6 @@ module mesh_init_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use stencil_oct_m
-  use subarray_oct_m
 
   implicit none
   

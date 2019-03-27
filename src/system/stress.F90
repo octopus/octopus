@@ -19,51 +19,38 @@
 #include "global.h"
 
 module stress_oct_m
-  use batch_oct_m
-  use batch_ops_oct_m
-  use born_charges_oct_m
   use boundaries_oct_m
   use comm_oct_m
+  use cube_oct_m
+  use cube_function_oct_m
   use density_oct_m
   use derivatives_oct_m
+  use double_grid_oct_m
   use epot_oct_m
+  use fft_oct_m
+  use fourier_space_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
-  use hamiltonian_base_oct_m
-  use index_oct_m
-  use io_oct_m
   use kpoints_oct_m
-  use lalg_basic_oct_m
-  use lasers_oct_m
-  use linear_response_oct_m
   use loct_math_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use periodic_copy_oct_m
+  use poisson_fft_oct_m
+  use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use species_pot_oct_m
   use states_oct_m
   use states_dim_oct_m
-  use symm_op_oct_m
-  use types_oct_m
-  use v_ks_oct_m
-  use poisson_oct_m
-  use cube_oct_m
-  use cube_function_oct_m
-  use poisson_fft_oct_m
-  use fft_oct_m
-  use fourier_space_oct_m
-  use double_grid_oct_m
   use submesh_oct_m
-  use periodic_copy_oct_m
-  use ps_oct_m  
+  use v_ks_oct_m
+
   implicit none
 
   private

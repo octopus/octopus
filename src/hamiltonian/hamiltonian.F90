@@ -22,7 +22,6 @@ module hamiltonian_oct_m
   use accel_oct_m
   use batch_oct_m
   use batch_ops_oct_m
-  use blas_oct_m
   use boundaries_oct_m
   use boundary_op_oct_m
   use comm_oct_m
@@ -34,19 +33,12 @@ module hamiltonian_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hardware_oct_m
-  use io_oct_m
-  use io_function_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
   use lda_u_oct_m
-  use math_oct_m
   use mesh_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
-  use mpi_oct_m
-  use mpi_lib_oct_m
   use oct_exchange_oct_m
   use parser_oct_m
   use par_vec_oct_m
@@ -58,17 +50,13 @@ module hamiltonian_oct_m
   use scdm_oct_m
   use scissor_oct_m
   use simul_box_oct_m
-  use smear_oct_m
-  use species_oct_m
   use states_oct_m
   use states_dim_oct_m
   use states_parallel_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
   use xc_oct_m
-  use xc_functl_oct_m
   use XC_F90(lib_m)
 
   implicit none

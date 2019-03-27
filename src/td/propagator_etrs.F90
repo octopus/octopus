@@ -21,7 +21,6 @@
 module propagator_etrs_oct_m
   use accel_oct_m
   use batch_oct_m
-  use batch_ops_oct_m
   use density_oct_m
   use exponential_oct_m
   use gauge_field_oct_m
@@ -33,7 +32,6 @@ module propagator_etrs_oct_m
   use lalg_basic_oct_m
   use lda_u_oct_m
   use lda_u_io_oct_m
-  use loct_pointer_oct_m
   use math_oct_m
   use messages_oct_m
   use mesh_function_oct_m
@@ -44,7 +42,6 @@ module propagator_etrs_oct_m
   use states_oct_m
   use types_oct_m
   use v_ks_oct_m
-  use xc_oct_m
 
   implicit none
 

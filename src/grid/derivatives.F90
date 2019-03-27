@@ -23,14 +23,10 @@ module derivatives_oct_m
   use boundaries_oct_m
   use global_oct_m
   use lalg_adv_oct_m
-  use lalg_basic_oct_m
   use loct_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use mpi_oct_m
-  use mpi_debug_oct_m
   use nl_operator_oct_m
   use par_vec_oct_m
   use parser_oct_m
@@ -42,7 +38,6 @@ module derivatives_oct_m
   use stencil_stargeneral_oct_m
   use stencil_variational_oct_m
   use transfer_table_oct_m
-  use types_oct_m
   use utils_oct_m
   use varinfo_oct_m
 

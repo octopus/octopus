@@ -32,7 +32,6 @@ module ion_interaction_oct_m
   use ps_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use unit_system_oct_m
 
   implicit none
 

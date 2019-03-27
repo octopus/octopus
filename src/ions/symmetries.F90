@@ -29,8 +29,6 @@ module symmetries_oct_m
   use species_oct_m
   use spglib_f08
   use symm_op_oct_m
-  use lalg_adv_oct_m
-
 
   implicit none
 

@@ -20,7 +20,6 @@
   
 module submesh_oct_m
   use batch_oct_m
-  use blas_oct_m
   use comm_oct_m
   use global_oct_m
   use lalg_basic_oct_m
@@ -32,8 +31,6 @@ module submesh_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use simul_box_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
     
   implicit none
   private 

@@ -21,23 +21,20 @@
 #include "global.h"
 
 module vdw_ts_oct_m
-  use comm_oct_m 
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
   use hirshfeld_oct_m
-  use ion_interaction_oct_m
   use io_oct_m
   use io_function_oct_m
   use messages_oct_m
-  use mesh_function_oct_m
   use mesh_oct_m
   use mpi_oct_m
-  use parser_oct_m 
+  use parser_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use ps_oct_m
-  use simul_box_oct_m 
+  use simul_box_oct_m
   use species_oct_m
   use states_oct_m
   use unit_oct_m

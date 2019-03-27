@@ -21,12 +21,8 @@
 module xc_oct_m
   use distributed_oct_m
   use comm_oct_m
-  use cube_oct_m
-  use cube_function_oct_m
   use derivatives_oct_m
   use global_oct_m
-  use grid_oct_m
-  use index_oct_m
   use io_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
@@ -36,15 +32,12 @@ module xc_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use par_vec_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use states_oct_m
   use states_dim_oct_m
-  use symmetrizer_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
   use XC_F90(lib_m)
   use xc_functl_oct_m
 

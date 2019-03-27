@@ -21,17 +21,13 @@
 module rkb_projector_oct_m
   use atom_oct_m
   use global_oct_m
-  use grid_oct_m
-  use lalg_basic_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use simul_box_oct_m
+  use mpi_oct_m
   use submesh_oct_m
   use profiling_oct_m
   use ps_oct_m
   use species_oct_m
-  use geometry_oct_m
-  use mpi_oct_m
 
   implicit none
 

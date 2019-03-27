@@ -21,7 +21,6 @@
 module states_restart_oct_m
   use global_oct_m
   use grid_oct_m
-  use io_oct_m
   use io_function_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
@@ -35,17 +34,12 @@ module states_restart_oct_m
   use multigrid_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use par_vec_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use states_oct_m
-  use states_calc_oct_m
   use states_dim_oct_m
-  use states_io_oct_m
   use string_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
   use types_oct_m
 
   implicit none

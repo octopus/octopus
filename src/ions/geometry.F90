@@ -24,8 +24,6 @@ module geometry_oct_m
   use distributed_oct_m
   use global_oct_m
   use io_oct_m
-  use loct_pointer_oct_m
-  use loct_math_oct_m
   use messages_oct_m
   use multicomm_oct_m
   use mpi_oct_m
@@ -34,7 +32,6 @@ module geometry_oct_m
   use read_coords_oct_m
   use space_oct_m
   use species_oct_m
-  use string_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m

@@ -28,14 +28,10 @@ module kdotp_oct_m
   use kdotp_calc_oct_m
   use kpoints_oct_m
   use lalg_adv_oct_m
-  use lalg_basic_oct_m
   use linear_response_oct_m
-  use linear_solver_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use mix_oct_m
   use mpi_oct_m
   use parser_oct_m
   use pert_oct_m
@@ -44,16 +40,13 @@ module kdotp_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use states_oct_m
-  use states_calc_oct_m
   use states_dim_oct_m
   use states_restart_oct_m
   use sternheimer_oct_m
-  use string_oct_m
   use system_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
-  use v_ks_oct_m
   
   implicit none
 

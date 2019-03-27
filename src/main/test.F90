@@ -19,39 +19,33 @@
 #include "global.h"
 
 module test_oct_m
-  use global_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
-  use command_line_oct_m
   use density_oct_m
   use derivatives_oct_m
   use epot_oct_m
-  use fft_oct_m
+  use global_oct_m
   use hamiltonian_oct_m
-  use io_oct_m
   use ion_interaction_oct_m
-  use mesh_interpolation_oct_m
   use mesh_function_oct_m
+  use mesh_interpolation_oct_m
+  use messages_oct_m
+  use multicomm_oct_m
   use orbitalbasis_oct_m
   use orbitalset_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
-  use restart_oct_m
   use simul_box_oct_m
   use states_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
   use system_oct_m
   use types_oct_m
-  use unit_system_oct_m
-  use utils_oct_m
   use v_ks_oct_m
-  use messages_oct_m
-  use multicomm_oct_m
   use XC_F90(lib_m)
   use xc_oct_m
 

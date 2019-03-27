@@ -25,17 +25,12 @@ module states_oct_m
   use comm_oct_m
   use batch_oct_m
   use batch_ops_oct_m
-  use blas_oct_m
   use derivatives_oct_m
   use distributed_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hardware_oct_m
-  use io_oct_m
   use kpoints_oct_m
-  use lalg_adv_oct_m
-  use lalg_basic_oct_m
   use loct_oct_m
   use loct_pointer_oct_m
   use math_oct_m
@@ -43,8 +38,7 @@ module states_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use modelmb_particles_oct_m
-  use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
-  use mpi_lib_oct_m
+  use mpi_oct_m
   use multicomm_oct_m
 #ifdef HAVE_OPENMP
   use omp_lib
@@ -60,7 +54,6 @@ module states_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use utils_oct_m
   use varinfo_oct_m
 
   implicit none

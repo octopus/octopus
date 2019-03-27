@@ -29,16 +29,12 @@ module controlfunction_oct_m
   use io_oct_m
   use lalg_adv_oct_m
   use lasers_oct_m
-  use loct_math_oct_m
   use loct_pointer_oct_m
   use math_oct_m
-  use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use string_oct_m
   use tdfunction_oct_m
   use unit_oct_m
   use unit_system_oct_m

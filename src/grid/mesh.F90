@@ -26,15 +26,11 @@ module mesh_oct_m
   use index_oct_m
   use io_oct_m
   use io_binary_oct_m
-  use math_oct_m
   use mesh_cube_map_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use multicomm_oct_m
-  use loct_oct_m
   use par_vec_oct_m
   use partition_oct_m
-  use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use symmetries_oct_m
