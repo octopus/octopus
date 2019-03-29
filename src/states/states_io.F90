@@ -330,8 +330,6 @@ contains
         dhistogram(ien) = dhistogram(ien) + st%d%kweights(flat_indices(1, iev))*sb%kpoints%full%npoints
       end do
 
-      print *, maxval(dhistogram)
-
       !normalize
       if(maxval(dhistogram) > real(height)) then
         maxhist = nint(maxval(dhistogram))
