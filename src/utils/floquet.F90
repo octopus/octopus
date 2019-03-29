@@ -95,7 +95,7 @@ program oct_floquet
   gr = sys%gr
 
   ! generate the full hamiltonian following the sequence in td_init
-  call hamiltonian_init(hm, gr, sys%geo, st, sys%ks%theory_level, sys%ks%xc_family, sys%ks%xc_flags, &
+  call hamiltonian_init(hm, gr, sys%geo, st, sys%ks%theory_level, sys%ks%xc_family, &
               family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
   call hamiltonian_epot_generate(hm, gr, sys%geo, st, time=M_ZERO)
   call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)

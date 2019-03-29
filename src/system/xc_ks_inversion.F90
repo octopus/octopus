@@ -163,7 +163,7 @@ contains
       ! initialize densities, hamiltonian and eigensolver
       call states_densities_init(ks_inv%aux_st, gr, geo)
       call hamiltonian_init(ks_inv%aux_hm, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, &
-                            XC_FAMILY_NONE, XC_FLAGS_NONE, .false.)
+                            XC_FAMILY_NONE, .false.)
       call eigensolver_init(ks_inv%eigensolver, gr, ks_inv%aux_st, xc)
     end if
 

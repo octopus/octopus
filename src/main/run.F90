@@ -161,8 +161,7 @@ contains
     call system_init(sys)
 
     call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
-      sys%ks%xc_family, sys%ks%xc_flags, &
-      family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+      sys%ks%xc_family, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
     
     if (hm%pcm%run_pcm) then 
       if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then

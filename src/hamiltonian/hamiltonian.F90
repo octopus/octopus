@@ -110,7 +110,6 @@ module hamiltonian_oct_m
     FLOAT, pointer :: vhartree(:) !< Hartree potential
     FLOAT, pointer :: vxc(:,:)    !< XC potential
     FLOAT, pointer :: vhxc(:,:)   !< XC potential + Hartree potential + Berry potential
-    FLOAT, pointer :: axc(:,:,:)  !< XC vector potential divided by c
     FLOAT, pointer :: vtau(:,:)   !< Derivative of e_XC w.r.t. tau
     FLOAT, pointer :: vberry(:,:) !< Berry phase potential from external E_field
 
@@ -124,7 +123,6 @@ module hamiltonian_oct_m
 
     integer :: theory_level    !< copied from sys%ks
     integer :: xc_family       !< copied from sys%ks
-    integer :: xc_flags        !< copied from sys%ks
     logical :: family_is_mgga_with_exc !< obtained from sys%ks
 
     type(epot_t) :: ep         !< handles the external potential
@@ -160,8 +158,6 @@ module hamiltonian_oct_m
     FLOAT :: current_time
     logical :: apply_packed  !< This is initialized by the StatesPack variable.
     
-    !> For the Rashba spin-orbit coupling
-    FLOAT :: rashba_coupling
     type(scdm_t)  :: scdm
 
     !> For the LDA+U 
@@ -188,14 +184,13 @@ module hamiltonian_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, xc_flags, family_is_mgga_with_exc)
+  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, family_is_mgga_with_exc)
     type(hamiltonian_t),                        intent(out)   :: hm
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
     type(states_t),                     target, intent(inout) :: st
     integer,                                    intent(in)    :: theory_level
     integer,                                    intent(in)    :: xc_family
-    integer,                                    intent(in)    :: xc_flags
     logical,                                    intent(in)    :: family_is_mgga_with_exc
 
     integer :: iline, icol
@@ -205,6 +200,8 @@ contains
 
     logical :: external_potentials_present
     logical :: kick_present
+    FLOAT :: rashba_coupling
+
 
     PUSH_SUB(hamiltonian_init)
     call profiling_in(prof, 'HAMILTONIAN_INIT')
@@ -212,7 +209,6 @@ contains
     ! make a couple of local copies
     hm%theory_level = theory_level
     hm%xc_family    = xc_family
-    hm%xc_flags     = xc_flags
     hm%family_is_mgga_with_exc = family_is_mgga_with_exc
     call states_dim_copy(hm%d, st%d)
 
@@ -238,7 +234,7 @@ contains
     !% State Phys.</i> <b>17</b>, 6031 (1984)]. This variable determines the strength
     !% of this perturbation, and has dimensions of energy times length.
     !%End
-    call parse_variable('RashbaSpinOrbitCoupling', M_ZERO, hm%rashba_coupling, units_inp%energy * units_inp%length)
+    call parse_variable('RashbaSpinOrbitCoupling', M_ZERO, rashba_coupling, units_inp%energy * units_inp%length)
     if(parse_is_defined('RashbaSpinOrbitCoupling')) then
       if(gr%sb%dim .ne. 2) then
         write(message(1),'(a)') 'Rashba spin-orbit coupling can only be used for two-dimensional systems.'
@@ -247,7 +243,7 @@ contains
       call messages_experimental('RashbaSpinOrbitCoupling')
     end if
 
-    call hamiltonian_base_init(hm%hm_base, hm%d%nspin, hm%mass, hm%rashba_coupling)
+    call hamiltonian_base_init(hm%hm_base, hm%d%nspin, hm%mass, rashba_coupling)
 
     ASSERT(associated(gr%der%lapl))
     hm%hm_base%kinetic => gr%der%lapl
@@ -263,7 +259,7 @@ contains
     SAFE_ALLOCATE(hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin))
     hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin) = M_ZERO
 
-    nullify(hm%vhartree, hm%vxc, hm%vtau, hm%axc)
+    nullify(hm%vhartree, hm%vxc, hm%vtau)
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
 
       SAFE_ALLOCATE(hm%vhartree(1:gr%mesh%np_part))
@@ -554,7 +550,6 @@ contains
     SAFE_DEALLOCATE_P(hm%vhartree)
     SAFE_DEALLOCATE_P(hm%vhxc)
     SAFE_DEALLOCATE_P(hm%vxc)
-    SAFE_DEALLOCATE_P(hm%axc)
     SAFE_DEALLOCATE_P(hm%vberry)
     SAFE_DEALLOCATE_P(hm%a_ind)
     SAFE_DEALLOCATE_P(hm%b_ind)
