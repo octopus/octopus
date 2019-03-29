@@ -97,7 +97,6 @@ module states_oct_m
     states_get_points,                &
     states_pack,                      &
     states_unpack,                    &
-    states_sync,                      &
     states_are_packed,                &
     states_write_info,                &
     states_set_zero,                  &
@@ -2295,28 +2294,6 @@ contains
 
     POP_SUB(states_unpack)
   end subroutine states_unpack
-
-  ! ------------------------------------------------------------
-
-  subroutine states_sync(st)
-    type(states_t),    intent(inout) :: st
-
-    integer :: iqn, ib
-
-    PUSH_SUB(states_sync)
-
-    if(states_are_packed(st)) then
-
-      do iqn = st%d%kpt%start, st%d%kpt%end
-        do ib = st%group%block_start, st%group%block_end
-          call batch_sync(st%group%psib(ib, iqn))
-        end do
-      end do
-
-    end if
-
-    POP_SUB(states_sync)
-  end subroutine states_sync
 
   ! -----------------------------------------------------------
 
