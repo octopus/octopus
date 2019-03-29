@@ -83,8 +83,6 @@ module kpoints_oct_m
     integer, pointer     :: symmetry_ops(:, :)  !< (reduced%npoints, nops)
     integer, pointer     :: num_symmetry_ops(:) !< (reduced%npoints)
 
-    FLOAT, pointer       :: klattice(:, :)
- 
     !> For the output of a band-structure
     FLOAT, pointer       :: coord_along_path(:)
   end type kpoints_t
@@ -225,7 +223,6 @@ contains
     this%nik_skip = 0
     this%nik_axis = 0
     nullify(this%symmetry_ops, this%num_symmetry_ops)
-    nullify(this%klattice)
     nullify(this%coord_along_path)
 
   end subroutine kpoints_nullify
@@ -248,9 +245,6 @@ contains
     ASSERT(dim <= MAX_DIM)
 
     call kpoints_nullify(this)
-
-    SAFE_ALLOCATE(this%klattice(1:dim, 1:dim))
-    this%klattice(1:dim, 1:dim) = klattice(1:dim, 1:dim)
 
     !%Variable KPointsUseSymmetries
     !%Type logical
@@ -828,7 +822,6 @@ contains
     call kpoints_grid_end(this%full)
     call kpoints_grid_end(this%reduced)
 
-    SAFE_DEALLOCATE_P(this%klattice)
     SAFE_DEALLOCATE_P(this%symmetry_ops)
     SAFE_DEALLOCATE_P(this%num_symmetry_ops)
     SAFE_DEALLOCATE_P(this%coord_along_path) 
@@ -895,9 +888,6 @@ contains
     kout%use_time_reversal = kin%use_time_reversal
 
     kout%nik_axis(1:kin%full%dim) = kin%nik_axis(1:kin%full%dim)
-
-    SAFE_ALLOCATE(kout%klattice(1:kin%full%dim, kin%full%dim))
-    kout%klattice(1:kin%full%dim, kin%full%dim) = kin%klattice(1:kin%full%dim, kin%full%dim)
 
     if(associated(kin%coord_along_path)) then
       SAFE_ALLOCATE(kout%coord_along_path(1:kin%full%npoints))
