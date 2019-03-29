@@ -39,10 +39,11 @@ module ps_cpi_oct_m
     ps_cpi_process
 
   type ps_cpi_t
-    type(ps_cpi_file_t), pointer :: cpi_file
-    type(ps_in_grid_t),  pointer :: ps_grid
+    ! Components are public by default
+    type(ps_cpi_file_t), pointer, private :: cpi_file
+    type(ps_in_grid_t),  pointer          :: ps_grid
 
-    type(valconf_t),     pointer :: conf    !< what to do with this?
+    type(valconf_t),     pointer, private :: conf    !< what to do with this?
   end type ps_cpi_t
 
 contains

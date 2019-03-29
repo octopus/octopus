@@ -50,6 +50,7 @@ module unit_oct_m
     sqrt
 
   type unit_t
+    ! Components are public by default
     real(8)           :: factor
     character(len=20) :: abbrev !< common abbreviation of the unit name
     character(len=50) :: name   !< common name

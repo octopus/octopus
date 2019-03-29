@@ -82,23 +82,24 @@ module nl_operator_oct_m
   end type nl_operator_index_t
 
   type nl_operator_t
-    type(stencil_t)       :: stencil
-    type(mesh_t), pointer :: mesh      !< pointer to the underlying mesh
-    integer, pointer      :: nn(:)     !< the size of the stencil at each point (for curvilinear coordinates)
-    integer               :: np        !< number of points in mesh
+    private
+    type(stencil_t),  public :: stencil
+    type(mesh_t), pointer    :: mesh      !< pointer to the underlying mesh
+    integer, pointer         :: nn(:)     !< the size of the stencil at each point (for curvilinear coordinates)
+    integer,          public :: np        !< number of points in mesh
     !> When running in parallel mode, the next three arrays are unique on each node.
-    integer, pointer  :: index(:,:)    !< index of the points. Unique on each parallel process.
-    FLOAT,   pointer  :: w(:,:)        !< weights. Unique on each parallel process.
+    integer, pointer, public :: index(:,:)    !< index of the points. Unique on each parallel process.
+    FLOAT,   pointer, public :: w(:,:)        !< weights. Unique on each parallel process.
 
-    logical               :: const_w   !< are the weights independent of index i
+    logical,          public :: const_w   !< are the weights independent of index i
 
     character(len=40) :: label
 
     !> the compressed index of grid points
-    integer :: nri
-    integer, pointer :: ri(:,:)
-    integer, pointer :: rimap(:)
-    integer, pointer :: rimap_inv(:)
+    integer, public :: nri
+    integer, pointer, public :: ri(:,:)
+    integer, pointer, public :: rimap(:)
+    integer, pointer, public :: rimap_inv(:)
 
     integer                   :: ninner
     integer                   :: nouter

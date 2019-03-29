@@ -64,6 +64,7 @@ module pes_flux_oct_m
     pes_flux_map_from_states
 
   type pes_flux_t
+    private
     integer          :: nkpnts                         !< total number of k-points
     integer          :: nkpnts_start, nkpnts_end       !< start/end of index for k-points on the current node
     integer          :: nk
@@ -75,7 +76,7 @@ module pes_flux_oct_m
     FLOAT, pointer   :: kcoords_cub(:,:,:)             !< coordinates of k-points
     FLOAT, pointer   :: kcoords_sph(:,:,:)
 
-    integer          :: shape                          !< shape of the surface (= cube/sphere/planes)
+    integer, public  :: shape                          !< shape of the surface (= cube/sphere/planes)
     integer          :: nsrfcpnts                      !< total number of surface points
     integer          :: nsrfcpnts_start, nsrfcpnts_end !< for cubic surface: number of surface points on node
     FLOAT, pointer   :: srfcnrml(:,:)                  !< vectors normal to the surface (includes surface element)
@@ -103,9 +104,9 @@ module pes_flux_oct_m
     CMPLX, pointer   :: spctramp_cub(:,:,:,:)          !< spectral amplitude
     CMPLX, pointer   :: spctramp_sph(:,:,:,:,:)
 
-    integer          :: ll(3)                          !< the dimensions of a cubic mesh containing the momentum-space
+    integer, public  :: ll(3)                          !< the dimensions of a cubic mesh containing the momentum-space
                                                        !< mesh. Used when working with semi-periodic systems 
-    integer          :: ngpt                           !< Number of free Gpoints use to increase resoltion                        
+    integer, public  :: ngpt                           !< Number of free Gpoints use to increase resoltion                        
 
     logical          :: usememory                      !< whether conjgplanewf should be kept in memory
     logical          :: avoid_ab

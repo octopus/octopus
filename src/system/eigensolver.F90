@@ -57,21 +57,22 @@ module eigensolver_oct_m
     eigensolver_run
 
   type eigensolver_t
-    integer :: es_type    !< which eigensolver to use
+    private
+    integer, public :: es_type    !< which eigensolver to use
 
-    FLOAT   :: tolerance
-    integer :: es_maxiter
+    FLOAT,   public :: tolerance
+    integer         :: es_maxiter
 
-    FLOAT   :: current_rel_dens_error
-    FLOAT   :: imag_time
+    FLOAT,   public :: current_rel_dens_error
+    FLOAT           :: imag_time
 
     !> Stores information about how well it performed.
-    FLOAT, pointer   :: diff(:, :)
-    integer          :: matvec
-    integer, pointer :: converged(:)
+    FLOAT, pointer,   public :: diff(:, :)
+    integer,          public :: matvec
+    integer, pointer, public :: converged(:)
 
     !> Stores information about the preconditioning.
-    type(preconditioner_t) :: pre
+    type(preconditioner_t), public :: pre
 
     type(subspace_t) :: sdiag
 

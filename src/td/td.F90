@@ -83,23 +83,24 @@ module td_oct_m
     BO        = 2
 
   type td_t
-    type(propagator_t)   :: tr             !< contains the details of the time-evolution
-    type(scf_t)          :: scf
-    type(ion_dynamics_t) :: ions
-    FLOAT                :: dt             !< time step
-    integer              :: max_iter       !< maximum number of iterations to perform
-    integer              :: iter           !< the actual iteration
-    logical              :: recalculate_gs !< Recalculate ground-state along the evolution.
+    private
+    type(propagator_t),   public :: tr             !< contains the details of the time-evolution
+    type(scf_t)                  :: scf
+    type(ion_dynamics_t), public :: ions
+    FLOAT,                public :: dt             !< time step
+    integer,              public :: max_iter       !< maximum number of iterations to perform
+    integer,              public :: iter           !< the actual iteration
+    logical                      :: recalculate_gs !< Recalculate ground-state along the evolution.
 
-    type(pes_t)          :: pesv
+    type(pes_t)                  :: pesv
 
-    FLOAT                :: mu
-    integer              :: dynamics
-    integer              :: energy_update_iter
-    FLOAT                :: scissor
+    FLOAT,                public :: mu
+    integer                      :: dynamics
+    integer                      :: energy_update_iter
+    FLOAT                        :: scissor
 
-    logical              :: freeze_occ
-    logical              :: freeze_u
+    logical                      :: freeze_occ
+    logical                      :: freeze_u
   end type td_t
 
 

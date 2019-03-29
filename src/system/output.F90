@@ -102,6 +102,7 @@ module output_oct_m
 
 
   type output_bgw_t
+    private
     integer           :: nbands
     integer           :: vxc_diag_nmin
     integer           :: vxc_diag_nmax
@@ -117,20 +118,21 @@ module output_oct_m
   end type output_bgw_t
 
   type output_t
+    private
     !> General output variables:
-    integer(8) :: what                !< what to output
-    integer(8) :: whatBZ              !< what to output - for k-point resolved output
-    integer(8) :: what_lda_u          !< what to output for the LDA+U part
-    integer(8) :: how                 !< how to output
+    integer(8), public :: what                !< what to output
+    integer(8), public :: whatBZ              !< what to output - for k-point resolved output
+    integer(8), public :: what_lda_u          !< what to output for the LDA+U part
+    integer(8), public :: how                 !< how to output
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
 
     !> These variables fine-tune the output for some of the possible output options:
-    integer :: output_interval     !< output every iter
-    integer :: restart_write_interval
-    logical :: duringscf
+    integer, public :: output_interval     !< output every iter
+    integer, public :: restart_write_interval
+    logical, public :: duringscf
     character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
-    character(len=MAX_PATH_LEN) :: iter_dir  !< The folder name, if information will be output while iterating.
+    character(len=MAX_PATH_LEN), public :: iter_dir  !< The folder name, if information will be output while iterating.
 
     type(mesh_plane_t) :: plane    !< This is to calculate the current flow across a plane
     type(mesh_line_t)  :: line     !< or through a line (in 2D)

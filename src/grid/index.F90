@@ -40,6 +40,7 @@ module index_oct_m
     index_load_lxyz
 
   type index_t
+    ! Components are public by default
     type(hypercube_t)    :: hypercube
     logical              :: is_hypercube     !< true if the box shape is an hypercube
     integer              :: dim              !< the dimension

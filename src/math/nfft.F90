@@ -70,20 +70,21 @@ module nfft_oct_m
 
 
   type nfft_t
+    private
 
     integer           :: N(3)       !> size of the nfft bandwidths
     integer           :: M(3)          !> Number of the nfft nodes
     integer           :: is_real    !> is the fft real or complex
     integer           :: dim        !> the dimension
     integer           :: fftN(3)    !> size of the fft used
-    FLOAT             :: norm       !> Normalization
+    FLOAT, public     :: norm       !> Normalization
 
     ! Guru options
-    logical           :: set_defaults = .false. !> set default values from the code
-    logical           :: guru                   !> use guru options?
-    integer           :: precompute             !> precompute strategy
-    integer           :: mm                     !> Window function cut-off parameter
-    FLOAT             :: sigma                  !> Oversampling factor
+    logical, public   :: set_defaults = .false. !> set default values from the code
+    logical, public   :: guru                   !> use guru options?
+    integer, public   :: precompute             !> precompute strategy
+    integer, public   :: mm                     !> Window function cut-off parameter
+    FLOAT,   public   :: sigma                  !> Oversampling factor
 
     type(c_ptr)       :: plan                   !> the NFFT plan
 

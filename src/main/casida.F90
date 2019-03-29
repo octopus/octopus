@@ -74,6 +74,7 @@ module casida_oct_m
     CASIDA_CASIDA       = 16
 
   type casida_t
+    private
     integer :: type !< CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_TAMM_DANCOFF |
                     !< CASIDA_VARIATIONAL | CASIDA_CASIDA
 
@@ -136,6 +137,7 @@ module casida_oct_m
   end type casida_t
 
   type casida_save_pot_t
+    private
     integer :: qi                    !< previous mtxel calculated in K_term
     integer :: qa                    !< previous mtxel calculated in K_term
     integer :: qk                    !< previous mtxel calculated in K_term

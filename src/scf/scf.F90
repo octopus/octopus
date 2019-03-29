@@ -91,10 +91,11 @@ module scf_oct_m
   
   !> some variables used for the SCF cycle
   type scf_t
-    integer :: max_iter   !< maximum number of SCF iterations
+    private
+    integer, public :: max_iter   !< maximum number of SCF iterations
     integer :: max_iter_berry  !< max number of electronic iterations before updating density, for Berry potential
 
-    FLOAT :: lmm_r
+    FLOAT, public :: lmm_r
 
     ! several convergence criteria
     FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev, conv_abs_force

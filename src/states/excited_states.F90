@@ -64,12 +64,14 @@ module excited_states_oct_m
   end interface zstates_mpmatrixelement
 
   type states_pair_t
+    ! Components are public by default
     integer :: i
     integer :: a
     integer :: kk
   end type states_pair_t
 
   type excited_states_t
+    ! Components are public by default
     type(states_t),      pointer :: st
     integer                      :: n_pairs
     type(states_pair_t), pointer :: pair(:)

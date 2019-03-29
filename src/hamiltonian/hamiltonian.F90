@@ -100,6 +100,8 @@ module hamiltonian_oct_m
     zoct_exchange_operator
 
   type hamiltonian_t
+    ! Components are public by default
+
     !> The Hamiltonian must know what are the "dimensions" of the spaces,
     !! in order to be able to operate on the states.
     type(states_dim_t)       :: d
@@ -128,16 +130,16 @@ module hamiltonian_oct_m
     type(pcm_t)  :: pcm        !< handles pcm variables
  
     !> absorbing boundaries
-    logical :: adjoint
+    logical, private :: adjoint
 
     !> Spectral range
     FLOAT :: spectral_middle_point
     FLOAT :: spectral_half_span
 
     !> Mass of the particle (in most cases, mass = 1, electron mass)
-    FLOAT :: mass
+    FLOAT, private :: mass
     !> anisotropic scaling factor for the mass: different along x,y,z etc...
-    FLOAT :: mass_scaling(MAX_DIM)
+    FLOAT, private :: mass_scaling(MAX_DIM)
 
     !> For the Hartree-Fock Hamiltonian, the Fock operator depends on the states.
     type(states_t), pointer :: hf_st
@@ -145,7 +147,7 @@ module hamiltonian_oct_m
     logical :: scdm_EXX
 
     !> There may be an "inhomogeneous", "source", or "forcing" term (useful for the OCT formalism)
-    logical :: inh_term
+    logical, private :: inh_term
     type(states_t) :: inh_st
 
     !> There may also be a exchange-like term, similar to the one necessary for time-dependent
@@ -155,7 +157,7 @@ module hamiltonian_oct_m
     type(scissor_t) :: scissor
 
     FLOAT :: current_time
-    logical :: apply_packed  !< This is initialized by the StatesPack variable.
+    logical, private :: apply_packed  !< This is initialized by the StatesPack variable.
     
     type(scdm_t)  :: scdm
 
@@ -163,7 +165,7 @@ module hamiltonian_oct_m
     type(lda_u_t) :: lda_u
     integer       :: lda_u_level
 
-    logical :: time_zero
+    logical, private :: time_zero
   end type hamiltonian_t
 
   integer, public, parameter :: &

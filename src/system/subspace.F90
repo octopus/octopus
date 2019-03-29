@@ -60,6 +60,7 @@ module subspace_oct_m
     zsubspace_diag
 
   type subspace_t
+    private
     integer :: method
   end type subspace_t
 
