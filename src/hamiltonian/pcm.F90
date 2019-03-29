@@ -1348,14 +1348,18 @@ contains
      
     end if
 
-    write (asc_vs_t_unit_format_tail, fmt='(I5,A11)') pcm%n_tesserae,'(1X,F14.8))'
-    write (asc_vs_t_unit_format, fmt='(A)') '(F14.8,'//trim(adjustl(asc_vs_t_unit_format_tail))
 
-    if ( pcm%solute .and. pcm%localf .and. td_calc_mode .and. calc .eq. PCM_ELECTRONS ) then
-      asc_vs_t_unit_e = io_open(PCM_DIR//'ASC_e_vs_t.dat', action='write', position='append', form='formatted')
-      write(asc_vs_t_unit_e,fmt=trim(adjustl(asc_vs_t_unit_format))) pcm%iter*pcm%dt, &
-       ( pcm%q_e(ia) , ia=1,pcm%n_tesserae )
-      call io_close(asc_vs_t_unit_e)
+    if ( mpi_grp_is_root(mpi_world) ) then
+
+      write (asc_vs_t_unit_format_tail,'(I5,A11)') pcm%n_tesserae,'(1X,F14.8))'
+      write (asc_vs_t_unit_format,'(A)') '(F14.8,'//trim(adjustl(asc_vs_t_unit_format_tail))
+  
+      if ( pcm%solute .and. pcm%localf .and. td_calc_mode .and. calc .eq. PCM_ELECTRONS ) then
+        asc_vs_t_unit_e = io_open(PCM_DIR//'ASC_e_vs_t.dat', action='write', position='append', form='formatted')
+        write(asc_vs_t_unit_e,trim(adjustl(asc_vs_t_unit_format))) pcm%iter*pcm%dt, &
+         ( pcm%q_e(ia) , ia=1,pcm%n_tesserae )
+        call io_close(asc_vs_t_unit_e)
+      end if
     end if
 
     POP_SUB(pcm_calc_pot_rs)  
