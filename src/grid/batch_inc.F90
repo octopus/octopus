@@ -113,6 +113,26 @@ subroutine X(batch_allocate)(this, st_start, st_end, np, fill_zeros)
   POP_SUB(X(batch_allocate))
 end subroutine X(batch_allocate)
 
+!--------------------------------------------------------------
+subroutine X(batch_allocate_temporary)(this)
+  type(batch_t),  intent(inout) :: this
+
+  integer :: ist, idim
+
+  PUSH_SUB(X(batch_allocate_temporary))
+
+  SAFE_ALLOCATE(this%X(psicont)(1:this%pack%size(2), 1:this%dim, 1:this%nst))
+  
+  do ist = 1, this%nst
+    this%states(ist)%X(psi) => this%X(psicont)(:, :, ist)
+    do idim = 1, this%dim
+      this%states_linear((ist - 1)*this%dim + idim)%X(psi) => this%X(psicont)(:, idim, ist)
+    end do
+  end do
+
+  POP_SUB(X(batch_allocate_temporary))
+end subroutine X(batch_allocate_temporary)
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

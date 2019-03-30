@@ -210,9 +210,58 @@ contains
     
     POP_SUB(batch_deallocate)
   end subroutine batch_deallocate
-  
+
   !--------------------------------------------------------------
 
+  subroutine batch_deallocate_temporary(this)
+    type(batch_t),  intent(inout) :: this
+    
+    integer :: ii
+    
+    PUSH_SUB(batch_deallocate)
+
+    do ii = 1, this%nst
+      nullify(this%states(ii)%dpsi)
+      nullify(this%states(ii)%zpsi)
+      nullify(this%states(ii)%spsi)
+      nullify(this%states(ii)%cpsi)
+    end do
+    
+    do ii = 1, this%nst_linear
+      nullify(this%states_linear(ii)%dpsi)
+      nullify(this%states_linear(ii)%zpsi)
+      nullify(this%states_linear(ii)%spsi)
+      nullify(this%states_linear(ii)%cpsi)
+    end do
+    
+    SAFE_DEALLOCATE_P(this%dpsicont)
+    SAFE_DEALLOCATE_P(this%zpsicont)
+    SAFE_DEALLOCATE_P(this%spsicont)
+    SAFE_DEALLOCATE_P(this%cpsicont)
+    
+    POP_SUB(batch_deallocate)
+  end subroutine batch_deallocate_temporary
+  
+  !--------------------------------------------------------------
+  subroutine batch_allocate_temporary(this)
+    type(batch_t),  intent(inout) :: this
+
+    PUSH_SUB(batch_deallocate_temporary)
+    
+    if(batch_type(this) == TYPE_FLOAT) then
+      call dbatch_allocate_temporary(this)
+    else if(batch_type(this) == TYPE_CMPLX) then
+      call zbatch_allocate_temporary(this)
+    else if(batch_type(this) == TYPE_FLOAT_SINGLE) then
+      call sbatch_allocate_temporary(this)
+    else if(batch_type(this) == TYPE_CMPLX_SINGLE) then
+      call cbatch_allocate_temporary(this)
+    end if
+
+    POP_SUB(batch_deallocate_temporary)
+  end subroutine batch_allocate_temporary
+
+  !--------------------------------------------------------------
   subroutine batch_init_empty (this, dim, nst)
     type(batch_t), intent(out)   :: this
     integer,       intent(in)    :: dim
@@ -513,6 +562,9 @@ contains
 
         call profiling_out(prof_copy)
       end if
+
+      if(this%is_allocated) call batch_deallocate_temporary(this)
+
     end if
 
     INCR(this%in_buffer_count, 1)
@@ -606,8 +658,12 @@ contains
     if(batch_is_packed(this)) then
 
       if(this%in_buffer_count == 1 .or. optional_default(force, .false.)) then
+
+        if(this%is_allocated) call batch_allocate_temporary(this)
+        
         copy_ = .true.
         if(present(copy)) copy_ = copy
+        if(this%is_allocated) copy_ = .true.
         
         if(copy_) call batch_sync(this)
         
@@ -664,15 +720,23 @@ contains
 
       if(batch_type(this) == TYPE_FLOAT) then
 
-         !$omp parallel do private(ist)
-         do ip = 1, this%pack%size(2)
-           forall(ist = 1:this%nst_linear)
-             this%states_linear(ist)%dpsi(ip) = this%pack%dpsi(ist, ip) 
-           end forall
-         end do
-
+        do ist = 1, this%nst_linear
+          ASSERT(associated(this%states_linear(ist)%dpsi))
+        end do
+        
+        !$omp parallel do private(ist)
+        do ip = 1, this%pack%size(2)
+          forall(ist = 1:this%nst_linear)
+            this%states_linear(ist)%dpsi(ip) = this%pack%dpsi(ist, ip) 
+          end forall
+        end do
+        
       else if(batch_type(this) == TYPE_CMPLX) then
-         
+
+        do ist = 1, this%nst_linear
+          ASSERT(associated(this%states_linear(ist)%zpsi))
+        end do
+        
         !$omp parallel do private(ist)
         do ip = 1, this%pack%size(2)
           forall(ist = 1:this%nst_linear)
@@ -681,6 +745,10 @@ contains
         end do
 
       else if(batch_type(this) == TYPE_FLOAT_SINGLE) then
+
+        do ist = 1, this%nst_linear
+          ASSERT(associated(this%states_linear(ist)%spsi))
+        end do
         
         !$omp parallel do private(ist)
         do ip = 1, this%pack%size(2)
@@ -690,6 +758,10 @@ contains
         end do
         
       else if(batch_type(this) == TYPE_CMPLX_SINGLE) then
+
+        do ist = 1, this%nst_linear
+          ASSERT(associated(this%states_linear(ist)%cpsi))
+        end do
         
         !$omp parallel do private(ist)
         do ip = 1, this%pack%size(2)
