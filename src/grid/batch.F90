@@ -115,6 +115,7 @@ module batch_oct_m
     integer                        :: status
     integer                        :: in_buffer_count !< whether there is a copy in the opencl buffer
     type(batch_pack_t)             :: pack
+    type(type_t)                   :: type !< only available if the batched is packed
   end type batch_t
 
   !--------------------------------------------------------------
@@ -301,7 +302,7 @@ contains
     
     ok = (this%nst_linear >= 1) .and. associated(this%states_linear)
     ok = ubound(this%states_linear, dim = 1) == this%nst_linear
-    if(ok) then
+    if(ok .and. .not. batch_is_packed(this)) then
       ! ensure that either all real are associated, or all cplx are associated
       all_assoc = .true.
       do ist = 1, this%nst_linear
@@ -399,11 +400,15 @@ contains
   type(type_t) pure function batch_type(this) result(btype)
     type(batch_t),      intent(in)    :: this
 
-    if(associated(this%states_linear(1)%dpsi)) btype = TYPE_FLOAT
-    if(associated(this%states_linear(1)%zpsi)) btype = TYPE_CMPLX
-    if(associated(this%states_linear(1)%spsi)) btype = TYPE_FLOAT_SINGLE
-    if(associated(this%states_linear(1)%cpsi)) btype = TYPE_CMPLX_SINGLE
-    
+    if(.not. batch_is_packed(this)) then
+      if(associated(this%states_linear(1)%dpsi)) btype = TYPE_FLOAT
+      if(associated(this%states_linear(1)%zpsi)) btype = TYPE_CMPLX
+      if(associated(this%states_linear(1)%spsi)) btype = TYPE_FLOAT_SINGLE
+      if(associated(this%states_linear(1)%cpsi)) btype = TYPE_CMPLX_SINGLE
+    else
+      btype = this%type
+    end if
+     
   end function batch_type
 
   ! ----------------------------------------------------
@@ -473,6 +478,7 @@ contains
     if(present(copy)) copy_ = copy
 
     if(.not. batch_is_packed(this)) then
+      this%type = batch_type(this)
       this%pack%size(1) = pad_pow2(this%nst_linear)
       this%pack%size(2) = batch_max_size(this)
 
