@@ -120,8 +120,6 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
 
   call profiling_count_operations(xx%nst*np*(R_ADD + R_MUL)*types_get_size(batch_type(xx))/types_get_size(TYPE_FLOAT))
 
-  call batch_pack_was_modified(yy)
-
   call profiling_out(axpy_const_prof)
   POP_SUB(X(batch_axpy_const))
 end subroutine X(batch_axpy_const)
@@ -235,8 +233,6 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
       end if
     end do
   end select
-
-  call batch_pack_was_modified(yy)
 
   SAFE_DEALLOCATE_A(aa_linear)
 
@@ -369,8 +365,6 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
     end do
   end select
 
-  call batch_pack_was_modified(xx)
-
   SAFE_DEALLOCATE_A(aa_linear)
 
   call profiling_out(scal_prof)
@@ -491,8 +485,6 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
 
   call profiling_count_operations(xx%nst_linear*np*(R_ADD + R_MUL))
 
-  call batch_pack_was_modified(yy)
-
   SAFE_DEALLOCATE_A(aa_linear)
 
   call profiling_out(xpay_prof)
@@ -552,8 +544,6 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
   ! cannot set a real batch with complex values
   ASSERT(batch_type(this) /= TYPE_FLOAT)
 #endif
-
-  call batch_pack_was_modified(this)
 
   select case(batch_status(this))
   case(BATCH_NOT_PACKED)
@@ -893,8 +883,6 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
   ASSERT(batch_type(this) /= TYPE_FLOAT)
 #endif
 
-  call batch_pack_was_modified(this)
-
   select case(batch_status(this))
   case(BATCH_NOT_PACKED)
 
@@ -1052,8 +1040,6 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
 #endif
     end if
   end select
-
-  call batch_pack_was_modified(yy)
 
   call profiling_out(mul_prof)
   POP_SUB(X(batch_mul))

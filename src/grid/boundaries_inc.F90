@@ -279,8 +279,6 @@ contains
 
     end select
 
-    call batch_pack_was_modified(ffb)
-
     POP_SUB(X(boundaries_set_batch).zero_boundaries)
   end subroutine zero_boundaries
 

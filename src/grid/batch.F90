@@ -53,11 +53,9 @@ module batch_oct_m
     cbatch_allocate,                &
     batch_deallocate,               &
     batch_is_packed,                &
-    batch_pack_was_modified,        &
     batch_is_ok,                    &
     batch_pack,                     &
     batch_unpack,                   &
-    batch_sync,                     &
     batch_status,                   &
     batch_type,                     &
     batch_inv_index,                &
@@ -65,7 +63,6 @@ module batch_oct_m
     batch_linear_to_ist,            &
     batch_linear_to_idim,           &
     batch_pack_size,                &
-    batch_is_sync,                  &
     batch_remote_access_start,      &
     batch_remote_access_stop
   
@@ -117,7 +114,6 @@ module batch_oct_m
     complex(4),          pointer   :: cpsicont(:, :, :)
     integer                        :: status
     integer                        :: in_buffer_count !< whether there is a copy in the opencl buffer
-    logical                        :: dirty     !< if this is true, the buffer has different data
     type(batch_pack_t)             :: pack
   end type batch_t
 
@@ -450,14 +446,6 @@ contains
 
   ! ----------------------------------------------------
 
-  subroutine batch_pack_was_modified(this)
-    type(batch_t),      intent(inout) :: this
-
-    this%dirty = .true.
-  end subroutine batch_pack_was_modified
-
-  ! ----------------------------------------------------
-
   integer function batch_pack_size(this) result(size)
     type(batch_t),      intent(inout) :: this
 
@@ -511,19 +499,13 @@ contains
       
       if(copy_) then
         call profiling_in(prof_copy, "BATCH_PACK_COPY")
-
-        this%dirty = .false.
         if(accel_is_enabled()) then
-
           call batch_write_to_opencl_buffer(this)
-
         else
           call pack_copy()
         end if
 
         call profiling_out(prof_copy)
-      else
-        this%dirty = .true.
       end if
     end if
 
@@ -655,7 +637,7 @@ contains
 
     PUSH_SUB(batch_sync)
 
-    if(batch_is_packed(this) .and. this%dirty) then
+    if(batch_is_packed(this)) then
       call profiling_in(prof, "BATCH_UNPACK_COPY")
       
       if(accel_is_enabled()) then
@@ -665,7 +647,6 @@ contains
       end if
       
       call profiling_out(prof)
-      this%dirty = .false.
     end if
     
     POP_SUB(batch_sync)
@@ -919,15 +900,6 @@ end function batch_linear_to_idim
 
 ! ------------------------------------------------------
 
-logical pure function batch_is_sync(this) result(sync)
-  type(batch_t),     intent(in)    :: this
-
-  sync = .not. this%dirty
-
-end function batch_is_sync
-
-! ------------------------------------------------------
-
 subroutine batch_remote_access_start(this, mpi_grp, rma_win)
   type(batch_t),   intent(inout) :: this
   type(mpi_grp_t), intent(in)    :: mpi_grp
@@ -1044,8 +1016,6 @@ subroutine batch_copy_data(np, xx, yy)
     end do
 
   end select
-
-  call batch_pack_was_modified(yy)
 
   call profiling_out(prof)
   POP_SUB(batch_copy_data)
