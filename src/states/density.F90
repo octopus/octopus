@@ -60,7 +60,6 @@ module density_oct_m
 
   type density_calc_t
     FLOAT,                pointer :: density(:, :)
-    FLOAT,                pointer :: Imdensity(:, :)
     type(states_t),       pointer :: st
     type(grid_t),         pointer :: gr
     type(accel_mem_t)            :: buff_density
@@ -70,12 +69,11 @@ module density_oct_m
 
 contains
   
-  subroutine density_calc_init(this, st, gr, density, Imdensity)
+  subroutine density_calc_init(this, st, gr, density)
     type(density_calc_t),           intent(out)   :: this
     type(states_t),       target,   intent(in)    :: st
     type(grid_t),         target,   intent(in)    :: gr
     FLOAT,                target,   intent(out)   :: density(:, :)
-    FLOAT, optional,      target,   intent(out)   :: Imdensity(:, :)
 
     logical :: correct_size
 
@@ -86,13 +84,6 @@ contains
 
     this%density => density
     this%density = M_ZERO
-
-    if(present(Imdensity)) then
-      this%Imdensity => Imdensity
-      this%Imdensity = M_ZERO
-    else 
-      nullify(this%Imdensity)
-    end if      
 
     this%packed = .false.
 
