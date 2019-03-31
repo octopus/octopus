@@ -82,7 +82,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   if(op%const_w) then
     SAFE_ALLOCATE(wre(1:op%stencil%size))
 
-    wre(1:op%stencil%size) = op%w_re(:, 1)
+    wre(1:op%stencil%size) = op%w(:, 1)
 
     if(present(factor)) then
       wre(1:op%stencil%size) = wre(1:op%stencil%size)*factor
@@ -244,7 +244,7 @@ contains
       do ll = 1, nri
         nn = op%nn(ll)
         forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%states_linear(ist)%X(psi)(ii) = factor_*sum(op%w_re(1:nn, ii)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+          fo%states_linear(ist)%X(psi)(ii) = factor_*sum(op%w(1:nn, ii)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
         end forall
       end do
       !$omp end parallel do
@@ -255,7 +255,7 @@ contains
       do ll = 1, nri
         nn = op%nn(ll)
         forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%pack%X(psi)(ist, ii) = factor_*sum(op%w_re(1:nn, ii)*fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
+          fo%pack%X(psi)(ist, ii) = factor_*sum(op%w(1:nn, ii)*fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
         end forall
       end do
       !$omp end parallel do
@@ -477,9 +477,9 @@ subroutine X(nl_operator_operate_diag)(op, fo)
   PUSH_SUB(X(nl_operator_operate_diag))
   
   if(op%const_w) then
-    fo(1:op%np) = op%w_re(op%stencil%center, 1)
+    fo(1:op%np) = op%w(op%stencil%center, 1)
   else
-    fo(1:op%np) = op%w_re(op%stencil%center, 1:op%np)
+    fo(1:op%np) = op%w(op%stencil%center, 1:op%np)
   end if
   
   POP_SUB(X(nl_operator_operate_diag))

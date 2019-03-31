@@ -85,7 +85,7 @@ module nl_operator_oct_m
     integer               :: np        !< number of points in mesh
     !> When running in parallel mode, the next three arrays are unique on each node.
     integer, pointer  :: index(:,:)    !< index of the points. Unique on each parallel process.
-    FLOAT,   pointer  :: w_re(:,:)     !< weightsp, real part. Unique on each parallel process.
+    FLOAT,   pointer  :: w(:,:)        !< weights. Unique on each parallel process.
 
     logical               :: const_w   !< are the weights independent of index i
 
@@ -292,7 +292,7 @@ contains
 
     PUSH_SUB(nl_operator_init)
 
-    nullify(op%mesh, op%index, op%w_re, op%ri, op%rimap, op%rimap_inv)
+    nullify(op%mesh, op%index, op%w, op%ri, op%rimap, op%rimap_inv)
     nullify(op%inner%imin, op%inner%imax, op%inner%ri)
     nullify(op%outer%imin, op%outer%imax, op%outer%ri)
     nullify(op%nn)
@@ -319,7 +319,7 @@ contains
 
     call loct_pointer_copy(opo%nn, opi%nn)
     call loct_pointer_copy(opo%index, opi%index)
-    call loct_pointer_copy(opo%w_re, opi%w_re)
+    call loct_pointer_copy(opo%w, opi%w)
 
     opo%const_w   = opi%const_w
 
@@ -377,13 +377,13 @@ contains
 
     ! allocate weights op%w
     if(op%const_w) then
-      SAFE_ALLOCATE(op%w_re(1:op%stencil%size, 1:1))
+      SAFE_ALLOCATE(op%w(1:op%stencil%size, 1:1))
       if(debug%info) then
         message(1) = 'Info: nl_operator_build: working with constant weights.'
         call messages_info(1)
       end if
     else
-      SAFE_ALLOCATE(op%w_re(1:op%stencil%size, 1:op%np))
+      SAFE_ALLOCATE(op%w(1:op%stencil%size, 1:op%np))
       if(debug%info) then
         message(1) = 'Info: nl_operator_build: working with non-constant weights.'
         call messages_info(1)
@@ -391,7 +391,7 @@ contains
     end if
 
     ! set initially to zero
-    op%w_re = M_ZERO
+    op%w = M_ZERO
 
     ! Build lookup table
     SAFE_ALLOCATE(st1(1:op%stencil%size))
@@ -702,7 +702,7 @@ contains
       call messages_info(2)
       
       do istencil = 1, this%stencil%size
-        write(message(1), '(a,i3,3i4,f25.10)') '      ', istencil, this%stencil%points(1:3, istencil), this%w_re(istencil, 1)
+        write(message(1), '(a,i3,3i4,f25.10)') '      ', istencil, this%stencil%points(1:3, istencil), this%w(istencil, 1)
         call messages_info(1)
       end do
       
@@ -746,7 +746,7 @@ contains
     end if
 #endif
 
-    opgt%w_re = M_ZERO
+    opgt%w = M_ZERO
     do ip = 1, mesh%np_global
       do jp = 1, op%stencil%size
         index = nl_operator_get_index(opg, jp, ip)
@@ -755,9 +755,9 @@ contains
             kp = nl_operator_get_index(opg, lp, index)
             if( kp == ip ) then
               if(.not.op%const_w) then
-                opgt%w_re(jp, ip) = M_HALF*opg%w_re(jp, ip) - M_HALF*(vol_pp(index)/vol_pp(ip))*opg%w_re(lp, index)
+                opgt%w(jp, ip) = M_HALF*opg%w(jp, ip) - M_HALF*(vol_pp(index)/vol_pp(ip))*opg%w(lp, index)
               else
-                opgt%w_re(jp, 1) = opg%w_re(lp, 1)
+                opgt%w(jp, 1) = opg%w(lp, 1)
               end if
             end if
           end do
@@ -769,7 +769,7 @@ contains
     if(mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_P(vol_pp)
       do ip = 1, mesh%vp%np_local
-        opt%w_re(:, ip) = opgt%w_re(:, mesh%vp%local(mesh%vp%xlocal+ip-1))
+        opt%w(:, ip) = opgt%w(:, mesh%vp%local(mesh%vp%xlocal+ip-1))
       end do
       call nl_operator_end(opg)
       call nl_operator_end(opgt)
@@ -817,7 +817,7 @@ contains
       vol_pp => mesh%vol_pp
     end if
 
-    opgt%w_re = M_ZERO
+    opgt%w = M_ZERO
     do ip = 1, mesh%np_global
       do jp = 1, op%stencil%size
         index = nl_operator_get_index(opg, jp, ip)
@@ -827,9 +827,9 @@ contains
             kp = nl_operator_get_index(opg, lp, index)
             if( kp == ip ) then
               if(.not.op%const_w) then
-                opgt%w_re(jp, ip) = M_HALF*opg%w_re(jp, ip) + M_HALF*(vol_pp(index)/vol_pp(ip))*opg%w_re(lp, index)
+                opgt%w(jp, ip) = M_HALF*opg%w(jp, ip) + M_HALF*(vol_pp(index)/vol_pp(ip))*opg%w(lp, index)
               else
-                opgt%w_re(jp, 1) = opg%w_re(lp, 1)
+                opgt%w(jp, 1) = opg%w(lp, 1)
               end if
             end if
           end do
@@ -842,7 +842,7 @@ contains
     if(mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_P(vol_pp)
       do ip = 1, mesh%vp%np_local
-        opt%w_re(:, ip) = opgt%w_re(:, mesh%vp%local(mesh%vp%xlocal+ip-1))
+        opt%w(:, ip) = opgt%w(:, mesh%vp%local(mesh%vp%xlocal+ip-1))
       end do
       call nl_operator_end(opg)
       call nl_operator_end(opgt)
@@ -871,13 +871,13 @@ contains
 
     ! Copy elements of op to opg that
     ! are independent from the partitions, i.e. everything
-    ! except op%index and -- in the non-constant case -- op%w_re
+    ! except op%index and -- in the non-constant case -- op%w
     call nl_operator_common_copy(op, opg)
 
     ! Weights have to be collected only if they are not constant.
     if(.not.op%const_w) then
       do ip = 1, op%stencil%size
-        call vec_allgather(op%mesh%vp, opg%w_re(ip, :), op%w_re(ip, :))
+        call vec_allgather(op%mesh%vp, opg%w(ip, :), op%w(ip, :))
       end do
     end if
 
@@ -892,9 +892,9 @@ contains
   ! ---------------------------------------------------------
   !> Copies all parts of op to opg that are independent of
   !! the partitions, i.e. everything except op%index and -- in the
-  !! non-constant case -- op%w_re
+  !! non-constant case -- op%w
   !! This can be considered as nl_operator_copy and
-  !! reallocating w_re and i.
+  !! reallocating w and i.
   !! \warning: this should be replaced by a normal copy with a flag.
   subroutine nl_operator_common_copy(op, opg)
     type(nl_operator_t), target, intent(in)  :: op
@@ -907,16 +907,16 @@ contains
     call stencil_copy(op%stencil, opg%stencil)
 
     if(op%const_w) then
-      SAFE_ALLOCATE(opg%w_re(1:op%stencil%size, 1:1))
+      SAFE_ALLOCATE(opg%w(1:op%stencil%size, 1:1))
     else
-      SAFE_ALLOCATE(opg%w_re(1:op%stencil%size, 1:op%mesh%np_global))
+      SAFE_ALLOCATE(opg%w(1:op%stencil%size, 1:op%mesh%np_global))
     end if
     opg%mesh     => op%mesh
     opg%np       =  op%mesh%np_global
     opg%const_w  =  op%const_w
     opg%nri      =  op%nri
     if(op%const_w) then
-      opg%w_re = op%w_re
+      opg%w = op%w
     end if
 
     POP_SUB(nl_operator_common_copy)
@@ -948,7 +948,7 @@ contains
       do jp = 1, op%stencil%size
         index = nl_operator_get_index(op, jp, ip)
         if(index <= op%np) &
-          op%w_re(jp, ip) = aa(ip, index)
+          op%w(jp, ip) = aa(ip, index)
       end do
     end do
 
@@ -996,7 +996,7 @@ contains
     end if
 
     SAFE_DEALLOCATE_P(op%index)
-    SAFE_DEALLOCATE_P(op%w_re)
+    SAFE_DEALLOCATE_P(op%w)
 
     SAFE_DEALLOCATE_P(op%ri)
     SAFE_DEALLOCATE_P(op%rimap)

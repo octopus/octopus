@@ -320,7 +320,7 @@ contains
 
     case(GAUSS_SEIDEL)
 
-      factor = CNST(-1.0)/der%lapl%w_re(der%lapl%stencil%center, 1)*this%relax_factor
+      factor = CNST(-1.0)/der%lapl%w(der%lapl%stencil%center, 1)*this%relax_factor
 
       do istep = 1, steps
 
@@ -333,13 +333,13 @@ contains
         nn = der%lapl%stencil%size
 
         if(der%lapl%const_w) then
-          call dgauss_seidel(der%lapl%stencil%size, der%lapl%w_re(1, 1), der%lapl%nri, &
+          call dgauss_seidel(der%lapl%stencil%size, der%lapl%w(1, 1), der%lapl%nri, &
             der%lapl%ri(1, 1), der%lapl%rimap_inv(1), der%lapl%rimap_inv(2),        &
             factor, pot(1), rho(1))
         else
           do ip = 1, mesh%np
-            point_lap = sum(der%lapl%w_re(1:nn, ip)*pot(der%lapl%index(1:nn, ip)))
-            pot(ip) = pot(ip) - CNST(0.7)/der%lapl%w_re(der%lapl%stencil%center, ip)*(point_lap-rho(ip))
+            point_lap = sum(der%lapl%w(1:nn, ip)*pot(der%lapl%index(1:nn, ip)))
+            pot(ip) = pot(ip) - CNST(0.7)/der%lapl%w(der%lapl%stencil%center, ip)*(point_lap-rho(ip))
           end do
         end if
       end do

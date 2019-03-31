@@ -320,13 +320,13 @@ contains
         do is = 1, ns
           select case(sum(abs(smix%preconditioner%stencil%points(1:der%mesh%sb%dim, is))))
           case(0)
-            smix%preconditioner%w_re(is, ip) = CNST(1.0) + weight/CNST(8.0)
+            smix%preconditioner%w(is, ip) = CNST(1.0) + weight/CNST(8.0)
           case(1)
-            smix%preconditioner%w_re(is, ip) = weight/CNST(16.0)
+            smix%preconditioner%w(is, ip) = weight/CNST(16.0)
           case(2)
-            smix%preconditioner%w_re(is, ip) = weight/CNST(32.0)
+            smix%preconditioner%w(is, ip) = weight/CNST(32.0)
           case(3)
-            smix%preconditioner%w_re(is, ip) = weight/CNST(64.0)
+            smix%preconditioner%w(is, ip) = weight/CNST(64.0)
           case default
             ASSERT(.false.)
           end select

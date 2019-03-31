@@ -695,7 +695,7 @@ contains
 !op(1) is used systematically above to get dimensions, but here we have to save
 !all operator stencil weights
 ! once we are happy and convinced, remove this comment
-        op(i)%w_re(:, p) = sol(:, i)
+        op(i)%w(:, p) = sol(:, i)
       end do
               
     end do ! loop over points p
