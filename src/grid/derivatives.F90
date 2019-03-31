@@ -105,8 +105,6 @@ module derivatives_oct_m
 
     FLOAT                 :: masses(MAX_DIM)     !< we can have different weights (masses) per space direction
 
-    integer               :: np_zero_bc
-
     !> If the so-called variational discretization is used, this controls a
     !! possible filter on the Laplacian.
     FLOAT :: lapl_cutoff   
@@ -406,7 +404,8 @@ contains
     logical :: const_w_, cmplx_op_
     character(len=32) :: name
     type(nl_operator_t) :: auxop
-    
+    integer :: np_zero_bc
+
     PUSH_SUB(derivatives_build)
 
     call boundaries_init(der%boundaries, mesh)
@@ -423,15 +422,15 @@ contains
     ! need non-constant weights for curvilinear and scattering meshes
     if(mesh%use_curvilinear) const_w_ = .false.
 
-    der%np_zero_bc = 0
+    np_zero_bc = 0
 
     ! build operators
     do i = 1, der%dim+1
       call nl_operator_build(mesh, der%op(i), der%mesh%np, const_w = const_w_, cmplx_op = cmplx_op_)
-      der%np_zero_bc = max(der%np_zero_bc, nl_operator_np_zero_bc(der%op(i)))
+      np_zero_bc = max(np_zero_bc, nl_operator_np_zero_bc(der%op(i)))
     end do
 
-    ASSERT(der%np_zero_bc > mesh%np .and. der%np_zero_bc <= mesh%np_part)
+    ASSERT(np_zero_bc > mesh%np .and. np_zero_bc <= mesh%np_part)
 
     select case(der%stencil_type)
 
