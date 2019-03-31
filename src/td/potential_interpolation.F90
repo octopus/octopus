@@ -47,9 +47,7 @@ module potential_interpolation_oct_m
 
   type potential_interpolation_t
     FLOAT, pointer      :: v_old(:, :, :) => null()
-    FLOAT, pointer      :: Imv_old(:, :, :) => null()
     FLOAT, pointer      :: vtau_old(:, :, :) => null()
-    FLOAT, pointer      :: Imvtau_old(:, :, :) => null()
     logical             :: mgga_with_exc
   end type potential_interpolation_t
 
@@ -64,9 +62,7 @@ contains
     PUSH_SUB(potential_interpolation_nullify)
     
     this%v_old => null()
-    this%imv_old => null()
     this%vtau_old => null()
-    this%imvtau_old => null()
 
     POP_SUB(potential_interpolation_nullify)
   end subroutine potential_interpolation_nullify
@@ -80,9 +76,7 @@ contains
     PUSH_SUB(potential_interpolation_copy)
 
     call loct_pointer_copy(vkso%v_old, vksi%v_old)
-    call loct_pointer_copy(vkso%Imv_old, vksi%Imv_old)
     call loct_pointer_copy(vkso%vtau_old, vksi%vtau_old)
-    call loct_pointer_copy(vkso%Imvtau_old, vksi%Imvtau_old)
 
     POP_SUB(potential_interpolation_copy)
   end subroutine potential_interpolation_copy
@@ -123,23 +117,18 @@ contains
 
     ASSERT(associated(potential_interpolation%v_old)) 
     SAFE_DEALLOCATE_P(potential_interpolation%v_old)
-    SAFE_DEALLOCATE_P(potential_interpolation%Imv_old) 
     SAFE_DEALLOCATE_P(potential_interpolation%vtau_old)
-    SAFE_DEALLOCATE_P(potential_interpolation%Imvtau_old)
 
     POP_SUB(potential_interpolation_end)
   end subroutine potential_interpolation_end
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine potential_interpolation_run_zero_iter(potential_interpolation, np, nspin, vhxc, imvhxc, &
-                vtau, imvtau)
+  subroutine potential_interpolation_run_zero_iter(potential_interpolation, np, nspin, vhxc, vtau)
     type(potential_interpolation_t), intent(inout) :: potential_interpolation
     integer,           intent(in)    :: np, nspin
     FLOAT,             intent(in)    :: vhxc(:, :)
-    FLOAT, optional,   intent(in)    :: imvhxc(:, :)
     FLOAT, optional,   intent(in)    :: vtau(:, :)
-    FLOAT, optional,   intent(in)    :: imvtau(:, :)
 
     integer :: i, ispin, ip
     
@@ -149,38 +138,23 @@ contains
       potential_interpolation%v_old(ip, ispin, i) = vhxc(ip, ispin)
     end forall
     
-    if(present(imvhxc)) then
-      forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
-        potential_interpolation%imv_old(ip, ispin, i) = imvhxc(ip, ispin)
-      end forall
-    end if
-
    if(present(vtau)) then
       forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
         potential_interpolation%vtau_old(ip, ispin, i) = vtau(ip, ispin)
       end forall
     end if 
 
-    if(present(imvtau)) then
-      forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
-        potential_interpolation%imvtau_old(ip, ispin, i) = imvtau(ip, ispin)
-      end forall
-    end if
-
     POP_SUB(potential_interpolation_run_zero_iter)
   end subroutine potential_interpolation_run_zero_iter
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine potential_interpolation_new(potential_interpolation, np, nspin, time, dt, vhxc, imvhxc, &
-                vtau, imvtau)
+  subroutine potential_interpolation_new(potential_interpolation, np, nspin, time, dt, vhxc, vtau)
     type(potential_interpolation_t), intent(inout) :: potential_interpolation
     integer,           intent(in)    :: np, nspin
     FLOAT,             intent(in)    :: time, dt
     FLOAT,             intent(in)    :: vhxc(:, :)
-    FLOAT, optional,   intent(in)    :: imvhxc(:, :)
     FLOAT, optional,   intent(in)    :: vtau(:, :)
-    FLOAT, optional,   intent(in)    :: imvtau(:, :)
 
     FLOAT, allocatable :: times(:)
     integer :: j
@@ -199,15 +173,6 @@ contains
     call interpolate( times, potential_interpolation%v_old(:, :, 1:interpolation_steps), &
          time, potential_interpolation%v_old(:, :, 0))
 
-    if(present(imvhxc)) then
-      do j = interpolation_steps, 2, -1
-        call lalg_copy(np, nspin, potential_interpolation%Imv_old(:, :, j-1), potential_interpolation%Imv_old(:, :, j))
-      end do
-      call lalg_copy(np, nspin, imvhxc(:, :),     potential_interpolation%Imv_old(:, :, 1))
-      call interpolate( times, potential_interpolation%imv_old(:, :, 1:interpolation_steps), &
-           time, potential_interpolation%imv_old(:, :, 0))
-    end if
-
     if(present(vtau)) then
       do j = interpolation_steps, 2, -1
         call lalg_copy(np, nspin, potential_interpolation%vtau_old(:, :, j-1), potential_interpolation%vtau_old(:, :, j))
@@ -217,77 +182,45 @@ contains
            time, potential_interpolation%vtau_old(:, :, 0))
     end if
 
-    if(present(imvtau)) then
-      do j = interpolation_steps, 2, -1
-        call lalg_copy(np, nspin, potential_interpolation%imvtau_old(:, :, j-1), potential_interpolation%imvtau_old(:, :, j))
-      end do
-      call lalg_copy(np, nspin, imvtau(:, :),     potential_interpolation%Imvtau_old(:, :, 1))
-      call interpolate( times, potential_interpolation%Imvtau_old(:, :, 1:interpolation_steps), &
-           time, potential_interpolation%Imvtau_old(:, :, 0))
-    end if
-
     SAFE_DEALLOCATE_A(times)
     POP_SUB(potential_interpolation_new)
   end subroutine potential_interpolation_new
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine potential_interpolation_set(potential_interpolation, np, nspin, i, vhxc, imvhxc, &
-                vtau, imvtau)
+  subroutine potential_interpolation_set(potential_interpolation, np, nspin, i, vhxc, vtau)
     type(potential_interpolation_t), intent(inout) :: potential_interpolation
     integer,           intent(in)    :: np, nspin
     integer,           intent(in)    :: i
     FLOAT,             intent(inout) :: vhxc(:, :)
-    FLOAT, optional,   intent(inout) :: imvhxc(:, :)
     FLOAT, optional,   intent(in)    :: vtau(:, :)
-    FLOAT, optional,   intent(in)    :: imvtau(:, :)
 
     PUSH_SUB(potential_interpolation_set)
 
     call lalg_copy(np, nspin, vhxc, potential_interpolation%v_old(:, :, i))
     
-    if(present(imvhxc)) then
-      call lalg_copy(np, nspin, imvhxc, potential_interpolation%imv_old(:, :, i))
-    end if
-
     if(present(vtau)) then
       call lalg_copy(np, nspin, vtau, potential_interpolation%vtau_old(:, :, i))
     end if
-
-    if(present(imvtau)) then
-      call lalg_copy(np, nspin, imvtau, potential_interpolation%imvtau_old(:, :, i))
-    end if
-
 
     POP_SUB(potential_interpolation_set)
   end subroutine potential_interpolation_set
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine potential_interpolation_get(potential_interpolation, np, nspin, i, vhxc, imvhxc, &
-    vtau, imvtau)
+  subroutine potential_interpolation_get(potential_interpolation, np, nspin, i, vhxc, vtau)
     type(potential_interpolation_t), intent(inout) :: potential_interpolation
     integer,           intent(in)    :: np, nspin
     integer,           intent(in)    :: i
     FLOAT,             intent(inout) :: vhxc(:, :)
-    FLOAT, optional,   intent(inout) :: imvhxc(:, :)
     FLOAT, optional,   intent(inout) :: vtau(:, :)
-    FLOAT, optional,   intent(inout) :: imvtau(:, :)
 
     PUSH_SUB(potential_interpolation_get)
 
     call lalg_copy(np, nspin, potential_interpolation%v_old(:, :, i), vhxc)
-    
-    if(present(imvhxc)) then
-      call lalg_copy(np, nspin, potential_interpolation%imv_old(:, :, i), imvhxc)
-    end if
 
     if(present(vtau)) then
       call lalg_copy(np, nspin, potential_interpolation%vtau_old(:, :, i), vtau)
-    end if
-
-    if(present(imvtau)) then
-      call lalg_copy(np, nspin, potential_interpolation%imvtau_old(:, :, i), imvtau)
     end if
 
     POP_SUB(potential_interpolation_get)
@@ -296,14 +229,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine potential_interpolation_interpolate(potential_interpolation, order, time, dt, t, vhxc, imvhxc, vtau, imvtau)
+  subroutine potential_interpolation_interpolate(potential_interpolation, order, time, dt, t, vhxc, vtau)
     type(potential_interpolation_t), intent(inout) :: potential_interpolation
     integer,           intent(in)    :: order
     FLOAT,             intent(in)    :: time, dt, t
     FLOAT,             intent(inout) :: vhxc(:, :)
-    FLOAT, optional,   intent(inout) :: imvhxc(:, :)
     FLOAT, optional,   intent(inout) :: vtau(:, :)
-    FLOAT, optional,   intent(inout) :: imvtau(:, :)
 
     integer :: j
     FLOAT, allocatable :: times(:)
@@ -316,14 +247,9 @@ contains
     end do
 
     call interpolate( times(1:order), potential_interpolation%v_old(:, :, 0:order-1), t, vhxc(:, :))
-    if(present(imvhxc)) then
-      call interpolate( times(1:order), potential_interpolation%Imv_old(:, :, 0:order-1), t, imvhxc(:, :))
-    end if
+
     if(present(vtau)) then
       call interpolate( times(1:order), potential_interpolation%vtau_old(:, :, 0:order-1), t, vtau(:, :))
-    end if
-    if(present(imvtau)) then
-      call interpolate( times(1:order), potential_interpolation%Imvtau_old(:, :, 0:order-1), t, imvtau(:, :))
     end if
 
     SAFE_DEALLOCATE_A(times)
