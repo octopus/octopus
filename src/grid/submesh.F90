@@ -73,7 +73,6 @@ module submesh_oct_m
     integer,      pointer :: map(:)         !< index in the mesh of the points inside the sphere
     FLOAT,        pointer :: x(:,:)
     type(mesh_t), pointer :: mesh
-    logical               :: has_points
     logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point
     
     integer               :: np_global      !< total number of points in the entire mesh
@@ -268,8 +267,6 @@ contains
 
     end if
 
-    this%has_points = (this%np > 0)
-    
     ! now order points for better locality
     
     SAFE_ALLOCATE(order(1:this%np_part))
@@ -331,7 +328,6 @@ contains
       this%np_part = nparray(2)
 
       if(root /= mpi_grp%rank) then
-        this%has_points = (this%np > 0)
         SAFE_ALLOCATE(this%map(1:this%np_part))
         SAFE_ALLOCATE(this%x(1:this%np_part, 0:mesh%sb%dim))
       end if
