@@ -401,7 +401,7 @@ contains
     integer, allocatable :: polynomials(:,:)
     FLOAT,   allocatable :: rhs(:,:)
     integer :: i
-    logical :: const_w_, cmplx_op_
+    logical :: const_w_
     character(len=32) :: name
     type(nl_operator_t) :: auxop
     integer :: np_zero_bc
@@ -417,7 +417,6 @@ contains
     der%mesh => mesh    ! make a pointer to the underlying mesh
 
     const_w_  = .true.
-    cmplx_op_ = .false.
 
     ! need non-constant weights for curvilinear and scattering meshes
     if(mesh%use_curvilinear) const_w_ = .false.
@@ -426,7 +425,7 @@ contains
 
     ! build operators
     do i = 1, der%dim+1
-      call nl_operator_build(mesh, der%op(i), der%mesh%np, const_w = const_w_, cmplx_op = cmplx_op_)
+      call nl_operator_build(mesh, der%op(i), der%mesh%np, const_w = const_w_)
       np_zero_bc = max(np_zero_bc, nl_operator_np_zero_bc(der%op(i)))
     end do
 

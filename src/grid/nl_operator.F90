@@ -86,10 +86,8 @@ module nl_operator_oct_m
     !> When running in parallel mode, the next three arrays are unique on each node.
     integer, pointer  :: index(:,:)    !< index of the points. Unique on each parallel process.
     FLOAT,   pointer  :: w_re(:,:)     !< weightsp, real part. Unique on each parallel process.
-    FLOAT,   pointer  :: w_im(:,:)     !< weightsp, imaginary part. Unique on each parallel process.
 
     logical               :: const_w   !< are the weights independent of index i
-    logical               :: cmplx_op  !< .true. if we have also imaginary weights
 
     character(len=40) :: label
 
@@ -294,7 +292,7 @@ contains
 
     PUSH_SUB(nl_operator_init)
 
-    nullify(op%mesh, op%index, op%w_re, op%w_im, op%ri, op%rimap, op%rimap_inv)
+    nullify(op%mesh, op%index, op%w_re, op%ri, op%rimap, op%rimap_inv)
     nullify(op%inner%imin, op%inner%imax, op%inner%ri)
     nullify(op%outer%imin, op%outer%imax, op%outer%ri)
     nullify(op%nn)
@@ -322,10 +320,8 @@ contains
     call loct_pointer_copy(opo%nn, opi%nn)
     call loct_pointer_copy(opo%index, opi%index)
     call loct_pointer_copy(opo%w_re, opi%w_re)
-    call loct_pointer_copy(opo%w_im, opi%w_im)
 
     opo%const_w   = opi%const_w
-    opo%cmplx_op  = opi%cmplx_op
 
     opo%nri       =  opi%nri
     ASSERT(associated(opi%ri))
@@ -351,12 +347,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_build(mesh, op, np, const_w, cmplx_op)
+  subroutine nl_operator_build(mesh, op, np, const_w)
     type(mesh_t), target, intent(in)    :: mesh
     type(nl_operator_t),  intent(inout) :: op
     integer,              intent(in)    :: np       !< Number of (local) points.
     logical, optional,    intent(in)    :: const_w  !< are the weights constant (independent of the point)
-    logical, optional,    intent(in)    :: cmplx_op !< do we have complex weights?
 
     integer :: ii, jj, p1(MAX_DIM), time, current, size
     integer, allocatable :: st1(:), st2(:), st1r(:), stencil(:, :)
@@ -378,25 +373,17 @@ contains
     op%np       = np
     op%mesh     => mesh
     op%const_w  = .false.
-    op%cmplx_op = .false.
     if(present(const_w )) op%const_w  = const_w
-    if(present(cmplx_op)) op%cmplx_op = cmplx_op
 
     ! allocate weights op%w
     if(op%const_w) then
       SAFE_ALLOCATE(op%w_re(1:op%stencil%size, 1:1))
-      if (op%cmplx_op) then
-        SAFE_ALLOCATE(op%w_im(1:op%stencil%size, 1:1))
-      end if
       if(debug%info) then
         message(1) = 'Info: nl_operator_build: working with constant weights.'
         call messages_info(1)
       end if
     else
       SAFE_ALLOCATE(op%w_re(1:op%stencil%size, 1:op%np))
-      if (op%cmplx_op) then
-        SAFE_ALLOCATE(op%w_im(1:op%stencil%size, 1:op%np))
-      end if
       if(debug%info) then
         message(1) = 'Info: nl_operator_build: working with non-constant weights.'
         call messages_info(1)
@@ -405,7 +392,6 @@ contains
 
     ! set initially to zero
     op%w_re = M_ZERO
-    if (op%cmplx_op) op%w_im = M_ZERO
 
     ! Build lookup table
     SAFE_ALLOCATE(st1(1:op%stencil%size))
@@ -761,7 +747,6 @@ contains
 #endif
 
     opgt%w_re = M_ZERO
-    if (op%cmplx_op) opgt%w_im = M_ZERO
     do ip = 1, mesh%np_global
       do jp = 1, op%stencil%size
         index = nl_operator_get_index(opg, jp, ip)
@@ -771,11 +756,8 @@ contains
             if( kp == ip ) then
               if(.not.op%const_w) then
                 opgt%w_re(jp, ip) = M_HALF*opg%w_re(jp, ip) - M_HALF*(vol_pp(index)/vol_pp(ip))*opg%w_re(lp, index)
-                if (op%cmplx_op) &
-                   opgt%w_im(jp, ip) = M_HALF*opg%w_im(jp, ip) - M_HALF*(vol_pp(index)/vol_pp(ip))*opg%w_im(lp, index)
               else
                 opgt%w_re(jp, 1) = opg%w_re(lp, 1)
-                if (op%cmplx_op) opgt%w_im(jp, 1) = opg%w_im(lp, 1)
               end if
             end if
           end do
@@ -788,9 +770,6 @@ contains
       SAFE_DEALLOCATE_P(vol_pp)
       do ip = 1, mesh%vp%np_local
         opt%w_re(:, ip) = opgt%w_re(:, mesh%vp%local(mesh%vp%xlocal+ip-1))
-        if(opt%cmplx_op) then
-          opt%w_im(:, ip) = opgt%w_im(:, mesh%vp%local(mesh%vp%xlocal+ip-1))
-        end if
       end do
       call nl_operator_end(opg)
       call nl_operator_end(opgt)
@@ -839,7 +818,6 @@ contains
     end if
 
     opgt%w_re = M_ZERO
-    if (op%cmplx_op) opgt%w_im = M_ZERO
     do ip = 1, mesh%np_global
       do jp = 1, op%stencil%size
         index = nl_operator_get_index(opg, jp, ip)
@@ -850,11 +828,8 @@ contains
             if( kp == ip ) then
               if(.not.op%const_w) then
                 opgt%w_re(jp, ip) = M_HALF*opg%w_re(jp, ip) + M_HALF*(vol_pp(index)/vol_pp(ip))*opg%w_re(lp, index)
-                if (op%cmplx_op) &
-                  opgt%w_im(jp, ip) = M_HALF*opg%w_im(jp, ip) + M_HALF*(vol_pp(index)/vol_pp(ip))*opg%w_im(lp, index)
               else
                 opgt%w_re(jp, 1) = opg%w_re(lp, 1)
-                if (op%cmplx_op) opgt%w_im(jp, 1) = opg%w_im(lp, 1)
               end if
             end if
           end do
@@ -868,9 +843,6 @@ contains
       SAFE_DEALLOCATE_P(vol_pp)
       do ip = 1, mesh%vp%np_local
         opt%w_re(:, ip) = opgt%w_re(:, mesh%vp%local(mesh%vp%xlocal+ip-1))
-        if(opt%cmplx_op) then
-          opt%w_im(:, ip) = opgt%w_im(:, mesh%vp%local(mesh%vp%xlocal+ip-1))
-        end if
       end do
       call nl_operator_end(opg)
       call nl_operator_end(opgt)
@@ -900,14 +872,12 @@ contains
     ! Copy elements of op to opg that
     ! are independent from the partitions, i.e. everything
     ! except op%index and -- in the non-constant case -- op%w_re
-    ! op%w_im.
     call nl_operator_common_copy(op, opg)
 
     ! Weights have to be collected only if they are not constant.
     if(.not.op%const_w) then
       do ip = 1, op%stencil%size
         call vec_allgather(op%mesh%vp, opg%w_re(ip, :), op%w_re(ip, :))
-        if(op%cmplx_op) call vec_allgather(op%mesh%vp, opg%w_im(ip, :), op%w_im(ip, :))
       end do
     end if
 
@@ -922,9 +892,9 @@ contains
   ! ---------------------------------------------------------
   !> Copies all parts of op to opg that are independent of
   !! the partitions, i.e. everything except op%index and -- in the
-  !! non-constant case -- op%w_re op%w_im.
+  !! non-constant case -- op%w_re
   !! This can be considered as nl_operator_copy and
-  !! reallocating w_re, w_im and i.
+  !! reallocating w_re and i.
   !! \warning: this should be replaced by a normal copy with a flag.
   subroutine nl_operator_common_copy(op, opg)
     type(nl_operator_t), target, intent(in)  :: op
@@ -938,25 +908,15 @@ contains
 
     if(op%const_w) then
       SAFE_ALLOCATE(opg%w_re(1:op%stencil%size, 1:1))
-      if(op%cmplx_op) then
-        SAFE_ALLOCATE(opg%w_im(1:op%stencil%size, 1:1))
-      end if
     else
       SAFE_ALLOCATE(opg%w_re(1:op%stencil%size, 1:op%mesh%np_global))
-      if(op%cmplx_op) then
-        SAFE_ALLOCATE(opg%w_im(1:op%stencil%size, 1:op%mesh%np_global))
-      end if
     end if
     opg%mesh     => op%mesh
     opg%np       =  op%mesh%np_global
-    opg%cmplx_op =  op%cmplx_op
     opg%const_w  =  op%const_w
     opg%nri      =  op%nri
     if(op%const_w) then
       opg%w_re = op%w_re
-      if(op%cmplx_op) then
-        opg%w_im = op%w_im
-      end if
     end if
 
     POP_SUB(nl_operator_common_copy)
@@ -989,7 +949,6 @@ contains
         index = nl_operator_get_index(op, jp, ip)
         if(index <= op%np) &
           op%w_re(jp, ip) = aa(ip, index)
-        if (op%cmplx_op) op%w_im(jp, ip) = bb(ip, index)
       end do
     end do
 
@@ -1038,7 +997,6 @@ contains
 
     SAFE_DEALLOCATE_P(op%index)
     SAFE_DEALLOCATE_P(op%w_re)
-    SAFE_DEALLOCATE_P(op%w_im)
 
     SAFE_DEALLOCATE_P(op%ri)
     SAFE_DEALLOCATE_P(op%rimap)
