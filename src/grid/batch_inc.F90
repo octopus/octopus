@@ -121,6 +121,8 @@ subroutine X(batch_allocate_temporary)(this)
 
   PUSH_SUB(X(batch_allocate_temporary))
 
+  ASSERT(.not. associated(this%X(psicont)))
+  
   SAFE_ALLOCATE(this%X(psicont)(1:this%pack%size(2), 1:this%dim, 1:this%nst))
   
   do ist = 1, this%nst
