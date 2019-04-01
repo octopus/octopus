@@ -817,8 +817,8 @@ contains
     message(1) = "Checking if the real-space grid is symmetric";
     call messages_info(1)
 
-    lsize(1:3) = dble(mesh%idx%ll(1:3))
-    offset(1:3) = dble(mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3))
+    lsize(1:3) = real(mesh%idx%ll(1:3), REAL_PRECISION)
+    offset(1:3) = real(mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3), REAL_PRECISION)
 
     nops = symmetries_number(mesh%sb%symm)
 
@@ -828,41 +828,46 @@ contains
       !If yes, it should have integer reduced coordinates 
       if(mesh%parallel_in_domains) then
         ! convert to global point
-        destpoint(1:3) = dble(mesh%idx%lxyz(mesh%vp%local(mesh%vp%xlocal + ip - 1), 1:3)) - offset(1:3)
+        destpoint(1:3) = real(mesh%idx%lxyz(mesh%vp%local(mesh%vp%xlocal + ip - 1), 1:3), REAL_PRECISION) - offset(1:3)
       else
-        destpoint(1:3) = dble(mesh%idx%lxyz(ip, 1:3)) - offset(1:3)
+        destpoint(1:3) = real(mesh%idx%lxyz(ip, 1:3), REAL_PRECISION) - offset(1:3)
       end if
       ! offset moves corner of cell to origin, in integer mesh coordinates
       ASSERT(all(destpoint >= 0))
       ASSERT(all(destpoint < lsize))
 
       ! move to center of cell in real coordinates
-      destpoint = destpoint - dble(int(lsize)/2)
+      destpoint = destpoint - real(int(lsize)/2, REAL_PRECISION)
 
       !convert to proper reduced coordinates
       forall(idim = 1:3) destpoint(idim) = destpoint(idim)/lsize(idim)
 
       ! iterate over all points that go to this point by a symmetry operation
       do iop = 1, nops
-        srcpoint = symm_op_apply_inv_red(mesh%sb%symm%ops(iop), destpoint) 
+        srcpoint = symm_op_apply_red(mesh%sb%symm%ops(iop), destpoint) 
 
         !We now come back to what should be an integer, if the symmetric point beloings to the grid
         forall(idim = 1:3) srcpoint(idim) = srcpoint(idim)*lsize(idim)
 
         ! move back to reference to origin at corner of cell
-        srcpoint = srcpoint + dble(int(lsize)/2)
+        srcpoint = srcpoint + real(int(lsize)/2, REAL_PRECISION)
+
+        ! apply periodic boundary conditions in periodic directions 
+        do idim = 1, mesh%sb%periodic_dim
+          if(nint(srcpoint(idim)) < 0 .or. nint(srcpoint(idim)) > lsize(idim)) then
+            srcpoint(idim) = modulo(srcpoint(idim), lsize(idim))
+          else if(nint(srcpoint(idim)) == lsize(idim)) then
+            srcpoint(idim) = M_ZERO
+          end if
+        end do
+        ASSERT(all(srcpoint >= -SYMPREC))
+        ASSERT(all(srcpoint < lsize))
 
         srcpoint(1:3) = srcpoint(1:3) + offset(1:3)
  
         if(any(srcpoint-anint(srcpoint)> SYMPREC)) then
           message(1) = "The real-space grid breaks at least one of the symmetries of the system."
           message(2) = "Change your spacing or use KPointsUseSymmetries=no."
-          !print '(3(3i4,2x))', symm_op_rotation_matrix_red(mesh%sb%symm%ops(iop))
-          !print *, srcpoint
-          !print *, destpoint
-          !print *, offset
-          !print *, mesh%idx%lxyz(ip, 1:3)
-          !print *, lsize
           call messages_fatal(2)
         end if
       end do
