@@ -102,6 +102,7 @@ module batch_oct_m
     integer,             pointer   :: ist_idim_index(:, :)
 
     logical                        :: is_allocated
+    logical                        :: mirror !< keep a copy of the batch data in unpacked form
 
     !> We also need a linear array with the states in order to calculate derivatives, etc.
     integer                        :: nst_linear
@@ -285,6 +286,7 @@ contains
     PUSH_SUB(batch_init_empty)
 
     this%is_allocated = .false.
+    this%mirror = .false.
     this%nst = nst
     this%dim = dim
     this%current = 1
@@ -328,6 +330,7 @@ contains
     PUSH_SUB(batch_init_empty_linear)
 
     this%is_allocated = .false.
+    this%mirror = .false.
     this%nst = 0
     this%dim = 0
     this%current = 1
@@ -576,7 +579,7 @@ contains
         call profiling_out(prof_copy)
       end if
 
-      if(this%is_allocated) call batch_deallocate_temporary(this)
+      if(this%is_allocated .and. .not. this%mirror) call batch_deallocate_temporary(this)
 
     end if
 
@@ -672,11 +675,11 @@ contains
 
       if(this%in_buffer_count == 1 .or. optional_default(force, .false.)) then
 
-        if(this%is_allocated) call batch_allocate_temporary(this)
+        if(this%is_allocated .and. .not. this%mirror) call batch_allocate_temporary(this)
         
         copy_ = .true.
         if(present(copy)) copy_ = copy
-        if(this%is_allocated) copy_ = .true.
+        if(this%is_allocated .and. .not. this%mirror) copy_ = .true.
         
         if(copy_) call batch_sync(this)
         

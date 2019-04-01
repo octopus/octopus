@@ -1069,10 +1069,10 @@ contains
 
           if (states_are_real(st)) then
             call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-            call dbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
+            call dbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part, mirror = st%d%mirror_states)
           else
             call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-            call zbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
+            call zbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part, mirror = st%d%mirror_states)
           end if
           
         end do
@@ -1231,13 +1231,12 @@ contains
     type(multicomm_t), intent(in)    :: mc
 
     integer :: default
-    logical :: pack_default
+    logical :: defaultl
 
     PUSH_SUB(states_exec_init)
 
     !%Variable StatesPack
     !%Type logical
-    !%Default yes
     !%Section Execution::Optimization
     !%Description
     !% When set to yes, states are stored in packed mode, which improves
@@ -1255,11 +1254,30 @@ contains
     !% The default is yes except when using OpenCL.
     !%End
 
-    pack_default = .true.
+    defaultl = .true.
     if(accel_is_enabled()) then
-      pack_default = .false.
+      defaultl = .false.
     end if
-    call parse_variable('StatesPack', pack_default, st%d%pack_states)
+    call parse_variable('StatesPack', defaultl, st%d%pack_states)
+
+    !%Variable StatesMirror
+    !%Type logical
+    !%Section Execution::Optimization
+    !%Description
+    !% When this is enabled, Octopus keeps a copy of the states in
+    !% main memory. This speeds up calculations when working with
+    !% GPUs, as the memory does not to be copied back, but consumes
+    !% more main memory.
+    !%
+    !% The default is false, except when acceleration is enabled and
+    !% StatesPack is disabled.
+    !%End
+
+    defaultl = .false.
+    if(accel_is_enabled() .and. .not. st%d%pack_states) then
+      defaultl = .true.
+    end if
+    call parse_variable('StatesMirror', defaultl, st%d%mirror_states)
 
     !%Variable StatesOrthogonalization
     !%Type integer

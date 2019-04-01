@@ -90,12 +90,13 @@ end subroutine X(batch_add_state_linear)
 
 
 !--------------------------------------------------------------
-subroutine X(batch_allocate)(this, st_start, st_end, np, fill_zeros)
+subroutine X(batch_allocate)(this, st_start, st_end, np, fill_zeros, mirror)
   type(batch_t),  intent(inout) :: this
   integer,        intent(in)    :: st_start
   integer,        intent(in)    :: st_end
   integer,        intent(in)    :: np
   logical, optional, intent(in) :: fill_zeros
+  logical, optional, intent(in) :: mirror
 
   integer :: ist
 
@@ -105,7 +106,8 @@ subroutine X(batch_allocate)(this, st_start, st_end, np, fill_zeros)
   if (optional_default(fill_zeros, .true.)) this%X(psicont) = R_TOTYPE(M_ZERO)
 
   this%is_allocated = .true.
-
+  this%mirror = optional_default(mirror, .false.)  
+  
   do ist = st_start, st_end
     call X(batch_add_state)(this, ist, this%X(psicont)(:, :, ist - st_start + 1))
   end do
