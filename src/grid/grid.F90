@@ -275,7 +275,7 @@ contains
       gr%fine%der => gr%der
     end if
 
-    !%Variable SymmetrizeDensities
+    !%Variable SymmetrizeDensity
     !%Type logical
     !%Default no
     !%Section Grid
@@ -283,8 +283,8 @@ contains
     !% When enabled the densities is symmetrized. Currently, this can
     !% only be done for periodic systems. (Experimental.)
     !%End
-    call parse_variable('SymmetrizeDensities', gr%sb%kpoints%use_symmetries, gr%mesh%symmetrize_density)
-    call messages_print_var_value(stdout, 'SymmetrizeDensities', gr%mesh%symmetrize_density)
+    call parse_variable('SymmetrizeDensity', gr%sb%kpoints%use_symmetries, gr%mesh%symmetrize_density)
+    call messages_print_var_value(stdout, 'SymmetrizeDensity', gr%mesh%symmetrize_density)
     if(gr%mesh%symmetrize_density) call mesh_check_symmetries(gr%mesh, gr%mesh%sb)
 
     ! multigrids are not initialized by default
