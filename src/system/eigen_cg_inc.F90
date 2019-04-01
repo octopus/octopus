@@ -36,7 +36,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   logical, optional,      intent(in)    :: additional_terms
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:)
-  R_TYPE, allocatable :: h_psi2(:,:), ppsi2(:,:), psi_lam(:,:), cg_vec_lam(:,:)
+  R_TYPE, allocatable :: h_psi2(:,:), psi_lam(:,:), cg_vec_lam(:,:)
   R_TYPE, allocatable :: lam(:), lam_conj(:), cg_phi(:)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   FLOAT    :: cg0, e0, res, norm, alpha, beta, dot, old_res, old_energy, first_delta_e
@@ -106,14 +106,13 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   end if
   
 ! Modifications Nicole
-	if(hm%theory_level == RDMFT) then
-		SAFE_ALLOCATE(psi_lam(1:gr%mesh%np_part, 1:st%d%dim))
-		SAFE_ALLOCATE(cg_vec_lam(1:gr%mesh%np_part, 1:st%d%dim))
-		SAFE_ALLOCATE(lam(1:st%nst))
-		SAFE_ALLOCATE(lam_conj(1:st%nst))
-		SAFE_ALLOCATE(cg_phi(1:st%nst))
-		SAFE_ALLOCATE(ppsi2(1:gr%mesh%np_part, 1:st%d%dim))
-	end if
+  if(hm%theory_level == RDMFT) then
+    SAFE_ALLOCATE(psi_lam(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(cg_vec_lam(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(lam(1:st%nst))
+    SAFE_ALLOCATE(lam_conj(1:st%nst))
+    SAFE_ALLOCATE(cg_phi(1:st%nst))
+  end if
 ! End Nicole
 
   h_psi = R_TOTYPE(M_ZERO)
@@ -145,15 +144,14 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     h_cg  = R_TOTYPE(M_ZERO)
     g_prev = R_TOTYPE(M_ZERO)
     
-! Modifications RDMFT	
-		if(hm%theory_level == RDMFT) then
-			psi_lam 		= R_TOTYPE(M_ZERO)
-			cg_vec_lam 	= R_TOTYPE(M_ZERO) 
-			lam					= R_TOTYPE(M_ZERO)
-			lam_conj		= R_TOTYPE(M_ZERO)
-			cg_phi			= R_TOTYPE(M_ZERO)
-			ppsi2				= R_TOTYPE(M_ZERO)
-		end if
+! Modifications RDMFT 
+    if(hm%theory_level == RDMFT) then
+      psi_lam     = R_TOTYPE(M_ZERO)
+      cg_vec_lam  = R_TOTYPE(M_ZERO) 
+      lam         = R_TOTYPE(M_ZERO)
+      lam_conj    = R_TOTYPE(M_ZERO)
+      cg_phi      = R_TOTYPE(M_ZERO)
+    end if
 ! End RDMFT
 
     call states_get_state(st, gr%mesh, ist, ik, psi)
@@ -164,7 +162,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 ! Modifications RDMFT
 !    ! Calculate starting gradient: |hpsi> = H|psi>
     if(hm%theory_level == RDMFT) then
-			call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik, set_occ = .true.)
+      call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik, set_occ = .true.)
     else 
       call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik)
     endif
@@ -181,31 +179,30 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     old_energy = st%eigenval(ist, ik)
     first_delta_e = M_ZERO
 
-! Medifications RDMFT
-		if(hm%theory_level == RDMFT) then
-			cg_vec_lam = R_TOTYPE(M_ZERO) 
-			do jst = 1, st%nst
-				if (jst == ist) then
-					lam(jst) = st%eigenval(ist, ik)
-					lam_conj(jst) = st%eigenval(ist, ik)
-				else
-					call states_get_state(st, gr%mesh, jst, ik, psi_lam)
-					
-					! calculate <phi_j|H|phi_i>	=lam_ji
-					lam(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_lam, h_psi))
-					
-					! calculate <phi_i|H|phi_j>=lam_ij
-					call X(hamiltonian_apply)(hm, gr%der, psi_lam, h_cg, jst, ik, set_occ = .true.)
-					lam_conj(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
-					h_cg= R_TOTYPE(M_ZERO)
-					
-					! cg_vec including lambda but leaving out the diagonal part that needs to be adpated every iteration (note that only psi changes but lambda remains constant)
-					forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-						cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_lam(ip, idim) !! works also with -lam
-					end forall	
-				end if
-			end do
-		end if
+! Modifications RDMFT
+    if(hm%theory_level == RDMFT) then
+      cg_vec_lam = R_TOTYPE(M_ZERO) 
+      do jst = 1, st%nst
+        if (jst == ist) then
+          lam(jst) = st%eigenval(ist, ik)
+          lam_conj(jst) = st%eigenval(ist, ik)
+        else
+          call states_get_state(st, gr%mesh, jst, ik, psi_lam)
+          
+          ! calculate <phi_j|H|phi_i> =lam_ji
+          lam(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_lam, h_psi))
+          
+          ! calculate <phi_i|H|phi_j>=lam_ij
+          call X(hamiltonian_apply)(hm, gr%der, psi_lam, h_cg, jst, ik, set_occ = .true.)
+          lam_conj(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
+          h_cg= R_TOTYPE(M_ZERO)
+      
+          forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+            cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_lam(ip, idim) !! works also with 0.5*(lam+lam_conj)
+          end forall  
+        end if
+      end do
+    end if
 ! End RDMFT
 
 !!!!!!!!!!!!!!!!!!!! Starts iteration for this band !!!!!!!!!!!!!!!!!!!!
@@ -221,40 +218,40 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       ! PTA92, eq. 5.10
 ! Modifications RDMFT
-			if(hm%theory_level == RDMFT) then
+      if(hm%theory_level == RDMFT) then
 ! update lamda every iteration. Numerically extremley expensive and not feasible for more than 1d.
 ! still left this here for test reason. 
-!				cg_vec_lam = R_TOTYPE(M_ZERO) 
-!				do jst = 1, st%nst
-!					if (jst == ist) then
-!						lam(jst) = st%eigenval(ist, ik)
-!						lam_conj(jst) = st%eigenval(ist, ik)
-!					else
-!						call states_get_state(st, gr%mesh, jst, ik, psi_lam)
-						
-!						! calculate <phi_j|H|phi_i>	=lam_ji
-!						lam(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_lam, h_psi))
-						
-!  					! calculate <phi_i|H|phi_j>=lam_ij
-!						call X(hamiltonian_apply)(hm, gr%der, psi_lam, h_cg, jst, ik, set_occ = .true.)
-!						lam_conj(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
-!						h_cg= R_TOTYPE(M_ZERO)
-				
-!						forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-!							cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_lam(ip, idim) !! works also with -lam
-!						end forall	
-!					end if
-!				end do
-				
-				forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-					g(ip, idim) = h_psi(ip, idim) - cg_vec_lam(ip, idim) - lam_conj(ist)*psi(ip, idim)
-				end forall
+!       cg_vec_lam = R_TOTYPE(M_ZERO) 
+!       do jst = 1, st%nst
+!         if (jst == ist) then
+!           lam(jst) = st%eigenval(ist, ik)
+!           lam_conj(jst) = st%eigenval(ist, ik)
+!         else
+!           call states_get_state(st, gr%mesh, jst, ik, psi_lam)
+            
+!           ! calculate <phi_j|H|phi_i> =lam_ji
+!           lam(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_lam, h_psi))
+            
+!           ! calculate <phi_i|H|phi_j>=lam_ij
+!           call X(hamiltonian_apply)(hm, gr%der, psi_lam, h_cg, jst, ik, set_occ = .true.)
+!           lam_conj(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
+!           h_cg= R_TOTYPE(M_ZERO)
+        
+!           forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+!             cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_lam(ip, idim) !! works also with -lam
+!           end forall  
+!         end if
+!       end do
+        
+        forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+          g(ip, idim) = h_psi(ip, idim) - cg_vec_lam(ip, idim) - lam_conj(ist)*psi(ip, idim)
+        end forall
 
-			else ! no RDMFT
-				forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-					g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
-				end forall 
-			end if 
+      else ! no RDMFT
+        forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+          g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
+        end forall 
+      end if 
 ! End RDMFT
 
       ! PTA92, eq. 5.12
@@ -411,18 +408,18 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       beta = R_REAL(a0) * M_TWO
 ! Modifications RDMFT
-			! Extra RDMFT part from lagrange multiplier in total functional: sum_ij lam_ij <phi_i|phi_j>
-			! for current state (ist=i) beta_i -> beta_i - sum_k (lam_ki <cg_i|phi_k> + c.c.)
-			!	with lam_ki = <phi_k|H|phi_i>
-			if(hm%theory_level == RDMFT) then
-				beta_rdmft = M_ZERO
-				do jst = 1, st%nst
-					call states_get_state(st, gr%mesh, jst, ik, psi_lam)
-					cg_phi(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_lam, cg))	
-					beta_rdmft = beta_rdmft + cg_phi(jst) / cg0 * ( lam(jst) + lam_conj(jst) )
-				end do
-				beta = beta - beta_rdmft * M_TWO
-			end if
+      ! Extra RDMFT part from lagrange multiplier in total functional: sum_ij lam_ij <phi_i|phi_j>
+      ! for current state (ist=i) beta_i -> beta_i - sum_k (lam_ki <cg_i|phi_k> + c.c.)
+      ! with lam_ki = <phi_k|H|phi_i>
+      if(hm%theory_level == RDMFT) then
+        beta_rdmft = M_ZERO
+        do jst = 1, st%nst
+          call states_get_state(st, gr%mesh, jst, ik, psi_lam)
+          cg_phi(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_lam, cg)) 
+          beta_rdmft = beta_rdmft + cg_phi(jst) / cg0 * ( lam(jst) + lam_conj(jst) )
+        end do
+        beta = beta - beta_rdmft * M_TWO
+      end if
 ! End RDMFT
 
       theta = atan(beta/alpha)*M_HALF
@@ -532,14 +529,12 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   end if
   
 ! Modifications Nicole
-	if(hm%theory_level == RDMFT) then
-		SAFE_DEALLOCATE_A(psi_lam)
-		SAFE_DEALLOCATE_A(cg_vec_lam)
-		SAFE_DEALLOCATE_A(lam)
-		SAFE_DEALLOCATE_A(lam_conj)
-		SAFE_DEALLOCATE_A(cg_phi)
-		SAFE_DEALLOCATE_A(ppsi2)
-	end if
+  if(hm%theory_level == RDMFT) then
+    SAFE_DEALLOCATE_A(psi_lam)
+    SAFE_DEALLOCATE_A(cg_vec_lam)
+    SAFE_DEALLOCATE_A(lam)
+    SAFE_DEALLOCATE_A(lam_conj)
+  end if
 ! End Nicole
 
   POP_SUB(X(eigensolver_cg2))
