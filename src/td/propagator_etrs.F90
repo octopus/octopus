@@ -337,7 +337,7 @@ contains
     type(density_calc_t)  :: dens_calc
     type(profile_t), save :: phase_prof
     integer               :: pnp, iprange
-    FLOAT, allocatable    :: vold(:, :), imvold(:, :), vtauold(:, :), imvtauold(:, :)
+    FLOAT, allocatable    :: vold(:, :), vtauold(:, :)
     type(accel_mem_t)    :: phase_buff
 
     PUSH_SUB(td_aetrs)

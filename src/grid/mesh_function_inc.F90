@@ -65,7 +65,7 @@ subroutine X(mf_normalize)(mesh, dim, psi, norm)
   FLOAT, optional, intent(out)   :: norm
 
   FLOAT   :: norm_
-  integer :: idim, ip
+  integer :: idim
 
   PUSH_SUB(X(mf_normalize))
 

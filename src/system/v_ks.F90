@@ -828,7 +828,7 @@ contains
       type(hamiltonian_t), intent(in)    :: hm
 
       integer        :: ip, ispin, ist, ik
-      FLOAT, pointer :: vxc_sic(:,:),  Imvxc_sic(:, :), vh_sic(:), rho(:, :), Imrho(:, :), qsp(:)
+      FLOAT, pointer :: vxc_sic(:,:),  vh_sic(:), rho(:, :), qsp(:)
       
       PUSH_SUB(add_adsic)
       
@@ -1192,14 +1192,12 @@ contains
     type(v_ks_t),                intent(inout) :: ks
     type(hamiltonian_t), target, intent(inout) :: hm
 
-    FLOAT, pointer :: pot(:), aux(:)
+    FLOAT, pointer :: pot(:)
 
     FLOAT, allocatable :: potx(:)
     CMPLX, allocatable :: kick(:)
     FLOAT, allocatable :: kick_real(:)
     integer :: ii
-
-    integer :: asc_unit_test
 
     FLOAT :: dt
 

@@ -832,7 +832,7 @@ contains
     integer,              intent(in)    :: ist !number of state
     FLOAT,                intent(out)   :: E_deriv(1:gr%mesh%np_part)
 
-    integer            :: jst, ii, ip
+    integer            :: ii, ip
     FLOAT              :: E_deriv_corr, norm, projection
     FLOAT, allocatable :: rho_spin(:,:), rho(:), pot(:)
     FLOAT, allocatable :: hpsi1(:,:), hpsi2(:,:), dpsi(:,:), dpsi2(:,:)

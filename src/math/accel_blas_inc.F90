@@ -30,8 +30,12 @@ subroutine X(accel_herk)(uplo, trans, n, k, alpha, a, offa, lda, beta, c, offc, 
   integer(8),        intent(in)    :: offc
   integer(8),        intent(in)    :: ldc   
 
+#ifdef HAVE_OPENCL
   integer :: ierr
+#endif
+#ifdef HAVE_CUDA
   type(accel_mem_t) :: alpha_buffer, beta_buffer
+#endif
 
   PUSH_SUB(X(accel_herk))
 

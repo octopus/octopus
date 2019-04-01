@@ -742,7 +742,7 @@ contains
 
     integer :: ip
     FLOAT :: radius
-    FLOAT, allocatable :: vl(:), Imvl(:), rho(:), Imrho(:)
+    FLOAT, allocatable :: vl(:), rho(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
 

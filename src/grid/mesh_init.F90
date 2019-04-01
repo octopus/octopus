@@ -795,7 +795,7 @@ contains
     logical              :: use_topo, reorder, partition_print
     integer              :: ierr
 
-    logical :: read_partition, write_partition, has_virtual_partition = .false.
+    logical :: has_virtual_partition = .false.
     integer :: vsize !< 'virtual' partition size
     type(restart_t) :: restart_load, restart_dump
     

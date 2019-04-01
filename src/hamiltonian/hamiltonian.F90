@@ -477,7 +477,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_phase
-      integer :: ip, ik, ip_inn, ip_bnd, sp, ip_global, ip_inner
+      integer :: ip, ik, sp, ip_global, ip_inner
       FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
 
       PUSH_SUB(hamiltonian_init.init_phase)
@@ -817,7 +817,7 @@ contains
 
     subroutine build_phase()
       integer :: ik, imat, nmat, max_npoints, offset
-      integer :: ip, ip_bnd, ip_inn, ip_global, ip_inner, sp
+      integer :: ip, ip_global, ip_inner, sp
       FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
       logical :: compute_phase_correction
 
@@ -1194,7 +1194,6 @@ contains
 
     integer :: err, err2, isp
     character(len=12) :: filename
-    CMPLX, allocatable :: zv(:)
 
     PUSH_SUB(hamiltonian_load_vhxc)
 

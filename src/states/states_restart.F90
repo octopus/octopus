@@ -146,7 +146,7 @@ contains
     integer :: iunit_wfns, iunit_occs, iunit_states
     integer :: err, err2(2), ik, idir, ist, idim, itot
     integer :: root(1:P_STRATEGY_MAX)
-    character(len=MAX_PATH_LEN) :: filename, filename1
+    character(len=MAX_PATH_LEN) :: filename
     character(len=300) :: lines(3)
     logical :: lr_wfns_are_associated, should_write, verbose_
     FLOAT   :: kpoint(1:MAX_DIM)
@@ -746,7 +746,6 @@ contains
     character(len=80) :: filename
     character(len=300) :: lines(2)
     FLOAT, pointer :: rho(:), rho_fine(:)
-    CMPLX, pointer :: zrho(:), zrho_fine(:)
 
     PUSH_SUB(states_dump_rho)
 

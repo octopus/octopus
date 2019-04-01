@@ -1118,7 +1118,7 @@ contains
       character(len=*), intent(in) :: dir, fname
 
       type(partial_charges_t) :: partial_charges
-      integer :: iunit, idir, iatom, ii
+      integer :: iunit, iatom
       FLOAT, allocatable :: hirshfeld_charges(:)
 
       PUSH_SUB(scf_run.scf_write_static)

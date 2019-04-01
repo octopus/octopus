@@ -268,7 +268,7 @@ contains
     integer :: ii, is, err
     character(len=256) :: filename
     !type(mpi_grp_t) :: mpi_grp
-    CMPLX, allocatable :: zv_old(:)
+
     PUSH_SUB(potential_interpolation_dump)
 
     err2 = 0
@@ -312,7 +312,7 @@ contains
 
     integer :: ii, is, err
     character(len=256) :: filename
-    CMPLX, allocatable :: zv_old(:)
+
     PUSH_SUB(potential_interpolation_load)
 
     err2 = 0

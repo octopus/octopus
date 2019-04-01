@@ -890,7 +890,7 @@ contains
     type(grid_t),              intent(in)    :: gr
     type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
 
-    integer :: is, ispin, ierr, ip
+    integer :: is, ierr, ip
     character(len=MAX_PATH_LEN) :: fname
     type(unit_t) :: fn_unit
     FLOAT, allocatable :: energy_density(:, :)

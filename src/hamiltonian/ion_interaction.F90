@@ -101,7 +101,7 @@ contains
     FLOAT, optional,          intent(out)   :: force_components(:, :, :)
     
     FLOAT, allocatable:: r(:), f(:)
-    FLOAT :: rr, dd, zi, zj, epsilon, sigma
+    FLOAT :: rr, dd, zi, zj
     integer :: iatom, jatom, natom, iindex, jindex
     type(species_t), pointer :: spci, spcj
     type(profile_t), save :: ion_ion_prof

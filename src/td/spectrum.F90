@@ -2387,7 +2387,7 @@ contains
     integer,                intent(in) :: energy_steps
     type(kick_t), optional, intent(in) :: kick !< if present, will write itself and nspin
 
-    integer :: is, idir, jdir, ie, ii, info, out_file, out_file_t
+    integer :: is, idir, jdir, ie, info, out_file, out_file_t
     FLOAT, allocatable :: work(:,:) 
     CMPLX, allocatable :: w(:)
     character(len=20) :: header_string

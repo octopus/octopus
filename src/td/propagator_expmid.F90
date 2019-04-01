@@ -59,7 +59,6 @@ contains
     integer :: ib, ik
     type(ion_state_t) :: ions_state
     FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
-    CMPLX :: zt, zdt
 
     PUSH_SUB(propagator_dt.exponential_midpoint)
 

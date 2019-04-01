@@ -447,7 +447,7 @@ contains
     integer,              intent(in)    :: ik
     CMPLX,                intent(out)   :: cmel(:,:) ! the current vector cmel(1:der%mesh%sb%dim, 1:st%d%nspin)
 
-    integer ::  idir, idim, iatom, ip, ib, ii, ierr, ispin
+    integer ::  idir, idim, ip, ispin
     CMPLX, allocatable :: gpsi_j(:, :, :), ppsi_j(:,:),  gpsi_i(:, :, :), ppsi_i(:,:)
 
     PUSH_SUB(current_calculate_mel)
@@ -544,7 +544,7 @@ contains
     type(states_t),       intent(in)    :: st
     FLOAT,                intent(out)   :: current(:, :, :)
 
-    integer :: ik, ist, idir, idim, ip, ib, ii, ispin, ndim
+    integer :: ik, ist, idir, idim, ip, ispin, ndim
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), g2psi(:, :, :, :)
     CMPLX :: tmp
 

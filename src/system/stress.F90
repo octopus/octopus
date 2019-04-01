@@ -330,7 +330,7 @@ contains
     FLOAT,                         intent(inout) :: stress(:, :)
     FLOAT,                         intent(out) :: stress_KE(3, 3) ! temporal
     FLOAT :: stress_l(3, 3)
-    integer :: ik, ist, idir, jdir, idim, ip, ispin
+    integer :: ik, ist, idir, jdir, idim, ispin
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :)
     type(profile_t), save :: prof
     logical, parameter :: hamiltonian_current = .false.
@@ -505,7 +505,7 @@ contains
     FLOAT,  allocatable :: rho_t(:),grho_t(:,:)
     FLOAT :: sigma_erf, alpha, gx, g2
     CMPLX :: zphase, zfact
-    integer :: ik, ispin, ist, idim, idir, jdir, ip, iatom
+    integer :: ik, ispin, ist, idim, idir, jdir, iatom
     integer :: ii,jj,kk
     type(profile_t), save :: prof
 

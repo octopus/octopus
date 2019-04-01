@@ -354,8 +354,6 @@ contains
   ! ---------------------------------------------------------
 
   subroutine species_end_global()
-    integer :: ierr
-    
     PUSH_SUB(species_end_global)
 
     call pseudo_set_end(default_pseudopotential_set)

@@ -287,10 +287,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine multiresolution()
+#ifndef SINGLE_PRECISION
     integer :: ist, ip
     integer :: ii, jj, kk, ix, iy, iz, dx, dy, dz, i_lev
     FLOAT :: weight
     R_TYPE, allocatable :: ff(:)
+#endif
 
     PUSH_SUB(X(boundaries_set_batch).multiresolution)
 

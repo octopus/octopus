@@ -348,7 +348,7 @@ contains
 
     character(len=120) :: s1, s2
     integer :: ii
-#ifndef HAVE_LIBXC3
+#if !defined(HAVE_LIBXC3) && !defined(HAVE_LIBXC4)
     type(XC_F90(pointer_t)) :: str
 #endif
     

@@ -582,7 +582,7 @@ contains
 
     logical :: projection
     integer :: ii, ll, mm, nn, work, norb, work2
-    integer :: ia, iorb, idim, ip, maxnorb
+    integer :: ia, iorb, idim, maxnorb
     FLOAT   :: norm
     FLOAT, allocatable :: dpsi(:,:), ddot(:,:)
     CMPLX, allocatable :: zpsi(:,:), zdot(:,:)

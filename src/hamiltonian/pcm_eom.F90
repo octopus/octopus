@@ -405,7 +405,6 @@ module pcm_eom_oct_m
    FLOAT, intent(in)  :: pot_t(:)
 
    FLOAT :: force(nts_act)
-   FLOAT :: delta_pot_t(nts_act), pot_vac_t(nts_act)
 
    PUSH_SUB(pcm_ief_prop_vv_ief_drl)
 
