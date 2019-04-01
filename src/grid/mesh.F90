@@ -106,6 +106,8 @@ module mesh_oct_m
     FLOAT                :: surface_element(MAX_DIM)
     FLOAT,   allocatable :: vol_pp(:)         !< Element of volume for curvilinear coordinates.
 
+    logical              :: symmetrize_density
+
     type(mesh_cube_map_t) :: cube_map
   end type mesh_t
   
@@ -799,8 +801,6 @@ contains
     integer :: ikpoint, iop, ip, idim, nops
     FLOAT :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
 
-    if(.not.sb%kpoints%use_symmetries) return
-
     !If all the axis have the same spacing and the same length
     !the grid is by obviously symmetric 
     !Indeed, reduced coordinates are proportional to the point index
@@ -867,7 +867,7 @@ contains
  
         if(any(srcpoint-anint(srcpoint)> SYMPREC)) then
           message(1) = "The real-space grid breaks at least one of the symmetries of the system."
-          message(2) = "Change your spacing or use KPointsUseSymmetries=no."
+          message(2) = "Change your spacing or use SymmetrizeDensity=no."
           call messages_fatal(2)
         end if
       end do
