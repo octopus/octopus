@@ -80,7 +80,7 @@ module rdmft_oct_m
     FLOAT    :: dressed_omega, dressed_lambda, dressed_electrons, dressed_coulomb
     FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO, tolerFO
     FLOAT, allocatable   :: eone(:), eone_int(:,:), twoint(:), hartree(:,:), exchange(:,:), evalues(:)  
-    FLOAT, allocatable   :: eone_kin(:), eone_int_kin(:,:)                ! used for kinetic energy calculation
+!    FLOAT, allocatable   :: eone_kin(:), eone_int_kin(:,:)                ! used for kinetic energy calculation, outcommented everywhere at the moment
     FLOAT, allocatable   :: vecnat(:,:), Coul(:,:,:), Exch(:,:,:) 
     integer, allocatable :: i_index(:), j_index(:), k_index(:), l_index(:) 
 
@@ -452,7 +452,7 @@ contains
       if (rdm%do_basis.eqv..true.) then
         rdm%n_twoint = st%nst*(st%nst+1)*(st%nst**2+st%nst+2)/8 
         SAFE_ALLOCATE(rdm%eone_int(1:st%nst, 1:st%nst))
-        SAFE_ALLOCATE(rdm%eone_int_kin(1:st%nst, 1:st%nst))
+!        SAFE_ALLOCATE(rdm%eone_int_kin(1:st%nst, 1:st%nst)) ! used for kinetic energy calculation, outcommented everywhere at the moment
         SAFE_ALLOCATE(rdm%twoint(1:rdm%n_twoint))
         SAFE_ALLOCATE(rdm%i_index(1:rdm%n_twoint))
         SAFE_ALLOCATE(rdm%j_index(1:rdm%n_twoint))
@@ -485,7 +485,7 @@ contains
       end if
 
       SAFE_ALLOCATE(rdm%eone(1:st%nst))
-      SAFE_ALLOCATE(rdm%eone_kin(1:st%nst))
+!      SAFE_ALLOCATE(rdm%eone_kin(1:st%nst))  ! used for kinetic energy calculation, outcommented everywhere at the moment
       SAFE_ALLOCATE(rdm%hartree(1:st%nst, 1:st%nst))
       SAFE_ALLOCATE(rdm%exchange(1:st%nst, 1:st%nst))
       SAFE_ALLOCATE(rdm%evalues(1:st%nst))
@@ -516,13 +516,13 @@ contains
 
       SAFE_DEALLOCATE_A(rdm%evalues)
       SAFE_DEALLOCATE_A(rdm%eone)
-      SAFE_DEALLOCATE_A(rdm%eone_kin)
+!      SAFE_DEALLOCATE_A(rdm%eone_kin) ! used for kinetic energy calculation, outcommented everywhere at the moment
       SAFE_DEALLOCATE_A(rdm%hartree)
       SAFE_DEALLOCATE_A(rdm%exchange)
 
       if (rdm%do_basis.eqv..true.) then
         SAFE_DEALLOCATE_A(rdm%eone_int)
-        SAFE_DEALLOCATE_A(rdm%eone_int_kin)
+!        SAFE_DEALLOCATE_A(rdm%eone_int_kin) ! used for kinetic energy calculation, outcommented everywhere at the moment
         SAFE_DEALLOCATE_A(rdm%twoint)
         SAFE_DEALLOCATE_A(rdm%i_index)
         SAFE_DEALLOCATE_A(rdm%j_index)
@@ -569,7 +569,6 @@ contains
 !        end if
 
         call v_ks_write_info(ks, iunit)
-<<<<<<< HEAD
         
         if (rdm%do_basis) then
           write(iunit, '(a)')'Orbital optimization with [basis set]'
@@ -1083,11 +1082,6 @@ contains
 
     lambda = M_ZERO
     FO = M_ZERO
-    if (rdm%do_basis.eqv..false.) then 
-      call density_calc (st,gr,st%rho)
-      call v_ks_calc(ks,hm,st,geo)
-      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
-    end if
 
     call construct_f(hm,st,gr,lambda,rdm)
     
@@ -1172,7 +1166,6 @@ contains
     smallstep = 1d-10
     thresh = 1d-10
 
-    call density_calc (st, gr, st%rho)
     call v_ks_calc(ks, hm, st, geo)
     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
 
@@ -1236,7 +1229,6 @@ contains
       call dstates_orthogonalization_full(st,gr%mesh,1)
 
       !calculate total energy
-      call density_calc (st, gr, st%rho)
       call v_ks_calc(ks, hm, st, geo)
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
       call rdm_derivatives(rdm, hm, st, gr)
@@ -1297,22 +1289,13 @@ contains
     SAFE_ALLOCATE(lambda(1:st%nst,1:st%nst)) 
     SAFE_ALLOCATE(FO(1:st%nst, 1:st%nst))
     
+    call v_ks_calc(ks, hm, st, geo)
+    
     !parameters for cg_solver
     conv = .false.
     nstconv_ = st%nst
  
     maxiter = 25
-    
-! FB: We do the energy comparison already in scf_rdmft, here we put it only for test reasons I reckon
-!    ! set up hamiltonian and calculate energy
-    call density_calc (st, gr, st%rho)
-    call v_ks_calc(ks, hm, st, geo)
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
-    call rdm_derivatives(rdm, hm, st, gr)
-    call total_energy_rdm(rdm, st%occ(:,1), energy)
-
-    ! store energy for later comparison
-    energy_old = energy
 
     rdm%eigens%converged = 0
     do ik = st%d%kpt%start, st%d%kpt%end
@@ -1321,7 +1304,7 @@ contains
       if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then 
         call loct_progress_bar(-1, st%lnst*st%d%kpt%nlocal)
       end if
-      !! For RDMFT, needs to be called with: orthogonalize_to_all=.true.
+      !! For RDMFT, needs to be called with: orthogonalize_to_all=.false.
       !!                                    additional_terms=.false.
       call deigensolver_cg2(gr, st, hm, rdm%eigens%xc, rdm%eigens%pre, rdm%eigens%tolerance, maxiter, &
             rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), &
@@ -1343,7 +1326,6 @@ contains
 
       rdm%eigens%matvec = rdm%eigens%matvec + maxiter ! necessary?  
     enddo
-<<<<<<< HEAD
     
     ! For debug
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
@@ -1353,42 +1335,6 @@ contains
     conv = all(rdm%eigens%converged(st%d%kpt%start:st%d%kpt%end) >= nstconv_)
 
     ! calculate total energy with new states
-    call density_calc (st, gr, st%rho)
-    call v_ks_calc(ks, hm, st, geo)
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
-    call rdm_derivatives(rdm, hm, st, gr)
-    
-    call total_energy_rdm(rdm, st%occ(:,1), energy)
-    
-    if (rdm%hf.eqv. .false.) then
-      ! calculate FO operator to check Hermiticity of lagrange multiplier matrix (lambda)
-      lambda = M_ZERO
-      FO = M_ZERO
-      call construct_f(hm, st, gr, lambda, rdm)
-
-      !Set up FO matrix to check maxFO
-      do ist = 1, st%nst
-        do jst = 1, ist - 1
-          FO(jst, ist) = - ( lambda(jst, ist) - lambda(ist ,jst))
-        end do
-      end do
-      rdm%maxFO = maxval(abs(FO))
-!     print*, "maxFO:", rdm%maxFO
-    end if
-
-  !    ! check if step lowers the energy (later to be removed?)
-  !    energy_diff = energy - energy_old
-=======
-    
-    ! For debug
-    if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
-      write(stdout, '(1x)')
-    end if
-
-    conv = all(rdm%eigens%converged(st%d%kpt%start:st%d%kpt%end) >= nstconv_)
-
-    ! calculate total energy with new states
-    call density_calc (st, gr, st%rho)
     call v_ks_calc(ks, hm, st, geo)
     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     call rdm_derivatives(rdm, hm, st, gr)
@@ -1719,33 +1665,35 @@ contains
     if (present(dE_dn)) then
       dE_dn(:) = rdm%eone(:) + V_h(:) + V_x(:)
     end if
-  
-!Calculate the energy contributions separately
-!energy=M_ZERO
-!do ist = 1, rdm%st%nst
-!  energy = energy  + occ(ist)*rdm%eone(ist)
-!end do
-!print*,'1body=', energy
 
-!energy=M_ZERO
-!do ist = 1, rdm%st%nst
-!  energy = energy  + occ(ist)*rdm%eone_kin(ist)
-!end do
-!print*,'kinetic=', energy
+! This part of the code allows for the calculation of the separted parts of the total energy. We used it already for many tests and in future it could also be helpful
+! for the analysis of results. Thus we did not remove it. Please note that there are dependencies at some other place in the code that are outcommented.
+    !Calculate the energy contributions separately
+    !energy=M_ZERO
+    !do ist = 1, rdm%st%nst
+    !  energy = energy  + occ(ist)*rdm%eone(ist)
+    !end do
+    !print*,'1body=', energy
 
-!energy=M_ZERO
-!do ist = 1, rdm%st%nst
-!  energy = energy  + M_HALF*occ(ist)*V_h(ist)
-!end do
-!print*,'hartree=', energy
+    !energy=M_ZERO
+    !do ist = 1, rdm%st%nst
+    !  energy = energy  + occ(ist)*rdm%eone_kin(ist)
+    !end do
+    !print*,'kinetic=', energy
 
-!energy=M_ZERO
-!do ist = 1, rdm%st%nst
-!  energy = energy + occ(ist)*V_x(ist)
-!end do
-!print*,'exchange=', energy
+    !energy=M_ZERO
+    !do ist = 1, rdm%st%nst
+    !  energy = energy  + M_HALF*occ(ist)*V_h(ist)
+    !end do
+    !print*,'hartree=', energy
 
-!energy=M_ZERO
+    !energy=M_ZERO
+    !do ist = 1, rdm%st%nst
+    !  energy = energy + occ(ist)*V_x(ist)
+    !end do
+    !print*,'exchange=', energy
+
+    !energy=M_ZERO
   
     !Total energy calculation without nuclei interaction  
     do ist = 1, rdm%st%nst
@@ -1810,10 +1758,10 @@ contains
                               terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
         rdm%eone(ist) = dmf_dotp(gr%mesh, dpsi(:, 1), hpsi(:, 1))
         
-        ! calculate only kinetic energy   
-        call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &    
-                                      terms = TERM_KINETIC )    
-        rdm%eone_kin(ist) = dmf_dotp(gr%mesh, dpsi(:, 1), hpsi(:, 1))   
+!        ! calculate only kinetic energys, outcommented everywhere at the moment
+!        call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &    
+!                                      terms = TERM_KINETIC )    
+!        rdm%eone_kin(ist) = dmf_dotp(gr%mesh, dpsi(:, 1), hpsi(:, 1))   
       end do
 
       !integrals used for the hartree and exchange parts of the total energy and their derivatives
@@ -1853,12 +1801,12 @@ contains
 
       do iorb = 1, st%nst
         rdm%eone(iorb) = M_ZERO
-        rdm%eone_kin(iorb) = M_ZERO
+!        rdm%eone_kin(iorb) = M_ZERO                                                  ! calculate only kinetic integrals, outcommented everywhere at the moment
         do ist = 1, st%nst
           do jst = 1, st%nst
             dd = rdm%vecnat(ist, iorb)*rdm%vecnat(jst, iorb)  
             rdm%eone(iorb) =rdm%eone(iorb) + dd*rdm%eone_int(ist, jst)
-            rdm%eone_kin(iorb) =rdm%eone_kin(iorb) + dd*rdm%eone_int_kin(ist, jst)
+!            rdm%eone_kin(iorb) =rdm%eone_kin(iorb) + dd*rdm%eone_int_kin(ist, jst)   ! calculate only kinetic integrals, outcommented everywhere at the moment
           end do
         end do
       end do
@@ -1913,11 +1861,11 @@ contains
         rdm%eone_int(jst, ist) = dmf_dotp(gr%mesh, dpsi2(:, 1), hpsi(:, 1))
         rdm%eone_int(ist, jst) = rdm%eone_int(jst, ist)
         
-        ! calculate only kinetic integrals    
-        call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &    
-                                      terms = TERM_KINETIC )    
-        rdm%eone_int_kin(jst, ist) = dmf_dotp(gr%mesh, dpsi2(:, 1), hpsi(:, 1))   
-        rdm%eone_int_kin(ist, jst) = rdm%eone_int_kin(jst, ist) 
+!        ! calculate only kinetic integrals, outcommented everywhere at the moment
+!        call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &    
+!                                      terms = TERM_KINETIC )    
+!        rdm%eone_int_kin(jst, ist) = dmf_dotp(gr%mesh, dpsi2(:, 1), hpsi(:, 1))   
+!        rdm%eone_int_kin(ist, jst) = rdm%eone_int_kin(jst, ist) 
       end do
     end do
 
