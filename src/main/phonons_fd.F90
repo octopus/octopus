@@ -62,7 +62,7 @@ contains
     ! Why not? The symmetries are computed only for the unperturbed geometry,
     ! and are not valid when the atoms are displaced.
     ! FIXME: implement instead use of symmetry over dynamical matrix to make things more efficient.
-    if(sys%st%symmetrize_density .or. sys%gr%sb%kpoints%use_symmetries) then
+    if(sys%gr%mesh%symmetrize_density .or. sys%gr%sb%kpoints%use_symmetries) then
       message(1) = "Cannot compute vibrational modes by finite differences when symmetry is being used."
       message(2) = "Set KPointsUseSymmetries = no and SymmetrizeDensity = no, for gs run and this run."
       call messages_fatal(2)

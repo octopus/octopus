@@ -653,7 +653,7 @@ contains
       call profiling_out(epot_reduce)
     end if
 
-   if(st%symmetrize_density) then
+   if(gr%mesh%symmetrize_density) then
       SAFE_ALLOCATE(tmpdensity(1:gr%mesh%np))
       call symmetrizer_init(symmetrizer, gr%mesh)
 

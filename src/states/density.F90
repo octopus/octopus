@@ -330,7 +330,7 @@ contains
       call profiling_out(reduce_prof)
     end if
 
-    if(this%st%symmetrize_density) then
+    if(this%gr%mesh%symmetrize_density) then
       SAFE_ALLOCATE(tmpdensity(1:this%gr%fine%mesh%np))
       call symmetrizer_init(symmetrizer, this%gr%fine%mesh)
 
