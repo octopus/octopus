@@ -156,7 +156,20 @@ contains
 
     PUSH_SUB(batch_end)
 
-    if(batch_is_packed(this)) then
+    if(this%is_allocated .and. batch_is_packed(this)) then
+      !deallocate directly to avoid unnecessary copies
+      this%status = BATCH_NOT_PACKED
+      this%in_buffer_count = 1
+      
+      if(accel_is_enabled()) then
+        call accel_release_buffer(this%pack%buffer)
+      else
+        SAFE_DEALLOCATE_A(this%pack%dpsi)
+        SAFE_DEALLOCATE_A(this%pack%zpsi)
+        SAFE_DEALLOCATE_A(this%pack%spsi)
+        SAFE_DEALLOCATE_A(this%pack%cpsi)
+      end if
+    else if(batch_is_packed(this)) then
       call batch_unpack(this, copy, force = .true.)
     end if
 
