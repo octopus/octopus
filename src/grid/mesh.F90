@@ -854,10 +854,8 @@ contains
 
         ! apply periodic boundary conditions in periodic directions 
         do idim = 1, mesh%sb%periodic_dim
-          if(nint(srcpoint(idim)) < 0 .or. nint(srcpoint(idim)) > lsize(idim)) then
-            srcpoint(idim) = modulo(srcpoint(idim), lsize(idim))
-          else if(nint(srcpoint(idim)) == lsize(idim)) then
-            srcpoint(idim) = M_ZERO
+          if(nint(srcpoint(idim)) < 0 .or. nint(srcpoint(idim)) >= lsize(idim)) then
+            srcpoint(idim) = modulo(srcpoint(idim)+M_HALF*SYMPREC, lsize(idim))
           end if
         end do
         ASSERT(all(srcpoint >= -SYMPREC))
@@ -865,7 +863,7 @@ contains
 
         srcpoint(1:3) = srcpoint(1:3) + offset(1:3)
  
-        if(any(srcpoint-anint(srcpoint)> SYMPREC)) then
+        if(any(srcpoint-anint(srcpoint)> SYMPREC*M_TWO)) then
           message(1) = "The real-space grid breaks at least one of the symmetries of the system."
           message(2) = "Change your spacing or use SymmetrizeDensity=no."
           call messages_fatal(2)
