@@ -1256,7 +1256,6 @@ contains
     type(floquet_t) :: F
     type(mesh_t)    :: mesh
     CMPLX   :: F_psi(:,:)
-    integer :: ik, ist
     FLOAT   :: F_eval
     FLOAT   :: time
     CMPLX   :: psi_t(:,:)
@@ -1629,7 +1628,7 @@ contains
       do ik=FBZ_st%d%kpt%start,FBZ_st%d%kpt%end
   
         do ia=FBZ_st%st_start,FBZ_st%st_end
-          !print *,'test info', ik, ia, FBZ_st%d%kpt%start, FBZ_st%d%kpt%end,FBZ_st%st_start,FBZ_st%st_end
+          !print *,'test info', ik, ia, FBZ_st%d%kpt%start, FBZ_st%d%kpt%end,FBZ_st%st_start,FBZ_st%st_end, FBZ_st%eigenval(ia,ik)
           call states_get_state(FBZ_st, mesh, ia, ik, u_m)
           call floquet_td_state(hm%F,mesh,u_m,FBZ_st%eigenval(ia,ik),time,Fpsi_a)
     

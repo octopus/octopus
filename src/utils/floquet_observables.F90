@@ -22,6 +22,7 @@ program floquet_observables
   use calc_mode_par_oct_m
   use comm_oct_m
   use command_line_oct_m
+  use cube_oct_m
   use current_oct_m
   use density_oct_m
   use geometry_oct_m
@@ -37,6 +38,7 @@ program floquet_observables
   use io_function_oct_m
   use io_oct_m
   use loct_oct_m
+  use loct_math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -91,7 +93,7 @@ program floquet_observables
   integer              :: ist, ispin  
   type(states_t)          :: dressed_st 
   type(states_t), pointer :: bare_st
-  type(states_t)         :: FBZ_st
+  type(states_t)          :: FBZ_st
 
   type(fobs_t)         :: obs
 
@@ -420,43 +422,7 @@ program floquet_observables
     call messages_info()
     
     call get_FBZ_st(dressed_st, FBZ_st)     
-     
-    call states_allocate_wfns(bare_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
-
-    time = M_ZERO
-    call messages_write('Reading td-state to calculate coefficients.')
-    call messages_info()
-    call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_load(restart, bare_st, sys%gr, ierr, iter=iter, label = ": td")
-    if (ierr /= 0) then
-      message(1) = 'Unable to read time-dependent wavefunctions.'
-      call messages_warning(1)
-    end if
-    if(ierr==0) then
-      call parse_variable('TDTimeStep', M_ZERO, time_step, unit = units_inp%time)
-      if(time_step == M_ZERO) then
-         message(1) = 'Did not find time-step in Floquet init, please give a value for TDTimeStep'
-        call messages_fatal(1)
-      end if
-      time = time_step*iter     
-    end if
-    call restart_end(restart)
-    if(ierr/=0) then
-      ierr = 0
-      call messages_write('Reading gs-states to calculate coefficients.')
-      call messages_info()
-      call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-      if(ierr == 0) call states_load(restart, bare_st, sys%gr, ierr)
-      if (ierr /= 0) then
-        message(1) = 'Unable to read ground-state wavefunctions.'
-        call messages_fatal(1)
-      end if
-      call restart_end(restart)
-    end if
-       
-     
-    call floquet_calc_FBZ_coefficients(hm, sys, FBZ_st, bare_st, time)
-     
+          
     if (simul_box_is_periodic(sys%gr%sb) .and. kpoints_have_zero_weight_path(sys%gr%sb%kpoints)) then
       filename = 'FBZ_bands_occ'
       call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = FBZ_st%occ)
@@ -497,13 +463,43 @@ contains
       ! reset flag
       hm%F%FBZ_solver = .false.
       call floquet_FBZ_filter(sys, hm, dressed_st, FBZ_st)
-!       if (simul_box_is_periodic(sys%gr%sb) .and. kpoints_have_zero_weight_path(sys%gr%sb%kpoints)) then
-!         filename = 'filtered_bands'
-!         call states_write_bandstructure(FLOQUET_DIR, FBZ_st%nst, FBZ_st, sys%gr%sb, filename, vec = FBZ_st%occ)
-!       else
-!         filename = trim(FLOQUET_DIR)//'filtered_eigenvalues'
-!         call states_write_eigenvalues(filename, FBZ_st%nst, FBZ_st, sys%gr%sb)
-!       end if
+
+      call states_allocate_wfns(bare_st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
+
+      time = M_ZERO
+      call messages_write('Reading td-state to calculate coefficients.')
+      call messages_info()
+      call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+      if(ierr == 0) call states_load(restart, bare_st, sys%gr, ierr, iter=iter, label = ": td")
+      if (ierr /= 0) then
+        message(1) = 'Unable to read time-dependent wavefunctions.'
+        call messages_warning(1)
+      end if
+      if(ierr==0) then
+        call parse_variable('TDTimeStep', M_ZERO, time_step, unit = units_inp%time)
+        if(time_step == M_ZERO) then
+           message(1) = 'Did not find time-step in Floquet init, please give a value for TDTimeStep'
+          call messages_fatal(1)
+        end if
+        time = time_step*iter     
+      end if
+      call restart_end(restart)
+      if(ierr/=0) then
+        ierr = 0
+        call messages_write('Reading gs-states to calculate coefficients.')
+        call messages_info()
+        call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+        if(ierr == 0) call states_load(restart, bare_st, sys%gr, ierr)
+        if (ierr /= 0) then
+          message(1) = 'Unable to read ground-state wavefunctions.'
+          call messages_fatal(1)
+        end if
+        call restart_end(restart)
+      end if
+   
+ 
+      call floquet_calc_FBZ_coefficients(hm, sys, FBZ_st, bare_st, time)
+
     end if
     POP_SUB(get_FBZ_st)
   end subroutine get_FBZ_st 
@@ -514,6 +510,7 @@ contains
   FLOAT, allocatable :: spect(:,:), me(:,:) 
   FLOAT :: pomega, pol(1:3)
   type(block_t)        :: blk  
+  type(states_t)       :: d_st
   
   
   !%Variable FloquetObservablePesOmega
@@ -552,24 +549,192 @@ contains
   write(message(1),'(a,f4.2,a,f4.2,a,f4.2,a)') 'Info: ARPES probe polarization: (', pol(1),',', pol(2),',', pol(3),')'
   call messages_info(1)
     
-    
+  
+!   if(.false.) then
+!     SAFE_ALLOCATE(spect(dressed_st%nst,dressed_st%d%nik))
+!     SAFE_ALLOCATE(me(dressed_st%nst,dressed_st%d%nik))
+!     call floquet_photoelectron_spectrum(hm, sys, dressed_st, pomega, pol, spect, me)
+!   end if
+
+
+  ! need the big dressed states dimension for the output because even with the FBZ we are covering sidebands
   SAFE_ALLOCATE(spect(dressed_st%nst,dressed_st%d%nik))
   SAFE_ALLOCATE(me(dressed_st%nst,dressed_st%d%nik))
-  call floquet_photoelectron_spectrum(hm, sys, dressed_st, pomega, pol, spect, me)
+  call states_copy(d_st, dressed_st)
+  call floquet_photoelectron_spectrum_FBZ(hm, sys, d_st, pomega, pol, spect, me)
 
-  write(str,'(I5)') hm%F%iter
+
   if(simul_box_is_periodic(sys%gr%sb)) then
-    filename = 'floquet_arpes_me_'//trim(adjustl(str))
-    call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, sys%gr%sb, filename, vec = me)
+    filename = 'floquet_arpes_me'
+    call states_write_bandstructure(FLOQUET_DIR, d_st%nst, d_st, sys%gr%sb, filename, vec = me)
 
-    filename = 'floquet_arpes_'//trim(adjustl(str))
-    call states_write_bandstructure(FLOQUET_DIR, dressed_st%nst, dressed_st, sys%gr%sb, filename, vec = spect)
+    filename = 'floquet_arpes'
+    call states_write_bandstructure(FLOQUET_DIR, d_st%nst, d_st, sys%gr%sb, filename, vec = spect)
   end if
 
   SAFE_DEALLOCATE_A(spect)
   SAFE_DEALLOCATE_A(me)
-    
+  call states_end(d_st)
+  
   end subroutine calc_floquet_arpes  
+
+
+  !---------------------------------------
+  subroutine floquet_photoelectron_spectrum_FBZ(hm, sys, dressed_st, pomega, pol, spect, me)
+    type(hamiltonian_t), intent(in) :: hm
+    type(system_t), intent(in)      :: sys
+    type(states_t), intent(inout)   :: dressed_st
+    FLOAT,          intent(in)      :: pomega     ! Probe field energy 
+    FLOAT,          intent(in)      :: pol(:)     ! Probe field polarization vector
+    FLOAT,          intent(out)     :: spect(:,:) ! the photoelectron spectrum
+    FLOAT,          intent(out)     :: me(:,:)    ! the photoelectron matrix elements
+
+
+    CMPLX, allocatable :: u_a(:,:),  phase(:), tmp(:), mec(:,:,:),spectc(:,:,:)
+    FLOAT :: Omega, dt , pp(1:3), kpt(1:3), xx(1:MAX_DIM), gg(1:3), AA(1:3)
+    integer :: idx, im, it, ist, idim, nT, ik, ia, Fdim(2), imm, dim, pdim, ip, spindim
+    integer :: il, igx,igy, ll, inl, in, ial, box(1:3)
+
+    type(cube_t):: cube
+    FLOAT, allocatable :: Lg(:,:)
+
+    type(mesh_t),   pointer :: mesh
+      
+
+    PUSH_SUB(floquet_photoelectron_spectrum_FBZ)
+
+    mesh  => sys%gr%der%mesh
+    
+    dt=hm%F%dt
+    nT=hm%F%nT
+    Omega=hm%F%omega
+    Fdim(:)=hm%F%order(:)
+    spindim = hm%F%spindim 
+    
+    dim = mesh%sb%dim
+    pdim = mesh%sb%periodic_dim
+    
+    SAFE_ALLOCATE(phase(1:mesh%np))
+    SAFE_ALLOCATE(u_a(1:mesh%np,hm%F%floquet_dim))
+    SAFE_ALLOCATE(tmp(spindim))
+
+    SAFE_ALLOCATE(spectc(dressed_st%nst,dressed_st%d%nik, spindim))
+    SAFE_ALLOCATE(mec(dressed_st%nst,dressed_st%d%nik, spindim))
+
+    
+
+    kpt(:) = M_ZERO
+    pp(:)  = M_ZERO
+    gg(:)  = M_ZERO
+    me(:,:) = M_ZERO
+    spect(:,:) = M_ZERO
+    mec(:,:,:) = M_z0
+    spectc(:,:,:) = M_z0
+    
+    AA(:)=M_ZERO
+    AA(1)=M_ONE
+    
+    ! get fourier grid for gpoints 
+    box(1:pdim) = mesh%idx%ll(1:pdim)
+    box(dim) = 1
+    call cube_init(cube,box, mesh%sb, fft_type = FFTLIB_FFTW, verbose = .true., spacing = mesh%spacing)
+    SAFE_ALLOCATE(Lg(1:maxval(cube%fs_n_global(:)),1:3))
+    print *, cube%fs_n_global(:)
+    print *, cube%rs_n_global(:)
+    print *,  cube%Lfs(:,1)
+    print *,  cube%Lrs(:,1)
+    do ii=1,maxval(cube%fs_n_global(:))   
+      Lg(ii,1:dim)= matmul(mesh%sb%klattice_primitive(1:dim,1:dim), cube%Lfs(ii,1:dim))
+    end do
+    
+        
+    call get_FBZ_st(dressed_st, FBZ_st) 
+  
+  
+    do ik=FBZ_st%d%kpt%start, FBZ_st%d%kpt%end
+      kpt(1:dim) = kpoints_get_point(mesh%sb%kpoints, ik) 
+
+      do ia=FBZ_st%st_start, FBZ_st%st_end
+        call states_get_state(FBZ_st, mesh, ia, ik, u_a)
+        
+        do il = Fdim(1), Fdim(2)
+          tmp(:) = M_ZERO
+
+          do in = Fdim(1), Fdim(2)
+            
+            if ((in -il) > Fdim(2) .or. (in -il) < Fdim(1)) cycle
+            inl = (in -il) - Fdim(1) + 1
+
+            do igx = 1, cube%fs_n_global(1)
+              gg(1)=Lg(igx,1)
+              do igy = 1, cube%fs_n_global(2)
+                gg(2)=Lg(igy,2)
+          
+                pp(dim) = M_TWO*(pomega + FBZ_st%eigenval(ia,ik) + il*Omega) - sum((kpt(1:pdim)+gg(1:pdim))**2)
+                if (pp(dim) < M_ZERO) cycle  
+                ! perpendicular (non-periodic) momentum component
+                pp(dim) = sqrt(pp(dim))
+                ! parallel (periodic) momentum component
+                pp(1:pdim) = kpt(1:pdim)+gg(1:pdim)  
+             
+                do ip=1, mesh%np
+                  xx=mesh_x_global(mesh, ip) 
+                  phase(ip) = exp(-M_ZI*sum(pp(1:dim)*xx(1:dim)))
+                end do
+                
+                ! Normalize to Jn(A/Omega.p)/sqrt(2pi)
+                phase(:)=phase(:)/sqrt(M_TWO*M_PI)*loct_bessel(in, pp(1)/Omega)!sum(AA(1:dim)*pp(1:dim))/Omega)
+                
+                do idim=1,spindim
+                  tmp(idim) = tmp(idim) + zmf_integrate(mesh, phase(1:mesh%np)*u_a(1:mesh%np,(inl-1)*spindim+idim))
+                end do
+              
+                tmp(:) = tmp(:)* sum(pol(1:dim)*pp(1:dim))
+
+              end do ! igy
+            end do ! igx
+          end do ! in
+          
+          ! combine ia and il to fill the full set of floquet eingenvalues (including replicas) 
+          ial = ia + (il - Fdim(1))*FBZ_st%nst
+!           print *, ial, ia, il, tmp(:)
+          
+          mec(ial,ik,:)    = tmp(:)    
+          spectc(ial,ik,:) = tmp(:)*FBZ_st%coeff(ia,ik)
+          dressed_st%eigenval(ial,ik)= FBZ_st%eigenval(ia,ik) + il*Omega
+            
+        end do ! il
+      end do ! ia
+    end do ! ik
+    
+    call comm_allreduce(FBZ_st%st_kpt_mpi_grp%comm, mec)
+    call comm_allreduce(FBZ_st%st_kpt_mpi_grp%comm, spectc)
+    
+    do ik=dressed_st%d%kpt%start, dressed_st%d%kpt%end
+      do ia=dressed_st%st_start, dressed_st%st_end
+        me(ia,ik) = sum(abs(mec(ia,ik,1:spindim))**2) 
+        spect(ia,ik) = sum(abs(spectc(ia,ik,1:spindim))**2) 
+      end do
+    end do
+    
+    ! don't forget to sort the spectra and me by energy for all kpoints 
+    
+    
+    SAFE_DEALLOCATE_A(tmp)
+    SAFE_DEALLOCATE_A(phase)
+    SAFE_DEALLOCATE_A(u_a)
+    SAFE_DEALLOCATE_A(mec)
+    SAFE_DEALLOCATE_A(spectc)
+
+    SAFE_DEALLOCATE_A(Lg)
+    call cube_end(cube)
+    call states_end(FBZ_st)
+    
+
+
+    POP_SUB(floquet_photoelectron_spectrum_FBZ)
+    
+  end subroutine floquet_photoelectron_spectrum_FBZ    
 
   !---------------------------------------
   subroutine floquet_photoelectron_spectrum(hm, sys, st, pomega, pol, spect, me)
@@ -579,7 +744,7 @@ contains
     FLOAT,          intent(in)      :: pomega     ! Probe field energy 
     FLOAT,          intent(in)      :: pol(:)     ! Probe field polarization vector
     FLOAT,          intent(out)     :: spect(:,:) ! the photoelectron spectrum
-    FLOAT,          intent(out)     :: me(:,:)    ! the photoeletron matrix elements
+    FLOAT,          intent(out)     :: me(:,:)    ! the photoelectron matrix elements
 
 
     CMPLX, allocatable :: u_a(:,:),  phase(:), tmp(:)
@@ -656,6 +821,8 @@ contains
     POP_SUB(floquet_photoelectron_spectrum)
     
   end subroutine floquet_photoelectron_spectrum    
+
+
 
 
   !-------------------------------------------------
