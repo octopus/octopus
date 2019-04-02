@@ -160,7 +160,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   type(states_t),      intent(inout) :: st
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(in)    :: geo
-  type(hamiltonian_t), intent(inout) :: hm
+  type(hamiltonian_t), intent(in)    :: hm
   integer, optional,   intent(in)    :: start
 
   integer :: nst, ik, n1, n2, idim, lcao_start, ie, maxmtxel
@@ -538,7 +538,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
   type(states_t),      intent(inout) :: st
   type(grid_t),        intent(inout) :: gr
   type(geometry_t),    intent(in)    :: geo
-  type(hamiltonian_t), intent(inout) :: hm
+  type(hamiltonian_t), intent(in)    :: hm
   integer,             intent(in)    :: start
 
   integer :: iatom, jatom, ik, ispin, nev, ib, n1, n2
