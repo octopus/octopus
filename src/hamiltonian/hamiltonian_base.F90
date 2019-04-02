@@ -362,10 +362,12 @@ contains
 
   !-----------------------------------------------------------------
     
-  subroutine hamiltonian_base_build_proj(this, mesh, epot)
+  subroutine hamiltonian_base_build_proj(this, mesh, epot, max_batch_size, r_type)
     type(hamiltonian_base_t), target, intent(inout) :: this
     type(mesh_t),                     intent(in)    :: mesh
     type(epot_t),             target, intent(in)    :: epot
+    integer,                          intent(in)    :: max_batch_size
+    type(type_t),                     intent(in)    :: r_type
 
     integer :: iatom, iproj, ll, lmax, lloc, mm, ic, jc
     integer :: nmat, imat, ip, iorder
@@ -728,6 +730,15 @@ contains
 
       call accel_create_buffer(this%buff_invmap, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, ipos)
       call accel_write_buffer(this%buff_invmap, ipos, invmap2)
+
+
+      ! the projection buffer, deallocated only at the very end
+      if (.not. this%projection%initialized .and. max_batch_size > 0) then
+        print*,r_type, max_batch_size
+        call accel_create_buffer(this%projection%buff_projection, ACCEL_MEM_READ_WRITE, &
+          r_type, this%full_projection_size*max_batch_size)
+        this%projection%initialized = .true.
+      end if
 
       SAFE_DEALLOCATE_A(offsets)
       SAFE_DEALLOCATE_A(cnt)

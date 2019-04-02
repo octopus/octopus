@@ -531,17 +531,9 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
   if(batch_is_packed(psib) .and. accel_is_enabled()) then
 
-    ! reinitialize the buffer on the GPU if we need more space
-    reinitialize = projection%buff_projection%size < this%full_projection_size*psib%pack%size_real(1)
-    if (.not. this%projection%initialized) then
-      call accel_create_buffer(projection%buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
-        this%full_projection_size*psib%pack%size_real(1))
-      projection%initialized = .true.
-    else if (reinitialize) then
-      call accel_release_buffer(projection%buff_projection)
-      call accel_create_buffer(projection%buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
-        this%full_projection_size*psib%pack%size_real(1))
-    end if
+    ! make sure the projection buffer is large enough
+    ASSERT(projection%buff_projection%size < this%full_projection_size*psib%pack%size_real(1))
+    ! in earlier versions, the buffer was allocated here; look in the git history for details
 
     call profiling_in(cl_prof, "CL_PROJ_BRA")
 
