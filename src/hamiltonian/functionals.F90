@@ -148,7 +148,6 @@ contains
           call messages_experimental("complex-scaled LB94 exchange and correlation")
           functl%family = XC_FAMILY_GGA
         else if(functl%id == XC_VDW_C_VDWDF .or. functl%id == XC_VDW_C_VDWDF2 .or. functl%id == XC_VDW_C_VDWDFCX) then
-          call messages_experimental("van der Waals functionals from libvdwxc")
           functl%family = XC_FAMILY_LIBVDWXC
           !functl%flags = functl%flags + XC_FLAGS_HAVE_VXC + XC_FLAGS_HAVE_EXC
         else if (functl%id == XC_RDMFT_XC_M) then
