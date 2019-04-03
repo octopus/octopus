@@ -248,7 +248,12 @@ contains
     SAFE_DEALLOCATE_P(this%zpsicont)
     SAFE_DEALLOCATE_P(this%spsicont)
     SAFE_DEALLOCATE_P(this%cpsicont)
-    
+
+    nullify(this%dpsicont)
+    nullify(this%zpsicont)
+    nullify(this%spsicont)
+    nullify(this%cpsicont)
+        
     POP_SUB(batch_deallocate)
   end subroutine batch_deallocate_temporary
   
