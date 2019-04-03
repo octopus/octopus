@@ -53,11 +53,9 @@ module batch_oct_m
     cbatch_allocate,                &
     batch_deallocate,               &
     batch_is_packed,                &
-    batch_pack_was_modified,        &
     batch_is_ok,                    &
     batch_pack,                     &
     batch_unpack,                   &
-    batch_sync,                     &
     batch_status,                   &
     batch_type,                     &
     batch_inv_index,                &
@@ -65,7 +63,6 @@ module batch_oct_m
     batch_linear_to_ist,            &
     batch_linear_to_idim,           &
     batch_pack_size,                &
-    batch_is_sync,                  &
     batch_remote_access_start,      &
     batch_remote_access_stop
   
@@ -105,6 +102,7 @@ module batch_oct_m
     integer,             pointer   :: ist_idim_index(:, :)
 
     logical                        :: is_allocated
+    logical                        :: mirror !< keep a copy of the batch data in unpacked form
 
     !> We also need a linear array with the states in order to calculate derivatives, etc.
     integer                        :: nst_linear
@@ -117,8 +115,8 @@ module batch_oct_m
     complex(4),          pointer   :: cpsicont(:, :, :)
     integer                        :: status
     integer                        :: in_buffer_count !< whether there is a copy in the opencl buffer
-    logical                        :: dirty     !< if this is true, the buffer has different data
     type(batch_pack_t)             :: pack
+    type(type_t)                   :: type !< only available if the batched is packed
   end type batch_t
 
   !--------------------------------------------------------------
@@ -159,7 +157,20 @@ contains
 
     PUSH_SUB(batch_end)
 
-    if(batch_is_packed(this)) then
+    if(this%is_allocated .and. batch_is_packed(this)) then
+      !deallocate directly to avoid unnecessary copies
+      this%status = BATCH_NOT_PACKED
+      this%in_buffer_count = 1
+      
+      if(accel_is_enabled()) then
+        call accel_release_buffer(this%pack%buffer)
+      else
+        SAFE_DEALLOCATE_A(this%pack%dpsi)
+        SAFE_DEALLOCATE_A(this%pack%zpsi)
+        SAFE_DEALLOCATE_A(this%pack%spsi)
+        SAFE_DEALLOCATE_A(this%pack%cpsi)
+      end if
+    else if(batch_is_packed(this)) then
       call batch_unpack(this, copy, force = .true.)
     end if
 
@@ -213,9 +224,58 @@ contains
     
     POP_SUB(batch_deallocate)
   end subroutine batch_deallocate
-  
+
   !--------------------------------------------------------------
 
+  subroutine batch_deallocate_temporary(this)
+    type(batch_t),  intent(inout) :: this
+    
+    integer :: ii
+    
+    PUSH_SUB(batch_deallocate)
+
+    do ii = 1, this%nst
+      nullify(this%states(ii)%dpsi)
+      nullify(this%states(ii)%zpsi)
+      nullify(this%states(ii)%spsi)
+      nullify(this%states(ii)%cpsi)
+    end do
+    
+    do ii = 1, this%nst_linear
+      nullify(this%states_linear(ii)%dpsi)
+      nullify(this%states_linear(ii)%zpsi)
+      nullify(this%states_linear(ii)%spsi)
+      nullify(this%states_linear(ii)%cpsi)
+    end do
+    
+    SAFE_DEALLOCATE_P(this%dpsicont)
+    SAFE_DEALLOCATE_P(this%zpsicont)
+    SAFE_DEALLOCATE_P(this%spsicont)
+    SAFE_DEALLOCATE_P(this%cpsicont)
+    
+    POP_SUB(batch_deallocate)
+  end subroutine batch_deallocate_temporary
+  
+  !--------------------------------------------------------------
+  subroutine batch_allocate_temporary(this)
+    type(batch_t),  intent(inout) :: this
+
+    PUSH_SUB(batch_deallocate_temporary)
+    
+    if(batch_type(this) == TYPE_FLOAT) then
+      call dbatch_allocate_temporary(this)
+    else if(batch_type(this) == TYPE_CMPLX) then
+      call zbatch_allocate_temporary(this)
+    else if(batch_type(this) == TYPE_FLOAT_SINGLE) then
+      call sbatch_allocate_temporary(this)
+    else if(batch_type(this) == TYPE_CMPLX_SINGLE) then
+      call cbatch_allocate_temporary(this)
+    end if
+
+    POP_SUB(batch_deallocate_temporary)
+  end subroutine batch_allocate_temporary
+
+  !--------------------------------------------------------------
   subroutine batch_init_empty (this, dim, nst)
     type(batch_t), intent(out)   :: this
     integer,       intent(in)    :: dim
@@ -226,6 +286,7 @@ contains
     PUSH_SUB(batch_init_empty)
 
     this%is_allocated = .false.
+    this%mirror = .false.
     this%nst = nst
     this%dim = dim
     this%current = 1
@@ -269,6 +330,7 @@ contains
     PUSH_SUB(batch_init_empty_linear)
 
     this%is_allocated = .false.
+    this%mirror = .false.
     this%nst = 0
     this%dim = 0
     this%current = 1
@@ -306,7 +368,7 @@ contains
     ok = (this%nst_linear >= 1) .and. associated(this%states_linear)
     ! deactivate this to make temporary batches work
     ! ok = ubound(this%states_linear, dim = 1) == this%nst_linear
-    if(ok) then
+    if(ok .and. .not. batch_is_packed(this)) then
       ! ensure that either all real are associated, or all cplx are associated
       all_assoc = .true.
       do ist = 1, this%nst_linear
@@ -404,11 +466,15 @@ contains
   type(type_t) pure function batch_type(this) result(btype)
     type(batch_t),      intent(in)    :: this
 
-    if(associated(this%states_linear(1)%dpsi)) btype = TYPE_FLOAT
-    if(associated(this%states_linear(1)%zpsi)) btype = TYPE_CMPLX
-    if(associated(this%states_linear(1)%spsi)) btype = TYPE_FLOAT_SINGLE
-    if(associated(this%states_linear(1)%cpsi)) btype = TYPE_CMPLX_SINGLE
-    
+    if(.not. batch_is_packed(this)) then
+      if(associated(this%states_linear(1)%dpsi)) btype = TYPE_FLOAT
+      if(associated(this%states_linear(1)%zpsi)) btype = TYPE_CMPLX
+      if(associated(this%states_linear(1)%spsi)) btype = TYPE_FLOAT_SINGLE
+      if(associated(this%states_linear(1)%cpsi)) btype = TYPE_CMPLX_SINGLE
+    else
+      btype = this%type
+    end if
+     
   end function batch_type
 
   ! ----------------------------------------------------
@@ -451,14 +517,6 @@ contains
 
   ! ----------------------------------------------------
 
-  subroutine batch_pack_was_modified(this)
-    type(batch_t),      intent(inout) :: this
-
-    this%dirty = .true.
-  end subroutine batch_pack_was_modified
-
-  ! ----------------------------------------------------
-
   integer function batch_pack_size(this) result(size)
     type(batch_t),      intent(inout) :: this
 
@@ -486,6 +544,7 @@ contains
     if(present(copy)) copy_ = copy
 
     if(.not. batch_is_packed(this)) then
+      this%type = batch_type(this)
       this%pack%size(1) = pad_pow2(this%nst_linear)
       this%pack%size(2) = batch_max_size(this)
 
@@ -512,20 +571,17 @@ contains
       
       if(copy_) then
         call profiling_in(prof_copy, "BATCH_PACK_COPY")
-
-        this%dirty = .false.
         if(accel_is_enabled()) then
-
           call batch_write_to_opencl_buffer(this)
-
         else
           call pack_copy()
         end if
 
         call profiling_out(prof_copy)
-      else
-        this%dirty = .true.
       end if
+
+      if(this%is_allocated .and. .not. this%mirror) call batch_deallocate_temporary(this)
+
     end if
 
     INCR(this%in_buffer_count, 1)
@@ -619,8 +675,12 @@ contains
     if(batch_is_packed(this)) then
 
       if(this%in_buffer_count == 1 .or. optional_default(force, .false.)) then
+
+        if(this%is_allocated .and. .not. this%mirror) call batch_allocate_temporary(this)
+        
         copy_ = .true.
         if(present(copy)) copy_ = copy
+        if(this%is_allocated .and. .not. this%mirror) copy_ = .true.
         
         if(copy_) call batch_sync(this)
         
@@ -656,7 +716,7 @@ contains
 
     PUSH_SUB(batch_sync)
 
-    if(batch_is_packed(this) .and. this%dirty) then
+    if(batch_is_packed(this)) then
       call profiling_in(prof, "BATCH_UNPACK_COPY")
       
       if(accel_is_enabled()) then
@@ -666,7 +726,6 @@ contains
       end if
       
       call profiling_out(prof)
-      this%dirty = .false.
     end if
     
     POP_SUB(batch_sync)
@@ -678,15 +737,23 @@ contains
 
       if(batch_type(this) == TYPE_FLOAT) then
 
-         !$omp parallel do private(ist)
-         do ip = 1, this%pack%size(2)
-           forall(ist = 1:this%nst_linear)
-             this%states_linear(ist)%dpsi(ip) = this%pack%dpsi(ist, ip) 
-           end forall
-         end do
-
+        do ist = 1, this%nst_linear
+          ASSERT(associated(this%states_linear(ist)%dpsi))
+        end do
+        
+        !$omp parallel do private(ist)
+        do ip = 1, this%pack%size(2)
+          forall(ist = 1:this%nst_linear)
+            this%states_linear(ist)%dpsi(ip) = this%pack%dpsi(ist, ip) 
+          end forall
+        end do
+        
       else if(batch_type(this) == TYPE_CMPLX) then
-         
+
+        do ist = 1, this%nst_linear
+          ASSERT(associated(this%states_linear(ist)%zpsi))
+        end do
+        
         !$omp parallel do private(ist)
         do ip = 1, this%pack%size(2)
           forall(ist = 1:this%nst_linear)
@@ -695,6 +762,10 @@ contains
         end do
 
       else if(batch_type(this) == TYPE_FLOAT_SINGLE) then
+
+        do ist = 1, this%nst_linear
+          ASSERT(associated(this%states_linear(ist)%spsi))
+        end do
         
         !$omp parallel do private(ist)
         do ip = 1, this%pack%size(2)
@@ -704,6 +775,10 @@ contains
         end do
         
       else if(batch_type(this) == TYPE_CMPLX_SINGLE) then
+
+        do ist = 1, this%nst_linear
+          ASSERT(associated(this%states_linear(ist)%cpsi))
+        end do
         
         !$omp parallel do private(ist)
         do ip = 1, this%pack%size(2)
@@ -920,15 +995,6 @@ end function batch_linear_to_idim
 
 ! ------------------------------------------------------
 
-logical pure function batch_is_sync(this) result(sync)
-  type(batch_t),     intent(in)    :: this
-
-  sync = .not. this%dirty
-
-end function batch_is_sync
-
-! ------------------------------------------------------
-
 subroutine batch_remote_access_start(this, mpi_grp, rma_win)
   type(batch_t),   intent(inout) :: this
   type(mpi_grp_t), intent(in)    :: mpi_grp
@@ -1045,8 +1111,6 @@ subroutine batch_copy_data(np, xx, yy)
     end do
 
   end select
-
-  call batch_pack_was_modified(yy)
 
   call profiling_out(prof)
   POP_SUB(batch_copy_data)

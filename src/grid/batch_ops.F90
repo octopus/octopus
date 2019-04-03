@@ -128,8 +128,6 @@ contains
 
     call profiling_in(prof, "BATCH_SET_ZERO")
 
-    call batch_pack_was_modified(this)
-
     select case(batch_status(this))
     case(BATCH_DEVICE_PACKED)
       call accel_set_buffer_to_zero(this%pack%buffer, batch_type(this), product(this%pack%size))
@@ -219,8 +217,6 @@ subroutine batch_set_points_cl(this, sp, ep, psi, ldpsi)
   PUSH_SUB(batch_set_points_cl)
   call profiling_in(set_points_prof, "SET_POINTS")
 
-  call batch_pack_was_modified(this)
-
   select case(batch_status(this))
   case(BATCH_NOT_PACKED, BATCH_PACKED)
     call messages_not_implemented('batch_get_points_cl for non-CL batches')
@@ -260,7 +256,6 @@ integer pure function batch_points_block_size(this) result(block_size)
 
 end function batch_points_block_size
 
-
 #include "real.F90"
 #include "batch_ops_inc.F90"
 #include "undef.F90"
@@ -268,7 +263,6 @@ end function batch_points_block_size
 #include "complex.F90"
 #include "batch_ops_inc.F90"
 #include "undef.F90"
-
 
 end module batch_ops_oct_m
 

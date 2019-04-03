@@ -329,7 +329,9 @@ contains
       end if
     end do
 
-    call batch_sync(epsib)
+    if(batch_is_packed(epsib)) then
+      call batch_unpack(epsib, force = .true.)
+    end if
 
     do itime = 1, epsib%nst
       if(states_are_real(sys%st)) then 
@@ -339,7 +341,6 @@ contains
       end if
       call messages_info(1)
     end do
-
 
     SAFE_DEALLOCATE_A(dweight)
     SAFE_DEALLOCATE_A(zweight)
@@ -426,12 +427,10 @@ contains
       end if
     end do
 
-    if(hamiltonian_apply_packed(hm, sys%gr%der%mesh)) then
-      call batch_unpack(hpsib)
+    if(batch_is_packed(hpsib)) then
+      call batch_unpack(hpsib, force = .true.)
     end if
-
-    call batch_sync(hpsib)
-
+    
     do itime = 1, hpsib%nst
       if(states_are_real(sys%st)) then 
         write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, dmf_nrm2(sys%gr%mesh, sys%st%d%dim, hpsib%states(itime)%dpsi)
@@ -440,7 +439,6 @@ contains
       end if
       call messages_info(1)
     end do
-
 
     call batch_end(hpsib, copy = .false.)
     SAFE_DEALLOCATE_P(hpsib)
