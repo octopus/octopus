@@ -52,11 +52,6 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 
   ASSERT(fi%nst_linear == fo%nst_linear)
 
-  do ist = 1, fi%nst_linear
-    ASSERT(ubound(fi%states_linear(ist)%X(psi)(:), dim=1) == op%mesh%np_part)
-    ASSERT(ubound(fo%states_linear(ist)%X(psi)(:), dim=1) >= op%mesh%np)
-  end do
-
   points_ = OP_ALL
   if(present(points)) points_ = points
 
@@ -130,10 +125,18 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 #endif
       
       if(batch_is_packed(fi) .and. batch_is_packed(fo)) then
+        
+        ASSERT(ubound(fi%pack%X(psi), dim = 2) == op%mesh%np_part)
+        ASSERT(ubound(fo%pack%X(psi), dim = 2) >= op%mesh%np)
+        
         call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), &
           fi%pack%X(psi)(1, 1), log2(fi%pack%size_real(1)), fo%pack%X(psi)(1, 1))
       else
         do ist = 1, fi%nst_linear
+
+          ASSERT(ubound(fi%states_linear(ist)%X(psi), dim = 1) == op%mesh%np_part)
+          ASSERT(ubound(fo%states_linear(ist)%X(psi), dim = 1) >= op%mesh%np)
+          
           pfi => fi%states_linear(ist)%X(psi)(:)
           pfo => fo%states_linear(ist)%X(psi)(:)
           
