@@ -531,9 +531,23 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
   if(batch_is_packed(psib) .and. accel_is_enabled()) then
 
-    ! make sure the projection buffer is large enough
-    ASSERT(projection%buff_projection%size < this%full_projection_size*psib%pack%size_real(1))
-    ! in earlier versions, the buffer was allocated here; look in the git history for details
+    ! initialize on first call to the function
+    if(.not.projection_buffer_initialized) then
+      call accel_create_buffer(buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
+        this%full_projection_size*psib%pack%size_real(1))
+      projection_buffer_size = this%full_projection_size*psib%pack%size_real(1)
+      projection_buffer_initialized = .true.
+      reinitialize = .false.
+    else
+      ! reinitialize if larger size is requested
+      reinitialize = projection_buffer_size < this%full_projection_size*psib%pack%size_real(1)
+    end if
+    if(reinitialize) then
+      call accel_release_buffer(buff_projection)
+      call accel_create_buffer(buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
+        this%full_projection_size*psib%pack%size_real(1))
+      projection_buffer_size = this%full_projection_size*psib%pack%size_real(1)
+    end if
 
     call profiling_in(cl_prof, "CL_PROJ_BRA")
 
@@ -555,7 +569,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
     call accel_set_kernel_arg(kernel, 4, this%buff_scals)
     call accel_set_kernel_arg(kernel, 5, psib%pack%buffer)
     call accel_set_kernel_arg(kernel, 6, log2(size))
-    call accel_set_kernel_arg(kernel, 7, projection%buff_projection)
+    call accel_set_kernel_arg(kernel, 7, buff_projection)
     call accel_set_kernel_arg(kernel, 8, log2(size))
 
     if(allocated(this%projector_phases)) then
@@ -582,7 +596,7 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 
     if(mesh%parallel_in_domains) then
       SAFE_ALLOCATE(projection%X(projection)(1:psib%pack%size_real(1), 1:this%full_projection_size))
-      call accel_read_buffer(projection%buff_projection, &
+      call accel_read_buffer(buff_projection, &
         this%full_projection_size*psib%pack%size_real(1), projection%X(projection))
     end if
 
@@ -730,13 +744,13 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   if(batch_is_packed(vpsib) .and. accel_is_enabled()) then
 
     if(mesh%parallel_in_domains) then
-      call accel_write_buffer(projection%buff_projection, &
+      call accel_write_buffer(buff_projection, &
         this%full_projection_size*vpsib%pack%size_real(1), projection%X(projection))
       SAFE_DEALLOCATE_A(projection%X(projection))
     end if
 
     call finish_opencl()
-    ! The deallocation of projection%buff_projection happens now in hamiltonian_base_end
+    ! The deallocation of buff_projection happens now in hamiltonian_base_end
     
     POP_SUB(X(hamiltonian_base_nlocal_finish))
     call profiling_out(prof_vnlpsi_finish)
@@ -858,7 +872,7 @@ contains
       call accel_set_kernel_arg(ker_mix, 0, this%nprojector_matrices)
       call accel_set_kernel_arg(ker_mix, 1, this%buff_offsets)
       call accel_set_kernel_arg(ker_mix, 2, this%buff_mix)
-      call accel_set_kernel_arg(ker_mix, 3, projection%buff_projection)
+      call accel_set_kernel_arg(ker_mix, 3, buff_projection)
       call accel_set_kernel_arg(ker_mix, 4, log2(vpsib%pack%size_real(1)))
       call accel_set_kernel_arg(ker_mix, 5, buff_proj)
       
@@ -872,7 +886,7 @@ contains
 
     else
 
-      buff_proj => projection%buff_projection
+      buff_proj => buff_projection
       
     end if
     

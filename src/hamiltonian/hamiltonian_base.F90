@@ -87,13 +87,6 @@ module hamiltonian_base_oct_m
     zhamiltonian_base_nlocal_force,            &
     projection_t
 
-  type projection_t
-    FLOAT, allocatable     :: dprojection(:, :)
-    CMPLX, allocatable     :: zprojection(:, :)
-    type(accel_mem_t)     :: buff_projection
-    logical :: initialized
-  end type projection_t
-
   !> This object stores and applies an electromagnetic potential that
   !! can be represented by different types of potentials.
 
@@ -133,10 +126,12 @@ module hamiltonian_base_oct_m
     CMPLX, allocatable :: phase_corr(:,:)
     type(accel_mem_t) :: buff_phase
     integer            :: buff_phase_qn_start
-
-    ! this variable is only allocated once
-    type(projection_t) :: projection
   end type hamiltonian_base_t
+
+  type projection_t
+    FLOAT, allocatable     :: dprojection(:, :)
+    CMPLX, allocatable     :: zprojection(:, :)
+  end type projection_t
 
   integer, parameter, public ::          &
     TERM_ALL                 = HUGE(1),  &
@@ -154,6 +149,10 @@ module hamiltonian_base_oct_m
     FIELD_UNIFORM_VECTOR_POTENTIAL = 4,    &
     FIELD_UNIFORM_MAGNETIC_FIELD   = 8
   
+  ! declare module wide to be retained over several applications of the hamiltonian
+  type(accel_mem_t), target, private :: buff_projection
+  logical, private :: projection_buffer_initialized
+  integer, private :: projection_buffer_size
 
   type(profile_t), save :: prof_vnlpsi_start, prof_vnlpsi_finish, prof_magnetic, prof_vlpsi, prof_gather, prof_scatter, &
     prof_matelement, prof_matelement_gather, prof_matelement_reduce
@@ -176,7 +175,8 @@ contains
     this%apply_projector_matrices = .false.
     this%nprojector_matrices = 0
 
-    this%projection%initialized = .false.
+    projection_buffer_initialized = .false.
+    projection_buffer_size = -1
 
     POP_SUB(hamiltonian_base_init)
   end subroutine hamiltonian_base_init
@@ -192,8 +192,8 @@ contains
     end if
 
     ! deallocate buffer on GPU
-    if (this%projection%initialized .and. accel_is_enabled()) then
-      call accel_release_buffer(this%projection%buff_projection)
+    if (projection_buffer_initialized .and. accel_is_enabled()) then
+      call accel_release_buffer(buff_projection)
     end if
     
     SAFE_DEALLOCATE_A(this%potential)
@@ -362,12 +362,10 @@ contains
 
   !-----------------------------------------------------------------
     
-  subroutine hamiltonian_base_build_proj(this, mesh, epot, max_batch_size, r_type)
+  subroutine hamiltonian_base_build_proj(this, mesh, epot)
     type(hamiltonian_base_t), target, intent(inout) :: this
     type(mesh_t),                     intent(in)    :: mesh
     type(epot_t),             target, intent(in)    :: epot
-    integer,                          intent(in)    :: max_batch_size
-    type(type_t),                     intent(in)    :: r_type
 
     integer :: iatom, iproj, ll, lmax, lloc, mm, ic, jc
     integer :: nmat, imat, ip, iorder
@@ -730,15 +728,6 @@ contains
 
       call accel_create_buffer(this%buff_invmap, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, ipos)
       call accel_write_buffer(this%buff_invmap, ipos, invmap2)
-
-
-      ! the projection buffer, deallocated only at the very end
-      if (.not. this%projection%initialized .and. max_batch_size > 0) then
-        print*,r_type, max_batch_size
-        call accel_create_buffer(this%projection%buff_projection, ACCEL_MEM_READ_WRITE, &
-          r_type, this%full_projection_size*max_batch_size)
-        this%projection%initialized = .true.
-      end if
 
       SAFE_DEALLOCATE_A(offsets)
       SAFE_DEALLOCATE_A(cnt)

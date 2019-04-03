@@ -961,14 +961,7 @@ contains
 
     this%geo => geo
     call epot_generate(this%ep, gr, this%geo, st)
-    ! This will allocate a buffer for the projection which is potentially
-    ! larger than needed (always TYPE_CMPLX). However, at this time, the
-    ! states have not yet been loaded, so we don't know the real size needed.
-    ! The projection buffer should be quite small anyway, so this factor of 2
-    ! is probably not too bad. All this is done to avoid reallocating the projection
-    ! buffer on the GPU.
-    call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep, &
-      st%d%block_size, TYPE_CMPLX)
+    call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep)
     call hamiltonian_update(this, gr%mesh, gr%der%boundaries, time)
    
     if (this%pcm%run_pcm) then
