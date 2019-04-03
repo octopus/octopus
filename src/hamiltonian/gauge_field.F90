@@ -294,7 +294,7 @@ contains
 
     !In the case of a kick, the induced field could not be higher than the initial kick
     do idim = 1, this%ndim
-      if(warning_shown .and. this%vecpot_kick(idim) /= M_ZERO .and.  &
+      if(.not. warning_shown .and. this%vecpot_kick(idim) /= M_ZERO .and.  &
          abs(this%vecpot(idim))> abs(this%vecpot_kick(idim))*1.01 .and. .not. this%kicktime > M_ZERO ) then
 
         warning_shown = .true.
