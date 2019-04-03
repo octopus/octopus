@@ -103,6 +103,7 @@ subroutine X(xc_oep_pt_rhs) (gr, st, is, oep, phi1, ist, rhs)
   integer,             intent(in)    :: ist
   R_TYPE,              intent(inout) :: rhs(:,:)
 
+  integer :: kst
   FLOAT :: abar, kkopii
   R_TYPE, allocatable :: aa(:,:), psiii(:, :), psikk(:, :)
 
