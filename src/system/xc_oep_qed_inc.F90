@@ -103,7 +103,7 @@ subroutine X(xc_oep_pt_rhs) (gr, st, is, oep, phi1, ist, rhs)
   integer,             intent(in)    :: ist
   R_TYPE,              intent(inout) :: rhs(:,:)
 
-  FLOAT :: abar
+  FLOAT :: abar, kkopii
   R_TYPE, allocatable :: aa(:,:), psiii(:, :), psikk(:, :)
 
   PUSH_SUB(X(xc_oep_pt_rhs))
@@ -120,6 +120,15 @@ subroutine X(xc_oep_pt_rhs) (gr, st, is, oep, phi1, ist, rhs)
   aa(:,1) = aa(:,1) + sqrt(M_HALF*oep%pt%omega_array(1))*oep%pt%lambda_array(1)*oep%pt%pol_dipole_array(:,1) &
             *R_CONJ(phi1(:, 1, ist))
 
+  do kst = st%st_start, oep%eigen_n + 1
+    call states_get_state(st, gr%mesh, kst, is, psikk)
+    kkopii = oep%pt%lambda_array(1)*X(mf_dotp)(gr%mesh, R_CONJ(psiii(:,1)), &
+      oep%pt%pol_dipole_array(:,1)*psikk(:,1))
+    aa(:,1) = aa(:,1) - oep%pt%lambda_array(1)*oep%pt%pol_dipole_array(:,1)*kkopii*R_CONJ(psikk(:,1))
+    aa(:,1) = aa(:,1) - sqrt(M_HALF*oep%pt%omega_array(1))*kkopii*R_CONJ(phi1(:, 1, kst))
+  end do
+
+            
   if (ist/=(oep%eigen_n + 1) .or. (oep%level == XC_OEP_FULL)) then
     abar = X(mf_dotp)(gr%mesh,  aa(:,1), &
      psiii(:,1))
