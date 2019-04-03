@@ -19,13 +19,13 @@
 
 ! ---------------------------------------------------------
 subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
-  type(mesh_t),   intent(in)    :: mesh
-  type(grid_t),   intent(inout) :: gr
-  type(hamiltonian_t), intent(in)    :: hm
-  type(states_t), intent(in)    :: st
-  integer,        intent(in)    :: is
-  type(xc_oep_t), intent(inout) :: oep
-  logical,        intent(in)    :: first
+  type(mesh_t),   intent(in)      :: mesh
+  type(grid_t),   intent(inout)   :: gr
+  type(hamiltonian_t), intent(in) :: hm
+  type(states_t), intent(in)      :: st
+  integer,        intent(in)      :: is
+  type(xc_oep_t), intent(inout)   :: oep
+  logical,        intent(in)      :: first
 
   integer :: ist, ip, jst, eigen_n, kssi, kssj, proc
   FLOAT, allocatable :: rho_sigma(:), v_bar_S(:), sqphi(:, :, :), dd(:)
@@ -48,7 +48,8 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
   if (oep%has_photons) then
     SAFE_ALLOCATE(phi1(1:gr%mesh%np,1:st%d%dim,1:st%nst))
     SAFE_ALLOCATE(bb(1:gr%mesh%np, 1:1))
-    oep%pt%ex = M_ZERO
+    if (is == 1) &
+      oep%pt%ex = M_ZERO
 
     if(.not. lr_is_allocated(oep%pt%lr)) then
       call lr_allocate(oep%pt%lr, st, gr%mesh)

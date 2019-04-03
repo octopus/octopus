@@ -27,7 +27,7 @@ subroutine X(xc_oep_pt_phi) (gr, hm, st, is, oep, phi1)
   R_TYPE,              intent(inout) :: phi1(:,:,:)
 
   integer :: ist, kst, iter_used
-  FLOAT :: rhs_kkbar, residue
+  FLOAT :: rhs_kkbar, residue, kkopii
   R_TYPE, allocatable :: rhs(:,:), psiii(:, :), psikk(:, :)
 
   PUSH_SUB(X(xc_oep_pt_phi))
@@ -35,9 +35,11 @@ subroutine X(xc_oep_pt_phi) (gr, hm, st, is, oep, phi1)
   SAFE_ALLOCATE(rhs(1:gr%mesh%np, 1:1))
   SAFE_ALLOCATE(psiii(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psikk(1:gr%mesh%np, 1:st%d%dim))
-
-  oep%pt%pt_number = M_ZERO
-  oep%pt%correlator = M_ZERO
+  if (is == 1) then !only initialize for first spin channel
+    oep%pt%pt_number = M_ZERO
+    oep%pt%correlator = M_ZERO
+    oep%pt%ex = M_ZERO
+  end if
 
   do ist = st%st_start, oep%eigen_n + 1
     call states_get_state(st, gr%mesh, ist, is, psiii)
@@ -64,6 +66,22 @@ subroutine X(xc_oep_pt_phi) (gr, hm, st, is, oep, phi1)
     oep%pt%pt_number = oep%pt%pt_number + st%occ(ist, is)*X(mf_dotp)(gr%mesh, R_CONJ(phi1(:, 1, ist)), &
                 phi1(:, 1, ist))
 
+    oep%pt%ex = oep%pt%ex + st%occ(ist, is)*oep%pt%lambda_array(1)*sqrt(M_HALF*oep%pt%omega_array(1))* &
+              X(mf_dotp)(gr%mesh, R_CONJ(phi1(:, 1, ist)), &
+                oep%pt%pol_dipole_array(:,1)*psiii(:,1))
+
+    oep%pt%ex = oep%pt%ex + st%occ(ist, is)*M_HALF*oep%pt%lambda_array(1)**2* &
+              X(mf_dotp)(gr%mesh, &
+                R_CONJ(oep%pt%pol_dipole_array(:,1)*psiii(:,1)), &
+                oep%pt%pol_dipole_array(:,1)*psiii(:,1))
+
+    do kst = st%st_start, oep%eigen_n + 1
+      call states_get_state(st, gr%mesh, kst, is, psikk)
+      kkopii = oep%pt%lambda_array(1)*X(mf_dotp)(gr%mesh, R_CONJ(psiii(:,1)), &
+        oep%pt%pol_dipole_array(:,1)*psikk(:,1))
+      oep%pt%ex = oep%pt%ex - st%occ(kst, is)*M_HALF*(kkopii)**2
+    end do
+
     ! calculate correlator function
     oep%pt%correlator(:,1) = oep%pt%correlator(:,1) + st%occ(ist, is)*psiii(:,1)*phi1(:, 1, ist)
 
@@ -85,8 +103,7 @@ subroutine X(xc_oep_pt_rhs) (gr, st, is, oep, phi1, ist, rhs)
   integer,             intent(in)    :: ist
   R_TYPE,              intent(inout) :: rhs(:,:)
 
-  integer :: kst
-  FLOAT :: kkopii, abar
+  FLOAT :: abar
   R_TYPE, allocatable :: aa(:,:), psiii(:, :), psikk(:, :)
 
   PUSH_SUB(X(xc_oep_pt_rhs))
@@ -102,25 +119,6 @@ subroutine X(xc_oep_pt_rhs) (gr, st, is, oep, phi1, ist, rhs)
             *R_CONJ(psiii(:,1))
   aa(:,1) = aa(:,1) + sqrt(M_HALF*oep%pt%omega_array(1))*oep%pt%lambda_array(1)*oep%pt%pol_dipole_array(:,1) &
             *R_CONJ(phi1(:, 1, ist))
-
-  oep%pt%ex = oep%pt%ex + st%occ(ist, is)*oep%pt%lambda_array(1)*sqrt(M_HALF*oep%pt%omega_array(1))* &
-              X(mf_dotp)(gr%mesh, R_CONJ(phi1(:, 1, ist)), &
-                oep%pt%pol_dipole_array(:,1)*psiii(:,1))
-
-  oep%pt%ex = oep%pt%ex + st%occ(ist, is)*M_HALF*oep%pt%lambda_array(1)**2* &
-              X(mf_dotp)(gr%mesh, &
-                R_CONJ(oep%pt%pol_dipole_array(:,1)*psiii(:,1)), &
-                oep%pt%pol_dipole_array(:,1)*psiii(:,1))
-
-  do kst = st%st_start, oep%eigen_n + 1
-    call states_get_state(st, gr%mesh, kst, is, psikk)
-    kkopii = oep%pt%lambda_array(1)*X(mf_dotp)(gr%mesh, R_CONJ(psiii(:,1)), &
-      oep%pt%pol_dipole_array(:,1)*psikk(:,1))
-    aa(:,1) = aa(:,1) - oep%pt%lambda_array(1)*oep%pt%pol_dipole_array(:,1)*kkopii*R_CONJ(psikk(:,1))
-    aa(:,1) = aa(:,1) - sqrt(M_HALF*oep%pt%omega_array(1))*kkopii*R_CONJ(phi1(:, 1, kst))
-
-    oep%pt%ex = oep%pt%ex - st%occ(kst, is)*M_HALF*(kkopii)**2
-  end do
 
   if (ist/=(oep%eigen_n + 1) .or. (oep%level == XC_OEP_FULL)) then
     abar = X(mf_dotp)(gr%mesh,  aa(:,1), &

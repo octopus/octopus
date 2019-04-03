@@ -198,8 +198,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   do iter = 1, oep%scftol%max_iter
     ! iteration over all states
     ss = M_ZERO
-    oep%pt%ex = M_ZERO
-    do ist = 1, st%nst
+    do ist = 1, oep%eigen_n + 1 !only over occupied states
 
       call states_get_state(st, gr%mesh, ist, is, psi)
 
