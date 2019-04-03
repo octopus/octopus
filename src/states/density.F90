@@ -138,7 +138,7 @@ contains
     integer :: ist, ip, ispin
     FLOAT   :: nrm
     CMPLX   :: term, psi1, psi2
-    CMPLX, allocatable :: psi(:), fpsi(:)
+    CMPLX, allocatable :: psi(:), fpsi(:), zpsi(:, :)
     FLOAT, allocatable :: weight(:), sqpsi(:)
     type(profile_t), save :: prof
     integer            :: wgsize
@@ -254,13 +254,16 @@ contains
 
       ! in this case wavefunctions are always complex
       ASSERT(.not. this%gr%have_fine_mesh)
-      call batch_sync(psib)
+
+      SAFE_ALLOCATE(zpsi(1:this%gr%mesh%np, 1:this%st%d%dim))
 
       do ist = 1, psib%nst
+        call batch_get_state(psib, ist, this%gr%mesh%np, zpsi)
+        
         do ip = 1, this%gr%fine%mesh%np
-
-          psi1 = psib%states(ist)%zpsi(ip, 1)
-          psi2 = psib%states(ist)%zpsi(ip, 2)
+          
+          psi1 = zpsi(ip, 1)
+          psi2 = zpsi(ip, 2)
 
           this%density(ip, 1) = this%density(ip, 1) + weight(ist)*(real(psi1, REAL_PRECISION)**2 + aimag(psi1)**2)
           this%density(ip, 2) = this%density(ip, 2) + weight(ist)*(real(psi2, REAL_PRECISION)**2 + aimag(psi2)**2)
@@ -271,6 +274,8 @@ contains
 
         end do
       end do
+
+      SAFE_DEALLOCATE_A(zpsi)
       
     end if
 

@@ -153,9 +153,6 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
       end if
       call profiling_count_operations(cop)
     end if
-
-    call batch_pack_was_modified(fo)
-
   end if
 
   SAFE_DEALLOCATE_A(wre)

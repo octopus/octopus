@@ -414,7 +414,6 @@ subroutine X(derivatives_test)(this, repetitions, min_blocksize, max_blocksize)
     etime = (loct_clock() - stime)/dble(repetitions)
 
     if(packstates) then
-      call batch_unpack(ffb, copy = .false.)
       call batch_unpack(opffb)
     end if
 
