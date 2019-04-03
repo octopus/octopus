@@ -23,22 +23,12 @@ module vtk_oct_m
   use cube_oct_m
   use geometry_oct_m
   use global_oct_m
-  use index_oct_m
   use io_oct_m
   use io_binary_oct_m
-  use io_csv_oct_m
-  use mesh_oct_m
   use messages_oct_m
-  use mpi_oct_m
-  use mpi_debug_oct_m
-  use parser_oct_m
   use profiling_oct_m
-  use simul_box_oct_m
   use species_oct_m
   use unit_oct_m
-  use unit_system_oct_m
-  use utils_oct_m
-  use varinfo_oct_m
 
   implicit none
 

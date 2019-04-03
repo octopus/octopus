@@ -26,7 +26,6 @@ module solvers_oct_m
   use global_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
-  use loct_math_oct_m
   use messages_oct_m
   use profiling_oct_m
 

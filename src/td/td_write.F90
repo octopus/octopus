@@ -19,8 +19,7 @@
 #include "global.h"
 
 module td_write_oct_m
-  use io_function_oct_m
-  use iso_c_binding
+  use blas_oct_m
   use comm_oct_m
   use current_oct_m
   use excited_states_oct_m
@@ -30,13 +29,14 @@ module td_write_oct_m
   use grid_oct_m
   use output_oct_m
   use hamiltonian_oct_m
+  use io_function_oct_m
   use io_oct_m
   use ion_dynamics_oct_m
+  use iso_c_binding
   use kick_oct_m
   use lasers_oct_m
   use lalg_adv_oct_m
   use lda_u_oct_m
-  use loct_oct_m
   use loct_math_oct_m
   use magnetic_oct_m
   use math_oct_m

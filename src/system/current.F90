@@ -26,38 +26,22 @@ module current_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
-  use grid_oct_m
   use hamiltonian_oct_m
   use hamiltonian_base_oct_m
-  use io_oct_m
-  use io_function_oct_m
-  use lalg_basic_oct_m
   use lda_u_oct_m
-  use logrid_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
   use parser_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
-  use ps_oct_m
-  use restart_oct_m
   use scissor_oct_m
   use simul_box_oct_m
-  use species_oct_m
-  use splines_oct_m
   use states_oct_m
   use states_dim_oct_m
-  use submesh_oct_m
-  use symmetries_oct_m
   use symmetrizer_oct_m
-  use symm_op_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
   use varinfo_oct_m
-  use xc_oct_m  
 
   implicit none
 
@@ -463,7 +447,7 @@ contains
     integer,              intent(in)    :: ik
     CMPLX,                intent(out)   :: cmel(:,:) ! the current vector cmel(1:der%mesh%sb%dim, 1:st%d%nspin)
 
-    integer ::  idir, idim, iatom, ip, ib, ii, ierr, ispin
+    integer ::  idir, idim, ip, ispin
     CMPLX, allocatable :: gpsi_j(:, :, :), ppsi_j(:,:),  gpsi_i(:, :, :), ppsi_i(:,:)
 
     PUSH_SUB(current_calculate_mel)
@@ -560,7 +544,7 @@ contains
     type(states_t),       intent(in)    :: st
     FLOAT,                intent(out)   :: current(:, :, :)
 
-    integer :: ik, ist, idir, idim, ip, ib, ii, ispin, ndim
+    integer :: ik, ist, idir, idim, ip, ispin, ndim
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), g2psi(:, :, :, :)
     CMPLX :: tmp
 

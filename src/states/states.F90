@@ -25,17 +25,12 @@ module states_oct_m
   use comm_oct_m
   use batch_oct_m
   use batch_ops_oct_m
-  use blas_oct_m
   use derivatives_oct_m
   use distributed_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hardware_oct_m
-  use io_oct_m
   use kpoints_oct_m
-  use lalg_adv_oct_m
-  use lalg_basic_oct_m
   use loct_oct_m
   use loct_pointer_oct_m
   use math_oct_m
@@ -43,8 +38,7 @@ module states_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use modelmb_particles_oct_m
-  use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
-  use mpi_lib_oct_m
+  use mpi_oct_m
   use multicomm_oct_m
 #ifdef HAVE_OPENMP
   use omp_lib
@@ -60,7 +54,6 @@ module states_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use utils_oct_m
   use varinfo_oct_m
 
   implicit none
@@ -83,7 +76,6 @@ module states_oct_m
     states_generate_random,           &
     states_fermi,                     &
     states_eigenvalues_sum,           &
-    states_spin_channel,              &
     states_calc_quantities,           &
     state_is_local,                   &
     state_kpt_is_local,               &
@@ -1709,19 +1701,6 @@ contains
 
     POP_SUB(states_eigenvalues_sum)
   end function states_eigenvalues_sum
-
-  ! -------------------------------------------------------
-  integer pure function states_spin_channel(ispin, ik, dim)
-    integer, intent(in) :: ispin, ik, dim
-
-    select case(ispin)
-    case(1); states_spin_channel = 1
-    case(2); states_spin_channel = mod(ik+1, 2)+1
-    case(3); states_spin_channel = dim
-    case default; states_spin_channel = -1
-    end select
-
-  end function states_spin_channel
 
 
   ! ---------------------------------------------------------

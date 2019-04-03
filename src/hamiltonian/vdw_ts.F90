@@ -21,23 +21,20 @@
 #include "global.h"
 
 module vdw_ts_oct_m
-  use comm_oct_m 
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
   use hirshfeld_oct_m
-  use ion_interaction_oct_m
   use io_oct_m
   use io_function_oct_m
   use messages_oct_m
-  use mesh_function_oct_m
   use mesh_oct_m
   use mpi_oct_m
-  use parser_oct_m 
+  use parser_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use ps_oct_m
-  use simul_box_oct_m 
+  use simul_box_oct_m
   use species_oct_m
   use states_oct_m
   use unit_oct_m
@@ -187,8 +184,8 @@ contains
     end interface
 
     type(periodic_copy_t) :: pc
-    integer :: iatom, jatom, ispecies, jspecies, jcopy, ddimention, ip 
-    FLOAT :: rr, rr2, rr6, dd, sr, dffdrr, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra
+    integer :: iatom, jatom, ispecies, jspecies, jcopy, ip 
+    FLOAT :: rr, rr2, rr6, dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra
     FLOAT, allocatable :: coordinates(:,:), vol_ratio(:), dvadens(:), dvadrr(:), & 
                           dr0dvra(:), r0ab(:,:)
     type(hirshfeld_t) :: hirshfeld
@@ -329,7 +326,7 @@ contains
     type(periodic_copy_t) :: pc
 
     integer :: iatom, jatom, ispecies, jspecies, jcopy
-    FLOAT :: rr, rr2, rr6,  dffdr0, ee, ff, dee, dffdrab, dffdvra, deabdvra, deabdrab, x_j(1:MAX_DIM) 
+    FLOAT :: rr, rr2, rr6,  dffdr0, ee, ff, dee, dffdvra, deabdvra, deabdrab, x_j(1:MAX_DIM) 
     FLOAT, allocatable ::  vol_ratio(:), dvadrr(:), dr0dvra(:), r0ab(:,:), derivative_coeff(:), c6ab(:,:)
 
     PUSH_SUB(vdw_ts_force_calculate)

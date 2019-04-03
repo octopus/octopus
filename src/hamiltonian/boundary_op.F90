@@ -18,16 +18,12 @@
 #include "global.h"
 
 module boundary_op_oct_m
-  use io_oct_m
   use io_function_oct_m
-  use io_oct_m
   use cube_function_oct_m
   use geometry_oct_m
   use global_oct_m
-  use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use mpi_oct_m
   use parser_oct_m
   use profiling_oct_m
   use unit_oct_m

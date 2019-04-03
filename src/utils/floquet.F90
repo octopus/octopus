@@ -19,40 +19,26 @@
 #include "global.h"
 
 program oct_floquet
-  use atom_oct_m
-  use basins_oct_m
-  use box_oct_m
-  use box_union_oct_m
+  use blas_oct_m
   use calc_mode_par_oct_m
   use comm_oct_m
-  use command_line_oct_m
   use density_oct_m
   use fft_oct_m
-  use fftw_params_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use io_oct_m
-  use io_binary_oct_m
-  use io_function_oct_m
-  use kick_oct_m
   use lalg_adv_oct_m
-  use loct_oct_m
-!  use local_write_oct_m
-  use math_oct_m
   use mesh_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use mpi_lib_oct_m
+  use multicomm_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
   use space_oct_m
-  use species_oct_m
-  use species_pot_oct_m
   use simul_box_oct_m
   use states_oct_m
   use states_restart_oct_m
@@ -60,9 +46,7 @@ program oct_floquet
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
-  use varinfo_oct_m
   use v_ks_oct_m
-  use multicomm_oct_m
   use xc_oct_m
 
   implicit none
@@ -111,7 +95,7 @@ program oct_floquet
   gr = sys%gr
 
   ! generate the full hamiltonian following the sequence in td_init
-  call hamiltonian_init(hm, gr, sys%geo, st, sys%ks%theory_level, sys%ks%xc_family, sys%ks%xc_flags, &
+  call hamiltonian_init(hm, gr, sys%geo, st, sys%ks%theory_level, sys%ks%xc_family, &
               family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
   call hamiltonian_epot_generate(hm, gr, sys%geo, st, time=M_ZERO)
   call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
