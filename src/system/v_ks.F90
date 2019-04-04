@@ -25,15 +25,13 @@ module v_ks_oct_m
   use derivatives_oct_m
   use energy_oct_m
   use energy_calc_oct_m
-  use epot_oct_m 
+  use epot_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use hamiltonian_base_oct_m
   use kick_oct_m
-  use index_oct_m
-  use io_function_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
   use libvdwxc_oct_m
@@ -47,13 +45,12 @@ module v_ks_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use pseudo_oct_m
-  use pcm_oct_m 
+  use pcm_oct_m
   use simul_box_oct_m
   use species_oct_m
   use states_oct_m
   use states_dim_oct_m
   use states_parallel_oct_m
-  use unit_system_oct_m
   use varinfo_oct_m
   use vdw_ts_oct_m
   use xc_oct_m
@@ -831,7 +828,7 @@ contains
       type(hamiltonian_t), intent(in)    :: hm
 
       integer        :: ip, ispin, ist, ik
-      FLOAT, pointer :: vxc_sic(:,:),  Imvxc_sic(:, :), vh_sic(:), rho(:, :), Imrho(:, :), qsp(:)
+      FLOAT, pointer :: vxc_sic(:,:),  vh_sic(:), rho(:, :), qsp(:)
       
       PUSH_SUB(add_adsic)
       
@@ -1195,14 +1192,12 @@ contains
     type(v_ks_t),                intent(inout) :: ks
     type(hamiltonian_t), target, intent(inout) :: hm
 
-    FLOAT, pointer :: pot(:), aux(:)
+    FLOAT, pointer :: pot(:)
 
     FLOAT, allocatable :: potx(:)
     CMPLX, allocatable :: kick(:)
     FLOAT, allocatable :: kick_real(:)
     integer :: ii
-
-    integer :: asc_unit_test
 
     FLOAT :: dt
 

@@ -21,21 +21,14 @@
 module species_pot_oct_m
   use atom_oct_m
   use curvilinear_oct_m
-  use double_grid_oct_m
-  use geometry_oct_m
   use global_oct_m
-  use grid_oct_m
-  use io_oct_m
   use io_function_oct_m
-  use loct_math_oct_m
-  use math_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use ps_oct_m
   use root_solver_oct_m
@@ -45,7 +38,6 @@ module species_pot_oct_m
   use submesh_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
   use volume_oct_m
 
   implicit none

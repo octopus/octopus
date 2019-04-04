@@ -77,7 +77,6 @@ end subroutine X(poisson_solve_finish)
     !! its calculations? (Defaults to .true.)
     logical, optional,    intent(in)    :: all_nodes
     type(derivatives_t), pointer :: der
-    type(cube_function_t) :: crho
 
     logical               :: all_nodes_value
     type(profile_t), save :: prof

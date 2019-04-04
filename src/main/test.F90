@@ -19,39 +19,33 @@
 #include "global.h"
 
 module test_oct_m
-  use global_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
-  use command_line_oct_m
   use density_oct_m
   use derivatives_oct_m
   use epot_oct_m
-  use fft_oct_m
+  use global_oct_m
   use hamiltonian_oct_m
-  use io_oct_m
   use ion_interaction_oct_m
-  use mesh_interpolation_oct_m
   use mesh_function_oct_m
+  use mesh_interpolation_oct_m
+  use messages_oct_m
+  use multicomm_oct_m
   use orbitalbasis_oct_m
   use orbitalset_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
-  use restart_oct_m
   use simul_box_oct_m
   use states_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
   use system_oct_m
   use types_oct_m
-  use unit_system_oct_m
-  use utils_oct_m
   use v_ks_oct_m
-  use messages_oct_m
-  use multicomm_oct_m
   use XC_F90(lib_m)
   use xc_oct_m
 
@@ -403,7 +397,7 @@ contains
     !Initialize external potential
     call simul_box_init(sb, sys%geo, sys%space)
     call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
-             sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+             family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
     call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, hm, sys%st, sys%geo)

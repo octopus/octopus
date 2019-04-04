@@ -30,12 +30,9 @@ module energy_calc_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use hamiltonian_base_oct_m
-  use io_oct_m
-  use lalg_basic_oct_m
   use lda_u_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
   use profiling_oct_m
   use pcm_oct_m
@@ -44,7 +41,6 @@ module energy_calc_oct_m
   use states_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
 
   implicit none
 

@@ -157,13 +157,13 @@ contains
 
         do is = 1, ns
           if(is /= this%op%stencil%center) then
-            this%op%w_re(is, ip) = M_HALF*(M_ONE - alpha)/gr%mesh%sb%dim
+            this%op%w(is, ip) = M_HALF*(M_ONE - alpha)/gr%mesh%sb%dim
           else
-            this%op%w_re(is, ip) = alpha
+            this%op%w(is, ip) = alpha
           end if
-          this%op%w_re(is, ip) = this%op%w_re(is, ip) * M_TWO * M_TWO*(M_ONE - alpha)/gr%mesh%sb%dim
+          this%op%w(is, ip) = this%op%w(is, ip) * M_TWO * M_TWO*(M_ONE - alpha)/gr%mesh%sb%dim
           ip2 = ip + this%op%ri(is, this%op%rimap(ip))
-          if(gr%mesh%use_curvilinear) this%op%w_re(is, ip) = this%op%w_re(is, ip)*(ns*gr%mesh%vol_pp(ip2)/vol)
+          if(gr%mesh%use_curvilinear) this%op%w(is, ip) = this%op%w(is, ip)*(ns*gr%mesh%vol_pp(ip2)/vol)
         end do
       end do
 

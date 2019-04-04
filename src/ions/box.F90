@@ -21,10 +21,7 @@
 
 module box_oct_m
   use global_oct_m
-  use io_oct_m
-  use loct_oct_m
   use messages_oct_m
-  use mpi_oct_m
   use profiling_oct_m
 
   implicit none

@@ -40,7 +40,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     slot = fft%slot
     select case (fft_array(slot)%library)
     case (FFTLIB_FFTW)
-      if(all(fft_array(slot)%rs_n(1:3) == 1)) then
+      if(all(fft_array(slot)%rs_n(1:3) >= 1)) then
 #ifdef R_TREAL
         call fftw_execute_dft_r2c(fft_array(slot)%planf, in(:,:,:), out(:,:,:))
 #else

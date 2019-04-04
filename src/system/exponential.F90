@@ -23,13 +23,10 @@ module exponential_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use blas_oct_m
-  use cube_function_oct_m
   use derivatives_oct_m
   use global_oct_m
-  use hardware_oct_m
   use hamiltonian_oct_m
   use hamiltonian_base_oct_m
-  use fourier_space_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use loct_math_oct_m
@@ -40,7 +37,6 @@ module exponential_oct_m
   use states_oct_m
   use states_calc_oct_m
   use types_oct_m
-  use varinfo_oct_m
   use xc_oct_m
 
   implicit none

@@ -28,12 +28,11 @@ module geom_opt_oct_m
   use io_function_oct_m
   use lcao_oct_m
   use loct_oct_m
-  use parser_oct_m
   use mesh_oct_m
   use messages_oct_m
   use minimizer_oct_m
-  use mpi_oct_m 
-  use output_oct_m
+  use mpi_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use read_coords_oct_m
   use restart_oct_m

@@ -25,7 +25,7 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
   character(len=*),       intent(in)    :: dir
   type(output_t),         intent(in)    :: outp
 
-  integer :: ik, ist, idim, idir, is, ierr, ip, nspin
+  integer :: ik, ist, idim, idir, is, ierr, ip
   character(len=MAX_PATH_LEN) :: fname
   type(unit_t) :: fn_unit
   FLOAT, allocatable :: dtmp(:), elf(:,:), polarization(:, :)

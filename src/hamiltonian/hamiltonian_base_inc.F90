@@ -503,15 +503,14 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   integer :: ist, ip, iproj, imat, nreal, iprojection
   integer :: npoints, nprojs, nst, maxnpoints
   integer, allocatable :: ind(:)
-  R_TYPE :: aa, bb, cc, dd
   type(projector_matrix_t), pointer :: pmat
-  integer :: padnprojs, wgsize, lnprojs, size
+  integer :: padnprojs, lnprojs, size
   type(profile_t), save :: cl_prof
   type(accel_kernel_t), save, target :: ker_proj_bra, ker_proj_bra_phase
   type(accel_kernel_t), pointer :: kernel
   R_TYPE, allocatable :: lpsi(:, :)
 
-  integer :: block_size, sp, ep
+  integer :: block_size
   logical :: reinitialize
   
   if(.not. this%apply_projector_matrices) return
@@ -1119,7 +1118,6 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
   type(projector_matrix_t), pointer :: pmat
   type(profile_t), save :: prof, reduce_prof
   integer :: wgsize, size
-  type(accel_kernel_t), save :: ker_proj_bra, ker_proj_bra_phase
 
   if(.not. this%apply_projector_matrices) return
 
