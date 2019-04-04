@@ -399,12 +399,6 @@ contains
       else
         ! initialize eigensolver
         call eigensolver_init(rdm%eigens, gr, st, ks%xc)
-!   copied from scf, precondiitoner not yet implemented for cg with rdmft
-!   if(preconditioner_is_multigrid(rdm%eigens%pre)) then
-!     SAFE_ALLOCATE(gr%mgrid_prec)
-!     call multigrid_init(gr%mgrid_prec, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc, &
-!     used_for_preconditioner=.true.)
-!   end if
       end if
 
       SAFE_ALLOCATE(rdm%eone(1:st%nst))
@@ -680,12 +674,6 @@ contains
         rdm%occsum = rdm%occsum + occin(ist,ik)
       end do
     end do
-
-!    do ist = 1, st%nst
-!      do ik = 1, st%d%nik
-!        occin(ist, ik) = occin(ist,ik)*st%qtot/rdm%occsum
-!      end do
-!    end do 
 
     rdm%occsum = st%qtot
 
