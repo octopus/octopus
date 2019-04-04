@@ -298,44 +298,9 @@ subroutine X(hamiltonian_apply) (hm, der, psi, hpsi, ist, ik, terms, set_bc, set
   call batch_end(hpsib)
   
 
-! Modifications by Nicole
-
-  ! treat hamiltonians that depend on the index of the orbital
-!  if(hm%theory_level == RDMFT .and. set_occ_ .eqv. .true.) then
-!    call X(occ_apply)(hpsi, hm%hf_st%occ(ist, ik), terms =  terms)
-!  endif 
-
-! End Nicole
-
   POP_SUB(X(hamiltonian_apply))
 end subroutine X(hamiltonian_apply)
 
-!subroutine X(occ_apply) (hpsib, occ, terms)
-
-!  R_TYPE,   target,    intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
-!  FLOAT,               intent(in)    :: occ
-!  integer,             intent(in)    :: terms
-  
-!  terms_ = optional_default(terms, TERM_ALL)
-
-!  if(terms_ == TERM_ALL) then
-!    call messages_write('Scaling with occupation numbers is not linear for all terms in the hamiltonian in RDMFT')
-!    call messages_fatal(1)
-!  endif
-
-!  ! this term is specific for each RDMFT functional
-!  if(terms_ == TERM_OTHERS) then
-!    ! Mueller functional
-!    hpsi = sqrt(occ)*hpsi
-!  endif
-
-!  ! all other terms in hamiltonian are linear in occupation number
-!  if(bitand(TERM_KINETIC, terms_) /= 0  .or. bitand(TERM_LOCAL_POTENTIAL, terms_) /= 0 &
-!    & .or. bitand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0 .or. bitand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then
-!    hpsi = occ*hpsi
-!  endif
-
-!end subroutine X(occ_apply)
 
 subroutine X(occ_apply) (hm, der, hpsib, occ, terms)
   type(hamiltonian_t), intent(in) :: hm
@@ -354,13 +319,8 @@ subroutine X(occ_apply) (hm, der, hpsib, occ, terms)
   do ibatch = 1, hpsib%nst
     call batch_get_state(hpsib, ibatch, der%mesh%np, hpsi)
     
-!   ! this term is specific for each RDMFT functional
-!   if(terms == TERM_OTHERS) then
-!     ! Mueller functional
-!     hpsi = sqrt(occ)*hpsi
-!   endif
-    
-    ! all other terms in hamiltonian are linear in occupation number
+    ! multiply linear terms in hamiltonian with occupation number
+    ! nonlinear occupation number dependency occurs only in the exchange, which is treated there
     if(bitand(TERM_KINETIC, terms) /= 0  .or. bitand(TERM_LOCAL_POTENTIAL, terms) /= 0 &
       & .or. bitand(TERM_NON_LOCAL_POTENTIAL, terms) /= 0 .or. bitand(TERM_LOCAL_EXTERNAL, terms) /= 0) then  
       hpsi = occ*hpsi
