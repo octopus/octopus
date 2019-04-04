@@ -1591,7 +1591,7 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
   R_TYPE,           intent(out)             :: twoint(:)  !
 
   integer :: ist, jst, kst, lst, ijst, klst, ikpt, jkpt, kkpt, lkpt
-  integer :: ist_global, jst_global, kst_global, lst_global, nst
+  integer :: ist_global, jst_global, kst_global, lst_global, nst, nst_tot
   integer :: iint
   R_TYPE  :: me
   R_TYPE, allocatable :: nn(:), vv(:)
@@ -1613,29 +1613,20 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
   ijst = 0
   iint = 1
 
-  nst = (st_max-st_min+1)*st%d%nik
+  nst_tot = (st_max-st_min+1)*st%d%nik
+  nst = (st_max-st_min+1)
 
-  do ist_global = 1, nst
-    if(st%d%nik == 1) then
-      ist = ist_global
-      ikpt = 1
-    else
-      ist = mod(ist_global-1, st%d%nik) +1
-      ikpt = (ist_global-ist)/st%d%nik+1
-    end if
+  do ist_global = 1, nst_tot
+    ist = mod(ist_global-1, nst) +1
+    ikpt = (ist_global-ist)/nst+1
 
     call states_get_state(st, gr%mesh, ist+st_min-1, ikpt, psii)
 
-    do jst_global = 1, nst
-      if(st%d%nik == 1) then
-        jst = jst_global
-        jkpt = 1
-      else
-        jst = mod(jst_global-1, st%d%nik) +1
-        jkpt = (jst_global-jst)/st%d%nik+1
-      end if
+    do jst_global = 1, nst_tot
+      jst = mod(jst_global-1, nst) +1
+      jkpt = (jst_global-jst)/nst+1
 
-      if(jst > ist) cycle
+      if(jst_global > ist_global) cycle
       ijst=ijst+1
 
       call states_get_state(st, gr%mesh, jst+st_min-1, jkpt, psij)
@@ -1644,28 +1635,17 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
       call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
 
       klst=0
-      do kst_global = 1, nst
-        if(st%d%nik == 1) then
-          kst = kst_global
-          kkpt = 1
-        else
-          kst = mod(kst_global-1, st%d%nik) +1
-          kkpt = (kst_global-kst)/st%d%nik+1
-        end if
+      do kst_global = 1, nst_tot
+        kst = mod(kst_global-1, nst) +1
+        kkpt = (kst_global-kst)/nst+1
 
- 
         call states_get_state(st, gr%mesh, kst+st_min-1, kkpt, psik)
 
-        do lst_global = 1, nst
-          if(st%d%nik == 1) then
-            lst = lst_global
-            lkpt = 1
-          else
-            lst = mod(lst_global-1, st%d%nik) +1
-            lkpt = (lst_global-lst)/st%d%nik+1
-          end if
+        do lst_global = 1, nst_tot
+          lst = mod(lst_global-1, nst) +1
+          lkpt = (lst_global-lst)/nst+1
 
-          if(lst > kst) cycle
+          if(lst_global > kst_global) cycle
           klst=klst+1
           if(klst > ijst) cycle
 
@@ -1675,14 +1655,14 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
 
           me = X(mf_integrate)(gr%mesh, psil(:, 1))
 
-          iindex(iint,1) =  ist
-          iindex(iint,2) =  ikpt
-          jindex(iint,1) =  jst
-          jindex(iint,2) =  jkpt
-          kindex(iint,1) =  kst
-          kindex(iint,2) =  kkpt
-          lindex(iint,1) =  lst
-          lindex(iint,2) =  lkpt
+          iindex(1,iint) =  ist+st_min-1
+          iindex(2,iint) =  ikpt
+          jindex(1,iint) =  jst+st_min-1
+          jindex(2,iint) =  jkpt
+          kindex(1,iint) =  kst+st_min-1
+          kindex(2,iint) =  kkpt
+          lindex(1,iint) =  lst+st_min-1
+          lindex(2,iint) =  lkpt
           twoint(iint) =  me
           iint = iint + 1
 

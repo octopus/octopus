@@ -63,6 +63,7 @@ module output_me_oct_m
 
     integer :: st_start !Start index for the output
     integer :: st_end   !Stop index for the output
+    integer :: nst      !Number of states computed
   end type output_me_t
 
   integer, parameter, public :: &
@@ -75,10 +76,10 @@ module output_me_oct_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine output_me_init(this, sb)
+  subroutine output_me_init(this, sb, nst)
     type(output_me_t), intent(out) :: this
     type(simul_box_t), intent(in)  :: sb
-
+    integer,           intent(in)  :: nst
     PUSH_SUB(output_me_init)
 
     !%Variable OutputMatrixElements
@@ -157,6 +158,7 @@ contains
     call parse_variable('OutputMEEnd', nst, this%st_end)
     ASSERT(this%st_end > 0 .and. this%st_end <= nst)
     ASSERT(this%st_start <= this%st_end)
+    this%nst = this%st_end - this%st_start +1
 
 
     POP_SUB(output_me_init)
@@ -285,25 +287,26 @@ contains
       if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization")
       ! how to do this properly? states_matrix
       iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
+      write(iunit, '(a)') '#(n1,k1) (n2,k2) (n3,k3) (n4,k4) <n1-k1, n2-k2|n3-k3, n4-k4>'
 
-      id = st%d%nik*st%nst*(st%d%nik*st%nst+1)*(st%d%nik**2*st%nst**2+st%d%nik*st%nst+2)/8
-      SAFE_ALLOCATE(iindex(1:id, 1:2))
-      SAFE_ALLOCATE(jindex(1:id, 1:2))
-      SAFE_ALLOCATE(kindex(1:id, 1:2))
-      SAFE_ALLOCATE(lindex(1:id, 1:2))
+      id = st%d%nik*this%nst*(st%d%nik*this%nst+1)*(st%d%nik**2*this%nst**2+st%d%nik*this%nst+2)/8
+      SAFE_ALLOCATE(iindex(1:2, 1:id))
+      SAFE_ALLOCATE(jindex(1:2, 1:id))
+      SAFE_ALLOCATE(kindex(1:2, 1:id))
+      SAFE_ALLOCATE(lindex(1:2, 1:id))
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(dtwoint(1:id))
-        call dstates_me_two_body(gr, st, st%st_start, st%st_end, iindex, jindex, kindex, lindex, dtwoint)
+        call dstates_me_two_body(gr, st, this%st_start, this%st_end, iindex, jindex, kindex, lindex, dtwoint)
         do ll = 1, id
-          write(iunit, *) iindex(ll,1:2), jindex(ll,1:2), kindex(ll,1:2), lindex(ll,1:2), dtwoint(ll)
+          write(iunit, '(4(i4,i5),e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), dtwoint(ll)
         enddo
         SAFE_DEALLOCATE_A(dtwoint)
       else
         SAFE_ALLOCATE(ztwoint(1:id))
-        call zstates_me_two_body(gr, st, st%st_start, st%st_end, iindex, jindex, kindex, lindex, ztwoint)
+        call zstates_me_two_body(gr, st, this%st_start, this%st_end, iindex, jindex, kindex, lindex, ztwoint)
         do ll = 1, id
-          write(iunit, *) iindex(ll,1:2), jindex(ll,1:2), kindex(ll,1:2), lindex(ll,1:2), ztwoint(ll)
+          write(iunit, '(4(i4,i5),2e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), ztwoint(ll)
         enddo
         SAFE_DEALLOCATE_A(ztwoint)
       end if
