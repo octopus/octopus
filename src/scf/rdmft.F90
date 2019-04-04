@@ -1329,6 +1329,7 @@ contains
     conv = all(rdm%eigens%converged(st%d%kpt%start:st%d%kpt%end) >= nstconv_)
 
     ! calculate total energy with new states
+    call density_calc (st, gr, st%rho)
     call v_ks_calc(ks, hm, st, geo)
     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     call rdm_derivatives(rdm, hm, st, gr)
