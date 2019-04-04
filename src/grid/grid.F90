@@ -278,7 +278,7 @@ contains
     !%Variable SymmetrizeDensity
     !%Type logical
     !%Default no
-    !%Section Grid
+    !%Section Mesh
     !%Description
     !% When enabled the densities is symmetrized. Currently, this can
     !% only be done for periodic systems. (Experimental.)
