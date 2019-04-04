@@ -24,7 +24,6 @@ module fourier_space_oct_m
   use cube_function_oct_m
   use global_oct_m
   use math_oct_m
-  use mesh_oct_m
   use messages_oct_m
   use fft_oct_m
 #ifdef HAVE_OPENMP
@@ -34,7 +33,6 @@ module fourier_space_oct_m
   use pfft_oct_m
 #endif
   use profiling_oct_m
-  use simul_box_oct_m
   use types_oct_m
 
   implicit none

@@ -24,7 +24,6 @@ module eigensolver_oct_m
   use eigen_cg_oct_m
   use eigen_lobpcg_oct_m
   use eigen_rmmdiis_oct_m
-  use energy_calc_oct_m
   use exponential_oct_m
   use global_oct_m
   use grid_oct_m
@@ -32,7 +31,6 @@ module eigensolver_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -41,14 +39,12 @@ module eigensolver_oct_m
   use parser_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
-  use sort_oct_m
   use states_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
   use subspace_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
   use xc_oct_m
 
   implicit none
@@ -83,7 +79,6 @@ module eigensolver_oct_m
 
     integer :: rmmdiis_minimization_iter
 
-    logical :: save_mem
     logical :: skip_finite_weight_kpoints
     logical :: folded_spectrum
     FLOAT, pointer   :: spectrum_shift(:,:)
@@ -265,19 +260,6 @@ contains
       !%End
 
       call parse_variable('EigensolverMinimizationIter', 5, eigens%rmmdiis_minimization_iter)
-
-      !%Variable EigensolverSaveMemory
-      !%Type logical
-      !%Default no
-      !%Section SCF::Eigensolver
-      !%Description
-      !% The RMMDIIS eigensolver may require a considerable amount of
-      !% extra memory. When this variable is set to yes, the
-      !% eigensolver will use less memory at the expense of some
-      !% performance. This is especially useful for GPUs.
-      !%End
-
-      call parse_variable('EigensolverSaveMemory', .false., eigens%save_mem)
 
       if(gr%mesh%use_curvilinear) call messages_experimental("RMMDIIS eigensolver for curvilinear coordinates")
 
@@ -489,7 +471,7 @@ contains
             call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
           else
             call deigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-              eigens%converged(ik), ik, eigens%diff(:, ik), eigens%save_mem)
+              eigens%converged(ik), ik, eigens%diff(:, ik))
           end if
         case(RS_PSD)
           call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
@@ -538,7 +520,7 @@ contains
             call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
           else
             call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-              eigens%converged(ik), ik,  eigens%diff(:, ik), eigens%save_mem)
+              eigens%converged(ik), ik,  eigens%diff(:, ik))
           end if
         case(RS_PSD)
           call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)

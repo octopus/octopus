@@ -23,7 +23,6 @@ module minimizer_oct_m
   use lalg_basic_oct_m
   use profiling_oct_m
   use messages_oct_m
-  use mpi_oct_m
 
   implicit none
 
