@@ -60,6 +60,9 @@ module output_me_oct_m
     !! octopole matrix elements (between Kohn-Sham or single-particle orbitals).
     !! In 2D, only the dipole moments are printed.
     integer :: ks_multipoles      
+
+    integer :: st_start !Start index for the output
+    integer :: st_end   !Stop index for the output
   end type output_me_t
 
   integer, parameter, public :: &
@@ -131,6 +134,30 @@ contains
       !%End
       call parse_variable('OutputMEMultipoles', 1, this%ks_multipoles)
     end if
+
+    !%Variable OutputMEStart
+    !%Type integer
+    !%Default 1
+    !%Section Output
+    !%Description
+    !% Specifies the state/band index for starting to compute the matrix element.
+    !% So far, this is only used for dipole matrix elements.
+    !%End
+    call parse_variable('OutputMEStart', 1, this%st_start)
+    ASSERT(this%st_start > 0 .and. this%st_start <= nst)
+
+    !%Variable OutputMEEnd
+    !%Type integer
+    !%Default 1
+    !%Section Output
+    !%Description
+    !% Specifies the highest state/band index used to compute the matrix element.
+    !% So far, this is only used for dipole matrix elements.
+    !%End
+    call parse_variable('OutputMEEnd', nst, this%st_end)
+    ASSERT(this%st_end > 0 .and. this%st_end <= nst)
+    ASSERT(this%st_start <= this%st_end)
+
 
     POP_SUB(output_me_init)
   end subroutine output_me_init
