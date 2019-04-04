@@ -21,7 +21,6 @@
 module propagator_etrs_oct_m
   use accel_oct_m
   use batch_oct_m
-  use batch_ops_oct_m
   use density_oct_m
   use exponential_oct_m
   use gauge_field_oct_m
@@ -33,7 +32,6 @@ module propagator_etrs_oct_m
   use lalg_basic_oct_m
   use lda_u_oct_m
   use lda_u_io_oct_m
-  use loct_pointer_oct_m
   use math_oct_m
   use messages_oct_m
   use mesh_function_oct_m
@@ -44,7 +42,6 @@ module propagator_etrs_oct_m
   use states_oct_m
   use types_oct_m
   use v_ks_oct_m
-  use xc_oct_m
 
   implicit none
 
@@ -340,7 +337,7 @@ contains
     type(density_calc_t)  :: dens_calc
     type(profile_t), save :: phase_prof
     integer               :: pnp, iprange
-    FLOAT, allocatable    :: vold(:, :), imvold(:, :), vtauold(:, :), imvtauold(:, :)
+    FLOAT, allocatable    :: vold(:, :), vtauold(:, :)
     type(accel_mem_t)    :: phase_buff
 
     PUSH_SUB(td_aetrs)
@@ -374,7 +371,6 @@ contains
       call v_ks_calc_finish(ks, hm)
 
       if(hm%family_is_mgga_with_exc) then 
-        !TODO: This does not support complex scaling for the apparently
         call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc, vtau = hm%vtau)
         call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
            tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
@@ -385,7 +381,6 @@ contains
           vtauold(ip, ispin) =  CNST(0.5)*dt*(hm%vtau(ip, ispin) - vtauold(ip, ispin))
         end forall      
       else
-        !TODO: This does not support complex scaling for the apparently
         call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc)
         call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
            tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
@@ -410,7 +405,6 @@ contains
 
     end if
 
-    !TODO: This does not support complex scaling for the apparently
     if(hm%family_is_mgga_with_exc) then
       call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc, vtau = hm%vtau)
     else

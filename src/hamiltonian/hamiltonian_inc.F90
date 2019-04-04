@@ -213,7 +213,7 @@ subroutine X(hamiltonian_external)(this, mesh, psib, vpsib)
   type(batch_t),               intent(inout) :: vpsib
 
   FLOAT, dimension(:), pointer :: vpsl
-  FLOAT, allocatable :: vpsl_spin(:,:), Imvpsl_spin(:,:)
+  FLOAT, allocatable :: vpsl_spin(:,:)
   integer :: pnp, offset, ispin
   type(accel_mem_t) :: vpsl_buff
 

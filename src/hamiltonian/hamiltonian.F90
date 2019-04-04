@@ -22,7 +22,6 @@ module hamiltonian_oct_m
   use accel_oct_m
   use batch_oct_m
   use batch_ops_oct_m
-  use blas_oct_m
   use boundaries_oct_m
   use boundary_op_oct_m
   use comm_oct_m
@@ -34,19 +33,12 @@ module hamiltonian_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hardware_oct_m
-  use io_oct_m
-  use io_function_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
   use lda_u_oct_m
-  use math_oct_m
   use mesh_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
-  use mpi_oct_m
-  use mpi_lib_oct_m
   use oct_exchange_oct_m
   use parser_oct_m
   use par_vec_oct_m
@@ -58,17 +50,13 @@ module hamiltonian_oct_m
   use scdm_oct_m
   use scissor_oct_m
   use simul_box_oct_m
-  use smear_oct_m
-  use species_oct_m
   use states_oct_m
   use states_dim_oct_m
   use states_parallel_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
   use xc_oct_m
-  use xc_functl_oct_m
   use XC_F90(lib_m)
 
   implicit none
@@ -122,7 +110,6 @@ module hamiltonian_oct_m
     FLOAT, pointer :: vhartree(:) !< Hartree potential
     FLOAT, pointer :: vxc(:,:)    !< XC potential
     FLOAT, pointer :: vhxc(:,:)   !< XC potential + Hartree potential + Berry potential
-    FLOAT, pointer :: axc(:,:,:)  !< XC vector potential divided by c
     FLOAT, pointer :: vtau(:,:)   !< Derivative of e_XC w.r.t. tau
     FLOAT, pointer :: vberry(:,:) !< Berry phase potential from external E_field
 
@@ -136,7 +123,6 @@ module hamiltonian_oct_m
 
     integer :: theory_level    !< copied from sys%ks
     integer :: xc_family       !< copied from sys%ks
-    integer :: xc_flags        !< copied from sys%ks
     logical :: family_is_mgga_with_exc !< obtained from sys%ks
 
     type(epot_t) :: ep         !< handles the external potential
@@ -172,8 +158,6 @@ module hamiltonian_oct_m
     FLOAT :: current_time
     logical :: apply_packed  !< This is initialized by the StatesPack variable.
     
-    !> For the Rashba spin-orbit coupling
-    FLOAT :: rashba_coupling
     type(scdm_t)  :: scdm
 
     !> For the LDA+U 
@@ -200,14 +184,13 @@ module hamiltonian_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, xc_flags, family_is_mgga_with_exc)
+  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, family_is_mgga_with_exc)
     type(hamiltonian_t),                        intent(out)   :: hm
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
     type(states_t),                     target, intent(inout) :: st
     integer,                                    intent(in)    :: theory_level
     integer,                                    intent(in)    :: xc_family
-    integer,                                    intent(in)    :: xc_flags
     logical,                                    intent(in)    :: family_is_mgga_with_exc
 
     integer :: iline, icol
@@ -217,6 +200,8 @@ contains
 
     logical :: external_potentials_present
     logical :: kick_present
+    FLOAT :: rashba_coupling
+
 
     PUSH_SUB(hamiltonian_init)
     call profiling_in(prof, 'HAMILTONIAN_INIT')
@@ -224,7 +209,6 @@ contains
     ! make a couple of local copies
     hm%theory_level = theory_level
     hm%xc_family    = xc_family
-    hm%xc_flags     = xc_flags
     hm%family_is_mgga_with_exc = family_is_mgga_with_exc
     call states_dim_copy(hm%d, st%d)
 
@@ -250,7 +234,7 @@ contains
     !% State Phys.</i> <b>17</b>, 6031 (1984)]. This variable determines the strength
     !% of this perturbation, and has dimensions of energy times length.
     !%End
-    call parse_variable('RashbaSpinOrbitCoupling', M_ZERO, hm%rashba_coupling, units_inp%energy * units_inp%length)
+    call parse_variable('RashbaSpinOrbitCoupling', M_ZERO, rashba_coupling, units_inp%energy * units_inp%length)
     if(parse_is_defined('RashbaSpinOrbitCoupling')) then
       if(gr%sb%dim .ne. 2) then
         write(message(1),'(a)') 'Rashba spin-orbit coupling can only be used for two-dimensional systems.'
@@ -259,7 +243,7 @@ contains
       call messages_experimental('RashbaSpinOrbitCoupling')
     end if
 
-    call hamiltonian_base_init(hm%hm_base, hm%d%nspin, hm%mass, hm%rashba_coupling)
+    call hamiltonian_base_init(hm%hm_base, hm%d%nspin, hm%mass, rashba_coupling)
 
     ASSERT(associated(gr%der%lapl))
     hm%hm_base%kinetic => gr%der%lapl
@@ -275,7 +259,7 @@ contains
     SAFE_ALLOCATE(hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin))
     hm%vhxc(1:gr%mesh%np, 1:hm%d%nspin) = M_ZERO
 
-    nullify(hm%vhartree, hm%vxc, hm%vtau, hm%axc)
+    nullify(hm%vhartree, hm%vxc, hm%vtau)
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
 
       SAFE_ALLOCATE(hm%vhartree(1:gr%mesh%np_part))
@@ -431,7 +415,9 @@ contains
     call parse_variable('HamiltonianApplyPacked', .true., hm%apply_packed)
 
     ! StatesPack not yet implemented for some cases, see hamiltonian_apply_packed
-    st%d%pack_states = hamiltonian_apply_packed(hm, gr%mesh)
+    if(st%d%pack_states) then
+      st%d%pack_states = hamiltonian_apply_packed(hm, gr%mesh)
+    end if
 
     external_potentials_present = associated(hm%ep%v_static) .or. &
 				  associated(hm%ep%E_field)  .or. &
@@ -491,7 +477,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_phase
-      integer :: ip, ik, ip_inn, ip_bnd, sp, ip_global, ip_inner
+      integer :: ip, ik, sp, ip_global, ip_inner
       FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
 
       PUSH_SUB(hamiltonian_init.init_phase)
@@ -564,7 +550,6 @@ contains
     SAFE_DEALLOCATE_P(hm%vhartree)
     SAFE_DEALLOCATE_P(hm%vhxc)
     SAFE_DEALLOCATE_P(hm%vxc)
-    SAFE_DEALLOCATE_P(hm%axc)
     SAFE_DEALLOCATE_P(hm%vberry)
     SAFE_DEALLOCATE_P(hm%a_ind)
     SAFE_DEALLOCATE_P(hm%b_ind)
@@ -832,7 +817,7 @@ contains
 
     subroutine build_phase()
       integer :: ik, imat, nmat, max_npoints, offset
-      integer :: ip, ip_bnd, ip_inn, ip_global, ip_inner, sp
+      integer :: ip, ip_global, ip_inner, sp
       FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
       logical :: compute_phase_correction
 
@@ -1006,6 +991,8 @@ contains
     if(this%scissor%apply) apply = .false.
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
     if(associated(this%hm_base%phase) .and. accel_is_enabled()) apply = .false.
+    if(.not. this%hm_base%apply_projector_matrices .and. accel_is_enabled()) apply = .false.
+    if(mesh%use_curvilinear .and. accel_is_enabled()) apply = .false.
     
   end function hamiltonian_apply_packed
 
@@ -1207,7 +1194,6 @@ contains
 
     integer :: err, err2, isp
     character(len=12) :: filename
-    CMPLX, allocatable :: zv(:)
 
     PUSH_SUB(hamiltonian_load_vhxc)
 

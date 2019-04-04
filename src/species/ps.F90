@@ -56,6 +56,7 @@ module ps_oct_m
     ps_bound_niwfs,             &
     ps_end,                     &
     ps_has_density,             &
+    ps_has_nlcc,                &
     ps_density_volume
   
   integer, parameter, public :: &
@@ -424,7 +425,7 @@ contains
       end do
     end if
 
-    if(ps%nlcc) then
+    if(ps_has_nlcc(ps)) then
       call spline_der(ps%core, ps%core_der)
     end if
 
@@ -676,7 +677,7 @@ contains
         end do
       end do
       
-      if(ps%nlcc) then
+      if(ps_has_nlcc(ps)) then
         rmax = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold)
         call spline_filter_mask(ps%core, 0, rmax, gmax, alpha, gamma)
       end if
@@ -710,7 +711,7 @@ contains
         end do
       end do
       
-      if(ps%nlcc) then
+      if(ps_has_nlcc(ps)) then
         call spline_filter_bessel(ps%core, 0, gmax, alpha, beta_fs, rcut, beta_rs)
       end if
       
@@ -880,7 +881,7 @@ contains
     end if
 
     ! Non-linear core-corrections
-    if(ps%nlcc) then
+    if(ps_has_nlcc(ps)) then
       iunit = io_open(trim(dir)//'/nlcc', action='write')
       call spline_print(ps%core, iunit)
       call io_close(iunit)
@@ -1415,6 +1416,15 @@ contains
     has_density = ps%has_density
 
   end function ps_has_density
+
+  !---------------------------------------
+
+  pure logical function ps_has_nlcc(ps) result(has_nlcc)
+    type(ps_t), intent(in) :: ps
+
+    has_nlcc = ps%nlcc
+
+  end function ps_has_nlcc
   
   !---------------------------------------
   FLOAT function ps_density_volume(ps) result(volume)

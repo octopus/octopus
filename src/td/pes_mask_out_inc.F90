@@ -2194,7 +2194,7 @@ subroutine pes_mask_load(restart, mask, st, ierr)
   type(states_t),   intent(inout) :: st
   integer,          intent(out)   :: ierr
 
-  character(len=80) :: filename, path
+  character(len=80) :: filename
   integer :: itot, ik, ist, idim , np, err, err2, iunit, ll(3)
   character(len=128) :: lines(2)
   character(len=7) :: dummy

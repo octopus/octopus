@@ -19,18 +19,12 @@
 #include "global.h"
 
 module elf_oct_m
-  use cube_function_oct_m
-  use cube_oct_m
   use density_oct_m
   use derivatives_oct_m
-  use fft_oct_m
-  use fourier_space_oct_m
   use global_oct_m
   use grid_oct_m
-  use io_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use mpi_oct_m
   use parser_oct_m
   use profiling_oct_m
   use states_oct_m
