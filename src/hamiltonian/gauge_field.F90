@@ -269,13 +269,13 @@ contains
     POP_SUB(gauge_field_get_vec_pot_acc)
   end subroutine gauge_field_get_vec_pot_acc
 
-
   ! ---------------------------------------------------------
   subroutine gauge_field_propagate(this, dt, time)
     type(gauge_field_t),  intent(inout) :: this
     FLOAT,                intent(in)    :: dt
     FLOAT,                intent(in)    :: time
-
+    
+    logical, save :: warning_shown = .false.
     integer :: idim
 
     PUSH_SUB(gauge_field_propagate)
@@ -294,17 +294,18 @@ contains
 
     !In the case of a kick, the induced field could not be higher than the initial kick
     do idim = 1, this%ndim
-      if(this%vecpot_kick(idim) /= M_ZERO .and.  &
-         abs(this%vecpot(idim))> abs(this%vecpot_kick(idim))*1.01 .and. &
-          .not. this%kicktime > M_ZERO ) then
-        write(message(1),'(a)') 'It seems that the gauge-field is diverging.'
-        write(message(2),'(a)') 'You should probably check the propagation parameters.'
-        call messages_fatal(2)
+      if(.not. warning_shown .and. this%vecpot_kick(idim) /= M_ZERO .and.  &
+         abs(this%vecpot(idim))> abs(this%vecpot_kick(idim))*1.01 .and. .not. this%kicktime > M_ZERO ) then
+
+        warning_shown = .true.
+
+        write(message(1),'(a)') 'It seems that the gauge-field might be diverging. You should probably check'
+        write(message(2),'(a)') 'the simulation parameters, in particular the number of k-points.'
+        call messages_warning(2)
       end if
     end do
     POP_SUB(gauge_field_propagate)
   end subroutine gauge_field_propagate
-
 
   ! ---------------------------------------------------------
   subroutine gauge_field_propagate_vel(this, dt)

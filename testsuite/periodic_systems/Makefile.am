@@ -80,6 +80,9 @@ dist_share_DATA =                                \
 	16-sodium_chain_cylinder.02-unocc.inp             \
 	16-sodium_chain_cylinder.03-ground_state_disp.inp \
 	16-sodium_chain_cylinder.04-unocc_disp.inp        \
-	16-sodium_chain_cylinder.test
+	16-sodium_chain_cylinder.test                     \
+	17-aluminium.01-gs.inp                            \
+	17-aluminium.02-td.inp                            \
+	17-aluminium.test
 
 CLEANFILES = *~ *.bak
