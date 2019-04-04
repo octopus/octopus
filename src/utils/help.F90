@@ -19,10 +19,8 @@
 #include "global.h"
 
 program oct_help
-  
   use command_line_oct_m
   use global_oct_m
-  use messages_oct_m
   use varinfo_oct_m
 
   implicit none

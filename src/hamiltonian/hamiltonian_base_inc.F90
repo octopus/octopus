@@ -71,7 +71,6 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
   if(batch_is_packed(psib) .or. batch_is_packed(vpsib)) then
     ASSERT(batch_is_packed(psib))
     ASSERT(batch_is_packed(vpsib))
-    call batch_pack_was_modified(vpsib)
   end if
 
   select case(batch_status(psib))
@@ -353,8 +352,6 @@ subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
     call accel_finish()
   end select
 
-  call batch_pack_was_modified(psib)
-
   call profiling_out(phase_prof)
   POP_SUB(X(hamiltonian_base_phase))
 end subroutine X(hamiltonian_base_phase)
@@ -506,15 +503,14 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   integer :: ist, ip, iproj, imat, nreal, iprojection
   integer :: npoints, nprojs, nst, maxnpoints
   integer, allocatable :: ind(:)
-  R_TYPE :: aa, bb, cc, dd
   type(projector_matrix_t), pointer :: pmat
-  integer :: padnprojs, wgsize, lnprojs, size
+  integer :: padnprojs, lnprojs, size
   type(profile_t), save :: cl_prof
   type(accel_kernel_t), save, target :: ker_proj_bra, ker_proj_bra_phase
   type(accel_kernel_t), pointer :: kernel
   R_TYPE, allocatable :: lpsi(:, :)
 
-  integer :: block_size, sp, ep
+  integer :: block_size
   
   if(.not. this%apply_projector_matrices) return
 
@@ -781,7 +777,6 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
             end forall
           end do
           !$omp end parallel do
-          call batch_pack_was_modified(vpsib)
         else
           do ist = 1, nst
             !$omp parallel do
@@ -803,7 +798,6 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
             end forall
           end do
           !$omp end parallel do
-          call batch_pack_was_modified(vpsib)
         else
           do ist = 1, nst
             !$omp parallel do
@@ -920,7 +914,6 @@ contains
       call profiling_count_operations(nst*npoints*R_ADD)
     end do
 
-    call batch_pack_was_modified(vpsib)
     call accel_finish()
 
     if(this%projector_mix) then
@@ -1109,7 +1102,6 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
   type(projector_matrix_t), pointer :: pmat
   type(profile_t), save :: prof, reduce_prof
   integer :: wgsize, size
-  type(accel_kernel_t), save :: ker_proj_bra, ker_proj_bra_phase
 
   if(.not. this%apply_projector_matrices) return
 
@@ -1266,17 +1258,14 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
       end if
 
       do idir = 1, 3
-        
         do ip = 1, npoints
           forall(ist = 1:nst)
             commpsib(idir)%pack%X(psi)(ist, pmat%map(ip)) = commpsib(idir)%pack%X(psi)(ist, pmat%map(ip)) &
               - psi(ist, ip, idir) + pmat%position(idir, ip)*psi(ist, ip, 0)
           end forall
         end do
-        
-        call batch_pack_was_modified(commpsib(idir))
       end do
-
+      
       call profiling_count_operations(nst*npoints*9*R_ADD)
     end if
     

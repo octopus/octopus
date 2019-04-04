@@ -130,7 +130,9 @@ subroutine X(accel_write_buffer_3)(this, size, data, offset)
   integer,                optional, intent(in)    :: offset
 
   integer(8) :: fsize, offset_
+#ifdef HAVE_OPENCL
   integer :: ierr
+#endif
 
   PUSH_SUB(X(accel_write_buffer_3))
   call profiling_in(prof_write, "CL_WRITE_BUFFER")

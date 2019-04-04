@@ -20,13 +20,11 @@
 
 module hirshfeld_oct_m
   use derivatives_oct_m
-  use messages_oct_m
   use geometry_oct_m
   use global_oct_m
-  use io_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
-  use mpi_oct_m 
+  use messages_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use ps_oct_m
@@ -199,7 +197,6 @@ contains
     FLOAT,                     intent(out)   :: volume_ratio
 
     integer :: ip
-    FLOAT :: dens_ip, rr
     FLOAT, allocatable :: atom_density(:, :), hirshfeld_density(:)
 
     type(profile_t), save :: prof
@@ -240,7 +237,6 @@ contains
     FLOAT,                     intent(out)   :: ddensity(:)
 
     integer :: ip
-    FLOAT :: dens_ip, rr
     FLOAT, allocatable :: atom_density(:, :)
     type(profile_t), save :: prof   
  
@@ -276,13 +272,13 @@ contains
     FLOAT,                     intent(in)    :: density(:, :)
     FLOAT,                     intent(out)   :: dposition(:)
 
-    integer :: ip, idir, icell, jcell, isp, ipp
+    integer :: ip, idir, icell, jcell, isp
     FLOAT :: atom_dens, atom_der,rri, rrj, tdensity, pos_i(1:MAX_DIM), pos_j(1:MAX_DIM), rmax_i, rmax_j, &
              rij, rmax_isqu, rmax_jsqu
     FLOAT, allocatable :: grad(:, :), atom_density(:, :), atom_derivative(:, :)
     type(periodic_copy_t) :: pp_i, pp_j
     type(ps_t), pointer :: ps_i, ps_j
-    type(profile_t), save :: prof, prof2
+    type(profile_t), save :: prof
     FLOAT :: tmp, xxi(1:MAX_DIM), xxj(1:MAX_DIM)
 
     FLOAT :: TOL_SPACING
