@@ -68,8 +68,9 @@ module current_oct_m
 
 contains
 
-  subroutine current_init(this)
+  subroutine current_init(this, sb)
     type(current_t), intent(out)   :: this
+    type(simul_box_t), intent(in)  :: sb
 
     PUSH_SUB(current_init)
 
@@ -98,6 +99,9 @@ contains
     if(.not.varinfo_valid_option('CurrentDensity', this%method)) call messages_input_error('CurrentDensity')
     if(this%method /= CURRENT_GRADIENT_CORR) then
       call messages_experimental("CurrentDensity /= gradient_corrected")
+    end if
+    if(this%method == CURRENT_FAST .and. sb%nonorthogonal ) then
+      call messages_not_implemented("CurrentDensity = fast with non-orthogonal cells")
     end if
     
     POP_SUB(current_init)
