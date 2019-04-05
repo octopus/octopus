@@ -414,11 +414,6 @@ contains
     !%End
     call parse_variable('HamiltonianApplyPacked', .true., hm%apply_packed)
 
-    ! StatesPack not yet implemented for some cases, see hamiltonian_apply_packed
-    if(st%d%pack_states) then
-      st%d%pack_states = hamiltonian_apply_packed(hm, gr%mesh)
-    end if
-
     external_potentials_present = associated(hm%ep%v_static) .or. &
 				  associated(hm%ep%E_field)  .or. &
 				  associated(hm%ep%lasers)
@@ -976,9 +971,11 @@ contains
 
   ! -----------------------------------------------------------------
 
-  logical pure function hamiltonian_apply_packed(this, mesh) result(apply)
+  logical function hamiltonian_apply_packed(this, mesh) result(apply)
     type(hamiltonian_t),   intent(in) :: this
     type(mesh_t),          intent(in) :: mesh
+
+    logical, save :: warning_shown = .false.
 
     apply = this%apply_packed
     ! comment these out; they are tested in the test suite
@@ -988,11 +985,40 @@ contains
     !if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
     !if(this%family_is_mgga_with_exc)  apply = .false.
     ! keep these checks; currently no tests for these in the test suite
-    if(this%scissor%apply) apply = .false.
-    if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
-    if(associated(this%hm_base%phase) .and. accel_is_enabled()) apply = .false.
-    if(mesh%use_curvilinear .and. accel_is_enabled()) apply = .false.
-    
+    if(this%scissor%apply) then
+      if(.not. warning_shown) then
+        call messages_write('Cannot use CUDA or OpenCL as the scissor operator is enabled.')
+        call messages_warning()
+      end if
+      apply = .false.
+    end if
+
+    if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) then
+      if(.not. warning_shown) then
+        call messages_write('Cannot use CUDA or OpenCL as imaginary absorbing boundaries are enabled.')
+        call messages_warning()
+      end if
+      apply = .false.
+    end if
+
+    if(associated(this%hm_base%phase) .and. accel_is_enabled()) then
+      if(.not. warning_shown) then
+        call messages_write('Cannot use CUDA or OpenCL as phase is applied to the states.')
+        call messages_warning()
+      end if
+      apply = .false.
+    end if
+
+    if(mesh%use_curvilinear .and. accel_is_enabled()) then
+      if(.not. warning_shown) then
+        call messages_write('Cannot use CUDA or OpenCL as curvilinear coordinates are used.')
+        call messages_warning()
+      end if
+      apply = .false.
+    end if
+
+    warning_shown = .true.
+
   end function hamiltonian_apply_packed
 
   ! -----------------------------------------------------------------
