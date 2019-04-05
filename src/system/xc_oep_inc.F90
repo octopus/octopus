@@ -122,14 +122,15 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
         if(oep%level /= XC_OEP_FULL .or. first) then
           oep%vxc = M_ZERO
           call X(xc_KLI_solve) (gr%mesh, gr, hm, st, is, oep, first)
+          vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, 1)
         end if
         ! if asked, solve the full OEP equation
         if(oep%level == XC_OEP_FULL .and. (.not. first)) then
           call X(xc_oep_solve)(gr, hm, st, is, vxc(:,is), oep)
+          vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, is)
         end if
         if (is == nspin_) &
           first = .false.
-        vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np,1)
       end if
     end do spin2
   end if
@@ -169,10 +170,10 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   SAFE_ALLOCATE(     ss(1:gr%mesh%np))
   SAFE_ALLOCATE(vxc_old(1:gr%mesh%np))
   SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(orthogonal(1:st%nst))
+  SAFE_ALLOCATE(orthogonal(1:oep%noccst))
 
   if (oep%has_photons) then
-    SAFE_ALLOCATE(phi1(1:gr%mesh%np,1:st%d%dim,1:st%nst))
+    SAFE_ALLOCATE(phi1(1:gr%mesh%np,1:st%d%dim,1:oep%noccst))
   end if
 
   vxc_old(1:gr%mesh%np) = vxc(1:gr%mesh%np)
@@ -193,18 +194,18 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   end if
 
   ! fix xc potential (needed for Hpsi)
-  vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np) + oep%vxc(1:gr%mesh%np,1)
+  vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np) + oep%vxc(1:gr%mesh%np, is)
 
   do iter = 1, oep%scftol%max_iter
     ! iteration over all states
     ss = M_ZERO
-    do ist = 1, oep%eigen_n + 1 !only over occupied states
+    do ist = 1, oep%noccst !only over occupied states
 
       call states_get_state(st, gr%mesh, ist, is, psi)
 
       ! evaluate right-hand side
-      vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np, 1))
-      bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, 1) - (vxc_bar - oep%uxc_bar(ist, is)))* &
+      vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np, is))
+      bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, is) - (vxc_bar - oep%uxc_bar(ist, is)))* &
         R_CONJ(psi(:, 1)) + oep%X(lxc)(1:gr%mesh%np, ist, is)
 
       if (oep%has_photons) &
@@ -238,30 +239,30 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
 
 
     if ((oep%mixing_scheme == OEP_MIXING_SCHEME_CONST)) then
-      oep%vxc(1:gr%mesh%np,1) = oep%vxc(1:gr%mesh%np,1) + oep%mixing*ss(1:gr%mesh%np)
+      oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)
     else if (oep%mixing_scheme == OEP_MIXING_SCHEME_DENS) then
-      oep%vxc(1:gr%mesh%np,1) = oep%vxc(1:gr%mesh%np,1) + oep%mixing*ss(1:gr%mesh%np)/st%rho(1:gr%mesh%np,is)
+      oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)/st%rho(1:gr%mesh%np,is)
     else if (oep%mixing_scheme == OEP_MIXING_SCHEME_BB) then
       if (dmf_nrm2(gr%mesh, oep%vxc_old(1:gr%mesh%np,is)) > M_EPSILON ) then ! do not do it for the first run
-        oep%mixing = -dmf_dotp(gr%mesh, oep%vxc(1:gr%mesh%np,1) - oep%vxc_old(1:gr%mesh%np,is), ss - oep%ss_old) &
+        oep%mixing = -dmf_dotp(gr%mesh, oep%vxc(1:gr%mesh%np,is) - oep%vxc_old(1:gr%mesh%np,is), ss - oep%ss_old) &
           / dmf_dotp(gr%mesh, ss - oep%ss_old, ss - oep%ss_old)
       end if
 
       write(message(1), '(a,es14.6,a,es14.8)') "Info: oep%mixing:", oep%mixing, " norm2ss: ", dmf_nrm2(gr%mesh, ss)
       call messages_info(1)
 
-      oep%vxc_old(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,1)
+      oep%vxc_old(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is)
       oep%ss_old(1:gr%mesh%np) = ss(1:gr%mesh%np)
-      oep%vxc(1:gr%mesh%np,1) = oep%vxc(1:gr%mesh%np,1) + oep%mixing*ss(1:gr%mesh%np)
+      oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)
     end if
 
-    do ist = 1, st%nst
+    do ist = 1, oep%noccst
       if(oep%eigen_type(ist) == 2) then
         call states_get_state(st, gr%mesh, ist, is, psi)
-        vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np,1))
+        vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np,is))
         if (oep%has_photons) &
           call X(xc_oep_pt_uxcbar)(gr, st, is, oep, phi1(:,:,ist), ist, vxc_bar)
-        oep%vxc(1:gr%mesh%np,1) = oep%vxc(1:gr%mesh%np,1) - (vxc_bar - oep%uxc_bar(ist,is))
+        oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) - (vxc_bar - oep%uxc_bar(ist,is))
       end if
     end do
 

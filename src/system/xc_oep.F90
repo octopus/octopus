@@ -85,6 +85,7 @@ module xc_oep_oct_m
     type(photon_mode_t)   :: pt
     FLOAT                 :: norm2ss
     FLOAT,   pointer      :: vxc_old(:,:), ss_old(:)
+    integer               :: noccst
   end type xc_oep_t
 
   type(profile_t), save ::      &
@@ -195,8 +196,8 @@ contains
         if (oep%mixing_scheme == OEP_MIXING_SCHEME_BB) then
           SAFE_ALLOCATE(oep%vxc_old(1:gr%mesh%np,st%d%ispin))
           SAFE_ALLOCATE(oep%ss_old(1:gr%mesh%np))
-          oep%vxc_old(1:gr%mesh%np,1) = M_ZERO
-          oep%ss_old(1:gr%mesh%np) = M_ZERO
+          oep%vxc_old = M_ZERO
+          oep%ss_old = M_ZERO
         end if
 
         oep%norm2ss = M_ZERO
@@ -211,18 +212,20 @@ contains
       call xc_oep_SpinFactor(oep, st%d%nspin)
 
       ! This variable will keep vxc across iterations
-      if (st%d%ispin==3) then !MG150512: temporary solution, not so elegant (just not to touch previous source)
+      if ((st%d%ispin==3) .or. oep%level == XC_OEP_FULL) then
         SAFE_ALLOCATE(oep%vxc(1:gr%mesh%np,st%d%nspin))
       else
         SAFE_ALLOCATE(oep%vxc(1:gr%mesh%np,1:1))
       end if
+      oep%vxc = M_ZERO
+
       ! when performing full OEP, we need to solve a linear equation
       if((oep%level == XC_OEP_FULL).or.(oep%has_photons)) then 
         call scf_tol_init(oep%scftol, st%qtot, def_maximumiter=10)
         call linear_solver_init(oep%solver, gr, states_are_real(st))
         call lr_init(oep%lr)
         if(oep%has_photons) then
-          call lr_init(oep%pt%lr)        
+          call lr_init(oep%pt%lr)
         end if
       end if
 
@@ -362,6 +365,12 @@ contains
       end if
     end do
     oep%eigen_n = oep%eigen_n - 1
+
+    ! find how many states are occupied.
+    oep%noccst = 0
+    do ist = 1, st%nst
+      if(st%occ(ist, is) > M_EPSILON) oep%noccst = ist
+    end do
 
     SAFE_DEALLOCATE_A(eigenval)
     SAFE_DEALLOCATE_A(occ)

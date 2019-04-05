@@ -41,11 +41,11 @@ subroutine X(xc_oep_pt_phi) (gr, hm, st, is, oep, phi1)
     oep%pt%ex = M_ZERO
   end if
 
-  do ist = st%st_start, oep%eigen_n + 1
+  do ist = st%st_start, oep%noccst
     call states_get_state(st, gr%mesh, ist, is, psiii)
     rhs(:,1) = -oep%pt%lambda_array(1)*sqrt(M_HALF*oep%pt%omega_array(1))*oep%pt%pol_dipole_array(:,1)*psiii(:,1)
 
-    do kst = st%st_start, oep%eigen_n + 1
+    do kst = st%st_start, oep%noccst
       call states_get_state(st, gr%mesh, kst, is, psikk)
       rhs_kkbar = X(mf_dotp)(gr%mesh, R_CONJ(psikk(:,1)), rhs(:,1))
       rhs(:,1) = rhs(:,1) - rhs_kkbar * psikk(:,1)
@@ -75,7 +75,7 @@ subroutine X(xc_oep_pt_phi) (gr, hm, st, is, oep, phi1)
                 R_CONJ(oep%pt%pol_dipole_array(:,1)*psiii(:,1)), &
                 oep%pt%pol_dipole_array(:,1)*psiii(:,1))
 
-    do kst = st%st_start, oep%eigen_n + 1
+    do kst = st%st_start, oep%noccst
       call states_get_state(st, gr%mesh, kst, is, psikk)
       kkopii = oep%pt%lambda_array(1)*X(mf_dotp)(gr%mesh, R_CONJ(psiii(:,1)), &
         oep%pt%pol_dipole_array(:,1)*psikk(:,1))
@@ -121,7 +121,7 @@ subroutine X(xc_oep_pt_rhs) (gr, st, is, oep, phi1, ist, rhs)
   aa(:,1) = aa(:,1) + sqrt(M_HALF*oep%pt%omega_array(1))*oep%pt%lambda_array(1)*oep%pt%pol_dipole_array(:,1) &
             *R_CONJ(phi1(:, 1, ist))
 
-  do kst = st%st_start, oep%eigen_n + 1
+  do kst = st%st_start, oep%noccst
     call states_get_state(st, gr%mesh, kst, is, psikk)
     kkopii = oep%pt%lambda_array(1)*X(mf_dotp)(gr%mesh, R_CONJ(psiii(:,1)), &
       oep%pt%pol_dipole_array(:,1)*psikk(:,1))
@@ -131,8 +131,7 @@ subroutine X(xc_oep_pt_rhs) (gr, st, is, oep, phi1, ist, rhs)
 
             
   if (ist/=(oep%eigen_n + 1) .or. (oep%level == XC_OEP_FULL)) then
-    abar = X(mf_dotp)(gr%mesh,  aa(:,1), &
-     psiii(:,1))
+    abar = X(mf_dotp)(gr%mesh,  aa(:,1), psiii(:,1))
     aa(:,1) = aa(:,1) - abar*R_CONJ(psiii(:,1))
   end if
 
@@ -198,7 +197,7 @@ subroutine X(xc_oep_pt_uxcbar) (gr, st, is, oep, phi1, ist, vxbar)
   result1 = sqrt(M_HALF*oep%pt%omega_array(1))*X(mf_dotp)(gr%mesh, R_CONJ(phi1(:,1)), aa(:,1))
   result1 = result1 + M_HALF*dmf_dotp(gr%mesh, R_REAL(aa(:,1)), R_REAL(aa(:,1)))
 
-   do kst = st%st_start, oep%eigen_n + 1
+   do kst = st%st_start, oep%noccst
      call states_get_state(st, gr%mesh, kst, is, psikk)
      kkopii = oep%pt%lambda_array(1)*X(mf_dotp)(gr%mesh, R_CONJ(psiii(:,1)), &
      oep%pt%pol_dipole_array(:,1)*psikk(:,1))

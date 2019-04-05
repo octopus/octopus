@@ -591,7 +591,9 @@ contains
         else
           call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
           if (ks%oep%level == 5) then
-            ks%oep%vxc(:,1) = hm%vhxc(:,1) - hm%vhartree(:)
+            do is = 1, st%d%nspin
+              ks%oep%vxc(:,is) = hm%vhxc(:,is) - hm%vhartree(:)
+            end do
           end if
           call v_ks_calc(ks, hm, st, geo)
         end if
