@@ -1580,7 +1580,7 @@ end subroutine X(states_me_one_body)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex, lindex, twoint)
+subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex, lindex, twoint, phase)
   type(grid_t),     intent(inout)           :: gr
   type(states_t),   intent(in)              :: st
   integer,          intent(in)              :: st_min, st_max
@@ -1589,6 +1589,7 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
   integer,          intent(out)             :: kindex(:,:)
   integer,          intent(out)             :: lindex(:,:)
   R_TYPE,           intent(out)             :: twoint(:)  !
+  CMPLX, optional,  intent(in)              :: phase(:,:)
 
   integer :: ist, jst, kst, lst, ijst, klst, ikpt, jkpt, kkpt, lkpt
   integer :: ist_global, jst_global, kst_global, lst_global, nst, nst_tot
@@ -1616,11 +1617,19 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
   nst_tot = (st_max-st_min+1)*st%d%nik
   nst = (st_max-st_min+1)
 
+  print *, present(phase)
+
   do ist_global = 1, nst_tot
     ist = mod(ist_global-1, nst) +1
     ikpt = (ist_global-ist)/nst+1
 
     call states_get_state(st, gr%mesh, ist+st_min-1, ikpt, psii)
+
+#ifdef R_TCOMPLEX
+    if(present(phase)) then
+       call states_set_phase(st%d, psii, phase(1:gr%mesh%np, ikpt), gr%mesh%np, .false.)
+    end if
+#endif
 
     do jst_global = 1, nst_tot
       jst = mod(jst_global-1, nst) +1
@@ -1630,6 +1639,12 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
       ijst=ijst+1
 
       call states_get_state(st, gr%mesh, jst+st_min-1, jkpt, psij)
+#ifdef R_TCOMPLEX
+      if(present(phase)) then
+         call states_set_phase(st%d, psij, phase(1:gr%mesh%np, jkpt), gr%mesh%np, .false.)
+      end if
+#endif
+
 
       nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np, 1))*psij(1:gr%mesh%np, 1)
       call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
@@ -1640,6 +1655,11 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
         kkpt = (kst_global-kst)/nst+1
 
         call states_get_state(st, gr%mesh, kst+st_min-1, kkpt, psik)
+#ifdef R_TCOMPLEX
+        if(present(phase)) then
+           call states_set_phase(st%d, psik, phase(1:gr%mesh%np, kkpt), gr%mesh%np, .false.)
+        end if
+#endif
 
         do lst_global = 1, nst_tot
           lst = mod(lst_global-1, nst) +1
@@ -1650,8 +1670,13 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
           if(klst > ijst) cycle
 
           call states_get_state(st, gr%mesh, lst+st_min-1, lkpt, psil)
+#ifdef R_TCOMPLEX
+          if(present(phase)) then
+            call states_set_phase(st%d, psil, phase(1:gr%mesh%np, lkpt), gr%mesh%np, .false.)
+          end if
+#endif
 
-          psil(1:gr%mesh%np, 1) = vv(1:gr%mesh%np)*psik(1:gr%mesh%np, 1)*R_CONJ(psil(1:gr%mesh%np, 1))
+          psil(1:gr%mesh%np, 1) = vv(1:gr%mesh%np)*R_CONJ(psik(1:gr%mesh%np, 1))*psil(1:gr%mesh%np, 1)
 
           me = X(mf_integrate)(gr%mesh, psil(:, 1))
 

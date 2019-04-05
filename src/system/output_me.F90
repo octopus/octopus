@@ -285,7 +285,7 @@ contains
       if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization")
       ! how to do this properly? states_matrix
       iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
-      write(iunit, '(a)') '#(n1,k1) (n2,k2) (n3,k3) (n4,k4) <n1-k1, n2-k2|n3-k3, n4-k4>'
+      write(iunit, '(a)') '#(n1,k1) (n2,k2) (n3,k3) (n4,k4) (n1-k1, n2-k2|n3-k3, n4-k4)'
 
       id = st%d%nik*this%nst*(st%d%nik*this%nst+1)*(st%d%nik**2*this%nst**2+st%d%nik*this%nst+2)/8
       SAFE_ALLOCATE(iindex(1:2, 1:id))
@@ -302,7 +302,16 @@ contains
         SAFE_DEALLOCATE_A(dtwoint)
       else
         SAFE_ALLOCATE(ztwoint(1:id))
-        call zstates_me_two_body(gr, st, this%st_start, this%st_end, iindex, jindex, kindex, lindex, ztwoint)
+        if(associated(hm%hm_base%phase)) then
+          !We cannot pass the phase array like that if kpt%start is not 1.  
+          ASSERT(.not.st%d%kpt%parallel) 
+          call zstates_me_two_body(gr, st, this%st_start, this%st_end, &
+                     iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase) 
+        else
+          call zstates_me_two_body(gr, st, this%st_start, this%st_end, &
+                     iindex, jindex, kindex, lindex, ztwoint)
+        end if
+
         do ll = 1, id
           write(iunit, '(4(i4,i5),2e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), ztwoint(ll)
         enddo
