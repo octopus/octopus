@@ -123,7 +123,6 @@ module hamiltonian_base_oct_m
   type projection_t
     FLOAT, allocatable     :: dprojection(:, :)
     CMPLX, allocatable     :: zprojection(:, :)
-    type(accel_mem_t)     :: buff_projection
   end type projection_t
 
   integer, parameter, public ::          &
@@ -142,6 +141,10 @@ module hamiltonian_base_oct_m
     FIELD_UNIFORM_VECTOR_POTENTIAL = 4,    &
     FIELD_UNIFORM_MAGNETIC_FIELD   = 8
   
+  ! declare module wide to be retained over several applications of the hamiltonian
+  type(accel_mem_t), target, private :: buff_projection
+  logical, private :: projection_buffer_initialized
+  integer, private :: projection_buffer_size
 
   type(profile_t), save :: prof_vnlpsi_start, prof_vnlpsi_finish, prof_magnetic, prof_vlpsi, prof_gather, prof_scatter, &
     prof_matelement, prof_matelement_gather, prof_matelement_reduce
@@ -164,6 +167,9 @@ contains
     this%apply_projector_matrices = .false.
     this%nprojector_matrices = 0
 
+    projection_buffer_initialized = .false.
+    projection_buffer_size = -1
+
     POP_SUB(hamiltonian_base_init)
   end subroutine hamiltonian_base_init
 
@@ -175,6 +181,11 @@ contains
 
     if(allocated(this%potential) .and. accel_is_enabled()) then
       call accel_release_buffer(this%potential_opencl)
+    end if
+
+    ! deallocate buffer on GPU
+    if (projection_buffer_initialized .and. accel_is_enabled()) then
+      call accel_release_buffer(buff_projection)
     end if
     
     SAFE_DEALLOCATE_A(this%potential)

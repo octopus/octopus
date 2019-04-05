@@ -991,7 +991,6 @@ contains
     if(this%scissor%apply) apply = .false.
     if(this%bc%abtype == IMAGINARY_ABSORBING .and. accel_is_enabled()) apply = .false.
     if(associated(this%hm_base%phase) .and. accel_is_enabled()) apply = .false.
-    if(.not. this%hm_base%apply_projector_matrices .and. accel_is_enabled()) apply = .false.
     if(mesh%use_curvilinear .and. accel_is_enabled()) apply = .false.
     
   end function hamiltonian_apply_packed

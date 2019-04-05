@@ -367,7 +367,8 @@ contains
     ! no push_sub, called too frequently
     
     ok = (this%nst_linear >= 1) .and. associated(this%states_linear)
-    ok = ubound(this%states_linear, dim = 1) == this%nst_linear
+    ! deactivate this to make temporary batches work
+    ! ok = ubound(this%states_linear, dim = 1) == this%nst_linear
     if(ok .and. .not. batch_is_packed(this)) then
       ! ensure that either all real are associated, or all cplx are associated
       all_assoc = .true.

@@ -891,7 +891,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine v_a_xc(hm)
-      type(hamiltonian_t),  intent(in) :: hm 
+      type(hamiltonian_t),  intent(in) :: hm
 
       type(profile_t), save :: prof
       FLOAT :: factor
