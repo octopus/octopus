@@ -93,6 +93,7 @@ module batch_oct_m
     integer                        :: nst
     integer                        :: current
     integer                        :: dim
+    integer                        :: max_size
 
     integer                        :: ndims
     integer,             pointer   :: ist_idim_index(:, :)
@@ -309,7 +310,8 @@ contains
       nullify(this%states_linear(ist)%spsi)
       nullify(this%states_linear(ist)%cpsi)
     end do
-    
+
+    this%max_size = 0
     this%in_buffer_count = 0
     this%status = BATCH_NOT_PACKED
 
@@ -347,6 +349,7 @@ contains
       nullify(this%states_linear(ist)%cpsi)
     end do
 
+    this%max_size = 0
     this%in_buffer_count = 0
     this%status = BATCH_NOT_PACKED
 
