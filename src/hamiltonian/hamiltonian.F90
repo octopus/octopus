@@ -1003,7 +1003,7 @@ contains
 
     if(associated(this%hm_base%phase) .and. accel_is_enabled()) then
       if(.not. warning_shown) then
-        call messages_write('Cannot use CUDA or OpenCL as phase is applied to the states.')
+        call messages_write('Cannot use CUDA or OpenCL as a phase is applied to the states.')
         call messages_warning()
       end if
       apply = .false.
