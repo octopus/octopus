@@ -93,6 +93,7 @@ module batch_oct_m
     integer                        :: nst
     integer                        :: current
     integer                        :: dim
+    integer                        :: max_size
 
     integer                        :: ndims
     integer,             pointer   :: ist_idim_index(:, :)
@@ -309,7 +310,8 @@ contains
       nullify(this%states_linear(ist)%spsi)
       nullify(this%states_linear(ist)%cpsi)
     end do
-    
+
+    this%max_size = 0
     this%in_buffer_count = 0
     this%status = BATCH_NOT_PACKED
 
@@ -347,6 +349,7 @@ contains
       nullify(this%states_linear(ist)%cpsi)
     end do
 
+    this%max_size = 0
     this%in_buffer_count = 0
     this%status = BATCH_NOT_PACKED
 
@@ -499,21 +502,7 @@ contains
   integer pure function batch_max_size(this) result(size)
     type(batch_t),      intent(in)    :: this
 
-    integer :: ist
-
-    size = 0
-    do ist = 1, this%nst_linear
-      if(associated(this%states_linear(ist)%dpsi)) then
-        size = max(size, ubound(this%states_linear(ist)%dpsi, dim = 1))
-      else if(associated(this%states_linear(ist)%zpsi)) then
-        size = max(size, ubound(this%states_linear(ist)%zpsi, dim = 1))
-      else if(associated(this%states_linear(ist)%spsi)) then
-        size = max(size, ubound(this%states_linear(ist)%spsi, dim = 1))
-      else if(associated(this%states_linear(ist)%cpsi)) then
-        size = max(size, ubound(this%states_linear(ist)%cpsi, dim = 1))
-      end if
-    end do
-
+    size = this%max_size
   end function batch_max_size
 
   ! ----------------------------------------------------
