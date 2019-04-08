@@ -100,6 +100,9 @@ contains
     if(this%method /= CURRENT_GRADIENT_CORR) then
       call messages_experimental("CurrentDensity /= gradient_corrected")
     end if
+    !The call to individual derivatives_perfom routines returns the derivatives along
+    !the primitive axis in case of non-orthogonal cells, whereas the code expects derivatives
+    !along the Cartesian axis.
     if(this%method == CURRENT_FAST .and. sb%nonorthogonal ) then
       call messages_not_implemented("CurrentDensity = fast with non-orthogonal cells")
     end if
@@ -177,6 +180,10 @@ contains
             call batch_copy_data(der%mesh%np_part, st%group%psib(ib, ik), epsib)
           end if
 
+          !The call to individual derivatives_perfom routines returns the derivatives along
+          !the primitive axis in case of non-orthogonal cells, whereas the code expects derivatives
+          !along the Cartesian axis.
+          ASSERT(.not.der%mesh%sb%nonorthogonal)
           do idir = 1, der%mesh%sb%dim
             call batch_copy(st%group%psib(ib, ik), commpsib(idir))
             call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
