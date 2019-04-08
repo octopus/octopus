@@ -68,8 +68,9 @@ module current_oct_m
 
 contains
 
-  subroutine current_init(this)
+  subroutine current_init(this, sb)
     type(current_t), intent(out)   :: this
+    type(simul_box_t), intent(in)  :: sb
 
     PUSH_SUB(current_init)
 
@@ -98,6 +99,12 @@ contains
     if(.not.varinfo_valid_option('CurrentDensity', this%method)) call messages_input_error('CurrentDensity')
     if(this%method /= CURRENT_GRADIENT_CORR) then
       call messages_experimental("CurrentDensity /= gradient_corrected")
+    end if
+    !The call to individual derivatives_perfom routines returns the derivatives along
+    !the primitive axis in case of non-orthogonal cells, whereas the code expects derivatives
+    !along the Cartesian axis.
+    if(this%method == CURRENT_FAST .and. sb%nonorthogonal ) then
+      call messages_not_implemented("CurrentDensity = fast with non-orthogonal cells")
     end if
     
     POP_SUB(current_init)
@@ -173,6 +180,10 @@ contains
             call batch_copy_data(der%mesh%np_part, st%group%psib(ib, ik), epsib)
           end if
 
+          !The call to individual derivatives_perfom routines returns the derivatives along
+          !the primitive axis in case of non-orthogonal cells, whereas the code expects derivatives
+          !along the Cartesian axis.
+          ASSERT(.not.der%mesh%sb%nonorthogonal)
           do idir = 1, der%mesh%sb%dim
             call batch_copy(st%group%psib(ib, ik), commpsib(idir))
             call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
