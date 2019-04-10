@@ -786,7 +786,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
       if(.not. allocated(this%projector_phases)) then    
         ! and copy the points from the local buffer to its position
         if(batch_is_packed(vpsib)) then
-          !$omp parallel do private(ip, ist)
+          !$omp parallel do private(ip, ist) if(.not. this%projector_self_overlap)
           do ip = 1, npoints
             forall(ist = 1:nst)
               vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) + psi(ist, ip)
@@ -795,7 +795,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
           !$omp end parallel do
         else
           do ist = 1, nst
-            !$omp parallel do
+            !$omp parallel do if(.not. this%projector_self_overlap)
             do ip = 1, npoints
               vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + psi(ist, ip)
             end do
@@ -805,7 +805,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
       else
         ! and copy the points from the local buffer to its position
         if(batch_is_packed(vpsib)) then
-          !$omp parallel do private(ip, ist, phase)
+          !$omp parallel do private(ip, ist, phase) if(.not. this%projector_self_overlap)
           do ip = 1, npoints
             phase = conjg(this%projector_phases(ip, imat, ik))
             forall(ist = 1:nst)
@@ -816,7 +816,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
           !$omp end parallel do
         else
           do ist = 1, nst
-            !$omp parallel do
+            !$omp parallel do if(.not. this%projector_self_overlap)
             do ip = 1, npoints
               vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) &
                   + psi(ist, ip)*conjg(this%projector_phases(ip, imat, ik))
