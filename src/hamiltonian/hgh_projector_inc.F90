@@ -160,6 +160,10 @@ subroutine X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
 
   call profiling_in(prof, "HGH_PROJECT_KET")
 
+#ifndef R_TCOMPLEX
+  ASSERT(reltype == 0)
+#endif
+
   ! This routine uses blocking to optimize cache usage. One block of
   ! |phi> is loaded in cache L1 and then then we calculate the dot
   ! product of it with the corresponding blocks of |psi_k>, next we
@@ -194,15 +198,19 @@ subroutine X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
           zweight(ii,1,mm) =  zweight(ii,1,mm) + mm*hgh_p(mm)%k(ii, jj)*uvpsi(1, jj, mm)
           zweight(ii,2,mm) =  zweight(ii,2,mm) - mm*hgh_p(mm)%k(ii, jj)*uvpsi(2, jj, mm)
 
+! this is needed here for the proper type conversion of the integer argument to sqrt
+! this part should be executed anyway only for complex wavefunctions (see earlier assert)
+#ifdef R_TCOMPLEX
           if(mm < ll) then 
-            zweight(ii,1,mm) =  zweight(ii,1,mm) + hgh_p(mm)%k(ii, jj)*sqrt(real(ll*(ll+1)-mm*(mm+1)))&
+            zweight(ii,1,mm) =  zweight(ii,1,mm) + hgh_p(mm)%k(ii, jj)*sqrt(R_REAL(ll*(ll+1)-mm*(mm+1)))&
                * uvpsi(2, jj, mm+1) 
           end if
 
           if(-mm < ll) then
-            zweight(ii,2,mm) =  zweight(ii,2,mm) + hgh_p(mm)%k(ii, jj)*sqrt(real(ll*(ll+1)-mm*(mm-1)))&
+            zweight(ii,2,mm) =  zweight(ii,2,mm) + hgh_p(mm)%k(ii, jj)*sqrt(R_REAL(ll*(ll+1)-mm*(mm-1)))&
                * uvpsi(1, jj, mm-1)
           end if
+#endif
 
         end do
       end do

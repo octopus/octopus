@@ -6,9 +6,10 @@ TestGroups : long-run, pseudopotentials
 Enabled    : Yes
 
 Input: 05-carbon_dojo_pbesol.01-gs.inp
-Precision: 0.00011
+Precision: 0.0005
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -155.19847590
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -155.198288155
+Precision: 0.00011
 match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ;  -14.529881
 match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ;    1.000000
 match ; Eigenvalue   [1dn] ; GREPFIELD(static/info, '1   dn', 3) ;  -11.667230

@@ -27,12 +27,12 @@ module run_oct_m
   use ground_state_oct_m
   use hamiltonian_oct_m
   use invert_ks_oct_m
-  use parser_oct_m
   use messages_oct_m
   use mpi_debug_oct_m
   use memory_oct_m
   use multicomm_oct_m
   use opt_control_oct_m
+  use parser_oct_m
   use phonons_fd_oct_m
   use phonons_lr_oct_m
   use poisson_oct_m
@@ -161,8 +161,7 @@ contains
     call system_init(sys)
 
     call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
-      sys%ks%xc_family, sys%ks%xc_flags, &
-      family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+      sys%ks%xc_family, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
     
     if (hm%pcm%run_pcm) then 
       if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then

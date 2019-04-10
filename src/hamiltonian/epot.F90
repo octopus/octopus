@@ -27,32 +27,20 @@ module epot_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use index_oct_m
-  use io_oct_m
   use ion_interaction_oct_m
   use kick_oct_m
-  use lalg_adv_oct_m
-  use lalg_basic_oct_m
   use lasers_oct_m
-  use linear_response_oct_m
-  use loct_math_oct_m
-  use logrid_oct_m
   use mesh_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use multigrid_oct_m
   use parser_oct_m
-  use periodic_copy_oct_m
   use poisson_oct_m
-  use poisson_cutoff_oct_m
   use profiling_oct_m
   use projector_oct_m
   use ps_oct_m
   use simul_box_oct_m
   use species_oct_m
   use species_pot_oct_m
-  use splines_oct_m
   use spline_filter_oct_m
   use states_oct_m
   use states_dim_oct_m
@@ -754,7 +742,7 @@ contains
 
     integer :: ip
     FLOAT :: radius
-    FLOAT, allocatable :: vl(:), Imvl(:), rho(:), Imrho(:)
+    FLOAT, allocatable :: vl(:), rho(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
 

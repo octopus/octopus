@@ -25,7 +25,6 @@ program dielectric_function
   use global_oct_m
   use io_oct_m
   use lalg_adv_oct_m
-  use loct_oct_m
   use messages_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -108,7 +107,7 @@ program dielectric_function
   call io_skip_header(in_file)
   call spectrum_count_time_steps(in_file, time_steps, dt)
 
-  if(parse_is_defined('GaugeFieldDelay')) then
+  if(parse_is_defined('TransientAbsorptionReference')) then
     !%Variable TransientAbsorptionReference
     !%Type string
     !%Default "."

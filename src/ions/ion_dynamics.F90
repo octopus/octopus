@@ -22,10 +22,7 @@ module ion_dynamics_oct_m
   use iso_c_binding
   use geometry_oct_m
   use global_oct_m
-  use io_oct_m
-  use loct_oct_m
   use loct_math_oct_m
-  use math_oct_m
   use messages_oct_m
   use mpi_oct_m
   use parser_oct_m

@@ -33,9 +33,7 @@ module output_me_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
   use parser_oct_m
-  use poisson_oct_m
   use profiling_oct_m
-  use projector_oct_m
   use simul_box_oct_m
   use states_oct_m
   use states_calc_oct_m

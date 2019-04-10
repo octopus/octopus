@@ -151,20 +151,23 @@ subroutine X(subspace_diag_scalapack)(der, st, hm, ik, eigenval, psi, diff)
   FLOAT, optional,     intent(out)   :: diff(:)
  
 #ifdef HAVE_SCALAPACK
-  R_TYPE, allocatable :: hs(:, :), hpsi(:, :, :), evectors(:, :), work(:)
-  R_TYPE              :: rttmp
-  integer             :: ist, size, lwork
+  R_TYPE, allocatable :: hs(:, :), hpsi(:, :, :), evectors(:, :)
+  integer             :: ist, size
   integer :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), hs_desc(BLACS_DLEN), info
   integer :: nbl, nrow, ncol, ip, idim
   type(batch_t) :: psib, hpsib
   type(profile_t), save :: prof_diag, prof_gemm1, prof_gemm2
+#ifdef HAVE_ELPA
+  class(elpa_t), pointer :: elpa
+#else
+  integer :: lwork
+  R_TYPE :: rttmp
+  R_TYPE, allocatable :: work(:)
 #ifdef R_TCOMPLEX
   integer :: lrwork
   CMPLX, allocatable :: rwork(:)
   CMPLX :: ftmp
 #endif
-#ifdef HAVE_ELPA
-  class(elpa_t), pointer :: elpa
 #endif
   
   PUSH_SUB(X(subspace_diag_scalapack))

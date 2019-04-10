@@ -11,7 +11,7 @@ Enabled    : Yes
 Processors : 4
 Input      : 19-td_move_ions.01-gs.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -29.63862020
+match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -29.63840675
 
 # time-propagation with moving ions
 Processors : 4
