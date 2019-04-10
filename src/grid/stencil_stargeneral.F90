@@ -45,9 +45,9 @@ contains
     
     integer :: dim
     FLOAT   :: vec1(1:3), vec2(1:3), theta(3)
-    integer :: arm(1:3)
+    integer :: arm(1:3), order(27)
     integer :: ii, jj, kk
-    FLOAT   :: norm, min_norm(3)
+    FLOAT   :: norm, min_norm(3), norms(27)
     
     PUSH_SUB(stencil_stargeneral_get_arms)  
 
@@ -135,6 +135,14 @@ contains
           norm = sum(vec1(1:3)**2)
 
           if(norm < min_norm(1)) then
+            if(min_norm(1) < min_norm(2) .and. this%stargeneral%narms==2) then
+              if(min_norm(2)< min_norm(3) .and. this%stargeneral%narms==3) then
+                this%stargeneral%arms(3, 1:3) = this%stargeneral%arms(2, 1:3)
+                min_norm(3) =  min_norm(2)
+              end if
+              this%stargeneral%arms(2, 1:3) = this%stargeneral%arms(1, 1:3)
+              min_norm(2) =  min_norm(1)
+            end if            
             min_norm(1) = norm
             this%stargeneral%arms(1, 1:3) = (/ii,jj,kk/)
             cycle
@@ -147,6 +155,10 @@ contains
           if(this%stargeneral%narms==1) cycle
 
           if(norm < min_norm(2)) then
+            if(min_norm(2)< min_norm(3) .and. this%stargeneral%narms==3) then
+              this%stargeneral%arms(3, 1:3) = this%stargeneral%arms(2, 1:3)
+              min_norm(3) =  min_norm(2)
+            end if
             min_norm(2) = norm
             this%stargeneral%arms(2, 1:3) = (/ii,jj,kk/)
             cycle
@@ -348,6 +360,83 @@ contains
           pol(i, n) = j
         end do
       end do
+
+      do i = 1, this%stargeneral%narms 
+
+        if (this%stargeneral%arms(i,1)==0) then
+          ! sum(this%stargeneral%arms(i,1:dim))==0 just checks whether we have a -1 in the arm vector or not
+          if(sum(this%stargeneral%arms(i,1:dim))==0 )then
+            do j1 = 1, 2*order
+              do j2 = 1, 2*order-j1
+                n = n + 1
+                pol(1:3, n) = (/0,j1,j2/)
+              end do
+            end do
+          else
+            do j1 = 1, 2*order
+              do j2 = 1, 2*order-j1
+                n = n + 1
+                pol(1:3, n) = (/0,j2,j1/)
+              end do
+            end do
+          end if
+        end if
+
+        if (this%stargeneral%arms(i,2)==0) then
+          ! sum(this%stargeneral%arms(i,1:dim))==0 just checks whether we have a -1 in the arm vector or not
+          if(sum(this%stargeneral%arms(i,1:dim))==0 )then
+            do j1 = 1, 2*order
+              do j2 = 1, 2*order-j1
+                n = n + 1
+                pol(1:3, n) = (/j2,0,j1/)
+              end do
+            end do
+          else
+            do j1 = 1, 2*order
+              do j2 = 1, 2*order-j1
+                n = n + 1
+                pol(1:3, n) = (/j1,0,j2/)
+              end do
+            end do
+          end if
+        end if
+
+        if (this%stargeneral%arms(i,3)==0) then
+          ! sum(this%stargeneral%arms(i,1:dim))==0 just checks whether we have a -1 in the arm vector or not
+          if(sum(this%stargeneral%arms(i,1:dim))==0 )then
+            do j1 = 1, 2*order
+              do j2 = 1, 2*order-j1
+                n = n + 1
+                pol(1:3, n) = (/j1,j2,0/)
+              end do
+            end do
+          else
+            do j1 = 1, 2*order
+              do j2 = 1, 2*order-j1
+                n = n + 1
+                pol(1:3, n) = (/j2,j1,0/)
+              end do
+            end do
+          end if
+        end if
+      end do ! end loop on number of arms
+
+!       !FCC
+!       do j = 1, 2*order
+!         n = n + 1
+!         pol(1:3, n) = (/j,1,0/)
+!         n = n + 1
+!         pol(1:3, n) = (/1,0,j/)
+!         n = n + 1
+!         pol(1:3, n) = (/0,j,1/)
+!       end do
+      
+!       !HEX
+!       do j = 1, 2*order
+!         n = n + 1
+!         pol(1:3, n) = (/j, 1, 0/)
+!       end do
+      
 
     end select
 
