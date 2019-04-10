@@ -289,6 +289,16 @@ contains
     !% Default value ensure that the damping function adquires a 0.0001 value at the end of the propagation time.
     !%End
     call parse_variable('PropagationSpectrumDampFactor', -M_ONE, spectrum%damp_factor, units_inp%time**(-1))
+    ! Get default damp factor
+    if (spectrum%damp /= SPECTRUM_DAMP_NONE .and. spectrum%damp /= SPECTRUM_DAMP_POLYNOMIAL &
+         .and. spectrum%damp_factor == -M_ONE) then
+      select case(spectrum%damp)
+        case(SPECTRUM_DAMP_LORENTZIAN)
+          spectrum%damp_factor =  -log(0.0001)/(spectrum%end_time-spectrum%start_time)
+        case(SPECTRUM_DAMP_GAUSSIAN)
+          spectrum%damp_factor =  sqrt(-log(0.0001)/(spectrum%end_time-spectrum%start_time)**2)
+      end select
+    end if
 
 
     call messages_print_var_value(stdout, 'PropagationSpectrumDampFactor', spectrum%damp_factor, unit = units_out%time**(-1))
@@ -638,17 +648,6 @@ contains
 
     ! Find out the iteration numbers corresponding to the time limits.
     call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
-    ! Get default damp factor
-    if (spectrum%damp /= SPECTRUM_DAMP_NONE .and. spectrum%damp /= SPECTRUM_DAMP_POLYNOMIAL &
-         .and. spectrum%damp_factor == -M_ONE) then
-      select case(spectrum%damp)
-        case(SPECTRUM_DAMP_LORENTZIAN)
-          spectrum%damp_factor =  -log(0.0001)/(spectrum%end_time-spectrum%start_time)
-        case(SPECTRUM_DAMP_GAUSSIAN)
-          spectrum%damp_factor =  sqrt(-log(0.0001)/(spectrum%end_time-spectrum%start_time)**2)
-      end select
-      call messages_print_var_value(stdout, 'PropagationSpectrumDampFactor', spectrum%damp_factor, unit = units_out%time**(-1))
-    end if
 
     SAFE_ALLOCATE(dipole(0:time_steps, 1:3, 1:nspin))
     call spectrum_read_dipole(in_file, dipole)
