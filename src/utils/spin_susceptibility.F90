@@ -44,9 +44,6 @@ program spin_susceptibility
   FLOAT, allocatable :: magnetization(:,:)
   type(spectrum_t)  :: spectrum
   type(block_t)     :: blk
-  type(space_t)     :: space
-  type(geometry_t)  :: geo
-  type(simul_box_t) :: sb
   type(batch_t)     :: vecpotb, ftrealb, ftimagb
   character(len=120) :: header
   FLOAT :: delta_strength
@@ -67,10 +64,6 @@ program spin_susceptibility
 
   call spectrum_init(spectrum)
 
-  call space_init(space)
-  call geometry_init(geo, space)
-  call simul_box_init(sb, geo, space)
-    
   call parse_variable('TDDeltaStrength', M_ZERO, delta_strength )
 
   in_file = io_open('td.general/transverse_magnetization', action='read', status='old', die=.false.)
@@ -160,9 +153,6 @@ program spin_susceptibility
   SAFE_DEALLOCATE_A(ftreal)
   SAFE_DEALLOCATE_A(ftimag)
     
-  call simul_box_end(sb)
-  call geometry_end(geo)
-  call space_end(space)
   call io_end()
   call messages_end()
   call global_end()
