@@ -27,11 +27,12 @@ module kubo_greenwood_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use restart_oct_m
+  use smear_oct_m
   use states_oct_m
   use states_restart_oct_m
   use system_oct_m
   use profiling_oct_m
-
+ 
   implicit none
 
   private
@@ -50,6 +51,7 @@ contains
     CMPLX, allocatable :: psii(:, :), psij(:, :), gpsii(:, :, :), gpsij(:, :, :)
     CMPLX, allocatable :: tensor(:, :)
     CMPLX :: prod
+    FLOAT :: eigi, eigj, occi, occj, df
     type(mesh_t), pointer :: mesh
     
     PUSH_SUB(kubo_greewood_run)
@@ -83,7 +85,7 @@ contains
     
     do iqn = sys%st%d%kpt%start, sys%st%d%kpt%end
     
-      do ist = 1, sys%st%nst
+       do ist = 1, sys%st%nst
         ! get the state i and calculate the gradient
         call states_get_state(sys%st, mesh, ist, iqn, psii)
         do idim = 1, sys%st%d%dim
@@ -113,7 +115,15 @@ contains
             do jdir = 1, mesh%sb%dim
 
               prod = zmf_dotp(mesh, sys%st%d%dim, psii, gpsij(:, idir, :))*zmf_dotp(mesh, sys%st%d%dim, psij, gpsii(:, jdir, :))
-              
+              eigi = sys%st%eigenval(ist,iqn)
+              eigj = sys%st%eigenval(jst,iqn)
+              occi = sys%st%occ(ist,iqn)
+              occj = sys%st%occ(jst,iqn)
+              if (abs(eigi-eigj) < CNST(1.0e-10)) then
+                 df = smear_step_function_der(sys%st%smear,eigi)
+              else
+                 df = (occj - occi)/(eigj - eigi)
+              endif
               tensor(idir, jdir) = tensor(idir, jdir) + CNST(2.0)*M_ZI/mesh%sb%rcell_volume* &
                 (sys%st%occ(ist, iqn) - sys%st%occ(jst, iqn))*prod
 

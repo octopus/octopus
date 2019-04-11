@@ -44,6 +44,7 @@ module smear_oct_m
     smear_calc_entropy,               &
     smear_delta_function,             &
     smear_step_function,              &
+    smear_step_function_der,          &
     smear_entropy_function,           &
     smear_is_semiconducting
 
@@ -535,6 +536,40 @@ contains
 
     POP_SUB(smear_step_function)
   end function smear_step_function
+
+  !---------------------------------------------------------------------
+
+  FLOAT function smear_step_function_der(this, energy) result(stepf)
+    type(smear_t), intent(in) :: this
+    FLOAT,         intent(in) :: energy
+
+    FLOAT, parameter :: maxarg = CNST(200.0)
+    FLOAT :: dsmear, xx
+
+    PUSH_SUB(smear_step_function_der)
+
+    dsmear = max(CNST(1e-14), this%dsmear)
+  
+    xx = (this%e_fermi - energy) / dsmear
+
+    stepf = M_ZERO
+    select case(this%method)
+  
+    case(SMEAR_FERMI_DIRAC)
+      if (xx > maxarg) then
+        stepf = M_ONE
+      else if(xx > -maxarg) then
+         stepf = M_ONE / (M_ONE + exp(-xx))
+         stepf = stepf*stepf*exp(-xx) / dsmear
+     end if
+
+    case default
+       call messages_not_implemented('Occupation derivatives only implemented for Fermi Dirac')
+  
+    end select
+
+    POP_SUB(smear_step_function_der)
+  end function smear_step_function_der
 
 
   ! ---------------------------------------------------------
