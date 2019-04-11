@@ -1003,7 +1003,7 @@ contains
 
     if(associated(this%hm_base%phase) .and. accel_is_enabled()) then
       if(.not. warning_shown) then
-        call messages_write('Cannot use CUDA or OpenCL as phase is applied to the states.')
+        call messages_write('Cannot use CUDA or OpenCL as a phase is applied to the states.')
         call messages_warning()
       end if
       apply = .false.
@@ -1012,6 +1012,14 @@ contains
     if(mesh%use_curvilinear .and. accel_is_enabled()) then
       if(.not. warning_shown) then
         call messages_write('Cannot use CUDA or OpenCL as curvilinear coordinates are used.')
+        call messages_warning()
+      end if
+      apply = .false.
+    end if
+    
+    if(hamiltonian_base_projector_self_overlap(this%hm_base) .and. accel_is_enabled()) then
+      if(.not. warning_shown) then
+        call messages_write('Cannot use CUDA or OpenCL as some pseudopotentials overlap with themselves.')
         call messages_warning()
       end if
       apply = .false.
