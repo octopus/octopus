@@ -812,9 +812,9 @@ contains
         call init_batches()
       else
         if(.not.batch_is_packed(psib)) then
-          reinitialize = .true.
+          reinitialize = te%psi1b%nst_linear /= psib%nst_linear
         else
-          reinitialize = any(te%psi1b%pack%size - psib%pack%size /= 0)
+          reinitialize = any(te%psi1b%pack%size /= psib%pack%size)
         end if
         if (reinitialize) then
           call end_batches()
