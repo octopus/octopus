@@ -742,16 +742,16 @@ contains
       PUSH_SUB(exponential_apply_batch.taylor_series_batch)
       call profiling_in(prof, "EXP_TAYLOR_BATCH")
 
+      if(hamiltonian_apply_packed(hm, der%mesh)) then
+        call batch_pack(psib)
+        if(present(psib2)) call batch_pack(psib2, copy = .false.)
+      end if
+      
       call initialize_temporary_batches()
 
       zfact = M_z1
       zfact2 = M_z1
       zfact_is_real = .true.
-
-      if(hamiltonian_apply_packed(hm, der%mesh)) then
-        call batch_pack(psib)
-        if(present(psib2)) call batch_pack(psib2, copy = .false.)
-      end if
       
       if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
 
