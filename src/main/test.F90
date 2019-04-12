@@ -241,7 +241,7 @@ contains
    
     !Initialize external potential
     SAFE_ALLOCATE(epsib)
-    call batch_copy(sys%st%group%psib(1, 1), epsib)
+    call batch_copy(sys%st%group%psib(1, 1), epsib, fill_zeros = .true.)
 
     do itime = 1, param%repetitions
       call zproject_psi_batch(sys%gr%mesh, ep%proj, ep%natoms, 2, &
