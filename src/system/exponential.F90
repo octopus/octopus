@@ -754,8 +754,6 @@ contains
         copy_at_end = batch_status(psib) == BATCH_NOT_PACKED
         call batch_pack(psib)
         if(present(psib2)) call batch_pack(psib2, copy = .false.)
-        call batch_pack(te%psi1b, copy = .false.)
-        call batch_pack(te%hpsi1b, copy = .false.)
       end if
       
       if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
@@ -794,8 +792,6 @@ contains
       end do
 
       if(hamiltonian_apply_packed(hm, der%mesh)) then
-        call batch_unpack(te%psi1b, copy = .false.)
-        call batch_unpack(te%hpsi1b, copy = .false.)
         if(present(psib2)) call batch_unpack(psib2, copy = copy_at_end)
         call batch_unpack(psib, copy = copy_at_end)
       end if
@@ -842,7 +838,7 @@ contains
       call batch_copy(psib, te%psi1b, copy_data = .false., fill_zeros = .false.)
       call batch_copy(psib, te%hpsi1b, copy_data = .false., fill_zeros = .false.)
       ! pack the batch -> store on device for GPU version, avoids data transfers
-      if(batch_is_packed(psib)) then
+      if(hamiltonian_apply_packed(hm, der%mesh)) then
         te%batches_packed = .true.
         call batch_pack(te%psi1b, copy = .false.)
         call batch_pack(te%hpsi1b, copy = .false.)
