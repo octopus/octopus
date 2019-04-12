@@ -809,6 +809,10 @@ contains
 
     subroutine initialize_temporary_batches()
       logical :: reinitialize
+      type(profile_t), save :: prof
+
+      call profiling_in(prof, "EXP_TEMP_REALLOC")
+      
       ! This routine initializes temporary batches. If their size changes,
       ! they are reinitialized.
       if(.not. te%batches_initialized) then
@@ -830,6 +834,8 @@ contains
           te%hpsi1b%nst_linear = psib%nst_linear
         end if
       end if
+
+      call profiling_out(prof)
     end subroutine initialize_temporary_batches
 
     subroutine init_batches()
