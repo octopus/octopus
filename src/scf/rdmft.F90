@@ -1305,10 +1305,10 @@ contains
 
     do icount = 1, rdm%n_twoint
 
-      ist = rdm%i_index(icount,1) 
-      jst = rdm%j_index(icount,1) 
-      kst = rdm%k_index(icount,1) 
-      lst = rdm%l_index(icount,1) 
+      ist = rdm%i_index(1,icount) 
+      jst = rdm%j_index(1,icount) 
+      kst = rdm%k_index(1,icount) 
+      lst = rdm%l_index(1,icount) 
 
       two_int = rdm%twoint(icount)
          
