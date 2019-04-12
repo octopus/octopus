@@ -244,15 +244,15 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
       oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)/st%rho(1:gr%mesh%np,is)
     else if (oep%mixing_scheme == OEP_MIXING_SCHEME_BB) then
       if (dmf_nrm2(gr%mesh, oep%vxc_old(1:gr%mesh%np,is)) > M_EPSILON ) then ! do not do it for the first run
-        oep%mixing = -dmf_dotp(gr%mesh, oep%vxc(1:gr%mesh%np,is) - oep%vxc_old(1:gr%mesh%np,is), ss - oep%ss_old) &
-          / dmf_dotp(gr%mesh, ss - oep%ss_old, ss - oep%ss_old)
+        oep%mixing = -dmf_dotp(gr%mesh, oep%vxc(1:gr%mesh%np,is) - oep%vxc_old(1:gr%mesh%np,is), ss - oep%ss_old(:, is)) &
+          / dmf_dotp(gr%mesh, ss - oep%ss_old(:, is), ss - oep%ss_old(:, is))
       end if
 
       write(message(1), '(a,es14.6,a,es14.8)') "Info: oep%mixing:", oep%mixing, " norm2ss: ", dmf_nrm2(gr%mesh, ss)
       call messages_info(1)
 
       oep%vxc_old(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is)
-      oep%ss_old(1:gr%mesh%np) = ss(1:gr%mesh%np)
+      oep%ss_old(1:gr%mesh%np,is) = ss(1:gr%mesh%np)
       oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)
     end if
 
@@ -261,7 +261,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
         call states_get_state(st, gr%mesh, ist, is, psi)
         vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np,is))
         if (oep%has_photons) &
-          call X(xc_oep_pt_uxcbar)(gr, st, is, oep, phi1(:,:,ist), ist, vxc_bar)
+          call X(xc_oep_pt_uxcbar)(gr, st, is, oep, phi1, ist, vxc_bar)
         oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) - (vxc_bar - oep%uxc_bar(ist,is))
       end if
     end do
@@ -270,7 +270,11 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
     if(ff < oep%scftol%conv_abs_dens) exit
   end do
 
-  oep%norm2ss = ff
+  if (is == 1) then
+    oep%norm2ss = ff
+  else
+    oep%norm2ss = oep%norm2ss + ff !adding up spin up and spin down component
+  end if
 
   if(ff > oep%scftol%conv_abs_dens) then
     write(message(1), '(a)') "OEP did not converge."

@@ -84,7 +84,7 @@ module xc_oep_oct_m
     logical               :: has_photons   ! one-photon OEP
     type(photon_mode_t)   :: pt
     FLOAT                 :: norm2ss
-    FLOAT,   pointer      :: vxc_old(:,:), ss_old(:)
+    FLOAT,   pointer      :: vxc_old(:,:), ss_old(:,:)
     integer               :: noccst
   end type xc_oep_t
 
@@ -195,7 +195,7 @@ contains
 
         if (oep%mixing_scheme == OEP_MIXING_SCHEME_BB) then
           SAFE_ALLOCATE(oep%vxc_old(1:gr%mesh%np,st%d%ispin))
-          SAFE_ALLOCATE(oep%ss_old(1:gr%mesh%np))
+          SAFE_ALLOCATE(oep%ss_old(1:gr%mesh%np,st%d%ispin))
           oep%vxc_old = M_ZERO
           oep%ss_old = M_ZERO
         end if

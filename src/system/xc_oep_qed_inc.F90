@@ -115,8 +115,7 @@ subroutine X(xc_oep_pt_rhs) (gr, st, is, oep, phi1, ist, rhs)
 
   call states_get_state(st, gr%mesh, ist, is, psiii)
 
-  aa(:,1) = M_ZERO
-  aa(:,1) = aa(:,1) + M_HALF*oep%pt%lambda_array(1)**2*oep%pt%pol_dipole_array(:,1)**2 &
+  aa(:,1) = M_HALF*oep%pt%lambda_array(1)**2*oep%pt%pol_dipole_array(:,1)**2 &
             *R_CONJ(psiii(:,1))
   aa(:,1) = aa(:,1) + sqrt(M_HALF*oep%pt%omega_array(1))*oep%pt%lambda_array(1)*oep%pt%pol_dipole_array(:,1) &
             *R_CONJ(phi1(:, 1, ist))
@@ -129,7 +128,6 @@ subroutine X(xc_oep_pt_rhs) (gr, st, is, oep, phi1, ist, rhs)
     aa(:,1) = aa(:,1) - sqrt(M_HALF*oep%pt%omega_array(1))*kkopii*R_CONJ(phi1(:, 1, kst))
   end do
 
-            
   if (ist/=(oep%eigen_n + 1) .or. (oep%level == XC_OEP_FULL)) then
     abar = X(mf_dotp)(gr%mesh,  aa(:,1), psiii(:,1))
     aa(:,1) = aa(:,1) - abar*R_CONJ(psiii(:,1))
@@ -177,7 +175,7 @@ subroutine X(xc_oep_pt_uxcbar) (gr, st, is, oep, phi1, ist, vxbar)
   type(states_t),      intent(in)    :: st
   integer,             intent(in)    :: is
   type(xc_oep_t),      intent(in)    :: oep
-  R_TYPE,              intent(in)    :: phi1(:,:)
+  R_TYPE,              intent(in)    :: phi1(:,:,:)
   integer,             intent(in)    :: ist
   FLOAT,               intent(inout) :: vxbar
 
@@ -194,7 +192,7 @@ subroutine X(xc_oep_pt_uxcbar) (gr, st, is, oep, phi1, ist, vxbar)
   call states_get_state(st, gr%mesh, ist, is, psiii)
 
   aa(:,1) = oep%pt%lambda_array(1)*oep%pt%pol_dipole_array(:,1)*psiii(:,1)
-  result1 = sqrt(M_HALF*oep%pt%omega_array(1))*X(mf_dotp)(gr%mesh, R_CONJ(phi1(:,1)), aa(:,1))
+  result1 = sqrt(M_HALF*oep%pt%omega_array(1))*X(mf_dotp)(gr%mesh, R_CONJ(phi1(:,1,ist)), aa(:,1))
   result1 = result1 + M_HALF*dmf_dotp(gr%mesh, R_REAL(aa(:,1)), R_REAL(aa(:,1)))
 
    do kst = st%st_start, oep%noccst
