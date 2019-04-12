@@ -839,8 +839,8 @@ contains
     end subroutine initialize_temporary_batches
 
     subroutine init_batches()
-      call batch_copy(psib, te%psi1b, copy_data=.false.)
-      call batch_copy(psib, te%hpsi1b, copy_data=.false.)
+      call batch_copy(psib, te%psi1b, copy_data = .false., fill_zeros = .false.)
+      call batch_copy(psib, te%hpsi1b, copy_data = .false., fill_zeros = .false.)
       ! pack the batch -> store on device for GPU version, avoids data transfers
       if(batch_is_packed(psib)) then
         te%batches_packed = .true.
