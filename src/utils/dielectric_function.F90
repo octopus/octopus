@@ -124,7 +124,7 @@ program dielectric_function
     call parse_variable('TransientAbsorptionReference', '.', ref_filename)
     ref_file = io_open(trim(ref_filename)//'/gauge_field', action='read', status='old', die=.false.)
     if(ref_file < 0) then
-      message(1) = "Cannot open reference file '"//trim(io_workpath(ref_filename//'/gauge_field'))//"'"
+      message(1) = "Cannot open reference file '"//trim(io_workpath(trim(ref_filename)//'/gauge_field'))//"'"
       call messages_fatal(1)
     end if
     call io_skip_header(ref_file)
