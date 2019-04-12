@@ -738,7 +738,6 @@ contains
       integer :: iter
       logical :: zfact_is_real
       type(profile_t), save :: prof
-      logical :: copy_at_end
 
       PUSH_SUB(exponential_apply_batch.taylor_series_batch)
       call profiling_in(prof, "EXP_TAYLOR_BATCH")
@@ -750,8 +749,6 @@ contains
       zfact_is_real = .true.
 
       if(hamiltonian_apply_packed(hm, der%mesh)) then
-        ! unpack at end with copying only if the status on entry is unpacked
-        copy_at_end = batch_status(psib) == BATCH_NOT_PACKED
         call batch_pack(psib)
         if(present(psib2)) call batch_pack(psib2, copy = .false.)
       end if
@@ -792,8 +789,8 @@ contains
       end do
 
       if(hamiltonian_apply_packed(hm, der%mesh)) then
-        if(present(psib2)) call batch_unpack(psib2, copy = copy_at_end)
-        call batch_unpack(psib, copy = copy_at_end)
+        if(present(psib2)) call batch_unpack(psib2)
+        call batch_unpack(psib, copy = .false.)
       end if
 
       call profiling_count_operations(psib%nst*hm%d%dim*dble(der%mesh%np)*te%exp_order*CNST(6.0))
