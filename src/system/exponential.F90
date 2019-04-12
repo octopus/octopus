@@ -849,23 +849,22 @@ contains
       end if
       te%tmp_nst = te%psi1b%nst
       te%tmp_nst_linear = te%psi1b%nst_linear
-      te%batches_initialized = .true.
 
+      te%batches_initialized = .true.
     end subroutine init_batches
 
     subroutine end_batches()
       ! deallocate temporary batches and arrays
-      if(te%batches_packed) then
-        call batch_unpack(te%psi1b, copy = .false.)
-        call batch_unpack(te%hpsi1b, copy = .false.)
-        te%batches_packed = .false.
-      end if
+      if(te%batches_packed) te%batches_packed = .false.
+
       te%psi1b%nst = te%tmp_nst
       te%psi1b%nst_linear = te%tmp_nst_linear
       call batch_end(te%hpsi1b, copy=.false.)
+      
       te%hpsi1b%nst = te%tmp_nst
       te%hpsi1b%nst_linear = te%tmp_nst_linear
       call batch_end(te%psi1b, copy=.false.)
+
       te%batches_initialized = .false.
     end subroutine end_batches
 
