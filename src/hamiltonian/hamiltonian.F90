@@ -982,9 +982,16 @@ contains
     !if(mesh%use_curvilinear) apply = .false.
     !if(hamiltonian_base_has_magnetic(this%hm_base)) apply = .false.
     !if(this%rashba_coupling**2 > M_ZERO) apply = .false.
-    !if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) apply = .false.
+    
     !if(this%family_is_mgga_with_exc)  apply = .false.
     ! keep these checks; currently no tests for these in the test suite
+
+    if(this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices .and. accel_is_enabled()) then
+      call messages_write('Cannot use CUDA or OpenCL as relativistic pseudopotentials are used.')
+      call messages_warning()
+      apply = .false.
+    end if
+    
     if(this%scissor%apply) then
       if(.not. warning_shown) then
         call messages_write('Cannot use CUDA or OpenCL as the scissor operator is enabled.')
