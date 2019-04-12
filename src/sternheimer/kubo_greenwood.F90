@@ -31,6 +31,8 @@ module kubo_greenwood_oct_m
   use states_oct_m
   use states_restart_oct_m
   use system_oct_m
+  use unit_system_oct_m
+  use parser_oct_m
   use profiling_oct_m
  
   implicit none
@@ -46,12 +48,12 @@ contains
     type(hamiltonian_t),  intent(inout) :: hm
 
     type(restart_t) :: gs_restart
-    integer :: ierr
+    integer :: ierr, nfreq, ifreq
     integer :: ist, jst, iqn, idim, idir, jdir
     CMPLX, allocatable :: psii(:, :), psij(:, :), gpsii(:, :, :), gpsij(:, :, :)
-    CMPLX, allocatable :: tensor(:, :)
+    CMPLX, allocatable :: tensor(:, :, :)
     CMPLX :: prod
-    FLOAT :: eigi, eigj, occi, occj, df
+    FLOAT :: eigi, eigj, occi, occj, df, width, dfreq, maxfreq
     type(mesh_t), pointer :: mesh
     
     PUSH_SUB(kubo_greewood_run)
@@ -61,7 +63,45 @@ contains
     
     call messages_experimental('Kubo Greenwood')
 
-    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh = sys%gr%mesh, exact = .true.)
+      !%Variable KuboGreenwoodwidth
+      !%Type float
+      !%Default 0.0
+      !%Section Linear Response::Kubo Greenwood
+      !%Description
+      !% The width applied to the Kubo Greenwood conductivity.
+      !% In units of energy. Cannot be negative.
+      !%End
+
+      call parse_variable('KuboGreenwoodWidth', M_ZERO, width, units_inp%energy)
+      if(width < -M_EPSILON) then
+        message(1) = "KuboGreenwoodWidth cannot be negative."
+        call messages_fatal(1)
+      end if
+
+      !%Variable KuboGreenwoodMaxEnergy
+      !%Type float
+      !%Default 2.0
+      !%Section Linear Response::Kubo Greenwood
+      !%Description
+      !% Maximum energy for Kubo Greenwood
+      !% In units of energy. 
+      !%End
+
+      call parse_variable('KuboGreenwoodMaxEnergy', CNST(2.0),maxfreq , units_inp%energy)
+
+      !%Variable KuboGreenwoodEnergySpacing
+      !%Type float
+      !%Default 0.01
+      !%Section Linear Response::Kubo Greenwood
+      !%Description
+      !% Spacing of frequencies for Kubo Greenwood
+      !% In units of energy. 
+      !%End
+
+      call parse_variable('KuboGreenwoodEnergySpacing', CNST(0.01), dfreq, units_inp%energy)
+
+      
+      call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh = sys%gr%mesh, exact = .true.)
     if(ierr == 0) then
       call states_look_and_load(gs_restart, sys%st, sys%gr)
       call restart_end(gs_restart)
@@ -78,11 +118,12 @@ contains
     SAFE_ALLOCATE(psij(1:mesh%np_part, 1:sys%st%d%dim))
     SAFE_ALLOCATE(gpsii(1:mesh%np, 1:sys%gr%sb%dim, 1:sys%st%d%dim))
     SAFE_ALLOCATE(gpsij(1:mesh%np, 1:sys%gr%sb%dim, 1:sys%st%d%dim))
-
-    SAFE_ALLOCATE(tensor(1:mesh%sb%dim, 1:mesh%sb%dim))
+    nfreq = nint(maxfreq / (dfreq+1))
+    
+    SAFE_ALLOCATE(tensor(1:mesh%sb%dim, 1:mesh%sb%dim,1:nfreq))
 
     tensor = CNST(0.0)
-    
+
     do iqn = sys%st%d%kpt%start, sys%st%d%kpt%end
     
        do ist = 1, sys%st%nst
@@ -110,23 +151,24 @@ contains
           do idim = 1, sys%st%d%dim
             call zderivatives_grad(sys%gr%der, psij(:, idim), gpsij(:, :, idim), set_bc = .false.)
           end do
+          eigi = sys%st%eigenval(ist,iqn)
+          eigj = sys%st%eigenval(jst,iqn)
+          occi = sys%st%occ(ist,iqn)
+          occj = sys%st%occ(jst,iqn)
+          if (abs(eigi-eigj) < CNST(1.0e-10)) then
+             df = smear_step_function_der(sys%st%smear,eigi)
+          else
+             df = (occj - occi)/(eigj - eigi)
+          endif
 
           do idir = 1, mesh%sb%dim
-            do jdir = 1, mesh%sb%dim
-
+             do jdir = 1, mesh%sb%dim
               prod = zmf_dotp(mesh, sys%st%d%dim, psii, gpsij(:, idir, :))*zmf_dotp(mesh, sys%st%d%dim, psij, gpsii(:, jdir, :))
-              eigi = sys%st%eigenval(ist,iqn)
-              eigj = sys%st%eigenval(jst,iqn)
-              occi = sys%st%occ(ist,iqn)
-              occj = sys%st%occ(jst,iqn)
-              if (abs(eigi-eigj) < CNST(1.0e-10)) then
-                 df = smear_step_function_der(sys%st%smear,eigi)
-              else
-                 df = (occj - occi)/(eigj - eigi)
-              endif
-              tensor(idir, jdir) = tensor(idir, jdir) + CNST(2.0)*M_ZI/mesh%sb%rcell_volume* &
-                (sys%st%occ(ist, iqn) - sys%st%occ(jst, iqn))*prod
-
+              
+              do ifreq = 1, nfreq
+                 tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - sys%st%d%kweights(iqn)*(CNST(2.0)/mesh%sb%rcell_volume)* &
+                      real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*(eigi-eigj - ifreq*dfreq))/ ((eigi-eigj - ifreq*dfreq)**2 + width/CNST(4.0))
+              end do
             end do
           end do
           
