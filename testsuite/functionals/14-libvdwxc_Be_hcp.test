@@ -4,7 +4,7 @@ Program    : octopus
 TestGroups : short-run, functionals, libvdwxc
 Enabled    : Yes
 
-Input      : 14-vdw_df_cx_be_hcp.inp
+Input      : 14-libvdwxc_Be_hcp.01-vdwdfcx.inp
 
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -26.58900976
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.76910154
