@@ -796,8 +796,8 @@ contains
       if(hamiltonian_apply_packed(hm, der%mesh)) then
         call batch_unpack(te%psi1b, copy = .false.)
         call batch_unpack(te%hpsi1b, copy = .false.)
-        if(present(psib2)) call batch_unpack(psib2, copy=copy_at_end)
-        call batch_unpack(psib, copy=copy_at_end)
+        if(present(psib2)) call batch_unpack(psib2, copy = copy_at_end)
+        call batch_unpack(psib, copy = copy_at_end)
       end if
 
       call profiling_count_operations(psib%nst*hm%d%dim*dble(der%mesh%np)*te%exp_order*CNST(6.0))
@@ -859,11 +859,11 @@ contains
 
       te%psi1b%nst = te%tmp_nst
       te%psi1b%nst_linear = te%tmp_nst_linear
-      call batch_end(te%hpsi1b, copy=.false.)
+      call batch_end(te%hpsi1b, copy = .false.)
       
       te%hpsi1b%nst = te%tmp_nst
       te%hpsi1b%nst_linear = te%tmp_nst_linear
-      call batch_end(te%psi1b, copy=.false.)
+      call batch_end(te%psi1b, copy = .false.)
 
       te%batches_initialized = .false.
     end subroutine end_batches
