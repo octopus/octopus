@@ -10,6 +10,8 @@ ExperimentalFeatures = True
 Spacing = 0.15 * angstrom
 XCFunctional = vdw_c_vdwdfcx + gga_x_lv_rpw86
 PseudopotentialSet = sg15
+ConvRelDens = 1e-6
+EigensolverTolerance = 1e-7
 
 %KPointsGrid
  2 | 2 | 2
