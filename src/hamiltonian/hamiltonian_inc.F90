@@ -79,7 +79,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
 
   if(apply_phase .and. set_phase_) then
     SAFE_ALLOCATE(epsib)
-    call batch_copy(psib, epsib, fill_zeros = .false.)
+    call batch_copy(psib, epsib)
   else
     epsib => psib
   end if

@@ -80,7 +80,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     if(pack) call batch_pack(psib(1)%batch)
 
-    call batch_copy(psib(1)%batch, resb(1)%batch, fill_zeros = .false.)
+    call batch_copy(psib(1)%batch, resb(1)%batch)
 
     call X(hamiltonian_apply_batch)(hm, gr%der, psib(1)%batch, resb(1)%batch, ik)
     nops = nops + bsize
@@ -110,12 +110,12 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       cycle
     end if
 
-    call batch_copy(psib(1)%batch, psib(2)%batch, fill_zeros = .false.)
+    call batch_copy(psib(1)%batch, psib(2)%batch)
 
     ! get lambda 
     call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb(1)%batch, psib(2)%batch)
 
-    call batch_copy(psib(1)%batch, resb(2)%batch, fill_zeros = .false.)
+    call batch_copy(psib(1)%batch, resb(2)%batch)
 
     call X(hamiltonian_apply_batch)(hm, gr%der, psib(2)%batch, resb(2)%batch, ik)
     nops = nops + bsize
@@ -148,7 +148,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
       ! for iter == 2 the preconditioning was done already
       if(iter > 2) then
-        call batch_copy(psib(iter - 1)%batch, psib(iter)%batch, fill_zeros = .false.)
+        call batch_copy(psib(iter - 1)%batch, psib(iter)%batch)
         call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb(iter - 1)%batch, psib(iter)%batch)
       end if
 
@@ -156,7 +156,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       call batch_xpay(gr%mesh%np, psib(iter - 1)%batch, lambda, psib(iter)%batch)
 
       if(iter > 2) then
-         call batch_copy(psib(iter)%batch, resb(iter)%batch, fill_zeros = .false.)
+         call batch_copy(psib(iter)%batch, resb(iter)%batch)
       end if
 
       ! calculate the residual
@@ -228,7 +228,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
       call profiling_out(prof_lc)
 
-      call batch_copy(psib(iter)%batch, resb(iter)%batch, fill_zeros = .false.)
+      call batch_copy(psib(iter)%batch, resb(iter)%batch)
 
       ! re-calculate the residual
       call X(hamiltonian_apply_batch)(hm, gr%der, psib(iter)%batch, resb(iter)%batch, ik)
@@ -305,7 +305,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     if(pack) call batch_pack(st%group%psib(ib, ik))  
   
-    call batch_copy(st%group%psib(ib, ik), resb(1)%batch, fill_zeros = .false.)
+    call batch_copy(st%group%psib(ib, ik), resb(1)%batch)
     
     call X(hamiltonian_apply_batch)(hm, gr%der, st%group%psib(ib, ik), resb(1)%batch, ik)
     call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), resb(1)%batch, me(1, :), reduce = .false.)
@@ -397,8 +397,8 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
 
     if(pack) call batch_pack(st%group%psib(ib, ik))
 
-    call batch_copy(st%group%psib(ib, ik), resb, fill_zeros = .false.)
-    call batch_copy(st%group%psib(ib, ik), kresb, fill_zeros = .false.)
+    call batch_copy(st%group%psib(ib, ik), resb)
+    call batch_copy(st%group%psib(ib, ik), kresb)
 
     do isd = 1, sd_steps
 
