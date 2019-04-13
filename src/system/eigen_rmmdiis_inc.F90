@@ -103,10 +103,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     end do
 
     if(all(done(1:bsize) /= 0)) then
-      if(pack) then
-        call batch_unpack(st%group%psib(ib, ik))
-      end if
-      call batch_end(resb(1)%batch, copy = .false.)
+      if(pack) call batch_unpack(st%group%psib(ib, ik))
+      call batch_end(resb(1)%batch)
       cycle
     end if
 
@@ -214,7 +212,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         end if
       end do
 
-      call batch_end(resb(iter)%batch, copy = .false.)
+      call batch_end(resb(iter)%batch)
 
       call profiling_in(prof_lc, "RMMDIIS_LC")
 
@@ -277,13 +275,13 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     ! we can remove most of the batches
     do iter = 1, niter
-      if(iter /= 1) call batch_end(psib(iter)%batch, copy = .false.)
-      if(iter /= niter - 1) call batch_end(resb(iter)%batch, copy = .false.)
+      if(iter /= 1) call batch_end(psib(iter)%batch)
+      if(iter /= niter - 1) call batch_end(resb(iter)%batch)
     end do
 
     call batch_copy_data(gr%mesh%np, resb(niter - 1)%batch, st%group%psib(ib, ik))
 
-    call batch_end(resb(niter - 1)%batch, copy = .false.)
+    call batch_end(resb(niter - 1)%batch)
 
     if(pack) call batch_unpack(st%group%psib(ib, ik))
 
@@ -321,7 +319,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     
     diff(minst:maxst) = sqrt(abs(eigen(1:maxst - minst + 1)))
     
-    call batch_end(resb(1)%batch, copy = .false.)
+    call batch_end(resb(1)%batch)
 
     if(pack) call batch_unpack(st%group%psib(ib, ik))
     
@@ -445,7 +443,6 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
         ca = R_REAL(me2(1, ii))*R_REAL(me2(4, ii)) - R_REAL(me2(3, ii))*R_REAL(me2(2, ii))
         cb = R_REAL(me1(2, ii))*R_REAL(me2(3, ii)) - R_REAL(me1(1, ii))*R_REAL(me2(1, ii))
         cc = R_REAL(me1(1, ii))*R_REAL(me2(2, ii)) - R_REAL(me2(4, ii))*R_REAL(me1(2, ii))
-         
 
         !This is - the solution of ca*x^2+cb*x+cc
         lambda(ist) = CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
@@ -457,8 +454,8 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
 
     if(pack) call batch_unpack(st%group%psib(ib, ik))
 
-    call batch_end(resb, copy = .false.)
-    call batch_end(kresb, copy = .false.)
+    call batch_end(resb)
+    call batch_end(kresb)
 
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
       call loct_progress_bar(st%lnst*(ik - 1) +  maxst, st%lnst*st%d%kpt%nlocal)
