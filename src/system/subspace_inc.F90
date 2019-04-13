@@ -83,7 +83,8 @@ subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
   R_TYPE, allocatable :: hmss(:, :), rdiff(:)
   integer             :: ib, minst, maxst
   type(batch_t)       :: hpsib
-
+  type(profile_t), save :: prof_diff
+  
   PUSH_SUB(X(subspace_diag_standard))
 
   SAFE_ALLOCATE(hmss(1:st%nst, 1:st%nst))
@@ -107,6 +108,8 @@ subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
   
   ! Recalculate the residues if requested by the diff argument.
   if(present(diff)) then 
+
+    call profiling_in(prof_diff, 'SUBSPACE_DIFF')
     
     SAFE_ALLOCATE(rdiff(1:st%nst))
     
@@ -115,6 +118,8 @@ subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
       minst = states_block_min(st, ib)
       maxst = states_block_max(st, ib)
 
+      if(hamiltonian_apply_packed(hm, der%mesh)) call batch_pack(st%group%psib(ib, ik))
+      
       call batch_copy(st%group%psib(ib, ik), hpsib)
 
       call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik)
@@ -123,11 +128,15 @@ subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
 
       call batch_end(hpsib)
 
+      if(hamiltonian_apply_packed(hm, der%mesh)) call batch_unpack(st%group%psib(ib, ik), copy = .false.)
+      
       diff(minst:maxst) = sqrt(abs(rdiff(minst:maxst)))
 
     end do
 
     SAFE_DEALLOCATE_A(rdiff)
+
+    call profiling_out(prof_diff)
     
   end if
 
