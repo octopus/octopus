@@ -241,12 +241,14 @@ contains
    
     !Initialize external potential
     SAFE_ALLOCATE(epsib)
-    call batch_copy(sys%st%group%psib(1, 1), epsib, fill_zeros = .true.)
+    call batch_copy(sys%st%group%psib(1, 1), epsib)
 
+    call batch_set_zero(epsib)
+    
     do itime = 1, param%repetitions
-      call zproject_psi_batch(sys%gr%mesh, ep%proj, ep%natoms, 2, &
-                               sys%st%group%psib(1, 1), epsib, 1)
+      call zproject_psi_batch(sys%gr%mesh, ep%proj, ep%natoms, 2, sys%st%group%psib(1, 1), epsib, 1)
     end do
+    
     do itime = 1, epsib%nst
       write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, 2, epsib%states(itime)%zpsi)
       call messages_info(1)
