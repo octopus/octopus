@@ -121,7 +121,7 @@ subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
       call batch_axpy(der%mesh%np, -eigenval, st%group%psib(ib, ik), hpsib)
       call X(mesh_batch_dotp_vector)(der%mesh, hpsib, hpsib, rdiff(minst:maxst))
 
-      call batch_end(hpsib, copy = .false.)
+      call batch_end(hpsib)
 
       diff(minst:maxst) = sqrt(abs(rdiff(minst:maxst)))
 
@@ -505,7 +505,7 @@ subroutine X(subspace_diag_hamiltonian)(der, st, hm, ik, hmss)
   call profiling_count_operations((R_ADD + R_MUL)*st%nst*(st%nst - CNST(1.0))*der%mesh%np)
   
   do ib = st%group%block_start, st%group%block_end
-    call batch_end(hpsib(ib), copy = .false.)
+    call batch_end(hpsib(ib))
   end do
   
   SAFE_DEALLOCATE_A(hpsib)
