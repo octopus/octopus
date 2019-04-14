@@ -537,7 +537,7 @@ contains
     if(mpi_grp_is_root(base_grp)) call device_info()
 
     ! initialize the cache used to speed up allocations
-    call alloc_cache_init(memcache, 2_8*(1024_8)**3)
+    call alloc_cache_init(memcache, nint(CNST(0.25)*accel%global_memory_size, 8))
     
     ! now initialize the kernels
     call accel_kernel_global_init()
@@ -775,9 +775,9 @@ contains
 
     PUSH_SUB(accel_end)
 
-    call alloc_cache_end(memcache, hits, misses, volume_hits, volume_misses)
-
     if(accel_is_enabled()) then
+      call alloc_cache_end(memcache, hits, misses, volume_hits, volume_misses)
+      
       call messages_write('Acceleration device allocation cache:', new_line = .true.)
       call messages_write('   Number of allocations    =')
       call messages_write(hits + misses, new_line = .true.)
