@@ -846,32 +846,7 @@ contains
     type(type_t),       intent(in)    :: type
     integer,            intent(in)    :: size
 
-    integer(8) :: fsize
-#ifdef HAVE_OPENCL
-    integer :: ierr
-#endif
-
-    PUSH_SUB(accel_create_buffer_4)
-
-    this%type = type
-    this%size = size
-    this%flags = flags
-    fsize = int(size, 8)*types_get_size(type)
-
-    if(this%size > 0) then
-
-#ifdef HAVE_OPENCL
-      this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
-#endif
-#ifdef HAVE_CUDA
-      call cuda_mem_alloc(this%mem, fsize)
-#endif
-    
-      INCR(buffer_alloc_count, 1)
-      INCR(allocated_mem, fsize)
-      
-    end if
+    call accel_create_buffer_8(this, flags, type, int(size, 8))
     
     POP_SUB(accel_create_buffer_4)
   end subroutine accel_create_buffer_4
