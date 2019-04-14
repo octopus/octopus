@@ -28,3 +28,5 @@ TDPolarizationDirection = 1
 TDPolarizationEquivAxes = 3
 
 FilterPotentials = filter_none
+
+StatesPack = no
