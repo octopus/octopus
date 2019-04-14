@@ -798,7 +798,7 @@ contains
         call messages_write(' in ')
         call messages_write(buffer_alloc_count)
         call messages_write(' buffers were not deallocated.')
-        call messages_warning()
+        call messages_fatal()
       end if
 
     end if
