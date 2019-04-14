@@ -133,7 +133,7 @@ module accel_oct_m
     type(cl_mem)           :: mem
 #endif
 #ifdef HAVE_CUDA
-    type(c_ptr)            :: cuda_ptr
+    type(c_ptr)            :: mem
 #endif
     integer(SIZEOF_SIZE_T) :: size
     type(type_t)           :: type
@@ -865,7 +865,7 @@ contains
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
 #endif
 #ifdef HAVE_CUDA
-      call cuda_mem_alloc(this%cuda_ptr, fsize)
+      call cuda_mem_alloc(this%mem, fsize)
 #endif
     
       INCR(buffer_alloc_count, 1)
@@ -903,7 +903,7 @@ contains
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
 #endif
 #ifdef HAVE_CUDA
-      call cuda_mem_alloc(this%cuda_ptr, fsize)
+      call cuda_mem_alloc(this%mem, fsize)
 #endif
       
       INCR(buffer_alloc_count, 1)
@@ -932,7 +932,7 @@ contains
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
 #endif
 #ifdef HAVE_CUDA
-      call cuda_mem_free(this%cuda_ptr)
+      call cuda_mem_free(this%mem)
 #endif
       
       INCR(buffer_alloc_count, -1)
@@ -998,7 +998,7 @@ contains
 #endif
 
 #ifdef HAVE_CUDA
-    call cuda_kernel_set_arg_buffer(kernel%arguments, buffer%cuda_ptr, narg)
+    call cuda_kernel_set_arg_buffer(kernel%arguments, buffer%mem, narg)
 #endif
    
   end subroutine accel_set_kernel_arg_buffer
