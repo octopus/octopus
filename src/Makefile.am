@@ -659,7 +659,8 @@ EXTRA_PROGRAMS = oct-propagation_spectrum \
                  oct-convert \
                  oct-local_multipoles \
                  oct-conductivity \
-                 oct-floquet
+                 oct-floquet \
+                 oct-wannier90 
 
 bin_PROGRAMS += @UTILITY_PROGRAMS@
 
@@ -743,6 +744,19 @@ oct_floquet_SOURCES = $(td_srcs) $(scf_srcs) $(system_srcs) $(hamiltonian_srcs) 
 			utils/floquet.F90
 oct_floquet_LINK = $(FCLINK)
 oct_floquet_LDADD = $(all_LIBS)
+
+
+oct_wannier90_SOURCES = $(system_srcs) $(hamiltonian_srcs) $(basis_set_srcs) \
+                        $(poisson_srcs) $(states_srcs) $(grid_srcs) \
+                        $(ions_srcs) $(species_srcs) $(math_srcs) $(basic_srcs) \
+                        utils/wannier90_interface.F90 
+
+noinst_HEADERS += \
+  utils/wannier90_interface_defs_from_pwscf.F90
+
+
+oct_wannier90_LINK = $(FCLINK)
+oct_wannier90_LDADD = $(all_LIBS)
 
 
 # debug files from MacOS gcc with -g
