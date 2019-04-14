@@ -115,20 +115,21 @@ module scf_oct_m
     integer :: mixdim1
     logical :: forced_finish !< remember if 'touch stop' was triggered earlier.
     type(lda_u_mixer_t) :: lda_u_mix
+    type(grid_t), pointer :: gr
   end type scf_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine scf_init(scf, gr, geo, st, mc, hm, ks, conv_force)
-    type(scf_t),         intent(inout) :: scf
-    type(grid_t),        intent(inout) :: gr
-    type(geometry_t),    intent(in)    :: geo
-    type(states_t),      intent(in)    :: st
-    type(multicomm_t),   intent(in)    :: mc
-    type(hamiltonian_t), intent(inout) :: hm
-    type(v_ks_t),        intent(in)    :: ks
-    FLOAT,   optional,   intent(in)    :: conv_force
+    type(scf_t),          intent(inout) :: scf
+    type(grid_t), target, intent(inout) :: gr
+    type(geometry_t),     intent(in)    :: geo
+    type(states_t),       intent(in)    :: st
+    type(multicomm_t),    intent(in)    :: mc
+    type(hamiltonian_t),  intent(inout) :: hm
+    type(v_ks_t),         intent(in)    :: ks
+    FLOAT,   optional,    intent(in)    :: conv_force
 
     FLOAT :: rmin
     integer :: mixdefault, ierr
@@ -477,15 +478,22 @@ contains
 
     scf%forced_finish = .false.
 
+    scf%gr => gr
+    
     POP_SUB(scf_init)
   end subroutine scf_init
 
 
   ! ---------------------------------------------------------
   subroutine scf_end(scf)
-    type(scf_t), intent(inout) :: scf
-
+    type(scf_t),  intent(inout) :: scf
+    
     PUSH_SUB(scf_end)
+
+    if(preconditioner_is_multigrid(scf%eigens%pre)) then
+      call multigrid_end(scf%gr%mgrid_prec)
+      SAFE_DEALLOCATE_P(scf%gr%mgrid_prec)
+    end if
 
     call eigensolver_end(scf%eigens)
     if(scf%mix_field /= OPTION__MIXFIELD__NONE) call mix_end(scf%smix)
