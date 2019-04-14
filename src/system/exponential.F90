@@ -790,7 +790,7 @@ contains
 
       if(hamiltonian_apply_packed(hm, der%mesh)) then
         if(present(psib2)) call batch_unpack(psib2)
-        call batch_unpack(psib, copy = .false.)
+        call batch_unpack(psib)
       end if
 
       call profiling_count_operations(psib%nst*hm%d%dim*dble(der%mesh%np)*te%exp_order*CNST(6.0))
