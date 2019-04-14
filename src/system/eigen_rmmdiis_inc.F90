@@ -457,8 +457,8 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
 
     if(pack) call batch_unpack(st%group%psib(ib, ik))
 
-    call batch_end(resb, copy = .false.)
-    call batch_end(kresb, copy = .false.)
+    call batch_end(resb)
+    call batch_end(kresb)
 
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
       call loct_progress_bar(st%lnst*(ik - 1) +  maxst, st%lnst*st%d%kpt%nlocal)

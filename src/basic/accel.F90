@@ -790,16 +790,17 @@ contains
 
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "ReleaseCommandQueue")
       call clReleaseContext(accel%context%cl_context, cl_status)
-
+#endif
+      
       if(buffer_alloc_count /= 0) then
-        call messages_write('OpenCL:')
+        call messages_write('Accel:')
         call messages_write(real(allocated_mem, REAL_PRECISION), fmt = 'f12.1', units = unit_megabytes, align_left = .true.)
         call messages_write(' in ')
         call messages_write(buffer_alloc_count)
         call messages_write(' buffers were not deallocated.')
-        call messages_warning()
+        call messages_fatal()
       end if
-#endif
+
     end if
 
     POP_SUB(accel_end)
