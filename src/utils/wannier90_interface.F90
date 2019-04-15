@@ -83,8 +83,6 @@ program wannier90_interface
   integer, allocatable :: w90_spin_proj_component(:)               ! up/down flag 
   FLOAT, allocatable   :: w90_spin_proj_axis(:,:)                  ! spin axis (not implemented)
 
-  PUSH_SUB(wannier90_interface)
-
   call getopt_init(ierr)
   if(ierr /= 0) then
     message(1) = "Your Fortran compiler doesn't support command-line arguments;"
@@ -233,8 +231,6 @@ program wannier90_interface
   call io_end()
   call messages_end()
   call global_end()
-
-  POP_SUB(wannier90_interface)
 
 contains
 
@@ -578,11 +574,11 @@ contains
   end subroutine write_unk
 
   subroutine create_wannier90_amn()
-    integer ::  ist, jst, ik, w90_amn,  iknn, G(3), ii, jj, idim, idim2, iw, ip
-    FLOAT   ::  Gr(3), t1, t2, center(3), dd
+    integer ::  ist, ik, w90_amn, idim, iw, ip
+    FLOAT   ::  center(3)
     character(len=80) :: filename
     CMPLX   :: projection
-    CMPLX, allocatable :: state1(:,:), state2(:,:), orbital(:,:)
+    CMPLX, allocatable :: psi(:,:), orbital(:,:)
     type(submesh_t) :: submesh
     FLOAT, allocatable ::  rr(:,:), ylm(:)
 
@@ -591,11 +587,11 @@ contains
     ASSERT(st%d%kpt%start==1 .and. st%d%kpt%end==sys%gr%sb%kpoints%full%npoints)
 
     ! precompute orbitals
-    SAFE_ALLOCATE(orbital(w90_nproj,1:sys%gr%mesh%np))
+    SAFE_ALLOCATE(orbital(1:sys%gr%mesh%np, 1:w90_nproj))
     orbital = M_ZERO
     do iw=1,w90_nproj
       ! cartesian coordinate of orbital center
-      center(1:3) =  matmul(w90_proj_centers(iw,1:3),sys%gr%sb%rlattice(1:3,1:3))
+      center(1:3) =  matmul(w90_proj_centers(iw,1:3), sys%gr%sb%rlattice(1:3,1:3))
       call submesh_init(submesh, sys%gr%sb, sys%gr%mesh, center, CNST(2.0)*maxval(sys%gr%sb%lsize(:)))
 
       ! make transpose table of submesh points for use in pwscf routine
@@ -607,18 +603,18 @@ contains
       ! get ylm as submesh points
       SAFE_ALLOCATE(ylm(1:submesh%np))
       ! (this is a routine from pwscf)
-      call ylm_wannier(ylm,w90_proj_lmr(iw,1),w90_proj_lmr(iw,2),rr,submesh%np)
+      call ylm_wannier(ylm, w90_proj_lmr(iw,1), w90_proj_lmr(iw,2), rr, submesh%np)
 
       ! apply radial function
       do ip=1,submesh%np
-        dd=sqrt(dot_product(submesh%x(ip,1:3),submesh%x(ip,1:3)))
-        ylm(ip) = ylm(ip)*M_TWO*exp(-dd)
+        ylm(ip) = ylm(ip)*M_TWO*exp(-submesh%x(ip,0))
       end do
 
-      call submesh_add_to_mesh(submesh,ylm, orbital(iw, :))
+      call submesh_add_to_mesh(submesh, ylm, orbital(1:sys%gr%mesh%np, iw))
 
       SAFE_DEALLOCATE_A(ylm)
       SAFE_DEALLOCATE_A(rr)
+      call submesh_end(submesh)
     end do
 
     filename = './'// trim(adjustl(w90_prefix))//'.amn'
@@ -630,20 +626,16 @@ contains
       write(w90_amn,*)  w90_num_bands, w90_num_kpts, w90_num_wann
     end if
 
-    SAFE_ALLOCATE(state1(1:sys%gr%der%mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(psi(1:sys%gr%der%mesh%np, 1:st%d%dim))
 
-    do ist=1,w90_num_bands
-      do iw=1,w90_num_wann
+    do ist=1, w90_num_bands
+      do iw=1, w90_nproj
         do ik=1, w90_num_kpts
-          call states_get_state(st, sys%gr%der%mesh, ist, ik, state1)
+          call states_get_state(st, sys%gr%der%mesh, ist, ik, psi)
           projection = M_ZERO
           do idim=1,st%d%dim
-            if(.not.w90_spinors) then
-              projection = projection + zmf_dotp(sys%gr%mesh,state1(1:sys%gr%mesh%np,idim),orbital(iw,1:sys%gr%mesh%np))
-            else
-              if(idim == w90_spin_proj_component(iw)) &
-                projection =  zmf_dotp(sys%gr%mesh,state1(1:sys%gr%mesh%np,idim),orbital(iw,1:sys%gr%mesh%np))
-            end if
+            if(w90_spinors .and. idim /= w90_spin_proj_component(iw)) cycle
+            projection = projection + zmf_dotp(sys%gr%mesh,psi(1:sys%gr%mesh%np,idim),orbital(1:sys%gr%mesh%np, iw))
           end do
           write (w90_amn,'(I5,2x,I5,2x,I5,2x,e12.6,2x,e12.6)') ist, iw, ik, projection
         end do
@@ -651,7 +643,7 @@ contains
     end do
     call io_close(w90_amn)
 
-    SAFE_DEALLOCATE_A(state1)
+    SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(orbital)
 
     POP_SUB(create_wannier90_amn)
