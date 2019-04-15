@@ -525,7 +525,7 @@ contains
       w90_eig = io_open(trim(filename), action='write')
       do ik=1,w90_num_kpts
         do ist=1,w90_num_bands
-          write(w90_eig,'(I5,2x,I5,2x,e12.6)') ist, ik, units_from_atomic(units_out%energy, st%eigenval(ist, ik))
+          write(w90_eig,'(I5,2x,I5,2x,e12.6)') ist, ik, units_from_atomic(unit_eV, st%eigenval(ist, ik))
         end do
       end do
 
