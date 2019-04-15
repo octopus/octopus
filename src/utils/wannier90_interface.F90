@@ -1,4 +1,4 @@
-!! Copyright (C) 2017 H. Huebener
+!! Copyright (C) 2017-2019 H. Huebener, N. Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -83,6 +83,7 @@ program wannier90_interface
   integer, allocatable :: w90_spin_proj_component(:)               ! up/down flag 
   FLOAT, allocatable   :: w90_spin_proj_axis(:,:)                  ! spin axis (not implemented)
 
+  PUSH_SUB(wannier90_interface)
 
   call getopt_init(ierr)
   if(ierr /= 0) then
@@ -220,11 +221,15 @@ program wannier90_interface
   call messages_end()
   call global_end()
 
+  POP_SUB(wannier90_interface)
+
 contains
 
   subroutine wannier90_setup()
     character(len=80) :: filename
     integer :: w90_win, oct_kpts, ia, axis(3), jj, kk
+
+    PUSH_SUB(wannier90_setup)
 
     call states_init(st, sys%gr, sys%geo)
     ! open win file
@@ -287,6 +292,8 @@ contains
 
     call io_close(w90_win)
 
+    POP_SUB(wannier90_setup)
+
   end subroutine wannier90_setup
 
   subroutine read_wannier90_files()
@@ -294,6 +301,8 @@ contains
     character(len=80) :: filename, dummy, dummy1
     logical :: exist
     FLOAT :: dummyr(7)
+
+    PUSH_SUB(read_wannier90_files)
 
     ! assume to use all bands and number of k-points is consistent with Wannier90
     ! input files. Consistncy is checked later
@@ -413,6 +422,8 @@ contains
 
     call io_close(w90_nnkp)
 
+    POP_SUB(read_wannier90_files)
+
   end subroutine read_wannier90_files
 
   subroutine create_wannier90_mmn()
@@ -421,6 +432,8 @@ contains
     character(len=80) :: filename
     CMPLX   :: overlap
     CMPLX, allocatable :: state1(:,:), state2(:,:)
+
+    PUSH_SUB(create_wannier90_mmn)
 
     ASSERT(st%d%kpt%start==1 .and. st%d%kpt%end==sys%gr%sb%kpoints%full%npoints)
 
@@ -487,6 +500,8 @@ contains
     SAFE_DEALLOCATE_A(state1)
     SAFE_DEALLOCATE_A(state2)
 
+    POP_SUB(create_wannier90_mmn)
+
   end subroutine create_wannier90_mmn
 
   subroutine write_unk()
@@ -496,6 +511,8 @@ contains
     character(len=80) :: filename
     CMPLX   :: overlap
     CMPLX, allocatable :: state1(:,:), state2(:)
+
+    PUSH_SUB(write_unk)
 
     ASSERT(st%d%kpt%start==1 .and. st%d%kpt%end==sys%gr%sb%kpoints%full%npoints)
     ASSERT(sys%gr%mesh%np==sys%gr%mesh%np_global)
@@ -535,6 +552,8 @@ contains
        end do
     end do
 
+    POP_SUB(write_unk)
+
   end subroutine write_unk
 
   subroutine create_wannier90_amn()
@@ -545,6 +564,8 @@ contains
     CMPLX, allocatable :: state1(:,:), state2(:,:), orbital(:,:)
     type(submesh_t) :: submesh
     FLOAT, allocatable ::  rr(:,:), ylm(:)
+
+    PUSH_SUB(create_wannier90_amn)
 
     ASSERT(st%d%kpt%start==1 .and. st%d%kpt%end==sys%gr%sb%kpoints%full%npoints)
 
@@ -611,6 +632,8 @@ contains
 
     SAFE_DEALLOCATE_A(state1)
     SAFE_DEALLOCATE_A(orbital)
+
+    POP_SUB(create_wannier90_amn)
 
   end subroutine create_wannier90_amn
 
