@@ -1,7 +1,7 @@
 Test       : vdW-DF-cx with libvdwxc - H2O
 Options    : libvdwxc
 Program    : octopus
-TestGroups : short-run, functionals, libvdwxc
+TestGroups : short-run, functionals
 Enabled    : Yes
 
 Input      : 13-libvdwxc_h2o.01-vdwdfcx.inp
