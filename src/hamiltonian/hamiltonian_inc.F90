@@ -170,7 +170,6 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
 
     case(RDMFT)
        call X(exchange_operator)(hm, der, ik, hm%exx_coef, epsib, hpsib, occ)
-!      call X(rdmft_exchange_operator)(hm, der, ik, epsib, hpsib, occ_)
     end select
     call profiling_out(prof_exx)
     
