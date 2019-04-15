@@ -72,7 +72,7 @@ program wannier90_interface
   integer              :: ist, ispin
   type(states_t)       :: st
   logical              :: w90_setup, w90_output, w90_wannier
-  logical              :: w90_unk, w90_amn, w90_mmn, w90_spinors
+  logical              :: w90_spinors
   integer              :: w90_nntot, w90_num_bands, w90_num_kpts   ! w90 input parameters
   integer, allocatable :: w90_nnk_list(:,:)                        !
   character(len=80)    :: w90_prefix                               ! w90 input file prefix
@@ -148,7 +148,7 @@ program wannier90_interface
 
   !%Variable wannier90_files
   !%Type flag
-  !%Default w90_mmn + w90_amn
+  !%Default w90_mmn + w90_amn + w90_eig
   !%Section Utilities::oct-wannier90
   !%Description
   !% Specifies which files to generate
@@ -159,13 +159,12 @@ program wannier90_interface
   !% (see Wannier90 documentation)
   !%Option w90_amn bit(3)
   !% (see Wannier90 documentation)
+  !%Option w90_eig bit(4)
+  !% Eigenvalues. See Wannier90 documentation for more details.
   !%End
-  w90_what = OPTION__WANNIER90_FILES__W90_MMN + OPTION__WANNIER90_FILES__W90_AMN
+  w90_what = OPTION__WANNIER90_FILES__W90_MMN + OPTION__WANNIER90_FILES__W90_AMN + OPTION__WANNIER90_FILES__W90_EIG
   call parse_variable('wannier90_files', w90_what, w90_what)
 
-  w90_unk = iand(w90_what, OPTION__WANNIER90_FILES__W90_UNK) /= 0
-  w90_mmn = iand(w90_what, OPTION__WANNIER90_FILES__W90_MMN) /= 0
-  w90_amn = iand(w90_what, OPTION__WANNIER90_FILES__W90_AMN) /= 0
 
   ! sanity checks
   if(w90_setup .and. w90_output) then
@@ -208,9 +207,23 @@ program wannier90_interface
 
     ! ---- actual interface work ----------
     call read_wannier90_files()
-    if(w90_mmn) call create_wannier90_mmn()
-    if(w90_unk) call write_unk()
-    if(w90_amn) call create_wannier90_amn()
+
+    if(iand(w90_what, OPTION__WANNIER90_FILES__W90_MMN) /= 0) then
+      call create_wannier90_mmn()
+    end if
+
+    if(iand(w90_what, OPTION__WANNIER90_FILES__W90_UNK) /= 0) then
+      call write_unk()
+    end if
+
+    if(iand(w90_what, OPTION__WANNIER90_FILES__W90_AMN) /= 0) then
+      call create_wannier90_amn()
+    end if
+
+    if(iand(w90_what, OPTION__WANNIER90_FILES__W90_EIG) /= 0) then
+      call create_wannier90_eig()
+    end if
+
   else if(w90_wannier) then
     call messages_not_implemented("The option wannier90_mode = w90_wannier is not yet implemented.")
   end if
@@ -366,7 +379,7 @@ contains
 
     call io_close(w90_nnkp)
 
-    if(w90_amn) then
+    if(iand(w90_what, OPTION__WANNIER90_FILES__W90_AMN) /= 0) then
        ! parse file again for definitions of projections
        w90_nnkp = io_open(trim(filename), action='read')
 
@@ -427,7 +440,7 @@ contains
   end subroutine read_wannier90_files
 
   subroutine create_wannier90_mmn()
-    integer ::  ist, jst, ik, w90_mmn, w90_eig,  iknn, G(3), ii, jj, idim, idim2
+    integer ::  ist, jst, ik, w90_mmn, iknn, G(3), ii, jj, idim, idim2
     FLOAT   ::  Gr(3), t1, t2
     character(len=80) :: filename
     CMPLX   :: overlap
@@ -484,25 +497,33 @@ contains
 
     close(w90_mmn)
 
-   if(mpi_grp_is_root(mpi_world)) then
-      filename = './'//trim(adjustl(w90_prefix))//'.eig'
-       w90_eig = io_open(trim(filename), action='write')
-       do ik=1,w90_num_kpts
-          do ist=1,w90_num_bands
-             write(w90_eig,'(I5,2x,I5,2x,e12.6)') ist, ik, units_from_atomic(units_out%energy, st%eigenval(ist, ik))
-          end do
-       end do
-
-       close(w90_eig)
-    end if
-
-
     SAFE_DEALLOCATE_A(state1)
     SAFE_DEALLOCATE_A(state2)
 
     POP_SUB(create_wannier90_mmn)
 
   end subroutine create_wannier90_mmn
+
+  subroutine create_wannier90_eig()
+    integer ::  ist, ik, w90_eig
+    character(len=80) :: filename
+
+    PUSH_SUB(create_wannier90_eig)
+
+    if(mpi_grp_is_root(mpi_world)) then
+      filename = './'//trim(adjustl(w90_prefix))//'.eig'
+      w90_eig = io_open(trim(filename), action='write')
+      do ik=1,w90_num_kpts
+        do ist=1,w90_num_bands
+          write(w90_eig,'(I5,2x,I5,2x,e12.6)') ist, ik, units_from_atomic(units_out%energy, st%eigenval(ist, ik))
+        end do
+      end do
+
+      close(w90_eig)
+    end if
+
+    POP_SUB(create_wannier90_eig)
+  end subroutine create_wannier90_eig
 
   subroutine write_unk()
     integer ::  ist, jst, ik, unk_file,  iknn, G(3), ii, jj, idim, idim2,  ispin
