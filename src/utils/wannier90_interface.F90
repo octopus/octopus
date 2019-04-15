@@ -601,7 +601,7 @@ contains
       ! make transpose table of submesh points for use in pwscf routine
       SAFE_ALLOCATE(rr(1:3,submesh%np))
       do ip=1,submesh%np
-         rr(1:3,ip) = submesh%x(ip,1:3)
+        rr(1:3,ip) = submesh%x(ip,1:3)
       end do
 
       ! get ylm as submesh points
@@ -611,8 +611,8 @@ contains
 
       ! apply radial function
       do ip=1,submesh%np
-         dd=sqrt(dot_product(submesh%x(ip,1:3),submesh%x(ip,1:3)))
-         ylm(ip) = ylm(ip)*M_TWO*exp(-dd)
+        dd=sqrt(dot_product(submesh%x(ip,1:3),submesh%x(ip,1:3)))
+        ylm(ip) = ylm(ip)*M_TWO*exp(-dd)
       end do
 
       call submesh_add_to_mesh(submesh,ylm, orbital(iw, :))
@@ -626,28 +626,28 @@ contains
 
     ! write header
     if(mpi_grp_is_root(mpi_world)) then
-       write(w90_amn,*) ' '
-       write(w90_amn,*)  w90_num_bands, w90_num_kpts, w90_num_wann
+      write(w90_amn,*) ' '
+      write(w90_amn,*)  w90_num_bands, w90_num_kpts, w90_num_wann
     end if
 
     SAFE_ALLOCATE(state1(1:sys%gr%der%mesh%np, 1:st%d%dim))
 
     do ist=1,w90_num_bands
-       do iw=1,w90_num_wann
-          do ik=1, w90_num_kpts
-             call states_get_state(st, sys%gr%der%mesh, ist, ik, state1)
-             projection = M_ZERO
-             do idim=1,st%d%dim
-                if(.not.w90_spinors) then
-                   projection = projection + zmf_dotp(sys%gr%mesh,state1(1:sys%gr%mesh%np,idim),orbital(iw,1:sys%gr%mesh%np))
-                else
-                   if(idim == w90_spin_proj_component(iw)) &
-                       projection =  zmf_dotp(sys%gr%mesh,state1(1:sys%gr%mesh%np,idim),orbital(iw,1:sys%gr%mesh%np))
-                end if
-             end do
-             write (w90_amn,'(I5,2x,I5,2x,I5,2x,e12.6,2x,e12.6)') ist, iw, ik, projection
+      do iw=1,w90_num_wann
+        do ik=1, w90_num_kpts
+          call states_get_state(st, sys%gr%der%mesh, ist, ik, state1)
+          projection = M_ZERO
+          do idim=1,st%d%dim
+            if(.not.w90_spinors) then
+              projection = projection + zmf_dotp(sys%gr%mesh,state1(1:sys%gr%mesh%np,idim),orbital(iw,1:sys%gr%mesh%np))
+            else
+              if(idim == w90_spin_proj_component(iw)) &
+                projection =  zmf_dotp(sys%gr%mesh,state1(1:sys%gr%mesh%np,idim),orbital(iw,1:sys%gr%mesh%np))
+            end if
           end do
-       end do
+          write (w90_amn,'(I5,2x,I5,2x,I5,2x,e12.6,2x,e12.6)') ist, iw, ik, projection
+        end do
+      end do
     end do
     call io_close(w90_amn)
 
