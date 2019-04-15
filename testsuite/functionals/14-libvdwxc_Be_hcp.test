@@ -1,4 +1,4 @@
-Test       : vdW-DF-cx with libvdwxc - H2O
+Test       : vdW-DF-cx with libvdwxc - Be hcp
 Options    : libvdwxc
 Program    : octopus
 TestGroups : short-run, functionals
