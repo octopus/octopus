@@ -136,9 +136,14 @@ program wannier90_interface
   !% The states will be written in the folder wannier. By default, the states are written as
   !% binary files, similar to the Kohn-Sham states.
   !%End
-  call parse_variable('wannier90_mode', w90_what, w90_what)
-  w90_setup = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_SETUP) /= 0
-  w90_output = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_OUTPUT) /= 0
+  call parse_variable('wannier90_mode', 0, w90_what)
+  w90_setup = iand(w90_what, OPTION__WANNIER90_MODE__W90_SETUP) /= 0
+  w90_output = iand(w90_what, OPTION__WANNIER90_MODE__W90_OUTPUT) /= 0
+
+  if(w90_what == 0) then
+    message(1) = "wannier90_mode must be set to a value different from 0."
+    call messages_fatal(1)
+  end if
 
   !%Variable wannier90_files
   !%Type flag
@@ -154,12 +159,12 @@ program wannier90_interface
   !%Option w90_amn bit(3)
   !% (see Wannier90 documentation)
   !%End
-  w90_what = OPTION__W90_INTERFACE_FILES__W90_MMN + OPTION__W90_INTERFACE_FILES__W90_AMN
+  w90_what = OPTION__WANNIER90_FILES__W90_MMN + OPTION__WANNIER90_FILES__W90_AMN
   call parse_variable('wannier90_files', w90_what, w90_what)
 
-  w90_unk = iand(w90_what, OPTION__W90_INTERFACE_FILES__W90_UNK) /= 0
-  w90_mmn = iand(w90_what, OPTION__W90_INTERFACE_FILES__W90_MMN) /= 0
-  w90_amn = iand(w90_what, OPTION__W90_INTERFACE_FILES__W90_AMN) /= 0
+  w90_unk = iand(w90_what, OPTION__WANNIER90_FILES__W90_UNK) /= 0
+  w90_mmn = iand(w90_what, OPTION__WANNIER90_FILES__W90_MMN) /= 0
+  w90_amn = iand(w90_what, OPTION__WANNIER90_FILES__W90_AMN) /= 0
 
   ! sanity checks
   if(w90_setup .and. w90_output) then
@@ -226,7 +231,7 @@ contains
     ! write direct lattice vectors (in angstrom)
     write(w90_win,'(a)') 'begin unit_cell_cart'
     do idim=1,3
-      write(w90_win,'(f12.8,f12.8,f12.8)') sys%gr%sb%rlattice(idim,1:3)*0.529177249
+      write(w90_win,'(f12.8,f12.8,f12.8)') units_from_atomic(unit_angstrom, sys%gr%sb%rlattice(idim,1:3))
     end do
     write(w90_win,'(a)') 'end unit_cell_cart'
     write(w90_win,'(a)') ' '
