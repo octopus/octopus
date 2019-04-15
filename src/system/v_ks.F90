@@ -391,7 +391,7 @@ contains
     ks%calc%calculating = .false.
 
     !The value of ks%calculate_current is set to false or true by Output    
-    call current_init(ks%current_calculator)
+    call current_init(ks%current_calculator, gr%sb)
     
     !%Variable VDWCorrection
     !%Type integer

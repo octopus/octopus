@@ -1252,6 +1252,8 @@ contains
     end if
     call parse_variable('StatesPack', defaultl, st%d%pack_states)
 
+    call messages_print_var_value(stdout, 'StatesPack', st%d%pack_states)
+
     !%Variable StatesMirror
     !%Type logical
     !%Section Execution::Optimization
@@ -1270,6 +1272,8 @@ contains
       defaultl = .true.
     end if
     call parse_variable('StatesMirror', defaultl, st%d%mirror_states)
+
+    call messages_print_var_value(stdout, 'StatesMirror', st%d%mirror_states)
 
     !%Variable StatesOrthogonalization
     !%Type integer

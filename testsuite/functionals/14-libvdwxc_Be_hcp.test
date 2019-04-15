@@ -1,0 +1,14 @@
+Test       : vdW-DF-cx with libvdwxc - Be hcp
+Options    : libvdwxc
+Program    : octopus
+TestGroups : short-run, functionals
+Enabled    : Yes
+
+Input      : 14-libvdwxc_Be_hcp.01-vdwdfcx.inp
+
+Precision: 7.0e-06
+match ;  Total energy  ; GREPFIELD(static/info, 'Total       =', 3) ; -26.588908225
+Precision: 3.0e-07
+match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.769097225
+Precision: 1.5e-7
+match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.414032305

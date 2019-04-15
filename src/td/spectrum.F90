@@ -290,7 +290,6 @@ contains
     !%End
     call parse_variable('PropagationSpectrumDampFactor', -M_ONE, spectrum%damp_factor, units_inp%time**(-1))
 
-
     call messages_print_var_value(stdout, 'PropagationSpectrumDampFactor', spectrum%damp_factor, unit = units_out%time**(-1))
 
     !%Variable PropagationSpectrumSigmaDiagonalization
@@ -637,18 +636,7 @@ contains
     end if
 
     ! Find out the iteration numbers corresponding to the time limits.
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
-    ! Get default damp factor
-    if (spectrum%damp /= SPECTRUM_DAMP_NONE .and. spectrum%damp /= SPECTRUM_DAMP_POLYNOMIAL &
-         .and. spectrum%damp_factor == -M_ONE) then
-      select case(spectrum%damp)
-        case(SPECTRUM_DAMP_LORENTZIAN)
-          spectrum%damp_factor =  -log(0.0001)/(spectrum%end_time-spectrum%start_time)
-        case(SPECTRUM_DAMP_GAUSSIAN)
-          spectrum%damp_factor =  sqrt(-log(0.0001)/(spectrum%end_time-spectrum%start_time)**2)
-      end select
-      call messages_print_var_value(stdout, 'PropagationSpectrumDampFactor', spectrum%damp_factor, unit = units_out%time**(-1))
-    end if
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     SAFE_ALLOCATE(dipole(0:time_steps, 1:3, 1:nspin))
     call spectrum_read_dipole(in_file, dipole)
@@ -827,7 +815,7 @@ contains
     end if
 
     ! Find out the iteration numbers corresponding to the time limits.
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     SAFE_ALLOCATE(dipole(0:time_steps, 1:3, 1:nspin))
     call spectrum_read_dipole(in_file, dipole)
@@ -967,7 +955,7 @@ contains
     dt = units_to_atomic(file_units%time, dt_cos) ! units_out is OK
 
     ! Find out the iteration numbers corresponding to the time limits.
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     ! Read the f-transformed charge density.
     call io_skip_header(in_file_sin)
@@ -1084,7 +1072,7 @@ contains
     PUSH_SUB(spectrum_rotatory_strength)
 
     call spectrum_mult_info(in_file, nspin, kick, time_steps, dt, file_units)
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     ! load angular momentum from file
     SAFE_ALLOCATE(angular(0:time_steps, 1:3))
@@ -1400,7 +1388,7 @@ contains
     PUSH_SUB(spectrum_hs_ar_from_acc)
 
     call spectrum_tdfile_info('acceleration', iunit, time_steps, dt)
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     ! load dipole from file
     SAFE_ALLOCATE(acc(1:MAX_DIM,0:time_steps))
@@ -1441,7 +1429,7 @@ contains
     end if
     if (.not.(iunit < 0)) then
       call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
-      call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+      call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
       call io_skip_header(iunit)
 !    write (*,*) 
@@ -1511,7 +1499,7 @@ contains
       iunit = io_open('td.general/multipoles', action='read', status='old')
     end if
     call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     call io_skip_header(iunit)
 
@@ -1604,7 +1592,7 @@ contains
       iunit = io_open('td.general/multipoles', action='read', status='old')
     end if
     call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
 
@@ -1718,7 +1706,7 @@ contains
     PUSH_SUB(spectrum_hs_from_acc)
 
     call spectrum_tdfile_info('acceleration', iunit, time_steps, dt)
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
 
@@ -1821,7 +1809,7 @@ contains
     PUSH_SUB(spectrum_hs_from_current)
 
     call spectrum_tdfile_info('total_current', iunit, time_steps, dt)
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
 
@@ -2160,11 +2148,11 @@ contains
 
   
   ! ---------------------------------------------------------
-  subroutine spectrum_fix_time_limits(time_steps, dt, start_time, end_time, istart, iend, ntiter)
-    integer, intent(in)    :: time_steps
-    FLOAT,   intent(in)    :: dt
-    FLOAT,   intent(inout) :: start_time, end_time
-    integer, intent(out)   :: istart, iend, ntiter
+  subroutine spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
+    type(spectrum_t), intent(inout) :: spectrum
+    integer, intent(in)             :: time_steps
+    FLOAT,   intent(in)             :: dt
+    integer, intent(out)            :: istart, iend, ntiter
 
     FLOAT :: ts, te, dummy
 
@@ -2173,19 +2161,31 @@ contains
     ts = M_ZERO
     te = time_steps * dt
 
-    if(start_time < ts) start_time = ts
-    if(start_time > te) start_time = te
-    if(end_time   > te .or. end_time <= M_ZERO) end_time = te
-    if(end_time   < ts) end_time   = ts
+    if(spectrum%start_time < ts) spectrum%start_time = ts
+    if(spectrum%start_time > te) spectrum%start_time = te
+    if(spectrum%end_time   > te .or. spectrum%end_time <= M_ZERO) spectrum%end_time = te
+    if(spectrum%end_time   < ts) spectrum%end_time   = ts
 
-    if(end_time < start_time) then
-      dummy = end_time ! swap
-      end_time = start_time
-      start_time = dummy
+    if(spectrum%end_time < spectrum%start_time) then
+      dummy = spectrum%end_time ! swap
+      spectrum%end_time = spectrum%start_time
+      spectrum%start_time = dummy
     end if
-    istart = int(start_time / dt)
-    iend = int(end_time / dt)
+    istart = int(spectrum%start_time / dt)
+    iend = int(spectrum%end_time / dt)
     ntiter = iend - istart + 1
+
+    ! Get default damp factor
+    if (spectrum%damp /= SPECTRUM_DAMP_NONE .and. spectrum%damp /= SPECTRUM_DAMP_POLYNOMIAL &
+         .and. spectrum%damp_factor == -M_ONE) then
+      select case(spectrum%damp)
+        case(SPECTRUM_DAMP_LORENTZIAN)
+          spectrum%damp_factor =  -log(0.0001)/(spectrum%end_time-spectrum%start_time)
+        case(SPECTRUM_DAMP_GAUSSIAN)
+          spectrum%damp_factor =  sqrt(-log(0.0001)/(spectrum%end_time-spectrum%start_time)**2)
+      end select
+    end if
+
 
     POP_SUB(spectrum_fix_time_limits)
   end subroutine spectrum_fix_time_limits
