@@ -444,7 +444,13 @@ contains
 
     PUSH_SUB(create_wannier90_mmn)
 
-    ASSERT(st%d%kpt%start==1 .and. st%d%kpt%end==sys%gr%sb%kpoints%full%npoints)
+    if(st%d%kpt%parallel) then
+      call messages_not_implemented("w90_mmn output with k-point parallelization.")
+    end if
+
+    if(st%parallel_in_states) then
+      call messages_not_implemented("w90_mmn output with states parallelization.")
+    end if
 
     filename = './'// trim(adjustl(w90_prefix))//'.mmn'
     w90_mmn = io_open(trim(filename), action='write')
@@ -506,6 +512,14 @@ contains
 
     PUSH_SUB(create_wannier90_eig)
 
+    if(st%d%kpt%parallel) then
+      call messages_not_implemented("w90_eig output with k-point parallelization.")
+    end if
+
+    if(st%parallel_in_states) then
+      call messages_not_implemented("w90_eig output with states parallelization.")
+    end if
+
     if(mpi_grp_is_root(mpi_world)) then
       filename = './'//trim(adjustl(w90_prefix))//'.eig'
       w90_eig = io_open(trim(filename), action='write')
@@ -531,8 +545,18 @@ contains
 
     PUSH_SUB(write_unk)
 
-    ASSERT(st%d%kpt%start==1 .and. st%d%kpt%end==sys%gr%sb%kpoints%full%npoints)
-    ASSERT(sys%gr%mesh%np==sys%gr%mesh%np_global)
+    if(st%d%kpt%parallel) then
+      call messages_not_implemented("w90_unk output with k-point parallelization.")
+    end if
+      
+    if(sys%gr%mesh%parallel_in_domains) then
+      call messages_not_implemented("w90_unk output with domain parallelization")
+    end if
+
+    if(st%parallel_in_states) then
+      call messages_not_implemented("w90_unk output with states parallelization.")
+    end if
+
 
     SAFE_ALLOCATE(state1(1:sys%gr%der%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(state2(1:sys%gr%der%mesh%np))
@@ -584,7 +608,13 @@ contains
 
     PUSH_SUB(create_wannier90_amn)
 
-    ASSERT(st%d%kpt%start==1 .and. st%d%kpt%end==sys%gr%sb%kpoints%full%npoints)
+    if(st%d%kpt%parallel) then
+      call messages_not_implemented("w90_amn output with k-point parallelization.")
+    end if
+
+    if(st%parallel_in_states) then
+      call messages_not_implemented("w90_amn output with states parallelization.")
+    end if
 
     ! precompute orbitals
     SAFE_ALLOCATE(orbital(1:sys%gr%mesh%np, 1:w90_nproj))
