@@ -328,8 +328,8 @@ contains
 
     inquire(file=filename,exist=exist)
     if(.not. exist) then
-       message(1) = 'W90: Cannot find specified Wannier90 nnkp file.'
-       write(message(2),'(a)') 'W90: Please run wannier90.x -pp '// trim(adjustl(w90_prefix)) // ' first.' 
+       message(1) = 'oct-wannier90: Cannot find specified Wannier90 nnkp file.'
+       write(message(2),'(a)') 'Please run wannier90.x -pp '// trim(adjustl(w90_prefix)) // ' first.' 
        call messages_fatal(2)
     end if
 
@@ -341,7 +341,7 @@ contains
        if(dummy =='begin' .and. dummy1 == 'kpoints' ) then
           read(w90_nnkp,*) itemp
           if(itemp /= w90_num_kpts) then
-             message(1) = 'W90: wannier90 setup seems to have been done with a different number of k-points.'
+             message(1) = 'oct-wannier90: wannier90 setup seems to have been done with a different number of k-points.'
              call messages_fatal(1)
           else
              exit
@@ -364,7 +364,7 @@ contains
           !make sure we are at the end of the block
           read(w90_nnkp,*) dummy
           if(dummy /= 'end') then
-             message(1) = 'W90: There dont seem to be enough k-points in nnkpts file to.'
+             message(1) = 'oct-wannier90: There dont seem to be enough k-points in nnkpts file to.'
              call messages_fatal(1)
           end if
           goto 102
@@ -372,7 +372,7 @@ contains
     end do
 
     ! jump point when EOF found while looking for nnkpts block
-101 message(1) = 'W90: Did not find nnkpts block in nnkp file'
+101 message(1) = 'oct-wannier90: Did not find nnkpts block in nnkp file'
     call messages_fatal(1)
 
 102 continue
@@ -390,7 +390,7 @@ contains
 
               if(dummy1 == 'spinor_projections') then
                  w90_spinors = .true.
-                 message(1) = 'W90: Spinor interface incomplete. Note there is no quantization axis implemented'
+                 message(1) = 'oct-wannier90: Spinor interface incomplete. Note there is no quantization axis implemented'
                  call messages_warning(1)
               end if
 
@@ -417,7 +417,7 @@ contains
               !make sure we are at the end of the block
               read(w90_nnkp,*) dummy
               if(dummy /= 'end') then
-                 message(1) = 'W90: There dont seem to be enough projections in nnkpts file to.'
+                 message(1) = 'oct-wannier90: There dont seem to be enough projections in nnkpts file to.'
                  call messages_fatal(1)
               end if
               goto 202
@@ -425,7 +425,7 @@ contains
        end do
 
        ! jump point when EOF found while looking for projections block
-201    message(1) = 'W90: Did not find projections block in w90.nnkp file'
+201    message(1) = 'oct-wannier90: Did not find projections block in w90.nnkp file'
        call messages_fatal(1)
 
        ! jump point when projections is found in file
