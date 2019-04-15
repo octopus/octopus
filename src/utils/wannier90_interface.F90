@@ -230,6 +230,7 @@ contains
 
     ! write direct lattice vectors (in angstrom)
     write(w90_win,'(a)') 'begin unit_cell_cart'
+    write(w90_win,'(a)') 'Ang'
     do idim=1,3
       write(w90_win,'(f12.8,f12.8,f12.8)') units_from_atomic(unit_angstrom, sys%gr%sb%rlattice(idim,1:3))
     end do
@@ -275,7 +276,7 @@ contains
     do ii=0,axis(1)-1
        do jj=0,axis(2)-1
           do kk=0,axis(3)-1
-             write(w90_win,'(f12.8,f12.8,f12.8)')  ii*M_ONE/(axis(1)*M_ONE), jj*M_ONE/(axis(2)*M_ONE),kk*M_ONE/(axis(3)*M_ONE)
+             write(w90_win,'(f12.8,f12.8,f12.8)') ii*M_ONE/(axis(1)*M_ONE), jj*M_ONE/(axis(2)*M_ONE), kk*M_ONE/(axis(3)*M_ONE)
              write(oct_kpts,'(a6,f12.8,a3,f12.8,a3,f12.8)') ' 1. | ',  ii*M_ONE/(axis(1)*M_ONE) ,' | ', jj*M_ONE/(axis(2)*M_ONE), ' | ', kk*M_ONE/(axis(3)*M_ONE)
           end do
        end do
