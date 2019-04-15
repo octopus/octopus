@@ -71,13 +71,14 @@ program wannier90_interface
   character(len=512)   :: filename, str, str2
   integer              :: ist, ispin
   type(states_t)       :: st
-  logical              :: w90_setup, w90_output, w90_unk, w90_amn, w90_mmn, w90_spinors
-  integer              ::w90_nntot, w90_num_bands, w90_num_kpts    ! w90 input parameters
-  integer, allocatable ::  w90_nnk_list(:,:)                       !
+  logical              :: w90_setup, w90_output, w90_wannier
+  logical              :: w90_unk, w90_amn, w90_mmn, w90_spinors
+  integer              :: w90_nntot, w90_num_bands, w90_num_kpts   ! w90 input parameters
+  integer, allocatable :: w90_nnk_list(:,:)                        !
   character(len=80)    :: w90_prefix                               ! w90 input file prefix
   integer              :: w90_num_wann                             ! input paramter
   FLOAT, allocatable   :: w90_proj_centers(:,:)                    ! projections centers
-  integer, allocatable ::  w90_proj_lmr(:,:)                       ! definitions for real valued Y_lm*R_r
+  integer, allocatable :: w90_proj_lmr(:,:)                        ! definitions for real valued Y_lm*R_r
   integer :: w90_nproj                                             ! number of such projections        
   integer, allocatable :: w90_spin_proj_component(:)               ! up/down flag 
   FLOAT, allocatable   :: w90_spin_proj_axis(:,:)                  ! spin axis (not implemented)
@@ -102,24 +103,23 @@ program wannier90_interface
 
   call system_init(sys)
 
-  !%Variable W90_prefix
+  !%Variable wannier90_prefix
   !%Type string
   !%Default w90
-  !%Section Utilities::oct-wannier90_interface
+  !%Section Utilities::oct-wannier90
   !%Description
-  !% Prefix for Wannier90 files
+  !% Prefix for wannier90 files
   !%End
-  !    call parse_string('W90_prefix', 'w90', w90_prefix)
-  !  if(w90_prefix=='w90') then
-  !     message(1) = "Did not find w90_prefix keyword, will use default: w90"
-  !     call  messages_warning(1)
-  !  end if
-  w90_prefix = 'w90'
+  call parse_variable('wannier90_prefix', 'w90', w90_prefix)
+  if(w90_prefix=='w90') then
+    message(1) = "Did not find wannier90_prefix keyword, will use default: w90"
+    call  messages_warning(1)
+  end if
 
-  !%Variable W90_interface_mode
+  !%Variable wannier90_mode
   !%Type flag
   !%Default none
-  !%Section Utilities::oct-wannier90_interface
+  !%Section Utilities::oct-wannier90
   !%Description
   !% Specifies which stage of the Wannier90 interface to use
   !%Option w90_setup bit(1)
@@ -131,17 +131,19 @@ program wannier90_interface
   !% Generates the relevant files for a wannier90 run, specified by the variable <tt>W90_interface_files</tt>.
   !% This needs files previously generated
   !% by <tt>wannier90.x -pp w90 </tt>
-  !%
+  !% Option w90_wannier bit(3)
+  !% Parse the output of wannier90 to generate the Wannier states on the real-space grid. 
+  !% The states will be written in the folder wannier. By default, the states are written as
+  !% binary files, similar to the Kohn-Sham states.
   !%End
-  call parse_variable('W90_interface_mode', w90_what, w90_what)
-
+  call parse_variable('wannier90_mode', w90_what, w90_what)
   w90_setup = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_SETUP) /= 0
   w90_output = iand(w90_what, OPTION__W90_INTERFACE_MODE__W90_OUTPUT) /= 0
 
-  !%Variable W90_interface_files
+  !%Variable wannier90_files
   !%Type flag
-  !%Default w90_mmn
-  !%Section Utilities::oct-wannier90_interface
+  !%Default w90_mmn + w90_amn
+  !%Section Utilities::oct-wannier90
   !%Description
   !% Specifies which files to generate
   !% Example: <tt>w90_mmn + w90_unk< /tt>
@@ -152,28 +154,22 @@ program wannier90_interface
   !%Option w90_amn bit(3)
   !% (see Wannier90 documentation)
   !%End
-  w90_what = 0
-  call parse_variable('W90_interface_files', w90_what, w90_what)
+  w90_what = OPTION__W90_INTERFACE_FILES__W90_MMN + OPTION__W90_INTERFACE_FILES__W90_AMN
+  call parse_variable('wannier90_files', w90_what, w90_what)
 
   w90_unk = iand(w90_what, OPTION__W90_INTERFACE_FILES__W90_UNK) /= 0
   w90_mmn = iand(w90_what, OPTION__W90_INTERFACE_FILES__W90_MMN) /= 0
   w90_amn = iand(w90_what, OPTION__W90_INTERFACE_FILES__W90_AMN) /= 0
 
-  ! default
-  if(w90_what == 0) then
-     w90_mmn = .true.
-     w90_amn = .true.
-  end if
-
   ! sanity checks
   if(w90_setup .and. w90_output) then
-      message(1) = 'W90: w90_setup and w90_output are mutually exclusive'
-      call messages_fatal(1)
+    message(1) = 'wannier90: wannier90_setup and wannier90_output are mutually exclusive'
+    call messages_fatal(1)
   end if
 
   ! create setup files
   if(w90_setup) then
-     call wannier90_setup()
+    call wannier90_setup()
 
   ! load states and calculate interface files
   elseif(w90_output) then
@@ -203,7 +199,9 @@ program wannier90_interface
     if(w90_mmn) call create_wannier90_mmn()
     if(w90_unk) call write_unk()
     if(w90_amn) call create_wannier90_amn()
-   end if
+  else if(w90_wannier) then
+    call messages_not_implemented("The option wannier90_mode = w90_wannier is not yet implemented.")
+  end if
 
   call system_end(sys)
   call fft_all_end()
@@ -228,7 +226,7 @@ contains
     ! write direct lattice vectors (in angstrom)
     write(w90_win,'(a)') 'begin unit_cell_cart'
     do idim=1,3
-       write(w90_win,'(f12.8,f12.8,f12.8)') sys%gr%sb%rlattice(idim,1:3)*0.529177249
+      write(w90_win,'(f12.8,f12.8,f12.8)') sys%gr%sb%rlattice(idim,1:3)*0.529177249
     end do
     write(w90_win,'(a)') 'end unit_cell_cart'
     write(w90_win,'(a)') ' '
