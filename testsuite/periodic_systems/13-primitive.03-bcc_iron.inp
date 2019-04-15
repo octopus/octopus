@@ -33,6 +33,8 @@ Smearing = 0.1*eV
 SmearingFunction = fermi_dirac
 ExtraStates = 2
 
-Debug = info
+ConvRelDens = 1e-6
+EigensolverTolerance = 1e-7
+EigensolverMaxIter = 50
 
 
