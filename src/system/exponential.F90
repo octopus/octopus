@@ -738,25 +738,20 @@ contains
       integer :: iter
       logical :: zfact_is_real
       type(profile_t), save :: prof
-      logical :: copy_at_end
 
       PUSH_SUB(exponential_apply_batch.taylor_series_batch)
       call profiling_in(prof, "EXP_TAYLOR_BATCH")
 
+      if(hamiltonian_apply_packed(hm, der%mesh)) then
+        call batch_pack(psib)
+        if(present(psib2)) call batch_pack(psib2, copy = .false.)
+      end if
+      
       call initialize_temporary_batches()
 
       zfact = M_z1
       zfact2 = M_z1
       zfact_is_real = .true.
-
-      if(hamiltonian_apply_packed(hm, der%mesh)) then
-        ! unpack at end with copying only if the status on entry is unpacked
-        copy_at_end = batch_status(psib) == BATCH_NOT_PACKED
-        call batch_pack(psib)
-        if(present(psib2)) call batch_pack(psib2, copy = .false.)
-        call batch_pack(te%psi1b, copy = .false.)
-        call batch_pack(te%hpsi1b, copy = .false.)
-      end if
       
       if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
 
@@ -794,10 +789,8 @@ contains
       end do
 
       if(hamiltonian_apply_packed(hm, der%mesh)) then
-        call batch_unpack(te%psi1b, copy = .false.)
-        call batch_unpack(te%hpsi1b, copy = .false.)
-        if(present(psib2)) call batch_unpack(psib2, copy=copy_at_end)
-        call batch_unpack(psib, copy=copy_at_end)
+        if(present(psib2)) call batch_unpack(psib2)
+        call batch_unpack(psib)
       end if
 
       call profiling_count_operations(psib%nst*hm%d%dim*dble(der%mesh%np)*te%exp_order*CNST(6.0))
@@ -809,15 +802,19 @@ contains
 
     subroutine initialize_temporary_batches()
       logical :: reinitialize
+      type(profile_t), save :: prof
+
+      call profiling_in(prof, "EXP_TEMP_REALLOC")
+      
       ! This routine initializes temporary batches. If their size changes,
       ! they are reinitialized.
       if(.not. te%batches_initialized) then
         call init_batches()
       else
         if(.not.batch_is_packed(psib)) then
-          reinitialize = .true.
+          reinitialize = te%psi1b%nst_linear /= psib%nst_linear
         else
-          reinitialize = any(te%psi1b%pack%size - psib%pack%size /= 0)
+          reinitialize = any(te%psi1b%pack%size /= psib%pack%size)
         end if
         if (reinitialize) then
           call end_batches()
@@ -830,36 +827,37 @@ contains
           te%hpsi1b%nst_linear = psib%nst_linear
         end if
       end if
+
+      call profiling_out(prof)
     end subroutine initialize_temporary_batches
 
     subroutine init_batches()
-      call batch_copy(psib, te%psi1b, copy_data=.false.)
-      call batch_copy(psib, te%hpsi1b, copy_data=.false.)
+      call batch_copy(psib, te%psi1b, copy_data = .false., fill_zeros = .false.)
+      call batch_copy(psib, te%hpsi1b, copy_data = .false., fill_zeros = .false.)
       ! pack the batch -> store on device for GPU version, avoids data transfers
-      if(batch_is_packed(psib)) then
+      if(hamiltonian_apply_packed(hm, der%mesh)) then
         te%batches_packed = .true.
         call batch_pack(te%psi1b, copy = .false.)
         call batch_pack(te%hpsi1b, copy = .false.)
       end if
       te%tmp_nst = te%psi1b%nst
       te%tmp_nst_linear = te%psi1b%nst_linear
-      te%batches_initialized = .true.
 
+      te%batches_initialized = .true.
     end subroutine init_batches
 
     subroutine end_batches()
       ! deallocate temporary batches and arrays
-      if(te%batches_packed) then
-        call batch_unpack(te%psi1b, copy = .false.)
-        call batch_unpack(te%hpsi1b, copy = .false.)
-        te%batches_packed = .false.
-      end if
+      if(te%batches_packed) te%batches_packed = .false.
+
       te%psi1b%nst = te%tmp_nst
       te%psi1b%nst_linear = te%tmp_nst_linear
-      call batch_end(te%hpsi1b, copy=.false.)
+      call batch_end(te%hpsi1b, copy = .false.)
+      
       te%hpsi1b%nst = te%tmp_nst
       te%hpsi1b%nst_linear = te%tmp_nst_linear
-      call batch_end(te%psi1b, copy=.false.)
+      call batch_end(te%psi1b, copy = .false.)
+
       te%batches_initialized = .false.
     end subroutine end_batches
 

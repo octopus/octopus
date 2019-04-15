@@ -65,6 +65,7 @@ dist_share_DATA =                                \
 	11-silicon_force.02-nlcc.inp             \
 	12-boron_nitride.test                    \
 	12-boron_nitride.01-gs.inp               \
+	12-boron_nitride.02-gs_gamma.inp         \
 	13-primitive.test                        \
 	13-primitive.01-diamond.inp              \
 	13-primitive.02-graphene.inp             \
