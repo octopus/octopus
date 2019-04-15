@@ -168,9 +168,15 @@ program wannier90_interface
 
   ! sanity checks
   if(w90_setup .and. w90_output) then
-    message(1) = 'wannier90: wannier90_setup and wannier90_output are mutually exclusive'
+    message(1) = 'oct-wannier90: wannier90_setup and wannier90_output are mutually exclusive'
     call messages_fatal(1)
   end if
+
+  if(.not.sys%gr%sb%kpoints%w90_compatible) then
+    message(1) = 'oct-wannier90: Only Wannier90KPointsGrid=yes is allowed for running oct-wannier90'
+    call messages_fatal(1)
+  end if
+
 
   ! create setup files
   if(w90_setup) then
@@ -254,12 +260,12 @@ contains
     write(w90_win,'(a)') ' '
 
     if(.not.parse_is_defined('KPointsGrid')) then
-       message(1) = 'W90: need Monkhorst-Pack grid. Please specify %KPointsGrid'
+       message(1) = 'oct-wannier90: need Monkhorst-Pack grid. Please specify %KPointsGrid'
        call messages_fatal(1)
     end if
-    if(parse_is_defined('KPointsPath')) then
-       message(1) = 'W90: can only run with Monkhorst-Pack grid. Please specify only %KPointsGrid'
-       call messages_fatal(1)
+    if(.not.sys%gr%sb%kpoints%w90_compatible) then
+      message(1) = 'oct-wannier90: Only Wannier90KPointsGrid=yes is allowed for running oct-wannier90'
+      call messages_fatal(1)
     end if
 
     axis(1:3) = sys%gr%sb%kpoints%nik_axis(1:3)
@@ -268,21 +274,18 @@ contains
 
     ! make wannier90 compliant MonkhorstPack mesh
     ! and write simultaneously to w90_prefix.win file and w90_kpoints for octopus input
-    filename = 'w90_kpoints'
-    oct_kpts = io_open(trim(filename), action='write')
-    write(oct_kpts,'(a)') '%KpointsReduced'
     write(w90_win,'(a)')  'begin kpoints '
 
     do ii=0,axis(1)-1
        do jj=0,axis(2)-1
           do kk=0,axis(3)-1
              write(w90_win,'(f12.8,f12.8,f12.8)') ii*M_ONE/(axis(1)*M_ONE), jj*M_ONE/(axis(2)*M_ONE), kk*M_ONE/(axis(3)*M_ONE)
-             write(oct_kpts,'(a6,f12.8,a3,f12.8,a3,f12.8)') ' 1. | ',  ii*M_ONE/(axis(1)*M_ONE) ,' | ', jj*M_ONE/(axis(2)*M_ONE), ' | ', kk*M_ONE/(axis(3)*M_ONE)
           end do
        end do
     end do
-    write(oct_kpts,'(a)') '%'
     write(w90_win,'(a)')  'end kpoints '
+
+    call io_close(w90_win)
 
   end subroutine wannier90_setup
 
