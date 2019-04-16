@@ -130,7 +130,7 @@ program wannier90_interface
   !% Generates the relevant files for a wannier90 run, specified by the variable <tt>W90_interface_files</tt>.
   !% This needs files previously generated
   !% by <tt>wannier90.x -pp w90 </tt>
-  !% Option w90_wannier bit(3)
+  !%Option w90_wannier bit(3)
   !% Parse the output of wannier90 to generate the Wannier states on the real-space grid. 
   !% The states will be written in the folder wannier. By default, the states are written as
   !% binary files, similar to the Kohn-Sham states.
@@ -138,6 +138,7 @@ program wannier90_interface
   call parse_variable('wannier90_mode', 0, w90_what)
   w90_setup = iand(w90_what, OPTION__WANNIER90_MODE__W90_SETUP) /= 0
   w90_output = iand(w90_what, OPTION__WANNIER90_MODE__W90_OUTPUT) /= 0
+  w90_wannier = iand(w90_what, OPTION__WANNIER90_MODE__W90_WANNIER) /= 0
 
   if(w90_what == 0) then
     message(1) = "wannier90_mode must be set to a value different from 0."
@@ -169,6 +170,15 @@ program wannier90_interface
     message(1) = 'oct-wannier90: wannier90_setup and wannier90_output are mutually exclusive'
     call messages_fatal(1)
   end if
+  if(w90_setup .and. w90_wannier) then
+    message(1) = 'oct-wannier90: wannier90_setup and wannier90_wannier are mutually exclusive'
+    call messages_fatal(1)
+  end if
+  if(w90_wannier .and. w90_output) then
+    message(1) = 'oct-wannier90: wannier90_wannier and wannier90_output are mutually exclusive'
+    call messages_fatal(1)
+  end if
+
 
   if(.not.sys%gr%sb%kpoints%w90_compatible) then
     message(1) = 'oct-wannier90: Only Wannier90KPointsGrid=yes is allowed for running oct-wannier90'
@@ -195,7 +205,7 @@ program wannier90_interface
     if(ierr == 0) then
       call states_look(restart, nik, dim, nst, ierr)
       if(dim==st%d%dim .and. nik==sys%gr%sb%kpoints%reduced%npoints .and. nst==st%nst) then
-         call states_load(restart, st, sys%gr, ierr, iter)
+         call states_load(restart, st, sys%gr, ierr, iter, label = ": wannier90")
       else
          write(message(1),'(a)') 'Restart structure not commensurate.'
          call messages_fatal(1)
@@ -223,7 +233,28 @@ program wannier90_interface
     end if
 
   else if(w90_wannier) then
-    call messages_not_implemented("The option wannier90_mode = w90_wannier is not yet implemented.")
+   ! normal interface run
+    call states_init(st, sys%gr, sys%geo)
+    call kpoints_distribute(st%d,sys%mc)
+    call states_distribute_nodes(st,sys%mc)
+    call states_exec_init(st, sys%mc)
+    call restart_module_init()
+    call states_allocate_wfns(st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
+    call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, &
+                       sys%mc, ierr, sys%gr%der%mesh)
+    if(ierr == 0) then
+      call states_look(restart, nik, dim, nst, ierr)
+      if(dim==st%d%dim .and. nik==sys%gr%sb%kpoints%reduced%npoints .and. nst==st%nst) then
+        call states_load(restart, st, sys%gr, ierr, iter, label = ": wannier90")
+      else
+         write(message(1),'(a)') 'Restart structure not commensurate.'
+         call messages_fatal(1)
+      end if
+    end if
+    call restart_end(restart)
+
+    call read_wannier90_files()
+    call generate_wannier_states(sys%gr%mesh, sys%gr%sb, sys%geo)
   end if
 
   call system_end(sys)
@@ -687,6 +718,86 @@ contains
     POP_SUB(create_wannier90_amn)
 
   end subroutine create_wannier90_amn
+
+  subroutine generate_wannier_states(mesh, sb, geo)
+    type(mesh_t),      intent(in) :: mesh
+    type(simul_box_t), intent(in) :: sb
+    type(geometry_t),  intent(in) :: geo
+
+    integer :: w90_Umat, nwann, nik
+    integer :: ik, iw, iw2, ip
+    CMPLX, allocatable :: Umnk(:,:)
+    CMPLX, allocatable :: wn(:), psi(:,:)
+    character(len=MAX_PATH_LEN) :: fname
+    FLOAT :: kpoint(1:MAX_DIM)
+
+    PUSH_SUB(generate_wannier_states)
+
+    ASSERT(st%d%ispin == UNPOLARIZED)
+
+    w90_Umat = io_open(trim('./'// trim(adjustl(w90_prefix))//'_u.mat'), action='read')    
+
+    !To be read later
+    w90_num_wann = w90_num_bands
+    
+    !Skip one line
+    read(w90_Umat, *)
+    !Read num_kpts, num_wann, num_wann for consistency check
+    read(w90_Umat, *) nik, nwann, nwann
+    if(nik /= w90_num_kpts .or. nwann /= w90_num_wann) then
+      print *, nik, w90_num_kpts, nwann, w90_num_wann
+      message(1) = "The file contains U matrices is inconsistent with the .win file."
+      call messages_fatal(1)
+    end if
+   
+    SAFE_ALLOCATE(Umnk(1:w90_num_wann*w90_num_wann, 1:w90_num_kpts)) 
+
+    do ik = 1, w90_num_kpts
+      !Skip one line
+      read(w90_Umat, *)
+      !Skip one line (k-point coordinate)
+      read(w90_Umat, *)
+      do iw = 1, w90_num_wann*w90_num_wann
+        read(w90_Umat,*) Umnk(iw, ik)
+      end do
+    end do
+    
+    call io_close(w90_Umat)
+
+    call io_mkdir('wannier')
+
+    !Computing the Wannier states in the primitive cell, from the U matrices
+    SAFE_ALLOCATE(wn(1:mesh%np))
+    SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
+
+    do iw = 1, w90_num_bands
+      write(fname, '(a,i3.3)') 'wannier-', iw
+
+      wn(:) = M_Z0
+
+      do ik = 1, w90_num_kpts
+        !This won't work for spin-polarized calculations
+        kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ik)
+
+        do iw2 = 1, w90_num_bands
+          call states_get_state(st, mesh, iw2, ik, psi)
+          forall(ip=1:mesh%np)
+            wn(ip) = wn(ip) + Umnk(iw2 +(iw-1)*w90_num_bands, ik) * psi(ip,1)* &
+                                  exp(-M_zI* sum(mesh%x(ip, 1:sb%dim) * kpoint(1:sb%dim)))
+          end forall
+        end do!ik   
+      end do!iw2
+
+      call zio_function_output(io_function_fill_how("XCrySDen"), 'wannier', trim(fname), mesh, &
+          wn,  unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+    end do
+
+    SAFE_DEALLOCATE_A(Umnk)
+    SAFE_DEALLOCATE_A(wn)
+    SAFE_DEALLOCATE_A(psi)
+
+    POP_SUB(generate_wannier_states)
+  end subroutine generate_wannier_states
 
   ! the definitions of atomic orbitals are taken from this file:
 #include "wannier90_interface_defs_from_pwscf.F90"
