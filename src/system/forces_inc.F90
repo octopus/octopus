@@ -205,7 +205,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl,
 
       ! the non-local potential contribution
       if(hm%hm_base%apply_projector_matrices .and. .not. accel_is_enabled() .and. &
-        .not. (gr%mesh%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
+        .not. (st%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
 
         call X(hamiltonian_base_nlocal_force)(hm%hm_base, gr%mesh, st, geo, iq, gr%mesh%sb%dim, psib, grad_psib, force_nl)
 
@@ -223,7 +223,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl,
 
           call profiling_count_operations(np*st%d%dim*gr%mesh%sb%dim*(2 + R_MUL))
 
-          if(gr%mesh%symmetrize_density .and. gr%sb%kpoints%use_symmetries) then
+          if(st%symmetrize_density .and. gr%sb%kpoints%use_symmetries) then
 
             ! We use that
             !
@@ -333,7 +333,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl,
  ! in this case we need to convert to Cartesian coordinates at the end
  ! TODO: integrate this to the routine X(hamiltonian_base_nlocal_force)
  if(hm%hm_base%apply_projector_matrices .and. .not. accel_is_enabled() .and. &
-        .not. (gr%mesh%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
+        .not. (st%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
    ! We convert the forces to Cartesian coordinates
    if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then
      do iatom = 1, geo%natoms
@@ -363,7 +363,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl,
     end do
   end if
 
-  if(gr%mesh%symmetrize_density) then
+  if(st%symmetrize_density) then
     call symmetrizer_init(symmetrizer, gr%mesh)
     SAFE_ALLOCATE(symmtmp(1:gr%mesh%np, 1:gr%mesh%sb%dim))
 
@@ -408,7 +408,7 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
 
   PUSH_SUB(X(total_force_from_potential))
 
-  ASSERT(.not. gr%mesh%symmetrize_density)
+  ASSERT(.not. st%symmetrize_density)
   ASSERT(lda_u_level == DFT_U_NONE)
 
   np = gr%mesh%np

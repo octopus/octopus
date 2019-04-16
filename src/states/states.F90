@@ -566,6 +566,19 @@ contains
       st%mmb_proj(:) = M_ZERO
     end if
 
+    !%Variable SymmetrizeDensity
+    !%Type logical
+    !%Default no
+    !%Section States
+    !%Description
+    !% When enabled the density is symmetrized. Currently, this can
+    !% only be done for periodic systems. (Experimental.)
+    !%End
+    call parse_variable('SymmetrizeDensity', gr%sb%kpoints%use_symmetries, st%symmetrize_density)
+    call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
+    if(st%symmetrize_density) call mesh_check_symmetries(gr%mesh, gr%mesh%sb)
+
+
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_nullify(st%dom_st_proc_grid)
 #endif
@@ -1395,6 +1408,8 @@ contains
 
     if(stin%parallel_in_states) call multicomm_all_pairs_copy(stout%ap, stin%ap)
 
+    stout%symmetrize_density = stin%symmetrize_density
+
     if(.not. exclude_wfns_) call states_group_copy(stin%d,stin%group, stout%group)
 
     stout%packed = stin%packed
@@ -2025,7 +2040,7 @@ contains
     ! We have to symmetrize everything as they are calculated from the
     ! wavefunctions.
     ! This must be done before compute the gauge-invariant kinetic energy density 
-    if(der%mesh%symmetrize_density) then
+    if(st%symmetrize_density) then
       SAFE_ALLOCATE(symm(1:der%mesh%np, 1:der%mesh%sb%dim))
       call symmetrizer_init(symmetrizer, der%mesh)
       do is = 1, st%d%nspin

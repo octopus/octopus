@@ -106,8 +106,6 @@ module mesh_oct_m
     FLOAT                :: surface_element(MAX_DIM)
     FLOAT,   allocatable :: vol_pp(:)         !< Element of volume for curvilinear coordinates.
 
-    logical              :: symmetrize_density
-
     type(mesh_cube_map_t) :: cube_map
   end type mesh_t
   
