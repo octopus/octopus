@@ -282,22 +282,30 @@ contains
       call messages_fatal(1)
     end if
 
-    axis(1:3) = sys%gr%sb%kpoints%nik_axis(1:3)
-    write(w90_win,'(a8,i4,i4,i4)')  'mp_grid ', axis(1:3)
+    write(w90_win,'(a)')  'write_u_matrices = .true.'
     write(w90_win,'(a)') ' '
 
-    ! make wannier90 compliant MonkhorstPack mesh
-    ! and write simultaneously to w90_prefix.win file and w90_kpoints for octopus input
-    write(w90_win,'(a)')  'begin kpoints '
+    if(sys%gr%sb%kpoints%reduced%npoints == 1) then
+      write(w90_win,'(a)')  'gamma_only = .true.'
+      write(w90_win,'(a)') ' '
+    else
+      axis(1:3) = sys%gr%sb%kpoints%nik_axis(1:3)
+      write(w90_win,'(a8,i4,i4,i4)')  'mp_grid ', axis(1:3)
+      write(w90_win,'(a)') ' '
 
-    do ii=0,axis(1)-1
-       do jj=0,axis(2)-1
+      ! make wannier90 compliant MonkhorstPack mesh
+      ! and write simultaneously to w90_prefix.win file and w90_kpoints for octopus input
+      write(w90_win,'(a)')  'begin kpoints '
+
+      do ii=0,axis(1)-1
+        do jj=0,axis(2)-1
           do kk=0,axis(3)-1
-             write(w90_win,'(f12.8,f12.8,f12.8)') ii*M_ONE/(axis(1)*M_ONE), jj*M_ONE/(axis(2)*M_ONE), kk*M_ONE/(axis(3)*M_ONE)
+            write(w90_win,'(f12.8,f12.8,f12.8)') ii*M_ONE/(axis(1)*M_ONE), jj*M_ONE/(axis(2)*M_ONE), kk*M_ONE/(axis(3)*M_ONE)
           end do
-       end do
-    end do
-    write(w90_win,'(a)')  'end kpoints '
+        end do
+      end do
+      write(w90_win,'(a)')  'end kpoints '
+    end if
 
     call io_close(w90_win)
 

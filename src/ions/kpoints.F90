@@ -446,15 +446,19 @@ contains
 
       this%nik_axis(1:MAX_DIM) = 1
 
-      !%Variable Wannier90KPointsGrid
-      !%Type logical
-      !%Default no
-      !%Section Mesh::KPoints
-      !%Description
-      !% In order to use the wannier90 tools, one must set this variable to true.
-      !% This generates a Monkhorst-Pack grid without any shift, and forbid to use symmetries
-      !%End
-      call parse_variable("Wannier90KPointsGrid", .false., this%w90_compatible)
+      if(gamma_only_) then
+        this%w90_compatible = .true.
+      else
+        !%Variable Wannier90KPointsGrid
+        !%Type logical
+        !%Default no
+        !%Section Mesh::KPoints
+        !%Description
+        !% In order to use the wannier90 tools, one must set this variable to true.
+        !% This generates a Monkhorst-Pack grid without any shift, and forbid to use symmetries
+        !%End
+        call parse_variable("Wannier90KPointsGrid", .false., this%w90_compatible)
+      end if
 
       if(.not. gamma_only_) then
         nshifts = max(parse_block_n(blk)-1,1) 
