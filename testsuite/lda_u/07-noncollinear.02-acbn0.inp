@@ -7,7 +7,7 @@ BoxShape = parallelepiped
 ExperimentalFeatures = yes
 
 EigenSolver = cg
-ConvRelDens = 5e-6
+ConvRelDens = 3e-5
 EigensolverTolerance = 1e-8
 CGOrthogonalizeAll = yes
 
@@ -39,10 +39,19 @@ PseudopotentialSet=hscv_pbe
 
 Spacing = 0.5
 
-FromScratch = no
+FromScratch = yes
 ParDomains = no
 
 SpinComponents = spinors
+GuessMagnetDensity = user_defined
+%AtomsMagnetDirection
+ 8.0 | 0.0 | 0.0
+-8.0 | 0.0 | 0.0
+ 0.0 | 0.0 | 0.0 
+ 0.0 | 0.0 | 0.0 
+%
+
+LCAOStart= lcao_states
 
 %KPointsGrid
 2 | 2 | 1
