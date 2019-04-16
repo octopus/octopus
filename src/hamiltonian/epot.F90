@@ -62,7 +62,10 @@ module epot_oct_m
     epot_generate,                 &
     epot_local_potential,          &
     epot_precalc_local_potential,  &
-    epot_global_force
+    epot_global_force,             &
+    epot_have_lasers,              &
+    epot_have_kick,                &
+    epot_have_external_potentials
 
   integer, public, parameter :: &
     CLASSICAL_NONE     = 0, & !< no classical charges
@@ -917,6 +920,51 @@ contains
 
     POP_SUB(epot_global_force)
   end subroutine epot_global_force
+
+  ! ---------------------------------------------------------
+
+  logical function epot_have_lasers(ep)
+    type(epot_t), intent(in)  :: ep
+
+    PUSH_SUB(epot_have_lasers)
+
+    epot_have_lasers = .false.
+
+    if( ep%no_lasers /= 0 ) epot_have_lasers = .true.
+
+    POP_SUB(epot_have_lasers)
+
+  end function epot_have_lasers
+
+  ! ---------------------------------------------------------
+
+  logical function epot_have_kick(ep)
+    type(epot_t), intent(in)  :: ep
+
+    PUSH_SUB(epot_have_kick)
+
+    epot_have_kick = .false.
+
+    if( ep%kick%delta_strength /= M_ZERO ) epot_have_kick = .true.
+
+    POP_SUB(epot_have_kick)
+
+  end function epot_have_kick
+
+  ! ---------------------------------------------------------
+
+  logical function epot_have_external_potentials(ep)
+    type(epot_t), intent(in)  :: ep
+
+    PUSH_SUB(epot_have_external_potentials)
+
+    epot_have_external_potentials =  .false.
+
+    if( associated(ep%v_static) .or. associated(ep%E_field) .or. epot_have_lasers(ep) ) epot_have_external_potentials = .true.
+
+    POP_SUB(epot_have_external_potentials)
+
+  end function epot_have_external_potentials
 
 end module epot_oct_m
 
