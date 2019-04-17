@@ -18,8 +18,8 @@ match ; nuclear pol. charge           ;  GREPFIELD(pcm/pcm_info.out, '       8  
 Processors : 4
 Input      : 20-local-field-absorption.02-td_prop_eom.inp
 Precision: 0.0001
-match ; M-solvent int. energy @ t=0       ;  GREPFIELD(td.general/energy,'       0', 12)   ; -4.691771297979e-08
-match ; M-solvent int. energy @ t=100*dt  ;  GREPFIELD(td.general/energy,'     100', 12)   ; -5.809845217443e-07
+match ; M-solvent int. energy at t=0      ;  GREPFIELD(td.general/energy,'       0', 12)   ; -4.691771297979e-08
+match ; M-solvent int. energy at t=100*dt ;  GREPFIELD(td.general/energy,'     100', 12)   ; -5.809845217443e-07
 
 Util       : oct-propagation_spectrum
 
