@@ -53,7 +53,7 @@ contains
     integer :: ierr, nfreq, ifreq, iunit
     integer :: ist, jst, iqn, idim, idir, jdir
     CMPLX, allocatable :: psii(:, :), psij(:, :), gpsii(:, :, :), gpsij(:, :, :)
-    CMPLX, allocatable :: tensor(:, :, :)
+    CMPLX, allocatable :: tensor(:, :, :), trace(:)
     CMPLX :: prod
     FLOAT :: eigi, eigj, occi, occj, df, width, dfreq, maxfreq, ww
     type(mesh_t), pointer :: mesh
@@ -124,9 +124,9 @@ contains
     nfreq = nint(maxfreq / (dfreq+1))
     
     SAFE_ALLOCATE(tensor(1:mesh%sb%dim, 1:mesh%sb%dim,1:nfreq))
-
+    SAFE_ALLOCATE(trace(1:nfreq))
     tensor = CNST(0.0)
-
+    trace = CNST(0.0)
     do iqn = sys%st%d%kpt%start, sys%st%d%kpt%end
     
        do ist = 1, sys%st%nst
@@ -163,24 +163,29 @@ contains
           else
              df = (occj - occi)/(eigj - eigi)
           endif
-
+          
           do idir = 1, mesh%sb%dim
              do jdir = 1, mesh%sb%dim
               prod = zmf_dotp(mesh, sys%st%d%dim, psii, gpsij(:, idir, :))*zmf_dotp(mesh, sys%st%d%dim, psij, gpsii(:, jdir, :))
               
               do ifreq = 1, nfreq
                  tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - sys%st%d%kweights(iqn)*(CNST(2.0)/mesh%sb%rcell_volume)* &
-                      real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*(eigi-eigj - ifreq*dfreq))/ ((eigi-eigj - ifreq*dfreq)**2 + width/CNST(4.0))
+                      df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*(eigi-eigj - ifreq*dfreq))/ ((eigi-eigj - ifreq*dfreq)**2 + width/CNST(4.0))
               end do
-            end do
-          end do
+           end do !loop over jdir
+         end do !loop over idir
           
-        end do
-      end do
+       end do !loop over states j
+     end do !loop over states i
       
 
-   end do
+   end do !kpt loop
 
+   do ifreq = 1, nfreq
+      do idir = 1, mesh%sb%dim
+         trace(ifreq) = trace(ifreq) + tensor(idir,idir,ifreq)
+      end do
+   end do
 
    !output
    write(dirname, '(a, a)') 'kubo_greenwood' 
@@ -192,13 +197,16 @@ contains
       '###########################################################################################################################'
     write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
     write(unit = iunit, iostat = ierr, fmt = '(a,a,a)') &
-      '#  Energy [', trim(units_abbrev(units_out%energy)), '] Conductivity [a.u.] ReX ImX ReY ImY ReZ ImZ'
+      !'#  Energy [', trim(units_abbrev(units_out%energy)), '] Conductivity [a.u.] freq ReXX ImXX ReYY ImYY ReZZ ImZZ'
+      'freq ReXX ImXX ReYY ImYY ReZZ ImZZ'
     write(unit = iunit, iostat = ierr, fmt = '(a)') &
       '###########################################################################################################################'
     do ifreq = 1, nfreq
-       ww = (ifreq-1)*dfreq
-       write(unit = iunit, iostat = ierr, fmt = '(7e20.10)')  ww , &
-            transpose(tensor(ifreq,1:3, 1:2))
+       !ww = (ifreq-1)*dfreq
+       ww = ifreq*dfreq
+       write(unit = iunit, iostat = ierr, fmt = '(7e20.10)') ww, &
+            tensor(1,1,ifreq), tensor(2,2,ifreq), tensor(3,3,ifreq)
+
     end do
 
    
