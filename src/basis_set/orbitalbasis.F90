@@ -124,7 +124,7 @@ contains
   !%Default 0.01
   !%Section Hamiltonian::DFT+U
   !%Description
-  !% Determines the threshold used to compute the radius of the atomic orbitals for LDA+U.
+  !% Determines the threshold used to compute the radius of the atomic orbitals for LDA+U and for Wannier90.
   !% This radius is computed by making sure that the 
   !% absolute value of the radial part of the atomic orbital is below the specified threshold.
   !% This value should be converged to be sure that results do not depend on this value. 
