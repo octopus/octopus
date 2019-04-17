@@ -138,9 +138,13 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
   
   ! multiply with occupation number
   ! ideally this should be done in all the sub parts of hamiltonian_apply to avoid using get and set state one time more than necessary
-  ! hwoever, this would mean to change many standard routines, which is also not optimal
-  if(hm%theory_level == RDMFT .and. set_occ .eqv. .true.) then
-      call X(occ_apply)(hm, der, hpsib, occ, terms_)
+  ! however, this would mean to change many standard routines, which we wanted to avoid for the moment
+  if(hm%theory_level == RDMFT .and. set_occ) then
+    if(bitand(TERM_KINETIC, terms_) /= 0  .or. bitand(TERM_LOCAL_POTENTIAL, terms_) /= 0 &
+      & .or. bitand(TERM_NON_LOCAL_POTENTIAL, terms_) /= 0 .or. bitand(TERM_LOCAL_EXTERNAL, terms_) /= 0) then  
+			call X(occ_apply) (hm, der, hpsib, occ, terms_)
+!			call batch_scal(der%mesh%np, occ, hpsib)
+    end if
   endif
 
   if (bitand(TERM_OTHERS, terms_) /= 0 .and. hamiltonian_base_has_magnetic(hm%hm_base)) then
