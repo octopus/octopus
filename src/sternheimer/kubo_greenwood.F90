@@ -23,6 +23,7 @@ module kubo_greenwood_oct_m
   use derivatives_oct_m
   use global_oct_m
   use hamiltonian_oct_m
+  use io_oct_m
   use messages_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -31,6 +32,7 @@ module kubo_greenwood_oct_m
   use states_oct_m
   use states_restart_oct_m
   use system_oct_m
+  use unit_oct_m
   use unit_system_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -48,14 +50,15 @@ contains
     type(hamiltonian_t),  intent(inout) :: hm
 
     type(restart_t) :: gs_restart
-    integer :: ierr, nfreq, ifreq
+    integer :: ierr, nfreq, ifreq, iunit
     integer :: ist, jst, iqn, idim, idir, jdir
     CMPLX, allocatable :: psii(:, :), psij(:, :), gpsii(:, :, :), gpsij(:, :, :)
     CMPLX, allocatable :: tensor(:, :, :)
     CMPLX :: prod
-    FLOAT :: eigi, eigj, occi, occj, df, width, dfreq, maxfreq
+    FLOAT :: eigi, eigj, occi, occj, df, width, dfreq, maxfreq, ww
     type(mesh_t), pointer :: mesh
-    
+    character(len=80) :: dirname, str_tmp
+
     PUSH_SUB(kubo_greewood_run)
 
     call messages_write('Info: Starting Kubo-Greenwood linear-response calculation.')
@@ -175,8 +178,32 @@ contains
         end do
       end do
       
+
+   end do
+
+
+   !output
+   write(dirname, '(a, a)') 'kubo_greenwood' 
+   call io_mkdir(trim(dirname))
+
+   iunit = io_open(trim(dirname)//'/kubo_greenwood', action='write')
+
+    write(unit = iunit, iostat = ierr, fmt = '(a)') &
+      '###########################################################################################################################'
+    write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
+    write(unit = iunit, iostat = ierr, fmt = '(a,a,a)') &
+      '#  Energy [', trim(units_abbrev(units_out%energy)), '] Conductivity [a.u.] ReX ImX ReY ImY ReZ ImZ'
+    write(unit = iunit, iostat = ierr, fmt = '(a)') &
+      '###########################################################################################################################'
+    do ifreq = 1, nfreq
+       ww = (ifreq-1)*dfreq
+       write(unit = iunit, iostat = ierr, fmt = '(7e20.10)')  ww , &
+            transpose(tensor(ifreq,1:3, 1:2))
     end do
 
+   
+   call io_close(iunit)
+   !end output
     SAFE_DEALLOCATE_A(tensor)
     SAFE_DEALLOCATE_A(psii)
     SAFE_DEALLOCATE_A(psij)
