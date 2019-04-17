@@ -121,7 +121,7 @@ contains
     SAFE_ALLOCATE(psij(1:mesh%np_part, 1:sys%st%d%dim))
     SAFE_ALLOCATE(gpsii(1:mesh%np, 1:sys%gr%sb%dim, 1:sys%st%d%dim))
     SAFE_ALLOCATE(gpsij(1:mesh%np, 1:sys%gr%sb%dim, 1:sys%st%d%dim))
-    nfreq = nint(maxfreq / (dfreq+1))
+    nfreq = nint(maxfreq / (dfreq)) + 1
     
     SAFE_ALLOCATE(tensor(1:mesh%sb%dim, 1:mesh%sb%dim,1:nfreq))
     SAFE_ALLOCATE(trace(1:nfreq))
@@ -163,14 +163,12 @@ contains
           else
              df = (occj - occi)/(eigj - eigi)
           endif
-          
           do idir = 1, mesh%sb%dim
              do jdir = 1, mesh%sb%dim
-              prod = zmf_dotp(mesh, sys%st%d%dim, psii, gpsij(:, idir, :))*zmf_dotp(mesh, sys%st%d%dim, psij, gpsii(:, jdir, :))
-              
+                prod = zmf_dotp(mesh, sys%st%d%dim, psii, gpsij(:, idir, :))*zmf_dotp(mesh, sys%st%d%dim, psij, gpsii(:, jdir, :))
               do ifreq = 1, nfreq
                  tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - sys%st%d%kweights(iqn)*(CNST(2.0)/mesh%sb%rcell_volume)* &
-                      df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*(eigi-eigj - ifreq*dfreq))/ ((eigi-eigj - ifreq*dfreq)**2 + width/CNST(4.0))
+                      df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*(eigi-eigj - (ifreq-1)*dfreq))/ ((eigi-eigj - (ifreq-1)*dfreq)**2 + width/CNST(4.0))
               end do
            end do !loop over jdir
          end do !loop over idir
@@ -203,10 +201,10 @@ contains
       '###########################################################################################################################'
     do ifreq = 1, nfreq
        !ww = (ifreq-1)*dfreq
-       ww = ifreq*dfreq
+       ww = (ifreq-1)*dfreq
        write(unit = iunit, iostat = ierr, fmt = '(7e20.10)') ww, &
             tensor(1,1,ifreq), tensor(2,2,ifreq), tensor(3,3,ifreq)
-
+ 
     end do
 
    
