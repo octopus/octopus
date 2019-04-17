@@ -381,7 +381,7 @@ contains
           end if
        end if
     end do
-   close(w90_nnkp)
+   call io_close(w90_nnkp)
 
     w90_nnkp = io_open(trim(filename), action='read')
     ! read from nnkp file
@@ -473,7 +473,7 @@ contains
   end subroutine read_wannier90_files
 
   subroutine create_wannier90_mmn()
-    integer ::  ist, jst, ik, w90_mmn, iknn, G(3), idim
+    integer ::  ist, jst, ik, ip, w90_mmn, iknn, G(3), idim
     FLOAT   ::  Gr(3)
     character(len=80) :: filename
     CMPLX   :: overlap
@@ -514,10 +514,10 @@ contains
        do jst=1,w90_num_bands
           call states_get_state(st, sys%gr%der%mesh, jst, iknn, psin)
 
-!         ! add phase
-!         do jj=1,sys%gr%der%mesh%np
-!           state2(jj,1:st%d%dim) = state2(jj,1:st%d%dim)*exp(M_zI*dot_product(sys%gr%der%mesh%x(jj,1:3),Gr(1:3)))
-!         end do
+         ! add phase
+         do ip=1,sys%gr%der%mesh%np
+           psin(ip,1:st%d%dim) = psin(ip,1:st%d%dim)*exp(-M_zI*dot_product(sys%gr%der%mesh%x(ip,1:3),Gr(1:3)))
+         end do
 
          do ist=1,w90_num_bands
            call states_get_state(st, sys%gr%der%mesh, ist, ik, psim)
@@ -535,7 +535,7 @@ contains
 
     end do
 
-    close(w90_mmn)
+    call io_close(w90_mmn)
 
     SAFE_DEALLOCATE_A(psim)
     SAFE_DEALLOCATE_A(psin)
@@ -567,7 +567,7 @@ contains
         end do
       end do
 
-      close(w90_eig)
+      call io_close(w90_eig)
     end if
 
     POP_SUB(create_wannier90_eig)
@@ -717,7 +717,7 @@ contains
 
     do ik=1, w90_num_kpts
       !This won't work for spin-polarized calculations
-      kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ik, absolute_coordinates=.true.)
+      kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ik)
 
       do ist=1, w90_num_bands
         call states_get_state(st, mesh, ist, ik, psi)

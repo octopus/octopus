@@ -1041,6 +1041,12 @@ contains
 
     SAFE_DEALLOCATE_A(ix)    
 
+    !In case of Wannier90 compliant grid, we do not reorder the points
+    if(w90_compatible) then
+      POP_SUB(kpoints_grid_generate)
+      return
+    end if    
+
     ! sort the k-points
 
     SAFE_ALLOCATE(nrm(1:npoints*nshifts))
