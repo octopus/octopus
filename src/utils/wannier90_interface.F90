@@ -22,27 +22,25 @@ program wannier90_interface
   use calc_mode_par_oct_m
   use comm_oct_m
   use command_line_oct_m
-  use geometry_oct_m
   use fft_oct_m
+  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use kpoints_oct_m
   use io_binary_oct_m
   use io_function_oct_m
   use io_oct_m
+  use kpoints_oct_m
   use loct_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2 
-  use multicomm_oct_m
   use orbitalset_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use system_oct_m
-  use sort_oct_m
   use space_oct_m
   use string_oct_m
   use states_oct_m
@@ -78,14 +76,6 @@ program wannier90_interface
   integer :: w90_nproj                                             ! number of such projections        
   integer, allocatable :: w90_spin_proj_component(:)               ! up/down flag 
   FLOAT, allocatable   :: w90_spin_proj_axis(:,:)                  ! spin axis (not implemented)
-
-  call getopt_init(ierr)
-  if(ierr /= 0) then
-    message(1) = "Your Fortran compiler doesn't support command-line arguments;"
-    message(2) = "the oct-wannier90 command is not available."
-    call messages_fatal(2)
-  end if
-
 
   call global_init()
 
@@ -219,7 +209,7 @@ program wannier90_interface
     end if
 
     if(iand(w90_what, OPTION__WANNIER90_FILES__W90_UNK) /= 0) then
-      call write_unk()
+      call write_unk(sys%gr%mesh)
     end if
 
     if(iand(w90_what, OPTION__WANNIER90_FILES__W90_AMN) /= 0) then
@@ -281,7 +271,7 @@ contains
     write(w90_win,'(a)') 'begin unit_cell_cart'
     write(w90_win,'(a)') 'Ang'
     do idim=1,3
-      write(w90_win,'(f12.8,f12.8,f12.8)') units_from_atomic(unit_angstrom, sys%gr%sb%rlattice(idim,1:3))
+      write(w90_win,'(f13.6,f13.6,f13.6)') units_from_atomic(unit_angstrom, sys%gr%sb%rlattice(idim,1:3))
     end do
     write(w90_win,'(a)') 'end unit_cell_cart'
     write(w90_win,'(a)') ' '
@@ -292,7 +282,7 @@ contains
 
     write(w90_win,'(a)') 'begin atoms_frac'
     do ia=1,sys%geo%natoms
-       write(w90_win,'(a,2x,f12.8,f12.8,f12.6)') trim(sys%geo%atom(ia)%label), & 
+       write(w90_win,'(a,2x,f13.6,f13.6,f13.6)') trim(sys%geo%atom(ia)%label), & 
          matmul(sys%geo%atom(ia)%x(1:3), sys%gr%sb%klattice(1:3, 1:3))/(M_TWO*M_PI) 
     end do
     write(w90_win,'(a)') 'end atoms_frac'
@@ -312,6 +302,8 @@ contains
     end if
 
     write(w90_win,'(a)')  'write_u_matrices = .true.'
+    write(w90_win,'(a)')  'translate_home_cell = .true.'
+    write(w90_win,'(a)')  'write_xyz = .true.'
     write(w90_win,'(a)') ' '
 
     if(sys%gr%sb%kpoints%reduced%npoints == 1) then
@@ -319,7 +311,7 @@ contains
       write(w90_win,'(a)') ' '
     else
       axis(1:3) = sys%gr%sb%kpoints%nik_axis(1:3)
-      write(w90_win,'(a8,i4,i4,i4)')  'mp_grid ', axis(1:3)
+      write(w90_win,'(a8,i4,i4,i4)')  'mp_grid =', axis(1:3)
       write(w90_win,'(a)') ' '
 
       ! make wannier90 compliant MonkhorstPack mesh
@@ -329,7 +321,7 @@ contains
       do ii=0,axis(1)-1
         do jj=0,axis(2)-1
           do kk=0,axis(3)-1
-            write(w90_win,'(f12.8,f12.8,f12.8)') ii*M_ONE/(axis(1)*M_ONE), jj*M_ONE/(axis(2)*M_ONE), kk*M_ONE/(axis(3)*M_ONE)
+            write(w90_win,'(f13.6,f13.6,f13.6)') ii*M_ONE/(axis(1)*M_ONE), jj*M_ONE/(axis(2)*M_ONE), kk*M_ONE/(axis(3)*M_ONE)
           end do
         end do
       end do
@@ -494,7 +486,7 @@ contains
 
     ! write header
     if(mpi_grp_is_root(mpi_world)) then
-       write(w90_mmn,*) ' '
+       write(w90_mmn,*) 'Created by oct-wannier90'
        write(w90_mmn,*) w90_num_bands, w90_num_kpts, w90_nntot
     end if
 
@@ -529,7 +521,7 @@ contains
            end do
 
            ! write to W90 file
-           if(mpi_grp_is_root(mpi_world)) write(w90_mmn,'(e12.6,2x,e12.6)') overlap
+           if(mpi_grp_is_root(mpi_world)) write(w90_mmn,'(e13.6,2x,e13.6)') overlap
          end do
        end do
 
@@ -563,7 +555,7 @@ contains
       w90_eig = io_open(trim(filename), action='write')
       do ik=1,w90_num_kpts
         do ist=1,w90_num_bands
-          write(w90_eig,'(I5,2x,I5,2x,e12.6)') ist, ik, units_from_atomic(unit_eV, st%eigenval(ist, ik))
+          write(w90_eig,'(I5,2x,I5,2x,e13.6)') ist, ik, units_from_atomic(unit_eV, st%eigenval(ist, ik))
         end do
       end do
 
@@ -573,7 +565,9 @@ contains
     POP_SUB(create_wannier90_eig)
   end subroutine create_wannier90_eig
 
-  subroutine write_unk()
+  subroutine write_unk(mesh)
+    type(mesh_t),  intent(in) :: mesh
+
     integer ::  ist, ik, unk_file, ispin
     integer :: nr(2,3), ix, iy, iz, ip
     character(len=80) :: filename
@@ -594,12 +588,12 @@ contains
     end if
 
 
-    SAFE_ALLOCATE(state1(1:sys%gr%der%mesh%np, 1:st%d%dim))
-    SAFE_ALLOCATE(state2(1:sys%gr%der%mesh%np))
+    SAFE_ALLOCATE(state1(1:mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(state2(1:mesh%np))
 
     ! set boundaries of inner box
-    nr(1,1:3) = sys%gr%mesh%idx%nr(1,1:3) + sys%gr%mesh%idx%enlarge(1:3)
-    nr(2,1:3) = sys%gr%mesh%idx%nr(2,1:3) - sys%gr%mesh%idx%enlarge(1:3)
+    nr(1,1:3) = mesh%idx%nr(1,1:3) + mesh%idx%enlarge(1:3)
+    nr(2,1:3) = mesh%idx%nr(2,1:3) - mesh%idx%enlarge(1:3)
 
     do ik=1,w90_num_kpts
        do ispin=1,st%d%dim
@@ -608,17 +602,17 @@ contains
              write(filename,'(a,i5.5,a1,i1)') './UNK', ik,'.', ispin
              unk_file = io_open(trim(filename), action='write',form='unformatted')
              ! write header
-             write(unk_file) sys%gr%mesh%idx%ll(1:sys%gr%mesh%idx%dim), ik,  w90_num_bands
+             write(unk_file) mesh%idx%ll(1:mesh%idx%dim), ik,  w90_num_bands
              ! states
              do ist=1,w90_num_bands
-                call states_get_state(st, sys%gr%der%mesh, ist, ik, state1)
+                call states_get_state(st, mesh, ist, ik, state1)
                 ! reorder state
                 ip=0
                 do iz=nr(1,3),nr(2,3)
                    do iy=nr(1,2),nr(2,2)
                       do ix=nr(1,1),nr(2,1)
                          ip=ip+1
-                         state2(ip) =  state1(sys%gr%mesh%idx%lxyz_inv(ix, iy, iz),ispin)
+                         state2(ip) =  state1(mesh%idx%lxyz_inv(ix, iy, iz),ispin)
                       end do
                    end do
                 end do
@@ -686,10 +680,14 @@ contains
       ! (this is a routine from pwscf)
       call ylm_wannier(ylm, w90_proj_lmr(iw,1), w90_proj_lmr(iw,2), &
                             rr, orbitals(iw)%sphere%np)
-      ! apply radial function
-      do ip=1,orbitals(iw)%sphere%np
-        ylm(ip) = ylm(ip)*M_TWO*exp(-orbitals(iw)%sphere%x(ip,0))
-      end do
+      if(w90_proj_lmr(iw,3) == 1) then
+        ! apply radial function
+        do ip=1,orbitals(iw)%sphere%np
+          ylm(ip) = ylm(ip)*M_TWO*exp(-orbitals(iw)%sphere%x(ip,0))
+        end do
+      else
+        call messages_not_implemented("r/=1 for the radial part is not implemented")
+      end if
 
       orbitals(iw)%zorb(1:orbitals(iw)%sphere%np, 1, 1) = ylm(1:orbitals(iw)%sphere%np) 
       SAFE_DEALLOCATE_A(ylm)
@@ -709,7 +707,7 @@ contains
 
     ! write header
     if(mpi_grp_is_root(mpi_world)) then
-      write(w90_amn,*) ' '
+      write(w90_amn,*) 'Created by oct-wannier90'
       write(w90_amn,*)  w90_num_bands, w90_num_kpts, w90_num_wann
     end if
 
@@ -735,7 +733,7 @@ contains
           projection = zmf_dotp(mesh, psi(1:mesh%np,idim), &
                                       orbitals(iw)%eorb_mesh(1:mesh%np,1,idim,ik))
           if(mpi_grp_is_root(mpi_world)) then
-            write (w90_amn,'(I5,2x,I5,2x,I5,2x,e12.6,2x,e12.6)') ist, iw, ik, projection
+            write (w90_amn,'(I5,2x,I5,2x,I5,2x,e13.6,2x,e13.6)') ist, iw, ik, projection
           end if
         end do !iw
       end do !ik
@@ -767,10 +765,18 @@ contains
     character(len=MAX_PATH_LEN) :: fname
     FLOAT :: kpoint(1:MAX_DIM)
     character(len=2) :: dum
+    logical :: exist
 
     PUSH_SUB(generate_wannier_states)
 
     ASSERT(st%d%ispin == UNPOLARIZED)
+
+    inquire(file=trim(trim(adjustl(w90_prefix))//'_centres.xyz'),exist=exist)
+    if(.not. exist) then
+       message(1) = 'oct-wannier90: Cannot find specified Wannier90 seedname_centres.xyz file.'
+       write(message(2),'(a)') 'Please run wannier90.x with "write_xyz=.true." in '// trim(adjustl(w90_prefix)) // '.'
+       call messages_fatal(2)
+    end if
 
     w90_xyz = io_open(trim(trim(adjustl(w90_prefix))//'_centres.xyz'), action='read')
     SAFE_ALLOCATE(centers(1:3, 1:w90_num_wann))
