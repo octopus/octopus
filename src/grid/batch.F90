@@ -392,11 +392,9 @@ contains
   subroutine batch_copy(bin, bout, pack, copy_data, fill_zeros)
     type(batch_t), target,   intent(in)    :: bin
     type(batch_t),           intent(out)   :: bout
-    logical,       optional, intent(in)    :: pack      !< If .false. the new batch will not be packed
-    logical,       optional, intent(in)    :: copy_data
-    logical,       optional, intent(in)    :: fill_zeros
-    !! If .true. the new batch will be packed
-    !! The default is to do the same as bin.
+    logical,       optional, intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(bin)
+    logical,       optional, intent(in)    :: copy_data  !< If .true. the new batch will be packed. Default: .false.
+    logical,       optional, intent(in)    :: fill_zeros !< If .true. fill the new batch with zeros. Default: .false.
 
     integer :: ii, np
     logical :: pack_, copy_data_, fill_zeros_
@@ -408,7 +406,7 @@ contains
     copy_data_ = optional_default(copy_data, .false.)
 
     ! There is no point in filling with zeros if later we overwrite them by copying
-    fill_zeros_ = optional_default(fill_zeros, .not. copy_data_)
+    fill_zeros_ = optional_default(fill_zeros, .false.)
 
     ! Make sure we do not request both to copy and fill with zero at the same time
     ASSERT(.not. (copy_data_ .and. fill_zeros_))
