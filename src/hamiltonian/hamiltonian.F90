@@ -414,11 +414,9 @@ contains
     !%End
     call parse_variable('HamiltonianApplyPacked', .true., hm%apply_packed)
 
-    external_potentials_present = associated(hm%ep%v_static) .or. &
-				  associated(hm%ep%E_field)  .or. &
-				  associated(hm%ep%lasers)
+    external_potentials_present = epot_have_external_potentials(hm%ep)
 
-    kick_present = hm%ep%kick%delta_strength /= M_ZERO
+    kick_present = epot_have_kick(hm%ep)
 
     call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM  
     if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT")
@@ -1327,10 +1325,18 @@ contains
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
         !> Adds PCM contributions
         if (this%pcm%run_pcm) then
-          forall (ip = 1:mesh%np)
-            this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
-              this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
-          end forall
+          if (this%pcm%solute) then
+            forall (ip = 1:mesh%np)
+              this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
+                this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
+            end forall
+          end if
+          if (this%pcm%localf) then
+            forall (ip = 1:mesh%np)
+              this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
+                this%pcm%v_ext_rs(ip)
+            end forall
+          end if
         end if
 
         if(this%bc%abtype == IMAGINARY_ABSORBING) then

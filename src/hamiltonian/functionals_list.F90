@@ -832,7 +832,7 @@
 !%Option vdw_c_vdwdf2     919000
 !% van der Waals density functional vdW-DF2 correlation from libvdwxc (not from libxc).  Use with gga_x_rpw86.
 !%Option vdw_c_vdwdfcx    920000
-!% van der Waals density functional vdW-DF-CX correlation from libvdwxc (not from libxc).  Use with gga_x_lv_rpw86.
+!% van der Waals density functional vdW-DF-cx correlation from libvdwxc (not from libxc).  Use with gga_x_lv_rpw86.
 !%Option none                       0
 !% Exchange and correlation set to zero (not from libxc).
 !%End

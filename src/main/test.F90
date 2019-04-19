@@ -241,7 +241,7 @@ contains
    
     !Initialize external potential
     SAFE_ALLOCATE(epsib)
-    call batch_copy(sys%st%group%psib(1, 1), epsib)
+    call batch_copy(sys%st%group%psib(1, 1), epsib, fill_zeros = .true.)
 
     call batch_set_zero(epsib)
     
