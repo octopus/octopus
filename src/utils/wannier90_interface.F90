@@ -22,6 +22,8 @@ program wannier90_interface
   use calc_mode_par_oct_m
   use comm_oct_m
   use command_line_oct_m
+  use cube_oct_m
+  use cube_function_oct_m
   use fft_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -30,6 +32,7 @@ program wannier90_interface
   use io_function_oct_m
   use io_oct_m
   use kpoints_oct_m
+  use lalg_basic_oct_m
   use loct_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -271,7 +274,7 @@ contains
     write(w90_win,'(a)') 'begin unit_cell_cart'
     write(w90_win,'(a)') 'Ang'
     do idim=1,3
-      write(w90_win,'(f13.6,f13.6,f13.6)') units_from_atomic(unit_angstrom, sys%gr%sb%rlattice(idim,1:3))
+      write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, sys%gr%sb%rlattice(idim,1:3))
     end do
     write(w90_win,'(a)') 'end unit_cell_cart'
     write(w90_win,'(a)') ' '
@@ -282,7 +285,7 @@ contains
 
     write(w90_win,'(a)') 'begin atoms_frac'
     do ia=1,sys%geo%natoms
-       write(w90_win,'(a,2x,f13.6,f13.6,f13.6)') trim(sys%geo%atom(ia)%label), & 
+       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(sys%geo%atom(ia)%label), & 
          matmul(sys%geo%atom(ia)%x(1:3), sys%gr%sb%klattice(1:3, 1:3))/(M_TWO*M_PI) 
     end do
     write(w90_win,'(a)') 'end atoms_frac'
@@ -321,7 +324,7 @@ contains
       do ii=0,axis(1)-1
         do jj=0,axis(2)-1
           do kk=0,axis(3)-1
-            write(w90_win,'(f13.6,f13.6,f13.6)') ii*M_ONE/(axis(1)*M_ONE), jj*M_ONE/(axis(2)*M_ONE), kk*M_ONE/(axis(3)*M_ONE)
+            write(w90_win,'(f13.8,f13.8,f13.8)') ii*M_ONE/(axis(1)*M_ONE), jj*M_ONE/(axis(2)*M_ONE), kk*M_ONE/(axis(3)*M_ONE)
           end do
         end do
       end do
@@ -474,11 +477,11 @@ contains
     PUSH_SUB(create_wannier90_mmn)
 
     if(st%d%kpt%parallel) then
-      call messages_not_implemented("w90_mmn output with k-point parallelization.")
+      call messages_not_implemented("w90_mmn output with k-point parallelization")
     end if
 
     if(st%parallel_in_states) then
-      call messages_not_implemented("w90_mmn output with states parallelization.")
+      call messages_not_implemented("w90_mmn output with states parallelization")
     end if
 
     filename = './'// trim(adjustl(w90_prefix))//'.mmn'
@@ -543,11 +546,11 @@ contains
     PUSH_SUB(create_wannier90_eig)
 
     if(st%d%kpt%parallel) then
-      call messages_not_implemented("w90_eig output with k-point parallelization.")
+      call messages_not_implemented("w90_eig output with k-point parallelization")
     end if
 
     if(st%parallel_in_states) then
-      call messages_not_implemented("w90_eig output with states parallelization.")
+      call messages_not_implemented("w90_eig output with states parallelization")
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
@@ -569,14 +572,16 @@ contains
     type(mesh_t),  intent(in) :: mesh
 
     integer ::  ist, ik, unk_file, ispin
-    integer :: nr(2,3), ix, iy, iz, ip
+    integer ::  ix, iy, iz
     character(len=80) :: filename
-    CMPLX, allocatable :: state1(:,:), state2(:)
+    CMPLX, allocatable :: psi(:)
+    type(cube_t) :: cube
+    type(cube_function_t) :: cf
 
     PUSH_SUB(write_unk)
 
     if(st%d%kpt%parallel) then
-      call messages_not_implemented("w90_unk output with k-point parallelization.")
+      call messages_not_implemented("w90_unk output with k-point parallelization")
     end if
       
     if(sys%gr%mesh%parallel_in_domains) then
@@ -584,44 +589,54 @@ contains
     end if
 
     if(st%parallel_in_states) then
-      call messages_not_implemented("w90_unk output with states parallelization.")
+      call messages_not_implemented("w90_unk output with states parallelization")
     end if
 
 
-    SAFE_ALLOCATE(state1(1:mesh%np, 1:st%d%dim))
-    SAFE_ALLOCATE(state2(1:mesh%np))
+    SAFE_ALLOCATE(psi(1:mesh%np))
 
-    ! set boundaries of inner box
-    nr(1,1:3) = mesh%idx%nr(1,1:3) + mesh%idx%enlarge(1:3)
-    nr(2,1:3) = mesh%idx%nr(2,1:3) - mesh%idx%enlarge(1:3)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, verbose = .false., &
+                     need_partition=.not.mesh%parallel_in_domains)
+    call cube_function_null(cf)
+    call zcube_function_alloc_RS(cube, cf)
 
     do ik=1,w90_num_kpts
-       do ispin=1,st%d%dim
+      do ispin=1,st%d%dim
+        if(mpi_grp_is_root(mpi_world)) then
+          write(filename,'(a,i5.5,a1,i1)') './UNK', ik,'.', ispin
+          unk_file = io_open(trim(filename), action='write',form='unformatted')
+          ! write header
+          write(unk_file) mesh%idx%ll(1:mesh%idx%dim), ik,  w90_num_bands
+        end if
+
+        ! states
+        do ist=1,w90_num_bands
+          call states_get_state(st, mesh, ist, ik, ispin, psi)
+
+          ! put the density in the cube
+          ! Note: At the moment this does not work for domain parallelization
+          if (cube%parallel_in_domains) then
+            ASSERT(.not. cube%parallel_in_domains)
+          else
+            if(mesh%parallel_in_domains) then
+              call zmesh_to_cube(mesh, psi, cube, cf, local = .true.)
+            else
+              call zmesh_to_cube(mesh, psi, cube, cf)
+            end if
+          end if
 
           if(mpi_grp_is_root(mpi_world)) then
-             write(filename,'(a,i5.5,a1,i1)') './UNK', ik,'.', ispin
-             unk_file = io_open(trim(filename), action='write',form='unformatted')
-             ! write header
-             write(unk_file) mesh%idx%ll(1:mesh%idx%dim), ik,  w90_num_bands
-             ! states
-             do ist=1,w90_num_bands
-                call states_get_state(st, mesh, ist, ik, state1)
-                ! reorder state
-                ip=0
-                do iz=nr(1,3),nr(2,3)
-                   do iy=nr(1,2),nr(2,2)
-                      do ix=nr(1,1),nr(2,1)
-                         ip=ip+1
-                         state2(ip) =  state1(mesh%idx%lxyz_inv(ix, iy, iz),ispin)
-                      end do
-                   end do
-                end do
-                write(unk_file) state2(:)
-             end do
-             call io_close(unk_file)
+            write(unk_file) (((cf%zrs(ix,iy,iz), ix=1,cube%rs_n_global(1)), iy=1,cube%rs_n_global(2)), iz=1,cube%rs_n_global(3))
           end if
-       end do
+        end do
+        call io_close(unk_file)
+      end do
     end do
+
+    call dcube_function_free_RS(cube, cf)
+    call cube_end(cube)
+
+    SAFE_DEALLOCATE_A(psi)
 
     POP_SUB(write_unk)
 
@@ -643,11 +658,11 @@ contains
     PUSH_SUB(create_wannier90_amn)
 
     if(st%d%kpt%parallel) then
-      call messages_not_implemented("w90_amn output with k-point parallelization.")
+      call messages_not_implemented("w90_amn output with k-point parallelization")
     end if
 
     if(st%parallel_in_states) then
-      call messages_not_implemented("w90_amn output with states parallelization.")
+      call messages_not_implemented("w90_amn output with states parallelization")
     end if
 
     !We use the variabel AOThreshold to deterine the threshold on the radii of the atomic orbitals
@@ -686,7 +701,7 @@ contains
           ylm(ip) = ylm(ip)*M_TWO*exp(-orbitals(iw)%sphere%x(ip,0))
         end do
       else
-        call messages_not_implemented("r/=1 for the radial part is not implemented")
+        call messages_not_implemented("oct-wannier90: r/=1 for the radial part")
       end if
 
       orbitals(iw)%zorb(1:orbitals(iw)%sphere%np, 1, 1) = ylm(1:orbitals(iw)%sphere%np) 
@@ -758,12 +773,12 @@ contains
     type(geometry_t),  intent(in) :: geo
 
     integer :: w90_Umat, w90_xyz, nwann, nik
-    integer :: ik, iw, iw2, ip
-    FLOAT, allocatable :: centers(:,:)
+    integer :: ik, iw, iw2, ip, ipmax
+    FLOAT, allocatable :: centers(:,:), dwn(:)
     CMPLX, allocatable :: Umnk(:,:,:)
-    CMPLX, allocatable :: wn(:), psi(:,:)
+    CMPLX, allocatable :: zwn(:), psi(:,:)
     character(len=MAX_PATH_LEN) :: fname
-    FLOAT :: kpoint(1:MAX_DIM)
+    FLOAT :: kpoint(1:MAX_DIM), wmod, wmodmax
     character(len=2) :: dum
     logical :: exist
 
@@ -819,13 +834,14 @@ contains
     call io_mkdir('wannier')
 
     !Computing the Wannier states in the primitive cell, from the U matrices
-    SAFE_ALLOCATE(wn(1:mesh%np))
+    SAFE_ALLOCATE(zwn(1:mesh%np))
+    SAFE_ALLOCATE(dwn(1:mesh%np))
     SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
 
     do iw = 1, w90_num_bands
       write(fname, '(a,i3.3)') 'wannier-', iw
 
-      wn(:) = M_Z0
+      zwn(:) = M_Z0
 
       do ik = 1, w90_num_kpts
         !This won't work for spin-polarized calculations
@@ -835,18 +851,37 @@ contains
           call states_get_state(st, mesh, iw2, ik, psi)
           !The minus sign is here is for the wrong convention of Octopus
           forall(ip=1:mesh%np)
-            wn(ip) = wn(ip) + Umnk(iw2, iw, ik)/w90_num_kpts * psi(ip,1) * &
+            zwn(ip) = zwn(ip) + Umnk(iw2, iw, ik)/w90_num_kpts * psi(ip,1) * &
                       exp(-M_zI* sum((mesh%x(ip, 1:sb%dim)-centers(1:sb%dim, iw)) * kpoint(1:sb%dim)))
           end forall
         end do!ik   
       end do!iw2
 
-      call zio_function_output(io_function_fill_how("XCrySDen"), 'wannier', trim(fname), mesh, &
-          wn,  unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+
+      !Following what Wannier90 is doing, we fix the global phase by setting the max to be real
+      ipmax = 0
+      wmodmax = M_z0
+      do ip=1, mesh%np
+        wmod = real(zwn(ip)*conjg(zwn(ip)), REAL_PRECISION)
+        if(wmod > wmodmax) then
+          ipmax = ip
+          wmodmax = wmod
+        end if
+      end do
+      call lalg_scal(mesh%np, sqrt(wmodmax)/zwn(ipmax), zwn)
+     
+
+      forall(ip=1:mesh%np)
+        dwn(ip) = real(zwn(ip), REAL_PRECISION)
+      end forall
+        
+      call dio_function_output(io_function_fill_how("XCrySDen"), 'wannier', trim(fname), mesh, &
+          dwn,  unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     end do
 
     SAFE_DEALLOCATE_A(Umnk)
-    SAFE_DEALLOCATE_A(wn)
+    SAFE_DEALLOCATE_A(zwn)
+    SAFE_DEALLOCATE_A(dwn)
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(centers)
 
