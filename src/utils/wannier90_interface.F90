@@ -611,7 +611,7 @@ contains
 
         ! states
         do ist=1,w90_num_bands
-          call states_get_state(st, mesh, ist, ik, ispin, psi)
+          call states_get_state(st, mesh, ispin, ist, ik, psi)
 
           ! put the density in the cube
           ! Note: At the moment this does not work for domain parallelization
@@ -629,7 +629,7 @@ contains
             write(unk_file) (((cf%zrs(ix,iy,iz), ix=1,cube%rs_n_global(1)), iy=1,cube%rs_n_global(2)), iz=1,cube%rs_n_global(3))
           end if
         end do
-        call io_close(unk_file)
+        if(mpi_grp_is_root(mpi_world)) call io_close(unk_file)
       end do
     end do
 
