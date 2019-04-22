@@ -42,6 +42,9 @@ module alloc_cache_oct_m
     integer(8) :: dummy
   end type alloc_cache_t
 
+  integer(8), public, parameter ::              &
+    ALLOC_CACHE_ANY_SIZE = -1_8
+  
   interface
 
     subroutine alloc_cache_init(alloc_cache, max_size)
