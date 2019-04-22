@@ -772,10 +772,26 @@ contains
 #endif
     integer(8) :: hits, misses
     real(8) :: volume_hits, volume_misses
+    logical :: found
+    type(accel_mem_t) :: tmp
 
     PUSH_SUB(accel_end)
 
     if(accel_is_enabled()) then
+
+      do 
+        call alloc_cache_get(memcache, ALLOC_CACHE_ANY_SIZE, found, tmp%mem)
+        if(.not. found) exit
+
+#ifdef HAVE_OPENCL
+        call clReleaseMemObject(tmp%mem, ierr)
+        if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
+#endif
+#ifdef HAVE_CUDA
+        call cuda_mem_free(tmp%mem)
+#endif
+      end do
+
       call alloc_cache_end(memcache, hits, misses, volume_hits, volume_misses)
 
       call messages_print_stress(stdout, "Acceleration-device allocation cache")

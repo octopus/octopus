@@ -21,6 +21,7 @@
 #include <fortran_types.h>
 #include <unordered_map>
 #include <cassert>
+#include <iostream>
 
 struct alloc_cache {
   typedef std::unordered_multimap<fint8, void *> map;
@@ -49,6 +50,9 @@ extern "C" void FC_FUNC(alloc_cache_init, ALLOC_CACHE_INIT)(alloc_cache ** cache
 
 extern "C" void FC_FUNC(alloc_cache_end, ALLOC_CACHE_END)( alloc_cache ** cache, fint8 * hits, fint8 * misses,
 							   double * vol_hits, double * vol_misses){
+
+  assert((*cache)->list.empty());
+
   delete *cache;
   *hits = (*cache)->hits;
   *misses = (*cache)->misses;
@@ -67,22 +71,36 @@ extern "C" void FC_FUNC(alloc_cache_put_low, ALLOC_CACHE_PUT_LOW)(alloc_cache **
 
 }
 
-extern "C" void FC_FUNC(alloc_cache_get_low, ALLOC_CACHE_GET_LOW)(alloc_cache ** cache, const fint8 * size, fint * found, void ** loc){
-  auto pos = (*cache)->list.find(*size);
-  *found = (pos != (*cache)->list.end());
+#define CACHE_ALLOC_ANY_SIZE -1
 
-  if(*found){
-    (*cache)->current_size -= *size;
+extern "C" void FC_FUNC(alloc_cache_get_low, ALLOC_CACHE_GET_LOW)(alloc_cache ** cache, const fint8 * size, fint * found, void ** loc){
+  if(*size == CACHE_ALLOC_ANY_SIZE){
+    auto pos = (*cache)->list.begin();
+    *found = pos != (*cache)->list.end();
+
+    if(*found) {
+      *loc = pos->second;
+      (*cache)->list.erase(pos);
+    }
     
-    assert(pos->first == *size);
-    *loc = pos->second;
-    (*cache)->list.erase(pos);
-    (*cache)->hits++;
-    (*cache)->vol_hits += *size;
   } else {
-    *loc = NULL;
-    (*cache)->misses++;
-    (*cache)->vol_misses += *size;
+    auto pos = (*cache)->list.find(*size);
+    *found = (pos != (*cache)->list.end());
+    
+    if(*found){
+      (*cache)->current_size -= *size;
+      
+      assert(pos->first == *size);
+      *loc = pos->second;
+      (*cache)->list.erase(pos);
+      (*cache)->hits++;
+      (*cache)->vol_hits += *size;
+    } else {
+      *loc = NULL;
+      (*cache)->misses++;
+      (*cache)->vol_misses += *size;
+    }
+
   }
   
 }
