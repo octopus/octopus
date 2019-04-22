@@ -170,7 +170,7 @@ contains
         do ib = st%group%block_start, st%group%block_end
 
           call batch_pack(st%group%psib(ib, ik), copy = .true.)
-          call batch_copy(st%group%psib(ib, ik), epsib, fill_zeros = .false.)
+          call batch_copy(st%group%psib(ib, ik), epsib)
           call boundaries_set(der%boundaries, st%group%psib(ib, ik))
           
           if(associated(hm%hm_base%phase)) then
@@ -251,7 +251,7 @@ contains
 
           call batch_pack(st%group%psib(ib, ik), copy = .true.)
 
-          call batch_copy(st%group%psib(ib, ik), hpsib, fill_zeros = .false.)
+          call batch_copy(st%group%psib(ib, ik), hpsib)
           call batch_copy(st%group%psib(ib, ik), rhpsib)
           call batch_copy(st%group%psib(ib, ik), rpsib)
           call batch_copy(st%group%psib(ib, ik), hrpsib)

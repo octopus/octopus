@@ -94,12 +94,11 @@ end subroutine X(batch_add_state_linear)
 
 
 !--------------------------------------------------------------
-subroutine X(batch_allocate)(this, st_start, st_end, np, fill_zeros, mirror)
+subroutine X(batch_allocate)(this, st_start, st_end, np, mirror)
   type(batch_t),  intent(inout) :: this
   integer,        intent(in)    :: st_start
   integer,        intent(in)    :: st_end
   integer,        intent(in)    :: np
-  logical, optional, intent(in) :: fill_zeros !< If .true., the batch is set to zero. Default: .false.
   logical, optional, intent(in) :: mirror     !< If .true., this batch will keep a copy when packed. Default: .false.
 
   integer :: ist
@@ -107,7 +106,6 @@ subroutine X(batch_allocate)(this, st_start, st_end, np, fill_zeros, mirror)
   PUSH_SUB(X(batch_allocate))
 
   SAFE_ALLOCATE(this%X(psicont)(1:np, 1:this%dim, 1:st_end - st_start + 1))
-  if (optional_default(fill_zeros, .false.)) this%X(psicont) = R_TOTYPE(M_ZERO)
 
   this%is_allocated = .true.
   this%mirror = optional_default(mirror, .false.)  

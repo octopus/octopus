@@ -205,10 +205,10 @@ contains
     if(te%batches_initialized) then
       te%psi1b%nst = te%tmp_nst
       te%psi1b%nst_linear = te%tmp_nst_linear
-      call batch_end(te%hpsi1b, copy=.false.)
+      call batch_end(te%hpsi1b)
       te%hpsi1b%nst = te%tmp_nst
       te%hpsi1b%nst_linear = te%tmp_nst_linear
-      call batch_end(te%psi1b, copy=.false.)
+      call batch_end(te%psi1b)
       te%batches_initialized = .false.
       te%batches_packed = .false.
     end if
@@ -832,8 +832,8 @@ contains
     end subroutine initialize_temporary_batches
 
     subroutine init_batches()
-      call batch_copy(psib, te%psi1b, copy_data = .false., fill_zeros = .false.)
-      call batch_copy(psib, te%hpsi1b, copy_data = .false., fill_zeros = .false.)
+      call batch_copy(psib, te%psi1b)
+      call batch_copy(psib, te%hpsi1b)
       ! pack the batch -> store on device for GPU version, avoids data transfers
       if(hamiltonian_apply_packed(hm, der%mesh)) then
         te%batches_packed = .true.
@@ -852,11 +852,11 @@ contains
 
       te%psi1b%nst = te%tmp_nst
       te%psi1b%nst_linear = te%tmp_nst_linear
-      call batch_end(te%hpsi1b, copy = .false.)
+      call batch_end(te%hpsi1b)
       
       te%hpsi1b%nst = te%tmp_nst
       te%hpsi1b%nst_linear = te%tmp_nst_linear
-      call batch_end(te%psi1b, copy = .false.)
+      call batch_end(te%psi1b)
 
       te%batches_initialized = .false.
     end subroutine end_batches
