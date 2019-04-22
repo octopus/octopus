@@ -27,6 +27,7 @@
 #endif
 
 module accel_oct_m
+  use alloc_cache_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
@@ -131,9 +132,8 @@ module accel_oct_m
   type accel_mem_t
 #ifdef HAVE_OPENCL
     type(cl_mem)           :: mem
-#endif
-#ifdef HAVE_CUDA
-    type(c_ptr)            :: cuda_ptr
+#else
+    type(c_ptr)            :: mem
 #endif
     integer(SIZEOF_SIZE_T) :: size
     type(type_t)           :: type
@@ -234,6 +234,7 @@ module accel_oct_m
   integer :: buffer_alloc_count
   integer(8) :: allocated_mem
   type(accel_kernel_t), pointer :: head
+  type(alloc_cache_t) :: memcache
   
 contains
 
@@ -535,6 +536,9 @@ contains
       
     if(mpi_grp_is_root(base_grp)) call device_info()
 
+    ! initialize the cache used to speed up allocations
+    call alloc_cache_init(memcache, nint(CNST(0.25)*accel%global_memory_size, 8))
+    
     ! now initialize the kernels
     call accel_kernel_global_init()
 
@@ -766,9 +770,34 @@ contains
 #ifdef HAVE_OPENCL
     integer :: ierr
 #endif
+    integer(8) :: hits, misses
+    real(8) :: volume_hits, volume_misses
 
     PUSH_SUB(accel_end)
 
+    if(accel_is_enabled()) then
+      call alloc_cache_end(memcache, hits, misses, volume_hits, volume_misses)
+
+      call messages_print_stress(stdout, "Acceleration-device allocation cache")
+
+      call messages_new_line()
+      call messages_write('    Number of allocations    =')
+      call messages_write(hits + misses, new_line = .true.)
+      call messages_write('    Volume of allocations    =')
+      call messages_write(volume_hits + volume_misses, fmt = 'f18.1', units = unit_gigabytes, align_left = .true., &
+        new_line = .true.)
+      call messages_write('    Hit ratio                =')
+      call messages_write(hits/dble(hits + misses)*100, fmt='(f5.1)')
+      call messages_write('%', new_line = .true.)
+      call messages_write('    Volume hit ratio         =')
+      call messages_write(volume_hits/(volume_hits + volume_misses)*100, fmt='(f5.1)')
+      call messages_write('%')
+      call messages_new_line()
+      call messages_info()
+
+      call messages_print_stress(stdout)
+    end if
+    
     call accel_kernel_global_end()
 
 #ifdef HAVE_CLBLAS
@@ -846,34 +875,7 @@ contains
     type(type_t),       intent(in)    :: type
     integer,            intent(in)    :: size
 
-    integer(8) :: fsize
-#ifdef HAVE_OPENCL
-    integer :: ierr
-#endif
-
-    PUSH_SUB(accel_create_buffer_4)
-
-    this%type = type
-    this%size = size
-    this%flags = flags
-    fsize = int(size, 8)*types_get_size(type)
-
-    if(this%size > 0) then
-
-#ifdef HAVE_OPENCL
-      this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
-#endif
-#ifdef HAVE_CUDA
-      call cuda_mem_alloc(this%cuda_ptr, fsize)
-#endif
-    
-      INCR(buffer_alloc_count, 1)
-      INCR(allocated_mem, fsize)
-      
-    end if
-    
-    POP_SUB(accel_create_buffer_4)
+    call accel_create_buffer_8(this, flags, type, int(size, 8))
   end subroutine accel_create_buffer_4
 
   ! ------------------------------------------
@@ -885,6 +887,7 @@ contains
     integer(8),         intent(in)    :: size
 
     integer(8) :: fsize
+    logical    :: found
 #ifdef HAVE_OPENCL
     integer :: ierr
 #endif
@@ -897,14 +900,18 @@ contains
     fsize = int(size, 8)*types_get_size(type)
 
     if(fsize > 0) then
-      
+
+      call alloc_cache_get(memcache, fsize, found, this%mem)
+
+      if(.not. found) then
 #ifdef HAVE_OPENCL
-      this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
+        this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
+        if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
 #endif
 #ifdef HAVE_CUDA
-      call cuda_mem_alloc(this%cuda_ptr, fsize)
+        call cuda_mem_alloc(this%mem, fsize)
 #endif
+      end if
       
       INCR(buffer_alloc_count, 1)
       INCR(allocated_mem, fsize)
@@ -922,21 +929,29 @@ contains
 #ifdef HAVE_OPENCL
     integer :: ierr
 #endif
+    logical :: put
+    integer(8) :: fsize
 
     PUSH_SUB(accel_release_buffer)
 
     if(this%size > 0) then
 
+      fsize = int(this%size, 8)*types_get_size(this%type)
+      
+      call alloc_cache_put(memcache, fsize, this%mem, put) 
+
+      if(.not. put) then
 #ifdef HAVE_OPENCL
-      call clReleaseMemObject(this%mem, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
+        call clReleaseMemObject(this%mem, ierr)
+        if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
 #endif
 #ifdef HAVE_CUDA
-      call cuda_mem_free(this%cuda_ptr)
+        call cuda_mem_free(this%mem)
 #endif
+      end if
       
       INCR(buffer_alloc_count, -1)
-      INCR(allocated_mem, -int(this%size, 8)*types_get_size(this%type))
+      INCR(allocated_mem, fsize)
 
     end if
     
@@ -998,7 +1013,7 @@ contains
 #endif
 
 #ifdef HAVE_CUDA
-    call cuda_kernel_set_arg_buffer(kernel%arguments, buffer%cuda_ptr, narg)
+    call cuda_kernel_set_arg_buffer(kernel%arguments, buffer%mem, narg)
 #endif
    
   end subroutine accel_set_kernel_arg_buffer
