@@ -292,16 +292,16 @@ contains
     write(w90_win,'(a)') 'end unit_cell_cart'
     write(w90_win,'(a)') ' '
 
-    ! for the moment projections are not implemented
-    write(w90_win,'(a)') 'use_bloch_phases = .true.'
-    write(w90_win,'(a)') ' '
-
     write(w90_win,'(a)') 'begin atoms_frac'
     do ia=1,sys%geo%natoms
        write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(geo%atom(ia)%label), & 
          matmul(geo%atom(ia)%x(1:3), sb%klattice(1:3, 1:3))/(M_TWO*M_PI) 
     end do
     write(w90_win,'(a)') 'end atoms_frac'
+    write(w90_win,'(a)') ' '
+
+    ! This is a default value. In practice, one should use projections
+    write(w90_win,'(a)') 'use_bloch_phases = .true.'
     write(w90_win,'(a)') ' '
 
     write(w90_win,'(a10,i4)') 'num_bands ', st%nst
