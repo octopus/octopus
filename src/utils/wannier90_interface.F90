@@ -38,6 +38,7 @@ program wannier90_interface
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2 
+  use multicomm_oct_m
   use orbitalset_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -86,9 +87,12 @@ program wannier90_interface
   call io_init()
   call calc_mode_par_init()
 
+  call restart_module_init()
+
   call fft_all_init()
   call unit_system_init()
 
+  call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
   call system_init(sys)
 
   !%Variable wannier90_prefix
@@ -201,7 +205,6 @@ program wannier90_interface
     call kpoints_distribute(st%d,sys%mc)
     call states_distribute_nodes(st,sys%mc)
     call states_exec_init(st, sys%mc)
-    call restart_module_init()
     call states_allocate_wfns(st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
     call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, &
                        sys%mc, ierr, sys%gr%der%mesh)
@@ -240,7 +243,6 @@ program wannier90_interface
     call kpoints_distribute(st%d,sys%mc)
     call states_distribute_nodes(st,sys%mc)
     call states_exec_init(st, sys%mc)
-    call restart_module_init()
     call states_allocate_wfns(st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
     call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, &
                        sys%mc, ierr, sys%gr%der%mesh)
@@ -272,7 +274,7 @@ contains
     type(geometry_t),  intent(in) :: geo
 
     character(len=80) :: filename
-    integer :: w90_win, ia, axis(3), jj, kk
+    integer :: w90_win, ia, axis(3)
 
     PUSH_SUB(wannier90_setup)
 
