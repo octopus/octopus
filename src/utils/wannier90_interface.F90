@@ -182,6 +182,8 @@ program wannier90_interface
     call messages_fatal(1)
   end if
 
+  call states_init(st, sys%gr, sys%geo)
+
   if(st%d%ispin /= UNPOLARIZED) then
     call messages_experimental("oct-wannier90 with SpinComponnents /= unpolarized") 
   end if
@@ -190,13 +192,12 @@ program wannier90_interface
 
   ! create setup files
   if(w90_setup) then
-    call wannier90_setup()
+    call wannier90_setup(sys%gr%sb, sys%geo)
 
   ! load states and calculate interface files
   elseif(w90_output) then
 
     ! normal interface run
-    call states_init(st, sys%gr, sys%geo)
     call kpoints_distribute(st%d,sys%mc)
     call states_distribute_nodes(st,sys%mc)
     call states_exec_init(st, sys%mc)
@@ -236,7 +237,6 @@ program wannier90_interface
 
   else if(w90_wannier) then
    ! normal interface run
-    call states_init(st, sys%gr, sys%geo)
     call kpoints_distribute(st%d,sys%mc)
     call states_distribute_nodes(st,sys%mc)
     call states_exec_init(st, sys%mc)
@@ -267,7 +267,10 @@ program wannier90_interface
 
 contains
 
-  subroutine wannier90_setup()
+  subroutine wannier90_setup(sb, geo)
+    type(simul_box_t), intent(in) :: sb
+    type(geometry_t),  intent(in) :: geo
+
     character(len=80) :: filename
     integer :: w90_win, ia, axis(3), jj, kk
 
@@ -285,7 +288,7 @@ contains
     write(w90_win,'(a)') 'begin unit_cell_cart'
     write(w90_win,'(a)') 'Ang'
     do idim=1,3
-      write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, sys%gr%sb%rlattice(1:3,idim))
+      write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, sb%rlattice(1:3,idim))
     end do
     write(w90_win,'(a)') 'end unit_cell_cart'
     write(w90_win,'(a)') ' '
@@ -296,8 +299,8 @@ contains
 
     write(w90_win,'(a)') 'begin atoms_frac'
     do ia=1,sys%geo%natoms
-       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(sys%geo%atom(ia)%label), & 
-         matmul(sys%geo%atom(ia)%x(1:3), sys%gr%sb%klattice(1:3, 1:3))/(M_TWO*M_PI) 
+       write(w90_win,'(a,2x,f13.8,f13.8,f13.8)') trim(geo%atom(ia)%label), & 
+         matmul(geo%atom(ia)%x(1:3), sb%klattice(1:3, 1:3))/(M_TWO*M_PI) 
     end do
     write(w90_win,'(a)') 'end atoms_frac'
     write(w90_win,'(a)') ' '
@@ -306,29 +309,29 @@ contains
     write(w90_win,'(a9,i4)') 'num_wann ', st%nst
     write(w90_win,'(a)') ' '
 
-    if(.not.parse_is_defined('KPointsGrid')) then
-       message(1) = 'oct-wannier90: need Monkhorst-Pack grid. Please specify %KPointsGrid'
-       call messages_fatal(1)
-    end if
-
     !This is for convenience. This is needed for plotting the Wannier states, if requested.
     write(w90_win,'(a)')  'write_u_matrices = .true.'
     write(w90_win,'(a)')  'translate_home_cell = .true.'
     write(w90_win,'(a)')  'write_xyz = .true.'
     write(w90_win,'(a)') ' '
 
-    if(sys%gr%sb%kpoints%reduced%npoints == 1) then
+    if(sb%kpoints%reduced%npoints == 1) then
       write(w90_win,'(a)')  'gamma_only = .true.'
       write(w90_win,'(a)') ' '
     else
-      axis(1:3) = sys%gr%sb%kpoints%nik_axis(1:3)
-      ASSERT(product(sys%gr%sb%kpoints%nik_axis(1:3)) == sys%gr%sb%kpoints%reduced%npoints)
+      if(.not.parse_is_defined('KPointsGrid')) then
+        message(1) = 'oct-wannier90: need Monkhorst-Pack grid. Please specify %KPointsGrid'
+        call messages_fatal(1)
+      end if
+
+      axis(1:3) = sb%kpoints%nik_axis(1:3)
+      ASSERT(product(sb%kpoints%nik_axis(1:3)) == sb%kpoints%reduced%npoints)
       write(w90_win,'(a8,i4,i4,i4)')  'mp_grid =', axis(1:3)
       write(w90_win,'(a)') ' '
       write(w90_win,'(a)')  'begin kpoints '
       !Put a minus sign here for the wrong convention in Octopus
-      do ii = 1, sys%gr%sb%kpoints%reduced%npoints
-        write(w90_win,'(f13.8,f13.8,f13.8)') -sys%gr%sb%kpoints%reduced%red_point(1:3,ii) 
+      do ii = 1, sb%kpoints%reduced%npoints
+        write(w90_win,'(f13.8,f13.8,f13.8)') -sb%kpoints%reduced%red_point(1:3,ii) 
       end do
       write(w90_win,'(a)')  'end kpoints '
     end if
@@ -776,6 +779,7 @@ contains
 
     integer :: w90_Umat, w90_xyz, nwann, nik
     integer :: ik, iw, iw2, ip, ipmax
+    integer(8) :: how
     FLOAT, allocatable :: centers(:,:), dwn(:)
     CMPLX, allocatable :: Umnk(:,:,:)
     CMPLX, allocatable :: zwn(:), psi(:,:)
@@ -790,9 +794,9 @@ contains
 
     inquire(file=trim(trim(adjustl(w90_prefix))//'_centres.xyz'),exist=exist)
     if(.not. exist) then
-       message(1) = 'oct-wannier90: Cannot find specified Wannier90 seedname_centres.xyz file.'
-       write(message(2),'(a)') 'Please run wannier90.x with "write_xyz=.true." in '// trim(adjustl(w90_prefix)) // '.'
-       call messages_fatal(2)
+      message(1) = 'oct-wannier90: Cannot find the Wannier90 file seedname_centres.xyz.'
+      write(message(2),'(a)') 'Please run wannier90.x with "write_xyz=.true." in '// trim(adjustl(w90_prefix)) // '.'
+      call messages_fatal(2)
     end if
 
     w90_xyz = io_open(trim(trim(adjustl(w90_prefix))//'_centres.xyz'), action='read')
@@ -803,9 +807,21 @@ contains
     do iw = 1, w90_num_wann
       read(w90_xyz, *) dum, centers(1:3, iw)
     end do    
-
     call io_close(w90_xyz) 
 
+
+    inquire(file=trim(trim(adjustl(w90_prefix))//'_u_dis.mat'),exist=exist)
+    if(exist) then
+      message(1) = 'oct-wannier90: Calculation of Wannier states with disentanglement is not yet supported.'
+      call messages_fatal(1)
+    end if
+
+    inquire(file=trim(trim(adjustl(w90_prefix))//'_u.mat'),exist=exist)
+    if(.not. exist) then
+      message(1) = 'oct-wannier90: Cannot find the Wannier90 seedname_u.mat file.'
+      write(message(2),'(a)') 'Please run wannier90.x with "write_u_matrices=.true." in '// trim(adjustl(w90_prefix)) // '.'
+      call messages_fatal(2)
+    end if
     w90_Umat = io_open(trim(trim(adjustl(w90_prefix))//'_u.mat'), action='read')    
 
     !To be read later
@@ -832,6 +848,9 @@ contains
     end do
     
     call io_close(w90_Umat)
+
+    !We read the output format for the Wannier states
+    call io_function_read_how(sb, how)
 
     call io_mkdir('wannier')
 
@@ -877,7 +896,7 @@ contains
         dwn(ip) = real(zwn(ip), REAL_PRECISION)
       end forall
         
-      call dio_function_output(io_function_fill_how("XCrySDen"), 'wannier', trim(fname), mesh, &
+      call dio_function_output(how, 'wannier', trim(fname), mesh, &
           dwn,  unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     end do
 
