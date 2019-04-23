@@ -276,7 +276,6 @@ contains
 
     PUSH_SUB(wannier90_setup)
 
-    call states_init(st, sys%gr, sys%geo)
     ! open win file
     filename = trim(adjustl(w90_prefix)) //'.win'
     w90_win = io_open(trim(filename), action='write')
