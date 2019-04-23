@@ -521,7 +521,7 @@ contains
 
   ! ---------------------------------------------------------
   
-  ! reset occ.num. to 2/0 for test reasons
+  ! reset occ.num. to 2/0
   subroutine set_occ_pinning(st)
     type(states_t),       intent(inout) :: st
     FLOAT, allocatable ::  occin(:,:), occ(:)
