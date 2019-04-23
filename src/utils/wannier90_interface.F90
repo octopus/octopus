@@ -182,6 +182,10 @@ program wannier90_interface
     call messages_fatal(1)
   end if
 
+  if(st%d%ispin /= UNPOLARIZED) then
+    call messages_experimental("oct-wannier90 with SpinComponnents /= unpolarized") 
+  end if
+
   w90_spinors = .false.
 
   ! create setup files
