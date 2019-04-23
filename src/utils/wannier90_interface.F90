@@ -169,11 +169,18 @@ program wannier90_interface
   end if
 
 
-  if(.not.sys%gr%sb%kpoints%w90_compatible) then
-    message(1) = 'oct-wannier90: Only Wannier90KPointsGrid=yes is allowed for running oct-wannier90'
+  if(sys%gr%sb%kpoints%use_symmetries) then
+    message(1) = 'oct-wannier90: k-points symmetries are not allowed'
     call messages_fatal(1)
   end if
-
+  if(sys%gr%sb%kpoints%use_time_reversal) then
+    message(1) = 'oct-wannier90: time-reversal symmetry is not allowed'
+    call messages_fatal(1)
+  end if
+  if(sys%gr%sb%kpoints%reduced%nshifts > 1) then
+    message(1) = 'oct-wannier90: Wannier90 does not allow for multiple shifts of the k-point grid'
+    call messages_fatal(1)
+  end if
 
   w90_spinors = .false.
 
@@ -274,7 +281,7 @@ contains
     write(w90_win,'(a)') 'begin unit_cell_cart'
     write(w90_win,'(a)') 'Ang'
     do idim=1,3
-      write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, sys%gr%sb%rlattice(idim,1:3))
+      write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, sys%gr%sb%rlattice(1:3,idim))
     end do
     write(w90_win,'(a)') 'end unit_cell_cart'
     write(w90_win,'(a)') ' '
@@ -299,11 +306,8 @@ contains
        message(1) = 'oct-wannier90: need Monkhorst-Pack grid. Please specify %KPointsGrid'
        call messages_fatal(1)
     end if
-    if(.not.sys%gr%sb%kpoints%w90_compatible) then
-      message(1) = 'oct-wannier90: Only Wannier90KPointsGrid=yes is allowed for running oct-wannier90'
-      call messages_fatal(1)
-    end if
 
+    !This is for convenience. This is needed for plotting the Wannier states, if requested.
     write(w90_win,'(a)')  'write_u_matrices = .true.'
     write(w90_win,'(a)')  'translate_home_cell = .true.'
     write(w90_win,'(a)')  'write_xyz = .true.'
@@ -314,19 +318,13 @@ contains
       write(w90_win,'(a)') ' '
     else
       axis(1:3) = sys%gr%sb%kpoints%nik_axis(1:3)
+      ASSERT(product(sys%gr%sb%kpoints%nik_axis(1:3)) == sys%gr%sb%kpoints%reduced%npoints)
       write(w90_win,'(a8,i4,i4,i4)')  'mp_grid =', axis(1:3)
       write(w90_win,'(a)') ' '
-
-      ! make wannier90 compliant MonkhorstPack mesh
-      ! and write simultaneously to w90_prefix.win file and w90_kpoints for octopus input
       write(w90_win,'(a)')  'begin kpoints '
-
-      do ii=0,axis(1)-1
-        do jj=0,axis(2)-1
-          do kk=0,axis(3)-1
-            write(w90_win,'(f13.8,f13.8,f13.8)') ii*M_ONE/(axis(1)*M_ONE), jj*M_ONE/(axis(2)*M_ONE), kk*M_ONE/(axis(3)*M_ONE)
-          end do
-        end do
+      !Put a minus sign here for the wrong convention in Octopus
+      do ii = 1, sys%gr%sb%kpoints%reduced%npoints
+        write(w90_win,'(f13.8,f13.8,f13.8)') -sys%gr%sb%kpoints%reduced%red_point(1:3,ii) 
       end do
       write(w90_win,'(a)')  'end kpoints '
     end if

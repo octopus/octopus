@@ -85,7 +85,6 @@ module kpoints_oct_m
 
     !> For the output of a band-structure
     FLOAT, pointer       :: coord_along_path(:)
-    logical              :: w90_compatible
   end type kpoints_t
 
   integer, public, parameter ::        &
@@ -296,18 +295,11 @@ contains
       return
     end if
 
-    this%w90_compatible = .false.
-
     !Monkhorst Pack grid
     if(parse_is_defined('KPointsGrid')) then
       this%method = this%method + KPOINTS_MONKH_PACK
       
       call read_MP(gamma_only = .false.)
-    end if
-
-    if(this%w90_compatible .and. this%use_symmetries) then
-      write(message(1), '(a)') "Wannier90KPointsGRid=yes is not compatible with KPointsUseSymmetries=yes."
-      call messages_fatal(1)
     end if
 
     !User-defined kpoints
@@ -331,11 +323,6 @@ contains
         call messages_warning(1)
       end if
       call read_path() 
-
-      if(this%w90_compatible) then
-        write(message(1), '(a)') "Wannier90KPointsGRid=yes is not compatible with KPointsPath."
-        call messages_fatal(1)
-      end if
     end if
 
 
@@ -446,20 +433,6 @@ contains
 
       this%nik_axis(1:MAX_DIM) = 1
 
-      if(gamma_only_) then
-        this%w90_compatible = .true.
-      else
-        !%Variable Wannier90KPointsGrid
-        !%Type logical
-        !%Default no
-        !%Section Mesh::KPoints
-        !%Description
-        !% In order to use the wannier90 tools, one must set this variable to true.
-        !% This generates a Monkhorst-Pack grid without any shift, and forbid to use symmetries
-        !%End
-        call parse_variable("Wannier90KPointsGrid", .false., this%w90_compatible)
-      end if
-
       if(.not. gamma_only_) then
         nshifts = max(parse_block_n(blk)-1,1) 
       else
@@ -519,7 +492,7 @@ contains
       SAFE_DEALLOCATE_A(shifts)
 
       call kpoints_grid_generate(dim, this%nik_axis(1:dim), this%full%nshifts, &
-               this%full%shifts(1:dim,1:this%full%nshifts), this%full%red_point, this%w90_compatible)
+               this%full%shifts(1:dim,1:this%full%nshifts), this%full%red_point)
 
       do ik = 1, this%full%npoints
         call kpoints_to_absolute(klattice, this%full%red_point(:, ik), this%full%point(:, ik), dim)
@@ -967,15 +940,12 @@ contains
   !! used with a shift of (1/2, 1/2, 1/2).
   !! naxis(i) are the number of points in the three directions determined by the lattice vectors.
   !! shift(i) and sz shift the grid of integration points from the origin.
-  !!
-  !! If the variable w90_compatible is set to true, the grid is generated without shifts
-  subroutine kpoints_grid_generate(dim, naxis, nshifts, shift, kpoints, w90_compatible, lk123)  
+  subroutine kpoints_grid_generate(dim, naxis, nshifts, shift, kpoints, lk123)  
     integer,           intent(in)  :: dim
     integer,           intent(in)  :: naxis(:)
     integer,           intent(in)  :: nshifts
     FLOAT,             intent(in)  :: shift(:,:)
     FLOAT,             intent(out) :: kpoints(:, :)
-    logical,           intent(in)  :: w90_compatible
     integer, optional, intent(out) :: lk123(:,:)      !< lk123(1:nkpt,1:3): maps ik to a triplet of indices on a cube
                                                       !< running from 0 to naxis(1:3).
   
@@ -997,55 +967,34 @@ contains
       SAFE_ALLOCATE(idx(1:npoints*nshifts))
     end if
 
-    if(.not. w90_compatible) then
+    do is = 1, nshifts
+      do ii = 0, npoints - 1
+        ik = npoints*is - ii
+        jj = ii
+        divisor = npoints
 
-      do is = 1, nshifts
-        do ii = 0, npoints - 1
-          ik = npoints*is - ii
-          jj = ii
-          divisor = npoints
+        do idir = 1, dim
+          divisor = divisor / naxis(idir)
+          ix(idir) = jj / divisor + 1
+          jj = mod(jj, divisor)
 
-          do idir = 1, dim
-            divisor = divisor / naxis(idir)
-            ix(idir) = jj / divisor + 1
-            jj = mod(jj, divisor)
+          kpoints(idir, ik) = (M_TWO*ix(idir) - M_ONE*naxis(idir) + M_TWO*shift(idir,is))*dx(idir)
+          !A default shift of +0.5 is including in case if(mod(naxis(idir), 2) /= 0 )
 
-            kpoints(idir, ik) = (M_TWO*ix(idir) - M_ONE*naxis(idir) + M_TWO*shift(idir,is))*dx(idir)
-            !A default shift of +0.5 is including in case if(mod(naxis(idir), 2) /= 0 )
-  
-            !bring back point to first Brillouin zone, except for points at 1/2
-            if ( abs(kpoints(idir, ik) - CNST(0.5)) > CNST(1e-14) )  then
-              kpoints(idir, ik) = mod(kpoints(idir, ik) + M_HALF, M_ONE) - M_HALF
-            end if
-
-          end do
-          if (present(lk123)) then
-            lk123_(ik, 1:dim) = ix(1:dim)
-            idx(ik) = ik
+          !bring back point to first Brillouin zone, except for points at 1/2
+          if ( abs(kpoints(idir, ik) - CNST(0.5)) > CNST(1e-14) )  then
+            kpoints(idir, ik) = mod(kpoints(idir, ik) + M_HALF, M_ONE) - M_HALF
           end if
+
         end do
+        if (present(lk123)) then
+          lk123_(ik, 1:dim) = ix(1:dim)
+          idx(ik) = ik
+        end if
       end do
-    else
-      ASSERT(dim==3)
-      ik = 1
-      do ii=0,naxis(1)-1
-        do jj=0,naxis(2)-1
-          do kk=0,naxis(3)-1
-            !We put here a minus sign to compensate for the unconventional definition of k-points in Octopus
-            kpoints(1:3,ik) = (/-ii*M_ONE/(naxis(1)*M_ONE), -jj*M_ONE/(naxis(2)*M_ONE),-kk*M_ONE/(naxis(3)*M_ONE)/)
-            ik = ik+1
-          end do
-       end do
-      end do
-    end if
+    end do
 
     SAFE_DEALLOCATE_A(ix)    
-
-    !In case of Wannier90 compliant grid, we do not reorder the points
-    if(w90_compatible) then
-      POP_SUB(kpoints_grid_generate)
-      return
-    end if    
 
     ! sort the k-points
 

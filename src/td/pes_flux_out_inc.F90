@@ -204,7 +204,7 @@ subroutine pes_flux_pmesh_pln(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
     
     call kpoints_grid_generate(dim, kpoints%nik_axis(1:dim), kpoints%full%nshifts, &
             kpoints%full%shifts(1:dim,1:kpoints%full%nshifts),  kpoints%full%red_point, &
-            kpoints%w90_compatible, Lkpt(:,1:dim))
+            Lkpt(:,1:dim))
 
 
   end if
