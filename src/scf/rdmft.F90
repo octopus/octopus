@@ -851,11 +851,6 @@ contains
 
     lambda = M_ZERO
     FO = M_ZERO
-    if (rdm%do_basis.eqv..false.) then 
-      call density_calc (st,gr,st%rho)
-      call v_ks_calc(ks,hm,st,geo)
-      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
-    end if
 
     call construct_f(hm,st,gr,lambda,rdm)
     
@@ -1003,94 +998,6 @@ contains
     call profiling_out(prof_orb_cg)
     
   end subroutine scf_orb_cg
-  
-
-  !--------------------------------------------------------------------
-  ! calculate the derivative of the energy with respect to orbital ist
-  !--------------------------------------------------------------------
-  subroutine E_deriv_calc(gr, st, hm, ist, E_deriv)
-    type(grid_t),         intent(inout) :: gr !< grid
-    type(states_t),       intent(inout) :: st !< States
-    type(hamiltonian_t),  intent(inout) :: hm !< Hamiltonian
-    integer,              intent(in)    :: ist !number of state
-    FLOAT,                intent(out)   :: E_deriv(1:gr%mesh%np_part)
-
-    integer            :: ii, ip
-    FLOAT              :: E_deriv_corr, norm, projection
-    FLOAT, allocatable :: rho_spin(:,:), rho(:), pot(:)
-    FLOAT, allocatable :: hpsi1(:,:), hpsi2(:,:), dpsi(:,:), dpsi2(:,:)
-  
-
-    PUSH_SUB(E_deriv_calc)
-
-    E_deriv = M_ZERO
-
-    SAFE_ALLOCATE(rho_spin(1:gr%mesh%np_part, 1:hm%d%ispin)) 
-    SAFE_ALLOCATE(rho(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(pot(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(hpsi1(1:gr%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(hpsi2(1:gr%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
-
-    !Initialize all local arrays to zero
-    hpsi1 = M_ZERO
-    hpsi2 = M_ZERO
-    dpsi  = M_ZERO
-    dpsi2  = M_ZERO
-    rho_spin = M_ZERO    
-    rho = M_ZERO    
-    pot = M_ZERO
-    E_deriv_corr = M_ZERO    
-
-    call density_calc(st, gr, rho_spin)
-    do ii = 1, hm%d%ispin
-      rho(:) = rho_spin(:, ii)
-    end do
-
-    SAFE_DEALLOCATE_A(rho_spin) 
-
-    call dpoisson_solve(psolver, pot, rho, all_nodes=.false.) !the Hartree potential
-    
-    call states_get_state(st, gr%mesh, ist, 1, dpsi)
-
-    call dhamiltonian_apply(hm, gr%der, dpsi, hpsi1, ist, 1, &
-                            & terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)
-    call dhamiltonian_apply(hm, gr%der, dpsi, hpsi2, ist, 1, &
-                            & terms = TERM_OTHERS, set_occ = .true.)
-      
-    !bare derivative wrt. state ist   
-    forall(ip=1:gr%mesh%np_part)
-      E_deriv(ip) = hpsi1(ip, 1) + pot(ip)*dpsi(ip, 1)
-     
-      !only for the Mueller functional
-      E_deriv(ip) = E_deriv(ip) + hpsi2(ip, 1)
-    end forall
-
-    norm = sqrt(dmf_dotp(gr%mesh, E_deriv, E_deriv))
-
-    !remove gradient in direction of orbital ist itself and normalize
-    projection = dmf_dotp(gr%mesh, E_deriv, dpsi(:,1))
-    forall(ip = 1:gr%mesh%np_part)
-      E_deriv(ip) = E_deriv(ip) - projection*dpsi(ip,1)
-    end forall
-    norm = sqrt(dmf_dotp(gr%mesh, E_deriv(:), E_deriv(:)))
-    if(norm > M_ZERO) then
-      forall(ip=1:gr%mesh%np_part)
-        E_deriv(ip) = E_deriv(ip)/norm
-      end forall
-    endif      
- 
-    SAFE_DEALLOCATE_A(rho)
-    SAFE_DEALLOCATE_A(pot)
-    SAFE_DEALLOCATE_A(hpsi1)
-    SAFE_DEALLOCATE_A(hpsi2)
-    SAFE_DEALLOCATE_A(dpsi)
-    SAFE_DEALLOCATE_A(dpsi2)
-
-    POP_SUB(E_deriv_calc)
-
-  end subroutine E_deriv_calc
 
 
   ! ----------------------------------------
