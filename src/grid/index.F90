@@ -25,7 +25,6 @@ module index_oct_m
   use io_binary_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use simul_box_oct_m
 
   implicit none
 
@@ -38,8 +37,7 @@ module index_oct_m
     index_dump,            &
     index_load,            &
     index_dump_lxyz,       &
-    index_load_lxyz,       &
-    index_subset_indices
+    index_load_lxyz
 
   type index_t
     type(hypercube_t)    :: hypercube
@@ -125,24 +123,6 @@ contains
       call hypercube_i_to_x(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ip, ix)
     end if
   end subroutine index_to_coords
-
-
-  !> This function returns .true. if the coordinates are inside the
-  !! inner cube (without the enlargement).
-  logical pure function coords_in_inner_cube(idx, ix) result(inside)
-    type(index_t), intent(in)    :: idx
-    integer,       intent(in)    :: ix(:)
-    
-    integer :: idir
-
-    inside = .true.
-    do idir = 1, idx%dim
-      inside = inside &
-           .and. (ix(idir) > idx%nr(1, idir) + idx%enlarge(idir)) &
-           .and. (ix(idir) < idx%nr(2, idir) - idx%enlarge(idir))
-    end do
-
-  end function coords_in_inner_cube
 
 
   ! --------------------------------------------------------------
@@ -336,78 +316,6 @@ contains
 
     POP_SUB(index_load_lxyz)
   end subroutine index_load_lxyz
-
-
-  ! --------------------------------------------------------------
-  !> Checks if the (x, y, z) indices of point are valid, i.e.
-  !! inside the dimensions of the simulation box.
-  logical function index_valid(idx, point)
-    type(index_t), intent(in) :: idx
-    integer,       intent(in) :: point(MAX_DIM)
-
-    integer :: idir
-    logical :: valid
-
-    PUSH_SUB(index_valid)
-
-    valid = .true.
-    do idir = 1, idx%dim
-      if(point(idir)  <  idx%nr(1, idir) .or. point(idir) > idx%nr(2, idir)) then
-        valid = .false.
-      end if
-    end do
-
-    index_valid = valid
-
-    POP_SUB(index_valid)
-  end function index_valid
-
-
-  ! --------------------------------------------------------------
-  !> Extracts the point numbers of a rectangular subset spanned
-  !! by the two corner points from and to.
-  subroutine index_subset_indices(idx, from, to, indices)
-    type(index_t), intent(in)  :: idx
-    integer,       intent(in)  :: from(MAX_DIM)
-    integer,       intent(in)  :: to(MAX_DIM)
-    integer,       intent(out) :: indices(:)
-
-    integer :: lb(MAX_DIM) !< Lower bound of indices.
-    integer :: ub(MAX_DIM) !< Upper bound of indices.
-
-    integer :: ix, iy, iz, ii
-
-    PUSH_SUB(index_subset_indices)
-
-    ! In debug mode, check for valid indices in from, to first.
-    if(debug%info) then
-      if(.not.index_valid(idx, from).or..not.index_valid(idx, to)) then
-        message(1) = 'Failed assertion:'
-        message(2) = 'mesh.mesh_subset_indices has been passed points outside the box:'
-        message(3) = ''
-        write(message (4), '(a, i6, a, i6, a, i6, a)') &
-          '  from = (', from(1), ', ', from(2), ', ', from(3), ')'
-        write(message(5), '(a, i6, a, i6, a, i6, a)') & 
-          '  to   = (', to(1), ', ', to(2), ', ', to(3), ')'
-        call messages_fatal(5)
-      end if
-    end if
-
-    lb = min(from, to)
-    ub = max(from, to)
-
-    ii = 1
-    do ix = lb(1), ub(1)
-      do iy = lb(2), ub(2)
-        do iz = lb(3), ub(3)
-          indices(ii) = idx%lxyz_inv(ix, iy, iz)
-          ii         = ii + 1
-        end do
-      end do
-    end do
-
-    POP_SUB(index_subset_indices)
-  end subroutine index_subset_indices
 
 end module index_oct_m
 

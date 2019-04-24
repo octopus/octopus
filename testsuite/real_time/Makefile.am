@@ -95,6 +95,8 @@ dist_share_DATA =                      \
         15-crank_nicolson.test                 \
         15-crank_nicolson.01-gs.inp            \
         15-crank_nicolson.02-kick.inp          \
+	15-crank_nicolson.03-freeze_domains.inp\
+	15-crank_nicolson.04-freeze_states.inp\
         17-absorption-spin_symmetry.01-gs.inp \
         17-absorption-spin_symmetry.02-td.inp \
         17-absorption-spin_symmetry.03-spectrum.inp \

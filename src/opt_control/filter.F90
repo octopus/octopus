@@ -19,10 +19,8 @@
 #include "global.h"
 
 module filter_oct_m  
-  use fft_oct_m
   use global_oct_m
-  use io_oct_m 
-  use loct_oct_m
+  use io_oct_m
   use parser_oct_m
   use messages_oct_m
   use profiling_oct_m

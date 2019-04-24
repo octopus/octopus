@@ -25,7 +25,7 @@ module lda_u_mixer_oct_m
   use mix_oct_m
   use profiling_oct_m
   use states_oct_m
-  use types_oct_m  
+  use types_oct_m
  
   implicit none
 

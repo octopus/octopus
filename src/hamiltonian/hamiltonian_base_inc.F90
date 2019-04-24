@@ -71,7 +71,6 @@ subroutine X(hamiltonian_base_local_sub)(potential, mesh, std, ispin, psib, vpsi
   if(batch_is_packed(psib) .or. batch_is_packed(vpsib)) then
     ASSERT(batch_is_packed(psib))
     ASSERT(batch_is_packed(vpsib))
-    call batch_pack_was_modified(vpsib)
   end if
 
   select case(batch_status(psib))
@@ -353,8 +352,6 @@ subroutine X(hamiltonian_base_phase)(this, der, np, iqn, conjugate, psib, src)
     call accel_finish()
   end select
 
-  call batch_pack_was_modified(psib)
-
   call profiling_out(phase_prof)
   POP_SUB(X(hamiltonian_base_phase))
 end subroutine X(hamiltonian_base_phase)
@@ -501,20 +498,20 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
   type(states_dim_t),               intent(in)    :: std
   integer,                          intent(in)    :: ik
   type(batch_t),                    intent(in)    :: psib
-  type(projection_t),               intent(out)   :: projection
+  type(projection_t),               intent(inout) :: projection
 
   integer :: ist, ip, iproj, imat, nreal, iprojection
   integer :: npoints, nprojs, nst, maxnpoints
   integer, allocatable :: ind(:)
-  R_TYPE :: aa, bb, cc, dd
   type(projector_matrix_t), pointer :: pmat
-  integer :: padnprojs, wgsize, lnprojs, size
+  integer :: padnprojs, lnprojs, size
   type(profile_t), save :: cl_prof
   type(accel_kernel_t), save, target :: ker_proj_bra, ker_proj_bra_phase
   type(accel_kernel_t), pointer :: kernel
   R_TYPE, allocatable :: lpsi(:, :)
 
-  integer :: block_size, sp, ep
+  integer :: block_size
+  logical :: reinitialize
   
   if(.not. this%apply_projector_matrices) return
 
@@ -529,58 +526,75 @@ subroutine X(hamiltonian_base_nlocal_start)(this, mesh, std, ik, psib, projectio
 #endif
 
   if(batch_is_packed(psib) .and. accel_is_enabled()) then
-
-    call accel_create_buffer(projection%buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
-      this%full_projection_size*psib%pack%size_real(1))
+    ! initialize on first call to the function
+    if(.not.projection_buffer_initialized) then
+      call accel_create_buffer(buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
+        this%full_projection_size*psib%pack%size_real(1))
+      projection_buffer_size = this%full_projection_size*psib%pack%size_real(1)
+      projection_buffer_initialized = .true.
+      reinitialize = .false.
+    else
+      ! reinitialize if larger size is requested
+      reinitialize = projection_buffer_size < this%full_projection_size*psib%pack%size_real(1)
+    end if
+    if(reinitialize) then
+      call accel_release_buffer(buff_projection)
+      call accel_create_buffer(buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
+        this%full_projection_size*psib%pack%size_real(1))
+      projection_buffer_size = this%full_projection_size*psib%pack%size_real(1)
+    end if
 
     call profiling_in(cl_prof, "CL_PROJ_BRA")
+    ! only do this if we have some points of projector matrices
+    if(this%max_npoints > 0) then
 
-    if(allocated(this%projector_phases)) then
-      call accel_kernel_start_call(ker_proj_bra_phase, 'projector.cl', 'projector_bra_phase')
-      kernel => ker_proj_bra_phase
-      size = psib%pack%size(1)
-      ASSERT(R_TYPE_VAL == TYPE_CMPLX)
-    else
-      call accel_kernel_start_call(ker_proj_bra, 'projector.cl', 'projector_bra')
-      kernel => ker_proj_bra
-      size = psib%pack%size_real(1)
+      if(allocated(this%projector_phases)) then
+        call accel_kernel_start_call(ker_proj_bra_phase, 'projector.cl', 'projector_bra_phase')
+        kernel => ker_proj_bra_phase
+        size = psib%pack%size(1)
+        ASSERT(R_TYPE_VAL == TYPE_CMPLX)
+      else
+        call accel_kernel_start_call(ker_proj_bra, 'projector.cl', 'projector_bra')
+        kernel => ker_proj_bra
+        size = psib%pack%size_real(1)
+      end if
+
+      call accel_set_kernel_arg(kernel, 0, this%nprojector_matrices)
+      call accel_set_kernel_arg(kernel, 1, this%buff_offsets)
+      call accel_set_kernel_arg(kernel, 2, this%buff_matrices)
+      call accel_set_kernel_arg(kernel, 3, this%buff_maps)
+      call accel_set_kernel_arg(kernel, 4, this%buff_scals)
+      call accel_set_kernel_arg(kernel, 5, psib%pack%buffer)
+      call accel_set_kernel_arg(kernel, 6, log2(size))
+      call accel_set_kernel_arg(kernel, 7, buff_projection)
+      call accel_set_kernel_arg(kernel, 8, log2(size))
+
+      if(allocated(this%projector_phases)) then
+        call accel_set_kernel_arg(kernel, 9, this%buff_projector_phases)
+        call accel_set_kernel_arg(kernel, 10, (ik - std%kpt%start)*this%total_points)
+      end if
+
+      padnprojs = pad_pow2(this%max_nprojs)
+      lnprojs = min(accel_kernel_workgroup_size(kernel)/size, padnprojs)
+
+      call accel_kernel_run(kernel, &
+        (/size, padnprojs, this%nprojector_matrices/), (/size, lnprojs, 1/))
+
+      do imat = 1, this%nprojector_matrices
+        pmat => this%projector_matrices(imat)
+
+        npoints = pmat%npoints
+        nprojs = pmat%nprojs
+
+        call profiling_count_operations(nreal*nprojs*M_TWO*npoints + nst*nprojs)
+      end do
+
+      call accel_finish()
     end if
-
-    call accel_set_kernel_arg(kernel, 0, this%nprojector_matrices)
-    call accel_set_kernel_arg(kernel, 1, this%buff_offsets)
-    call accel_set_kernel_arg(kernel, 2, this%buff_matrices)
-    call accel_set_kernel_arg(kernel, 3, this%buff_maps)
-    call accel_set_kernel_arg(kernel, 4, this%buff_scals)
-    call accel_set_kernel_arg(kernel, 5, psib%pack%buffer)
-    call accel_set_kernel_arg(kernel, 6, log2(size))
-    call accel_set_kernel_arg(kernel, 7, projection%buff_projection)
-    call accel_set_kernel_arg(kernel, 8, log2(size))
-
-    if(allocated(this%projector_phases)) then
-      call accel_set_kernel_arg(kernel, 9, this%buff_projector_phases)
-      call accel_set_kernel_arg(kernel, 10, (ik - std%kpt%start)*this%total_points)
-    end if
-
-    padnprojs = pad_pow2(this%max_nprojs)
-    lnprojs = min(accel_kernel_workgroup_size(kernel)/size, padnprojs)
-
-    call accel_kernel_run(kernel, &
-      (/size, padnprojs, this%nprojector_matrices/), (/size, lnprojs, 1/))
-
-    do imat = 1, this%nprojector_matrices
-      pmat => this%projector_matrices(imat)
-
-      npoints = pmat%npoints
-      nprojs = pmat%nprojs
-
-      call profiling_count_operations(nreal*nprojs*M_TWO*npoints + nst*nprojs)
-    end do
-
-    call accel_finish()
 
     if(mesh%parallel_in_domains) then
       SAFE_ALLOCATE(projection%X(projection)(1:psib%pack%size_real(1), 1:this%full_projection_size))
-      call accel_read_buffer(projection%buff_projection, &
+      call accel_read_buffer(buff_projection, &
         this%full_projection_size*psib%pack%size_real(1), projection%X(projection))
     end if
 
@@ -728,13 +742,16 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
   if(batch_is_packed(vpsib) .and. accel_is_enabled()) then
 
     if(mesh%parallel_in_domains) then
-      call accel_write_buffer(projection%buff_projection, &
-        this%full_projection_size*vpsib%pack%size_real(1), projection%X(projection))
+      ! only do this if we have points of some projector matrices
+      if(this%max_npoints > 0) then
+        call accel_write_buffer(buff_projection, &
+          this%full_projection_size*vpsib%pack%size_real(1), projection%X(projection))
+      end if
       SAFE_DEALLOCATE_A(projection%X(projection))
     end if
 
     call finish_opencl()
-    call accel_release_buffer(projection%buff_projection)
+    ! The deallocation of buff_projection happens now in hamiltonian_base_end
     
     POP_SUB(X(hamiltonian_base_nlocal_finish))
     call profiling_out(prof_vnlpsi_finish)
@@ -774,17 +791,16 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
       if(.not. allocated(this%projector_phases)) then    
         ! and copy the points from the local buffer to its position
         if(batch_is_packed(vpsib)) then
-          !$omp parallel do private(ip, ist)
+          !$omp parallel do private(ip, ist) if(.not. this%projector_self_overlap)
           do ip = 1, npoints
             forall(ist = 1:nst)
               vpsib%pack%X(psi)(ist, pmat%map(ip)) = vpsib%pack%X(psi)(ist, pmat%map(ip)) + psi(ist, ip)
             end forall
           end do
           !$omp end parallel do
-          call batch_pack_was_modified(vpsib)
         else
           do ist = 1, nst
-            !$omp parallel do
+            !$omp parallel do if(.not. this%projector_self_overlap)
             do ip = 1, npoints
               vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) + psi(ist, ip)
             end do
@@ -794,7 +810,7 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
       else
         ! and copy the points from the local buffer to its position
         if(batch_is_packed(vpsib)) then
-          !$omp parallel do private(ip, ist, phase)
+          !$omp parallel do private(ip, ist, phase) if(.not. this%projector_self_overlap)
           do ip = 1, npoints
             phase = conjg(this%projector_phases(ip, imat, ik))
             forall(ist = 1:nst)
@@ -803,10 +819,9 @@ subroutine X(hamiltonian_base_nlocal_finish)(this, mesh, std, ik, projection, vp
             end forall
           end do
           !$omp end parallel do
-          call batch_pack_was_modified(vpsib)
         else
           do ist = 1, nst
-            !$omp parallel do
+            !$omp parallel do if(.not. this%projector_self_overlap)
             do ip = 1, npoints
               vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) = vpsib%states_linear(ist)%X(psi)(pmat%map(ip)) &
                   + psi(ist, ip)*conjg(this%projector_phases(ip, imat, ik))
@@ -846,86 +861,89 @@ contains
 
     call profiling_in(cl_prof, "CL_PROJ_KET")
 
-    if(this%projector_mix) then
+    ! only do this if we have points of some projector matrices
+    if(this%max_npoints > 0) then
 
-      SAFE_ALLOCATE(buff_proj)
-      call accel_create_buffer(buff_proj, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, this%full_projection_size*vpsib%pack%size_real(1))
+      if(this%projector_mix) then
 
-      call accel_kernel_start_call(ker_mix, 'projector.cl', 'projector_mix')
-      
-      call accel_set_kernel_arg(ker_mix, 0, this%nprojector_matrices)
-      call accel_set_kernel_arg(ker_mix, 1, this%buff_offsets)
-      call accel_set_kernel_arg(ker_mix, 2, this%buff_mix)
-      call accel_set_kernel_arg(ker_mix, 3, projection%buff_projection)
-      call accel_set_kernel_arg(ker_mix, 4, log2(vpsib%pack%size_real(1)))
-      call accel_set_kernel_arg(ker_mix, 5, buff_proj)
-      
-      padnprojs = pad_pow2(this%max_nprojs)
-      lnprojs = min(accel_kernel_workgroup_size(ker_mix)/vpsib%pack%size_real(1), padnprojs)
-      
-      call accel_kernel_run(ker_mix, &
-        (/vpsib%pack%size_real(1), padnprojs, this%nprojector_matrices/), (/vpsib%pack%size_real(1), lnprojs, 1/))
-      
-      call accel_finish()
+        SAFE_ALLOCATE(buff_proj)
+        call accel_create_buffer(buff_proj, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, this%full_projection_size*vpsib%pack%size_real(1))
 
-    else
+        call accel_kernel_start_call(ker_mix, 'projector.cl', 'projector_mix')
+        
+        call accel_set_kernel_arg(ker_mix, 0, this%nprojector_matrices)
+        call accel_set_kernel_arg(ker_mix, 1, this%buff_offsets)
+        call accel_set_kernel_arg(ker_mix, 2, this%buff_mix)
+        call accel_set_kernel_arg(ker_mix, 3, buff_projection)
+        call accel_set_kernel_arg(ker_mix, 4, log2(vpsib%pack%size_real(1)))
+        call accel_set_kernel_arg(ker_mix, 5, buff_proj)
+        
+        padnprojs = pad_pow2(this%max_nprojs)
+        lnprojs = min(accel_kernel_workgroup_size(ker_mix)/vpsib%pack%size_real(1), padnprojs)
+        
+        call accel_kernel_run(ker_mix, &
+          (/vpsib%pack%size_real(1), padnprojs, this%nprojector_matrices/), (/vpsib%pack%size_real(1), lnprojs, 1/))
+        
+        call accel_finish()
 
-      buff_proj => projection%buff_projection
+      else
+
+        buff_proj => buff_projection
+        
+      end if
       
-    end if
-    
-    if(allocated(this%projector_phases)) then
-      call accel_kernel_start_call(ker_proj_ket_phase, 'projector.cl', 'projector_ket_phase')
-      kernel => ker_proj_ket_phase
-      size = vpsib%pack%size(1)
-      ASSERT(R_TYPE_VAL == TYPE_CMPLX)
-    else
-      call accel_kernel_start_call(ker_proj_ket, 'projector.cl', 'projector_ket')
-      kernel => ker_proj_ket
-      size = vpsib%pack%size_real(1)
-    end if
-
-    do iregion = 1, this%nregions
-      
-      call accel_set_kernel_arg(kernel, 0, this%nprojector_matrices)
-      call accel_set_kernel_arg(kernel, 1, this%regions(iregion) - 1)
-      call accel_set_kernel_arg(kernel, 2, this%buff_offsets)
-      call accel_set_kernel_arg(kernel, 3, this%buff_matrices)
-      call accel_set_kernel_arg(kernel, 4, this%buff_maps)
-      call accel_set_kernel_arg(kernel, 5, buff_proj)
-      call accel_set_kernel_arg(kernel, 6, log2(size))
-      call accel_set_kernel_arg(kernel, 7, vpsib%pack%buffer)
-      call accel_set_kernel_arg(kernel, 8, log2(size))
-
       if(allocated(this%projector_phases)) then
-        call accel_set_kernel_arg(kernel, 9, this%buff_projector_phases)
-        call accel_set_kernel_arg(kernel, 10, (ik - std%kpt%start)*this%total_points)
+        call accel_kernel_start_call(ker_proj_ket_phase, 'projector.cl', 'projector_ket_phase')
+        kernel => ker_proj_ket_phase
+        size = vpsib%pack%size(1)
+        ASSERT(R_TYPE_VAL == TYPE_CMPLX)
+      else
+        call accel_kernel_start_call(ker_proj_ket, 'projector.cl', 'projector_ket')
+        kernel => ker_proj_ket
+        size = vpsib%pack%size_real(1)
       end if
 
-      wgsize = accel_kernel_workgroup_size(kernel)/size    
+      do iregion = 1, this%nregions
+        
+        call accel_set_kernel_arg(kernel, 0, this%nprojector_matrices)
+        call accel_set_kernel_arg(kernel, 1, this%regions(iregion) - 1)
+        call accel_set_kernel_arg(kernel, 2, this%buff_offsets)
+        call accel_set_kernel_arg(kernel, 3, this%buff_matrices)
+        call accel_set_kernel_arg(kernel, 4, this%buff_maps)
+        call accel_set_kernel_arg(kernel, 5, buff_proj)
+        call accel_set_kernel_arg(kernel, 6, log2(size))
+        call accel_set_kernel_arg(kernel, 7, vpsib%pack%buffer)
+        call accel_set_kernel_arg(kernel, 8, log2(size))
 
-      call accel_kernel_run(kernel, &
-        (/size, pad(this%max_npoints, wgsize), this%regions(iregion + 1) - this%regions(iregion)/), &
-        (/size, wgsize, 1/))
+        if(allocated(this%projector_phases)) then
+          call accel_set_kernel_arg(kernel, 9, this%buff_projector_phases)
+          call accel_set_kernel_arg(kernel, 10, (ik - std%kpt%start)*this%total_points)
+        end if
+
+        wgsize = accel_kernel_workgroup_size(kernel)/size    
+
+        call accel_kernel_run(kernel, &
+          (/size, pad(this%max_npoints, wgsize), this%regions(iregion + 1) - this%regions(iregion)/), &
+          (/size, wgsize, 1/))
+        
+        call accel_finish()
+        
+      end do
       
+      do imat = 1, this%nprojector_matrices
+        pmat => this%projector_matrices(imat)
+        npoints = pmat%npoints
+        nprojs = pmat%nprojs
+        call profiling_count_operations(nreal*nprojs*M_TWO*npoints)
+        call profiling_count_operations(nst*npoints*R_ADD)
+      end do
+
       call accel_finish()
-      
-    end do
-    
-    do imat = 1, this%nprojector_matrices
-      pmat => this%projector_matrices(imat)
-      npoints = pmat%npoints
-      nprojs = pmat%nprojs
-      call profiling_count_operations(nreal*nprojs*M_TWO*npoints)
-      call profiling_count_operations(nst*npoints*R_ADD)
-    end do
 
-    call batch_pack_was_modified(vpsib)
-    call accel_finish()
-
-    if(this%projector_mix) then
-      call accel_release_buffer(buff_proj)
-      SAFE_DEALLOCATE_P(buff_proj)
+      if(this%projector_mix) then
+        call accel_release_buffer(buff_proj)
+        SAFE_DEALLOCATE_P(buff_proj)
+      end if
     end if
     
     call profiling_out(cl_prof)
@@ -1109,7 +1127,6 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
   type(projector_matrix_t), pointer :: pmat
   type(profile_t), save :: prof, reduce_prof
   integer :: wgsize, size
-  type(accel_kernel_t), save :: ker_proj_bra, ker_proj_bra_phase
 
   if(.not. this%apply_projector_matrices) return
 
@@ -1266,17 +1283,14 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
       end if
 
       do idir = 1, 3
-        
         do ip = 1, npoints
           forall(ist = 1:nst)
             commpsib(idir)%pack%X(psi)(ist, pmat%map(ip)) = commpsib(idir)%pack%X(psi)(ist, pmat%map(ip)) &
               - psi(ist, ip, idir) + pmat%position(idir, ip)*psi(ist, ip, 0)
           end forall
         end do
-        
-        call batch_pack_was_modified(commpsib(idir))
       end do
-
+      
       call profiling_count_operations(nst*npoints*9*R_ADD)
     end if
     

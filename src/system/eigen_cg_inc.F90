@@ -37,11 +37,11 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
-  FLOAT    :: cg0, e0, res, norm, alpha, beta, dot, old_res, old_energy, first_delta_e
+  FLOAT    :: cg0, e0, res, alpha, beta, dot, old_res, old_energy, first_delta_e
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
   FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :)
   FLOAT    :: integral_hartree, integral_xc, tmp
-  integer  :: ist, iter, maxter, idim, ip, jst, im, isp, ixc
+  integer  :: ist, iter, maxter, idim, ip, isp, ixc
   R_TYPE   :: sb(3)
   logical  :: fold_ ! use folded spectrum operator (H-shift)^2
   logical  :: orthogonalize_to_all_, additional_terms_, add_xc_term
@@ -130,6 +130,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     g0    = R_TOTYPE(M_ZERO)
     h_cg  = R_TOTYPE(M_ZERO)
     g_prev = R_TOTYPE(M_ZERO)
+    gg1   = R_TOTYPE(M_ZERO)
 
     call states_get_state(st, gr%mesh, ist, ik, psi)
 
@@ -187,13 +188,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       ! dot products needed for conjugate gradient
       gg = X(mf_dotp) (gr%mesh, st%d%dim, g0, g, reduce = .false.)
-      if(conjugate_direction_ == OPTION__CGDIRECTION__POLAK) then
+      if(iter /= 1 .and. conjugate_direction_ == OPTION__CGDIRECTION__POLAK) then
         ! only needed for Polak-Ribiere
-        if(iter /= 1) then
-          gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g0, g_prev, reduce = .false.)
-        else
-          gg1 = M_ZERO
-        end if
+        gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g0, g_prev, reduce = .false.)
       end if
 
       if(gr%mesh%parallel_in_domains) then

@@ -141,7 +141,7 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
   R_TYPE,      intent(out)   :: vnew(:, :, :)
   
   FLOAT, parameter :: w0 = CNST(0.01), ww = M_FIVE
-  integer  :: i, j, k, l, d1aux, d2aux, d3aux
+  integer  :: i, j, k, l
   R_TYPE    :: gamma, determinant
   R_TYPE, allocatable :: beta(:, :), work(:)
 

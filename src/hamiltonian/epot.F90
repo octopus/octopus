@@ -27,32 +27,20 @@ module epot_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use index_oct_m
-  use io_oct_m
   use ion_interaction_oct_m
   use kick_oct_m
-  use lalg_adv_oct_m
-  use lalg_basic_oct_m
   use lasers_oct_m
-  use linear_response_oct_m
-  use loct_math_oct_m
-  use logrid_oct_m
   use mesh_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use multigrid_oct_m
   use parser_oct_m
-  use periodic_copy_oct_m
   use poisson_oct_m
-  use poisson_cutoff_oct_m
   use profiling_oct_m
   use projector_oct_m
   use ps_oct_m
   use simul_box_oct_m
   use species_oct_m
   use species_pot_oct_m
-  use splines_oct_m
   use spline_filter_oct_m
   use states_oct_m
   use states_dim_oct_m
@@ -74,7 +62,10 @@ module epot_oct_m
     epot_generate,                 &
     epot_local_potential,          &
     epot_precalc_local_potential,  &
-    epot_global_force
+    epot_global_force,             &
+    epot_have_lasers,              &
+    epot_have_kick,                &
+    epot_have_external_potentials
 
   integer, public, parameter :: &
     CLASSICAL_NONE     = 0, & !< no classical charges
@@ -731,7 +722,7 @@ contains
 
     integer :: ip
     FLOAT :: radius
-    FLOAT, allocatable :: vl(:), Imvl(:), rho(:), Imrho(:)
+    FLOAT, allocatable :: vl(:), rho(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
 
@@ -906,6 +897,51 @@ contains
 
     POP_SUB(epot_global_force)
   end subroutine epot_global_force
+
+  ! ---------------------------------------------------------
+
+  logical function epot_have_lasers(ep)
+    type(epot_t), intent(in)  :: ep
+
+    PUSH_SUB(epot_have_lasers)
+
+    epot_have_lasers = .false.
+
+    if( ep%no_lasers /= 0 ) epot_have_lasers = .true.
+
+    POP_SUB(epot_have_lasers)
+
+  end function epot_have_lasers
+
+  ! ---------------------------------------------------------
+
+  logical function epot_have_kick(ep)
+    type(epot_t), intent(in)  :: ep
+
+    PUSH_SUB(epot_have_kick)
+
+    epot_have_kick = .false.
+
+    if( ep%kick%delta_strength /= M_ZERO ) epot_have_kick = .true.
+
+    POP_SUB(epot_have_kick)
+
+  end function epot_have_kick
+
+  ! ---------------------------------------------------------
+
+  logical function epot_have_external_potentials(ep)
+    type(epot_t), intent(in)  :: ep
+
+    PUSH_SUB(epot_have_external_potentials)
+
+    epot_have_external_potentials =  .false.
+
+    if( associated(ep%v_static) .or. associated(ep%E_field) .or. epot_have_lasers(ep) ) epot_have_external_potentials = .true.
+
+    POP_SUB(epot_have_external_potentials)
+
+  end function epot_have_external_potentials
 
 end module epot_oct_m
 

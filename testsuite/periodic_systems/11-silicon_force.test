@@ -85,6 +85,7 @@ match ; Force 8 (x)   ; GREPFIELD(static/info, '8        Si', 3) ; 0.029157
 match ; Force 8 (y)   ; GREPFIELD(static/info, '8        Si', 4) ; -0.028179
 match ; Force 8 (z)   ; GREPFIELD(static/info, '8        Si', 5) ; -0.032377
 
+
 Precision : 1.0e-06
 match ; Stress (xx)   ; GREPFIELD(static/info, 'T_{ij}', 2, 1) ; -0.0001280128
 match ; Stress (yy)   ; GREPFIELD(static/info, 'T_{ij}', 3, 2) ; -0.0002426109
@@ -130,3 +131,10 @@ match ; Force 7 (z)   ; GREPFIELD(static/info, '7        Si', 5) ;  0.015802
 match ; Force 8 (x)   ; GREPFIELD(static/info, '8        Si', 3) ;  0.029097
 match ; Force 8 (y)   ; GREPFIELD(static/info, '8        Si', 4) ; -0.026850
 match ; Force 8 (z)   ; GREPFIELD(static/info, '8        Si', 5) ; -0.029844
+
+match ; Force Ion-ion; LINEFIELD(static/forces, 2, 6)  ; -0.370281E+00
+match ; Force Local  ; LINEFIELD(static/forces, 2, 12) ;  0.457010E+00
+match ; Force NL     ; LINEFIELD(static/forces, 2, 15) ; -0.144879E+00
+match ; Force SCF    ; LINEFIELD(static/forces, 2, 24) ; -0.605939E-01
+match ; Force NLCC   ; LINEFIELD(static/forces, 2, 27) ;  0.870824E-02
+

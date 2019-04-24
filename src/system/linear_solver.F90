@@ -27,16 +27,13 @@ module linear_solver_oct_m
   use hamiltonian_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m
-  use loct_oct_m
   use parser_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use profiling_oct_m
   use preconditioners_oct_m
-  use scf_tol_oct_m
   use smear_oct_m
   use solvers_oct_m
   use states_oct_m

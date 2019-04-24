@@ -82,10 +82,15 @@ contains
     if(bof) then
       write(message(1),'(a,i6)') "The cholesky_serial orthogonalization failed with error code ", ierr
       message(2) = "There may be a linear dependence, a zero vector, or maybe a library problem."
-      call messages_warning(2)
+      message(3) = "Using the Gram-Schimdt orthogonalization instead."
+      call messages_warning(3)
     end if
-
-    call X(states_trsm)(st, mesh, ik, ss)
+  
+    if(.not. bof) then
+      call X(states_trsm)(st, mesh, ik, ss)
+    else
+      call mgs()
+    end if
 
     SAFE_DEALLOCATE_A(ss)
 

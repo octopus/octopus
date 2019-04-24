@@ -26,8 +26,8 @@ module pcm_oct_m
   use io_oct_m
   use index_oct_m
   use messages_oct_m
-  use mesh_oct_m 
-  use mesh_interpolation_oct_m 
+  use mesh_oct_m
+  use mesh_interpolation_oct_m
   use mpi_oct_m
   use par_vec_oct_m
   use parser_oct_m
@@ -51,8 +51,8 @@ module pcm_oct_m
 
   public ::                 &
     pcm_t,                  &
+    pcm_min_t,              &
     pcm_sphere_t,           &
-    !pcm_tessera_t,          & ! now in pcm_eom
     pcm_init,               &
     pcm_end,                &
     pcm_charges,            &
@@ -60,10 +60,14 @@ module pcm_oct_m
     pcm_pot_rs,             &
     pcm_elect_energy,       &
     pcm_v_nuclei_cav,       &
-    pcm_v_cav_li, &
+    pcm_v_cav_li,           &
     pcm_update,             &
     pcm_calc_pot_rs,				&
-    pcm_charge_density
+    pcm_charge_density,     &
+    pcm_dipole,             &
+    pcm_field,              &
+    pcm_eps,                &
+    pcm_min_input_parsing_for_spectrum
 
 
   !> The cavity hosting the solute molecule is built from a set of 
@@ -76,83 +80,84 @@ module pcm_oct_m
   end type pcm_sphere_t
 
   !> The resulting cavity is discretized by a set of tesserae defined in 3d.  
-  integer, parameter :: pcm_dim_space = 3
-
-  !type :: pcm_tessera_t ! now in pcm_eom
-  !  FLOAT :: point(1:pcm_dim_space)  !< representative point of the tessera  
-  !  FLOAT :: area                    !< area of the tessera
-  !  FLOAT :: normal(1:pcm_dim_space) !< unitary outgoing vector normal to the tessera surface  
-  !  FLOAT :: r_sphere                !< radius of the sphere to which the tessera belongs
-  !end type pcm_tessera_t
+  integer, parameter :: PCM_DIM_SPACE = 3
 
   type pcm_t
-    logical                          :: run_pcm       !< If .true., PCM calculation is enabled
-    integer                          :: n_spheres     !< Number of spheres used to build the VdW cavity
-    integer                          :: n_tesserae    !< Total number of tesserae
-    type(pcm_sphere_t),  allocatable :: spheres(:)    !< See type pcm_sphere_t
-    type(pcm_tessera_t), allocatable :: tess(:)       !< See type pcm_tessera_t
-    FLOAT                            :: scale_r       !< scaling factor for the radii of the spheres used in PCM
-    FLOAT, allocatable               :: matrix(:,:)   !< static PCM response matrix (for epsilon_0)
-    FLOAT, allocatable               :: matrix_d(:,:) !< dynamical PCM response matrix (for epsilon_infty)
+    logical                          :: run_pcm          !< If .true., PCM calculation is enabled
+    integer                          :: n_spheres        !< Number of spheres used to build the VdW cavity
+    integer                          :: n_tesserae       !< Total number of tesserae
+    type(pcm_sphere_t),  allocatable :: spheres(:)       !< See type pcm_sphere_t
+    type(pcm_tessera_t), allocatable :: tess(:)          !< See type pcm_tessera_t
+    FLOAT                            :: scale_r          !< scaling factor for the radii of the spheres used in PCM
+    FLOAT, allocatable               :: matrix(:,:)      !< static PCM response matrix (for epsilon_0)
+    FLOAT, allocatable               :: matrix_d(:,:)    !< dynamical PCM response matrix (for epsilon_infty)
     FLOAT, allocatable               :: matrix_lf(:,:)   !< static PCM response matrix (for epsilon_0)        - local field effects
     FLOAT, allocatable               :: matrix_lf_d(:,:) !< dynamical PCM response matrix (for epsilon_infty) - local field effects
-    FLOAT, allocatable               :: q_e(:)        !< polarization charges due to the solute electrons        
-    FLOAT, allocatable               :: q_n(:)        !< polarization charges due to the solute nuclei
-    FLOAT, allocatable               :: q_e_in(:)     !< inertial polarization charges due to the solute electrons
-    FLOAT, allocatable               :: rho_e(:)      !< polarization density due to the solute electrons        
-    FLOAT, allocatable               :: rho_n(:)      !< polarization density due to the solute nuclei
-    FLOAT                            :: qtot_e        !< total polarization charge due to electrons
-    FLOAT                            :: qtot_n        !< total polarization charge due to nuclei
-    FLOAT                            :: qtot_e_in     !< total inertial polarization charge due to electrons
-    FLOAT                            :: q_e_nominal   !< total (nominal) electronic charge
-    FLOAT                            :: q_n_nominal   !< total (nominal) nuclear charge
-    logical                          :: noneq         !< flag to use non-equilibrium PCM
-    logical                          :: renorm_charges!< flag to renormalized polarization charges
-    FLOAT                            :: q_tot_tol     !< tolerance to trigger normalization of the polarization charges
-    FLOAT                            :: deltaQ_e      !< difference between the calculated and nominal electronic charge
-    FLOAT                            :: deltaQ_n      !< difference between the calculated and nominal nuclear charge
-    FLOAT, allocatable               :: v_e(:)        !< Hartree potential at each tessera
-    FLOAT, allocatable               :: v_n(:)        !< Nuclear potential at each tessera
-    FLOAT, allocatable               :: v_e_rs(:)     !< PCM potential in real-space produced by q_e(:) 
-    FLOAT, allocatable               :: v_n_rs(:)     !< PCM potential in real-space produced by q_n(:)
-    FLOAT, allocatable               :: q_ext(:)    !< polarization charges due to an ext. pot.       
-    FLOAT, allocatable               :: q_ext_in(:) !< inertial polarization charges due to an ext. pot.
-    FLOAT, allocatable               :: rho_ext(:)  !< polarization density due to an ext. pot.        
-    FLOAT                            :: qtot_ext    !< total polarization charge due to an ext. pot.
-    FLOAT                            :: qtot_ext_in !< total inertial polarization charge due to an ext. pot.
-    FLOAT, allocatable               :: v_ext(:)    !< external potential at each tessera
-    FLOAT, allocatable               :: v_ext_rs(:) !< PCM potential in real-space produced by q_ext(:) 
-    FLOAT, allocatable               :: q_kick(:)    !< polarization charges due to kick       
-    FLOAT, allocatable               :: rho_kick(:)  !< polarization density due to kick        
-    FLOAT                            :: qtot_kick    !< total polarization charge due to kick
-    FLOAT, allocatable               :: v_kick(:)    !< kick potential at each tessera
-    FLOAT, allocatable               :: v_kick_rs(:) !< PCM potential in real-space produced by q_kick(:) 
-!     FLOAT, allocatable               :: arg_li(:,:)   !< used in the trilinear interpolation to estimate
-                                                      !< the Hartree potential at the tesserae 
-    FLOAT                            :: epsilon_0     !< Static dielectric constant of the solvent 
-    FLOAT                            :: epsilon_infty !< Infinite-frequency dielectric constant of the solvent
-    character(len=3)                 :: which_eps     !< Dielectric function model, either Debye or Drude-Lorentz
-    type(debye_param_t)		     :: deb 	      !< Debye parameters
-    type(drude_param_t)		     :: drl 	      !< Drude-Lorentz parameters
-    logical                          :: eom           !< Logical flag for polarization charges propagation through an EoM
-    logical                          :: localf        !< Logical flag to include polarization charges due to external field
-    logical                          :: solute        !< Logical flag to include polarization charges due to the solute
-    logical                          :: kick_like     !< Logical flag to consider kick-like polarization due to kick
-    integer                          :: initial_asc   !< Flag to read or not pol.charges from input file
-    FLOAT                            :: gaussian_width!< Parameter to change the width of density of polarization charges
-!     integer                          :: n_vertices    !< Number of grid points used to interpolate the Hartree potential
-                                                      !! at the tesserae 
-!     integer, allocatable             :: ind_vh(:,:)   !< Grid points used during interpolation
-    integer                          :: info_unit     !< unit for pcm info file
-    integer                          :: counter       !< used to print the number of SCF or TD iterations in energy_calc
-    character(len=80)                :: input_cavity  !< file name containing the geometry of the VdW cavity
+    FLOAT, allocatable               :: q_e(:)           !< polarization charges due to the solute electrons
+    FLOAT, allocatable               :: q_n(:)           !< polarization charges due to the solute nuclei
+    FLOAT, allocatable               :: q_e_in(:)        !< inertial polarization charges due to the solute electrons
+    FLOAT, allocatable               :: rho_e(:)         !< polarization density due to the solute electrons
+    FLOAT, allocatable               :: rho_n(:)         !< polarization density due to the solute nuclei
+    FLOAT                            :: qtot_e           !< total polarization charge due to electrons
+    FLOAT                            :: qtot_n           !< total polarization charge due to nuclei
+    FLOAT                            :: qtot_e_in        !< total inertial polarization charge due to electrons
+    FLOAT                            :: q_e_nominal      !< total (nominal) electronic charge
+    FLOAT                            :: q_n_nominal      !< total (nominal) nuclear charge
+    logical                          :: noneq            !< flag to use non-equilibrium PCM
+    logical                          :: renorm_charges   !< flag to renormalized polarization charges
+    FLOAT                            :: q_tot_tol        !< tolerance to trigger normalization of the polarization charges
+    FLOAT                            :: deltaQ_e         !< difference between the calculated and nominal electronic charge
+    FLOAT                            :: deltaQ_n         !< difference between the calculated and nominal nuclear charge
+    FLOAT, allocatable               :: v_e(:)           !< Hartree potential at each tessera
+    FLOAT, allocatable               :: v_n(:)           !< Nuclear potential at each tessera
+    FLOAT, allocatable               :: v_e_rs(:)        !< PCM potential in real-space produced by q_e(:)
+    FLOAT, allocatable               :: v_n_rs(:)        !< PCM potential in real-space produced by q_n(:)
+    FLOAT, allocatable               :: q_ext(:)         !< polarization charges due to an ext. pot.
+    FLOAT, allocatable               :: q_ext_in(:)      !< inertial polarization charges due to an ext. pot.
+    FLOAT, allocatable               :: rho_ext(:)       !< polarization density due to an ext. pot.
+    FLOAT                            :: qtot_ext         !< total polarization charge due to an ext. pot.
+    FLOAT                            :: qtot_ext_in      !< total inertial polarization charge due to an ext. pot.
+    FLOAT, allocatable               :: v_ext(:)         !< external potential at each tessera
+    FLOAT, allocatable               :: v_ext_rs(:)      !< PCM potential in real-space produced by q_ext(:)
+    FLOAT, allocatable               :: q_kick(:)        !< polarization charges due to kick
+    FLOAT, allocatable               :: rho_kick(:)      !< polarization density due to kick   
+    FLOAT                            :: qtot_kick        !< total polarization charge due to kick
+    FLOAT, allocatable               :: v_kick(:)        !< kick potential at each tessera
+    FLOAT, allocatable               :: v_kick_rs(:)     !< PCM potential in real-space produced by q_kick(:)
+    FLOAT                            :: epsilon_0        !< Static dielectric constant of the solvent
+    FLOAT                            :: epsilon_infty    !< Infinite-frequency dielectric constant of the solvent
+    character(len=3)                 :: which_eps        !< Dielectric function model, either Debye or Drude-Lorentz
+    type(debye_param_t)		           :: deb 	           !< Debye parameters
+    type(drude_param_t)		           :: drl 	           !< Drude-Lorentz parameters
+    logical                          :: eom              !< Logical flag for polarization charges propagation through an EoM
+    logical                          :: localf           !< Logical flag to include polarization charges due to external field
+    logical                          :: solute           !< Logical flag to include polarization charges due to the solute
+    logical                          :: kick_is_present  !< .true. if there are kicks in the calculation
+                                                         !< (if localf is .false. this is irrelevant to PCM)
+    logical                          :: kick_like        !< Logical flag to consider kick-like polarization due to kick
+    integer                          :: initial_asc      !< Flag to read or not pol.charges from input file
+    FLOAT                            :: gaussian_width   !< Parameter to change the width of density of polarization charges
+    integer                          :: info_unit        !< unit for pcm info file
+    integer                          :: counter          !< used to print the number of SCF or TD iterations in energy_calc
+    character(len=80)                :: input_cavity     !< file name containing the geometry of the VdW cavity
     
-    integer                          :: update_iter   !< how often the pcm potential is updated
-    integer                          :: iter          !< update iteration counter
+    integer                          :: update_iter      !< how often the pcm potential is updated
+    integer                          :: iter             !< update iteration counter
     
-    integer                          :: calc_method   !< which method should be used to obtain the pcm potential 
-    integer                          :: tess_nn       !< number of tessera center mesh-point nearest neighbors
+    integer                          :: calc_method      !< which method should be used to obtain the pcm potential
+    integer                          :: tess_nn          !< number of tessera center mesh-point nearest neighbors
+    FLOAT                            :: dt               !< time-step of propagation
   end type pcm_t
+
+  type pcm_min_t
+    logical              :: run_pcm   !< If .true., PCM calculation is enabled
+    logical              :: localf    !< flag to include polarization charges due to external field
+    logical              :: noneq     !< flag to use non-equilibrium PCM
+    logical              :: eom       !< flag for polarization charges propagation through an EoM
+    character(len=3)     :: which_eps !< dielectric function model, either Debye or Drude-Lorentz
+    type(debye_param_t)	 :: deb 	    !< Debye parameters
+    type(drude_param_t)	 :: drl 	    !< Drude-Lorentz parameters
+  end type pcm_min_t
 
   FLOAT, allocatable :: s_mat_act(:,:) !< S_I matrix 
   FLOAT, allocatable :: d_mat_act(:,:) !< D_I matrix
@@ -162,36 +167,23 @@ module pcm_oct_m
   logical            :: gamess_benchmark !< Decide to output pcm_matrix in a GAMESS format 
   FLOAT, allocatable :: mat_gamess(:,:)  !< PCM matrix formatted to be inputed to GAMESS
 
-  integer, parameter ::		&
-    PCM_ELECTRONS = 0,		&
-    PCM_NUCLEI    = 1,		&
+  integer, parameter ::		      &
+    PCM_ELECTRONS          = 0, &
+    PCM_NUCLEI             = 1, &
     PCM_EXTERNAL_POTENTIAL = 2, &
-    PCM_KICK = 3,               &
+    PCM_KICK               = 3, &
     PCM_EXTERNAL_PLUS_KICK = 4
 
-  integer, parameter, public ::   &
-    PCM_CALC_DIRECT  = 1, &
+  integer, parameter, public :: &
+    PCM_CALC_DIRECT  = 1,       &
     PCM_CALC_POISSON = 2
 
-  integer, parameter ::      &
-    PCM_VDW_OPTIMIZED   = 1, &
-    PCM_VDW_SPECIES     = 2
+  integer, parameter ::    &
+    PCM_VDW_OPTIMIZED = 1, &
+    PCM_VDW_SPECIES   = 2
 
-  logical :: td_calc_mode = .false.
-
-  integer :: CM
-
-  integer, parameter :: CM_GS = 1, &
-                        CM_TD = 3
-
-  FLOAT :: dt !< time-step of propagation
-
-  integer, parameter :: n_tess_sphere = 60 !< minimum number of tesserae per sphere
-					   !< cannot be changed without changing cav_gen subroutine
-
-  integer :: asc_vs_t_unit, asc_vs_t_unit_sol, asc_vs_t_unit_n, asc_vs_t_unit_e, asc_vs_t_unit_ext
-
-  logical :: kick_is_present
+  integer, parameter :: N_TESS_SPHERE = 60 !< minimum number of tesserae per sphere
+					                                 !< cannot be changed without changing cav_gen subroutine
 
 contains
 
@@ -228,7 +220,7 @@ contains
     
     PUSH_SUB(pcm_init)
 
-    kick_is_present = kick_present
+    pcm%kick_is_present = kick_present
 
     pcm%localf = .false.
     pcm%iter = 0
@@ -250,12 +242,9 @@ contains
     call parse_variable('PCMCalculation', .false., pcm%run_pcm)
     if (pcm%run_pcm) then
       call messages_print_stress(stdout, trim('PCM'))
-      if ( (grid%sb%box_shape /= MINIMUM).OR.(grid%sb%dim /= pcm_dim_space) ) then
+      if ( (grid%sb%box_shape /= MINIMUM).OR.(grid%sb%dim /= PCM_DIM_SPACE) ) then
         message(1) = "PCM is only available for BoxShape = minimum and 3d calculations"
         call messages_fatal(1)
-      else
-        call parse_variable('CalculationMode', 1, CM)
-        if ( CM /= CM_GS ) call messages_experimental("Polarizable Continuum Model")
       end if
     else
       POP_SUB(pcm_init)
@@ -428,7 +417,7 @@ contains
     pcm%deb%eps_d = pcm%epsilon_infty
 
     !< re-parse TDTimeStep to propagate polarization charges
-    call parse_variable('TDTimeStep', M_ZERO, dt, unit = units_inp%time)
+    call parse_variable('TDTimeStep', M_ZERO, pcm%dt, unit = units_inp%time)
 
     !%Variable PCMDebyeRelaxTime
     !%Type float
@@ -509,7 +498,7 @@ contains
     call parse_variable('PCMLocalField', .false., pcm%localf)
     call messages_print_var_value(stdout, "PCMLocalField", pcm%localf)
 
-    if( pcm%localf .and. ((.not.external_potentials_present) .and. (.not.kick_is_present)) ) then
+    if( pcm%localf .and. ((.not.external_potentials_present) .and. (.not.pcm%kick_is_present)) ) then
       message(1) = "Sorry, you have set PCMLocalField = yes, but you have not included any external potentials."
       call messages_fatal(1)
     endif
@@ -559,9 +548,15 @@ contains
       call messages_fatal(1)
     endif
 
-    if( pcm%kick_like .and. (.not. kick_is_present) ) then
+    if( pcm%kick_like .and. (.not. pcm%kick_is_present) ) then
       message(1) = "Sorry, you have set PCMKick = yes, but you have not included any kick."
       call messages_fatal(1)
+    endif
+
+    if( pcm%kick_is_present .and. pcm%run_pcm .and. (.not.pcm%localf) ) then
+      message(1) = "You have set up a PCM calculation with a kick without local field effects."
+      message(2) = "Please, reconsider if you want the kick to be relevant for the PCM run."
+      call messages_warning(2)
     endif
     
     !%Variable PCMUpdateIter
@@ -731,7 +726,7 @@ contains
       !%End
       call parse_variable('PCMTessSubdivider', 1, subdivider)
 
-      SAFE_ALLOCATE(dum2(1:subdivider*n_tess_sphere*pcm%n_spheres))
+      SAFE_ALLOCATE(dum2(1:subdivider*N_TESS_SPHERE*pcm%n_spheres))
 
       !%Variable PCMTessMinDistance
       !%Type float
@@ -845,7 +840,7 @@ contains
 !     cSAFE_ALLOCATE(pcm%ind_vh(1:pcm%n_tesserae, 1:pcm%n_vertices))
 !     pcm%ind_vh = INT(M_ZERO)
 
-!     cSAFE_ALLOCATE(pcm%arg_li(1:pcm%n_tesserae, 1:pcm_dim_space))
+!     cSAFE_ALLOCATE(pcm%arg_li(1:pcm%n_tesserae, 1:PCM_DIM_SPACE))
 !     pcm%arg_li = M_ZERO
 
 !     !> Creating the list of the nearest grid points to each tessera
@@ -894,26 +889,6 @@ contains
     end if
 
     if ( pcm%epsilon_infty /= pcm%epsilon_0 ) then 
-
-      if( pcm%noneq .and. CM /= CM_GS .and. CM /= CM_TD ) then
-        call messages_write('Non-equilibrium PCM version was created for a time propagation run (CalculationMode = td).')
-        call messages_new_line()
-        call messages_write('Other choices of CalculationMode are not tested and might produce unexpected results.')        
-        call messages_new_line()        
-        call messages_warning()
-      else if ( pcm%noneq .and. CM == CM_GS ) then 
-        call messages_write('Non-equilbrium PCM is not active in a time-independent run (e.g., CalculationMode = gs).')        
-        call messages_new_line()
-        call messages_write('You set epsilon_infty /= epsilon_0, but epsilon_infty is not relevant for CalculationMode = gs.')
-        call messages_new_line()
-        call messages_write('By definition, the ground state is in equilibrium with the solvent.')        
-        call messages_new_line()
-        call messages_write('Therefore, the only relevant dielectric constant is the static one.')        
-        call messages_new_line()
-        call messages_write('Nevertheless, the dynamical PCM response matrix is evaluated for benchamarking purposes.')        
-        call messages_new_line()                
-        call messages_warning()
-      end if 
        
       SAFE_ALLOCATE( pcm%matrix_d(1:pcm%n_tesserae, 1:pcm%n_tesserae) )
       pcm%matrix_d = M_ZERO
@@ -1084,7 +1059,7 @@ contains
       SAFE_ALLOCATE( pcm%rho_e(1:grid%mesh%np_part) )
       if( pcm%localf ) then
         SAFE_ALLOCATE( pcm%rho_ext(1:grid%mesh%np_part) )
-        if( kick_is_present ) SAFE_ALLOCATE( pcm%rho_kick(1:grid%mesh%np_part) )
+        if( pcm%kick_is_present ) SAFE_ALLOCATE( pcm%rho_kick(1:grid%mesh%np_part) )
       end if
     end if 
 
@@ -1103,7 +1078,6 @@ contains
     pcm%q_e    = M_ZERO
     pcm%v_e_rs = M_ZERO
 
-    !if ( calc_mode_id == CM_GS .and. pcm%epsilon_infty /= pcm%epsilon_0 ) &
     SAFE_ALLOCATE( pcm%q_e_in(1:pcm%n_tesserae) )
     pcm%q_e_in = M_ZERO
 
@@ -1119,7 +1093,7 @@ contains
       SAFE_ALLOCATE( pcm%q_ext_in(1:pcm%n_tesserae) )
       pcm%q_ext_in = M_ZERO
 
-      if( kick_is_present ) then
+      if( pcm%kick_is_present ) then
         SAFE_ALLOCATE( pcm%v_kick(1:pcm%n_tesserae) )
         SAFE_ALLOCATE( pcm%q_kick(1:pcm%n_tesserae) )
         SAFE_ALLOCATE( pcm%v_kick_rs(1:grid%mesh%np) )
@@ -1134,18 +1108,6 @@ contains
     pcm%q_n_nominal = val_charge
     pcm%deltaQ_e = M_ZERO
     pcm%deltaQ_n = M_ZERO
-
-
-    asc_vs_t_unit = io_open(PCM_DIR//'ASC_vs_t.dat', action='write')
-    if ( pcm%solute .and. pcm%localf ) then
-     asc_vs_t_unit_sol = io_open(PCM_DIR//'ASC_sol_vs_t.dat', action='write')
-     asc_vs_t_unit_n = io_open(PCM_DIR//'ASC_n_vs_t.dat', action='write')
-     asc_vs_t_unit_e = io_open(PCM_DIR//'ASC_e_vs_t.dat', action='write')
-     asc_vs_t_unit_ext = io_open(PCM_DIR//'ASC_ext_vs_t.dat', action='write')
-    else if( pcm%solute .and. (.not.pcm%localf) ) then
-     asc_vs_t_unit_n = io_open(PCM_DIR//'ASC_n_vs_t.dat', action='write')
-     asc_vs_t_unit_e = io_open(PCM_DIR//'ASC_e_vs_t.dat', action='write')
-    end if
 
     POP_SUB(pcm_init)
   end subroutine pcm_init
@@ -1174,6 +1136,15 @@ contains
     logical :: not_yet_called = .false.
     logical :: is_time_for_kick = .false.
     logical :: after_kick = .false.
+
+    logical :: td_calc_mode = .false.
+
+    integer :: asc_vs_t_unit_e
+
+    character(len=23) :: asc_vs_t_unit_format
+    character(len=16) :: asc_vs_t_unit_format_tail
+
+    integer :: ia
 
     PUSH_SUB(pcm_calc_pot_rs)  
     
@@ -1228,9 +1199,9 @@ contains
         if( pcm%eom ) then	!< equation-of-motion propagation
           select case (pcm%which_eps)
             case('drl')
-             call pcm_charges_propagation(pcm%q_e, pcm%v_e, dt, pcm%tess, input_asc_e, 'electron', 'drl', this_drl = pcm%drl)
+             call pcm_charges_propagation(pcm%q_e, pcm%v_e, pcm%dt, pcm%tess, input_asc_e, 'electron', 'drl', this_drl = pcm%drl)
             case default
-             call pcm_charges_propagation(pcm%q_e, pcm%v_e, dt, pcm%tess, input_asc_e, 'electron', 'deb', this_deb = pcm%deb)
+             call pcm_charges_propagation(pcm%q_e, pcm%v_e, pcm%dt, pcm%tess, input_asc_e, 'electron', 'deb', this_deb = pcm%deb)
           end select
           if ( (.not.pcm%localf) .and. not_yet_called ) call pcm_eom_enough_initial(not_yet_called)
           !< total pcm charges due to solute electrons
@@ -1282,11 +1253,11 @@ contains
         if( pcm%eom ) then	!< equation-of-motion propagation
           select case (pcm%which_eps)
             case('drl')
-             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, input_asc_ext, 'external', 'drl', this_drl = pcm%drl)
+             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, pcm%dt, pcm%tess, input_asc_ext, 'external', 'drl',this_drl=pcm%drl)
             case default
-             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, dt, pcm%tess, input_asc_ext, 'external', 'deb', this_deb = pcm%deb)
+             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, pcm%dt, pcm%tess, input_asc_ext, 'external', 'deb',this_deb=pcm%deb)
           end select
-          if ( (.not.kick_is_present) .and. not_yet_called ) call pcm_eom_enough_initial(not_yet_called)
+          if ( (.not.pcm%kick_is_present) .and. not_yet_called ) call pcm_eom_enough_initial(not_yet_called)
           !< total pcm charges due to time-dependent external field
           pcm%qtot_ext = sum(pcm%q_ext)
           !< summing pcm charges due to time-dependent and static external potentials
@@ -1319,6 +1290,8 @@ contains
     end if
 
     if (calc == PCM_EXTERNAL_PLUS_KICK .or. calc == PCM_KICK) then
+      pcm%q_kick = M_ZERO
+      pcm%v_kick_rs = M_ZERO
       if ( is_time_for_kick ) then
         call pcm_v_cav_li(pcm%v_kick, kick, pcm, mesh)
       else
@@ -1345,9 +1318,9 @@ contains
         !< BEGIN - equation-of-motion propagation
         select case (pcm%which_eps)
           case('drl')
-            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'drl', this_drl = pcm%drl)
+            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, pcm%dt, pcm%tess, input_asc_ext, 'justkick','drl',this_drl=pcm%drl)
           case default
-            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, dt, pcm%tess, input_asc_ext, 'justkick', 'deb', this_deb = pcm%deb)
+            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, pcm%dt, pcm%tess, input_asc_ext, 'justkick','deb',this_deb=pcm%deb)
         end select
         if ( not_yet_called ) call pcm_eom_enough_initial(not_yet_called)
         pcm%qtot_kick  = sum(pcm%q_kick)
@@ -1364,24 +1337,29 @@ contains
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_kick, pcm%qtot_kick, mesh, pcm%rho_kick)
       call pcm_pot_rs(pcm, pcm%v_kick_rs, pcm%q_kick, pcm%rho_kick, mesh )
       if( .not.pcm%kick_like ) then
-        pcm%q_ext    = pcm%q_ext    + pcm%q_kick
-        pcm%v_ext_rs = pcm%v_ext_rs + pcm%v_kick_rs
+        if ( calc == PCM_EXTERNAL_PLUS_KICK ) then
+          pcm%q_ext    = pcm%q_ext    + pcm%q_kick
+          pcm%v_ext_rs = pcm%v_ext_rs + pcm%v_kick_rs
+        else
+          pcm%q_ext    = pcm%q_kick
+          pcm%v_ext_rs = pcm%v_kick_rs
+        endif
       end if
      
     end if
 
-    if ( pcm%solute .and. pcm%localf ) then
-      write(asc_vs_t_unit,*) pcm%iter*dt, pcm%q_n + pcm%q_e + pcm%q_ext
-      write(asc_vs_t_unit_sol,*) pcm%iter*dt, pcm%q_n + pcm%q_e
-      write(asc_vs_t_unit_n,*) pcm%iter*dt, pcm%q_n
-      write(asc_vs_t_unit_e,*) pcm%iter*dt, pcm%q_e
-      write(asc_vs_t_unit_ext,*) pcm%iter*dt, pcm%q_ext
-    else if( (.not.pcm%solute) .and. pcm%localf ) then
-      write(asc_vs_t_unit,*) pcm%iter*dt, pcm%q_ext
-    else if( pcm%solute .and. (.not.pcm%localf) ) then
-      write(asc_vs_t_unit,*) pcm%iter*dt, pcm%q_n + pcm%q_e
-      write(asc_vs_t_unit_n,*) pcm%iter*dt, pcm%q_n
-      write(asc_vs_t_unit_e,*) pcm%iter*dt, pcm%q_e
+
+    if ( mpi_grp_is_root(mpi_world) ) then
+
+      write (asc_vs_t_unit_format_tail,'(I5,A11)') pcm%n_tesserae,'(1X,F14.8))'
+      write (asc_vs_t_unit_format,'(A)') '(F14.8,'//trim(adjustl(asc_vs_t_unit_format_tail))
+  
+      if ( pcm%solute .and. pcm%localf .and. td_calc_mode .and. calc .eq. PCM_ELECTRONS ) then
+        asc_vs_t_unit_e = io_open(PCM_DIR//'ASC_e_vs_t.dat', action='write', position='append', form='formatted')
+        write(asc_vs_t_unit_e,trim(adjustl(asc_vs_t_unit_format))) pcm%iter*pcm%dt, &
+         ( pcm%q_e(ia) , ia=1,pcm%n_tesserae )
+        call io_close(asc_vs_t_unit_e)
+      end if
     end if
 
     POP_SUB(pcm_calc_pot_rs)  
@@ -1427,7 +1405,7 @@ contains
     type(pcm_tessera_t),     intent(in)    :: tess(:)    !< (1:n_tess)
     integer,             intent(in)    :: n_tess
 
-    FLOAT   :: diff(1:pcm_dim_space), dist, z_ia
+    FLOAT   :: diff(1:PCM_DIM_SPACE), dist, z_ia
     integer :: ik, ia
     type(species_t), pointer :: spci 
 
@@ -1439,7 +1417,7 @@ contains
     do ik = 1, n_tess
       do ia = 1, geo%natoms
 
-        diff = geo%atom(ia)%x(1:pcm_dim_space) - tess(ik)%point
+        diff = geo%atom(ia)%x(1:PCM_DIM_SPACE) - tess(ik)%point
         dist = dot_product( diff, diff )
         dist = sqrt(dist)
 
@@ -1470,7 +1448,7 @@ contains
     FLOAT, optional,  intent(out)   :: E_int_e_ext
     FLOAT, optional,  intent(out)   :: E_int_n_ext 
 
-    FLOAT   :: diff(1:pcm_dim_space)
+    FLOAT   :: diff(1:PCM_DIM_SPACE)
     FLOAT   :: dist, z_ia
     integer :: ik, ia
     type(species_t), pointer :: spci 
@@ -1503,7 +1481,7 @@ contains
 
       do ia = 1, geo%natoms
 
-        diff = geo%atom(ia)%x(1:pcm_dim_space) - pcm%tess(ik)%point
+        diff = geo%atom(ia)%x(1:PCM_DIM_SPACE) - pcm%tess(ik)%point
         dist = dot_product( diff, diff )
         dist = sqrt(dist)
 
@@ -1577,7 +1555,7 @@ contains
   !> Creating the list of the nearest 8 cube vertices in real-space 
   !! to calculate the Hartree potential at 'point'
   subroutine nearest_cube_vertices(point, mesh, vert_idx, weight_li)
-    FLOAT, intent(in)        :: point(:)!< (1:pcm_dim_space)
+    FLOAT, intent(in)        :: point(:)!< (1:PCM_DIM_SPACE)
     type(mesh_t), intent(in) :: mesh
     integer, intent(out)     :: vert_idx(:)
     FLOAT, intent(out)       :: weight_li(:)
@@ -1585,12 +1563,12 @@ contains
     FLOAT   :: dmin
     integer :: rankmin
 
-    FLOAT   :: coord_0(1:pcm_dim_space)
+    FLOAT   :: coord_0(1:PCM_DIM_SPACE)
     integer :: sign_x
     integer :: sign_y
     integer :: sign_z
-    integer :: point_0(1:pcm_dim_space)
-    integer :: point_f(1:pcm_dim_space)
+    integer :: point_0(1:PCM_DIM_SPACE)
+    integer :: point_f(1:PCM_DIM_SPACE)
 
     PUSH_SUB(nearest_cube_vertices)    
 
@@ -1600,15 +1578,15 @@ contains
 
     vert_idx(1) = mesh_nearest_point(mesh, point, dmin, rankmin)
 
-    coord_0 = mesh%x(vert_idx(1), 1:pcm_dim_space)
+    coord_0 = mesh%x(vert_idx(1), 1:PCM_DIM_SPACE)
 
-    point_0 = NINT(coord_0/mesh%spacing(1:pcm_dim_space))
+    point_0 = NINT(coord_0/mesh%spacing(1:PCM_DIM_SPACE))
 
     sign_x = INT( sign( CNST(1.0), point(1) - coord_0(1) ) )
     sign_y = INT( sign( CNST(1.0), point(2) - coord_0(2) ) )
     sign_z = INT( sign( CNST(1.0), point(3) - coord_0(3) ) )
 
-    weight_li = ABS(point - coord_0)/mesh%spacing(1:pcm_dim_space)
+    weight_li = ABS(point - coord_0)/mesh%spacing(1:PCM_DIM_SPACE)
 
     !FRONT CUBE PLANE
     point_f = point_0
@@ -2191,7 +2169,7 @@ contains
     FLOAT, parameter :: M_SD_DIAG    = CNST(1.0694)
     FLOAT, parameter :: M_DIST_MIN   = CNST(0.1)
 
-    FLOAT :: diff(1:pcm_dim_space)
+    FLOAT :: diff(1:PCM_DIM_SPACE)
     FLOAT :: dist
     FLOAT :: s_diag
     FLOAT :: s_off_diag
@@ -2229,7 +2207,7 @@ contains
     FLOAT, parameter :: M_SD_DIAG    = CNST(1.0694)
     FLOAT, parameter :: M_DIST_MIN   = CNST(0.04)
 
-    FLOAT :: diff(1:pcm_dim_space)
+    FLOAT :: diff(1:PCM_DIM_SPACE)
     FLOAT :: dist
     FLOAT :: d_diag
     FLOAT :: d_off_diag
@@ -2280,32 +2258,32 @@ contains
     integer, parameter :: dim_angles = 24
     integer, parameter :: dim_ten = 10
     integer, parameter :: dim_vertices = 122
-    !integer, parameter :: n_tess_sphere = 60 ! now a global variable of pcm module
+    !integer, parameter :: N_TESS_SPHERE = 60 ! now a global variable of pcm module
     integer, parameter :: max_vertices = 6
     integer, parameter :: mxts = 10000
 
     FLOAT :: thev(1:dim_angles)
     FLOAT :: fiv(1:dim_angles)
     FLOAT :: fir
-    FLOAT :: cv(1:dim_vertices, 1:pcm_dim_space)
+    FLOAT :: cv(1:dim_vertices, 1:PCM_DIM_SPACE)
     FLOAT :: th
     FLOAT :: fi
     FLOAT :: cth
     FLOAT :: sth
 
-    FLOAT :: xctst(tess_sphere*n_tess_sphere)
-    FLOAT :: yctst(tess_sphere*n_tess_sphere)
-    FLOAT :: zctst(tess_sphere*n_tess_sphere)
-    FLOAT :: ast(tess_sphere*n_tess_sphere)
-    FLOAT :: nctst(pcm_dim_space, tess_sphere*n_tess_sphere)
+    FLOAT :: xctst(tess_sphere*N_TESS_SPHERE)
+    FLOAT :: yctst(tess_sphere*N_TESS_SPHERE)
+    FLOAT :: zctst(tess_sphere*N_TESS_SPHERE)
+    FLOAT :: ast(tess_sphere*N_TESS_SPHERE)
+    FLOAT :: nctst(PCM_DIM_SPACE, tess_sphere*N_TESS_SPHERE)
 
-    FLOAT :: pts(1:pcm_dim_space, 1:dim_ten)
-    FLOAT :: pp(1:pcm_dim_space)
-    FLOAT :: pp1(1:pcm_dim_space)
-    FLOAT :: ccc(1:pcm_dim_space, 1:dim_ten)
+    FLOAT :: pts(1:PCM_DIM_SPACE, 1:dim_ten)
+    FLOAT :: pp(1:PCM_DIM_SPACE)
+    FLOAT :: pp1(1:PCM_DIM_SPACE)
+    FLOAT :: ccc(1:PCM_DIM_SPACE, 1:dim_ten)
 
-    integer :: idum(1:n_tess_sphere*max_vertices)
-    integer :: jvt1(1:max_vertices,1:n_tess_sphere)
+    integer :: idum(1:N_TESS_SPHERE*max_vertices)
+    integer :: jvt1(1:max_vertices,1:N_TESS_SPHERE)
     integer :: isfet(1:dim_ten*dim_angles)
 
     integer :: ii
@@ -2471,7 +2449,7 @@ contains
       zctst(:) = M_ZERO
       ast(:)   = M_ZERO
 
-      do its = 1, n_tess_sphere 
+      do its = 1, N_TESS_SPHERE 
         do i_tes = 1, tess_sphere
           if (tess_sphere == 1) then
             n1 = jvt1(1,its)
@@ -2527,7 +2505,7 @@ contains
         end do
       end do !> loop through the tesseare on the sphere 'nsfe'
 
-      do its = 1, n_tess_sphere*tess_sphere
+      do its = 1, N_TESS_SPHERE*tess_sphere
 
         if (abs(ast(its)) <= M_EPSILON) cycle
         nn = nn + 1
@@ -2653,10 +2631,10 @@ contains
     integer, intent(in)        :: ns 
     integer, intent(in)        :: nesf
     integer, intent(inout)     :: nv
-    FLOAT, intent(inout)       :: pts(:,:) !< (1:pcm_dim_space, 1:dim_ten)
-    FLOAT, intent(out)         :: ccc(:,:) !< (1:pcm_dim_space, 1:dim_ten)
-    FLOAT, intent(out)         :: pp(:)    !< (1:pcm_dim_space)
-    FLOAT, intent(out)         :: pp1(:)   !< (1:pcm_dim_space)
+    FLOAT, intent(inout)       :: pts(:,:) !< (1:PCM_DIM_SPACE, 1:dim_ten)
+    FLOAT, intent(out)         :: ccc(:,:) !< (1:PCM_DIM_SPACE, 1:dim_ten)
+    FLOAT, intent(out)         :: pp(:)    !< (1:PCM_DIM_SPACE)
+    FLOAT, intent(out)         :: pp1(:)   !< (1:PCM_DIM_SPACE)
     FLOAT, intent(out)         :: area
 
     FLOAT, parameter   :: tol = -CNST(1.0e-10)
@@ -2673,15 +2651,15 @@ contains
     integer :: icut
     integer :: jj
 
-    FLOAT  :: p1(1:pcm_dim_space)
-    FLOAT  :: p2(1:pcm_dim_space)
-    FLOAT  :: p3(1:pcm_dim_space)
-    FLOAT  :: p4(1:pcm_dim_space)
-    FLOAT  :: point(1:pcm_dim_space)
-    FLOAT  :: pscr(1:pcm_dim_space,1:dim_ten)
-    FLOAT  :: cccp(1:pcm_dim_space,1:dim_ten)
-    FLOAT  :: pointl(1:pcm_dim_space,1:dim_ten)
-    FLOAT  :: diff(1:pcm_dim_space)
+    FLOAT  :: p1(1:PCM_DIM_SPACE)
+    FLOAT  :: p2(1:PCM_DIM_SPACE)
+    FLOAT  :: p3(1:PCM_DIM_SPACE)
+    FLOAT  :: p4(1:PCM_DIM_SPACE)
+    FLOAT  :: point(1:PCM_DIM_SPACE)
+    FLOAT  :: pscr(1:PCM_DIM_SPACE,1:dim_ten)
+    FLOAT  :: cccp(1:PCM_DIM_SPACE,1:dim_ten)
+    FLOAT  :: pointl(1:PCM_DIM_SPACE,1:dim_ten)
+    FLOAT  :: diff(1:PCM_DIM_SPACE)
 
     integer :: ind(1:dim_ten)
     integer :: ltyp(1:dim_ten)
@@ -2900,10 +2878,10 @@ contains
   !! of p1 and p2 with the 'alpha' parameter optimized iteratively.
   subroutine inter( sfe, p1, p2, p3, p4, ns, ia)
     type(pcm_sphere_t), intent(in) :: sfe(:) !< (1:nesf)
-    FLOAT, intent(in)          :: p1(:)  !< (1:pcm_dim_space)
-    FLOAT, intent(in)          :: p2(:)  !< (1:pcm_dim_space)
-    FLOAT, intent(in)          :: p3(:)  !< (1:pcm_dim_space)
-    FLOAT, intent(out)         :: p4(:)  !< (1:pcm_dim_space)
+    FLOAT, intent(in)          :: p1(1:PCM_DIM_SPACE)  !< (1:PCM_DIM_SPACE)
+    FLOAT, intent(in)          :: p2(1:PCM_DIM_SPACE)  !< (1:PCM_DIM_SPACE)
+    FLOAT, intent(in)          :: p3(1:PCM_DIM_SPACE)  !< (1:PCM_DIM_SPACE)
+    FLOAT, intent(out)         :: p4(1:PCM_DIM_SPACE)  !< (1:PCM_DIM_SPACE)
     integer, intent(in) :: ns
     integer, intent(in) :: ia
 
@@ -2915,8 +2893,10 @@ contains
     FLOAT  :: delta
     FLOAT  :: dnorm
     FLOAT  :: diff
-    FLOAT  :: diff_vec(1:pcm_dim_space)
+    FLOAT  :: diff_vec(1:PCM_DIM_SPACE)
     logical :: band_iter
+
+    PUSH_SUB(inter)
 
     diff_vec = M_ZERO
 
@@ -2945,7 +2925,10 @@ contains
       diff =( p4(1) - sfe(ns)%x )**2 + ( p4(2) - sfe(ns)%y )**2 + ( p4(3) - sfe(ns)%z )**2
       diff = sqrt(diff) - sfe(ns)%r
 
-      if ( abs(diff) < tol ) return
+      if ( abs(diff) < tol ) then
+       POP_SUB(inter)
+       return
+      endif
 
       if (ia == 0) then
         if (diff > M_ZERO) delta =  M_ONE/(M_TWO**(m_iter+1))
@@ -2962,6 +2945,7 @@ contains
       end if
     end do
     
+    POP_SUB(inter)
   end subroutine inter
 
   ! -----------------------------------------------------------------------------
@@ -2974,18 +2958,18 @@ contains
   !! Beta(n): external angle respect to vertex 'n'.
   subroutine gaubon( sfe, nv, ns, pts, ccc, pp, pp1, area, intsph )
     type(pcm_sphere_t), intent(in) :: sfe(:)    !< (1:nesf)
-    FLOAT, intent(in)          :: pts(:,:)  !< (1:pcm_dim_space,1:dim_ten) 
-    FLOAT, intent(in)          :: ccc(:,:)  !< (1:pcm_dim_space,1:dim_ten)
-    FLOAT, intent(inout)       :: pp(:)     !< (1:pcm_dim_space)
-    FLOAT, intent(inout)       :: pp1(:)    !< (1:pcm_dim_space)
+    FLOAT, intent(in)          :: pts(:,:)  !< (1:PCM_DIM_SPACE,1:dim_ten) 
+    FLOAT, intent(in)          :: ccc(:,:)  !< (1:PCM_DIM_SPACE,1:dim_ten)
+    FLOAT, intent(inout)       :: pp(:)     !< (1:PCM_DIM_SPACE)
+    FLOAT, intent(inout)       :: pp1(:)    !< (1:PCM_DIM_SPACE)
     integer, intent(in)        :: intsph(:) !< (1:dim_ten)
     FLOAT, intent(out)         :: area
     integer, intent(in)        :: nv
     integer, intent(in)        :: ns
 
-    FLOAT :: p1(1:pcm_dim_space), p2(1:pcm_dim_space), p3(1:pcm_dim_space)
-    FLOAT :: u1(1:pcm_dim_space), u2(1:pcm_dim_space)
-    FLOAT :: point_1(1:pcm_dim_space), point_2(1:pcm_dim_space)
+    FLOAT :: p1(1:PCM_DIM_SPACE), p2(1:PCM_DIM_SPACE), p3(1:PCM_DIM_SPACE)
+    FLOAT :: u1(1:PCM_DIM_SPACE), u2(1:PCM_DIM_SPACE)
+    FLOAT :: point_1(1:PCM_DIM_SPACE), point_2(1:PCM_DIM_SPACE)
     FLOAT :: tpi, sum1, dnorm, dnorm1, dnorm2
     FLOAT :: cosphin, phin, costn, sum2, betan
     integer :: nsfe1, ia, nn, n0, n1, n2
@@ -3106,9 +3090,9 @@ contains
 
   !> calculates the vectorial product p3 = p1 x p2
   subroutine vecp(p1, p2, p3, dnorm)
-    FLOAT, intent(in)  :: P1(:) !< (1:pcm_dim_space)
-    FLOAT, intent(in)  :: P2(:) !< (1:pcm_dim_space)
-    FLOAT, intent(out) :: P3(:) !< (1:pcm_dim_space)
+    FLOAT, intent(in)  :: P1(:) !< (1:PCM_DIM_SPACE)
+    FLOAT, intent(in)  :: P2(:) !< (1:PCM_DIM_SPACE)
+    FLOAT, intent(out) :: P3(:) !< (1:PCM_DIM_SPACE)
     FLOAT, intent(out) :: dnorm
 
     p3 = M_ZERO
@@ -3171,17 +3155,6 @@ contains
       call io_close(asc_unit_test_ext)
     end if
 
-    call io_close(asc_vs_t_unit)
-    if ( pcm%solute .and. pcm%localf ) then
-     call io_close(asc_vs_t_unit_sol)
-     call io_close(asc_vs_t_unit_n)
-     call io_close(asc_vs_t_unit_e)
-     call io_close(asc_vs_t_unit_ext)
-    else if( pcm%solute .and. (.not.pcm%localf) ) then
-     call io_close(asc_vs_t_unit_n)
-     call io_close(asc_vs_t_unit_e)
-    end if
-
     SAFE_DEALLOCATE_A(pcm%spheres)
     SAFE_DEALLOCATE_A(pcm%tess)
     SAFE_DEALLOCATE_A(pcm%matrix)
@@ -3205,21 +3178,19 @@ contains
       SAFE_DEALLOCATE_A(pcm%q_ext_in)
       SAFE_DEALLOCATE_A(pcm%v_ext)
       SAFE_DEALLOCATE_A(pcm%v_ext_rs)
-      if( kick_is_present ) then
+      if( pcm%kick_is_present ) then
         SAFE_DEALLOCATE_A(pcm%q_kick)
         SAFE_DEALLOCATE_A(pcm%v_kick)
         SAFE_DEALLOCATE_A(pcm%v_kick_rs)
       end if 
     end if
-!     cSAFE_DEALLOCATE_A(pcm%ind_vh)
-!     cSAFE_DEALLOCATE_A(pcm%arg_li)
 
     if (pcm%calc_method == PCM_CALC_POISSON) then
       SAFE_DEALLOCATE_A( pcm%rho_n)
       SAFE_DEALLOCATE_A( pcm%rho_e)
       if (pcm%localf) then
         SAFE_DEALLOCATE_A( pcm%rho_ext)
-        if( kick_is_present ) then
+        if( pcm%kick_is_present ) then
           SAFE_DEALLOCATE_A( pcm%rho_kick)
         end if
       endif
@@ -3310,6 +3281,161 @@ contains
         end select
 
   end function pcm_get_vdw_radius
+
+
+  ! -----------------------------------------------------------------------------
+  !> Computes the dipole moment mu_pcm due to a distribution of charges q_pcm
+  subroutine pcm_dipole(mu_pcm, q_pcm, tess, n_tess)
+    FLOAT,           intent(out) :: mu_pcm(:) !< (1:PCM_DIM_SPACE)
+    FLOAT,           intent(in)  :: q_pcm(:)  !< (1:n_tess)
+    integer,         intent(in)  :: n_tess
+    type(pcm_tessera_t), intent(in)  :: tess(:) !< (1:n_tess)
+
+    integer :: ia
+
+    PUSH_SUB(pcm_dipole)
+
+    mu_pcm = M_ZERO
+    do ia = 1, n_tess
+      mu_pcm = mu_pcm + q_pcm(ia) * tess(ia)%point
+    end do
+
+    POP_SUB(pcm_dipole)
+  end subroutine pcm_dipole
+
+  ! -----------------------------------------------------------------------------
+  !> Computes the field e_pcm at the reference point ref_point due to a distribution of charges q_pcm
+  subroutine pcm_field(e_pcm, q_pcm, ref_point, tess, n_tess)
+    FLOAT,           intent(out) :: e_pcm(:) !< (1:PCM_DIM_SPACE)
+    FLOAT,           intent(in)  :: q_pcm(:)  !< (1:n_tess)
+    integer,         intent(in)  :: n_tess
+    type(pcm_tessera_t), intent(in)  :: tess(:) !< (1:n_tess)
+
+    FLOAT,           intent(in) :: ref_point(1:3)
+
+    FLOAT :: diff(1:3)
+    FLOAT :: dist
+
+    integer :: ia
+
+    PUSH_SUB(pcm_field)
+
+    e_pcm = M_ZERO
+    do ia = 1, n_tess
+      diff = ref_point - tess(ia)%point
+      dist = sqrt( dot_product( diff, diff ) )
+      e_pcm = e_pcm + q_pcm(ia) * diff / dist**3
+    end do
+
+    POP_SUB(pcm_field)
+  end subroutine pcm_field
+
+  ! -----------------------------------------------------------------------------
+  ! Driver function to evaluate eps(omega)
+  subroutine pcm_eps(pcm, eps, omega)
+    type(pcm_min_t), intent(in)  :: pcm
+    CMPLX,           intent(out) :: eps
+    FLOAT,           intent(in)  :: omega
+
+    PUSH_SUB(pcm_eps)
+
+    if ( pcm%eom ) then
+      if ( pcm%which_eps == 'deb') then
+       call pcm_eps_deb(eps, pcm%deb, omega)
+      else if (pcm%which_eps == 'drl') then
+       call pcm_eps_drl(eps, pcm%drl, omega)
+      end if
+    else if( pcm%noneq .and. (.not.pcm%eom) ) then
+      eps = pcm%deb%eps_d
+    else if( (.not.pcm%noneq) .and. (.not.pcm%eom) ) then
+      eps = pcm%deb%eps_0
+    end if
+
+    POP_SUB(pcm_eps)
+  end subroutine pcm_eps
+
+  subroutine pcm_min_input_parsing_for_spectrum(pcm)
+    type(pcm_min_t), intent(out) :: pcm
+
+    PUSH_SUB(pcm_min_input_parsing_for_spectrum)
+
+    ! re-parsing PCM keywords
+    call parse_variable('PCMCalculation', .false., pcm%run_pcm)
+    call messages_print_stress(stdout, trim('PCM'))
+    call parse_variable('PCMLocalField', .false., pcm%localf)
+    call messages_print_var_value(stdout, "PCMLocalField", pcm%localf)
+    if ( pcm%localf ) then
+      call messages_experimental("PCM local field effects in the optical spectrum")
+      call messages_write('Beware of possible numerical errors in the optical spectrum due to PCM local field effects,')
+      call messages_new_line()
+      call messages_write('particularly, when static and high-frequency values of the dielectric functions are large')
+      call messages_write(' (>~10 in units of the vacuum permittivity \epsilon_0).')
+      call messages_new_line()
+      call messages_write('However, PCM local field effects in the optical spectrum work well for polar or non-polar solvents')
+      call messages_new_line()
+      call messages_write('in the nonequilibrium or equation-of-motion TD-PCM propagation schemes.')
+      call messages_warning()
+    end if
+    call parse_variable('PCMEoM' , .false., pcm%eom)
+    call messages_print_var_value(stdout, "PCMEoM", pcm%eom)
+    call parse_variable('PCMNonequilibrium' , .false., pcm%noneq)
+    if ( pcm%eom ) pcm%noneq = .true.
+    call messages_print_var_value(stdout, "PCMNonequilibrium", pcm%noneq)
+
+    ! reading dielectric function model parameters
+    call parse_variable('PCMStaticEpsilon' , M_ONE, pcm%deb%eps_0)
+    call messages_print_var_value(stdout, "PCMStaticEpsilon", pcm%deb%eps_0)
+    if ( pcm%eom ) then
+      call parse_variable('PCMEpsilonModel', 'deb', pcm%which_eps)
+      call messages_print_var_value(stdout, "PCMEpsilonModel", pcm%which_eps)
+      if ( pcm%which_eps == 'deb' ) then
+        call parse_variable('PCMDynamicEpsilon', pcm%deb%eps_0, pcm%deb%eps_d)
+        call messages_print_var_value(stdout, "PCMDynamicEpsilon", pcm%deb%eps_d)
+        call parse_variable('PCMDebyeRelaxTime', M_ZERO, pcm%deb%tau)
+        call messages_print_var_value(stdout, "PCMDebyeRelaxTime", pcm%deb%tau)
+      else if( pcm%which_eps == 'drl' ) then
+        call parse_variable('PCMDrudeLOmega', sqrt(M_ONE/(pcm%deb%eps_0-M_ONE)), pcm%drl%w0)
+        call messages_print_var_value(stdout, "PCMDrudeLOmega", pcm%drl%w0)
+        call parse_variable('PCMDrudeLDamping', M_ZERO, pcm%drl%gm)
+        call messages_print_var_value(stdout, "PCMDrudeLDamping", pcm%drl%gm)
+      end if
+    else if ( pcm%noneq .and. (.not.pcm%eom) ) then
+      call parse_variable('PCMDynamicEpsilon', pcm%deb%eps_0, pcm%deb%eps_d)
+      call messages_print_var_value(stdout, "PCMDynamicEpsilon", pcm%deb%eps_d)
+    end if
+
+    POP_SUB(pcm_min_input_parsing_for_spectrum)
+  end subroutine pcm_min_input_parsing_for_spectrum
+
+  ! -----------------------------------------------------------------------------
+  ! Debye dielectric function
+  subroutine pcm_eps_deb(eps, deb, omega)
+    CMPLX, intent(out) :: eps
+    type(debye_param_t), intent(in) :: deb
+    FLOAT, intent(in) :: omega
+
+    PUSH_SUB(pcm_eps_deb)
+
+    eps = deb%eps_d +  (deb%eps_0-deb%eps_d)/(M_ONE+(omega*deb%tau)**2) +&
+    M_zI*omega*deb%tau*(deb%eps_0-deb%eps_d)/(M_ONE+(omega*deb%tau)**2)
+
+    POP_SUB(pcm_eps_deb)
+  end subroutine pcm_eps_deb
+
+  ! -----------------------------------------------------------------------------
+  ! Drude-Lorentz dielectric function
+  subroutine pcm_eps_drl(eps, drl, omega)
+    CMPLX, intent(out) :: eps
+    type(drude_param_t), intent(in) :: drl
+    FLOAT, intent(in) :: omega
+
+    PUSH_SUB(pcm_eps_drl)
+
+    eps = M_ONE+(drl%w0**2-omega**2)*drl%aa/((drl%w0**2-omega**2)**2+(omega*drl%gm)**2) + &
+                   M_zI*omega*drl%gm*drl%aa/((drl%w0**2-omega**2)**2+(omega*drl%gm)**2)
+
+    POP_SUB(pcm_eps_drl)
+  end subroutine pcm_eps_drl
 
 end module pcm_oct_m
 

@@ -268,6 +268,7 @@ dnl ===================================================================
 dnl now we search for libraries
 
 ACX_LIBXC
+ACX_LIBVDWXC
 
 dnl check for BLAS
 ACX_BLAS([], AC_MSG_ERROR([could not find required BLAS library]))

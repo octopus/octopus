@@ -22,7 +22,6 @@ module spline_filter_oct_m
   use global_oct_m
   use io_oct_m
   use splines_oct_m
-  use loct_math_oct_m
   use messages_oct_m
 
   implicit none
