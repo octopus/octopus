@@ -168,7 +168,7 @@ contains
                 prod = zmf_dotp(mesh, sys%st%d%dim, psii, gpsij(:, idir, :))*zmf_dotp(mesh, sys%st%d%dim, psij, gpsii(:, jdir, :))
               do ifreq = 1, nfreq
                  tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - sys%st%d%kweights(iqn)*(CNST(2.0)/mesh%sb%rcell_volume)* &
-                      df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*(eigi-eigj - (ifreq-1)*dfreq))/ ((eigi-eigj - (ifreq-1)*dfreq)**2 + width/CNST(4.0))
+                      df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*(eigi-eigj - (ifreq-1)*dfreq))/ ((eigi-eigj - (ifreq-1)*dfreq)**2 + width**2/CNST(4.0))
               end do
            end do !loop over jdir
          end do !loop over idir
