@@ -133,8 +133,7 @@ contains
     xpos = M_ZERO 
     xneg = M_ZERO
     energy = M_ZERO 
-    conv = .false.
-    if(rdm%do_basis.eqv..false.) then
+    if (.not. rdm%do_basis) then
       !stepsize for steepest decent
       SAFE_ALLOCATE(stepsize(1:st%nst))
       stepsize = 0.1
@@ -151,24 +150,24 @@ contains
       write(message(1), '(a)') '**********************************************************************'
       write(message(2),'(a, i4)') 'RDM Iteration:', iter
       call messages_info(2)
-      if (rdm%hf.eqv. .false.) then
-      call scf_occ(rdm, gr, hm, st, energy_occ) 
-    else
-      call scf_occ_NO(rdm, gr, hm, st, energy_occ)
-    end if
+      if (rdm%hf) then
+        call scf_occ_NO(rdm, gr, hm, st, energy_occ)
+      else
+        call scf_occ(rdm, gr, hm, st, energy_occ)
+      end if
       ! Diagonalization of the generalized Fock matrix 
       write(message(1), '(a)') 'Optimization of natural orbitals'
       call messages_info(1)
       do icount = 1, maxcount !still under investigation how many iterations we need
-        if (rdm%do_basis.eqv..false.) then
-          call scf_orb_cg(rdm, gr, geo, st, ks, hm, energy) 
-        else
+        if (rdm%do_basis) then
           call scf_orb(rdm, gr, geo, st, ks, hm, energy)
+        else
+          call scf_orb_cg(rdm, gr, geo, st, ks, hm, energy)
         end if
         energy_dif = energy - energy_old
         energy_old = energy
-        if (rdm%do_basis.eqv. .true.) then
-          if (abs(energy_dif)/abs(energy).lt. rdm%conv_ener.and.rdm%maxFO < rdm%tolerFO)  exit
+        if (rdm%do_basis) then
+          if (abs(energy_dif)/abs(energy) < rdm%conv_ener .and. rdm%maxFO < rdm%tolerFO)  exit
           if (energy_dif < M_ZERO) then 
             xneg = xneg + 1
           else
@@ -190,48 +189,43 @@ contains
       write(message(1),'(a,es20.10)') 'Total energy orb', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
       write(message(2),'(a,2x,es20.10)') 'Relative ', rel_ener
       call messages_info(2)
-      if (rdm%hf.eqv. .false.) then
+      if (.not. rdm%hf) then
         write(message(1),'(a,5x,es20.10)') 'Max F0', rdm%maxFO
         call messages_info(1)
       end if
 
 
-      if (rdm%do_basis.eqv..true.) then
-        if ((rel_ener < rdm%conv_ener).and.rdm%maxFO < rdm%tolerFO) then
-          conv = .true.
-        end if
+      if (rdm%do_basis) then
+        conv = (rel_ener < rdm%conv_ener) .and. rdm%maxFO < rdm%tolerFO
       else
-        if (rel_ener < rdm%conv_ener) then
-          conv = .true.
-        end if
+        conv = rel_ener < rdm%conv_ener
       endif
  
       if (rdm%toler > 1e-4) rdm%toler = rdm%toler*1e-1 !Is this still okay or does it restrict the possible convergence? FB: Does this makes sense at all?
 
       ! save restart information
-      if ((conv .or. (modulo(iter, outp%restart_write_interval) == 0) &
-        .or. iter == max_iter)) then
-        if(rdm%do_basis .eqv. .true.) then
+      if ((conv .or. (modulo(iter, outp%restart_write_interval) == 0) .or. iter == max_iter)) then
+        if (rdm%do_basis) then
           call states_copy(states_save, st)
           SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
           SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
           do iorb = 1, st%nst
-          dpsi = M_ZERO
+            dpsi = M_ZERO
             do ist = 1, st%nst
-               call states_get_state(st, gr%mesh, ist, 1, dpsi2)
+              call states_get_state(st, gr%mesh, ist, 1, dpsi2)
               forall(ip=1:gr%mesh%np_part)
                 dpsi(ip,1) = dpsi(ip,1) + rdm%vecnat(ist, iorb)*dpsi2(ip,1)
               end forall
-            enddo
+            end do
             call states_set_state(states_save, gr%mesh, iorb, 1, dpsi)
-          enddo
+          end do
           call density_calc (states_save,gr,states_save%rho)
           ! if other quantities besides the densities and the states are needed they also have to be recalculated here!
           call states_dump(restart_dump, states_save, gr, ierr, iter=iter) 
 
-          if ((conv .or. iter == max_iter)) then
+          if (conv .or. iter == max_iter) then
             call states_copy(st, states_save)
-          endif
+          end if
         
           call states_end(states_save)
       
@@ -247,9 +241,9 @@ contains
         end if
       endif
       ! write output for iterations if requested
-      if(outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
+      if (outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
-        write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
+        write(dirname,'(a,a,i4.4)') trim(outp%iter_dir), "scf.", iter
         call output_all(outp, gr, geo, st, hm, ks, dirname)
       end if
 
@@ -283,7 +277,6 @@ contains
     call rdmft_end()
  
     POP_SUB(scf_rdmft) 
-
   contains
 
     ! ---------------------------------------------------------
@@ -302,7 +295,6 @@ contains
         call messages_not_implemented("Complex states for RDMFT")
       end if
 
- 
 
       !%Variable RDMTolerance
       !%Type float
@@ -369,8 +361,8 @@ contains
       rdm%gr   => gr
       rdm%st   => st
       
-      if (rdm%do_basis.eqv..true.) then
-        rdm%n_twoint = st%nst*(st%nst+1)*(st%nst**2+st%nst+2)/8 
+      if (rdm%do_basis) then
+        rdm%n_twoint = st%nst*(st%nst + 1)*(st%nst**2 + st%nst + 2)/8
         SAFE_ALLOCATE(rdm%eone_int(1:st%nst, 1:st%nst))
         SAFE_ALLOCATE(rdm%twoint(1:rdm%n_twoint))
         SAFE_ALLOCATE(rdm%i_index(1:rdm%n_twoint))
@@ -414,13 +406,11 @@ contains
       rdm%iter = 1
 
       POP_SUB(scf_rdmft.rdmft_init)
-
     end subroutine rdmft_init
 
     ! ----------------------------------------
 
     subroutine rdmft_end()
-
       PUSH_SUB(scf_rdmft.rdmft_end)
     
       nullify(rdm%gr)
@@ -431,7 +421,7 @@ contains
       SAFE_DEALLOCATE_A(rdm%hartree)
       SAFE_DEALLOCATE_A(rdm%exchange)
 
-      if (rdm%do_basis.eqv..true.) then
+      if (rdm%do_basis) then
         SAFE_DEALLOCATE_A(rdm%eone_int)
         SAFE_DEALLOCATE_A(rdm%twoint)
         SAFE_DEALLOCATE_A(rdm%i_index)
@@ -446,7 +436,6 @@ contains
       end if
 
       POP_SUB(scf_rdmft.rdmft_end)
-
     end subroutine rdmft_end
     
     ! ---------------------------------------------------------
@@ -492,8 +481,8 @@ contains
         iunit = 0
       end if
 
-      if(mpi_grp_is_root(mpi_world)) then
-        if(max_iter > 0) then
+      if (mpi_grp_is_root(mpi_world)) then
+        if (max_iter > 0) then
           write(iunit, '(a)') 'Convergence:'
           write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'maxFO = ', rdm%maxFO
           write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_ener = ', rel_ener
@@ -502,7 +491,7 @@ contains
         ! otherwise, these values are uninitialized, and unknown.
       end if
 
-      if(mpi_grp_is_root(mpi_world)) then
+      if (mpi_grp_is_root(mpi_world)) then
         write(iunit,'(a)') 'Natural occupation numbers:'
         write(iunit,'(a4,5x,a12)')'#st','Occupation'  
         do ist = 1, st%nst
@@ -510,7 +499,7 @@ contains
         end do
       end if
       
-      if(mpi_grp_is_root(mpi_world)) then
+      if (mpi_grp_is_root(mpi_world)) then
         call io_close(iunit)
       end if
       
@@ -526,7 +515,9 @@ contains
     type(states_t),       intent(inout) :: st
     FLOAT, allocatable ::  occin(:,:), occ(:)
     integer :: ist
+
     PUSH_SUB(set_occ_pinning)    
+
     SAFE_ALLOCATE(occin(1:st%nst, 1:st%d%nik))
     SAFE_ALLOCATE(occ(1:st%nst))
     
@@ -536,7 +527,6 @@ contains
     where(occin(:,:) > 1) occin(:,:) = st%smear%el_per_state
     
     st%occ = occin
-
     
     POP_SUB(set_occ_pinning)
   end subroutine set_occ_pinning
@@ -565,14 +555,14 @@ contains
     
     energy = M_ZERO
     
-    if((rdm%iter == 1).and. (rdm%do_basis.eqv. .true.))  then 
+    if (rdm%iter == 1 .and. rdm%do_basis) then
       call dstates_me_two_body(gr, st, rdm%n_twoint, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
-      call rdm_integrals(rdm,hm,st,gr) 
+      call rdm_integrals(rdm, hm, st, gr)
       call sum_integrals(rdm)
     end if
 
     call rdm_derivatives(rdm, hm, st, gr)
-    
+
     call total_energy_rdm(rdm, st%occ(:,1), energy)
 
     rdm%occsum = M_ZERO
@@ -596,7 +586,6 @@ contains
     call messages_info(2)   
     
     POP_SUB(scf_occ_NO)
-
   end subroutine scf_occ_NO
     
   ! scf for the occupation numbers 
@@ -633,9 +622,8 @@ contains
     thresh_occ = 1d-14  
     
     !Initialize the occin. Smallocc is used for numerical stability
-    
     occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
-    where(occin(:,:) < smallocc) occin(:,:) = smallocc 
+    where(occin(:,:) < smallocc) occin(:,:) = smallocc
     where(occin(:,:) > st%smear%el_per_state-smallocc) occin(:,:) = st%smear%el_per_state - smallocc
 
     !Renormalize the occupation numbers 
@@ -651,9 +639,9 @@ contains
 
     st%occ = occin
     
-    if((rdm%iter == 1).and. (rdm%do_basis.eqv. .true.))  then 
+    if (rdm%iter == 1 .and. rdm%do_basis) then
       call dstates_me_two_body(gr, st, rdm%n_twoint, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
-      call rdm_integrals(rdm,hm,st,gr) 
+      call rdm_integrals(rdm, hm, st, gr)
       call sum_integrals(rdm)
     end if
 
@@ -716,12 +704,12 @@ contains
       ! check occ.num. threshold again after minimization
       do ist = 1, st%nst
         st%occ(ist,1) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
-        if (st%occ(ist,1) <= thresh_occ ) st%occ(ist,1)=thresh_occ
+        if (st%occ(ist,1) <= thresh_occ ) st%occ(ist,1) = thresh_occ
       end do
       
-      if(abs(sumgim) < rdm%toler .or. abs((mu1-mu2)*M_HALF) < rdm%toler)  exit
-      cycle
+      if (abs(sumgim) < rdm%toler .or. abs((mu1-mu2)*M_HALF) < rdm%toler)  exit
     end do
+
     if (icycle >= 50) then
       write(message(1),'(a,1x,f11.4)') 'Bisection ended without finding mu, sum of occupation numbers:', rdm%occsum
       call messages_fatal(1)
@@ -743,90 +731,85 @@ contains
     end do
 
     write(message(1),'(a,1x,f14.12)') 'Sum of occupation numbers', rdm%occsum
-    write(message(2),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+    write(message(2),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy, energy + hm%ep%eii)
     call messages_info(2)   
 
     SAFE_DEALLOCATE_A(occin)
     SAFE_DEALLOCATE_A(theta)
+
     POP_SUB(scf_occ)
     call profiling_out(prof_occ)
 
   end subroutine scf_occ
 
   
+  subroutine objective_rdmft(size, theta, objective, getgrad, df)
+    integer,     intent(in)    :: size
+    REAL_DOUBLE, intent(in)    :: theta(size)
+    REAL_DOUBLE, intent(inout) :: objective
+    integer,     intent(in)    :: getgrad
+    REAL_DOUBLE, intent(inout) :: df(size)
 
-    subroutine objective_rdmft(size, theta, objective, getgrad, df)
-      integer,     intent(in)    :: size
-      REAL_DOUBLE, intent(in)    :: theta(size)
-      REAL_DOUBLE, intent(inout) :: objective
-      integer,     intent(in)    :: getgrad
-      REAL_DOUBLE, intent(inout) :: df(size)
-
-      integer :: ist
-      FLOAT   :: thresh_occ, thresh_theta
-      FLOAT, allocatable :: dE_dn(:),occ(:)
+    integer :: ist
+    FLOAT   :: thresh_occ, thresh_theta
+    FLOAT, allocatable :: dE_dn(:),occ(:)
  
-      PUSH_SUB(objective_rdmft)
+    PUSH_SUB(objective_rdmft)
 
-      ASSERT(size == rdm%st%nst)
+    ASSERT(size == rdm%st%nst)
 
-      SAFE_ALLOCATE(dE_dn(1:size))
-      SAFE_ALLOCATE(occ(1:size))
+    SAFE_ALLOCATE(dE_dn(1:size))
+    SAFE_ALLOCATE(occ(1:size))
 
-      occ = M_ZERO
+    occ = M_ZERO
       
-      ! Defines a threshold on occ nums to avoid numerical instabilities.
-      ! Needs to be changed consistently with the same variable in scf_occ
-      thresh_occ = 1d-14  
-      thresh_theta = asin(sqrt(thresh_occ/M_TWO))*(M_HALF/M_PI)
+    ! Defines a threshold on occ nums to avoid numerical instabilities.
+    ! Needs to be changed consistently with the same variable in scf_occ
+    thresh_occ = CNST(1e-14)
+    thresh_theta = asin(sqrt(thresh_occ/M_TWO))*(M_HALF/M_PI)
     
-      do ist = 1, size
-        occ(ist) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
-        if (occ(ist) .LE. thresh_occ ) occ(ist)=thresh_occ
-      end do
+    do ist = 1, size
+      occ(ist) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
+      if (occ(ist) <= thresh_occ ) occ(ist) = thresh_occ
+    end do
       
-      rdm%occsum = M_ZERO
-      do ist = 1, size
-        rdm%occsum = rdm%occsum + occ(ist)
-      end do
+    rdm%occsum = M_ZERO
+    do ist = 1, size
+      rdm%occsum = rdm%occsum + occ(ist)
+    end do
       
-      !calculate the total energy without nuclei interaction and the energy
-      !derivatives with respect to the occupation numbers
+    !calculate the total energy without nuclei interaction and the energy
+    !derivatives with respect to the occupation numbers
 
-      call total_energy_rdm(rdm, occ, objective, dE_dn)
-      do ist = 1, size
-        if (occ(ist) .LE. thresh_occ ) then
-          df(ist) = M_FOUR*M_PI*sin(M_FOUR*thresh_theta*M_PI)*(dE_dn(ist)-rdm%mu)
-        else
-          df(ist) = M_FOUR*M_PI*sin(M_FOUR*theta(ist)*M_PI)*(dE_dn(ist)-rdm%mu)
-        end if
-      end do
-      objective = objective - rdm%mu*(rdm%occsum - rdm%qtot)
+    call total_energy_rdm(rdm, occ, objective, dE_dn)
+    do ist = 1, size
+      if (occ(ist) <= thresh_occ ) then
+        df(ist) = M_FOUR*M_PI*sin(M_FOUR*thresh_theta*M_PI)*(dE_dn(ist) - rdm%mu)
+      else
+        df(ist) = M_FOUR*M_PI*sin(M_FOUR*theta(ist)*M_PI)*(dE_dn(ist) - rdm%mu)
+      end if
+    end do
+    objective = objective - rdm%mu*(rdm%occsum - rdm%qtot)
 
-      SAFE_DEALLOCATE_A(dE_dn)
-      SAFE_DEALLOCATE_A(occ)
+    SAFE_DEALLOCATE_A(dE_dn)
+    SAFE_DEALLOCATE_A(occ)
 
+    POP_SUB(objective_rdmft)
+  end subroutine objective_rdmft
 
-      POP_SUB(objective_rdmft)
+  subroutine write_iter_info_rdmft(iter, size, energy, maxdr, maxdf, theta)
+    implicit none
+    integer, intent(in) :: iter
+    integer, intent(in) :: size
+    real(8), intent(in) :: energy, maxdr, maxdf
+    real(8), intent(in) :: theta(size)
 
-    end subroutine objective_rdmft
+    PUSH_SUB(write_iter_info_rdmft)
 
-    subroutine write_iter_info_rdmft(iter, size, energy, maxdr, maxdf, theta)
-        implicit none
-        integer, intent(in) :: iter
-        integer, intent(in) :: size
-        real(8), intent(in) :: energy, maxdr, maxdf
-        real(8), intent(in) :: theta(size)
+    ASSERT(size == rdm%st%nst)
 
-       PUSH_SUB(write_iter_info_rdmft)
-
-       ASSERT(size == rdm%st%nst)
-
-       POP_SUB(write_iter_info_rdmft)
-
-    end subroutine write_iter_info_rdmft
-   
-  ! --------------------------------------------
+    POP_SUB(write_iter_info_rdmft)
+  end subroutine write_iter_info_rdmft
     
   ! scf for the natural orbitals
   subroutine scf_orb(rdm, gr, geo, st, ks, hm, energy)
@@ -852,7 +835,7 @@ contains
     lambda = M_ZERO
     FO = M_ZERO
 
-    call construct_f(hm,st,gr,lambda,rdm)
+    call construct_f(hm, st, gr, lambda, rdm)
     
     !Set up FO matrix 
     if (rdm%iter==1) then
@@ -895,12 +878,10 @@ contains
   end subroutine scf_orb
 
   
- !-----------------------------------------------------------------
+  !-----------------------------------------------------------------
   ! Minimize the total energy wrt. an orbital by conjugate gradient
   !-----------------------------------------------------------------
-
   subroutine scf_orb_cg(rdm, gr, geo, st, ks, hm, energy)
-
     type(rdm_t),          intent(inout) :: rdm
     type(grid_t),         intent(inout) :: gr !< grid
     type(geometry_t),     intent(inout) :: geo !< geometry
@@ -952,15 +933,15 @@ contains
         rdm%eigens%converged(ik) = 0
         do ist = 1, st%nst
           if(rdm%eigens%diff(ist, ik) < rdm%eigens%tolerance) then
-          rdm%eigens%converged(ik) = ist
+            rdm%eigens%converged(ik) = ist
           else
-          exit
+            exit
           end if
         end do
       end if
 
       rdm%eigens%matvec = rdm%eigens%matvec + maxiter ! necessary?  
-    enddo
+    end do
     
     ! For debug
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
@@ -985,7 +966,7 @@ contains
     !Set up FO matrix to check maxFO
     do ist = 1, st%nst
       do jst = 1, ist - 1
-        FO(jst, ist) = - ( lambda(jst, ist) - lambda(ist ,jst))
+        FO(jst, ist) = - (lambda(jst, ist) - lambda(ist ,jst))
       end do
     end do
     rdm%maxFO = maxval(abs(FO))
@@ -1017,7 +998,7 @@ contains
 
     lambda = M_ZERO
 
-    if (rdm%do_basis.eqv..false.) then 
+    if (.not. rdm%do_basis) then
       SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part,1:st%d%dim))
       SAFE_ALLOCATE(hpsi1(1:gr%mesh%np_part,1:st%d%dim))
       SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part ,1:st%d%dim))
@@ -1069,8 +1050,8 @@ contains
  
       do jorb = 1,st%nst
         do iorb = 1,st%nst
-        lambda(jorb,iorb) = lambda(jorb,iorb)  + g_h(iorb, jorb)+ g_x(iorb, jorb) 
-      end do
+          lambda(jorb,iorb) = lambda(jorb,iorb)  + g_h(iorb, jorb)+ g_x(iorb, jorb)
+        end do
       end do
 
     else ! calculate the same lambda matrix on the basis
@@ -1087,31 +1068,30 @@ contains
               !The coefficient of the Exchange term below is only for the Mueller functional
               Fock(ist ,jst, iorb) =  Fock(ist ,jst, iorb) + st%occ(iorb, 1)*st%occ(jorb,1)*rdm%Coul(ist, jst, jorb)  &
                                       - sqrt(st%occ(iorb,1))*sqrt(st%occ(jorb,1))*rdm%Exch(ist, jst,jorb)
-            enddo
+            end do
             Fock(jst, ist, iorb) = Fock(ist, jst, iorb)
-          enddo
-        enddo
-      enddo
+          end do
+        end do
+      end do
 
       do jorb = 1, st%nst
         do ist = 1, st%nst
           fvec(ist) = M_ZERO
           do jst =1, st%nst
             fvec(ist) = fvec(ist)+Fock(ist,jst,jorb)*rdm%vecnat(jst,jorb)
-          enddo
-        enddo
+          end do
+        end do
         do iorb= 1, st%nst
           lambda(iorb, jorb) = M_ZERO
           do ist = 1, st%nst
             lambda(iorb,jorb) = lambda(iorb,jorb) + rdm%vecnat(ist,iorb)*fvec(ist)
-          enddo
-        enddo
-      enddo
+          end do
+        end do
+      end do
     end if
 
-    
 
-    if (rdm%do_basis.eqv..false.) then 
+    if (.not. rdm%do_basis) then
       SAFE_DEALLOCATE_A(g_x)
       SAFE_DEALLOCATE_A(g_h)
       SAFE_DEALLOCATE_A(hpsi)
@@ -1143,9 +1123,9 @@ contains
 
     PUSH_SUB(assign_eigenfunctions)
 
-    if (rdm%do_basis.eqv..false.) then 
+    if (.not. rdm%do_basis) then
       do iqn = st%d%kpt%start, st%d%kpt%end
-        if(states_are_real(st)) then
+        if (states_are_real(st)) then
           call states_rotate(gr%mesh, st, lambda, iqn)
         else
           call states_rotate(gr%mesh, st, M_z1*lambda, iqn)
@@ -1155,22 +1135,19 @@ contains
       SAFE_ALLOCATE(vecnat_new(1:st%nst, 1:st%nst))
       do iorb = 1, st%nst
         do ist = 1, st%nst
-          vecnat_new(ist,iorb) = M_ZERO
+          vecnat_new(ist, iorb) = M_ZERO
           do jorb = 1, st%nst
-            vecnat_new(ist , iorb) = vecnat_new(ist , iorb) + rdm%vecnat(ist, jorb)*lambda(jorb,iorb)
-          enddo
-        enddo
-      enddo
+            vecnat_new(ist , iorb) = vecnat_new(ist , iorb) + rdm%vecnat(ist, jorb)*lambda(jorb, iorb)
+          end do
+        end do
+      end do
       
       rdm%vecnat = vecnat_new
-
 
       SAFE_DEALLOCATE_A(vecnat_new)
     end if
 
-    
     POP_SUB(assign_eigenfunctions)
-
   end subroutine assign_eigfunctions
    
   ! --------------------------------------------
@@ -1221,7 +1198,6 @@ contains
     SAFE_DEALLOCATE_A(V_x)
     
     POP_SUB(total_energy_rdm)
-   
   end subroutine total_energy_rdm
   
   ! ----------------------------------------
@@ -1309,14 +1285,14 @@ contains
         do ist = 1, st%nst
           do jst = 1, st%nst
             dd = rdm%vecnat(ist, iorb)*rdm%vecnat(jst, iorb)  
-            rdm%eone(iorb) =rdm%eone(iorb) + dd*rdm%eone_int(ist, jst)
+            rdm%eone(iorb) = rdm%eone(iorb) + dd*rdm%eone_int(ist, jst)
           end do
         end do
       end do
 
       do iorb = 1, st%nst
         do jorb =1 , iorb
-          rdm%hartree(iorb ,jorb)= M_ZERO; rdm%exchange(iorb,jorb)=M_ZERO     
+          rdm%hartree(iorb ,jorb) = M_ZERO; rdm%exchange(iorb,jorb) = M_ZERO
           do ist =1, st%nst
             do jst =1, st%nst
               dd = rdm%vecnat(ist, iorb)*rdm%vecnat(jst, iorb)
@@ -1329,8 +1305,7 @@ contains
       end do
     end if
      
-    POP_SUB(rdm_derivatives) 
-
+    POP_SUB(rdm_derivatives)
   end subroutine rdm_derivatives
   
   ! --------------------------------------------
@@ -1370,7 +1345,6 @@ contains
     SAFE_DEALLOCATE_A(dpsi2)
     
     POP_SUB(rdm_integrals) 
-
   end subroutine rdm_integrals
 
   ! --------------------------------------------
@@ -1396,9 +1370,9 @@ contains
         do jst = 1, ist
           DM(ist, jst, iorb) = rdm%vecnat(ist, iorb)*rdm%vecnat(jst, iorb)
           DM(jst, ist, iorb) = DM(ist, jst, iorb)
-        enddo
-      enddo
-    enddo
+        end do
+      end do
+    end do
 
     do icount = 1, rdm%n_twoint
 
@@ -1448,28 +1422,28 @@ contains
 
         !the Hartree terms
         rdm%Coul(ist, jst, iorb) = rdm%Coul(ist, jst, iorb) + DM(kst, lst, iorb)*wkl*two_int
-        if(inv_pairs) rdm%Coul(kst, lst, iorb) = rdm%Coul(kst, lst, iorb) + DM(ist, jst, iorb)*wij*two_int
+        if (inv_pairs) rdm%Coul(kst, lst, iorb) = rdm%Coul(kst, lst, iorb) + DM(ist, jst, iorb)*wij*two_int
 
         !the exchange terms
         !weights are only included if they can differ from one
         rdm%Exch(ist, kst, iorb) = rdm%Exch(ist, kst, iorb) + two_int*DM(jst, lst, iorb)*wik
         if (kst /= lst) then 
           rdm%Exch(ist, lst, iorb) = rdm%Exch(ist, lst, iorb) + two_int*DM(jst, kst, iorb)*wil
-        endif
-        if(ist /= jst) then
+        end if
+        if (ist /= jst) then
           if(jst >= kst) then
             rdm%Exch(jst, kst, iorb) = rdm%Exch(jst, kst, iorb) + two_int*DM(ist, lst, iorb)*wjk
-          else            
-            if(inv_pairs) rdm%Exch(kst, jst, iorb) = rdm%Exch(kst, jst, iorb) + two_int*DM(ist, lst, iorb)
-          endif
-        endif        
-        if(ist /=jst .and. kst /= lst) then
-          if(jst >= lst) then
+          else
+            if (inv_pairs) rdm%Exch(kst, jst, iorb) = rdm%Exch(kst, jst, iorb) + two_int*DM(ist, lst, iorb)
+          end if
+        end if
+        if (ist /=jst .and. kst /= lst) then
+          if (jst >= lst) then
             rdm%Exch(jst, lst, iorb) = rdm%Exch(jst, lst, iorb) + two_int*DM(ist, kst, iorb)*wjl
           else
-            if(inv_pairs) rdm%Exch(lst, jst, iorb) = rdm%Exch(lst, jst, iorb) + two_int*DM(ist, kst, iorb)
-          endif
-        endif
+            if (inv_pairs) rdm%Exch(lst, jst, iorb) = rdm%Exch(lst, jst, iorb) + two_int*DM(ist, kst, iorb)
+          end if
+        end if
 
       end do !iorb
     end do !icount
@@ -1486,7 +1460,6 @@ contains
     SAFE_DEALLOCATE_A(DM)
 
     POP_SUB(sum_integrals)
- 
   end subroutine sum_integrals
 
 end module rdmft_oct_m
