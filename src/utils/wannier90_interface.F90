@@ -19,6 +19,7 @@
 #include "global.h"
 
 program wannier90_interface
+  use batch_oct_m
   use calc_mode_par_oct_m
   use comm_oct_m
   use command_line_oct_m
@@ -86,6 +87,8 @@ program wannier90_interface
   call messages_init()
   call io_init()
   call calc_mode_par_init()
+
+  call profiling_init()
 
   call restart_module_init()
 
@@ -223,7 +226,7 @@ program wannier90_interface
     call read_wannier90_files()
 
     if(iand(w90_what, OPTION__WANNIER90_FILES__W90_MMN) /= 0) then
-      call create_wannier90_mmn()
+      call create_wannier90_mmn(sys%gr%mesh)
     end if
 
     if(iand(w90_what, OPTION__WANNIER90_FILES__W90_UNK) /= 0) then
@@ -264,6 +267,7 @@ program wannier90_interface
   call system_end(sys)
   call fft_all_end()
   call io_end()
+  call profiling_end()
   call messages_end()
   call global_end()
 
@@ -473,14 +477,20 @@ contains
 
   end subroutine read_wannier90_files
 
-  subroutine create_wannier90_mmn()
-    integer ::  ist, jst, ik, ip, w90_mmn, iknn, G(3), idim
+  subroutine create_wannier90_mmn(mesh)
+    type(mesh_t),   intent(in) :: mesh
+
+    integer ::  ist, jst, ik, ip, w90_mmn, iknn, G(3), idim, ibind
     FLOAT   ::  Gr(3)
     character(len=80) :: filename
-    CMPLX   :: overlap
-    CMPLX, allocatable :: psim(:,:), psin(:,:)
+    CMPLX, allocatable :: overlap(:)
+    CMPLX, allocatable :: psim(:,:), psin(:,:), phase(:)
+    type(profile_t), save :: prof, reduce_prof
+    type(batch_t), pointer :: batch
 
     PUSH_SUB(create_wannier90_mmn)
+
+    call profiling_in(prof, "W90_MMN")
 
     if(st%d%kpt%parallel) then
       call messages_not_implemented("w90_mmn output with k-point parallelization")
@@ -489,6 +499,10 @@ contains
     if(st%parallel_in_states) then
       call messages_not_implemented("w90_mmn output with states parallelization")
     end if
+
+    message(1) = "Info: Computing the overlap matrix";
+    call messages_info(1)
+
 
     filename = './'// trim(adjustl(w90_prefix))//'.mmn'
     w90_mmn = io_open(trim(filename), action='write')
@@ -499,11 +513,13 @@ contains
        write(w90_mmn,*) w90_num_bands, w90_num_kpts, w90_nntot
     end if
 
-    SAFE_ALLOCATE(psim(1:sys%gr%der%mesh%np, 1:st%d%dim))
-    SAFE_ALLOCATE(psin(1:sys%gr%der%mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(psim(1:mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(psin(1:mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(phase(1:mesh%np))
+    SAFE_ALLOCATE(overlap(1:w90_num_bands))
 
     ! loop over the pairs specified in the nnkp file (read before in init)
-    do ii=1,w90_num_kpts*w90_nntot
+    do ii = 1, w90_num_kpts*w90_nntot
        ik = w90_nnk_list(ii,1)
        iknn = w90_nnk_list(ii,2)
        G(1:3) = w90_nnk_list(ii,3:5)
@@ -511,35 +527,66 @@ contains
 
        Gr(1:3) = matmul(G(1:3),sys%gr%sb%klattice(1:3,1:3))
 
-       ! loop over bands
-       do jst=1,w90_num_bands
-          call states_get_state(st, sys%gr%der%mesh, jst, iknn, psin)
-
-         ! add phase
-         do ip=1,sys%gr%der%mesh%np
-           psin(ip,1:st%d%dim) = psin(ip,1:st%d%dim)*exp(-M_zI*dot_product(sys%gr%der%mesh%x(ip,1:3),Gr(1:3)))
-         end do
-
-         do ist=1,w90_num_bands
-           call states_get_state(st, sys%gr%der%mesh, ist, ik, psim)
-
-           !See Eq. (25) in PRB 56, 12847 (1997)
-           overlap = M_ZERO
-           do idim=1,st%d%dim
-              overlap =overlap +  zmf_dotp(sys%gr%der%mesh, psim(:,idim), psin(:,idim))
-           end do
-
-           ! write to W90 file
-           if(mpi_grp_is_root(mpi_world)) write(w90_mmn,'(e13.6,2x,e13.6)') overlap
-         end do
+       do ip = 1, sys%gr%der%mesh%np
+         phase(ip) = exp(-M_zI*dot_product(mesh%x(ip,1:3),Gr(1:3)))
        end do
 
+       ! loop over bands
+       do jst = 1, w90_num_bands
+          call states_get_state(st, mesh, jst, iknn, psin)
+
+         !Do not apply the phase if the phase factor is null
+         if(any(G(1:3) /= 0)) then
+           ! add phase
+           do idim = 1, st%d%dim
+             do ip = 1, mesh%np
+               psin(ip, idim) = psin(ip, idim)*phase(ip)
+             end do
+           end do
+         end if
+
+
+         !See Eq. (25) in PRB 56, 12847 (1997)
+         do ist = 1, w90_num_bands
+           batch => st%group%psib(st%group%iblock(ist, ik), ik)
+           select case(batch_status(batch))
+           case(BATCH_NOT_PACKED)
+             overlap(ist) = M_z0
+             do idim = 1, st%d%dim
+               ibind = batch_inv_index(batch, (/ist, idim/))
+               overlap(ist) = overlap(ist) + zmf_dotp(mesh, batch%states_linear(ibind)%zpsi, psin(:,idim), reduce = .false.)
+             end do
+           !Not properly done at the moment
+           case(BATCH_PACKED, BATCH_DEVICE_PACKED)
+             call states_get_state(st, mesh, ist, ik, psim)
+             overlap(ist) = zmf_dotp(mesh, st%d%dim, psim, psin, reduce = .false.)
+           end select
+         end do
+
+         if(mesh%parallel_in_domains) then
+           call profiling_in(reduce_prof, "W90_MMN_REDUCE")
+           call comm_allreduce(mesh%mpi_grp%comm, overlap)
+           call profiling_out(reduce_prof)
+         end if
+ 
+         ! write to W90 file
+         if(mpi_grp_is_root(mpi_world)) then
+           do ist = 1, w90_num_bands
+             write(w90_mmn,'(e13.6,2x,e13.6)') overlap(ist)
+           end do
+         end if
+
+       end do
     end do
 
     call io_close(w90_mmn)
 
     SAFE_DEALLOCATE_A(psim)
     SAFE_DEALLOCATE_A(psin)
+    SAFE_DEALLOCATE_A(phase)
+    SAFE_DEALLOCATE_A(overlap)
+
+    call profiling_out(prof)
 
     POP_SUB(create_wannier90_mmn)
 
@@ -657,13 +704,13 @@ contains
     integer ::  ist, ik, w90_amn, idim, iw, ip
     FLOAT   ::  center(3),  kpoint(1:MAX_DIM), threshold
     character(len=80) :: filename
-    CMPLX   :: projection
-    CMPLX, allocatable :: psi(:,:)
+    CMPLX, allocatable :: psi(:,:), phase(:), projection(:)
     FLOAT, allocatable ::  rr(:,:), ylm(:)
     type(orbitalset_t), allocatable :: orbitals(:)
-    
+    type(profile_t), save :: prof, reduce_prof
 
     PUSH_SUB(create_wannier90_amn)
+    call profiling_in(prof, "W90_AMN")
 
     if(st%d%kpt%parallel) then
       call messages_not_implemented("w90_amn output with k-point parallelization")
@@ -672,6 +719,10 @@ contains
     if(st%parallel_in_states) then
       call messages_not_implemented("w90_amn output with states parallelization")
     end if
+
+    message(1) = "Info: Computing the projection matrix";
+    call messages_info(1)
+
 
     !We use the variabel AOThreshold to deterine the threshold on the radii of the atomic orbitals
     call parse_variable('AOThreshold', CNST(0.01), threshold)
@@ -735,17 +786,23 @@ contains
     end if
 
     SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(phase(1:mesh%np))
+    SAFE_ALLOCATE(projection(1:w90_nproj))
 
     do ik=1, w90_num_kpts
       !This won't work for spin-polarized calculations
       kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ik)
+
+      forall(ip=1:mesh%np)
+        phase(ip) = exp(-M_zI* sum(mesh%x(ip, 1:sb%dim) * kpoint(1:sb%dim)))
+      end forall
 
       do ist=1, w90_num_bands
         call states_get_state(st, mesh, ist, ik, psi)
         do idim = 1, st%d%dim
           !The minus sign is here is for the wrong convention of Octopus
           forall(ip=1:mesh%np)
-            psi(ip, idim) = psi(ip, idim)*exp(-M_zI* sum(mesh%x(ip, 1:sb%dim) * kpoint(1:sb%dim)))
+            psi(ip, idim) = psi(ip, idim)*phase(ip)
           end forall
         end do
 
@@ -753,23 +810,35 @@ contains
           idim = 1
           if(w90_spinors) idim = w90_spin_proj_component(iw)
 
-          projection = zmf_dotp(mesh, psi(1:mesh%np,idim), &
-                                      orbitals(iw)%eorb_mesh(1:mesh%np,1,idim,ik))
-          if(mpi_grp_is_root(mpi_world)) then
-            write (w90_amn,'(I5,2x,I5,2x,I5,2x,e13.6,2x,e13.6)') ist, iw, ik, projection
-          end if
-        end do !iw
+          projection(iw) = zmf_dotp(mesh, psi(1:mesh%np,idim), &
+                                      orbitals(iw)%eorb_mesh(1:mesh%np,1,idim,ik), reduce = .false.)
+        end do
+
+        if(mesh%parallel_in_domains) then
+          call profiling_in(reduce_prof, "W90_AMN_REDUCE")
+          call comm_allreduce(mesh%mpi_grp%comm, projection)
+          call profiling_out(reduce_prof)
+        end if
+
+        if(mpi_grp_is_root(mpi_world)) then
+          do iw=1, w90_nproj
+            write (w90_amn,'(I5,2x,I5,2x,I5,2x,e13.6,2x,e13.6)') ist, iw, ik, projection(iw)
+          end do
+        end if
       end do !ik
     end do !ist
     call io_close(w90_amn)
 
     SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(phase)
+    SAFE_DEALLOCATE_A(projection)
 
-
-    do iw=1, w90_nproj
+    do iw = 1, w90_nproj
       call orbitalset_end(orbitals(iw))
     end do
     SAFE_DEALLOCATE_A(orbitals)
+
+    call profiling_out(prof)
 
     POP_SUB(create_wannier90_amn)
 
