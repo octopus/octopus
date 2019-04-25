@@ -544,7 +544,7 @@ contains
     FLOAT,                intent(out)   :: energy
 
     integer :: ist,ik
-    REAL(8) :: objective
+    FLOAT :: objective
 
     PUSH_SUB(scf_occ_NO)
 
@@ -600,8 +600,8 @@ contains
     FLOAT ::  sumgi1, sumgi2, sumgim, mu1, mu2, mum, dinterv, thresh_occ
     FLOAT, allocatable ::  occin(:,:)
     FLOAT, parameter :: smallocc = CNST(0.00001) 
-    REAL(8), allocatable ::   theta(:)
-    REAL(8) :: objective
+    FLOAT, allocatable ::   theta(:)
+    FLOAT :: objective
     type(profile_t), save :: prof_occ
 
     call profiling_in(prof_occ, "SCF_OCC")
@@ -619,7 +619,7 @@ contains
     
     ! Defines a threshold on occ nums to avoid numerical instabilities.
     ! Needs to be changed consistently with the same variable in objective_rdmft
-    thresh_occ = 1d-14  
+    thresh_occ = CNST(1e-14)
     
     !Initialize the occin. Smallocc is used for numerical stability
     occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
@@ -655,13 +655,13 @@ contains
 
     !use n_j=sin^2(2pi*theta_j) to treat pinned states, minimize for both intial mu
     theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-    call minimize_multidim(MINMETHOD_BFGS, st%nst, theta, real(0.05,8), real(0.01, 8), &
-        real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+    call minimize_multidim(MINMETHOD_BFGS, st%nst, theta, CNST(0.05), CNST(0.01), &
+        CNST(1e-12), CNST(1e-12), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
     sumgi1 = rdm%occsum - st%qtot
     rdm%mu = mu2
     theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-    call minimize_multidim(MINMETHOD_BFGS, st%nst, theta, real(0.05,8), real(0.01, 8), &
-        real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+    call minimize_multidim(MINMETHOD_BFGS, st%nst, theta, CNST(0.05), CNST(0.01), &
+        CNST(1e-12), CNST(1e-12), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
     sumgi2 = rdm%occsum - st%qtot
 
     ! Adjust the interval between the initial mu to include the root of rdm%occsum-st%qtot=M_ZERO
@@ -672,8 +672,8 @@ contains
         mu1 = mu1 - dinterv
         rdm%mu = mu1
         theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-        call minimize_multidim(MINMETHOD_BFGS, st%nst, theta, real(0.05,8), real(0.01, 8), &
-            real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+        call minimize_multidim(MINMETHOD_BFGS, st%nst, theta, CNST(0.05), CNST(0.01), &
+            CNST(1e-12), CNST(1e-12), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
         sumgi1 = rdm%occsum - st%qtot 
       else
         mu1 = mu2
@@ -681,8 +681,8 @@ contains
         mu2 = mu2 + dinterv
         rdm%mu = mu2
         theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-        call minimize_multidim(MINMETHOD_BFGS, st%nst, theta, real(0.05,8), real(0.01, 8), &
-            real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+        call minimize_multidim(MINMETHOD_BFGS, st%nst, theta, CNST(0.05), CNST(0.01), &
+            CNST(1e-12), CNST(1e-12), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
         sumgi2 = rdm%occsum - st%qtot 
       end if
     end do
@@ -691,8 +691,8 @@ contains
       mum = (mu1 + mu2)*M_HALF
       rdm%mu = mum
       theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
-      call minimize_multidim(MINMETHOD_BFGS, st%nst, theta, real(0.05,8), real(0.0001, 8), &
-          real(CNST(1e-12), 8), real(CNST(1e-12),8), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
+      call minimize_multidim(MINMETHOD_BFGS, st%nst, theta, CNST(0.05), CNST(0.0001), &
+          CNST(1e-12), CNST(1e-12), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
       sumgim = rdm%occsum - st%qtot
       if (sumgi1*sumgim < M_ZERO) then
         mu2 = mum
@@ -1385,14 +1385,14 @@ contains
          
       ! create weights of unique integrals 
       if(ist == jst) then
-        wij = 1.d0
+        wij = M_ONE
       else
-        wij = 2.d0
+        wij = M_TWO
       endif
       if(kst == lst) then
-        wkl = 1.d0
+        wkl = M_ONE
       else
-        wkl = 2.d0
+        wkl = M_TWO
       endif
 
       if(ist == kst .and. jst /= lst) then
