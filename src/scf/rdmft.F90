@@ -604,8 +604,8 @@ contains
     FLOAT :: objective
     type(profile_t), save :: prof_occ
 
-    call profiling_in(prof_occ, "SCF_OCC")
     PUSH_SUB(scf_occ)
+    call profiling_in(prof_occ, "SCF_OCC")
 
     write(message(1),'(a)') 'Optimization of occupation numbers'
     call messages_info(1)
@@ -737,9 +737,8 @@ contains
     SAFE_DEALLOCATE_A(occin)
     SAFE_DEALLOCATE_A(theta)
 
-    POP_SUB(scf_occ)
     call profiling_out(prof_occ)
-
+    POP_SUB(scf_occ)
   end subroutine scf_occ
 
   
@@ -825,8 +824,8 @@ contains
     FLOAT, allocatable ::  lambda(:,:), FO(:,:)
     type(profile_t), save :: prof_orb_basis
     
-    call profiling_in(prof_orb_basis, "SCF_ORB_BASIS")
     PUSH_SUB(scf_orb)
+    call profiling_in(prof_orb_basis, "SCF_ORB_BASIS")
 
     !matrix of Lagrange Multipliers from  Equation (8), Piris and Ugalde, Vol. 30, No. 13, J. Comput. Chem. 
     SAFE_ALLOCATE(lambda(1:st%nst,1:st%nst)) 
@@ -872,9 +871,8 @@ contains
     SAFE_DEALLOCATE_A(lambda) 
     SAFE_DEALLOCATE_A(FO) 
 
-    POP_SUB(scf_orb)
     call profiling_out(prof_orb_basis)
-
+    POP_SUB(scf_orb)
   end subroutine scf_orb
 
   
@@ -898,10 +896,9 @@ contains
     
     logical :: conv
     type(profile_t), save :: prof_orb_cg
-
-    call profiling_in(prof_orb_cg, "CG")
     
     PUSH_SUB(scf_orb_cg)
+    call profiling_in(prof_orb_cg, "CG")
     
     SAFE_ALLOCATE(lambda(1:st%nst,1:st%nst)) 
     SAFE_ALLOCATE(FO(1:st%nst, 1:st%nst))
@@ -974,10 +971,8 @@ contains
     SAFE_DEALLOCATE_A(lambda) 
     SAFE_DEALLOCATE_A(FO)
 
-    POP_SUB(scf_orb_cg)
-
     call profiling_out(prof_orb_cg)
-    
+    POP_SUB(scf_orb_cg)
   end subroutine scf_orb_cg
 
 
