@@ -17,3 +17,5 @@ Radius = 6.0*angstrom
 FilterPotentials = filter_none
 
 MixField = density
+
+StatesPack = no

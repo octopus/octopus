@@ -66,6 +66,8 @@ subroutine X(batch_add_state)(this, ist, psi)
     this%ist_idim_index(ii, 2) = idim
   end do
 
+  this%max_size = max(this%max_size, ubound(this%states(this%current)%X(psi), dim = 1))
+  
   this%current = this%current + 1
 
   POP_SUB(X(batch_add_state))
@@ -83,6 +85,8 @@ subroutine X(batch_add_state_linear)(this, psi)
   this%states_linear(this%current)%X(psi) => psi
   this%ist_idim_index(this%current, 1) = this%current
 
+  this%max_size = max(this%max_size, ubound(this%states_linear(this%current)%X(psi), dim = 1))
+  
   this%current = this%current + 1
 
   POP_SUB(X(batch_add_state_linear))
@@ -90,20 +94,18 @@ end subroutine X(batch_add_state_linear)
 
 
 !--------------------------------------------------------------
-subroutine X(batch_allocate)(this, st_start, st_end, np, fill_zeros, mirror)
+subroutine X(batch_allocate)(this, st_start, st_end, np, mirror)
   type(batch_t),  intent(inout) :: this
   integer,        intent(in)    :: st_start
   integer,        intent(in)    :: st_end
   integer,        intent(in)    :: np
-  logical, optional, intent(in) :: fill_zeros
-  logical, optional, intent(in) :: mirror
+  logical, optional, intent(in) :: mirror     !< If .true., this batch will keep a copy when packed. Default: .false.
 
   integer :: ist
 
   PUSH_SUB(X(batch_allocate))
 
   SAFE_ALLOCATE(this%X(psicont)(1:np, 1:this%dim, 1:st_end - st_start + 1))
-  if (optional_default(fill_zeros, .true.)) this%X(psicont) = R_TOTYPE(M_ZERO)
 
   this%is_allocated = .true.
   this%mirror = optional_default(mirror, .false.)  
@@ -125,7 +127,7 @@ subroutine X(batch_allocate_temporary)(this)
 
   ASSERT(.not. associated(this%X(psicont)))
   
-  SAFE_ALLOCATE(this%X(psicont)(1:this%pack%size(2), 1:this%dim, 1:this%nst))
+  SAFE_ALLOCATE(this%X(psicont)(1:this%max_size, 1:this%dim, 1:this%nst))
   
   do ist = 1, this%nst
     this%states(ist)%X(psi) => this%X(psicont)(:, :, ist)

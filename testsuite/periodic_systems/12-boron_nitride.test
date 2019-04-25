@@ -62,3 +62,51 @@ match ; Force 3 (z)   ; GREPFIELD(static/info, '3         B', 5)  ;   0
 match ; Force 4 (x)   ; GREPFIELD(static/info, '4         N', 3)  ;   1.419524
 match ; Force 4 (y)   ; GREPFIELD(static/info, '4         N', 4)  ;   0
 match ; Force 4 (z)   ; GREPFIELD(static/info, '4         N', 5)  ;   0
+
+Input      : 12-boron_nitride.02-gs_gamma.inp
+
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+
+match ; Total k-points     ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 1
+match ; Reduced k-points   ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 1
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 187
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;   4
+
+Precision: 0.0005
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -692.28732021
+match ; Free energy        ; GREPFIELD(static/info, 'Free        =', 3) ;  -692.28732021
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -1086.63818887
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -190.01248939
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  -522.48707579
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;  -175.93715602
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;   -24.29891637
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;   536.48954678
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;   580.58436110
+Precision: 0.0001
+match ; Entropy            ; GREPFIELD(static/info, 'Entropy     =', 3) ;    0.0
+match ; Fermi energy       ; GREPFIELD(static/info, 'Fermi energy =', 4);   -2.058610
+
+match ; k-point 1 (x) ; GREPFIELD(static/info, '#k =   1', 7) ;   0.000000
+match ; k-point 1 (y) ; GREPFIELD(static/info, '#k =   1', 8) ;   0.000000
+match ; k-point 1 (z) ; GREPFIELD(static/info, '#k =   1', 9) ;   0.000000
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -22.963990
+match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   1', 3, 8) ;  -4.247269
+match ; Eigenvalue  9 ; GREPFIELD(static/info, '#k =   1', 3, 9) ;  -1.140961
+match ; Eigenvalue 10 ; GREPFIELD(static/info, '#k =   1', 3, 10) ;  0.882817
+
+# forces on 1 and 3; 2 and 4 must be equal by symmetry
+match ; Force 1 (x)   ; GREPFIELD(static/info, '1         B', 3)  ; 6.403454 
+match ; Force 1 (y)   ; GREPFIELD(static/info, '1         B', 4)  ;   0
+match ; Force 1 (z)   ; GREPFIELD(static/info, '1         B', 5)  ;   0
+
+match ; Force 2 (x)   ; GREPFIELD(static/info, '2         N', 3)  ;  -5.066585
+match ; Force 2 (y)   ; GREPFIELD(static/info, '2         N', 4)  ;   0
+match ; Force 2 (z)   ; GREPFIELD(static/info, '2         N', 5)  ;   0
+
+match ; Force 3 (x)   ; GREPFIELD(static/info, '3         B', 3)  ;  6.403454
+match ; Force 3 (y)   ; GREPFIELD(static/info, '3         B', 4)  ;   0
+match ; Force 3 (z)   ; GREPFIELD(static/info, '3         B', 5)  ;   0
+
+match ; Force 4 (x)   ; GREPFIELD(static/info, '4         N', 3)  ;  -5.066585
+match ; Force 4 (y)   ; GREPFIELD(static/info, '4         N', 4)  ;   0
+match ; Force 4 (z)   ; GREPFIELD(static/info, '4         N', 5)  ;   0

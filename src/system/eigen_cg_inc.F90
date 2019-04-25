@@ -142,6 +142,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     g0    = R_TOTYPE(M_ZERO)
     h_cg  = R_TOTYPE(M_ZERO)
     g_prev = R_TOTYPE(M_ZERO)
+    gg1   = R_TOTYPE(M_ZERO)
     
     if(hm%theory_level == RDMFT) then
       psi_lam     = R_TOTYPE(M_ZERO)
@@ -263,13 +264,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       ! dot products needed for conjugate gradient
       gg = X(mf_dotp) (gr%mesh, st%d%dim, g0, g, reduce = .false.)
-      if(conjugate_direction_ == OPTION__CGDIRECTION__POLAK) then
+      if(iter /= 1 .and. conjugate_direction_ == OPTION__CGDIRECTION__POLAK) then
         ! only needed for Polak-Ribiere
-        if(iter /= 1) then
-          gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g0, g_prev, reduce = .false.)
-        else
-          gg1 = M_ZERO
-        end if
+        gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g0, g_prev, reduce = .false.)
       end if
 
       if(gr%mesh%parallel_in_domains) then

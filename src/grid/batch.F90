@@ -93,6 +93,7 @@ module batch_oct_m
     integer                        :: nst
     integer                        :: current
     integer                        :: dim
+    integer                        :: max_size
 
     integer                        :: ndims
     integer,             pointer   :: ist_idim_index(:, :)
@@ -309,7 +310,8 @@ contains
       nullify(this%states_linear(ist)%spsi)
       nullify(this%states_linear(ist)%cpsi)
     end do
-    
+
+    this%max_size = 0
     this%in_buffer_count = 0
     this%status = BATCH_NOT_PACKED
 
@@ -347,6 +349,7 @@ contains
       nullify(this%states_linear(ist)%cpsi)
     end do
 
+    this%max_size = 0
     this%in_buffer_count = 0
     this%status = BATCH_NOT_PACKED
 
@@ -385,29 +388,19 @@ contains
 
   !--------------------------------------------------------------
 
-  subroutine batch_copy(bin, bout, pack, copy_data, fill_zeros)
+  subroutine batch_copy(bin, bout, pack, copy_data)
     type(batch_t), target,   intent(in)    :: bin
     type(batch_t),           intent(out)   :: bout
-    logical,       optional, intent(in)    :: pack      !< If .false. the new batch will not be packed
-    logical,       optional, intent(in)    :: copy_data
-    logical,       optional, intent(in)    :: fill_zeros
-    !! If .true. the new batch will be packed
-    !! The default is to do the same as bin.
+    logical,       optional, intent(in)    :: pack       !< If .false. the new batch will not be packed. Default: batch_is_packed(bin)
+    logical,       optional, intent(in)    :: copy_data  !< If .true. the new batch will be packed. Default: .false.
 
     integer :: ii, np
-    logical :: pack_, copy_data_, fill_zeros_
-
+    logical :: pack_, copy_data_
     PUSH_SUB(batch_copy)
 
     call batch_init_empty(bout, bin%dim, bin%nst)
 
     copy_data_ = optional_default(copy_data, .false.)
-
-    ! There is no point in filling with zeros if later we overwrite them by copying
-    fill_zeros_ = optional_default(fill_zeros, .not. copy_data_)
-
-    ! Make sure we do not request both to copy and fill with zero at the same time
-    ASSERT(.not. (copy_data_ .and. fill_zeros_))
 
     if(batch_type(bin) == TYPE_FLOAT) then
 
@@ -416,7 +409,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%dpsi, dim = 1))
       end do
 
-      call dbatch_allocate(bout, 1, bin%nst, np, fill_zeros = fill_zeros_)
+      call dbatch_allocate(bout, 1, bin%nst, np)
 
     else if(batch_type(bin) == TYPE_CMPLX) then
       np = 0
@@ -424,7 +417,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%zpsi, dim = 1))
       end do
 
-      call zbatch_allocate(bout, 1, bin%nst, np, fill_zeros = fill_zeros_)
+      call zbatch_allocate(bout, 1, bin%nst, np)
 
     else if(batch_type(bin) == TYPE_FLOAT_SINGLE) then
 
@@ -433,7 +426,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%spsi, dim = 1))
       end do
 
-      call sbatch_allocate(bout, 1, bin%nst, np, fill_zeros = fill_zeros_)
+      call sbatch_allocate(bout, 1, bin%nst, np)
 
     else if(batch_type(bin) == TYPE_CMPLX_SINGLE) then
 
@@ -442,8 +435,7 @@ contains
         np = max(np, ubound(bin%states_linear(ii)%cpsi, dim = 1))
       end do
 
-      call cbatch_allocate(bout, 1, bin%nst, np, fill_zeros = fill_zeros_)
-
+      call cbatch_allocate(bout, 1, bin%nst, np)
     end if
 
     pack_ = batch_is_packed(bin)
@@ -498,21 +490,7 @@ contains
   integer pure function batch_max_size(this) result(size)
     type(batch_t),      intent(in)    :: this
 
-    integer :: ist
-
-    size = 0
-    do ist = 1, this%nst_linear
-      if(associated(this%states_linear(ist)%dpsi)) then
-        size = max(size, ubound(this%states_linear(ist)%dpsi, dim = 1))
-      else if(associated(this%states_linear(ist)%zpsi)) then
-        size = max(size, ubound(this%states_linear(ist)%zpsi, dim = 1))
-      else if(associated(this%states_linear(ist)%spsi)) then
-        size = max(size, ubound(this%states_linear(ist)%spsi, dim = 1))
-      else if(associated(this%states_linear(ist)%cpsi)) then
-        size = max(size, ubound(this%states_linear(ist)%cpsi, dim = 1))
-      end if
-    end do
-
+    size = this%max_size
   end function batch_max_size
 
   ! ----------------------------------------------------

@@ -433,7 +433,7 @@ contains
     PUSH_SUB(submesh_build_global)
 
     if(.not. this%mesh%parallel_in_domains) then
-      POP_SUB(submesh_build global)
+      POP_SUB(submesh_build_global)
       return
     end if 
 
