@@ -1026,10 +1026,10 @@ contains
       do iorb = 1, st%nst
         call states_get_state(st, gr%mesh, iorb, 1, dpsi)
         call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, iorb, 1, &
-                             terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL, set_occ = .true.)
-        call dhamiltonian_apply(hm, gr%der, dpsi, hpsi1, iorb, 1, &
-                              terms = TERM_OTHERS, set_occ = .true.)
-        forall (ip=1:gr%mesh%np_part)
+          terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL + TERM_RDMFT_OCC)
+        call dhamiltonian_apply(hm, gr%der, dpsi, hpsi1, iorb, 1, terms = TERM_OTHERS)
+
+        forall (ip = 1:gr%mesh%np_part)
           dpsi(ip,1) = pot(ip)*dpsi(ip,1)
         end forall
 
