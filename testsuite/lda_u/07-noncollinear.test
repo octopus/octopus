@@ -59,7 +59,7 @@ match ;  Total energy         ; GREPFIELD(static/info, 'Total       =', 3) ; -24
 Precision: 1e-8
 match ;  Ion-ion energy       ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -177.00987193
 Precision: 0.002
-match ;  Eigenvalues sum      ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -34.315127829999994
+match ;  Eigenvalues sum      ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -34.31512783
 Precision: 0.003
 match ;  Hartree energy       ; GREPFIELD(static/info, 'Hartree     =', 3) ; 45.80775776
 Precision: 0.0005
@@ -73,17 +73,17 @@ match ;  External energy      ; GREPFIELD(static/info, 'External    =', 3) ; -20
 Precision: 0.0003
 match ;  Hubbard energy       ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 0.28672072
 
-Precision: 3.e-06
+Precision: 4.e-06
 match ;  Total Magnetic Moment x  ; GREPFIELD(static/info, 'mx = ', 3) ; 2.5e-06
 match ;  Total Magnetic Moment y  ; GREPFIELD(static/info, 'my = ', 3) ; 2.5e-06
 match ;  Total Magnetic Moment z  ; GREPFIELD(static/info, 'mz = ', 3) ; 2.5e-06
 
 Precision: 0.001
 match ;  Local Magnetic Moment (Ni1)  ; GREPFIELD(static/info, '1        Ni', 3) ; 3.642054
-match ;  Local Magnetic Moment (Ni2)  ; GREPFIELD(static/info, '2        Ni', 3) ; -3.6420399999999997
+match ;  Local Magnetic Moment (Ni2)  ; GREPFIELD(static/info, '2        Ni', 3) ; -3.64204
 Precision: 0.0004
-match ;  Local Magnetic Moment (O1)   ; GREPFIELD(static/info, '3         O', 3) ; -7.999999999999999e-05
-match ;  Local Magnetic Moment (O2)   ; GREPFIELD(static/info, '4         O', 3) ; -7.999999999999999e-05
+match ;  Local Magnetic Moment (O1)   ; GREPFIELD(static/info, '3         O', 3) ; -8.e-05
+match ;  Local Magnetic Moment (O2)   ; GREPFIELD(static/info, '4         O', 3) ; -8.e-05
 
 Precision: 0.0005
 match ;  Effective U (Ni1)  ; GREPFIELD(static/info, '1        Ni   d', 4) ; 0.3129835
