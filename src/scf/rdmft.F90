@@ -189,7 +189,7 @@ contains
       write(message(1),'(a,es20.10)') 'Total energy orb', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
       write(message(2),'(a,2x,es20.10)') 'Relative ', rel_ener
       call messages_info(2)
-      if (.not. rdm%hf) then
+      if (.not. rdm%hf .and. rdm%do_basis) then
         write(message(1),'(a,5x,es20.10)') 'Max F0', rdm%maxFO
         call messages_info(1)
       end if
@@ -233,18 +233,28 @@ contains
           SAFE_DEALLOCATE_A(dpsi2)
         else
           call states_dump(restart_dump, st, gr, ierr, iter=iter) 
+          
+          ! calculate maxFO for cg-solver 
+          if (.not. rdm%hf) then
+            call calc_maxFO (hm, st, gr, rdm)
+          end if 
         endif
          
         if (ierr /= 0) then
           message(1) = 'Unable to write states wavefunctions.'
           call messages_warning(1)
         end if
+        
       endif
+
+      
+    
       ! write output for iterations if requested
       if (outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir), "scf.", iter
         call output_all(outp, gr, geo, st, hm, ks, dirname)
+        call scf_write_static(dirname, "info")
       end if
 
       if (conv) exit
@@ -260,7 +270,8 @@ contains
       !endif
       write(message(1),'(a,i3,a)')  'The calculation converged after ',iter,' iterations'
       write(message(2),'(a,es20.10)')  'The total energy is ', units_from_atomic(units_out%energy,energy + hm%ep%eii)
-      call messages_info(2)
+      write(message(3),'(a,es15.5)') 'The maximal non-diagonal element of the Hermitian matrix F is ', rdm%maxFO
+      call messages_info(3)
       if(gs_run_) then 
         call scf_write_static(STATIC_DIR, "info")
         call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
@@ -505,7 +516,39 @@ contains
       
       POP_SUB(scf_rdmft.scf_write_static)
     end subroutine scf_write_static 
+    
+    subroutine calc_maxFO (hm, st, gr, rdm)
+      type(rdm_t),          intent(inout) :: rdm
+      type(grid_t),         intent(inout) :: gr
+      type(hamiltonian_t),  intent(inout) :: hm
+      type(states_t),       intent(inout) :: st
+    
+      FLOAT, allocatable ::  lambda(:,:), FO(:,:)
+      integer :: ist, jst
+      
+      PUSH_SUB(scf_rdmft.calc_maxFO)
+      
+      SAFE_ALLOCATE(lambda(1:st%nst,1:st%nst)) 
+      SAFE_ALLOCATE(FO(1:st%nst, 1:st%nst))
+      
+      ! calculate FO operator to check Hermiticity of lagrange multiplier matrix (lambda)
+      lambda = M_ZERO
+      FO = M_ZERO
+      call construct_f(hm, st, gr, lambda, rdm)
 
+      !Set up FO matrix to check maxFO
+      do ist = 1, st%nst
+        do jst = 1, ist - 1
+          FO(jst, ist) = - (lambda(jst, ist) - lambda(ist ,jst))
+        end do
+      end do
+      rdm%maxFO = maxval(abs(FO))
+
+      SAFE_DEALLOCATE_A(lambda) 
+      SAFE_DEALLOCATE_A(FO)
+      
+      POP_SUB(scf_rdmft.calc_maxFO)
+    end subroutine calc_maxFO
   end subroutine scf_rdmft
 
   ! ---------------------------------------------------------
@@ -892,16 +935,12 @@ contains
     integer            :: ik, ist, jst
     integer            :: maxiter, nstconv_ ! maximum number of orbital optimization iterations
     FLOAT              :: energy_old, energy_diff, occ_sum, maxFO
-    FLOAT, allocatable ::  lambda(:,:), FO(:,:)
     
     logical :: conv
     type(profile_t), save :: prof_orb_cg
     
     PUSH_SUB(scf_orb_cg)
     call profiling_in(prof_orb_cg, "CG")
-    
-    SAFE_ALLOCATE(lambda(1:st%nst,1:st%nst)) 
-    SAFE_ALLOCATE(FO(1:st%nst, 1:st%nst))
     
     call v_ks_calc(ks, hm, st, geo)
     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
@@ -954,22 +993,6 @@ contains
     call rdm_derivatives(rdm, hm, st, gr)
     
     call total_energy_rdm(rdm, st%occ(:,1), energy)
-    
-    ! clauculate FO operator to check Hermiticity of lagrange multiplier matrix (lambda)
-    lambda = M_ZERO
-    FO = M_ZERO
-    call construct_f(hm, st, gr, lambda, rdm)
-
-    !Set up FO matrix to check maxFO
-    do ist = 1, st%nst
-      do jst = 1, ist - 1
-        FO(jst, ist) = - (lambda(jst, ist) - lambda(ist ,jst))
-      end do
-    end do
-    rdm%maxFO = maxval(abs(FO))
-
-    SAFE_DEALLOCATE_A(lambda) 
-    SAFE_DEALLOCATE_A(FO)
 
     call profiling_out(prof_orb_cg)
     POP_SUB(scf_orb_cg)
@@ -993,61 +1016,35 @@ contains
 
     lambda = M_ZERO
 
+    !calculate the Lagrange multiplyer lambda matrix on the grid, Eq. (9), Piris and Ugalde, Vol. 30, No. 13, J. Comput. Chem.
     if (.not. rdm%do_basis) then
       SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part,1:st%d%dim))
       SAFE_ALLOCATE(hpsi1(1:gr%mesh%np_part,1:st%d%dim))
       SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part ,1:st%d%dim))
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part ,1:st%d%dim))
-      SAFE_ALLOCATE(rho(1:gr%mesh%np_part,1:hm%d%ispin)) 
-      SAFE_ALLOCATE(rho_tot(1:gr%mesh%np_part))
-      SAFE_ALLOCATE(pot(1:gr%mesh%np_part))
-      SAFE_ALLOCATE(g_x(1:st%nst,1:st%nst))
-      SAFE_ALLOCATE(g_h(1:st%nst,1:st%nst))
 
       hpsi = M_ZERO
       hpsi1 = M_ZERO
       dpsi2 = M_ZERO
-      rho = M_ZERO    
-      rho_tot = M_ZERO    
-      pot = M_ZERO
       dpsi = M_ZERO
-      g_x = M_ZERO
-      g_h = M_ZERO
  
-  
-      !calculate the Lagrange multiplyer lambda matrix on the grid, Eq. (9), Piris and Ugalde, Vol. 30, No. 13, J. Comput. Chem.
-      call density_calc(st, gr, rho)
-      do ist =1, hm%d%ispin
-        rho_tot(:) = rho(:, ist)
-      end do
-
-      call dpoisson_solve(psolver, pot, rho_tot, all_nodes=.false.)
-
       do iorb = 1, st%nst
         call states_get_state(st, gr%mesh, iorb, 1, dpsi)
-        call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, iorb, 1, &
-          terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL + TERM_RDMFT_OCC)
-        call dhamiltonian_apply(hm, gr%der, dpsi, hpsi1, iorb, 1, terms = TERM_OTHERS)
+        call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, iorb, 1)
 
-        forall (ip = 1:gr%mesh%np_part)
-          dpsi(ip,1) = pot(ip)*dpsi(ip,1)
-        end forall
-
-        do jorb = 1, st%nst  
+        do jorb = iorb, st%nst  
+          ! calculate <phi_j|H|phi_i> =lam_ji
           call states_get_state(st, gr%mesh, jorb, 1, dpsi2)
           lambda(jorb, iorb) = dmf_dotp(gr%mesh, dpsi2(:,1), hpsi(:,1))
-          lambda(iorb, jorb) = lambda(jorb, iorb)
-          g_h(iorb, jorb) = dmf_dotp(gr%mesh, dpsi(:,1), dpsi2(:, 1))
-          g_x(iorb, jorb) = dmf_dotp(gr%mesh, dpsi2(:,1), hpsi1(:,1))  
-          g_x(iorb, jorb) = g_x(iorb, jorb)
+          
+          ! calculate <phi_i|H|phi_j>=lam_ij
+          if (.not. iorb==jorb ) then
+            call dhamiltonian_apply(hm,gr%der, dpsi2, hpsi1, jorb, 1)
+            lambda(iorb, jorb) = dmf_dotp(gr%mesh, dpsi(:,1), hpsi1(:,1))
+          end if
         end do
       end do
  
-      do jorb = 1,st%nst
-        do iorb = 1,st%nst
-          lambda(jorb,iorb) = lambda(jorb,iorb)  + g_h(iorb, jorb)+ g_x(iorb, jorb)
-        end do
-      end do
 
     else ! calculate the same lambda matrix on the basis
       !call sum_integrals(rdm)
@@ -1217,7 +1214,6 @@ contains
     nspin_ = min(st%d%nspin, 2)
    
     if (rdm%do_basis.eqv..false.) then 
-      ! FB: can this be calculated smarter if we use cg (that actually calculates hamiltonian_apply several times)? 
       SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim))
       SAFE_ALLOCATE(rho1(1:gr%mesh%np))
       SAFE_ALLOCATE(rho(1:gr%mesh%np))
