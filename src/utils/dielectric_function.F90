@@ -25,7 +25,6 @@ program dielectric_function
   use global_oct_m
   use io_oct_m
   use lalg_adv_oct_m
-  use loct_oct_m
   use messages_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -108,7 +107,7 @@ program dielectric_function
   call io_skip_header(in_file)
   call spectrum_count_time_steps(in_file, time_steps, dt)
 
-  if(parse_is_defined('GaugeFieldDelay')) then
+  if(parse_is_defined('TransientAbsorptionReference')) then
     !%Variable TransientAbsorptionReference
     !%Type string
     !%Default "."
@@ -125,7 +124,7 @@ program dielectric_function
     call parse_variable('TransientAbsorptionReference', '.', ref_filename)
     ref_file = io_open(trim(ref_filename)//'/gauge_field', action='read', status='old', die=.false.)
     if(ref_file < 0) then
-      message(1) = "Cannot open reference file '"//trim(io_workpath(ref_filename//'/gauge_field'))//"'"
+      message(1) = "Cannot open reference file '"//trim(io_workpath(trim(ref_filename)//'/gauge_field'))//"'"
       call messages_fatal(1)
     end if
     call io_skip_header(ref_file)
@@ -176,7 +175,7 @@ program dielectric_function
 
 
   ! Find out the iteration numbers corresponding to the time limits.
-  call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+  call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
   istart = max(1, istart)
 

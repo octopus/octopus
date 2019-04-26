@@ -21,28 +21,24 @@
 module xc_ks_inversion_oct_m
   use density_oct_m
   use derivatives_oct_m
-  use eigensolver_oct_m 
-  use geometry_oct_m 
-  use global_oct_m 
-  use grid_oct_m 
-  use hamiltonian_oct_m 
-  use io_oct_m 
+  use eigensolver_oct_m
+  use geometry_oct_m
+  use global_oct_m
+  use grid_oct_m
+  use hamiltonian_oct_m
+  use io_oct_m
   use io_function_oct_m
-  use lalg_adv_oct_m 
-  use mesh_function_oct_m 
-  use mesh_oct_m 
-  use messages_oct_m 
-  use parser_oct_m 
-  use poisson_oct_m 
-  use profiling_oct_m 
-  use states_oct_m 
-  use states_dim_oct_m 
-  use unit_oct_m 
-  use unit_system_oct_m 
-  use varinfo_oct_m 
+  use mesh_oct_m
+  use messages_oct_m
+  use parser_oct_m
+  use profiling_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+  use varinfo_oct_m
   use XC_F90(lib_m) 
-  use xc_oct_m 
-  use xc_functl_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -167,7 +163,7 @@ contains
       ! initialize densities, hamiltonian and eigensolver
       call states_densities_init(ks_inv%aux_st, gr, geo)
       call hamiltonian_init(ks_inv%aux_hm, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, &
-                            XC_FAMILY_NONE, XC_FLAGS_NONE, .false.)
+                            XC_FAMILY_NONE, .false.)
       call eigensolver_init(ks_inv%eigensolver, gr, ks_inv%aux_st, xc)
     end if
 

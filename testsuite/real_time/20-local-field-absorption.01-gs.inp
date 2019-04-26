@@ -1,0 +1,22 @@
+CalculationMode = gs
+
+UnitsOutput = eV_Angstrom
+
+FromScratch = yes
+
+%Coordinates
+ 'H' | 0 | 0 | 0
+%
+
+radius = 6.0*angstrom
+spacing = 0.18*angstrom
+
+PseudopotentialSet = hgh_lda
+
+MixField = density
+
+PCMCalculation = yes
+PCMCalcMethod = pcm_direct
+PCMStaticEpsilon = 78.39
+PCMRadiusScaling = 5.0
+PCMSpheresOnH = yes

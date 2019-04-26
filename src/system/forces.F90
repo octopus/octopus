@@ -33,14 +33,12 @@ module forces_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use hamiltonian_base_oct_m
-  use index_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
   use lda_u_oct_m
   use linear_response_oct_m
-  use loct_math_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -56,13 +54,11 @@ module forces_oct_m
   use states_dim_oct_m
   use symm_op_oct_m
   use symmetrizer_oct_m
-  use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
   use v_ks_oct_m
   use vdw_ts_oct_m
-
 
   implicit none
 
