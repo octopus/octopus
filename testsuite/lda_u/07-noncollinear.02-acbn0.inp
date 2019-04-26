@@ -39,7 +39,7 @@ PseudopotentialSet=hscv_pbe
 
 Spacing = 0.5
 
-FromScratch = yes
+FromScratch = no
 ParDomains = no
 
 SpinComponents = spinors

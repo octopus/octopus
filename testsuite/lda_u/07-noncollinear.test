@@ -47,7 +47,6 @@ match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   1', 3, 17) ; -0.1703395
 match ; Occupation Ni2 up-down 3d4 ; LINEFIELD(static/occ_matrices, -2, 7) ; -0.053856575
 match ; Occupation Ni2 up-down 3d5 ; LINEFIELD(static/occ_matrices, -1, 9) ; -0.40021377
 
-Enabled    : No
 Input      : 07-noncollinear.02-acbn0.inp
 
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
