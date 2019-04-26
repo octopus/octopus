@@ -7,7 +7,7 @@ BoxShape = parallelepiped
 ExperimentalFeatures = yes
 
 EigenSolver = cg
-ConvRelDens = 1e-5
+ConvRelDens = 5e-6
 EigensolverTolerance = 1e-8
 CGOrthogonalizeAll = yes
 
