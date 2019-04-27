@@ -81,6 +81,9 @@ program wannier90_interface
   integer :: w90_nproj                                             ! number of such projections        
   integer, allocatable :: w90_spin_proj_component(:)               ! up/down flag 
   FLOAT, allocatable   :: w90_spin_proj_axis(:,:)                  ! spin axis (not implemented)
+  integer              :: w90_num_exclude
+  integer, allocatable :: exclude_list(:)                          ! list of excluded bands
+  integer, allocatable :: band_index(:)                            ! band index after exclusion
 
   call global_init()
 
@@ -211,6 +214,7 @@ program wannier90_interface
     call states_allocate_wfns(st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
     call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, &
                        sys%mc, ierr, sys%gr%der%mesh)
+
     if(ierr == 0) then
       call states_look(restart, nik, dim, nst, ierr)
       if(dim==st%d%dim .and. nik==sys%gr%sb%kpoints%reduced%npoints .and. nst==st%nst) then
@@ -263,6 +267,9 @@ program wannier90_interface
     call read_wannier90_files()
     call generate_wannier_states(sys%gr%mesh, sys%gr%sb, sys%geo)
   end if
+
+  SAFE_DEALLOCATE_A(exclude_list)
+  SAFE_DEALLOCATE_A(band_index)
 
   call system_end(sys)
   call fft_all_end()
@@ -355,11 +362,8 @@ contains
 
     PUSH_SUB(read_wannier90_files)
 
-    ! assume to use all bands and number of k-points is consistent with Wannier90
-    ! input files. Consistncy is checked later
-    w90_num_bands = st%nst
-
     w90_num_kpts = sys%gr%sb%kpoints%full%npoints
+    w90_num_exclude = 0 
 
     ! open nnkp file
     filename = trim(adjustl(w90_prefix)) //'.nnkp'
@@ -392,21 +396,44 @@ contains
     ! read from nnkp file
     ! find the nnkpts block
     do while(.true.)
-       read(w90_nnkp,*,end=101) dummy, dummy1
-       if(dummy =='begin' .and. dummy1 == 'nnkpts' ) then
-          read(w90_nnkp,*) w90_nntot
-          SAFE_ALLOCATE(w90_nnk_list(w90_num_kpts*w90_nntot,5))
-          do ii=1,w90_num_kpts*w90_nntot
-             read(w90_nnkp,*) w90_nnk_list(ii,1:5)
-          end do
-          !make sure we are at the end of the block
-          read(w90_nnkp,*) dummy
-          if(dummy /= 'end') then
-             message(1) = 'oct-wannier90: There dont seem to be enough k-points in nnkpts file to.'
-             call messages_fatal(1)
-          end if
-          goto 102
-       end if
+      read(w90_nnkp,*,end=101) dummy, dummy1
+      if(dummy =='begin' .and. dummy1 == 'nnkpts' ) then
+        read(w90_nnkp,*) w90_nntot
+        SAFE_ALLOCATE(w90_nnk_list(1:w90_num_kpts*w90_nntot,1:5))
+        do ii=1,w90_num_kpts*w90_nntot
+          read(w90_nnkp,*) w90_nnk_list(ii,1:5)
+        end do
+        !make sure we are at the end of the block
+        read(w90_nnkp,*) dummy
+        if(dummy /= 'end') then
+          message(1) = 'oct-wannier90: There dont seem to be enough k-points in nnkpts file to.'
+          call messages_fatal(1)
+        end if
+        exit
+      end if
+    end do
+
+    ! read from nnkp file
+    ! find the exclude block
+    SAFE_ALLOCATE(exclude_list(1:st%nst))
+    !By default we use all the bands
+    exclude_list(1:st%nst) = 1
+    do while(.true.)
+      read(w90_nnkp,*,end=102) dummy, dummy1
+      if(dummy =='begin' .and. dummy1 == 'exclude_bands' ) then
+        read(w90_nnkp,*) w90_num_exclude
+        do ii=1,w90_num_exclude
+          read(w90_nnkp,*) itemp
+          exclude_list(itemp) = 0
+        end do
+        !make sure we are at the end of the block
+        read(w90_nnkp,*) dummy
+        if(dummy /= 'end') then
+          message(1) = 'oct-wannier90: There dont seem to be enough bands in exclude_bands list.'
+          call messages_fatal(1)
+        end if
+        goto 102
+      end if
     end do
 
     ! jump point when EOF found while looking for nnkpts block
@@ -416,6 +443,17 @@ contains
 102 continue
 
     call io_close(w90_nnkp)
+
+    !We get the number of bands
+    w90_num_bands = st%nst - w90_num_exclude
+
+    SAFE_ALLOCATE(band_index(1:st%nst))
+    itemp = 0
+    do ii = 1, st%nst
+      if(exclude_list(ii) == 0) cycle
+      itemp = itemp + 1
+      band_index(ii) = itemp
+    end do
 
     if(iand(w90_what, OPTION__WANNIER90_FILES__W90_AMN) /= 0) then
        ! parse file again for definitions of projections
@@ -468,10 +506,9 @@ contains
 
        ! jump point when projections is found in file
 202    continue
-
+       call io_close(w90_nnkp)
+ 
     end if
-
-    call io_close(w90_nnkp)
 
     POP_SUB(read_wannier90_files)
 
@@ -532,8 +569,9 @@ contains
        end do
 
        ! loop over bands
-       do jst = 1, w90_num_bands
-          call states_get_state(st, mesh, jst, iknn, psin)
+       do jst = 1, st%nst
+         if(exclude_list(jst) == 0) cycle
+         call states_get_state(st, mesh, jst, iknn, psin)
 
          !Do not apply the phase if the phase factor is null
          if(any(G(1:3) /= 0)) then
@@ -547,7 +585,9 @@ contains
 
 
          !See Eq. (25) in PRB 56, 12847 (1997)
-         do ist = 1, w90_num_bands
+         do ist = 1, st%nst
+           if(exclude_list(ist) == 0) cycle
+
            batch => st%group%psib(st%group%iblock(ist, ik), ik)
            select case(batch_status(batch))
            case(BATCH_NOT_PACKED)
@@ -571,7 +611,8 @@ contains
  
          ! write to W90 file
          if(mpi_grp_is_root(mpi_world)) then
-           do ist = 1, w90_num_bands
+           do ist = 1, st%nst
+             if(exclude_list(ist) == 0) cycle
              write(w90_mmn,'(e13.6,2x,e13.6)') overlap(ist)
            end do
          end if
@@ -609,9 +650,11 @@ contains
     if(mpi_grp_is_root(mpi_world)) then
       filename = './'//trim(adjustl(w90_prefix))//'.eig'
       w90_eig = io_open(trim(filename), action='write')
-      do ik=1,w90_num_kpts
-        do ist=1,w90_num_bands
-          write(w90_eig,'(I5,2x,I5,2x,e13.6)') ist, ik, units_from_atomic(unit_eV, st%eigenval(ist, ik))
+      do ik = 1, w90_num_kpts
+        do ist = 1, st%nst
+          if(exclude_list(ist) == 0) cycle
+          write(w90_eig,'(I5,2x,I5,2x,e13.6)') band_index(ist), ik,  &
+                             units_from_atomic(unit_eV, st%eigenval(ist, ik))
         end do
       end do
 
@@ -655,8 +698,8 @@ contains
     call cube_function_null(cf)
     call zcube_function_alloc_RS(cube, cf)
 
-    do ik=1,w90_num_kpts
-      do ispin=1,st%d%dim
+    do ik = 1, w90_num_kpts
+      do ispin = 1, st%d%dim
         if(mpi_grp_is_root(mpi_world)) then
           write(filename,'(a,i5.5,a1,i1)') './UNK', ik,'.', ispin
           unk_file = io_open(trim(filename), action='write',form='unformatted')
@@ -665,7 +708,8 @@ contains
         end if
 
         ! states
-        do ist=1,w90_num_bands
+        do ist = 1, st%nst
+          if(exclude_list(ist) == 0) cycle
           call states_get_state(st, mesh, ispin, ist, ik, psi)
 
           ! put the density in the cube
@@ -789,7 +833,7 @@ contains
     SAFE_ALLOCATE(phase(1:mesh%np))
     SAFE_ALLOCATE(projection(1:w90_nproj))
 
-    do ik=1, w90_num_kpts
+    do ik = 1, w90_num_kpts
       !This won't work for spin-polarized calculations
       kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ik)
 
@@ -797,7 +841,8 @@ contains
         phase(ip) = exp(-M_zI* sum(mesh%x(ip, 1:sb%dim) * kpoint(1:sb%dim)))
       end forall
 
-      do ist=1, w90_num_bands
+      do ist = 1, st%nst
+        if(exclude_list(ist) == 0) cycle
         call states_get_state(st, mesh, ist, ik, psi)
         do idim = 1, st%d%dim
           !The minus sign is here is for the wrong convention of Octopus
@@ -806,7 +851,7 @@ contains
           end forall
         end do
 
-        do iw=1, w90_nproj
+        do iw = 1, w90_nproj
           idim = 1
           if(w90_spinors) idim = w90_spin_proj_component(iw)
 
@@ -821,8 +866,8 @@ contains
         end if
 
         if(mpi_grp_is_root(mpi_world)) then
-          do iw=1, w90_nproj
-            write (w90_amn,'(I5,2x,I5,2x,I5,2x,e13.6,2x,e13.6)') ist, iw, ik, projection(iw)
+          do iw = 1, w90_nproj
+            write (w90_amn,'(I5,2x,I5,2x,I5,2x,e13.6,2x,e13.6)') band_index(ist), iw, ik, projection(iw)
           end do
         end if
       end do !ik
@@ -931,7 +976,7 @@ contains
     SAFE_ALLOCATE(dwn(1:mesh%np))
     SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
 
-    do iw = 1, w90_num_bands
+    do iw = 1, w90_num_wann
       write(fname, '(a,i3.3)') 'wannier-', iw
 
       zwn(:) = M_Z0
@@ -940,7 +985,8 @@ contains
         !This won't work for spin-polarized calculations
         kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ik, absolute_coordinates=.true.)
 
-        do iw2 = 1, w90_num_bands
+        do iw2 = 1, st%nst
+          if(exclude_list(iw2) == 0) cycle
           call states_get_state(st, mesh, iw2, ik, psi)
           !The minus sign is here is for the wrong convention of Octopus
           forall(ip=1:mesh%np)
