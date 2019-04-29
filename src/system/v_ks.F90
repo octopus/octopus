@@ -371,6 +371,11 @@ contains
 
     end select
 
+    if (st%d%ispin == SPINORS) then
+      if(bitand(ks%xc_family, XC_FAMILY_GGA) /= 0) call messages_not_implemented("GGA with spinors")
+      if(bitand(ks%xc_family, XC_FAMILY_MGGA) /= 0) call messages_not_implemented("MGGA with spinors")
+    end if
+
     ks%frozen_hxc = .false.
 
     call v_ks_write_info(ks, stdout)
