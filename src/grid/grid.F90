@@ -117,7 +117,6 @@ contains
     if(gr%have_fine_mesh) call messages_experimental("UseFineMesh")
 
     call geometry_grid_defaults(geo, def_h, def_rsize)
-    call geometry_grid_defaults_info(geo)
     
     ! initialize to -1
     grid_spacing = -M_ONE
@@ -172,24 +171,25 @@ contains
     end if
 #endif
 
-    do idir = 1, gr%sb%dim
-      if(grid_spacing(idir) < M_EPSILON) then
-        if(def_h > M_ZERO .and. def_h < huge(def_h)) then
+    if (any(grid_spacing(1:gr%sb%dim) < M_EPSILON)) then
+      if (def_h > M_ZERO .and. def_h < huge(def_h)) then
+        call geometry_grid_defaults_info(geo)
+        do idir = 1, gr%sb%dim
           grid_spacing(idir) = def_h
           write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", idir, &
             ") [", trim(units_abbrev(units_out%length)), "] = ",                        &
             units_from_atomic(units_out%length, grid_spacing(idir))
           call messages_info(1)
+        end do
         ! Note: the default automatically matches the 'recommended' value compared by messages_check_def above.
-        else
-          message(1) = 'Either:'
-          message(2) = "   *) variable 'Spacing' is not defined and"
-          message(3) = "      I can't find a suitable default"
-          message(4) = "   *) your input for 'Spacing' is negative or zero"
-          call messages_fatal(4)
-        end if
+      else
+        message(1) = 'Either:'
+        message(2) = "   *) variable 'Spacing' is not defined and"
+        message(3) = "      I can't find a suitable default"
+        message(4) = "   *) your input for 'Spacing' is negative or zero"
+        call messages_fatal(4)
       end if
-    end do
+    end if
 
     ! initialize curvilinear coordinates
     call curvilinear_init(gr%cv, gr%sb, geo, grid_spacing)
