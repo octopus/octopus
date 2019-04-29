@@ -567,8 +567,6 @@ contains
     !%End
     call parse_variable('SymmetrizeDensity', gr%sb%kpoints%use_symmetries, st%symmetrize_density)
     call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
-    if(st%symmetrize_density) call mesh_check_symmetries(gr%mesh, gr%sb)
-
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_nullify(st%dom_st_proc_grid)
