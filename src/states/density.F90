@@ -365,11 +365,12 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_freeze_orbitals(st, gr, mc, n)
+  subroutine states_freeze_orbitals(st, gr, mc, n, family_is_mgga)
     type(states_t),    intent(inout) :: st
     type(grid_t),      intent(in)    :: gr
     type(multicomm_t), intent(in)    :: mc
     integer,           intent(in)    :: n
+    logical,           intent(in)    :: family_is_mgga
 
     integer :: ist, istep, ik, ib, nblock, st_min
     integer :: nodeto, nodefr, nsend, nreceiv
@@ -430,6 +431,22 @@ contains
     end do
 
     call density_calc_end(dens_calc)
+
+    if(family_is_mgga) then
+      if(.not.associated(st%frozen_tau)) then
+        SAFE_ALLOCATE(st%frozen_tau(1:gr%mesh%np, 1:st%d%nspin))
+      end if    
+      if(.not.associated(st%frozen_gdens)) then
+        SAFE_ALLOCATE(st%frozen_gdens(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
+      end if
+      if(.not.associated(st%frozen_ldens)) then
+        SAFE_ALLOCATE(st%frozen_ldens(1:gr%mesh%np, 1:st%d%nspin))
+      end if
+
+      call states_calc_quantities(gr%der, st, .true., kinetic_energy_density = st%frozen_tau, &
+           density_gradient = st%frozen_gdens, density_laplacian = st%frozen_ldens, st_end = n) 
+    end if 
+
 
     call states_copy(staux, st)
 

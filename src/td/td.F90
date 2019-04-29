@@ -685,9 +685,6 @@ contains
 
       if(freeze_orbitals /= 0) then
         call messages_experimental('TDFreezeOrbitals')
-        if(family_is_mgga(sys%ks%xc_family)) then
-          call messages_not_implemented('TDFreezeOrbitals with MGGAs')
-        end if
       end if
 
 
@@ -695,7 +692,7 @@ contains
 
       if(freeze_orbitals > 0) then
         ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
-        call states_freeze_orbitals(st, gr, sys%mc, freeze_orbitals)
+        call states_freeze_orbitals(st, gr, sys%mc, freeze_orbitals, family_is_mgga(sys%ks%xc_family))
         write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
           ' orbitals have been frozen.', st%nst, ' will be propagated.'
         call messages_info(1)
@@ -706,7 +703,7 @@ contains
         write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
         call messages_info(1)
         call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
-        call states_freeze_orbitals(st, gr, sys%mc, n = st%nst-1)
+        call states_freeze_orbitals(st, gr, sys%mc, st%nst-1, family_is_mgga(sys%ks%xc_family))
         call v_ks_freeze_hxc(sys%ks)
         call density_calc(st, gr, st%rho)
       else

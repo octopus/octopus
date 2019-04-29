@@ -132,6 +132,9 @@ module states_oct_m
     !> It may be required to "freeze" the deepest orbitals during the evolution; the density
     !! of these orbitals is kept in frozen_rho. It is different from rho_core.
     FLOAT, pointer :: frozen_rho(:, :)
+    FLOAT, pointer :: frozen_tau(:, :)
+    FLOAT, pointer :: frozen_gdens(:,:,:)
+    FLOAT, pointer :: frozen_ldens(:,:)
 
     logical        :: calc_eigenval
     logical        :: uniform_occ   !< .true. if occupations are equal for all states: no empty states, and no smearing
@@ -221,6 +224,7 @@ contains
     nullify(st%rho, st%current)
     nullify(st%current_kpt)
     nullify(st%rho_core, st%frozen_rho)
+    nullify(st%frozen_tau, st%frozen_gdens, st%frozen_ldens)
     nullify(st%eigenval, st%occ, st%spin)
 
     st%parallel_in_states = .false.
@@ -1389,6 +1393,9 @@ contains
  
     call loct_pointer_copy(stout%rho_core, stin%rho_core)
     call loct_pointer_copy(stout%frozen_rho, stin%frozen_rho)
+    call loct_pointer_copy(stout%frozen_tau, stin%frozen_tau)
+    call loct_pointer_copy(stout%frozen_gdens, stin%frozen_gdens)
+    call loct_pointer_copy(stout%frozen_ldens, stin%frozen_ldens)
 
     stout%fixed_occ = stin%fixed_occ
     stout%restart_fixed_occ = stin%restart_fixed_occ
@@ -1459,6 +1466,9 @@ contains
     SAFE_DEALLOCATE_P(st%current_kpt)
     SAFE_DEALLOCATE_P(st%rho_core)
     SAFE_DEALLOCATE_P(st%frozen_rho)
+    SAFE_DEALLOCATE_P(st%frozen_tau)
+    SAFE_DEALLOCATE_P(st%frozen_gdens)
+    SAFE_DEALLOCATE_P(st%frozen_ldens)
     SAFE_DEALLOCATE_P(st%occ)
     SAFE_DEALLOCATE_P(st%spin)
 
@@ -1825,7 +1835,8 @@ contains
   !! derivatives of the orbitals from the states and the density.
   !! The quantities to be calculated depend on the arguments passed.
   subroutine states_calc_quantities(der, st, nlcc, &
-    kinetic_energy_density, paramagnetic_current, density_gradient, density_laplacian, gi_kinetic_energy_density)
+    kinetic_energy_density, paramagnetic_current, density_gradient, density_laplacian, &
+    gi_kinetic_energy_density, st_end)
     type(derivatives_t),     intent(in)    :: der
     type(states_t),          intent(in)    :: st
     logical,                 intent(in)    :: nlcc
@@ -1834,6 +1845,7 @@ contains
     FLOAT, optional,         intent(out)   :: density_gradient(:,:,:)           !< The gradient of the density.
     FLOAT, optional,         intent(out)   :: density_laplacian(:,:)            !< The Laplacian of the density.
     FLOAT, optional,         intent(out)   :: gi_kinetic_energy_density(:,:)    !< The gauge-invariant kinetic energy density.
+    integer, optional,       intent(in)    :: st_end                            !< Maximum state used to compute the quantities
 
     FLOAT, pointer :: jp(:, :, :)
     FLOAT, pointer :: tau(:, :)
@@ -1841,7 +1853,7 @@ contains
     FLOAT, allocatable :: abs_wf_psi(:), abs_gwf_psi(:)
     CMPLX, allocatable :: psi_gpsi(:)
     CMPLX   :: c_tmp
-    integer :: is, ik, ist, i_dim, st_dim, ii
+    integer :: is, ik, ist, i_dim, st_dim, ii, st_end_
     FLOAT   :: ww, kpoint(1:MAX_DIM)
     logical :: something_to_do
     FLOAT, allocatable :: symm(:, :)
@@ -1851,6 +1863,8 @@ contains
     call profiling_in(prof, "STATES_CALC_QUANTITIES")
 
     PUSH_SUB(states_calc_quantities)
+
+    st_end_ = min(st%st_end, optional_default(st_end, st%st_end))
 
     something_to_do = present(kinetic_energy_density) .or. present(gi_kinetic_energy_density) .or. &
       present(paramagnetic_current) .or. present(density_gradient) .or. present(density_laplacian)
@@ -1894,8 +1908,7 @@ contains
       kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_dim_get_kpoint_index(st%d, ik))
       is = states_dim_get_spin_index(st%d, ik)
 
-      do ist = st%st_start, st%st_end
-
+      do ist = st%st_start, st_end_
         ! all calculations will be done with complex wavefunctions
         call states_get_state(st, der%mesh, ist, ik, wf_psi)
 
