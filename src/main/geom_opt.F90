@@ -132,7 +132,7 @@ contains
     SAFE_ALLOCATE(coords(1:g_opt%size))
     call to_coords(g_opt, coords)
 
-    if(sys%st%d%pack_states) call states_pack(sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_pack(sys%st)
 
     !Minimize
     select case(g_opt%method)
@@ -176,7 +176,7 @@ contains
       call messages_fatal(2)
     end if
 
-    if(sys%st%d%pack_states) call states_unpack(sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_unpack(sys%st)
   
     ! print out geometry
     call from_coords(g_opt, coords)

@@ -272,8 +272,6 @@ contains
       gr%fine%der => gr%der
     end if
 
-    call mesh_check_symmetries(gr%mesh, gr%mesh%sb)
-
     ! multigrids are not initialized by default
     nullify(gr%mgrid)
 
