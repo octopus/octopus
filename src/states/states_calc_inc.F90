@@ -1545,6 +1545,11 @@ subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, ji
 
   SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psij(1:gr%mesh%np_part, 1:st%d%dim))
+
+  if (st%d%ispin == SPINORS) then
+    call messages_not_implemented("One-body integrals with spinors.")
+  end if
+
   
   np = gr%mesh%np
   iint = 1
@@ -1580,17 +1585,19 @@ end subroutine X(states_me_one_body)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_me_two_body) (gr, st, nint, iindex, jindex, kindex, lindex, twoint)
+subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex, lindex, twoint, phase)
   type(grid_t),     intent(inout)           :: gr
   type(states_t),   intent(in)              :: st
-  integer,          intent(in)              :: nint
-  integer,          intent(out)             :: iindex(1:nint)
-  integer,          intent(out)             :: jindex(1:nint)
-  integer,          intent(out)             :: kindex(1:nint)
-  integer,          intent(out)             :: lindex(1:nint)
-  R_TYPE,           intent(out)             :: twoint(1:nint)  !
+  integer,          intent(in)              :: st_min, st_max
+  integer,          intent(out)             :: iindex(:,:)
+  integer,          intent(out)             :: jindex(:,:)
+  integer,          intent(out)             :: kindex(:,:)
+  integer,          intent(out)             :: lindex(:,:)
+  R_TYPE,           intent(out)             :: twoint(:)  !
+  CMPLX, optional,  intent(in)              :: phase(:,:)
 
-  integer :: ist, jst, kst, lst, ijst, klst
+  integer :: ist, jst, kst, lst, ijst, klst, ikpt, jkpt, kkpt, lkpt
+  integer :: ist_global, jst_global, kst_global, lst_global, nst, nst_tot
   integer :: iint
   R_TYPE  :: me
   R_TYPE, allocatable :: nn(:), vv(:)
@@ -1605,42 +1612,87 @@ subroutine X(states_me_two_body) (gr, st, nint, iindex, jindex, kindex, lindex, 
   SAFE_ALLOCATE(psik(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psil(1:gr%mesh%np, 1:st%d%dim))
 
+  if (st%d%ispin == SPINORS) then
+    call messages_not_implemented("Two-body integrals with spinors.")
+  end if
+
   ijst = 0
   iint = 1
 
-  do ist = 1, st%nst
+  nst_tot = (st_max-st_min+1)*st%d%nik
+  nst = (st_max-st_min+1)
 
-    call states_get_state(st, gr%mesh, ist, 1, psii)
+  print *, present(phase)
 
-    do jst = 1, st%nst
-      if(jst > ist) cycle
+  do ist_global = 1, nst_tot
+    ist = mod(ist_global-1, nst) +1
+    ikpt = (ist_global-ist)/nst+1
+
+    call states_get_state(st, gr%mesh, ist+st_min-1, ikpt, psii)
+
+#ifdef R_TCOMPLEX
+    if(present(phase)) then
+       call states_set_phase(st%d, psii, phase(1:gr%mesh%np, ikpt), gr%mesh%np, .false.)
+    end if
+#endif
+
+    do jst_global = 1, nst_tot
+      jst = mod(jst_global-1, nst) +1
+      jkpt = (jst_global-jst)/nst+1
+
+      if(jst_global > ist_global) cycle
       ijst=ijst+1
 
-      call states_get_state(st, gr%mesh, jst, 1, psij)
+      call states_get_state(st, gr%mesh, jst+st_min-1, jkpt, psij)
+#ifdef R_TCOMPLEX
+      if(present(phase)) then
+         call states_set_phase(st%d, psij, phase(1:gr%mesh%np, jkpt), gr%mesh%np, .false.)
+      end if
+#endif
+
 
       nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np, 1))*psij(1:gr%mesh%np, 1)
       call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
 
       klst=0
-      do kst = 1, st%nst
- 
-        call states_get_state(st, gr%mesh, kst, 1, psik)
+      do kst_global = 1, nst_tot
+        kst = mod(kst_global-1, nst) +1
+        kkpt = (kst_global-kst)/nst+1
 
-        do lst = 1, st%nst
-          if(lst > kst) cycle
+        call states_get_state(st, gr%mesh, kst+st_min-1, kkpt, psik)
+#ifdef R_TCOMPLEX
+        if(present(phase)) then
+           call states_set_phase(st%d, psik, phase(1:gr%mesh%np, kkpt), gr%mesh%np, .false.)
+        end if
+#endif
+
+        do lst_global = 1, nst_tot
+          lst = mod(lst_global-1, nst) +1
+          lkpt = (lst_global-lst)/nst+1
+
+          if(lst_global > kst_global) cycle
           klst=klst+1
           if(klst > ijst) cycle
 
-          call states_get_state(st, gr%mesh, lst, 1, psil)
+          call states_get_state(st, gr%mesh, lst+st_min-1, lkpt, psil)
+#ifdef R_TCOMPLEX
+          if(present(phase)) then
+            call states_set_phase(st%d, psil, phase(1:gr%mesh%np, lkpt), gr%mesh%np, .false.)
+          end if
+#endif
 
-          psil(1:gr%mesh%np, 1) = vv(1:gr%mesh%np)*psik(1:gr%mesh%np, 1)*R_CONJ(psil(1:gr%mesh%np, 1))
+          psil(1:gr%mesh%np, 1) = vv(1:gr%mesh%np)*R_CONJ(psik(1:gr%mesh%np, 1))*psil(1:gr%mesh%np, 1)
 
           me = X(mf_integrate)(gr%mesh, psil(:, 1))
 
-          iindex(iint) =  ist
-          jindex(iint) =  jst
-          kindex(iint) =  kst
-          lindex(iint) =  lst
+          iindex(1,iint) =  ist+st_min-1
+          iindex(2,iint) =  ikpt
+          jindex(1,iint) =  jst+st_min-1
+          jindex(2,iint) =  jkpt
+          kindex(1,iint) =  kst+st_min-1
+          kindex(2,iint) =  kkpt
+          lindex(1,iint) =  lst+st_min-1
+          lindex(2,iint) =  lkpt
           twoint(iint) =  me
           iint = iint + 1
 
