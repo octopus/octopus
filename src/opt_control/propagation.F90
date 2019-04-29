@@ -33,11 +33,9 @@ module propagation_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
-  use io_oct_m
-  use ion_dynamics_oct_m 
+  use ion_dynamics_oct_m
   use lasers_oct_m
   use loct_oct_m
-  use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -56,7 +54,6 @@ module propagation_oct_m
   use td_oct_m
   use td_write_oct_m
   use v_ks_oct_m
-  use varinfo_oct_m
 
   implicit none
 

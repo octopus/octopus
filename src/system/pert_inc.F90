@@ -82,8 +82,6 @@ contains
 
     end select
 
-    call batch_pack_was_modified(f_out)
-
   end subroutine electric
   
 end subroutine X(pert_apply_batch)

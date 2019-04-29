@@ -10,27 +10,27 @@ Enabled    : Yes
 # ground state
 Processors : 1
 Input      : 01-propagators.01-gs.inp
-Precision  : 1.0e-6
+Precision  : 2e-07
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -11.00353072
+match ;  Initial energy  ; GREPFIELD(static/info, 'Total       =', 3) ; -11.00351994
 
 Processors : 4
 Input      : 01-propagators.02-expmid.inp
-Precision  : 1.0e-6
-match ; Forces [step  1] ; LINEFIELD(td.general/coordinates, -21, 15) ; 1.700891546919e-01
-match ; Forces [step 20] ; LINEFIELD(td.general/coordinates, -1, 15) ; 1.459084925797e-01
+Precision  : 4e-08
+match ;  Forces [step  1]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.17008514884955
+match ;  Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.1459088457585
 
 Processors : 4
 Input      : 01-propagators.03-etrs.inp
-Precision  : 1.0e-6
-match ; Forces [step  1] ; LINEFIELD(td.general/coordinates, -21, 15) ; 1.700891546919e-01
-match ; Forces [step 20] ; LINEFIELD(td.general/coordinates, -1, 15) ; 1.459374529298e-01
+Precision  : 4e-08
+match ;  Forces [step  1]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.17008514884955
+match ;  Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.1459378049224
 
 Processors : 4
 Input      : 01-propagators.04-aetrs.inp
-Precision  : 1.0e-6
-match ; Forces [step  1] ; LINEFIELD(td.general/coordinates, -21, 15) ; 1.700891414518e-01
-match ; Forces [step 20] ; LINEFIELD(td.general/coordinates, -1, 15) ; 1.459084925797e-01
+Precision  : 4e-08
+match ;  Forces [step  1]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.17008514884955
+match ;  Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.1459088457585
 
 Processors : 4
 Input      : 01-propagators.05-caetrs.inp
@@ -40,9 +40,9 @@ match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -9.573
 
 Processors : 4
 Input      : 01-propagators.06-cn.inp
-Precision  : 1.0e-6
-match ; Forces [step  1] ; LINEFIELD(td.general/coordinates, -21, 15) ; 1.700891414518e-01
-match ; Forces [step 20] ; LINEFIELD(td.general/coordinates, -1, 15) ; 1.458998300318e-01
+Precision  : 4e-08
+match ;  Forces [step  1]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.17008514884955
+match ;  Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.14590017869645
 
 Processors : 4
 Input      : 01-propagators.07-magnus.inp

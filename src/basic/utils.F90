@@ -312,6 +312,9 @@ contains
 #ifdef HAVE_LIBISF
     get_optional_libraries = trim(get_optional_libraries)//' libisf'
 #endif
+#ifdef HAVE_LIBVDWXC
+    get_optional_libraries = trim(get_optional_libraries)//' libvdwxc'
+#endif
 #ifdef HAVE_METIS
     get_optional_libraries = trim(get_optional_libraries)//' metis'
 #endif

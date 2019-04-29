@@ -29,3 +29,5 @@ DisableAccel = yes
 FilterPotentials = filter_none
 
 MixField = density
+
+ConvAbsEv = 1e-5

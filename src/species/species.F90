@@ -22,10 +22,7 @@ module species_oct_m
   use global_oct_m
   use iihash_oct_m
   use io_oct_m
-  use loct_oct_m
-  use loct_math_oct_m
   use loct_pointer_oct_m
-  use logrid_oct_m
   use math_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -35,7 +32,6 @@ module species_oct_m
   use pseudo_oct_m
   use share_directory_oct_m
   use pseudo_set_oct_m
-  use space_oct_m
   use splines_oct_m
   use string_oct_m
   use unit_oct_m
@@ -358,8 +354,6 @@ contains
   ! ---------------------------------------------------------
 
   subroutine species_end_global()
-    integer :: ierr
-    
     PUSH_SUB(species_end_global)
 
     call pseudo_set_end(default_pseudopotential_set)

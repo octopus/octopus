@@ -27,7 +27,6 @@ module propagator_cn_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
   use lda_u_oct_m
-  use loct_pointer_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use potential_interpolation_oct_m
@@ -36,7 +35,6 @@ module propagator_cn_oct_m
   use solvers_oct_m
   use sparskit_oct_m
   use states_oct_m
-  use xc_oct_m
 
   implicit none
 

@@ -33,9 +33,7 @@ module output_me_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
   use parser_oct_m
-  use poisson_oct_m
   use profiling_oct_m
-  use projector_oct_m
   use simul_box_oct_m
   use states_oct_m
   use states_calc_oct_m
@@ -60,6 +58,10 @@ module output_me_oct_m
     !! octopole matrix elements (between Kohn-Sham or single-particle orbitals).
     !! In 2D, only the dipole moments are printed.
     integer :: ks_multipoles      
+
+    integer :: st_start !Start index for the output
+    integer :: st_end   !Stop index for the output
+    integer :: nst      !Number of states computed
   end type output_me_t
 
   integer, parameter, public :: &
@@ -72,10 +74,10 @@ module output_me_oct_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine output_me_init(this, sb)
+  subroutine output_me_init(this, sb, nst)
     type(output_me_t), intent(out) :: this
     type(simul_box_t), intent(in)  :: sb
-
+    integer,           intent(in)  :: nst
     PUSH_SUB(output_me_init)
 
     !%Variable OutputMatrixElements
@@ -132,6 +134,31 @@ contains
       call parse_variable('OutputMEMultipoles', 1, this%ks_multipoles)
     end if
 
+    !%Variable OutputMEStart
+    !%Type integer
+    !%Default 1
+    !%Section Output
+    !%Description
+    !% Specifies the state/band index for starting to compute the matrix element.
+    !% So far, this is only used for dipole matrix elements.
+    !%End
+    call parse_variable('OutputMEStart', 1, this%st_start)
+    ASSERT(this%st_start > 0 .and. this%st_start <= nst)
+
+    !%Variable OutputMEEnd
+    !%Type integer
+    !%Default 1
+    !%Section Output
+    !%Description
+    !% Specifies the highest state/band index used to compute the matrix element.
+    !% So far, this is only used for dipole matrix elements.
+    !%End
+    call parse_variable('OutputMEEnd', nst, this%st_end)
+    ASSERT(this%st_end > 0 .and. this%st_end <= nst)
+    ASSERT(this%st_start <= this%st_end)
+    this%nst = this%st_end - this%st_start +1
+
+
     POP_SUB(output_me_init)
   end subroutine output_me_init
 
@@ -149,7 +176,7 @@ contains
     character(len=256) :: fname
     FLOAT, allocatable :: doneint(:), dtwoint(:)
     CMPLX, allocatable :: zoneint(:), ztwoint(:)
-    integer, allocatable :: iindex(:), jindex(:), kindex(:), lindex(:)
+    integer, allocatable :: iindex(:,:), jindex(:,:), kindex(:,:), lindex(:,:)
     
     PUSH_SUB(output_me)
 
@@ -215,8 +242,8 @@ contains
       message(1) = "Computing one-body matrix elements"
       call messages_info(1)
 
-      ASSERT(.not. st%parallel_in_states)
-      if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
+      if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=one_body with states parallelization")
+      if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=one_body with k-points parallelization")
       if(hm%family_is_mgga_with_exc) &
       call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
       ! how to do this properly? states_matrix
@@ -224,21 +251,21 @@ contains
 
       id = st%nst*(st%nst+1)/2
 
-      SAFE_ALLOCATE(iindex(1:id))
-      SAFE_ALLOCATE(jindex(1:id))
+      SAFE_ALLOCATE(iindex(1:id,1:1))
+      SAFE_ALLOCATE(jindex(1:id,1:1))
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(doneint(1:id))
-        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, doneint)
+        call dstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), doneint)
         do ll = 1, id
-          write(iunit, *) iindex(ll), jindex(ll), doneint(ll)
+          write(iunit, *) iindex(ll,1), jindex(ll,1), doneint(ll)
         enddo
         SAFE_DEALLOCATE_A(doneint)
       else
         SAFE_ALLOCATE(zoneint(1:id))
-        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex, jindex, zoneint)
+        call zstates_me_one_body(dir, gr, geo, st, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), zoneint)
         do ll = 1, id
-          write(iunit, *) iindex(ll), jindex(ll), zoneint(ll)
+          write(iunit, *) iindex(ll,1), jindex(ll,1), zoneint(ll)
         enddo
         SAFE_DEALLOCATE_A(zoneint)
       end if
@@ -254,28 +281,39 @@ contains
       call messages_info(1)
 
       ASSERT(.not. st%parallel_in_states)
-      if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
+      if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body with states parallelization")
+      if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization")
       ! how to do this properly? states_matrix
       iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
+      write(iunit, '(a)') '#(n1,k1) (n2,k2) (n3,k3) (n4,k4) (n1-k1, n2-k2|n3-k3, n4-k4)'
 
-      id = st%nst*(st%nst+1)*(st%nst**2+st%nst+2)/8
-      SAFE_ALLOCATE(iindex(1:id))
-      SAFE_ALLOCATE(jindex(1:id))
-      SAFE_ALLOCATE(kindex(1:id))
-      SAFE_ALLOCATE(lindex(1:id))
+      id = st%d%nik*this%nst*(st%d%nik*this%nst+1)*(st%d%nik**2*this%nst**2+st%d%nik*this%nst+2)/8
+      SAFE_ALLOCATE(iindex(1:2, 1:id))
+      SAFE_ALLOCATE(jindex(1:2, 1:id))
+      SAFE_ALLOCATE(kindex(1:2, 1:id))
+      SAFE_ALLOCATE(lindex(1:2, 1:id))
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(dtwoint(1:id))
-        call dstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, dtwoint)
+        call dstates_me_two_body(gr, st, this%st_start, this%st_end, iindex, jindex, kindex, lindex, dtwoint)
         do ll = 1, id
-          write(iunit, *) iindex(ll), jindex(ll), kindex(ll), lindex(ll), dtwoint(ll)
+          write(iunit, '(4(i4,i5),e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), dtwoint(ll)
         enddo
         SAFE_DEALLOCATE_A(dtwoint)
       else
         SAFE_ALLOCATE(ztwoint(1:id))
-        call zstates_me_two_body(gr, st, id, iindex, jindex, kindex, lindex, ztwoint)
+        if(associated(hm%hm_base%phase)) then
+          !We cannot pass the phase array like that if kpt%start is not 1.  
+          ASSERT(.not.st%d%kpt%parallel) 
+          call zstates_me_two_body(gr, st, this%st_start, this%st_end, &
+                     iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase) 
+        else
+          call zstates_me_two_body(gr, st, this%st_start, this%st_end, &
+                     iindex, jindex, kindex, lindex, ztwoint)
+        end if
+
         do ll = 1, id
-          write(iunit, *) iindex(ll), jindex(ll), kindex(ll), lindex(ll), ztwoint(ll)
+          write(iunit, '(4(i4,i5),2e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), ztwoint(ll)
         enddo
         SAFE_DEALLOCATE_A(ztwoint)
       end if

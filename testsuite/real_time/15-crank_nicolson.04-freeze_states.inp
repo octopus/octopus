@@ -14,6 +14,7 @@ bond_length = 2.8
 
 MoveIons = no
 
+
 Spacing = 0.6
 
 Radius = 6
@@ -24,8 +25,8 @@ TDMaxSteps = 20
 
 TDPropagator = crank_nicolson
 
-ParDomains = no
-ParStates = auto
+ParDomains = 2
+ParStates = 2
 
 FromScratch = yes
 

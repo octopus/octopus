@@ -92,7 +92,7 @@ program spin_susceptibility
 
 
   ! Find out the iteration numbers corresponding to the time limits.
-  call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+  call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
   istart = max(1, istart)
 

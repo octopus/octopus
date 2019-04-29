@@ -106,7 +106,10 @@
   integer,                 intent(in)   :: ik
 
   integer :: ios, ios2, iorb, iorb2
-  integer :: ind, ind2, idim
+  integer :: ind, ind2
+#ifdef R_TCOMPLEX
+  integer :: idim
+#endif
   type(orbitalset_t), pointer :: os, os2
 
   PUSH_SUB(X(loewdin_overlap))
@@ -157,11 +160,15 @@ subroutine X(loewdin_info)(basis, kpt)
 
    PUSH_SUB(X(loewdin_info))
 
+   SAFE_ALLOCATE(overlap(1:basis%size,1:basis%size))
+
    do ik = kpt%start, kpt%end
      call X(loewdin_overlap)(basis, overlap, ik)
      if(debug%info) call X(print_matrix)(basis, 'overlap', overlap, ik)
    end do
 
+   SAFE_DEALLOCATE_A(overlap)
+   
    POP_SUB(X(loewdin_info))
 end subroutine X(loewdin_info)
 

@@ -29,8 +29,6 @@ module symmetries_oct_m
   use species_oct_m
   use spglib_f08
   use symm_op_oct_m
-  use lalg_adv_oct_m
-
 
   implicit none
 
@@ -38,7 +36,6 @@ module symmetries_oct_m
   
   public ::                        &
     symmetries_t,                  &
-    symmetries_nullify,            &
     symmetries_init,               &
     symmetries_copy,               &
     symmetries_end,                &
@@ -89,15 +86,6 @@ module symmetries_oct_m
   end interface
 
 contains
-  
-  elemental subroutine symmetries_nullify(this)
-    type(symmetries_t), intent(out) :: this
-
-    this%nops = 0
-    this%breakdir = M_ZERO
-    this%space_group = 0
-
-  end subroutine symmetries_nullify
 
   subroutine symmetries_init(this, geo, dim, periodic_dim, rlattice, klattice)
     type(symmetries_t),  intent(out) :: this

@@ -24,11 +24,8 @@ program harmonic_spectrum
   use global_oct_m
   use io_oct_m
   use messages_oct_m
-  use parser_oct_m
   use spectrum_oct_m
-  use unit_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
 
   implicit none
 
