@@ -127,6 +127,11 @@ contains
     end if
 
     call rdmft_init() 
+    
+    write(message(1),'(a,1x,f14.12)') 'Sum of occupation numbers', rdm%occsum
+    write(message(2),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy, energy + hm%ep%eii)
+    call messages_info(2)   
+    
    
     !set initial values
     energy_old = CNST(1.0e20)
@@ -948,6 +953,9 @@ contains
     !parameters for cg_solver
     conv = .false.
     nstconv_ = st%nst
+    
+    ! no preconditioner for rdmft implemented
+    rdm%eigens%pre%which = 0
  
     maxiter = 25
 
