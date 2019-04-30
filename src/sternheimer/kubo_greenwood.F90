@@ -144,7 +144,8 @@ contains
         
         do jst = 1, sys%st%nst
           ! get the state j and calculate the gradient
-          call states_get_state(sys%st, mesh, ist, iqn, psij)
+!          call states_get_state(sys%st, mesh, ist, iqn, psij)
+          call states_get_state(sys%st, mesh, jst, iqn, psij)
           do idim = 1, sys%st%d%dim
             call boundaries_set(sys%gr%der%boundaries, psij(:, idim))
           end do
@@ -165,13 +166,13 @@ contains
           endif
           do idir = 1, mesh%sb%dim
              do jdir = 1, mesh%sb%dim
-                prod = zmf_dotp(mesh, sys%st%d%dim, psii, gpsij(:, idir, :))*zmf_dotp(mesh, sys%st%d%dim, psij, gpsii(:, jdir, :))
-              do ifreq = 1, nfreq
+                   prod = zmf_dotp(mesh, sys%st%d%dim, psii, gpsij(:, idir, :))*zmf_dotp(mesh, sys%st%d%dim, psij, gpsii(:, jdir, :))
+                   do ifreq = 1, nfreq
                  tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - sys%st%d%kweights(iqn)*(CNST(2.0)/mesh%sb%rcell_volume)* &
                       df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*(eigi-eigj - (ifreq-1)*dfreq))/ ((eigi-eigj - (ifreq-1)*dfreq)**2 + width**2/CNST(4.0))
-              end do
-           end do !loop over jdir
-         end do !loop over idir
+                   end do
+                end do !loop over jdir
+             end do !loop over idir
           
        end do !loop over states j
      end do !loop over states i
@@ -200,7 +201,6 @@ contains
     write(unit = iunit, iostat = ierr, fmt = '(a)') &
       '###########################################################################################################################'
     do ifreq = 1, nfreq
-       !ww = (ifreq-1)*dfreq
        ww = (ifreq-1)*dfreq
        write(unit = iunit, iostat = ierr, fmt = '(7e20.10)') ww, &
             tensor(1,1,ifreq), tensor(2,2,ifreq), tensor(3,3,ifreq)
