@@ -504,10 +504,13 @@ contains
     end if
 
     if (periodic_dim == 0) then
-      if (this%symmetries_compute) then
-        call messages_write('Symmetry elements : '//trim(this%group_elements), new_line = .true.)
-        call messages_write('Symmetry group    : '//trim(this%group_name))
-        call messages_info(iunit = iunit)
+      ! At the moment only the root node has information about symetries of finite systems.
+      if(mpi_grp_is_root(mpi_world)) then
+        if (this%symmetries_compute) then
+          call messages_write('Symmetry elements : '//trim(this%group_elements), new_line = .true.)
+          call messages_write('Symmetry group    : '//trim(this%group_name))
+          call messages_info(iunit = iunit)
+        end if
       end if
     else
       write(message(1),'(a, i4)') 'Space group No. ', this%space_group
