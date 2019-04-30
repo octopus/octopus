@@ -56,7 +56,9 @@ module density_oct_m
     states_freeze_orbitals,           &
     states_total_density,             &
     ddensity_accumulate_grad,         &
-    zdensity_accumulate_grad
+    zdensity_accumulate_grad,         &
+    states_freeze_redistribute_states,&
+    states_freeze_adjust_qtot
 
   type density_calc_t
     FLOAT,                pointer :: density(:, :)
@@ -450,11 +452,7 @@ contains
 
     call states_copy(staux, st)
 
-    st%nst = st%nst - n
-
-    call states_deallocate_wfns(st)
-    call states_distribute_nodes(st, mc)
-    call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
+    call states_freeze_redistribute_states(st, gr, mc, n)
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim, 1))
     SAFE_ALLOCATE(rec_buffer(1:gr%mesh%np, 1:st%d%dim))
@@ -518,27 +516,6 @@ contains
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(rec_buffer)
     
-    ! Change the smearing method by fixing the occupations to 
-    ! that of the ground-state such that the unfrozen states inherit 
-    ! those values.
-    st%smear%method = SMEAR_FIXED_OCC
-  
-    ! Set total charge
-    st%qtot = M_ZERO
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        st%qtot = st%qtot + staux%occ(n+ist, ik) * st%d%kweights(ik)
-      end do
-    end do
-
-    SAFE_DEALLOCATE_P(st%eigenval)
-    SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
-    st%eigenval = huge(st%eigenval)
-
-    SAFE_DEALLOCATE_P(st%occ)
-    SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
-    st%occ      = M_ZERO
-
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         st%occ(ist, ik) = staux%occ(n+ist, ik)
@@ -549,6 +526,64 @@ contains
     call states_end(staux)
     POP_SUB(states_freeze_orbitals)
   end subroutine states_freeze_orbitals
+
+  ! ---------------------------------------------------------
+  subroutine states_freeze_redistribute_states(st, gr, mc, nn)
+    type(states_t),    intent(inout) :: st
+    type(grid_t),      intent(in)    :: gr
+    type(multicomm_t), intent(in)    :: mc
+    integer,           intent(in)    :: nn
+
+    PUSH_SUB(states_freeze_redistribute_states)
+
+    st%nst = st%nst - nn
+
+    call states_deallocate_wfns(st)
+    call states_distribute_nodes(st, mc)
+    call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
+
+    SAFE_DEALLOCATE_P(st%eigenval)
+    SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))
+    st%eigenval = huge(st%eigenval)
+
+    SAFE_DEALLOCATE_P(st%occ)
+    SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
+    st%occ      = M_ZERO
+
+
+    POP_SUB(states_freeze_redistribute_states)
+  end subroutine states_freeze_redistribute_states
+
+  ! ---------------------------------------------------------
+  subroutine states_freeze_adjust_qtot(st)
+    type(states_t), intent(inout) :: st
+
+    integer :: ik, ist
+
+    PUSH_SUB(states_freeze_adjust_occs)
+
+    ! Change the smearing method by fixing the occupations to  
+    ! that of the ground-state such that the unfrozen states inherit 
+    ! those values.
+    st%smear%method = SMEAR_FIXED_OCC 
+
+    ! Set total charge
+    st%qtot = M_ZERO
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ist = st%st_start, st%st_end
+        st%qtot = st%qtot + st%occ(ist, ik) * st%d%kweights(ik)
+      end do
+    end do
+
+#if defined(HAVE_MPI)        
+    if(st%parallel_in_states .or. st%d%kpt%parallel) then
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, st%qtot)
+    end if
+#endif  
+
+
+    POP_SUB(states_freeze_adjust_qtot)
+  end subroutine states_freeze_adjust_qtot
 
 
   ! ---------------------------------------------------------
