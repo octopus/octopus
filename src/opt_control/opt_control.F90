@@ -544,6 +544,7 @@ contains
          call messages_info(2)
       end if
 
+      call controlfunction_end(par_)
       SAFE_DEALLOCATE_A(xl)
       SAFE_DEALLOCATE_A(xu)
       SAFE_DEALLOCATE_A(x)
