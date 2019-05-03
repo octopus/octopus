@@ -55,8 +55,8 @@ module symmetries_oct_m
     logical                  :: symmetries_compute
     character(len=6)         :: group_name
     character(len=30)        :: group_elements
-    character(len=11)        :: symbol
-    character(len=7)         :: schoenflies
+    character(len=10)        :: symbol
+    character(len=6)         :: schoenflies
   end type symmetries_t
 
   real(8), parameter, public :: SYMPREC = CNST(1e-5)
@@ -366,7 +366,8 @@ contains
         f_string(i:i) = c_string(i)
         i = i + 1
       end do
-      if (i < len(f_string)) f_string(i:) = ' '
+
+      if (i <= len(f_string)) f_string(i:) = ' '
 
     end subroutine c_to_f_string
     
