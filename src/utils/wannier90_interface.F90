@@ -215,10 +215,11 @@ program wannier90_interface
     call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, &
                        sys%mc, ierr, sys%gr%der%mesh)
 
+    call read_wannier90_files()
     if(ierr == 0) then
       call states_look(restart, nik, dim, nst, ierr)
       if(dim==st%d%dim .and. nik==sys%gr%sb%kpoints%reduced%npoints .and. nst==st%nst) then
-         call states_load(restart, st, sys%gr, ierr, iter, label = ": wannier90")
+         call states_load(restart, st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
       else
          write(message(1),'(a)') 'Restart structure not commensurate.'
          call messages_fatal(1)
@@ -227,8 +228,6 @@ program wannier90_interface
     call restart_end(restart)
 
     ! ---- actual interface work ----------
-    call read_wannier90_files()
-
     if(iand(w90_what, OPTION__WANNIER90_FILES__W90_MMN) /= 0) then
       call create_wannier90_mmn(sys%gr%mesh)
     end if
@@ -253,10 +252,11 @@ program wannier90_interface
     call states_allocate_wfns(st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
     call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, &
                        sys%mc, ierr, sys%gr%der%mesh)
+    call read_wannier90_files()
     if(ierr == 0) then
       call states_look(restart, nik, dim, nst, ierr)
       if(dim==st%d%dim .and. nik==sys%gr%sb%kpoints%reduced%npoints .and. nst==st%nst) then
-        call states_load(restart, st, sys%gr, ierr, iter, label = ": wannier90")
+        call states_load(restart, st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
       else
          write(message(1),'(a)') 'Restart structure not commensurate.'
          call messages_fatal(1)
@@ -264,7 +264,6 @@ program wannier90_interface
     end if
     call restart_end(restart)
 
-    call read_wannier90_files()
     call generate_wannier_states(sys%gr%mesh, sys%gr%sb, sys%geo)
   end if
 
@@ -766,7 +765,6 @@ contains
 
     message(1) = "Info: Computing the projection matrix";
     call messages_info(1)
-
 
     !We use the variabel AOThreshold to deterine the threshold on the radii of the atomic orbitals
     call parse_variable('AOThreshold', CNST(0.01), threshold)

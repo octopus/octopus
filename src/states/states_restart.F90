@@ -319,7 +319,7 @@ contains
   !! <0 => Fatal error, or nothing read
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine states_load(restart, st, gr, ierr, iter, lr, lowest_missing, label, verbose)
+  subroutine states_load(restart, st, gr, ierr, iter, lr, lowest_missing, label, verbose, skip)
     type(restart_t),            intent(in)    :: restart
     type(states_t),             intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
@@ -329,6 +329,7 @@ contains
     integer,          optional, intent(out)   :: lowest_missing(:, :) !< all states below this one were read successfully
     character(len=*), optional, intent(in)    :: label
     logical,          optional, intent(in)    :: verbose
+    integer,          optional, intent(in)    :: skip(:) !< A mask for reading (1) or skipping(0) the states. For expert use only.
 
     integer              :: states_file, wfns_file, occ_file, err, ik, ist, idir, idim
     integer              :: idone, iread, ntodo
@@ -359,6 +360,10 @@ contains
     ! make sure these intent(out)`s are initialized no matter what
     if (present(lowest_missing)) lowest_missing = 1
     if (present(iter)) iter = 0
+
+    if (present(skip)) then
+      ASSERT(ubound(skip, dim = 1) == st%nst)
+    end if
 
     if (restart_skip(restart)) then
       ierr = -1
@@ -592,6 +597,10 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
+        if(present(skip)) then
+          if(skip(ist) == 0) cycle
+        end if
+
         do idim = 1, st%d%dim
 
           if (.not. restart_file_present(idim, ist, ik)) then
@@ -684,8 +693,14 @@ contains
         write(str, '(a,i5)') 'Reading states information for linear response.'
       end if
       call messages_print_stress(stdout, trim(str))
-      write(message(1),'(a,i6,a,i6,a)') 'Only ', iread,' files out of ', &
-           st%nst * st%d%nik * st%d%dim, ' could be read.'
+      if(.not. present(skip)) then
+        write(message(1),'(a,i6,a,i6,a)') 'Only ', iread,' files out of ', &
+             st%nst * st%d%nik * st%d%dim, ' could be read.'
+      else
+        write(message(1),'(a,i6,a,i6,a)') 'Only ', iread,' files out of ', &
+             st%nst * st%d%nik * st%d%dim, ' were loaded.'
+        ierr = 0
+      end if
       call messages_info(1)
       call messages_print_stress(stdout)
     end if
