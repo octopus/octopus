@@ -113,7 +113,8 @@ contains
     !%Option dipole 32
     !% Prints the dipole matrix elements. Not available with states parallelization.
     !% For periodic systems, the intraband terms (dipole matrix elements between degenerated states)
-    !% are set to zero.
+    !% are set to zero, and only the absolute value of the dipole matrix element is printed.
+    !% Not yet supported for spinors.
     !%End
 
     call parse_variable('OutputMatrixElements', 0, this%what)

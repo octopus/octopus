@@ -296,7 +296,7 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
 
     iunit = io_open(file = trim(fname)//index2axis(idir), action = 'write')
 
-    write(iunit, '(a)') '# Dipole matrix elements file: <Phi_i | r | Phi_j>' 
+    write(iunit, '(a)') '# Dipole matrix elements file: |<Phi_i | r | Phi_j>|' 
     write(iunit, '(a,i4)')      '# ik =', ik
     write(iunit, '(a)')    '# Units = ['//trim(units_abbrev(units_out%length))//']'
   
@@ -313,7 +313,7 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
            call boundaries_set(gr%der%boundaries, psii(:, idim))
         end do
 
-#ifdef R_TCMPLX
+#ifdef R_TCOMPLEX
         if(associated(hm%hm_base%phase)) then
           call states_set_phase(st%d, psii, hm%hm_base%phase(1:gr%mesh%np_part, ik), gr%mesh%np_part, .false.)
         end if
@@ -352,12 +352,11 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
       do jst = this%st_start, this%st_end
 
         call states_get_state(st, gr%mesh, jst, ik, psij)
-#ifdef R_TCMPLX
+#ifdef R_TCOMPLEX
         if(associated(hm%hm_base%phase).and. simul_box_is_periodic(gr%mesh%sb)) then
           call states_set_phase(st%d, psij, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .false.)
         end if
 #endif
-
 
         multip_element = X(mf_dotp)(gr%mesh, st%d%dim, gpsii(:, idir, :), psij)
         if(simul_box_is_periodic(gr%mesh%sb)) then
@@ -369,10 +368,7 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
         end if
         multip_element = units_from_atomic(units_out%length, multip_element)
 
-        write(iunit, fmt='(f20.12)', advance = 'no') R_REAL(multip_element)
-#if defined(R_TCOMPLEX)
-        write(iunit, fmt='(f20.12)', advance = 'no') R_AIMAG(multip_element)
-#endif
+        write(iunit, fmt='(f20.12)', advance = 'no') R_ABS(multip_element)
         write(iunit, fmt='(a)', advance = 'no') '   '
       end do
       write(iunit, '(a)') ''
