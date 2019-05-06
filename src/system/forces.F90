@@ -542,7 +542,8 @@ subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
     do idir = 1, gr%mesh%sb%dim
       do is = 1, hm%d%spin_channels
         force_nlcc(idir, iatom) = force_nlcc(idir, iatom) &
-                       -dmf_dotp(gr%mesh, drho(:,idir), hm%vxc(1:gr%mesh%np, is))/st%d%spin_channels
+                       -dmf_dotp(gr%mesh, drho(:,idir), hm%vxc(1:gr%mesh%np, is), reduce = .false.)&
+                          /st%d%spin_channels
       end do
     end do
   end do
@@ -550,6 +551,14 @@ subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
   SAFE_DEALLOCATE_A(drho)
 
   if(geo%atoms_dist%parallel) call dforces_gather(geo, force_nlcc)
+
+#if defined(HAVE_MPI)
+  if(gr%mesh%parallel_in_domains) then
+    call profiling_in(prof_comm, "FORCES_COMM")
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, force_nlcc)
+    call profiling_out(prof_comm)
+  end if
+#endif
 
   POP_SUB(forces_from_nlcc)
 end subroutine forces_from_nlcc
@@ -594,7 +603,7 @@ subroutine forces_from_scf(gr, geo, hm, st, force_scf, vhxc_old)
         do idir = 1, gr%mesh%sb%dim
           do is = 1, hm%d%spin_channels
             force_scf(idir, iatom) = force_scf(idir, iatom) &
-                                      -dmf_dotp(gr%mesh, drho(:,is,idir), dvhxc(:,is))
+                                      -dmf_dotp(gr%mesh, drho(:,is,idir), dvhxc(:,is), reduce = .false.)
           end do
         end do
       end if
@@ -605,6 +614,15 @@ subroutine forces_from_scf(gr, geo, hm, st, force_scf, vhxc_old)
   SAFE_DEALLOCATE_A(drho)
 
   if(geo%atoms_dist%parallel) call dforces_gather(geo, force_scf) 
+
+#if defined(HAVE_MPI)
+  if(gr%mesh%parallel_in_domains) then
+    call profiling_in(prof_comm, "FORCES_COMM")
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, force_scf)
+    call profiling_out(prof_comm)
+  end if
+#endif
+
   
   POP_SUB(forces_from_scf)
 end subroutine forces_from_scf
