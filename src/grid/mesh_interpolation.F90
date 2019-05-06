@@ -21,9 +21,7 @@
 module mesh_interpolation_oct_m
   use comm_oct_m
   use iso_c_binding
-  use geometry_oct_m
   use global_oct_m
-  use io_oct_m
   use loct_math_oct_m
   use mesh_oct_m
   use messages_oct_m

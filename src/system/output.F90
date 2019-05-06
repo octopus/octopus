@@ -20,8 +20,7 @@
 
 module output_oct_m
   use basins_oct_m
-  use batch_oct_m
-  use comm_oct_m 
+  use comm_oct_m
   use cube_function_oct_m
   use cube_oct_m
   use current_oct_m
@@ -49,19 +48,15 @@ module output_oct_m
   use lda_u_io_oct_m
   use linear_response_oct_m
   use loct_oct_m
-  use loct_math_oct_m
   use magnetic_oct_m
   use mesh_oct_m
-  use mesh_batch_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use modelmb_density_matrix_oct_m
-  use modelmb_exchange_syms_oct_m
   use mpi_oct_m
   use orbitalset_oct_m
   use output_me_oct_m
   use parser_oct_m
-  use par_vec_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use simul_box_oct_m
@@ -80,7 +75,6 @@ module output_oct_m
   use varinfo_oct_m
   use v_ks_oct_m
   use vtk_oct_m
-  use vdw_ts_oct_m
 #if defined(HAVE_BERKELEYGW)
   use wfn_rho_vxc_io_m
 #endif
@@ -464,7 +458,7 @@ contains
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me_init(outp%me, sb, st, nst)
+      call output_me_init(outp%me, sb, nst)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
@@ -897,7 +891,7 @@ contains
     type(grid_t),              intent(in)    :: gr
     type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
 
-    integer :: is, ispin, ierr, ip
+    integer :: is, ierr, ip
     character(len=MAX_PATH_LEN) :: fname
     type(unit_t) :: fn_unit
     FLOAT, allocatable :: energy_density(:, :)

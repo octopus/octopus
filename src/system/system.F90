@@ -28,25 +28,19 @@ module system_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
-  use io_function_oct_m
   use mesh_oct_m
   use messages_oct_m
   use modelmb_particles_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use output_oct_m
-  use parser_oct_m
-  use pcm_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use space_oct_m
-  use species_oct_m
   use simul_box_oct_m
   use sort_oct_m
   use states_oct_m
   use states_dim_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
   use v_ks_oct_m
 
   implicit none

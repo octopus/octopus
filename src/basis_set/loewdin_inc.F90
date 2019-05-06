@@ -106,7 +106,10 @@
   integer,                 intent(in)   :: ik
 
   integer :: ios, ios2, iorb, iorb2
-  integer :: ind, ind2, idim
+  integer :: ind, ind2
+#ifdef R_TCOMPLEX
+  integer :: idim
+#endif
   type(orbitalset_t), pointer :: os, os2
 
   PUSH_SUB(X(loewdin_overlap))

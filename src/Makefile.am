@@ -42,6 +42,7 @@ include/config_F90.h: $(top_builddir)/config.h
 # Sources in basic
 basic_f_srcs =                                 \
 	basic/accel.F90                        \
+	basic/alloc_cache.F90                  \
 	basic/blacs.F90                        \
 	basic/blacs_proc_grid.F90              \
 	basic/calc_mode_par.F90                \
@@ -57,7 +58,6 @@ basic_f_srcs =                                 \
 	basic/io_binary_f.F90                  \
 	basic/io_csv_f.F90                     \
 	basic/io.F90                           \
-	basic/kinds.F90                        \
 	basic/loct.F90                         \
 	basic/loct_pointer.F90                 \
 	basic/lookup.F90                       \
@@ -67,12 +67,10 @@ basic_f_srcs =                                 \
 	basic/mpi_lib.F90                      \
 	basic/multicomm.F90                    \
 	basic/parser.F90                       \
-	basic/path.F90                         \
 	basic/profiling.F90                    \
 	basic/sort.F90                         \
 	basic/space.F90                        \
 	basic/string.F90                       \
-	basic/topology.F90                     \
 	basic/types.F90                        \
 	basic/unit.F90                         \
 	basic/unit_system.F90                  \
@@ -81,6 +79,7 @@ basic_f_srcs =                                 \
 	basic/write_iter.F90
 
 basic_c_srcs =                                 \
+	basic/alloc_cache_low.cc               \
 	basic/cublas.cc                        \
 	basic/cuda_low.cc                      \
 	basic/getopt_f.c                       \
@@ -297,7 +296,6 @@ grid_f_srcs =                                 \
 	grid/partition_transfer.F90           \
 	grid/par_vec.F90                      \
 	grid/restart.F90                      \
-	grid/sphericalmesh.F90                \
 	grid/stencil_cube.F90                 \
 	grid/stencil.F90                      \
 	grid/stencil_star.F90                 \

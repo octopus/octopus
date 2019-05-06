@@ -21,7 +21,6 @@
 
 module scaling_function_oct_m
   use blas_oct_m
-  use global_oct_m
   use messages_oct_m
 
   implicit none

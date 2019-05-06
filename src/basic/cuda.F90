@@ -19,8 +19,7 @@
 #include "global.h"
 
 module cuda_oct_m
-  use global_oct_m
-  
+
   implicit none
 
   private

@@ -32,7 +32,6 @@ module ion_interaction_oct_m
   use ps_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use unit_system_oct_m
 
   implicit none
 
@@ -102,7 +101,7 @@ contains
     FLOAT, optional,          intent(out)   :: force_components(:, :, :)
     
     FLOAT, allocatable:: r(:), f(:)
-    FLOAT :: rr, dd, zi, zj, epsilon, sigma
+    FLOAT :: rr, dd, zi, zj
     integer :: iatom, jatom, natom, iindex, jindex
     type(species_t), pointer :: spci, spcj
     type(profile_t), save :: ion_ion_prof

@@ -19,7 +19,6 @@
 #include "global.h"
 
 module td_oct_m
-  use global_oct_m
   use boundary_op_oct_m
   use calc_mode_par_oct_m
   use density_oct_m
@@ -27,6 +26,7 @@ module td_oct_m
   use forces_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
+  use global_oct_m
   use grid_oct_m
   use ground_state_oct_m
   use hamiltonian_oct_m
@@ -37,14 +37,17 @@ module td_oct_m
   use lda_u_oct_m
   use lda_u_io_oct_m
   use loct_oct_m
-  use loct_math_oct_m
+  use messages_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use parser_oct_m
   use pes_oct_m
   use poisson_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
+  use propagator_oct_m
+  use propagator_base_oct_m
   use restart_oct_m
   use scdm_oct_m
   use scf_oct_m
@@ -54,16 +57,12 @@ module td_oct_m
   use states_calc_oct_m
   use states_restart_oct_m
   use system_oct_m
-  use propagator_oct_m
-  use propagator_base_oct_m
   use td_write_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
-  use messages_oct_m
-  use multicomm_oct_m
   use xc_oct_m
 
   implicit none
@@ -471,7 +470,7 @@ contains
 
       if(iter > 1) then
         if( ((iter-1)*td%dt <= hm%ep%kick%time) .and. (iter*td%dt > hm%ep%kick%time) ) then
-          if( .not.hm%pcm%kick_like ) then
+          if( .not.hm%pcm%localf ) then
             call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
           else
             call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)
