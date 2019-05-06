@@ -555,7 +555,7 @@ subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
 #if defined(HAVE_MPI)
   if(gr%mesh%parallel_in_domains) then
     call profiling_in(prof_comm, "FORCES_COMM")
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, force_nlcc)
+    call comm_allreduce(gr%mesh%mpi_grp%comm, force_nlcc)
     call profiling_out(prof_comm)
   end if
 #endif
@@ -618,7 +618,7 @@ subroutine forces_from_scf(gr, geo, hm, st, force_scf, vhxc_old)
 #if defined(HAVE_MPI)
   if(gr%mesh%parallel_in_domains) then
     call profiling_in(prof_comm, "FORCES_COMM")
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, force_scf)
+    call comm_allreduce(gr%mesh%mpi_grp%comm, force_scf)
     call profiling_out(prof_comm)
   end if
 #endif
