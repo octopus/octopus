@@ -290,6 +290,9 @@ contains
     !%Option heat_current bit(33)
     !% Outputs the total heat current density. The output file is
     !% called <tt>heat_current-</tt>.
+    !%Option photon_correlator bit(34)
+    !% Outputs the electron-photon correlation function. The output file is
+    !% called <tt>photon_correlator</tt>.
     !%End
     call parse_variable('Output', 0, outp%what)
 
@@ -721,6 +724,12 @@ contains
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
         call lda_u_write_kanamoriU(dir, st, hm%lda_u)
+    end if
+
+    if (ks%oep%level == 5 .and. ks%oep%has_photons) then
+      if(bitand(outp%what, OPTION__OUTPUT__PHOTON_CORRELATOR) /= 0) &
+        call dio_function_output(outp%how, STATIC_DIR, "photon_correlator", gr%mesh, ks%oep%pt%correlator(:,1), &
+          units_out%length, ierr, geo = geo)
     end if
 
     call profiling_out(prof)

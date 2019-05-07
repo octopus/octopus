@@ -1015,25 +1015,6 @@ contains
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
       call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
-
-!       if(mpi_grp_is_root(mpi_world)) then
-        if (ks%oep%level == 5) then
-          if (ks%oep%has_photons) then
-          !test
-          write(message(1), '(a)') "Info: Starting to print correlator."
-          call messages_info(1)
-          call io_mkdir(STATIC_DIR)
-          call dio_function_output(outp%how, STATIC_DIR, "correlator", gr%mesh, ks%oep%pt%correlator(:,1), &
-            units_out%length, ierr, geo = geo)
-
-!           call dio_function_output(outp%how, "./", "correlator", gr%mesh, ks%oep%pt%correlator(:,1), &
-!               unit_one, ierr)
-          write(message(1), '(a)') "Info: Finished to print correlator."
-          call messages_info(1)
-          !test
-          end if
-        end if
-!       end if
     end if
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
