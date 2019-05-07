@@ -489,63 +489,30 @@ contains
     PUSH_SUB(pcm_eom_end)
 
     ! pcm charges
-    if( allocated(q_tp) ) then
-      SAFE_DEALLOCATE_A(q_tp)
-    endif
-    if( allocated(qext_tp) ) then
-      SAFE_DEALLOCATE_A(qext_tp)
-    endif
-    if( allocated(qkick_tp) ) then
-      SAFE_DEALLOCATE_A(qkick_tp)
-    endif
+    SAFE_DEALLOCATE_A(q_tp)
+    SAFE_DEALLOCATE_A(qext_tp)
+    SAFE_DEALLOCATE_A(qkick_tp)
 
     ! increment pcm charges
-    if( allocated(dq_tp) ) then
-      SAFE_DEALLOCATE_A(dq_tp)
-    endif
-    if( allocated(dqext_tp) ) then
-      SAFE_DEALLOCATE_A(dqext_tp)
-    endif
-    if( allocated(dqkick_tp) ) then
-      SAFE_DEALLOCATE_A(dqkick_tp)
-    endif
+    SAFE_DEALLOCATE_A(dq_tp)
+    SAFE_DEALLOCATE_A(dqext_tp)
+    SAFE_DEALLOCATE_A(dqkick_tp)
 
     ! force-like term in pcm-eom equation
-    if( allocated(force_tp) ) then
-      SAFE_DEALLOCATE_A(force_tp)
-    endif
-    if( allocated(force_qext_tp) ) then
-      SAFE_DEALLOCATE_A(force_qext_tp)
-    endif
-    if( allocated(force_qkick_tp) ) then
-      SAFE_DEALLOCATE_A(force_qkick_tp)
-    endif
+    SAFE_DEALLOCATE_A(force_tp)
+    SAFE_DEALLOCATE_A(force_qext_tp)
+    SAFE_DEALLOCATE_A(force_qkick_tp)
 
     ! pcm-eom bem matrices
-    if( allocated(matq0) ) then
-      SAFE_DEALLOCATE_A(matq0)
-    endif
-    if( allocated(matqd) ) then
-      SAFE_DEALLOCATE_A(matqd)
-    endif
-    if( allocated(matq0_lf) ) then
-      SAFE_DEALLOCATE_A(matq0_lf)
-    endif
-    if( allocated(matqd_lf) ) then
-      SAFE_DEALLOCATE_A(matqd_lf)
-    endif
-    if( allocated(matqv) ) then
-      SAFE_DEALLOCATE_A(matqv)
-    endif
-    if( allocated(matqv_lf) ) then
-      SAFE_DEALLOCATE_A(matqv_lf)
-    endif
-    if( allocated(matqq) ) then
-      SAFE_DEALLOCATE_A(matqq)
-    endif
+    SAFE_DEALLOCATE_A(matq0)
+    SAFE_DEALLOCATE_A(matqd)
+    SAFE_DEALLOCATE_A(matq0_lf)
+    SAFE_DEALLOCATE_A(matqd_lf)
+    SAFE_DEALLOCATE_A(matqv)
+    SAFE_DEALLOCATE_A(matqv_lf)
+    SAFE_DEALLOCATE_A(matqq)
 
     SAFE_DEALLOCATE_A(pot_tp)
-
     SAFE_DEALLOCATE_A(cts_act)
 
     call deallocate_TS_matrix()
