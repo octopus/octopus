@@ -323,7 +323,7 @@ while ($_ = <TESTSUITE>) {
             }
         }
 
-        if ( $_ =~ /^MPIUtil\s*:\s*(.*)\s*$/) {
+        elsif ( $_ =~ /^MPIUtil\s*:\s*(.*)\s*$/) {
             $command = "$exec_directory/$1";
             if( ! -x "$command") {
                 $command = "$exec_directory/../utils/$1";
