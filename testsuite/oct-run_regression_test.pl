@@ -323,6 +323,19 @@ while ($_ = <TESTSUITE>) {
             }
         }
 
+        if ( $_ =~ /^MPIUtil\s*:\s*(.*)\s*$/) {
+            $command = "$exec_directory/$1";
+            if( ! -x "$command") {
+                $command = "$exec_directory/../utils/$1";
+            }
+            $report{$testname}{"util"} = $1;
+        
+            if( ! -x "$command") {
+                die255("Cannot find utility '$1'.");
+            }
+        }
+
+
         elsif ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
             # FIXME: enforce this is "serial" or numeric
             $np = $1;
