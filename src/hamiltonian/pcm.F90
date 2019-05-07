@@ -1108,6 +1108,9 @@ contains
     pcm%q_n_nominal = val_charge
     pcm%deltaQ_e = M_ZERO
     pcm%deltaQ_n = M_ZERO
+    pcm%qtot_e = M_ZERO
+    pcm%qtot_n = M_ZERO
+    pcm%qtot_ext = M_ZERO
 
     POP_SUB(pcm_init)
   end subroutine pcm_init

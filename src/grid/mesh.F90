@@ -404,8 +404,6 @@ contains
     else
       if (mpi_grp_is_root(mpi_grp)) then
         write(iunit, '(a)') dump_tag
-        write(iunit, '(a20,1i10)')  'np=                 ', mesh%np
-        write(iunit, '(a20,1i10)')  'np_part=            ', mesh%np_part
         write(iunit, '(a20,1i10)')  'np_global=          ', mesh%np_global
         write(iunit, '(a20,1i10)')  'np_part_global=     ', mesh%np_part_global
       end if
@@ -449,12 +447,10 @@ contains
       if (err /= 0) ierr = ierr + 2
 
       if (ierr == 0) then
-        call iopar_read(mpi_grp, iunit, lines, 4, err)
+        call iopar_read(mpi_grp, iunit, lines, 2, err)
         if (err /= 0) then
           ierr = ierr + 4
         else
-          read(lines(1), '(a20,1i10)') str, mesh%np
-          read(lines(2), '(a20,1i10)') str, mesh%np_part
           read(lines(3), '(a20,1i10)') str, mesh%np_global
           read(lines(4), '(a20,1i10)') str, mesh%np_part_global
           mesh%parallel_in_domains = .false.

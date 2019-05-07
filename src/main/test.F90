@@ -391,12 +391,12 @@ contains
 
     call states_allocate_wfns(sys%st, sys%gr%mesh)
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
-    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_pack(sys%st)
 
     !Initialize external potential
     call simul_box_init(sb, sys%geo, sys%space)
     call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
              family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_pack(sys%st)
     call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, hm, sys%st, sys%geo)
