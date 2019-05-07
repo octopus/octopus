@@ -266,9 +266,9 @@ contains
 
     select case (pcm_vdw_type)
     case (PCM_VDW_OPTIMIZED) 
-      default_value = 1.2d0
+      default_value = CNST(1.2)
     case (PCM_VDW_SPECIES) 
-      default_value = 1.d0
+      default_value = M_ONE
     end select
    
     !%Variable PCMRadiusScaling
@@ -1646,10 +1646,10 @@ contains
     if (present(qtot_nominal)   .and. present(epsilon) .and.  &
         present(renorm_charges) .and. present(q_tot_tol) .and. present(deltaQ) ) then
       !< renormalization of the polarization charges to enforce fulfillment of the Gauss law.
-      deltaQ = abs(q_pcm_tot) - ((epsilon - CNST(1.0))/epsilon )*abs(qtot_nominal)
+      deltaQ = abs(q_pcm_tot) - ((epsilon - M_ONE)/epsilon )*abs(qtot_nominal)
       if ((renorm_charges) .and. (abs(deltaQ) > q_tot_tol)) then
         q_pcm_tot_norm = M_ZERO
-        coeff = sign(CNST(1.0), qtot_nominal)*sign(CNST(1.0), deltaQ)
+        coeff = sign(M_ONE, qtot_nominal)*sign(M_ONE, deltaQ)
         do ia = 1, n_tess
           q_pcm(ia) = q_pcm(ia) + coeff*q_pcm(ia)/q_pcm_tot*abs(deltaQ)
           q_pcm_tot_norm = q_pcm_tot_norm + q_pcm(ia)
@@ -1779,8 +1779,8 @@ contains
       ! Extrapolate the tessera point charge with a gaussian distritibution
       ! to the neighboring points 
       ! rho(r) = N exp(-|r-sk|^2/(alpha*Ak))
-      Norm = 0 
-      lrho = 0
+      norm = M_ZERO
+      lrho = M_ZERO
       do ipt = 1, npt
         
         ! Check the point is inside the mesh skip otherwise
@@ -1944,7 +1944,7 @@ contains
           ! Computing the distances between tesserae and grid points.
           call mesh_r(mesh, ip, term, origin=tess(ia)%point)
           arg = term/sqrt( tess(ia)%area*width_factor )        
-          term = (1 + P_1*arg + P_2*arg**2 )/(1 + Q_1*arg + Q_2*arg**2 + P_2*arg**3)
+          term = (M_ONE + P_1*arg + P_2*arg**2 )/(M_ONE + Q_1*arg + Q_2*arg**2 + P_2*arg**3)
           v_pcm(ip) = v_pcm(ip) + q_pcm(ia)*term/sqrt(tess(ia)%area*width_factor)
         end do
       end do
@@ -3215,7 +3215,7 @@ contains
 
     case (PCM_VDW_SPECIES)
       vdw_r = species_vdw_radius(species)
-      if(vdw_r< CNST(0.0)) then
+      if(vdw_r < M_ZERO) then
         call messages_write('The default vdW radius for species '//trim(species_label(species))//':')
         call messages_write(' is not defined. ')
         call messages_write(' Add a positive vdW radius value in %Species block. ')

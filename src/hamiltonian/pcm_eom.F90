@@ -379,10 +379,10 @@ contains
     !> See E. Vanden-Eijnden, G. Ciccotti, Chem.Phys.Lett. 429 (2006) 310-316.
     !> Using the scheme in Eq.(21) and (17), ibid.
     !> See subroutine pcm_ief_prop_vv_ief_drl
-    f1 = dt*(1.d0 - dt*0.5d0*drl%gm)
-    f2 = dt*dt*0.5d0
-    f3 = 1.d0 - dt*drl%gm*(1.d0 - dt*M_HALF*drl%gm)
-    f4 = 0.5d0*dt
+    f1 = dt*(M_ONE - dt*M_HALF*drl%gm)
+    f2 = dt*dt*M_HALF
+    f3 = M_ONE - dt*drl%gm*(M_ONE - dt*M_HALF*drl%gm)
+    f4 = M_HALF*dt
     f5 = drl%gm*f2
 
     POP_SUB(init_vv_propagator)
@@ -636,7 +636,7 @@ contains
       do i = 1, nts_act
         if (fact2(i) < M_ZERO)fact2(i) = M_ZERO !< check out
       end do
-      if (abs(drl%w0) <= M_EPSILON) drl%w0 = 1.d-8 !< check out
+      if (abs(drl%w0) <= M_EPSILON) drl%w0 = CNST(1.0e-8) !< check out
       fact1(:) = fact2(:) + drl%w0*drl%w0                           !< Eq.(19), ibid.
       fact2(:) = sgn_lf*(TWO*PI - sgn*sgn_lf*eigv(:))*drl%aa/FOUR*PI  !< Eq.(10) down, local field analogous
       Kdiag0(:) = fact2(:)/fact1(:)                                 !< from Eq.(10) up, ibid.
@@ -790,7 +790,7 @@ contains
       if (eigv(i) < M_ZERO) then
         write(6,*) "WARNING:",i," eig of S is negative!"
         write(6,*) "   I put it to 1e-8"
-        eigv(i) = 1.d-8
+        eigv(i) = CNST(1.0e-8)
       end if
       scr1(:,i) = eigt(:,i)*sqrt(eigv(i))
     end do
