@@ -29,7 +29,9 @@ module pcm_eom_oct_m
             pcm_eom_end,             &
             pcm_tessera_t,           &
             debye_param_t,           &
-            drude_param_t 
+            drude_param_t,           &
+            PCM_DEBYE_MODEL,         &
+            PCM_DRUDE_MODEL
   save
 
   !> tesselation derived type
@@ -58,13 +60,16 @@ module pcm_eom_oct_m
     FLOAT :: w0                                   !< resonance frequency
   end type drude_param_t
 
+  integer, parameter :: PCM_DEBYE_MODEL = 1, &
+                        PCM_DRUDE_MODEL = 2
+
   type(debye_param_t) :: deb
   type(drude_param_t) :: drl
 
   character(8) :: which_eom			  !< character flag for PCM charges due to:
                                                   !< electrons ('electron'), external potential ('external') or kick ('justkick')
 
-  character(3) :: which_eps			  !< character flag for Debye ('deb') and Drude-Lorentz models ('drl')
+  integer :: which_eps			          !< flag for Debye (PCM_DEBYE_MODEL) and Drude-Lorentz (PCM_DRUDE_MODEL) models
 
   FLOAT :: dt 					  !< time-step of the propagation
 
@@ -116,7 +121,7 @@ contains
     type(pcm_tessera_t),           intent(in)  :: this_cts_act(:)
     logical,                       intent(in)  :: input_asc
     character(len=*),              intent(in)  :: this_eom !< EOM case, either due to electrons ('electron') or due to external potential ('external')
-    character(len=*),              intent(in)  :: this_eps !< type of dielectric model to be used, either Debye ('deb') or Drude-Lorentz ('drl')
+    integer,                       intent(in)  :: this_eps !< type of dielectric model to be used, either Debye (PCM_DEBYE_MODEL) or Drude-Lorentz (PCM_DRUDE_MODEL)
     type(debye_param_t), optional, intent(in)  :: this_deb
     type(drude_param_t), optional, intent(in)  :: this_drl
 
@@ -146,19 +151,19 @@ contains
       cts_act = this_cts_act
 
       which_eps = this_eps
-      if (which_eps == 'deb' .and. (.not.(present(this_deb)))) then
+      if (which_eps == PCM_DEBYE_MODEL .and. (.not.(present(this_deb)))) then
         message(1) = "pcm_charges_propagation: EOM-PCM error. Debye dielectric function requires three parameters."
         call messages_fatal(1)
-      else if (which_eps=='deb' .and. present(this_deb)) then
+      else if (which_eps==PCM_DEBYE_MODEL .and. present(this_deb)) then
         deb = this_deb
       end if
-      if (which_eps == 'drl' .and. (.not.(present(this_drl)))) then
+      if (which_eps == PCM_DRUDE_MODEL .and. (.not.(present(this_drl)))) then
         message(1) = "pcm_charges_propagation: EOM-PCM error. Drude-Lorentz dielectric function requires three parameters."
         call messages_fatal(1)
-      else if (which_eps == 'drl' .and. present(this_drl)) then
+      else if (which_eps == PCM_DRUDE_MODEL .and. present(this_drl)) then
         drl = this_drl
       end if
-      if (which_eps /= 'deb' .and. which_eps /= 'drl') then
+      if (which_eps /= PCM_DEBYE_MODEL .and. which_eps /= PCM_DRUDE_MODEL) then
         message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye or Drude-Lorent dielectric models are allowed."
         call messages_fatal(1)
       end if
@@ -170,13 +175,13 @@ contains
     end if
 
 
-    if (input_asc .and. which_eps == 'deb') then
+    if (input_asc .and. which_eps == PCM_DEBYE_MODEL) then
       !> initialize pcm charges due to electrons, external potential or kick
       call pcm_charges_from_input_file(q_t,pot_t)
 
       POP_SUB(pcm_charges_propagation)
       return
-    else if (input_asc .and. which_eps /= 'deb') then
+    else if (input_asc .and. which_eps /= PCM_DEBYE_MODEL) then
       message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye EOM-PCM can startup from input charges."
       call messages_fatal(1)
     end if
@@ -198,9 +203,9 @@ contains
     else
 
       !> propagate pcm charges due to electrons or external potential (including possible kick)
-      if (which_eps == "deb") then
+      if (which_eps == PCM_DEBYE_MODEL) then
         call pcm_ief_prop_deb(q_t,pot_t)
-      else if (which_eps == "drl") then
+      else if (which_eps == PCM_DRUDE_MODEL) then
         call pcm_ief_prop_vv_ief_drl(q_t,pot_t)
       end if
 
@@ -278,7 +283,7 @@ contains
       SAFE_ALLOCATE(q_tp(nts_act))
       q_tp = q_t
 
-      if (which_eps == "drl" ) then
+      if (which_eps == PCM_DRUDE_MODEL ) then
         SAFE_ALLOCATE(dq_tp(nts_act))
         SAFE_ALLOCATE(force_tp(nts_act))
         dq_tp = M_ZERO
@@ -298,7 +303,7 @@ contains
       SAFE_ALLOCATE(qext_tp(nts_act))
       qext_tp = q_t
 
-      if( which_eps == "drl" ) then
+      if( which_eps == PCM_DRUDE_MODEL ) then
         SAFE_ALLOCATE(dqext_tp(nts_act))
         SAFE_ALLOCATE(force_qext_tp(nts_act))
         dqext_tp = M_ZERO
@@ -307,14 +312,14 @@ contains
 
     else if (which_eom == 'justkick') then
 
-      if( which_eps == "drl" ) then
+      if( which_eps == PCM_DRUDE_MODEL ) then
         SAFE_ALLOCATE(dqkick_tp(nts_act))
         SAFE_ALLOCATE(force_qkick_tp(nts_act))
         dqkick_tp = M_ZERO
         force_qkick_tp = M_ZERO
       end if
 
-      if (which_eps == "drl") then
+      if (which_eps == PCM_DRUDE_MODEL) then
         dqkick_tp = matmul(matqv_lf, pot_t)*dt
       else
         q_t = matmul(matqv_lf - matmul(matqq, matqd_lf), pot_t)
@@ -326,7 +331,7 @@ contains
     end if
 
     !< initializing Velocity-Verlet algorithm for the integration of EOM-PCM for Drude-Lorentz
-    if (which_eps == 'drl') call init_vv_propagator
+    if (which_eps == PCM_DRUDE_MODEL) call init_vv_propagator
 
     POP_SUB(init_charges)
   end subroutine init_charges
@@ -580,7 +585,7 @@ contains
     SAFE_ALLOCATE(scr2(nts_act,nts_act))
     SAFE_ALLOCATE(scr3(nts_act,nts_act))
 
-    if (which_eps == "deb") then
+    if (which_eps == PCM_DEBYE_MODEL) then
       if (deb%eps_0 /= M_ONE) then
         fac_eps0 = (deb%eps_0 + M_ONE)/(deb%eps_0 - M_ONE)			 
         Kdiag0(:) = sgn_lf*(TWO*PI - sgn*sgn_lf*eigv(:))/(TWO*PI*fac_eps0 - sgn*eigv(:)) !< Eq.(14) with eps_0 in Ref.1
@@ -597,7 +602,7 @@ contains
                  ((TWO*PI - sgn*eigv(:))*deb%eps_d + TWO*PI + eigv(:))/deb%tau
       fact2(:) = Kdiag0(:)*fact1(:)		                              !< tau^{-1}K_0 in Eq.(38), ibid.
 
-    else if (which_eps == "drl") then
+    else if (which_eps == PCM_DRUDE_MODEL) then
       Kdiagd(:) = M_ZERO                             !< from Eq.(10) up in Ref.2
       fact2(:) = (TWO*PI - sgn*eigv(:))*drl%aa/FOUR*PI !< Eq.(10) down
       do i = 1, nts_act

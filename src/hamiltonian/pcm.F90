@@ -36,6 +36,7 @@ module pcm_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use species_oct_m
+  use varinfo_oct_m
   
   ! to output debug info
   use unit_oct_m
@@ -124,7 +125,7 @@ module pcm_oct_m
     FLOAT, allocatable               :: v_kick_rs(:)     !< PCM potential in real-space produced by q_kick(:)
     FLOAT                            :: epsilon_0        !< Static dielectric constant of the solvent
     FLOAT                            :: epsilon_infty    !< Infinite-frequency dielectric constant of the solvent
-    character(len=3)                 :: which_eps        !< Dielectric function model, either Debye or Drude-Lorentz
+    integer                          :: which_eps        !< Dielectric function model, either Debye or Drude-Lorentz
     type(debye_param_t)		           :: deb 	           !< Debye parameters
     type(drude_param_t)		           :: drl 	           !< Drude-Lorentz parameters
     logical                          :: eom              !< Logical flag for polarization charges propagation through an EoM
@@ -152,7 +153,7 @@ module pcm_oct_m
     logical              :: localf    !< flag to include polarization charges due to external field
     logical              :: noneq     !< flag to use non-equilibrium PCM
     logical              :: eom       !< flag for polarization charges propagation through an EoM
-    character(len=3)     :: which_eps !< dielectric function model, either Debye or Drude-Lorentz
+    integer              :: which_eps !< dielectric function model, either Debye or Drude-Lorentz
     type(debye_param_t)	 :: deb 	    !< Debye parameters
     type(drude_param_t)	 :: drl 	    !< Drude-Lorentz parameters
   end type pcm_min_t
@@ -355,26 +356,20 @@ contains
     
     !%Variable PCMEpsilonModel
     !%Type string
-    !%Default 'deb'
+    !%Default pcm_debye
     !%Section Hamiltonian::PCM
     !%Description
-    !% Define the dielectric function model. For the moment, the choice is between:
-    !% 1) Debye model ('deb'): <math>\varepsilon(\omega)=\varepsilon_d+\frac{\varepsilon_0-\varepsilon_d}{1-i\omega\tau}</math>
-    !% 2) Drude-Lorentz ('drl') model: <math>\varepsilon(\omega)=1+\frac{A}{\omega_0^2-\omega^2+i\gamma\omega}</math>
+    !% Define the dielectric function model.
+    !%Option pcm_debye 1
+    !% Debye model: <math>\varepsilon(\omega)=\varepsilon_d+\frac{\varepsilon_0-\varepsilon_d}{1-i\omega\tau}</math>
+    !%Option pcm_drude 2
+    !% Drude-Lorentz model: <math>\varepsilon(\omega)=1+\frac{A}{\omega_0^2-\omega^2+i\gamma\omega}</math>
     !%End
-    call parse_variable('PCMEpsilonModel', 'deb', pcm%which_eps)
+    call parse_variable('PCMEpsilonModel', PCM_DEBYE_MODEL, pcm%which_eps)
     call messages_print_var_value(stdout, "PCMEpsilonModel", pcm%which_eps)
+    if(.not. varinfo_valid_option('PCMEpsilonModel', pcm%which_eps)) call messages_input_error('PCMEpsilonModel')
 
-    if (pcm%which_eps /= 'deb' .and. pcm%which_eps /= 'drl') then
-      call messages_write('Sorry, only Debye or Drude-Lorentz dielectric models are available.')
-      call messages_new_line()
-      call messages_write('To spare you some time, Octopus will proceed with the default choice (Debye).')        
-      call messages_new_line()
-      call messages_write('You may change PCMEpsilonModel value for a Drude-Lorentz run.')        
-      call messages_warning()
-    end if
-
-    if (pcm%noneq .and. pcm%which_eps == 'deb' .and. pcm%epsilon_0 == pcm%epsilon_infty) then
+    if (pcm%noneq .and. pcm%which_eps == PCM_DEBYE_MODEL .and. pcm%epsilon_0 == pcm%epsilon_infty) then
       call messages_write('Sorry, inertial/dynamic polarization splitting scheme for TD-PCM or Debye equation-of-motion TD-PCM')
       call messages_new_line()
       call messages_write('require both static and dynamic dielectric constants, and they must be different.')
@@ -401,7 +396,7 @@ contains
     call parse_variable('PCMEoMInitialCharges', 0, pcm%initial_asc)
     call messages_print_var_value(stdout, "PCMEoMInitialCharges", pcm%initial_asc)
 
-    if (((.not. pcm%eom) .or. (pcm%eom .and. pcm%which_eps /= 'deb')) .and. pcm%initial_asc /= 0) then
+    if (((.not. pcm%eom) .or. (pcm%eom .and. pcm%which_eps /= PCM_DEBYE_MODEL)) .and. pcm%initial_asc /= 0) then
       call messages_write('Sorry, initial polarization charges can only be read from input file for a Debye EOM-PCM run.')
       call messages_new_line()
       call messages_write('To spare you some time, Octopus will proceed as if PCMEoMInitialCharges = 0.')       
@@ -427,7 +422,8 @@ contains
     call parse_variable('PCMDebyeRelaxTime', M_ZERO, pcm%deb%tau)
     call messages_print_var_value(stdout, "PCMDebyeRelaxTime", pcm%deb%tau)
 
-    if (pcm%eom .and. pcm%which_eps == 'deb' .and. (abs(pcm%deb%tau) <= M_EPSILON .or. pcm%deb%eps_0 == pcm%deb%eps_d)) then
+    if (pcm%eom .and. pcm%which_eps == PCM_DEBYE_MODEL .and. &
+      (abs(pcm%deb%tau) <= M_EPSILON .or. pcm%deb%eps_0 == pcm%deb%eps_d)) then
       call messages_write('Sorry, you have set PCMEoM = yes, but you have not included all required Debye model parameters.')
       call messages_new_line()
       call messages_write('You need PCMEpsilonStatic, PCMEpsilonDynamic and PCMDebyeRelaxTime for an EoM TD-PCM run.')        
@@ -438,7 +434,7 @@ contains
     end if
 
     if (abs(pcm%epsilon_0 - M_ONE) <= M_EPSILON ) then
-      if (pcm%eom .and. pcm%which_eps == 'drl') then
+      if (pcm%eom .and. pcm%which_eps == PCM_DRUDE_MODEL) then
         message(1) = "PCMEpsilonStatic = 1 is incompatible with a Drude-Lorentz EOM-PCM run."
         call messages_fatal(1)
       end if
@@ -456,7 +452,7 @@ contains
       call messages_print_var_value(stdout, "PCMDrudeLOmega", pcm%drl%w0)
     end if    
 
-    if (pcm%eom .and. pcm%which_eps == 'drl' .and. pcm%drl%w0 == M_ZERO) then
+    if (pcm%eom .and. pcm%which_eps == PCM_DRUDE_MODEL .and. pcm%drl%w0 == M_ZERO) then
       call messages_write('Sorry, you have set PCMDrudeLOmega = 0 but this is incompatible with a Drude-Lorentz EOM-PCM run.')
       call messages_new_line()
       if (pcm%epsilon_0 /= M_ONE) then
@@ -1187,10 +1183,12 @@ contains
         !< BEGIN - equation-of-motion propagation or inertial/dynamical charge splitting
         if( pcm%eom ) then	!< equation-of-motion propagation
           select case (pcm%which_eps)
-            case('drl')
-             call pcm_charges_propagation(pcm%q_e, pcm%v_e, pcm%dt, pcm%tess, input_asc_e, 'electron', 'drl', this_drl = pcm%drl)
-            case default
-             call pcm_charges_propagation(pcm%q_e, pcm%v_e, pcm%dt, pcm%tess, input_asc_e, 'electron', 'deb', this_deb = pcm%deb)
+          case (PCM_DRUDE_MODEL)
+            call pcm_charges_propagation(pcm%q_e, pcm%v_e, pcm%dt, pcm%tess, input_asc_e, 'electron', &
+              PCM_DRUDE_MODEL, this_drl = pcm%drl)
+          case default
+            call pcm_charges_propagation(pcm%q_e, pcm%v_e, pcm%dt, pcm%tess, input_asc_e, 'electron', &
+              PCM_DEBYE_MODEL, this_deb = pcm%deb)
           end select
           if ((.not. pcm%localf) .and. not_yet_called) call pcm_eom_enough_initial(not_yet_called)
           !< total pcm charges due to solute electrons
@@ -1241,10 +1239,12 @@ contains
         !< BEGIN - equation-of-motion propagation or inertial/dynamical charge splitting
         if (pcm%eom) then	!< equation-of-motion propagation
           select case (pcm%which_eps)
-          case('drl')
-            call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, pcm%dt, pcm%tess, input_asc_ext, 'external', 'drl',this_drl=pcm%drl)
+          case(PCM_DRUDE_MODEL)
+            call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, pcm%dt, pcm%tess, input_asc_ext, 'external', &
+              PCM_DRUDE_MODEL, this_drl=pcm%drl)
           case default
-            call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, pcm%dt, pcm%tess, input_asc_ext, 'external', 'deb',this_deb=pcm%deb)
+            call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, pcm%dt, pcm%tess, input_asc_ext, 'external', &
+              PCM_DEBYE_MODEL, this_deb=pcm%deb)
           end select
           if ((.not. pcm%kick_is_present) .and. not_yet_called) call pcm_eom_enough_initial(not_yet_called)
           !< total pcm charges due to time-dependent external field
@@ -1307,11 +1307,11 @@ contains
         if (after_kick) then
           !< BEGIN - equation-of-motion propagation
           select case (pcm%which_eps)
-          case('drl')
-            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, pcm%dt, pcm%tess, input_asc_ext, 'justkick', 'drl', &
+          case(PCM_DRUDE_MODEL)
+            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, pcm%dt, pcm%tess, input_asc_ext, 'justkick', PCM_DRUDE_MODEL, &
               this_drl=pcm%drl)
           case default
-            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, pcm%dt, pcm%tess, input_asc_ext, 'justkick', 'deb', &
+            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, pcm%dt, pcm%tess, input_asc_ext, 'justkick', PCM_DEBYE_MODEL, &
               this_deb=pcm%deb)
           end select
           if ( not_yet_called ) call pcm_eom_enough_initial(not_yet_called)
@@ -3266,9 +3266,9 @@ contains
     PUSH_SUB(pcm_eps)
 
     if (pcm%eom) then
-      if ( pcm%which_eps == 'deb') then
+      if ( pcm%which_eps == PCM_DEBYE_MODEL) then
         call pcm_eps_deb(eps, pcm%deb, omega)
-      else if (pcm%which_eps == 'drl') then
+      else if (pcm%which_eps == PCM_DRUDE_MODEL) then
         call pcm_eps_drl(eps, pcm%drl, omega)
       end if
     else if (pcm%noneq .and. (.not. pcm%eom)) then
@@ -3312,14 +3312,14 @@ contains
     call parse_variable('PCMStaticEpsilon' , M_ONE, pcm%deb%eps_0)
     call messages_print_var_value(stdout, "PCMStaticEpsilon", pcm%deb%eps_0)
     if ( pcm%eom ) then
-      call parse_variable('PCMEpsilonModel', 'deb', pcm%which_eps)
+      call parse_variable('PCMEpsilonModel', PCM_DEBYE_MODEL, pcm%which_eps)
       call messages_print_var_value(stdout, "PCMEpsilonModel", pcm%which_eps)
-      if ( pcm%which_eps == 'deb' ) then
+      if ( pcm%which_eps == PCM_DEBYE_MODEL ) then
         call parse_variable('PCMDynamicEpsilon', pcm%deb%eps_0, pcm%deb%eps_d)
         call messages_print_var_value(stdout, "PCMDynamicEpsilon", pcm%deb%eps_d)
         call parse_variable('PCMDebyeRelaxTime', M_ZERO, pcm%deb%tau)
         call messages_print_var_value(stdout, "PCMDebyeRelaxTime", pcm%deb%tau)
-      else if( pcm%which_eps == 'drl' ) then
+      else if( pcm%which_eps == PCM_DRUDE_MODEL ) then
         call parse_variable('PCMDrudeLOmega', sqrt(M_ONE/(pcm%deb%eps_0-M_ONE)), pcm%drl%w0)
         call messages_print_var_value(stdout, "PCMDrudeLOmega", pcm%drl%w0)
         call parse_variable('PCMDrudeLDamping', M_ZERO, pcm%drl%gm)
