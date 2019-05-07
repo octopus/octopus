@@ -1154,12 +1154,8 @@ contains
     end if
 
     if (present(kick_time)) then
-      if (kick_time) then
-        is_time_for_kick = .true.
-        after_kick = .true.
-      else
-        is_time_for_kick = .false.
-      end if
+      is_time_for_kick = kick_time
+      if (kick_time) after_kick = .true.
     end if
 
     select case(pcm%initial_asc)
@@ -1402,28 +1398,22 @@ contains
 
     FLOAT   :: diff(1:PCM_DIM_SPACE), dist, z_ia
     integer :: ik, ia
-    type(species_t), pointer :: spci 
 
     PUSH_SUB(pcm_v_nuclei_cav)
 
-    diff = M_ZERO
     v_n_cav = M_ZERO
 
     do ik = 1, n_tess
       do ia = 1, geo%natoms
 
         diff = geo%atom(ia)%x(1:PCM_DIM_SPACE) - tess(ik)%point
-        dist = dot_product( diff, diff )
-        dist = sqrt(dist)
+        dist = sqrt(dot_product(diff, diff))
 
-        spci => geo%atom(ia)%species
-        z_ia = species_zval(spci)
+        z_ia = species_zval(geo%atom(ia)%species)
 
-        v_n_cav(ik) = v_n_cav(ik) + z_ia/dist       
+        v_n_cav(ik) = v_n_cav(ik) - z_ia/dist
       end do
     end do
-
-    v_n_cav = -v_n_cav
 
     POP_SUB(pcm_v_nuclei_cav)
   end subroutine pcm_v_nuclei_cav
@@ -2134,12 +2124,10 @@ contains
 
     s_diag = M_ZERO
     s_off_diag = M_ZERO
-    diff = M_ZERO
 
     diff = tessi%point - tessj%point
 
-    dist = dot_product(diff, diff)
-    dist = sqrt(dist)
+    dist = sqrt(dot_product(diff, diff))
 
     if (abs(dist) <= M_EPSILON) then
       s_diag = M_SD_DIAG*sqrt(M_FOUR*M_Pi/tessi%area)
@@ -2841,8 +2829,6 @@ contains
 
     PUSH_SUB(inter)
 
-    diff_vec = M_ZERO
-
     diff_vec = p1 - p3
     r = sqrt(dot_product(diff_vec, diff_vec))
 
@@ -2860,7 +2846,6 @@ contains
       band_iter = .true.
 
       alpha = alpha + delta
-      dnorm = M_ZERO
 
       p4 = p1 + alpha*(p2 - p1) - p3
       dnorm = sqrt(dot_product(p4, p4))
@@ -3042,7 +3027,6 @@ contains
     p3(2) = p1(3)*p2(1) - p1(1)*p2(3)
     P3(3) = p1(1)*p2(2) - p1(2)*p2(1)
 
-    dnorm = M_ZERO
     dnorm = sqrt(dot_product(p3, p3))
  
   end subroutine vecp
