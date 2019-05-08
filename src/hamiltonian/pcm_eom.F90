@@ -151,22 +151,26 @@ contains
       cts_act = this_cts_act
 
       which_eps = this_eps
-      if (which_eps == PCM_DEBYE_MODEL .and. (.not.(present(this_deb)))) then
-        message(1) = "pcm_charges_propagation: EOM-PCM error. Debye dielectric function requires three parameters."
-        call messages_fatal(1)
-      else if (which_eps==PCM_DEBYE_MODEL .and. present(this_deb)) then
-        deb = this_deb
-      end if
-      if (which_eps == PCM_DRUDE_MODEL .and. (.not.(present(this_drl)))) then
-        message(1) = "pcm_charges_propagation: EOM-PCM error. Drude-Lorentz dielectric function requires three parameters."
-        call messages_fatal(1)
-      else if (which_eps == PCM_DRUDE_MODEL .and. present(this_drl)) then
-        drl = this_drl
-      end if
-      if (which_eps /= PCM_DEBYE_MODEL .and. which_eps /= PCM_DRUDE_MODEL) then
+      select case (which_eps)
+      case (PCM_DEBYE_MODEL)
+        if (present(this_deb)) then
+          deb = this_deb
+        else
+          message(1) = "pcm_charges_propagation: EOM-PCM error. Debye dielectric function requires three parameters."
+          call messages_fatal(1)
+        end if
+      case (PCM_DRUDE_MODEL)
+        if (present(this_drl)) then
+          drl = this_drl
+        else
+          message(1) = "pcm_charges_propagation: EOM-PCM error. Drude-Lorentz dielectric function requires three parameters."
+          call messages_fatal(1)
+        end if
+      case default
         message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye or Drude-Lorent dielectric models are allowed."
         call messages_fatal(1)
-      end if
+      end select
+
       if( abs(deb%tau) <= M_EPSILON ) then
         message(1) = "pcm_charges_propagation: EOM-PCM error. Debye EOM-PCM require a non-null Debye relaxation time."
         call messages_fatal(1)
@@ -175,15 +179,18 @@ contains
     end if
 
 
-    if (input_asc .and. which_eps == PCM_DEBYE_MODEL) then
-      !> initialize pcm charges due to electrons, external potential or kick
-      call pcm_charges_from_input_file(q_t,pot_t)
+    if (input_asc) then
+      select case (which_eps)
+      case (PCM_DEBYE_MODEL)
+        !> initialize pcm charges due to electrons, external potential or kick
+        call pcm_charges_from_input_file(q_t,pot_t)
 
-      POP_SUB(pcm_charges_propagation)
-      return
-    else if (input_asc .and. which_eps /= PCM_DEBYE_MODEL) then
-      message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye EOM-PCM can startup from input charges."
-      call messages_fatal(1)
+        POP_SUB(pcm_charges_propagation)
+        return
+      case default
+        message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye EOM-PCM can startup from input charges."
+        call messages_fatal(1)
+      end select
     end if
 
     if ((initial_electron .and. which_eom == 'electron') .or. & 
@@ -303,7 +310,7 @@ contains
       SAFE_ALLOCATE(qext_tp(1:nts_act))
       qext_tp = q_t
 
-      if( which_eps == PCM_DRUDE_MODEL ) then
+      if (which_eps == PCM_DRUDE_MODEL) then
         SAFE_ALLOCATE(dqext_tp(1:nts_act))
         SAFE_ALLOCATE(force_qext_tp(1:nts_act))
         dqext_tp = M_ZERO
