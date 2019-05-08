@@ -147,7 +147,7 @@ contains
         call messages_fatal(1)     
       end if
 
-      SAFE_ALLOCATE(cts_act(nts_act))
+      SAFE_ALLOCATE(cts_act(1:nts_act))
       cts_act = this_cts_act
 
       which_eps = this_eps
@@ -228,7 +228,7 @@ contains
     PUSH_SUB(pcm_charges_from_input_file)
 
     if (which_eom == 'electron') then
-      SAFE_ALLOCATE(q_tp(nts_act))
+      SAFE_ALLOCATE(q_tp(1:nts_act))
       asc_unit = io_open(PCM_DIR//'ASC_e.dat', action='read')
       do ia = 1, nts_act
         read(asc_unit,*) aux1, q_t(ia), aux2
@@ -236,7 +236,7 @@ contains
       q_tp = q_t
 
     else if (which_eom == 'external') then
-      SAFE_ALLOCATE(qext_tp(nts_act))
+      SAFE_ALLOCATE(qext_tp(1:nts_act))
       asc_unit = io_open(PCM_DIR//'ASC_ext.dat', action='read')
       do ia = 1, nts_act
         read(asc_unit,*) aux1, q_t(ia), aux2
@@ -244,16 +244,16 @@ contains
       qext_tp = q_t
 
     else if (which_eom == 'justkick') then
-      SAFE_ALLOCATE(qkick_tp(nts_act))
+      SAFE_ALLOCATE(qkick_tp(1:nts_act))
       asc_unit = io_open(PCM_DIR//'ASC_kick.dat', action='read')
       do ia = 1, nts_act
         read(asc_unit,*) aux1, q_t(ia), aux2
       end do
       qkick_tp = q_t  
     end if
-    call io_close(asc_unit)   
+    call io_close(asc_unit)
 
-    SAFE_ALLOCATE(pot_tp(nts_act))
+    SAFE_ALLOCATE(pot_tp(1:nts_act))
     pot_tp = pot_t
 
     POP_SUB(pcm_charges_from_input_file)
@@ -274,18 +274,18 @@ contains
       message(1) = 'EOM-PCM for solvent polarization due to solute electrons considers that you start from a ground state run.'
       call messages_warning(1)
   
-      SAFE_ALLOCATE(pot_tp(nts_act))
+      SAFE_ALLOCATE(pot_tp(1:nts_act))
       pot_tp = pot_t
 
       !< applying the static IEF-PCM response matrix (corresponging to epsilon_0) to the initial potential
       q_t = matmul(matq0, pot_t) 
 
-      SAFE_ALLOCATE(q_tp(nts_act))
+      SAFE_ALLOCATE(q_tp(1:nts_act))
       q_tp = q_t
 
       if (which_eps == PCM_DRUDE_MODEL ) then
-        SAFE_ALLOCATE(dq_tp(nts_act))
-        SAFE_ALLOCATE(force_tp(nts_act))
+        SAFE_ALLOCATE(dq_tp(1:nts_act))
+        SAFE_ALLOCATE(force_tp(1:nts_act))
         dq_tp = M_ZERO
         force_tp = M_ZERO
       end if
@@ -294,18 +294,18 @@ contains
       !< Here (instead) we consider zero the potential at any earlier time.
       !< Therefore, the solvent is not initially in equilibrium with the external potential unless its initial value is zero.
 
-      SAFE_ALLOCATE(potext_tp(nts_act))
+      SAFE_ALLOCATE(potext_tp(1:nts_act))
       potext_tp = pot_t
 
       !< applying the dynamic IEF-PCM response matrix (for epsilon_d) to the initial potential
       q_t = matmul(matqd_lf, pot_t)
 
-      SAFE_ALLOCATE(qext_tp(nts_act))
+      SAFE_ALLOCATE(qext_tp(1:nts_act))
       qext_tp = q_t
 
       if( which_eps == PCM_DRUDE_MODEL ) then
-        SAFE_ALLOCATE(dqext_tp(nts_act))
-        SAFE_ALLOCATE(force_qext_tp(nts_act))
+        SAFE_ALLOCATE(dqext_tp(1:nts_act))
+        SAFE_ALLOCATE(force_qext_tp(1:nts_act))
         dqext_tp = M_ZERO
         force_qext_tp = M_ZERO
       end if
@@ -313,8 +313,8 @@ contains
     else if (which_eom == 'justkick') then
 
       if( which_eps == PCM_DRUDE_MODEL ) then
-        SAFE_ALLOCATE(dqkick_tp(nts_act))
-        SAFE_ALLOCATE(force_qkick_tp(nts_act))
+        SAFE_ALLOCATE(dqkick_tp(1:nts_act))
+        SAFE_ALLOCATE(force_qkick_tp(1:nts_act))
         dqkick_tp = M_ZERO
         force_qkick_tp = M_ZERO
       end if
@@ -325,7 +325,7 @@ contains
         q_t = matmul(matqv_lf - matmul(matqq, matqd_lf), pot_t)
       end if
 
-      SAFE_ALLOCATE(qkick_tp(nts_act))
+      SAFE_ALLOCATE(qkick_tp(1:nts_act))
       qkick_tp = q_t
 
     end if
@@ -445,18 +445,18 @@ contains
     PUSH_SUB(pcm_bem_init)
 
     if (which_eom == 'electron') then
-      SAFE_ALLOCATE(matq0(nts_act, nts_act))
-      SAFE_ALLOCATE(matqd(nts_act, nts_act))
-      SAFE_ALLOCATE(matqv(nts_act, nts_act))
+      SAFE_ALLOCATE(matq0(1:nts_act, 1:nts_act))
+      SAFE_ALLOCATE(matqd(1:nts_act, 1:nts_act))
+      SAFE_ALLOCATE(matqv(1:nts_act, 1:nts_act))
       if (.not. allocated(matqq)) then
-        SAFE_ALLOCATE(matqq(nts_act,nts_act))
+        SAFE_ALLOCATE(matqq(1:nts_act, 1:nts_act))
       end if
     else if (which_eom == 'external' .or. which_eom == 'justkick') then
-      SAFE_ALLOCATE(matq0_lf(nts_act, nts_act)) !< not used yet
-      SAFE_ALLOCATE(matqd_lf(nts_act, nts_act))
-      SAFE_ALLOCATE(matqv_lf(nts_act, nts_act))
+      SAFE_ALLOCATE(matq0_lf(1:nts_act, 1:nts_act)) !< not used yet
+      SAFE_ALLOCATE(matqd_lf(1:nts_act, 1:nts_act))
+      SAFE_ALLOCATE(matqv_lf(1:nts_act, 1:nts_act))
       if (.not. allocated(matqq)) then
-        SAFE_ALLOCATE(matqq(nts_act,nts_act))
+        SAFE_ALLOCATE(matqq(1:nts_act, 1:nts_act))
       end if
     end if
     call do_PCM_propMat()
@@ -556,12 +556,12 @@ contains
     !> 'local field' differ from 'standard' PCM response matrix in some sign changes
     if (which_eom == 'external' .or. which_eom == 'justkick') sgn_lf = -M_ONE 
 
-    SAFE_ALLOCATE(cals(nts_act,nts_act))
-    SAFE_ALLOCATE(cald(nts_act,nts_act))
-    SAFE_ALLOCATE(Kdiag0(nts_act))
-    SAFE_ALLOCATE(Kdiagd(nts_act))
-    SAFE_ALLOCATE(fact1(nts_act))
-    SAFE_ALLOCATE(fact2(nts_act))
+    SAFE_ALLOCATE(cals(1:nts_act, 1:nts_act))
+    SAFE_ALLOCATE(cald(1:nts_act, 1:nts_act))
+    SAFE_ALLOCATE(Kdiag0(1:nts_act))
+    SAFE_ALLOCATE(Kdiagd(1:nts_act))
+    SAFE_ALLOCATE(fact1(1:nts_act))
+    SAFE_ALLOCATE(fact2(1:nts_act))
 
     !> generate Calderon S and D matrices
     do i = 1, nts_act
@@ -580,10 +580,10 @@ contains
     SAFE_DEALLOCATE_A(cals)
     SAFE_DEALLOCATE_A(cald)
 
-    SAFE_ALLOCATE(scr4(nts_act,nts_act))
-    SAFE_ALLOCATE(scr1(nts_act,nts_act))
-    SAFE_ALLOCATE(scr2(nts_act,nts_act))
-    SAFE_ALLOCATE(scr3(nts_act,nts_act))
+    SAFE_ALLOCATE(scr4(1:nts_act, 1:nts_act))
+    SAFE_ALLOCATE(scr1(1:nts_act, 1:nts_act))
+    SAFE_ALLOCATE(scr2(1:nts_act, 1:nts_act))
+    SAFE_ALLOCATE(scr3(1:nts_act, 1:nts_act))
 
     if (which_eps == PCM_DEBYE_MODEL) then
       if (deb%eps_0 /= M_ONE) then
@@ -711,10 +711,10 @@ contains
   subroutine allocate_TS_matrix()
     PUSH_SUB(allocate_TS_matrix)
 
-    SAFE_ALLOCATE(eigv(nts_act))
-    SAFE_ALLOCATE(eigt(nts_act,nts_act))
-    SAFE_ALLOCATE(sm12(nts_act,nts_act))
-    SAFE_ALLOCATE(sp12(nts_act,nts_act))
+    SAFE_ALLOCATE(eigv(1:nts_act))
+    SAFE_ALLOCATE(eigt(1:nts_act, 1:nts_act))
+    SAFE_ALLOCATE(sm12(1:nts_act, 1:nts_act))
+    SAFE_ALLOCATE(sp12(1:nts_act, 1:nts_act))
 
     POP_SUB(allocate_TS_matrix)
   end subroutine allocate_TS_matrix
@@ -744,11 +744,11 @@ contains
 
     PUSH_SUB(do_TS_matrix)
 
-    SAFE_ALLOCATE(scr1(nts_act, nts_act))
-    SAFE_ALLOCATE(scr2(nts_act, nts_act))
-    SAFE_ALLOCATE(eigt_t(nts_act, nts_act))
-    SAFE_ALLOCATE(work(1 + 6*nts_act + 2*nts_act*nts_act))
-    SAFE_ALLOCATE(iwork(3 + 5*nts_act))
+    SAFE_ALLOCATE(scr1(1:nts_act, 1:nts_act))
+    SAFE_ALLOCATE(scr2(1:nts_act, 1:nts_act))
+    SAFE_ALLOCATE(eigt_t(1:nts_act, 1:nts_act))
+    SAFE_ALLOCATE(work(1:1 + 6*nts_act + 2*nts_act*nts_act))
+    SAFE_ALLOCATE(iwork(1:3 + 5*nts_act))
 
     sgn = M_ONE
 

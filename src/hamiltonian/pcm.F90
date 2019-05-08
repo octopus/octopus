@@ -661,7 +661,7 @@ contains
         pcm%n_spheres = pcm%n_spheres + 1 !counting the number of species different from Hydrogen
       end do
 
-      SAFE_ALLOCATE( pcm%spheres(1:pcm%n_spheres) )
+      SAFE_ALLOCATE(pcm%spheres(1:pcm%n_spheres))
       pcm%spheres(:)%x = M_ZERO
       pcm%spheres(:)%y = M_ZERO
       pcm%spheres(:)%z = M_ZERO        
