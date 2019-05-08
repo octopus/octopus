@@ -611,13 +611,13 @@ contains
 
     else if (which_eps == PCM_DRUDE_MODEL) then
       Kdiagd(:) = M_ZERO                             !< from Eq.(10) up in Ref.2
-      fact2(:) = (TWO*PI - sgn*eigv(:))*drl%aa/FOUR*PI !< Eq.(10) down
+      fact2(:) = (TWO*PI - sgn*eigv(:))*drl%aa/(FOUR*PI) !< Eq.(10) down
       do i = 1, nts_act
         if (fact2(i) < M_ZERO)fact2(i) = M_ZERO !< check out
       end do
       if (abs(drl%w0) <= M_EPSILON) drl%w0 = CNST(1.0e-8) !< check out
       fact1(:) = fact2(:) + drl%w0*drl%w0                           !< Eq.(19), ibid.
-      fact2(:) = sgn_lf*(TWO*PI - sgn*sgn_lf*eigv(:))*drl%aa/FOUR*PI  !< Eq.(10) down, local field analogous
+      fact2(:) = sgn_lf*(TWO*PI - sgn*sgn_lf*eigv(:))*drl%aa/(FOUR*PI)  !< Eq.(10) down, local field analogous
       Kdiag0(:) = fact2(:)/fact1(:)                                 !< from Eq.(10) up, ibid.
     end if
 
