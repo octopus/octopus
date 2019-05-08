@@ -760,8 +760,9 @@ contains
     call dsyevd(jobz, uplo, nts_act, eigt, nts_act, eigv, work, lwork, iwork, liwork, info)
     do i = 1, nts_act
       if (eigv(i) < M_ZERO) then
-        write(6,*) "WARNING:",i," eig of S is negative!"
-        write(6,*) "   I put it to 1e-8"
+        write(message(1),*) "Eigenvalue ", i, " of S when constructing the TS matrix is negative!"
+        write(message(2),*) "I put it to 1e-8"
+        call messages_warning(2)
         eigv(i) = CNST(1.0e-8)
       end if
       scr1(:,i) = eigt(:,i)*sqrt(eigv(i))
