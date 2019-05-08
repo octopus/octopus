@@ -22,6 +22,7 @@ module pcm_eom_oct_m
   use io_oct_m
   use messages_oct_m
   use profiling_oct_m
+  implicit none
 
   private
   public :: pcm_charges_propagation, &
@@ -595,29 +596,29 @@ contains
     if (which_eps == PCM_DEBYE_MODEL) then
       if (deb%eps_0 /= M_ONE) then
         fac_eps0 = (deb%eps_0 + M_ONE)/(deb%eps_0 - M_ONE)			 
-        Kdiag0(:) = sgn_lf*(TWO*PI - sgn*sgn_lf*eigv(:))/(TWO*PI*fac_eps0 - sgn*eigv(:)) !< Eq.(14) with eps_0 in Ref.1
+        Kdiag0(:) = sgn_lf*(M_TWO*M_PI - sgn*sgn_lf*eigv(:))/(M_TWO*M_PI*fac_eps0 - sgn*eigv(:)) !< Eq.(14) with eps_0 in Ref.1
       else
         Kdiag0(:) = M_ZERO
       end if
       if (deb%eps_d /= M_ONE) then
         fac_epsd = (deb%eps_d + M_ONE)/(deb%eps_d - M_ONE)
-        Kdiagd(:) = sgn_lf*(TWO*PI - sgn*sgn_lf*eigv(:))/(TWO*PI*fac_epsd - sgn*eigv(:)) !< Eq.(14) with eps_d, ibid.
+        Kdiagd(:) = sgn_lf*(M_TWO*M_PI - sgn*sgn_lf*eigv(:))/(M_TWO*M_PI*fac_epsd - sgn*eigv(:)) !< Eq.(14) with eps_d, ibid.
       else
         Kdiagd(:) = M_ZERO
       end if
-      fact1(:) = ((TWO*PI - sgn*eigv(:))*deb%eps_0 + TWO*PI + eigv(:))/ &       !< inverse of Eq.(32), ibid.
-                 ((TWO*PI - sgn*eigv(:))*deb%eps_d + TWO*PI + eigv(:))/deb%tau
+      fact1(:) = ((M_TWO*M_PI - sgn*eigv(:))*deb%eps_0 + M_TWO*M_PI + eigv(:))/ &       !< inverse of Eq.(32), ibid.
+                 ((M_TWO*M_PI - sgn*eigv(:))*deb%eps_d + M_TWO*M_PI + eigv(:))/deb%tau
       fact2(:) = Kdiag0(:)*fact1(:)		                              !< tau^{-1}K_0 in Eq.(38), ibid.
 
     else if (which_eps == PCM_DRUDE_MODEL) then
       Kdiagd(:) = M_ZERO                             !< from Eq.(10) up in Ref.2
-      fact2(:) = (TWO*PI - sgn*eigv(:))*drl%aa/(FOUR*PI) !< Eq.(10) down
+      fact2(:) = (M_TWO*M_PI - sgn*eigv(:))*drl%aa/(M_FOUR*M_PI) !< Eq.(10) down
       do i = 1, nts_act
         if (fact2(i) < M_ZERO)fact2(i) = M_ZERO !< check out
       end do
       if (abs(drl%w0) <= M_EPSILON) drl%w0 = CNST(1.0e-8) !< check out
       fact1(:) = fact2(:) + drl%w0*drl%w0                           !< Eq.(19), ibid.
-      fact2(:) = sgn_lf*(TWO*PI - sgn*sgn_lf*eigv(:))*drl%aa/(FOUR*PI)  !< Eq.(10) down, local field analogous
+      fact2(:) = sgn_lf*(M_TWO*M_PI - sgn*sgn_lf*eigv(:))*drl%aa/(M_FOUR*M_PI)  !< Eq.(10) down, local field analogous
       Kdiag0(:) = fact2(:)/fact1(:)                                 !< from Eq.(10) up, ibid.
     end if
 
@@ -685,7 +686,7 @@ contains
       dist = sqrt(dot_product(diff, diff))
       value = dot_product(cts_act(j)%normal, diff)/dist**3 !< Eq.(5) in Refs.1-2
     else
-      value = CNST(-1.0694)*sqrt(FOUR*PI*cts_act(i)%area)
+      value = CNST(-1.0694)*sqrt(M_FOUR*M_PI*cts_act(i)%area)
       value = value/(M_TWO*cts_act(i)%r_sphere)/cts_act(i)%area !< diagonal part is a bit cumbersome
     end if
 
@@ -708,7 +709,7 @@ contains
       dist = sqrt(dot_product(diff, diff))
       value = M_ONE/dist !< Eq.(5) in Refs.1-2
     else
-      value = CNST(1.0694)*sqrt(FOUR*PI/cts_act(i)%area) !< diagonal part is a bit cumbersome
+      value = CNST(1.0694)*sqrt(M_FOUR*M_PI/cts_act(i)%area) !< diagonal part is a bit cumbersome
     end if
 
     POP_SUB(green_s)
