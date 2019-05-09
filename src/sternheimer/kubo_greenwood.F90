@@ -53,7 +53,8 @@ contains
     integer :: ierr, nfreq, ifreq, iunit
     integer :: ist, jst, iqn, idim, idir, jdir
     CMPLX, allocatable :: psii(:, :), psij(:, :), gpsii(:, :, :), gpsij(:, :, :)
-    CMPLX, allocatable :: tensor(:, :, :), trace(:)
+    CMPLX, allocatable :: tensor(:, :, :), trace(:), therm_tensor(:,:,:)
+    CMPLX, allocatable :: k11(:), k12(:), k21(:), k22(:)
     CMPLX :: prod
     FLOAT :: eigi, eigj, occi, occj, df, width, dfreq, maxfreq, ww
     type(mesh_t), pointer :: mesh
@@ -124,9 +125,19 @@ contains
     nfreq = nint(maxfreq / (dfreq)) + 1
     
     SAFE_ALLOCATE(tensor(1:mesh%sb%dim, 1:mesh%sb%dim,1:nfreq))
-    SAFE_ALLOCATE(trace(1:nfreq))
+    SAFE_ALLOCATE(therm_tensor(1:mesh%sb%dim, 1:mesh%sb%dim,1:nfreq))
+    SAFE_ALLOCATE(k11(1:nfreq))
+    SAFE_ALLOCATE(k12(1:nfreq))
+    SAFE_ALLOCATE(k21(1:nfreq))
+    SAFE_ALLOCATE(k22(1:nfreq))
+
     tensor = CNST(0.0)
-    trace = CNST(0.0)
+    k12 = CNST(0.0)
+    k11 = CNST(0.0)
+    k21 = CNST(0.0)
+    k22 = CNST(0.0)
+    therm_tensor = CNST(0.0)
+    
     do iqn = sys%st%d%kpt%start, sys%st%d%kpt%end
     
        do ist = 1, sys%st%nst
@@ -137,8 +148,8 @@ contains
         end do
         if(associated(hm%hm_base%phase)) then 
           call states_set_phase(sys%st%d, psii, hm%hm_base%phase(:, iqn), mesh%np_part, .false.)
-        end if
-        do idim = 1, sys%st%d%dim
+       end if
+        do idim = 1, sys%st%d%dim 
           call zderivatives_grad(sys%gr%der, psii(:, idim), gpsii(:, :, idim), set_bc = .false.)
         end do
         
@@ -164,18 +175,19 @@ contains
           else
              df = (occj - occi)/(eigj - eigi)
           endif
+          
           do idir = 1, mesh%sb%dim
              do jdir = 1, mesh%sb%dim
-                   prod = zmf_dotp(mesh, sys%st%d%dim, psii, gpsij(:, idir, :))*zmf_dotp(mesh, sys%st%d%dim, psij, gpsii(:, jdir, :))
-                   do ifreq = 1, nfreq
-                 tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - sys%st%d%kweights(iqn)*(CNST(2.0)/mesh%sb%rcell_volume)* &
-                      df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*(eigi-eigj - (ifreq-1)*dfreq))/ ((eigi-eigj - (ifreq-1)*dfreq)**2 + width**2/CNST(4.0))
-                   end do
-                end do !loop over jdir
-             end do !loop over idir
-          
+                prod = zmf_dotp(mesh, sys%st%d%dim, psii, gpsij(:, idir, :))*zmf_dotp(mesh, sys%st%d%dim, psij, gpsii(:, jdir, :))
+                do ifreq = 1, nfreq
+                   tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - sys%st%d%kweights(iqn)*(CNST(-2.0)/mesh%sb%rcell_volume)* &
+                        df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*(eigi-eigj - (ifreq-1)*dfreq))/ ((eigi-eigj - (ifreq-1)*dfreq)**2 + width**2/CNST(4.0))
+!                   tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - real(prod,REAL_PRECISION) 
+                end do
+             end do !loop over jdir
+          end do !loop over idir
        end do !loop over states j
-     end do !loop over states i
+    end do !loop over states i
       
 
    end do !kpt loop
@@ -203,13 +215,38 @@ contains
     do ifreq = 1, nfreq
        ww = (ifreq-1)*dfreq
        write(unit = iunit, iostat = ierr, fmt = '(7e20.10)') ww, &
-            tensor(1,1,ifreq), tensor(2,2,ifreq), tensor(3,3,ifreq)
- 
+            tensor(1,1,ifreq), tensor(2,2,ifreq), tensor(3,3,ifreq) 
     end do
 
    
    call io_close(iunit)
-   !end output
+
+
+
+   
+   !output
+   write(dirname, '(a, a)') 'kubo_greenwood' 
+   call io_mkdir(trim(dirname))
+
+   iunit = io_open(trim(dirname)//'/thermal_conductivity', action='write')
+
+    write(unit = iunit, iostat = ierr, fmt = '(a)') &
+      '###########################################################################################################################'
+    write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
+    write(unit = iunit, iostat = ierr, fmt = '(a,a,a)') &
+      !'#  Energy [', trim(units_abbrev(units_out%energy)), '] Conductivity [a.u.] freq ReXX ImXX ReYY ImYY ReZZ ImZZ'
+      'freq ReXX ImXX ReYY ImYY ReZZ ImZZ'
+    write(unit = iunit, iostat = ierr, fmt = '(a)') &
+      '###########################################################################################################################'
+    do ifreq = 1, nfreq
+       ww = (ifreq-1)*dfreq
+       write(unit = iunit, iostat = ierr, fmt = '(7e20.10)') ww, &
+            therm_tensor(1,1,ifreq), therm_tensor(2,2,ifreq), therm_tensor(3,3,ifreq) 
+    end do
+
+   
+   call io_close(iunit)
+!end output
     SAFE_DEALLOCATE_A(tensor)
     SAFE_DEALLOCATE_A(psii)
     SAFE_DEALLOCATE_A(psij)
