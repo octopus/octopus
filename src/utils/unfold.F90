@@ -324,7 +324,7 @@ contains
         Gvec(1:sb%dim) = nint(path_kpoints_grid%red_point(:, ik)+M_HALF*CNST(1e-7))
         write(file_kpts,'(a6,f12.8,a3,f12.8,a3,f12.8)') ' 1. | ',  path_kpoints_grid%red_point(1, ik)-Gvec(1), &
                   ' | ', path_kpoints_grid%red_point(2, ik)-Gvec(2), ' | ', path_kpoints_grid%red_point(3, ik)-Gvec(3)
-        write(file_Gvec,'(3i)') Gvec(1:3)
+        write(file_Gvec,'(3i3)') Gvec(1:3)
       end do
       write(file_kpts,'(a)') '%'
       call io_close(file_Gvec)
@@ -438,7 +438,7 @@ contains
           do ix = Gmin,Gmax
             do iy = Gmin,Gmax
               do iz = Gmin,Gmax
-                vec_PC = ix*klattice_PC(1:3,1) + iy*klattice_PC(1:3,2) + iz*klattice_PC(1:3,3)
+                vec_PC(1:3) = ix*klattice_PC(1:3,1) + iy*klattice_PC(1:3,2) + iz*klattice_PC(1:3,3)
                 if(abs(vec_SC(1)-vec_PC(1)-gvec_abs(1, ik)) < tol &
                   .and. abs(vec_SC(2)-vec_PC(2)-gvec_abs(2, ik)) < tol &
                   .and. abs(vec_SC(3)-vec_PC(3)-gvec_abs(3, ik)) < tol) then
@@ -455,7 +455,7 @@ contains
           call kpoints_to_absolute(sb%klattice, real(shell%red_gvec(1:2,ig), REAL_PRECISION), vec_SC, 2)
           do ix = Gmin,Gmax
             do iy = Gmin,Gmax
-              vec_PC = ix*klattice_PC(1:3,1) + iy*klattice_PC(1:3,2)
+              vec_PC(1:2) = ix*klattice_PC(1:2,1) + iy*klattice_PC(1:2,2)
               if(abs(vec_SC(1)-vec_PC(1)-gvec_abs(1, ik)) < tol &
                   .and. abs(vec_SC(2)-vec_PC(2)-gvec_abs(2, ik)) < tol) then
                   g_select(ig) = .true.
