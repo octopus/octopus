@@ -28,13 +28,11 @@ include unfold_kpt.dat
 ExperimentalFeatures = yes
 SymmetrizeDensity = yes
 
-ExtraStates = 2
+ExtraStates = 4
+ExtraStatesToConverge = 2
+MaximumIter = 100
 ConvRelDens = 1e-7
 EigensolverTolerance = 1e-8
 
-Output = geometry + dos
-OutputFormat = xyz
-
 FilterPotentials = filter_none
 
-MixField = density

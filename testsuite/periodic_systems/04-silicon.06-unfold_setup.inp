@@ -25,15 +25,6 @@ Spacing = a/14
 %
 
 ExperimentalFeatures = yes
-SymmetrizeDensity = yes
-
-ExtraStates = 5
-ConvRelDens = 1e-7
-EigensolverTolerance = 1e-8
-
-FilterPotentials = filter_none
-
-MixField = density
 
 UnfoldMode = unfold_setup
 %UnfoldLatticeParameters

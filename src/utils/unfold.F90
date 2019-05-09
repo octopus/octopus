@@ -114,9 +114,13 @@ program oct_unfold
   end if
 
   if(sys%st%parallel_in_states) then
-    message(1) = "oct-unfold is not implemented for states parallelization."
-    call messages_fatal(1)
+    call messages_not_implemented("oct-unfold with states parallelization.")
   end if 
+
+  if(sys%st%d%ispin == SPINORS) then
+    call messages_not_implemented("oct-unfold for spinors")
+  end if
+
 
   !%Variable UnfoldMode
   !%Type flag
@@ -262,7 +266,7 @@ program oct_unfold
     call states_allocate_wfns(sys%st, sys%gr%mesh)
 
     call restart_init(restart, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_load(restart, sys%st, sys%gr, ierr, label = ": unocc")
+    if(ierr == 0) call states_load(restart, sys%st, sys%gr, ierr, label = ": unfold")
     if (ierr /= 0) then
       message(1) = 'Unable to read unocc wavefunctions.'
       call messages_fatal(1)
@@ -337,52 +341,82 @@ contains
     type(cube_t),          intent(inout) :: zcube
     type(cube_function_t), intent(inout) :: cf
 
-    FLOAT, allocatable :: PKm(:,:), AkE(:,:)
+    FLOAT, allocatable :: PKm(:,:), AkE(:,:), eigs(:)
     CMPLX, allocatable :: zpsi(:), field_g(:)
-    integer :: file_ake, iq, ist, idim 
-    integer :: ig, ix, iy, iz, ik, ie
-    FLOAT   :: Eigmin,Eigmax,dE, norm
-    FLOAT :: coeff_sqr , tol=1e-7
-    integer, parameter :: nextend = 10, NE = 1000
-    FLOAT, DIMENSION(NE+2*nextend) :: Eigs
+    integer :: file_ake, iq, ist, idim, nenergy 
+    integer :: ig, ix, iy, iz, ik, ie, Gmin, Gmax
+    FLOAT   :: eigmin, eigmax, de, norm, tol=1e-7
+    integer, parameter :: nextend = 10
     FLOAT :: vec_PC(MAX_DIM),vec_SC(MAX_DIM)
     type(fourier_shell_t) :: shell 
     character(len=100) :: filename
-    FLOAT, allocatable :: Gvec_abs(:,:)
-    integer :: Gmin,Gmax
+    FLOAT, allocatable :: gvec_abs(:,:)
     logical, allocatable :: g_select(:)
 
-     
     PUSH_SUB(wfs_extract_spec_fn)
    
     SAFE_ALLOCATE(zpsi(1:gr%mesh%np))
- 
-    !Eigenvalues min and max 
-    Eigmin  = MINVAL(st%eigenval(:,:))
-    Eigmax  = MAXVAL(st%eigenval(:,:))
-    dE  =  (Eigmax-Eigmin)/NE  
-    Eigmin   = Eigmin - nextend*dE 
 
-    do ie = 1, NE + 2*nextend
-      Eigs(ie)  = Eigmin + (ie-1)*dE
+    !%Variable UnfoldEnergyStep
+    !%Type float
+    !%Default 0
+    !%Section Utilities::oct-unfold
+    !%Description
+    !% Specifies the energy resolution for the unfolded band structure.
+    !% If you specify 0, the resolution will be set to be 1/1000 points between <tt>UnfoldMinEnergy</tt>
+    !% and <tt>UnfoldMaxEnergy</tt> 
+    !%End
+    call parse_variable('UnfoldEnergyStep', M_ZERO, de)
+    if(de < M_ZERO) then
+      message(1) = "UnfoldEnergyStep must be positive"
+      call messages_fatal(1)
+    end if
+
+    !%Variable UnfoldMinEnergy
+    !%Type float
+    !%Section Utilities::oct-unfold
+    !%Description
+    !% Specifies the start of the energy range for the unfolded band structure.
+    !% The default value correspond to the samllest eigenvalue.
+    !%End
+    call parse_variable('UnfoldMinEnergy', minval(st%eigenval(:,:)), eigmin)
+
+    !%Variable UnfoldMaxEnergy
+    !%Type float
+    !%Section Utilities::oct-unfold
+    !%Description
+    !% Specifies the end of the energy range for the unfolded band structure.
+    !% The default value correspond to the largest eigenvalue.
+    !%End
+    call parse_variable('UnfoldMinEnergy', maxval(st%eigenval(:,:)), eigmax)
+ 
+    if(de == M_ZERO) then
+      de = (eigmax-eigmin)/CNST(1000)
+    end if
+    
+    !We increase a bit the energy range
+    nenergy = floor((eigmax-eigmin+2*nextend*de)/de)
+    SAFE_ALLOCATE(eigs(1:nenergy))
+    do ie = 1, nenergy
+      eigs(ie) = eigmin - nextend*de + (ie-1)*de
     end do        
 
     PKm(:,:) = M_ZERO
 
-    SAFE_ALLOCATE(Gvec_abs(sb%periodic_dim, st%d%nik))
+    SAFE_ALLOCATE(gvec_abs(sb%periodic_dim, st%d%nik))
     file_Gvec = io_open('./unfold_gvec.dat', action='read')
     read(file_Gvec,*)
     read(file_Gvec,*)
     do ik = 1, st%d%nik
       read(file_Gvec,*) vec_SC
-      call kpoints_to_absolute(sb%klattice, vec_SC(1:sb%periodic_dim), Gvec_abs(1:sb%periodic_dim,ik), &
+      call kpoints_to_absolute(sb%klattice, vec_SC(1:sb%periodic_dim), gvec_abs(1:sb%periodic_dim,ik), &
                  sb%periodic_dim)
     end do 
     call io_close(file_Gvec)
 
     if (mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, (st%d%kpt%end-st%d%kpt%start+1)*st%nst)
 
-    SAFE_ALLOCATE(AkE(1:NE + 2*nextend, 1:st%d%nik))
+    SAFE_ALLOCATE(AkE(1:nenergy, 1:st%d%nik))
     AkE(:,:) = M_ZERO
 
     SAFE_ALLOCATE(PKm(st%d%kpt%start:st%d%kpt%end,1:st%nst))
@@ -405,9 +439,9 @@ contains
             do iy = Gmin,Gmax
               do iz = Gmin,Gmax
                 vec_PC = ix*klattice_PC(1:3,1) + iy*klattice_PC(1:3,2) + iz*klattice_PC(1:3,3)
-                if(abs(vec_SC(1)-vec_PC(1)-Gvec_abs(1, ik)) < tol &
-                  .and. abs(vec_SC(2)-vec_PC(2)-Gvec_abs(2, ik)) < tol &
-                  .and. abs(vec_SC(3)-vec_PC(3)-Gvec_abs(3, ik)) < tol) then
+                if(abs(vec_SC(1)-vec_PC(1)-gvec_abs(1, ik)) < tol &
+                  .and. abs(vec_SC(2)-vec_PC(2)-gvec_abs(2, ik)) < tol &
+                  .and. abs(vec_SC(3)-vec_PC(3)-gvec_abs(3, ik)) < tol) then
                   g_select(ig) = .true.
                 end if
               end do !iz
@@ -422,8 +456,8 @@ contains
           do ix = Gmin,Gmax
             do iy = Gmin,Gmax
               vec_PC = ix*klattice_PC(1:3,1) + iy*klattice_PC(1:3,2)
-              if(abs(vec_SC(1)-vec_PC(1)-Gvec_abs(1, ik)) < tol &
-                  .and. abs(vec_SC(2)-vec_PC(2)-Gvec_abs(2, ik)) < tol) then
+              if(abs(vec_SC(1)-vec_PC(1)-gvec_abs(1, ik)) < tol &
+                  .and. abs(vec_SC(2)-vec_PC(2)-gvec_abs(2, ik)) < tol) then
                   g_select(ig) = .true.
               end if
             end do !ix
@@ -438,7 +472,7 @@ contains
         write(filename,"(A13,I3.3,A4)") "./static/AkE_",ik,".dat"
         file_ake = io_open(trim(filename), action='write')
         write(file_ake, *) '#Energy Ak(E)'
-        write(file_ake, *) '#Number of points in energy ',  NE + 2*nextend 
+        write(file_ake, *) '#Number of points in energy window ',  nenergy 
       end if
 
       do ist = 1, st%nst 
@@ -461,23 +495,16 @@ contains
           SAFE_ALLOCATE(field_g(1:shell%ngvectors))
           norm = M_ZERO
           do ig = 1, shell%ngvectors
-            ix = shell%coords(1, ig)
-            iy = shell%coords(2, ig)
-            iz = shell%coords(3, ig)
-
-            field_g(ig) = cf%fs(ix, iy, iz) * &
+            field_g(ig) = cf%fs(shell%coords(1, ig), shell%coords(2, ig), shell%coords(3, ig)) * &
               sqrt(gr%mesh%volume_element / product(zcube%rs_n_global(1:3)))
             norm = norm + abs(field_g(ig))**2
           end do
-        
           field_g(:) = field_g(:) / sqrt(norm)
 
           !Finding sub-g and calculating the Projection Pkm
           do ig = 1, shell%ngvectors
-            if(g_select(ig)) then
-              coeff_sqr = abs(field_g(ig))**2
-              PKm(ik,ist) =   PKm(ik,ist) + coeff_sqr
-            end if  
+            if(.not. g_select(ig)) cycle
+            PKm(ik,ist) = PKm(ik,ist) + abs(field_g(ig))**2
           end do 
 
           SAFE_DEALLOCATE_A(field_g)
@@ -489,16 +516,17 @@ contains
       end do !ist
 
       ! Calculating the spectral function 
+      !TODO: We could implement here a different broadening
       do ist = 1, st%nst
-        do ie = 1, NE + 2*nextend
-           AkE(ie, ik)  = AkE(ie, ik) + PKm(ik,ist) * ( 3.0*dE / M_PI ) / & 
-                     ( (Eigs(ie)-st%eigenval(ist,ik))**2 + (3.0*dE)**2 ) 
+        do ie = 1, nenergy
+           AkE(ie, ik)  = AkE(ie, ik) + PKm(ik,ist) * ( 3.0*de / M_PI ) / & 
+                     ( (eigs(ie)-st%eigenval(ist,ik))**2 + (3.0*de)**2 ) 
         end do   
       end do 
         
       ! writing Spectral-Function
-      do ie = 1,NE + 2*nextend
-        write(file_ake,fmt ='(1es19.12,1x,1es19.12)') Eigs(ie),AkE(ie, ik)
+      do ie = 1, nenergy
+        write(file_ake,fmt ='(1es19.12,1x,1es19.12)') eigs(ie), AkE(ie, ik)
       end do
 
       if (mpi_grp_is_root(gr%mesh%mpi_grp)) call io_close(file_ake) 
@@ -517,19 +545,21 @@ contains
     if(mpi_grp_is_root(mpi_world)) then
       file_ake = io_open("static/AkE.dat", action='write')
       write(file_ake, *) '#Energy Ak(E)'
-      write(file_ake, *) '#Number of points in energy ',  NE + 2*nextend 
+      write(file_ake, *) '#Number of points in energy window ',  nenergy 
       do ik = 1, st%d%nik
-        do ie = 1,NE + 2*nextend
-          write(file_ake,fmt ='(1es19.12,1x,1es19.12,1x,1es19.12)') coord_along_path(ik), Eigs(ie),AkE(ie, ik)
+        do ie = 1, nenergy
+          write(file_ake,fmt ='(1es19.12,1x,1es19.12,1x,1es19.12)') coord_along_path(ik), &
+                   eigs(ie), AkE(ie, ik)
         end do
       end do
       
       call io_close(file_ake)
     end if
 
+    SAFE_DEALLOCATE_A(eigs)
     SAFE_DEALLOCATE_A(AkE)
 
-    SAFE_DEALLOCATE_A(Gvec_abs)
+    SAFE_DEALLOCATE_A(gvec_abs)
     SAFE_DEALLOCATE_A(PKm)
     SAFE_DEALLOCATE_A(zpsi)
     POP_SUB(wfs_extract_spec_fn)
