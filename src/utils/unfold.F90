@@ -408,7 +408,7 @@ contains
     read(file_Gvec,*)
     read(file_Gvec,*)
     do ik = 1, st%d%nik
-      read(file_Gvec,*) vec_SC
+      read(file_Gvec,*) vec_SC(1:3)
       call kpoints_to_absolute(sb%klattice, vec_SC(1:sb%periodic_dim), gvec_abs(1:sb%periodic_dim,ik), &
                  sb%periodic_dim)
     end do 
