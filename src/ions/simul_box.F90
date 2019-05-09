@@ -63,7 +63,8 @@ module simul_box_oct_m
     simul_box_atoms_in_box,     &
     simul_box_copy,             &
     simul_box_periodic_atom_in_box, &
-    simul_box_symmetry_check
+    simul_box_symmetry_check,   &
+    reciprocal_lattice
 
   integer, parameter, public :: &
     SPHERE         = 1,         &

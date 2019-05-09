@@ -185,3 +185,12 @@ match ; Susceptibility XX          ; GREPFIELD(em_resp/freq_0.0000/susceptibilit
 match ; Susceptibility YY          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 2, 2) ; -6185.012367
 match ; Susceptibility ZZ          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 3, 3) ; -6185.012367
 
+
+MPIUtils: oct-unfold
+Input: 04-silicon.06-unfold_setup.inp
+
+Program: octopus
+Input: 04-silicon.07-unocc.inp
+
+MPIUtils: oct-unfold
+Input: 04-silicon.08-unfold_run.inp
