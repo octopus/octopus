@@ -403,13 +403,14 @@ contains
 
     PKm(:,:) = M_ZERO
 
-    SAFE_ALLOCATE(gvec_abs(sb%periodic_dim, st%d%nik))
+    SAFE_ALLOCATE(gvec_abs(1:sb%periodic_dim, 1:st%d%nik))
+    gvec_abs = 0
     file_Gvec = io_open('./unfold_gvec.dat', action='read')
     read(file_Gvec,*)
     read(file_Gvec,*)
     do ik = 1, st%d%nik
       read(file_Gvec,*) vec_SC(1:3)
-      call kpoints_to_absolute(sb%klattice, vec_SC(1:sb%periodic_dim), gvec_abs(1:sb%periodic_dim,ik), &
+      call kpoints_to_absolute(sb%klattice, vec_SC(1:sb%periodic_dim), gvec_abs(1:sb%periodic_dim, ik), &
                  sb%periodic_dim)
     end do 
     call io_close(file_Gvec)
@@ -434,7 +435,7 @@ contains
       select case(sb%periodic_dim)
       case(3)
         do ig = 1, shell%ngvectors
-          call kpoints_to_absolute(sb%klattice, real(shell%red_gvec(1:3,ig), REAL_PRECISION), vec_SC, 3)
+          call kpoints_to_absolute(sb%klattice, real(shell%red_gvec(1:3,ig), REAL_PRECISION), vec_SC(1:3), 3)
           do ix = Gmin,Gmax
             do iy = Gmin,Gmax
               do iz = Gmin,Gmax
@@ -452,7 +453,7 @@ contains
       case(2)
 
         do ig = 1, shell%ngvectors
-          call kpoints_to_absolute(sb%klattice, real(shell%red_gvec(1:2,ig), REAL_PRECISION), vec_SC, 2)
+          call kpoints_to_absolute(sb%klattice, real(shell%red_gvec(1:2,ig), REAL_PRECISION), vec_SC(1:2), 2)
           do ix = Gmin,Gmax
             do iy = Gmin,Gmax
               vec_PC(1:2) = ix*klattice_PC(1:2,1) + iy*klattice_PC(1:2,2)
@@ -495,8 +496,7 @@ contains
           SAFE_ALLOCATE(field_g(1:shell%ngvectors))
           norm = M_ZERO
           do ig = 1, shell%ngvectors
-            field_g(ig) = cf%fs(shell%coords(1, ig), shell%coords(2, ig), shell%coords(3, ig)) * &
-              sqrt(gr%mesh%volume_element / product(zcube%rs_n_global(1:3)))
+            field_g(ig) = cf%fs(shell%coords(1, ig), shell%coords(2, ig), shell%coords(3, ig))
             norm = norm + abs(field_g(ig))**2
           end do
           field_g(:) = field_g(:) / sqrt(norm)
@@ -519,7 +519,7 @@ contains
       !TODO: We could implement here a different broadening
       do ist = 1, st%nst
         do ie = 1, nenergy
-           AkE(ie, ik)  = AkE(ie, ik) + PKm(ik,ist) * ( 3.0*de / M_PI ) / & 
+          AkE(ie, ik) = AkE(ie, ik) + PKm(ik,ist) * ( 3.0*de / M_PI ) / & 
                      ( (eigs(ie)-st%eigenval(ist,ik))**2 + (3.0*de)**2 ) 
         end do   
       end do 
@@ -533,7 +533,7 @@ contains
 
       call fourier_shell_end(shell)
       SAFE_DEALLOCATE_A(g_select)
-       
+
     end do !ik
 
 #if defined(HAVE_MPI)        
