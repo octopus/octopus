@@ -401,8 +401,6 @@ contains
       eigs(ie) = eigmin - nextend*de + (ie-1)*de
     end do        
 
-    PKm(:,:) = M_ZERO
-
     SAFE_ALLOCATE(gvec_abs(1:sb%periodic_dim, 1:st%d%nik))
     gvec_abs = 0
     file_Gvec = io_open('./unfold_gvec.dat', action='read')
@@ -421,6 +419,7 @@ contains
     AkE(:,:) = M_ZERO
 
     SAFE_ALLOCATE(PKm(st%d%kpt%start:st%d%kpt%end,1:st%nst))
+    PKm(:,:) = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end
       iq =  states_dim_get_kpoint_index(st%d, ik) 
 
