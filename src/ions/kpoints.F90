@@ -59,6 +59,7 @@ module kpoints_oct_m
     kpoints_grid_init,            &
     kpoints_path_generate,        &
     kpoints_to_reduced,           & 
+    kpoints_fold_to_1BZ,          &
     kpoints_grid_end
 
   type kpoints_grid_t

@@ -247,6 +247,8 @@ program oct_unfold
                                 path_kpoints_grid%red_point(:, ik), sb%dim)
   end do
 
+  call kpoints_fold_to_1BZ(path_kpoints_grid, klattice_PC)
+
   if(iand(run_mode, OPTION__UNFOLDMODE__UNFOLD_SETUP) /= 0) then
 
     call unfold_setup()
