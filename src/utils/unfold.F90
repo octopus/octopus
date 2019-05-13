@@ -161,7 +161,7 @@ program oct_unfold
   !%Variable UnfoldLatticeVectors
   !%Type block
   !%Default simple cubic
-  !%Section Utilites:oct-unfold
+  !%Section Utilities:oct-unfold
   !%Description
   !% Lattice vectors of the primitive cell on which the unfolding is performed. 
   !%End
@@ -192,7 +192,7 @@ program oct_unfold
 
   !%Variable UnfoldKPointsPath
   !%Type block
-  !%Section Utilites:oct-unfold
+  !%Section Utilities:oct-unfold
   !%Description
   !% Specifies the k-point path for which the unfolding need to be done.
   !% The syntax is identical to <tt>KPointsPath</tt>.
