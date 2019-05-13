@@ -109,7 +109,7 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter)
                                             smix%mixfield%X(df)(:, i, j, ipos), reduce = .false.)
       end do
     end do
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  smix%X(gamma))
+    if(smix%der%mesh%parallel_in_domains) call comm_allreduce(smix%der%mesh%mpi_grp%comm,  smix%X(gamma))
     smix%X(gamma) = max(CNST(1e-8),sqrt(R_REAL(smix%X(gamma))))
     smix%X(gamma) = M_ONE/smix%X(gamma)
 
@@ -179,7 +179,7 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
         end do
       end do
       !TODO: We should further reduce the number of calls to allreduce here
-      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  beta(i,j))
+      if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm,  beta(i,j))
       beta(j, i) = R_CONJ(beta(i, j))
     end do
     beta(i, i) = w0**2 + ww**2
@@ -195,7 +195,7 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
         work(i) = work(i) + X(mix_dotp)(this, df(:, k, l, i), f(:, k, l), reduce = .false.)
       end do
     end do
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  work(i))
+    if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm,  work(i))
   end do
 
   ! linear mixing term
@@ -369,7 +369,7 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
       
     end do
   end do
-  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  aa)
+  if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm,  aa)
 
   aa(1:size, size + 1) = CNST(-1.0)
   aa(size + 1, 1:size) = CNST(-1.0)
@@ -484,7 +484,7 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
           a(i, j) = a(i, j) + X(mix_dotp)(this, df(:, k, l, j), df(:, k, l, i), reduce = .false.)
         end do
       end do
-      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  a(i, j))
+      if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm,  a(i, j))
       if(j > i) a(j, i) = a(i, j)
     end do
   end do
@@ -508,7 +508,7 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
         end do
       end do
     end do
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  alpha)
+    if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm,  alpha)
     vnew(:, :, :) = vnew(:, :, :) + alpha * dv(:, :, :, i)
   end do
 

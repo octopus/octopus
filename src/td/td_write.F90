@@ -2180,7 +2180,7 @@ contains
 
     SAFE_ALLOCATE(projections(1:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
     projections(:,:,:) = M_Z0
-    call calc_projections(gr, st, gs_st, projections)
+    call calc_projections(gr%mesh, st, gs_st, projections)
 
     if(mpi_grp_is_root(mpi_world)) then
       call write_iter_start(out_proj)
@@ -2235,7 +2235,7 @@ contains
       
       SAFE_DEALLOCATE_A(xpsi)
 
-      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  projections)
+      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  projections)
 
       call distribute_projections(st, gs_st, projections)
 
@@ -2361,10 +2361,10 @@ contains
    !! p(uist, ist, ik) = < \phi_0(uist, k) | \phi(ist, ik) (t) >
    !! \f]
    ! ---------------------------------------------------------
-   subroutine calc_projections(gr, st, gs_st, projections)
+   subroutine calc_projections(mesh, st, gs_st, projections)
      implicit none 
     
-     type(grid_t),      intent(in)    :: gr
+     type(mesh_t),      intent(in)    :: mesh
      type(states_t),    intent(inout) :: st
      type(states_t),    intent(in)    :: gs_st
      CMPLX, intent(inout) :: projections(1:st%nst, &
@@ -2374,15 +2374,15 @@ contains
      CMPLX, allocatable :: psi(:, :), gspsi(:, :)
      PUSH_SUB(calc_projections)
     
-     SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
-     SAFE_ALLOCATE(gspsi(1:gr%mesh%np, 1:st%d%dim))
+     SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
+     SAFE_ALLOCATE(gspsi(1:mesh%np, 1:st%d%dim))
      
      do ik = 1, st%d%nik
        do ist = st%st_start, st%st_end
-         call states_get_state(st, gr%mesh, ist, ik, psi)
+         call states_get_state(st, mesh, ist, ik, psi)
          do uist = gs_st%st_start, gs_st%nst
-           call states_get_state(gs_st, gr%mesh, uist, ik, gspsi)
-           projections(ist, uist, ik) = zmf_dotp(gr%mesh, st%d%dim, psi, gspsi, reduce = .false.)
+           call states_get_state(gs_st, mesh, uist, ik, gspsi)
+           projections(ist, uist, ik) = zmf_dotp(mesh, st%d%dim, psi, gspsi, reduce = .false.)
         end do
       end do
     end do

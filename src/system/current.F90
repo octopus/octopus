@@ -535,7 +535,7 @@ contains
       end do
     end do
 
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  cmel)
+    if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp%comm,  cmel)
 
     
 

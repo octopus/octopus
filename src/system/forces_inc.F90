@@ -69,15 +69,15 @@ subroutine X(forces_from_local_potential)(gr, geo, ep, gdensity, force)
   FLOAT,  allocatable :: vloc(:)
   R_TYPE, pointer     :: zvloc(:)
   integer             :: ip, idir, iatom
-  FLOAT, allocatable  :: force_tmp(:,:)
+  R_TYPE, allocatable  :: force_tmp(:,:)
  
   PUSH_SUB(X(forces_from_local_potential))
 
   SAFE_ALLOCATE(vloc(1:gr%mesh%np))
   SAFE_ALLOCATE(zvloc(1:gr%mesh%np))
 
-  SAFE_ALLOCATE(force_tmp(1:gr%mesh%sb%dim, 1:geo%natom))
-  force_tmp = = M_ZERO
+  SAFE_ALLOCATE(force_tmp(1:gr%mesh%sb%dim, 1:geo%natoms))
+  force_tmp = M_ZERO
   
   do iatom = geo%atoms_dist%start, geo%atoms_dist%end
 
@@ -99,9 +99,9 @@ subroutine X(forces_from_local_potential)(gr, geo, ep, gdensity, force)
   if(geo%atoms_dist%parallel) call X(forces_gather)(geo, force_tmp)
   !if(geo%atoms_dist%parallel .and. geo%atoms_dist%nlocal > 0) call X(forces_gather)(geo, force)
 
-  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  force_tmp) 
+  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  force_tmp) 
 
-  force(1:gr%mesh%sb%dim, 1:geo%natom) = force(1:gr%mesh%sb%dim, 1:geo%natom) + force_tmp(1:gr%mesh%sb%dim, 1:geo%natom)
+  force(1:gr%mesh%sb%dim, 1:geo%natoms) = force(1:gr%mesh%sb%dim, 1:geo%natoms) + force_tmp(1:gr%mesh%sb%dim, 1:geo%natoms)
 
   SAFE_DEALLOCATE_A(vloc)
   SAFE_DEALLOCATE_P(zvloc)
@@ -120,7 +120,7 @@ subroutine X(total_force_from_local_potential)(gr, ep, gdensity, force)
 
   R_TYPE, pointer     :: zvloc(:)
   integer             :: idir
-  FLOAT               :: force_tmp(1:MAX_DIM)
+  R_TYPE              :: force_tmp(1:MAX_DIM)
  
   PUSH_SUB(X(total_force_from_local_potential))
   SAFE_ALLOCATE(zvloc(1:gr%mesh%np))
@@ -130,7 +130,7 @@ subroutine X(total_force_from_local_potential)(gr, ep, gdensity, force)
     force_tmp(idir) = X(mf_dotp)(gr%mesh, zvloc, gdensity(:, idir), reduce = .false.)
   end do
 
-  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  force_tmp, dim = gr%mesh%sb%dim)
+  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  force_tmp, dim = gr%mesh%sb%dim)
   force(1:gr%mesh%sb%dim) = force(1:gr%mesh%sb%dim) + force_tmp(1:gr%mesh%sb%dim)
 
   SAFE_DEALLOCATE_P(zvloc)

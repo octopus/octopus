@@ -255,7 +255,7 @@ contains
     do m = 1, ubound(res, 1)
       res(m) = real( zmf_dotp(gr_%mesh, viapsi(:, 1), derpsi_(:, m, 1), reduce = .false.) , REAL_PRECISION)
     end do
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  res)
+    if(gr_%mesh%parallel_in_domains) call comm_allreduce(gr_%mesh%mpi_grp%comm,  res)
 
     call states_get_state(chi_, gr_%mesh, ist_, ik_, zpsi)
     pdot3 = real(M_zI * zmf_dotp(gr_%mesh, zpsi(:, 1), viapsi(:, 1)), REAL_PRECISION)
