@@ -1025,8 +1025,9 @@ contains
             factor = M_TWO
           end if
           ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + &
-            factor*dmf_dotp(ks%gr%fine%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin))
+            factor*dmf_dotp(ks%gr%fine%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin), reduce = .false.)
         end do
+        if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  ks%calc%energy%intnvxc)
 
         if(states_are_real(st)) then
           ks%calc%energy%int_dft_u = denergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)
