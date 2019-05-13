@@ -779,7 +779,7 @@ contains
       call td_write_temperature(writ%out(OUT_TEMPERATURE)%handle, geo, iter)
 
     if(writ%out(OUT_POPULATIONS)%write) &
-      call td_write_populations(writ%out(OUT_POPULATIONS)%handle, gr%mesh, st, &
+      call td_write_populations(writ%out(OUT_POPULATIONS)%handle, gr%mesh, gr%sb, st, &
         writ, dt, iter)
 
     if(writ%out(OUT_ACC)%write) &
@@ -1479,9 +1479,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_populations(out_populations, mesh, st, writ, dt, iter)
+  subroutine td_write_populations(out_populations, mesh, sb, st, writ, dt, iter)
     type(c_ptr),            intent(inout) :: out_populations
     type(mesh_t),           intent(in)    :: mesh
+    type(simul_box_t),      intent(in)    :: sb
     type(states_t),         intent(inout) :: st
     type(td_write_t),       intent(in)    :: writ
     FLOAT,                  intent(in)    :: dt
@@ -1500,7 +1501,7 @@ contains
     call zstates_matrix(mesh, writ%gs_st, st, dotprodmatrix)
 
     !See comment in zstates_mpdotp
-    if(simul_box_is_periodic(gr%sb)) then
+    if(simul_box_is_periodic(sb)) then
       call messages_not_implemented("TDOutput populations for periodic systems.")
     end if
 

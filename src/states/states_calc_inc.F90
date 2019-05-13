@@ -1065,8 +1065,8 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
   end do
 
 #if defined(HAVE_MPI)        
-  if(st%d%kpt%parallel) then
-    call comm_allreduce(st%d%kpt%mpi_grp%comm, aa)
+  if(st1%d%kpt%parallel) then
+    call comm_allreduce(st1%d%kpt%mpi_grp%comm, aa)
   end if
 #endif
 
