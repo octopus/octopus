@@ -2148,29 +2148,34 @@ contains
 
       end if
 
-      SAFE_ALLOCATE(projections(1:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
-      do idir = 1, geo%space%dim
-        projections = M_Z0
+      !The dipole matrix elements cannot be computed like that for solids
+      if(.not. simul_box_is_periodic(gr%sb)) then
 
-        call dipole_matrix_elements(idir)
+        SAFE_ALLOCATE(projections(1:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
+        do idir = 1, geo%space%dim
+          projections = M_Z0
 
-        if(mpi_grp_is_root(mpi_world)) then
-          write(aux, '(a,i1,a)') "<i|x_", idir, "|a>"
-          call write_iter_string(out_proj, "# ------")
-          call write_iter_header(out_proj, aux)
-          do ik = 1, st%d%nik
-            do ist = gs_st%st_start, st%st_end
-              do uist = gs_st%st_start, gs_st%st_end
-                call write_iter_double(out_proj,  real(projections(ist, uist, ik)), 1)
-                call write_iter_double(out_proj, aimag(projections(ist, uist, ik)), 1)
+          call dipole_matrix_elements(idir)
+
+          if(mpi_grp_is_root(mpi_world)) then
+            write(aux, '(a,i1,a)') "<i|x_", idir, "|a>"
+            call write_iter_string(out_proj, "# ------")
+            call write_iter_header(out_proj, aux)
+            do ik = 1, st%d%nik
+              do ist = gs_st%st_start, st%st_end
+                do uist = gs_st%st_start, gs_st%st_end
+                  call write_iter_double(out_proj,  real(projections(ist, uist, ik)), 1)
+                  call write_iter_double(out_proj, aimag(projections(ist, uist, ik)), 1)
+                end do
               end do
             end do
-          end do
-          call write_iter_nl(out_proj)
+            call write_iter_nl(out_proj)
           
-        end if
-      end do
-      SAFE_DEALLOCATE_A(projections)
+          end if
+        end do
+        SAFE_DEALLOCATE_A(projections)
+
+      end if
 
       if(mpi_grp_is_root(mpi_world)) then
         call td_write_print_header_end(out_proj)
