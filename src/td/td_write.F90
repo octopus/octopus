@@ -2227,13 +2227,15 @@ contains
             do idim = 1, st%d%dim
               xpsi(1:gr%mesh%np, idim) = gr%mesh%x(1:gr%mesh%np, dir)*gspsi(1:gr%mesh%np, idim)
             end do
-            projections(ist, uist, ik) = -n_dip(dir) - zmf_dotp(gr%mesh, st%d%dim, psi, xpsi)
+            projections(ist, uist, ik) = -n_dip(dir) - zmf_dotp(gr%mesh, st%d%dim, psi, xpsi, reduce = .false.)
 
           end do
         end do
       end do
       
       SAFE_DEALLOCATE_A(xpsi)
+
+      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  projections)
 
       call distribute_projections(st, gs_st, projections)
 
@@ -2380,12 +2382,16 @@ contains
          call states_get_state(st, gr%mesh, ist, ik, psi)
          do uist = gs_st%st_start, gs_st%nst
            call states_get_state(gs_st, gr%mesh, uist, ik, gspsi)
-           projections(ist, uist, ik) = zmf_dotp(gr%mesh, st%d%dim, psi, gspsi)
+           projections(ist, uist, ik) = zmf_dotp(gr%mesh, st%d%dim, psi, gspsi, reduce = .false.)
         end do
       end do
     end do
+
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(gspsi)
+
+    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  projections)
+
     call distribute_projections(st, gs_st, projections)
     POP_SUB(calc_projections)
   end subroutine calc_projections
