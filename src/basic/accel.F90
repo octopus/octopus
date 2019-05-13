@@ -1036,6 +1036,8 @@ contains
     integer :: ierr
 #endif
 
+    ASSERT(accel_buffer_is_allocated(buffer))
+    
     ! no push_sub, called too frequently
 #ifdef HAVE_OPENCL
     call clSetKernelArg(kernel%kernel, narg, buffer%mem, ierr)
