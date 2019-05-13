@@ -187,9 +187,10 @@ subroutine X(eigensolver_plan) (gr, st, hm, pre, tol, niter, converged, ik, diff
       ! part of the matrix since it is symmetric (LAPACK routine only needs the upper triangle).
       do ist = d1 + 1, d2
         do ii = 1, ist
-          ham(ii, ist) = X(mf_dotp)(gr%mesh, dim, vv(:, :, ii), av(:, :, ist))
+          ham(ii, ist) = X(mf_dotp)(gr%mesh, dim, vv(:, :, ii), av(:, :, ist), reduce = .false.)
         end do
       end do
+      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  ham, dim = (/ist, d2/))
 
       ! Diagonalization in the subspace, using LAPACK.
       hevec(1:d2, 1:d2) = ham(1:d2, 1:d2)
