@@ -69,7 +69,7 @@ module accel_oct_m
     accel_write_buffer,           &
     accel_read_buffer,            &
     accel_release_buffer,         &
-    accel_buffer_allocated,       &
+    accel_buffer_is_allocated,    &
     accel_finish,                 &
     accel_set_kernel_arg,         &
     accel_max_workgroup_size,     &
@@ -985,11 +985,11 @@ contains
     
   ! ------------------------------------------
   
-  logical pure function accel_buffer_allocated(this) result(allocated)
+  logical pure function accel_buffer_is_allocated(this) result(allocated)
     type(accel_mem_t), intent(in) :: this
 
     allocated = this%allocated
-  end function accel_buffer_allocated
+  end function accel_buffer_is_allocated
     
   ! ------------------------------------------
 
