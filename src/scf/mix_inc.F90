@@ -363,7 +363,8 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
       aa(ii, jj) = CNST(0.0)
       do kk = 1, d2
         do ll = 1, d3
-          aa(ii, jj) = aa(ii, jj) + X(mix_dotp)(this, this%mixfield%X(df)(:, kk, ll, jj), this%mixfield%X(df)(:, kk, ll, ii), reduce = .false.)
+          aa(ii, jj) = aa(ii, jj) + X(mix_dotp)(this, this%mixfield%X(df)(:, kk, ll, jj), &
+                           this%mixfield%X(df)(:, kk, ll, ii), reduce = .false.)
         end do
       end do
       
