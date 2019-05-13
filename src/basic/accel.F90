@@ -69,6 +69,7 @@ module accel_oct_m
     accel_write_buffer,           &
     accel_read_buffer,            &
     accel_release_buffer,         &
+    accel_buffer_allocated,       &
     accel_finish,                 &
     accel_set_kernel_arg,         &
     accel_max_workgroup_size,     &
@@ -138,6 +139,7 @@ module accel_oct_m
     integer(SIZEOF_SIZE_T) :: size
     type(type_t)           :: type
     integer                :: flags
+    logical                :: allocated = .false.
   end type accel_mem_t
 
   type accel_kernel_t
@@ -859,7 +861,8 @@ contains
     !> To be implemented.
     this%size = 0
     this%flags = 0
-
+    this%allocated = .false.
+    
   end subroutine accel_mem_nullify
 
   ! ------------------------------------------
@@ -914,7 +917,8 @@ contains
     this%size = size
     this%flags = flags
     fsize = int(size, 8)*types_get_size(type)
-
+    this%allocated = .true.
+    
     if(fsize > 0) then
 
       call alloc_cache_get(memcache, fsize, found, this%mem)
@@ -974,9 +978,19 @@ contains
     this%size = 0
     this%flags = 0
 
+    this%allocated = .false.
+    
     POP_SUB(accel_release_buffer)
   end subroutine accel_release_buffer
+    
+  ! ------------------------------------------
+  
+  logical pure function accel_buffer_allocated(this) result(allocated)
+    type(accel_mem_t), intent(in) :: this
 
+    allocated = this%allocated
+  end function accel_buffer_allocated
+    
   ! ------------------------------------------
 
   integer(SIZEOF_SIZE_T) pure function opencl_get_buffer_size(this) result(size)
