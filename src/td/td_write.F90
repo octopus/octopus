@@ -351,8 +351,7 @@ contains
     if(writ%out(OUT_PROJ)%write .or. writ%out(OUT_POPULATIONS)%write &
       .or.writ%out(OUT_KP_PROJ)%write .or. writ%out(OUT_N_EX)%write) then
       if (.not.writ%out(OUT_KP_PROJ)%write.and. &
-          .not.writ%out(OUT_N_EX)%write.and. &
-          (st%parallel_in_states.or.st%d%kpt%parallel)) then
+          .not.writ%out(OUT_N_EX)%write.and. st%parallel_in_states) then
         message(1) = "Options TDOutput = td_occup and populations are not implemented for parallel in states."
         call messages_fatal(1)
       end if
@@ -1500,6 +1499,11 @@ contains
     SAFE_ALLOCATE(dotprodmatrix(1:writ%gs_st%nst, 1:st%nst, 1:st%d%nik))
     call zstates_matrix(mesh, writ%gs_st, st, dotprodmatrix)
 
+    !See comment in zstates_mpdotp
+    if(simul_box_is_periodic(gr%sb)) then
+      call messages_not_implemented("TDOutput populations for periodic systems.")
+    end if
+
     ! all processors calculate the projection
     gsp = zstates_mpdotp(mesh, writ%gs_st, st, dotprodmatrix)
 
@@ -2380,7 +2384,7 @@ contains
      SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
      SAFE_ALLOCATE(gspsi(1:gr%mesh%np, 1:st%d%dim))
      
-     do ik = 1, st%d%nik
+     do ik = st%d%kpt%start, st%d%kpt%end 
        do ist = st%st_start, st%st_end
          call states_get_state(st, gr%mesh, ist, ik, psi)
          do uist = gs_st%st_start, gs_st%nst
@@ -2391,7 +2395,15 @@ contains
     end do
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(gspsi)
+
+#if defined(HAVE_MPI)        
+   if(st%d%kpt%parallel) then
+     call comm_allreduce(st%d%kpt%mpi_grp%comm, projections)
+   end if
+#endif
+
     call distribute_projections(st, gs_st, projections)
+
     POP_SUB(calc_projections)
   end subroutine calc_projections
 
