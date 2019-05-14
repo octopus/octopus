@@ -1006,14 +1006,14 @@ contains
       apply = .false.
     end if
 
-    if(associated(this%hm_base%phase) .and. accel_is_enabled()) then
+    if(associated(this%hm_base%phase) .and. .not. simul_box_is_periodic(mesh%sb) .and. accel_is_enabled()) then
       if(.not. warning_shown) then
         call messages_write('Cannot use CUDA or OpenCL as a phase is applied to the states.')
         call messages_warning()
       end if
       apply = .false.
     end if
-
+    
     if(mesh%use_curvilinear .and. accel_is_enabled()) then
       if(.not. warning_shown) then
         call messages_write('Cannot use CUDA or OpenCL as curvilinear coordinates are used.')
