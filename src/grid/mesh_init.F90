@@ -912,20 +912,16 @@ contains
       reorder = .true.
       call MPI_Graph_create(mpi_grp%comm, mpi_grp%size, gindex, gedges, reorder, graph_comm, mpi_err)
 
+      ! we have a new communicator
+      call mpi_grp_init(mesh%mpi_grp, graph_comm)
+
       SAFE_DEALLOCATE_A(nb)
       SAFE_DEALLOCATE_A(gindex)
       SAFE_DEALLOCATE_A(gedges)
 
-    else
-
-      call MPI_Comm_dup(mpi_grp%comm, graph_comm, mpi_err)
-
     end if
 
-    ! we have a new communicator
-    call mpi_grp_init(mesh%mpi_grp, graph_comm)
-
-    call vec_init(graph_comm, 0, mesh%np_global, mesh%np_part_global, mesh%idx, stencil,&
+    call vec_init(mesh%mpi_grp%comm, 0, mesh%np_global, mesh%np_part_global, mesh%idx, stencil,&
          mesh%sb%dim, mesh%sb%periodic_dim, mesh%inner_partition, mesh%bndry_partition, mesh%vp)
 
     ! check the number of ghost neighbours in parallel
