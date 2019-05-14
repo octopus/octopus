@@ -22,9 +22,6 @@ module lasers_oct_m
   use derivatives_oct_m
   use global_oct_m
   use mpi_oct_m
-  use grid_oct_m
-  use io_oct_m
-  use kpoints_oct_m
   use parser_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -554,7 +551,7 @@ contains
 
         write(iunit,'(a,es17.6,3a)') '   Peak intensity       = ', max_intensity, ' [a.u]'
         write(iunit,'(a,es17.6,3a)') '                        = ', &
-          max_intensity * 6.4364086e+15, ' [W/cm^2]'
+          max_intensity * CNST(6.4364086e+15), ' [W/cm^2]'
         write(iunit,'(a,es17.6,a)')  '   Int. intensity       = ', fluence, ' [a.u]'
         write(iunit,'(a,es17.6,a)')  '   Fluence              = ', &
           fluence / CNST(5.4525289841210) , ' [a.u]'

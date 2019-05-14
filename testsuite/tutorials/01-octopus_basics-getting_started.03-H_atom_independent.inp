@@ -1,0 +1,7 @@
+CalculationMode = gs
+
+%Coordinates
+ 'H' | 0 | 0 | 0
+%
+
+TheoryLevel = independent_particles

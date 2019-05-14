@@ -25,7 +25,6 @@ module propagator_magnus_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_base_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
   use lasers_oct_m
@@ -36,7 +35,6 @@ module propagator_magnus_oct_m
   use propagator_rk_oct_m
   use states_oct_m
   use v_ks_oct_m
-  use xc_oct_m
 
   implicit none
 
@@ -79,7 +77,7 @@ contains
         else
           call potential_interpolation_interpolate(tr%vksold, 3, time, dt, atime(j)-dt, hm%vhxc)
         end if
-        call hamiltonian_update(hm, gr%mesh)
+        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
       end do
     else
       vaux = M_ZERO
@@ -120,11 +118,7 @@ contains
 
     SAFE_DEALLOCATE_A(psi)
 
-    if(.not. hm%cmplxscl%space) then
-      call density_calc(st, gr, st%rho)
-    else
-      call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-    end if
+    call density_calc(st, gr, st%rho)
 
     SAFE_DEALLOCATE_A(vaux)
     POP_SUB(propagator_dt.td_magnus)
@@ -150,8 +144,7 @@ contains
     FLOAT, allocatable :: vhxc1(:, :), vhxc2(:, :)
 
     if(ion_dynamics_ions_move(ions) .or. gauge_field_is_applied(hm%ep%gfield)) then
-      message(1) = "The commutator-free Magnus expansion can't be used &
-                    &with moving ions or gauge fields"
+      message(1) = "The commutator-free Magnus expansion cannot be used with moving ions or gauge fields"
       call messages_fatal(1)
     end if
 

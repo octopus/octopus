@@ -30,7 +30,6 @@ module kdotp_calc_oct_m
   use profiling_oct_m
   use states_oct_m
   use states_calc_oct_m
-  use sternheimer_oct_m
   use system_oct_m
   use utils_oct_m
 

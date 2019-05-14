@@ -21,21 +21,17 @@
 module mix_oct_m
   use derivatives_oct_m
   use global_oct_m
-  use io_oct_m
-  use io_function_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use mpi_oct_m
   use nl_operator_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
   use stencil_cube_oct_m
   use types_oct_m
-  use unit_system_oct_m
   use varinfo_oct_m
 
   implicit none
@@ -297,7 +293,7 @@ contains
     subroutine init_preconditioner()
 
       integer :: ns, maxp, ip, is
-      FLOAT, parameter :: weight = 50.0
+      FLOAT, parameter :: weight = CNST(50.0)
       
       ! This the mixing preconditioner from GPAW:
       !
@@ -324,13 +320,13 @@ contains
         do is = 1, ns
           select case(sum(abs(smix%preconditioner%stencil%points(1:der%mesh%sb%dim, is))))
           case(0)
-            smix%preconditioner%w_re(is, ip) = CNST(1.0) + weight/CNST(8.0)
+            smix%preconditioner%w(is, ip) = CNST(1.0) + weight/CNST(8.0)
           case(1)
-            smix%preconditioner%w_re(is, ip) = weight/CNST(16.0)
+            smix%preconditioner%w(is, ip) = weight/CNST(16.0)
           case(2)
-            smix%preconditioner%w_re(is, ip) = weight/CNST(32.0)
+            smix%preconditioner%w(is, ip) = weight/CNST(32.0)
           case(3)
-            smix%preconditioner%w_re(is, ip) = weight/CNST(64.0)
+            smix%preconditioner%w(is, ip) = weight/CNST(64.0)
           case default
             ASSERT(.false.)
           end select
@@ -868,7 +864,7 @@ contains
 
     PUSH_SUB(mixfield_get_ddvnew)
 
-    re(1:mixfield%d1, 1:mixfield%d3) =  real(mixfield%zvnew(1:mixfield%d1, 1, 1:mixfield%d3))
+    re(1:mixfield%d1, 1:mixfield%d3) =  real(mixfield%zvnew(1:mixfield%d1, 1, 1:mixfield%d3), REAL_PRECISION)
     im(1:mixfield%d1, 1:mixfield%d3) = aimag(mixfield%zvnew(1:mixfield%d1, 1, 1:mixfield%d3))
 
     POP_SUB(mixfield_get_ddvnew)

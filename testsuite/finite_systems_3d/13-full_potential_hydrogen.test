@@ -26,6 +26,7 @@ Enabled    : Yes
 Processors : 2
 
 Input: 13-full_potential_hydrogen.01-gs.inp
+match ; SCF convergence               ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Eigenvalue 1                  ; GREPFIELD(static/info, ' 1   -- ', 3) ; -0.497964
 match ; Eigenvalue 2                  ; GREPFIELD(static/info, ' 2   -- ', 3) ; -0.107244
 match ; Total energy                  ; GREPFIELD(static/info, 'Total       =', 3) ; -0.10724396
@@ -48,6 +49,7 @@ match ; Tot <Lz>                      ; GREPFIELD(static/ks_me_angular_momentum,
 match ; Tot <L2>                      ; GREPFIELD(static/ks_me_angular_momentum, 'Total', 4, 1) ; 2.010470
 
 Input: 13-full_potential_hydrogen.02-gs-cg.inp
+match ; SCF convergence               ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy                  ; GREPFIELD(static/info, 'Total       =', 3) ; -0.50144038
 match ; Species displacement          ; GREPFIELD(out, 'H_f atom displaced', 7)    ;  0.0
 match ; Eigenvalue                    ; GREPFIELD(static/info, ' 1   -- ', 3)      ; -0.501440

@@ -24,7 +24,6 @@ module fourier_space_oct_m
   use cube_function_oct_m
   use global_oct_m
   use math_oct_m
-  use mesh_oct_m
   use messages_oct_m
   use fft_oct_m
 #ifdef HAVE_OPENMP
@@ -34,7 +33,6 @@ module fourier_space_oct_m
   use pfft_oct_m
 #endif
   use profiling_oct_m
-  use simul_box_oct_m
   use types_oct_m
 
   implicit none
@@ -51,9 +49,7 @@ module fourier_space_oct_m
     dfourier_space_op_apply,    &
     zfourier_space_op_init,     &
     zfourier_space_op_apply,    &
-    fourier_space_op_end,       &
-    dfourier_to_mesh,           &
-    zfourier_to_mesh
+    fourier_space_op_end
 
   type fourier_space_op_t
     private

@@ -20,7 +20,6 @@
 
 module ground_state_oct_m
   use calc_mode_par_oct_m
-  use energy_calc_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
@@ -30,19 +29,13 @@ module ground_state_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
-  use parser_oct_m
   use rdmft_oct_m
   use restart_oct_m
   use scf_oct_m
-  use simul_box_oct_m
-  use species_oct_m
   use states_oct_m
-  use states_calc_oct_m
-  use states_io_oct_m
   use states_restart_oct_m
   use system_oct_m
   use v_ks_oct_m
-  use varinfo_oct_m
 
   implicit none
 
@@ -112,7 +105,7 @@ contains
 
     call write_canonicalized_xyz_file("exec", "initial_coordinates", sys%geo, sys%gr%mesh)
 
-    call scf_init(scfv, sys%gr, sys%geo, sys%st, sys%mc, hm)
+    call scf_init(scfv, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks)
 
     if(fromScratch) then
       if(sys%ks%theory_level == RDMFT) then
@@ -140,7 +133,7 @@ contains
     end if
     call messages_info()
 
-    if(sys%st%d%pack_states) call states_pack(sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_pack(sys%st)
     
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
@@ -158,7 +151,7 @@ contains
     call scf_end(scfv)
     call restart_end(restart_dump)
 
-    if(sys%st%d%pack_states) call states_unpack(sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_unpack(sys%st)
 
     ! clean up
     call states_deallocate_wfns(sys%st)

@@ -20,23 +20,17 @@
 
 module rdmft_oct_m
   use density_oct_m
-  use eigensolver_oct_m
-  use energy_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use hamiltonian_base_oct_m
   use lalg_adv_oct_m
-  use lalg_basic_oct_m
-  use loct_oct_m
-  use loct_math_oct_m 
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use minimizer_oct_m
   use output_oct_m
-  use output_me_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -131,7 +125,7 @@ contains
     if(rdm%do_basis.eqv..false.) then
       !stepsize for steepest decent
       SAFE_ALLOCATE(stepsize(1:st%nst))
-      stepsize = 0.1
+      stepsize = CNST(0.1)
       maxcount = 10
     else
       maxcount = 50
@@ -644,7 +638,7 @@ contains
     if (rdm%do_basis.eqv..false.) then 
       call density_calc (st,gr,st%rho)
       call v_ks_calc(ks,hm,st,geo)
-      call hamiltonian_update(hm, gr%mesh)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     end if
 
     call construct_f(hm,st,gr,lambda,rdm)
@@ -728,7 +722,7 @@ contains
 
     call density_calc (st, gr, st%rho)
     call v_ks_calc(ks, hm, st, geo)
-    call hamiltonian_update(hm, gr%mesh)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
 
     call rdm_derivatives(rdm, hm, st, gr)
     call total_energy_rdm(rdm, st%occ(:,1), energy)
@@ -784,7 +778,7 @@ contains
         !calculate total energy
         call density_calc (st, gr, st%rho)
         call v_ks_calc(ks, hm, st, geo)
-        call hamiltonian_update(hm, gr%mesh)
+        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
         call rdm_derivatives(rdm, hm, st, gr)
         call total_energy_rdm(rdm, st%occ(:,1), energy)
 
@@ -838,7 +832,7 @@ contains
     integer,              intent(in)    :: ist !number of state
     FLOAT,                intent(out)   :: E_deriv(1:gr%mesh%np_part)
 
-    integer            :: jst, ii, ip
+    integer            :: ii, ip
     FLOAT              :: E_deriv_corr, norm, projection
     FLOAT, allocatable :: rho_spin(:,:), rho(:), pot(:)
     FLOAT, allocatable :: hpsi1(:,:), hpsi2(:,:), dpsi(:,:), dpsi2(:,:)
@@ -1144,7 +1138,7 @@ contains
   ! calculates the derivatives of the energy terms with respect to the occupation numbers
   subroutine rdm_derivatives(rdm, hm, st, gr)
     type(rdm_t),          intent(inout) :: rdm
-    type(hamiltonian_t),  intent(in)    :: hm 
+    type(hamiltonian_t),  intent(in)    :: hm
     type(states_t),       intent(in)    :: st 
     type(grid_t),         intent(inout) :: gr
     
@@ -1246,7 +1240,7 @@ contains
   !calculates the one electron integrals in the basis of the initial orbitals
   subroutine rdm_integrals(rdm, hm, st, gr)
     type(rdm_t),          intent(inout) :: rdm
-    type(hamiltonian_t),  intent(in)    :: hm 
+    type(hamiltonian_t),  intent(in)    :: hm
     type(states_t),       intent(in)    :: st 
     type(grid_t),         intent(inout) :: gr
     

@@ -30,13 +30,11 @@ module em_resp_oct_m
   use io_oct_m
   use kdotp_oct_m
   use kdotp_calc_oct_m
-  use lalg_basic_oct_m
   use linear_response_oct_m
   use loct_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use mix_oct_m
   use mpi_oct_m
   use parser_oct_m
   use pert_oct_m
@@ -45,7 +43,6 @@ module em_resp_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use sort_oct_m
-  use species_oct_m
   use states_oct_m
   use states_dim_oct_m
   use states_restart_oct_m
@@ -71,6 +68,7 @@ module em_resp_oct_m
     integer :: nsigma !< 1: consider only positive values of the frequency
                       !! 2: consider both positive and negative
     integer :: nfactor!< 1: only one frequency needed
+                      !! 2: two frequencies (complex conjugate for magneto-optics)
                       !! 3: three frequencies (for the hyperpolarizabilities)
     integer :: nomega !< number of frequencies to consider
 
@@ -78,10 +76,17 @@ module em_resp_oct_m
     FLOAT :: freq_factor(3)
     FLOAT,      pointer :: omega(:)  !< the frequencies to consider
     type(lr_t), pointer :: lr(:,:,:) !< linear response for (gr%sb%dim, nsigma, nfactor)
-
+    CMPLX,      pointer :: alpha_k(:, :, :, :)    !< contributions of k-points to 
+                                                  !! the linear polarizability
+    CMPLX,      pointer :: alpha_be_k(:, :, :, :) !< contributions of k-points to 
+                                                  !! the magneto-optical response
     logical :: calc_hyperpol
     CMPLX   :: alpha(MAX_DIM, MAX_DIM, 3)        !< the linear polarizability
     CMPLX   :: alpha_be(MAX_DIM, MAX_DIM, MAX_DIM) !< the magneto-optical response
+    CMPLX   :: alpha0(MAX_DIM, MAX_DIM, 3)        !< the linear polarizability without G = G` = 0 term
+                                                  !! of the LRC kernel
+    CMPLX   :: alpha_be0(MAX_DIM, MAX_DIM, MAX_DIM) !< the magneto-optical response without G = G` = 0
+                                                  !! term of the LRC kernel
     CMPLX   :: beta (MAX_DIM, MAX_DIM, MAX_DIM)  !< first hyperpolarizability
 
     CMPLX   :: chi_para(MAX_DIM, MAX_DIM)     !< The paramagnetic part of the susceptibility
@@ -99,7 +104,10 @@ module em_resp_oct_m
     logical :: calc_magnetooptics                !< whether to calculate magneto-optical response
     logical :: magnetooptics_nohvar              !< whether to consider corrections to exchange-correlation 
                                                  !! and Hartree terms for magnetic perturbations in magneto-optics
-    
+    logical :: kpt_output                        !< whether to include in the output contributions of different 
+                                                 !! k-points to dielectric constant  
+    logical :: lrc_kernel                        !< whether the LRC kernel is used   
+
   end type em_resp_t
 
 contains
@@ -118,18 +126,18 @@ contains
     type(lr_t), allocatable :: kdotp_em_lr2(:, :, :, :)
     type(lr_t), allocatable :: b_lr(:, :)
     type(lr_t), allocatable :: kb_lr(:, :, :), k2_lr(:, :, :)
-    type(lr_t), allocatable :: ke_lr(:, :, :)
+    type(lr_t), allocatable :: ke_lr(:, :, :, :)
     type(pert_t)            :: pert_kdotp, pert2_none, pert_b
 
-    integer :: sigma, sigma_alt, ndim, idir, idir2, ierr, iomega, ifactor, nsigma_eff, ipert
-    integer :: ierr_e(3), ierr_e2(3) 
+    integer :: sigma, sigma_alt, ndim, idir, idir1, idir2, ierr, iomega, ifactor, nsigma_eff, ipert
+    integer :: ierr_e(3), ierr_e2(3), nfactor_ke
     character(len=100) :: dirname_output, str_tmp
     logical :: complex_response, have_to_calculate, use_kdotp, opp_freq, &
       exact_freq(3), complex_wfs, allocate_rho_em, allocate_rho_mo
 
     FLOAT :: closest_omega, last_omega, frequency
     FLOAT, allocatable :: dl_eig(:,:,:)
-    CMPLX :: frequency_eta, frequency_zero
+    CMPLX :: frequency_eta, frequency_zero, lrc_coef(MAX_DIM, MAX_DIM)
     type(restart_t) :: gs_restart, restart_load, restart_dump, kdotp_restart
     integer, parameter :: PB = 1, PK2 = 2, PKB = 3, PKE = 4, PE = 5
 
@@ -147,6 +155,14 @@ contains
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC .and. &
       any(abs(em_vars%omega(1:em_vars%nomega)) > M_EPSILON)) then
       call messages_not_implemented('Dynamical magnetic response')
+    end if
+
+    em_vars%lrc_kernel = .false.
+    if(abs(sys%ks%xc%kernel_lrc_alpha) > M_EPSILON) em_vars%lrc_kernel = .true.
+
+    if(em_vars%lrc_kernel .and. gr%sb%periodic_dim < gr%sb%dim) then
+      message(1) = 'The use of the LRC kernel for non-periodic dimensions makes no sense.'
+      call messages_warning(1)
     end if
 
     complex_wfs = states_are_complex(sys%st)
@@ -274,7 +290,7 @@ contains
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
       em_vars%nsigma = 1
       if(use_kdotp) call messages_experimental("Magnetic perturbation for periodic systems")
-    end if
+    end if  
 
     if(em_vars%calc_magnetooptics .or. &
       (pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC)) then
@@ -300,11 +316,11 @@ contains
 
         if(gr%sb%periodic_dim < gr%sb%dim) then
           if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
-            message(2) = "All directions should be periodic for magnetic perturbations with kdotp."
+            message(1) = "All directions should be periodic for magnetic perturbations with kdotp."
           else
-            message(2) = "All directions should be periodic for magnetooptics with kdotp."
+            message(1) = "All directions should be periodic for magnetooptics with kdotp."
           end if
-          call messages_fatal(2)
+          call messages_fatal(1)
         end if
         if(.not. complex_response) then
           do idir = 1,gr%sb%dim
@@ -336,11 +352,17 @@ contains
       ! otherwise, use default, which is hartree + fxc
     end if
 
+    if(em_vars%lrc_kernel .and. (.not. sternheimer_add_hartree(sh)) &
+      .and. (.not. sternheimer_add_fxc(sh))) then
+      message(1) = "Only the G = G'= 0 term of the LRC kernel is taken into account."
+      call messages_warning(1)
+    end if   
+        
+
     if(mpi_grp_is_root(mpi_world)) then
       call info()
       call io_mkdir(EM_RESP_DIR) ! output
     end if
-
 
     allocate_rho_em = sternheimer_add_fxc(sh) .or. sternheimer_add_hartree(sh)
     do ifactor = 1, em_vars%nfactor
@@ -351,6 +373,13 @@ contains
         end do
       end do
     end do
+    
+    if((pert_type(em_vars%perturbation) .ne. PERTURBATION_ELECTRIC) .or. (.not. use_kdotp) &
+      .or. sys%st%d%nik == 1) em_vars%kpt_output = .false.
+
+    if(em_vars%kpt_output) then
+      SAFE_ALLOCATE(em_vars%alpha_k(1:MAX_DIM, 1:MAX_DIM, 1:em_vars%nfactor, 1:sys%st%d%nik))
+    end if
 
     if(em_vars%calc_magnetooptics) then
       if(em_vars%magnetooptics_nohvar) then
@@ -368,12 +397,19 @@ contains
       end do
       
       if(use_kdotp) then
-        SAFE_ALLOCATE(ke_lr(1:gr%sb%dim, 1:gr%sb%dim, 1:em_vars%nsigma))
+        if(em_vars%kpt_output) then 
+          SAFE_ALLOCATE(em_vars%alpha_be_k(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM, 1:sys%st%d%nik))
+        end if
+        nfactor_ke = 1
+        if(gr%sb%kpoints%use_time_reversal .and. gr%sb%kpoints%full%npoints > 1) nfactor_ke = em_vars%nfactor
+        SAFE_ALLOCATE(ke_lr(1:gr%sb%dim, 1:gr%sb%dim, 1:em_vars%nsigma, 1:nfactor_ke))
         do idir = 1, gr%sb%dim
           do idir2 = 1, gr%sb%dim
             do sigma = 1, em_vars%nsigma
-              call lr_init(ke_lr(idir, idir2, sigma))
-              call lr_allocate(ke_lr(idir, idir2, sigma), sys%st, sys%gr%mesh, allocate_rho = .false.)
+              do ifactor = 1, nfactor_ke              
+                call lr_init(ke_lr(idir, idir2, sigma, ifactor))
+                call lr_allocate(ke_lr(idir, idir2, sigma, ifactor), sys%st, sys%gr%mesh, allocate_rho = .false.)
+              end do
             end do
           end do
         end do
@@ -407,7 +443,7 @@ contains
 
         ! if this frequency is zero and this is not the first
         ! iteration we do not have to do anything
-        if(iomega > 1 .and. em_vars%freq_factor(ifactor) == M_ZERO) have_to_calculate = .false. 
+        if(iomega > 1 .and. abs(em_vars%freq_factor(ifactor)) <= M_EPSILON) have_to_calculate = .false. 
 
         if(ifactor > 1 .and. (.not. em_vars%calc_magnetooptics)) then 
 
@@ -571,6 +607,10 @@ contains
       SAFE_DEALLOCATE_A(dl_eig)
     end if
 
+    if(em_vars%kpt_output) then
+      SAFE_DEALLOCATE_P(em_vars%alpha_k)
+    end	if
+
     if(em_vars%calc_magnetooptics .or. &
       (pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC)) then
       if(use_kdotp) then  
@@ -599,11 +639,16 @@ contains
         do idir = 1, gr%sb%dim 
           do idir2 = 1, gr%sb%dim
             do sigma = 1, em_vars%nsigma
-              call lr_dealloc(ke_lr(idir, idir2, sigma))
+              do ifactor = 1, nfactor_ke
+                call lr_dealloc(ke_lr(idir, idir2, sigma, ifactor))
+              end do
             end do
           end do
         end do
         SAFE_DEALLOCATE_A(ke_lr)
+        if(em_vars%kpt_output) then
+          SAFE_DEALLOCATE_P(em_vars%alpha_be_k)
+        end if        
       else
         call pert_end(pert_b)
       end if
@@ -736,6 +781,7 @@ contains
       em_vars%freq_factor(1:3) = M_ONE
       em_vars%calc_magnetooptics = .false.
       em_vars%magnetooptics_nohvar = .true.
+      em_vars%kpt_output = .false.
 
       !%Variable EMPerturbationType
       !%Type integer
@@ -813,6 +859,17 @@ contains
         !% from consideration of perturbations induced by a magnetic field
         !%End
         call parse_variable('EMMagnetoopticsNoHVar', .true., em_vars%magnetooptics_nohvar)
+
+        !%Variable EMKPointOutput
+        !%Type logical
+        !%Default false
+        !%Section Linear Response::Polarizabilities
+        !%Description
+        !% Give in the output contributions of different k-points to the dielectric constant.
+        !% Can be also used for magneto-optical effects.
+        !%End
+
+        call parse_variable('EMKPointOutput', .false., em_vars%kpt_output)
 
       end if
 
@@ -950,21 +1007,22 @@ contains
     call write_eta()
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
-      call out_polarizability()
-      if(em_vars%calc_Born) then
-        call out_Born_charges(em_vars%Born_charges(ifactor), geo, gr%sb%dim, dirname, &
-          write_real = em_vars%eta < M_EPSILON)
-      end if
+      if((.not. em_vars%calc_magnetooptics) .or. ifactor == 1) then
+        call out_polarizability()
+        if(em_vars%calc_Born) then
+          call out_Born_charges(em_vars%Born_charges(ifactor), geo, gr%sb%dim, dirname, &
+            write_real = em_vars%eta < M_EPSILON)
+        end if
 
-      if(gr%sb%periodic_dim  ==  gr%sb%dim) then
-        call out_dielectric_constant()
-      end if
+        if(gr%sb%periodic_dim  ==  gr%sb%dim) then
+          call out_dielectric_constant()
+        end if
 
-      if((.not. simul_box_is_periodic(gr%sb) .or. em_vars%force_no_kdotp) .and. em_vars%calc_rotatory) then
-        call out_circular_dichroism()
-      end if
+        if((.not. simul_box_is_periodic(gr%sb) .or. em_vars%force_no_kdotp) .and. em_vars%calc_rotatory) then
+          call out_circular_dichroism()
+        end if
 
-      if(em_vars%calc_magnetooptics) then 
+      else 
         call out_magnetooptics() 
         if(iomega == 1) call out_susceptibility()
       end if
@@ -1095,7 +1153,9 @@ contains
     ! ---------------------------------------------------------
     !> epsilon = 1 + 4 * pi * alpha/volume
     subroutine out_dielectric_constant()
-      integer :: idir
+      integer :: idir, idir1, ik
+      character(len=80) :: header_string
+      CMPLX, allocatable :: epsilon_k(:, :, :)
 
       PUSH_SUB(em_resp_output.out_dielectric_constant)
   
@@ -1113,8 +1173,101 @@ contains
       write(iunit, '(a)')
       write(iunit, '(a)') '# Imaginary part of dielectric constant'
       call output_tensor(iunit, aimag(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
-  
+
+      if(em_vars%lrc_kernel) then
+        write(iunit, '(a)')
+        write(iunit, '(a)') '# Without G = G'' = 0 term of the LRC kernel'
+
+        epsilon(1:gr%sb%dim, 1:gr%sb%dim) = &
+          4 * M_PI * em_vars%alpha0(1:gr%sb%dim, 1:gr%sb%dim, ifactor) / gr%sb%rcell_volume
+        do idir = 1, gr%sb%dim
+          epsilon(idir, idir) = epsilon(idir, idir) + M_ONE
+        end do
+
+        write(iunit, '(a)') '# Real part of dielectric constant'
+        call output_tensor(iunit, real(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
+        write(iunit, '(a)')
+        write(iunit, '(a)') '# Imaginary part of dielectric constant'
+        call output_tensor(iunit, aimag(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
+      end if
+
       call io_close(iunit)
+
+      if(em_vars%kpt_output) then
+        SAFE_ALLOCATE(epsilon_k(1:gr%sb%dim, 1:gr%sb%dim, 1:gr%sb%kpoints%reduced%npoints))
+        do ik = 1, gr%sb%kpoints%reduced%npoints
+          do idir = 1, gr%sb%dim
+            do idir1 = 1, gr%sb%dim
+              epsilon_k(idir, idir1, ik) = M_FOUR * M_PI * em_vars%alpha_k(idir, idir1, ifactor, ik) / gr%sb%rcell_volume
+            end do
+          end do
+        end do
+        iunit = io_open(trim(dirname)//'/epsilon_k_re', action='write')
+
+        write(iunit, '(a)') '# Real part of dielectric constant'
+        write(iunit, '(a10)', advance = 'no') '#  index  '
+        write(iunit, '(a20)', advance = 'no') str_center("weight", 20)
+        write(iunit, '(a20)', advance = 'no') str_center("kx", 20)        
+        write(iunit, '(a20)', advance = 'no') str_center("ky", 20)     
+        write(iunit, '(a20)', advance = 'no') str_center("kz", 20)
+
+        do idir = 1, gr%sb%dim
+          do idir1 = 1, gr%sb%dim
+            write(header_string,'(a7,i1,a1,i1,a1)') 'Re eps(', idir, ',', idir1, ')'
+            write(iunit, '(a20)', advance = 'no') str_center(trim(header_string), 20)
+          end do
+        end do
+        write(iunit, *)
+
+        do ik = 1, gr%sb%kpoints%reduced%npoints
+          write(iunit, '(i8)', advance = 'no') ik
+          write(iunit, '(e20.8)', advance = 'no') gr%sb%kpoints%reduced%weight(ik)
+          do idir = 1, gr%sb%dim
+            write(iunit, '(e20.8)', advance = 'no') gr%sb%kpoints%reduced%red_point(idir, ik)
+          end do
+          do idir = 1, gr%sb%dim
+            do idir1 = 1, gr%sb%dim
+              write(iunit, '(e20.8)', advance = 'no') real(epsilon_k(idir, idir1, ik))
+            end do
+          end do
+          write(iunit, *)
+        end do
+        call io_close(iunit)
+
+        iunit = io_open(trim(dirname)//'/epsilon_k_im', action='write')
+
+        write(iunit, '(a)') '# Imaginary part of dielectric constant'
+        write(iunit, '(a10)', advance = 'no') '#  index  '
+        write(iunit, '(a20)', advance = 'no') str_center("weight", 20)
+        write(iunit, '(a20)', advance = 'no') str_center("kx", 20)        
+        write(iunit, '(a20)', advance = 'no') str_center("ky", 20)     
+        write(iunit, '(a20)', advance = 'no') str_center("kz", 20)
+
+        do idir = 1, gr%sb%dim
+          do idir1 = 1, gr%sb%dim
+            write(header_string,'(a7,i1,a1,i1,a1)') 'Im eps(', idir, ',', idir1,')'
+            write(iunit, '(a20)', advance = 'no') str_center(trim(header_string), 20)
+          end do
+        end do
+        write(iunit, *)
+
+        do ik = 1, gr%sb%kpoints%reduced%npoints                              
+          write(iunit, '(i8)', advance = 'no') ik
+          write(iunit, '(e20.8)', advance = 'no') gr%sb%kpoints%reduced%weight(ik)
+          do idir = 1, gr%sb%dim
+            write(iunit, '(e20.8)', advance = 'no') gr%sb%kpoints%reduced%red_point(idir, ik)
+          end do
+          do idir = 1, gr%sb%dim
+            do idir1 = 1, gr%sb%dim
+              write(iunit, '(e20.8)', advance = 'no') aimag(epsilon_k(idir, idir1, ik))
+            end do
+          end do
+          write(iunit, *)          
+        end do
+        call io_close(iunit)
+        SAFE_DEALLOCATE_A(epsilon_k)
+      end if
+
       POP_SUB(em_resp_output.out_dielectric_constant)
     end subroutine out_dielectric_constant
 
@@ -1127,7 +1280,7 @@ contains
       PUSH_SUB(em_resp_output.out_susceptibility)
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
-        write(dirname1, '(a, a)') EM_RESP_DIR//'freq_0.0000'
+        write(dirname1, '(a)') EM_RESP_DIR//'freq_0.0000'
         call io_mkdir(trim(dirname1))
         iunit = io_open(trim(dirname1)//'/susceptibility', action='write')
       else  
@@ -1260,7 +1413,7 @@ contains
       do idir = 1, gr%sb%dim
         if(states_are_complex(st)) then 
 
-          if(gr%sb%dim == 3 .and. iand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
+          if(gr%sb%dim == 3 .and. bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
             if(em_vars%nsigma == 1) then
               call zlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor))
             else
@@ -1272,7 +1425,7 @@ contains
           end do
         else
 
-          if(gr%sb%dim == 3 .and. iand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
+          if(gr%sb%dim == 3 .and. bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
             if(em_vars%nsigma == 1) then
               call dlr_calc_elf(st, gr, em_vars%lr(idir, 1, ifactor))
             else
@@ -1353,62 +1506,143 @@ contains
     
    ! ---------------------------------------------------------
     subroutine out_magnetooptics   
-      integer :: idir
-      CMPLX :: mcd(4), diff(3)
-      CMPLX :: eps1, eps2
+      integer :: idir, ik
+      CMPLX :: epsilon_m(4), diff(4), eps_mk(MAX_DIM)
       
       PUSH_SUB(em_resp_output.out_magnetooptics)
       
-      mcd(:) = M_ZERO
+      diff(:) = M_ZERO
+      epsilon_m(:) = M_ZERO
       do idir = 1, gr%sb%dim 
         diff(idir) = M_HALF * (em_vars%alpha_be(magn_dir(idir, 1), magn_dir(idir, 2), idir) - &
           em_vars%alpha_be(magn_dir(idir, 2), magn_dir(idir, 1), idir))
 
-        eps1 = epsilon(magn_dir(idir, 1), magn_dir(idir, 1))
-        eps2 = epsilon(magn_dir(idir, 2), magn_dir(idir, 2))
-        if(use_kdotp) mcd(idir) = M_TWO * M_PI * &
-          em_vars%omega(iomega)/(gr%sb%rcell_volume * P_C) * diff(idir)/(M_HALF * (sqrt(eps1) + sqrt(eps2)))
+        epsilon_m(idir) = 4 * M_PI * diff(idir) / gr%sb%rcell_volume
       end do
-      mcd(4) = M_TWO * M_PI * & 
-        em_vars%omega(iomega)/P_C * (diff(1) + diff(2) + diff(3)) / M_THREE
+      diff(4) =(diff(1) + diff(2) + diff(3)) / M_THREE
+      epsilon_m(4) = 4 * M_PI * diff(4) / gr%sb%rcell_volume
   
-      iunit = io_open(trim(dirname)//'/alpha_be', action='write')
+      iunit = io_open(trim(dirname)//'/alpha_mo', action='write')
   
       if (.not. em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
-  
-      write(iunit, '(1a)') '# Real part of magneto-optical response [a.u.]'
-      
-      do idir = 1, gr%sb%dim 
-        call output_tensor(iunit, real(em_vars%alpha_be(:,:,idir)), &
-          gr%sb%dim, unit_one)
-        write(iunit, '(3a,f25.15)') 'Re_', index2axis(idir), ' ', real(diff(idir))
-      end do
-      
-      write(iunit, '(1a)') '# Imaginary part of magneto-optical response [a.u.]'
-      
-      do idir = 1, gr%sb%dim 
-        call output_tensor(iunit, aimag(em_vars%alpha_be(:,:,idir)), &
-          gr%sb%dim, unit_one)
-        write(iunit, '(3a,f25.15)') 'Im_', index2axis(idir), ' ', aimag(diff(idir))
-      end do
-      
-      mcd(:) = mcd(:) / unit_ppm%factor
-      
-      write(iunit, '()')        
-      if(use_kdotp) then
-        write(iunit, '(1a)') '# Faraday rotation [ppm a.u.]'
-        write(iunit, '(3f20.10)') -aimag(mcd(1)), -aimag(mcd(2)), -aimag(mcd(3))
-      end if
-      write(iunit, '(1a,f20.10)')' Average for Faraday rotation [1e-3 a.u.]  ', -aimag(mcd(4) * CNST(1e-3))
 
+      write(iunit, '(a1, a25)', advance = 'no') '#', str_center(" ", 25)
+      write(iunit, '(a20)', advance = 'no') str_center("   yz,x = -zy,x", 20)
+      write(iunit, '(a20)', advance = 'no') str_center("   zx,y = -xz,y", 20)
+      write(iunit, '(a20)', advance = 'no') str_center("   xy,z = -yx,z", 20)
+      write(iunit, '(a20)', advance = 'no') str_center(" Average", 20)
+      write(iunit, *)
+ 
+      write(iunit, '(a25)', advance = 'no') str_center("Re alpha [a.u.]", 25)
+      do idir = 1, gr%sb%dim + 1 
+        write(iunit, '(e20.8)', advance = 'no') real(diff(idir))
+      end do
+      write(iunit, *)
 
-      if(use_kdotp) then
-        write(iunit, '(1a)') '# Magnetic circular dichroism [ppm a.u.]'
-        write(iunit, '(3f20.10)')   real(mcd(1)), real(mcd(2)), real(mcd(3))
-      end if
-      write(iunit, '(1a,f20.10)')' Average for magnetic circular dichroism [1e-3 a.u.]  ', real(mcd(4) * CNST(1e-3))
+      write(iunit, '(a25)', advance = 'no') str_center("Im alpha [a.u.]", 25)
+      do idir = 1, gr%sb%dim + 1
+        write(iunit, '(e20.8)', advance = 'no') aimag(diff(idir))
+      end do
+      write(iunit, *)
+
+      write(iunit, '(a25)', advance = 'no') str_center("Re epsilon (B = 1 a.u.)", 25)
+      do idir = 1, gr%sb%dim + 1
+        write(iunit, '(e20.8)', advance = 'no') real(epsilon_m(idir))
+      end do
+      write(iunit, *)
+
+      write(iunit, '(a25)', advance = 'no') str_center("Im epsilon (B = 1 a.u.)", 25)
+      do idir = 1, gr%sb%dim + 1
+        write(iunit, '(e20.8)', advance = 'no') aimag(epsilon_m(idir))
+      end do
+      write(iunit, *)
+
+      if(em_vars%lrc_kernel) then
+        write(iunit, '(a)')   
+        write(iunit, '(a)') '# Without the G = G'' = 0 term of the LRC kernel'
       
+        diff(:) = M_ZERO
+        epsilon_m(:) = M_ZERO
+        do idir = 1, gr%sb%dim 
+          diff(idir) = M_HALF * (em_vars%alpha_be0(magn_dir(idir, 1), magn_dir(idir, 2), idir) - &
+            em_vars%alpha_be0(magn_dir(idir, 2), magn_dir(idir, 1), idir))
+
+          epsilon_m(idir) = 4 * M_PI * diff(idir) / gr%sb%rcell_volume
+        end do
+        diff(4) =(diff(1) + diff(2) + diff(3)) / M_THREE
+        epsilon_m(4) = 4 * M_PI * diff(4) / gr%sb%rcell_volume
+
+        write(iunit, '(a1, a25)', advance = 'no') '#', str_center(" ", 25)
+        write(iunit, '(a20)', advance = 'no') str_center("   yz,x = -zy,x", 20)
+        write(iunit, '(a20)', advance = 'no') str_center("   zx,y = -xz,y", 20)
+        write(iunit, '(a20)', advance = 'no') str_center("   xy,z = -yx,z", 20)
+        write(iunit, '(a20)', advance = 'no') str_center(" Average", 20)
+        write(iunit, *)
+ 
+        write(iunit, '(a25)', advance = 'no') str_center("Re alpha [a.u.]", 25)
+        do idir = 1, gr%sb%dim + 1 
+          write(iunit, '(e20.8)', advance = 'no') real(diff(idir))
+        end do
+        write(iunit, *)
+
+        write(iunit, '(a25)', advance = 'no') str_center("Im alpha [a.u.]", 25)
+        do idir = 1, gr%sb%dim + 1
+          write(iunit, '(e20.8)', advance = 'no') aimag(diff(idir))
+        end do
+        write(iunit, *)
+
+        write(iunit, '(a25)', advance = 'no') str_center("Re epsilon (B = 1 a.u.)", 25)
+        do idir = 1, gr%sb%dim + 1
+          write(iunit, '(e20.8)', advance = 'no') real(epsilon_m(idir))
+        end do
+        write(iunit, *)
+
+        write(iunit, '(a25)', advance = 'no') str_center("Im epsilon (B = 1 a.u.)", 25)
+        do idir = 1, gr%sb%dim + 1
+          write(iunit, '(e20.8)', advance = 'no') aimag(epsilon_m(idir))
+        end do
+        write(iunit, *)
+      end if      
       call io_close(iunit)
+
+      if(em_vars%kpt_output) then
+	iunit = io_open(trim(dirname)//'/epsilon_mo_k', action='write')
+
+        write(iunit, '(a)') '# Contribution to dielectric tensor for B = 1 a.u.'
+        write(iunit, '(a10)', advance = 'no') '#  index  '
+        write(iunit, '(a20)', advance = 'no') str_center("weight", 20)
+        write(iunit, '(a20)', advance = 'no') str_center("kx", 20)
+        write(iunit, '(a20)', advance = 'no') str_center("ky", 20)
+        write(iunit, '(a20)', advance = 'no') str_center("kz", 20)
+        write(iunit, '(a20)', advance = 'no') str_center("Re eps_yz,x", 20)
+        write(iunit, '(a20)', advance = 'no') str_center("Re eps_zx,y", 20)
+        write(iunit, '(a20)', advance = 'no') str_center("Re eps_xy,z", 20)
+        write(iunit, '(a20)', advance = 'no') str_center("Im eps_yz,x", 20)
+        write(iunit, '(a20)', advance = 'no') str_center("Im eps_zx,y", 20)
+        write(iunit, '(a20)', advance = 'no') str_center("Im eps_xy,z", 20)
+        write(iunit, *)
+
+        do ik = 1, gr%sb%kpoints%reduced%npoints
+          write(iunit, '(i8)', advance = 'no') ik
+          write(iunit, '(e20.8)', advance = 'no') gr%sb%kpoints%reduced%weight(ik)
+          do idir = 1, gr%sb%dim
+            eps_mk(idir) = M_TWO * M_PI * (em_vars%alpha_be_k(magn_dir(idir, 1), magn_dir(idir, 2), idir, ik) - &
+              em_vars%alpha_be_k(magn_dir(idir, 2), magn_dir(idir, 1), idir, ik)) / gr%sb%rcell_volume
+          end do
+
+          do idir = 1, gr%sb%dim
+            write(iunit, '(e20.8)', advance = 'no') gr%sb%kpoints%reduced%red_point(idir, ik)
+          end do
+          do idir = 1, gr%sb%dim
+            write(iunit, '(e20.8)', advance = 'no') real(eps_mk(idir))
+          end do
+          do idir = 1, gr%sb%dim
+            write(iunit, '(e20.8)', advance = 'no') aimag(eps_mk(idir))
+          end do
+          write(iunit, *)
+        end do
+	call io_close(iunit)
+      end if
       
       POP_SUB(em_resp_output.out_magnetooptics)
     end subroutine out_magnetooptics

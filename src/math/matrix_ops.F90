@@ -19,6 +19,7 @@
 #include "global.h"
 
 module matrix_ops_oct_m
+  use blacs_oct_m
   use blacs_proc_grid_oct_m
   use global_oct_m
   use lapack_oct_m
@@ -158,10 +159,11 @@ contains
     FLOAT,                    intent(out)   :: eigenvalues(:)  !< The eigenvalues of the matrix
     type(matrix_t), optional, intent(inout) :: metric          !< If present, a generalized eigenvalue problem is solved
 
-    integer :: ndiv, np1, np2, nb1, nb2, nr1, nr2
+    integer :: ndiv, np1, np2, nb1, nb2
     integer, allocatable :: div(:)
     type(blacs_proc_grid_t) :: proc_grid
 #ifdef HAVE_SCALAPACK
+    integer :: nr1, nr2
     integer :: info, desc(BLACS_DLEN)
     FLOAT, allocatable :: da(:, :), devec(:, :), dwork(:)
     CMPLX, allocatable :: za(:, :), zevec(:, :), zwork(:), rwork(:)
@@ -190,10 +192,10 @@ contains
     
     call blacs_proc_grid_init(proc_grid, this%mpi_grp, procdim = (/np1, np2/))
 
+#ifdef HAVE_SCALAPACK
     nr1 = max(1, numroc(this%dim(1), nb1, proc_grid%myrow, 0, proc_grid%nprow))
     nr2 = max(1, numroc(this%dim(2), nb2, proc_grid%mycol, 0, proc_grid%npcol))
 
-#ifdef HAVE_SCALAPACK
     call descinit(desc(1), this%dim(1), this%dim(2), nb1, nb2, 0, 0, proc_grid%context, nr1, info)
 
     if(matrix_type(this) == TYPE_FLOAT) then

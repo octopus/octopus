@@ -1,0 +1,20 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Octopus basics - Time-dependent propagation
+Program    : octopus
+TestGroups : short-run, tutorials
+Enabled    : Yes
+
+Input: 07-octopus_basics-time_dependent_propagation.01-gs.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+Precision: 0.001
+match ; Total Energy ; GREPFIELD(static/info, 'Total  ', 3) ; -218.78590399
+
+Input: 07-octopus_basics-time_dependent_propagation.02-td.inp
+match ; Energy iteration  1 ; GREPFIELD(out, ' 1       0.002000', 3) ; -218.785065
+match ; Energy iteration 50 ; GREPFIELD(out, '50       0.100000', 3) ; -218.785065
+
+Input: 07-octopus_basics-time_dependent_propagation.03-td_laser.inp
+Precision: 0.00001
+match ; Laser iteration  1 ; LINEFIELD(td.general/laser,  8, 3) ; -6.279072927970e-03
+match ; Laser iteration 50 ; LINEFIELD(td.general/laser, 57, 3) ;  7.020930841775e-02

@@ -2,10 +2,11 @@
 
 Test       : Tkatchenko-Scheffler van der Waals correction
 Program    : octopus
-TestGroups : short-run, functionals
+TestGroups : long-run, functionals
 Enabled    : Yes
 
 Input      : 08-vdw_ts.01-gs.inp
+match ; SCF convergence      ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy         ; GREPFIELD(static/info, 'Total       =', 3) ;  -28.74030000
 match ; Ion-ion energy       ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;   26.63589006
 match ; Eigenvalues sum      ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;   -7.56259137

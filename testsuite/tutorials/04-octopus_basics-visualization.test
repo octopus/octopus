@@ -1,0 +1,12 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Octopus basics - Total energy convergence
+Program    : octopus
+TestGroups : short-run, tutorials
+Enabled    : Yes
+Precision  : 0.05
+
+ExtraFile  : benzene.xyz
+Input: 04-octopus_basics-visualization.01-benzene.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total Energy  ; GREPFIELD(static/info, 'Total  ', 3) ; -993.72234376

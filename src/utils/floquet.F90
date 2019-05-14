@@ -19,40 +19,26 @@
 #include "global.h"
 
 program oct_floquet
-  use atom_oct_m
-  use basins_oct_m
-  use box_oct_m
-  use box_union_oct_m
+  use blas_oct_m
   use calc_mode_par_oct_m
   use comm_oct_m
-  use command_line_oct_m
   use density_oct_m
   use fft_oct_m
-  use fftw_params_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use io_oct_m
-  use io_binary_oct_m
-  use io_function_oct_m
-  use kick_oct_m
   use lalg_adv_oct_m
-  use loct_oct_m
-!  use local_write_oct_m
-  use math_oct_m
   use mesh_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use mpi_lib_oct_m
+  use multicomm_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
   use space_oct_m
-  use species_oct_m
-  use species_pot_oct_m
   use simul_box_oct_m
   use states_oct_m
   use states_restart_oct_m
@@ -60,9 +46,7 @@ program oct_floquet
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
-  use varinfo_oct_m
   use v_ks_oct_m
-  use multicomm_oct_m
   use xc_oct_m
 
   implicit none
@@ -111,10 +95,10 @@ program oct_floquet
   gr = sys%gr
 
   ! generate the full hamiltonian following the sequence in td_init
-  call hamiltonian_init(hm, gr, sys%geo, st, sys%ks%theory_level, sys%ks%xc_family, sys%ks%xc_flags, &
+  call hamiltonian_init(hm, gr, sys%geo, st, sys%ks%theory_level, sys%ks%xc_family, &
               family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
   call hamiltonian_epot_generate(hm, gr, sys%geo, st, time=M_ZERO)
-  call hamiltonian_update(hm, gr%mesh, time = M_ZERO)
+  call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
 
   call states_allocate_wfns(st, gr%mesh)
   ! not sure this is needed ...
@@ -124,7 +108,7 @@ program oct_floquet
 
      ! initialize the vector field and update the hamiltonian     
      call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb, st)
-     call hamiltonian_update(hm, gr%mesh, time = M_ZERO)
+     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
   end if
 
   call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
@@ -136,7 +120,7 @@ program oct_floquet
 
   call density_calc(st, gr, st%rho)
   call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = M_ZERO)
-  call hamiltonian_update(hm, gr%mesh, time = M_ZERO)
+  call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
 
   call floquet_init()
 
@@ -172,7 +156,7 @@ contains
       ! variables documented in td/td_write.F90
       call parse_variable('TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
       call messages_print_var_value(stdout,'Frequency used for Floquet analysis', omega)
-      if(omega==M_ZERO) then
+      if(abs(omega)<=M_EPSILON) then
          message(1) = "Please give a non-zero value for TDFloquetFrequency"
          call messages_fatal(1)
       endif
@@ -235,7 +219,7 @@ contains
     ! perform time-integral over one cycle
     do it=1,nT
       ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
-      call hamiltonian_update(hm,gr%mesh,time=Tcycle+it*dt)
+      call hamiltonian_update(hm,gr%mesh, gr%der%boundaries,time=Tcycle+it*dt)
       ! get hpsi
       call zhamiltonian_apply_all(hm, sys%ks%xc, gr%der, st, hm_st)
 
@@ -384,7 +368,7 @@ contains
      end if
   
     ! reset time in Hamiltonian
-    call hamiltonian_update(hm,gr%mesh,time=M_ZERO)
+    call hamiltonian_update(hm,gr%mesh, gr%der%boundaries,time=M_ZERO)
 
     SAFE_DEALLOCATE_A(hmss)
     SAFE_DEALLOCATE_A(psi)

@@ -1,0 +1,51 @@
+CalculationMode = em_resp
+ExperimentalFeatures = yes
+
+PeriodicDimensions = 3
+
+a = 10.2
+
+BoxShape = parallelepiped
+Lsize = a/2
+Spacing = Lsize/7
+
+%ReducedCoordinates
+  "Si" |   0.0       | 0.0       | 0.0 
+  "Si" |   1/2       | 1/2       | 0.0
+  "Si" |   1/2       | 0.0       | 1/2
+  "Si" |   0.0       | 1/2       | 1/2 
+  "Si" |   1/4       | 1/4       | 1/4 
+  "Si" |   1/4 + 1/2 | 1/4 + 1/2 | 1/4
+  "Si" |   1/4 + 1/2 | 1/4       | 1/4 + 1/2
+  "Si" |   1/4       | 1/4 + 1/2 | 1/4 + 1/2 
+%
+
+
+%KPointsGrid
+ 4 | 4 | 4
+ 1/2 | 1/2 | 1/2
+%
+
+KPointsUseSymmetries = yes
+SymmetrizeDensity = yes
+
+ExtraStates = 1
+
+%EMFreqs 
+1 | 0.1
+%
+
+XCKernelLRCAlpha = 0.2
+
+LinearSolver = qmr_dotp
+LRTolInitTol = 1e-4
+LinearSolverMaxIter = 500
+EMEta = 0.01
+KdotPEta = 0.01
+EMPerturbationType = electric
+EMCalcMagnetooptics = true
+EMKPointOutput = true
+
+FilterPotentials = filter_none
+
+MixField = density

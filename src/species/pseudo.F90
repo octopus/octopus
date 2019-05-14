@@ -19,9 +19,6 @@
 #include "global.h"
 
 module pseudo_oct_m
-  use global_oct_m
-  use messages_oct_m
-  use profiling_oct_m
 
   implicit none
 
@@ -88,7 +85,8 @@ module pseudo_oct_m
     PSEUDO_FORMAT_PSF                        = 779,   &
     PSEUDO_FORMAT_CPI                        = 780,   &
     PSEUDO_FORMAT_FHI                        = 781,   &
-    PSEUDO_FORMAT_HGH                        = 782
+    PSEUDO_FORMAT_HGH                        = 782,   &
+    PSEUDO_FORMAT_PSP8                       = 783
 
   ! we only define these values here, the specific functionals are
   ! obtained from libxc

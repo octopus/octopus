@@ -26,7 +26,6 @@ module pes_flux_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use kpoints_oct_m
-  use io_function_oct_m
   use io_oct_m
   use lasers_oct_m
   use loct_oct_m
@@ -42,7 +41,6 @@ module pes_flux_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
-  use sort_oct_m
   use states_oct_m
   use states_dim_oct_m
   use unit_oct_m
@@ -701,7 +699,7 @@ contains
       
       Emin = 0
       Emax = 10 
-      De   = 0.1
+      De   = CNST(0.1)
     
       if(parse_block('PES_Flux_EnergyGrid', blk) == 0) then
 
@@ -1277,7 +1275,7 @@ contains
     do isp = isp_start, isp_end
       do idir = 1, mdim
         ! calculate flux only along the surface normal
-        if(this%srfcnrml(idir, isp) == M_ZERO) cycle
+        if(abs(this%srfcnrml(idir, isp)) <= M_EPSILON) cycle
 
         Jk_cub = M_z0
 

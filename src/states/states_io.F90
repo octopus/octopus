@@ -26,14 +26,10 @@ module states_io_oct_m
   use grid_oct_m
   use io_oct_m
   use kpoints_oct_m
-  use lalg_basic_oct_m
-  use loct_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
-  use mpi_lib_oct_m
+  use mpi_oct_m
   use orbitalset_oct_m
   use orbitalset_utils_oct_m
   use parser_oct_m
@@ -48,7 +44,6 @@ module states_io_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
-  use varinfo_oct_m
 
   implicit none
 
@@ -109,13 +104,8 @@ contains
         write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4)')   &
           '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>'
       else
-        if(st%cmplxscl%space) then
-          write(message(1), '(a4,1x,a5,1x,a12,1x,a15,4x,a12)')   &
-            '#st',' Spin',' Eigenvalue', ' Im(Eigenvalue)', 'Occupation'
-        else
-          write(message(1), '(a4,1x,a5,1x,a12,4x,a12)')       &
-            '#st',' Spin',' Eigenvalue', 'Occupation'
-        end if
+        write(message(1), '(a4,1x,a5,1x,a12,4x,a12)')       &
+          '#st',' Spin',' Eigenvalue', 'Occupation'
       end if
       if(present(error)) &
         write(message(1),'(a,a10)') trim(message(1)), ' Error'
@@ -147,14 +137,8 @@ contains
                 units_from_atomic(units_out%energy, st%eigenval(ist, ik)), st%occ(ist, ik), st%spin(1:3, ist, ik)
               if(present(error)) write(tmp_str(3), '(a3,es7.1,a1)')'  (', error(ist, ik), ')'
             else
-              if(st%cmplxscl%space) then !cmplxscl
-                write(tmp_str(2), '(1x,f12.6,3x,f12.6,3x,f12.6)') &
-                  units_from_atomic(units_out%energy, st%zeigenval%Re(ist, ik+is)), &
-                  units_from_atomic(units_out%energy, st%zeigenval%Im(ist, ik+is)), st%occ(ist, ik+is)
-              else
-                write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
-                  units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), st%occ(ist, ik+is)
-              end if
+              write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
+                units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), st%occ(ist, ik+is)
               if(present(error)) write(tmp_str(3), '(a7,es7.1,a1)')'      (', error(ist, ik+is), ')'
             end if
             if(present(error)) then
@@ -205,10 +189,6 @@ contains
 
       tmp_str(1) = trim(tmp_str(1))//'  Eigenvalue ['// trim(units_abbrev(units_out%energy)) // ']'
 
-      if(st%cmplxscl%space) then
-        tmp_str(1) = trim(tmp_str(1))//'  Im(Eigenvalue)'
-      end if
-        
       tmp_str(1) = trim(tmp_str(1))//'  Occupation'
 
       if(st%d%ispin  ==  SPINORS) then
@@ -267,24 +247,10 @@ contains
           end if
 
 
-          if(.not. st%cmplxscl%space) then
-
-            if(len(units_abbrev(units_out%energy)) == 1) then
-              write(tmp_str(1), '(2a,f14.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%eigenval(ist, iqn))
-            else
-              write(tmp_str(1), '(2a,f15.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%eigenval(ist, iqn))
-            end if
-
+          if(len(units_abbrev(units_out%energy)) == 1) then
+            write(tmp_str(1), '(2a,f14.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%eigenval(ist, iqn))
           else
-
-            if(len(units_abbrev(units_out%energy)) == 1) then
-              write(tmp_str(1), '(2a,f14.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%zeigenval%Re(ist, iqn))
-            else
-              write(tmp_str(1), '(2a,f15.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%zeigenval%Re(ist, iqn))
-            end if
-
-            write(tmp_str(1), '(2a,f15.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%zeigenval%Im(ist, iqn))
-
+            write(tmp_str(1), '(2a,f15.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%eigenval(ist, iqn))
           end if
 
           write(tmp_str(1), '(2a,f11.6)') trim(tmp_str(1)), ' ', st%occ(ist, iqn)
@@ -358,8 +324,6 @@ contains
         ASSERT(ien <= ndiv)
         dhistogram(ien) = dhistogram(ien) + st%d%kweights(flat_indices(1, iev))*sb%kpoints%full%npoints
       end do
-
-      print *, maxval(dhistogram)
 
       !normalize
       if(maxval(dhistogram) > real(height)) then
@@ -540,7 +504,7 @@ contains
           ff(1:gr%mesh%np) = psi_initial(1:gr%mesh%np, 1)*gr%mesh%x(1:gr%mesh%np, icoord)* &
             psi_ist(1:gr%mesh%np, 1)
           osc(icoord)  = dmf_integrate(gr%mesh, ff)
-          osc_strength = osc_strength + 2.0/real(gr%mesh%sb%dim)*transition_energy*abs(osc(icoord))**2.0
+          osc_strength = osc_strength + CNST(2.0)/real(gr%mesh%sb%dim)*transition_energy*abs(osc(icoord))**2
 
         end do
 
@@ -595,54 +559,8 @@ contains
  
   end subroutine states_write_tpa
 
+
   ! ---------------------------------------------------------
-  subroutine states_write_fermi_for_bands(dir, st, sb)
-    character(len=*),  intent(in) :: dir
-    type(states_t),    intent(in) :: st
-    type(simul_box_t), intent(in) :: sb
-
-    integer :: iunit, idir
-    character(len=100) :: str_tmp
-
-    PUSH_SUB(states_write_fermi_for_bands)
-
-    iunit = io_open(trim(dir)//'/'//'bands-efermi.dat', action='write')    
-
-    write(message(1), '(3a)') '# Fermi energy [', trim(units_abbrev(units_out%energy)), &
-      '] in a format compatible with bands-gp.dat'
-
-    message(2)=""
-    message(3)=""
-    message(4)=""
-    do idir = 1, sb%dim
-      write(str_tmp, '(f12.6)') minval(sb%kpoints%reduced%point(idir, 1:sb%kpoints%reduced%npoints))
-      message(2) = trim(message(2)) // trim(str_tmp)
-      write(str_tmp, '(f12.6)') M_ZERO     ! Gamma point
-      message(3) = trim(message(3)) // trim(str_tmp)
-      write(str_tmp, '(f12.6)') maxval(sb%kpoints%reduced%point(idir, 1:sb%kpoints%reduced%npoints))
-      message(4) = trim(message(4)) // trim(str_tmp)
-    end do
-    do idir = 1, sb%dim
-      write(str_tmp, '(f12.6)') minval(sb%kpoints%reduced%red_point(idir, 1:sb%kpoints%reduced%npoints))
-      message(2) = trim(message(2)) // trim(str_tmp)
-      write(str_tmp, '(f12.6)') M_ZERO     ! Gamma point
-      message(3) = trim(message(3)) // trim(str_tmp)
-      write(str_tmp, '(f12.6)') maxval(sb%kpoints%reduced%red_point(idir, 1:sb%kpoints%reduced%npoints))
-      message(4) = trim(message(4)) // trim(str_tmp)
-    end do
-    write(str_tmp, '(f12.6)') units_from_atomic(units_out%energy, st%smear%e_fermi)
-    message(2) = trim(message(2)) // trim(str_tmp)
-    message(3) = trim(message(3)) // trim(str_tmp)
-    message(4) = trim(message(4)) // trim(str_tmp)
-
-    call messages_info(4, iunit)
-    call io_close(iunit)
-
-    POP_SUB(states_write_fermi_for_bands)
-  end subroutine states_write_fermi_for_bands
-
-
-    ! ---------------------------------------------------------
 
   subroutine states_write_bandstructure(dir, nst, st, sb, geo, mesh, phase, vec_pot, vec_pot_var)
     character(len=*),  intent(in)             :: dir
@@ -662,7 +580,7 @@ contains
 
     logical :: projection
     integer :: ii, ll, mm, nn, work, norb, work2
-    integer :: ia, iorb, idim, ip, maxnorb
+    integer :: ia, iorb, idim, maxnorb
     FLOAT   :: norm
     FLOAT, allocatable :: dpsi(:,:), ddot(:,:)
     CMPLX, allocatable :: zpsi(:,:), zdot(:,:)
@@ -757,8 +675,7 @@ contains
               os%ll = ll
               os%nn = nn
               os%ii = ii
-              os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
-                                OPTION__AOTRUNCATION__AO_FULL, CNST(0.01))
+              os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, OPTION__AOTRUNCATION__AO_FULL, CNST(0.01))
               work2 = work2 + 1
             end if
           end do
@@ -801,7 +718,7 @@ contains
             SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
             os%phase(:,:) = M_ZERO
             if(simul_box_is_periodic(mesh%sb) .and. .not. os%submeshforperiodic) then
-              SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
+              SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%norbs, 1:os%ndim, st%d%kpt%start:st%d%kpt%end))
               os%eorb_mesh(:,:,:,:) = M_ZERO
             else
               SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
@@ -822,7 +739,7 @@ contains
             if(ik < st%d%nik-npath+1 ) cycle ! We only want points inside the k-point path
             if(states_are_real(st)) then
               call states_get_state(st, mesh, ist, ik, dpsi )
-              call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., ddot(1:st%d%dim,1:os%norbs))
+              call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., .false., ddot(1:st%d%dim,1:os%norbs))
               do iorb = 1, os%norbs
                 do idim = 1, st%d%dim
                   weight(ik,ist,iorb,norb,ia) = weight(ik,ist,iorb,norb,ia) + abs(ddot(idim,iorb))**2
@@ -834,7 +751,7 @@ contains
                 ! Apply the phase that contains both the k-point and vector-potential terms.
                 call states_set_phase(st%d, zpsi, phase(:,ik), mesh%np, .false.)
               end if
-              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(phase), &
+              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(phase), .false.,&
                                  zdot(1:st%d%dim,1:os%norbs))
               do iorb = 1, os%norbs
                 do idim = 1, st%d%dim

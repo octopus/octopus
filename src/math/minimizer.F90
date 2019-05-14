@@ -20,10 +20,10 @@
 
 module minimizer_oct_m
   use global_oct_m
+  use iso_c_binding
   use lalg_basic_oct_m
   use profiling_oct_m
   use messages_oct_m
-  use mpi_oct_m
 
   implicit none
 
@@ -186,18 +186,95 @@ contains
     integer, intent(in)    :: maxiter
     interface
       subroutine f(val, n, x, grad, need_gradient, f_data)
-        FLOAT    :: val
-        integer  :: n
-        FLOAT    :: x(n), grad(n)
-        integer  :: need_gradient
-        FLOAT    :: f_data
+        use iso_c_binding
+        real(c_double), intent(out) :: val
+        integer(c_int), intent(in)  :: n
+        real(c_double), intent(in)  :: x(*)
+        real(c_double), intent(out) :: grad(*)
+        integer(c_int), intent(in)  :: need_gradient
+        type(c_ptr),    intent(in)  :: f_data
       end subroutine f
     end interface
     real(8), intent(out)   :: minimum
     real(8), intent(in), optional :: lb(:), ub(:)
 #if defined(HAVE_NLOPT)
 
-    integer(8) :: opt
+    interface
+      subroutine nlocreate(opt, alg, n)
+        use iso_c_binding
+        type(c_ptr),    intent(out) :: opt
+        integer(c_int), intent(in)  :: alg
+        integer(c_int), intent(in)  :: n
+      end subroutine nlocreate
+
+      subroutine nlo_set_lower_bounds(ret, opt, lower_bounds)
+        use iso_c_binding
+        integer(c_int), intent(out)   :: ret
+        type(c_ptr),    intent(inout) :: opt
+        real(c_double), intent(in)    :: lower_bounds(*)
+      end subroutine nlo_set_lower_bounds
+
+      subroutine nlo_set_upper_bounds(ret, opt, upper_bounds)
+        use iso_c_binding
+        integer(c_int), intent(out)   :: ret
+        type(c_ptr),    intent(inout) :: opt
+        real(c_double), intent(in)    :: upper_bounds(*)
+      end subroutine nlo_set_upper_bounds
+
+      subroutine nlo_set_min_objective(ret, opt, f, f_data)
+        use iso_c_binding
+        integer(c_int), intent(out)   :: ret
+        type(c_ptr),    intent(inout) :: opt
+        interface
+          subroutine f(val, n, x, grad, need_gradient, f_data)
+            use iso_c_binding
+            real(c_double), intent(out) :: val
+            integer(c_int), intent(in)  :: n
+            real(c_double), intent(in)  :: x(*)
+            real(c_double), intent(out) :: grad(*)
+            integer(c_int), intent(in)  :: need_gradient
+            type(c_ptr),    intent(in)  :: f_data
+          end subroutine f
+        end interface
+        type(c_ptr),    intent(in)    :: f_data
+      end subroutine nlo_set_min_objective
+
+      subroutine nlo_set_xtol_abs1(ret, opt, xtol_abs)
+        use iso_c_binding
+        integer(c_int), intent(out)   :: ret
+        type(c_ptr),    intent(inout) :: opt
+        real(c_double), intent(in)    :: xtol_abs
+      end subroutine nlo_set_xtol_abs1
+
+      subroutine nlo_set_initial_step1(ret, opt, initial_step1)
+        use iso_c_binding
+        integer(c_int), intent(out)   :: ret
+        type(c_ptr),    intent(inout) :: opt
+        real(c_double), intent(in)    :: initial_step1
+      end subroutine nlo_set_initial_step1
+
+      subroutine nlo_set_maxeval(ret, opt, maxeval)
+        use iso_c_binding
+        integer(c_int), intent(out)   :: ret
+        type(c_ptr),    intent(inout) :: opt
+        integer(c_int), intent(in)    :: maxeval
+      end subroutine nlo_set_maxeval
+
+      subroutine nlo_optimize(ret, opt, x, optf)
+        use iso_c_binding
+        integer(c_int), intent(out)   :: ret
+        type(c_ptr),    intent(inout) :: opt
+        real(c_double), intent(inout) :: x(*)
+        real(c_double), intent(out)   :: optf
+      end subroutine nlo_optimize
+
+      subroutine nlo_destroy(opt)
+        use iso_c_binding
+        type(c_ptr), intent(inout) :: opt
+      end subroutine nlo_destroy
+    end interface
+
+    type(c_ptr) :: opt
     integer :: ires
     include 'nlopt.f'
 
@@ -215,11 +292,11 @@ contains
       call nlo_set_upper_bounds(ires, opt, ub)
     end if
 
-    call nlo_set_min_objective(ires, opt, f, 0)
+    call nlo_set_min_objective(ires, opt, f, C_NULL_PTR)
     ! This would set an inequality constraint (TODO)
     !call nlo_add_inequality_constraint(ires, opt, myconstraint, d1, CNST(1.0e-8))
 
-    call nlo_set_xtol_abs(ires, opt, toldr)
+    call nlo_set_xtol_abs1(ires, opt, toldr)
     call nlo_set_initial_step1(ires, opt, step)
     call nlo_set_maxeval(ires, opt, maxiter)
 
@@ -407,10 +484,10 @@ contains
     f_alpha = CNST(0.99)
     n_min = 5
     f_inc = CNST(1.1)
-    dt_max = 10.0 * dt
+    dt_max = CNST(10.0) * dt
     f_dec = CNST(0.5)
 
-    maxmove = 0.2 * P_Ang 
+    maxmove = CNST(0.2) * P_Ang 
     
     grad = M_ZERO
 
@@ -437,13 +514,13 @@ contains
       end select
 
       if (n_iter /= 1) then 
-        p_value = 0.0
+        p_value = M_ZERO
         do i_tmp = 0, dim/3 - 1
           p_value = p_value - grad(3*i_tmp+1)*vel(3*i_tmp+1) - grad(3*i_tmp+2)*vel(3*i_tmp+2) - grad(3*i_tmp+3)*vel(3*i_tmp+3)
         end do
 
-        if(p_value > 0.0) then
-          vel(1:dim) = (1.0 - alpha) * vel(1:dim) - alpha * grad(1:dim) * lalg_nrm2(dim,vel) / lalg_nrm2(dim,grad)
+        if(p_value > M_ZERO) then
+          vel(1:dim) = (M_ONE - alpha) * vel(1:dim) - alpha * grad(1:dim) * lalg_nrm2(dim,vel) / lalg_nrm2(dim,grad)
           if(p_times > n_min) then
             dt = min(dt * f_inc , dt_max)
             alpha = alpha * f_alpha

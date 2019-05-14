@@ -19,7 +19,6 @@
 #include "global.h"
 
 module td_oct_m
-  use global_oct_m
   use boundary_op_oct_m
   use calc_mode_par_oct_m
   use density_oct_m
@@ -27,6 +26,7 @@ module td_oct_m
   use forces_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
+  use global_oct_m
   use grid_oct_m
   use ground_state_oct_m
   use hamiltonian_oct_m
@@ -37,14 +37,17 @@ module td_oct_m
   use lda_u_oct_m
   use lda_u_io_oct_m
   use loct_oct_m
-  use loct_math_oct_m
+  use messages_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use parser_oct_m
   use pes_oct_m
   use poisson_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
+  use propagator_oct_m
+  use propagator_base_oct_m
   use restart_oct_m
   use scdm_oct_m
   use scf_oct_m
@@ -54,16 +57,12 @@ module td_oct_m
   use states_calc_oct_m
   use states_restart_oct_m
   use system_oct_m
-  use propagator_oct_m
-  use propagator_base_oct_m
   use td_write_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
-  use messages_oct_m
-  use multicomm_oct_m
   use xc_oct_m
 
   implicit none
@@ -359,15 +358,13 @@ contains
     type(grid_t),     pointer :: gr   ! some shortcuts
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
-    logical                   :: stopping, cmplxscl
+    logical                   :: stopping
     integer                   :: iter, ierr, scsteps
     real(8)                   :: etime
     type(profile_t),     save :: prof
     type(restart_t)           :: restart_load, restart_dump
 
     PUSH_SUB(td_run)
-
-    cmplxscl = hm%cmplxscl%space
 
     ! some shortcuts
     gr  => sys%gr
@@ -376,27 +373,21 @@ contains
 
     call td_init(td, sys, hm)
 
-    !In both of these cases, the Schroedinger equation must contain an extra term related to the time-derivative of the ions, aas these two contributions are attached to atoms.
-    if (ion_dynamics_ions_move(td%ions)) then
-      if (hm%lda_u_level /= DFT_U_NONE ) call messages_not_implemented("DFT+U with MoveIons=yes")
-      if (associated(st%rho_core))  call messages_not_implemented("Nonlinear core correction with MoveIons=yes")
-    end if
-
     ! Allocate wavefunctions during time-propagation
     if(td%dynamics == EHRENFEST) then
       !Note: this is not really clean to do this
       if(hm%lda_u_level /= DFT_U_NONE .and. states_are_real(st)) then
         call lda_u_end(hm%lda_u)
         !complex wfs are required for Ehrenfest
-        call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX, alloc_Left = cmplxscl)
+        call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
         call lda_u_init(hm%lda_u, hm%lda_u_level, gr, geo, st) 
       else
         !complex wfs are required for Ehrenfest
-        call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX, alloc_Left = cmplxscl)
+        call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
       end if 
     else
-      call states_allocate_wfns(st, gr%mesh, alloc_Left = cmplxscl)
-      call scf_init(td%scf, sys%gr, sys%geo, sys%st, sys%mc, hm)
+      call states_allocate_wfns(st, gr%mesh)
+      call scf_init(td%scf, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks)
     end if
 
     if(hm%scdm_EXX) then
@@ -411,7 +402,7 @@ contains
 
       ! initialize the vector field and update the hamiltonian
       call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb, st)
-      call hamiltonian_update(hm, gr%mesh, time = td%dt*td%iter)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = td%dt*td%iter)
     end if
 
     call init_wfs()
@@ -429,12 +420,12 @@ contains
         call hamiltonian_epot_generate(hm, gr, geo, st, time = td%iter*td%dt)
       end if
 
-      call forces_calculate(gr, geo, hm, st, td%iter*td%dt, td%dt)
+      call forces_calculate(gr, geo, hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
-      if(iand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-        call forces_calculate(gr, geo, hm, st, td%iter*td%dt, td%dt)
+      if(bitand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+        call forces_calculate(gr, geo, hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
       end if  
     end if
 
@@ -479,18 +470,10 @@ contains
 
       if(iter > 1) then
         if( ((iter-1)*td%dt <= hm%ep%kick%time) .and. (iter*td%dt > hm%ep%kick%time) ) then
-          if( .not.hm%pcm%kick_like ) then
-            if(.not. cmplxscl) then
-              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
-            else
-              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, theta = hm%cmplxscl%theta)
-            endif
+          if( .not.hm%pcm%localf ) then
+            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
           else
-            if(.not. cmplxscl) then
-              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)
-            else
-              call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, theta = hm%cmplxscl%theta, pcm = hm%pcm)
-            endif
+            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)
           end if
           call td_write_kick(gr%mesh, hm%ep%kick, sys%outp, geo, iter)
         end if
@@ -549,12 +532,7 @@ contains
 
     subroutine print_header()
 
-      if(.not.cmplxscl) then
-        write(message(1), '(a7,1x,a14,a14,a10,a17)') 'Iter ', 'Time ', 'Energy ', 'SC Steps', 'Elapsed Time '
-      else
-        write(message(1), '(a7,1x,a14,a14,a14,a10,a17)') &
-          'Iter ', 'Time ', 'Re(Energy) ','Im(Energy) ', 'SC Steps', 'Elapsed Time '
-      end if
+      write(message(1), '(a7,1x,a14,a14,a10,a17)') 'Iter ', 'Time ', 'Energy ', 'SC Steps', 'Elapsed Time '
 
       call messages_info(1)
       call messages_print_stress(stdout)
@@ -565,18 +543,10 @@ contains
     subroutine check_point()
       PUSH_SUB(td_run.check_point)
 
-      if(.not. cmplxscl) then
-        write(message(1), '(i7,1x,2f14.6,i10,f14.3)') iter, &
-          units_from_atomic(units_out%time, iter*td%dt), &
-          units_from_atomic(units_out%energy, hm%energy%total + geo%kinetic_energy), &
-          scsteps, loct_clock() - etime
-      else
-        write(message(1), '(i7,1x,3f14.6,i10,f14.3)') iter, &
-          units_from_atomic(units_out%time, iter*td%dt), &
-          units_from_atomic(units_out%energy, hm%energy%total + geo%kinetic_energy), &
-          units_from_atomic(units_out%energy, hm%energy%Imtotal), &
-          scsteps, loct_clock() - etime
-      end if
+      write(message(1), '(i7,1x,2f14.6,i10,f14.3)') iter, &
+        units_from_atomic(units_out%time, iter*td%dt), &
+        units_from_atomic(units_out%energy, hm%energy%total + geo%kinetic_energy), &
+        scsteps, loct_clock() - etime
 
       call messages_info(1)
       etime = loct_clock()
@@ -612,13 +582,9 @@ contains
             message(1) = "Unable to load TD states."
             call messages_fatal(1)
           end if
-          if(.not. cmplxscl) then
-            call density_calc(st, gr, st%rho)
-          else
-            call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-          end if
+          call density_calc(st, gr, st%rho)
           call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
-          call forces_calculate(gr, geo, hm, st, iter*td%dt, td%dt)
+          call forces_calculate(gr, geo, hm, st, sys%ks, t = iter*td%dt, dt = td%dt)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds")
           call print_header()
         end if
@@ -725,11 +691,7 @@ contains
       end if
 
 
-      if(.not. cmplxscl) then
-        call density_calc(st, gr, st%rho)
-      else
-        call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-      end if
+      call density_calc(st, gr, st%rho)
 
       if(freeze_orbitals > 0) then
         ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
@@ -841,19 +803,11 @@ contains
 
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
-      if(hm%ep%kick%time  ==  M_ZERO) then
+      if(abs(hm%ep%kick%time)  <=  M_EPSILON) then
         if( .not.hm%pcm%localf ) then
-          if(.not. cmplxscl) then
-            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
-          else
-            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, theta = hm%cmplxscl%theta)
-          endif
+          call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
         else
-          if(.not. cmplxscl) then
-            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)
-          else
-            call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, theta = hm%cmplxscl%theta, pcm = hm%pcm)
-          endif
+          call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)
         end if
         call td_write_kick(gr%mesh, hm%ep%kick, sys%outp, geo, 0)
       end if
@@ -1022,7 +976,6 @@ contains
     integer,             intent(in)  :: iter
     integer,             intent(out) :: ierr
 
-    logical :: cmplxscl
     integer :: err, err2
 
     PUSH_SUB(td_dump)
@@ -1051,8 +1004,7 @@ contains
       if (err /= 0) ierr = ierr + 1
     end if
 
-    cmplxscl = st%cmplxscl%space      
-    call potential_interpolation_dump(td%tr%vksold, restart, gr, cmplxscl, st%d%nspin, err2)
+    call potential_interpolation_dump(td%tr%vksold, restart, gr, st%d%nspin, err2)
     if (err2 /= 0) ierr = ierr + 2
 
     call pes_dump(restart, td%pesv, st, gr%mesh, err)
@@ -1080,7 +1032,6 @@ contains
     type(td_t),          intent(inout) :: td
     integer,             intent(out)   :: ierr
 
-    logical :: cmplxscl
     integer :: err, err2
     PUSH_SUB(td_load)
 
@@ -1098,14 +1049,13 @@ contains
     end if
 
     ! Read states
-    call states_load(restart, st, gr, err, iter=td%iter, read_left = st%have_left_states, label = ": td")
+    call states_load(restart, st, gr, err, iter=td%iter, label = ": td")
     if (err /= 0) then
       ierr = ierr + 1
     end if
 
     ! read potential from previous interactions
-    cmplxscl = st%cmplxscl%space
-    call potential_interpolation_load(td%tr%vksold, restart, gr, cmplxscl, st%d%nspin, err2)
+    call potential_interpolation_load(td%tr%vksold, restart, gr, st%d%nspin, err2)
 
     if (err2 /= 0) ierr = ierr + 2
 
@@ -1121,7 +1071,7 @@ contains
       if (err /= 0) then
         ierr = ierr + 8
       else
-        call hamiltonian_update(hm, gr%mesh, time = td%dt*td%iter)
+        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = td%dt*td%iter)
       end if
     end if
 

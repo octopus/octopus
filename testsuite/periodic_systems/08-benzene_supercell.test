@@ -12,8 +12,13 @@ match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6)
 match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 1
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 47
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;   8
+
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+
 match ; Dipole x     ; GREPFIELD(static/info, '<x>', 3)       ;   0.0
+Precision: 0.00016
 match ; Dipole y     ; GREPFIELD(static/info, '<y>', 3)       ;   0.0
+Precision: 0.0001
 match ; Dipole z     ; GREPFIELD(static/info, '<z>', 3)       ;   0.0
 
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -37.06105918
@@ -24,21 +29,23 @@ match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -1.626
 match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 30.10957852
 match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -87.18612759
 
-match ; Eigenvalue  1      ; GREPFIELD(static/info, ' 1   --', 3) ; -0.751292
+match ; Eigenvalue  1      ; GREPFIELD(static/info, ' 1   --', 3) ; -0.751290
 match ; Eigenvalue  2      ; GREPFIELD(static/info, ' 2   --', 3) ; -0.642841
-match ; Eigenvalue  3      ; GREPFIELD(static/info, ' 3   --', 3) ; -0.564025
-match ; Eigenvalue  4      ; GREPFIELD(static/info, ' 4   --', 3) ; -0.557052
+match ; Eigenvalue  3      ; GREPFIELD(static/info, ' 3   --', 3) ; -0.564024
+match ; Eigenvalue  4      ; GREPFIELD(static/info, ' 4   --', 3) ; -0.557053
 match ; Eigenvalue  5      ; GREPFIELD(static/info, ' 5   --', 3) ; -0.486945
-match ; Eigenvalue  6      ; GREPFIELD(static/info, ' 6   --', 3) ; -0.423023
+match ; Eigenvalue  6      ; GREPFIELD(static/info, ' 6   --', 3) ; -0.423022
 match ; Eigenvalue  7      ; GREPFIELD(static/info, ' 7   --', 3) ; -0.403365
-match ; Eigenvalue  8      ; GREPFIELD(static/info, ' 8   --', 3) ; -0.316177
-match ; Eigenvalue  9      ; GREPFIELD(static/info, ' 9   --', 3) ; -0.313644
+match ; Eigenvalue  8      ; GREPFIELD(static/info, ' 8   --', 3) ; -0.316178
+match ; Eigenvalue  9      ; GREPFIELD(static/info, ' 9   --', 3) ; -0.313645
 match ; Eigenvalue 10      ; GREPFIELD(static/info, '10   --', 3) ; -0.254481
 match ; Eigenvalue 11      ; GREPFIELD(static/info, '11   --', 3) ; -0.214822
-match ; Eigenvalue 12      ; GREPFIELD(static/info, '12   --', 3) ; -0.135470
-match ; Eigenvalue 13      ; GREPFIELD(static/info, '13   --', 3) ; -0.134062
-match ; Eigenvalue 14      ; GREPFIELD(static/info, '14   --', 3) ; -0.133474
-match ; Eigenvalue 15      ; GREPFIELD(static/info, '15   --', 3) ; -0.119520
+match ; Eigenvalue 12      ; GREPFIELD(static/info, '12   --', 3) ; -0.135471
+match ; Eigenvalue 13      ; GREPFIELD(static/info, '13   --', 3) ; -0.134063
+match ; Eigenvalue 14      ; GREPFIELD(static/info, '14   --', 3) ; -0.133473
+match ; Eigenvalue 15      ; GREPFIELD(static/info, '15   --', 3) ; -0.119519
 match ; Eigenvalue 16      ; GREPFIELD(static/info, '16   --', 3) ;  0.004355
-match ; Eigenvalue 17      ; GREPFIELD(static/info, '17   --', 3) ;  0.059679
-match ; Eigenvalue 18      ; GREPFIELD(static/info, '18   --', 3) ;  0.066358
+Precision: 0.007
+match ; Eigenvalue 17      ; GREPFIELD(static/info, '17   --', 3) ;  0.059678
+Precision: 0.005
+match ; Eigenvalue 18      ; GREPFIELD(static/info, '18   --', 3) ;  0.064385

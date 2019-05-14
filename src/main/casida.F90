@@ -20,7 +20,6 @@
 #include "global.h"
 
 module casida_oct_m
-  use global_oct_m
   use batch_oct_m
   use calc_mode_par_oct_m
   use comm_oct_m
@@ -28,6 +27,7 @@ module casida_oct_m
   use excited_states_oct_m
   use forces_oct_m
   use gauss_legendre_oct_m
+  use global_oct_m
   use hamiltonian_oct_m
   use io_oct_m
   use io_function_oct_m
@@ -37,9 +37,12 @@ module casida_oct_m
   use linear_response_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
+  use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use parser_oct_m
   use pert_oct_m
+  use phonons_lr_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -54,10 +57,7 @@ module casida_oct_m
   use unit_system_oct_m
   use utils_oct_m
   use v_ks_oct_m
-  use phonons_lr_oct_m
   use xc_oct_m
-  use messages_oct_m  
-  use multicomm_oct_m
 
   implicit none
 
@@ -273,8 +273,8 @@ contains
     call parse_variable('CasidaTheoryLevel', CASIDA_EPS_DIFF + CASIDA_PETERSILKA + CASIDA_CASIDA, theorylevel)
 
     if (states_are_complex(sys%st)) then
-      if((iand(theorylevel, CASIDA_VARIATIONAL) /= 0 &
-        .or. iand(theorylevel, CASIDA_CASIDA) /= 0)) then
+      if((bitand(theorylevel, CASIDA_VARIATIONAL) /= 0 &
+        .or. bitand(theorylevel, CASIDA_CASIDA) /= 0)) then
         message(1) = "Variational and full Casida theory levels do not apply to complex wavefunctions."
         call messages_fatal(1, only_root_writes = .true.)
         ! see section II.D of CV(2) paper regarding this assumption. Would be Eq. 30 with complex wfns.
@@ -457,7 +457,7 @@ contains
     end if
 
     ! First, print the differences between KS eigenvalues (first approximation to the excitation energies).
-    if(iand(theorylevel, CASIDA_EPS_DIFF) /= 0) then
+    if(bitand(theorylevel, CASIDA_EPS_DIFF) /= 0) then
       message(1) = "Info: Approximating resonance energies through KS eigenvalue differences"
       call messages_info(1)
       cas%type = CASIDA_EPS_DIFF
@@ -466,7 +466,7 @@ contains
 
     if (sys%st%d%ispin /= SPINORS) then
 
-      if(iand(theorylevel, CASIDA_TAMM_DANCOFF) /= 0) then
+      if(bitand(theorylevel, CASIDA_TAMM_DANCOFF) /= 0) then
         call messages_experimental("Tamm-Dancoff calculation")
         message(1) = "Info: Calculating matrix elements in the Tamm-Dancoff approximation"
         call messages_info(1)
@@ -474,7 +474,7 @@ contains
         call casida_work(sys, hm, cas)
       end if
 
-      if(iand(theorylevel, CASIDA_VARIATIONAL) /= 0) then
+      if(bitand(theorylevel, CASIDA_VARIATIONAL) /= 0) then
         call messages_experimental("CV(2)-DFT calculation")
         message(1) = "Info: Calculating matrix elements with the CV(2)-DFT theory"
         call messages_info(1)
@@ -482,7 +482,7 @@ contains
         call casida_work(sys, hm, cas)
       end if
 
-      if(iand(theorylevel, CASIDA_CASIDA) /= 0) then
+      if(bitand(theorylevel, CASIDA_CASIDA) /= 0) then
         message(1) = "Info: Calculating matrix elements with the full Casida method"
         call messages_info(1)
         cas%type = CASIDA_CASIDA
@@ -491,7 +491,7 @@ contains
 
       ! Doing this first, if doing the others later, takes longer, because we would use
       ! each Poisson solution for only one matrix element instead of a whole column.
-      if(iand(theorylevel, CASIDA_PETERSILKA) /= 0) then
+      if(bitand(theorylevel, CASIDA_PETERSILKA) /= 0) then
         message(1) = "Info: Calculating resonance energies via the Petersilka approximation"
         call messages_info(1)
         cas%type = CASIDA_PETERSILKA

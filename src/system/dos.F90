@@ -25,7 +25,6 @@ module dos_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use io_oct_m
-  use lda_u_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -40,7 +39,6 @@ module dos_oct_m
   use submesh_oct_m
   use unit_oct_m
   use unit_system_oct_m
-
 
   implicit none
 
@@ -336,7 +334,7 @@ contains
             SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
             os%phase(:,:) = M_ZERO
             if(simul_box_is_periodic(mesh%sb) .and. .not. os%submeshforperiodic) then
-              SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
+              SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%norbs, 1:os%ndim, st%d%kpt%start:st%d%kpt%end))
               os%eorb_mesh(:,:,:,:) = M_ZERO
             else
               SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
@@ -373,7 +371,7 @@ contains
            do ik = st%d%kpt%start, st%d%kpt%end
             if(states_are_real(st)) then
               call states_get_state(st, mesh, ist, ik, dpsi )
-              call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., ddot(1:st%d%dim,1:os%norbs))
+              call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., .false., ddot(1:st%d%dim,1:os%norbs))
               do iorb = 1, os%norbs
                 do idim = 1, st%d%dim
                   weight(ik,ist) = weight(ik,ist) + st%d%kweights(ik)*abs(ddot(idim,iorb))**2
@@ -391,7 +389,7 @@ contains
                   !$omp end parallel do
                 end do
               end if
-              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(hm%hm_base%phase), &
+              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(hm%hm_base%phase), .false., &
                                  zdot(1:st%d%dim,1:os%norbs))
 
               do iorb = 1, os%norbs

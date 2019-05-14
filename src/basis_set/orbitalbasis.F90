@@ -32,7 +32,6 @@ module orbitalbasis_oct_m
   use simul_box_oct_m
   use species_oct_m
   use submesh_oct_m
-  use types_oct_m  
  
   implicit none
 
@@ -44,7 +43,9 @@ module orbitalbasis_oct_m
        orbitalbasis_init,              &
        orbitalbasis_end,               &
        dorbitalbasis_build,            &
-       zorbitalbasis_build
+       zorbitalbasis_build,            &
+       dorbitalbasis_build_empty,      &
+       zorbitalbasis_build_empty
 
   type orbitalbasis_t
     type(orbitalset_t), pointer :: orbsets(:)   !> All the orbital sets of the system
@@ -56,7 +57,7 @@ module orbitalbasis_oct_m
     integer, pointer    :: global2os(:,:)     !> Mapping functions
     integer, pointer    :: os2global(:,:)     
 
-    integer             :: truncation         !> Truncation method for the orbitals
+    integer(8)          :: truncation         !> Truncation method for the orbitals
     FLOAT               :: threshold          !> Threshold for orbital truncation
 
     logical             :: normalize          !> Do we normalize the orbitals 
@@ -73,6 +74,10 @@ contains
 
   PUSH_SUB(orbitalbasis_nullify)
 
+  this%normalize = .true.
+  this%submeshforperiodic = .false.
+  this%orthogonalization = .false.
+
   nullify(this%orbsets)
   nullify(this%global2os)
   nullify(this%os2global)
@@ -81,6 +86,8 @@ contains
   this%maxnorbs = 0
   this%max_np = 0
   this%size = 0
+
+  this%threshold = CNST(0.01)
 
   POP_SUB(orbitalbasis_nullify)
 

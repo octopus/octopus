@@ -20,20 +20,20 @@
 
 module invert_ks_oct_m
   use density_oct_m
-  use eigensolver_oct_m 
+  use eigensolver_oct_m
   use global_oct_m
-  use hamiltonian_oct_m 
-  use output_oct_m 
-  use io_oct_m 
-  use mesh_function_oct_m 
-  use messages_oct_m 
-  use parser_oct_m 
+  use hamiltonian_oct_m
+  use output_oct_m
+  use io_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
+  use parser_oct_m
   use poisson_oct_m
-  use profiling_oct_m 
+  use profiling_oct_m
   use restart_oct_m
   use states_restart_oct_m
-  use system_oct_m 
-  use xc_ks_inversion_oct_m 
+  use system_oct_m
+  use xc_ks_inversion_oct_m
   
   implicit none
 
@@ -89,7 +89,7 @@ contains
       hm%vhxc(1:np, ii) = hm%vhartree(1:np)
     end do
 
-    call hamiltonian_update(hm, sys%gr%mesh)
+    call hamiltonian_update(hm, sys%gr%mesh, sys%gr%der%boundaries)
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
                          sys%ks%ks_inversion%aux_st, hm, 1)
     call density_calc(sys%ks%ks_inversion%aux_st, sys%gr, sys%ks%ks_inversion%aux_st%rho)
@@ -113,7 +113,7 @@ contains
 
     ! output quality of KS inversion
     
-    call hamiltonian_update(hm, sys%gr%mesh)
+    call hamiltonian_update(hm, sys%gr%mesh, sys%gr%der%boundaries)
     
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
          sys%ks%ks_inversion%aux_st, hm, 1)

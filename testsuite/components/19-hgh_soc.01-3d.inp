@@ -1,3 +1,5 @@
+CalculationMode = test
+
 TestMode = projector
 
 %Coordinates
@@ -16,3 +18,5 @@ SpinComponents = spinors
 RelativisticCorrection = spin_orbit
 
 TestRepetitions = 10
+
+StatesBlockSize = 4

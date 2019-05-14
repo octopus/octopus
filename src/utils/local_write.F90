@@ -19,7 +19,6 @@
 #include "global.h"
 
 module local_write_oct_m
-  use box_union_oct_m
   use iso_c_binding
   use geometry_oct_m
   use global_oct_m
@@ -32,9 +31,6 @@ module local_write_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use mpi_debug_oct_m
-  use mpi_lib_oct_m
-  use multicomm_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -72,7 +68,7 @@ module local_write_oct_m
   type local_write_t
     private
     type(local_write_prop_t),allocatable :: out(:,:)
-    integer                  :: how              !< how to output
+    integer(8)               :: how              !< how to output
     integer                  :: lmax             !< maximum multipole moment to output
   end type local_write_t
 
@@ -140,7 +136,7 @@ contains
 
     SAFE_ALLOCATE(writ%out(1:LOCAL_OUT_MAX, 1:nd))
     do iout = 1, LOCAL_OUT_MAX
-      writ%out(iout,:)%write = (iand(flags, 2**(iout - 1)) /= 0)
+      writ%out(iout,:)%write = (bitand(flags, 2**(iout - 1)) /= 0)
     end do
 
     call messages_obsolete_variable('LDOutputHow', 'LDOutputFormat')
@@ -300,7 +296,7 @@ contains
     type(hamiltonian_t),  intent(inout) :: hm
     type(v_ks_t),         intent(inout) :: ks
     integer,              intent(in) :: iter
-    integer,              intent(in) :: how
+    integer(8),           intent(in) :: how
 
     integer            :: id, is, ix, ierr
     character(len=120) :: folder, out_name
@@ -537,18 +533,15 @@ contains
     integer,                  intent(in)    :: iter
     integer,                  intent(in)    :: l_start
     logical,                  intent(in)    :: start
-    integer,                  intent(in)    :: how
+    integer(8),               intent(in)    :: how
 
     integer :: id, is, ll, mm, add_lm
     character(len=120) :: aux
     FLOAT, allocatable :: ionic_dipole(:,:), multipole(:,:,:)
     CMPLX, allocatable :: zmultipole(:,:,:)
-    logical :: cmplxscl, use_ionic_dipole
+    logical :: use_ionic_dipole
 
     PUSH_SUB(local_write_multipole)
-
-    cmplxscl = .false.
-    if(st%cmplxscl%space) cmplxscl = .true.
 
     if(mpi_grp_is_root(mpi_world).and. iter == l_start .and. start) then
       do id = 1, nd   
@@ -570,11 +563,8 @@ contains
           write(aux,'(a18,i1,a1)') 'Electronic charge(', is,')'; call write_iter_header(out_multip(id)%handle, aux)
           if(lmax>0) then
             write(aux, '(a3,a1,i1,a1)') '<x>', '(', is,')'; call write_iter_header(out_multip(id)%handle, aux)
-            if(cmplxscl) call write_iter_header(out_multip(id)%handle, ' ')   
             write(aux, '(a3,a1,i1,a1)') '<y>', '(', is,')'; call write_iter_header(out_multip(id)%handle, aux)
-            if(cmplxscl) call write_iter_header(out_multip(id)%handle, ' ')   
             write(aux, '(a3,a1,i1,a1)') '<z>', '(', is,')'; call write_iter_header(out_multip(id)%handle, aux)
-            if(cmplxscl) call write_iter_header(out_multip(id)%handle, ' ')   
           end if
           do ll = 2, lmax
             do mm = -ll, ll
@@ -597,42 +587,15 @@ contains
                 call write_iter_header(out_multip(id)%handle, 'Electrons')
               case(1)
                 call write_iter_header(out_multip(id)%handle, '[' // trim(units_abbrev(units_out%length)) // ']')
-                if(cmplxscl) call write_iter_header(out_multip(id)%handle, ' ')   
               case default
                 write(aux, '(a,a2,i1)') trim(units_abbrev(units_out%length)), "**", ll
                 call write_iter_header(out_multip(id)%handle, '[' // trim(aux) // ']')
-                if(cmplxscl) call write_iter_header(out_multip(id)%handle, ' ')   
               end select
             end do
           end do
         end do
         call write_iter_nl(out_multip(id)%handle)
 
-        ! complex quantities
-        if(cmplxscl) then
-          call write_iter_string(out_multip(id)%handle, '#       _         ')
-          call write_iter_header(out_multip(id)%handle, ' ')
-
-          do is = 1, st%d%nspin
-            do ll = 0, lmax
-              do mm = -ll, ll
-                select case(ll)
-                case(0)
-                  call write_iter_header(out_multip(id)%handle, ' ')
-                case(1)
-                  call write_iter_header(out_multip(id)%handle, 'Re')
-                  call write_iter_header(out_multip(id)%handle, 'Im')   
-                case default
-                  call write_iter_header(out_multip(id)%handle, 'Re')
-                  call write_iter_header(out_multip(id)%handle, 'Im')   
-                end select
-              end do
-            end do
-          end do
-          call write_iter_nl(out_multip(id)%handle)
-
-        end if
-      
         call local_write_print_header_end(out_multip(id)%handle)
         call write_iter_flush(out_multip(id)%handle)
       end do
@@ -642,26 +605,10 @@ contains
     SAFE_ALLOCATE(multipole(1:(lmax + 1)**2, 1:st%d%nspin, nd))
     ionic_dipole(:,:) = M_ZERO
     multipole   (:,:,:) = M_ZERO
-    if(cmplxscl) then
-      SAFE_ALLOCATE(zmultipole(1:(lmax + 1)**2, 1:st%d%nspin, nd))
-      zmultipole(:,:,:) = M_z0
-    end if
 
     do is = 1, st%d%nspin
-      if(.not. cmplxscl) then
-        call dmf_local_multipoles(gr%mesh, nd, st%rho(:,is), lmax, multipole(:,is,:), inside)
-      else
-        message(1) = 'Local Multipoles is still not implemented for complex densities'
-        call messages_fatal(1)
-        !FIXME: modify X(mf_local_multipoles) to deal with complex rho
-        !call zmf_local_multipoles(gr%mesh, st%zrho%Re(:,is) + M_zI * st%zrho%Im(:,is), lmax,&
-        !  zmultipole(:,is), inside, cmplxscl_th = st%cmplxscl%theta, inside)
-        !multipole (:,is) = real(zmultipole(:,is)) ! it should be real anyways 
-      end if 
+      call dmf_local_multipoles(gr%mesh, nd, st%rho(:,is), lmax, multipole(:,is,:), inside)
     end do
-    ! FIXME: with cmplxscl we need to think how to treat 
-    ! the ions dipole moment 
-
     ! Setting center of mass as reference needed for non-neutral systems.
     do id = 1, nd
       do is = 1, st%d%nspin
@@ -699,18 +646,8 @@ contains
           add_lm = 1
           do ll = 0, lmax
             do mm = -ll, ll
-              if(cmplxscl .and. ll > 0 ) then
-                message(1) = 'Local Multipoles is still not implemented for complex densities'
-                call messages_fatal(1)
-                !FIXME: to deal with complex rho
-                !call write_iter_double(out_multip(id)%handle, units_from_atomic(units_out%length**ll,&
-                !  real(zmultipole(add_lm, is), REAL_PRECISION)), 1)
-                !call write_iter_double(out_multip(id)%handle, units_from_atomic(units_out%length**ll,&
-                !  aimag(zmultipole(add_lm, is))), 1)
-              else
-                call write_iter_double(out_multip(id)%handle, units_from_atomic(units_out%length**ll, &
+              call write_iter_double(out_multip(id)%handle, units_from_atomic(units_out%length**ll, &
                                         multipole(add_lm, is, id)), 1)
-              end if
             add_lm = add_lm + 1
             end do
           end do
@@ -720,7 +657,7 @@ contains
     end if
 
    ! Write multipoles in BILD format
-    if(iand(how, OPTION__OUTPUTFORMAT__BILD) /= 0 .and. mpi_grp_is_root(mpi_world))then
+    if(bitand(how, OPTION__OUTPUTFORMAT__BILD) /= 0 .and. mpi_grp_is_root(mpi_world))then
       !FIXME: to include spin larger than 1.
       is = 1
       do id = 1, nd

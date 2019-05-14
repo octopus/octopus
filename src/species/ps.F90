@@ -56,6 +56,7 @@ module ps_oct_m
     ps_bound_niwfs,             &
     ps_end,                     &
     ps_has_density,             &
+    ps_has_nlcc,                &
     ps_density_volume
   
   integer, parameter, public :: &
@@ -71,8 +72,8 @@ module ps_oct_m
   
   integer, parameter, public :: INVALID_L = 333
 
-  character(len=4), parameter  :: ps_name(PSEUDO_FORMAT_UPF1:PSEUDO_FORMAT_HGH) = &
-    (/"upf1", "upf2", "qso ", "psml", "psf ", "cpi ", "fhi ", "hgh "/)
+  character(len=4), parameter  :: ps_name(PSEUDO_FORMAT_UPF1:PSEUDO_FORMAT_PSP8) = &
+    (/"upf1", "upf2", "qso ", "psml", "psf ", "cpi ", "fhi ", "hgh ", "psp8"/)
 
   type ps_t
     integer :: projector_type
@@ -108,6 +109,7 @@ module ps_oct_m
 
     logical :: nlcc    !< .true. if the pseudo has non-linear core corrections.
     type(spline_t) :: core !< normalization \int dr 4 pi r^2 rho(r) = N
+    type(spline_t) :: core_der !< derivative of the core correction
 
 
     !LONG-RANGE PART OF THE LOCAL POTENTIAL
@@ -300,7 +302,7 @@ contains
       end if
 
     case(PSEUDO_FORMAT_HGH)
-      ps%pseudo_type   = PSEUDO_TYPE_SEMILOCAL
+      ps%pseudo_type   = PSEUDO_TYPE_KLEINMAN_BYLANDER
       ps%projector_type = PROJ_HGH
       
       call hgh_init(ps_hgh, trim(filename))
@@ -314,10 +316,10 @@ contains
       call hgh_process(ps_hgh)
       call logrid_copy(ps_hgh%g, ps%g)
 
-    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
+    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML, PSEUDO_FORMAT_PSP8)
       
       if(.not. xml_warned) then
-        call messages_experimental('XML (QSO, UPF, and PSML) pseudopotential support')
+        call messages_experimental('XML (QSO, UPF, and PSML, PSP8) pseudopotential support')
         xml_warned = .true.
       end if
       
@@ -388,6 +390,7 @@ contains
     call spline_init(ps%dkb)
     call spline_init(ps%vl)
     call spline_init(ps%core)
+    call spline_init(ps%core_der)
     call spline_init(ps%density)
     call spline_init(ps%density_der)
 
@@ -411,7 +414,7 @@ contains
       SAFE_ALLOCATE(ps%k    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
       call hgh_load(ps, ps_hgh)
       call hgh_end(ps_hgh)
-    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML)
+    case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML, PSEUDO_FORMAT_PSP8)
       call ps_xml_load(ps, ps_xml)
       call ps_xml_end(ps_xml)
     end select
@@ -420,6 +423,10 @@ contains
       do is = 1, ps%ispin
         call spline_der(ps%density(is), ps%density_der(is))
       end do
+    end if
+
+    if(ps_has_nlcc(ps)) then
+      call spline_der(ps%core, ps%core_der)
     end if
 
     call ps_check_bound(ps, eigen)
@@ -455,6 +462,8 @@ contains
       call messages_write(" QSO")
     case(PSEUDO_FORMAT_PSML)
       call messages_write(" PSML")
+    case(PSEUDO_FORMAT_PSP8)
+      call messages_write(" PSP8")
     case(PSEUDO_FORMAT_PSF)
       call messages_write(" PSF")
     case(PSEUDO_FORMAT_CPI)
@@ -490,14 +499,14 @@ contains
     if(ps%pseudo_type == PSEUDO_TYPE_SEMILOCAL) then
       call messages_write("    orbital origin   :")
       select case(ps%file_format)
-      case(PSEUDO_FORMAT_PSF, PSEUDO_FORMAT_HGH)
+      case(PSEUDO_FORMAT_PSF)
         call messages_write(" calculated");
       case default
         call messages_write(" from file");
       end select
       call messages_info()
     end if
-    
+
     call messages_write("    lmax             :")
     call messages_write(ps%lmax, fmt = '(i2)')
     call messages_info()
@@ -547,7 +556,7 @@ contains
     type(ps_t),        intent(inout) :: ps
 
     FLOAT, allocatable :: vsr(:), vlr(:), nlr(:)
-    FLOAT :: r
+    FLOAT :: r, exp_arg
     integer :: ii
     
     PUSH_SUB(ps_separate)
@@ -568,7 +577,13 @@ contains
         vlr(ii)  = -ps%z_val*loct_erf(r/(ps%sigma_erf*sqrt(M_TWO)))/r
       end if
       vsr(ii) = spline_eval(ps%vl, r) - vlr(ii)
-      nlr(ii) = -ps%z_val*M_ONE/(ps%sigma_erf*sqrt(M_TWO*M_PI))**3*exp(-M_HALF*r**2/ps%sigma_erf**2)
+
+      exp_arg = -M_HALF*r**2/ps%sigma_erf**2
+      if(exp_arg > CNST(-100)) then
+        nlr(ii) = -ps%z_val*M_ONE/(ps%sigma_erf*sqrt(M_TWO*M_PI))**3*exp(exp_arg)
+      else
+        nlr(ii) = M_ZERO
+      end if
     end do
     
     call spline_init(ps%vlr)
@@ -662,7 +677,7 @@ contains
         end do
       end do
       
-      if(ps%nlcc) then
+      if(ps_has_nlcc(ps)) then
         rmax = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold)
         call spline_filter_mask(ps%core, 0, rmax, gmax, alpha, gamma)
       end if
@@ -672,6 +687,12 @@ contains
           if(abs(spline_integral(ps%density(ispin))) > CNST(1.0e-12)) then
             rmax = spline_cutoff_radius(ps%density(ispin), ps%projectors_sphere_threshold)
             call spline_filter_mask(ps%density(ispin), 0, rmax, gmax, alpha, gamma)
+            call spline_force_pos(ps%density(ispin))
+          end if
+
+          if(abs(spline_integral(ps%density_der(ispin))) > CNST(1.0e-12)) then
+            rmax = spline_cutoff_radius(ps%density_der(ispin), ps%projectors_sphere_threshold)
+            call spline_filter_mask(ps%density_der(ispin), 0, rmax, gmax, alpha, gamma)
           end if
         end do
       end if
@@ -690,13 +711,15 @@ contains
         end do
       end do
       
-      if(ps%nlcc) then
+      if(ps_has_nlcc(ps)) then
         call spline_filter_bessel(ps%core, 0, gmax, alpha, beta_fs, rcut, beta_rs)
       end if
       
       if(ps_has_density(ps)) then
         do ispin = 1, ps%ispin
           call spline_filter_bessel(ps%density(ispin), 0, gmax, alpha, beta_fs, rcut, beta_rs)
+          call spline_force_pos(ps%density(ispin))
+          call spline_filter_bessel(ps%density_der(ispin), 0, gmax, alpha, beta_fs, rcut, beta_rs)
         end do
       end if
 
@@ -858,7 +881,7 @@ contains
     end if
 
     ! Non-linear core-corrections
-    if(ps%nlcc) then
+    if(ps_has_nlcc(ps)) then
       iunit = io_open(trim(dir)//'/nlcc', action='write')
       call spline_print(ps%core, iunit)
       call io_close(iunit)
@@ -889,6 +912,7 @@ contains
 
     call spline_end(ps%vl)
     call spline_end(ps%core)
+    call spline_end(ps%core_der)
 
     if(associated(ps%density)) call spline_end(ps%density)
     if(associated(ps%density_der)) call spline_end(ps%density_der)
@@ -1190,7 +1214,7 @@ contains
           do ic = 1, ps_xml%nchannels
             
             do ip = 1, ps%g%nrval
-              kbprojector(ip) = 0.0
+              kbprojector(ip) = M_ZERO
               if(ip <= ps_xml%grid_size) then
                 do jc = 1, ps_xml%nchannels
                   kbprojector(ip) = kbprojector(ip) + matrix(jc, ic)*ps_xml%projector(ip, ll, jc)
@@ -1223,9 +1247,9 @@ contains
           ps%conf%occ(ii, 1) = ps_xml%wf_occ(ii)
         end if
 
-        ps%conf%j(ii) = 0.0
+        ps%conf%j(ii) = M_ZERO
         if(pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
-          ps%conf%j(ii) = 0.5*pseudo_wavefunction_2j(ps_xml%pseudo, ii)
+          ps%conf%j(ii) = M_HALF*pseudo_wavefunction_2j(ps_xml%pseudo, ii)
         end if
 
         do ip = 1, ps%g%nrval
@@ -1392,6 +1416,15 @@ contains
     has_density = ps%has_density
 
   end function ps_has_density
+
+  !---------------------------------------
+
+  pure logical function ps_has_nlcc(ps) result(has_nlcc)
+    type(ps_t), intent(in) :: ps
+
+    has_nlcc = ps%nlcc
+
+  end function ps_has_nlcc
   
   !---------------------------------------
   FLOAT function ps_density_volume(ps) result(volume)
@@ -1403,6 +1436,11 @@ contains
     type(spline_t) :: volspl
     
     PUSH_SUB(ps_density_volume)
+    
+    if (.not. ps_has_density(ps)) then
+       message(1) = "The pseudopotential does not contain an atomic density"
+       call messages_fatal(1)
+    end if
 
     SAFE_ALLOCATE(vol(1:ps%g%nrval))
     

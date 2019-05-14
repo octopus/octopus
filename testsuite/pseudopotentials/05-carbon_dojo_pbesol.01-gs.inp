@@ -27,6 +27,6 @@ ExtraStates = 2
 0 | 0 | 0
 %
 
-ConvRelDens = 4e-6
+ConvRelDens = 2e-6
 
 ExperimentalFeatures = yes

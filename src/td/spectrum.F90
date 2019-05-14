@@ -21,18 +21,17 @@
 module spectrum_oct_m
   use batch_oct_m
   use iso_c_binding
-  use cmplxscl_oct_m
   use compressed_sensing_oct_m
   use fft_oct_m
   use global_oct_m
   use io_oct_m
   use kick_oct_m
   use lalg_adv_oct_m
-  use loct_math_oct_m
   use math_oct_m
   use messages_oct_m
   use minimizer_oct_m
   use parser_oct_m
+  use pcm_oct_m
   use profiling_oct_m
   use string_oct_m
   use types_oct_m
@@ -97,7 +96,6 @@ module spectrum_oct_m
     integer :: spectype            !< spectrum type (absorption, energy loss, or dipole power)
     integer :: method              !< Fourier transform or compressed sensing 
     FLOAT   :: noise               !< the level of noise that is assumed in the time series for compressed sensing 
-    type(cmplxscl_t) :: cmplxscl   !< the complex scaling parameters
     logical :: sigma_diag          !< diagonalize sigma tensor
   end type spectrum_t
 
@@ -121,8 +119,6 @@ contains
 
     PUSH_SUB(spectrum_init)
     
-    call cmplxscl_init(spectrum%cmplxscl)
-
     call messages_print_stress(stdout, "Spectrum Options")
 
     !%Variable PropagationSpectrumType
@@ -230,15 +226,11 @@ contains
     !% frequencies, <i>e.g.</i> for Van der Waals <math>C_6</math> coefficients.
     !% This is the only allowed choice for complex scaling.
     !%End
-    if(spectrum%cmplxscl%space .or. spectrum%cmplxscl%time) then
-      spectrum%transform = SPECTRUM_TRANSFORM_LAPLACE
-    else
-      call parse_variable('PropagationSpectrumTransform', SPECTRUM_TRANSFORM_SIN, spectrum%transform)
-      if(.not.varinfo_valid_option('PropagationSpectrumTransform', spectrum%transform)) then
-        call messages_input_error('PropagationSpectrumTransform')
-      end if
-    call messages_print_var_option(stdout, 'PropagationSpectrumTransform', spectrum%transform)
+    call parse_variable('PropagationSpectrumTransform', SPECTRUM_TRANSFORM_SIN, spectrum%transform)
+    if(.not.varinfo_valid_option('PropagationSpectrumTransform', spectrum%transform)) then
+      call messages_input_error('PropagationSpectrumTransform')
     end if
+    call messages_print_var_option(stdout, 'PropagationSpectrumTransform', spectrum%transform)
 
     !%Variable PropagationSpectrumStartTime
     !%Type float
@@ -290,13 +282,15 @@ contains
 
     !%Variable PropagationSpectrumDampFactor
     !%Type float
-    !%Default 0.15 au
+    !%Default -1.0
     !%Section Utilities::oct-propagation_spectrum
     !%Description
-    !% If <tt>PropagationSpectrumDampMode = exponential</tt>, the damping parameter of the exponential
+    !% If <tt>PropagationSpectrumDampMode = exponential, gaussian</tt>, the damping parameter of the exponential
     !% is fixed through this variable.
+    !% Default value ensure that the damping function adquires a 0.0001 value at the end of the propagation time.
     !%End
-    call parse_variable('PropagationSpectrumDampFactor', CNST(0.15), spectrum%damp_factor, units_inp%time**(-1))
+    call parse_variable('PropagationSpectrumDampFactor', -M_ONE, spectrum%damp_factor, units_inp%time**(-1))
+
     call messages_print_var_value(stdout, 'PropagationSpectrumDampFactor', spectrum%damp_factor, unit = units_out%time**(-1))
 
     !%Variable PropagationSpectrumSigmaDiagonalization
@@ -457,12 +451,14 @@ contains
         sigma(:, :, ie, is) = matmul( transpose(ip), matmul(sigmap(:, :, ie, is), ip) )
       end do
     end do
-    ! Diagonalize sigma tensor
-    if (spectrum%sigma_diag) &
-    call spectrum_sigma_diagonalize(sigma, nspin, spectrum%energy_step, energy_steps, kick)
 
     ! Finally, write down the result
     call spectrum_cross_section_tensor_write(out_file, sigma, nspin, spectrum%energy_step, energy_steps, kick)
+
+    ! Diagonalize sigma tensor
+    if (spectrum%sigma_diag) then
+      call spectrum_sigma_diagonalize(sigma, nspin, spectrum%energy_step, energy_steps, kick)
+    end if
 
     SAFE_DEALLOCATE_A(sigma)
     SAFE_DEALLOCATE_A(sigmap)
@@ -486,23 +482,32 @@ contains
 
     integer :: is, idir, jdir, ie, ii
     FLOAT :: average, anisotropy
-    FLOAT, allocatable :: pp(:,:), ip(:,:)
-    logical :: spins_subtract
+    FLOAT, allocatable :: pp(:,:), pp2(:,:), ip(:,:)
+    logical :: spins_singlet, spins_triplet
     character(len=20) :: header_string
 
     PUSH_SUB(spectrum_cross_section_tensor_write)
 
+    spins_singlet = .true.
+    spins_triplet = .false.
     if(present(kick)) then
       write(out_file, '(a15,i2)')      '# nspin        ', nspin
       call kick_write(kick, out_file)
-      spins_subtract = (kick%delta_strength_mode == KICK_SPIN_MODE)
-    else
-      spins_subtract = .false.
+      select case(kick%delta_strength_mode)
+      case (KICK_SPIN_MODE)
+        spins_triplet = .true.
+        spins_singlet = .false.
+      case (KICK_SPIN_DENSITY_MODE)
+        spins_triplet = .true.
+      end select
     end if
 
     write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
     write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma]", 20)
     write(out_file, '(a20)', advance = 'no') str_center("Anisotropy[sigma]", 20)
+    if (spins_triplet .and. spins_singlet) then
+      write(out_file, '(a20)', advance = 'no') str_center("(1/3)*Tr[sigma-]", 20)
+    end if
     do is = 1, nspin
       do idir = 1, 3
         do jdir = 1, 3
@@ -513,6 +518,9 @@ contains
     end do
     write(out_file, '(1x)')
     write(out_file, '(a1,a20)', advance = 'no') '#', str_center('[' // trim(units_abbrev(units_out%energy)) // ']', 20)
+    if (spins_triplet .and. spins_singlet) then
+      write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+    end if
     do ii = 1, 2 + nspin * 9
       write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
     end do
@@ -532,21 +540,22 @@ contains
     ! more different that the eigenvalues are, the larger the anisotropy is.
 
     SAFE_ALLOCATE(pp(1:3, 1:3))
+    if (spins_triplet .and. spins_singlet) SAFE_ALLOCATE(pp2(1:3, 1:3))
     SAFE_ALLOCATE(ip(1:3, 1:3))
 
     do ie = 0, energy_steps
 
-      pp = M_ZERO
-      pp(:, :) = pp(:, :) + sigma(:, :, ie, 1)
+      pp(:, :) = sigma(:, :, ie, 1)
       if (nspin >= 2) then
-        if (spins_subtract) then
+        if (spins_singlet .and. spins_triplet) then
+          pp2(:, :) = pp(:, :) - sigma(:, :, ie, 2)
+          pp(:, :)  = pp(:, :) + sigma(:, :, ie, 2)
+        elseif (spins_triplet .and. .not.spins_singlet) then
           pp(:, :) = pp(:, :) - sigma(:, :, ie, 2)
-        else
+        elseif (spins_singlet .and. .not.spins_triplet) then
           pp(:, :) = pp(:, :) + sigma(:, :, ie, 2)
         end if
       end if
-      average = M_THIRD * ( pp(1, 1) + pp(2, 2) + pp(3, 3) )
-      ip = matmul(pp, pp)
 
       average = M_THIRD * ( pp(1, 1) + pp(2, 2) + pp(3, 3) )
       ip = matmul(pp, pp)
@@ -556,6 +565,12 @@ contains
       ! they have been read from the "cross_section_vector.x", where they are already in the proper units.
       write(out_file,'(3e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * energy_step)), &
         average, sqrt(max(anisotropy, M_ZERO))
+
+      if (spins_singlet .and. spins_triplet) then
+        average =  M_THIRD * ( pp2(1, 1) + pp2(2, 2) + pp2(3, 3) )
+        write(out_file,'(1e20.8)', advance = 'no') average
+      end if
+
       do is = 1, nspin
         write(out_file,'(9e20.8)', advance = 'no') sigma(1:3, 1:3, ie, is)
       end do
@@ -563,6 +578,9 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(pp)
+    if (spins_triplet .and. spins_singlet) then 
+      SAFE_DEALLOCATE_A(pp2)
+    end if
     SAFE_DEALLOCATE_A(ip)
     POP_SUB(spectrum_cross_section_tensor_write)
   end subroutine spectrum_cross_section_tensor_write
@@ -581,15 +599,12 @@ contains
     FLOAT   :: dt, ref_dt, energy, ewsum, polsum
     type(kick_t) :: kick, ref_kick
     FLOAT, allocatable :: dipole(:, :, :), ref_dipole(:, :, :), sigma(:, :, :), sf(:, :)
-    FLOAT, allocatable :: Imdipole(:, :, :), Imref_dipole(:, :, :)
     type(unit_system_t) :: file_units, ref_file_units
     type(batch_t) :: dipoleb, sigmab
-    logical       :: cmplxscl
+
+    type(pcm_min_t) :: pcm
 
     PUSH_SUB(spectrum_cross_section)
-
-    cmplxscl = .false.
-    if(spectrum%cmplxscl%space .or. spectrum%cmplxscl%time) cmplxscl = .true.
 
     ! This function gives us back the unit connected to the "multipoles" file, the header information,
     ! the number of time steps, and the time step.
@@ -624,37 +639,31 @@ contains
     end if
 
     ! Find out the iteration numbers corresponding to the time limits.
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     SAFE_ALLOCATE(dipole(0:time_steps, 1:3, 1:nspin))
-    if(cmplxscl) then
-      SAFE_ALLOCATE(Imdipole(0:time_steps, 1:3, 1:nspin))
-      call spectrum_read_dipole(in_file, dipole, Imdipole)
-    else 
-      call spectrum_read_dipole(in_file, dipole)
-    end if
+    call spectrum_read_dipole(in_file, dipole)
 
     if(present(ref_file)) then
       SAFE_ALLOCATE(ref_dipole(0:time_steps, 1:3, 1:nspin))
-      if(cmplxscl) then
-        SAFE_ALLOCATE(Imref_dipole(0:time_steps, 1:3, 1:nspin))
-        call spectrum_read_dipole(ref_file, ref_dipole, Imref_dipole)
-      else 
-        call spectrum_read_dipole(ref_file, ref_dipole)
-      end if
+      call spectrum_read_dipole(ref_file, ref_dipole)
     end if
+
+    ! parsing and re-printing to output useful PCM data
+    call pcm_min_input_parsing_for_spectrum(pcm)
+
+    ! adding the dipole generated by the PCM polarization charges due solute
+    if(pcm%localf) &
+      call spectrum_add_pcm_dipole(dipole, time_steps, dt, nspin)
 
     ! Now subtract the initial dipole.
     if(present(ref_file)) then
       dipole = dipole - ref_dipole
-      if(cmplxscl) Imdipole = Imdipole - Imref_dipole 
     else
       do it = 1, time_steps
         dipole(it, :, :) = dipole(it, :, :) - dipole(0, :, :)
-        if(cmplxscl) Imdipole(it, :, :) = Imdipole(it, :, :) - Imdipole(0, :, :)
       end do
       dipole(0, :, :) = M_ZERO
-      if(cmplxscl) Imdipole(0, :, :) = M_ZERO
     end if
 
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
@@ -663,20 +672,34 @@ contains
     no_e = int(spectrum%max_energy / spectrum%energy_step)
     SAFE_ALLOCATE(sigma(0:no_e, 1:3, 1:nspin))
 
+    if ( pcm%localf ) then
 
-    if(cmplxscl) then
-      call batch_init(dipoleb, 3, 1, nspin, dipole + M_zI * Imdipole)
+      ! for numerical reasons, we cannot add the difference (d(t)-d(t0)) of PCM dipoles here -- although it would look cleaner
+
+      ! in the PCM local field case \sigma(\omega) \propto \Im{\alpha(\omega)\epsilon(\omega)} not just \propto \Im{\alpha(\omega)}
+      ! since the dielectric function is complex as well, we need to compute both the real and imaginary part of the polarizability
+      call spectrum_times_pcm_epsilon(pcm, dipole, sigma, nspin, spectrum, istart, iend, kick%time, dt, no_e)
+
+      write(out_file,'(a57)') "Cross-section spectrum contains full local field effects."
+
     else
-      call batch_init(dipoleb, 3, 1, nspin, dipole)
-    end if
-    call batch_init(sigmab, 3, 1, nspin, sigma)
 
-    call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, kick%time, dt, dipoleb)
-    call spectrum_fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
-      istart + 1, iend + 1, kick%time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab, spectrum%cmplxscl)
-    
-    call batch_end(dipoleb)
-    call batch_end(sigmab)
+      call batch_init(dipoleb, 3, 1, nspin, dipole)
+      call batch_init(sigmab, 3, 1, nspin, sigma)
+
+      call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, kick%time, dt, dipoleb)
+      call spectrum_fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
+       istart + 1, iend + 1, kick%time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab)
+
+      call batch_end(dipoleb)
+      call batch_end(sigmab)
+
+    end if
+
+    if( pcm%run_pcm ) &
+      call spectrum_over_pcm_refraction_index(pcm, sigma, nspin, spectrum, no_e)
+
+
 
     SAFE_DEALLOCATE_A(dipole)
     if(present(ref_file)) then
@@ -766,20 +789,16 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine spectrum_read_dipole(in_file, dipole, Imdipole)
+  subroutine spectrum_read_dipole(in_file, dipole)
     integer,           intent(in)    :: in_file
     FLOAT,             intent(out)   :: dipole(0:, :, :)
-    FLOAT, optional,   intent(out)   :: Imdipole(0:, :, :)
 
     integer :: nspin, lmax, time_steps, trash, it, idir, ispin
     FLOAT   :: dt,  dump
     type(kick_t) :: kick
     type(unit_system_t) :: file_units
-    logical   :: cmplxscl
 
     PUSH_SUB(spectrum_read_dipole)
-
-    cmplxscl = present(Imdipole)
 
     ! This function gives us back the unit connected to the "multipoles" file, the header information,
     ! the number of time steps, and the time step.
@@ -789,18 +808,226 @@ contains
     call io_skip_header(in_file)
 
     do it = 0, time_steps
-      if (cmplxscl) then
-        read(in_file, *) trash, dump, (dump, (dipole(it, idir, ispin), Imdipole(it, idir, ispin), idir = 1, 3), ispin = 1, nspin)
-      else 
-        read(in_file, *) trash, dump, (dump, (dipole(it, idir, ispin), idir = 1, 3), ispin = 1, nspin)
-      end if
+      read(in_file, *) trash, dump, (dump, (dipole(it, idir, ispin), idir = 1, 3), ispin = 1, nspin)
     end do
     dipole(:,:,:) = units_to_atomic(file_units%length, dipole(:,:,:))
-    if (cmplxscl) Imdipole(:,:,:) = units_to_atomic(file_units%length, Imdipole(:,:,:))
     
     POP_SUB(spectrum_read_dipole)
 
   end subroutine spectrum_read_dipole
+
+  ! ---------------------------------------------------------
+
+  subroutine spectrum_add_pcm_dipole(dipole, time_steps, dt, nspin)
+    FLOAT,   intent(inout) :: dipole(0:, :, :)
+    integer, intent(in)    :: time_steps
+    FLOAT,   intent(in)    :: dt
+    integer, intent(in)    :: nspin
+
+    type(pcm_t) :: pcm
+    FLOAT :: dipole_pcm(1:3)
+    integer :: ia, it, ii
+
+    ! unit io variables
+    integer :: asc_unit_test
+    integer :: cavity_unit
+    integer :: asc_vs_t_unit, asc_vs_t_unit_check
+    integer :: dipole_vs_t_unit_check, dipole_vs_t_unit_check1
+    integer :: iocheck
+    integer :: aux_int
+    FLOAT :: aux_float, aux_float1, aux_vec(1:3)
+    character(len=23) :: asc_vs_t_unit_format
+    character(len=16) :: asc_vs_t_unit_format_tail
+
+    PUSH_SUB(spectrum_add_pcm_dipole)
+
+    ! reading PCM cavity from standard output file in two steps
+
+    ! first step - counting tesserae
+    asc_unit_test = io_open(PCM_DIR//'ASC_e.dat', action='read')
+    pcm%n_tesserae = 0
+    iocheck = 1
+    do while( iocheck >= 0 )
+      read(asc_unit_test,*,IOSTAT=iocheck) aux_vec(1:3), aux_float, aux_int
+      if( iocheck >= 0 ) pcm%n_tesserae = pcm%n_tesserae + 1
+    end do
+    call io_close(asc_unit_test)
+
+    ! intermezzo - allocating PCM tessellation and polarization charges arrays
+    SAFE_ALLOCATE(pcm%tess(1:pcm%n_tesserae))
+    SAFE_ALLOCATE(pcm%q_e(1:pcm%n_tesserae))
+    SAFE_ALLOCATE(pcm%q_e_in(1:pcm%n_tesserae)) ! with auxiliary role
+
+    ! second step - reading of PCM tessellation arrays from standard output file
+    !               writing the cavity to debug-purpose file
+    asc_unit_test = io_open(PCM_DIR//'ASC_e.dat', action='read')
+    cavity_unit = io_open(PCM_DIR//'cavity_check.xyz', action='write')
+    write(cavity_unit,'(I3)') pcm%n_tesserae
+    write(cavity_unit,*)
+    do ia = 1, pcm%n_tesserae
+      read(asc_unit_test,*) pcm%tess(ia)%point(1:3), aux_float, aux_int
+      write(cavity_unit,'(A1,3(1X,F14.8))') 'H', pcm%tess(ia)%point(1:3)
+    end do
+    call io_close(asc_unit_test)
+    call io_close(cavity_unit)
+
+    write (asc_vs_t_unit_format_tail,'(I5,A11)') pcm%n_tesserae,'(1X,F14.8))'
+    write (asc_vs_t_unit_format,'(A)') '(F14.8,'//trim(adjustl(asc_vs_t_unit_format_tail))
+
+    ! Now, summary: * read the time-dependent PCM polarization charges due to solute electrons, pcm%q_e
+    !               * compute the real-time dipole generated by pcm%q_e, dipole_pcm
+    !               * add it to the real-time molecular dipole
+    !               * write the total dipole and its PCM contribution to debug-purpose files
+    ! N.B. we assume nuclei fixed in time
+
+    ! opening time-dependent PCM charges standard and debug-purpose file
+    asc_vs_t_unit = io_open(PCM_DIR//'ASC_e_vs_t.dat', action='read', form='formatted')
+    asc_vs_t_unit_check = io_open(PCM_DIR//'ASC_e_vs_t_check.dat', action='write', form='formatted')
+
+    ! opening time-dependent PCM and total dipole debug-purpose files
+    dipole_vs_t_unit_check = io_open(PCM_DIR//'dipole_e_vs_t_check.dat', action='write', form='formatted')
+    dipole_vs_t_unit_check1 = io_open(PCM_DIR//'dipole_e_vs_t_check1.dat', action='write', form='formatted')
+
+    ! reading PCM charges for the zeroth-iteration - not used - pcm%q_e_in is only auxiliary here
+    read(asc_vs_t_unit,trim(adjustl(asc_vs_t_unit_format))) aux_float1, ( pcm%q_e_in(ia) , ia=1,pcm%n_tesserae )
+
+    do it = 1, time_steps
+
+      ! reading real-time PCM charges due to electrons per timestep
+      read(asc_vs_t_unit,trim(adjustl(asc_vs_t_unit_format))) aux_float, ( pcm%q_e(ia) , ia=1,pcm%n_tesserae )
+
+      ! computing real-time PCM dipole per timestep
+      call pcm_dipole(dipole_pcm(1:3), -pcm%q_e(1:pcm%n_tesserae), pcm%tess, pcm%n_tesserae)
+
+      ! adding PCM dipole to the molecular dipole per timestep
+      dipole(it, 1, 1:nspin) = dipole(it, 1, 1:nspin) + dipole_pcm(1)
+      dipole(it, 2, 1:nspin) = dipole(it, 2, 1:nspin) + dipole_pcm(2)
+      dipole(it, 3, 1:nspin) = dipole(it, 3, 1:nspin) + dipole_pcm(3)
+
+      ! since we always have a kick for the optical spectrum in Octopus
+      ! the first-iteration dipole should be equal to the zeroth-iteration one
+      ! in any case, made them equal by hand
+      if ( it == 1 ) then
+        dipole(0, 1, 1:nspin) = dipole(1, 1, 1:nspin)
+        dipole(0, 2, 1:nspin) = dipole(1, 2, 1:nspin)
+        dipole(0, 3, 1:nspin) = dipole(1, 3, 1:nspin)
+      end if
+
+      ! writing real-time PCM charges and dipole, and the total dipole for debug purposes
+      write(asc_vs_t_unit_check,trim(adjustl(asc_vs_t_unit_format))) aux_float, ( pcm%q_e(ia) , ia=1,pcm%n_tesserae )
+      write(dipole_vs_t_unit_check,'(F14.8,3(1X,F14.8))') aux_float, dipole_pcm
+      write(dipole_vs_t_unit_check1,'(F14.8,3(1X,F14.8))') aux_float, dipole(it,:,1)
+
+    end do
+
+    ! closing PCM and debug files
+    call io_close(asc_vs_t_unit)
+    call io_close(asc_vs_t_unit_check)
+    call io_close(dipole_vs_t_unit_check)
+    call io_close(dipole_vs_t_unit_check1)
+
+    ! deallocating PCM arrays
+    SAFE_DEALLOCATE_A(pcm%tess)
+    SAFE_DEALLOCATE_A(pcm%q_e)
+    SAFE_DEALLOCATE_A(pcm%q_e_in)
+
+    POP_SUB(spectrum_add_pcm_dipole)
+
+  end subroutine spectrum_add_pcm_dipole
+
+  ! ---------------------------------------------------------
+
+  subroutine spectrum_times_pcm_epsilon(pcm, dipole, sigma, nspin, spectrum, istart, iend, kick_time, dt, no_e)
+    type(pcm_min_t)   , intent(in)    :: pcm
+    FLOAT, allocatable, intent(inout) :: sigma(:, :, :)
+    FLOAT, allocatable, intent(in)    :: dipole(:, :, :)
+    integer,            intent(in)    :: nspin
+    type(spectrum_t),   intent(in)    :: spectrum !< check intent in
+    FLOAT,              intent(in)    :: kick_time
+    integer,            intent(in)    :: istart, iend
+    FLOAT,              intent(in)    :: dt
+    integer,            intent(in)    :: no_e
+
+    FLOAT, allocatable :: sigmap(:, :, :)
+    type(batch_t) :: dipoleb, sigmab
+
+    integer :: ie
+
+    CMPLX, allocatable :: eps(:)
+
+    PUSH_SUB(spectrum_times_pcm_epsilon)
+
+    ! imaginary part of the polarizability
+
+    call batch_init(dipoleb, 3, 1, nspin, dipole)
+    call batch_init(sigmab, 3, 1, nspin, sigma)
+
+    call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, kick_time, dt, dipoleb)
+    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
+      istart + 1, iend + 1, kick_time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab)
+
+    call batch_end(dipoleb)
+    call batch_end(sigmab)
+
+    ! real part of the polarizability
+
+    SAFE_ALLOCATE(sigmap(0:no_e, 1:3, 1:nspin))
+
+    call batch_init(dipoleb, 3, 1, nspin, dipole)
+    call batch_init(sigmab, 3, 1, nspin, sigmap)
+
+    call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart + 1, iend + 1, kick_time, dt, dipoleb)
+    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
+      istart + 1, iend + 1, kick_time, dt, dipoleb, 1, no_e + 1, spectrum%energy_step, sigmab)
+
+    call batch_end(dipoleb)
+    call batch_end(sigmab)
+
+    SAFE_ALLOCATE(eps(0:no_e))
+
+    ! multiplying by the dielectric function and taking the imaginary part of the product
+
+    do ie = 0, no_e
+      call pcm_eps(pcm, eps(ie), ie*spectrum%energy_step)
+      sigma(ie, 1:3, 1:nspin) = sigma(ie, 1:3, 1:nspin) * REAL(eps(ie), REAL_PRECISION) + sigmap(ie, 1:3, 1:nspin) *AIMAG(eps(ie))
+    end do
+
+    SAFE_DEALLOCATE_A(sigmap)
+    SAFE_DEALLOCATE_A(eps)
+
+    POP_SUB(spectrum_times_pcm_epsilon)
+
+  end subroutine spectrum_times_pcm_epsilon
+
+  ! ---------------------------------------------------------
+
+  subroutine spectrum_over_pcm_refraction_index(pcm, sigma, nspin, spectrum, no_e)
+    type(pcm_min_t)   , intent(in)    :: pcm
+    FLOAT, allocatable, intent(inout) :: sigma(:, :, :)
+    integer,            intent(in)    :: nspin
+    type(spectrum_t),   intent(in)    :: spectrum !< check intent in
+    integer,            intent(in)    :: no_e
+
+    integer :: ie
+
+    CMPLX, allocatable :: eps(:)
+
+    PUSH_SUB(spectrum_over_pcm_refraction_index)
+
+    SAFE_ALLOCATE(eps(0:no_e))
+
+    ! dividing by the refraction index - n(\omega)=\sqrt{\frac{|\epsilon(\omega)|+\Re[\epsilon(\omega)]}{2}}
+
+    do ie = 0, no_e
+      call pcm_eps(pcm, eps(ie), ie*spectrum%energy_step)
+      sigma(ie, 1:3, 1:nspin) = sigma(ie, 1:3, 1:nspin) / sqrt( CNST(0.5) * ( ABS(eps(ie)) + REAL(eps(ie), REAL_PRECISION) ) )
+    end do
+
+    SAFE_DEALLOCATE_A(eps)
+
+    POP_SUB(spectrum_over_pcm_refraction_index)
+
+  end subroutine spectrum_over_pcm_refraction_index
   
   ! ---------------------------------------------------------
   subroutine spectrum_dipole_power(in_file, out_file, spectrum)
@@ -829,7 +1056,7 @@ contains
     end if
 
     ! Find out the iteration numbers corresponding to the time limits.
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     SAFE_ALLOCATE(dipole(0:time_steps, 1:3, 1:nspin))
     call spectrum_read_dipole(in_file, dipole)
@@ -969,7 +1196,7 @@ contains
     dt = units_to_atomic(file_units%time, dt_cos) ! units_out is OK
 
     ! Find out the iteration numbers corresponding to the time limits.
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     ! Read the f-transformed charge density.
     call io_skip_header(in_file_sin)
@@ -1086,7 +1313,7 @@ contains
     PUSH_SUB(spectrum_rotatory_strength)
 
     call spectrum_mult_info(in_file, nspin, kick, time_steps, dt, file_units)
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     ! load angular momentum from file
     SAFE_ALLOCATE(angular(0:time_steps, 1:3))
@@ -1402,7 +1629,7 @@ contains
     PUSH_SUB(spectrum_hs_ar_from_acc)
 
     call spectrum_tdfile_info('acceleration', iunit, time_steps, dt)
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     ! load dipole from file
     SAFE_ALLOCATE(acc(1:MAX_DIM,0:time_steps))
@@ -1443,7 +1670,7 @@ contains
     end if
     if (.not.(iunit < 0)) then
       call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
-      call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+      call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
       call io_skip_header(iunit)
 !    write (*,*) 
@@ -1513,7 +1740,7 @@ contains
       iunit = io_open('td.general/multipoles', action='read', status='old')
     end if
     call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     call io_skip_header(iunit)
 
@@ -1606,7 +1833,7 @@ contains
       iunit = io_open('td.general/multipoles', action='read', status='old')
     end if
     call spectrum_mult_info(iunit, nspin, kick, time_steps, dt, file_units, lmax=lmax)
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
 
@@ -1720,7 +1947,7 @@ contains
     PUSH_SUB(spectrum_hs_from_acc)
 
     call spectrum_tdfile_info('acceleration', iunit, time_steps, dt)
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
 
@@ -1823,7 +2050,7 @@ contains
     PUSH_SUB(spectrum_hs_from_current)
 
     call spectrum_tdfile_info('total_current', iunit, time_steps, dt)
-    call spectrum_fix_time_limits(time_steps, dt, spectrum%start_time, spectrum%end_time, istart, iend, ntiter)
+    call spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
 
     if(spectrum%energy_step <= M_ZERO) spectrum%energy_step = M_TWO * M_PI / (dt*time_steps)
 
@@ -2162,11 +2389,11 @@ contains
 
   
   ! ---------------------------------------------------------
-  subroutine spectrum_fix_time_limits(time_steps, dt, start_time, end_time, istart, iend, ntiter)
-    integer, intent(in)    :: time_steps
-    FLOAT,   intent(in)    :: dt
-    FLOAT,   intent(inout) :: start_time, end_time
-    integer, intent(out)   :: istart, iend, ntiter
+  subroutine spectrum_fix_time_limits(spectrum, time_steps, dt, istart, iend, ntiter)
+    type(spectrum_t), intent(inout) :: spectrum
+    integer, intent(in)             :: time_steps
+    FLOAT,   intent(in)             :: dt
+    integer, intent(out)            :: istart, iend, ntiter
 
     FLOAT :: ts, te, dummy
 
@@ -2175,19 +2402,31 @@ contains
     ts = M_ZERO
     te = time_steps * dt
 
-    if(start_time < ts) start_time = ts
-    if(start_time > te) start_time = te
-    if(end_time   > te .or. end_time <= M_ZERO) end_time = te
-    if(end_time   < ts) end_time   = ts
+    if(spectrum%start_time < ts) spectrum%start_time = ts
+    if(spectrum%start_time > te) spectrum%start_time = te
+    if(spectrum%end_time   > te .or. spectrum%end_time <= M_ZERO) spectrum%end_time = te
+    if(spectrum%end_time   < ts) spectrum%end_time   = ts
 
-    if(end_time < start_time) then
-      dummy = end_time ! swap
-      end_time = start_time
-      start_time = dummy
+    if(spectrum%end_time < spectrum%start_time) then
+      dummy = spectrum%end_time ! swap
+      spectrum%end_time = spectrum%start_time
+      spectrum%start_time = dummy
     end if
-    istart = int(start_time / dt)
-    iend = int(end_time / dt)
+    istart = int(spectrum%start_time / dt)
+    iend = int(spectrum%end_time / dt)
     ntiter = iend - istart + 1
+
+    ! Get default damp factor
+    if (spectrum%damp /= SPECTRUM_DAMP_NONE .and. spectrum%damp /= SPECTRUM_DAMP_POLYNOMIAL &
+         .and. spectrum%damp_factor == -M_ONE) then
+      select case(spectrum%damp)
+        case(SPECTRUM_DAMP_LORENTZIAN)
+          spectrum%damp_factor =  -log(0.0001)/(spectrum%end_time-spectrum%start_time)
+        case(SPECTRUM_DAMP_GAUSSIAN)
+          spectrum%damp_factor =  sqrt(-log(0.0001)/(spectrum%end_time-spectrum%start_time)**2)
+      end select
+    end if
+
 
     POP_SUB(spectrum_fix_time_limits)
   end subroutine spectrum_fix_time_limits
@@ -2210,6 +2449,7 @@ contains
 
     ASSERT(batch_is_ok(time_function))
     ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)
+
 
     do itime = time_start, time_end
       time = time_step*(itime-1)
@@ -2266,7 +2506,7 @@ contains
   !! by \f$ \sin(w*(t-t0)) \f$, and the "exponential" transform is computed by multiplying the real function by
   !! \f$ e(-I*w*t0)*e(-w*t) \f$.
   subroutine spectrum_fourier_transform(method, transform, noise, time_start, time_end, t0, time_step, time_function, &
-    energy_start, energy_end, energy_step, energy_function, cmplxscl)
+    energy_start, energy_end, energy_step, energy_function)
     integer,                  intent(in)    :: method
     integer,                  intent(in)    :: transform
     FLOAT,                    intent(in)    :: noise
@@ -2279,31 +2519,20 @@ contains
     integer,                  intent(in)    :: energy_end
     FLOAT,                    intent(in)    :: energy_step
     type(batch_t),            intent(inout) :: energy_function
-    type(cmplxscl_t), optional, intent(in)    :: cmplxscl
 
     integer :: itime, ienergy, ii
     FLOAT   :: energy!, kernel
     CMPLX :: ez, eidt
     type(compressed_sensing_t) :: cs
-    logical :: cmplxft ! perform complex Fourier Transform?
 
     PUSH_SUB(fourier_transform)
     
-    cmplxft = .false. 
-    if(present(cmplxscl)) then
-      if(cmplxscl%space .or. cmplxscl%time) cmplxft = .true.
-    end if
-
     ASSERT(batch_is_ok(time_function))
     ASSERT(batch_is_ok(energy_function))
     ASSERT(time_function%nst_linear == energy_function%nst_linear)
     ASSERT(batch_status(time_function) == batch_status(energy_function))
     ASSERT(batch_status(time_function) == BATCH_NOT_PACKED)
-    if(cmplxft) then
-      ASSERT(batch_type(time_function) == TYPE_CMPLX)
-    else 
-      ASSERT(batch_type(time_function) == TYPE_FLOAT)
-    end if
+    ASSERT(batch_type(time_function) == TYPE_FLOAT)
     ASSERT(batch_type(energy_function) == TYPE_FLOAT)
 
     select case(method)
@@ -2312,10 +2541,10 @@ contains
 
       do ienergy = energy_start, energy_end
 
-        energy = energy_step*(ienergy - energy_start)
+        energy = energy_step*(ienergy - 1)
 
         do ii = 1, energy_function%nst_linear
-          energy_function%states_linear(ii)%dpsi(ienergy) = 0.0
+          energy_function%states_linear(ii)%dpsi(ienergy) = M_ZERO
         end do
 
         select case(transform)
@@ -2324,11 +2553,6 @@ contains
         ! One can compute the exponential by successive multiplications, instead of calling the sine or
         ! cosine function at each time step.
         case(SPECTRUM_TRANSFORM_SIN)
-          if(cmplxft) then
-            write(message(1),'(a)') 'With complex scaling the only allowed Fourier transform'
-            write(message(2),'(a)') 'is PropagationSpectrumTransform = laplace'
-            call messages_fatal(2)            
-          end if
 
           eidt = exp(M_zI * energy * time_step )
           ez = exp(M_zI * energy * ( (time_start-1)*time_step - t0) )
@@ -2342,11 +2566,6 @@ contains
           end do
 
         case(SPECTRUM_TRANSFORM_COS)
-          if(cmplxft) then
-            write(message(1),'(a)') 'With complex scaling the only allowed Fourier transform'
-            write(message(2),'(a)') 'is PropagationSpectrumTransform = laplace'
-            call messages_fatal(2)            
-          end if
 
           eidt = exp(M_zI * energy * time_step)
           ez = exp(M_zI * energy * ( (time_start-1)*time_step - t0) )
@@ -2361,29 +2580,16 @@ contains
 
         case(SPECTRUM_TRANSFORM_LAPLACE)
         
-          if(cmplxft) then
-            eidt = exp( -energy * time_step * exp(M_zI * cmplxscl%alphaR) + M_zI * cmplxscl%alphaR)
-            ez = exp( -energy * ( (time_start-1)*time_step - t0) )
-            do itime = time_start, time_end
-              do ii = 1, time_function%nst_linear
-                energy_function%states_linear(ii)%dpsi(ienergy) = &
-                  energy_function%states_linear(ii)%dpsi(ienergy) + &
-                  real( time_function%states_linear(ii)%zpsi(itime) * ez, REAL_PRECISION)
-              end do
-              ez = ez * eidt
+          eidt = exp( -energy * time_step)
+          ez = exp( -energy * ( (time_start-1)*time_step - t0) )
+          do itime = time_start, time_end
+            do ii = 1, time_function%nst_linear
+              energy_function%states_linear(ii)%dpsi(ienergy) = &
+                energy_function%states_linear(ii)%dpsi(ienergy) + &
+                real( time_function%states_linear(ii)%dpsi(itime) * ez, REAL_PRECISION)
             end do
-          else
-            eidt = exp( -energy * time_step)
-            ez = exp( -energy * ( (time_start-1)*time_step - t0) )
-            do itime = time_start, time_end
-              do ii = 1, time_function%nst_linear
-                energy_function%states_linear(ii)%dpsi(ienergy) = &
-                  energy_function%states_linear(ii)%dpsi(ienergy) + &
-                  real( time_function%states_linear(ii)%dpsi(itime) * ez, REAL_PRECISION)
-              end do
-              ez = ez * eidt
-            end do
-          end if
+            ez = ez * eidt
+          end do
         end select
 
         ! The total sum must be multiplied by time_step in order to get the integral.
@@ -2422,62 +2628,180 @@ contains
     integer,                intent(in) :: energy_steps
     type(kick_t), optional, intent(in) :: kick !< if present, will write itself and nspin
 
-    integer :: is, idir, jdir, ie, ii, info, out_file
+    integer :: is, idir, jdir, ie, info, out_file, out_file_t
     FLOAT, allocatable :: work(:,:) 
     CMPLX, allocatable :: w(:)
     character(len=20) :: header_string
+    logical :: spins_singlet, spins_triplet, symmetrize
+    FLOAT, allocatable :: pp(:,:), pp2(:,:)
 
     PUSH_SUB(spectrum_sigma_diagonalize)
 
-    out_file = io_open('cross_section_diagonal-sigma', action='write')
+    
+    !%Variable PropagationSpectrumSymmetrizeSigma
+    !%Type logical
+    !%Default .false.
+    !%Section Utilities::oct-propagation_spectrum
+    !%Description
+    !% The polarizablity tensor has to be real and symmetric. Due to numerical accuracy, 
+    !% that is not extricly conserved when computing it from different time-propations.
+    !% If <tt>PropagationSpectrumSymmetrizeSigma = yes</tt>, the polarizability tensor is
+    !% symmetrized before its diagonalizied.
+    !% This variable is only used if the cross_section_tensor is computed. 
+    !%End
+    call parse_variable('PropagationSpectrumSymmetrizeSigma', .false., symmetrize)
+    call messages_print_var_value(stdout, 'PropagationSpectrumSymmetrizeSigma', symmetrize)
+
+    spins_singlet = .true.
+    spins_triplet = .false.
+    if(present(kick)) then
+      select case(kick%delta_strength_mode)
+      case (KICK_SPIN_MODE)
+        spins_triplet = .true.
+        spins_singlet = .false.
+      case (KICK_SPIN_DENSITY_MODE)
+        spins_triplet = .true.
+      end select
+    end if
+    
+    if (spins_singlet .and. spins_triplet) then
+      out_file = io_open('cross_section_diagonal-sigma_s', action='write')
+      out_file_t = io_open('cross_section_diagonal-sigma_t', action='write')
+    else
+      out_file = io_open('cross_section_diagonal-sigma', action='write')
+    end if
 
     write(out_file, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
-    do is = 1, nspin
-      do idir = 1, 3
-        write(out_file, '(a20)', advance = 'no') str_center("Real part", 20)
-        write(out_file, '(a20)', advance = 'no') str_center("Imaginary part", 20)
-        do jdir = 1, 3
-          write(header_string,'(a7,i1,a1,i1,a1,i1,a1)') 'vector(', idir, ',', jdir, ',', is, ')'
-          write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
-        end do
+    do idir = 1, 3
+      write(out_file, '(a20)', advance = 'no') str_center("Real part", 20)
+      if (.not.symmetrize) write(out_file, '(a20)', advance = 'no') str_center("Imaginary part", 20)
+      do jdir = 1, 3
+        write(header_string,'(a7,i1,a1,i1,a1,i1,a1)') 'vector(', idir, ',', jdir, ',', is, ')'
+        write(out_file, '(a20)', advance = 'no') str_center(trim(header_string), 20)
       end do
     end do
     write(out_file, '(1x)')
     write(out_file, '(a1,a20)', advance = 'no') '#', str_center('[' // trim(units_abbrev(units_out%energy)) // ']', 20)
 
-    do ii = 1, nspin 
-      do idir = 1, 3
+    do idir = 1, 3
+      write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+      if (.not.symmetrize) then
         write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
-        write(out_file, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
-        do jdir = 1, 3
-          write(out_file, '(a20)', advance = 'no')  str_center('[ - ]', 20)
-        end do
+      end if
+      do jdir = 1, 3
+        write(out_file, '(a20)', advance = 'no')  str_center('[ - ]', 20)
       end do
     end do
     write(out_file, '(1x)')
 
+    if (spins_singlet .and. spins_triplet) then
+      write(out_file_t, '(a1, a20)', advance = 'no') '#', str_center("Energy", 20)
+      do idir = 1, 3
+        write(out_file_t, '(a20)', advance = 'no') str_center("Real part", 20)
+        if (.not.symmetrize) write(out_file_t, '(a20)', advance = 'no') str_center("Imaginary part", 20)
+        do jdir = 1, 3
+          write(header_string,'(a7,i1,a1,i1,a1,i1,a1)') 'vector(', idir, ',', jdir, ',', is, ')'
+          write(out_file_t, '(a20)', advance = 'no') str_center(trim(header_string), 20)
+        end do
+      end do
+      write(out_file_t, '(1x)')
+      write(out_file_t, '(a1,a20)', advance = 'no') '#', str_center('[' // trim(units_abbrev(units_out%energy)) // ']', 20)
+     
+      do idir = 1, 3
+        write(out_file_t, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+        if(.not.symmetrize) then
+          write(out_file_t, '(a20)', advance = 'no')  str_center('[' // trim(units_abbrev(units_out%length**2)) // ']', 20)
+        end if
+        do jdir = 1, 3
+          write(out_file_t, '(a20)', advance = 'no')  str_center('[ - ]', 20)
+        end do
+      end do
+      write(out_file_t, '(1x)')
+    end if
+
+    SAFE_ALLOCATE(pp(1:3, 1:3))
+    if (spins_triplet .and. spins_singlet) SAFE_ALLOCATE(pp2(1:3, 1:3))
     SAFE_ALLOCATE(w(1:3))
     SAFE_ALLOCATE(work(1:3, 1:3))
     do ie = 0, energy_steps
-      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * energy_step))
-      do is = 1, nspin
-        work(1:3, 1:3) = sigma(1:3, 1:3, ie, is)
-        call lalg_eigensolve_nonh(3, work, w, err_code = info, sort_eigenvectors = .true.)
+
+      pp(:, :) = sigma(:, :, ie, 1)
+      if (nspin >= 2) then
+        if (spins_singlet .and. spins_triplet) then
+          pp2(:, :) = pp(:, :) - sigma(:, :, ie, 2)
+          pp(:, :)  = pp(:, :) + sigma(:, :, ie, 2)
+        elseif (spins_triplet .and. .not.spins_singlet) then
+          pp(:, :) = pp(:, :) - sigma(:, :, ie, 2)
+        elseif (spins_singlet .and. .not.spins_triplet) then
+          pp(:, :) = pp(:, :) + sigma(:, :, ie, 2)
+        end if
+      end if
+
+      if (symmetrize) then
+        do idir = 1, 3
+          do jdir = idir + 1, 3
+            pp(idir, jdir) = (pp(idir, jdir) + pp(jdir, idir) )/2.
+            pp(jdir, idir) = pp(idir, jdir)
+          end do 
+        end do
+      end if
+
+      work(1:3, 1:3) = pp(1:3, 1:3)
+      call lalg_eigensolve_nonh(3, work, w, err_code = info, sort_eigenvectors = .true.)
       ! Note that the cross-section elements do not have to be transformed to the proper units, since
       ! they have been read from the "cross_section_vector.x", where they are already in the proper units.
-        do idir = 3, 1, -1
+
+      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * energy_step))
+      do idir = 3, 1, -1
+        if (symmetrize) then
+          write(out_file,'(2e20.8)', advance = 'no') real(w(idir))
+        else
           write(out_file,'(2e20.8)', advance = 'no') w(idir)
+        end if
+      
+        do jdir = 1, 3
+          write(out_file,'(e20.8)', advance = 'no') work(jdir, idir)
+        end do
+      end do 
+      write(out_file, '(1x)')
+
+      if (spins_singlet .and. spins_triplet) then
+        if (symmetrize) then
+          do idir = 1, 3
+            do jdir = idir + 1, 3
+              pp2(idir, jdir) = (pp2(idir, jdir) + pp2(jdir, idir) )/2.
+              pp2(jdir, idir) = pp2(idir, jdir)
+            end do 
+          end do
+        end if
+        work(1:3, 1:3) = -pp2(1:3, 1:3)
+        call lalg_eigensolve_nonh(3, work, w, err_code = info, sort_eigenvectors = .true.)
+        ! Note that the cross-section elements do not have to be transformed to the proper units, since
+        ! they have been read from the "cross_section_vector.x", where they are already in the proper units.
+      
+        write(out_file_t,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * energy_step))
+        do idir = 3, 1, -1
+          if (symmetrize) then
+            write(out_file_t,'(2e20.8)', advance = 'no') real(w(idir))
+          else
+            write(out_file_t,'(2e20.8)', advance = 'no') w(idir)
+          end if
         
           do jdir = 1, 3
-            write(out_file,'(e20.8)', advance = 'no') work(jdir, idir)
+            write(out_file_t,'(e20.8)', advance = 'no') work(jdir, idir)
           end do
         end do 
-        write(out_file, '(1x)')
-      end do
+        write(out_file_t, '(1x)')
+      end if
     end do
 
     call io_close(out_file)
 
+    SAFE_DEALLOCATE_A(pp)
+    if (spins_triplet .and. spins_singlet) then 
+      SAFE_DEALLOCATE_A(pp2)
+      call io_close(out_file_t)
+    end if
     SAFE_DEALLOCATE_A(w)
     SAFE_DEALLOCATE_A(work)
 

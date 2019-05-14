@@ -26,38 +26,22 @@ module current_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
-  use grid_oct_m
   use hamiltonian_oct_m
   use hamiltonian_base_oct_m
-  use io_oct_m
-  use io_function_oct_m
-  use lalg_basic_oct_m
   use lda_u_oct_m
-  use logrid_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
   use parser_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
-  use ps_oct_m
-  use restart_oct_m
   use scissor_oct_m
   use simul_box_oct_m
-  use species_oct_m
-  use splines_oct_m
   use states_oct_m
   use states_dim_oct_m
-  use submesh_oct_m
-  use symmetries_oct_m
   use symmetrizer_oct_m
-  use symm_op_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
   use varinfo_oct_m
-  use xc_oct_m  
 
   implicit none
 
@@ -73,7 +57,8 @@ module current_oct_m
     current_init,                         &
     current_end,                          &
     current_calculate,                    &
-    current_calculate_mel
+    current_heat_calculate,               &
+    current_calculate_mel 
 
   integer, parameter, public ::           &
     CURRENT_GRADIENT           = 1,       &
@@ -83,8 +68,9 @@ module current_oct_m
 
 contains
 
-  subroutine current_init(this)
+  subroutine current_init(this, sb)
     type(current_t), intent(out)   :: this
+    type(simul_box_t), intent(in)  :: sb
 
     PUSH_SUB(current_init)
 
@@ -114,6 +100,12 @@ contains
     if(this%method /= CURRENT_GRADIENT_CORR) then
       call messages_experimental("CurrentDensity /= gradient_corrected")
     end if
+    !The call to individual derivatives_perfom routines returns the derivatives along
+    !the primitive axis in case of non-orthogonal cells, whereas the code expects derivatives
+    !along the Cartesian axis.
+    if(this%method == CURRENT_FAST .and. sb%nonorthogonal ) then
+      call messages_not_implemented("CurrentDensity = fast with non-orthogonal cells")
+    end if
     
     POP_SUB(current_init)
   end subroutine current_init
@@ -136,8 +128,8 @@ contains
     type(hamiltonian_t),  intent(in)    :: hm
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(inout) :: st
-    FLOAT,                intent(out)    :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
-    FLOAT, pointer,               intent(inout)    :: current_kpt(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, kpt%start:kpt%end)
+    FLOAT,                intent(out)   :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
+    FLOAT, pointer,       intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, kpt%start:kpt%end)
 
     integer :: ik, ist, idir, idim, ip, ib, ii, ispin
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), hpsi(:, :), rhpsi(:, :), rpsi(:, :), hrpsi(:, :)
@@ -170,6 +162,7 @@ contains
     current_kpt = M_ZERO
 
     select case(this%method)
+
     case(CURRENT_FAST)
 
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -177,7 +170,7 @@ contains
         do ib = st%group%block_start, st%group%block_end
 
           call batch_pack(st%group%psib(ib, ik), copy = .true.)
-          call batch_copy(st%group%psib(ib, ik), epsib)
+          call batch_copy(st%group%psib(ib, ik), epsib, fill_zeros = .false.)
           call boundaries_set(der%boundaries, st%group%psib(ib, ik))
           
           if(associated(hm%hm_base%phase)) then
@@ -187,6 +180,10 @@ contains
             call batch_copy_data(der%mesh%np_part, st%group%psib(ib, ik), epsib)
           end if
 
+          !The call to individual derivatives_perfom routines returns the derivatives along
+          !the primitive axis in case of non-orthogonal cells, whereas the code expects derivatives
+          !along the Cartesian axis.
+          ASSERT(.not.der%mesh%sb%nonorthogonal)
           do idir = 1, der%mesh%sb%dim
             call batch_copy(st%group%psib(ib, ik), commpsib(idir))
             call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
@@ -254,7 +251,7 @@ contains
 
           call batch_pack(st%group%psib(ib, ik), copy = .true.)
 
-          call batch_copy(st%group%psib(ib, ik), hpsib)
+          call batch_copy(st%group%psib(ib, ik), hpsib, fill_zeros = .false.)
           call batch_copy(st%group%psib(ib, ik), rhpsib)
           call batch_copy(st%group%psib(ib, ik), rpsib)
           call batch_copy(st%group%psib(ib, ik), hrpsib)
@@ -359,7 +356,7 @@ contains
             end if
             
             if(hm%lda_u_level /= DFT_U_NONE) then
-              call zlda_u_commute_r(hm%lda_u, der%mesh, st%d, ik, ist, psi, gpsi, &
+              call zlda_u_commute_r(hm%lda_u, der%mesh, st%d, ik, psi, gpsi, &
                               associated(hm%hm_base%phase))
             end if
 
@@ -461,7 +458,7 @@ contains
     integer,              intent(in)    :: ik
     CMPLX,                intent(out)   :: cmel(:,:) ! the current vector cmel(1:der%mesh%sb%dim, 1:st%d%nspin)
 
-    integer ::  idir, idim, iatom, ip, ib, ii, ierr, ispin
+    integer ::  idir, idim, ip, ispin
     CMPLX, allocatable :: gpsi_j(:, :, :), ppsi_j(:,:),  gpsi_i(:, :, :), ppsi_i(:,:)
 
     PUSH_SUB(current_calculate_mel)
@@ -550,10 +547,91 @@ contains
 
   end subroutine current_calculate_mel
 
+  ! ---------------------------------------------------------
+  subroutine current_heat_calculate(der, hm, geo, st, current)
+    type(derivatives_t),  intent(in)    :: der
+    type(hamiltonian_t),  intent(in)    :: hm
+    type(geometry_t),     intent(in)    :: geo
+    type(states_t),       intent(in)    :: st
+    FLOAT,                intent(out)   :: current(:, :, :)
+
+    integer :: ik, ist, idir, idim, ip, ispin, ndim
+    CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), g2psi(:, :, :, :)
+    CMPLX :: tmp
+
+    PUSH_SUB(current_heat_calculate)
+
+    ASSERT(simul_box_is_periodic(der%mesh%sb))
+    ASSERT(st%d%dim == 1)
+
+    ndim = der%mesh%sb%dim
+    
+    SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:ndim, 1:st%d%dim))
+    SAFE_ALLOCATE(g2psi(1:der%mesh%np, 1:ndim, 1:ndim, 1:st%d%dim))
+    
+    do ip = 1, der%mesh%np
+      current(ip, 1:ndim, 1:st%d%nspin) = st%current(ip, 1:ndim, 1:st%d%nspin)*hm%ep%vpsl(ip)
+    end do
+    
+    
+    do ik = st%d%kpt%start, st%d%kpt%end
+      ispin = states_dim_get_spin_index(st%d, ik)
+      do ist = st%st_start, st%st_end
+        
+        call states_get_state(st, der%mesh, ist, ik, psi)
+        do idim = 1, st%d%dim
+          call boundaries_set(der%boundaries, psi(:, idim))
+        end do
+
+        if(associated(hm%hm_base%phase)) then 
+          call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,  conjugate = .false.)
+        end if
+
+        do idim = 1, st%d%dim
+          call zderivatives_grad(der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
+        end do
+        do idir = 1, ndim
+          if(associated(hm%hm_base%phase)) then 
+            call states_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np, conjugate = .true.)
+          end if
+            
+          !do idim = 1, st%d%dim
+          !  call boundaries_set(der%boundaries, psi(:, idim))
+          !end do
+           
+          do idim = 1, st%d%dim
+            call boundaries_set(der%boundaries, gpsi(:,idir, idim))
+          end do
+            
+          if(associated(hm%hm_base%phase)) then 
+            call states_set_phase(st%d, gpsi(:, idir, :), hm%hm_base%phase(1:der%mesh%np_part, ik), &
+                                  der%mesh%np_part,  conjugate = .false.)
+          end if
+            
+          do idim = 1, st%d%dim
+            call zderivatives_grad(der, gpsi(:, idir, idim), g2psi(:, :, idir, idim), set_bc = .false.)
+          end do
+        end do
+        idim = 1
+        do ip = 1, der%mesh%np
+          do idir = 1, ndim
+            !tmp = sum(conjg(g2psi(ip, idir, 1:ndim, idim))*gpsi(ip, idir, idim)) - sum(conjg(gpsi(ip, 1:ndim, idim))*g2psi(ip, idir, 1:ndim, idim))
+            tmp = sum(conjg(g2psi(ip, 1:ndim, idir, idim))*gpsi(ip, 1:ndim, idim)) - &
+                  sum(conjg(gpsi(ip, 1:ndim, idim))*g2psi(ip, 1:ndim, idir, idim))
+            tmp = tmp - conjg(gpsi(ip, idir, idim))*sum(g2psi(ip, 1:ndim, 1:ndim, idim)) + &
+                  sum(conjg(g2psi(ip, 1:ndim, 1:ndim, idim)))*gpsi(ip, idir, idim)
+            current(ip, idir, ispin) = current(ip, idir, ispin) + st%d%kweights(ik)*st%occ(ist, ik)*aimag(tmp)/CNST(8.0)
+          end do
+        end do
+      end do
+    end do
 
 
-
-
+    POP_SUB(current_heat_calculate)
+      
+  end subroutine current_heat_calculate
+    
 
 end module current_oct_m
 

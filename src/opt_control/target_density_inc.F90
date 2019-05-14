@@ -227,8 +227,10 @@
     select case(tg%curr_functional)
     case(oct_no_curr)
     case(oct_curr_square, oct_max_curr_ring, oct_curr_square_td)
-      SAFE_ALLOCATE(stin%current( 1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:stin%d%nspin ) )
-      stin%current= M_ZERO
+      if (.not. associated(stin%current)) then
+        SAFE_ALLOCATE(stin%current( 1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:stin%d%nspin ) )
+        stin%current= M_ZERO
+      end if
     end select
 
     call parse_variable('OCTCurrentWeight', M_ZERO, tg%curr_weight)
@@ -529,13 +531,13 @@
       semilocal_function = M_ZERO
 
     case(oct_curr_square,oct_curr_square_td)
-      call states_calc_quantities(gr%der, psi, paramagnetic_current=psi%current) 
+      call states_calc_quantities(gr%der, psi, .false., paramagnetic_current=psi%current) 
       do ip = 1, gr%mesh%np
         semilocal_function(ip) =  sum(psi%current(ip, 1:gr%sb%dim, 1)**2)  
       end do
       
     case(oct_max_curr_ring)
-      call states_calc_quantities(gr%der, psi, paramagnetic_current=psi%current) 
+      call states_calc_quantities(gr%der, psi, .false., paramagnetic_current=psi%current) 
 
       if(gr%sb%dim /= M_TWO) then
         call messages_not_implemented('Target for dimension != 2')
@@ -585,7 +587,7 @@
     SAFE_ALLOCATE(grad_psi_in(1:gr%der%mesh%np_part, 1:gr%der%mesh%sb%dim, 1))
 
     if(target_mode(tg) == oct_targetmode_td ) then 
-      call states_calc_quantities(gr%der, psi_in, paramagnetic_current=psi_in%current) 
+      call states_calc_quantities(gr%der, psi_in, .false., paramagnetic_current=psi_in%current) 
     end if
 
     select case(tg%curr_functional)

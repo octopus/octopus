@@ -19,13 +19,10 @@
 #include "global.h"
 
 module ps_xml_oct_m
-  use atomic_oct_m
   use global_oct_m
-  use io_oct_m
   use messages_oct_m
   use profiling_oct_m
   use pseudo_oct_m
-  use ps_in_grid_oct_m
 
   implicit none
 
@@ -106,8 +103,8 @@ contains
     end if
     
     if(ierr == PSEUDO_STATUS_FORMAT_NOT_SUPPORTED) then
-      POP_SUB(ps_xml_init)
-      return
+      call messages_write("Pseudopotential file '" // trim(filename) // "' not supported")
+      call messages_fatal()
     end if
 
     this%initialized = .true.
@@ -217,7 +214,7 @@ contains
 
     !  checking normalization of the wavefunctions
     do ll = 0, this%lmax
-      nrm = 0.0
+      nrm = M_ZERO
       do ip = 1, this%grid_size
         rr = this%grid(ip)
         nrm = nrm + this%wavefunction(ip, ll)**2*this%weights(ip)*rr**2

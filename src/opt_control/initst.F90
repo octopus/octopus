@@ -25,12 +25,12 @@ module initst_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use messages_oct_m
+  use mesh_function_oct_m
   use opt_control_state_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
   use states_oct_m
-  use states_calc_oct_m
   use states_restart_oct_m
   use string_oct_m
   use system_oct_m
@@ -206,7 +206,7 @@ contains
         do ik = 1, psi%d%nik
           do is = psi%st_start, psi%st_end
             call states_get_state(psi, sys%gr%mesh, is, ik, zpsi)
-            call zstates_normalize_orbital(sys%gr%mesh, psi%d%dim, zpsi)
+            call zmf_normalize(sys%gr%mesh, psi%d%dim, zpsi)
             call states_set_state(psi, sys%gr%mesh, is, ik, zpsi)
           end do
         end do

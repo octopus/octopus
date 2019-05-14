@@ -24,17 +24,14 @@ program photoelectron_spectrum
   use global_oct_m
   use grid_oct_m
   use kpoints_oct_m
-  use io_binary_oct_m
   use io_function_oct_m
   use io_oct_m
-  use loct_oct_m
   use messages_oct_m
   use multicomm_oct_m
   use parser_oct_m
-  use pes_oct_m  
-  use pes_mask_oct_m  
+  use pes_mask_oct_m
   use pes_flux_oct_m
-  use pes_out_oct_m  
+  use pes_out_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
@@ -46,7 +43,6 @@ program photoelectron_spectrum
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
-  use varinfo_oct_m
   
   implicit none
 
@@ -57,7 +53,8 @@ program photoelectron_spectrum
   end type pesoutput_t  
 
   integer              :: ierr, integrate
-  integer              :: dim, dir, how, idim, pdim, ngpt
+  integer              :: dim, dir, idim, pdim, ngpt
+  integer(8)           :: how
   integer              :: llp(3), llg(3)   !< The size of the g-point and p-point cubic grids 
   FLOAT                :: Emax, Emin, Estep, uEstep,uEspan(2), pol(3)
   FLOAT                :: uThstep, uThspan(2), uPhstep, uPhspan(2), pvec(3)
@@ -529,7 +526,7 @@ program photoelectron_spectrum
         end if
       end if
       
-      if(iand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TOT) /= 0) then
+      if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TOT) /= 0) then
         call messages_print_stress(stdout, "Energy-resolved PES")
 
         select case (pes_method)
@@ -542,7 +539,7 @@ program photoelectron_spectrum
         
       end if
       
-      if(iand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_ANGLE) /= 0) then
+      if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_ANGLE) /= 0) then
         call messages_print_stress(stdout, "Angle- and energy-resolved PES")
         
         select case (pes_method)
@@ -556,7 +553,7 @@ program photoelectron_spectrum
                                           
       end if
 
-      if(iand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP_CUT) /= 0) then
+      if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP_CUT) /= 0) then
         call messages_print_stress(stdout, "Velocity map on a plane")
         dir = -1
         if(sum((pvec-(/1 ,0 ,0/))**2)  <= M_EPSILON  )  dir = 1
@@ -596,7 +593,7 @@ program photoelectron_spectrum
         end if
       end if
 
-      if(iand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_XY) /= 0) then
+      if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_XY) /= 0) then
         call messages_print_stress(stdout, "Angle and energy-resolved on a plane")
         if(uEstep >  0 .and. uEstep > Estep) then
           Estep = uEstep
@@ -614,7 +611,7 @@ program photoelectron_spectrum
                                         
       end if
 
-      if(iand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TH_PH) /= 0) then
+      if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TH_PH) /= 0) then
         call messages_print_stress(stdout, "PES on spherical cuts")
 
         write(message(1), '(a,es19.12,a2,es19.12,2x,a19)') &
@@ -639,7 +636,7 @@ program photoelectron_spectrum
 
       end if
 
-      if(iand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP) /= 0) then
+      if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP) /= 0) then
         
         call io_function_read_how(sb, how, ignore_error = .true.)
         call messages_print_stress(stdout, "Full velocity map")
@@ -658,7 +655,7 @@ program photoelectron_spectrum
         
       end if
 
-      if(iand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES) /= 0) then
+      if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES) /= 0) then
         call messages_print_stress(stdout, "ARPES")
 
         forall (i1=1:llp(1), i2=1:llp(2), i3=1:llp(3))
@@ -675,7 +672,7 @@ program photoelectron_spectrum
       end if
       
       
-      if(iand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES_CUT) /= 0) then
+      if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES_CUT) /= 0) then
         call messages_print_stress(stdout, "ARPES cut on reciprocal space path")
         
         filename = outfile('./PES_ARPES', ist, ispin, "path")
