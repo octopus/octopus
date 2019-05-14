@@ -2212,10 +2212,6 @@ contains
  
       SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
       SAFE_ALLOCATE(gspsi(1:gr%mesh%np, 1:st%d%dim))
-      
-      ! n_dip is not defined for more than space%dim
-      call geometry_dipole(geo, n_dip)
-
       SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1:st%d%dim))
       
       do ik = 1, st%d%nik
@@ -2227,7 +2223,7 @@ contains
             do idim = 1, st%d%dim
               xpsi(1:gr%mesh%np, idim) = gr%mesh%x(1:gr%mesh%np, dir)*gspsi(1:gr%mesh%np, idim)
             end do
-            projections(ist, uist, ik) = -n_dip(dir) - zmf_dotp(gr%mesh, st%d%dim, psi, xpsi, reduce = .false.)
+            projections(ist, uist, ik) = - zmf_dotp(gr%mesh, st%d%dim, psi, xpsi, reduce = .false.)
 
           end do
         end do
@@ -2236,6 +2232,17 @@ contains
       SAFE_DEALLOCATE_A(xpsi)
 
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  projections)
+
+      ! n_dip is not defined for more than space%dim
+      call geometry_dipole(geo, n_dip)
+      do ik = 1, st%d%nik
+        do ist = gs_st%st_start, st%nst
+          do uist = gs_st%st_start, gs_st%st_end
+            projections(ist, uist, ik) = projections(ist, uist, ik)-n_dip(dir)
+          end do
+        end do
+      end do
+
 
       call distribute_projections(st, gs_st, projections)
 

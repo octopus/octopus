@@ -998,6 +998,8 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
   SAFE_ALLOCATE(psi1(1:mesh%np, 1:st1%d%dim))
   SAFE_ALLOCATE(psi2(1:mesh%np, 1:st1%d%dim))
 
+  aa(:, :, :) = M_ZERO
+
   do ik = st1%d%kpt%start, st1%d%kpt%end
 
     if(st1%parallel_in_states) then
@@ -1035,6 +1037,8 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
       end do
       SAFE_DEALLOCATE_A(phi2)
 
+      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  aa(:,:,ik))
+
       ! Each process holds some lines of the matrix. So it is broadcasted (All processes
       ! should get the whole matrix)
       call MPI_Barrier(st1%mpi_grp%comm, mpi_err)
@@ -1066,12 +1070,11 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
 
     end if
 
+    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  aa(:, :, ik))
   end do
 
   SAFE_DEALLOCATE_A(psi1)
   SAFE_DEALLOCATE_A(psi2)    
-
-  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  aa)
 
   POP_SUB(X(states_matrix))
 end subroutine X(states_matrix)
