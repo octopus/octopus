@@ -99,7 +99,7 @@ subroutine X(forces_from_local_potential)(gr, geo, ep, gdensity, force)
   if(geo%atoms_dist%parallel) call X(forces_gather)(geo, force_tmp)
   !if(geo%atoms_dist%parallel .and. geo%atoms_dist%nlocal > 0) call X(forces_gather)(geo, force)
 
-  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  force_tmp) 
+  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, force_tmp) 
 
   force(1:gr%mesh%sb%dim, 1:geo%natoms) = force(1:gr%mesh%sb%dim, 1:geo%natoms) + force_tmp(1:gr%mesh%sb%dim, 1:geo%natoms)
 
@@ -629,6 +629,7 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv, lda_u_lev
 #endif
   
   SAFE_ALLOCATE(force_local(1:gr%sb%dim, 1:geo%natoms))
+  force_local = M_ZERO
   call zforces_from_local_potential(gr, geo, ep, grad_rho, force_local)
   force_deriv(:,:) = force_deriv(:,:) + force_local(:,:)
   SAFE_DEALLOCATE_A(force_local)

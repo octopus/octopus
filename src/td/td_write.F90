@@ -2223,13 +2223,15 @@ contains
             do idim = 1, st%d%dim
               xpsi(1:gr%mesh%np, idim) = gr%mesh%x(1:gr%mesh%np, dir)*gspsi(1:gr%mesh%np, idim)
             end do
-            projections(ist, uist, ik) = - zmf_dotp(gr%mesh, st%d%dim, psi, xpsi, reduce = .false.)
+            projections(ist, uist, ik) = -zmf_dotp(gr%mesh, st%d%dim, psi, xpsi, reduce = .false.)
 
           end do
         end do
       end do
       
       SAFE_DEALLOCATE_A(xpsi)
+      SAFE_DEALLOCATE_A(gspsi)
+      SAFE_DEALLOCATE_A(psi)
 
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  projections)
 
@@ -2383,6 +2385,8 @@ contains
     
      SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
      SAFE_ALLOCATE(gspsi(1:mesh%np, 1:st%d%dim))
+
+     projections(:,:,:) = M_ZERO
      
      do ik = 1, st%d%nik
        do ist = st%st_start, st%st_end
