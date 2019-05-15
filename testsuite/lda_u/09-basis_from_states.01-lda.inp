@@ -30,3 +30,5 @@ FromScratch = yes
 
 ExtraStates = 3
 
+MeshBlockSize = 16
+
