@@ -964,7 +964,9 @@ subroutine X(states_angular_momentum)(st, gr, ll, l2)
   end do
 
   if(gr%mesh%parallel_in_domains) then
+#if !defined(R_TREAL)
     call comm_allreduce(gr%mesh%mpi_grp%comm,  ll)
+#endif
     if(present(l2)) then
       call comm_allreduce(gr%mesh%mpi_grp%comm,  l2)
     end if
