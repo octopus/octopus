@@ -635,9 +635,6 @@ contains
         end do
       end do
 
-      !We do not use axis
-      this%nik_axis(1:MAX_DIM) = 1
-
       !We do not have shifts
       nshifts = 1
       call kpoints_grid_init(dim, path_kpoints_grid, nkpoints, nshifts)
