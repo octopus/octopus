@@ -166,7 +166,7 @@ module pcm_oct_m
   logical            :: gamess_benchmark !< Decide to output pcm_matrix in a GAMESS format 
   FLOAT, allocatable :: mat_gamess(:,:)  !< PCM matrix formatted to be inputed to GAMESS
 
-  integer, parameter ::		      &
+  integer, parameter ::         &
     PCM_ELECTRONS          = 0, &
     PCM_NUCLEI             = 1, &
     PCM_EXTERNAL_POTENTIAL = 2, &

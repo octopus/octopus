@@ -184,7 +184,7 @@ contains
       select case (which_eps)
       case (PCM_DEBYE_MODEL)
         !> initialize pcm charges due to electrons, external potential or kick
-        call pcm_charges_from_input_file(q_t,pot_t)
+        call pcm_charges_from_input_file(q_t, pot_t)
 
         POP_SUB(pcm_charges_propagation)
         return
@@ -212,9 +212,9 @@ contains
 
       !> propagate pcm charges due to electrons or external potential (including possible kick)
       if (which_eps == PCM_DEBYE_MODEL) then
-        call pcm_ief_prop_deb(q_t,pot_t)
+        call pcm_ief_prop_deb(q_t, pot_t)
       else if (which_eps == PCM_DRUDE_MODEL) then
-        call pcm_ief_prop_vv_ief_drl(q_t,pot_t)
+        call pcm_ief_prop_vv_ief_drl(q_t, pot_t)
       end if
 
     end if
@@ -347,7 +347,7 @@ contains
   !------------------------------------------------------------------------------------------------------------------------------
   !> Euler method for integrating first order EOM for the polarization charges within IEF-PCM
   !> in the case of Debye dielectric functions.
-  subroutine pcm_ief_prop_deb(q_t,pot_t)
+  subroutine pcm_ief_prop_deb(q_t, pot_t)
     FLOAT, intent(out) :: q_t(:)
     FLOAT, intent(in)  :: pot_t(:)
 
@@ -404,7 +404,7 @@ contains
   !------------------------------------------------------------------------------------------------------------------------------
   !> VV algorithm for integrating second order EOM for the polarization charges within IEF-PCM
   !> in the case of Drude-Lorentz dielectric functions.
-  subroutine pcm_ief_prop_vv_ief_drl(q_t,pot_t)
+  subroutine pcm_ief_prop_vv_ief_drl(q_t, pot_t)
     FLOAT, intent(out) :: q_t(:)
     FLOAT, intent(in)  :: pot_t(:)
 
@@ -541,7 +541,7 @@ contains
   !> The matrices are required for the EOMs, eq.(37) in Ref.1 and eq.(15) in Ref.2 
   subroutine do_PCM_propMat()
     save
-    integer :: i,j
+    integer :: i, j
     FLOAT, allocatable :: scr4(:,:), scr1(:,:)
     FLOAT, allocatable :: scr2(:,:), scr3(:,:)
     FLOAT, allocatable :: fact1(:), fact2(:)   !< tau^{-1} and tau^{-1}K_0 from (38)-(39), respectively, with Eq.(32), Ref.1
@@ -633,7 +633,7 @@ contains
       scr1(:,i) = scr3(:, i)*fact2(i)
     end do
     if (which_eom == 'electron') then
-      matqv = -matmul(scr1,scr4) !< Eq.(38) in Ref.1 and Eq.(17) in Ref.2
+      matqv = -matmul(scr1, scr4) !< Eq.(38) in Ref.1 and Eq.(17) in Ref.2
     else if (which_eom == 'external' .or. which_eom == 'justkick') then
       matqv_lf = -matmul(scr1, scr4) !< local field analogous
     end if
