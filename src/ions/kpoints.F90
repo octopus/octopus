@@ -635,6 +635,8 @@ contains
         end do
       end do
 
+      call parse_block_end(blk)
+
       !We do not have shifts
       nshifts = 1
       call kpoints_grid_init(dim, path_kpoints_grid, nkpoints, nshifts)

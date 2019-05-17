@@ -470,7 +470,7 @@ contains
 
       if(iter > 1) then
         if( ((iter-1)*td%dt <= hm%ep%kick%time) .and. (iter*td%dt > hm%ep%kick%time) ) then
-          if( .not.hm%pcm%kick_like ) then
+          if( .not.hm%pcm%localf ) then
             call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick)
           else
             call kick_apply(gr%mesh, st, td%ions, geo, hm%ep%kick, pcm = hm%pcm)

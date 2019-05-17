@@ -227,8 +227,10 @@
     select case(tg%curr_functional)
     case(oct_no_curr)
     case(oct_curr_square, oct_max_curr_ring, oct_curr_square_td)
-      SAFE_ALLOCATE(stin%current( 1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:stin%d%nspin ) )
-      stin%current= M_ZERO
+      if (.not. associated(stin%current)) then
+        SAFE_ALLOCATE(stin%current( 1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:stin%d%nspin ) )
+        stin%current= M_ZERO
+      end if
     end select
 
     call parse_variable('OCTCurrentWeight', M_ZERO, tg%curr_weight)

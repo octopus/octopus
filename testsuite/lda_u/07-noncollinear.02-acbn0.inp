@@ -7,7 +7,7 @@ BoxShape = parallelepiped
 ExperimentalFeatures = yes
 
 EigenSolver = cg
-ConvRelDens = 5e-5
+ConvRelDens = 5e-6
 EigensolverTolerance = 1e-8
 CGOrthogonalizeAll = yes
 
@@ -16,7 +16,7 @@ a = 7.8809
 %Species
 "Ni" | species_pseudo | hubbard_l | 2 | hubbard_u | 7.0/27.21138
 %
-DFTULevel = dft_u_empirical
+DFTULevel = dft_u_acbn0
 
 PseudopotentialSet=hscv_lda
 
@@ -39,7 +39,7 @@ PseudopotentialSet=hscv_lda
 
 Spacing = 0.5
 
-FromScratch = yes
+FromScratch = no
 ParDomains = no
 
 SpinComponents = spinors

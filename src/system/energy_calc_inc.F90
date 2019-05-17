@@ -58,7 +58,6 @@ subroutine X(calculate_expectation_values)(hm, der, st, eigen, terms)
   integer :: ik, minst, maxst, ib
   type(batch_t) :: hpsib
   type(profile_t), save :: prof
-  logical :: copy_at_end
 
   PUSH_SUB(X(calculate_expectation_values))
   
@@ -70,23 +69,20 @@ subroutine X(calculate_expectation_values)(hm, der, st, eigen, terms)
       minst = states_block_min(st, ib)
       maxst = states_block_max(st, ib)
 
-      call batch_copy(st%group%psib(ib, ik), hpsib, fill_zeros = .false.)
-
-      copy_at_end = .false.
       if(hamiltonian_apply_packed(hm, der%mesh)) then
-        ! unpack at end only if the status on entry is unpacked
-        copy_at_end = .not. batch_is_packed(st%group%psib(ib, ik))
         call batch_pack(st%group%psib(ib, ik))
-        call batch_pack(hpsib, copy = .false.)
       end if
+      
+      call batch_copy(st%group%psib(ib, ik), hpsib)
 
       call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik, terms = terms)
       call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst, ik))        
+
       if(hamiltonian_apply_packed(hm, der%mesh)) then
         call batch_unpack(st%group%psib(ib, ik), copy = .false.)
       end if
 
-      call batch_end(hpsib, copy = copy_at_end)
+      call batch_end(hpsib)
 
     end do
   end do

@@ -62,7 +62,10 @@ module epot_oct_m
     epot_generate,                 &
     epot_local_potential,          &
     epot_precalc_local_potential,  &
-    epot_global_force
+    epot_global_force,             &
+    epot_have_lasers,              &
+    epot_have_kick,                &
+    epot_have_external_potentials
 
   integer, public, parameter :: &
     CLASSICAL_NONE     = 0, & !< no classical charges
@@ -604,7 +607,6 @@ contains
     type(profile_t), save :: epot_reduce
     type(ps_t), pointer :: ps
     type(symmetrizer_t) :: symmetrizer
-    FLOAT, allocatable :: tmpdensity(:)
     
     call profiling_in(epot_generate_prof, "EPOT_GENERATE")
     PUSH_SUB(epot_generate)
@@ -640,28 +642,6 @@ contains
         call comm_allreduce(geo%atoms_dist%mpi_grp%comm, density, dim = gr%mesh%np)
       call profiling_out(epot_reduce)
     end if
-
-   if(st%symmetrize_density) then
-      SAFE_ALLOCATE(tmpdensity(1:gr%mesh%np))
-      call symmetrizer_init(symmetrizer, gr%mesh)
-
-      call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field = ep%vpsl, symmfield = tmpdensity)
-      ep%vpsl(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
-
-      if(associated(st%rho_core)) then
-        call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field = st%rho_core, symmfield = tmpdensity)
-        st%rho_core(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
-      end if
-
-      if(ep%have_density) then
-        call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field = density, symmfield = tmpdensity)
-        density(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
-      end if
-
-      call symmetrizer_end(symmetrizer)
-      SAFE_DEALLOCATE_A(tmpdensity)
-    end if
-
 
     if(ep%have_density) then
       ! now we solve the poisson equation with the density of all nodes
@@ -917,6 +897,51 @@ contains
 
     POP_SUB(epot_global_force)
   end subroutine epot_global_force
+
+  ! ---------------------------------------------------------
+
+  logical function epot_have_lasers(ep)
+    type(epot_t), intent(in)  :: ep
+
+    PUSH_SUB(epot_have_lasers)
+
+    epot_have_lasers = .false.
+
+    if( ep%no_lasers /= 0 ) epot_have_lasers = .true.
+
+    POP_SUB(epot_have_lasers)
+
+  end function epot_have_lasers
+
+  ! ---------------------------------------------------------
+
+  logical function epot_have_kick(ep)
+    type(epot_t), intent(in)  :: ep
+
+    PUSH_SUB(epot_have_kick)
+
+    epot_have_kick = .false.
+
+    if( ep%kick%delta_strength /= M_ZERO ) epot_have_kick = .true.
+
+    POP_SUB(epot_have_kick)
+
+  end function epot_have_kick
+
+  ! ---------------------------------------------------------
+
+  logical function epot_have_external_potentials(ep)
+    type(epot_t), intent(in)  :: ep
+
+    PUSH_SUB(epot_have_external_potentials)
+
+    epot_have_external_potentials =  .false.
+
+    if( associated(ep%v_static) .or. associated(ep%E_field) .or. epot_have_lasers(ep) ) epot_have_external_potentials = .true.
+
+    POP_SUB(epot_have_external_potentials)
+
+  end function epot_have_external_potentials
 
 end module epot_oct_m
 
