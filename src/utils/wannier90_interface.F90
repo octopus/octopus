@@ -344,7 +344,7 @@ contains
       write(w90_win,'(a)') ' '
       write(w90_win,'(a)')  'begin kpoints '
       !Put a minus sign here for the wrong convention in Octopus
-      do ii = 1, sb%kpoints%reduced%npoints
+      do ii = 1, sb%kpoints%reduced%npoints-npath
         write(w90_win,'(f13.8,f13.8,f13.8)') -sb%kpoints%reduced%red_point(1:3,ii) 
       end do
       write(w90_win,'(a)')  'end kpoints '
@@ -364,7 +364,7 @@ contains
 
     PUSH_SUB(read_wannier90_files)
 
-    w90_num_kpts = sys%gr%sb%kpoints%full%npoints
+    w90_num_kpts = product(sys%gr%sb%kpoints%nik_axis(1:3))
     w90_num_exclude = 0 
 
     ! open nnkp file
@@ -593,15 +593,15 @@ contains
            batch => st%group%psib(st%group%iblock(ist, ik), ik)
            select case(batch_status(batch))
            case(BATCH_NOT_PACKED)
-             overlap(ist) = M_z0
+             overlap(band_index(ist)) = M_z0
              do idim = 1, st%d%dim
                ibind = batch_inv_index(batch, (/ist, idim/))
-               overlap(ist) = overlap(ist) + zmf_dotp(mesh, batch%states_linear(ibind)%zpsi, psin(:,idim), reduce = .false.)
+               overlap(band_index(ist)) = overlap(band_index(ist)) + zmf_dotp(mesh, batch%states_linear(ibind)%zpsi, psin(:,idim), reduce = .false.)
              end do
            !Not properly done at the moment
            case(BATCH_PACKED, BATCH_DEVICE_PACKED)
              call states_get_state(st, mesh, ist, ik, psim)
-             overlap(ist) = zmf_dotp(mesh, st%d%dim, psim, psin, reduce = .false.)
+             overlap(band_index(ist)) = zmf_dotp(mesh, st%d%dim, psim, psin, reduce = .false.)
            end select
          end do
 
@@ -615,7 +615,7 @@ contains
          if(mpi_grp_is_root(mpi_world)) then
            do ist = 1, st%nst
              if(exclude_list(ist) == 0) cycle
-             write(w90_mmn,'(e13.6,2x,e13.6)') overlap(ist)
+             write(w90_mmn,'(e13.6,2x,e13.6)') overlap(band_index(ist))
            end do
          end if
 
@@ -816,7 +816,7 @@ contains
       SAFE_ALLOCATE(orbitals(iw)%eorb_mesh(1:mesh%np, 1:1, 1:1, 1:w90_num_kpts))
       orbitals(iw)%eorb_mesh(:,:,:,:) = M_Z0
 
-      call orbitalset_update_phase(orbitals(iw), sb, st%d%kpt, st%d%ispin == SPIN_POLARIZED)
+      call orbitalset_update_phase(orbitals(iw), sb, st%d%kpt, st%d%ispin == SPIN_POLARIZED, kpt_max = w90_num_kpts)
 
       SAFE_DEALLOCATE_A(rr)
     end do
