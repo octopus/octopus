@@ -991,7 +991,7 @@ contains
           call states_get_state(st, mesh, iw2, ik, psi)
           !The minus sign is here is for the wrong convention of Octopus
           forall(ip=1:mesh%np)
-            zwn(ip) = zwn(ip) + Umnk(iw2, iw, ik)/w90_num_kpts * psi(ip,1) * &
+            zwn(ip) = zwn(ip) + Umnk(band_index(iw2), iw, ik)/w90_num_kpts * psi(ip,1) * &
                       exp(-M_zI* sum((mesh%x(ip, 1:sb%dim)-centers(1:sb%dim, iw)) * kpoint(1:sb%dim)))
           end forall
         end do!ik   
