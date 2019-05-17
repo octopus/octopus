@@ -306,6 +306,12 @@ contains
     if(writ%out(OUT_FLOQUET)%write) call messages_experimental('TDOutput = td_floquet')
     if(writ%out(OUT_N_EX)%write) call messages_experimental('TDOutput = n_excited_el')
 
+    !See comment in zstates_mpdotp
+    if(simul_box_is_periodic(sb) .and. writ%out(OUT_POPULATIONS)%write) then
+      call messages_not_implemented("TDOutput populations for periodic systems")
+    end if
+
+
     if(writ%out(OUT_KP_PROJ)%write.or.writ%out(OUT_FLOQUET)%write) then
       ! make sure this is not domain distributed
       if(gr%mesh%np /= gr%mesh%np_global) then
@@ -1500,10 +1506,9 @@ contains
     SAFE_ALLOCATE(dotprodmatrix(1:writ%gs_st%nst, 1:st%nst, 1:st%d%nik))
     call zstates_matrix(mesh, writ%gs_st, st, dotprodmatrix)
 
+
     !See comment in zstates_mpdotp
-    if(simul_box_is_periodic(sb)) then
-      call messages_not_implemented("TDOutput populations for periodic systems.")
-    end if
+    ASSERT(.not. simul_box_is_periodic(sb))
 
     ! all processors calculate the projection
     gsp = zstates_mpdotp(mesh, writ%gs_st, st, dotprodmatrix)
