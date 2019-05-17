@@ -53,7 +53,7 @@ contains
     integer :: ierr, nfreq, ifreq, iunit
     integer :: ist, jst, iqn, idim, idir, jdir
     CMPLX, allocatable :: psii(:, :), psij(:, :), gpsii(:, :, :), gpsij(:, :, :)
-    CMPLX, allocatable :: tensor(:, :, :), trace(:), therm_tensor(:,:,:)
+    CMPLX, allocatable :: tensor(:, :, :), therm_tensor(:,:,:)
     CMPLX, allocatable :: k11(:), k12(:), k21(:), k22(:)
     CMPLX :: prod
     FLOAT :: eigi, eigj, occi, occj, df, width, dfreq, maxfreq, ww
@@ -123,21 +123,18 @@ contains
     SAFE_ALLOCATE(gpsii(1:mesh%np, 1:sys%gr%sb%dim, 1:sys%st%d%dim))
     SAFE_ALLOCATE(gpsij(1:mesh%np, 1:sys%gr%sb%dim, 1:sys%st%d%dim))
     nfreq = nint(maxfreq / (dfreq)) + 1
-    
     SAFE_ALLOCATE(tensor(1:mesh%sb%dim, 1:mesh%sb%dim,1:nfreq))
     SAFE_ALLOCATE(therm_tensor(1:mesh%sb%dim, 1:mesh%sb%dim,1:nfreq))
     SAFE_ALLOCATE(k11(1:nfreq))
     SAFE_ALLOCATE(k12(1:nfreq))
     SAFE_ALLOCATE(k21(1:nfreq))
     SAFE_ALLOCATE(k22(1:nfreq))
-
     tensor = CNST(0.0)
     k12 = CNST(0.0)
     k11 = CNST(0.0)
     k21 = CNST(0.0)
     k22 = CNST(0.0)
     therm_tensor = CNST(0.0)
-    
     do iqn = sys%st%d%kpt%start, sys%st%d%kpt%end
     
        do ist = 1, sys%st%nst
@@ -191,12 +188,6 @@ contains
       
 
    end do !kpt loop
-
-   do ifreq = 1, nfreq
-      do idir = 1, mesh%sb%dim
-         trace(ifreq) = trace(ifreq) + tensor(idir,idir,ifreq)
-      end do
-   end do
 
    !output
    write(dirname, '(a, a)') 'kubo_greenwood' 
