@@ -307,7 +307,7 @@ contains
     if(writ%out(OUT_N_EX)%write) call messages_experimental('TDOutput = n_excited_el')
 
     !See comment in zstates_mpdotp
-    if(simul_box_is_periodic(sb) .and. writ%out(OUT_POPULATIONS)%write) then
+    if(simul_box_is_periodic(gr%sb) .and. writ%out(OUT_POPULATIONS)%write) then
       call messages_not_implemented("TDOutput populations for periodic systems")
     end if
 
