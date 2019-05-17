@@ -327,6 +327,8 @@ contains
     !% This variable selects the OpenCL device that Octopus will
     !% use. You can specify one of the options below or a numerical
     !% id to select a specific device.
+    !% Values >= 0 select the device to be used. In case of MPI enabled runs
+    !% devices are distributed in a round robin fashion, starting at this value.
     !%Option gpu -1
     !% If available, Octopus will use a GPU for OpenCL.
     !%Option cpu -2

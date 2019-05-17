@@ -90,7 +90,7 @@ extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice **
     exit(1);
   }
   
-  *device_number = *rank % ndevices;
+  *device_number = (*device_number + *rank) % ndevices;
   CUDA_SAFE_CALL(cuDeviceGet(*device, *device_number));
 
   CUDA_SAFE_CALL(cuCtxCreate(*context, 0, **device));
