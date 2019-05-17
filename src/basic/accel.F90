@@ -349,6 +349,7 @@ contains
     call messages_print_stress(stdout, "GPU acceleration")
 
 #ifdef HAVE_CUDA
+    if(idevice<0) idevice = 0
     call cuda_init(accel%context%cuda_context, accel%device%cuda_device, idevice, base_grp%rank)
 #ifdef HAVE_MPI
     write(message(1), '(A, I5.5, A, I5.5)') "Rank ", base_grp%rank, " uses device number ", idevice
