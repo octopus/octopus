@@ -38,9 +38,6 @@ dist_share_DATA =                                \
 	04-silicon.03-emresp.inp                 \
 	04-silicon.04-emresp_mo.inp              \
 	04-silicon.05-emresp_magn.inp            \
-        04-silicon.06-unfold_setup.inp           \
-        04-silicon.07-unocc.inp                  \
-        04-silicon.08-unfold_run.inp             \
 	05-lithium.test                          \
 	05-lithium.01-gs.inp                     \
 	05-lithium.02-td.inp                     \
@@ -89,7 +86,12 @@ dist_share_DATA =                                \
 	17-aluminium.01-gs.inp                            \
 	17-aluminium.02-td.inp                            \
 	17-aluminium.test                                 \
-        18-TiO2.01-gs.inp                        \
-        18-TiO2.test
+	18-TiO2.01-gs.inp                        \
+	18-TiO2.test                             \
+	19-unfolding.01-gs.inp                   \
+ 	19-unfolding.02-setup.inp                \
+	19-unfolding.03-unocc.inp                \
+	19-unfolding.04-run.inp                  \
+	19-unfolding.test
 
 CLEANFILES = *~ *.bak

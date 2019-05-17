@@ -184,18 +184,3 @@ Precision : 0.3
 match ; Susceptibility XX          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 1, 1) ; -6185.012367
 match ; Susceptibility YY          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 2, 2) ; -6185.012367
 match ; Susceptibility ZZ          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 3, 3) ; -6185.012367
-
-
-MPIUtil: oct-unfold
-Input: 04-silicon.06-unfold_setup.inp
-
-Program: octopus
-Input: 04-silicon.07-unocc.inp
-
-MPIUtil: oct-unfold
-Input: 04-silicon.08-unfold_run.inp
-
-Precision : 0.001
-match ; AkE kpt 1 ; LINEFIELD(static/AkE.dat,  157, 3) ; 1.376160941098E+02
-match ; AkE kpt 1 ; LINEFIELD(static/AkE.dat,  158, 3) ; 1.701330028385E+02
-match ; AkE kpt 1 ; LINEFIELD(static/AkE.dat,  159, 3) ; 1.741274245703E+02
