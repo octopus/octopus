@@ -33,8 +33,10 @@ module xc_oep_oct_m
   use messages_oct_m
   use mpi_oct_m
   use parser_oct_m
+  use photon_mode_oct_m
   use poisson_oct_m
   use profiling_oct_m
+  use states_calc_oct_m
   use states_oct_m
   use states_dim_oct_m
   use scf_tol_oct_m
@@ -42,8 +44,6 @@ module xc_oep_oct_m
   use xc_oct_m
   use XC_F90(lib_m)
   use xc_functl_oct_m
-  use photon_mode_oct_m
-  use states_calc_oct_m
 
   implicit none
 

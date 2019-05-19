@@ -180,14 +180,12 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
 
   if(.not. lr_is_allocated(oep%lr)) then
     call lr_allocate(oep%lr, st, gr%mesh)
-    ! initialize to something non-zero
     oep%lr%X(dl_psi)(:,:, :, :) = M_ZERO
   end if
 
   if (oep%has_photons) then
     if(.not. lr_is_allocated(oep%pt%lr)) then
       call lr_allocate(oep%pt%lr, st, gr%mesh)
-      ! initialize to something non-zero
       oep%pt%lr%X(dl_psi)(:,:, :, :) = M_ZERO
     end if
     call X(xc_oep_pt_phi)(gr, hm, st, is, oep, phi1)
