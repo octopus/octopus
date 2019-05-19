@@ -360,6 +360,7 @@ contains
 
     !If we use LDA+U, we also have do mix it
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
+      call lda_u_mixer_init(hm%lda_u, scf%lda_u_mix, st)
       call lda_u_mixer_init_auxmixer(hm%lda_u, scf%lda_u_mix, scf%smix, st)
     end if
     call mix_get_field(scf%smix, scf%mixfield)
@@ -642,7 +643,7 @@ contains
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call batch_copy(st%group%psib(ib, iqn), psioutb(ib, iqn), fill_zeros = .false.)
+          call batch_copy(st%group%psib(ib, iqn), psioutb(ib, iqn))
         end do
       end do
       
@@ -650,9 +651,7 @@ contains
 
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
     !If we use LDA+U, we also have do mix it
-    if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
-      call lda_u_mixer_init(hm%lda_u, scf%lda_u_mix, st)
-    end if
+    if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
     evsum_in = states_eigenvalues_sum(st)
 

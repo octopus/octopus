@@ -457,7 +457,7 @@ contains
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me_init(outp%me, sb)
+      call output_me_init(outp%me, sb, nst)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
@@ -1324,7 +1324,7 @@ contains
 
     ! deallocate everything
     call cube_function_free_fs(cube, cf)
-    call dcube_function_free_rs(cube, cf)
+    call zcube_function_free_rs(cube, cf)
     call cube_end(cube)
     
     if(states_are_real(st)) then

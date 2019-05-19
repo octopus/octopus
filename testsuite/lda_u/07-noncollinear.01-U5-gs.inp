@@ -18,7 +18,7 @@ a = 7.8809
 %
 DFTULevel = dft_u_empirical
 
-PseudopotentialSet=hscv_pbe
+PseudopotentialSet=hscv_lda
 
 %LatticeParameters
   a | a | a

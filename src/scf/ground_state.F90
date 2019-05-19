@@ -133,7 +133,7 @@ contains
     end if
     call messages_info()
 
-    if(sys%st%d%pack_states) call states_pack(sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_pack(sys%st)
     
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
@@ -151,7 +151,7 @@ contains
     call scf_end(scfv)
     call restart_end(restart_dump)
 
-    if(sys%st%d%pack_states) call states_unpack(sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_unpack(sys%st)
 
     ! clean up
     call states_deallocate_wfns(sys%st)

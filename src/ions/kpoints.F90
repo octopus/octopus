@@ -635,8 +635,7 @@ contains
         end do
       end do
 
-      ! in case monkhorst pack grid is not defined we give a default vaule
-      if( bitand(this%method, KPOINTS_MONKH_PACK) == 0  ) this%nik_axis(1:MAX_DIM) = 1
+      call parse_block_end(blk)
 
       !We do not have shifts
       nshifts = 1

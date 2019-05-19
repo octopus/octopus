@@ -243,10 +243,12 @@ contains
     SAFE_ALLOCATE(epsib)
     call batch_copy(sys%st%group%psib(1, 1), epsib)
 
+    call batch_set_zero(epsib)
+    
     do itime = 1, param%repetitions
-      call zproject_psi_batch(sys%gr%mesh, ep%proj, ep%natoms, 2, &
-                               sys%st%group%psib(1, 1), epsib, 1)
+      call zproject_psi_batch(sys%gr%mesh, ep%proj, ep%natoms, 2, sys%st%group%psib(1, 1), epsib, 1)
     end do
+    
     do itime = 1, epsib%nst
       write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, 2, epsib%states(itime)%zpsi)
       call messages_info(1)
@@ -286,7 +288,6 @@ contains
     call states_allocate_wfns(sys%st, sys%gr%mesh)
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
     if(sys%st%d%pack_states) call states_pack(sys%st)
-
 
     SAFE_ALLOCATE(epsib)
     call batch_copy(sys%st%group%psib(1, 1), epsib, copy_data = .true.)
@@ -392,12 +393,12 @@ contains
 
     call states_allocate_wfns(sys%st, sys%gr%mesh)
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
-    if(sys%st%d%pack_states) call states_pack(sys%st)
 
     !Initialize external potential
     call simul_box_init(sb, sys%geo, sys%space)
     call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
              family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_pack(sys%st)
     call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, hm, sys%st, sys%geo)

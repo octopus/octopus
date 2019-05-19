@@ -208,7 +208,7 @@ subroutine X(ghost_update_batch_finish)(handle)
     SAFE_DEALLOCATE_P(handle%X(recv_buffer))
   end if
 
-  call batch_end(handle%ghost_send, copy = .false.)
+  call batch_end(handle%ghost_send)
 
   call profiling_out(prof_wait)
   POP_SUB(X(ghost_update_batch_finish))

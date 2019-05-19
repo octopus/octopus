@@ -390,7 +390,7 @@ contains
     type(geometry_t),  intent(in) :: geo
 
     character(len=80) :: filename
-    integer :: w90_win, ia, axis(3)
+    integer :: w90_win, ia, axis(3), npath
 
     PUSH_SUB(wannier90_setup)
 
@@ -441,13 +441,18 @@ contains
         call messages_fatal(1)
       end if
 
+      !In case the user used also a k-point path, we ignore it
+      npath = SIZE(sb%kpoints%coord_along_path)
+
       axis(1:3) = sb%kpoints%nik_axis(1:3)
-      ASSERT(product(sb%kpoints%nik_axis(1:3)) == sb%kpoints%reduced%npoints-sb%kpoints%nik_skip)
+      ASSERT(product(sb%kpoints%nik_axis(1:3)) == sb%kpoints%reduced%npoints - npath)
+
       write(w90_win,'(a8,i4,i4,i4)')  'mp_grid =', axis(1:3)
       write(w90_win,'(a)') ' '
       write(w90_win,'(a)')  'begin kpoints '
       !Put a minus sign here for the wrong convention in Octopus
-      do ii = 1, sb%kpoints%reduced%npoints-sb%kpoints%nik_skip
+
+      do ii = 1, sb%kpoints%reduced%npoints-npath
         write(w90_win,'(f13.8,f13.8,f13.8)') -sb%kpoints%reduced%red_point(1:3,ii) 
       end do
       write(w90_win,'(a)')  'end kpoints '
@@ -467,7 +472,7 @@ contains
 
     PUSH_SUB(read_wannier90_files)
 
-    w90_num_kpts = sys%gr%sb%kpoints%full%npoints-sys%gr%sb%kpoints%nik_skip
+    w90_num_kpts = product(sys%gr%sb%kpoints%nik_axis(1:3))
     w90_num_exclude = 0 
 
     ! open nnkp file
@@ -726,15 +731,16 @@ contains
            batch => st%group%psib(st%group%iblock(ist, ik), ik)
            select case(batch_status(batch))
            case(BATCH_NOT_PACKED)
-             overlap(ist) = M_z0
+             overlap(band_index(ist)) = M_z0
              do idim = 1, st%d%dim
                ibind = batch_inv_index(batch, (/ist, idim/))
-               overlap(ist) = overlap(ist) + zmf_dotp(mesh, batch%states_linear(ibind)%zpsi, psin(:,idim), reduce = .false.)
+               overlap(band_index(ist)) = overlap(band_index(ist)) + &
+                    zmf_dotp(mesh, batch%states_linear(ibind)%zpsi, psin(:,idim), reduce = .false.)
              end do
            !Not properly done at the moment
            case(BATCH_PACKED, BATCH_DEVICE_PACKED)
              call states_get_state(st, mesh, ist, ik, psim)
-             overlap(ist) = zmf_dotp(mesh, st%d%dim, psim, psin, reduce = .false.)
+             overlap(band_index(ist)) = zmf_dotp(mesh, st%d%dim, psim, psin, reduce = .false.)
            end select
          end do
 
@@ -748,7 +754,7 @@ contains
          if(mpi_grp_is_root(mpi_world)) then
            do ist = 1, st%nst
              if(exclude_list(ist) == 0) cycle
-             write(w90_mmn,'(e13.6,2x,e13.6)') overlap(ist)
+             write(w90_mmn,'(e13.6,2x,e13.6)') overlap(band_index(ist))
            end do
          end if
 
@@ -1153,7 +1159,7 @@ contains
           call states_get_state(st, mesh, iw2, ik, psi)
           !The minus sign is here is for the wrong convention of Octopus
           forall(ip=1:mesh%np)
-            zwn(ip) = zwn(ip) + Umnk(iw2, iw, ik)/w90_num_kpts * psi(ip,1) * &
+            zwn(ip) = zwn(ip) + Umnk(band_index(iw2), iw, ik)/w90_num_kpts * psi(ip,1) * &
                       exp(-M_zI* sum((mesh%x(ip, 1:sb%dim)-centers(1:sb%dim, iw)) * kpoint(1:sb%dim)))
           end forall
         end do!ik   

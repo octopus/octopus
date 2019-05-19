@@ -1365,8 +1365,6 @@ contains
 
     stout%only_userdef_istates = stin%only_userdef_istates
 
-    call loct_pointer_copy(stout%node, stin%node)
-
     if(.not. exclude_wfns_) call loct_pointer_copy(stout%rho, stin%rho)
 
     stout%calc_eigenval = stin%calc_eigenval
@@ -1404,6 +1402,7 @@ contains
     call mpi_grp_copy(stout%mpi_grp, stin%mpi_grp)
     stout%dom_st_kpt_mpi_grp = stin%dom_st_kpt_mpi_grp
     stout%st_kpt_mpi_grp     = stin%st_kpt_mpi_grp
+    call loct_pointer_copy(stout%node, stin%node)
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_copy(stin%dom_st_proc_grid, stout%dom_st_proc_grid)
