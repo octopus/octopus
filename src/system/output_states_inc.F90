@@ -25,7 +25,7 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
   character(len=*),       intent(in)    :: dir
   type(output_t),         intent(in)    :: outp
 
-  integer :: ik, ist, idim, idir, is, ierr, ip, nspin
+  integer :: ik, ist, idim, idir, is, ierr, ip
   character(len=MAX_PATH_LEN) :: fname
   type(unit_t) :: fn_unit
   FLOAT, allocatable :: dtmp(:), elf(:,:), polarization(:, :)
@@ -160,12 +160,12 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
     case(UNPOLARIZED)
       write(fname, '(a)') 'tau'
       call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-        elf(:,1), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+        elf(:,1), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     case(SPIN_POLARIZED, SPINORS)
       do is = 1, 2
         write(fname, '(a,i1)') 'tau-sp', is
         call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-          elf(:, is), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+          elf(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
       end do
     end select
     SAFE_DEALLOCATE_A(elf)

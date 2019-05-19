@@ -24,7 +24,6 @@ module orbitalset_oct_m
   use blas_oct_m
   use comm_oct_m
   use distributed_oct_m
-  use geometry_oct_m
   use global_oct_m
   use hardware_oct_m
   use kpoints_oct_m
@@ -37,7 +36,6 @@ module orbitalset_oct_m
   use simul_box_oct_m
   use species_oct_m
   use submesh_oct_m
-  use types_oct_m  
  
   implicit none
 

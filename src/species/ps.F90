@@ -56,6 +56,7 @@ module ps_oct_m
     ps_bound_niwfs,             &
     ps_end,                     &
     ps_has_density,             &
+    ps_has_nlcc,                &
     ps_density_volume
   
   integer, parameter, public :: &
@@ -108,6 +109,7 @@ module ps_oct_m
 
     logical :: nlcc    !< .true. if the pseudo has non-linear core corrections.
     type(spline_t) :: core !< normalization \int dr 4 pi r^2 rho(r) = N
+    type(spline_t) :: core_der !< derivative of the core correction
 
 
     !LONG-RANGE PART OF THE LOCAL POTENTIAL
@@ -195,7 +197,8 @@ contains
     end if
 
     if(ps%file_format == PSEUDO_FORMAT_UNKNOWN) then
-      call messages_write("Cannot determine the pseudopotential type for species '"//trim(label)//"' from", new_line = .true.)
+      call messages_write("Cannot determine the pseudopotential type for species '"//trim(label)//"' from", &
+                          new_line = .true.)
       call messages_write("file '"//trim(filename)//"'.")
       call messages_fatal()
     end if
@@ -228,7 +231,8 @@ contains
       if(user_lmax /= INVALID_L) then
         ps%lmax = min(ps%lmax, user_lmax) ! Maybe the file does not have enough components.
         if(user_lmax /= ps%lmax) then
-          message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
+          message(1) = "lmax in Species block for " // trim(label) // &
+                       " is larger than number available in pseudopotential."
           call messages_fatal(1)
         end if
       end if
@@ -274,7 +278,8 @@ contains
       if(user_lmax /= INVALID_L) then
         ps%lmax = min(ps%lmax, user_lmax) ! Maybe the file does not have enough components.
         if(user_lmax /= ps%lmax) then
-          message(1) = "lmax in Species block for " // trim(label) // " is larger than number available in pseudopotential."
+          message(1) = "lmax in Species block for " // trim(label) // &
+                       " is larger than number available in pseudopotential."
           call messages_fatal(1)
         end if
       end if
@@ -385,6 +390,7 @@ contains
     call spline_init(ps%dkb)
     call spline_init(ps%vl)
     call spline_init(ps%core)
+    call spline_init(ps%core_der)
     call spline_init(ps%density)
     call spline_init(ps%density_der)
 
@@ -417,6 +423,10 @@ contains
       do is = 1, ps%ispin
         call spline_der(ps%density(is), ps%density_der(is))
       end do
+    end if
+
+    if(ps_has_nlcc(ps)) then
+      call spline_der(ps%core, ps%core_der)
     end if
 
     call ps_check_bound(ps, eigen)
@@ -667,7 +677,7 @@ contains
         end do
       end do
       
-      if(ps%nlcc) then
+      if(ps_has_nlcc(ps)) then
         rmax = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold)
         call spline_filter_mask(ps%core, 0, rmax, gmax, alpha, gamma)
       end if
@@ -701,7 +711,7 @@ contains
         end do
       end do
       
-      if(ps%nlcc) then
+      if(ps_has_nlcc(ps)) then
         call spline_filter_bessel(ps%core, 0, gmax, alpha, beta_fs, rcut, beta_rs)
       end if
       
@@ -805,7 +815,8 @@ contains
 
     write(iunit,'(/,a)')    'orbitals:'
     do j = 1, ps%conf%p
-      write(iunit,'(1x,a,i2,3x,a,i2,3x,a,f5.1,3x,a,l1)') 'n = ', ps%conf%n(j), 'l = ', ps%conf%l(j), 'j = ', ps%conf%j(j), 'bound = ', all(ps%bound(j,:))
+      write(iunit,'(1x,a,i2,3x,a,i2,3x,a,f5.1,3x,a,l1)') 'n = ', ps%conf%n(j), 'l = ', ps%conf%l(j), &
+                                                         'j = ', ps%conf%j(j), 'bound = ', all(ps%bound(j,:))
     end do
 
     
@@ -870,7 +881,7 @@ contains
     end if
 
     ! Non-linear core-corrections
-    if(ps%nlcc) then
+    if(ps_has_nlcc(ps)) then
       iunit = io_open(trim(dir)//'/nlcc', action='write')
       call spline_print(ps%core, iunit)
       call io_close(iunit)
@@ -901,6 +912,7 @@ contains
 
     call spline_end(ps%vl)
     call spline_end(ps%core)
+    call spline_end(ps%core_der)
 
     if(associated(ps%density)) call spline_end(ps%density)
     if(associated(ps%density_der)) call spline_end(ps%density_der)
@@ -1186,7 +1198,8 @@ contains
       if(pseudo_nprojectors(ps_xml%pseudo) > 0) then
         do ll = 0, ps_xml%lmax
 
-          if(is_diagonal(ps_xml%nchannels, ps_xml%dij(ll, :, :)) .or. pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
+          if (is_diagonal(ps_xml%nchannels, ps_xml%dij(ll, :, :)) .or. &
+              pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
             matrix = CNST(0.0)
             forall(ic = 1:ps_xml%nchannels)
               eigenvalues(ic) = ps_xml%dij(ll, ic, ic)
@@ -1403,6 +1416,15 @@ contains
     has_density = ps%has_density
 
   end function ps_has_density
+
+  !---------------------------------------
+
+  pure logical function ps_has_nlcc(ps) result(has_nlcc)
+    type(ps_t), intent(in) :: ps
+
+    has_nlcc = ps%nlcc
+
+  end function ps_has_nlcc
   
   !---------------------------------------
   FLOAT function ps_density_volume(ps) result(volume)

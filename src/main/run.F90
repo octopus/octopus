@@ -27,12 +27,12 @@ module run_oct_m
   use ground_state_oct_m
   use hamiltonian_oct_m
   use invert_ks_oct_m
-  use parser_oct_m
   use messages_oct_m
   use mpi_debug_oct_m
   use memory_oct_m
   use multicomm_oct_m
   use opt_control_oct_m
+  use parser_oct_m
   use phonons_fd_oct_m
   use phonons_lr_oct_m
   use poisson_oct_m
@@ -161,10 +161,30 @@ contains
     call system_init(sys)
 
     call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
-      sys%ks%xc_family, sys%ks%xc_flags, &
-      family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
-    
-    if (hm%pcm%run_pcm) then 
+      sys%ks%xc_family, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+
+    if (hm%pcm%run_pcm) then
+      select case (calc_mode_id)
+      case (CM_GS)
+        if (hm%pcm%epsilon_infty /= hm%pcm%epsilon_0 .and. hm%pcm%noneq) then
+          call messages_write('Non-equilbrium PCM is not active in a time-independent run.', &
+            new_line=.true.)
+          call messages_write('You set epsilon_infty /= epsilon_0, but epsilon_infty is not relevant for CalculationMode = gs.', &
+            new_line=.true.)
+          call messages_write('By definition, the ground state is in equilibrium with the solvent.', &
+            new_line=.true.)
+          call messages_write('Therefore, the only relevant dielectric constant is the static one.', &
+            new_line=.true.)
+          call messages_write('Nevertheless, the dynamical PCM response matrix is evaluated for benchamarking purposes.', &
+            new_line=.true.)
+          call messages_warning()
+        end if
+      case (CM_TD)
+        call messages_experimental("PCM for CalculationMode = td")
+      case default
+        call messages_not_implemented("PCM for CalculationMode /= gs or td")
+      end select
+
       if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
         call messages_experimental('Parallel in domain calculations with PCM')
       end if

@@ -21,7 +21,6 @@
 
 module poisson_oct_m
   use batch_oct_m
-  use boundaries_oct_m
   use cube_oct_m
   use cube_function_oct_m
   use derivatives_oct_m
@@ -31,7 +30,6 @@ module poisson_oct_m
   use io_oct_m
   use io_function_oct_m
   use loct_math_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_cube_parallel_map_oct_m
   use mesh_function_oct_m

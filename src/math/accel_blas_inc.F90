@@ -30,8 +30,12 @@ subroutine X(accel_herk)(uplo, trans, n, k, alpha, a, offa, lda, beta, c, offc, 
   integer(8),        intent(in)    :: offc
   integer(8),        intent(in)    :: ldc   
 
+#ifdef HAVE_OPENCL
   integer :: ierr
+#endif
+#ifdef HAVE_CUDA
   type(accel_mem_t) :: alpha_buffer, beta_buffer
+#endif
 
   PUSH_SUB(X(accel_herk))
 
@@ -67,17 +71,17 @@ subroutine X(accel_herk)(uplo, trans, n, k, alpha, a, offa, lda, beta, c, offc, 
 #ifdef R_TREAL
   call cuda_blas_dsyrk(handle = accel%cublas_handle, uplo = uplo, trans = trans, &
     n = n, k = k, &
-    alpha = alpha_buffer%cuda_ptr, &
-    A = a%cuda_ptr, lda = lda, &
-    beta = beta_buffer%cuda_ptr, &
-    C = c%cuda_ptr, ldc = ldc)
+    alpha = alpha_buffer%mem, &
+    A = a%mem, lda = lda, &
+    beta = beta_buffer%mem, &
+    C = c%mem, ldc = ldc)
 #else
   call cuda_blas_zherk(handle = accel%cublas_handle, uplo = uplo, trans = trans, &
     n = n, k = k, &
-    alpha = alpha_buffer%cuda_ptr, &
-    A = a%cuda_ptr, lda = lda, &
-    beta = beta_buffer%cuda_ptr, &
-    C = c%cuda_ptr, ldc = ldc)
+    alpha = alpha_buffer%mem, &
+    A = a%mem, lda = lda, &
+    beta = beta_buffer%mem, &
+    C = c%mem, ldc = ldc)
 #endif
 
   call accel_finish()
@@ -123,7 +127,7 @@ subroutine X(accel_trsm)(side, uplo, trans, diag, m, n, alpha, a, offa, lda, b, 
   call accel_write_buffer(alpha_buffer, alpha)
   
   call aX(cuda_blas_, trsm)(handle = accel%cublas_handle, side = side, uplo = uplo, trans = trans, diag = diag, &
-    m = m, n = n, alpha = alpha_buffer%cuda_ptr, A = a%cuda_ptr, lda = lda, B = b%cuda_ptr, ldb = ldb)
+    m = m, n = n, alpha = alpha_buffer%mem, A = a%mem, lda = lda, B = b%mem, ldb = ldb)
 #endif
 
 #ifdef HAVE_OPENCL
@@ -196,9 +200,9 @@ subroutine X(accel_gemm)(transa, transb, m, n, k, alpha, A, offa, lda, B, offb, 
 
   call aX(cuda_blas_,gemm)(handle = accel%cublas_handle, transa = transa, transb = transb, &
     m = m, n = n, k = k, &
-    alpha = alpha_buffer%cuda_ptr, a = a%cuda_ptr, lda = lda, &
-    b = b%cuda_ptr, ldb = ldb, &
-    beta = beta_buffer%cuda_ptr, c = c%cuda_ptr, ldc = ldc)
+    alpha = alpha_buffer%mem, a = a%mem, lda = lda, &
+    b = b%mem, ldb = ldb, &
+    beta = beta_buffer%mem, c = c%mem, ldc = ldc)
 
   call accel_finish()
 
@@ -236,8 +240,8 @@ subroutine X(accel_dot)(n, x, offx, incx, y, offy, incy, res, offres)
 #else
   call cuda_blas_zdotc &
 #endif
-  (handle = accel%cublas_handle, n = n, x = x%cuda_ptr, offx = offx, incx = incx, &
-  y = y%cuda_ptr, offy = offy, incy = incy, res = res%cuda_ptr, offres = offres)
+  (handle = accel%cublas_handle, n = n, x = x%mem, offx = offx, incx = incx, &
+  y = y%mem, offy = offy, incy = incy, res = res%mem, offres = offres)
 
   call accel_finish()
 #endif
@@ -283,8 +287,8 @@ subroutine X(accel_nrm2)(n, x, offx, incx, res, offres)
   PUSH_SUB(X(accel_nrm2))
 
 #ifdef HAVE_CUDA
-  call aX(cuda_blas_,nrm2)(handle = accel%cublas_handle, n = n, x = x%cuda_ptr, offx = offx, incx = incx, &
-    res = res%cuda_ptr, offres = offres)
+  call aX(cuda_blas_,nrm2)(handle = accel%cublas_handle, n = n, x = x%mem, offx = offx, incx = incx, &
+    res = res%mem, offres = offres)
 
   call accel_finish()
 #endif

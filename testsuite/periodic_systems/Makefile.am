@@ -62,11 +62,14 @@ dist_share_DATA =                                \
 	10-berkeleygw.02-unocc.inp               \
 	11-silicon_force.test                    \
 	11-silicon_force.01-gs.inp               \
+	11-silicon_force.02-nlcc.inp             \
 	12-boron_nitride.test                    \
 	12-boron_nitride.01-gs.inp               \
+	12-boron_nitride.02-gs_gamma.inp         \
 	13-primitive.test                        \
 	13-primitive.01-diamond.inp              \
 	13-primitive.02-graphene.inp             \
+	13-primitive.03-bcc_iron.inp             \
 	14-silicon_shifts.01-gs.inp              \
 	14-silicon_shifts.02-td.inp              \
 	14-silicon_shifts.03-delayed_kick.inp    \
@@ -79,6 +82,11 @@ dist_share_DATA =                                \
 	16-sodium_chain_cylinder.02-unocc.inp             \
 	16-sodium_chain_cylinder.03-ground_state_disp.inp \
 	16-sodium_chain_cylinder.04-unocc_disp.inp        \
-	16-sodium_chain_cylinder.test
+	16-sodium_chain_cylinder.test                     \
+	17-aluminium.01-gs.inp                            \
+	17-aluminium.02-td.inp                            \
+	17-aluminium.test                                 \
+        18-TiO2.01-gs.inp                        \
+        18-TiO2.test
 
 CLEANFILES = *~ *.bak

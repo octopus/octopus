@@ -19,15 +19,10 @@
 #include "global.h"
 
 module double_grid_oct_m
-
-  use curvilinear_oct_m
-  use geometry_oct_m
   use global_oct_m
   use math_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use mesh_function_oct_m
-  use loct_oct_m
   use parser_oct_m
   use par_vec_oct_m
   use profiling_oct_m
@@ -47,7 +42,6 @@ module double_grid_oct_m
   
   public ::                         &
        double_grid_t,               &
-       double_grid_nullify,         &
        double_grid_init,            &
        double_grid_end,             &
        double_grid_apply_local,     &
@@ -71,24 +65,7 @@ module double_grid_oct_m
   type(profile_t), save :: double_grid_local_prof, double_grid_nonlocal_prof
 
 contains
-  
-  subroutine double_grid_nullify(this)
-    type(double_grid_t), intent(out) :: this
 
-    PUSH_SUB(double_grid_nullify)
-
-    this%order=0
-    this%npoints=0
-    this%spacing_divisor=0
-    this%interpolation_min=0
-    this%interpolation_max=0
-    this%nn=0
-    this%use_double_grid=.false.
-    nullify(this%co)
-
-    POP_SUB(double_grid_nullify)
-  end subroutine double_grid_nullify
-  
   subroutine double_grid_init(this, sb)
     type(double_grid_t), intent(out) :: this
     type(simul_box_t),   intent(in)  :: sb
@@ -225,7 +202,7 @@ contains
     integer,             intent(in)    :: jxyz(:)
     integer,             intent(in)    :: jxyz_inv(:)
     FLOAT,               intent(in)    :: vv
-    FLOAT,               intent(inout) :: vs(0:)
+    FLOAT,               intent(inout) :: vs(:)
     
     integer :: start(1:3), pp, qq, rr
     integer :: ll, mm, nn, ip, is2
@@ -268,9 +245,10 @@ contains
           !map the global point to a local point
           if (mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
 #endif
-          if (ip == 0) cycle
-          is2 = jxyz_inv(ip)
-          vs(is2) = vs(is2) + this%co(ll)*this%co(mm)*this%co(nn)*vv
+          if (ip > 0) then
+            is2 = jxyz_inv(ip)
+            if(is2 > 0) vs(is2) = vs(is2) + this%co(ll)*this%co(mm)*this%co(nn)*vv
+          end if
           rr = rr + kk
         end do
         qq = qq + jj

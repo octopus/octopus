@@ -19,18 +19,12 @@
 #include "global.h"
 
 module elf_oct_m
-  use cube_function_oct_m
-  use cube_oct_m
   use density_oct_m
   use derivatives_oct_m
-  use fft_oct_m
-  use fourier_space_oct_m
   use global_oct_m
   use grid_oct_m
-  use io_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use mpi_oct_m
   use parser_oct_m
   use profiling_oct_m
   use states_oct_m
@@ -100,7 +94,8 @@ contains
     SAFE_ALLOCATE(grho(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
     SAFE_ALLOCATE(  jj(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
 
-    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = kappa, paramagnetic_current = jj, density_gradient = grho)
+    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = kappa, &
+                                paramagnetic_current = jj, density_gradient = grho)
 
     ! spin-dependent quantities
     if(st%d%ispin == UNPOLARIZED) then

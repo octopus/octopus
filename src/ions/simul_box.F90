@@ -21,7 +21,6 @@
 
 module simul_box_oct_m
   use atom_oct_m
-  use blas_oct_m
   use iso_c_binding
   use geometry_oct_m
   use global_oct_m
@@ -115,7 +114,6 @@ module simul_box_oct_m
     FLOAT :: volume_element                      !< the volume element in real space
     FLOAT :: surface_element   (MAX_DIM)         !< surface element in real space
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
-    FLOAT :: metric            (MAX_DIM,MAX_DIM) !< metric tensor F matrix following Chelikowski paper PRB 78 075109 (2008)
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     logical :: nonorthogonal
     
@@ -649,6 +647,7 @@ contains
       !%End
       lparams(:) = M_ONE
       has_angles = .false.
+      angles = CNST(90.0)
 
       if (parse_block('LatticeParameters', blk) == 0) then
         do idim = 1, sb%dim
@@ -776,13 +775,10 @@ contains
       sb%surface_element(3) = sqrt(abs(sum(dcross_product(sb%rlattice_primitive(1:3, 1), sb%rlattice_primitive(1:3, 2))**2)))
     end if
 
-    sb%metric = M_ZERO
-    sb%metric = matmul(transpose(sb%klattice_primitive), sb%klattice_primitive)
-
     ! rlattice_primitive is the A matrix from Chelikowski PRB 78 075109 (2008)
     ! klattice_primitive is the transpose (!) of the B matrix, with no 2 pi factor included
     ! klattice is the proper reciprocal lattice vectors, with 2 pi factor, and in units of 1/bohr
-    ! metric is the F matrix of Chelikowski
+    ! The F matrix of Chelikowski is matmul(transpose(sb%klattice_primitive), sb%klattice_primitive)
 
 
     POP_SUB(simul_box_build_lattice)

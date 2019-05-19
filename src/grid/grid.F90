@@ -25,8 +25,6 @@ module grid_oct_m
   use double_grid_oct_m
   use geometry_oct_m
   use global_oct_m
-  use index_oct_m
-  use io_oct_m
   use mesh_oct_m
   use mesh_init_oct_m
   use messages_oct_m
@@ -53,8 +51,7 @@ module grid_oct_m
     grid_init_stage_2,     &
     grid_end,              &
     grid_write_info,       &
-    grid_create_multigrid, &
-    grid_create_largergrid
+    grid_create_multigrid
 
   type grid_t
     type(simul_box_t)           :: sb
@@ -120,7 +117,6 @@ contains
     if(gr%have_fine_mesh) call messages_experimental("UseFineMesh")
 
     call geometry_grid_defaults(geo, def_h, def_rsize)
-    call geometry_grid_defaults_info(geo)
     
     ! initialize to -1
     grid_spacing = -M_ONE
@@ -175,24 +171,25 @@ contains
     end if
 #endif
 
-    do idir = 1, gr%sb%dim
-      if(grid_spacing(idir) < M_EPSILON) then
-        if(def_h > M_ZERO .and. def_h < huge(def_h)) then
+    if (any(grid_spacing(1:gr%sb%dim) < M_EPSILON)) then
+      if (def_h > M_ZERO .and. def_h < huge(def_h)) then
+        call geometry_grid_defaults_info(geo)
+        do idir = 1, gr%sb%dim
           grid_spacing(idir) = def_h
           write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", idir, &
             ") [", trim(units_abbrev(units_out%length)), "] = ",                        &
             units_from_atomic(units_out%length, grid_spacing(idir))
           call messages_info(1)
+        end do
         ! Note: the default automatically matches the 'recommended' value compared by messages_check_def above.
-        else
-          message(1) = 'Either:'
-          message(2) = "   *) variable 'Spacing' is not defined and"
-          message(3) = "      I can't find a suitable default"
-          message(4) = "   *) your input for 'Spacing' is negative or zero"
-          call messages_fatal(4)
-        end if
+      else
+        message(1) = 'Either:'
+        message(2) = "   *) variable 'Spacing' is not defined and"
+        message(3) = "      I can't find a suitable default"
+        message(4) = "   *) your input for 'Spacing' is negative or zero"
+        call messages_fatal(4)
       end if
-    end do
+    end if
 
     ! initialize curvilinear coordinates
     call curvilinear_init(gr%cv, gr%sb, geo, grid_spacing)
@@ -274,8 +271,6 @@ contains
       gr%fine%mesh => gr%mesh
       gr%fine%der => gr%der
     end if
-
-    call mesh_check_symmetries(gr%mesh, gr%mesh%sb)
 
     ! multigrids are not initialized by default
     nullify(gr%mgrid)
@@ -376,57 +371,6 @@ contains
 
     POP_SUB(grid_create_multigrid)
   end subroutine grid_create_multigrid
-
-
-  !-------------------------------------------------------------------
-  subroutine grid_create_largergrid(grin, geo, mc, grout)
-    type(grid_t),      intent(in)  :: grin
-    type(geometry_t),  intent(in)  :: geo
-    type(multicomm_t), intent(in)  :: mc
-    type(grid_t),      intent(out) :: grout
-
-    FLOAT :: avg
-
-    PUSH_SUB(grid_create_largergrid)
-
-    call simul_box_copy(grout%sb, grin%sb)
-
-    ! Modification of the simulation box.
-    select case(grout%sb%box_shape)
-    case(CYLINDER)
-      grout%sb%box_shape = CYLINDER
-      avg = M_HALF * (grin%sb%rsize + grin%sb%xsize)
-      if(grin%sb%rsize <= grin%sb%xsize) then
-        grout%sb%rsize = avg
-        grout%sb%xsize = grin%sb%xsize
-      else
-        grout%sb%xsize = avg
-        grout%sb%rsize = grin%sb%rsize
-      end if
-      grout%sb%lsize(1)        = grout%sb%xsize
-      grout%sb%lsize(2:grout%sb%dim) = grout%sb%rsize
-    case(PARALLELEPIPED, MINIMUM, BOX_IMAGE, BOX_USDEF)
-      grout%sb%box_shape = SPHERE
-      grout%sb%rsize = sqrt( sum(grout%sb%lsize(:)**2) )
-      grout%sb%lsize(1:grout%sb%dim) = grout%sb%rsize
-    case default
-      write(message(1),'(a)') 'grid_create_largergrid: Internal octopus error -- unsupported box shape for this routine.'
-      call messages_fatal(1)
-    end select
-
-    call stencil_copy(grin%stencil, grout%stencil)
-
-    call grid_init_stage_1(grout, geo)
-
-    call mesh_init_stage_3(grout%mesh, grout%stencil, mc)
-
-    call derivatives_build(grout%der, grout%mesh)
-
-    ! multigrids are not initialized by default
-    nullify(grout%mgrid)
-
-    POP_SUB(grid_create_largergrid)
-  end subroutine grid_create_largergrid
 
 end module grid_oct_m
 

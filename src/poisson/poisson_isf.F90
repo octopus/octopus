@@ -27,7 +27,6 @@ module poisson_isf_oct_m
   use messages_oct_m
   use mesh_oct_m
   use mpi_oct_m
-  use par_vec_oct_m
   use parser_oct_m
   use profiling_oct_m
   use scaling_function_oct_m

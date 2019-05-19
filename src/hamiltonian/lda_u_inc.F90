@@ -306,7 +306,7 @@ subroutine X(compute_dftu_energy)(this, energy, st)
         end do
 
         do im = 1, this%orbsets(ios)%norbs
-          energy = energy + M_HALF*this%orbsets(ios)%Ueff*nsigma*(M_ONE-nsigma)/this%orbsets(ios)%norbs
+          energy = energy + M_HALF*this%orbsets(ios)%Ueff*nsigma*(M_ONE-nsigma/this%orbsets(ios)%norbs)
           energy = energy - M_HALF*this%orbsets(ios)%Ueff*R_REAL(this%X(n)(im, im, ispin, ios))
         end do
       end do
@@ -452,8 +452,8 @@ subroutine X(compute_ACBNO_U)(this, ios)
 
       if(this%nspins>this%spin_channels) then !Spinors
         if(im == imp) then
-          tmpU = tmpU - R_REAL(this%X(n)(im,im,3,ios)*this%X(n)(im,im,4,ios)) &
-                            +R_REAL(this%X(n)(im,im,4,ios)*this%X(n)(im,im,3,ios))
+          tmpU = tmpU -(R_REAL(this%X(n)(im,im,3,ios)*this%X(n)(im,im,4,ios)) &
+                       +R_REAL(this%X(n)(im,im,4,ios)*this%X(n)(im,im,3,ios)))
         end if
       end if 
 
@@ -494,8 +494,8 @@ subroutine X(compute_ACBNO_U)(this, ios)
     end do
 
     if(this%nspins>this%spin_channels) then !Spinors
-      denomU = denomU + R_REAL(this%X(n)(1,1,3,ios)*this%X(n)(1,1,4,ios)) & 
-                            +R_REAL(this%X(n)(1,1,4,ios)*this%X(n)(1,1,3,ios))
+      denomU = denomU - (R_REAL(this%X(n)(1,1,3,ios)*this%X(n)(1,1,4,ios)) & 
+                        +R_REAL(this%X(n)(1,1,4,ios)*this%X(n)(1,1,3,ios)))
     end if
 
     ! We have to be careful in the case of hydrogen atom for instance 

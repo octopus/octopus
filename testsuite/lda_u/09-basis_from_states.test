@@ -13,14 +13,14 @@ match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 1
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -39.20567896
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -39.205598065
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -22.49518607
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -6.50889827
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  12.12218292
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -5.55372248
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.56599600
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  36.46846437
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -59.18142434
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  36.468326315
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -59.18125559
 
 match ; k-point 1 (x) ; GREPFIELD(static/info, '#k =   1', 7) ; 0.000000 
 match ; k-point 1 (y) ; GREPFIELD(static/info, '#k =   1', 8) ; 0.000000
@@ -36,14 +36,14 @@ match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 1
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -39.20556555
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -39.205651555
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -22.49518607
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -8.74891583
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -8.74900542
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 12.12218601
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -5.55372298
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.56599601
 match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 36.46846634
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;-59.18143129
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;-59.18138547
 match ; Hubbard energy     ; GREPFIELD(static/info, 'Hubbard     =', 3) ;  0.00000003
 
 match ; k-point 1 (x) ; GREPFIELD(static/info, '#k =   1', 7) ; 0.000000

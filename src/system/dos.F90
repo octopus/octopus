@@ -25,7 +25,6 @@ module dos_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use io_oct_m
-  use lda_u_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -40,7 +39,6 @@ module dos_oct_m
   use submesh_oct_m
   use unit_oct_m
   use unit_system_oct_m
-
 
   implicit none
 

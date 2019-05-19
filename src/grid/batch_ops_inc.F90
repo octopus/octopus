@@ -16,26 +16,6 @@
 !! 02110-1301, USA.
 !!
 
-!--------------------------------------------------------------
-
-subroutine X(batch_set)(this, np, psi)
-  type(batch_t),  intent(inout) :: this
-  integer,        intent(in)    :: np
-  R_TYPE,         intent(in)    :: psi(:, :, :)
-
-  integer :: ist, idim
-
-  PUSH_SUB(X(batch_set))
-
-  do ist = 1, this%nst
-    do idim = 1, this%dim
-      call lalg_copy(np, psi(:, idim, ist), this%states(ist)%X(psi)(:, idim))
-    end do
-  end do
-
-  POP_SUB(X(batch_set))
-end subroutine X(batch_set)
-
 ! --------------------------------------------------------------
 
 subroutine X(batch_axpy_const)(np, aa, xx, yy)
@@ -52,7 +32,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
   call profiling_in(axpy_const_prof, "BATCH_AXPY_CONST")
 
   ASSERT(batch_type(yy) == batch_type(xx))
-#ifdef R_TCMPLX
+#ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
   ASSERT(batch_type(yy) == TYPE_CMPLX)
 #endif
@@ -120,8 +100,6 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
 
   call profiling_count_operations(xx%nst*np*(R_ADD + R_MUL)*types_get_size(batch_type(xx))/types_get_size(TYPE_FLOAT))
 
-  call batch_pack_was_modified(yy)
-
   call profiling_out(axpy_const_prof)
   POP_SUB(X(batch_axpy_const))
 end subroutine X(batch_axpy_const)
@@ -148,7 +126,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   call profiling_in(axpy_vec_prof, "BATCH_AXPY_VEC")
 
   ASSERT(batch_type(yy) == batch_type(xx))
-#ifdef R_TCMPLX
+#ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
   ASSERT(batch_type(yy) == TYPE_CMPLX)
 #endif
@@ -236,8 +214,6 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
     end do
   end select
 
-  call batch_pack_was_modified(yy)
-
   SAFE_DEALLOCATE_A(aa_linear)
 
   call profiling_count_operations(xx%nst*np*(R_ADD + R_MUL)*types_get_size(batch_type(xx))/types_get_size(TYPE_FLOAT))
@@ -288,7 +264,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   PUSH_SUB(X(batch_scal_vec))
   call profiling_in(scal_prof, "BATCH_SCAL")
 
-#ifdef R_TCMPLX
+#ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
   ASSERT(batch_type(xx) == TYPE_CMPLX)
 #endif
@@ -369,8 +345,6 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
     end do
   end select
 
-  call batch_pack_was_modified(xx)
-
   SAFE_DEALLOCATE_A(aa_linear)
 
   call profiling_out(scal_prof)
@@ -398,7 +372,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   call profiling_in(xpay_prof, "BATCH_XPAY")
 
   ASSERT(batch_type(yy) == batch_type(xx))
-#ifdef R_TCMPLX
+#ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
   ASSERT(batch_type(yy) == TYPE_CMPLX)
 #endif
@@ -491,8 +465,6 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
 
   call profiling_count_operations(xx%nst_linear*np*(R_ADD + R_MUL))
 
-  call batch_pack_was_modified(yy)
-
   SAFE_DEALLOCATE_A(aa_linear)
 
   call profiling_out(xpay_prof)
@@ -552,8 +524,6 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
   ! cannot set a real batch with complex values
   ASSERT(batch_type(this) /= TYPE_FLOAT)
 #endif
-
-  call batch_pack_was_modified(this)
 
   select case(batch_status(this))
   case(BATCH_NOT_PACKED)
@@ -893,8 +863,6 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
   ASSERT(batch_type(this) /= TYPE_FLOAT)
 #endif
 
-  call batch_pack_was_modified(this)
-
   select case(batch_status(this))
   case(BATCH_NOT_PACKED)
 
@@ -972,7 +940,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
   call profiling_in(mul_prof, "BATCH_MUL")
 
   ASSERT(batch_type(yy) == batch_type(xx))
-#ifdef R_TCMPLX
+#ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
   ASSERT(batch_type(yy) == TYPE_CMPLX)
 #endif
@@ -1052,8 +1020,6 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
 #endif
     end if
   end select
-
-  call batch_pack_was_modified(yy)
 
   call profiling_out(mul_prof)
   POP_SUB(X(batch_mul))

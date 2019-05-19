@@ -3,7 +3,6 @@
 module atom_oct_m
   use global_oct_m
   use messages_oct_m
-  use profiling_oct_m
   use species_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -45,6 +44,7 @@ module atom_oct_m
     FLOAT, dimension(MAX_DIM) :: f_fields = M_ZERO !< Lasers
     FLOAT, dimension(MAX_DIM) :: f_u      = M_ZERO !< Hubbard forces
     FLOAT, dimension(MAX_DIM) :: f_scf    = M_ZERO !< SCF forces
+    FLOAT, dimension(MAX_DIM) :: f_nlcc   = M_ZERO !< NLCC forces
   end type atom_t
 
   type, public :: atom_classical_t
