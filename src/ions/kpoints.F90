@@ -635,8 +635,8 @@ contains
         end do
       end do
 
-      !We do not use axis
-      this%nik_axis(1:MAX_DIM) = 1
+      ! in case monkhorst pack grid is not defined we give a default vaule
+      if( bitand(this%method, KPOINTS_MONKH_PACK) == 0  ) this%nik_axis(1:MAX_DIM) = 1
 
       !We do not have shifts
       nshifts = 1
