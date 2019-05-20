@@ -143,7 +143,7 @@ contains
         call messages_fatal(1)
       end if
       
-      call transform_states(psi, restart, sys%gr, prefix = "OCTInitial")
+      call transform_states(psi, restart, sys%gr, sys%mc, prefix = "OCTInitial")
       call restart_end(restart)
 
     case(oct_is_userdefined) 

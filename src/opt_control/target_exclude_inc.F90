@@ -19,11 +19,12 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_exclude(gr, tg, td, restart)
+  subroutine target_init_exclude(gr, tg, td, restart, mc)
     type(grid_t),     intent(in)    :: gr
     type(target_t),   intent(inout) :: tg
     type(td_t),       intent(in)    :: td
     type(restart_t),  intent(inout) :: restart
+    type(multicomm_t),intent(in)    :: mc
 
     PUSH_SUB(target_init_exclude)
 
@@ -46,7 +47,7 @@
     call parse_variable('OCTExcludedStates', '1', tg%excluded_states_list)
     call states_deallocate_wfns(tg%st)
 
-    call states_look_and_load(restart, tg%st, gr)
+    call states_look_and_load(restart, tg%st, gr, mc)
 
     POP_SUB(target_init_exclude)
   end subroutine target_init_exclude

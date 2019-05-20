@@ -169,7 +169,7 @@ contains
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
     call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_look_and_load(gs_restart, sys%st, sys%gr, is_complex = complex_response)
+      call states_look_and_load(gs_restart, sys%st, sys%gr, sys%mc, is_complex = complex_response)
       call restart_end(gs_restart)
     else
       message(1) = "Previous gs calculation is required."

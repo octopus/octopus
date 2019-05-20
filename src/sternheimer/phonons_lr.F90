@@ -145,7 +145,7 @@ contains
 
     call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_look_and_load(gs_restart, st, gr)
+      call states_look_and_load(gs_restart, st, gr, sys%mc)
       call restart_end(gs_restart)
     else
       message(1) = "Previous gs calculation is required."

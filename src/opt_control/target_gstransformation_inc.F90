@@ -19,11 +19,12 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_gstransformation(gr, tg, td, restart)
+  subroutine target_init_gstransformation(gr, tg, td, restart, mc)
     type(grid_t),     intent(in)    :: gr
     type(target_t),   intent(inout) :: tg
     type(td_t),       intent(in)    :: td
     type(restart_t),  intent(inout) :: restart
+    type(multicomm_t),intent(in)    :: mc
 
     PUSH_SUB(target_init_gstransformation)
 
@@ -45,7 +46,7 @@
     !% 
     !% The syntax is the same as the <tt>TransformStates</tt> block.
     !%End
-    call transform_states(tg%st, restart, gr, prefix = "OCTTarget")
+    call transform_states(tg%st, restart, gr, mc, prefix = "OCTTarget")
 
     if(.not. parse_is_defined('OCTTargetTransformStates')) then
       message(1) = 'If "OCTTargetOperator = oct_tg_superposition", then you must'

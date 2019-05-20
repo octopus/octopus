@@ -58,10 +58,11 @@ module states_restart_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine states_look_and_load(restart, st, gr, is_complex)
+  subroutine states_look_and_load(restart, st, gr, mc, is_complex)
     type(restart_t),            intent(inout) :: restart
     type(states_t),     target, intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
+    type(multicomm_t),          intent(in)    :: mc
     logical,          optional, intent(in)    :: is_complex
 
     integer :: kpoints, dim, nst, ierr
@@ -76,11 +77,6 @@ contains
       call messages_fatal(1)
     end if
 
-    if(st%parallel_in_states) then
-      message(1) = "Internal error: cannot use states_look_and_load when parallel in states."
-      call messages_fatal(1)
-    end if
-
     ! Resize st%occ, retaining information there
     SAFE_ALLOCATE(new_occ(1:nst, 1:st%d%nik))
     new_occ(:,:) = M_ZERO
@@ -88,9 +84,6 @@ contains
     SAFE_DEALLOCATE_P(st%occ)
     st%occ => new_occ
 
-    ! FIXME: This wrong, one cannot just change the number of states
-    ! without updating the internal structures, in the case of parallel in states.
-    ! I think it is right now without state parallelism.
     st%nst      = nst
     st%st_start = 1
     st%st_end   = nst
@@ -99,6 +92,9 @@ contains
     SAFE_DEALLOCATE_P(st%node)
     SAFE_ALLOCATE(st%node(1:st%nst))
     st%node(:)  = 0
+
+    !We distribute the nodes according to the multicomm object
+    call states_distribute_nodes(st, mc)
 
     SAFE_DEALLOCATE_P(st%eigenval)
     SAFE_ALLOCATE(st%eigenval(1:st%nst, 1:st%d%nik))

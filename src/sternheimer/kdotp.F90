@@ -132,7 +132,7 @@ contains
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
     call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_look_and_load(restart_load, sys%st, sys%gr, is_complex = complex_response)
+      call states_look_and_load(restart_load, sys%st, sys%gr, sys%mc, is_complex = complex_response)
       call restart_end(restart_load)
     else
       message(1) = "A previous gs calculation is required."

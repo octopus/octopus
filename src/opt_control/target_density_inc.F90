@@ -18,12 +18,13 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_density(gr, tg, stin, td, restart)
+  subroutine target_init_density(gr, tg, stin, td, restart, mc)
     type(grid_t),     intent(in)    :: gr
     type(target_t),   intent(inout) :: tg
     type(states_t),   intent(inout) :: stin 
     type(td_t),       intent(in)    :: td
     type(restart_t),  intent(inout) :: restart
+    type(multicomm_t),intent(in)    :: mc
 
     integer             :: ip, ist, jst, cstr_dim(MAX_DIM), ib, idim, jj, no_constraint, no_ptpair, iqn
     type(block_t)       :: blk
@@ -79,7 +80,7 @@
         if(parse_block('OCTTargetDensityFromState', blk) == 0) then
           call states_copy(tmp_st, tg%st)
           call states_deallocate_wfns(tmp_st)
-          call states_look_and_load(restart, tmp_st, gr)
+          call states_look_and_load(restart, tmp_st, gr, mc)
 
           SAFE_ALLOCATE(rotation_matrix(1:tmp_st%nst, 1:tmp_st%nst))
 

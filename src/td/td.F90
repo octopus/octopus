@@ -651,7 +651,7 @@ contains
         ! overwrites orbitals that were read from restart/gs
         if(parse_is_defined('UserDefinedStates')) call states_read_user_def_orbitals(gr%mesh, st)
 
-        call transform_states(st, restart, gr)
+        call transform_states(st, restart, gr, sys%mc)
         call restart_end(restart)
       end if
 
@@ -865,10 +865,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine transform_states(st, restart, gr, prefix)
+  subroutine transform_states(st, restart, gr, mc, prefix)
     type(states_t),             intent(inout) :: st
     type(restart_t),            intent(inout) :: restart
     type(grid_t),               intent(in)    :: gr
+    type(multicomm_t),          intent(in)    :: mc
     character(len=*), optional, intent(in)    :: prefix
 
     type(states_t) :: stin
@@ -915,7 +916,7 @@ contains
           call messages_fatal(1)
         end if
         call states_copy(stin, st, exclude_wfns = .true.)
-        call states_look_and_load(restart, stin, gr)
+        call states_look_and_load(restart, stin, gr, mc)
 
         ! FIXME: rotation matrix should be R_TYPE
         SAFE_ALLOCATE(rotation_matrix(1:stin%nst, 1:stin%nst))
