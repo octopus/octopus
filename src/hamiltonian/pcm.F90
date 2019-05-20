@@ -82,8 +82,25 @@ module pcm_oct_m
   !> The resulting cavity is discretized by a set of tesserae defined in 3d.  
   integer, parameter :: PCM_DIM_SPACE = 3
 
+  integer, parameter, public :: &
+    PCM_CALC_DIRECT  = 1,       &
+    PCM_CALC_POISSON = 2
+
+  integer, parameter ::    &
+    PCM_VDW_OPTIMIZED = 1, &
+    PCM_VDW_SPECIES   = 2
+
+  integer, parameter :: N_TESS_SPHERE = 60 !< minimum number of tesserae per sphere
+					                                 !< cannot be changed without changing cav_gen subroutine
+
+  integer, parameter :: &
+    PCM_TD_EQ  = 0,     &
+    PCM_TD_NEQ = 1,     &
+    PCM_TD_EOM = 2
+
   type pcm_t
     logical                          :: run_pcm          !< If .true., PCM calculation is enabled
+    integer                          :: tdlevel          !< flag to use non-equilibrium TD-PCM, either inertial/dynamic split or EOM
     integer                          :: n_spheres        !< Number of spheres used to build the VdW cavity
     integer                          :: n_tesserae       !< Total number of tesserae
     type(pcm_sphere_t),  allocatable :: spheres(:)       !< See type pcm_sphere_t
@@ -103,7 +120,6 @@ module pcm_oct_m
     FLOAT                            :: qtot_e_in        !< total inertial polarization charge due to electrons
     FLOAT                            :: q_e_nominal      !< total (nominal) electronic charge
     FLOAT                            :: q_n_nominal      !< total (nominal) nuclear charge
-    logical                          :: noneq            !< flag to use non-equilibrium PCM
     logical                          :: renorm_charges   !< flag to renormalized polarization charges
     FLOAT                            :: q_tot_tol        !< tolerance to trigger normalization of the polarization charges
     FLOAT                            :: deltaQ_e         !< difference between the calculated and nominal electronic charge
@@ -126,10 +142,9 @@ module pcm_oct_m
     FLOAT, allocatable               :: v_kick_rs(:)     !< PCM potential in real-space produced by q_kick(:)
     FLOAT                            :: epsilon_0        !< Static dielectric constant of the solvent
     FLOAT                            :: epsilon_infty    !< Infinite-frequency dielectric constant of the solvent
-    character(len=3)                 :: which_eps        !< Dielectric function model, either Debye or Drude-Lorentz
+    integer                          :: which_eps        !< Dielectric function model, either Debye or Drude-Lorentz
     type(debye_param_t)		           :: deb 	           !< Debye parameters
     type(drude_param_t)		           :: drl 	           !< Drude-Lorentz parameters
-    logical                          :: eom              !< Logical flag for polarization charges propagation through an EoM
     logical                          :: localf           !< Logical flag to include polarization charges due to external field
     logical                          :: solute           !< Logical flag to include polarization charges due to the solute
     logical                          :: kick_is_present  !< .true. if there are kicks in the calculation
@@ -147,16 +162,17 @@ module pcm_oct_m
     integer                          :: calc_method      !< which method should be used to obtain the pcm potential
     integer                          :: tess_nn          !< number of tessera center mesh-point nearest neighbors
     FLOAT                            :: dt               !< time-step of propagation
+    integer                          :: TD_EQ = PCM_TD_EQ         !< backup of parameter PCM_TD_EQ accesible outside pcm module
+    integer                          :: EPS_DEBYE = PCM_EPS_DEBYE !< backup of parameter PCM_EPS_DEBYE accesible outside pcm module
   end type pcm_t
 
   type pcm_min_t
-    logical              :: run_pcm   !< If .true., PCM calculation is enabled
-    logical              :: localf    !< flag to include polarization charges due to external field
-    logical              :: noneq     !< flag to use non-equilibrium PCM
-    logical              :: eom       !< flag for polarization charges propagation through an EoM
-    character(len=3)     :: which_eps !< dielectric function model, either Debye or Drude-Lorentz
-    type(debye_param_t)	 :: deb 	    !< Debye parameters
-    type(drude_param_t)	 :: drl 	    !< Drude-Lorentz parameters
+    logical             :: run_pcm   !< If .true., PCM calculation is enabled
+    logical             :: localf    !< flag to include polarization charges due to external field
+    integer             :: tdlevel   !< flag to use non-equilibrium TD-PCM, either inertial/dynamic split or EOM
+    integer             :: which_eps !< dielectric function model, either Debye or Drude-Lorentz
+    type(debye_param_t)	:: deb 	    !< Debye parameters
+    type(drude_param_t)	:: drl 	    !< Drude-Lorentz parameters
   end type pcm_min_t
 
   FLOAT, allocatable :: s_mat_act(:,:) !< S_I matrix 
@@ -166,24 +182,6 @@ module pcm_oct_m
 
   logical            :: gamess_benchmark !< Decide to output pcm_matrix in a GAMESS format 
   FLOAT, allocatable :: mat_gamess(:,:)  !< PCM matrix formatted to be inputed to GAMESS
-
-  integer, parameter ::		      &
-    PCM_ELECTRONS          = 0, &
-    PCM_NUCLEI             = 1, &
-    PCM_EXTERNAL_POTENTIAL = 2, &
-    PCM_KICK               = 3, &
-    PCM_EXTERNAL_PLUS_KICK = 4
-
-  integer, parameter, public :: &
-    PCM_CALC_DIRECT  = 1,       &
-    PCM_CALC_POISSON = 2
-
-  integer, parameter ::    &
-    PCM_VDW_OPTIMIZED = 1, &
-    PCM_VDW_SPECIES   = 2
-
-  integer, parameter :: N_TESS_SPHERE = 60 !< minimum number of tesserae per sphere
-					                                 !< cannot be changed without changing cav_gen subroutine
 
 contains
 
@@ -285,54 +283,32 @@ contains
     call parse_variable('PCMRadiusScaling', default_value, pcm%scale_r)
     call messages_print_var_value(stdout, "PCMRadiusScaling", pcm%scale_r)
 
-    !%Variable PCMNonequilibrium
-    !%Type logical
-    !%Default no
+    !%Variable PCMTDLevel
+    !%Type integer
+    !%Default eq
     !%Section Hamiltonian::PCM
     !%Description
-    !% If .false. the solvent polarization follows instantaneously the changes in solute density or in the external field.  
-    !% If .true. the solvent polarization charges either:
-    !% 1) evolves following an equation of motion (when PCMEoM is also true); or
-    !% 2) they are splitted in two terms: 
+    !% When CalculationMode=td, PCMTDLevel it sets the way the time-depenendent solvent polarization is propagated.
+    !%Option eq 0
+    !% If PCMTDLevel=eq, the solvent is always in equilibrium with the solute or the external field, i.e., 
+    !% the solvent polarization follows instantaneously the changes in solute density or in the external field.
+    !% PCMTDLevel=neq and PCMTDLevel=eom are both nonequilibrium runs.
+    !%Option neq 1
+    !% If PCMTDLevel=neq, solvent polarization charges are splitted in two terms: 
     !% one that follows instantaneously the changes in the solute density or in the external field (dynamical polarization charges),  
-    !% and another that lag behind in the evolution w.r.t. the solute density or the external field (inertial polarization charges).        
+    !% and another that lag behind in the evolution w.r.t. the solute density or the external field (inertial polarization charges).
+    !%Option eom 2
+    !% If PCMTDLevel=eom, solvent polarization charges evolves following an equation of motion, generalizing 'neq' propagation. 
+    !% The equation of motion used here depends on the value of PCMEpsilonModel.
     !%End
-    call parse_variable('PCMNonequilibrium', .false., pcm%noneq)
-    call messages_print_var_value(stdout, "PCMNonequilibrium", pcm%noneq)
+    call parse_variable('PCMTDLevel', PCM_TD_EQ, pcm%tdlevel)
+    call messages_print_var_value(stdout, "PCMTDLevel", pcm%tdlevel)
 
-    if( pcm%noneq .and. (.not. pcm%run_pcm) ) then
-      call messages_write('Sorry, you have set PCMNonequilibrium = yes, but PCMCalculation = no.')
+    if( pcm%tdlevel /= PCM_TD_EQ .and. (.not. pcm%run_pcm) ) then
+      call messages_write('Sorry, you have set PCMTDLevel /= eq, but PCMCalculation = no.')
       call messages_new_line()
       call messages_write('To spare you some time, Octopus will proceed as if PCMCalculation = yes.')       
       call messages_warning()
-    endif
-
-    !%Variable PCMEoM
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian::PCM
-    !%Description
-    !% If .false. the propagation of the solvent polarization charges is history independent.
-    !% If .true. the propagation of the solvent polarization charges follows an equation of motion.
-    !% For the moment, the choices of equation of motion ensue from either Debye (default) or Drude-Lorentz dielectric models.
-    !% You can change the default model by setting the variable PCMEpsilonModel to the other available value 'drl'.
-    !%End
-    call parse_variable('PCMEoM', .false., pcm%eom)
-    call messages_print_var_value(stdout, "PCMEoM", pcm%eom)
-
-    if( pcm%eom .and. (.not. pcm%run_pcm) ) then
-      call messages_write('Sorry, you have set PCMEoM = yes, but PCMCalculation = no.')
-      call messages_new_line()
-      call messages_write('To spare you some time, Octopus will proceed as if PCMCalculation = yes.')       
-      call messages_warning()
-    endif
-
-    if( pcm%eom .and. (.not. pcm%noneq) ) then
-      call messages_write('You have set PCMEoM = yes, Octopus will set PCMNonequilibrium = yes')
-      call messages_new_line()
-      call messages_write('to remind you the non-equilibrium character of your run.')       
-      call messages_warning()
-      pcm%noneq = .true.
     endif
     
     !%Variable PCMStaticEpsilon
@@ -357,18 +333,23 @@ contains
     call messages_print_var_value(stdout, "PCMDynamicEpsilon", pcm%epsilon_infty)
     
     !%Variable PCMEpsilonModel
-    !%Type string
-    !%Default 'deb'
+    !%Type integer
+    !%Default debye
     !%Section Hamiltonian::PCM
     !%Description
     !% Define the dielectric function model. For the moment, the choice is between:
-    !% 1) Debye model ('deb'): <math>\varepsilon(\omega)=\varepsilon_d+\frac{\varepsilon_0-\varepsilon_d}{1-i\omega\tau}</math>
-    !% 2) Drude-Lorentz ('drl') model: <math>\varepsilon(\omega)=1+\frac{A}{\omega_0^2-\omega^2+i\gamma\omega}</math>
+    !%Option debye  1
+    !% 1) Debye model: <math>\varepsilon(\omega)=\varepsilon_d+\frac{\varepsilon_0-\varepsilon_d}{1-i\omega\tau}</math>
+    !%Option drude  2
+    !% 2) Drude-Lorentz model: <math>\varepsilon(\omega)=1+\frac{A}{\omega_0^2-\omega^2+i\gamma\omega}</math>
     !%End
-    call parse_variable('PCMEpsilonModel', 'deb', pcm%which_eps)
+    call parse_variable('PCMEpsilonModel', PCM_EPS_DEBYE, pcm%which_eps)
     call messages_print_var_value(stdout, "PCMEpsilonModel", pcm%which_eps)
 
-    if(pcm%which_eps /= 'deb' .and. pcm%which_eps /= 'drl') then
+    if( pcm%tdlevel == PCM_TD_EOM .and. pcm%which_eps == PCM_EPS_DRUDE) &
+      call messages_experimental("Drude-Lorentz EOM-PCM is experimental")
+
+    if(pcm%which_eps /= PCM_EPS_DEBYE .and. pcm%which_eps /= PCM_EPS_DRUDE) then
       call messages_write('Sorry, only Debye or Drude-Lorentz dielectric models are available.')
       call messages_new_line()
       call messages_write('To spare you some time, Octopus will proceed with the default choice (Debye).')        
@@ -377,14 +358,14 @@ contains
       call messages_warning()
     end if
 
-    if( pcm%noneq .and. pcm%which_eps == 'deb' .and. pcm%epsilon_0 == pcm%epsilon_infty ) then
+    if( pcm%tdlevel /= PCM_TD_EQ .and. pcm%which_eps == PCM_EPS_DEBYE .and. pcm%epsilon_0 == pcm%epsilon_infty ) then
       call messages_write('Sorry, inertial/dynamic polarization splitting scheme for TD-PCM or Debye equation-of-motion TD-PCM')
       call messages_new_line()
       call messages_write('require both static and dynamic dielectric constants, and they must be different.')
       call messages_new_line()
       call messages_write('Octopus will run using TD-PCM version in equilibrium with solvent at each time.')        
       call messages_warning()
-      pcm%noneq = .false.
+      pcm%tdlevel = PCM_TD_EQ
     end if
 
     !%Variable PCMEoMInitialCharges
@@ -404,12 +385,17 @@ contains
     call parse_variable('PCMEoMInitialCharges', 0, pcm%initial_asc)
     call messages_print_var_value(stdout, "PCMEoMInitialCharges", pcm%initial_asc)
 
-    if( ( (.not.pcm%eom) .or. ( pcm%eom .and. pcm%which_eps /= 'deb' ) ) .and. pcm%initial_asc /= 0 ) then
-      call messages_write('Sorry, initial polarization charges can only be read from input file for a Debye EOM-PCM run.')
-      call messages_new_line()
-      call messages_write('To spare you some time, Octopus will proceed as if PCMEoMInitialCharges = 0.')       
-      call messages_warning()
-      pcm%initial_asc = 0
+    if( pcm%initial_asc /= 0 ) &
+      call messages_experimental("The use of external initialization for the EOM-PCM charges is experimental")
+
+    if( pcm%initial_asc /= 0 ) then
+      if( ( pcm%tdlevel /= PCM_TD_EOM .or. ( pcm%tdlevel == PCM_TD_EOM .and. pcm%which_eps /= PCM_EPS_DEBYE ) ) ) then
+        call messages_write('Sorry, initial polarization charges can only be read from input file for a Debye EOM-PCM run.')
+        call messages_new_line()
+        call messages_write('To spare you some time, Octopus will proceed as if PCMEoMInitialCharges = 0.')       
+        call messages_warning()
+        pcm%initial_asc = 0
+      endif
     endif
 
     !> packing Debye parameters for convenience
@@ -430,18 +416,19 @@ contains
     call parse_variable('PCMDebyeRelaxTime', M_ZERO, pcm%deb%tau)
     call messages_print_var_value(stdout, "PCMDebyeRelaxTime", pcm%deb%tau)
 
-    if( pcm%eom .and. pcm%which_eps == 'deb' .and. ( abs(pcm%deb%tau) <= M_EPSILON .or. pcm%deb%eps_0 == pcm%deb%eps_d ) ) then
-      call messages_write('Sorry, you have set PCMEoM = yes, but you have not included all required Debye model parameters.')
+    if( pcm%tdlevel == PCM_TD_EOM .and. pcm%which_eps == PCM_EPS_DEBYE .and.               &
+        ( abs(pcm%deb%tau) <= M_EPSILON .or. pcm%deb%eps_0 == pcm%deb%eps_d ) ) then
+      call messages_write('Sorry, you have set PCMTDLevel = eom, but you have not included all required Debye model parameters.')
       call messages_new_line()
-      call messages_write('You need PCMEpsilonStatic, PCMEpsilonDynamic and PCMDebyeRelaxTime for an EoM TD-PCM run.')        
+      call messages_write('You need PCMEpsilonStatic, PCMEpsilonDynamic and PCMDebyeRelaxTime for an EOM TD-PCM run.')        
       call messages_new_line()
       call messages_write('Octopus will run using TD-PCM version in equilibrium with solvent at each time.')        
       call messages_warning()
-      pcm%eom = .false.
+      pcm%tdlevel = PCM_TD_EQ
     end if
 
     if( abs(pcm%epsilon_0-M_ONE) <= M_EPSILON ) then
-      if( pcm%eom .and. pcm%which_eps == 'drl' ) then
+      if( pcm%tdlevel == PCM_TD_EOM .and. pcm%which_eps == PCM_EPS_DRUDE ) then
         message(1) = "PCMEpsilonStatic = 1 is incompatible with a Drude-Lorentz EOM-PCM run."
         call messages_fatal(1)
       end if
@@ -459,7 +446,7 @@ contains
       call messages_print_var_value(stdout, "PCMDrudeLOmega", pcm%drl%w0)
     end if    
 
-    if( pcm%eom .and. pcm%which_eps == 'drl' .and. pcm%drl%w0 == M_ZERO ) then
+    if( pcm%tdlevel == PCM_TD_EOM .and. pcm%which_eps == PCM_EPS_DRUDE .and. pcm%drl%w0 == M_ZERO ) then
       call messages_write('Sorry, you have set PCMDrudeLOmega = 0 but this is incompatible with a Drude-Lorentz EOM-PCM run.')
       call messages_new_line()
       if( pcm%epsilon_0 /= M_ONE ) then
@@ -494,6 +481,7 @@ contains
     !% This variable is a flag for including local field effects when an external field is applied. The total field interacting with
     !% the molecule (also known as cavity field) is not the bare field in the solvent (the so-called Maxwell field), but it also
     !% include a contribution due to the polarization of the solvent. The latter is calculated here within the PCM framework.
+    !% See [G. Gil, et al., J. Chem. Theory Comput., 2019, 15 (4), pp 2306–2319].
     !%End
     call parse_variable('PCMLocalField', .false., pcm%localf)
     call messages_print_var_value(stdout, "PCMLocalField", pcm%localf)
@@ -1194,19 +1182,20 @@ contains
 
     if (calc == PCM_ELECTRONS) then
       call pcm_v_cav_li(pcm%v_e, v_h, pcm, mesh)
-      if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 .and. pcm%noneq ) then
+      if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 .and. pcm%tdlevel /= PCM_TD_EQ ) then
         !< BEGIN - equation-of-motion propagation or inertial/dynamical charge splitting
-        if( pcm%eom ) then	!< equation-of-motion propagation
+        select case (pcm%tdlevel)
+        case( PCM_TD_EOM ) !< equation-of-motion propagation
           select case (pcm%which_eps)
-            case('drl')
-             call pcm_charges_propagation(pcm%q_e, pcm%v_e, pcm%dt, pcm%tess, input_asc_e, 'electron', 'drl', this_drl = pcm%drl)
-            case default
-             call pcm_charges_propagation(pcm%q_e, pcm%v_e, pcm%dt, pcm%tess, input_asc_e, 'electron', 'deb', this_deb = pcm%deb)
+          case(PCM_EPS_DRUDE)
+            call pcm_charges_propagation(pcm%q_e, pcm%v_e, pcm%dt, pcm%tess, input_asc_e, calc, PCM_EPS_DRUDE, this_drl = pcm%drl)
+          case default
+            call pcm_charges_propagation(pcm%q_e, pcm%v_e, pcm%dt, pcm%tess, input_asc_e, calc, PCM_EPS_DEBYE, this_deb = pcm%deb)
           end select
           if ( (.not.pcm%localf) .and. not_yet_called ) call pcm_eom_enough_initial(not_yet_called)
           !< total pcm charges due to solute electrons
           pcm%qtot_e = sum(pcm%q_e)
-        else			!< inertial/dynamical partition
+        case( PCM_TD_NEQ ) !< inertial/dynamical partition
           select case (pcm%iter)
           case(1)
             !< calculating inertial polarization charges (once and for all)
@@ -1229,7 +1218,7 @@ contains
             pcm%q_e = pcm%q_e + pcm%q_e_in
             pcm%qtot_e = pcm%qtot_e + pcm%qtot_e_in
           end select
-        end if !< END - equation-of-motion propagation or inertial/dynamical charge splitting
+        end select !< END - equation-of-motion propagation or inertial/dynamical charge splitting
       else !< BEGIN - pcm charges propagation in equilibrium with solute
 
         !< calculating polarization charges to be equil. (upon self-consitency) with the ground state Hartree potential (always).
@@ -1248,14 +1237,17 @@ contains
 
     if (calc == PCM_EXTERNAL_POTENTIAL .or. calc == PCM_EXTERNAL_PLUS_KICK) then
       call pcm_v_cav_li(pcm%v_ext, v_ext, pcm, mesh)
-      if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 .and. pcm%noneq ) then
+      if( td_calc_mode .and. pcm%epsilon_infty /= pcm%epsilon_0 .and. pcm%tdlevel /= PCM_TD_EQ ) then
         !< BEGIN - equation-of-motion propagation or inertial/dynamical charge splitting
-        if( pcm%eom ) then	!< equation-of-motion propagation
+        select case (pcm%tdlevel)
+        case( PCM_TD_EOM ) !< equation-of-motion propagation
           select case (pcm%which_eps)
-            case('drl')
-             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, pcm%dt, pcm%tess, input_asc_ext, 'external', 'drl',this_drl=pcm%drl)
+            case(PCM_EPS_DRUDE)
+             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, pcm%dt, pcm%tess, input_asc_ext, calc, &
+                                          pcm%which_eps, this_drl=pcm%drl)
             case default
-             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, pcm%dt, pcm%tess, input_asc_ext, 'external', 'deb',this_deb=pcm%deb)
+             call pcm_charges_propagation(pcm%q_ext, pcm%v_ext, pcm%dt, pcm%tess, input_asc_ext, calc, &
+                                          pcm%which_eps, this_deb=pcm%deb)
           end select
           if ( (.not.pcm%kick_is_present) .and. not_yet_called ) call pcm_eom_enough_initial(not_yet_called)
           !< total pcm charges due to time-dependent external field
@@ -1264,7 +1256,7 @@ contains
           !< dont pay attention to the use of q_ext_in and qtot_ext_in, whose role here is only auxiliary
           pcm%q_ext = pcm%q_ext + pcm%q_ext_in
           pcm%qtot_ext = pcm%qtot_ext + pcm%qtot_ext_in
-        else			!< inertial/dynamical partition -> sudden switch-on
+        case( PCM_TD_NEQ ) !< inertial/dynamical partition -> sudden switch-on
           !< calculating dynamical polarization charges (each time)
           call pcm_charges(pcm%q_ext, pcm%qtot_ext, pcm%v_ext, pcm%matrix_lf_d, pcm%n_tesserae)
 
@@ -1272,7 +1264,7 @@ contains
           !< dont pay attention to the use of q_ext_in and qtot_ext_in, whose role here is only auxiliary
           pcm%q_ext = pcm%q_ext + pcm%q_ext_in
           pcm%qtot_ext = pcm%qtot_ext + pcm%qtot_ext_in
-        end if !< END - equation-of-motion propagation or inertial/dynamical charge splitting
+        end select !< END - equation-of-motion propagation or inertial/dynamical charge splitting
       else !< BEGIN - pcm charges propagation in equilibrium with external potential
 
         !< calculating polarization charges equilibrated with the external potential (always).
@@ -1317,10 +1309,12 @@ contains
         if ( after_kick ) then
         !< BEGIN - equation-of-motion propagation
         select case (pcm%which_eps)
-          case('drl')
-            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, pcm%dt, pcm%tess, input_asc_ext, 'justkick','drl',this_drl=pcm%drl)
+          case(PCM_EPS_DRUDE)
+            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, pcm%dt, pcm%tess, input_asc_ext, calc, &
+                                         pcm%which_eps, this_drl=pcm%drl)
           case default
-            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, pcm%dt, pcm%tess, input_asc_ext, 'justkick','deb',this_deb=pcm%deb)
+            call pcm_charges_propagation(pcm%q_kick, pcm%v_kick, pcm%dt, pcm%tess, input_asc_ext, calc, &
+                                         pcm%which_eps, this_deb=pcm%deb)
         end select
         if ( not_yet_called ) call pcm_eom_enough_initial(not_yet_called)
         pcm%qtot_kick  = sum(pcm%q_kick)
@@ -3196,7 +3190,7 @@ contains
       endif
     end if 
 
-    if( pcm%eom ) call pcm_eom_end
+    if( pcm%tdlevel == PCM_TD_EOM ) call pcm_eom_end
 
     if ( mpi_grp_is_root(mpi_world) ) call io_close(pcm%info_unit)
 
@@ -3339,15 +3333,15 @@ contains
 
     PUSH_SUB(pcm_eps)
 
-    if ( pcm%eom ) then
-      if ( pcm%which_eps == 'deb') then
+    if ( pcm%tdlevel == PCM_TD_EOM ) then
+      if ( pcm%which_eps == PCM_EPS_DEBYE) then
        call pcm_eps_deb(eps, pcm%deb, omega)
-      else if (pcm%which_eps == 'drl') then
+      else if (pcm%which_eps == PCM_EPS_DRUDE) then
        call pcm_eps_drl(eps, pcm%drl, omega)
       end if
-    else if( pcm%noneq .and. (.not.pcm%eom) ) then
+    else if( pcm%tdlevel == PCM_TD_NEQ ) then
       eps = pcm%deb%eps_d
-    else if( (.not.pcm%noneq) .and. (.not.pcm%eom) ) then
+    else if( pcm%tdlevel == PCM_TD_EQ ) then
       eps = pcm%deb%eps_0
     end if
 
@@ -3376,30 +3370,27 @@ contains
       call messages_write('in the nonequilibrium or equation-of-motion TD-PCM propagation schemes.')
       call messages_warning()
     end if
-    call parse_variable('PCMEoM' , .false., pcm%eom)
-    call messages_print_var_value(stdout, "PCMEoM", pcm%eom)
-    call parse_variable('PCMNonequilibrium' , .false., pcm%noneq)
-    if ( pcm%eom ) pcm%noneq = .true.
-    call messages_print_var_value(stdout, "PCMNonequilibrium", pcm%noneq)
+    call parse_variable('PCMTDLevel' , PCM_TD_EQ, pcm%tdlevel)
+    call messages_print_var_value(stdout, "PCMTDLevel", pcm%tdlevel)
 
     ! reading dielectric function model parameters
     call parse_variable('PCMStaticEpsilon' , M_ONE, pcm%deb%eps_0)
     call messages_print_var_value(stdout, "PCMStaticEpsilon", pcm%deb%eps_0)
-    if ( pcm%eom ) then
-      call parse_variable('PCMEpsilonModel', 'deb', pcm%which_eps)
+    if ( pcm%tdlevel == PCM_TD_EOM ) then
+      call parse_variable('PCMEpsilonModel', PCM_EPS_DEBYE, pcm%which_eps)
       call messages_print_var_value(stdout, "PCMEpsilonModel", pcm%which_eps)
-      if ( pcm%which_eps == 'deb' ) then
+      if ( pcm%which_eps == PCM_EPS_DEBYE ) then
         call parse_variable('PCMDynamicEpsilon', pcm%deb%eps_0, pcm%deb%eps_d)
         call messages_print_var_value(stdout, "PCMDynamicEpsilon", pcm%deb%eps_d)
         call parse_variable('PCMDebyeRelaxTime', M_ZERO, pcm%deb%tau)
         call messages_print_var_value(stdout, "PCMDebyeRelaxTime", pcm%deb%tau)
-      else if( pcm%which_eps == 'drl' ) then
+      else if( pcm%which_eps == PCM_EPS_DRUDE ) then
         call parse_variable('PCMDrudeLOmega', sqrt(M_ONE/(pcm%deb%eps_0-M_ONE)), pcm%drl%w0)
         call messages_print_var_value(stdout, "PCMDrudeLOmega", pcm%drl%w0)
         call parse_variable('PCMDrudeLDamping', M_ZERO, pcm%drl%gm)
         call messages_print_var_value(stdout, "PCMDrudeLDamping", pcm%drl%gm)
       end if
-    else if ( pcm%noneq .and. (.not.pcm%eom) ) then
+    else if ( pcm%tdlevel == PCM_TD_NEQ ) then
       call parse_variable('PCMDynamicEpsilon', pcm%deb%eps_0, pcm%deb%eps_d)
       call messages_print_var_value(stdout, "PCMDynamicEpsilon", pcm%deb%eps_d)
     end if

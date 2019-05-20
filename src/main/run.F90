@@ -168,7 +168,7 @@ contains
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     else if(hm%pcm%run_pcm .and. calc_mode_id == CM_TD ) then
       call messages_experimental("PCM for CalculationMode = td")
-    else if ( hm%pcm%epsilon_infty /= hm%pcm%epsilon_0 .and. hm%pcm%noneq .and. calc_mode_id == CM_GS ) then
+    else if ( hm%pcm%epsilon_infty /= hm%pcm%epsilon_0 .and. hm%pcm%tdlevel /= hm%pcm%TD_EQ .and. calc_mode_id == CM_GS ) then
       call messages_write('Non-equilbrium PCM is not active in a time-independent run.')
       call messages_new_line()
       call messages_write('You set epsilon_infty /= epsilon_0, but epsilon_infty is not relevant for CalculationMode = gs.')

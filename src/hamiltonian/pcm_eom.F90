@@ -28,7 +28,19 @@ module pcm_eom_oct_m
   use io_function_oct_m
 
   private
-  public :: pcm_charges_propagation, pcm_eom_enough_initial, pcm_eom_end, pcm_tessera_t, debye_param_t, drude_param_t 
+  public :: pcm_charges_propagation, &
+            pcm_eom_enough_initial,  &
+            pcm_eom_end,             &
+            pcm_tessera_t,           &
+            debye_param_t,           &
+            drude_param_t,           &
+            PCM_NUCLEI,              & 
+            PCM_ELECTRONS,           &
+            PCM_EXTERNAL_POTENTIAL,  &
+            PCM_EXTERNAL_PLUS_KICK,  &
+            PCM_KICK,                &
+            PCM_EPS_DEBYE,           &
+            PCM_EPS_DRUDE
   save
 
   !> tesselation derived type
@@ -60,10 +72,10 @@ module pcm_eom_oct_m
   type(debye_param_t) :: deb
   type(drude_param_t) :: drl
 
-  character(8) :: which_eom			                  !< character flag for PCM charges due to:
-                                                  !< electrons ('electron'), external potential ('external') or kick ('justkick')
+  integer :: which_eom			                      !< flag for PCM charges due to:
+                                                  !< electrons, external potential (including kick) or just the kick
 
-  character(3) :: which_eps			                  !< character flag for Debye ('deb') and Drude-Lorentz models ('drl')
+  integer :: which_eps			                      !< character flag for Debye and Drude-Lorentz models
 
   FLOAT :: dt 					                          !< time-step of the propagation
 
@@ -106,6 +118,17 @@ module pcm_eom_oct_m
 
   logical :: enough_initial = .false.
 
+  integer, parameter ::		      &
+    PCM_ELECTRONS          = 0, &
+    PCM_NUCLEI             = 1, &
+    PCM_EXTERNAL_POTENTIAL = 2, &
+    PCM_KICK               = 3, &
+    PCM_EXTERNAL_PLUS_KICK = 4
+
+  integer, parameter ::	&
+    PCM_EPS_DEBYE = 1,      &
+    PCM_EPS_DRUDE = 2
+
   contains
 
   !------------------------------------------------------------------------------------------------------------------------------
@@ -122,8 +145,8 @@ module pcm_eom_oct_m
 
    logical, intent(in) :: input_asc
 
-   character(*), intent(in) :: this_eom !< EOM case, either due to electrons ('electron') or due to external potential ('external')
-   character(*), intent(in) :: this_eps !< type of dielectric model to be used, either Debye ('deb') or Drude-Lorentz ('drl')
+   integer, intent(in) :: this_eom !< EOM case, either due to electrons, external potential (including kick), or just the kick
+   integer, intent(in) :: this_eps !< type of dielectric model to be used, either Debye or Drude-Lorentz
    type(debye_param_t), optional, intent(in) :: this_deb
    type(drude_param_t), optional, intent(in) :: this_drl
 
@@ -135,7 +158,8 @@ module pcm_eom_oct_m
    PUSH_SUB(pcm_charges_propagation)
 
    which_eom=this_eom
-   if (which_eom /= 'electron' .and. which_eom /= 'external' .and. which_eom /= 'justkick' ) then
+   if (which_eom /= PCM_ELECTRONS .and. which_eom /= PCM_EXTERNAL_POTENTIAL .and. &
+       which_eom /= PCM_EXTERNAL_PLUS_KICK  .and. which_eom /= PCM_KICK           ) then
     message(1) = "pcm_charges_propagation: EOM evolution of PCM charges can only be due to solute electrons"
     message(2) = "or external potential (including the kick)."
     call messages_fatal(2)
@@ -151,19 +175,19 @@ module pcm_eom_oct_m
     allocate(cts_act(nts_act))
     cts_act=this_cts_act
     which_eps=this_eps
-    if (which_eps=='deb' .and. (.not.(present(this_deb)))) then
+    if (which_eps==PCM_EPS_DEBYE .and. (.not.(present(this_deb)))) then
      message(1) = "pcm_charges_propagation: EOM-PCM error. Debye dielectric function requires three parameters."
      call messages_fatal(1)
-    else if (which_eps=='deb' .and. present(this_deb)) then
+    else if (which_eps==PCM_EPS_DEBYE .and. present(this_deb)) then
      deb=this_deb
     endif
-    if (which_eps=='drl' .and. (.not.(present(this_drl)))) then
+    if (which_eps==PCM_EPS_DRUDE .and. (.not.(present(this_drl)))) then
      message(1) = "pcm_charges_propagation: EOM-PCM error. Drude-Lorentz dielectric function requires three parameters."
      call messages_fatal(1)
-    else if (which_eps=='drl' .and. present(this_drl)) then
+    else if (which_eps==PCM_EPS_DRUDE .and. present(this_drl)) then
      drl=this_drl
     endif
-    if (which_eps/='deb' .and. which_eps/='drl') then
+    if (which_eps/=PCM_EPS_DEBYE .and. which_eps/=PCM_EPS_DRUDE) then
      message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye or Drude-Lorent dielectric models are allowed."
      call messages_fatal(1)
     endif
@@ -175,7 +199,7 @@ module pcm_eom_oct_m
    endif
 
 
-   if( input_asc .and. which_eps == 'deb' ) then
+   if( input_asc .and. which_eps == PCM_EPS_DEBYE ) then
 
     !> initialize pcm charges due to electrons, external potential or kick
 
@@ -184,16 +208,16 @@ module pcm_eom_oct_m
     POP_SUB(pcm_charges_propagation)
     return
 
-   else if( input_asc .and. which_eps /= 'deb' ) then
+   else if( input_asc .and. which_eps /= PCM_EPS_DEBYE ) then
 
     message(1) = "pcm_charges_propagation: EOM-PCM error. Only Debye EOM-PCM can startup from input charges."
     call messages_fatal(1)
 
    endif
 
-   if( ( initial_electron .and. which_eom == 'electron' ) .or. & 
-       ( initial_external .and. which_eom == 'external' ) .or. & 
-       ( initial_kick     .and. which_eom == 'justkick' )      ) then
+   if( ( initial_electron .and. which_eom == PCM_ELECTRONS ) .or. & 
+       ( initial_external .and. ( which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PLUS_KICK ) ) .or. & 
+       ( initial_kick     .and. which_eom == PCM_KICK )      ) then
 
      !> initialize pcm matrices
 
@@ -203,17 +227,17 @@ module pcm_eom_oct_m
 
      call init_charges(q_t, pot_t)
 
-     if(initial_electron .and. which_eom == 'electron' ) initial_electron=.false.
-     if(initial_external .and. which_eom == 'external' ) initial_external=.false.
-     if(initial_kick     .and. which_eom == 'justkick' ) initial_kick=.false.
+     if(initial_electron .and. which_eom == PCM_ELECTRONS ) initial_electron=.false.
+     if(initial_external .and.(which_eom == PCM_EXTERNAL_POTENTIAL.or.which_eom == PCM_EXTERNAL_PLUS_KICK)) initial_external=.false.
+     if(initial_kick     .and. which_eom == PCM_KICK ) initial_kick=.false.
 
    else
 
      !> propagate pcm charges due to electrons or external potential (including possible kick)
 
-     if( which_eps .eq. "deb") then
+     if( which_eps .eq. PCM_EPS_DEBYE) then
       call pcm_ief_prop_deb(q_t,pot_t)
-     else if( which_eps .eq. "drl" ) then
+     else if( which_eps .eq. PCM_EPS_DRUDE ) then
       call pcm_ief_prop_vv_ief_drl(q_t,pot_t)
      endif
 
@@ -237,21 +261,21 @@ module pcm_eom_oct_m
 
    PUSH_SUB(pcm_charges_from_input_file)
 
-   if( which_eom == 'electron' ) then
+   if( which_eom == PCM_ELECTRONS ) then
     SAFE_ALLOCATE(q_tp(nts_act))
     asc_unit = io_open(PCM_DIR//'ASC_e.dat', action='read')
     do ia = 1, nts_act
       read(asc_unit,*) aux1, q_t(ia), aux2
     end do
     q_tp=q_t
-   else if( which_eom == 'external' ) then
+   else if( which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PLUS_KICK ) then
     SAFE_ALLOCATE(qext_tp(nts_act))
     asc_unit = io_open(PCM_DIR//'ASC_ext.dat', action='read')
     do ia = 1, nts_act
       read(asc_unit,*) aux1, q_t(ia), aux2
     end do
     qext_tp = q_t
-   else if( which_eom == 'justkick' ) then
+   else if( which_eom == PCM_KICK ) then
     SAFE_ALLOCATE(qkick_tp(nts_act))
     asc_unit = io_open(PCM_DIR//'ASC_kick.dat', action='read')
     do ia = 1, nts_act
@@ -275,7 +299,7 @@ module pcm_eom_oct_m
 
    PUSH_SUB(init_charges)
 
-   if( which_eom == 'electron' ) then
+   if( which_eom == PCM_ELECTRONS ) then
     !< Here we consider the potential at any earlier time equal to the initial potential.
     !< Therefore, we can suppose that the solvent is already in equilibrium with the initial solute potential.
     !< The latter is valid when starting the propagation from the ground state but does not hold in general.
@@ -291,14 +315,14 @@ module pcm_eom_oct_m
     SAFE_ALLOCATE(q_tp(nts_act))
     q_tp = q_t
 
-    if( which_eps .eq. "drl" ) then
+    if( which_eps .eq. PCM_EPS_DRUDE ) then
      SAFE_ALLOCATE(dq_tp(nts_act))
      SAFE_ALLOCATE(force_tp(nts_act))
      dq_tp=M_ZERO
      force_tp=M_ZERO
     endif
 			    
-   else if( which_eom == 'external' ) then
+   else if( which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PLUS_KICK ) then
     !< Here (instead) we consider zero the potential at any earlier time.
     !< Therefore, the solvent is not initially in equilibrium with the external potential unless its initial value is zero.
 
@@ -311,23 +335,23 @@ module pcm_eom_oct_m
     SAFE_ALLOCATE(qext_tp(nts_act))
     qext_tp = q_t
 
-    if( which_eps .eq. "drl" ) then
+    if( which_eps .eq. PCM_EPS_DRUDE ) then
      SAFE_ALLOCATE(dqext_tp(nts_act))
      SAFE_ALLOCATE(force_qext_tp(nts_act))
      dqext_tp=M_ZERO
      force_qext_tp=M_ZERO
     endif
 
-   else if( which_eom == 'justkick' ) then
+   else if( which_eom == PCM_KICK ) then
 
-    if( which_eps .eq. "drl" ) then
+    if( which_eps .eq. PCM_EPS_DRUDE ) then
      SAFE_ALLOCATE(dqkick_tp(nts_act))
      SAFE_ALLOCATE(force_qkick_tp(nts_act))
      dqkick_tp=M_ZERO
      force_qkick_tp=M_ZERO
     endif
 
-    if( which_eps .eq. "drl" ) then
+    if( which_eps .eq. PCM_EPS_DRUDE ) then
       dqkick_tp=matmul(matqv_lf,pot_t)*dt
     else
       q_t = matmul(matqv_lf-matmul(matqq,matqd_lf),pot_t)
@@ -339,7 +363,7 @@ module pcm_eom_oct_m
    endif
 
    !< initializing Velocity-Verlet algorithm for the integration of EOM-PCM for Drude-Lorentz
-   if( which_eps == 'drl' ) call init_vv_propagator
+   if( which_eps == PCM_EPS_DRUDE ) call init_vv_propagator
 
    POP_SUB(init_charges)
   end subroutine init_charges
@@ -353,7 +377,7 @@ module pcm_eom_oct_m
 
    PUSH_SUB(pcm_ief_prop_deb)
 
-   if( which_eom == 'electron' ) then
+   if( which_eom == PCM_ELECTRONS ) then
     !> Eq.(47) in S. Corni, S. Pipolo and R. Cammi, J.Phys.Chem.A 2015, 119, 5405-5416.
     q_t(:) = q_tp(:) - dt*matmul(matqq,q_tp)   + &
 	  	       dt*matmul(matqv,pot_tp) + &
@@ -363,7 +387,7 @@ module pcm_eom_oct_m
 
     pot_tp = pot_t
 
-   else if( which_eom == 'external' ) then 
+   else if( which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PLUS_KICK ) then 
     !> analogous to Eq.(47) ibid. with different matrices
     q_t(:) = qext_tp(:) - dt*matmul(matqq,qext_tp)   + &
 	  	          dt*matmul(matqv_lf,potext_tp) + &
@@ -373,7 +397,7 @@ module pcm_eom_oct_m
 
     potext_tp = pot_t
 
-   else if( which_eom == 'justkick' ) then
+   else if( which_eom == PCM_KICK ) then
     !> simplifying for kick
     q_t(:) = qkick_tp(:) - dt*matmul(matqq,qkick_tp)    !< N.B. matqq
 
@@ -413,7 +437,7 @@ module pcm_eom_oct_m
 
    PUSH_SUB(pcm_ief_prop_vv_ief_drl)
 
-   if( which_eom == 'electron' ) then 
+   if( which_eom == PCM_ELECTRONS ) then 
     !> From Eq.(15) S. Pipolo and S. Corni, J.Phys.Chem.C 2016, 120, 28774-28781.
     !> Using the scheme in Eq.(21) and (17) of E. Vanden-Eijnden, G. Ciccotti, Chem.Phys.Lett. 429 (2006) 310-316.
     q_t = q_tp + f1*dq_tp + f2*force_tp
@@ -422,7 +446,7 @@ module pcm_eom_oct_m
     force_tp = force
     q_tp = q_t
 
-   else if( which_eom == 'external' ) then
+   else if( which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PLUS_KICK ) then
     !> analagous to Eq.(15) ibid. with different matrices
     q_t = qext_tp + f1*dqext_tp + f2*force_qext_tp
     force = -matmul(matqq,q_t) + matmul(matqv_lf,pot_t)	!< N.B. matqq
@@ -430,7 +454,7 @@ module pcm_eom_oct_m
     force_qext_tp = force
     q_tp = q_t
 
-   else if( which_eom == 'justkick' ) then
+   else if( which_eom == PCM_KICK ) then
     !> simplifying for kick
     q_t = qkick_tp + f1*dqkick_tp + f2*force_qkick_tp
     force = -matmul(matqq,q_t)												  !< N.B. matqq
@@ -454,14 +478,14 @@ module pcm_eom_oct_m
 
    PUSH_SUB(pcm_bem_init)
 
-   if( which_eom == 'electron' ) then
+   if( which_eom == PCM_ELECTRONS ) then
     SAFE_ALLOCATE(matq0(nts_act,nts_act))
     SAFE_ALLOCATE(matqd(nts_act,nts_act))
     SAFE_ALLOCATE(matqv(nts_act,nts_act))
     if( .not.allocated(matqq) ) then
      SAFE_ALLOCATE(matqq(nts_act,nts_act))
     endif
-   else if( which_eom == 'external' .or. which_eom == 'justkick' ) then
+   else if( which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PLUS_KICK .or. which_eom == PCM_KICK ) then
     SAFE_ALLOCATE(matq0_lf(nts_act,nts_act)) !< not used yet
     SAFE_ALLOCATE(matqd_lf(nts_act,nts_act))
     SAFE_ALLOCATE(matqv_lf(nts_act,nts_act))
@@ -471,7 +495,7 @@ module pcm_eom_oct_m
    endif  
    call do_PCM_propMat
 
-   if( which_eom == 'electron' ) then
+   if( which_eom == PCM_ELECTRONS ) then
     pcmmat0_unit = io_open(PCM_DIR//'pcm_matrix_static_from_eom.out', action='write')
     pcmmatd_unit = io_open(PCM_DIR//'pcm_matrix_dynamic_from_eom.out', action='write')
      do jtess = 1, nts_act
@@ -482,7 +506,7 @@ module pcm_eom_oct_m
      end do
     call io_close(pcmmat0_unit)
     call io_close(pcmmatd_unit)
-   else if( which_eom == 'external' ) then
+   else if( which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PLUS_KICK ) then
     pcmmat0_unit = io_open(PCM_DIR//'pcm_matrix_static_lf_from_eom.out', action='write')
     pcmmatd_unit = io_open(PCM_DIR//'pcm_matrix_dynamic_lf_from_eom.out', action='write')
      do jtess = 1, nts_act
@@ -591,7 +615,7 @@ module pcm_eom_oct_m
 
    sgn_lf=M_ONE
    !> 'local field' differ from 'standard' PCM response matrix in some sign changes
-   if( which_eom == 'external' .or. which_eom == 'justkick' ) sgn_lf=-M_ONE 
+   if( ( which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PLUS_KICK ) .or. which_eom == PCM_KICK ) sgn_lf=-M_ONE 
 
    SAFE_ALLOCATE(cals(nts_act,nts_act))
    SAFE_ALLOCATE(cald(nts_act,nts_act))
@@ -619,7 +643,7 @@ module pcm_eom_oct_m
    SAFE_ALLOCATE(scr1(nts_act,nts_act))
    SAFE_ALLOCATE(scr2(nts_act,nts_act))
    SAFE_ALLOCATE(scr3(nts_act,nts_act))
-   if (which_eps .eq. "deb") then
+   if (which_eps .eq. PCM_EPS_DEBYE) then
     if( deb%eps_0 /= M_ONE ) then
      fac_eps0=(deb%eps_0+M_ONE)/(deb%eps_0-M_ONE)			 
      Kdiag0(:)=sgn_lf*(twopi-sgn*sgn_lf*eigv(:))/(twopi*fac_eps0-sgn*eigv(:)) !< Eq.(14) with eps_0 in Ref.1
@@ -635,7 +659,7 @@ module pcm_eom_oct_m
     fact1(:)=((twopi-sgn*eigv(:))*deb%eps_0+twopi+eigv(:))/ &                 !< inverse of Eq.(32), ibid.
     ((twopi-sgn*eigv(:))*deb%eps_d+twopi+eigv(:))/deb%tau
     fact2(:)=Kdiag0(:)*fact1(:)				                                        !< tau^{-1}K_0 in Eq.(38), ibid.
-   elseif (which_eps .eq. "drl") then
+   elseif (which_eps .eq. PCM_EPS_DRUDE) then
     Kdiagd(:)=M_ZERO					                                                !< from Eq.(10) up in Ref.2
     fact2(:)=(twopi-sgn*eigv(:))*drl%aa/fourpi                                !< Eq.(10) down
     do i=1,nts_act
@@ -656,25 +680,25 @@ module pcm_eom_oct_m
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*fact2(i)
    enddo
-   if( which_eom == 'electron' ) then
+   if( which_eom == PCM_ELECTRONS ) then
     matqv=-matmul(scr1,scr4)				                                          !< Eq.(38) in Ref.1 and Eq.(17) in Ref.2
-   else if( which_eom == 'external' .or. which_eom == 'justkick' ) then
+   else if( which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PlUS_KICK .or. which_eom == PCM_KICK ) then
     matqv_lf=-matmul(scr1,scr4)				                                        !< local field analogous
    endif
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*Kdiag0(i)
    enddo
-   if( which_eom == 'electron' ) then
+   if( which_eom == PCM_ELECTRONS ) then
     matq0=-matmul(scr1,scr4)				                                          !< from Eq.(14) and (18) for eps_0 in Ref.1
-   else if( which_eom == 'external' .or. which_eom == 'justkick' ) then
+   else if( which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PlUS_KICK .or. which_eom == PCM_KICK ) then
     matq0_lf=-matmul(scr1,scr4)			                                          !< local field analogous !< not used yet
    endif
    do i=1,nts_act
     scr1(:,i)=scr3(:,i)*Kdiagd(i)
    enddo
-   if( which_eom == 'electron' ) then
+   if( which_eom == PCM_ELECTRONS ) then
     matqd=-matmul(scr1,scr4)				                                          !< from Eq.(14) and (18) for eps_d, ibid.
-   else if( which_eom == 'external' .or. which_eom == 'justkick' ) then
+   else if( which_eom == PCM_EXTERNAL_POTENTIAL .or. which_eom == PCM_EXTERNAL_PlUS_KICK .or. which_eom == PCM_KICK ) then
     matqd_lf=-matmul(scr1,scr4)				                                        !< local field analogous
    endif
    SAFE_DEALLOCATE_A(scr4)

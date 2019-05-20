@@ -762,12 +762,12 @@ contains
       if ( pcm%kick_like ) then
         ! computing kick-like polarization due to kick
         call pcm_calc_pot_rs(pcm, mesh, kick = kick%delta_strength * kick_function_real, kick_time = .true.)
-      else if ( .not.pcm%kick_like .and. pcm%which_eps == 'deb' ) then
+      else if ( .not.pcm%kick_like .and. pcm%which_eps == pcm%EPS_DEBYE ) then
         ! computing the kick-like part of polarization due to kick for Debye dielectric model
         pcm%kick_like = .true.
         call pcm_calc_pot_rs(pcm, mesh, kick = kick%delta_strength * kick_function_real, kick_time = .true.)
         pcm%kick_like = .false.
-      else if ( .not.pcm%kick_like .and. pcm%which_eps == 'drl' ) then
+      else if ( .not.pcm%kick_like .and. pcm%which_eps /= pcm%EPS_DEBYE ) then
         POP_SUB(kick_pcm_function_get)
         return
       end if
