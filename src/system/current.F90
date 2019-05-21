@@ -63,8 +63,7 @@ module current_oct_m
   integer, parameter, public ::           &
     CURRENT_GRADIENT           = 1,       &
     CURRENT_GRADIENT_CORR      = 2,       &
-    CURRENT_HAMILTONIAN        = 3,       &
-    CURRENT_FAST               = 4
+    CURRENT_HAMILTONIAN        = 3
 
 contains
 
@@ -91,20 +90,12 @@ contains
     !%Option hamiltonian 3
     !% The current density is obtained from the commutator of the
     !% Hamiltonian with the position operator. (Experimental)
-    !%Option gradient_corrected_fast 4
-    !% More efficient version of the gradient_corrected calculation of the current. (Experimental)
     !%End
 
     call parse_variable('CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
     if(.not.varinfo_valid_option('CurrentDensity', this%method)) call messages_input_error('CurrentDensity')
     if(this%method /= CURRENT_GRADIENT_CORR) then
       call messages_experimental("CurrentDensity /= gradient_corrected")
-    end if
-    !The call to individual derivatives_perfom routines returns the derivatives along
-    !the primitive axis in case of non-orthogonal cells, whereas the code expects derivatives
-    !along the Cartesian axis.
-    if(this%method == CURRENT_FAST .and. sb%nonorthogonal ) then
-      call messages_not_implemented("CurrentDensity = fast with non-orthogonal cells")
     end if
     
     POP_SUB(current_init)
@@ -163,86 +154,6 @@ contains
 
     select case(this%method)
 
-    case(CURRENT_FAST)
-
-      do ik = st%d%kpt%start, st%d%kpt%end
-        ispin = states_dim_get_spin_index(st%d, ik)
-        do ib = st%group%block_start, st%group%block_end
-
-          call batch_pack(st%group%psib(ib, ik), copy = .true.)
-          call batch_copy(st%group%psib(ib, ik), epsib)
-          call boundaries_set(der%boundaries, st%group%psib(ib, ik))
-          
-          if(associated(hm%hm_base%phase)) then
-            call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np_part, ik, &
-              conjugate = .false., psib = epsib, src = st%group%psib(ib, ik))
-          else
-            call batch_copy_data(der%mesh%np_part, st%group%psib(ib, ik), epsib)
-          end if
-
-          !The call to individual derivatives_perfom routines returns the derivatives along
-          !the primitive axis in case of non-orthogonal cells, whereas the code expects derivatives
-          !along the Cartesian axis.
-          ASSERT(.not.der%mesh%sb%nonorthogonal)
-          do idir = 1, der%mesh%sb%dim
-            call batch_copy(st%group%psib(ib, ik), commpsib(idir))
-            call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
-          end do
-
-          
-          
-          call zhamiltonian_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, ik, epsib, commpsib)
-
-          do idir = 1, der%mesh%sb%dim
-
-            if(associated(hm%hm_base%phase)) then
-              call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np_part, ik, conjugate = .true., psib = commpsib(idir))
-            end if
-            
-            do ist = states_block_min(st, ib), states_block_max(st, ib)
-
-              do idim = 1, st%d%dim
-                ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
-                call batch_get_state(st%group%psib(ib, ik), ii, der%mesh%np, psi(:, idim))
-                call batch_get_state(commpsib(idir), ii, der%mesh%np, hrpsi(:, idim))
-              end do
-              
-              ww = st%d%kweights(ik)*st%occ(ist, ik) 
-              if(st%d%ispin /= SPINORS) then
-                !$omp parallel do
-                do ip = 1, der%mesh%np
-                  current_kpt(ip, idir, ik) = &
-                    current_kpt(ip, idir, ik) + ww*aimag(conjg(psi(ip, 1))*hrpsi(ip, 1))
-                end do
-                !$omp end parallel do
-              else
-                !$omp parallel do private(c_tmp)
-                do ip = 1, der%mesh%np
-                  current(ip, idir, 1) = current(ip, idir, 1) + &
-                    ww*aimag(conjg(psi(ip, 1))*hrpsi(ip, 1))
-                  current(ip, idir, 2) = current(ip, idir, 2) + &
-                    ww*aimag(conjg(psi(ip, 2))*hrpsi(ip, 2))
-                  c_tmp = conjg(psi(ip, 1))*hrpsi(ip, 2) - psi(ip, 2)*conjg(hrpsi(ip, 1))
-                  current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
-                  current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
-                end do
-                !$omp end parallel do
-              end if            
- 
-
- 
-            end do
-
-            call batch_end(commpsib(idir))
-
-          end do
-
-          call batch_end(epsib)
-          call batch_unpack(st%group%psib(ib, ik), copy = .false.)
-
-        end do
-      end do
-    
     case(CURRENT_HAMILTONIAN)
 
       do ik = st%d%kpt%start, st%d%kpt%end
@@ -263,7 +174,7 @@ contains
 
             call batch_mul(der%mesh%np, der%mesh%x(:, idir), hpsib, rhpsib)
             call batch_mul(der%mesh%np_part, der%mesh%x(:, idir), st%group%psib(ib, ik), rpsib)
-          
+
             call zhamiltonian_apply_batch(hm, der, rpsib, hrpsib, ik, set_bc = .false.)
 
             do ist = states_block_min(st, ib), states_block_max(st, ib)
@@ -292,19 +203,19 @@ contains
                   current(ip, idir, 2) = current(ip, idir, 2) + &
                     ww*aimag(conjg(psi(ip, 2))*hrpsi(ip, 2) - conjg(psi(ip, 2))*rhpsi(ip, 2))
                   c_tmp = conjg(psi(ip, 1))*hrpsi(ip, 2) - conjg(psi(ip, 1))*rhpsi(ip, 2) &
-                         -psi(ip, 2)*conjg(hrpsi(ip, 1)) - psi(ip, 2)*conjg(rhpsi(ip, 1))
+                    -psi(ip, 2)*conjg(hrpsi(ip, 1)) - psi(ip, 2)*conjg(rhpsi(ip, 1))
                   current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
                   current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
                 end do
                 !$omp end parallel do
               end if
-  
+
             end do
-            
+
           end do
 
           call batch_unpack(st%group%psib(ib, ik), copy = .false.)
-          
+
           call batch_end(hpsib)
           call batch_end(rhpsib)
           call batch_end(rpsib)
@@ -312,86 +223,171 @@ contains
 
         end do
       end do
-    
+
     case(CURRENT_GRADIENT, CURRENT_GRADIENT_CORR)
 
-      do ik = st%d%kpt%start, st%d%kpt%end
-        ispin = states_dim_get_spin_index(st%d, ik)
-        do ist = st%st_start, st%st_end
-          
-          call states_get_state(st, der%mesh, ist, ik, psi)
-          
-          do idim = 1, st%d%dim
-            call boundaries_set(der%boundaries, psi(:, idim))
-          end do
+      if(this%method == CURRENT_GRADIENT_CORR .and. .not. hm%family_is_mgga_with_exc &
+        .and. hm%lda_u_level == DFT_U_NONE .and. .not. der%mesh%sb%nonorthogonal) then
 
-          if(associated(hm%hm_base%phase)) then 
-            call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
-          end if
+        ! we can use the packed version
+        
+        do ik = st%d%kpt%start, st%d%kpt%end
+          ispin = states_dim_get_spin_index(st%d, ik)
+          do ib = st%group%block_start, st%group%block_end
 
-          do idim = 1, st%d%dim
-            call zderivatives_grad(der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
-          end do
-          
-          if(this%method == CURRENT_GRADIENT_CORR) then
-            !A nonlocal contribution from the MGGA potential must be included
-            !This must be done first, as this is like a position-dependent mass 
-            if(hm%family_is_mgga_with_exc) then
-              do idim = 1, st%d%dim
-                do idir = 1, der%mesh%sb%dim
+            call batch_pack(st%group%psib(ib, ik), copy = .true.)
+            call batch_copy(st%group%psib(ib, ik), epsib)
+            call boundaries_set(der%boundaries, st%group%psib(ib, ik))
+
+            if(associated(hm%hm_base%phase)) then
+              call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np_part, ik, &
+                conjugate = .false., psib = epsib, src = st%group%psib(ib, ik))
+            else
+              call batch_copy_data(der%mesh%np_part, st%group%psib(ib, ik), epsib)
+            end if
+
+            !The call to individual derivatives_perfom routines returns the derivatives along
+            !the primitive axis in case of non-orthogonal cells, whereas the code expects derivatives
+            !along the Cartesian axis.
+            ASSERT(.not.der%mesh%sb%nonorthogonal)
+            do idir = 1, der%mesh%sb%dim
+              call batch_copy(st%group%psib(ib, ik), commpsib(idir))
+              call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
+            end do
+
+            call zhamiltonian_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, ik, epsib, commpsib)
+
+            do idir = 1, der%mesh%sb%dim
+
+              if(associated(hm%hm_base%phase)) then
+                call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np_part, ik, conjugate = .true., psib = commpsib(idir))
+              end if
+
+              do ist = states_block_min(st, ib), states_block_max(st, ib)
+
+                do idim = 1, st%d%dim
+                  ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
+                  call batch_get_state(st%group%psib(ib, ik), ii, der%mesh%np, psi(:, idim))
+                  call batch_get_state(commpsib(idir), ii, der%mesh%np, hrpsi(:, idim))
+                end do
+
+                ww = st%d%kweights(ik)*st%occ(ist, ik) 
+                if(st%d%ispin /= SPINORS) then
                   !$omp parallel do
                   do ip = 1, der%mesh%np
-                    gpsi(ip, idir, idim) = (M_ONE+CNST(2.0)*hm%vtau(ip,ispin))*gpsi(ip, idir, idim)
+                    current_kpt(ip, idir, ik) = &
+                      current_kpt(ip, idir, ik) + ww*aimag(conjg(psi(ip, 1))*hrpsi(ip, 1))
                   end do
                   !$omp end parallel do
-                end do
-              end do 
-            end if
-           
-            !A nonlocal contribution from the pseudopotential must be included
-            call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, st%d%dim, ik, psi, gpsi)                 
-            !A nonlocal contribution from the scissor must be included
-            if(hm%scissor%apply) then
-              call scissor_commute_r(hm%scissor, der%mesh, ik, psi, gpsi)
-            end if
-            
-            if(hm%lda_u_level /= DFT_U_NONE) then
-              call zlda_u_commute_r(hm%lda_u, der%mesh, st%d, ik, psi, gpsi, &
-                              associated(hm%hm_base%phase))
-            end if
+                else
+                  !$omp parallel do private(c_tmp)
+                  do ip = 1, der%mesh%np
+                    current(ip, idir, 1) = current(ip, idir, 1) + &
+                      ww*aimag(conjg(psi(ip, 1))*hrpsi(ip, 1))
+                    current(ip, idir, 2) = current(ip, idir, 2) + &
+                      ww*aimag(conjg(psi(ip, 2))*hrpsi(ip, 2))
+                    c_tmp = conjg(psi(ip, 1))*hrpsi(ip, 2) - psi(ip, 2)*conjg(hrpsi(ip, 1))
+                    current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
+                    current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
+                  end do
+                  !$omp end parallel do
+                end if
 
-          end if
-
-          ww = st%d%kweights(ik)*st%occ(ist, ik)
-
-          if(st%d%ispin /= SPINORS) then
-            do idir = 1, der%mesh%sb%dim
-              !$omp parallel do
-              do ip = 1, der%mesh%np
-                current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) + &
-                  ww*aimag(conjg(psi(ip, 1))*gpsi(ip, idir, 1))
               end do
-              !$omp end parallel do
-            end do
-          else
-            do idir = 1, der%mesh%sb%dim
-              !$omp parallel do  private(c_tmp)
-              do ip = 1, der%mesh%np
-                current(ip, idir, 1) = current(ip, idir, 1) + &
-                  ww*aimag(conjg(psi(ip, 1))*gpsi(ip, idir, 1))
-                current(ip, idir, 2) = current(ip, idir, 2) + &
-                  ww*aimag(conjg(psi(ip, 2))*gpsi(ip, idir, 2))
-                c_tmp = conjg(psi(ip, 1))*gpsi(ip, idir, 2) - psi(ip, 2)*conjg(gpsi(ip, idir, 1))
-                current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
-                current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
-              end do
-              !$omp end parallel do
-            end do
-          end if
 
+              call batch_end(commpsib(idir))
+
+            end do
+
+            call batch_end(epsib)
+            call batch_unpack(st%group%psib(ib, ik), copy = .false.)
+
+          end do
         end do
-      end do
-      
+
+      else
+
+        ! use the slow non-packed version
+        
+        do ik = st%d%kpt%start, st%d%kpt%end
+          ispin = states_dim_get_spin_index(st%d, ik)
+          do ist = st%st_start, st%st_end
+
+            call states_get_state(st, der%mesh, ist, ik, psi)
+
+            do idim = 1, st%d%dim
+              call boundaries_set(der%boundaries, psi(:, idim))
+            end do
+
+            if(associated(hm%hm_base%phase)) then 
+              call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
+            end if
+
+            do idim = 1, st%d%dim
+              call zderivatives_grad(der, psi(:, idim), gpsi(:, :, idim), set_bc = .false.)
+            end do
+
+            if(this%method == CURRENT_GRADIENT_CORR) then
+              !A nonlocal contribution from the MGGA potential must be included
+              !This must be done first, as this is like a position-dependent mass 
+              if(hm%family_is_mgga_with_exc) then
+                do idim = 1, st%d%dim
+                  do idir = 1, der%mesh%sb%dim
+                    !$omp parallel do
+                    do ip = 1, der%mesh%np
+                      gpsi(ip, idir, idim) = (M_ONE+CNST(2.0)*hm%vtau(ip,ispin))*gpsi(ip, idir, idim)
+                    end do
+                    !$omp end parallel do
+                  end do
+                end do
+              end if
+
+              !A nonlocal contribution from the pseudopotential must be included
+              call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, st%d%dim, ik, psi, gpsi)                 
+              !A nonlocal contribution from the scissor must be included
+              if(hm%scissor%apply) then
+                call scissor_commute_r(hm%scissor, der%mesh, ik, psi, gpsi)
+              end if
+
+              if(hm%lda_u_level /= DFT_U_NONE) then
+                call zlda_u_commute_r(hm%lda_u, der%mesh, st%d, ik, psi, gpsi, &
+                  associated(hm%hm_base%phase))
+              end if
+
+            end if
+
+            ww = st%d%kweights(ik)*st%occ(ist, ik)
+
+            if(st%d%ispin /= SPINORS) then
+              do idir = 1, der%mesh%sb%dim
+                !$omp parallel do
+                do ip = 1, der%mesh%np
+                  current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) + &
+                    ww*aimag(conjg(psi(ip, 1))*gpsi(ip, idir, 1))
+                end do
+                !$omp end parallel do
+              end do
+            else
+              do idir = 1, der%mesh%sb%dim
+                !$omp parallel do  private(c_tmp)
+                do ip = 1, der%mesh%np
+                  current(ip, idir, 1) = current(ip, idir, 1) + &
+                    ww*aimag(conjg(psi(ip, 1))*gpsi(ip, idir, 1))
+                  current(ip, idir, 2) = current(ip, idir, 2) + &
+                    ww*aimag(conjg(psi(ip, 2))*gpsi(ip, idir, 2))
+                  c_tmp = conjg(psi(ip, 1))*gpsi(ip, idir, 2) - psi(ip, 2)*conjg(gpsi(ip, idir, 1))
+                  current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
+                  current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
+                end do
+                !$omp end parallel do
+              end do
+            end if
+
+          end do
+        end do
+
+      end if
+
     case default
 
       ASSERT(.false.)
@@ -409,14 +405,14 @@ contains
           end do
           !$omp end parallel do
         end do
-      end do 
+      end do
     end if
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
       ! TODO: this could take dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) to reduce the amount of data copied
       call comm_allreduce(st%st_kpt_mpi_grp%comm, current) 
     end if
-    
+
     if(st%symmetrize_density) then
       SAFE_ALLOCATE(symmcurrent(1:der%mesh%np, 1:der%mesh%sb%dim))
       call symmetrizer_init(symmetrizer, der%mesh)

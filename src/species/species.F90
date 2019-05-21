@@ -237,11 +237,11 @@ contains
     !%Section System::Species
     !%Description
     !% (Experimental) This enables a new automatic method for
-    !% determining the best parameters for the pseudopotential
+    !% determining the grid parameters for the pseudopotential
     !% (spacing and radius). For the moment, only the spacing can be
     !% adjusted for a few pseudopotentials.
     !%
-    !% This does not affect Octopus fixed parameters for the standard
+    !% This does not affect Octopus fixed default parameters for the standard
     !% pseudopotential set.
     !%End
     call parse_variable('PseudopotentialAutomaticParameters', .false., automatic)
@@ -253,10 +253,12 @@ contains
     !%Default 0.005
     !%Section System::Species
     !%Description
-    !% For some pseudopotentials, Octopus can select the convergence
-    !% parameters (spacing and radius) automatically so that the
-    !% discretization error is below a certain threshold. This
-    !% variable controls the value of that threshold.
+    !% For some pseudopotentials, Octopus can select the grid
+    !% spacing automatically so that the discretization error
+    !% when calculating the total energy is below a certain
+    !% threshold. This variable controls the value of that threshold.
+    !% Note that other quantities of interest might require a
+    !% different spacing to be considered converged within a similar threshold.
     !%End
     call parse_variable('PseudopotentialEnergyTolerance', CNST(0.005), energy_tolerance)
     
