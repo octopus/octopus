@@ -189,9 +189,9 @@ contains
   !-------------------------------------------------------------------------------------------------------
   !> Initializes the PCM calculation: reads the VdW molecular cavity and generates the PCM response matrix.
   subroutine pcm_init(pcm, geo, grid, qtot, val_charge, external_potentials_present, kick_present)
+    type(pcm_t)     , intent(out) :: pcm
     type(geometry_t), intent(in)  :: geo
     type(grid_t)    , intent(in)  :: grid
-    type(pcm_t)     , intent(out) :: pcm
     FLOAT           , intent(in)  :: qtot
     FLOAT           , intent(in)  :: val_charge
     logical         , intent(in)  :: external_potentials_present
