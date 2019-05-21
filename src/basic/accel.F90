@@ -139,7 +139,7 @@ module accel_oct_m
     integer(SIZEOF_SIZE_T) :: size
     type(type_t)           :: type
     integer                :: flags
-    logical                :: allocated = .false.
+    logical                :: allocated
   end type accel_mem_t
 
   type accel_kernel_t
