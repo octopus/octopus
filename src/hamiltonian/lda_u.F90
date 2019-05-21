@@ -272,7 +272,9 @@ contains
     !%End
     call parse_variable('ACBN0RotationallyInvariant', st%d%ispin /= SPINORS, this%rot_inv)
     call messages_print_var_value(stdout, 'ACBN0RotationallyInvariant', this%rot_inv)
-    if(st%d%ispin == SPINORS ) call messages_not_implemented("Rotationally invariant ACBN0 with spinors.")
+    if(this%rot_inv .and. st%d%ispin == SPINORS ) then
+      call messages_not_implemented("Rotationally invariant ACBN0 with spinors.")
+    end if
 
   end if
 

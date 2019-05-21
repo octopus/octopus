@@ -144,7 +144,7 @@ module pcm_eom_oct_m
       message(1) = "pcm_charges_propagation: Number of tesserae do not coincide with size of PCM charges array."
       call messages_fatal(1)     
     endif 
-    allocate(cts_act(nts_act))
+    SAFE_ALLOCATE(cts_act(nts_act))
     cts_act=this_cts_act
     which_eps=this_eps
     if (which_eps=='deb' .and. (.not.(present(this_deb)))) then
@@ -551,8 +551,14 @@ module pcm_eom_oct_m
     SAFE_DEALLOCATE_A(matqv_lf)
    endif
    if( allocated(matqq) ) then
-    SAFE_DEALLOCATE_A(matqv)
+    SAFE_DEALLOCATE_A(matqq)
    endif
+
+   SAFE_DEALLOCATE_A(pot_tp)
+
+   SAFE_DEALLOCATE_A(cts_act)
+
+   call deallocate_TS_matrix
 
    POP_SUB(pcm_eom_end)
   end subroutine pcm_eom_end

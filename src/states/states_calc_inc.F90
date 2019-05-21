@@ -997,6 +997,8 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
 
   dim = st1%d%dim
 
+  aa (:,:,:) = R_TOTYPE(M_ZERO)
+
   SAFE_ALLOCATE(psi1(1:mesh%np, 1:st1%d%dim))
   SAFE_ALLOCATE(psi2(1:mesh%np, 1:st1%d%dim))
 
@@ -1074,6 +1076,13 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
 
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  aa(:, :, ik))
   end do
+
+#if defined(HAVE_MPI)        
+  if(st1%d%kpt%parallel) then
+    call comm_allreduce(st1%d%kpt%mpi_grp%comm, aa)
+  end if
+#endif
+
 
   SAFE_DEALLOCATE_A(psi1)
   SAFE_DEALLOCATE_A(psi2)    
