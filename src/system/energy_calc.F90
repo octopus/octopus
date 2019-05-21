@@ -30,12 +30,9 @@ module energy_calc_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use hamiltonian_base_oct_m
-  use io_oct_m
-  use lalg_basic_oct_m
   use lda_u_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
   use profiling_oct_m
   use pcm_oct_m
@@ -44,7 +41,6 @@ module energy_calc_oct_m
   use states_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
 
   implicit none
 
@@ -80,8 +76,7 @@ contains
     hm%energy%eigenvalues = states_eigenvalues_sum(st)
 
     evxctau = M_ZERO
-    if((full_ .or. hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) & 
-      .and.(hm%theory_level /= CLASSICAL)) then
+    if(full_ .or. hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
       if(states_are_real(st)) then
 
         tnadd_energy = M_ZERO
@@ -139,12 +134,6 @@ contains
                              + hm%energy%int_e_ext_pcm + hm%energy%int_n_ext_pcm &
         + hm%energy%dft_u -  hm%energy%int_dft_u
 
-    case(CLASSICAL)
-      st%eigenval           = M_ZERO
-      hm%energy%eigenvalues = M_ZERO
-      hm%energy%kinetic     = M_ZERO
-      hm%energy%extern      = hm%ep%eii
-      hm%energy%total       = hm%ep%eii
    end select 
     
     hm%energy%entropy = smear_calc_entropy(st%smear, st%eigenval, st%d%nik, st%nst, st%d%kweights, st%occ)

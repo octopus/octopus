@@ -25,7 +25,6 @@
     use global_oct_m
     use grid_oct_m
     use io_oct_m
-    use math_oct_m
     use messages_oct_m
     use parser_oct_m
     use profiling_oct_m
@@ -36,12 +35,13 @@
     use states_oct_m
     use unit_oct_m
     use unit_system_oct_m
-    use varinfo_oct_m
 
     implicit none
 
     integer :: iunit, ierr, ii, jj, iter, read_iter, ntime, nvel, ivel
-    FLOAT, allocatable :: time(:), velocities(:, :), total_current(:, :), ftcurr(:, :, :), curr(:, :, :), heat_current(:,:), ftheatcurr(:,:,:), heatcurr(:,:,:)
+    FLOAT, allocatable :: time(:), velocities(:, :)
+    FLOAT, allocatable :: total_current(:, :), ftcurr(:, :, :), curr(:, :, :)
+    FLOAT, allocatable :: heat_current(:,:), ftheatcurr(:,:,:), heatcurr(:,:,:)
     type(geometry_t)  :: geo 
     type(space_t)     :: space
     type(simul_box_t) :: sb

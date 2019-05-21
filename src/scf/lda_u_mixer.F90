@@ -25,7 +25,7 @@ module lda_u_mixer_oct_m
   use mix_oct_m
   use profiling_oct_m
   use states_oct_m
-  use types_oct_m  
+  use types_oct_m
  
   implicit none
 
@@ -112,18 +112,12 @@ contains
 
    if(states_are_real(st)) then
      SAFE_ALLOCATE(mixer%dtmp_occ(1:mixer%occsize, 1))
-     call dlda_u_get_occupations(this, mixer%dtmp_occ(1:mixer%occsize, 1))
-     call mixfield_set_vin(mixer%mixfield_occ, mixer%dtmp_occ)
    else
      SAFE_ALLOCATE(mixer%ztmp_occ(1:mixer%occsize, 1))
-     call zlda_u_get_occupations(this, mixer%ztmp_occ(1:mixer%occsize, 1))
-     call mixfield_set_vin(mixer%mixfield_occ, mixer%ztmp_occ)
    end if
 
    if(this%level == DFT_U_ACBN0) then
      SAFE_ALLOCATE(mixer%tmpU(1:this%norbsets, 1))
-     call lda_u_get_effectiveU(this, mixer%tmpU(1:this%norbsets, 1))
-     call mixfield_set_vin(mixer%mixfield_U, mixer%tmpU)
    end if
 
    POP_SUB(lda_u_mixer_init)

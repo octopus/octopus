@@ -214,11 +214,6 @@ contains
         call messages_write('  or contact the octopus developers for details.')
         call messages_new_line()
         call messages_info()
-
-      else
-
-        
-
       end if
       
       open(unit = iunit_out, file = 'exec/messages', action = 'write')
@@ -1061,7 +1056,7 @@ contains
       ! write to stderr if we are node 0
       call pop_sub_write(stderr)
     end if
-    
+
     no_sub_stack = no_sub_stack - 1
 
   contains

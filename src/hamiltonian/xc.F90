@@ -21,12 +21,8 @@
 module xc_oct_m
   use distributed_oct_m
   use comm_oct_m
-  use cube_oct_m
-  use cube_function_oct_m
   use derivatives_oct_m
   use global_oct_m
-  use grid_oct_m
-  use index_oct_m
   use io_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
@@ -36,15 +32,12 @@ module xc_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use par_vec_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use states_oct_m
   use states_dim_oct_m
-  use symmetrizer_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
   use XC_F90(lib_m)
   use xc_functl_oct_m
 
@@ -235,12 +228,12 @@ contains
       !%Description
       !% Set to a non-zero value to add a long-range correction for solids to the kernel.
       !% This is the <math>\alpha</math> parameter defined in S. Botti <i>et al.</i>, <i>Phys. Rev. B</i>
-      !% 69, 155112 (2004). The <math>\Gamma = \Gamma' = 0</math> term <math>-\alpha/q^2</math> is taken 
+      !% 69, 155112 (2004). The <math>\Gamma = \Gamma` = 0</math> term <math>-\alpha/q^2</math> is taken 
       !% into account by introducing an additional pole to the polarizability (see R. Stubner  
       !% <i>et al.</i>, <i>Phys. Rev. B</i> 70, 245119 (2004)). The rest of the terms are included by  
       !% multiplying the Hartree term by <math>1 - \alpha / 4 \pi</math>. The use of non-zero 
       !% <math>\alpha</math> in combination with <tt>HamiltonianVariation</tt> = <tt>V_ext_only</tt>  
-      !% corresponds to account of only the <math>\Gamma = \Gamma' = 0</math> term. 
+      !% corresponds to account of only the <math>\Gamma = \Gamma` = 0</math> term. 
       !% Applicable only to isotropic systems. (Experimental)
       !%End
 
@@ -313,17 +306,16 @@ contains
 
       end if
 
-      !%Variable XCParallel
+      !%Variable ParallelXC
       !%Type logical
-      !%Default false
+      !%Default true
       !%Section Execution::Parallelization
       !%Description
-      !% (Experimental) When enabled, additional parallelization
+      !% When enabled, additional parallelization
       !% will be used for the calculation of the XC functional.
       !%End
-      call parse_variable('XCParallel', .false., xcs%parallel)
-
-      if(xcs%parallel) call messages_experimental('XCParallel')
+      call messages_obsolete_variable('XCParallel', 'ParallelXC')
+      call parse_variable('ParallelXC', .true., xcs%parallel)
       
       POP_SUB(xc_init.parse)
     end subroutine parse

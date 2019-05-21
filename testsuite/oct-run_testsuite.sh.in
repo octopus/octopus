@@ -34,6 +34,7 @@ skipped_tests=0
 passed_tests=0
 total_tests=0
 failure_report=""
+failed_list=""
 failed_logs=""
 NUM=0
 
@@ -86,10 +87,13 @@ function queue {
 function inqueue {
     if [ $OCT_TEST_NJOBS -gt 1 ]
     then
-        printf "In execution: $OUTLIST\n\n"
-    else
-        printf "\n"
+        printf "In execution: $OUTLIST\n"
     fi
+    if [ $failed_tests -gt 0 ]
+    then
+        printf "\nFAILED TESTS: $failed_list\n"
+    fi
+    printf "\n"
 }
 
 
@@ -147,7 +151,8 @@ function checkqueue {
     elif [ ${failures} == "skipped" ]; then
 	skipped_tests=$((skipped_tests + 1))
     else
-	echo "Failed test: "$test_name
+	echo "Test failed: "$test_name
+	failed_list="$failed_list "$test_name
 	failed_logs="$failed_logs "$logfile
 	failed_tests=$((failed_tests + 1))
 	name_length=`echo -n $test_name | wc -m`

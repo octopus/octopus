@@ -15,3 +15,6 @@ Spacing = 0.32*angstrom
 Radius = 6.0*angstrom
 
 SpinComponents = spinors
+
+ConvRelDens = 1e-8
+EigensolverTolerance = 1e-9

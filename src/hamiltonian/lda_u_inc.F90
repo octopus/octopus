@@ -407,7 +407,7 @@ subroutine X(compute_dftu_energy)(this, energy, st)
         end do
 
         do im = 1, this%orbsets(ios)%norbs
-          energy = energy + M_HALF*this%orbsets(ios)%Ueff*nsigma*(M_ONE-nsigma)/this%orbsets(ios)%norbs
+          energy = energy + M_HALF*this%orbsets(ios)%Ueff*nsigma*(M_ONE-nsigma/this%orbsets(ios)%norbs)
           energy = energy - M_HALF*this%orbsets(ios)%Ueff*R_REAL(this%X(n)(im, im, ispin, ios))
         end do
       end do
@@ -540,7 +540,6 @@ subroutine X(compute_ACBNO_U)(this, ios)
                             +R_REAL(this%X(n)(im,im,4,ios)*this%X(n)(imp,imp,3,ios))
         end if
       end if
-      denomJ = denomJ + tmpJ
 
       ! We compute the term
       ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
@@ -554,11 +553,24 @@ subroutine X(compute_ACBNO_U)(this, ios)
 
       if(this%nspins>this%spin_channels) then !Spinors
         if(im == imp) then
-          tmpU = tmpU - R_REAL(this%X(n)(im,im,3,ios)*this%X(n)(im,im,4,ios)) &
-                            +R_REAL(this%X(n)(im,im,4,ios)*this%X(n)(im,im,3,ios))
+          tmpU = tmpU -(R_REAL(this%X(n)(im,im,3,ios)*this%X(n)(im,im,4,ios)) &
+                       +R_REAL(this%X(n)(im,im,4,ios)*this%X(n)(im,im,3,ios)))
         end if
       end if 
 
+      if(this%rot_inv) then
+        !Rotationally invariance term
+        !sum_{alpha} sum_{m,mp/=m} n^alpha_{mmp}n^alpha_{mpm}
+        if(imp/=im) then
+          do ispin1 = 1, this%spin_channels
+            tmpJ = tmpJ + R_REAL(this%X(n)(im,imp,ispin1,ios)*this%X(n)(imp,im,ispin1,ios))
+            tmpU = tmpU + R_REAL(this%X(n)(im,imp,ispin1,ios)*this%X(n)(imp,im,ispin1,ios))
+          end do
+          ASSERT(this%nspins==this%spin_channels)!Spinors not yet implemented
+        end if
+      end if
+
+      denomJ = denomJ + tmpJ
       denomU = denomU + tmpU
 
     end do
@@ -583,8 +595,8 @@ subroutine X(compute_ACBNO_U)(this, ios)
     end do
 
     if(this%nspins>this%spin_channels) then !Spinors
-      denomU = denomU + R_REAL(this%X(n)(1,1,3,ios)*this%X(n)(1,1,4,ios)) & 
-                            +R_REAL(this%X(n)(1,1,4,ios)*this%X(n)(1,1,3,ios))
+      denomU = denomU - (R_REAL(this%X(n)(1,1,3,ios)*this%X(n)(1,1,4,ios)) & 
+                        +R_REAL(this%X(n)(1,1,4,ios)*this%X(n)(1,1,3,ios)))
     end if
 
     ! We have to be careful in the case of hydrogen atom for instance 
@@ -649,6 +661,15 @@ subroutine X(compute_ACBNO_U_restricted)(this)
         ! We compute the term
         ! sum_{m,mp} N_{m}N_{mp}
         denomU = denomU + R_REAL(this%X(n)(im,im,1,ios))*R_REAL(this%X(n)(imp,imp,1,ios))
+
+        if(this%rot_inv) then
+          !Rotationally invariance term
+          !sum_{m,mp/=m} n^alpha_{mmp}n^alpha_{mpm}
+          if(imp/=im) then
+            denomJ = denomJ + R_REAL(this%X(n)(im,imp,1,ios)*this%X(n)(imp,im,1,ios))
+            denomU = denomU + R_REAL(this%X(n)(im,imp,1,ios)*this%X(n)(imp,im,1,ios))
+          end if
+        end if
       end do
       end do
 

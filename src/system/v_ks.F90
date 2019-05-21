@@ -25,15 +25,13 @@ module v_ks_oct_m
   use derivatives_oct_m
   use energy_oct_m
   use energy_calc_oct_m
-  use epot_oct_m 
+  use epot_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use hamiltonian_base_oct_m
   use kick_oct_m
-  use index_oct_m
-  use io_function_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
   use libvdwxc_oct_m
@@ -47,13 +45,12 @@ module v_ks_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use pseudo_oct_m
-  use pcm_oct_m 
+  use pcm_oct_m
   use simul_box_oct_m
   use species_oct_m
   use states_oct_m
   use states_dim_oct_m
   use states_parallel_oct_m
-  use unit_system_oct_m
   use varinfo_oct_m
   use vdw_ts_oct_m
   use xc_oct_m
@@ -182,9 +179,6 @@ contains
     !% This is the default density-functional theory scheme. Note that you can also use 
     !% hybrids in this scheme, but they will be handled the "DFT" way, <i>i.e.</i>, solving the
     !% OEP equation.
-    !%Option classical 5
-    !% (Experimental) Only the classical interaction between ions is
-    !% considered. This is mainly for testing.
     !%Option rdmft 7 
     !% (Experimental) Reduced Density Matrix functional theory.
     !%End
@@ -321,7 +315,6 @@ contains
     call messages_obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
     call messages_obsolete_variable('HartreeFock', 'TheoryLevel')
 
-    if(ks%theory_level == CLASSICAL) call messages_experimental('Classical theory level')
     if(ks%theory_level == RDMFT ) call messages_experimental('RDMFT theory level')
     
     select case(ks%theory_level)
@@ -374,9 +367,14 @@ contains
 
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) call xc_oep_init(ks%oep, ks%xc_family, gr, st)
 
-      if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) call xc_ks_inversion_init(ks%ks_inversion, gr, geo, st)
+      if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) call xc_ks_inversion_init(ks%ks_inversion, gr, geo, st, ks%xc)
 
     end select
+
+    if (st%d%ispin == SPINORS) then
+      if(bitand(ks%xc_family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA) /= 0) call messages_not_implemented("GGA with spinors")
+      if(bitand(ks%xc_family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) call messages_not_implemented("MGGA with spinors")
+    end if
 
     ks%frozen_hxc = .false.
 
@@ -398,7 +396,7 @@ contains
     ks%calc%calculating = .false.
 
     !The value of ks%calculate_current is set to false or true by Output    
-    call current_init(ks%current_calculator)
+    call current_init(ks%current_calculator, gr%sb)
     
     !%Variable VDWCorrection
     !%Type integer
@@ -835,7 +833,7 @@ contains
       type(hamiltonian_t), intent(in)    :: hm
 
       integer        :: ip, ispin, ist, ik
-      FLOAT, pointer :: vxc_sic(:,:),  Imvxc_sic(:, :), vh_sic(:), rho(:, :), Imrho(:, :), qsp(:)
+      FLOAT, pointer :: vxc_sic(:,:),  vh_sic(:), rho(:, :), qsp(:)
       
       PUSH_SUB(add_adsic)
       
@@ -898,7 +896,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine v_a_xc(hm)
-      type(hamiltonian_t),  intent(in) :: hm 
+      type(hamiltonian_t),  intent(in) :: hm
 
       type(profile_t), save :: prof
       FLOAT :: factor
@@ -1199,18 +1197,18 @@ contains
     type(v_ks_t),                intent(inout) :: ks
     type(hamiltonian_t), target, intent(inout) :: hm
 
-    FLOAT, pointer :: pot(:), aux(:)
+    FLOAT, pointer :: pot(:)
 
     FLOAT, allocatable :: potx(:)
     CMPLX, allocatable :: kick(:)
     FLOAT, allocatable :: kick_real(:)
     integer :: ii
 
-    integer :: asc_unit_test
-
     FLOAT :: dt
 
     logical :: kick_time
+
+    logical :: laser_present, kick_present
 
     PUSH_SUB(v_ks_hartree)
 
@@ -1239,13 +1237,14 @@ contains
       if (hm%pcm%solute) &
         call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_h = pot, time_present = ks%calc%time_present)
 
-      dt=hm%current_time/hm%pcm%iter
-
       !> Local field effects due to the applied electrostatic potential representing the laser and the kick (if they were).
       !! For the laser, the latter is only valid in the long-wavelength limit.
       !! Static potentials are included in subroutine hamiltonian_epot_generate (module hamiltonian).
+      !! The sign convention for typical potentials and kick are different...
       if( hm%pcm%localf .and. ks%calc%time_present ) then
-        if ( associated(hm%ep%lasers) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< external potential and kick
+        laser_present = epot_have_lasers( hm%ep )
+        kick_present  = epot_have_kick(   hm%ep )
+        if ( laser_present .and. kick_present ) then !< external potential and kick
           SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
           SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part)) 
           SAFE_ALLOCATE(kick_real(1:ks%gr%mesh%np_part))
@@ -1255,18 +1254,18 @@ contains
             call laser_potential(hm%ep%lasers(ii), ks%gr%mesh, potx, ks%calc%time)
           end do
           kick_real = M_ZERO
-          kick_time =((hm%pcm%iter-1)*dt <= hm%ep%kick%time) .and. (hm%pcm%iter*dt > hm%ep%kick%time)
-          if ( hm%pcm%iter > 1 .and. kick_time ) then 
+          kick_time = ((hm%pcm%iter-1)*hm%pcm%dt <= hm%ep%kick%time) .and. (hm%pcm%iter*hm%pcm%dt > hm%ep%kick%time)
+          if ( kick_time ) then
             call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.)
             kick = hm%ep%kick%delta_strength * kick
             kick_real = DREAL(kick)
           end if
-          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = kick_real, time_present = ks%calc%time_present, &
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, kick = -kick_real, time_present = ks%calc%time_present, &
                                                                  kick_time = kick_time )
           SAFE_DEALLOCATE_A(potx)
           SAFE_DEALLOCATE_A(kick)
           SAFE_DEALLOCATE_A(kick_real)
-        else if ( associated(hm%ep%lasers) .and. hm%ep%kick%delta_strength == M_ZERO ) then !< just external potential
+        else if ( laser_present .and. .not.kick_present ) then !< just external potential
           SAFE_ALLOCATE(potx(1:ks%gr%mesh%np_part))
           potx = M_ZERO    
           do ii = 1, hm%ep%no_lasers        
@@ -1274,18 +1273,18 @@ contains
           end do
           call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, v_ext = potx, time_present = ks%calc%time_present)
           SAFE_DEALLOCATE_A(potx)
-        else if ( (.not.associated(hm%ep%lasers)) .and. hm%ep%kick%delta_strength /= M_ZERO ) then !< just kick
+        else if ( .not.laser_present .and. kick_present ) then !< just kick
           SAFE_ALLOCATE(kick(1:ks%gr%mesh%np_part))
           SAFE_ALLOCATE(kick_real(1:ks%gr%mesh%np_part))
           kick = M_ZERO
           kick_real = M_ZERO
-          kick_time =((hm%pcm%iter-1)*dt <= hm%ep%kick%time) .and. (hm%pcm%iter*dt > hm%ep%kick%time)
-          if ( hm%pcm%iter > 1 .and. kick_time ) then
+          kick_time =((hm%pcm%iter-1)*hm%pcm%dt <= hm%ep%kick%time) .and. (hm%pcm%iter*hm%pcm%dt > hm%ep%kick%time)
+          if ( kick_time ) then
             call kick_function_get(ks%gr%mesh, hm%ep%kick, kick, to_interpolate = .true.)
             kick = hm%ep%kick%delta_strength * kick
             kick_real = DREAL(kick)
           end if
-          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, kick = kick_real, time_present = ks%calc%time_present, kick_time = kick_time )
+          call pcm_calc_pot_rs(hm%pcm, ks%gr%mesh, kick = -kick_real, time_present = ks%calc%time_present, kick_time = kick_time )
           SAFE_DEALLOCATE_A(kick)
           SAFE_DEALLOCATE_A(kick_real)
         end if

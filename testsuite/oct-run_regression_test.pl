@@ -481,7 +481,7 @@ close(TESTSUITE);
 print "Status: ".$failures." failures\n";
 
 if($opt_r) {
-    use YAML 'Dump';
+    require YAML;
     open(YML, ">>$opt_r" ) or die255("Could not create '$opt_r'.");
     flock(YML, LOCK_EX) or die "Cannot lock file - $opt_r!\n";
     print YML YAML::Dump(\%report);
@@ -514,7 +514,7 @@ sub run_match_new {
     $params =~ s/\\,/_COMMA_/g;
     my @par = split(/,/, $params);
     for ($params=0; $params <= $#par; $params++) {
-        $par[$params] =~ s/_COMMA_/,/g;
+        $par[$params] =~ s/_COMMA_/\\,/g;
         $par[$params] =~ s/^\s*//;
         $par[$params] =~ s/\s*$//;
     }

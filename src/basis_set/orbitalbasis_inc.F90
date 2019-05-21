@@ -382,10 +382,8 @@ subroutine X(orbitalbasis_build_empty)(this, geo, mesh, kpt, ndim, nstates, verb
   os%sphere%mesh => mesh
   nullify(os%spec)
   os%iatom = -1
-  do is = 1, nstates
-    SAFE_ALLOCATE(os%X(orb)(1:mesh%np,1:os%ndim,1:os%norbs))
-    os%X(orb)(:,:,:) = R_TOTYPE(M_ZERO)
-  end do
+  SAFE_ALLOCATE(os%X(orb)(1:mesh%np,1:os%ndim,1:os%norbs))
+  os%X(orb)(:,:,:) = R_TOTYPE(M_ZERO)
 
   this%maxnorbs = nstates
   this%max_np = mesh%np 

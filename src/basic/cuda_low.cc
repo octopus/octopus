@@ -49,7 +49,6 @@ typedef int CUdeviceptr;
 
 #include <fortran_types.h>
 
-
 #define NVRTC_SAFE_CALL(x)                                        \
   do {                                                            \
     nvrtcResult result = x;                                       \
@@ -74,7 +73,7 @@ typedef int CUdeviceptr;
 
 using namespace std;
 
-extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice ** device){
+extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice ** device, fint * device_number, fint * rank){
 
 #ifdef HAVE_CUDA
   CUDA_SAFE_CALL(cuInit(0));
@@ -91,7 +90,8 @@ extern "C" void FC_FUNC_(cuda_init, CUDA_INIT)(CUcontext ** context, CUdevice **
     exit(1);
   }
   
-  CUDA_SAFE_CALL(cuDeviceGet(*device, 0));
+  *device_number = *rank % ndevices;
+  CUDA_SAFE_CALL(cuDeviceGet(*device, *device_number));
 
   CUDA_SAFE_CALL(cuCtxCreate(*context, 0, **device));
 
@@ -155,9 +155,10 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(map<string, CUm
   NVRTC_SAFE_CALL(nvrtcCreateProgram(&prog, source.c_str(), "kernel_include.c", 0, NULL, NULL));
 
   int major = 0, minor = 0;
-  CUDA_SAFE_CALL(cuDeviceComputeCapability(&major, &minor, **device));
+  CUDA_SAFE_CALL(cuDeviceGetAttribute(&major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, **device));
+  CUDA_SAFE_CALL(cuDeviceGetAttribute(&minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, **device));
 
-  char compute_version[2];
+  char compute_version[3];
   sprintf(compute_version, "%.1d%.1d", major, minor);
 
   string all_flags = "--gpu-architecture=compute_" + string(compute_version)
@@ -211,8 +212,29 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(map<string, CUm
 
   *module = new CUmodule;
 
-  CUDA_SAFE_CALL(cuModuleLoadDataEx(*module, ptx, 0, 0, 0));
+  const int num_options = 2;
+  CUjit_option options[num_options];
+  void * option_values[num_options];
 
+  unsigned log_size = 4096;
+  char log_buffer[log_size];
+  
+  options[0] = CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES;
+  option_values[0] = (void *) (long)log_size;
+
+  options[1] = CU_JIT_ERROR_LOG_BUFFER;
+  option_values[1] = (void *) log_buffer;
+  
+  CUresult result = cuModuleLoadDataEx(*module, ptx, num_options, options, option_values);
+
+  if(result != CUDA_SUCCESS){
+    std::cerr << log_buffer << std::endl;
+    const char *msg;
+    cuGetErrorName(result, &msg);
+    std::cerr << "\nerror: cuModuleLoadDataEx failed with error " << msg << '\n';
+    exit(1);
+  }
+      
   delete [] ptx;
 
   (**module_map)[map_descriptor] = *module;
@@ -370,7 +392,7 @@ extern "C" void FC_FUNC_(cuda_launch_kernel, CUDA_LAUNCH_KERNEL)
 #endif
 }
 
-extern "C" void FC_FUNC_(cuda_device_name, CUDA_DEVICE_NAME)(CUdevice ** device, STR_F_TYPE const name STR_ARG1){
+extern "C" void FC_FUNC_(cuda_device_name, CUDA_DEVICE_NAME)(CUdevice ** device, STR_F_TYPE name STR_ARG1){
 #ifdef HAVE_CUDA
   char devicename[200];
   CUDA_SAFE_CALL(cuDeviceGetName(devicename, sizeof(devicename), **device));
@@ -383,7 +405,8 @@ extern "C" void FC_FUNC_(cuda_device_name, CUDA_DEVICE_NAME)(CUdevice ** device,
 extern "C" void FC_FUNC_(cuda_device_capability, CUDA_DEVICE_CAPABILITY)(CUdevice ** device, fint * major, fint * minor){
 #ifdef HAVE_CUDA
   int cmajor = 0, cminor = 0;
-  CUDA_SAFE_CALL(cuDeviceComputeCapability(&cmajor, &cminor, **device));
+  CUDA_SAFE_CALL(cuDeviceGetAttribute(&cmajor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, **device));
+  CUDA_SAFE_CALL(cuDeviceGetAttribute(&cminor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, **device));
   *major = cmajor;
   *minor = cminor;
 #endif

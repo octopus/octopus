@@ -25,17 +25,12 @@ module states_oct_m
   use comm_oct_m
   use batch_oct_m
   use batch_ops_oct_m
-  use blas_oct_m
   use derivatives_oct_m
   use distributed_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hardware_oct_m
-  use io_oct_m
   use kpoints_oct_m
-  use lalg_adv_oct_m
-  use lalg_basic_oct_m
   use loct_oct_m
   use loct_pointer_oct_m
   use math_oct_m
@@ -43,8 +38,7 @@ module states_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use modelmb_particles_oct_m
-  use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
-  use mpi_lib_oct_m
+  use mpi_oct_m
   use multicomm_oct_m
 #ifdef HAVE_OPENMP
   use omp_lib
@@ -60,7 +54,6 @@ module states_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use utils_oct_m
   use varinfo_oct_m
 
   implicit none
@@ -83,7 +76,6 @@ module states_oct_m
     states_generate_random,           &
     states_fermi,                     &
     states_eigenvalues_sum,           &
-    states_spin_channel,              &
     states_calc_quantities,           &
     state_is_local,                   &
     state_kpt_is_local,               &
@@ -97,7 +89,6 @@ module states_oct_m
     states_get_points,                &
     states_pack,                      &
     states_unpack,                    &
-    states_sync,                      &
     states_are_packed,                &
     states_write_info,                &
     states_set_zero,                  &
@@ -1070,10 +1061,10 @@ contains
 
           if (states_are_real(st)) then
             call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-            call dbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
+            call dbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part, mirror = st%d%mirror_states)
           else
             call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-            call zbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part)
+            call zbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part, mirror = st%d%mirror_states)
           end if
           
         end do
@@ -1232,27 +1223,57 @@ contains
     type(multicomm_t), intent(in)    :: mc
 
     integer :: default
+    logical :: defaultl
 
     PUSH_SUB(states_exec_init)
 
     !%Variable StatesPack
     !%Type logical
-    !%Default no
     !%Section Execution::Optimization
     !%Description
-    !% (Experimental) When set to yes, states are stored in packed
-    !% mode, which improves performance considerably. However this
-    !% is not fully implemented and it might give wrong results.
+    !% When set to yes, states are stored in packed mode, which improves
+    !% performance considerably. Not all parts of the code will profit from
+    !% this, but should nevertheless work regardless of how the states are
+    !% stored.
     !%
     !% If OpenCL is used and this variable is set to yes, Octopus
     !% will store the wave-functions in device (GPU) memory. If
     !% there is not enough memory to store all the wave-functions,
     !% execution will stop with an error.
+    !%
     !% See also the related <tt>HamiltonianApplyPacked</tt> variable.
+    !%
+    !% The default is yes except when using OpenCL.
     !%End
 
-    call parse_variable('StatesPack', .false., st%d%pack_states)
-    if(st%d%pack_states) call messages_experimental('StatesPack')
+    defaultl = .true.
+    if(accel_is_enabled()) then
+      defaultl = .false.
+    end if
+    call parse_variable('StatesPack', defaultl, st%d%pack_states)
+
+    call messages_print_var_value(stdout, 'StatesPack', st%d%pack_states)
+
+    !%Variable StatesMirror
+    !%Type logical
+    !%Section Execution::Optimization
+    !%Description
+    !% When this is enabled, Octopus keeps a copy of the states in
+    !% main memory. This speeds up calculations when working with
+    !% GPUs, as the memory does not to be copied back, but consumes
+    !% more main memory.
+    !%
+    !% The default is false, except when acceleration is enabled and
+    !% StatesPack is disabled.
+    !%End
+
+    defaultl = .false.
+    if(accel_is_enabled() .and. .not. st%d%pack_states) then
+      defaultl = .true.
+    end if
+    call parse_variable('StatesMirror', defaultl, st%d%mirror_states)
+
+    call messages_print_var_value(stdout, 'StatesMirror', st%d%mirror_states)
 
     !%Variable StatesOrthogonalization
     !%Type integer
@@ -1261,15 +1282,13 @@ contains
     !% The full orthogonalization method used by some
     !% eigensolvers. The default is <tt>cholesky_serial</tt>, except with state
     !% parallelization, the default is <tt>cholesky_parallel</tt>.
-    !%Option gram_schmidt 1
     !%Option cholesky_serial 1
     !% Cholesky decomposition implemented using
     !% BLAS/LAPACK. Can be used with domain parallelization but not
-    !% state parallelization. (Obsolete synonym: <tt>gram_schmidt</tt>)
-    !%Option par_gram_schmidt 1
+    !% state parallelization.
     !%Option cholesky_parallel 2
     !% Cholesky decomposition implemented using
-    !% ScaLAPACK. Compatible with states parallelization. (Obsolete synonym: <tt>par_gram_schmidt</tt>)
+    !% ScaLAPACK. Compatible with states parallelization.
     !%Option cgs 3
     !% Classical Gram-Schmidt (CGS) orthogonalization.
     !% Can be used with domain parallelization but not state parallelization.
@@ -1346,8 +1365,6 @@ contains
 
     stout%only_userdef_istates = stin%only_userdef_istates
 
-    call loct_pointer_copy(stout%node, stin%node)
-
     if(.not. exclude_wfns_) call loct_pointer_copy(stout%rho, stin%rho)
 
     stout%calc_eigenval = stin%calc_eigenval
@@ -1385,6 +1402,7 @@ contains
     call mpi_grp_copy(stout%mpi_grp, stin%mpi_grp)
     stout%dom_st_kpt_mpi_grp = stin%dom_st_kpt_mpi_grp
     stout%st_kpt_mpi_grp     = stin%st_kpt_mpi_grp
+    call loct_pointer_copy(stout%node, stin%node)
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_copy(stin%dom_st_proc_grid, stout%dom_st_proc_grid)
@@ -1686,19 +1704,6 @@ contains
 
     POP_SUB(states_eigenvalues_sum)
   end function states_eigenvalues_sum
-
-  ! -------------------------------------------------------
-  integer pure function states_spin_channel(ispin, ik, dim)
-    integer, intent(in) :: ispin, ik, dim
-
-    select case(ispin)
-    case(1); states_spin_channel = 1
-    case(2); states_spin_channel = mod(ik+1, 2)+1
-    case(3); states_spin_channel = dim
-    case default; states_spin_channel = -1
-    end select
-
-  end function states_spin_channel
 
 
   ! ---------------------------------------------------------
@@ -2076,7 +2081,8 @@ contains
          ! calculate gradient of the NLCC
          call zderivatives_grad(der, wf_psi(:,1), gwf_psi(:,:,1), set_bc = .false.)
          do is = 1, st%d%spin_channels
-           density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) + gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim,1)
+           density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) + &
+                                                                    gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim,1)
          end do
        end if
 
@@ -2220,7 +2226,11 @@ contains
 
     PUSH_SUB(states_pack)
 
-    ASSERT(.not. st%packed)
+    ! nothing to do, already packed
+    if (st%packed) then
+      POP_SUB(states_pack)
+      return
+    end if
 
     st%packed = .true.
 
@@ -2272,40 +2282,18 @@ contains
 
     PUSH_SUB(states_unpack)
 
-    ASSERT(st%packed)
-
-    st%packed = .false.
-
-    do iqn = st%d%kpt%start, st%d%kpt%end
-      do ib = st%group%block_start, st%group%block_end
-        if(batch_is_packed(st%group%psib(ib, iqn))) call batch_unpack(st%group%psib(ib, iqn), copy)
-      end do
-    end do
-
-    POP_SUB(states_unpack)
-  end subroutine states_unpack
-
-  ! ------------------------------------------------------------
-
-  subroutine states_sync(st)
-    type(states_t),    intent(inout) :: st
-
-    integer :: iqn, ib
-
-    PUSH_SUB(states_sync)
-
-    if(states_are_packed(st)) then
+    if(st%packed) then
+      st%packed = .false.
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call batch_sync(st%group%psib(ib, iqn))
+          if(batch_is_packed(st%group%psib(ib, iqn))) call batch_unpack(st%group%psib(ib, iqn), copy)
         end do
       end do
-
     end if
 
-    POP_SUB(states_sync)
-  end subroutine states_sync
+    POP_SUB(states_unpack)
+  end subroutine states_unpack
 
   ! -----------------------------------------------------------
 

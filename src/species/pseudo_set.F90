@@ -21,8 +21,6 @@
 module pseudo_set_oct_m
   use element_oct_m
   use global_oct_m
-  use messages_oct_m
-  use profiling_oct_m
 
   implicit none
 
@@ -31,6 +29,7 @@ module pseudo_set_oct_m
   public ::                                  &
     pseudo_set_t,                            &
     pseudo_set_init,                         &
+    pseudo_set_nullify,                      &
     pseudo_set_end,                          &
     pseudo_set_has,                          &
     pseudo_set_file_path,                    &
@@ -46,17 +45,13 @@ module pseudo_set_oct_m
 
   interface
     
-    ! -------------------------------------------------
-    
-    subroutine pseudo_set_init(pseudo_set, dirname, ierr)
+    subroutine pseudo_set_nullify(pseudo_set)
       import :: pseudo_set_t
       implicit none
-      
-      type(pseudo_set_t), intent(out)   :: pseudo_set
-      character(len=*),   intent(in)    :: dirname
-      integer,            intent(out)   :: ierr
-    end subroutine pseudo_set_init
 
+      type(pseudo_set_t),   intent(inout) :: pseudo_set
+    end subroutine pseudo_set_nullify
+    
     ! -------------------------------------------------
     
     subroutine pseudo_set_end(pseudo_set)
@@ -90,13 +85,14 @@ module pseudo_set_oct_m
 
     ! -------------------------------------------------
 
-    real(8) function pseudo_set_spacing(pseudo_set, element)
+    real(8) function pseudo_set_spacing(pseudo_set, element, etol)
       use element_oct_m
       import :: pseudo_set_t
       implicit none
       
       type(pseudo_set_t), intent(in)    :: pseudo_set
       type(element_t),    intent(in)    :: element
+      real(8),            intent(in)    :: etol
     end function pseudo_set_spacing
     
     ! -------------------------------------------------
@@ -115,6 +111,37 @@ module pseudo_set_oct_m
 
 contains
 
+  subroutine pseudo_set_init(pseudo_set, dirname, ierr, automatic)
+    type(pseudo_set_t), intent(out)   :: pseudo_set
+    character(len=*),   intent(in)    :: dirname
+    integer,            intent(out)   :: ierr
+    logical, optional,  intent(in)    :: automatic !< use automatic spacing (true by default)
+    
+    interface
+      subroutine pseudo_set_init_low(pseudo_set, dirname, automatic_int, ierr)
+        import :: pseudo_set_t
+        implicit none
+        
+        type(pseudo_set_t), intent(out)   :: pseudo_set
+        character(len=*),   intent(in)    :: dirname
+        integer,            intent(in)    :: automatic_int
+        integer,            intent(out)   :: ierr
+      end subroutine pseudo_set_init_low
+    end interface
+    
+    integer :: auto_int
+
+    auto_int = 1;
+    if(present(automatic)) then
+      if(.not. automatic) auto_int = 0
+    end if
+
+    call pseudo_set_init_low(pseudo_set, dirname, auto_int, ierr)
+    
+  end subroutine pseudo_set_init
+
+  ! -----------------------------------------------------------------------
+  
   logical function pseudo_set_has(pseudo_set, element)
     type(pseudo_set_t), intent(in)    :: pseudo_set
     type(element_t),    intent(in)    :: element

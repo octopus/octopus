@@ -28,25 +28,19 @@ module system_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
-  use io_function_oct_m
   use mesh_oct_m
   use messages_oct_m
   use modelmb_particles_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use output_oct_m
-  use parser_oct_m
-  use pcm_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use space_oct_m
-  use species_oct_m
   use simul_box_oct_m
   use sort_oct_m
   use states_oct_m
   use states_dim_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
   use v_ks_oct_m
 
   implicit none
@@ -103,6 +97,8 @@ contains
     call kpoints_distribute(sys%st%d, sys%mc)
     call states_distribute_nodes(sys%st, sys%mc)
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
+    if(sys%st%symmetrize_density) call mesh_check_symmetries(sys%gr%mesh, sys%gr%sb)
+
     call output_init(sys%outp, sys%gr%sb, sys%st%nst, sys%ks)
     call states_densities_init(sys%st, sys%gr, sys%geo)
     call states_exec_init(sys%st, sys%mc)

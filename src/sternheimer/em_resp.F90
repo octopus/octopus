@@ -30,13 +30,11 @@ module em_resp_oct_m
   use io_oct_m
   use kdotp_oct_m
   use kdotp_calc_oct_m
-  use lalg_basic_oct_m
   use linear_response_oct_m
   use loct_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use mix_oct_m
   use mpi_oct_m
   use parser_oct_m
   use pert_oct_m
@@ -45,7 +43,6 @@ module em_resp_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use sort_oct_m
-  use species_oct_m
   use states_oct_m
   use states_dim_oct_m
   use states_restart_oct_m
@@ -86,9 +83,9 @@ module em_resp_oct_m
     logical :: calc_hyperpol
     CMPLX   :: alpha(MAX_DIM, MAX_DIM, 3)        !< the linear polarizability
     CMPLX   :: alpha_be(MAX_DIM, MAX_DIM, MAX_DIM) !< the magneto-optical response
-    CMPLX   :: alpha0(MAX_DIM, MAX_DIM, 3)        !< the linear polarizability without G = G' = 0 term
+    CMPLX   :: alpha0(MAX_DIM, MAX_DIM, 3)        !< the linear polarizability without G = G` = 0 term
                                                   !! of the LRC kernel
-    CMPLX   :: alpha_be0(MAX_DIM, MAX_DIM, MAX_DIM) !< the magneto-optical response without G = G' = 0
+    CMPLX   :: alpha_be0(MAX_DIM, MAX_DIM, MAX_DIM) !< the magneto-optical response without G = G` = 0
                                                   !! term of the LRC kernel
     CMPLX   :: beta (MAX_DIM, MAX_DIM, MAX_DIM)  !< first hyperpolarizability
 

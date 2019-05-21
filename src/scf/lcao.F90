@@ -22,13 +22,13 @@ module lcao_oct_m
   use atom_oct_m
   use atomic_orbital_oct_m
   use batch_oct_m
+  use blacs_oct_m
   use blacs_proc_grid_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use io_oct_m
-  use io_function_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use lapack_oct_m
@@ -38,10 +38,9 @@ module lcao_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
+  use mpi_oct_m
   use mpi_debug_oct_m
   use parser_oct_m
-  use periodic_copy_oct_m
   use profiling_oct_m
   use ps_oct_m
   use quickrnd_oct_m
@@ -699,11 +698,6 @@ contains
     type(profile_t), save :: prof
 
     PUSH_SUB(lcao_run)
-
-    if(sys%ks%theory_level == CLASSICAL) then
-      POP_SUB(lcao_run) 
-      return
-    end if
 
     if (present(st_start)) then
       ! If we are doing unocc calculation, do not mess with the correct eigenvalues

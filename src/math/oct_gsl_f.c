@@ -24,20 +24,10 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_math.h>
 #include <gsl/gsl_sf.h>
-#include <gsl/gsl_sf_expint.h>
-#include <gsl/gsl_vector.h>
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_permutation.h>
 #include <gsl/gsl_combination.h>
-#include <gsl/gsl_linalg.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
-#include <gsl/gsl_spline.h>
-#include <gsl/gsl_chebyshev.h>
-#include <gsl/gsl_deriv.h>
 
 #include "string_f.h"
 
@@ -49,24 +39,11 @@
 /* ---------------------- Interface to GSL functions ------------------------ */
 
 
-/* Mathematical Functions */
-double FC_FUNC_(oct_asinh, OCT_ASINH)
-     (const double *x)
-{
-  return gsl_asinh(*x);
-}
-
 /* Special Functions */
 double FC_FUNC_(oct_gamma, OCT_GAMMA)
      (const double *x)
 {
   return gsl_sf_gamma(*x);
-}
-
-double FC_FUNC_(oct_hypergeometric, OCT_HYPERGEOMETRIC)
-     (const double *a, const double*b, const double *x)
-{
-  return gsl_sf_hyperg_U(*a, *b, *x);
 }
 
 double FC_FUNC_(oct_incomplete_gamma, OCT_INCOMPLETE_GAMMA)
@@ -155,24 +132,12 @@ double FC_FUNC_(oct_legendre_sphplm, OCT_LEGENDRE_SPHPLM)
   return gsl_sf_legendre_sphPlm(*l, *m, *x);
 }
 
-double FC_FUNC_(oct_sine_integral, OCT_SINE_INTEGRAL)
-     (const double *x)
-{
-  return gsl_sf_Si(*x);
-}
-
 /* generalized Laguerre polynomials */
 double FC_FUNC_(oct_sf_laguerre_n, OCT_SF_LAGUERRE_N)
      (const int *n, const double *a, const double *x)
 {
   return gsl_sf_laguerre_n(*n, *a, *x);
 }
-
-
-/* Vectors and Matrices */
-
-
-/* Permutations */
 
 
 /* Combinations */
@@ -203,8 +168,6 @@ void FC_FUNC_(oct_combination_end, OCT_COMBINATION_END)
 {
   gsl_combination_free (((gsl_combination *)(*c)));
 }
-
-/* Linear Algebra */
 
 
 /* Random Number Generation */
@@ -243,70 +206,4 @@ void FC_FUNC_(oct_strerror, OCT_STRERROR)
 
   c = gsl_strerror(*err);
   TO_F_STR1(c, res);
-}
-
-
-/* Chebyshev Approximations */
-/*
-void FC_FUNC_(oct_chebyshev_coeffs, OCT_CHEBYSHEV_COEFFS)
-     (gsl_complex *coeffs, int *order)
-{
-  int i;
-  double f (double x, void *p){return cos(x);}
-  double g (double x, void *p){return -sin(x);}
-  gsl_cheb_series *cs = gsl_cheb_alloc (*order);
-  gsl_function F;
-  F.function = f;
-  F.params = 0;
-  gsl_cheb_init (cs, &F, -1.0, 1.0);
-  for(i=0; i<=12; i++){GSL_SET_REAL(&coeffs[i], (*cs).c[i]);}
-  F.function = g;
-  F.params = 0;
-  gsl_cheb_init (cs, &F, -1.0, 1.0);
-  for(i=0; i<=12; i++){GSL_SET_IMAG(&coeffs[i], (*cs).c[i]);}    
-}
-*/
-
- /* Numerical Derivatives.
-    The following is an interface to the GSL support for numerical derivatives,
-    in particular the gsl_deriv_central function. It computes a four points
-    approximation to the derivative of a function, supplying an error estimation. */
-
- /* This is a type used to communicate with Fortran; func_nd is the type of the
-    interface to a Fortran subroutine that calculates the value of the function.
-    The first argument is the function argument, whereas the second is the function
-    value. For convenience reasons, it is wrapped around the "param_nd_t" struct. */
-typedef void (*func_nd)(double*, double*);
-typedef struct{
-  func_nd func;
-} param_nd_t;
-
- /* This is the function that is called by the GSL function gsl_deriv_central. It
-    receives as first argument the function argument, and as second argument
-    a pointer to a params data type (a GSL data type), which in this case should
-    be a pointer to a param_nd_t data type, where the address of the Fortran
-    subroutine is. */
-double function_oct_numerical_derivative (double x, void * params)
-{
-  double res;
-  param_nd_t * p;
-
-  p = (param_nd_t *) params;
-  p->func(&x, &res);
-  return res;
-}
- /* This is the function that should be called by Fortran. The interface is defined
-    in loct_math.F90 file. */
-void FC_FUNC_(oct_numerical_derivative, OCT_NUMERICAL_DERIVATIVE)
-     (const double *x, const double *h, double *result, double *abserr, const func_nd f)
-{
-  gsl_function F;
-  param_nd_t p;
-
-  p.func = f;
-  F.function = &function_oct_numerical_derivative;
-  F.params = (void *) &p;
-  /* the GSL headers specify double x, double h */
-  gsl_deriv_central (&F, *x, *h, result, abserr);
-  return;
 }

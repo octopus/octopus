@@ -22,7 +22,6 @@
 !! used when optimal control runs are requested.
 module opt_control_oct_m
   use boundary_op_oct_m
-  use messages_oct_m
   use controlfunction_oct_m
   use exponential_oct_m
   use filter_oct_m
@@ -30,14 +29,14 @@ module opt_control_oct_m
   use global_oct_m
   use grid_oct_m
   use initst_oct_m
+  use iso_c_binding
   use output_oct_m
   use hamiltonian_oct_m
   use io_oct_m
   use lasers_oct_m
   use loct_oct_m
-  use loct_math_oct_m
   use math_oct_m
-  use mesh_oct_m
+  use messages_oct_m
   use minimizer_oct_m
   use opt_control_global_oct_m
   use opt_control_iter_oct_m
@@ -546,6 +545,7 @@ contains
          call messages_info(2)
       end if
 
+      call controlfunction_end(par_)
       SAFE_DEALLOCATE_A(xl)
       SAFE_DEALLOCATE_A(xu)
       SAFE_DEALLOCATE_A(x)

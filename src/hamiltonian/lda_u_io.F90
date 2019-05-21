@@ -19,10 +19,8 @@
 
 module lda_u_io_oct_m
   use atomic_orbital_oct_m
-  use comm_oct_m
   use geometry_oct_m
   use global_oct_m
-  use grid_oct_m
   use io_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
@@ -35,7 +33,6 @@ module lda_u_io_oct_m
   use restart_oct_m
   use species_oct_m
   use states_oct_m
-  use types_oct_m  
   use unit_oct_m
   use unit_system_oct_m
  
@@ -145,20 +142,24 @@ contains
          if(this%orbsets(ios)%ndim == 1) then
            if(this%orbsets(ios)%nn /= 0 ) then
              write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                          this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
+                                                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                                                        units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
            else
              write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                  l_notation(this%orbsets(ios)%ll), units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
+                                                    l_notation(this%orbsets(ios)%ll), &
+                                                    units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
            end if
         else
           if(this%orbsets(ios)%nn /= 0 ) then
              write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                          this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                          int(M_TWO*(this%orbsets(ios)%jj)), '/2', units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
+                                                             this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                                                             int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                                                             units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
            else
              write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                  l_notation(this%orbsets(ios)%ll), &
-                           int(M_TWO*(this%orbsets(ios)%jj)), '/2', units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
+                                                             l_notation(this%orbsets(ios)%ll), &
+                                                             int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                                                             units_from_atomic(units_out%energy, this%orbsets(ios)%Ubar)
            end if
          end if
        else
@@ -175,20 +176,24 @@ contains
          if(this%orbsets(ios)%ndim == 1) then
            if(this%orbsets(ios)%nn /= 0 ) then
              write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                          this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
+                                                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                                                        units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
            else
              write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                  l_notation(this%orbsets(ios)%ll), units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
+                                                    l_notation(this%orbsets(ios)%ll), &
+                                                    units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
            end if
         else
           if(this%orbsets(ios)%nn /= 0 ) then
              write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                          this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                          int(M_TWO*(this%orbsets(ios)%jj)), '/2', units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
+                                                             this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                                                             int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                                                             units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
            else
              write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                  l_notation(this%orbsets(ios)%ll), &
-                           int(M_TWO*(this%orbsets(ios)%jj)), '/2', units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
+                                                            l_notation(this%orbsets(ios)%ll), &
+                                                            int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                                                            units_from_atomic(units_out%energy, this%orbsets(ios)%Jbar)
            end if
          end if
        else
@@ -228,20 +233,24 @@ contains
          if(this%orbsets(ios)%ndim == 1) then
            if(this%orbsets(ios)%nn /= 0 ) then
              write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                          this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), units_from_atomic(units_out%energy, kanamori(1,ios))
+                                                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                                                        units_from_atomic(units_out%energy, kanamori(1,ios))
            else
              write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                  l_notation(this%orbsets(ios)%ll), units_from_atomic(units_out%energy, kanamori(1,ios))
+                                                    l_notation(this%orbsets(ios)%ll), &
+                                                    units_from_atomic(units_out%energy, kanamori(1,ios))
            end if
         else
           if(this%orbsets(ios)%nn /= 0 ) then
              write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                          this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                          int(M_TWO*(this%orbsets(ios)%jj)), '/2', units_from_atomic(units_out%energy, kanamori(1,ios))
+                                                                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                                                                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                                                                units_from_atomic(units_out%energy, kanamori(1,ios))
            else
              write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                  l_notation(this%orbsets(ios)%ll), &
-                           int(M_TWO*(this%orbsets(ios)%jj)), '/2', units_from_atomic(units_out%energy, kanamori(1,ios))
+                                                            l_notation(this%orbsets(ios)%ll), &
+                                                            int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                                                            units_from_atomic(units_out%energy, kanamori(1,ios))
            end if
          end if
        else
@@ -258,20 +267,24 @@ contains
          if(this%orbsets(ios)%ndim == 1) then
            if(this%orbsets(ios)%nn /= 0 ) then
              write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                          this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), units_from_atomic(units_out%energy, kanamori(2,ios))
+                                                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                                                        units_from_atomic(units_out%energy, kanamori(2,ios))
            else
              write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                  l_notation(this%orbsets(ios)%ll), units_from_atomic(units_out%energy, kanamori(2,ios))
+                                                    l_notation(this%orbsets(ios)%ll), &
+                                                    units_from_atomic(units_out%energy, kanamori(2,ios))
            end if
         else
           if(this%orbsets(ios)%nn /= 0 ) then
              write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                          this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                          int(M_TWO*(this%orbsets(ios)%jj)), '/2', units_from_atomic(units_out%energy, kanamori(2,ios))
+                                                                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                                                                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                                                                units_from_atomic(units_out%energy, kanamori(2,ios))
            else
              write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                  l_notation(this%orbsets(ios)%ll), &
-                           int(M_TWO*(this%orbsets(ios)%jj)), '/2', units_from_atomic(units_out%energy, kanamori(2,ios))
+                                                            l_notation(this%orbsets(ios)%ll), &
+                                                            int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                                                            units_from_atomic(units_out%energy, kanamori(2,ios))
            end if
          end if
        else
@@ -287,20 +300,24 @@ contains
          if(this%orbsets(ios)%ndim == 1) then
            if(this%orbsets(ios)%nn /= 0 ) then
              write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                          this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), units_from_atomic(units_out%energy, kanamori(3,ios))
+                                                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                                                        units_from_atomic(units_out%energy, kanamori(3,ios))
            else
              write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                  l_notation(this%orbsets(ios)%ll), units_from_atomic(units_out%energy, kanamori(3,ios))
+                                                    l_notation(this%orbsets(ios)%ll), &
+                                                    units_from_atomic(units_out%energy, kanamori(3,ios))
            end if
         else
           if(this%orbsets(ios)%nn /= 0 ) then
              write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                          this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                          int(M_TWO*(this%orbsets(ios)%jj)), '/2', units_from_atomic(units_out%energy, kanamori(3,ios))
+                                                                this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                                                                int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                                                                units_from_atomic(units_out%energy, kanamori(3,ios))
            else
              write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                  l_notation(this%orbsets(ios)%ll), &
-                           int(M_TWO*(this%orbsets(ios)%jj)), '/2', units_from_atomic(units_out%energy, kanamori(3,ios))
+                                                            l_notation(this%orbsets(ios)%ll), &
+                                                            int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                                                            units_from_atomic(units_out%energy, kanamori(3,ios))
            end if
          end if
        else
@@ -385,20 +402,24 @@ contains
          if(this%orbsets(ios)%ndim == 1) then 
            if(this%orbsets(ios)%nn /= 0 ) then
              write(iunit,'(i4,a10, 2x, i1, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                          this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)  
+                                                        this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                                                        units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)  
            else
              write(iunit,'(i4,a10, 3x, a1, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                  l_notation(this%orbsets(ios)%ll), units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)
+                                                    l_notation(this%orbsets(ios)%ll), &
+                                                    units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)
            end if
         else
           if(this%orbsets(ios)%nn /= 0 ) then
              write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                          this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
-                          int(M_TWO*(this%orbsets(ios)%jj)), '/2', units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)
+                                                             this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                                                             int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                                                             units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)
            else
              write(iunit,'(i4,a10, 3x, a1, i1, a2, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
-                                  l_notation(this%orbsets(ios)%ll), &
-                           int(M_TWO*(this%orbsets(ios)%jj)), '/2', units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)
+                                                            l_notation(this%orbsets(ios)%ll), &
+                                                            int(M_TWO*(this%orbsets(ios)%jj)), '/2', &
+                                                            units_from_atomic(units_out%energy, this%orbsets(ios)%Ueff)
            end if 
         end if
        else

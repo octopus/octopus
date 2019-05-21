@@ -19,11 +19,12 @@
 #include "global.h"
 
 program octopus
-  use global_oct_m
   use calc_mode_par_oct_m
   use command_line_oct_m
   use io_oct_m
+  use global_oct_m
   use loct_oct_m
+  use messages_oct_m
   use mpi_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -31,7 +32,6 @@ program octopus
   use string_oct_m
   use utils_oct_m
   use varinfo_oct_m
-  use messages_oct_m
 
   implicit none
 
@@ -123,6 +123,13 @@ program octopus
   call profiling_init()
   
   call print_header()
+
+#if !defined(HAVE_LIBXC3) && !defined(HAVE_LIBXC4)
+  call messages_write('You have compiled Octopus with version 2 of Libxc.', new_line = .true.)
+  call messages_write('Support for this version of Libxc has been deprecated and', new_line = .true.)
+  call messages_write('will be removed in the next major release of Octopus.', new_line = .true.)
+  call messages_warning()
+#endif
   
   ! now we really start
   call run(inp_calc_mode)

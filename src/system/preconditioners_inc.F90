@@ -16,7 +16,7 @@
 !! 02110-1301, USA.
 !!
 
-! --------------------------------------------------------- 
+! ---------------------------------------------------------
 subroutine X(preconditioner_apply)(pre, gr, hm, ik, a, b, omega)
   type(preconditioner_t), intent(in)    :: pre
   type(grid_t), target,   intent(in)    :: gr
@@ -25,7 +25,7 @@ subroutine X(preconditioner_apply)(pre, gr, hm, ik, a, b, omega)
   R_TYPE,                 intent(inout) :: a(:,:)
   R_TYPE,                 intent(inout) :: b(:,:)
   R_TYPE,       optional, intent(in)    :: omega
-  
+
   integer :: idim
   R_TYPE  :: omega_
   type(profile_t), save :: preconditioner_prof
@@ -94,21 +94,22 @@ contains
   subroutine multigrid
     FLOAT :: step
 
-    R_TYPE, allocatable :: d0(:), q0(:)
+    R_TYPE, allocatable :: d0(:), q0(:), r0(:)
     R_TYPE, allocatable :: r1(:), d1(:), q1(:), t1(:)
     R_TYPE, allocatable :: r2(:), d2(:), q2(:)
 
     type(mesh_t), pointer :: mesh0, mesh1, mesh2
-    integer :: idim, ip
+    integer :: idim, ip, j
 
     PUSH_SUB(X(preconditioner_apply).multigrid)
-    
+
     mesh0 => gr%mgrid_prec%level(0)%mesh
     mesh1 => gr%mgrid_prec%level(1)%mesh
     mesh2 => gr%mgrid_prec%level(2)%mesh
 
+    SAFE_ALLOCATE(r0(1:mesh0%np_part))
     SAFE_ALLOCATE(d0(1:mesh0%np_part))
-    SAFE_ALLOCATE(q0(1:mesh0%np))
+    SAFE_ALLOCATE(q0(1:mesh0%np_part))
 
     SAFE_ALLOCATE(r1(1:mesh1%np))
     SAFE_ALLOCATE(d1(1:mesh1%np_part))
@@ -123,6 +124,7 @@ contains
 
     do idim = 1, hm%d%dim
 
+      r0 = M_ZERO
       d0 = M_ZERO
       q0 = M_ZERO
       r1 = M_ZERO
@@ -132,62 +134,82 @@ contains
       d2 = M_ZERO
       q2 = M_ZERO
 
+
       ! move to level  1
       call X(multigrid_fine2coarse)(gr%mgrid_prec%level(1)%tt, gr%mgrid_prec%level(0)%der, &
-        gr%mgrid_prec%level(1)%mesh, a(:, idim), r1, FULLWEIGHT)
+        gr%mgrid_prec%level(1)%mesh, a(:,idim), r1, FULLWEIGHT)
+      ! r1 has the opposite sign of r2 to avoid an unnecessary operation in the first step
 
       forall (ip = 1:mesh1%np)
-        r1(ip) = -r1(ip)
-        d1(ip) = CNST(4.0)*step*r1(ip)
+        d1(ip) = -CNST(4.0)*step*r1(ip)
       end forall
+
+      ! pre-smoothing
+      do j = 1, pre%npre
+        call X(derivatives_lapl)(gr%mgrid_prec%level(1)%der, d1, q1)
+
+        forall (ip = 1:mesh1%np)
+          q1(ip) = CNST(-0.5)*q1(ip) + r1(ip)
+          d1(ip) = d1(ip) - CNST(4.0)*step*q1(ip)
+        end forall
+      end do
 
       call X(derivatives_lapl)(gr%mgrid_prec%level(1)%der, d1, q1)
 
-      forall (ip = 1:mesh1%np) q1(ip) = CNST(-0.5)*q1(ip) - r1(ip)
+      call lalg_axpy(mesh1%np, -M_HALF, q1, r1)
+
 
       ! move to level  2
-
       call X(multigrid_fine2coarse)(gr%mgrid_prec%level(2)%tt, gr%mgrid_prec%level(1)%der, &
         gr%mgrid_prec%level(2)%mesh, q1, r2, FULLWEIGHT)
 
       forall (ip = 1:mesh2%np) d2(ip) = CNST(16.0)*step*r2(ip)
 
-      call X(derivatives_lapl)(gr%mgrid_prec%level(2)%der, d2, q2)
+      ! Jacobi steps on coarsest grid
+      do j = 1, pre%nmiddle
+        call X(derivatives_lapl)(gr%mgrid_prec%level(2)%der, d2, q2)
 
-      forall (ip = 1:mesh2%np)
-        q2(ip) = CNST(-0.5)*q2(ip) - r2(ip)
-        d2(ip) = d2(ip) - CNST(16.0)*step*q2(ip)
-      end forall
+        forall (ip = 1:mesh2%np)
+          q2(ip) = CNST(-0.5)*q2(ip) - r2(ip)
+          d2(ip) = d2(ip) - CNST(16.0)*step*q2(ip)
+        end forall
+      end do
 
       ! back to level 1
-
       call X(multigrid_coarse2fine)(gr%mgrid_prec%level(2)%tt, gr%mgrid_prec%level(2)%der, &
         gr%mgrid_prec%level(1)%mesh, d2, t1)
 
-      forall (ip = 1:mesh1%np) 
-        q1(ip) = q1(ip) + t1(ip)
-        d1(ip) = d1(ip) - q1(ip)
+      forall (ip = 1:mesh1%np)
+        d1(ip) = d1(ip) - t1(ip)
       end forall
 
-      call X(derivatives_lapl)(gr%mgrid_prec%level(1)%der, d1, q1)
+      ! post-smoothing
+      do j = 1, pre%npost
+        call X(derivatives_lapl)(gr%mgrid_prec%level(1)%der, d1, q1)
 
-      forall (ip = 1:mesh1%np) 
-        q1(ip) = CNST(-0.5)*q1(ip) - r1(ip)
-        d1(ip) = d1(ip) - CNST(4.0)*step*q1(ip)
-      end forall
+        forall (ip = 1:mesh1%np)
+          q1(ip) = CNST(-0.5)*q1(ip) + r1(ip)
+          d1(ip) = d1(ip) - CNST(4.0)*step*q1(ip)
+        end forall
+      end do
 
       ! and finally back to level 0
-
       call X(multigrid_coarse2fine)(gr%mgrid_prec%level(1)%tt ,gr%mgrid_prec%level(1)%der, &
-        gr%mgrid_prec%level(0)%mesh, d1, d0)
+        gr%mgrid_prec%level(0)%mesh, d1, q0)
 
-      forall (ip = 1:mesh0%np) d0(ip) = -d0(ip)
+      forall (ip = 1:mesh0%np) d0(ip) = - q0(ip)
 
-      call X(derivatives_lapl)(gr%mgrid_prec%level(0)%der, d0, q0)
+      ! post-smoothing
+      do j = 1, pre%npost
+        call X(derivatives_lapl)(gr%mgrid_prec%level(0)%der, d0, q0)
 
-      forall (ip = 1:mesh0%np) 
-        q0(ip) = CNST(-0.5)*q0(ip) - a(ip, idim)
-        d0(ip) = d0(ip) - step*q0(ip)
+        forall (ip = 1:mesh0%np)
+          q0(ip) = CNST(-0.5)*q0(ip) - a(ip, idim)
+          d0(ip) = d0(ip) - step*q0(ip)
+        end forall
+      end do
+
+      forall (ip = 1:mesh0%np)
         b(ip, idim) = -d0(ip)
       end forall
 
@@ -212,6 +234,7 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, ik, aa, bb, omega)
 
   integer :: ii
   type(profile_t), save :: prof
+  R_TYPE, allocatable :: psia(:, :), psib(:, :)
 
   PUSH_SUB(X(preconditioner_apply_batch))
   call profiling_in(prof, 'PRECONDITIONER_BATCH')
@@ -225,15 +248,15 @@ subroutine X(preconditioner_apply_batch)(pre, gr, hm, ik, aa, bb, omega)
     call batch_copy_data(gr%der%mesh%np, aa, bb)
 
   else
-    ASSERT(.not. batch_is_packed(aa))
-    ASSERT(.not. batch_is_packed(bb))
+    SAFE_ALLOCATE(psia(1:gr%mesh%np, 1:hm%d%dim))
+    SAFE_ALLOCATE(psib(1:gr%mesh%np, 1:hm%d%dim))
     do ii = 1, aa%nst
-      if (present(omega)) then
-        call X(preconditioner_apply)(pre, gr, hm, ik, aa%states(ii)%X(psi), bb%states(ii)%X(psi), omega(ii))
-      else
-        call X(preconditioner_apply)(pre, gr, hm, ik, aa%states(ii)%X(psi), bb%states(ii)%X(psi))
-      end if
+      call batch_get_state(aa, ii, gr%mesh%np, psia)
+      call X(preconditioner_apply)(pre, gr, hm, ik, psia, psib, omega(ii))
+      call batch_set_state(bb, ii, gr%mesh%np, psib)
     end do
+    SAFE_DEALLOCATE_A(psia)
+    SAFE_DEALLOCATE_A(psib)
   end if
 
   call profiling_out(prof)

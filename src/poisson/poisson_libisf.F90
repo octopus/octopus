@@ -27,7 +27,6 @@ module poisson_libisf_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use par_vec_oct_m
   use parser_oct_m
   use profiling_oct_m
 
@@ -141,6 +140,7 @@ contains
 
 #ifdef HAVE_LIBISF
     call pkernel_free(this%kernel)
+    call f_lib_finalize()
 #endif
     
     POP_SUB(poisson_libisf_end)

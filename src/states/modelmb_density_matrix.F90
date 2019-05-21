@@ -19,7 +19,6 @@
 #include "global.h"
 
 module modelmb_density_matrix_oct_m
-
   use batch_oct_m
   use comm_oct_m
   use global_oct_m
@@ -28,15 +27,11 @@ module modelmb_density_matrix_oct_m
   use io_oct_m
   use index_oct_m
   use lalg_adv_oct_m
-  use loct_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
-  use modelmb_particles_oct_m
   use modelmb_1part_oct_m
   use mpi_oct_m
-  use mpi_lib_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use profiling_oct_m

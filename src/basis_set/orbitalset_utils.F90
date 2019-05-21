@@ -14,9 +14,6 @@
 !! along with this program; if not, write to the Free Software
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
-!!
-!! $Id$
-
 #include "global.h"
 
 module orbitalset_utils_oct_m
@@ -38,9 +35,7 @@ module orbitalset_utils_oct_m
   use simul_box_oct_m
   use species_oct_m
   use submesh_oct_m
-  use types_oct_m  
   use unit_oct_m
-
  
   implicit none
 
