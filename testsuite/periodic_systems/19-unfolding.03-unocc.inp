@@ -31,8 +31,8 @@ SymmetrizeDensity = yes
 ExtraStates = 4
 ExtraStatesToConverge = 2
 MaximumIter = 100
-ConvRelDens = 1e-7
-EigensolverTolerance = 1e-8
+ConvRelDens = 1e-8
+EigensolverTolerance = 1e-9
 
 FilterPotentials = filter_none
 

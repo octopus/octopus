@@ -85,7 +85,7 @@ Input: 19-unfolding.03-unocc.inp
 MPIUtil: oct-unfold
 Input: 19-unfolding.04-run.inp
 
-Precision : 0.001
-match ; AkE kpt 1 ; LINEFIELD(static/AkE.dat,  157, 3) ; 1.376160941098E+02
-match ; AkE kpt 1 ; LINEFIELD(static/AkE.dat,  158, 3) ; 1.701330028385E+02
-match ; AkE kpt 1 ; LINEFIELD(static/AkE.dat,  159, 3) ; 1.741274245703E+02
+Precision : 0.002
+match ; AkE kpt 1 ; LINEFIELD(static/AkE.dat,  157, 3) ; 1.376223749428E+02
+match ; AkE kpt 1 ; LINEFIELD(static/AkE.dat,  158, 3) ; 1.701407730463E+02
+match ; AkE kpt 1 ; LINEFIELD(static/AkE.dat,  159, 3) ; 1.741353848029E+02
