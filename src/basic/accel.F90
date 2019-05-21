@@ -805,10 +805,10 @@ contains
       call messages_write(volume_hits + volume_misses, fmt = 'f18.1', units = unit_gigabytes, align_left = .true., &
         new_line = .true.)
       call messages_write('    Hit ratio                =')
-      call messages_write(hits/dble(hits + misses)*100, fmt='(f5.1)')
+      call messages_write(hits/dble(hits + misses)*100, fmt='(f6.1)', align_left = .true.)
       call messages_write('%', new_line = .true.)
       call messages_write('    Volume hit ratio         =')
-      call messages_write(volume_hits/(volume_hits + volume_misses)*100, fmt='(f5.1)')
+      call messages_write(volume_hits/(volume_hits + volume_misses)*100, fmt='(f6.1)', align_left = .true.)
       call messages_write('%')
       call messages_new_line()
       call messages_info()
