@@ -305,7 +305,7 @@ contains
     integer,              intent(in)     :: root
     type(mpi_grp_t),      intent(in)     :: mpi_grp
 
-    integer :: nparray(1:2)
+    integer :: nparray(1:3)
     type(profile_t), save :: prof
 
     PUSH_SUB(submesh_broadcast)
@@ -319,13 +319,23 @@ contains
 
     if(mpi_grp%size > 1) then
 
-      if(root == mpi_grp%rank) nparray = (/this%np, this%np_part/)
+      if(root == mpi_grp%rank) then
+        nparray(1) = this%np
+        nparray(2) = this%np_part
+        if(this%overlap) then 
+          nparray(3) = 1
+        else
+          nparray(3) = 0
+        end if
+      end if
+
 #ifdef HAVE_MPI
-      call MPI_Bcast(nparray, 2, MPI_INTEGER, root, mpi_grp%comm, mpi_err)
+      call MPI_Bcast(nparray, 3, MPI_INTEGER, root, mpi_grp%comm, mpi_err)
       call MPI_Barrier(mpi_grp%comm, mpi_err)
 #endif
       this%np = nparray(1)
       this%np_part = nparray(2)
+      this%overlap = (nparray(3) == 1)
 
       if(root /= mpi_grp%rank) then
         SAFE_ALLOCATE(this%map(1:this%np_part))
