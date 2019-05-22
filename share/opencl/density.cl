@@ -90,9 +90,9 @@ __kernel void current_accumulate(const int nst,
     dd3 += weights[ist]*cc3.y;
   }
 
-  current[ip*3 + 0] += dd1;
-  current[ip*3 + 1] += dd2;
-  current[ip*3 + 2] += dd3;
+  current[ip*3 + 0] = dd1;
+  current[ip*3 + 1] = dd2;
+  current[ip*3 + 2] = dd3;
 
 }
 
