@@ -128,40 +128,73 @@ contains
     CMPLX, allocatable :: psi(:, :), gpsi(:, :)
     CMPLX :: c_tmp
     FLOAT :: ww
-    
+
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:st%d%dim))
-    
-    do idir = 1, der%mesh%sb%dim
-      do ist = states_block_min(st, ib), states_block_max(st, ib)
-        
-        do idim = 1, st%d%dim
-          ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
-          call batch_get_state(psib, ii, der%mesh%np, psi(:, idim))
-          call batch_get_state(gpsib(idir), ii, der%mesh%np, gpsi(:, idim))
+
+
+    if(st%d%ispin == SPINORS .or. batch_status(psib) == BATCH_DEVICE_PACKED) then
+
+      do idir = 1, der%mesh%sb%dim
+        do ist = states_block_min(st, ib), states_block_max(st, ib)
+
+          do idim = 1, st%d%dim
+            ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
+            call batch_get_state(psib, ii, der%mesh%np, psi(:, idim))
+            call batch_get_state(gpsib(idir), ii, der%mesh%np, gpsi(:, idim))
+          end do
+
+          ww = st%d%kweights(ik)*st%occ(ist, ik) 
+          if(st%d%ispin /= SPINORS) then
+            !$omp parallel do
+            do ip = 1, der%mesh%np
+              current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) + ww*aimag(conjg(psi(ip, 1))*gpsi(ip, 1))
+            end do
+            !$omp end parallel do
+          else
+            !$omp parallel do private(c_tmp)
+            do ip = 1, der%mesh%np
+              current(ip, idir, 1) = current(ip, idir, 1) + ww*aimag(conjg(psi(ip, 1))*gpsi(ip, 1))
+              current(ip, idir, 2) = current(ip, idir, 2) + ww*aimag(conjg(psi(ip, 2))*gpsi(ip, 2))
+              c_tmp = conjg(psi(ip, 1))*gpsi(ip, 2) - psi(ip, 2)*conjg(gpsi(ip, 1))
+              current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
+              current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
+            end do
+            !$omp end parallel do
+          end if
+
         end do
-        
-        ww = st%d%kweights(ik)*st%occ(ist, ik) 
-        if(st%d%ispin /= SPINORS) then
-          !$omp parallel do
-          do ip = 1, der%mesh%np
-            current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) + ww*aimag(conjg(psi(ip, 1))*gpsi(ip, 1))
+      end do
+
+    else
+
+      do ii = 1, psib%nst
+        ist = states_block_min(st, ib) + ii - 1
+        ww = st%d%kweights(ik)*st%occ(ist, ik)
+
+        if(batch_is_packed(psib)) then
+          do idir = 1, der%mesh%sb%dim
+            !$omp parallel do
+            do ip = 1, der%mesh%np
+              current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) &
+                + ww*aimag(conjg(psib%pack%zpsi(ii, ip))*gpsib(idir)%pack%zpsi(ii, ip))
+            end do
+            !$omp end parallel do
           end do
-          !$omp end parallel do
         else
-          !$omp parallel do private(c_tmp)
-          do ip = 1, der%mesh%np
-            current(ip, idir, 1) = current(ip, idir, 1) + ww*aimag(conjg(psi(ip, 1))*gpsi(ip, 1))
-            current(ip, idir, 2) = current(ip, idir, 2) + ww*aimag(conjg(psi(ip, 2))*gpsi(ip, 2))
-            c_tmp = conjg(psi(ip, 1))*gpsi(ip, 2) - psi(ip, 2)*conjg(gpsi(ip, 1))
-            current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
-            current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
-          end do
-          !$omp end parallel do
+          do idir = 1, der%mesh%sb%dim
+            !$omp parallel do
+            do ip = 1, der%mesh%np
+              current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) &
+                + ww*aimag(conjg(psib%states(ii)%zpsi(ip, 1))*gpsib(idir)%states(ii)%zpsi(ip, 1))
+            end do
+            !$omp end parallel do
+          end do          
         end if
         
       end do
-    end do
+
+    end if
 
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(gpsi)
