@@ -113,6 +113,62 @@ contains
   end subroutine current_end
 
   ! ---------------------------------------------------------
+
+  subroutine current_batch_accumulate(st, der, ik, ib, psib, gpsib, current, current_kpt)
+    type(states_t),      intent(in)    :: st
+    type(derivatives_t), intent(inout) :: der
+    integer,             intent(in)    :: ik
+    integer,             intent(in)    :: ib
+    type(batch_t),       intent(in)    :: psib
+    type(batch_t),       intent(in)    :: gpsib(:)
+    FLOAT,               intent(inout) :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
+    FLOAT, pointer,      intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, kpt%start:kpt%end)
+
+    integer :: ist, idir, ii, ip, idim
+    CMPLX, allocatable :: psi(:, :), gpsi(:, :)
+    CMPLX :: c_tmp
+    FLOAT :: ww
+    
+    SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:st%d%dim))
+    
+    do idir = 1, der%mesh%sb%dim
+      do ist = states_block_min(st, ib), states_block_max(st, ib)
+        
+        do idim = 1, st%d%dim
+          ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
+          call batch_get_state(psib, ii, der%mesh%np, psi(:, idim))
+          call batch_get_state(gpsib(idir), ii, der%mesh%np, gpsi(:, idim))
+        end do
+        
+        ww = st%d%kweights(ik)*st%occ(ist, ik) 
+        if(st%d%ispin /= SPINORS) then
+          !$omp parallel do
+          do ip = 1, der%mesh%np
+            current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) + ww*aimag(conjg(psi(ip, 1))*gpsi(ip, 1))
+          end do
+          !$omp end parallel do
+        else
+          !$omp parallel do private(c_tmp)
+          do ip = 1, der%mesh%np
+            current(ip, idir, 1) = current(ip, idir, 1) + ww*aimag(conjg(psi(ip, 1))*gpsi(ip, 1))
+            current(ip, idir, 2) = current(ip, idir, 2) + ww*aimag(conjg(psi(ip, 2))*gpsi(ip, 2))
+            c_tmp = conjg(psi(ip, 1))*gpsi(ip, 2) - psi(ip, 2)*conjg(gpsi(ip, 1))
+            current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
+            current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
+          end do
+          !$omp end parallel do
+        end if
+        
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(gpsi)
+
+  end subroutine current_batch_accumulate
+
+  ! ---------------------------------------------------------
   subroutine current_calculate(this, der, hm, geo, st, current, current_kpt)
     type(current_t),      intent(in)    :: this
     type(derivatives_t),  intent(inout) :: der
@@ -257,46 +313,16 @@ contains
 
             call zhamiltonian_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, ik, epsib, commpsib)
 
-            do idir = 1, der%mesh%sb%dim
-
-              if(associated(hm%hm_base%phase)) then
+            if(associated(hm%hm_base%phase)) then
+              do idir = 1, der%mesh%sb%dim
                 call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np_part, ik, conjugate = .true., psib = commpsib(idir))
-              end if
-
-              do ist = states_block_min(st, ib), states_block_max(st, ib)
-
-                do idim = 1, st%d%dim
-                  ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
-                  call batch_get_state(st%group%psib(ib, ik), ii, der%mesh%np, psi(:, idim))
-                  call batch_get_state(commpsib(idir), ii, der%mesh%np, hrpsi(:, idim))
-                end do
-
-                ww = st%d%kweights(ik)*st%occ(ist, ik) 
-                if(st%d%ispin /= SPINORS) then
-                  !$omp parallel do
-                  do ip = 1, der%mesh%np
-                    current_kpt(ip, idir, ik) = &
-                      current_kpt(ip, idir, ik) + ww*aimag(conjg(psi(ip, 1))*hrpsi(ip, 1))
-                  end do
-                  !$omp end parallel do
-                else
-                  !$omp parallel do private(c_tmp)
-                  do ip = 1, der%mesh%np
-                    current(ip, idir, 1) = current(ip, idir, 1) + &
-                      ww*aimag(conjg(psi(ip, 1))*hrpsi(ip, 1))
-                    current(ip, idir, 2) = current(ip, idir, 2) + &
-                      ww*aimag(conjg(psi(ip, 2))*hrpsi(ip, 2))
-                    c_tmp = conjg(psi(ip, 1))*hrpsi(ip, 2) - psi(ip, 2)*conjg(hrpsi(ip, 1))
-                    current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
-                    current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
-                  end do
-                  !$omp end parallel do
-                end if
-
               end do
+            end if
+            
+            call current_batch_accumulate(st, der, ik, ib, st%group%psib(ib, ik), commpsib, current, current_kpt)
 
+            do idir = 1, der%mesh%sb%dim
               call batch_end(commpsib(idir))
-
             end do
 
             call batch_end(epsib)
