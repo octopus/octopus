@@ -311,6 +311,12 @@ contains
     if(writ%out(OUT_FLOQUET)%write) call messages_experimental('TDOutput = td_floquet')
     if(writ%out(OUT_N_EX)%write) call messages_experimental('TDOutput = n_excited_el')
 
+    !See comment in zstates_mpdotp
+    if(simul_box_is_periodic(gr%sb) .and. writ%out(OUT_POPULATIONS)%write) then
+      call messages_not_implemented("TDOutput populations for periodic systems")
+    end if
+
+
     if(writ%out(OUT_KP_PROJ)%write.or.writ%out(OUT_FLOQUET)%write) then
       ! make sure this is not domain distributed
       if(gr%mesh%np /= gr%mesh%np_global) then
@@ -356,8 +362,7 @@ contains
     if(writ%out(OUT_PROJ)%write .or. writ%out(OUT_POPULATIONS)%write &
       .or.writ%out(OUT_KP_PROJ)%write .or. writ%out(OUT_N_EX)%write) then
       if (.not.writ%out(OUT_KP_PROJ)%write.and. &
-          .not.writ%out(OUT_N_EX)%write.and. &
-          (st%parallel_in_states.or.st%d%kpt%parallel)) then
+          .not.writ%out(OUT_N_EX)%write.and. st%parallel_in_states) then
         message(1) = "Options TDOutput = td_occup and populations are not implemented for parallel in states."
         call messages_fatal(1)
       end if
@@ -792,7 +797,7 @@ contains
       call td_write_temperature(writ%out(OUT_TEMPERATURE)%handle, geo, iter)
 
     if(writ%out(OUT_POPULATIONS)%write) &
-      call td_write_populations(writ%out(OUT_POPULATIONS)%handle, gr%mesh, st, &
+      call td_write_populations(writ%out(OUT_POPULATIONS)%handle, gr%mesh, gr%sb, st, &
         writ, dt, iter)
 
     if(writ%out(OUT_ACC)%write) &
@@ -1535,9 +1540,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_populations(out_populations, mesh, st, writ, dt, iter)
+  subroutine td_write_populations(out_populations, mesh, sb, st, writ, dt, iter)
     type(c_ptr),            intent(inout) :: out_populations
     type(mesh_t),           intent(in)    :: mesh
+    type(simul_box_t),      intent(in)    :: sb
     type(states_t),         intent(inout) :: st
     type(td_write_t),       intent(in)    :: writ
     FLOAT,                  intent(in)    :: dt
@@ -1554,6 +1560,10 @@ contains
 
     SAFE_ALLOCATE(dotprodmatrix(1:writ%gs_st%nst, 1:st%nst, 1:st%d%nik))
     call zstates_matrix(mesh, writ%gs_st, st, dotprodmatrix)
+
+
+    !See comment in zstates_mpdotp
+    ASSERT(.not. simul_box_is_periodic(sb))
 
     ! all processors calculate the projection
     gsp = zstates_mpdotp(mesh, writ%gs_st, st, dotprodmatrix)
@@ -2203,29 +2213,34 @@ contains
 
       end if
 
-      SAFE_ALLOCATE(projections(1:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
-      do idir = 1, geo%space%dim
-        projections = M_Z0
+      !The dipole matrix elements cannot be computed like that for solids
+      if(.not. simul_box_is_periodic(gr%sb)) then
 
-        call dipole_matrix_elements(idir)
+        SAFE_ALLOCATE(projections(1:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
+        do idir = 1, geo%space%dim
+          projections = M_Z0
 
-        if(mpi_grp_is_root(mpi_world)) then
-          write(aux, '(a,i1,a)') "<i|x_", idir, "|a>"
-          call write_iter_string(out_proj, "# ------")
-          call write_iter_header(out_proj, aux)
-          do ik = 1, st%d%nik
-            do ist = gs_st%st_start, st%st_end
-              do uist = gs_st%st_start, gs_st%st_end
-                call write_iter_double(out_proj,  real(projections(ist, uist, ik)), 1)
-                call write_iter_double(out_proj, aimag(projections(ist, uist, ik)), 1)
+          call dipole_matrix_elements(idir)
+
+          if(mpi_grp_is_root(mpi_world)) then
+            write(aux, '(a,i1,a)') "<i|x_", idir, "|a>"
+            call write_iter_string(out_proj, "# ------")
+            call write_iter_header(out_proj, aux)
+            do ik = 1, st%d%nik
+              do ist = gs_st%st_start, st%st_end
+                do uist = gs_st%st_start, gs_st%st_end
+                  call write_iter_double(out_proj,  real(projections(ist, uist, ik)), 1)
+                  call write_iter_double(out_proj, aimag(projections(ist, uist, ik)), 1)
+                end do
               end do
             end do
-          end do
-          call write_iter_nl(out_proj)
+            call write_iter_nl(out_proj)
           
-        end if
-      end do
-      SAFE_DEALLOCATE_A(projections)
+          end if
+        end do
+        SAFE_DEALLOCATE_A(projections)
+
+      end if
 
       if(mpi_grp_is_root(mpi_world)) then
         call td_write_print_header_end(out_proj)
@@ -2430,7 +2445,7 @@ contains
      SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
      SAFE_ALLOCATE(gspsi(1:gr%mesh%np, 1:st%d%dim))
      
-     do ik = 1, st%d%nik
+     do ik = st%d%kpt%start, st%d%kpt%end 
        do ist = st%st_start, st%st_end
          call states_get_state(st, gr%mesh, ist, ik, psi)
          do uist = gs_st%st_start, gs_st%nst
@@ -2441,7 +2456,15 @@ contains
     end do
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(gspsi)
+
+#if defined(HAVE_MPI)        
+   if(st%d%kpt%parallel) then
+     call comm_allreduce(st%d%kpt%mpi_grp%comm, projections)
+   end if
+#endif
+
     call distribute_projections(st, gs_st, projections)
+
     POP_SUB(calc_projections)
   end subroutine calc_projections
 

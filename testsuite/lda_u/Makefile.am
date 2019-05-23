@@ -40,6 +40,7 @@ dist_share_DATA =                                \
             06-laser.03-velocity_gauge.inp       \
             06-laser.test                        \
 	    07-noncollinear.01-U5-gs.inp         \
+	    07-noncollinear.02-acbn0.inp         \
             07-noncollinear.test                 \
 	    08-loewdin.01-Si.inp                 \
 	    08-loewdin.test                      \

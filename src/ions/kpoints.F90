@@ -635,6 +635,8 @@ contains
         end do
       end do
 
+      call parse_block_end(blk)
+
       !We do not use axis
       this%nik_axis(1:MAX_DIM) = 1
 

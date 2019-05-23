@@ -42,6 +42,7 @@ module propagation_oct_m
   use multicomm_oct_m
   use oct_exchange_oct_m
   use opt_control_state_oct_m
+  use pert_oct_m
   use propagator_oct_m
   use propagator_base_oct_m
   use profiling_oct_m
@@ -769,6 +770,7 @@ contains
     FLOAT,         optional, intent(in)    :: qtildehalf(:, :)
 
     type(states_t) :: inh
+    type(pert_t) :: pert
     integer :: j, iatom, idim
     CMPLX, allocatable :: dvpsi(:, :, :), zpsi(:, :), inhzpsi(:, :)
     integer :: ist, ik, ib
@@ -799,15 +801,21 @@ contains
           call states_get_state(inh, gr%mesh, ist, ik, inhzpsi)
 
           do iatom = 1, geo%natoms
-            call zhamiltonian_dervexternal(hm, geo, gr, iatom, st%d%dim, zpsi, dvpsi)
             do idim = 1, gr%sb%dim
+              call pert_init(pert, PERTURBATION_IONIC, gr, geo)
+              call pert_setup_atom(pert, iatom)
+              call pert_setup_dir(pert, idim)
+              call zpert_apply(pert, gr, geo, hm, ik, zpsi(:, :), dvpsi(:, :, idim))
+              dvpsi(:, :, idim) = - dvpsi(:, :, idim)
               inhzpsi(:,  :)  = &
                 inhzpsi(:, :) + st%occ(ist, ik)*qtildehalf(iatom, idim)*dvpsi(:, :, idim)
+              call pert_end(pert)
             end do
           end do
           call states_set_state(inh, gr%mesh, ist, ik, inhzpsi)
         end do
       end do
+
       SAFE_DEALLOCATE_A(zpsi)
       SAFE_DEALLOCATE_A(inhzpsi)
       SAFE_DEALLOCATE_A(dvpsi)

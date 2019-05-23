@@ -132,7 +132,11 @@ contains
     SAFE_DEALLOCATE_A(Gvec)
     SAFE_DEALLOCATE_A(Gvec_G)
     SAFE_DEALLOCATE_P(rho)
-    
+    if (total_density_alloc) then
+      SAFE_DEALLOCATE_P(rho_total)
+    end if
+    SAFE_DEALLOCATE_A(rho_total_fs)
+
     POP_SUB(stress_calculate)
     call profiling_out(stress_prof)
 

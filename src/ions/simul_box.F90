@@ -647,6 +647,7 @@ contains
       !%End
       lparams(:) = M_ONE
       has_angles = .false.
+      angles = CNST(90.0)
 
       if (parse_block('LatticeParameters', blk) == 0) then
         do idim = 1, sb%dim
