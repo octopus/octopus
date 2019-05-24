@@ -426,10 +426,21 @@ contains
     type(submesh_t),      intent(in)   :: sm2
     
     integer :: ii, jj, dd
+    FLOAT :: distance
 
-    ! Check whether they have the same point or not. The arrays are
-    ! sorted, so we can make the comparison faster.
+    !no PUSH_SUB, called too often
+
+    if(.not. simul_box_is_periodic(sm1%mesh%sb)) then
+      !first check the distance
+      distance = sum((sm1%center(1:sm1%mesh%sb%dim) - sm2%center(1:sm2%mesh%sb%dim))**2)
+      overlap = distance <= (CNST(1.5)*(sm1%radius + sm2%radius))**2
+      
+      ! if they are very far, no need to check in detail
+      if(.not. overlap) return
+    end if
     
+    ! Otherwise check whether they have the some point in common. We
+    ! can make the comparison faster using that the arrays are sorted.
     overlap = .false.
     ii = 1
     jj = 1
