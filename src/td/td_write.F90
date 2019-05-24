@@ -2202,7 +2202,7 @@ contains
       do ik = 1, st%d%nik
         do ist = gs_st%st_start, st%nst
           do uist = gs_st%st_start, gs_st%st_end
-            call write_iter_double(out_proj,  real(projections(ist, uist, ik)), 1)
+            call write_iter_double(out_proj,  real(projections(ist, uist, ik), REAL_PRECISION), 1)
             call write_iter_double(out_proj, aimag(projections(ist, uist, ik)), 1)
           end do
         end do
