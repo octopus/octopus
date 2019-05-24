@@ -421,7 +421,7 @@ contains
 
   ! --------------------------------------------------------------
 
-  logical pure function submesh_overlap(sm1, sm2) result(overlap)
+  logical function submesh_overlap(sm1, sm2) result(overlap)
     type(submesh_t),      intent(in)   :: sm1
     type(submesh_t),      intent(in)   :: sm2
     
@@ -433,7 +433,7 @@ contains
     overlap = .false.
     ii = 1
     jj = 1
-    do while(ii <= sm1%np .and. jj <= sm2%np)
+    do while(ii <= sm1%np_part .and. jj <= sm2%np_part)
       dd = sm1%map(ii) - sm2%map(jj)
       if(dd < 0) then
         ii = ii + 1
@@ -444,6 +444,12 @@ contains
         exit
       end if
     end do
+
+#ifdef HAVE_MPI
+    if(sm1%mesh%parallel_in_domains) then
+      call MPI_Allreduce(MPI_IN_PLACE, overlap, 1, MPI_LOGICAL, MPI_LOR, sm1%mesh%mpi_grp%comm, mpi_err)
+    end if
+#endif
     
   end function submesh_overlap
 
