@@ -121,7 +121,7 @@ program dielectric_function
     !% relative to the current folder
     !%End
 
-    call parse_variable('TransientAbsorptionReference', '.', ref_filename)
+    call parse_variable('GaugeFieldDelay', '.', ref_filename)
     ref_file = io_open(trim(ref_filename)//'/gauge_field', action='read', status='old', die=.false.)
     if(ref_file < 0) then
       message(1) = "Cannot open reference file '"//trim(io_workpath(trim(ref_filename)//'/gauge_field'))//"'"
@@ -183,8 +183,8 @@ program dielectric_function
 
   n0 = sqrt(sum(vecpot0(1:space%dim))**2)
 
-  SAFE_ALLOCATE(ftreal(0:energy_steps, 1:space%dim))
-  SAFE_ALLOCATE(ftimag(0:energy_steps, 1:space%dim))
+  SAFE_ALLOCATE(ftreal(1:energy_steps, 1:space%dim))
+  SAFE_ALLOCATE(ftimag(1:energy_steps, 1:space%dim))
 
   call batch_init(vecpotb, space%dim)
   call batch_init(ftrealb, space%dim)
@@ -192,8 +192,8 @@ program dielectric_function
 
   do ii = 1, space%dim
     call batch_add_state(vecpotb, vecpot(:,  space%dim + ii))
-    call batch_add_state(ftrealb, ftreal(0:,  ii))
-    call batch_add_state(ftimagb, ftimag(0:,  ii))
+    call batch_add_state(ftrealb, ftreal(1:,  ii))
+    call batch_add_state(ftimagb, ftimag(1:,  ii))
   end do
 
   call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, spectrum%start_time, dt, vecpotb)
@@ -211,13 +211,13 @@ program dielectric_function
   call batch_end(ftrealb)
   call batch_end(ftimagb)
 
-  SAFE_ALLOCATE(invdielectric(1:space%dim, 0:energy_steps))
-  SAFE_ALLOCATE(dielectric(1:space%dim, 0:energy_steps))
-  SAFE_ALLOCATE(chi(1:space%dim, 0:energy_steps))
+  SAFE_ALLOCATE(invdielectric(1:space%dim, 1:energy_steps))
+  SAFE_ALLOCATE(dielectric(1:space%dim, 1:energy_steps))
+  SAFE_ALLOCATE(chi(1:space%dim, 1:energy_steps))
   SAFE_ALLOCATE(fullmat(1:space%dim, 1:space%dim))
 
-  do kk = 0, energy_steps
-    ww = kk*spectrum%energy_step + spectrum%min_energy
+  do kk = 1, energy_steps
+    ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
 
     invdielectric(1:space%dim, kk) = (vecpot0(1:space%dim) + TOCMPLX(ftreal(kk, 1:space%dim), ftimag(kk, 1:space%dim)))/n0
 
@@ -249,8 +249,8 @@ program dielectric_function
 
   out_file = io_open('td.general/inverse_dielectric_function', action='write')
   write(out_file,'(a)') trim(header)
-  do kk = 0, energy_steps
-    ww = kk*spectrum%energy_step + spectrum%min_energy
+  do kk = 1, energy_steps
+    ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
     write(out_file, '(7e15.6)') ww,                                         &
          real(invdielectric(1, kk), REAL_PRECISION), aimag(invdielectric(1, kk)), &
          real(invdielectric(2, kk), REAL_PRECISION), aimag(invdielectric(2, kk)), &
@@ -260,8 +260,8 @@ program dielectric_function
  
   out_file = io_open('td.general/dielectric_function', action='write')
   write(out_file,'(a)') trim(header)
-  do kk = 0, energy_steps
-    ww = kk*spectrum%energy_step + spectrum%min_energy
+  do kk = 1, energy_steps
+    ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
     write(out_file, '(7e15.6)') ww,                                         &
          real(dielectric(1, kk), REAL_PRECISION), aimag(dielectric(1, kk)), &
          real(dielectric(2, kk), REAL_PRECISION), aimag(dielectric(2, kk)), &
@@ -271,9 +271,9 @@ program dielectric_function
 
   out_file = io_open('td.general/chi', action='write')
   write(out_file,'(a)') trim(header)
-  do kk = 0, energy_steps
+  do kk = 1, energy_steps
     dielectric(1:3, kk) = (dielectric(1:3, kk) - M_ONE)/(CNST(4.0)*M_PI)
-    ww = kk*spectrum%energy_step + spectrum%min_energy
+    ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
     write(out_file, '(7e15.6)') ww, &
       real(chi(1, kk), REAL_PRECISION), aimag(chi(1, kk)), &
       real(chi(2, kk), REAL_PRECISION), aimag(chi(2, kk)), &
