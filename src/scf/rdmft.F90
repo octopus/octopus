@@ -130,11 +130,6 @@ contains
     end if
 
     call rdmft_init() 
-    
-    write(message(1),'(a,1x,f14.12)') 'Sum of occupation numbers', rdm%occsum
-    write(message(2),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy, energy + hm%ep%eii)
-    call messages_info(2)   
-    
    
     !set initial values
     energy_old = CNST(1.0e20)
@@ -632,14 +627,14 @@ contains
           end if
         else
           if (rdm%dressed) then
-            write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','conv','Occupation', 'Mode Occ.', '-1/2d^2/dq^2', '1/2w^2q^2'
+            write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','Occupation','conv', 'Mode Occ.', '-1/2d^2/dq^2', '1/2w^2q^2'
             do ist = 1, st%nst
-              write(iunit,'(i4,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12)') ist, rdm%eigens%diff(ist, 1), st%occ(ist, 1), photon_number_state(ist), ekin_state(ist), epot_state(ist)
+              write(iunit,'(i4,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12)') ist, st%occ(ist, 1), rdm%eigens%diff(ist, 1), photon_number_state(ist), ekin_state(ist), epot_state(ist)
             end do
           else
-            write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','conv','Occupation'
+            write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','Occupation','conv'
             do ist = 1, st%nst
-              write(iunit,'(i4,3x,f14.12,3x,f14.12)') ist, rdm%eigens%diff(ist, 1), st%occ(ist, 1)
+              write(iunit,'(i4,3x,f14.12,3x,f14.12)') ist, st%occ(ist, 1), rdm%eigens%diff(ist, 1)
             end do
           end if
         end if
@@ -1154,7 +1149,6 @@ contains
       if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then 
         call loct_progress_bar(-1, st%lnst*st%d%kpt%nlocal)
       end if
-
       !! For RDMFT, this needs to be called with: orthogonalize_to_all=.false. , additional_terms=.false.                                 
       call deigensolver_cg2(gr, st, hm, rdm%eigens%xc, rdm%eigens%pre, rdm%eigens%tolerance, maxiter, &
             rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), &

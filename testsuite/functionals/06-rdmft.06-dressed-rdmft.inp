@@ -30,9 +30,10 @@ RDMNoElectrons = Nelec
   "dressedhelium" | 0 | 0 
 %
 
+
 BoxShape = parallelepiped
 Lsize = 6.5
 Spacing = 0.55
-Extrastates = 4
+Extrastates = 5
 
 
