@@ -425,11 +425,26 @@ contains
     type(submesh_t),      intent(in)   :: sm1
     type(submesh_t),      intent(in)   :: sm2
     
-    FLOAT :: distance
+    integer :: ii, jj, dd
 
-    distance = sum((sm1%center(1:sm1%mesh%sb%dim) - sm2%center(1:sm2%mesh%sb%dim))**2)
-    overlap = distance + CNST(100.0)*M_EPSILON <= (sm1%radius + sm2%radius)**2
-
+    ! Check whether they have the same point or not. The arrays are
+    ! sorted, so we can make the comparison faster.
+    
+    overlap = .false.
+    ii = 1
+    jj = 1
+    do while(ii <= sm1%np .and. jj <= sm2%np)
+      dd = sm1%map(ii) - sm2%map(jj)
+      if(dd < 0) then
+        ii = ii + 1
+      else if(dd > 0) then
+        jj = jj + 1
+      else
+        overlap = .true.
+        exit
+      end if
+    end do
+    
   end function submesh_overlap
 
   ! -------------------------------------------------------------
