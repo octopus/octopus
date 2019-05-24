@@ -1071,10 +1071,11 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
 
         end do
       end do
+   
+      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  aa(:, :, ik))
 
     end if
 
-    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  aa(:, :, ik))
   end do
 
 #if defined(HAVE_MPI)        
