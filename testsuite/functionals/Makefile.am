@@ -139,5 +139,4 @@ dist_share_DATA =                                  \
   12-vdw_solid_c6.01-gs_diamond.inp          \
   12-vdw_solid_c6.02-gs_graphene.inp
 
-
 CLEANFILES = *~ *.bak

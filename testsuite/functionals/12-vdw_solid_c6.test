@@ -2,7 +2,7 @@
 
 Test       : Tkatchenko-Scheffler van der Waals correction (self-consistent) in solids 
 Program    : octopus
-TestGroups : functionals, long-run, VDW_test
+TestGroups : functionals, long-run
 Enabled    : Yes
 
 Processors : 3

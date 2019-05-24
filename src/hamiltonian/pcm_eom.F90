@@ -456,17 +456,11 @@ module pcm_eom_oct_m
     if( .not.allocated(matqq) ) then
      SAFE_ALLOCATE(matqq(nts_act,nts_act))
     endif
-   else if( which_eom == 'external' ) then
+   else if( which_eom == 'external' .or. which_eom == 'justkick' ) then
     SAFE_ALLOCATE(matq0_lf(nts_act,nts_act)) !< not used yet
     SAFE_ALLOCATE(matqd_lf(nts_act,nts_act))
     SAFE_ALLOCATE(matqv_lf(nts_act,nts_act))
-    if( (.not.allocated(matqq)) .and. which_eps == 'deb' ) then
-     SAFE_ALLOCATE(matqq(nts_act,nts_act))
-    endif
-   else if( which_eom == 'justkick' ) then
-    SAFE_ALLOCATE(matqv_lf(nts_act,nts_act))
-    SAFE_ALLOCATE(matqd_lf(nts_act,nts_act))
-    if( (.not.allocated(matqq)) .and. which_eps == 'deb' ) then
+    if( .not.allocated(matqq) ) then
      SAFE_ALLOCATE(matqq(nts_act,nts_act))
     endif
    endif  
@@ -543,6 +537,9 @@ module pcm_eom_oct_m
    endif
    if( allocated(matqd) ) then
     SAFE_DEALLOCATE_A(matqd)
+   endif
+   if( allocated(matq0_lf) ) then
+    SAFE_DEALLOCATE_A(matq0_lf)
    endif
    if( allocated(matqd_lf) ) then
     SAFE_DEALLOCATE_A(matqd_lf)
@@ -664,7 +661,7 @@ module pcm_eom_oct_m
    enddo
    if( which_eom == 'electron' ) then
     matq0=-matmul(scr1,scr4)				                                          !< from Eq.(14) and (18) for eps_0 in Ref.1
-   else if( which_eom == 'external' ) then
+   else if( which_eom == 'external' .or. which_eom == 'justkick' ) then
     matq0_lf=-matmul(scr1,scr4)			                                          !< local field analogous !< not used yet
    endif
    do i=1,nts_act

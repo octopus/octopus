@@ -105,7 +105,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     SAFE_ALLOCATE( psi2(1:gr%mesh%np_part, 1:st%d%dim))
   end if
   
-! Modifications Nicole
   if(hm%theory_level == RDMFT) then
     SAFE_ALLOCATE(psi_lam(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(cg_vec_lam(1:gr%mesh%np_part, 1:st%d%dim))
@@ -113,7 +112,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     SAFE_ALLOCATE(lam_conj(1:st%nst))
     SAFE_ALLOCATE(cg_phi(1:st%nst))
   end if
-! End Nicole
 
   h_psi = R_TOTYPE(M_ZERO)
   cg    = R_TOTYPE(M_ZERO)
@@ -143,8 +141,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     g0    = R_TOTYPE(M_ZERO)
     h_cg  = R_TOTYPE(M_ZERO)
     g_prev = R_TOTYPE(M_ZERO)
+    gg1   = R_TOTYPE(M_ZERO)
     
-! Modifications RDMFT 
     if(hm%theory_level == RDMFT) then
       psi_lam     = R_TOTYPE(M_ZERO)
       cg_vec_lam  = R_TOTYPE(M_ZERO) 
@@ -152,21 +150,14 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       lam_conj    = R_TOTYPE(M_ZERO)
       cg_phi      = R_TOTYPE(M_ZERO)
     end if
-! End RDMFT
 
     call states_get_state(st, gr%mesh, ist, ik, psi)
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
     if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
 
-! Modifications RDMFT
-!    ! Calculate starting gradient: |hpsi> = H|psi>
-    if(hm%theory_level == RDMFT) then
-      call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik, set_occ = .true.)
-    else 
-      call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik)
-    endif
-! End RDMFT
+    ! Calculate starting gradient: |hpsi> = H|psi>
+    call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik)
 
     if(fold_) then
       call X(hamiltonian_apply)(hm, gr%der, h_psi, psi2, ist, ik)
@@ -179,8 +170,20 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     old_energy = st%eigenval(ist, ik)
     first_delta_e = M_ZERO
 
-! Modifications RDMFT
     if(hm%theory_level == RDMFT) then
+			! For RDMFT, the gradient of the total energy functional differs from the DFT or HF case.
+			! The difference is that the lagrange multiplier matrix lambda cannot be diagonalized together with the Hamiltonian,
+			! because the orbitals of the minimization or not the eigenstates of the single-body Hamiltonian, but of the systems 1RDM
+			! The functional that is minimized in the cg-routine reads: F= E[psi_i]-sum_ij lam_ij (<psi_i|psi_j> -delta_ij) + const.
+			! The respective gradient reads: dF/dphi_i= dE/dphi_i - sum_j lam_ij |phi_j>= H|phi_i> - sum_j lam_ij |phi_j>
+			! We get the expression for lam_ij from the gradient with respect to phi*: lam_ij=<phi_i|dE/dphi_j^*>=<phi_i|H|phi_j>
+			! And that is what we calculate here as lam_conj
+			! Additionally, we get a different formula for the line minimization, which turns out to only change the beta of the original expression.
+			! beta-> beta+beta_rdmft,  beta_rdmft= - sum_j (lam_ji <cg_i|phi_k> + c.c.)
+			! Thus, we also need to calculate lam_ji. Note that lam_ij != lam_ji until convergence.
+			! As an approximation, we calculate the lambda-matrix only once for every orbital and do not update during the iter_loop.
+			! This seems to be a reasonable approximation, but it needs more careful testing. We left the additional code that updates lambda in every 
+			! iteration commented.
       cg_vec_lam = R_TOTYPE(M_ZERO) 
       do jst = 1, st%nst
         if (jst == ist) then
@@ -188,22 +191,21 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
           lam_conj(jst) = st%eigenval(ist, ik)
         else
           call states_get_state(st, gr%mesh, jst, ik, psi_lam)
-          
+
           ! calculate <phi_j|H|phi_i> =lam_ji
           lam(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_lam, h_psi))
           
-          ! calculate <phi_i|H|phi_j>=lam_ij
-          call X(hamiltonian_apply)(hm, gr%der, psi_lam, h_cg, jst, ik, set_occ = .true.)
+          ! calculate <phi_i|H|phi_j>=lam_ij=lam_conj
+          call X(hamiltonian_apply)(hm, gr%der, psi_lam, h_cg, jst, ik)
           lam_conj(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
           h_cg= R_TOTYPE(M_ZERO)
       
           forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-            cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_lam(ip, idim) !! works also with 0.5*(lam+lam_conj)
-          end forall  
+            cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_lam(ip, idim)
+          end forall
         end if
       end do
     end if
-! End RDMFT
 
 !!!!!!!!!!!!!!!!!!!! Starts iteration for this band !!!!!!!!!!!!!!!!!!!!
     iter_loop: do iter = 1, maxter
@@ -217,10 +219,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       end if
 
       ! PTA92, eq. 5.10
-! Modifications RDMFT
       if(hm%theory_level == RDMFT) then
 ! update lamda every iteration. Numerically extremley expensive and not feasible for more than 1d.
-! still left this here for test reason. 
 !       cg_vec_lam = R_TOTYPE(M_ZERO) 
 !       do jst = 1, st%nst
 !         if (jst == ist) then
@@ -247,12 +247,11 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
           g(ip, idim) = h_psi(ip, idim) - cg_vec_lam(ip, idim) - lam_conj(ist)*psi(ip, idim)
         end forall
 
-      else ! no RDMFT
+      else
         forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
           g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
         end forall 
       end if 
-! End RDMFT
 
       ! PTA92, eq. 5.12
       ! Orthogonalize to all states -> not needed for good convergence
@@ -275,13 +274,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       ! dot products needed for conjugate gradient
       gg = X(mf_dotp) (gr%mesh, st%d%dim, g0, g, reduce = .false.)
-      if(conjugate_direction_ == OPTION__CGDIRECTION__POLAK) then
+      if(iter /= 1 .and. conjugate_direction_ == OPTION__CGDIRECTION__POLAK) then
         ! only needed for Polak-Ribiere
-        if(iter /= 1) then
-          gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g0, g_prev, reduce = .false.)
-        else
-          gg1 = M_ZERO
-        end if
+        gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g0, g_prev, reduce = .false.)
       end if
 
       if(gr%mesh%parallel_in_domains) then
@@ -343,14 +338,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 2*R_MUL))
       end if
 
-! Modifications RDMFT
       ! cg contains now the conjugate gradient
-      if(hm%theory_level == RDMFT) then
-        call X(hamiltonian_apply)(hm, gr%der, cg, h_cg, ist, ik, set_occ = .true.)
-      else
-        call X(hamiltonian_apply)(hm, gr%der, cg, h_cg, ist, ik)
-      endif
-! End RDMFT
+      call X(hamiltonian_apply)(hm, gr%der, cg, h_cg, ist, ik)
 
       if(fold_) then
          call X(hamiltonian_apply)(hm, gr%der, h_cg, psi2, ist, ik)
@@ -407,7 +396,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       end if
 
       beta = R_REAL(a0) * M_TWO
-! Modifications RDMFT
+
       ! Extra RDMFT part from lagrange multiplier in total functional: sum_ij lam_ij <phi_i|phi_j>
       ! for current state (ist=i) beta_i -> beta_i - sum_k (lam_ki <cg_i|phi_k> + c.c.)
       ! with lam_ki = <phi_k|H|phi_i>
@@ -420,7 +409,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         end do
         beta = beta - beta_rdmft * M_TWO
       end if
-! End RDMFT
 
       theta = atan(beta/alpha)*M_HALF
       stheta = sin(theta)

@@ -121,7 +121,8 @@ dist_share_DATA = \
 	31-acetylene_b3lyp.01-gs.inp \
 	32-tdpcm_methane.test \
 	32-tdpcm_methane.01-ground_state.inp \
-	32-tdpcm_methane.02-td_prop.inp \
+	32-tdpcm_methane.02-td_prop_noneq.inp \
+	32-tdpcm_methane.03-td_prop_eom.inp \
 	33-cg.test \
 	33-cg.01-orthogonalize_all.inp \
 	33-cg.02-additional_terms.inp \

@@ -1252,6 +1252,8 @@ contains
     end if
     call parse_variable('StatesPack', defaultl, st%d%pack_states)
 
+    call messages_print_var_value(stdout, 'StatesPack', st%d%pack_states)
+
     !%Variable StatesMirror
     !%Type logical
     !%Section Execution::Optimization
@@ -1270,6 +1272,8 @@ contains
       defaultl = .true.
     end if
     call parse_variable('StatesMirror', defaultl, st%d%mirror_states)
+
+    call messages_print_var_value(stdout, 'StatesMirror', st%d%mirror_states)
 
     !%Variable StatesOrthogonalization
     !%Type integer
@@ -1400,6 +1404,7 @@ contains
     call mpi_grp_copy(stout%mpi_grp, stin%mpi_grp)
     stout%dom_st_kpt_mpi_grp = stin%dom_st_kpt_mpi_grp
     stout%st_kpt_mpi_grp     = stin%st_kpt_mpi_grp
+    call loct_pointer_copy(stout%node, stin%node)
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_copy(stin%dom_st_proc_grid, stout%dom_st_proc_grid)
