@@ -284,7 +284,6 @@ contains
             call states_get_state(st, mesh, jst, ik, psij)
             aa(jst) = X(mf_dotp)(mesh, st%d%dim, psij, psii, reduce = .false.)
           end do
-
           if(mesh%parallel_in_domains .and. ist > 1) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = ist - 1)
 
           ! subtract the projections
@@ -950,19 +949,28 @@ subroutine X(states_angular_momentum)(st, gr, ll, l2)
 #else
         call X(physics_op_L)(gr%der, psi, lpsi)
 
-        ll(ist, ik, 1) = ll(ist, ik, 1) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 1)))
+        ll(ist, ik, 1) = ll(ist, ik, 1) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 1), reduce = .false.))
         if(gr%mesh%sb%dim == 3) then
-          ll(ist, ik, 2) = ll(ist, ik, 2) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 2)))
-          ll(ist, ik, 3) = ll(ist, ik, 3) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 3)))
+          ll(ist, ik, 2) = ll(ist, ik, 2) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 2), reduce = .false.))
+          ll(ist, ik, 3) = ll(ist, ik, 3) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 3), reduce = .false.))
         end if
 #endif
         if(present(l2)) then
           call X(physics_op_L2)(gr%der, psi(:), lpsi(:, 1))
-          l2(ist, ik) = l2(ist, ik) + TOFLOAT(X(mf_dotp)(gr%mesh, psi(:), lpsi(:, 1)))
+          l2(ist, ik) = l2(ist, ik) + TOFLOAT(X(mf_dotp)(gr%mesh, psi(:), lpsi(:, 1), reduce = .false.))
         end if
       end do
     end do
   end do
+
+  if(gr%mesh%parallel_in_domains) then
+#if !defined(R_TREAL)
+    call comm_allreduce(gr%mesh%mpi_grp%comm,  ll)
+#endif
+    if(present(l2)) then
+      call comm_allreduce(gr%mesh%mpi_grp%comm,  l2)
+    end if
+  end if
 
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(lpsi)
@@ -993,6 +1001,8 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
 
   SAFE_ALLOCATE(psi1(1:mesh%np, 1:st1%d%dim))
   SAFE_ALLOCATE(psi2(1:mesh%np, 1:st1%d%dim))
+
+  aa(:, :, :) = M_ZERO
 
   do ik = st1%d%kpt%start, st1%d%kpt%end
 
@@ -1025,11 +1035,13 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
 
         do ist = st1%st_start, st1%st_end
           call states_get_state(st1, mesh, ist, ik, psi1)
-          aa(ist, jj, ik) = X(mf_dotp)(mesh, dim, psi1, phi2)
+          aa(ist, jj, ik) = X(mf_dotp)(mesh, dim, psi1, phi2, reduce = .false.)
         end do
 
       end do
       SAFE_DEALLOCATE_A(phi2)
+
+      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  aa(:,:,ik))
 
       ! Each process holds some lines of the matrix. So it is broadcasted (All processes
       ! should get the whole matrix)
@@ -1055,10 +1067,12 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
 
           call states_get_state(st2, mesh, jj, ik, psi2)
 
-          aa(ii, jj, ik) = X(mf_dotp)(mesh, dim, psi1, psi2)
+          aa(ii, jj, ik) = X(mf_dotp)(mesh, dim, psi1, psi2, reduce = .false.)
 
         end do
       end do
+   
+      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  aa(:, :, ik))
 
     end if
 

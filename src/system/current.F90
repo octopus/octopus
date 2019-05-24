@@ -636,12 +636,13 @@ contains
       
       do idim = 1, hm%d%dim
           
-        cmel(idir,ispin) = M_zI * zmf_dotp(der%mesh, psi_i(:, idim), gpsi_j(:, idir,idim))
-        cmel(idir,ispin) = cmel(idir,ispin) - M_zI * zmf_dotp(der%mesh, gpsi_i(:, idir, idim), psi_j(:, idim))
+        cmel(idir,ispin) = M_zI * zmf_dotp(der%mesh, psi_i(:, idim), gpsi_j(:, idir,idim), reduce = .false.)
+        cmel(idir,ispin) = cmel(idir,ispin) - M_zI * zmf_dotp(der%mesh, gpsi_i(:, idir, idim), psi_j(:, idim), reduce = .false.)
           
       end do
     end do
 
+    if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp%comm,  cmel)
 
     
 
