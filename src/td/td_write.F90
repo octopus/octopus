@@ -2371,7 +2371,7 @@ contains
    ! ---------------------------------------------------------
    !> This subroutine calculates:
    !! \f[
-   !! p(uist, ist, ik) = < \phi_0(uist, k) | \phi(ist, ik) (t) >
+   !! p(uist, ist, ik) = < \phi(ist, ik) (t) | \phi_0(uist, k) >
    !! \f]
    ! ---------------------------------------------------------
    subroutine calc_projections(gr, st, gs_st, projections)
