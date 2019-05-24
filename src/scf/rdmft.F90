@@ -158,14 +158,13 @@ contains
       if (rdm%hf.eqv. .false.) then
       call scf_occ(rdm, gr, hm, st, energy_occ) 
     else
-    call scf_occ_NO(rdm, gr, hm, st, energy_occ)
+      call scf_occ_NO(rdm, gr, hm, st, energy_occ)
     end if
       ! Diagonalization of the generalized Fock matrix 
       write(message(1), '(a)') 'Optimization of natural orbitals'
       call messages_info(1)
       do icount = 1, maxcount !still under investigation how many iterations we need
         if (rdm%do_basis.eqv..false.) then
-!          call scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
           call scf_orb_cg(rdm, gr, geo, st, ks, hm, energy) 
         else
           call scf_orb(rdm, gr, geo, st, ks, hm, energy)
@@ -544,20 +543,11 @@ contains
       SAFE_ALLOCATE(ekin_state(1:st%nst))
       SAFE_ALLOCATE(epot_state(1:st%nst))
 
-      if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
+      if(mpi_grp_is_root(mpi_world)) then
         call io_mkdir(dir)
         iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
 
         call grid_write_info(gr, geo, iunit)
- 
-        ! do we need that?
-!        call symmetries_write_info(gr%mesh%sb%symm, gr%sb%dim, gr%sb%periodic_dim, iunit)
-
-        ! k-point version not yet implemented
-!        if(simul_box_is_periodic(gr%sb)) then
-!          call kpoints_write_info(gr%mesh%sb%kpoints, iunit)
-!          write(iunit,'(1x)')
-!        end if
 
         call v_ks_write_info(ks, iunit)
         
@@ -601,14 +591,6 @@ contains
           write(iunit, '(a)') 'SCF *not* converged!'
         end if
         write(iunit, '(1x)')
-
-! FB: something like this could be useful in terms of the single-particle Hamiltonian but needs to be rewritten for our purposes
-!        if(any(scf%eigens%converged < st%nst) .and. .not. scf%lcao_restricted) then
-!          write(iunit,'(a)') 'Some of the states are not fully converged!'
-!        end if
-
-!        call states_write_eigenvalues(iunit, st%nst, st, gr%sb)
-!        write(iunit, '(1x)')
 
         write(iunit, '(3a,es20.10)') 'Total Energy [', trim(units_abbrev(units_out%energy)), ']:', &
           units_from_atomic(units_out%energy,energy + hm%ep%eii) 
@@ -752,13 +734,7 @@ contains
     where(occin(:,:) > 1) occin(:,:) = st%smear%el_per_state
     
     st%occ = occin
-    
-    ! For hardcoding occupation numbers
-!    occ=M_ZERO
-!    occ=(/1.966127204384, 0.028428180975, 0.004501851603, 0.000764989996, 0.000146467259, 0.000031338136/)
-!    do ist=1, st%nst
-!   st%occ(ist,1)=occ(ist)
-! end do
+
     
     POP_SUB(set_occ_pinning)
   end subroutine set_occ_pinning
@@ -849,9 +825,9 @@ contains
     theta  = M_ZERO
     energy = M_ZERO
     
-    ! threshold on occ nums to avaoid numerical instabilities
-    ! needs to be changed consistently with the same variable in objective_rdmft!!
-  thresh_occ = 1d-14  
+    ! Defines a threshold on occ nums to avoid numerical instabilities.
+    ! Needs to be changed consistently with the same variable in objective_rdmft
+    thresh_occ = 1d-14  
     
     !Initialize the occin. Smallocc is used for numerical stability
 
@@ -938,7 +914,7 @@ contains
       ! check occ.num. threshold again after minimization
       do ist = 1, st%nst
         st%occ(ist,1) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
-        if (st%occ(ist,1) .LE. thresh_occ ) st%occ(ist,1)=thresh_occ
+        if (st%occ(ist,1) <= thresh_occ ) st%occ(ist,1)=thresh_occ
       end do
       
       if(abs(sumgim) < rdm%toler .or. abs((mu1-mu2)*M_HALF) < rdm%toler)  exit
@@ -997,14 +973,14 @@ contains
 
       occ = M_ZERO
       
-      ! threshold on occ nums to avaoid numerical instabilities
-      ! needs to be changed consistently with the same variable in objective_rdmft!!
-    thresh_occ = 1d-14  
-    thresh_theta = asin(sqrt(thresh_occ/M_TWO))*(M_HALF/M_PI)
+      ! Defines a threshold on occ nums to avoid numerical instabilities.
+      ! Needs to be changed consistently with the same variable in scf_occ
+      thresh_occ = 1d-14  
+      thresh_theta = asin(sqrt(thresh_occ/M_TWO))*(M_HALF/M_PI)
     
       do ist = 1, size
         occ(ist) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
-    if (occ(ist) .LE. thresh_occ ) occ(ist)=thresh_occ
+        if (occ(ist) .LE. thresh_occ ) occ(ist)=thresh_occ
       end do
       
       rdm%occsum = M_ZERO
@@ -1116,139 +1092,6 @@ contains
 
   end subroutine scf_orb
 
- 
-  !---------------------------------------------------------------
-  ! Minimize the total energy wrt. an orbital by steepest descent (NOT WORKING, WILL BE REMOVED LATER)
-  !---------------------------------------------------------------
-
-  subroutine scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
-    
-    type(rdm_t),          intent(inout) :: rdm
-    type(grid_t),         intent(inout) :: gr !< grid
-    type(geometry_t),     intent(inout) :: geo !< geometry
-    type(states_t),       intent(inout) :: st !< States
-    type(v_ks_t),         intent(inout) :: ks !< Kohn-Sham
-    type(hamiltonian_t),  intent(inout) :: hm !< Hamiltonian
-    FLOAT,                intent(inout) :: stepsize(1:st%nst) !< step for steepest decent
-    FLOAT,                intent(out)   :: energy    
-
-    type(states_t)     :: states_old
-
-    integer            :: ist, jst, lst, ip, itry, trymax
-!    integer            :: first, last, change, counter, done, notdone
-    FLOAT              :: scaleup, scaledown, norm, projection
-    FLOAT              :: step1, step2, test
-    FLOAT              :: energy_old, energy_diff, smallstep, thresh
-    FLOAT, allocatable :: E_deriv(:), E_deriv_mod(:), dpsi(:,:), dpsi2(:,:)  
-
-    PUSH_SUB(scf_orb_direct)
-
-    SAFE_ALLOCATE(E_deriv(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(E_deriv_mod(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
-
-    E_deriv = M_ZERO
-
-    !set parameters for steepest decent
-    scaleup = 2.4d0
-    scaledown = 0.5d0
-    trymax = 5
-    smallstep = 1d-10
-    thresh = 1d-10
-
-    call v_ks_calc(ks, hm, st, geo)
-    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
-
-    call rdm_derivatives(rdm, hm, st, gr)
-    call total_energy_rdm(rdm, st%occ(:,1), energy)
-    !store current energy
-    energy_old = energy
-
-    do itry = 1, 10
-      do ist = 1, st%nst
-
-      !store current states
-      call states_copy(states_old, st)
-
-      !calculate the derivative with respect to state ist (also removes changes in direction of ist and normalizes)
-      call E_deriv_calc(gr, st, hm, ist, E_deriv)    
-                  
-      !calculate the correct stepsize
-      step1 = M_ZERO
-      step2 = stepsize(ist)
-      test = M_ONE
-
-      !find interval which contains correct stepsize
-      do while(test .gt. M_ZERO) !tests if derivatives at borders of interval have opposite signs
-        !make sure we start with an unmodified state ist
-        call states_get_state(states_old, gr%mesh, ist, 1, dpsi) 
-        forall(ip=1:gr%mesh%np_part)
-          dpsi(ip,1) = dpsi(ip,1) - E_deriv(ip)*step2
-        end forall      
-        call states_set_state(st, gr%mesh, ist, 1, dpsi)
-        call E_deriv_calc(gr, st, hm, ist, E_deriv_mod)    
-        test = dmf_dotp(gr%mesh, E_deriv(:), E_deriv_mod(:))
-        step2 = step2*M_TWO
-      enddo
-
-      test = M_ONE
-
-      do while(abs(test) .gt. thresh .and. stepsize(ist) .gt. thresh)
-        call states_get_state(states_old, gr%mesh, ist, 1, dpsi)
-        stepsize(ist) = (step1+step2)*M_HALF
-        forall(ip=1:gr%mesh%np_part)
-          dpsi(ip,1) = dpsi(ip,1) - E_deriv(ip)*stepsize(ist)
-        end forall
-        !normalize state
-        !norm = sqrt(dmf_dotp(gr%mesh, dpsi(:,1), dpsi(:,1)))
-        !forall(ip=1:gr%mesh%np_part)
-        !  dpsi(ip, 1) = dpsi(ip, 1)/norm
-        !end forall
-      
-        call states_set_state(st, gr%mesh, ist, 1, dpsi)
-        call E_deriv_calc(gr, st, hm, ist, E_deriv_mod)  
-        test = dmf_dotp(gr%mesh, E_deriv(:), E_deriv_mod(:)) 
-
-        if(test .gt. M_ZERO) then           
-          step1 = stepsize(ist)
-        else
-          step2 = stepsize(ist)
-        endif
-      enddo
-    
-      call dstates_orthogonalization_full(st,gr%mesh,1)
-
-      !calculate total energy
-      call v_ks_calc(ks, hm, st, geo)
-      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
-      call rdm_derivatives(rdm, hm, st, gr)
-      call total_energy_rdm(rdm, st%occ(:,1), energy)
-      !check if step lowers the energy
-      energy_diff = energy - energy_old
-      if (energy_diff .lt. - thresh) then 
-        !sucessful step
-        energy_old = energy
-      else 
-        !not sucessful step
-        energy = energy_old !reset energy
-        !undo changes in st and dpsi (cannot use states_copy due to memory leak) 
-        do jst = 1, st%nst
-          call states_get_state(states_old, gr%mesh, jst, 1, dpsi)
-          call states_set_state(st, gr%mesh, jst, 1, dpsi)
-        enddo
-      endif !energy_diff  
-      call states_end(states_old)
-    enddo !ist
-  enddo
-
-    SAFE_DEALLOCATE_A(E_deriv)
-    SAFE_DEALLOCATE_A(dpsi)
-    SAFE_DEALLOCATE_A(dpsi2)
-
-    POP_SUB(scf_orb_direct)
-
-  end subroutine scf_orb_direct
   
  !-----------------------------------------------------------------
   ! Minimize the total energy wrt. an orbital by conjugate gradient
@@ -1281,6 +1124,7 @@ contains
     SAFE_ALLOCATE(FO(1:st%nst, 1:st%nst))
     
     call v_ks_calc(ks, hm, st, geo)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     
     !parameters for cg_solver
     conv = .false.
@@ -1290,13 +1134,12 @@ contains
 
     rdm%eigens%converged = 0
     do ik = st%d%kpt%start, st%d%kpt%end
-      rdm%eigens%matvec = 0  ! necessary?
-      ! shall we use the progress bar?
+      rdm%eigens%matvec = 0  
       if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then 
         call loct_progress_bar(-1, st%lnst*st%d%kpt%nlocal)
       end if
-      !! For RDMFT, needs to be called with: orthogonalize_to_all=.false.
-      !!                                    additional_terms=.false.
+
+      !! For RDMFT, this needs to be called with: orthogonalize_to_all=.false. , additional_terms=.false.                                 
       call deigensolver_cg2(gr, st, hm, rdm%eigens%xc, rdm%eigens%pre, rdm%eigens%tolerance, maxiter, &
             rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), &
             orthogonalize_to_all=.false., &
@@ -1394,7 +1237,7 @@ contains
     pot = M_ZERO
     E_deriv_corr = M_ZERO    
 
-    call density_calc(st, gr, rho_spin) !rho=sum_i int_dx n_i psi_i^2 (includes the occupation numbers!)
+    call density_calc(st, gr, rho_spin)
     do ii = 1, hm%d%ispin
       rho(:) = rho_spin(:, ii)
     end do
@@ -1412,7 +1255,6 @@ contains
       
     !bare derivative wrt. state ist   
     forall(ip=1:gr%mesh%np_part)
-!      E_deriv(ip) = st%occ(ist, 1)*(hpsi1(ip, 1) + pot(ip)*dpsi(ip, 1)) 
       E_deriv(ip) = hpsi1(ip, 1) + pot(ip)*dpsi(ip, 1)
      
       !only for the Mueller functional
@@ -1490,7 +1332,7 @@ contains
         rho_tot(:) = rho(:, ist)
       end do
 
-      call dpoisson_solve(psolver, pot, rho_tot, all_nodes=.false.) !the Hartree potential (actually not necessary to be computed here, can be accessed by hm%vhartree)
+      call dpoisson_solve(psolver, pot, rho_tot, all_nodes=.false.)
 
       do iorb = 1, st%nst
         call states_get_state(st, gr%mesh, iorb, 1, dpsi)
@@ -1499,7 +1341,6 @@ contains
         call dhamiltonian_apply(hm, gr%der, dpsi, hpsi1, iorb, 1, &
                               terms = TERM_OTHERS, set_occ = .true.)
         forall (ip=1:gr%mesh%np_part)
-!           dpsi(ip,1) = st%occ(iorb, 1)*pot(ip)*dpsi(ip,1)
           dpsi(ip,1) = pot(ip)*dpsi(ip,1)
         end forall
 
@@ -1508,15 +1349,13 @@ contains
           lambda(jorb, iorb) = dmf_dotp(gr%mesh, dpsi2(:,1), hpsi(:,1))
           lambda(iorb, jorb) = lambda(jorb, iorb)
           g_h(iorb, jorb) = dmf_dotp(gr%mesh, dpsi(:,1), dpsi2(:, 1))
-          g_x(iorb, jorb) = dmf_dotp(gr%mesh, dpsi2(:,1), hpsi1(:,1))
-!          g_x(iorb, jorb) = sqrt(st%occ(iorb,1))*g_x(iorb, jorb)   
+          g_x(iorb, jorb) = dmf_dotp(gr%mesh, dpsi2(:,1), hpsi1(:,1))  
           g_x(iorb, jorb) = g_x(iorb, jorb)
         end do
       end do
  
       do jorb = 1,st%nst
         do iorb = 1,st%nst
-!       lambda(jorb,iorb) = st%occ(iorb,1)*lambda(jorb,iorb)  + g_h(iorb, jorb)+ g_x(iorb, jorb) 
         lambda(jorb,iorb) = lambda(jorb,iorb)  + g_h(iorb, jorb)+ g_x(iorb, jorb) 
       end do
       end do
@@ -1532,7 +1371,7 @@ contains
           do jst = 1, ist
             Fock(ist,jst,iorb) = st%occ(iorb, 1)*rdm%eone_int(ist,jst)
             do jorb = 1, st%nst
-              !The coefficimnt of the Exchange term below is only for the Mueller functional
+              !The coefficient of the Exchange term below is only for the Mueller functional
               Fock(ist ,jst, iorb) =  Fock(ist ,jst, iorb) + st%occ(iorb, 1)*st%occ(jorb,1)*rdm%Coul(ist, jst, jorb)  &
                                       - sqrt(st%occ(iorb,1))*sqrt(st%occ(jorb,1))*rdm%Exch(ist, jst,jorb)
             enddo
