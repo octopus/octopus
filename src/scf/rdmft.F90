@@ -282,7 +282,7 @@ contains
         call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
       end if
     else
-      write(message(1),'(a,i3,a)')  'The calculation did not converge after ', iter, ' iterations '
+      write(message(1),'(a,i3,a)')  'The calculation did not converge after ', iter-1, ' iterations '
       write(message(2),'(a,es15.5)') 'Relative energy difference between the last two iterations ', rel_ener
       write(message(3),'(a,es15.5)') 'The maximal non-diagonal element of the Hermitian matrix F is ', rdm%maxFO
       call messages_info(3)
@@ -492,7 +492,7 @@ contains
 
         write(iunit, '(3a,es20.10)') 'Total Energy [', trim(units_abbrev(units_out%energy)), ']:', &
           units_from_atomic(units_out%energy,energy + hm%ep%eii) 
-        write(iunit,'(a,1x,f14.12)') 'Sum of occupation numbers:', rdm%occsum
+        write(iunit,'(a,1x,f16.12)') 'Sum of occupation numbers:', rdm%occsum
       else
         iunit = 0
       end if
@@ -629,7 +629,7 @@ contains
       call messages_info(1)
     end do
 
-    write(message(1),'(a,1x,f11.9)') 'Sum of occupation numbers', rdm%occsum
+    write(message(1),'(a,1x,f13.9)') 'Sum of occupation numbers', rdm%occsum
     write(message(2),'(a,es20.10)') 'Total energy occ', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
     call messages_info(2)   
     
@@ -778,7 +778,7 @@ contains
       call messages_info(1)
     end do
 
-    write(message(1),'(a,1x,f14.12)') 'Sum of occupation numbers', rdm%occsum
+    write(message(1),'(a,1x,f16.12)') 'Sum of occupation numbers', rdm%occsum
     write(message(2),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy, energy + hm%ep%eii)
     call messages_info(2)   
 
