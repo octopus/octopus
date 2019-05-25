@@ -980,6 +980,8 @@ subroutine batch_remote_access_start(this, mpi_grp, rma_win)
 
   PUSH_SUB(batch_remote_access_start)
 
+  ASSERT(batch_status(this) == BATCH_PACKED)
+  
   if(mpi_grp%size > 1) then
     call batch_pack(this)
     
