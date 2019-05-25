@@ -72,6 +72,8 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
     end do
   else
     do ia = 1, geo%natoms
+      if(species_type(geo%atom(ia)%species) /= SPECIES_PSEUDO &
+           .and. species_type(geo%atom(ia)%species) /= SPECIES_PSPIO) cycle
       work = 0
       n_s_orb = 0
       hubbardj = species_hubbard_j(geo%atom(ia)%species)
