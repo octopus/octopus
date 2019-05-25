@@ -30,3 +30,8 @@ FromScratch = yes
 
 ExtraStates = 3
 
+# fix MeshBlockSize in order to make tests comparible between GPU and non-GPU machiens
+# which would implicitely use different defaults for that value:
+
+MeshBlockSize = 16
+
