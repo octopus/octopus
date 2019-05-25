@@ -74,6 +74,7 @@ dist_share_DATA = \
 	12-spintarget.01-ground_state.inp      \
 	12-spintarget.02-oct.inp               \
 	13-box-nlopt.test                      \
-	13-box-nlopt.03-bobyqa.inp
+	13-box-nlopt.03-bobyqa.inp             \
+	13-box-nlopt.04-lbfgs.inp
 
 CLEANFILES = *~ *.bak
