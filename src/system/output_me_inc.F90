@@ -276,7 +276,7 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
   integer,             intent(in) :: ik
   
   integer :: ist, jst, ip, iunit, idir, idim, ispin
-  R_TYPE :: multip_element
+  R_TYPE :: dip_element
   R_TYPE, allocatable :: psii(:, :), psij(:, :), gpsii(:,:,:)
 
   PUSH_SUB(X(output_me_dipole))
@@ -305,14 +305,20 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
       call states_get_state(st, gr%mesh, ist, ik, psii)
 
       if(.not. simul_box_is_periodic(gr%mesh%sb)) then
-        do ip = 1, gr%mesh%np
-          gpsii(ip, idir, 1) = psii(ip, 1)*gr%mesh%x(ip, idir)
+
+        do idim = 1, st%d%dim  
+          do ip = 1, gr%mesh%np
+            gpsii(ip, idir, idim) = psii(ip, idim)*gr%mesh%x(ip, idir)
+          end do
         end do
+
       else
+
         do idim = 1, st%d%dim
            call boundaries_set(gr%der%boundaries, psii(:, idim))
         end do
 
+        !We need the phase here as the routines for the nonlocal contributions assume that the wavefunctions have a phase.
 #ifdef R_TCOMPLEX
         if(associated(hm%hm_base%phase)) then
           call states_set_phase(st%d, psii, hm%hm_base%phase(1:gr%mesh%np_part, ik), gr%mesh%np_part, .false.)
@@ -322,6 +328,12 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
         do idim = 1, st%d%dim
           call X(derivatives_grad)(gr%der, psii(:, idim), gpsii(:, :, idim), set_bc = .false.)
         end do
+
+        if(ist == this%st_start) then
+          print *, ik, psii(1:2,1)
+          print *, ik, gpsii(1:2,1,1)
+          print *, ' ' 
+        end if
 
         !A nonlocal contribution from the MGGA potential must be included
         !This must be done first, as this is like a position-dependent mass 
@@ -353,20 +365,20 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
 
         call states_get_state(st, gr%mesh, jst, ik, psij)
 #ifdef R_TCOMPLEX
-        if(associated(hm%hm_base%phase).and. simul_box_is_periodic(gr%mesh%sb)) then
+        if(associated(hm%hm_base%phase)) then
           call states_set_phase(st%d, psij, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .false.)
         end if
 #endif
 
-        multip_element = X(mf_dotp)(gr%mesh, st%d%dim, gpsii(:, idir, :), psij)
+        dip_element = X(mf_dotp)(gr%mesh, st%d%dim, gpsii(:, idir, :), psij)
         if(simul_box_is_periodic(gr%mesh%sb)) then
           if(abs(st%eigenval(ist, ik) - st%eigenval(jst, ik)) > CNST(1e-6)) then  
-            multip_element = -multip_element/((st%eigenval(ist, ik) - st%eigenval(jst, ik)))
+            dip_element = -dip_element/((st%eigenval(ist, ik) - st%eigenval(jst, ik)))
           else
-            multip_element = R_TOTYPE(M_ZERO)
+            dip_element = R_TOTYPE(M_ZERO)
           end if
         end if
-        multip_element = units_from_atomic(units_out%length, multip_element)
+        dip_element = units_from_atomic(units_out%length, multip_element)
 
         write(iunit, fmt='(f20.12)', advance = 'no') R_ABS(multip_element)
         write(iunit, fmt='(a)', advance = 'no') '   '

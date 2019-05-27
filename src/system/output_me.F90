@@ -26,15 +26,16 @@ module output_me_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use io_oct_m
-  use mesh_oct_m
-  use mesh_function_oct_m
-  use messages_oct_m
   use kpoints_oct_m
   use loct_math_oct_m
   use lda_u_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
+  use mesh_oct_m
+  use mesh_function_oct_m
+  use messages_oct_m
   use parser_oct_m
+  use projector_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use states_oct_m
@@ -64,10 +65,7 @@ module output_me_oct_m
 
     integer :: st_start !Start index for the output
     integer :: st_end   !Stop index for the output
-<<<<<<< HEAD
-=======
     integer :: nst      !Number of states computed
->>>>>>> develop
   end type output_me_t
 
   integer, parameter, public :: &
@@ -81,19 +79,12 @@ module output_me_oct_m
 contains
   
   ! ---------------------------------------------------------
-<<<<<<< HEAD
   subroutine output_me_init(this, sb, st, nst)
     type(output_me_t), intent(out) :: this
     type(simul_box_t), intent(in)  :: sb
     type(states_t),    intent(in)  :: st
     integer,           intent(in)  :: nst
 
-=======
-  subroutine output_me_init(this, sb, nst)
-    type(output_me_t), intent(out) :: this
-    type(simul_box_t), intent(in)  :: sb
-    integer,           intent(in)  :: nst
->>>>>>> develop
     PUSH_SUB(output_me_init)
 
     !%Variable OutputMatrixElements

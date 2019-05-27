@@ -37,10 +37,7 @@ ExtraStates = 1
 ConvRelDens = 1e-7
 EigensolverTolerance = 1e-8
 
-Output = geometry + dos + matrix_elements
-OutputMatrixElements = dipole
-OutputMEStart = 14
-OutputMEEnd = 16
+Output = geometry + dos
 OutputFormat = xyz
 
 FilterPotentials = filter_none
