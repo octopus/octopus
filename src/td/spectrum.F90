@@ -1027,8 +1027,8 @@ contains
 
     ! dividing by the refraction index - n(\omega)=\sqrt{\frac{|\epsilon(\omega)|+\Re[\epsilon(\omega)]}{2}}
 
-    do ie = 0, no_e
-      call pcm_eps(pcm, eps(ie), ie*spectrum%energy_step + spectrum%min_energy)
+    do ie = 1, no_e
+      call pcm_eps(pcm, eps(ie), (ie-1)*spectrum%energy_step + spectrum%min_energy)
       sigma(ie, 1:3, 1:nspin) = sigma(ie, 1:3, 1:nspin) / sqrt( CNST(0.5) * ( ABS(eps(ie)) + REAL(eps(ie), REAL_PRECISION) ) )
     end do
 
@@ -1226,7 +1226,7 @@ contains
     ! Get the number of energy steps.
     no_e = spectrum_nenergy_steps(spectrum)
 
-    SAFE_ALLOCATE(chi(0:no_e))
+    SAFE_ALLOCATE(chi(1:no_e))
     chi = M_ZERO
 
     ! Gets the damp function
@@ -1248,8 +1248,8 @@ contains
 
     ! Fourier transformation from time to frequency
     if (abs(kick%delta_strength) < 1.d-12) kick%delta_strength = M_ONE
-    do ie = 0, no_e
-      energy = ie * spectrum%energy_step + spectrum%min_energy
+    do ie = 1, no_e
+      energy = (ie-1) * spectrum%energy_step + spectrum%min_energy
       do it = istart, iend
         jj = it - istart
 
@@ -1262,8 +1262,8 @@ contains
 
     ! Test f-sum rule
     fsum = M_ZERO
-    do ie = 0, no_e
-      energy = ie * spectrum%energy_step + spectrum%min_energy
+    do ie = 1, no_e
+      energy = (ie-1) * spectrum%energy_step + spectrum%min_energy
       fsum = fsum + energy * aimag(chi(ie))
     end do
     fsum = spectrum%energy_step * fsum * 2/sum(kick%qvector(:)**2)
@@ -1283,8 +1283,8 @@ contains
     write(out_file, '(a20)', advance = 'no') str_center('[' // trim(units_abbrev(units_out%energy)) // '**(-1)]', 20)
     write(out_file, '(1x)')
 
-    do ie = 0, no_e
-      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, ie * spectrum%energy_step + spectrum%min_energy)
+    do ie = 1, no_e
+      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie-1) * spectrum%energy_step + spectrum%min_energy)
       write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy**(-1), aimag(chi(ie)))
       write(out_file, '(1x)')
     end do
@@ -2119,8 +2119,8 @@ contains
       call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
         istart + 1, iend + 1, M_ZERO, dt, cur_batch, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, sps_batch)
 
-      do ie = 0, no_e
-        sps(ie) = (sps(ie)**2 + spc(ie)**2) * (ie * spectrum%energy_step + spectrum%min_energy)**2
+      do ie = 1, no_e
+        sps(ie) = (sps(ie)**2 + spc(ie)**2) * ((ie-1) * spectrum%energy_step + spectrum%min_energy)**2
       end do
 
       call spectrum_hs_output(out_file, spectrum, pol, no_e, sps)   
@@ -2179,7 +2179,7 @@ contains
       sp = M_ZERO
 
       do ie = 1, no_e
-        call hsfunction(ie * spectrum%energy_step + spectrum%min_energy, sp(ie))
+        call hsfunction((ie-1) * spectrum%energy_step + spectrum%min_energy, sp(ie))
         sp(ie) = -sp(ie)
       end do
 
@@ -2638,7 +2638,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine spectrum_sigma_diagonalize(sigma, nspin, energy_step, min_energy, energy_steps, kick)
-    FLOAT,                  intent(in) :: sigma(:, :, 0:, :) !< (3, 3, energy_steps, nspin) already converted to units
+    FLOAT,                  intent(in) :: sigma(:, :, :, :) !< (3, 3, energy_steps, nspin) already converted to units
     integer,                intent(in) :: nspin
     FLOAT,                  intent(in) :: energy_step, min_energy
     integer,                intent(in) :: energy_steps
@@ -2739,7 +2739,7 @@ contains
     if (spins_triplet .and. spins_singlet) SAFE_ALLOCATE(pp2(1:3, 1:3))
     SAFE_ALLOCATE(w(1:3))
     SAFE_ALLOCATE(work(1:3, 1:3))
-    do ie = 0, energy_steps
+    do ie = 1, energy_steps
 
       pp(:, :) = sigma(:, :, ie, 1)
       if (nspin >= 2) then
@@ -2767,7 +2767,7 @@ contains
       ! Note that the cross-section elements do not have to be transformed to the proper units, since
       ! they have been read from the "cross_section_vector.x", where they are already in the proper units.
 
-      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * energy_step + min_energy))
+      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, ((ie-1) * energy_step + min_energy))
       do idir = 3, 1, -1
         if (symmetrize) then
           write(out_file,'(2e20.8)', advance = 'no') real(w(idir))
