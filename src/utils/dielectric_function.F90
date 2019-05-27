@@ -121,7 +121,7 @@ program dielectric_function
     !% relative to the current folder
     !%End
 
-    call parse_variable('GaugeFieldDelay', '.', ref_filename)
+    call parse_variable('TransientAbsorptionReference', '.', ref_filename)
     ref_file = io_open(trim(ref_filename)//'/gauge_field', action='read', status='old', die=.false.)
     if(ref_file < 0) then
       message(1) = "Cannot open reference file '"//trim(io_workpath(trim(ref_filename)//'/gauge_field'))//"'"
@@ -154,7 +154,7 @@ program dielectric_function
   call io_close(in_file)
 
   !We remove the reference
-  if(parse_is_defined('GaugeFieldDelay')) then
+  if(parse_is_defined('TransientAbsorptionReference')) then
     time_steps_ref = time_steps_ref + 1
     SAFE_ALLOCATE(vecpot_ref(1:time_steps_ref, space%dim*3))
     call io_skip_header(ref_file)
