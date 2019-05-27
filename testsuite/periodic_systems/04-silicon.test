@@ -167,7 +167,7 @@ match ; Mag.-opt. Im epsilon       ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Im
 match ; Mag.-opt. Im epsilon       ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Im epsilon', 9) ; 0.70069675E+01
 match ; Mag.-opt. Im epsilon       ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Im epsilon', 10) ; 0.70069675E+01
 
-Precision : 0.0004
+Precision : 0.0005
 match ; MO Re eps (w/o G=0)        ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'LRC kernel', 7, 4) ; 0.31086729
 match ; MO Re eps (w/o G=0)        ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'LRC kernel', 8, 4) ; 0.31086729
 match ; MO Re eps (w/o G=0)        ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'LRC kernel', 9, 4) ; 0.31086729
