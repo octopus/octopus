@@ -1284,7 +1284,8 @@ contains
     write(out_file, '(1x)')
 
     do ie = 1, no_e
-      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie-1) * spectrum%energy_step + spectrum%min_energy)
+      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, &
+                                  (ie-1) * spectrum%energy_step + spectrum%min_energy)
       write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy**(-1), aimag(chi(ie)))
       write(out_file, '(1x)')
     end do
