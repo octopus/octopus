@@ -780,7 +780,8 @@ contains
     write(out_file, '(1x)')
 
     do ie = 1, no_e
-      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie-1) * spectrum%energy_step + spectrum%min_energy)
+      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, &
+                                    (ie-1) * spectrum%energy_step + spectrum%min_energy)
       do isp = 1, nspin
         write(out_file,'(3e20.8)', advance = 'no') (units_from_atomic(units_out%length**2, sigma(ie, idir, isp)), &
                                                     idir = 1, 3)
@@ -1130,7 +1131,8 @@ contains
     write(out_file, '(1x)')
 
     do ie = 1, no_e
-      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie-1) * spectrum%energy_step + spectrum%min_energy)
+      write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, &
+                                    (ie-1) * spectrum%energy_step + spectrum%min_energy)
       do isp = 1, nspin
         write(out_file,'(3e20.8)', advance = 'no') (units_from_atomic(units_out%length**2, power(ie, idir, isp)), &
                                                     idir = 1, 3)
