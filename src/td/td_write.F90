@@ -367,7 +367,12 @@ contains
         call messages_fatal(1)
       end if
       
-      call states_copy(writ%gs_st, st, exclude_wfns = .true., exclude_eigenval = .true.)
+      if(.not.writ%out(OUT_KP_PROJ)%write.and..not.writ%out(OUT_N_EX)%write) then
+        call states_copy(writ%gs_st, st, exclude_wfns = .true., exclude_eigenval = .true.)
+      else
+        ! we want the same layout of gs_st as st
+        call states_copy(writ%gs_st, st)
+      end if
 
       ! clean up all the stuff we have to reallocate
       SAFE_DEALLOCATE_P(writ%gs_st%node)
