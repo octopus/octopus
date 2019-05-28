@@ -192,8 +192,8 @@ program dielectric_function
 
   do ii = 1, space%dim
     call batch_add_state(vecpotb, vecpot(:,  space%dim + ii))
-    call batch_add_state(ftrealb, ftreal(1:,  ii))
-    call batch_add_state(ftimagb, ftimag(1:,  ii))
+    call batch_add_state(ftrealb, ftreal(:,  ii))
+    call batch_add_state(ftimagb, ftimag(:,  ii))
   end do
 
   call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, spectrum%start_time, dt, vecpotb)

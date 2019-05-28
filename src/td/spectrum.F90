@@ -344,24 +344,24 @@ contains
     ! on subsequent calls, do not overwrite energy_steps and dw
     call io_skip_header(in_file(1))
 
-    SAFE_ALLOCATE(sigma (1:3, 1:3, 0:energy_steps, 1:nspin))
-    SAFE_ALLOCATE(sigmap(1:3, 1:3, 0:energy_steps, 1:nspin))
-    SAFE_ALLOCATE(sigmau(1:3,      0:energy_steps, 1:nspin))
-    SAFE_ALLOCATE(sigmav(1:3,      0:energy_steps, 1:nspin))
-    SAFE_ALLOCATE(sigmaw(1:3,      0:energy_steps, 1:nspin))
+    SAFE_ALLOCATE(sigma (1:3, 1:3, 1:energy_steps, 1:nspin))
+    SAFE_ALLOCATE(sigmap(1:3, 1:3, 1:energy_steps, 1:nspin))
+    SAFE_ALLOCATE(sigmau(1:3,      1:energy_steps, 1:nspin))
+    SAFE_ALLOCATE(sigmav(1:3,      1:energy_steps, 1:nspin))
+    SAFE_ALLOCATE(sigmaw(1:3,      1:energy_steps, 1:nspin))
     SAFE_ALLOCATE(    ip(1:3, 1:3))
 
     select case(equiv_axes)
 
     case(3)
 
-      do ie = 0, energy_steps
+      do ie = 1, energy_steps
         read(in_file(1), *) dump, (sigmau(1:3, ie, is), is = 1, nspin)
       end do
 
       ! The first row of sigma is the vector that we have just read, but properly projected...
       do is = 1, nspin
-        do ie = 0, energy_steps
+        do ie = 1, energy_steps
           sigmap(1, 1, ie, is) = sum(sigmau(1:3, ie, is) * kick%pol(1:3, 1))
           sigmap(1, 2, ie, is) = sum(sigmau(1:3, ie, is) * kick%pol(1:3, 2))
           sigmap(1, 3, ie, is) = sum(sigmau(1:3, ie, is) * kick%pol(1:3, 3))
@@ -378,7 +378,7 @@ contains
 
       ! But for the (2,3) term we need the wprime vector....
       do is = 1, nspin
-        do ie = 0, energy_steps
+        do ie = 1, energy_steps
           sigmap(2, 3, ie, is) = sum(sigmau(1:3, ie, is) * kick%wprime(1:3))
           sigmap(3, 2, ie, is) = sigmap(2, 3, ie, is)
         end do
@@ -389,14 +389,14 @@ contains
       call spectrum_cross_section_info(in_file(2), ie, kick, trash, dump)
       call io_skip_header(in_file(2))
 
-      do ie = 0, energy_steps
+      do ie = 1, energy_steps
         read(in_file(1), *) dump, (sigmau(1:3, ie, is), is = 1, nspin)
         read(in_file(2), *) dump, (sigmaw(1:3, ie, is), is = 1, nspin)
       end do
 
       ! The first row of sigma is the vector that we have just read, but properly projected...
       do is = 1, nspin
-        do ie = 0, energy_steps
+        do ie = 1, energy_steps
           sigmap(1, 1, ie, is) = sum( sigmau(1:3, ie, is) * kick%pol(1:3, 1))
           sigmap(1, 2, ie, is) = sum( sigmau(1:3, ie, is) * kick%pol(1:3, 2))
           sigmap(1, 3, ie, is) = sum( sigmau(1:3, ie, is) * kick%pol(1:3, 3))
@@ -405,7 +405,7 @@ contains
 
       ! The third row of sigma is also the vector that we have just read, but properly projected...
       do is = 1, nspin
-        do ie = 0, energy_steps
+        do ie = 1, energy_steps
           sigmap(3, 1, ie, is) = sum( sigmaw(1:3, ie, is) * kick%pol(1:3, 1))
           sigmap(3, 2, ie, is) = sum( sigmaw(1:3, ie, is) * kick%pol(1:3, 2))
           sigmap(3, 3, ie, is) = sum( sigmaw(1:3, ie, is) * kick%pol(1:3, 3))
@@ -426,28 +426,28 @@ contains
       call io_skip_header(in_file(2))
       call io_skip_header(in_file(3))
 
-      do ie = 0, energy_steps
+      do ie = 1, energy_steps
         read(in_file(1), *) dump, (sigmau(1:3, ie, is), is = 1, nspin)
         read(in_file(2), *) dump, (sigmav(1:3, ie, is), is = 1, nspin)
         read(in_file(3), *) dump, (sigmaw(1:3, ie, is), is = 1, nspin)
       end do
 
       do is = 1, nspin
-        do ie = 0, energy_steps
+        do ie = 1, energy_steps
           sigmap(1, 1, ie, is) = sum( sigmau(1:3, ie, is) * kick%pol(1:3, 1))
           sigmap(1, 2, ie, is) = sum( sigmau(1:3, ie, is) * kick%pol(1:3, 2))
           sigmap(1, 3, ie, is) = sum( sigmau(1:3, ie, is) * kick%pol(1:3, 3))
         end do
       end do
       do is = 1, nspin
-        do ie = 0, energy_steps
+        do ie = 1, energy_steps
           sigmap(2, 1, ie, is) = sum( sigmav(1:3, ie, is) * kick%pol(1:3, 1))
           sigmap(2, 2, ie, is) = sum( sigmav(1:3, ie, is) * kick%pol(1:3, 2))
           sigmap(2, 3, ie, is) = sum( sigmav(1:3, ie, is) * kick%pol(1:3, 3))
         end do
       end do
       do is = 1, nspin
-        do ie = 0, energy_steps
+        do ie = 1, energy_steps
           sigmap(3, 1, ie, is) = sum( sigmaw(1:3, ie, is) * kick%pol(1:3, 1))
           sigmap(3, 2, ie, is) = sum( sigmaw(1:3, ie, is) * kick%pol(1:3, 2))
           sigmap(3, 3, ie, is) = sum( sigmaw(1:3, ie, is) * kick%pol(1:3, 3))
@@ -460,7 +460,7 @@ contains
     ip(1:3, 1:3) = kick%pol(1:3, 1:3)
     dump = lalg_inverter(3, ip)
     do is = 1, nspin
-      do ie = 0, energy_steps
+      do ie = 1, energy_steps
         sigma(:, :, ie, is) = matmul( transpose(ip), matmul(sigmap(:, :, ie, is), ip) )
       end do
     end do
@@ -488,7 +488,7 @@ contains
   ! ---------------------------------------------------------
   subroutine spectrum_cross_section_tensor_write(out_file, sigma, nspin, energy_step, min_energy, energy_steps, kick)
     integer,                intent(in) :: out_file
-    FLOAT,                  intent(in) :: sigma(:, :, 0:, :) !< (3, 3, energy_steps, nspin) already converted to units
+    FLOAT,                  intent(in) :: sigma(:, :, :, :) !< (3, 3, energy_steps, nspin) already converted to units
     integer,                intent(in) :: nspin
     FLOAT,                  intent(in) :: energy_step, min_energy
     integer,                intent(in) :: energy_steps
@@ -557,7 +557,7 @@ contains
     if (spins_triplet .and. spins_singlet) SAFE_ALLOCATE(pp2(1:3, 1:3))
     SAFE_ALLOCATE(ip(1:3, 1:3))
 
-    do ie = 0, energy_steps
+    do ie = 1, energy_steps
 
       pp(:, :) = sigma(:, :, ie, 1)
       if (nspin >= 2) then
@@ -577,7 +577,7 @@ contains
 
       ! Note that the cross-section elements do not have to be transformed to the proper units, since
       ! they have been read from the "cross_section_vector.x", where they are already in the proper units.
-      write(out_file,'(3e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * energy_step + min_energy)), &
+      write(out_file,'(3e20.8)', advance = 'no') units_from_atomic(units_out%energy, ((ie-1) * energy_step + min_energy)), &
         average, sqrt(max(anisotropy, M_ZERO))
 
       if (spins_singlet .and. spins_triplet) then
@@ -1023,7 +1023,7 @@ contains
 
     PUSH_SUB(spectrum_over_pcm_refraction_index)
 
-    SAFE_ALLOCATE(eps(0:no_e))
+    SAFE_ALLOCATE(eps(1:no_e))
 
     ! dividing by the refraction index - n(\omega)=\sqrt{\frac{|\epsilon(\omega)|+\Re[\epsilon(\omega)]}{2}}
 
@@ -1403,7 +1403,7 @@ contains
     do ie = 1, no_e
       write(out_file,'(e20.8,e20.8,e20.8)') units_from_atomic(units_out%energy, (ie-1)*spectrum%energy_step+spectrum%min_energy), &
         units_from_atomic(units_out%length**3, imsp(ie)/M_PI), &
-        units_from_atomic(units_out%length**4, resp(ie)*P_C/(M_THREE*ie*spectrum%energy_step))
+        units_from_atomic(units_out%length**4, resp(ie)*P_C/(M_THREE*max((ie-1),1)*spectrum%energy_step))
     end do
 
     SAFE_DEALLOCATE_A(resp)
@@ -2200,7 +2200,7 @@ contains
     type(spectrum_t), intent(inout) :: spectrum
     character,        intent(in)    :: pol
     integer,          intent(in)    :: no_e
-    FLOAT,            intent(in)    :: sp(0:no_e)
+    FLOAT,            intent(in)    :: sp(:)
 
     integer :: iunit, ie
 
