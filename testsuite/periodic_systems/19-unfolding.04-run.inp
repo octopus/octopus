@@ -25,7 +25,7 @@ Spacing = a/14
 include unfold_kpt.dat
 ExperimentalFeatures = yes
 
-ExtraStates = 4
+ExtraStates = 8
 
 UnfoldMode = unfold_run
 %UnfoldLatticeParameters
@@ -44,3 +44,5 @@ UnfoldMode = unfold_run
  1.0 | 1.0 | 1.0 # Another Gamma point
 %
 
+UnfoldMinEnergy = -8.0*eV
+UnfoldMaxEnergy =  9.0*eV

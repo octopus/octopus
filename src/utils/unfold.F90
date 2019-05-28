@@ -390,7 +390,7 @@ contains
     !% Specifies the end of the energy range for the unfolded band structure.
     !% The default value correspond to the largest eigenvalue.
     !%End
-    call parse_variable('UnfoldMinEnergy', maxval(st%eigenval(:,:)), eigmax)
+    call parse_variable('UnfoldMaxEnergy', maxval(st%eigenval(:,:)), eigmax)
  
     if(de == M_ZERO) then
       de = (eigmax-eigmin)/CNST(1000)
