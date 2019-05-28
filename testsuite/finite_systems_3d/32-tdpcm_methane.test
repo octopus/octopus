@@ -19,7 +19,7 @@ match ; molecule-solvent int. energy  ;  GREPFIELD(static/info, 'E_M-solvent =',
 match ; electronic pol. charge        ;  GREPFIELD(pcm/pcm_info.out, '       9   ', 7)  ;  -7.88989420
 match ; nuclear pol. charge           ;  GREPFIELD(pcm/pcm_info.out, '       9   ', 9)  ;   7.89728298
 
-Input      : 32-tdpcm_methane.02-td_prop_noneq.inp
+Input      : 32-tdpcm_methane.02-td_prop_neq.inp
 Precision: 0.0001
 match ; M-solvent int. energy @ t=0      ;  GREPFIELD(td.general/energy,'       0', 12)   ; -1.495587719231e-02
 match ; M-solvent int. energy @ t=21*dt  ;  GREPFIELD(td.general/energy,'      21', 12)   ; -1.502584992053e-02
