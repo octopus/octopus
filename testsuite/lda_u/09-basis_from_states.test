@@ -13,9 +13,9 @@ match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 1
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -39.205598065
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -39.20557150
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -22.49518607
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -6.50889827
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -6.50882613
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  12.12218292
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -5.55372248
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.56599600

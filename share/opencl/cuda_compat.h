@@ -106,6 +106,13 @@ __forceinline__ static Double2 operator+(const Double2 & a, const Double2 & b){
   return c;
 }
 
+__forceinline__ static Double2 operator-(const Double2 & a, const Double2 & b){
+  Double2 c;
+  c.x = a.x - b.x;
+  c.y = a.y - b.y;
+  return c;
+}
+
 __forceinline__ static Double2 operator+=(Double2 & a, const Double2 & b){
   a.x += b.x;
   a.y += b.y;
