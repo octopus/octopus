@@ -109,6 +109,15 @@ contains
 
     call v_ks_init(sys%ks, sys%gr, sys%st, sys%geo, sys%mc)
 
+    if(sys%ks%theory_level == HARTREE_FOCK .or. output_need_exchange(sys%outp)) then
+      if(states_are_real(sys%st)) then
+        call poisson_init(exchange_psolver, sys%gr%der, sys%mc, force_serial = .true., force_cmplx = .false.)
+      else
+        call poisson_init(exchange_psolver, sys%gr%der, sys%mc, force_serial = .true., force_cmplx = .true.)
+      end if
+    end if
+
+
     call profiling_out(prof)
     POP_SUB(system_init)
 
@@ -145,6 +154,7 @@ contains
     call multicomm_end(sys%mc)
 
     call poisson_end(psolver)
+    call poisson_end(exchange_psolver)
     call v_ks_end(sys%ks)
     
     call output_end(sys%outp)

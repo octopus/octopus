@@ -165,9 +165,10 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
     end if
     
   case(POISSON_FFT)
+    this%fft_solver%precalculated_g = .false.
 
     call poisson_fft_init(this%fft_solver, this%der%mesh, this%cube, this%kernel, &
-      soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq)
+      soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq, singul = M_ZERO)
     ! soft parameter has no effect unless in 1D
 
     if (this%kernel == POISSON_FFT_KERNEL_CORRECTED) then
@@ -186,23 +187,36 @@ end subroutine poisson_kernel_init
 
 
 !-----------------------------------------------------------------
-subroutine poisson_kernel_reinit(this, qq)
+subroutine poisson_kernel_reinit(this, qq, singul)
   type(poisson_t), intent(inout) :: this
   FLOAT,           intent(in)    :: qq(:)
+  FLOAT,           intent(in)    :: singul
+
+  type(profile_t), save :: prof
 
   PUSH_SUB(poisson_kernel_reinit)
 
-  select case(this%method)
-  case(POISSON_FFT)
-    if(any(abs(this%qq(1:this%der%mesh%sb%periodic_dim) - qq(1:this%der%mesh%sb%periodic_dim)) > M_EPSILON)) then
-      this%qq(1:this%der%mesh%sb%periodic_dim) = qq(1:this%der%mesh%sb%periodic_dim)
+  call profiling_in(prof, 'POISSON_REINIT')
+
+  !We only reinitialize the poisson sover if needed
+  if(any(abs(this%qq(1:this%der%mesh%sb%periodic_dim) - qq(1:this%der%mesh%sb%periodic_dim)) > M_EPSILON)) then
+    this%qq(1:this%der%mesh%sb%periodic_dim) = qq(1:this%der%mesh%sb%periodic_dim)
+   
+    select case(this%method)
+    case(POISSON_FFT)
+      if(.not. this%fft_solver%precalculated_g) then
+        call poisson_fft_precalculate_g(this%fft_solver, this%der%mesh, this%cube)
+      end if
       call poisson_fft_end(this%fft_solver)
       call poisson_fft_init(this%fft_solver, this%der%mesh, this%cube, this%kernel, &
-        soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq)
-    end if
-  case default
-    call messages_not_implemented("poisson_kernel_reinit with other methods than FFT")
-  end select
+        soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq, singul = singul)
+    case default
+      call messages_not_implemented("poisson_kernel_reinit with other methods than FFT")
+    end select
+
+  end if
+
+  call profiling_out(prof)
 
   POP_SUB(poisson_kernel_reinit)
 end subroutine poisson_kernel_reinit

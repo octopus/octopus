@@ -72,7 +72,6 @@ module scdm_oct_m
     
     FLOAT, pointer   :: dpsi(:,:)   !< scdm states in their local box
     CMPLX, pointer   :: zpsi(:,:)   ! ^
-    type(poisson_t)  :: poisson     !< solver used to compute exchange with localized scdm states
     type(poisson_fft_t) :: poisson_fft !< used for above poisson solver
 
     logical          :: verbose     !< write info about SCDM procedure
@@ -98,6 +97,8 @@ module scdm_oct_m
   logical,public    :: scdm_is_local=.false.  ! is localized
 
   type(profile_t), save :: prof_scdm, prof_scdm_QR, prof_scdm_matmul1, prof_scdm_matmul3
+
+  type(poisson_t), save, public:: scdm_poisson     !< solver used to compute exchange with localized scdm states
   
 contains
 
@@ -273,7 +274,7 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   
   ! set up poisson solver used for the exchange operator with scdm states
   ! this replicates poisson_kernel_init()
-  scdm%poisson%poisson_soft_coulomb_param = M_ZERO
+  scdm_poisson%poisson_soft_coulomb_param = M_ZERO
   if (der%mesh%sb%periodic_dim.eq.3) then
     call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, &
          kernel=POISSON_FFT_KERNEL_HOCKNEY,fullcube=fullcube)
@@ -282,14 +283,14 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   end if
   
   ! create poisson object
-  SAFE_ALLOCATE(scdm%poisson%der)
-  SAFE_ALLOCATE(scdm%poisson%der%mesh)
-  scdm%poisson%der%mesh = scdm%boxmesh
-  scdm%poisson%der%mesh%vp%npart = 1
-  scdm%poisson%method = POISSON_FFT
-  scdm%poisson%kernel = POISSON_FFT_KERNEL_SPH
-  scdm%poisson%cube = scdm%boxcube
-  scdm%poisson%fft_solver = scdm%poisson_fft
+  SAFE_ALLOCATE(scdm_poisson%der)
+  SAFE_ALLOCATE(scdm_poisson%der%mesh)
+  scdm_poisson%der%mesh = scdm%boxmesh
+  scdm_poisson%der%mesh%vp%npart = 1
+  scdm_poisson%method = POISSON_FFT
+  scdm_poisson%kernel = POISSON_FFT_KERNEL_SPH
+  scdm_poisson%cube = scdm%boxcube
+  scdm_poisson%fft_solver = scdm%poisson_fft
 
 #ifdef HAVE_SCALAPACK
   if(st%scalapack_compatible) then
