@@ -78,7 +78,7 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device, boundaries1, boun
 
   ASSERT(associated(cube%fft))
   ASSERT(cube%fft%library /= FFTLIB_NONE)
-  ASSERT(present (boundaries1)==present(boundaries2))
+  ASSERT(present (boundaries1).eqv.present(boundaries2))
 
   nullify(this%dop)
   nullify(this%zop)
