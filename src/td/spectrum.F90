@@ -2331,7 +2331,6 @@ contains
     end do
 100 continue
     dw = units_to_atomic(units_out%energy, e2 - e1)
-    energy_steps = energy_steps - 1
 
     if(energy_steps < 3) then
       message(1) = "Empty multipole file?"
