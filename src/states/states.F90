@@ -966,11 +966,12 @@ contains
 
   ! ---------------------------------------------------------
   !> Allocates the KS wavefunctions defined within a states_t structure.
-  subroutine states_allocate_wfns(st, mesh, wfs_type, alloc_Left)
+  subroutine states_allocate_wfns(st, mesh, wfs_type, alloc_Left, skip)
     type(states_t),         intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
     type(type_t), optional, intent(in)      :: wfs_type
     logical,      optional, intent(in)      :: alloc_Left !< allocate an additional set of wfs to store left eigenstates
+    integer,      optional, intent(in)      :: skip(:)
 
     PUSH_SUB(states_allocate_wfns)
 
@@ -979,7 +980,7 @@ contains
       st%priv%wfs_type = wfs_type
     end if
 
-    call states_init_block(st, mesh)
+    call states_init_block(st, mesh, skip = skip)
     call states_set_zero(st)
 
     POP_SUB(states_allocate_wfns)
@@ -1002,12 +1003,13 @@ contains
   !! st\%block_initialized: it should be .false. on entry, and .true. after exiting this routine.
   !!
   !! The set of batches st\%psib(1:st\%nblocks) contains the blocks themselves.
-  subroutine states_init_block(st, mesh, verbose)
+  subroutine states_init_block(st, mesh, verbose, skip)
     type(states_t),           intent(inout) :: st
     type(mesh_t),             intent(in)    :: mesh
     logical, optional,        intent(in)    :: verbose
+    integer, optional,        intent(in)    :: skip(:)
 
-    integer :: ib, iqn, ist
+    integer :: ib, iqn, ist, istmin, istmax
     logical :: same_node, verbose_
     integer, allocatable :: bstart(:), bend(:)
 
@@ -1021,27 +1023,56 @@ contains
 
     verbose_ = optional_default(verbose, .true.)
 
+    !In case we have a list of state to skip, we do not allocate them 
+    istmin = 1
+    if(present(skip)) then
+      do ist = 1, st%nst
+        if(skip(ist) == 1) then
+          istmin = ist
+          exit
+        end if  
+      end do
+    end if
+
+    istmax = st%nst
+    if(present(skip)) then
+      do ist = st%nst, istmin, -1
+        if(skip(ist) == 1) then
+          istmax = ist
+          exit
+        end if
+      end do
+    end if
+
+    if(present(skip) .and. verbose_) then
+      call messages_write('Info: Allocating states from ')      
+      call messages_write(istmin, fmt = 'i8')
+      call messages_write(' to ')
+      call messages_write(istmax, fmt = 'i8')
+      call messages_info()
+    end if
+
     ! count and assign blocks
     ib = 0
     st%group%nblocks = 0
-    bstart(1) = 1
-    do ist = 1, st%nst
+    bstart(1) = istmin
+    do ist = istmin, istmax
       INCR(ib, 1)
 
       st%group%iblock(ist, st%d%kpt%start:st%d%kpt%end) = st%group%nblocks + 1
 
       same_node = .true.
-      if(st%parallel_in_states .and. ist /= st%nst) then
+      if(st%parallel_in_states .and. ist /= istmax) then
         ! We have to avoid that states that are in different nodes end
         ! up in the same block
         same_node = (st%node(ist + 1) == st%node(ist))
       end if
 
-      if(ib == st%d%block_size .or. ist == st%nst .or. .not. same_node) then
+      if(ib == st%d%block_size .or. ist == istmax .or. .not. same_node) then
         ib = 0
         INCR(st%group%nblocks, 1)
         bend(st%group%nblocks) = ist
-        if(ist /= st%nst) bstart(st%group%nblocks + 1) = ist + 1
+        if(ist /= istmax) bstart(st%group%nblocks + 1) = ist + 1
       end if
     end do
 

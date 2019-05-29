@@ -206,16 +206,15 @@ program wannier90_interface
 
   ! load states and calculate interface files
   elseif(w90_output) then
+    call read_wannier90_files()
 
     ! normal interface run
     call kpoints_distribute(st%d,sys%mc)
     call states_distribute_nodes(st,sys%mc)
     call states_exec_init(st, sys%mc)
-    call states_allocate_wfns(st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
+    call states_allocate_wfns(st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
     call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, &
                        sys%mc, ierr, sys%gr%der%mesh)
-
-    call read_wannier90_files()
     if(ierr == 0) then
       call states_look(restart, nik, dim, nst, ierr)
       if(dim==st%d%dim .and. nik==sys%gr%sb%kpoints%reduced%npoints .and. nst==st%nst) then
@@ -245,14 +244,15 @@ program wannier90_interface
     end if
 
   else if(w90_wannier) then
+    call read_wannier90_files()
+
    ! normal interface run
     call kpoints_distribute(st%d,sys%mc)
     call states_distribute_nodes(st,sys%mc)
     call states_exec_init(st, sys%mc)
-    call states_allocate_wfns(st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX)
+    call states_allocate_wfns(st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
     call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, &
                        sys%mc, ierr, sys%gr%der%mesh)
-    call read_wannier90_files()
     if(ierr == 0) then
       call states_look(restart, nik, dim, nst, ierr)
       if(dim==st%d%dim .and. nik==sys%gr%sb%kpoints%reduced%npoints .and. nst==st%nst) then
@@ -369,6 +369,9 @@ contains
 
     ! open nnkp file
     filename = trim(adjustl(w90_prefix)) //'.nnkp'
+
+    message(1) = "Info: Parsing "//filename
+    call messages_info(1)
 
     inquire(file=filename,exist=exist)
     if(.not. exist) then
@@ -511,6 +514,9 @@ contains
        call io_close(w90_nnkp)
  
     end if
+
+    message(1) = "Info: Finished parsing "//filename
+    call messages_info(1)
 
     POP_SUB(read_wannier90_files)
 

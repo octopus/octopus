@@ -674,7 +674,7 @@ contains
     end if
 #endif
 
-    if (.not. present(lr)) call fill_random()
+    if (.not. present(lr) .and. .not. present(skip)) call fill_random()
     ! it is better to initialize lr wfns to zero
 
     SAFE_DEALLOCATE_A(filled)
