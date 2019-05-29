@@ -86,7 +86,7 @@ match ; Force 8 (y)   ; GREPFIELD(static/info, '8        Si', 4) ; -0.028179
 match ; Force 8 (z)   ; GREPFIELD(static/info, '8        Si', 5) ; -0.032377
 
 
-Precision : 1.0e-06
+Precision : 1.01e-06
 match ; Stress (xx)   ; GREPFIELD(static/info, 'T_{ij}', 2, 1) ; -0.0001280128
 match ; Stress (yy)   ; GREPFIELD(static/info, 'T_{ij}', 3, 2) ; -0.0002426109
 match ; Stress (zz)   ; GREPFIELD(static/info, 'T_{ij}', 4, 3) ; -0.0002349053

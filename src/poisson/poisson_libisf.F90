@@ -140,6 +140,7 @@ contains
 
 #ifdef HAVE_LIBISF
     call pkernel_free(this%kernel)
+    call f_lib_finalize()
 #endif
     
     POP_SUB(poisson_libisf_end)

@@ -267,6 +267,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
       ie = ie + 1
     end do
 
+
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ie, maxmtxel)
   end do
 
