@@ -74,7 +74,7 @@ module output_me_oct_m
     OUTPUT_ME_ANG_MOMENTUM     =   2, &
     OUTPUT_ME_ONE_BODY         =   4, &
     OUTPUT_ME_TWO_BODY         =   8, &
-    OUTPUT_ME_TWO_BODY_DENSITY =  16, &
+    OUTPUT_ME_TWO_BODY_EXC_K   =  16, &
     OUTPUT_ME_KS_MULTIPOLES    =  32, &
     OUTPUT_ME_DIPOLE           =  64
 
@@ -110,8 +110,8 @@ contains
     !%Option two_body 8
     !% <math>\left< ij \left| \frac{1}{\left|\vec{r}_1-\vec{r}_2\right|} \right| kl \right></math>.
     !% Not available with states parallelization. For periodic system, this is not available for k-point parallelization neither.
-    !%Option two_body_density 16
-    !% <math>\left< ij \left| \frac{1}{\left|\vec{r}_1-\vec{r}_2\right|} \right| ji \right></math>.
+    !%Option two_body_exc_k 16
+    !% <math>\left< n1-k1, n2-k2 \left| \frac{1}{\left|\vec{r}_1-\vec{r}_2\right|} \right| n2-k1 n1-k2 \right></math>.
     !% Not available with states parallelization. For periodic system, this is not available for k-point parallelization neither.
     !%Option ks_multipoles 32
     !% See <tt>OutputMEMultipoles</tt>. Not available with states parallelization.
@@ -317,7 +317,7 @@ contains
 
     end if
 
-    if(bitand(this%what, output_me_two_body) /= 0 .or. bitand(this%what, output_me_two_body_density) /= 0 ) then
+    if(bitand(this%what, output_me_two_body) /= 0 .or. bitand(this%what, output_me_two_body_exc_k) /= 0 ) then
       message(1) = "Computing two-body matrix elements"
       call messages_info(1)
 
@@ -329,11 +329,11 @@ contains
         iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
         write(iunit, '(a)') '#(n1,k1) (n2,k2) (n3,k3) (n4,k4) (n1-k1, n2-k2|n3-k3, n4-k4)'
       else
-        if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body_density with states parallelization")
-        if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body_density with k-points parallelization")
+        if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body_exc_k with states parallelization")
+        if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body_exc_k with k-points parallelization")
         ! how to do this properly? states_matrix
         iunit = io_open(trim(dir)//'/output_me_two_body_density', action='write')
-        write(iunit, '(a)') '#(n1,k1) (n2,k2) (n1-k1, n1-k1|n2-k2, n2-k2)'
+        write(iunit, '(a)') '#(n1,k1) (n2,k2) (n1-k1, n1-k2|n2-k2, n2-k1)'
       end if
 
       call singularity_nullify(singul)
@@ -344,7 +344,7 @@ contains
           id = (st%d%nik*this%nst)**2*((st%d%nik*this%nst)**2+1)/2
         end if
       else
-        id = (st%d%nik*this%nst)*((st%d%nik*this%nst)+1)/2
+        id = (st%d%nik*this%nst)**2
       end if
 
       if(states_are_complex(st)) then
@@ -369,11 +369,11 @@ contains
           ASSERT(.not.st%d%kpt%parallel) 
           call zstates_me_two_body(gr, st, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase, singularity = singul, &
-                     density_only = (bitand(this%what, output_me_two_body_density) /= 0))
+                     exc_k = (bitand(this%what, output_me_two_body_exc_k) /= 0))
         else
           call zstates_me_two_body(gr, st, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint, &
-                     density_only = (bitand(this%what, output_me_two_body_density) /= 0))
+                     exc_k = (bitand(this%what, output_me_two_body_exc_k) /= 0))
         end if
 
         if(bitand(this%what, output_me_two_body) /= 0) then

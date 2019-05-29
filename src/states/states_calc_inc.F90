@@ -1613,7 +1613,7 @@ end subroutine X(states_me_one_body)
 
 ! ---------------------------------------------------------
 subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex, lindex, twoint, &
-                 phase, singularity, density_only)
+                 phase, singularity, exc_k)
   type(grid_t),     intent(in)              :: gr
   type(states_t),   intent(in)              :: st
   integer,          intent(in)              :: st_min, st_max
@@ -1624,7 +1624,7 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
   R_TYPE,           intent(out)             :: twoint(:)  !
   CMPLX, optional,  intent(in)              :: phase(:,:)
   type(singularity_t), optional,intent(in)  :: singularity
-  logical, optional,intent(in)              :: density_only
+  logical, optional,intent(in)              :: exc_k
 
   integer :: ist, jst, kst, lst, ijst, klst, ikpt, jkpt, kkpt, lkpt
   integer :: ist_global, jst_global, kst_global, lst_global, nst, nst_tot
@@ -1633,6 +1633,7 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
   R_TYPE, allocatable :: nn(:), vv(:)
   R_TYPE, allocatable :: psii(:, :), psij(:, :), psik(:, :), psil(:, :)
   FLOAT :: qq(1:MAX_DIM)
+  logical :: exc_k_
 
   PUSH_SUB(X(states_me_two_body))
 
@@ -1658,7 +1659,8 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
   nst_tot = (st_max-st_min+1)*st%d%nik
   nst = (st_max-st_min+1)
 
-  print *, present(phase)
+  exc_k_ = .false.
+  if(present(exc_k)) exc_k_ = exc_k
 
   do ist_global = 1, nst_tot
     ist = mod(ist_global-1, nst) +1
@@ -1671,6 +1673,9 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
       jst = mod(jst_global-1, nst) +1
       jkpt = (jst_global-jst)/nst+1
       jkpoint = states_dim_get_kpoint_index(st%d, jkpt)
+
+      if(exc_k_ .and. ist /= jst) cycle
+
       if(present(singularity)) then
         qq(1:gr%der%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint, absolute_coordinates=.false.) &
                          - kpoints_get_point(gr%sb%kpoints, jkpoint, absolute_coordinates=.false.)
@@ -1679,7 +1684,6 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
         call poisson_kernel_reinit(exchange_psolver, qq, &
                   -gr%sb%kpoints%full%npoints*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
       end if
-
 
 #ifndef R_TCOMPLEX
       if(jst_global > ist_global) cycle
@@ -1709,6 +1713,8 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
         kst = mod(kst_global-1, nst) +1
         kkpt = (kst_global-kst)/nst+1
 
+        if(exc_k_ .and. kkpt /= jkpt) cycle
+
         call states_get_state(st, gr%mesh, kst+st_min-1, kkpt, psik)
 #ifdef R_TCOMPLEX
         if(present(phase)) then
@@ -1719,11 +1725,14 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
         do lst_global = 1, nst_tot
           lst = mod(lst_global-1, nst) +1
           lkpt = (lst_global-lst)/nst+1
+          klst=klst+1
 #ifndef R_TCOMPLEX
           if(lst_global > kst_global) cycle
-#endif
-          klst=klst+1
           if(klst > ijst) cycle
+#endif
+
+          if(exc_k_ .and. kst /= lst) cycle
+          if(exc_k_ .and. lkpt /= ikpt) cycle
 
           call states_get_state(st, gr%mesh, lst+st_min-1, lkpt, psil)
 #ifdef R_TCOMPLEX
