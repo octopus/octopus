@@ -63,8 +63,8 @@ module xc_oep_oct_m
     XC_OEP_KLI    = 3,           &
     XC_OEP_FULL   = 5,           &
     OEP_MIXING_SCHEME_CONST = 1, &
-    OEP_MIXING_SCHEME_DENS  = 2, &
-    OEP_MIXING_SCHEME_BB    = 3
+    OEP_MIXING_SCHEME_BB    = 2, &
+    OEP_MIXING_SCHEME_DENS  = 3 &
 
   type xc_oep_t
     integer               :: level      !< 0 = no oep, 1 = Slater, 2 = KLI, 4 = full OEP
@@ -160,13 +160,13 @@ contains
         !%Option OEP_MIXING_SCHEME_CONST 1
         !%Use a constant
         !%Reference: S. Kuemmel and J. Perdew, <i>Phys. Rev. Lett.</i> <b>90</b>, 4, 043004 (2003)
-        !%Option OEP_MIXING_SCHEME_DENS 2
-        !%Use the inverse of the electron density
-        !%Reference: S. Kuemmel and J. Perdew, <i>Phys. Rev. B</i> <b>68</b>, 035103 (2003)
-        !%Option OEP_MIXING_SCHEME_BB 3
+        !%Option OEP_MIXING_SCHEME_BB 2
         !%Use the Barzilai-Borwein (BB) Method
         !%Reference: T. W. Hollins, S. J. Clark, K. Refson, and N. I. Gidopoulos, 
         !%<i>Phys. Rev. B</i> <b>85<\b>, 235126 (2012)
+        !%Option OEP_MIXING_SCHEME_DENS 3
+        !%Use the inverse of the electron density
+        !%Reference: S. Kuemmel and J. Perdew, <i>Phys. Rev. B</i> <b>68</b>, 035103 (2003)
         !%End
         call parse_variable('OEPMixingScheme', OEP_MIXING_SCHEME_CONST, oep%mixing_scheme)
 
