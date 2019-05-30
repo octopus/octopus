@@ -254,11 +254,11 @@ contains
       SAFE_DEALLOCATE_P(oep%vxc)
       if((oep%level == XC_OEP_FULL).or.(oep%has_photons)) then
         call lr_dealloc(oep%lr)
+        call linear_solver_end(oep%solver)
         if(oep%has_photons) then
           call lr_dealloc(oep%pt%lr)
+          call photon_mode_end(oep%pt)
         end if
-        call linear_solver_end(oep%solver)
-        call photon_mode_end(oep%pt)
       end if
       if((oep%level == XC_OEP_FULL).and.(oep%mixing_scheme == OEP_MIXING_SCHEME_BB)) then
         SAFE_DEALLOCATE_P(oep%vxc_old)
