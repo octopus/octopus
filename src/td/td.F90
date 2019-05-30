@@ -469,7 +469,7 @@ contains
     ! step "iter" means propagation from (iter-1)*dt to iter*dt.
     propagation: do iter = td%iter, td%max_iter
 
-      stopping = clean_stop(sys%mc%master_comm) .or. walltimer_alarm(print=.true.)
+      stopping = clean_stop(sys%mc%master_comm) .or. walltimer_alarm()
        
       call profiling_in(prof, "TIME_STEP")
 

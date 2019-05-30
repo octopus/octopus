@@ -169,7 +169,7 @@ contains
     now = loct_clock()
     
     if(present(print)) then
-       if(print) write(*,*) "Timer::WakeUp called. Time = ", now - start_time, " (", duration, ") ", active 
+       if(print) write(*,*) "Walltimer. elapsed time = ", now - start_time, " (", duration, ") ", active 
     endif
     
     if(auto_tap) call walltimer_tap()
