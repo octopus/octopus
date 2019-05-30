@@ -32,6 +32,7 @@ program octopus
   use string_oct_m
   use utils_oct_m
   use varinfo_oct_m
+  use walltimer_oct_m
 
   implicit none
 
@@ -47,6 +48,8 @@ program octopus
   call global_init()
   call messages_init()
 
+  call walltimer_init()
+  
   !%Variable ReportMemory
   !%Type logical
   !%Default no
@@ -146,6 +149,8 @@ program octopus
   call profiling_end()
   
   call calc_mode_par_end()
+
+  call walltimer_end()
   
   call print_date("Calculation ended on ")
   call print_walltime()
