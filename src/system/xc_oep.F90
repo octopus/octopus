@@ -57,11 +57,14 @@ module xc_oep_oct_m
     zoep_x
 
   !> the OEP levels
-  integer, public, parameter :: &
-    XC_OEP_NONE   = 1,          &
-    XC_OEP_SLATER = 2,          &
-    XC_OEP_KLI    = 3,          &
-    XC_OEP_FULL   = 5
+  integer, public, parameter ::  &
+    XC_OEP_NONE   = 1,           &
+    XC_OEP_SLATER = 2,           &
+    XC_OEP_KLI    = 3,           &
+    XC_OEP_FULL   = 5,           &
+    OEP_MIXING_SCHEME_CONST = 1, &
+    OEP_MIXING_SCHEME_DENS  = 2, &
+    OEP_MIXING_SCHEME_BB    = 3
 
   type xc_oep_t
     integer               :: level      !< 0 = no oep, 1 = Slater, 2 = KLI, 4 = full OEP
@@ -75,6 +78,10 @@ module xc_oep_oct_m
     FLOAT,   pointer      :: vxc(:,:), uxc_bar(:,:)
     FLOAT,   pointer      :: dlxc(:, :, :)
     CMPLX,   pointer      :: zlxc(:, :, :)
+    integer               :: mixing_scheme
+    FLOAT                 :: norm2ss
+    FLOAT,   pointer      :: vxc_old(:,:), ss_old(:,:)
+    integer               :: noccst
   end type xc_oep_t
 
   type(profile_t), save ::      &
@@ -143,6 +150,35 @@ contains
         !%End
         call messages_obsolete_variable('OEP_Mixing', 'OEPMixing')
         call parse_variable('OEPMixing', M_ONE, oep%mixing)
+
+        !%Variable OEPMixingScheme
+        !%Type integer
+        !%Default 1.0
+        !%Section Hamiltonian::XC
+        !%Description
+        !%Different Mixing Schemes are possible
+        !%Option OEP_MIXING_SCHEME_CONST 1
+        !%Use a constant
+        !%Reference: S. Kuemmel and J. Perdew, <i>Phys. Rev. Lett.</i> <b>90</b>, 4, 043004 (2003)
+        !%Option OEP_MIXING_SCHEME_DENS 2
+        !%Use the inverse of the electron density
+        !%Reference: S. Kuemmel and J. Perdew, <i>Phys. Rev. B</i> <b>68</b>, 035103 (2003)
+        !%Option OEP_MIXING_SCHEME_BB 3
+        !%Use the Barzilai-Borwein (BB) Method
+        !%Reference: T. W. Hollins, S. J. Clark, K. Refson, and N. I. Gidopoulos, 
+        !%<i>Phys. Rev. B</i> <b>85<\b>, 235126 (2012)
+        !%End
+        call parse_variable('OEPMixingScheme', OEP_MIXING_SCHEME_CONST, oep%mixing_scheme)
+
+        if (oep%mixing_scheme == OEP_MIXING_SCHEME_BB) then
+          SAFE_ALLOCATE(oep%vxc_old(1:gr%mesh%np,st%d%ispin))
+          SAFE_ALLOCATE(oep%ss_old(1:gr%mesh%np,st%d%ispin))
+          oep%vxc_old = M_ZERO
+          oep%ss_old = M_ZERO
+        end if
+
+        oep%norm2ss = M_ZERO
+
       end if
 
      ! this routine is only prepared for finite systems. (Why not?)
@@ -153,11 +189,13 @@ contains
       call xc_oep_SpinFactor(oep, st%d%nspin)
 
       ! This variable will keep vxc across iterations
-      if (st%d%ispin==3) then !MG150512: temporary solution, not so elegant (just not to touch previous source)
+      if ((st%d%ispin==3) .or. oep%level == XC_OEP_FULL) then
         SAFE_ALLOCATE(oep%vxc(1:gr%mesh%np,st%d%nspin))
       else
         SAFE_ALLOCATE(oep%vxc(1:gr%mesh%np,1:1))
       end if
+      oep%vxc = M_ZERO
+
       ! when performing full OEP, we need to solve a linear equation
       if(oep%level == XC_OEP_FULL) then 
         call scf_tol_init(oep%scftol, st%qtot, def_maximumiter=10)
@@ -192,6 +230,10 @@ contains
       if(oep%level == XC_OEP_FULL) then 
         call lr_dealloc(oep%lr)
         call linear_solver_end(oep%solver)
+      end if
+      if((oep%level == XC_OEP_FULL).and.(oep%mixing_scheme == OEP_MIXING_SCHEME_BB)) then
+        SAFE_DEALLOCATE_P(oep%vxc_old)
+        SAFE_DEALLOCATE_P(oep%ss_old)
       end if
     end if
 
@@ -294,6 +336,12 @@ contains
       end if
     end do
     oep%eigen_n = oep%eigen_n - 1
+
+    ! find how many states are occupied.
+    oep%noccst = 0
+    do ist = 1, st%nst
+      if(st%occ(ist, is) > M_EPSILON) oep%noccst = ist
+    end do
 
     SAFE_DEALLOCATE_A(eigenval)
     SAFE_DEALLOCATE_A(occ)

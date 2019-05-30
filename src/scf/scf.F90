@@ -581,17 +581,26 @@ contains
           message(1) = 'Unable to read density. Density will be calculated from states.'
           call messages_warning(1)
         else
-          call v_ks_calc(ks, hm, st, geo)
+          if (.not. (restart_has_flag(restart_load, RESTART_FLAG_VHXC))) &
+            call v_ks_calc(ks, hm, st, geo)
         end if
       end if
 
       if (restart_has_flag(restart_load, RESTART_FLAG_VHXC)) then
+        write(message(1), '(a)') "Info: Reading Vhxc."
+        call messages_info(1)
         call hamiltonian_load_vhxc(restart_load, hm, gr%mesh, ierr)
         if (ierr /= 0) then
           message(1) = 'Unable to read Vhxc. Vhxc will be calculated from states.'
           call messages_warning(1)
         else
           call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
+          if (ks%oep%level == 5) then
+            do is = 1, st%d%nspin
+              ks%oep%vxc(:,is) = hm%vhxc(:,is) - hm%vhartree(:)
+            end do
+          end if
+          call v_ks_calc(ks, hm, st, geo)
         end if
       end if
 
@@ -1333,10 +1342,14 @@ contains
         write(iunit, '(1x,a)', advance = 'no') label
         label = 'rel_ev'
         write(iunit, '(1x,a)', advance = 'no') label
-         if (scf%conv_abs_force > M_ZERO) then
-           label = 'force_diff'
-           write(iunit, '(1x,a)', advance = 'no') label
-         end if
+        if (scf%conv_abs_force > M_ZERO) then
+          label = 'force_diff'
+          write(iunit, '(1x,a)', advance = 'no') label
+        end if
+        if (ks%oep%level == 5) then
+          label = 'OEP norm2ss'
+          write(iunit, '(1x,a)', advance = 'no') label
+        end if
         write(iunit,'(a)') ''
         call io_close(iunit)
       end if
@@ -1363,6 +1376,9 @@ contains
         if (scf%conv_abs_force > M_ZERO) then
           write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%force, scf%abs_force)
         end if
+        if (ks%oep%level == 5) then
+          write(iunit, '(es13.5)', advance = 'no') ks%oep%norm2ss
+        end if 
         write(iunit,'(a)') ''
         call io_close(iunit)
       end if

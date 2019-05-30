@@ -52,6 +52,9 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   SAFE_ALLOCATE(oep%X(lxc)(1:gr%mesh%np, st%st_start:st%st_end, 1:nspin_))
   SAFE_ALLOCATE(oep%uxc_bar(1:st%nst, 1:nspin_))
 
+  if ((.not.st%fromscratch).and.(first)) &
+    first = .false.
+
   ! this part handles the (pure) orbital functionals
   oep%X(lxc) = M_ZERO
   spin: do is = 1, nspin_
@@ -121,15 +124,16 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
         if(oep%level /= XC_OEP_FULL .or. first) then
           oep%vxc = M_ZERO
           call X(xc_KLI_solve) (gr%mesh, st, is, oep)
+          vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, 1)
         end if
 
         ! if asked, solve the full OEP equation
         if(oep%level == XC_OEP_FULL .and. (.not. first)) then
           call X(xc_oep_solve)(gr, hm, st, is, vxc(:,is), oep)
+          vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, is)
         end if
-
-        first = .false.
-        vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np,1)
+        if (is == nspin_) &
+          first = .false.
       end if
     end do spin2
   end if
@@ -149,7 +153,7 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
   type(hamiltonian_t), intent(in)    :: hm
   type(states_t),      intent(in)    :: st
   integer,             intent(in)    :: is
-  FLOAT,               intent(inout) :: vxc(:) !< (gr%mesh%np)
+  FLOAT,               intent(inout) :: vxc(:) !< (gr%mesh%np, given for the spin is)
   type(xc_oep_t),      intent(inout) :: oep
 
   integer :: iter, ist, iter_used
@@ -172,23 +176,22 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
 
   if(.not. lr_is_allocated(oep%lr)) then
     call lr_allocate(oep%lr, st, gr%mesh)
-    ! initialize to something non-zero
-    oep%lr%X(dl_psi)(:,:, :, :) = M_ONE
+    oep%lr%X(dl_psi)(:,:, :, :) = M_ZERO
   end if
 
   ! fix xc potential (needed for Hpsi)
-  vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np) + oep%vxc(1:gr%mesh%np,1)
+  vxc(1:gr%mesh%np) = vxc_old(1:gr%mesh%np) + oep%vxc(1:gr%mesh%np, is)
 
   do iter = 1, oep%scftol%max_iter
     ! iteration over all states
     ss = M_ZERO
-    do ist = 1, st%nst
+    do ist = 1, oep%noccst !only over occupied states
 
       call states_get_state(st, gr%mesh, ist, is, psi)
-      
+
       ! evaluate right-hand side
-      vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np, 1))
-      bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, 1) - (vxc_bar - oep%uxc_bar(ist, is)))* &
+      vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np, is))
+      bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, is) - (vxc_bar - oep%uxc_bar(ist, is)))* &
         R_CONJ(psi(:, 1)) + oep%X(lxc)(1:gr%mesh%np, ist, is)
 
       call X(lr_orth_vector) (gr%mesh, st, bb, ist, is, R_TOTYPE(M_ZERO))
@@ -202,20 +205,42 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
       ss(1:gr%mesh%np) = ss(1:gr%mesh%np) + M_TWO*R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*psi(:, 1))
     end do
 
-    oep%vxc(1:gr%mesh%np,1) = oep%vxc(1:gr%mesh%np,1) + oep%mixing*ss(1:gr%mesh%np)
 
+    if ((oep%mixing_scheme == OEP_MIXING_SCHEME_CONST)) then
+      oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)
+    else if (oep%mixing_scheme == OEP_MIXING_SCHEME_DENS) then
+      oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)/st%rho(1:gr%mesh%np,is)
+    else if (oep%mixing_scheme == OEP_MIXING_SCHEME_BB) then
+      if (dmf_nrm2(gr%mesh, oep%vxc_old(1:gr%mesh%np,is)) > M_EPSILON ) then ! do not do it for the first run
+        oep%mixing = -dmf_dotp(gr%mesh, oep%vxc(1:gr%mesh%np,is) - oep%vxc_old(1:gr%mesh%np,is), ss - oep%ss_old(:, is)) &
+          / dmf_dotp(gr%mesh, ss - oep%ss_old(:, is), ss - oep%ss_old(:, is))
+      end if
 
-    do ist = 1, st%nst
+      write(message(1), '(a,es14.6,a,es14.8)') "Info: oep%mixing:", oep%mixing, " norm2ss: ", dmf_nrm2(gr%mesh, ss)
+      call messages_info(1)
+
+      oep%vxc_old(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is)
+      oep%ss_old(1:gr%mesh%np,is) = ss(1:gr%mesh%np)
+      oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) + oep%mixing*ss(1:gr%mesh%np)
+    end if
+
+    do ist = 1, oep%noccst
       if(oep%eigen_type(ist) == 2) then
         call states_get_state(st, gr%mesh, ist, is, psi)
-        vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np,1))
-        oep%vxc(1:gr%mesh%np,1) = oep%vxc(1:gr%mesh%np,1) - (vxc_bar - oep%uxc_bar(ist,is))
+        vxc_bar = dmf_dotp(gr%mesh, (R_ABS(psi(:, 1)))**2, oep%vxc(1:gr%mesh%np,is))
+        oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) - (vxc_bar - oep%uxc_bar(ist,is))
       end if
     end do
 
     ff = dmf_nrm2(gr%mesh, ss)
     if(ff < oep%scftol%conv_abs_dens) exit
   end do
+
+  if (is == 1) then
+    oep%norm2ss = ff
+  else
+    oep%norm2ss = oep%norm2ss + ff !adding up spin up and spin down component
+  end if
 
   if(ff > oep%scftol%conv_abs_dens) then
     write(message(1), '(a)') "OEP did not converge."
