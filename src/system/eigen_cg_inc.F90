@@ -19,7 +19,7 @@
 ! ---------------------------------------------------------
 !> conjugate-gradients method.
 subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, diff, shift, orthogonalize_to_all, &
-  conjugate_direction, additional_terms)
+  conjugate_direction, additional_terms, energy_change_threshold)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
@@ -34,6 +34,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   logical, optional,      intent(in)    :: orthogonalize_to_all
   integer, optional,      intent(in)    :: conjugate_direction
   logical, optional,      intent(in)    :: additional_terms
+  FLOAT, optional,        intent(in)    :: energy_change_threshold
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
@@ -46,6 +47,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   logical  :: fold_ ! use folded spectrum operator (H-shift)^2
   logical  :: orthogonalize_to_all_, additional_terms_, add_xc_term
   integer  :: conjugate_direction_
+  FLOAT    :: energy_change_threshold_
 
   PUSH_SUB(X(eigensolver_cg2))
 
@@ -60,6 +62,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   ! get the optional arguments for CG options
   orthogonalize_to_all_ = optional_default(orthogonalize_to_all, .false.)
   conjugate_direction_ = optional_default(conjugate_direction, int(OPTION__CGDIRECTION__FLETCHER, 4))
+  energy_change_threshold_ = optional_default(energy_change_threshold, CNST(0.1))
   ! do we add the XC term? needs derivatives of the XC functional
   additional_terms_ = optional_default(additional_terms, .false.)
   add_xc_term = additional_terms_
@@ -356,7 +359,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       if(iter > 1) then
         ! This criterion is discussed in Sec. V.B.6
-        if(abs(st%eigenval(ist, ik) - old_energy) < first_delta_e*CNST(1e-1)) then
+        if(abs(st%eigenval(ist, ik) - old_energy) < first_delta_e*energy_change_threshold_) then
           exit iter_loop
         end if
       else
