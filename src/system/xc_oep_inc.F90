@@ -52,9 +52,6 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   SAFE_ALLOCATE(oep%X(lxc)(1:gr%mesh%np, st%st_start:st%st_end, 1:nspin_))
   SAFE_ALLOCATE(oep%uxc_bar(1:st%nst, 1:nspin_))
 
-  if ((.not.st%fromscratch).and.(first)) &
-    first = .false.
-
   ! this part handles the (pure) orbital functionals
   oep%X(lxc) = M_ZERO
   spin: do is = 1, nspin_
@@ -216,8 +213,10 @@ subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
           / dmf_dotp(gr%mesh, ss - oep%ss_old(:, is), ss - oep%ss_old(:, is))
       end if
 
-      write(message(1), '(a,es14.6,a,es14.8)') "Info: oep%mixing:", oep%mixing, " norm2ss: ", dmf_nrm2(gr%mesh, ss)
-      call messages_info(1)
+      if(debug%info) then
+        write(message(1), '(a,es14.6,a,es14.8)') "Info: oep%mixing:", oep%mixing, " norm2ss: ", dmf_nrm2(gr%mesh, ss)
+        call messages_info(1)
+      end if
 
       oep%vxc_old(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is)
       oep%ss_old(1:gr%mesh%np,is) = ss(1:gr%mesh%np)
