@@ -71,12 +71,12 @@ basic_f_srcs =                                 \
 	basic/sort.F90                         \
 	basic/space.F90                        \
 	basic/string.F90                       \
-	basic/timer_oct_m.F90                  \
 	basic/types.F90                        \
 	basic/unit.F90                         \
 	basic/unit_system.F90                  \
 	basic/utils.F90                        \
 	basic/varinfo.F90                      \
+	basic/walltimer_oct_m.F90              \
 	basic/write_iter.F90
 
 basic_c_srcs =                                 \
