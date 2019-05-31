@@ -309,7 +309,7 @@ contains
             modg2 = sum((this%Gvec(1:3, ix, iy, iz)+qq(1:3))**2)
           end if
 
-          !We only keep close shells
+          !We only keep closed shells
           if(M_HALF*modg2 > ekin_cutoff) cycle
 
           !This tests are done after the check on the cutoff
