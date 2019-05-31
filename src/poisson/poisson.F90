@@ -122,7 +122,6 @@ module poisson_oct_m
     integer :: nslaves
     FLOAT :: theta !< cmplxscl
     FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
-    FLOAT :: mu !< Range separation for the exchange operator
     type(poisson_fmm_t)  :: params_fmm
 #ifdef HAVE_MPI2
     integer         :: intercomm
