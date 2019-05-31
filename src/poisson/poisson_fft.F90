@@ -84,7 +84,7 @@ contains
     
     !We must define the singularity if we specify a q vector
     this%singularity = optional_default(singul, M_ZERO)
-    ASSERT(present(qq) == present(singul))
+    ASSERT(present(qq) .eqv. present(singul))
 
     if(present(qq) .and. simul_box_is_periodic(mesh%sb)) then
       ASSERT(ubound(qq, 1) >= mesh%sb%periodic_dim)
