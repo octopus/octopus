@@ -1648,7 +1648,7 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
     call messages_not_implemented("Two-body integrals with spinors.")
   end if
 
-  ASSERT(present(phase) == present(singularity))
+  ASSERT(present(phase) .eqv. present(singularity))
 #ifdef R_TCOMPLEX
   ASSERT(present(phase))
 #endif
