@@ -64,7 +64,7 @@ module xc_oep_oct_m
     XC_OEP_FULL   = 5,           &
     OEP_MIXING_SCHEME_CONST = 1, &
     OEP_MIXING_SCHEME_BB    = 2, &
-    OEP_MIXING_SCHEME_DENS  = 3 &
+    OEP_MIXING_SCHEME_DENS  = 3
 
   type xc_oep_t
     integer               :: level      !< 0 = no oep, 1 = Slater, 2 = KLI, 4 = full OEP
