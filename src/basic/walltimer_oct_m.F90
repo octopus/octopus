@@ -83,7 +83,7 @@ contains
     !% A value less than 1 second (1/60 minutes) will disable the timer.
     !%End0.0
     call parse_Variable('Walltime', M_ZERO, alarm_time)
-    call setAlarm(alarm_time*60.d0)
+    call setAlarm(alarm_time*CNST(60.0))
     
     !%Variable RestartWriteTime
     !%Type float
@@ -94,8 +94,8 @@ contains
     !% In huge calculations, this value should be increased.
     !%End
     call parse_Variable('RestartWriteTime', CNST(5.0), write_time)
-    if(write_time > alarm_time/4) write_time = alarm_time/4
-    call setMargin(write_time*60.d0)
+    if(write_time > alarm_time/CNST(4.0)) write_time = alarm_time/CNST(4.0)
+    call setMargin(write_time*CNST(60.0))
     
     call start()
     
@@ -157,7 +157,10 @@ contains
 
     start_time = loct_clock()
     last_tap = start_time
-    if(duration > 1.d0) active = .true.
+
+    !> disable timer if duration is less than one second.
+
+    if(duration > CNST(1.0)) active = .true.
     
     POP_SUB(start)
 
@@ -195,7 +198,11 @@ contains
     now = loct_clock()
     
     if(present(print)) then
-      if(print) write(*,*) "Walltimer. elapsed time = ", now - start_time, " (", duration, ") ", active 
+      if(print) then
+        write(message(1), '("Walltimer. elapsed time = ",F6.2," (", F6.2, "), active = ",L1 )')  &
+          now - start_time, duration, active
+        call messages_info(1)
+      end if
     end if
     
     if(auto_tap) call walltimer_tap()

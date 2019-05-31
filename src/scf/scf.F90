@@ -878,10 +878,8 @@ contains
       if (gs_run_ .and. present(restart_dump)) then 
          ! save restart information
          
-         if ( (finish .or. &
-              (modulo(iter, outp%restart_write_interval) == 0) .or. &
-              iter == scf%max_iter .or. &
-              scf%forced_finish) ) then
+         if ( (finish .or. (modulo(iter, outp%restart_write_interval) == 0) &
+            .or. iter == scf%max_iter .or. scf%forced_finish) ) then
 
           call states_dump(restart_dump, st, gr, ierr, iter=iter) 
           if (ierr /= 0) then
