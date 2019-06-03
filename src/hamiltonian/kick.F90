@@ -85,6 +85,7 @@ module kick_oct_m
     integer           :: pol_dir
     integer           :: pol_equiv_axes
     FLOAT             :: wprime(MAX_DIM)
+    FLOAT             :: easy_axis(MAX_DIM)
     !> In case we have a general multipolar kick,
     !! the form of this "kick" will be (atomic units):
     !! \f[
@@ -120,6 +121,7 @@ contains
 
     type(block_t) :: blk
     integer :: n_rows, irow, idir, iop
+    FLOAT :: norm
 
     PUSH_SUB(kick_init)
 
@@ -198,14 +200,16 @@ contains
     !% This mode is intended for use with symmetries to obtain both of the responses
     !% at once, at described in the reference above.
     !%Option kick_magnon 3
-    !% Rotates the magnetization.
+    !% Rotates the magnetization. Only works for spinors. 
+    !% Can be used in a supercell or my making use of the generalized Bloch theorem.
+    !% In the later case (see <tt>SpiralBoundaryConditions</tt>) spin-orbit coupling cannot be used.
     !%End
     call parse_variable('TDDeltaStrengthMode', KICK_DENSITY_MODE, kick%delta_strength_mode)
     select case (kick%delta_strength_mode)
     case (KICK_DENSITY_MODE)
     case (KICK_SPIN_MODE, KICK_SPIN_DENSITY_MODE)
     case (KICK_MAGNON_MODE)
-      if (nspin == UNPOLARIZED) call messages_input_error('TDDeltaStrengthMode')
+      if(nspin /= SPINORS) call messages_input_error('TDDeltaStrengthMode')
     case default
       call messages_input_error('TDDeltaStrengthMode')
     end select
@@ -291,7 +295,9 @@ contains
 
       call parse_variable('TDPolarizationDirection', 0, kick%pol_dir)
 
-      if(kick%pol_dir < 1 .or. kick%pol_dir > dim) call messages_input_error('TDPolarizationDirection')
+      if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
+        if(kick%pol_dir < 1 .or. kick%pol_dir > dim) call messages_input_error('TDPolarizationDirection')
+      end if
       
       !%Variable TDPolarization
       !%Type block
@@ -463,7 +469,35 @@ contains
     if(kick%delta_strength_mode == KICK_MAGNON_MODE .and. kick%qkick_mode /= QKICKMODE_EXP) then
       message(1) = "For magnons, the kick mode must be expnential."
       call messages_fatal(1)
-     end if
+    end if
+
+    if(kick%delta_strength_mode == KICK_MAGNON_MODE) then
+      !%Variable TDEasyAxis
+      !%Type block
+      !%Section Time-Dependent::Response::Dipole
+      !%Description
+      !% For magnon kicks only. 
+      !% This variable defines the direction of the easy axis of the crystal.
+      !% The magnetization is kicked in the plane transverse to this vector
+      !%End
+      if(parse_block('TDEasyAxis', blk)==0) then
+        n_rows = parse_block_n(blk)
+
+        do idir = 1, 3
+          call parse_block_float(blk, 0, idir - 1, kick%easy_axis(idir))
+        end do
+        norm = sqrt(sum(kick%easy_axis(1:3)**2))
+        if(norm < CNST(1e-9)) then
+          message(1) = "TDEasyAxis norm is too small."
+          call messages_fatal(1)
+        end if
+        kick%easy_axis(1:3) = kick%easy_axis(1:3)/norm
+        call parse_block_end(blk)
+      else
+        message(1) = "For magnons, the variable TDEasyAxis must be defined."
+        call messages_fatal(1)
+      end if
+    end if
 
     POP_SUB(kick_init)
   end subroutine kick_init
@@ -823,6 +857,7 @@ contains
 
     CMPLX, allocatable :: kick_pcm_function(:)
     integer :: ns
+    FLOAT :: uvec(MAX_DIM), vvec(MAX_DIM), norm, dot
 
     PUSH_SUB(kick_apply)
 
@@ -923,25 +958,49 @@ contains
 
             call states_get_state(st, mesh, ist, iqn, psi)
 
+            !We first two vectors defining a basis in the transverse plane
+            !For this we take two vectors not align with the first one
+            !and we perform a Gram-Schmidt orthogonalization
+            uvec(1) = -kick%easy_axis(2)
+            uvec(2) = M_TWO*kick%easy_axis(3)
+            uvec(3) = M_THREE*kick%easy_axis(1)
+ 
+            vvec(1) = M_TWO*kick%easy_axis(3)
+            vvec(2) = -M_HALF*kick%easy_axis(1)
+            vvec(3) = kick%easy_axis(2)
+
+            dot = sum(kick%easy_axis(1:3)*uvec(1:3))
+            uvec(1:3) = uvec(1:3) - dot*kick%easy_axis(1:3)
+            norm = sum(uvec(1:3)**2)
+            uvec(1:3) = uvec(1:3)/sqrt(norm)
+
+            dot = sum(kick%easy_axis(1:3)*vvec(1:3))
+            norm = sum(uvec(1:3)*vvec(1:3))
+            vvec(1:3) = vvec(1:3) - dot*kick%easy_axis(1:3) - norm*uvec(1:3)
+            norm = sum(vvec(1:3)**2)
+            vvec(1:3) = vvec(1:3)/sqrt(norm)
+    
+            !The perturbation direction is defined as
+            !cos(q.r)*uvec + sin(q.r)*vvec
+
             do ip = 1, mesh%np
+              
+              cc(1) = psi(ip, 1)
+              cc(2) = psi(ip, 2) 
 
-              select case(kick%pol_dir)
-              case(1)
-                cc(1) = real(kick_function(ip), REAL_PRECISION)*psi(ip, 1)
-                cc(2) = real(kick_function(ip), REAL_PRECISION)*psi(ip, 2)
+              !First part: 1I*cos(\lambda)
+              psi(ip, 1) = cos(kick%delta_strength)* cc(1)
+              psi(ip, 2) = cos(kick%delta_strength)* cc(2)
 
-                psi(ip, 1) = (cos(kick%delta_strength)-M_zI*sin(kick%delta_strength)*imag(kick_function(ip)))*psi(ip, 1) &
-                             - sin(kick%delta_strength)*cc(2)
-                psi(ip, 2) =  sin(kick%delta_strength)*cc(1) +  (cos(kick%delta_strength)+M_zI*sin(kick%delta_strength)*imag(kick_function(ip)))*psi(ip, 2)
-              case(2)
-               call messages_not_implemented("Magnon kick for a polarization direction along y.")
-              case(3)
-                cc(1) = M_zI*kick_function(ip)*psi(ip, 1)
-                cc(2) = M_zI*conjg(kick_function(ip))*psi(ip, 2)
+              !We now add -i sin(\lambda) u.\sigma
+              !           (u_z      u_x-i*u_y)            (v_z         v_x-i*v_y)
+              ! =cos(q.r) (                  )  + sin(q.r)(                     )
+              !           (u_x+i*u_y  -u_z   )            (v_x+i*v_y   -v_z     ) 
+              psi(ip, 1) = psi(ip, 1) -M_zI*sin(kick%delta_strength)*( real(kick_function(ip), REAL_PRECISION) * (uvec(3)*cc(1) + (uvec(1)-M_zI*uvec(2))*cc(2)) &
+                                      + aimag(kick_function(ip)) * (vvec(3)*cc(1) + (vvec(1)-M_zI*vvec(2))*cc(2)))
+              psi(ip, 2) = psi(ip, 2) -M_zI*sin(kick%delta_strength)*( real(kick_function(ip), REAL_PRECISION) * (-uvec(3)*cc(2) + (uvec(1)+M_zI*uvec(2))*cc(1)) &
+                                      + aimag(kick_function(ip)) * (-vvec(3)*cc(2) + (vvec(1)+M_zI*vvec(2))*cc(1)))
 
-                psi(ip, 1) = cos(kick%delta_strength)*psi(ip, 1) -sin(kick%delta_strength)*cc(2)
-                psi(ip, 2) = -sin(kick%delta_strength)*cc(1) + cos(kick%delta_strength)*psi(ip, 2)
-              end select
             end do
 
             call states_set_state(st, mesh, ist, iqn, psi)
