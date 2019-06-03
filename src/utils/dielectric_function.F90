@@ -179,12 +179,12 @@ program dielectric_function
 
   istart = max(1, istart)
 
-  energy_steps = int(spectrum%max_energy / spectrum%energy_step)
+  energy_steps = spectrum_nenergy_steps(spectrum)
 
   n0 = sqrt(sum(vecpot0(1:space%dim))**2)
 
-  SAFE_ALLOCATE(ftreal(0:energy_steps, 1:space%dim))
-  SAFE_ALLOCATE(ftimag(0:energy_steps, 1:space%dim))
+  SAFE_ALLOCATE(ftreal(1:energy_steps, 1:space%dim))
+  SAFE_ALLOCATE(ftimag(1:energy_steps, 1:space%dim))
 
   call batch_init(vecpotb, space%dim)
   call batch_init(ftrealb, space%dim)
@@ -192,30 +192,32 @@ program dielectric_function
 
   do ii = 1, space%dim
     call batch_add_state(vecpotb, vecpot(:,  space%dim + ii))
-    call batch_add_state(ftrealb, ftreal(0:,  ii))
-    call batch_add_state(ftimagb, ftimag(0:,  ii))
+    call batch_add_state(ftrealb, ftreal(:,  ii))
+    call batch_add_state(ftimagb, ftimag(:,  ii))
   end do
 
   call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, spectrum%start_time, dt, vecpotb)
 
   call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-    istart, iend, spectrum%start_time, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftrealb)
+    istart, iend, spectrum%start_time, dt, vecpotb, spectrum%min_energy, &
+    spectrum%max_energy, spectrum%energy_step, ftrealb)
 
   call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
-    istart, iend, spectrum%start_time, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftimagb)
+    istart, iend, spectrum%start_time, dt, vecpotb, spectrum%min_energy, &
+    spectrum%max_energy, spectrum%energy_step, ftimagb)
 
 
   call batch_end(vecpotb)
   call batch_end(ftrealb)
   call batch_end(ftimagb)
 
-  SAFE_ALLOCATE(invdielectric(1:space%dim, 0:energy_steps))
-  SAFE_ALLOCATE(dielectric(1:space%dim, 0:energy_steps))
-  SAFE_ALLOCATE(chi(1:space%dim, 0:energy_steps))
+  SAFE_ALLOCATE(invdielectric(1:space%dim, 1:energy_steps))
+  SAFE_ALLOCATE(dielectric(1:space%dim, 1:energy_steps))
+  SAFE_ALLOCATE(chi(1:space%dim, 1:energy_steps))
   SAFE_ALLOCATE(fullmat(1:space%dim, 1:space%dim))
 
-  do kk = 0, energy_steps
-    ww = kk*spectrum%energy_step
+  do kk = 1, energy_steps
+    ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
 
     invdielectric(1:space%dim, kk) = (vecpot0(1:space%dim) + TOCMPLX(ftreal(kk, 1:space%dim), ftimag(kk, 1:space%dim)))/n0
 
@@ -247,8 +249,8 @@ program dielectric_function
 
   out_file = io_open('td.general/inverse_dielectric_function', action='write')
   write(out_file,'(a)') trim(header)
-  do kk = 0, energy_steps
-    ww = kk*spectrum%energy_step
+  do kk = 1, energy_steps
+    ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
     write(out_file, '(7e15.6)') ww,                                         &
          real(invdielectric(1, kk), REAL_PRECISION), aimag(invdielectric(1, kk)), &
          real(invdielectric(2, kk), REAL_PRECISION), aimag(invdielectric(2, kk)), &
@@ -258,8 +260,8 @@ program dielectric_function
  
   out_file = io_open('td.general/dielectric_function', action='write')
   write(out_file,'(a)') trim(header)
-  do kk = 0, energy_steps
-    ww = kk*spectrum%energy_step
+  do kk = 1, energy_steps
+    ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
     write(out_file, '(7e15.6)') ww,                                         &
          real(dielectric(1, kk), REAL_PRECISION), aimag(dielectric(1, kk)), &
          real(dielectric(2, kk), REAL_PRECISION), aimag(dielectric(2, kk)), &
@@ -269,9 +271,9 @@ program dielectric_function
 
   out_file = io_open('td.general/chi', action='write')
   write(out_file,'(a)') trim(header)
-  do kk = 0, energy_steps
+  do kk = 1, energy_steps
     dielectric(1:3, kk) = (dielectric(1:3, kk) - M_ONE)/(CNST(4.0)*M_PI)
-    ww = kk*spectrum%energy_step
+    ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
     write(out_file, '(7e15.6)') ww, &
       real(chi(1, kk), REAL_PRECISION), aimag(chi(1, kk)), &
       real(chi(2, kk), REAL_PRECISION), aimag(chi(2, kk)), &
