@@ -512,16 +512,18 @@ contains
         end do !idim
 
         !ist loop end
-        if (mpi_grp_is_root(mpi_world)) call loct_progress_bar((ik-st%d%kpt%start)*st%nst+ist, &
-                                               (st%d%kpt%end-st%d%kpt%start+1)*st%nst)
+        if (mpi_grp_is_root(mpi_world)) then
+           call loct_progress_bar((ik-st%d%kpt%start)*st%nst+ist, &
+                                         (st%d%kpt%end-st%d%kpt%start+1)*st%nst)
+        end if
       end do !ist
 
       ! Calculating the spectral function 
       !TODO: We could implement here a different broadening
       do ist = 1, st%nst
         do ie = 1, nenergy
-          AkE(ie, ik) = AkE(ie, ik) + PKm(ik,ist) * ( 3.0*de / M_PI ) / & 
-                     ( (eigs(ie)-st%eigenval(ist,ik))**2 + (3.0*de)**2 ) 
+          AkE(ie, ik) = AkE(ie, ik) + PKm(ik,ist) * ( M_THREE*de / M_PI ) / & 
+                     ( (eigs(ie)-st%eigenval(ist,ik))**2 + (M_THREE*de)**2 ) 
         end do   
       end do 
         
@@ -545,8 +547,8 @@ contains
 
     if(mpi_grp_is_root(mpi_world)) then
       file_ake = io_open("static/AkE.dat", action='write')
-      write(file_ake, *) '#Energy Ak(E)'
-      write(file_ake, *) '#Number of points in energy window ',  nenergy 
+      write(file_ake, '(a)') '#Energy Ak(E)'
+      write(file_ake, '(a)') '#Number of points in energy window ',  nenergy 
       do ik = 1, st%d%nik
         do ie = 1, nenergy
           write(file_ake,fmt ='(1es19.12,1x,1es19.12,1x,1es19.12)') coord_along_path(ik), &
