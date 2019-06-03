@@ -328,7 +328,6 @@ contains
       call messages_experimental('TDEnergyUpdateIter /= 1 when moving ions')
     end if
 
-
     POP_SUB(td_init)
   end subroutine td_init
 
@@ -366,7 +365,6 @@ contains
     type(profile_t),     save :: prof
     type(restart_t)           :: restart_load, restart_dump
 
-    
     PUSH_SUB(td_run)
 
     ! some shortcuts
@@ -461,7 +459,6 @@ contains
     end if
 
     if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) call states_pack(st)
-
     
     etime = loct_clock()
     ! This is the time-propagation loop. It starts at t=0 and finishes
