@@ -40,7 +40,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   R_TYPE, allocatable :: lam(:), lam_conj(:)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma, cg_phi
   FLOAT    :: cg0, e0, res, alpha, beta, dot, old_res, old_energy, first_delta_e
-  FLOAT    :: stheta, stheta2, ctheta, ctheta2, beta_rdmft
+  FLOAT    :: stheta, stheta2, ctheta, ctheta2
   FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :)
   FLOAT    :: integral_hartree, integral_xc, tmp
   integer  :: ist, jst, iter, maxter, idim, ip, isp, ixc
@@ -380,13 +380,11 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       ! for current state (ist=i) beta_i -> beta_i - sum_k (lam_ki <cg_i|phi_k> + c.c.)
       ! with lam_ki = <phi_k|H|phi_i>
       if(hm%theory_level == RDMFT) then
-        beta_rdmft = M_ZERO
         do jst = 1, st%nst
           call states_get_state(st, gr%mesh, jst, ik, psi_lam)
           cg_phi = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_lam, cg)) 
-          beta_rdmft = beta_rdmft + cg_phi / cg0 * ( lam(jst) + lam_conj(jst) )
+          beta = beta - M_TWO * cg_phi / cg0 * ( lam(jst) + lam_conj(jst) )
         end do
-        beta = beta - beta_rdmft * M_TWO
       end if
 
       theta = atan(beta/alpha)*M_HALF
