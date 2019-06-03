@@ -240,7 +240,7 @@ program oct_unfold
   SAFE_DEALLOCATE_A(resolution)
   SAFE_DEALLOCATE_A(highsympoints)
 
-  !We convert the k-point to the reduce coordinate of the supercell
+  !We convert the k-point to the reduced coordinate of the supercell
   do ik = 1, path_kpoints_grid%npoints
     call kpoints_to_reduced(sb%rlattice, path_kpoints_grid%point(:, ik), &
                                 path_kpoints_grid%red_point(:, ik), sb%dim)
