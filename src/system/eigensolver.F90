@@ -470,11 +470,8 @@ contains
           call deigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
           call deigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, &
-            eigens%converged(ik), ik, eigens%diff(:, ik), &
-            orthogonalize_to_all=eigens%orthogonalize_to_all, &
-            conjugate_direction=eigens%conjugate_direction, &
-            additional_terms=eigens%additional_terms, &
-            energy_change_threshold=eigens%energy_change_threshold)
+            eigens%converged(ik), ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, &
+            eigens%conjugate_direction, eigens%additional_terms, eigens%energy_change_threshold)
         case(RS_PLAN)
           call deigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
@@ -510,17 +507,14 @@ contains
         case(RS_CG)
            if(eigens%folded_spectrum) then
              call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, & 
-                                eigens%diff(:, ik), shift=eigens%spectrum_shift, &
-                                orthogonalize_to_all=eigens%orthogonalize_to_all, &
-                                conjugate_direction=eigens%conjugate_direction, &
-                                additional_terms=eigens%additional_terms)
+                                eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
+                                eigens%additional_terms, eigens%energy_change_threshold, &
+                                shift=eigens%spectrum_shift)
 
            else
               call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
-                                eigens%diff(:, ik), &
-                                orthogonalize_to_all=eigens%orthogonalize_to_all, &
-                                conjugate_direction=eigens%conjugate_direction, &
-                                additional_terms=eigens%additional_terms)
+                                eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
+                                eigens%additional_terms, eigens%energy_change_threshold)
 
            end if
         case(RS_PLAN)

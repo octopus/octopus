@@ -18,23 +18,23 @@
 
 ! ---------------------------------------------------------
 !> conjugate-gradients method.
-subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, diff, shift, orthogonalize_to_all, &
-  conjugate_direction, additional_terms, energy_change_threshold)
-  type(grid_t),           intent(in)    :: gr
-  type(states_t),         intent(inout) :: st
-  type(hamiltonian_t),    intent(in)    :: hm
-  type(preconditioner_t), intent(in)    :: pre
-  type(xc_t),             intent(in)    :: xc
-  FLOAT,                  intent(in)    :: tol
-  integer,                intent(inout) :: niter
-  integer,                intent(inout) :: converged
-  integer,                intent(in)    :: ik
-  FLOAT,        optional, intent(out)   :: diff(:) !< (1:st%nst)
-  FLOAT,pointer, optional, intent(in)   :: shift(:,:)
-  logical, optional,      intent(in)    :: orthogonalize_to_all
-  integer, optional,      intent(in)    :: conjugate_direction
-  logical, optional,      intent(in)    :: additional_terms
-  FLOAT, optional,        intent(in)    :: energy_change_threshold
+subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, diff, orthogonalize_to_all, &
+  conjugate_direction, additional_terms, energy_change_threshold, shift)
+  type(grid_t),             intent(in)    :: gr
+  type(states_t),           intent(inout) :: st
+  type(hamiltonian_t),      intent(in)    :: hm
+  type(preconditioner_t),   intent(in)    :: pre
+  type(xc_t),               intent(in)    :: xc
+  FLOAT,                    intent(in)    :: tol
+  integer,                  intent(inout) :: niter
+  integer,                  intent(inout) :: converged
+  integer,                  intent(in)    :: ik
+  FLOAT,                    intent(out)   :: diff(:) !< (1:st%nst)
+  logical,                  intent(in)    :: orthogonalize_to_all
+  integer,                  intent(in)    :: conjugate_direction
+  logical,                  intent(in)    :: additional_terms
+  FLOAT,                    intent(in)    :: energy_change_threshold
+  FLOAT, pointer, optional, intent(in)   :: shift(:,:)
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
@@ -45,9 +45,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   integer  :: ist, iter, maxter, idim, ip, isp, ixc
   R_TYPE   :: sb(3)
   logical  :: fold_ ! use folded spectrum operator (H-shift)^2
-  logical  :: orthogonalize_to_all_, additional_terms_, add_xc_term
-  integer  :: conjugate_direction_
-  FLOAT    :: energy_change_threshold_
+  logical  :: add_xc_term
 
   PUSH_SUB(X(eigensolver_cg2))
 
@@ -59,13 +57,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     ASSERT(associated(shift))
   end if
 
-  ! get the optional arguments for CG options
-  orthogonalize_to_all_ = optional_default(orthogonalize_to_all, .false.)
-  conjugate_direction_ = optional_default(conjugate_direction, int(OPTION__CGDIRECTION__FLETCHER, 4))
-  energy_change_threshold_ = optional_default(energy_change_threshold, CNST(0.1))
   ! do we add the XC term? needs derivatives of the XC functional
-  additional_terms_ = optional_default(additional_terms, .false.)
-  add_xc_term = additional_terms_
+  add_xc_term = additional_terms
   if(st%d%ispin == UNPOLARIZED) then
     isp = 1
   else
@@ -119,7 +112,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   end if
 
   ! Set the diff to zero, since it is intent(out)
-  if(present(diff)) diff(1:st%nst) = M_ZERO
+  diff(1:st%nst) = M_ZERO
 
   ! Start of main loop, which runs over all the eigenvectors searched
   ASSERT(converged >= 0)
@@ -157,7 +150,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     ! Starts iteration for this band
     iter_loop: do iter = 1, maxter
       ! need to save g from previous iteration for Polak-Ribiere method
-      if(conjugate_direction_ == OPTION__CGDIRECTION__POLAK) then
+      if(conjugate_direction == OPTION__CGDIRECTION__POLAK) then
         if(iter /= 1) then
           g_prev = g
         else
@@ -183,7 +176,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, g0)
       ! orthogonalize against previous or all states, depending on the optional argument orthogonalize_to_all
       call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., &
-        against_all=orthogonalize_to_all_)
+        against_all=orthogonalize_to_all)
 
       do idim = 1, st%d%dim
         call lalg_axpy(gr%mesh%np, -dot, psi(:, idim), g0(:, idim))
@@ -191,7 +184,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       ! dot products needed for conjugate gradient
       gg = X(mf_dotp) (gr%mesh, st%d%dim, g0, g, reduce = .false.)
-      if(iter /= 1 .and. conjugate_direction_ == OPTION__CGDIRECTION__POLAK) then
+      if(iter /= 1 .and. conjugate_direction == OPTION__CGDIRECTION__POLAK) then
         ! only needed for Polak-Ribiere
         gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g0, g_prev, reduce = .false.)
       end if
@@ -223,7 +216,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
           call lalg_copy(gr%mesh%np, g0(:, idim), cg(:, idim))
         end do
       else
-        select case (conjugate_direction_)
+        select case (conjugate_direction)
         case (OPTION__CGDIRECTION__FLETCHER)
           ! PTA eq. 5.20
           gamma = gg/gg0        ! (Fletcher-Reeves)
@@ -287,7 +280,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       e0 = st%eigenval(ist, ik)
       alpha = M_TWO * R_REAL(e0 - b0)
 
-      if (additional_terms_) then
+      if (additional_terms) then
         ! more terms here, see PTA92 eqs 5.31, 5.32, 5.33, 5.36
         ! Hartree term
         tmp = M_TWO/cg0
@@ -359,7 +352,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       if(iter > 1) then
         ! This criterion is discussed in Sec. V.B.6
-        if(abs(st%eigenval(ist, ik) - old_energy) < first_delta_e*energy_change_threshold_) then
+        if(abs(st%eigenval(ist, ik) - old_energy) < first_delta_e*energy_change_threshold) then
           exit iter_loop
         end if
       else
@@ -396,9 +389,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
     niter = niter + iter + 1
 
-    if(present(diff)) then
-      diff(ist) = res
-    end if
+    diff(ist) = res
 
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
       call loct_progress_bar(st%lnst*(ik - 1) +  ist, st%lnst*st%d%kpt%nlocal)
