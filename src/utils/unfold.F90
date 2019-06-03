@@ -136,9 +136,8 @@ program oct_unfold
   !% Perform the actual unfolding, based on the states obtained from the previous unocc run.
   !%End
   call parse_variable('UnfoldMode', 0, run_mode)
-  if(run_mode == 0) then
-    message(1) = "UnfoldMode must be set to a value different from 0."
-    call messages_fatal(1)
+  if(.not.varinfo_valid_option('UnfoldMode')) then
+    call messages_input_error("UnfoldMode must be set to a value different from 0.")
   end if
 
   !%Variable UnfoldLatticeParameters
