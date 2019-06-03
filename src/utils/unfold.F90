@@ -283,6 +283,7 @@ program oct_unfold
 
     call cube_function_free_fs(zcube, cf)
     call zcube_function_free_rs(zcube, cf)
+    call cube_end(zcube)
 
   else
     message(1) = "Unsupported or incorrect value of UnfoldMode." 
