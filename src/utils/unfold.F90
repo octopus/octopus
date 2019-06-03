@@ -477,7 +477,7 @@ contains
         write(filename,"(a13,i3.3,a4)") "./static/ake_",ik,".dat"
         file_ake = io_open(trim(filename), action='write')
         write(file_ake, '(a)') '#Energy Ak(E)'
-        write(file_ake, '(a)') '#Number of points in energy window ',  nenergy 
+        write(file_ake, '(a, i5)') '#Number of points in energy window ',  nenergy 
       end if
 
       do ist = 1, st%nst 
@@ -551,7 +551,7 @@ contains
     if(mpi_grp_is_root(mpi_world)) then
       file_ake = io_open("static/ake.dat", action='write')
       write(file_ake, '(a)') '#Energy Ak(E)'
-      write(file_ake, '(a)') '#Number of points in energy window ',  nenergy 
+      write(file_ake, '(a, i5)') '#Number of points in energy window ',  nenergy 
       do ik = 1, st%d%nik
         do ie = 1, nenergy
           write(file_ake,fmt ='(1es19.12,1x,1es19.12,1x,1es19.12)') coord_along_path(ik), &
