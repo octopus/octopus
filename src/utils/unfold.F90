@@ -318,7 +318,7 @@ contains
       file_Gvec = io_open('unfold_gvec.dat', action='write')
       file_kpts = io_open('unfold_kpt.dat', action='write')
       write(file_kpts,'(a)') '%KpointsReduced'
-      write(file_Gvec,*) '#Created by oct-unfold'
+      write(file_Gvec,'(a)') '#Created by oct-unfold'
       write(file_Gvec,*) path_kpoints_grid%npoints
 
       !We convert the k-point to the reduce coordinate of the supercell
