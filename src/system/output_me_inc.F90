@@ -329,12 +329,6 @@ subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
           call X(derivatives_grad)(gr%der, psii(:, idim), gpsii(:, :, idim), set_bc = .false.)
         end do
 
-        if(ist == this%st_start) then
-          print *, ik, psii(1:2,1)
-          print *, ik, gpsii(1:2,1,1)
-          print *, ' ' 
-        end if
-
         !A nonlocal contribution from the MGGA potential must be included
         !This must be done first, as this is like a position-dependent mass 
         if(hm%family_is_mgga_with_exc) then
