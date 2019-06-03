@@ -197,7 +197,7 @@ program oct_unfold
   !% The syntax is identical to <tt>KPointsPath</tt>.
   !%End
   if(parse_block('UnfoldKPointsPath', blk) /= 0) then
-    write(message(1),'(a)') 'Internal error while reading UnfoldPointsPath.'
+    write(message(1),'(a)') 'Error while reading UnfoldPointsPath.'
     call messages_fatal(1)
   end if
 
