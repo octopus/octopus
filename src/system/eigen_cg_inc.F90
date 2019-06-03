@@ -142,13 +142,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     g_prev = R_TOTYPE(M_ZERO)
     gg1   = R_TOTYPE(M_ZERO)
     
-    if(hm%theory_level == RDMFT) then
-      psi_lam     = R_TOTYPE(M_ZERO)
-      cg_vec_lam  = R_TOTYPE(M_ZERO) 
-      lam         = R_TOTYPE(M_ZERO)
-      lam_conj    = R_TOTYPE(M_ZERO)
-    end if
-
     call states_get_state(st, gr%mesh, ist, ik, psi)
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
