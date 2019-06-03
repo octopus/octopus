@@ -196,7 +196,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       end do
     end if
 
-!!!!!!!!!!!!!!!!!!!! Starts iteration for this band !!!!!!!!!!!!!!!!!!!!
+    ! Starts iteration for this band
     iter_loop: do iter = 1, maxter
       ! need to save g from previous iteration for Polak-Ribiere method
       if(conjugate_direction_ == OPTION__CGDIRECTION__POLAK) then
@@ -209,8 +209,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       ! PTA92, eq. 5.10
       if(hm%theory_level == RDMFT) then
-! update lamda every iteration. Numerically extremley expensive and not feasible for more than 1d.
-! still left this here for test reason. 
+        ! update lamda every iteration. Numerically extremley expensive and not feasible for more than 1d.
+        ! still left this here for test reason. 
 !       cg_vec_lam = R_TOTYPE(M_ZERO) 
 !       do jst = 1, st%nst
 !         if (jst == ist) then
@@ -506,7 +506,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     SAFE_DEALLOCATE_A(psi2)
   end if
   
-! Modifications Nicole
   if(hm%theory_level == RDMFT) then
     SAFE_DEALLOCATE_A(psi_lam)
     SAFE_DEALLOCATE_A(cg_vec_lam)
@@ -514,7 +513,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     SAFE_DEALLOCATE_A(lam_conj)
     SAFE_DEALLOCATE_A(ppsi2)
   end if
-! End Nicole
 
   POP_SUB(X(eigensolver_cg2))
 end subroutine X(eigensolver_cg2)
