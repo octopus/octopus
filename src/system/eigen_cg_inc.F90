@@ -36,9 +36,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   logical, optional,      intent(in)    :: additional_terms
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:)
-  R_TYPE, allocatable :: h_psi2(:,:), ppsi2(:,:), psi_lam(:,:), cg_vec_lam(:,:)
-  R_TYPE, allocatable :: lam(:), lam_conj(:), cg_phi(:)
-  R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
+  R_TYPE, allocatable :: h_psi2(:,:), psi_lam(:,:), cg_vec_lam(:,:)
+  R_TYPE, allocatable :: lam(:), lam_conj(:)
+  R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma, cg_phi
   FLOAT    :: cg0, e0, res, alpha, beta, dot, old_res, old_energy, first_delta_e
   FLOAT    :: stheta, stheta2, ctheta, ctheta2, beta_rdmft
   FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :)
@@ -110,8 +110,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     SAFE_ALLOCATE(cg_vec_lam(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(lam(1:st%nst))
     SAFE_ALLOCATE(lam_conj(1:st%nst))
-    SAFE_ALLOCATE(cg_phi(1:st%nst))
-    SAFE_ALLOCATE(ppsi2(1:gr%mesh%np_part, 1:st%d%dim))
   end if
 
   h_psi = R_TOTYPE(M_ZERO)
@@ -149,8 +147,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       cg_vec_lam  = R_TOTYPE(M_ZERO) 
       lam         = R_TOTYPE(M_ZERO)
       lam_conj    = R_TOTYPE(M_ZERO)
-      cg_phi      = R_TOTYPE(M_ZERO)
-      ppsi2       = R_TOTYPE(M_ZERO)
     end if
 
     call states_get_state(st, gr%mesh, ist, ik, psi)
@@ -394,8 +390,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         beta_rdmft = M_ZERO
         do jst = 1, st%nst
           call states_get_state(st, gr%mesh, jst, ik, psi_lam)
-          cg_phi(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_lam, cg)) 
-          beta_rdmft = beta_rdmft + cg_phi(jst) / cg0 * ( lam(jst) + lam_conj(jst) )
+          cg_phi = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_lam, cg)) 
+          beta_rdmft = beta_rdmft + cg_phi / cg0 * ( lam(jst) + lam_conj(jst) )
         end do
         beta = beta - beta_rdmft * M_TWO
       end if
@@ -511,7 +507,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     SAFE_DEALLOCATE_A(cg_vec_lam)
     SAFE_DEALLOCATE_A(lam)
     SAFE_DEALLOCATE_A(lam_conj)
-    SAFE_DEALLOCATE_A(ppsi2)
   end if
 
   POP_SUB(X(eigensolver_cg2))
