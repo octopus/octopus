@@ -248,11 +248,11 @@ program oct_unfold
 
   call kpoints_fold_to_1BZ(path_kpoints_grid, klattice_PC)
 
-  if(iand(run_mode, OPTION__UNFOLDMODE__UNFOLD_SETUP) /= 0) then
+  if(run_mode == OPTION__UNFOLDMODE__UNFOLD_SETUP) then
 
     call unfold_setup()
     
-  else if(iand(run_mode, OPTION__UNFOLDMODE__UNFOLD_RUN) /= 0) then
+  else if(run_mode == OPTION__UNFOLDMODE__UNFOLD_RUN) then
 
     !Sanity check
     file_Gvec = io_open('unfold_gvec.dat', action='read')
