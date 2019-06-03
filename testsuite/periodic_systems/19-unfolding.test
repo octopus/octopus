@@ -2,7 +2,7 @@
 
 Test       : Unfolding utility test
 Program    : octopus
-TestGroups : long-run, periodic_systems, symmetries
+TestGroups : long-run, periodic_systems
 Enabled    : Yes
 Processors : 4
 Input      : 19-unfolding.01-gs.inp
