@@ -467,14 +467,14 @@ contains
         end do !ig
 
       case default
-        call messages_not_implemented("Unfolding for dimensions other than 2 or 3") 
+        call messages_not_implemented("Unfolding for periodic dimensions other than 2 or 3") 
       end select
 
       if (mpi_grp_is_root(gr%mesh%mpi_grp)) then
-        write(filename,"(A13,I3.3,A4)") "./static/AkE_",ik,".dat"
+        write(filename,"(a13,i3.3,a4)") "./static/AkE_",ik,".dat"
         file_ake = io_open(trim(filename), action='write')
-        write(file_ake, *) '#Energy Ak(E)'
-        write(file_ake, *) '#Number of points in energy window ',  nenergy 
+        write(file_ake, '(a)') '#Energy Ak(E)'
+        write(file_ake, '(a)') '#Number of points in energy window ',  nenergy 
       end if
 
       do ist = 1, st%nst 
