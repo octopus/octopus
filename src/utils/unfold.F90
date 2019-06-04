@@ -318,9 +318,9 @@ contains
     if(mpi_grp_is_root(mpi_world)) then
       file_gvec = io_open('unfold_gvec.dat', action='write')
       file_kpts = io_open('unfold_kpt.dat', action='write')
-      write(file_kpts,'(a)') '%KpointsReduced'
-      write(file_gvec,'(a)') '#Created by oct-unfold'
-      write(file_gvec,'(i)') path_kpoints_grid%npoints
+      write(file_kpts,'(a)')  '%KpointsReduced'
+      write(file_gvec,'(a)')  '#Created by oct-unfold'
+      write(file_gvec,'(i5)') path_kpoints_grid%npoints
 
       !We convert the k-point to the reduce coordinate of the supercell
       do ik = 1, path_kpoints_grid%npoints
