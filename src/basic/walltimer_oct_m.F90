@@ -203,7 +203,7 @@ contains
   
     if(walltimer_alarm) then
       write(message(1), '("Walltimer stopping execution after = ",F6.2," minutes.")') (now - start_time)/CNST(60.0)
-      call messages_info(1, all_nodes= .true.)
+      call messages_info(1)
     end if
   
     POP_SUB(walltimer_alarm)
