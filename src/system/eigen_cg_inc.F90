@@ -165,7 +165,20 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     first_delta_e = M_ZERO
 
     if(hm%theory_level == RDMFT) then
-      cg_vec_lam = R_TOTYPE(M_ZERO)
+      ! For RDMFT, the gradient of the total energy functional differs from the DFT or HF case.
+      ! The difference is that the lagrange multiplier matrix lambda cannot be diagonalized together with the Hamiltonian,
+      ! because the orbitals of the minimization or not the eigenstates of the single-body Hamiltonian, but of the systems 1RDM
+      ! The functional that is minimized in the cg-routine reads: F= E[psi_i]-sum_ij lam_ij (<psi_i|psi_j> -delta_ij) + const.
+      ! The respective gradient reads: dF/dphi_i= dE/dphi_i - sum_j lam_ij |phi_j>= H|phi_i> - sum_j lam_ij |phi_j>
+      ! We get the expression for lam_ij from the gradient with respect to phi*: lam_ij=<phi_i|dE/dphi_j^*>=<phi_i|H|phi_j>
+      ! And that is what we calculate here as lam_conj
+      ! Additionally, we get a different formula for the line minimization, which turns out to only change the beta of the original expression.
+      ! beta-> beta+beta_rdmft,  beta_rdmft= - sum_j (lam_ji <cg_i|phi_k> + c.c.)
+      ! Thus, we also need to calculate lam_ji. Note that lam_ij != lam_ji until convergence.
+      ! As an approximation, we calculate the lambda-matrix only once for every orbital and do not update during the iter_loop.
+      ! This seems to be a reasonable approximation, but it needs more careful testing. We left the additional code that updates lambda in every 
+      ! iteration commented.
+      cg_vec_lam = R_TOTYPE(M_ZERO) 
       do jst = 1, st%nst
         if (jst == ist) then
           lam(jst) = st%eigenval(ist, ik)
