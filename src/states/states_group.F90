@@ -70,10 +70,11 @@ contains
 
   !---------------------------------------------------------
 
-  subroutine states_group_copy(d,group_in, group_out)
+  subroutine states_group_copy(d,group_in, group_out, copy_data)
     type(states_dim_t) :: d
     type(states_group_t), intent(in)    :: group_in
     type(states_group_t), intent(out)   :: group_out
+    logical, optional,    intent(in)    :: copy_data
 
     integer :: qn_start, qn_end, ib, iqn
     
@@ -98,7 +99,7 @@ contains
 
       do iqn = qn_start, qn_end
         do ib = group_out%block_start, group_out%block_end
-          call batch_copy(group_in%psib(ib, iqn), group_out%psib(ib, iqn), copy_data = .true.)
+          call batch_copy(group_in%psib(ib, iqn), group_out%psib(ib, iqn), copy_data = optional_default(copy_data, .true.))
         end do
       end do
       
