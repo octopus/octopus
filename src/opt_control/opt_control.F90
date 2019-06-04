@@ -29,6 +29,7 @@ module opt_control_oct_m
   use global_oct_m
   use grid_oct_m
   use initst_oct_m
+  use iso_c_binding
   use output_oct_m
   use hamiltonian_oct_m
   use io_oct_m
@@ -544,6 +545,7 @@ contains
          call messages_info(2)
       end if
 
+      call controlfunction_end(par_)
       SAFE_DEALLOCATE_A(xl)
       SAFE_DEALLOCATE_A(xu)
       SAFE_DEALLOCATE_A(x)

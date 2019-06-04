@@ -23,3 +23,5 @@ SmearingFunction = fermi_dirac
 
 Output = current
 OutputFormat = axis_z
+
+ConvRelDens = 1e-6
