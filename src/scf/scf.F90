@@ -685,7 +685,6 @@ contains
     
     do iter = 1, scf%max_iter
       call profiling_in(prof, "SCF_CYCLE")
-      call walltimer_tap()
 
       ! reset scdm flag
       scdm_is_local = .false.

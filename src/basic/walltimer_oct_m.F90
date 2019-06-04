@@ -155,8 +155,9 @@ contains
   end subroutine start
 
   !> measure time of on itertion  
-  subroutine walltimer_tap()
+  subroutine walltimer_tap(print)
 
+    logical, optional :: print
     double precision :: now
 
     PUSH_SUB(walltimer_tap)
@@ -166,6 +167,14 @@ contains
     iteration_time = now - last_tap
     last_tap = now
     
+    if(present(print)) then
+      if(print) then
+        write(message(1), '("Walltimer_tap:   elapsed time = ",F6.2," (", 3F10.5, "), active = ",L1 )')  &
+          now - start_time, duration, iteration_time, margin, active
+        call messages_info(1, all_nodes=.true.)
+      end if
+    end if
+
     POP_SUB(walltimer_tap)
 
   end subroutine walltimer_tap
@@ -182,9 +191,9 @@ contains
     
     if(present(print)) then
       if(print) then
-        write(message(1), '("Walltimer: elapsed time = ",F6.2," (", F6.2, "), active = ",L1 )')  &
-          now - start_time, duration, active
-        call messages_info(1)
+        write(message(1), '("Walltimer_alarm: elapsed time = ",F6.2," (", 3F10.5, "), active = ",L1 )')  &
+          now - start_time, duration, iteration_time, margin, active
+        call messages_info(1, all_nodes=.true.)
       end if
     end if
     
@@ -194,7 +203,7 @@ contains
   
     if(walltimer_alarm) then
       write(message(1), '("Walltimer stopping execution after = ",F6.2," minutes.")') (now - start_time)/CNST(60.0)
-      call messages_info(1)
+      call messages_info(1, all_nodes= .true.)
     end if
   
     POP_SUB(walltimer_alarm)
