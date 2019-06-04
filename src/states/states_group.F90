@@ -33,6 +33,7 @@ module states_group_oct_m
   public ::                           &
     states_group_t,                   &
     states_group_null,                &
+    states_group_end,                 &
     states_group_copy
 
   type states_group_t
@@ -67,6 +68,37 @@ contains
 
     POP_SUB(states_group_null)
   end subroutine states_group_null
+
+  ! ---------------------------------------------------------
+  subroutine states_group_end(this, d)
+    type(states_group_t), intent(inout) :: this
+    type(states_dim_t),   intent(in)    :: d
+
+    integer :: ib, iq
+
+    PUSH_SUB(states_group_end)
+
+    if (this%block_initialized) then
+      do ib = 1, this%nblocks
+        do iq = d%kpt%start, d%kpt%end
+          if (this%block_is_local(ib, iq)) then
+            call batch_end(this%psib(ib, iq))
+          end if
+        end do
+      end do
+
+      SAFE_DEALLOCATE_P(this%psib)
+
+      SAFE_DEALLOCATE_P(this%iblock)
+      SAFE_DEALLOCATE_P(this%block_range)
+      SAFE_DEALLOCATE_P(this%block_size)
+      SAFE_DEALLOCATE_P(this%block_is_local)
+      SAFE_DEALLOCATE_A(this%block_node)
+      this%block_initialized = .false.
+    end if
+
+    POP_SUB(states_group_end)
+  end subroutine states_group_end
 
   !---------------------------------------------------------
 
