@@ -37,7 +37,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   FLOAT, pointer, optional, intent(in)   :: shift(:,:)
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:)
-  R_TYPE, allocatable :: h_psi2(:,:), psi_j(:,:), cg_vec_lam(:,:)
+  R_TYPE, allocatable :: h_psi2(:,:), psi_j(:,:)
   R_TYPE, allocatable :: lam(:), lam_conj(:)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma, cg_phi
   FLOAT    :: cg0, e0, res, alpha, beta, dot, old_res, old_energy, first_delta_e
@@ -106,7 +106,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   
   if(hm%theory_level == RDMFT) then
     SAFE_ALLOCATE(psi_j(1:gr%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(cg_vec_lam(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(lam(1:st%nst))
     SAFE_ALLOCATE(lam_conj(1:st%nst))
     call states_group_copy(st%d, st%group, hpsi_j, copy_data=.false.)
@@ -176,11 +175,11 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       end if
 
       ! PTA92, eq. 5.10
-      if (hm%theory_level /= RDMFT) then
-        forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-          g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
-        end forall 
-      else
+      forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+        g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
+      end forall
+
+      if (hm%theory_level == RDMFT) then
         ! For RDMFT, the gradient of the total energy functional differs from the DFT or HF case.
         ! The difference is that the lagrange multiplier matrix lambda cannot be diagonalized together with the Hamiltonian,
         ! because the orbitals of the minimization or not the eigenstates of the single-body Hamiltonian, but of the systems 1RDM
@@ -195,7 +194,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         ! This seems to be a reasonable approximation, but it needs more careful testing. We left the additional code that updates lambda in every 
         ! iteration commented.
         ! lambda should be updated every CG iteration, but this is numerically very expensive and currently not feasible.
-        cg_vec_lam = R_TOTYPE(M_ZERO)
         do jst = 1, st%nst
           if (jst == ist) then
             lam(jst) = st%eigenval(ist, ik)
@@ -217,14 +215,10 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
             h_cg = R_TOTYPE(M_ZERO)
 
             forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-              cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_j(ip, idim)
+              g(ip, idim) = g(ip, idim) - lam_conj(jst)*psi_j(ip, idim)
             end forall
           end if
         end do
-
-        forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-          g(ip, idim) = h_psi(ip, idim) - cg_vec_lam(ip, idim) - lam_conj(ist)*psi(ip, idim)
-        end forall
       end if
 
       ! PTA92, eq. 5.12
@@ -487,7 +481,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   end if
   if(hm%theory_level == RDMFT) then
     SAFE_DEALLOCATE_A(psi_j)
-    SAFE_DEALLOCATE_A(cg_vec_lam)
     SAFE_DEALLOCATE_A(lam)
     SAFE_DEALLOCATE_A(lam_conj)
     call states_group_end(hpsi_j, st%d)
