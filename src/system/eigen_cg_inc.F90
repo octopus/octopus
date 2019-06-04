@@ -49,6 +49,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   logical  :: orthogonalize_to_all_, additional_terms_, add_xc_term
   integer  :: conjugate_direction_
 
+  type(states_group_t) :: hpsi_j
+  integer :: ib, iq
+
   PUSH_SUB(X(eigensolver_cg2))
 
   ! if the optional shift argument is present, assume we are computing a folded spectrum
@@ -110,6 +113,10 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     SAFE_ALLOCATE(cg_vec_lam(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(lam(1:st%nst))
     SAFE_ALLOCATE(lam_conj(1:st%nst))
+    call states_group_copy(st%d, st%group, hpsi_j, copy_data=.false.)
+    do ib = hpsi_j%block_start, hpsi_j%block_end
+      call X(hamiltonian_apply_batch) (hm, gr%der, st%group%psib(ib, ik), hpsi_j%psib(ib, ik), ik)
+    end do
   end if
 
   h_psi = R_TOTYPE(M_ZERO)
@@ -167,6 +174,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         if (jst == ist) then
           lam(jst) = st%eigenval(ist, ik)
           lam_conj(jst) = st%eigenval(ist, ik)
+          do idim = 1, st%d%dim
+            call batch_set_state(hpsi_j%psib(hpsi_j%iblock(ist, ik), ik), (/ist, idim/), gr%mesh%np, h_psi(:, idim))
+          end do
         else
           call states_get_state(st, gr%mesh, jst, ik, psi_j)
 
@@ -174,7 +184,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
           lam(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_j, h_psi))
           
           ! calculate <phi_i|H|phi_j> = lam_ij
-          call X(hamiltonian_apply)(hm, gr%der, psi_j, h_cg, jst, ik)
+          do idim = 1, st%d%dim
+            call batch_get_state(hpsi_j%psib(hpsi_j%iblock(jst, ik), ik), (/jst, idim/), gr%mesh%np, h_cg(:, idim))
+          end do
           lam_conj(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
           h_cg = R_TOTYPE(M_ZERO)
       
@@ -202,7 +214,34 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
           g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
         end forall 
       else
-        ! lambda should be updated every CG iteration, but this is numerically very expensive and currently not feasible.      
+        ! lambda should be updated every CG iteration, but this is numerically very expensive and currently not feasible.
+        cg_vec_lam = R_TOTYPE(M_ZERO)
+        do jst = 1, st%nst
+          if (jst == ist) then
+            lam(jst) = st%eigenval(ist, ik)
+            lam_conj(jst) = st%eigenval(ist, ik)
+            do idim = 1, st%d%dim
+              call batch_set_state(hpsi_j%psib(hpsi_j%iblock(ist, ik), ik), (/ist, idim/), gr%mesh%np, h_psi(:, idim))
+            end do
+          else
+            call states_get_state(st, gr%mesh, jst, ik, psi_j)
+
+            ! calculate <phi_j|H|phi_i> = lam_ji
+            lam(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_j, h_psi))
+
+            ! calculate <phi_i|H|phi_j> = lam_ij
+            do idim = 1, st%d%dim
+              call batch_get_state(hpsi_j%psib(hpsi_j%iblock(jst, ik), ik), (/jst, idim/), gr%mesh%np, h_cg(:, idim))
+            end do
+            lam_conj(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
+            h_cg = R_TOTYPE(M_ZERO)
+
+            forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+              cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_j(ip, idim)
+            end forall
+          end if
+        end do
+
         forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
           g(ip, idim) = h_psi(ip, idim) - cg_vec_lam(ip, idim) - lam_conj(ist)*psi(ip, idim)
         end forall
@@ -473,6 +512,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     SAFE_DEALLOCATE_A(cg_vec_lam)
     SAFE_DEALLOCATE_A(lam)
     SAFE_DEALLOCATE_A(lam_conj)
+    call states_group_end(hpsi_j, st%d)
   end if
 
   POP_SUB(X(eigensolver_cg2))
