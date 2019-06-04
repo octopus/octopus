@@ -164,48 +164,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     old_energy = st%eigenval(ist, ik)
     first_delta_e = M_ZERO
 
-    if(hm%theory_level == RDMFT) then
-      ! For RDMFT, the gradient of the total energy functional differs from the DFT or HF case.
-      ! The difference is that the lagrange multiplier matrix lambda cannot be diagonalized together with the Hamiltonian,
-      ! because the orbitals of the minimization or not the eigenstates of the single-body Hamiltonian, but of the systems 1RDM
-      ! The functional that is minimized in the cg-routine reads: F= E[psi_i]-sum_ij lam_ij (<psi_i|psi_j> -delta_ij) + const.
-      ! The respective gradient reads: dF/dphi_i= dE/dphi_i - sum_j lam_ij |phi_j>= H|phi_i> - sum_j lam_ij |phi_j>
-      ! We get the expression for lam_ij from the gradient with respect to phi*: lam_ij=<phi_i|dE/dphi_j^*>=<phi_i|H|phi_j>
-      ! And that is what we calculate here as lam_conj
-      ! Additionally, we get a different formula for the line minimization, which turns out to only change the beta of the original expression.
-      ! beta-> beta+beta_rdmft,  beta_rdmft= - sum_j (lam_ji <cg_i|phi_k> + c.c.)
-      ! Thus, we also need to calculate lam_ji. Note that lam_ij != lam_ji until convergence.
-      ! As an approximation, we calculate the lambda-matrix only once for every orbital and do not update during the iter_loop.
-      ! This seems to be a reasonable approximation, but it needs more careful testing. We left the additional code that updates lambda in every 
-      ! iteration commented.
-      cg_vec_lam = R_TOTYPE(M_ZERO) 
-      do jst = 1, st%nst
-        if (jst == ist) then
-          lam(jst) = st%eigenval(ist, ik)
-          lam_conj(jst) = st%eigenval(ist, ik)
-          do idim = 1, st%d%dim
-            call batch_set_state(hpsi_j%psib(hpsi_j%iblock(ist, ik), ik), (/ist, idim/), gr%mesh%np, h_psi(:, idim))
-          end do
-        else
-          call states_get_state(st, gr%mesh, jst, ik, psi_j)
-
-          ! calculate <phi_j|H|phi_i> = lam_ji
-          lam(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_j, h_psi))
-          
-          ! calculate <phi_i|H|phi_j> = lam_ij
-          do idim = 1, st%d%dim
-            call batch_get_state(hpsi_j%psib(hpsi_j%iblock(jst, ik), ik), (/jst, idim/), gr%mesh%np, h_cg(:, idim))
-          end do
-          lam_conj(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
-          h_cg = R_TOTYPE(M_ZERO)
-      
-          forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-            cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_j(ip, idim)
-          end forall
-        end if
-      end do
-    end if
-
     ! Starts iteration for this band
     iter_loop: do iter = 1, maxter
       ! need to save g from previous iteration for Polak-Ribiere method
@@ -223,6 +181,19 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
           g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
         end forall 
       else
+        ! For RDMFT, the gradient of the total energy functional differs from the DFT or HF case.
+        ! The difference is that the lagrange multiplier matrix lambda cannot be diagonalized together with the Hamiltonian,
+        ! because the orbitals of the minimization or not the eigenstates of the single-body Hamiltonian, but of the systems 1RDM
+        ! The functional that is minimized in the cg-routine reads: F= E[psi_i]-sum_ij lam_ij (<psi_i|psi_j> -delta_ij) + const.
+        ! The respective gradient reads: dF/dphi_i= dE/dphi_i - sum_j lam_ij |phi_j>= H|phi_i> - sum_j lam_ij |phi_j>
+        ! We get the expression for lam_ij from the gradient with respect to phi*: lam_ij=<phi_i|dE/dphi_j^*>=<phi_i|H|phi_j>
+        ! And that is what we calculate here as lam_conj
+        ! Additionally, we get a different formula for the line minimization, which turns out to only change the beta of the original expression.
+        ! beta-> beta+beta_rdmft,  beta_rdmft= - sum_j (lam_ji <cg_i|phi_k> + c.c.)
+        ! Thus, we also need to calculate lam_ji. Note that lam_ij != lam_ji until convergence.
+        ! As an approximation, we calculate the lambda-matrix only once for every orbital and do not update during the iter_loop.
+        ! This seems to be a reasonable approximation, but it needs more careful testing. We left the additional code that updates lambda in every 
+        ! iteration commented.
         ! lambda should be updated every CG iteration, but this is numerically very expensive and currently not feasible.
         cg_vec_lam = R_TOTYPE(M_ZERO)
         do jst = 1, st%nst
