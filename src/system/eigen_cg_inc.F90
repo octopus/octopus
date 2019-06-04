@@ -162,7 +162,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     first_delta_e = M_ZERO
 
     if(hm%theory_level == RDMFT) then
-      cg_vec_lam = R_TOTYPE(M_ZERO) 
+      cg_vec_lam = R_TOTYPE(M_ZERO)
       do jst = 1, st%nst
         if (jst == ist) then
           lam(jst) = st%eigenval(ist, ik)
@@ -170,13 +170,13 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         else
           call states_get_state(st, gr%mesh, jst, ik, psi_lam)
 
-          ! calculate <phi_j|H|phi_i> =lam_ji
+          ! calculate <phi_j|H|phi_i> = lam_ji
           lam(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_lam, h_psi))
           
-          ! calculate <phi_i|H|phi_j>=lam_ij
+          ! calculate <phi_i|H|phi_j> = lam_ij
           call X(hamiltonian_apply)(hm, gr%der, psi_lam, h_cg, jst, ik)
           lam_conj(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
-          h_cg= R_TOTYPE(M_ZERO)
+          h_cg = R_TOTYPE(M_ZERO)
       
           forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
             cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_lam(ip, idim)
@@ -197,40 +197,16 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       end if
 
       ! PTA92, eq. 5.10
-      if(hm%theory_level == RDMFT) then
-        ! update lamda every iteration. Numerically extremley expensive and not feasible for more than 1d.
-        ! still left this here for test reason. 
-!       cg_vec_lam = R_TOTYPE(M_ZERO) 
-!       do jst = 1, st%nst
-!         if (jst == ist) then
-!           lam(jst) = st%eigenval(ist, ik)
-!           lam_conj(jst) = st%eigenval(ist, ik)
-!         else
-!           call states_get_state(st, gr%mesh, jst, ik, psi_lam)
-            
-!           ! calculate <phi_j|H|phi_i> =lam_ji
-!           lam(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_lam, h_psi))
-            
-!           ! calculate <phi_i|H|phi_j>=lam_ij
-!           call X(hamiltonian_apply)(hm, gr%der, psi_lam, h_cg, jst, ik, set_occ = .true.)
-!           lam_conj(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
-!           h_cg= R_TOTYPE(M_ZERO)
-        
-!           forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-!             cg_vec_lam(ip, idim) = cg_vec_lam(ip, idim) + lam_conj(jst)*psi_lam(ip, idim) !! works also with -lam
-!           end forall  
-!         end if
-!       end do
-        
-        forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-          g(ip, idim) = h_psi(ip, idim) - cg_vec_lam(ip, idim) - lam_conj(ist)*psi(ip, idim)
-        end forall
-
-      else
+      if (hm%theory_level /= RDMFT) then
         forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
           g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
         end forall 
-      end if 
+      else
+        ! lambda should be updated every CG iteration, but this is numerically very expensive and currently not feasible.      
+        forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
+          g(ip, idim) = h_psi(ip, idim) - cg_vec_lam(ip, idim) - lam_conj(ist)*psi(ip, idim)
+        end forall
+      end if
 
       ! PTA92, eq. 5.12
       ! Orthogonalize to all states -> not needed for good convergence
@@ -382,7 +358,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       if(hm%theory_level == RDMFT) then
         do jst = 1, st%nst
           call states_get_state(st, gr%mesh, jst, ik, psi_lam)
-          cg_phi = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_lam, cg)) 
+          cg_phi = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_lam, cg))
           beta = beta - M_TWO * cg_phi / cg0 * ( lam(jst) + lam_conj(jst) )
         end do
       end if
@@ -492,7 +468,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   if(fold_) then
     SAFE_DEALLOCATE_A(psi2)
   end if
-  
   if(hm%theory_level == RDMFT) then
     SAFE_DEALLOCATE_A(psi_lam)
     SAFE_DEALLOCATE_A(cg_vec_lam)
