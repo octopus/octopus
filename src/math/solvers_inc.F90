@@ -519,10 +519,6 @@ end subroutine X(bi_conjugate_gradients)
     case(0)
       if(res < threshold_) then
         if (present(converged)) converged = .true.
-      else
-        write(message(1), '(a)') "QMR solver not converged!"
-        write(message(2), '(a)') "Try increasing the maximum number of iterations or the tolerance."
-        call messages_warning(2)
       end if
     case(1)
       write(message(1), '(a)') "QMR breakdown, cannot continue: b or P*b is the zero vector!"

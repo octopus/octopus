@@ -188,6 +188,8 @@ if [ "$report" == "yes" ]; then
     fi
 fi
 
+export OCT_PARSE_ENV=1
+
 for y in $tests; do
     total_tests=$((total_tests + 1))
     test_name=`echo $y | sed "s|$testsuite/||"`
@@ -198,8 +200,11 @@ for y in $tests; do
 	runtest_directory=$bin_directory
     fi
 
+    offset_GPU=$test_index
+
     test_index=$(($test_index + 1))
     echo Starting test $test_index: $test_name
+
 
     if [ "$dry_run" == "yes" ]; then
         if [ "$report" == "yes" ]; then
@@ -212,10 +217,10 @@ for y in $tests; do
     fi
     if [ "$report" == "yes" ]; then
         $runtest_directory/oct-run_regression_test.pl -l $opt_n \
-            $preserve_opt -D $bin_directory -f $y -r ${yaml}.yaml > ${ybase}.log 2>&1 &
+            $preserve_opt -D $bin_directory -f $y -r ${yaml}.yaml -G $offset_GPU > ${ybase}.log 2>&1 &
     else
         $runtest_directory/oct-run_regression_test.pl -l $opt_n \
-            $preserve_opt -D $bin_directory -f $y > ${ybase}.log 2>&1 &
+            $preserve_opt -D $bin_directory -f $y -G $offset_GPU > ${ybase}.log 2>&1 &
     fi
     ppid=$!
     queue $ppid $test_name
@@ -225,6 +230,9 @@ for y in $tests; do
 	checkqueue
     fi
 done
+
+unset OCT_PARSE_ENV
+
 while [ $NUM -ge 1 ]
 do
     checkqueue
