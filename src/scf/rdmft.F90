@@ -403,6 +403,7 @@ contains
       else
         ! initialize eigensolver
         call eigensolver_init(rdm%eigens, gr, st, ks%xc)
+        if (rdm%eigens%additional_terms) call messages_not_implemented("CGAdditionalTerms with RDMFT.")
       end if
 
       SAFE_ALLOCATE(rdm%eone(1:st%nst))
@@ -957,20 +958,15 @@ contains
     ! no preconditioner for rdmft implemented
     rdm%eigens%pre%which = 0
  
-    maxiter = 25
-
     rdm%eigens%converged = 0
     do ik = st%d%kpt%start, st%d%kpt%end
       rdm%eigens%matvec = 0  
       if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then 
         call loct_progress_bar(-1, st%lnst*st%d%kpt%nlocal)
       end if
-      !! For RDMFT, this needs to be called with: orthogonalize_to_all=.false. , additional_terms=.false.                                 
-      call deigensolver_cg2(gr, st, hm, rdm%eigens%xc, rdm%eigens%pre, rdm%eigens%tolerance, maxiter, &
-            rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), &
-            orthogonalize_to_all=.false., &
-            conjugate_direction=rdm%eigens%conjugate_direction, &
-            additional_terms=.false.)
+      call deigensolver_cg2(gr, st, hm, rdm%eigens%xc, rdm%eigens%pre, rdm%eigens%tolerance, rdm%eigens%es_maxiter, &
+        rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), rdm%eigens%orthogonalize_to_all, &
+        rdm%eigens%conjugate_direction, rdm%eigens%additional_terms, rdm%eigens%energy_change_threshold)
   
       if(st%calc_eigenval .and. .not. rdm%eigens%folded_spectrum) then
         ! recheck convergence after subspace diagonalization, since states may have reordered (copied from eigensolver_run)
