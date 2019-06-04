@@ -19,6 +19,7 @@
 */
 
 #include <cl_global.h>
+#include <cl_complex.h>
 
 __kernel void density_real(const int nst,
 			   const int np,
@@ -60,6 +61,38 @@ __kernel void density_complex(const int nst,
   }
 
   density[offset + ip] += dd;
+
+}
+
+__kernel void current_accumulate(const int nst,
+				 const int np,
+				 __constant double * restrict weights,
+				 const __global double2 * restrict psi, const int ldpsi,
+				 const __global double2 * restrict gpsi1, 
+				 const __global double2 * restrict gpsi2, 
+				 const __global double2 * restrict gpsi3, const int ldgpsi,
+				 __global double * restrict current){
+  
+  int ip  = get_global_id(0);
+  if(ip >= np) return;
+
+  double dd1 = 0.0;
+  double dd2 = 0.0;
+  double dd3 = 0.0;
+
+  for(int ist = 0; ist < nst; ist ++){
+    double2 ff = complex_conj(psi[(ip<<ldpsi) + ist]);
+    double2 cc1 = complex_mul(ff, gpsi1[(ip<<ldgpsi) + ist]);
+    double2 cc2 = complex_mul(ff, gpsi2[(ip<<ldgpsi) + ist]);
+    double2 cc3 = complex_mul(ff, gpsi3[(ip<<ldgpsi) + ist]);
+    dd1 += weights[ist]*cc1.y;
+    dd2 += weights[ist]*cc2.y;
+    dd3 += weights[ist]*cc3.y;
+  }
+
+  current[ip*3 + 0] = dd1;
+  current[ip*3 + 1] = dd2;
+  current[ip*3 + 2] = dd3;
 
 }
 
