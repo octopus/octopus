@@ -77,15 +77,6 @@ module forces_oct_m
 
   type(profile_t), save :: prof_comm
 
-
-  type(geometry_t), pointer :: geo_
-  type(grid_t), pointer :: gr_
-  type(hamiltonian_t), pointer :: hm_
-  type(states_t), pointer :: psi_
-  type(states_t), pointer :: chi_
-  integer, pointer :: j_, ist_, ik_, iatom_
-  CMPLX, allocatable :: derpsi_(:, :, :)
-
 contains
 
   ! ---------------------------------------------------------
@@ -118,11 +109,11 @@ contains
   ! -------------------------------------------------------
 
   subroutine forces_costate_calculate(gr, geo, hm, psi, chi, f, q)
-    type(grid_t),        target, intent(in)    :: gr
-    type(geometry_t),    target, intent(inout) :: geo
-    type(hamiltonian_t), target, intent(in)    :: hm
-    type(states_t),      target, intent(in)    :: psi
-    type(states_t),      target, intent(in)    :: chi
+    type(grid_t),        intent(in)    :: gr
+    type(geometry_t),    intent(inout) :: geo
+    type(hamiltonian_t), intent(in)    :: hm
+    type(states_t),      intent(in)    :: psi
+    type(states_t),      intent(in)    :: chi
     FLOAT,               intent(inout) :: f(:, :)
     FLOAT,               intent(in)    :: q(:, :)
 
@@ -130,7 +121,7 @@ contains
     integer, target :: j, ist, ik, iatom
     FLOAT :: r, w2r_, w1r_, xx(MAX_DIM), dq, pdot3p, pdot3m, pdot3p2, pdot3m2, dforce1, dforce2
     type(profile_t), save :: forces_prof
-    CMPLX, allocatable :: zpsi(:, :)
+    CMPLX, allocatable :: zpsi(:, :), derpsi(:, :, :)
     FLOAT, allocatable :: forceks1p(:), forceks1m(:), forceks1p2(:), forceks1m2(:), dforceks1(:)
 
     call profiling_in(forces_prof, "FORCES")
@@ -158,19 +149,9 @@ contains
       end do
     end do
 
-    SAFE_ALLOCATE(derpsi_(1:gr%mesh%np_part, 1:gr%sb%dim, 1:psi%d%dim))
+    SAFE_ALLOCATE(derpsi(1:gr%mesh%np_part, 1:gr%sb%dim, 1:psi%d%dim))
 
     dq = CNST(0.001)
-
-    geo_ => geo
-    gr_ => gr
-    hm_ => hm
-    j_ => j
-    ist_ => ist
-    ik_ => ik
-    iatom_ => iatom
-    psi_ => psi
-    chi_ => chi
 
     SAFE_ALLOCATE(forceks1p(1:gr%sb%dim))
     SAFE_ALLOCATE(forceks1m(1:gr%sb%dim))
@@ -181,9 +162,9 @@ contains
     
     do ist = 1, psi%nst
       do ik = 1, psi%d%nik
-        derpsi_ = M_z0
+        derpsi = M_z0
         call states_get_state(psi, gr%mesh, ist, ik, zpsi)
-        call zderivatives_grad(gr%der, zpsi(:, 1), derpsi_(:, :, 1))
+        call zderivatives_grad(gr%der, zpsi(:, 1), derpsi(:, :, 1))
         do iatom = 1, geo%natoms
           do j = 1, gr%sb%dim
             call force1(geo%atom(iatom)%x(j) + dq, forceks1p, pdot3p)
@@ -205,7 +186,7 @@ contains
     SAFE_DEALLOCATE_A(forceks1p2)
     SAFE_DEALLOCATE_A(forceks1m2)
     SAFE_DEALLOCATE_A(dforceks1)
-    SAFE_DEALLOCATE_A(derpsi_)
+    SAFE_DEALLOCATE_A(derpsi)
 
     POP_SUB(forces_costate_calculate)
     call profiling_out(forces_prof)
@@ -229,39 +210,38 @@ contains
       FLOAT, intent(in) :: r
       w2r = M_TWO * species_zval(speca) * species_zval(specb) / r**3
     end function w2r
-  end subroutine forces_costate_calculate
-  ! ---------------------------------------------------------
 
+    subroutine force1(q, res, pdot3)
+      FLOAT, intent(in) :: q
+      FLOAT, intent(inout) :: res(:)
+      FLOAT, intent(inout) :: pdot3
 
-  ! ---------------------------------------------------------
-  subroutine force1(q, res, pdot3)
-    FLOAT, intent(in) :: q
-    FLOAT, intent(inout) :: res(:)
-    FLOAT, intent(inout) :: pdot3
+      integer :: m
+      FLOAT :: qold
+      CMPLX, allocatable :: viapsi(:, :), zpsi(:, :)
 
-    integer :: m
-    FLOAT :: qold
-    CMPLX, allocatable :: viapsi(:, :), zpsi(:, :)
-
-    qold = geo_%atom(iatom_)%x(j_)
-    geo_%atom(iatom_)%x(j_) = q
-    SAFE_ALLOCATE(viapsi(1:gr_%mesh%np_part, 1:psi_%d%dim))
-    SAFE_ALLOCATE(zpsi(1:gr_%mesh%np_part, 1:psi_%d%dim))
-    viapsi = M_z0
-    call states_get_state(psi_, gr_%mesh, ist_, ik_, zpsi)
-    call zhamiltonian_apply_atom (hm_, geo_, gr_, iatom_, zpsi, viapsi)
+      qold = geo%atom(iatom)%x(j)
+      geo%atom(iatom)%x(j) = q
+      SAFE_ALLOCATE(viapsi(1:gr%mesh%np_part, 1:psi%d%dim))
+      SAFE_ALLOCATE(zpsi(1:gr%mesh%np_part, 1:psi%d%dim))
+      viapsi = M_z0
+      call states_get_state(psi, gr%mesh, ist, ik, zpsi)
+      call zhamiltonian_apply_atom (hm, geo, gr, iatom, zpsi, viapsi)
     
-    res(:) = M_ZERO
-    do m = 1, ubound(res, 1)
-      res(m) = real( zmf_dotp(gr_%mesh, viapsi(:, 1), derpsi_(:, m, 1), reduce = .false.) , REAL_PRECISION)
-    end do
-    if(gr_%mesh%parallel_in_domains) call comm_allreduce(gr_%mesh%mpi_grp%comm,  res)
+      res(:) = M_ZERO
+      do m = 1, ubound(res, 1)
+        res(m) = real( zmf_dotp(gr%mesh, viapsi(:, 1), derpsi(:, m, 1), reduce = .false.) , REAL_PRECISION)
+      end do
+      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  res)
 
-    call states_get_state(chi_, gr_%mesh, ist_, ik_, zpsi)
-    pdot3 = real(M_zI * zmf_dotp(gr_%mesh, zpsi(:, 1), viapsi(:, 1)), REAL_PRECISION)
-    geo_%atom(iatom_)%x(j_) = qold
-    SAFE_DEALLOCATE_A(viapsi)
-  end subroutine force1
+      call states_get_state(chi, gr%mesh, ist, ik, zpsi)
+      pdot3 = real(M_zI * zmf_dotp(gr%mesh, zpsi(:, 1), viapsi(:, 1)), REAL_PRECISION)
+      geo%atom(iatom)%x(j) = qold
+
+      SAFE_DEALLOCATE_A(viapsi)
+    end subroutine force1
+
+  end subroutine forces_costate_calculate
   ! ---------------------------------------------------------
 
 
