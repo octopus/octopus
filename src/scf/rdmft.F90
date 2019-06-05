@@ -401,8 +401,8 @@ contains
           rdm%vecnat(ist,ist)= M_ONE
         end do
       else
-        ! initialize eigensolver
-        call eigensolver_init(rdm%eigens, gr, st, ks%xc)
+        ! initialize eigensolver. No preconditioner for rdmft is implemented, so we disable it.
+        call eigensolver_init(rdm%eigens, gr, st, ks%xc, disable_preconditioner=.true.)
         if (rdm%eigens%additional_terms) call messages_not_implemented("CGAdditionalTerms with RDMFT.")
       end if
 
@@ -951,9 +951,6 @@ contains
     conv = .false.
     nstconv_ = st%nst
     
-    ! no preconditioner for rdmft implemented
-    rdm%eigens%pre%which = 0
- 
     rdm%eigens%converged = 0
     do ik = st%d%kpt%start, st%d%kpt%end
       rdm%eigens%matvec = 0  
