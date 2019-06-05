@@ -2203,14 +2203,14 @@ contains
 
     SAFE_ALLOCATE(projections(1:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
     projections(:,:,:) = M_Z0
-    call calc_projections(gr, st, gs_st, projections)
+    call calc_projections(gr%mesh, st, gs_st, projections)
 
     if(mpi_grp_is_root(mpi_world)) then
       call write_iter_start(out_proj)
       do ik = 1, st%d%nik
         do ist = gs_st%st_start, st%nst
           do uist = gs_st%st_start, gs_st%st_end
-            call write_iter_double(out_proj,  real(projections(ist, uist, ik)), 1)
+            call write_iter_double(out_proj,  real(projections(ist, uist, ik), REAL_PRECISION), 1)
             call write_iter_double(out_proj, aimag(projections(ist, uist, ik)), 1)
           end do
         end do
@@ -2235,10 +2235,6 @@ contains
  
       SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
       SAFE_ALLOCATE(gspsi(1:gr%mesh%np, 1:st%d%dim))
-      
-      ! n_dip is not defined for more than space%dim
-      call geometry_dipole(geo, n_dip)
-
       SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1:st%d%dim))
       
       do ik = 1, st%d%nik
@@ -2250,13 +2246,28 @@ contains
             do idim = 1, st%d%dim
               xpsi(1:gr%mesh%np, idim) = gr%mesh%x(1:gr%mesh%np, dir)*gspsi(1:gr%mesh%np, idim)
             end do
-            projections(ist, uist, ik) = -n_dip(dir) - zmf_dotp(gr%mesh, st%d%dim, psi, xpsi)
+            projections(ist, uist, ik) = -zmf_dotp(gr%mesh, st%d%dim, psi, xpsi, reduce = .false.)
 
           end do
         end do
       end do
       
       SAFE_DEALLOCATE_A(xpsi)
+      SAFE_DEALLOCATE_A(gspsi)
+      SAFE_DEALLOCATE_A(psi)
+
+      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  projections)
+
+      ! n_dip is not defined for more than space%dim
+      call geometry_dipole(geo, n_dip)
+      do ik = 1, st%d%nik
+        do ist = gs_st%st_start, st%nst
+          do uist = gs_st%st_start, gs_st%st_end
+            projections(ist, uist, ik) = projections(ist, uist, ik)-n_dip(dir)
+          end do
+        end do
+      end do
+
 
       call distribute_projections(st, gs_st, projections)
 
@@ -2379,13 +2390,13 @@ contains
    ! ---------------------------------------------------------
    !> This subroutine calculates:
    !! \f[
-   !! p(uist, ist, ik) = < \phi_0(uist, k) | \phi(ist, ik) (t) >
+   !! p(uist, ist, ik) = < \phi(ist, ik) (t) | \phi_0(uist, k) >
    !! \f]
    ! ---------------------------------------------------------
-   subroutine calc_projections(gr, st, gs_st, projections)
+   subroutine calc_projections(mesh, st, gs_st, projections)
      implicit none 
     
-     type(grid_t),      intent(in)    :: gr
+     type(mesh_t),      intent(in)    :: mesh
      type(states_t),    intent(inout) :: st
      type(states_t),    intent(in)    :: gs_st
      CMPLX, intent(inout) :: projections(1:st%nst, &
@@ -2395,26 +2406,28 @@ contains
      CMPLX, allocatable :: psi(:, :), gspsi(:, :)
      PUSH_SUB(calc_projections)
     
-     SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
-     SAFE_ALLOCATE(gspsi(1:gr%mesh%np, 1:st%d%dim))
+     SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
+     SAFE_ALLOCATE(gspsi(1:mesh%np, 1:st%d%dim))
+
+     projections(:,:,:) = M_ZERO
      
      do ik = st%d%kpt%start, st%d%kpt%end 
        do ist = st%st_start, st%st_end
-         call states_get_state(st, gr%mesh, ist, ik, psi)
+         call states_get_state(st, mesh, ist, ik, psi)
          do uist = gs_st%st_start, gs_st%nst
-           call states_get_state(gs_st, gr%mesh, uist, ik, gspsi)
-           projections(ist, uist, ik) = zmf_dotp(gr%mesh, st%d%dim, psi, gspsi)
+           call states_get_state(gs_st, mesh, uist, ik, gspsi)
+           projections(ist, uist, ik) = zmf_dotp(mesh, st%d%dim, psi, gspsi, reduce = .false.)
         end do
       end do
     end do
+
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(gspsi)
 
-#if defined(HAVE_MPI)        
-   if(st%d%kpt%parallel) then
-     call comm_allreduce(st%d%kpt%mpi_grp%comm, projections)
-   end if
-#endif
+    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  projections)
+    if(st%d%kpt%parallel) then
+      call comm_allreduce(st%d%kpt%mpi_grp%comm, projections)
+    end if
 
     call distribute_projections(st, gs_st, projections)
 

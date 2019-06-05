@@ -19,7 +19,9 @@
 #include "global.h"
  
 module v_ks_oct_m
+  use accel_oct_m
   use berry_oct_m
+  use comm_oct_m
   use current_oct_m
   use density_oct_m
   use derivatives_oct_m
@@ -771,7 +773,17 @@ contains
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
       SAFE_ALLOCATE(ks%calc%hf_st)
       call states_copy(ks%calc%hf_st, st)
-      if(st%parallel_in_states) call states_parallel_remote_access_start(ks%calc%hf_st)
+      if(st%parallel_in_states) then
+        if(accel_is_enabled()) then
+          call messages_write('State parallelization of Hartree-Fock exchange  is not supported')
+          call messages_new_line()
+          call messages_write('when running with OpenCL/CUDA. Please use domain parallelization')
+          call messages_new_line()
+          call messages_write("or disable acceleration using 'DisableAccel = yes'.")
+          call messages_fatal()
+        end if
+        call states_parallel_remote_access_start(ks%calc%hf_st)
+      end if
     end if
 
     ! Calculate the vector potential induced by the electronic current.
@@ -1030,8 +1042,9 @@ contains
             factor = M_TWO
           end if
           ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + &
-            factor*dmf_dotp(ks%gr%fine%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin))
+            factor*dmf_dotp(ks%gr%fine%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin), reduce = .false.)
         end do
+        if(ks%gr%der%mesh%parallel_in_domains) call comm_allreduce(ks%gr%der%mesh%mpi_grp%comm,  ks%calc%energy%intnvxc)
 
         if(states_are_real(st)) then
           ks%calc%energy%int_dft_u = denergy_calc_electronic(hm, ks%gr%der, st, terms = TERM_DFT_U)

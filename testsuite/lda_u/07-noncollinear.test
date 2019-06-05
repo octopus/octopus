@@ -81,7 +81,7 @@ Precision: 6e-05
 match ;  Eigenvalues sum      ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -31.99683222
 Precision: 5e-05
 match ;  Hartree energy       ; GREPFIELD(static/info, 'Hartree     =', 3) ; 48.409386874999996
-Precision: 3e-05
+Precision: 4e-05
 match ;  Exchange energy      ; GREPFIELD(static/info, 'Exchange    =', 3) ; -26.607099705
 Precision: 1e-05
 match ;  Correlation energy   ; GREPFIELD(static/info, 'Correlation =', 3) ; -2.783769953
@@ -105,7 +105,7 @@ Precision: 1e-6
 match ;  Local Magnetic Moment (O1)   ; GREPFIELD(static/info, '3         O', 3) ; 0.0
 match ;  Local Magnetic Moment (O2)   ; GREPFIELD(static/info, '4         O', 3) ; 0.0
 
-Precision: 1e-05
+Precision: 1.2e-05
 match ;  Effective U (Ni1)  ; GREPFIELD(static/info, '1        Ni   d', 4) ; 0.34847755
 match ;  Effective U (Ni2)  ; GREPFIELD(static/info, '2        Ni   d', 4) ; 0.34847755
 Precision: 2e-05

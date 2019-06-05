@@ -165,10 +165,14 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
         ! delta_v^KLI
         delta_v = M_ZERO
         do ist=1,eigen_n
-          kssi = oep%eigen_index(ist)
           do is = 1,st%d%nspin
-            delta_v(ist) = delta_v(ist)+ dmf_dotp(mesh,p_i(1:mesh%np,is,ist),v_m1(1:mesh%np,is))
+            delta_v(ist) = delta_v(ist)+ dmf_dotp(mesh,p_i(1:mesh%np,is,ist),v_m1(1:mesh%np,is), reduce = .false.)
           end do
+        end do
+        if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  delta_v, dim = eigen_n)
+
+        do ist=1,eigen_n
+          kssi = oep%eigen_index(ist)
           delta_v(ist) = delta_v(ist) - real(sum(oep%uxc_bar(kssi,:)))
         end do
 
