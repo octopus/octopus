@@ -37,11 +37,10 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   FLOAT, pointer, optional, intent(in)   :: shift(:,:)
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:), psi_j(:,:)
-  FLOAT, allocatable :: lam(:), lam_conj(:)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma, cg_phi
-  FLOAT    :: cg0, e0, res, alpha, beta, dot, old_res, old_energy, first_delta_e
+  FLOAT    :: cg0, e0, res, alpha, beta, dot, old_res, old_energy, first_delta_e, lam, lam_conj
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
-  FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :)
+  FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :), lam_sym(:)
   FLOAT    :: integral_hartree, integral_xc, tmp
   integer  :: ist, jst, iter, maxter, idim, ip, isp, ixc, ib
   R_TYPE   :: sb(3)
@@ -103,8 +102,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   
   if(hm%theory_level == RDMFT) then
     SAFE_ALLOCATE(psi_j(1:gr%mesh%np, 1:st%d%dim))
-    SAFE_ALLOCATE(lam(1:st%nst))
-    SAFE_ALLOCATE(lam_conj(1:st%nst))
+    SAFE_ALLOCATE(lam_sym(1:st%nst))
     call states_group_copy(st%d, st%group, hpsi_j, copy_data=.false.)
     do ib = hpsi_j%block_start, hpsi_j%block_end
       call X(hamiltonian_apply_batch) (hm, gr%der, st%group%psib(ib, ik), hpsi_j%psib(ib, ik), ik)
@@ -193,22 +191,20 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         ! lambda should be updated every CG iteration, but this is numerically very expensive and currently not feasible.
         do jst = 1, st%nst
           if (jst == ist) then
-            lam(jst) = st%eigenval(ist, ik)
-            lam_conj(jst) = st%eigenval(ist, ik)
+            lam_sym(jst) = M_TWO*st%eigenval(jst, ik)
           else
             call states_get_state(st, gr%mesh, jst, ik, psi_j)
-
-            ! calculate <phi_j|H|phi_i> = lam_ji
-            lam(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_j, h_psi))
-
-            ! calculate <phi_i|H|phi_j> = lam_ij
             do idim = 1, st%d%dim
               call batch_get_state(hpsi_j%psib(hpsi_j%iblock(jst, ik), ik), (/jst, idim/), gr%mesh%np, h_cg(:, idim))
             end do
-            lam_conj(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
+
+            ! calculate <phi_j|H|phi_i> = lam_ji and <phi_i|H|phi_j> = lam_ij
+            lam = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_j, h_psi))
+            lam_conj = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
+            lam_sym(jst) = lam + lam_conj
 
             forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-              g(ip, idim) = g(ip, idim) - lam_conj(jst)*psi_j(ip, idim)
+              g(ip, idim) = g(ip, idim) - lam_conj*psi_j(ip, idim)
             end forall
           end if
         end do
@@ -365,7 +361,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         do jst = 1, st%nst
           call states_get_state(st, gr%mesh, jst, ik, psi_j)
           cg_phi = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_j, cg))
-          beta = beta - M_TWO * cg_phi / cg0 * ( lam(jst) + lam_conj(jst) )
+          beta = beta - M_TWO * cg_phi / cg0 * lam_sym(jst)
         end do
       end if
 
@@ -480,8 +476,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   end if
   if(hm%theory_level == RDMFT) then
     SAFE_DEALLOCATE_A(psi_j)
-    SAFE_DEALLOCATE_A(lam)
-    SAFE_DEALLOCATE_A(lam_conj)
+    SAFE_DEALLOCATE_A(lam_sym)
     call states_group_end(hpsi_j, st%d)
   end if
 
