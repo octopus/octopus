@@ -77,7 +77,7 @@
     call parse_variable('VibrationalSpectrumTimeStepFactor', 10, skip)
     if(skip <= 0) call messages_input_error('VibrationalSpectrumTimeStepFactor')
 
-    max_freq = 1 + nint(spectrum%max_energy/spectrum%energy_step)
+    max_freq = spectrum_nenergy_steps(spectrum)
 
     if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
 
@@ -228,7 +228,7 @@
     call batch_add_state(ftvafb, ftvaf)
 
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-      1, nvaf, M_ZERO, deltat, vafb, 1, max_freq, spectrum%energy_step, ftvafb)
+      1, nvaf, M_ZERO, deltat, vafb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, ftvafb)
 
     call batch_end(vafb)
     call batch_end(ftvafb)
@@ -243,7 +243,7 @@
     write(unit = iunit, iostat = ierr, fmt = 800 ) 
 
     do ifreq = 1, max_freq
-      ww = spectrum%energy_step*(ifreq - 1)
+      ww = spectrum%energy_step*(ifreq - 1) + spectrum%min_energy
       write(unit = iunit, iostat = ierr, fmt = '(2e20.10)') units_from_atomic(unit_invcm, ww), ftvaf(ifreq)
     end do
 
