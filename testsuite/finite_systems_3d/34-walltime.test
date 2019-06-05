@@ -28,7 +28,7 @@ match ; Walltimer ; GREPCOUNT(out, 'Walltimer stopping execution') ; 1
 match ; Writing States ; GREPCOUNT(out, 'Finished writing states') ; 1
 
 # Finally restart the time propagation after being stopped
-Input: 34-walltime.04_restart_td.inp
+Input: 34-walltime.04-restart_td.inp
 match ; Reading States ; GREPCOUNT(out, 'Info: States reading done.') ; 1
 match ; Energy [step 50] ; LINEFIELD(workdir/td.general/energy, -1, 3) ; -3.792367769449e+01
 
