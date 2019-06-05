@@ -37,20 +37,18 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   FLOAT, pointer, optional, intent(in)   :: shift(:,:)
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:)
-  R_TYPE, allocatable :: h_psi2(:,:), psi_j(:,:)
+  R_TYPE, allocatable :: psi_j(:,:)
   R_TYPE, allocatable :: lam(:), lam_conj(:)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma, cg_phi
   FLOAT    :: cg0, e0, res, alpha, beta, dot, old_res, old_energy, first_delta_e
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
   FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :)
   FLOAT    :: integral_hartree, integral_xc, tmp
-  integer  :: ist, jst, iter, maxter, idim, ip, isp, ixc
+  integer  :: ist, jst, iter, maxter, idim, ip, isp, ixc, ib
   R_TYPE   :: sb(3)
   logical  :: fold_ ! use folded spectrum operator (H-shift)^2
   logical  :: add_xc_term
-
   type(states_group_t) :: hpsi_j
-  integer :: ib, iq
 
   PUSH_SUB(X(eigensolver_cg2))
 
