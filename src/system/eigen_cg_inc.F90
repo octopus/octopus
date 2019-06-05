@@ -103,7 +103,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   end if
   
   if(hm%theory_level == RDMFT) then
-    SAFE_ALLOCATE(psi_j(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(psi_j(1:gr%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(lam(1:st%nst))
     SAFE_ALLOCATE(lam_conj(1:st%nst))
     call states_group_copy(st%d, st%group, hpsi_j, copy_data=.false.)
