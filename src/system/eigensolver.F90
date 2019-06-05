@@ -105,11 +105,12 @@ module eigensolver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_init(eigens, gr, st, xc)
+  subroutine eigensolver_init(eigens, gr, st, xc, disable_preconditioner)
     type(eigensolver_t), intent(out)   :: eigens
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(in)    :: st
     type(xc_t), target,  intent(in)    :: xc
+    logical, optional,   intent(in)    :: disable_preconditioner
 
     integer :: default_iter, default_es
     FLOAT   :: default_tol
@@ -335,12 +336,12 @@ contains
       call messages_warning()
     end if
 
-    select case(eigens%es_type)
-    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
+    if (.not. optional_default(disable_preconditioner, .false.) .and. &
+      any(eigens%es_type == (/RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD/))) then
       call preconditioner_init(eigens%pre, gr)
-    case default
+    else
       call preconditioner_null(eigens%pre)
-    end select
+    end if
 
     nullify(eigens%diff)
     SAFE_ALLOCATE(eigens%diff(1:st%nst, 1:st%d%nik))
