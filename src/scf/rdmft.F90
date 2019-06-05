@@ -61,22 +61,40 @@ module rdmft_oct_m
        scf_rdmft
 
   type rdm_t
-    type(states_t) :: psi
     type(eigensolver_t) :: eigens
-    integer  :: max_iter
     integer  :: iter
     integer  :: n_twoint !number of unique two electron integrals
-    logical  :: do_basis, hf
-    FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO, tolerFO
-    FLOAT, allocatable   :: eone(:), eone_int(:,:), twoint(:), hartree(:,:), exchange(:,:), evalues(:)   
-    FLOAT, allocatable   :: vecnat(:,:), Coul(:,:,:), Exch(:,:,:) 
-    integer, allocatable :: i_index(:,:), j_index(:,:), k_index(:,:), l_index(:,:) 
+    logical  :: do_basis
+    logical  :: hf
+    FLOAT    :: mu
+    FLOAT    :: occsum
+    FLOAT    :: qtot
+    FLOAT    :: scale_f
+    FLOAT    :: toler
+    FLOAT    :: conv_ener
+    FLOAT    :: maxFO
+    FLOAT    :: tolerFO
+
+    FLOAT, allocatable   :: eone(:)
+    FLOAT, allocatable   :: eone_int(:,:)
+    FLOAT, allocatable   :: twoint(:)
+    FLOAT, allocatable   :: hartree(:,:)
+    FLOAT, allocatable   :: exchange(:,:)
+    FLOAT, allocatable   :: evalues(:)
+    FLOAT, allocatable   :: vecnat(:,:)
+    FLOAT, allocatable   :: Coul(:,:,:)
+    FLOAT, allocatable   :: Exch(:,:,:)
+
+    integer, allocatable :: i_index(:,:)
+    integer, allocatable :: j_index(:,:)
+    integer, allocatable :: k_index(:,:)
+    integer, allocatable :: l_index(:,:)
 
     !>shortcuts
     type(states_t),   pointer :: st
     type(grid_t),     pointer :: gr
   end type rdm_t
- 
+
   type(rdm_t), save :: rdm
  
 contains
