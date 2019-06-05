@@ -36,9 +36,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   FLOAT,                    intent(in)    :: energy_change_threshold
   FLOAT, pointer, optional, intent(in)   :: shift(:,:)
 
-  R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:)
-  R_TYPE, allocatable :: psi_j(:,:)
-  R_TYPE, allocatable :: lam(:), lam_conj(:)
+  R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:), psi_j(:,:)
+  FLOAT, allocatable :: lam(:), lam_conj(:)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma, cg_phi
   FLOAT    :: cg0, e0, res, alpha, beta, dot, old_res, old_energy, first_delta_e
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
@@ -207,7 +206,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
               call batch_get_state(hpsi_j%psib(hpsi_j%iblock(jst, ik), ik), (/jst, idim/), gr%mesh%np, h_cg(:, idim))
             end do
             lam_conj(jst) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
-            h_cg = R_TOTYPE(M_ZERO)
 
             forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
               g(ip, idim) = g(ip, idim) - lam_conj(jst)*psi_j(ip, idim)
