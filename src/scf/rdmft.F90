@@ -100,10 +100,10 @@ contains
     integer,               intent(in)    :: max_iter
     type(restart_t),       intent(in)    :: restart_dump
     
-    type(states_t) :: states_initial, states_save
-    integer :: iter, icount, ip, ist, iatom, ierr, maxcount, iorb
-    FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, sum_charge, rr, rel_ener
-    FLOAT, allocatable :: species_charge_center(:), psi(:, :), stepsize(:)
+    type(states_t) :: states_save
+    integer :: iter, icount, ip, ist, ierr, maxcount, iorb
+    FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, rel_ener
+    FLOAT, allocatable :: stepsize(:)
     FLOAT, allocatable :: dpsi(:,:), dpsi2(:,:)
     logical :: conv, gs_run_
     character(len=MAX_PATH_LEN) :: dirname    
@@ -165,7 +165,7 @@ contains
       call messages_info(1)
       do icount = 1, maxcount !still under investigation how many iterations we need
         if (rdm%do_basis) then
-          call scf_orb(rdm, gr, geo, st, ks, hm, energy)
+          call scf_orb(rdm, gr, st, hm, energy)
         else
           call scf_orb_cg(rdm, gr, geo, st, ks, hm, energy)
         end if
@@ -562,20 +562,21 @@ contains
   ! reset occ.num. to 2/0
   subroutine set_occ_pinning(st)
     type(states_t),       intent(inout) :: st
-    FLOAT, allocatable ::  occin(:,:), occ(:)
-    integer :: ist
+
+    FLOAT, allocatable ::  occin(:,:)
 
     PUSH_SUB(set_occ_pinning)    
 
     SAFE_ALLOCATE(occin(1:st%nst, 1:st%d%nik))
-    SAFE_ALLOCATE(occ(1:st%nst))
     
     occin = M_ZERO
     occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
-    where(occin(:,:) < 1) occin(:,:) = 0 
+    where(occin(:,:) < 1) occin(:,:) = M_ZERO
     where(occin(:,:) > 1) occin(:,:) = st%smear%el_per_state
     
     st%occ = occin
+
+    SAFE_DEALLOCATE_A(occin)
     
     POP_SUB(set_occ_pinning)
   end subroutine set_occ_pinning
@@ -593,7 +594,6 @@ contains
     FLOAT,                intent(out)   :: energy
 
     integer :: ist,ik
-    FLOAT :: objective
 
     PUSH_SUB(scf_occ_NO)
 
@@ -860,14 +860,12 @@ contains
   end subroutine write_iter_info_rdmft
     
   ! scf for the natural orbitals
-  subroutine scf_orb(rdm, gr, geo, st, ks, hm, energy)
+  subroutine scf_orb(rdm, gr, st, hm, energy)
     type(rdm_t),          intent(inout) :: rdm
     type(grid_t),         intent(inout) :: gr !< grid
-    type(geometry_t),     intent(inout) :: geo !< geometry
     type(states_t),       intent(inout) :: st !< States
-    type(v_ks_t),         intent(inout) :: ks !< Kohn-Sham
     type(hamiltonian_t),  intent(inout) :: hm !< Hamiltonian
-    FLOAT ,               intent(out)   :: energy    
+    FLOAT,                intent(out)   :: energy    
     
     integer :: ist, jst
     FLOAT, allocatable ::  lambda(:,:), FO(:,:)
@@ -937,10 +935,8 @@ contains
     type(hamiltonian_t),  intent(inout) :: hm !< Hamiltonian
     FLOAT,                intent(out)   :: energy    
 
-    type(states_t)     :: states_old
-    integer            :: ik, ist, jst
+    integer            :: ik, ist
     integer            :: maxiter, nstconv_ ! maximum number of orbital optimization iterations
-    FLOAT              :: energy_old, energy_diff, occ_sum, maxFO
     
     logical :: conv
     type(profile_t), save :: prof_orb_cg
@@ -1014,7 +1010,7 @@ contains
       
     FLOAT, allocatable :: hpsi(:,:), hpsi1(:,:), dpsi(:,:), dpsi2(:,:), fvec(:) 
     FLOAT, allocatable :: g_x(:,:), g_h(:,:), rho(:,:), rho_tot(:), pot(:), fock(:,:,:)
-    integer :: ist, ip, iorb, jorb, jst
+    integer :: ist, iorb, jorb, jst
 
     PUSH_SUB(construct_f)
 
