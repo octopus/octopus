@@ -67,6 +67,7 @@ contains
     type(scf_t)  :: scfv
     type(restart_t) :: restart_load, restart_dump
     integer      :: ierr
+    type(rdm_t) :: rdm
 
     PUSH_SUB(ground_state_run)
 
@@ -137,7 +138,9 @@ contains
     
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
-      call scf_rdmft(sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, scfv%max_iter, restart_dump)
+      call rdmft_init(rdm, sys%gr, sys%st, sys%ks)
+      call scf_rdmft(rdm, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, scfv%max_iter, restart_dump)
+      call rdmft_end(rdm)
     else
       if(.not. fromScratch) then
         call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, &

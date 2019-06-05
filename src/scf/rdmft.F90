@@ -56,9 +56,11 @@ module rdmft_oct_m
   implicit none
 
   private
-  public ::                      & 
-       rdm_t,                    &
-       scf_rdmft
+  public ::                   &
+    rdm_t,                    &
+    rdmft_init,               &
+    rdmft_end,                &
+    scf_rdmft
 
   type rdm_t
     type(eigensolver_t) :: eigens
@@ -95,15 +97,168 @@ module rdmft_oct_m
     type(grid_t),     pointer :: gr
   end type rdm_t
 
-  type(rdm_t), save :: rdm
- 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine rdmft_init(rdm, gr, st, ks)
+    type(rdm_t),    intent(out) :: rdm
+    type(grid_t),   intent(in)  :: gr  !< grid
+    type(states_t), intent(in)  :: st  !< States
+    type(v_ks_t),   intent(in)  :: ks  !< Kohn-Sham
+
+    integer :: ist
+
+    PUSH_SUB(rdmft_init)
+
+    if(st%nst < st%qtot + 1) then   
+      message(1) = "Too few states to run RDMFT calculation"
+      message(2) = "Number of states should be at least the number of electrons plus one"
+      call messages_fatal(2)
+    end if
    
+    if (states_are_complex(st)) then
+      call messages_not_implemented("Complex states for RDMFT")
+    end if
+
+
+    !%Variable RDMTolerance
+    !%Type float
+    !%Default 1e-7 Ha
+    !%Section SCF::RDMFT
+    !%Description
+    !% Convergence criterion for stopping the occupation numbers minimization. Minimization is
+    !% stopped when all derivatives of the energy wrt. each occupation number 
+    !% are smaller than this criterion. The bisection for finding the correct mu that is needed
+    !% for the occupation number minimization also stops according to this criterion.
+    !%End
+    call parse_variable('RDMTolerance', CNST(1.0e-7), rdm%toler)
+
+    !%Variable RDMToleranceFO
+    !%Type float
+    !%Default 1e-4 Ha
+    !%Section SCF::RDMFT
+    !%Description
+    !% Convergence criterion for stopping the diagonalization of the Fock Matrix in the Piris Method. 
+    !% Orbital minimization is stopped when all off-diagonal ellements of the FOck Matrix  
+    !% are smaller than this criterion.
+    !%End
+    call parse_variable('RDMToleranceFO', CNST(1.0e-4), rdm%tolerFO)
+
+    !%Variable RDMConvEner
+    !%Type float
+    !%Default 1e-6 Ha
+    !%Section SCF::RDMFT
+    !%Description
+    !% Convergence criterion for stopping the overall minimization of the energy with
+    !% respect to occupation numbers and the orbitals. The minimization of the 
+    !% energy stops when the total energy difference between two subsequent 
+    !% minimizations of the energy with respect to the occupation numbers and the
+    !% orbitals is smaller than this criterion. It is also used to exit the orbital minimization.
+    !%End
+    call parse_variable('RDMConvEner', CNST(1.0e-7), rdm%conv_ener)
+
+    !%Variable RDMBasis
+    !%Type logical
+    !%Default yes 
+    !%Section SCF::RDMFT
+    !%Description
+    !% If true, all the energy terms and corresponding derivatives involved in RDMFT will
+    !% not be calculated on the grid but on the basis of the initial orbitals
+    !%End
+    call parse_variable('RDMBasis',.true., rdm%do_basis)
+
+    !%Variable RDMHartreeFock
+    !%Type logical
+    !%Default no 
+    !%Section SCF::RDMFT
+    !%Description
+    !% If true, the code simulates a HF calculation, by omitting the occ.num. optimization
+    !% can be used for test reasons
+    !%End
+    call parse_variable('RDMHartreeFock',.false., rdm%hf)
+
+    if (rdm%do_basis) then
+      rdm%n_twoint = st%nst*(st%nst + 1)*(st%nst**2 + st%nst + 2)/8
+      SAFE_ALLOCATE(rdm%eone_int(1:st%nst, 1:st%nst))
+      SAFE_ALLOCATE(rdm%twoint(1:rdm%n_twoint))
+      SAFE_ALLOCATE(rdm%i_index(1:2,1:rdm%n_twoint))
+      SAFE_ALLOCATE(rdm%j_index(1:2,1:rdm%n_twoint))
+      SAFE_ALLOCATE(rdm%k_index(1:2,1:rdm%n_twoint))
+      SAFE_ALLOCATE(rdm%l_index(1:2,1:rdm%n_twoint))
+      SAFE_ALLOCATE(rdm%vecnat(1:st%nst, 1:st%nst))
+      SAFE_ALLOCATE(rdm%Coul(1:st%nst, 1:st%nst, 1:st%nst))
+      SAFE_ALLOCATE(rdm%Exch(1:st%nst, 1:st%nst, 1:st%nst))
+      rdm%eone_int = M_ZERO
+      rdm%twoint = M_ZERO
+      rdm%vecnat = M_ZERO
+      rdm%i_index = M_ZERO
+      rdm%j_index = M_ZERO
+      rdm%k_index = M_ZERO
+      rdm%l_index = M_ZERO
+      rdm%Coul = M_ZERO
+      rdm%Exch = M_ZERO
+      do ist = 1, st%nst
+        rdm%vecnat(ist, ist) = M_ONE
+      end do
+    else
+      ! initialize eigensolver. No preconditioner for rdmft is implemented, so we disable it.
+      call eigensolver_init(rdm%eigens, gr, st, ks%xc, disable_preconditioner=.true.)
+      if (rdm%eigens%additional_terms) call messages_not_implemented("CGAdditionalTerms with RDMFT.")
+    end if
+
+    SAFE_ALLOCATE(rdm%eone(1:st%nst))
+    SAFE_ALLOCATE(rdm%hartree(1:st%nst, 1:st%nst))
+    SAFE_ALLOCATE(rdm%exchange(1:st%nst, 1:st%nst))
+    SAFE_ALLOCATE(rdm%evalues(1:st%nst))
+
+    rdm%eone = M_ZERO
+    rdm%hartree = M_ZERO
+    rdm%exchange = M_ZERO
+    rdm%evalues = M_ZERO
+    rdm%mu = M_TWO*st%eigenval(int(st%qtot*M_HALF), 1)
+    rdm%qtot = st%qtot
+    rdm%occsum = M_ZERO
+    rdm%scale_f = CNST(1e-2)
+    rdm%maxFO = M_ZERO
+    rdm%iter = 1
+
+    POP_SUB(rdmft_init)
+  end subroutine rdmft_init
+
+  ! ----------------------------------------
+
+  subroutine rdmft_end(rdm)
+    type(rdm_t), intent(inout) :: rdm
+
+    PUSH_SUB(rdmft_end)
+
+    SAFE_DEALLOCATE_A(rdm%evalues)
+    SAFE_DEALLOCATE_A(rdm%eone)
+    SAFE_DEALLOCATE_A(rdm%hartree)
+    SAFE_DEALLOCATE_A(rdm%exchange)
+
+    if (rdm%do_basis) then
+      SAFE_DEALLOCATE_A(rdm%eone_int)
+      SAFE_DEALLOCATE_A(rdm%twoint)
+      SAFE_DEALLOCATE_A(rdm%i_index)
+      SAFE_DEALLOCATE_A(rdm%j_index)
+      SAFE_DEALLOCATE_A(rdm%k_index)
+      SAFE_DEALLOCATE_A(rdm%l_index)
+      SAFE_DEALLOCATE_A(rdm%vecnat)
+      SAFE_DEALLOCATE_A(rdm%Coul)
+      SAFE_DEALLOCATE_A(rdm%Exch)
+    else
+      call eigensolver_end(rdm%eigens)
+    end if
+
+    POP_SUB(rdmft_end)
+  end subroutine rdmft_end
 
   ! ----------------------------------------
 
   ! scf for the occupation numbers and the natural orbitals
-  subroutine scf_rdmft(gr, geo, st, ks, hm, outp, max_iter, restart_dump)
+  subroutine scf_rdmft(rdm, gr, geo, st, ks, hm, outp, max_iter, restart_dump)
+    type(rdm_t),           intent(inout) :: rdm
     type(grid_t),  target, intent(inout) :: gr  !< grid
     type(geometry_t),      intent(inout) :: geo !< geometry
     type(states_t),target, intent(inout) :: st  !< States
@@ -112,7 +267,7 @@ contains
     type(output_t),        intent(in)    :: outp !< output
     integer,               intent(in)    :: max_iter
     type(restart_t),       intent(in)    :: restart_dump
-    
+
     type(states_t) :: states_save
     integer :: iter, icount, ip, ist, ierr, maxcount, iorb
     FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, rel_ener
@@ -123,6 +278,10 @@ contains
 
     PUSH_SUB(scf_rdmft)
 
+    ! shortcuts
+    rdm%gr   => gr
+    rdm%st   => st
+    
     gs_run_ = .true.
 
     if (hm%d%ispin /= 1) then
@@ -138,8 +297,6 @@ contains
     if(st%parallel_in_states) then
       call messages_not_implemented("RDMFT parallel in states")
     end if
-
-    call rdmft_init() 
     
     write(message(1),'(a,1x,f14.12)') 'Sum of occupation numbers', rdm%occsum
     write(message(2),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy, energy + hm%ep%eii)
@@ -302,172 +459,10 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(stepsize)
-
-    call rdmft_end()
  
     POP_SUB(scf_rdmft) 
+
   contains
-
-    ! ---------------------------------------------------------
-
-    subroutine rdmft_init()
-
-      PUSH_SUB(scf_rdmft.rdmft_init)  
-
-      if(st%nst < st%qtot + 1) then   
-        message(1) = "Too few states to run RDMFT calculation"
-        message(2) = "Number of states should be at least the number of electrons plus one"
-        call messages_fatal(2)
-      end if
-   
-      if (states_are_complex(st)) then
-        call messages_not_implemented("Complex states for RDMFT")
-      end if
-
-
-      !%Variable RDMTolerance
-      !%Type float
-      !%Default 1e-7 Ha
-      !%Section SCF::RDMFT
-      !%Description
-      !% Convergence criterion for stopping the occupation numbers minimization. Minimization is
-      !% stopped when all derivatives of the energy wrt. each occupation number 
-      !% are smaller than this criterion. The bisection for finding the correct mu that is needed
-      !% for the occupation number minimization also stops according to this criterion.
-      !%End
-
-      call parse_variable('RDMTolerance', CNST(1.0e-7), rdm%toler)
-      
-      !%Variable RDMToleranceFO
-      !%Type float
-      !%Default 1e-4 Ha
-      !%Section SCF::RDMFT
-      !%Description
-      !% Convergence criterion for stopping the diagonalization of the Fock Matrix in the Piris Method. 
-      !% Orbital minimization is stopped when all off-diagonal ellements of the FOck Matrix  
-      !% are smaller than this criterion.
-      !%End
-
-      call parse_variable('RDMToleranceFO', CNST(1.0e-4), rdm%tolerFO)
-
-      !%Variable RDMConvEner
-      !%Type float
-      !%Default 1e-6 Ha
-      !%Section SCF::RDMFT
-      !%Description
-      !% Convergence criterion for stopping the overall minimization of the energy with
-      !% respect to occupation numbers and the orbitals. The minimization of the 
-      !% energy stops when the total energy difference between two subsequent 
-      !% minimizations of the energy with respect to the occupation numbers and the
-      !% orbitals is smaller than this criterion. It is also used to exit the orbital minimization.
-      !%End
-
-      call parse_variable('RDMConvEner', CNST(1.0e-7), rdm%conv_ener)
-      
-      !%Variable RDMBasis
-      !%Type logical
-      !%Default yes 
-      !%Section SCF::RDMFT
-      !%Description
-      !% If true, all the energy terms and corresponding derivatives involved in RDMFT will
-      !% not be calculated on the grid but on the basis of the initial orbitals
-      !%End
-
-      call parse_variable('RDMBasis',.true., rdm%do_basis)
-
-      !%Variable RDMHartreeFock
-      !%Type logical
-      !%Default no 
-      !%Section SCF::RDMFT
-      !%Description
-      !% If true, the code simulates a HF calculation, by omitting the occ.num. optimization
-      !% can be used for test reasons
-      !%End
-
-      call parse_variable('RDMHartreeFock',.false., rdm%hf)
-      
-      ! shortcuts
-      rdm%gr   => gr
-      rdm%st   => st
-      
-      if (rdm%do_basis) then
-        rdm%n_twoint = st%nst*(st%nst + 1)*(st%nst**2 + st%nst + 2)/8
-        SAFE_ALLOCATE(rdm%eone_int(1:st%nst, 1:st%nst))
-        SAFE_ALLOCATE(rdm%twoint(1:rdm%n_twoint))
-        SAFE_ALLOCATE(rdm%i_index(1:2,1:rdm%n_twoint))
-        SAFE_ALLOCATE(rdm%j_index(1:2,1:rdm%n_twoint))
-        SAFE_ALLOCATE(rdm%k_index(1:2,1:rdm%n_twoint))
-        SAFE_ALLOCATE(rdm%l_index(1:2,1:rdm%n_twoint))
-        SAFE_ALLOCATE(rdm%vecnat(1:st%nst, 1:st%nst))
-        SAFE_ALLOCATE(rdm%Coul(1:rdm%st%nst, 1:rdm%st%nst, 1:rdm%st%nst))
-        SAFE_ALLOCATE(rdm%Exch(1:rdm%st%nst, 1:rdm%st%nst, 1:rdm%st%nst))
-        rdm%eone_int = M_ZERO
-        rdm%twoint = M_ZERO
-        rdm%vecnat = M_ZERO
-        rdm%i_index = M_ZERO
-        rdm%j_index = M_ZERO
-        rdm%k_index = M_ZERO
-        rdm%l_index = M_ZERO
-        rdm%Coul = M_ZERO
-        rdm%Exch = M_ZERO
-        do ist = 1, st%nst
-          rdm%vecnat(ist,ist)= M_ONE
-        end do
-      else
-        ! initialize eigensolver. No preconditioner for rdmft is implemented, so we disable it.
-        call eigensolver_init(rdm%eigens, gr, st, ks%xc, disable_preconditioner=.true.)
-        if (rdm%eigens%additional_terms) call messages_not_implemented("CGAdditionalTerms with RDMFT.")
-      end if
-
-      SAFE_ALLOCATE(rdm%eone(1:st%nst))
-      SAFE_ALLOCATE(rdm%hartree(1:st%nst, 1:st%nst))
-      SAFE_ALLOCATE(rdm%exchange(1:st%nst, 1:st%nst))
-      SAFE_ALLOCATE(rdm%evalues(1:st%nst))
-
-      rdm%eone = M_ZERO
-      rdm%hartree = M_ZERO
-      rdm%exchange = M_ZERO
-      rdm%evalues = M_ZERO
-      rdm%mu = M_TWO*st%eigenval(int(st%qtot*M_HALF), 1)
-      rdm%qtot = st%qtot
-      rdm%occsum = M_ZERO
-      rdm%scale_f = CNST(1e-2)
-      rdm%maxFO = M_ZERO
-      rdm%iter = 1
-
-      POP_SUB(scf_rdmft.rdmft_init)
-    end subroutine rdmft_init
-
-    ! ----------------------------------------
-
-    subroutine rdmft_end()
-      PUSH_SUB(scf_rdmft.rdmft_end)
-    
-      nullify(rdm%gr)
-      nullify(rdm%st)
-
-      SAFE_DEALLOCATE_A(rdm%evalues)
-      SAFE_DEALLOCATE_A(rdm%eone)
-      SAFE_DEALLOCATE_A(rdm%hartree)
-      SAFE_DEALLOCATE_A(rdm%exchange)
-
-      if (rdm%do_basis) then
-        SAFE_DEALLOCATE_A(rdm%eone_int)
-        SAFE_DEALLOCATE_A(rdm%twoint)
-        SAFE_DEALLOCATE_A(rdm%i_index)
-        SAFE_DEALLOCATE_A(rdm%j_index)
-        SAFE_DEALLOCATE_A(rdm%k_index)
-        SAFE_DEALLOCATE_A(rdm%l_index)
-        SAFE_DEALLOCATE_A(rdm%vecnat)
-        SAFE_DEALLOCATE_A(rdm%Coul)
-        SAFE_DEALLOCATE_A(rdm%Exch)
-      else
-        call eigensolver_end(rdm%eigens)
-      end if
-
-      POP_SUB(scf_rdmft.rdmft_end)
-    end subroutine rdmft_end
-    
     ! ---------------------------------------------------------
     subroutine scf_write_static(dir, fname)
       character(len=*), intent(in) :: dir, fname
@@ -801,76 +796,77 @@ contains
 
     call profiling_out(prof_occ)
     POP_SUB(scf_occ)
-  end subroutine scf_occ
 
-  
-  subroutine objective_rdmft(size, theta, objective, getgrad, df)
-    integer,     intent(in)    :: size
-    REAL_DOUBLE, intent(in)    :: theta(size)
-    REAL_DOUBLE, intent(inout) :: objective
-    integer,     intent(in)    :: getgrad
-    REAL_DOUBLE, intent(inout) :: df(size)
+  contains
 
-    integer :: ist
-    FLOAT   :: thresh_occ, thresh_theta
-    FLOAT, allocatable :: dE_dn(:),occ(:)
+    subroutine objective_rdmft(size, theta, objective, getgrad, df)
+      integer,     intent(in)    :: size
+      REAL_DOUBLE, intent(in)    :: theta(size)
+      REAL_DOUBLE, intent(inout) :: objective
+      integer,     intent(in)    :: getgrad
+      REAL_DOUBLE, intent(inout) :: df(size)
+
+      integer :: ist
+      FLOAT   :: thresh_occ, thresh_theta
+      FLOAT, allocatable :: dE_dn(:),occ(:)
  
-    PUSH_SUB(objective_rdmft)
+      PUSH_SUB(scf_occ.objective_rdmft)
 
-    ASSERT(size == rdm%st%nst)
+      ASSERT(size == rdm%st%nst)
 
-    SAFE_ALLOCATE(dE_dn(1:size))
-    SAFE_ALLOCATE(occ(1:size))
+      SAFE_ALLOCATE(dE_dn(1:size))
+      SAFE_ALLOCATE(occ(1:size))
 
-    occ = M_ZERO
+      occ = M_ZERO
       
-    ! Defines a threshold on occ nums to avoid numerical instabilities.
-    ! Needs to be changed consistently with the same variable in scf_occ
-    thresh_occ = CNST(1e-14)
-    thresh_theta = asin(sqrt(thresh_occ/M_TWO))*(M_HALF/M_PI)
+      ! Defines a threshold on occ nums to avoid numerical instabilities.
+      ! Needs to be changed consistently with the same variable in scf_occ
+      thresh_occ = CNST(1e-14)
+      thresh_theta = asin(sqrt(thresh_occ/M_TWO))*(M_HALF/M_PI)
     
-    do ist = 1, size
-      occ(ist) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
-      if (occ(ist) <= thresh_occ ) occ(ist) = thresh_occ
-    end do
+      do ist = 1, size
+        occ(ist) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
+        if (occ(ist) <= thresh_occ ) occ(ist) = thresh_occ
+      end do
       
-    rdm%occsum = M_ZERO
-    do ist = 1, size
-      rdm%occsum = rdm%occsum + occ(ist)
-    end do
+      rdm%occsum = M_ZERO
+      do ist = 1, size
+        rdm%occsum = rdm%occsum + occ(ist)
+      end do
       
-    !calculate the total energy without nuclei interaction and the energy
-    !derivatives with respect to the occupation numbers
+      !calculate the total energy without nuclei interaction and the energy
+      !derivatives with respect to the occupation numbers
 
-    call total_energy_rdm(rdm, occ, objective, dE_dn)
-    do ist = 1, size
-      if (occ(ist) <= thresh_occ ) then
-        df(ist) = M_FOUR*M_PI*sin(M_FOUR*thresh_theta*M_PI)*(dE_dn(ist) - rdm%mu)
-      else
-        df(ist) = M_FOUR*M_PI*sin(M_FOUR*theta(ist)*M_PI)*(dE_dn(ist) - rdm%mu)
-      end if
-    end do
-    objective = objective - rdm%mu*(rdm%occsum - rdm%qtot)
+      call total_energy_rdm(rdm, occ, objective, dE_dn)
+      do ist = 1, size
+        if (occ(ist) <= thresh_occ ) then
+          df(ist) = M_FOUR*M_PI*sin(M_FOUR*thresh_theta*M_PI)*(dE_dn(ist) - rdm%mu)
+        else
+          df(ist) = M_FOUR*M_PI*sin(M_FOUR*theta(ist)*M_PI)*(dE_dn(ist) - rdm%mu)
+        end if
+      end do
+      objective = objective - rdm%mu*(rdm%occsum - rdm%qtot)
 
-    SAFE_DEALLOCATE_A(dE_dn)
-    SAFE_DEALLOCATE_A(occ)
+      SAFE_DEALLOCATE_A(dE_dn)
+      SAFE_DEALLOCATE_A(occ)
 
-    POP_SUB(objective_rdmft)
-  end subroutine objective_rdmft
+      POP_SUB(scf_occ.objective_rdmft)
+    end subroutine objective_rdmft
 
-  subroutine write_iter_info_rdmft(iter, size, energy, maxdr, maxdf, theta)
-    implicit none
-    integer, intent(in) :: iter
-    integer, intent(in) :: size
-    real(8), intent(in) :: energy, maxdr, maxdf
-    real(8), intent(in) :: theta(size)
+    subroutine write_iter_info_rdmft(iter, size, energy, maxdr, maxdf, theta)
+      integer,     intent(in) :: iter
+      integer,     intent(in) :: size
+      real(8),     intent(in) :: energy, maxdr, maxdf
+      real(8),     intent(in) :: theta(size)
 
-    PUSH_SUB(write_iter_info_rdmft)
+      PUSH_SUB(scf_occ.write_iter_info_rdmft)
 
-    ASSERT(size == rdm%st%nst)
+      ! Nothing to do.
 
-    POP_SUB(write_iter_info_rdmft)
-  end subroutine write_iter_info_rdmft
+      POP_SUB(scf_occ.write_iter_info_rdmft)
+    end subroutine write_iter_info_rdmft
+
+  end subroutine scf_occ
     
   ! scf for the natural orbitals
   subroutine scf_orb(rdm, gr, st, hm, energy)
@@ -923,7 +919,7 @@ contains
     end if
  
     call lalg_eigensolve(st%nst, FO, rdm%evalues)
-    call assign_eigfunctions(st, gr, FO)
+    call assign_eigfunctions(rdm, st, gr, FO)
     if (rdm%do_basis.eqv..true.) call sum_integrals(rdm) ! to calculate rdm%Coul and rdm%Exch with the new rdm%vecnat 
     call rdm_derivatives(rdm, hm, st, gr)
     call total_energy_rdm(rdm, st%occ(:,1), energy)
@@ -1115,10 +1111,11 @@ contains
   ! ----------------------------------------
   
   ! finds the new states after the minimization of the orbitals (Piris method)
-  subroutine assign_eigfunctions(st, gr, lambda)
-    type(states_t),       intent(inout) :: st
-    type(grid_t),         intent(in)    :: gr
-    FLOAT,                intent(in)    :: lambda(:, :)
+  subroutine assign_eigfunctions(rdm, st, gr, lambda)
+    type(rdm_t),    intent(inout) :: rdm
+    type(states_t), intent(inout) :: st
+    type(grid_t),   intent(in)    :: gr
+    FLOAT,          intent(in)    :: lambda(:, :)
     
     integer :: iqn, iorb, jorb, ist
     FLOAT, allocatable :: vecnat_new(:,:)
@@ -1156,10 +1153,10 @@ contains
 
   ! calculates the total energy when only the occupation numbers are updated
   subroutine total_energy_rdm(rdm, occ, energy, dE_dn)
-    type(rdm_t),          intent(inout)  :: rdm
-    FLOAT,                intent(in)     :: occ(:)
-    FLOAT,                intent(out)    :: energy
-    FLOAT, optional,      intent(out)    :: dE_dn(:) !< (1:st%nst)
+    type(rdm_t),          intent(in)  :: rdm
+    FLOAT,                intent(in)  :: occ(:)
+    FLOAT,                intent(out) :: energy
+    FLOAT, optional,      intent(out) :: dE_dn(:) !< (1:st%nst)
      
     integer :: ist, jst
     FLOAT, allocatable :: V_h(:), V_x(:)
