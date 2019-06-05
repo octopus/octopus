@@ -376,7 +376,6 @@ contains
 
       ! clean up all the stuff we have to reallocate
       SAFE_DEALLOCATE_P(writ%gs_st%node)
-      SAFE_DEALLOCATE_P(writ%gs_st%node_st_kpt)
 
       call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
 
@@ -421,8 +420,6 @@ contains
         !States can be distibuted for the states we propagate.
         SAFE_ALLOCATE(writ%gs_st%node(1:writ%gs_st%nst))
         writ%gs_st%node(:)  = 0
-        SAFE_ALLOCATE(writ%gs_st%node_st_kpt(1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
-        writ%gs_st%node_st_kpt(:,:)  = 0
 
         writ%gs_st%eigenval = huge(writ%gs_st%eigenval)
         writ%gs_st%occ      = M_ZERO
