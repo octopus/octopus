@@ -587,7 +587,6 @@ contains
       end if
 
       if (restart_has_flag(restart_load, RESTART_FLAG_VHXC)) then
-        call messages_info(1)
         call hamiltonian_load_vhxc(restart_load, hm, gr%mesh, ierr)
         if (ierr /= 0) then
           message(1) = 'Unable to read Vhxc. Vhxc will be calculated from states.'
