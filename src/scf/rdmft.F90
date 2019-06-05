@@ -57,13 +57,8 @@ module rdmft_oct_m
 
   private
   public ::                      & 
-       assign_eigfunctions,      &
        rdm_t,                    &
-       scf_occ,                  &
-       scf_occ_NO,               &
-       scf_orb,                  &
-       scf_rdmft,                &
-       set_occ_pinning
+       scf_rdmft
 
   type rdm_t
     type(states_t) :: psi
