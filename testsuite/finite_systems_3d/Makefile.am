@@ -129,6 +129,8 @@ dist_share_DATA = \
 	33-cg.03-cg_direction.inp \
 	34-walltime.01-gs_walltime.inp \
 	34-walltime.02-restart_gs.inp \
+    34-walltime.03-td_walltime.inp
+    34-walltime.04-restart_td.inp
 	34-walltime.test
 
 
