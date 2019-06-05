@@ -198,9 +198,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
           if (jst == ist) then
             lam(jst) = st%eigenval(ist, ik)
             lam_conj(jst) = st%eigenval(ist, ik)
-            do idim = 1, st%d%dim
-              call batch_set_state(hpsi_j%psib(hpsi_j%iblock(ist, ik), ik), (/ist, idim/), gr%mesh%np, h_psi(:, idim))
-            end do
           else
             call states_get_state(st, gr%mesh, jst, ik, psi_j)
 
@@ -406,6 +403,12 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       st%eigenval(ist, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi))
       res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
+
+      if (hm%theory_level == RDMFT) then
+        do idim = 1, st%d%dim
+          call batch_set_state(hpsi_j%psib(hpsi_j%iblock(ist, ik), ik), (/ist, idim/), gr%mesh%np, h_psi(:, idim))
+        end do
+      end if
 
       ! consider change in energy
       if(iter == 1) then
