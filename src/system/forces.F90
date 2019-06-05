@@ -92,11 +92,11 @@ contains
   !> This computes the total forces on the ions created by the electrons
   !! (it excludes the force due to possible time-dependent external fields).
   subroutine total_force_calculate(gr, geo, ep, st, x, lda_u)
-    type(grid_t),     intent(inout) :: gr
+    type(grid_t),     intent(in)    :: gr
     type(geometry_t), intent(in)    :: geo
-    type(epot_t),     intent(inout) :: ep
-    type(states_t),   intent(inout) :: st
-    FLOAT, intent(inout)            :: x(MAX_DIM)
+    type(epot_t),     intent(in)    :: ep
+    type(states_t),   intent(in)    :: st
+    FLOAT,            intent(inout) :: x(MAX_DIM)
     integer,          intent(in)    :: lda_u
 
     type(profile_t), save :: forces_prof
@@ -118,13 +118,13 @@ contains
   ! -------------------------------------------------------
 
   subroutine forces_costate_calculate(gr, geo, hm, psi, chi, f, q)
-    type(grid_t), target, intent(inout) :: gr
-    type(geometry_t), target, intent(inout) :: geo
-    type(hamiltonian_t), target, intent(inout) :: hm
-    type(states_t), target, intent(inout) :: psi
-    type(states_t), target, intent(inout) :: chi
-    FLOAT,            intent(inout) :: f(:, :)
-    FLOAT,            intent(in)    :: q(:, :)
+    type(grid_t),        target, intent(in)    :: gr
+    type(geometry_t),    target, intent(inout) :: geo
+    type(hamiltonian_t), target, intent(in)    :: hm
+    type(states_t),      target, intent(in)    :: psi
+    type(states_t),      target, intent(in)    :: chi
+    FLOAT,               intent(inout) :: f(:, :)
+    FLOAT,               intent(in)    :: q(:, :)
 
     integer :: jatom, idim, jdim
     integer, target :: j, ist, ik, iatom
@@ -267,7 +267,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine forces_calculate(gr, geo, hm, st, ks, vhxc_old, t, dt)
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(inout) :: geo
     type(hamiltonian_t), intent(inout) :: hm
     type(states_t),      intent(inout) :: st
@@ -523,7 +523,7 @@ contains
  ! This routine add the contribution to the forces from the nonlinear core correction
  ! see Eq. 9 of Kronik et al., J. Chem. Phys. 115, 4322 (2001)
 subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
-  type(grid_t),                   intent(inout) :: gr
+  type(grid_t),                   intent(in)    :: gr
   type(geometry_t),               intent(inout) :: geo
   type(hamiltonian_t),            intent(in)    :: hm
   type(states_t),                 intent(inout) :: st
@@ -571,7 +571,7 @@ end subroutine forces_from_nlcc
  ! NTD : No idea if this is good or bad, but this is easy to implement 
  !       and works well in practice
 subroutine forces_from_scf(gr, geo, hm, st, force_scf, vhxc_old)
-  type(grid_t),                   intent(inout) :: gr
+  type(grid_t),                   intent(in)    :: gr
   type(geometry_t),               intent(inout) :: geo
   type(hamiltonian_t),            intent(in)    :: hm
   type(states_t),                 intent(inout) :: st

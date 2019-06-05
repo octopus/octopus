@@ -730,7 +730,7 @@ contains
   subroutine td_write_iter(writ, outp, gr, st, hm, geo, kick, dt,ks, iter)
     type(td_write_t),    intent(inout) :: writ !< Write object
     type(output_t),      intent(in)    :: outp
-    type(grid_t),        intent(inout) :: gr   !< The grid
+    type(grid_t),        intent(in)    :: gr   !< The grid
     type(states_t),      intent(inout) :: st   !< State object
     type(hamiltonian_t), intent(inout) :: hm   !< Hamiltonian object
     type(geometry_t),    intent(inout) :: geo  !< Geometry object
@@ -837,7 +837,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_data(writ, gr, st, hm, ks, outp, geo, iter, dt)
     type(td_write_t),     intent(inout) :: writ
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
     type(v_ks_t),         intent(in)    :: ks
@@ -869,7 +869,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_output(writ, gr, st, hm, ks, outp, geo, iter, dt)
     type(td_write_t),     intent(inout) :: writ
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
     type(v_ks_t),         intent(in)    :: ks
@@ -900,8 +900,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_spin(out_spin, gr, st, iter)
-    type(c_ptr), intent(inout)       :: out_spin
-    type(grid_t),      intent(inout) :: gr
+    type(c_ptr),       intent(inout) :: out_spin
+    type(grid_t),      intent(in)    :: gr
     type(states_t),    intent(in)    :: st
     integer,           intent(in)    :: iter
 
@@ -953,7 +953,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_local_magnetic_moments(out_magnets, gr, st, geo, lmm_r, iter)
     type(c_ptr),              intent(inout) :: out_magnets
-    type(grid_t),             intent(inout) :: gr
+    type(grid_t),             intent(in)    :: gr
     type(states_t),           intent(in)    :: st
     type(geometry_t),         intent(in)    :: geo
     FLOAT,                    intent(in)    :: lmm_r
@@ -1011,7 +1011,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_angular(out_angular, gr, geo, hm, st, kick, iter)
     type(c_ptr),            intent(inout) :: out_angular
-    type(grid_t),           intent(inout) :: gr
+    type(grid_t),           intent(in)    :: gr
     type(geometry_t),       intent(inout) :: geo
     type(hamiltonian_t),    intent(inout) :: hm
     type(states_t),         intent(inout) :: st
@@ -1566,7 +1566,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_acc(out_acc, gr, geo, st, hm, dt, iter)
     type(c_ptr),         intent(inout) :: out_acc
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(inout) :: geo
     type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(inout) :: hm
@@ -1615,7 +1615,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_vel(out_vel, gr, st, iter)
     type(c_ptr),         intent(inout) :: out_vel
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(inout) :: st
     integer,             intent(in)    :: iter
 
@@ -2457,12 +2457,12 @@ contains
 
 
   subroutine td_write_proj_kp(out_proj_kp, hm,gr, st, gs_st, iter)
-    type(c_ptr),       intent(inout) :: out_proj_kp
-    type(hamiltonian_t), intent(inout)  :: hm
-    type(grid_t),      intent(inout) :: gr
-    type(states_t),    intent(in)    :: st
-    type(states_t),    intent(inout) :: gs_st
-    integer,           intent(in)    :: iter
+    type(c_ptr),         intent(inout) :: out_proj_kp
+    type(hamiltonian_t), intent(inout) :: hm
+    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(in)    :: st
+    type(states_t),      intent(inout) :: gs_st
+    integer,             intent(in)    :: iter
 
     CMPLX, allocatable :: proj(:,:), psi(:,:,:), gs_psi(:,:,:), temp_state(:,:)
     character(len=80) :: filename1, filename2
@@ -2560,12 +2560,12 @@ contains
 
   !---------------------------------------
   subroutine td_write_floquet(out_floquet, hm, gr, st, ks, iter)
-    type(c_ptr),       intent(inout)   :: out_floquet
+    type(c_ptr),         intent(inout) :: out_floquet
     type(hamiltonian_t), intent(inout) :: hm
-    type(grid_t),      intent(inout)   :: gr
-    type(states_t),    intent(inout)   :: st !< at iter=0 this is the groundstate
-    type(v_ks_t),      intent(in)      :: ks
-    integer,           intent(in)      :: iter 
+    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(inout) :: st !< at iter=0 this is the groundstate
+    type(v_ks_t),        intent(in)    :: ks
+    integer,             intent(in)    :: iter 
 
     CMPLX, allocatable :: hmss(:,:), psi(:,:,:), hpsi(:,:,:), temp_state1(:,:)
     CMPLX, allocatable :: HFloquet(:,:,:), HFloq_eff(:,:), temp(:,:)

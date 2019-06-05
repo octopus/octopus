@@ -103,7 +103,7 @@ end subroutine X(lcao_atomic_orbital)
 subroutine X(lcao_simple)(this, st, gr, geo, hm, start)
   type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(in)    :: hm
   integer, optional,   intent(in)    :: start
@@ -158,7 +158,7 @@ end subroutine X(lcao_simple)
 subroutine X(lcao_wf)(this, st, gr, geo, hm, start)
   type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(in)    :: hm
   integer, optional,   intent(in)    :: start
@@ -371,7 +371,7 @@ end subroutine X(lcao_wf)
 subroutine X(init_orbitals)(this, st, gr, geo, start)
   type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   integer, optional,   intent(in)    :: start
 
@@ -483,7 +483,7 @@ end subroutine X(get_ao)
 subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, start)
   type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   integer, optional,   intent(in)    :: start
 
@@ -537,7 +537,7 @@ end subroutine X(lcao_alt_init_orbitals)
 subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, start)
   type(lcao_t),        intent(inout) :: this
   type(states_t),      intent(inout) :: st
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(in)    :: hm
   integer,             intent(in)    :: start

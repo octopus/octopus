@@ -340,11 +340,11 @@
 
   ! ----------------------------------------------------------------------
   subroutine target_output_density(tg, gr, dir, geo, outp)
-    type(target_t), intent(inout) :: tg
-    type(grid_t), intent(inout)   :: gr
-    character(len=*), intent(in)  :: dir
-    type(geometry_t),       intent(in)  :: geo
-    type(output_t),         intent(in)  :: outp
+    type(target_t),   intent(in) :: tg
+    type(grid_t),     intent(in) :: gr
+    character(len=*), intent(in) :: dir
+    type(geometry_t), intent(in) :: geo
+    type(output_t),   intent(in) :: outp
 
     integer :: ierr
     PUSH_SUB(target_output_density)
@@ -365,9 +365,9 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_density(gr, tg, psi) result(j1)
-    type(grid_t),     intent(in)    :: gr
-    type(target_t),   intent(inout) :: tg
-    type(states_t), intent(inout)   :: psi
+    type(grid_t),   intent(in) :: gr
+    type(target_t), intent(in) :: tg
+    type(states_t), intent(in) :: psi
 
     integer :: ip, maxiter
     FLOAT :: currfunc_tmp
@@ -413,9 +413,9 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_density(tg, gr, psi_in, chi_out)
-    type(target_t),    intent(inout) :: tg
-    type(grid_t),      intent(inout) :: gr
-    type(states_t),    intent(inout) :: psi_in
+    type(target_t),    intent(in)    :: tg
+    type(grid_t),      intent(in)    :: gr
+    type(states_t),    intent(in)    :: psi_in
     type(states_t),    intent(inout) :: chi_out
 
     integer :: no_electrons, ip, ist, ib, ik
@@ -492,8 +492,8 @@
   !!
   subroutine target_tdcalc_density(tg, gr, psi, time)
     type(target_t),      intent(inout) :: tg
-    type(grid_t),        intent(inout) :: gr
-    type(states_t),      intent(inout) :: psi
+    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(in)    :: psi
     integer,             intent(in)    :: time
 
     PUSH_SUB(target_tdcalc_density)
@@ -512,9 +512,9 @@
   !> Calculates a current functional that may be combined with
   !! other functionals found in function target_j1.
   FLOAT function jcurr_functional(tg, gr, psi) result(jcurr)
-    type(target_t), intent(in)    :: tg
-    type(grid_t),   intent(in)    :: gr
-    type(states_t), intent(inout) :: psi
+    type(target_t), intent(in) :: tg
+    type(grid_t),   intent(in) :: gr
+    type(states_t), intent(in) :: psi
 
     integer :: ip
     FLOAT, allocatable :: semilocal_function(:)
@@ -575,7 +575,7 @@
     type(target_t),    intent(in)    :: tg
     type(grid_t),      intent(in)    :: gr
     FLOAT,             intent(in)    :: factor
-    type(states_t),    intent(inout) :: psi_in
+    type(states_t),    intent(in)    :: psi_in
     type(states_t),    intent(inout) :: chi
 
     CMPLX, allocatable :: grad_psi_in(:,:,:), zpsi(:, :), zchi(:, :)

@@ -1867,7 +1867,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
   type(states_t),    intent(in)       :: st
   character(len=*),  intent(in)       :: file
   type(output_t),    intent(in)       :: outp
-  type(grid_t),      intent(inout)    :: gr
+  type(grid_t),      intent(in)       :: gr
   type(geometry_t),  intent(in)       :: geo
   integer,           intent(in)       :: iter
 

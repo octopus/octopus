@@ -188,7 +188,7 @@ contains
     type(output_me_t),   intent(in)    :: this
     character(len=*),    intent(in)    :: dir
     type(states_t),      intent(inout) :: st
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
     type(hamiltonian_t), intent(in)    :: hm
 
@@ -369,7 +369,7 @@ contains
   subroutine output_me_out_momentum(fname, st, gr)
     character(len=*), intent(in) :: fname
     type(states_t),   intent(inout) :: st
-    type(grid_t),     intent(inout) :: gr
+    type(grid_t),     intent(in)    :: gr
 
     integer            :: ik, ist, is, ns, iunit, idir
     character(len=80)  :: cspin, str_tmp
@@ -456,7 +456,7 @@ contains
   subroutine output_me_out_ang_momentum(fname, st, gr)
     character(len=*), intent(in)    :: fname
     type(states_t),   intent(inout) :: st
-    type(grid_t),     intent(inout) :: gr
+    type(grid_t),     intent(in)    :: gr
 
     integer            :: iunit, ik, ist, is, ns, idir, kstart, kend
     character(len=80)  :: tmp_str(MAX_DIM), cspin

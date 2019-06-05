@@ -362,7 +362,7 @@ contains
   ! ----------------------------------------------------------------------
   subroutine target_output(tg, gr, dir, geo, hm, outp)
     type(target_t), intent(inout) :: tg
-    type(grid_t), intent(inout)   :: gr
+    type(grid_t), intent(in)   :: gr
     character(len=*), intent(in)  :: dir
     type(geometry_t),       intent(in)  :: geo
     type(hamiltonian_t),    intent(in)  :: hm
@@ -409,7 +409,7 @@ contains
   subroutine target_tdcalc(tg, hm, gr, geo, psi, time, max_time)
     type(target_t),      intent(inout) :: tg
     type(hamiltonian_t), intent(inout) :: hm
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(inout) :: geo
     type(states_t),      intent(inout) :: psi
     integer,             intent(in)    :: time
@@ -538,7 +538,7 @@ contains
   !! the time-dependent case.
   FLOAT function target_j1(tg, gr, qcpsi, geo) result(j1)
     type(target_t), intent(inout)   :: tg
-    type(grid_t),   intent(inout)   :: gr
+    type(grid_t),   intent(in)      :: gr
     type(opt_control_state_t), intent(inout)   :: qcpsi
     type(geometry_t), intent(in), optional :: geo
 
@@ -587,7 +587,7 @@ contains
   !> Calculate |chi(T)> = \hat{O}(T) |psi(T)>
   subroutine target_chi(tg, gr, qcpsi_in, qcchi_out, geo)
     type(target_t),    intent(inout) :: tg
-    type(grid_t),      intent(inout) :: gr
+    type(grid_t),      intent(in)    :: gr
     type(opt_control_state_t), target, intent(inout) :: qcpsi_in
     type(opt_control_state_t), target, intent(inout) :: qcchi_out
     type(geometry_t),  intent(in)    :: geo
@@ -614,7 +614,7 @@ contains
     case(oct_tg_local)
       call target_chi_local(tg, gr, psi_in, chi_out)
     case(oct_tg_td_local)
-      call target_chi_tdlocal(gr, chi_out)
+      call target_chi_tdlocal(chi_out)
     case(oct_tg_exclude_state)
       call target_chi_exclude(tg, gr, psi_in, chi_out)
     case(oct_tg_hhg)

@@ -60,8 +60,8 @@ end subroutine X(forces_gather)
 
 !---------------------------------------------------------------------------
 subroutine X(forces_from_local_potential)(gr, geo, ep, gdensity, force)
-  type(grid_t),                   intent(inout) :: gr
-  type(geometry_t),               intent(inout) :: geo
+  type(grid_t),                   intent(in)    :: gr
+  type(geometry_t),               intent(in)    :: geo
   type(epot_t),                   intent(in)    :: ep
   R_TYPE,                         intent(in)    :: gdensity(:, :)
   R_TYPE,                         intent(inout) :: force(:, :)
@@ -113,8 +113,8 @@ end subroutine X(forces_from_local_potential)
 
 !---------------------------------------------------------------------------
 subroutine X(total_force_from_local_potential)(gr, ep, gdensity, force)
-  type(grid_t),                   intent(inout) :: gr
-  type(epot_t),                   intent(inout) :: ep
+  type(grid_t),                   intent(in)    :: gr
+  type(epot_t),                   intent(in)    :: ep
   R_TYPE,                         intent(in)    :: gdensity(:, :)
   R_TYPE,                         intent(inout) :: force(:)
 
@@ -144,10 +144,10 @@ end subroutine X(total_force_from_local_potential)
 !! and transport properties of nanostructures, Imperial College Press (2005)
 !! Section 1.6, page 12
 subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl, force_u)
-  type(grid_t),                   intent(inout) :: gr
-  type(geometry_t),               intent(inout) :: geo
+  type(grid_t),                   intent(in)    :: gr
+  type(geometry_t),               intent(in)    :: geo
   type(hamiltonian_t),            intent(in)    :: hm
-  type(states_t),                 intent(inout) :: st
+  type(states_t),                 intent(in)    :: st
   FLOAT,                          intent(out)   :: force(:, :)
   FLOAT,                          intent(out)   :: force_loc(:, :)
   FLOAT,                          intent(out)   :: force_nl(:, :)
@@ -404,10 +404,10 @@ end subroutine X(forces_from_potential)
 
 !---------------------------------------------------------------------------
 subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
-  type(grid_t),                   intent(inout) :: gr
+  type(grid_t),                   intent(in)    :: gr
   type(geometry_t),               intent(in)    :: geo
-  type(epot_t),                   intent(inout) :: ep
-  type(states_t),                 intent(inout) :: st
+  type(epot_t),                   intent(in)    :: ep
+  type(states_t),                 intent(in)    :: st
   FLOAT,                          intent(inout) :: x(1:MAX_DIM)
   integer,                        intent(in)    :: lda_u_level
  
@@ -512,10 +512,10 @@ end subroutine X(total_force_from_potential)
 
 ! --------------------------------------------------------------------------------
 subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv, lda_u_level)
-  type(grid_t),                   intent(inout) :: gr
-  type(geometry_t),               intent(inout) :: geo
-  type(epot_t),                   intent(inout) :: ep
-  type(states_t),                 intent(inout) :: st
+  type(grid_t),                   intent(in)    :: gr
+  type(geometry_t),               intent(in)    :: geo
+  type(epot_t),                   intent(in)    :: ep
+  type(states_t),                 intent(in)    :: st
   type(lr_t),                     intent(in)    :: lr
   type(lr_t),                     intent(in)    :: lr2
   CMPLX,                          intent(out)   :: force_deriv(:,:) !< (gr%mesh%sb%dim, geo%natoms)
@@ -642,10 +642,10 @@ end subroutine X(forces_derivative)
 !> lr, lr2 are wfns from electric perturbation; lr is for +omega, lr2 is for -omega.
 !! for each atom, Z*(i,j) = dF(j)/dE(i)
 subroutine X(forces_born_charges)(gr, geo, ep, st, lr, lr2, born_charges, lda_u_level)
-  type(grid_t),                   intent(inout) :: gr
-  type(geometry_t),               intent(inout) :: geo
-  type(epot_t),                   intent(inout) :: ep
-  type(states_t),                 intent(inout) :: st
+  type(grid_t),                   intent(in)    :: gr
+  type(geometry_t),               intent(in)    :: geo
+  type(epot_t),                   intent(in)    :: ep
+  type(states_t),                 intent(in)    :: st
   type(lr_t),                     intent(in)    :: lr(:)  !< (gr%mesh%sb%dim)
   type(lr_t),                     intent(in)    :: lr2(:) !< (gr%mesh%sb%dim)
   type(born_charges_t),           intent(inout) :: born_charges

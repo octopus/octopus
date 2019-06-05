@@ -55,7 +55,7 @@ contains
 
 subroutine modelmb_sym_all_states (gr, st, geo)
   type(states_t),         intent(inout) :: st
-  type(grid_t),           intent(inout) :: gr
+  type(grid_t),           intent(in)    :: gr
   type(geometry_t),       intent(in)    :: geo
 
   PUSH_SUB(modelmb_sym_all_states)

@@ -37,7 +37,7 @@
 !------------------------------------------------------------
 
 subroutine X(oep_x) (der, st, is, jdm, lxc, ex, exx_coef, F_out)
-  type(derivatives_t), intent(inout) :: der
+  type(derivatives_t), intent(in) :: der
   type(states_t), target, intent(in) :: st
   integer,        intent(in)    :: is
   integer,        intent(in)    :: jdm
