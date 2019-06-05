@@ -138,6 +138,9 @@ dist_share_DATA =                                  \
         13-libvdwxc_h2o.test                       \
         13-libvdwxc_h2o.01-vdwdfcx.inp             \
         14-libvdwxc_Be_hcp.test                    \
-        14-libvdwxc_Be_hcp.01-vdwdfcx.inp
+        14-libvdwxc_Be_hcp.01-vdwdfcx.inp          \
+        15-oep-CG.test                             \
+        15-oep-CG.01-kli.inp                       \
+        15-oep-CG.02-oep-bb.inp
 
 CLEANFILES = *~ *.bak
