@@ -65,6 +65,7 @@ module rdmft_oct_m
   type rdm_t
     type(eigensolver_t) :: eigens
     integer  :: iter
+    integer  :: nst !< number of states
     integer  :: n_twoint !number of unique two electron integrals
     logical  :: do_basis
     logical  :: hf
@@ -91,10 +92,6 @@ module rdmft_oct_m
     integer, allocatable :: j_index(:,:)
     integer, allocatable :: k_index(:,:)
     integer, allocatable :: l_index(:,:)
-
-    !>shortcuts
-    type(states_t),   pointer :: st
-    type(grid_t),     pointer :: gr
   end type rdm_t
 
 contains
@@ -119,7 +116,6 @@ contains
     if (states_are_complex(st)) then
       call messages_not_implemented("Complex states for RDMFT")
     end if
-
 
     !%Variable RDMTolerance
     !%Type float
@@ -177,17 +173,18 @@ contains
     !%End
     call parse_variable('RDMHartreeFock',.false., rdm%hf)
 
+    rdm%nst = st%nst
     if (rdm%do_basis) then
-      rdm%n_twoint = st%nst*(st%nst + 1)*(st%nst**2 + st%nst + 2)/8
-      SAFE_ALLOCATE(rdm%eone_int(1:st%nst, 1:st%nst))
+      rdm%n_twoint = rdm%nst*(rdm%nst + 1)*(rdm%nst**2 + rdm%nst + 2)/8
+      SAFE_ALLOCATE(rdm%eone_int(1:rdm%nst, 1:rdm%nst))
       SAFE_ALLOCATE(rdm%twoint(1:rdm%n_twoint))
       SAFE_ALLOCATE(rdm%i_index(1:2,1:rdm%n_twoint))
       SAFE_ALLOCATE(rdm%j_index(1:2,1:rdm%n_twoint))
       SAFE_ALLOCATE(rdm%k_index(1:2,1:rdm%n_twoint))
       SAFE_ALLOCATE(rdm%l_index(1:2,1:rdm%n_twoint))
-      SAFE_ALLOCATE(rdm%vecnat(1:st%nst, 1:st%nst))
-      SAFE_ALLOCATE(rdm%Coul(1:st%nst, 1:st%nst, 1:st%nst))
-      SAFE_ALLOCATE(rdm%Exch(1:st%nst, 1:st%nst, 1:st%nst))
+      SAFE_ALLOCATE(rdm%vecnat(1:rdm%nst, 1:rdm%nst))
+      SAFE_ALLOCATE(rdm%Coul(1:rdm%nst, 1:rdm%nst, 1:rdm%nst))
+      SAFE_ALLOCATE(rdm%Exch(1:rdm%nst, 1:rdm%nst, 1:rdm%nst))
       rdm%eone_int = M_ZERO
       rdm%twoint = M_ZERO
       rdm%vecnat = M_ZERO
@@ -197,7 +194,7 @@ contains
       rdm%l_index = M_ZERO
       rdm%Coul = M_ZERO
       rdm%Exch = M_ZERO
-      do ist = 1, st%nst
+      do ist = 1, rdm%nst
         rdm%vecnat(ist, ist) = M_ONE
       end do
     else
@@ -206,10 +203,10 @@ contains
       if (rdm%eigens%additional_terms) call messages_not_implemented("CGAdditionalTerms with RDMFT.")
     end if
 
-    SAFE_ALLOCATE(rdm%eone(1:st%nst))
-    SAFE_ALLOCATE(rdm%hartree(1:st%nst, 1:st%nst))
-    SAFE_ALLOCATE(rdm%exchange(1:st%nst, 1:st%nst))
-    SAFE_ALLOCATE(rdm%evalues(1:st%nst))
+    SAFE_ALLOCATE(rdm%eone(1:rdm%nst))
+    SAFE_ALLOCATE(rdm%hartree(1:rdm%nst, 1:rdm%nst))
+    SAFE_ALLOCATE(rdm%exchange(1:rdm%nst, 1:rdm%nst))
+    SAFE_ALLOCATE(rdm%evalues(1:rdm%nst))
 
     rdm%eone = M_ZERO
     rdm%hartree = M_ZERO
@@ -258,15 +255,15 @@ contains
 
   ! scf for the occupation numbers and the natural orbitals
   subroutine scf_rdmft(rdm, gr, geo, st, ks, hm, outp, max_iter, restart_dump)
-    type(rdm_t),           intent(inout) :: rdm
-    type(grid_t),  target, intent(inout) :: gr  !< grid
-    type(geometry_t),      intent(inout) :: geo !< geometry
-    type(states_t),target, intent(inout) :: st  !< States
-    type(v_ks_t),          intent(inout) :: ks  !< Kohn-Sham
-    type(hamiltonian_t),   intent(inout) :: hm  !< Hamiltonian
-    type(output_t),        intent(in)    :: outp !< output
-    integer,               intent(in)    :: max_iter
-    type(restart_t),       intent(in)    :: restart_dump
+    type(rdm_t),         intent(inout) :: rdm
+    type(grid_t),        intent(inout) :: gr  !< grid
+    type(geometry_t),    intent(inout) :: geo !< geometry
+    type(states_t),      intent(inout) :: st  !< States
+    type(v_ks_t),        intent(inout) :: ks  !< Kohn-Sham
+    type(hamiltonian_t), intent(inout) :: hm  !< Hamiltonian
+    type(output_t),      intent(in)    :: outp !< output
+    integer,             intent(in)    :: max_iter
+    type(restart_t),     intent(in)    :: restart_dump
 
     type(states_t) :: states_save
     integer :: iter, icount, ip, ist, ierr, maxcount, iorb
@@ -278,10 +275,6 @@ contains
 
     PUSH_SUB(scf_rdmft)
 
-    ! shortcuts
-    rdm%gr   => gr
-    rdm%st   => st
-    
     gs_run_ = .true.
 
     if (hm%d%ispin /= 1) then
@@ -812,7 +805,7 @@ contains
  
       PUSH_SUB(scf_occ.objective_rdmft)
 
-      ASSERT(size == rdm%st%nst)
+      ASSERT(size == rdm%nst)
 
       SAFE_ALLOCATE(dE_dn(1:size))
       SAFE_ALLOCATE(occ(1:size))
@@ -1163,8 +1156,8 @@ contains
      
     PUSH_SUB(total_energy_rdm)
   
-    SAFE_ALLOCATE(V_h(1:rdm%st%nst))
-    SAFE_ALLOCATE(V_x(1:rdm%st%nst))
+    SAFE_ALLOCATE(V_h(1:rdm%nst))
+    SAFE_ALLOCATE(V_x(1:rdm%nst))
 
     energy = M_ZERO
     V_h = M_ZERO
@@ -1172,8 +1165,8 @@ contains
      
     !Calculate hartree and exchange contribution 
     !This is only for the Mueller functional and has to be changed
-    do ist = 1, rdm%st%nst
-      do jst = 1, rdm%st%nst
+    do ist = 1, rdm%nst
+      do jst = 1, rdm%nst
         V_h(ist) = V_h(ist) + occ(jst)*rdm%hartree(ist, jst)
         V_x(ist) = V_x(ist) - sqrt(occ(jst))*rdm%exchange(ist, jst) 
       end do
@@ -1187,7 +1180,7 @@ contains
     end if
 
     !Total energy calculation without nuclei interaction  
-    do ist = 1, rdm%st%nst
+    do ist = 1, rdm%nst
       energy = energy + occ(ist)*rdm%eone(ist) &
                       + M_HALF*occ(ist)*V_h(ist) & 
                       + occ(ist)*V_x(ist)
@@ -1357,14 +1350,14 @@ contains
 
     PUSH_SUB(sum_integrals)
 
-    SAFE_ALLOCATE(DM(1:rdm%st%nst, 1:rdm%st%nst, 1:rdm%st%nst))
+    SAFE_ALLOCATE(DM(1:rdm%nst, 1:rdm%nst, 1:rdm%nst))
      
     rdm%Coul = M_ZERO  
     rdm%Exch = M_ZERO 
     DM = M_ZERO 
   
-    do iorb = 1, rdm%st%nst
-      do ist = 1, rdm%st%nst
+    do iorb = 1, rdm%nst
+      do ist = 1, rdm%nst
         do jst = 1, ist
           DM(ist, jst, iorb) = rdm%vecnat(ist, iorb)*rdm%vecnat(jst, iorb)
           DM(jst, ist, iorb) = DM(ist, jst, iorb)
@@ -1416,7 +1409,7 @@ contains
 
       inv_pairs = (ist /= kst .or. jst /= lst)
 
-      do iorb = 1, rdm%st%nst 
+      do iorb = 1, rdm%nst 
 
         !the Hartree terms
         rdm%Coul(ist, jst, iorb) = rdm%Coul(ist, jst, iorb) + DM(kst, lst, iorb)*wkl*two_int
@@ -1446,8 +1439,8 @@ contains
       end do !iorb
     end do !icount
    
-    do iorb =1, rdm%st%nst
-      do ist = 1, rdm%st%nst
+    do iorb =1, rdm%nst
+      do ist = 1, rdm%nst
         do jst = 1, ist-1
           rdm%Coul(jst, ist, iorb) = rdm%Coul(ist, jst, iorb)
           rdm%Exch(jst, ist, iorb) = rdm%Exch(ist, jst, iorb)
