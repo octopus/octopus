@@ -9,7 +9,7 @@ Enabled    : Yes
 # all the final results will be identical whether or not the restart of the 
 # density, vhxc, and mixing is working properly.
 
-Precision : 2.0e-6
+Precision : 7.0e-6
 # First start a ground state calculation that uses the mixing of the density
 Input: 34-walltime.01-gs_walltime.inp
 match ; SCF convergence ; GREPCOUNT(workdir/static/info, 'SCF \*not\* converged') ; 1
