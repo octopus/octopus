@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2019 M. Marques, A. Castro, A. Rubio, G. Bertsch, M. Oliveira, M. Lueders
+!! Copyright (C) 2019 M. Lueders
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -44,10 +44,11 @@ module walltimer_oct_m
   logical :: active         !< if .false. the timer will not issue an alarm.
   logical :: auto_tap       !< if .true., tap() is automatically called in every wakeUp() call.
 
-  public :: walltimer_init
-  public :: walltimer_end
-  public :: walltimer_tap
-  public :: walltimer_alarm
+  public ::         &
+    walltimer_init, &
+    walltimer_end,  &
+    walltimer_tap,  &
+    walltimer_alarm
   
 contains
 
@@ -116,7 +117,7 @@ contains
   !> set alarm interval in seconds
   subroutine set_alarm(time)
 
-    double precision :: time
+    FLOAT :: time
 
     PUSH_SUB(set_alarm)
 
@@ -129,7 +130,7 @@ contains
   !> set safty margin in seconds
   subroutine set_margin(time)
 
-    double precision :: time
+    FLOAT :: time
 
     PUSH_SUB(set_margin)
 
@@ -158,7 +159,7 @@ contains
   subroutine walltimer_tap(print)
 
     logical, optional :: print
-    double precision :: now
+    FLOAT :: now
 
     PUSH_SUB(walltimer_tap)
 
@@ -167,12 +168,10 @@ contains
     iteration_time = now - last_tap
     last_tap = now
     
-    if(present(print)) then
-      if(print) then
-        write(message(1), '("Walltimer_tap:   elapsed time = ",F6.2," (", 3F10.5, "), active = ",L1 )')  &
-          now - start_time, duration, iteration_time, margin, active
-        call messages_info(1, all_nodes=.true.)
-      end if
+    if(optional_default(print, .false.)) then
+      write(message(1), '("Walltimer_tap:   elapsed time = ",F6.2," (", 3F10.5, "), active = ",L1 )')  &
+        now - start_time, duration, iteration_time, margin, active
+      call messages_info(1, all_nodes=.true.)
     end if
 
     POP_SUB(walltimer_tap)
@@ -183,18 +182,16 @@ contains
   logical function walltimer_alarm(print)
 
     logical, optional :: print
-    double precision :: now
+    FLOAT :: now
 
     PUSH_SUB(walltimer_alarm)
 
     now = loct_clock()
     
-    if(present(print)) then
-      if(print) then
-        write(message(1), '("Walltimer_alarm: elapsed time = ",F6.2," (", 3F10.5, "), active = ",L1 )')  &
-          now - start_time, duration, iteration_time, margin, active
-        call messages_info(1, all_nodes=.true.)
-      end if
+    if(optional_default(print, .false.)) then
+      write(message(1), '("Walltimer_alarm: elapsed time = ",F6.2," (", 3F10.5, "), active = ",L1 )')  &
+        now - start_time, duration, iteration_time, margin, active
+      call messages_info(1, all_nodes=.true.)
     end if
     
     if(auto_tap) call walltimer_tap()
