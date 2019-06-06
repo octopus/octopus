@@ -229,6 +229,7 @@ contains
     !% <tt>td.general/projections.XXX</tt>. Only use this option if
     !% you really need it, as it might be computationally expensive. See <tt>TDProjStateStart</tt>.
     !% The output interval of this quantity is controled by the variable <tt>TDOutputComputeInterval</tt>
+    !% In case of states parallelization, all the ground-state states are stord by each task.
     !%Option local_mag_moments bit(9)
     !% If set, outputs the local magnetic moments, integrated in sphere centered around each atom.
     !% The radius of the sphere can be set with <tt>LocalMagneticMomentsSphereRadius</tt>.
@@ -434,7 +435,8 @@ contains
  
       call states_load(restart_gs, writ%gs_st, gr, ierr, label = ': gs for TDOutput')
 
-      if(ierr /= 0 .and. ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik*writ%gs_st%d%dim*writ%gs_st%mpi_grp%size) then
+      if(ierr /= 0 .and. ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik &
+                                      *writ%gs_st%d%dim*writ%gs_st%mpi_grp%size) then
         message(1) = "Unable to read wavefunctions for TDOutput."
         call messages_fatal(1)
       end if
