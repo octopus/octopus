@@ -86,7 +86,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   SAFE_ALLOCATE(    g(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(   g0(1:gr%mesh%np,      1:st%d%dim))
   SAFE_ALLOCATE(g_prev(1:gr%mesh%np,     1:st%d%dim))
-  if(additional_terms_) then
+  if(additional_terms) then
     SAFE_ALLOCATE(  chi(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(omega(1:gr%mesh%np_part, 1:st%d%dim))
     if(st%d%ispin == UNPOLARIZED) then
