@@ -21,7 +21,7 @@
 !> calculates the eigenvalues of the orbitals
 subroutine X(calculate_eigenvalues)(hm, der, st)
   type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(inout) :: der
+  type(derivatives_t), intent(in)    :: der
   type(states_t),      intent(inout) :: st
 
   R_TYPE, allocatable :: eigen(:, :)
@@ -50,7 +50,7 @@ end subroutine X(calculate_eigenvalues)
 
 subroutine X(calculate_expectation_values)(hm, der, st, eigen, terms)
   type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(inout) :: der
+  type(derivatives_t), intent(in)    :: der
   type(states_t),      intent(inout) :: st
   R_TYPE,              intent(out)   :: eigen(st%st_start:, st%d%kpt%start:) !< (:st%st_end, :st%d%kpt%end)
   integer, optional,   intent(in)    :: terms
@@ -94,7 +94,7 @@ end subroutine X(calculate_expectation_values)
 ! ---------------------------------------------------------
 FLOAT function X(energy_calc_electronic)(hm, der, st, terms) result(energy)
   type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(inout) :: der
+  type(derivatives_t), intent(in)    :: der
   type(states_t),      intent(inout) :: st
   integer,             intent(in)    :: terms
 

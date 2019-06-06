@@ -118,7 +118,7 @@ contains
   subroutine density_calc_accumulate(this, ik, psib)
     type(density_calc_t),         intent(inout) :: this
     integer,                      intent(in)    :: ik
-    type(batch_t),                intent(inout) :: psib
+    type(batch_t),                intent(in)    :: psib
 
     integer :: ist, ip, ispin
     FLOAT   :: nrm
@@ -341,9 +341,9 @@ contains
   ! ---------------------------------------------------------
   !> Computes the density from the orbitals in st. 
   subroutine density_calc(st, gr, density)
-    type(states_t),          intent(inout)  :: st
-    type(grid_t),            intent(in)     :: gr
-    FLOAT,                   intent(out)    :: density(:, :)
+    type(states_t),          intent(in)  :: st
+    type(grid_t),            intent(in)  :: gr
+    FLOAT,                   intent(out) :: density(:, :)
 
     integer :: ik, ib
     type(density_calc_t) :: dens_calc

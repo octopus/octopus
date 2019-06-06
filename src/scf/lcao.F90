@@ -128,10 +128,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lcao_init(this, gr, geo, st)
-    type(lcao_t),         intent(out)   :: this
-    type(grid_t),         intent(inout) :: gr
-    type(geometry_t),     intent(in)    :: geo
-    type(states_t),       intent(in)    :: st
+    type(lcao_t),         intent(out) :: this
+    type(grid_t),         intent(in)  :: gr
+    type(geometry_t),     intent(in)  :: geo
+    type(states_t),       intent(in)  :: st
 
     integer :: ia, n, iorb, jj, maxj, idim
     integer :: ii, ll, mm
@@ -856,7 +856,7 @@ contains
   subroutine lcao_wf(this, st, gr, geo, hm, start)
     type(lcao_t),        intent(inout) :: this
     type(states_t),      intent(inout) :: st
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
     type(hamiltonian_t), intent(in)    :: hm
     integer, optional,   intent(in)    :: start
@@ -1331,7 +1331,7 @@ contains
   subroutine lcao_init_orbitals(this, st, gr, geo, start)
     type(lcao_t),        intent(inout) :: this
     type(states_t),      intent(inout) :: st
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
     integer, optional,   intent(in)    :: start
 

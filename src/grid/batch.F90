@@ -370,7 +370,7 @@ contains
     ! no push_sub, called too frequently
     
     ok = (this%nst_linear >= 1) .and. associated(this%states_linear)
-    ok = ubound(this%states_linear, dim = 1) == this%nst_linear
+    ok = ok .and. ubound(this%states_linear, dim = 1) == this%nst_linear
     if(ok .and. .not. batch_is_packed(this)) then
       ! ensure that either all real are associated, or all cplx are associated
       all_assoc = .true.
@@ -980,6 +980,8 @@ subroutine batch_remote_access_start(this, mpi_grp, rma_win)
 
   PUSH_SUB(batch_remote_access_start)
 
+  ASSERT(.not. accel_is_enabled())
+  
   if(mpi_grp%size > 1) then
     call batch_pack(this)
     

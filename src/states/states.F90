@@ -601,11 +601,11 @@ contains
   !! the nik, dim, and nst contained in it.
   ! ---------------------------------------------------------
   subroutine states_look(restart, nik, dim, nst, ierr)
-    type(restart_t), intent(inout) :: restart
-    integer,         intent(out)   :: nik
-    integer,         intent(out)   :: dim
-    integer,         intent(out)   :: nst
-    integer,         intent(out)   :: ierr
+    type(restart_t), intent(in)  :: restart
+    integer,         intent(out) :: nik
+    integer,         intent(out) :: dim
+    integer,         intent(out) :: nst
+    integer,         intent(out) :: ierr
 
     character(len=256) :: lines(3)
     character(len=20)   :: char
@@ -1368,8 +1368,6 @@ contains
     stout%nst           = stin%nst
 
     stout%only_userdef_istates = stin%only_userdef_istates
-
-    call loct_pointer_copy(stout%node, stin%node)
 
     if(.not. exclude_wfns_) call loct_pointer_copy(stout%rho, stin%rho)
 
