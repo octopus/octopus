@@ -256,8 +256,8 @@ contains
   ! scf for the occupation numbers and the natural orbitals
   subroutine scf_rdmft(rdm, gr, geo, st, ks, hm, outp, max_iter, restart_dump)
     type(rdm_t),         intent(inout) :: rdm
-    type(grid_t),        intent(inout) :: gr  !< grid
-    type(geometry_t),    intent(inout) :: geo !< geometry
+    type(grid_t),        intent(in)    :: gr  !< grid
+    type(geometry_t),    intent(in) :: geo !< geometry
     type(states_t),      intent(inout) :: st  !< States
     type(v_ks_t),        intent(inout) :: ks  !< Kohn-Sham
     type(hamiltonian_t), intent(inout) :: hm  !< Hamiltonian
@@ -519,7 +519,7 @@ contains
     
     subroutine calc_maxFO (hm, st, gr, rdm)
       type(rdm_t),          intent(inout) :: rdm
-      type(grid_t),         intent(inout) :: gr
+      type(grid_t),         intent(in)    :: gr
       type(hamiltonian_t),  intent(inout) :: hm
       type(states_t),       intent(inout) :: st
     
@@ -555,7 +555,7 @@ contains
   
   ! reset occ.num. to 2/0
   subroutine set_occ_pinning(st)
-    type(states_t),       intent(inout) :: st
+    type(states_t), intent(inout) :: st
 
     FLOAT, allocatable ::  occin(:,:)
 
@@ -582,8 +582,8 @@ contains
   ! used in Hartree-Fock mode
   subroutine scf_occ_NO(rdm, gr, hm, st, energy)
     type(rdm_t),          intent(inout) :: rdm
-    type(grid_t),         intent(inout) :: gr
-    type(hamiltonian_t),  intent(inout) :: hm
+    type(grid_t),         intent(in)    :: gr
+    type(hamiltonian_t),  intent(in)    :: hm
     type(states_t),       intent(inout) :: st
     FLOAT,                intent(out)   :: energy
 
@@ -628,8 +628,8 @@ contains
   ! scf for the occupation numbers 
   subroutine scf_occ(rdm, gr, hm, st, energy)
     type(rdm_t),          intent(inout) :: rdm
-    type(grid_t),         intent(inout) :: gr
-    type(hamiltonian_t),  intent(inout) :: hm
+    type(grid_t),         intent(in)    :: gr
+    type(hamiltonian_t),  intent(in)    :: hm
     type(states_t),       intent(inout) :: st
     FLOAT,                intent(out)   :: energy
 
@@ -845,9 +845,9 @@ contains
   ! scf for the natural orbitals
   subroutine scf_orb(rdm, gr, st, hm, energy)
     type(rdm_t),          intent(inout) :: rdm
-    type(grid_t),         intent(inout) :: gr !< grid
+    type(grid_t),         intent(in)    :: gr !< grid
     type(states_t),       intent(inout) :: st !< States
-    type(hamiltonian_t),  intent(inout) :: hm !< Hamiltonian
+    type(hamiltonian_t),  intent(in)    :: hm !< Hamiltonian
     FLOAT,                intent(out)   :: energy    
     
     integer :: ist, jst
@@ -911,8 +911,8 @@ contains
   !-----------------------------------------------------------------
   subroutine scf_orb_cg(rdm, gr, geo, st, ks, hm, energy)
     type(rdm_t),          intent(inout) :: rdm
-    type(grid_t),         intent(inout) :: gr !< grid
-    type(geometry_t),     intent(inout) :: geo !< geometry
+    type(grid_t),         intent(in)    :: gr !< grid
+    type(geometry_t),     intent(in)    :: geo !< geometry
     type(states_t),       intent(inout) :: st !< States
     type(v_ks_t),         intent(inout) :: ks !< Kohn-Sham
     type(hamiltonian_t),  intent(inout) :: hm !< Hamiltonian
@@ -982,10 +982,10 @@ contains
   ! ----------------------------------------
   ! constructs the Lagrange multiplyers needed for the orbital minimization
   subroutine construct_f(hm, st, gr, lambda, rdm)
-    type(hamiltonian_t),  intent(in) :: hm
+    type(hamiltonian_t),  intent(in)    :: hm
     type(states_t),       intent(inout) :: st
-    type(grid_t),         intent(in) :: gr
-    FLOAT,                intent(out):: lambda(:,:) !< (1:st%nst, 1:st%nst)
+    type(grid_t),         intent(in)    :: gr
+    FLOAT,                intent(out)   :: lambda(:,:) !< (1:st%nst, 1:st%nst)
     type(rdm_t),          intent(inout) :: rdm
       
     FLOAT, allocatable :: hpsi(:,:), hpsi1(:,:), dpsi(:,:), dpsi2(:,:), fvec(:) 
@@ -1179,7 +1179,7 @@ contains
     type(rdm_t),          intent(inout) :: rdm
     type(hamiltonian_t),  intent(in)    :: hm
     type(states_t),       intent(in)    :: st 
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),         intent(in)    :: gr
     
     FLOAT, allocatable :: hpsi(:,:), rho1(:), rho(:), dpsi(:,:), dpsi2(:,:)
     FLOAT, allocatable :: v_ij(:,:,:)
@@ -1286,7 +1286,7 @@ contains
     type(rdm_t),          intent(inout) :: rdm
     type(hamiltonian_t),  intent(in)    :: hm
     type(states_t),       intent(in)    :: st 
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),         intent(in)    :: gr
     
     FLOAT, allocatable :: hpsi(:,:)
     FLOAT, allocatable :: dpsi(:,:), dpsi2(:,:)
