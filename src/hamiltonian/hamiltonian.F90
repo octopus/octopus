@@ -1036,12 +1036,12 @@ contains
 
   ! -----------------------------------------------------------------
   subroutine zhamiltonian_apply_atom (hm, geo, gr, ia, psi, vpsi)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(geometry_t),    intent(in)    :: geo
-    type(grid_t),        intent(in)    :: gr
-    integer,             intent(in)    :: ia
-    CMPLX,               intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
-    CMPLX,               intent(out)   :: vpsi(:,:) !< (gr%mesh%np, hm%d%dim)
+    type(hamiltonian_t), intent(in)  :: hm
+    type(geometry_t),    intent(in)  :: geo
+    type(grid_t),        intent(in)  :: gr
+    integer,             intent(in)  :: ia
+    CMPLX,               intent(in)  :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
+    CMPLX,               intent(out) :: vpsi(:,:) !< (gr%mesh%np, hm%d%dim)
 
     integer :: idim
     FLOAT, allocatable :: vlocal(:)

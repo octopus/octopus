@@ -19,7 +19,7 @@
 ! ---------------------------------------------------------
 subroutine X(output_lr) (st, gr, lr, dir, idir, isigma, outp, geo, pert_unit)
   type(states_t),       intent(inout) :: st
-  type(grid_t),         intent(inout) :: gr
+  type(grid_t),         intent(in)    :: gr
   type(lr_t),           intent(inout) :: lr
   character(len=*),     intent(in)    :: dir
   integer,              intent(in)    :: idir      !< direction of perturbation

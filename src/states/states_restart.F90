@@ -59,7 +59,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_look_and_load(restart, st, gr, is_complex)
-    type(restart_t),            intent(inout) :: restart
+    type(restart_t),            intent(in)    :: restart
     type(states_t),     target, intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
     logical,          optional, intent(in)    :: is_complex

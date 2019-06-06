@@ -18,12 +18,12 @@
 
 ! ---------------------------------------------------------
 subroutine output_states(st, gr, geo, hm, dir, outp)
-  type(states_t),         intent(inout) :: st
-  type(grid_t),           intent(inout) :: gr
-  type(geometry_t),       intent(in)    :: geo
-  type(hamiltonian_t),    intent(in)    :: hm
-  character(len=*),       intent(in)    :: dir
-  type(output_t),         intent(in)    :: outp
+  type(states_t),         intent(in) :: st
+  type(grid_t),           intent(in) :: gr
+  type(geometry_t),       intent(in) :: geo
+  type(hamiltonian_t),    intent(in) :: hm
+  character(len=*),       intent(in) :: dir
+  type(output_t),         intent(in) :: outp
 
   integer :: ik, ist, idim, idir, is, ierr, ip
   character(len=MAX_PATH_LEN) :: fname
@@ -196,10 +196,10 @@ end subroutine output_states
 
 ! ---------------------------------------------------------
 subroutine output_current_flow(gr, st, dir, outp)
-  type(grid_t),         intent(inout) :: gr
-  type(states_t),       intent(inout) :: st
-  character(len=*),     intent(in)    :: dir
-  type(output_t),       intent(in)    :: outp
+  type(grid_t),         intent(in) :: gr
+  type(states_t),       intent(in) :: st
+  character(len=*),     intent(in) :: dir
+  type(output_t),       intent(in) :: outp
 
   integer :: iunit, ip, idir, rankmin
   FLOAT   :: flow, dmin

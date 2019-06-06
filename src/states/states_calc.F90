@@ -113,9 +113,9 @@ contains
   ! -----------------------------------------------------------------------------
 
   subroutine states_calc_momentum(st, der, momentum)
-    type(states_t),      intent(inout) :: st
-    type(derivatives_t), intent(inout) :: der
-    FLOAT,               intent(out)   :: momentum(:,:,:)
+    type(states_t),      intent(in)  :: st
+    type(derivatives_t), intent(in)  :: der
+    FLOAT,               intent(out) :: momentum(:,:,:)
 
     if (states_are_real(st)) then
       call dstates_calc_momentum(st, der, momentum)
