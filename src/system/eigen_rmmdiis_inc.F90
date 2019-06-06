@@ -298,6 +298,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
   ! recalculate the eigenvalues and residuals
   SAFE_ALLOCATE(eigen_full(1:st%nst))
+  eigen_full(1:st%nst) = R_TOTYPE(M_ZERO)
+
   do ib = st%group%block_start, st%group%block_end
     minst = states_block_min(st, ib)
     maxst = states_block_max(st, ib)

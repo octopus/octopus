@@ -112,6 +112,7 @@ subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
     call profiling_in(prof_diff, 'SUBSPACE_DIFF')
     
     SAFE_ALLOCATE(rdiff(1:st%nst))
+    rdiff(1:st%nst) = R_TOTYPE(M_ZERO)
     
     do ib = st%group%block_start, st%group%block_end
       
@@ -124,15 +125,16 @@ subroutine X(subspace_diag_standard)(der, st, hm, ik, eigenval, diff)
 
       call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik)
       call batch_axpy(der%mesh%np, -eigenval, st%group%psib(ib, ik), hpsib)
-      call X(mesh_batch_dotp_vector)(der%mesh, hpsib, hpsib, rdiff(minst:maxst))
+      call X(mesh_batch_dotp_vector)(der%mesh, hpsib, hpsib, rdiff(minst:maxst), reduce = .false.)
 
       call batch_end(hpsib)
 
       if(hamiltonian_apply_packed(hm, der%mesh)) call batch_unpack(st%group%psib(ib, ik), copy = .false.)
       
-      diff(minst:maxst) = sqrt(abs(rdiff(minst:maxst)))
-
     end do
+
+    if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp%comm, rdiff)
+    diff(1:st%nst) = sqrt(abs(rdiff(1:st%nst)))
 
     SAFE_DEALLOCATE_A(rdiff)
 
