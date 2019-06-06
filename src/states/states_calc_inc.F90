@@ -1346,7 +1346,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 
     SAFE_ALLOCATE(psi(1:st%nst, 1:st%d%dim, 1:block_size))
 
-    overlap(1:st%nst, 1:st%nst) = CNST(0.0)
+    overlap(1:st%nst, 1:st%nst) = R_TOTYPE(M_ZERO)
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
@@ -1442,15 +1442,19 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 
   else
 
+    overlap(1:st%nst, 1:st%nst) = R_TOTYPE(M_ZERO)
+
     do ib = st%group%block_start, st%group%block_end
       do jb = ib, st%group%block_end
         if(ib == jb) then
-          call X(mesh_batch_dotp_self)(mesh, st%group%psib(ib, ik), overlap)
+          call X(mesh_batch_dotp_self)(mesh, st%group%psib(ib, ik), overlap, reduce = .false.)
         else
-          call X(mesh_batch_dotp_matrix)(mesh, st%group%psib(ib, ik), st%group%psib(jb, ik), overlap)
+          call X(mesh_batch_dotp_matrix)(mesh, st%group%psib(ib, ik), st%group%psib(jb, ik), overlap, reduce = .false.)
         end if
       end do
     end do
+
+    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
 
   end if
 
