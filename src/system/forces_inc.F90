@@ -161,7 +161,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl,
   R_TYPE, allocatable :: psi(:, :)
   R_TYPE, allocatable :: grad_psi(:, :, :)
   FLOAT,  pointer :: grad_rho(:, :)
-  FLOAT,  allocatable :: force_psi(:), force_tmp(:)
+  FLOAT,  allocatable :: force_psi(:)
   FLOAT, allocatable :: symmtmp(:, :)
   type(batch_t) :: psib, grad_psib(1:MAX_DIM)
   FLOAT :: kweight
@@ -176,7 +176,6 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl,
   grad_rho = M_ZERO
 
   SAFE_ALLOCATE(force_psi(1:gr%mesh%sb%dim))
-  SAFE_ALLOCATE(force_tmp(1:gr%mesh%sb%dim))
 
   force = M_ZERO
   force_loc = M_ZERO
@@ -224,6 +223,8 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl,
       else 
 
         do ist = minst, maxst
+
+          if(st%occ(ist, iq) <= M_EPSILON) cycle
 
           ! get the state and its gradient out of the batches (for the moment)
           do idim = 1, st%d%dim
@@ -293,9 +294,8 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl,
 
                 !Let us now apply the symmetry to the force
                 !Note: here we are working with reduced quantities
-                force_tmp(1:gr%sb%dim) = symm_op_apply_cart(gr%sb%symm%ops(iop), force_psi)
                 force_nl(1:gr%sb%dim, iatom) = force_nl(1:gr%mesh%sb%dim, iatom) + &
-                  force_tmp(1:gr%mesh%sb%dim)
+                  symm_op_apply_cart(gr%sb%symm%ops(iop), force_psi)
 
               end do
 
@@ -395,7 +395,6 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl,
   end do
 
 
-  SAFE_DEALLOCATE_A(force_tmp)
   SAFE_DEALLOCATE_A(force_psi)
   SAFE_DEALLOCATE_P(grad_rho)
   
@@ -440,6 +439,9 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
     ikpoint = states_dim_get_kpoint_index(st%d, iq)
     do ist = st%st_start, st%st_end
 
+      ff = st%d%kweights(iq) * st%occ(ist, iq) * M_TWO
+      if(ff <= M_EPSILON) cycle
+
       call states_get_state(st, gr%mesh, ist, iq, psi)
 
       do idim = 1, st%d%dim
@@ -460,7 +462,6 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
 
         call X(derivatives_grad)(gr%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
 
-        ff = st%d%kweights(iq) * st%occ(ist, iq) * M_TWO
         do idir = 1, gr%mesh%sb%dim
           do ip = 1, np
             grad_rho(ip, idir) = grad_rho(ip, idir) + ff*R_REAL(R_CONJ(psi(ip, idim))*grad_psi(ip, idir, idim))
@@ -556,6 +557,10 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv, lda_u_lev
   do iq = st%d%kpt%start, st%d%kpt%end
     ikpoint = states_dim_get_kpoint_index(st%d, iq)
     do ist = st%st_start, st%st_end
+
+      ff = st%d%kweights(iq) * st%occ(ist, iq)
+      if(ff <= M_EPSILON) cycle
+
       do idim = 1, st%d%dim
 
         call states_get_state(st, gr%mesh, idim, ist, iq, psi(:, idim))
@@ -585,7 +590,6 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv, lda_u_lev
         call X(derivatives_grad)(gr%der, dl_psi2(:, idim), grad_dl_psi2(:, :, idim), set_bc = .false.)
 
         !accumulate to calculate the gradient of the density
-        ff = st%d%kweights(iq) * st%occ(ist, iq)
         do idir = 1, gr%mesh%sb%dim
           do ip = 1, np
             grad_rho(ip, idir) = grad_rho(ip, idir) + ff * &
@@ -600,7 +604,7 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv, lda_u_lev
         if(projector_is_null(ep%proj(iatom))) cycle
         do idir = 1, gr%mesh%sb%dim
 
-          force_deriv(idir, iatom) = force_deriv(idir, iatom) - st%d%kweights(iq) * st%occ(ist, iq) * &
+          force_deriv(idir, iatom) = force_deriv(idir, iatom) - ff * &
             (X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, grad_psi(:, idir, :), dl_psi) &
             + X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, psi, grad_dl_psi(:, idir, :)) &
             + X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, dl_psi2, grad_psi(:, idir, :)) &

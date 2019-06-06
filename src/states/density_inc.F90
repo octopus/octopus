@@ -44,6 +44,8 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
         ist = batch_linear_to_ist(psib, ii)
       
         ff = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
+        if(ff <= M_EPSILON) cycle
+
         do ip = 1, gr%mesh%np
           
           psi = psib%states_linear(ii)%X(psi)(ip)
@@ -60,6 +62,8 @@ subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
       ist = batch_linear_to_ist(psib, ii)
       
       ff = st%d%kweights(iq)*st%occ(ist, iq)*M_TWO
+      if(ff <= M_EPSILON) cycle
+
       do idir = 1, gr%mesh%sb%dim
         do ip = 1, gr%mesh%np
           
