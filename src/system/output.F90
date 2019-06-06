@@ -1449,7 +1449,8 @@ contains
     type(output_t),         intent(in)    :: outp
 
     need_exx =( bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0 &
-           .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY) /= 0)
+           .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY) /= 0 &
+           .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K) /= 0 )
   end function output_need_exchange
 
    ! ---------------------------------------------------------

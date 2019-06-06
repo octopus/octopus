@@ -341,7 +341,7 @@ contains
         if(states_are_real(st)) then
           id = st%d%nik*this%nst*(st%d%nik*this%nst+1)*(st%d%nik**2*this%nst**2+st%d%nik*this%nst+2)/8
         else
-          id = (st%d%nik*this%nst)**2*((st%d%nik*this%nst)**2+1)/2
+          id = (st%d%nik*this%nst)**4
         end if
       else
         id = (st%d%nik*this%nst)**2
@@ -382,7 +382,7 @@ contains
           enddo
         else
           do ll = 1, id
-            write(iunit, '(4(i4,i5),2e15.6)') iindex(1:2,ll), kindex(1:2,ll), ztwoint(ll)
+            write(iunit, '(2(i4,i5),2e15.6)') iindex(1:2,ll), kindex(1:2,ll), ztwoint(ll)
           enddo
         end if
         SAFE_DEALLOCATE_A(ztwoint)
