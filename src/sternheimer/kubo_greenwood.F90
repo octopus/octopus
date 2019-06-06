@@ -57,6 +57,7 @@ contains
     CMPLX, allocatable :: k11(:), k12(:), k21(:), k22(:)
     CMPLX :: prod
     FLOAT :: eigi, eigj, occi, occj, df, width, dfreq, maxfreq, ww
+    FLOAT :: sum_occ, sum_cond1, sum_cond2
     type(mesh_t), pointer :: mesh
     character(len=80) :: dirname, str_tmp
 
@@ -135,6 +136,13 @@ contains
     k21 = CNST(0.0)
     k22 = CNST(0.0)
     therm_tensor = CNST(0.0)
+    sum_occ = CNST(0.0)
+    sum_cond1 = CNST(0.0)
+    sum_cond2 = CNST(0.0)
+    !write(*,*)"kpt", sys%st%d%kpt%start, sys%st%d%kpt%end
+    !write(*,*)"number states", sys%st%nst
+    
+    
     do iqn = sys%st%d%kpt%start, sys%st%d%kpt%end
     
        do ist = 1, sys%st%nst
@@ -149,6 +157,9 @@ contains
         do idim = 1, sys%st%d%dim 
           call zderivatives_grad(sys%gr%der, psii(:, idim), gpsii(:, :, idim), set_bc = .false.)
         end do
+
+         occi = sys%st%occ(ist,iqn)
+         sum_occ = sum_occ + occi*sys%st%d%kweights(iqn)
         
         do jst = 1, sys%st%nst
           ! get the state j and calculate the gradient
@@ -168,7 +179,8 @@ contains
           occi = sys%st%occ(ist,iqn)
           occj = sys%st%occ(jst,iqn)
           if (abs(eigi-eigj) < CNST(1.0e-10)) then
-             df = smear_step_function_der(sys%st%smear,eigi)
+             !!!df = smear_step_function_der(sys%st%smear,eigi)
+             df = step_der(sys%st%smear,eigi)
           else
              df = (occj - occi)/(eigj - eigi)
           endif
@@ -177,23 +189,45 @@ contains
              do jdir = 1, mesh%sb%dim
                 prod = zmf_dotp(mesh, sys%st%d%dim, psii, gpsij(:, idir, :))*zmf_dotp(mesh, sys%st%d%dim, psij, gpsii(:, jdir, :))
                 do ifreq = 1, nfreq
-                   tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - sys%st%d%kweights(iqn)*(CNST(-2.0)/mesh%sb%rcell_volume)* &
-                        df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*(eigi-eigj - (ifreq-1)*dfreq))/ ((eigi-eigj - (ifreq-1)*dfreq)**2 + width**2/CNST(4.0))
-!                   tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - real(prod,REAL_PRECISION) 
+                  tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - sys%st%d%kweights(iqn)*(CNST(-2.0)/mesh%sb%rcell_volume)* &
+                        df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*(eigi-eigj - (ifreq-1)*dfreq))/ ((eigi-eigj - (ifreq-1)*dfreq)**2 + width**2/CNST(4.0))                   
                 end do
              end do !loop over jdir
           end do !loop over idir
        end do !loop over states j
     end do !loop over states i
-      
 
+    !begin sum rule
+!    do ifreq=1, nfreq
+!       do idir = 1, mesh%sb%dim
+!          sum_cond1 = sum_cond1 + CNST(2.0)*mesh%sb%rcell_volume*sys%st%d%kweights(iqn)*real(tensor(idir,idir,ifreq),REAL_PRECISION)/(CNST(3.0)*M_PI*sum_occ)
+!       end do
+    !    end do
+    do ifreq=2,nfreq-2,2
+       sum_cond1 = sum_cond1 + (tensor(1,1,ifreq) + tensor(2,2,ifreq) + tensor(3,3,ifreq))
+    enddo
+
+    do ifreq=1,nfreq-1,2
+       sum_cond2 = sum_cond2 + (tensor(1,1,ifreq) + tensor(2,2,ifreq) + tensor(3,3,ifreq))
+    enddo
+
+    sum_cond1 = CNST(2.0)*sum_cond1 + CNST(4.0)*sum_cond2
+    sum_cond1 = sum_cond1 + (tensor(1,1,0) + tensor(2,2,0) + tensor(3,3,0))
+    sum_cond1 = (sum_cond1 + (tensor(1,1,nfreq) + tensor(2,2,nfreq) + tensor(3,3,nfreq)))*dfreq/CNST(3.0)
+
+    sum_cond1 = CNST(2.0) * mesh%sb%rcell_volume * sum_cond1 * sys%st%d%kweights(iqn) / (M_PI * sum_occ) 
+    
+    !end sum rule
+    
    end do !kpt loop
 
+   write(*,*)"sum rule for occupations::: ", sum_occ
+   write(*,*)"sum rule for conductivity:: ", sum_cond1
    !output
    write(dirname, '(a, a)') 'kubo_greenwood' 
    call io_mkdir(trim(dirname))
 
-   iunit = io_open(trim(dirname)//'/kubo_greenwood', action='write')
+   iunit = io_open(trim(dirname)//'/electrical_conductivity', action='write')
 
     write(unit = iunit, iostat = ierr, fmt = '(a)') &
       '###########################################################################################################################'
@@ -246,6 +280,44 @@ contains
     
     POP_SUB(kubo_greewood_run)
   end subroutine kubo_greenwood_run
+
+
+
+  FLOAT function step_der(this, energy) result(stepf)
+    type(smear_t), intent(in) :: this
+    FLOAT,         intent(in) :: energy
+
+    FLOAT, parameter :: maxarg = CNST(200.0)
+    FLOAT :: dsmear, xx
+
+    PUSH_SUB(smear_step_function_der)
+
+    dsmear = max(CNST(1e-14), this%dsmear)
+    
+    xx = (this%e_fermi - energy) / dsmear
+
+    !write(*,*)"dsmear",dsmear
+    !write(*,*)"xx", xx
+    stepf = M_ZERO
+    select case(this%method)
+  
+    case(SMEAR_FERMI_DIRAC)
+       stepf = M_ONE / (CNST(2.0) + exp(-xx) + exp(xx)) / dsmear
+     !  if (xx > maxarg) then
+     !    stepf = M_ONE
+     !  else if(xx > -maxarg) then
+     !     stepf = M_ONE / (M_ONE + exp(-xx))
+     !     stepf = stepf*stepf*exp(-xx) / dsmear
+     ! end if
+
+    !!!write(*,*)"stepf",stepf
+    case default
+       call messages_not_implemented('Occupation derivatives only implemented for Fermi Dirac')
+  
+    end select
+
+    POP_SUB(step_der)
+  end function step_der
 
 end module kubo_greenwood_oct_m
 
