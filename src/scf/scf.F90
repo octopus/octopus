@@ -71,6 +71,7 @@ module scf_oct_m
   use varinfo_oct_m
   use vdw_ts_oct_m
 !  use xc_functl_oct_m
+  use walltimer_oct_m
   use XC_F90(lib_m)
   
   implicit none
@@ -115,7 +116,7 @@ module scf_oct_m
     integer :: mixdim1
     logical :: forced_finish !< remember if 'touch stop' was triggered earlier.
     type(lda_u_mixer_t) :: lda_u_mix
-    type(grid_t), pointer :: gr
+    type(grid_t), pointer :: gr 
   end type scf_t
 
 contains
@@ -134,7 +135,7 @@ contains
     FLOAT :: rmin
     integer :: mixdefault, ierr
     type(type_t) :: mix_type
-    
+
     PUSH_SUB(scf_init)
 
     !%Variable MaximumIter
@@ -549,7 +550,7 @@ contains
     FLOAT, allocatable :: vhxc_old(:,:)
     FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
     type(batch_t), allocatable :: psioutb(:, :)
-    
+
     PUSH_SUB(scf_run)
 
     if(scf%forced_finish) then
@@ -681,6 +682,7 @@ contains
 
     ! SCF cycle
     itime = loct_clock()
+    
     do iter = 1, scf%max_iter
       call profiling_in(prof, "SCF_CYCLE")
 
@@ -858,7 +860,7 @@ contains
 
 
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
-      scf%forced_finish = clean_stop(mc%master_comm)
+      scf%forced_finish = clean_stop(mc%master_comm) .or. walltimer_alarm()
 
       if (finish .and. st%modelmbparticles%nparticle > 0) then
         call modelmb_sym_all_states (gr, st, geo)
@@ -866,8 +868,9 @@ contains
 
       if (gs_run_ .and. present(restart_dump)) then 
         ! save restart information
+         
         if ( (finish .or. (modulo(iter, outp%restart_write_interval) == 0) &
-          .or. iter == scf%max_iter .or. scf%forced_finish)) then
+          .or. iter == scf%max_iter .or. scf%forced_finish) ) then
 
           call states_dump(restart_dump, st, gr, ierr, iter=iter) 
           if (ierr /= 0) then
