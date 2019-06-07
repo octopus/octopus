@@ -25,7 +25,6 @@
 #include "global.h"
 
 module walltimer_oct_m
-
   use global_oct_m
   use loct_oct_m
   use messages_oct_m
@@ -54,7 +53,6 @@ contains
 
   !> initialize the timer
   subroutine walltimer_init(auto)
-
     logical, optional, intent(in) :: auto   !< automatically call walltimer_tap in walltimer_alarm() if .true.
 
     FLOAT  :: alarm_time, write_time
@@ -100,7 +98,6 @@ contains
     call start()
     
     POP_SUB(walltimer_init)
-
   end subroutine walltimer_init
 
   !> destructor
@@ -111,20 +108,17 @@ contains
     active = .false.
 
     POP_SUB(walltimer_end)
-
   end subroutine walltimer_end
 
   !> set alarm interval in seconds
   subroutine set_alarm(time)
-
     FLOAT :: time
 
     PUSH_SUB(set_alarm)
 
     duration = time
 
-    POP_SUB(set_alarm)        
-
+    POP_SUB(set_alarm)
   end subroutine set_alarm
 
   !> set safty margin in seconds
@@ -137,7 +131,6 @@ contains
     margin = time
 
     POP_SUB(set_margin)
-
   end subroutine set_margin
 
   !> start the timer (save starting time)  
@@ -152,13 +145,12 @@ contains
     if(duration > M_ONE) active = .true.
     
     POP_SUB(start)
-
   end subroutine start
 
   !> measure time of on itertion  
   subroutine walltimer_tap(print)
+    logical, optional, intent(in) :: print
 
-    logical, optional :: print
     FLOAT :: now
 
     PUSH_SUB(walltimer_tap)
@@ -175,13 +167,12 @@ contains
     end if
 
     POP_SUB(walltimer_tap)
-
   end subroutine walltimer_tap
 
   !> indicate whether time is up
   logical function walltimer_alarm(print)
+    logical, optional, intent(in) :: print
 
-    logical, optional :: print
     FLOAT :: now
 
     PUSH_SUB(walltimer_alarm)
@@ -204,7 +195,6 @@ contains
     end if
   
     POP_SUB(walltimer_alarm)
-
   end function walltimer_alarm
 
 end module walltimer_oct_m
