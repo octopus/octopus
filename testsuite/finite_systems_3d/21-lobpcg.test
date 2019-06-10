@@ -36,6 +36,7 @@ match ; Eigenvalue 4 dn; GREPFIELD(static/info, ' 4   dn', 3) ; -3.682145
 match ; mz             ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 2.00000
 
 Input: 21-lobpcg.02-spinors.inp
+Precision : 0.00012
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -141.78884487
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 0.00000000

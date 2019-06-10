@@ -260,6 +260,137 @@ subroutine X(output_me_ks_multipoles1d)(fname, st, gr, ll, ik)
   POP_SUB(X(output_me_ks_multipoles1d))
 end subroutine X(output_me_ks_multipoles1d)
 
+! ---------------------------------------------------------
+!> Prints out the dipole matrix elements between KS states.
+!!
+!! It prints the states to the file opened in iunit.
+!!
+! ---------------------------------------------------------
+subroutine X(output_me_dipole)(this, fname, st, gr, hm, geo, ik)
+  type(output_me_t),   intent(in) :: this
+  character(len=*),    intent(in) :: fname
+  type(states_t),      intent(in) :: st
+  type(grid_t),        intent(in) :: gr
+  type(hamiltonian_t), intent(in) :: hm
+  type(geometry_t),    intent(in) :: geo
+  integer,             intent(in) :: ik
+  
+  integer :: ist, jst, ip, iunit, idir, idim, ispin
+  R_TYPE :: dip_element
+  R_TYPE, allocatable :: psii(:, :), psij(:, :), gpsii(:,:,:)
+
+  PUSH_SUB(X(output_me_dipole))
+
+  ASSERT(.not. st%parallel_in_states)
+  if(st%d%ispin == SPINORS) then
+    call messages_not_implemented("Dipole matrix elements with spinors")
+  end if
+
+  ispin = states_dim_get_spin_index(st%d, ik)
+
+  SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(gpsii(1:gr%mesh%np, 1:gr%sb%dim, 1:st%d%dim))
+  
+  do idir = 1, gr%sb%dim
+
+    iunit = io_open(file = trim(fname)//index2axis(idir), action = 'write')
+
+    write(iunit, '(a)') '# Dipole matrix elements file: |<Phi_i | r | Phi_j>|' 
+    write(iunit, '(a,i4)')      '# ik =', ik
+    write(iunit, '(a)')    '# Units = ['//trim(units_abbrev(units_out%length))//']'
+  
+    do ist = this%st_start, this%st_end
+
+      call states_get_state(st, gr%mesh, ist, ik, psii)
+
+      if(.not. simul_box_is_periodic(gr%mesh%sb)) then
+
+        do idim = 1, st%d%dim  
+          do ip = 1, gr%mesh%np
+            gpsii(ip, idir, idim) = psii(ip, idim)*gr%mesh%x(ip, idir)
+          end do
+        end do
+
+      else
+
+        do idim = 1, st%d%dim
+           call boundaries_set(gr%der%boundaries, psii(:, idim))
+        end do
+
+        !We need the phase here as the routines for the nonlocal contributions assume that the wavefunctions have a phase.
+#ifdef R_TCOMPLEX
+        if(associated(hm%hm_base%phase)) then
+          call states_set_phase(st%d, psii, hm%hm_base%phase(1:gr%mesh%np_part, ik), gr%mesh%np_part, .false.)
+        end if
+#endif
+
+        do idim = 1, st%d%dim
+          call X(derivatives_grad)(gr%der, psii(:, idim), gpsii(:, :, idim), set_bc = .false.)
+        end do
+
+        !A nonlocal contribution from the MGGA potential must be included
+        !This must be done first, as this is like a position-dependent mass 
+        if(hm%family_is_mgga_with_exc) then
+          do idim = 1, st%d%dim
+            !$omp parallel do
+            do ip = 1, gr%mesh%np
+              gpsii(ip, idir, idim) = (M_ONE + M_TWO*hm%vtau(ip, ispin))*gpsii(ip, idir, idim)
+            end do
+            !$omp end parallel do
+          end do
+        end if
+
+        !A nonlocal contribution from the pseudopotential must be included
+        call X(projector_commute_r_allatoms_alldir)(hm%ep%proj, geo, gr%mesh, st%d%dim, ik, psii, gpsii) 
+        
+        !A nonlocal contribution from the scissor must be included
+        if(hm%scissor%apply) then
+          call scissor_commute_r(hm%scissor, gr%mesh, ik, psii, gpsii)
+        end if
+
+        if(hm%lda_u_level /= DFT_U_NONE) then
+          call X(lda_u_commute_r)(hm%lda_u, gr%mesh, st%d, ik, psii, gpsii, &
+                            associated(hm%hm_base%phase))
+        end if
+      end if
+
+      do jst = this%st_start, this%st_end
+
+        call states_get_state(st, gr%mesh, jst, ik, psij)
+#ifdef R_TCOMPLEX
+        if(associated(hm%hm_base%phase)) then
+          call states_set_phase(st%d, psij, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .false.)
+        end if
+#endif
+
+        dip_element = X(mf_dotp)(gr%mesh, st%d%dim, gpsii(:, idir, :), psij)
+        if(simul_box_is_periodic(gr%mesh%sb)) then
+          if(abs(st%eigenval(ist, ik) - st%eigenval(jst, ik)) > CNST(1e-6)) then  
+            dip_element = -dip_element/((st%eigenval(ist, ik) - st%eigenval(jst, ik)))
+          else
+            dip_element = R_TOTYPE(M_ZERO)
+          end if
+        end if
+        dip_element = units_from_atomic(units_out%length, dip_element)
+
+        write(iunit, fmt='(f20.12)', advance = 'no') R_ABS(dip_element)
+        write(iunit, fmt='(a)', advance = 'no') '   '
+      end do
+      write(iunit, '(a)') ''
+    end do
+    call io_close(iunit)
+
+  end do
+
+  SAFE_DEALLOCATE_A(gpsii)
+  SAFE_DEALLOCATE_A(psii)
+  SAFE_DEALLOCATE_A(psij)
+
+  POP_SUB(X(output_me_dipole))
+end subroutine X(output_me_dipole)
+
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

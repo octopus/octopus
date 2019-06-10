@@ -317,62 +317,6 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   POP_SUB(X(mesh_batch_dotp_self))
 end subroutine X(mesh_batch_dotp_self)
 
-!-----------------------------------------------------------------
-
-subroutine X(mesh_batch_rotate)(mesh, aa, transf)
-  type(mesh_t),      intent(in)    :: mesh
-  type(batch_t),     intent(inout) :: aa
-  R_TYPE,            intent(in)    :: transf(:, :)
-
-  R_TYPE, allocatable :: psinew(:, :), psicopy(:, :)
-  
-  integer :: ist, idim, block_size, size, sp, indb
-  type(profile_t), save :: prof
-
-  call profiling_in(prof, "BATCH_ROTATE")
-  ASSERT(batch_status(aa) == BATCH_NOT_PACKED)
-
-  call batch_pack_was_modified(aa)
-
-#ifdef R_TREAL  
-  block_size = max(40, hardware%l2%size/(2*8*aa%nst))
-#else
-  block_size = max(20, hardware%l2%size/(2*16*aa%nst))
-#endif
-
-  SAFE_ALLOCATE(psinew(1:block_size, 1:aa%nst))
-  SAFE_ALLOCATE(psicopy(1:block_size, 1:aa%nst))
-
-  do sp = 1, mesh%np, block_size
-    size = min(block_size, mesh%np - sp + 1)
-    
-    do idim = 1, aa%dim
-
-      do ist = 1, aa%nst
-        indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
-        call blas_copy(size, aa%states_linear(indb)%X(psi)(sp), 1, psicopy(1, ist), 1)
-      end do
-      
-      call lalg_gemm(size, aa%nst, aa%nst, R_TOTYPE(M_ONE), psicopy, &
-        transf, R_TOTYPE(M_ZERO), psinew)
-      
-      do ist = 1, aa%nst
-        indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
-        call blas_copy(size, psinew(1, ist), 1, aa%states_linear(indb)%X(psi)(sp), 1)
-      end do
-      
-    end do
-  end do
-
-  SAFE_DEALLOCATE_A(psicopy)
-  SAFE_DEALLOCATE_A(psinew)
-
-  call profiling_count_operations((R_ADD + R_MUL)*dble(mesh%np)*aa%dim*aa%nst**2)
-
-  call profiling_out(prof)
-
-end subroutine X(mesh_batch_rotate)
-
 ! --------------------------------------------------------------------------
 
 subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
@@ -401,16 +345,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   ASSERT(aa%dim == bb%dim)
 
   status = batch_status(aa)
-
-  if(batch_status(bb) /= status) then 
-    if(batch_status(aa) /= BATCH_NOT_PACKED) then
-      ASSERT(batch_is_sync(aa))
-    end if
-    if(batch_status(aa) /= BATCH_NOT_PACKED) then
-      ASSERT(batch_is_sync(bb))
-    end if
-    status = BATCH_NOT_PACKED
-  end if
+  ASSERT(batch_status(bb) == status)
 
   select case(status)
   case(BATCH_NOT_PACKED)
@@ -534,8 +469,6 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
 #endif
 
   PUSH_SUB(X(mesh_batch_exchange_points))
-
-  call batch_pack_was_modified(aa)
 
   ASSERT(present(backward_map) .neqv. present(forward_map))
   ASSERT(batch_type(aa) == R_TYPE_VAL)

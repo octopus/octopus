@@ -27,8 +27,6 @@ module string_oct_m
 
   private
   public ::          &
-    upcase,          &
-    lowcase,         &
     compact,         &
     add_last_slash,  &
     str_trim,        &
@@ -37,40 +35,6 @@ module string_oct_m
     conv_to_C_string 
 
 contains
-
-  ! ---------------------------------------------------------
-  !> Upcases a string
-  !! \date 15-OCT-2000: First version
-  !! \author Fernando Nogueira
-  subroutine upcase(str)
-    character(len=*), intent(inout) :: str
-
-    integer :: i, s
-
-    do i = 1, len(str)
-      s = iachar(str(i:i))
-      if((s<=122) .and. (s>=97)) s = s - 32
-      str(i:i) = achar(s)
-    end do
-
-  end subroutine upcase
-
-  ! ---------------------------------------------------------
-  !> Lowcases a string
-  !! \date 15-OCT-2000: First version
-  !! \author Fernando Nogueira
-  subroutine  lowcase(str)
-    character(len=*), intent(inout) :: str
-
-    integer :: i, s
-
-    do i = 1, len(str)
-      s = iachar(str(i:i))
-      if ((s<=90) .and. (s>=65)) s = s + 32
-      str(i:i) = achar(s)
-    end do
-
-  end subroutine lowcase
 
   ! ---------------------------------------------------------
   !> Removes all spaces from a string

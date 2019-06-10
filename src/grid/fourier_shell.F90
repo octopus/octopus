@@ -19,7 +19,6 @@
 #include "global.h"
 
 module fourier_shell_oct_m
-  use cube_function_oct_m
   use cube_oct_m
   use fft_oct_m
   use global_oct_m

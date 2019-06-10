@@ -26,7 +26,6 @@ module pes_flux_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use kpoints_oct_m
-  use io_function_oct_m
   use io_oct_m
   use lasers_oct_m
   use loct_oct_m
@@ -42,7 +41,6 @@ module pes_flux_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
-  use sort_oct_m
   use states_oct_m
   use states_dim_oct_m
   use unit_oct_m

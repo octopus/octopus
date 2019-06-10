@@ -36,9 +36,11 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, basisfro
     if(.not.has_phase .or..not.simul_box_is_periodic(os%sphere%mesh%sb) &
             .or. os%submeshforperiodic) then
       SAFE_ALLOCATE(spsi(1:os%sphere%np, 1:ndim))
-      forall(ip=1:os%sphere%np, idim=1:ndim)
-        spsi(ip,idim) = psi(os%sphere%map(ip), idim)
-      end forall
+      do idim = 1, ndim
+        forall(ip=1:os%sphere%np)
+          spsi(ip,idim) = psi(os%sphere%map(ip), idim)
+        end forall
+      end do
     end if
   end if
 
@@ -105,7 +107,7 @@ subroutine X(orbitalset_get_coeff_batch)(os, ndim, psib, ik, has_phase, basisfro
 
   integer :: ist
   type(profile_t), save :: prof
-  R_TYPE, allocatable :: spsi(:,:), psi(:,:)
+  R_TYPE, allocatable :: psi(:,:)
 
   call profiling_in(prof, "ORBSET_GET_COEFF_BATCH")
 
@@ -132,7 +134,7 @@ subroutine X(orbitalset_add_to_psi)(os, ndim, psi, ik, has_phase, basisfromstate
   logical,              intent(in) :: basisfromstates
   R_TYPE,               intent(in) :: weight(:,:)
 
-  integer :: im, ip, idim, idim_orb
+  integer :: im, idim, idim_orb
   type(profile_t), save :: prof
 
   call profiling_in(prof, "ORBSET_ADD_TO_PSI")
@@ -192,7 +194,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
   logical,              intent(in) :: basisfromstates
   R_TYPE,               intent(in) :: weight(:,:)
 
-  integer :: ip, iorb, ii, ist, idim, bind, idim_orb
+  integer :: ip, iorb, ist, idim, bind, idim_orb
   integer :: idim1, idim2, idim3, idim4
   type(profile_t), save :: prof
   R_TYPE, allocatable :: psi(:,:), sorb(:)
@@ -205,8 +207,6 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, ik, has_phase, basisfromst
 
   ! This routine uses blocking to optimize cache usage.   
   block_size = hardware%X(block_size)
-
-  call batch_pack_was_modified(psib)
 
   if(os%sphere%mesh%use_curvilinear .or. batch_status(psib) == BATCH_DEVICE_PACKED) then
     !

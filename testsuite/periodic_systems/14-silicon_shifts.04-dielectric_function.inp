@@ -72,3 +72,5 @@ Tpulse = 210
 %
 GaugeFieldDelay =  50*0.5
 TransientAbsorptionReference = "14-silicon_shifts.02-td.inp/td.general"
+
+PropagationSpectrumDampMode = exponential

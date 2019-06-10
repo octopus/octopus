@@ -60,8 +60,8 @@ end subroutine X(forces_gather)
 
 !---------------------------------------------------------------------------
 subroutine X(forces_from_local_potential)(gr, geo, ep, gdensity, force)
-  type(grid_t),                   intent(inout) :: gr
-  type(geometry_t),               intent(inout) :: geo
+  type(grid_t),                   intent(in)    :: gr
+  type(geometry_t),               intent(in)    :: geo
   type(epot_t),                   intent(in)    :: ep
   R_TYPE,                         intent(in)    :: gdensity(:, :)
   R_TYPE,                         intent(inout) :: force(:, :)
@@ -69,16 +69,19 @@ subroutine X(forces_from_local_potential)(gr, geo, ep, gdensity, force)
   FLOAT,  allocatable :: vloc(:)
   R_TYPE, pointer     :: zvloc(:)
   integer             :: ip, idir, iatom
+  R_TYPE, allocatable  :: force_tmp(:,:)
  
   PUSH_SUB(X(forces_from_local_potential))
 
   SAFE_ALLOCATE(vloc(1:gr%mesh%np))
   SAFE_ALLOCATE(zvloc(1:gr%mesh%np))
+
+  SAFE_ALLOCATE(force_tmp(1:gr%mesh%sb%dim, 1:geo%natoms))
+  force_tmp = M_ZERO
   
   do iatom = geo%atoms_dist%start, geo%atoms_dist%end
 
     if(.not.simul_box_in_box(gr%mesh%sb, geo, geo%atom(iatom)%x) .and. ep%ignore_external_ions) then
-      force(1:gr%mesh%sb%dim, iatom) = M_ZERO
       cycle
     end if
     
@@ -88,16 +91,21 @@ subroutine X(forces_from_local_potential)(gr, geo, ep, gdensity, force)
     forall(ip = 1:gr%mesh%np) zvloc(ip) = vloc(ip)
 
     do idir = 1, gr%mesh%sb%dim
-      force(idir, iatom) = -X(mf_dotp)(gr%mesh, zvloc, gdensity(:, idir))
+      force_tmp(idir, iatom) = -X(mf_dotp)(gr%mesh, zvloc, gdensity(:, idir), reduce = .false.)
     end do
 
   end do
 
-  if(geo%atoms_dist%parallel) call X(forces_gather)(geo, force)
+  if(geo%atoms_dist%parallel) call X(forces_gather)(geo, force_tmp)
   !if(geo%atoms_dist%parallel .and. geo%atoms_dist%nlocal > 0) call X(forces_gather)(geo, force)
+
+  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, force_tmp) 
+
+  force(1:gr%mesh%sb%dim, 1:geo%natoms) = force(1:gr%mesh%sb%dim, 1:geo%natoms) + force_tmp(1:gr%mesh%sb%dim, 1:geo%natoms)
 
   SAFE_DEALLOCATE_A(vloc)
   SAFE_DEALLOCATE_P(zvloc)
+  SAFE_DEALLOCATE_A(force_tmp)
 
   POP_SUB(X(forces_from_local_potential))
 end subroutine X(forces_from_local_potential)
@@ -105,21 +113,25 @@ end subroutine X(forces_from_local_potential)
 
 !---------------------------------------------------------------------------
 subroutine X(total_force_from_local_potential)(gr, ep, gdensity, force)
-  type(grid_t),                   intent(inout) :: gr
-  type(epot_t),                   intent(inout) :: ep
+  type(grid_t),                   intent(in)    :: gr
+  type(epot_t),                   intent(in)    :: ep
   R_TYPE,                         intent(in)    :: gdensity(:, :)
   R_TYPE,                         intent(inout) :: force(:)
 
   R_TYPE, pointer     :: zvloc(:)
   integer             :: idir
+  R_TYPE              :: force_tmp(1:MAX_DIM)
  
   PUSH_SUB(X(total_force_from_local_potential))
   SAFE_ALLOCATE(zvloc(1:gr%mesh%np))
   
   zvloc(1:gr%mesh%np) = ep%vpsl(1:gr%mesh%np)
   do idir = 1, gr%mesh%sb%dim
-    force(idir) = force(idir) + X(mf_dotp)(gr%mesh, zvloc, gdensity(:, idir))
+    force_tmp(idir) = X(mf_dotp)(gr%mesh, zvloc, gdensity(:, idir), reduce = .false.)
   end do
+
+  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  force_tmp, dim = gr%mesh%sb%dim)
+  force(1:gr%mesh%sb%dim) = force(1:gr%mesh%sb%dim) + force_tmp(1:gr%mesh%sb%dim)
 
   SAFE_DEALLOCATE_P(zvloc)
   POP_SUB(X(total_force_from_local_potential))
@@ -132,10 +144,10 @@ end subroutine X(total_force_from_local_potential)
 !! and transport properties of nanostructures, Imperial College Press (2005)
 !! Section 1.6, page 12
 subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl, force_u)
-  type(grid_t),                   intent(inout) :: gr
-  type(geometry_t),               intent(inout) :: geo
+  type(grid_t),                   intent(in)    :: gr
+  type(geometry_t),               intent(in)    :: geo
   type(hamiltonian_t),            intent(in)    :: hm
-  type(states_t),                 intent(inout) :: st
+  type(states_t),                 intent(in)    :: st
   FLOAT,                          intent(out)   :: force(:, :)
   FLOAT,                          intent(out)   :: force_loc(:, :)
   FLOAT,                          intent(out)   :: force_nl(:, :)
@@ -392,10 +404,10 @@ end subroutine X(forces_from_potential)
 
 !---------------------------------------------------------------------------
 subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
-  type(grid_t),                   intent(inout) :: gr
+  type(grid_t),                   intent(in)    :: gr
   type(geometry_t),               intent(in)    :: geo
-  type(epot_t),                   intent(inout) :: ep
-  type(states_t),                 intent(inout) :: st
+  type(epot_t),                   intent(in)    :: ep
+  type(states_t),                 intent(in)    :: st
   FLOAT,                          intent(inout) :: x(1:MAX_DIM)
   integer,                        intent(in)    :: lda_u_level
  
@@ -500,10 +512,10 @@ end subroutine X(total_force_from_potential)
 
 ! --------------------------------------------------------------------------------
 subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv, lda_u_level)
-  type(grid_t),                   intent(inout) :: gr
-  type(geometry_t),               intent(inout) :: geo
-  type(epot_t),                   intent(inout) :: ep
-  type(states_t),                 intent(inout) :: st
+  type(grid_t),                   intent(in)    :: gr
+  type(geometry_t),               intent(in)    :: geo
+  type(epot_t),                   intent(in)    :: ep
+  type(states_t),                 intent(in)    :: st
   type(lr_t),                     intent(in)    :: lr
   type(lr_t),                     intent(in)    :: lr2
   CMPLX,                          intent(out)   :: force_deriv(:,:) !< (gr%mesh%sb%dim, geo%natoms)
@@ -617,6 +629,7 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv, lda_u_lev
 #endif
   
   SAFE_ALLOCATE(force_local(1:gr%sb%dim, 1:geo%natoms))
+  force_local = M_ZERO
   call zforces_from_local_potential(gr, geo, ep, grad_rho, force_local)
   force_deriv(:,:) = force_deriv(:,:) + force_local(:,:)
   SAFE_DEALLOCATE_A(force_local)
@@ -629,10 +642,10 @@ end subroutine X(forces_derivative)
 !> lr, lr2 are wfns from electric perturbation; lr is for +omega, lr2 is for -omega.
 !! for each atom, Z*(i,j) = dF(j)/dE(i)
 subroutine X(forces_born_charges)(gr, geo, ep, st, lr, lr2, born_charges, lda_u_level)
-  type(grid_t),                   intent(inout) :: gr
-  type(geometry_t),               intent(inout) :: geo
-  type(epot_t),                   intent(inout) :: ep
-  type(states_t),                 intent(inout) :: st
+  type(grid_t),                   intent(in)    :: gr
+  type(geometry_t),               intent(in)    :: geo
+  type(epot_t),                   intent(in)    :: ep
+  type(states_t),                 intent(in)    :: st
   type(lr_t),                     intent(in)    :: lr(:)  !< (gr%mesh%sb%dim)
   type(lr_t),                     intent(in)    :: lr2(:) !< (gr%mesh%sb%dim)
   type(born_charges_t),           intent(inout) :: born_charges

@@ -24,10 +24,13 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
   FLOAT,           intent(in)  :: rho(:)
 
   FLOAT                :: prefactor
-  FLOAT                :: aa1, aa2, aa3, aa4, tmp
+  FLOAT                :: aa1, aa2, aa3, aa4
   integer              :: ip, jp, dim, nthreads
   FLOAT                :: xx1(1:MAX_DIM), xx2(1:MAX_DIM), xx3(1:MAX_DIM), xx4(1:MAX_DIM)
+#ifdef HAVE_MPI
+  FLOAT                :: tmp
   FLOAT, allocatable   :: pvec(:)
+#endif
 
   PUSH_SUB(dpoisson_solve_direct_sm)
 

@@ -28,12 +28,10 @@ module propagator_expmid_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
   use lda_u_oct_m
-  use math_oct_m
   use messages_oct_m
   use potential_interpolation_oct_m
   use propagator_base_oct_m
   use states_oct_m
-  use xc_oct_m
 
   implicit none
 
@@ -61,7 +59,6 @@ contains
     integer :: ib, ik
     type(ion_state_t) :: ions_state
     FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
-    CMPLX :: zt, zdt
 
     PUSH_SUB(propagator_dt.exponential_midpoint)
 

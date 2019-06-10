@@ -36,8 +36,8 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
   #ifdef R_TCOMPLEX
   FLOAT, allocatable :: tmp(:)
   #endif
-  integer :: is, mm, kappa
-  FLOAT :: mu, coeff
+  integer :: is, mm
+  FLOAT :: coeff
 
   PUSH_SUB(X(get_atomic_orbital))
 

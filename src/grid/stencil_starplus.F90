@@ -21,7 +21,6 @@
 module stencil_starplus_oct_m
   use global_oct_m
   use messages_oct_m
-  use profiling_oct_m
   use stencil_oct_m
 
   implicit none
@@ -29,7 +28,6 @@ module stencil_starplus_oct_m
   private
   public ::                     &
     stencil_starplus_size_lapl, &
-    stencil_starplus_extent,    &
     stencil_starplus_get_lapl,  &
     stencil_starplus_pol_lapl,  &
     stencil_starplus_size_grad, &
@@ -51,31 +49,6 @@ contains
 
     POP_SUB(stencil_starplus_size_lapl)
   end function stencil_starplus_size_lapl
-
-
-  ! ---------------------------------------------------------
-  !> Returns maximum extension of the stencil in spatial direction
-  !! dir = 1, 2, 3 for a given discretization order.
-  integer function stencil_starplus_extent(dir, order)
-    integer, intent(in) :: dir
-    integer, intent(in) :: order
-
-    integer :: extent
-
-    PUSH_SUB(stencil_starplus_extent)
-
-    extent = 0
-    if(dir >= 1.or.dir <= 3) then
-      if(order <= 2) then
-        extent = 2
-      else
-        extent = order
-      end if
-    end if
-    stencil_starplus_extent = extent
-
-    POP_SUB(stencil_starplus_extent)
-  end function stencil_starplus_extent
 
 
   ! ---------------------------------------------------------

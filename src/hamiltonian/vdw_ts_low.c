@@ -450,9 +450,6 @@ void distance (const int iatom, const int jatom, const double coordinates[],
 /* Function to calculate the Van der Waals energy... and forces */
 void vdw_calculate (const int natoms, const double dd, const double sr, const int zatom[], const double coordinates[], const double volume_ratio[],
                     double * energy, double force[], double derivative_coeff[]) {
-   double sr_ok;
-   double dd_ok;;
-   
   int ia;
 
   *energy = 0.0;

@@ -24,8 +24,6 @@ module geometry_oct_m
   use distributed_oct_m
   use global_oct_m
   use io_oct_m
-  use loct_pointer_oct_m
-  use loct_math_oct_m
   use messages_oct_m
   use multicomm_oct_m
   use mpi_oct_m
@@ -34,7 +32,6 @@ module geometry_oct_m
   use read_coords_oct_m
   use space_oct_m
   use species_oct_m
-  use string_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
@@ -44,7 +41,6 @@ module geometry_oct_m
   private
   public ::                          &
     geometry_t,                      &
-    geometry_nullify,                &
     geometry_init,                   &
     geometry_init_xyz,               &
     geometry_init_species,           &
@@ -87,29 +83,6 @@ module geometry_oct_m
   end type geometry_t
 
 contains
-
-  ! ---------------------------------------------------------
-  subroutine geometry_nullify(this)
-    type(geometry_t), intent(inout) :: this
-
-    PUSH_SUB(geometry_nullify)
-
-    nullify(this%space, this%atom, this%catom, this%species)
-    this%natoms=0
-    this%ncatoms=0
-    this%nspecies=0
-    this%only_user_def=.false.
-    this%species_time_dependent=.false.
-    this%kinetic_energy=M_ZERO
-    this%nlpp=.false.
-    this%nlcc=.false.
-    call distributed_nullify(this%atoms_dist, 0)
-    this%reduced_coordinates=.false.
-    this%periodic_dim=0
-    this%lsize=M_ZERO
-
-    POP_SUB(geometry_nullify)
-  end subroutine geometry_nullify
 
   ! ---------------------------------------------------------
   subroutine geometry_init(geo, space, print_info)

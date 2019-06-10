@@ -30,12 +30,9 @@ module energy_calc_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use hamiltonian_base_oct_m
-  use io_oct_m
-  use lalg_basic_oct_m
   use lda_u_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
   use profiling_oct_m
   use pcm_oct_m
@@ -44,7 +41,6 @@ module energy_calc_oct_m
   use states_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
 
   implicit none
 
@@ -63,7 +59,7 @@ contains
   !! counts exist (see TDDFT theory for details).
   subroutine energy_calc_total(hm, gr, st, iunit, full)
     type(hamiltonian_t), intent(inout) :: hm
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(inout) :: st
     integer, optional,   intent(in)    :: iunit
     logical, optional,   intent(in)    :: full
@@ -215,7 +211,7 @@ contains
   
   subroutine energy_calc_eigenvalues(hm, der, st)
     type(hamiltonian_t), intent(inout) :: hm
-    type(derivatives_t), intent(inout) :: der
+    type(derivatives_t), intent(in)    :: der
     type(states_t),      intent(inout) :: st
     
     PUSH_SUB(energy_calc_eigenvalues)

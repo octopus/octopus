@@ -41,14 +41,13 @@ program oct_convert
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
+  use restart_oct_m
   use spectrum_oct_m
   use string_oct_m
   use system_oct_m
-  use restart_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
-  use multicomm_oct_m
 
   implicit none
 
@@ -671,7 +670,7 @@ contains
         call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, c_start + 1, c_start + time_steps + 1, & 
                                   kick%time, dt, tdrho_b)
         call spectrum_fourier_transform(spectrum%method, spectrum%transform, spectrum%noise, &
-              c_start + 1, c_start + time_steps + 1, kick%time, dt, tdrho_b, e_start + 1, e_end + 1, &
+              c_start + 1, c_start + time_steps + 1, kick%time, dt, tdrho_b, min_energy, max_energy, &
               spectrum%energy_step, wdrho_b)
         call batch_end(tdrho_b)
         call batch_end(wdrho_b)

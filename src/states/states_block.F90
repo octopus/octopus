@@ -25,7 +25,6 @@
 
 module states_block_oct_m
   use batch_oct_m
-  use comm_oct_m
   use global_oct_m
   use lalg_basic_oct_m
   use math_oct_m
@@ -34,7 +33,6 @@ module states_block_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use mpi_debug_oct_m
   use mpi_lib_oct_m
   use multicomm_oct_m
   use profiling_oct_m

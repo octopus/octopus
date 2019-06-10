@@ -20,7 +20,6 @@
 
 module density_oct_m
   use accel_oct_m
-  use blas_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use iso_c_binding
@@ -28,17 +27,14 @@ module density_oct_m
   use derivatives_oct_m
   use global_oct_m
   use grid_oct_m
-  use io_oct_m
   use kpoints_oct_m
-  use loct_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use multigrid_oct_m
   use multicomm_oct_m
-  use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
-  use mpi_lib_oct_m
+  use mpi_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
@@ -46,10 +42,6 @@ module density_oct_m
   use states_dim_oct_m
   use symmetrizer_oct_m
   use types_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
-  use utils_oct_m
-  use varinfo_oct_m
 
   implicit none
 
@@ -68,7 +60,6 @@ module density_oct_m
 
   type density_calc_t
     FLOAT,                pointer :: density(:, :)
-    FLOAT,                pointer :: Imdensity(:, :)
     type(states_t),       pointer :: st
     type(grid_t),         pointer :: gr
     type(accel_mem_t)            :: buff_density
@@ -78,12 +69,11 @@ module density_oct_m
 
 contains
   
-  subroutine density_calc_init(this, st, gr, density, Imdensity)
+  subroutine density_calc_init(this, st, gr, density)
     type(density_calc_t),           intent(out)   :: this
     type(states_t),       target,   intent(in)    :: st
     type(grid_t),         target,   intent(in)    :: gr
     FLOAT,                target,   intent(out)   :: density(:, :)
-    FLOAT, optional,      target,   intent(out)   :: Imdensity(:, :)
 
     logical :: correct_size
 
@@ -94,13 +84,6 @@ contains
 
     this%density => density
     this%density = M_ZERO
-
-    if(present(Imdensity)) then
-      this%Imdensity => Imdensity
-      this%Imdensity = M_ZERO
-    else 
-      nullify(this%Imdensity)
-    end if      
 
     this%packed = .false.
 
@@ -133,12 +116,12 @@ contains
   subroutine density_calc_accumulate(this, ik, psib)
     type(density_calc_t),         intent(inout) :: this
     integer,                      intent(in)    :: ik
-    type(batch_t),                intent(inout) :: psib
+    type(batch_t),                intent(in)    :: psib
 
     integer :: ist, ip, ispin
     FLOAT   :: nrm
     CMPLX   :: term, psi1, psi2
-    CMPLX, allocatable :: psi(:), fpsi(:)
+    CMPLX, allocatable :: psi(:), fpsi(:), zpsi(:, :)
     FLOAT, allocatable :: weight(:), sqpsi(:)
     type(profile_t), save :: prof
     integer            :: wgsize
@@ -254,13 +237,16 @@ contains
 
       ! in this case wavefunctions are always complex
       ASSERT(.not. this%gr%have_fine_mesh)
-      call batch_sync(psib)
+
+      SAFE_ALLOCATE(zpsi(1:this%gr%mesh%np, 1:this%st%d%dim))
 
       do ist = 1, psib%nst
+        call batch_get_state(psib, ist, this%gr%mesh%np, zpsi)
+        
         do ip = 1, this%gr%fine%mesh%np
-
-          psi1 = psib%states(ist)%zpsi(ip, 1)
-          psi2 = psib%states(ist)%zpsi(ip, 2)
+          
+          psi1 = zpsi(ip, 1)
+          psi2 = zpsi(ip, 2)
 
           this%density(ip, 1) = this%density(ip, 1) + weight(ist)*(real(psi1, REAL_PRECISION)**2 + aimag(psi1)**2)
           this%density(ip, 2) = this%density(ip, 2) + weight(ist)*(real(psi2, REAL_PRECISION)**2 + aimag(psi2)**2)
@@ -271,6 +257,8 @@ contains
 
         end do
       end do
+
+      SAFE_DEALLOCATE_A(zpsi)
       
     end if
 
@@ -351,9 +339,9 @@ contains
   ! ---------------------------------------------------------
   !> Computes the density from the orbitals in st. 
   subroutine density_calc(st, gr, density)
-    type(states_t),          intent(inout)  :: st
-    type(grid_t),            intent(in)     :: gr
-    FLOAT,                   intent(out)    :: density(:, :)
+    type(states_t),          intent(in)  :: st
+    type(grid_t),            intent(in)  :: gr
+    FLOAT,                   intent(out) :: density(:, :)
 
     integer :: ik, ib
     type(density_calc_t) :: dens_calc
@@ -383,9 +371,10 @@ contains
     type(multicomm_t), intent(in)    :: mc
     integer,           intent(in)    :: n
 
-    integer :: ist, ik, ib, nblock
+    integer :: ist, istep, ik, ib, nblock, st_min
+    integer :: nodeto, nodefr, nsend, nreceiv
     type(states_t) :: staux
-    CMPLX, allocatable :: psi(:, :, :)
+    CMPLX, allocatable :: psi(:, :, :), rec_buffer(:,:)
     type(batch_t)  :: psib
     type(density_calc_t) :: dens_calc
 #ifdef HAVE_MPI
@@ -400,7 +389,7 @@ contains
       call messages_fatal(2)
     end if
 
-    ASSERT(.not. st%parallel_in_states)
+    ASSERT(states_are_complex(st))
 
     if(.not.associated(st%frozen_rho)) then
       SAFE_ALLOCATE(st%frozen_rho(1:gr%mesh%np, 1:st%d%nspin))
@@ -409,15 +398,16 @@ contains
     call density_calc_init(dens_calc, st, gr, st%frozen_rho)
 
     do ik = st%d%kpt%start, st%d%kpt%end
-      if(n < st%st_start .or. n > st%st_end) cycle
+      if(n < st%st_start) cycle
 
       do ib =  st%group%block_start, st%group%block_end
+        !We can use the full batch 
         if(states_block_max(st, ib) <= n) then
 
           call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
           if(states_block_max(st, ib) == n) exit
 
-        else 
+        else !Here we only use a part of this batch 
 
           nblock = n - states_block_min(st, ib) + 1
 
@@ -450,55 +440,66 @@ contains
     call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim, 1))
-    
-#if defined(HAVE_MPI) 
+    SAFE_ALLOCATE(rec_buffer(1:gr%mesh%np, 1:st%d%dim))
 
     if(staux%parallel_in_states) then
+#if defined(HAVE_MPI) 
+
       do ik = st%d%kpt%start, st%d%kpt%end
+        !We cound how many states we have to send, and how many we  will receive
+        nsend = 0
         do ist = staux%st_start, staux%st_end
-          if(ist <= n) cycle
-          if(.not.state_is_local(st, ist-n)) then
+          if(ist > n) nsend = nsend + 1
+        end do
+        nreceiv = st%st_end-st%st_start+1
 
-            call states_get_state(staux, gr%mesh, ist, ik, psi(:, :, 1))
+        st_min = min(max(staux%st_start-n, 1),st%st_start)
+ 
+        do ist = st_min, st%st_end
+          nodeto = -1
+          nodefr = -1
+          if(nsend > 0 .and. ist+n <= staux%st_end) nodeto = st%node(ist)
+          if(nreceiv > 0 .and. ist >= st%st_start) nodefr = staux%node(ist+n)
 
-            ! I think this can cause a deadlock. XA
-            call MPI_Send(psi(1, 1, 1), gr%mesh%np_part*st%d%dim, MPI_CMPLX, staux%node(ist), ist, &
-              st%mpi_grp%comm, mpi_err)
-
-            call MPI_Recv(psi(1, 1, 1), gr%mesh%np_part*st%d%dim, MPI_CMPLX, st%node(ist - n), &
-              ist, st%mpi_grp%comm, status, mpi_err)
-
-            call states_set_state(st, gr%mesh, ist - n, ik, psi(:, :, 1))
-            
+          !Local copy
+          if(nsend >0 .and. nreceiv>0 .and. nodeto == nodefr .and. nodefr == st%mpi_grp%rank) then
+            call states_get_state(staux, gr%mesh, ist+n, ik, psi(:, :, 1))
+            call states_set_state(st, gr%mesh, ist, ik, psi(:, :, 1))            
+            nsend = nsend -1
+            nreceiv= nreceiv-1
           else
-            call states_get_state(staux, gr%mesh, ist, ik, psi(:, :, 1))
-            call states_set_state(st, gr%mesh, ist - n, ik, psi(:, :, 1))
+            if(nsend > 0 .and. nodeto > -1 .and. nodeto /= st%mpi_grp%rank) then
+              call states_get_state(staux, gr%mesh, ist+n, ik, psi(:, :, 1))
+              call MPI_Send(psi(1, 1, 1), gr%mesh%np*st%d%dim, MPI_CMPLX, nodeto, ist, &
+                    st%mpi_grp%comm, mpi_err)
+              nsend = nsend -1
+            end if          
+
+            if(nreceiv > 0 .and. nodefr > -1 .and. nodefr /= st%mpi_grp%rank) then
+              call MPI_Recv(rec_buffer(1, 1), gr%mesh%np*st%d%dim, MPI_CMPLX, nodefr, &
+                 ist, st%mpi_grp%comm, status, mpi_err)
+              call states_set_state(st, gr%mesh, ist, ik, rec_buffer(:, :))
+              nreceiv= nreceiv-1
+            end if
           end if
-   
         end do
       end do
-   else
-     do ik = st%d%kpt%start, st%d%kpt%end
-       do ist = staux%st_start, staux%st_end
-         if(ist <= n) cycle
-         call states_get_state(staux, gr%mesh, ist, ik, psi(:, :, 1))
-         call states_set_state(st, gr%mesh, ist - n, ik, psi(:, :, 1))
-       end do
-     end do
-   end if
 
-#else
-
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
-        call states_get_state(staux, gr%mesh, ist + n, ik, psi(:, :, 1))
-        call states_set_state(st, gr%mesh, ist, ik, psi(:, :, 1))
-      end do
-    end do
-
+      ! Add a barrier to ensure that the process are synchronized
+      call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
+   
+    else
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ist = st%st_start, st%st_end
+          call states_get_state(staux, gr%mesh, ist + n, ik, psi(:, :, 1))
+          call states_set_state(st, gr%mesh, ist, ik, psi(:, :, 1))
+        end do
+      end do
+    end if
 
     SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(rec_buffer)
     
     ! Change the smearing method by fixing the occupations to 
     ! that of the ground-state such that the unfrozen states inherit 

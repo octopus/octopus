@@ -19,7 +19,7 @@
 ! --------------------------------------------------------------------------
 subroutine X(pert_apply_batch)(this, gr, geo, hm, ik, f_in, f_out)
   type(pert_t),         intent(in)    :: this
-  type(grid_t),         intent(inout) :: gr
+  type(grid_t),         intent(in)    :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(inout) :: hm
   integer,              intent(in)    :: ik
@@ -81,8 +81,6 @@ contains
       ASSERT(.false.)
 
     end select
-
-    call batch_pack_was_modified(f_out)
 
   end subroutine electric
   
@@ -395,7 +393,7 @@ end subroutine X(ionic_perturbation)
 ! --------------------------------------------------------------------------
 subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   type(pert_t),         intent(in)    :: this
-  type(grid_t),         intent(inout) :: gr
+  type(grid_t),         intent(in)    :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(inout) :: hm
   integer,              intent(in)    :: ik
@@ -681,7 +679,7 @@ end subroutine X(pert_apply_order_2)
 
 ! --------------------------------------------------------------------------
 subroutine X(ionic_perturbation_order_2) (gr, geo, hm, ik, f_in, f_out, iatom, idir, jdir)
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(inout) :: hm
   integer,             intent(in)    :: ik
@@ -741,7 +739,7 @@ end subroutine X(ionic_perturbation_order_2)
 
 ! --------------------------------------------------------------------------
 subroutine X(ionic_pert_matrix_elements_2)(gr, geo, hm, ik, st, vib, factor, matrix)
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(inout) :: hm
   integer,             intent(in)    :: ik
@@ -816,7 +814,7 @@ end subroutine X(ionic_pert_matrix_elements_2)
 !! ways.
 subroutine X(pert_expectation_density) (this, gr, geo, hm, st, psia, psib, density, pert_order)
   type(pert_t),         intent(in)    :: this
-  type(grid_t),         intent(inout) :: gr
+  type(grid_t),         intent(in)    :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(inout) :: hm
   type(states_t),       intent(in)    :: st
@@ -866,7 +864,7 @@ end subroutine X(pert_expectation_density)
 ! --------------------------------------------------------------------------
 R_TYPE function X(pert_expectation_value) (this, gr, geo, hm, st, psia, psib, pert_order) result(expval)
   type(pert_t),         intent(in)    :: this
-  type(grid_t),         intent(inout) :: gr
+  type(grid_t),         intent(in)    :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(inout) :: hm
   type(states_t),       intent(in)    :: st
@@ -910,7 +908,7 @@ end function X(pert_expectation_value)
 
 R_TYPE function X(pert_states_expectation_value)(this, gr, geo, hm, st, pert_order) result(expval)
   type(pert_t),         intent(in)    :: this
-  type(grid_t),         intent(inout) :: gr
+  type(grid_t),         intent(in)    :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(inout) :: hm
   type(states_t),       intent(in)    :: st

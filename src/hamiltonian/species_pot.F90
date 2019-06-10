@@ -21,21 +21,14 @@
 module species_pot_oct_m
   use atom_oct_m
   use curvilinear_oct_m
-  use double_grid_oct_m
-  use geometry_oct_m
   use global_oct_m
-  use grid_oct_m
-  use io_oct_m
   use io_function_oct_m
-  use loct_math_oct_m
-  use math_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use ps_oct_m
   use root_solver_oct_m
@@ -45,7 +38,6 @@ module species_pot_oct_m
   use submesh_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
   use volume_oct_m
 
   implicit none
@@ -486,7 +478,7 @@ contains
     FLOAT,                intent(inout) :: drho(:, :, :) !< (mesh%np, spin_channels, dim)
 
     integer :: isp, ip, icell, idir
-    FLOAT :: rr, pos(1:MAX_DIM), range
+    FLOAT :: rr, pos(1:MAX_DIM), range, spline
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
     type(periodic_copy_t) :: pp
@@ -520,10 +512,12 @@ contains
             call mesh_r(mesh, ip, rr, origin = pos)
             rr = max(rr, r_small)
 
-            do idir = 1, mesh%sb%dim
-              do isp = 1, spin_channels
-                if(rr >= spline_range_max(ps%density_der(isp))) cycle
-                drho(ip, isp, idir) = drho(ip, isp, idir) - spline_eval(ps%density_der(isp), rr)*(mesh%x(ip, idir)-pos(idir))/rr
+            do isp = 1, spin_channels
+              if(rr >= spline_range_max(ps%density_der(isp))) cycle
+              spline = spline_eval(ps%density_der(isp), rr)
+
+              do idir = 1, mesh%sb%dim
+                drho(ip, isp, idir) = drho(ip, isp, idir) - spline*(mesh%x(ip, idir)-pos(idir))/rr
               end do
            end do
           end do
@@ -828,7 +822,7 @@ contains
     type(mesh_t),            intent(in)  :: mesh
     FLOAT,                   intent(out) :: rho_core_grad(:,:)
 
-    FLOAT :: center(MAX_DIM), rr
+    FLOAT :: center(MAX_DIM), rr, spline
     integer :: icell, ip, idir
     type(periodic_copy_t) :: pp
     type(ps_t), pointer :: ps
@@ -839,20 +833,23 @@ contains
     if(species_is_ps(species)) then
       ps => species_ps(species)
       rho_core_grad = M_ZERO
-      call periodic_copy_init(pp, mesh%sb, pos, range = spline_cutoff_radius(ps%core_der, ps%projectors_sphere_threshold))
-      do icell = 1, periodic_copy_num(pp)
-        center(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
-        do ip = 1, mesh%np
-          call mesh_r(mesh, ip, rr, origin = center)
-          rr = max(rr, r_small)
-
-          do idir = 1, mesh%sb%dim
+      if(ps_has_nlcc(ps)) then
+        call periodic_copy_init(pp, mesh%sb, pos, range = spline_cutoff_radius(ps%core_der, ps%projectors_sphere_threshold))
+        do icell = 1, periodic_copy_num(pp)
+          center(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
+          do ip = 1, mesh%np
+            call mesh_r(mesh, ip, rr, origin = center)
+            rr = max(rr, r_small)
             if(rr >= spline_range_max(ps%core_der)) cycle
-              rho_core_grad(ip, idir) = rho_core_grad(ip, idir) - spline_eval(ps%core_der, rr)*(mesh%x(ip, idir)-center(idir))/rr
+            spline = spline_eval(ps%core_der, rr)
+
+            do idir = 1, mesh%sb%dim
+              rho_core_grad(ip, idir) = rho_core_grad(ip, idir) - spline*(mesh%x(ip, idir)-center(idir))/rr
+            end do
           end do
         end do
-      end do
-      call periodic_copy_end(pp)
+        call periodic_copy_end(pp)
+      end if
     else
       rho_core_grad = M_ZERO
     end if

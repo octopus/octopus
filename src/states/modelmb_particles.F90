@@ -23,10 +23,8 @@
 module modelmb_particles_oct_m
   use global_oct_m
   use grid_oct_m
-  use hypercube_oct_m
   use loct_pointer_oct_m
   use parser_oct_m
-  use mesh_oct_m
   use messages_oct_m
   use profiling_oct_m
 

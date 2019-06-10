@@ -26,48 +26,27 @@ module loct_math_oct_m
   public ::                    &
     loct_gamma,                &
     loct_incomplete_gamma,     &
-    loct_hypergeometric,       &
-    loct_asinh,                &
     loct_erf,                  &
     loct_erfc,                 &
     loct_ylm,                  &
     loct_bessel,               &
-    loct_bessel_In,            &
+    loct_bessel_in,            &
     loct_bessel_j0,            &
     loct_bessel_j1,            &
     loct_bessel_k0,            &
     loct_bessel_k1,            &
     loct_sph_bessel,           &
     loct_legendre_sphplm,      &
-    loct_sine_integral,        &
     loct_sf_laguerre_n,        &
     loct_ran_init,             &
     loct_ran_end,              &
     loct_ran_gaussian,         &
     loct_ran_flat,             &
     loct_fft_optimize,         &
-    loct_numerical_derivative, &
     loct_combination_init,     &
     loct_combination_end,      &
     loct_combination_next,     &
     loct_get_combination
-
-  ! ---------------------------------------------------------
-  !> Numerical derivative.
-  interface loct_numerical_derivative
-    subroutine oct_numerical_derivative(x, h, result, abserr, f)
-      implicit none
-      real(8), intent(in)  :: x, h
-      real(8), intent(out) :: result, abserr
-      interface
-        subroutine f(x, fx)
-          implicit none
-          real(8), intent(in)    :: x
-          real(8), intent(inout) :: fx
-        end subroutine f
-      end interface
-    end subroutine oct_numerical_derivative
-  end interface loct_numerical_derivative
 
 
   ! ---------------------------------------------------------
@@ -89,15 +68,6 @@ module loct_math_oct_m
     end function oct_incomplete_gamma
     module procedure oct_incomplete_gamma4
   end interface loct_incomplete_gamma
-
-  interface loct_hypergeometric
-    function oct_hypergeometric(a, b, x)
-      implicit none
-      real(8) :: oct_hypergeometric
-      real(8), intent(in) :: a, b, x
-    end function oct_hypergeometric
-    module procedure oct_hypergeometric4
-  end interface loct_hypergeometric
 
   interface loct_bessel
     function oct_bessel(n, x)
@@ -165,15 +135,6 @@ module loct_math_oct_m
     module procedure oct_bessel_k14
   end interface loct_bessel_k1
 
-  interface loct_asinh
-    function oct_asinh(x)
-      implicit none
-      real(8) :: oct_asinh
-      real(8), intent(in) :: x
-    end function oct_asinh
-    module procedure oct_asinh4
-  end interface loct_asinh
-
   interface loct_erf
     function oct_erf(x)
       implicit none
@@ -201,15 +162,6 @@ module loct_math_oct_m
     end function oct_legendre_sphplm
     module procedure oct_legendre_sphplm4
   end interface loct_legendre_sphplm
-
-  interface loct_sine_integral
-    function oct_sine_integral(x)
-      implicit none
-      real(8) :: oct_sine_integral
-      real(8), intent(in) :: x
-    end function oct_sine_integral
-    module procedure oct_sine_integral4
-  end interface loct_sine_integral
 
   interface loct_sf_laguerre_n
     function oct_sf_laguerre_n(n, a, x)
@@ -341,13 +293,6 @@ contains
     oct_incomplete_gamma4 = real(oct_incomplete_gamma(real(a, kind = 8), real(x, kind=8)), kind=4)
   end function oct_incomplete_gamma4
 
-  real(4) function oct_hypergeometric4(a, b, x)
-    real(4), intent(in) :: a, b, x
-
-    oct_hypergeometric4 = real(oct_hypergeometric(real(a, kind = 8), real(b, kind = 8), real(x, kind = 8)), &
-      kind = 4)
-  end function oct_hypergeometric4
-
   real(4) function oct_bessel4(n, x)
     integer, intent(in) :: n
     real(4), intent(in) :: x
@@ -393,12 +338,6 @@ contains
     oct_bessel_k14 = real(oct_bessel_k1(real(x, kind=8)), kind=4)
   end function oct_bessel_k14
 
-  real(4) function oct_asinh4(x)
-    real(4), intent(in) :: x
-
-    oct_asinh4 = real(oct_asinh(real(x, kind=8)), kind=4)
-  end function oct_asinh4
-
   real(4) function oct_erf4(x)
     real(4), intent(in) :: x
 
@@ -417,12 +356,6 @@ contains
 
     oct_legendre_sphplm4 = real(oct_legendre_sphplm(l, m, real(x, kind=8)), kind=4)
   end function oct_legendre_sphplm4
-
-  real(4) function oct_sine_integral4(x)
-    real(4), intent(in)  :: x
-
-    oct_sine_integral4 = real(oct_sine_integral(real(x, kind=8)), kind=4)
-  end function oct_sine_integral4
 
   real(4) function oct_sf_laguerre_n4(n, a, x)
     integer, intent(in)  :: n

@@ -20,14 +20,11 @@
 
 module mesh_init_oct_m
   use checksum_interface_oct_m
-  use cube_oct_m
   use curvilinear_oct_m
   use geometry_oct_m
   use global_oct_m
   use hypercube_oct_m
   use index_oct_m
-  use io_oct_m
-  use loct_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_cube_map_oct_m
@@ -42,7 +39,6 @@ module mesh_init_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use stencil_oct_m
-  use subarray_oct_m
 
   implicit none
   
@@ -799,7 +795,7 @@ contains
     logical              :: use_topo, reorder, partition_print
     integer              :: ierr
 
-    logical :: read_partition, write_partition, has_virtual_partition = .false.
+    logical :: has_virtual_partition = .false.
     integer :: vsize !< 'virtual' partition size
     type(restart_t) :: restart_load, restart_dump
     
@@ -916,20 +912,16 @@ contains
       reorder = .true.
       call MPI_Graph_create(mpi_grp%comm, mpi_grp%size, gindex, gedges, reorder, graph_comm, mpi_err)
 
+      ! we have a new communicator
+      call mpi_grp_init(mesh%mpi_grp, graph_comm)
+
       SAFE_DEALLOCATE_A(nb)
       SAFE_DEALLOCATE_A(gindex)
       SAFE_DEALLOCATE_A(gedges)
 
-    else
-
-      call MPI_Comm_dup(mpi_grp%comm, graph_comm, mpi_err)
-
     end if
 
-    ! we have a new communicator
-    call mpi_grp_init(mesh%mpi_grp, graph_comm)
-
-    call vec_init(graph_comm, 0, mesh%np_global, mesh%np_part_global, mesh%idx, stencil,&
+    call vec_init(mesh%mpi_grp%comm, 0, mesh%np_global, mesh%np_part_global, mesh%idx, stencil,&
          mesh%sb%dim, mesh%sb%periodic_dim, mesh%inner_partition, mesh%bndry_partition, mesh%vp)
 
     ! check the number of ghost neighbours in parallel

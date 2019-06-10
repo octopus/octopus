@@ -23,18 +23,15 @@ module cube_oct_m
   use accel_oct_m
   use fft_oct_m
   use global_oct_m
-  use index_oct_m
   use io_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use multicomm_oct_m
   use nfft_oct_m
   use parser_oct_m
   use pfft_oct_m
   use pnfft_oct_m
   use profiling_oct_m
   use simul_box_oct_m
-  use varinfo_oct_m
 
   implicit none
   private

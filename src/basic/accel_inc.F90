@@ -65,7 +65,7 @@ subroutine X(accel_write_buffer_1)(this, size, data, offset)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_memcpy_htod(this%cuda_ptr, data(1), fsize, offset_)
+    call cuda_memcpy_htod(this%mem, data(1), fsize, offset_)
 #endif
     
     call profiling_count_transfers(size, data(1))
@@ -108,7 +108,7 @@ subroutine X(accel_write_buffer_2)(this, size, data, offset)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_memcpy_htod(this%cuda_ptr, data(1, 1), fsize, offset_)
+    call cuda_memcpy_htod(this%mem, data(1, 1), fsize, offset_)
 #endif
     
     call profiling_count_transfers(size, data(1, 1))
@@ -130,7 +130,9 @@ subroutine X(accel_write_buffer_3)(this, size, data, offset)
   integer,                optional, intent(in)    :: offset
 
   integer(8) :: fsize, offset_
+#ifdef HAVE_OPENCL
   integer :: ierr
+#endif
 
   PUSH_SUB(X(accel_write_buffer_3))
   call profiling_in(prof_write, "CL_WRITE_BUFFER")
@@ -149,7 +151,7 @@ subroutine X(accel_write_buffer_3)(this, size, data, offset)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueWriteBuffer")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_memcpy_htod(this%cuda_ptr, data(1, 1, 1), fsize, offset_)
+    call cuda_memcpy_htod(this%mem, data(1, 1, 1), fsize, offset_)
 #endif
     
     call profiling_count_transfers(size, data(1, 1, 1))
@@ -192,7 +194,7 @@ subroutine X(accel_read_buffer_1)(this, size, data, offset)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueReadBuffer")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_memcpy_dtoh(this%cuda_ptr, data(1), fsize, offset_)
+    call cuda_memcpy_dtoh(this%mem, data(1), fsize, offset_)
 #endif
     
     call profiling_count_transfers(size, data(1))
@@ -235,7 +237,7 @@ subroutine X(accel_read_buffer_2)(this, size, data, offset)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueReadBuffer")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_memcpy_dtoh(this%cuda_ptr, data(1, 1), fsize, offset_)
+    call cuda_memcpy_dtoh(this%mem, data(1, 1), fsize, offset_)
 #endif
     
     call profiling_count_transfers(size, data(1, 1))
@@ -278,7 +280,7 @@ subroutine X(accel_read_buffer_3)(this, size, data, offset)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueReadBuffer")
 #endif
 #ifdef HAVE_CUDA
-    call cuda_memcpy_dtoh(this%cuda_ptr, data(1, 1, 1), fsize, offset_)
+    call cuda_memcpy_dtoh(this%mem, data(1, 1, 1), fsize, offset_)
 #endif
     
     call profiling_count_transfers(size, data(1, 1, 1))

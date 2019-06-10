@@ -20,7 +20,6 @@
 #include "global.h"
 
 module casida_oct_m
-  use global_oct_m
   use batch_oct_m
   use calc_mode_par_oct_m
   use comm_oct_m
@@ -28,6 +27,7 @@ module casida_oct_m
   use excited_states_oct_m
   use forces_oct_m
   use gauss_legendre_oct_m
+  use global_oct_m
   use hamiltonian_oct_m
   use io_oct_m
   use io_function_oct_m
@@ -37,9 +37,12 @@ module casida_oct_m
   use linear_response_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
+  use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use parser_oct_m
   use pert_oct_m
+  use phonons_lr_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -54,10 +57,7 @@ module casida_oct_m
   use unit_system_oct_m
   use utils_oct_m
   use v_ks_oct_m
-  use phonons_lr_oct_m
   use xc_oct_m
-  use messages_oct_m  
-  use multicomm_oct_m
 
   implicit none
 

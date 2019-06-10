@@ -32,7 +32,6 @@ module loewdin_oct_m
   use orbitalset_oct_m
   use profiling_oct_m
   use simul_box_oct_m
-  use types_oct_m  
  
   implicit none
 

@@ -21,7 +21,6 @@
 module states_restart_oct_m
   use global_oct_m
   use grid_oct_m
-  use io_oct_m
   use io_function_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
@@ -35,17 +34,12 @@ module states_restart_oct_m
   use multigrid_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use par_vec_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use states_oct_m
-  use states_calc_oct_m
   use states_dim_oct_m
-  use states_io_oct_m
   use string_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
   use types_oct_m
 
   implicit none
@@ -65,7 +59,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine states_look_and_load(restart, st, gr, is_complex)
-    type(restart_t),            intent(inout) :: restart
+    type(restart_t),            intent(in)    :: restart
     type(states_t),     target, intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
     logical,          optional, intent(in)    :: is_complex
@@ -152,7 +146,7 @@ contains
     integer :: iunit_wfns, iunit_occs, iunit_states
     integer :: err, err2(2), ik, idir, ist, idim, itot
     integer :: root(1:P_STRATEGY_MAX)
-    character(len=MAX_PATH_LEN) :: filename, filename1
+    character(len=MAX_PATH_LEN) :: filename
     character(len=300) :: lines(3)
     logical :: lr_wfns_are_associated, should_write, verbose_
     FLOAT   :: kpoint(1:MAX_DIM)
@@ -752,7 +746,6 @@ contains
     character(len=80) :: filename
     character(len=300) :: lines(2)
     FLOAT, pointer :: rho(:), rho_fine(:)
-    CMPLX, pointer :: zrho(:), zrho_fine(:)
 
     PUSH_SUB(states_dump_rho)
 

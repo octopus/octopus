@@ -23,16 +23,14 @@
 #endif
 
 module poisson_fmm_oct_m
-  use boundaries_oct_m 
-  use iso_c_binding
+  use boundaries_oct_m
   use cube_oct_m
   use derivatives_oct_m
   use fft_oct_m
-  use geometry_oct_m
   use global_oct_m
   use index_oct_m
-  use io_oct_m
   use io_function_oct_m
+  use iso_c_binding
   use lalg_basic_oct_m
   use loct_math_oct_m
   use math_oct_m
@@ -48,7 +46,6 @@ module poisson_fmm_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use stencil_star_oct_m
-  use varinfo_oct_m
 
 #ifdef HAVE_LIBFM
   use fcs_module

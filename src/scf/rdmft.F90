@@ -20,23 +20,17 @@
 
 module rdmft_oct_m
   use density_oct_m
-  use eigensolver_oct_m
-  use energy_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use hamiltonian_base_oct_m
   use lalg_adv_oct_m
-  use lalg_basic_oct_m
-  use loct_oct_m
-  use loct_math_oct_m 
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use minimizer_oct_m
   use output_oct_m
-  use output_me_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -70,7 +64,7 @@ module rdmft_oct_m
     FLOAT    :: mu, occsum, qtot, scale_f, toler, conv_ener, maxFO
     FLOAT, allocatable   :: eone(:), eone_int(:,:), twoint(:), hartree(:,:), exchange(:,:), evalues(:)   
     FLOAT, allocatable   :: vecnat(:,:), Coul(:,:,:), Exch(:,:,:) 
-    integer, allocatable :: i_index(:), j_index(:), k_index(:), l_index(:) 
+    integer, allocatable :: i_index(:,:), j_index(:,:), k_index(:,:), l_index(:,:) 
 
     !>shortcuts
     type(states_t),   pointer :: st
@@ -335,10 +329,10 @@ contains
         rdm%n_twoint = st%nst*(st%nst+1)*(st%nst**2+st%nst+2)/8 
         SAFE_ALLOCATE(rdm%eone_int(1:st%nst, 1:st%nst))
         SAFE_ALLOCATE(rdm%twoint(1:rdm%n_twoint))
-        SAFE_ALLOCATE(rdm%i_index(1:rdm%n_twoint))
-        SAFE_ALLOCATE(rdm%j_index(1:rdm%n_twoint))
-        SAFE_ALLOCATE(rdm%k_index(1:rdm%n_twoint))
-        SAFE_ALLOCATE(rdm%l_index(1:rdm%n_twoint))
+        SAFE_ALLOCATE(rdm%i_index(1:2,1:rdm%n_twoint))
+        SAFE_ALLOCATE(rdm%j_index(1:2,1:rdm%n_twoint))
+        SAFE_ALLOCATE(rdm%k_index(1:2,1:rdm%n_twoint))
+        SAFE_ALLOCATE(rdm%l_index(1:2,1:rdm%n_twoint))
         SAFE_ALLOCATE(rdm%vecnat(1:st%nst, 1:st%nst))
         SAFE_ALLOCATE(rdm%Coul(1:rdm%st%nst, 1:rdm%st%nst, 1:rdm%st%nst))
         SAFE_ALLOCATE(rdm%Exch(1:rdm%st%nst, 1:rdm%st%nst, 1:rdm%st%nst))
@@ -464,7 +458,7 @@ contains
     st%occ = occin
     
     if((rdm%iter == 1).and. (rdm%do_basis.eqv. .true.))  then 
-      call dstates_me_two_body(gr, st, rdm%n_twoint, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
+      call dstates_me_two_body(gr, st, 1, st%nst, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
       call rdm_integrals(rdm,hm,st,gr) 
       call sum_integrals(rdm)
     end if
@@ -838,7 +832,7 @@ contains
     integer,              intent(in)    :: ist !number of state
     FLOAT,                intent(out)   :: E_deriv(1:gr%mesh%np_part)
 
-    integer            :: jst, ii, ip
+    integer            :: ii, ip
     FLOAT              :: E_deriv_corr, norm, projection
     FLOAT, allocatable :: rho_spin(:,:), rho(:), pot(:)
     FLOAT, allocatable :: hpsi1(:,:), hpsi2(:,:), dpsi(:,:), dpsi2(:,:)
@@ -1144,7 +1138,7 @@ contains
   ! calculates the derivatives of the energy terms with respect to the occupation numbers
   subroutine rdm_derivatives(rdm, hm, st, gr)
     type(rdm_t),          intent(inout) :: rdm
-    type(hamiltonian_t),  intent(in)    :: hm 
+    type(hamiltonian_t),  intent(in)    :: hm
     type(states_t),       intent(in)    :: st 
     type(grid_t),         intent(inout) :: gr
     
@@ -1246,7 +1240,7 @@ contains
   !calculates the one electron integrals in the basis of the initial orbitals
   subroutine rdm_integrals(rdm, hm, st, gr)
     type(rdm_t),          intent(inout) :: rdm
-    type(hamiltonian_t),  intent(in)    :: hm 
+    type(hamiltonian_t),  intent(in)    :: hm
     type(states_t),       intent(in)    :: st 
     type(grid_t),         intent(inout) :: gr
     
@@ -1311,10 +1305,10 @@ contains
 
     do icount = 1, rdm%n_twoint
 
-      ist = rdm%i_index(icount) 
-      jst = rdm%j_index(icount) 
-      kst = rdm%k_index(icount) 
-      lst = rdm%l_index(icount) 
+      ist = rdm%i_index(1,icount) 
+      jst = rdm%j_index(1,icount) 
+      kst = rdm%k_index(1,icount) 
+      lst = rdm%l_index(1,icount) 
 
       two_int = rdm%twoint(icount)
          

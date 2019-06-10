@@ -19,10 +19,8 @@
 
 module lda_u_io_oct_m
   use atomic_orbital_oct_m
-  use comm_oct_m
   use geometry_oct_m
   use global_oct_m
-  use grid_oct_m
   use io_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
@@ -35,7 +33,6 @@ module lda_u_io_oct_m
   use restart_oct_m
   use species_oct_m
   use states_oct_m
-  use types_oct_m  
   use unit_oct_m
   use unit_system_oct_m
  

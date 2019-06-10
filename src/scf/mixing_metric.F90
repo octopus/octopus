@@ -83,24 +83,24 @@ contains
 
         select case(inb)
         case(0)
-          !          op%w_re(is, ip) = CNST(1.0) + weight/CNST(8.0)
-          op%w_re(is, ip) = CNST(0.125)*(weight + CNST(7.0))
+          !          op%w(is, ip) = CNST(1.0) + weight/CNST(8.0)
+          op%w(is, ip) = CNST(0.125)*(weight + CNST(7.0))
         case(1)
-          !          op%w_re(is, ip) = weight/CNST(16.0)
-          op%w_re(is, ip) = CNST(0.0625)*(weight - CNST(1.0))
+          !          op%w(is, ip) = weight/CNST(16.0)
+          op%w(is, ip) = CNST(0.0625)*(weight - CNST(1.0))
         case(2)
-          !          op%w_re(is, ip) = weight/CNST(32.0)
-          op%w_re(is, ip) = CNST(0.03125)*(weight - CNST(1.0))
+          !          op%w(is, ip) = weight/CNST(32.0)
+          op%w(is, ip) = CNST(0.03125)*(weight - CNST(1.0))
         case(3)
-          !          op%w_re(is, ip) = weight/CNST(64.0)
-          op%w_re(is, ip) = CNST(0.015625)*(weight - CNST(1.0))
+          !          op%w(is, ip) = weight/CNST(64.0)
+          op%w(is, ip) = CNST(0.015625)*(weight - CNST(1.0))
         case default
           ASSERT(.false.)
         end select
         
       end do
 
-      print*, "COSA", ip, sum(op%w_re(1:op%stencil%size, ip))
+      print*, "COSA", ip, sum(op%w(1:op%stencil%size, ip))
 
     end do
     

@@ -17,8 +17,12 @@
 !!
 
   subroutine opt_control_nlopt_func(val, n, x, grad, need_gradient, f_data)
-    integer :: n, need_gradient
-    FLOAT :: val, x(n), grad(n), f_data
+    real(c_double), intent(out) :: val
+    integer(c_int), intent(in)  :: n
+    real(c_double), intent(in)  :: x(*)
+    real(c_double), intent(out) :: grad(*)
+    integer(c_int), intent(in)  :: need_gradient
+    type(c_ptr),    intent(in)  :: f_data
 
     integer :: getgrad
     PUSH_SUB(opt_control_nlopt_func)

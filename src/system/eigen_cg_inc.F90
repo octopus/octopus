@@ -18,34 +18,34 @@
 
 ! ---------------------------------------------------------
 !> conjugate-gradients method.
-subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, diff, shift, orthogonalize_to_all, &
-  conjugate_direction, additional_terms)
-  type(grid_t),           intent(in)    :: gr
-  type(states_t),         intent(inout) :: st
-  type(hamiltonian_t),    intent(in)    :: hm
-  type(preconditioner_t), intent(in)    :: pre
-  type(xc_t),             intent(in)    :: xc
-  FLOAT,                  intent(in)    :: tol
-  integer,                intent(inout) :: niter
-  integer,                intent(inout) :: converged
-  integer,                intent(in)    :: ik
-  FLOAT,        optional, intent(out)   :: diff(:) !< (1:st%nst)
-  FLOAT,pointer, optional, intent(in)   :: shift(:,:)
-  logical, optional,      intent(in)    :: orthogonalize_to_all
-  integer, optional,      intent(in)    :: conjugate_direction
-  logical, optional,      intent(in)    :: additional_terms
+subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, diff, orthogonalize_to_all, &
+  conjugate_direction, additional_terms, energy_change_threshold, shift)
+  type(grid_t),             intent(in)    :: gr
+  type(states_t),           intent(inout) :: st
+  type(hamiltonian_t),      intent(in)    :: hm
+  type(preconditioner_t),   intent(in)    :: pre
+  type(xc_t),               intent(in)    :: xc
+  FLOAT,                    intent(in)    :: tol
+  integer,                  intent(inout) :: niter
+  integer,                  intent(inout) :: converged
+  integer,                  intent(in)    :: ik
+  FLOAT,                    intent(out)   :: diff(:) !< (1:st%nst)
+  logical,                  intent(in)    :: orthogonalize_to_all
+  integer,                  intent(in)    :: conjugate_direction
+  logical,                  intent(in)    :: additional_terms
+  FLOAT,                    intent(in)    :: energy_change_threshold
+  FLOAT, pointer, optional, intent(in)   :: shift(:,:)
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:)
   R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
-  FLOAT    :: cg0, e0, res, norm, alpha, beta, dot, old_res, old_energy, first_delta_e
+  FLOAT    :: cg0, e0, res, alpha, beta, dot, old_res, old_energy, first_delta_e
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
   FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :)
   FLOAT    :: integral_hartree, integral_xc, tmp
-  integer  :: ist, iter, maxter, idim, ip, jst, im, isp, ixc
+  integer  :: ist, iter, maxter, idim, ip, isp, ixc
   R_TYPE   :: sb(3)
   logical  :: fold_ ! use folded spectrum operator (H-shift)^2
-  logical  :: orthogonalize_to_all_, additional_terms_, add_xc_term
-  integer  :: conjugate_direction_
+  logical  :: add_xc_term
 
   PUSH_SUB(X(eigensolver_cg2))
 
@@ -57,12 +57,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     ASSERT(associated(shift))
   end if
 
-  ! get the optional arguments for CG options
-  orthogonalize_to_all_ = optional_default(orthogonalize_to_all, .false.)
-  conjugate_direction_ = optional_default(conjugate_direction, int(OPTION__CGDIRECTION__FLETCHER, 4))
   ! do we add the XC term? needs derivatives of the XC functional
-  additional_terms_ = optional_default(additional_terms, .false.)
-  add_xc_term = additional_terms_
+  add_xc_term = additional_terms
   if(st%d%ispin == UNPOLARIZED) then
     isp = 1
   else
@@ -85,29 +81,28 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   niter = 0
   old_res = 10*tol
 
-  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(h_psi(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(  psi(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(   cg(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(    g(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(   g0(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(g_prev(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE( h_cg(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(  chi(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(omega(1:gr%mesh%np_part, 1:st%d%dim))
-  if(st%d%ispin == UNPOLARIZED) then
-    SAFE_ALLOCATE(fxc(1:gr%mesh%np, 1:1, 1:1))
-  else if(st%d%ispin == SPIN_POLARIZED) then
-    SAFE_ALLOCATE(fxc(1:gr%mesh%np, 1:2, 1:2))
+  SAFE_ALLOCATE(   g0(1:gr%mesh%np,      1:st%d%dim))
+  SAFE_ALLOCATE(g_prev(1:gr%mesh%np,     1:st%d%dim))
+  if(additional_terms) then
+    SAFE_ALLOCATE(  chi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(omega(1:gr%mesh%np_part, 1:st%d%dim))
+    if(st%d%ispin == UNPOLARIZED) then
+      SAFE_ALLOCATE(fxc(1:gr%mesh%np, 1:1, 1:1))
+    else if(st%d%ispin == SPIN_POLARIZED) then
+      SAFE_ALLOCATE(fxc(1:gr%mesh%np, 1:2, 1:2))
+    end if
   end if
   if(fold_) then
-    SAFE_ALLOCATE( psi2(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE( psi2(1:gr%mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(h_psi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE( h_cg(1:gr%mesh%np_part, 1:st%d%dim))
+  else
+    SAFE_ALLOCATE(h_psi(1:gr%mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE( h_cg(1:gr%mesh%np, 1:st%d%dim))
   end if
-  h_psi = R_TOTYPE(M_ZERO)
-  cg    = R_TOTYPE(M_ZERO)
-  g     = R_TOTYPE(M_ZERO)
-  g0    = R_TOTYPE(M_ZERO)
-  h_cg  = R_TOTYPE(M_ZERO)
-  g_prev = R_TOTYPE(M_ZERO)
 
   ! get derivative once here -> the density does not change in the loop
   if(add_xc_term) then
@@ -116,7 +111,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   end if
 
   ! Set the diff to zero, since it is intent(out)
-  if(present(diff)) diff(1:st%nst) = M_ZERO
+  diff(1:st%nst) = M_ZERO
 
   ! Start of main loop, which runs over all the eigenvectors searched
   ASSERT(converged >= 0)
@@ -124,12 +119,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   ! The steps in this loop follow closely the algorithm from
   ! Payne et al. (1992), Rev. Mod. Phys. 64, 4, section V.B
   eigenfunction_loop : do ist = converged + 1, st%nst
-    h_psi = R_TOTYPE(M_ZERO)
-    cg    = R_TOTYPE(M_ZERO)
-    g     = R_TOTYPE(M_ZERO)
-    g0    = R_TOTYPE(M_ZERO)
-    h_cg  = R_TOTYPE(M_ZERO)
-    g_prev = R_TOTYPE(M_ZERO)
+    gg1   = R_TOTYPE(M_ZERO)
 
     call states_get_state(st, gr%mesh, ist, ik, psi)
 
@@ -142,7 +132,10 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     if(fold_) then
       call X(hamiltonian_apply)(hm, gr%der, h_psi, psi2, ist, ik)
       ! h_psi = (H-shift)^2 psi
-      h_psi = psi2 - M_TWO*shift(ist,ik)*h_psi + shift(ist,ik)**2*psi
+      do idim = 1, st%d%dim
+        h_psi(1:gr%mesh%np, idim) = psi2(1:gr%mesh%np, idim) - M_TWO*shift(ist,ik)*h_psi(1:gr%mesh%np, idim) &
+                                  + shift(ist,ik)**2*psi(1:gr%mesh%np, idim)
+      end do
     end if
 
     ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
@@ -153,7 +146,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     ! Starts iteration for this band
     iter_loop: do iter = 1, maxter
       ! need to save g from previous iteration for Polak-Ribiere method
-      if(conjugate_direction_ == OPTION__CGDIRECTION__POLAK) then
+      if(conjugate_direction == OPTION__CGDIRECTION__POLAK) then
         if(iter /= 1) then
           g_prev = g
         else
@@ -179,7 +172,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, g0)
       ! orthogonalize against previous or all states, depending on the optional argument orthogonalize_to_all
       call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., &
-        against_all=orthogonalize_to_all_)
+        against_all=orthogonalize_to_all)
 
       do idim = 1, st%d%dim
         call lalg_axpy(gr%mesh%np, -dot, psi(:, idim), g0(:, idim))
@@ -187,13 +180,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       ! dot products needed for conjugate gradient
       gg = X(mf_dotp) (gr%mesh, st%d%dim, g0, g, reduce = .false.)
-      if(conjugate_direction_ == OPTION__CGDIRECTION__POLAK) then
+      if(iter /= 1 .and. conjugate_direction == OPTION__CGDIRECTION__POLAK) then
         ! only needed for Polak-Ribiere
-        if(iter /= 1) then
-          gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g0, g_prev, reduce = .false.)
-        else
-          gg1 = M_ZERO
-        end if
+        gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g0, g_prev, reduce = .false.)
       end if
 
       if(gr%mesh%parallel_in_domains) then
@@ -223,7 +212,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
           call lalg_copy(gr%mesh%np, g0(:, idim), cg(:, idim))
         end do
       else
-        select case (conjugate_direction_)
+        select case (conjugate_direction)
         case (OPTION__CGDIRECTION__FLETCHER)
           ! PTA eq. 5.20
           gamma = gg/gg0        ! (Fletcher-Reeves)
@@ -247,10 +236,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         ! the corresponding coefficients are then divided by cg0
         norma =  X(mf_dotp) (gr%mesh, st%d%dim, psi, cg)
         do idim = 1, st%d%dim
-          forall (ip = 1:gr%mesh%np)
-            cg(ip, idim) = cg(ip, idim) - norma*psi(ip, idim)
-          end forall
+          call lalg_axpy(gr%mesh%np, -norma, psi(1:gr%mesh%np, idim), cg(:, idim))
         end do
+        
 
         call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 2*R_MUL))
       end if
@@ -259,9 +247,12 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       call X(hamiltonian_apply)(hm, gr%der, cg, h_cg, ist, ik)
 
       if(fold_) then
-         call X(hamiltonian_apply)(hm, gr%der, h_cg, psi2, ist, ik)
-         ! h_psi = (H-shift)^2 psi
-         h_cg = psi2 - M_TWO*shift(ist,ik)*h_cg + shift(ist,ik)**2*cg
+        call X(hamiltonian_apply)(hm, gr%der, h_cg, psi2, ist, ik)
+        ! h_psi = (H-shift)^2 psi
+        do idim = 1, st%d%dim
+          h_cg(1:gr%mesh%np, idim) = psi2(1:gr%mesh%np, idim) - M_TWO*shift(ist,ik)*h_cg(1:gr%mesh%np, idim) &
+                                 + shift(ist,ik)**2*cg(1:gr%mesh%np, idim)
+        end do
       end if
 
       ! Line minimization (eq. 5.23 to 5.38)
@@ -287,7 +278,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       e0 = st%eigenval(ist, ik)
       alpha = M_TWO * R_REAL(e0 - b0)
 
-      if (additional_terms_) then
+      if (additional_terms) then
         ! more terms here, see PTA92 eqs 5.31, 5.32, 5.33, 5.36
         ! Hartree term
         tmp = M_TWO/cg0
@@ -359,7 +350,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       if(iter > 1) then
         ! This criterion is discussed in Sec. V.B.6
-        if(abs(st%eigenval(ist, ik) - old_energy) < first_delta_e*CNST(1e-1)) then
+        if(abs(st%eigenval(ist, ik) - old_energy) < first_delta_e*energy_change_threshold) then
           exit iter_loop
         end if
       else
@@ -396,9 +387,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
     niter = niter + iter + 1
 
-    if(present(diff)) then
-      diff(ist) = res
-    end if
+    diff(ist) = res
 
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
       call loct_progress_bar(st%lnst*(ik - 1) +  ist, st%lnst*st%d%kpt%nlocal)
@@ -416,9 +405,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   SAFE_DEALLOCATE_A(chi)
   SAFE_DEALLOCATE_A(omega)
   SAFE_DEALLOCATE_A(fxc)
-  if(fold_) then
-    SAFE_DEALLOCATE_A(psi2)
-  end if
+  SAFE_DEALLOCATE_A(psi2)
   POP_SUB(X(eigensolver_cg2))
 end subroutine X(eigensolver_cg2)
 
