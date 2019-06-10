@@ -142,14 +142,14 @@ contains
       case(BATCH_NOT_PACKED)
         if(states_are_real(this%st)) then
           do ist = 1, psib%nst
-            if(weight(ist) <= M_EPSILON) cycle
+            if(abs(weight(ist)) <= M_EPSILON) cycle
             forall(ip = 1:this%gr%mesh%np)
               this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%states(ist)%dpsi(ip, 1)**2
             end forall
           end do
         else
           do ist = 1, psib%nst
-            if(weight(ist) <= M_EPSILON) cycle
+            if(abs(weight(ist)) <= M_EPSILON) cycle
             forall(ip = 1:this%gr%mesh%np)
               this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
                 (real(psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)**2 + aimag(psib%states(ist)%zpsi(ip, 1))**2)
@@ -209,7 +209,7 @@ contains
 
       do ist = 1, psib%nst
 
-        if(weight(ist) <= M_EPSILON) cycle
+        if(abs(weight(ist)) <= M_EPSILON) cycle
 
         call batch_get_state(psib, ist, this%gr%mesh%np, psi)
 
@@ -246,7 +246,7 @@ contains
 
 
       do ist = 1, psib%nst
-        if(weight(ist) <= M_EPSILON) cycle
+        if(abs(weight(ist)) <= M_EPSILON) cycle
 
         call batch_get_state(psib, ist, this%gr%mesh%np, zpsi)
         

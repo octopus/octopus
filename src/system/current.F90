@@ -148,7 +148,7 @@ contains
         do ist = states_block_min(st, ib), states_block_max(st, ib)
 
           ww = st%d%kweights(ik)*st%occ(ist, ik)
-          if(ww <= M_EPSILON) cycle
+          if(abs(ww) <= M_EPSILON) cycle
 
           do idim = 1, st%d%dim
             ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
@@ -225,7 +225,7 @@ contains
       do ii = 1, psib%nst
         ist = states_block_min(st, ib) + ii - 1
         ww = st%d%kweights(ik)*st%occ(ist, ik)
-        if(ww <= M_EPSILON) cycle
+        if(abs(ww) <= M_EPSILON) cycle
 
         if(batch_is_packed(psib)) then
           do idir = 1, der%mesh%sb%dim
@@ -428,7 +428,7 @@ contains
           do ist = st%st_start, st%st_end
 
             ww = st%d%kweights(ik)*st%occ(ist, ik)
-            if(ww <= M_EPSILON) cycle
+            if(abs(ww) <= M_EPSILON) cycle
 
             call states_get_state(st, der%mesh, ist, ik, psi)
 
@@ -691,7 +691,7 @@ contains
       ispin = states_dim_get_spin_index(st%d, ik)
       do ist = st%st_start, st%st_end
 
-        if(st%d%kweights(ik)*st%occ(ist, ik) <= M_EPSILON) cycle
+        if(abs(st%d%kweights(ik)*st%occ(ist, ik)) <= M_EPSILON) cycle
         
         call states_get_state(st, der%mesh, ist, ik, psi)
         do idim = 1, st%d%dim

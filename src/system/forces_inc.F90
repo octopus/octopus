@@ -224,7 +224,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl,
 
         do ist = minst, maxst
 
-          if(st%occ(ist, iq) <= M_EPSILON) cycle
+          if(abs(st%occ(ist, iq)) <= M_EPSILON) cycle
 
           ! get the state and its gradient out of the batches (for the moment)
           do idim = 1, st%d%dim
@@ -440,7 +440,7 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
     do ist = st%st_start, st%st_end
 
       ff = st%d%kweights(iq) * st%occ(ist, iq) * M_TWO
-      if(ff <= M_EPSILON) cycle
+      if(abs(ff) <= M_EPSILON) cycle
 
       call states_get_state(st, gr%mesh, ist, iq, psi)
 
@@ -559,7 +559,7 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv, lda_u_lev
     do ist = st%st_start, st%st_end
 
       ff = st%d%kweights(iq) * st%occ(ist, iq)
-      if(ff <= M_EPSILON) cycle
+      if(abs(ff) <= M_EPSILON) cycle
 
       do idim = 1, st%d%dim
 
