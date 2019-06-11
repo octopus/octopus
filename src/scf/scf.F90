@@ -581,7 +581,7 @@ contains
           message(1) = 'Unable to read density. Density will be calculated from states.'
           call messages_warning(1)
         else
-          if (.not. (restart_has_flag(restart_load, RESTART_FLAG_VHXC))) &
+          if (.not. restart_has_flag(restart_load, RESTART_FLAG_VHXC) .and. ks%oep%level /= 5) &
             call v_ks_calc(ks, hm, st, geo)
         end if
       end if
@@ -597,8 +597,8 @@ contains
             do is = 1, st%d%nspin
               ks%oep%vxc(:,is) = hm%vhxc(:,is) - hm%vhartree(:)
             end do
+            call v_ks_calc(ks, hm, st, geo)
           end if
-          call v_ks_calc(ks, hm, st, geo)
         end if
       end if
 
