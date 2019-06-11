@@ -581,8 +581,12 @@ contains
           message(1) = 'Unable to read density. Density will be calculated from states.'
           call messages_warning(1)
         else
-          if (.not. restart_has_flag(restart_load, RESTART_FLAG_VHXC) .and. ks%oep%level /= 5) &
+          if(bitand(ks%xc_family, XC_FAMILY_OEP) == 0) then
             call v_ks_calc(ks, hm, st, geo)
+          else
+            if (.not. restart_has_flag(restart_load, RESTART_FLAG_VHXC) .and. ks%oep%level /= 5) &
+              call v_ks_calc(ks, hm, st, geo)
+          end if
         end if
       end if
 
@@ -593,11 +597,13 @@ contains
           call messages_warning(1)
         else
           call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
-          if (ks%oep%level == 5) then
-            do is = 1, st%d%nspin
-              ks%oep%vxc(1:gr%mesh%np, is) = hm%vhxc(1:gr%mesh%np, is) - hm%vhartree(1:gr%mesh%np)
-            end do
-            call v_ks_calc(ks, hm, st, geo)
+          if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+            if (ks%oep%level == 5) then
+              do is = 1, st%d%nspin
+                ks%oep%vxc(1:gr%mesh%np, is) = hm%vhxc(1:gr%mesh%np, is) - hm%vhartree(1:gr%mesh%np)
+              end do
+              call v_ks_calc(ks, hm, st, geo)
+            end if
           end if
         end if
       end if
@@ -1344,9 +1350,11 @@ contains
           label = 'force_diff'
           write(iunit, '(1x,a)', advance = 'no') label
         end if
-        if (ks%oep%level == 5) then
-          label = 'OEP norm2ss'
-          write(iunit, '(1x,a)', advance = 'no') label
+        if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+          if (ks%oep%level == 5) then
+            label = 'OEP norm2ss'
+            write(iunit, '(1x,a)', advance = 'no') label
+          end if
         end if
         write(iunit,'(a)') ''
         call io_close(iunit)
@@ -1374,9 +1382,10 @@ contains
         if (scf%conv_abs_force > M_ZERO) then
           write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%force, scf%abs_force)
         end if
-        if (ks%oep%level == 5) then
-          write(iunit, '(es13.5)', advance = 'no') ks%oep%norm2ss
-        end if 
+        if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+          if (ks%oep%level == 5) &
+            write(iunit, '(es13.5)', advance = 'no') ks%oep%norm2ss
+        end if
         write(iunit,'(a)') ''
         call io_close(iunit)
       end if
