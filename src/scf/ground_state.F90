@@ -112,7 +112,7 @@ contains
       if(sys%ks%theory_level == RDMFT) then
         call messages_write("RDMFT calculations cannot be started FromScratch")
         call messages_new_line()
-        call messages_write("Run a DFT calculation with XCFunctional = oep_x first")
+        call messages_write("Run a calculation for independent particles first")
         call messages_fatal()
       else
         call lcao_run(sys, hm, lmm_r = scfv%lmm_r)
