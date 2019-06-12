@@ -29,8 +29,8 @@
 !! number, i.e. the table is usually slightly larger than the user requests.
 
 module iihash_oct_m
-  use ialist_oct_m
   use global_oct_m
+  use iso_c_binding
   use messages_oct_m
   use profiling_oct_m
 
@@ -42,13 +42,10 @@ module iihash_oct_m
     iihash_init,   &
     iihash_end,    &
     iihash_insert, &
-    iihash_lookup, &
-    get_next_prime
+    iihash_lookup
 
   type iihash_t
-    private
-    integer                 :: size
-    type(ialist_t), pointer :: keyval(:)
+    type(c_ptr) :: map
   end type iihash_t
   
 contains
@@ -63,23 +60,20 @@ contains
     type(iihash_t), intent(out) :: h
     integer,        intent(in)  :: size
 
-    integer :: prime_size, i, min_size
-
+    interface
+      subroutine iihash_map_init(map)
+        use iso_c_binding
+        implicit none
+        
+        type(c_ptr), intent(inout) :: map
+      end subroutine iihash_map_init
+    end interface
+    
+    
     PUSH_SUB(iihash_init)
 
-    if(size < 2) then
-      min_size = 3
-    else
-      min_size = size
-    end if
-
-    prime_size = get_next_prime(min_size)
-    SAFE_ALLOCATE(h%keyval(0:prime_size-1))
-    do i = 0, prime_size-1
-      call ialist_init(h%keyval(i))
-    end do
-    h%size = prime_size
-
+    call iihash_map_init(h%map)
+    
     POP_SUB(iihash_init)
   end subroutine iihash_init
 
@@ -88,16 +82,20 @@ contains
   !> Free a hash table.
   subroutine iihash_end(h)
     type(iihash_t), intent(inout) :: h
-
-    integer :: i
-
+    
+    interface
+      subroutine iihash_map_end(map)
+        use iso_c_binding
+        implicit none
+        
+        type(c_ptr), intent(inout) :: map
+      end subroutine iihash_map_end
+    end interface
+    
     PUSH_SUB(iihash_end)
-
-    do i = 0, h%size-1
-      call ialist_end(h%keyval(i))
-    end do
-    SAFE_DEALLOCATE_P(h%keyval)
-
+    
+    call iihash_map_end(h%map)
+    
     POP_SUB(iihash_end)
   end subroutine iihash_end
 
@@ -109,12 +107,18 @@ contains
     integer,           intent(in)    :: key
     integer,           intent(in)    :: val
 
-    integer :: k
-
-    ASSERT(key >= 0)
-
-    k = hash(h, key)
-    call ialist_insert(key, val, h%keyval(k))
+    interface
+      subroutine iihash_map_insert(map, key, val)
+        use iso_c_binding
+        implicit none
+        
+        type(c_ptr), intent(inout) :: map
+        integer,     intent(in)    :: key
+        integer,     intent(in)    :: val
+      end subroutine iihash_map_insert
+    end interface
+    
+    call iihash_map_insert(h%map, key, val)
   end subroutine iihash_insert
 
 
@@ -128,91 +132,30 @@ contains
     integer,           intent(in)  :: key
     logical, optional, intent(out) :: found
 
-    integer :: k
+    interface
+      subroutine iihash_map_lookup(map, key, ifound, val)
+        use iso_c_binding
+        implicit none
+        
+        type(c_ptr), intent(in)    :: map
+        integer,     intent(in)    :: key
+        integer,     intent(out)   :: ifound
+        integer,     intent(out)   :: val
+      end subroutine iihash_map_lookup
+    end interface
 
-    k = hash(h, key)
+    integer :: ifound, val
 
-    iihash_lookup = ialist_lookup(key, h%keyval(k), found)
+    call iihash_map_lookup(h%map, key, ifound, val)
+
+    found = (ifound == 1)
+
+    if(found) iihash_lookup = val
+
   end function iihash_lookup
 
-
-  ! ---------------------------------------------------------
-  !> The hash function.
-  integer function hash(h, key)
-    type(iihash_t), intent(in) :: h
-    integer,        intent(in) :: key
-
-    hash = mod(key, h%size)
-  end function hash
-
-
-  ! ---------------------------------------------------------
-  !> Returns the smallest prime number that is greater than k
-  !! using the Sieve of Eratosthenes.
-  integer function get_next_prime(k)
-    integer, intent(in) :: k
-
-    integer          :: size, i, j
-    logical, pointer :: primes(:), primes1(:)
-    logical          :: found, searching
-
-    found     = .false.
-    searching = .true.
-    size      = k+k/4
-
-    SAFE_ALLOCATE(primes(1:size))
-
-    primes    = .true.
-    primes(1) = .false.
-
-    j = 1
-
-    do while(searching)
-      call sieve()
-
-      ! Search for prime greater or equal k.
-      do i = k, size
-        if(primes(i)) then
-          found = .true.
-          exit
-        end if
-      end do
-
-      ! If no suitable prime could be found, enlarge
-      ! the array and continue sieving.
-      if(found) then
-        searching = .false.
-        get_next_prime = i
-      else
-        SAFE_ALLOCATE(primes1(1:size+size/4))
-        primes1(1:size)             = primes
-        primes1(size+1:size+size/4) = .true.
-        size                        = size+size/4
-        SAFE_DEALLOCATE_P(primes)
-        primes => primes1
-      end if
-    end do
-    SAFE_DEALLOCATE_P(primes)
-
-  contains
-
-    ! This routine implements the Sieve of Eratosthenes.
-    subroutine sieve()
-      do while(j < size)
-        do while(.not.primes(j).and.j < size)
-          j = j + 1
-        end do
-        i = 2*j
-        do while(i <= size)
-          primes(i) = .false.
-          i = i + j
-        end do
-        j = j + 1
-      end do
-    end subroutine sieve
-  end function get_next_prime
 end module iihash_oct_m
-
+  
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8

@@ -53,7 +53,6 @@ basic_f_srcs =                                 \
 	basic/distributed.F90                  \
 	basic/global.F90                       \
 	basic/hardware.F90                     \
-	basic/ialist.F90                       \
 	basic/iihash.F90                       \
 	basic/io_binary_f.F90                  \
 	basic/io_csv_f.F90                     \
@@ -84,6 +83,7 @@ basic_c_srcs =                                 \
 	basic/cublas.cc                        \
 	basic/cuda_low.cc                      \
 	basic/getopt_f.c                       \
+	basic/iihash_low.cc                    \
 	basic/io_binary.c                      \
 	basic/io_csv.c                         \
 	basic/oct_f.c                          \
