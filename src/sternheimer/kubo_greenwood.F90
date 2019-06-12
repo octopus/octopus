@@ -56,8 +56,8 @@ contains
     CMPLX, allocatable :: tensor(:, :, :), therm_tensor(:,:,:)
     CMPLX, allocatable :: k11(:), k12(:), k21(:), k22(:)
     CMPLX :: prod
-    FLOAT :: eigi, eigj, occi, occj, df, width, dfreq, maxfreq, ww
-    FLOAT :: sum_occ, sum_cond1, sum_cond2
+    FLOAT :: eigi, eigj, occi, occj, df, width, dfreq, maxfreq, minfreq, ww
+    FLOAT :: sum_occ, sum_cond1, sum_cond2, sum_cond, sum_k
     type(mesh_t), pointer :: mesh
     character(len=80) :: dirname, str_tmp
 
@@ -93,6 +93,19 @@ contains
       !%End
 
       call parse_variable('KuboGreenwoodMaxEnergy', CNST(2.0),maxfreq , units_inp%energy)
+
+
+
+      !%Variable KuboGreenwoodMinEnergy
+      !%Type float
+      !%Default 0.001
+      !%Section Linear Response::Kubo Greenwood
+      !%Description
+      !% Minimum energy for Kubo Greenwood
+      !% In units of energy. 
+      !%End
+
+      call parse_variable('KuboGreenwoodMinEnergy', CNST(0.001),minfreq , units_inp%energy)
 
       !%Variable KuboGreenwoodEnergySpacing
       !%Type float
@@ -139,8 +152,8 @@ contains
     sum_occ = CNST(0.0)
     sum_cond1 = CNST(0.0)
     sum_cond2 = CNST(0.0)
-    !write(*,*)"kpt", sys%st%d%kpt%start, sys%st%d%kpt%end
-    !write(*,*)"number states", sys%st%nst
+    sum_cond = CNST(0.0)
+    sum_k = CNST(0.0)
     
     
     do iqn = sys%st%d%kpt%start, sys%st%d%kpt%end
@@ -163,7 +176,6 @@ contains
         
         do jst = 1, sys%st%nst
           ! get the state j and calculate the gradient
-!          call states_get_state(sys%st, mesh, ist, iqn, psij)
           call states_get_state(sys%st, mesh, jst, iqn, psij)
           do idim = 1, sys%st%d%dim
             call boundaries_set(sys%gr%der%boundaries, psij(:, idim))
@@ -179,18 +191,18 @@ contains
           occi = sys%st%occ(ist,iqn)
           occj = sys%st%occ(jst,iqn)
           if (abs(eigi-eigj) < CNST(1.0e-10)) then
-             !!!df = smear_step_function_der(sys%st%smear,eigi)
-             df = step_der(sys%st%smear,eigi)
+             df = smear_step_function_der(sys%st%smear,eigi)
+             !df = step_der(sys%st%smear,eigi)
           else
              df = (occj - occi)/(eigj - eigi)
           endif
-          
+
           do idir = 1, mesh%sb%dim
              do jdir = 1, mesh%sb%dim
                 prod = zmf_dotp(mesh, sys%st%d%dim, psii, gpsij(:, idir, :))*zmf_dotp(mesh, sys%st%d%dim, psij, gpsii(:, jdir, :))
                 do ifreq = 1, nfreq
                   tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - sys%st%d%kweights(iqn)*(CNST(-2.0)/mesh%sb%rcell_volume)* &
-                        df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*(eigi-eigj - (ifreq-1)*dfreq))/ ((eigi-eigj - (ifreq-1)*dfreq)**2 + width**2/CNST(4.0))                   
+                        df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*(eigi-eigj - (minfreq + (ifreq-1)*dfreq)))/ ((eigi-eigj - (minfreq + (ifreq-1)*dfreq))**2 + width**2/CNST(4.0))                   
                 end do
              end do !loop over jdir
           end do !loop over idir
@@ -198,31 +210,20 @@ contains
     end do !loop over states i
 
     !begin sum rule
-!    do ifreq=1, nfreq
-!       do idir = 1, mesh%sb%dim
-!          sum_cond1 = sum_cond1 + CNST(2.0)*mesh%sb%rcell_volume*sys%st%d%kweights(iqn)*real(tensor(idir,idir,ifreq),REAL_PRECISION)/(CNST(3.0)*M_PI*sum_occ)
-!       end do
-    !    end do
-    do ifreq=2,nfreq-2,2
+
+    do ifreq=1,nfreq
        sum_cond1 = sum_cond1 + (tensor(1,1,ifreq) + tensor(2,2,ifreq) + tensor(3,3,ifreq))
     enddo
 
-    do ifreq=1,nfreq-1,2
-       sum_cond2 = sum_cond2 + (tensor(1,1,ifreq) + tensor(2,2,ifreq) + tensor(3,3,ifreq))
-    enddo
+    sum_cond1 = CNST(2.0) * mesh%sb%rcell_volume * sum_cond1 * sys%st%d%kweights(iqn)* dfreq / (M_PI* sum_occ)
 
-    sum_cond1 = CNST(2.0)*sum_cond1 + CNST(4.0)*sum_cond2
-    sum_cond1 = sum_cond1 + (tensor(1,1,0) + tensor(2,2,0) + tensor(3,3,0))
-    sum_cond1 = (sum_cond1 + (tensor(1,1,nfreq) + tensor(2,2,nfreq) + tensor(3,3,nfreq)))*dfreq/CNST(3.0)
-
-    sum_cond1 = CNST(2.0) * mesh%sb%rcell_volume * sum_cond1 * sys%st%d%kweights(iqn) / (M_PI * sum_occ) 
-    
     !end sum rule
-    
+    sum_k = sum_k + sys%st%d%kweights(iqn)
    end do !kpt loop
 
    write(*,*)"sum rule for occupations::: ", sum_occ
    write(*,*)"sum rule for conductivity:: ", sum_cond1
+   write(*,*)"sum of k weights ", sum_k 
    !output
    write(dirname, '(a, a)') 'kubo_greenwood' 
    call io_mkdir(trim(dirname))
@@ -238,7 +239,7 @@ contains
     write(unit = iunit, iostat = ierr, fmt = '(a)') &
       '###########################################################################################################################'
     do ifreq = 1, nfreq
-       ww = (ifreq-1)*dfreq
+       ww = minfreq + (ifreq-1)*dfreq
        write(unit = iunit, iostat = ierr, fmt = '(7e20.10)') ww, &
             tensor(1,1,ifreq), tensor(2,2,ifreq), tensor(3,3,ifreq) 
     end do
@@ -302,7 +303,10 @@ contains
     select case(this%method)
   
     case(SMEAR_FERMI_DIRAC)
-       stepf = M_ONE / (CNST(2.0) + exp(-xx) + exp(xx)) / dsmear
+       stepf = M_ONE / (exp(-xx) + M_ONE)
+       stepf = CNST(-1.0)*stepf*(stepf-CNST(1.0))/dsmear*CNST(2.0)
+       !stepf = M_ONE / (CNST(2.0) + exp(-xx) + exp(xx)) / dsmear
+       
      !  if (xx > maxarg) then
      !    stepf = M_ONE
      !  else if(xx > -maxarg) then
