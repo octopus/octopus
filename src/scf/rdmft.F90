@@ -200,7 +200,7 @@ contains
     else
       ! initialize eigensolver. No preconditioner for rdmft is implemented, so we disable it.
       call eigensolver_init(rdm%eigens, gr, st, ks%xc, disable_preconditioner=.true.)
-      if (rdm%eigens%additional_terms) call messages_not_implemented("CGAdditionalTerms with RDMFT.")
+      if (rdm%eigens%additional_terms) call messages_not_implemented("CG Additional Terms with RDMFT.")
     end if
 
     SAFE_ALLOCATE(rdm%eone(1:rdm%nst))
@@ -217,7 +217,7 @@ contains
     rdm%occsum = M_ZERO
     rdm%scale_f = CNST(1e-2)
     rdm%maxFO = M_ZERO
-    rdm%iter = 1
+    rdm%iter = 0
 
     POP_SUB(rdmft_init)
   end subroutine rdmft_init
@@ -268,7 +268,6 @@ contains
     type(states_t) :: states_save
     integer :: iter, icount, ip, ist, ierr, maxcount, iorb
     FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, rel_ener
-    FLOAT, allocatable :: stepsize(:)
     FLOAT, allocatable :: dpsi(:,:), dpsi2(:,:)
     logical :: conv, gs_run_
     character(len=MAX_PATH_LEN) :: dirname    
@@ -290,43 +289,47 @@ contains
     if(st%parallel_in_states) then
       call messages_not_implemented("RDMFT parallel in states")
     end if
-    
-    write(message(1),'(a,1x,f14.12)') 'Sum of occupation numbers', rdm%occsum
-    write(message(2),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy, energy + hm%ep%eii)
-    call messages_info(2)   
-    
-   
+
+    call messages_print_stress(stdout, 'RDMFT Calculation')
+    call messages_print_var_value(stdout, 'RDMBasis', rdm%do_basis)
+ 
     !set initial values
     energy_old = CNST(1.0e20)
     xpos = M_ZERO 
     xneg = M_ZERO
     energy = M_ZERO 
     if (.not. rdm%do_basis) then
-      !stepsize for steepest decent
-      SAFE_ALLOCATE(stepsize(1:st%nst))
-      stepsize = 0.1
-      maxcount = 1
+      maxcount = 1 !still needs to be checked
     else
       maxcount = 50
+      !precalculate matrix elements in basis
+      write(message(1),'(a)') 'Calculating Coulomb and exchange matrix elements in basis'
+      write(message(2),'(a)') '--this may take a while--'
+      call messages_info(2)
+
+      call dstates_me_two_body(gr, st, 1, st%nst, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
+      call rdm_integrals(rdm,hm,st,gr)
+      call sum_integrals(rdm)
     endif
-    
+
     ! Start the actual minimization, first step is minimization of occupation numbers
     ! Orbital minimization is according to Piris and Ugalde, Vol. 30, No. 13, J. Comput. Chem. (scf_orb) or
     ! using conjugated gradient (scf_orb_cg)
     do iter = 1, max_iter
-      ! occupation number minimization
+      rdm%iter = rdm%iter + 1
       write(message(1), '(a)') '**********************************************************************'
-      write(message(2),'(a, i4)') 'RDM Iteration:', iter
+      write(message(2),'(a, i4)') 'Iteration:', iter
       call messages_info(2)
+      ! occupation number optimization unless we are doing Hartree-Fock
       if (rdm%hf) then
         call scf_occ_NO(rdm, gr, hm, st, energy_occ)
       else
         call scf_occ(rdm, gr, hm, st, energy_occ)
       end if
-      ! Diagonalization of the generalized Fock matrix 
+      ! orbital optimization
       write(message(1), '(a)') 'Optimization of natural orbitals'
       call messages_info(1)
-      do icount = 1, maxcount !still under investigation how many iterations we need
+      do icount = 1, maxcount 
         if (rdm%do_basis) then
           call scf_orb(rdm, gr, st, hm, energy)
         else
@@ -347,18 +350,18 @@ contains
             rdm%scale_f = CNST(0.95)* rdm%scale_f 
           end if
         endif !rdm%do_basis
-        rdm%iter = rdm%iter + 1
       end do !icount
       xneg = M_ZERO
       xpos = M_ZERO
       
       rel_ener = abs(energy_occ-energy)/abs(energy)
 
-      write(message(1),'(a,es20.10)') 'Total energy orb', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
-      write(message(2),'(a,2x,es20.10)') 'Relative ', rel_ener
+      write(message(1),'(a,11x,es20.10)') 'Total energy:', units_from_atomic(units_out%energy,energy + hm%ep%eii) 
+      write(message(2),'(a,1x,es20.10)') 'Rel. energy difference:', rel_ener
       call messages_info(2)
+
       if (.not. rdm%hf .and. rdm%do_basis) then
-        write(message(1),'(a,5x,es20.10)') 'Max F0', rdm%maxFO
+        write(message(1),'(a,18x,es20.10)') 'Max F0', rdm%maxFO
         call messages_info(1)
       end if
 
@@ -405,6 +408,8 @@ contains
           ! calculate maxFO for cg-solver 
           if (.not. rdm%hf) then
             call calc_maxFO (hm, st, gr, rdm)
+            write(message(1),'(a,18x,es20.10)') 'Max F0:', rdm%maxFO
+            call messages_info(1)
           end if 
         endif
          
@@ -415,8 +420,6 @@ contains
         
       endif
 
-      
-    
       ! write output for iterations if requested
       if (outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
@@ -429,16 +432,8 @@ contains
     end do 
 
     if(conv) then 
-      ! output final information
-        !if (rdm%do_basis.eqv..false.) then
-        !call scf_orb(rdm, gr, geo, st, ks, hm, energy) !NH this call changes the energy again, needs to be replaced
-        !write(message(1),'(a,es15.5)')  'The maximum non diagonal element of the matrix F formed by the Lagrange multiplyers is ', &
-        !                                rdm%maxFO
-        !call messages_info(1)
-      !endif
-      write(message(1),'(a,i3,a)')  'The calculation converged after ',iter,' iterations'
-      write(message(2),'(a,es20.10)')  'The total energy is ', units_from_atomic(units_out%energy,energy + hm%ep%eii)
-      write(message(3),'(a,es15.5)') 'The maximal non-diagonal element of the Hermitian matrix F is ', rdm%maxFO
+      write(message(1),'(a,i3,a)')  'The calculation converged after ',rdm%iter,' iterations'
+      write(message(2),'(a,9x,es20.10)')  'The total energy is ', units_from_atomic(units_out%energy,energy + hm%ep%eii)
       call messages_info(3)
       if(gs_run_) then 
         call scf_write_static(STATIC_DIR, "info")
@@ -450,8 +445,6 @@ contains
       write(message(3),'(a,es15.5)') 'The maximal non-diagonal element of the Hermitian matrix F is ', rdm%maxFO
       call messages_info(3)
     end if
-
-    SAFE_DEALLOCATE_A(stepsize)
  
     POP_SUB(scf_rdmft) 
 
@@ -604,12 +597,6 @@ contains
     call set_occ_pinning(st)
     
     energy = M_ZERO
-    
-    if (rdm%iter == 1 .and. rdm%do_basis) then
-      call dstates_me_two_body(gr, st, 1, st%nst, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
-      call rdm_integrals(rdm, hm, st, gr)
-      call sum_integrals(rdm)
-    end if
 
     call rdm_derivatives(rdm, hm, st, gr)
 
@@ -689,12 +676,6 @@ contains
 
     st%occ = occin
     
-    if (rdm%iter == 1 .and. rdm%do_basis) then
-      call dstates_me_two_body(gr, st, 1, st%nst, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
-      call rdm_integrals(rdm, hm, st, gr)
-      call sum_integrals(rdm)
-    end if
-
     call rdm_derivatives(rdm, hm, st, gr)
 
     !finding the chemical potential mu such that the occupation numbers sum up to the number of electrons
@@ -780,8 +761,8 @@ contains
       call messages_info(1)
     end do
 
-    write(message(1),'(a,1x,f16.12)') 'Sum of occupation numbers', rdm%occsum
-    write(message(2),'(a,es20.10)') 'Total energy ', units_from_atomic(units_out%energy, energy + hm%ep%eii)
+    write(message(1),'(a,3x,f11.9)') 'Sum of occupation numbers', rdm%occsum
+    write(message(2),'(a,11x,es20.10)') 'Total energy ', units_from_atomic(units_out%energy, energy + hm%ep%eii)
     call messages_info(2)   
 
     SAFE_DEALLOCATE_A(occin)
