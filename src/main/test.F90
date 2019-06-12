@@ -476,7 +476,8 @@ contains
       call density_calc(sys%st, sys%gr, sys%st%rho)
     end do
 
-    write(message(1),'(a,i1,3x, f12.6)') "Norm density  ", dmf_nrm2(sys%gr%mesh, sys%st%rho(:,1))
+    write(message(1),'(a,3x, f12.6)') "Norm density  ", dmf_nrm2(sys%gr%mesh, sys%st%rho(:,1))
+    call messages_info(1)
 
     call states_deallocate_wfns(sys%st)
     call system_end(sys)
