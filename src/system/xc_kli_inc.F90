@@ -20,7 +20,7 @@
 ! ---------------------------------------------------------
 subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
   type(mesh_t),   intent(in)      :: mesh
-  type(grid_t),   intent(inout)   :: gr
+  type(grid_t),   intent(in)      :: gr
   type(hamiltonian_t), intent(in) :: hm
   type(states_t), intent(in)      :: st
   integer,        intent(in)      :: is
