@@ -311,8 +311,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine excited_states_output(excited_state, dirname)
-    type(excited_states_t), intent(inout) :: excited_state
-    character(len=*),       intent(in)    :: dirname
+    type(excited_states_t), intent(in) :: excited_state
+    character(len=*),       intent(in) :: dirname
 
     integer :: iunit, ipair
 

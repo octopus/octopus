@@ -114,7 +114,7 @@ contains
   ! ---------------------------------------------------------
   subroutine pes_init(pes, mesh, sb, st, save_iter, hm, max_iter, dt)
     type(pes_t),         intent(out)   :: pes
-    type(mesh_t),        intent(inout) :: mesh
+    type(mesh_t),        intent(in)    :: mesh
     type(simul_box_t),   intent(in)    :: sb
     type(states_t),      intent(in)    :: st
     integer,             intent(in)    :: save_iter
@@ -227,7 +227,7 @@ contains
     integer,          intent(in)    :: iter
     type(output_t),   intent(in)    :: outp
     FLOAT,            intent(in)    :: dt
-    type(grid_t),     intent(inout) :: gr
+    type(grid_t),     intent(in)    :: gr
     type(geometry_t), intent(in)    :: geo
 
     PUSH_SUB(pes_output)

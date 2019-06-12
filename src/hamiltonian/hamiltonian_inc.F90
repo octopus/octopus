@@ -275,7 +275,7 @@ end subroutine X(hamiltonian_apply)
 subroutine X(hamiltonian_apply_all) (hm, xc, der, st, hst)
   type(hamiltonian_t), intent(inout) :: hm
   type(xc_t),          intent(in)    :: xc
-  type(derivatives_t), intent(inout) :: der
+  type(derivatives_t), intent(in)    :: der
   type(states_t),      intent(inout) :: st
   type(states_t),      intent(inout) :: hst
 

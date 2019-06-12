@@ -94,7 +94,6 @@ module hamiltonian_oct_m
     zexchange_operator_single,       &
     dscdm_exchange_operator,         &
     zscdm_exchange_operator,         &
-    zhamiltonian_dervexternal,       &
     zhamiltonian_apply_atom,         &
     hamiltonian_dump_vhxc,           &
     hamiltonian_load_vhxc,           &
@@ -1006,14 +1005,14 @@ contains
       apply = .false.
     end if
 
-    if(associated(this%hm_base%phase) .and. accel_is_enabled()) then
+    if(associated(this%hm_base%phase) .and. .not. simul_box_is_periodic(mesh%sb) .and. accel_is_enabled()) then
       if(.not. warning_shown) then
         call messages_write('Cannot use CUDA or OpenCL as a phase is applied to the states.')
         call messages_warning()
       end if
       apply = .false.
     end if
-
+    
     if(mesh%use_curvilinear .and. accel_is_enabled()) then
       if(.not. warning_shown) then
         call messages_write('Cannot use CUDA or OpenCL as curvilinear coordinates are used.')
@@ -1034,81 +1033,15 @@ contains
 
   end function hamiltonian_apply_packed
 
-  ! -----------------------------------------------------------------
-  !> This routine computes the action of the derivative of the external potential
-  !! with respect to the nuclear positions. It is preliminary, and should be
-  !! recoded in a more efficient way.
-  subroutine zhamiltonian_dervexternal(hm, geo, gr, ia, dim, psi, dvpsi)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(geometry_t),    intent(in)  :: geo
-    type(grid_t),        intent(in)  :: gr
-    integer,             intent(in)  :: ia
-    integer,             intent(in)  :: dim
-    CMPLX,               intent(inout)  :: psi(:, :)
-    CMPLX,               intent(out) :: dvpsi(:, :, :)
-
-    CMPLX, allocatable :: dpsi(:, :, :), dvlocalpsi(:, :, :), vlocalpsi(:, :)
-    integer :: idim, j
-
-    PUSH_SUB(zhamiltonian_dervexternal)
-
-    SAFE_ALLOCATE(vlocalpsi(1:gr%mesh%np_part, 1:dim))
-    SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:gr%sb%dim, 1:dim))
-    SAFE_ALLOCATE(dvlocalpsi(1:gr%mesh%np_part, 1:gr%sb%dim, 1:dim))
-
-    dpsi = M_z0
-    dvlocalpsi = M_z0
-
-    do idim = 1, dim
-      call zderivatives_grad(gr%der, psi(:, idim), dpsi(:, :, idim))
-    end do
-    call zhamiltonian_apply_atom (hm, geo, gr, ia, psi, vlocalpsi)
-
-    do idim = 1, dim
-      call zderivatives_grad(gr%der, vlocalpsi(:, idim), dvlocalpsi(:, :, idim))
-    end do
-    
-    ! Various ways to do the same thing:
-    ! (1)
-    !    _SAFE_ALLOCATE(dvlocal(1:gr%mesh%np, 1:gr%sb%dim))
-    !    call dderivatives_grad(gr%der, vlocal, dvlocal)
-    !    do idim = 1, dim
-    !      do ip = 1, gr%mesh%np
-    !        call mesh_r(gr%mesh, ip, rr, coords = xx, origin = qa)
-    !        dvpsi(ip, idim, 1) = (xx(1) / sqrt( (xx(1)**2+M_ONE)**3 ) ) * psi(ip, idim)
-    !      end do
-    !    end do
-    !    _SAFE_DEALLOCATE_A(dvlocal)
-    !
-    ! (2)
-    !    do idim = 1, dim
-    !      do ip = 1, gr%mesh%np
-    !        dvpsi(ip, idim) = dvlocal(ip, 1) * psi(ip, idim)
-    !      end do
-    !    end do
-    !
-    ! (3)
-
-    do j = 1, gr%sb%dim
-      call zhamiltonian_apply_atom (hm, geo, gr, ia, dpsi(:, j, :), vlocalpsi)
-      dvpsi(:, :, j) = -vlocalpsi(:, :) + dvlocalpsi(:, j, :)
-    end do
-
-    SAFE_DEALLOCATE_A(vlocalpsi)
-    SAFE_DEALLOCATE_A(dpsi)
-    SAFE_DEALLOCATE_A(dvlocalpsi)
-    POP_SUB(zhamiltonian_dervexternal)
-  end subroutine zhamiltonian_dervexternal
-
 
   ! -----------------------------------------------------------------
   subroutine zhamiltonian_apply_atom (hm, geo, gr, ia, psi, vpsi)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(geometry_t),    intent(in)    :: geo
-    type(grid_t),        intent(in)    :: gr
-    integer,             intent(in)    :: ia
-    CMPLX,               intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
-    CMPLX,               intent(out)   :: vpsi(:,:) !< (gr%mesh%np, hm%d%dim)
+    type(hamiltonian_t), intent(in)  :: hm
+    type(geometry_t),    intent(in)  :: geo
+    type(grid_t),        intent(in)  :: gr
+    integer,             intent(in)  :: ia
+    CMPLX,               intent(in)  :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
+    CMPLX,               intent(out) :: vpsi(:,:) !< (gr%mesh%np, hm%d%dim)
 
     integer :: idim
     FLOAT, allocatable :: vlocal(:)

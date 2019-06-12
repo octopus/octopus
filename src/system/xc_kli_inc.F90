@@ -127,11 +127,13 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
   eigen_n = oep%eigen_n
 
   SAFE_ALLOCATE(v_bar_S(1:st%nst))
+  v_bar_S = M_ZERO
   do ist = st%st_start, st%st_end
     if(st%occ(ist, is) > M_EPSILON) then
-      v_bar_S(ist) = dmf_dotp(mesh, sqphi(:, 1, ist) , oep%vxc(:,1))
+      v_bar_S(ist) = dmf_dotp(mesh, sqphi(:, 1, ist) , oep%vxc(:,1), reduce = .false.)
     end if
   end do
+  if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, v_bar_S, dim = st%st_end) 
 
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then

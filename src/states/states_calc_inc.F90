@@ -284,7 +284,6 @@ contains
             call states_get_state(st, mesh, jst, ik, psij)
             aa(jst) = X(mf_dotp)(mesh, st%d%dim, psij, psii, reduce = .false.)
           end do
-
           if(mesh%parallel_in_domains .and. ist > 1) call comm_allreduce(mesh%mpi_grp%comm, aa, dim = ist - 1)
 
           ! subtract the projections
@@ -811,9 +810,9 @@ end function X(states_residue)
 !!
 ! ---------------------------------------------------------
 subroutine X(states_calc_momentum)(st, der, momentum)
-  type(states_t),      intent(inout) :: st
-  type(derivatives_t), intent(inout) :: der
-  FLOAT,               intent(out)   :: momentum(:,:,:)
+  type(states_t),      intent(in)  :: st
+  type(derivatives_t), intent(in)  :: der
+  FLOAT,               intent(out) :: momentum(:,:,:)
 
   integer             :: idim, ist, ik, idir
   CMPLX               :: expect_val_p
@@ -917,7 +916,7 @@ end subroutine X(states_calc_momentum)
 ! ---------------------------------------------------------
 subroutine X(states_angular_momentum)(st, gr, ll, l2)
   type(states_t),  intent(in)     :: st
-  type(grid_t),    intent(inout)  :: gr
+  type(grid_t),    intent(in)     :: gr
   FLOAT,           intent(out)    :: ll(:, :, :) !< (st%nst, st%d%nik, 1 or 3)
   FLOAT, optional, intent(out)    :: l2(:, :)    !< (st%nst, st%d%nik)
 
@@ -950,19 +949,28 @@ subroutine X(states_angular_momentum)(st, gr, ll, l2)
 #else
         call X(physics_op_L)(gr%der, psi, lpsi)
 
-        ll(ist, ik, 1) = ll(ist, ik, 1) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 1)))
+        ll(ist, ik, 1) = ll(ist, ik, 1) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 1), reduce = .false.))
         if(gr%mesh%sb%dim == 3) then
-          ll(ist, ik, 2) = ll(ist, ik, 2) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 2)))
-          ll(ist, ik, 3) = ll(ist, ik, 3) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 3)))
+          ll(ist, ik, 2) = ll(ist, ik, 2) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 2), reduce = .false.))
+          ll(ist, ik, 3) = ll(ist, ik, 3) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 3), reduce = .false.))
         end if
 #endif
         if(present(l2)) then
           call X(physics_op_L2)(gr%der, psi(:), lpsi(:, 1))
-          l2(ist, ik) = l2(ist, ik) + TOFLOAT(X(mf_dotp)(gr%mesh, psi(:), lpsi(:, 1)))
+          l2(ist, ik) = l2(ist, ik) + TOFLOAT(X(mf_dotp)(gr%mesh, psi(:), lpsi(:, 1), reduce = .false.))
         end if
       end do
     end do
   end do
+
+  if(gr%mesh%parallel_in_domains) then
+#if !defined(R_TREAL)
+    call comm_allreduce(gr%mesh%mpi_grp%comm,  ll)
+#endif
+    if(present(l2)) then
+      call comm_allreduce(gr%mesh%mpi_grp%comm,  l2)
+    end if
+  end if
 
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(lpsi)
@@ -989,8 +997,12 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
 
   dim = st1%d%dim
 
+  aa (:,:,:) = R_TOTYPE(M_ZERO)
+
   SAFE_ALLOCATE(psi1(1:mesh%np, 1:st1%d%dim))
   SAFE_ALLOCATE(psi2(1:mesh%np, 1:st1%d%dim))
+
+  aa(:, :, :) = M_ZERO
 
   do ik = st1%d%kpt%start, st1%d%kpt%end
 
@@ -1023,11 +1035,13 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
 
         do ist = st1%st_start, st1%st_end
           call states_get_state(st1, mesh, ist, ik, psi1)
-          aa(ist, jj, ik) = X(mf_dotp)(mesh, dim, psi1, phi2)
+          aa(ist, jj, ik) = X(mf_dotp)(mesh, dim, psi1, phi2, reduce = .false.)
         end do
 
       end do
       SAFE_DEALLOCATE_A(phi2)
+
+      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  aa(:,:,ik))
 
       ! Each process holds some lines of the matrix. So it is broadcasted (All processes
       ! should get the whole matrix)
@@ -1053,14 +1067,23 @@ subroutine X(states_matrix)(mesh, st1, st2, aa)
 
           call states_get_state(st2, mesh, jj, ik, psi2)
 
-          aa(ii, jj, ik) = X(mf_dotp)(mesh, dim, psi1, psi2)
+          aa(ii, jj, ik) = X(mf_dotp)(mesh, dim, psi1, psi2, reduce = .false.)
 
         end do
       end do
+   
+      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  aa(:, :, ik))
 
     end if
 
   end do
+
+#if defined(HAVE_MPI)        
+  if(st1%d%kpt%parallel) then
+    call comm_allreduce(st1%d%kpt%mpi_grp%comm, aa)
+  end if
+#endif
+
 
   SAFE_DEALLOCATE_A(psi1)
   SAFE_DEALLOCATE_A(psi2)    
@@ -1323,7 +1346,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 
     SAFE_ALLOCATE(psi(1:st%nst, 1:st%d%dim, 1:block_size))
 
-    overlap(1:st%nst, 1:st%nst) = CNST(0.0)
+    overlap(1:st%nst, 1:st%nst) = R_TOTYPE(M_ZERO)
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
@@ -1419,15 +1442,19 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 
   else
 
+    overlap(1:st%nst, 1:st%nst) = R_TOTYPE(M_ZERO)
+
     do ib = st%group%block_start, st%group%block_end
       do jb = ib, st%group%block_end
         if(ib == jb) then
-          call X(mesh_batch_dotp_self)(mesh, st%group%psib(ib, ik), overlap)
+          call X(mesh_batch_dotp_self)(mesh, st%group%psib(ib, ik), overlap, reduce = .false.)
         else
-          call X(mesh_batch_dotp_matrix)(mesh, st%group%psib(ib, ik), st%group%psib(jb, ik), overlap)
+          call X(mesh_batch_dotp_matrix)(mesh, st%group%psib(ib, ik), st%group%psib(jb, ik), overlap, reduce = .false.)
         end if
       end do
     end do
+
+    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
 
   end if
 
@@ -1527,7 +1554,7 @@ end subroutine X(states_calc_projections)
 subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, jindex, oneint)
 
   character(len=*),    intent(in)    :: dir
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   type(states_t),      intent(inout) :: st
   integer,             intent(in)    :: nspin
@@ -1586,7 +1613,7 @@ end subroutine X(states_me_one_body)
 
 ! ---------------------------------------------------------
 subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex, lindex, twoint, phase)
-  type(grid_t),     intent(inout)           :: gr
+  type(grid_t),     intent(in)              :: gr
   type(states_t),   intent(in)              :: st
   integer,          intent(in)              :: st_min, st_max
   integer,          intent(out)             :: iindex(:,:)

@@ -29,7 +29,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
   type(xc_oep_t),      intent(inout) :: oep
   type(xc_t),          intent(in)    :: xcs
   logical,             intent(in)    :: apply_sic_pz
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   type(hamiltonian_t), intent(in)    :: hm
   type(states_t),      intent(inout) :: st
   FLOAT,               intent(inout) :: ex, ec
@@ -90,10 +90,12 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, hm, st, ex, ec, vxc)
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np))
 
+    oep%uxc_bar(:, is) = M_ZERO
     do ist = st%st_start, st%st_end
       call states_get_state(st, gr%mesh, idm, ist, isp, psi)
-      oep%uxc_bar(ist,is) = R_REAL(X(mf_dotp)(gr%mesh, R_CONJ(psi), oep%X(lxc)(1:gr%mesh%np, ist, is)))
+      oep%uxc_bar(ist, is) = R_REAL(X(mf_dotp)(gr%mesh, R_CONJ(psi), oep%X(lxc)(1:gr%mesh%np, ist, is), reduce = .false.))
     end do
+    if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, oep%uxc_bar(1:st%st_end, is), dim = st%st_end)
 
     SAFE_DEALLOCATE_A(psi)
 
@@ -146,7 +148,7 @@ end subroutine X(xc_OEP_calc)
 
 ! ---------------------------------------------------------
 subroutine X(xc_oep_solve) (gr, hm, st, is, vxc, oep)
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   type(hamiltonian_t), intent(in)    :: hm
   type(states_t),      intent(in)    :: st
   integer,             intent(in)    :: is

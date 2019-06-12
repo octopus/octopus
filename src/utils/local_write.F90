@@ -235,7 +235,7 @@ contains
     logical,                intent(in)    :: ions_inside(:,:)
     logical,                intent(in)    :: inside(:,:)
     FLOAT  ,                intent(in)    :: center(:,:)
-    type(grid_t),           intent(inout) :: gr
+    type(grid_t),           intent(in)    :: gr
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(inout) :: hm
     type(v_ks_t),           intent(inout) :: ks
@@ -290,7 +290,7 @@ contains
     integer,                  intent(in)    :: nd 
     character(len=15),        intent(in)    :: lab(:)
     logical,                  intent(in)    :: inside(:,:)
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),         intent(in)    :: gr
     type(geometry_t),     intent(inout) :: geo
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
@@ -376,7 +376,7 @@ contains
     integer,                  intent(in)    :: nd 
     character(len=15),        intent(in)    :: lab(:)
     logical,                  intent(in)    :: inside(:,:)
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),         intent(in)    :: gr
     type(geometry_t),     intent(inout) :: geo
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm

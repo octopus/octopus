@@ -1068,6 +1068,7 @@ subroutine X(hamiltonian_base_nlocal_force)(this, mesh, st, geo, iqn, ndim, psi1
     
     do ii = 1, psi1b%nst_linear
       ist = batch_linear_to_ist(psi1b, ii)
+      if(st%d%kweights(iqn)*abs(st%occ(ist, iqn)) <= M_EPSILON) cycle
       do iproj = 1, nprojs
         do idir = 1, ndim
           ff(idir) = ff(idir) - CNST(2.0)*st%d%kweights(iqn)*st%occ(ist, iqn)*pmat%scal(iproj)*mesh%volume_element*&
@@ -1292,7 +1293,8 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
 contains
 
   subroutine X(commutator_opencl)()
-    type(accel_kernel_t), target, save :: ker_commutator_bra, ker_mix, ker_commutator_ket
+    type(accel_kernel_t), target, save :: ker_commutator_bra, ker_commutator_bra_phase, ker_mix
+    type(accel_kernel_t), target, save :: ker_commutator_ket, ker_commutator_ket_phase
     type(accel_kernel_t), pointer :: kernel
     type(accel_mem_t), target :: buff_proj
     type(accel_mem_t), pointer :: buff_proj_copy
@@ -1300,12 +1302,19 @@ contains
     FLOAT, allocatable :: proj(:)
 
     padnprojs = pad_pow2(this%max_nprojs)
-    
+
     call accel_create_buffer(buff_proj, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, 4*this%full_projection_size*psib%pack%size_real(1))
 
-    call accel_kernel_start_call(ker_commutator_bra, 'projector.cl', 'projector_commutator_bra')
-    size = psib%pack%size_real(1)
-    kernel => ker_commutator_bra
+    if(allocated(this%projector_phases)) then
+      call accel_kernel_start_call(ker_commutator_bra_phase, 'projector.cl', 'projector_commutator_bra_phase')
+      kernel => ker_commutator_bra_phase
+      size = psib%pack%size(1)
+      ASSERT(R_TYPE_VAL == TYPE_CMPLX)
+    else
+      call accel_kernel_start_call(ker_commutator_bra, 'projector.cl', 'projector_commutator_bra')
+      size = psib%pack%size_real(1)
+      kernel => ker_commutator_bra
+    end if
     
     call accel_set_kernel_arg(kernel,  0, this%nprojector_matrices)
     call accel_set_kernel_arg(kernel,  1, this%buff_offsets)
@@ -1318,6 +1327,11 @@ contains
     call accel_set_kernel_arg(kernel,  8, buff_proj)
     call accel_set_kernel_arg(kernel,  9, log2(size))
 
+    if(allocated(this%projector_phases)) then
+      call accel_set_kernel_arg(kernel, 10, this%buff_projector_phases)
+      call accel_set_kernel_arg(kernel, 11, (ik - std%kpt%start)*this%total_points)
+    end if
+      
     lnprojs = min(accel_kernel_workgroup_size(kernel)/size, padnprojs)
 
     call accel_kernel_run(kernel, (/size, padnprojs, this%nprojector_matrices/), (/size, lnprojs, 1/))
@@ -1362,10 +1376,17 @@ contains
       
     end if
     
-    call accel_kernel_start_call(ker_commutator_ket, 'projector.cl', 'projector_commutator_ket')
-    kernel => ker_commutator_ket
-    size = psib%pack%size_real(1)
-
+    if(allocated(this%projector_phases)) then
+      call accel_kernel_start_call(ker_commutator_ket_phase, 'projector.cl', 'projector_commutator_ket_phase')
+      kernel => ker_commutator_ket_phase
+      size = psib%pack%size(1)
+      ASSERT(R_TYPE_VAL == TYPE_CMPLX)
+    else
+      call accel_kernel_start_call(ker_commutator_ket, 'projector.cl', 'projector_commutator_ket')
+      kernel => ker_commutator_ket
+      size = psib%pack%size_real(1)
+    end if
+    
     do iregion = 1, this%nregions
       
       call accel_set_kernel_arg(kernel,  0, this%nprojector_matrices)
@@ -1381,6 +1402,11 @@ contains
       call accel_set_kernel_arg(kernel, 10, commpsib(3)%pack%buffer)
       call accel_set_kernel_arg(kernel, 11, log2(size))
 
+      if(allocated(this%projector_phases)) then
+        call accel_set_kernel_arg(kernel, 12, this%buff_projector_phases)
+        call accel_set_kernel_arg(kernel, 13, (ik - std%kpt%start)*this%total_points)
+      end if
+      
       wgsize = accel_kernel_workgroup_size(kernel)/size    
 
       call accel_kernel_run(kernel, &

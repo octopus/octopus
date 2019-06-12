@@ -369,6 +369,7 @@ contains
 
           do ist = st%st_start, st%st_end
            do ik = st%d%kpt%start, st%d%kpt%end
+            if(abs(st%d%kweights(ik)) <= M_EPSILON) cycle
             if(states_are_real(st)) then
               call states_get_state(st, mesh, ist, ik, dpsi )
               call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., .false., ddot(1:st%d%dim,1:os%norbs))

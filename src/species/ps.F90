@@ -831,6 +831,11 @@ contains
     iunit  = io_open(trim(dir)//'/local_long_range', action='write')
     call spline_print(ps%vlr, iunit)
     call io_close(iunit)
+
+    ! Local part of the pseudopotential
+    iunit  = io_open(trim(dir)//'/local_long_range_density', action='write')
+    call spline_print(ps%nlr, iunit)
+    call io_close(iunit)
     
     ! Fourier transform of the local part
     iunit = io_open(trim(dir)//'/local_ft', action='write')

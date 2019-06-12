@@ -59,7 +59,7 @@ contains
   !! counts exist (see TDDFT theory for details).
   subroutine energy_calc_total(hm, gr, st, iunit, full)
     type(hamiltonian_t), intent(inout) :: hm
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(inout) :: st
     integer, optional,   intent(in)    :: iunit
     logical, optional,   intent(in)    :: full
@@ -213,7 +213,7 @@ contains
   
   subroutine energy_calc_eigenvalues(hm, der, st)
     type(hamiltonian_t), intent(inout) :: hm
-    type(derivatives_t), intent(inout) :: der
+    type(derivatives_t), intent(in)    :: der
     type(states_t),      intent(inout) :: st
     
     PUSH_SUB(energy_calc_eigenvalues)

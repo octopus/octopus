@@ -584,6 +584,12 @@ contains
       end do
     end do
 
+#ifdef HAVE_MPI
+    if(mesh%parallel_in_domains) then
+      call MPI_Allreduce(MPI_IN_PLACE, this%projector_self_overlap, 1, MPI_LOGICAL, MPI_LOR, mesh%mpi_grp%comm, mpi_err)
+    end if
+#endif
+    
     SAFE_DEALLOCATE_A(order)
     SAFE_DEALLOCATE_A(head)
 

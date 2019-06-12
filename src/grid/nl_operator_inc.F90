@@ -276,6 +276,9 @@ contains
     PUSH_SUB(X(nl_operator_operate_batch).operate_opencl)
     call profiling_in(prof, "CL_NL_OPERATOR")
 
+    ASSERT(accel_buffer_is_allocated(fi%pack%buffer))
+    ASSERT(accel_buffer_is_allocated(fo%pack%buffer))
+    
     kernel_operate = op%kernel
 
     call accel_create_buffer(buff_weights, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
@@ -289,7 +292,10 @@ contains
     select case(function_opencl)
     case(OP_INVMAP)
       ASSERT(points_ == OP_ALL)
-     
+      ASSERT(accel_buffer_is_allocated(op%buff_ri))
+      ASSERT(accel_buffer_is_allocated(op%buff_imin))
+      ASSERT(accel_buffer_is_allocated(op%buff_imax))
+      
       call accel_set_kernel_arg(kernel_operate, 0, op%stencil%size)
       call accel_set_kernel_arg(kernel_operate, 1, nri)
       call accel_set_kernel_arg(kernel_operate, 2, op%buff_ri)
@@ -307,6 +313,8 @@ contains
       call accel_kernel_run(kernel_operate, (/eff_size, pnri/), (/eff_size, bsize/eff_size/))
 
     case(OP_MAP)
+      ASSERT(accel_buffer_is_allocated(op%buff_ri))
+      ASSERT(accel_buffer_is_allocated(op%buff_map))
 
       call accel_set_kernel_arg(kernel_operate, 0, op%mesh%np)
       call accel_set_kernel_arg(kernel_operate, 1, op%buff_ri)
@@ -374,7 +382,10 @@ contains
       
     case(OP_NOMAP)
       ASSERT(points_ == OP_ALL)
-
+      ASSERT(accel_buffer_is_allocated(op%buff_stencil))
+      ASSERT(accel_buffer_is_allocated(op%buff_xyz_to_ip))
+      ASSERT(accel_buffer_is_allocated(op%buff_ip_to_xyz))
+      
       call accel_set_kernel_arg(kernel_operate, 0, op%mesh%np)
       call accel_set_kernel_arg(kernel_operate, 1, op%buff_stencil)
       call accel_set_kernel_arg(kernel_operate, 2, op%buff_xyz_to_ip)

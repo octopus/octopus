@@ -63,7 +63,7 @@ contains
   ! ---------------------------------------------------------
   subroutine elf_calc(st, gr, elf, de)
     type(states_t),   intent(inout) :: st
-    type(grid_t),     intent(inout) :: gr
+    type(grid_t),     intent(in)    :: gr
     !> elf(gr%mesh%np, 1) if st%d%ispin = 1, elf(gr%mesh%np, 3) otherwise.
     !! On output, it should contain the global ELF if st%d%ispin = 1,
     !! otherwise elf(:, 3) contains the global ELF, and 

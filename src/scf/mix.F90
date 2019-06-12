@@ -19,6 +19,7 @@
 #include "global.h"
 
 module mix_oct_m
+  use comm_oct_m
   use derivatives_oct_m
   use global_oct_m
   use lalg_adv_oct_m
