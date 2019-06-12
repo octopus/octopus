@@ -23,14 +23,10 @@ module derivatives_oct_m
   use boundaries_oct_m
   use global_oct_m
   use lalg_adv_oct_m
-  use lalg_basic_oct_m
   use loct_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use mpi_oct_m
-  use mpi_debug_oct_m
   use nl_operator_oct_m
   use par_vec_oct_m
   use parser_oct_m
@@ -42,7 +38,6 @@ module derivatives_oct_m
   use stencil_stargeneral_oct_m
   use stencil_variational_oct_m
   use transfer_table_oct_m
-  use types_oct_m
   use utils_oct_m
   use varinfo_oct_m
 
@@ -58,11 +53,9 @@ module derivatives_oct_m
   private
   public ::                             &
     derivatives_t,                      &
-    derivatives_nullify,                &
     derivatives_init,                   &
     derivatives_end,                    &
     derivatives_build,                  &
-    derivatives_stencil_extent,         &
     derivatives_handle_batch_t,         &
     dderivatives_test,                  &
     zderivatives_test,                  &
@@ -112,8 +105,6 @@ module derivatives_oct_m
 
     FLOAT                 :: masses(MAX_DIM)     !< we can have different weights (masses) per space direction
 
-    integer               :: np_zero_bc
-
     !> If the so-called variational discretization is used, this controls a
     !! possible filter on the Laplacian.
     FLOAT :: lapl_cutoff   
@@ -152,32 +143,11 @@ module derivatives_oct_m
 contains
 
   ! ---------------------------------------------------------
-  elemental subroutine derivatives_nullify(this)
-    type(derivatives_t), intent(out) :: this
-
-    call boundaries_nullify(this%boundaries)
-    nullify(this%mesh)
-    this%dim = 0
-    this%order = 0
-    this%stencil_type = 0
-    this%masses = M_ZERO
-    this%np_zero_bc = 0
-    this%lapl_cutoff = M_ZERO
-    nullify(this%op, this%lapl, this%grad)
-    this%n_ghost = 0
-#if defined(HAVE_MPI)
-    this%comm_method = 0
-#endif
-    nullify(this%finer, this%coarser)
-    nullify(this%to_finer, this%to_coarser)
-
-  end subroutine derivatives_nullify
-
-  ! ---------------------------------------------------------
-  subroutine derivatives_init(der, sb, use_curvilinear)
+  subroutine derivatives_init(der, sb, use_curvilinear, order)
     type(derivatives_t), target, intent(out) :: der
     type(simul_box_t),           intent(in)  :: sb
     logical,                     intent(in)  :: use_curvilinear
+    integer, optional,           intent(in)  :: order
 
     integer :: idir
     integer :: default_stencil
@@ -244,6 +214,10 @@ contains
     !% </ul>
     !%End
     call parse_variable('DerivativesOrder', 4, der%order)
+    ! overwrite order if given as argument
+    if(present(order)) then
+      der%order = order
+    end if
 
 #ifdef HAVE_MPI
     !%Variable ParallelizationOfDerivatives
@@ -319,32 +293,6 @@ contains
 
     POP_SUB(derivatives_end)
   end subroutine derivatives_end
-
-
-  ! ---------------------------------------------------------
-  !> Returns maximum extension of the stencil in spatial direction
-  !! dir = 1, 2, 3 for a given derivative der.
-  integer function derivatives_stencil_extent(der, dir) result(extent)
-    type(derivatives_t), intent(in) :: der
-    integer,             intent(in) :: dir
-
-    PUSH_SUB(stencil_extent)
-
-    select case(der%stencil_type)
-      case(DER_STAR)
-        extent = stencil_star_extent(dir, der%order)
-      case(DER_VARIATIONAL)
-        extent = stencil_variational_extent(dir, der%order)
-      case(DER_CUBE)
-        extent = stencil_cube_extent(dir, der%order)
-      case(DER_STARPLUS)
-        extent = stencil_cube_extent(dir, der%order)
-      case(DER_STARGENERAL)
-        extent = stencil_cube_extent(dir, der%order)
-      end select
-      
-    POP_SUB(stencil_extent)
-  end function derivatives_stencil_extent
 
 
   ! ---------------------------------------------------------
@@ -453,10 +401,11 @@ contains
     integer, allocatable :: polynomials(:,:)
     FLOAT,   allocatable :: rhs(:,:)
     integer :: i
-    logical :: const_w_, cmplx_op_
+    logical :: const_w_
     character(len=32) :: name
     type(nl_operator_t) :: auxop
-    
+    integer :: np_zero_bc
+
     PUSH_SUB(derivatives_build)
 
     call boundaries_init(der%boundaries, mesh)
@@ -468,20 +417,19 @@ contains
     der%mesh => mesh    ! make a pointer to the underlying mesh
 
     const_w_  = .true.
-    cmplx_op_ = .false.
 
     ! need non-constant weights for curvilinear and scattering meshes
     if(mesh%use_curvilinear) const_w_ = .false.
 
-    der%np_zero_bc = 0
+    np_zero_bc = 0
 
     ! build operators
     do i = 1, der%dim+1
-      call nl_operator_build(mesh, der%op(i), der%mesh%np, const_w = const_w_, cmplx_op = cmplx_op_)
-      der%np_zero_bc = max(der%np_zero_bc, nl_operator_np_zero_bc(der%op(i)))
+      call nl_operator_build(mesh, der%op(i), der%mesh%np, const_w = const_w_)
+      np_zero_bc = max(np_zero_bc, nl_operator_np_zero_bc(der%op(i)))
     end do
 
-    ASSERT(der%np_zero_bc > mesh%np .and. der%np_zero_bc <= mesh%np_part)
+    ASSERT(np_zero_bc > mesh%np .and. np_zero_bc <= mesh%np_part)
 
     select case(der%stencil_type)
 
@@ -747,7 +695,7 @@ contains
 !op(1) is used systematically above to get dimensions, but here we have to save
 !all operator stencil weights
 ! once we are happy and convinced, remove this comment
-        op(i)%w_re(:, p) = sol(:, i)
+        op(i)%w(:, p) = sol(:, i)
       end do
               
     end do ! loop over points p

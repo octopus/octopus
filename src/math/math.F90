@@ -31,16 +31,8 @@ module math_oct_m
 
   private
   public ::                     &
-    dparker_traub,              &
-    zparker_traub,              &
-    dmatrix_newton_raphson,     &
-    zmatrix_newton_raphson,     &
-    dmatrix_inv_residual,       &
-    zmatrix_inv_residual,       &
     ddot_product,               &
     zdot_product,               &
-    is_integer_multiple,        &
-    divides,                    &
     ylmr,                       &
     grylmr,                     &
     weights,                    &
@@ -48,16 +40,12 @@ module math_oct_m
     hermite,                    &
     set_app_threshold,          &
     operator(.app.),            &
-    math_xor,                   &
     dcross_product,             &
     zcross_product,             &
     hypot,                      &
     ddelta,                     &
     member,                     &
     make_idx_set,               &
-    infinity_norm,              &
-    matrix_symmetric_average,   &
-    matrix_symmetrize,          &
     interpolation_coefficients, &
     interpolate,                &
     even,                       &
@@ -106,51 +94,11 @@ module math_oct_m
     end function oct_hypotf
   end interface hypot
 
-  interface infinity_norm
-    module procedure dinfinity_norm, zinfinity_norm
-  end interface infinity_norm
-
-  interface matrix_symmetric_average
-    module procedure dmatrix_symmetric_average, zmatrix_symmetric_average
-  end interface matrix_symmetric_average
-
-  interface matrix_symmetrize
-    module procedure dmatrix_symmetrize, zmatrix_symmetrize
-  end interface matrix_symmetrize
-
   interface log2
     module procedure dlog2, ilog2
   end interface log2
 
 contains
-
-
-  ! ---------------------------------------------------------
-  !> Checks if a divides b.
-  logical function divides(a, b)
-    integer, intent(in) :: a, b
-
-    PUSH_SUB(divides)
-
-    divides = mod(b, a) == 0
-
-    POP_SUB(divides)
-  end function divides
-
-
-  ! ---------------------------------------------------------
-  logical function is_integer_multiple(a, b)
-    FLOAT, intent(in) :: a, b
-
-    FLOAT :: ratio
-
-    PUSH_SUB(is_integer_multiple)
-
-    ratio = a/b
-    is_integer_multiple = ratio.app.TOFLOAT(nint(ratio))
-
-    POP_SUB(is_integer_multiple)
-  end function is_integer_multiple
 
 
   ! ---------------------------------------------------------
@@ -577,20 +525,6 @@ contains
     end if
 
   end function ddelta
-
-
-  ! ---------------------------------------------------------
-  logical function math_xor(a, b)
-    logical, intent(in) :: a
-    logical, intent(in) :: b
-
-    PUSH_SUB(math_xor)
-
-    math_xor = ( a .or. b )
-    if ( a .and. b ) math_xor = .false.
-
-    POP_SUB(math_xor)
-  end function math_xor
 
 
   ! ---------------------------------------------------------

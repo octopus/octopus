@@ -22,13 +22,13 @@ module lcao_oct_m
   use atom_oct_m
   use atomic_orbital_oct_m
   use batch_oct_m
+  use blacs_oct_m
   use blacs_proc_grid_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use io_oct_m
-  use io_function_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use lapack_oct_m
@@ -38,10 +38,9 @@ module lcao_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
+  use mpi_oct_m
   use mpi_debug_oct_m
   use parser_oct_m
-  use periodic_copy_oct_m
   use profiling_oct_m
   use ps_oct_m
   use quickrnd_oct_m
@@ -129,10 +128,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lcao_init(this, gr, geo, st)
-    type(lcao_t),         intent(out)   :: this
-    type(grid_t),         intent(inout) :: gr
-    type(geometry_t),     intent(in)    :: geo
-    type(states_t),       intent(in)    :: st
+    type(lcao_t),         intent(out) :: this
+    type(grid_t),         intent(in)  :: gr
+    type(geometry_t),     intent(in)  :: geo
+    type(states_t),       intent(in)  :: st
 
     integer :: ia, n, iorb, jj, maxj, idim
     integer :: ii, ll, mm
@@ -857,7 +856,7 @@ contains
   subroutine lcao_wf(this, st, gr, geo, hm, start)
     type(lcao_t),        intent(inout) :: this
     type(states_t),      intent(inout) :: st
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
     type(hamiltonian_t), intent(in)    :: hm
     integer, optional,   intent(in)    :: start
@@ -1332,7 +1331,7 @@ contains
   subroutine lcao_init_orbitals(this, st, gr, geo, start)
     type(lcao_t),        intent(inout) :: this
     type(states_t),      intent(inout) :: st
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
     integer, optional,   intent(in)    :: start
 

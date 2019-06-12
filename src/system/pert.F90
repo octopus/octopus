@@ -36,10 +36,8 @@ module pert_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use nl_operator_oct_m
   use parser_oct_m
   use physics_op_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
   use simul_box_oct_m
@@ -116,10 +114,10 @@ contains
 
   ! --------------------------------------------------------------------
   subroutine pert_init(this, pert_type, gr, geo)
-    type(pert_t),      intent(out)   :: this
-    integer,           intent(in)    :: pert_type
-    type(grid_t),      intent(inout) :: gr
-    type(geometry_t),  intent(in)    :: geo
+    type(pert_t),      intent(out) :: this
+    integer,           intent(in)  :: pert_type
+    type(grid_t),      intent(in)  :: gr
+    type(geometry_t),  intent(in)  :: geo
 
     PUSH_SUB(pert_init)
     

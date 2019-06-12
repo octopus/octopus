@@ -31,7 +31,6 @@ module initst_oct_m
   use profiling_oct_m
   use restart_oct_m
   use states_oct_m
-  use states_calc_oct_m
   use states_restart_oct_m
   use string_oct_m
   use system_oct_m

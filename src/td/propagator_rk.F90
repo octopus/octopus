@@ -34,11 +34,14 @@ module propagator_rk_oct_m
   use messages_oct_m
   use oct_exchange_oct_m
   use opt_control_state_oct_m
+  use pert_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
   use species_oct_m
+#ifdef HAVE_SPARSKIT
   use sparskit_oct_m
+#endif
   use states_oct_m
   use v_ks_oct_m
   use xc_oct_m
@@ -411,6 +414,7 @@ contains
     subroutine prepare_inh()
       integer :: idir
       CMPLX, allocatable :: psi(:, :), inhpsi(:, :)
+      type(pert_t) :: pert
 
       if(ion_dynamics_ions_move(ions)) then
         call states_copy(inh, st)
@@ -426,14 +430,16 @@ contains
             call states_get_state(stphi, gr%mesh, ist, ik, psi)
 
             do iatom = 1, geo%natoms
-
-              call zhamiltonian_dervexternal(hm, geo, gr, iatom, stphi%d%dim, psi, dvpsi)
-
               do idir = 1, gr%sb%dim
+                call pert_init(pert, PERTURBATION_IONIC, gr, geo)
+                call pert_setup_atom(pert, iatom)
+                call pert_setup_dir(pert, idir)
+                call zpert_apply(pert, gr, geo, hm, ik, psi(:, :), dvpsi(:, :, idir))
+                dvpsi(:, :, idir) = - dvpsi(:, :, idir)
                 inhpsi(1:gr%mesh%np, 1:stphi%d%dim) = inhpsi(1:gr%mesh%np, 1:stphi%d%dim) &
                   + st%occ(ist, ik)*post(idir, iatom)*dvpsi(1:gr%mesh%np, 1:stphi%d%dim, idir)
+                call pert_end(pert)
               end do
-
             end do
 
             call states_set_state(inh, gr%mesh, ist, ik, inhpsi)

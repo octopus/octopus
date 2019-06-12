@@ -20,6 +20,8 @@ PeriodicDimensions = 3
 TotalStates = 18
 
 EigenSolver = rmmdiis
+ConvRelDens = 1e-7
+EigensolverTolerance = 1e-8
 
 BoxShape = parallelepiped
 

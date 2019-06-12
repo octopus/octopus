@@ -1867,7 +1867,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, file, gr, geo, iter)
   type(states_t),    intent(in)       :: st
   character(len=*),  intent(in)       :: file
   type(output_t),    intent(in)       :: outp
-  type(grid_t),      intent(inout)    :: gr
+  type(grid_t),      intent(in)       :: gr
   type(geometry_t),  intent(in)       :: geo
   integer,           intent(in)       :: iter
 
@@ -2194,7 +2194,7 @@ subroutine pes_mask_load(restart, mask, st, ierr)
   type(states_t),   intent(inout) :: st
   integer,          intent(out)   :: ierr
 
-  character(len=80) :: filename, path
+  character(len=80) :: filename
   integer :: itot, ik, ist, idim , np, err, err2, iunit, ll(3)
   character(len=128) :: lines(2)
   character(len=7) :: dummy

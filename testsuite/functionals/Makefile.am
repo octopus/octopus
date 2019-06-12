@@ -134,7 +134,10 @@ dist_share_DATA =                                  \
 	11-vdw_d3.01-gs.inp                        \
         12-vdw_solid_c6.test                       \
         12-vdw_solid_c6.01-gs_diamond.inp          \
-        12-vdw_solid_c6.02-gs_graphene.inp
-
+        12-vdw_solid_c6.02-gs_graphene.inp         \
+        13-libvdwxc_h2o.test                       \
+        13-libvdwxc_h2o.01-vdwdfcx.inp             \
+        14-libvdwxc_Be_hcp.test                    \
+        14-libvdwxc_Be_hcp.01-vdwdfcx.inp
 
 CLEANFILES = *~ *.bak

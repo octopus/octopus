@@ -25,7 +25,6 @@ module propagator_magnus_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_base_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
   use lasers_oct_m
@@ -36,7 +35,6 @@ module propagator_magnus_oct_m
   use propagator_rk_oct_m
   use states_oct_m
   use v_ks_oct_m
-  use xc_oct_m
 
   implicit none
 

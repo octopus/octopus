@@ -20,7 +20,6 @@
   
 module submesh_oct_m
   use batch_oct_m
-  use blas_oct_m
   use comm_oct_m
   use global_oct_m
   use lalg_basic_oct_m
@@ -32,8 +31,6 @@ module submesh_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use simul_box_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
     
   implicit none
   private 
@@ -76,7 +73,6 @@ module submesh_oct_m
     integer,      pointer :: map(:)         !< index in the mesh of the points inside the sphere
     FLOAT,        pointer :: x(:,:)
     type(mesh_t), pointer :: mesh
-    logical               :: has_points
     logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point
     
     integer               :: np_global      !< total number of points in the entire mesh
@@ -271,8 +267,6 @@ contains
 
     end if
 
-    this%has_points = (this%np > 0)
-    
     ! now order points for better locality
     
     SAFE_ALLOCATE(order(1:this%np_part))
@@ -311,7 +305,7 @@ contains
     integer,              intent(in)     :: root
     type(mpi_grp_t),      intent(in)     :: mpi_grp
 
-    integer :: nparray(1:2)
+    integer :: nparray(1:3)
     type(profile_t), save :: prof
 
     PUSH_SUB(submesh_broadcast)
@@ -325,16 +319,25 @@ contains
 
     if(mpi_grp%size > 1) then
 
-      if(root == mpi_grp%rank) nparray = (/this%np, this%np_part/)
+      if(root == mpi_grp%rank) then
+        nparray(1) = this%np
+        nparray(2) = this%np_part
+        if(this%overlap) then 
+          nparray(3) = 1
+        else
+          nparray(3) = 0
+        end if
+      end if
+
 #ifdef HAVE_MPI
-      call MPI_Bcast(nparray, 2, MPI_INTEGER, root, mpi_grp%comm, mpi_err)
+      call MPI_Bcast(nparray, 3, MPI_INTEGER, root, mpi_grp%comm, mpi_err)
       call MPI_Barrier(mpi_grp%comm, mpi_err)
 #endif
       this%np = nparray(1)
       this%np_part = nparray(2)
+      this%overlap = (nparray(3) == 1)
 
       if(root /= mpi_grp%rank) then
-        this%has_points = (this%np > 0)
         SAFE_ALLOCATE(this%map(1:this%np_part))
         SAFE_ALLOCATE(this%x(1:this%np_part, 0:mesh%sb%dim))
       end if
@@ -418,15 +421,47 @@ contains
 
   ! --------------------------------------------------------------
 
-  logical pure function submesh_overlap(sm1, sm2) result(overlap)
+  logical function submesh_overlap(sm1, sm2) result(overlap)
     type(submesh_t),      intent(in)   :: sm1
     type(submesh_t),      intent(in)   :: sm2
     
+    integer :: ii, jj, dd
     FLOAT :: distance
 
-    distance = sum((sm1%center(1:sm1%mesh%sb%dim) - sm2%center(1:sm2%mesh%sb%dim))**2)
-    overlap = distance + CNST(100.0)*M_EPSILON <= (sm1%radius + sm2%radius)**2
+    !no PUSH_SUB, called too often
 
+    if(.not. simul_box_is_periodic(sm1%mesh%sb)) then
+      !first check the distance
+      distance = sum((sm1%center(1:sm1%mesh%sb%dim) - sm2%center(1:sm2%mesh%sb%dim))**2)
+      overlap = distance <= (CNST(1.5)*(sm1%radius + sm2%radius))**2
+      
+      ! if they are very far, no need to check in detail
+      if(.not. overlap) return
+    end if
+    
+    ! Otherwise check whether they have the some point in common. We
+    ! can make the comparison faster using that the arrays are sorted.
+    overlap = .false.
+    ii = 1
+    jj = 1
+    do while(ii <= sm1%np_part .and. jj <= sm2%np_part)
+      dd = sm1%map(ii) - sm2%map(jj)
+      if(dd < 0) then
+        ii = ii + 1
+      else if(dd > 0) then
+        jj = jj + 1
+      else
+        overlap = .true.
+        exit
+      end if
+    end do
+
+#ifdef HAVE_MPI
+    if(sm1%mesh%parallel_in_domains) then
+      call MPI_Allreduce(MPI_IN_PLACE, overlap, 1, MPI_LOGICAL, MPI_LOR, sm1%mesh%mpi_grp%comm, mpi_err)
+    end if
+#endif
+    
   end function submesh_overlap
 
   ! -------------------------------------------------------------
@@ -440,7 +475,7 @@ contains
     PUSH_SUB(submesh_build_global)
 
     if(.not. this%mesh%parallel_in_domains) then
-      POP_SUB(submesh_build global)
+      POP_SUB(submesh_build_global)
       return
     end if 
 

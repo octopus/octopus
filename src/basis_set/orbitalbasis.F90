@@ -32,7 +32,6 @@ module orbitalbasis_oct_m
   use simul_box_oct_m
   use species_oct_m
   use submesh_oct_m
-  use types_oct_m  
  
   implicit none
 

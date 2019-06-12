@@ -51,7 +51,6 @@ module propagator_base_oct_m
     !> Auxiliary function to store the Magnus potentials.
     FLOAT, pointer      :: vmagnus(:, :, :) => null() 
     integer             :: scf_propagation_steps 
-    logical             :: first
     type(sparskit_solver_t), pointer :: tdsk
     integer             :: tdsk_size
     FLOAT               :: scf_threshold

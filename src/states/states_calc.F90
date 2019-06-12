@@ -25,7 +25,6 @@ module states_calc_oct_m
   use batch_ops_oct_m
   use blas_oct_m
   use blacs_oct_m
-  use blacs_proc_grid_oct_m
   use iso_c_binding
   use comm_oct_m
   use derivatives_oct_m
@@ -33,37 +32,25 @@ module states_calc_oct_m
   use global_oct_m
   use grid_oct_m
   use hardware_oct_m
-  use io_oct_m
   use kpoints_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
-  use lapack_oct_m
-  use loct_oct_m
   use messages_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
-  use multicomm_oct_m
-  use parser_oct_m
   use pblas_oct_m
   use physics_op_oct_m
   use poisson_oct_m
   use profiling_oct_m
-  use restart_oct_m
-  use sort_oct_m
   use scalapack_oct_m
   use simul_box_oct_m
-  use smear_oct_m
   use states_oct_m
   use states_dim_oct_m
   use states_parallel_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
-  use utils_oct_m
   use types_oct_m
-  use varinfo_oct_m
 
   implicit none
 
@@ -71,7 +58,6 @@ module states_calc_oct_m
 
   public ::                         &
     states_orthogonalize,           &
-    states_degeneracy_matrix,       &
     states_rotate,                  &
     dstates_calc_orth_test,         &
     zstates_calc_orth_test,         &
@@ -90,7 +76,6 @@ module states_calc_oct_m
     zstates_matrix,                 &
     dstates_calc_overlap,           &
     zstates_calc_overlap,           &
-    states_orthogonalize_cproduct,  &
     dstates_calc_projections,       &
     zstates_calc_projections,       &
     dstates_me_one_body,            &
@@ -125,220 +110,12 @@ contains
     POP_SUB(states_orthogonalize)
   end subroutine states_orthogonalize
 
-  ! ---------------------------------------------------------
-
-  subroutine states_orthogonalize_cproduct(st, mesh)
-    type(states_t),    intent(inout) :: st
-    type(mesh_t),      intent(in)    :: mesh
-
-    integer            :: ik,ist
-    CMPLX              :: cnorm
-    CMPLX, allocatable :: psi(:,:)
-
-    PUSH_SUB(states_orthogonalize_cproduct)
-    ASSERT(st%d%dim == 1)
-    SAFE_ALLOCATE(psi(1:mesh%np_part, 1))
-   
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = 1, st%nst
-        call states_get_state(st, mesh, ist, ik, psi)
-
-!         ! Orthogonalize eigenstates according to cproduct - this implies st%cmplxscl = .true. 
-!         if(ist > 1) then
-!            call zstates_orthogonalize_single(st, mesh, ist - 1, ik, psi, normalize = .true.,  norm = cnorm)
-!         else
-!         ! Normalize the first eigenstate  
-        cnorm = sqrt(zmf_dotp(mesh, 1, psi, psi, dotu = .true.))
-!           cnorm = sqrt(zmf_integrate(mesh, psi(:,1)**2))
-!         end if    
-
-        psi = psi /cnorm
-        call states_set_state(st, mesh, ist, ik, psi)
-        
-      end do
-    end do
-    SAFE_DEALLOCATE_A(psi)
-
-    POP_SUB(states_orthogonalize_cproduct)
-  end subroutine states_orthogonalize_cproduct
-
-  ! ---------------------------------------------------------
-  !> Reorder the states in st so that the order corresponds to
-  !! the indices given in args (args could come from an argsort)
-  subroutine reorder_states_by_args(st, mesh, args, ik)
-
-    type(states_t), intent(inout) :: st
-    type(mesh_t),   intent(in)    :: mesh
-    integer,        intent(in)    :: args(:)
-    integer,        intent(in)    :: ik
-
-    integer :: ist, jst, kst
-    CMPLX,   allocatable :: buf(:,:),buf1(:,:)
-    logical, allocatable :: ok(:)
-    integer, allocatable :: rank(:)
-    
-    PUSH_SUB(reorder_states_by_args)
-
-    SAFE_ALLOCATE(ok(1:st%nst))
-    SAFE_ALLOCATE(rank(1:st%nst))
-    SAFE_ALLOCATE(buf(1:mesh%np_part,1:st%d%dim))
-    SAFE_ALLOCATE(buf1(1:mesh%np_part,1:st%d%dim))
-
-    do ist = 1, st%nst
-      ok(ist) = .false.
-      rank(args(ist)) = ist
-    end do
-
-    do ist = 1, st%nst
-      if ((args(ist) /= ist).and.(.not.(ok(ist)))) then
-        call states_get_state(st, mesh, ist, ik, buf)
-        kst = ist
-        do
-          jst = args(kst)
-          if (jst == ist) then
-            call states_set_state(st, mesh, rank(jst), ik, buf)
-            ok(rank(jst)) = .true.
-            exit
-          end if
-          call states_get_state(st, mesh, jst, ik, buf1)
-          call states_set_state(st, mesh, kst, ik, buf1)             
-          ok(kst) = .true.
-          kst = jst
-        end do
-      end if
-    end do
-
-    SAFE_DEALLOCATE_A(ok)
-    SAFE_DEALLOCATE_A(rank)
-    SAFE_DEALLOCATE_A(buf)
-    SAFE_DEALLOCATE_A(buf1)
-    
-    POP_SUB(reorder_states_by_args)
-  end subroutine reorder_states_by_args
-
-
-  ! -------------------------------------------------------
-  subroutine states_degeneracy_matrix(sb, st, dir)
-    type(simul_box_t), intent(in) :: sb
-    type(states_t),    intent(in) :: st
-    character(len=*),  intent(in) :: dir
-
-    integer :: idir, is, js, inst, inik, iunit
-    integer, allocatable :: eindex(:,:), sindex(:)
-    integer, allocatable :: degeneracy_matrix(:, :)
-    FLOAT,   allocatable :: eigenval_sorted(:)
-    FLOAT :: degen_thres, evis, evjs, kpoint(1:MAX_DIM)
-
-    PUSH_SUB(states_degeneracy_matrix)
-
-    SAFE_ALLOCATE(eigenval_sorted(1:st%nst*st%d%nik))
-    SAFE_ALLOCATE(         sindex(1:st%nst*st%d%nik))
-    SAFE_ALLOCATE(      eindex(1:2, 1:st%nst*st%d%nik))
-    SAFE_ALLOCATE(degeneracy_matrix(1:st%nst*st%d%nik, 1:st%nst*st%d%nik))
-
-    ! convert double index "inst, inik" to single index "is"
-    ! and keep mapping array
-    is = 1
-    do inst = 1, st%nst
-      do inik = 1, st%d%nik
-        eigenval_sorted(is) = st%eigenval(inst, inik)        
-        eindex(1, is) = inst
-        eindex(2, is) = inik
-        is = is + 1
-      end do
-    end do
-
-    ! sort eigenvalues
-    call sort(eigenval_sorted, sindex)
-
-    !%Variable DegeneracyThreshold
-    !%Type float
-    !%Default 1e-5
-    !%Section States
-    !%Description
-    !% States with energy <math>E_i</math> and <math>E_j</math> will be considered degenerate
-    !% if <math> \left| E_i - E_j \right| < </math><tt>DegeneracyThreshold</tt>.
-    !%End
-    call parse_variable('DegeneracyThreshold', units_from_atomic(units_inp%energy, CNST(1e-5)), degen_thres)
-    degen_thres = units_to_atomic(units_inp%energy, degen_thres)
-
-    ! setup degeneracy matrix. the matrix summarizes the degeneracy relations 
-    ! among the states
-    degeneracy_matrix = 0
-
-    do is = 1, st%nst*st%d%nik
-      do js = 1, st%nst*st%d%nik
-
-        ! a state is always degenerate to itself
-        if ( is == js ) cycle
-
-        evis = st%eigenval(eindex(1, sindex(is)), eindex(2, sindex(is)))
-        evjs = st%eigenval(eindex(1, sindex(js)), eindex(2, sindex(js)))
-
-        ! is evjs in the "evis plus minus threshold" bracket?
-        if( (evjs > evis - degen_thres).and.(evjs < evis + degen_thres) ) then
-          ! mark forward scattering states with +1 and backward scattering
-          ! states with -1
-          !WARNING: IS THIS REALLY NECESSARY? - have to calculate momentum
-          degeneracy_matrix(is, js) = 1
-          !degeneracy_matrix(is, js) = &
-          !  sign(1, st%momentum(1, eindex(1, sindex(js)), eindex(2, sindex(js))))
-        end if
-
-      end do
-    end do
-
-    ! write matrix
-    iunit = io_open(trim(dir)//'degeneracy_matrix', action='write')
-    if(mpi_grp_is_root(mpi_world)) then
-      write(iunit, '(a)', advance='no') '# index  '
-      do idir = 1, sb%dim
-        write(iunit, '(2a)', advance='no') 'k', index2axis(idir)
-      end do
-      write(iunit, '(a)') ' eigenvalue  degeneracy matrix'
-
-      do is = 1, st%nst*st%d%nik
-        write(iunit, '(i6,4e24.16,32767i3)') is, &
-          kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, eindex(2, sindex(is)))), &
-          eigenval_sorted(is), (degeneracy_matrix(is, js), js = 1, st%nst*st%d%nik)
-        write(iunit, '(i6)', advance='no') is
-        kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, eindex(2, sindex(is))))
-        do idir = 1, sb%dim
-          write(iunit, '(e24.16)', advance='no') kpoint(idir)
-        end do
-        write(iunit, '(e24.16)', advance='no') eigenval_sorted(is)
-        do js = 1, st%nst * st%d%nik
-          write(iunit, '(i3)') degeneracy_matrix(is, js)
-        end do
-      end do
-    end if
-    if(iunit > 0) call io_close(iunit)
-
-    ! write index vectors
-    iunit = io_open(trim(dir)//'/index_vectors', action='write')    
-    if(mpi_grp_is_root(mpi_world)) then
-      write(iunit, '(a)') '# index  sindex  eindex1 eindex2'
-
-      do is = 1, st%nst*st%d%nik
-        write(iunit,'(4i6)') is, sindex(is), eindex(1, sindex(is)), eindex(2, sindex(is))
-      end do
-    end if
-    if(iunit > 0) call io_close(iunit)
-
-    SAFE_DEALLOCATE_A(eigenval_sorted)
-    SAFE_DEALLOCATE_A(sindex)
-    SAFE_DEALLOCATE_A(eindex)
-    SAFE_DEALLOCATE_A(degeneracy_matrix)
-
-    POP_SUB(states_degeneracy_matrix)
-  end subroutine states_degeneracy_matrix
-
   ! -----------------------------------------------------------------------------
 
   subroutine states_calc_momentum(st, der, momentum)
-    type(states_t),      intent(inout) :: st
-    type(derivatives_t), intent(inout) :: der
-    FLOAT,               intent(out)   :: momentum(:,:,:)
+    type(states_t),      intent(in)  :: st
+    type(derivatives_t), intent(in)  :: der
+    FLOAT,               intent(out) :: momentum(:,:,:)
 
     if (states_are_real(st)) then
       call dstates_calc_momentum(st, der, momentum)

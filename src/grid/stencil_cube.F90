@@ -21,7 +21,6 @@
 module stencil_cube_oct_m
   use global_oct_m
   use messages_oct_m
-  use profiling_oct_m
   use stencil_oct_m
 
   implicit none
@@ -29,7 +28,6 @@ module stencil_cube_oct_m
   private
   public ::                        &
     stencil_cube_size_lapl,        &
-    stencil_cube_extent,           &
     stencil_cube_get_lapl,         &
     stencil_cube_polynomials_lapl, &
     stencil_cube_size_grad,        &
@@ -50,27 +48,6 @@ contains
 
     POP_SUB(stencil_cube_size_lapl)
   end function stencil_cube_size_lapl
-
-
-  ! ---------------------------------------------------------
-  !> Returns maximum extension of the stencil in spatial direction
-  !! dir = 1, 2, 3 for a given discretization order.
-  integer function stencil_cube_extent(dir, order)
-    integer, intent(in) :: dir
-    integer, intent(in) :: order
-
-    integer :: extent
-
-    PUSH_SUB(stencil_cube_extent)
-
-    extent = 0
-    if(dir >= 1.or.dir <= 3) then
-      extent = order
-    end if
-    stencil_cube_extent = extent
-
-    POP_SUB(stencil_cube_extent)
-  end function stencil_cube_extent
 
 
   ! ---------------------------------------------------------

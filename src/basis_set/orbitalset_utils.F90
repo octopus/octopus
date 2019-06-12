@@ -26,10 +26,8 @@ module orbitalset_utils_oct_m
   use mesh_oct_m
   use messages_oct_m
   use orbitalset_oct_m
-  use profiling_oct_m
   use species_oct_m
   use submesh_oct_m
-  use types_oct_m  
  
   implicit none
 

@@ -19,29 +19,15 @@
 #include "global.h"
 
 module states_dim_oct_m
-  use blas_oct_m
   use distributed_oct_m
-  use geometry_oct_m
   use global_oct_m
-  use grid_oct_m
   use io_oct_m
   use kpoints_oct_m
-  use lalg_basic_oct_m
-  use loct_pointer_oct_m
   use math_oct_m
   use messages_oct_m
-  use mesh_oct_m
-  use mesh_function_oct_m
-  use mpi_oct_m
-  use mpi_lib_oct_m
   use multicomm_oct_m
-  use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
-  use species_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
-  use varinfo_oct_m
 
   implicit none
 
@@ -81,6 +67,7 @@ module states_dim_oct_m
     integer :: block_size
     integer :: orth_method
     logical :: pack_states
+    logical :: mirror_states
     FLOAT   :: cl_states_mem
   end type states_dim_t
 
@@ -113,6 +100,7 @@ contains
     dout%block_size     = din%block_size
     dout%orth_method    = din%orth_method
     dout%pack_states    = din%pack_states
+    dout%mirror_states  = din%mirror_states
     dout%cl_states_mem  = din%cl_states_mem
 
     SAFE_ALLOCATE(dout%kweights(1:din%nik))

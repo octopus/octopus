@@ -13,7 +13,3 @@ Spacing = 0.55
 Extrastates = 4
 
 
-ConvRelDens = 1e-1
-
-FilterPotentials = filter_none
-

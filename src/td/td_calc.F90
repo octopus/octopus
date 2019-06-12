@@ -58,12 +58,12 @@ contains
 !!          allowed to move
 ! ---------------------------------------------------------
 subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
-  type(grid_t),        intent(inout) :: gr
-  type(geometry_t),    intent(inout) :: geo
-  type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(inout) :: hm
-  FLOAT,               intent(in)    :: time
-  FLOAT,               intent(out)   :: acc(MAX_DIM)
+  type(grid_t),        intent(in)  :: gr
+  type(geometry_t),    intent(in)  :: geo
+  type(states_t),      intent(in)  :: st
+  type(hamiltonian_t), intent(in)  :: hm
+  FLOAT,               intent(in)  :: time
+  FLOAT,               intent(out) :: acc(MAX_DIM)
 
   FLOAT :: field(MAX_DIM), x(MAX_DIM)
   CMPLX, allocatable :: zpsi(:, :), hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:)
@@ -164,9 +164,9 @@ end subroutine td_calc_tacc
 !! \f]
 ! ---------------------------------------------------------
 subroutine td_calc_tvel(gr, st, vel)
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(inout) :: st
-  FLOAT,               intent(out)   :: vel(MAX_DIM)
+  type(grid_t),        intent(in)  :: gr
+  type(states_t),      intent(in)  :: st
+  FLOAT,               intent(out) :: vel(MAX_DIM)
 
   FLOAT, allocatable :: momentum(:,:,:)
   

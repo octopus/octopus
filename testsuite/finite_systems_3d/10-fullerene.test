@@ -12,13 +12,13 @@ Input      : 10-fullerene.01-gs.inp
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -318.47795089
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 3706.61771965
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -68.51711735
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -68.51728453
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 3988.93707569
 match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -137.61500010
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -91.98680624
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -13.26967136
 match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 225.40943621
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -8134.18571883
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -8134.18597135
 
 match ; Eigenvalue  10     ; GREPFIELD(static/info, ' 10   --', 3) ; -0.656765
 match ; Eigenvalue  20     ; GREPFIELD(static/info, ' 20   --', 3) ; -0.572604
@@ -33,7 +33,7 @@ match ; Eigenvalue 100     ; GREPFIELD(static/info, '100   --', 3) ; -0.064320
 match ; Eigenvalue 110     ; GREPFIELD(static/info, '110   --', 3) ; 0.007267
 match ; Eigenvalue 120     ; GREPFIELD(static/info, '120   --', 3) ; 0.057976
 match ; Eigenvalue 130     ; GREPFIELD(static/info, '130   --', 3) ; 0.198754
-match ; Eigenvalue 140     ; GREPFIELD(static/info, '140   --', 3) ; 0.270325
+match ; Eigenvalue 140     ; GREPFIELD(static/info, '140   --', 3) ; 0.270424
 
 Precision : 0.002
 

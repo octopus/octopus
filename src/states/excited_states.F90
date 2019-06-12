@@ -20,13 +20,10 @@
 
 module excited_states_oct_m
   use global_oct_m
-  use grid_oct_m
   use io_oct_m
   use lalg_adv_oct_m
-  use loct_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use mpi_oct_m
   use profiling_oct_m
   use states_oct_m
   use states_calc_oct_m
@@ -314,8 +311,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine excited_states_output(excited_state, dirname)
-    type(excited_states_t), intent(inout) :: excited_state
-    character(len=*),       intent(in)    :: dirname
+    type(excited_states_t), intent(in) :: excited_state
+    character(len=*),       intent(in) :: dirname
 
     integer :: iunit, ipair
 

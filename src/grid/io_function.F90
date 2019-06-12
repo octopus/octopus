@@ -492,7 +492,7 @@ contains
 
       do idir = 1, mesh%sb%dim
         write(iunit, '(3f12.6)') (units_from_atomic(units_out%length, &
-          mesh%sb%rlattice(idir, idir2)), idir2 = 1, mesh%sb%dim)
+          mesh%sb%rlattice(idir2, idir)), idir2 = 1, mesh%sb%dim)
       end do
 
       write(iunit, '(a)') 'PRIMCOORD'//trim(index_str)

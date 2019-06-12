@@ -23,20 +23,20 @@ module eigen_cg_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
-  use io_oct_m
   use lalg_basic_oct_m
-  use lalg_adv_oct_m
   use loct_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use mpi_lib_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
+  use poisson_oct_m
   use states_oct_m
   use states_calc_oct_m
+  use states_dim_oct_m
+  use xc_oct_m
+  use XC_F90(lib_m)
 
   implicit none
 

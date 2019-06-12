@@ -24,7 +24,6 @@ module eigensolver_oct_m
   use eigen_cg_oct_m
   use eigen_lobpcg_oct_m
   use eigen_rmmdiis_oct_m
-  use energy_calc_oct_m
   use exponential_oct_m
   use global_oct_m
   use grid_oct_m
@@ -32,7 +31,6 @@ module eigensolver_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -41,14 +39,13 @@ module eigensolver_oct_m
   use parser_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
-  use sort_oct_m
   use states_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
   use subspace_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -78,12 +75,19 @@ module eigensolver_oct_m
 
     type(subspace_t) :: sdiag
 
+    type(xc_t), pointer :: xc
+
     integer :: rmmdiis_minimization_iter
 
-    logical :: save_mem
     logical :: skip_finite_weight_kpoints
     logical :: folded_spectrum
     FLOAT, pointer   :: spectrum_shift(:,:)
+
+    ! cg options
+    logical :: orthogonalize_to_all
+    integer :: conjugate_direction
+    logical :: additional_terms
+    FLOAT   :: energy_change_threshold
   end type eigensolver_t
 
 
@@ -94,15 +98,18 @@ module eigensolver_oct_m
        RS_EVO     =  9,         &
        RS_LOBPCG  =  8,         &
        RS_RMMDIIS = 10,         &
-       RS_PSD      = 14
+       RS_ARPACK  = 12,         &
+       RS_FEAST   = 13,         &
+       RS_PSD     = 14
   
 contains
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_init(eigens, gr, st)
+  subroutine eigensolver_init(eigens, gr, st, xc)
     type(eigensolver_t), intent(out)   :: eigens
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(in)    :: st
+    type(xc_t), target,  intent(in)    :: xc
 
     integer :: default_iter, default_es
     FLOAT   :: default_tol
@@ -177,6 +184,68 @@ contains
     select case(eigens%es_type)
     case(RS_CG_NEW)
     case(RS_CG)
+      !%Variable CGOrthogonalizeAll
+      !%Type logical
+      !%Default no
+      !%Section SCF::Eigensolver
+      !%Description
+      !% Used by the cg solver only.
+      !% During the cg iterations, the current band can be orthogonalized
+      !% against all other bands or only against the lower bands. Orthogonalizing
+      !% against all other bands can improve convergence properties, whereas
+      !% orthogonalizing against lower bands needs less operations.
+      !%End
+      call parse_variable('CGOrthogonalizeAll', .false., eigens%orthogonalize_to_all)
+
+      !%Variable CGDirection
+      !%Type integer
+      !%Section SCF::Eigensolver
+      !%Description
+      !% Used by the cg solver only.
+      !% The conjugate direction is updated using a certain coefficient to the previous
+      !% direction. This coeffiction can be computed in different ways. The default is
+      !% to use Fletcher-Reeves (FR), an alternative is Polak-Ribiere (PR).
+      !%Option fletcher 1
+      !% The coefficient for Fletcher-Reeves consists of the current norm of the
+      !% steepest descent vector divided by that of the previous iteration.
+      !%Option polak 2
+      !% For the Polak-Ribiere scheme, a product of the current with the previous
+      !% steepest descent vector is subtracted in the nominator.
+      !%End
+      call parse_variable('CGDirection', OPTION__CGDIRECTION__FLETCHER, eigens%conjugate_direction)
+
+      !%Variable CGAdditionalTerms
+      !%Type logical
+      !%Section SCF::Eigensolver
+      !%Default no
+      !%Description
+      !% Used by the cg solver only.
+      !% Add additional terms during the line minimization, see PTA92, eq. 5.31ff.
+      !% These terms can improve convergence for some systems, but they are quite costly.
+      !% If you experience convergence problems, you might try out this option.
+      !% This feature is still experimental.
+      !%End
+      call parse_variable('CGAdditionalTerms', .false., eigens%additional_terms)
+      if(eigens%additional_terms) then
+        call messages_experimental("The additional terms for the CG eigensolver are not tested for all cases.")
+      end if
+
+      !%Variable CGEnergyChangeThreshold
+      !%Type float
+      !%Section SCF::Eigensolver
+      !%Default 0.1
+      !%Description
+      !% Used by the cg solver only.
+      !% For each band, the CG iterations are stopped when the change in energy is smaller than the
+      !% change in the first iteration multiplied by this factor. This limits the number of CG
+      !% iterations for each band, while still showing good convergence for the SCF cycle. The criterion
+      !% is discussed in Sec. V.B.6 of Payne et al. (1992), Rev. Mod. Phys. 64, 4.
+      !% The default value is 0.1, which is usually a good choice for LDA and GGA potentials. If you
+      !% are solving the OEP equation, you might want to set this value to 1e-3 or smaller. In general,
+      !% smaller values might help if you experience convergence problems.
+      !%End
+      call parse_variable('CGEnergyChangeThreshold', CNST(0.1), eigens%energy_change_threshold)
+
     case(RS_PLAN)
     case(RS_EVO)
       call messages_experimental("imaginary-time evolution eigensolver")
@@ -208,19 +277,6 @@ contains
       !%End
 
       call parse_variable('EigensolverMinimizationIter', 5, eigens%rmmdiis_minimization_iter)
-
-      !%Variable EigensolverSaveMemory
-      !%Type logical
-      !%Default no
-      !%Section SCF::Eigensolver
-      !%Description
-      !% The RMMDIIS eigensolver may require a considerable amount of
-      !% extra memory. When this variable is set to yes, the
-      !% eigensolver will use less memory at the expense of some
-      !% performance. This is especially useful for GPUs.
-      !%End
-
-      call parse_variable('EigensolverSaveMemory', .false., eigens%save_mem)
 
       if(gr%mesh%use_curvilinear) call messages_experimental("RMMDIIS eigensolver for curvilinear coordinates")
 
@@ -330,6 +386,9 @@ contains
     call parse_variable('EigensolverSkipKpoints', .false., eigens%skip_finite_weight_kpoints)
     call messages_print_var_value(stdout,'EigensolverSkipKpoints',  eigens%skip_finite_weight_kpoints)
 
+    ! set KS object
+    eigens%xc => xc
+
     POP_SUB(eigensolver_init)
   end subroutine eigensolver_init
 
@@ -410,8 +469,9 @@ contains
         case(RS_CG_NEW)
           call deigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
-          call deigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-            eigens%converged(ik), ik, eigens%diff(:, ik))
+          call deigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, &
+            eigens%converged(ik), ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, &
+            eigens%conjugate_direction, eigens%additional_terms, eigens%energy_change_threshold)
         case(RS_PLAN)
           call deigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
@@ -426,7 +486,7 @@ contains
             call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
           else
             call deigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-              eigens%converged(ik), ik, eigens%diff(:, ik), eigens%save_mem)
+              eigens%converged(ik), ik, eigens%diff(:, ik))
           end if
         case(RS_PSD)
           call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
@@ -446,11 +506,16 @@ contains
           call zeigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
            if(eigens%folded_spectrum) then
-             call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, & 
-                                eigens%diff(:, ik), shift=eigens%spectrum_shift)
+             call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, & 
+                                eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
+                                eigens%additional_terms, eigens%energy_change_threshold, &
+                                shift=eigens%spectrum_shift)
+
            else
-              call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
-                                eigens%diff(:, ik))
+              call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
+                                eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
+                                eigens%additional_terms, eigens%energy_change_threshold)
+
            end if
         case(RS_PLAN)
           call zeigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
@@ -467,7 +532,7 @@ contains
             call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
           else
             call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-              eigens%converged(ik), ik,  eigens%diff(:, ik), eigens%save_mem)
+              eigens%converged(ik), ik,  eigens%diff(:, ik))
           end if
         case(RS_PSD)
           call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)

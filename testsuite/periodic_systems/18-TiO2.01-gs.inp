@@ -1,0 +1,49 @@
+CalculationMode = gs
+PeriodicDimensions = 3
+BoxShape = parallelepiped
+ExperimentalFeatures = yes
+
+PseudopotentialSet = pseudodojo_pbe
+
+aCell = 4.594*Angstrom
+bCell = 4.594*Angstrom
+cCell = 2.959*Angstrom
+
+%LatticeParameters
+  aCell | bCell | cCell
+%
+%LatticeVectors
+ 1.0 | 0.0 | 0.0
+ 0.0 | 1.0 | 0.0
+ 0.0 | 0.0 | 1.0
+%
+
+u = 0.305
+%ReducedCoordinates
+ "Ti" | 0.0 | 0.0 | 0.0
+ "Ti" | 0.5 | 0.5 | 0.5
+ "O"  | u   |  u  | 0.0
+ "O"  | 1-u | 1-u | 0.0
+ "O"  | 1/2+u | 1/2-u | 1/2
+ "O"  | 1/2-u | 1/2+u | 1/2
+%
+
+Spacing = 0.5
+
+FromScratch = yes
+
+KPointsUseSymmetries = yes
+ExtraStates = 2
+EigenSolver = rmmdiis
+#ConvRelDens = 1e-7
+ParKPoints = no
+
+%KPointsGrid
+ 2 | 2 | 2
+%
+
+Output = matrix_elements
+OutputMatrixElements  = two_body
+OutputMEStart = 24
+OutputMEEnd = 25
+

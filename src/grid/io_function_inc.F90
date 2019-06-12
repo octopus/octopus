@@ -1357,7 +1357,7 @@ contains
     ! This differs from mesh%sb%rlattice if it is not an integer multiple of the spacing
     do idir = 1, 3
       do idir2 = 1, 3
-        lattice_vectors(idir, idir2) = mesh%spacing(idir) * (my_n(idir) - 1) * mesh%sb%rlattice_primitive(idir2, idir)
+        lattice_vectors(idir, idir2) = mesh%spacing(idir) * (my_n(idir) - 1) * mesh%sb%rlattice_primitive(idir, idir2)
       end do
     end do
     

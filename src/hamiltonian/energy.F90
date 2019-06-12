@@ -22,7 +22,6 @@
 module energy_oct_m
   use global_oct_m
   use messages_oct_m
-  use profiling_oct_m
 
   implicit none
 

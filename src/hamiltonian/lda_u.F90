@@ -29,9 +29,7 @@ module lda_u_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_base_oct_m 
-  use io_oct_m
-  use kpoints_oct_m
+  use hamiltonian_base_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
   use loewdin_oct_m
@@ -42,20 +40,14 @@ module lda_u_oct_m
   use multicomm_oct_m
   use orbitalbasis_oct_m
   use orbitalset_oct_m
-  use orbitalset_utils_oct_m
   use parser_oct_m
-  use periodic_copy_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use species_pot_oct_m
   use states_oct_m
   use states_dim_oct_m
   use submesh_oct_m
-  use types_oct_m  
-  use unit_oct_m
-  use unit_system_oct_m
  
   implicit none
 
@@ -281,7 +273,9 @@ contains
     !%End
     call parse_variable('ACBN0RotationallyInvariant', st%d%ispin /= SPINORS, this%rot_inv)
     call messages_print_var_value(stdout, 'ACBN0RotationallyInvariant', this%rot_inv)
-    if(st%d%ispin == SPINORS ) call messages_not_implemented("Rotationally invariant ACBN0 with spinors.")
+    if(this%rot_inv .and. st%d%ispin == SPINORS ) then
+      call messages_not_implemented("Rotationally invariant ACBN0 with spinors.")
+    end if
 
   end if
 

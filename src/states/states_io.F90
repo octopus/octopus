@@ -26,14 +26,10 @@ module states_io_oct_m
   use grid_oct_m
   use io_oct_m
   use kpoints_oct_m
-  use lalg_basic_oct_m
-  use loct_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
-  use mpi_lib_oct_m
+  use mpi_oct_m
   use orbitalset_oct_m
   use orbitalset_utils_oct_m
   use parser_oct_m
@@ -48,7 +44,6 @@ module states_io_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
-  use varinfo_oct_m
 
   implicit none
 
@@ -330,8 +325,6 @@ contains
         dhistogram(ien) = dhistogram(ien) + st%d%kweights(flat_indices(1, iev))*sb%kpoints%full%npoints
       end do
 
-      print *, maxval(dhistogram)
-
       !normalize
       if(maxval(dhistogram) > real(height)) then
         maxhist = nint(maxval(dhistogram))
@@ -566,54 +559,8 @@ contains
  
   end subroutine states_write_tpa
 
+
   ! ---------------------------------------------------------
-  subroutine states_write_fermi_for_bands(dir, st, sb)
-    character(len=*),  intent(in) :: dir
-    type(states_t),    intent(in) :: st
-    type(simul_box_t), intent(in) :: sb
-
-    integer :: iunit, idir
-    character(len=100) :: str_tmp
-
-    PUSH_SUB(states_write_fermi_for_bands)
-
-    iunit = io_open(trim(dir)//'/'//'bands-efermi.dat', action='write')    
-
-    write(message(1), '(3a)') '# Fermi energy [', trim(units_abbrev(units_out%energy)), &
-      '] in a format compatible with bands-gp.dat'
-
-    message(2)=""
-    message(3)=""
-    message(4)=""
-    do idir = 1, sb%dim
-      write(str_tmp, '(f12.6)') minval(sb%kpoints%reduced%point(idir, 1:sb%kpoints%reduced%npoints))
-      message(2) = trim(message(2)) // trim(str_tmp)
-      write(str_tmp, '(f12.6)') M_ZERO     ! Gamma point
-      message(3) = trim(message(3)) // trim(str_tmp)
-      write(str_tmp, '(f12.6)') maxval(sb%kpoints%reduced%point(idir, 1:sb%kpoints%reduced%npoints))
-      message(4) = trim(message(4)) // trim(str_tmp)
-    end do
-    do idir = 1, sb%dim
-      write(str_tmp, '(f12.6)') minval(sb%kpoints%reduced%red_point(idir, 1:sb%kpoints%reduced%npoints))
-      message(2) = trim(message(2)) // trim(str_tmp)
-      write(str_tmp, '(f12.6)') M_ZERO     ! Gamma point
-      message(3) = trim(message(3)) // trim(str_tmp)
-      write(str_tmp, '(f12.6)') maxval(sb%kpoints%reduced%red_point(idir, 1:sb%kpoints%reduced%npoints))
-      message(4) = trim(message(4)) // trim(str_tmp)
-    end do
-    write(str_tmp, '(f12.6)') units_from_atomic(units_out%energy, st%smear%e_fermi)
-    message(2) = trim(message(2)) // trim(str_tmp)
-    message(3) = trim(message(3)) // trim(str_tmp)
-    message(4) = trim(message(4)) // trim(str_tmp)
-
-    call messages_info(4, iunit)
-    call io_close(iunit)
-
-    POP_SUB(states_write_fermi_for_bands)
-  end subroutine states_write_fermi_for_bands
-
-
-    ! ---------------------------------------------------------
 
   subroutine states_write_bandstructure(dir, nst, st, sb, geo, mesh, phase, vec_pot, vec_pot_var)
     character(len=*),  intent(in)             :: dir
@@ -633,7 +580,7 @@ contains
 
     logical :: projection
     integer :: ii, ll, mm, nn, work, norb, work2
-    integer :: ia, iorb, idim, ip, maxnorb
+    integer :: ia, iorb, idim, maxnorb
     FLOAT   :: norm
     FLOAT, allocatable :: dpsi(:,:), ddot(:,:)
     CMPLX, allocatable :: zpsi(:,:), zdot(:,:)

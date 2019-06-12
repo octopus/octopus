@@ -275,7 +275,11 @@
 	a0 = a1 = VEC_ZERO;
 
 	for(j = 0; j < n; j++) {
-	  register VEC_TYPE wj = VEC_SCAL(w[j]);
+#ifdef VEC_SCAL_LD
+          register VEC_TYPE wj = VEC_SCAL_LD(w + j);
+#else
+          register VEC_TYPE wj = VEC_SCAL(w[j]);
+#endif
 	  int indexj = (index[j] + i)<<ldf;
 	  a0 = VEC_FMA(wj, LOAD(fi + indexj              + k), a0);
 	  a1 = VEC_FMA(wj, LOAD(fi + indexj + 1*VEC_SIZE + k), a1);

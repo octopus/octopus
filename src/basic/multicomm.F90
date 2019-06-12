@@ -48,9 +48,8 @@
 !! index is parallelized.
 
 module multicomm_oct_m
+  use blacs_oct_m
   use global_oct_m
-  use io_oct_m
-  use loct_oct_m
   use messages_oct_m
   use mpi_oct_m
 #if defined(HAVE_OPENMP)
@@ -59,7 +58,6 @@ module multicomm_oct_m
   use parser_oct_m
   use profiling_oct_m
   use utils_oct_m
-  use varinfo_oct_m
   
   implicit none
   

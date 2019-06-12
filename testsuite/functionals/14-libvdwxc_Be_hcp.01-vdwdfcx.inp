@@ -1,0 +1,24 @@
+%LatticeVectors
+ 4.327472828166566 | 0.0 | 0.0
+ -2.163736414083283 | 3.747701403379137 | 0.0
+ 0.0 | 0.0 | 6.781149921737009
+%
+
+PeriodicDimensions = 3
+ParKPoints = False
+ExperimentalFeatures = True
+Spacing = 0.15 * angstrom
+XCFunctional = vdw_c_vdwdfcx + gga_x_lv_rpw86
+PseudopotentialSet = sg15
+ConvRelDens = 1e-6
+EigensolverTolerance = 1e-7
+
+%KPointsGrid
+ 2 | 2 | 2
+%
+
+
+%Coordinates
+ 'Be' | -1.0818682070416414 | -1.8738507016895685 | -3.3905749608685043
+ 'Be' | -1.0818682070416414 | 0.6246169005631896 | 0.0
+%

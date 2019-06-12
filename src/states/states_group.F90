@@ -20,11 +20,9 @@
 
 module states_group_oct_m
   use batch_oct_m
-  use batch_ops_oct_m
   use global_oct_m
   use loct_pointer_oct_m
   use messages_oct_m
-  use mpi_oct_m
   use profiling_oct_m
   use states_dim_oct_m
 
