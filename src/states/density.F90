@@ -142,12 +142,14 @@ contains
       case(BATCH_NOT_PACKED)
         if(states_are_real(this%st)) then
           do ist = 1, psib%nst
+            if(abs(weight(ist)) <= M_EPSILON) cycle
             forall(ip = 1:this%gr%mesh%np)
               this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%states(ist)%dpsi(ip, 1)**2
             end forall
           end do
         else
           do ist = 1, psib%nst
+            if(abs(weight(ist)) <= M_EPSILON) cycle
             forall(ip = 1:this%gr%mesh%np)
               this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
                 (real(psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)**2 + aimag(psib%states(ist)%zpsi(ip, 1))**2)
@@ -207,6 +209,8 @@ contains
 
       do ist = 1, psib%nst
 
+        if(abs(weight(ist)) <= M_EPSILON) cycle
+
         call batch_get_state(psib, ist, this%gr%mesh%np, psi)
 
         call zmultigrid_coarse2fine(this%gr%fine%tt, this%gr%der, this%gr%fine%mesh, psi, fpsi, order = 2)
@@ -240,7 +244,10 @@ contains
 
       SAFE_ALLOCATE(zpsi(1:this%gr%mesh%np, 1:this%st%d%dim))
 
+
       do ist = 1, psib%nst
+        if(abs(weight(ist)) <= M_EPSILON) cycle
+
         call batch_get_state(psib, ist, this%gr%mesh%np, zpsi)
         
         do ip = 1, this%gr%fine%mesh%np
