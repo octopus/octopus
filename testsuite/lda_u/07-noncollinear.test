@@ -105,7 +105,7 @@ Precision: 2e-6
 match ;  Local Magnetic Moment (O1)   ; GREPFIELD(static/info, '3         O', 3) ; 0.0
 match ;  Local Magnetic Moment (O2)   ; GREPFIELD(static/info, '4         O', 3) ; 0.0
 
-Precision: 1.2e-05
+Precision: 2e-05
 match ;  Effective U (Ni1)  ; GREPFIELD(static/info, '1        Ni   d', 4) ; 0.34847755
 match ;  Effective U (Ni2)  ; GREPFIELD(static/info, '2        Ni   d', 4) ; 0.34847755
 Precision: 2e-05
