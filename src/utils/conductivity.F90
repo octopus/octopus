@@ -97,7 +97,7 @@
     call parse_variable('ConductivityFromForces', .false., from_forces)
     if(from_forces) call messages_experimental('ConductivityFromForces')
     
-    max_freq = 1 + nint(spectrum%max_energy/spectrum%energy_step)
+    max_freq = spectrum_nenergy_steps(spectrum)
     
     if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
 
@@ -358,12 +358,12 @@
 
     call batch_init(ftcurrb, 3, 1, 1, ftcurr)
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-      1, ntime, M_ZERO, deltat, currb, 1, max_freq, spectrum%energy_step, ftcurrb)
+      1, ntime, M_ZERO, deltat, currb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, ftcurrb)
     call batch_end(ftcurrb)
 
     call batch_init(ftcurrb, 3, 1, 1, ftcurr(:, :, 2:2))
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
-      1, ntime, M_ZERO, deltat, currb, 1, max_freq, spectrum%energy_step, ftcurrb)
+      1, ntime, M_ZERO, deltat, currb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, ftcurrb)
     call batch_end(ftcurrb)
     
     call batch_end(currb)
@@ -384,7 +384,7 @@
     v0 = sqrt(sum(vel0(1:space%dim)**2))
     if(.not. from_forces .or. v0 < epsilon(v0)) v0 = CNST(1.0)
     do ifreq = 1, max_freq
-      ww = spectrum%energy_step*(ifreq - 1)
+      ww = spectrum%energy_step*(ifreq - 1) + spectrum%min_energy
       write(unit = iunit, iostat = ierr, fmt = '(7e20.10)') units_from_atomic(units_out%energy, ww), &
            transpose(ftcurr(ifreq, 1:3, 1:2)/v0)
       !write(*,*)ifreq, ftcurr(ifreq, 1:3, 1:2)
@@ -405,12 +405,12 @@
 
     call batch_init(ftheatcurrb, 3, 1, 1, ftheatcurr)
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-      1, ntime, M_ZERO, deltat, heatcurrb, 1, max_freq, spectrum%energy_step, ftheatcurrb)
+      1, ntime, M_ZERO, deltat, heatcurrb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, ftheatcurrb)
     call batch_end(ftheatcurrb)
 
     call batch_init(ftheatcurrb, 3, 1, 1, ftheatcurr(:, :, 2:2))
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
-      1, ntime, M_ZERO, deltat, heatcurrb, 1, max_freq, spectrum%energy_step, ftheatcurrb)
+      1, ntime, M_ZERO, deltat, heatcurrb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, ftheatcurrb)
     call batch_end(ftheatcurrb)
     
     call batch_end(heatcurrb)
@@ -432,7 +432,7 @@
     if(.not. from_forces .or. v0 < epsilon(v0)) v0 = CNST(1.0)
 
     do ifreq = 1, max_freq
-      ww = spectrum%energy_step*(ifreq - 1)
+      ww = spectrum%energy_step*(ifreq - 1) + spectrum%min_energy
       write(unit = iunit, iostat = ierr, fmt = '(7e20.10)') units_from_atomic(units_out%energy, ww), &
         transpose(ftheatcurr(ifreq, 1:3, 1:2)/v0)
       !print *, ifreq, ftheatcurr(ifreq, 1:3, 1:2)

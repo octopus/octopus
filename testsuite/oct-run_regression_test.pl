@@ -44,6 +44,7 @@ Usage: oct-run_regression_test.pl [options]
     -l        copy output log to current directory
     -m        run matches only (assumes there are work directories)
     -r        print a report into a YAML files
+    -G        deviceID offset for CUDA run
 
 Exit codes:
     0         all tests passed
@@ -89,7 +90,7 @@ if (not @ARGV) { usage; }
 
 $opt_f = "";
 $opt_r = "";
-getopts("nlvhD:c:f:spm:r:");
+getopts("nlvhD:c:f:spm:r:G:");
 
 # avoid warnings 'used only once: possible typo'
 $useless = $opt_h;
@@ -114,6 +115,12 @@ if($opt_D) {
 
 if(length($opt_f) == 0) {
     die255("You must supply the name of a test file with the -f option.");
+}
+
+if($opt_G) {
+    $offset_GPU = $opt_G;
+} else {
+    $offset_GPU = -1
 }
 
 $aexec = get_env("EXEC");
@@ -160,6 +167,14 @@ $enabled = ""; # FIXME: should Enabled be optional?
 $options_required = "";
 $options_required_mpi = "";
 $options_are_mpi = 0;
+
+# adjust offset_GPU for MPI runs:
+
+if( "$mpiexec" eq "" ) {
+    $offset_GPU = $offset_GPU * $np;
+}
+
+$ENV{OCT_OpenCLDevice} = $offset_GPU;
 
 # This variable counts the number of failed testcases.
 $failures = 0;

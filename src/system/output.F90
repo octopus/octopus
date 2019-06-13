@@ -144,9 +144,10 @@ module output_oct_m
   
 contains
 
-  subroutine output_init(outp, sb, nst, ks)
+  subroutine output_init(outp, sb, st, nst, ks)
     type(output_t),       intent(out)   :: outp
     type(simul_box_t),    intent(in)    :: sb
+    type(states_t),       intent(in)    :: st
     integer,              intent(in)    :: nst
     type(v_ks_t),         intent(inout) :: ks
 
@@ -457,7 +458,7 @@ contains
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me_init(outp%me, sb, nst)
+      call output_me_init(outp%me, sb, st, nst)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
@@ -631,7 +632,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine output_all(outp, gr, geo, st, hm, ks, dir)
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),         intent(in)    :: gr
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
@@ -726,7 +727,7 @@ contains
   subroutine output_localization_funct(st, hm, gr, dir, outp, geo)
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(in)    :: hm
-    type(grid_t),           intent(inout) :: gr
+    type(grid_t),           intent(in)    :: gr
     character(len=*),       intent(in)    :: dir
     type(output_t),         intent(in)    :: outp
     type(geometry_t),       intent(in)    :: geo
@@ -835,7 +836,7 @@ contains
   subroutine calc_electronic_pressure(st, hm, gr, pressure)
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(in)    :: hm
-    type(grid_t),           intent(inout) :: gr
+    type(grid_t),           intent(in)    :: gr
     FLOAT,                  intent(out)   :: pressure(:)
 
     FLOAT, allocatable :: rho(:,:), lrho(:), tau(:,:)
@@ -880,15 +881,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine output_energy_density(hm, ks, st, der, dir, outp, geo, gr, grp)
-    type(hamiltonian_t),       intent(in)    :: hm
-    type(v_ks_t),              intent(in)    :: ks
-    type(states_t),            intent(inout) :: st
-    type(derivatives_t),       intent(inout) :: der
-    character(len=*),          intent(in)    :: dir
-    type(output_t),            intent(in)    :: outp
-    type(geometry_t),          intent(in)    :: geo
-    type(grid_t),              intent(in)    :: gr
-    type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
+    type(hamiltonian_t),       intent(in) :: hm
+    type(v_ks_t),              intent(in) :: ks
+    type(states_t),            intent(in) :: st
+    type(derivatives_t),       intent(in) :: der
+    character(len=*),          intent(in) :: dir
+    type(output_t),            intent(in) :: outp
+    type(geometry_t),          intent(in) :: geo
+    type(grid_t),              intent(in) :: gr
+    type(mpi_grp_t), optional, intent(in) :: grp !< the group that shares the same data, must contain the domains group
 
     integer :: is, ierr, ip
     character(len=MAX_PATH_LEN) :: fname

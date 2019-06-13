@@ -329,6 +329,8 @@ contains
     !% This variable selects the OpenCL device that Octopus will
     !% use. You can specify one of the options below or a numerical
     !% id to select a specific device.
+    !% Values >= 0 select the device to be used. In case of MPI enabled runs
+    !% devices are distributed in a round robin fashion, starting at this value.
     !%Option gpu -1
     !% If available, Octopus will use a GPU for OpenCL.
     !%Option cpu -2
@@ -349,6 +351,7 @@ contains
     call messages_print_stress(stdout, "GPU acceleration")
 
 #ifdef HAVE_CUDA
+    if(idevice<0) idevice = 0
     call cuda_init(accel%context%cuda_context, accel%device%cuda_device, idevice, base_grp%rank)
 #ifdef HAVE_MPI
     write(message(1), '(A, I5.5, A, I5.5)') "Rank ", base_grp%rank, " uses device number ", idevice
@@ -805,10 +808,10 @@ contains
       call messages_write(volume_hits + volume_misses, fmt = 'f18.1', units = unit_gigabytes, align_left = .true., &
         new_line = .true.)
       call messages_write('    Hit ratio                =')
-      call messages_write(hits/dble(hits + misses)*100, fmt='(f5.1)')
+      call messages_write(hits/dble(hits + misses)*100, fmt='(f6.1)', align_left = .true.)
       call messages_write('%', new_line = .true.)
       call messages_write('    Volume hit ratio         =')
-      call messages_write(volume_hits/(volume_hits + volume_misses)*100, fmt='(f5.1)')
+      call messages_write(volume_hits/(volume_hits + volume_misses)*100, fmt='(f6.1)', align_left = .true.)
       call messages_write('%')
       call messages_new_line()
       call messages_info()

@@ -114,10 +114,10 @@ contains
 
   ! --------------------------------------------------------------------
   subroutine pert_init(this, pert_type, gr, geo)
-    type(pert_t),      intent(out)   :: this
-    integer,           intent(in)    :: pert_type
-    type(grid_t),      intent(inout) :: gr
-    type(geometry_t),  intent(in)    :: geo
+    type(pert_t),      intent(out) :: this
+    integer,           intent(in)  :: pert_type
+    type(grid_t),      intent(in)  :: gr
+    type(geometry_t),  intent(in)  :: geo
 
     PUSH_SUB(pert_init)
     

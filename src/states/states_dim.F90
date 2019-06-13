@@ -99,7 +99,8 @@ contains
     dout%spin_channels  = din%spin_channels
     dout%block_size     = din%block_size
     dout%orth_method    = din%orth_method
-    dout%mirror_states    = din%mirror_states
+    dout%pack_states    = din%pack_states
+    dout%mirror_states  = din%mirror_states
     dout%cl_states_mem  = din%cl_states_mem
 
     SAFE_ALLOCATE(dout%kweights(1:din%nik))
