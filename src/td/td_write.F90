@@ -229,7 +229,7 @@ contains
     !% <tt>td.general/projections.XXX</tt>. Only use this option if
     !% you really need it, as it might be computationally expensive. See <tt>TDProjStateStart</tt>.
     !% The output interval of this quantity is controled by the variable <tt>TDOutputComputeInterval</tt>
-    !% In case of states parallelization, all the ground-state states are stord by each task.
+    !% In case of states parallelization, all the ground-state states are stored by each task.
     !%Option local_mag_moments bit(9)
     !% If set, outputs the local magnetic moments, integrated in sphere centered around each atom.
     !% The radius of the sphere can be set with <tt>LocalMagneticMomentsSphereRadius</tt>.
@@ -359,7 +359,7 @@ contains
       .or.writ%out(OUT_KP_PROJ)%write .or. writ%out(OUT_N_EX)%write) then
 
       if(st%parallel_in_states .and. writ%out(OUT_POPULATIONS)%write) then
-        message(1) = "Options TDOutput = td_occup and populations are not implemented for parallel in states."
+        message(1) = "Options TDOutput = populations are not implemented for parallel in states."
         call messages_fatal(1)
       end if
 
