@@ -143,6 +143,18 @@ contains
 
       call messages_print_var_value(stdout, 'PreconditionerFilterFactor', alpha)
 
+      ! check for correct interval of alpha
+      if (alpha < CNST(0.5) .or. alpha > CNST(1.0)) then
+        call messages_write('Error! You are using a value for the Filter preconditioner which is')
+        call messages_new_line()
+        call messages_write('known to lead to wrong results.')
+        call messages_new_line()
+        call messages_new_line()
+        call messages_write('Please use a value between 0.5 and 1.0.')
+        call messages_new_line()
+        call messages_fatal(only_root_writes = .true.)
+      end if
+
       ns = this%op%stencil%size
 
       if (this%op%const_w) then
