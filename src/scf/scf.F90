@@ -1350,7 +1350,7 @@ contains
           label = 'force_diff'
           write(iunit, '(1x,a)', advance = 'no') label
         end if
-        if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+        if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
           if (ks%oep%level == 5) then
             label = 'OEP norm2ss'
             write(iunit, '(1x,a)', advance = 'no') label
@@ -1382,7 +1382,7 @@ contains
         if (scf%conv_abs_force > M_ZERO) then
           write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%force, scf%abs_force)
         end if
-        if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+        if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
           if (ks%oep%level == 5) &
             write(iunit, '(es13.5)', advance = 'no') ks%oep%norm2ss
         end if
