@@ -472,7 +472,7 @@ contains
       call MPI_Allreduce(stopping, stopping_tmp, 1, MPI_LOGICAL, MPI_LOR, sys%mc%master_comm, mpi_err)
       stopping = stopping_tmp
 #endif      
- 
+
       call profiling_in(prof, "TIME_STEP")
 
       if(iter > 1) then
