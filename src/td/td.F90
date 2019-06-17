@@ -63,6 +63,7 @@ module td_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
+  use walltimer_oct_m
   use xc_oct_m
 
   implicit none
@@ -326,7 +327,7 @@ contains
     if(ion_dynamics_ions_move(td%ions) .and. td%energy_update_iter /= 1) then
       call messages_experimental('TDEnergyUpdateIter /= 1 when moving ions')
     end if
-    
+
     POP_SUB(td_init)
   end subroutine td_init
 
@@ -458,14 +459,15 @@ contains
     end if
 
     if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) call states_pack(st)
-
+    
     etime = loct_clock()
     ! This is the time-propagation loop. It starts at t=0 and finishes
     ! at td%max_iter*dt. The index i runs from 1 to td%max_iter, and
     ! step "iter" means propagation from (iter-1)*dt to iter*dt.
     propagation: do iter = td%iter, td%max_iter
 
-      stopping = clean_stop(sys%mc%master_comm)
+      stopping = clean_stop(sys%mc%master_comm) .or. walltimer_alarm()
+       
       call profiling_in(prof, "TIME_STEP")
 
       if(iter > 1) then

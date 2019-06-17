@@ -95,6 +95,8 @@ contains
     !% Tests the DFT+U part of the code for projections on the basis.
     !%Option hamiltonian_apply 8
     !% Tests the application of the Hamiltonian, or a part of it
+    !%Option density_calc 9
+    !%Calculation of the density.
     !%End
     call parse_variable('TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -190,6 +192,8 @@ contains
       call test_dft_u(param)
     case(OPTION__TESTMODE__HAMILTONIAN_APPLY)
       call test_hamiltonian(param)
+    case(OPTION__TESTMODE__DENSITY_CALC)
+      call test_density_calc(param)
     end select
   
     POP_SUB(test_run)
@@ -444,6 +448,43 @@ contains
 
     POP_SUB(test_hamiltonian)
   end subroutine test_hamiltonian
+
+
+  ! ---------------------------------------------------------
+  subroutine test_density_calc(param)
+    type(test_parameters_t), intent(in) :: param
+
+    type(system_t) :: sys
+    integer :: itime
+
+    PUSH_SUB(test_density_calc)
+
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+    call messages_write('Info: Testing density calculation')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    call system_init(sys)
+
+    call states_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    if(sys%st%d%pack_states) call states_pack(sys%st)
+
+    do itime = 1, param%repetitions
+      call density_calc(sys%st, sys%gr, sys%st%rho)
+    end do
+
+    write(message(1),'(a,3x, f12.6)') "Norm density  ", dmf_nrm2(sys%gr%mesh, sys%st%rho(:,1))
+    call messages_info(1)
+
+    call states_deallocate_wfns(sys%st)
+    call system_end(sys)
+
+    POP_SUB(test_density_calc)
+  end subroutine test_density_calc
+
 
 
 ! ---------------------------------------------------------
