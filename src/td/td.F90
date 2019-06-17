@@ -692,8 +692,6 @@ contains
       ! in order that the code does properly the initialization.
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
-      call density_calc(st, gr, st%rho)
-
       if(freeze_orbitals > 0) then
         if(fromScratch) then
           ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
@@ -713,6 +711,7 @@ contains
           ' orbitals have been frozen.', st%nst, ' will be propagated.'
         call messages_info(1)
         call states_freeze_adjust_qtot(st)
+        call density_calc(st, gr, st%rho)
         call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
       elseif(freeze_orbitals < 0) then
         ! This means SAE approximation. We calculate the Hxc first, then freeze all
@@ -729,6 +728,7 @@ contains
         call density_calc(st, gr, st%rho)
       else
         ! Normal run.
+        call density_calc(st, gr, st%rho)
         call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
       end if
 
