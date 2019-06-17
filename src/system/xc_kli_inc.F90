@@ -28,7 +28,7 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
   logical,        intent(in)      :: first
 
   integer :: ist, ip, jst, eigen_n, kssi, kssj, proc
-  FLOAT, allocatable :: rho_sigma(:), v_bar_S(:), sqphi(:, :, :), dd(:)
+  FLOAT, allocatable :: rho_sigma(:), v_bar_S(:), sqphi(:, :, :), dd(:), coctranslation(:)
   FLOAT, allocatable :: Ma(:,:), xx(:,:), yy(:,:)
   R_TYPE, allocatable :: psi(:, :), bb(:,:)
   R_TYPE, allocatable :: phi1(:,:,:)
@@ -46,6 +46,11 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
 
   if (oep%has_photons) then
+
+    SAFE_ALLOCATE(coctranslation(1:mesh%np))
+    coctranslation(:) = oep%pt%pol_dipole_array(:,1)
+    oep%pt%pol_dipole_array(:,1) = oep%pt%pol_dipole_array(:,1) - dmf_dotp(gr%mesh, SUM(st%rho, DIM=2),oep%pt%pol_dipole_array(:,1))/abs(st%qtot)
+
     SAFE_ALLOCATE(phi1(1:gr%mesh%np,1:st%d%dim,1:st%nst))
     SAFE_ALLOCATE(bb(1:gr%mesh%np, 1:1))
     if (is == 1) &
@@ -102,6 +107,11 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
       end do
     end if
   end do
+
+  if (oep%has_photons) then
+    oep%pt%pol_dipole_array(:,1) = oep%pt%pol_dipole_array(:,1) + dmf_dotp(gr%mesh, SUM(st%rho, DIM=2),coctranslation(:))/abs(st%qtot)
+    SAFE_DEALLOCATE_A(coctranslation)
+  end if
 
   do ip = 1, mesh%np
     oep%vxc(ip, 1) = oep%vxc(ip, 1)/rho_sigma(ip)
