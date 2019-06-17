@@ -135,6 +135,9 @@ contains
       !% If you observe that the first eigenvectors are not converging
       !% properly, especially for periodic systems, you should
       !% increment this value.
+      !%
+      !% The allowed range for this parameter is between 0.5 and 1.0.
+      !% For other values, the SCF may converge to wrong results.
       !%End
       default_alpha = CNST(0.5)
       if(simul_box_is_periodic(gr%sb)) default_alpha = CNST(0.6)
@@ -145,14 +148,7 @@ contains
 
       ! check for correct interval of alpha
       if (alpha < CNST(0.5) .or. alpha > CNST(1.0)) then
-        call messages_write('Error! You are using a value for the Filter preconditioner which is')
-        call messages_new_line()
-        call messages_write('known to lead to wrong results.')
-        call messages_new_line()
-        call messages_new_line()
-        call messages_write('Please use a value between 0.5 and 1.0.')
-        call messages_new_line()
-        call messages_fatal(only_root_writes = .true.)
+        call messages_input_error('PreconditionerFilterFactor')
       end if
 
       ns = this%op%stencil%size
