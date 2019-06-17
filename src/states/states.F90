@@ -1851,7 +1851,7 @@ contains
     FLOAT, allocatable :: abs_wf_psi(:), abs_gwf_psi(:)
     CMPLX, allocatable :: psi_gpsi(:)
     CMPLX   :: c_tmp
-    integer :: is, ik, ist, i_dim, st_dim, ii, st_end_
+    integer :: is, ik, ist, i_dim, st_dim, ii, st_end_, idir
     FLOAT   :: ww, kpoint(1:MAX_DIM)
     logical :: something_to_do
     FLOAT, allocatable :: symm(:, :)
@@ -2107,6 +2107,31 @@ contains
            density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is) + lwf_psi(1:der%mesh%np, 1)
          end do
       end if
+    end if
+
+    !If we freeze some of the orbitals, we need to had the contributions here
+    if(associated(st%frozen_tau)) then
+      do is = 1, st%d%nspin
+        do ii = 1, der%mesh%np
+          tau(ii, is) = tau(ii, is) + st%frozen_tau(ii, is)
+        end do
+      end do
+    end if
+    if(associated(st%frozen_gdens)) then
+      do is = 1, st%d%nspin
+        do idir = 1, der%mesh%sb%dim
+          do ii = 1, der%mesh%np
+            density_gradient(ii, idir, is) = density_gradient(ii, idir, is) + st%frozen_gdens(ii, idir, is)
+          end do
+        end do
+      end do
+    end if
+    if(associated(st%frozen_tau)) then
+      do is = 1, st%d%nspin
+        do ii = 1, der%mesh%np
+          density_laplacian(ii, is) = density_laplacian(ii, is) + st%frozen_ldens(ii, is)
+        end do
+      end do
     end if
 
     SAFE_DEALLOCATE_A(wf_psi)

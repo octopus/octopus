@@ -162,31 +162,6 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
  density_gradient = gdens, density_laplacian = ldens)
     end if
 
-    !If we freeze some of the orbitals, we need to had the contributions here
-    if(associated(st%frozen_tau)) then
-      do isp = 1, st%d%nspin
-        do ip = 1, der%mesh%np
-          tau(ip, isp) = tau(ip, isp) + st%frozen_tau(ip, isp)
-        end do
-      end do
-    end if
-    if(associated(st%frozen_gdens)) then
-      do isp = 1, st%d%nspin
-        do idir = 1, der%mesh%sb%dim
-          do ip = 1, der%mesh%np
-            gdens(ip, idir, isp) = gdens(ip, idir, isp) + st%frozen_gdens(ip, idir, isp)
-          end do 
-        end do
-      end do
-    end if
-    if(associated(st%frozen_tau)) then
-      do isp = 1, st%d%nspin
-        do ip = 1, der%mesh%np
-          ldens(ip, isp) = ldens(ip, isp) + st%frozen_ldens(ip, isp)
-        end do
-      end do
-    end if
-
     if(functl(FUNC_X)%id == XC_MGGA_X_TB09 .and. der%mesh%sb%periodic_dim == 3) then
       call calc_tb09_c()
     end if
