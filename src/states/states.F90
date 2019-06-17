@@ -1894,6 +1894,9 @@ contains
 
       do ist = st%st_start, st%st_end
 
+        ww = st%d%kweights(ik)*st%occ(ist, ik)
+        if(abs(ww) <= M_EPSILON) cycle
+
         ! all calculations will be done with complex wavefunctions
         call states_get_state(st, der%mesh, ist, ik, wf_psi)
 
@@ -1912,8 +1915,6 @@ contains
             call zderivatives_lapl(der, wf_psi(:,st_dim), lwf_psi(:,st_dim), set_bc = .false.)
           end do
         end if
-
-        ww = st%d%kweights(ik)*st%occ(ist, ik)
 
         !We precompute some quantites, to avoid to compute it many times
         wf_psi_conj(1:der%mesh%np, 1:st%d%dim) = conjg(wf_psi(1:der%mesh%np,1:st%d%dim))
