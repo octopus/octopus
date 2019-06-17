@@ -108,7 +108,7 @@ module td_write_oct_m
     OUT_SEPARATE_VELOCITY= 23, &
     OUT_SEPARATE_FORCES  = 24, &
     OUT_TOTAL_HEAT_CURRENT = 25, &
-    OUT_TRANS_M          = 26, &
+    OUT_TOT_M            = 26, &
     OUT_MAX              = 26
   
   integer, parameter ::      &
@@ -281,9 +281,9 @@ contains
     !% Writes forces in a separate file.
     !%Option total_heat_current bit(24)
     !% Output the total heat current (average of the heat current density over the cell).
-    !%Option transverse_magnetization bit(25)
-    !% Writes the transverse magnetization, where the transverse magnetization is controled by the variables
-    !% <tt>TDPolarizationDirection</tt> and <tt>TDMomentumTransfer</tt>. 
+    !%Option total_magnetization bit(25)
+    !% Writes the total magnetization, where the total magnetization is calculated at the momentum
+    !% defined by <tt>TDMomentumTransfer</tt>. 
     !% This is used to extract the magnon frequency in case of a magnon kick.
     !%End
 
@@ -638,9 +638,9 @@ contains
         call write_iter_init(writ%out(OUT_N_EX)%handle, first, &
           units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/n_ex")))
     
-     if(writ%out(OUT_TRANS_M)%write) &
-        call write_iter_init(writ%out(OUT_TRANS_M)%handle, first, &
-          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/transverse_magnetization")))
+     if(writ%out(OUT_TOT_M)%write) &
+        call write_iter_init(writ%out(OUT_TOT_M)%handle, first, &
+          units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/total_magnetization")))
       
     end if
     
@@ -767,8 +767,8 @@ contains
     if(writ%out(OUT_MAGNETS)%write) &
       call td_write_local_magnetic_moments(writ%out(OUT_MAGNETS)%handle, gr, st, geo, writ%lmm_r, iter)
 
-    if(writ%out(OUT_TRANS_M)%write) &
-      call td_write_trans_mag(writ%out(OUT_TRANS_M)%handle, gr, st, kick, iter)
+    if(writ%out(OUT_TOT_M)%write) &
+      call td_write_tot_mag(writ%out(OUT_TOT_M)%handle, gr, st, kick, iter)
 
     if(writ%out(OUT_PROJ)%write .and. mod(iter, writ%compute_interval) == 0) then
       if (mpi_grp_is_root(mpi_world)) call write_iter_set(writ%out(OUT_PROJ)%handle, iter)
@@ -1020,7 +1020,7 @@ contains
   end subroutine td_write_local_magnetic_moments
 
   ! ---------------------------------------------------------
-  subroutine td_write_trans_mag(out_magnets, gr, st, kick, iter)
+  subroutine td_write_tot_mag(out_magnets, gr, st, kick, iter)
     type(c_ptr),              intent(inout) :: out_magnets
     type(grid_t),             intent(inout) :: gr
     type(states_t),           intent(in)    :: st
@@ -1028,11 +1028,12 @@ contains
     integer,                  intent(in)    :: iter
 
     character(len=50) :: aux
-    CMPLX :: tm(2)
+    CMPLX :: tm(6)
+    integer :: ii
 
-    PUSH_SUB(td_write_trans_mag)
+    PUSH_SUB(td_write_tot_mag)
 
-    call magnetic_transverse_magnetization(gr%mesh, st, gr%der%boundaries, kick%qvector, kick%pol_dir, tm)
+    call magnetic_total_magnetization(gr%mesh, st, gr%der%boundaries, kick%qvector, tm)
 
     if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
 
@@ -1041,25 +1042,33 @@ contains
 
         !second line -> columns name
         call write_iter_header_start(out_magnets)
-        call write_iter_header(out_magnets, 'Re[m_+]')
-        call write_iter_header(out_magnets, 'Im[m_+]')
-        call write_iter_header(out_magnets, 'Re[m_-]')
-        call write_iter_header(out_magnets, 'Im[m_-]')
+        call write_iter_header(out_magnets, 'Re[m_x(q)]')
+        call write_iter_header(out_magnets, 'Im[m_x(q)]')
+        call write_iter_header(out_magnets, 'Re[m_y(q)]')
+        call write_iter_header(out_magnets, 'Im[m_y(q)]')
+        call write_iter_header(out_magnets, 'Re[m_z(q)]')
+        call write_iter_header(out_magnets, 'Im[m_z(q)]')
+        call write_iter_header(out_magnets, 'Re[m_x(-q)]')
+        call write_iter_header(out_magnets, 'Im[m_x(-q)]')
+        call write_iter_header(out_magnets, 'Re[m_y(-q)]')
+        call write_iter_header(out_magnets, 'Im[m_y(-q)]')
+        call write_iter_header(out_magnets, 'Re[m_z(-q)]')
+        call write_iter_header(out_magnets, 'Im[m_z(-q)]')
         call write_iter_nl(out_magnets)
 
         call td_write_print_header_end(out_magnets)
       end if
 
       call write_iter_start(out_magnets)
-      call write_iter_double(out_magnets, real(tm(1),REAL_PRECISION), 1)
-      call write_iter_double(out_magnets, aimag(tm(1)), 1)
-      call write_iter_double(out_magnets, real(tm(2),REAL_PRECISION), 1)
-      call write_iter_double(out_magnets, aimag(tm(2)), 1)
+      do ii = 1, 6
+        call write_iter_double(out_magnets, real(tm(ii),REAL_PRECISION), 1)
+        call write_iter_double(out_magnets, aimag(tm(ii)), 1)
+      end do
       call write_iter_nl(out_magnets)
     end if
 
-    POP_SUB(td_write_trans_mag)
-  end subroutine td_write_trans_mag
+    POP_SUB(td_write_tot_mag)
+  end subroutine td_write_tot_mag
 
 
 

@@ -47,7 +47,7 @@ module magnetic_oct_m
     magnetic_local_moments,    &
     calc_physical_current,     &
     magnetic_induced,          &
-    magnetic_transverse_magnetization
+    magnetic_total_magnetization
 
 contains
 
@@ -208,71 +208,47 @@ contains
   end subroutine magnetic_local_moments
 
   ! ---------------------------------------------------------
-  subroutine magnetic_transverse_magnetization(mesh, st, boundaries, qq, qpol, trans_mag)
+  subroutine magnetic_total_magnetization(mesh, st, boundaries, qq, trans_mag)
     type(mesh_t),       intent(in)  :: mesh
     type(states_t),     intent(in)  :: st
     type(boundaries_t), intent(in)  :: boundaries
     FLOAT,              intent(in)  :: qq(:)
-    integer,            intent(in)  :: qpol
-    CMPLX,              intent(out) :: trans_mag(2)
+    CMPLX,              intent(out) :: trans_mag(6)
 
     integer :: ip
     CMPLX, allocatable :: tmp(:,:)
     FLOAT, allocatable :: md(:, :)
     FLOAT :: rr, xx(MAX_DIM)
     CMPLX :: expqr
-    
 
-    PUSH_SUB(magnetic_transverse_magnetization)
+    PUSH_SUB(magnetic_total_magnetization)
 
-    SAFE_ALLOCATE(tmp(1:mesh%np, 1:2))
+    SAFE_ALLOCATE(tmp(1:mesh%np, 1:6))
     SAFE_ALLOCATE(md (1:mesh%np, 1:max(mesh%sb%dim, 3)))
 
     call magnetic_density(mesh, st, st%rho, md)
-    select case(qpol)
-    case(1)
-      ASSERT(.not. boundaries%spiral)
-      do ip = 1, mesh%np
-        call mesh_r(mesh, ip, rr, coords=xx)
-        expqr = exp(M_zI*sum(xx(1:mesh%sb%dim)*qq(1:mesh%sb%dim)))
-        tmp(ip,1) = conjg(expqr)*(md(ip,2) + M_zI*md(ip, 3))
-        tmp(ip,2) = expqr*(md(ip,2) - M_zI*md(ip, 3))
-      end do
-    case(2)
-      ASSERT(.not. boundaries%spiral)
-      do ip = 1, mesh%np
-        call mesh_r(mesh, ip, rr, coords=xx)
-        expqr = exp(M_zI*sum(xx(1:mesh%sb%dim)*qq(1:mesh%sb%dim)))
-        tmp(ip,1) = conjg(expqr)*(md(ip,1) + M_zI*md(ip, 3))
-        tmp(ip,2) = expqr*(md(ip,1) - M_zI*md(ip, 3))
-      end do
-    case(3)
-    !  if(.not.boundaries%spiral) then
-        do ip = 1, mesh%np
-          call mesh_r(mesh, ip, rr, coords=xx)
-          expqr = exp(M_zI*sum(xx(1:mesh%sb%dim)*qq(1:mesh%sb%dim)))
-          tmp(ip,1) = conjg(expqr)*(md(ip,1) + M_zI*md(ip, 2))
-          tmp(ip,2) = expqr*(md(ip,1) - M_zI*md(ip, 2))
-        end do
-    !  else
-    !    do ip = 1, mesh%np
-    !      call mesh_r(mesh, ip, rr, coords=xx)
-    !     expqr = exp(M_zI*sum(xx(1:mesh%sb%dim)*qq(1:mesh%sb%dim)))
-    ! !  !   tmp(ip,1) = M_TWO*conjg(expqr)*md(ip,1)
-    !   !   tmp(ip,2) = M_TWO*expqr*md(ip, 1)
-    !      tmp(ip,1) = expqr*(md(ip,1) + M_zI*md(ip, 2))
-    !      tmp(ip,2) = conjg(expqr)*(md(ip,1) - M_zI*md(ip, 2))
-    !    end do
-    !  end if
-    end select
-    trans_mag(1) = zmf_integrate(mesh, tmp(:,1))
-    trans_mag(2) = zmf_integrate(mesh, tmp(:,2))
+    do ip = 1, mesh%np
+      call mesh_r(mesh, ip, rr, coords=xx)
+      expqr = exp(M_zI*sum(xx(1:mesh%sb%dim)*qq(1:mesh%sb%dim)))
+      tmp(ip,1) = expqr*md(ip,1)
+      tmp(ip,2) = expqr*md(ip,2)
+      tmp(ip,3) = expqr*md(ip,3)
+      tmp(ip,4) = conjg(expqr)*md(ip,1)
+      tmp(ip,5) = conjg(expqr)*md(ip,2)
+      tmp(ip,6) = conjg(expqr)*md(ip,3)
+    end do
+
+    !TODO: combine the reductions here
+    do ip = 1, 6
+      trans_mag(ip) = zmf_integrate(mesh, tmp(:,ip))
+    end do
+     
 
     SAFE_DEALLOCATE_A(md)
     SAFE_DEALLOCATE_A(tmp)
 
-    POP_SUB(magnetic_transverse_magnetization)
-  end subroutine magnetic_transverse_magnetization
+    POP_SUB(magnetic_total_magnetization)
+  end subroutine magnetic_total_magnetization
 
 
   ! ---------------------------------------------------------

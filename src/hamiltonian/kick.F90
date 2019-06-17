@@ -729,7 +729,7 @@ contains
       if(to_interpolate) np = mesh%np_part
     end if 
     
-    if(abs(kick%qlength) > M_EPSILON) then ! q-vector is set
+    if(abs(kick%qlength) > M_EPSILON .or. kick%delta_strength_mode == KICK_MAGNON_MODE) then ! q-vector is set
 
       select case (kick%qkick_mode)
         case (QKICKMODE_COS)
