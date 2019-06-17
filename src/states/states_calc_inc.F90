@@ -1612,7 +1612,8 @@ end subroutine X(states_me_one_body)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex, lindex, twoint, phase)
+subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex, lindex, twoint, &
+                 phase, singularity, density_only)
   type(grid_t),     intent(in)              :: gr
   type(states_t),   intent(in)              :: st
   integer,          intent(in)              :: st_min, st_max
@@ -1622,13 +1623,16 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
   integer,          intent(out)             :: lindex(:,:)
   R_TYPE,           intent(out)             :: twoint(:)  !
   CMPLX, optional,  intent(in)              :: phase(:,:)
+  type(singularity_t), optional,intent(in)  :: singularity
+  logical, optional,intent(in)              :: density_only
 
   integer :: ist, jst, kst, lst, ijst, klst, ikpt, jkpt, kkpt, lkpt
   integer :: ist_global, jst_global, kst_global, lst_global, nst, nst_tot
-  integer :: iint
+  integer :: iint, ikpoint, jkpoint, ip, idim
   R_TYPE  :: me
   R_TYPE, allocatable :: nn(:), vv(:)
   R_TYPE, allocatable :: psii(:, :), psij(:, :), psik(:, :), psil(:, :)
+  FLOAT :: qq(1:MAX_DIM)
 
   PUSH_SUB(X(states_me_two_body))
 
@@ -1643,6 +1647,11 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
     call messages_not_implemented("Two-body integrals with spinors.")
   end if
 
+  ASSERT(present(phase) == present(singularity))
+#ifdef R_TCOMPLEX
+  ASSERT(present(phase))
+#endif
+
   ijst = 0
   iint = 1
 
@@ -1654,32 +1663,46 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
   do ist_global = 1, nst_tot
     ist = mod(ist_global-1, nst) +1
     ikpt = (ist_global-ist)/nst+1
+    ikpoint = states_dim_get_kpoint_index(st%d, ikpt)
 
     call states_get_state(st, gr%mesh, ist+st_min-1, ikpt, psii)
-
-#ifdef R_TCOMPLEX
-    if(present(phase)) then
-       call states_set_phase(st%d, psii, phase(1:gr%mesh%np, ikpt), gr%mesh%np, .false.)
-    end if
-#endif
 
     do jst_global = 1, nst_tot
       jst = mod(jst_global-1, nst) +1
       jkpt = (jst_global-jst)/nst+1
+      jkpoint = states_dim_get_kpoint_index(st%d, jkpt)
+      if(present(singularity)) then
+        qq(1:gr%der%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint, absolute_coordinates=.false.) &
+                         - kpoints_get_point(gr%sb%kpoints, jkpoint, absolute_coordinates=.false.)
+        ! In case of k-points, the poisson solver must contains k-q 
+        ! in the Coulomb potential, and must be changed for each q point
+        call poisson_kernel_reinit(exchange_psolver, qq, &
+                  -gr%sb%kpoints%full%npoints*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
+      end if
 
+
+#ifndef R_TCOMPLEX
       if(jst_global > ist_global) cycle
+#endif
       ijst=ijst+1
 
       call states_get_state(st, gr%mesh, jst+st_min-1, jkpt, psij)
-#ifdef R_TCOMPLEX
-      if(present(phase)) then
-         call states_set_phase(st%d, psij, phase(1:gr%mesh%np, jkpt), gr%mesh%np, .false.)
-      end if
-#endif
 
-
+      
       nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np, 1))*psij(1:gr%mesh%np, 1)
-      call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
+      do idim = 2, st%d%dim
+        nn(1:gr%mesh%np) = nn(1:gr%mesh%np) + R_CONJ(psii(1:gr%mesh%np, idim))*psij(1:gr%mesh%np, idim)
+      end do
+      call X(poisson_solve)(exchange_psolver, vv, nn, all_nodes=.false.)
+
+      !We now put back the phase that we treated analytically using the Poisson solver
+#ifdef R_TCOMPLEX
+      do idim = 1, st%d%dim
+        do ip = 1, gr%mesh%np
+          vv(ip) = vv(ip) * exp(M_zI*sum(qq(1:gr%der%dim)*gr%mesh%x(ip, 1:gr%der%dim)))
+        end do
+      end do
+#endif
 
       klst=0
       do kst_global = 1, nst_tot
@@ -1696,8 +1719,9 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
         do lst_global = 1, nst_tot
           lst = mod(lst_global-1, nst) +1
           lkpt = (lst_global-lst)/nst+1
-
+#ifndef R_TCOMPLEX
           if(lst_global > kst_global) cycle
+#endif
           klst=klst+1
           if(klst > ijst) cycle
 

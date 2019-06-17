@@ -57,6 +57,8 @@ module fourier_space_oct_m
     CMPLX, pointer :: zop(:, :, :)
     logical :: in_device_memory
     type(accel_mem_t) :: op_buffer
+    logical :: real_op
+    integer, allocatable :: boundaries1(:,:), boundaries2(:,:,:)
   end type fourier_space_op_t
 
 contains
@@ -165,6 +167,8 @@ contains
     end if
     SAFE_DEALLOCATE_P(this%dop)
     SAFE_DEALLOCATE_P(this%zop)
+    SAFE_DEALLOCATE_A(this%boundaries1)
+    SAFE_DEALLOCATE_A(this%boundaries2)
 
     POP_SUB(fourier_space_op_end)
   end subroutine fourier_space_op_end

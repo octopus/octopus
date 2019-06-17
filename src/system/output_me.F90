@@ -38,6 +38,7 @@ module output_me_oct_m
   use projector_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use singularity_oct_m
   use states_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
@@ -69,12 +70,13 @@ module output_me_oct_m
   end type output_me_t
 
   integer, parameter, public :: &
-    OUTPUT_ME_MOMENTUM       =   1, &
-    OUTPUT_ME_ANG_MOMENTUM   =   2, &
-    OUTPUT_ME_ONE_BODY       =   4, &
-    OUTPUT_ME_TWO_BODY       =   8, &
-    OUTPUT_ME_KS_MULTIPOLES  =  16, &
-    OUTPUT_ME_DIPOLE         =  32
+    OUTPUT_ME_MOMENTUM         =   1, &
+    OUTPUT_ME_ANG_MOMENTUM     =   2, &
+    OUTPUT_ME_ONE_BODY         =   4, &
+    OUTPUT_ME_TWO_BODY         =   8, &
+    OUTPUT_ME_TWO_BODY_DENSITY =  16, &
+    OUTPUT_ME_KS_MULTIPOLES    =  32, &
+    OUTPUT_ME_DIPOLE           =  64
 
 contains
   
@@ -107,10 +109,13 @@ contains
     !% <math>\left< i \left| \hat{T} + V_{ext} \right| j \right></math>. Not available with states parallelization.
     !%Option two_body 8
     !% <math>\left< ij \left| \frac{1}{\left|\vec{r}_1-\vec{r}_2\right|} \right| kl \right></math>.
-    !% Not available with states parallelization.
-    !%Option ks_multipoles 16
+    !% Not available with states parallelization. For periodic system, this is not available for k-point parallelization neither.
+    !%Option two_body_density 16
+    !% <math>\left< ij \left| \frac{1}{\left|\vec{r}_1-\vec{r}_2\right|} \right| ji \right></math>.
+    !% Not available with states parallelization. For periodic system, this is not available for k-point parallelization neither.
+    !%Option ks_multipoles 32
     !% See <tt>OutputMEMultipoles</tt>. Not available with states parallelization.
-    !%Option dipole 32
+    !%Option dipole 64
     !% Prints the dipole matrix elements. Not available with states parallelization.
     !% For periodic systems, the intraband terms (dipole matrix elements between degenerated states)
     !% are set to zero, and only the absolute value of the dipole matrix element is printed.
@@ -197,6 +202,7 @@ contains
     FLOAT, allocatable :: doneint(:), dtwoint(:)
     CMPLX, allocatable :: zoneint(:), ztwoint(:)
     integer, allocatable :: iindex(:,:), jindex(:,:), kindex(:,:), lindex(:,:)
+    type(singularity_t) :: singul
     
     PUSH_SUB(output_me)
 
@@ -311,18 +317,39 @@ contains
 
     end if
 
-    if(bitand(this%what, output_me_two_body) /= 0) then
+    if(bitand(this%what, output_me_two_body) /= 0 .or. bitand(this%what, output_me_two_body_density) /= 0 ) then
       message(1) = "Computing two-body matrix elements"
       call messages_info(1)
 
       ASSERT(.not. st%parallel_in_states)
-      if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body with states parallelization")
-      if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization")
-      ! how to do this properly? states_matrix
-      iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
-      write(iunit, '(a)') '#(n1,k1) (n2,k2) (n3,k3) (n4,k4) (n1-k1, n2-k2|n3-k3, n4-k4)'
+      if(bitand(this%what, output_me_two_body) /= 0) then
+        if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body with states parallelization")
+        if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization")
+        ! how to do this properly? states_matrix
+        iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
+        write(iunit, '(a)') '#(n1,k1) (n2,k2) (n3,k3) (n4,k4) (n1-k1, n2-k2|n3-k3, n4-k4)'
+      else
+        if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body_density with states parallelization")
+        if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body_density with k-points parallelization")
+        ! how to do this properly? states_matrix
+        iunit = io_open(trim(dir)//'/output_me_two_body_density', action='write')
+        write(iunit, '(a)') '#(n1,k1) (n2,k2) (n1-k1, n1-k1|n2-k2, n2-k2)'
+      end if
 
-      id = st%d%nik*this%nst*(st%d%nik*this%nst+1)*(st%d%nik**2*this%nst**2+st%d%nik*this%nst+2)/8
+      call singularity_nullify(singul)
+      if(bitand(this%what, output_me_two_body) /= 0) then
+        if(states_are_real(st)) then
+          id = st%d%nik*this%nst*(st%d%nik*this%nst+1)*(st%d%nik**2*this%nst**2+st%d%nik*this%nst+2)/8
+        else
+          id = (st%d%nik*this%nst)**2*((st%d%nik*this%nst)**2+1)/2
+        end if
+      else
+        id = (st%d%nik*this%nst)*((st%d%nik*this%nst)+1)/2
+      end if
+
+      if(states_are_complex(st)) then
+        call singularity_init(singul, st, gr%sb, gr%mesh)
+      end if
       SAFE_ALLOCATE(iindex(1:2, 1:id))
       SAFE_ALLOCATE(jindex(1:2, 1:id))
       SAFE_ALLOCATE(kindex(1:2, 1:id))
@@ -341,15 +368,23 @@ contains
           !We cannot pass the phase array like that if kpt%start is not 1.  
           ASSERT(.not.st%d%kpt%parallel) 
           call zstates_me_two_body(gr, st, this%st_start, this%st_end, &
-                     iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase) 
+                     iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase, singularity = singul, &
+                     density_only = (bitand(this%what, output_me_two_body_density) /= 0))
         else
           call zstates_me_two_body(gr, st, this%st_start, this%st_end, &
-                     iindex, jindex, kindex, lindex, ztwoint)
+                     iindex, jindex, kindex, lindex, ztwoint, &
+                     density_only = (bitand(this%what, output_me_two_body_density) /= 0))
         end if
 
-        do ll = 1, id
-          write(iunit, '(4(i4,i5),2e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), ztwoint(ll)
-        enddo
+        if(bitand(this%what, output_me_two_body) /= 0) then
+          do ll = 1, id
+            write(iunit, '(4(i4,i5),2e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), ztwoint(ll)
+          enddo
+        else
+          do ll = 1, id
+            write(iunit, '(4(i4,i5),2e15.6)') iindex(1:2,ll), kindex(1:2,ll), ztwoint(ll)
+          enddo
+        end if
         SAFE_DEALLOCATE_A(ztwoint)
       end if
       
@@ -358,6 +393,8 @@ contains
       SAFE_DEALLOCATE_A(kindex)
       SAFE_DEALLOCATE_A(lindex)
       call io_close(iunit)
+
+      call singularity_end(singul)
 
     end if
 

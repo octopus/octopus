@@ -22,6 +22,7 @@ module poisson_fft_oct_m
   use cube_function_oct_m
   use cube_oct_m
   use fft_oct_m
+  use fourier_shell_oct_m
   use fourier_space_oct_m
   use global_oct_m
   use loct_math_oct_m
@@ -43,7 +44,9 @@ module poisson_fft_oct_m
     poisson_fft_t,           &
     poisson_fft_init,        &
     poisson_fft_end,         &
-    poisson_fft_solve
+    poisson_fft_solve,       &
+    zpoisson_fft_solve,      &
+    poisson_fft_precalculate_g
 
   integer, public, parameter ::                &
        POISSON_FFT_KERNEL_NONE      = -1,      &
@@ -58,22 +61,30 @@ module poisson_fft_oct_m
     type(fourier_space_op_t) :: coulb  !< object for Fourier space operations
     integer                  :: kernel !< choice of kernel, one of options above
     FLOAT                    :: qq(MAX_DIM) !< q-point for exchange in periodic system
+    logical                  :: precalculated_g !< Do we have precalculated the G vector coordinates
+    FLOAT, allocatable       :: Gvec(:,:,:,:) !< G vectors of the cube, in absolute coordinates  
+    FLOAT                    :: singularity !< Value of the Coulomb potential at the singularity
   end type poisson_fft_t
 contains
 
-  subroutine poisson_fft_init(this, mesh, cube, kernel, soft_coulb_param, qq, fullcube)
-    type(poisson_fft_t), intent(out)   :: this
+  subroutine poisson_fft_init(this, mesh, cube, kernel, soft_coulb_param, qq, fullcube, singul)
+    type(poisson_fft_t), intent(inout) :: this !< inout as we want to keep precalculated_g for instance
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
     integer,             intent(in)    :: kernel
     FLOAT, optional,     intent(in)    :: soft_coulb_param
     FLOAT, optional,     intent(in)    :: qq(:) !< (1:mesh%sb%periodic_dim)
     type(cube_t), optional, intent(in) :: fullcube !< needed for Hockney kerenl
+    FLOAT, optional,     intent(in)    :: singul
 
     PUSH_SUB(poisson_fft_init)
 
     this%kernel = kernel
     this%qq = M_ZERO
+    
+    !We must define the singularity if we specify a q vector
+    this%singularity = optional_default(singul, M_ZERO)
+    ASSERT(present(qq) == present(singul))
 
     if(present(qq) .and. simul_box_is_periodic(mesh%sb)) then
       ASSERT(ubound(qq, 1) >= mesh%sb%periodic_dim)
@@ -168,30 +179,67 @@ contains
   end subroutine get_cutoff
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_gg_transform(gg_in, temp, sb, qq, gg, modg2)
+  subroutine poisson_fft_gg_transform(gg_in, temp, sb, gg, modg2, qq)
     integer,           intent(in)    :: gg_in(:)
     FLOAT,             intent(in)    :: temp(:)
     type(simul_box_t), intent(in)    :: sb
-    FLOAT,             intent(in)    :: qq(:)
     FLOAT,             intent(inout) :: gg(:)
     FLOAT,             intent(out)   :: modg2
-
-!    integer :: idir
+    FLOAT, optional,   intent(in)    :: qq(:)
 
     ! no PUSH_SUB, called too frequently
-
     gg(1:3) = gg_in(1:3)
-    gg(1:sb%periodic_dim) = gg(1:sb%periodic_dim) + qq(1:sb%periodic_dim)
-    gg(1:3) = gg(1:3) * temp(1:3)
+    if(present(qq)) &
+      gg(1:sb%periodic_dim) = gg(1:sb%periodic_dim) + qq(1:sb%periodic_dim)
+    gg(1:3) = gg(1:3)*temp(1:3)
     gg(1:3) = matmul(sb%klattice_primitive(1:3,1:3),gg(1:3))
-! MJV 27 jan 2015 this should not be necessary
-!    do idir = 1, 3
-!      gg(idir) = gg(idir) / lalg_nrm2(3, sb%klattice_primitive(1:3, idir))
-!    end do
-
     modg2 = sum(gg(1:3)**2)
 
   end subroutine poisson_fft_gg_transform
+
+  !-----------------------------------------------------------------
+  subroutine poisson_fft_precalculate_g(this, mesh, cube)
+    type(poisson_fft_t), intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+    type(cube_t),        intent(inout) :: cube
+
+    FLOAT :: modg2, gg(3), temp(3)
+    integer :: ix, iy, iz, ixx(3), db(3)
+
+    ASSERT(MAX_DIM == 3)
+
+    PUSH_SUB(poisson_fft_precalculate_g)
+
+    db(1:3) = cube%rs_n_global(1:3)
+    temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
+
+    SAFE_ALLOCATE(this%Gvec(1:3, 1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
+    this%Gvec = M_ZERO
+
+    ! According to the conventions of plane-wave codes, e.g. Quantum ESPRESSO,
+    ! PARATEC, EPM, and BerkeleyGW, if the FFT grid is even, then neither
+    ! nfft/2 nor -nfft/2 should be a valid G-vector component.
+    do iz = 1, cube%fs_n_global(3)
+      ixx(3) = pad_feq(iz, db(3), .true.)
+      if(2 * ixx(3) == db(3)) cycle
+      do iy = 1, cube%fs_n_global(2)
+        ixx(2) = pad_feq(iy, db(2), .true.)
+        if(2 * ixx(2) == db(2)) cycle
+        do ix = 1, cube%fs_n_global(1)
+          ixx(1) = pad_feq(ix, db(1), .true.)
+          if(2 * ixx(1) == db(1)) cycle
+
+          call poisson_fft_gg_transform(ixx, temp, mesh%sb, gg, modg2)
+          this%Gvec(1:3, ix, iy, iz) = gg(1:3) 
+
+        end do
+      end do
+    end do
+
+    this%precalculated_g = .true.
+
+    POP_SUB(poisson_fft_precalculate_g)
+  end subroutine poisson_fft_precalculate_g
 
   !-----------------------------------------------------------------
   subroutine poisson_fft_build_3d_3d(this, mesh, cube)
@@ -200,50 +248,101 @@ contains
     type(cube_t),        intent(inout) :: cube
 
     integer :: ix, iy, iz, ixx(3), db(3)
-    FLOAT :: temp(3), modg2
-    FLOAT :: gg(3)
+    FLOAT :: temp(3), modg2, modq2
+    FLOAT :: gg(3), qq(3)
     FLOAT, allocatable :: fft_Coulb_FS(:,:,:)
+    FLOAT :: ekin_cutoff
+    logical :: apply_full_space
+    integer, allocatable :: boundaries1(:,:), boundaries2(:,:,:)
 
     PUSH_SUB(poisson_fft_build_3d_3d)
 
     db(1:3) = cube%rs_n_global(1:3)
+    temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
+
+    apply_full_space = .false.
+    if( any(abs(this%qq(:))>CNST(1e-8))) apply_full_space = .true.
+
+    if(apply_full_space) then
+      ASSERT(cube%rs_n_global(1)==cube%fs_n_global(1))
+    end if
+
+    ekin_cutoff = fourier_shell_cutoff(cube, mesh, apply_full_space, dg = temp)
 
     ! store the Fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
     fft_Coulb_FS = M_ZERO
 
-    temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
+    !We want to operate on the sphere instead of the cube
+    !This way we get a cylinder
+    SAFE_ALLOCATE(boundaries1(1:2, 1:cube%fs_n_global(3)))
+    SAFE_ALLOCATE(boundaries2(1:2, 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
+    boundaries1(1:2, 1:cube%fs_n_global(3)) = 0
+    boundaries2(1:2, 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)) = 0
 
-    do ix = 1, cube%fs_n_global(1)
-      ixx(1) = pad_feq(ix, db(1), .true.)
+    !We get the norm of the q vector
+    ixx(1:3) = 0
+    call poisson_fft_gg_transform(ixx, temp, mesh%sb, gg, modq2, this%qq)
+     
+    !If the G vectors are precalculated, we convert qq to absolute coordinates
+    qq(1:3) = this%qq(1:3)
+    if(this%precalculated_g) qq(1:3) = matmul(mesh%sb%klattice_primitive(1:3,1:3), qq(1:3)*temp(1:3))
+
+    ! According to the conventions of plane-wave codes, e.g. Quantum ESPRESSO,
+    ! PARATEC, EPM, and BerkeleyGW, if the FFT grid is even, then neither
+    ! nfft/2 nor -nfft/2 should be a valid G-vector component.
+    do iz = 1, cube%fs_n_global(3)
+      ixx(3) = pad_feq(iz, db(3), .true.)
+      if(2 * ixx(3) == db(3)) cycle
+      boundaries1(1:2,iz) = 0
       do iy = 1, cube%fs_n_global(2)
         ixx(2) = pad_feq(iy, db(2), .true.)
-        do iz = 1, cube%fs_n_global(3)
-          ixx(3) = pad_feq(iz, db(3), .true.)
+        if(2 * ixx(2) == db(2)) cycle
+        boundaries2(1:2,iy,iz) = 0 
+        do ix = 1, cube%fs_n_global(1)
+          ixx(1) = pad_feq(ix, db(1), .true.)
+          if(2 * ixx(1) == db(1)) cycle
 
-         call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
+          if(.not. this%precalculated_g) then
+            call poisson_fft_gg_transform(ixx, temp, mesh%sb, gg, modg2, this%qq)
+          else
+            modg2 = sum((this%Gvec(1:3, ix, iy, iz)+qq(1:3))**2)
+          end if
+
+          !We only keep close shells
+          if(M_HALF*modg2 > ekin_cutoff) cycle
+
+          !This tests are done after the check on the cutoff
+          if( boundaries2(1,iy,iz) == 0)  boundaries2(1,iy,iz) = ix
+          boundaries2(2,iy,iz) = ix
+          if( boundaries1(1,iz) == 0)  boundaries1(1,iz) = iy
+          boundaries1(2,iz) = max(iy,boundaries1(2,iz))
+
 #ifdef HAVE_NFFT
          !HH not very elegant
          if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
 #endif
 
-          if(abs(modg2) > M_EPSILON) then
-            fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
-          else
-            fft_Coulb_FS(ix, iy, iz) = M_ZERO
-          end if
+         if(abs(modg2) > CNST(1e-6)) then
+           fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI/modg2
+         else
+           !We use the user-defined value of the singularity
+           fft_Coulb_FS(ix, iy, iz) = this%singularity
+         end if
+
         end do
       end do
-
     end do
 
-    forall(iz=1:cube%fs_n_global(3), iy=1:cube%fs_n_global(2), ix=1:cube%fs_n_global(1))
-      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-    end forall
 
-    call dfourier_space_op_init(this%coulb, cube, fft_Coulb_FS)
+    call dfourier_space_op_init(this%coulb, cube, fft_Coulb_FS, &
+                                   boundaries1 = boundaries1, boundaries2 = boundaries2)
 
+
+    SAFE_DEALLOCATE_A(boundaries1)
+    SAFE_DEALLOCATE_A(boundaries2)
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
+
     POP_SUB(poisson_fft_build_3d_3d)
   end subroutine poisson_fft_build_3d_3d
   !-----------------------------------------------------------------
@@ -295,7 +394,7 @@ contains
         do iz = 1, nfs(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
           
-          call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
+          call poisson_fft_gg_transform(ixx, temp, mesh%sb, gg, modg2, this%qq)
           
           if(abs(modg2) > M_EPSILON) then
             fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
@@ -399,7 +498,7 @@ contains
         do iz = 1, cube%fs_n_global(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-          call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
+          call poisson_fft_gg_transform(ixx, temp, mesh%sb, gg, modg2, this%qq)
 
           if(abs(modg2) > M_EPSILON) then
             gz = abs(gg(3))
@@ -479,7 +578,7 @@ contains
         do iz = 1, db(3)
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-          call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
+          call poisson_fft_gg_transform(ixx, temp, mesh%sb, gg, modg2, this%qq)
 
           if(abs(modg2) > M_EPSILON) then
             gperp = hypot(gg(2), gg(3))
@@ -573,7 +672,7 @@ contains
           iz = cube%fs_istart(3) + lz - 1
           ixx(3) = pad_feq(iz, db(3), .true.)
 
-          call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
+          call poisson_fft_gg_transform(ixx, temp, mesh%sb, gg, modg2, this%qq)
 #ifdef HAVE_NFFT
           !HH
           if(cube%fft%library.eq.FFTLIB_NFFT) then
@@ -900,6 +999,66 @@ contains
 
     POP_SUB(poisson_fft_solve)
   end subroutine poisson_fft_solve
+
+    !-----------------------------------------------------------------
+
+  subroutine zpoisson_fft_solve(this, mesh, cube, pot, rho, mesh_cube_map, average_to_zero)
+    type(poisson_fft_t),            intent(in)    :: this
+    type(mesh_t),                   intent(in)    :: mesh
+    type(cube_t),                   intent(in)    :: cube
+    CMPLX,                          intent(out)   :: pot(:)
+    CMPLX,                          intent(in)    :: rho(:)
+    type(mesh_cube_parallel_map_t), intent(in)    :: mesh_cube_map
+    logical,              optional, intent(in)    :: average_to_zero !< default is false
+
+    logical :: average_to_zero_
+    CMPLX :: average
+    type(cube_function_t) :: cf
+
+    PUSH_SUB(zpoisson_fft_solve)
+
+    average_to_zero_ = .false.
+    if (present(average_to_zero)) average_to_zero_ = average_to_zero
+    average = M_ZERO !this avoids a non-initialized warning
+
+    call cube_function_null(cf)
+    call zcube_function_alloc_RS(cube, cf, in_device = (this%kernel /= POISSON_FFT_KERNEL_CORRECTED))
+
+    ! put the density in the cube
+    if (cube%parallel_in_domains) then
+      call zmesh_to_cube_parallel(mesh, rho, cube, cf, mesh_cube_map)
+    else
+      if(mesh%parallel_in_domains) then
+        call zmesh_to_cube(mesh, rho, cube, cf, local = .true.)
+      else
+        call zmesh_to_cube(mesh, rho, cube, cf)
+      end if
+    end if
+
+    ! apply the Couloumb term in Fourier space
+    call zfourier_space_op_apply(this%coulb, cube, cf)
+
+    !now the cube has the potential
+    if(average_to_zero_) average = cube_function_surface_average(cube, cf)
+
+    ! move the potential back to the mesh
+    if (cube%parallel_in_domains) then
+      call zcube_to_mesh_parallel(cube, cf, mesh, pot, mesh_cube_map)
+    else
+      if(mesh%parallel_in_domains) then
+        call zcube_to_mesh(cube, cf, mesh, pot, local=.true.)
+      else
+        call zcube_to_mesh(cube, cf, mesh, pot)
+      end if
+    end if
+
+    if(average_to_zero_) pot(1:mesh%np) = pot(1:mesh%np) - average
+
+    call zcube_function_free_RS(cube, cf) ! memory is no longer needed
+
+    POP_SUB(zpoisson_fft_solve)
+  end subroutine zpoisson_fft_solve
+
 
 end module poisson_fft_oct_m
 

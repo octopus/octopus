@@ -592,7 +592,7 @@ subroutine X(scdm_exchange_operator) (hm, der, psib, hpsib, ik, exx_coef)
           end do
         end do
 
-        call X(poisson_solve)(hm%scdm%poisson, pot_l, rho_l, all_nodes=.false.)
+        call X(poisson_solve)(scdm_poisson, pot_l, rho_l, all_nodes=.false.)
 
         ff = hm%hf_st%occ(jst, ik2)
         if(hm%d%ispin == UNPOLARIZED) ff = M_HALF*ff

@@ -64,11 +64,12 @@ subroutine X(cube_function_fs2rs)(cube, cf)
 end subroutine X(cube_function_fs2rs)
 
 ! ---------------------------------------------------------
-subroutine X(fourier_space_op_init)(this, cube, op, in_device)
+subroutine X(fourier_space_op_init)(this, cube, op, in_device, boundaries1, boundaries2)
   type(fourier_space_op_t), intent(out) :: this
   type(cube_t),             intent(in)  :: cube
   R_TYPE,                   intent(in)  :: op(:, :, :)
   logical, optional,        intent(in)  :: in_device
+  integer, optional,        intent(in)  :: boundaries1(:,:), boundaries2(:,:,:)
 
   integer :: ii, jj, kk, ii_linear, size
   R_TYPE, allocatable :: op_linear(:)
@@ -77,16 +78,43 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
 
   ASSERT(associated(cube%fft))
   ASSERT(cube%fft%library /= FFTLIB_NONE)
+  ASSERT(present (boundaries1)==present(boundaries2))
 
   nullify(this%dop)
   nullify(this%zop)
 
+#ifdef R_TREAL
+  this%real_op = .true.
+#else
+  this%real_op = .false.
+#endif
+
   if(cube%fft%library /= FFTLIB_ACCEL .or. .not. optional_default(in_device, .true.)) then
     this%in_device_memory = .false.
     SAFE_ALLOCATE(this%X(op)(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
-    forall (kk = 1:cube%fs_n(3), jj = 1:cube%fs_n(2), ii = 1:cube%fs_n(1)) 
-      this%X(op)(ii, jj, kk) = op(ii, jj, kk)
-    end forall
+    do kk = 1,cube%fs_n(3)
+      do jj = 1,cube%fs_n(2)
+        do ii = 1,cube%fs_n(1)
+          this%X(op)(ii, jj, kk) = op(ii, jj, kk)
+        end do
+       end do
+    end do
+
+    SAFE_ALLOCATE(this%boundaries1(1:2,1:cube%fs_n(3)))
+    SAFE_ALLOCATE(this%boundaries2(1:2,1:cube%fs_n(2),1:cube%fs_n(3)))
+    if(present(boundaries1)) then
+      this%boundaries1 = boundaries1
+      this%boundaries2 = boundaries2
+    else
+      do kk = 1,cube%fs_n(3)
+        do jj = 1,cube%fs_n(2)
+           this%boundaries2(1,jj,kk) = 1
+           this%boundaries2(2,jj,kk) = cube%fs_n(1)
+        end do
+        this%boundaries1(1,kk) = 1
+        this%boundaries1(2,kk) = cube%fs_n(2)
+      end do
+    end if 
   else
     this%in_device_memory = .true.
 
@@ -144,25 +172,75 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   if(cube%fft%library == FFTLIB_PFFT) then
     !Note that the function in fourier space returned by PFFT is transposed
     ! Probably in this case this%X(op) should be also transposed
-    !$omp parallel do private(ii, jj, kk)
-    do ii = 1, cube%fs_n(1)
-      do jj = 1, cube%fs_n(2)
-        do kk = 1, cube%fs_n(3)
-          cf%fs(kk, ii, jj) = cf%fs(kk, ii, jj)*this%X(op) (ii, jj, kk)
+    if(this%real_op) then
+      !$omp parallel do private(ii, jj, kk)
+      do ii = 1, cube%fs_n(1)
+        do jj = 1, cube%fs_n(2)
+          do kk = 1, cube%fs_n(3)
+            cf%fs(kk, ii, jj) = cf%fs(kk, ii, jj)*this%dop(ii, jj, kk)
+          end do
         end do
       end do
-    end do
-    !$omp end parallel do
+    else
+      !$omp parallel do private(ii, jj, kk)
+      do ii = 1, cube%fs_n(1)
+        do jj = 1, cube%fs_n(2)
+          do kk = 1, cube%fs_n(3)
+            cf%fs(kk, ii, jj) = cf%fs(kk, ii, jj)*this%X(op) (ii, jj, kk)
+          end do
+        end do
+      end do
+    end if
   else if(cube%fft%library == FFTLIB_FFTW .or. .not. this%in_device_memory) then
-    !$omp parallel do private(ii, jj, kk)
-    do kk = 1, cube%fs_n(3)
-      do jj = 1, cube%fs_n(2)
-        do ii = 1, cube%fs_n(1)
-          cf%fs(ii, jj, kk) = cf%fs(ii, jj, kk)*this%X(op)(ii, jj, kk)
+    if(allocated(this%boundaries1) .and. allocated(this%boundaries2)) then
+      if(this%real_op) then
+        !$omp parallel do private(ii, jj, kk)
+        do kk = 1, cube%fs_n(3)
+          if(this%boundaries1(1,kk)==0) cycle
+          do jj = this%boundaries1(1,kk), this%boundaries1(2,kk)
+            if(this%boundaries2(1,jj,kk)==0) cycle
+            do ii = this%boundaries2(1,jj,kk), this%boundaries2(2,jj,kk)
+              cf%fs(ii, jj, kk) = cf%fs(ii, jj, kk)*this%dop(ii, jj, kk)
+            end do
+          end do
         end do
-      end do
-    end do
-    !$omp end parallel do
+        !$omp end parallel do
+      else
+        !$omp parallel do private(ii, jj, kk)
+        do kk = 1, cube%fs_n(3)
+          if(this%boundaries1(1,kk)==0) cycle
+          do jj = this%boundaries1(1,kk), this%boundaries1(2,kk)
+            if(this%boundaries2(1,jj,kk)==0) cycle
+            do ii = this%boundaries2(1,jj,kk), this%boundaries2(2,jj,kk)
+              cf%fs(ii, jj, kk) = cf%fs(ii, jj, kk)*this%X(op)(ii, jj, kk)
+            end do
+          end do
+        end do
+        !$omp end parallel do
+      end if
+    else
+      if(this%real_op) then
+        !$omp parallel do private(ii, jj, kk)
+        do kk = 1, cube%fs_n(3)
+          do jj = 1, cube%fs_n(2)
+            do ii = 1, cube%fs_n(1)
+              cf%fs(ii, jj, kk) = cf%fs(ii, jj, kk)*this%dop(ii, jj, kk)
+            end do
+          end do
+        end do
+        !$omp end parallel do
+      else
+        !$omp parallel do private(ii, jj, kk)
+        do kk = 1, cube%fs_n(3)
+          do jj = 1, cube%fs_n(2)
+            do ii = 1, cube%fs_n(1)
+              cf%fs(ii, jj, kk) = cf%fs(ii, jj, kk)*this%X(op)(ii, jj, kk)
+            end do
+          end do
+        end do
+        !$omp end parallel do
+      end if
+    end if
   else if(cube%fft%library == FFTLIB_ACCEL) then
     call accel_set_kernel_arg(X(zmul), 0, product(cube%fs_n(1:3)))
     call accel_set_kernel_arg(X(zmul), 1, this%op_buffer)

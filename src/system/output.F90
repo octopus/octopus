@@ -98,7 +98,8 @@ module output_oct_m
     doutput_lr,          &
     zoutput_lr,          &
     output_kick,         &
-    output_scalar_pot
+    output_scalar_pot,   &
+    output_need_exchange
 
 
   type output_bgw_t
@@ -1441,6 +1442,15 @@ contains
 #endif
 
   end subroutine output_berkeleygw
+ 
+  !--------------------------------------------------------------
+
+  logical function output_need_exchange(outp) result(need_exx)
+    type(output_t),         intent(in)    :: outp
+
+    need_exx =( bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0 &
+           .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY) /= 0)
+  end function output_need_exchange
 
    ! ---------------------------------------------------------
   subroutine output_dftu_orbitals(dir, this, outp, st, mesh, geo, has_phase)
