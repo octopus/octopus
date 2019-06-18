@@ -54,6 +54,7 @@ module grid_oct_m
     grid_create_multigrid
 
   type grid_t
+    ! Components are public by default
     type(simul_box_t)           :: sb
     type(mesh_t)                :: mesh
     type(multigrid_level_t)     :: fine

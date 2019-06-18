@@ -49,6 +49,7 @@ module curv_modine_oct_m
     curv_modine_jacobian_inv
 
   type curv_modine_t
+    private
     FLOAT :: L(MAX_DIM)    !< size of the box
     FLOAT :: xbar          !< size of central flat region (in units of L)
     FLOAT :: Jbar          !< increase in density of points is 1/J

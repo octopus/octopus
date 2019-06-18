@@ -109,27 +109,28 @@ module v_ks_oct_m
   end type v_ks_calc_t
 
   type v_ks_t
-    integer :: theory_level
+    private
+    integer,                  public :: theory_level
 
-    logical :: frozen_hxc !< For RPA and SAE calculations.
+    logical,                  public :: frozen_hxc !< For RPA and SAE calculations.
 
-    integer                  :: xc_family  !< the XC stuff
-    integer                  :: xc_flags   !< the XC flags
-    integer                  :: sic_type   !< what kind of self-interaction correction to apply
-    type(xc_t)               :: xc
-    type(xc_OEP_t)           :: oep
-    type(xc_ks_inversion_t)  :: ks_inversion
-    type(poisson_t), pointer :: hartree_solver
-    logical                  :: new_hartree
-    type(grid_t), pointer    :: gr
-    type(v_ks_calc_t)        :: calc
-    logical                  :: calculate_current
-    type(current_t)          :: current_calculator
-    integer                  :: vdw_correction
-    logical                  :: vdw_self_consistent
-    type(vdw_ts_t)           :: vdw_ts
-    type(dftd3_calc)         :: vdw_d3
-    logical                  :: include_td_field
+    integer,                  public :: xc_family  !< the XC stuff
+    integer,                  public :: xc_flags   !< the XC flags
+    integer,                  public :: sic_type   !< what kind of self-interaction correction to apply
+    type(xc_t),               public :: xc
+    type(xc_OEP_t)                   :: oep
+    type(xc_ks_inversion_t),  public :: ks_inversion
+    type(poisson_t), pointer, public :: hartree_solver
+    logical                          :: new_hartree
+    type(grid_t), pointer,    public :: gr
+    type(v_ks_calc_t)                :: calc
+    logical                          :: calculate_current
+    type(current_t)                  :: current_calculator
+    integer,                  public :: vdw_correction
+    logical                          :: vdw_self_consistent
+    type(vdw_ts_t),           public :: vdw_ts
+    type(dftd3_calc)                 :: vdw_d3
+    logical                          :: include_td_field
   end type v_ks_t
 
 contains

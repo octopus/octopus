@@ -138,7 +138,8 @@ module profiling_oct_m
   integer, parameter :: MAX_MEMORY_VARS = 25
 
   type profile_vars_t
-    integer                  :: mode    !< 1=time, 2=memory, 4=memory_full
+    private
+    integer, public          :: mode    !< 1=time, 2=memory, 4=memory_full
 
     type(profile_pointer_t)  :: current !< the currently active profile
     type(profile_pointer_t)  :: profile_list(MAX_PROFILES) !< the list of all profiles

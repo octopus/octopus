@@ -41,6 +41,7 @@ module opt_control_global_oct_m
   !! is done: which algorithm, how the control funtion is stored, should the
   !! intermediate results be stored for debugging, etc.
   type oct_t
+    ! Components are public by default
     integer :: algorithm            !< The algorithm to optimize depends on whether the control function is
                                     !! represented in real time, or is parametrized. Filled by the OCTScheme input variable.
     logical :: mode_fixed_fluence   !< Whether or not the optimization is performed in the subspace of external fields

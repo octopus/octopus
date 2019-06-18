@@ -46,9 +46,10 @@ module curv_gygi_oct_m
     curv_gygi_jacobian
 
   type curv_gygi_t
-    FLOAT :: A             !< local reduction in grid spacing is 1/(1+A)
-    FLOAT :: alpha         !< range of enhancement of the resolution
-    FLOAT :: beta          !< distance over which Euclidian coordinates are recovered
+    private
+    FLOAT, public :: A             !< local reduction in grid spacing is 1/(1+A)
+    FLOAT, public :: alpha         !< range of enhancement of the resolution
+    FLOAT, public :: beta          !< distance over which Euclidian coordinates are recovered
     FLOAT, pointer :: pos(:, :)
     integer :: npos
   end type curv_gygi_t

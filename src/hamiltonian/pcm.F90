@@ -72,7 +72,8 @@ module pcm_oct_m
 
   !> The cavity hosting the solute molecule is built from a set of 
   !! interlocking spheres with optimized radii centered at the nuclear positions.  
-  type :: pcm_sphere_t  
+  type pcm_sphere_t
+    private
     FLOAT :: x !
     FLOAT :: y !< center of the sphere
     FLOAT :: z !
@@ -83,19 +84,20 @@ module pcm_oct_m
   integer, parameter :: PCM_DIM_SPACE = 3
 
   type pcm_t
-    logical                          :: run_pcm          !< If .true., PCM calculation is enabled
+    private
+    logical, public                  :: run_pcm          !< If .true., PCM calculation is enabled
     integer                          :: n_spheres        !< Number of spheres used to build the VdW cavity
-    integer                          :: n_tesserae       !< Total number of tesserae
+    integer, public                  :: n_tesserae       !< Total number of tesserae
     type(pcm_sphere_t),  allocatable :: spheres(:)       !< See type pcm_sphere_t
-    type(pcm_tessera_t), allocatable :: tess(:)          !< See type pcm_tessera_t
+    type(pcm_tessera_t), allocatable, public :: tess(:)          !< See type pcm_tessera_t
     FLOAT                            :: scale_r          !< scaling factor for the radii of the spheres used in PCM
     FLOAT, allocatable               :: matrix(:,:)      !< static PCM response matrix (for epsilon_0)
     FLOAT, allocatable               :: matrix_d(:,:)    !< dynamical PCM response matrix (for epsilon_infty)
     FLOAT, allocatable               :: matrix_lf(:,:)   !< static PCM response matrix (for epsilon_0)        - local field effects
     FLOAT, allocatable               :: matrix_lf_d(:,:) !< dynamical PCM response matrix (for epsilon_infty) - local field effects
-    FLOAT, allocatable               :: q_e(:)           !< polarization charges due to the solute electrons
+    FLOAT, allocatable, public       :: q_e(:)           !< polarization charges due to the solute electrons
     FLOAT, allocatable               :: q_n(:)           !< polarization charges due to the solute nuclei
-    FLOAT, allocatable               :: q_e_in(:)        !< inertial polarization charges due to the solute electrons
+    FLOAT, allocatable, public       :: q_e_in(:)        !< inertial polarization charges due to the solute electrons
     FLOAT, allocatable               :: rho_e(:)         !< polarization density due to the solute electrons
     FLOAT, allocatable               :: rho_n(:)         !< polarization density due to the solute nuclei
     FLOAT                            :: qtot_e           !< total polarization charge due to electrons
@@ -103,53 +105,52 @@ module pcm_oct_m
     FLOAT                            :: qtot_e_in        !< total inertial polarization charge due to electrons
     FLOAT                            :: q_e_nominal      !< total (nominal) electronic charge
     FLOAT                            :: q_n_nominal      !< total (nominal) nuclear charge
-    logical                          :: noneq            !< flag to use non-equilibrium PCM
+    logical, public                  :: noneq            !< flag to use non-equilibrium PCM
     logical                          :: renorm_charges   !< flag to renormalized polarization charges
     FLOAT                            :: q_tot_tol        !< tolerance to trigger normalization of the polarization charges
     FLOAT                            :: deltaQ_e         !< difference between the calculated and nominal electronic charge
     FLOAT                            :: deltaQ_n         !< difference between the calculated and nominal nuclear charge
     FLOAT, allocatable               :: v_e(:)           !< Hartree potential at each tessera
     FLOAT, allocatable               :: v_n(:)           !< Nuclear potential at each tessera
-    FLOAT, allocatable               :: v_e_rs(:)        !< PCM potential in real-space produced by q_e(:)
-    FLOAT, allocatable               :: v_n_rs(:)        !< PCM potential in real-space produced by q_n(:)
+    FLOAT, allocatable, public       :: v_e_rs(:)        !< PCM potential in real-space produced by q_e(:)
+    FLOAT, allocatable, public       :: v_n_rs(:)        !< PCM potential in real-space produced by q_n(:)
     FLOAT, allocatable               :: q_ext(:)         !< polarization charges due to an ext. pot.
     FLOAT, allocatable               :: q_ext_in(:)      !< inertial polarization charges due to an ext. pot.
     FLOAT, allocatable               :: rho_ext(:)       !< polarization density due to an ext. pot.
     FLOAT                            :: qtot_ext         !< total polarization charge due to an ext. pot.
     FLOAT                            :: qtot_ext_in      !< total inertial polarization charge due to an ext. pot.
     FLOAT, allocatable               :: v_ext(:)         !< external potential at each tessera
-    FLOAT, allocatable               :: v_ext_rs(:)      !< PCM potential in real-space produced by q_ext(:)
+    FLOAT, allocatable, public       :: v_ext_rs(:)      !< PCM potential in real-space produced by q_ext(:)
     FLOAT, allocatable               :: q_kick(:)        !< polarization charges due to kick
     FLOAT, allocatable               :: rho_kick(:)      !< polarization density due to kick   
     FLOAT                            :: qtot_kick        !< total polarization charge due to kick
     FLOAT, allocatable               :: v_kick(:)        !< kick potential at each tessera
-    FLOAT, allocatable               :: v_kick_rs(:)     !< PCM potential in real-space produced by q_kick(:)
-    FLOAT                            :: epsilon_0        !< Static dielectric constant of the solvent
-    FLOAT                            :: epsilon_infty    !< Infinite-frequency dielectric constant of the solvent
-    character(len=3)                 :: which_eps        !< Dielectric function model, either Debye or Drude-Lorentz
-    type(debye_param_t)		           :: deb 	           !< Debye parameters
-    type(drude_param_t)		           :: drl 	           !< Drude-Lorentz parameters
+    FLOAT, allocatable, public       :: v_kick_rs(:)     !< PCM potential in real-space produced by q_kick(:)
+    FLOAT, public                    :: epsilon_0        !< Static dielectric constant of the solvent
+    FLOAT, public                    :: epsilon_infty    !< Infinite-frequency dielectric constant of the solvent
+    character(len=3), public         :: which_eps        !< Dielectric function model, either Debye or Drude-Lorentz
+    type(debye_param_t)              :: deb              !< Debye parameters
+    type(drude_param_t)              :: drl        !< Drude-Lorentz parameters
     logical                          :: eom              !< Logical flag for polarization charges propagation through an EoM
-    logical                          :: localf           !< Logical flag to include polarization charges due to external field
-    logical                          :: solute           !< Logical flag to include polarization charges due to the solute
+    logical, public                  :: localf           !< Logical flag to include polarization charges due to external field
+    logical, public                  :: solute           !< Logical flag to include polarization charges due to the solute
     logical                          :: kick_is_present  !< .true. if there are kicks in the calculation
                                                          !< (if localf is .false. this is irrelevant to PCM)
-    logical                          :: kick_like        !< Logical flag to consider kick-like polarization due to kick
+    logical, public                  :: kick_like        !< Logical flag to consider kick-like polarization due to kick
     integer                          :: initial_asc      !< Flag to read or not pol.charges from input file
     FLOAT                            :: gaussian_width   !< Parameter to change the width of density of polarization charges
     integer                          :: info_unit        !< unit for pcm info file
-    integer                          :: counter          !< used to print the number of SCF or TD iterations in energy_calc
+    integer, public                  :: counter          !< used to print the number of SCF or TD iterations in energy_calc
     character(len=80)                :: input_cavity     !< file name containing the geometry of the VdW cavity
-    
     integer                          :: update_iter      !< how often the pcm potential is updated
-    integer                          :: iter             !< update iteration counter
-    
+    integer, public                  :: iter             !< update iteration counter    
     integer                          :: calc_method      !< which method should be used to obtain the pcm potential
     integer                          :: tess_nn          !< number of tessera center mesh-point nearest neighbors
-    FLOAT                            :: dt               !< time-step of propagation
+    FLOAT, public                    :: dt               !< time-step of propagation
   end type pcm_t
 
   type pcm_min_t
+    ! Components are public by default
     logical              :: run_pcm   !< If .true., PCM calculation is enabled
     logical              :: localf    !< flag to include polarization charges due to external field
     logical              :: noneq     !< flag to use non-equilibrium PCM

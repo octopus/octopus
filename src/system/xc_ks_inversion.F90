@@ -74,13 +74,14 @@ module xc_ks_inversion_oct_m
     XC_FLAGS_NONE = 0
 
   type xc_ks_inversion_t
-     integer             :: method
-     integer             :: level
-     integer             :: asymp
-     FLOAT, pointer      :: vhxc_previous_step(:,:)
-     type(states_t)      :: aux_st
-     type(hamiltonian_t) :: aux_hm
-     type(eigensolver_t) :: eigensolver
+    private
+     integer,             public :: method
+     integer                     :: level
+     integer,             public :: asymp
+     FLOAT, pointer              :: vhxc_previous_step(:,:)
+     type(states_t),      public :: aux_st
+     type(hamiltonian_t)         :: aux_hm
+     type(eigensolver_t), public :: eigensolver
   end type xc_ks_inversion_t
 
 

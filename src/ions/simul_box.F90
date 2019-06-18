@@ -63,7 +63,9 @@ module simul_box_oct_m
     simul_box_atoms_in_box,     &
     simul_box_copy,             &
     simul_box_periodic_atom_in_box, &
-    simul_box_symmetry_check
+    simul_box_symmetry_check,   &
+    interp_t,                   &
+    multiresolution_t
 
   integer, parameter, public :: &
     SPHERE         = 1,         &
@@ -75,22 +77,25 @@ module simul_box_oct_m
     BOX_USDEF      = 77
   !< BOX_USDEF shares a number with other 'user_defined' input file options.
 
-  type, public :: interp_t
+  type :: interp_t
+    ! Components are public by default
     integer          :: nn, order  !< interpolation points and order
     FLOAT,   pointer :: ww(:)      !< weights
     integer, pointer :: posi(:)    !< positions
   end type interp_t
 
 
-  type, public :: multiresolution_t
-    type(interp_t) :: interp          !< interpolation points
-    integer        :: num_areas       !< number of multiresolution areas
-    integer        :: num_radii       !< number of radii (resolution borders)
-    FLOAT, pointer :: radius(:)       !< radius of the high-resolution area
-    FLOAT          :: center(MAX_DIM) !< central point
+  type :: multiresolution_t
+    ! Components are public by default
+    type(interp_t)   :: interp          !< interpolation points
+    integer, private :: num_areas       !< number of multiresolution areas
+    integer          :: num_radii       !< number of radii (resolution borders)
+    FLOAT, pointer   :: radius(:)       !< radius of the high-resolution area
+    FLOAT            :: center(MAX_DIM) !< central point
   end type multiresolution_t
 
   type simul_box_t
+    ! Components are public by default
     type(symmetries_t) :: symm
     !> 1->sphere, 2->cylinder, 3->sphere around each atom,
     !! 4->parallelepiped (orthonormal, up to now).
@@ -100,9 +105,9 @@ module simul_box_oct_m
     FLOAT :: xsize          !< the length of the cylinder in the x-direction
     FLOAT :: lsize(MAX_DIM) !< half of the length of the parallelepiped in each direction.
 
-    type(lookup_t)        :: atom_lookup
+    type(lookup_t), private :: atom_lookup
 
-    character(len=1024) :: user_def !< for the user-defined box
+    character(len=1024), private :: user_def !< for the user-defined box
 
     logical :: mr_flag                 !< .true. when using multiresolution
     type(multiresolution_t) :: hr_area !< high-resolution areas
@@ -111,7 +116,7 @@ module simul_box_oct_m
     FLOAT :: rlattice          (MAX_DIM,MAX_DIM)   !< lattice vectors
     FLOAT :: klattice_primitive(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     FLOAT :: klattice          (MAX_DIM,MAX_DIM)   !< reciprocal-lattice vectors
-    FLOAT :: volume_element                      !< the volume element in real space
+    FLOAT, private :: volume_element               !< the volume element in real space
     FLOAT :: surface_element   (MAX_DIM)         !< surface element in real space
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
@@ -124,8 +129,8 @@ module simul_box_oct_m
 
     !> for the box defined through an image
     integer             :: image_size(1:2)
-    type(c_ptr)         :: image
-    character(len=200)  :: filename
+    type(c_ptr), private         :: image
+    character(len=200), private  :: filename
 
   end type simul_box_t
 

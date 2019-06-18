@@ -59,17 +59,18 @@ module xc_oct_m
 
 
   type xc_t
-    integer :: family                   !< the families present
-    integer :: flags                    !<flags of the xc functional
-    integer :: kernel_family
-    type(xc_functl_t) :: functional(2,2)    !< (FUNC_X,:) => exchange,    (FUNC_C,:) => correlation
-                                        !< (:,1) => unpolarized, (:,2) => polarized
+    private
+    integer,           public :: family              !< the families present
+    integer,           public :: flags               !<flags of the xc functional
+    integer,           public :: kernel_family
+    type(xc_functl_t), public :: functional(2,2)     !< (FUNC_X,:) => exchange,    (FUNC_C,:) => correlation
+                                                     !! (:,1) => unpolarized, (:,2) => polarized
 
-    type(xc_functl_t) :: kernel(2,2)
-    FLOAT   :: kernel_lrc_alpha         !< long-range correction alpha parameter for kernel in solids
+    type(xc_functl_t), public :: kernel(2,2)
+    FLOAT,             public   :: kernel_lrc_alpha  !< long-range correction alpha parameter for kernel in solids
 
-    FLOAT   :: exx_coef                 !< amount of EXX to add for the hybrids
-    logical :: use_gi_ked               !< should we use the gauge-independent kinetic energy density?
+    FLOAT,             public   :: exx_coef          !< amount of EXX to add for the hybrids
+    logical                     :: use_gi_ked        !< should we use the gauge-independent kinetic energy density?
 
     integer :: xc_density_correction
     logical :: xcd_optimize_cutoff

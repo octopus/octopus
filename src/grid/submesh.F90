@@ -66,7 +66,8 @@ module submesh_oct_m
     submesh_end
 
   type submesh_t
-    FLOAT                 :: center(1:MAX_DIM)
+    ! Components are public by default
+    FLOAT, private        :: center(1:MAX_DIM)
     FLOAT                 :: radius
     integer               :: np             !< number of points inside the submesh
     integer               :: np_part        !< number of points inside the submesh including ghost points

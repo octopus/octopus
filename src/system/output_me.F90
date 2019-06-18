@@ -56,6 +56,7 @@ module output_me_oct_m
     output_me
 
   type output_me_t
+    private
     integer :: what                !< what to output 
     !> If output_ksdipole, this number sets up which matrix elements will
     !! be printed: e.g. if ksmultipoles = 3, the dipole, quadrupole and 

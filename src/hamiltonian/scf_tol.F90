@@ -44,15 +44,16 @@ module scf_tol_oct_m
        scf_tol_obsolete_variables
 
   type scf_tol_t
-     integer           :: max_iter
+    private
+     integer, public   :: max_iter
      integer           :: scheme
-     FLOAT             :: conv_rel_dens
-     FLOAT             :: conv_abs_dens
+     FLOAT,   public   :: conv_rel_dens
+     FLOAT,   public   :: conv_abs_dens
      FLOAT             :: conv_threshold_use
      FLOAT             :: dynamic_tol_factor
      FLOAT             :: current_tol
      FLOAT             :: initial_tol
-     FLOAT             :: final_tol
+     FLOAT,   public   :: final_tol
      integer           :: iter_window
   end type scf_tol_t
 

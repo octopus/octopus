@@ -91,10 +91,11 @@ module scf_oct_m
   
   !> some variables used for the SCF cycle
   type scf_t
-    integer :: max_iter   !< maximum number of SCF iterations
+    private
+    integer, public :: max_iter   !< maximum number of SCF iterations
     integer :: max_iter_berry  !< max number of electronic iterations before updating density, for Berry potential
 
-    FLOAT :: lmm_r
+    FLOAT, public :: lmm_r
 
     ! several convergence criteria
     FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev, conv_abs_force
@@ -539,7 +540,7 @@ contains
     type(restart_t), optional, intent(in)    :: restart_load
     type(restart_t), optional, intent(in)    :: restart_dump
 
-    logical :: finish, gs_run_, berry_conv
+    logical :: finish, gs_run_, berry_conv, forced_finish_tmp
     integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
     real(8) :: etime, itime
@@ -861,6 +862,11 @@ contains
 
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
       scf%forced_finish = clean_stop(mc%master_comm) .or. walltimer_alarm()
+
+#ifdef HAVE_MPI
+      call MPI_Allreduce(scf%forced_finish, forced_finish_tmp, 1, MPI_LOGICAL, MPI_LOR, mc%master_comm, mpi_err)
+      scf%forced_finish = forced_finish_tmp
+#endif      
 
       if (finish .and. st%modelmbparticles%nparticle > 0) then
         call modelmb_sym_all_states (gr, st, geo)

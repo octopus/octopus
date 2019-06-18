@@ -44,6 +44,7 @@ module ion_interaction_oct_m
     ion_interaction_test
 
   type ion_interaction_t
+    ! Components are public by default
     FLOAT                      :: alpha
   end type ion_interaction_t
 

@@ -67,6 +67,7 @@ module poisson_fmm_oct_m
 #endif
 
   type poisson_fmm_t
+    private
     FLOAT   :: delta_E_fmm
     FLOAT   :: alpha_fmm  !< Alpha for the correction of the FMM
     type(mpi_grp_t) :: all_nodes_grp !< The communicator for all nodes.

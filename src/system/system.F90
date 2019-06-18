@@ -53,6 +53,7 @@ module system_oct_m
     system_h_setup
 
   type system_t
+    ! Components are public by default
     type(space_t)                :: space
     type(geometry_t)             :: geo
     type(grid_t),        pointer :: gr    !< the mesh

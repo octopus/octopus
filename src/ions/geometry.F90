@@ -62,6 +62,7 @@ module geometry_oct_m
     geometry_set_positions
 
   type geometry_t
+    ! Components are public by default
     type(space_t), pointer :: space
     integer                :: natoms
     type(atom_t), pointer  :: atom(:)
@@ -70,7 +71,7 @@ module geometry_oct_m
     integer :: nspecies
     type(species_t), pointer :: species(:)
     logical :: only_user_def        !< Do we want to treat only user-defined species?
-    logical :: species_time_dependent !< For time-dependent user defined species
+    logical, private :: species_time_dependent !< For time-dependent user defined species
     FLOAT :: kinetic_energy         !< the ion kinetic energy
     logical :: nlpp                 !< does any species have non-local pp?
     logical :: nlcc                 !< does any species have non-local core corrections?

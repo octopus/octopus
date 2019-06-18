@@ -46,6 +46,7 @@ module cube_oct_m
     cube_end
 
   type cube_t
+    ! Components are public by default
     logical :: parallel_in_domains !< will the cube be divided in domains?
     type(mpi_grp_t) :: mpi_grp     !< the mpi group describing parallelization in domains
 
@@ -69,8 +70,8 @@ module cube_oct_m
 
 
     type(fft_t), pointer :: fft !< the fft object
-    logical :: has_cube_mapping !< Saves if a mapping with the cube is needed.
-                                !! Until now, is needed with par_states (without par_domains) and PES.
+    logical, private :: has_cube_mapping !< Saves if a mapping with the cube is needed.
+                                         !! Until now, is needed with par_states (without par_domains) and PES.
   end type cube_t
 
   !> It is intended to be used within a vector.
@@ -79,6 +80,7 @@ module cube_oct_m
   !! mapping between x,y,z index and process is saved, in a compact
   !! way.
   type dimensions_t
+    private
     integer :: start_xyz(1:3) !< First index X, Y, Z, which this process has
     integer :: end_xyz(1:3)   !< Last  index X, Y, Z, which this process has
   end type dimensions_t

@@ -40,6 +40,7 @@ module curv_briggs_oct_m
     curv_briggs_jacobian_inv
 
   type curv_briggs_t
+    private
     FLOAT :: L(MAX_DIM)  !< size of the box
     FLOAT :: beta        !< adjustable parameter between 0 and 1 that controls the degree of scaling
   end type curv_briggs_t

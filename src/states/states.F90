@@ -106,6 +106,7 @@ module states_oct_m
   end type states_priv_t
 
   type states_t
+    ! Components are public by default
     type(states_dim_t)       :: d
     type(states_priv_t)      :: priv                  !< the private components
     integer                  :: nst                   !< Number of states in each irreducible subspace
@@ -141,7 +142,7 @@ module states_oct_m
     logical        :: restart_fixed_occ !< should the occupation numbers be fixed by restart?
     logical        :: restart_reorder_occs !< used for restart with altered occupation numbers
     FLOAT, pointer :: occ(:,:)      !< the occupation numbers
-    logical        :: fixed_spins   !< In spinors mode, the spin direction is set
+    logical, private :: fixed_spins   !< In spinors mode, the spin direction is set
                                     !< for the initial (random) orbitals.
     FLOAT, pointer :: spin(:, :, :)
 
@@ -170,10 +171,10 @@ module states_oct_m
     integer                     :: lnst               !< Number of states on local node.
     integer                     :: st_start, st_end   !< Range of states processed by local node.
     integer, pointer            :: node(:)            !< To which node belongs each state.
-    type(multicomm_all_pairs_t) :: ap                 !< All-pairs schedule.
+    type(multicomm_all_pairs_t), private :: ap        !< All-pairs schedule.
 
     logical                     :: symmetrize_density
-    logical                     :: packed
+    logical, private            :: packed
 
     integer                     :: randomization      !< Method used to generate random states
   end type states_t
@@ -1894,6 +1895,9 @@ contains
 
       do ist = st%st_start, st%st_end
 
+        ww = st%d%kweights(ik)*st%occ(ist, ik)
+        if(abs(ww) <= M_EPSILON) cycle
+
         ! all calculations will be done with complex wavefunctions
         call states_get_state(st, der%mesh, ist, ik, wf_psi)
 
@@ -1912,8 +1916,6 @@ contains
             call zderivatives_lapl(der, wf_psi(:,st_dim), lwf_psi(:,st_dim), set_bc = .false.)
           end do
         end if
-
-        ww = st%d%kweights(ik)*st%occ(ist, ik)
 
         !We precompute some quantites, to avoid to compute it many times
         wf_psi_conj(1:der%mesh%np, 1:st%d%dim) = conjg(wf_psi(1:der%mesh%np,1:st%d%dim))

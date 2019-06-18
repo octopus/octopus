@@ -77,6 +77,8 @@ module epot_oct_m
     SPIN_ORBIT = 1
 
   type epot_t
+    ! Components are public by default
+
     ! Classical charges:
     integer        :: classical_pot !< how to include the classical charges
     FLOAT, pointer :: Vclassical(:) !< We use it to store the potential of the classical charges
@@ -107,27 +109,27 @@ module epot_oct_m
     FLOAT :: gyromagnetic_ratio
 
     !> SO prefactor (1.0 = normal SO, 0.0 = no SO)
-    FLOAT :: so_strength
+    FLOAT, private :: so_strength
     
     !> the ion-ion energy and force
     FLOAT          :: eii
     FLOAT, pointer :: fii(:, :)
     FLOAT, allocatable :: vdw_forces(:, :)
     
-    real(4), pointer :: local_potential(:,:)
-    logical          :: local_potential_precalculated
+    real(4), pointer, private :: local_potential(:,:)
+    logical,          private :: local_potential_precalculated
 
     logical          :: ignore_external_ions
-    logical                  :: have_density
-    type(poisson_t), pointer :: poisson_solver
+    logical,                  private :: have_density
+    type(poisson_t), pointer, private :: poisson_solver
 
     logical :: force_total_enforce
 
     type(ion_interaction_t) :: ion_interaction
 
     !> variables for external forces over the ions
-    logical     :: global_force
-    type(tdf_t) :: global_force_function
+    logical,     private :: global_force
+    type(tdf_t), private :: global_force_function
   end type epot_t
 
 contains

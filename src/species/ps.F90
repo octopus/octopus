@@ -76,15 +76,17 @@ module ps_oct_m
     (/"upf1", "upf2", "qso ", "psml", "psf ", "cpi ", "fhi ", "hgh ", "psp8"/)
 
   type ps_t
+    ! Components are public by default
     integer :: projector_type
-    character(len=10) :: label
+    character(len=10), private :: label
 
-    integer  :: ispin    !< Consider spin (ispin = 2) or not (ispin = 1)
-    FLOAT    :: z, z_val
+    integer, private  :: ispin    !< Consider spin (ispin = 2) or not (ispin = 1)
+    FLOAT, private    :: z
+    FLOAT    :: z_val
     type(valconf_t)   :: conf
-    type(logrid_t) :: g
+    type(logrid_t), private :: g
     type(spline_t), pointer :: ur(:, :)     !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r
-    type(spline_t), pointer :: ur_sq(:, :)  !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r^2
+    type(spline_t), pointer, private :: ur_sq(:, :)  !< (1:conf%p, 1:ispin) atomic wavefunctions, as a function of r^2
     logical, allocatable    :: bound(:, :)  !< (1:conf%p, 1:ispin) is the state bound or not
 
     ! Kleinman-Bylander projectors stuff
@@ -114,26 +116,26 @@ module ps_oct_m
 
     !LONG-RANGE PART OF THE LOCAL POTENTIAL
     
-    logical :: has_long_range
+    logical, private :: has_long_range
 
-    type(spline_t) :: vlr         !< the long-range part of the local potential
-    type(spline_t) :: vlr_sq      !< the long-range part of the
-                                  !< local potential in terms of r^2, to avoid the sqrt
-    type(spline_t) :: nlr         !< the charge density associated with the long-range part
+    type(spline_t), private :: vlr !< the long-range part of the local potential
+    type(spline_t) :: vlr_sq       !< the long-range part of the
+                                   !< local potential in terms of r^2, to avoid the sqrt
+    type(spline_t) :: nlr          !< the charge density associated with the long-range part
 
-    FLOAT :: sigma_erf            !< the a constant in erf(r/(sqrt(2)*sigma))/r
+    FLOAT :: sigma_erf             !< the a constant in erf(r/(sqrt(2)*sigma))/r
 
-    logical :: has_density                     !< does the species have a density?
+    logical,        private :: has_density     !< does the species have a density?
     type(spline_t), pointer :: density(:)      !< the atomic density for each spin
     type(spline_t), pointer :: density_der(:)  !< the radial derivative for the atomic density for each spin
     
-    logical :: is_separated
-    logical :: local
-    logical :: hamann
-    integer :: file_format
-    integer :: pseudo_type
-    integer :: exchange_functional
-    integer :: correlation_functional
+    logical, private :: is_separated
+    logical          :: local
+    logical          :: hamann
+    integer, private :: file_format
+    integer, private :: pseudo_type
+    integer          :: exchange_functional
+    integer          :: correlation_functional
   end type ps_t
 
   FLOAT, parameter :: eps = CNST(1.0e-8)

@@ -46,6 +46,7 @@ module unit_system_oct_m
     unit_system_from_file
 
   type unit_system_t
+    ! Components are public by default
     type(unit_t) :: length
     type(unit_t) :: length_xyz_file
     type(unit_t) :: energy

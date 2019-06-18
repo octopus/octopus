@@ -51,6 +51,7 @@ module current_oct_m
   private
 
   type current_t
+    private
     integer :: method
   end type current_t
     

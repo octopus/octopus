@@ -70,6 +70,8 @@ module kick_oct_m
 
 
   type kick_t
+    ! Components are public by default
+
     !> The time which the kick is applied (normally, this is zero)
     FLOAT             :: time
     !> The strength, and strength "mode".
@@ -100,7 +102,7 @@ module kick_oct_m
     integer           :: qbessel_l, qbessel_m
     !> In case we use a general function
     integer           :: function_mode
-    character(len=200):: user_defined_function
+    character(len=200), private:: user_defined_function
   end type kick_t
 
 contains

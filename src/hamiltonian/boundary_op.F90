@@ -41,8 +41,9 @@ module boundary_op_oct_m
     bc_t
 
   type bc_t
-    integer                 :: abtype
-    FLOAT, pointer          :: mf(:)     !< The mask-function on the mesh
+    private
+    integer, public         :: abtype
+    FLOAT, pointer, public  :: mf(:)     !< The mask-function on the mesh
     type(cube_function_t)   :: cf        !< The mask-function on the cube
     logical                 :: ab_user_def
     FLOAT, pointer          :: ab_ufn(:)

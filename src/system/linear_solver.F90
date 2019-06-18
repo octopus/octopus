@@ -54,14 +54,16 @@ module linear_solver_oct_m
        linear_solver_obsolete_variables
 
   type linear_solver_t
-     integer                :: solver         
-     type(preconditioner_t) :: pre
-     integer                :: max_iter
+    private
+    integer,                public :: solver
+    type(preconditioner_t), public :: pre
+    integer                        :: max_iter
   end type linear_solver_t
 
   type(profile_t), save :: prof, prof_batch
 
   type linear_solver_args_t
+    private
     type(linear_solver_t), pointer :: ls
     type(hamiltonian_t),   pointer :: hm
     type(grid_t),          pointer :: gr
