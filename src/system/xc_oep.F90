@@ -86,6 +86,7 @@ module xc_oep_oct_m
     FLOAT                 :: norm2ss
     FLOAT,   pointer      :: vxc_old(:,:), ss_old(:,:)
     integer               :: noccst
+    logical               :: coctranslation_logical
   end type xc_oep_t
 
   type(profile_t), save ::      &
@@ -219,6 +220,14 @@ contains
       end if
       oep%vxc = M_ZERO
 
+      !%Variable KLIpt_coc
+      !%Type logical
+      !%Default .false.
+      !%Section Hamiltonian::XC
+      !%Description
+      !% Activate the center of charge translation of the electric dipole operator which should avoid the dependence of the photon KLI on an permanent dipole.
+      !%End
+
       ! when performing full OEP, we need to solve a linear equation
       if((oep%level == XC_OEP_FULL).or.(oep%has_photons)) then 
         call scf_tol_init(oep%scftol, st%qtot, def_maximumiter=10)
@@ -226,6 +235,7 @@ contains
         call lr_init(oep%lr)
         if(oep%has_photons) then
           call lr_init(oep%pt%lr)
+          call parse_variable('KLIpt_coc', .false., oep%coctranslation_logical)
         end if
       end if
 

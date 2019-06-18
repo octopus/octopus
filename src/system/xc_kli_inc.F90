@@ -47,9 +47,11 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
 
   if (oep%has_photons) then
 
-    SAFE_ALLOCATE(coctranslation(1:mesh%np))
-    coctranslation(:) = oep%pt%pol_dipole_array(:,1)
-    oep%pt%pol_dipole_array(:,1) = oep%pt%pol_dipole_array(:,1) - dmf_dotp(gr%mesh, SUM(st%rho, DIM=2),oep%pt%pol_dipole_array(:,1))/abs(st%qtot)
+    if (oep%coctranslation_logical) then
+      SAFE_ALLOCATE(coctranslation(1:mesh%np))
+      coctranslation(:) = oep%pt%pol_dipole_array(:,1)
+      oep%pt%pol_dipole_array(:,1) = oep%pt%pol_dipole_array(:,1) - dmf_dotp(gr%mesh, SUM(st%rho, DIM=2),oep%pt%pol_dipole_array(:,1))/abs(st%qtot)
+    end if
 
     SAFE_ALLOCATE(phi1(1:gr%mesh%np,1:st%d%dim,1:st%nst))
     SAFE_ALLOCATE(bb(1:gr%mesh%np, 1:1))
@@ -108,7 +110,7 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
     end if
   end do
 
-  if (oep%has_photons) then
+  if (oep%coctranslation_logical) then
     oep%pt%pol_dipole_array(:,1) = oep%pt%pol_dipole_array(:,1) + dmf_dotp(gr%mesh, SUM(st%rho, DIM=2),coctranslation(:))/abs(st%qtot)
     SAFE_DEALLOCATE_A(coctranslation)
   end if
