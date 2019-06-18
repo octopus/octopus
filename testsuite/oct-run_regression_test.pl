@@ -174,7 +174,7 @@ if( "$mpiexec" eq "" ) {
     $offset_GPU = $offset_GPU * $np;
 }
 
-$ENV{OCT_OpenCLDevice} = $offset_GPU;
+$ENV{OCT_AccelDevice} = $offset_GPU;
 
 # This variable counts the number of failed testcases.
 $failures = 0;

@@ -228,13 +228,13 @@ contains
 
     if(accel_is_enabled()) then
 
-      !%Variable OperateOpenCL
+      !%Variable OperateAccel
       !%Type integer
       !%Default map
       !%Section Execution::Optimization
       !%Description
       !% This variable selects the subroutine used to apply non-local
-      !% operators over the grid when OpenCL is used.
+      !% operators over the grid when an accelerator device is used.
       !%Option invmap 1
       !% The standard implementation ported to OpenCL.
       !%Option map 2
@@ -242,7 +242,9 @@ contains
       !%Option nomap 3
       !% (Experimental) This version does not use a map.
       !%End
-      call parse_variable('OperateOpenCL',  OP_MAP, function_opencl)
+      call parse_variable('OperateAccel',  OP_MAP, function_opencl)
+
+      call messages_obsolete_variable('OperateOpenCL', 'OperateAccel')
 
     end if
 
