@@ -51,7 +51,8 @@ program dielectric_function
   character(len=120) :: header
   FLOAT :: start_time
   character(len=MAX_PATH_LEN) :: ref_filename
-
+  type(parser_t) :: parser
+  
   ! Initialize stuff
   call global_init(is_serial = .true.)
 
@@ -59,7 +60,9 @@ program dielectric_function
   if(ierr == 0) call getopt_dielectric_function()
   call getopt_end()
 
-  call messages_init()
+  call parser_init(parser)
+  
+  call messages_init(parser)
 
   call io_init()
 
@@ -295,6 +298,8 @@ program dielectric_function
   call space_end(space)
   call io_end()
   call messages_end()
+
+  call parser_end(parser)
   call global_end()
 
 end program dielectric_function

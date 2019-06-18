@@ -123,10 +123,10 @@ module messages_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine messages_init()
+  subroutine messages_init(parser)
+    type(parser_t), intent(in) :: parser
+    
     logical :: trap_signals
-
-    call parser_init()
 
     call messages_obsolete_variable('DevelVersion', 'ExperimentalFeatures')
 
@@ -223,7 +223,6 @@ contains
  
     end if
 
-    call parser_end()
     call debug_end(debug)
   
   end subroutine messages_end

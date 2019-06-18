@@ -68,12 +68,15 @@ program oct_floquet
   logical :: downfolding = .false.
   type(mesh_t) :: mesh
   type(restart_t) :: restart
-
+  type(parser_t) :: parser
+  
   ! the usual initializations
   call global_init(is_serial = .false.)
   call calc_mode_par_init()
 
-  call messages_init()
+  call parser_init(parser)
+  
+  call messages_init(parser)
 
   call io_init()
   call profiling_init()
@@ -141,6 +144,8 @@ program oct_floquet
   call io_end()
   call print_date("Calculation ended on ")
   call messages_end()
+
+  call parser_end(parser)
   call global_end()
 
 contains

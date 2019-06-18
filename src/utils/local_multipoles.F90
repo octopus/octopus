@@ -69,13 +69,15 @@ program oct_local_multipoles
   type(simul_box_t)     :: sb
   integer, parameter    :: BADER = 512
   FLOAT                 :: BaderThreshold
-
+  type(parser_t)        :: parser
 
   ! Initialize stuff
   call global_init(is_serial = .false.)
   call calc_mode_par_init()
 
-  call messages_init()
+  call parser_init(parser)
+  
+  call messages_init(parser)
 
   call io_init()
   call profiling_init()
@@ -105,6 +107,7 @@ program oct_local_multipoles
   call io_end()
   call print_date("Calculation ended on ")
   call messages_end()
+  call parser_end(parser)
   call global_end()
 
 contains

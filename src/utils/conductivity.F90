@@ -54,7 +54,7 @@
     integer :: skip
     FLOAT, parameter :: inv_ohm_meter = CNST(4599848.1)
     logical :: from_forces
-    
+    type(parser_t) :: parser    
     
     ! Initialize stuff
     call global_init(is_serial = .true.)		 
@@ -62,7 +62,9 @@
     call getopt_init(ierr)
     call getopt_end()
 
-    call messages_init()
+    call parser_init(parser)
+    
+    call messages_init(parser)
 
     call messages_experimental('oct-conductivity')
 
@@ -452,6 +454,8 @@
 
     call io_end()
     call messages_end()
+
+    call parser_end(parser)
     call global_end()
 
   end program conductivity

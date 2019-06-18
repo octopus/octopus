@@ -24,6 +24,7 @@ program centergeom
   use global_oct_m
   use io_oct_m
   use messages_oct_m
+  use parser_oct_m
   use simul_box_oct_m
   use space_oct_m
   use unit_oct_m
@@ -36,14 +37,17 @@ program centergeom
   type(simul_box_t) :: sb
   type(geometry_t)  :: geo
   type(space_t)     :: space
-
+  type(parser_t) :: parser
+  
   call global_init(is_serial = .true.)
 
   call getopt_init(ierr)
   if(ierr == 0) call getopt_center_geom()
   call getopt_end()
 
-  call messages_init()
+  call parser_init(parser)
+  
+  call messages_init(parser)
 
   call io_init()
   call unit_system_init()
@@ -61,6 +65,11 @@ program centergeom
 
   call io_end()
   call messages_end()
+
+  call parser_end(parser)
+
+  call parser_end(parser)
+  
   call global_end()
 end program centergeom
 

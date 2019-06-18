@@ -53,6 +53,7 @@ program oct_convert
 
   character(len=256) :: config_str
   integer :: ierr
+  type(parser_t) :: parser
   
   call getopt_init(ierr)
   config_str = trim(get_config_opts()) // trim(get_optional_libraries())
@@ -61,7 +62,10 @@ program oct_convert
 
   call global_init()
   call calc_mode_par_init()
-  call messages_init()
+
+  call parser_init(parser)
+
+  call messages_init(parser)
 
   call io_init()
   call profiling_init()
@@ -84,6 +88,9 @@ program oct_convert
   call io_end()
   call print_date("Calculation ended on ")
   call messages_end()
+
+  call parser_end(parser)
+
   call global_end()
 
 contains

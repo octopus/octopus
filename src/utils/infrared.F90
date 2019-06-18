@@ -44,6 +44,7 @@
     FLOAT :: dw, max_energy
     integer :: ifreq, idir
     integer, parameter :: max_freq = 10000
+    type(parser_t) :: parser
 
     ! Initialize stuff
     call global_init(is_serial = .true.)
@@ -52,7 +53,9 @@
 
     call getopt_end()
 
-    call messages_init()
+    call parser_init(parser)
+    
+    call messages_init(parser)
 
     call io_init()
 
@@ -114,6 +117,8 @@
 
     call io_end()
     call messages_end()
+
+    call parser_end(parser)
     call global_end()
 
   contains

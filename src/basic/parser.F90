@@ -29,6 +29,7 @@ module parser_oct_m
 
   private
   public ::              &
+    parser_t,            &
     block_t,             &
     parser_init,         &
     parser_end,          &
@@ -49,6 +50,10 @@ module parser_oct_m
     parse_expression,    &
     parse_array
 
+  type :: parser_t
+    integer :: dummy
+  end type parser_t
+  
   type :: block_t
     private
     integer, pointer :: p
@@ -269,7 +274,9 @@ module parser_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine parser_init
+  subroutine parser_init(self)
+    type(parser_t), intent(out) :: self
+    
     integer :: ierr
     logical :: file_exists
     
@@ -327,8 +334,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parser_end
-
+  subroutine parser_end(self)
+    type(parser_t), intent(inout) :: self
+    
     call sym_output_table(only_unused = 1, mpiv_node = mpi_world%rank)
     call parse_end()
 

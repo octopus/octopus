@@ -89,7 +89,8 @@ program photoelectron_spectrum
   integer              :: pes_method, option 
 
   type(multicomm_t)    :: mc
-
+  type(parser_t) :: parser
+  
   call getopt_init(ierr)
   if(ierr /= 0) then
     message(1) = "Your Fortran compiler doesn't support command-line arguments;"
@@ -99,8 +100,10 @@ program photoelectron_spectrum
 
 
   call global_init(is_serial = .true.)
+
+  call parser_init(parser)
   
-  call messages_init()  
+  call messages_init(parser)  
   call io_init()
 
   !* In order to initialize k-points
@@ -446,6 +449,8 @@ program photoelectron_spectrum
 
   call io_end()
   call messages_end()
+
+  call parser_end(parser)
   call global_end()
   
   SAFE_DEALLOCATE_A(pesP)    
