@@ -98,21 +98,22 @@ module fft_oct_m
     FFT_NULL = -1
   
   type fft_t
-    integer     :: slot    !< in which slot do we have this fft
+    private
+    integer         :: slot    !< in which slot do we have this fft
 
-    integer     :: type    !< is the fft real or complex
-    integer     :: library !< what library are we using
+    integer         :: type    !< is the fft real or complex
+    integer, public :: library !< what library are we using
 
-    integer     :: comm           !< MPI communicator
-    integer     :: rs_n_global(3) !< total size of the fft in each direction in real space
-    integer     :: fs_n_global(3) !< total size of the fft in each direction in fourier space
-    integer     :: rs_n(3)        !< local size of the fft in in each direction real space
-    integer     :: fs_n(3)        !< local size of the fft in in each direction fourier space
-    integer     :: rs_istart(1:3) !< where does the local portion of the function start in real space
-    integer     :: fs_istart(1:3) !< where does the local portion of the function start in fourier space
+    integer         :: comm           !< MPI communicator
+    integer         :: rs_n_global(3) !< total size of the fft in each direction in real space
+    integer         :: fs_n_global(3) !< total size of the fft in each direction in fourier space
+    integer         :: rs_n(3)        !< local size of the fft in in each direction real space
+    integer         :: fs_n(3)        !< local size of the fft in in each direction fourier space
+    integer         :: rs_istart(1:3) !< where does the local portion of the function start in real space
+    integer         :: fs_istart(1:3) !< where does the local portion of the function start in fourier space
 
-    integer     :: stride_rs(1:3)
-    integer     :: stride_fs(1:3)
+    integer, public :: stride_rs(1:3)
+    integer, public :: stride_fs(1:3)
 
     type(c_ptr) :: planf                  !< plan for forward transform
     type(c_ptr) :: planb                  !< plan for backward transform
@@ -120,9 +121,9 @@ module fft_oct_m
     !integer(ptrdiff_t_kind) :: pfft_planb !< PFFT plan for backward transform
 
     !> The following arrays have to be stored here and allocated in the initialization routine because of PFFT 
-    FLOAT, pointer :: drs_data(:,:,:) !< array used to store the function in real space that is passed to PFFT.
-    CMPLX, pointer :: zrs_data(:,:,:) !< array used to store the function in real space that is passed to PFFT.
-    CMPLX, pointer ::  fs_data(:,:,:) !< array used to store the function in fourier space that is passed to PFFT
+    FLOAT, pointer, public :: drs_data(:,:,:) !< array used to store the function in real space that is passed to PFFT.
+    CMPLX, pointer, public :: zrs_data(:,:,:) !< array used to store the function in real space that is passed to PFFT.
+    CMPLX, pointer, public ::  fs_data(:,:,:) !< array used to store the function in fourier space that is passed to PFFT
 #ifdef HAVE_CLFFT
     !> data for clfft
     type(clfftPlanHandle) :: cl_plan_fw 
@@ -131,10 +132,10 @@ module fft_oct_m
     type(c_ptr)           :: cuda_plan_fw
     type(c_ptr)           :: cuda_plan_bw
 #ifdef HAVE_NFFT
-    type(nfft_t) :: nfft 
+    type(nfft_t), public :: nfft
 #endif
 #ifdef HAVE_PNFFT
-    type(pnfft_t) :: pnfft 
+    type(pnfft_t), public :: pnfft
 #endif
 
   end type fft_t

@@ -58,14 +58,16 @@ module multigrid_oct_m
     FULLWEIGHT = 2
 
   type multigrid_level_t
+    ! Components are public by default
     type(transfer_table_t)          :: tt
     type(mesh_t),          pointer  :: mesh
     type(derivatives_t),   pointer  :: der
   end type multigrid_level_t
 
   type multigrid_t
-    integer                          :: n_levels
-    type(multigrid_level_t), pointer :: level(:)
+    private
+    integer                                  :: n_levels
+    type(multigrid_level_t), pointer, public :: level(:)
 
     integer          :: tp
     integer, pointer :: sp(:)

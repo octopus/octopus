@@ -40,7 +40,8 @@ module born_charges_oct_m
     out_Born_charges
 
   type Born_charges_t
-    CMPLX, pointer :: charge(:, :, :)    !< i, j, atom: Z*(i,j) = dF(j)/dE(i) = dP(i) / dR(j)
+    private
+    CMPLX, pointer, public :: charge(:, :, :)    !< i, j, atom: Z*(i,j) = dF(j)/dE(i) = dP(i) / dR(j)
     CMPLX :: sum_ideal(MAX_DIM, MAX_DIM) !< the sum of Born charges according to acoustic sum rule 
     CMPLX :: delta(MAX_DIM, MAX_DIM)     !< discrepancy of sum of Born charge tensors from sum rule, per atom
     logical :: correct                   !< correct according to sum rule?

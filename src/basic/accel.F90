@@ -96,6 +96,7 @@ module accel_oct_m
 #endif
 
   type accel_context_t
+    ! Components are public by default
 #ifdef HAVE_OPENCL
     type(cl_context) :: cl_context
 #elif defined(HAVE_CUDA)
@@ -106,6 +107,7 @@ module accel_oct_m
   end type accel_context_t
 
   type accel_device_t
+    ! Components are public by default
 #ifdef HAVE_OPENCL
     type(cl_device_id) :: cl_device
 #elif defined(HAVE_CUDA)
@@ -115,7 +117,8 @@ module accel_oct_m
 #endif
   end type accel_device_t
 
-  type accel_t 
+  type accel_t
+    ! Components are public by default
     type(accel_context_t)  :: context
     type(accel_device_t)   :: device
 #ifdef HAVE_OPENCL
@@ -131,6 +134,7 @@ module accel_oct_m
   end type accel_t
 
   type accel_mem_t
+    ! Components are public by default
 #ifdef HAVE_OPENCL
     type(cl_mem)           :: mem
 #else
@@ -143,6 +147,7 @@ module accel_oct_m
   end type accel_mem_t
 
   type accel_kernel_t
+    ! Components are public by default
 #ifdef HAVE_OPENCL
     type(cl_kernel)               :: kernel
 #endif

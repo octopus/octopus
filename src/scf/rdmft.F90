@@ -56,6 +56,7 @@ module rdmft_oct_m
        scf_rdmft
 
   type rdm_t
+    private
     type(states_t) :: psi
     integer  :: max_iter
     integer  :: iter

@@ -35,6 +35,7 @@ module ps_cpi_file_oct_m
 
   !> First, the contents of the file.
   type ps_cpi_file_t
+    ! Components are public by default
     FLOAT              :: zval          !< valence charge
     integer            :: no_l_channels !< number of pseudo components (lmax+1)
     
@@ -47,8 +48,8 @@ module ps_cpi_file_oct_m
     
     logical            :: core_corrections
     FLOAT, pointer     :: chcore(:)     !< r times the core charge
-    FLOAT, pointer     :: d1chcore(:)   !< first  derivative of chcore
-    FLOAT, pointer     :: d2chcore(:)   !< second derivative of chcore
+    FLOAT, pointer, private :: d1chcore(:)   !< first  derivative of chcore
+    FLOAT, pointer, private :: d2chcore(:)   !< second derivative of chcore
   end type ps_cpi_file_t
   
 contains

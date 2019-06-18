@@ -38,6 +38,7 @@ module volume_oct_m
        volume_in_volume
 
   type volume_t
+    private
     integer          :: n_elements
     logical, pointer :: join(:)      => NULL()         ! Add or subtract the volume
     integer, pointer :: type(:)      => NULL()         ! sphere, slab, etc.

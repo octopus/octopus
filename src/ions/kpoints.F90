@@ -58,6 +58,7 @@ module kpoints_oct_m
     kpoints_get_path_coord
 
   type kpoints_grid_t
+    ! Components are public by default
     FLOAT, pointer   :: point(:, :)
     FLOAT, pointer   :: point1BZ(:, :)
     FLOAT, pointer   :: red_point(:, :)
@@ -69,6 +70,7 @@ module kpoints_oct_m
   end type kpoints_grid_t
 
   type kpoints_t
+    ! Components are public by default
     type(kpoints_grid_t) :: full
     type(kpoints_grid_t) :: reduced
 
@@ -79,12 +81,12 @@ module kpoints_oct_m
     integer              :: nik_skip=0 !< number of user defined points with zero weight
 
     !> For the modified Monkhorst-Pack scheme
-    integer              :: nik_axis(MAX_DIM)    !< number of MP divisions
-    integer, pointer     :: symmetry_ops(:, :)  !< (reduced%npoints, nops)
-    integer, pointer     :: num_symmetry_ops(:) !< (reduced%npoints)
+    integer                   :: nik_axis(MAX_DIM)    !< number of MP divisions
+    integer, pointer, private :: symmetry_ops(:, :)  !< (reduced%npoints, nops)
+    integer, pointer, private :: num_symmetry_ops(:) !< (reduced%npoints)
 
     !> For the output of a band-structure
-    FLOAT, pointer       :: coord_along_path(:)
+    FLOAT, pointer            :: coord_along_path(:)
   end type kpoints_t
 
   integer, public, parameter ::        &

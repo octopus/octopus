@@ -51,14 +51,15 @@ module vibrations_oct_m
     vibrations_get_suffix
   
   type vibrations_t
-    integer :: num_modes
-    integer :: ndim
-    integer :: natoms
-    FLOAT, pointer :: dyn_matrix(:,:)
-    FLOAT, pointer :: infrared(:,:)
-    FLOAT, pointer :: normal_mode(:,:)
-    FLOAT, pointer :: freq(:)
-    FLOAT :: disp
+    private
+    integer,        public :: num_modes
+    integer,        public :: ndim
+    integer,        public :: natoms
+    FLOAT, pointer, public :: dyn_matrix(:,:)
+    FLOAT, pointer, public :: infrared(:,:)
+    FLOAT, pointer, public :: normal_mode(:,:)
+    FLOAT, pointer, public :: freq(:)
+    FLOAT,          public :: disp
     FLOAT :: total_mass
     character (len=2) :: suffix
     character (len=80) :: filename_dynmat

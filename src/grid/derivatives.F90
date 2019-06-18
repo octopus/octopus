@@ -97,6 +97,7 @@ module derivatives_oct_m
     NON_BLOCKING = 2 
 
   type derivatives_t
+    ! Components are public by default
     type(boundaries_t)    :: boundaries
     type(mesh_t), pointer :: mesh          !< pointer to the underlying mesh
     integer               :: dim           !< dimensionality of the space (sb%dim)
@@ -107,16 +108,16 @@ module derivatives_oct_m
 
     !> If the so-called variational discretization is used, this controls a
     !! possible filter on the Laplacian.
-    FLOAT :: lapl_cutoff   
+    FLOAT, private :: lapl_cutoff   
 
-    type(nl_operator_t), pointer :: op(:)  !< op(1:conf%dim) => gradient
-    !! op(conf%dim+1) => Laplacian
-    type(nl_operator_t), pointer :: lapl   !< these are just shortcuts for op
+    type(nl_operator_t), pointer, private :: op(:)  !< op(1:conf%dim) => gradient
+                                                    !! op(conf%dim+1) => Laplacian
+    type(nl_operator_t), pointer :: lapl            !< these are just shortcuts for op
     type(nl_operator_t), pointer :: grad(:)
 
     integer                      :: n_ghost(MAX_DIM)   !< ghost points to add in each dimension
 #if defined(HAVE_MPI)
-    integer                      :: comm_method 
+    integer, private             :: comm_method 
 #endif
     type(derivatives_t),    pointer :: finer
     type(derivatives_t),    pointer :: coarser

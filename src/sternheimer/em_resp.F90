@@ -63,6 +63,7 @@ module em_resp_oct_m
        out_hyperpolarizability
 
   type em_resp_t
+    private
     type(pert_t) :: perturbation
 
     integer :: nsigma !< 1: consider only positive values of the frequency

@@ -50,6 +50,7 @@ module dos_oct_m
     dos_write_dos
 
   type dos_t
+    private
     FLOAT   :: emin
     FLOAT   :: emax
     integer :: epoints

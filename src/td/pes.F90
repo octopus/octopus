@@ -51,13 +51,14 @@ module pes_oct_m
     pes_dump
 
   type pes_t
-    logical :: calc_spm
+    private
+    logical, public :: calc_spm
     type(pes_spm_t) :: spm
 
-    logical :: calc_mask
+    logical, public :: calc_mask
     type(pes_mask_t) :: mask
 
-    logical :: calc_flux
+    logical, public :: calc_flux
     type(pes_flux_t) :: flux
     
   end type pes_t

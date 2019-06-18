@@ -53,10 +53,11 @@ module pes_spm_oct_m
     pes_spm_load
 
   type pes_spm_t
+    private
     integer                    :: nspoints                  !< how many points we store the wf
     FLOAT, pointer             :: rcoords(:,:)              !< coordinates of the sample points
     FLOAT, pointer             :: rcoords_nrm(:,:)
-    CMPLX, pointer             :: wf(:,:,:,:,:)   => NULL() !< wavefunctions at sample points
+    CMPLX, pointer, public     :: wf(:,:,:,:,:)   => NULL() !< wavefunctions at sample points
     FLOAT, pointer             :: dq(:,:)         => NULL() !< part 1 of Volkov phase (recipe phase) 
     FLOAT, pointer             :: domega(:)       => NULL() !< part 2 of Volkov phase (recipe phase)
     integer                    :: recipe                    !< type of calculation (RAW/PHASE)

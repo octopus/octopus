@@ -64,6 +64,7 @@ module mix_oct_m
     mix_add_auxmixfield
 
   type mixfield_t
+    private
     FLOAT, pointer :: ddf(:, :, :, :)
     FLOAT, pointer :: ddv(:, :, :, :)
     FLOAT, pointer :: df_old(:, :, :)
@@ -85,6 +86,7 @@ module mix_oct_m
   end type mixfield_t
 
   type mixfield_ptr_t
+    private
     type(mixfield_t), pointer :: p
   end type mixfield_ptr_t
 

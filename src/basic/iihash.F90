@@ -46,6 +46,7 @@ module iihash_oct_m
     get_next_prime
 
   type iihash_t
+    private
     integer                 :: size
     type(ialist_t), pointer :: keyval(:)
   end type iihash_t

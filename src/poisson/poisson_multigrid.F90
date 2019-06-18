@@ -49,6 +49,7 @@ module poisson_multigrid_oct_m
     mg_solver_t
 
   type mg_solver_t
+    private
 
     FLOAT ::                    &
       threshold,                &

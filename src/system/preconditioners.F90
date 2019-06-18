@@ -60,6 +60,7 @@ module preconditioners_oct_m
     preconditioner_obsolete_variables
 
   type preconditioner_t
+    private
     integer :: which
 
     type(nl_operator_t) :: op

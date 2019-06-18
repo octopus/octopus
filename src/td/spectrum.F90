@@ -98,7 +98,7 @@ module spectrum_oct_m
     integer :: spectype            !< spectrum type (absorption, energy loss, or dipole power)
     integer :: method              !< Fourier transform or compressed sensing 
     FLOAT   :: noise               !< the level of noise that is assumed in the time series for compressed sensing 
-    logical :: sigma_diag          !< diagonalize sigma tensor
+    logical, private :: sigma_diag          !< diagonalize sigma tensor
   end type spectrum_t
 
   !> Module variables, necessary to compute the function hsfunction, called by

@@ -47,8 +47,9 @@ module symmetries_oct_m
     symmetries_write_info
 
   type symmetries_t
-    type(symm_op_t), allocatable :: ops(:)
-    integer                  :: nops
+    private
+    type(symm_op_t), allocatable, public :: ops(:)
+    integer, public          :: nops
     FLOAT                    :: breakdir(1:3)
     integer                  :: space_group
     logical                  :: any_non_spherical

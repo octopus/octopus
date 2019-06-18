@@ -40,11 +40,13 @@ module ialist_oct_m
     ialist_lookup
 
   type ialist_t
+    private
     type(iacons_t), pointer :: head
     integer                 :: length
   end type ialist_t
 
   type iacons_t
+    private
     integer                 :: key
     integer                 :: val
     type(iacons_t), pointer :: next

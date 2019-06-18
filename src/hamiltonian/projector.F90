@@ -81,22 +81,23 @@ module projector_oct_m
   !! - relativistic Kleinman-Bylander projector (includes spin-orbit)
 
   type projector_t
-    integer :: type = PROJ_NONE
-    integer :: nprojections
-    integer :: lmax
-    integer :: lloc
-    integer :: nik
-    integer :: reltype
+    private
+    integer, public :: type = PROJ_NONE
+    integer         :: nprojections
+    integer, public :: lmax
+    integer, public :: lloc
+    integer         :: nik
+    integer         :: reltype
 
-    type(submesh_t)  :: sphere
+    type(submesh_t), public  :: sphere
     
 
     !> Only one of the following structures should be used at once
     !! The one to be used depends on the value of type variable
-    type(hgh_projector_t), pointer :: hgh_p(:, :) => null()
-    type(kb_projector_t),  pointer :: kb_p(:, :)  => null()
-    type(rkb_projector_t), pointer :: rkb_p(:, :) => null()
-    CMPLX,                 pointer :: phase(:, :) => null()
+    type(hgh_projector_t), pointer, public :: hgh_p(:, :) => null()
+    type(kb_projector_t),  pointer, public :: kb_p(:, :)  => null()
+    type(rkb_projector_t), pointer         :: rkb_p(:, :) => null()
+    CMPLX,                 pointer, public :: phase(:, :) => null()
   end type projector_t
 
 contains

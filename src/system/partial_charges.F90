@@ -32,6 +32,7 @@ module partial_charges_oct_m
   private
 
   type partial_charges_t
+    private
     integer :: dummy
   end type partial_charges_t
 
