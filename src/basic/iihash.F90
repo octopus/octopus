@@ -45,6 +45,8 @@ module iihash_oct_m
     iihash_lookup
 
   type iihash_t
+    private
+    
     type(c_ptr) :: map
   end type iihash_t
   
