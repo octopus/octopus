@@ -19,8 +19,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_classical(geo, tg, td, oct)
+  subroutine target_init_classical(geo, parser, tg, td, oct)
     type(geometry_t), intent(in)    :: geo
+    type(parser_t),   intent(in)    :: parser
     type(target_t),   intent(inout) :: tg
     type(td_t),       intent(in)    :: td
     type(oct_t),      intent(in)    :: oct

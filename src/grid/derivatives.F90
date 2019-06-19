@@ -144,8 +144,9 @@ module derivatives_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine derivatives_init(der, sb, use_curvilinear, order)
+  subroutine derivatives_init(der, parser, sb, use_curvilinear, order)
     type(derivatives_t), target, intent(out) :: der
+    type(parser_t),              intent(in)  :: parser
     type(simul_box_t),           intent(in)  :: sb
     logical,                     intent(in)  :: use_curvilinear
     integer, optional,           intent(in)  :: order
@@ -239,7 +240,7 @@ contains
       call messages_input_error('ParallelizationOfDerivatives')
     end if
 
-    call messages_obsolete_variable('OverlapDerivatives', 'ParallelizationOfDerivatives')
+    call messages_obsolete_variable(parser, 'OverlapDerivatives', 'ParallelizationOfDerivatives')
 #endif
 
     ! if needed, der%masses should be initialized in modelmb_particles_init

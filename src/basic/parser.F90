@@ -18,22 +18,7 @@
 
 #include "global.h"
 
-!> This module is only supposed to be used within this file.
-module block_t_oct_m
-  implicit none
-  
-  private
-
-  type, public :: block_t
-    private
-    integer, pointer :: p
-  end type block_t
-
-end module block_t_oct_m
-
-
 module parser_oct_m
-  use block_t_oct_m
   use global_oct_m
   use loct_oct_m
   use mpi_oct_m
@@ -44,7 +29,8 @@ module parser_oct_m
 
   private
   public ::              &
-    block_t,             &   ! This is defined in block_t_oct_m above
+    parser_t,            &
+    block_t,             &
     parser_init,         &
     parser_end,          &
     parse_init,          &
@@ -63,6 +49,15 @@ module parser_oct_m
     parse_block_logical, &
     parse_expression,    &
     parse_array
+
+  type :: parser_t
+    integer :: dummy
+  end type parser_t
+  
+  type :: block_t
+    private
+    integer, pointer :: p
+  end type block_t
 
   interface parse_init
     integer function oct_parse_init(file_out, mpiv_node)
@@ -151,7 +146,7 @@ module parser_oct_m
     end subroutine oct_parse_string
 
     integer function oct_parse_block(name, blk)
-      use block_t_oct_m
+      import block_t
       implicit none
       character(len=*), intent(in) :: name
       type(block_t), intent(out) :: blk
@@ -173,7 +168,7 @@ module parser_oct_m
 
   interface parse_block_end
     subroutine oct_parse_block_end(blk)
-      use block_t_oct_m
+      import block_t
       implicit none
       type(block_t), intent(inout) :: blk
     end subroutine oct_parse_block_end
@@ -181,7 +176,7 @@ module parser_oct_m
 
   interface parse_block_n
     integer function oct_parse_block_n(blk)
-      use block_t_oct_m
+      import block_t
       implicit none
       type(block_t), intent(in) :: blk
     end function oct_parse_block_n
@@ -189,7 +184,7 @@ module parser_oct_m
 
   interface parse_block_cols
     integer function oct_parse_block_cols(blk, line)
-      use block_t_oct_m
+      import block_t
       implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in) :: line
@@ -198,7 +193,7 @@ module parser_oct_m
 
   interface parse_block_integer
     subroutine oct_parse_block_int(blk, l, c, res)
-      use block_t_oct_m
+      import block_t
       implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
@@ -208,7 +203,7 @@ module parser_oct_m
 
   interface parse_block_float
     subroutine oct_parse_block_double(blk, l, c, res)
-      use block_t_oct_m
+      import block_t
       implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
@@ -221,7 +216,7 @@ module parser_oct_m
 
   interface parse_block_cmplx
     subroutine oct_parse_block_complex(blk, l, c, res)
-      use block_t_oct_m
+      import block_t
       implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
@@ -232,7 +227,7 @@ module parser_oct_m
 
   interface parse_block_string
     subroutine oct_parse_block_string(blk, l, c, res)
-      use block_t_oct_m
+      import block_t
       implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
@@ -279,7 +274,9 @@ module parser_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine parser_init
+  subroutine parser_init(self)
+    type(parser_t), intent(out) :: self
+    
     integer :: ierr
     logical :: file_exists
     
@@ -337,8 +334,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parser_end
-
+  subroutine parser_end(self)
+    type(parser_t), intent(inout) :: self
+    
     call sym_output_table(only_unused = 1, mpiv_node = mpi_world%rank)
     call parse_end()
 
@@ -346,7 +344,8 @@ contains
 
   ! ---------------------------------------------------------  
 
-  logical function parse_is_defined(name) result(isdef)
+  logical function parse_is_defined(self, name) result(isdef)
+    type(parser_t), intent(in)   :: self
     character(len=*), intent(in) :: name
 
     isdef = parse_isdef(name) /= 0

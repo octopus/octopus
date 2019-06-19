@@ -117,14 +117,14 @@ contains
     kdotp_vars%eff_mass_inv(:,:,:,:) = 0 
     kdotp_vars%velocity(:,:,:) = 0 
 
-    call pert_init(kdotp_vars%perturbation, PERTURBATION_KDOTP, sys%gr, sys%geo)
+    call pert_init(kdotp_vars%perturbation, sys%parser, PERTURBATION_KDOTP, sys%gr, sys%geo)
     SAFE_ALLOCATE(kdotp_vars%lr(1:1, 1:pdim))
 
     call parse_input()
 
     if(calc_2nd_order) then
-      call pert_init(kdotp_vars%perturbation2, PERTURBATION_NONE, sys%gr, sys%geo)
-      call pert_init(pert2, PERTURBATION_KDOTP, sys%gr, sys%geo)
+      call pert_init(kdotp_vars%perturbation2, sys%parser, PERTURBATION_NONE, sys%gr, sys%geo)
+      call pert_init(pert2, sys%parser, PERTURBATION_KDOTP, sys%gr, sys%geo)
       call pert_setup_dir(kdotp_vars%perturbation2, 1) ! direction is irrelevant
       SAFE_ALLOCATE(kdotp_vars%lr2(1:1, 1:pdim, 1:pdim))
     end if
@@ -133,7 +133,7 @@ contains
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
     call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_look_and_load(restart_load, sys%st, sys%gr, is_complex = complex_response)
+      call states_look_and_load(restart_load, sys%parser, sys%st, sys%gr, is_complex = complex_response)
       call restart_end(restart_load)
     else
       message(1) = "A previous gs calculation is required."
@@ -177,7 +177,7 @@ contains
       call kdotp_write_band_velocity(sys%st, pdim, kdotp_vars%velocity(:,:,:))
     end if
 
-    call sternheimer_obsolete_variables('KdotP_', 'KdotP')
+    call sternheimer_obsolete_variables(sys%parser, 'KdotP_', 'KdotP')
     call sternheimer_init(sh, sys, hm, complex_response, set_ham_var = 0, &
       set_occ_response = (kdotp_vars%occ_solution_method == 0), set_last_occ_response = (kdotp_vars%occ_solution_method == 0), &
       occ_response_by_sternheimer = .true.)
@@ -202,7 +202,7 @@ contains
       if(.not. fromScratch) then
         str_tmp = kdotp_wfs_tag(idir)
         call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, 1), ierr)
-        if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(1, idir))
+        if (ierr == 0) call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(1, idir))
         call restart_close_dir(restart_load)
           
         if(ierr /= 0) then
@@ -214,7 +214,7 @@ contains
           do idir2 = idir, pdim
             str_tmp = kdotp_wfs_tag(idir, idir2)
             call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, 1), ierr)
-            if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
+            if (ierr == 0) call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
             call restart_close_dir(restart_load)
           
             if(ierr /= 0) then
@@ -370,7 +370,7 @@ contains
       !% evaluate the contributions in the occupied subspace.
       !%End
 
-      call messages_obsolete_variable('KdotP_OccupiedSolutionMethod', 'KdotPOccupiedSolutionMethod')
+      call messages_obsolete_variable(sys%parser, 'KdotP_OccupiedSolutionMethod', 'KdotPOccupiedSolutionMethod')
 
       call parse_variable('KdotPOccupiedSolutionMethod', 0, kdotp_vars%occ_solution_method)
       if(kdotp_vars%occ_solution_method == 1 .and. .not. smear_is_semiconducting(sys%st%smear)) then
@@ -396,7 +396,7 @@ contains
       !% Imaginary frequency added to Sternheimer equation which may improve convergence.
       !% Not recommended.
       !%End
-      call messages_obsolete_variable('KdotP_Eta', 'KdotPEta')
+      call messages_obsolete_variable(sys%parser, 'KdotP_Eta', 'KdotPEta')
       call parse_variable('KdotPEta', M_ZERO, kdotp_vars%eta)
       kdotp_vars%eta = units_to_atomic(units_inp%energy, kdotp_vars%eta)
 
@@ -408,7 +408,7 @@ contains
       !% If true, uses <tt>kdotp</tt> perturbations of ground-state wavefunctions
       !% to calculate effective masses. It is not correct for degenerate states.
       !%End      
-      call messages_obsolete_variable('KdotP_CalculateEffectiveMasses', 'KdotPCalculateEffectiveMasses')
+      call messages_obsolete_variable(sys%parser, 'KdotP_CalculateEffectiveMasses', 'KdotPCalculateEffectiveMasses')
       call parse_variable('KdotPCalculateEffectiveMasses', .true., calc_eff_mass)
 
       !%Variable KdotPCalcSecondOrder

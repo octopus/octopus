@@ -86,8 +86,9 @@ module geometry_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine geometry_init(geo, space, print_info)
+  subroutine geometry_init(geo, parser, space, print_info)
     type(geometry_t),           intent(inout) :: geo
+    type(parser_t),             intent(in)    :: parser
     type(space_t),    target,   intent(in)    :: space
     logical,          optional, intent(in)    :: print_info
 
@@ -98,8 +99,8 @@ contains
     call species_init_global()
     
     ! initialize geometry
-    call geometry_init_xyz(geo)
-    call geometry_init_species(geo, print_info=print_info)
+    call geometry_init_xyz(geo, parser)
+    call geometry_init_species(geo, parser, print_info=print_info)
     call distributed_nullify(geo%atoms_dist, geo%natoms)
 
     POP_SUB(geometry_init)
@@ -108,8 +109,9 @@ contains
 
   ! ---------------------------------------------------------------
   !> initializes the xyz positions of the atoms in the structure geo
-  subroutine geometry_init_xyz(geo)
+  subroutine geometry_init_xyz(geo, parser)
     type(geometry_t), intent(inout) :: geo
+    type(parser_t),   intent(in)    :: parser
 
     type(read_coords_info) :: xyz
     integer             :: ia
@@ -120,7 +122,7 @@ contains
     call read_coords_init(xyz)
 
     ! load positions of the atoms
-    call read_coords_read('Coordinates', xyz, geo%space)
+    call read_coords_read('Coordinates', xyz, geo%space, parser)
 
     if(xyz%n < 1) then
       message(1) = "Coordinates have not been defined."
@@ -149,7 +151,7 @@ contains
     call read_coords_init(xyz)
     nullify(geo%catom)
     geo%ncatoms = 0
-    call read_coords_read('Classical', xyz, geo%space)
+    call read_coords_read('Classical', xyz, geo%space, parser)
     if(xyz%source /= READ_COORDS_ERR) then ! found classical atoms
       if(.not. bitand(xyz%flags, XYZ_FLAGS_CHARGE) /= 0) then
         message(1) = "Need to know charge for the classical atoms."
@@ -173,8 +175,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine geometry_init_species(geo, print_info)
+  subroutine geometry_init_species(geo, parser, print_info)
     type(geometry_t),  intent(inout) :: geo
+    type(parser_t),    intent(in)    :: parser
     logical, optional, intent(in)    :: print_info
 
     logical :: print_info_, spec_user_defined
@@ -207,7 +210,7 @@ contains
       end do
       k = k + 1
       call species_init(geo%species(k), atom_get_label(geo%atom(j)), k)
-      call species_read(geo%species(k))
+      call species_read(geo%species(k), parser)
       ! these are the species which do not represent atoms
       geo%only_user_def = geo%only_user_def .and. .not. species_represents_real_atom(geo%species(k))
       
@@ -227,7 +230,7 @@ contains
       call messages_print_stress(stdout, "Species")
     end if
     do i = 1, geo%nspecies
-      call species_build(geo%species(i), ispin, geo%space%dim, print_info=print_info_)
+      call species_build(geo%species(i), parser, ispin, geo%space%dim, print_info=print_info_)
     end do
     if(print_info_) then
       call messages_print_stress(stdout)

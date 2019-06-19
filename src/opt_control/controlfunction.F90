@@ -182,8 +182,9 @@ contains
   !!
   !! Output argument "mode_fixed_fluence" is also given a value, depending on whether
   !! the user requires a fixed-fluence run (.true.) or not (.false.).
-  subroutine controlfunction_mod_init(ep, dt, max_iter, mode_fixed_fluence)
+  subroutine controlfunction_mod_init(ep, parser, dt, max_iter, mode_fixed_fluence)
     type(epot_t), intent(inout)                   :: ep
+    type(parser_t),                 intent(in)    :: parser
     FLOAT, intent(in)                             :: dt
     integer, intent(in)                           :: max_iter
     logical, intent(out)                          :: mode_fixed_fluence
@@ -389,7 +390,7 @@ contains
     end do
 
     ! Fix the carrier frequency
-    call messages_obsolete_variable('OCTCarrierFrequency')
+    call messages_obsolete_variable(parser, 'OCTCarrierFrequency')
     cf_common%w0 = laser_carrier_frequency(ep%lasers(1))
 
     ! Fix the number of control functions: if we have "traditional" QOCT (i.e. the control functions

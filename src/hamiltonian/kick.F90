@@ -108,11 +108,12 @@ module kick_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine kick_init(kick, nspin, dim, periodic_dim)
-    type(kick_t), intent(out) :: kick
-    integer,      intent(in)  :: nspin
-    integer,      intent(in)  :: dim
-    integer,      intent(in)  :: periodic_dim
+  subroutine kick_init(kick, parser, nspin, dim, periodic_dim)
+    type(kick_t),   intent(out) :: kick
+    type(parser_t), intent(in)  :: parser
+    integer,        intent(in)  :: nspin
+    integer,        intent(in)  :: dim
+    integer,        intent(in)  :: periodic_dim
 
     type(block_t) :: blk
     integer :: n_rows, irow, idir
@@ -203,7 +204,7 @@ contains
       call messages_input_error('TDDeltaStrengthMode')
     end select
 
-    if(parse_is_defined('TDDeltaUserDefined')) then
+    if(parse_is_defined(parser, 'TDDeltaUserDefined')) then
 
       kick%function_mode = KICK_FUNCTION_USER_DEFINED
       kick%n_multipoles = 0

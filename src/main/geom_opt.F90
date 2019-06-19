@@ -109,7 +109,7 @@ contains
     ! load wavefunctions
     if(.not. fromscratch) then
       call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
-      if(ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr)
+      if(ierr == 0) call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr)
       call restart_end(restart_load)
       if(ierr /= 0) then
         message(1) = "Unable to read wavefunctions: Starting from scratch."
@@ -118,7 +118,7 @@ contains
       end if
     end if
 
-    call scf_init(g_opt%scfv, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks, conv_force = CNST(1e-8))
+    call scf_init(g_opt%scfv, sys%parser, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks, conv_force = CNST(1e-8))
 
     if(fromScratch) then
       call lcao_run(sys, hm, lmm_r = g_opt%scfv%lmm_r)
@@ -397,7 +397,7 @@ contains
       !%End
       call parse_variable('GOFireIntegrator', OPTION__GOFIREINTEGRATOR__VERLET, g_opt%fire_integrator)
 
-      call messages_obsolete_variable('GOWhat2Minimize', 'GOObjective')
+      call messages_obsolete_variable(sys%parser, 'GOWhat2Minimize', 'GOObjective')
 
       !%Variable GOObjective
       !%Type integer
@@ -474,7 +474,7 @@ contains
       !%End
 
       call read_coords_init(xyz)
-      call read_coords_read('GOConstrains', xyz, g_opt%geo%space)
+      call read_coords_read('GOConstrains', xyz, g_opt%geo%space, sys%parser)
       if(xyz%source /= READ_COORDS_ERR) then
         !Sanity check
         if(g_opt%geo%natoms /= xyz%n) then
@@ -579,11 +579,11 @@ contains
 
     call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%gr, g_opt%geo, g_opt%st)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
-    call v_ks_calc(g_opt%syst%ks, g_opt%hm, g_opt%st, g_opt%geo, calc_eigenval = .true.)
+    call v_ks_calc(g_opt%syst%ks, g_opt%syst%parser, g_opt%hm, g_opt%st, g_opt%geo, calc_eigenval = .true.)
     call energy_calc_total(g_opt%hm, g_opt%syst%gr, g_opt%st)
 
     ! do SCF calculation
-    call scf_run(g_opt%scfv, g_opt%syst%mc, g_opt%syst%gr, g_opt%geo, g_opt%st, &
+    call scf_run(g_opt%scfv, g_opt%syst%parser, g_opt%syst%mc, g_opt%syst%gr, g_opt%geo, g_opt%st, &
       g_opt%syst%ks, g_opt%hm, g_opt%syst%outp, verbosity = VERB_COMPACT, restart_dump=g_opt%restart_dump)
 
     ! store results

@@ -440,8 +440,9 @@ end subroutine mesh_init_stage_2
 !! mpi_grp is the communicator group that will be used for
 !! this mesh.
 ! ---------------------------------------------------------
-subroutine mesh_init_stage_3(mesh, stencil, mc, parent)
+subroutine mesh_init_stage_3(mesh, parser, stencil, mc, parent)
   type(mesh_t),              intent(inout) :: mesh
+  type(parser_t),            intent(in)    :: parser
   type(stencil_t),           intent(in)    :: stencil
   type(multicomm_t),         intent(in)    :: mc
   type(mesh_t),    optional, intent(in)    :: parent
@@ -550,8 +551,8 @@ contains
     select case(order)
     case(ORDER_BLOCKS)
 
-      call messages_obsolete_variable('MeshBlockSizeXY', 'MeshBlockSize')
-      call messages_obsolete_variable('MeshBlockSizeZ', 'MeshBlockSize')
+      call messages_obsolete_variable(parser, 'MeshBlockSizeXY', 'MeshBlockSize')
+      call messages_obsolete_variable(parser, 'MeshBlockSizeZ', 'MeshBlockSize')
 
       !%Variable MeshBlockSize
       !%Type block

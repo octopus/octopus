@@ -113,8 +113,9 @@ contains
   end subroutine pes_nullify
 
   ! ---------------------------------------------------------
-  subroutine pes_init(pes, mesh, sb, st, save_iter, hm, max_iter, dt)
+  subroutine pes_init(pes, parser, mesh, sb, st, save_iter, hm, max_iter, dt)
     type(pes_t),         intent(out)   :: pes
+    type(parser_t),      intent(in)    :: parser
     type(mesh_t),        intent(in)    :: mesh
     type(simul_box_t),   intent(in)    :: sb
     type(states_t),      intent(in)    :: st
@@ -172,9 +173,9 @@ contains
     end if 
 
     
-    if(pes%calc_spm)  call pes_spm_init(pes%spm, mesh, st, save_iter)
-    if(pes%calc_mask) call pes_mask_init(pes%mask, mesh, sb, st, hm, max_iter,dt)
-    if(pes%calc_flux) call pes_flux_init(pes%flux, mesh, st, hm, save_iter, max_iter)
+    if(pes%calc_spm)  call pes_spm_init(pes%spm, parser, mesh, st, save_iter)
+    if(pes%calc_mask) call pes_mask_init(pes%mask, parser, mesh, sb, st, hm, max_iter,dt)
+    if(pes%calc_flux) call pes_flux_init(pes%flux, parser, mesh, st, hm, save_iter, max_iter)
 
 
     !Footer Photoelectron info

@@ -139,8 +139,9 @@ module simul_box_oct_m
 contains
 
   !--------------------------------------------------------------
-  subroutine simul_box_init(sb, geo, space)
+  subroutine simul_box_init(sb, parser, geo, space)
     type(simul_box_t),                   intent(inout) :: sb
+    type(parser_t),                      intent(in)    :: parser
     type(geometry_t),                    intent(inout) :: geo
     type(space_t),                       intent(in)    :: space
 
@@ -155,7 +156,7 @@ contains
     call read_misc()                       ! Miscellaneous stuff.
     call read_box()                        ! Parameters defining the simulation box.
     call simul_box_lookup_init(sb, geo)
-    call simul_box_build_lattice(sb)       ! Build lattice vectors.
+    call simul_box_build_lattice(sb, parser)       ! Build lattice vectors.
     call simul_box_atoms_in_box(sb, geo, .true.)   ! Put all the atoms inside the box.
 
     call simul_box_check_atoms_are_too_close(geo, sb)
@@ -164,7 +165,7 @@ contains
 
     ! we need k-points for periodic systems
     only_gamma_kpoint = (sb%periodic_dim == 0)
-    call kpoints_init(sb%kpoints, sb%symm, sb%dim, sb%rlattice, sb%klattice, only_gamma_kpoint)
+    call kpoints_init(sb%kpoints, parser, sb%symm, sb%dim, sb%rlattice, sb%klattice, only_gamma_kpoint)
 
     call simul_box_symmetry_check(sb, geo, sb%kpoints, sb%dim)
 
@@ -271,7 +272,7 @@ contains
         !%Description
         !% The interpolation order in the multiresolution approach (with <tt>MultiResolutionArea</tt>).
         !%End
-        call messages_obsolete_variable('MR_InterpolationOrder', 'MultiResolutionInterpolationOrder')
+        call messages_obsolete_variable(parser, 'MR_InterpolationOrder', 'MultiResolutionInterpolationOrder')
         call parse_variable('MultiResolutionInterpolationOrder', 5, order)
         call simul_box_interp_init(sb, order)
 
@@ -447,7 +448,7 @@ contains
           ! use value read from XSF lattice vectors
           sb%lsize(:) = geo%lsize(:)
         else if(parse_block('Lsize', blk) == 0) then
-          if(parse_block_cols(blk,0) < sb%dim .and. .not. parse_is_defined('LatticeVectors')) &
+          if(parse_block_cols(blk,0) < sb%dim .and. .not. parse_is_defined(parser, 'LatticeVectors')) &
               call messages_input_error('Lsize')
           do idir = 1, sb%dim
             call parse_block_float(blk, 0, idir - 1, sb%lsize(idir), units_inp%length)
@@ -455,7 +456,7 @@ contains
               call messages_check_def(sb%lsize(idir), .false., def_rsize, 'Lsize', units_out%length)
           end do
           call parse_block_end(blk)
-        else if ((parse_is_defined('Lsize'))) then
+        else if ((parse_is_defined(parser, 'Lsize'))) then
           call parse_variable('Lsize', -M_ONE, sb%lsize(1), units_inp%length)
           if(abs(sb%lsize(1)+M_ONE)  <=  M_EPSILON) then
             call messages_input_error('Lsize')
@@ -561,7 +562,7 @@ contains
         end do
       end select
 
-      call messages_obsolete_variable('BoxOffset')
+      call messages_obsolete_variable(parser, 'BoxOffset')
       
       POP_SUB(simul_box_init.read_box)
     end subroutine read_box
@@ -622,8 +623,9 @@ contains
   end subroutine simul_box_interp_init
 
   !--------------------------------------------------------------
-  subroutine simul_box_build_lattice(sb, rlattice_primitive)
+  subroutine simul_box_build_lattice(sb, parser, rlattice_primitive)
     type(simul_box_t), intent(inout) :: sb
+    type(parser_t),    intent(in)    :: parser
     FLOAT,   optional, intent(in)    :: rlattice_primitive(:,:)
 
     type(block_t) :: blk
@@ -672,7 +674,7 @@ contains
         end if
         call parse_block_end(blk)
 
-        if (parse_is_defined('Lsize')) then
+        if (parse_is_defined(parser, 'Lsize')) then
           message(1) = 'LatticeParameters is incompatible with Lsize'
           call messages_print_var_info(stdout, "LatticeParameters")
           call messages_fatal(1)
@@ -712,7 +714,7 @@ contains
           sb%rlattice_primitive(3,3) = sqrt(M_ONE-sb%rlattice_primitive(1,3)**2-sb%rlattice_primitive(2,3)**2)
         end if
 
-        if (parse_is_defined('LatticeVectors')) then
+        if (parse_is_defined(parser, 'LatticeVectors')) then
           message(1) = 'LatticeParameters with angles is incompatible with LatticeVectors'
           call messages_print_var_info(stdout, "LatticeParameters")
           call messages_fatal(1)
@@ -720,7 +722,7 @@ contains
 
         if(any(angles/=CNST(90.0))) sb%nonorthogonal = .true.
 
-        if (.not. parse_is_defined('Lsize')) then
+        if (.not. parse_is_defined(parser, 'Lsize')) then
           sb%lsize(:) = M_ZERO
           sb%lsize(1:sb%dim) = lparams(1:sb%dim)*M_HALF
         end if
@@ -751,7 +753,7 @@ contains
           end do
           call parse_block_end(blk)
 
-          if (.not. parse_is_defined('Lsize')) then
+          if (.not. parse_is_defined(parser, 'Lsize')) then
             sb%lsize(:) = M_ZERO
             sb%lsize(1:sb%dim) = lparams(1:sb%dim)*M_HALF
           end if
@@ -1339,8 +1341,9 @@ contains
 
 
   ! --------------------------------------------------------------
-  subroutine simul_box_load(sb, dir, filename, mpi_grp, ierr)
+  subroutine simul_box_load(sb, parser, dir, filename, mpi_grp, ierr)
     type(simul_box_t), intent(inout) :: sb
+    type(parser_t),    intent(in)    :: parser
     character(len=*),  intent(in)    :: dir
     character(len=*),  intent(in)    :: filename
     type(mpi_grp_t),   intent(in)    :: mpi_grp
@@ -1477,7 +1480,7 @@ contains
     end if
 
     if (ierr == 0) then
-      call simul_box_build_lattice(sb, rlattice_primitive)
+      call simul_box_build_lattice(sb, parser, rlattice_primitive)
     end if
 
     POP_SUB(simul_box_load)

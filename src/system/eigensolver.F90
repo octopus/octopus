@@ -106,8 +106,9 @@ module eigensolver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_init(eigens, gr, st, xc)
+  subroutine eigensolver_init(eigens, parser, gr, st, xc)
     type(eigensolver_t), intent(out)   :: eigens
+    type(parser_t),      intent(in)    :: parser
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(in)    :: st
     type(xc_t), target,  intent(in)    :: xc
@@ -173,11 +174,12 @@ contains
       call messages_fatal(2)
     end if
 
-    if(eigens%es_type == RS_LOBPCG .and. st%group%block_start /= st%group%block_end) &
+    if(eigens%es_type == RS_LOBPCG .and. st%group%block_start /= st%group%block_end) then
       call messages_experimental("lobpcg eigensolver with more than one block per node")
+    end if
 
-    call messages_obsolete_variable('EigensolverVerbose')
-    call messages_obsolete_variable('EigensolverSubspaceDiag', 'SubspaceDiagonalization')
+    call messages_obsolete_variable(parser, 'EigensolverVerbose')
+    call messages_obsolete_variable(parser, 'EigensolverSubspaceDiag', 'SubspaceDiagonalization')
 
     default_iter = 25
     default_tol = CNST(1e-6)
@@ -293,9 +295,9 @@ contains
 
     call messages_print_var_option(stdout, "Eigensolver", eigens%es_type)
 
-    call messages_obsolete_variable('EigensolverInitTolerance', 'EigensolverTolerance')
-    call messages_obsolete_variable('EigensolverFinalTolerance', 'EigensolverTolerance')
-    call messages_obsolete_variable('EigensolverFinalToleranceIteration')
+    call messages_obsolete_variable(parser, 'EigensolverInitTolerance', 'EigensolverTolerance')
+    call messages_obsolete_variable(parser, 'EigensolverFinalTolerance', 'EigensolverTolerance')
+    call messages_obsolete_variable(parser, 'EigensolverFinalToleranceIteration')
 
     ! this is an internal option that makes the solver use the 
     ! folded operator (H-shift)^2 to converge first eigenvalues around
@@ -338,7 +340,7 @@ contains
 
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
-      call preconditioner_init(eigens%pre, gr)
+      call preconditioner_init(eigens%pre, parser, gr)
     case default
       call preconditioner_null(eigens%pre)
     end select

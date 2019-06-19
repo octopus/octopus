@@ -135,8 +135,9 @@ module epot_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init( ep, gr, geo, ispin, nik, xc_family)
+  subroutine epot_init(ep, parser, gr, geo, ispin, nik, xc_family)
     type(epot_t),                       intent(out)   :: ep
+    type(parser_t),                     intent(in)    :: parser
     type(grid_t),                       intent(in)    :: gr
     type(geometry_t),                   intent(inout) :: geo
     integer,                            intent(in)    :: ispin
@@ -225,12 +226,12 @@ contains
     end if
 
     ! lasers
-    call laser_init(ep%no_lasers, ep%lasers, gr%mesh)
+    call laser_init(ep%lasers, parser, ep%no_lasers, gr%mesh)
 
-    call kick_init(ep%kick, ispin, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim)
+    call kick_init(ep%kick, parser, ispin, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim)
 
     ! No more "UserDefinedTDPotential" from this version on.
-    call messages_obsolete_variable('UserDefinedTDPotential', 'TDExternalFields')
+    call messages_obsolete_variable(parser, 'UserDefinedTDPotential', 'TDExternalFields')
 
     !%Variable StaticElectricField
     !%Type block
@@ -518,7 +519,7 @@ contains
     !% does not affect the electrons directly.
     !%End
 
-    if(parse_is_defined('TDGlobalForce')) then
+    if(parse_is_defined(parser, 'TDGlobalForce')) then
 
       ep%global_force = .true.
 

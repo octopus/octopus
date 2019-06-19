@@ -163,8 +163,9 @@ contains
 
   ! ---------------------------------------------------------
   !> create index and domain communicators
-  subroutine multicomm_init(mc, base_grp, parallel_mask, default_mask, n_node, index_range, min_range)
+  subroutine multicomm_init(mc, parser, base_grp, parallel_mask, default_mask, n_node, index_range, min_range)
     type(multicomm_t), intent(out)   :: mc
+    type(parser_t),    intent(in)    :: parser
     type(mpi_grp_t),   intent(inout) :: base_grp
     integer,           intent(in)    :: parallel_mask
     integer,           intent(in)    :: default_mask
@@ -181,8 +182,8 @@ contains
 
     call messages_print_stress(stdout, "Parallelization")
 
-    call messages_obsolete_variable('ParallelizationStrategy')
-    call messages_obsolete_variable('ParallelizationGroupRanks')
+    call messages_obsolete_variable(parser, 'ParallelizationStrategy')
+    call messages_obsolete_variable(parser, 'ParallelizationGroupRanks')
     
     do ipar = 1, P_STRATEGY_MAX
       default(ipar) = PAR_NO

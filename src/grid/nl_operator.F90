@@ -154,7 +154,9 @@ module nl_operator_oct_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine nl_operator_global_init()
+  subroutine nl_operator_global_init(parser)
+    type(parser_t),         intent(in)    :: parser
+    
     integer :: default
 
     PUSH_SUB(nl_operator_global_init)
@@ -244,7 +246,7 @@ contains
       !%End
       call parse_variable('OperateAccel',  OP_MAP, function_opencl)
 
-      call messages_obsolete_variable('OperateOpenCL', 'OperateAccel')
+      call messages_obsolete_variable(parser, 'OperateOpenCL', 'OperateAccel')
 
     end if
 

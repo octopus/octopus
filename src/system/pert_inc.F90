@@ -391,8 +391,9 @@ subroutine X(ionic_perturbation)(gr, geo, hm, ik, f_in, f_out, iatom, idir)
 end subroutine X(ionic_perturbation)
 
 ! --------------------------------------------------------------------------
-subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
+subroutine X(pert_apply_order_2) (this, parser, gr, geo, hm, ik, f_in, f_out)
   type(pert_t),         intent(in)    :: this
+  type(parser_t),       intent(in)    :: parser
   type(grid_t),         intent(in)    :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(inout) :: hm
@@ -641,7 +642,7 @@ contains
     else 
       SAFE_ALLOCATE(cpsi(1:gr%mesh%np,1:hm%d%dim))  
       cpsi(:,:) = M_ZERO
-      call pert_init(pert_kdotp, PERTURBATION_KDOTP, gr, geo)
+      call pert_init(pert_kdotp, parser, PERTURBATION_KDOTP, gr, geo)
       call pert_setup_dir(pert_kdotp, this%dir)
       call X(pert_apply)(pert_kdotp,gr,geo,hm,ik,f_in_copy,cpsi,set_bc=.false.)
       do idim = 1, hm%d%dim
@@ -812,8 +813,9 @@ end subroutine X(ionic_pert_matrix_elements_2)
 !! correct if used as <psi(0)|H(1)|psi(1)> since the LR wavefunctions include the
 !! occupation. This routine must be modified if used differently than these two
 !! ways.
-subroutine X(pert_expectation_density) (this, gr, geo, hm, st, psia, psib, density, pert_order)
+subroutine X(pert_expectation_density) (this, parser, gr, geo, hm, st, psia, psib, density, pert_order)
   type(pert_t),         intent(in)    :: this
+  type(parser_t),       intent(in)    :: parser
   type(grid_t),         intent(in)    :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(inout) :: hm
@@ -844,7 +846,7 @@ subroutine X(pert_expectation_density) (this, gr, geo, hm, st, psia, psib, densi
         call X(pert_apply)(this, gr, geo, hm, ik, psib(:, :, ist, ik), pertpsib)
         ikweight = st%d%kweights(ik) * st%smear%el_per_state
       else
-        call X(pert_apply_order_2)(this, gr, geo, hm, ik, psib(:, :, ist, ik), pertpsib)
+        call X(pert_apply_order_2)(this, parser, gr, geo, hm, ik, psib(:, :, ist, ik), pertpsib)
         ikweight = st%d%kweights(ik) * st%occ(ist, ik)
       end if
 
@@ -862,8 +864,9 @@ subroutine X(pert_expectation_density) (this, gr, geo, hm, st, psia, psib, densi
 end subroutine X(pert_expectation_density)
 
 ! --------------------------------------------------------------------------
-R_TYPE function X(pert_expectation_value) (this, gr, geo, hm, st, psia, psib, pert_order) result(expval)
+R_TYPE function X(pert_expectation_value) (this, parser, gr, geo, hm, st, psia, psib, pert_order) result(expval)
   type(pert_t),         intent(in)    :: this
+  type(parser_t),       intent(in)    :: parser
   type(grid_t),         intent(in)    :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(inout) :: hm
@@ -887,7 +890,7 @@ R_TYPE function X(pert_expectation_value) (this, gr, geo, hm, st, psia, psib, pe
 
   SAFE_ALLOCATE(density(1:gr%mesh%np))
 
-  call X(pert_expectation_density)(this, gr, geo, hm, st, psia, psib, density, pert_order = order)
+  call X(pert_expectation_density)(this, parser, gr, geo, hm, st, psia, psib, density, pert_order = order)
 
   expval = X(mf_integrate)(gr%mesh, density)
 

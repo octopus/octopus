@@ -24,6 +24,7 @@ program harmonic_spectrum
   use global_oct_m
   use io_oct_m
   use messages_oct_m
+  use parser_oct_m
   use spectrum_oct_m
   use unit_system_oct_m
 
@@ -34,7 +35,8 @@ program harmonic_spectrum
   type(spectrum_t) :: spectrum
   character :: pol
   logical :: get_maxima
-
+  type(parser_t) :: parser
+  
   integer, parameter :: &
     HS_FROM_MULT = 1,   &
     HS_FROM_ACC  = 2,   &
@@ -61,16 +63,19 @@ program harmonic_spectrum
 
   ! Initialize stuff
   call global_init(is_serial = .true.)
-  call messages_init()
+
+  call parser_init(parser)
+  
+  call messages_init(parser)
 
   call io_init()
-  call unit_system_init()
+  call unit_system_init(parser)
   call fft_all_init()
 
   call spectrum_init(spectrum)
 
-  call messages_obsolete_variable('HarmonicSpectrumPolarization')
-  call messages_obsolete_variable('HarmonicSpectrumMode')
+  call messages_obsolete_variable(parser, 'HarmonicSpectrumPolarization')
+  call messages_obsolete_variable(parser, 'HarmonicSpectrumMode')
 
   if( (pol /= 'x') .and. &
       (pol /= 'y') .and. &
@@ -121,6 +126,9 @@ program harmonic_spectrum
 
   call io_end()
   call messages_end()
+
+  call parser_end(parser)
+  
   call global_end()
 end program harmonic_spectrum
 

@@ -89,8 +89,9 @@ contains
   end subroutine multigrid_level_nullify
 
   ! ---------------------------------------------------------
-  subroutine multigrid_init(mgrid, geo, cv, mesh, der, stencil, mc, used_for_preconditioner)
+  subroutine multigrid_init(mgrid, parser, geo, cv, mesh, der, stencil, mc, used_for_preconditioner)
     type(multigrid_t),     target, intent(out) :: mgrid
+    type(parser_t),                intent(in)    :: parser
     type(geometry_t),              intent(in)  :: geo
     type(curvilinear_t),           intent(in)  :: cv
     type(mesh_t),          target, intent(in)  :: mesh
@@ -172,9 +173,9 @@ contains
       
       call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil)
 
-      call derivatives_init(mgrid%level(i)%der, mesh%sb, cv%method /= CURV_METHOD_UNIFORM, order=order)
+      call derivatives_init(mgrid%level(i)%der, parser, mesh%sb, cv%method /= CURV_METHOD_UNIFORM, order=order)
 
-      call mesh_init_stage_3(mgrid%level(i)%mesh, stencil, mc, parent = mgrid%level(i - 1)%mesh)
+      call mesh_init_stage_3(mgrid%level(i)%mesh, parser, stencil, mc, parent = mgrid%level(i - 1)%mesh)
 
       call multigrid_get_transfer_tables(mgrid%level(i)%tt, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh)
 

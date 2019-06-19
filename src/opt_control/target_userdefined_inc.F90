@@ -19,8 +19,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_userdefined(gr, tg, td)
+  subroutine target_init_userdefined(gr, parser, tg, td)
     type(grid_t),   intent(in)    :: gr
+    type(parser_t), intent(in)    :: parser
     type(target_t), intent(inout) :: tg
     type(td_t),     intent(in)    :: td
 
@@ -117,8 +118,9 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_userdefined(tg, gr, dir, geo, hm, outp)
+  subroutine target_output_userdefined(tg, parser, gr, dir, geo, hm, outp)
     type(target_t),      intent(in) :: tg
+    type(parser_t),      intent(in) :: parser
     type(grid_t),        intent(in) :: gr
     character(len=*),    intent(in) :: dir
     type(geometry_t),    intent(in) :: geo
@@ -127,7 +129,7 @@
     PUSH_SUB(target_output_userdefined)
     
     call io_mkdir(trim(dir))
-    call output_states(tg%st, gr, geo, hm, trim(dir), outp)
+    call output_states(tg%st, parser, gr, geo, hm, trim(dir), outp)
 
     POP_SUB(target_output_userdefined)
   end subroutine target_output_userdefined

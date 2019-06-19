@@ -400,13 +400,13 @@ subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol
   do dir1 = startdir, ndir_
     do dir2 = 1, sys%gr%sb%dim
       call pert_setup_dir(perturbation, dir1)
-      zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, psi, lr(dir2, 1)%X(dl_psi))
+      zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, sys%parser, sys%gr, sys%geo, hm, sys%st, psi, lr(dir2, 1)%X(dl_psi))
 
       if(nsigma == 1) then
         zpol(dir1, dir2) = zpol(dir1, dir2) + R_CONJ(zpol(dir1, dir2))
       else
         zpol(dir1, dir2) = zpol(dir1, dir2) &
-          - X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, lr(dir2, 2)%X(dl_psi), psi)
+          - X(pert_expectation_value)(perturbation, sys%parser, sys%gr, sys%geo, hm, sys%st, lr(dir2, 2)%X(dl_psi), psi)
       end if
     end do
   end do
@@ -449,19 +449,19 @@ subroutine X(lr_calc_susceptibility)(sys, hm, lr, nsigma, perturbation, chi_para
 
       call pert_setup_dir(perturbation, dir1, dir2)
 
-      trace = X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, psi, lr(dir2, 1)%X(dl_psi))
+      trace = X(pert_expectation_value)(perturbation, sys%parser, sys%gr, sys%geo, hm, sys%st, psi, lr(dir2, 1)%X(dl_psi))
       
       if (nsigma == 1) then 
         trace = trace + R_CONJ(trace)
       else
         trace = trace + &
-          X(pert_expectation_value)(perturbation, sys%gr, sys%geo, hm, sys%st, lr(dir2, 2)%X(dl_psi), psi)
+          X(pert_expectation_value)(perturbation, sys%parser, sys%gr, sys%geo, hm, sys%st, lr(dir2, 2)%X(dl_psi), psi)
       end if
      
       ! first the paramagnetic term 
       chi_para(dir1, dir2) = chi_para(dir1, dir2) + trace
 
-      chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + X(pert_expectation_value)(perturbation, &
+      chi_dia(dir1, dir2) = chi_dia(dir1, dir2) + X(pert_expectation_value)(perturbation, sys%parser, &
         sys%gr, sys%geo, hm, sys%st, psi, psi, pert_order=2)
 
     end do
@@ -959,9 +959,9 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, nfactor,
   pertpsi_e(:,:,:) = M_ZERO
   pertpsi_b(:,:) = M_ZERO
   
-  call pert_init(pert_m, PERTURBATION_MAGNETIC, sys%gr, sys%geo)
+  call pert_init(pert_m, sys%parser, PERTURBATION_MAGNETIC, sys%gr, sys%geo)
   do ii = 1, nfactor
-    call pert_init(pert_e(ii), PERTURBATION_ELECTRIC, sys%gr, sys%geo)
+    call pert_init(pert_e(ii), sys%parser, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
   end do
   
   psi(:,:) = M_ZERO
@@ -1580,7 +1580,7 @@ contains
 
     ASSERT(nsigma_h .ge. nsigma_in)
 
-    call pert_init(pert_kdotp, PERTURBATION_KDOTP, sys%gr, sys%geo)
+    call pert_init(pert_kdotp, sys%parser, PERTURBATION_KDOTP, sys%gr, sys%geo)
     call pert_setup_dir(pert_kdotp, dir)
 
     psi_out(:, :, :) = M_ZERO
@@ -2068,7 +2068,7 @@ subroutine X(inhomog_per_component)(sys, hm, idir, ik, &
 
   f_out(:,:) = M_ZERO
   
-  call pert_init(pert_kdotp, PERTURBATION_KDOTP, sys%gr, sys%geo)
+  call pert_init(pert_kdotp, sys%parser, PERTURBATION_KDOTP, sys%gr, sys%geo)
   call pert_setup_dir(pert_kdotp, idir)
   
   vel(:,:,:) = M_ZERO
@@ -2164,7 +2164,7 @@ subroutine X(inhomog_per_component_2nd_order)(sys, hm, idir, ik, &
 
   f_out(:,:) = M_ZERO
   
-  call pert_init(pert_kdotp, PERTURBATION_KDOTP, sys%gr, sys%geo)
+  call pert_init(pert_kdotp, sys%parser, PERTURBATION_KDOTP, sys%gr, sys%geo)
   call pert_setup_dir(pert_kdotp, idir)
 
   vel(:,:,:) = M_ZERO
@@ -2514,14 +2514,13 @@ subroutine X(inhomog_K2)(sys, hm, idir1, idir2, ik, &
   call X(inhomog_per_component)(sys, hm, idir1, ik, &
     psi_k2, psi_out, factor_plus, factor_k, factor_magn)
   
-  call pert_init(pert_kdotp2, PERTURBATION_KDOTP, sys%gr, sys%geo)
+  call pert_init(pert_kdotp2, sys%parser, PERTURBATION_KDOTP, sys%gr, sys%geo)
   call pert_setup_dir(pert_kdotp2,idir1,idir2)
   
   do ist = 1, sys%st%nst
     if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
       call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi) 
-      call X(pert_apply_order_2)(pert_kdotp2, sys%gr, sys%geo, hm, ik, &  
-        psi, f_out)
+      call X(pert_apply_order_2)(pert_kdotp2, sys%parser, sys%gr, sys%geo, hm, ik, psi, f_out)
       if(idir1 == idir2) f_out(:,:) = M_HALF * f_out(:,:)
       do idim = 1, hm%d%dim
         do ip = 1, sys%gr%mesh%np
@@ -2590,7 +2589,7 @@ subroutine X(inhomog_KB)(sys, hm, idir, idir1, idir2, ik, &
   call X(inhomog_per_component)(sys, hm, idir, ik, & 
     psi_b, psi_out, factor, factor, factor_magn)
 
-  call pert_init(pert_kdotp2, PERTURBATION_KDOTP, sys%gr, sys%geo)
+  call pert_init(pert_kdotp2, sys%parser, PERTURBATION_KDOTP, sys%gr, sys%geo)
   call pert_setup_dir(pert_kdotp2, idir1, idir2)
 
 
@@ -2601,12 +2600,10 @@ subroutine X(inhomog_KB)(sys, hm, idir, idir1, idir2, ik, &
     if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
       call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi(:, :, ist))
       call pert_setup_dir(pert_kdotp2, idir, idir1)
-      call X(pert_apply_order_2)(pert_kdotp2, sys%gr, sys%geo, hm, ik,  &  
-        psi_k2(:, :, ist), f_out1(:, :, ist))
+      call X(pert_apply_order_2)(pert_kdotp2, sys%parser, sys%gr, sys%geo, hm, ik, psi_k2(:, :, ist), f_out1(:, :, ist))
       if(idir .ne. idir1) f_out1(:,:,ist) = M_TWO * f_out1(:, :, ist)   
       call pert_setup_dir(pert_kdotp2,idir,idir2)
-      call X(pert_apply_order_2)(pert_kdotp2, sys%gr, sys%geo, hm, ik, &  
-         psi_k1(:, :, ist), f_out2(:, :, ist))
+      call X(pert_apply_order_2)(pert_kdotp2, sys%parser, sys%gr, sys%geo, hm, ik, psi_k1(:, :, ist), f_out2(:, :, ist))
       if(idir .ne. idir2) f_out2(:,:,ist) = M_TWO * f_out2(:, :, ist)
 
       do idim = 1, hm%d%dim
@@ -2617,12 +2614,10 @@ subroutine X(inhomog_KB)(sys, hm, idir, idir1, idir2, ik, &
       end do
 
       call pert_setup_dir(pert_kdotp2, idir, idir1)
-      call X(pert_apply_order_2)(pert_kdotp2, sys%gr, sys%geo, hm, ik, &  
-        psi(:, :, ist), f_out1(:, :, ist))
+      call X(pert_apply_order_2)(pert_kdotp2, sys%parser, sys%gr, sys%geo, hm, ik, psi(:, :, ist), f_out1(:, :, ist))
       if(idir .ne. idir1) f_out1(:, :, ist) = M_TWO * f_out1(:, :, ist)  
       call pert_setup_dir(pert_kdotp2, idir, idir2)
-      call X(pert_apply_order_2)(pert_kdotp2, sys%gr, sys%geo, hm, ik, &  
-        psi(:, :, ist), f_out2(:, :,ist))
+      call X(pert_apply_order_2)(pert_kdotp2, sys%parser, sys%gr, sys%geo, hm, ik, psi(:, :, ist), f_out2(:, :,ist))
       if(idir .ne. idir2) f_out2(:, :, ist) = M_TWO * f_out2(:, :, ist)
     end if
   end do

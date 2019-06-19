@@ -123,8 +123,9 @@ module scf_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(scf, gr, geo, st, mc, hm, ks, conv_force)
+  subroutine scf_init(scf, parser, gr, geo, st, mc, hm, ks, conv_force)
     type(scf_t),          intent(inout) :: scf
+    type(parser_t),       intent(in)    :: parser
     type(grid_t), target, intent(inout) :: gr
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(in)    :: st
@@ -237,8 +238,8 @@ contains
     !%End
     call parse_variable('ConvRelEv', M_ZERO, scf%conv_rel_ev, unit = units_inp%energy)
 
-    call messages_obsolete_variable("ConvAbsForce", "ConvForce")
-    call messages_obsolete_variable("ConvRelForce", "ConvForce")
+    call messages_obsolete_variable(parser, 'ConvAbsForce', 'ConvForce')
+    call messages_obsolete_variable(parser, 'ConvRelForce', 'ConvForce')
 
     !%Variable ConvForce
     !%Type float
@@ -286,7 +287,7 @@ contains
 
     if(scf%max_iter < 0) scf%max_iter = huge(scf%max_iter)
 
-    call messages_obsolete_variable('What2Mix', 'MixField')
+    call messages_obsolete_variable(parser, 'What2Mix', 'MixField')
 
     !%Variable MixField
     !%Type integer
@@ -355,9 +356,9 @@ contains
     mix_type = TYPE_FLOAT
 
     if(scf%mix_field == OPTION__MIXFIELD__DENSITY) then
-      call mix_init(scf%smix, gr%fine%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
+      call mix_init(scf%smix, parser, gr%fine%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     else if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
-      call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
+      call mix_init(scf%smix, parser, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     end if
 
     !If we use LDA+U, we also have do mix it
@@ -376,14 +377,12 @@ contains
       call lda_u_periodic_coulomb_integrals(hm%lda_u, st, gr%der, mc, associated(hm%hm_base%phase))
     end if
 
-
     ! now the eigensolver stuff
-    call eigensolver_init(scf%eigens, gr, st, ks%xc)
+    call eigensolver_init(scf%eigens, parser, gr, st, ks%xc)
 
     if(preconditioner_is_multigrid(scf%eigens%pre)) then
       SAFE_ALLOCATE(gr%mgrid_prec)
-      call multigrid_init(gr%mgrid_prec, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc, &
-        used_for_preconditioner=.true.)
+      call multigrid_init(gr%mgrid_prec, parser, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
     end if
 
     !%Variable SCFinLCAO
@@ -525,8 +524,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run, verbosity, iters_done, restart_load, restart_dump)
+  subroutine scf_run(scf, parser, mc, gr, geo, st, ks, hm, outp, gs_run, verbosity, iters_done, restart_load, restart_dump)
     type(scf_t),               intent(inout) :: scf !< self consistent cycle
+    type(parser_t),            intent(in)    :: parser
     type(multicomm_t),         intent(in)    :: mc
     type(grid_t),              intent(inout) :: gr !< grid
     type(geometry_t),          intent(inout) :: geo !< geometry
@@ -583,7 +583,7 @@ contains
           message(1) = 'Unable to read density. Density will be calculated from states.'
           call messages_warning(1)
         else
-          call v_ks_calc(ks, hm, st, geo)
+          call v_ks_calc(ks, parser, hm, st, geo)
         end if
       end if
 
@@ -711,7 +711,7 @@ contains
             scf%eigens%converged = 0
             call eigensolver_run(scf%eigens, gr, st, hm, iter)
 
-            call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
+            call v_ks_calc(ks, parser, hm, st, geo, calc_current=outp%duringscf)
 
             dipole_prev = dipole
             call calc_dipole(dipole)
@@ -744,7 +744,7 @@ contains
 
       select case(scf%mix_field)
       case(OPTION__MIXFIELD__POTENTIAL)
-        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, parser, hm, st, geo, calc_current=outp%duringscf)
         call mixfield_set_vout(scf%mixfield, hm%vhxc)
       case (OPTION__MIXFIELD__DENSITY)
         call mixfield_set_vout(scf%mixfield, rhoout)
@@ -835,7 +835,7 @@ contains
           call messages_warning(1)
         end if
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
-        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, parser, hm, st, geo, calc_current=outp%duringscf)
       case (OPTION__MIXFIELD__POTENTIAL)
         ! mix input and output potentials
         call mixing(scf%smix)
@@ -853,10 +853,10 @@ contains
         end do
 
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, parser, hm, st, geo, calc_current=outp%duringscf)
         
       case(OPTION__MIXFIELD__NONE)
-        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, parser, hm, st, geo, calc_current=outp%duringscf)
       end select
 
 
@@ -937,7 +937,7 @@ contains
       if((outp%what+outp%what_lda_u+outp%whatBZ)/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
-        call output_all(outp, gr, geo, st, hm, ks, dirname)
+        call output_all(outp, parser, gr, geo, st, hm, ks, dirname)
       end if
 
       ! save information for the next iteration
@@ -970,9 +970,8 @@ contains
 
     if(scf%lcao_restricted) call lcao_end(lcao)
 
-    if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) &
-        .or. bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
-      call v_ks_calc(ks, hm, st, geo)
+    if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) .or. bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
+      call v_ks_calc(ks, parser, hm, st, geo)
     end if
 
     select case(scf%mix_field)
@@ -1017,7 +1016,7 @@ contains
     if(gs_run_) then 
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
-      call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
+      call output_all(outp, parser, gr, geo, st, hm, ks, STATIC_DIR)
     end if
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then

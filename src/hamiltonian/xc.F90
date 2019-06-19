@@ -119,16 +119,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_init(xcs, ndim, periodic_dim, nel, x_id, c_id, xk_id, ck_id, hartree_fock)
-    type(xc_t), intent(out) :: xcs
-    integer,    intent(in)  :: ndim
-    integer,    intent(in)  :: periodic_dim
-    FLOAT,      intent(in)  :: nel
-    integer,    intent(in)  :: x_id
-    integer,    intent(in)  :: c_id
-    integer,    intent(in)  :: xk_id
-    integer,    intent(in)  :: ck_id
-    logical,    intent(in)  :: hartree_fock
+  subroutine xc_init(xcs, parser, ndim, periodic_dim, nel, x_id, c_id, xk_id, ck_id, hartree_fock)
+    type(xc_t),     intent(out) :: xcs
+    type(parser_t), intent(in)  :: parser
+    integer,        intent(in)  :: ndim
+    integer,        intent(in)  :: periodic_dim
+    FLOAT,          intent(in)  :: nel
+    integer,        intent(in)  :: x_id
+    integer,        intent(in)  :: c_id
+    integer,        intent(in)  :: xk_id
+    integer,        intent(in)  :: ck_id
+    logical,        intent(in)  :: hartree_fock
 
     integer :: isp
     logical :: ll
@@ -145,11 +146,11 @@ contains
     !get both spin-polarized and unpolarized
     do isp = 1, 2
 
-      call xc_functl_init_functl(xcs%functional(FUNC_X, isp), x_id, ndim, nel, isp)
-      call xc_functl_init_functl(xcs%functional(FUNC_C, isp), c_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%functional(FUNC_X, isp), parser, x_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%functional(FUNC_C, isp), parser, c_id, ndim, nel, isp)
 
-      call xc_functl_init_functl(xcs%kernel(FUNC_X, isp), xk_id, ndim, nel, isp)
-      call xc_functl_init_functl(xcs%kernel(FUNC_C, isp), ck_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%kernel(FUNC_X, isp), parser, xk_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%kernel(FUNC_C, isp), parser, ck_id, ndim, nel, isp)
 
     end do
 
@@ -196,8 +197,8 @@ contains
     if (bitand(xcs%family, XC_FAMILY_LCA) /= 0) &
       call messages_not_implemented("LCA current functionals") ! not even in libxc!
 
-    call messages_obsolete_variable('MGGAimplementation')
-    call messages_obsolete_variable('CurrentInTau', 'XCUseGaugeIndependentKED')
+    call messages_obsolete_variable(parser, 'MGGAimplementation')
+    call messages_obsolete_variable(parser, 'CurrentInTau', 'XCUseGaugeIndependentKED')
 
     if(family_is_mgga(xcs%family)) then
       !%Variable XCUseGaugeIndependentKED
@@ -315,7 +316,7 @@ contains
       !% When enabled, additional parallelization
       !% will be used for the calculation of the XC functional.
       !%End
-      call messages_obsolete_variable('XCParallel', 'ParallelXC')
+      call messages_obsolete_variable(parser, 'XCParallel', 'ParallelXC')
       call parse_variable('ParallelXC', .true., xcs%parallel)
       
       POP_SUB(xc_init.parse)

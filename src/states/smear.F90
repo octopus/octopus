@@ -73,8 +73,9 @@ module smear_oct_m
 contains
 
   !--------------------------------------------------
-  subroutine smear_init(this, ispin, fixed_occ, integral_occs, kpoints)
+  subroutine smear_init(this, parser, ispin, fixed_occ, integral_occs, kpoints)
     type(smear_t),   intent(out) :: this
+    type(parser_t),  intent(in)    :: parser
     integer,         intent(in)  :: ispin
     logical,         intent(in)  :: fixed_occ
     logical,         intent(in)  :: integral_occs
@@ -129,7 +130,7 @@ contains
       call parse_variable('Smearing', CNST(0.1) / (M_TWO * P_Ry), this%dsmear, units_inp%energy)
     end if
 
-    call messages_obsolete_variable("ElectronicTemperature", "Smearing")
+    call messages_obsolete_variable(parser, 'ElectronicTemperature', 'Smearing')
 
     this%el_per_state = 1
     if(ispin == 1) & ! unpolarized

@@ -81,7 +81,7 @@ contains
     !% restart, and stop.
     !%End
     call parse_variable('MaximumIter', 50, max_iter)
-    call messages_obsolete_variable('UnoccMaximumIter', 'MaximumIter')
+    call messages_obsolete_variable(sys%parser, 'UnoccMaximumIter', 'MaximumIter')
     if(max_iter < 0) max_iter = huge(max_iter)
 
     !%Variable UnoccShowOccStates
@@ -96,10 +96,8 @@ contains
     call parse_variable('UnoccShowOccStates', .false., showoccstates)
 
     bandstructure_mode = .false.
-    if(simul_box_is_periodic(sys%gr%sb).and. &
-          kpoints_get_kpoint_method(sys%gr%sb%kpoints) == KPOINTS_PATH) then
+    if(simul_box_is_periodic(sys%gr%sb) .and. kpoints_get_kpoint_method(sys%gr%sb%kpoints) == KPOINTS_PATH) then
       bandstructure_mode = .true.
-      
     end if
 
     call init_(sys%gr%mesh, sys%st)
@@ -115,7 +113,7 @@ contains
       call restart_init(restart_load_unocc, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
 
       if(ierr == 0) then
-        call states_load(restart_load_unocc, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+        call states_load(restart_load_unocc, sys%parser, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
         if(hm%lda_u_level /= DFT_U_NONE) &
           call lda_u_load(restart_load_unocc, hm%lda_u, sys%st, ierr)
         call restart_end(restart_load_unocc)
@@ -132,7 +130,7 @@ contains
 
     if(ierr_rho == 0) then
       if (read_gs) then
-        call states_load(restart_load_gs, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+        call states_load(restart_load_gs, sys%parser, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
         if(hm%lda_u_level /= DFT_U_NONE) &
           call lda_u_load(restart_load_gs, hm%lda_u, sys%st, ierr)
       end if
@@ -204,7 +202,7 @@ contains
       call lcao_run(sys, hm, st_start = showstart)
     else
       ! we successfully read all the states and are planning to use them, no need for LCAO
-      call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval = .false.)
+      call v_ks_calc(sys%ks, sys%parser, hm, sys%st, sys%geo, calc_eigenval = .false.)
       showstart = minval(occ_states(:)) + 1
     end if
 
@@ -286,7 +284,7 @@ contains
       end if 
       if(sys%outp%output_interval /= 0 .and. mod(iter, sys%outp%output_interval) == 0) then
         write(dirname,'(a,i4.4)') "unocc.",iter
-        call output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, sys%ks, dirname)
+        call output_all(sys%outp, sys%parser, sys%gr, sys%geo, sys%st, hm, sys%ks, dirname)
       end if
      
       if(converged .or. forced_finish) exit
@@ -316,7 +314,7 @@ contains
     end if
  
 
-    call output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, sys%ks, STATIC_DIR)
+    call output_all(sys%outp, sys%parser, sys%gr, sys%geo, sys%st, hm, sys%ks, STATIC_DIR)
 
     call end_()
     POP_SUB(unocc_run)
@@ -330,12 +328,12 @@ contains
 
       PUSH_SUB(unocc_run.init_)
 
-      call messages_obsolete_variable("NumberUnoccStates", "ExtraStates")
+      call messages_obsolete_variable(sys%parser, "NumberUnoccStates", "ExtraStates")
 
       call states_allocate_wfns(st, mesh)
 
       ! now the eigensolver stuff
-      call eigensolver_init(eigens, sys%gr, st, sys%ks%xc)
+      call eigensolver_init(eigens, sys%parser, sys%gr, st, sys%ks%xc)
 
       if(eigens%es_type == RS_RMMDIIS) then
         message(1) = "With the RMMDIIS eigensolver for unocc, you will need to stop the calculation"
