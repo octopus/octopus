@@ -58,8 +58,9 @@ module boundary_op_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine bc_init(this, mesh, sb, geo)
+  subroutine bc_init(this, parser, mesh, sb, geo)
     type(bc_t),               intent(out) :: this
+    type(parser_t),           intent(in)  :: parser
     type(mesh_t),             intent(in)  :: mesh
     type(simul_box_t),        intent(in)  :: sb
     type(geometry_t),         intent(in)  :: geo
@@ -144,7 +145,7 @@ contains
       !%End
 
       cols_abshape_block = 0
-      if(parse_block('ABShape', blk) < 0) then
+      if(parse_block(parser, 'ABShape', blk) < 0) then
         message(1) = "Input: ABShape not specified. Using default values for absorbing boundaries."
         call messages_info(1)
       

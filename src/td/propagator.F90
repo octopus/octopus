@@ -534,19 +534,19 @@ contains
     case(PROP_AETRS, PROP_CAETRS)
       call td_aetrs(ks, parser, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
     case(PROP_EXPONENTIAL_MIDPOINT)
-      call exponential_midpoint(hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
+      call exponential_midpoint(hm, parser, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
     case(PROP_CRANK_NICOLSON)
-      call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .false.)
+      call td_crank_nicolson(hm, parser, gr, st, tr, time, dt, ions, geo, .false.)
     case(PROP_RUNGE_KUTTA4)
       call td_runge_kutta4(ks, parser, hm, gr, st, tr, time, dt, ions, geo)
     case(PROP_RUNGE_KUTTA2)
       call td_runge_kutta2(ks, parser, hm, gr, st, tr, time, dt, ions, geo)
     case(PROP_CRANK_NICOLSON_SPARSKIT)
-      call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .true.)
+      call td_crank_nicolson(hm, parser, gr, st, tr, time, dt, ions, geo, .true.)
     case(PROP_MAGNUS)
       call td_magnus(hm, gr, st, tr, time, dt)
     case(PROP_QOCT_TDDFT_PROPAGATOR)
-      call td_qoct_tddft_propagator(hm, ks%xc, gr, st, tr, time, dt, ions, geo)
+      call td_qoct_tddft_propagator(hm, parser, ks%xc, gr, st, tr, time, dt, ions, geo)
     case(PROP_EXPLICIT_RUNGE_KUTTA4)
       if(present(qcchi)) then
         call td_explicit_runge_kutta4(ks, parser, hm, gr, st, time, dt, ions, geo, qcchi)
@@ -570,7 +570,7 @@ contains
     end if
 
     if(generate .or. geometry_species_time_dependent(geo)) then
-      call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
+      call hamiltonian_epot_generate(hm, parser,  gr, geo, st, time = abs(nt*dt))
     end if
 
     call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval = update_energy_, time = abs(nt*dt), calc_energy = update_energy_)
@@ -578,13 +578,13 @@ contains
 
     ! Recalculate forces, update velocities...
     if(update_energy_ .and. ion_dynamics_ions_move(ions) .and. tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) then
-      call forces_calculate(gr, geo, hm, st, ks, t = abs(nt*dt), dt = dt)
+      call forces_calculate(gr, parser, geo, hm, st, ks, t = abs(nt*dt), dt = dt)
       call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
-      if(generate) call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
+      if(generate) call hamiltonian_epot_generate(hm, parser,  gr, geo, st, time = abs(nt*dt))
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
       if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-        call forces_calculate(gr, geo, hm, st, ks, t = abs(nt*dt), dt = dt)
+        call forces_calculate(gr, parser, geo, hm, st, ks, t = abs(nt*dt), dt = dt)
       end if
     end if
 
@@ -649,7 +649,7 @@ contains
 
     ! move the hamiltonian to time t
     call ion_dynamics_propagate(ions, gr%sb, geo, iter*dt, dt)
-    call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
+    call hamiltonian_epot_generate(hm, parser, gr, geo, st, time = iter*dt)
     ! now calculate the eigenfunctions
     call scf_run(scf, parser, mc, gr, geo, st, ks, hm, outp, &
       gs_run = .false., verbosity = VERB_COMPACT, iters_done = scsteps)
@@ -663,7 +663,7 @@ contains
       call messages_not_implemented("DFT+U with propagator_dt_bo")  
     end if
 
-    call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
+    call hamiltonian_epot_generate(hm, parser,  gr, geo, st, time = iter*dt)
 
     ! update Hamiltonian and eigenvalues (fermi is *not* called)
     call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval = .true., time = iter*dt, calc_energy = .true.)
@@ -672,7 +672,7 @@ contains
     call energy_calc_total(hm, gr, st, iunit = -1)
 
     call ion_dynamics_propagate_vel(ions, geo)
-    call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
+    call hamiltonian_epot_generate(hm, parser, gr, geo, st, time = iter*dt)
      geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
 
     if(gauge_field_is_applied(hm%ep%gfield)) then

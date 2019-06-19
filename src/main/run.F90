@@ -198,7 +198,7 @@ contains
     if(calc_mode_id /= CM_DUMMY) then
       message(1) = "Info: Generating external potential"
       call messages_info(1)
-      call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
+      call hamiltonian_epot_generate(hm, sys%parser, sys%gr, sys%geo, sys%st)
       message(1) = "      done."
       call messages_info(1)
     end if

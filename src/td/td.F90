@@ -382,7 +382,7 @@ contains
         call lda_u_end(hm%lda_u)
         !complex wfs are required for Ehrenfest
         call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
-        call lda_u_init(hm%lda_u, hm%lda_u_level, gr, geo, st) 
+        call lda_u_init(hm%lda_u, sys%parser, hm%lda_u_level, gr, geo, st) 
       else
         !complex wfs are required for Ehrenfest
         call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
@@ -419,15 +419,15 @@ contains
     if(ion_dynamics_ions_move(td%ions)) then
       if(td%iter > 0) then
         call td_read_coordinates()
-        call hamiltonian_epot_generate(hm, gr, geo, st, time = td%iter*td%dt)
+        call hamiltonian_epot_generate(hm, sys%parser, gr, geo, st, time = td%iter*td%dt)
       end if
 
-      call forces_calculate(gr, geo, hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
+      call forces_calculate(gr, sys%parser, geo, hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
       if(bitand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-        call forces_calculate(gr, geo, hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
+        call forces_calculate(gr, sys%parser, geo, hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
       end if  
     end if
 
@@ -592,7 +592,7 @@ contains
           end if
           call density_calc(st, gr, st%rho)
           call v_ks_calc(sys%ks, sys%parser, hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
-          call forces_calculate(gr, geo, hm, st, sys%ks, t = iter*td%dt, dt = td%dt)
+          call forces_calculate(gr, sys%parser, geo, hm, st, sys%ks, t = iter*td%dt, dt = td%dt)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds")
           call print_header()
         end if
@@ -657,7 +657,7 @@ contains
         ! check if we should deploy user-defined wavefunctions.
         ! according to the settings in the input file the routine
         ! overwrites orbitals that were read from restart/gs
-        if(parse_is_defined(sys%parser, 'UserDefinedStates')) call states_read_user_def_orbitals(gr%mesh, st)
+        if(parse_is_defined(sys%parser, 'UserDefinedStates')) call states_read_user_def_orbitals(gr%mesh, sys%parser, st)
 
         call transform_states(st, sys%parser, restart, gr)
         call restart_end(restart)
@@ -920,7 +920,7 @@ contains
     !% Note: This variable cannot be used when parallel in states.
     !%End
     if(parse_is_defined(parser, trim(block_name))) then
-      if(parse_block(trim(block_name), blk) == 0) then
+      if(parse_block(parser, trim(block_name), blk) == 0) then
         if(st%parallel_in_states) &
           call messages_not_implemented(trim(block_name) // " parallel in states")
         if(parse_block_n(blk) /= st%nst) then

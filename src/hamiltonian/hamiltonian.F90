@@ -283,7 +283,7 @@ contains
     call epot_init(hm%ep, parser, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%xc_family)
 
     ! Calculate initial value of the gauge vector field
-    call gauge_field_init(hm%ep%gfield, gr%sb)
+    call gauge_field_init(hm%ep%gfield, parser, gr%sb)
 
     nullify(hm%vberry)
     if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb) .and. .not. gauge_field_is_applied(hm%ep%gfield)) then
@@ -335,7 +335,7 @@ contains
     end if
 
     ! Boundaries
-    call bc_init(hm%bc, gr%mesh, gr%mesh%sb, hm%geo)
+    call bc_init(hm%bc, parser, gr%mesh, gr%mesh%sb, hm%geo)
 
     !%Variable MassScaling
     !%Type block
@@ -354,7 +354,7 @@ contains
     !%
     !%End
     hm%mass_scaling(1:gr%sb%dim) = M_ONE
-    if(parse_block('MassScaling', blk) == 0) then
+    if(parse_block(parser, 'MassScaling', blk) == 0) then
         ncols = parse_block_cols(blk, 0)
         if(ncols > gr%sb%dim) then
           call messages_input_error("MassScaling")
@@ -394,7 +394,7 @@ contains
     call lda_u_nullify(hm%lda_u)
     if(hm%lda_u_level /= DFT_U_NONE) then
       call messages_experimental('DFT+U')
-      call lda_u_init(hm%lda_u, hm%lda_u_level, gr, geo, st)
+      call lda_u_init(hm%lda_u, parser, hm%lda_u_level, gr, geo, st)
     end if
  
 
@@ -929,8 +929,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_epot_generate(this, gr, geo, st, time)
+  subroutine hamiltonian_epot_generate(this, parser, gr, geo, st, time)
     type(hamiltonian_t),      intent(inout) :: this
+    type(parser_t),           intent(in)    :: parser
     type(grid_t),             intent(in)    :: gr
     type(geometry_t), target, intent(inout) :: geo
     type(states_t),           intent(inout) :: st
@@ -939,7 +940,7 @@ contains
     PUSH_SUB(hamiltonian_epot_generate)
 
     this%geo => geo
-    call epot_generate(this%ep, gr, this%geo, st)
+    call epot_generate(this%ep, parser, gr, this%geo, st)
     call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep)
     call hamiltonian_update(this, gr%mesh, gr%der%boundaries, time)
    
@@ -1039,8 +1040,9 @@ contains
 
 
   ! -----------------------------------------------------------------
-  subroutine zhamiltonian_apply_atom (hm, geo, gr, ia, psi, vpsi)
+  subroutine zhamiltonian_apply_atom (hm, parser, geo, gr, ia, psi, vpsi)
     type(hamiltonian_t), intent(in)  :: hm
+    type(parser_t),      intent(in)  :: parser
     type(geometry_t),    intent(in)  :: geo
     type(grid_t),        intent(in)  :: gr
     integer,             intent(in)  :: ia
@@ -1053,7 +1055,7 @@ contains
 
     SAFE_ALLOCATE(vlocal(1:gr%mesh%np_part))
     vlocal = M_ZERO
-    call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, ia, vlocal)
+    call epot_local_potential(hm%ep, parser, gr%der, gr%dgrid, geo, ia, vlocal)
 
     do idim = 1, hm%d%dim
       vpsi(1:gr%mesh%np, idim)  = vlocal(1:gr%mesh%np) * psi(1:gr%mesh%np, idim)

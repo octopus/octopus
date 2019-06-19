@@ -402,7 +402,7 @@ contains
     !% It is always possible to fix <b>all</b> atoms using the <tt>MoveIons</tt> directive.
     !%End
 
-    if(parse_block(trim(what), blk) == 0) then
+    if(parse_block(parser, trim(what), blk) == 0) then
       call check_duplicated(done)
 
       gf%n = parse_block_n(blk)
@@ -452,7 +452,7 @@ contains
 
     ! This is valid only for Coordinates.
     if(trim(what) == 'Coordinates') then
-      if(parse_block('Reduced'//trim(what), blk) == 0) then
+      if(parse_block(parser, 'Reduced'//trim(what), blk) == 0) then
         call check_duplicated(done)
 
         gf%n = parse_block_n(blk)

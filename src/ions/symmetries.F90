@@ -88,8 +88,9 @@ module symmetries_oct_m
 
 contains
 
-  subroutine symmetries_init(this, geo, dim, periodic_dim, rlattice, klattice)
+  subroutine symmetries_init(this, parser, geo, dim, periodic_dim, rlattice, klattice)
     type(symmetries_t),  intent(out) :: this
+    type(parser_t,       intent(in)  :: parser
     type(geometry_t),    intent(in)  :: geo
     integer,             intent(in)  :: dim
     integer,             intent(in)  :: periodic_dim
@@ -299,7 +300,7 @@ contains
 
       this%breakdir(1:3) = M_ZERO
 
-      if(parse_block('SymmetryBreakDir', blk) == 0) then
+      if(parse_block(parser, 'SymmetryBreakDir', blk) == 0) then
 
         do idir = 1, dim4syms
           call parse_block_float(blk, 0, idir - 1, this%breakdir(idir))

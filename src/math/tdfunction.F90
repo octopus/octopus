@@ -119,8 +119,9 @@ contains
 
   !------------------------------------------------------------
   !> This function initializes "f" from the TDFunctions block.
-  subroutine tdf_read(f, function_name, ierr)
+  subroutine tdf_read(f, parser, function_name, ierr)
     type(tdf_t),      intent(inout) :: f
+    type(parser_t),   intent(in)    :: parser
     character(len=*), intent(in)    :: function_name
     integer,          intent(out)   :: ierr  !< Error code, 0 on success.
 
@@ -202,7 +203,7 @@ contains
     !% that defines the field.
     !%End
     ierr = -3
-    if(parse_block('TDFunctions', blk) /= 0) then
+    if(parse_block(parser, 'TDFunctions', blk) /= 0) then
       ierr = -1
       POP_SUB(tdf_read)
       return

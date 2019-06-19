@@ -162,7 +162,7 @@ contains
       !% <br>%</tt>
       !%  
       !%End
-      if(parse_block('OCTInitialUserdefined', blk) == 0) then
+      if(parse_block(sys%parser, 'OCTInitialUserdefined', blk) == 0) then
 
         SAFE_ALLOCATE(zpsi(1:sys%gr%mesh%np, 1:psi%d%dim))
         

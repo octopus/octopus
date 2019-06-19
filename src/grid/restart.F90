@@ -364,7 +364,7 @@ contains
     !% This flag allows to selectively skip the reading and writting of specific restart information.
     !%End
     set = .false.
-    if(parse_block('RestartOptions', blk) == 0) then
+    if(parse_block(parser, 'RestartOptions', blk) == 0) then
 
       default_basedir = 'restart'
 

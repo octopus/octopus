@@ -52,7 +52,7 @@
     !% <br>%</tt>
     !%  
     !%End
-    if(parse_block('OCTTargetUserdefined', blk) == 0) then
+    if(parse_block(parser, 'OCTTargetUserdefined', blk) == 0) then
         
       no_states = parse_block_n(blk)
       do ib = 1, no_states

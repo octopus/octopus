@@ -348,7 +348,7 @@ contains
     !%End
 
     no_l = 0
-    if(parse_block('TDExternalFields', blk) == 0) then
+    if(parse_block(parser, 'TDExternalFields', blk) == 0) then
       no_l = parse_block_n(blk)
       SAFE_ALLOCATE(lasers(1:no_l))
 
@@ -374,12 +374,12 @@ contains
         lasers(il)%omega = omega0
      
         call parse_block_string(blk, il-1, jj+2, envelope_expression)
-        call tdf_read(lasers(il)%f, trim(envelope_expression), ierr)
+        call tdf_read(lasers(il)%f, parser, trim(envelope_expression), ierr)
 
         ! Check if there is a phase.
         if(parse_block_cols(blk, il-1) > jj+3) then
           call parse_block_string(blk, il-1, jj+3, phase_expression)
-          call tdf_read(lasers(il)%phi, trim(phase_expression), ierr)
+          call tdf_read(lasers(il)%phi, parser, trim(phase_expression), ierr)
           if (ierr /= 0) then            
             write(message(1),'(3A)') 'Error in the "', trim(envelope_expression), '" field defined in the TDExternalFields block:'
             write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'

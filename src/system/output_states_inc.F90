@@ -179,7 +179,7 @@ subroutine output_states(st, parser, gr, geo, hm, dir, outp)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__TPA) /= 0) then
-    call states_write_tpa (trim(dir), gr, st)
+    call states_write_tpa(trim(dir), parser, gr, st)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then

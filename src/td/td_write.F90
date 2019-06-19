@@ -483,7 +483,7 @@ contains
       !% These weights should be normalized to one; otherwise the routine
       !% will normalize them, and write a warning.
       !%End
-      if(parse_block('TDExcitedStatesToProject', blk) == 0) then
+      if(parse_block(parser, 'TDExcitedStatesToProject', blk) == 0) then
         writ%n_excited_states = parse_block_n(blk)
         SAFE_ALLOCATE(writ%excited_st(1:writ%n_excited_states))
         do ist = 1, writ%n_excited_states
@@ -825,9 +825,10 @@ contains
       call td_write_total_heat_current(writ%out(OUT_TOTAL_HEAT_CURRENT)%handle, hm, gr, geo, st, iter)
     end if
     
-    if(writ%out(OUT_PARTIAL_CHARGES)%write) &
-      call td_write_partial_charges(writ%out(OUT_PARTIAL_CHARGES)%handle, writ%partial_charges, gr%fine%mesh, st, geo, iter)
-
+    if(writ%out(OUT_PARTIAL_CHARGES)%write) then
+      call td_write_partial_charges(writ%out(OUT_PARTIAL_CHARGES)%handle, parser, writ%partial_charges, gr%fine%mesh, st, geo, iter)
+    end if
+    
     if(writ%out(OUT_N_EX)%write .and. mod(iter, writ%compute_interval) == 0) then
       if (mpi_grp_is_root(mpi_world))  call write_iter_set(writ%out(OUT_N_EX)%handle, iter)
       call td_write_n_ex(writ%out(OUT_N_EX)%handle, outp, gr, st, writ%gs_st, iter)
@@ -1040,7 +1041,7 @@ contains
     do idir = 1, 3
        call pert_setup_dir(angular_momentum, idir)
        !we have to multiply by 2, because the perturbation returns L/2
-       angular(idir) = M_TWO*real(zpert_states_expectation_value(angular_momentum, gr, geo, hm, st), REAL_PRECISION)
+       angular(idir) = M_TWO*real(zpert_states_expectation_value(angular_momentum, parser, gr, geo, hm, st), REAL_PRECISION)
     end do
 
     call pert_end(angular_momentum)
@@ -2983,8 +2984,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_partial_charges(out_partial_charges, partial_charges, mesh, st, geo, iter)
+  subroutine td_write_partial_charges(out_partial_charges, parser, partial_charges, mesh, st, geo, iter)
     type(c_ptr),             intent(inout) :: out_partial_charges
+    type(parser_t),          intent(in)    :: parser
     type(partial_charges_t), intent(in)    :: partial_charges
     type(mesh_t),            intent(in)    :: mesh
     type(states_t),          intent(in)    :: st
@@ -2999,7 +3001,7 @@ contains
 
     SAFE_ALLOCATE(hirshfeld_charges(1:geo%natoms))
 
-    call partial_charges_calculate(partial_charges, mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
+    call partial_charges_calculate(partial_charges, parser, mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
         
     if(mpi_grp_is_root(mpi_world)) then
 

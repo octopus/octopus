@@ -77,7 +77,7 @@
 
       if(trim(expression)  ==  'OCTTargetDensityFromState') then
 
-        if(parse_block('OCTTargetDensityFromState', blk) == 0) then
+        if(parse_block(parser, 'OCTTargetDensityFromState', blk) == 0) then
           call states_copy(tmp_st, tg%st)
           call states_deallocate_wfns(tmp_st)
           call states_look_and_load(restart, parser, tmp_st, gr)
@@ -259,7 +259,7 @@
     end if
 
     if(parse_is_defined(parser, 'OCTSpatialCurrWeight')) then
-      if(parse_block('OCTSpatialCurrWeight', blk) == 0) then
+      if(parse_block(parser, 'OCTSpatialCurrWeight', blk) == 0) then
         SAFE_ALLOCATE(tg%spatial_curr_wgt(1:gr%mesh%np_part))
         SAFE_ALLOCATE(xp(1:gr%mesh%np_part))
         SAFE_ALLOCATE(tmp_box(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))

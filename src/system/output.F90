@@ -341,7 +341,7 @@ contains
       call parse_variable('OutputWfsNumber', default, outp%wfs_list)
     end if
 
-    if(parse_block('CurrentThroughPlane', blk) == 0) then
+    if(parse_block(parser, 'CurrentThroughPlane', blk) == 0) then
       outp%what = ior(outp%what, OPTION__OUTPUT__J_FLOW)
 
       !%Variable CurrentThroughPlane
@@ -465,7 +465,7 @@ contains
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
-      call output_berkeleygw_init(nst, outp%bgw, sb%periodic_dim)
+      call output_berkeleygw_init(nst, parser, outp%bgw, sb%periodic_dim)
     end if
 
     !%Variable OutputLDA_U
@@ -956,8 +956,9 @@ contains
 
   
   ! ---------------------------------------------------------
-  subroutine output_berkeleygw_init(nst, bgw, periodic_dim)
+  subroutine output_berkeleygw_init(nst, parser, bgw, periodic_dim)
     integer,            intent(in)  :: nst
+    type(parser_t),     intent(in)  :: parser
     type(output_bgw_t), intent(out) :: bgw
     integer,            intent(in)  :: periodic_dim
 
@@ -1121,7 +1122,7 @@ contains
     bgw%vmtxel_polarization(1:3) = M_ZERO
     bgw%vmtxel_polarization(1) = M_ONE
 
-    if(bgw%calc_vmtxel .and. parse_block('BerkeleyGW_VmtxelPolarization', blk)==0) then
+    if(bgw%calc_vmtxel .and. parse_block(parser, 'BerkeleyGW_VmtxelPolarization', blk)==0) then
       do idir = 1, 3
         call parse_block_float(blk, 0, idir - 1, bgw%vmtxel_polarization(idir))
 

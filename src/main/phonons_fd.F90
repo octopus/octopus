@@ -171,7 +171,7 @@ contains
         geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) + vib%disp
 
         ! first force
-        call hamiltonian_epot_generate(hm, gr, geo, st)
+        call hamiltonian_epot_generate(hm, parser, gr, geo, st)
         call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval=.true.)
         call energy_calc_total (hm, gr, st)
@@ -187,7 +187,7 @@ contains
         geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) - M_TWO*vib%disp
 
         ! second force
-        call hamiltonian_epot_generate(hm, gr, geo, st)
+        call hamiltonian_epot_generate(hm, parser, gr, geo, st)
         call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval=.true.)
         call energy_calc_total(hm, gr, st)

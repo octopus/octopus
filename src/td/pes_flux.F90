@@ -215,7 +215,7 @@ contains
     !% </tt>
     !%End
     offset = M_ZERO
-    if(parse_block('PES_Flux_Offset', blk) == 0) then
+    if(parse_block(parser, 'PES_Flux_Offset', blk) == 0) then
       do imdim = 1, mdim
         call parse_block_float(blk, 0, imdim - 1, offset(imdim))
       end do
@@ -268,7 +268,7 @@ contains
       !% the non-periodic dimension symmetrically placed at <tt>PES_Flux_Lsize</tt> distance from
       !% the origin.
       !%End
-      if(parse_block('PES_Flux_Lsize', blk) == 0) then
+      if(parse_block(parser, 'PES_Flux_Lsize', blk) == 0) then
         do imdim = 1, mdim
           call parse_block_float(blk, 0, imdim - 1, border(imdim))
         end do
@@ -704,7 +704,7 @@ contains
       Emax = 10 
       De   = CNST(0.1)
     
-      if(parse_block('PES_Flux_EnergyGrid', blk) == 0) then
+      if(parse_block(parser, 'PES_Flux_EnergyGrid', blk) == 0) then
 
         call parse_block_float(blk, 0, 0, Emin)
         call parse_block_float(blk, 0, 1, Emax)
@@ -769,7 +769,7 @@ contains
     
       NBZ(:) = 1
       if (.not. kpoints_have_zero_weight_path(sb%kpoints)) NBZ(1:pdim) = 2
-      if(parse_block('PES_Flux_BZones', blk) == 0) then
+      if(parse_block(parser, 'PES_Flux_BZones', blk) == 0) then
 
         call parse_block_integer(blk, 0, 0, NBZ(1))
         call parse_block_integer(blk, 0, 1, NBZ(2))

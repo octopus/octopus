@@ -76,7 +76,7 @@ program dielectric_function
     
   SAFE_ALLOCATE(vecpot0(1:space%dim))
 
-  if(parse_block('GaugeVectorField', blk) == 0) then
+  if(parse_block(parser, 'GaugeVectorField', blk) == 0) then
     
     do ii = 1, space%dim
       call parse_block_float(blk, 0, ii - 1, vecpot0(ii))

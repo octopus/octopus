@@ -720,7 +720,7 @@ contains
     end if
 
     if (.not. present(st_start)) then
-      call lcao_guess_density(lcao, sys%st, sys%gr, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
+      call lcao_guess_density(lcao, sys%parser, sys%st, sys%gr, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
         sys%st%d%spin_channels, sys%st%rho)
 
       if(sys%st%d%ispin > UNPOLARIZED) then
@@ -956,8 +956,9 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine lcao_atom_density(this, st, gr, sb, geo, iatom, spin_channels, rho)
+  subroutine lcao_atom_density(this, parser, st, gr, sb, geo, iatom, spin_channels, rho)
     type(lcao_t),             intent(inout) :: this
+    type(parser_t),           intent(in)    :: parser
     type(states_t),           intent(in)    :: st
     type(grid_t),             intent(in)    :: gr
     type(simul_box_t),        intent(in)    :: sb
@@ -1051,7 +1052,7 @@ contains
       end if
 
     else
-      call species_atom_density(gr%fine%mesh, sb, geo%atom(iatom), spin_channels, rho)
+      call species_atom_density(gr%fine%mesh, parser, sb, geo%atom(iatom), spin_channels, rho)
     end if
 
     POP_SUB(lcao_atom_density)
@@ -1059,8 +1060,9 @@ contains
 
   ! ---------------------------------------------------------
   !> builds a density which is the sum of the atomic densities
-  subroutine lcao_guess_density(this, st, gr, sb, geo, qtot, nspin, spin_channels, rho)
+  subroutine lcao_guess_density(this, parser, st, gr, sb, geo, qtot, nspin, spin_channels, rho)
     type(lcao_t),      intent(inout) :: this
+    type(parser_t),    intent(in)    :: parser
     type(states_t),    intent(in)    :: st
     type(grid_t),      intent(in)    :: gr
     type(simul_box_t), intent(in)    :: sb
@@ -1121,7 +1123,7 @@ contains
       parallelized_in_atoms = .true.
 
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call lcao_atom_density(this, st, gr, sb, geo, ia, spin_channels, atom_rho)
+        call lcao_atom_density(this, parser, st, gr, sb, geo, ia, spin_channels, atom_rho)
         rho(1:gr%fine%mesh%np, 1:spin_channels) = rho(1:gr%fine%mesh%np, 1:spin_channels) + &
                                                   atom_rho(1:gr%fine%mesh%np, 1:spin_channels)
       end do
@@ -1139,14 +1141,14 @@ contains
       atom_rho = M_ZERO
       rho = M_ZERO
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
-        call lcao_atom_density(this, st, gr, sb, geo, ia, 2, atom_rho(1:gr%fine%mesh%np, 1:2))
+        call lcao_atom_density(this, parser, st, gr, sb, geo, ia, 2, atom_rho(1:gr%fine%mesh%np, 1:2))
         rho(1:gr%fine%mesh%np, 1:2) = rho(1:gr%fine%mesh%np, 1:2) + atom_rho(1:gr%fine%mesh%np, 1:2)
       end do
 
     case (INITRHO_RANDOM) ! Randomly oriented spins
       SAFE_ALLOCATE(atom_rho(1:gr%fine%mesh%np, 1:2))
       do ia = 1, geo%natoms
-        call lcao_atom_density(this, st, gr, sb, geo, ia, 2, atom_rho)
+        call lcao_atom_density(this, parser, st, gr, sb, geo, ia, 2, atom_rho)
 
         if (nspin == 2) then
           call quickrnd(iseed, rnd)
@@ -1194,7 +1196,7 @@ contains
       !% than the number of valence electrons in the atom, it will be rescaled
       !% to this number, which is the maximum possible magnetization.
       !%End
-      if(parse_block('AtomsMagnetDirection', blk) < 0) then
+      if(parse_block(parser, 'AtomsMagnetDirection', blk) < 0) then
         message(1) = "AtomsMagnetDirection block is not defined."
         call messages_fatal(1)
       end if
@@ -1219,7 +1221,7 @@ contains
         end if
 
         !Get atomic density
-        call lcao_atom_density(this, st, gr, sb, geo, ia, 2, atom_rho)
+        call lcao_atom_density(this, parser, st, gr, sb, geo, ia, 2, atom_rho)
 
         !Scale magnetization density
         n1 = dmf_integrate(gr%fine%mesh, atom_rho(:, 1))

@@ -65,7 +65,7 @@
     !%
     !%End
     if(parse_is_defined(parser, 'OCTOptimizeHarmonicSpectrum')) then
-      if(parse_block('OCTOptimizeHarmonicSpectrum', blk) == 0) then
+      if(parse_block(parser, 'OCTOptimizeHarmonicSpectrum', blk) == 0) then
         tg%hhg_nks = parse_block_cols(blk, 0)
         SAFE_ALLOCATE(    tg%hhg_k(1:tg%hhg_nks))
         SAFE_ALLOCATE(tg%hhg_alpha(1:tg%hhg_nks))
@@ -139,7 +139,7 @@
 
     vl(:) = M_ZERO
     vl_grad(:,:) = M_ZERO
-    call epot_local_potential(ep, gr%der, gr%dgrid, geo, 1, vl)
+    call epot_local_potential(ep, parser, gr%der, gr%dgrid, geo, 1, vl)
     call dderivatives_grad(gr%der, vl, vl_grad)
     forall(ist=1:gr%mesh%np, jst=1:gr%sb%dim)
       tg%grad_local_pot(1, ist, jst) = vl_grad(ist, jst)

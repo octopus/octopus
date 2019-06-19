@@ -139,7 +139,7 @@ contains
 
 
     ! If filters are to be used, they also have to be initialized.
-    call filter_init(td%max_iter, td%dt, filter)
+    call filter_init(td%max_iter, sys%parser, td%dt, filter)
     call filter_write(filter)
 
 

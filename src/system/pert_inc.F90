@@ -17,8 +17,9 @@
 !!
 
 ! --------------------------------------------------------------------------
-subroutine X(pert_apply_batch)(this, gr, geo, hm, ik, f_in, f_out)
+subroutine X(pert_apply_batch)(this, parser, gr, geo, hm, ik, f_in, f_out)
   type(pert_t),         intent(in)    :: this
+  type(parser_t),       intent(in)    :: parser
   type(grid_t),         intent(in)    :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(inout) :: hm
@@ -44,7 +45,7 @@ subroutine X(pert_apply_batch)(this, gr, geo, hm, ik, f_in, f_out)
   case default
     do ist = 1, f_in%nst
       call batch_get_state(f_in, ist, gr%mesh%np, fi)
-      call X(pert_apply)(this, gr, geo, hm, ik, fi, fo)
+      call X(pert_apply)(this, parser, gr, geo, hm, ik, fi, fo)
       call batch_set_state(f_out, ist, gr%mesh%np, fo)
     end do
   end select
@@ -89,8 +90,9 @@ end subroutine X(pert_apply_batch)
 ! --------------------------------------------------------------------------
 !> Returns f_out = H' f_in, where H' is perturbation Hamiltonian
 !! Note that e^ikr phase is applied to f_in, then is removed afterward
-subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out, set_bc)
+subroutine X(pert_apply)(this, parser, gr, geo, hm, ik, f_in, f_out, set_bc)
   type(pert_t),         intent(in)    :: this
+  type(parser_t),       intent(in)    :: parser
   type(grid_t),         intent(in)    :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(inout) :: hm
@@ -327,7 +329,7 @@ contains
 
         if (this%ionic%pure_dir .and. iatom /= this%atom1 .and. idir /= this%dir) cycle
 
-        call X(ionic_perturbation)(gr, geo, hm, ik, f_in_copy(:, 1), tmp, iatom, idir)
+        call X(ionic_perturbation)(gr, parser, geo, hm, ik, f_in_copy(:, 1), tmp, iatom, idir)
         
         call lalg_axpy(gr%mesh%np, this%ionic%mix1(iatom, idir), tmp, f_out(:, 1))
 
@@ -342,8 +344,9 @@ contains
 end subroutine X(pert_apply)
 
   ! --------------------------------------------------------------------------
-subroutine X(ionic_perturbation)(gr, geo, hm, ik, f_in, f_out, iatom, idir)
+subroutine X(ionic_perturbation)(gr, parser, geo, hm, ik, f_in, f_out, iatom, idir)
   type(grid_t),         intent(in)    :: gr
+  type(parser_t),       intent(in)    :: parser
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(inout) :: hm
   integer,              intent(in)    :: ik
@@ -364,7 +367,7 @@ subroutine X(ionic_perturbation)(gr, geo, hm, ik, f_in, f_out, iatom, idir)
 
   SAFE_ALLOCATE(vloc(1:gr%mesh%np))
   vloc(1:gr%mesh%np) = M_ZERO
-  call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, iatom, vloc)
+  call epot_local_potential(hm%ep, parser, gr%der, gr%dgrid, geo, iatom, vloc)
 
   SAFE_ALLOCATE(fin(1:gr%mesh%np_part, 1:1))
   call lalg_copy(gr%mesh%np_part, f_in, fin(:, 1))
@@ -573,7 +576,7 @@ contains
                .and. iatom /= this%atom1 .and. idir /= this%dir &
                .and. iatom /= this%atom2 .and. jdir /= this%dir2) cycle
 
-          call X(ionic_perturbation_order_2)(gr, geo, hm, ik, f_in_copy(:, 1), tmp, iatom, idir, jdir)
+          call X(ionic_perturbation_order_2)(gr, parser, geo, hm, ik, f_in_copy(:, 1), tmp, iatom, idir, jdir)
           
           call lalg_axpy(gr%mesh%np, this%ionic%mix1(iatom, idir)*this%ionic%mix2(iatom, jdir), tmp, f_out(:, 1))
           
@@ -644,7 +647,7 @@ contains
       cpsi(:,:) = M_ZERO
       call pert_init(pert_kdotp, parser, PERTURBATION_KDOTP, gr, geo)
       call pert_setup_dir(pert_kdotp, this%dir)
-      call X(pert_apply)(pert_kdotp,gr,geo,hm,ik,f_in_copy,cpsi,set_bc=.false.)
+      call X(pert_apply)(pert_kdotp, parser, gr,geo,hm,ik,f_in_copy,cpsi,set_bc=.false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
           f_out(ip,idim) = gr%mesh%x(ip,this%dir2)*cpsi(ip,idim)
@@ -657,7 +660,7 @@ contains
         end do
       end do
       cpsi(:,:) = M_ZERO
-      call X(pert_apply)(pert_kdotp,gr,geo,hm,ik,f_in_copy,cpsi,set_bc=.false.)
+      call X(pert_apply)(pert_kdotp, parser, gr,geo,hm,ik,f_in_copy,cpsi,set_bc=.false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
           f_out(ip,idim) = f_out(ip,idim) - cpsi(ip,idim)
@@ -679,8 +682,9 @@ end subroutine X(pert_apply_order_2)
 
 
 ! --------------------------------------------------------------------------
-subroutine X(ionic_perturbation_order_2) (gr, geo, hm, ik, f_in, f_out, iatom, idir, jdir)
+subroutine X(ionic_perturbation_order_2) (gr, parser, geo, hm, ik, f_in, f_out, iatom, idir, jdir)
   type(grid_t),        intent(in)    :: gr
+  type(parser_t),      intent(in)    :: parser
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(inout) :: hm
   integer,             intent(in)    :: ik
@@ -703,7 +707,7 @@ subroutine X(ionic_perturbation_order_2) (gr, geo, hm, ik, f_in, f_out, iatom, i
   SAFE_ALLOCATE(vloc(1:gr%mesh%np))
 
   forall(ip = 1:gr%mesh%np) vloc(ip) = M_ZERO
-  call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, iatom, vloc)
+  call epot_local_potential(hm%ep, parser, gr%der, gr%dgrid, geo, iatom, vloc)
 
   call lalg_copy(gr%mesh%np_part, f_in, fin(:, 1))
    
@@ -739,8 +743,9 @@ subroutine X(ionic_perturbation_order_2) (gr, geo, hm, ik, f_in, f_out, iatom, i
 end subroutine X(ionic_perturbation_order_2)
 
 ! --------------------------------------------------------------------------
-subroutine X(ionic_pert_matrix_elements_2)(gr, geo, hm, ik, st, vib, factor, matrix)
+subroutine X(ionic_pert_matrix_elements_2)(gr, parser, geo, hm, ik, st, vib, factor, matrix)
   type(grid_t),        intent(in)    :: gr
+  type(parser_t),      intent(in)    :: parser
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(inout) :: hm
   integer,             intent(in)    :: ik
@@ -780,7 +785,7 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, geo, hm, ik, st, vib, factor, mat
       idir  = vibrations_get_dir (vib, imat)
 
       forall(ip = 1:gr%mesh%np) vloc(ip) = M_ZERO
-      call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, iatom, vloc)
+      call epot_local_potential(hm%ep, parser, gr%der, gr%dgrid, geo, iatom, vloc)
 
       do jdir = 1, gr%sb%dim
         jmat = vibrations_get_index(vib, iatom, jdir)
@@ -843,7 +848,7 @@ subroutine X(pert_expectation_density) (this, parser, gr, geo, hm, st, psia, psi
     do ist = st%st_start, st%st_end
 
       if(order == 1) then 
-        call X(pert_apply)(this, gr, geo, hm, ik, psib(:, :, ist, ik), pertpsib)
+        call X(pert_apply)(this, parser, gr, geo, hm, ik, psib(:, :, ist, ik), pertpsib)
         ikweight = st%d%kweights(ik) * st%smear%el_per_state
       else
         call X(pert_apply_order_2)(this, parser, gr, geo, hm, ik, psib(:, :, ist, ik), pertpsib)
@@ -909,8 +914,9 @@ end function X(pert_expectation_value)
 
 ! --------------------------------------------------------------------------
 
-R_TYPE function X(pert_states_expectation_value)(this, gr, geo, hm, st, pert_order) result(expval)
+R_TYPE function X(pert_states_expectation_value)(this, parser, gr, geo, hm, st, pert_order) result(expval)
   type(pert_t),         intent(in)    :: this
+  type(parser_t),       intent(in)    :: parser
   type(grid_t),         intent(in)    :: gr
   type(geometry_t),     intent(in)    :: geo
   type(hamiltonian_t),  intent(inout) :: hm
@@ -940,7 +946,7 @@ R_TYPE function X(pert_states_expectation_value)(this, gr, geo, hm, st, pert_ord
 
       call batch_copy(st%group%psib(ib, ik), hpsib)
 
-      call X(pert_apply_batch)(this, gr, geo, hm, ik, st%group%psib(ib, ik), hpsib)
+      call X(pert_apply_batch)(this, parser, gr, geo, hm, ik, st%group%psib(ib, ik), hpsib)
       call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), hpsib, tt(minst:maxst))
 
       call batch_end(hpsib, copy = .false.)

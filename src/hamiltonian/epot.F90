@@ -246,7 +246,7 @@ contains
     !% the single-point Berry phase.
     !%End
     nullify(ep%E_field, ep%v_static)
-    if(parse_block('StaticElectricField', blk)==0) then
+    if(parse_block(parser, 'StaticElectricField', blk)==0) then
       SAFE_ALLOCATE(ep%E_field(1:gr%sb%dim))
       do idir = 1, gr%sb%dim
         call parse_block_float(blk, 0, idir - 1, ep%E_field(idir), units_inp%energy / units_inp%length)
@@ -306,7 +306,7 @@ contains
     !% <math>1.7152553 \times 10^3</math> Tesla.
     !%End
     nullify(ep%B_field, ep%A_static)
-    if(parse_block('StaticMagneticField', blk) == 0) then
+    if(parse_block(parser, 'StaticMagneticField', blk) == 0) then
 
       !%Variable StaticMagneticField2DGauge
       !%Type integer
@@ -524,7 +524,7 @@ contains
       ep%global_force = .true.
 
       call parse_variable('TDGlobalForce', 'none', function_name)
-      call tdf_read(ep%global_force_function, trim(function_name), ierr)
+      call tdf_read(ep%global_force_function, parser, trim(function_name), ierr)
 
       if(ierr /= 0) then
         call messages_write("You have enabled the GlobalForce option but Octopus could not find")
@@ -594,8 +594,9 @@ contains
   end subroutine epot_end
 
   ! ---------------------------------------------------------
-  subroutine epot_generate(ep, gr, geo, st)
+  subroutine epot_generate(ep, parser, gr, geo, st)
     type(epot_t),             intent(inout) :: ep
+    type(parser_t),           intent(in)    :: parser
     type(grid_t),     target, intent(in)    :: gr
     type(geometry_t), target, intent(in)    :: geo
     type(states_t),           intent(inout) :: st
@@ -627,10 +628,10 @@ contains
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
       if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
       if(geo%nlcc) then
-        call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, &
+        call epot_local_potential(ep, parser, gr%der, gr%dgrid, geo, ia, ep%vpsl, &
           rho_core = st%rho_core, density = density)
       else
-        call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, density = density)
+        call epot_local_potential(ep, parser, gr%der, gr%dgrid, geo, ia, ep%vpsl, density = density)
       end if
     end do
 
@@ -711,8 +712,9 @@ contains
   end function local_potential_has_density
   
   ! ---------------------------------------------------------
-  subroutine epot_local_potential(ep, der, dgrid, geo, iatom, vpsl, Imvpsl, rho_core, density, Imdensity)
+  subroutine epot_local_potential(ep, parser, der, dgrid, geo, iatom, vpsl, Imvpsl, rho_core, density, Imdensity)
     type(epot_t),             intent(in)    :: ep
+    type(parser_t),           intent(in)    :: parser
     type(derivatives_t),      intent(in)    :: der
     type(double_grid_t),      intent(in)    :: dgrid
     type(geometry_t),         intent(in)    :: geo
@@ -744,7 +746,7 @@ contains
       if(local_potential_has_density(der%mesh%sb, geo%atom(iatom))) then
         SAFE_ALLOCATE(rho(1:der%mesh%np))
 
-        call species_get_density(geo%atom(iatom)%species, geo%atom(iatom)%x, der%mesh, rho)
+        call species_get_density(geo%atom(iatom)%species, parser, geo%atom(iatom)%x, der%mesh, rho)
 
         if(present(density)) then
           forall(ip = 1:der%mesh%np) density(ip) = density(ip) + rho(ip)
@@ -852,8 +854,9 @@ contains
   end subroutine epot_generate_classical
 
   ! ---------------------------------------------------------
-  subroutine epot_precalc_local_potential(ep, gr, geo)
+  subroutine epot_precalc_local_potential(ep, parser, gr, geo)
     type(epot_t),     intent(inout) :: ep
+    type(parser_t),   intent(in)    :: parser
     type(grid_t),     intent(in)    :: gr
     type(geometry_t), intent(in)    :: geo
 
@@ -873,7 +876,7 @@ contains
     
     do iatom = 1, geo%natoms
       tmp(1:gr%mesh%np) = M_ZERO
-      call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, tmp)!, time)
+      call epot_local_potential(ep, parser, gr%der, gr%dgrid, geo, iatom, tmp)!, time)
       ep%local_potential(1:gr%mesh%np, iatom) = real(tmp(1:gr%mesh%np), 4)
     end do
     ep%local_potential_precalculated = .true.

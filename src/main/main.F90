@@ -110,7 +110,7 @@ program octopus
   !%Option recipe 99
   !% Prints out a tasty recipe.
   !%End
-  if(parse_block('CalculationMode', blk) == 0) then
+  if(parse_block(parser, 'CalculationMode', blk) == 0) then
     call messages_write('The datasets mode has been deprecated,', new_line = .true.)
     call messages_write('please use several Octopus runs.')
     call messages_fatal()

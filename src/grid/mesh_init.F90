@@ -589,7 +589,7 @@ contains
         bsize(1:3) = (/ 15,  15,   4/)
       end select
 
-      if(parse_block('MeshBlockSize', blk) == 0) then
+      if(parse_block(parser, 'MeshBlockSize', blk) == 0) then
         nn = parse_block_cols(blk, 0)
         do idir = 1, nn
           call parse_block_integer(blk, 0, idir - 1, bsize(idir))
@@ -708,7 +708,7 @@ contains
       bits = log2(pad_pow2(size))
 
       bsize = 10
-      if(parse_block('MeshBlockSize', blk) == 0) then
+      if(parse_block(parser, 'MeshBlockSize', blk) == 0) then
         nn = parse_block_cols(blk, 0)
         do idir = 1, nn
           call parse_block_integer(blk, 0, idir - 1, bsize(idir))

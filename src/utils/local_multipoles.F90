@@ -446,7 +446,7 @@ contains
 
     ! First, find out if there is a LocalDomains block.
     local%nd = 0
-    if(parse_block('LocalDomains', blk) == 0) then
+    if(parse_block(parser, 'LocalDomains', blk) == 0) then
       local%nd = parse_block_n(blk)
     end if
 
@@ -736,7 +736,7 @@ contains
         call messages_fatal(1)
       end if                                                                               
 
-      call add_dens_to_ion_x(ff2,sys%geo)
+      call add_dens_to_ion_x(ff2, parser, sys%geo)
       call basins_init(basins, sys%gr%mesh)
       call parse_variable('LDBaderThreshold', CNST(0.01), BaderThreshold)
       call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
@@ -932,9 +932,10 @@ contains
   end subroutine bader_union_inside
 
   ! ---------------------------------------------------------
-  subroutine add_dens_to_ion_x(ff, geo)
-    FLOAT,              intent(inout)   :: ff(:,:)
-    type(geometry_t),   intent(inout)   :: geo
+  subroutine add_dens_to_ion_x(ff, parser, geo)
+    FLOAT,              intent(inout) :: ff(:,:)
+    type(parser_t),     intent(in)    :: parser
+    type(geometry_t),   intent(inout) :: geo
 
     integer :: ia, is
     FLOAT, allocatable :: ffs(:)
@@ -943,7 +944,7 @@ contains
 
     SAFE_ALLOCATE(ffs(1:sys%gr%mesh%np))
     do ia = 1, geo%natoms
-      call species_get_density(geo%atom(ia)%species, geo%atom(ia)%x, sys%gr%mesh, ffs)
+      call species_get_density(geo%atom(ia)%species, parser, geo%atom(ia)%x, sys%gr%mesh, ffs)
       do is = 1, sys%st%d%nspin
         ff(1:sys%gr%mesh%np,is) = ff(1:sys%gr%mesh%np, is) - ffs(1:sys%gr%mesh%np)
       end do

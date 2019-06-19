@@ -600,7 +600,7 @@ contains
 
     ! First, find out if there is a Species block.
     n_spec_block = 0
-    if(parse_block('Species', blk) == 0) then
+    if(parse_block(parser, 'Species', blk) == 0) then
       n_spec_block = parse_block_n(blk)
     end if
 

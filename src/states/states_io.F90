@@ -362,8 +362,9 @@ contains
   end subroutine states_write_eigenvalues
 
   ! ---------------------------------------------------------
-  subroutine states_write_tpa(dir, gr, st)
+  subroutine states_write_tpa(dir, parser, gr, st)
     character(len=*), intent(in) :: dir
+    type(parser_t),   intent(in) :: parser
     type(grid_t),     intent(in) :: gr
     type(states_t),   intent(in) :: st
 
@@ -421,7 +422,7 @@ contains
     !% <br>&nbsp;&nbsp; 0.1 | 0.2 | 0.3
     !% <br>%</tt>
     !%End
-    if(parse_block('MomentumTransfer', blk) == 0) then
+    if(parse_block(parser, 'MomentumTransfer', blk) == 0) then
 
       ! check if input makes sense
       ncols = parse_block_cols(blk, 0)

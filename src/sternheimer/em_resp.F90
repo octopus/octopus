@@ -702,7 +702,7 @@ contains
       !%
       !%End
 
-      if (parse_block('EMFreqs', blk) == 0) then 
+      if(parse_block(sys%parser, 'EMFreqs', blk) == 0) then 
 
         nrow = parse_block_n(blk)
         em_vars%nomega = 0
@@ -827,7 +827,7 @@ contains
         !% <tt>1 | 1 | -2</tt>.
         !%End
 
-        if (parse_block('EMHyperpol', blk) == 0) then 
+        if (parse_block(sys%parser, 'EMHyperpol', blk) == 0) then 
           call parse_block_float(blk, 0, 0, em_vars%freq_factor(1))
           call parse_block_float(blk, 0, 1, em_vars%freq_factor(2))
           call parse_block_float(blk, 0, 2, em_vars%freq_factor(3))

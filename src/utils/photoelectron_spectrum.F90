@@ -256,7 +256,7 @@ program photoelectron_spectrum
   !%End
   st_range(1:2)=(/1, st%nst/)
   resolve_states = .false.
-  if(parse_block('PhotoelectronSpectrumResolveStates', blk) == 0) then
+  if(parse_block(parser, 'PhotoelectronSpectrumResolveStates', blk) == 0) then
     if(parse_block_cols(blk,0) < 2) call messages_input_error('PhotoelectronSpectrumResolveStates')
     do idim = 1, 2
       call parse_block_integer(blk, 0, idim - 1, st_range(idim))
@@ -767,7 +767,7 @@ program photoelectron_spectrum
         PUSH_SUB(get_laser_polarization)
         
         no_l = 0
-        if(parse_block('TDExternalFields', blk) == 0) then
+        if(parse_block(parser, 'TDExternalFields', blk) == 0) then
           no_l = parse_block_n(blk)
 
           call parse_block_cmplx(blk, 0, 1, cPol(1))

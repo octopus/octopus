@@ -569,7 +569,7 @@ contains
 
     call from_coords(g_opt, coords)
 
-    if(g_opt%fixed_atom /= 0) call xyz_adjust_it(g_opt%geo, rotate = .false.)
+    if(g_opt%fixed_atom /= 0) call xyz_adjust_it(g_opt%geo, g_opt%syst%parser, rotate = .false.)
 
     call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, warn_if_not = .false., die_if_not = .true.)
 
@@ -577,7 +577,7 @@ contains
 
     call scf_mix_clear(g_opt%scfv)
 
-    call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%gr, g_opt%geo, g_opt%st)
+    call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%parser, g_opt%syst%gr, g_opt%geo, g_opt%st)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
     call v_ks_calc(g_opt%syst%ks, g_opt%syst%parser, g_opt%hm, g_opt%st, g_opt%geo, calc_eigenval = .true.)
     call energy_calc_total(g_opt%hm, g_opt%syst%gr, g_opt%st)

@@ -245,7 +245,7 @@ contains
   
     !Initialize external potential
     call epot_init(ep, sys%parser, sys%gr, sys%geo, SPINORS, 1, XC_FAMILY_NONE)
-    call epot_generate(ep, sys%gr, sys%geo, sys%st)
+    call epot_generate(ep, sys%parser, sys%gr, sys%geo, sys%st)
    
     !Initialize external potential
     SAFE_ALLOCATE(epsib)
@@ -409,7 +409,7 @@ contains
     call hamiltonian_init(hm, sys%parser, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
              family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
     if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_pack(sys%st)
-    call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
+    call hamiltonian_epot_generate(hm, sys%parser, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, sys%parser, hm, sys%st, sys%geo)
 

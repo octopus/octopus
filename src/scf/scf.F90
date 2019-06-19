@@ -662,7 +662,7 @@ contains
       SAFE_ALLOCATE(  forcein(1:geo%natoms, 1:gr%sb%dim))
       SAFE_ALLOCATE( forceout(1:geo%natoms, 1:gr%sb%dim))
       SAFE_ALLOCATE(forcediff(1:gr%sb%dim))
-      call forces_calculate(gr, geo, hm, st, ks)
+      call forces_calculate(gr, parser, geo, hm, st, ks)
       do iatom = 1, geo%natoms
         forcein(iatom, 1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
       end do
@@ -776,7 +776,7 @@ contains
 
       ! compute forces only if they are used as convergence criterion
       if (scf%conv_abs_force > M_ZERO) then
-        call forces_calculate(gr, geo, hm, st, ks, vhxc_old=vhxc_old)
+        call forces_calculate(gr, parser, geo, hm, st, ks, vhxc_old=vhxc_old)
         scf%abs_force = M_ZERO
         do iatom = 1, geo%natoms
           forceout(iatom,1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
@@ -790,7 +790,7 @@ contains
         if(outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0 &
            .and. outp%output_interval /= 0 &
            .and. gs_run_ .and. mod(iter, outp%output_interval) == 0)  &
-          call forces_calculate(gr, geo, hm, st, ks, vhxc_old=vhxc_old)
+          call forces_calculate(gr, parser, geo, hm, st, ks, vhxc_old=vhxc_old)
       end if
 
       if(abs(st%qtot) <= M_EPSILON) then
@@ -1001,7 +1001,7 @@ contains
 
     ! calculate forces
     if(scf%calc_force) then
-      call forces_calculate(gr, geo, hm, st, ks, vhxc_old=vhxc_old)
+      call forces_calculate(gr, parser, geo, hm, st, ks, vhxc_old=vhxc_old)
     end if
 
     ! calculate stress
@@ -1223,7 +1223,7 @@ contains
         SAFE_ALLOCATE(hirshfeld_charges(1:geo%natoms))
 
         call partial_charges_init(partial_charges)
-        call partial_charges_calculate(partial_charges, gr%fine%mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
+        call partial_charges_calculate(partial_charges, parser, gr%fine%mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
         call partial_charges_end(partial_charges)
 
         if(mpi_grp_is_root(mpi_world)) then

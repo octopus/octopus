@@ -51,6 +51,7 @@ module parser_oct_m
     parse_array
 
   type :: parser_t
+    private
     integer :: dummy
   end type parser_t
   
@@ -453,7 +454,8 @@ contains
 
   ! ---------------------------------------------------------
   
-  integer function parse_block(name, blk, check_varinfo_)
+  integer function parse_block(self, name, blk, check_varinfo_)
+    type(parser_t),    intent(in)    :: self
     character(len=*),  intent(in)    :: name
     type(block_t),     intent(out)   :: blk
     logical, optional, intent(in)    :: check_varinfo_

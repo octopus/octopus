@@ -236,7 +236,7 @@ contains
       !%
       !% This feature allows calculation of quadrupole, octupole, etc., response functions.
       !%End
-    else if(parse_block('TDKickFunction', blk) == 0) then
+    else if(parse_block(parser, 'TDKickFunction', blk) == 0) then
 
       kick%function_mode = KICK_FUNCTION_MULTIPOLE
       n_rows = parse_block_n(blk)
@@ -323,7 +323,7 @@ contains
       !%End
 
       kick%pol(:, :) = M_ZERO
-      if(parse_block('TDPolarization', blk)==0) then
+      if(parse_block(parser, 'TDPolarization', blk)==0) then
         n_rows = parse_block_n(blk)
         
         if(n_rows < dim) call messages_input_error('TDPolarization')
@@ -369,7 +369,7 @@ contains
       !% <i>et al.</i>, <i>J. Nanoscience and Nanotechnology</i> <b>8</b>,
       !% 3392 (2008).
       !%End
-      if(parse_block('TDPolarizationWprime', blk)==0) then
+      if(parse_block(parser, 'TDPolarizationWprime', blk)==0) then
         do idir = 1, 3
           call parse_block_float(blk, 0, idir - 1, kick%wprime(idir))
         end do
@@ -408,7 +408,7 @@ contains
     !% In this case, the block has to include two extra values (<i>l</i> and <i>m</i>).
     !%End
 
-    if(parse_block('TDMomentumTransfer', blk)==0) then
+    if(parse_block(parser, 'TDMomentumTransfer', blk)==0) then
       do idir = 1, MAX_DIM
         call parse_block_float(blk, 0, idir - 1, kick%qvector(idir))
         kick%qvector(idir) = units_to_atomic(unit_one / units_inp%length, kick%qvector(idir))

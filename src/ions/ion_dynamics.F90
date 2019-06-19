@@ -171,7 +171,7 @@ contains
 
     
     ndisp = 0
-    if(parse_block('IonsTimeDependentDisplacements', blk) == 0) then
+    if(parse_block(parser, 'IonsTimeDependentDisplacements', blk) == 0) then
       call messages_experimental("IonsTimeDependentDisplacements")
       ndisp= parse_block_n(blk)
       SAFE_ALLOCATE(this%td_displacements(1:geo%natoms))
@@ -183,7 +183,7 @@ contains
         this%td_displacements(iatom)%move = .true.
         
         call parse_block_string(blk, i-1, 1, expression)
-        call tdf_read(this%td_displacements(iatom)%fx, trim(expression), ierr)
+        call tdf_read(this%td_displacements(iatom)%fx, parser, trim(expression), ierr)
         if (ierr /= 0) then            
           write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
           call messages_warning(1)
@@ -191,14 +191,14 @@ contains
         
         
         call parse_block_string(blk, i-1, 2, expression)
-        call tdf_read(this%td_displacements(iatom)%fy, trim(expression), ierr)
+        call tdf_read(this%td_displacements(iatom)%fy, parser, trim(expression), ierr)
         if (ierr /= 0) then            
           write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
           call messages_warning(1)
         end if
         
         call parse_block_string(blk, i-1, 3, expression)
-        call tdf_read(this%td_displacements(iatom)%fz, trim(expression), ierr)
+        call tdf_read(this%td_displacements(iatom)%fz, parser, trim(expression), ierr)
         if (ierr /= 0) then            
           write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
           call messages_warning(1)
@@ -257,7 +257,7 @@ contains
       !%End
       call parse_variable('TemperatureFunction', 'temperature', temp_function_name)
 
-      call tdf_read(this%temperature_function, temp_function_name, ierr)
+      call tdf_read(this%temperature_function, parser, temp_function_name, ierr)
 
       if(ierr /= 0) then
         message(1) = "You have enabled a thermostat but Octopus could not find"

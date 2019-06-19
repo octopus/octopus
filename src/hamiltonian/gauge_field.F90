@@ -84,8 +84,9 @@ contains
   end subroutine gauge_field_nullify
 
   ! ---------------------------------------------------------
-  subroutine gauge_field_init(this, sb)
+  subroutine gauge_field_init(this, parser, sb)
     type(gauge_field_t),     intent(out)   :: this
+    type(parser_t),          intent(in)    :: parser
     type(simul_box_t),       intent(in)    :: sb
 
     integer :: ii, iop
@@ -145,7 +146,7 @@ contains
     !%End
     ! Read the initial gauge vector field
 
-    if(parse_block('GaugeVectorField', blk) == 0) then
+    if(parse_block(parser, 'GaugeVectorField', blk) == 0) then
 
       this%with_gauge_field = .true.
 

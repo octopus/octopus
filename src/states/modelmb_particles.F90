@@ -112,8 +112,9 @@ contains
   !>==============================================================
   !!  initialization function for modelmb particles information
   !!==============================================================
-  subroutine modelmb_particles_init (this,gr)
+  subroutine modelmb_particles_init(this, parser, gr)
     type(modelmb_particle_t), intent(inout) :: this
+    type(parser_t),           intent(in)    :: parser
     type(grid_t),             intent(in)    :: gr
     
     integer :: ipart, ncols, nline, itmp, jtmp, npar, ntype
@@ -221,7 +222,7 @@ contains
     this%bosonfermion = 1 ! set to fermion
     
     
-    if(parse_block('DescribeParticlesModelmb', blk) == 0) then
+    if(parse_block(parser, 'DescribeParticlesModelmb', blk) == 0) then
       
       call messages_experimental("Model many-body")
       

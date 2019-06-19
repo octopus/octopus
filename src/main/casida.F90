@@ -309,7 +309,7 @@ contains
     !% using an exponential operator instead of the normal dipole one.
     !%End
 
-    if(parse_block('CasidaMomentumTransfer', blk)==0) then
+    if(parse_block(sys%parser, 'CasidaMomentumTransfer', blk)==0) then
       do idir = 1, cas%sb_dim
         call parse_block_float(blk, 0, idir - 1, cas%qvector(idir))
         cas%qvector(idir) = units_to_atomic(unit_one / units_inp%length, cas%qvector(idir))

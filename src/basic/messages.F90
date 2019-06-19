@@ -609,11 +609,7 @@ contains
 
     type(block_t) :: blk
     
-    if(parse_block(var, blk) == 0) then
-      call messages_write('Input error in the input block %'// trim(var))
-    else
-      call messages_write('Input error in the input variable '// trim(var))
-    end if
+    call messages_write('Input error in the input variable '// trim(var))
     
     if(present(details)) then
       call messages_write(':', new_line = .true.)

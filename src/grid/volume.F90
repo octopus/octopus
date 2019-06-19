@@ -61,8 +61,9 @@ contains
     SAFE_DEALLOCATE_P(vol%params)
   end subroutine volume_end
 
-  subroutine volume_read_from_block(vol, block_name)
+  subroutine volume_read_from_block(vol, parser, block_name)
     type(volume_t),   intent(inout) :: vol
+    type(parser_t),   intent(in)    :: parser
     character(len=*), intent(in)    :: block_name
 
     type(block_t) :: blk
@@ -90,7 +91,7 @@ contains
     !%
     !%End
 
-    if(parse_block(block_name, blk, check_varinfo_=.false.) == 0) then
+    if(parse_block(parser, block_name, blk, check_varinfo_=.false.) == 0) then
       vol%n_elements = parse_block_n(blk)
 
       SAFE_ALLOCATE(vol%join(1:vol%n_elements))

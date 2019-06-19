@@ -150,7 +150,7 @@ contains
     !% <br>%</tt>
     !%End
 
-    if(parse_block('Spacing', blk) == 0) then
+    if(parse_block(parser, 'Spacing', blk) == 0) then
       if(parse_block_cols(blk,0) < gr%sb%dim) call messages_input_error('Spacing')
       do idir = 1, gr%sb%dim
         call parse_block_float(blk, 0, idir - 1, grid_spacing(idir), units_inp%length)

@@ -161,7 +161,7 @@ contains
 
     call simul_box_check_atoms_are_too_close(geo, sb)
 
-    call symmetries_init(sb%symm, geo, sb%dim, sb%periodic_dim, sb%rlattice, sb%klattice)
+    call symmetries_init(sb%symm, parser, geo, sb%dim, sb%periodic_dim, sb%rlattice, sb%klattice)
 
     ! we need k-points for periodic systems
     only_gamma_kpoint = (sb%periodic_dim == 0)
@@ -234,7 +234,7 @@ contains
       !% NOTE: currently, only one area can be set up, and only works in 3D, and in serial.
       !%End
 
-      if(parse_block('MultiResolutionArea', blk) == 0) then
+      if(parse_block(parser, 'MultiResolutionArea', blk) == 0) then
 
         call messages_experimental('Multi-resolution')
 
@@ -447,7 +447,7 @@ contains
         if(all(geo%lsize(1:sb%dim) > M_ZERO)) then
           ! use value read from XSF lattice vectors
           sb%lsize(:) = geo%lsize(:)
-        else if(parse_block('Lsize', blk) == 0) then
+        else if(parse_block(parser, 'Lsize', blk) == 0) then
           if(parse_block_cols(blk,0) < sb%dim .and. .not. parse_is_defined(parser, 'LatticeVectors')) &
               call messages_input_error('Lsize')
           do idir = 1, sb%dim
@@ -656,7 +656,7 @@ contains
       has_angles = .false.
       angles = CNST(90.0)
 
-      if (parse_block('LatticeParameters', blk) == 0) then
+      if (parse_block(parser, 'LatticeParameters', blk) == 0) then
         do idim = 1, sb%dim
           call parse_block_float(blk, 0, idim - 1, lparams(idim))
         end do
@@ -744,7 +744,7 @@ contains
         sb%nonorthogonal = .false.
         forall(idim = 1:sb%dim) sb%rlattice_primitive(idim, idim) = M_ONE
 
-        if (parse_block('LatticeVectors', blk) == 0) then 
+        if (parse_block(parser, 'LatticeVectors', blk) == 0) then 
           do idim = 1, sb%dim
             do jdim = 1, sb%dim
               call parse_block_float(blk, idim - 1,  jdim - 1, sb%rlattice_primitive(jdim, idim))

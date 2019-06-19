@@ -586,7 +586,7 @@ contains
     !% behaviours.
     !%End
     cols_pesmask_block = 0
-    if (parse_block('PESMaskSize', blk) == 0) then
+    if (parse_block(parser, 'PESMaskSize', blk) == 0) then
       cols_pesmask_block = parse_block_cols(blk, 0)
     end if
 

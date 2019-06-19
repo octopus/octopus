@@ -121,7 +121,7 @@ contains
     !%End
     call messages_obsolete_variable(parser, 'PhotoElectronSpectrumPoints', 'PES_spm_points')
     this%sphgrid = .false.
-    if (parse_block('PES_spm_points', blk) < 0) then
+    if (parse_block(parser, 'PES_spm_points', blk) < 0) then
       this%sphgrid = .true.
     end if
 

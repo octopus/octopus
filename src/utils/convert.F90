@@ -783,7 +783,7 @@ contains
     !%End
     ! First, find out if there is a ConvertScalarOperation block.
     n_operations = 0
-    if(parse_block('ConvertScalarOperation', blk) == 0) then
+    if(parse_block(parser, 'ConvertScalarOperation', blk) == 0) then
       n_operations = parse_block_n(blk)
     end if
 

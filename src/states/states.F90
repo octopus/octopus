@@ -548,7 +548,7 @@ contains
 
     call distributed_nullify(st%d%kpt, st%d%nik)
 
-    call modelmb_particles_init (st%modelmbparticles,gr)
+    call modelmb_particles_init(st%modelmbparticles, parser, gr)
     if (st%modelmbparticles%nparticle > 0) then
       ! FIXME: check why this is not initialized properly in the test, or why it is written out when not initialized
       SAFE_ALLOCATE(st%mmb_nspindown(1:st%modelmbparticles%ntype_of_particle, 1:st%nst))
@@ -731,7 +731,7 @@ contains
 
     integral_occs = .true.
 
-    occ_fix: if(parse_block('Occupations', blk) == 0) then
+    occ_fix: if(parse_block(parser, 'Occupations', blk) == 0) then
       ! read in occupations
       st%fixed_occ = .true.
 
@@ -950,7 +950,7 @@ contains
     !% This constraint must be fulfilled:
     !% <br><math> \left< S_x \right>^2 + \left< S_y \right>^2 + \left< S_z \right>^2 = \frac{1}{4} </math>
     !%End
-    spin_fix: if(parse_block('InitialSpins', blk)==0) then
+    spin_fix: if(parse_block(parser, 'InitialSpins', blk)==0) then
       do i = 1, st%nst
         do j = 1, 3
           call parse_block_float(blk, i-1, j-1, st%spin(j, i, 1))

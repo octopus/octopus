@@ -101,7 +101,7 @@ contains
     call messages_obsolete_variable(parser, 'DensityMatrixtoCalc', 'DensitytoCalc')
     call messages_obsolete_variable(parser, 'DensitiestoCalc', 'DensitytoCalc')
 
-    if(parse_block('DensitytoCalc', blk) /= 0) then
+    if(parse_block(parser, 'DensitytoCalc', blk) /= 0) then
      message(1) = 'To print out density (matrices), you must specify the DensitytoCalc block in input'
      call messages_fatal(1)
     end if

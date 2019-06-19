@@ -448,7 +448,7 @@ contains
     !%End
     SAFE_ALLOCATE(cf_common%alpha(1:cf_common%no_controlfunctions))
     cf_common%alpha = M_ZERO
-    if(parse_block('OCTPenalty', blk) == 0) then
+    if(parse_block(parser, 'OCTPenalty', blk) == 0) then
       ! We have a block
       ncols = parse_block_cols(blk, 0)
       if(ncols /= cf_common%no_controlfunctions) then
@@ -482,7 +482,7 @@ contains
     steps = max_iter
     SAFE_ALLOCATE(cf_common%td_penalty(1:cf_common%no_controlfunctions))
 
-    if (parse_block('OCTLaserEnvelope', blk)==0) then
+    if (parse_block(parser, 'OCTLaserEnvelope', blk)==0) then
 
       ! Cannot have this unless we have the "usual" controlfunction_mode_epsilon.
       if(cf_common%mode /= controlfunction_mode_epsilon) then
@@ -497,13 +497,13 @@ contains
       do irow = 1, no_lines
         call parse_block_string(blk, irow - 1, 0, expression)
         call parse_block_end(blk)
-        call tdf_read(cf_common%td_penalty(irow), trim(expression), ierr)
+        call tdf_read(cf_common%td_penalty(irow), parser, trim(expression), ierr)
         if(ierr.ne.0) then
           message(1) = 'Time-dependent function "'//trim(expression)//'" could not be read from inp file.'
           call messages_fatal(1)
         end if
         call tdf_to_numerical(cf_common%td_penalty(irow), steps, dt, cf_common%omegamax)
-        ierr = parse_block('OCTLaserEnvelope', blk)
+        ierr = parse_block(parser, 'OCTLaserEnvelope', blk)
       end do
 
       call parse_block_end(blk)
