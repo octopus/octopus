@@ -260,13 +260,14 @@ contains
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
 
+      call density_calc_init(dens_calc, st, gr, st%rho)
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
           call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
         end do
       end do
-
-      call density_calc(st, gr, st%rho)
+      call density_calc_end(dens_calc)
 
       call v_ks_calc(ks, parser, hm, st, geo, time = time, calc_current = .false.)
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
