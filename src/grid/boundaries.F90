@@ -39,6 +39,7 @@ module boundaries_oct_m
   private
 
   type boundaries_t
+    private
     type(mesh_t), pointer :: mesh
     integer          :: nper             !< the number of points that correspond to pbc
     integer, pointer :: per_points(:, :) !< (1:2, 1:nper) the list of points that correspond to pbc 

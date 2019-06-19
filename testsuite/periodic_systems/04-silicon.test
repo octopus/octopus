@@ -76,6 +76,8 @@ match ; DOS value  2   ; LINEFIELD(static/total-dos.dat,   2, 2);        0.47203
 match ; DOS energy 442 ; LINEFIELD(static/total-dos.dat, 442, 1);        0.250698
 match ; DOS value  442 ; LINEFIELD(static/total-dos.dat, 442, 2);        1.858955
 
+
+
 Input      : 04-silicon.02-kdotp.inp
 
 match ; vg(x) k1 st1  ; LINEFIELD(kdotp/velocity, 5, 3) ; 0.06525

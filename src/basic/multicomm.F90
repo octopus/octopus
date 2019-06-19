@@ -111,16 +111,17 @@ module multicomm_oct_m
 
   !> Stores all communicators and groups
   type multicomm_t
+    private
     integer          :: n_node           !< Total number of nodes.
 
-    integer          :: par_strategy     !< What kind of parallelization strategy should we use?
+    integer, public  :: par_strategy     !< What kind of parallelization strategy should we use?
 
-    integer, allocatable :: group_sizes(:)   !< Number of processors in each group.
-    integer, allocatable :: who_am_i(:)      !< Rank in the "line"-communicators.
-    integer, allocatable :: group_comm(:)    !< "Line"-communicators I belong to.
-    integer          :: dom_st_comm      !< States-domain plane communicator.
-    integer          :: st_kpt_comm      !< Kpoints-states plane communicator.
-    integer          :: dom_st_kpt_comm  !< Kpoints-states-domain cube communicator.
+    integer, allocatable         :: group_sizes(:)   !< Number of processors in each group.
+    integer, allocatable, public :: who_am_i(:)      !< Rank in the "line"-communicators.
+    integer, allocatable, public :: group_comm(:)    !< "Line"-communicators I belong to.
+    integer, public              :: dom_st_comm      !< States-domain plane communicator.
+    integer, public              :: st_kpt_comm      !< Kpoints-states plane communicator.
+    integer, public              :: dom_st_kpt_comm  !< Kpoints-states-domain cube communicator.
 
     integer          :: nthreads         !< Number of OMP threads
     integer          :: node_type        !< Is this node a P_MASTER or a P_SLAVE?
@@ -128,16 +129,17 @@ module multicomm_oct_m
     
     integer          :: full_comm        !< The base communicator.
     integer          :: full_comm_rank   !< The rank in the base communicator.
-    integer          :: master_comm      !< The communicator without slaves.
+    integer, public  :: master_comm      !< The communicator without slaves.
     integer          :: master_comm_rank !< The rank in the communicator without slaves.
-    integer          :: slave_intercomm  !< the intercomm to communicate with slaves
+    integer, public  :: slave_intercomm  !< the intercomm to communicate with slaves
   end type multicomm_t
 
   !> An all-pairs communication schedule for a given group.
   type multicomm_all_pairs_t
-    type(mpi_grp_t)  :: grp            !< Schedule for this group.
-    integer          :: rounds         !< This many comm. rounds.
-    integer, pointer :: schedule(:, :) !< This is the schedule.
+    private
+    type(mpi_grp_t)  :: grp                    !< Schedule for this group.
+    integer          :: rounds                 !< This many comm. rounds.
+    integer, pointer, public :: schedule(:, :) !< This is the schedule.
   end type multicomm_all_pairs_t
 
 contains

@@ -39,13 +39,13 @@ module ps_psf_oct_m
     ps_psf_get_eigen
 
   type ps_psf_t
+    ! Components are public by default
+    type(ps_psf_file_t), private :: psf_file
+    type(ps_in_grid_t)           :: ps_grid
 
-    type(ps_psf_file_t) :: psf_file
-    type(ps_in_grid_t)  :: ps_grid
-
-    type(valconf_t)     :: conf
-    FLOAT, pointer      :: eigen(:, :)
-    integer             :: ispin
+    type(valconf_t)              :: conf
+    FLOAT, pointer,      private :: eigen(:, :)
+    integer,             private :: ispin
   end type ps_psf_t
 
 contains

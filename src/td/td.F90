@@ -63,6 +63,7 @@ module td_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
+  use walltimer_oct_m
   use xc_oct_m
 
   implicit none
@@ -82,23 +83,24 @@ module td_oct_m
     BO        = 2
 
   type td_t
-    type(propagator_t)   :: tr             !< contains the details of the time-evolution
-    type(scf_t)          :: scf
-    type(ion_dynamics_t) :: ions
-    FLOAT                :: dt             !< time step
-    integer              :: max_iter       !< maximum number of iterations to perform
-    integer              :: iter           !< the actual iteration
-    logical              :: recalculate_gs !< Recalculate ground-state along the evolution.
+    private
+    type(propagator_t),   public :: tr             !< contains the details of the time-evolution
+    type(scf_t)                  :: scf
+    type(ion_dynamics_t), public :: ions
+    FLOAT,                public :: dt             !< time step
+    integer,              public :: max_iter       !< maximum number of iterations to perform
+    integer,              public :: iter           !< the actual iteration
+    logical                      :: recalculate_gs !< Recalculate ground-state along the evolution.
 
-    type(pes_t)          :: pesv
+    type(pes_t)                  :: pesv
 
-    FLOAT                :: mu
-    integer              :: dynamics
-    integer              :: energy_update_iter
-    FLOAT                :: scissor
+    FLOAT,                public :: mu
+    integer                      :: dynamics
+    integer                      :: energy_update_iter
+    FLOAT                        :: scissor
 
-    logical              :: freeze_occ
-    logical              :: freeze_u
+    logical                      :: freeze_occ
+    logical                      :: freeze_u
   end type td_t
 
 
@@ -326,7 +328,7 @@ contains
     if(ion_dynamics_ions_move(td%ions) .and. td%energy_update_iter /= 1) then
       call messages_experimental('TDEnergyUpdateIter /= 1 when moving ions')
     end if
-    
+
     POP_SUB(td_init)
   end subroutine td_init
 
@@ -358,7 +360,7 @@ contains
     type(grid_t),     pointer :: gr   ! some shortcuts
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
-    logical                   :: stopping
+    logical                   :: stopping, stopping_tmp
     integer                   :: iter, ierr, scsteps
     real(8)                   :: etime
     type(profile_t),     save :: prof
@@ -458,14 +460,20 @@ contains
     end if
 
     if(st%d%pack_states .and. hamiltonian_apply_packed(hm, gr%mesh)) call states_pack(st)
-
+    
     etime = loct_clock()
     ! This is the time-propagation loop. It starts at t=0 and finishes
     ! at td%max_iter*dt. The index i runs from 1 to td%max_iter, and
     ! step "iter" means propagation from (iter-1)*dt to iter*dt.
     propagation: do iter = td%iter, td%max_iter
 
-      stopping = clean_stop(sys%mc%master_comm)
+      stopping = clean_stop(sys%mc%master_comm) .or. walltimer_alarm()
+
+#ifdef HAVE_MPI
+      call MPI_Allreduce(stopping, stopping_tmp, 1, MPI_LOGICAL, MPI_LOR, sys%mc%master_comm, mpi_err)
+      stopping = stopping_tmp
+#endif      
+
       call profiling_in(prof, "TIME_STEP")
 
       if(iter > 1) then

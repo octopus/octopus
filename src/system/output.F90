@@ -102,6 +102,7 @@ module output_oct_m
 
 
   type output_bgw_t
+    private
     integer           :: nbands
     integer           :: vxc_diag_nmin
     integer           :: vxc_diag_nmax
@@ -117,20 +118,21 @@ module output_oct_m
   end type output_bgw_t
 
   type output_t
+    private
     !> General output variables:
-    integer(8) :: what                !< what to output
-    integer(8) :: whatBZ              !< what to output - for k-point resolved output
-    integer(8) :: what_lda_u          !< what to output for the LDA+U part
-    integer(8) :: how                 !< how to output
+    integer(8), public :: what                !< what to output
+    integer(8), public :: whatBZ              !< what to output - for k-point resolved output
+    integer(8), public :: what_lda_u          !< what to output for the LDA+U part
+    integer(8), public :: how                 !< how to output
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
 
     !> These variables fine-tune the output for some of the possible output options:
-    integer :: output_interval     !< output every iter
-    integer :: restart_write_interval
-    logical :: duringscf
+    integer, public :: output_interval     !< output every iter
+    integer, public :: restart_write_interval
+    logical, public :: duringscf
     character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
-    character(len=MAX_PATH_LEN) :: iter_dir  !< The folder name, if information will be output while iterating.
+    character(len=MAX_PATH_LEN), public :: iter_dir  !< The folder name, if information will be output while iterating.
 
     type(mesh_plane_t) :: plane    !< This is to calculate the current flow across a plane
     type(mesh_line_t)  :: line     !< or through a line (in 2D)
@@ -144,9 +146,10 @@ module output_oct_m
   
 contains
 
-  subroutine output_init(outp, sb, nst, ks)
+  subroutine output_init(outp, sb, st, nst, ks)
     type(output_t),       intent(out)   :: outp
     type(simul_box_t),    intent(in)    :: sb
+    type(states_t),       intent(in)    :: st
     integer,              intent(in)    :: nst
     type(v_ks_t),         intent(inout) :: ks
 
@@ -457,7 +460,7 @@ contains
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me_init(outp%me, sb, nst)
+      call output_me_init(outp%me, sb, st, nst)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
@@ -631,7 +634,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine output_all(outp, gr, geo, st, hm, ks, dir)
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),         intent(in)    :: gr
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
@@ -726,7 +729,7 @@ contains
   subroutine output_localization_funct(st, hm, gr, dir, outp, geo)
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(in)    :: hm
-    type(grid_t),           intent(inout) :: gr
+    type(grid_t),           intent(in)    :: gr
     character(len=*),       intent(in)    :: dir
     type(output_t),         intent(in)    :: outp
     type(geometry_t),       intent(in)    :: geo
@@ -835,7 +838,7 @@ contains
   subroutine calc_electronic_pressure(st, hm, gr, pressure)
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(in)    :: hm
-    type(grid_t),           intent(inout) :: gr
+    type(grid_t),           intent(in)    :: gr
     FLOAT,                  intent(out)   :: pressure(:)
 
     FLOAT, allocatable :: rho(:,:), lrho(:), tau(:,:)
@@ -880,15 +883,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine output_energy_density(hm, ks, st, der, dir, outp, geo, gr, grp)
-    type(hamiltonian_t),       intent(in)    :: hm
-    type(v_ks_t),              intent(in)    :: ks
-    type(states_t),            intent(inout) :: st
-    type(derivatives_t),       intent(inout) :: der
-    character(len=*),          intent(in)    :: dir
-    type(output_t),            intent(in)    :: outp
-    type(geometry_t),          intent(in)    :: geo
-    type(grid_t),              intent(in)    :: gr
-    type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
+    type(hamiltonian_t),       intent(in) :: hm
+    type(v_ks_t),              intent(in) :: ks
+    type(states_t),            intent(in) :: st
+    type(derivatives_t),       intent(in) :: der
+    character(len=*),          intent(in) :: dir
+    type(output_t),            intent(in) :: outp
+    type(geometry_t),          intent(in) :: geo
+    type(grid_t),              intent(in) :: gr
+    type(mpi_grp_t), optional, intent(in) :: grp !< the group that shares the same data, must contain the domains group
 
     integer :: is, ierr, ip
     character(len=MAX_PATH_LEN) :: fname

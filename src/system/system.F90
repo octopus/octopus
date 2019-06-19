@@ -53,6 +53,7 @@ module system_oct_m
     system_h_setup
 
   type system_t
+    ! Components are public by default
     type(space_t)                :: space
     type(geometry_t)             :: geo
     type(grid_t),        pointer :: gr    !< the mesh
@@ -99,7 +100,7 @@ contains
     call grid_init_stage_2(sys%gr, sys%mc, sys%geo)
     if(sys%st%symmetrize_density) call mesh_check_symmetries(sys%gr%mesh, sys%gr%sb)
 
-    call output_init(sys%outp, sys%gr%sb, sys%st%nst, sys%ks)
+    call output_init(sys%outp, sys%gr%sb, sys%st, sys%st%nst, sys%ks)
     call states_densities_init(sys%st, sys%gr, sys%geo)
     call states_exec_init(sys%st, sys%mc)
     call elf_init()

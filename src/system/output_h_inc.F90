@@ -20,7 +20,7 @@
   subroutine output_hamiltonian(hm, st, der, dir, outp, geo, gr, grp)
     type(hamiltonian_t),       intent(in)    :: hm
     type(states_t),            intent(inout) :: st
-    type(derivatives_t),       intent(inout) :: der
+    type(derivatives_t),       intent(in)    :: der
     character(len=*),          intent(in)    :: dir
     type(output_t),            intent(in)    :: outp
     type(geometry_t),          intent(in)    :: geo
@@ -262,7 +262,7 @@
 
   ! ---------------------------------------------------------
   subroutine output_scalar_pot(outp, gr, geo, hm, dir, time)
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),         intent(in)    :: gr
     type(geometry_t),     intent(in)    :: geo
     type(hamiltonian_t),  intent(inout) :: hm
     type(output_t),       intent(in)    :: outp

@@ -54,6 +54,7 @@ module sparskit_oct_m
 #endif
 
   type sparskit_solver_t
+    private
     logical :: is_complex           !< whether set up for complex (otherwise real)
     integer :: size                 !< size of the linear system
     integer :: solver_type          !< which solver to use

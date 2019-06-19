@@ -39,11 +39,12 @@ module matrix_oct_m
     matrix_type
   
   type matrix_t
-    integer            :: dim(1:2)
-    FLOAT, allocatable :: dmat(:, :)
-    CMPLX, allocatable :: zmat(:, :)
-    type(type_t)       :: type
-    type(mpi_grp_t)    :: mpi_grp
+    ! Components are public by default
+    integer               :: dim(1:2)
+    FLOAT, allocatable    :: dmat(:, :)
+    CMPLX, allocatable    :: zmat(:, :)
+    type(type_t), private :: type
+    type(mpi_grp_t)       :: mpi_grp
   end type matrix_t
 
   interface matrix_init

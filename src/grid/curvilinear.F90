@@ -53,7 +53,8 @@ module curvilinear_oct_m
     CURV_METHOD_MODINE  = 4
 
   type curvilinear_t
-    integer :: method
+    private
+    integer, public :: method
     type(curv_gygi_t)   :: gygi
     type(curv_briggs_t) :: briggs
     type(curv_modine_t) :: modine

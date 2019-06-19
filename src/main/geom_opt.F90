@@ -54,6 +54,7 @@ module geom_opt_oct_m
   public :: geom_opt_run
 
   type geom_opt_t
+    private
     integer  :: method
     FLOAT    :: step
     FLOAT    :: line_tol

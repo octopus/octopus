@@ -63,6 +63,7 @@ module xc_functl_oct_m
 #endif
 
   type xc_functl_t
+    ! Components are public by default
     integer         :: family            !< LDA, GGA, etc.
     integer         :: type              !< exchange, correlation, or exchange-correlation
     integer         :: id                !< identifier
@@ -70,9 +71,9 @@ module xc_functl_oct_m
     integer         :: spin_channels     !< XC_UNPOLARIZED | XC_POLARIZED
     integer         :: flags             !< XC_FLAGS_HAVE_EXC + XC_FLAGS_HAVE_VXC + ...
 
-    type(XC_F90(pointer_t)) :: conf         !< the pointer used to call the library
-    type(XC_F90(pointer_t)) :: info         !< information about the functional
-    type(libvdwxc_t)        :: libvdwxc     !< libvdwxc data for van der Waals functionals
+    type(XC_F90(pointer_t))          :: conf         !< the pointer used to call the library
+    type(XC_F90(pointer_t)), private :: info         !< information about the functional
+    type(libvdwxc_t)                 :: libvdwxc     !< libvdwxc data for van der Waals functionals
 
     integer         :: LB94_modified     !< should I use a special version of LB94 that
     FLOAT           :: LB94_threshold    !< needs to be handled specially

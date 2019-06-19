@@ -57,6 +57,7 @@ module kdotp_oct_m
        int2str      
 
   type kdotp_t
+    private
     type(pert_t) :: perturbation
     type(pert_t) :: perturbation2
 

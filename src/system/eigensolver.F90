@@ -57,21 +57,22 @@ module eigensolver_oct_m
     eigensolver_run
 
   type eigensolver_t
-    integer :: es_type    !< which eigensolver to use
+    private
+    integer, public :: es_type    !< which eigensolver to use
 
-    FLOAT   :: tolerance
-    integer :: es_maxiter
+    FLOAT,   public :: tolerance
+    integer         :: es_maxiter
 
-    FLOAT   :: current_rel_dens_error
-    FLOAT   :: imag_time
+    FLOAT,   public :: current_rel_dens_error
+    FLOAT           :: imag_time
 
     !> Stores information about how well it performed.
-    FLOAT, pointer   :: diff(:, :)
-    integer          :: matvec
-    integer, pointer :: converged(:)
+    FLOAT, pointer,   public :: diff(:, :)
+    integer,          public :: matvec
+    integer, pointer, public :: converged(:)
 
     !> Stores information about the preconditioning.
-    type(preconditioner_t) :: pre
+    type(preconditioner_t), public :: pre
 
     type(subspace_t) :: sdiag
 
@@ -87,6 +88,7 @@ module eigensolver_oct_m
     logical :: orthogonalize_to_all
     integer :: conjugate_direction
     logical :: additional_terms
+    FLOAT   :: energy_change_threshold
   end type eigensolver_t
 
 
@@ -228,6 +230,22 @@ contains
       if(eigens%additional_terms) then
         call messages_experimental("The additional terms for the CG eigensolver are not tested for all cases.")
       end if
+
+      !%Variable CGEnergyChangeThreshold
+      !%Type float
+      !%Section SCF::Eigensolver
+      !%Default 0.1
+      !%Description
+      !% Used by the cg solver only.
+      !% For each band, the CG iterations are stopped when the change in energy is smaller than the
+      !% change in the first iteration multiplied by this factor. This limits the number of CG
+      !% iterations for each band, while still showing good convergence for the SCF cycle. The criterion
+      !% is discussed in Sec. V.B.6 of Payne et al. (1992), Rev. Mod. Phys. 64, 4.
+      !% The default value is 0.1, which is usually a good choice for LDA and GGA potentials. If you
+      !% are solving the OEP equation, you might want to set this value to 1e-3 or smaller. In general,
+      !% smaller values might help if you experience convergence problems.
+      !%End
+      call parse_variable('CGEnergyChangeThreshold', CNST(0.1), eigens%energy_change_threshold)
 
     case(RS_PLAN)
     case(RS_EVO)
@@ -453,10 +471,8 @@ contains
           call deigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
           call deigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, &
-            eigens%converged(ik), ik, eigens%diff(:, ik), &
-            orthogonalize_to_all=eigens%orthogonalize_to_all, &
-            conjugate_direction=eigens%conjugate_direction, &
-            additional_terms=eigens%additional_terms)
+            eigens%converged(ik), ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, &
+            eigens%conjugate_direction, eigens%additional_terms, eigens%energy_change_threshold)
         case(RS_PLAN)
           call deigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
@@ -492,17 +508,14 @@ contains
         case(RS_CG)
            if(eigens%folded_spectrum) then
              call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, & 
-                                eigens%diff(:, ik), shift=eigens%spectrum_shift, &
-                                orthogonalize_to_all=eigens%orthogonalize_to_all, &
-                                conjugate_direction=eigens%conjugate_direction, &
-                                additional_terms=eigens%additional_terms)
+                                eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
+                                eigens%additional_terms, eigens%energy_change_threshold, &
+                                shift=eigens%spectrum_shift)
 
            else
               call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
-                                eigens%diff(:, ik), &
-                                orthogonalize_to_all=eigens%orthogonalize_to_all, &
-                                conjugate_direction=eigens%conjugate_direction, &
-                                additional_terms=eigens%additional_terms)
+                                eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
+                                eigens%additional_terms, eigens%energy_change_threshold)
 
            end if
         case(RS_PLAN)

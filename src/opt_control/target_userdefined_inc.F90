@@ -20,9 +20,9 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_init_userdefined(gr, tg, td)
-    type(grid_t),     intent(in)    :: gr
-    type(target_t),   intent(inout) :: tg
-    type(td_t),       intent(in)    :: td
+    type(grid_t),   intent(in)    :: gr
+    type(target_t), intent(inout) :: tg
+    type(td_t),     intent(in)    :: td
 
     integer             :: no_states, ib, ip, idim, inst, inik, id, ist, ik
     type(block_t)       :: blk
@@ -118,12 +118,12 @@
 
   ! ----------------------------------------------------------------------
   subroutine target_output_userdefined(tg, gr, dir, geo, hm, outp)
-    type(target_t), intent(inout) :: tg
-    type(grid_t), intent(inout)   :: gr
-    character(len=*), intent(in)  :: dir
-    type(geometry_t),       intent(in)  :: geo
-    type(hamiltonian_t),    intent(in)  :: hm
-    type(output_t),         intent(in)  :: outp
+    type(target_t),      intent(in) :: tg
+    type(grid_t),        intent(in) :: gr
+    character(len=*),    intent(in) :: dir
+    type(geometry_t),    intent(in) :: geo
+    type(hamiltonian_t), intent(in) :: hm
+    type(output_t),      intent(in) :: outp
     PUSH_SUB(target_output_userdefined)
     
     call io_mkdir(trim(dir))
@@ -137,9 +137,9 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_userdefined(tg, gr, psi) result(j1)
-    type(target_t),   intent(inout) :: tg
-    type(grid_t),     intent(inout) :: gr
-    type(states_t),   intent(inout) :: psi
+    type(target_t), intent(in) :: tg
+    type(grid_t),   intent(in) :: gr
+    type(states_t), intent(in) :: psi
 
     integer :: ik, ist
     CMPLX, allocatable :: zpsi(:, :), zst(:, :)
@@ -170,9 +170,9 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_userdefined(tg, gr, psi_in, chi_out)
-    type(target_t),    intent(inout) :: tg
-    type(grid_t),      intent(inout) :: gr
-    type(states_t),    intent(inout) :: psi_in
+    type(target_t),    intent(in)    :: tg
+    type(grid_t),      intent(in)    :: gr
+    type(states_t),    intent(in)    :: psi_in
     type(states_t),    intent(inout) :: chi_out
 
     integer :: ik, ist

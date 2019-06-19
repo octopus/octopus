@@ -34,6 +34,7 @@ module projector_matrix_oct_m
     projector_matrix_deallocate
 
   type projector_matrix_t
+    ! Components are public by default
     integer, pointer :: map(:)
     FLOAT,   pointer :: projectors(:, :)
     FLOAT,   pointer :: scal(:)

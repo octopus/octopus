@@ -60,6 +60,7 @@ module preconditioners_oct_m
     preconditioner_obsolete_variables
 
   type preconditioner_t
+    private
     integer :: which
 
     type(nl_operator_t) :: op
@@ -135,6 +136,9 @@ contains
       !% If you observe that the first eigenvectors are not converging
       !% properly, especially for periodic systems, you should
       !% increment this value.
+      !%
+      !% The allowed range for this parameter is between 0.5 and 1.0.
+      !% For other values, the SCF may converge to wrong results.
       !%End
       default_alpha = CNST(0.5)
       if(simul_box_is_periodic(gr%sb)) default_alpha = CNST(0.6)
@@ -142,6 +146,11 @@ contains
       call parse_variable('PreconditionerFilterFactor', default_alpha, alpha)
 
       call messages_print_var_value(stdout, 'PreconditionerFilterFactor', alpha)
+
+      ! check for correct interval of alpha
+      if (alpha < CNST(0.5) .or. alpha > CNST(1.0)) then
+        call messages_input_error('PreconditionerFilterFactor')
+      end if
 
       ns = this%op%stencil%size
 

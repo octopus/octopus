@@ -35,6 +35,7 @@ module mesh_cube_map_oct_m
     mesh_cube_map_end
 
   type mesh_cube_map_t
+    ! Components are public by default
     integer            :: nmap      !< The number of maps
     integer, pointer   :: map(:, :)
     type(accel_mem_t) :: map_buffer

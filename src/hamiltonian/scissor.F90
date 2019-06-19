@@ -51,7 +51,8 @@ module scissor_oct_m
        scissor_end
 
   type scissor_t
-    logical                 :: apply
+    private
+    logical, public         :: apply
     FLOAT                   :: gap
     type(states_t)          :: gs_st
   end type scissor_t

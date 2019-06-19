@@ -33,10 +33,11 @@ module debug_oct_m
     debug_disable
 
   type debug_t
-    logical :: info
-    logical :: trace
-    logical :: trace_term
-    logical :: trace_file
+    private
+    logical, public :: info
+    logical, public :: trace
+    logical, public :: trace_term
+    logical, public :: trace_file
     logical :: extra_checks
     integer :: bits    
   end type debug_t

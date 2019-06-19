@@ -62,7 +62,8 @@ module linear_response_oct_m
 
 
   type lr_t
-    logical :: is_allocated, is_allocated_rho
+    ! Components are public by default
+    logical, private :: is_allocated, is_allocated_rho
      
     !> the real quantities
     FLOAT, pointer :: ddl_rho(:,:)     !< response of the density

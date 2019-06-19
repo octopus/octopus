@@ -71,6 +71,7 @@ module scf_oct_m
   use varinfo_oct_m
   use vdw_ts_oct_m
 !  use xc_functl_oct_m
+  use walltimer_oct_m
   use XC_F90(lib_m)
   
   implicit none
@@ -90,10 +91,11 @@ module scf_oct_m
   
   !> some variables used for the SCF cycle
   type scf_t
-    integer :: max_iter   !< maximum number of SCF iterations
+    private
+    integer, public :: max_iter   !< maximum number of SCF iterations
     integer :: max_iter_berry  !< max number of electronic iterations before updating density, for Berry potential
 
-    FLOAT :: lmm_r
+    FLOAT, public :: lmm_r
 
     ! several convergence criteria
     FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev, conv_abs_force
@@ -115,7 +117,7 @@ module scf_oct_m
     integer :: mixdim1
     logical :: forced_finish !< remember if 'touch stop' was triggered earlier.
     type(lda_u_mixer_t) :: lda_u_mix
-    type(grid_t), pointer :: gr
+    type(grid_t), pointer :: gr 
   end type scf_t
 
 contains
@@ -134,7 +136,7 @@ contains
     FLOAT :: rmin
     integer :: mixdefault, ierr
     type(type_t) :: mix_type
-    
+
     PUSH_SUB(scf_init)
 
     !%Variable MaximumIter
@@ -538,7 +540,7 @@ contains
     type(restart_t), optional, intent(in)    :: restart_load
     type(restart_t), optional, intent(in)    :: restart_dump
 
-    logical :: finish, gs_run_, berry_conv
+    logical :: finish, gs_run_, berry_conv, forced_finish_tmp
     integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
     real(8) :: etime, itime
@@ -549,7 +551,7 @@ contains
     FLOAT, allocatable :: vhxc_old(:,:)
     FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
     type(batch_t), allocatable :: psioutb(:, :)
-    
+
     PUSH_SUB(scf_run)
 
     if(scf%forced_finish) then
@@ -681,6 +683,7 @@ contains
 
     ! SCF cycle
     itime = loct_clock()
+    
     do iter = 1, scf%max_iter
       call profiling_in(prof, "SCF_CYCLE")
 
@@ -858,7 +861,12 @@ contains
 
 
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
-      scf%forced_finish = clean_stop(mc%master_comm)
+      scf%forced_finish = clean_stop(mc%master_comm) .or. walltimer_alarm()
+
+#ifdef HAVE_MPI
+      call MPI_Allreduce(scf%forced_finish, forced_finish_tmp, 1, MPI_LOGICAL, MPI_LOR, mc%master_comm, mpi_err)
+      scf%forced_finish = forced_finish_tmp
+#endif      
 
       if (finish .and. st%modelmbparticles%nparticle > 0) then
         call modelmb_sym_all_states (gr, st, geo)
@@ -866,8 +874,9 @@ contains
 
       if (gs_run_ .and. present(restart_dump)) then 
         ! save restart information
+         
         if ( (finish .or. (modulo(iter, outp%restart_write_interval) == 0) &
-          .or. iter == scf%max_iter .or. scf%forced_finish)) then
+          .or. iter == scf%max_iter .or. scf%forced_finish) ) then
 
           call states_dump(restart_dump, st, gr, ierr, iter=iter) 
           if (ierr /= 0) then

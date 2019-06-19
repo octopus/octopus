@@ -73,9 +73,9 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_spin(tg, gr, psi) result(j1)
-    type(target_t),   intent(inout) :: tg
-    type(grid_t),     intent(inout) :: gr
-    type(states_t),   intent(inout) :: psi
+    type(target_t),   intent(in) :: tg
+    type(grid_t),     intent(in) :: gr
+    type(states_t),   intent(in) :: psi
     
     integer :: i, j
     CMPLX, allocatable :: zpsi(:, :)
@@ -103,9 +103,9 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_spin(tg, gr, psi_in, chi_out)
-    type(target_t),    intent(inout) :: tg
-    type(grid_t),      intent(inout) :: gr
-    type(states_t),    intent(inout) :: psi_in
+    type(target_t),    intent(in)    :: tg
+    type(grid_t),      intent(in)    :: gr
+    type(states_t),    intent(in)    :: psi_in
     type(states_t),    intent(inout) :: chi_out
     
     integer :: i, j

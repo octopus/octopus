@@ -49,6 +49,7 @@ module poisson_corrections_oct_m
   FLOAT, parameter :: alpha_ = M_FIVE
 
   type poisson_corr_t
+    private
     integer :: method
     integer :: maxl
     FLOAT, pointer :: phi(:, :)

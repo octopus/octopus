@@ -229,6 +229,7 @@ contains
     !% <tt>td.general/projections.XXX</tt>. Only use this option if
     !% you really need it, as it might be computationally expensive. See <tt>TDProjStateStart</tt>.
     !% The output interval of this quantity is controled by the variable <tt>TDOutputComputeInterval</tt>
+    !% In case of states parallelization, all the ground-state states are stored by each task.
     !%Option local_mag_moments bit(9)
     !% If set, outputs the local magnetic moments, integrated in sphere centered around each atom.
     !% The radius of the sphere can be set with <tt>LocalMagneticMomentsSphereRadius</tt>.
@@ -356,9 +357,9 @@ contains
 
     if(writ%out(OUT_PROJ)%write .or. writ%out(OUT_POPULATIONS)%write &
       .or.writ%out(OUT_KP_PROJ)%write .or. writ%out(OUT_N_EX)%write) then
-      if (.not.writ%out(OUT_KP_PROJ)%write.and. &
-          .not.writ%out(OUT_N_EX)%write.and. st%parallel_in_states) then
-        message(1) = "Options TDOutput = td_occup and populations are not implemented for parallel in states."
+
+      if(st%parallel_in_states .and. writ%out(OUT_POPULATIONS)%write) then
+        message(1) = "Options TDOutput = populations are not implemented for parallel in states."
         call messages_fatal(1)
       end if
 
@@ -368,10 +369,10 @@ contains
       end if
       
       if(.not.writ%out(OUT_KP_PROJ)%write.and..not.writ%out(OUT_N_EX)%write) then
-         call states_copy(writ%gs_st, st, exclude_wfns = .true., exclude_eigenval = .true.)
+        call states_copy(writ%gs_st, st, exclude_wfns = .true., exclude_eigenval = .true.)
       else
-         ! we want the same layout of gs_st as st
-         call states_copy(writ%gs_st, st)
+        ! we want the same layout of gs_st as st
+        call states_copy(writ%gs_st, st)
       end if
 
       ! clean up all the stuff we have to reallocate
@@ -381,8 +382,8 @@ contains
 
       if(.not.writ%out(OUT_KP_PROJ)%write.and..not.writ%out(OUT_N_EX)%write) then
         if(ierr == 0) &
-          call states_look(restart_gs, ii, jj, kk, ierr)
-          writ%gs_st%nst = min(writ%gs_st%nst, kk)
+          call states_look(restart_gs, ii, jj, writ%gs_st%nst, ierr)
+          writ%gs_st%st_end = writ%gs_st%nst
         if(ierr /= 0) then
           message(1) = "Unable to read states information."
           call messages_fatal(1)
@@ -407,26 +408,35 @@ contains
         else
            writ%gs_st%st_start = 1
         end if
-       
+
+        call states_deallocate_wfns(writ%gs_st)
+
+        writ%gs_st%parallel_in_states = .false.
+
         ! allocate memory
         SAFE_ALLOCATE(writ%gs_st%occ(1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
         SAFE_ALLOCATE(writ%gs_st%eigenval(1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
-        
+
+        !We want all the task to have all the states
+        !States can be distibuted for the states we propagate.
         SAFE_ALLOCATE(writ%gs_st%node(1:writ%gs_st%nst))
         writ%gs_st%node(:)  = 0
-        
+
         writ%gs_st%eigenval = huge(writ%gs_st%eigenval)
         writ%gs_st%occ      = M_ZERO
         if(writ%gs_st%d%ispin == SPINORS) then
+          SAFE_DEALLOCATE_P(writ%gs_st%spin)
           SAFE_ALLOCATE(writ%gs_st%spin(1:3, 1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
         end if
-        
+
         call states_allocate_wfns(writ%gs_st, gr%mesh, TYPE_CMPLX)
+        
       end if
  
       call states_load(restart_gs, writ%gs_st, gr, ierr, label = ': gs for TDOutput')
 
-      if(ierr /= 0 .and. ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik*writ%gs_st%d%dim) then
+      if(ierr /= 0 .and. ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik &
+                                      *writ%gs_st%d%dim*writ%gs_st%mpi_grp%size) then
         message(1) = "Unable to read wavefunctions for TDOutput."
         call messages_fatal(1)
       end if
@@ -730,7 +740,7 @@ contains
   subroutine td_write_iter(writ, outp, gr, st, hm, geo, kick, dt,ks, iter)
     type(td_write_t),    intent(inout) :: writ !< Write object
     type(output_t),      intent(in)    :: outp
-    type(grid_t),        intent(inout) :: gr   !< The grid
+    type(grid_t),        intent(in)    :: gr   !< The grid
     type(states_t),      intent(inout) :: st   !< State object
     type(hamiltonian_t), intent(inout) :: hm   !< Hamiltonian object
     type(geometry_t),    intent(inout) :: geo  !< Geometry object
@@ -837,7 +847,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_data(writ, gr, st, hm, ks, outp, geo, iter, dt)
     type(td_write_t),     intent(inout) :: writ
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
     type(v_ks_t),         intent(in)    :: ks
@@ -869,7 +879,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_output(writ, gr, st, hm, ks, outp, geo, iter, dt)
     type(td_write_t),     intent(inout) :: writ
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
     type(v_ks_t),         intent(in)    :: ks
@@ -900,8 +910,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine td_write_spin(out_spin, gr, st, iter)
-    type(c_ptr), intent(inout)       :: out_spin
-    type(grid_t),      intent(inout) :: gr
+    type(c_ptr),       intent(inout) :: out_spin
+    type(grid_t),      intent(in)    :: gr
     type(states_t),    intent(in)    :: st
     integer,           intent(in)    :: iter
 
@@ -953,7 +963,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_local_magnetic_moments(out_magnets, gr, st, geo, lmm_r, iter)
     type(c_ptr),              intent(inout) :: out_magnets
-    type(grid_t),             intent(inout) :: gr
+    type(grid_t),             intent(in)    :: gr
     type(states_t),           intent(in)    :: st
     type(geometry_t),         intent(in)    :: geo
     FLOAT,                    intent(in)    :: lmm_r
@@ -1011,7 +1021,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_angular(out_angular, gr, geo, hm, st, kick, iter)
     type(c_ptr),            intent(inout) :: out_angular
-    type(grid_t),           intent(inout) :: gr
+    type(grid_t),           intent(in)    :: gr
     type(geometry_t),       intent(inout) :: geo
     type(hamiltonian_t),    intent(inout) :: hm
     type(states_t),         intent(inout) :: st
@@ -1566,7 +1576,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_acc(out_acc, gr, geo, st, hm, dt, iter)
     type(c_ptr),         intent(inout) :: out_acc
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(inout) :: geo
     type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(inout) :: hm
@@ -1615,7 +1625,7 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_vel(out_vel, gr, st, iter)
     type(c_ptr),         intent(inout) :: out_vel
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(inout) :: st
     integer,             intent(in)    :: iter
 
@@ -2457,12 +2467,12 @@ contains
 
 
   subroutine td_write_proj_kp(out_proj_kp, hm,gr, st, gs_st, iter)
-    type(c_ptr),       intent(inout) :: out_proj_kp
-    type(hamiltonian_t), intent(inout)  :: hm
-    type(grid_t),      intent(inout) :: gr
-    type(states_t),    intent(in)    :: st
-    type(states_t),    intent(inout) :: gs_st
-    integer,           intent(in)    :: iter
+    type(c_ptr),         intent(inout) :: out_proj_kp
+    type(hamiltonian_t), intent(inout) :: hm
+    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(in)    :: st
+    type(states_t),      intent(inout) :: gs_st
+    integer,             intent(in)    :: iter
 
     CMPLX, allocatable :: proj(:,:), psi(:,:,:), gs_psi(:,:,:), temp_state(:,:)
     character(len=80) :: filename1, filename2
@@ -2560,12 +2570,12 @@ contains
 
   !---------------------------------------
   subroutine td_write_floquet(out_floquet, hm, gr, st, ks, iter)
-    type(c_ptr),       intent(inout)   :: out_floquet
+    type(c_ptr),         intent(inout) :: out_floquet
     type(hamiltonian_t), intent(inout) :: hm
-    type(grid_t),      intent(inout)   :: gr
-    type(states_t),    intent(inout)   :: st !< at iter=0 this is the groundstate
-    type(v_ks_t),      intent(in)      :: ks
-    integer,           intent(in)      :: iter 
+    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(inout) :: st !< at iter=0 this is the groundstate
+    type(v_ks_t),        intent(in)    :: ks
+    integer,             intent(in)    :: iter 
 
     CMPLX, allocatable :: hmss(:,:), psi(:,:,:), hpsi(:,:,:), temp_state1(:,:)
     CMPLX, allocatable :: HFloquet(:,:,:), HFloq_eff(:,:), temp(:,:)
