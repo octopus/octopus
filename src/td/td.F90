@@ -696,6 +696,10 @@ contains
         if(family_is_mgga(sys%ks%xc_family)) then
           call messages_not_implemented('TDFreezeOrbitals with MGGAs')
         end if
+
+        if(hm%lda_u_level /= DFT_U_NONE) then
+          call messages_not_implemented('TDFreezeOrbitals with DFT+U')
+        end if
       end if
 
 
