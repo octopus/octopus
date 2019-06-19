@@ -59,7 +59,7 @@
 
     call io_init()
 
-    call unit_system_init()
+    call unit_system_init(parser)
 
     call spectrum_init(spectrum, &
       default_energy_step = units_to_atomic(unit_invcm, CNST(0.2)), &
@@ -76,7 +76,7 @@
     !% time step used to calculate the vibrational spectrum.
     !%End
 
-    call messages_obsolete_variable('PropagationSpectrumTimeStepFactor', 'VibrationalSpectrumTimeStepFactor')
+    call messages_obsolete_variable(parser, 'PropagationSpectrumTimeStepFactor', 'VibrationalSpectrumTimeStepFactor')
     call parse_variable('VibrationalSpectrumTimeStepFactor', 10, skip)
     if(skip <= 0) call messages_input_error('VibrationalSpectrumTimeStepFactor')
 
@@ -85,8 +85,8 @@
     if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
 
     call space_init(space)
-    call geometry_init(geo, space)
-    call simul_box_init(sb, geo, space)
+    call geometry_init(geo, parser, space)
+    call simul_box_init(sb, parser, geo, space)
 
     ! Opens the coordinates files.
     iunit = io_open('td.general/coordinates', action='read')

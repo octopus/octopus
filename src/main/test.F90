@@ -64,13 +64,15 @@ module test_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine test_run()
+  subroutine test_run(parser)
+    type(parser_t),       intent(in)    :: parser
+        
     type(test_parameters_t) :: param
     integer :: test_mode
     
     PUSH_SUB(test_run)
 
-    call messages_obsolete_variable('WhichTest', 'TestMode')
+    call messages_obsolete_variable(parser, 'WhichTest', 'TestMode')
 
     !%Variable TestMode
     !%Type integer
@@ -100,8 +102,8 @@ contains
     !%End
     call parse_variable('TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
-    call messages_obsolete_variable('TestDerivatives', 'TestType')
-    call messages_obsolete_variable('TestOrthogonalization', 'TestType')
+    call messages_obsolete_variable(parser, 'TestDerivatives', 'TestType')
+    call messages_obsolete_variable(parser, 'TestOrthogonalization', 'TestType')
   
     !%Variable TestType
     !%Type integer
@@ -177,39 +179,40 @@ contains
   
     select case(test_mode)
     case(OPTION__TESTMODE__HARTREE)
-      call test_hartree(param)
+      call test_hartree(param, parser)
     case(OPTION__TESTMODE__DERIVATIVES)
-      call test_derivatives(param)
+      call test_derivatives(param, parser)
     case(OPTION__TESTMODE__ORTHOGONALIZATION)
-      call test_orthogonalization(param)
+      call test_orthogonalization(param, parser)
     case(OPTION__TESTMODE__INTERPOLATION)
-      call test_interpolation(param)
+      call test_interpolation(param, parser)
     case(OPTION__TESTMODE__ION_INTERACTION)
-      call test_ion_interaction()
+      call test_ion_interaction(parser)
     case(OPTION__TESTMODE__PROJECTOR)
-      call test_projector(param)
+      call test_projector(param, parser)
     case(OPTION__TESTMODE__DFT_U)
-      call test_dft_u(param)
+      call test_dft_u(param, parser)
     case(OPTION__TESTMODE__HAMILTONIAN_APPLY)
-      call test_hamiltonian(param)
+      call test_hamiltonian(param, parser)
     case(OPTION__TESTMODE__DENSITY_CALC)
-      call test_density_calc(param)
+      call test_density_calc(param, parser)
     end select
   
     POP_SUB(test_run)
   end subroutine test_run
 
   ! ---------------------------------------------------------
-  subroutine test_hartree(param)
+  subroutine test_hartree(param, parser)
     type(test_parameters_t), intent(in) :: param
-    
+    type(parser_t),          intent(in) :: parser
+
     type(system_t) :: sys
 
     PUSH_SUB(test_hartree)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
-    call system_init(sys)
+    call system_init(sys, parser)
     call poisson_test(sys%gr%mesh, param%repetitions)
     call system_end(sys)
 
@@ -217,8 +220,9 @@ contains
   end subroutine test_hartree
 
  ! ---------------------------------------------------------
-  subroutine test_projector(param)
+  subroutine test_projector(param, parser)
     type(test_parameters_t), intent(in) :: param
+    type(parser_t),          intent(in) :: parser
     
     type(system_t) :: sys
     type(epot_t) :: ep
@@ -234,13 +238,13 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys)
+    call system_init(sys, parser)
 
     call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
   
     !Initialize external potential
-    call epot_init(ep, sys%gr, sys%geo, SPINORS, 1, XC_FAMILY_NONE)
+    call epot_init(ep, sys%parser, sys%gr, sys%geo, SPINORS, 1, XC_FAMILY_NONE)
     call epot_generate(ep, sys%gr, sys%geo, sys%st)
    
     !Initialize external potential
@@ -268,9 +272,10 @@ contains
   end subroutine test_projector
 
   ! ---------------------------------------------------------
-  subroutine test_dft_u(param)
+  subroutine test_dft_u(param, parser)
     type(test_parameters_t), intent(in) :: param
-
+    type(parser_t),          intent(in) :: parser
+    
     type(system_t) :: sys
     type(batch_t), pointer :: epsib
     integer :: itime
@@ -287,7 +292,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys)
+    call system_init(sys, parser)
 
     call states_allocate_wfns(sys%st, sys%gr%mesh)
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -356,8 +361,9 @@ contains
   end subroutine test_dft_u
 
   ! ---------------------------------------------------------
-  subroutine test_hamiltonian(param)
+  subroutine test_hamiltonian(param, parser)
     type(test_parameters_t), intent(in) :: param
+    type(parser_t),          intent(in) :: parser
     
     type(system_t) :: sys
     type(batch_t), pointer :: hpsib
@@ -393,21 +399,20 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys)
+    call system_init(sys, parser)
 
     call states_allocate_wfns(sys%st, sys%gr%mesh)
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
 
     !Initialize external potential
-    call simul_box_init(sb, sys%geo, sys%space)
-    call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
+    call simul_box_init(sb, sys%parser, sys%geo, sys%space)
+    call hamiltonian_init(hm, sys%parser, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
              family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
     if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_pack(sys%st)
     call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, hm, sys%st, sys%geo)
+    call v_ks_calc(sys%ks, sys%parser, hm, sys%st, sys%geo)
 
-   
     call boundaries_set(sys%gr%der%boundaries, sys%st%group%psib(1, 1)) 
 
     SAFE_ALLOCATE(hpsib)
@@ -451,9 +456,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine test_density_calc(param)
+  subroutine test_density_calc(param, parser)
     type(test_parameters_t), intent(in) :: param
-
+    type(parser_t),          intent(in) :: parser
+    
     type(system_t) :: sys
     integer :: itime
 
@@ -466,7 +472,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys)
+    call system_init(sys, parser)
 
     call states_allocate_wfns(sys%st, sys%gr%mesh)
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -488,14 +494,15 @@ contains
 
 
 ! ---------------------------------------------------------
-  subroutine test_derivatives(param)
+  subroutine test_derivatives(param, parser)
     type(test_parameters_t), intent(in) :: param
+    type(parser_t),          intent(in) :: parser
     
     type(system_t) :: sys
 
     PUSH_SUB(test_derivatives)
 
-    call system_init(sys)
+    call system_init(sys, parser)
 
     message(1) = 'Info: Testing the finite-differences derivatives.'
     message(2) = ''
@@ -524,8 +531,9 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine test_orthogonalization(param)
+  subroutine test_orthogonalization(param, parser)
     type(test_parameters_t), intent(in) :: param
+    type(parser_t),          intent(in) :: parser
     
     type(system_t) :: sys
 
@@ -534,7 +542,7 @@ contains
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
     call calc_mode_par_set_scalapack_compat()
 
-    call system_init(sys)
+    call system_init(sys, parser)
 
     message(1) = 'Info: Testing orthogonalization.'
     message(2) = ''
@@ -559,14 +567,15 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine test_interpolation(param)
+  subroutine test_interpolation(param, parser)
     type(test_parameters_t), intent(in) :: param
-
+    type(parser_t),          intent(in) :: parser
+    
     type(system_t) :: sys
 
     PUSH_SUB(test_interpolation)
 
-    call system_init(sys)
+    call system_init(sys, parser)
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
       call messages_write('Info: Testing real interpolation routines')
@@ -595,12 +604,14 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine test_ion_interaction()
+  subroutine test_ion_interaction(parser)
+    type(parser_t),          intent(in) :: parser
+    
     type(system_t) :: sys
 
     PUSH_SUB(test_ion_interaction)
 
-    call system_init(sys)
+    call system_init(sys, parser)
 
     call ion_interaction_test(sys%geo, sys%gr%sb)
 

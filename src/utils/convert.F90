@@ -76,9 +76,9 @@ program oct_convert
   call messages_print_stress(stdout, "Convert mode")
   call messages_print_stress(stdout)
 
-  call restart_module_init()
+  call restart_module_init(parser)
   call fft_all_init()
-  call unit_system_init()
+  call unit_system_init(parser)
 
   call convert()
 
@@ -111,7 +111,7 @@ contains
     PUSH_SUB(convert)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-    call system_init(sys)
+    call system_init(sys, parser)
 
     message(1) = 'Info: Converting files'
     message(2) = ''
@@ -252,7 +252,7 @@ contains
 
     CASE(FOURIER_TRANSFORM)
       ! Compute Fourier transform 
-      call convert_transform(sys%gr%mesh, sys%geo, sys%mc, basename, folder, &
+      call convert_transform(sys%gr%mesh, sys%parser, sys%geo, sys%mc, basename, folder, &
          c_start, c_end, c_step, sys%outp, subtract_file, &
          ref_name, ref_folder)
 
@@ -396,9 +396,10 @@ contains
   ! ---------------------------------------------------------
   !> Giving a range of input files, it computes the Fourier transform
   !! of the file.
-  subroutine convert_transform(mesh, geo, mc, basename, in_folder, c_start, c_end, c_step, outp, & 
+  subroutine convert_transform(mesh, parser, geo, mc, basename, in_folder, c_start, c_end, c_step, outp, & 
        subtract_file, ref_name, ref_folder)
     type(mesh_t)    , intent(in)    :: mesh
+    type(parser_t),   intent(in)    :: parser
     type(geometry_t), intent(in)    :: geo
     type(multicomm_t), intent(in)   :: mc
     character(len=*), intent(inout) :: basename       !< File name
@@ -567,7 +568,7 @@ contains
 
     !TODO: set system variable common for all the program in 
     !      order to use call kick_init(kick, sy%st%d%nspin, sys%space%dim, sys%geo%periodic_dim)
-    call kick_init(kick, 1, mesh%sb%dim, geo%periodic_dim)
+    call kick_init(kick, parser, 1, mesh%sb%dim, geo%periodic_dim)
 
     e_start = nint(min_energy / dw)
     e_end   = nint(max_energy / dw)

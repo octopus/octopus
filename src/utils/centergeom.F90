@@ -50,11 +50,11 @@ program centergeom
   call messages_init(parser)
 
   call io_init()
-  call unit_system_init()
+  call unit_system_init(parser)
 
   call space_init(space)
-  call geometry_init(geo, space)
-  call simul_box_init(sb, geo, space)
+  call geometry_init(geo, parser, space)
+  call simul_box_init(sb, parser, geo, space)
 
   call xyz_adjust_it(geo)
   call geometry_write_xyz(geo, './adjusted')
@@ -68,8 +68,6 @@ program centergeom
 
   call parser_end(parser)
 
-  call parser_end(parser)
-  
   call global_end()
 end program centergeom
 

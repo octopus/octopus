@@ -87,18 +87,18 @@ program oct_floquet
 
   call messages_experimental("oct-floquet utility")
   call fft_all_init()
-  call unit_system_init()
-  call restart_module_init()
+  call unit_system_init(parser)
+  call restart_module_init(parser)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  call system_init(sys)
-  call simul_box_init(sb, sys%geo, sys%space)
+  call system_init(sys, parser)
+  call simul_box_init(sb, sys%parser, sys%geo, sys%space)
   ! make shortcut copies
   st = sys%st
   gr = sys%gr
 
   ! generate the full hamiltonian following the sequence in td_init
-  call hamiltonian_init(hm, gr, sys%geo, st, sys%ks%theory_level, sys%ks%xc_family, &
+  call hamiltonian_init(hm, sys%parser, gr, sys%geo, st, sys%ks%theory_level, sys%ks%xc_family, &
               family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
   call hamiltonian_epot_generate(hm, gr, sys%geo, st, time=M_ZERO)
   call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
@@ -115,14 +115,14 @@ program oct_floquet
   end if
 
   call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
-  if(ierr == 0) call states_load(restart, st, gr, ierr, label = ": gs")
+  if(ierr == 0) call states_load(restart, sys%parser, st, gr, ierr, label = ": gs")
   if (ierr /= 0) then
      message(1) = 'Unable to read ground-state wavefunctions.'
      call messages_fatal(1)
   end if
 
   call density_calc(st, gr, st%rho)
-  call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = M_ZERO)
+  call v_ks_calc(sys%ks, sys%parser, hm, st, sys%geo, calc_eigenval=.true., time = M_ZERO)
   call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
 
   call floquet_init()

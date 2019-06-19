@@ -344,7 +344,8 @@ contains
 
   ! ---------------------------------------------------------  
 
-  logical function parse_is_defined(name) result(isdef)
+  logical function parse_is_defined(self, name) result(isdef)
+    type(parser_t), intent(in)   :: self
     character(len=*), intent(in) :: name
 
     isdef = parse_isdef(name) /= 0

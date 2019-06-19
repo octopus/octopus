@@ -58,7 +58,7 @@ program casida_spectrum
   call parser_init(parser)
   call messages_init(parser)
   call io_init()
-  call unit_system_init()
+  call unit_system_init(parser)
   call space_init(cs%space)
 
   ! Reads the spin components. This is read here, as well as in states_init.
@@ -146,7 +146,7 @@ program casida_spectrum
     end if
 
     ! apply rotation to geometry
-    call geometry_init(geo, cs%space)
+    call geometry_init(geo, parser, cs%space)
     do iatom = 1, geo%natoms
       coord(1:cs%space%dim) = geo%atom(iatom)%x(1:cs%space%dim)
       geo%atom(iatom)%x(1:cs%space%dim) = matmul(rotation(1:cs%space%dim, 1:cs%space%dim), coord(1:cs%space%dim))

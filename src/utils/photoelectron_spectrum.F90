@@ -107,13 +107,13 @@ program photoelectron_spectrum
   call io_init()
 
   !* In order to initialize k-points
-  call unit_system_init()
+  call unit_system_init(parser)
   
   call space_init(space)
-  call geometry_init(geo, space)
-  call simul_box_init(sb, geo, space)
+  call geometry_init(geo, parser, space)
+  call simul_box_init(sb, parser, geo, space)
   gr%sb = sb
-  call states_init(st, gr, geo)
+  call states_init(st, parser, gr, geo)
   !*
 
   !Initialize variables
@@ -157,7 +157,7 @@ program photoelectron_spectrum
     if (simul_box_is_periodic(sb)) option = OPTION__PES_FLUX_SHAPE__PLN
     
     call parse_variable('PES_Flux_Shape', option, pflux%shape)
-    call pes_flux_reciprocal_mesh_gen(pflux, sb, st, 0, post = .true.)
+    call pes_flux_reciprocal_mesh_gen(pflux, parser, sb, st, 0, post = .true.)
     
     llg(1:dim) = pflux%ll(1:dim)
     ngpt = pflux%ngpt
@@ -233,7 +233,7 @@ program photoelectron_spectrum
 
   
   
-  call restart_module_init()
+  call restart_module_init(parser)
   call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr)
   if(ierr /= 0) then
     message(1) = "Unable to read time-dependent restart information."
@@ -390,7 +390,7 @@ program photoelectron_spectrum
   if(uEspan(2) > 0 ) Emax = uEspan(2)
 
 
-  call unit_system_init()
+  call unit_system_init(parser)
  
   write(message(1),'(a,f10.2,a2,f10.2,a2,f10.2,a1)') &
                    "Zenith axis: (",pol(1),", ",pol(2),", ",pol(3),")"
@@ -643,7 +643,7 @@ program photoelectron_spectrum
 
       if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP) /= 0) then
         
-        call io_function_read_how(sb, how, ignore_error = .true.)
+        call io_function_read_how(sb, parser, how, ignore_error = .true.)
         call messages_print_stress(stdout, "Full velocity map")
         
         filename = outfile('./PES_velocity_map', ist, ispin)

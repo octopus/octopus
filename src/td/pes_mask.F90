@@ -174,8 +174,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
+  subroutine pes_mask_init(mask, parser, mesh, sb, st, hm, max_iter,dt)
     type(pes_mask_t),         intent(out) :: mask
+    type(parser_t),           intent(in)  :: parser
     type(mesh_t), target,     intent(in)  :: mesh
     type(simul_box_t),        intent(in)  :: sb
     type(states_t),           intent(in)  :: st
@@ -368,8 +369,7 @@ contains
       call messages_fatal(1) 
     end if
  
-    
-     call messages_obsolete_variable('PESMaskEnlargeLev', 'PESMaskEnlargeFactor')
+    call messages_obsolete_variable(parser, 'PESMaskEnlargeLev', 'PESMaskEnlargeFactor')
     
     !%Variable PESMask2PEnlargeFactor
     !%Type float
@@ -413,7 +413,7 @@ contains
       call messages_fatal(1) 
     end if
     
-    call messages_obsolete_variable('PESMaskNFFTEnlargeLev', 'PESMask2PEnlargeFactor')
+    call messages_obsolete_variable(parser, 'PESMaskNFFTEnlargeLev', 'PESMask2PEnlargeFactor')
     
     
     mask%ll = 1

@@ -69,13 +69,13 @@ program harmonic_spectrum
   call messages_init(parser)
 
   call io_init()
-  call unit_system_init()
+  call unit_system_init(parser)
   call fft_all_init()
 
   call spectrum_init(spectrum)
 
-  call messages_obsolete_variable('HarmonicSpectrumPolarization')
-  call messages_obsolete_variable('HarmonicSpectrumMode')
+  call messages_obsolete_variable(parser, 'HarmonicSpectrumPolarization')
+  call messages_obsolete_variable(parser, 'HarmonicSpectrumMode')
 
   if( (pol /= 'x') .and. &
       (pol /= 'y') .and. &

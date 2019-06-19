@@ -230,8 +230,9 @@ contains
   end subroutine kpoints_nullify
 
   ! ---------------------------------------------------------
-  subroutine kpoints_init(this, symm, dim, rlattice, klattice, only_gamma)
+  subroutine kpoints_init(this, parser, symm, dim, rlattice, klattice, only_gamma)
     type(kpoints_t),    intent(out) :: this
+    type(parser_t),     intent(in)  :: parser
     type(symmetries_t), intent(in)  :: symm
     integer,            intent(in)  :: dim
     FLOAT,              intent(in)  :: rlattice(:,:), klattice(:,:)
@@ -298,14 +299,14 @@ contains
     end if
 
     !Monkhorst Pack grid
-    if(parse_is_defined('KPointsGrid')) then
+    if(parse_is_defined(parser, 'KPointsGrid')) then
       this%method = this%method + KPOINTS_MONKH_PACK
       
       call read_MP(gamma_only = .false.)
     end if
 
     !User-defined kpoints
-    if(parse_is_defined('KPointsReduced').or. parse_is_defined('KPoints')) then
+    if(parse_is_defined(parser, 'KPointsReduced').or. parse_is_defined(parser, 'KPoints')) then
       this%method = this%method + KPOINTS_USER
 
       if(this%use_symmetries) then
@@ -317,7 +318,7 @@ contains
     end if
 
     !User-defined k-points path
-    if(parse_is_defined('KPointsPath')) then
+    if(parse_is_defined(parser, 'KPointsPath')) then
       this%method = this%method + KPOINTS_PATH
        
       if(this%use_symmetries) then
@@ -396,7 +397,7 @@ contains
 
       PUSH_SUB(kpoints_init.read_MP)
 
-      call messages_obsolete_variable('KPointsMonkhorstPack', 'KPointsGrid')
+      call messages_obsolete_variable(parser, 'KPointsMonkhorstPack', 'KPointsGrid')
 
       !%Variable KPointsGrid
       !%Type block

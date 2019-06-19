@@ -190,7 +190,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine restart_module_init()
+  subroutine restart_module_init(parser)
+    type(parser_t),         intent(in)    :: parser
 
     logical :: set(RESTART_N_DATA_TYPES)
     integer :: iline, n_cols, data_type
@@ -232,12 +233,12 @@ contains
     info(RESTART_PARTITION)%dir = PARTITION_DIR
 
     ! Read input
-    call messages_obsolete_variable('RestartFileFormat', 'RestartOptions')
-    call messages_obsolete_variable('TmpDir', 'RestartOptions')
-    call messages_obsolete_variable('RestartDir', 'RestartOptions')
-    call messages_obsolete_variable('MeshPartitionRead', 'RestartOptions')
-    call messages_obsolete_variable('MeshPartitionWrite', 'RestartOptions')
-    call messages_obsolete_variable('MeshPartitionDir', 'RestartOptions')
+    call messages_obsolete_variable(parser, 'RestartFileFormat', 'RestartOptions')
+    call messages_obsolete_variable(parser, 'TmpDir', 'RestartOptions')
+    call messages_obsolete_variable(parser, 'RestartDir', 'RestartOptions')
+    call messages_obsolete_variable(parser, 'MeshPartitionRead', 'RestartOptions')
+    call messages_obsolete_variable(parser, 'MeshPartitionWrite', 'RestartOptions')
+    call messages_obsolete_variable(parser, 'MeshPartitionDir', 'RestartOptions')
 
     !%Variable RestartOptions
     !%Type block

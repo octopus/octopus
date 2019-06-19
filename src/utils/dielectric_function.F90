@@ -66,13 +66,13 @@ program dielectric_function
 
   call io_init()
 
-  call unit_system_init()
+  call unit_system_init(parser)
 
   call spectrum_init(spectrum)
 
   call space_init(space)
-  call geometry_init(geo, space)
-  call simul_box_init(sb, geo, space)
+  call geometry_init(geo, parser, space)
+  call simul_box_init(sb, parser, geo, space)
     
   SAFE_ALLOCATE(vecpot0(1:space%dim))
 
@@ -110,7 +110,7 @@ program dielectric_function
   call io_skip_header(in_file)
   call spectrum_count_time_steps(in_file, time_steps, dt)
 
-  if(parse_is_defined('TransientAbsorptionReference')) then
+  if(parse_is_defined(parser, 'TransientAbsorptionReference')) then
     !%Variable TransientAbsorptionReference
     !%Type string
     !%Default "."
@@ -157,7 +157,7 @@ program dielectric_function
   call io_close(in_file)
 
   !We remove the reference
-  if(parse_is_defined('TransientAbsorptionReference')) then
+  if(parse_is_defined(parser, 'TransientAbsorptionReference')) then
     time_steps_ref = time_steps_ref + 1
     SAFE_ALLOCATE(vecpot_ref(1:time_steps_ref, space%dim*3))
     call io_skip_header(ref_file)

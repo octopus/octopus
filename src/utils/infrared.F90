@@ -59,7 +59,7 @@
 
     call io_init()
 
-    call unit_system_init()
+    call unit_system_init(parser)
 
     !These variables are documented in src/td/spectrum.F90
     call parse_variable('TDMaxSteps', 1500, max_iter)
@@ -73,8 +73,8 @@
     if (end_time < M_ZERO) end_time = huge(end_time)
 
     call space_init(space)
-    call geometry_init(geo, space)
-    call simul_box_init(sb, geo, space)
+    call geometry_init(geo, parser, space)
+    call simul_box_init(sb, parser, geo, space)
 
       SAFE_ALLOCATE(dipole(0:max_iter+1, 1:3))
 

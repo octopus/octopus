@@ -139,7 +139,7 @@ program octopus
 #endif
   
   ! now we really start
-  call run(inp_calc_mode)
+  call run(parser, inp_calc_mode)
   
 #if defined(HAVE_MPI)
   ! wait for all processors to finish

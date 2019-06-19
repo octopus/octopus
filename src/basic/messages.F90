@@ -128,7 +128,7 @@ contains
     
     logical :: trap_signals
 
-    call messages_obsolete_variable('DevelVersion', 'ExperimentalFeatures')
+    call messages_obsolete_variable(parser, 'DevelVersion', 'ExperimentalFeatures')
 
     !%Variable ExperimentalFeatures
     !%Type logical
@@ -143,7 +143,7 @@ contains
     !%End
     call parse_variable('ExperimentalFeatures', .false., conf%devel_version)
     
-    call messages_obsolete_variable('DebugLevel', 'Debug')
+    call messages_obsolete_variable(parser, 'DebugLevel', 'Debug')
 
     call debug_init(debug)
     
@@ -1082,11 +1082,12 @@ contains
 #endif
   
   ! ---------------------------------------------------------
-  subroutine messages_obsolete_variable(name, rep)
+  subroutine messages_obsolete_variable(parser, name, rep)
+    type(parser_t),             intent(in) :: parser
     character(len=*),           intent(in) :: name
     character(len=*), optional, intent(in) :: rep
     
-    if ( parse_is_defined(trim(name))) then 
+    if(parse_is_defined(parser, trim(name))) then 
 
       write(message(1), '(a)') 'Input variable '//trim(name)//' is obsolete.'
 

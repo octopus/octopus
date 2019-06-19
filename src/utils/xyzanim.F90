@@ -52,7 +52,7 @@ program xyzanim
   
   call messages_init(parser)
   call io_init()
-  call unit_system_init()
+  call unit_system_init(parser)
 
   ! Sets the filenames
   coords_file = 'td.general/coordinates'
@@ -81,8 +81,8 @@ program xyzanim
   call parse_variable('AnimationMultiFiles', .false., multifiles)
 
   call space_init(space)
-  call geometry_init(geo, space)
-  call simul_box_init(sb, geo, space)
+  call geometry_init(geo, parser, space)
+  call simul_box_init(sb, parser, geo, space)
 
   record_length = 100 + geo%space%dim*geo%natoms*3*20
 

@@ -53,7 +53,7 @@ program propagation_spectrum
 
   call io_init()
 
-  call unit_system_init()
+  call unit_system_init(parser)
 
   call spectrum_init(spectrum)
 

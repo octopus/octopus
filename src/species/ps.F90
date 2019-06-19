@@ -144,8 +144,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_init(ps, label, z, user_lmax, user_llocal, ispin, filename)
+  subroutine ps_init(ps, parser, label, z, user_lmax, user_llocal, ispin, filename)
     type(ps_t),        intent(out)   :: ps
+    type(parser_t),    intent(in)    :: parser
     character(len=10), intent(in)    :: label
     integer,           intent(in)    :: user_lmax
     integer,           intent(in)    :: user_llocal
@@ -169,7 +170,7 @@ contains
     
     ! Fix the threshold to calculate the radius of the projector-function localization spheres:
 
-    call messages_obsolete_variable('SpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
+    call messages_obsolete_variable(parser, 'SpecieProjectorSphereThreshold', 'SpeciesProjectorSphereThreshold')
 
     !%Variable SpeciesProjectorSphereThreshold
     !%Type float

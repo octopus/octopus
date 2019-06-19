@@ -138,14 +138,14 @@ contains
     call parse_variable('SymmetrizeDynamicalMatrix', .true., symmetrize)
 
     ! replaced by properly saving and reading the dynamical matrix
-    call messages_obsolete_variable('UseRestartDontSolve')
+    call messages_obsolete_variable(sys%parser, 'UseRestartDontSolve')
 
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
 
     call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_look_and_load(gs_restart, st, gr)
+      call states_look_and_load(gs_restart, sys%parser, st, gr)
       call restart_end(gs_restart)
     else
       message(1) = "Previous gs calculation is required."
@@ -171,7 +171,7 @@ contains
         ! load wavefunctions
         str_tmp = trim(kdotp_wfs_tag(idir))
         call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
-        if (ierr == 0) call states_load(kdotp_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
+        if (ierr == 0) call states_load(kdotp_restart, sys%parser, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
         call restart_close_dir(kdotp_restart)
 
         if(ierr /= 0) then
@@ -209,7 +209,7 @@ contains
       call zionic_pert_matrix_elements_2(sys%gr, sys%geo, hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
     end if
 
-    call pert_init(ionic_pert, PERTURBATION_IONIC, gr, geo)
+    call pert_init(ionic_pert, sys%parser, PERTURBATION_IONIC, gr, geo)
 
     call lr_init(lr(1))
     call lr_allocate(lr(1), st, gr%mesh)
@@ -245,7 +245,7 @@ contains
         message(1) = "Loading restart wavefunctions for linear response."
         call messages_info(1)
         call restart_open_dir(restart_load, wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1), ierr)
-        if (ierr == 0) call states_load(restart_load, st, gr, ierr, lr = lr(1))
+        if (ierr == 0) call states_load(restart_load, sys%parser, st, gr, ierr, lr = lr(1))
         if (ierr /= 0) then
           message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))//"'."
           call messages_warning(1)
@@ -338,9 +338,9 @@ contains
       message(1) = "Calculating response wavefunctions for normal modes."
       call messages_info(1)
       if(states_are_real(st)) then
-        call dphonons_lr_wavefunctions(lr(1), st, gr, vib, restart_load, restart_dump)
+        call dphonons_lr_wavefunctions(lr(1), sys%parser, st, gr, vib, restart_load, restart_dump)
       else
-        call zphonons_lr_wavefunctions(lr(1), st, gr, vib, restart_load, restart_dump)
+        call zphonons_lr_wavefunctions(lr(1), sys%parser, st, gr, vib, restart_load, restart_dump)
       end if
     end if
 
