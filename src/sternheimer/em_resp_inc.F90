@@ -50,7 +50,9 @@ subroutine X(run_sternheimer)()
             if((.not. em_vars%calc_magnetooptics) .or. complex_wfs .or. ifactor == 1) then
               str_tmp = em_wfs_tag(idir, ifactor)
               call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, sigma), ierr)
-              if (ierr == 0) call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
+              if (ierr == 0) then
+                call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr, lr=em_vars%lr(idir, sigma_alt, ifactor))
+              end if
               call restart_close_dir(restart_load)
 
               if(ierr /= 0) then

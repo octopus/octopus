@@ -307,7 +307,8 @@ contains
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
 
     do istep = td%max_iter, 1, -1
-      call propagator_dt(sys%ks, sys%parser, hm, gr, psi, td%tr, (istep - 1)*td%dt, -td%dt, td%mu, istep-1, td%ions, sys%geo, sys%outp)
+      call propagator_dt(sys%ks, sys%parser, hm, gr, psi, td%tr, &
+        (istep - 1)*td%dt, -td%dt, td%mu, istep-1, td%ions, sys%geo, sys%outp)
 
       call oct_prop_dump_states(prop, istep - 1, psi, gr, ierr)
       if (ierr /= 0) then
