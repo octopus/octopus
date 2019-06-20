@@ -157,7 +157,9 @@ contains
 
   ! ---------------------------------------------------------
   !> initialize the table
-  subroutine fft_all_init()
+  subroutine fft_all_init(parser)
+    type(parser_t),      intent(in)   :: parser
+    
     integer :: ii
 
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)

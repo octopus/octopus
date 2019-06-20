@@ -145,7 +145,7 @@ contains
     call restart_module_init(parser)
 
     ! initialize FFTs
-    call fft_all_init()
+    call fft_all_init(parser)
 
     call unit_system_init(parser)
 

@@ -52,7 +52,7 @@ program octopus
   
   call messages_init(parser)
 
-  call walltimer_init()
+  call walltimer_init(parser)
   
   !%Variable ReportMemory
   !%Type logical

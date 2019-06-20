@@ -222,7 +222,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_init_global()
+  subroutine species_init_global(parser)
+    type(parser_t),         intent(in)  :: parser
+    
     integer :: ierr
     
     PUSH_SUB(species_init_global)

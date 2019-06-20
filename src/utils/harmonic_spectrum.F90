@@ -70,7 +70,7 @@ program harmonic_spectrum
 
   call io_init(parser)
   call unit_system_init(parser)
-  call fft_all_init()
+  call fft_all_init(parser)
 
   call spectrum_init(spectrum)
 

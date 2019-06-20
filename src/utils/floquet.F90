@@ -86,7 +86,7 @@ program oct_floquet
   call messages_print_stress(stdout)
 
   call messages_experimental("oct-floquet utility")
-  call fft_all_init()
+  call fft_all_init(parser)
   call unit_system_init(parser)
   call restart_module_init(parser)
 

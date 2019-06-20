@@ -96,7 +96,7 @@ contains
 
     geo%space => space
 
-    call species_init_global()
+    call species_init_global(parser)
     
     ! initialize geometry
     call geometry_init_xyz(geo, parser)

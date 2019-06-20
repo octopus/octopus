@@ -92,8 +92,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine root_solver_read(rs)
+  subroutine root_solver_read(rs, parser)
     type(root_solver_t), intent(out) :: rs
+    type(parser_t),      intent(in)  :: parser
 
     PUSH_SUB(root_solver_read)
 

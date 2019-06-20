@@ -517,7 +517,8 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine oct_parse_double4_unit(name, def4, res4, unit)
+  subroutine oct_parse_double4_unit(self, name, def4, res4, unit)
+    type(parser_t),         intent(in)  :: self
     character(len=*),       intent(in)  :: name
     real(4),                intent(in)  :: def4
     real(4),                intent(out) :: res4
@@ -539,7 +540,8 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine oct_parse_double8_unit(name, def, res, unit)
+  subroutine oct_parse_double8_unit(self, name, def, res, unit)
+    type(parser_t),   intent(in)  :: self
     character(len=*), intent(in)  :: name
     real(8),          intent(in)  :: def
     real(8),          intent(out) :: res

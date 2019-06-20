@@ -52,8 +52,9 @@ module walltimer_oct_m
 contains
 
   !> initialize the timer
-  subroutine walltimer_init(auto)
-    logical, optional, intent(in) :: auto   !< automatically call walltimer_tap in walltimer_alarm() if .true.
+  subroutine walltimer_init(parser, auto)
+    type(parser_t),      intent(in)   :: parser
+    logical, optional,   intent(in)   :: auto   !< automatically call walltimer_tap in walltimer_alarm() if .true.
 
     FLOAT  :: alarm_time, write_time
 
