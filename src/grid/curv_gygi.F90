@@ -62,8 +62,9 @@ module curv_gygi_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine curv_gygi_init(cv, sb, geo)
+  subroutine curv_gygi_init(cv, parser, sb, geo)
     type(curv_gygi_t), intent(out) :: cv
+    type(parser_t),    intent(in)  :: parser
     type(simul_box_t), intent(in)  :: sb
     type(geometry_t),  intent(in)  :: geo
 

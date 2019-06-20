@@ -218,7 +218,7 @@ contains
     !%Option ode_pd89 4
     !% Prince-Dormand solver.
     !%End
-    call parse_variable(parser, 'WatterstromODESolver', ODE_PD89, os%solver_type)
+    call parse_variable(dummy_parser, 'WatterstromODESolver', ODE_PD89, os%solver_type)
 
     !%Variable WatterstromODESolverNSteps
     !%Type integer
@@ -228,7 +228,7 @@ contains
     !% Number of steps which the chosen ODE solver should perform
     !% in the integration interval [<i>a</i>, <i>b</i>] of the Watterstrom ODE.
     !%End
-    call parse_variable(parser, 'WatterstromODESolverNSteps', 400, os%nsteps)
+    call parse_variable(dummy_parser, 'WatterstromODESolverNSteps', 400, os%nsteps)
 
     ! set up ODE solver
     os%nsize       = order

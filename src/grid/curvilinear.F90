@@ -65,8 +65,9 @@ module curvilinear_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine curvilinear_init(cv, sb, geo, spacing)
+  subroutine curvilinear_init(cv, parser, sb, geo, spacing)
     type(curvilinear_t), intent(out) :: cv
+    type(parser_t),      intent(in)  :: parser
     type(simul_box_t),   intent(in)  :: sb
     type(geometry_t),    intent(in)  :: geo
     FLOAT,               intent(in)  :: spacing(:)
@@ -107,11 +108,11 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)
-      call curv_gygi_init(cv%gygi, sb, geo)
+      call curv_gygi_init(cv%gygi, parser, sb, geo)
     case(CURV_METHOD_BRIGGS)
-      call curv_briggs_init(cv%briggs, sb)
+      call curv_briggs_init(cv%briggs, parser, sb)
     case(CURV_METHOD_MODINE)
-      call curv_modine_init(cv%modine, sb, geo, spacing)
+      call curv_modine_init(cv%modine, parser, sb, geo, spacing)
     end select
 
     POP_SUB(curvilinear_init)

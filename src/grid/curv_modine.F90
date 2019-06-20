@@ -129,11 +129,12 @@ contains
   end subroutine getf2
 
   ! ---------------------------------------------------------
-  subroutine curv_modine_init(cv, sb, geo, spacing)
-    type(curv_modine_t), target, intent(out)  :: cv
-    type(simul_box_t),   target, intent(in)   :: sb
-    type(geometry_t),            intent(in)   :: geo
-    FLOAT,                       intent(in)   :: spacing(:)
+  subroutine curv_modine_init(cv, parser, sb, geo, spacing)
+    type(curv_modine_t), target, intent(out) :: cv
+    type(parser_t),              intent(in)  :: parser
+    type(simul_box_t),   target, intent(in)  :: sb
+    type(geometry_t),            intent(in)  :: geo
+    FLOAT,                       intent(in)  :: spacing(:)
 
     PUSH_SUB(curv_modine_init)
 

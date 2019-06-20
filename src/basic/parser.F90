@@ -272,6 +272,8 @@ module parser_oct_m
     module procedure oct_parse_expression14
   end interface
 
+  type(parser_t), public, save :: dummy_parser
+  
 contains
 
   ! ---------------------------------------------------------

@@ -48,8 +48,9 @@ module curv_briggs_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine curv_briggs_init(cv, sb)
+  subroutine curv_briggs_init(cv, parser, sb)
     type(curv_briggs_t), intent(out) :: cv
+    type(parser_t),      intent(in)  :: parser
     type(simul_box_t),   intent(in)  :: sb
 
     cv%L = M_ZERO
