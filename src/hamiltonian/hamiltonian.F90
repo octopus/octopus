@@ -841,18 +841,21 @@ contains
         if(.not. allocated(this%hm_base%phase_corr)) then
           if(compute_phase_correction) then
             SAFE_ALLOCATE(this%hm_base%phase_corr(mesh%np+1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
-            this%hm_base%phase_corr = M_ONE
           end if
         end if
 
         kpoint(1:mesh%sb%dim) = M_ZERO
         do ik = this%d%kpt%start, this%d%kpt%end
           kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, states_dim_get_kpoint_index(this%d, ik))
+          !We add the vector potential
+          kpoint(1:mesh%sb%dim) = kpoint(1:mesh%sb%dim) + this%hm_base%uniform_vector_potential(1:mesh%sb%dim)
 
+          !It is more efficient to compute the exponential of the full array
           forall (ip = 1:mesh%np_part)
-            this%hm_base%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(kpoint(1:mesh%sb%dim) &
-              + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
+            this%hm_base%phase(ip, ik) = -M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*kpoint(1:mesh%sb%dim))
           end forall
+          this%hm_base%phase(1:mesh%np_part, ik) = exp(this%hm_base%phase(1:mesh%np_part, ik))
+
           if(compute_phase_correction) then
             ! loop over boundary points
             sp = mesh%np
@@ -868,13 +871,16 @@ contains
 
               ! compute phase correction from global coordinate (opposite sign!)
               x_global = mesh_x_global(mesh, ip_inner)
-              this%hm_base%phase_corr(ip, ik) = this%hm_base%phase(ip, ik)* &
-                exp(M_zI * sum(x_global(1:mesh%sb%dim) * (kpoint(1:mesh%sb%dim) &
-                  + this%hm_base%uniform_vector_potential(1:mesh%sb%dim))))
+
+              !It is more efficient to compute the exponential of the full array 
+              this%hm_base%phase_corr(ip, ik) = M_zI * sum(x_global(1:mesh%sb%dim) * kpoint(1:mesh%sb%dim))
             end do
+            this%hm_base%phase_corr(sp+1:mesh%np_part, ik) = exp(this%hm_base%phase_corr(sp+1:mesh%np_part, ik)) &
+                                            *this%hm_base%phase(sp+1:mesh%np_part, ik)
           end if
 
         end do
+
         if(accel_is_enabled()) then
           call accel_write_buffer(this%hm_base%buff_phase, mesh%np_part*this%d%kpt%nlocal, this%hm_base%phase)
         end if
@@ -884,8 +890,6 @@ contains
           call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, &
                vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end if
-
-
       end if
 
       max_npoints = this%hm_base%max_npoints
