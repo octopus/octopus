@@ -390,7 +390,7 @@ contains
       if(gr%have_fine_mesh) then
         ks%new_hartree = .true.
         SAFE_ALLOCATE(ks%hartree_solver)
-        call poisson_init(ks%hartree_solver, gr%fine%der, mc, label = " (fine mesh)")
+        call poisson_init(ks%hartree_solver, parser, gr%fine%der, mc, label = " (fine mesh)")
       else
         ks%hartree_solver => psolver
       end if

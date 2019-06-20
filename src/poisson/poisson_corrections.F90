@@ -67,8 +67,9 @@ module poisson_corrections_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_corrections_init(this, ml, mesh)
+  subroutine poisson_corrections_init(this, parser, ml, mesh)
     type(poisson_corr_t), intent(out) :: this
+    type(parser_t),       intent(in)  :: parser
     integer,              intent(in)  :: ml
     type(mesh_t),         intent(in)  :: mesh
 
@@ -95,7 +96,7 @@ contains
     !% An exact integration of the Poisson equation is done over the boundaries. This option is
     !% experimental, and not implemented for domain parallelization.
     !%End
-    call parse_variable(dummy_parser, 'PoissonSolverBoundaries', CORR_MULTIPOLE, this%method)
+    call parse_variable(parser, 'PoissonSolverBoundaries', CORR_MULTIPOLE, this%method)
 
     select case(this%method)
     case(CORR_MULTIPOLE)

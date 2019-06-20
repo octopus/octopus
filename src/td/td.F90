@@ -393,7 +393,7 @@ contains
     end if
 
     if(hm%scdm_EXX) then
-      call scdm_init(st,gr%der,psolver%cube, hm%scdm,operate_on_scdm=.true.)
+      call scdm_init(st, sys%parser, gr%der, psolver%cube, hm%scdm, operate_on_scdm = .true.)
       ! make sure scdm is constructed as soon as it is needed
       scdm_is_local = .false.
     end if
