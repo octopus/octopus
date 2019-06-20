@@ -873,7 +873,7 @@ contains
       end do !iter 
 
       if(any(res > te%lanczos_tol)) then ! Here one should consider the possibility of the happy breakdown.
-        write(message(1),'(a,es9.2)') 'Lanczos exponential expansion did not converge: ', max(res)
+        write(message(1),'(a,es9.2)') 'Lanczos exponential expansion did not converge: ', maxval(res)
         call messages_warning(1)
       end if
 
