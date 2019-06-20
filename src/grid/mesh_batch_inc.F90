@@ -776,6 +776,111 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   POP_SUB(X(priv_mesh_batch_nrm2))
 end subroutine X(priv_mesh_batch_nrm2)
 
+! ---------------------------------------------------------
+!> Orthonormalizes states of phib to the orbitals of nst batches of psi.
+!! It also permits doing only the orthogonalization (no normalization).
+subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
+  normalize, overlap, norm, gs_scheme)
+  type(mesh_t),      intent(in)    :: mesh
+  integer,           intent(in)    :: nst
+  type(batch_t),     intent(in)    :: psib(:)   !< psi(nst)
+  type(batch_t),     intent(inout) :: phib      
+  logical, optional, intent(in)    :: normalize
+  R_TYPE,  optional, intent(out)   :: overlap(:,:) !< (nst, phib%nst)
+  R_TYPE,  optional, intent(out)   :: norm(:)
+  integer, optional, intent(in)    :: gs_scheme
+
+  logical :: normalize_
+  integer :: ist, idim, is
+  FLOAT, allocatable   :: nrm2(:)
+  R_TYPE, allocatable  :: ss(:,:), ss_full(:,:)
+  integer :: block_size, size, sp, ep
+  type(profile_t), save :: prof
+  type(profile_t), save :: reduce_prof
+  logical :: drcgs
+  integer :: nsteps
+
+  call profiling_in(prof, "BATCH_GRAM_SCHMIDT")
+  PUSH_SUB(X(mesh_batch_orthogonalization))
+
+  SAFE_ALLOCATE(ss(1:phib%nst, 1:nst))
+  ss = R_TOTYPE(M_ZERO)
+
+  drcgs = .false.
+  nsteps = 1
+  if(present(gs_scheme)) then
+    if(gs_scheme == OPTION__ARNOLDIORTHOGONALIZATION__DRCGS) then
+      drcgs = .true.
+      nsteps = 2
+      SAFE_ALLOCATE(ss_full(1:phib%nst, 1:nst))
+      ss_full = R_TOTYPE(M_ZERO)
+    end if
+  end if
+
+  do is = 1, nsteps
+    if(nst>=1 .and. drcgs) then
+      call X(mesh_batch_dotp_vector)(mesh, psib(nst), phib, ss(1:phib%nst,1))
+      call batch_axpy(mesh%np, -ss(1:phib%nst,1), psib(nst), phib)
+      if(present(overlap)) ss_full(1:phib%nst, nst) = ss_full(1:phib%nst, nst) + ss(1:phib%nst, 1)
+    end if
+    ss = R_TOTYPE(M_ZERO)
+
+    do ist = 1, nst
+      call X(mesh_batch_dotp_vector)(mesh, psib(ist), phib, ss(1:phib%nst,ist), reduce = .false.) 
+    end do
+
+    if(mesh%parallel_in_domains) then
+      call profiling_in(reduce_prof, "BATCH_GRAM_SCHMIDT_REDUCE")
+      call comm_allreduce(mesh%mpi_grp%comm, ss)
+      call profiling_out(reduce_prof)
+    end if
+
+    do ist = 1, nst
+      call batch_axpy(mesh%np, -ss(1:phib%nst,ist), psib(ist), phib)
+    end do
+
+    !We accumulate the overlap
+    if(drcgs .and. present(overlap)) then
+      do ist = 1, nst
+        ss_full(1:phib%nst, ist) = ss_full(1:phib%nst, ist) + ss(1:phib%nst, ist)
+      end do 
+    end if
+  end do
+
+  normalize_ = .false.
+  if(present(normalize)) then
+    normalize_ = normalize
+  end if
+
+  !We have a transpose here because this helps for the Lanczos implementation
+  !which is the only routine using this one at the moment
+  if(present(overlap)) then
+    if(drcgs) then
+      overlap(1:nst, 1:phib%nst) = transpose(ss_full(1:phib%nst, 1:nst))
+    else
+      overlap(1:nst, 1:phib%nst) = transpose(ss(1:phib%nst, 1:nst))
+    end if
+  end if
+
+  if(present(norm) .or. normalize_) then
+    SAFE_ALLOCATE(nrm2(1:phib%nst))
+    call mesh_batch_nrm2(mesh, phib, nrm2)
+    if(present(norm)) then
+      norm(1:phib%nst) = nrm2(1:phib%nst)
+    end if
+    if(normalize_) then
+      call batch_scal(mesh%np, M_ONE/nrm2, phib)
+    end if
+    SAFE_DEALLOCATE_A(nrm2)
+  end if
+
+  SAFE_DEALLOCATE_A(ss)
+  SAFE_DEALLOCATE_A(ss_full)
+
+  POP_SUB(X(mesh_batch_orthogonalization))
+  call profiling_out(prof)
+end subroutine X(mesh_batch_orthogonalization)
+
 
 !! Local Variables:
 !! mode: f90
