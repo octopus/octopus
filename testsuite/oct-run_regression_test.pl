@@ -325,8 +325,8 @@ while ($_ = <TESTSUITE>) {
         }
       
 
-        if ( $_ =~ /^Util\s*:\s*(.*)\s*$/) {
-            $np = "serial";
+        if ( $_ =~ /^Util\s*:\s*(.*)\s*$/ || $_ =~ /^MPIUtil\s*:\s*(.*)\s*$/) {
+            if( $_ =~ /^Util\s*:\s*(.*)\s*$/) {$np = "serial";}
             $command = "$exec_directory/$1";
             if( ! -x "$command") {
                 $command = "$exec_directory/../utils/$1";

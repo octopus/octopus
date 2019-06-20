@@ -64,6 +64,7 @@ module simul_box_oct_m
     simul_box_copy,             &
     simul_box_periodic_atom_in_box, &
     simul_box_symmetry_check,   &
+    reciprocal_lattice,         &
     interp_t,                   &
     multiresolution_t
 

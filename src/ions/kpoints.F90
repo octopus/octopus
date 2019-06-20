@@ -55,7 +55,12 @@ module kpoints_oct_m
     kpoints_have_zero_weight_path,&
     kpoints_to_absolute,          &
     kpoints_get_kpoint_method,    &
-    kpoints_get_path_coord
+    kpoints_get_path_coord,       &
+    kpoints_grid_init,            &
+    kpoints_path_generate,        &
+    kpoints_to_reduced,           & 
+    kpoints_fold_to_1BZ,          &
+    kpoints_grid_end
 
   type kpoints_grid_t
     ! Components are public by default
