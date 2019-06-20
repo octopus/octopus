@@ -410,6 +410,7 @@ contains
   subroutine spline_init_global()
     PUSH_SUB(spline_init_global)
 
+
     !%Variable Splines
     !%Type integer
     !%Default gsl
@@ -422,7 +423,11 @@ contains
     !% (experimental) Octopus own implementation. New, untested, and
     !% hopefully faster.
     !%End
-    call parse_variable(parser, 'Splines', OPTION__SPLINES__GSL, library)
+    
+    ! !temporarily disabled, since getting parse here is complicated
+    ! call parse_variable(parser, 'Splines', OPTION__SPLINES__GSL, library)
+
+    library = OPTION__SPLINES__GSL
     
     POP_SUB(spline_init_global)
   end subroutine spline_init_global
