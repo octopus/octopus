@@ -78,6 +78,7 @@ program oct_unfold
   integer       :: ierr, run_mode, file_gvec, jdim
   FLOAT         :: lparams(MAX_DIM), rlattice_pc(MAX_DIM, MAX_DIM), klattice_pc(MAX_DIM, MAX_DIM)
   FLOAT         :: volume_element_pc
+  type(parser_t) :: parser
   type(block_t) :: blk
   integer       :: nhighsympoints, nsegments
   integer       :: icol, idir, ncols
@@ -89,9 +90,10 @@ program oct_unfold
   
   ! the usual initializations
   call global_init(is_serial = .false.)
+  call parser_init(parser)
   call calc_mode_par_init()
 
-  call messages_init()
+  call messages_init(parser)
 
   call io_init()
   call profiling_init()
@@ -102,12 +104,12 @@ program oct_unfold
 
   call messages_experimental("oct-unfold utility")
   call fft_all_init()
-  call unit_system_init()
-  call restart_module_init()
+  call unit_system_init(parser)
+  call restart_module_init(parser)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  call system_init(sys)
-  call simul_box_init(sb, sys%geo, sys%space)
+  call system_init(sys, parser)
+  call simul_box_init(sb, parser, sys%geo, sys%space)
 
   if(sb%periodic_dim == 0) then
     message(1) = "oct-unfold can only be used for periodic ystems."
@@ -268,7 +270,7 @@ program oct_unfold
     call states_allocate_wfns(sys%st, sys%gr%mesh)
 
     call restart_init(restart, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_load(restart, sys%st, sys%gr, ierr, label = ": unfold")
+    if(ierr == 0) call states_load(restart, parser, sys%st, sys%gr, ierr, label = ": unfold")
     if(ierr /= 0) then
       message(1) = 'Unable to read unocc wavefunctions.'
       call messages_fatal(1)
@@ -303,6 +305,7 @@ program oct_unfold
   call io_end()
   call print_date("Calculation ended on ")
   call messages_end()
+  call parser_end(parser)
   call global_end()
 
 
