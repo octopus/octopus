@@ -213,7 +213,7 @@ contains
     SAFE_ALLOCATE(cas%n_occ(1:sys%st%d%nik))
     SAFE_ALLOCATE(cas%n_unocc(1:sys%st%d%nik))
 
-    call states_count_pairs(sys%st, cas%n_pairs, cas%n_occ, cas%n_unocc, cas%is_included, is_frac_occ)
+    call states_count_pairs(sys%st, sys%parser, cas%n_pairs, cas%n_occ, cas%n_unocc, cas%is_included, is_frac_occ)
     if(is_frac_occ) then
       call messages_not_implemented("Casida with partial occupations")
       ! Formulas are in Casida 1995 reference. The occupations are not used at all here currently.

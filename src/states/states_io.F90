@@ -563,8 +563,9 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_write_bandstructure(dir, nst, st, sb, geo, mesh, phase, vec_pot, vec_pot_var)
+  subroutine states_write_bandstructure(dir, parser, nst, st, sb, geo, mesh, phase, vec_pot, vec_pot_var)
     character(len=*),  intent(in)             :: dir
+    type(parser_t),               intent(in)  :: parser
     integer,           intent(in)             :: nst
     type(states_t),    intent(in)             :: st
     type(simul_box_t), intent(in)             :: sb
@@ -603,7 +604,7 @@ contains
     !% Determines if projections of wavefunctions on the atomic orbitals 
     !% are computed or not for obtaining the orbital resolved band-structure.
     !%End
-    call parse_variable(dummy_parser, 'BandStructureComputeProjections', .false., projection)
+    call parse_variable(parser, 'BandStructureComputeProjections', .false., projection)
 
 
     if(mpi_grp_is_root(mpi_world)) then

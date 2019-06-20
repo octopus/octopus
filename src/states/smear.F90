@@ -111,7 +111,7 @@ contains
     if(fixed_occ) then
       this%method = SMEAR_FIXED_OCC
     else
-      call parse_variable(dummy_parser, 'SmearingFunction', SMEAR_SEMICONDUCTOR, this%method)
+      call parse_variable(parser, 'SmearingFunction', SMEAR_SEMICONDUCTOR, this%method)
       if(.not. varinfo_valid_option('SmearingFunction', this%method)) call messages_input_error('SmearingFunction')
       call messages_print_var_option(stdout, 'SmearingFunction', this%method)
     end if
@@ -127,7 +127,7 @@ contains
     !%End
     this%dsmear = CNST(1e-14)
     if(this%method /= SMEAR_SEMICONDUCTOR .and. this%method /= SMEAR_FIXED_OCC) then
-      call parse_variable(dummy_parser, 'Smearing', CNST(0.1) / (M_TWO * P_Ry), this%dsmear, units_inp%energy)
+      call parse_variable(parser, 'Smearing', CNST(0.1) / (M_TWO * P_Ry), this%dsmear, units_inp%energy)
     end if
 
     call messages_obsolete_variable(parser, 'ElectronicTemperature', 'Smearing')
@@ -160,7 +160,7 @@ contains
       !%Description
       !% Sets the order of the Methfessel-Paxton smearing function.
       !%End
-      call parse_variable(dummy_parser, 'SmearingMPOrder', 1, this%MP_n)
+      call parse_variable(parser, 'SmearingMPOrder', 1, this%MP_n)
     end if
 
     POP_SUB(smear_init)
