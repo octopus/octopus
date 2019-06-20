@@ -446,10 +446,10 @@ contains
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
 
-    call restart_init(restart_dump, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
+    call restart_init(restart_dump, sys%parser, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
     if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
       ! We will also use the TD restart directory as temporary storage during the time propagation
-      call restart_init(restart_load, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+      call restart_init(restart_load, sys%parser, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
     end if
 
     call messages_print_stress(stdout, "Time-Dependent Simulation")
@@ -624,7 +624,7 @@ contains
       PUSH_SUB(td_run.init_wfs)
 
       if (.not. fromscratch) then
-        call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+        call restart_init(restart, sys%parser, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
         if(ierr == 0) &
           call td_load(restart, sys%parser, gr, st, hm, td, ierr)
         if(ierr /= 0) then
@@ -644,7 +644,7 @@ contains
       end if
 
       if (fromScratch) then
-        call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+        call restart_init(restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
 
         if(.not. st%only_userdef_istates) then
           if(ierr == 0) call states_load(restart, sys%parser, st, gr, ierr, label = ": gs")
@@ -773,7 +773,7 @@ contains
 
         !In this case we should reload GS wavefunctions 
         if(hm%lda_u_level /= DFT_U_NONE .and..not.fromScratch) then 
-          call restart_init(restart_frozen, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+          call restart_init(restart_frozen, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
           call lda_u_load(restart_frozen, hm%lda_u, st, ierr)
           call restart_end(restart_frozen)
         end if
@@ -794,7 +794,7 @@ contains
 
         !In this case we should reload GS wavefunctions
         if(hm%lda_u_level == DFT_U_ACBN0 .and. .not.fromScratch) then
-          call restart_init(restart_frozen, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+          call restart_init(restart_frozen, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
           call lda_u_load(restart_frozen, hm%lda_u, st, ierr)
           call restart_end(restart_frozen)    
           write(message(1),'(a)') 'Loaded GS effective U of DFT+U'

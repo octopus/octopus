@@ -1056,11 +1056,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_prop_init(prop, dirname, gr, mc)
-    type(oct_prop_t), intent(inout) :: prop
-    character(len=*), intent(in)    :: dirname
-    type(grid_t),     intent(in)    :: gr
-    type(multicomm_t), intent(in)   :: mc
+  subroutine oct_prop_init(prop, parser, dirname, gr, mc)
+    type(oct_prop_t),  intent(inout) :: prop
+    type(parser_t),    intent(in)    :: parser
+    character(len=*),  intent(in)    :: dirname
+    type(grid_t),      intent(in)    :: gr
+    type(multicomm_t), intent(in)    :: mc
     
     integer :: j, ierr
 
@@ -1072,8 +1073,8 @@ contains
 
     ! The OCT_DIR//trim(dirname) will be used to write and read information during the calculation,
     ! so they need to use the same path.
-    call restart_init(prop%restart_dump, RESTART_OCT, RESTART_TYPE_DUMP, mc, ierr, mesh=gr%mesh)
-    call restart_init(prop%restart_load, RESTART_OCT, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
+    call restart_init(prop%restart_dump, parser, RESTART_OCT, RESTART_TYPE_DUMP, mc, ierr, mesh=gr%mesh)
+    call restart_init(prop%restart_load, parser, RESTART_OCT, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
 
     SAFE_ALLOCATE(prop%iter(1:prop%number_checkpoints+2))
     prop%iter(1) = 0

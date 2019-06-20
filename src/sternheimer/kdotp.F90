@@ -131,7 +131,7 @@ contains
 
     !Read ground-state wavefunctions
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
-    call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+    call restart_init(restart_load, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
       call states_look_and_load(restart_load, sys%parser, sys%st, sys%gr, is_complex = complex_response)
       call restart_end(restart_load)
@@ -147,9 +147,9 @@ contains
     ! Start restart. Note: we are going to use the same directory to read and write.
     ! Therefore, restart_dump must be initialized first to make sure the directory
     ! exists when we initialize restart_load.
-    call restart_init(restart_dump, RESTART_KDOTP, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
+    call restart_init(restart_dump, sys%parser, RESTART_KDOTP, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
     ! no problem if this fails
-    call restart_init(restart_load, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
+    call restart_init(restart_load, sys%parser, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
@@ -372,7 +372,7 @@ contains
 
       call messages_obsolete_variable(sys%parser, 'KdotP_OccupiedSolutionMethod', 'KdotPOccupiedSolutionMethod')
 
-      call parse_variable(dummy_parser, 'KdotPOccupiedSolutionMethod', 0, kdotp_vars%occ_solution_method)
+      call parse_variable(sys%parser, 'KdotPOccupiedSolutionMethod', 0, kdotp_vars%occ_solution_method)
       if(kdotp_vars%occ_solution_method == 1 .and. .not. smear_is_semiconducting(sys%st%smear)) then
         call messages_not_implemented('KdotPOccupiedSolutionMethod = sum_over_states for non-semiconducting smearing')
       end if
@@ -385,7 +385,7 @@ contains
       !% States with energy <math>E_i</math> and <math>E_j</math> will be considered degenerate
       !% if <math> \left| E_i - E_j \right| < </math><tt>DegeneracyThreshold</tt>.
       !%End
-      call parse_variable(dummy_parser, 'DegeneracyThreshold', units_from_atomic(units_inp%energy, CNST(1e-5)), kdotp_vars%degen_thres)
+      call parse_variable(sys%parser, 'DegeneracyThreshold', units_from_atomic(units_inp%energy, CNST(1e-5)), kdotp_vars%degen_thres)
       kdotp_vars%degen_thres = units_to_atomic(units_inp%energy, kdotp_vars%degen_thres)
 
       !%Variable KdotPEta
@@ -397,7 +397,7 @@ contains
       !% Not recommended.
       !%End
       call messages_obsolete_variable(sys%parser, 'KdotP_Eta', 'KdotPEta')
-      call parse_variable(dummy_parser, 'KdotPEta', M_ZERO, kdotp_vars%eta)
+      call parse_variable(sys%parser, 'KdotPEta', M_ZERO, kdotp_vars%eta)
       kdotp_vars%eta = units_to_atomic(units_inp%energy, kdotp_vars%eta)
 
       !%Variable KdotPCalculateEffectiveMasses
@@ -409,7 +409,7 @@ contains
       !% to calculate effective masses. It is not correct for degenerate states.
       !%End      
       call messages_obsolete_variable(sys%parser, 'KdotP_CalculateEffectiveMasses', 'KdotPCalculateEffectiveMasses')
-      call parse_variable(dummy_parser, 'KdotPCalculateEffectiveMasses', .true., calc_eff_mass)
+      call parse_variable(sys%parser, 'KdotPCalculateEffectiveMasses', .true., calc_eff_mass)
 
       !%Variable KdotPCalcSecondOrder
       !%Type logical
@@ -420,7 +420,7 @@ contains
       !% Note that the second derivative of the Hamiltonian is NOT included in this calculation.
       !% This is needed for a subsequent run in <tt>CalculationMode = em_resp</tt> with <tt>EMHyperpol</tt>.
       !%End      
-      call parse_variable(dummy_parser, 'KdotPCalcSecondOrder', .false., calc_2nd_order)
+      call parse_variable(sys%parser, 'KdotPCalcSecondOrder', .false., calc_2nd_order)
 
       POP_SUB(kdotp_lr_run.parse_input)
 

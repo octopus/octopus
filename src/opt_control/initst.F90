@@ -93,14 +93,14 @@ contains
     !%Option oct_is_userdefined 4
     !% Start in a user-defined state.
     !%End
-    call parse_variable(dummy_parser, 'OCTInitialState', oct_is_groundstate, istype)
+    call parse_variable(sys%parser, 'OCTInitialState', oct_is_groundstate, istype)
     if(.not.varinfo_valid_option('OCTInitialState', istype)) call messages_input_error('OCTInitialState')    
 
     select case(istype)
     case(oct_is_groundstate) 
       message(1) =  'Info: Using ground state for initial state.'
       call messages_info(1)
-      call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+      call restart_init(restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
       if(ierr == 0) call states_load(restart, sys%parser, psi, sys%gr, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to read wavefunctions."
@@ -137,7 +137,7 @@ contains
         call messages_fatal(2)
       end if
 
-      call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+      call restart_init(restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
       if(ierr /= 0) then
         message(1) = "Could not read states for OCTInitialTransformStates."
         call messages_fatal(1)
@@ -223,7 +223,7 @@ contains
     end select
 
     ! Check whether we want to freeze some of the deeper orbitals.
-    call parse_variable(dummy_parser, 'TDFreezeOrbitals', 0, freeze_orbitals)
+    call parse_variable(sys%parser, 'TDFreezeOrbitals', 0, freeze_orbitals)
     if(freeze_orbitals > 0) then
       ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
       call states_freeze_orbitals(psi, sys%gr, sys%mc, freeze_orbitals)

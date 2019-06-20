@@ -369,7 +369,7 @@ contains
     call mix_get_field(scf%smix, scf%mixfield)
 
     if(hm%lda_u_level /= DFT_U_NONE .and. hm%lda_u%basisfromstates) then
-      call lda_u_loadbasis(hm%lda_u, st, gr%mesh, mc, ierr)
+      call lda_u_loadbasis(hm%lda_u, parser, st, gr%mesh, mc, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to load LDA+U basis from selected states."
         call messages_fatal(1)

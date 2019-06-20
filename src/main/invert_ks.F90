@@ -137,7 +137,7 @@ contains
 
     sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp = sys%st%dom_st_kpt_mpi_grp
     ! save files in restart format
-    call restart_init(restart, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, err, mesh = sys%gr%mesh)
+    call restart_init(restart, sys%parser, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, err, mesh = sys%gr%mesh)
     call states_dump(restart, sys%ks%ks_inversion%aux_st, sys%gr, err, 0)
     if (err /= 0) then
       message(1) = "Unable to write states wavefunctions."
@@ -172,7 +172,7 @@ contains
       !% Name of the file that contains the density used as the target in the 
       !% inversion of the KS equations.
       !%End
-      call parse_variable(dummy_parser, 'InvertKSTargetDensity', "target_density.dat", filename)
+      call parse_variable(sys%parser, 'InvertKSTargetDensity', "target_density.dat", filename)
 
       iunit = io_open(filename, action='read', status='old')
 

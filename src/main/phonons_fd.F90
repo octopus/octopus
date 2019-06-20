@@ -71,7 +71,7 @@ contains
     call init_()
 
     ! load wavefunctions
-    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+    call restart_init(gs_restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) call states_load(gs_restart, sys%parser, sys%st, sys%gr, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
@@ -96,7 +96,7 @@ contains
     !% <tt>Displacement</tt> controls how much the atoms are to be moved in order to calculate the 
     !% dynamical matrix.
     !%End
-    call parse_variable(dummy_parser, 'Displacement', CNST(0.01), vib%disp, units_inp%length)
+    call parse_variable(sys%parser, 'Displacement', CNST(0.01), vib%disp, units_inp%length)
 
     ! calculate dynamical matrix
     call get_dyn_matrix(sys%gr, sys%parser, sys%mc, sys%geo, sys%st, sys%ks, hm, sys%outp, vib)

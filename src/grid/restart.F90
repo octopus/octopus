@@ -396,8 +396,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Initializes a restart object.
-  subroutine restart_init(restart, data_type, type, mc, ierr, mesh, dir, exact)
-    type(restart_t),             intent(out) :: restart   !< Restart information.
+  subroutine restart_init(restart, parser, data_type, type, mc, ierr, mesh, dir, exact)
+    type(restart_t),             intent(out) :: restart   !< Restart information
+    type(parser_t),              intent(in)  :: parser
     integer,                     intent(in)  :: data_type !< Restart data type (RESTART_GS, RESTART_TD, etc)
     integer,                     intent(in)  :: type      !< Is this restart used for dumping (type = RESTART_TYPE_DUMP)
                                                           !! or for loading (type = RESTART_TYPE_LOAD)?
@@ -451,7 +452,7 @@ contains
       !% option and write some restart information anyway.
       !%End
 
-      call parse_variable(dummy_parser, 'RestartWrite', .true., restart_write)
+      call parse_variable(parser, 'RestartWrite', .true., restart_write)
       restart%skip = .not. restart_write
 
       if(restart%skip) then

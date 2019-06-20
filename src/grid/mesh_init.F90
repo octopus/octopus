@@ -546,7 +546,7 @@ contains
     !% grid in two of the dimensions.
     !%End
 
-    call parse_variable(dummy_parser, 'MeshOrder', ORDER_BLOCKS, order)
+    call parse_variable(parser, 'MeshOrder', ORDER_BLOCKS, order)
 
     select case(order)
     case(ORDER_BLOCKS)
@@ -817,7 +817,7 @@ contains
       !% Gives the possibility to change the partition nodes.
       !% Afterward, it crashes.
       !%End
-      call parse_variable(dummy_parser, 'MeshPartitionVirtualSize', mesh%mpi_grp%size, vsize)
+      call parse_variable(parser, 'MeshPartitionVirtualSize', mesh%mpi_grp%size, vsize)
       
       if (vsize /= mesh%mpi_grp%size) then
         write(message(1),'(a,I7)') "Changing the partition size to", vsize
@@ -869,7 +869,7 @@ contains
     !% topology to map the processors. This can improve performance
     !% for certain interconnection systems.
     !%End
-    call parse_variable(dummy_parser, 'MeshUseTopology', .false., use_topo)
+    call parse_variable(parser, 'MeshUseTopology', .false., use_topo)
 
     if(use_topo) then
       ! this should be integrated in vec_init
@@ -969,7 +969,7 @@ contains
     !% nor print the partition information, such as local points,
     !% no. of neighbours, ghost points and boundary points.
     !%End
-    call parse_variable(dummy_parser, 'PartitionPrint', .true., partition_print)
+    call parse_variable(parser, 'PartitionPrint', .true., partition_print)
     
     if (partition_print) then
       call mesh_partition_write_info(mesh, stencil, mesh%vp%part_vec)

@@ -234,7 +234,7 @@ program photoelectron_spectrum
   
   
   call restart_module_init(parser)
-  call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr)
+  call restart_init(restart, parser, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr)
   if(ierr /= 0) then
     message(1) = "Unable to read time-dependent restart information."
     call messages_fatal(1)

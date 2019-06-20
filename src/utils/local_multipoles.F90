@@ -325,7 +325,7 @@ contains
 
     if (ldrestart) then
       !TODO: check for domains & mesh compatibility 
-      call restart_init(restart_ld, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
+      call restart_init(restart_ld, sys%parser, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
                         dir=trim(ldrestart_folder), mesh = sys%gr%mesh)
       call local_restart(local, restart_ld)
       call restart_end(restart_ld)
@@ -342,7 +342,7 @@ contains
     else 
       restart_folder = folder
     end if
-    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
+    call restart_init(restart, sys%parser, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
                       dir=trim(restart_folder), mesh = sys%gr%mesh)
 
 !!$    call loct_progress_bar(-1, l_end-l_start)
@@ -775,7 +775,7 @@ contains
     filename = "ldomains"
     write(message(1),'(a,a)')'Info: Writing restart info to ', trim(filename)
     call messages_info(1)
-    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_DUMP, sys%mc, ierr, &
+    call restart_init(restart, sys%parser, RESTART_UNDEFINED, RESTART_TYPE_DUMP, sys%mc, ierr, &
                       mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
     ff2 = M_ZERO
     SAFE_ALLOCATE(lines(1:lcl%nd+2))

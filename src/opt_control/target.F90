@@ -269,7 +269,7 @@ contains
     call states_deallocate_wfns(tg%st)
     call states_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
     nullify(tg%td_fitness)
-    call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, exact=.true.)
+    call restart_init(restart, parser, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, exact=.true.)
     if(ierr /= 0) then
       message(1) = "Could not read gs for OCTTargetOperator."
       call messages_fatal(1)

@@ -509,19 +509,19 @@ contains
     call messages_info(2)
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
-      call dderivatives_test(sys%gr%der, param%repetitions, param%min_blocksize, param%max_blocksize)
+      call dderivatives_test(sys%gr%der, sys%parser, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__COMPLEX) then
-      call zderivatives_test(sys%gr%der, param%repetitions, param%min_blocksize, param%max_blocksize)
+      call zderivatives_test(sys%gr%der, sys%parser, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
     if(param%type == OPTION__TESTTYPE__REAL_SINGLE) then
-      call sderivatives_test(sys%gr%der, param%repetitions, param%min_blocksize, param%max_blocksize)
+      call sderivatives_test(sys%gr%der, sys%parser, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
    
     if(param%type == OPTION__TESTTYPE__COMPLEX_SINGLE) then
-      call cderivatives_test(sys%gr%der, param%repetitions, param%min_blocksize, param%max_blocksize)
+      call cderivatives_test(sys%gr%der, sys%parser, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
     call system_end(sys)

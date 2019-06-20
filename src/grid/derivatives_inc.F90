@@ -333,8 +333,9 @@ end subroutine X(derivatives_curl)
 
 ! ----------------------------------------------------------
 
-subroutine X(derivatives_test)(this, repetitions, min_blocksize, max_blocksize)
+subroutine X(derivatives_test)(this, parser, repetitions, min_blocksize, max_blocksize)
   type(derivatives_t), intent(in) :: this
+  type(parser_t),      intent(in) :: parser    
   integer,             intent(in) :: repetitions
   integer,             intent(in) :: min_blocksize
   integer,             intent(in) :: max_blocksize
@@ -348,7 +349,7 @@ subroutine X(derivatives_test)(this, repetitions, min_blocksize, max_blocksize)
   real(8) :: stime, etime
   character(len=20) :: type
 
-  call parse_variable(dummy_parser, 'StatesPack', .true., packstates)
+  call parse_variable(parser, 'StatesPack', .true., packstates)
 
   SAFE_ALLOCATE(ff(1:this%mesh%np_part))
   SAFE_ALLOCATE(opff(1:this%mesh%np, 1:this%mesh%sb%dim))

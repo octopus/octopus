@@ -56,7 +56,7 @@ contains
     cv%L = M_ZERO
     cv%L(1:sb%dim) = sb%lsize(1:sb%dim)
 
-    call parse_variable(dummy_parser, 'CurvBriggsBeta', M_HALF, cv%beta)
+    call parse_variable(parser, 'CurvBriggsBeta', M_HALF, cv%beta)
 
     if(cv%beta<M_ZERO.or.cv%beta>M_ONE) then
       message(1) = 'The parameter "CurvBriggsBeta" must lie between 0 and 1.'

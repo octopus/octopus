@@ -248,7 +248,7 @@ contains
     
     select case (c_how)
     CASE(OPERATION)
-      call convert_operate(sys%gr%mesh, sys%geo, sys%mc, sys%outp)
+      call convert_operate(sys%gr%mesh, sys%parser, sys%geo, sys%mc, sys%outp)
 
     CASE(FOURIER_TRANSFORM)
       ! Compute Fourier transform 
@@ -257,7 +257,7 @@ contains
          ref_name, ref_folder)
 
     CASE(CONVERT_FORMAT)
-      call convert_low(sys%gr%mesh, sys%geo, sys%mc, basename, folder, &
+      call convert_low(sys%gr%mesh, sys%parser, sys%geo, sys%mc, basename, folder, &
          c_start, c_end, c_step, sys%outp, iterate_folder, &
          subtract_file, ref_name, ref_folder)
     end select
@@ -270,9 +270,10 @@ contains
   ! ---------------------------------------------------------
   !> Giving a range of input files, it writes the corresponding 
   !! output files
-  subroutine convert_low(mesh, geo, mc, basename, in_folder, c_start, c_end, c_step, outp, iterate_folder, & 
-                                 subtract_file, ref_name, ref_folder)
-    type(mesh_t)    , intent(in)    :: mesh
+  subroutine convert_low(mesh, parser, geo, mc, basename, in_folder, c_start, c_end, c_step, outp, iterate_folder, & 
+    subtract_file, ref_name, ref_folder)
+    type(mesh_t),     intent(in)    :: mesh
+    type(parser_t),   intent(in)    :: parser
     type(geometry_t), intent(in)    :: geo
     type(multicomm_t), intent(in)   :: mc
     character(len=*), intent(inout) :: basename       !< File name
@@ -305,7 +306,7 @@ contains
  
     if (subtract_file) then
       write(message(1),'(a,a,a,a)') "Reading ref-file from ", trim(ref_folder), trim(ref_name),".obf"
-      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
+      call restart_init(restart, parser, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
                         dir=trim(ref_folder), mesh = mesh)
       ! FIXME: why only real functions? Please generalize.
       if(ierr == 0) then
@@ -329,7 +330,7 @@ contains
     else 
       restart_folder = in_folder
     end if
-    call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
+    call restart_init(restart, parser, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
                       dir=trim(restart_folder), mesh = mesh)
     call loct_progress_bar(-1, c_end-c_start)
     do ii = c_start, c_end, c_step
@@ -581,7 +582,7 @@ contains
     if (subtract_file) then
       write(message(1),'(a,a,a,a)') "Reading ref-file from ", trim(ref_folder), trim(ref_name),".obf"
       call messages_info(1)
-      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
+      call restart_init(restart, parser, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
                         dir=trim(ref_folder), mesh = mesh)
       ! FIXME: why only real functions? Please generalize.
       if(ierr == 0) then
@@ -611,7 +612,7 @@ contains
       folder = in_folder(1:len_trim(in_folder)-1)
       folder_index = index(folder, '/', .true.)
       restart_folder = folder(1:folder_index)
-      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
+      call restart_init(restart, parser, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
                         dir=trim(restart_folder), mesh = mesh)
     end if
    
@@ -752,12 +753,12 @@ contains
   ! ---------------------------------------------------------
   !> Given a set of mesh function operations it computes a  
   !! a resulting mesh function from linear combination of them.
-  subroutine convert_operate(mesh, geo, mc, outp)
-
-    type(mesh_t)    , intent(in)    :: mesh
-    type(geometry_t), intent(in)    :: geo
+  subroutine convert_operate(mesh, parser, geo, mc, outp)
+    type(mesh_t),      intent(in)    :: mesh
+    type(parser_t),    intent(in)   :: parser
+    type(geometry_t),  intent(in)    :: geo
     type(multicomm_t), intent(in)   :: mc
-    type(output_t)  , intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
+    type(output_t)  ,  intent(in)    :: outp           !< Output object; Decides the kind, what and where to output
 
     integer             :: ierr, ip, i_op, length, n_operations
     type(block_t)       :: blk
@@ -834,7 +835,7 @@ contains
       end if
       ! FIXME: why only real functions? Please generalize.
       ! TODO: check if mesh function are real or complex.
-      call restart_init(restart, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
+      call restart_init(restart, parser, RESTART_UNDEFINED, RESTART_TYPE_LOAD, mc, ierr, &
                         dir=trim(folder), mesh = mesh, exact=.true.)
       if(ierr == 0) then
         call drestart_read_mesh_function(restart, trim(filename), mesh, tmp_ff, ierr)

@@ -114,7 +114,7 @@ program oct_floquet
      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
   end if
 
-  call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+  call restart_init(restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
   if(ierr == 0) call states_load(restart, sys%parser, st, gr, ierr, label = ": gs")
   if (ierr /= 0) then
      message(1) = 'Unable to read ground-state wavefunctions.'

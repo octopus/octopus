@@ -168,7 +168,7 @@ contains
 
     complex_wfs = states_are_complex(sys%st)
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
-    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+    call restart_init(gs_restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
       call states_look_and_load(gs_restart, sys%parser, sys%st, sys%gr, is_complex = complex_response)
       call restart_end(gs_restart)
@@ -206,7 +206,7 @@ contains
       message(1) = "Reading kdotp wavefunctions for periodic directions."
       call messages_info(1)
 
-      call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
+      call restart_init(kdotp_restart, sys%parser, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
       if(ierr /= 0) then
         message(1) = "Unable to read kdotp wavefunctions."
         message(2) = "Previous kdotp calculation required."
@@ -545,9 +545,9 @@ contains
           exact_freq(:) = .false.
 
           if(states_are_real(sys%st)) then
-            call drun_sternheimer()
+            call drun_sternheimer(sys%parser)
           else
-            call zrun_sternheimer()
+            call zrun_sternheimer(sys%parser)
           end if
 
         end if ! have_to_calculate
@@ -748,7 +748,7 @@ contains
         !% they are calculated in increasing order. Can be set to false to use the order as stated,
         !% in case this makes better use of available restart information.
         !%End
-        call parse_variable(dummy_parser, 'EMFreqsSort', .true., freq_sort)
+        call parse_variable(sys%parser, 'EMFreqsSort', .true., freq_sort)
 
         if(freq_sort) call sort(em_vars%omega)
 
@@ -771,7 +771,7 @@ contains
       !% In units of energy. Cannot be negative.
       !%End
 
-      call parse_variable(dummy_parser, 'EMEta', M_ZERO, em_vars%eta, units_inp%energy)
+      call parse_variable(sys%parser, 'EMEta', M_ZERO, em_vars%eta, units_inp%energy)
       if(em_vars%eta < -M_EPSILON) then
         message(1) = "EMEta cannot be negative."
         call messages_fatal(1)
@@ -798,7 +798,7 @@ contains
       !%Option none 0
       !% Zero perturbation, for use in testing.
       !%End 
-      call parse_variable(dummy_parser, 'EMPerturbationType', PERTURBATION_ELECTRIC, perturb_type)
+      call parse_variable(sys%parser, 'EMPerturbationType', PERTURBATION_ELECTRIC, perturb_type)
       call messages_print_var_option(stdout, 'EMPerturbationType', perturb_type)
       
       call pert_init(em_vars%perturbation, sys%parser, perturb_type, sys%gr, sys%geo)
@@ -813,7 +813,7 @@ contains
         !% and write to file <tt>rotatory_strength</tt>.
         !%End
 
-        call parse_variable(dummy_parser, 'EMCalcRotatoryResponse', .false., em_vars%calc_rotatory)
+        call parse_variable(sys%parser, 'EMCalcRotatoryResponse', .false., em_vars%calc_rotatory)
 
         !%Variable EMHyperpol
         !%Type block
@@ -849,7 +849,7 @@ contains
         !%Description
         !% Calculate magneto-optical response.
         !%End
-        call parse_variable(dummy_parser, 'EMCalcMagnetooptics', .false., em_vars%calc_magnetooptics)
+        call parse_variable(sys%parser, 'EMCalcMagnetooptics', .false., em_vars%calc_magnetooptics)
 
         !%Variable EMMagnetoopticsNoHVar
         !%Type logical
@@ -859,7 +859,7 @@ contains
         !% Exclude corrections to the exchange-correlation and Hartree terms 
         !% from consideration of perturbations induced by a magnetic field
         !%End
-        call parse_variable(dummy_parser, 'EMMagnetoopticsNoHVar', .true., em_vars%magnetooptics_nohvar)
+        call parse_variable(sys%parser, 'EMMagnetoopticsNoHVar', .true., em_vars%magnetooptics_nohvar)
 
         !%Variable EMKPointOutput
         !%Type logical
@@ -870,7 +870,7 @@ contains
         !% Can be also used for magneto-optical effects.
         !%End
 
-        call parse_variable(dummy_parser, 'EMKPointOutput', .false., em_vars%kpt_output)
+        call parse_variable(sys%parser, 'EMKPointOutput', .false., em_vars%kpt_output)
 
       end if
 
@@ -886,7 +886,7 @@ contains
       !% for the finite system. This variable has no effect for a finite system.
       !%End
 
-      call parse_variable(dummy_parser, 'EMForceNoKdotP', .false., em_vars%force_no_kdotp)
+      call parse_variable(sys%parser, 'EMForceNoKdotP', .false., em_vars%force_no_kdotp)
 
       !%Variable EMCalcBornCharges
       !%Type logical
@@ -896,7 +896,7 @@ contains
       !% Calculate linear-response Born effective charges from electric perturbation (experimental).
       !%End
 
-      call parse_variable(dummy_parser, 'EMCalcBornCharges', .false., em_vars%calc_Born)
+      call parse_variable(sys%parser, 'EMCalcBornCharges', .false., em_vars%calc_Born)
       if (em_vars%calc_Born) call messages_experimental("Calculation of Born effective charges")
 
       !%Variable EMOccupiedResponse
@@ -910,7 +910,7 @@ contains
       !% the full response is always calculated.
       !%End
 
-      call parse_variable(dummy_parser, 'EMOccupiedResponse', .false., em_vars%occ_response)
+      call parse_variable(sys%parser, 'EMOccupiedResponse', .false., em_vars%occ_response)
       if(em_vars%occ_response .and. .not. (smear_is_semiconducting(sys%st%smear) .or. sys%st%smear%method == SMEAR_FIXED_OCC)) then
         message(1) = "EMOccupiedResponse cannot be used if there are partial occupations."
         call messages_fatal(1)
@@ -926,7 +926,7 @@ contains
       !% be used. Restart wavefunctions from a very different frequency can hinder convergence.
       !%End
 
-      call parse_variable(dummy_parser, 'EMWavefunctionsFromScratch', .false., em_vars%wfns_from_scratch)
+      call parse_variable(sys%parser, 'EMWavefunctionsFromScratch', .false., em_vars%wfns_from_scratch)
 
       POP_SUB(em_resp_run.parse_input)
 

@@ -114,7 +114,7 @@ contains
     !% and written in directory <tt>restart/vib_modes/phn_nm_wfs_XXXXX</tt>.
     !% This part is time-consuming and not parallel, but not needed for most purposes.
     !%End
-    call parse_variable(dummy_parser, 'CalcNormalModeWfs', .false., normal_mode_wfs)
+    call parse_variable(sys%parser, 'CalcNormalModeWfs', .false., normal_mode_wfs)
 
     !%Variable CalcInfrared
     !%Type logical
@@ -124,7 +124,7 @@ contains
     !% If set to true, infrared intensities (and Born charges) will be calculated
     !% and written in <tt>vib_modes/infrared</tt>.
     !%End
-    call parse_variable(dummy_parser, 'CalcInfrared', .true., do_infrared)
+    call parse_variable(sys%parser, 'CalcInfrared', .true., do_infrared)
 
     !%Variable SymmetrizeDynamicalMatrix
     !%Type logical
@@ -135,7 +135,7 @@ contains
     !% the matrix will be symmetrized to enforce <math>D_{ij} = D_{ji}</math>. If set to false,
     !% only the upper half of the matrix will be calculated.
     !%End
-    call parse_variable(dummy_parser, 'SymmetrizeDynamicalMatrix', .true., symmetrize)
+    call parse_variable(sys%parser, 'SymmetrizeDynamicalMatrix', .true., symmetrize)
 
     ! replaced by properly saving and reading the dynamical matrix
     call messages_obsolete_variable(sys%parser, 'UseRestartDontSolve')
@@ -143,7 +143,7 @@ contains
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
 
-    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+    call restart_init(gs_restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
     if(ierr == 0) then
       call states_look_and_load(gs_restart, sys%parser, st, gr)
       call restart_end(gs_restart)
@@ -157,7 +157,7 @@ contains
       message(1) = "Reading kdotp wavefunctions for periodic directions."
       call messages_info(1)
 
-      call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+      call restart_init(kdotp_restart, sys%parser, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
       if(ierr /= 0) then
         message(1) = "Unable to read kdotp wavefunctions."
         message(2) = "Previous kdotp calculation required."
@@ -214,8 +214,8 @@ contains
     call lr_init(lr(1))
     call lr_allocate(lr(1), st, gr%mesh)
 
-    call restart_init(restart_dump, RESTART_VIB_MODES, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
-    call restart_init(restart_load, RESTART_VIB_MODES, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+    call restart_init(restart_dump, sys%parser, RESTART_VIB_MODES, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
+    call restart_init(restart_load, sys%parser, RESTART_VIB_MODES, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
 
     if (fromScratch) then
       start_mode = 1
