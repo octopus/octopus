@@ -240,7 +240,7 @@ contains
     !% Passive analysis of the wf. Simply analyze the plane-wave components of the 
     !% wavefunctions on the region <i>r</i> > <i>R1</i>. This mode employs a step masking function by default.
     !%End
-    call parse_variable(parser, 'PESMaskMode', PES_MASK_MODE_MASK, mask%mode)
+    call parse_variable(dummy_parser, 'PESMaskMode', PES_MASK_MODE_MASK, mask%mode)
     if(.not.varinfo_valid_option('PESMaskMode', mask%mode)) call messages_input_error('PESMaskMode')
     call messages_print_var_option(stdout, "PESMaskMode", mask%mode)
     
@@ -268,7 +268,7 @@ contains
     !% getting rid of an unwanted ionization signal coming from the pump.
     !% NOTE: This will enforce the mask boundary conditions for all times. 
     !%End
-    call parse_variable(parser, 'PESMaskStartTime', -M_ONE, mask%start_time, unit = units_inp%time)
+    call parse_variable(dummy_parser, 'PESMaskStartTime', -M_ONE, mask%start_time, unit = units_inp%time)
 
     !%Variable PESMaskPlaneWaveProjection
     !%Type integer
@@ -296,7 +296,7 @@ contains
     !%Option pnfft_map 7
     !% Use PNFFT library. 
     !%End
-    call parse_variable(parser, 'PESMaskPlaneWaveProjection', PW_MAP_FFT, mask%pw_map_how)
+    call parse_variable(dummy_parser, 'PESMaskPlaneWaveProjection', PW_MAP_FFT, mask%pw_map_how)
     
     if(.not.varinfo_valid_option('PESMaskPlaneWaveProjection', mask%pw_map_how)) then
       call messages_input_error('PESMaskPlaneWaveProjection')
@@ -350,7 +350,7 @@ contains
     !%End
 
     mask%enlarge = M_ONE
-    call parse_variable(parser, 'PESMaskEnlargeFactor', M_ONE, mask%enlarge(1))
+    call parse_variable(dummy_parser, 'PESMaskEnlargeFactor', M_ONE, mask%enlarge(1))
     
     if ( mask%enlarge(1) /= M_ONE ) then
 
@@ -387,7 +387,7 @@ contains
     !%End
     
     mask%enlarge_2p = M_ONE
-    call parse_variable(parser, 'PESMask2PEnlargeFactor', M_ONE, mask%enlarge_2p(1))
+    call parse_variable(dummy_parser, 'PESMask2PEnlargeFactor', M_ONE, mask%enlarge_2p(1))
 
     
     if ( mask%enlarge_2p(1) /= M_ONE ) then
@@ -563,7 +563,7 @@ contains
     !%Option m_erf 3 
     !%Error function. Not Implemented.
     !%End
-    call parse_variable(parser, 'PESMaskShape', defaultMask, mask%shape)
+    call parse_variable(dummy_parser, 'PESMaskShape', defaultMask, mask%shape)
     if(.not.varinfo_valid_option('PESMaskShape', mask%shape)) call messages_input_error('PESMaskShape')
     call messages_print_var_option(stdout, "PESMaskShape", mask%shape)
     
@@ -670,7 +670,7 @@ contains
     !% to filter out the unwanted components by setting an energy cut-off. 
     !% If <tt>PESMaskFilterCutOff = -1</tt> no filter is applied.
     !%End
-    call parse_variable(parser, 'PESMaskFilterCutOff', -M_ONE, pCutOff, unit = units_inp%energy)
+    call parse_variable(dummy_parser, 'PESMaskFilterCutOff', -M_ONE, pCutOff, unit = units_inp%energy)
     
     nullify(mask%Mk)
     mask%filter_k = .false.
@@ -700,7 +700,7 @@ contains
     !% and total simulation time. 
     !% Note: Carefully choose <math>R1</math> in order to avoid contributions from returning electrons. 
     !%End
-    call parse_variable(parser, 'PESMaskIncludePsiA', .false., mask%add_psia)
+    call parse_variable(dummy_parser, 'PESMaskIncludePsiA', .false., mask%add_psia)
     if(mask%add_psia) then
       message(1)= "Input: Include contribution from Psi_A."
       call messages_info(1)
@@ -719,7 +719,7 @@ contains
       tmp = maxval(mask%Lk(1:mask%ll(idim),1:mesh%sb%dim))**M_TWO/M_TWO
       if (tmp > MaxE) MaxE = tmp
     end do
-    call parse_variable(parser, 'PESMaskSpectEnergyMax', MaxE, mask%energyMax, unit = units_inp%energy)
+    call parse_variable(dummy_parser, 'PESMaskSpectEnergyMax', MaxE, mask%energyMax, unit = units_inp%energy)
     call messages_print_var_value(stdout, "PESMaskSpectEnergyMax", mask%energyMax, unit = units_out%energy)
 
     !%Variable PESMaskSpectEnergyStep 
@@ -729,7 +729,7 @@ contains
     !% The PES spectrum energy step.
     !%End
     DeltaE = minval(mask%Lk(2,1:mesh%sb%dim)-mask%Lk(1,1:mesh%sb%dim))**M_TWO/M_TWO
-    call parse_variable(parser, 'PESMaskSpectEnergyStep', DeltaE, mask%energyStep, unit = units_inp%energy)
+    call parse_variable(dummy_parser, 'PESMaskSpectEnergyStep', DeltaE, mask%energyStep, unit = units_inp%energy)
     call messages_print_var_value(stdout, "PESMaskSpectEnergyStep", mask%energyStep, unit = units_out%energy)
     
 

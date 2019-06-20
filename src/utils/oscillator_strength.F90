@@ -25,6 +25,7 @@ module oscillator_strength_oct_m
   use lalg_adv_oct_m
   use messages_oct_m
   use minimizer_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use spectrum_oct_m
   use string_oct_m
@@ -1157,7 +1158,8 @@ program oscillator_strength
 
   ! Initialize stuff
   call global_init(is_serial = .true.)
-  call io_init(parser, defaults = .true.)
+
+  call io_init(dummy_parser, defaults = .true.)
 
   select case(run_mode)
   case(GENERATE_NTHORDER_SIGNAL)

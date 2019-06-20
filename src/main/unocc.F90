@@ -80,7 +80,7 @@ contains
     !% has not been achieved. -1 means unlimited. 0 means just do LCAO or read from
     !% restart, and stop.
     !%End
-    call parse_variable(parser, 'MaximumIter', 50, max_iter)
+    call parse_variable(dummy_parser, 'MaximumIter', 50, max_iter)
     call messages_obsolete_variable(sys%parser, 'UnoccMaximumIter', 'MaximumIter')
     if(max_iter < 0) max_iter = huge(max_iter)
 
@@ -93,7 +93,7 @@ contains
     !% This is useful for testing, or if the occupied states fail to converge.
     !% It will be enabled automatically if only occupied states are being calculated.
     !%End
-    call parse_variable(parser, 'UnoccShowOccStates', .false., showoccstates)
+    call parse_variable(dummy_parser, 'UnoccShowOccStates', .false., showoccstates)
 
     bandstructure_mode = .false.
     if(simul_box_is_periodic(sys%gr%sb) .and. kpoints_get_kpoint_method(sys%gr%sb%kpoints) == KPOINTS_PATH) then

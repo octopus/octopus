@@ -86,7 +86,7 @@
     !%End
 
     call messages_obsolete_variable(parser, 'PropagationSpectrumTimeStepFactor', 'ConductivitySpectrumTimeStepFactor')
-    call parse_variable(parser, 'ConductivitySpectrumTimeStepFactor', 1, skip)
+    call parse_variable(dummy_parser, 'ConductivitySpectrumTimeStepFactor', 1, skip)
     if(skip <= 0) call messages_input_error('ConductivitySpectrumTimeStepFactor')
 
     !%Variable ConductivityFromForces
@@ -96,7 +96,7 @@
     !%Description
     !% (Experimental) If enabled, Octopus will attempt to calculate the conductivity from the forces instead of the current. 
     !%End
-    call parse_variable(parser, 'ConductivityFromForces', .false., from_forces)
+    call parse_variable(dummy_parser, 'ConductivityFromForces', .false., from_forces)
     if(from_forces) call messages_experimental('ConductivityFromForces')
     
     max_freq = spectrum_nenergy_steps(spectrum)

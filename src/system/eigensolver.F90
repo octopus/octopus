@@ -166,7 +166,7 @@ contains
       default_es = RS_CG
     end if
 
-    call parse_variable(parser, 'Eigensolver', default_es, eigens%es_type)
+    call parse_variable(dummy_parser, 'Eigensolver', default_es, eigens%es_type)
 
     if(st%parallel_in_states .and. .not. eigensolver_parallel_in_states(eigens)) then
       message(1) = "The selected eigensolver is not parallel in states."
@@ -198,7 +198,7 @@ contains
       !% against all other bands can improve convergence properties, whereas
       !% orthogonalizing against lower bands needs less operations.
       !%End
-      call parse_variable(parser, 'CGOrthogonalizeAll', .false., eigens%orthogonalize_to_all)
+      call parse_variable(dummy_parser, 'CGOrthogonalizeAll', .false., eigens%orthogonalize_to_all)
 
       !%Variable CGDirection
       !%Type integer
@@ -215,7 +215,7 @@ contains
       !% For the Polak-Ribiere scheme, a product of the current with the previous
       !% steepest descent vector is subtracted in the nominator.
       !%End
-      call parse_variable(parser, 'CGDirection', OPTION__CGDIRECTION__FLETCHER, eigens%conjugate_direction)
+      call parse_variable(dummy_parser, 'CGDirection', OPTION__CGDIRECTION__FLETCHER, eigens%conjugate_direction)
 
       !%Variable CGAdditionalTerms
       !%Type logical
@@ -228,7 +228,7 @@ contains
       !% If you experience convergence problems, you might try out this option.
       !% This feature is still experimental.
       !%End
-      call parse_variable(parser, 'CGAdditionalTerms', .false., eigens%additional_terms)
+      call parse_variable(dummy_parser, 'CGAdditionalTerms', .false., eigens%additional_terms)
       if(eigens%additional_terms) then
         call messages_experimental("The additional terms for the CG eigensolver are not tested for all cases.")
       end if
@@ -247,7 +247,7 @@ contains
       !% are solving the OEP equation, you might want to set this value to 1e-3 or smaller. In general,
       !% smaller values might help if you experience convergence problems.
       !%End
-      call parse_variable(parser, 'CGEnergyChangeThreshold', CNST(0.1), eigens%energy_change_threshold)
+      call parse_variable(dummy_parser, 'CGEnergyChangeThreshold', CNST(0.1), eigens%energy_change_threshold)
 
     case(RS_PLAN)
     case(RS_EVO)
@@ -262,7 +262,7 @@ contains
       !% method (<tt>Eigensolver = evolution</tt>) to obtain the lowest eigenvalues/eigenvectors.
       !% It must satisfy <tt>EigensolverImaginaryTime > 0</tt>.
       !%End
-      call parse_variable(parser, 'EigensolverImaginaryTime', CNST(10.0), eigens%imag_time)
+      call parse_variable(dummy_parser, 'EigensolverImaginaryTime', CNST(10.0), eigens%imag_time)
       if(eigens%imag_time <= M_ZERO) call messages_input_error('EigensolverImaginaryTime')
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
@@ -279,7 +279,7 @@ contains
       !% minimizations.
       !%End
 
-      call parse_variable(parser, 'EigensolverMinimizationIter', 5, eigens%rmmdiis_minimization_iter)
+      call parse_variable(dummy_parser, 'EigensolverMinimizationIter', 5, eigens%rmmdiis_minimization_iter)
 
       if(gr%mesh%use_curvilinear) call messages_experimental("RMMDIIS eigensolver for curvilinear coordinates")
 
@@ -313,7 +313,7 @@ contains
     !% This is the tolerance for the eigenvectors. The default is 1e-6,
     !% except for the ARPACK solver for which it is 0.
     !%End
-    call parse_variable(parser, 'EigensolverTolerance', default_tol, eigens%tolerance)
+    call parse_variable(dummy_parser, 'EigensolverTolerance', default_tol, eigens%tolerance)
 
     !%Variable EigensolverMaxIter
     !%Type integer
@@ -325,7 +325,7 @@ contains
     !% except for <tt>rmdiis</tt>, which performs only 3 iterations (only
     !% increase it if you know what you are doing).
     !%End
-    call parse_variable(parser, 'EigensolverMaxIter', default_iter, eigens%es_maxiter)
+    call parse_variable(dummy_parser, 'EigensolverMaxIter', default_iter, eigens%es_maxiter)
     if(eigens%es_maxiter < 1) call messages_input_error('EigensolverMaxIter')
 
     if(eigens%es_maxiter > default_iter) then
@@ -386,7 +386,7 @@ contains
     !%Description
     !% Only solve Hamiltonian for k-points with zero weight
     !%End
-    call parse_variable(parser, 'EigensolverSkipKpoints', .false., eigens%skip_finite_weight_kpoints)
+    call parse_variable(dummy_parser, 'EigensolverSkipKpoints', .false., eigens%skip_finite_weight_kpoints)
     call messages_print_var_value(stdout,'EigensolverSkipKpoints',  eigens%skip_finite_weight_kpoints)
 
     ! set KS object

@@ -165,7 +165,7 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   !%Description
   !% Output detailed information on SCDM procedure.
   !%End
-  call parse_variable(parser, 'SCDM_verbose', .false., scdm%verbose)
+  call parse_variable(dummy_parser, 'SCDM_verbose', .false., scdm%verbose)
   
   scdm%full_cube_n = fullcube%rs_n_global
   
@@ -182,7 +182,7 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   !%Description
   !% Controls the size of the box on which the SCDM states are defined (box size = 2*radius).
   !%End  
-  call parse_variable(parser, 'SCDMCutoffRadius', 3._8, rcut, units_inp%length)
+  call parse_variable(dummy_parser, 'SCDMCutoffRadius', 3._8, rcut, units_inp%length)
   if (scdm%root.and.scdm%verbose) call messages_print_var_value(stdout, 'SCDM cutoff', rcut)
   ! box_size is half the size of the  box
   scdm%box_size = 0

@@ -131,7 +131,7 @@ contains
 
     default = 2**(LOCAL_OUT_MULTIPOLES - 1) 
 
-    call parse_variable(parser, 'LDOutput', default, flags)
+    call parse_variable(dummy_parser, 'LDOutput', default, flags)
 
     if(.not.varinfo_valid_option('LDOutput', flags, is_flag = .true.)) call messages_input_error('LDOutput')
 
@@ -150,7 +150,7 @@ contains
     !% Describes the format of the output files (see <tt>LDOutput</tt>).
     !% It can take the same values as <tt>OutputFormat</tt> flag.
     !%End
-    call parse_variable(parser, 'LDOutputFormat', 0, writ%how)
+    call parse_variable(dummy_parser, 'LDOutputFormat', 0, writ%how)
     if(.not.varinfo_valid_option('OutputFormat', writ%how, is_flag=.true.)) then
       call messages_input_error('LDOutputFormat')
     end if
@@ -164,7 +164,7 @@ contains
     !% during a time-dependent simulation. Must be non-negative.
     !%End
 
-    call parse_variable(parser, 'LDMultipoleLmax', 1, writ%lmax)
+    call parse_variable(dummy_parser, 'LDMultipoleLmax', 1, writ%lmax)
     if (writ%lmax < 0) then
       write(message(1), '(a,i6,a)') "Input: '", writ%lmax, "' is not a valid LDMultipoleLmax."
       message(2) = '(Must be LDMultipoleLmax >= 0 )'
@@ -631,7 +631,7 @@ contains
     !% Describes if the ionic dipole has to be take into account
     !% when computing the multipoles.
     !%End
-    call parse_variable(parser, 'LDIonicDipole', .true., use_ionic_dipole)
+    call parse_variable(dummy_parser, 'LDIonicDipole', .true., use_ionic_dipole)
     if (use_ionic_dipole) then
       call local_geometry_dipole(nd, ions_inside, geo, center, ionic_dipole)
       do is = 1, st%d%nspin

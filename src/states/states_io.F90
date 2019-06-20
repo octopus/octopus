@@ -603,7 +603,7 @@ contains
     !% Determines if projections of wavefunctions on the atomic orbitals 
     !% are computed or not for obtaining the orbital resolved band-structure.
     !%End
-    call parse_variable(parser, 'BandStructureComputeProjections', .false., projection)
+    call parse_variable(dummy_parser, 'BandStructureComputeProjections', .false., projection)
 
 
     if(mpi_grp_is_root(mpi_world)) then

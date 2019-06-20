@@ -100,7 +100,7 @@ contains
     !%Option exterior 3
     !% Exterior complex scaling (not yet implemented).
     !%End
-    call parse_variable(parser, 'AbsorbingBoundaries', NOT_ABSORBING, this%abtype)
+    call parse_variable(dummy_parser, 'AbsorbingBoundaries', NOT_ABSORBING, this%abtype)
     if(.not.varinfo_valid_option('AbsorbingBoundaries', this%abtype, is_flag = .true.)) then
       call messages_input_error('AbsorbingBoundaries')
     end if
@@ -120,7 +120,7 @@ contains
       !% When <tt>AbsorbingBoundaries = cap</tt>, this is the height of the imaginary potential.
       !%End
       if(this%abtype == IMAGINARY_ABSORBING) then
-        call parse_variable(parser, 'ABCapHeight', -CNST(0.2), abheight, units_inp%energy)
+        call parse_variable(dummy_parser, 'ABCapHeight', -CNST(0.2), abheight, units_inp%energy)
       end if
 
       !%Variable ABShape
@@ -209,7 +209,7 @@ contains
       !%End
 !       call messages_obsolete_variable('ABWidth', 'ABShape')
       abwidth = bounds(2)-bounds(1)
-      call parse_variable(parser, 'ABWidth', abwidth, abwidth, units_inp%length)
+      call parse_variable(dummy_parser, 'ABWidth', abwidth, abwidth, units_inp%length)
       bounds(1) = bounds(2) - abwidth
       
       write(message(1),'(a,es10.3,3a)') & 

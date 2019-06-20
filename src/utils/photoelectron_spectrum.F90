@@ -128,7 +128,7 @@ program photoelectron_spectrum
   call messages_print_stress(stdout,"Postprocessing")  
   
   !Figure out wich method has been used to calculate the photoelectron data  
-  call parse_variable(parser, 'PhotoElectronSpectrum', OPTION__PHOTOELECTRONSPECTRUM__NONE, pes_method)
+  call parse_variable(dummy_parser, 'PhotoElectronSpectrum', OPTION__PHOTOELECTRONSPECTRUM__NONE, pes_method)
   
   select case (pes_method)
   case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
@@ -156,7 +156,7 @@ program photoelectron_spectrum
     if(dim <= 2) option = OPTION__PES_FLUX_SHAPE__CUB
     if (simul_box_is_periodic(sb)) option = OPTION__PES_FLUX_SHAPE__PLN
     
-    call parse_variable(parser, 'PES_Flux_Shape', option, pflux%shape)
+    call parse_variable(dummy_parser, 'PES_Flux_Shape', option, pflux%shape)
     call pes_flux_reciprocal_mesh_gen(pflux, parser, sb, st, 0, post = .true.)
     
     llg(1:dim) = pflux%ll(1:dim)
@@ -264,7 +264,7 @@ program photoelectron_spectrum
     call parse_block_end(blk)
     if (abs(st_range(2)-st_range(1)) > 0)resolve_states = .true.    
   else
-    call parse_variable(parser, 'PhotoelectronSpectrumResolveStates', .false., resolve_states)
+    call parse_variable(dummy_parser, 'PhotoelectronSpectrumResolveStates', .false., resolve_states)
   end if
   
   
@@ -371,7 +371,7 @@ program photoelectron_spectrum
   !%Option arpes_cut bit(8)
   !% ARPES cut on a plane following a zero-weight path in reciprocal space.
   !%End
-  call parse_variable(parser, 'PhotoelectronSpectrumOutput', pesout%what, pesout%what)
+  call parse_variable(dummy_parser, 'PhotoelectronSpectrumOutput', pesout%what, pesout%what)
   
   ! TODO: I think it would be better to move these options in the
   ! input file to have more flexibility to combine and to keep

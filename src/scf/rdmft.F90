@@ -296,7 +296,7 @@ contains
       !% for the occupation number minimization also stops according to this criterion.
       !%End
 
-      call parse_variable(parser, 'RDMTolerance', CNST(1.0e-7), rdm%toler)
+      call parse_variable(dummy_parser, 'RDMTolerance', CNST(1.0e-7), rdm%toler)
 
       !%Variable RDMConvEner
       !%Type float
@@ -310,7 +310,7 @@ contains
       !% orbitals is smaller than this criterion. It is also used to exit the orbital minimization.
       !%End
 
-      call parse_variable(parser, 'RDMConvEner', CNST(1.0e-7), rdm%conv_ener)
+      call parse_variable(dummy_parser, 'RDMConvEner', CNST(1.0e-7), rdm%conv_ener)
       
       !%Variable RDMBasis
       !%Type logical
@@ -321,7 +321,7 @@ contains
       !% not be calculated on the grid but on the basis of the initial orbitals
       !%End
 
-      call parse_variable(parser, 'RDMBasis',.true., rdm%do_basis)
+      call parse_variable(dummy_parser, 'RDMBasis',.true., rdm%do_basis)
 
       ! shortcuts
       rdm%gr   => gr

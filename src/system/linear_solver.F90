@@ -150,7 +150,7 @@ contains
       end if
     end if
 
-    call parse_variable(parser, "LinearSolver", defsolver_, fsolver)
+    call parse_variable(dummy_parser, "LinearSolver", defsolver_, fsolver)
 
     ! set up pointer for dot product and norm in QMR solvers
     call mesh_init_mesh_aux(gr%mesh)
@@ -168,7 +168,7 @@ contains
     !% Maximum number of iterations the linear solver does, even if
     !% convergence is not achieved.
     !%End
-    call parse_variable(parser, "LinearSolverMaxIter", 1000, this%max_iter)
+    call parse_variable(dummy_parser, "LinearSolverMaxIter", 1000, this%max_iter)
 
     write(message(1),'(a)') 'Linear Solver'
     call messages_print_stress(stdout, trim(message(1)))

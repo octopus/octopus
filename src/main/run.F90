@@ -107,7 +107,7 @@ contains
     !% mainly because it is simple and useful for testing purposes.
     !%End
     
-    call parse_variable(parser, 'ResponseMethod', LR, get_resp_method)
+    call parse_variable(dummy_parser, 'ResponseMethod', LR, get_resp_method)
 
     if(.not.varinfo_valid_option('ResponseMethod', get_resp_method)) then
       call messages_input_error('ResponseMethod')
@@ -227,7 +227,7 @@ contains
       !% information.
       !%End
 
-      call parse_variable(parser, 'FromScratch', .false., fromScratch)
+      call parse_variable(dummy_parser, 'FromScratch', .false., fromScratch)
 
       call profiling_in(calc_mode_prof, "CALC_MODE")
 

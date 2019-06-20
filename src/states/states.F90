@@ -276,7 +276,7 @@ contains
     !% be oriented non-collinearly: <i>i.e.</i> the magnetization vector is allowed to take different
     !% directions at different points. This vector is always in 3D regardless of <tt>Dimensions</tt>.
     !%End
-    call parse_variable(parser, 'SpinComponents', UNPOLARIZED, st%d%ispin)
+    call parse_variable(dummy_parser, 'SpinComponents', UNPOLARIZED, st%d%ispin)
     if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call messages_input_error('SpinComponents')
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
     ! Use of spinors requires complex wavefunctions.
@@ -298,7 +298,7 @@ contains
     !% electrons, while a positive value means we are taking electrons
     !% from the system.
     !%End
-    call parse_variable(parser, 'ExcessCharge', M_ZERO, excess_charge)
+    call parse_variable(dummy_parser, 'ExcessCharge', M_ZERO, excess_charge)
 
     !%Variable CalcEigenvalues
     !%Type logical
@@ -313,7 +313,7 @@ contains
     !%
     !% This mode cannot be used with unoccupied states.    
     !%End
-    call parse_variable(parser, 'CalcEigenvalues', .true., st%calc_eigenval)
+    call parse_variable(dummy_parser, 'CalcEigenvalues', .true., st%calc_eigenval)
     if(.not. st%calc_eigenval) call messages_experimental('CalcEigenvalues = .false.')
     
     !%Variable TotalStates
@@ -330,7 +330,7 @@ contains
     !% If you want to add some unoccupied states, probably it is more convenient to use the variable
     !% <tt>ExtraStates</tt>.
     !%End
-    call parse_variable(parser, 'TotalStates', 0, ntot)
+    call parse_variable(dummy_parser, 'TotalStates', 0, ntot)
     if (ntot < 0) then
       write(message(1), '(a,i5,a)') "Input: '", ntot, "' is not a valid value for TotalStates."
       call messages_fatal(1)
@@ -352,7 +352,7 @@ contains
     !% an electronic temperature with <tt>Smearing</tt>, or in order to calculate
     !% excited states (including with <tt>CalculationMode = unocc</tt>).
     !%End
-    call parse_variable(parser, 'ExtraStates', 0, nempty)
+    call parse_variable(dummy_parser, 'ExtraStates', 0, nempty)
     if (nempty < 0) then
       write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid value for ExtraStates."
       message(2) = '(0 <= ExtraStates)'
@@ -376,7 +376,7 @@ contains
     !% unocc calculation faster.
     !% By default, all extra states need to be converged.
     !%End
-    call parse_variable(parser, 'ExtraStatesToConverge', nempty, nempty_conv)
+    call parse_variable(dummy_parser, 'ExtraStatesToConverge', nempty, nempty_conv)
     if (nempty < 0) then
       write(message(1), '(a,i5,a)') "Input: '", nempty_conv, "' is not a valid value for ExtraStatesToConverge."
       message(2) = '(0 <= ExtraStatesToConverge)'
@@ -468,7 +468,7 @@ contains
 
     ASSERT(default > 0)
 
-    call parse_variable(parser, 'StatesBlockSize', default, st%d%block_size)
+    call parse_variable(dummy_parser, 'StatesBlockSize', default, st%d%block_size)
     if(st%d%block_size < 1) then
       call messages_write("The variable 'StatesBlockSize' must be greater than 0.")
       call messages_fatal()
@@ -497,7 +497,7 @@ contains
     !% will be used as initial states for a time-propagation. No attempt is made
     !% to load ground-state orbitals from a previous ground-state run.
     !%End
-    call parse_variable(parser, 'OnlyUserDefinedInitialStates', .false., st%only_userdef_istates)
+    call parse_variable(dummy_parser, 'OnlyUserDefinedInitialStates', .false., st%only_userdef_istates)
 
     ! we now allocate some arrays
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
@@ -531,7 +531,7 @@ contains
     !%Option par_dependent 2
     !% The randomization depends on the number of taks used in the calculation.
     !%End
-    call parse_variable(parser, 'StatesRandomization', PAR_INDEPENDENT, st%randomization)
+    call parse_variable(dummy_parser, 'StatesRandomization', PAR_INDEPENDENT, st%randomization)
 
 
     call states_read_initial_occs(st, parser, excess_charge, gr%sb%kpoints)
@@ -567,7 +567,7 @@ contains
     !% When enabled the density is symmetrized. Currently, this can
     !% only be done for periodic systems. (Experimental.)
     !%End
-    call parse_variable(parser, 'SymmetrizeDensity', gr%sb%kpoints%use_symmetries, st%symmetrize_density)
+    call parse_variable(dummy_parser, 'SymmetrizeDensity', gr%sb%kpoints%use_symmetries, st%symmetrize_density)
     call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
 
 #ifdef HAVE_SCALAPACK
@@ -586,7 +586,7 @@ contains
     !% Warning: This variable is designed for testing and
     !% benchmarking and normal users need not use it.
     !%End
-    call parse_variable(parser, 'ForceComplex', .false., force)
+    call parse_variable(dummy_parser, 'ForceComplex', .false., force)
 
     if(force) call states_set_complex(st)
 
@@ -658,7 +658,7 @@ contains
     !% if the occupations from the previous calculation had been set via the <tt>Occupations</tt> block,
     !% <i>i.e.</i> fixed. Otherwise, occupations will be determined by smearing.
     !%End
-    call parse_variable(parser, 'RestartFixedOccupations', .false., st%restart_fixed_occ)
+    call parse_variable(dummy_parser, 'RestartFixedOccupations', .false., st%restart_fixed_occ)
     ! we will turn on st%fixed_occ if restart_read is ever called
 
     !%Variable Occupations
@@ -856,7 +856,7 @@ contains
     !% according to the order of the expectation values of the restart wavefunctions.
     !%End
     if(st%fixed_occ) then
-      call parse_variable(parser, 'RestartReorderOccs', .false., st%restart_reorder_occs)
+      call parse_variable(dummy_parser, 'RestartReorderOccs', .false., st%restart_reorder_occs)
     else
       st%restart_reorder_occs = .false.
     end if
@@ -1254,7 +1254,7 @@ contains
     if(accel_is_enabled()) then
       defaultl = .false.
     end if
-    call parse_variable(parser, 'StatesPack', defaultl, st%d%pack_states)
+    call parse_variable(dummy_parser, 'StatesPack', defaultl, st%d%pack_states)
 
     call messages_print_var_value(stdout, 'StatesPack', st%d%pack_states)
 
@@ -1275,7 +1275,7 @@ contains
     if(accel_is_enabled() .and. .not. st%d%pack_states) then
       defaultl = .true.
     end if
-    call parse_variable(parser, 'StatesMirror', defaultl, st%d%mirror_states)
+    call parse_variable(dummy_parser, 'StatesMirror', defaultl, st%d%mirror_states)
 
     call messages_print_var_value(stdout, 'StatesMirror', st%d%mirror_states)
 
@@ -1315,7 +1315,7 @@ contains
     end if
 #endif
     
-    call parse_variable(parser, 'StatesOrthogonalization', default, st%d%orth_method)
+    call parse_variable(dummy_parser, 'StatesOrthogonalization', default, st%d%orth_method)
 
     if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) call messages_input_error('StatesOrthogonalization')
     call messages_print_var_option(stdout, 'StatesOrthogonalization', st%d%orth_method)
@@ -1334,7 +1334,7 @@ contains
     !% amount of memory in megabytes that would be subtracted from
     !% the total device memory.
     !%End
-    call parse_variable(parser, 'StatesCLDeviceMemory', CNST(-512.0), st%d%cl_states_mem)
+    call parse_variable(dummy_parser, 'StatesCLDeviceMemory', CNST(-512.0), st%d%cl_states_mem)
 
     POP_SUB(states_exec_init)
   end subroutine states_exec_init
@@ -1741,7 +1741,7 @@ contains
     !% This variable has no effect unless you are using states parallelization and have linked ScaLAPACK.
     !% Note: currently, use of ScaLAPACK is not compatible with task parallelization (<i>i.e.</i> slaves).
     !%End
-    call parse_variable(parser, 'ScaLAPACKCompatible', &
+    call parse_variable(dummy_parser, 'ScaLAPACKCompatible', &
       calc_mode_par_scalapack_compat() .and. .not. st%d%kpt%parallel, st%scalapack_compatible)
     if((calc_mode_par_scalapack_compat() .and. .not. st%d%kpt%parallel) .neqv. st%scalapack_compatible) &
       call messages_experimental('Setting ScaLAPACKCompatible to other than default')
@@ -2406,7 +2406,7 @@ contains
     !% number will be included. If a value less than 0 is supplied, this criterion will not be used.
     !%End
 
-    call parse_variable(parser, 'CasidaKSEnergyWindow', -M_ONE, energy_window, units_inp%energy)
+    call parse_variable(dummy_parser, 'CasidaKSEnergyWindow', -M_ONE, energy_window, units_inp%energy)
 
     !%Variable CasidaKohnShamStates
     !%Type string
@@ -2435,7 +2435,7 @@ contains
     if(energy_window < M_ZERO) then
       write(nst_string,'(i6)') st%nst
       write(default,'(a,a)') "1-", trim(adjustl(nst_string))
-      call parse_variable(parser, 'CasidaKohnShamStates', default, wfn_list)
+      call parse_variable(dummy_parser, 'CasidaKohnShamStates', default, wfn_list)
 
       write(message(1),'(a,a)') "Info: States that form the basis: ", trim(wfn_list)
       call messages_info(1)

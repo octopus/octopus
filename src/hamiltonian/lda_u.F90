@@ -208,7 +208,7 @@ contains
    !% states in the restart_proj folder.
    !% The states are defined via the block DFTUBasisStates
    !%End
-   call parse_variable(parser, 'DFTUBasisFromStates', .false., this%basisfromstates)
+   call parse_variable(dummy_parser, 'DFTUBasisFromStates', .false., this%basisfromstates)
    if(this%basisfromstates) call messages_experimental("DFTUBasisFromStates") 
 
    !%Variable DFTUDoubleCounting
@@ -223,7 +223,7 @@ contains
    !%Option dft_u_amf 1
    !% (Experimental) Around mean field double counting, as defined in PRB 44, 943 (1991) and PRB 49, 14211 (1994).
    !%End
-   call parse_variable(parser, 'DFTUDoubleCounting', DFT_U_FLL, this%double_couting)
+   call parse_variable(dummy_parser, 'DFTUDoubleCounting', DFT_U_FLL, this%double_couting)
    call messages_print_var_option(stdout,  'DFTUDoubleCounting', this%double_couting)
    if(this%double_couting /= DFT_U_FLL) call messages_experimental("DFTUDoubleCounting = dft_u_amf")
    if(st%d%ispin == SPINORS .and. this%double_couting /= DFT_U_FLL) then
@@ -240,7 +240,7 @@ contains
      !% from the peusopotential. Only available with ACBN0 functional.
      !% It is strongly recommended to set AOLoewdin=yes when using the option.
      !%End
-     call parse_variable(parser, 'UseAllAtomicOrbitals', .false., this%useAllOrbitals)
+     call parse_variable(dummy_parser, 'UseAllAtomicOrbitals', .false., this%useAllOrbitals)
      if(this%useAllOrbitals) call messages_experimental("UseAllAtomicOrbitals")
 
      !%Variable SkipSOrbitals
@@ -251,7 +251,7 @@ contains
      !% If set to yes, Octopus will determine the effective U for all atomic orbitals
      !% from the peusopotential but s orbitals. Only available with ACBN0 functional.
      !%End
-     call parse_variable(parser, 'SkipSOrbitals', .true., this%skipSOrbitals)   
+     call parse_variable(dummy_parser, 'SkipSOrbitals', .true., this%skipSOrbitals)   
      if(.not.this%SkipSOrbitals) call messages_experimental("SkipSOrbitals")
 
      !%Variable ACBN0Screening
@@ -263,7 +263,7 @@ contains
      !% will be estimated from bare Hartree-Fock. If set to 1 (default), the full screening
      !% of the U, as defined in the ACBN0 functional, is used.
      !%End
-     call parse_variable(parser, 'ACBN0Screening', M_ONE, this%acbn0_screening)
+     call parse_variable(dummy_parser, 'ACBN0Screening', M_ONE, this%acbn0_screening)
      call messages_print_var_value(stdout, 'ACBN0Screening', this%acbn0_screening)
 
      !%Variable ACBN0RotationallyInvariant
@@ -274,7 +274,7 @@ contains
      !% This is different from the original formula for U and J.
      !% This is activated by default, except in the case of spinors, as this is not yet implemented in this case.
      !%End
-     call parse_variable(parser, 'ACBN0RotationallyInvariant', st%d%ispin /= SPINORS, this%rot_inv)
+     call parse_variable(dummy_parser, 'ACBN0RotationallyInvariant', st%d%ispin /= SPINORS, this%rot_inv)
      call messages_print_var_value(stdout, 'ACBN0RotationallyInvariant', this%rot_inv)
      if(this%rot_inv .and. st%d%ispin == SPINORS ) then
        call messages_not_implemented("Rotationally invariant ACBN0 with spinors.")

@@ -145,7 +145,7 @@ contains
     !% Calculate the photoelectron spectrum by including the Volkov phase (approximately), see
     !% P. M. Dinh, P. Romaniello, P.-G. Reinhard, and E. Suraud, <i>Phys. Rev. A.</i> <b>87</b>, 032514 (2013).
     !%End
-    call parse_variable(parser, 'PES_spm_recipe', M_PHASE, this%recipe)
+    call parse_variable(dummy_parser, 'PES_spm_recipe', M_PHASE, this%recipe)
     if(.not.varinfo_valid_option('PES_spm_recipe', this%recipe, is_flag = .true.)) &
       call messages_input_error('PES_spm_recipe')
     call messages_print_var_option(stdout, "PES_spm_recipe", this%recipe)
@@ -159,7 +159,7 @@ contains
     !% time-propagation, evaluated by the PES_spm method. <tt>PES_spm_OmegaMax</tt> is then the maximum frequency
     !% (approximate kinetic energy) and <tt>PES_spm_DeltaOmega</tt> the spacing in frequency domain of the spectrum.
     !%End
-    call parse_variable(parser, 'PES_spm_OmegaMax', units_to_atomic(units_inp%energy, M_ZERO), this%omegamax)
+    call parse_variable(dummy_parser, 'PES_spm_OmegaMax', units_to_atomic(units_inp%energy, M_ZERO), this%omegamax)
     this%onfly = .false.
     if(this%omegamax > M_ZERO) then
       this%onfly = .true.
@@ -175,7 +175,7 @@ contains
     !% The spacing in frequency domain for the photoelectron spectrum (if <tt>PES_spm_OmegaMax > 0</tt>).
     !% The default is <tt>PES_spm_OmegaMax/500</tt>.
     !%End
-    call parse_variable(parser, 'PES_spm_DeltaOmega', units_to_atomic(units_inp%energy, this%omegamax/CNST(500)), this%delomega)
+    call parse_variable(dummy_parser, 'PES_spm_DeltaOmega', units_to_atomic(units_inp%energy, this%omegamax/CNST(500)), this%delomega)
     if(this%onfly) then
       if(this%delomega <= M_ZERO) call messages_input_error('PES_spm_DeltaOmega')
       call messages_print_var_value(stdout, "PES_spm_DeltaOmega", this%delomega)
@@ -189,7 +189,7 @@ contains
     !% Number of steps in <math>\theta</math> (<math>0 \le \theta \le \pi</math>) for the spherical grid (if no
     !% <tt>PES_spm_points</tt> are given).
     !%End
-    call parse_variable(parser, 'PES_spm_StepsThetaR', 45, this%nstepsthetar)
+    call parse_variable(dummy_parser, 'PES_spm_StepsThetaR', 45, this%nstepsthetar)
     if(this%sphgrid .and. this%nstepsthetar < 0) call messages_input_error('PES_spm_StepsThetaR')
 
     !%Variable PES_spm_StepsPhiR
@@ -200,7 +200,7 @@ contains
     !% Number of steps in <math>\phi</math> (<math>0 \le \phi \le 2 \pi</math>) for the spherical grid (if no
     !% <tt>PES_spm_points</tt> are given).
     !%End
-    call parse_variable(parser, 'PES_spm_StepsPhiR', 90, this%nstepsphir)
+    call parse_variable(dummy_parser, 'PES_spm_StepsPhiR', 90, this%nstepsphir)
     if(this%sphgrid) then
       if(this%nstepsphir < 0)  call messages_input_error('PES_spm_StepsPhiR')
       if(this%nstepsphir == 0) this%nstepsphir = 1
@@ -215,7 +215,7 @@ contains
     !%End
     if(this%sphgrid) then
       if(parse_is_defined(parser, 'PES_spm_Radius')) then
-        call parse_variable(parser, 'PES_spm_Radius', M_ZERO, radius)
+        call parse_variable(dummy_parser, 'PES_spm_Radius', M_ZERO, radius)
         if(radius <= M_ZERO) call messages_input_error('PES_spm_Radius')
         call messages_print_var_value(stdout, "PES_spm_Radius", radius)
       else

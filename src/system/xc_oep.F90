@@ -125,7 +125,7 @@ contains
     !% Ref: S. Kuemmel and J. Perdew, <i>Phys. Rev. Lett.</i> <b>90</b>, 043004 (2003).
     !%End
     call messages_obsolete_variable(parser, 'OEP_Level', 'OEPLevel')
-    call parse_variable(parser, 'OEPLevel', XC_OEP_KLI, oep%level)
+    call parse_variable(dummy_parser, 'OEPLevel', XC_OEP_KLI, oep%level)
     if(.not. varinfo_valid_option('OEPLevel', oep%level)) call messages_input_error('OEPLevel')
 
     if(oep%level /= XC_OEP_NONE) then
@@ -144,7 +144,7 @@ contains
         !% equation in the full OEP procedure.
         !%End
         call messages_obsolete_variable(parser, 'OEP_Mixing', 'OEPMixing')
-        call parse_variable(parser, 'OEPMixing', M_ONE, oep%mixing)
+        call parse_variable(dummy_parser, 'OEPMixing', M_ONE, oep%mixing)
       end if
 
      ! this routine is only prepared for finite systems. (Why not?)

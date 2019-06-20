@@ -139,7 +139,7 @@ contains
 #ifdef HAVE_PARMETIS
     default = PARMETIS
 #endif
-    call parse_variable(parser, 'MeshPartitionPackage', default, library)
+    call parse_variable(dummy_parser, 'MeshPartitionPackage', default, library)
 
 #if !defined(HAVE_METIS)
     if(library == METIS) then
@@ -169,7 +169,7 @@ contains
     !% partition. This in principle should give a better partition, but
     !% it is slower and requires more memory.
     !%End
-    call parse_variable(parser, 'MeshPartitionStencil', STAR, stencil_to_use)
+    call parse_variable(dummy_parser, 'MeshPartitionStencil', STAR, stencil_to_use)
 
     if (stencil_to_use == STAR) then
       call stencil_star_get_lapl(stencil, mesh%sb%dim, order = 1)
@@ -335,7 +335,7 @@ contains
       !%Option graph 2
       !% Graph partitioning (called 'k-way' by METIS).
       !%End
-      call parse_variable(parser, 'MeshPartition', default_method, method)
+      call parse_variable(dummy_parser, 'MeshPartition', default_method, method)
 
       SAFE_ALLOCATE(part_global(1:nv_global))
 

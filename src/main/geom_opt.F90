@@ -227,7 +227,7 @@ contains
       !% freedom of the optimization by using the translational
       !% invariance.
       !%End
-      call parse_variable(parser, 'GOCenter', .false.,  center)
+      call parse_variable(dummy_parser, 'GOCenter', .false.,  center)
 
       if(center) then
         g_opt%fixed_atom = 1
@@ -283,7 +283,7 @@ contains
       !% The FIRE algorithm. See also <tt>GOFireMass</tt> and <tt>GOFireIntegrator</tt>.
       !% Ref: E. Bitzek, P. Koskinen, F. Gahler, M. Moseler, and P. Gumbsch, <i>Phys. Rev. Lett.</i> <b>97</b>, 170201 (2006).
       !%End
-      call parse_variable(parser, 'GOMethod', MINMETHOD_FIRE, g_opt%method)
+      call parse_variable(dummy_parser, 'GOMethod', MINMETHOD_FIRE, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call messages_input_error('GOMethod')
       call messages_print_var_option(stdout, "GOMethod", g_opt%method)
 
@@ -298,7 +298,7 @@ contains
       !% <tt>GOMinimumMove</tt> is satisfied. If <tt>GOTolerance < 0</tt>,
       !% this criterion is ignored.
       !%End
-      call parse_variable(parser, 'GOTolerance', CNST(0.001), g_opt%tolgrad, units_inp%force)
+      call parse_variable(dummy_parser, 'GOTolerance', CNST(0.001), g_opt%tolgrad, units_inp%force)
       
       !%Variable GOMinimumMove
       !%Type float
@@ -318,7 +318,7 @@ contains
       else
         default_toldr = -M_ONE
       end if
-      call parse_variable(parser, 'GOMinimumMove', default_toldr, g_opt%toldr, units_inp%length)
+      call parse_variable(dummy_parser, 'GOMinimumMove', default_toldr, g_opt%toldr, units_inp%length)
 
       if(g_opt%method == MINMETHOD_NMSIMPLEX .and. g_opt%toldr <= M_ZERO) call messages_input_error('GOMinimumMove')
       
@@ -333,10 +333,10 @@ contains
       !%End
       if(g_opt%method /= MINMETHOD_FIRE ) then
         default_step = M_HALF
-        call parse_variable(parser, 'GOStep', default_step, g_opt%step)
+        call parse_variable(dummy_parser, 'GOStep', default_step, g_opt%step)
       else
         default_step = CNST(0.1)*unit_femtosecond%factor
-        call parse_variable(parser, 'GOStep', default_step, g_opt%step, unit = units_inp%time)
+        call parse_variable(dummy_parser, 'GOStep', default_step, g_opt%step, unit = units_inp%time)
       end if
 
       !%Variable GOLineTol
@@ -348,7 +348,7 @@ contains
       !% that use the forces.
       !% WARNING: in some weird units.
       !%End
-      call parse_variable(parser, 'GOLineTol', CNST(0.1), g_opt%line_tol)
+      call parse_variable(dummy_parser, 'GOLineTol', CNST(0.1), g_opt%line_tol)
 
       !%Variable GOMaxIter
       !%Type integer
@@ -358,7 +358,7 @@ contains
       !% Even if the convergence criterion is not satisfied, the minimization will stop
       !% after this number of iterations.
       !%End
-      call parse_variable(parser, 'GOMaxIter', 200, g_opt%max_iter)
+      call parse_variable(dummy_parser, 'GOMaxIter', 200, g_opt%max_iter)
       if(g_opt%max_iter <= 0) then
         message(1) = "GOMaxIter has to be larger than 0"
         call messages_fatal(1)
@@ -380,7 +380,7 @@ contains
       !% If <tt>GOFireMass</tt> <= 0, the masses of each 
       !% species will be used.
       !%End
-      call parse_variable(parser, 'GOFireMass', M_ONE*unit_amu%factor, g_opt%fire_mass, unit = unit_amu)
+      call parse_variable(dummy_parser, 'GOFireMass', M_ONE*unit_amu%factor, g_opt%fire_mass, unit = unit_amu)
 
       !%Variable GOFireIntegrator
       !%Type integer
@@ -395,7 +395,7 @@ contains
       !%Option euler 0
       !% The Euler method.
       !%End
-      call parse_variable(parser, 'GOFireIntegrator', OPTION__GOFIREINTEGRATOR__VERLET, g_opt%fire_integrator)
+      call parse_variable(dummy_parser, 'GOFireIntegrator', OPTION__GOFIREINTEGRATOR__VERLET, g_opt%fire_integrator)
 
       call messages_obsolete_variable(sys%parser, 'GOWhat2Minimize', 'GOObjective')
 
@@ -416,7 +416,7 @@ contains
       !% Note that in this case one still uses the forces as the gradient of the objective function.
       !% This is, of course, inconsistent, and may lead to very strange behavior.
       !%End
-      call parse_variable(parser, 'GOObjective', MINWHAT_ENERGY, g_opt%what2minimize)
+      call parse_variable(dummy_parser, 'GOObjective', MINWHAT_ENERGY, g_opt%what2minimize)
       if(.not.varinfo_valid_option('GOObjective', g_opt%what2minimize)) call messages_input_error('GOObjective')
       call messages_print_var_option(stdout, "GOObjective", g_opt%what2minimize)
 

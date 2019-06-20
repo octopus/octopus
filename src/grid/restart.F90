@@ -451,7 +451,7 @@ contains
       !% option and write some restart information anyway.
       !%End
 
-      call parse_variable(parser, 'RestartWrite', .true., restart_write)
+      call parse_variable(dummy_parser, 'RestartWrite', .true., restart_write)
       restart%skip = .not. restart_write
 
       if(restart%skip) then

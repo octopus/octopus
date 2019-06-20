@@ -290,7 +290,7 @@ contains
     if(hm%ep%no_lasers > 0) default = default + 2**(OUT_LASER - 1)
     if(kick%qkick_mode /= QKICKMODE_NONE) default = default + 2**(OUT_FTCHD - 1)
 
-    call parse_variable(parser, 'TDOutput', default, flags)
+    call parse_variable(dummy_parser, 'TDOutput', default, flags)
 
     if(.not.varinfo_valid_option('TDOutput', flags, is_flag = .true.)) call messages_input_error('TDOutput')
 
@@ -330,7 +330,7 @@ contains
     !% Maximum electric multipole of the density output to the file <tt>td.general/multipoles</tt>
     !% during a time-dependent simulation. Must be non-negative.
     !%End
-    call parse_variable(parser, 'TDMultipoleLmax', 1, writ%lmax)
+    call parse_variable(dummy_parser, 'TDMultipoleLmax', 1, writ%lmax)
     if (writ%lmax < 0) then
       write(message(1), '(a,i6,a)') "Input: '", writ%lmax, "' is not a valid TDMultipoleLmax."
       message(2) = '(Must be TDMultipoleLmax >= 0 )'
@@ -354,7 +354,7 @@ contains
     end if
 
     ! This variable is documented in scf/scf.F90
-    call parse_variable(parser, 'LocalMagneticMomentsSphereRadius', rmin*M_HALF, writ%lmm_r, units_inp%length)
+    call parse_variable(dummy_parser, 'LocalMagneticMomentsSphereRadius', rmin*M_HALF, writ%lmm_r, units_inp%length)
 
     if(writ%out(OUT_PROJ)%write .or. writ%out(OUT_POPULATIONS)%write &
       .or.writ%out(OUT_KP_PROJ)%write .or. writ%out(OUT_N_EX)%write) then
@@ -405,7 +405,7 @@ contains
           !% is set by the number of states in the propagation and the number of unoccupied states
           !% available.
           !%End
-          call parse_variable(parser, 'TDProjStateStart', 1, writ%gs_st%st_start)
+          call parse_variable(dummy_parser, 'TDProjStateStart', 1, writ%gs_st%st_start)
         else
            writ%gs_st%st_start = 1
         end if
@@ -506,7 +506,7 @@ contains
     !% Must be >= 0. If it is 0, then no output is written. 
     !% Implemented only for projections and number of excited electrons for the moment.
     !%End
-    call parse_variable(parser, 'TDOutputComputeInterval', 50, writ%compute_interval)
+    call parse_variable(dummy_parser, 'TDOutputComputeInterval', 50, writ%compute_interval)
     if(writ%compute_interval < 0) then
       message(1) = "TDOutputComputeInterval must be >= 0."
       call messages_fatal(1)
@@ -676,7 +676,7 @@ contains
     !%End
     default = 0
     if(hm%lda_u_level == DFT_U_ACBN0) default = default + 2**(OUT_DFTU_EFFECTIVE_U - 1)
-    call parse_variable(parser, 'TDOutputDFTU', default, flags)
+    call parse_variable(dummy_parser, 'TDOutputDFTU', default, flags)
 
     if(.not.varinfo_valid_option('TDOutputDFTU', flags, is_flag = .true.)) &
       call messages_input_error('TDOutputDFTU')
@@ -2616,7 +2616,7 @@ contains
     !% Other options will work, but likely be nonsense.
     !% 
     !%End
-    call parse_variable(parser, 'TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
+    call parse_variable(dummy_parser, 'TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
     call messages_print_var_value(stdout,'Frequency used for Floquet analysis', omega)
     if(abs(omega)<=M_EPSILON) then
        message(1) = "Please give a non-zero value for TDFloquetFrequency"
@@ -2634,7 +2634,7 @@ contains
     !% Number of points on which one Floquet cycle is sampled in the time-integral of the Floquet analysis.
     !%
     !%End 
-    call parse_variable(parser, 'TDFloquetSample',20 ,nt)
+    call parse_variable(dummy_parser, 'TDFloquetSample',20 ,nt)
     call messages_print_var_value(stdout,'Number of Floquet time-sampling points', nT)
     dt = Tcycle/real(nT)
 
@@ -2645,7 +2645,7 @@ contains
     !%Description
     !% Order of Floquet Hamiltonian. If negative number is given, downfolding is performed.
     !%End
-    call parse_variable(parser, 'TDFloquetDimension',-1,Forder)
+    call parse_variable(dummy_parser, 'TDFloquetDimension',-1,Forder)
     if(Forder.ge.0) then
        call messages_print_var_value(stdout,'Order of multiphoton Floquet-Hamiltonian', Forder)
        !Dimension of multiphoton Floquet-Hamiltonian

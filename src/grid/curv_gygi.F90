@@ -83,7 +83,7 @@ contains
     !% [This is the <math>A_{\alpha}</math> variable in Eq. 2 of F. Gygi and G. Galli, <i>Phys.
     !% Rev. B</i> <b>52</b>, R2229 (1995)]. It must be larger than zero.
     !%End
-    call parse_variable(parser, 'CurvGygiA', M_HALF, cv%A)
+    call parse_variable(dummy_parser, 'CurvGygiA', M_HALF, cv%A)
 
     !%Variable CurvGygiAlpha
     !%Type float
@@ -97,7 +97,7 @@ contains
     !% It must be larger than zero.
     !%End
 
-    call parse_variable(parser, 'CurvGygiAlpha', M_TWO, cv%alpha, units_inp%length)
+    call parse_variable(dummy_parser, 'CurvGygiAlpha', M_TWO, cv%alpha, units_inp%length)
     !%Variable CurvGygiBeta
     !%Type float
     !%Default 4.0 a.u.
@@ -107,7 +107,7 @@ contains
     !% recovered. [This is the <math>b_{\alpha}</math> variable in Eq. 2 of F. Gygi and G. Galli,
     !% <i>Phys. Rev. B</i> <b>52</b>, R2229 (1995)]. It must be larger than zero.
     !%End
-    call parse_variable(parser, 'CurvGygiBeta', M_FOUR, cv%beta, units_inp%length)
+    call parse_variable(dummy_parser, 'CurvGygiBeta', M_FOUR, cv%beta, units_inp%length)
 
     if(cv%a<=M_ZERO)     call messages_input_error('CurvGygiA')
     if(cv%alpha<=M_ZERO) call messages_input_error('CurvGygiAlpha')

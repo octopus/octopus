@@ -100,7 +100,7 @@ contains
     !%Option density_calc 9
     !%Calculation of the density.
     !%End
-    call parse_variable(parser, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
+    call parse_variable(dummy_parser, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
     call messages_obsolete_variable(parser, 'TestDerivatives', 'TestType')
     call messages_obsolete_variable(parser, 'TestOrthogonalization', 'TestType')
@@ -122,7 +122,7 @@ contains
     !%Option all 3
     !% Tests for double-precision real and complex functions.
     !%End
-    call parse_variable(parser, 'TestType', OPTION__TESTTYPE__ALL, param%type)
+    call parse_variable(dummy_parser, 'TestType', OPTION__TESTTYPE__ALL, param%type)
     if(param%type < 1 .or. param%type > 5) then
       message(1) = "Invalid option for TestType."
       call messages_fatal(1, only_root_writes = .true.)
@@ -141,7 +141,7 @@ contains
     !% Currently this variable is used by the <tt>hartree_test</tt>,
     !% <tt>derivatives</tt>, and <tt>projector</tt> tests.
     !%End  
-    call parse_variable(parser, 'TestRepetitions', 1, param%repetitions)
+    call parse_variable(dummy_parser, 'TestRepetitions', 1, param%repetitions)
   
     !%Variable TestMinBlockSize
     !%Type integer
@@ -154,7 +154,7 @@ contains
     !%
     !% Currently this variable is only used by the derivatives test.
     !%End
-    call parse_variable(parser, 'TestMinBlockSize', 1, param%min_blocksize)
+    call parse_variable(dummy_parser, 'TestMinBlockSize', 1, param%min_blocksize)
 
     !%Variable TestMaxBlockSize
     !%Type integer
@@ -167,7 +167,7 @@ contains
     !%
     !% Currently this variable is only used by the derivatives test.
     !%End
-    call parse_variable(parser, 'TestMaxBlockSize', 128, param%max_blocksize)
+    call parse_variable(dummy_parser, 'TestMaxBlockSize', 128, param%max_blocksize)
 
     call messages_print_stress(stdout, "Test mode")
     call messages_print_var_option(stdout, "TestMode", test_mode)
@@ -388,7 +388,7 @@ contains
     !%Option term_non_local_potential 4
     !% Apply only the non_local potential.
     !%End
-    call parse_variable(parser, 'TestHamiltonianApply', OPTION__TESTMODE__HARTREE, terms)
+    call parse_variable(dummy_parser, 'TestHamiltonianApply', OPTION__TESTMODE__HARTREE, terms)
     if(terms==0) terms = huge(1)
 
 

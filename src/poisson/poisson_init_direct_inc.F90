@@ -115,7 +115,7 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
     !% When <tt>Dimensions = 1</tt>, to prevent divergence, the Coulomb interaction treated by the Poisson
     !% solver is not <math>1/r</math> but <math>1/\sqrt{a^2 + r^2}</math>, where this variable sets the value of <math>a</math>.
     !%End
-    call parse_variable(parser, 'Poisson1DSoftCoulombParam', M_ONE, this%poisson_soft_coulomb_param, units_inp%length)
+    call parse_variable(dummy_parser, 'Poisson1DSoftCoulombParam', M_ONE, this%poisson_soft_coulomb_param, units_inp%length)
   else
     this%poisson_soft_coulomb_param = M_ZERO
   end if
@@ -125,26 +125,26 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
     call poisson_fmm_init(this%params_fmm, this%der, all_nodes_comm)
 
   case(POISSON_CG)
-    call parse_variable(parser, 'PoissonSolverMaxMultipole', 4, maxl)
+    call parse_variable(dummy_parser, 'PoissonSolverMaxMultipole', 4, maxl)
     write(message(1),'(a,i2)')'Info: Boundary conditions fixed up to L =',  maxl
     call messages_info(1)
-    call parse_variable(parser, 'PoissonSolverMaxIter', 400, iter)
-    call parse_variable(parser, 'PoissonSolverThreshold', CNST(1.0e-6), threshold)
+    call parse_variable(dummy_parser, 'PoissonSolverMaxIter', 400, iter)
+    call parse_variable(dummy_parser, 'PoissonSolverThreshold', CNST(1.0e-6), threshold)
     call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
     call poisson_cg_init(threshold, iter)
 
   case(POISSON_CG_CORRECTED)
-    call parse_variable(parser, 'PoissonSolverMaxMultipole', 4, maxl)
-    call parse_variable(parser, 'PoissonSolverMaxIter', 400, iter)
-    call parse_variable(parser, 'PoissonSolverThreshold', CNST(1.0e-6), threshold)
+    call parse_variable(dummy_parser, 'PoissonSolverMaxMultipole', 4, maxl)
+    call parse_variable(dummy_parser, 'PoissonSolverMaxIter', 400, iter)
+    call parse_variable(dummy_parser, 'PoissonSolverThreshold', CNST(1.0e-6), threshold)
     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
     call messages_info(1)
     call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
     call poisson_cg_init(threshold, iter)
 
   case(POISSON_MULTIGRID)
-    call parse_variable(parser, 'PoissonSolverMaxMultipole', 4, maxl)
-    call parse_variable(parser, 'PoissonSolverThreshold', CNST(1.0e-6), threshold)
+    call parse_variable(dummy_parser, 'PoissonSolverMaxMultipole', 4, maxl)
+    call parse_variable(dummy_parser, 'PoissonSolverThreshold', CNST(1.0e-6), threshold)
     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
     call messages_info(1)
 
@@ -171,7 +171,7 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
     ! soft parameter has no effect unless in 1D
 
     if (this%kernel == POISSON_FFT_KERNEL_CORRECTED) then
-      call parse_variable(parser, 'PoissonSolverMaxMultipole', 2, maxl)
+      call parse_variable(dummy_parser, 'PoissonSolverMaxMultipole', 2, maxl)
       write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
       call messages_info(1)
       call poisson_corrections_init(this%corrector, maxl, this%der%mesh)

@@ -139,7 +139,7 @@ contains
     !% How many nodes to use to solve the Poisson equation. A value of
     !% 0, the default, implies that all available nodes are used.
     !%End
-    call parse_variable(parser, 'PoissonSolverNodes', default_nodes, nodes)
+    call parse_variable(dummy_parser, 'PoissonSolverNodes', default_nodes, nodes)
 
     this%all_nodes_comm = all_nodes_comm
 

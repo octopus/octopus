@@ -169,7 +169,7 @@ contains
         ! disabled by default since there are some problems for dim != 3
         ! if(accel_is_enabled() .and. sb%dim == 3) default_lib = FFTLIB_ACCEL
 #endif
-        call parse_variable(parser, 'FFTLibrary', default_lib, fft_library_)
+        call parse_variable(dummy_parser, 'FFTLibrary', default_lib, fft_library_)
         if(optional_default(verbose, .false.)) call messages_print_var_option(stdout, 'FFTLibrary', fft_library_)
       end if
 #ifndef HAVE_PFFT
