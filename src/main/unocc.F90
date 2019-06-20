@@ -110,7 +110,8 @@ contains
     
     read_gs = .true.
     if (.not. fromScratch) then
-      call restart_init(restart_load_unocc, sys%parser, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+      call restart_init(restart_load_unocc, sys%parser, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, &
+        mesh = sys%gr%mesh, exact = .true.)
 
       if(ierr == 0) then
         call states_load(restart_load_unocc, sys%parser, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)

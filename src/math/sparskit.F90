@@ -79,7 +79,8 @@ module sparskit_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine sparskit_solver_init(n, sk, is_complex)
+  subroutine sparskit_solver_init(parser, n, sk, is_complex)
+    type(parser_t),          intent(in)  :: parser
     integer,                 intent(in)  :: n
     type(sparskit_solver_t), intent(out) :: sk
     logical,                 intent(in)  :: is_complex
