@@ -141,7 +141,7 @@ contains
     !% By default, symmetries are computed when running in 3
     !% dimensions for systems with less than 100 atoms.
     !%End
-    call parse_variable('SymmetriesCompute', def_sym_comp, this%symmetries_compute)
+    call parse_variable(parser, 'SymmetriesCompute', def_sym_comp, this%symmetries_compute)
 
     if(this%symmetries_compute .and. dim /= 3) then
       call messages_experimental('symmetries for non 3D systems')

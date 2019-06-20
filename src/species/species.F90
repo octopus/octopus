@@ -244,7 +244,7 @@ contains
     !% This does not affect Octopus fixed default parameters for the standard
     !% pseudopotential set.
     !%End
-    call parse_variable('PseudopotentialAutomaticParameters', .false., automatic)
+    call parse_variable(parser, 'PseudopotentialAutomaticParameters', .false., automatic)
     
     if(automatic) call messages_experimental('PseudopotentialAutomaticParameters')
     
@@ -260,7 +260,7 @@ contains
     !% Note that other quantities of interest might require a
     !% different spacing to be considered converged within a similar threshold.
     !%End
-    call parse_variable('PseudopotentialEnergyTolerance', CNST(0.005), energy_tolerance)
+    call parse_variable(parser, 'PseudopotentialEnergyTolerance', CNST(0.005), energy_tolerance)
     
     !%Variable PseudopotentialSet
     !%Type integer
@@ -320,7 +320,7 @@ contains
     !% (experimental) High-accuracy PBEsol version of the pseudopotentials of http://pseudo-dojo.org. Version 0.4.
     !%End
 
-    call parse_variable('PseudopotentialSet', OPTION__PSEUDOPOTENTIALSET__STANDARD, default_pseudopotential_set_id)
+    call parse_variable(parser, 'PseudopotentialSet', OPTION__PSEUDOPOTENTIALSET__STANDARD, default_pseudopotential_set_id)
     call messages_print_var_option(stdout, 'PseudopotentialSet', default_pseudopotential_set_id)
     select case (default_pseudopotential_set_id)
     case (OPTION__PSEUDOPOTENTIALSET__NONE)

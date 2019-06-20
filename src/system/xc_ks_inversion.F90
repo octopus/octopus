@@ -119,7 +119,7 @@ contains
     !%Option iter_godby 4
     !% Iterative scheme for <math>v_s</math> using power method from Rex Godby.
     !%End
-    call parse_variable('InvertKSmethod', XC_INV_METHOD_ITER_STELLA, ks_inv%method)
+    call parse_variable(parser, 'InvertKSmethod', XC_INV_METHOD_ITER_STELLA, ks_inv%method)
 
     if(ks_inv%method < XC_INV_METHOD_TWO_PARTICLE &
       .or. ks_inv%method > XC_INV_METHOD_ITER_GODBY) then
@@ -139,7 +139,7 @@ contains
     !% Compute exact adiabatic <math>v_{xc}</math>.
     !%End
     call messages_obsolete_variable(parser, 'KS_Inversion_Level', 'KSInversionLevel')
-    call parse_variable('KSInversionLevel', XC_KS_INVERSION_ADIABATIC, ks_inv%level)
+    call parse_variable(parser, 'KSInversionLevel', XC_KS_INVERSION_ADIABATIC, ks_inv%level)
     if(.not.varinfo_valid_option('KSInversionLevel', ks_inv%level)) call messages_input_error('KSInversionLevel')
 
     !%Variable KSInversionAsymptotics
@@ -153,7 +153,7 @@ contains
     !%Option xc_asymptotics_sc 2
     !% Applies the soft-Coulomb decay of <math>-1/\sqrt{r^2+1}</math> to <math>v_{xc}</math> in the asymptotic region.
     !%End
-    call parse_variable('KSInversionAsymptotics', XC_ASYMPTOTICS_NONE, ks_inv%asymp)
+    call parse_variable(parser, 'KSInversionAsymptotics', XC_ASYMPTOTICS_NONE, ks_inv%asymp)
 
     if(ks_inv%level /= XC_KS_INVERSION_NONE) then
       call states_copy(ks_inv%aux_st, st, exclude_wfns = .true.)
@@ -364,7 +364,7 @@ contains
     !% Absolute difference between the calculated and the target density in the KS
     !% inversion. Has to be larger than the convergence of the density in the SCF run.
     !%End    
-    call parse_variable('InvertKSConvAbsDens', CNST(1e-5), convdensity)
+    call parse_variable(parser, 'InvertKSConvAbsDens', CNST(1e-5), convdensity)
 
     !%Variable InvertKSStellaBeta
     !%Type float
@@ -373,7 +373,7 @@ contains
     !%Description
     !% residual term in Stella iterative scheme to avoid 0 denominators
     !%End    
-    call parse_variable('InvertKSStellaBeta', CNST(.000001), beta)
+    call parse_variable(parser, 'InvertKSStellaBeta', CNST(.000001), beta)
 
     !%Variable InvertKSStellaAlpha
     !%Type float
@@ -382,7 +382,7 @@ contains
     !%Description
     !% prefactor term in iterative scheme from L Stella
     !%End    
-    call parse_variable('InvertKSStellaAlpha', CNST(0.25), alpha)
+    call parse_variable(parser, 'InvertKSStellaAlpha', CNST(0.25), alpha)
 
     !%Variable InvertKSGodbyMu
     !%Type float
@@ -391,7 +391,7 @@ contains
     !%Description
     !% prefactor for iterative KS inversion convergence scheme from Godby based on van Leeuwen scheme
     !%End    
-    call parse_variable('InvertKSGodbyMu', CNST(1.0), mu)
+    call parse_variable(parser, 'InvertKSGodbyMu', CNST(1.0), mu)
 
     !%Variable InvertKSGodbyPower
     !%Type float
@@ -401,7 +401,7 @@ contains
     !% power to which density is elevated for iterative KS inversion convergence 
     !% scheme from Godby based on van Leeuwen scheme
     !%End    
-    call parse_variable('InvertKSGodbyPower', CNST(0.05), npower_in)
+    call parse_variable(parser, 'InvertKSGodbyPower', CNST(0.05), npower_in)
     npower = npower_in
 
     !%Variable InvertKSVerbosity
@@ -419,7 +419,7 @@ contains
     !% Same as 1 but outputs the density and the KS potential in each iteration in 
     !% addition.
     !%End
-    call parse_variable('InvertKSVerbosity', 0, verbosity)  
+    call parse_variable(parser, 'InvertKSVerbosity', 0, verbosity)  
     if(verbosity < 0 .or. verbosity > 2) then
       call messages_input_error('InvertKSVerbosity')
       call messages_fatal(1)
@@ -432,7 +432,7 @@ contains
     !%Description
     !% Selects how many iterations of inversion will be done in the iterative scheme
     !%End
-    call parse_variable('InvertKSMaxIter', 200, max_iter)  
+    call parse_variable(parser, 'InvertKSMaxIter', 200, max_iter)  
            
     SAFE_ALLOCATE(vhxc(1:np, 1:nspin))
 

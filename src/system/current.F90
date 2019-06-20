@@ -96,7 +96,7 @@ contains
     !% Hamiltonian with the position operator. (Experimental)
     !%End
 
-    call parse_variable('CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
+    call parse_variable(parser, 'CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
     if(.not.varinfo_valid_option('CurrentDensity', this%method)) call messages_input_error('CurrentDensity')
     if(this%method /= CURRENT_GRADIENT_CORR) then
       call messages_experimental("CurrentDensity /= gradient_corrected")

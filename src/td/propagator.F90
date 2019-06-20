@@ -253,7 +253,7 @@ contains
     !%End
     call messages_obsolete_variable(parser, 'TDEvolutionMethod', 'TDPropagator')
 
-    call parse_variable('TDPropagator', PROP_ETRS, tr%method)
+    call parse_variable(parser, 'TDPropagator', PROP_ETRS, tr%method)
     if(.not.varinfo_valid_option('TDPropagator', tr%method)) call messages_input_error('TDPropagator')
 
     select case(tr%method)
@@ -367,7 +367,7 @@ contains
     !% Self-consistency is imposed for all propagation steps.
     !%End
 
-    call parse_variable('TDStepsWithSelfConsistency', 0, tr%scf_propagation_steps)
+    call parse_variable(parser, 'TDStepsWithSelfConsistency', 0, tr%scf_propagation_steps)
 
     if(tr%scf_propagation_steps == -1) tr%scf_propagation_steps = HUGE(tr%scf_propagation_steps)
     if(tr%scf_propagation_steps < 0) call messages_input_error('TDStepsWithSelfConsistency', 'Cannot be negative')
@@ -395,7 +395,7 @@ contains
     !% The self consistency has to be measured against some accuracy 
     !% threshold. This variable controls the value of that threshold.
     !%End
-    call parse_variable('TDSCFThreshold', CNST(1.0e-6), tr%scf_threshold)
+    call parse_variable(parser, 'TDSCFThreshold', CNST(1.0e-6), tr%scf_threshold)
 
     POP_SUB(propagator_init)
   end subroutine propagator_init

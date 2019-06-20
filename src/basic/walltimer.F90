@@ -80,7 +80,7 @@ contains
     !% iteration (plus the RestartWriteTime) would exceed the given time.
     !% A value less than 1 second (1/60 minutes) will disable the timer.
     !%End0.0
-    call parse_variable('Walltime', M_ZERO, alarm_time)
+    call parse_variable(parser, 'Walltime', M_ZERO, alarm_time)
     call set_alarm(alarm_time*CNST(60.0))
     
     !%Variable RestartWriteTime
@@ -91,7 +91,7 @@ contains
     !% The RestartWriteTime (in minutes) will be subtracted from the WallTime to allow time for writing the restart file.
     !% In huge calculations, this value should be increased.
     !%End
-    call parse_variable('RestartWriteTime', CNST(5.0), write_time)
+    call parse_variable(parser, 'RestartWriteTime', CNST(5.0), write_time)
     if(write_time > alarm_time/CNST(4.0)) write_time = alarm_time/CNST(4.0)
     call set_margin(write_time*CNST(60.0))
     

@@ -420,7 +420,7 @@ contains
       !% Magnitude of the static electric field used to calculate the static polarizability,
       !% if <tt>ResponseMethod = finite_differences</tt>.
       !%End
-      call parse_variable('EMStaticElectricField', CNST(0.01), e_field, units_inp%force)
+      call parse_variable(parser, 'EMStaticElectricField', CNST(0.01), e_field, units_inp%force)
       if (e_field <= M_ZERO) then
         write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid EMStaticElectricField."
         message(2) = '(Must have EMStaticElectricField > 0)'
@@ -428,7 +428,7 @@ contains
       end if
 
       ! variable defined in em_resp
-      call parse_variable('EMCalcBornCharges', .false., calc_Born)
+      call parse_variable(parser, 'EMCalcBornCharges', .false., calc_Born)
       if (calc_Born) call messages_experimental("Calculation of Born effective charges")
 
       !%Variable EMStartDensityIsZeroField
@@ -442,7 +442,7 @@ contains
       !% to initialize the calculation for each field from scratch, as specified by the LCAO variables. 
       !% Only applies if <tt>ResponseMethod = finite_differences</tt>.
       !%End
-      call parse_variable('EMStartDensityIsZeroField', .true., start_density_is_zero_field)
+      call parse_variable(parser, 'EMStartDensityIsZeroField', .true., start_density_is_zero_field)
 
       !%Variable EMCalcDiagonalField
       !%Type logical
@@ -452,7 +452,7 @@ contains
       !% Calculate <i>yz</i>-field for <math>\beta_{xyz}</math> hyperpolarizability, which is sometimes harder to converge.
       !% Only applies if <tt>ResponseMethod = finite_differences</tt>.
       !%End
-      call parse_variable('EMCalcDiagonalField', .true., calc_diagonal)
+      call parse_variable(parser, 'EMCalcDiagonalField', .true., calc_diagonal)
 
       !%Variable EMWriteRestartDensities
       !%Type logical
@@ -463,7 +463,7 @@ contains
       !% Only applies if <tt>ResponseMethod = finite_differences</tt>. Restarting from calculations at smaller
       !% fields can be helpful if there are convergence problems.
       !%End
-      call parse_variable('EMWriteRestartDensities', .true., write_restart_densities)
+      call parse_variable(parser, 'EMWriteRestartDensities', .true., write_restart_densities)
 
       !%Variable EMVerbose
       !%Type logical
@@ -473,7 +473,7 @@ contains
       !% Write full SCF output.
       !% Only applies if <tt>ResponseMethod = finite_differences</tt>.
       !%End
-      call parse_variable('EMVerbose', .false., verbose)
+      call parse_variable(parser, 'EMVerbose', .false., verbose)
 
       if(verbose) then
         verbosity = VERB_FULL

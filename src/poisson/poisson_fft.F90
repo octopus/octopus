@@ -153,7 +153,7 @@ contains
 
     PUSH_SUB(get_cutoff)
 
-    call parse_variable('PoissonCutoffRadius', default_r_c, r_c, units_inp%length)
+    call parse_variable(parser, 'PoissonCutoffRadius', default_r_c, r_c, units_inp%length)
 
     call messages_write('Info: Poisson Cutoff Radius     =')
     call messages_write(r_c, units = units_out%length, fmt = '(f6.1)')

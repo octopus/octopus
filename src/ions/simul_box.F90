@@ -204,7 +204,7 @@ contains
       !%End
 
       if(geo%periodic_dim == -1) then
-        call parse_variable('PeriodicDimensions', 0, sb%periodic_dim)
+        call parse_variable(parser, 'PeriodicDimensions', 0, sb%periodic_dim)
       else
         sb%periodic_dim = geo%periodic_dim
       end if
@@ -273,7 +273,7 @@ contains
         !% The interpolation order in the multiresolution approach (with <tt>MultiResolutionArea</tt>).
         !%End
         call messages_obsolete_variable(parser, 'MR_InterpolationOrder', 'MultiResolutionInterpolationOrder')
-        call parse_variable('MultiResolutionInterpolationOrder', 5, order)
+        call parse_variable(parser, 'MultiResolutionInterpolationOrder', 5, order)
         call simul_box_interp_init(sb, order)
 
         sb%mr_flag = .true.
@@ -344,7 +344,7 @@ contains
       else
         default_boxshape = MINIMUM
       end if
-      call parse_variable('BoxShape', default_boxshape, sb%box_shape)
+      call parse_variable(parser, 'BoxShape', default_boxshape, sb%box_shape)
       if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call messages_input_error('BoxShape')
       select case(sb%box_shape)
       case(SPHERE, MINIMUM, BOX_USDEF)
@@ -386,7 +386,7 @@ contains
       !%End
       select case(sb%box_shape)
       case(SPHERE, CYLINDER)
-        call parse_variable('Radius', def_rsize, sb%rsize, units_inp%length)
+        call parse_variable(parser, 'Radius', def_rsize, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO) call messages_input_error('radius')
         if(def_rsize>M_ZERO) call messages_check_def(sb%rsize, .false., def_rsize, 'radius', units_out%length)
       case(MINIMUM)
@@ -398,7 +398,7 @@ contains
         end if
 
         default=sb%rsize
-        call parse_variable('radius', default, sb%rsize, units_inp%length)
+        call parse_variable(parser, 'radius', default, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call messages_input_error('Radius')
       end select
 
@@ -416,7 +416,7 @@ contains
           default = def_rsize
         end if
 
-        call parse_variable('Xlength', default, sb%xsize, units_inp%length)
+        call parse_variable(parser, 'Xlength', default, sb%xsize, units_inp%length)
         if(def_rsize > M_ZERO .and. sb%periodic_dim == 0) &
           call messages_check_def(sb%xsize, .false., def_rsize, 'xlength', units_out%length)
       end if
@@ -457,7 +457,7 @@ contains
           end do
           call parse_block_end(blk)
         else if ((parse_is_defined(parser, 'Lsize'))) then
-          call parse_variable('Lsize', -M_ONE, sb%lsize(1), units_inp%length)
+          call parse_variable(parser, 'Lsize', -M_ONE, sb%lsize(1), units_inp%length)
           if(abs(sb%lsize(1)+M_ONE)  <=  M_EPSILON) then
             call messages_input_error('Lsize')
           end if
@@ -488,7 +488,7 @@ contains
         !% directory and <tt>OCTOPUS-HOME/share/</tt>.
         !%End
 #if defined(HAVE_GDLIB)
-        call parse_variable('BoxShapeImage', '', sb%filename)
+        call parse_variable(parser, 'BoxShapeImage', '', sb%filename)
         if(trim(sb%filename) == "") then
           message(1) = "Must specify BoxShapeImage if BoxShape = box_image."
           call messages_fatal(1)
@@ -541,7 +541,7 @@ contains
         !% with axis parallel to the <i>z</i>-axis.
         !%End
 
-        call parse_variable('BoxShapeUsDef', 'x^2+y^2+z^2 < 4', sb%user_def)
+        call parse_variable(parser, 'BoxShapeUsDef', 'x^2+y^2+z^2 < 4', sb%user_def)
         call conv_to_C_string(sb%user_def)
       end if
 

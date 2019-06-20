@@ -355,7 +355,8 @@ contains
 
   ! ---------------------------------------------------------  
   
-  subroutine parse_integer(name, def, res)
+  subroutine parse_integer(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     integer,          intent(in)    :: def
     integer,          intent(out)   :: res
@@ -371,7 +372,8 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine parse_integer8(name, def, res)
+  subroutine parse_integer8(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     integer(8),       intent(in)    :: def
     integer(8),       intent(out)   :: res
@@ -383,7 +385,8 @@ contains
 
   ! ---------------------------------------------------------  
   
-  subroutine parse_integer48(name, def, res)
+  subroutine parse_integer48(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     integer,          intent(in)    :: def
     integer(8),       intent(out)   :: res
@@ -395,7 +398,8 @@ contains
 
   ! ---------------------------------------------------------  
   
-  subroutine parse_integer84(name, def, res)
+  subroutine parse_integer84(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     integer(8),       intent(in)    :: def
     integer,          intent(out)   :: res
@@ -411,7 +415,8 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine parse_string(name, def, res)
+  subroutine parse_string(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     character(len=*), intent(in)    :: def
     character(len=*), intent(out)   :: res
@@ -423,7 +428,8 @@ contains
   
   ! ---------------------------------------------------------
   !> logical is a FORTRAN type, so we emulate the routine with integers
-  subroutine parse_logical(name, def, res)
+  subroutine parse_logical(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     logical,          intent(in)    :: def
     logical,          intent(out)   :: res
@@ -442,7 +448,8 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine parse_cmplx(name, def, res)
+  subroutine parse_cmplx(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     complex(8),       intent(in)    :: def
     complex(8),       intent(out)   :: res

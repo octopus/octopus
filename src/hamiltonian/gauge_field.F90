@@ -117,7 +117,7 @@ contains
     !% Bertsch et al, Phys. Rev. B 62 7998 (2000).
     !%End
 
-    call parse_variable('GaugeFieldDynamics', OPTION__GAUGEFIELDDYNAMICS__POLARIZATION, this%dynamics)
+    call parse_variable(parser, 'GaugeFieldDynamics', OPTION__GAUGEFIELDDYNAMICS__POLARIZATION, this%dynamics)
 
     !%Variable GaugeFieldPropagate
     !%Type logical
@@ -127,7 +127,7 @@ contains
     !% Propagate the gauge field with initial condition set by GaugeVectorField or zero if not specified
     !%End
 
-    call parse_variable('GaugeFieldPropagate', .false., this%with_gauge_field)
+    call parse_variable(parser, 'GaugeFieldPropagate', .false., this%with_gauge_field)
 
     !%Variable GaugeVectorField
     !%Type block
@@ -182,7 +182,7 @@ contains
     !% systems one can apply this probe with a delay relative to the start of the simulation.
     !%End
 
-    call parse_variable('GaugeFieldDelay', M_ZERO, this%kicktime)
+    call parse_variable(parser, 'GaugeFieldDelay', M_ZERO, this%kicktime)
 
     if(abs(this%kicktime) <= M_EPSILON) then
        this%vecpot(1:this%ndim) = this%vecpot_kick(1:this%ndim)

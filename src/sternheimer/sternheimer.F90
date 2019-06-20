@@ -165,7 +165,7 @@ contains
     default_preorthog = (sys%st%smear%method == SMEAR_SEMICONDUCTOR .or. &
       (sys%st%smear%method == SMEAR_FIXED_OCC .and. sys%st%smear%integral_occs)) &
       .and. .not. this%occ_response
-    call parse_variable('Preorthogonalization', default_preorthog, this%preorthogonalization) 
+    call parse_variable(parser, 'Preorthogonalization', default_preorthog, this%preorthogonalization) 
 
     !%Variable HamiltonianVariation
     !%Type integer
@@ -193,7 +193,7 @@ contains
     if(present(set_ham_var)) then
       ham_var = set_ham_var
     else if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-      call parse_variable('HamiltonianVariation', 3, ham_var)
+      call parse_variable(parser, 'HamiltonianVariation', 3, ham_var)
     else
       ham_var = 0
     end if

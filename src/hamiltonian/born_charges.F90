@@ -81,7 +81,7 @@ contains
     !% or <i>k</i>-point sampling (in periodic directions).
     !%End
 
-    call parse_variable('BornChargeSumRuleCorrection', .true., this%correct)
+    call parse_variable(parser, 'BornChargeSumRuleCorrection', .true., this%correct)
 
     POP_SUB(Born_charges_init)
   end subroutine Born_charges_init

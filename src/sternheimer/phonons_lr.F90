@@ -114,7 +114,7 @@ contains
     !% and written in directory <tt>restart/vib_modes/phn_nm_wfs_XXXXX</tt>.
     !% This part is time-consuming and not parallel, but not needed for most purposes.
     !%End
-    call parse_variable('CalcNormalModeWfs', .false., normal_mode_wfs)
+    call parse_variable(parser, 'CalcNormalModeWfs', .false., normal_mode_wfs)
 
     !%Variable CalcInfrared
     !%Type logical
@@ -124,7 +124,7 @@ contains
     !% If set to true, infrared intensities (and Born charges) will be calculated
     !% and written in <tt>vib_modes/infrared</tt>.
     !%End
-    call parse_variable('CalcInfrared', .true., do_infrared)
+    call parse_variable(parser, 'CalcInfrared', .true., do_infrared)
 
     !%Variable SymmetrizeDynamicalMatrix
     !%Type logical
@@ -135,7 +135,7 @@ contains
     !% the matrix will be symmetrized to enforce <math>D_{ij} = D_{ji}</math>. If set to false,
     !% only the upper half of the matrix will be calculated.
     !%End
-    call parse_variable('SymmetrizeDynamicalMatrix', .true., symmetrize)
+    call parse_variable(parser, 'SymmetrizeDynamicalMatrix', .true., symmetrize)
 
     ! replaced by properly saving and reading the dynamical matrix
     call messages_obsolete_variable(sys%parser, 'UseRestartDontSolve')

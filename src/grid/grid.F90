@@ -112,7 +112,7 @@ contains
     !% Experimental, and incompatible with domain-parallelization.
     !%End
     if (gr%sb%dim == 3) then 
-      call parse_variable('UseFineMesh', .false., gr%have_fine_mesh)
+      call parse_variable(parser, 'UseFineMesh', .false., gr%have_fine_mesh)
     else
       gr%have_fine_mesh = .false.
     end if
@@ -158,7 +158,7 @@ contains
       end do
       call parse_block_end(blk)
     else
-      call parse_variable('Spacing', -M_ONE, grid_spacing(1), units_inp%length)
+      call parse_variable(parser, 'Spacing', -M_ONE, grid_spacing(1), units_inp%length)
       grid_spacing(1:gr%sb%dim) = grid_spacing(1)
       if(def_h > M_ZERO) call messages_check_def(grid_spacing(1), .true., def_h, 'Spacing', units_out%length)
     end if

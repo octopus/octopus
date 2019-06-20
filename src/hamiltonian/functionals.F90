@@ -235,7 +235,7 @@ contains
       !% The parameter of the Slater X<math>\alpha</math> functional. Applies only for
       !% <tt>XCFunctional = xc_lda_c_xalpha</tt>.
       !%End
-      call parse_variable('Xalpha', M_ONE, alpha)
+      call parse_variable(parser, 'Xalpha', M_ONE, alpha)
 #ifdef HAVE_LIBXC4
       parameters(1) = alpha
       call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
@@ -259,7 +259,7 @@ contains
       !% Soft Coulomb interaction of the form <math>1/\sqrt{x^2 + \alpha^2}</math>.
       !%End
       call messages_obsolete_variable(parser, 'SoftInteraction1D_alpha', 'Interaction1D')
-      call parse_variable('Interaction1D', INT_SOFT_COULOMB, interact_1d)
+      call parse_variable(parser, 'Interaction1D', INT_SOFT_COULOMB, interact_1d)
 
       !%Variable Interaction1DScreening
       !%Type float
@@ -270,7 +270,7 @@ contains
       !% when running in 1D.
       !%End
       call messages_obsolete_variable(parser, 'SoftInteraction1D_alpha', 'Interaction1DScreening')
-      call parse_variable('Interaction1DScreening', M_ONE, alpha)
+      call parse_variable(parser, 'Interaction1DScreening', M_ONE, alpha)
 #ifdef HAVE_LIBXC4
       parameters(1) = real(interact_1d, REAL_PRECISION)
       parameters(2) = alpha
@@ -300,7 +300,7 @@ contains
       !%Description
       !% Whether to use a modified form of the LB94 functional (<tt>XCFunctional = xc_gga_x_lb</tt>).
       !%End
-      call parse_variable('LB94_modified', .false., lb94_modified)
+      call parse_variable(parser, 'LB94_modified', .false., lb94_modified)
       if(lb94_modified) then
         functl%LB94_modified = 1
       else
@@ -315,7 +315,7 @@ contains
       !%Description
       !% A threshold for the LB94 functional (<tt>XCFunctional = xc_gga_x_lb</tt>).
       !%End
-      call parse_variable('LB94_threshold', CNST(1.0e-6), functl%LB94_threshold)
+      call parse_variable(parser, 'LB94_threshold', CNST(1.0e-6), functl%LB94_threshold)
       
     end select
     

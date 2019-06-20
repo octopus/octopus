@@ -44,7 +44,7 @@
     !% in this list only states that have been calculated in a previous "gs" or "unocc" calculation,
     !% or otherwise the error will be silently ignored.
     !%End
-    call parse_variable('OCTExcludedStates', '1', tg%excluded_states_list)
+    call parse_variable(parser, 'OCTExcludedStates', '1', tg%excluded_states_list)
     call states_deallocate_wfns(tg%st)
 
     call states_look_and_load(restart, parser, tg%st, gr)

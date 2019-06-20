@@ -224,7 +224,7 @@ contains
     !% This is useful to describe non-electronic systems, or for
     !% esoteric purposes.
     !%End
-    call parse_variable('ParticleMass', M_ONE, hm%mass)
+    call parse_variable(parser, 'ParticleMass', M_ONE, hm%mass)
 
     !%Variable RashbaSpinOrbitCoupling
     !%Type float
@@ -236,7 +236,7 @@ contains
     !% State Phys.</i> <b>17</b>, 6031 (1984)]. This variable determines the strength
     !% of this perturbation, and has dimensions of energy times length.
     !%End
-    call parse_variable('RashbaSpinOrbitCoupling', M_ZERO, rashba_coupling, units_inp%energy*units_inp%length)
+    call parse_variable(parser, 'RashbaSpinOrbitCoupling', M_ZERO, rashba_coupling, units_inp%energy*units_inp%length)
     if(parse_is_defined(parser, 'RashbaSpinOrbitCoupling')) then
       if(gr%sb%dim .ne. 2) then
         write(message(1),'(a)') 'Rashba spin-orbit coupling can only be used for two-dimensional systems.'
@@ -301,7 +301,7 @@ contains
       call states_set_complex(st)
     end if
 
-    call parse_variable('CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
+    call parse_variable(parser, 'CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField
     !%Type logical
     !%Default no
@@ -389,7 +389,7 @@ contains
     !% Octopus determines the effective U term using the 
     !% ACBN0 functional as defined in PRX 5, 011006 (2015)
     !%End
-    call parse_variable('DFTULevel', DFT_U_NONE, hm%lda_u_level)
+    call parse_variable(parser, 'DFTULevel', DFT_U_NONE, hm%lda_u_level)
     call messages_print_var_option(stdout,  'DFTULevel', hm%lda_u_level)
     call lda_u_nullify(hm%lda_u)
     if(hm%lda_u_level /= DFT_U_NONE) then
@@ -415,7 +415,7 @@ contains
     !% additional copying but makes operations more efficient.
     !% See also the related <tt>StatesPack</tt> variable.
     !%End
-    call parse_variable('HamiltonianApplyPacked', .true., hm%apply_packed)
+    call parse_variable(parser, 'HamiltonianApplyPacked', .true., hm%apply_packed)
 
     external_potentials_present = epot_have_external_potentials(hm%ep)
 
@@ -432,7 +432,7 @@ contains
     !% If set to yes, and <tt>TheoryLevel = hartree_fock</tt>,
     !% the Fock operator for exact exchange will be applied with the SCDM method.
     !%End
-    call parse_variable('scdm_EXX', .false., hm%scdm_EXX)
+    call parse_variable(parser, 'scdm_EXX', .false., hm%scdm_EXX)
     if(hm%scdm_EXX) then
       call messages_experimental("SCDM method for exact exchange")
       if(hm%theory_level /= HARTREE_FOCK) then
@@ -461,7 +461,7 @@ contains
     !% zero, so that all time depedent field at that time will be
     !% included.
     !%End
-    call parse_variable('TimeZero', .false., hm%time_zero)
+    call parse_variable(parser, 'TimeZero', .false., hm%time_zero)
     if(hm%time_zero) call messages_experimental('TimeZero')
 
     call scissor_nullify(hm%scissor)

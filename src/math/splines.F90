@@ -422,7 +422,7 @@ contains
     !% (experimental) Octopus own implementation. New, untested, and
     !% hopefully faster.
     !%End
-    call parse_variable('Splines', OPTION__SPLINES__GSL, library)
+    call parse_variable(parser, 'Splines', OPTION__SPLINES__GSL, library)
     
     POP_SUB(spline_init_global)
   end subroutine spline_init_global

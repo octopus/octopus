@@ -107,7 +107,7 @@ contains
       if(st%parallel_in_states) default = OPTION__SUBSPACEDIAGONALIZATION__SCALAPACK
 #endif
 
-      call parse_variable('SubspaceDiagonalization', default, this%method)
+      call parse_variable(parser, 'SubspaceDiagonalization', default, this%method)
 
       if(.not.varinfo_valid_option('SubspaceDiagonalization', this%method)) call messages_input_error('SubspaceDiagonalization')
     end if

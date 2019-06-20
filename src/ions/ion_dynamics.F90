@@ -141,7 +141,7 @@ contains
     !% move with a constant velocity given by the initial
     !% conditions. They will not be affected by any forces.
     !%End
-    call parse_variable('IonsConstantVelocity', .false., this%constant_velocity)
+    call parse_variable(parser, 'IonsConstantVelocity', .false., this%constant_velocity)
     call messages_print_var_value(stdout, 'IonsConstantVelocity', this%constant_velocity)
 
     if(this%constant_velocity) then
@@ -229,7 +229,7 @@ contains
     !% Nose-Hoover thermostat.
     !%End
     
-    call parse_variable('Thermostat', THERMO_NONE, this%thermostat)
+    call parse_variable(parser, 'Thermostat', THERMO_NONE, this%thermostat)
     if(.not.varinfo_valid_option('Thermostat', this%thermostat)) call messages_input_error('Thermostat')
     call messages_print_var_option(stdout, 'Thermostat', this%thermostat)
     
@@ -255,7 +255,7 @@ contains
       !% temperature. The values of the temperature are given in
       !% degrees Kelvin.
       !%End
-      call parse_variable('TemperatureFunction', 'temperature', temp_function_name)
+      call parse_variable(parser, 'TemperatureFunction', 'temperature', temp_function_name)
 
       call tdf_read(this%temperature_function, parser, temp_function_name, ierr)
 
@@ -276,7 +276,7 @@ contains
         !%End
         call messages_obsolete_variable(parser, 'NHMass', 'ThermostatMass')
 
-        call parse_variable('ThermostatMass', CNST(1.0), this%nh(1)%mass)
+        call parse_variable(parser, 'ThermostatMass', CNST(1.0), this%nh(1)%mass)
         this%nh(2)%mass = this%nh(1)%mass
 
         this%nh(1:2)%pos = M_ZERO
@@ -310,7 +310,7 @@ contains
 
       if( mpi_grp_is_root(mpi_world)) then
         call loct_ran_init(random_gen_pointer)
-        call parse_variable('RandomVelocityTemp', M_ZERO, temperature, unit = unit_kelvin)
+        call parse_variable(parser, 'RandomVelocityTemp', M_ZERO, temperature, unit = unit_kelvin)
       end if
 
       do i = 1, geo%natoms
@@ -439,7 +439,7 @@ contains
     !% propagation run. The default is yes when the ion velocity is
     !% set explicitly or implicitly, otherwise is no.
     !%End
-    call parse_variable('MoveIons', have_velocities, this%move_ions)
+    call parse_variable(parser, 'MoveIons', have_velocities, this%move_ions)
     call messages_print_var_value(stdout, 'MoveIons', this%move_ions)
 
     if(ion_dynamics_ions_move(this)) then 

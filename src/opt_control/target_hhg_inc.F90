@@ -165,7 +165,7 @@
     !% In practice, it is better if you also set an upper limit, <i>e.g.</i>
     !% <math>f(\omega) = step(\omega-1) step(2-\omega)</math>.
     !%End
-    call parse_variable('OCTHarmonicWeight', '1', tg%plateau_string)
+    call parse_variable(parser, 'OCTHarmonicWeight', '1', tg%plateau_string)
     tg%dt = td%dt
     SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))
     tg%td_fitness = M_ZERO

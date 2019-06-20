@@ -71,7 +71,7 @@ contains
     !% interaction for periodic systems. This value affects the speed
     !% of the calculation, normally users do not need to modify it.
     !%End
-    call parse_variable('EwaldAlpha', CNST(0.21), this%alpha)
+    call parse_variable(parser, 'EwaldAlpha', CNST(0.21), this%alpha)
     
     POP_SUB(ion_interaction_init)
   end subroutine ion_interaction_init

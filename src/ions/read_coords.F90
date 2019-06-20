@@ -172,7 +172,7 @@ contains
       gf%flags = ior(gf%flags, XYZ_FLAGS_CHARGE)
 
       ! no default, since we do not do this unless the input tag is present
-      call parse_variable('PDB'//trim(what), '', str)
+      call parse_variable(parser, 'PDB'//trim(what), '', str)
 
       message(1) = "Reading " // trim(what) // " from " // trim(str)
       call messages_info(1)
@@ -212,7 +212,7 @@ contains
 
       gf%source = READ_COORDS_XYZ
       ! no default, since we do not do this unless the input tag is present
-      call parse_variable('XYZ'//trim(what), '', str)
+      call parse_variable(parser, 'XYZ'//trim(what), '', str)
 
       message(1) = "Reading " // trim(what) // " from " // trim(str)
       call messages_info(1)
@@ -254,7 +254,7 @@ contains
 
       gf%source = READ_COORDS_XSF
       ! no default, since we do not do this unless the input tag is present
-      call parse_variable('XSF'//trim(what), '', str)
+      call parse_variable(parser, 'XSF'//trim(what), '', str)
 
       message(1) = "Reading " // trim(what) // " from " // trim(str)
       call messages_info(1)
@@ -274,7 +274,7 @@ contains
         !% If an animated file is given with <tt>XSFCoordinates</tt>, this variable selects which animation step
         !% will be used. The <tt>PRIMVEC</tt> block must be written for each step.
         !%End
-        call parse_variable('XSFCoordinatesAnimStep', 1, step_to_use)
+        call parse_variable(parser, 'XSFCoordinatesAnimStep', 1, step_to_use)
         if(step_to_use < 1) then
           message(1) = "XSFCoordinatesAnimStep must be > 0."
           call messages_fatal(1)

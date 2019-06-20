@@ -80,7 +80,7 @@ contains
     !%Description
     !% Dump libvdwxc inputs and outputs to files.
     !%End
-    call parse_variable('libvdwxcDebug', .false., libvdwxc%debug)
+    call parse_variable(parser, 'libvdwxcDebug', .false., libvdwxc%debug)
     POP_SUB(libvdwxc_init)
 
     !%Variable libvdwxcVDWFactor
@@ -91,7 +91,7 @@ contains
     !% Setting a prefactor other than one is wrong, but useful
     !% for debugging.
     !%End
-    call parse_variable('libvdwxcVDWFactor', M_ONE, libvdwxc%vdw_factor)
+    call parse_variable(parser, 'libvdwxcVDWFactor', M_ONE, libvdwxc%vdw_factor)
   end subroutine libvdwxc_init
 
   subroutine libvdwxc_print(this)
@@ -154,7 +154,7 @@ contains
     !%Option libvdwxc_mode_mpi 3
     !% Run with fftw3-mpi.  Works only if Octopus is compiled with MPI.
     !%End
-    call parse_variable('libvdwxcMode', LIBVDWXC_MODE_AUTO, libvdwxc_mode)
+    call parse_variable(parser, 'libvdwxcMode', LIBVDWXC_MODE_AUTO, libvdwxc_mode)
 
     if(libvdwxc_mode == LIBVDWXC_MODE_AUTO) then
       if(mesh%mpi_grp%size == 1) then

@@ -98,7 +98,7 @@ contains
     !% Modine [N.A. Modine, G. Zumbach and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997)]
     !% (NOT WORKING).
     !%End
-    call parse_variable('CurvMethod', CURV_METHOD_UNIFORM, cv%method)
+    call parse_variable(parser, 'CurvMethod', CURV_METHOD_UNIFORM, cv%method)
     if(.not.varinfo_valid_option('CurvMethod', cv%method)) call messages_input_error('CurvMethod')
     call messages_print_var_option(stdout, "CurvMethod", cv%method)
 

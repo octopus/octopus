@@ -222,7 +222,7 @@ contains
 
     ! Reads the spin components. This is read here, as well as in states_init,
     ! to be able to pass it to the pseudopotential initializations subroutine.
-    call parse_variable('SpinComponents', 1, ispin)
+    call parse_variable(parser, 'SpinComponents', 1, ispin)
     if(.not.varinfo_valid_option('SpinComponents', ispin)) call messages_input_error('SpinComponents')
     ispin = min(2, ispin)
 
@@ -245,7 +245,7 @@ contains
     !% and applied to the Hamiltonian at each time step. You must have at least one <tt>species_user_defined</tt>
     !% type of species to use this.
     !%End
-    call parse_variable('SpeciesTimeDependent', .false., geo%species_time_dependent)
+    call parse_variable(parser, 'SpeciesTimeDependent', .false., geo%species_time_dependent)
     ! we must have at least one user defined species in order to have time dependency
     do i = 1,geo%nspecies
       if(species_type(geo%species(i)) == SPECIES_USDEF) then

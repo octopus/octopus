@@ -163,7 +163,7 @@ contains
 
     cinp = UNITS_ATOMIC
     
-    call parse_variable('UnitsOutput', UNITS_ATOMIC, cc)
+    call parse_variable(parser, 'UnitsOutput', UNITS_ATOMIC, cc)
     if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call messages_input_error('UnitsOutput')
     cout = cc
 
@@ -236,7 +236,7 @@ contains
     !% coordinates in Angstrom.
     !%End
 
-    call parse_variable('UnitsXYZFiles', OPTION__UNITSXYZFILES__ANGSTROM_UNITS, xyz_units)
+    call parse_variable(parser, 'UnitsXYZFiles', OPTION__UNITSXYZFILES__ANGSTROM_UNITS, xyz_units)
 
     if(.not.varinfo_valid_option('UnitsXYZFiles', xyz_units)) call messages_input_error('UnitsXYZFiles', 'Invalid option')
 

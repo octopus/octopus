@@ -111,7 +111,7 @@ contains
       default = PRE_FILTER
     end if
 
-    call parse_variable('Preconditioner', default, this%which)
+    call parse_variable(parser, 'Preconditioner', default, this%which)
     if(.not.varinfo_valid_option('Preconditioner', this%which)) call messages_input_error('Preconditioner')
     call messages_print_var_option(stdout, 'Preconditioner', this%which)
 
@@ -143,7 +143,7 @@ contains
       default_alpha = CNST(0.5)
       if(simul_box_is_periodic(gr%sb)) default_alpha = CNST(0.6)
 
-      call parse_variable('PreconditionerFilterFactor', default_alpha, alpha)
+      call parse_variable(parser, 'PreconditionerFilterFactor', default_alpha, alpha)
 
       call messages_print_var_value(stdout, 'PreconditionerFilterFactor', alpha)
 
@@ -192,7 +192,7 @@ contains
       !% This variable is the number of pre-smoothing iterations for the multigrid
       !% preconditioner. The default is 1.
       !%End
-      call parse_variable('PreconditionerIterationsPre', 1, this%npre)
+      call parse_variable(parser, 'PreconditionerIterationsPre', 1, this%npre)
 
       !%Variable PreconditionerIterationsMiddle
       !%Type integer
@@ -201,7 +201,7 @@ contains
       !% This variable is the number of smoothing iterations on the coarsest grid for the multigrid
       !% preconditioner. The default is 1.
       !%End
-      call parse_variable('PreconditionerIterationsMiddle', 1, this%nmiddle)
+      call parse_variable(parser, 'PreconditionerIterationsMiddle', 1, this%nmiddle)
 
       !%Variable PreconditionerIterationsPost
       !%Type integer
@@ -210,7 +210,7 @@ contains
       !% This variable is the number of post-smoothing iterations for the multigrid
       !% preconditioner. The default is 2.
       !%End
-      call parse_variable('PreconditionerIterationsPost', 2, this%npost)
+      call parse_variable(parser, 'PreconditionerIterationsPost', 2, this%npost)
     end if
 
     POP_SUB(preconditioner_init)

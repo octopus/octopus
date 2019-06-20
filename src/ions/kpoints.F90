@@ -266,7 +266,7 @@ contains
     !% automatic).
     !%
     !%End
-    call parse_variable('KPointsUseSymmetries', .false., this%use_symmetries)
+    call parse_variable(parser, 'KPointsUseSymmetries', .false., this%use_symmetries)
 
     !%Variable KPointsUseTimeReversal
     !%Type logical
@@ -286,7 +286,7 @@ contains
     !%
     !%End
     default_timereversal = this%use_symmetries .and. .not. symmetries_have_break_dir(symm)
-    call parse_variable('KPointsUseTimeReversal', default_timereversal, this%use_time_reversal)
+    call parse_variable(parser, 'KPointsUseTimeReversal', default_timereversal, this%use_time_reversal)
 
     !We determine the method used to define k-point
     this%method = 0

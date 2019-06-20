@@ -372,7 +372,7 @@ contains
 
       call messages_obsolete_variable(sys%parser, 'KdotP_OccupiedSolutionMethod', 'KdotPOccupiedSolutionMethod')
 
-      call parse_variable('KdotPOccupiedSolutionMethod', 0, kdotp_vars%occ_solution_method)
+      call parse_variable(parser, 'KdotPOccupiedSolutionMethod', 0, kdotp_vars%occ_solution_method)
       if(kdotp_vars%occ_solution_method == 1 .and. .not. smear_is_semiconducting(sys%st%smear)) then
         call messages_not_implemented('KdotPOccupiedSolutionMethod = sum_over_states for non-semiconducting smearing')
       end if
@@ -385,7 +385,7 @@ contains
       !% States with energy <math>E_i</math> and <math>E_j</math> will be considered degenerate
       !% if <math> \left| E_i - E_j \right| < </math><tt>DegeneracyThreshold</tt>.
       !%End
-      call parse_variable('DegeneracyThreshold', units_from_atomic(units_inp%energy, CNST(1e-5)), kdotp_vars%degen_thres)
+      call parse_variable(parser, 'DegeneracyThreshold', units_from_atomic(units_inp%energy, CNST(1e-5)), kdotp_vars%degen_thres)
       kdotp_vars%degen_thres = units_to_atomic(units_inp%energy, kdotp_vars%degen_thres)
 
       !%Variable KdotPEta
@@ -397,7 +397,7 @@ contains
       !% Not recommended.
       !%End
       call messages_obsolete_variable(sys%parser, 'KdotP_Eta', 'KdotPEta')
-      call parse_variable('KdotPEta', M_ZERO, kdotp_vars%eta)
+      call parse_variable(parser, 'KdotPEta', M_ZERO, kdotp_vars%eta)
       kdotp_vars%eta = units_to_atomic(units_inp%energy, kdotp_vars%eta)
 
       !%Variable KdotPCalculateEffectiveMasses
@@ -409,7 +409,7 @@ contains
       !% to calculate effective masses. It is not correct for degenerate states.
       !%End      
       call messages_obsolete_variable(sys%parser, 'KdotP_CalculateEffectiveMasses', 'KdotPCalculateEffectiveMasses')
-      call parse_variable('KdotPCalculateEffectiveMasses', .true., calc_eff_mass)
+      call parse_variable(parser, 'KdotPCalculateEffectiveMasses', .true., calc_eff_mass)
 
       !%Variable KdotPCalcSecondOrder
       !%Type logical
@@ -420,7 +420,7 @@ contains
       !% Note that the second derivative of the Hamiltonian is NOT included in this calculation.
       !% This is needed for a subsequent run in <tt>CalculationMode = em_resp</tt> with <tt>EMHyperpol</tt>.
       !%End      
-      call parse_variable('KdotPCalcSecondOrder', .false., calc_2nd_order)
+      call parse_variable(parser, 'KdotPCalcSecondOrder', .false., calc_2nd_order)
 
       POP_SUB(kdotp_lr_run.parse_input)
 

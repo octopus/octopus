@@ -212,7 +212,7 @@ contains
     !%Option no 0
     !% This parallelization strategy is not used.    
     !%End
-    call parse_variable('ParDomains', default(P_STRATEGY_DOMAINS), parse(P_STRATEGY_DOMAINS))
+    call parse_variable(parser, 'ParDomains', default(P_STRATEGY_DOMAINS), parse(P_STRATEGY_DOMAINS))
 
     !%Variable ParStates
     !%Type integer
@@ -235,7 +235,7 @@ contains
     !%Option no 0
     !% This parallelization strategy is not used.    
     !%End
-    call parse_variable('ParStates', default(P_STRATEGY_STATES), parse(P_STRATEGY_STATES))
+    call parse_variable(parser, 'ParStates', default(P_STRATEGY_STATES), parse(P_STRATEGY_STATES))
 
     !%Variable ParKPoints
     !%Type integer
@@ -256,7 +256,7 @@ contains
     !%Option no 0
     !% This parallelization strategy is not used.    
     !%End
-    call parse_variable('ParKPoints', default(P_STRATEGY_KPOINTS), parse(P_STRATEGY_KPOINTS))
+    call parse_variable(parser, 'ParKPoints', default(P_STRATEGY_KPOINTS), parse(P_STRATEGY_KPOINTS))
 
     !%Variable ParOther
     !%Type integer
@@ -281,7 +281,7 @@ contains
     !%Option no 0
     !% This parallelization strategy is not used.    
     !%End
-    call parse_variable('ParOther', default(P_STRATEGY_OTHER), parse(P_STRATEGY_OTHER))
+    call parse_variable(parser, 'ParOther', default(P_STRATEGY_OTHER), parse(P_STRATEGY_OTHER))
 
     do ipar = 1, P_STRATEGY_MAX
       if(parse(ipar) == PAR_NO) parse(ipar) = 1
@@ -319,7 +319,7 @@ contains
       !% such nodes is given by this variable multiplied by the number
       !% of domains used in domain parallelization.
       !%End
-      call parse_variable('ParallelizationNumberSlaves', 0, num_slaves)
+      call parse_variable(parser, 'ParallelizationNumberSlaves', 0, num_slaves)
       
       ! the slaves must be defined at a certain parallelization level, for the moment this is state parallelization.
       slave_level = P_STRATEGY_STATES

@@ -93,7 +93,7 @@ contains
     !%Option oct_is_userdefined 4
     !% Start in a user-defined state.
     !%End
-    call parse_variable('OCTInitialState', oct_is_groundstate, istype)
+    call parse_variable(parser, 'OCTInitialState', oct_is_groundstate, istype)
     if(.not.varinfo_valid_option('OCTInitialState', istype)) call messages_input_error('OCTInitialState')    
 
     select case(istype)
@@ -223,7 +223,7 @@ contains
     end select
 
     ! Check whether we want to freeze some of the deeper orbitals.
-    call parse_variable('TDFreezeOrbitals', 0, freeze_orbitals)
+    call parse_variable(parser, 'TDFreezeOrbitals', 0, freeze_orbitals)
     if(freeze_orbitals > 0) then
       ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
       call states_freeze_orbitals(psi, sys%gr, sys%mc, freeze_orbitals)
