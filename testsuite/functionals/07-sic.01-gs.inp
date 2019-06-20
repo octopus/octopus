@@ -19,7 +19,7 @@ SICCorrection = sic_pz
 OEPLevel = oep_kli
 
 EigenSolver = cg_new
-EigenSolverTolerance = 1e-7
+EigenSolverTolerance = 1e-8
 
 Mixing = 0.1
 ConvRelDens = 5e-6
