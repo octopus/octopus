@@ -120,14 +120,14 @@ program octopus
   if(.not.varinfo_valid_option('CalculationMode', inp_calc_mode)) call messages_input_error('CalculationMode')
 
   ! Now we can initialize the I/O
-  call io_init()
+  call io_init(parser)
 
   call calc_mode_par_init()
   
   ! now we declare octopus as running
   call messages_switch_status('running')
   
-  call profiling_init()
+  call profiling_init(parser)
   
   call print_header()
 

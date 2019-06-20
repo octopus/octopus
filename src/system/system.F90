@@ -85,7 +85,7 @@ contains
 
     call messages_obsolete_variable(sys%parser, 'SystemName')
 
-    call space_init(sys%space)
+    call space_init(sys%space, sys%parser)
     
     call geometry_init(sys%geo, sys%parser, sys%space)
     call grid_init_stage_0(sys%gr, sys%parser, sys%geo, sys%space)

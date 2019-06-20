@@ -67,8 +67,8 @@ program oct_convert
 
   call messages_init(parser)
 
-  call io_init()
-  call profiling_init()
+  call io_init(parser)
+  call profiling_init(parser)
   call messages_experimental("oct-convert utility")
 
   call print_header()

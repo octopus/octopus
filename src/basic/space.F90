@@ -55,8 +55,9 @@ module space_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine space_init(this, dim)
+  subroutine space_init(this, parser, dim)
     type(space_t),     intent(inout) :: this
+    type(parser_t),    intent(in)    :: parser
     integer, optional, intent(in)    :: dim
 
     PUSH_SUB(space_init_simple)

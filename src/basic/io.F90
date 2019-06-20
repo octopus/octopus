@@ -60,8 +60,9 @@ contains
   !> If the argument defaults is present and set to true, then the routine
   !! will not try to read anything from the inp file, but set everything
   !! to the default values.
-  subroutine io_init(defaults)
-    logical, optional, intent(in) :: defaults
+  subroutine io_init(parser, defaults)
+    type(parser_t),    intent(in)    :: parser
+    logical, optional, intent(in)    :: defaults
 
     character(len=MAX_PATH_LEN) :: filename
     character(len=256) :: node_hook

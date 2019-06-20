@@ -51,7 +51,7 @@ program xyzanim
   call parser_init(parser)
   
   call messages_init(parser)
-  call io_init()
+  call io_init(parser)
   call unit_system_init(parser)
 
   ! Sets the filenames
@@ -80,7 +80,7 @@ program xyzanim
   !%End
   call parse_variable(parser, 'AnimationMultiFiles', .false., multifiles)
 
-  call space_init(space)
+  call space_init(space, parser)
   call geometry_init(geo, parser, space)
   call simul_box_init(sb, parser, geo, space)
 

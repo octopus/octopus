@@ -51,7 +51,7 @@ program propagation_spectrum
   
   call messages_init(parser)
 
-  call io_init()
+  call io_init(parser)
 
   call unit_system_init(parser)
 

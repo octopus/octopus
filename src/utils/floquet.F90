@@ -78,8 +78,8 @@ program oct_floquet
   
   call messages_init(parser)
 
-  call io_init()
-  call profiling_init()
+  call io_init(parser)
+  call profiling_init(parser)
 
   call print_header()
   call messages_print_stress(stdout, "Non-interacting Floquet")

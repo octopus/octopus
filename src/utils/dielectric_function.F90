@@ -64,13 +64,13 @@ program dielectric_function
   
   call messages_init(parser)
 
-  call io_init()
+  call io_init(parser)
 
   call unit_system_init(parser)
 
   call spectrum_init(spectrum)
 
-  call space_init(space)
+  call space_init(space, parser)
   call geometry_init(geo, parser, space)
   call simul_box_init(sb, parser, geo, space)
     

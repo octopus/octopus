@@ -57,7 +57,7 @@
     
     call messages_init(parser)
 
-    call io_init()
+    call io_init(parser)
 
     call unit_system_init(parser)
 
@@ -84,7 +84,7 @@
 
     if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
 
-    call space_init(space)
+    call space_init(space, parser)
     call geometry_init(geo, parser, space)
     call simul_box_init(sb, parser, geo, space)
 

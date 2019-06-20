@@ -104,12 +104,12 @@ program photoelectron_spectrum
   call parser_init(parser)
   
   call messages_init(parser)  
-  call io_init()
+  call io_init(parser)
 
   !* In order to initialize k-points
   call unit_system_init(parser)
   
-  call space_init(space)
+  call space_init(space, parser)
   call geometry_init(geo, parser, space)
   call simul_box_init(sb, parser, geo, space)
   gr%sb = sb

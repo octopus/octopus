@@ -177,7 +177,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Create profiling subdirectory.
-  subroutine profiling_init()
+  subroutine profiling_init(parser)
+    type(parser_t),          intent(in)    :: parser
+    
     integer :: ii
 
     PUSH_SUB(profiling_init)

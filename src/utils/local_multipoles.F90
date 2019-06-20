@@ -79,8 +79,8 @@ program oct_local_multipoles
   
   call messages_init(parser)
 
-  call io_init()
-  call profiling_init()
+  call io_init(parser)
+  call profiling_init(parser)
  
   call print_header()
   call messages_print_stress(stdout, "Local Domains mode")

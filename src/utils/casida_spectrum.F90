@@ -57,9 +57,9 @@ program casida_spectrum
 
   call parser_init(parser)
   call messages_init(parser)
-  call io_init()
+  call io_init(parser)
   call unit_system_init(parser)
-  call space_init(cs%space)
+  call space_init(cs%space, parser)
 
   ! Reads the spin components. This is read here, as well as in states_init.
   call parse_variable(parser, 'SpinComponents', 1, cs%ispin)
