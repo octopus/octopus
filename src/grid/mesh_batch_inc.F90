@@ -792,7 +792,7 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
 
   logical :: normalize_
   integer :: ist, idim, is
-  FLOAT, allocatable   :: nrm2(:)
+  R_TYPE, allocatable   :: nrm2(:)
   R_TYPE, allocatable  :: ss(:,:), ss_full(:,:)
   integer :: block_size, size, sp, ep
   type(profile_t), save :: prof
@@ -864,12 +864,12 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
 
   if(present(norm) .or. normalize_) then
     SAFE_ALLOCATE(nrm2(1:phib%nst))
-    call mesh_batch_nrm2(mesh, phib, nrm2)
+    call X(mesh_batch_dotp_vector)(mesh, phib, phib, nrm2)
     if(present(norm)) then
-      norm(1:phib%nst) = nrm2(1:phib%nst)
+      norm(1:phib%nst) = sqrt(real(nrm2(1:phib%nst), REAL_PRECISION))
     end if
     if(normalize_) then
-      call batch_scal(mesh%np, M_ONE/nrm2, phib)
+      call batch_scal(mesh%np, M_ONE/sqrt(real(nrm2, REAL_PRECISION)), phib)
     end if
     SAFE_DEALLOCATE_A(nrm2)
   end if
