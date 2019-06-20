@@ -756,7 +756,7 @@ contains
       ! allocate structure
       SAFE_ALLOCATE(spec%ps)
       if(spec%type == SPECIES_PSPIO) then
-        call ps_pspio_init(spec%ps, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
+        call ps_pspio_init(spec%ps, parser, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
       else
         call ps_init(spec%ps, parser, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
       end if

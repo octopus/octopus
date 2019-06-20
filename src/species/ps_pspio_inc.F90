@@ -17,8 +17,9 @@
 !!
 
   ! ---------------------------------------------------------
-  subroutine ps_pspio_init(ps, label, z, lmax, lloc, ispin, filename)
+  subroutine ps_pspio_init(ps, parser, label, z, lmax, lloc, ispin, filename)
     type(ps_t),        intent(out)   :: ps
+    type(parser_t),    intent(in)    :: parser
     character(len=10), intent(in)    :: label
     integer,           intent(inout) :: lmax
     integer,           intent(in)    :: lloc, ispin
