@@ -878,7 +878,7 @@ contains
       end if
 
       ! zpsi = nrm * V * expo(1:iter, 1) = nrm * V * expo * V^(T) * zpsi
-      call batch_scal(der%mesh%np, expo(1,1,1:psib%nst), psib)
+      call batch_scal(der%mesh%np, expo(1,1,1:psib%nst), psib, a_full = .false.)
       do ii = 2, iter
         call batch_axpy(der%mesh%np, beta(1:psib%nst)*expo(ii,1,1:psib%nst), vb(ii), psib, a_full = .false.)
         !In order to apply the two exponentials, we mush store the eigenvales and eigenvectors given by zlalg_exp

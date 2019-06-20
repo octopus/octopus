@@ -820,7 +820,7 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
   do is = 1, nsteps
     if(nst>=1 .and. drcgs) then
       call X(mesh_batch_dotp_vector)(mesh, psib(nst), phib, ss(1:phib%nst,1))
-      call batch_axpy(mesh%np, -ss(1:phib%nst,1), psib(nst), phib)
+      call batch_axpy(mesh%np, -ss(1:phib%nst,1), psib(nst), phib, a_full = .false.)
       if(present(overlap)) ss_full(1:phib%nst, nst) = ss_full(1:phib%nst, nst) + ss(1:phib%nst, 1)
     end if
     ss = R_TOTYPE(M_ZERO)
@@ -836,7 +836,7 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
     end if
 
     do ist = 1, nst
-      call batch_axpy(mesh%np, -ss(1:phib%nst,ist), psib(ist), phib)
+      call batch_axpy(mesh%np, -ss(1:phib%nst,ist), psib(ist), phib, a_full = .false.)
     end do
 
     !We accumulate the overlap
@@ -869,7 +869,7 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
       norm(1:phib%nst) = sqrt(real(nrm2(1:phib%nst), REAL_PRECISION))
     end if
     if(normalize_) then
-      call batch_scal(mesh%np, M_ONE/sqrt(real(nrm2, REAL_PRECISION)), phib)
+      call batch_scal(mesh%np, M_ONE/sqrt(real(nrm2, REAL_PRECISION)), phib, a_full =.false.)
     end if
     SAFE_DEALLOCATE_A(nrm2)
   end if
