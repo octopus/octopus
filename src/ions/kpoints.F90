@@ -1083,7 +1083,7 @@ contains
      
       vec(1:dim) = kpt2(1:dim)-kpt1(1:dim) 
       length = sqrt(sum(vec(1:dim)**2)) 
-      total_length = total_length + length
+      if(resolution(is) > 0) total_length = total_length + length
     end do 
 
     accumulated_length = M_ZERO
@@ -1103,7 +1103,7 @@ contains
         coord(kpt_ind) = accumulated_length + (ik-1)*length/resolution(is) 
         kpoints(1:dim, kpt_ind) = kpt1(1:dim) + (ik-1)*length/resolution(is)*vec(1:dim)
       end do
-      accumulated_length = accumulated_length + length
+      if(resolution(is) > 0) accumulated_length = accumulated_length + length
     end do
     !We add the last point
     kpt_ind = kpt_ind +1
