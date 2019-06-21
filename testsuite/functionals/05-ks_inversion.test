@@ -8,6 +8,7 @@ Enabled    : Yes
 Processors: 1
 
 Input: 05-ks_inversion.01-target_density.inp
+match ; SCF convergence                          ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Density value 1                          ; LINEFIELD(static/density.y=0\,z=0,    2, 2) ;  7.08858456238250E-015
 match ; Density value 2                          ; LINEFIELD(static/density.y=0\,z=0,  301, 2) ;  8.86969906323769E-001
 

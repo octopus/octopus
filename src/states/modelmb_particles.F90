@@ -23,10 +23,8 @@
 module modelmb_particles_oct_m
   use global_oct_m
   use grid_oct_m
-  use hypercube_oct_m
   use loct_pointer_oct_m
   use parser_oct_m
-  use mesh_oct_m
   use messages_oct_m
   use profiling_oct_m
 
@@ -63,7 +61,7 @@ module modelmb_particles_oct_m
     !!   ...
     !!   nparticle_modelmb lines (fixed)
     !!   %
-    character(80), pointer :: labels_particles(:)
+    character(80), allocatable :: labels_particles(:)
 
     integer, pointer :: particletype(:)
     integer, pointer :: nparticles_per_type(:)
@@ -83,7 +81,7 @@ module modelmb_particles_oct_m
     !!   ...
     !!   however many lines wanted (up to nparticle_modelmb)
     !!   %
-    character(80), pointer :: labels_densities(:)
+    character(80), allocatable :: labels_densities(:)
     
     integer, pointer :: particle_kept_densities(:)
 
@@ -97,7 +95,6 @@ contains
     PUSH_SUB(modelmb_particles_nullify)
     
     this%nparticle = 0
-    nullify(this%labels_particles)
     nullify(this%particletype)
     nullify(this%nparticles_per_type)
     nullify(this%particles_of_type)
@@ -105,7 +102,6 @@ contains
     nullify(this%bosonfermion)
     nullify(this%mass_particle)
     nullify(this%charge_particle)
-    nullify(this%labels_densities)
     nullify(this%particle_kept_densities)
     
     POP_SUB(modelmb_particles_nullify)
@@ -280,7 +276,7 @@ contains
     
     PUSH_SUB(modelmb_particles_end)
     
-    SAFE_DEALLOCATE_P(this%labels_particles)
+    SAFE_DEALLOCATE_A(this%labels_particles)
     SAFE_DEALLOCATE_P(this%particletype)
     SAFE_DEALLOCATE_P(this%mass_particle)
     SAFE_DEALLOCATE_P(this%charge_particle)
@@ -289,7 +285,7 @@ contains
     SAFE_DEALLOCATE_P(this%exchange_symmetry)
     SAFE_DEALLOCATE_P(this%bosonfermion)
     
-    SAFE_DEALLOCATE_P(this%labels_densities)
+    SAFE_DEALLOCATE_A(this%labels_densities)
     SAFE_DEALLOCATE_P(this%particle_kept_densities)
     
     POP_SUB(modelmb_particles_end)
@@ -308,7 +304,7 @@ contains
     modelmb_out%nparticle = modelmb_in%nparticle
     modelmb_out%ndensities_to_calculate = modelmb_in%ndensities_to_calculate
     
-    call loct_pointer_copy(modelmb_out%labels_particles,modelmb_in%labels_particles)
+    call loct_allocatable_copy(modelmb_out%labels_particles,modelmb_in%labels_particles)
     call loct_pointer_copy(modelmb_out%particletype,modelmb_in%particletype)
     call loct_pointer_copy(modelmb_out%mass_particle,modelmb_in%mass_particle)
     call loct_pointer_copy(modelmb_out%charge_particle,modelmb_in%charge_particle)
@@ -317,7 +313,7 @@ contains
     call loct_pointer_copy(modelmb_out%exchange_symmetry,modelmb_in%exchange_symmetry)
     call loct_pointer_copy(modelmb_out%bosonfermion,modelmb_in%bosonfermion)
     
-    call loct_pointer_copy(modelmb_out%labels_densities,modelmb_in%labels_densities)
+    call loct_allocatable_copy(modelmb_out%labels_densities,modelmb_in%labels_densities)
     call loct_pointer_copy(modelmb_out%particle_kept_densities,modelmb_in%particle_kept_densities)
     
     POP_SUB(modelmb_particles_copy)

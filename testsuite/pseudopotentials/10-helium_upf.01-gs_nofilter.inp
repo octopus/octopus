@@ -1,0 +1,20 @@
+CalculationMode = gs
+
+%Species
+'He' | species_pseudo | file | "10-helium_upf.pbe-mt.UPF"
+%
+
+%Coordinates
+ 'He' | 0.0 | 0.0 | 1.0
+%
+
+Spacing = 0.4
+Radius = 5.0
+
+ExperimentalFeatures = yes
+
+XCFunctional = gga_x_pbe + gga_c_pbe
+
+FilterPotentials = no
+
+Debug = info

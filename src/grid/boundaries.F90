@@ -21,6 +21,7 @@
 module boundaries_oct_m
   use accel_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use global_oct_m
   use math_oct_m
   use messages_oct_m
@@ -54,7 +55,6 @@ module boundaries_oct_m
 
   public ::                        &
     boundaries_t,                  &
-    boundaries_nullify,            &
     boundaries_init,               &
     boundaries_end,                &
     boundaries_set
@@ -113,22 +113,6 @@ module boundaries_oct_m
   end interface boundaries_set
 
 contains
-  
-  ! ---------------------------------------------------------
-  elemental subroutine boundaries_nullify(this)
-    type(boundaries_t), intent(out) :: this
-
-    nullify(this%mesh)
-    this%nper = 0
-    nullify(this%per_points, this%per_send, this%per_recv)
-    nullify(this%nsend, this%nrecv)
-    call accel_mem_nullify(this%buff_per_points)
-    call accel_mem_nullify(this%buff_per_send)
-    call accel_mem_nullify(this%buff_per_recv)
-    call accel_mem_nullify(this%buff_nsend)
-    call accel_mem_nullify(this%buff_nrecv)
-
-  end subroutine boundaries_nullify
 
   ! ---------------------------------------------------------
   subroutine boundaries_init(this, mesh)
@@ -368,20 +352,21 @@ contains
 
   ! -------------------------------------------------------
 
-  subroutine boundaries_set_batch(this, ffb)
+  subroutine boundaries_set_batch(this, ffb, phase_correction)
     type(boundaries_t), intent(in)    :: this
     type(batch_t),      intent(inout) :: ffb
+    CMPLX, optional,    intent(in)    :: phase_correction(:)
 
     PUSH_SUB(boundaries_set_batch)
     
     if(batch_type(ffb) == TYPE_FLOAT) then 
-      call dboundaries_set_batch(this, ffb)
+      call dboundaries_set_batch(this, ffb, phase_correction)
     else if(batch_type(ffb) == TYPE_CMPLX) then 
-      call zboundaries_set_batch(this, ffb)
+      call zboundaries_set_batch(this, ffb, phase_correction)
     else if(batch_type(ffb) == TYPE_FLOAT_SINGLE) then 
-      call sboundaries_set_batch(this, ffb)
+      call sboundaries_set_batch(this, ffb, phase_correction)
     else if(batch_type(ffb) == TYPE_CMPLX_SINGLE) then 
-      call cboundaries_set_batch(this, ffb)
+      call cboundaries_set_batch(this, ffb, phase_correction)
     else
       ASSERT(.false.)
      end if

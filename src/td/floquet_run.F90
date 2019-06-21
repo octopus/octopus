@@ -99,7 +99,7 @@ contains
     
     if(mode == FLOQUET_NON_INTERACTING .or. mode == FLOQUET_FROZEN_PHONON) then
       
-      call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX, alloc_Left = hm%cmplxscl%space)
+      call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
       
       call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
 
@@ -132,7 +132,7 @@ contains
         call td_run(sys, hm, td_fromScratch)    
       end if
 
-      call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX, alloc_Left = hm%cmplxscl%space)
+      call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
       call floquet_hamiltonian_solve(hm,sys%gr,sys,sys%st, fromScratch)      
       
     end if   

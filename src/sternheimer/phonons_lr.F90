@@ -32,17 +32,14 @@ module phonons_lr_oct_m
   use kdotp_calc_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m
-  use loct_oct_m
   use parser_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use output_oct_m
   use pert_oct_m
   use profiling_oct_m
-  use projector_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use smear_oct_m
@@ -51,7 +48,6 @@ module phonons_lr_oct_m
   use states_dim_oct_m
   use states_restart_oct_m
   use sternheimer_oct_m
-  use string_oct_m
   use system_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -269,9 +265,9 @@ contains
       end if
       
       if(states_are_real(st)) then
-        call dforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv)
+        call dforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv, hm%lda_u_level)
       else
-        call zforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv)
+        call zforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv, hm%lda_u_level)
       end if
 
       do jmat = 1, vib%num_modes

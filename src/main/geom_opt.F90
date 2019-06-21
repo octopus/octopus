@@ -28,12 +28,11 @@ module geom_opt_oct_m
   use io_function_oct_m
   use lcao_oct_m
   use loct_oct_m
-  use parser_oct_m
   use mesh_oct_m
   use messages_oct_m
   use minimizer_oct_m
-  use mpi_oct_m 
-  use output_oct_m
+  use mpi_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use read_coords_oct_m
   use restart_oct_m
@@ -118,7 +117,7 @@ contains
       end if
     end if
 
-    call scf_init(g_opt%scfv, sys%gr, sys%geo, sys%st, sys%mc, hm, conv_force = CNST(1e-8))
+    call scf_init(g_opt%scfv, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks, conv_force = CNST(1e-8))
 
     if(fromScratch) then
       call lcao_run(sys, hm, lmm_r = g_opt%scfv%lmm_r)
@@ -194,7 +193,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine init_(fromscratch)
-      logical,  intent(in) :: fromscratch
+      logical,  intent(inout) :: fromscratch
 
       logical :: center, does_exist
       integer :: iter, iatom
@@ -244,7 +243,7 @@ contains
       
       !%Variable GOMethod
       !%Type integer
-      !%Default steep
+      !%Default fire
       !%Section Calculation Modes::Geometry Optimization
       !%Description
       !% Method by which the minimization is performed. For more information see the
@@ -280,10 +279,10 @@ contains
       !% forces) which makes it less efficient than other schemes. It is included here
       !% for completeness, since it is free.
       !%Option fire 8
-      !% (Experimental) The FIRE algorithm. See also <tt>GOFireMass</tt> and <tt>GOFireIntegrator</tt>.
+      !% The FIRE algorithm. See also <tt>GOFireMass</tt> and <tt>GOFireIntegrator</tt>.
       !% Ref: E. Bitzek, P. Koskinen, F. Gahler, M. Moseler, and P. Gumbsch, <i>Phys. Rev. Lett.</i> <b>97</b>, 170201 (2006).
       !%End
-      call parse_variable('GOMethod', MINMETHOD_STEEPEST_DESCENT, g_opt%method)
+      call parse_variable('GOMethod', MINMETHOD_FIRE, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call messages_input_error('GOMethod')
       call messages_print_var_option(stdout, "GOMethod", g_opt%method)
 
@@ -462,8 +461,10 @@ contains
       !% <br>&nbsp;&nbsp;'O'  | &nbsp;1 | 0 | 0
       !% <br>%</tt>
       !%
-      !% It describes one carbon and one oxygen where the distance along the
-      !% x axis is fixed.
+      !% Coordinates with a constrain value of 0 will be optimized, while
+      !% coordinates with a constrain different from zero will be kept fixed. So,
+      !% in this example the x coordinates of both atoms will remain fixed and the
+      !% distance between the two atoms along the x axis will be constant.
       !%
       !% Note: It is important for the constrains to maintain the ordering 
       !% in which the atoms were defined in the coordinates specifications.
@@ -481,13 +482,11 @@ contains
         end if
         ! copy information and adjust units
         do iatom = 1, g_opt%geo%natoms
-          if(all(xyz%atom(iatom)%x(1:g_opt%dim) == M_ZERO &
-                 .or.xyz%atom(iatom)%x(1:g_opt%dim) == M_ONE)) then
-            g_opt%geo%atom(iatom)%c = xyz%atom(iatom)%x
-          else
-            write(message(1), '(a)') 'Constrains can only be 0 or 1.'
-            call messages_fatal(1)
-          end if
+          where(xyz%atom(iatom)%x == M_ZERO)
+            g_opt%geo%atom(iatom)%c = M_ZERO
+          elsewhere
+            g_opt%geo%atom(iatom)%c = M_ONE
+          end where
         end do
 
         call read_coords_end(xyz)
@@ -506,14 +505,11 @@ contains
 
       if(.not. fromScratch) then
         inquire(file = './last.xyz', exist = does_exist)
-        if(.not. does_exist) then
-          write(message(1), '(a)') "The file last.xyz does not exist. Octopus cannot restart the GO calculation."
-          write(message(2), '(a)') "Please use FromScratch=yes to start the calculation from scratch."
-          call messages_fatal(2)          
-        end if
-        call geometry_read_xyz(g_opt%geo, './last')
+        if(.not. does_exist) fromScratch = .true.
       end if
 
+      if(.not. fromScratch) call geometry_read_xyz(g_opt%geo, './last')
+      
       ! clean out old geom/go.XXXX.xyz files. must be consistent with write_iter_info
       iter = 1
       do
@@ -653,9 +649,9 @@ contains
     call geometry_write_xyz(g_opt%geo, 'geom/'//trim(c_geom_iter), comment = trim(title))
     call geometry_write_xyz(g_opt%geo, './last')
 
-    if(iand(g_opt%syst%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+    if(bitand(g_opt%syst%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
     write(c_forces_iter, '(a,i4.4)') "forces.", geom_iter
-      if(iand(g_opt%syst%outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
+      if(bitand(g_opt%syst%outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
         call write_bild_forces_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh)
       else
         call write_xsf_geometry_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh, write_forces = .true.)
@@ -748,7 +744,7 @@ contains
       if(gopt%fixed_atom == iatom) cycle
       if(.not. gopt%geo%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
-        if(gopt%geo%atom(iatom)%c(idir) == M_ZERO) then
+        if(abs(gopt%geo%atom(iatom)%c(idir)) <= M_EPSILON) then
           grad(icoord) = -gopt%geo%atom(iatom)%f(idir)
         else
           grad(icoord) = M_ZERO
@@ -776,7 +772,7 @@ contains
       if(gopt%fixed_atom == iatom) cycle      
       if(.not. gopt%geo%atom(iatom)%move) cycle
       do idir = 1, gopt%dim
-        if(gopt%geo%atom(iatom)%c(idir) == M_ZERO) &
+        if(abs(gopt%geo%atom(iatom)%c(idir)) <= M_EPSILON) &
           gopt%geo%atom(iatom)%x(idir) = coords(icoord)
         if(gopt%fixed_atom /= 0) then
           gopt%geo%atom(iatom)%x(idir) = gopt%geo%atom(iatom)%x(idir) + gopt%geo%atom(gopt%fixed_atom)%x(idir)

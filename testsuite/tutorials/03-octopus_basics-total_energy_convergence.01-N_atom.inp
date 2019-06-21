@@ -1,0 +1,19 @@
+CalculationMode = gs
+UnitsOutput = eV_Angstrom
+
+Nitrogen_mass = 14.0
+
+%Species
+ 'N' | species_pseudo | set | standard | lmax | 1 | lloc | 0 | mass | Nitrogen_mass
+%
+
+XYZCoordinates = 'N.xyz'
+
+ExtraStates = 1
+%Occupations
+  2 | 1 | 1 | 1
+  %
+
+BoxShape = sphere
+Radius = 5.0*angstrom
+Spacing = 0.26*angstrom

@@ -26,15 +26,11 @@ module mesh_oct_m
   use index_oct_m
   use io_oct_m
   use io_binary_oct_m
-  use math_oct_m
   use mesh_cube_map_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use multicomm_oct_m
-  use loct_oct_m
   use par_vec_oct_m
   use partition_oct_m
-  use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use symmetries_oct_m
@@ -103,6 +99,7 @@ module mesh_oct_m
     FLOAT,   allocatable :: x(:,:)            !< The (local) \b points
     integer, allocatable :: resolution(:, :, :)
     FLOAT                :: volume_element    !< The global volume element.
+    FLOAT                :: surface_element(MAX_DIM)
     FLOAT,   allocatable :: vol_pp(:)         !< Element of volume for curvilinear coordinates.
 
     type(mesh_cube_map_t) :: cube_map
@@ -795,7 +792,7 @@ contains
     type(mesh_t),       intent(in) :: mesh
     type(simul_box_t),  intent(in) :: sb
 
-    integer :: ikpoint, ii, iop, ip, idim, nops
+    integer :: iop, ip, idim, nops
     FLOAT :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
 
     if(.not.sb%kpoints%use_symmetries) return

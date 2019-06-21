@@ -6,6 +6,7 @@ TestGroups : long-run, real_time
 Enabled    : Yes
 
 Input      : 09-angular_momentum.01-gs.inp
+match ; SCF convergence   ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Initial energy    ; GREPFIELD(static/info, 'Total       =', 3) ; -23.18613657
 
 Input      : 09-angular_momentum.02-td_gipaw.inp
@@ -104,7 +105,9 @@ match ; Beta   1 ; LINEFIELD(rotatory_strength, 15, 3) ; -0.00000000E+00
 
 match ; Energy 2 ; LINEFIELD(rotatory_strength, 31, 1) ;  0.58798921E-02
 match ; R      2 ; LINEFIELD(rotatory_strength, 31, 2) ;  0.62266720E-03
-match ; Beta   2 ; LINEFIELD(rotatory_strength, 31, 3) ; -0.32428613E+00
+Precision: 0.0003
+match ; Beta   2 ; LINEFIELD(rotatory_strength, 31, 3) ; -0.32445796E+00
+Precision: 0.0001
 
 match ; Energy 3 ; LINEFIELD(rotatory_strength, 1002, 1) ;  0.36271584E+00
 match ; R      3 ; LINEFIELD(rotatory_strength, 1002, 2) ;  0.18143382E-03

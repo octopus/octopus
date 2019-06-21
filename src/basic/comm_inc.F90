@@ -22,11 +22,10 @@ subroutine X(comm_allreduce_0)(comm, aa)
   integer,                          intent(in)    :: comm
   R_TYPE,                           intent(inout) :: aa
 
+#if defined(HAVE_MPI)
   R_TYPE :: aac
 
   !no PUSH SUB, called too often
-    
-#if defined(HAVE_MPI)
   aac = aa
   call MPI_Allreduce(aac, aa, 1, R_MPITYPE, MPI_SUM, comm, mpi_err)
 #endif
@@ -76,9 +75,12 @@ subroutine X(comm_allreduce_2)(comm, aa, dim)
   R_TYPE,                           intent(inout) :: aa(:, :)
   integer, optional,                intent(in)    :: dim(:) !< (2)
 
-  integer :: dim_(1:2), ii
+  integer :: dim_(1:2)
   R_TYPE, allocatable :: aac(:, :)
-  
+#if defined(HAVE_MPI) && !defined(HAVE_MPI2)
+  integer :: ii
+#endif
+
   PUSH_SUB(X(comm_allreduce_2))
 
   dim_ = ubound(aa)

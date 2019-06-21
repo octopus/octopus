@@ -1,0 +1,68 @@
+CalculationMode = gs
+
+PeriodicDimensions = 3
+
+BoxShape = parallelepiped
+
+ExperimentalFeatures = yes
+
+Smearing = 0.01
+SmearingFunction = fermi_dirac
+
+EigenSolver = rmmdiis
+
+a = 7.8809
+
+%Species
+"Ni" | species_pseudo | hubbard_l | 2 | hubbard_u | 5.0/27.21138
+%
+DFTULevel = dft_u_empirical
+
+PseudopotentialSet=hscv_pbe
+
+%LatticeParameters
+  a | a | a
+%
+
+%LatticeVectors
+ 0.0 | 1/2 | 1/2
+ 1/2 | 0.0 | 1/2
+ 1.0 | 1.0 | 0.0
+%
+
+%ReducedCoordinates
+ "Ni" | 0.0 | 0.0 | 0.0
+ "Ni" | 0.0 | 0.0 | 0.5
+ "O"  | 0.5 | 0.5 | 0.25
+ "O"  | 0.5 | 0.5 | 0.75
+%
+
+Spacing = 0.5
+
+FromScratch = yes
+ParStates = no
+ParDomains = no
+
+SpinComponents = polarized
+GuessMagnetDensity = user_defined
+%AtomsMagnetDirection
+ 8.0
+-8.0
+ 0.0
+ 0.0
+%
+
+LCAOStart = lcao_states
+
+%KPointsGrid
+2 | 2 | 2
+%
+KPointsUseSymmetries = yes
+KPointsUseTimeReversal = no
+
+ExtraStates = 6
+ConvRelDens = 1e-6
+
+AOTruncation = ao_box
+OutputLDA_U = occ_matrices
+

@@ -45,9 +45,6 @@ module xc_functl_oct_m
   integer, public, parameter :: &
     XC_KS_INVERSION = 801,      &  !< inversion of Kohn-Sham potential
     XC_OEP_X = 901,             &  !< Exact exchange
-    XC_LDA_XC_CMPLX = 701,      &  !< complex-scaled LDA exchange and correlation
-    XC_PBE_XC_CMPLX = 702,      &  !< complex-scaled PBE exchange and correlation
-    XC_LB94_XC_CMPLX = 703,     &  !< complex-scaled LB94 exchange and correlation
     XC_HALF_HARTREE = 917,      &  !< half-Hartree exchange for two electrons (supports complex scaling)
     XC_VDW_C_VDWDF = 918,       &  !< vdw-df correlation from libvdwxc
     XC_VDW_C_VDWDF2 = 919,      &  !< vdw-df2 correlation from libvdwxc
@@ -110,6 +107,9 @@ contains
 
     integer :: interact_1d
     FLOAT   :: alpha
+#ifdef HAVE_LIBXC4
+    FLOAT   :: parameters(2)
+#endif
     logical :: ok, lb94_modified
     integer, parameter :: INT_EXP_SCREENED = 0, INT_SOFT_COULOMB = 1
 
@@ -132,18 +132,9 @@ contains
           functl%family = XC_FAMILY_OEP
         else if (functl%id == XC_KS_INVERSION) then
           functl%family = XC_FAMILY_KS_INVERSION
-        else if (functl%id == XC_LDA_XC_CMPLX) then
-          call messages_experimental("complex-scaled LDA exchange and correlation")
-          functl%family = XC_FAMILY_LDA
         else if(functl%id == XC_HALF_HARTREE) then
           call messages_experimental("half-Hartree exchange")
           functl%family = XC_FAMILY_LDA ! XXX not really
-        else if(functl%id == XC_PBE_XC_CMPLX) then
-          call messages_experimental("complex-scaled PBE exchange and correlation")
-          functl%family = XC_FAMILY_GGA
-        else if(functl%id == XC_LB94_XC_CMPLX) then
-          call messages_experimental("complex-scaled LB94 exchange and correlation")
-          functl%family = XC_FAMILY_GGA
         else if(functl%id == XC_VDW_C_VDWDF .or. functl%id == XC_VDW_C_VDWDF2 .or. functl%id == XC_VDW_C_VDWDFCX) then
           call messages_experimental("van der Waals functionals from libvdwxc")
           functl%family = XC_FAMILY_LIBVDWXC
@@ -168,10 +159,6 @@ contains
       functl%flags = XC_F90(info_flags)(functl%info)
       ! Convert Octopus code for functional into corresponding libvdwxc code:
       call libvdwxc_init(functl%libvdwxc, functl%id - XC_VDW_C_VDWDF + 1)
-    else if(functl%id == XC_LDA_XC_CMPLX &
-      .or. functl%id == XC_PBE_XC_CMPLX &
-      .or. functl%id == XC_LB94_XC_CMPLX) then
-      functl%type = XC_EXCHANGE_CORRELATION
 
     else if(functl%id == XC_HALF_HARTREE) then
       functl%type = XC_EXCHANGE_CORRELATION
@@ -187,19 +174,19 @@ contains
       functl%flags    = XC_F90(info_flags)(functl%info)
 
       ! FIXME: no need to say this for kernel
-      if(iand(functl%flags, XC_FLAGS_HAVE_EXC) == 0) then
+      if(bitand(functl%flags, XC_FLAGS_HAVE_EXC) == 0) then
         message(1) = 'Specified functional does not have total energy available.'
         message(2) = 'Corresponding component of energy will just be left as zero.'
         call messages_warning(2)
       end if
 
-      if(iand(functl%flags, XC_FLAGS_HAVE_VXC) == 0) then
+      if(bitand(functl%flags, XC_FLAGS_HAVE_VXC) == 0) then
         message(1) = 'Specified functional does not have XC potential available.'
         message(2) = 'Cannot run calculations. Choose another XCFunctional.'
         call messages_fatal(2)
       end if
 
-      ok = iand(functl%flags, XC_FLAGS_1D) /= 0
+      ok = bitand(functl%flags, XC_FLAGS_1D) /= 0
       if((ndim /= 1).and.ok) then
         message(1) = 'Specified functional is only allowed in 1D.'
         call messages_fatal(1)
@@ -209,7 +196,7 @@ contains
         call messages_fatal(1)
       end if
 
-      ok = iand(functl%flags, XC_FLAGS_2D) /= 0
+      ok = bitand(functl%flags, XC_FLAGS_2D) /= 0
       if((ndim /= 2).and.ok) then
         message(1) = 'Specified functional is only allowed in 2D.'
         call messages_fatal(1)
@@ -219,7 +206,7 @@ contains
         call messages_fatal(1)
       end if
 
-      ok = iand(functl%flags, XC_FLAGS_3D) /= 0
+      ok = bitand(functl%flags, XC_FLAGS_3D) /= 0
       if((ndim /= 3).and.ok) then
         message(1) = 'Specified functional is only allowed in 3D.'
         call messages_fatal(1)
@@ -248,8 +235,13 @@ contains
       !% <tt>XCFunctional = xc_lda_c_xalpha</tt>.
       !%End
       call parse_variable('Xalpha', M_ONE, alpha)
+#ifdef HAVE_LIBXC4
+      parameters(1) = alpha
+      call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
+#else
       call XC_F90(lda_c_xalpha_set_par)(functl%conf, alpha)
-
+#endif
+      
       ! FIXME: doesn`t this apply to other 1D functionals?
     case(XC_LDA_X_1D, XC_LDA_C_1D_CSC)
       !%Variable Interaction1D
@@ -278,16 +270,26 @@ contains
       !%End
       call messages_obsolete_variable('SoftInteraction1D_alpha', 'Interaction1DScreening')
       call parse_variable('Interaction1DScreening', M_ONE, alpha)
-      
+#ifdef HAVE_LIBXC4
+      parameters(1) = real(interact_1d, REAL_PRECISION)
+      parameters(2) = alpha
+      call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
+#else
       if(functl%id == XC_LDA_X_1D) then
         call XC_F90(lda_x_1d_set_par)(functl%conf, interact_1d, alpha)
       else
         call XC_F90(lda_c_1d_csc_set_par)(functl%conf, interact_1d, alpha)
       end if
-
+#endif
+      
     case(XC_LDA_C_2D_PRM)
+#ifdef HAVE_LIBXC4
+      parameters(1) = nel
+      call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
+#else
       call XC_F90(lda_c_2d_prm_set_par)(functl%conf, nel)
-
+#endif
+      
     ! FIXME: libxc has XC_GGA_X_LBM, isn`t that the modified one?
     case(XC_GGA_X_LB)
       !%Variable LB94_modified
@@ -326,10 +328,8 @@ contains
 
     PUSH_SUB(xc_functl_end)
 
-    if(functl%family /= XC_FAMILY_NONE .and. functl%family /= XC_FAMILY_OEP .and. &
-      functl%family /= XC_FAMILY_KS_INVERSION .and. &
-      functl%id /= XC_LDA_XC_CMPLX .and. functl%id /= XC_HALF_HARTREE .and. &
-      functl%id /= XC_PBE_XC_CMPLX .and. functl%id /= XC_LB94_XC_CMPLX) then
+    if (functl%family /= XC_FAMILY_NONE .and. functl%family /= XC_FAMILY_OEP .and. &
+        functl%family /= XC_FAMILY_KS_INVERSION .and. functl%id /= XC_HALF_HARTREE ) then
       call XC_F90(func_end)(functl%conf)
     end if
 
@@ -347,9 +347,11 @@ contains
     integer,           intent(in) :: iunit
 
     character(len=120) :: s1, s2
-    type(XC_F90(pointer_t)) :: str
     integer :: ii
-
+#if !defined(HAVE_LIBXC3) && !defined(HAVE_LIBXC4)
+    type(XC_F90(pointer_t)) :: str
+#endif
+    
     PUSH_SUB(xc_functl_write_info)
 
     if(functl%family == XC_FAMILY_OEP) then
@@ -374,26 +376,9 @@ contains
     else if(functl%family == XC_FAMILY_LIBVDWXC) then
       call libvdwxc_write_info(functl%libvdwxc, iunit)
 
-    else if(functl%id == XC_LDA_XC_CMPLX) then
-      ! this is handled separately for the moment
-      ! we will include it in libxc when done with the tests
-      write(message(1), '(2x,a)') 'Exchange-Correlation:'
-      write(message(2), '(4x,a)') 'Complex-scaled LDA'
-      call messages_info(2, iunit)
-
     else if(functl%id == XC_HALF_HARTREE) then
       write(message(1), '(2x,a)') 'Exchange-Correlation:'
       write(message(2), '(4x,a)') 'Half-Hartree two-electron exchange'
-      call messages_info(2, iunit)
-
-    else if(functl%id == XC_PBE_XC_CMPLX) then
-      write(message(1), '(2x,a)') 'Exchange-Correlation:'
-      write(message(2), '(4x,a)') 'Complex-scaled PBE'
-      call messages_info(2, iunit)
-
-    else if(functl%id == XC_LB94_XC_CMPLX) then
-      write(message(1), '(2x,a)') 'Exchange-Correlation:'
-      write(message(2), '(4x,a)') 'Complex-scaled LB94'
       call messages_info(2, iunit)
       
     else if(functl%family /= XC_FAMILY_NONE) then ! all the other families
@@ -423,7 +408,7 @@ contains
       call messages_info(2, iunit)
       
       ii = 0
-#ifdef HAVE_LIBXC3
+#if defined HAVE_LIBXC3 || defined HAVE_LIBXC4
       call XC_F90(info_refs)(functl%info, ii, s1)
 #else
       call XC_F90(info_refs)(functl%info, ii, str, s1)
@@ -431,7 +416,7 @@ contains
       do while(ii >= 0)
         write(message(1), '(4x,a,i1,2a)') '[', ii, '] ', trim(s1)
         call messages_info(1, iunit)
-#ifdef HAVE_LIBXC3
+#if defined HAVE_LIBXC3 || defined HAVE_LIBXC4
         call XC_F90(info_refs)(functl%info, ii, s1)
 #else
         call XC_F90(info_refs)(functl%info, ii, str, s1)

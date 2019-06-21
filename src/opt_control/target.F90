@@ -26,7 +26,6 @@ module target_oct_m
   use epot_oct_m
   use excited_states_oct_m
   use fft_oct_m
-  use forces_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
@@ -361,26 +360,27 @@ contains
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output(tg, gr, dir, geo, outp)
+  subroutine target_output(tg, gr, dir, geo, hm, outp)
     type(target_t), intent(inout) :: tg
     type(grid_t), intent(inout)   :: gr
     character(len=*), intent(in)  :: dir
     type(geometry_t),       intent(in)  :: geo
+    type(hamiltonian_t),    intent(in)  :: hm
     type(output_t),         intent(in)  :: outp
 
     PUSH_SUB(target_output)
 
     select case(tg%type)
     case(oct_tg_groundstate)
-      call target_output_groundstate(tg, gr, dir, geo, outp)
+      call target_output_groundstate(tg, gr, dir, geo, hm, outp)
     case(oct_tg_excited)
-      call target_output_excited(tg, gr, dir, geo, outp)
+      call target_output_excited(tg, gr, dir, geo, hm, outp)
     case(oct_tg_exclude_state)
-      call target_output_exclude(tg, gr, dir, geo, outp)
+      call target_output_exclude(tg, gr, dir, geo, hm, outp)
     case(oct_tg_gstransformation)
-      call target_output_gstransformation(tg, gr, dir, geo, outp)
+      call target_output_gstransformation(tg, gr, dir, geo, hm, outp)
     case(oct_tg_userdefined) 
-      call target_output_userdefined(tg, gr, dir, geo, outp)
+      call target_output_userdefined(tg, gr, dir, geo, hm, outp)
     case(oct_tg_jdensity)
       call target_output_density(tg, gr, dir, geo, outp)
     case(oct_tg_local)
@@ -388,11 +388,11 @@ contains
     case(oct_tg_td_local)
       call target_output_tdlocal(tg, gr, dir, geo, outp)
     case(oct_tg_hhg)
-      call target_output_hhg(tg, gr, dir, geo, outp)
+      call target_output_hhg(tg, gr, dir, geo, hm, outp)
     case(oct_tg_hhgnew)
-      call target_output_hhg(tg, gr, dir, geo, outp)
+      call target_output_hhg(tg, gr, dir, geo, hm, outp)
     case(oct_tg_velocity)
-      call target_output_velocity(tg, gr, dir, geo, outp)
+      call target_output_velocity(tg, gr, dir, geo, hm, outp)
     case(oct_tg_classical)
       call target_output_classical
     end select

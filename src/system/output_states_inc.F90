@@ -17,81 +17,37 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine output_states(st, gr, geo, dir, outp)
+subroutine output_states(st, gr, geo, hm, dir, outp)
   type(states_t),         intent(inout) :: st
   type(grid_t),           intent(inout) :: gr
   type(geometry_t),       intent(in)    :: geo
+  type(hamiltonian_t),    intent(in)    :: hm
   character(len=*),       intent(in)    :: dir
   type(output_t),         intent(in)    :: outp
 
-  integer :: ik, ist, idim, idir, is, ierr, ip, nspin
+  integer :: ik, ist, idim, idir, is, ierr, ip
   character(len=MAX_PATH_LEN) :: fname
   type(unit_t) :: fn_unit
-  type(base_density_iterator_t)        :: iter
-  type(base_density_t),        pointer :: subsys_density
-  type(base_density_t),        pointer :: base_density
-  character(len=BASE_DENSITY_NAME_LEN) :: name
-  FLOAT,       dimension(:,:), pointer :: density
   FLOAT, allocatable :: dtmp(:), elf(:,:), polarization(:, :)
   CMPLX, allocatable :: ztmp(:)
+  type(dos_t) :: dos
 
   PUSH_SUB(output_states)
 
-  nullify(subsys_density, base_density, density)
-  if(iand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
-    if(associated(st%subsys_st))then
-      call base_states_get(st%subsys_st, subsys_density)
-      ASSERT(associated(subsys_density))
-      call base_density_get(subsys_density, density)
-      ASSERT(associated(density))
-    else
-      density => st%rho
-    end if
     do is = 1, st%d%nspin
       if(st%d%nspin == 1) then
         write(fname, '(a)') 'density'
       else
         write(fname, '(a,i1)') 'density-sp', is
       end if
-      if(associated(st%zrho%Im)) then !cmplxscl
-        SAFE_ALLOCATE(ztmp(1:gr%fine%mesh%np))
-        forall (ip = 1:gr%fine%mesh%np) ztmp(ip) = st%zrho%Re(ip, is) + M_zI * st%zrho%Im(ip, is)
-        call zio_function_output(outp%how, dir, fname, gr%fine%mesh, &
-          ztmp(:), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
-        SAFE_DEALLOCATE_A(ztmp)
-      else
-        call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
-          density(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
-      end if
+      call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
+        st%rho(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     end do
-    if(associated(subsys_density))then
-      call base_density_init(iter, subsys_density)
-      do
-        nullify(base_density, density)
-        call base_density_next(iter, name, base_density, ierr)
-        if(ierr/=BASE_DENSITY_OK)exit
-        ASSERT(associated(base_density))
-        call base_density_get(base_density, density)
-        ASSERT(associated(density))
-        call base_density_get(base_density, nspin=nspin)
-        ASSERT(nspin>0)
-        do is = 1, nspin
-          if(nspin>1) then
-            write(fname, "(a,i1,'-',a)") "density-sp", is, trim(adjustl(name))
-          else
-            write(fname, "(a,'-',a)") "density", trim(adjustl(name))
-          end if
-          call dio_function_output(outp%how, dir, fname, gr%fine%mesh, &
-            density(:,is), fn_unit, ierr, geo=geo, grp=st%dom_st_kpt_mpi_grp)
-        end do
-      end do 
-      call base_density_end(iter)
-      nullify(subsys_density, base_density, density)
-    end if    
   end if
 
-  if(iand(outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
     fn_unit = units_out%length**(1-gr%mesh%sb%dim)
     SAFE_ALLOCATE(polarization(1:gr%fine%mesh%np, 1:gr%sb%dim))
 
@@ -110,7 +66,7 @@ subroutine output_states(st, gr, geo, dir, outp)
     SAFE_DEALLOCATE_A(polarization)
   end if
 
-  if(iand(outp%what, OPTION__OUTPUT__WFS) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__WFS) /= 0) then
     fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
 
     if (states_are_real(st)) then
@@ -145,12 +101,6 @@ subroutine output_states(st, gr, geo, dir, outp)
               call states_get_state(st, gr%mesh, idim, ist, ik, ztmp)
               call zio_function_output(outp%how, dir, fname, gr%mesh, ztmp, &
                 fn_unit, ierr, geo = geo)
-              if(st%have_left_states) then
-                fname = 'L'// trim(fname)
-                call states_get_state(st, gr%mesh, idim, ist, ik, ztmp, left = .true.)
-                call zio_function_output(outp%how, dir, fname, gr%mesh, ztmp, &
-                  fn_unit, ierr, geo = geo)                    
-              end if
             end if
           end do
         end do
@@ -161,7 +111,7 @@ subroutine output_states(st, gr, geo, dir, outp)
     SAFE_DEALLOCATE_A(ztmp)
   end if
 
-  if(iand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0) then
     fn_unit = units_out%length**(-gr%mesh%sb%dim)
     SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
     if (states_are_complex(st)) then
@@ -202,34 +152,36 @@ subroutine output_states(st, gr, geo, dir, outp)
     SAFE_DEALLOCATE_A(ztmp)
   end if
 
-  if(iand(outp%what, OPTION__OUTPUT__KINETIC_ENERGY_DENSITY) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__KINETIC_ENERGY_DENSITY) /= 0) then
     fn_unit = units_out%energy * units_out%length**(-gr%mesh%sb%dim)
     SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
-    call states_calc_quantities(gr%der, st, kinetic_energy_density = elf)
+    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = elf)
     select case(st%d%ispin)
     case(UNPOLARIZED)
       write(fname, '(a)') 'tau'
       call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-        elf(:,1), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+        elf(:,1), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
     case(SPIN_POLARIZED, SPINORS)
       do is = 1, 2
         write(fname, '(a,i1)') 'tau-sp', is
         call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
-          elf(:, is), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+          elf(:, is), fn_unit, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
       end do
     end select
     SAFE_DEALLOCATE_A(elf)
   end if
 
-  if(iand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
-    call states_write_dos (trim(dir), st)
+  if(bitand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
+    call dos_init(dos, st)
+    call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh, hm)
+    call dos_end(dos)
   end if
 
-  if(iand(outp%what, OPTION__OUTPUT__TPA) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__TPA) /= 0) then
     call states_write_tpa (trim(dir), gr, st)
   end if
 
-  if(iand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .or. iand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
     if (states_are_real(st)) then
       call doutput_modelmb (trim(dir), gr, st, geo, outp)
     else
@@ -255,7 +207,7 @@ subroutine output_current_flow(gr, st, dir, outp)
 
   PUSH_SUB(output_current_flow)
 
-  if(iand(outp%what, OPTION__OUTPUT__J_FLOW) == 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__J_FLOW) == 0) then
     POP_SUB(output_current_flow)
     return
   end if
@@ -296,7 +248,7 @@ subroutine output_current_flow(gr, st, dir, outp)
 
   if(states_are_complex(st)) then
     SAFE_ALLOCATE(j(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
-    call states_calc_quantities(gr%der, st, paramagnetic_current = j)
+    call states_calc_quantities(gr%der, st, .false., paramagnetic_current = j)
 
     do idir = 1, gr%mesh%sb%dim
       do ip = 1, gr%mesh%np

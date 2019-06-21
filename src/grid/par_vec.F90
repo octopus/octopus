@@ -848,9 +848,11 @@ contains
     integer,    intent(in) :: ip
     integer,    intent(in) :: inode
 
+#ifdef HAVE_MPI
     integer :: nn
     logical :: found
-
+#endif
+    
 ! no push_sub because called too frequently
 
 #ifdef HAVE_MPI

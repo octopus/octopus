@@ -20,27 +20,22 @@
 #include "global.h"
 
 module scissor_oct_m
+  use batch_oct_m
+  use batch_ops_oct_m
   use global_oct_m
-  use lalg_basic_oct_m
+  use grid_oct_m
   use kpoints_oct_m
+  use lalg_basic_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
-  use simul_box_oct_m
-  use states_oct_m
-  use states_restart_oct_m
-  use states_dim_oct_m
-  use states_parallel_oct_m
-  use batch_oct_m
-  use grid_oct_m
-  use batch_ops_oct_m
-  use profiling_oct_m
   use messages_oct_m
   use multicomm_oct_m
+  use profiling_oct_m
   use restart_oct_m
-  use types_oct_m
-  use mpi_oct_m
-  use mpi_lib_oct_m
-  use comm_oct_m
+  use simul_box_oct_m
+  use states_oct_m
+  use states_dim_oct_m
+  use states_restart_oct_m
 
   implicit none
 
@@ -77,8 +72,8 @@ contains
 
   CMPLX, allocatable   :: phase(:)
   type(restart_t) :: restart_gs
-  integer :: ierr, ii, jj
-  integer :: ist, ik, idim, ip
+  integer :: ierr
+  integer :: ist, ik, ip
   CMPLX, allocatable :: temp_state(:,:)
   FLOAT   :: kpoint(1:MAX_DIM)
 
@@ -121,7 +116,7 @@ contains
     write(message(1),'(a)')    'Adding the phase for GS states.'
     call messages_info(1)
   
-    SAFE_ALLOCATE(temp_state(1:gr%mesh%np,1:this%gs_st%d%dim))
+    SAFE_ALLOCATE(temp_state(1:gr%mesh%np_part,1:this%gs_st%d%dim))
     SAFE_ALLOCATE(phase(1:gr%mesh%np))
     ! We apply the phase to these states, as we need it for the projectors later
     do ik=this%gs_st%d%kpt%start, this%gs_st%d%kpt%end
@@ -133,9 +128,7 @@ contains
 
       do ist=this%gs_st%st_start, this%gs_st%st_end
         call states_get_state(this%gs_st, gr%mesh, ist, ik, temp_state )
-        do idim=1,this%gs_st%d%dim
-          temp_state(1:gr%mesh%np,idim) = temp_state(1:gr%mesh%np,idim) * phase(1:gr%mesh%np)
-        end do
+        call states_set_phase(this%gs_st%d, temp_state, phase, gr%mesh%np, .false.)
         call states_set_state(this%gs_st, gr%mesh, ist, ik,temp_state )
       end do
    

@@ -25,7 +25,7 @@ UnitsOutput = ev_angstrom
 %
 
 %Species
-"C" | species_pseudo | db_file | "PSF/C.psf" |lmax | 1 | lloc | 1
+"C" | species_pseudo   |lmax | 1 | lloc | 1
 %
 
 spacing = 0.19*angstrom

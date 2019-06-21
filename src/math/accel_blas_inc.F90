@@ -30,8 +30,12 @@ subroutine X(accel_herk)(uplo, trans, n, k, alpha, a, offa, lda, beta, c, offc, 
   integer(8),        intent(in)    :: offc
   integer(8),        intent(in)    :: ldc   
 
+#ifdef HAVE_OPENCL
   integer :: ierr
+#endif
+#ifdef HAVE_CUDA
   type(accel_mem_t) :: alpha_buffer, beta_buffer
+#endif
 
   PUSH_SUB(X(accel_herk))
 
@@ -106,8 +110,12 @@ subroutine X(accel_trsm)(side, uplo, trans, diag, m, n, alpha, a, offa, lda, b, 
   integer(8),        intent(in)    :: offb
   integer(8),        intent(in)    :: ldb
 
+#ifdef HAVE_CUDA
   type(accel_mem_t) :: alpha_buffer
+#endif
+#ifdef HAVE_OPENCL
   integer :: ierr
+#endif
 
   PUSH_SUB(X(accel_trsm))
 
@@ -159,8 +167,12 @@ subroutine X(accel_gemm)(transa, transb, m, n, k, alpha, A, offa, lda, B, offb, 
   integer(8),         intent(in)    :: offc
   integer(8),         intent(in)    :: ldc
 
+#ifdef HAVE_CLBLAS
   integer :: ierr
+#endif
+#ifdef HAVE_CUDA
   type(accel_mem_t) :: alpha_buffer, beta_buffer
+#endif
 
   PUSH_SUB(X(accel_gemm))
 
@@ -215,9 +227,11 @@ subroutine X(accel_dot)(n, x, offx, incx, y, offy, incy, res, offres)
   type(accel_mem_t), intent(inout) :: res
   integer(8),        intent(in)    :: offres
 
+#ifdef HAVE_OPENCL
   integer :: status
   type(accel_mem_t)  :: scratch_buffer
-  
+#endif  
+
   PUSH_SUB(X(accel_dot))
 
 #ifdef HAVE_CUDA
@@ -265,8 +279,10 @@ subroutine X(accel_nrm2)(n, x, offx, incx, res, offres)
   type(accel_mem_t), intent(inout) :: res
   integer(8),        intent(in)    :: offres
 
+#ifdef HAVE_OPENCL
   integer :: status
   type(accel_mem_t)  :: scratch_buffer
+#endif
   
   PUSH_SUB(X(accel_nrm2))
 

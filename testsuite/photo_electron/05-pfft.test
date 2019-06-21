@@ -14,6 +14,7 @@ Enabled    : Yes
 # Ground state
 Processors : 4
 Input      : 05-pfft.01-gs.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy   ; GREPFIELD(static/info, 'Total       =', 3) ;  -0.49919533
 
 # Hydrogen PES spectrum mask-method

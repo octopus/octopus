@@ -20,6 +20,7 @@
 
 module pert_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use boundaries_oct_m
   use comm_oct_m
   use derivatives_oct_m
@@ -35,10 +36,8 @@ module pert_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use nl_operator_oct_m
   use parser_oct_m
   use physics_op_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
   use simul_box_oct_m

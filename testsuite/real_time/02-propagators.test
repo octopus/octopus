@@ -11,24 +11,24 @@ Enabled    : Yes
 # ground state
 Processors : 1
 Input      : 02-propagators.01-gs.inp
-Precision  : 1.0e-6
-match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -11.003530715
+Precision  : 1.0e-8
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ;  Initial energy  ; GREPFIELD(static/info, 'Total       =', 3) ; -11.00352258
 
 Processors : 4
 Input      : 02-propagators.02-cnsparskit.inp
-Precision  : 1.0e-6
-match ; Forces [step  1] ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.17008915222385
-match ; Forces [step 20] ; LINEFIELD(td.general/coordinates, -1, 15) ;  0.1458998393478
+Precision  : 1.0e-8
+match ;  Forces [step  1]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.1700863421019
+match ;  Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.1458990183992
 
 Processors : 4
 Input      : 02-propagators.03-rungekutta2.inp
-Precision  : 1.0e-6
-match ; Forces [step  1] ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.17008915222385
-match ; Forces [step 20] ; LINEFIELD(td.general/coordinates, -1, 15) ;  0.1459098720553
+Precision  : 1.0e-8
+match ;  Forces [step  1]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.1700863421019
+match ;  Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.1459090492095
 
 Processors : 4
 Input      : 02-propagators.04-rungekutta4.inp
-Precision  : 1.0e-6
-match ; Forces [step  1] ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.17008915222385 
-match ; Forces [step 20] ; LINEFIELD(td.general/coordinates, -1, 15) ;  0.14591124458305
-
+Precision  : 1.0e-8
+match ;  Forces [step  1]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.1700863421019
+match ;  Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 0.1459103725742

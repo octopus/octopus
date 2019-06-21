@@ -30,6 +30,6 @@ TheoryLevel = independent_particles
 
 ConvRelDens = 1.0e-7
 
-DisableOpenCL = yes
+DisableAccel = yes
 
 

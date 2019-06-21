@@ -5,8 +5,10 @@ Program    : octopus
 TestGroups : long-run, finite_systems_3d
 Enabled    : Yes
 
+ExtraFile: 16-scfinlcao_std.Cl.psf
 Input: 16-scfinlcao_std.01-gs.inp
 
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;   -1388.70114650
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;    1601.15113645
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;    -362.52586430
@@ -37,24 +39,13 @@ match ; Dipole Moment z   ; GREPFIELD(static/info, '<z>', 4) ;   8.06628E-01
 
 match ; Force C  x        ; GREPFIELD(static/info, '1         C', 3) ;  -0.000000
 match ; Force C  z        ; GREPFIELD(static/info, '1         C', 5) ;  -3.717101
-match ; Force Cl y        ; GREPFIELD(static/info, '3        Cl', 4) ;  23.312070
-
-match ; Bond 1->5 trans x ; GREPFIELD(static/density.scad, '//  Bond 1 -> 5', 2, 1);   -1.367881
-match ; Bond 1->5 rot x   ; GREPFIELD(static/density.scad, '//  Bond 1 -> 5', 2, 2); -108.23
-match ; Bond 1->5 cyl h   ; GREPFIELD(static/density.scad, '//  Bond 1 -> 5', 2, 3);    3.325918
-match ; Number polyhedra  ; GREPFIELD(out, 'polyhedra', 2); 836
-match ; Minimum value     ; GREPFIELD(out, 'Minimum value =', 4); 0.0000000000000000
-match ; Maximum value     ; GREPFIELD(out, 'Maximum value =', 8); 1.9624470051615213
-match ; Isovalue          ; GREPFIELD(out, 'isovalue', 5); 0.9812235025807595
-match ; Polyhedron point 1; LINEFIELD(static/density.scad, 314, 2); -4.190540
-match ; Polyhedron point 2; LINEFIELD(static/density.scad, 315, 3); -2.362158
-match ; Polyhedron face   ; LINEFIELD(static/density.scad, 319, 2);  2
+match ; Force Cl y        ; GREPFIELD(static/info, '3        Cl', 4) ;  23.312227
 
 match ; MATLAB point 1    ; LINEFIELD(static/density.z=0.matlab, 22, 28); 1.23255040284864
 match ; MATLAB point 2    ; LINEFIELD(static/density.z=0.matlab, 42, 30); 0.02499576752910
 
-match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 3.957
-match ; Partial charge  2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)  ; 0.940
-match ; Partial charge  3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4)  ; 7.034
-match ; Partial charge  4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5)  ; 7.034
-match ; Partial charge  5 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 6)  ; 7.034
+match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 3.972
+match ; Partial charge  2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)  ; 0.932
+match ; Partial charge  3 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 4)  ; 7.032
+match ; Partial charge  4 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 5)  ; 7.032
+match ; Partial charge  5 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 6)  ; 7.032

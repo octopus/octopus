@@ -29,8 +29,6 @@
 #include "symbols.h"
 #include "gsl_userdef.h"
 
-
-
 /* The symbol table: a chain of `struct symrec'.  */
 symrec *sym_table = (symrec *)0;
 
@@ -191,6 +189,8 @@ static struct init_fntc arith_fncts[] = {
   {"round",   1, (gsl_complex (*)()) &gsl_complex_round},
   {"floor",   1, (gsl_complex (*)()) &gsl_complex_floor},
   {"ceiling", 1, (gsl_complex (*)()) &gsl_complex_ceiling},
+
+  {"rand",    0, (gsl_complex (*)()) &gsl_complex_rand},
 
   {0, 0, 0}
 };

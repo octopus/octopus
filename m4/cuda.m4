@@ -24,7 +24,7 @@ AC_DEFUN([ACX_CUDA],
 
   dnl BACKUP LIBS AND CFLAGS
   acx_cuda_save_LIBS="$LIBS"
-  acx_cuda_save_LDFLAGS="$LIBS"
+  acx_cuda_save_LDFLAGS="$LDFLAGS"
   acx_cuda_save_CFLAGS="$CFLAGS"
 
   dnl Check if the library was given in the command line

@@ -20,17 +20,24 @@
 
 psfdir = $(pkgdatadir)/pseudopotentials/PSF
 
-dist_psf_DATA = \
+dist_psf_DATA =        \
+	set_defaults   \
 	Cd.psf \
 	C.psf  \
+	C.psf.spacing  \
+	D.psf  \
 	H.psf  \
 	Li.psf \
 	Na.psf \
 	N.psf  \
 	O.psf  \
+	O.psf.spacing  \
 	Se.psf \
+	Se.psf.spacing \
 	Si.psf \
 	S.psf  \
+	S.psf.spacing  \
+	T.psf  \
 	Ti.psf
 
 # In order to get `make check' working with a `VPATH' build (e. g. to use

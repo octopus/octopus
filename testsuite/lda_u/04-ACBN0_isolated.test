@@ -1,0 +1,60 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : ACBN0 functional for isolated systems
+Program    : octopus
+TestGroups : short-run, finite_systems_3d, lda_u
+Enabled    : Yes
+
+Processors : 4
+
+Input      : 04-ACBN0_isolated.01-H_unpacked.inp
+
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -0.47409386
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -0.55614049
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   0.30809758
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;  -0.26390372
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -0.02222889
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;   0.47548472
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  -0.97539083
+match ; Hubbard energy     ; GREPFIELD(static/info, 'Hubbard     =', 3) ;   0.00386472
+
+match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -0.556140
+match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ; 1.000000
+match ; Eigenvalue   [1dn] ; GREPFIELD(static/info, '1   dn', 3) ; 0.104612
+Precision: 0.00072
+match ;  Eigenvalue   [2up]  ; GREPFIELD(static/info, '2   up', 3) ; 0.1051265
+Precision: 0.0001
+match ; Eigenvalue   [2dn] ; GREPFIELD(static/info, '2   dn', 3) ; 0.140371
+
+
+match ; Occupation 1s up ; LINEFIELD(static/occ_matrices, -3, 1) ; 0.98724291
+
+match ; U  ; LINEFIELD(static/effectiveU, -4, 4) ; 0.613357
+
+
+Input      : 04-ACBN0_isolated.02-H_packed.inp
+
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -0.47409386
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -0.55614049
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   0.30809758
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;  -0.26390372
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -0.02222889
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;   0.47548472
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  -0.97539083
+match ; Hubbard energy     ; GREPFIELD(static/info, 'Hubbard     =', 3) ;   0.00386472
+
+match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -0.556140
+match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ; 1.000000
+match ; Eigenvalue   [1dn] ; GREPFIELD(static/info, '1   dn', 3) ; 0.104612
+Precision: 0.00072
+match ;  Eigenvalue   [2up]  ; GREPFIELD(static/info, '2   up', 3) ; 0.1051265
+Precision: 0.0001
+match ; Eigenvalue   [2dn] ; GREPFIELD(static/info, '2   dn', 3) ; 0.140371
+
+
+match ; Occupation 1s up ; LINEFIELD(static/occ_matrices, -3, 1) ; 0.98724291
+
+match ; U  ; LINEFIELD(static/effectiveU, -4, 4) ; 0.613357
+

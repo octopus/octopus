@@ -1,0 +1,53 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+CalculationMode = td
+FromScratch = yes
+
+bondlength = 1.7/0.529177
+
+%Species
+ "Na" | species_pseudo | set | standard | hubbard_l | 0 | hubbard_u | 2.0/27.21138
+%
+
+%Coordinates
+"Na" | 0.0 | 0.0 |  bondlength 
+"Na" | 0.0 | 0.0 | -bondlength 
+%
+
+BoxShape = sphere
+Radius  = 8.0/0.529177
+Spacing = 0.3/0.529177
+
+ExcessCharge = 1
+
+TDPropagationTime = 0.20
+TDTimeStep = 0.01
+TDPropagator = exp_mid
+TDExponentialMethod = lanczos
+TDExpOrder = 20
+
+
+omega = 0.1
+electric_amplitude = 1.0
+
+%TDExternalFields
+electric_field   | 0 | 0 | i | omega | "envelope_function"
+%
+
+%TDFunctions
+"envelope_function" | tdf_cw | electric_amplitude
+%
+
+AbsorbingBoundaries = no
+
+TDOutput = laser + energy + multipoles + total_current
+
+FilterPotentials = filter_none
+
+ParDomains = no
+MixField = density
+
+DFTULevel = dft_u_empirical
+ExperimentalFeatures = yes
+AOThreshold = 0.1
+

@@ -17,6 +17,7 @@ Enabled    : Yes
 # get 1.8626 Hartree * bohr^6.
 
 Input: 03-vdw_sternheimer.01-ground_state.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy   ; GREPFIELD(static/info, 'Total       =', 3) ; -2.84478376
 match ; HOMO           ; GREPFIELD(static/info, '1   --', 3) ; -0.572215
 

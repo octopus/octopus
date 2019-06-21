@@ -10,7 +10,8 @@ Enabled    : Yes
 # ground state
 Processors : 4
 Input      : 05-time_propagation.01-gs.inp
-match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -37.92527580
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -37.92523762
 
 # time-propagation, parallel in domains
 Processors : 4

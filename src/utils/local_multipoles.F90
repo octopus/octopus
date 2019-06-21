@@ -24,20 +24,18 @@ program oct_local_multipoles
   use box_oct_m
   use box_union_oct_m
   use calc_mode_par_oct_m
-  use command_line_oct_m
   use comm_oct_m
   use geometry_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use io_oct_m
-  use io_binary_oct_m
   use io_function_oct_m
   use kick_oct_m
   use loct_oct_m
   use local_write_oct_m
   use mesh_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
+  use multicomm_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -45,12 +43,11 @@ program oct_local_multipoles
   use species_oct_m
   use species_pot_oct_m
   use simul_box_oct_m
-  use system_oct_m    
+  use system_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
   use varinfo_oct_m
-  use multicomm_oct_m
   use xc_oct_m
 
   implicit none
@@ -96,7 +93,7 @@ program oct_local_multipoles
   call system_init(sys)
   call simul_box_init(sb, sys%geo, sys%space)
   call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
-             sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+             family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
 
   call local_domains()
 
@@ -691,7 +688,7 @@ contains
     lcl%inside = .false.
     do ip = 1 , sys%gr%mesh%np
       do id = 1, lcl%nd
-        if (iand(int(inside(ip)), 2**id) /= 0) lcl%inside(ip,id) = .true.
+        if (bitand(int(inside(ip)), 2**id) /= 0) lcl%inside(ip,id) = .true.
       end do
     end do
 
@@ -710,7 +707,8 @@ contains
     type(local_domain_t),   intent(inout) :: lcl
     FLOAT,                  intent(in)    :: ff(:)
     
-    integer             :: how, id, ip, iunit, ierr
+    integer(8)          :: how
+    integer             :: id, ip, iunit, ierr
     type(basins_t)      :: basins
     FLOAT, allocatable  :: ff2(:,:)
     logical             :: extra_write
@@ -810,7 +808,8 @@ contains
     integer,           intent(in)    :: dsh(:)
     logical,           intent(out)   :: inside(:,:)
 
-    integer               :: how, ia, ib, id, ierr, ip, ix, rankmin
+    integer(8)            :: how
+    integer               :: ia, ib, id, ierr, ip, ix, rankmin
     integer               :: max_check
     integer, allocatable  :: dunit(:), domain_map(:,:), ion_map(:)
     FLOAT                 :: dmin, dd

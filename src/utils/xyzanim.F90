@@ -20,16 +20,15 @@
 
 program xyzanim
   use command_line_oct_m
+  use geometry_oct_m
   use global_oct_m
-  use messages_oct_m
-  use loct_oct_m
-  use parser_oct_m
   use io_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
+  use messages_oct_m
+  use parser_oct_m
   use simul_box_oct_m
   use space_oct_m
-  use geometry_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -94,7 +93,7 @@ program xyzanim
       ((geo%atom(i)%x(j), j = 1, geo%space%dim), i = 1, geo%natoms)
       do i = 1, geo%natoms
         do j = 1, geo%space%dim
-          geo%atom(i)%x(j)=units_to_atomic(units_inp%length, geo%atom(i)%x(j))
+          geo%atom(i)%x(j)=units_to_atomic(units_out%length, geo%atom(i)%x(j))
         end do
       end do
     if(mod(iter, sampling) == 0) then

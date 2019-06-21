@@ -18,7 +18,7 @@
 
 ! ---------------------------------------------------------
 !> See http://prola.aps.org/abstract/PRB/v54/i16/p11169_1
-subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, diff, save_mem)
+subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, diff)
   type(grid_t),           intent(in)    :: gr
   type(states_t), target, intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
@@ -28,24 +28,23 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   integer,                intent(inout) :: converged
   integer,                intent(in)    :: ik
   FLOAT,                  intent(out)   :: diff(:) !< (1:st%nst)
-  logical,                intent(in)    :: save_mem
 
   R_TYPE, allocatable :: mm(:, :, :, :), evec(:, :, :), finalpsi(:)
   R_TYPE, allocatable :: eigen(:), nrmsq(:)
   FLOAT,  allocatable :: eval(:, :)
   FLOAT,  allocatable :: lambda(:)
   integer :: ist, minst, idim, ii, iter, nops, maxst, jj, bsize, ib, jter, kter, prog
-  R_TYPE :: ca, cb, cc
-  R_TYPE, allocatable :: fr(:, :)
+  FLOAT :: ca, cb, cc
+  R_TYPE, allocatable :: fr(:, :), me(:, :)
   type(batch_pointer_t), allocatable :: psib(:), resb(:)
   integer, allocatable :: done(:), last(:)
   logical, allocatable :: failed(:)
-  logical :: pack, save_pack_mem
+  logical :: pack
+  integer :: err
 
   PUSH_SUB(X(eigensolver_rmmdiis))
 
   pack = hamiltonian_apply_packed(hm, gr%mesh)
-  save_pack_mem = pack .and. save_mem
 
   SAFE_ALLOCATE(lambda(1:st%nst))
   SAFE_ALLOCATE(psib(1:niter))
@@ -53,6 +52,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   SAFE_ALLOCATE(done(1:st%d%block_size))
   SAFE_ALLOCATE(last(1:st%d%block_size))
   SAFE_ALLOCATE(failed(1:st%d%block_size))
+  SAFE_ALLOCATE(me(1:2, 1:st%d%block_size))
   SAFE_ALLOCATE(fr(1:4, 1:st%d%block_size))
   SAFE_ALLOCATE(nrmsq(1:st%d%block_size))
   SAFE_ALLOCATE(eigen(1:st%d%block_size))
@@ -80,14 +80,17 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     if(pack) call batch_pack(psib(1)%batch)
 
-    call batch_copy(psib(1)%batch, resb(1)%batch)
+    call batch_copy(psib(1)%batch, resb(1)%batch, fill_zeros = .false.)
 
     call X(hamiltonian_apply_batch)(hm, gr%der, psib(1)%batch, resb(1)%batch, ik)
     nops = nops + bsize
 
-    call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, resb(1)%batch, eigen)
+    call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, resb(1)%batch, me(1, :), reduce = .false.)
+    call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, psib(1)%batch, me(2, :), reduce = .false.)
+    if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me)
 
-    st%eigenval(minst:maxst, ik) = R_REAL(eigen(1:bsize))
+    !This is the Rayleigh quotient
+    forall(ist = minst:maxst) st%eigenval(ist, ik) = R_REAL(me(1, ist - minst + 1))/R_REAL(me(2, ist - minst + 1))
 
     call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(1)%batch, resb(1)%batch)
 
@@ -96,7 +99,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     call X(mesh_batch_dotp_vector)(gr%mesh, resb(1)%batch, resb(1)%batch, nrmsq)
 
     do ii = 1, bsize
-      if(sqrt(abs(nrmsq(ii))) < tol) done(ii) = 1
+      if(sqrt(abs(R_REAL(nrmsq(ii)))) < tol) done(ii) = 1
     end do
 
     if(all(done(1:bsize) /= 0)) then
@@ -107,14 +110,12 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       cycle
     end if
 
-    call batch_copy(psib(1)%batch, psib(2)%batch)
+    call batch_copy(psib(1)%batch, psib(2)%batch, fill_zeros = .false.)
 
     ! get lambda 
     call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb(1)%batch, psib(2)%batch)
 
-    if(save_pack_mem) call batch_unpack(resb(1)%batch)
-
-    call batch_copy(psib(1)%batch, resb(2)%batch)
+    call batch_copy(psib(1)%batch, resb(2)%batch, fill_zeros = .false.)
 
     call X(hamiltonian_apply_batch)(hm, gr%der, psib(2)%batch, resb(2)%batch, ik)
     nops = nops + bsize
@@ -129,11 +130,12 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     do ist = minst, maxst
       ii = ist - minst + 1
 
-      ca = fr(1, ii)*fr(4, ii) - fr(3, ii)*fr(2, ii)
-      cb = fr(3, ii) - st%eigenval(ist, ik)*fr(1, ii)
-      cc = st%eigenval(ist, ik)*fr(2, ii) - fr(4, ii)
+      ca = R_REAL(fr(1, ii))*R_REAL(fr(4, ii)) - R_REAL(fr(3, ii))*R_REAL(fr(2, ii))
+      cb = R_REAL(me(2, ii))*R_REAL(fr(3, ii)) - R_REAL(me(1, ii))*R_REAL(fr(1, ii))
+      cc = R_REAL(me(1, ii))*R_REAL(fr(2, ii)) - R_REAL(fr(4, ii))*R_REAL(me(2, ii))
 
-      lambda(ist) = R_REAL(CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc)))
+      !This is - the solution of ca*x^2+cb*x+cc
+      lambda(ist) = CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
 
       ! restrict the value of lambda to be between 0.1 and 1.0
       if(abs(lambda(ist)) > CNST(1.0)) lambda(ist) = lambda(ist)/abs(lambda(ist))
@@ -146,8 +148,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
       ! for iter == 2 the preconditioning was done already
       if(iter > 2) then
-        if(save_pack_mem) call batch_unpack(psib(iter - 2)%batch)
-        call batch_copy(psib(iter - 1)%batch, psib(iter)%batch)
+        call batch_copy(psib(iter - 1)%batch, psib(iter)%batch, fill_zeros = .false.)
         call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb(iter - 1)%batch, psib(iter)%batch)
       end if
 
@@ -155,9 +156,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       call batch_xpay(gr%mesh%np, psib(iter - 1)%batch, lambda, psib(iter)%batch)
 
       if(iter > 2) then
-        if(save_pack_mem) call batch_unpack(resb(iter - 1)%batch)
-
-        call batch_copy(psib(iter)%batch, resb(iter)%batch)
+         call batch_copy(psib(iter)%batch, resb(iter)%batch, fill_zeros = .false.)
       end if
 
       ! calculate the residual
@@ -165,13 +164,6 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       nops = nops + bsize
 
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(iter)%batch, resb(iter)%batch)
-
-      call profiling_in(prof_sync, "RMMDIIS_SYNC")
-      if(save_pack_mem) then
-        call batch_sync(psib(iter)%batch)
-        call batch_sync(resb(iter)%batch)
-      end if
-      call profiling_out(prof_sync)
 
       call profiling_in(prof_iter, 'RMMDIIS_MATRIX')
       ! calculate the matrix elements between iterations
@@ -195,7 +187,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       ! symmetrize
       do jter = 1, iter
         do kter = jter + 1, iter
-          mm(jter, kter, 1:2, 1:bsize) = mm(kter, jter, 1:2, 1:bsize)
+          mm(jter, kter, 1:2, 1:bsize) = R_CONJ(mm(kter, jter, 1:2, 1:bsize))
         end do
       end do
 
@@ -208,13 +200,17 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
         ii = ist - minst + 1
 
         failed(ii) = .false.
-        call lalg_lowest_geneigensolve(1, iter, mm(:, :, 1, ii), mm(:, :, 2, ii), eval(:, ii), evec(:, :, ii), bof = failed(ii))
-        if(failed(ii)) then
+        call lalg_lowest_geneigensolve(1, iter, mm(:, :, 1, ii), mm(:, :, 2, ii), eval(:, ii), evec(:, :, ii), bof = failed(ii), &
+                                       err_code = err)
+        if( err < 0 .or. err > iter ) then
+          failed(ii) = .true.
           last(ii) = iter - 1
-          ! we shouldn`t do anything
+     
           evec(1:iter - 1, 1, ii) = CNST(0.0)
           evec(iter, 1, ii) = CNST(1.0)
           cycle
+        else !In this case we did not reach the tolerance
+          failed(ii) = .false.
         end if
       end do
 
@@ -232,7 +228,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
       call profiling_out(prof_lc)
 
-      call batch_copy(psib(iter)%batch, resb(iter)%batch)
+      call batch_copy(psib(iter)%batch, resb(iter)%batch, fill_zeros = .false.)
 
       ! re-calculate the residual
       call X(hamiltonian_apply_batch)(hm, gr%der, psib(iter)%batch, resb(iter)%batch, ik)
@@ -255,13 +251,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     end do ! iter
 
-    if(save_pack_mem) call batch_unpack(psib(niter - 1)%batch, copy = any(failed(1:bsize)))
-
     SAFE_DEALLOCATE_A(mm)
-
-    if(save_pack_mem) then
-      call batch_pack(resb(niter - 1)%batch, copy = .false.)
-    end if
 
     ! end with a trial move
     call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb(niter)%batch, resb(niter - 1)%batch)
@@ -291,8 +281,6 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       if(iter /= niter - 1) call batch_end(resb(iter)%batch, copy = .false.)
     end do
 
-    if(save_pack_mem) call batch_pack(psib(1)%batch, copy = .false.)
-
     call batch_copy_data(gr%mesh%np, resb(niter - 1)%batch, st%group%psib(ib, ik))
 
     call batch_end(resb(niter - 1)%batch, copy = .false.)
@@ -314,13 +302,18 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   do ib = st%group%block_start, st%group%block_end
     minst = states_block_min(st, ib)
     maxst = states_block_max(st, ib)
-    
-    call batch_copy(st%group%psib(ib, ik), resb(1)%batch)
+
+    if(pack) call batch_pack(st%group%psib(ib, ik))  
+  
+    call batch_copy(st%group%psib(ib, ik), resb(1)%batch, fill_zeros = .false.)
     
     call X(hamiltonian_apply_batch)(hm, gr%der, st%group%psib(ib, ik), resb(1)%batch, ik)
-    call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), resb(1)%batch, eigen)
-    
-    st%eigenval(minst:maxst, ik) = R_REAL(eigen(1:maxst - minst + 1))
+    call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), resb(1)%batch, me(1, :), reduce = .false.)
+    call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), st%group%psib(ib, ik), me(2, :), reduce = .false.)
+    if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me)
+
+    !This is the Rayleigh quotient
+    forall(ist = minst:maxst) st%eigenval(ist, ik) = R_REAL(me(1, ist - minst + 1))/R_REAL(me(2, ist - minst + 1))
     
     call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%group%psib(ib, ik), resb(1)%batch)
     
@@ -329,6 +322,8 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     diff(minst:maxst) = sqrt(abs(eigen(1:maxst - minst + 1)))
     
     call batch_end(resb(1)%batch, copy = .false.)
+
+    if(pack) call batch_unpack(st%group%psib(ib, ik))
     
     nops = nops + maxst - minst + 1
   end do
@@ -353,6 +348,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   SAFE_DEALLOCATE_A(fr)
   SAFE_DEALLOCATE_A(nrmsq)
   SAFE_DEALLOCATE_A(eigen)
+  SAFE_DEALLOCATE_A(me)
 
   POP_SUB(X(eigensolver_rmmdiis))
 
@@ -372,8 +368,9 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
   integer, parameter :: sweeps = 5
   integer :: sd_steps
   integer :: isd, ist, minst, maxst, ib, ii
-  R_TYPE  :: ca, cb, cc
-  R_TYPE, allocatable :: lambda(:), diff(:)
+  FLOAT  :: ca, cb, cc
+  FLOAT, allocatable :: lambda(:)
+  R_TYPE, allocatable :: diff(:)
   R_TYPE, allocatable :: me1(:, :), me2(:, :)
   logical :: pack
   type(batch_t) :: resb, kresb
@@ -400,11 +397,12 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
 
     if(pack) call batch_pack(st%group%psib(ib, ik))
 
-    call batch_copy(st%group%psib(ib, ik), resb)
-    call batch_copy(st%group%psib(ib, ik), kresb)
+    call batch_copy(st%group%psib(ib, ik), resb, fill_zeros = .false.)
+    call batch_copy(st%group%psib(ib, ik), kresb, fill_zeros = .false.)
 
     do isd = 1, sd_steps
 
+      !We start by computing the Rayleigh quotient
       call X(hamiltonian_apply_batch)(hm, gr%der, st%group%psib(ib, ik), resb, ik)
 
       call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), resb, me1(1, :), reduce = .false.)
@@ -412,8 +410,10 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
 
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me1)
 
+      !This is the Rayleigh quotient
       forall(ist = minst:maxst) st%eigenval(ist, ik) = R_REAL(me1(1, ist - minst + 1)/me1(2, ist - minst + 1))
  
+      !We get the residual vector
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%group%psib(ib, ik), resb)
 
       if(debug%info) then
@@ -442,12 +442,13 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
       do ist = minst, maxst
         ii = ist - minst + 1
 
-        ca = me2(1, ii)*me2(4, ii) - me2(3, ii)*me2(2, ii)
-        cb = me1(2, ii)*me2(3, ii) - me1(1, ii)*me2(1, ii)
-        cc = me1(1, ii)*me2(2, ii) - me1(2, ii)*me2(4, ii)
+        ca = R_REAL(me2(1, ii))*R_REAL(me2(4, ii)) - R_REAL(me2(3, ii))*R_REAL(me2(2, ii))
+        cb = R_REAL(me1(2, ii))*R_REAL(me2(3, ii)) - R_REAL(me1(1, ii))*R_REAL(me2(1, ii))
+        cc = R_REAL(me1(1, ii))*R_REAL(me2(2, ii)) - R_REAL(me2(4, ii))*R_REAL(me1(2, ii))
+         
 
+        !This is - the solution of ca*x^2+cb*x+cc
         lambda(ist) = CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
-
       end do
 
       call batch_axpy(gr%mesh%np, lambda, kresb, st%group%psib(ib, ik))

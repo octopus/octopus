@@ -19,25 +19,14 @@
 #include "global.h"
 
 module modelmb_exchange_syms_oct_m
-
   use batch_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hypercube_oct_m
   use index_oct_m
-  use io_oct_m
-  use lalg_adv_oct_m
-  use loct_oct_m
-  use math_oct_m
   use mesh_batch_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
   use modelmb_particles_oct_m
-  use modelmb_density_matrix_oct_m
-  use mpi_oct_m
-  use mpi_lib_oct_m
-  use parser_oct_m
   use permutations_oct_m
   use profiling_oct_m
   use states_oct_m

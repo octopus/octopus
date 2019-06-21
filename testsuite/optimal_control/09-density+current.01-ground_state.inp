@@ -35,5 +35,5 @@ ExtraStates= 1
 Output= density + wfs
 OutputFormat= axis_x
 
-DisableOpenCL = yes
+DisableAccel = yes
 

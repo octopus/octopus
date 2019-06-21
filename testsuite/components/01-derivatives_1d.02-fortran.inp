@@ -1,3 +1,4 @@
+CalculationMode = test
 TestMode = derivatives
 
 # coordinates are not used at all
@@ -16,7 +17,7 @@ Spacing = 0.01
 OperateDouble = fortran
 OperateComplex = fortran
 
-DisableOpencl = yes
+DisableAccel = yes
 
 TestRepetitions = 1
 

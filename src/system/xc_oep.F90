@@ -95,7 +95,7 @@ contains
 
     PUSH_SUB(xc_oep_init)
 
-    if(iand(family, XC_FAMILY_OEP) == 0) then
+    if(bitand(family, XC_FAMILY_OEP) == 0) then
       oep%level = XC_OEP_NONE
       POP_SUB(xc_oep_init)
       return
@@ -170,6 +170,9 @@ contains
 
       if(st%d%nspin == SPINORS) &
         call messages_experimental("OEP with spinors")
+
+      if(st%d%kpt%parallel) &
+        call messages_not_implemented("OEP parallel in spin/k-points")
 
     end if
 

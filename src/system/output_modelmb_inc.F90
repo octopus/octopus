@@ -75,7 +75,7 @@ subroutine X(output_modelmb) (dir, gr, st, geo, outp)
   SAFE_ALLOCATE(wf(1:gr%mesh%np))
 
   call modelmb_density_matrix_nullify(denmat)
-  if(iand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
     call modelmb_density_matrix_init(dirname, st, denmat)
   end if
 
@@ -100,11 +100,11 @@ subroutine X(output_modelmb) (dir, gr, st, geo, outp)
       symmetries_satisfied = .false.
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .and. symmetries_satisfied) then
+    if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .and. symmetries_satisfied) then
       call X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0 .and. symmetries_satisfied) then
+    if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0 .and. symmetries_satisfied) then
       fn_unit = units_out%length**(-gr%mesh%sb%dim)
       write(filename, '(a,i4.4)') 'wf-st', mm
       call X(io_function_output)(outp%how, trim(dirname), trim(filename), gr%mesh, wf, &
@@ -117,7 +117,7 @@ subroutine X(output_modelmb) (dir, gr, st, geo, outp)
 
   SAFE_DEALLOCATE_A(wf)
 
-  if(iand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
+  if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
     call modelmb_density_matrix_end (denmat)
   end if
 

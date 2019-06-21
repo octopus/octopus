@@ -18,9 +18,9 @@ theta = 108.23 * pi / 180
 %
 
 %Species
- 'C'  | species_pseudo | db_file | "PSF/C.psf"  | lmax | 3 | lloc | 0
- 'H'  | species_pseudo | db_file | "PSF/H.psf"  | lmax | 3 | lloc | 0
- 'Cl' | species_pseudo | db_file | "extra/Cl.psf" | lmax | 3 | lloc | 0
+ 'C'  | species_pseudo | lmax | 3 | lloc | 0
+ 'H'  | species_pseudo | lmax | 3 | lloc | 0
+ 'Cl' | species_pseudo | file | "16-scfinlcao_std.Cl.psf" | lmax | 3 | lloc | 0
 %
 
 Spacing = 0.25*angstrom
@@ -31,11 +31,8 @@ XCFunctional = gga_x_pbe + gga_c_pbe
 SCFinLCAO = yes
 ExperimentalFeatures = yes
 Output = geometry + density
-OutputFormat = openscad + matlab + plane_z
+OutputFormat = matlab + plane_z
 
 SCFCalculatePartialCharges = yes
 
 ExperimentalFeatures = yes
-
-#We need to disable OpenCL as the OpenSCAD file changes considerably for small numerical differences
-DisableOpenCL = yes

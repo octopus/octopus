@@ -38,6 +38,5 @@ ExperimentalFeatures = yes
 ConvRelEv = 1e-8
 
 ParDomains = no
-ParKPoints = auto
 
 FilterPotentials = filter_none

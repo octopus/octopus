@@ -89,7 +89,6 @@ subroutine X(ode_step)(os, func, startval, solutionp, solutionvec)
 
   R_TYPE, allocatable :: yn(:), kv(:,:), y0(:)
   FLOAT   :: tn, dh
-  integer, parameter :: order = 4
   integer :: ii, jj, kk
 
   PUSH_SUB(X(ode_step))

@@ -126,8 +126,8 @@ module parser_oct_m
     subroutine oct_parse_int(name, def, res)
       implicit none
       character(len=*), intent(in) :: name
-      integer, intent(in)          :: def
-      integer, intent(out)         :: res
+      integer(8), intent(in)       :: def
+      integer(8), intent(out)      :: res
     end subroutine oct_parse_int
 
     subroutine oct_parse_double(name, def, res)
@@ -161,6 +161,9 @@ module parser_oct_m
 
   interface parse_variable
     module procedure parse_integer
+    module procedure parse_integer8
+    module procedure parse_integer48
+    module procedure parse_integer84
     module procedure parse_logical
     module procedure parse_string
     module procedure parse_cmplx
@@ -357,10 +360,54 @@ contains
     integer,          intent(in)    :: def
     integer,          intent(out)   :: res
 
+    integer(8) :: res8
+    
+    call parse_check_varinfo(name)
+    call oct_parse_int(name, int(def, 8), res8)
+
+    res = int(res8)
+    
+  end subroutine parse_integer
+
+  ! ---------------------------------------------------------
+
+  subroutine parse_integer8(name, def, res)
+    character(len=*), intent(in)    :: name
+    integer(8),       intent(in)    :: def
+    integer(8),       intent(out)   :: res
+
     call parse_check_varinfo(name)
     call oct_parse_int(name, def, res)
+    
+  end subroutine parse_integer8
 
-  end subroutine parse_integer
+  ! ---------------------------------------------------------  
+  
+  subroutine parse_integer48(name, def, res)
+    character(len=*), intent(in)    :: name
+    integer,          intent(in)    :: def
+    integer(8),       intent(out)   :: res
+
+    call parse_check_varinfo(name)
+    call oct_parse_int(name, int(def, 8), res)
+    
+  end subroutine parse_integer48
+
+  ! ---------------------------------------------------------  
+  
+  subroutine parse_integer84(name, def, res)
+    character(len=*), intent(in)    :: name
+    integer(8),       intent(in)    :: def
+    integer,          intent(out)   :: res
+
+    integer(8) :: res8
+    
+    call parse_check_varinfo(name)
+    call oct_parse_int(name, def, res8)
+
+    res = int(res8)
+    
+  end subroutine parse_integer84
 
   ! ---------------------------------------------------------
   
@@ -381,7 +428,7 @@ contains
     logical,          intent(in)    :: def
     logical,          intent(out)   :: res
 
-    integer :: idef, ires
+    integer(8) :: idef, ires
 
     call parse_check_varinfo(name)
     

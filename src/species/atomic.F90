@@ -55,6 +55,7 @@ module atomic_oct_m
     integer           :: n(12)     !< n quantum number
     integer           :: l(12)     !< l quantum number
     FLOAT             :: occ(12,2) !< occupations of each level
+    FLOAT             :: j(12)     !< j quantum number
   end type valconf_t
 
 
@@ -73,6 +74,7 @@ contains
     c%n = 0
     c%l = 0
     c%occ = M_ZERO
+    c%j = M_ZERO
 
     POP_SUB(valconf_null)
   end subroutine valconf_null
@@ -92,6 +94,7 @@ contains
     cout%n      = cin%n
     cout%l      = cin%l
     cout%occ    = cin%occ
+    cout%j      = cin%j
 
     POP_SUB(valconf_copy)
   end subroutine valconf_copy
@@ -136,6 +139,8 @@ contains
           call messages_fatal(1)
        end select
     end do
+
+    c%j = M_ZERO
 
     POP_SUB(read_valconf)
   end subroutine read_valconf

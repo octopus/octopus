@@ -28,8 +28,7 @@ module sort_oct_m
 
   private
   public ::                     &
-    sort,                       &
-    matrix_sort
+    sort
 
   ! ------------------------------------------------------------------------------
   !> This is the common interface to a sorting routine.
@@ -57,12 +56,7 @@ module sort_oct_m
     module procedure dsort, isort
     module procedure dshellsort1, zshellsort1, ishellsort1
     module procedure dshellsort2, zshellsort2, ishellsort2
-    module procedure sort_complex
   end interface sort
-
-  interface matrix_sort
-    module procedure dmatrix_sort, zmatrix_sort
-  end interface matrix_sort
 
 contains
 
@@ -107,93 +101,6 @@ contains
 
     POP_SUB(isort)
   end subroutine isort
-
-
-  ! ---------------------------------------------------------
-  !> Sort a complex vector vec(:)+i*Imvec(:) and put the ordering in reorder(:)
-  !! according to the following order:
-  !!
-  !! 1. values with zero imaginary part sorted by increasing real part
-  !! 2. values with negative imaginary part sorted by decreasing imaginary part
-  !! 3. values with positive imaginary part unsorted
-  subroutine sort_complex(vec, Imvec, reorder, imthr)
-    FLOAT,           intent(inout)  :: vec(:)
-    FLOAT,           intent(inout)  :: Imvec(:)
-    integer,         intent(out)    :: reorder(:)
-    FLOAT, optional, intent(in)     :: imthr !< the threshold for zero imaginary part
-
-    integer              :: dim, n0, n1, n2, i
-    integer, allocatable :: table(:),idx0(:)
-    FLOAT,   allocatable :: temp(:),tempI(:)
-    FLOAT                :: imthr_
-
-    PUSH_SUB(sort_complex)
-
-    dim = size(vec, 1)
-    ASSERT(dim == size(Imvec,1) .and. dim == size(reorder,1))
-
-    imthr_ = CNST(1E-6)
-    if(present(imthr)) imthr_ = imthr
-
-    allocate(table(1:dim))
-    allocate(temp(1:dim))
-    allocate(tempI(1:dim))
-
-    tempI = Imvec
-    call sort(tempI,table)
-
-    n0 = 0
-    n1 = 0
-    temp = vec
-    do i = 1, dim
-      if (abs(Imvec(i)) < imthr_) then
-        n0 = n0 + 1 
-      else if (Imvec(i) < -imthr_) then 
-        n1 = n1 + 1
-      end if
-      vec(i)     = temp(table(dim - i + 1))
-      Imvec(i)   = tempI(dim - i + 1)
-      reorder(i) = table(dim - i + 1)
-    end do
-    n2 = dim - n0 - n1 
-
-    temp = vec
-    tempI = Imvec
-    table = reorder
-
-    !first zero img parts
-    if (n0 > 0) then
-      allocate(idx0(1:n0))
-      call sort(temp(n2+1:n2+n0),idx0(:))
-    end if
-
-    do i = 1, n0
-      vec  (i) = temp (n2 + i)
-      Imvec  (i) = tempI(n2 + idx0(i))
-      reorder(i) = table(n2 + idx0(i))
-    end do
-    deallocate(idx0)
-
-    !negative Img parts
-    do i =  1, n1
-      vec    (n0 + i) = temp (n2 + n0 + i)
-      Imvec  (n0 + i) = tempI(n2 + n0 + i)
-      reorder(n0 + i) = table(n2 + n0 + i)
-    end do
-
-    ! positive img parts
-    do i = 1, n2
-      vec    (n0 + n1 + i) = temp (n2 + 1 -i)
-      Imvec  (n0 + n1 + i) = tempI(n2 + 1 -i)
-      reorder(n0 + n1 + i) = table(n2 + 1 -i)
-    end do
-
-    deallocate(tempI)  
-    deallocate(temp)
-    deallocate(table)
-
-    POP_SUB(sort_complex)
-  end subroutine sort_complex
 
 
 #include "undef.F90"

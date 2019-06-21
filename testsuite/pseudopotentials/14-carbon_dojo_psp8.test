@@ -1,0 +1,39 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Carbon pseudojo PSP8 format
+Program    : octopus
+TestGroups : long-run, pseudopotentials
+Enabled    : Yes
+
+ExtraFile  : 14-carbon_dojo_psp8.pseudo.psp8
+Input: 14-carbon_dojo_psp8.01-gs.inp
+Precision: 0.0005
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =',    3) ; -156.14454398
+Precision: 0.00012
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =',    3) ;    0.00000000
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =',    3) ;  -38.63595054
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =',    3) ;  120.51880755
+match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ;  -53.67905346
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =',    3) ;  -47.39864114
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =',    3) ;   -3.27019821
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =',    3) ;   91.27188205
+match ; External energy    ; GREPFIELD(static/info, 'External    =',    3) ; -317.26644636
+
+match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -14.651340
+match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ;   1.000000
+match ; Eigenvalue   [1dn] ; GREPFIELD(static/info, '1   dn', 3) ; -11.709626
+match ; Occupation   [1dn] ; GREPFIELD(static/info, '1   dn', 4) ;   1.000000
+match ; Eigenvalue   [2up] ; GREPFIELD(static/info, '2   up', 3) ;  -6.137492
+match ; Occupation   [2up] ; GREPFIELD(static/info, '2   up', 4) ;   0.666667
+match ; Eigenvalue   [2dn] ; GREPFIELD(static/info, '2   dn', 3) ;  -3.481557
+match ; Occupation   [2dn] ; GREPFIELD(static/info, '2   dn', 4) ;   0.000000
+match ; Eigenvalue   [3up] ; GREPFIELD(static/info, '3   up', 3) ;  -6.137492
+match ; Occupation   [3up] ; GREPFIELD(static/info, '3   up', 4) ;   0.666667
+match ; Eigenvalue   [3dn] ; GREPFIELD(static/info, '3   dn', 3) ;  -3.481556
+match ; Occupation   [3dn] ; GREPFIELD(static/info, '3   dn', 4) ;   0.000000
+match ; Eigenvalue   [4up] ; GREPFIELD(static/info, '4   up', 3) ;  -6.137492
+match ; Occupation   [4up] ; GREPFIELD(static/info, '4   up', 4) ;   0.666667
+match ; Eigenvalue   [4dn] ; GREPFIELD(static/info, '4   dn', 3) ;  -3.481556
+match ; Occupation   [4dn] ; GREPFIELD(static/info, '4   dn', 4) ;   0.000000
+

@@ -20,7 +20,6 @@
 
 module berry_oct_m
   use global_oct_m
-  use grid_oct_m
   use lalg_adv_oct_m
   use mesh_oct_m
   use mesh_function_oct_m

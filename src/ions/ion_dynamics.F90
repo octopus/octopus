@@ -22,10 +22,7 @@ module ion_dynamics_oct_m
   use iso_c_binding
   use geometry_oct_m
   use global_oct_m
-  use io_oct_m
-  use loct_oct_m
   use loct_math_oct_m
-  use math_oct_m
   use messages_oct_m
   use mpi_oct_m
   use parser_oct_m
@@ -156,11 +153,11 @@ contains
     !%Type block
     !%Section Time-Dependent::Propagation
     !%Description
-    !% (Experimental) This variable allows you to specify a time-dependent
-    !% function describing the ions' displacement from their equilibrium
-    !% position: <math>r(t) = r_0 + \Delta r(t)</math>.
-    !% Specify the displacements dx(t), dy(t), dz(t)
-    !% as follows, for some or all of the atoms:
+    !% (Experimental) This variable allows you to specify a
+    !% time-dependent function describing the displacement of the ions
+    !% from their equilibrium position: <math>r(t) = r_0 + \Delta
+    !% r(t)</math>.  Specify the displacements dx(t), dy(t), dz(t) as
+    !% follows, for some or all of the atoms:
     !% 
     !% <tt>%IonsTimeDependentDisplacements
     !% <br>&nbsp;&nbsp; atom_index | "dx(t)" | "dy(t)" | "dz(t)"
@@ -464,9 +461,10 @@ contains
     end if
 
     if (this%drive_ions .and. associated(this%td_displacements) ) then
-!       if (any (this%td_displacements(1:this%geo_t0%natoms)%move)) then
-!         call geometry_end(this%geo_t0)
-!       end if
+      if (any (this%td_displacements(1:this%geo_t0%natoms)%move)) then
+        ! geometry end cannot be called here, otherwise the species are destroyed twice
+        ! call geometry_end(this%geo_t0)
+      end if
       SAFE_DEALLOCATE_P(this%td_displacements)
     end if
     

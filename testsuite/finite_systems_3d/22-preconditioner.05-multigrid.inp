@@ -1,0 +1,18 @@
+# -*- coding: utf-8 -*-
+
+CalculationMode = gs
+FromScratch = yes
+
+Radius = 3.5*angstrom
+Spacing = 0.25*angstrom
+
+CH = 1.2*angstrom
+%Coordinates
+ "C" |           0 |          0 |           0
+ "H" |  CH/sqrt(3) | CH/sqrt(3) |  CH/sqrt(3)
+ "H" | -CH/sqrt(3) |-CH/sqrt(3) |  CH/sqrt(3)
+ "H" |  CH/sqrt(3) |-CH/sqrt(3) | -CH/sqrt(3)
+ "H" | -CH/sqrt(3) | CH/sqrt(3) | -CH/sqrt(3)
+%
+
+Preconditioner = pre_multigrid

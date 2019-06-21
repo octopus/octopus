@@ -11,6 +11,7 @@ Enabled    : Yes
 # ground state
 Processors : 1
 Input      : 06-caetrs.01-gs.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Initial energy ; GREPFIELD(static/info, 'Total       =', 3) ; -10.60764719
 
 Processors : 4

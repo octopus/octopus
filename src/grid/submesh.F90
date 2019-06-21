@@ -20,7 +20,6 @@
   
 module submesh_oct_m
   use batch_oct_m
-  use blas_oct_m
   use comm_oct_m
   use global_oct_m
   use lalg_basic_oct_m
@@ -32,8 +31,6 @@ module submesh_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use simul_box_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
     
   implicit none
   private 
@@ -45,10 +42,14 @@ module submesh_oct_m
     submesh_broadcast,           &    
     submesh_copy,                &
     submesh_get_inv,             &
+    submesh_build_global,        &
+    submesh_end_global,          &
     dsm_integrate,               &
     zsm_integrate,               &
     dsm_integrate_frommesh,      &
-    zsm_integrate_frommesh,      &         
+    zsm_integrate_frommesh,      & 
+    dsm_nrm2,                    &
+    zsm_nrm2,                    &
     submesh_add_to_mesh,         &
     dsubmesh_batch_add,          &
     zsubmesh_batch_add,          &
@@ -58,6 +59,10 @@ module submesh_oct_m
     dsubmesh_batch_dotp_matrix,  &
     zsubmesh_batch_dotp_matrix,  &
     submesh_overlap,             &
+    dsubmesh_copy_from_mesh,     &
+    zsubmesh_copy_from_mesh,     &
+    dsubmesh_copy_from_mesh_batch,     &
+    zsubmesh_copy_from_mesh_batch,     &
     submesh_end
 
   type submesh_t
@@ -68,8 +73,12 @@ module submesh_oct_m
     integer,      pointer :: map(:)         !< index in the mesh of the points inside the sphere
     FLOAT,        pointer :: x(:,:)
     type(mesh_t), pointer :: mesh
-    logical               :: has_points
     logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point
+    
+    integer               :: np_global      !< total number of points in the entire mesh
+    FLOAT,    allocatable :: x_global(:,:)  
+    integer,  allocatable :: part_v(:)
+    integer,  allocatable :: global2local(:)
   end type submesh_t
   
   interface submesh_add_to_mesh
@@ -77,8 +86,12 @@ module submesh_oct_m
   end interface submesh_add_to_mesh
 
   interface submesh_to_mesh_dotp
-    module procedure ddsubmesh_to_mesh_dotp, zdsubmesh_to_mesh_dotp
+    module procedure ddsubmesh_to_mesh_dotp, zdsubmesh_to_mesh_dotp, zzsubmesh_to_mesh_dotp
   end interface submesh_to_mesh_dotp
+
+   type(profile_t), save ::           &
+       C_PROFILING_SM_REDUCE,         &
+       C_PROFILING_SM_NRM2
 
 contains
   
@@ -88,9 +101,12 @@ contains
     PUSH_SUB(submesh_null)
 
     sm%np = -1
+    sm%radius = M_ZERO
     nullify(sm%map)
     nullify(sm%x)
     nullify(sm%mesh)
+
+    sm%np_global = -1
 
     POP_SUB(submesh_null)
 
@@ -218,7 +234,8 @@ contains
       is = 0
       do ip = 1, mesh%np_part
         do icell = 1, periodic_copy_num(pp)
-          r2 = sum((mesh%x(ip, 1:sb%dim) - center_copies(1:sb%dim, icell))**2)
+          xx(1:sb%dim) = mesh%x(ip, 1:sb%dim) - center_copies(1:sb%dim, icell)
+          r2 = sum(xx(1:sb%dim)**2)
           if(r2 > rc**2 ) cycle
           is = is + 1
         end do
@@ -250,8 +267,6 @@ contains
 
     end if
 
-    this%has_points = (this%np > 0)
-    
     ! now order points for better locality
     
     SAFE_ALLOCATE(order(1:this%np_part))
@@ -313,7 +328,6 @@ contains
       this%np_part = nparray(2)
 
       if(root /= mpi_grp%rank) then
-        this%has_points = (this%np > 0)
         SAFE_ALLOCATE(this%map(1:this%np_part))
         SAFE_ALLOCATE(this%x(1:this%np_part, 0:mesh%sb%dim))
       end if
@@ -407,6 +421,75 @@ contains
     overlap = distance + CNST(100.0)*M_EPSILON <= (sm1%radius + sm2%radius)**2
 
   end function submesh_overlap
+
+  ! -------------------------------------------------------------
+
+    subroutine submesh_build_global(this)
+    type(submesh_t),      intent(inout)   :: this
+
+    integer, allocatable :: part_np(:)
+    integer :: ipart, ind, ip
+
+    PUSH_SUB(submesh_build_global)
+
+    if(.not. this%mesh%parallel_in_domains) then
+      POP_SUB(submesh_build global)
+      return
+    end if 
+
+    SAFE_ALLOCATE(part_np(this%mesh%vp%npart))
+    part_np = 0
+    part_np(this%mesh%vp%partno) = this%np
+
+  #if defined(HAVE_MPI)
+    call comm_allreduce(this%mesh%mpi_grp%comm, part_np)
+  #endif 
+    this%np_global = sum(part_np)
+    !The 0 index correspond to the local index
+    SAFE_ALLOCATE(this%x_global(1:this%np_global, 1:this%mesh%sb%dim))
+    SAFE_ALLOCATE(this%part_v(1:this%np_global))
+    SAFE_ALLOCATE(this%global2local(1:this%np_global))
+    this%x_global = M_ZERO
+    this%part_v = 0
+    this%global2local = 0
+
+    ind = 0
+    do ipart = 1, this%mesh%vp%npart
+      if(ipart == this%mesh%vp%partno) then
+        do ip = 1, this%np
+          this%x_global(ind + ip, 1:this%mesh%sb%dim) = this%x(ip,1:this%mesh%sb%dim)
+          this%part_v(ind+ip) = this%mesh%vp%partno
+          this%global2local(ind+ip) = ip
+        end do
+      end if
+      ind = ind + part_np(ipart)
+    end do 
+
+   #if defined(HAVE_MPI)
+    call comm_allreduce(this%mesh%mpi_grp%comm, this%x_global)
+    call comm_allreduce(this%mesh%mpi_grp%comm, this%part_v)
+    call comm_allreduce(this%mesh%mpi_grp%comm, this%global2local)
+   #endif 
+
+    SAFE_DEALLOCATE_A(part_np)
+
+    POP_SUB(submesh_build_global)
+  end subroutine submesh_build_global
+
+
+  subroutine submesh_end_global(this)
+    type(submesh_t),      intent(inout)   :: this
+
+    PUSH_SUB(submesh_end_global)
+
+    SAFE_DEALLOCATE_A(this%x_global)
+    this%np_global = -1
+    SAFE_DEALLOCATE_A(this%part_v)
+    SAFE_DEALLOCATE_A(this%global2local)
+
+    POP_SUB(submesh_end_global)
+  end subroutine submesh_end_global
+
   
   ! -----------------------------------------------------------
   
@@ -416,22 +499,85 @@ contains
     CMPLX,            intent(inout) :: phi(:)
     CMPLX,  optional, intent(in)    :: factor
     
-    integer :: ip
+    integer :: ip, m
     
     PUSH_SUB(zzdsubmesh_add_to_mesh)
-    
+   
     if(present(factor)) then
-      do ip = 1, this%np
+      !Loop unrolling inspired by BLAS axpy routine
+      m = mod(this%np,4)
+      do ip = 1, m
         phi(this%map(ip)) = phi(this%map(ip)) + factor*sphi(ip)
       end do
+      if( this%np.ge.4) then
+        do ip = m+1, this%np, 4
+          phi(this%map(ip))   = phi(this%map(ip))   + factor*sphi(ip)
+          phi(this%map(ip+1)) = phi(this%map(ip+1)) + factor*sphi(ip+1)
+          phi(this%map(ip+2)) = phi(this%map(ip+2)) + factor*sphi(ip+2)
+          phi(this%map(ip+3)) = phi(this%map(ip+3)) + factor*sphi(ip+3)
+        end do
+      end if
     else
-      do ip = 1, this%np
+      m = mod(this%np,4)
+      do ip = 1, m
         phi(this%map(ip)) = phi(this%map(ip)) + sphi(ip)
       end do
-    end if
+      if( this%np.ge.4) then
+        do ip = m+1, this%np, 4
+          phi(this%map(ip))   = phi(this%map(ip))   + sphi(ip)
+          phi(this%map(ip+1)) = phi(this%map(ip+1)) + sphi(ip+1)
+          phi(this%map(ip+2)) = phi(this%map(ip+2)) + sphi(ip+2)
+          phi(this%map(ip+3)) = phi(this%map(ip+3)) + sphi(ip+3)
+        end do
+      end if
+    end if 
     
     POP_SUB(zzdsubmesh_add_to_mesh)
   end subroutine zzsubmesh_add_to_mesh
+
+
+  !------------------------------------------------------------
+
+  CMPLX function zzsubmesh_to_mesh_dotp(this, sphi, phi, reduce) result(dotp)
+    type(submesh_t),   intent(in) :: this
+    CMPLX,             intent(in) :: sphi(:)
+    CMPLX,             intent(in) :: phi(:)
+    logical, optional, intent(in) :: reduce
+  
+    integer :: is, m, ip
+  
+    PUSH_SUB(zzsubmesh_to_mesh_dotp)
+  
+    dotp = cmplx(M_ZERO, M_ZERO)
+  
+    if(this%mesh%use_curvilinear) then
+      do is = 1, this%np
+        dotp = dotp + this%mesh%vol_pp(this%map(is))*phi(this%map(is))*conjg(sphi(is))
+      end do
+    else
+      m = mod(this%np,4)
+      do ip = 1, m
+        dotp = dotp + phi(this%map(ip))*conjg(sphi(ip))
+      end do
+      if( this%np.ge.4) then
+        do ip = m+1, this%np, 4
+          dotp = dotp + phi(this%map(ip))*conjg(sphi(ip))     &
+                      + phi(this%map(ip+1))*conjg(sphi(ip+1)) &
+                      + phi(this%map(ip+2))*conjg(sphi(ip+2)) &
+                      + phi(this%map(ip+3))*conjg(sphi(ip+3))
+        end do
+      end if
+        dotp = dotp*this%mesh%vol_pp(1)
+    end if
+  
+    if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) then
+      call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
+      call comm_allreduce(this%mesh%vp%comm, dotp)
+      call profiling_out(C_PROFILING_SM_REDUCE)
+    end if 
+ 
+    POP_SUB(zzsubmesh_to_mesh_dotp)
+  end function zzsubmesh_to_mesh_dotp
 
 
 #include "undef.F90"

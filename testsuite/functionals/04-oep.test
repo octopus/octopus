@@ -18,23 +18,41 @@ Enabled    : Yes
 Processors : 4
 
 # First, we reproduce the LSDA results for Li, 8 electrons.
+# The numbers from the paper are the following ones:
+#  Total energy:     -0.50705
+#  Exchange energy:  -0.95075
+#  LOMO eigenvalue:  -0.2037
+#  HOMO eigenvalue:  -0.1376
 Input: 04-oep.01-jellium-lsda.inp
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.50708589
-match ; Exchange     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.95075770
-match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; -0.203717
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.50705
+match ; Exchange     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.95075
+match ; Eigenvalue 1 ; GREPFIELD(static/info, '1   --', 3) ; -0.2037
+match ; Eigenvalue 2 ; GREPFIELD(static/info, '2   --', 3) ; -0.1376
 
 # Now, EXX/KLI for Li, 8 electrons (restarting from the previous run)
+# The numbers from the paper are the following ones:
+#  Total energy:     -0.3354
+#  Exchange energy:  -1.0269
+#  LOMO eigenvalue:  -0.25485
+#  HOMO eigenvalue:  -0.18895
 Input: 04-oep.02-jellium-exx_kli.inp
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.33541781
-match ; Exchange     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -1.02691632
-match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; -0.254827
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.3354
+match ; Exchange     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -1.0269
+match ; Eigenvalue 1 ; GREPFIELD(static/info, '1   --', 3) ; -0.25485
+match ; Eigenvalue 2 ; GREPFIELD(static/info, '2   --', 3) ; -0.18895
 
-
-# And finally, full EXX for Li, 8 electrons (restarting from the previous run)
+# And finally, full EXX for Li, 8 electrons (restarting from the LSDA run)
+# The numbers from the paper are the following ones:
+#  Total energy:     -0.3357
+#  Exchange energy:  -1.02955
+#  LOMO eigenvalue:  -0.2538
+#  HOMO eigenvalue:  -0.18905
+Input: 04-oep.01-jellium-lsda.inp
 Input: 04-oep.03-jellium-full_exx.inp
-Precision : 3e-4
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.33571494
-Precision : default
-match ; Exchange     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -1.02955661
-match ; Eigenvalue 1 ; GREPFIELD(static/info, '1   --', 3) ; -0.253783
-match ; Eigenvalue 2 ; GREPFIELD(static/info, '2   --', 3) ; -0.189040
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.3357
+match ; Exchange     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -1.02955
+match ; Eigenvalue 1 ; GREPFIELD(static/info, '1   --', 3) ; -0.2538
+match ; Eigenvalue 2 ; GREPFIELD(static/info, '2   --', 3) ; -0.18905

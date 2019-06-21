@@ -35,12 +35,10 @@ SymmetrizeDensity = yes
 
 ExtraStates = 1
 ConvRelDens = 1e-7
+EigensolverTolerance = 1e-8
 
 Output = geometry + dos
 OutputFormat = xyz
-
-OutputBandsGnuplotMode = yes
-OutputBandsGraceMode = yes
 
 FilterPotentials = filter_none
 

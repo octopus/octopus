@@ -33,12 +33,14 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel,
   logical, optional,        intent(in)    :: add
 
   type(species_t), pointer :: spec
-  integer :: idim, iatom, jj, ip, ispin, ii, ll, mm
-  FLOAT, allocatable :: dorbital(:)
+  integer :: idim, iatom, jj, ispin, ii, ll, mm
   R_TYPE, allocatable :: orbital(:)
   FLOAT :: radius
   type(profile_t), save :: prof
   type(submesh_t) :: sphere
+#ifdef R_TCOMPLEX
+  FLOAT, allocatable :: dorbital(:)
+#endif
   
   call profiling_in(prof, "ATOMIC_ORBITAL")
   PUSH_SUB(X(lcao_atomic_orbital))
@@ -66,7 +68,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel,
 #ifdef R_TCOMPLEX
   if(.not. this%complex_ylms) then
     SAFE_ALLOCATE(dorbital(1:sphere%np))
-    call dspecies_get_orbital_submesh(spec, sphere, ii, ll, mm, ispin, geo%atom(iatom)%x, dorbital)
+    call datomic_orbital_get_submesh(spec, sphere, ii, ll, mm, ispin, geo%atom(iatom)%x, dorbital)
     if(.not. optional_default(add, .false.)) psi(1:mesh%np, idim) = CNST(0.0)
     call submesh_add_to_mesh(sphere, dorbital, psi(:, idim))
 
@@ -76,7 +78,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel,
 
     SAFE_ALLOCATE(orbital(1:sphere%np))
 
-    call X(species_get_orbital_submesh)(spec, sphere, ii, ll, mm, ispin, geo%atom(iatom)%x, orbital)
+    call X(atomic_orbital_get_submesh)(spec, sphere, ii, ll, mm, ispin, geo%atom(iatom)%x, orbital)
     
     if(.not. optional_default(add, .false.)) psi(1:mesh%np, idim) = CNST(0.0)
     call submesh_add_to_mesh(sphere, orbital, psi(:, idim))
@@ -1212,7 +1214,7 @@ end subroutine X(lcao_alt_wf)
           derivative = .false.
         end if
 
-        call X(species_get_orbital_submesh)(geo%atom(iatom)%species, sphere, ii, ll, mm, &
+        call X(atomic_orbital_get_submesh)(geo%atom(iatom)%species, sphere, ii, ll, mm, &
           ispin, geo%atom(iatom)%x, orbitalb%states(iorb)%X(psi)(:, 1), derivative = derivative)
       end do
  

@@ -2,7 +2,7 @@
 
 Test       : testsuite/optimal_control/12-spintarget.test
 Program    : octopus
-TestGroups : short-run, optimal_control
+TestGroups : long-run, optimal_control
 Enabled    : Yes
 
 Input: 12-spintarget.01-ground_state.inp

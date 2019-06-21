@@ -1,0 +1,30 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Carbon pseudojo PSML format
+Program    : octopus
+TestGroups : long-run, pseudopotentials
+Enabled    : Yes
+
+ExtraFile  : 04-carbon_dojo_psml.pseudo.psml
+Input: 04-carbon_dojo_psml.01-gs.inp
+Precision: 0.0008
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -156.14273299
+Precision: 0.00011
+match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -14.651820
+match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ;   1.000000
+match ; Eigenvalue   [1dn] ; GREPFIELD(static/info, '1   dn', 3) ; -11.710183
+match ; Occupation   [1dn] ; GREPFIELD(static/info, '1   dn', 4) ;   1.000000
+match ; Eigenvalue   [2up] ; GREPFIELD(static/info, '2   up', 3) ;  -6.137108
+match ; Occupation   [2up] ; GREPFIELD(static/info, '2   up', 4) ;   0.666667
+match ; Eigenvalue   [2dn] ; GREPFIELD(static/info, '2   dn', 3) ;  -3.481342
+match ; Occupation   [2dn] ; GREPFIELD(static/info, '2   dn', 4) ;   0.000000
+match ; Eigenvalue   [3up] ; GREPFIELD(static/info, '3   up', 3) ;  -6.137107
+match ; Occupation   [3up] ; GREPFIELD(static/info, '3   up', 4) ;   0.666667
+match ; Eigenvalue   [3dn] ; GREPFIELD(static/info, '3   dn', 3) ;  -3.481342
+match ; Occupation   [3dn] ; GREPFIELD(static/info, '3   dn', 4) ;   0.000000
+match ; Eigenvalue   [4up] ; GREPFIELD(static/info, '4   up', 3) ;  -6.137107
+match ; Occupation   [4up] ; GREPFIELD(static/info, '4   up', 4) ;   0.666667
+match ; Eigenvalue   [4dn] ; GREPFIELD(static/info, '4   dn', 3) ;  -3.481341
+match ; Occupation   [4dn] ; GREPFIELD(static/info, '4   dn', 4) ;   0.000000
+

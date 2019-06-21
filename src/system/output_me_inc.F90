@@ -57,7 +57,7 @@ subroutine X(output_me_ks_multipoles)(fname, st, gr, ll, mm, ik)
     write(iunit, fmt = '(a)')    '# Units = ['//trim(units_abbrev(units_out%length))//']'
   end if
   
-  SAFE_ALLOCATE(multipole(1:gr%mesh%np_part))
+  SAFE_ALLOCATE(multipole(1:gr%mesh%np))
 
   multipole = M_ZERO
   do ip = 1, gr%mesh%np
@@ -141,7 +141,7 @@ subroutine X(output_me_ks_multipoles2d)(fname, st, gr, dir, ik)
   write(iunit, fmt = '(a,i4)')      '# ik =', ik
   write(iunit, fmt = '(a)')    '# Units = ['//trim(units_abbrev(units_out%length))//']'
   
-  SAFE_ALLOCATE(dipole(1:gr%mesh%np_part))
+  SAFE_ALLOCATE(dipole(1:gr%mesh%np))
 
   dipole = M_ZERO
   do ip = 1, gr%mesh%np
@@ -219,7 +219,7 @@ subroutine X(output_me_ks_multipoles1d)(fname, st, gr, ll, ik)
     write(iunit, fmt = '(a)')    '# Units = ['//trim(units_abbrev(units_out%length))//']'
   end if
   
-  SAFE_ALLOCATE(dipole(1:gr%mesh%np_part))
+  SAFE_ALLOCATE(dipole(1:gr%mesh%np))
 
 
   dipole = M_ZERO
@@ -259,171 +259,6 @@ subroutine X(output_me_ks_multipoles1d)(fname, st, gr, ll, ik)
 
   POP_SUB(X(output_me_ks_multipoles1d))
 end subroutine X(output_me_ks_multipoles1d)
-
-
-! ---------------------------------------------------------
-subroutine X(one_body) (dir, gr, geo, st, hm)
-  use xc_oct_m
-
-  character(len=*),    intent(in)    :: dir
-  type(grid_t),        intent(inout) :: gr
-  type(geometry_t),    intent(in)    :: geo
-  type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(in)    :: hm
-
-  integer ist, jst, iunit, idir, iatom, np
-  R_TYPE :: me, exp_r, exp_g, corr
-  R_TYPE, allocatable :: gpsi(:,:), cpsi(:,:)
-  R_TYPE, allocatable :: psii(:, :), psij(:, :)
-
-  SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(psij(1:gr%mesh%np_part, 1:st%d%dim))
-  
-  PUSH_SUB(X(one_body))
-
-  np = gr%mesh%np
-
-  ASSERT(.not. st%parallel_in_states)
-  if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
-  if(hm%family_is_mgga_with_exc) &
-    call messages_not_implemented("OutputMatrixElements=one_body with MGGA") 
-  ! how to do this properly? states_matrix
-  iunit = io_open(trim(dir)//'/output_me_one_body', action='write')
-
-  do ist = 1, st%nst
-
-    call states_get_state(st, gr%mesh, ist, 1, psii)
-    
-    do jst = 1, st%nst
-      if(jst > ist) cycle
-      
-      call states_get_state(st, gr%mesh, jst, 1, psij)
-
-      psij(1:np, 1) = R_CONJ(psii(1:np, 1))*hm%Vhxc(1:np, 1)*psij(1:np, 1)
-
-      me = st%eigenval(ist,1) - X(mf_integrate)(gr%mesh, psij(:, 1))
-
-      write(iunit, *) ist, jst, me
-    end do
-  end do
-
-  SAFE_ALLOCATE(gpsi(1:gr%mesh%np_part, 1:gr%sb%dim))
-  SAFE_ALLOCATE(cpsi(1:gr%mesh%np_part, 1:1))
-
-  iunit = io_open(trim(dir)//'/output_me_gauge', action='write')
-
-  do ist = 1, st%nst
-
-    call states_get_state(st, gr%mesh, ist, 1, psii)
-
-    do jst = 1, st%nst
-      if(st%occ(ist, 1) < CNST(0.0001)) cycle
-      if(st%occ(jst, 1) > CNST(0.0001)) cycle
-
-      call states_get_state(st, gr%mesh, jst, 1, psij)
-
-      call X(derivatives_grad)(gr%der, psij(:, 1), gpsi)
-       
-      do idir = 1, 3
-         exp_r = X(mf_integrate)(gr%mesh, R_CONJ(psii(1:np, 1))*gr%mesh%x(1:np, idir)*psij(1:np, 1))
-         exp_g = X(mf_integrate)(gr%mesh, R_CONJ(psii(1:np, 1))*gpsi(1:np, idir))
-         
-         corr = M_ZERO
-         do iatom = 1, geo%natoms
-           cpsi = M_ZERO
-           call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, 1, idir, 1, psij, cpsi)
-           corr = corr + X(mf_integrate)(gr%mesh, R_CONJ(psii(1:np, 1))*cpsi(1:np, 1))
-         end do
-
-         me = (st%eigenval(jst, 1) - st%eigenval(ist, 1))*exp_r
-         
-         write(iunit, *) ist, jst, idir, me, me - (exp_g + corr)
-
-       end do
-       
-     end do
-   end do
-
-  SAFE_DEALLOCATE_A(cpsi)   
-  SAFE_DEALLOCATE_A(gpsi)
-  SAFE_DEALLOCATE_A(psii)
-  SAFE_DEALLOCATE_A(psij)
-
-  call io_close(iunit)
-  POP_SUB(X(one_body))
-end subroutine X(one_body)
-
-! ---------------------------------------------------------
-subroutine X(two_body) (dir, gr, st)
-  character(len=*), intent(in)    :: dir
-  type(grid_t),     intent(inout) :: gr
-  type(states_t),   intent(in)    :: st
-
-  integer ist, jst, kst, lst, ijst, klst, iunit
-  R_TYPE :: me
-  R_TYPE, allocatable :: nn(:), vv(:)
-  R_TYPE, allocatable :: psii(:, :), psij(:, :), psik(:, :), psil(:, :)
-
-  PUSH_SUB(X(two_body))
-
-  ASSERT(.not. st%parallel_in_states)
-  if(gr%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("OutputMatrixElements=two_body with k-points")
-  ! how to do this properly? states_matrix
-  iunit = io_open(trim(dir)//'/output_me_two_body', action='write')
-
-  SAFE_ALLOCATE(nn(1:gr%mesh%np))
-  SAFE_ALLOCATE(vv(1:gr%mesh%np))
-  SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(psik(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(psil(1:gr%mesh%np, 1:st%d%dim))
-
-  ijst=0
-  do ist = 1, st%nst
-
-    call states_get_state(st, gr%mesh, ist, 1, psii)
-
-    do jst = 1, st%nst
-      if(jst > ist) cycle
-      ijst=ijst+1
-
-      call states_get_state(st, gr%mesh, jst, 1, psij)
-
-      nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np, 1))*psij(1:gr%mesh%np, 1)
-      call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
-
-      klst=0
-      do kst = 1, st%nst
- 
-        call states_get_state(st, gr%mesh, kst, 1, psik)
-
-        do lst = 1, st%nst
-          if(lst > kst) cycle
-          klst=klst+1
-          if(klst > ijst) cycle
-
-          call states_get_state(st, gr%mesh, lst, 1, psil)
-
-          psil(1:gr%mesh%np, 1) = vv(1:gr%mesh%np)*psik(1:gr%mesh%np, 1)*R_CONJ(psil(1:gr%mesh%np, 1))
-
-          me = X(mf_integrate)(gr%mesh, psil(:, 1))
-
-          write(iunit, *) ist, jst, kst, lst, me
-        end do
-      end do
-    end do
-  end do
- 
-  SAFE_DEALLOCATE_A(nn)
-  SAFE_DEALLOCATE_A(vv)
-  SAFE_DEALLOCATE_A(psii)
-  SAFE_DEALLOCATE_A(psij)
-  SAFE_DEALLOCATE_A(psik)
-  SAFE_DEALLOCATE_A(psil)
-
-  call io_close(iunit)
-  POP_SUB(X(two_body))
-end subroutine X(two_body)
 
 !! Local Variables:
 !! mode: f90

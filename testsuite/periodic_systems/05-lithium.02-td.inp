@@ -14,7 +14,7 @@ Spacing = a/10
 %
 
 %Species
- 'Li' | species_pseudo | lmax | 2 | lloc | 0 | db_file | "PSF/Li.psf"
+ 'Li' | species_pseudo | lmax | 2 | lloc | 0  
 %
 
 BoxShape = parallelepiped
@@ -37,9 +37,10 @@ TDMaxSteps = 20
 ExperimentalFeatures = yes
 
 ParDomains = no
-ParKPoints = auto
 
 TDEnergyUpdateIter = 5
 
 FilterPotentials = filter_none
 
+Output = forces
+OutputFormat = xcrysden

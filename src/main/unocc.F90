@@ -27,6 +27,9 @@ module unocc_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lcao_oct_m
+  use lda_u_oct_m
+  use lda_u_io_oct_m
+  use loct_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -62,7 +65,6 @@ contains
     integer :: max_iter, nst_calculated, showstart
     integer :: n_filled, n_partially_filled, n_half_filled
     integer, allocatable :: lowest_missing(:, :), occ_states(:)
-    character(len=50) :: str
     character(len=10) :: dirname
     type(restart_t) :: restart_load_unocc, restart_load_gs, restart_dump
     logical :: write_density, bandstructure_mode
@@ -114,6 +116,8 @@ contains
 
       if(ierr == 0) then
         call states_load(restart_load_unocc, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+        if(hm%lda_u_level /= DFT_U_NONE) &
+          call lda_u_load(restart_load_unocc, hm%lda_u, sys%st, ierr)
         call restart_end(restart_load_unocc)
       end if
       
@@ -129,6 +133,8 @@ contains
     if(ierr_rho == 0) then
       if (read_gs) then
         call states_load(restart_load_gs, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
+        if(hm%lda_u_level /= DFT_U_NONE) &
+          call lda_u_load(restart_load_gs, hm%lda_u, sys%st, ierr)
       end if
       call states_load_rho(restart_load_gs, sys%st, sys%gr, ierr_rho)
       write_density = restart_has_map(restart_load_gs)
@@ -176,11 +182,7 @@ contains
       message(1) = "Unable to read density: Building density from wavefunctions."
       call messages_info(1)
 
-      if(.not. hm%cmplxscl%space) then
-        call density_calc(sys%st, sys%gr, sys%st%rho)
-      else
-        call density_calc(sys%st, sys%gr, sys%st%zrho%Re, sys%st%zrho%Im)
-      end if
+      call density_calc(sys%st, sys%gr, sys%st%rho)
     end if
 
     if (states_are_real(sys%st)) then
@@ -245,18 +247,14 @@ contains
     call states_fermi(sys%st, sys%gr%mesh)
 
     do iter = 1, max_iter
-      call eigensolver_run(eigens, sys%gr, sys%st, hm, 1, converged)
-
-      write(str, '(a,i5)') 'Unoccupied states iteration #', iter
-      call messages_print_stress(stdout, trim(str))
+      call eigensolver_run(eigens, sys%gr, sys%st, hm, 1, converged, sys%st%nst_conv)
 
       ! If not all gs wavefunctions were read when starting, in particular for nscf with different k-points,
       ! the occupations must be recalculated each time, though they do not affect the result of course.
       ! FIXME: This is wrong for metals where we must use the Fermi level from the original calculation!
       call states_fermi(sys%st, sys%gr%mesh)
 
-      call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = showstart, compact = .true.)
-      call messages_print_stress(stdout)
+      call write_iter_(sys%st)
 
       ! write output file
       if(mpi_grp_is_root(mpi_world)) then
@@ -310,9 +308,11 @@ contains
     end if
 
     if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) then
-      call states_write_bands(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb)
-      if(iand(sys%gr%sb%kpoints%method, KPOINTS_PATH) /= 0) &
-        call states_write_bandstructure(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb, 'bandstructure')
+      if(bitand(sys%gr%sb%kpoints%method, KPOINTS_PATH) /= 0) then
+        call states_write_bandstructure(STATIC_DIR, sys%st%nst, sys%st, sys%gr%sb, sys%geo, sys%gr%mesh, &
+              hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
+              vec_pot_var = hm%hm_base%vector_potential)
+      end if
     end if
  
 
@@ -335,7 +335,7 @@ contains
       call states_allocate_wfns(st, mesh)
 
       ! now the eigensolver stuff
-      call eigensolver_init(eigens, sys%gr, st)
+      call eigensolver_init(eigens, sys%gr, st, sys%ks%xc)
 
       if(eigens%es_type == RS_RMMDIIS) then
         message(1) = "With the RMMDIIS eigensolver for unocc, you will need to stop the calculation"
@@ -355,6 +355,42 @@ contains
 
       POP_SUB(unocc_run.end_)
     end subroutine end_
+
+        ! ---------------------------------------------------------
+    subroutine write_iter_(st)
+      type(states_t), intent(in) :: st
+
+      character(len=50) :: str
+      FLOAT :: mem
+#ifdef HAVE_MPI
+      FLOAT :: mem_tmp
+#endif
+
+      PUSH_SUB(unocc_run.write_iter_)
+
+      write(str, '(a,i5)') 'Unoccupied states iteration #', iter
+      call messages_print_stress(stdout, trim(str))
+       
+      write(message(1),'(a,i6,a,i6)') 'Converged states: ', minval(eigens%converged(1:st%d%nik))
+      call messages_info(1)
+
+      call states_write_eigenvalues(stdout, sys%st%nst, sys%st, sys%gr%sb, eigens%diff, st_start = showstart, compact = .true.)
+
+      if(conf%report_memory) then
+        mem = loct_get_memory_usage()/(CNST(1024.0)**2)
+#ifdef HAVE_MPI
+        call MPI_Allreduce(mem, mem_tmp, 1, MPI_FLOAT, MPI_SUM, mpi_world%comm, mpi_err)
+        mem = mem_tmp
+#endif
+        write(message(1),'(a,f14.2)') 'Memory usage [Mbytes]     :', mem
+        call messages_info(1)
+      end if
+
+      call messages_print_stress(stdout)
+
+      POP_SUB(unocc_run.write_iter_)
+    end subroutine write_iter_
+
 
   end subroutine unocc_run
 

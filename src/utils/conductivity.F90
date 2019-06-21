@@ -25,7 +25,6 @@
     use global_oct_m
     use grid_oct_m
     use io_oct_m
-    use math_oct_m
     use messages_oct_m
     use parser_oct_m
     use profiling_oct_m
@@ -36,23 +35,24 @@
     use states_oct_m
     use unit_oct_m
     use unit_system_oct_m
-    use varinfo_oct_m
 
     implicit none
 
     integer :: iunit, ierr, ii, jj, iter, read_iter, ntime, nvel, ivel
-    FLOAT, allocatable :: time(:), velocities(:, :), total_current(:, :), ftcurr(:, :, :), curr(:, :, :)
+    FLOAT, allocatable :: time(:), velocities(:, :)
+    FLOAT, allocatable :: total_current(:, :), ftcurr(:, :, :), curr(:, :, :)
+    FLOAT, allocatable :: heat_current(:,:), ftheatcurr(:,:,:), heatcurr(:,:,:)
     type(geometry_t)  :: geo 
     type(space_t)     :: space
     type(simul_box_t) :: sb
     type(spectrum_t) :: spectrum
     type(grid_t)     :: gr
     type(states_t)    :: st
-    type(batch_t) :: currb, ftcurrb
-    FLOAT :: ww, curtime, currtime, deltat, velcm(1:MAX_DIM), vel0(1:MAX_DIM), current(1:MAX_DIM), integral(1:2), v0, tmp(1:6)
+    type(batch_t) :: currb, ftcurrb, heatcurrb, ftheatcurrb
+    FLOAT :: ww, curtime, deltat, velcm(1:MAX_DIM), vel0(1:MAX_DIM), current(1:MAX_DIM), integral(1:2), v0
     integer :: ifreq, max_freq
-    integer :: skip, idir
-    FLOAT, parameter :: inv_ohm_meter = 4599848.1
+    integer :: skip
+    FLOAT, parameter :: inv_ohm_meter = CNST(4599848.1)
     logical :: from_forces
     
     
@@ -98,7 +98,7 @@
     if(from_forces) call messages_experimental('ConductivityFromForces')
     
     max_freq = 1 + nint(spectrum%max_energy/spectrum%energy_step)
-
+    
     if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
 
     call space_init(space)
@@ -107,7 +107,7 @@
 
     call grid_init_stage_0(gr, geo, space)
     call states_init(st, gr, geo)
-
+    
     if(from_forces) then
 
       call messages_write('Info: Reading coordinates from td.general/coordinates')
@@ -243,10 +243,11 @@
 
         iter = iter + 1 !counts number of timesteps (with time larger than zero up to SpecEndTime)
       end do
-
+      
       call io_close(iunit)
 
       SAFE_ALLOCATE(total_current(1:3, 1:ntime))
+      SAFE_ALLOCATE(heat_current(1:3, 1:ntime))
       SAFE_ALLOCATE(time(1:ntime))
       
       iunit = io_open('td.general/total_current', action='read', status='old', die=.false.)
@@ -272,12 +273,36 @@
         
       end if
 
-    end if
-
+         iunit = io_open('td.general/total_heat_current', action='read', status='old', die=.false.)
+      
+      if(iunit > 0) then
+        
+        call io_skip_header(iunit)
+        
+        do iter = 1, ntime
+          read(unit = iunit, iostat = ierr, fmt = *) read_iter, time(iter), &
+            heat_current(1, iter), heat_current(2, iter), heat_current(3, iter)
+          !write(*,*)heat_current(1, iter), heat_current(2, iter), heat_current(3, iter)
+       end do
+        
+       call io_close(iunit)
+       
+      else
+        
+        call messages_write("Cannot find the 'td.general/heat_current' file.")
+        call messages_write(" Conductivity will only be calculated from the forces")
+        call messages_warning()
+        
+        heat_current(1:3, 1:ntime) = CNST(0.0)
+        
+      end if
+   end if
+   
     deltat = time(2) - time(1)
       
-    SAFE_ALLOCATE(curr(ntime, 1:3, 1:1))
 
+    SAFE_ALLOCATE(curr(ntime, 1:3, 1:1))
+    SAFE_ALLOCATE(heatcurr(ntime, 1:3, 1:1))
     integral = CNST(0.0)
 
     if(from_forces) iunit = io_open('td.general/current_from_forces', action='write')
@@ -285,7 +310,6 @@
     do iter = 1, ntime
 
       if(from_forces) then
-
         if(iter == 1) then
           vel0 = CNST(0.0)
           ivel = 1
@@ -315,9 +339,8 @@
         curr(iter, 1:space%dim, 1) = vel0(1:space%dim)*st%qtot/sb%rcell_volume + current(1:space%dim)
        
       else
-
         curr(iter, 1:space%dim, 1) = total_current(1:space%dim, iter)/sb%rcell_volume
-
+        heatcurr(iter,1:space%dim,1)=heat_current(1:space%dim,iter)/sb%rcell_volume
       end if
         
       if(from_forces) write(iunit,*) iter, iter*deltat,  curr(iter, 1:space%dim, 1)
@@ -325,7 +348,6 @@
     end do
 
     if(from_forces) call io_close(iunit)
-    
     SAFE_ALLOCATE(ftcurr(1:max_freq, 1:3, 1:2))
 
     ftcurr = M_ONE
@@ -361,17 +383,67 @@
 
     v0 = sqrt(sum(vel0(1:space%dim)**2))
     if(.not. from_forces .or. v0 < epsilon(v0)) v0 = CNST(1.0)
-
     do ifreq = 1, max_freq
       ww = spectrum%energy_step*(ifreq - 1)
       write(unit = iunit, iostat = ierr, fmt = '(7e20.10)') units_from_atomic(units_out%energy, ww), &
-        transpose(ftcurr(ifreq, 1:3, 1:2)/v0)
+           transpose(ftcurr(ifreq, 1:3, 1:2)/v0)
+      !write(*,*)ifreq, ftcurr(ifreq, 1:3, 1:2)
     end do
     
     call io_close(iunit)
     
     SAFE_DEALLOCATE_A(ftcurr)
+    
+!!!!!!!!!!!!!!!!!!!!!
+    SAFE_ALLOCATE(ftheatcurr(1:max_freq, 1:3, 1:2))
 
+    ftheatcurr = M_ONE
+
+    call batch_init(heatcurrb, 3, 1, 1, heatcurr)
+    
+    call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, 1, ntime, M_ZERO, deltat, heatcurrb)
+
+    call batch_init(ftheatcurrb, 3, 1, 1, ftheatcurr)
+    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
+      1, ntime, M_ZERO, deltat, heatcurrb, 1, max_freq, spectrum%energy_step, ftheatcurrb)
+    call batch_end(ftheatcurrb)
+
+    call batch_init(ftheatcurrb, 3, 1, 1, ftheatcurr(:, :, 2:2))
+    call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
+      1, ntime, M_ZERO, deltat, heatcurrb, 1, max_freq, spectrum%energy_step, ftheatcurrb)
+    call batch_end(ftheatcurrb)
+    
+    call batch_end(heatcurrb)
+
+
+    !and print the spectrum
+    iunit = io_open('td.general/heat_conductivity', action='write')
+
+    
+    write(unit = iunit, iostat = ierr, fmt = '(a)') &
+      '###########################################################################################################################'
+    write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
+    write(unit = iunit, iostat = ierr, fmt = '(a,a,a)') &
+      '#  Energy [', trim(units_abbrev(units_out%energy)), '] Conductivity [a.u.] ReX ImX ReY ImY ReZ ImZ'
+    write(unit = iunit, iostat = ierr, fmt = '(a)') &
+      '###########################################################################################################################'
+
+    v0 = sqrt(sum(vel0(1:space%dim)**2))
+    if(.not. from_forces .or. v0 < epsilon(v0)) v0 = CNST(1.0)
+
+    do ifreq = 1, max_freq
+      ww = spectrum%energy_step*(ifreq - 1)
+      write(unit = iunit, iostat = ierr, fmt = '(7e20.10)') units_from_atomic(units_out%energy, ww), &
+        transpose(ftheatcurr(ifreq, 1:3, 1:2)/v0)
+      !print *, ifreq, ftheatcurr(ifreq, 1:3, 1:2)
+   end do
+    
+    call io_close(iunit)
+    
+    SAFE_DEALLOCATE_A(ftheatcurr)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    
     call simul_box_end(sb)
     call geometry_end(geo)
     call space_end(space)

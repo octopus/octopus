@@ -1,0 +1,68 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : ACBN0 functional for LiF bulk crystals - spin restricted case
+Program    : octopus
+TestGroups : short-run, periodic_systems, lda_u
+Enabled    : Yes
+
+Input      : 03-ACBN0_restricted.01-lif.inp
+
+#Copied from 02-ACBN0.test
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -24.29697036
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  -14.42250723
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -4.4945515
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   8.26566924
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;  -4.37608960
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -0.49327115
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;   17.57023241
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  -30.89557101
+match ; Hubbard energy     ; GREPFIELD(static/info, 'Hubbard     =', 3) ;   0.05487630
+
+match ; k-point 2 (x) ; GREPFIELD(static/info, '#k =   2', 7) ;  0.000000
+match ; k-point 2 (y) ; GREPFIELD(static/info, '#k =   2', 8) ;  0.500000
+match ; k-point 2 (z) ; GREPFIELD(static/info, '#k =   2', 9) ;  0.000000
+#The index are changed for spin
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   2', 3, 1) ;  -0.942710
+match ; Eigenvalue  3 ; GREPFIELD(static/info, '#k =   2', 3, 3) ;  -0.409361
+match ; Eigenvalue  4 ; GREPFIELD(static/info, '#k =   2', 3, 4) ;  -0.408759
+match ; Eigenvalue  5 ; GREPFIELD(static/info, '#k =   2', 3, 5) ;   0.283876
+
+#Multiplied by a factor of two
+match ; Occupation F down 2p2 ; LINEFIELD(static/occ_matrices, -2, 3) ; 1.92279858
+match ; Occupation F down 2p3 ; LINEFIELD(static/occ_matrices, -1, 5) ; 1.92279858
+
+match ; Kanamori U   ; LINEFIELD(static/kanamoriU, -7, 4) ; 0.857466
+match ; Kanamori Up  ; LINEFIELD(static/kanamoriU, -4, 4) ; 0.775511
+match ; Kanamori J   ; LINEFIELD(static/kanamoriU, -1, 4) ; 0.041851
+match ; U2p F   ; LINEFIELD(static/effectiveU, -7, 4) ; 0.492816
+
+Input      : 03-ACBN0_restricted.02-lif_unpacked.inp
+
+#Copied from 02-ACBN0.test
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -24.29697036
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  -14.42250723
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -4.4945515
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   8.26566924
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;  -4.37608960
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -0.49327115
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;   17.57023241
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  -30.89557101
+match ; Hubbard energy     ; GREPFIELD(static/info, 'Hubbard     =', 3) ;   0.05487630
+
+match ; k-point 2 (x) ; GREPFIELD(static/info, '#k =   2', 7) ;  0.000000
+match ; k-point 2 (y) ; GREPFIELD(static/info, '#k =   2', 8) ;  0.500000
+match ; k-point 2 (z) ; GREPFIELD(static/info, '#k =   2', 9) ;  0.000000
+#The index are changed for spin
+match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   2', 3, 1) ;  -0.942710
+match ; Eigenvalue  3 ; GREPFIELD(static/info, '#k =   2', 3, 3) ;  -0.409361
+match ; Eigenvalue  4 ; GREPFIELD(static/info, '#k =   2', 3, 4) ;  -0.408759
+match ; Eigenvalue  5 ; GREPFIELD(static/info, '#k =   2', 3, 5) ;   0.283876
+
+#Multiplied by a factor of two
+match ; Occupation F down 2p2 ; LINEFIELD(static/occ_matrices, -2, 3) ; 1.92279858
+match ; Occupation F down 2p3 ; LINEFIELD(static/occ_matrices, -1, 5) ; 1.92279858
+
+match ; U2p F   ; LINEFIELD(static/effectiveU, -7, 4) ; 0.492816
+

@@ -25,3 +25,5 @@ ExperimentalFeatures = yes
 
 FilterPotentials = filter_none
 
+# Parallelization in spin/k-points is currently not available for OEP
+ParKpoints = no

@@ -24,7 +24,6 @@ program centergeom
   use global_oct_m
   use io_oct_m
   use messages_oct_m
-  use parser_oct_m
   use simul_box_oct_m
   use space_oct_m
   use unit_oct_m

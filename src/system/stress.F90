@@ -19,53 +19,38 @@
 #include "global.h"
 
 module stress_oct_m
-  use batch_oct_m
-  use batch_ops_oct_m
-  use born_charges_oct_m
   use boundaries_oct_m
   use comm_oct_m
+  use cube_oct_m
+  use cube_function_oct_m
   use density_oct_m
   use derivatives_oct_m
+  use double_grid_oct_m
   use epot_oct_m
+  use fft_oct_m
+  use fourier_space_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
-  use hamiltonian_base_oct_m
-  use index_oct_m
-  use io_oct_m
   use kpoints_oct_m
-  use lalg_basic_oct_m
-  use lasers_oct_m
-  use linear_response_oct_m
   use loct_math_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use periodic_copy_oct_m
+  use poisson_fft_oct_m
+  use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use species_pot_oct_m
   use states_oct_m
   use states_dim_oct_m
-  use symm_op_oct_m
-  use symmetrizer_oct_m
-  use types_oct_m
-  use v_ks_oct_m
-  use poisson_oct_m
-  use cube_oct_m
-  use cube_function_oct_m
-  use poisson_fft_oct_m
-  use fft_oct_m
-  use fourier_space_oct_m
-  use ssys_states_oct_m
-  use double_grid_oct_m
   use submesh_oct_m
-  use periodic_copy_oct_m
-  use ps_oct_m  
+  use v_ks_oct_m
+
   implicit none
 
   private
@@ -98,13 +83,14 @@ contains
     type(v_ks_t),              intent(inout) :: ks !< Kohn-Sham
     type(profile_t), save :: stress_prof
     FLOAT :: stress(3,3) ! stress tensor in Cartecian coordinate
-    FLOAT :: stress_KE(3,3),stress_Hartree(3,3),stress_xc(3,3) ! temporal
-    FLOAT :: stress_ps(3,3),stress_Ewald(3,3)
+    FLOAT :: stress_KE(3,3), stress_Hartree(3,3), stress_xc(3,3) ! temporal
+    FLOAT :: stress_ps(3,3), stress_Ewald(3,3)
 
 
     call profiling_in(stress_prof, "STRESS")
     PUSH_SUB(stress_calculate)
 
+    SAFE_ALLOCATE(rho(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
 
     if(gr%der%mesh%sb%kpoints%use_symmetries) then
       write(message(1), '(a)') "Symmetry operation is not implemented in stress calculation."
@@ -130,17 +116,22 @@ contains
     ! Stress from pseudopotentials
     call stress_from_pseudo(gr, hm, st, geo, ks, stress, stress_ps)
     
-! Stress from Ewald summation
+    ! Stress from Ewald summation
     call stress_from_Ewald_sum(gr, geo, hm, stress, stress_Ewald)
     
 
     ! Stress from kinetic energy of ion
     ! Stress from ion-field interaction
 
-! Sign changed to fit conventional definition    
+    ! Sign changed to fit conventional definition    
     stress = - stress
     
     gr%sb%stress_tensor(1:3,1:3) = stress(1:3,1:3)
+
+    SAFE_DEALLOCATE_A(FourPi_G2)
+    SAFE_DEALLOCATE_A(Gvec)
+    SAFE_DEALLOCATE_A(Gvec_G)
+    SAFE_DEALLOCATE_P(rho)
     
     POP_SUB(stress_calculate)
     call profiling_out(stress_prof)
@@ -153,9 +144,6 @@ contains
       PUSH_SUB(stress.calculate_density)
 
       ! get density taking into account non-linear core corrections
-      SAFE_ALLOCATE(rho(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
-      !> Calculate the subsystems total density.
-      if(associated(st%subsys_st)) call ssys_states_acc(st%subsys_st)
       call states_total_density(st, ks%gr%fine%mesh, rho)
 
       nullify(rho_total)
@@ -179,7 +167,7 @@ contains
          total_density_alloc = .false.
          rho_total => rho(:, 1)
       end if
-      
+
       POP_SUB(stress.calculate_density)
     end subroutine calculate_density
     ! -------------------------------------------------------  
@@ -190,8 +178,7 @@ contains
       type(cube_t),    pointer             :: cube
       type(fourier_space_op_t), pointer    :: coulb
       type(cube_function_t) :: cf
-      type(profile_t), save :: prof
-      integer :: ii, jj, kk, iit, jjt, kkt, idir, jdir
+      integer :: ii, jj, kk, iit, jjt, kkt
       FLOAT :: gx, xx(3)
       CMPLX :: zphase
       
@@ -259,7 +246,10 @@ contains
          call messages_fatal(1)
       case default
          ASSERT(.false.)
-      end select
+       end select
+
+       call cube_function_free_fs(cube, cf)
+       call dcube_function_free_rs(cube, cf)
     
     end subroutine density_rs2fs
 
@@ -268,9 +258,7 @@ contains
       type(poisson_t), target,   intent(in)    :: this
       type(cube_t),    pointer             :: cube
       type(fourier_space_op_t), pointer    :: coulb
-      type(cube_function_t) :: cf      
-      type(profile_t), save :: prof
-      integer :: ii, jj, kk, iit, jjt, kkt, db(3)
+      integer :: db(3)
       integer :: ix,iy,iz, ixx(3)
       FLOAT :: gg(3), modg2, temp(3)
 
@@ -342,12 +330,9 @@ contains
     FLOAT,                         intent(inout) :: stress(:, :)
     FLOAT,                         intent(out) :: stress_KE(3, 3) ! temporal
     FLOAT :: stress_l(3, 3)
-    integer :: ik, ist, idir, jdir, idim, iatom, ip, ib, ii, ierr, ispin
-    CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), hpsi(:, :), rhpsi(:, :), rpsi(:, :), hrpsi(:, :)
+    integer :: ik, ist, idir, jdir, idim, ispin
+    CMPLX, allocatable :: gpsi(:, :, :), psi(:, :)
     type(profile_t), save :: prof
-    type(symmetrizer_t) :: symmetrizer
-    type(batch_t) :: hpsib, rhpsib, rpsib, hrpsib, epsib
-    type(batch_t), allocatable :: commpsib(:)
     logical, parameter :: hamiltonian_current = .false.
 
     call profiling_in(prof, "STRESS_FROM_KEE")    
@@ -370,14 +355,7 @@ contains
           end do
           
           if(associated(hm%hm_base%phase)) then 
-             ! Apply the phase that contains both the k-point and vector-potential terms.
-             do idim = 1, st%d%dim
-                !$omp parallel do
-                do ip = 1, der%mesh%np_part
-                   psi(ip, idim) = hm%hm_base%phase(ip, ik)*psi(ip, idim)
-                end do
-                !$omp end parallel do
-             end do
+            call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,.false.)  
           end if
           
           do idim = 1, st%d%dim
@@ -522,15 +500,13 @@ contains
     FLOAT :: stress_l(3, 3)
     FLOAT :: stress_t_SR(3, 3), stress_t_LR(3, 3), stress_t_NL(3, 3)
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), rppsi(:, :, :)
-    FLOAT,  allocatable :: grad_rho(:, :)
-    FLOAT :: energy_ps_SR,energy_ps_LR,energy_ps_NL, energy_ps
+    FLOAT :: energy_ps_SR
     FLOAT,  allocatable :: vloc(:),rvloc(:,:)
     FLOAT,  allocatable :: rho_t(:),grho_t(:,:)
-    FLOAT :: sigma_erf, alpha, gx, g2, fact, zi, charge
+    FLOAT :: sigma_erf, alpha, gx, g2
     CMPLX :: zphase, zfact
-    integer :: ik, ispin, ist, idim, idir, jdir, ip, iatom
+    integer :: ik, ispin, ist, idim, idir, jdir, iatom
     integer :: ii,jj,kk
-    type(ps_t) :: spec_ps
     type(profile_t), save :: prof
 
     call profiling_in(prof, "STRESS_FROM_PSEUDO")    
@@ -564,14 +540,7 @@ contains
           end do
 
           if(associated(hm%hm_base%phase)) then 
-             ! Apply the phase that contains both the k-point and vector-potential terms.
-             do idim = 1, st%d%dim
-                !$omp parallel do
-                do ip = 1, der%mesh%np_part
-                   psi(ip, idim) = hm%hm_base%phase(ip, ik)*psi(ip, idim)
-                end do
-                !$omp end parallel do
-             end do
+            call states_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
           end if
           
           do idim = 1, st%d%dim
@@ -726,7 +695,6 @@ contains
     FLOAT, allocatable :: vl(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
-    logical :: cmplxscl
     
     PUSH_SUB(epot_local_pseudopotential_sr)
     call profiling_in(prof, "EPOT_LOCAL_PSEUDOPOTENTIAL_SR")
@@ -768,7 +736,7 @@ contains
     FLOAT,             intent(inout) :: gg(:)
     FLOAT,             intent(out)   :: modg2
 
-    integer :: idir
+!    integer :: idir
 
     ! no PUSH_SUB, called too frequently
 
@@ -791,10 +759,11 @@ contains
     type(hamiltonian_t),  intent(inout)    :: hm
     FLOAT,                         intent(inout) :: stress(:, :)
     FLOAT,                         intent(out) :: stress_Ewald(3, 3) ! temporal
-    FLOAT :: stress_l(3, 3), stress_RS(3, 3), stress_FS(3, 3), stress_PS(3, 3)
+
+    FLOAT :: stress_l(3, 3)
 
     type(simul_box_t), pointer :: sb
-    FLOAT :: rr, xi(1:MAX_DIM), zi, zj, ereal, efourier, eself, erfc, rcut, epseudo
+    FLOAT :: rr, xi(1:MAX_DIM), zi, zj, erfc, rcut
     integer :: iatom, jatom, icopy
     type(periodic_copy_t) :: pc
     integer :: ix, iy, iz, isph, ss, idim, idir, jdir
@@ -804,7 +773,6 @@ contains
     CMPLX   :: sumatoms, aa
     FLOAT :: sigma_erf
     type(profile_t), save :: prof
-    FLOAT :: energy_LR, energy_SR, energy_ZERO, energy_TOT, energy_ps
 
     call profiling_in(prof, "STRESS_FROM_EWALD")    
     PUSH_SUB(stress_from_Ewald_sum)

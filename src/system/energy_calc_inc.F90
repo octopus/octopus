@@ -25,38 +25,23 @@ subroutine X(calculate_eigenvalues)(hm, der, st)
   type(states_t),      intent(inout) :: st
 
   R_TYPE, allocatable :: eigen(:, :)
-  logical :: cmplxscl
 
   PUSH_SUB(X(calculate_eigenvalues))
   
-  cmplxscl = hm%cmplxscl%space
-
-  if(hm%theory_level == CLASSICAL) then
-    st%eigenval = M_ZERO
-    POP_SUB(X(calculate_eigenvalues))
-    return
-  end if
-
   if(debug%info) then
     write(message(1), '(a)') 'Debug: Calculating eigenvalues.'
     call messages_info(1)
   end if
 
   st%eigenval = M_ZERO
-  if(cmplxscl) st%zeigenval%Im = M_ZERO
 
   SAFE_ALLOCATE(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
   call X(calculate_expectation_values)(hm, der, st, eigen)
 
   st%eigenval(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end) = &
     real(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), REAL_PRECISION)
-#ifdef R_TCOMPLEX    
-  if(cmplxscl) st%zeigenval%Im(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end) = &
-    aimag(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-#endif
 
   call comm_allreduce(st%st_kpt_mpi_grp%comm, st%eigenval)
-  if(cmplxscl) call comm_allreduce(st%st_kpt_mpi_grp%comm, st%zeigenval%Im)
 
   SAFE_DEALLOCATE_A(eigen)
 
@@ -73,13 +58,11 @@ subroutine X(calculate_expectation_values)(hm, der, st, eigen, terms)
   integer :: ik, minst, maxst, ib
   type(batch_t) :: hpsib
   type(profile_t), save :: prof
-  logical :: cmplxscl
+  logical :: copy_at_end
 
   PUSH_SUB(X(calculate_expectation_values))
   
   call profiling_in(prof, "EIGENVALUE_CALC")
-
-  cmplxscl = hm%cmplxscl%space
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ib = st%group%block_start, st%group%block_end
@@ -87,26 +70,23 @@ subroutine X(calculate_expectation_values)(hm, der, st, eigen, terms)
       minst = states_block_min(st, ib)
       maxst = states_block_max(st, ib)
 
-      call batch_copy(st%group%psib(ib, ik), hpsib)
+      call batch_copy(st%group%psib(ib, ik), hpsib, fill_zeros = .false.)
 
+      copy_at_end = .false.
       if(hamiltonian_apply_packed(hm, der%mesh)) then
+        ! unpack at end only if the status on entry is unpacked
+        copy_at_end = .not. batch_is_packed(st%group%psib(ib, ik))
         call batch_pack(st%group%psib(ib, ik))
-        if(st%have_left_states) call batch_pack(st%psibL(ib, ik))
         call batch_pack(hpsib, copy = .false.)
       end if
 
       call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik, terms = terms)
-      if(st%have_left_states) then
-        call X(mesh_batch_dotp_vector)(der%mesh, st%psibL(ib, ik), hpsib, eigen(minst:maxst, ik), cproduct = cmplxscl)
-      else
-        call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst, ik), cproduct = cmplxscl)        
-      end if
+      call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst, ik))        
       if(hamiltonian_apply_packed(hm, der%mesh)) then
         call batch_unpack(st%group%psib(ib, ik), copy = .false.)
-        if(st%have_left_states) call batch_unpack(st%psibL(ib, ik), copy = .false.)
       end if
 
-      call batch_end(hpsib, copy = .false.)
+      call batch_end(hpsib, copy = copy_at_end)
 
     end do
   end do
@@ -116,7 +96,7 @@ subroutine X(calculate_expectation_values)(hm, der, st, eigen, terms)
 end subroutine X(calculate_expectation_values)
 
 ! ---------------------------------------------------------
-R_TYPE function X(energy_calc_electronic)(hm, der, st, terms) result(energy)
+FLOAT function X(energy_calc_electronic)(hm, der, st, terms) result(energy)
   type(hamiltonian_t), intent(in)    :: hm
   type(derivatives_t), intent(inout) :: der
   type(states_t),      intent(inout) :: st
@@ -130,16 +110,7 @@ R_TYPE function X(energy_calc_electronic)(hm, der, st, terms) result(energy)
 
   call X(calculate_expectation_values)(hm, der, st, tt, terms = terms)
 
-  if(hm%cmplxscl%space) then
-#ifdef R_TCOMPLEX
-    energy = zstates_eigenvalues_sum(st, tt)
-#else
-    message(1) = "Internal error in energy_calc_electronic, real states but complex scaling."
-    call messages_fatal(1)
-#endif
-  else
-    energy = states_eigenvalues_sum(st, real(tt, REAL_PRECISION))
-  end if
+  energy = states_eigenvalues_sum(st, real(tt, REAL_PRECISION))
 
   SAFE_DEALLOCATE_A(tt)
   POP_SUB(X(energy_calc_electronic))

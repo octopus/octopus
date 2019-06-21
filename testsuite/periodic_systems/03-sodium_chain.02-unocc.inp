@@ -10,7 +10,7 @@ CalculationMode = unocc
 FromScratch = yes
 
 %Species
-  "Na" | species_pseudo | lmax | 2 | lloc | 2 | db_file | "PSF/Na.psf"
+  "Na" | species_pseudo | lmax | 2 | lloc | 2  
 %
 
 %Coordinates

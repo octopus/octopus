@@ -226,34 +226,51 @@ end subroutine X(derivatives_grad)
 ! ---------------------------------------------------------
 subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
   type(derivatives_t), intent(in)    :: der
-  R_TYPE,              intent(inout) :: ff(:,:)   !< ff(der%mesh%np_part, der%mesh%sb%dim)
+  R_TYPE,  target,     intent(inout) :: ff(:,:)   !< ff(der%mesh%np_part, der%mesh%sb%dim)
   R_TYPE,              intent(out)   :: op_ff(:)  !< op_ff(der%mesh%np)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: set_bc
 
   R_TYPE, allocatable :: tmp(:)
-  integer             :: idir, ii
+  R_TYPE, pointer     :: ff_uvw(:,:)
+  integer             :: idir, ii, ip
 
   PUSH_SUB(X(derivatives_div))
   call profiling_in(divergence_prof, "DIVERGENCE")
 
   ASSERT(ubound(ff, DIM=2) >= der%dim)
 
-  call X(derivatives_perform) (der%grad(1), der, ff(:, 1), op_ff, ghost_update, set_bc)
+  ! div_xyw (F)= div_uvw (BF), where B
+  if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%nonorthogonal ) then
+    SAFE_ALLOCATE(ff_uvw(1:der%mesh%np_part, 1:der%dim))
+    forall (ip = 1:der%mesh%np_part)
+      ff_uvw(ip, 1:der%dim) = matmul(transpose(der%mesh%sb%klattice_primitive(1:der%dim, 1:der%dim)),ff(ip, 1:der%dim))
+    end forall
+  else
+    ff_uvw => ff
+  end if
+
+  call X(derivatives_perform) (der%grad(1), der, ff_uvw(:, 1), op_ff, ghost_update, set_bc)
 
   SAFE_ALLOCATE(tmp(1:der%mesh%np))
 
   do idir = 2, der%dim
-    call X(derivatives_perform) (der%grad(idir), der, ff(:, idir), tmp, ghost_update, set_bc)
+    call X(derivatives_perform) (der%grad(idir), der, ff_uvw(:, idir), tmp, ghost_update, set_bc)
 
     forall(ii = 1:der%mesh%np) op_ff(ii) = op_ff(ii) + tmp(ii)
   end do
 
   SAFE_DEALLOCATE_A(tmp)
+  if(simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%nonorthogonal ) then
+    SAFE_DEALLOCATE_P(ff_uvw)
+  else
+    nullify(ff_uvw)
+  end if
 
   call profiling_out(divergence_prof)
   POP_SUB(X(derivatives_div))
 end subroutine X(derivatives_div)
+
 
 
 ! ---------------------------------------------------------
@@ -316,9 +333,11 @@ end subroutine X(derivatives_curl)
 
 ! ----------------------------------------------------------
 
-subroutine X(derivatives_test)(this, test_param)
-  type(derivatives_t),     intent(in)    :: this
-  type(test_parameters_t), intent(in)    :: test_param
+subroutine X(derivatives_test)(this, repetitions, min_blocksize, max_blocksize)
+  type(derivatives_t), intent(in) :: this
+  integer,             intent(in) :: repetitions
+  integer,             intent(in) :: min_blocksize
+  integer,             intent(in) :: max_blocksize
   
   R_TYPE, allocatable :: ff(:), opff(:, :)
   R_TYPE :: aa, bb, cc
@@ -363,7 +382,7 @@ subroutine X(derivatives_test)(this, test_param)
   cc = cc - M_ZI*R_TOTYPE(50.0)
 #endif
 
-  blocksize = test_param%min_blocksize
+  blocksize = min_blocksize
     
   forall(ip = 1:this%mesh%np_part) ff(ip) = bb*exp(-aa*sum(this%mesh%x(ip, 1:this%mesh%sb%dim)**2)) + cc
 
@@ -384,18 +403,17 @@ subroutine X(derivatives_test)(this, test_param)
       call batch_pack(opffb, copy = .false.)
     end if
 
-    if(test_param%repetitions > 1) then
+    if(repetitions > 1) then
       call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false., factor = CNST(0.5))
     end if
 
     stime = loct_clock()
-    do itime = 1, test_param%repetitions
+    do itime = 1, repetitions
       call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false., factor = CNST(0.5))
     end do
-    etime = (loct_clock() - stime)/dble(test_param%repetitions)
+    etime = (loct_clock() - stime)/dble(repetitions)
 
     if(packstates) then
-      call batch_unpack(ffb, copy = .false.)
       call batch_unpack(opffb)
     end if
 
@@ -422,7 +440,7 @@ subroutine X(derivatives_test)(this, test_param)
     call batch_end(opffb)
 
     blocksize = 2*blocksize
-    if(blocksize > test_param%max_blocksize) exit
+    if(blocksize > max_blocksize) exit
 
   end do
 

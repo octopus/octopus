@@ -1,0 +1,34 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Fullerene, unpacked
+Program    : octopus
+TestGroups : long-run, finite_systems_3d
+Enabled    : Yes
+
+Processors: 4
+Input: 14-fullerene_unpacked.01-gs.inp
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF \*not\* converged') ; 1
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;    -344.48255016
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;    3706.61771965
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;     -87.44954379
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;    3996.14665413
+match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -138.18268706
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;     -92.39658963
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;     -13.29016932
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;     227.63926061
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;   -8143.12279627
+
+match ; Eigenvalue  10     ; GREPFIELD(static/info, ' 10   --', 3) ; -0.740741
+match ; Eigenvalue  20     ; GREPFIELD(static/info, ' 20   --', 3) ; -0.654994
+match ; Eigenvalue  30     ; GREPFIELD(static/info, ' 30   --', 3) ; -0.587552
+match ; Eigenvalue  40     ; GREPFIELD(static/info, ' 40   --', 3) ; -0.477951
+match ; Eigenvalue  50     ; GREPFIELD(static/info, ' 50   --', 3) ; -0.379479
+match ; Eigenvalue  60     ; GREPFIELD(static/info, ' 60   --', 3) ; -0.308527
+match ; Eigenvalue  70     ; GREPFIELD(static/info, ' 70   --', 3) ; -0.251311
+match ; Eigenvalue  80     ; GREPFIELD(static/info, ' 80   --', 3) ; -0.225756
+match ; Eigenvalue  90     ; GREPFIELD(static/info, ' 90   --', 3) ; -0.162714
+match ; Eigenvalue 100     ; GREPFIELD(static/info, '100   --', 3) ; -0.141117
+match ; Eigenvalue 110     ; GREPFIELD(static/info, '110   --', 3) ; -0.059069
+match ; Eigenvalue 120     ; GREPFIELD(static/info, '120   --', 3) ; -0.008812
+match ; Eigenvalue 130     ; GREPFIELD(static/info, '130   --', 3) ;  0.133556
+match ; Eigenvalue 140     ; GREPFIELD(static/info, '140   --', 3) ;  0.194807

@@ -1,0 +1,101 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Helium UPF
+Program    : octopus
+TestGroups : short-run, pseudopotentials
+Enabled    : Yes
+
+
+ExtraFile: 10-helium_upf.pbe-mt.UPF
+Input: 10-helium_upf.01-gs_nofilter.inp
+Precision: 0.00011
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;     -2.87062228
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;      0.00000000
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;     -1.15699050
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;      2.00325768
+match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ;  -1.31978407
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;     -0.98416530
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;     -0.04599286
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;      2.56933532
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;     -6.41306502
+match ; Eigenvalue 1       ; GREPFIELD(static/info, '  1   --', 3) ;          -0.578495
+match ; z                  ; GREPFIELD(debug/geometry/He/pseudo-info, 'z ', 3)   ; 2.000
+match ; z valence          ; GREPFIELD(debug/geometry/He/pseudo-info, 'zval', 3) ; 2.000
+match ; l max              ; GREPFIELD(debug/geometry/He/pseudo-info, 'lmax', 3) ; 0
+match ; l loc              ; GREPFIELD(debug/geometry/He/pseudo-info, 'lloc', 3) ; 0
+match ; kbc                ; GREPFIELD(debug/geometry/He/pseudo-info, 'kbc', 3)  ; 0
+match ; rcmax              ; GREPFIELD(debug/geometry/He/pseudo-info, 'rcmax', 3)  ; 0.0
+match ; potential r       2; LINEFIELD(debug/geometry/He/local, 2, 1) ;    3.12500000E-03
+match ; potential value   2; LINEFIELD(debug/geometry/He/local, 2, 2) ;   -5.41894259E+00
+match ; potential r      50; LINEFIELD(debug/geometry/He/local, 50, 1) ;   1.00807620E-02
+match ; potential value  50; LINEFIELD(debug/geometry/He/local, 50, 2) ;  -5.41877588E+00
+match ; potential r     100; LINEFIELD(debug/geometry/He/local, 100, 1) ;  3.41452400E-02
+match ; potential value 100; LINEFIELD(debug/geometry/He/local, 100, 2) ; -5.41643119E+00
+match ; potential r     200; LINEFIELD(debug/geometry/He/local, 200, 1) ;  3.91745296E-01
+match ; potential value 200; LINEFIELD(debug/geometry/He/local, 200, 2) ; -4.10120902E+00
+match ; potential r     300; LINEFIELD(debug/geometry/He/local, 300, 1) ;  4.49445888E+00
+match ; potential value 300; LINEFIELD(debug/geometry/He/local, 300, 2) ; -4.76785278E-13 
+match ; potential r     416; LINEFIELD(debug/geometry/He/local, 416, 1) ;  7.61901469E+01
+match ; potential value 416; LINEFIELD(debug/geometry/He/local, 416, 2) ;  1.12132525E-14
+
+Input: 10-helium_upf.02-gs_filter_ts.inp
+Precision: 0.00011
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -2.89583136
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  0.00000000
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -1.16286262
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  2.02539756
+match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -1.33449764
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.99685739
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.04521143
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  2.65207533
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -6.53123566
+match ; Eigenvalue 1       ; GREPFIELD(static/info, '  1   --', 3) ;      -0.581431
+match ; z                  ; GREPFIELD(debug/geometry/He/pseudo-info, 'z ', 3)   ; 2.000
+match ; z valence          ; GREPFIELD(debug/geometry/He/pseudo-info, 'zval', 3) ; 2.000
+match ; l max              ; GREPFIELD(debug/geometry/He/pseudo-info, 'lmax', 3) ; 0
+match ; l loc              ; GREPFIELD(debug/geometry/He/pseudo-info, 'lloc', 3) ; 0
+match ; kbc                ; GREPFIELD(debug/geometry/He/pseudo-info, 'kbc', 3)  ; 0
+match ; rcmax              ; GREPFIELD(debug/geometry/He/pseudo-info, 'rcmax', 3)  ; 0.0
+match ; potential r       2; LINEFIELD(debug/geometry/He/local, 2, 1) ;    3.12500000E-03
+match ; potential value   2; LINEFIELD(debug/geometry/He/local, 2, 2) ;   -7.18091216E+00
+match ; potential r      50; LINEFIELD(debug/geometry/He/local, 50, 1) ;   1.00807620E-02
+match ; potential value  50; LINEFIELD(debug/geometry/He/local, 50, 2) ;  -7.17877574E+00
+match ; potential r     100; LINEFIELD(debug/geometry/He/local, 100, 1) ;  3.41452400E-02
+match ; potential value 100; LINEFIELD(debug/geometry/He/local, 100, 2) ; -7.14946626E+00
+match ; potential r     200; LINEFIELD(debug/geometry/He/local, 200, 1) ;  3.91745296E-01
+match ; potential value 200; LINEFIELD(debug/geometry/He/local, 200, 2) ; -3.83064620E+00
+match ; potential r     300; LINEFIELD(debug/geometry/He/local, 300, 1) ;  4.49445888E+00
+match ; potential value 300; LINEFIELD(debug/geometry/He/local, 300, 2) ;  0.00000000E+00
+match ; potential r     416; LINEFIELD(debug/geometry/He/local, 416, 1) ;  7.61901469E+01
+match ; potential value 416; LINEFIELD(debug/geometry/He/local, 416, 2) ; -0.00000000E+00
+
+Input: 10-helium_upf.03-gs_filter_bsb.inp
+Precision: 0.00011
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;    -2.84285262
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;     0.00000000
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;    -1.14509434
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;     1.98457607
+match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -1.30698559
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;    -0.97455803
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;    -0.04560977
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;     2.51291308
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;    -6.32017808
+match ; Eigenvalue 1       ; GREPFIELD(static/info, '  1   --', 3) ;         -0.572547
+match ; z                  ; GREPFIELD(debug/geometry/He/pseudo-info, 'z ', 3)   ; 2.000
+match ; z valence          ; GREPFIELD(debug/geometry/He/pseudo-info, 'zval', 3) ; 2.000
+match ; l max              ; GREPFIELD(debug/geometry/He/pseudo-info, 'lmax', 3) ; 0
+match ; l loc              ; GREPFIELD(debug/geometry/He/pseudo-info, 'lloc', 3) ; 0
+match ; kbc                ; GREPFIELD(debug/geometry/He/pseudo-info, 'kbc', 3)  ; 0
+match ; rcmax              ; GREPFIELD(debug/geometry/He/pseudo-info, 'rcmax', 3)  ; 0.0
+match ; potential r       2; LINEFIELD(debug/geometry/He/local, 2, 1) ;    3.12500000E-03
+match ; potential value   2; LINEFIELD(debug/geometry/He/local, 2, 2) ;   -6.23608681E+00
+match ; potential r      50; LINEFIELD(debug/geometry/He/local, 50, 1) ;   1.00807620E-02
+match ; potential value  50; LINEFIELD(debug/geometry/He/local, 50, 2) ;  -6.23423637E+00
+match ; potential r     100; LINEFIELD(debug/geometry/He/local, 100, 1) ;  3.41452400E-02
+match ; potential value 100; LINEFIELD(debug/geometry/He/local, 100, 2) ; -6.21282958E+00
+match ; potential r     200; LINEFIELD(debug/geometry/He/local, 200, 1) ;  3.91745296E-01
+match ; potential value 200; LINEFIELD(debug/geometry/He/local, 200, 2) ; -3.71077541E+00
+match ; potential r     300; LINEFIELD(debug/geometry/He/local, 300, 1) ;  4.49445888E+00
+match ; potential value 300; LINEFIELD(debug/geometry/He/local, 300, 2) ; -5.96665570E-04

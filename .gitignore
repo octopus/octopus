@@ -1,80 +1,45 @@
+*~
+Makefile.in
+Makefile
+*.o
+*.a
+*.mod
+*.bak
+.deps
+*.log
+*_oct.f90
+*.optrpt
+config.status
+config.guess
+config.sub
+config.h
+stamp-h1
+aclocal.m4
+autom4te.cache
+autogen*
+configure
+config.h.in
+build-aux
+build-stamp
+semantic.cache
+*.gcno
+*.gcda
+
+# new dependencies files
+*.dirstamp
+src/.fortran_dependencies/
 
 # /
-/*.log
-/config.status
-/config.guess
-/config.sub
-/config.h
-/stamp-h1
-/aclocal.m4
-/autom4te.cache
-/autogen*
-/Makefile
-/.deps
-/*.bak
-/Makefile.in
-/configure
-/config.h.in
-/build-aux
 /bin
 /lib
 /man
 /include
+/blds
 
 # /build/
-/build/*.log
-/build/config.status
-/build/config.guess
-/build/config.sub
-/build/config.h
-/build/stamp-h1
-/build/aclocal.m4
-/build/autom4te.cache
-/build/autogen*
-/build/Makefile
-/build/.deps
-/build/*.bak
-/build/Makefile.in
-/build/configure
-/build/config.h.in
-/build/build-aux
 /build/octopus.spec
 
-# /debian/
-/debian/*.log
-/debian/config.status
-/debian/config.guess
-/debian/config.sub
-/debian/config.h
-/debian/stamp-h1
-/debian/aclocal.m4
-/debian/autom4te.cache
-/debian/autogen*
-/debian/Makefile
-/debian/.deps
-/debian/*.bak
-/debian/Makefile.in
-/debian/configure
-/debian/config.h.in
-/debian/build-aux
-
 # /doc/
-/doc/*.log
-/doc/config.status
-/doc/config.guess
-/doc/config.sub
-/doc/config.h
-/doc/stamp-h1
-/doc/aclocal.m4
-/doc/autom4te.cache
-/doc/autogen*
-/doc/Makefile
-/doc/.deps
-/doc/*.bak
-/doc/Makefile.in
-/doc/configure
-/doc/config.h.in
-/doc/build-aux
 /doc/*.1
 /doc/variables.texi
 
@@ -84,27 +49,9 @@
 /doc/doxygen/doxygen*tmp
 
 # /doc/html/
-/doc/html/Makefile
-/doc/html/Makefile.in
 /doc/html/varsRightFrame.html
 
 # /doc/html/icons/
-/doc/html/icons/*.log
-/doc/html/icons/config.status
-/doc/html/icons/config.guess
-/doc/html/icons/config.sub
-/doc/html/icons/config.h
-/doc/html/icons/stamp-h1
-/doc/html/icons/aclocal.m4
-/doc/html/icons/autom4te.cache
-/doc/html/icons/autogen*
-/doc/html/icons/Makefile
-/doc/html/icons/.deps
-/doc/html/icons/*.bak
-/doc/html/icons/Makefile.in
-/doc/html/icons/configure
-/doc/html/icons/config.h.in
-/doc/html/icons/build-aux
 /doc/html/icons/texinfo.tex
 /doc/html/icons/*.1
 /doc/html/icons/variables.texi
@@ -112,22 +59,6 @@
 /doc/html/icons/vars
 
 # /doc/html/js/
-/doc/html/js/*.log
-/doc/html/js/config.status
-/doc/html/js/config.guess
-/doc/html/js/config.sub
-/doc/html/js/config.h
-/doc/html/js/stamp-h1
-/doc/html/js/aclocal.m4
-/doc/html/js/autom4te.cache
-/doc/html/js/autogen*
-/doc/html/js/Makefile
-/doc/html/js/.deps
-/doc/html/js/*.bak
-/doc/html/js/Makefile.in
-/doc/html/js/configure
-/doc/html/js/config.h.in
-/doc/html/js/build-aux
 /doc/html/js/texinfo.tex
 /doc/html/js/*.1
 /doc/html/js/variables.texi
@@ -135,204 +66,39 @@
 /doc/html/js/vars
 
 # /doc/html/vars/
-/doc/html/vars/Makefile
-/doc/html/vars/Makefile.in
 /doc/html/vars/*.html
 /doc/html/vars/alpha.js
 /doc/html/vars/sections.js
 
-# /external_libs/
-/external_libs/*.log
-/external_libs/config.status
-/external_libs/config.guess
-/external_libs/config.sub
-/external_libs/config.h
-/external_libs/stamp-h1
-/external_libs/aclocal.m4
-/external_libs/autom4te.cache
-/external_libs/autogen*
-/external_libs/Makefile
-/external_libs/.deps
-/external_libs/*.bak
-/external_libs/Makefile.in
-/external_libs/configure
-/external_libs/config.h.in
-/external_libs/build-aux
-
-# /external_libs/bpdn/
-/external_libs/bpdn/Makefile.in
-/external_libs/bpdn/.deps
-/external_libs/bpdn/Makefile
-/external_libs/bpdn/*.mod
-/external_libs/bpdn/*.a
-/external_libs/bpdn/*.o
-
-# /external_libs/dftd3/
-/external_libs/dftd3/Makefile.in
-
 # /external_libs/fortrancl/
-/external_libs/fortrancl/*.mod
-/external_libs/fortrancl/Makefile
-/external_libs/fortrancl/Makefile.in
-/external_libs/fortrancl/.deps
 /external_libs/fortrancl/config_F90.h
-/external_libs/fortrancl/*.a
-
-# /external_libs/isf/
-/external_libs/isf/Makefile
-/external_libs/isf/Makefile.in
 
 # /external_libs/isf/flib/
-/external_libs/isf/flib/Makefile
-/external_libs/isf/flib/Makefile.in
-/external_libs/isf/flib/*.o
-/external_libs/isf/flib/*.mod
-/external_libs/isf/flib/*.a
-/external_libs/isf/flib/.deps
 /external_libs/isf/flib/mpif.h
 
-# /external_libs/isf/src/
-/external_libs/isf/src/Makefile
-/external_libs/isf/src/Makefile.in
-/external_libs/isf/src/*.mod
-/external_libs/isf/src/*.a
-/external_libs/isf/src/*.o
 
 # /external_libs/isf/wrappers/
-/external_libs/isf/wrappers/Makefile
-/external_libs/isf/wrappers/Makefile.in
-/external_libs/isf/wrappers/*.mod
-/external_libs/isf/wrappers/*.o
-/external_libs/isf/wrappers/*.a
 /external_libs/isf/wrappers/mpif.h
 
-# /external_libs/metis-5.1/
-/external_libs/metis-5.1/.deps
-/external_libs/metis-5.1/Makefile
-/external_libs/metis-5.1/Makefile.in
-
-# /external_libs/metis-5.1/GKlib/
-/external_libs/metis-5.1/GKlib/.deps
-/external_libs/metis-5.1/GKlib/Makefile
-/external_libs/metis-5.1/GKlib/Makefile.in
-/external_libs/metis-5.1/GKlib/*.a
-/external_libs/metis-5.1/GKlib/*.o
-
-# /external_libs/metis-5.1/include/
-/external_libs/metis-5.1/include/.deps
-/external_libs/metis-5.1/include/Makefile
-/external_libs/metis-5.1/include/Makefile.in
-
-# /external_libs/metis-5.1/libmetis/
-/external_libs/metis-5.1/libmetis/.deps
-/external_libs/metis-5.1/libmetis/Makefile
-/external_libs/metis-5.1/libmetis/Makefile.in
-/external_libs/metis-5.1/libmetis/*.a
-/external_libs/metis-5.1/libmetis/*.o
-
 # /external_libs/qshep/
-/external_libs/qshep/*.log
-/external_libs/qshep/config.status
-/external_libs/qshep/config.guess
-/external_libs/qshep/config.sub
-/external_libs/qshep/config.h
-/external_libs/qshep/stamp-h1
-/external_libs/qshep/aclocal.m4
-/external_libs/qshep/autom4te.cache
-/external_libs/qshep/autogen*
-/external_libs/qshep/Makefile
-/external_libs/qshep/.deps
-/external_libs/qshep/*.bak
-/external_libs/qshep/Makefile.in
-/external_libs/qshep/configure
-/external_libs/qshep/config.h.in
-/external_libs/qshep/build-aux
-/external_libs/qshep/*.a
-/external_libs/qshep/*.mod
 /external_libs/qshep/*__genmod.*
-/external_libs/qshep/*.o
 
-# /external_libs/spglib-1.9.9/
-/external_libs/spglib-1.9.9/src/*.a
+# /external_libs/dftd3/
+/external_libs/dftd3/Makefile
+/external_libs/dftd3/Makefile.in
+/external_libs/dftd3/*.o
+/external_libs/dftd3/*.a
+/external_libs/dftd3/*.mod
 
-# /external_libs/yaml-0.1.4/
-/external_libs/yaml-0.1.4/Makefile
-/external_libs/yaml-0.1.4/Makefile.in
 
-# /external_libs/yaml-0.1.4/include/
-/external_libs/yaml-0.1.4/include/Makefile
-/external_libs/yaml-0.1.4/include/Makefile.in
-/external_libs/yaml-0.1.4/include/*mod
-
-# /external_libs/yaml-0.1.4/src/
-/external_libs/yaml-0.1.4/src/Makefile
-/external_libs/yaml-0.1.4/src/Makefile.in
-/external_libs/yaml-0.1.4/src/*.o
-/external_libs/yaml-0.1.4/src/*.a
-/external_libs/yaml-0.1.4/src/.deps
+# /external_libs/rapidxml/
+/external_libs/rapidxml/Makefile
+/external_libs/rapidxml/Makefile.in
 
 # /liboct_parser/
-/liboct_parser/*.log
-/liboct_parser/config.status
-/liboct_parser/config.guess
-/liboct_parser/config.sub
-/liboct_parser/config.h
-/liboct_parser/stamp-h1
-/liboct_parser/aclocal.m4
-/liboct_parser/autom4te.cache
-/liboct_parser/autogen*
-/liboct_parser/Makefile
-/liboct_parser/.deps
-/liboct_parser/*.bak
-/liboct_parser/Makefile.in
-/liboct_parser/configure
-/liboct_parser/config.h.in
-/liboct_parser/build-aux
-/liboct_parser/*.a
 /liboct_parser/lib64
-/liboct_parser/*.o
-
-# /m4/
-/m4/*.log
-/m4/config.status
-/m4/config.guess
-/m4/config.sub
-/m4/config.h
-/m4/stamp-h1
-/m4/aclocal.m4
-/m4/autom4te.cache
-/m4/autogen*
-/m4/Makefile
-/m4/.deps
-/m4/*.bak
-/m4/Makefile.in
-/m4/configure
-/m4/config.h.in
-/m4/build-aux
-
-# /scripts/
-/scripts/Makefile
-/scripts/Makefile.in
-/scripts/oct-analyze_projections
-/scripts/oct-vdW_c6
 
 # /share/
-/share/*.log
-/share/config.status
-/share/config.guess
-/share/config.sub
-/share/config.h
-/share/stamp-h1
-/share/aclocal.m4
-/share/autom4te.cache
-/share/autogen*
-/share/Makefile
-/share/.deps
-/share/*.bak
-/share/Makefile.in
-/share/configure
-/share/config.h.in
-/share/build-aux
 /share/varinfo
 /share/varinfo_orig
 /share/variables
@@ -340,262 +106,64 @@
 /share/man
 /share/octopus
 
-# /share/opencl/
-/share/opencl/Makefile
-/share/opencl/Makefile.in
-
 # /share/pseudopotentials/
-/share/pseudopotentials/*.log
-/share/pseudopotentials/config.status
-/share/pseudopotentials/config.guess
-/share/pseudopotentials/config.sub
-/share/pseudopotentials/config.h
-/share/pseudopotentials/stamp-h1
-/share/pseudopotentials/aclocal.m4
-/share/pseudopotentials/autom4te.cache
-/share/pseudopotentials/autogen*
-/share/pseudopotentials/Makefile
-/share/pseudopotentials/.deps
-/share/pseudopotentials/*.bak
-/share/pseudopotentials/Makefile.in
-/share/pseudopotentials/configure
-/share/pseudopotentials/config.h.in
-/share/pseudopotentials/build-aux
 /share/pseudopotentials/varinfo
 /share/pseudopotentials/varinfo_orig
 /share/pseudopotentials/variables
 /share/pseudopotentials/variables.xml
 
 # /share/pseudopotentials/HGH/
-/share/pseudopotentials/HGH/*.log
-/share/pseudopotentials/HGH/config.status
-/share/pseudopotentials/HGH/config.guess
-/share/pseudopotentials/HGH/config.sub
-/share/pseudopotentials/HGH/config.h
-/share/pseudopotentials/HGH/stamp-h1
-/share/pseudopotentials/HGH/aclocal.m4
-/share/pseudopotentials/HGH/autom4te.cache
-/share/pseudopotentials/HGH/autogen*
-/share/pseudopotentials/HGH/Makefile
-/share/pseudopotentials/HGH/.deps
-/share/pseudopotentials/HGH/*.bak
-/share/pseudopotentials/HGH/Makefile.in
-/share/pseudopotentials/HGH/configure
-/share/pseudopotentials/HGH/config.h.in
-/share/pseudopotentials/HGH/build-aux
 /share/pseudopotentials/HGH/varinfo
 /share/pseudopotentials/HGH/varinfo_orig
 /share/pseudopotentials/HGH/variables
 /share/pseudopotentials/HGH/variables.xml
 
 # /share/pseudopotentials/PSF/
-/share/pseudopotentials/PSF/*.log
-/share/pseudopotentials/PSF/config.status
-/share/pseudopotentials/PSF/config.guess
-/share/pseudopotentials/PSF/config.sub
-/share/pseudopotentials/PSF/config.h
-/share/pseudopotentials/PSF/stamp-h1
-/share/pseudopotentials/PSF/aclocal.m4
-/share/pseudopotentials/PSF/autom4te.cache
-/share/pseudopotentials/PSF/autogen*
-/share/pseudopotentials/PSF/Makefile
-/share/pseudopotentials/PSF/.deps
-/share/pseudopotentials/PSF/*.bak
-/share/pseudopotentials/PSF/Makefile.in
-/share/pseudopotentials/PSF/configure
-/share/pseudopotentials/PSF/config.h.in
-/share/pseudopotentials/PSF/build-aux
 /share/pseudopotentials/PSF/varinfo
 /share/pseudopotentials/PSF/varinfo_orig
 /share/pseudopotentials/PSF/variables
 /share/pseudopotentials/PSF/variables.xml
 
-# /share/pseudopotentials/extra/
-/share/pseudopotentials/extra/Makefile
-/share/pseudopotentials/extra/Makefile.in
-
-# /share/pseudopotentials/hscv/
-/share/pseudopotentials/hscv/Makefile
-/share/pseudopotentials/hscv/Makefile.in
-
-# /share/pseudopotentials/hscv/lda/
-/share/pseudopotentials/hscv/lda/Makefile
-/share/pseudopotentials/hscv/lda/Makefile.in
-
-# /share/pseudopotentials/hscv/pbe/
-/share/pseudopotentials/hscv/pbe/Makefile
-/share/pseudopotentials/hscv/pbe/Makefile.in
-
-# /share/pseudopotentials/sg15/
-/share/pseudopotentials/sg15/Makefile
-/share/pseudopotentials/sg15/Makefile.in
-
-# /share/quadrature/
-/share/quadrature/Makefile
-/share/quadrature/Makefile.in
-
 # /share/recipes/
-/share/recipes/*.log
-/share/recipes/config.status
-/share/recipes/config.guess
-/share/recipes/config.sub
-/share/recipes/config.h
-/share/recipes/stamp-h1
-/share/recipes/aclocal.m4
-/share/recipes/autom4te.cache
-/share/recipes/autogen*
-/share/recipes/Makefile
-/share/recipes/.deps
-/share/recipes/*.bak
-/share/recipes/Makefile.in
-/share/recipes/configure
-/share/recipes/config.h.in
-/share/recipes/build-aux
 /share/recipes/varinfo
 /share/recipes/varinfo_orig
 /share/recipes/variables
 /share/recipes/variables.xml
 
 # /share/recipes/da/
-/share/recipes/da/*.log
-/share/recipes/da/config.status
-/share/recipes/da/config.guess
-/share/recipes/da/config.sub
-/share/recipes/da/config.h
-/share/recipes/da/stamp-h1
-/share/recipes/da/aclocal.m4
-/share/recipes/da/autom4te.cache
-/share/recipes/da/autogen*
-/share/recipes/da/Makefile
-/share/recipes/da/.deps
-/share/recipes/da/*.bak
-/share/recipes/da/Makefile.in
-/share/recipes/da/configure
-/share/recipes/da/config.h.in
-/share/recipes/da/build-aux
 /share/recipes/da/varinfo
 /share/recipes/da/varinfo_orig
 /share/recipes/da/variables
 /share/recipes/da/variables.xml 
 
-# /share/recipes/de/
-/share/recipes/de/Makefile
-/share/recipes/de/Makefile.in
-
 # /share/recipes/en/
-/share/recipes/en/*.log
-/share/recipes/en/config.status
-/share/recipes/en/config.guess
-/share/recipes/en/config.sub
-/share/recipes/en/config.h
-/share/recipes/en/stamp-h1
-/share/recipes/en/aclocal.m4
-/share/recipes/en/autom4te.cache
-/share/recipes/en/autogen*
-/share/recipes/en/Makefile
-/share/recipes/en/.deps
-/share/recipes/en/*.bak
-/share/recipes/en/Makefile.in
-/share/recipes/en/configure
-/share/recipes/en/config.h.in
-/share/recipes/en/build-aux
 /share/recipes/en/varinfo
 /share/recipes/en/varinfo_orig
 /share/recipes/en/variables
 /share/recipes/en/variables.xml
 
 # /share/recipes/es/
-/share/recipes/es/*.log
-/share/recipes/es/config.status
-/share/recipes/es/config.guess
-/share/recipes/es/config.sub
-/share/recipes/es/config.h
-/share/recipes/es/stamp-h1
-/share/recipes/es/aclocal.m4
-/share/recipes/es/autom4te.cache
-/share/recipes/es/autogen*
-/share/recipes/es/Makefile
-/share/recipes/es/.deps
-/share/recipes/es/*.bak
-/share/recipes/es/Makefile.in
-/share/recipes/es/configure
-/share/recipes/es/config.h.in
-/share/recipes/es/build-aux
 /share/recipes/es/varinfo
 /share/recipes/es/varinfo_orig
 /share/recipes/es/variables
 /share/recipes/es/variables.xml
 
-# /share/recipes/eu/
-/share/recipes/eu/Makefile
-/share/recipes/eu/Makefile.in
-
 # /share/recipes/it/
-/share/recipes/it/*.log
-/share/recipes/it/config.status
-/share/recipes/it/config.guess
-/share/recipes/it/config.sub
-/share/recipes/it/config.h
-/share/recipes/it/stamp-h1
-/share/recipes/it/aclocal.m4
-/share/recipes/it/autom4te.cache
-/share/recipes/it/autogen*
-/share/recipes/it/Makefile
-/share/recipes/it/.deps
-/share/recipes/it/*.bak
-/share/recipes/it/Makefile.in
-/share/recipes/it/configure
-/share/recipes/it/config.h.in
-/share/recipes/it/build-aux
 /share/recipes/it/varinfo
 /share/recipes/it/varinfo_orig
 /share/recipes/it/variables
 /share/recipes/it/variables.xml
 
 # /share/util/
-/share/util/*.log
-/share/util/config.status
-/share/util/config.guess
-/share/util/config.sub
-/share/util/config.h
-/share/util/stamp-h1
-/share/util/aclocal.m4
-/share/util/autom4te.cache
-/share/util/autogen*
-/share/util/Makefile
-/share/util/.deps
-/share/util/*.bak
-/share/util/Makefile.in
-/share/util/configure
-/share/util/config.h.in
-/share/util/build-aux
 /share/util/varinfo
 /share/util/varinfo_orig
 /share/util/variables
 /share/util/variables.xml
 
 # /src/
-/src/*.log
-/src/config.status
-/src/config.guess
-/src/config.sub
-/src/config.h
-/src/stamp-h1
-/src/aclocal.m4
-/src/autom4te.cache
-/src/autogen*
-/src/Makefile
-/src/.deps
-/src/*.bak
-/src/Makefile.in
-/src/configure
-/src/config.h.in
-/src/build-aux
 /src/octopus
 /src/oct-*
 /src/octopus_*
-/src/*.mod
-/src/config.h
 /src/config_F90.h
 /src/debug
 /src/static
@@ -605,7 +173,6 @@
 /src/stamp*
 /src/Makefile.local
 /src/messages.std*
-/src/semantic.cache
 /src/*.pbs
 /src/machinefile*
 /src/inp.*
@@ -613,191 +180,18 @@
 /src/Doxyfile
 /src/octopus.png
 
-# /src/basic/
-/src/basic/*.mod
-/src/basic/*.o
-/src/basic/*.a
-/src/basic/*~
-/src/basic/Makefile
-/src/basic/Makefile.in
-/src/basic/.deps
-/src/basic/*_oct.f90
-/src/basic/*.optrpt
-
-# /src/frozen/
-/src/frozen/*.o
-/src/frozen/*.a
-/src/frozen/*.mod
-/src/frozen/*~
-/src/frozen/Makefile.in
-/src/frozen/Makefile
-/src/frozen/.deps
-/src/frozen/*_oct.f90
-/src/frozen/*.optrpt
-
-# /src/grid/
-/src/grid/*.o
-/src/grid/*.a
-/src/grid/*.mod
-/src/grid/*~
-/src/grid/Makefile.in
-/src/grid/.deps
-/src/grid/Makefile
-/src/grid/*_oct.f90
-/src/grid/*.optrpt
-
-# /src/hamiltonian/
-/src/hamiltonian/*.o
-/src/hamiltonian/*.a
-/src/hamiltonian/*.mod
-/src/hamiltonian/*~
-/src/hamiltonian/Makefile
-/src/hamiltonian/Makefile.in
-/src/hamiltonian/.deps
-/src/hamiltonian/*_oct.f90
-/src/hamiltonian/*.optrpt
-
 # /src/include/
-/src/include/*.o
-/src/include/*.a
-/src/include/*.mod
-/src/include/*~
 /src/include/config_F90.h
 /src/include/defaults.h
 /src/include/options.h
-/src/include/Makefile.in
-/src/include/Makefile
-/src/include/*.optrpt
-
-# /src/ions/
-/src/ions/*.o
-/src/ions/*.a
-/src/ions/*.mod
-/src/ions/*~
-/src/ions/Makefile.in
-/src/ions/Makefile
-/src/ions/.deps
-/src/ions/*_oct.f90
-/src/ions/*.optrpt
 
 # /src/main/
-/src/main/*.o
-/src/main/*.a
-/src/main/*.mod
-/src/main/*~
-/src/main/Makefile
-/src/main/Makefile.in
-/src/main/.deps
 /src/main/octopus
 /src/main/oct-test
 /src/main/octopus_mpi
 /src/main/*.dSYM
-/src/main/*_oct.f90
-/src/main/*.optrpt
-
-# /src/math/
-/src/math/*.o
-/src/math/*.a
-/src/math/*~
-/src/math/*.mod
-/src/math/.deps
-/src/math/Makefile.in
-/src/math/Makefile
-/src/math/*_oct.f90
-/src/math/*.optrpt
-
-# /src/opt_control/
-/src/opt_control/*.o
-/src/opt_control/*.a
-/src/opt_control/*.mod
-/src/opt_control/*~
-/src/opt_control/Makefile.in
-/src/opt_control/Makefile
-/src/opt_control/*_oct.f90
-/src/opt_control/*.optrpt
-
-# /src/poisson/
-/src/poisson/*.o
-/src/poisson/*.mod
-/src/poisson/*.a
-/src/poisson/Makefile.in
-/src/poisson/Makefile
-/src/poisson/*~
-/src/poisson/.deps
-/src/poisson/*_oct.f90
-/src/poisson/*.optrpt
-
-# /src/scf/
-/src/scf/*.o
-/src/scf/*.a
-/src/scf/*.mod
-/src/scf/*~
-/src/scf/Makefile.in
-/src/scf/Makefile
-/src/scf/*_oct.f90
-/src/scf/*.optrpt
-
-# /src/species/
-/src/species/Makefile.in
-/src/species/Makefile
-/src/species/*.o
-/src/species/*.a
-/src/species/*.mod
-/src/species/*~
-/src/species/.deps
-/src/species/*_oct.f90
-/src/species/*.optrpt
-
-# /src/states/
-/src/states/*.o
-/src/states/*.a
-/src/states/*.mod
-/src/states/Makefile.in
-/src/states/Makefile
-/src/states/*~
-/src/states/.deps
-/src/states/*_oct.f90
-/src/states/*.optrpt
-
-# /src/sternheimer/
-/src/sternheimer/*.o
-/src/sternheimer/*.a
-/src/sternheimer/*.mod
-/src/sternheimer/*~
-/src/sternheimer/Makefile
-/src/sternheimer/Makefile.in
-/src/sternheimer/.deps
-/src/sternheimer/*_oct.f90
-/src/sternheimer/*.optrpt
-
-# /src/system/
-/src/system/*.o
-/src/system/*.a
-/src/system/*.mod
-/src/system/*~
-/src/system/Makefile
-/src/system/Makefile.in
-/src/system/*_oct.f90
-/src/system/*.optrpt
-
-# /src/td/
-/src/td/Makefile.in
-/src/td/Makefile
-/src/td/*.o
-/src/td/*.a
-/src/td/*.mod
-/src/td/*~
-/src/td/*_oct.f90
-/src/td/*.optrpt
 
 # /src/utils/
-/src/utils/*.o
-/src/utils/*.a
-/src/utils/*.mod
-/src/utils/Makefile
-/src/utils/Makefile.in
-/src/utils/*~
-/src/utils/.deps
 /src/utils/oct-casida_spectrum
 /src/utils/oct-center-geom
 /src/utils/oct-conductivity
@@ -812,217 +206,12 @@
 /src/utils/oct-propagation_spectrum
 /src/utils/oct-vibrational_spectrum
 /src/utils/oct-xyz-anim
-/src/utils/oct-floquet
+/src/utils/oct-floquet_observables
 /src/utils/*.dSYM
-/src/utils/*_oct.f90
-/src/utils/*.optrpt
 
 # /testsuite/
-/testsuite/*.log
-/testsuite/config.status
-/testsuite/config.guess
-/testsuite/config.sub
-/testsuite/config.h
-/testsuite/stamp-h1
-/testsuite/aclocal.m4
-/testsuite/autom4te.cache
-/testsuite/autogen*
-/testsuite/Makefile
-/testsuite/.deps
-/testsuite/*.bak
-/testsuite/Makefile.in
-/testsuite/configure
-/testsuite/config.h.in
-/testsuite/build-aux
-/testsuite/build-stamp
 /testsuite/*.test
-/testsuite/semantic.cache
 /testsuite/oct-run_testsuite.sh
-
-# /testsuite/complex_scaling/
-/testsuite/complex_scaling/Makefile
-/testsuite/complex_scaling/Makefile.in
-
-# /testsuite/components/
-/testsuite/components/Makefile
-/testsuite/components/Makefile.in
-
-# /testsuite/finite_systems_1d/
-/testsuite/finite_systems_1d/*.log
-/testsuite/finite_systems_1d/config.status
-/testsuite/finite_systems_1d/config.guess
-/testsuite/finite_systems_1d/config.sub
-/testsuite/finite_systems_1d/config.h
-/testsuite/finite_systems_1d/stamp-h1
-/testsuite/finite_systems_1d/aclocal.m4
-/testsuite/finite_systems_1d/autom4te.cache
-/testsuite/finite_systems_1d/autogen*
-/testsuite/finite_systems_1d/Makefile
-/testsuite/finite_systems_1d/.deps
-/testsuite/finite_systems_1d/*.bak
-/testsuite/finite_systems_1d/Makefile.in
-/testsuite/finite_systems_1d/configure
-/testsuite/finite_systems_1d/config.h.in
-/testsuite/finite_systems_1d/build-aux
-/testsuite/finite_systems_1d/build-stamp
-/testsuite/finite_systems_1d/semantic.cache
-
-# /testsuite/finite_systems_2d/
-/testsuite/finite_systems_2d/*.log
-/testsuite/finite_systems_2d/config.status
-/testsuite/finite_systems_2d/config.guess
-/testsuite/finite_systems_2d/config.sub
-/testsuite/finite_systems_2d/config.h
-/testsuite/finite_systems_2d/stamp-h1
-/testsuite/finite_systems_2d/aclocal.m4
-/testsuite/finite_systems_2d/autom4te.cache
-/testsuite/finite_systems_2d/autogen*
-/testsuite/finite_systems_2d/Makefile
-/testsuite/finite_systems_2d/.deps
-/testsuite/finite_systems_2d/*.bak
-/testsuite/finite_systems_2d/Makefile.in
-/testsuite/finite_systems_2d/configure
-/testsuite/finite_systems_2d/config.h.in
-/testsuite/finite_systems_2d/build-aux
-/testsuite/finite_systems_2d/build-stamp
-/testsuite/finite_systems_2d/semantic.cache
-
-# /testsuite/finite_systems_3d/
-/testsuite/finite_systems_3d/*.log
-/testsuite/finite_systems_3d/config.status
-/testsuite/finite_systems_3d/config.guess
-/testsuite/finite_systems_3d/config.sub
-/testsuite/finite_systems_3d/config.h
-/testsuite/finite_systems_3d/stamp-h1
-/testsuite/finite_systems_3d/aclocal.m4
-/testsuite/finite_systems_3d/autom4te.cache
-/testsuite/finite_systems_3d/autogen*
-/testsuite/finite_systems_3d/Makefile
-/testsuite/finite_systems_3d/.deps
-/testsuite/finite_systems_3d/*.bak
-/testsuite/finite_systems_3d/Makefile.in
-/testsuite/finite_systems_3d/configure
-/testsuite/finite_systems_3d/config.h.in
-/testsuite/finite_systems_3d/build-aux
-/testsuite/finite_systems_3d/build-stamp
-/testsuite/finite_systems_3d/semantic.cache
-
-# /testsuite/frozen/
-/testsuite/frozen/Makefile
-/testsuite/frozen/Makefile.in
-
-# /testsuite/floquet/
-/testsuite/floquet/Makefile
-/testsuite/floquet/Makefile.in
-
-# /testsuite/functionals/
-/testsuite/functionals/Makefile
-/testsuite/functionals/Makefile.in
-
-# /testsuite/linear_response/
-/testsuite/linear_response/*.log
-/testsuite/linear_response/config.status
-/testsuite/linear_response/config.guess
-/testsuite/linear_response/config.sub
-/testsuite/linear_response/config.h
-/testsuite/linear_response/stamp-h1
-/testsuite/linear_response/aclocal.m4
-/testsuite/linear_response/autom4te.cache
-/testsuite/linear_response/autogen*
-/testsuite/linear_response/Makefile
-/testsuite/linear_response/.deps
-/testsuite/linear_response/*.bak
-/testsuite/linear_response/Makefile.in
-/testsuite/linear_response/configure
-/testsuite/linear_response/config.h.in
-/testsuite/linear_response/build-aux
-/testsuite/linear_response/build-stamp
-/testsuite/linear_response/semantic.cache
-
-# /testsuite/optimal_control/
-/testsuite/optimal_control/*.log
-/testsuite/optimal_control/config.status
-/testsuite/optimal_control/config.guess
-/testsuite/optimal_control/config.sub
-/testsuite/optimal_control/config.h
-/testsuite/optimal_control/stamp-h1
-/testsuite/optimal_control/aclocal.m4
-/testsuite/optimal_control/autom4te.cache
-/testsuite/optimal_control/autogen*
-/testsuite/optimal_control/Makefile
-/testsuite/optimal_control/.deps
-/testsuite/optimal_control/*.bak
-/testsuite/optimal_control/Makefile.in
-/testsuite/optimal_control/configure
-/testsuite/optimal_control/config.h.in
-/testsuite/optimal_control/build-aux
-/testsuite/optimal_control/build-stamp
-/testsuite/optimal_control/semantic.cache
-
-# /testsuite/periodic_systems/
-/testsuite/periodic_systems/*.log
-/testsuite/periodic_systems/config.status
-/testsuite/periodic_systems/config.guess
-/testsuite/periodic_systems/config.sub
-/testsuite/periodic_systems/config.h
-/testsuite/periodic_systems/stamp-h1
-/testsuite/periodic_systems/aclocal.m4
-/testsuite/periodic_systems/autom4te.cache
-/testsuite/periodic_systems/autogen*
-/testsuite/periodic_systems/Makefile
-/testsuite/periodic_systems/.deps
-/testsuite/periodic_systems/*.bak
-/testsuite/periodic_systems/Makefile.in
-/testsuite/periodic_systems/configure
-/testsuite/periodic_systems/config.h.in
-/testsuite/periodic_systems/build-aux
-/testsuite/periodic_systems/build-stamp
-/testsuite/periodic_systems/semantic.cache
 
 # /testsuite/photo_electron/
 /testsuite/photo_electron/.log
-/testsuite/photo_electron/config.status
-/testsuite/photo_electron/config.guess
-/testsuite/photo_electron/config.sub
-/testsuite/photo_electron/config.h
-/testsuite/photo_electron/stamp-h1
-/testsuite/photo_electron/aclocal.m4
-/testsuite/photo_electron/autom4te.cache
-/testsuite/photo_electron/autogen*
-/testsuite/photo_electron/Makefile
-/testsuite/photo_electron/.deps
-/testsuite/photo_electron/*.bak
-/testsuite/photo_electron/Makefile.in
-/testsuite/photo_electron/configure
-/testsuite/photo_electron/config.h.in
-/testsuite/photo_electron/build-aux
-/testsuite/photo_electron/build-stamp
-/testsuite/photo_electron/semantic.cache
-
-# /testsuite/pseudopotentials/
-/testsuite/pseudopotentials/Makefile
-/testsuite/pseudopotentials/Makefile.in
-
-# /testsuite/real_time/
-/testsuite/real_time/*.log
-/testsuite/real_time/config.status
-/testsuite/real_time/config.guess
-/testsuite/real_time/config.sub
-/testsuite/real_time/config.h
-/testsuite/real_time/stamp-h1
-/testsuite/real_time/aclocal.m4
-/testsuite/real_time/autom4te.cache
-/testsuite/real_time/autogen*
-/testsuite/real_time/Makefile
-/testsuite/real_time/.deps
-/testsuite/real_time/*.bak
-/testsuite/real_time/Makefile.in
-/testsuite/real_time/configure
-/testsuite/real_time/config.h.in
-/testsuite/real_time/build-aux
-/testsuite/real_time/build-stamp
-/testsuite/real_time/semantic.cache
-
-# /testsuite/symmetries/
-/testsuite/symmetries/Makefile
-/testsuite/symmetries/Makefile.in

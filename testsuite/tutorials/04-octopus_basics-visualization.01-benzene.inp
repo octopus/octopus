@@ -1,0 +1,11 @@
+CalculationMode = gs
+UnitsOutput = eV_Angstrom
+
+## NOTE: The spacing and radius have been changed from the tutorial to make the run faster ##
+Radius = 4*angstrom      # 5*angstrom in tutorial
+Spacing = 0.3*angstrom   # 0.15*angstrom in tutorial
+
+Output = wfs + density + elf + potential
+OutputFormat = cube + xcrysden + dx + axis_x + plane_z
+
+XYZCoordinates = "benzene.xyz"

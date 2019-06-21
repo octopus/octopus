@@ -6,18 +6,15 @@ TestGroups : short-run, functionals
 Enabled    : Yes
 
 Input: 02-xc_2d.00-hartree.inp
-match ; Hartree energy                           ; GREPFIELD(static/info, 'Total       =', 3) ; 1.11152575
-Precision : 2e-4
-match ; Hartree eigenvalues sum                  ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; 1.42855062
-Precision : 1e-4
-match ; Hartree kinetic energy                   ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 0.31638757
-Precision : 2e-4
-match ; Hartree external energy                  ; GREPFIELD(static/info, 'External    =', 3) ; 0.47811330
-Precision : 1e-4
-match ; Hartree eigenvalue 1 up                  ; GREPFIELD(static/info, '  1   up', 3) ; 0.607023
-match ; Hartree eigenvalue 2 up                  ; GREPFIELD(static/info, '  2   up', 3) ; 0.821598
-match ; Hartree eigenvalue 1 dn                  ; GREPFIELD(static/info, '  1   dn', 3) ; 1.156287
-match ; Hartree eigenvalue 2 dn                  ; GREPFIELD(static/info, '  2   dn', 3) ; 1.221884
+match ; SCF convergence                          ; GREPCOUNT(static/info, 'SCF converged') ; 1.0
+match ; Hartree energy                           ; GREPFIELD(static/info, 'Total       =', 3) ; 1.11161424
+match ; Hartree eigenvalues sum                  ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; 1.42868005
+match ; Hartree kinetic energy                   ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 0.31633274
+match ; Hartree external energy                  ; GREPFIELD(static/info, 'External    =', 3) ; 0.47821569
+match ; Hartree eigenvalue 1 up                  ; GREPFIELD(static/info, '  1   up', 3) ; 0.606973
+match ; Hartree eigenvalue 2 up                  ; GREPFIELD(static/info, '  2   up', 3) ; 0.821707
+match ; Hartree eigenvalue 1 dn                  ; GREPFIELD(static/info, '  1   dn', 3) ; 1.156249
+match ; Hartree eigenvalue 2 dn                  ; GREPFIELD(static/info, '  2   dn', 3) ; 1.221872
 
 # This tests the Hartree-Fock implementation. It reproduces one number
 # given in: [B. Reusch et al., Phys. Rev. B 63, 113313]. I have chosen
@@ -38,6 +35,7 @@ match ; Hartree eigenvalue 2 dn                  ; GREPFIELD(static/info, '  2  
 # could be due to the use of an underconverged basis set in the paper.
 
 Input: 02-xc_2d.01-hf.inp
+match ; SCF convergence                          ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Hartree-Fock energy                      ; GREPFIELD(static/info, 'Total       =', 3) ; 1.04191861
 match ; Hartree-Fock eigenvalues sum             ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; 1.31401934
 match ; Hartree-Fock kinetic energy              ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 0.31688385

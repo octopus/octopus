@@ -24,7 +24,6 @@
 module quickrnd_oct_m
   use global_oct_m
   use messages_oct_m
-  use profiling_oct_m
 
   implicit none
 
@@ -37,11 +36,6 @@ module quickrnd_oct_m
     module procedure dquickrnd_single, dquickrnd_array, zquickrnd_array
   end interface quickrnd
 
-  interface shiftseed
-    module procedure dshiftseed, zshiftseed
-  end interface shiftseed
-
-  
 contains
 
   subroutine dquickrnd_single(iseed, rnd)
@@ -104,10 +98,9 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine dshiftseed(iseed, n, rnd)
+  subroutine shiftseed(iseed, n)
     integer, intent(inout) :: iseed
     integer, intent(in)    :: n
-    FLOAT,   intent(in)    :: rnd  
 
     integer, parameter :: im=6075, ia=106, ic=1283
     integer :: ii
@@ -120,28 +113,8 @@ contains
 
     POP_SUB(shiftseed)
 
-  end subroutine dshiftseed
+  end subroutine shiftseed
  
-    ! ---------------------------------------------------------
-
-  subroutine zshiftseed(iseed, n, rnd)
-    integer, intent(inout) :: iseed
-    integer, intent(in)    :: n
-    CMPLX,   intent(in)    :: rnd
-
-    integer, parameter :: im=6075, ia=106, ic=1283
-    integer :: ii
-
-    PUSH_SUB(shiftseed)
-
-    do ii = 1, 2*n
-      iseed = mod(iseed*ia + ic, im)
-    end do
-
-    POP_SUB(shiftseed)
-
-  end subroutine zshiftseed
-
  
 end module quickrnd_oct_m
 

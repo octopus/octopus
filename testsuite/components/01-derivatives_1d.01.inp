@@ -1,3 +1,4 @@
+CalculationMode = test
 TestMode = derivatives
 
 # coordinates are not used at all

@@ -26,5 +26,6 @@ SUBDIRS =               \
 	fortrancl       \
 	bpdn            \
 	yaml-0.1.4      \
-	dftd3
+	dftd3           \
+	rapidxml
 

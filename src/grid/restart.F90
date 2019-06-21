@@ -93,7 +93,7 @@ module restart_oct_m
     integer           :: data_type !< Type of information that the restart is supposed to read/write (GS, TD, etc)
     integer           :: type      !< Restart type: RESTART_TYPE_DUMP or RESTART_TYPE_LOAD
     logical           :: skip      !< If set to .true., no restart information should be loaded or dumped.
-    integer           :: format    !< Format used to store the restart information.
+    integer(8)        :: format    !< Format used to store the restart information.
     character(len=MAX_PATH_LEN) :: dir !< Directory where the restart information is stored.
     character(len=MAX_PATH_LEN) :: pwd !< The current directory where the restart information is being loaded from or dumped to.
                                        !! It can be either dir or a subdirectory of dir.
@@ -886,7 +886,7 @@ contains
     type(restart_t), intent(in) :: restart
     integer,         intent(in) :: flag
 
-    restart_has_flag = iand(info(restart%data_type)%flags, flag) /= 0
+    restart_has_flag = bitand(info(restart%data_type)%flags, flag) /= 0
 
   end function restart_has_flag
 

@@ -20,9 +20,6 @@
 
 module epot_oct_m
   use atom_oct_m
-  use base_hamiltonian_oct_m
-  use base_potential_oct_m
-  use base_term_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use double_grid_oct_m
@@ -30,34 +27,21 @@ module epot_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use index_oct_m
-  use io_oct_m
   use ion_interaction_oct_m
   use kick_oct_m
-  use lalg_adv_oct_m
-  use lalg_basic_oct_m
   use lasers_oct_m
-  use linear_response_oct_m
-  use loct_math_oct_m
-  use logrid_oct_m
   use mesh_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use multigrid_oct_m
   use parser_oct_m
-  use periodic_copy_oct_m
   use poisson_oct_m
-  use poisson_cutoff_oct_m
   use profiling_oct_m
   use projector_oct_m
   use ps_oct_m
   use simul_box_oct_m
   use species_oct_m
   use species_pot_oct_m
-  use splines_oct_m
   use spline_filter_oct_m
-  use ssys_external_oct_m
   use states_oct_m
   use states_dim_oct_m
   use submesh_oct_m
@@ -94,13 +78,9 @@ module epot_oct_m
     integer        :: classical_pot !< how to include the classical charges
     FLOAT, pointer :: Vclassical(:) !< We use it to store the potential of the classical charges
 
-    ! Subsystems external potential.
-    type(base_potential_t), pointer :: subsys_external
-
     ! Ions
     FLOAT,             pointer :: vpsl(:)       !< the local part of the pseudopotentials
                                                 !< plus the potential from static electric fields
-    FLOAT,             pointer :: Imvpsl(:)     !< cmplxscl: imaginary part of vpsl
     type(projector_t), pointer :: proj(:)       !< non-local projectors
     logical                    :: non_local
     integer                    :: natoms
@@ -110,6 +90,7 @@ module epot_oct_m
     type(laser_t), pointer :: lasers(:)            !< lasers stuff
     FLOAT,         pointer :: E_field(:)           !< static electric field
     FLOAT, pointer         :: v_static(:)          !< static scalar potential
+    FLOAT, allocatable     :: v_ext(:)             !< static scalar potential - 1:gr%mesh%np_part
     FLOAT, pointer         :: B_field(:)           !< static magnetic field
     FLOAT, pointer         :: A_static(:,:)        !< static vector potential
     type(gauge_field_t)    :: gfield               !< the time-dependent gauge field
@@ -131,7 +112,6 @@ module epot_oct_m
     FLOAT, allocatable :: vdw_forces(:, :)
     
     real(4), pointer :: local_potential(:,:)
-    real(4), pointer :: Imlocal_potential(:,:) !cmplxscl
     logical          :: local_potential_precalculated
 
     logical          :: ignore_external_ions
@@ -150,18 +130,15 @@ module epot_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init( ep, gr, geo, ispin, nik, cmplxscl, subsys_hm, xc_family)
+  subroutine epot_init( ep, gr, geo, ispin, nik, xc_family)
     type(epot_t),                       intent(out)   :: ep
     type(grid_t),                       intent(in)    :: gr
     type(geometry_t),                   intent(inout) :: geo
     integer,                            intent(in)    :: ispin
     integer,                            intent(in)    :: nik
-    logical,                            intent(in)    :: cmplxscl
-    type(base_hamiltonian_t), optional, intent(in)    :: subsys_hm
     integer,                            intent(in)    :: xc_family
 
 
-    type(base_term_t), pointer :: subsys_ionic
     integer :: ispec, ip, idir, ia, gauge_2d, ierr
     type(block_t) :: blk
     FLOAT, allocatable :: grx(:)
@@ -199,31 +176,10 @@ contains
       if(.not.geo%skip_species_pot_init) call species_pot_init(geo%species(ispec), mesh_gcutoff(gr%mesh), filter)
     end do
 
-    ! Sets the pointer to the subsystem.
-    nullify(ep%subsys_external)
-    if(present(subsys_hm))then
-      ASSERT(.not.cmplxscl)
-      call base_hamiltonian_get(subsys_hm, "external", ep%subsys_external)
-      ASSERT(associated(ep%subsys_external))
-    end if
+    SAFE_ALLOCATE(ep%vpsl(1:gr%mesh%np))
 
-    ! Local part of the pseudopotentials
-    if(associated(ep%subsys_external))then
-      ! Sets the pointer to the subsystems total potential.
-      call base_potential_get(ep%subsys_external, ep%vpsl)
-      ASSERT(associated(ep%vpsl))
-    else
-      SAFE_ALLOCATE(ep%vpsl(1:gr%mesh%np))
-    end if
     ep%vpsl(1:gr%mesh%np) = M_ZERO
 
-    nullify(ep%Imvpsl)
-
-    if(cmplxscl) then
-      SAFE_ALLOCATE(ep%Imvpsl(1:gr%mesh%np))
-      ep%Imvpsl(1:gr%mesh%np) = M_ZERO
-    end if
-    
     ep%classical_pot = 0
     nullify(ep%Vclassical)
     if(geo%ncatoms > 0) then
@@ -311,6 +267,12 @@ contains
         SAFE_ALLOCATE(ep%v_static(1:gr%mesh%np))
         forall(ip = 1:gr%mesh%np)
           ep%v_static(ip) = sum(gr%mesh%x(ip, gr%sb%periodic_dim + 1:gr%sb%dim) * ep%E_field(gr%sb%periodic_dim + 1:gr%sb%dim))
+        end forall
+        ! The following is needed to make interpolations.
+        ! It is used by PCM.
+        SAFE_ALLOCATE(ep%v_ext(1:gr%mesh%np_part))
+        forall(ip = 1:gr%mesh%np_part)
+          ep%v_ext(ip) = sum(gr%mesh%x(ip, gr%sb%periodic_dim + 1:gr%sb%dim) * ep%E_field(gr%sb%periodic_dim + 1:gr%sb%dim))
         end forall
       end if
     end if
@@ -521,7 +483,6 @@ contains
     call gauge_field_nullify(ep%gfield)
 
     nullify(ep%local_potential)
-    nullify(ep%Imlocal_potential)
     ep%local_potential_precalculated = .false.
     
 
@@ -540,15 +501,6 @@ contains
     end if
 
     call ion_interaction_init(ep%ion_interaction)
-
-    nullify(subsys_ionic)
-    if(present(subsys_hm))then
-      ASSERT(.not.cmplxscl)
-      call base_hamiltonian_get(subsys_hm, "ionic", subsys_ionic)
-      ASSERT(associated(subsys_ionic))
-      call ion_interaction_add_subsys_ionic(ep%ion_interaction, subsys_ionic)
-      nullify(subsys_ionic)
-    end if
 
     !%Variable TDGlobalForce
     !%Type string
@@ -599,18 +551,9 @@ contains
     end if
 
     SAFE_DEALLOCATE_P(ep%local_potential)
-    SAFE_DEALLOCATE_P(ep%Imlocal_potential)!cmplxscl 
     SAFE_DEALLOCATE_P(ep%fii)
     SAFE_DEALLOCATE_A(ep%vdw_forces)
-
-    if(associated(ep%subsys_external))then
-      nullify(ep%vpsl)
-    else
-      SAFE_DEALLOCATE_P(ep%vpsl)
-    end if
-    nullify(ep%subsys_external)
-
-    SAFE_DEALLOCATE_P(ep%Imvpsl)!cmplxscl
+    SAFE_DEALLOCATE_P(ep%vpsl)
 
     if(ep%classical_pot > 0) then
       ep%classical_pot = 0
@@ -628,6 +571,7 @@ contains
     ! the macroscopic fields
     SAFE_DEALLOCATE_P(ep%E_field)
     SAFE_DEALLOCATE_P(ep%v_static)
+    SAFE_DEALLOCATE_A(ep%v_ext)
     SAFE_DEALLOCATE_P(ep%B_field)
     SAFE_DEALLOCATE_P(ep%A_static)
 
@@ -644,24 +588,19 @@ contains
   end subroutine epot_end
 
   ! ---------------------------------------------------------
-  subroutine epot_generate(ep, gr, geo, st, cmplxscl)
+  subroutine epot_generate(ep, gr, geo, st)
     type(epot_t),             intent(inout) :: ep
     type(grid_t),     target, intent(in)    :: gr
     type(geometry_t), target, intent(in)    :: geo
     type(states_t),           intent(inout) :: st
-    logical,                  intent(in)    :: cmplxscl  
 
     integer :: ia, ip
     type(atom_t),      pointer :: atm
     type(mesh_t),      pointer :: mesh
     type(simul_box_t), pointer :: sb
     type(profile_t), save :: epot_generate_prof
-    FLOAT, dimension(:), pointer :: vpsl
     FLOAT,    allocatable :: density(:)
-    FLOAT,    allocatable :: Imdensity(:)
     FLOAT,    allocatable :: tmp(:)
-    CMPLX,    allocatable :: zdensity(:)
-    CMPLX,    allocatable :: ztmp(:)
     type(profile_t), save :: epot_reduce
     type(ps_t), pointer :: ps
     type(symmetrizer_t) :: symmetrizer
@@ -675,41 +614,18 @@ contains
 
     SAFE_ALLOCATE(density(1:mesh%np))
     density = M_ZERO
-    if(cmplxscl) then
-      SAFE_ALLOCATE(Imdensity(1:mesh%np))
-      Imdensity = M_ZERO
-    end if
 
     ! Local part
-    nullify(vpsl)
-    if(associated(ep%subsys_external))then
-      ! Sets the vpsl pointer to the "live" part of the subsystem potential.
-      call base_potential_gets(ep%subsys_external, "live", vpsl)
-      ASSERT(associated(vpsl))
-    else
-      ! Sets the vpsl pointer to the total potential.
-      vpsl => ep%vpsl
-    end if
-    vpsl = M_ZERO
-    if(associated(ep%Imvpsl)) ep%Imvpsl = M_ZERO
+    ep%vpsl = M_ZERO
     if(geo%nlcc) st%rho_core = M_ZERO
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
       if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
       if(geo%nlcc) then
-        if(cmplxscl) then
-          call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, vpsl, ep%Imvpsl, &
-            rho_core = st%rho_core, density = density, Imdensity = Imdensity)
-        else
-          call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, vpsl, &
-            rho_core = st%rho_core, density = density)
-        end if
+        call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, &
+          rho_core = st%rho_core, density = density)
       else
-        if(cmplxscl) then
-          call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, vpsl, ep%Imvpsl, density = density, Imdensity = Imdensity)
-        else
-          call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, vpsl, density = density)
-        end if
+        call epot_local_potential(ep, gr%der, gr%dgrid, geo, ia, ep%vpsl, density = density)
       end if
     end do
 
@@ -717,12 +633,11 @@ contains
     if(geo%atoms_dist%parallel) then
       call profiling_in(epot_reduce, "EPOT_REDUCE")
 
-      call comm_allreduce(geo%atoms_dist%mpi_grp%comm, vpsl, dim = gr%mesh%np)
+      call comm_allreduce(geo%atoms_dist%mpi_grp%comm, ep%vpsl, dim = gr%mesh%np)
       if(associated(st%rho_core)) &
         call comm_allreduce(geo%atoms_dist%mpi_grp%comm, st%rho_core, dim = gr%mesh%np)
       if(ep%have_density) &
         call comm_allreduce(geo%atoms_dist%mpi_grp%comm, density, dim = gr%mesh%np)
-      ASSERT(.not.cmplxscl) ! not implemented
       call profiling_out(epot_reduce)
     end if
 
@@ -730,16 +645,16 @@ contains
       SAFE_ALLOCATE(tmpdensity(1:gr%mesh%np))
       call symmetrizer_init(symmetrizer, gr%mesh)
 
-      call dsymmetrizer_apply(symmetrizer, field = vpsl, symmfield = tmpdensity)
-      vpsl(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
+      call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field = ep%vpsl, symmfield = tmpdensity)
+      ep%vpsl(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
 
       if(associated(st%rho_core)) then
-        call dsymmetrizer_apply(symmetrizer, field = st%rho_core, symmfield = tmpdensity)
+        call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field = st%rho_core, symmfield = tmpdensity)
         st%rho_core(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
       end if
 
       if(ep%have_density) then
-        call dsymmetrizer_apply(symmetrizer, field = density, symmfield = tmpdensity)
+        call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field = density, symmfield = tmpdensity)
         density(1:gr%mesh%np) = tmpdensity(1:gr%mesh%np)
       end if
 
@@ -751,29 +666,14 @@ contains
     if(ep%have_density) then
       ! now we solve the poisson equation with the density of all nodes
 
-      if(cmplxscl) then
-        SAFE_ALLOCATE(ztmp(1:mesh%np))
-        SAFE_ALLOCATE(zdensity(1:mesh%np))
-        ztmp(:) = M_ZERO
-        zdensity(:) = density(:) + M_zI * Imdensity(:)
-        call zpoisson_solve(ep%poisson_solver, ztmp, zdensity)
-        forall(ip = 1:mesh%np) vpsl(ip) = vpsl(ip) + real(ztmp(ip), REAL_PRECISION)
-        forall(ip = 1:mesh%np) ep%Imvpsl(ip) = ep%Imvpsl(ip) + aimag(ztmp(ip))
-        SAFE_DEALLOCATE_A(zdensity)
-        SAFE_DEALLOCATE_A(ztmp)
-      else
-        SAFE_ALLOCATE(tmp(1:gr%mesh%np_part))
-        if(poisson_solver_is_iterative(ep%poisson_solver)) tmp(1:mesh%np) = M_ZERO
-        call dpoisson_solve(ep%poisson_solver, tmp, density)
-        forall(ip = 1:mesh%np) vpsl(ip) = vpsl(ip) + tmp(ip)
-        SAFE_DEALLOCATE_A(tmp)
-      end if
+      SAFE_ALLOCATE(tmp(1:gr%mesh%np_part))
+      if(poisson_solver_is_iterative(ep%poisson_solver)) tmp(1:mesh%np) = M_ZERO
+      call dpoisson_solve(ep%poisson_solver, tmp, density)
+      forall(ip = 1:mesh%np) ep%vpsl(ip) = ep%vpsl(ip) + tmp(ip)
+      SAFE_DEALLOCATE_A(tmp)
 
     end if
     SAFE_DEALLOCATE_A(density)
-    if(cmplxscl) then
-      SAFE_DEALLOCATE_A(Imdensity)
-    end if
 
     ! we assume that we need to recalculate the ion-ion energy
     call ion_interaction_calculate(ep%ion_interaction, geo, sb, ep%ignore_external_ions, ep%eii, ep%fii)
@@ -788,14 +688,14 @@ contains
     end do
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
-      if(ep%proj(ia)%type == M_NONE) cycle
+      if(ep%proj(ia)%type == PROJ_NONE) cycle
       ps => species_ps(geo%atom(ia)%species)
       call submesh_init(ep%proj(ia)%sphere, mesh%sb, mesh, geo%atom(ia)%x, ps%rc_max + mesh%spacing(1))
     end do
 
     if(geo%atoms_dist%parallel) then
       do ia = 1, geo%natoms
-        if(ep%proj(ia)%type == M_NONE) cycle
+        if(ep%proj(ia)%type == PROJ_NONE) cycle
         ps => species_ps(geo%atom(ia)%species)
         call submesh_broadcast(ep%proj(ia)%sphere, mesh, geo%atom(ia)%x, ps%rc_max + mesh%spacing(1), &
           geo%atoms_dist%node(ia), geo%atoms_dist%mpi_grp)
@@ -805,16 +705,13 @@ contains
     do ia = 1, geo%natoms
       atm => geo%atom(ia)
       call projector_build(ep%proj(ia), gr, atm, ep%so_strength)
-      if(.not. projector_is(ep%proj(ia), M_NONE)) ep%non_local = .true.
+      if(.not. projector_is(ep%proj(ia), PROJ_NONE)) ep%non_local = .true.
     end do
 
     ! add static electric fields
-    if (ep%classical_pot > 0)   vpsl(1:mesh%np) = vpsl(1:mesh%np) + ep%Vclassical(1:mesh%np)
-    if (associated(ep%e_field) .and. sb%periodic_dim < sb%dim) vpsl(1:mesh%np) = vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
+    if (ep%classical_pot > 0)   ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%Vclassical(1:mesh%np)
+    if (associated(ep%e_field) .and. sb%periodic_dim < sb%dim) ep%vpsl(1:mesh%np) = ep%vpsl(1:mesh%np) + ep%v_static(1:mesh%np)
 
-    ! Calculates the total potential by summing all the subsystem contributions.
-    if(associated(ep%subsys_external)) call ssys_external_calc(ep%subsys_external)
-  
     POP_SUB(epot_generate)
     call profiling_out(epot_generate_prof)
   end subroutine epot_generate
@@ -832,7 +729,7 @@ contains
   
   ! ---------------------------------------------------------
   subroutine epot_local_potential(ep, der, dgrid, geo, iatom, vpsl, Imvpsl, rho_core, density, Imdensity)
-    type(epot_t),             intent(inout) :: ep
+    type(epot_t),             intent(in)    :: ep
     type(derivatives_t),      intent(in)    :: der
     type(double_grid_t),      intent(in)    :: dgrid
     type(geometry_t),         intent(in)    :: geo
@@ -845,26 +742,16 @@ contains
 
     integer :: ip
     FLOAT :: radius
-    FLOAT, allocatable :: vl(:), Imvl(:), rho(:), Imrho(:)
+    FLOAT, allocatable :: vl(:), rho(:)
     type(submesh_t)  :: sphere
     type(profile_t), save :: prof
-    logical :: cmplxscl
 
     PUSH_SUB(epot_local_potential)
     call profiling_in(prof, "EPOT_LOCAL")
 
-    cmplxscl = present(Imvpsl)
-    if(present(Imdensity)) then
-      ASSERT(cmplxscl)
-      ASSERT(present(density))
-    end if
-    
     if(ep%local_potential_precalculated) then
 
       forall(ip = 1:der%mesh%np) vpsl(ip) = vpsl(ip) + ep%local_potential(ip, iatom)
-      if(cmplxscl) then
-        forall(ip = 1:der%mesh%np) Imvpsl(ip) = Imvpsl(ip) + ep%Imlocal_potential(ip, iatom)
-      end if
     else
 
       !Local potential, we can get it by solving the Poisson equation
@@ -874,36 +761,21 @@ contains
       if(local_potential_has_density(der%mesh%sb, geo%atom(iatom))) then
         SAFE_ALLOCATE(rho(1:der%mesh%np))
 
-        if (cmplxscl) then
-          SAFE_ALLOCATE(Imrho(1:der%mesh%np))
-          call species_get_density(geo%atom(iatom)%species, geo%atom(iatom)%x, der%mesh, rho, Imrho)
-        else
-          call species_get_density(geo%atom(iatom)%species, geo%atom(iatom)%x, der%mesh, rho)
-        end if
+        call species_get_density(geo%atom(iatom)%species, geo%atom(iatom)%x, der%mesh, rho)
 
         if(present(density)) then
           forall(ip = 1:der%mesh%np) density(ip) = density(ip) + rho(ip)
-          if(cmplxscl) then
-            forall(ip = 1:der%mesh%np) Imdensity(ip) = Imdensity(ip) + Imrho(ip)
-          end if
         else
 
           SAFE_ALLOCATE(vl(1:der%mesh%np))
-          if (cmplxscl) then
-            SAFE_ALLOCATE(Imvl(1:der%mesh%np))
-          end if
           
           if(poisson_solver_is_iterative(ep%poisson_solver)) then
             ! vl has to be initialized before entering routine
             ! and our best guess for the potential is zero
             vl(1:der%mesh%np) = M_ZERO
-            if (cmplxscl) Imvl(1:der%mesh%np) = M_ZERO
           end if
 
           call dpoisson_solve(ep%poisson_solver, vl, rho, all_nodes = .false.)
-          if (cmplxscl) then ! XXX this will not work for 1D because of soft-Coulomb not being Coulomb
-            call dpoisson_solve(ep%poisson_solver, Imvl, Imrho, all_nodes = .false.)
-          end if
         end if
 
         SAFE_DEALLOCATE_A(rho)
@@ -911,21 +783,12 @@ contains
       else
 
         SAFE_ALLOCATE(vl(1:der%mesh%np))
-        if(cmplxscl) then
-          SAFE_ALLOCATE(Imvl(1:der%mesh%np))
-          call species_get_local(geo%atom(iatom)%species, der%mesh, geo%atom(iatom)%x(1:der%mesh%sb%dim), vl, Imvl)
-        else
-          call species_get_local(geo%atom(iatom)%species, der%mesh, geo%atom(iatom)%x(1:der%mesh%sb%dim), vl)
-        end if
+        call species_get_local(geo%atom(iatom)%species, der%mesh, geo%atom(iatom)%x(1:der%mesh%sb%dim), vl)
       end if
 
       if(allocated(vl)) then
         forall(ip = 1:der%mesh%np) vpsl(ip) = vpsl(ip) + vl(ip)
         SAFE_DEALLOCATE_A(vl)
-        if(cmplxscl) then
-          forall(ip = 1:der%mesh%np) Imvpsl(ip) = Imvpsl(ip) + Imvl(ip)
-          SAFE_DEALLOCATE_A(Imvl)
-        end if
       end if
 
       !the localized part
@@ -945,7 +808,6 @@ contains
         end do
 
         SAFE_DEALLOCATE_A(vl)
-        ASSERT(.not.cmplxscl)
         call submesh_end(sphere)
 
       end if
@@ -960,7 +822,6 @@ contains
       call species_get_nlcc(geo%atom(iatom)%species, geo%atom(iatom)%x, der%mesh, rho)
       forall(ip = 1:der%mesh%np) rho_core(ip) = rho_core(ip) + rho(ip)
       SAFE_DEALLOCATE_A(rho)
-      SAFE_DEALLOCATE_A(Imrho)
     end if
 
     call profiling_out(prof)
@@ -1014,20 +875,12 @@ contains
     type(geometry_t), intent(in)    :: geo
 
     integer :: iatom
-    FLOAT, allocatable :: tmp(:), Imtmp(:)
-    logical  :: cmplxscl
+    FLOAT, allocatable :: tmp(:)
     
     PUSH_SUB(epot_precalc_local_potential)
-    cmplxscl =.false.
-    if(associated(ep%Imvpsl)) cmplxscl = .true.
     
     if(.not. associated(ep%local_potential)) then
       SAFE_ALLOCATE(ep%local_potential(1:gr%mesh%np, 1:geo%natoms))
-    end if
-
-    if(.not. associated(ep%Imlocal_potential) .and. cmplxscl) then
-      SAFE_ALLOCATE(ep%Imlocal_potential(1:gr%mesh%np, 1:geo%natoms))
-      SAFE_ALLOCATE(Imtmp(1:gr%mesh%np))
     end if
 
 
@@ -1035,25 +888,14 @@ contains
 
     SAFE_ALLOCATE(tmp(1:gr%mesh%np))
     
-    if(cmplxscl) then
-      do iatom = 1, geo%natoms
-        tmp(1:gr%mesh%np) = M_ZERO
-        Imtmp(1:gr%mesh%np) = M_ZERO
-        call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, tmp, Imtmp)!, time)
-        ep%local_potential(1:gr%mesh%np, iatom) = real(tmp(1:gr%mesh%np), 4)
-        ep%Imlocal_potential(1:gr%mesh%np, iatom) = real(Imtmp(1:gr%mesh%np), 4)
-      end do
-    else
-      do iatom = 1, geo%natoms
-        tmp(1:gr%mesh%np) = M_ZERO
-        call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, tmp)!, time)
-        ep%local_potential(1:gr%mesh%np, iatom) = real(tmp(1:gr%mesh%np), 4)
-      end do
-    end if
+    do iatom = 1, geo%natoms
+      tmp(1:gr%mesh%np) = M_ZERO
+      call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, tmp)!, time)
+      ep%local_potential(1:gr%mesh%np, iatom) = real(tmp(1:gr%mesh%np), 4)
+    end do
     ep%local_potential_precalculated = .true.
 
     SAFE_DEALLOCATE_A(tmp)
-    SAFE_DEALLOCATE_A(Imtmp)
     POP_SUB(epot_precalc_local_potential)
   end subroutine epot_precalc_local_potential
 

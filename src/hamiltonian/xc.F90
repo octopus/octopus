@@ -21,12 +21,8 @@
 module xc_oct_m
   use distributed_oct_m
   use comm_oct_m
-  use cube_oct_m
-  use cube_function_oct_m
   use derivatives_oct_m
   use global_oct_m
-  use grid_oct_m
-  use index_oct_m
   use io_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
@@ -36,15 +32,12 @@ module xc_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use par_vec_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use states_oct_m
   use states_dim_oct_m
-  use symmetrizer_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
   use XC_F90(lib_m)
   use xc_functl_oct_m
 
@@ -57,7 +50,6 @@ module xc_oct_m
     xc_end,             &
     xc_write_info,      &
     xc_get_vxc,         &
-    xc_get_vxc_cmplx,   &
     xc_get_fxc,         &
     xc_get_kxc,         &
     xc_is_orbital_dependent, &
@@ -173,8 +165,8 @@ contains
     xcs%exx_coef = M_ZERO
     ll =  (hartree_fock) &
       .or.(xcs%functional(FUNC_X,1)%id == XC_OEP_X) &
-      .or.(iand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0) &
-      .or.(iand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0)
+      .or.(bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0) &
+      .or.(bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0)
     if(ll) then
       if((xcs%functional(FUNC_X,1)%id /= 0).and.(xcs%functional(FUNC_X,1)%id /= XC_OEP_X)) then
         message(1) = "You cannot use an exchange functional when performing"
@@ -186,8 +178,8 @@ contains
         call messages_experimental("Fock operator (Hartree-Fock, OEP, hybrids) in fully periodic systems")
 
       ! get the mixing coefficient for hybrids
-      if(iand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0 .or. &
-         iand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0) then        
+      if(bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0 .or. &
+         bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0) then        
         call XC_F90(hyb_exx_coef)(xcs%functional(FUNC_C,1)%conf, xcs%exx_coef)
       else
         ! we are doing Hartree-Fock plus possibly a correlation functional
@@ -200,7 +192,7 @@ contains
       xcs%family             = ior(xcs%family, XC_FAMILY_OEP)
     end if
 
-    if (iand(xcs%family, XC_FAMILY_LCA) /= 0) &
+    if (bitand(xcs%family, XC_FAMILY_LCA) /= 0) &
       call messages_not_implemented("LCA current functionals") ! not even in libxc!
 
     call messages_obsolete_variable('MGGAimplementation')
@@ -236,8 +228,13 @@ contains
       !%Description
       !% Set to a non-zero value to add a long-range correction for solids to the kernel.
       !% This is the <math>\alpha</math> parameter defined in S. Botti <i>et al.</i>, <i>Phys. Rev. B</i>
-      !% 69, 155112 (2004), which results in multiplying the Hartree term by
-      !% <math>1 - \alpha / 4 \pi</math>. (Experimental)
+      !% 69, 155112 (2004). The <math>\Gamma = \Gamma` = 0</math> term <math>-\alpha/q^2</math> is taken 
+      !% into account by introducing an additional pole to the polarizability (see R. Stubner  
+      !% <i>et al.</i>, <i>Phys. Rev. B</i> 70, 245119 (2004)). The rest of the terms are included by  
+      !% multiplying the Hartree term by <math>1 - \alpha / 4 \pi</math>. The use of non-zero 
+      !% <math>\alpha</math> in combination with <tt>HamiltonianVariation</tt> = <tt>V_ext_only</tt>  
+      !% corresponds to account of only the <math>\Gamma = \Gamma` = 0</math> term. 
+      !% Applicable only to isotropic systems. (Experimental)
       !%End
 
       call parse_variable('XCKernelLRCAlpha', M_ZERO, xcs%kernel_lrc_alpha)
@@ -309,17 +306,16 @@ contains
 
       end if
 
-      !%Variable XCParallel
+      !%Variable ParallelXC
       !%Type logical
-      !%Default false
+      !%Default true
       !%Section Execution::Parallelization
       !%Description
-      !% (Experimental) When enabled, additional parallelization
+      !% When enabled, additional parallelization
       !% will be used for the calculation of the XC functional.
       !%End
-      call parse_variable('XCParallel', .false., xcs%parallel)
-
-      if(xcs%parallel) call messages_experimental('XCParallel')
+      call messages_obsolete_variable('XCParallel', 'ParallelXC')
+      call parse_variable('ParallelXC', .true., xcs%parallel)
       
       POP_SUB(xc_init.parse)
     end subroutine parse
@@ -354,8 +350,8 @@ contains
     PUSH_SUB(xc_is_orbital_dependent)
 
     xc_is_orbital_dependent = xcs%exx_coef /= M_ZERO .or. &
-      iand(xcs%functional(FUNC_X,1)%family, XC_FAMILY_OEP) /= 0 .or. &
-      iand(xcs%family, XC_FAMILY_MGGA) /= 0
+      bitand(xcs%functional(FUNC_X,1)%family, XC_FAMILY_OEP) /= 0 .or. &
+      bitand(xcs%family, XC_FAMILY_MGGA) /= 0
 
     POP_SUB(xc_is_orbital_dependent)
   end function xc_is_orbital_dependent

@@ -69,16 +69,17 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_gstransformation(tg, gr, dir, geo, outp)
+  subroutine target_output_gstransformation(tg, gr, dir, geo, hm, outp)
     type(target_t), intent(inout) :: tg
     type(grid_t), intent(inout)   :: gr
     character(len=*), intent(in)  :: dir
     type(geometry_t),       intent(in)  :: geo
+    type(hamiltonian_t),    intent(in)  :: hm
     type(output_t),         intent(in)  :: outp
     PUSH_SUB(target_output_gstransformation)
     
     call io_mkdir(trim(dir))
-    call output_states(tg%st, gr, geo, trim(dir), outp)
+    call output_states(tg%st, gr, geo, hm, trim(dir), outp)
 
     POP_SUB(target_output_gstransformation)
   end subroutine target_output_gstransformation

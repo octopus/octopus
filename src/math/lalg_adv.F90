@@ -22,10 +22,7 @@ module lalg_adv_oct_m
   use global_oct_m
   use lapack_oct_m
   use messages_oct_m
-  use mpi_oct_m
   use profiling_oct_m
-  use blacs_proc_grid_oct_m
-  use scalapack_oct_m
   use sort_oct_m
   use utils_oct_m
   
@@ -252,6 +249,8 @@ contains
 
       SAFE_DEALLOCATE_A(zevalues)
     end if
+
+    SAFE_DEALLOCATE_A(evectors)
 
     POP_SUB(zlalg_exp)
   end subroutine zlalg_exp
@@ -492,15 +491,15 @@ contains
         zeigenvec = dm
         zeigenvec(alpha, beta) = zeigenvec(alpha, beta) + deltah
         call lalg_eigensolve_nonh(2, zeigenvec(:, :), zeigplus)
-        zeigenvec(:, 1) = (M_ONE/sum(conjg(zeigref_(1:2, 1))*zeigenvec(1:2, 1))) * zeigenvec(:, 1)
-        zeigenvec(:, 2) = (M_ONE/sum(conjg(zeigref_(1:2, 2))*zeigenvec(1:2, 2))) * zeigenvec(:, 2)
+        zeigenvec(:, 1) = zeigenvec(:, 1)/sum(conjg(zeigref_(1:2, 1))*zeigenvec(1:2, 1))
+        zeigenvec(:, 2) = zeigenvec(:, 2)/sum(conjg(zeigref_(1:2, 2))*zeigenvec(1:2, 2))
         zuder_directplus = zeigenvec(2, 2)
 
         zeigenvec = dm
         zeigenvec(alpha, beta) = zeigenvec(alpha, beta) - deltah
         call lalg_eigensolve_nonh(2, zeigenvec(:, :), zeigminus)
-        zeigenvec(:, 1) = (M_ONE/sum(conjg(zeigref_(1:2, 1))*zeigenvec(1:2, 1))) * zeigenvec(:, 1)
-        zeigenvec(:, 2) = (M_ONE/sum(conjg(zeigref_(1:2, 2))*zeigenvec(1:2, 2))) * zeigenvec(:, 2)
+        zeigenvec(:, 1) = zeigenvec(:, 1)/sum(conjg(zeigref_(1:2, 1))*zeigenvec(1:2, 1))
+        zeigenvec(:, 2) = zeigenvec(:, 2)/sum(conjg(zeigref_(1:2, 2))*zeigenvec(1:2, 2))
         zuder_directminus = zeigenvec(2, 2)
 
         write(*, '(2i1,4f24.12)') alpha, beta, zder_direct, (zeigplus(2) - zeigminus(2))/(M_TWO * deltah)

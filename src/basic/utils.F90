@@ -37,6 +37,7 @@ module utils_oct_m
   public ::                       &
     get_divisors,                 &
     index2axis,                   &
+    index2axisBZ,                 &
     output_tensor,                &
     output_dipole,                &
     print_header,                 &
@@ -111,6 +112,27 @@ contains
     end select
 
   end function index2axis
+
+  ! ---------------------------------------------------------
+  pure function index2axisBZ(idir) result(ch)
+    integer, intent(in) :: idir
+    character(len=2) :: ch
+
+    select case(idir)
+      case(1)
+        ch = "kx"
+      case(2)
+        ch = "ky"
+      case(3)
+        ch = "kz"
+      case(4)
+        ch = "kw"
+      case default
+        write(ch,'(i2)') idir
+    end select
+
+  end function index2axisBZ
+
 
   ! ---------------------------------------------------------
   subroutine output_tensor(iunit, tensor, ndim, unit, write_average)

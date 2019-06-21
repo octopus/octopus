@@ -29,16 +29,12 @@ module controlfunction_oct_m
   use io_oct_m
   use lalg_adv_oct_m
   use lasers_oct_m
-  use loct_math_oct_m
   use loct_pointer_oct_m
   use math_oct_m
-  use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use string_oct_m
   use tdfunction_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -410,7 +406,7 @@ contains
     mode_fixed_fluence = .false.
     select case(cf_common%representation)
     case(ctr_fourier_series_h, ctr_zero_fourier_series_h)
-      if(cf_common%targetfluence  ==  M_ZERO) then
+      if(abs(cf_common%targetfluence) <= M_EPSILON) then
         write(message(1), '(a)') 'If you set "OCTControlFunctionRepresentation" to either'
         write(message(2), '(a)') '"control_fourier_series_h", or "control_zero_fourier_series_h", then the run'
         write(message(3), '(a)') 'must be done in fixed fluence mode.'
@@ -1354,7 +1350,6 @@ contains
     type(controlfunction_t), intent(in)  :: par
     FLOAT,                   intent(out) :: lower_bounds(:)
     FLOAT,                   intent(out) :: upper_bounds(:)
-    integer :: dog
 
     PUSH_SUB(controlfunction_bounds)
 

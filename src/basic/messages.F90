@@ -108,6 +108,12 @@ module messages_oct_m
     module procedure messages_write_logical
   end interface messages_write
 
+
+  interface  messages_print_var_option
+    module procedure messages_print_var_option_4
+    module procedure messages_print_var_option_8
+  end interface messages_print_var_option
+  
   integer :: warnings
   integer :: experimentals
   integer :: current_line
@@ -118,6 +124,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine messages_init()
+    logical :: trap_signals
 
     call parser_init()
 
@@ -143,7 +150,20 @@ contains
     warnings = 0
     experimentals = 0
 
-    call trap_segfault()
+    !%Variable DebugTrapSignals
+    !%Type logical
+    !%Section Execution::Debug
+    !%Description
+    !% If true, trap signals to handle them in octopus itself and
+    !% print a custom backtrace. If false, do not trap signals; then,
+    !% core dumps can be produced or gdb can be used to stop at the
+    !% point a signal was produced (e.g. a segmentation fault). This
+    !% variable is enabled if <tt>Debug</tt> is set to trace mode
+    !% (<tt>trace</tt>, <tt>trace_term</tt> or <tt>trace_file</tt>).
+    !%End
+    call parse_variable('DebugTrapSignals', debug%trace, trap_signals)
+
+    if (trap_signals) call trap_segfault()
 
     call messages_reset_lines()
 
@@ -194,11 +214,6 @@ contains
         call messages_write('  or contact the octopus developers for details.')
         call messages_new_line()
         call messages_info()
-
-      else
-
-        
-
       end if
       
       open(unit = iunit_out, file = 'exec/messages', action = 'write')
@@ -219,11 +234,14 @@ contains
     logical, optional, intent(in) :: only_root_writes
 
     integer :: ii, no_lines_
-    logical :: only_root_writes_, should_write, received
-    integer :: send_req
+    logical :: only_root_writes_, should_write
     integer, allocatable :: recv_buf(:), recv_req(:)
     integer, parameter :: FATAL_TAG = 1620299
-
+#ifdef HAVE_MPI
+    logical :: received
+    integer :: send_req
+#endif
+    
     no_lines_ = current_line
     if(present(no_lines)) no_lines_ = no_lines
 
@@ -732,12 +750,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine messages_print_var_option(iunit, var, option, pre)
+  subroutine messages_print_var_option_8(iunit, var, option, pre)
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
-    integer,          intent(in) :: option
+    integer(8),       intent(in) :: option
     character(len=*), intent(in), optional :: pre
 
+    integer :: option4
+
+    option4 = int(option)
+    
     if(.not. mpi_grp_is_root(mpi_world)) return
 
     if(flush_messages) then
@@ -746,23 +768,33 @@ contains
     end if
 
     if(present(pre)) then
-      call varinfo_print_option(iunit, var, option, pre)
+      call varinfo_print_option(iunit, var, option4, pre)
       if(flush_messages) then
-        call varinfo_print_option(iunit_out, var, option, pre)
+        call varinfo_print_option(iunit_out, var, option4, pre)
       end if
     else
-      call varinfo_print_option(iunit, var, option)
+      call varinfo_print_option(iunit, var, option4)
       if(flush_messages) then
-        call varinfo_print_option(iunit_out, var, option, pre)
+        call varinfo_print_option(iunit_out, var, option4, pre)
       end if
     end if
 
     if(flush_messages) then
       close(iunit_out)
     end if
-  end subroutine messages_print_var_option
+  end subroutine messages_print_var_option_8
 
+  ! ---------------------------------------------------------
+  subroutine messages_print_var_option_4(iunit, var, option, pre)
+    integer,          intent(in) :: iunit
+    character(len=*), intent(in) :: var
+    integer(4),       intent(in) :: option
+    character(len=*), intent(in), optional :: pre
 
+    call messages_print_var_option_8(iunit, var, int(option, 8), pre)
+
+  end subroutine messages_print_var_option_4
+  
   ! ---------------------------------------------------------
   subroutine messages_print_stress(iunit, msg)
     integer,                    intent(in) :: iunit
@@ -1024,7 +1056,7 @@ contains
       ! write to stderr if we are node 0
       call pop_sub_write(stderr)
     end if
-    
+
     no_sub_stack = no_sub_stack - 1
 
   contains

@@ -20,7 +20,6 @@
 #include "global.h"
 
 module casida_oct_m
-  use global_oct_m
   use batch_oct_m
   use calc_mode_par_oct_m
   use comm_oct_m
@@ -28,6 +27,7 @@ module casida_oct_m
   use excited_states_oct_m
   use forces_oct_m
   use gauss_legendre_oct_m
+  use global_oct_m
   use hamiltonian_oct_m
   use io_oct_m
   use io_function_oct_m
@@ -37,9 +37,12 @@ module casida_oct_m
   use linear_response_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
+  use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use parser_oct_m
   use pert_oct_m
+  use phonons_lr_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -54,10 +57,7 @@ module casida_oct_m
   use unit_system_oct_m
   use utils_oct_m
   use v_ks_oct_m
-  use phonons_lr_oct_m
   use xc_oct_m
-  use messages_oct_m  
-  use multicomm_oct_m
 
   implicit none
 
@@ -85,6 +85,8 @@ module casida_oct_m
     integer           :: sb_dim         !< number of spatial dimensions
     integer           :: el_per_state
     character(len=80) :: trandens
+    character(len=80) :: print_exst     !< excited states for which Casida coefficients will be printed
+    FLOAT             :: weight_thresh  !< threshold for the Casida coefficients to be printed
     logical           :: triplet        !< use triplet kernel?
     logical           :: calc_forces    !< calculate excited-state forces
     logical           :: calc_forces_kernel    !< calculate excited-state forces with kernel
@@ -229,10 +231,10 @@ contains
     end select
 
 
-    ! setup Hamiltonian
+    ! setup Hamiltonian, without recalculating eigenvalues (use the ones from the restart information)
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call system_h_setup(sys, hm)
+    call system_h_setup(sys, hm, calc_eigenval=.false.)
 
     !%Variable CasidaTheoryLevel
     !%Type flag
@@ -271,8 +273,8 @@ contains
     call parse_variable('CasidaTheoryLevel', CASIDA_EPS_DIFF + CASIDA_PETERSILKA + CASIDA_CASIDA, theorylevel)
 
     if (states_are_complex(sys%st)) then
-      if((iand(theorylevel, CASIDA_VARIATIONAL) /= 0 &
-        .or. iand(theorylevel, CASIDA_CASIDA) /= 0)) then
+      if((bitand(theorylevel, CASIDA_VARIATIONAL) /= 0 &
+        .or. bitand(theorylevel, CASIDA_CASIDA) /= 0)) then
         message(1) = "Variational and full Casida theory levels do not apply to complex wavefunctions."
         call messages_fatal(1, only_root_writes = .true.)
         ! see section II.D of CV(2) paper regarding this assumption. Would be Eq. 30 with complex wfns.
@@ -366,6 +368,37 @@ contains
     !%End
     call parse_variable('CasidaHermitianConjugate', .false., cas%herm_conj)
 
+    !%Variable CasidaPrintExcitations
+    !%Type string
+    !%Section Linear Response::Casida
+    !%Default write all
+    !%Description
+    !% Specifies which excitations are written at the end of the calculation. 
+    !%
+    !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
+    !% valid.
+    !%End
+    call parse_variable('CasidaPrintExcitations', "all", cas%print_exst)
+
+    !%Variable CasidaWeightThreshold
+    !%Type float
+    !%Section Linear Response::Casida
+    !%Default -1.
+    !%Description
+    !% Specifies the threshold value for which the individual excitations are printed. 
+    !% i.e. juste-h pairs with weight larger than this threshold will be printed. 
+    !% 
+    !% If a negative value (default) is set, all coefficients will be printed.
+    !% For many case, a 0.01 value is a valid option.
+    !%End
+    call parse_variable('CasidaWeightThreshold', -M_ONE, cas%weight_thresh)
+    if (cas%weight_thresh > M_ONE) then
+      message(1) = 'Casida coefficients have values between 0 and 1'
+      message(2) = 'Threshold values reset to default value'
+      call messages_warning(2)
+      cas%weight_thresh = -M_ONE
+    end if
+
     !%Variable CasidaCalcForces
     !%Type logical
     !%Section Linear Response::Casida
@@ -424,7 +457,7 @@ contains
     end if
 
     ! First, print the differences between KS eigenvalues (first approximation to the excitation energies).
-    if(iand(theorylevel, CASIDA_EPS_DIFF) /= 0) then
+    if(bitand(theorylevel, CASIDA_EPS_DIFF) /= 0) then
       message(1) = "Info: Approximating resonance energies through KS eigenvalue differences"
       call messages_info(1)
       cas%type = CASIDA_EPS_DIFF
@@ -433,7 +466,7 @@ contains
 
     if (sys%st%d%ispin /= SPINORS) then
 
-      if(iand(theorylevel, CASIDA_TAMM_DANCOFF) /= 0) then
+      if(bitand(theorylevel, CASIDA_TAMM_DANCOFF) /= 0) then
         call messages_experimental("Tamm-Dancoff calculation")
         message(1) = "Info: Calculating matrix elements in the Tamm-Dancoff approximation"
         call messages_info(1)
@@ -441,7 +474,7 @@ contains
         call casida_work(sys, hm, cas)
       end if
 
-      if(iand(theorylevel, CASIDA_VARIATIONAL) /= 0) then
+      if(bitand(theorylevel, CASIDA_VARIATIONAL) /= 0) then
         call messages_experimental("CV(2)-DFT calculation")
         message(1) = "Info: Calculating matrix elements with the CV(2)-DFT theory"
         call messages_info(1)
@@ -449,7 +482,7 @@ contains
         call casida_work(sys, hm, cas)
       end if
 
-      if(iand(theorylevel, CASIDA_CASIDA) /= 0) then
+      if(bitand(theorylevel, CASIDA_CASIDA) /= 0) then
         message(1) = "Info: Calculating matrix elements with the full Casida method"
         call messages_info(1)
         cas%type = CASIDA_CASIDA
@@ -458,7 +491,7 @@ contains
 
       ! Doing this first, if doing the others later, takes longer, because we would use
       ! each Poisson solution for only one matrix element instead of a whole column.
-      if(iand(theorylevel, CASIDA_PETERSILKA) /= 0) then
+      if(bitand(theorylevel, CASIDA_PETERSILKA) /= 0) then
         message(1) = "Info: Calculating resonance energies via the Petersilka approximation"
         call messages_info(1)
         cas%type = CASIDA_PETERSILKA
@@ -740,9 +773,10 @@ contains
         cas%w(ia) = st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - &
                     st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk)
         if(cas%w(ia) < -M_EPSILON) then
-          message(1) = "There are negative unocc-occ KS eigenvalue differences."
-          message(2) = "This indicates an inconsistency between gs, unocc, and/or casida calculations."
-          call messages_fatal(2, only_root_writes = .true.)
+          message(1) = "There is a negative unocc-occ KS eigenvalue difference for"
+          write(message(2),'("states ",I5," and ",I5," of k-point ",I5,".")') cas%pair(ia)%i, cas%pair(ia)%a, cas%pair(ia)%kk
+          message(3) = "This indicates an inconsistency between gs, unocc, and/or casida calculations."
+          call messages_fatal(3, only_root_writes = .true.)
         end if
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(ia, cas%n_pairs)
       end do

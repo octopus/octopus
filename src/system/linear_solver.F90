@@ -27,16 +27,13 @@ module linear_solver_oct_m
   use hamiltonian_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m
-  use loct_oct_m
   use parser_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use profiling_oct_m
   use preconditioners_oct_m
-  use scf_tol_oct_m
   use smear_oct_m
   use solvers_oct_m
   use states_oct_m
@@ -84,7 +81,7 @@ contains
     type(linear_solver_t),  intent(out)   :: this
     type(grid_t),           intent(in)    :: gr
     logical,                intent(in)    :: states_are_real !< for choosing solver
-    integer, optional,      intent(in)    :: def_solver
+    integer(8), optional,   intent(in)    :: def_solver
 
     integer :: fsolver
     integer :: defsolver_ 

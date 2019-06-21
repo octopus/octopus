@@ -19,6 +19,7 @@
 #include "global.h"
 
 module symmetries_oct_m
+  use iso_c_binding
   use geometry_oct_m
   use global_oct_m
   use messages_oct_m
@@ -26,9 +27,8 @@ module symmetries_oct_m
   use parser_oct_m
   use profiling_oct_m
   use species_oct_m
+  use spglib_f08
   use symm_op_oct_m
-  use lalg_adv_oct_m
-
 
   implicit none
 
@@ -36,7 +36,6 @@ module symmetries_oct_m
   
   public ::                        &
     symmetries_t,                  &
-    symmetries_nullify,            &
     symmetries_init,               &
     symmetries_copy,               &
     symmetries_end,                &
@@ -87,15 +86,6 @@ module symmetries_oct_m
   end interface
 
 contains
-  
-  elemental subroutine symmetries_nullify(this)
-    type(symmetries_t), intent(out) :: this
-
-    this%nops = 0
-    this%breakdir = M_ZERO
-    this%space_group = 0
-
-  end subroutine symmetries_nullify
 
   subroutine symmetries_init(this, geo, dim, periodic_dim, rlattice, klattice)
     type(symmetries_t),  intent(out) :: this
@@ -107,7 +97,6 @@ contains
 
     integer :: max_size, dim4syms
     integer :: idir, iatom, iop, verbosity, point_group
-    real(8) :: determinant
     real(8) :: lattice(1:3, 1:3)
     real(8), allocatable :: position(:, :)
     integer, allocatable :: typs(:)
@@ -118,8 +107,9 @@ contains
     integer                  :: fullnops
     integer, allocatable     :: rotation(:, :, :)
     real(8), allocatable     :: translation(:, :)
-
-
+    character(kind=c_char) :: c_symbol(11), c_schoenflies(7) 
+    logical :: def_sym_comp
+    
     PUSH_SUB(symmetries_init)
 
     ! if someone cares, they could try to analyze the symmetry point group of the individual species too
@@ -136,16 +126,25 @@ contains
 
     dim4syms = min(3,dim)
 
+    def_sym_comp = (geo%natoms < 100)
+    def_sym_comp = def_sym_comp .and. dim == 3
+    
     !%Variable SymmetriesCompute
     !%Type logical
-    !%Default (natoms < 100) ? true : false
     !%Section Execution::Symmetries
     !%Description
     !% If disabled, <tt>Octopus</tt> will not compute
     !% nor print the symmetries.
+    !%
+    !% By default, symmetries are computed when running in 3
+    !% dimensions for systems with less than 100 atoms.
     !%End
-    call parse_variable('SymmetriesCompute', (geo%natoms < 100), this%symmetries_compute)
+    call parse_variable('SymmetriesCompute', def_sym_comp, this%symmetries_compute)
 
+    if(this%symmetries_compute .and. dim /= 3) then
+      call messages_experimental('symmetries for non 3D systems')
+    end if
+    
     if(this%any_non_spherical .or. .not. this%symmetries_compute) then
       call init_identity()
 
@@ -190,7 +189,7 @@ contains
 
       do iatom = 1, geo%natoms
         position(1:3,iatom) = M_ZERO
- 
+
         if(.not. geo%reduced_coordinates) then
           ! Transform atomic positions to reduced coordinates
           position(1:dim4syms,iatom) = matmul(geo%atom(iatom)%x(1:dim4syms),klattice(1:dim4syms,1:dim4syms))/(M_TWO*M_PI) 
@@ -217,11 +216,11 @@ contains
         lattice(idir, idir) = M_ONE
       end do
 
-      call spg_get_international(this%space_group, this%symbol, lattice(1,1), &
-                 position(1,1), typs(1), geo%natoms, symprec)
-      call spg_get_schoenflies(this%space_group, this%schoenflies, lattice(1, 1), &
-                 position(1, 1), typs(1), geo%natoms, symprec)
-
+      this%space_group = spg_get_international(c_symbol, lattice(1,1), &
+                 position(1,1), typs(1), geo%natoms, SYMPREC)
+      this%space_group = spg_get_schoenflies(c_schoenflies, lattice(1, 1), &
+                 position(1, 1), typs(1), geo%natoms, SYMPREC)
+      
       if(this%space_group == 0) then
         message(1) = "Symmetry analysis failed in spglib. Disabling symmetries."
         call messages_warning(1)
@@ -237,15 +236,18 @@ contains
         return
       end if
 
-      call spg_get_multiplicity(max_size, lattice(1, 1), position(1, 1), &
-                                 typs(1), geo%natoms, symprec)
+      call c_to_f_string(c_symbol, this%symbol)
+      call c_to_f_string(c_schoenflies, this%schoenflies)
+      
+      max_size = spg_get_multiplicity(lattice(1, 1), position(1, 1), &
+                                      typs(1), geo%natoms, SYMPREC)
 
       ! spglib returns row-major not column-major matrices!!! --DAS
       SAFE_ALLOCATE(rotation(1:3, 1:3, 1:max_size))
       SAFE_ALLOCATE(translation(1:3, 1:max_size))
 
-      call spg_get_symmetry(fullnops, rotation(1, 1, 1), translation(1, 1), &
-        max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, symprec)
+      fullnops = spg_get_symmetry(rotation(1, 1, 1), translation(1, 1), &
+        max_size, lattice(1, 1), position(1, 1), typs(1), geo%natoms, SYMPREC)
 
       do iop = 1, fullnops
         ! transpose due to array order difference between C and fortran
@@ -263,7 +265,7 @@ contains
       do iop = 1, fullnops
         if(all(rotation(1:3, 1:3, iop) == identity(1:3, 1:3))) then
           found_identity = .true.
-          if(any(abs(translation(1:3, iop)) > real(symprec, REAL_PRECISION))) then
+          if(any(abs(translation(1:3, iop)) > real(SYMPREC, REAL_PRECISION))) then
             is_supercell = .true.
             write(message(1),'(a,3f12.6)') 'Identity has a fractional translation ', translation(1:3, iop)
             call messages_info(1)
@@ -353,6 +355,21 @@ contains
       
     end subroutine init_identity
 
+    subroutine c_to_f_string(c_string, f_string)
+      character(kind=c_char,len=1), intent(in)  :: c_string(*)
+      character(len=*),             intent(out) :: f_string
+
+      integer :: i
+
+      i = 1
+      do while(c_string(i) /= C_NULL_CHAR .and. i <= len(f_string))
+        f_string(i:i) = c_string(i)
+        i = i + 1
+      end do
+      if (i < len(f_string)) f_string(i:) = ' '
+
+    end subroutine c_to_f_string
+    
   end subroutine symmetries_init
 
   
@@ -466,8 +483,7 @@ contains
     integer,               intent(in) :: dim, periodic_dim
     integer,               intent(in) :: iunit
     
-    integer :: iop, ind
-    type(symm_op_t) :: tmpop   
+    integer :: iop
  
     PUSH_SUB(symmetries_write_info)
     
@@ -483,6 +499,7 @@ contains
       message(1) = "Symmetries have been disabled by SymmetriesCompute = false."
       call messages_info(1,iunit = iunit)
       call messages_print_stress(iunit)
+      POP_SUB(symmetries_write_info)
       return
     end if
 

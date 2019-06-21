@@ -1,0 +1,29 @@
+CalculationMode = test
+
+TestMode = hamiltonian_apply
+TestRepetitions = 3
+TestHamiltonianApply = term_local_potential
+
+PeriodicDimensions = 3
+BoxShape = parallelepiped
+ExperimentalFeatures = yes
+
+a = 10.26120
+
+%LatticeParameters
+  a | a | a
+%
+%LatticeVectors
+ 0.0 | 1/2 | 1/2
+ 1/2 | 0.0 | 1/2
+ 1/2 | 1/2 | 0.0
+%
+
+%ReducedCoordinates
+ "Si" | 0.0 | 0.0 | 0.0
+ "Si" | 1/4 | 1/4 | 1/4
+%
+
+Spacing = 0.5
+
+FilterPotentials = filter_none

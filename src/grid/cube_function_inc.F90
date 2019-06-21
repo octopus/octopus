@@ -108,13 +108,15 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local, order, gatherfs)
   integer, optional, intent(in) :: order(3)
   logical, optional, intent(in) :: gatherfs
 
+#ifdef HAVE_MPI
   integer :: ix, iy, iz, index, order_(1:3)
   R_TYPE, allocatable :: cf_tmp(:)
   type(profile_t), save :: prof_allgather
+#endif
+  
+  PUSH_SUB(X(cube_function_allgather))
 
 #ifdef HAVE_MPI
-
-  PUSH_SUB(X(cube_function_allgather))
   call profiling_in(prof_allgather, "CF_ALLGATHER")
 
   if(cube_getFFTLibrary(cube) == FFTLIB_PFFT .or. &

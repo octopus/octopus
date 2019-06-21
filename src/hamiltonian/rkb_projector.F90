@@ -21,17 +21,13 @@
 module rkb_projector_oct_m
   use atom_oct_m
   use global_oct_m
-  use grid_oct_m
-  use lalg_basic_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use simul_box_oct_m
+  use mpi_oct_m
   use submesh_oct_m
   use profiling_oct_m
   use ps_oct_m
   use species_oct_m
-  use geometry_oct_m
-  use mpi_oct_m
 
   implicit none
 
@@ -191,21 +187,28 @@ contains
 
     n_s = rkb_p%n_s
 
-    SAFE_ALLOCATE(bra(1:n_s, 1:2))
-
     if(mesh%use_curvilinear) then
+      SAFE_ALLOCATE(bra(1:n_s, 1:2))
       bra(1:n_s, 1) = rkb_p%bra(1:n_s, 1)*mesh%vol_pp(sm%map(1:n_s))
       bra(1:n_s, 2) = rkb_p%bra(1:n_s, 2)*mesh%vol_pp(sm%map(1:n_s))
+      do idim = 1, 2
+        do is = 1, n_s
+          uvpsi(idim, 1) = uvpsi(idim, 1) + psi(is, idim)*bra(is, 1)
+          uvpsi(idim, 2) = uvpsi(idim, 2) + psi(is, idim)*bra(is, 2)
+        end do
+      end do
+      SAFE_DEALLOCATE_A(bra)
     else
-      bra(1:n_s, 1:2) = rkb_p%bra(1:n_s, 1:2)*mesh%volume_element
+      do idim = 1, 2
+        do is = 1, n_s
+          uvpsi(idim, 1) = uvpsi(idim, 1) + psi(is, idim)*rkb_p%bra(is, 1)
+          uvpsi(idim, 2) = uvpsi(idim, 2) + psi(is, idim)*rkb_p%bra(is, 2)
+        end do
+        uvpsi(idim, 1) = uvpsi(idim, 1)*mesh%volume_element
+        uvpsi(idim, 2) = uvpsi(idim, 2)*mesh%volume_element
+      end do
     end if
 
-    do idim = 1, 2
-      do is = 1, n_s
-        uvpsi(idim, 1) = uvpsi(idim, 1) + psi(is, idim)*bra(is, 1)
-        uvpsi(idim, 2) = uvpsi(idim, 2) + psi(is, idim)*bra(is, 2)
-      end do
-    end do
 
     SAFE_DEALLOCATE_A(bra)
 #ifndef HAVE_OPENMP

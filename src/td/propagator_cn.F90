@@ -26,7 +26,7 @@ module propagator_cn_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
-  use loct_pointer_oct_m
+  use lda_u_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use potential_interpolation_oct_m
@@ -35,7 +35,6 @@ module propagator_cn_oct_m
   use solvers_oct_m
   use sparskit_oct_m
   use states_oct_m
-  use xc_oct_m
 
   implicit none
 
@@ -109,24 +108,16 @@ contains
     end if
 
     if(hm%family_is_mgga_with_exc) then
-      if(hm%cmplxscl%space) then
-        call potential_interpolation_interpolate(tr%vksold, 3, &
-          time, dt, time -dt/M_TWO, hm%vhxc, hm%imvhxc, hm%vtau, hm%imvtau)
-      else
-        call potential_interpolation_interpolate(tr%vksold, 3, &
-          time, dt, time -dt/M_TWO, hm%vhxc, vtau = hm%vtau)
-      end if
+      call potential_interpolation_interpolate(tr%vksold, 3, &
+        time, dt, time -dt/M_TWO, hm%vhxc, vtau = hm%vtau)
     else 
-      if(hm%cmplxscl%space) then
-        call potential_interpolation_interpolate(tr%vksold, 3, &
-           time, dt, time -dt/M_TWO, hm%vhxc, hm%imvhxc)
-      else
-        call potential_interpolation_interpolate(tr%vksold, 3, &
-          time, dt, time -dt/M_TWO, hm%vhxc)
-      end if
+      call potential_interpolation_interpolate(tr%vksold, 3, &
+        time, dt, time -dt/M_TWO, hm%vhxc)
     end if
 
-    call hamiltonian_update(hm, gr%mesh, time = time - dt/M_TWO)
+    call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt/M_TWO)
+    !We update the occupation matrices
+    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
     ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
     do ik = st%d%kpt%start, st%d%kpt%end
@@ -177,79 +168,12 @@ contains
       end do
     end do
 
-    if(hm%cmplxscl%space) then !Left states
-
-      dt_op = - dt !propagate backwards
-      t_op  = time + dt/M_TWO
-
-      if(hm%family_is_mgga_with_exc) then
-        call potential_interpolation_interpolate(tr%vksold, 3,  &
-          time, dt, time + dt/M_TWO, hm%vhxc, hm%imvhxc, hm%vtau, hm%imvtau)
-      else
-        call potential_interpolation_interpolate(tr%vksold, 3,  &
-          time, dt, time + dt/M_TWO, hm%vhxc, hm%imvhxc)
-      end if
-
-      call hamiltonian_update(hm, gr%mesh, time = time + dt/M_TWO)
-
-      ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ist = st%st_start, st%st_end
-
-          call states_get_state(st, gr%mesh, ist, ik, zpsi_rhs,left = .true. )
-          call exponential_apply(tr%te, gr%der, hm, zpsi_rhs, ist, ik, -dt/M_TWO)
-
-          if(hamiltonian_inh_term(hm)) then
-            SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
-            do idim = 1, st%d%dim
-              call states_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi, left = .true.)
-              forall(ip = 1:gr%mesh%np) zpsi_rhs(ip, idim) = zpsi_rhs(ip, idim) - dt*inhpsi(ip)
-            end do
-            SAFE_DEALLOCATE_A(inhpsi)
-          end if
-
-          ! put the values in a continuous array
-          do idim = 1, st%d%dim
-            call states_get_state(st, gr%mesh, idim, ist, ik, zpsi((idim - 1)*np+1:idim*np), left = .true.)
-            rhs((idim - 1)*np + 1:idim*np) = zpsi_rhs(1:np, idim)
-          end do
-
-          ist_op = ist
-          ik_op = ik
-          if(use_sparskit) then
-#ifdef HAVE_SPARSKIT
-            call zsparskit_solver_run(tr%tdsk, td_zop, td_zopt, zpsi, rhs)
-#endif
-          else
-            iter = 2000
-            call zqmr_sym_gen_dotu(np*st%d%dim, zpsi, rhs, propagator_qmr_op, zmf_dotu_aux, zmf_nrm2_aux, &
-              propagator_qmr_prec, iter, dres, cgtol, showprogress = .false., converged = converged)
-
-            if(.not.converged) then
-              write(message(1),'(a)')        'The linear solver used for the Crank-Nicolson'
-              write(message(2),'(a,es14.4)') 'propagator did not converge for left states: Residual = ', dres
-              call messages_warning(2)
-            end if
-
-          end if
-
-          do idim = 1, st%d%dim
-            call states_set_state(st, gr%mesh, idim, ist, ik, zpsi((idim-1)*np + 1:(idim - 1)*np + np), left = .true.)
-          end do
-
-        end do
-      end do
-
-    end if
-
-    if(.not. hm%cmplxscl%space) then
-      call density_calc(st, gr, st%rho)
-    else
-      call density_calc(st, gr, st%zrho%Re, st%zrho%Im)
-    end if
+    call density_calc(st, gr, st%rho)
 
     !restore to time 'time - dt'
-    if(ion_dynamics_ions_move(ions)) call ion_dynamics_restore_state(ions, geo, ions_state)
+    if(ion_dynamics_ions_move(ions)) then
+      call ion_dynamics_restore_state(ions, geo, ions_state)
+    end if
 
     SAFE_DEALLOCATE_A(zpsi_rhs)
     SAFE_DEALLOCATE_A(zpsi)

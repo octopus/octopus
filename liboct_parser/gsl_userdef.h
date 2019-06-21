@@ -46,4 +46,7 @@ gsl_complex gsl_complex_round (gsl_complex a);
 gsl_complex gsl_complex_ceiling (gsl_complex a);
 gsl_complex gsl_complex_floor (gsl_complex a);
 
+void        gsl_complex_rand_seed(long a);
+gsl_complex gsl_complex_rand();
+
 #endif /* __GSL_USERDEF_H__ */

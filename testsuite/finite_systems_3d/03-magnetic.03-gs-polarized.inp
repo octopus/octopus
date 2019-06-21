@@ -26,3 +26,5 @@ LCAOStart = no
 FilterPotentials = filter_none
 
 MixField = density
+
+ParKpoints = no

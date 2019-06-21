@@ -19,51 +19,33 @@
 #include "global.h"
 
 module scdm_oct_m
-  use batch_oct_m
-  use batch_ops_oct_m
   use blacs_proc_grid_oct_m
-  use blas_oct_m
-  use cmplxscl_oct_m
+  use blacs_oct_m
   use comm_oct_m
   use cube_oct_m
-  use cube_function_oct_m
   use derivatives_oct_m
   use fft_oct_m
-  use nfft_oct_m
-  use geometry_oct_m
   use global_oct_m
-  use grid_oct_m
-  use hardware_oct_m
   use index_oct_m
-  use io_oct_m
-  use io_function_oct_m
-  use kpoints_oct_m
-  use lalg_basic_oct_m
-  use math_oct_m
+  use lalg_adv_oct_m
   use mesh_oct_m
   use mesh_cube_map_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use mpi_lib_oct_m
   use multicomm_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use poisson_oct_m
   use poisson_fft_oct_m
   use profiling_oct_m
+  use scalapack_oct_m
   use simul_box_oct_m
-  use smear_oct_m
   use states_oct_m
-  use states_calc_oct_m
   use states_dim_oct_m
   use states_parallel_oct_m
-  use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
-  use xc_oct_m
-  use XC_F90(lib_m)
 
   implicit none
 
@@ -77,10 +59,7 @@ module scdm_oct_m
   
   type scdm_t
     type(states_t)   :: st          !< localized orthogonal states
-    type(poisson_t)  :: poisson1    !< solver (not used, only for testing)
-    type(cube_t)     :: cube        !< mesh cube for fft
     FLOAT, pointer   :: center(:,:) !< coordinates of centers of states (in same units as mesh%x)
-    FLOAT            :: rcut        !< orbital cutoff radius (box size) NOTE: this could be dynamic and state dependent
     integer          :: box_size    !< number of mesh points in the dimension of local box around scdm states 
                                     !! NOTE: this could be dynamic and state dependent
     integer          :: full_box    !< = (2*box_size+1)**3, i.e. number of points in box
@@ -95,9 +74,7 @@ module scdm_oct_m
     CMPLX, pointer   :: zpsi(:,:)   ! ^
     type(poisson_t)  :: poisson     !< solver used to compute exchange with localized scdm states
     type(poisson_fft_t) :: poisson_fft !< used for above poisson solver
-    type(cmplxscl_t)    :: cmplxscl
 
-    logical          :: re_ortho_normalize=.false. !< orthonormalize the scdm states
     logical          :: verbose     !< write info about SCDM procedure
     logical          :: psi_scdm    !< Hamiltonian is applied to an SCDM state
 
@@ -111,7 +88,6 @@ module scdm_oct_m
                                     !! used for states parallelization in the exchange operator
     integer          :: st_exx_start!< index of state distribution in the exchange operator
     integer          :: st_exx_end  !.
-    integer          :: lnst_exx    !.
     logical          :: root        !< this is a redundat flag equal to mpi_world%rank==0
 #ifdef HAVE_SCALAPACK 
     type(blacs_proc_grid_t) :: proc_grid  !< blacs context for RRQR on transpose states with scalapack
@@ -137,18 +113,15 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   type(scdm_t) :: scdm
   logical, optional :: operate_on_scdm  !< apply exchange to SCDM states by performing a basis rotation on the st object
   
-  type(cmplxscl_t) :: cmplxscl
-  integer :: ii, jj, kk, ip, rank
-  integer :: inp_calc_mode
+  integer :: ii, jj, kk, ip
   logical :: operate_on_scdm_
-  !debug
-  integer :: temp(3)
   
   integer,  allocatable:: istart(:)
   integer,  allocatable:: iend(:)
   integer,  allocatable:: ilsize(:)
   integer :: box(3)
-  FLOAT :: dummy, enlarge(3)
+  FLOAT :: dummy
+  FLOAT :: rcut ! orbital cutoff radius (box size) NOTE: this could be dynamic and state dependent
   
   PUSH_SUB(scdm_init)
   ! check if already initialized
@@ -180,7 +153,6 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   scdm%root = (mpi_world%rank ==0)
   
   scdm%nst   = st%nst
-  scdm%cmplxscl = st%cmplxscl
   
   ! initialize state object for the SCDM states by copying
   call states_copy(scdm%st,st)
@@ -209,12 +181,12 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   !%Description
   !% Controls the size of the box on which the SCDM states are defined (box size = 2*radius).
   !%End  
-  call parse_variable('SCDMCutoffRadius', 3._8, scdm%rcut, units_inp%length)
-  if (scdm%root.and.scdm%verbose) call messages_print_var_value(stdout, 'SCDM cutoff', scdm%rcut)
+  call parse_variable('SCDMCutoffRadius', 3._8, rcut, units_inp%length)
+  if (scdm%root.and.scdm%verbose) call messages_print_var_value(stdout, 'SCDM cutoff', rcut)
   ! box_size is half the size of the  box
   scdm%box_size = 0
   do ii = 1, 3
-    scdm%box_size = max(scdm%box_size,ceiling(scdm%rcut/der%mesh%spacing(ii)))
+    scdm%box_size = max(scdm%box_size,ceiling(rcut/der%mesh%spacing(ii)))
   end do
   
   if (scdm%root .and. scdm%verbose) then
@@ -240,7 +212,6 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   call multicomm_divide_range(st%nst, scdm%st_exx_grp%size, istart, iend, lsize=ilsize)
   scdm%st_exx_start = istart(scdm%st_exx_grp%rank+1)
   scdm%st_exx_end = iend(scdm%st_exx_grp%rank+1)
-  scdm%lnst_exx = ilsize(scdm%st_exx_grp%rank+1)
   
   ! allocate local boxes for the SCDM states
   if (.not.states_are_real(st)) then

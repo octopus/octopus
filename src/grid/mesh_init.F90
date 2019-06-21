@@ -20,14 +20,11 @@
 
 module mesh_init_oct_m
   use checksum_interface_oct_m
-  use cube_oct_m
   use curvilinear_oct_m
   use geometry_oct_m
   use global_oct_m
   use hypercube_oct_m
   use index_oct_m
-  use io_oct_m
-  use loct_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_cube_map_oct_m
@@ -42,7 +39,6 @@ module mesh_init_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use stencil_oct_m
-  use subarray_oct_m
 
   implicit none
   
@@ -124,7 +120,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
     ! one we selected. We choose the size that has the spacing closest
     ! to the requested one.
     do delta = -1, 1
-      spacing_new(delta) = CNST(2.0)*sb%lsize(idir)/real(2*mesh%idx%nr(2, idir) + 1 - delta) 
+      spacing_new(delta) = CNST(2.0)*sb%lsize(idir)/real(2*mesh%idx%nr(2, idir) + 1 - delta, REAL_PRECISION)
       spacing_new(delta) = abs(spacing_new(delta) - spacing(idir))
     end do
 
@@ -133,7 +129,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
     ASSERT(delta >= -1) 
     ASSERT(delta <=  1) 
 
-    mesh%spacing(idir) = CNST(2.0)*sb%lsize(idir)/real(2*mesh%idx%nr(2, idir) + 1 - delta)
+    mesh%spacing(idir) = CNST(2.0)*sb%lsize(idir)/real(2*mesh%idx%nr(2, idir) + 1 - delta, REAL_PRECISION)
 
     ! we need to adjust the grid by adding or removing one point
     if(delta == -1) then
@@ -156,7 +152,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
     end if
   end do
 
-  mesh%idx%ll(:) = mesh%idx%nr(2, :) - mesh%idx%nr(1, :) + 1
+  mesh%idx%ll(1:MAX_DIM) = mesh%idx%nr(2, 1:MAX_DIM) - mesh%idx%nr(1, 1:MAX_DIM) + 1
 
 
   call profiling_out(mesh_init_prof)
@@ -194,8 +190,9 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
   call profiling_in(mesh_init_prof, "MESH_INIT")
 
   ! enlarge mesh for boundary points
-  mesh%idx%nr(1,:) = mesh%idx%nr(1,:) - mesh%idx%enlarge(:)
-  mesh%idx%nr(2,:) = mesh%idx%nr(2,:) + mesh%idx%enlarge(:)
+  mesh%idx%nr(1, 1:MAX_DIM) = mesh%idx%nr(1, 1:MAX_DIM) - mesh%idx%enlarge(1:MAX_DIM)
+  mesh%idx%nr(2, 1:MAX_DIM) = mesh%idx%nr(2, 1:MAX_DIM) + mesh%idx%enlarge(1:MAX_DIM)
+  
   if(mesh%idx%is_hypercube) then
     call hypercube_init(mesh%idx%hypercube, sb%dim, mesh%idx%nr, mesh%idx%enlarge(1))
     mesh%np_part_global = hypercube_number_total_points(mesh%idx%hypercube)
@@ -274,6 +271,10 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil)
           end if
         else ! the usual way: mark both inner and enlargement points
           if (in_box(ix)) then
+
+            ASSERT(all((/ix, iy, iz/) <=  mesh%idx%nr(2, 1:3) - mesh%idx%enlarge(1:3)))
+            ASSERT(all((/ix, iy, iz/) >=  mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3)))
+            
             mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)
             do is = 1, stencil%size
               if(stencil%center == is) cycle
@@ -794,7 +795,7 @@ contains
     logical              :: use_topo, reorder, partition_print
     integer              :: ierr
 
-    logical :: read_partition, write_partition, has_virtual_partition = .false.
+    logical :: has_virtual_partition = .false.
     integer :: vsize !< 'virtual' partition size
     type(restart_t) :: restart_load, restart_dump
     
@@ -1009,6 +1010,7 @@ contains
     SAFE_ALLOCATE(mesh%vol_pp(1:np))
 
     forall(ip = 1:np) mesh%vol_pp(ip) = product(mesh%spacing(1:sb%dim))
+
     jj(sb%dim + 1:MAX_DIM) = 0
 
     if(mesh%parallel_in_domains) then
@@ -1100,7 +1102,7 @@ contains
                 dx = abs(mod(ix, n_mod))
                 dy = abs(mod(iy, n_mod))
                 dz = abs(mod(iz, n_mod))
-                if(dx+dy+dz == M_ZERO) cycle
+                if(dx+dy+dz == 0) cycle
 
                 if(abs(vol_tmp(ix, iy, iz)) < DELTA) cycle
 
@@ -1163,6 +1165,8 @@ contains
     else
       mesh%volume_element = mesh%vol_pp(1)
     end if
+
+    mesh%surface_element(1:sb%dim) = sb%surface_element(1:sb%dim)
 
     POP_SUB(mesh_init_stage_3.mesh_get_vol_pp)
 

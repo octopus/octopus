@@ -30,15 +30,13 @@ KPointsUseSymmetries = yes
 SymmetrizeDensity = yes
 
 ParDomains = no
-ParKPoints = auto
 
 %KPointsGrid
   2 | 2 | 1
-  0 | 0 | 0
 %
 
 %Species
- 'B' | species_pseudo | db_file | "HGH/B.hgh"
+ 'B' | species_pseudo | set | hgh_lda
 %
 
 %Coordinates

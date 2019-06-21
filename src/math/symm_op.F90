@@ -100,10 +100,10 @@ contains
 
     !What comes out of spglib is the rotation matrix in fractional coordinates
     !This is not a rotation matrix!
-    this%rot_red = M_ZERO
+    this%rot_red = 0
     this%rot_red(1:dim, 1:dim) = rot(1:dim, 1:dim)
     do idim = dim+1,3
-      this%rot_red(idim,idim) = M_ONE
+      this%rot_red(idim,idim) = 1
     end do
 
     !The inverse operation is only given by its inverse, not the transpose  

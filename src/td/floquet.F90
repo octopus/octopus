@@ -564,10 +564,10 @@ contains
          this%td_hm(it)%geo%skip_species_pot_init = .true.
 
          call hamiltonian_init(this%td_hm(it), gr, this%td_hm(it)%geo, st, sys%ks%theory_level, &
-                               sys%ks%xc_family,sys%ks%xc_flags,  family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+                               sys%ks%xc_family,  family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
          call hamiltonian_epot_generate(this%td_hm(it), gr, this%td_hm(it)%geo, st, time=M_ZERO)
 
-         call scf_init(scf,gr,this%td_hm(it)%geo,st,sys%mc,this%td_hm(it),conv_force = CNST(1e-8))
+         call scf_init(scf,gr,this%td_hm(it)%geo,st,sys%mc,this%td_hm(it),sys%ks, conv_force = CNST(1e-8))
          call scf_run(scf,sys%mc,gr,this%td_hm(it)%geo,st,sys%ks,this%td_hm(it),sys%outp, gs_run=.false.)
          call scf_end(scf)
 
@@ -589,14 +589,14 @@ contains
          this%td_hm(it)%geo%skip_species_pot_init = .true.
 
          call hamiltonian_init(this%td_hm(it), gr, this%td_hm(it)%geo, st, sys%ks%theory_level, &
-                               sys%ks%xc_family,sys%ks%xc_flags,  family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+                               sys%ks%xc_family,  family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
          time =this%F%Tcycle+ it*this%F%dt ! offset in time to catch switchon cycle
          do ispin=1,this%d%nspin
             forall (ip = 1:gr%mesh%np) this%td_hm(it)%vhxc(ip,ispin) = this%vhxc(ip, ispin)
          end do
          forall (ip = 1:gr%mesh%np) this%td_hm(it)%ep%vpsl(ip)= this%ep%vpsl(ip)
          call hamiltonian_epot_generate(this%td_hm(it), gr, this%td_hm(it)%geo, st, time=time)
-         call hamiltonian_update(this%td_hm(it), gr%der%mesh,time=time)
+         call hamiltonian_update(this%td_hm(it), gr%der%mesh, gr%der%boundaries,time=time)
 
         case(FLOQUET_INTERACTING)
            ! init is on the fly           
@@ -666,9 +666,9 @@ contains
      hm%td_hm(it)%geo%skip_species_pot_init = .true.
 
      call hamiltonian_init(hm%td_hm(it), gr, hm%td_hm(it)%geo, st, sys%ks%theory_level, &
-                           sys%ks%xc_family,sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+                           sys%ks%xc_family, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
      
-     call hamiltonian_update(hm%td_hm(it), gr%der%mesh,time=time)
+     call hamiltonian_update(hm%td_hm(it), gr%der%mesh, gr%der%boundaries,time=time)
 
      ! fill time-dependent hamiltonian structure with scf-fields at this time
      do ispin=1,hm%d%nspin
@@ -761,9 +761,8 @@ contains
         call geometry_init(hm%td_hm(it)%geo, sys%space,  xyzfname = filename)
         
         
-        
         call hamiltonian_init(hm%td_hm(it), gr, hm%td_hm(it)%geo, st, sys%ks%theory_level, &
-                              sys%ks%xc_family,sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+                              sys%ks%xc_family,family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
  
 
         if (hm%theory_level /= INDEPENDENT_PARTICLES) then
@@ -1007,7 +1006,7 @@ contains
       ! set dimension of Floquet Hamiltonian                                                    
       hm%d%dim = dressed_st%d%dim
       
-      call eigensolver_init(eigens, gr, dressed_st)
+      call eigensolver_init(eigens, gr, dressed_st, sys%ks%xc)
       eigens%converged(:) = 0
 
       ! the subspace diagonalization is hardcoded (and only applied once)
@@ -1206,7 +1205,7 @@ contains
       end if
       
       call energy_calc_total(hm, gr, dressed_st, iunit, full = .true.)
-      call forces_calculate(gr, sys%geo, hm, dressed_st)
+      call forces_calculate(gr, sys%geo, hm, dressed_st, sys%ks)
 
       if(mpi_grp_is_root(mpi_world)) then
         write(iunit, '(3a)') 'Energy [', trim(units_abbrev(units_out%energy)), ']:'

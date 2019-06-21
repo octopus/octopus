@@ -29,7 +29,6 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
 
   FLOAT :: r, xx(1:MAX_DIM)
   FLOAT :: vv
-  FLOAT :: tmp(1:MAX_DIM)
 
   integer :: is
   integer :: ii, jj, kk
@@ -73,13 +72,13 @@ subroutine double_grid_apply (this, spec, mesh, sm, x_atom, vl, l, lm, ic)
 #endif
 
     !$omp critical
-    SAFE_ALLOCATE(vs(0:sm%np_part))
+    SAFE_ALLOCATE(vs(1:sm%np_part))
     !$omp end critical
 
     vs = M_ZERO
 
     !for each grid point
-    !$omp do private(ii, jj, kk, vv, tmp, r, xx)
+    !$omp do private(ii, jj, kk, vv, r, xx)
     do is = 1, sm%np_part
 
       ! iterate over the fine grid

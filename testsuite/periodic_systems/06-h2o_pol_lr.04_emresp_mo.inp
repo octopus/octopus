@@ -1,0 +1,31 @@
+CalculationMode = em_resp
+ExperimentalFeatures = yes
+
+%Coordinates
+ 'O'  |  0.000000  | -0.553586  |  0.000000
+ 'H'  |  1.429937  |  0.553586  |  0.000000
+ 'H'  | -1.429937  |  0.553586  |  0.000000
+%
+
+Spacing = 0.5
+BoxShape = parallelepiped
+Lsize = 10
+PeriodicDimensions = 3
+
+%KPointsGrid
+1 | 1 | 1
+%
+
+%EMFreqs 
+2 | 0.0 | 0.1
+%
+
+EMEta = 0.01
+KdotPEta = 0.01
+LRTolFinalTol = 1e-4
+EMPerturbationType = electric
+EMCalcMagnetooptics = true
+
+FilterPotentials = filter_none
+
+MixField = density

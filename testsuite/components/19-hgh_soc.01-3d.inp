@@ -1,0 +1,22 @@
+CalculationMode = test
+
+TestMode = projector
+
+%Coordinates
+"W" | 0.0 | 0.0 |  0.0	
+%
+
+BoxShape = sphere
+Radius  = 8.0*angstrom
+Spacing = 0.3*angstrom
+
+ExperimentalFeatures = yes
+
+PseudopotentialSet = hgh_lda
+
+SpinComponents = spinors
+RelativisticCorrection = spin_orbit
+
+TestRepetitions = 10
+
+StatesBlockSize = 4

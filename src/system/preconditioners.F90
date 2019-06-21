@@ -39,14 +39,14 @@ module preconditioners_oct_m
 
   implicit none
   private
-  
+
   integer, public, parameter ::     &
     PRE_NONE      = 0,              &
     PRE_FILTER    = 1,              &
     PRE_JACOBI    = 2,              &
     PRE_POISSON   = 3,              &
     PRE_MULTIGRID = 7
-  
+
   public ::                            &
     preconditioner_t,                  &
     preconditioner_init,               &
@@ -64,20 +64,21 @@ module preconditioners_oct_m
 
     type(nl_operator_t) :: op
     FLOAT, pointer      :: diag_lapl(:) !< diagonal of the laplacian
+    integer             :: npre, npost, nmiddle
   end type preconditioner_t
-  
+
 contains
 
-  ! --------------------------------------------------------- 
+  ! ---------------------------------------------------------
   subroutine preconditioner_init(this, gr)
-    type(preconditioner_t), intent(out)    :: this 
+    type(preconditioner_t), intent(out)    :: this
     type(grid_t),           intent(in)     :: gr
 
     FLOAT :: alpha, default_alpha
     FLOAT :: vol
     integer :: default
     integer :: maxp, is, ns, ip, ip2
-    
+
     PUSH_SUB(preconditioner_init)
 
     !%Variable Preconditioner
@@ -137,11 +138,11 @@ contains
       !%End
       default_alpha = CNST(0.5)
       if(simul_box_is_periodic(gr%sb)) default_alpha = CNST(0.6)
-      
+
       call parse_variable('PreconditionerFilterFactor', default_alpha, alpha)
 
       call messages_print_var_value(stdout, 'PreconditionerFilterFactor', alpha)
-      
+
       ns = this%op%stencil%size
 
       if (this%op%const_w) then
@@ -156,15 +157,16 @@ contains
 
         do is = 1, ns
           if(is /= this%op%stencil%center) then
-            this%op%w_re(is, ip) = M_HALF*(M_ONE - alpha)/gr%mesh%sb%dim
+            this%op%w(is, ip) = M_HALF*(M_ONE - alpha)/gr%mesh%sb%dim
           else
-            this%op%w_re(is, ip) = alpha
+            this%op%w(is, ip) = alpha
           end if
+          this%op%w(is, ip) = this%op%w(is, ip) * M_TWO * M_TWO*(M_ONE - alpha)/gr%mesh%sb%dim
           ip2 = ip + this%op%ri(is, this%op%rimap(ip))
-          if(gr%mesh%use_curvilinear) this%op%w_re(is, ip) = this%op%w_re(is, ip)*(ns*gr%mesh%vol_pp(ip2)/vol)
+          if(gr%mesh%use_curvilinear) this%op%w(is, ip) = this%op%w(is, ip)*(ns*gr%mesh%vol_pp(ip2)/vol)
         end do
       end do
-      
+
       call nl_operator_update_weights(this%op)
 
     case(PRE_JACOBI, PRE_MULTIGRID)
@@ -173,10 +175,39 @@ contains
       call lalg_scal(gr%mesh%np, -M_HALF, this%diag_lapl(:))
     end select
 
+    if(this%which == PRE_MULTIGRID) then
+      !%Variable PreconditionerIterationsPre
+      !%Type integer
+      !%Section SCF::Eigensolver
+      !%Description
+      !% This variable is the number of pre-smoothing iterations for the multigrid
+      !% preconditioner. The default is 1.
+      !%End
+      call parse_variable('PreconditionerIterationsPre', 1, this%npre)
+
+      !%Variable PreconditionerIterationsMiddle
+      !%Type integer
+      !%Section SCF::Eigensolver
+      !%Description
+      !% This variable is the number of smoothing iterations on the coarsest grid for the multigrid
+      !% preconditioner. The default is 1.
+      !%End
+      call parse_variable('PreconditionerIterationsMiddle', 1, this%nmiddle)
+
+      !%Variable PreconditionerIterationsPost
+      !%Type integer
+      !%Section SCF::Eigensolver
+      !%Description
+      !% This variable is the number of post-smoothing iterations for the multigrid
+      !% preconditioner. The default is 2.
+      !%End
+      call parse_variable('PreconditionerIterationsPost', 2, this%npost)
+    end if
+
     POP_SUB(preconditioner_init)
   end subroutine preconditioner_init
 
-  
+
   ! ---------------------------------------------------------
   subroutine preconditioner_null(this)
     type(preconditioner_t), intent(inout) :: this
@@ -190,7 +221,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine preconditioner_end(this)
-    type(preconditioner_t), intent(inout) :: this 
+    type(preconditioner_t), intent(inout) :: this
 
     PUSH_SUB(preconditioner_end)
 

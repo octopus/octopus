@@ -21,12 +21,9 @@
 module eigensolver_oct_m
   use batch_oct_m
   use derivatives_oct_m
-  use eigen_arpack_oct_m
   use eigen_cg_oct_m
-  use eigen_feast_oct_m
   use eigen_lobpcg_oct_m
   use eigen_rmmdiis_oct_m
-  use energy_calc_oct_m
   use exponential_oct_m
   use global_oct_m
   use grid_oct_m
@@ -34,7 +31,6 @@ module eigensolver_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -43,14 +39,13 @@ module eigensolver_oct_m
   use parser_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
-  use sort_oct_m
   use states_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
   use subspace_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -67,9 +62,7 @@ module eigensolver_oct_m
     FLOAT   :: tolerance
     integer :: es_maxiter
 
-    type(eigen_arpack_t) :: arpack
-    integer :: arnoldi_vectors
-    FLOAT   :: current_rel_dens_error !< for the arpack solver it is important to base precision on how well density is converged
+    FLOAT   :: current_rel_dens_error
     FLOAT   :: imag_time
 
     !> Stores information about how well it performed.
@@ -82,14 +75,18 @@ module eigensolver_oct_m
 
     type(subspace_t) :: sdiag
 
-    type(feast_t) :: feast !< Contains data used by FEAST solver (at least a linear solver)
+    type(xc_t), pointer :: xc
 
     integer :: rmmdiis_minimization_iter
 
-    logical :: save_mem
     logical :: skip_finite_weight_kpoints
     logical :: folded_spectrum
     FLOAT, pointer   :: spectrum_shift(:,:)
+
+    ! cg options
+    logical :: orthogonalize_to_all
+    integer :: conjugate_direction
+    logical :: additional_terms
   end type eigensolver_t
 
 
@@ -102,168 +99,16 @@ module eigensolver_oct_m
        RS_RMMDIIS = 10,         &
        RS_ARPACK  = 12,         &
        RS_FEAST   = 13,         &
-       RS_PSD      = 14
+       RS_PSD     = 14
   
 contains
 
-  subroutine cmplxscl_choose_state_order(eigens, st, gr)
-    type(eigensolver_t), intent(inout) :: eigens
-    type(states_t),      intent(inout) :: st
-    type(grid_t),        intent(in)    :: gr
-    
-    !CMPLX, allocatable :: kinetic_elements(:, :) ! XXXXXX
-    integer :: ist
-    FLOAT   :: limitvalue
-    CMPLX, allocatable :: boundary_norms(:)
-    FLOAT, allocatable :: buf(:), score(:)
-
-    PUSH_SUB(cmplxscl_choose_state_order)
-
-    call states_orthogonalize_cproduct(st, gr%mesh)
-
-    !SAF!E_ALL!OCATE(kinetic_elements(1:st%nst, 1))
-    SAFE_ALLOCATE(score(1:st%nst))
-    SAFE_ALLOCATE(buf(1:st%nst))
-    SAFE_ALLOCATE(boundary_norms(1:st%nst))
-
-    call identify_continuum_states(gr%mesh, st, boundary_norms)
-        
-    buf(:) = abs(boundary_norms(:))
-    call sort(buf)
-    if(st%cmplxscl%nlocalizedstates == 0) then
-      limitvalue = -M_ONE ! all states will be above limitvalue
-    else
-      limitvalue = min(buf(st%cmplxscl%nlocalizedstates) * CNST(1.01), st%cmplxscl%localizationthreshold)
-    end if
-    
-    do ist=1, st%nst
-      if(abs(boundary_norms(ist)) <= limitvalue) then ! XXX spin
-        score(ist) = -M_PI + atan(st%zeigenval%Re(ist, 1)) ! all negative values
-      else
-        score(ist) = M_PI + atan(abs(boundary_norms(ist))) ! all positive values
-      end if
-    end do
-    
-    write(message(1), *) 'Partial norm'
-    call messages_info(1)
-    do ist=1, st%nst
-      write(message(1), *) ist, boundary_norms(ist)
-      call messages_info(1)
-    end do
-    write(message(1), *) 'state Re(eps) Im(eps) bnorm^2 score'
-    call messages_info(1)
-    do ist=1, st%nst
-      write(message(1), '(i4,2x,f11.6,f11.6,4x,f9.4,2x,f9.4)') ist, st%zeigenval%Re(ist, 1), st%zeigenval%Im(ist, 1), &
-        abs(boundary_norms(ist)), score(ist)
-      !'(i4,1x,2f7.3)') ist, st%zeigenval%Re(ist), st%zeigenval%Im(ist)
-      !write(message(1), *) ist, score(ist), abs(boundary_norms(ist)), (abs(boundary_norms(ist)) <= limitvalue)
-      call messages_info(1)
-    end do
-
-    call states_sort_complex(gr%mesh, st, eigens%diff, score)
-
-    call identify_continuum_states(gr%mesh, st, boundary_norms) ! XXX This is just to get correct ordering again
-    write(message(1), *) 'and again: Score / abs.part.norm'
-    call messages_info(1)
-    do ist=1, st%nst
-      write(message(1), '(i4,2x,f11.6,f11.6,4x,f9.4,2x)') ist, st%zeigenval%Re(ist, 1), st%zeigenval%Im(ist, 1), &
-        abs(boundary_norms(ist))
-      !write(message(1), ist, 
-      write(message(1), *) ist, score(ist), abs(boundary_norms(ist)), (abs(boundary_norms(ist)) <= limitvalue)
-      call messages_info(1)
-    end do
-
-    SAFE_DEALLOCATE_A(boundary_norms)
-    SAFE_DEALLOCATE_A(buf)
-    SAFE_DEALLOCATE_A(score)
-    !call cmplxscl_get_kinetic_elements(st, hm, gr%der, kinetic_elements)
-
-    !print*, 'kinetic elements'
-    !do ist = 1, st%nst
-    !  print*, kinetic_elements(ist, 1)
-    !end do
-
-    !print*, 'kinetic elements / eps'
-    !do ist = 1, st%nst
-    !  print*, kinetic_elements(ist, 1) / (st%zeigenval%Re(ist, 1) + M_zI * st%zeigenval%Im(ist, 1)) !&
-    !* exp(-M_TWO * M_zI * st%cmplxscl%theta)
-    !end do
-    !SAF!E_DEA!LLOC!ATE_A(kinetic_elements)
-    POP_SUB(cmplxscl_choose_state_order)
-  end subroutine cmplxscl_choose_state_order
-
-
-
-  ! XXXX complex scaling.  Move to some better place
-  ! This is a hack to identify continuum states.
-  ! Continuum states are the only states that do not approach 
-  ! zero asymptotically.  Thus they will be very nonzero even far
-  ! from the center of the system.  To identify them we therefore
-  ! look at a state and check whether a very large fraction of its norm
-  ! is contributed within some radius.
-  ! If it isn't, then it's considered a continuum state.
-  ! Really this method should consider only boundary points, because some continuum
-  ! states could potentially also have a large fraction of the norm in the center.
-  ! But this is difficult to implement when the box shape is user defined.
-  ! Hence we use a fixed radius related to total system size.
-  subroutine identify_continuum_states(mesh, st, boundary_norms)
-    type(mesh_t),   intent(in)   :: mesh
-    type(states_t), intent(in)   :: st
-    CMPLX,          intent(out)  :: boundary_norms(:)
-
-    FLOAT              :: r2
-    integer            :: ist, ik, ii
-    CMPLX, allocatable :: psi(:, :)
-    FLOAT, allocatable :: mask(:)
-    CMPLX              :: cnorm2
-
-    PUSH_SUB(identify_continuum_states)
-    !print*, size(mesh%x, 1)
-    !print*, size(mesh%x, 2)
-    !print*, mesh%x(1:5, 1)
-    !print*, mesh%x(1:5, 2)
-    !print*, mesh%x(1:5, 3)
-
-    ! Well, we hardcode that everything is centered on 0.
-    ! Then we calculate distances to 0 and use those to weight
-    ! the norm of each state.  Ugly ugly...
-    SAFE_ALLOCATE(mask(1:mesh%np_part))
-    SAFE_ALLOCATE(psi(1:mesh%np_part, 1))
-
-    r2 = st%cmplxscl%localizationradius**2
-    do ii=1, mesh%np_part
-      if(sum(mesh%x(ii, :)**2) < r2) then
-        mask(ii) = M_ZERO
-      else
-        mask(ii) = M_ONE
-      end if
-    end do
-    !print*, 'mask', sum(mask)
-
-    ASSERT(st%d%dim == 1)
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist=1, st%nst
-        call states_get_state(st, mesh, ist, ik, psi)
-        psi(:, 1) = psi(:, 1) * mask(:)
-        cnorm2 = zmf_dotp(mesh, 1, psi, psi, dotu = .true.)
-        !print*, 'cnorm2', ist, cnorm2
-        boundary_norms(ist) = cnorm2
-      end do
-    end do
-
-    SAFE_DEALLOCATE_A(psi)
-    SAFE_DEALLOCATE_A(mask)
-
-    POP_SUB(identify_continuum_states)
-  end subroutine identify_continuum_states
-
-
-
   ! ---------------------------------------------------------
-  subroutine eigensolver_init(eigens, gr, st)
+  subroutine eigensolver_init(eigens, gr, st, xc)
     type(eigensolver_t), intent(out)   :: eigens
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(in)    :: st
+    type(xc_t), target,  intent(in)    :: xc
 
     integer :: default_iter, default_es
     FLOAT   :: default_tol
@@ -308,10 +153,6 @@ contains
     !% Note: with <tt>unocc</tt>, you will need to stop the calculation
     !% by hand, since the highest states will probably never converge.
     !% Usage with more than one block of states per node is experimental, unfortunately.
-    !%Option arpack 12
-    !% (Experimental) Implicitly Restarted Arnoldi Method. Requires the ARPACK package.
-    !%Option feast 13
-    !% (Experimental) Non-Hermitian FEAST eigensolver. Requires the FEAST package.
     !%Option psd 14
     !% (Experimental) Precondtioned steepest descent optimization of the eigenvectors.
     !%End
@@ -342,6 +183,52 @@ contains
     select case(eigens%es_type)
     case(RS_CG_NEW)
     case(RS_CG)
+      !%Variable CGOrthogonalizeAll
+      !%Type logical
+      !%Default no
+      !%Section SCF::Eigensolver
+      !%Description
+      !% Used by the cg solver only.
+      !% During the cg iterations, the current band can be orthogonalized
+      !% against all other bands or only against the lower bands. Orthogonalizing
+      !% against all other bands can improve convergence properties, whereas
+      !% orthogonalizing against lower bands needs less operations.
+      !%End
+      call parse_variable('CGOrthogonalizeAll', .false., eigens%orthogonalize_to_all)
+
+      !%Variable CGDirection
+      !%Type integer
+      !%Section SCF::Eigensolver
+      !%Description
+      !% Used by the cg solver only.
+      !% The conjugate direction is updated using a certain coefficient to the previous
+      !% direction. This coeffiction can be computed in different ways. The default is
+      !% to use Fletcher-Reeves (FR), an alternative is Polak-Ribiere (PR).
+      !%Option fletcher 1
+      !% The coefficient for Fletcher-Reeves consists of the current norm of the
+      !% steepest descent vector divided by that of the previous iteration.
+      !%Option polak 2
+      !% For the Polak-Ribiere scheme, a product of the current with the previous
+      !% steepest descent vector is subtracted in the nominator.
+      !%End
+      call parse_variable('CGDirection', OPTION__CGDIRECTION__FLETCHER, eigens%conjugate_direction)
+
+      !%Variable CGAdditionalTerms
+      !%Type logical
+      !%Section SCF::Eigensolver
+      !%Default no
+      !%Description
+      !% Used by the cg solver only.
+      !% Add additional terms during the line minimization, see PTA92, eq. 5.31ff.
+      !% These terms can improve convergence for some systems, but they are quite costly.
+      !% If you experience convergence problems, you might try out this option.
+      !% This feature is still experimental.
+      !%End
+      call parse_variable('CGAdditionalTerms', .false., eigens%additional_terms)
+      if(eigens%additional_terms) then
+        call messages_experimental("The additional terms for the CG eigensolver are not tested for all cases.")
+      end if
+
     case(RS_PLAN)
     case(RS_EVO)
       call messages_experimental("imaginary-time evolution eigensolver")
@@ -374,64 +261,7 @@ contains
 
       call parse_variable('EigensolverMinimizationIter', 5, eigens%rmmdiis_minimization_iter)
 
-      !%Variable EigensolverSaveMemory
-      !%Type logical
-      !%Default no
-      !%Section SCF::Eigensolver
-      !%Description
-      !% The RMMDIIS eigensolver may require a considerable amount of
-      !% extra memory. When this variable is set to yes, the
-      !% eigensolver will use less memory at the expense of some
-      !% performance. This is especially useful for GPUs.
-      !%End
-
-      call parse_variable('EigensolverSaveMemory', .false., eigens%save_mem)
-
       if(gr%mesh%use_curvilinear) call messages_experimental("RMMDIIS eigensolver for curvilinear coordinates")
-
-    case(RS_ARPACK) 
-#if defined(HAVE_ARPACK) 
-
-      !%Variable EigensolverArnoldiVectors 
-      !%Type integer 
-      !%Section SCF::Eigensolver
-      !%Description 
-      !% For <tt>Eigensolver = arpack</tt>, this indicates how many Arnoldi vectors are generated.
-      !% It must satisfy <tt>EigensolverArnoldiVectors</tt> - Number Of Eigenvectors >= 2. 
-      !% See the ARPACK documentation for more details. It will default to  
-      !% twice the number of eigenvectors (which is the number of states) 
-      !%End 
-      call parse_variable('EigensolverArnoldiVectors', 2*st%nst, eigens%arnoldi_vectors) 
-      if(eigens%arnoldi_vectors-st%nst < (M_TWO - st%nst)) call messages_input_error('EigensolverArnoldiVectors') 
-
-      eigens%current_rel_dens_error = -M_ONE ! Negative initial value to signify that no value has been assigned yet
-
-      ! Arpack is not working in some cases, so let us check. 
-      if(st%d%ispin  ==  SPINORS) then 
-        write(message(1), '(a)') 'The ARPACK diagonalizer does not handle spinors (yet).' 
-        write(message(2), '(a)') 'Please provide a different Eigensolver.' 
-        call messages_fatal(2) 
-      end if
-
-      call arpack_init(eigens%arpack, gr, st%nst)
-      call messages_experimental("ARPACK eigensolver")
-
-      !Some default values 
-      default_iter = 500  ! empirical value based upon experience
-      default_tol = M_ZERO ! default is machine precision   
-#else
-      message(1) = "You cannot use Eigensolver = arpack, since the code was not compiled with this option."
-      call messages_fatal(1)
-#endif
-
-    case(RS_FEAST)
-#ifdef HAVE_FEAST
-      call messages_experimental("FEAST eigensolver")
-      call feast_init(eigens%feast, gr, st%nst)
-#else
-      message(1) = "You cannot use Eigensolver = feast, since the code was not compiled with this option."
-      call messages_fatal(1)
-#endif
 
     case(RS_PSD)
       default_iter = 18
@@ -489,7 +319,7 @@ contains
     end if
 
     select case(eigens%es_type)
-    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS)
+    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
       call preconditioner_init(eigens%pre, gr)
     case default
       call preconditioner_null(eigens%pre)
@@ -505,7 +335,7 @@ contains
 
     ! FEAST: subspace diagonalization or not?  I guess not.
     ! But perhaps something could be gained by changing this.
-    call subspace_init(eigens%sdiag, st, no_sd = (eigens%es_type == RS_ARPACK).or.(eigens%es_type == RS_FEAST))
+    call subspace_init(eigens%sdiag, st, no_sd = .false.)
 
     ! print memory requirements
     select case(eigens%es_type)
@@ -539,6 +369,9 @@ contains
     call parse_variable('EigensolverSkipKpoints', .false., eigens%skip_finite_weight_kpoints)
     call messages_print_var_value(stdout,'EigensolverSkipKpoints',  eigens%skip_finite_weight_kpoints)
 
+    ! set KS object
+    eigens%xc => xc
+
     POP_SUB(eigensolver_init)
   end subroutine eigensolver_init
 
@@ -552,10 +385,6 @@ contains
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
       call preconditioner_end(eigens%pre)
-
-    case(RS_FEAST)
-      call feast_end(eigens%feast)
-    
     end select
 
     SAFE_DEALLOCATE_P(eigens%converged)
@@ -566,15 +395,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_run(eigens, gr, st, hm, iter, conv)
+  subroutine eigensolver_run(eigens, gr, st, hm, iter, conv, nstconv)
     type(eigensolver_t),  intent(inout) :: eigens
     type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
     integer,              intent(in)    :: iter
     logical,    optional, intent(out)   :: conv
+    integer,    optional, intent(in)    :: nstconv !< Number of states considered for 
+                                                   !< the convergence criteria
 
-    integer :: maxiter, ik, ist
+    integer :: maxiter, ik, ist, nstconv_
 #ifdef HAVE_MPI
     logical :: conv_reduced
     integer :: outcount, lmatvec
@@ -587,6 +418,11 @@ contains
     PUSH_SUB(eigensolver_run)
 
     if(present(conv)) conv = .false.
+    if(present(nstconv)) then 
+      nstconv_ = nstconv
+    else
+      nstconv_ = st%nst
+    end if
 
     eigens%matvec = 0
 
@@ -599,7 +435,7 @@ contains
       maxiter = eigens%es_maxiter
 
       if(st%calc_eigenval) then
-        if(eigens%es_type == RS_RMMDIIS .or. eigens%es_type /= RS_PSD &
+        if(eigens%es_type == RS_RMMDIIS .or. eigens%es_type == RS_PSD &
           .or. (eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES)) then
           
           if (states_are_real(st)) then
@@ -616,8 +452,11 @@ contains
         case(RS_CG_NEW)
           call deigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
-          call deigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-            eigens%converged(ik), ik, eigens%diff(:, ik))
+          call deigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, &
+            eigens%converged(ik), ik, eigens%diff(:, ik), &
+            orthogonalize_to_all=eigens%orthogonalize_to_all, &
+            conjugate_direction=eigens%conjugate_direction, &
+            additional_terms=eigens%additional_terms)
         case(RS_PLAN)
           call deigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
@@ -632,22 +471,15 @@ contains
             call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
           else
             call deigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-              eigens%converged(ik), ik, eigens%diff(:, ik), eigens%save_mem)
+              eigens%converged(ik), ik, eigens%diff(:, ik))
           end if
-        case(RS_ARPACK)
-          ! We don`t have any tests of this presently and would not like
-          ! to guarantee that it works right now
-          call messages_not_implemented('ARPACK solver for Hermitian problems')
-        case(RS_FEAST)
-          ! same as for ARPACK
-          call messages_not_implemented('FEAST solver for Hermitian problems')
         case(RS_PSD)
           call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
         end select
 
         ! FEAST: subspace diag or not?
         if(st%calc_eigenval) then
-          if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_ARPACK .and. eigens%es_type /= RS_PSD) then
+          if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_PSD) then
             call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           end if
         end if
@@ -659,11 +491,19 @@ contains
           call zeigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
            if(eigens%folded_spectrum) then
-             call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, & 
-                                eigens%diff(:, ik), shift=eigens%spectrum_shift)
+             call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, & 
+                                eigens%diff(:, ik), shift=eigens%spectrum_shift, &
+                                orthogonalize_to_all=eigens%orthogonalize_to_all, &
+                                conjugate_direction=eigens%conjugate_direction, &
+                                additional_terms=eigens%additional_terms)
+
            else
-              call zeigensolver_cg2(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
-                                eigens%diff(:, ik))
+              call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
+                                eigens%diff(:, ik), &
+                                orthogonalize_to_all=eigens%orthogonalize_to_all, &
+                                conjugate_direction=eigens%conjugate_direction, &
+                                additional_terms=eigens%additional_terms)
+
            end if
         case(RS_PLAN)
           call zeigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
@@ -680,21 +520,14 @@ contains
             call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
           else
             call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
-              eigens%converged(ik), ik,  eigens%diff(:, ik), eigens%save_mem)
+              eigens%converged(ik), ik,  eigens%diff(:, ik))
           end if
-#if defined(HAVE_ARPACK) 
-       	case(RS_ARPACK)
-          call zeigensolver_arpack(eigens%arpack, gr, st, hm, eigens%tolerance, eigens%current_rel_dens_error, maxiter, & 
-            eigens%converged(ik), ik, eigens%diff(:,ik))
-#endif 
-        case(RS_FEAST)
-          call zeigensolver_feast(eigens%feast, gr, st, hm, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_PSD)
           call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
         end select
 
         if(st%calc_eigenval) then
-          if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_ARPACK .and. eigens%es_type /= RS_PSD) then
+          if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_PSD) then
             call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           end if
         end if
@@ -716,18 +549,11 @@ contains
       eigens%matvec = eigens%matvec + maxiter
     end do ik_loop
 
-    ! If we complex scale H the eigenstates need to be orthonormalized with respect to the c-product.
-    ! Moreover the eigenvalues ordering need to be imposed as there is no eigensolver 
-    ! supporting this ordering (yet).
-    if(st%cmplxscl%space) then
-      call cmplxscl_choose_state_order(eigens, st, gr)
-    end if
-
     if(mpi_grp_is_root(mpi_world) .and. eigensolver_has_progress_bar(eigens) .and. .not. debug%info) then
       write(stdout, '(1x)')
     end if
 
-    if(present(conv)) conv = all(eigens%converged(st%d%kpt%start:st%d%kpt%end) == st%nst)
+    if(present(conv)) conv = all(eigens%converged(st%d%kpt%start:st%d%kpt%end) >= nstconv_)
 
 #ifdef HAVE_MPI
     if(st%d%kpt%parallel) then

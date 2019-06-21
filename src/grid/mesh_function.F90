@@ -19,27 +19,19 @@
 #include "global.h"
 
 module mesh_function_oct_m
-  use batch_oct_m
   use blas_oct_m
   use comm_oct_m
-  use cube_function_oct_m
   use global_oct_m
-  use hardware_oct_m
-  use hypercube_oct_m
-  use index_oct_m
   use lalg_basic_oct_m
   use loct_math_oct_m
-  use math_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use modelmb_1part_oct_m
   use mpi_oct_m
   use par_vec_oct_m
   use profiling_oct_m
   use qshep_oct_m
   use quickrnd_oct_m
   use splines_oct_m
-  use box_union_oct_m
 
   implicit none
 
@@ -49,10 +41,6 @@ module mesh_function_oct_m
     zmf_integrate,         &
     smf_integrate,         &
     cmf_integrate,         &
-    dmf_add,               &
-    zmf_add,               &
-    smf_add,               &
-    cmf_add,               &    
     dmf_dotp,              &
     zmf_dotp,              &
     smf_dotp,              &
@@ -81,7 +69,9 @@ module mesh_function_oct_m
     dmf_dotu_aux,          &
     zmf_dotu_aux,          &
     dmf_nrm2_aux,          &
-    zmf_nrm2_aux
+    zmf_nrm2_aux,          &
+    dmf_normalize,         &
+    zmf_normalize
 
   ! These variables are to be used by the "distdot" function, that is outside the module
   ! but inside this file.

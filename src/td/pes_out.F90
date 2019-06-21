@@ -21,31 +21,22 @@
 module pes_out_oct_m
   use cube_function_oct_m
   use cube_oct_m
-  use geometry_oct_m
   use global_oct_m
-  use grid_oct_m
   use io_oct_m
   use io_function_oct_m
   use loct_oct_m
   use math_oct_m
-  use mesh_oct_m
   use messages_oct_m
-  use mpi_oct_m
 #if defined(HAVE_NETCDF)
   use netcdf
 #endif    
-  use output_oct_m
-  use parser_oct_m
   use profiling_oct_m
   use qshep_oct_m
-  use restart_oct_m
   use simul_box_oct_m
   use sort_oct_m
-  use states_oct_m
   use string_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
   use vtk_oct_m
     
   implicit none
@@ -76,11 +67,10 @@ contains
     character(len=*),  intent(in) :: file
     FLOAT,             intent(in) :: Lk(:,:)
     integer,           intent(in) :: ll(:)  
-    integer,           intent(in) :: how
+    integer(8),        intent(in) :: how
     type(simul_box_t), intent(in) :: sb 
     FLOAT, optional,   intent(in) :: pmesh(:,:,:,:)  
   
-    integer :: iunit
     integer :: ierr
     character(len=512) :: filename
     type(cube_t) :: cube
@@ -107,7 +97,7 @@ contains
   
 #if defined(HAVE_NETCDF)  
   
-    if(iand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
+    if(bitand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) then
       filename = trim(file)//".ncdf"
       write(message(1), '(a)') 'Writing netcdf format file: '
       call messages_info(1)
@@ -119,7 +109,7 @@ contains
 
 #endif
   
-    if(iand(how, OPTION__OUTPUTFORMAT__VTK) /= 0)  then
+    if(bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0)  then
       filename = trim(file)//".vtk"
       write(message(1), '(a)') 'Writing vtk format file: '
       call messages_info(1)

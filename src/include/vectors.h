@@ -25,7 +25,21 @@
 
 #ifdef HAVE_VEC
 
-#ifdef HAVE_M256D
+#ifdef HAVE_M512D
+#include <immintrin.h>
+#define VEC_SIZE 8
+#define VEC_TYPE __m512d
+#define VEC_LD(addr) _mm512_load_pd(addr)
+#define VEC_LDU(addr) _mm512_loadu_pd(addr)
+#define VEC_ST(addr, vec)  _mm512_store_pd(addr, vec)
+#define VEC_STU(addr, vec)  _mm512_storeu_pd(addr, vec)
+#define VEC_FMA(aa, bb, cc) _mm512_fmadd_pd(aa, bb, cc)
+#define VEC_SCAL(aa) _mm512_set1_pd(aa)
+#define VEC_ZERO _mm512_setzero_pd()
+
+#define DEPTH 16
+
+#elif defined(HAVE_M256D)
 #include <immintrin.h>
 #if defined(HAVE_FMA4) || defined(HAVE_FMA3)
 #include <x86intrin.h>

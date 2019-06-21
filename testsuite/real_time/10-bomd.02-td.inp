@@ -30,3 +30,4 @@ ParDomains = no
 
 MixField = density
 
+TDMultipoleLmax = 0

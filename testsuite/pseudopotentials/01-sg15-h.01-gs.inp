@@ -13,3 +13,9 @@ FromScratch = yes
 FilterPotentials = filter_none
 
 MixField = density
+
+XCFunctional = lda_x + lda_c_pz_mod
+
+Spacing = 0.3
+
+Radius = 8

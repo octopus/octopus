@@ -94,7 +94,7 @@ foreach $F90file (@F90){
 	}
 	    
 	if(/^Option\s+(\S+)\s+bit\((\S+)\)/){
-	  if($2 > 30) {
+	  if($2 > 52) {
 	    printf STDERR "ERROR: bit($2) is too large and will overflow the maximum integer.\n";
 	    printf STDERR "File $F90file, Variable $var, Option $1.\n";
 	    exit(1);
@@ -188,7 +188,7 @@ sub print_defaults_header{
   open(OUT, ">$include/defaults.h");
   my $key;
   foreach $key (sort(keys %default_value)) {
-    print OUT "#define DEFAULT__", uc $key, " (", $default_value{"$key"}, ")\n";
+    print OUT "#define DEFAULT__", uc $key, " (", $default_value{"$key"}, "_8)\n";
   }
   close(OUT);
 }
@@ -199,7 +199,7 @@ sub print_options_header{
   open(OUT, ">$include/options.h");
   my $key;
   foreach $key (sort(keys %varopt)) {
-    print OUT "#define OPTION__", uc $key, " (", $varopt{"$key"}, ")\n";
+    print OUT "#define OPTION__", uc $key, " (", $varopt{"$key"}, "_8)\n";
   }
 
   close(OUT);

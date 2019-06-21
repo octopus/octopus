@@ -33,5 +33,5 @@ TheoryLevel = independent_particles
 
 ProfilingMode = prof_time
 
-DisableOpenCL = yes
+DisableAccel = yes
 

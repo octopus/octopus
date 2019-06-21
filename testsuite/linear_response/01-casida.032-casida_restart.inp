@@ -13,7 +13,7 @@ bond_length = 2.0744
 %
 
 %Species
-"N" | species_pseudo | lmax | 2 | lloc | 0 | db_file | "PSF/N.psf"
+"N" | species_pseudo | lmax | 2 | lloc | 0  
 %
 
 BoxShape = sphere
@@ -32,3 +32,6 @@ ParDomains = 2
 ParOther = 2
 
 MixField = density
+
+Debug = trace
+

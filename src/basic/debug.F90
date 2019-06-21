@@ -112,11 +112,11 @@ contains
   subroutine from_bits(this)
     type(debug_t), intent(inout) :: this
     
-    this%info         = (iand(this%bits, OPTION__DEBUG__INFO)         /= 0)
-    this%trace_term   = (iand(this%bits, OPTION__DEBUG__TRACE_TERM)   /= 0)
-    this%trace_file   = (iand(this%bits, OPTION__DEBUG__TRACE_FILE)   /= 0)
-    this%trace        = (iand(this%bits, OPTION__DEBUG__TRACE)        /= 0) .or. this%trace_term .or. this%trace_file
-    this%extra_checks = (iand(this%bits, OPTION__DEBUG__EXTRA_CHECKS) /= 0) .or. this%trace_term .or. this%trace_file
+    this%info         = (bitand(this%bits, OPTION__DEBUG__INFO)         /= 0)
+    this%trace_term   = (bitand(this%bits, OPTION__DEBUG__TRACE_TERM)   /= 0)
+    this%trace_file   = (bitand(this%bits, OPTION__DEBUG__TRACE_FILE)   /= 0)
+    this%trace        = (bitand(this%bits, OPTION__DEBUG__TRACE)        /= 0) .or. this%trace_term .or. this%trace_file
+    this%extra_checks = (bitand(this%bits, OPTION__DEBUG__EXTRA_CHECKS) /= 0) .or. this%trace_term .or. this%trace_file
 
   end subroutine from_bits
   

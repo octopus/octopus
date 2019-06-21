@@ -4,8 +4,6 @@ FromScratch = yes
 
 PeriodicDimensions = 3
 
-ParKPoints = auto 
-
 a = 6.74065308785213
 
 Spacing = 0.4

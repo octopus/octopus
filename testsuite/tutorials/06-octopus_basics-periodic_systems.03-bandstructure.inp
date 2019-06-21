@@ -1,0 +1,33 @@
+CalculationMode = unocc
+
+PeriodicDimensions = 3
+
+Spacing = 0.5
+
+a = 10.18
+%LatticeParameters
+ a | a | a
+%
+
+%LatticeVectors
+ 0.0 | 0.5 | 0.5
+ 0.5 | 0.0 | 0.5
+ 0.5 | 0.5 | 0.0
+%
+
+%ReducedCoordinates
+ "Si" | 0.0 | 0.0 | 0.0
+ "Si" | 1/4 | 1/4 | 1/4
+%
+
+ExtraStates = 10
+ExtraStatesToConverge = 5
+
+%KPointsPath
+  10 |  10 |  15
+ 0.5 | 0.0 | 0.0  # L point
+ 0.0 | 0.0 | 0.0  # Gamma point
+ 0.0 | 0.5 | 0.5  # X point
+ 1.0 | 1.0 | 1.0  # Another Gamma point
+%
+KPointsUseSymmetries = no

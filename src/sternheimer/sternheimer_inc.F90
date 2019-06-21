@@ -46,11 +46,15 @@ subroutine X(sternheimer_solve)(                           &
   R_TYPE :: omega_sigma, proj
   logical, allocatable :: orth_mask(:)
   type(batch_t) :: rhsb, dlpsib, orhsb
-  logical :: conv_last, conv, states_conv, have_restart_rho_, states_conv_reduced
+  logical :: conv_last, conv, states_conv, have_restart_rho_
   type(mesh_t), pointer :: mesh
   type(states_t), pointer :: st
   integer :: total_iter, idim, ip, ispin, ib, total_iter_reduced
   logical :: calculate_rho
+#ifdef HAVE_MPI
+  logical :: states_conv_reduced
+#endif
+  
   PUSH_SUB(X(sternheimer_solve))
   call profiling_in(prof, "STERNHEIMER")
 

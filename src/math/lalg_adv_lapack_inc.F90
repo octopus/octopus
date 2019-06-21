@@ -80,7 +80,9 @@ subroutine X(geneigensolve)(n, a, b, e, bof, err_code)
   integer, optional, intent(out)   :: err_code
 
   integer :: info, lwork, ii, jj
+#ifdef R_TCOMPLEX
   FLOAT, allocatable :: rwork(:)
+#endif
   R_TYPE, allocatable :: work(:), diag(:)
 
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
@@ -107,7 +109,7 @@ subroutine X(geneigensolve)(n, a, b, e, bof, err_code)
   ! b was destroyed, so we rebuild it
   do ii = 1, n
     do jj = 1, ii - 1
-      b(jj, ii) = b(ii, jj)
+      b(jj, ii) = R_CONJ(b(ii, jj))
     end do
     b(ii, ii) = diag(ii)
   end do
@@ -189,6 +191,9 @@ subroutine X(eigensolve_nonh)(n, a, e, err_code, side, sort_eigenvectors)
   end if
 
   lwork = -1
+  ! Initializing info, if not it can cause that the geev query mode fails.
+  ! Besides, if info is not initialized valgrind complains about it. 
+  info = 0
   ! A bug in the query mode of zgeev demands that the working array has to be larger than 1
   ! problem here is that a value is written somewhere into the array whether it is
   ! allocated or not. I noticed that it happens (hopefully) always at an index which
@@ -1263,9 +1268,12 @@ subroutine X(lalg_least_squares_vec)(nn, aa, bb, xx)
   R_TYPE,  intent(in)    :: bb(:)
   R_TYPE,  intent(out)   :: xx(:)
 
+#ifdef R_TREAL
   R_TYPE :: dlwork
-  R_TYPE, allocatable :: ss(:), work(:)
+  R_TYPE, allocatable :: work(:)
   integer :: rank, info
+#endif
+  R_TYPE, allocatable :: ss(:)
   
   interface
     subroutine dgelss(m, n, nrhs, a, lda, b, ldb, s, rcond, rank, work, lwork, info)

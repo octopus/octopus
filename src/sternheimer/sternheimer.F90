@@ -20,37 +20,30 @@
 
 module sternheimer_oct_m
   use batch_oct_m
-  use batch_ops_oct_m
   use density_oct_m
   use global_oct_m
   use grid_oct_m
-  use output_oct_m
   use hamiltonian_oct_m
-  use io_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m
   use linear_solver_oct_m
-  use parser_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mix_oct_m
   use mpi_oct_m
   use multigrid_oct_m
+  use parser_oct_m
   use pert_oct_m
   use poisson_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
   use restart_oct_m
   use scf_tol_oct_m
-  use simul_box_oct_m
   use smear_oct_m
   use states_oct_m
-  use states_calc_oct_m
   use states_dim_oct_m
   use states_restart_oct_m
-  use string_oct_m
   use system_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -120,15 +113,15 @@ contains
   !-----------------------------------------------------------
   subroutine sternheimer_init(this, sys, hm, wfs_are_cplx, &
     set_ham_var, set_occ_response, set_last_occ_response, occ_response_by_sternheimer, set_default_solver)
-    type(sternheimer_t), intent(out)   :: this
-    type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: hm
-    logical,             intent(in)    :: wfs_are_cplx
-    integer, optional,   intent(in)    :: set_ham_var
-    logical, optional,   intent(in)    :: set_occ_response
-    logical, optional,   intent(in)    :: set_last_occ_response
-    logical, optional,   intent(in)    :: occ_response_by_sternheimer
-    integer, optional,   intent(in)    :: set_default_solver
+    type(sternheimer_t),  intent(out)   :: this
+    type(system_t),       intent(inout) :: sys
+    type(hamiltonian_t),  intent(inout) :: hm
+    logical,              intent(in)    :: wfs_are_cplx
+    integer,    optional, intent(in)    :: set_ham_var
+    logical,    optional, intent(in)    :: set_occ_response
+    logical,    optional, intent(in)    :: set_last_occ_response
+    logical,    optional, intent(in)    :: occ_response_by_sternheimer
+    integer(8), optional, intent(in)    :: set_default_solver
 
     integer :: ham_var
     logical :: default_preorthog
@@ -146,9 +139,9 @@ contains
     end if
 
     if(wfs_are_cplx) then
-      call mix_init(this%mixer, sys%gr%der, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = TYPE_CMPLX)
+      call mix_init(this%mixer, sys%gr%der, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type_= TYPE_CMPLX)
     else
-      call mix_init(this%mixer, sys%gr%der, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type = TYPE_FLOAT)
+      call mix_init(this%mixer, sys%gr%der, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type_= TYPE_FLOAT)
     end if
 
     if(present(set_occ_response)) then

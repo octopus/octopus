@@ -126,8 +126,7 @@ contains
       end if
       
       psf%vps(2:, ndown) = psf%vps(2:, ndown) / psf%rofi(2:)
-      psf%vps(1,  ndown) = linear_extrapolate(psf%rofi(1), psf%rofi(2), psf%rofi(3), &
-        psf%vps(2, ndown), psf%vps(3, ndown))
+      psf%vps(1,  ndown) = first_point_extrapolate(psf%rofi, psf%vps(:, ndown))
     end do
 
     ! Reads --or skips-- the "down" pseudopotentials.
@@ -147,8 +146,7 @@ contains
       end if
 
       psf%vso(2:, nup) = psf%vso(2:, nup) / psf%rofi(2:)
-      psf%vso(1,  nup) = linear_extrapolate(psf%rofi(1), psf%rofi(2), psf%rofi(3), &
-        psf%vso(2, nup), psf%vso(3, nup))
+      psf%vso(1,  nup) = first_point_extrapolate(psf%rofi, psf%vso(:, nup))
 
     end do
     if(psf%irel /= 'rel') then
@@ -164,8 +162,7 @@ contains
       read(unit) (psf%chcore(i), i=2, psf%nr)
     end if
 
-    psf%chcore(1) = linear_extrapolate(psf%rofi(1), psf%rofi(2), psf%rofi(3), &
-      psf%chcore(2), psf%chcore(3))
+    psf%chcore(1) = first_point_extrapolate(psf%rofi, psf%chcore)
 
     ! Reads the pseudo-valence charge density, in bohr^(-3)
     !   rho_val(1:nrval) : pseudo-valence charge distribution
@@ -177,8 +174,7 @@ contains
       read(unit) (psf%rho_val(i), i=2, psf%nr)
     end if
 
-    psf%rho_val(1) = linear_extrapolate(psf%rofi(1), psf%rofi(2), psf%rofi(3), &
-      psf%rho_val(2), psf%rho_val(3))
+    psf%rho_val(1) = first_point_extrapolate(psf%rofi, psf%rho_val)
 
     POP_SUB(ps_psf_file_read)
   end subroutine ps_psf_file_read

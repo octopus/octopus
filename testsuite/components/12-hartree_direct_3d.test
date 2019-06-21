@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Hartree direct 3D
-Program    : oct-test
+Program    : octopus
 TestGroups : long-run, components
 Enabled    : Yes
 

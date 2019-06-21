@@ -1,12 +1,12 @@
 CalculationMode =  gs
 
-PseudopotentialSet = hgh_lda
+PseudopotentialSet = hgh_lda_sc
 
 dist = 4.0
 
 %Coordinates
- 'Cu_sc' | 0.0 | 0.0 | -dist/2
- 'Cu_sc' | 0.0 | 0.0 |  dist/2
+ 'Cu' | 0.0 | 0.0 | -dist/2
+ 'Cu' | 0.0 | 0.0 |  dist/2
 %
 
 Spacing = 0.4

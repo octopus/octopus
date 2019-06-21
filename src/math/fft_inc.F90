@@ -40,14 +40,22 @@ subroutine X(fft_forward)(fft, in, out, norm)
     slot = fft%slot
     select case (fft_array(slot)%library)
     case (FFTLIB_FFTW)
-      ii = min(1, fft_array(slot)%rs_n(1))
-      jj = min(1, fft_array(slot)%rs_n(2))
-      kk = min(1, fft_array(slot)%rs_n(3))
+      if(all(fft_array(slot)%rs_n(1:3) >= 1)) then
 #ifdef R_TREAL
-      call fftw_execute_dft_r2c(fft_array(slot)%planf, in(ii:,jj:,kk:), out(ii:,jj:,kk:))
+        call fftw_execute_dft_r2c(fft_array(slot)%planf, in(:,:,:), out(:,:,:))
 #else
-      call fftw_execute_dft(fft_array(slot)%planf, in(ii:,jj:,kk:), out(ii:,jj:,kk:))
+        call fftw_execute_dft(fft_array(slot)%planf, in(:,:,:), out(:,:,:))
 #endif
+      else
+        ii = min(1, fft_array(slot)%rs_n(1))
+        jj = min(1, fft_array(slot)%rs_n(2))
+        kk = min(1, fft_array(slot)%rs_n(3))
+#ifdef R_TREAL
+        call fftw_execute_dft_r2c(fft_array(slot)%planf, in(ii:,jj:,kk:), out(ii:,jj:,kk:))
+#else
+        call fftw_execute_dft(fft_array(slot)%planf, in(ii:,jj:,kk:), out(ii:,jj:,kk:))
+#endif
+      end if
     case (FFTLIB_NFFT)
 #ifdef HAVE_NFFT
       call X(nfft_forward)(fft_array(slot)%nfft, in(:,:,:), out(:,:,:))
@@ -57,6 +65,8 @@ subroutine X(fft_forward)(fft, in, out, norm)
 #ifdef HAVE_PNFFT
       call X(pnfft_forward)(fft_array(slot)%pnfft, in(:,:,:), out(:,:,:))
       if(present(norm)) norm = fft_array(slot)%pnfft%norm
+#else
+      if(present(norm)) norm = M_ZERO
 #endif
     case (FFTLIB_PFFT)
       if (all(fft_array(slot)%rs_n /= 0)) then
@@ -232,6 +242,8 @@ subroutine X(fft_forward)(fft, in, out, norm)
 #ifdef HAVE_NFFT    
       call X(nfft_backward)(fft_array(slot)%nfft, in(:,:,:), out(:,:,:))
       if(present(norm)) norm = fft_array(slot)%nfft%norm
+#else
+      if(present(norm)) norm = M_ZERO
 #endif
     case (FFTLIB_PNFFT)
       scale = .false. ! the result is already scaled
@@ -287,7 +299,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     if(scale) then
       ! multiply by 1/(N1*N2*N2)
       scaling_factor = M_ONE/(fft_array(slot)%rs_n_global(1)*fft_array(slot)%rs_n_global(2)*fft_array(slot)%rs_n_global(3))
-      !$omp parallel do
+      !$omp parallel do private(jj,ii)
       do kk = 1, fft_array(slot)%rs_n(3)
         do jj = 1, fft_array(slot)%rs_n(2)
           do ii = 1, fft_array(slot)%rs_n(1)

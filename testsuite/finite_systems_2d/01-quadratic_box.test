@@ -9,6 +9,7 @@ Enabled    : Yes
 # E. Rasanen et al., Phys. Rev. B 67, 235307 (2003).
 # This input file is just the particle in a box in 2D calculation.
 Input : 01-quadratic_box.01-ground_state.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Eigenvalue ; GREPFIELD(static/info, '1   --', 3) ; 0.999921
 match ; Occupation ; GREPFIELD(static/info, '1   --', 4) ; 1.000000
 
@@ -16,6 +17,7 @@ match ; Occupation ; GREPFIELD(static/info, '1   --', 4) ; 1.000000
 # This adds the Hartree interaction in 2D to the previous particle in a box example.
 # To make it more meaningful, it uses two electrons.
 Input : 01-quadratic_box.02-hartree.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Eigenvalue ; GREPFIELD(static/info, '1   --', 3) ; 3.768933
 match ; Occupation ; GREPFIELD(static/info, '1   --', 4) ; 2.000000
 
@@ -24,6 +26,7 @@ match ; Occupation ; GREPFIELD(static/info, '1   --', 4) ; 2.000000
 # obtains one point in Fig. 3 of [E. Rasanen et al., Phys. Rev. B 67, 235307 (2003)]: that
 # corresponding to the chemical potential for the two-electron dot, with beta = 1.
 Input : 01-quadratic_box.03-hartree+xc.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; 3.35400744
 match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; 2.739407
 
@@ -33,4 +36,5 @@ match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; 2.739407
 # in Fig. 3 of [E. Rasanen et al., Phys. Rev. B 67, 235307 (2003)]: 
 # that point corresponding to the chemical potential for the three-electron dot, with beta = 1.
 Input : 01-quadratic_box.04-spin_polarized.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; 7.75925832

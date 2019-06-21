@@ -27,26 +27,31 @@ subroutine X(pert_apply_batch)(this, gr, geo, hm, ik, f_in, f_out)
   type(batch_t),        intent(inout) :: f_out
 
   integer :: ist
-
+  R_TYPE, allocatable :: fi(:, :), fo(:, :)
+  
   PUSH_SUB(X(pert_apply_batch))
 
   ASSERT(batch_status(f_in) == batch_status(f_out))
-
-
+  
+  SAFE_ALLOCATE(fi(1:gr%mesh%np, 1:hm%d%dim))
+  SAFE_ALLOCATE(fo(1:gr%mesh%np, 1:hm%d%dim))
+  
   select case(this%pert_type)
   case(PERTURBATION_ELECTRIC)
 
     call electric()
 
   case default
-
-    ASSERT(batch_status(f_in) == BATCH_NOT_PACKED)
-
     do ist = 1, f_in%nst
-      call X(pert_apply)(this, gr, geo, hm, ik, f_in%states(ist)%X(psi), f_out%states(ist)%X(psi))
+      call batch_get_state(f_in, ist, gr%mesh%np, fi)
+      call X(pert_apply)(this, gr, geo, hm, ik, fi, fo)
+      call batch_set_state(f_out, ist, gr%mesh%np, fo)
     end do
   end select
 
+  SAFE_DEALLOCATE_A(fi)
+  SAFE_DEALLOCATE_A(fo)
+  
   POP_SUB(X(pert_apply_batch))
 
 contains
@@ -71,13 +76,11 @@ contains
         end do
       end do
 
-    case(BATCH_CL_PACKED)
+    case(BATCH_DEVICE_PACKED)
       
       ASSERT(.false.)
 
     end select
-
-    call batch_pack_was_modified(f_out)
 
   end subroutine electric
   
@@ -130,9 +133,9 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out, set_bc)
     apply_kpoint = .false.
 
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part)
-      f_in_copy(ip, idim) = hm%hm_base%phase(ip, ik) * f_in_copy(ip, idim)
-    end forall
+#ifdef R_TCOMPLEX
+    call states_set_phase(hm%d, f_in_copy, hm%hm_base%phase(1:gr%mesh%np_part, ik), gr%mesh%np_part, .false.)
+#endif
   end if
 
   select case(this%pert_type)
@@ -154,9 +157,9 @@ subroutine X(pert_apply)(this, gr, geo, hm, ik, f_in, f_out, set_bc)
   end select
   
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
-      f_out(ip, idim) = conjg(hm%hm_base%phase(ip, ik)) * f_out(ip, idim)
-    end forall
+#ifdef R_TCOMPLEX
+    call states_set_phase(hm%d, f_out, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .true.)
+#endif
   end if
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then
@@ -223,7 +226,6 @@ contains
       SAFE_DEALLOCATE_A(grad)
     else
       SAFE_ALLOCATE(Hxpsi(1:gr%mesh%np,1:hm%d%dim))     
-      Hxpsi(:,:) = M_ZERO
       call X(hamiltonian_apply)(hm,gr%der,f_in_copy(:,:),Hxpsi(:,:),1,ik,set_bc = .false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
@@ -236,7 +238,6 @@ contains
           f_in_copy(ip,idim) = gr%mesh%x(ip,this%dir)*f_in_copy(ip,idim)
         end do
       end do
-      Hxpsi(:,:) = M_ZERO
       call X(hamiltonian_apply)(hm,gr%der, f_in_copy(:,:),Hxpsi(:,:),1,ik,set_bc = .false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
@@ -420,9 +421,9 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   ! kdotp has the perturbation written in terms of the periodic part with the phase
 
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np_part)
-      f_in_copy(ip, idim) = hm%hm_base%phase(ip, ik)*f_in_copy(ip, idim)
-    end forall
+#ifdef R_TCOMPLEX
+    call states_set_phase(hm%d, f_in_copy, hm%hm_base%phase(1:gr%mesh%np_part, ik), gr%mesh%np_part, .false.)
+#endif
   end if
 
   select case(this%pert_type)
@@ -440,9 +441,9 @@ subroutine X(pert_apply_order_2) (this, gr, geo, hm, ik, f_in, f_out)
   end select
 
   if (apply_kpoint) then
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
-      f_out(ip, idim) = conjg(hm%hm_base%phase(ip, ik))*f_out(ip, idim)
-    end forall
+#ifdef R_TCOMPLEX
+    call states_set_phase(hm%d, f_out, hm%hm_base%phase(1:gr%mesh%np, ik), gr%mesh%np, .true.)
+#endif
   end if
 
   if (this%pert_type /= PERTURBATION_ELECTRIC) then

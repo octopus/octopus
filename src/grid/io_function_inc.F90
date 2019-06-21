@@ -439,7 +439,7 @@ end subroutine X(io_function_input_global)
 ! ---------------------------------------------------------
 subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, unit, ierr, &
   geo, grp, root, is_global, vector_dim_labels)
-  integer,                    intent(in)  :: how
+  integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
   type(mesh_t),               intent(in)  :: mesh
@@ -453,7 +453,8 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
   logical,          optional, intent(in)  :: is_global !< Input data is mesh%np_global? And, thus, it has not be gathered
   character(len=*), optional, intent(in)  :: vector_dim_labels(:)
 
-  integer :: ivd, how_seq
+  integer :: ivd
+  integer(8) :: how_seq
   character(len=MAX_PATH_LEN) :: full_fname
   R_TYPE, pointer :: ff_global(:, :)
   logical :: i_am_root, is_global_
@@ -488,7 +489,7 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
     i_am_root = (mesh%vp%rank == root_)
 
     if (.not. is_global_) then
-      if(iand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
+      if(bitand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
         call messages_not_implemented("OutputFormat = boundary_points with domain parallelization")
         SAFE_ALLOCATE(ff_global(1:mesh%np_part_global, 1:vector_dim))
         ! FIXME: needs version of vec_gather that includes boundary points. See ticket #127
@@ -523,8 +524,8 @@ subroutine X(io_function_output_vector)(how, dir, fname, mesh, ff, vector_dim, u
 
     how_seq = how
     
-    if(iand(how, OPTION__OUTPUTFORMAT__VTK) /= 0) call out_vtk()
-    how_seq = iand(how_seq, not(OPTION__OUTPUTFORMAT__VTK)) ! remove from the list of formats
+    if(bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0) call out_vtk()
+    how_seq = bitand(how_seq, not(OPTION__OUTPUTFORMAT__VTK)) ! remove from the list of formats
 
     if(how_seq /= 0) then !perhaps there is nothing left to do
       do ivd = 1, vector_dim
@@ -598,8 +599,108 @@ contains
 end subroutine X(io_function_output_vector)
 
 ! ---------------------------------------------------------
+subroutine X(io_function_output_vector_BZ)(how, dir, fname, mesh, kpt, ff, vector_dim, unit, & 
+  ierr, grp, root, vector_dim_labels)
+  integer(8),                 intent(in)  :: how
+  character(len=*),           intent(in)  :: dir
+  character(len=*),           intent(in)  :: fname
+  type(mesh_t),               intent(in)  :: mesh
+  type(distributed_t),        intent(in)  :: kpt
+  R_TYPE,           target,   intent(in)  :: ff(:, :)
+  integer,                    intent(in)  :: vector_dim
+  type(unit_t),               intent(in)  :: unit
+  integer,                    intent(out) :: ierr
+  type(mpi_grp_t),  optional, intent(in)  :: grp !< the group that shares the same data, must contain the domains group
+  integer,          optional, intent(in)  :: root !< which process is going to write the data
+  character(len=*), optional, intent(in)  :: vector_dim_labels(:)
+
+  integer :: ivd
+  integer(8) :: how_seq
+  character(len=MAX_PATH_LEN) :: full_fname
+  R_TYPE, pointer :: ff_global(:, :)
+  logical :: i_am_root
+  integer :: root_, comm
+
+  PUSH_SUB(X(io_function_output_vector_BZ))
+
+  if(present(vector_dim_labels)) then
+    ASSERT(ubound(vector_dim_labels, dim = 1) >= vector_dim)
+  end if
+
+  ASSERT(vector_dim < 10)
+
+  ierr = 0
+  ASSERT( ubound(ff, 1) - lbound(ff, dim = 1 ) + 1 == kpt%end - kpt%start +1 )
+
+  i_am_root = .true.
+#ifdef HAVE_MPI
+  comm = MPI_COMM_NULL
+#endif
+  root_ = optional_default(root, 0)
+
+  if(kpt%parallel) then
+    comm = grp%comm
+
+    i_am_root = (grp%rank == root_)
+
+    SAFE_ALLOCATE(ff_global(1:mesh%sb%kpoints%reduced%npoints, 1:vector_dim))
+    ff_global(1:mesh%sb%kpoints%reduced%npoints, 1:vector_dim) = R_TOTYPE(M_ZERO)   
+ 
+    do ivd = 1, vector_dim
+      ff_global(kpt%start:kpt%end, ivd) = ff(lbound(ff, 1):ubound(ff, 1), ivd) 
+    end do
+#ifdef HAVE_MPI
+    call comm_allreduce(comm, ff_global)
+#endif
+  else
+    ff_global => ff
+  end if
+
+  if(present(grp)) then
+    i_am_root = i_am_root .and. (grp%rank == root_)
+    comm = grp%comm
+  end if
+
+  if(i_am_root) then
+
+    how_seq = how
+
+    if(how_seq /= 0) then !perhaps there is nothing left to do
+      do ivd = 1, vector_dim
+        if(present(vector_dim_labels)) then
+          full_fname = trim(fname)//'-'//vector_dim_labels(ivd)
+        else
+          write(full_fname, '(2a,i1)') trim(fname), '-', ivd
+        end if
+        
+        call X(io_function_output_global_BZ)(how_seq, dir, full_fname, mesh, ff_global(:, ivd), unit, ierr)
+      end do
+    end if
+
+  end if
+
+#ifdef HAVE_MPI
+  if(comm /= MPI_COMM_NULL .and. comm /= 0 ) then
+    ! I have to broadcast the error code
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
+    ! Add a barrier to ensure that the process are synchronized
+    call MPI_Barrier(comm, mpi_err)
+  end if
+#endif
+  
+  if(kpt%parallel) then
+    SAFE_DEALLOCATE_P(ff_global)
+  else
+    nullify(ff_global)
+  end if
+
+  POP_SUB(X(io_function_output_vector_BZ))
+end subroutine X(io_function_output_vector_BZ)
+
+
+! ---------------------------------------------------------
 subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, grp, root, is_global)
-  integer,                    intent(in)  :: how
+  integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir
   character(len=*),           intent(in)  :: fname
   type(mesh_t),               intent(in)  :: mesh
@@ -636,7 +737,7 @@ subroutine X(io_function_output) (how, dir, fname, mesh, ff, unit, ierr, geo, gr
     comm = mesh%vp%comm
     i_am_root = (mesh%vp%rank == root_)
     if (.not. is_global_) then
-      if(iand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
+      if(bitand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
         call messages_not_implemented("OutputFormat = boundary_points with domain parallelization")
         SAFE_ALLOCATE(ff_global(1:mesh%np_part_global))
         ! FIXME: needs version of vec_gather that includes boundary points. See ticket #127
@@ -691,7 +792,7 @@ end subroutine X(io_function_output)
 
 ! ---------------------------------------------------------
 subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, geo)
-  integer,                    intent(in)  :: how
+  integer(8),                 intent(in)  :: how
   character(len=*),           intent(in)  :: dir, fname
   type(mesh_t),               intent(in)  :: mesh
   R_TYPE,                     intent(in)  :: ff(:)  !< (mesh%np_global or mesh%np_part_global)
@@ -719,7 +820,7 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
 
   np_max = mesh%np_global
   ! should we output boundary points?
-  if(iand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
+  if(bitand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
     if(ubound(ff, dim = 1) >= mesh%np_part_global) then
       np_max = mesh%np_part_global
     else
@@ -729,50 +830,49 @@ subroutine X(io_function_output_global) (how, dir, fname, mesh, ff, unit, ierr, 
     endif
   endif
 
-  if(iand(how, OPTION__OUTPUTFORMAT__BINARY)     /= 0) call out_binary()
-  if(iand(how, OPTION__OUTPUTFORMAT__AXIS_X)     /= 0) call out_axis (1, 2, 3) ! x ; y=0,z=0
-  if(iand(how, OPTION__OUTPUTFORMAT__AXIS_Y)     /= 0) call out_axis (2, 1, 3) ! y ; x=0,z=0
-  if(iand(how, OPTION__OUTPUTFORMAT__AXIS_Z)     /= 0) call out_axis (3, 1, 2) ! z ; x=0,y=0
-  if(iand(how, OPTION__OUTPUTFORMAT__PLANE_X)    /= 0) call out_plane(1, 2, 3) ! x=0; y; z;
-  if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Y)    /= 0) call out_plane(2, 1, 3) ! y=0; x; z;
-  if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Z)    /= 0) call out_plane(3, 1, 2) ! z=0; x; y;
-  if(iand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XY)    /= 0) call out_integrate_plane(1, 2, 3) ! \int dx dy; z;
-  if(iand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XZ)    /= 0) call out_integrate_plane(1, 3, 2) ! \int dx dz; y;
-  if(iand(how, OPTION__OUTPUTFORMAT__INTEGRATE_YZ)    /= 0) call out_integrate_plane(2, 3, 1) ! \int dy dz; x;
-  if(iand(how, OPTION__OUTPUTFORMAT__MESH_INDEX) /= 0) call out_mesh_index()
-  if(iand(how, OPTION__OUTPUTFORMAT__DX)         /= 0) call out_dx()
-  if(iand(how, OPTION__OUTPUTFORMAT__XCRYSDEN)   /= 0) then
+  if(bitand(how, OPTION__OUTPUTFORMAT__BINARY)     /= 0) call out_binary()
+  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_X)     /= 0) call out_axis (1, 2, 3) ! x ; y=0,z=0
+  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Y)     /= 0) call out_axis (2, 1, 3) ! y ; x=0,z=0
+  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Z)     /= 0) call out_axis (3, 1, 2) ! z ; x=0,y=0
+  if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_X)    /= 0) call out_plane(1, 2, 3) ! x=0; y; z;
+  if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Y)    /= 0) call out_plane(2, 1, 3) ! y=0; x; z;
+  if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Z)    /= 0) call out_plane(3, 1, 2) ! z=0; x; y;
+  if(bitand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XY)    /= 0) call out_integrate_plane(1, 2, 3) ! \int dx dy; z;
+  if(bitand(how, OPTION__OUTPUTFORMAT__INTEGRATE_XZ)    /= 0) call out_integrate_plane(1, 3, 2) ! \int dx dz; y;
+  if(bitand(how, OPTION__OUTPUTFORMAT__INTEGRATE_YZ)    /= 0) call out_integrate_plane(2, 3, 1) ! \int dy dz; x;
+  if(bitand(how, OPTION__OUTPUTFORMAT__MESH_INDEX) /= 0) call out_mesh_index()
+  if(bitand(how, OPTION__OUTPUTFORMAT__DX)         /= 0) call out_dx()
+  if(bitand(how, OPTION__OUTPUTFORMAT__XCRYSDEN)   /= 0) then
     call out_xcrysden(.true.)
 #ifdef R_TCOMPLEX
     call out_xcrysden(.false.)
 #endif
   end if
-  if(iand(how, OPTION__OUTPUTFORMAT__CUBE)       /= 0) call out_cube()
+  if(bitand(how, OPTION__OUTPUTFORMAT__CUBE)       /= 0) call out_cube()
 
-  if(iand(how, OPTION__OUTPUTFORMAT__MATLAB) /= 0) then
+  if(bitand(how, OPTION__OUTPUTFORMAT__MATLAB) /= 0) then
 #if defined(R_TCOMPLEX)
     do jj = 1, 3 ! re, im, abs
 #else
     do jj = 1, 1 ! only real part
 #endif
-      if(iand(how, OPTION__OUTPUTFORMAT__PLANE_X) /= 0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
-      if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
-      if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Z) /= 0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
+      if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_X) /= 0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
+      if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
+      if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Z) /= 0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
     end do
-    if(iand(how, OPTION__OUTPUTFORMAT__MESHGRID) /= 0) then
+    if(bitand(how, OPTION__OUTPUTFORMAT__MESHGRID) /= 0) then
       do jj = 4, 5 ! meshgrid
-        if(iand(how, OPTION__OUTPUTFORMAT__PLANE_X) /= 0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
-        if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
-        if(iand(how, OPTION__OUTPUTFORMAT__PLANE_Z) /= 0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
+        if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_X) /= 0) call out_matlab(how, 1, 2, 3, jj) ! x=0; y; z; 
+        if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Y) /= 0) call out_matlab(how, 2, 1, 3, jj) ! y=0; x; z;
+        if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Z) /= 0) call out_matlab(how, 3, 1, 2, jj) ! z=0; x; y;
       end do
     end if
   end if
 
 #if defined(HAVE_NETCDF)
-  if(iand(how, OPTION__OUTPUTFORMAT__NETCDF)     /= 0) call out_netcdf()
+  if(bitand(how, OPTION__OUTPUTFORMAT__NETCDF)     /= 0) call out_netcdf()
 #endif
-  if(iand(how, OPTION__OUTPUTFORMAT__OPENSCAD) /= 0) call out_openscad()
-  if(iand(how, OPTION__OUTPUTFORMAT__VTK) /= 0) call out_vtk()
+  if(bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0) call out_vtk()
 
   POP_SUB(X(io_function_output_global))
   call profiling_out(write_prof)
@@ -891,7 +991,6 @@ contains
 
     integer :: ix, iy, iz, np
     integer :: ixvect(MAX_DIM)
-    integer :: ixvect_test(MAX_DIM)
     FLOAT   :: xx(1:MAX_DIM), zz
     R_TYPE  :: fu
 
@@ -927,7 +1026,7 @@ contains
         end do
       end do
      
-      if(.not.mesh%use_curvilinear) fu = fu*mesh%volume_element
+      if(.not.mesh%use_curvilinear) fu = fu*mesh%surface_element(d3)
       if(np > 0 ) write(iunit, mformat, iostat=ierr) zz, fu
     end do
 
@@ -939,7 +1038,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine out_matlab(how, d1, d2, d3, out_what)
-    integer, intent(in) :: how, d1, d2, d3, out_what
+    integer(8), intent(in) :: how
+    integer, intent(in) :: d1, d2, d3, out_what
 
     integer :: ix, iy, record_length
     integer :: min_d2, min_d3, max_d2, max_d3
@@ -954,7 +1054,7 @@ contains
     min_d3 = mesh%idx%nr(1, d3) + mesh%idx%enlarge(d3)
     max_d3 = mesh%idx%nr(2, d3) - mesh%idx%enlarge(d3)    
     
-    if(iand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
+    if(bitand(how, OPTION__OUTPUTFORMAT__BOUNDARY_POINTS) /= 0) then
       min_d2 = mesh%idx%nr(1, d2)
       max_d2 = mesh%idx%nr(2, d2)
       min_d3 = mesh%idx%nr(1, d3)
@@ -1137,6 +1237,7 @@ contains
   subroutine out_cube()
 
     integer :: ix, iy, iz, idir, idir2, iatom
+    integer :: int_unit(3)
     FLOAT   :: offset(MAX_DIM)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
@@ -1165,8 +1266,16 @@ contains
     write(iunit, '(2a)') 'Generated by octopus ', trim(conf%version)
     write(iunit, '(4a)') 'git: ', trim(conf%git_commit), " build: ",  trim(conf%build_time)
     write(iunit, '(i5,3f12.6)') geo%natoms, offset(1:3)
+
+    ! According to http://gaussian.com/cubegen/
+    ! If N1<0 the input cube coordinates are assumed to be in Bohr, otherwise, they are interpreted as Angstroms. 
+    int_unit(1:3) = 1
+    if (units_out%length%abbrev == "b") then
+      int_unit(1) = -1
+    end if
+
     do idir = 1, 3
-      write(iunit, '(i5,3f12.6)') cube%rs_n_global(idir), (units_from_atomic(units_out%length, &
+      write(iunit, '(i5,3f12.6)') int_unit(idir)*cube%rs_n_global(idir), (units_from_atomic(units_out%length, &
         mesh%spacing(idir)*mesh%sb%rlattice_primitive(idir2, idir)), idir2 = 1, 3)
     end do
     do iatom = 1, geo%natoms
@@ -1248,7 +1357,7 @@ contains
     ! This differs from mesh%sb%rlattice if it is not an integer multiple of the spacing
     do idir = 1, 3
       do idir2 = 1, 3
-        lattice_vectors(idir, idir2) = mesh%spacing(idir) * (my_n(idir) - 1) * mesh%sb%rlattice_primitive(idir2, idir)
+        lattice_vectors(idir, idir2) = mesh%spacing(idir) * (my_n(idir) - 1) * mesh%sb%rlattice_primitive(idir, idir2)
       end do
     end do
     
@@ -1347,189 +1456,8 @@ contains
 
 #endif /*defined(HAVE_NETCDF)*/
  
-  subroutine out_openscad()
-    integer :: ip, ii, jj, kk, ll, npoly
-    type(openscad_file_t) :: cad_file
-    type(polyhedron_t) :: poly
-    FLOAT :: isosurface_value
-
-    integer, allocatable :: edges(:), triangles(:, :)
-    integer :: iunit, cubeindex, cube_point(0:7)
-    FLOAT :: vertlist(1:3, 0:11), minff, maxff
-
-    PUSH_SUB(X(io_function_output_global).out_openscad)
-
-    ASSERT(present(geo))
-    ASSERT(mesh%sb%dim == 3)
-
-#ifdef R_TREAL
-    maxff = maxval(ff)
-    minff = minval(ff)
-    write(message(1),*) 'Minimum value = ', units_from_atomic(unit, minff), &
-      ' Maximum value = ', units_from_atomic(unit, maxff), " ", trim(units_abbrev(unit))
-#else
-    maxff = maxval(abs(ff))
-    minff = minval(abs(ff))
-    write(message(1),*) 'Minimum magnitude = ', units_from_atomic(unit, minff), &
-      ' Maximum magnitude = ', units_from_atomic(unit, maxff), " ", trim(units_abbrev(unit))
-#endif
-    call messages_info(1)
-
-    ! note: this default makes no sense for real wfs. the complex version is better.
-
-    !%Variable OpenSCADIsovalue
-    !%Type float
-    !%Default (max+min)/2
-    !%Section Output
-    !%Description
-    !% The value for the isosurface in OpenSCAD, when writing output of a field with <tt>OutputFormat = openscad</tt>.
-    !% It is expressed in <tt>UnitsOutput</tt> for the relevant quantity. For complex fields, the isovalue is
-    !% for the magnitude of the field.
-    !%End
-    call parse_variable('OpenSCADIsovalue', (maxff + minff) / M_TWO, isosurface_value, unit)
-    write(message(1),*) 'OpenSCAD output at isovalue ', units_from_atomic(unit, isosurface_value), " ", trim(units_abbrev(unit))
-    call messages_info(1)
-    
-    SAFE_ALLOCATE(edges(0:255))
-    SAFE_ALLOCATE(triangles(1:16, 0:255))
-
-    iunit = io_open(trim(conf%share)//"/marching_cubes_edges.data", action='read', status='old', die=.true.)
-
-    do ii = 0, 255
-      read(iunit, *) edges(ii)
-    end do
-
-    call io_close(iunit)
-
-
-    iunit = io_open(trim(conf%share)//"/marching_cubes_triangles.data", action='read', status='old', die=.true.)
-
-    do ii = 0, 255
-      read(iunit, *) (triangles(jj, ii), jj = 1, 16)
-    end do
-
-    call io_close(iunit)
-
-    call openscad_file_init(cad_file, trim(dir)//'/'//trim(fname)//".scad")
-
-    call geometry_write_openscad(geo, cad_file = cad_file)
-
-    if(isosurface_value > maxff .or. isosurface_value < minff) then
-      if(isosurface_value > maxff) then
-        message(1) = "OpenSCADIsovalue is larger than the maximum for the field. No polyhedra will be output."
-      else
-        message(1) = "OpenSCADIsovalue is smaller than the minimum for the field. No polyhedra will be output."
-        ! You might expect the surface to be that of the simulation box in this case.
-        ! It is not, since we discard polyhedra on the edge.
-      end if
-
-      call messages_warning(1)
-      call openscad_file_end(cad_file)
-      POP_SUB(X(io_function_output_global).out_openscad)
-      return
-    end if
-
-    npoly = 0
-    do ip = 1, np_max
-      ii = mesh%idx%lxyz(ip, 1)
-      jj = mesh%idx%lxyz(ip, 2)
-      kk = mesh%idx%lxyz(ip, 3)
-
-      cube_point(0) = mesh%idx%lxyz_inv(ii    , jj    , kk    )
-      cube_point(1) = mesh%idx%lxyz_inv(ii    , jj + 1, kk    )
-      cube_point(2) = mesh%idx%lxyz_inv(ii + 1, jj + 1, kk    )
-      cube_point(3) = mesh%idx%lxyz_inv(ii + 1, jj    , kk    )
-      cube_point(4) = mesh%idx%lxyz_inv(ii    , jj    , kk + 1)
-      cube_point(5) = mesh%idx%lxyz_inv(ii    , jj + 1, kk + 1)
-      cube_point(6) = mesh%idx%lxyz_inv(ii + 1, jj + 1, kk + 1)
-      cube_point(7) = mesh%idx%lxyz_inv(ii + 1, jj    , kk + 1)
-
-      if(any(cube_point < 1 .or. cube_point > np_max)) cycle
-      
-      cubeindex = 0
-      if(X(inside_isolevel)(ff, cube_point(0), isosurface_value)) cubeindex = cubeindex + 1
-      if(X(inside_isolevel)(ff, cube_point(1), isosurface_value)) cubeindex = cubeindex + 2
-      if(X(inside_isolevel)(ff, cube_point(2), isosurface_value)) cubeindex = cubeindex + 4
-      if(X(inside_isolevel)(ff, cube_point(3), isosurface_value)) cubeindex = cubeindex + 8
-      if(X(inside_isolevel)(ff, cube_point(4), isosurface_value)) cubeindex = cubeindex + 16
-      if(X(inside_isolevel)(ff, cube_point(5), isosurface_value)) cubeindex = cubeindex + 32
-      if(X(inside_isolevel)(ff, cube_point(6), isosurface_value)) cubeindex = cubeindex + 64
-      if(X(inside_isolevel)(ff, cube_point(7), isosurface_value)) cubeindex = cubeindex + 128
-
-      if(edges(cubeindex) == 0) cycle
-      npoly = npoly + 1
-      
-      vertlist = CNST(3.333333333333333333)
-
-      if(iand(edges(cubeindex), 1) /= 0) then
-        vertlist(1:3, 0) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(0), cube_point(1))
-      end if
-      if(iand(edges(cubeindex), 2) /= 0) then
-        vertlist(1:3, 1) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(1), cube_point(2))
-      end if
-      if(iand(edges(cubeindex), 4) /= 0) then
-        vertlist(1:3, 2) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(2), cube_point(3))
-      end if
-      if(iand(edges(cubeindex), 8) /= 0) then
-        vertlist(1:3, 3) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(3), cube_point(0))
-      end if
-      if(iand(edges(cubeindex), 16) /= 0) then
-        vertlist(1:3, 4) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(4), cube_point(5))
-      end if
-      if(iand(edges(cubeindex), 32) /= 0) then
-        vertlist(1:3, 5) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(5), cube_point(6))
-      end if
-      if(iand(edges(cubeindex), 64) /= 0) then
-        vertlist(1:3, 6) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(6), cube_point(7))
-      end if
-      if(iand(edges(cubeindex), 128) /= 0) then
-        vertlist(1:3, 7) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(7), cube_point(4))
-      end if
-      if(iand(edges(cubeindex), 256) /= 0) then
-        vertlist(1:3, 8) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(0), cube_point(4))
-      end if
-      if(iand(edges(cubeindex), 512) /= 0) then
-        vertlist(1:3, 9) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(1), cube_point(5))
-      end if
-      if(iand(edges(cubeindex), 1024) /= 0) then
-        vertlist(1:3, 10) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(2), cube_point(6))
-      end if
-      if(iand(edges(cubeindex), 2048) /= 0) then
-        vertlist(1:3, 11) = X(interpolate_isolevel)(mesh, ff, isosurface_value, cube_point(3), cube_point(7))
-      end if
-      
-      call polyhedron_init(poly)
-
-      ll = 1
-      do
-        if(triangles(ll, cubeindex) == -1) exit
-
-        call polyhedron_add_point(poly, triangles(ll    , cubeindex), vertlist(1:3, triangles(ll    , cubeindex)))
-        call polyhedron_add_point(poly, triangles(ll + 1, cubeindex), vertlist(1:3, triangles(ll + 1, cubeindex)))
-        call polyhedron_add_point(poly, triangles(ll + 2, cubeindex), vertlist(1:3, triangles(ll + 2, cubeindex)))
-        call polyhedron_add_triangle(poly, triangles(ll:ll + 2, cubeindex))
-
-        ll = ll + 3
-      end do
-
-      call openscad_file_polyhedron(cad_file, poly)
-      call polyhedron_end(poly)
-
-    end do
-    
-    call openscad_file_end(cad_file)
-    write(message(1),'(a,i9,a,a)') ' Wrote ', npoly, ' polyhedra to ', trim(dir)//'/'//trim(fname)//".scad"
-    call messages_info(1)
-
-    if(npoly == 0) then
-      message(1) = "There were no points inside the isosurface for OpenSCAD output."
-      call messages_warning(1)
-    end if
-
-    POP_SUB(X(io_function_output_global).out_openscad)
-  end subroutine out_openscad
-
   ! ---------------------------------------------------------
+
   subroutine out_vtk()
     type(cube_t) :: cube
     type(cube_function_t) :: cf
@@ -1576,6 +1504,93 @@ contains
   end subroutine out_vtk
 
 end subroutine X(io_function_output_global)
+
+
+! ---------------------------------------------------------
+subroutine X(io_function_output_global_BZ) (how, dir, fname, mesh, ff, unit, ierr)
+  integer(8),                 intent(in)  :: how
+  character(len=*),           intent(in)  :: dir, fname
+  type(mesh_t),               intent(in)  :: mesh
+  R_TYPE,                     intent(in)  :: ff(:)  !< (st%d%nik)
+  type(unit_t),               intent(in)  :: unit
+  integer,                    intent(out) :: ierr
+
+  character(len=512) :: filename
+  character(len=20)  :: mformat, mformat2, mfmtheader
+  integer            :: iunit, np_max
+
+  call profiling_in(write_prof, "DISK_WRITE")
+  PUSH_SUB(X(io_function_output_global_BZ))
+
+  call io_mkdir(dir)
+
+! Define the format
+  mformat    = '(99es23.14E3)'
+  mformat2   = '(i12,99es34.24E3)'
+  mfmtheader = '(a,a10,5a23)'
+
+  ASSERT(how > 0)
+  ASSERT(ubound(ff, dim = 1) >= mesh%sb%kpoints%reduced%npoints)
+
+  np_max = mesh%sb%kpoints%reduced%npoints
+
+  if(bitand(how, OPTION__OUTPUTFORMAT__BINARY)     /= 0) call messages_not_implemented("Outpur_KPT with format binary") 
+  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_X)     /= 0) call messages_not_implemented("Outpur_KPT with format axis x")
+  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Y)     /= 0) call messages_not_implemented("Outpur_KPT with format axis y")
+  if(bitand(how, OPTION__OUTPUTFORMAT__AXIS_Z)     /= 0) call messages_not_implemented("Outpur_KPT with format axis z")
+  if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_X)    /= 0) call out_plane(1, 2, 3) ! x=0; y; z;
+  if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Y)    /= 0) call out_plane(2, 1, 3) ! y=0; x; z;
+  if(bitand(how, OPTION__OUTPUTFORMAT__PLANE_Z)    /= 0) call out_plane(3, 1, 2) ! z=0; x; y;
+  if(bitand(how, OPTION__OUTPUTFORMAT__DX)         /= 0) call messages_not_implemented("Outpur_KPT with format dx")
+  if(bitand(how, OPTION__OUTPUTFORMAT__XCRYSDEN)   /= 0) call messages_not_implemented("Outpur_KPT with format xcrysden")
+  if(bitand(how, OPTION__OUTPUTFORMAT__CUBE)       /= 0) call messages_not_implemented("Outpur_KPT with format cube")
+
+  if(bitand(how, OPTION__OUTPUTFORMAT__MATLAB) /= 0) call messages_not_implemented("Outpur_KPT with format matlab")
+
+#if defined(HAVE_NETCDF)
+  if(bitand(how, OPTION__OUTPUTFORMAT__NETCDF)     /= 0) call messages_not_implemented("Outpur_KPT with format netcdf")
+#endif
+  if(bitand(how, OPTION__OUTPUTFORMAT__VTK) /= 0) call messages_not_implemented("Outpur_KPT with format vtk")
+
+  POP_SUB(X(io_function_output_global_BZ))
+  call profiling_out(write_prof)
+
+
+ contains
+  ! ---------------------------------------------------------
+  subroutine out_plane(d1, d2, d3)
+    integer, intent(in) :: d1, d2, d3
+
+    integer :: ik, dim
+    FLOAT   :: kk(1:MAX_DIM)
+    R_TYPE  :: fu
+
+    PUSH_SUB(X(io_function_output_global_BZ).out_plane)
+
+    filename = trim(dir)//'/'//trim(fname)//"."//index2axisBZ(d1)//"=0"
+    iunit = io_open(filename, action='write')
+
+    write(iunit, mfmtheader, iostat=ierr) '#', index2axisBZ(d2), index2axisBZ(d3), 'Re', 'Im'
+
+    kk(1:MAX_DIM) = M_ZERO
+    dim = mesh%sb%kpoints%reduced%dim
+
+    do ik = 1, mesh%sb%kpoints%reduced%npoints
+      kk(1:dim) = units_from_atomic(units_out%length**(-1), &
+                         mesh%sb%kpoints%reduced%point1BZ(1:dim,ik))
+      if(abs(kk(d1)) < CNST(1.0e-6)) then
+        fu = units_from_atomic(unit, ff(ik))
+        write(iunit, mformat, iostat=ierr)  &
+          kk(d2), kk(d3), fu
+         
+      end if
+    end do
+
+    call io_close(iunit)
+
+    POP_SUB(X(io_function_output_global_BZ).out_plane)
+  end subroutine out_plane
+end subroutine X(io_function_output_global_BZ)
 
 ! -----------------------------------------------
 

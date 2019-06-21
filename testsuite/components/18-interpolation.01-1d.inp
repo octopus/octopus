@@ -1,3 +1,5 @@
+CalculationMode = test
+
 TestMode = interpolation
 
 Dimensions = 1

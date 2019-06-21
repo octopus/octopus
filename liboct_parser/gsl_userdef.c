@@ -21,6 +21,7 @@
 #include <gsl/gsl_complex_math.h>
 #include <gsl/gsl_sf_erf.h>
 #include <math.h>
+#include <stdlib.h>
 
 
 /* ------------------------------------------------------ */
@@ -198,3 +199,18 @@ gsl_complex gsl_complex_floor (gsl_complex a)
 
   return z;
 }
+
+/* ------------------------------------------------------ */
+void gsl_complex_rand_seed(long a)
+{
+  srandom(a);
+}
+
+/* ------------------------------------------------------ */
+gsl_complex gsl_complex_rand (gsl_complex a)
+{
+
+  double r = random()/((double) RAND_MAX);
+  return gsl_complex_rect(r, 0.0);
+}
+

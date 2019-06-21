@@ -18,16 +18,12 @@
 #include "global.h"
 
 module boundary_op_oct_m
-  use io_oct_m
   use io_function_oct_m
-  use io_oct_m
   use cube_function_oct_m
   use geometry_oct_m
   use global_oct_m
-  use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use mpi_oct_m
   use parser_oct_m
   use profiling_oct_m
   use unit_oct_m
@@ -281,13 +277,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine bc_generate_mf(this, mesh, geo, bounds, mf)
-    type(bc_t),               intent(out)   :: this
+    type(bc_t),               intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
     type(geometry_t),         intent(in)    :: geo
     FLOAT,                    intent(in)    :: bounds(1:2)
     FLOAT,                    intent(inout) :: mf(:)
 
-    integer :: ip, dir, ierr
+    integer :: ip, dir
     FLOAT   :: width
     FLOAT   :: xx(1:MAX_DIM), rr, dd, ddv(1:MAX_DIM), tmp(1:MAX_DIM)
 

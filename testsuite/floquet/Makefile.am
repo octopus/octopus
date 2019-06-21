@@ -23,7 +23,7 @@ sharedir = $(pkgdatadir)/testsuite/floquet
 dist_share_DATA = \
   01-h1d.01-gs.inp                          \
   01-h1d.02-floquet_nint.inp                \
-  01-h1d.03-floquet_nint_restart.inp        \  
+  01-h1d.03-floquet_nint_restart.inp        \
   01-h1d.04-floquet_td_sample.inp           \
   01-h1d.05-floquet_int.inp                 \
   01-h1d.test                               \

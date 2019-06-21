@@ -21,7 +21,6 @@
 module stencil_stargeneral_oct_m
   use global_oct_m
   use messages_oct_m
-  use profiling_oct_m
   use simul_box_oct_m
   use stencil_oct_m
 
@@ -44,8 +43,9 @@ contains
     type(stencil_t),     intent(inout) :: this 
     type(simul_box_t),      intent(in) :: sb
     
-    integer :: idim, dim
-    FLOAT   :: vec1(1:3), vec2(1:3), theta, arm(1:3)
+    integer :: dim
+    FLOAT   :: vec1(1:3), vec2(1:3), theta
+    integer :: arm(1:3)
     
     PUSH_SUB(stencil_stargeneral_get_arms)  
 

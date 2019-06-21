@@ -32,5 +32,5 @@ ConvRelDens = 1.0e-7
 
 ExtraStates = 1
 
-DisableOpenCL = yes
+DisableAccel = yes
 

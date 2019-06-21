@@ -40,7 +40,8 @@ module propagator_base_oct_m
     PROP_CAETRS                  = 12, &
     PROP_RUNGE_KUTTA4            = 13, &
     PROP_RUNGE_KUTTA2            = 14, & 
-    PROP_EXPLICIT_RUNGE_KUTTA4   = 15
+    PROP_EXPLICIT_RUNGE_KUTTA4   = 15, &
+    PROP_CFMAGNUS4               = 16
 
   type propagator_t
     integer             :: method           !< Which evolution method to use.
@@ -50,7 +51,6 @@ module propagator_base_oct_m
     !> Auxiliary function to store the Magnus potentials.
     FLOAT, pointer      :: vmagnus(:, :, :) => null() 
     integer             :: scf_propagation_steps 
-    logical             :: first
     type(sparskit_solver_t), pointer :: tdsk
     integer             :: tdsk_size
     FLOAT               :: scf_threshold

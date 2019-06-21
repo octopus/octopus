@@ -22,7 +22,6 @@
 !! used when optimal control runs are requested.
 module opt_control_oct_m
   use boundary_op_oct_m
-  use messages_oct_m
   use controlfunction_oct_m
   use exponential_oct_m
   use filter_oct_m
@@ -35,9 +34,8 @@ module opt_control_oct_m
   use io_oct_m
   use lasers_oct_m
   use loct_oct_m
-  use loct_math_oct_m
   use math_oct_m
-  use mesh_oct_m
+  use messages_oct_m
   use minimizer_oct_m
   use opt_control_global_oct_m
   use opt_control_iter_oct_m
@@ -154,8 +152,8 @@ contains
 
     ! Informative output.
     call opt_control_get_qs(psi, initial_st)
-    call output_states(psi, sys%gr, sys%geo, OCT_DIR//'initial', sys%outp)
-    call target_output(oct_target, sys%gr, OCT_DIR//'target', sys%geo, sys%outp)
+    call output_states(psi, sys%gr, sys%geo, hm, OCT_DIR//'initial', sys%outp)
+    call target_output(oct_target, sys%gr, OCT_DIR//'target', sys%geo, hm, sys%outp)
     call states_end(psi)
 
 

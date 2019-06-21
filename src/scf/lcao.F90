@@ -20,14 +20,15 @@
 
 module lcao_oct_m
   use atom_oct_m
+  use atomic_orbital_oct_m
   use batch_oct_m
+  use blacs_oct_m
   use blacs_proc_grid_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use io_oct_m
-  use io_function_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use lapack_oct_m
@@ -37,10 +38,9 @@ module lcao_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
+  use mpi_oct_m
   use mpi_debug_oct_m
   use parser_oct_m
-  use periodic_copy_oct_m
   use profiling_oct_m
   use ps_oct_m
   use quickrnd_oct_m
@@ -693,16 +693,11 @@ contains
     FLOAT,   optional,   intent(in)    :: lmm_r !< used only if not present(st_start)
 
     type(lcao_t) :: lcao
-    integer :: s1, s2, k1, k2, is, ik, st_start_random
+    integer :: st_start_random
     logical :: lcao_done
     type(profile_t), save :: prof
 
     PUSH_SUB(lcao_run)
-
-    if(sys%ks%theory_level == CLASSICAL) then
-      POP_SUB(lcao_run) 
-      return
-    end if
 
     if (present(st_start)) then
       ! If we are doing unocc calculation, do not mess with the correct eigenvalues
@@ -796,7 +791,7 @@ contains
       end if
 
       ! Randomly generate the initial wavefunctions.
-      call states_generate_random(sys%st, sys%gr%mesh, ist_start_ = st_start_random, normalized = .false.)
+      call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb, ist_start_ = st_start_random, normalized = .false.)
 
       call messages_write('Orthogonalizing wavefunctions.')
       call messages_info()
@@ -809,6 +804,7 @@ contains
         if(.not. present(st_start)) then
           call states_fermi(sys%st, sys%gr%mesh) ! occupations
         end if
+
       end if
 
     else if (present(st_start)) then
@@ -822,6 +818,7 @@ contains
     end if
 
     call lcao_end(lcao)
+
 
     call profiling_out(prof)
     POP_SUB(lcao_run)
@@ -1037,13 +1034,16 @@ contains
           factors(iorb) = ps%conf%occ(ii, 1)/(CNST(2.0)*ll + CNST(1.0))
         end do
 
-        !$omp parallel do private(ip, aa)
+        !$omp parallel do private(ip, aa, iorb) 
         do ip = 1, this%sphere(iatom)%np
           aa = CNST(0.0)
           do iorb = 1, this%norb_atom(iatom)/this%mult
             aa = aa + factors(iorb)*this%orbitals(iatom)%states_linear(iorb)%dpsi(ip)**2
           end do
+          !Due to the mapping function, more than one task could write to the same point in the array
+          !$omp critical
           rho(this%sphere(iatom)%map(ip), 1) = aa
+          !$omp end critical
         end do
 
         SAFE_DEALLOCATE_A(factors)
@@ -1069,7 +1069,7 @@ contains
     integer,           intent(in)    :: nspin, spin_channels
     FLOAT,             intent(out)   :: rho(:, :)
 
-    integer :: ia, is, ip, idir, gmd_opt
+    integer :: ia, is, idir, gmd_opt
     integer, save :: iseed = 321
     type(block_t) :: blk
     FLOAT :: rr, rnd, phi, theta, mag(1:3), lmag, n1, n2
@@ -1227,8 +1227,8 @@ contains
         if (lmag > n1 + n2) then
           mag = mag*(n1 + n2)/lmag
           lmag = n1 + n2
-        elseif (lmag == M_ZERO) then
-          if (n1 - n2 == M_ZERO) then
+        elseif (abs(lmag) <= M_EPSILON) then
+          if (abs(n1 - n2) <= M_EPSILON) then
             rho(1:gr%fine%mesh%np, 1:2) = rho(1:gr%fine%mesh%np, 1:2) + atom_rho(1:gr%fine%mesh%np, 1:2)
           else
             atom_rho(:, 1) = (atom_rho(:, 1) + atom_rho(:, 2))/M_TWO
@@ -1258,11 +1258,11 @@ contains
 
         elseif (nspin == 4) then
           theta = acos(mag(3)/lmag)
-          if (mag(1) == M_ZERO) then
-            if (mag(2) == M_ZERO) then
+          if (abs(mag(1)) <= M_EPSILON) then
+            if (abs(mag(2)) <= M_EPSILON) then
               phi = M_ZERO
             elseif (mag(2) < M_ZERO) then
-              phi = M_PI*M_TWOTHIRD
+              phi = M_PI*CNST(3.0/2.0)
             elseif (mag(2) > M_ZERO) then
               phi = M_PI*M_HALF
             end if

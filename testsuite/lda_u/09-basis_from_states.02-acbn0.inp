@@ -1,0 +1,45 @@
+CalculationMode = gs
+PeriodicDimensions = 3
+BoxShape = parallelepiped
+ExperimentalFeatures = yes
+
+a = 4.0485*angstrom
+%Species
+ 'Al' | species_pseudo | file | '09-basis_from_states.fhi' | lmax | 2 | lloc | 0 |hubbard_l | 1 
+%
+
+DFTULevel = dft_u_acbn0
+%RestartOptions
+ restart_proj | "./09-basis_from_states.01-lda.inp/restart"
+%
+DFTUBasisFromStates = yes
+%DFTUBasisStates
+  1
+  2
+  3
+%
+
+
+
+%LatticeParameters
+ a | a | a
+%
+
+%LatticeVectors
+ 0.0 | 0.5 | 0.5
+ 0.5 | 0.0 | 0.5
+ 0.5 | 0.5 | 0.0
+%
+
+%ReducedCoordinates
+  "Al" | 0.0 | 0.0 | 0.0
+%
+
+Spacing = 0.4
+Smearing = 0.1
+SmearingFunction = fermi_dirac
+
+FromScratch = yes
+
+ExtraStates = 3
+OutputLDA_U = occ_matrices + effectiveU

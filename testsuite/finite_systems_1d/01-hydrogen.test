@@ -16,6 +16,7 @@ Enabled    : Yes
 # prints in the static/eigenvalues file.
 
 Input: 01-hydrogen.01-ground_state.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.66978603
 match ; CALC_MODE calls ; GREPFIELD(profiling/time.*, 'CALC_MODE', 2); 1
 

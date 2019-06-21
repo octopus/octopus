@@ -87,7 +87,7 @@ contains
   end subroutine multigrid_level_nullify
 
   ! ---------------------------------------------------------
-  subroutine multigrid_init(mgrid, geo, cv, mesh, der, stencil, mc)
+  subroutine multigrid_init(mgrid, geo, cv, mesh, der, stencil, mc, used_for_preconditioner)
     type(multigrid_t),     target, intent(out) :: mgrid
     type(geometry_t),              intent(in)  :: geo
     type(curvilinear_t),           intent(in)  :: cv
@@ -95,8 +95,9 @@ contains
     type(derivatives_t),   target, intent(in)  :: der
     type(stencil_t),               intent(in)  :: stencil
     type(multicomm_t),             intent(in)  :: mc
+    logical, optional,             intent(in)  :: used_for_preconditioner
 
-    integer :: i, n_levels, np
+    integer :: i, n_levels, np, order
 
     PUSH_SUB(multigrid_init)
 
@@ -113,6 +114,30 @@ contains
     !%End
 
     call parse_variable('MultigridLevels', 0, n_levels)
+
+    ! default:
+    order = der%order
+    if (optional_default(used_for_preconditioner, .false.)) then
+      n_levels = 3
+      write(message(1), '(a)') "Set number of multigrid levels to 3 for preconditioner. This ignores the value of MultigridLevels."
+      call messages_info(1)
+
+      !%Variable MultigridDerivativesOrder
+      !%Type integer
+      !%Default 1
+      !%Section Mesh::Derivatives
+      !%Description
+      !% This variable gives the discretization order for the approximation of
+      !% the differential operators on the different levels of the multigrid.
+      !% For more details, see the variable DerivativesOrder.
+      !%End
+      call parse_variable('MultigridDerivativesOrder', 1, order)
+      ! set order to a minimum of 2 for general star stencil, fails otherwise
+      ! the parameter DER_STARGENERAL is private to the derivatives module
+      if (der%stencil_type == 5) then
+        order = max(2, order)
+      end if
+    end if
 
     if ( n_levels <= 0 )then
       n_levels=n_levels-3
@@ -145,7 +170,7 @@ contains
       
       call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil)
 
-      call derivatives_init(mgrid%level(i)%der, mesh%sb, cv%method /= CURV_METHOD_UNIFORM)
+      call derivatives_init(mgrid%level(i)%der, mesh%sb, cv%method /= CURV_METHOD_UNIFORM, order=order)
 
       call mesh_init_stage_3(mgrid%level(i)%mesh, stencil, mc, parent = mgrid%level(i - 1)%mesh)
 

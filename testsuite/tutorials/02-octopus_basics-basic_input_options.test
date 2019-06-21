@@ -1,0 +1,16 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Octopus basics - Basic input options
+Program    : octopus
+TestGroups : short-run, tutorials
+Enabled    : Yes
+
+ExtraFile  : N.xyz
+Input: 02-octopus_basics-basic_input_options.01-N_atom.inp
+match ; SCF convergence        ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Number of inner points ; GREPFIELD(out, 'inner mesh', 5) ; 89727
+match ; Grid cutoff            ; GREPFIELD(out, 'Grid Cutoff', 5) ; 1160.586810
+match ; Matrix vector products ; GREPFIELD(out, 'Matrix vector products', 4) ; 25
+match ; Converged eigenvectors ; GREPFIELD(out, 'Converged eigenvectors', 3) ; 0
+Precision: 0.05
+match ; Total Energy           ; GREPFIELD(static/info, 'Total  ', 3) ; -262.19

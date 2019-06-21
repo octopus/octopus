@@ -33,10 +33,11 @@ Input: 11-tdmagnetic.01-gs.inp
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; 1.79226552
 
 Input: 11-tdmagnetic.02-unocc.inp
-
+Precision: 0.00013
 match ; Unoccupied state 1; GREPFIELD(static/eigenvalues, '2   --', 3) ; 1.802604
 
 Input: 11-tdmagnetic.03-td.inp
+Precision: 0.0001
 match ; <x>(t) ; LINEFIELD(td.general/multipoles, -1, 4) ; 1.448208882702e+00
 match ; <y>(t) ; LINEFIELD(td.general/multipoles, -1, 5) ; -1.105531371295e-02
 

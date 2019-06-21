@@ -31,16 +31,8 @@ module math_oct_m
 
   private
   public ::                     &
-    dparker_traub,              &
-    zparker_traub,              &
-    dmatrix_newton_raphson,     &
-    zmatrix_newton_raphson,     &
-    dmatrix_inv_residual,       &
-    zmatrix_inv_residual,       &
     ddot_product,               &
     zdot_product,               &
-    is_integer_multiple,        &
-    divides,                    &
     ylmr,                       &
     grylmr,                     &
     weights,                    &
@@ -48,16 +40,12 @@ module math_oct_m
     hermite,                    &
     set_app_threshold,          &
     operator(.app.),            &
-    math_xor,                   &
     dcross_product,             &
     zcross_product,             &
     hypot,                      &
     ddelta,                     &
     member,                     &
     make_idx_set,               &
-    infinity_norm,              &
-    matrix_symmetric_average,   &
-    matrix_symmetrize,          &
     interpolation_coefficients, &
     interpolate,                &
     even,                       &
@@ -106,51 +94,11 @@ module math_oct_m
     end function oct_hypotf
   end interface hypot
 
-  interface infinity_norm
-    module procedure dinfinity_norm, zinfinity_norm
-  end interface infinity_norm
-
-  interface matrix_symmetric_average
-    module procedure dmatrix_symmetric_average, zmatrix_symmetric_average
-  end interface matrix_symmetric_average
-
-  interface matrix_symmetrize
-    module procedure dmatrix_symmetrize, zmatrix_symmetrize
-  end interface matrix_symmetrize
-
   interface log2
     module procedure dlog2, ilog2
   end interface log2
 
 contains
-
-
-  ! ---------------------------------------------------------
-  !> Checks if a divides b.
-  logical function divides(a, b)
-    integer, intent(in) :: a, b
-
-    PUSH_SUB(divides)
-
-    divides = mod(b, a) == 0
-
-    POP_SUB(divides)
-  end function divides
-
-
-  ! ---------------------------------------------------------
-  logical function is_integer_multiple(a, b)
-    FLOAT, intent(in) :: a, b
-
-    FLOAT :: ratio
-
-    PUSH_SUB(is_integer_multiple)
-
-    ratio = a/b
-    is_integer_multiple = ratio.app.TOFLOAT(nint(ratio))
-
-    POP_SUB(is_integer_multiple)
-  end function is_integer_multiple
 
 
   ! ---------------------------------------------------------
@@ -197,32 +145,31 @@ contains
 
     integer :: i
     FLOAT :: dx, dy, dz, r, plm, cosm, sinm, cosmm1, sinmm1, cosphi, sinphi
-
+    FLOAT,   parameter :: tiny = CNST(1.e-30)
+ 
     !   no push_sub: this routine is called too many times
 
     ! if l=0, no calculations are required
     if (li == 0) then
-      ylm = TOCMPLX(CNST(0.282094791773878), M_ZERO)
+      ylm = TOCMPLX(sqrt(M_ONE/(M_FOUR*M_PI)), M_ZERO)
       return
     end if
 
-    r = sqrt(x*x + y*y + z*z)
+    r = x*x + y*y + z*z
 
     ! if r=0, direction is undefined => make ylm=0 except for l=0
-    if (r == M_ZERO) then
+    if (r <= tiny) then
       ylm = M_z0
       return
     end if
-
+    r = sqrt(r)
     dx = x/r; dy = y/r; dz = z/r
 
     ! get the associated Legendre polynomial (including the normalization factor)
     plm = loct_legendre_sphplm(li, abs(mi), dz)
 
     ! compute sin(|m|*phi) and cos(|m|*phi)
-    r = sqrt(dx*dx + dy*dy)
-    if (abs(r) < CNST(1e-20)) r = CNST(1e-20)
-
+    r = sqrt(max(dx*dx + dy*dy, tiny))
     cosphi = dx/r; sinphi = dy/r
 
     cosm = M_ONE; sinm = M_ZERO
@@ -581,20 +528,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  logical function math_xor(a, b)
-    logical, intent(in) :: a
-    logical, intent(in) :: b
-
-    PUSH_SUB(math_xor)
-
-    math_xor = ( a .or. b )
-    if ( a .and. b ) math_xor = .false.
-
-    POP_SUB(math_xor)
-  end function math_xor
-
-
-  ! ---------------------------------------------------------
   !> Construct out(1:length) = (/1, ..., n/) if in is not present,
   !! out(1:length) = in otherwise.
   subroutine make_idx_set(n, out, length, in)
@@ -720,7 +653,7 @@ contains
       do j = k+1, n
         sumx2 = sumx2 + xx(j)**2
       end do
-      if(sumx2.eq.M_ZERO .and. xx(k).eq. M_ZERO) exit
+      if(abs(sumx2)<=M_EPSILON .and. abs(xx(k))<= M_EPSILON) exit
       if( k < n-1 ) then
         u(k) = atan2(sqrt(sumx2), xx(k))
       else
@@ -1081,7 +1014,7 @@ contains
 
     PUSH_SUB(numder_ridders)
     
-    if(h == M_ZERO) then
+    if(abs(h) <= M_EPSILON) then
       message(1) = "h must be nonzero in numder_ridders"
       call messages_fatal(1)
     end if

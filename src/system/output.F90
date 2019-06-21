@@ -19,17 +19,14 @@
 #include "global.h"
 
 module output_oct_m
-  use base_density_oct_m
-  use base_hamiltonian_oct_m
-  use base_potential_oct_m
-  use base_states_oct_m
   use basins_oct_m
-  use batch_oct_m
+  use comm_oct_m
   use cube_function_oct_m
   use cube_oct_m
   use current_oct_m
   use density_oct_m
   use derivatives_oct_m
+  use dos_oct_m
   use elf_oct_m
 #if defined(HAVE_ETSF_IO)
   use etsf_io
@@ -47,21 +44,19 @@ module output_oct_m
   use kick_oct_m
   use kpoints_oct_m
   use lasers_oct_m
+  use lda_u_oct_m
+  use lda_u_io_oct_m
   use linear_response_oct_m
   use loct_oct_m
-  use loct_math_oct_m
   use magnetic_oct_m
   use mesh_oct_m
-  use mesh_batch_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use modelmb_density_matrix_oct_m
-  use modelmb_exchange_syms_oct_m
   use mpi_oct_m
-  use output_fio_oct_m
+  use orbitalset_oct_m
   use output_me_oct_m
   use parser_oct_m
-  use par_vec_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use simul_box_oct_m
@@ -71,6 +66,7 @@ module output_oct_m
   use states_oct_m
   use states_dim_oct_m
   use states_io_oct_m
+  use submesh_oct_m
   use symm_op_oct_m
   use symmetries_oct_m
   use unit_oct_m
@@ -122,8 +118,10 @@ module output_oct_m
 
   type output_t
     !> General output variables:
-    integer :: what                !< what to output
-    integer :: how                 !< how to output
+    integer(8) :: what                !< what to output
+    integer(8) :: whatBZ              !< what to output - for k-point resolved output
+    integer(8) :: what_lda_u          !< what to output for the LDA+U part
+    integer(8) :: how                 !< how to output
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
 
@@ -131,7 +129,6 @@ module output_oct_m
     integer :: output_interval     !< output every iter
     integer :: restart_write_interval
     logical :: duringscf
-
     character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
     character(len=MAX_PATH_LEN) :: iter_dir  !< The folder name, if information will be output while iterating.
 
@@ -139,11 +136,10 @@ module output_oct_m
     type(mesh_line_t)  :: line     !< or through a line (in 2D)
 
     type(output_bgw_t) :: bgw      !< parameters for BerkeleyGW output
-    type(current_t)    :: current_calculator
-
+  
   end type output_t
 
-  integer, parameter, public ::              &
+  integer(8), parameter, public ::              &
     OPTION__OUTPUT__J_FLOW          =     32768
   
 contains
@@ -157,7 +153,7 @@ contains
     type(block_t) :: blk
     FLOAT :: norm
     character(len=80) :: nst_string, default
-    integer :: what_no_how
+    integer :: what_no_how, what_no_how_u
 
     PUSH_SUB(output_init)
 
@@ -280,19 +276,25 @@ contains
     !% matrix. For the moment the trace is made over the second dimension, and
     !% the code is limited to 2D. The idea is to model <i>N</i> particles in 1D as an
     !% <i>N</i>-dimensional non-interacting problem, then to trace out <i>N</i>-1 coordinates.
-    !%Option frozen_system bit(30)
-    !% Generates input for a frozen calculation.
+    !%Option potential_gradient bit(31)
+    !% Prints the gradient of the potential.
+    !%Option energy_density bit(32)
+    !% Outputs the total energy density to a file called
+    !% <tt>energy_density</tt>.
+    !%Option heat_current bit(33)
+    !% Outputs the total heat current density. The output file is
+    !% called <tt>heat_current-</tt>.
     !%End
     call parse_variable('Output', 0, outp%what)
 
-    if(iand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
       call messages_experimental("Wave-functions in Fourier space")
     end if
 
     ! cannot calculate the ELF in 1D
-    if(iand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. iand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
        if(sb%dim /= 2 .and. sb%dim /= 3) then
-         outp%what = iand(outp%what, not(OPTION__OUTPUT__ELF + OPTION__OUTPUT__ELF_BASINS))
+         outp%what = bitand(outp%what, not(OPTION__OUTPUT__ELF + OPTION__OUTPUT__ELF_BASINS))
          write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
          call messages_warning(1)
        end if
@@ -302,11 +304,11 @@ contains
       call messages_input_error('Output')
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
       call messages_experimental("Model many-body wfs")
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
       call messages_experimental("Model many-body density matrix")
       ! NOTES:
       !   could be made into block to be able to specify which dimensions to trace
@@ -315,7 +317,10 @@ contains
       !   dimensions. The current 1D 1-particle case is simple.
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__WFS) /= 0  .or.  iand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0 ) then
+    if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) call messages_experimental("'Output = energy_density'")
+    if(bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) call messages_experimental("'Output = heat_current'")
+    
+    if(bitand(outp%what, OPTION__OUTPUT__WFS) /= 0  .or.  bitand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0 ) then
 
       !%Variable OutputWfsNumber
       !%Type string
@@ -451,13 +456,47 @@ contains
       call parse_block_end(blk)
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
       call output_me_init(outp%me, sb)
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
       call output_berkeleygw_init(nst, outp%bgw, sb%periodic_dim)
     end if
+
+    !%Variable OutputLDA_U
+    !%Type flag
+    !%Default none
+    !%Section Output
+    !%Description
+    !% Specifies what to print, related to LDA+U. 
+    !% The output files are written at the end of the run into the output directory for the
+    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
+    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
+    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
+    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir/effectiveU</tt>.
+    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
+    !% the options below. Indices in the filename are labelled as follows:
+    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
+    !% There is no tag for directions, given as a letter. The perturbation direction is always
+    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
+    !% Example: <tt>occ_matrices + effectiveU</tt>
+    !%Option occ_matrices  bit(0)
+    !% Outputs the occupation matrices of LDA+U
+    !%Option effectiveU bit(1)
+    !% Outputs the value of the effectiveU for each atoms 
+    !%Option magnetization bit(2)
+    !% Outputs file containing structure and magnetization of the localized subspace 
+    !% on the atoms as a vector associated with each atom, which can be visualized.
+    !% For the moment, it only works if a +U is added on one type of orbital per atom. 
+    !%Option local_orbitals bit(3)
+    !% Outputs the localized orbitals that form the correlated subspace
+    !%Option kanamoriU bit(4)
+    !% Outputs the Kanamori interaction parameters U, U`, and J.
+    !% These parameters are not determined self-consistently, but are taken from the 
+    !% occupation matrices and Coulomb integrals comming from a standard +U calculation.
+    !%End
+    call parse_variable('OutputLDA_U', 0_8, outp%what_lda_u)
 
     !%Variable OutputInterval
     !%Type integer
@@ -490,23 +529,6 @@ contains
     !%End
     call parse_variable('OutputDuringSCF', .false., outp%duringscf) 
 
-    !%Variable OutputIterDir
-    !%Default "output_iter"
-    !%Type string
-    !%Section Output
-    !%Description
-    !% The name of the directory where <tt>Octopus</tt> stores information
-    !% such as the density, forces, etc. requested by variable <tt>Output</tt>
-    !% in the format specified by <tt>OutputFormat</tt>.
-    !% This information is written while iterating <tt>CalculationMode = gs</tt>, <tt>unocc</tt>, or <tt>td</tt>,
-    !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
-    !%End
-    call parse_variable('OutputIterDir', "output_iter", outp%iter_dir)
-    if(outp%what /= 0 .and. outp%output_interval > 0) then
-      call io_mkdir(outp%iter_dir)
-    end if
-    call add_last_slash(outp%iter_dir)
-
     !%Variable RestartWriteInterval
     !%Type integer
     !%Default 50
@@ -526,23 +548,70 @@ contains
 
     ! these kinds of Output do not have a how
     what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS + OPTION__OUTPUT__BERKELEYGW + OPTION__OUTPUT__DOS + &
-      OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW + OPTION__OUTPUT__FROZEN_SYSTEM
+      OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW
+    what_no_how_u = OPTION__OUTPUTLDA_U__OCC_MATRICES + OPTION__OUTPUTLDA_U__EFFECTIVEU + &
+      OPTION__OUTPUTLDA_U__MAGNETIZATION + OPTION__OUTPUTLDA_U__KANAMORIU
 
-    ! we are using a what that has a how.
-    if(iand(outp%what, not(what_no_how)) /= 0) then
-      call io_function_read_how(sb, outp%how)
-    else
-      outp%how = 0
-    end if
-
-    if(iand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
-      call messages_experimental("Frozen output")
-    end if
-
-    if(iand(outp%what, OPTION__OUTPUT__CURRENT) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__CURRENT) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) then
       call v_ks_calculate_current(ks, .true.)
     else
       call v_ks_calculate_current(ks, .false.)
+    end if
+
+   
+    !%Variable Output_KPT
+    !%Type flag
+    !%Default none
+    !%Section Output
+    !%Description
+    !% Specifies what to print. The output files are written at the end of the run into the output directory for the
+    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
+    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
+    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
+    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
+    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
+    !% the options below. Indices in the filename are labelled as follows:
+    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
+    !% There is no tag for directions, given as a letter. The perturbation direction is always
+    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
+    !% Example: <tt>current_kpt</tt>
+    !%Option current_kpt  bit(0)
+    !% Outputs the current density resolved in momentum space. The output file is called <tt>current_kpt-</tt>.
+    !%Option density_kpt bit(1)
+    !% Outputs the electronic density resolved in momentum space. 
+    !%End
+    call parse_variable('Output_KPT', 0_8, outp%whatBZ)
+
+    if(.not.varinfo_valid_option('Output_KPT', outp%whatBZ, is_flag=.true.)) then
+      call messages_input_error('Output_KPT')
+    end if
+
+    if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
+     call v_ks_calculate_current(ks, .true.) 
+    end if
+
+    !%Variable OutputIterDir
+    !%Default "output_iter"
+    !%Type string
+    !%Section Output
+    !%Description
+    !% The name of the directory where <tt>Octopus</tt> stores information
+    !% such as the density, forces, etc. requested by variable <tt>Output</tt>
+    !% in the format specified by <tt>OutputFormat</tt>.
+    !% This information is written while iterating <tt>CalculationMode = gs</tt>, <tt>unocc</tt>, or <tt>td</tt>,
+    !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
+    !%End
+    call parse_variable('OutputIterDir', "output_iter", outp%iter_dir)
+    if(outp%what + outp%whatBZ + outp%what_lda_u /= 0 .and. outp%output_interval > 0) then
+      call io_mkdir(outp%iter_dir)
+    end if
+    call add_last_slash(outp%iter_dir)
+
+    ! we are using a what that has a how.
+    if(bitand(outp%what, not(what_no_how)) /= 0 .or. outp%whatBZ /= 0 .or. bitand(outp%what_lda_u, not(what_no_how_u)) /= 0) then
+      call io_function_read_how(sb, outp%how)
+    else
+      outp%how = 0
     end if
 
 
@@ -577,13 +646,13 @@ contains
     PUSH_SUB(output_all)
     call profiling_in(prof, "OUTPUT_ALL")
 
-    if(outp%what /= 0) then
+    if(outp%what+outp%whatBZ+outp%what_lda_u /= 0) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
       call io_mkdir(dir)
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__MESH_R) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__MESH_R) /= 0) then
       do idir = 1, gr%mesh%sb%dim
         write(fname, '(a,a)') 'mesh_r-', index2axis(idir)
         call dio_function_output(outp%how, dir, fname, gr%mesh, gr%mesh%x(:,idir), &
@@ -591,49 +660,61 @@ contains
       end do
     end if
     
-    call output_states(st, gr, geo, dir, outp)
-    call output_hamiltonian(hm, st, gr%der, dir, outp, geo, st%st_kpt_mpi_grp)
+    call output_states(st, gr, geo, hm, dir, outp)
+    call output_hamiltonian(hm, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
     call output_localization_funct(st, hm, gr, dir, outp, geo)
     call output_current_flow(gr, st, dir, outp)
 
-    if(iand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
-      if(iand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
+    if(bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
+      if(bitand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
         call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh)
       end if
-      if(iand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
+      if(bitand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
         call geometry_write_xyz(geo, trim(dir)//'/geometry')
         if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir)
       end if
-      if(iand(outp%how, OPTION__OUTPUTFORMAT__OPENSCAD) /= 0) then
-        call geometry_write_openscad(geo, trim(dir)//'/geometry')
-      end if
-      if(iand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
+      if(bitand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
         call vtk_output_geometry(trim(dir)//'/geometry', geo)
       end if     
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-      if(iand(outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+      if(bitand(outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
         call write_bild_forces_file(dir, "forces", geo, gr%mesh)
       else
         call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, write_forces = .true.)
       end if
     end if
 
-    if(iand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
       call output_me(outp%me, dir, st, gr, geo, hm)
     end if
 
-    if (iand(outp%how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
+    if (bitand(outp%how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
       call output_etsf(st, gr, geo, dir, outp)
     end if
 
-    if (iand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
+    if (bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
       call output_berkeleygw(outp%bgw, dir, st, gr, ks, hm, geo)
     end if
     
-    if(iand(outp%what, OPTION__OUTPUT__FROZEN_SYSTEM) /= 0) then
-      call output_fio(gr, geo, st, hm, trim(adjustl(dir)), mpi_world)
+    call output_energy_density(hm, ks, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
+
+    if(hm%lda_u_level /= DFT_U_NONE) then
+      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCC_MATRICES) /= 0)&
+        call lda_u_write_occupation_matrices(dir, hm%lda_u, st)
+
+      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__EFFECTIVEU) /= 0)&
+        call lda_u_write_effectiveU(dir, hm%lda_u)
+
+      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__MAGNETIZATION) /= 0)&
+        call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st)
+
+      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__LOCAL_ORBITALS) /= 0)&
+        call output_dftu_orbitals(dir, hm%lda_u, outp, st, gr%mesh, geo, associated(hm%hm_base%phase))
+
+      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
+        call lda_u_write_kanamoriU(dir, st, hm%lda_u)
     end if
 
     call profiling_out(prof)
@@ -666,13 +747,13 @@ contains
     SAFE_ALLOCATE(f_loc(1:gr%mesh%np, 1:imax))
 
     ! First the ELF in real space
-    if(iand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. iand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
       ASSERT(gr%mesh%sb%dim /= 1)
 
       call elf_calc(st, gr, f_loc)
       
       ! output ELF in real space
-      if(iand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
+      if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
         write(fname, '(a)') 'elf_rs'
         call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
           f_loc(:,imax), unit_one, ierr, geo = geo, grp = mpi_grp)
@@ -688,12 +769,12 @@ contains
         end if
       end if
 
-      if(iand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) &
+      if(bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) &
         call out_basins(f_loc(:,1), "elf_rs_basins")
     end if
 
     ! Now Bader analysis
-    if(iand(outp%what, OPTION__OUTPUT__BADER) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__BADER) /= 0) then
       do is = 1, st%d%nspin
         call dderivatives_lapl(gr%der, st%rho(:,is), f_loc(:,is))
         write(fname, '(a,i1)') 'bader-sp', is
@@ -707,7 +788,7 @@ contains
     end if
 
     ! Now the pressure
-    if(iand(outp%what, OPTION__OUTPUT__EL_PRESSURE) /= 0) then
+    if(bitand(outp%what, OPTION__OUTPUT__EL_PRESSURE) /= 0) then
       call calc_electronic_pressure(st, hm, gr, f_loc(:,1))
       call dio_function_output(outp%how, dir, "el_pressure", gr%mesh, &
         f_loc(:,1), unit_one, ierr, geo = geo, grp = mpi_grp)
@@ -769,7 +850,7 @@ contains
 
     rho = M_ZERO
     call density_calc(st, gr, rho)
-    call states_calc_quantities(gr%der, st, kinetic_energy_density = tau)
+    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = tau)
 
     pressure = M_ZERO
     do is = 1, st%d%spin_channels
@@ -797,6 +878,78 @@ contains
   end subroutine calc_electronic_pressure
 
 
+  ! ---------------------------------------------------------
+  subroutine output_energy_density(hm, ks, st, der, dir, outp, geo, gr, grp)
+    type(hamiltonian_t),       intent(in)    :: hm
+    type(v_ks_t),              intent(in)    :: ks
+    type(states_t),            intent(inout) :: st
+    type(derivatives_t),       intent(inout) :: der
+    character(len=*),          intent(in)    :: dir
+    type(output_t),            intent(in)    :: outp
+    type(geometry_t),          intent(in)    :: geo
+    type(grid_t),              intent(in)    :: gr
+    type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
+
+    integer :: is, ierr, ip
+    character(len=MAX_PATH_LEN) :: fname
+    type(unit_t) :: fn_unit
+    FLOAT, allocatable :: energy_density(:, :)
+    FLOAT, allocatable :: ex_density(:)
+    FLOAT, allocatable :: ec_density(:)
+
+    PUSH_SUB(output_hamiltonian)
+   
+    if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) then
+      fn_unit = units_out%energy*units_out%length**(-gr%mesh%sb%dim)
+      SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
+
+      ! the kinetic energy density
+      call states_calc_quantities(gr%der, st, .true., kinetic_energy_density = energy_density)
+
+      ! the external potential energy density
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
+        energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
+      end forall
+
+      ! the hartree energy density
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
+        energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
+      end forall
+
+      ! the XC energy density
+      SAFE_ALLOCATE(ex_density(1:gr%mesh%np))
+      SAFE_ALLOCATE(ec_density(1:gr%mesh%np))
+
+      ASSERT(.not. gr%have_fine_mesh)
+
+      call xc_get_vxc(gr%fine%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), &
+                      st%qtot, ex_density = ex_density, ec_density = ec_density)
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
+        energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
+      end forall
+
+      SAFE_DEALLOCATE_A(ex_density)
+      SAFE_DEALLOCATE_A(ec_density)
+      
+      select case(st%d%ispin)
+      case(UNPOLARIZED)
+        write(fname, '(a)') 'energy_density'
+        call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+          energy_density(:,1), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+      case(SPIN_POLARIZED, SPINORS)
+        do is = 1, 2
+          write(fname, '(a,i1)') 'energy_density-sp', is
+          call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+            energy_density(:, is), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
+        end do
+      end select
+      SAFE_DEALLOCATE_A(energy_density)
+    end if
+ 
+    POP_SUB(output_hamiltonian)
+  end subroutine output_energy_density
+
+  
   ! ---------------------------------------------------------
   subroutine output_berkeleygw_init(nst, bgw, periodic_dim)
     integer,            intent(in)  :: nst
@@ -1287,6 +1440,100 @@ contains
 #endif
 
   end subroutine output_berkeleygw
+
+   ! ---------------------------------------------------------
+  subroutine output_dftu_orbitals(dir, this, outp, st, mesh, geo, has_phase)
+    character(len=*),  intent(in) :: dir
+    type(lda_u_t),     intent(in) :: this
+    type(output_t),    intent(in) :: outp
+    type(states_t),    intent(in) :: st
+    type(mesh_t),      intent(in) :: mesh
+    type(geometry_t),  intent(in) :: geo
+    logical,           intent(in) :: has_phase
+
+    integer :: ios, im, ik, idim, ierr
+    CMPLX, allocatable :: tmp(:)
+    FLOAT, allocatable :: dtmp(:)
+    type(orbitalset_t), pointer :: os
+    type(unit_t) :: fn_unit
+    character(len=32) :: fname
+
+    PUSH_SUB(output_dftu_orbitals)
+
+    fn_unit = sqrt(units_out%length**(-mesh%sb%dim))
+
+    if(.not.(has_phase .and. .not.this%basis%submeshforperiodic &
+           .and.simul_box_is_periodic(mesh%sb)).and. .not. this%basisfromstates) then
+      if(states_are_real(st)) then
+        SAFE_ALLOCATE(dtmp(1:mesh%np))
+      else
+        SAFE_ALLOCATE(tmp(1:mesh%np))
+      end if
+    end if
+
+    do ios = 1, this%norbsets
+      os => this%orbsets(ios)
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do im = 1, this%orbsets(ios)%norbs
+          do idim = 1, st%d%dim
+            if(st%d%nik > 1) then
+              if(st%d%dim > 1) then
+                write(fname, '(a,i1,a,i3.3,a,i4.4,a,i1)') 'orb', im, '-os', ios, '-k', ik, '-sp', idim
+              else
+                write(fname, '(a,i1,a,i3.3,a,i4.4)') 'orb', im, '-os', ios, '-k', ik
+              end if
+            else
+              if(st%d%dim > 1) then
+                write(fname, '(a,i1,a,i3.3,a,i1)') 'orb', im, '-os', ios, '-sp', idim
+              else
+                write(fname, '(a,i1,a,i3.3)') 'orb', im, '-os', ios
+              end if
+            end if
+            if(has_phase) then
+              if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
+               call zio_function_output(outp%how, dir, fname, mesh, &
+                  os%eorb_mesh(1:mesh%np,im,idim,ik), fn_unit, ierr, geo = geo)
+              else
+               tmp = M_Z0
+               call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,idim,im,ik), tmp)
+               call zio_function_output(outp%how, dir, fname, mesh, tmp, fn_unit, ierr, geo = geo)
+              end if
+            else
+              if(this%basisfromstates) then
+                if (states_are_real(st)) then
+                  call dio_function_output(outp%how, dir, fname, mesh, &
+                      os%dorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
+                else
+                  call zio_function_output(outp%how, dir, fname, mesh, &
+                      os%zorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
+                end if
+              else
+                if (states_are_real(st)) then
+                  dtmp = M_Z0
+                  call submesh_add_to_mesh(os%sphere, os%dorb(1:os%sphere%np,idim,im), dtmp)
+                  call dio_function_output(outp%how, dir, fname, mesh, dtmp, fn_unit, ierr, geo = geo)
+                else
+                  tmp = M_Z0
+                  call submesh_add_to_mesh(os%sphere, os%zorb(1:os%sphere%np,idim,im), tmp)
+                  call zio_function_output(outp%how, dir, fname, mesh, tmp, fn_unit, ierr, geo = geo)
+                end if
+              end if
+            end if
+          end do
+        end do
+      end do
+    end do
+
+    if(.not.(has_phase .and. .not.this%basis%submeshforperiodic &
+               .and.simul_box_is_periodic(mesh%sb)).and. .not. this%basisfromstates) then
+      SAFE_DEALLOCATE_A(tmp)
+      SAFE_DEALLOCATE_A(dtmp)
+    end if
+
+    POP_SUB(output_dftu_orbitals)
+  end subroutine output_dftu_orbitals
+
+  ! ---------------------------------------------------------
 
 #include "output_etsf_inc.F90"
 

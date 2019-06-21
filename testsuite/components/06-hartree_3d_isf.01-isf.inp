@@ -1,3 +1,5 @@
+CalculationMode = test
+
 UnitsOutput = ev_angstrom
 
 %Coordinates

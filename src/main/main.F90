@@ -19,11 +19,12 @@
 #include "global.h"
 
 program octopus
-  use global_oct_m
   use calc_mode_par_oct_m
   use command_line_oct_m
   use io_oct_m
+  use global_oct_m
   use loct_oct_m
+  use messages_oct_m
   use mpi_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -31,7 +32,6 @@ program octopus
   use string_oct_m
   use utils_oct_m
   use varinfo_oct_m
-  use messages_oct_m
 
   implicit none
 
@@ -101,6 +101,7 @@ program octopus
   !% Invert the Kohn-Sham equations (experimental).
   !%Option floquet 19
   !% Calculate time-periodic quantities using Floquet theory.
+  !%Option test 20
   !%Option recipe 99
   !% Prints out a tasty recipe.
   !%End

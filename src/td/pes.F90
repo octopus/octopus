@@ -160,9 +160,9 @@ contains
       call messages_input_error('PhotoElectronSpectrum')
     end if
     
-    pes%calc_spm  = iand(photoelectron_flags, PHOTOELECTRON_SPM) /= 0
-    pes%calc_mask = iand(photoelectron_flags, PHOTOELECTRON_MASK) /= 0
-    pes%calc_flux = iand(photoelectron_flags, PHOTOELECTRON_FLUX) /= 0
+    pes%calc_spm  = bitand(photoelectron_flags, PHOTOELECTRON_SPM) /= 0
+    pes%calc_mask = bitand(photoelectron_flags, PHOTOELECTRON_MASK) /= 0
+    pes%calc_flux = bitand(photoelectron_flags, PHOTOELECTRON_FLUX) /= 0
 
     !Header Photoelectron info
     if(pes%calc_spm .or. pes%calc_mask .or. pes%calc_flux) then 

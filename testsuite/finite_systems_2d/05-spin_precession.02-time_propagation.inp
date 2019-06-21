@@ -44,6 +44,7 @@ TDPropagationTime = (1/4) * (2*pi*P_c)/Bz
 dt = 0.50
 TDPropagator = aetrs
 TDExponentialMethod = lanczos
+ArnoldiOrthogonalization = drcgs
 TDExpOrder = 16
 TDTimeStep = dt
 
@@ -54,5 +55,5 @@ TDOutput = energy + multipoles + spin
 
 ExperimentalFeatures = yes
 
-
+Debug = trace
 

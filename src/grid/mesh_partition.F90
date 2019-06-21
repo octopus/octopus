@@ -19,23 +19,17 @@
 #include "global.h"
 
 module mesh_partition_oct_m
-  use curvilinear_oct_m
   use global_oct_m
-  use hypercube_oct_m
   use index_oct_m
   use io_oct_m
-  use loct_oct_m
-  use math_oct_m
   use mesh_oct_m
   use metis_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use multicomm_oct_m
   use parser_oct_m
   use partition_oct_m
   use profiling_oct_m
   use restart_oct_m
-  use simul_box_oct_m
   use stencil_oct_m
   use stencil_star_oct_m
 
@@ -101,7 +95,9 @@ contains
     integer, allocatable :: xadj(:)          !< Local part of xadj
     
     integer, allocatable :: options(:)     !< Options to (Par)METIS.
+#ifdef HAVE_METIS
     integer              :: edgecut        !< Number of edges cut by partitioning.
+#endif
     REAL_SINGLE, allocatable :: tpwgts(:)  !< The fraction of vertex weight that should be distributed 
 
     integer              :: iunit          !< For debug output to files.
@@ -582,6 +578,7 @@ contains
     ierr = 0
 
     if (restart_skip(restart)) then
+      call profiling_out(prof)
       POP_SUB(mesh_partition_dump)
       return
     end if

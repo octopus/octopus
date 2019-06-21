@@ -19,30 +19,31 @@
 #include "global.h"
 
 module states_io_oct_m
+  use atomic_orbital_oct_m
+  use comm_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use io_oct_m
   use kpoints_oct_m
-  use lalg_basic_oct_m
-  use loct_oct_m
-  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use mpi_oct_m ! if not before parser_m, ifort 11.072 can`t compile with MPI2
-  use mpi_lib_oct_m
+  use mpi_oct_m
+  use orbitalset_oct_m
+  use orbitalset_utils_oct_m
   use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use sort_oct_m
+  use species_oct_m
   use states_oct_m
   use states_dim_oct_m
+  use submesh_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
-  use varinfo_oct_m
 
   implicit none
 
@@ -50,14 +51,17 @@ module states_io_oct_m
 
   public ::                           &
     states_write_eigenvalues,         &
-    states_write_dos,                 &
     states_write_tpa,                 &
-    states_write_bands,               &
     states_write_bandstructure
 
   interface states_write_eigenvalues
     module procedure states_write_eigenvalues_u, states_write_eigenvalues_f
   end interface states_write_eigenvalues
+
+  interface states_write_bandstructure
+    module procedure states_write_bandstructure_prj, states_write_bandstructure_simple
+  end interface states_write_bandstructure
+
 
 contains
 
@@ -131,13 +135,8 @@ contains
         write(message(1), '(a4,1x,a5,1x,a12,1x,a12,2x,a4,4x,a4,4x,a4)')   &
           '#st',' Spin',' Eigenvalue', 'Occupation ', '<Sx>', '<Sy>', '<Sz>'
       else
-        if(st%cmplxscl%space) then
-          write(message(1), '(a4,1x,a5,1x,a12,1x,a15,4x,a12)')   &
-            '#st',' Spin',' Eigenvalue', ' Im(Eigenvalue)', 'Occupation'
-        else
-          write(message(1), '(a4,1x,a5,1x,a12,4x,a12)')       &
-            '#st',' Spin',' Eigenvalue', 'Occupation'
-        end if
+        write(message(1), '(a4,1x,a5,1x,a12,4x,a12)')       &
+          '#st',' Spin',' Eigenvalue', 'Occupation'
       end if
       if(associated(st%coeff)) &
         write(message(1),'(a,a10,a,a10)') trim(message(1)), ' Re[coeff]', ' Im[coeff]'
@@ -171,14 +170,8 @@ contains
                 units_from_atomic(units_out%energy, st%eigenval(ist, ik)), st%occ(ist, ik), st%spin(1:3, ist, ik)
               if(present(error)) write(tmp_str(3), '(a3,es7.1,a1)')'  (', error(ist, ik), ')'
             else
-              if(st%cmplxscl%space) then !cmplxscl
-                write(tmp_str(2), '(1x,f12.6,3x,f12.6,3x,f12.6)') &
-                  units_from_atomic(units_out%energy, st%zeigenval%Re(ist, ik+is)), &
-                  units_from_atomic(units_out%energy, st%zeigenval%Im(ist, ik+is)), st%occ(ist, ik+is)
-              else
-                write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
-                  units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), st%occ(ist, ik+is)
-              end if
+              write(tmp_str(2), '(1x,f12.6,3x,f12.6)') &
+                units_from_atomic(units_out%energy, st%eigenval(ist, ik+is)), st%occ(ist, ik+is)
               if(associated(st%coeff)) then
                 write(tmp_str(4), '(1x,f12.6,1x,f12.6)') &
                                        real(st%coeff(ist, ik+is)), aimag(st%coeff(ist, ik+is))                                       
@@ -234,10 +227,6 @@ contains
 
       tmp_str(1) = trim(tmp_str(1))//'  Eigenvalue ['// trim(units_abbrev(units_out%energy)) // ']'
 
-      if(st%cmplxscl%space) then
-        tmp_str(1) = trim(tmp_str(1))//'  Im(Eigenvalue)'
-      end if
-        
       tmp_str(1) = trim(tmp_str(1))//'  Occupation'
 
       if(st%d%ispin  ==  SPINORS) then
@@ -296,24 +285,10 @@ contains
           end if
 
 
-          if(.not. st%cmplxscl%space) then
-
-            if(len(units_abbrev(units_out%energy)) == 1) then
-              write(tmp_str(1), '(2a,f14.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%eigenval(ist, iqn))
-            else
-              write(tmp_str(1), '(2a,f15.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%eigenval(ist, iqn))
-            end if
-
+          if(len(units_abbrev(units_out%energy)) == 1) then
+            write(tmp_str(1), '(2a,f14.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%eigenval(ist, iqn))
           else
-
-            if(len(units_abbrev(units_out%energy)) == 1) then
-              write(tmp_str(1), '(2a,f14.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%zeigenval%Re(ist, iqn))
-            else
-              write(tmp_str(1), '(2a,f15.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%zeigenval%Re(ist, iqn))
-            end if
-
-            write(tmp_str(1), '(2a,f15.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%zeigenval%Im(ist, iqn))
-
+            write(tmp_str(1), '(2a,f15.6)') trim(tmp_str(1)), ' ', units_from_atomic(units_out%energy, st%eigenval(ist, iqn))
           end if
 
           write(tmp_str(1), '(2a,f11.6)') trim(tmp_str(1)), ' ', st%occ(ist, iqn)
@@ -341,10 +316,9 @@ contains
         
       end do
       
-      SAFE_DEALLOCATE_A(flat_indices)
-
       if(nst*st%d%nik > 1) call print_dos()
 
+      SAFE_DEALLOCATE_A(flat_indices)
       SAFE_DEALLOCATE_A(flat_eigenval)
 
     end if
@@ -363,6 +337,7 @@ contains
 
       integer, parameter :: ndiv = 70, height = 10
       integer :: histogram(1:ndiv), iev, ien, iline, maxhist, ife
+      FLOAT :: dhistogram(1:ndiv)
       character(len=ndiv) :: line
       FLOAT :: emin, emax, de
       
@@ -370,7 +345,7 @@ contains
 
       emin = flat_eigenval(1)
       emax = flat_eigenval(st%d%nik*nst)
-      de = (emax - emin)/(ndiv - 1.0)
+      de = (emax - emin)/(ndiv - M_ONE)
 
       if(de < M_EPSILON) then
         POP_SUB(states_write_eigenvalues_u.print_dos)
@@ -380,18 +355,19 @@ contains
       ife = nint((st%smear%e_fermi - emin)/de) + 1
 
       histogram = 0
+      dhistogram = M_ZERO
       do iev = 1, st%d%nik*nst
         ien = nint((flat_eigenval(iev) - emin)/de) + 1
         ASSERT(ien >= 1)
         ASSERT(ien <= ndiv)
-        histogram(ien) = histogram(ien) + 1
+        dhistogram(ien) = dhistogram(ien) + st%d%kweights(flat_indices(1, iev))*sb%kpoints%full%npoints
       end do
 
       !normalize
-      if(maxval(histogram) > height) then
-        maxhist = maxval(histogram)
+      if(maxval(dhistogram) > real(height)) then
+        maxhist = nint(maxval(dhistogram))
         do ien = 1, ndiv
-          histogram(ien) = (histogram(ien)*height)/maxhist
+          histogram(ien) = nint((dhistogram(ien)*height)/maxhist)
         end do
       end if
 
@@ -422,154 +398,6 @@ contains
     end subroutine print_dos
     
   end subroutine states_write_eigenvalues_u
-
-
-  ! ---------------------------------------------------------
-  subroutine states_write_bands(dir, nst, st, sb)
-    character(len=*),  intent(in) :: dir
-    integer,           intent(in) :: nst
-    type(states_t),    intent(in) :: st
-    type(simul_box_t), intent(in) :: sb
-
-    integer :: idir, ist, ik, ns, is
-    integer, allocatable :: iunit(:)
-    FLOAT   :: kpoint(1:MAX_DIM)
-    FLOAT   :: red_kpoint(1:MAX_DIM)
-    logical :: grace_mode, gnuplot_mode
-    character(len=80) :: filename    
-
-    if(.not. mpi_grp_is_root(mpi_world)) return
-
-    PUSH_SUB(states_write_bands)
-
-    !%Variable OutputBandsGnuplotMode
-    !%Type logical
-    !%Default yes
-    !%Section Output
-    !%Description
-    !% The band file will be written in Gnuplot-friendly format to <tt>bands-gp.dat</tt>
-    !% (or <tt>band-gp-is.dat</tt> if spin-polarized).
-    !%End
-    call parse_variable('OutputBandsGnuplotMode', .true., gnuplot_mode)
-
-    !%Variable OutputBandsGraceMode
-    !%Type logical
-    !%Default no
-    !%Section Output
-    !%Description
-    !% The band file will be written in Grace-friendly format to <tt>bands-grace.dat</tt>
-    !% (or <tt>bands-grace-is.dat</tt> if spin-polarized).
-    !%End
-    call parse_variable('OutputBandsGraceMode', .false., grace_mode)
-
-    ! shortcuts
-    ns = 1
-    if(st%d%nspin == 2) ns = 2
-
-    SAFE_ALLOCATE(iunit(0:ns-1))
-
-    if (gnuplot_mode) then
-      do is = 0, ns-1
-        if (ns > 1) then
-          write(filename, '(a,i1.1,a)') 'bands-gp-', is+1,'.dat'
-        else
-          write(filename, '(a)') 'bands-gp.dat'
-        end if
-        iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
-
-        ! write header
-        write(iunit(is),'(a)',advance='no') '# '
-        do idir = 1, sb%dim
-          write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
-        end do
-        write(iunit(is),'(a)',advance='no') '(unscaled), '
-        do idir = 1, sb%dim
-          write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
-        end do
-        write(iunit(is),'(a,i6,3a)') '(scaled), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), ']'
-      end do
-
-      ! output bands in gnuplot format
-      do ist = 1, nst
-        do ik = 1, st%d%nik, ns
-          do is = 0, ns - 1
-            kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is), &
-                                                 absolute_coordinates=.true.)
-            red_kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is), &
-                                                     absolute_coordinates=.false.)
-            write(iunit(is),'(1x)',advance='no')
-            do idir = 1, sb%dim
-              write(iunit(is),'(f14.8)',advance='no') kpoint(idir)
-            end do
-            do idir = 1, sb%dim
-              write(iunit(is),'(f14.8)',advance='no') red_kpoint(idir)
-            end do
-            write(iunit(is),'(3x,f14.8)') units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
-          end do
-        end do
-        do is = 0, ns-1
-          write(iunit(is), '(a)')
-        end do
-      end do
-      do is = 0, ns-1
-        call io_close(iunit(is))
-      end do
-    end if
-
-    if (grace_mode) then
-      do is = 0, ns-1
-        if (ns > 1) then
-          write(filename, '(a,i1.1,a)') 'bands-grace-', is+1,'.dat'
-        else
-          write(filename, '(a)') 'bands-grace.dat'
-        end if
-        iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
-
-        ! write header
-        write(iunit(is),'(a)',advance='no') '# '
-        do idir = 1, sb%dim
-          write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
-        end do
-        write(iunit(is),'(a)',advance='no') '(unscaled), '
-        do idir = 1, sb%dim
-          write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
-        end do
-        write(iunit(is),'(a,i6,3a)') '(scaled), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), ']'
-      end do
-
-      ! output bands in xmgrace format, i.e.:
-      ! k_x, k_y, k_z, e_1, e_2, ..., e_n
-      do ik = 1, st%d%nik, ns
-        do is = 0, ns-1
-          kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is), &
-                                               absolute_coordinates=.true.)
-          red_kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is), &
-                                                   absolute_coordinates=.false.)
-          write(iunit(is),'(1x)',advance='no')
-          do idir = 1, sb%dim
-            write(iunit(is),'(f14.8)',advance='no') kpoint(idir)
-          end do
-          do idir = 1, sb%dim
-            write(iunit(is),'(f14.8)',advance='no') red_kpoint(idir)
-          end do
-          write(iunit(is),'(3x)',advance='no')
-          do ist = 1, nst
-            write(iunit(is),'(f14.8)',advance='no') units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
-          end do
-          write(iunit(is),'(a)')
-        end do
-      end do
-      do is = 0, ns-1
-        call io_close(iunit(is))
-      end do        
-    end if
-
-    SAFE_DEALLOCATE_A(iunit)
-
-    call states_write_fermi_for_bands(dir, st, sb)
-
-    POP_SUB(states_write_bands)
-  end subroutine states_write_bands
 
   ! ---------------------------------------------------------
   subroutine states_write_tpa(dir, gr, st)
@@ -714,7 +542,7 @@ contains
           ff(1:gr%mesh%np) = psi_initial(1:gr%mesh%np, 1)*gr%mesh%x(1:gr%mesh%np, icoord)* &
             psi_ist(1:gr%mesh%np, 1)
           osc(icoord)  = dmf_integrate(gr%mesh, ff)
-          osc_strength = osc_strength + 2.0/real(gr%mesh%sb%dim)*transition_energy*abs(osc(icoord))**2.0
+          osc_strength = osc_strength + CNST(2.0)/real(gr%mesh%sb%dim)*transition_energy*abs(osc(icoord))**2
 
         end do
 
@@ -769,228 +597,285 @@ contains
  
   end subroutine states_write_tpa
 
+
   ! ---------------------------------------------------------
-  subroutine states_write_dos(dir, st)
-    character(len=*), intent(in) :: dir
-    type(states_t),   intent(in) :: st
 
-    integer :: ie, ik, ist, epoints, is, ns, maxdos
+  subroutine states_write_bandstructure_prj(dir, nst, st, sb, geo, mesh, phase, vec_pot, vec_pot_var, vec)
+    character(len=*),  intent(in)             :: dir
+    integer,           intent(in)             :: nst
+    type(states_t),    intent(in)             :: st
+    type(simul_box_t), intent(in)             :: sb
+    type(geometry_t), target, intent(in)      :: geo
+    type(mesh_t),             intent(in)      :: mesh
+    CMPLX, pointer                            :: phase(:, :)
+    FLOAT, optional, allocatable, intent(in)  :: vec_pot(:) !< (sb%dim)
+    FLOAT, optional, allocatable, intent(in)  :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
+    FLOAT, optional, intent(in)               :: vec(:,:) ! optional observable to be printed together  with the bandstrucure
+                                                          ! it must have the same structure as st%eigenval(:,:)
+
+
+    integer :: idir, ist, ik, ns, is,npath
     integer, allocatable :: iunit(:)
-    FLOAT   :: emin, emax, de, gamma, energy
-    FLOAT   :: evalmax, evalmin, tdos, eextend
-    FLOAT, allocatable :: dos(:,:,:)
-    character(len=64)  :: filename
+    FLOAT   :: red_kpoint(1:MAX_DIM)
+    character(len=80) :: filename
 
-    if(.not. mpi_grp_is_root(mpi_world)) return ! only first node outputs
+    logical :: projection
+    integer :: ii, ll, mm, nn, work, norb, work2
+    integer :: ia, iorb, idim, maxnorb
+    FLOAT   :: norm
+    FLOAT, allocatable :: dpsi(:,:), ddot(:,:)
+    CMPLX, allocatable :: zpsi(:,:), zdot(:,:)
+    FLOAT, allocatable :: weight(:,:,:,:,:)
+    type(orbitalset_t) :: os
 
-    PUSH_SUB(states_write_dos)
 
-    evalmin = minval(st%eigenval)
-    evalmax = maxval(st%eigenval)
-    ! we extend the energy mesh by this amount
-    eextend  = (evalmax - evalmin) / M_FOUR
-
-    !%Variable DOSEnergyMin
-    !%Type float
-    !%Section Output
-    !%Description
-    !% Lower bound for the energy mesh of the DOS.
-    !% The default is the lowest eigenvalue, minus a quarter of the total range of eigenvalues.
-    !%End
-    call parse_variable('DOSEnergyMin', evalmin - eextend, emin, units_inp%energy)
-
-    !%Variable DOSEnergyMax
-    !%Type float
-    !%Section Output
-    !%Description
-    !% Upper bound for the energy mesh of the DOS.
-    !% The default is the highest eigenvalue, plus a quarter of the total range of eigenvalues.
-    !%End
-    call parse_variable('DOSEnergyMax', evalmax + eextend, emax, units_inp%energy)
-
-    !%Variable DOSEnergyPoints
-    !%Type integer
-    !%Default 500
-    !%Section Output
-    !%Description
-    !% Determines how many energy points <tt>Octopus</tt> should use for 
-    !% the DOS energy grid.
-    !%End
-    call parse_variable('DOSEnergyPoints', 500, epoints)
-
-    !%Variable DOSGamma
-    !%Type float
-    !%Default 0.008 Ha
-    !%Section Output
-    !%Description
-    !% Determines the width of the Lorentzian which is used for the DOS sum.
-    !%End
-    call parse_variable('DOSGamma', units_from_atomic(units_inp%energy, CNST(0.008)), gamma)
-    gamma = units_to_atomic(units_inp%energy, gamma)
-
-    ! spacing for energy mesh
-    de = (emax - emin) / (epoints - 1)
+    PUSH_SUB(states_write_bandstructure_prj)   
 
     ! shortcuts
     ns = 1
     if(st%d%nspin == 2) ns = 2
 
-    ! space for state-dependent DOS
-    SAFE_ALLOCATE(dos(1:epoints, 1:st%nst, 0:ns-1))
-    SAFE_ALLOCATE(iunit(0:ns-1))    
+    !%Variable BandStructureComputeProjections
+    !%Type logical
+    !%Default false
+    !%Section Output
+    !%Description
+    !% Determines if projections of wavefunctions on the atomic orbitals 
+    !% are computed or not for obtaining the orbital resolved band-structure.
+    !%End
+    call parse_variable('BandStructureComputeProjections', .false., projection)
 
-    ! compute band/spin-resolved density of states
-    do ist = 1, st%nst
+
+    if(mpi_grp_is_root(mpi_world)) then
+      SAFE_ALLOCATE(iunit(0:ns-1))
 
       do is = 0, ns-1
         if (ns > 1) then
-          write(filename, '(a,i4.4,a,i1.1,a)') 'dos-', ist, '-', is+1,'.dat'
+          write(filename, '(a,i1.1,a)') 'bandstructure-sp', is+1
         else
-          write(filename, '(a,i4.4,a)') 'dos-', ist, '.dat'
+          write(filename, '(a)') 'bandstructure'
         end if
         iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
+
         ! write header
-        write(iunit(is), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], band-resolved DOS'
-      end do
-
-      do ie = 1, epoints
-        energy = emin + (ie - 1) * de
-        dos(ie, ist, :) = M_ZERO
-        ! sum up Lorentzians
-        do ik = 1, st%d%nik, ns
-          do is = 0, ns-1
-            dos(ie, ist, is) = dos(ie, ist, is) + st%d%kweights(ik+is) * M_ONE/M_Pi * &
-              gamma / ( (energy - st%eigenval(ist, ik+is))**2 + gamma**2 )
+        write(iunit(is),'(a)',advance='no') '# coord. '
+        do idir = 1, sb%dim
+          write(iunit(is),'(3a)',advance='no') 'k', index2axis(idir), ' '
+        end do
+        if(.not.projection) then
+          write(iunit(is),'(a,i6,3a)') '(red. coord.), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), ']'
+        else 
+         write(iunit(is),'(a,i6,3a)',advance='no') '(red. coord.), bands:', nst, ' [', trim(units_abbrev(units_out%energy)), '] '
+         do ia = 1, geo%natoms
+            work = orbitalset_utils_count(geo, ia)
+            do norb = 1, work
+             work2 = orbitalset_utils_count(geo, ia, norb)
+              write(iunit(is),'(a, i3.3,a,i1.1,a)',advance='no') 'w(at=',ia,',os=',norb,') '
+            end do
           end do
-        end do
-        do is = 0, ns-1
-          write(message(1), '(2f12.6)') units_from_atomic(units_out%energy, energy), &
-                                        units_from_atomic(unit_one / units_out%energy, dos(ie, ist, is))
-          call messages_info(1, iunit(is))
-        end do
-      end do
-
-      do is = 0, ns-1
-        call io_close(iunit(is))
-      end do
-    end do
-
-    ! for spin-polarized calculations also output spin-resolved tDOS
-    if(st%d%nspin > 1) then    
-      do is = 0, ns-1
-        write(filename, '(a,i1.1,a)') 'total-dos-', is+1,'.dat'
-        iunit(is) = io_open(trim(dir)//'/'//trim(filename), action='write')    
-        ! write header
-        write(iunit(is), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], total DOS (spin-resolved)'
-
-        do ie = 1, epoints
-          energy = emin + (ie - 1) * de
-          tdos = M_ZERO
-          do ist = 1, st%nst
-            tdos = tdos + dos(ie, ist, is)
-          end do
-          write(message(1), '(2f12.6)') units_from_atomic(units_out%energy, energy), &
-                                        units_from_atomic(unit_one / units_out%energy, tdos)
-          call messages_info(1, iunit(is))
-        end do
-
-        call io_close(iunit(is))
+          write(iunit(is),'(a)') ''
+        end if
       end do
     end if
+ 
+    npath = SIZE(sb%kpoints%coord_along_path)*ns
 
 
-    iunit(0) = io_open(trim(dir)//'/'//'total-dos.dat', action='write')    
-    write(iunit(0), '(3a)') '# energy [', trim(units_abbrev(units_out%energy)), '], total DOS'
-    
-    ! compute total density of states
-    do ie = 1, epoints
-      energy = emin + (ie - 1) * de
-      tdos = M_ZERO
-      do ist = 1, st%nst
-        do is = 0, ns-1
-          tdos = tdos + dos(ie, ist, is)
-        end do
+    !We need to compute the projections of each wavefunctions on the localized basis
+    if(projection) then    
+
+      if(states_are_real(st)) then
+        SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
+      else
+        SAFE_ALLOCATE(zpsi(1:mesh%np, 1:st%d%dim))
+      end if
+
+      maxnorb = 0
+      do ia = 1, geo%natoms
+        maxnorb = max(maxnorb, orbitalset_utils_count(geo, ia))
       end do
-      write(message(1), '(2f12.6)') units_from_atomic(units_out%energy, energy), &
-                                    units_from_atomic(unit_one / units_out%energy, tdos)
-      call messages_info(1, iunit(0))
+
+      SAFE_ALLOCATE(weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L, 1:geo%natoms))
+      weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L, 1:geo%natoms) = M_ZERO
+ 
+      do ia = 1, geo%natoms
+
+        !We first count how many orbital set we have
+        work = orbitalset_utils_count(geo, ia)
+
+        !We loop over the orbital sets of the atom ia
+        do norb = 1, work
+          call orbitalset_nullify(os)
+
+          !We count the orbitals
+          work2 = 0
+          do iorb = 1, species_niwfs(geo%atom(ia)%species)
+           call species_iwf_ilm(geo%atom(ia)%species, iorb, 1, ii, ll, mm)
+            call species_iwf_n(geo%atom(ia)%species, iorb, 1, nn )
+            if(ii == norb) then
+              os%ll = ll
+              os%nn = nn
+              os%ii = ii
+              os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, OPTION__AOTRUNCATION__AO_FULL, CNST(0.01))
+              work2 = work2 + 1
+            end if
+          end do
+          os%norbs = work2
+          os%ndim = 1
+          os%submeshforperiodic = .false.
+          os%spec => geo%atom(ia)%species
+          call submesh_null(os%sphere)
+
+          do iorb = 1, os%norbs
+            ! We obtain the orbital
+            if(states_are_real(st)) then
+              call dget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
+                                                os, iorb, os%radius, os%ndim)
+              norm = M_ZERO
+              do idim = 1, os%ndim
+                norm = norm + dsm_nrm2(os%sphere, os%dorb(1:os%sphere%np,idim,iorb))**2
+              end do
+              norm = sqrt(norm)
+              do idim = 1, os%ndim
+                os%dorb(1:os%sphere%np,idim,iorb) =  os%dorb(1:os%sphere%np,idim,iorb)/norm
+              end do
+            else
+              call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
+                                                os, iorb, os%radius, os%ndim)
+              norm = M_ZERO
+              do idim = 1, os%ndim
+                norm = norm + zsm_nrm2(os%sphere, os%zorb(1:os%sphere%np,idim,iorb))**2
+              end do
+              norm = sqrt(norm)
+              do idim = 1, os%ndim
+                os%zorb(1:os%sphere%np,idim,iorb) =  os%zorb(1:os%sphere%np,idim,iorb)/norm
+              end do
+            end if
+          end do !iorb
+
+          nullify(os%phase)
+          if(associated(phase)) then
+            ! In case of complex wavefunction, we allocate the array for the phase correction
+            SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
+            os%phase(:,:) = M_ZERO
+            if(simul_box_is_periodic(mesh%sb) .and. .not. os%submeshforperiodic) then
+              SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%norbs, 1:os%ndim, st%d%kpt%start:st%d%kpt%end))
+              os%eorb_mesh(:,:,:,:) = M_ZERO
+            else
+              SAFE_ALLOCATE(os%eorb_submesh(1:os%sphere%np, 1:os%ndim, 1:os%norbs, st%d%kpt%start:st%d%kpt%end))
+              os%eorb_submesh(:,:,:,:) = M_ZERO
+            end if
+            call orbitalset_update_phase(os, sb, st%d%kpt, (st%d%ispin==SPIN_POLARIZED), &
+                              vec_pot, vec_pot_var)
+          end if
+
+          if(states_are_real(st)) then
+            SAFE_ALLOCATE(ddot(1:st%d%dim,1:os%norbs))
+          else
+            SAFE_ALLOCATE(zdot(1:st%d%dim,1:os%norbs))
+          end if
+
+          do ist = st%st_start, st%st_end
+           do ik = st%d%kpt%start, st%d%kpt%end
+            if(ik < st%d%nik-npath+1 ) cycle ! We only want points inside the k-point path
+            if(states_are_real(st)) then
+              call states_get_state(st, mesh, ist, ik, dpsi )
+              call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., .false., ddot(1:st%d%dim,1:os%norbs))
+              do iorb = 1, os%norbs
+                do idim = 1, st%d%dim
+                  weight(ik,ist,iorb,norb,ia) = weight(ik,ist,iorb,norb,ia) + abs(ddot(idim,iorb))**2
+                end do
+              end do
+            else
+              call states_get_state(st, mesh, ist, ik, zpsi )
+              if(associated(phase)) then
+                ! Apply the phase that contains both the k-point and vector-potential terms.
+                call states_set_phase(st%d, zpsi, phase(:,ik), mesh%np, .false.)
+              end if
+              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(phase), .false.,&
+                                 zdot(1:st%d%dim,1:os%norbs))
+              do iorb = 1, os%norbs
+                do idim = 1, st%d%dim
+                  weight(ik,ist,iorb,norb,ia) = weight(ik,ist,iorb,norb,ia) + abs(zdot(idim,iorb))**2
+                end do
+              end do
+            end if
+          end do
+         end do
+
+         SAFE_DEALLOCATE_A(ddot)
+         SAFE_DEALLOCATE_A(zdot)
+
+         call orbitalset_end(os)
+       end do !norb
+
+       if(st%parallel_in_states .or. st%d%kpt%parallel) then
+         call comm_allreduce(st%st_kpt_mpi_grp%comm, weight(1:st%d%nik,1:st%nst, 1:maxnorb, 1:MAX_L,ia))
+       end if
+     end do !ia
+
+    SAFE_DEALLOCATE_A(dpsi)
+    SAFE_DEALLOCATE_A(zpsi)
+
+  end if  !projection
+
+  if(mpi_grp_is_root(mpi_world)) then
+    ! output bands
+    do ik = st%d%nik-npath+1, st%d%nik, ns
+      do is = 0, ns - 1
+        red_kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, states_dim_get_kpoint_index(st%d, ik + is), &
+                                                   absolute_coordinates=.false.)
+        write(iunit(is),'(1x)',advance='no')
+        write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, & 
+                                                   states_dim_get_kpoint_index(st%d, ik + is)-(st%d%nik -npath)) 
+        do idir = 1, sb%dim
+          write(iunit(is),'(f14.8)',advance='no') red_kpoint(idir)
+        end do
+        do ist = 1, nst
+          write(iunit(is),'(1x,f14.8)',advance='no') units_from_atomic(units_out%energy, st%eigenval(ist, ik + is))
+          if (present(vec)) then
+            write(iunit(is),'(1x,e14.8)',advance='no') units_from_atomic(unit_one, vec(ist, ik + is))
+          end if
+          
+        end do
+        if(projection) then
+          do ia = 1, geo%natoms
+            work = orbitalset_utils_count(geo, ia)
+            do norb = 1, work
+              work2 = orbitalset_utils_count(geo, ia, norb)              
+              do iorb = 1, work2
+                do ist = 1, nst
+                  write(iunit(is),'(es15.8)',advance='no') weight(ik+is,ist,iorb,norb,ia)
+                end do
+              end do
+            end do
+          end do
+        end if
+      end do
+
+      do is = 0, ns-1
+        write(iunit(is), '(a)')
+      end do
     end do
 
-    call io_close(iunit(0))
-
-    SAFE_DEALLOCATE_A(dos)
-
-
-    ! write Fermi file
-    iunit(0) = io_open(trim(dir)//'/'//'total-dos-efermi.dat', action='write')
-    write(message(1), '(3a)') '# Fermi energy [', trim(units_abbrev(units_out%energy)), &
-      '] in a format compatible with total-dos.dat'
-
-    ! this is the maximum that tdos can reach
-    maxdos = st%smear%el_per_state * st%nst
-
-    write(message(2), '(2f12.6)') units_from_atomic(units_out%energy, st%smear%e_fermi), M_ZERO
-    write(message(3), '(f12.6,i6)') units_from_atomic(units_out%energy, st%smear%e_fermi), maxdos
-
-    call messages_info(3, iunit(0))
-    call io_close(iunit(0))
-
-    SAFE_DEALLOCATE_A(iunit)
-
-    POP_SUB(states_write_dos)
-  end subroutine states_write_dos
-
-
-  ! ---------------------------------------------------------
-  subroutine states_write_fermi_for_bands(dir, st, sb)
-    character(len=*),  intent(in) :: dir
-    type(states_t),    intent(in) :: st
-    type(simul_box_t), intent(in) :: sb
-
-    integer :: iunit, idir
-    character(len=100) :: str_tmp
-
-    PUSH_SUB(states_write_fermi_for_bands)
-
-    iunit = io_open(trim(dir)//'/'//'bands-efermi.dat', action='write')    
-
-    write(message(1), '(3a)') '# Fermi energy [', trim(units_abbrev(units_out%energy)), &
-      '] in a format compatible with bands-gp.dat'
-
-    message(2)=""
-    message(3)=""
-    message(4)=""
-    do idir = 1, sb%dim
-      write(str_tmp, '(f12.6)') minval(sb%kpoints%reduced%point(idir, 1:sb%kpoints%reduced%npoints))
-      message(2) = trim(message(2)) // trim(str_tmp)
-      write(str_tmp, '(f12.6)') M_ZERO     ! Gamma point
-      message(3) = trim(message(3)) // trim(str_tmp)
-      write(str_tmp, '(f12.6)') maxval(sb%kpoints%reduced%point(idir, 1:sb%kpoints%reduced%npoints))
-      message(4) = trim(message(4)) // trim(str_tmp)
+    do is = 0, ns-1
+      call io_close(iunit(is))
     end do
-    do idir = 1, sb%dim
-      write(str_tmp, '(f12.6)') minval(sb%kpoints%reduced%red_point(idir, 1:sb%kpoints%reduced%npoints))
-      message(2) = trim(message(2)) // trim(str_tmp)
-      write(str_tmp, '(f12.6)') M_ZERO     ! Gamma point
-      message(3) = trim(message(3)) // trim(str_tmp)
-      write(str_tmp, '(f12.6)') maxval(sb%kpoints%reduced%red_point(idir, 1:sb%kpoints%reduced%npoints))
-      message(4) = trim(message(4)) // trim(str_tmp)
-    end do
-    write(str_tmp, '(f12.6)') units_from_atomic(units_out%energy, st%smear%e_fermi)
-    message(2) = trim(message(2)) // trim(str_tmp)
-    message(3) = trim(message(3)) // trim(str_tmp)
-    message(4) = trim(message(4)) // trim(str_tmp)
+  end if
 
-    call messages_info(4, iunit)
-    call io_close(iunit)
+  if(projection) then
+     SAFE_DEALLOCATE_A(weight)
+  end if
 
-    POP_SUB(states_write_fermi_for_bands)
-  end subroutine states_write_fermi_for_bands
+  SAFE_DEALLOCATE_A(iunit)
 
 
-    ! ---------------------------------------------------------
-
-  subroutine states_write_bandstructure(dir, nst, st, sb, filename, vec)
+  POP_SUB(states_write_bandstructure_prj)
+    
+  end subroutine states_write_bandstructure_prj
+  
+  
+  subroutine states_write_bandstructure_simple(dir, nst, st, sb, filename, vec)
     character(len=*),  intent(in) :: dir
     integer,           intent(in) :: nst
     type(states_t),    intent(in) :: st
@@ -1005,7 +890,7 @@ contains
 
     if(.not. mpi_grp_is_root(mpi_world)) return
 
-    PUSH_SUB(states_write_bandstructure)   
+    PUSH_SUB(states_write_bandstructure_simple)   
 
     ! shortcuts
     ns = 1
@@ -1059,9 +944,11 @@ contains
     SAFE_DEALLOCATE_A(iunit)
 
 
-  POP_SUB(states_write_bandstructure)
+  POP_SUB(states_write_bandstructure_simple)
     
-  end subroutine states_write_bandstructure
+  end subroutine states_write_bandstructure_simple
+  
+  
 
 end module states_io_oct_m
 

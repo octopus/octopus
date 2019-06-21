@@ -170,7 +170,7 @@ contains
     integer,           intent(in)    :: is_real
     logical, optional, intent(in)    :: optimize
 
-    integer :: ii, jj, idir, my_N(3), idim
+    integer :: ii, my_N(3)
     logical :: optimize_
     integer :: nfft_flags
 
@@ -236,7 +236,6 @@ contains
     type(nfft_t), intent(inout) :: nfft
 
     integer :: idir, mm
-    character(len=100) :: str_tmp
 
     PUSH_SUB(nfft_write_info)
 
@@ -298,12 +297,9 @@ contains
   subroutine nfft_end(nfft)
     type(nfft_t), intent(inout) :: nfft
 
-    integer :: ii
-
     PUSH_SUB(nfft_end)
 
     call oct_nfft_finalize(nfft%plan);
-
 
     POP_SUB(nfft_end)
   end subroutine nfft_end

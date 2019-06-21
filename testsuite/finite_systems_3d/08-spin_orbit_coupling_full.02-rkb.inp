@@ -9,7 +9,7 @@ Radius  = 5.0*angstrom
 Spacing = 0.35*angstrom
 
 %Species
- "Xe" | species_pseudo | db_file | "extra/Xe.UPF"
+ "Xe" | species_pseudo | file | "08-spin_orbit_coupling_full.Xe.UPF"
 %
 
 %Coordinates

@@ -1,0 +1,14 @@
+CalculationMode = gs
+
+PseudopotentialSet = pseudodojo_pbe
+
+%Coordinates
+ 'D' | 0.0 | 0.0 | 0.0
+%
+
+Spacing = 0.35
+Radius = 6.0
+
+Debug = info
+
+ExperimentalFeatures = yes

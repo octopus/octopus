@@ -1,0 +1,34 @@
+CalculationMode = gs
+
+PeriodicDimensions = 3
+
+Spacing = 0.5
+
+a = 10.18
+%LatticeParameters
+ a | a | a
+%
+
+%LatticeVectors
+ 0.0 | 0.5 | 0.5
+ 0.5 | 0.0 | 0.5
+ 0.5 | 0.5 | 0.0
+%
+
+%ReducedCoordinates
+ "Si" | 0.0 | 0.0 | 0.0
+ "Si" | 1/4 | 1/4 | 1/4
+%
+
+nk = 2
+%KPointsGrid
+  nk |  nk |  nk
+ 0.5 | 0.5 | 0.5
+ 0.5 | 0.0 | 0.0
+ 0.0 | 0.5 | 0.0
+ 0.0 | 0.0 | 0.5
+%
+KPointsUseSymmetries = yes
+
+ExtraStates = 1
+Output = dos

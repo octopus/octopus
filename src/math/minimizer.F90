@@ -23,7 +23,6 @@ module minimizer_oct_m
   use lalg_basic_oct_m
   use profiling_oct_m
   use messages_oct_m
-  use mpi_oct_m
 
   implicit none
 
@@ -162,9 +161,6 @@ contains
     real(8), intent(out)   :: minimum
     integer, intent(out)   :: ierr
     
-    integer :: npt, iprint, sizeofw
-    REAL_DOUBLE, allocatable :: w(:)
-    
     PUSH_SUB(minimize_multidim_nograd)
 
     ASSERT(ubound(x, dim = 1) >= dim)
@@ -201,7 +197,6 @@ contains
 #if defined(HAVE_NLOPT)
 
     integer(8) :: opt
-    real(8) :: minf
     integer :: ires
     include 'nlopt.f'
 
@@ -230,7 +225,8 @@ contains
     call nlo_optimize(ires, opt, x, minimum)
     ierr = ires
     call nlo_destroy(opt)
-
+#else
+    ierr = 0
 #endif
   end subroutine minimize_multidim_nlopt
 
@@ -371,7 +367,6 @@ contains
     integer :: n_iter
     real(8), allocatable :: grad(:)
     real(8) :: dt
-    real(8) :: max_grad_atoms
 
     integer :: n_min
     real (8) :: alpha
@@ -397,10 +392,6 @@ contains
 
     PUSH_SUB(minimize_fire)
 
-    if(mpi_grp_is_root(mpi_world)) then
-      call messages_experimental('GOMethod = fire')
-    end if
-
     SAFE_ALLOCATE(grad_atoms(1:dim/3))
     SAFE_ALLOCATE(grad(1:dim))
 
@@ -415,10 +406,10 @@ contains
     f_alpha = CNST(0.99)
     n_min = 5
     f_inc = CNST(1.1)
-    dt_max = 10.0 * dt
+    dt_max = CNST(10.0) * dt
     f_dec = CNST(0.5)
 
-    maxmove = 0.2 * P_Ang 
+    maxmove = CNST(0.2) * P_Ang 
     
     grad = M_ZERO
 
@@ -445,13 +436,13 @@ contains
       end select
 
       if (n_iter /= 1) then 
-        p_value = 0.0
+        p_value = M_ZERO
         do i_tmp = 0, dim/3 - 1
           p_value = p_value - grad(3*i_tmp+1)*vel(3*i_tmp+1) - grad(3*i_tmp+2)*vel(3*i_tmp+2) - grad(3*i_tmp+3)*vel(3*i_tmp+3)
         end do
 
-        if(p_value > 0.0) then
-          vel(1:dim) = (1.0 - alpha) * vel(1:dim) - alpha * grad(1:dim) * lalg_nrm2(dim,vel) / lalg_nrm2(dim,grad)
+        if(p_value > M_ZERO) then
+          vel(1:dim) = (M_ONE - alpha) * vel(1:dim) - alpha * grad(1:dim) * lalg_nrm2(dim,vel) / lalg_nrm2(dim,grad)
           if(p_times > n_min) then
             dt = min(dt * f_inc , dt_max)
             alpha = alpha * f_alpha

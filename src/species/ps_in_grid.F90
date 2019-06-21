@@ -37,7 +37,7 @@ module ps_in_grid_oct_m
     ps_in_grid_kb_cosines,    &
     ps_in_grid_cutoff_radii,  &
     ps_in_grid_check_rphi,    &
-    linear_extrapolate
+    first_point_extrapolate
 
   type ps_in_grid_t
     type(logrid_t) :: g                !< log grid where the pseudos are defined
@@ -149,9 +149,6 @@ contains
     PUSH_SUB(ps_in_grid_vlocal)
 
     if(l_loc >= 0) then
-      write(message(1), '(a,i2,a)') "Info: l = ", l_loc, " component used as local potential."
-      call messages_info(1)
-
       ps%vlocal(:) = ps%vps(:, l_loc+1)
 
     else if(l_loc == -1) then
@@ -159,9 +156,6 @@ contains
         message(1) = "For the moment, Vanderbilt local potentials are only possible with tm grids."
         call messages_fatal(1)
       end if
-
-      message(1) = "Info: The local potential is a Vanderbilt function."
-      call messages_info(1)
 
       a = CNST(1.82) / rcore
       b = M_ONE
@@ -196,19 +190,15 @@ contains
     PUSH_SUB(ps_in_grid_kb_projectors)
 
     do l = 1, ps%no_l_channels
-      ps%KB(2:, l) = (ps%vps(2:, l) - ps%vlocal(2:)) * &
-        (ps%rphi(2:, l, 1)/ps%g%rofi(2:)) * ps%dknorm(l)
+      ps%KB(2:, l) = (ps%vps(2:, l) - ps%vlocal(2:))*(ps%rphi(2:, l, 1)/ps%g%rofi(2:))*ps%dknorm(l)
 
-      ps%KB(1, l) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), ps%g%rofi(3), &
-        ps%KB(2, l), ps%KB(3, l))
+      ps%KB(1, l) = first_point_extrapolate(ps%g%rofi, ps%KB(:, l))
     end do
 
     do l = 1, ps%so_no_l_channels
-      ps%so_KB(2:, l) = ps%so_vps(2:, l) * &
-        (ps%rphi(2:, l, 1)/ps%g%rofi(2:)) * ps%dknorm(l)
+      ps%so_KB(2:, l) = ps%so_vps(2:, l)*(ps%rphi(2:, l, 1)/ps%g%rofi(2:))*ps%dknorm(l)
 
-      ps%so_KB(1, l) = linear_extrapolate(ps%g%rofi(1), ps%g%rofi(2), ps%g%rofi(3), &
-        ps%so_KB(2, l), ps%so_KB(3, l))      
+      ps%so_KB(1, l) = first_point_extrapolate(ps%g%rofi, ps%so_KB(:, l))
     end do
 
     POP_SUB(ps_in_grid_kb_projectors)
@@ -341,16 +331,35 @@ contains
     POP_SUB(ps_in_grid_check_rphi)
   end subroutine ps_in_grid_check_rphi
 
-
   ! ---------------------------------------------------------
-  FLOAT function linear_extrapolate(x0, x1, x2, y1, y2) result(y0)
-    FLOAT, intent(in) :: x0, x1, x2, y1, y2
-    
-    FLOAT :: mm
 
-    mm = (y2 - y1)/(x2 - x1)
-    y0 = y1 + mm*(x0 - x1)
-  end function linear_extrapolate
+  FLOAT function first_point_extrapolate(x, y, high_order) result(y0)
+    FLOAT,             intent(in)    :: x(:)
+    FLOAT,             intent(in)    :: y(:)
+    logical, optional, intent(in)    :: high_order
+    
+    FLOAT :: x1, x2, x3
+    FLOAT :: y1, y2, y3
+    
+    x1 = x(2) - x(1)
+    x2 = x(3) - x(1)
+    x3 = x(4) - x(1)
+    y1 = y(2)
+    y2 = y(3)
+    y3 = y(4)
+
+    if(optional_default(high_order, .false.)) then
+
+      y0 = y1*x2*x3*(x2 - x3) + y2*x1*x3*(x3 - x1) + y3*x1*x2*(x1 - x2);
+      y0 = y0/((x1 - x2)*(x1 - x3)*(x2 - x3));
+
+    else
+
+      y0 = y1 - (y2 - y1)*x1/(x2 - x1)
+
+    end if
+      
+  end function first_point_extrapolate
 
 end module ps_in_grid_oct_m
 

@@ -65,7 +65,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   integer,           intent(in)    :: ik
 
   integer :: ipj, nreduce, ii, ns, idim, ll, mm, is, ist, bind
-  R_TYPE, allocatable :: reduce_buffer(:,:), lpsi(:, :)
+  R_TYPE, allocatable :: reduce_buffer(:,:), lpsi(:, :), uvpsi(:,:,:)
   integer, allocatable :: ireduce(:, :, :, :)
   type(profile_t), save :: prof
   type(profile_t), save :: reduce_prof
@@ -73,7 +73,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   PUSH_SUB(X(project_psi_batch))
   call profiling_in(prof, "VNLPSI")
 
-  ASSERT(.not.batch_is_packed(psib))
+  ASSERT(batch_status(psib) /= BATCH_DEVICE_PACKED)
 
   ! generate the reduce buffer and related structures
   SAFE_ALLOCATE(ireduce(1:npj, 0:MAX_L, -MAX_L:MAX_L, 1:psib%nst))
@@ -82,7 +82,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   ! count the number of elements in the reduce buffer
   do ist = 1, psib%nst
     do ipj = 1, npj
-      if(pj(ipj)%type == M_NONE) cycle
+      if(pj(ipj)%type == PROJ_NONE) cycle
       do ll = 0, pj(ipj)%lmax
         if (ll == pj(ipj)%lloc) cycle
         do mm = -ll, ll
@@ -109,24 +109,42 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
   do ist = 1, psib%nst
     do ipj = 1, npj
-      if(pj(ipj)%type == M_NONE) cycle
+      if(pj(ipj)%type == PROJ_NONE) cycle
       ns = pj(ipj)%sphere%np
       if(ns < 1) cycle
 
       ! copy psi to the small spherical grid
-      do idim = 1, dim
-        bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
-        if(associated(pj(ipj)%phase)) then
-          forall (is = 1:ns) 
-            lpsi(is, idim) = psib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, ik)
-          end forall
-        else
-          forall (is = 1:ns) 
-            lpsi(is, idim) = psib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is))
-          end forall
-        end if
-      end do
+      select case(batch_status(psib))
+      case(BATCH_NOT_PACKED)
+        do idim = 1, dim
+          bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+          if(associated(pj(ipj)%phase)) then
+            forall (is = 1:ns) 
+              lpsi(is, idim) = psib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, ik)
+            end forall
+          else
+            forall (is = 1:ns) 
+              lpsi(is, idim) = psib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is))
+            end forall
+          end if
+        end do
 
+      case(BATCH_PACKED)
+        do idim = 1, dim
+          bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+          if(associated(pj(ipj)%phase)) then
+            forall (is = 1:ns) 
+              lpsi(is, idim) = psib%pack%X(psi)(bind, pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, ik)
+            end forall
+          else
+            forall (is = 1:ns) 
+              lpsi(is, idim) = psib%pack%X(psi)(bind, pj(ipj)%sphere%map(is))
+            end forall
+          end if
+        end do
+
+      end select
+        
       ! apply the projectors for each angular momentum component
       do ll = 0, pj(ipj)%lmax
         if (ll == pj(ipj)%lloc) cycle
@@ -134,9 +152,9 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
 
           ii = ireduce(ipj, ll, mm, ist)
           select case(pj(ipj)%type)
-          case(M_KB)
+          case(PROJ_KB)
             call X(kb_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(ll, mm), dim, lpsi(1:ns, 1:dim), reduce_buffer(1:dim, ii:))
-          case(M_RKB)
+          case(PROJ_RKB)
 #ifdef R_TCOMPLEX
             if(ll /= 0) then
               call rkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%rkb_p(ll, mm), lpsi(1:ns, 1:dim), reduce_buffer(1:dim, ii:))
@@ -144,7 +162,7 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
               call zkb_project_bra(mesh, pj(ipj)%sphere, pj(ipj)%kb_p(1, 1), dim, lpsi(1:ns, 1:dim), reduce_buffer(1:dim, ii:))
             end if
 #endif
-          case(M_HGH)
+          case(PROJ_HGH)
             call X(hgh_project_bra)(mesh, pj(ipj)%sphere, pj(ipj)%hgh_p(ll, mm), dim, pj(ipj)%reltype, &
               lpsi(1:ns, 1:dim), reduce_buffer(1:dim, ii:))
           end select
@@ -163,12 +181,12 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
   end if
 
   ! calculate |ppsi> += |p><p|psi>
-  !$omp parallel private(ist, ipj, ns, lpsi, ll, mm, ii, idim, is)
+  !$omp parallel private(ist, ipj, ns, lpsi, ll, mm, ii, idim, is, uvpsi, bind)
   SAFE_ALLOCATE(lpsi(1:maxval(pj(1:npj)%sphere%np), 1:dim))
   !$omp do
   do ist = 1, psib%nst
     do ipj = 1, npj
-      if(pj(ipj)%type == M_NONE) cycle
+      if(pj(ipj)%type == PROJ_NONE) cycle
 
       ns = pj(ipj)%sphere%np
       if(ns < 1) cycle
@@ -181,9 +199,9 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
           ii = ireduce(ipj, ll, mm, ist)
 
           select case(pj(ipj)%type)
-          case(M_KB)
+          case(PROJ_KB)
             call X(kb_project_ket)(pj(ipj)%kb_p(ll, mm), dim, reduce_buffer(1:dim, ii:), lpsi(1:ns, 1:dim))
-          case(M_RKB)
+          case(PROJ_RKB)
 #ifdef R_TCOMPLEX
             if(ll /= 0) then
               call rkb_project_ket(pj(ipj)%rkb_p(ll, mm), reduce_buffer(1:dim, ii:), lpsi(1:ns, 1:dim))
@@ -191,30 +209,59 @@ subroutine X(project_psi_batch)(mesh, pj, npj, dim, psib, ppsib, ik)
               call zkb_project_ket(pj(ipj)%kb_p(1, 1), dim, reduce_buffer(1:dim, ii:), lpsi(1:ns, 1:dim))
             end if
 #endif
-          case(M_HGH)
-            call X(hgh_project_ket)(pj(ipj)%hgh_p(ll, mm), dim, &
-              pj(ipj)%reltype, reduce_buffer(1:dim, ii:), lpsi(1:ns, 1:dim))
           end select
-          
         end do ! mm
-      end do ! ll
-    
-      !put the result back in the complete grid
-      do idim = 1, dim
-        bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
-        if(associated(pj(ipj)%phase)) then
-          forall (is = 1:ns)
-            ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) = &
-              ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, ik))
-          end forall
-        else
-          forall (is = 1:ns) 
-            ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) = &
-              ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) + lpsi(is, idim)
-          end forall
+ 
+        if(pj(ipj)%type == PROJ_HGH) then
+          SAFE_ALLOCATE(uvpsi(1:dim, 1:3, -ll:ll))
+          do mm = -ll,ll
+            ii = ireduce(ipj, ll, mm, ist)
+            uvpsi(1:dim, 1:3, mm) = reduce_buffer(1:dim, ii:ii+2)
+          end do
+          call X(hgh_project_ket)(pj(ipj)%hgh_p(ll, :), ll, pj(ipj)%lmax, dim, &
+              pj(ipj)%reltype, uvpsi(1:dim, 1:3, -ll:ll), lpsi(1:ns, 1:dim))
+          SAFE_DEALLOCATE_A(uvpsi)
         end if
-      end do
+      end do ! ll
 
+    !  print *, ll, lpsi(1, 1:dim)  
+  
+      !put the result back in the complete grid
+      select case(batch_status(psib))
+      case(BATCH_NOT_PACKED)
+        do idim = 1, dim
+          bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+          if(associated(pj(ipj)%phase)) then
+            forall (is = 1:ns)
+              ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) = &
+                ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, ik))
+            end forall
+          else
+            forall (is = 1:ns) 
+              ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) = &
+                ppsib%states_linear(bind)%X(psi)(pj(ipj)%sphere%map(is)) + lpsi(is, idim)
+            end forall
+          end if
+        end do
+
+      case(BATCH_PACKED)
+        do idim = 1, dim
+          bind = batch_ist_idim_to_linear(psib, (/ist, idim/))
+          if(associated(pj(ipj)%phase)) then
+            forall (is = 1:ns)
+              ppsib%pack%X(psi)(bind, pj(ipj)%sphere%map(is)) = &
+                ppsib%pack%X(psi)(bind, pj(ipj)%sphere%map(is)) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, ik))
+            end forall
+          else
+            forall (is = 1:ns) 
+              ppsib%pack%X(psi)(bind, pj(ipj)%sphere%map(is)) = &
+                ppsib%pack%X(psi)(bind, pj(ipj)%sphere%map(is)) + lpsi(is, idim)
+            end forall
+          end if
+        end do
+        
+      end select
+        
     end do ! ipj
   end do ! ist
   !$omp end do nowait
@@ -311,11 +358,9 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi)
     do mm = -ll, ll
       
       select case (pj%type)
-      case (M_HGH)
-        call X(hgh_project)(mesh, pj%sphere, pj%hgh_p(ll, mm), dim, psi, ppsi, pj%reltype)
-      case (M_KB)
+      case (PROJ_KB)
         call X(kb_project)(mesh, pj%sphere, pj%kb_p(ll, mm), dim, psi, ppsi)
-      case (M_RKB)
+      case (PROJ_RKB)
 #ifdef R_TCOMPLEX
         if(ll /= 0) then
           call rkb_project(mesh, pj%sphere, pj%rkb_p(ll, mm), psi, ppsi)
@@ -326,6 +371,9 @@ subroutine X(project_sphere)(mesh, pj, dim, psi, ppsi)
       end select
   
     end do
+    if(pj%type == PROJ_HGH) then
+      call X(hgh_project)(mesh, pj%sphere, pj%hgh_p(ll, :), ll, pj%lmax, dim, psi, ppsi, pj%reltype)
+    end if
   end do
 
   POP_SUB(X(project_sphere))
@@ -352,7 +400,7 @@ subroutine X(projector_commute_r)(pj, mesh, dim, idir, ik, psi, cpsi)
   PUSH_SUB(X(projector_commute_r))
   call profiling_in(prof, "PROJ_COMMUTE")
 
-  if(pj%type /= M_NONE) then
+  if(pj%type /= PROJ_NONE) then
 
     ns = pj%sphere%np
     map => pj%sphere%map
@@ -427,7 +475,7 @@ subroutine X(projector_commute_r_allatoms_alldir)(pj, geo, mesh, dim, ik, psi, c
   call profiling_in(prof, "PROJ_COMMUTE_ALL")
 
   do iatom = 1, geo%natoms
-    if(species_is_ps(geo%atom(iatom)%species) .and. pj(iatom)%type /= M_NONE) then
+    if(species_is_ps(geo%atom(iatom)%species) .and. pj(iatom)%type /= PROJ_NONE) then
 
       ns = pj(iatom)%sphere%np
       map => pj(iatom)%sphere%map
@@ -502,7 +550,7 @@ subroutine X(r_project_psi)(pj, mesh, dim, ik, psi, cpsi)
   R_TYPE,                    intent(inout)  :: cpsi(:,:,:)
 
   integer ::  ns, idim, ip, sb_dim, isb_dim
-  R_TYPE, allocatable :: lpsi(:, :), pxlpsi(:,:), xplpsi(:, :),xplpsi_t(:, :, :)
+  R_TYPE, allocatable :: lpsi(:, :), xplpsi(:, :), xplpsi_t(:, :, :)
   integer, pointer :: map(:)
   FLOAT,   pointer :: smx(:, :)
   type(profile_t), save :: prof
@@ -512,7 +560,7 @@ subroutine X(r_project_psi)(pj, mesh, dim, ik, psi, cpsi)
 
   sb_dim = mesh%sb%dim
   
-  if(pj%type /= M_NONE) then
+  if(pj%type /= PROJ_NONE) then
 
     ns = pj%sphere%np
     map => pj%sphere%map

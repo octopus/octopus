@@ -20,19 +20,16 @@
 
 module hgh_projector_oct_m
   use atom_oct_m
+  use blas_oct_m
   use comm_oct_m
   use global_oct_m
   use hardware_oct_m
-  use lalg_basic_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use simul_box_oct_m
   use profiling_oct_m
   use ps_oct_m
   use species_oct_m
   use submesh_oct_m
-  use geometry_oct_m
-  use mpi_oct_m
 
   implicit none
 
@@ -52,8 +49,8 @@ module hgh_projector_oct_m
 
   type hgh_projector_t
     integer        :: n_s         !< number of points inside the sphere
-    FLOAT, pointer :: p(:, :)     !< projectors
-    FLOAT, pointer :: lp(:, :, :) !< angular momentum times projectors
+    FLOAT, pointer :: dp(:, :)    !< projectors
+    CMPLX, pointer :: zp(:, :)
     FLOAT          :: h(3, 3)     !< parameters
     FLOAT          :: k(3, 3)     !< spin-orbit parameters
   end type hgh_projector_t
@@ -67,8 +64,8 @@ contains
 
     PUSH_SUB(hgh_projector_null)
 
-    nullify(hgh_p%p)
-    nullify(hgh_p%lp)
+    nullify(hgh_p%dp)
+    nullify(hgh_p%zp)
     hgh_p%h = M_ZERO
     hgh_p%k = M_ZERO
 
@@ -76,35 +73,38 @@ contains
   end subroutine hgh_projector_null
 
   ! ---------------------------------------------------------
-  subroutine hgh_projector_init(hgh_p, sm, a, l, lm, so_strength)
+  subroutine hgh_projector_init(hgh_p, sm, reltyp, a, l, lm, so_strength)
     type(hgh_projector_t), intent(inout) :: hgh_p
     type(submesh_t),       intent(in)    :: sm
+    integer,               intent(in)    :: reltyp
     type(atom_t), target,  intent(in)    :: a
     integer,               intent(in)    :: l, lm
     FLOAT,                 intent(in)    :: so_strength
 
     integer :: is, i
-    FLOAT :: v, dv(1:3), x(1:3)
+    FLOAT :: v, x(1:3)
     type(ps_t), pointer :: ps
 
     PUSH_SUB(hgh_projector_init)
 
     hgh_p%n_s = sm%np
-    SAFE_ALLOCATE(hgh_p%p (1:hgh_p%n_s, 1:3))
-    SAFE_ALLOCATE(hgh_p%lp(1:hgh_p%n_s, 1:3, 1:3))
+    if(reltyp == 0) then
+      SAFE_ALLOCATE(hgh_p%dp(1:hgh_p%n_s, 1:3))
+      x = M_ZERO
+      do is = 1, hgh_p%n_s
+        x(1:3) = sm%x(is, 1:3)
 
-    x = M_ZERO
-    do is = 1, hgh_p%n_s
-      x(1:3) = sm%x(is, 1:3)
-      
-      do i = 1, 3
-        call species_real_nl_projector(a%species, x, l, lm, i, v, dv)
-        hgh_p%p (is, i) = v
-        hgh_p%lp(is, 1, i) = x(2)*dv(3) - x(3)*dv(2)
-        hgh_p%lp(is, 2, i) = x(3)*dv(1) - x(1)*dv(3)
-        hgh_p%lp(is, 3, i) = x(1)*dv(2) - x(2)*dv(1)
+        do i = 1, 3
+          call species_real_nl_projector(a%species, x, l, lm, i, v)
+          hgh_p%dp (is, i) = v
+        end do
       end do
-    end do
+    else
+      SAFE_ALLOCATE(hgh_p%zp(1:hgh_p%n_s, 1:3))
+      do i = 1, 3
+        call species_nl_projector(a%species, hgh_p%n_s, sm%x(:, 0:3), l, lm, i, hgh_p%zp(:, i)) 
+      end do
+    end if
 
     ps => species_ps(a%species)
     hgh_p%h(:, :) = ps%h(l, :, :)
@@ -120,23 +120,12 @@ contains
 
     PUSH_SUB(hgh_projector_end)
 
-    SAFE_DEALLOCATE_P(hgh_p%p)
-    SAFE_DEALLOCATE_P(hgh_p%lp)
+    SAFE_DEALLOCATE_P(hgh_p%dp)
+    SAFE_DEALLOCATE_P(hgh_p%zp)
 
     POP_SUB(hgh_projector_end)
   end subroutine hgh_projector_end
 
-  ! ---------------------------------------------------------
-  !> index from (1:3, 1:4) to linear array
-  pure integer function hgh_index(kk, jj)
-    integer, intent(in) :: kk
-    integer, intent(in) :: jj
-
-    ! no push/pop, threadsafe
-
-    hgh_index = (kk-1)*3 + jj
-    
-  end function hgh_index
 
 #include "undef.F90"
 #include "real.F90"

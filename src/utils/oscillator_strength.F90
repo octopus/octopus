@@ -23,9 +23,6 @@ module oscillator_strength_oct_m
   use io_oct_m
   use kick_oct_m
   use lalg_adv_oct_m
-  use loct_oct_m
-  use loct_math_oct_m
-  use parser_oct_m
   use messages_oct_m
   use minimizer_oct_m
   use profiling_oct_m
@@ -837,7 +834,7 @@ contains
         ot(i) = ot(i) - M_TWO * power * sin(omega*i*dt)
       end do
     case(0)
-      if(omega == M_ZERO) then
+      if(abs(omega) <= M_EPSILON) then
         do i = 0, time_steps
           ot(i) = ot(i) - power * cos(omega*i*dt)
         end do

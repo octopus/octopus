@@ -1,0 +1,41 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+UnitsOutput = ev_angstrom
+
+Dimensions = 3
+PeriodicDimensions = 1
+
+CalculationMode = gs
+
+FromScratch = yes
+
+%Species
+  "Na" | species_pseudo | lmax | 2 | lloc | 2  
+%
+
+%Coordinates
+  "Na" |   0.0 | 0.0 | 0.0 
+%
+
+BoxShape = cylinder
+
+Xlength = 1.99932905*angstrom
+Radius = 5.29*angstrom
+
+%Spacing
+ 1.99932905/6*angstrom  | 0.3*angstrom | 0.3*angstrom
+%
+
+%KPointsGrid
+8 | 1 | 1
+%
+
+KPointsUseSymmetries = yes
+
+SymmetrizeDensity = yes
+
+ExperimentalFeatures = yes
+
+FilterPotentials = filter_none
+
+MixField = density

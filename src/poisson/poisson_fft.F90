@@ -23,18 +23,12 @@ module poisson_fft_oct_m
   use cube_oct_m
   use fft_oct_m
   use fourier_space_oct_m
-  use geometry_oct_m
   use global_oct_m
-  use lalg_basic_oct_m
-  use loct_oct_m
   use loct_math_oct_m
   use math_oct_m
   use mesh_cube_parallel_map_oct_m
-  use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use mpi_oct_m
-  use par_vec_oct_m
   use parser_oct_m
   use poisson_cutoff_oct_m
   use profiling_oct_m
@@ -182,7 +176,7 @@ contains
     FLOAT,             intent(inout) :: gg(:)
     FLOAT,             intent(out)   :: modg2
 
-    integer :: idir
+!    integer :: idir
 
     ! no PUSH_SUB, called too frequently
 
