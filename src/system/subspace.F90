@@ -297,8 +297,9 @@ SAFE_ALLOCATE(evecs_temp(1:st%nst*Fdim, 1:st%nst))
 !               if(im-in > Fdim .or. im-in < 1) cycle
               if(im-in-hm%F%order(1) > Fdim .or. im-in-hm%F%order(1) < 0) cycle
               do idim=1,hm%F%spindim
-                rot_state(ist,1:der%mesh%np,(imm-1)*hm%F%spindim+idim) =  rot_state(ist,1:der%mesh%np,(imm-1)*hm%F%spindim+idim)+ & 
-                                                                   evecs_reshape(jst,imm)*state(1:der%mesh%np,(im-in-hm%F%order(1)-1)*hm%F%spindim+idim)
+                rot_state(ist,1:der%mesh%np,(imm-1)*hm%F%spindim+idim) =  & 
+                     rot_state(ist,1:der%mesh%np,(imm-1)*hm%F%spindim+idim)+ & 
+                     evecs_reshape(jst,imm)*state(1:der%mesh%np,(im-in-hm%F%order(1)-1)*hm%F%spindim+idim)
               end do
             end do
           end do
