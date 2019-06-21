@@ -79,8 +79,9 @@ module pes_spm_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine pes_spm_init(this, mesh, st, save_iter)
+  subroutine pes_spm_init(this, parser, mesh, st, save_iter)
     type(pes_spm_t), intent(out) :: this
+    type(parser_t),  intent(in)  :: parser
     type(mesh_t),    intent(in)  :: mesh
     type(states_t),  intent(in)  :: st
     integer,         intent(in)  :: save_iter
@@ -118,7 +119,7 @@ contains
     !% <br>%
     !% </tt>
     !%End
-    call messages_obsolete_variable('PhotoElectronSpectrumPoints', 'PES_spm_points')
+    call messages_obsolete_variable(parser, 'PhotoElectronSpectrumPoints', 'PES_spm_points')
     this%sphgrid = .false.
     if (parse_block('PES_spm_points', blk) < 0) then
       this%sphgrid = .true.
@@ -213,7 +214,7 @@ contains
     !% are given).
     !%End
     if(this%sphgrid) then
-      if(parse_is_defined('PES_spm_Radius')) then
+      if(parse_is_defined(parser, 'PES_spm_Radius')) then
         call parse_variable('PES_spm_Radius', M_ZERO, radius)
         if(radius <= M_ZERO) call messages_input_error('PES_spm_Radius')
         call messages_print_var_value(stdout, "PES_spm_Radius", radius)

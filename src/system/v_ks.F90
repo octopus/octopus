@@ -136,8 +136,9 @@ module v_ks_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine v_ks_init(ks, gr, st, geo, mc)
+  subroutine v_ks_init(ks, parser, gr, st, geo, mc)
     type(v_ks_t),         intent(inout)   :: ks
+    type(parser_t),       intent(in)    :: parser
     type(grid_t), target, intent(inout) :: gr
     type(states_t),       intent(in)    :: st
     type(geometry_t),     intent(inout) :: geo
@@ -193,7 +194,7 @@ contains
     parsed_theory_level = .false.
     
     ! the user knows what he wants, give her that
-    if(parse_is_defined('TheoryLevel')) then
+    if(parse_is_defined(parser, 'TheoryLevel')) then
       call parse_variable('TheoryLevel', KOHN_SHAM_DFT, ks%theory_level)
       if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error('TheoryLevel')
 
@@ -233,7 +234,7 @@ contains
 
     ASSERT(default >= 0)
 
-    if(.not. parse_is_defined('XCFunctional') &
+    if(.not. parse_is_defined(parser, 'XCFunctional') &
       .and. (pseudo_x_functional /= PSEUDO_EXCHANGE_ANY .or. pseudo_c_functional /= PSEUDO_CORRELATION_ANY)) then
       call messages_write('Info: the XCFunctional has been selected to match the pseudopotentials', new_line = .true.)
       call messages_write('      used in the calculation.')
@@ -282,8 +283,8 @@ contains
       xk_id = val - ck_id*1000  
     end if
     
-    call messages_obsolete_variable('XFunctional', 'XCFunctional')
-    call messages_obsolete_variable('CFunctional', 'XCFunctional')
+    call messages_obsolete_variable(parser, 'XFunctional', 'XCFunctional')
+    call messages_obsolete_variable(parser, 'CFunctional', 'XCFunctional')
 
     ! initialize XC modules
 
@@ -291,7 +292,7 @@ contains
     ! but it might become Hartree-Fock later. This is safe because it
     ! becomes Hartree-Fock in the cases where the functional is hybrid
     ! and the ifs inside check for both conditions.
-    call xc_init(ks%xc, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st%qtot, &
+    call xc_init(ks%xc, parser, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st%qtot, &
       x_id, c_id, xk_id, ck_id, hartree_fock = ks%theory_level == HARTREE_FOCK)
 
     if(bitand(ks%xc%family, XC_FAMILY_LIBVDWXC) /= 0) then
@@ -315,8 +316,8 @@ contains
      
     end if
 
-    call messages_obsolete_variable('NonInteractingElectrons', 'TheoryLevel')
-    call messages_obsolete_variable('HartreeFock', 'TheoryLevel')
+    call messages_obsolete_variable(parser, 'NonInteractingElectrons', 'TheoryLevel')
+    call messages_obsolete_variable(parser, 'HartreeFock', 'TheoryLevel')
 
     if(ks%theory_level == RDMFT ) call messages_experimental('RDMFT theory level')
     
@@ -368,9 +369,9 @@ contains
         ks%sic_type = SIC_NONE
       end if
 
-      if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) call xc_oep_init(ks%oep, ks%xc_family, gr, st)
+      if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) call xc_oep_init(ks%oep, parser, ks%xc_family, gr, st)
 
-      if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) call xc_ks_inversion_init(ks%ks_inversion, gr, geo, st, ks%xc)
+      if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) call xc_ks_inversion_init(ks%ks_inversion, parser, gr, geo, st, ks%xc)
 
     end select
 
@@ -484,7 +485,7 @@ contains
         !%  VDWD3Functional = 'pbe'
         !%
         !%End
-        if(parse_is_defined('VDWD3Functional')) call messages_experimental('VDWD3Functional')
+        if(parse_is_defined(parser, 'VDWD3Functional')) call messages_experimental('VDWD3Functional')
         call parse_variable('VDWD3Functional', d3func_def, d3func)
         
         if(d3func == '') then
@@ -647,8 +648,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine v_ks_calc(ks, hm, st, geo, calc_eigenval, time, calc_berry, calc_energy, calc_current)
+  subroutine v_ks_calc(ks, parser, hm, st, geo, calc_eigenval, time, calc_berry, calc_energy, calc_current)
     type(v_ks_t),               intent(inout) :: ks
+    type(parser_t),             intent(in)    :: parser
     type(hamiltonian_t),        intent(inout) :: hm
     type(states_t),             intent(inout) :: st
     type(geometry_t),           intent(in)    :: geo
@@ -664,7 +666,7 @@ contains
 
     calc_current_ = optional_default(calc_current, .true.)
 
-    call v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy, calc_current_)
+    call v_ks_calc_start(ks, parser, hm, st, geo, time, calc_berry, calc_energy, calc_current_)
     call v_ks_calc_finish(ks, hm)
 
     if(optional_default(calc_eigenval, .false.)) then
@@ -680,8 +682,9 @@ contains
   !! potential. The routine v_ks_calc_finish must be called to finish
   !! the calculation. The argument hm is not modified. The argument st
   !! can be modified after the function have been used.
-  subroutine v_ks_calc_start(ks, hm, st, geo, time, calc_berry, calc_energy, calc_current) 
-    type(v_ks_t),            target,   intent(inout) :: ks 
+  subroutine v_ks_calc_start(ks, parser, hm, st, geo, time, calc_berry, calc_energy, calc_current) 
+    type(v_ks_t),            target,   intent(inout) :: ks
+    type(parser_t),                    intent(in)    :: parser
     type(hamiltonian_t),     target,   intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
     type(states_t),                    intent(inout) :: st
     type(geometry_t) ,       target,   intent(in)    :: geo
@@ -967,10 +970,10 @@ contains
         ! The OEP family has to be handled specially
         if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
           if (states_are_real(st)) then
-            call dxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
+            call dxc_oep_calc(ks%oep, parser, ks%xc, (ks%sic_type == SIC_PZ),  &
                   ks%gr, hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
           else
-            call zxc_oep_calc(ks%oep, ks%xc, (ks%sic_type == SIC_PZ),  &
+            call zxc_oep_calc(ks%oep, parser, ks%xc, (ks%sic_type == SIC_PZ),  &
                   ks%gr, hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
           end if
         end if

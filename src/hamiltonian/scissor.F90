@@ -30,6 +30,7 @@ module scissor_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use multicomm_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
@@ -63,8 +64,9 @@ module scissor_oct_m
 
 contains
 
- subroutine scissor_init(this, st, gr, d, gap, mc)
-  type(scissor_t),           intent(inout) :: this
+ subroutine scissor_init(this, parser, st, gr, d, gap, mc)
+   type(scissor_t),          intent(inout) :: this
+   type(parser_t),           intent(in)    :: parser
   type(states_t),            intent(in)    :: st
   type(grid_t),              intent(in)    :: gr
   type(states_dim_t),        intent(in)    :: d
@@ -85,10 +87,8 @@ contains
 
   call messages_print_stress(stdout, "TDScissor")
 
-  if(this%gs_st%parallel_in_states) &
-    call messages_not_implemented("scissor operator parallel in states")
-  if(gr%mesh%parallel_in_domains) &
-    call messages_not_implemented("scissor operator parallel in domains")
+  if(this%gs_st%parallel_in_states) call messages_not_implemented("Scissor operator parallel in states")
+  if(gr%mesh%parallel_in_domains) call messages_not_implemented("Scissor operator parallel in domains")
 
   this%apply = .true.
   this%gap = real(gap)
@@ -104,7 +104,7 @@ contains
      call messages_fatal(1)
   end if
 
-  call states_load(restart_gs, this%gs_st, gr, ierr, label = ': gs for TDScissor')
+  call states_load(restart_gs, parser, this%gs_st, gr, ierr, label = ': gs for TDScissor')
   if(ierr /= 0 .and. ierr /= (this%gs_st%st_end-this%gs_st%st_start+1)*this%gs_st%d%nik*this%gs_st%d%dim) then
     message(1) = "Unable to read wavefunctions for TDScissor."
     call messages_fatal(1)

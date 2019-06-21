@@ -146,8 +146,9 @@ module output_oct_m
   
 contains
 
-  subroutine output_init(outp, sb, st, nst, ks)
+  subroutine output_init(outp, parser, sb, st, nst, ks)
     type(output_t),       intent(out)   :: outp
+    type(parser_t),       intent(in)    :: parser
     type(simul_box_t),    intent(in)    :: sb
     type(states_t),       intent(in)    :: st
     integer,              intent(in)    :: nst
@@ -516,7 +517,7 @@ contains
     !% calculations, <tt>OutputDuringSCF</tt> must be set too for this output to be produced.
     !%End
     call parse_variable('OutputInterval', 50, outp%output_interval)
-    call messages_obsolete_variable("OutputEvery", "OutputInterval/RestartWriteInterval")
+    call messages_obsolete_variable(parser, 'OutputEvery', 'OutputInterval/RestartWriteInterval')
     if(outp%output_interval < 0) then
       message(1) = "OutputInterval must be >= 0."
       call messages_fatal(1)
@@ -612,7 +613,7 @@ contains
 
     ! we are using a what that has a how.
     if(bitand(outp%what, not(what_no_how)) /= 0 .or. outp%whatBZ /= 0 .or. bitand(outp%what_lda_u, not(what_no_how_u)) /= 0) then
-      call io_function_read_how(sb, outp%how)
+      call io_function_read_how(sb, parser, outp%how)
     else
       outp%how = 0
     end if
@@ -633,8 +634,9 @@ contains
   end subroutine output_end
 
   ! ---------------------------------------------------------
-  subroutine output_all(outp, gr, geo, st, hm, ks, dir)
+  subroutine output_all(outp, parser, gr, geo, st, hm, ks, dir)
     type(grid_t),         intent(in)    :: gr
+    type(parser_t),       intent(in)    :: parser
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
@@ -663,7 +665,7 @@ contains
       end do
     end if
     
-    call output_states(st, gr, geo, hm, dir, outp)
+    call output_states(st, parser, gr, geo, hm, dir, outp)
     call output_hamiltonian(hm, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
     call output_localization_funct(st, hm, gr, dir, outp, geo)
     call output_current_flow(gr, st, dir, outp)

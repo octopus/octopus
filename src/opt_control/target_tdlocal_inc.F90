@@ -19,8 +19,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_tdlocal(gr, tg, td)
+  subroutine target_init_tdlocal(gr, parser, tg, td)
     type(grid_t),   intent(in)    :: gr
+    type(parser_t), intent(in)    :: parser
     type(target_t), intent(inout) :: tg
     type(td_t),     intent(in)    :: td
 

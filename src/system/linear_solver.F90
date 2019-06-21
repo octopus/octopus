@@ -32,6 +32,7 @@ module linear_solver_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use preconditioners_oct_m
   use smear_oct_m
@@ -79,8 +80,9 @@ module linear_solver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine linear_solver_init(this, gr, states_are_real, def_solver)
+  subroutine linear_solver_init(this, parser, gr, states_are_real, def_solver)
     type(linear_solver_t),  intent(out)   :: this
+    type(parser_t),         intent(in)    :: parser
     type(grid_t),           intent(in)    :: gr
     logical,                intent(in)    :: states_are_real !< for choosing solver
     integer(8), optional,   intent(in)    :: def_solver
@@ -156,7 +158,7 @@ contains
     !the last 2 digits select the linear solver
     this%solver = mod(fsolver, 100)
 
-    call preconditioner_init(this%pre, gr)
+    call preconditioner_init(this%pre, parser, gr)
 
     !%Variable LinearSolverMaxIter
     !%Type integer
@@ -239,14 +241,15 @@ contains
 
   ! ----------------------------------------------------------
   
-  subroutine linear_solver_obsolete_variables(old_prefix, new_prefix)
+  subroutine linear_solver_obsolete_variables(parser, old_prefix, new_prefix)
+    type(parser_t),      intent(in)    :: parser
     character(len=*),    intent(in)    :: old_prefix
     character(len=*),    intent(in)    :: new_prefix
     
-    call messages_obsolete_variable(trim(old_prefix)//"LinearSolver", trim(new_prefix)//"LinearSolver")
-    call messages_obsolete_variable(trim(old_prefix)//"LinearSolverMaxIter", trim(new_prefix)//"LinearSolverMaxIter")
+    call messages_obsolete_variable(parser, trim(old_prefix)//"LinearSolver", trim(new_prefix)//"LinearSolver")
+    call messages_obsolete_variable(parser, trim(old_prefix)//"LinearSolverMaxIter", trim(new_prefix)//"LinearSolverMaxIter")
 
-    call preconditioner_obsolete_variables(old_prefix, new_prefix)
+    call preconditioner_obsolete_variables(parser, old_prefix, new_prefix)
 
   end subroutine linear_solver_obsolete_variables
 

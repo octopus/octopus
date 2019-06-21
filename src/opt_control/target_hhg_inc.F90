@@ -19,8 +19,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_hhg(tg, td, w0)
+  subroutine target_init_hhg(tg, parser, td, w0)
     type(target_t),   intent(inout) :: tg
+    type(parser_t),   intent(in)    :: parser
     type(td_t),       intent(in)    :: td
     FLOAT,            intent(in)    :: w0
 
@@ -63,7 +64,7 @@
     !% <br>%</tt>
     !%
     !%End
-    if(parse_is_defined('OCTOptimizeHarmonicSpectrum')) then
+    if(parse_is_defined(parser, 'OCTOptimizeHarmonicSpectrum')) then
       if(parse_block('OCTOptimizeHarmonicSpectrum', blk) == 0) then
         tg%hhg_nks = parse_block_cols(blk, 0)
         SAFE_ALLOCATE(    tg%hhg_k(1:tg%hhg_nks))
@@ -97,8 +98,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_hhgnew(gr, tg, td, geo, ep)
+  subroutine target_init_hhgnew(gr, parser, tg, td, geo, ep)
     type(grid_t),     intent(in)    :: gr
+    type(parser_t),   intent(in)    :: parser
     type(target_t),   intent(inout) :: tg
     type(td_t),       intent(in)    :: td
     type(geometry_t), intent(in)    :: geo
@@ -201,8 +203,9 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_hhg(tg, gr, dir, geo, hm, outp)
+  subroutine target_output_hhg(tg, parser, gr, dir, geo, hm, outp)
     type(target_t),      intent(in) :: tg
+    type(parser_t),      intent(in) :: parser
     type(grid_t),        intent(in) :: gr
     character(len=*),    intent(in) :: dir
     type(geometry_t),    intent(in) :: geo
@@ -212,7 +215,7 @@
     PUSH_SUB(target_output_hhg)
     
     call io_mkdir(trim(dir))
-    call output_states(tg%st, gr, geo, hm, trim(dir), outp)
+    call output_states(tg%st, parser, gr, geo, hm, trim(dir), outp)
 
     POP_SUB(target_output_hhg)
   end subroutine target_output_hhg

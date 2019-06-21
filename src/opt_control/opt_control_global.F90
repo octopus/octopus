@@ -67,12 +67,14 @@ contains
   !! should be. It uses this information to fill the "oct" variable. All the components
   !! of oct are filled, except for mode_fixed_fluence, which is filled when the control
   !! parameters module is initialized.
-  subroutine oct_read_inp(oct)
-    type(oct_t), intent(inout) :: oct
+  subroutine oct_read_inp(oct, parser)
+    type(oct_t),    intent(inout) :: oct
+    type(parser_t), intent(in)    :: parser
+
     PUSH_SUB(oct_read_inp)
 
     call messages_print_stress(stdout, "OCT run mode")
-    call messages_obsolete_variable('OCTControlRepresentation')
+    call messages_obsolete_variable(parser, 'OCTControlRepresentation')
 
     !%Variable OCTScheme
     !%Type integer

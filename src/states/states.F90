@@ -238,8 +238,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_init(st, gr, geo)
+  subroutine states_init(st, parser, gr, geo)
     type(states_t), target, intent(inout) :: st
+    type(parser_t),         intent(in)    :: parser
     type(grid_t),           intent(in)    :: gr
     type(geometry_t),       intent(in)    :: geo
 
@@ -502,8 +503,8 @@ contains
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
     st%occ      = M_ZERO
     ! allocate space for formula strings that define user-defined states
-    if(parse_is_defined('UserDefinedStates') .or. parse_is_defined('OCTInitialUserdefined') &
-         .or. parse_is_defined('OCTTargetUserdefined')) then
+    if(parse_is_defined(parser, 'UserDefinedStates') .or. parse_is_defined(parser, 'OCTInitialUserdefined') &
+         .or. parse_is_defined(parser, 'OCTTargetUserdefined')) then
       SAFE_ALLOCATE(st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik))
       ! initially we mark all 'formulas' as undefined
       st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik) = 'undefined'
@@ -533,8 +534,8 @@ contains
     call parse_variable('StatesRandomization', PAR_INDEPENDENT, st%randomization)
 
 
-    call states_read_initial_occs(st, excess_charge, gr%sb%kpoints)
-    call states_read_initial_spins(st)
+    call states_read_initial_occs(st, parser, excess_charge, gr%sb%kpoints)
+    call states_read_initial_spins(st, parser)
 
     st%st_start = 1
     st%st_end = st%nst
@@ -633,8 +634,9 @@ contains
   !! The resulting occupations are placed on the st\%occ variable. The
   !! boolean st\%fixed_occ is also set to .true., if the occupations are
   !! set by the user through the "Occupations" block; false otherwise.
-  subroutine states_read_initial_occs(st, excess_charge, kpoints)
+  subroutine states_read_initial_occs(st, parser, excess_charge, kpoints)
     type(states_t),  intent(inout) :: st
+    type(parser_t),  intent(in)    :: parser
     FLOAT,           intent(in)    :: excess_charge
     type(kpoints_t), intent(in)    :: kpoints
 
@@ -859,7 +861,7 @@ contains
       st%restart_reorder_occs = .false.
     end if
 
-    call smear_init(st%smear, st%d%ispin, st%fixed_occ, integral_occs, kpoints)
+    call smear_init(st%smear, parser, st%d%ispin, st%fixed_occ, integral_occs, kpoints)
 
     unoccupied_states = (st%d%ispin /= SPINORS .and. st%nst*2 > st%qtot) .or. (st%d%ispin == SPINORS .and. st%nst > st%qtot)
     
@@ -899,8 +901,9 @@ contains
   !! resulting spins are placed onto the st\%spin pointer. The boolean
   !! st\%fixed_spins is set to true if (and only if) the InitialSpins
   !! block is present.
-  subroutine states_read_initial_spins(st)
+  subroutine states_read_initial_spins(st, parser)
     type(states_t), intent(inout) :: st
+    type(parser_t), intent(in)    :: parser
 
     integer :: i, j
     type(block_t) :: blk

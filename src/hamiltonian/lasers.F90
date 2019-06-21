@@ -243,9 +243,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_init(no_l, lasers, mesh)
-    integer,             intent(out) :: no_l
+  subroutine laser_init(lasers, parser, no_l, mesh)
     type(laser_t), pointer           :: lasers(:)
+    type(parser_t),      intent(in)  :: parser
+    integer,             intent(out) :: no_l
     type(mesh_t),        intent(in)  :: mesh
 
     type(block_t)     :: blk
@@ -257,7 +258,7 @@ contains
 
     PUSH_SUB(laser_init)
 
-    call messages_obsolete_variable("TDLasers", "TDExternalFields")
+    call messages_obsolete_variable(parser, "TDLasers", "TDExternalFields")
     !%Variable TDExternalFields
     !%Type block
     !%Section Time-Dependent

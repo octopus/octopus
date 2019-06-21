@@ -18,8 +18,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_density(gr, tg, stin, td, restart)
+  subroutine target_init_density(gr, parser, tg, stin, td, restart)
     type(grid_t),     intent(in)    :: gr
+    type(parser_t),   intent(in)    :: parser
     type(target_t),   intent(inout) :: tg
     type(states_t),   intent(inout) :: stin 
     type(td_t),       intent(in)    :: td
@@ -68,7 +69,7 @@
     !% The syntax is the same as the <tt>TransformStates</tt> block.
     !%End
 
-    if(parse_is_defined('OCTTargetDensity')) then
+    if(parse_is_defined(parser, 'OCTTargetDensity')) then
       tg%density_weight = M_ONE
       SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
       tg%rho = M_ZERO
@@ -79,7 +80,7 @@
         if(parse_block('OCTTargetDensityFromState', blk) == 0) then
           call states_copy(tmp_st, tg%st)
           call states_deallocate_wfns(tmp_st)
-          call states_look_and_load(restart, tmp_st, gr)
+          call states_look_and_load(restart, parser, tmp_st, gr)
 
           SAFE_ALLOCATE(rotation_matrix(1:tmp_st%nst, 1:tmp_st%nst))
 
@@ -257,7 +258,7 @@
       tg%strt_iter_curr_tg = 0
     end if
 
-    if(parse_is_defined('OCTSpatialCurrWeight')) then
+    if(parse_is_defined(parser, 'OCTSpatialCurrWeight')) then
       if(parse_block('OCTSpatialCurrWeight', blk) == 0) then
         SAFE_ALLOCATE(tg%spatial_curr_wgt(1:gr%mesh%np_part))
         SAFE_ALLOCATE(xp(1:gr%mesh%np_part))

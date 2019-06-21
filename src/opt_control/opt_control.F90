@@ -109,10 +109,10 @@ contains
 
     ! Read general information about how the OCT run will be made, from inp file. "oct_read_inp" is
     ! in the opt_control_global_oct_m module (like the definition of the oct_t data type)
-    call oct_read_inp(oct)
+    call oct_read_inp(oct, sys%parser)
 
     ! Read info about, and prepare, the control functions
-    call controlfunction_mod_init(hm%ep, td%dt, td%max_iter, oct%mode_fixed_fluence)
+    call controlfunction_mod_init(hm%ep, sys%parser, td%dt, td%max_iter, oct%mode_fixed_fluence)
     call controlfunction_init(par, td%dt, td%max_iter)
     call controlfunction_set(par, hm%ep)
       ! This prints the initial control parameters, exactly as described in the inp file,
@@ -127,7 +127,7 @@ contains
 
 
     ! Startup of the iterator data type (takes care of counting iterations, stopping, etc).
-    call oct_iterator_init(iterator, par)
+    call oct_iterator_init(iterator, sys%parser, par)
 
 
     ! Initialization of the propagation_oct_m module.
@@ -145,7 +145,7 @@ contains
 
     ! Figure out the starting wavefunction(s), and the target.
     call initial_state_init(sys, hm, initial_st)
-    call target_init(sys%gr, sys%geo, initial_st, td, controlfunction_w0(par), oct_target, oct, hm%ep, sys%mc)
+    call target_init(sys%gr, sys%parser, sys%geo, initial_st, td, controlfunction_w0(par), oct_target, oct, hm%ep, sys%mc)
 
     ! Sanity checks.
     call check_faulty_runmodes(sys, hm, td%tr)
@@ -153,8 +153,8 @@ contains
 
     ! Informative output.
     call opt_control_get_qs(psi, initial_st)
-    call output_states(psi, sys%gr, sys%geo, hm, OCT_DIR//'initial', sys%outp)
-    call target_output(oct_target, sys%gr, OCT_DIR//'target', sys%geo, hm, sys%outp)
+    call output_states(psi, sys%parser, sys%gr, sys%geo, hm, OCT_DIR//'initial', sys%outp)
+    call target_output(oct_target, sys%parser, sys%gr, OCT_DIR//'target', sys%geo, hm, sys%outp)
     call states_end(psi)
 
 
@@ -213,7 +213,7 @@ contains
 
     ! clean up
     call controlfunction_end(par)
-    call oct_iterator_end(iterator)
+    call oct_iterator_end(iterator, sys%parser)
     call filter_end(filter)
     call td_end(td)
     call opt_control_state_end(initial_st)

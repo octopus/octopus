@@ -127,7 +127,7 @@ contains
 
     PUSH_SUB(td_init)
 
-    call ion_dynamics_init(td%ions, sys%geo)
+    call ion_dynamics_init(td%ions, sys%parser, sys%geo)
 
     td%iter = 0
 
@@ -200,7 +200,7 @@ contains
 
     td%dt = td%dt/td%mu
     
-    if(parse_is_defined('TDMaxSteps') .and. parse_is_defined('TDPropagationTime')) then
+    if(parse_is_defined(sys%parser, 'TDMaxSteps') .and. parse_is_defined(sys%parser, 'TDPropagationTime')) then
       call messages_write('You cannot set TDMaxSteps and TDPropagationTime at the same time')
       call messages_fatal()
     end if
@@ -219,7 +219,7 @@ contains
     !%End
     call parse_variable('TDPropagationTime', CNST(-1.0), propagation_time, unit = units_inp%time)
 
-    call messages_obsolete_variable('TDMaximumIter', 'TDMaxSteps')
+    call messages_obsolete_variable(sys%parser, 'TDMaximumIter', 'TDMaxSteps')
 
     !%Variable TDMaxSteps
     !%Type integer
@@ -245,7 +245,7 @@ contains
     end if
 
     ! now the photoelectron stuff
-    call pes_init(td%pesv, sys%gr%mesh, sys%gr%sb, sys%st, sys%outp%restart_write_interval, hm, td%max_iter, td%dt)
+    call pes_init(td%pesv, sys%parser, sys%gr%mesh, sys%gr%sb, sys%st, sys%outp%restart_write_interval, hm, td%max_iter, td%dt)
 
     !%Variable TDDynamics
     !%Type integer
@@ -300,9 +300,9 @@ contains
     td%scissor = units_to_atomic(units_inp%energy, td%scissor) 
     call messages_print_var_value(stdout, 'TDScissor', td%scissor)
 
-    call propagator_init(sys%gr, sys%st, td%tr, &
-      ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield), &
-          hm%family_is_mgga_with_exc)
+    call propagator_init(sys%gr, sys%parser, sys%st, td%tr, &
+      ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield), hm%family_is_mgga_with_exc)
+    
     if(hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
       call messages_print_stress(stdout, "Time-dependent external fields")
       call laser_write_info(hm%ep%lasers, stdout, td%dt, td%max_iter)
@@ -389,7 +389,7 @@ contains
       end if 
     else
       call states_allocate_wfns(st, gr%mesh)
-      call scf_init(td%scf, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks)
+      call scf_init(td%scf, sys%parser, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks)
     end if
 
     if(hm%scdm_EXX) then
@@ -431,12 +431,12 @@ contains
       end if  
     end if
 
-    call td_write_init(write_handler, sys%outp, gr, st, hm, geo, sys%ks, &
+    call td_write_init(write_handler, sys%parser, sys%outp, gr, st, hm, geo, sys%ks, &
       ion_dynamics_ions_move(td%ions), gauge_field_is_applied(hm%ep%gfield), &
       hm%ep%kick, td%iter, td%max_iter, td%dt, sys%mc)
 
     if(td%scissor > M_EPSILON) then
-      call scissor_init(hm%scissor, st, gr, hm%d, td%scissor, sys%mc)
+      call scissor_init(hm%scissor, sys%parser, st, gr, hm%d, td%scissor, sys%mc)
     end if
 
     if(td%iter == 0) call td_run_zero_iter()
@@ -493,11 +493,11 @@ contains
       ! time iterate the system, one time step.
       select case(td%dynamics)
       case(EHRENFEST)
-        call propagator_dt(sys%ks, hm, gr, st, td%tr, iter*td%dt, td%dt, td%energy_update_iter*td%mu, &
+        call propagator_dt(sys%ks, sys%parser, hm, gr, st, td%tr, iter*td%dt, td%dt, td%energy_update_iter*td%mu, &
           iter, td%ions, geo, sys%outp, scsteps = scsteps, &
           update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
       case(BO)
-        call propagator_dt_bo(td%scf, gr, sys%ks, st, hm, geo, sys%mc, sys%outp, iter, td%dt, td%ions, scsteps)
+        call propagator_dt_bo(td%scf, sys%parser, gr, sys%ks, st, hm, geo, sys%mc, sys%outp, iter, td%dt, td%ions, scsteps)
       end select
 
       !Apply mask absorbing boundaries
@@ -507,7 +507,7 @@ contains
       if(td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) &
         call pes_calc(td%pesv, gr%mesh, st, td%dt, iter, gr, hm)
 
-      call td_write_iter(write_handler, sys%outp, gr, st, hm, geo, hm%ep%kick, td%dt, sys%ks, iter)
+      call td_write_iter(write_handler, sys%parser, sys%outp, gr, st, hm, geo, hm%ep%kick, td%dt, sys%ks, iter)
 
       ! write down data
       call check_point()
@@ -565,7 +565,7 @@ contains
         if (st%modelmbparticles%nparticle > 0) then
           call modelmb_sym_all_states (gr, st, geo)
         end if
-        call td_write_output(write_handler, gr, st, hm, sys%ks, sys%outp, geo, iter, td%dt)
+        call td_write_output(write_handler, sys%parser, gr, st, hm, sys%ks, sys%outp, geo, iter, td%dt)
       end if
 
       if (mod(iter, sys%outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
@@ -585,13 +585,13 @@ contains
           call states_deallocate_wfns(sys%st)
           call ground_state_run(sys, hm, fromScratch)
           call states_allocate_wfns(sys%st, gr%mesh)
-          call td_load(restart_load, gr, st, hm, td, ierr)
+          call td_load(restart_load, sys%parser, gr, st, hm, td, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to load TD states."
             call messages_fatal(1)
           end if
           call density_calc(st, gr, st%rho)
-          call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
+          call v_ks_calc(sys%ks, sys%parser, hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
           call forces_calculate(gr, geo, hm, st, sys%ks, t = iter*td%dt, dt = td%dt)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds")
           call print_header()
@@ -626,7 +626,7 @@ contains
       if (.not. fromscratch) then
         call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
         if(ierr == 0) &
-          call td_load(restart, gr, st, hm, td, ierr)
+          call td_load(restart, sys%parser, gr, st, hm, td, ierr)
         if(ierr /= 0) then
           fromScratch = .true.
           td%iter = 0
@@ -647,7 +647,7 @@ contains
         call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
 
         if(.not. st%only_userdef_istates) then
-          if(ierr == 0) call states_load(restart, st, gr, ierr, label = ": gs")
+          if(ierr == 0) call states_load(restart, sys%parser, st, gr, ierr, label = ": gs")
           if (ierr /= 0) then
             message(1) = 'Unable to read ground-state wavefunctions.'
             call messages_fatal(1)
@@ -657,9 +657,9 @@ contains
         ! check if we should deploy user-defined wavefunctions.
         ! according to the settings in the input file the routine
         ! overwrites orbitals that were read from restart/gs
-        if(parse_is_defined('UserDefinedStates')) call states_read_user_def_orbitals(gr%mesh, st)
+        if(parse_is_defined(sys%parser, 'UserDefinedStates')) call states_read_user_def_orbitals(gr%mesh, st)
 
-        call transform_states(st, restart, gr)
+        call transform_states(st, sys%parser, restart, gr)
         call restart_end(restart)
       end if
 
@@ -696,6 +696,10 @@ contains
         if(family_is_mgga(sys%ks%xc_family)) then
           call messages_not_implemented('TDFreezeOrbitals with MGGAs')
         end if
+
+        if(hm%lda_u_level /= DFT_U_NONE) then
+          call messages_not_implemented('TDFreezeOrbitals with DFT+U')
+        end if
       end if
 
 
@@ -707,19 +711,19 @@ contains
         write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
           ' orbitals have been frozen.', st%nst, ' will be propagated.'
         call messages_info(1)
-        call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
+        call v_ks_calc(sys%ks, sys%parser, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
       elseif(freeze_orbitals < 0) then
         ! This means SAE approximation. We calculate the Hxc first, then freeze all
         ! orbitals minus one.
         write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
         call messages_info(1)
-        call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
+        call v_ks_calc(sys%ks, sys%parser, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
         call states_freeze_orbitals(st, gr, sys%mc, n = st%nst-1)
         call v_ks_freeze_hxc(sys%ks)
         call density_calc(st, gr, st%rho)
       else
         ! Normal run.
-        call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
+        call v_ks_calc(sys%ks, sys%parser, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
       end if
 
       !%Variable TDFreezeHXC
@@ -807,7 +811,7 @@ contains
     subroutine td_run_zero_iter()
       PUSH_SUB(td_run.td_run_zero_iter)
 
-      call td_write_iter(write_handler, sys%outp, gr, st, hm, geo, hm%ep%kick, td%dt, sys%ks, 0)
+      call td_write_iter(write_handler, sys%parser, sys%outp, gr, st, hm, geo, hm%ep%kick, td%dt, sys%ks, 0)
 
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
@@ -822,7 +826,7 @@ contains
       call propagator_run_zero_iter(hm, gr, td%tr)
       if (sys%outp%output_interval > 0) then
         call td_write_data(write_handler, gr, st, hm, sys%ks, sys%outp, geo, 0)
-        call td_write_output(write_handler, gr, st, hm, sys%ks, sys%outp, geo, 0)
+        call td_write_output(write_handler, sys%parser, gr, st, hm, sys%ks, sys%outp, geo, 0)
       end if
 
       POP_SUB(td_run.td_run_zero_iter)
@@ -873,8 +877,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine transform_states(st, restart, gr, prefix)
+  subroutine transform_states(st, parser, restart, gr, prefix)
     type(states_t),             intent(inout) :: st
+    type(parser_t),             intent(in)    :: parser
     type(restart_t),            intent(inout) :: restart
     type(grid_t),               intent(in)    :: gr
     character(len=*), optional, intent(in)    :: prefix
@@ -914,7 +919,7 @@ contains
     !% ignored for real wavefunctions.
     !% Note: This variable cannot be used when parallel in states.
     !%End
-    if(parse_is_defined(trim(block_name))) then
+    if(parse_is_defined(parser, trim(block_name))) then
       if(parse_block(trim(block_name), blk) == 0) then
         if(st%parallel_in_states) &
           call messages_not_implemented(trim(block_name) // " parallel in states")
@@ -923,7 +928,7 @@ contains
           call messages_fatal(1)
         end if
         call states_copy(stin, st, exclude_wfns = .true.)
-        call states_look_and_load(restart, stin, gr)
+        call states_look_and_load(restart, parser, stin, gr)
 
         ! FIXME: rotation matrix should be R_TYPE
         SAFE_ALLOCATE(rotation_matrix(1:stin%nst, 1:stin%nst))
@@ -1032,8 +1037,9 @@ contains
   end subroutine td_dump
 
   ! ---------------------------------------------------------
-  subroutine td_load(restart, gr, st, hm, td, ierr)
+  subroutine td_load(restart, parser, gr, st, hm, td, ierr)
     type(restart_t),     intent(in)    :: restart
+    type(parser_t),      intent(in)    :: parser
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(inout) :: hm
@@ -1057,7 +1063,7 @@ contains
     end if
 
     ! Read states
-    call states_load(restart, st, gr, err, iter=td%iter, label = ": td")
+    call states_load(restart, parser, st, gr, err, iter=td%iter, label = ": td")
     if (err /= 0) then
       ierr = ierr + 1
     end if

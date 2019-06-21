@@ -71,8 +71,9 @@ module preconditioners_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine preconditioner_init(this, gr)
+  subroutine preconditioner_init(this, parser, gr)
     type(preconditioner_t), intent(out)    :: this
+    type(parser_t),         intent(in)     :: parser
     type(grid_t),           intent(in)     :: gr
 
     FLOAT :: alpha, default_alpha
@@ -111,8 +112,7 @@ contains
     end if
 
     call parse_variable('Preconditioner', default, this%which)
-    if(.not.varinfo_valid_option('Preconditioner', this%which)) &
-      call messages_input_error('Preconditioner')
+    if(.not.varinfo_valid_option('Preconditioner', this%which)) call messages_input_error('Preconditioner')
     call messages_print_var_option(stdout, 'Preconditioner', this%which)
 
     select case(this%which)
@@ -136,6 +136,9 @@ contains
       !% If you observe that the first eigenvectors are not converging
       !% properly, especially for periodic systems, you should
       !% increment this value.
+      !%
+      !% The allowed range for this parameter is between 0.5 and 1.0.
+      !% For other values, the SCF may converge to wrong results.
       !%End
       default_alpha = CNST(0.5)
       if(simul_box_is_periodic(gr%sb)) default_alpha = CNST(0.6)
@@ -143,6 +146,11 @@ contains
       call parse_variable('PreconditionerFilterFactor', default_alpha, alpha)
 
       call messages_print_var_value(stdout, 'PreconditionerFilterFactor', alpha)
+
+      ! check for correct interval of alpha
+      if (alpha < CNST(0.5) .or. alpha > CNST(1.0)) then
+        call messages_input_error('PreconditionerFilterFactor')
+      end if
 
       ns = this%op%stencil%size
 
@@ -247,11 +255,12 @@ contains
   end function preconditioner_is_multigrid
 
   ! ---------------------------------------------------------
-  subroutine preconditioner_obsolete_variables(old_prefix, new_prefix)
+  subroutine preconditioner_obsolete_variables(parser, old_prefix, new_prefix)
+    type(parser_t),      intent(in)    :: parser
     character(len=*),    intent(in)    :: old_prefix
     character(len=*),    intent(in)    :: new_prefix
 
-    call messages_obsolete_variable(trim(old_prefix)//'Preconditioner', trim(new_prefix)//'Preconditioner')
+    call messages_obsolete_variable(parser, trim(old_prefix)//'Preconditioner', trim(new_prefix)//'Preconditioner')
   end subroutine preconditioner_obsolete_variables
 
 #include "undef.F90"

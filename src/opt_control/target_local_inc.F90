@@ -19,8 +19,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_local(gr, tg, td)
+  subroutine target_init_local(gr, parser, tg, td)
     type(grid_t),   intent(in)    :: gr
+    type(parser_t), intent(in)    :: parser
     type(target_t), intent(inout) :: tg
     type(td_t),     intent(in)    :: td
 
@@ -40,7 +41,7 @@
     !% that defines the target. This should be done by defining it through a string, using 
     !% the variable <tt>OCTLocalTarget</tt>.
     !%End
-    if(parse_is_defined('OCTLocalTarget')) then
+    if(parse_is_defined(parser, 'OCTLocalTarget')) then
       SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
       tg%rho = M_ZERO
       call parse_variable('OCTLocalTarget', "0", expression)

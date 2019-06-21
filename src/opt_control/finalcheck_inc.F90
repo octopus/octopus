@@ -59,7 +59,7 @@
     call messages_info(4)
     call messages_print_stress(stdout)
 
-    call output_states(psi, sys%gr, sys%geo, hm, OCT_DIR//'final', sys%outp)
+    call output_states(psi, sys%parser, sys%gr, sys%geo, hm, OCT_DIR//'final', sys%outp)
 
     nullify(par)
     call states_end(psi)

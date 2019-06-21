@@ -34,6 +34,7 @@ module propagator_rk_oct_m
   use messages_oct_m
   use oct_exchange_oct_m
   use opt_control_state_oct_m
+  use parser_oct_m
   use pert_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
@@ -67,8 +68,9 @@ module propagator_rk_oct_m
   
 contains
   
-  subroutine td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi)
+  subroutine td_explicit_runge_kutta4(ks, parser, hm, gr, st, time, dt, ions, geo, qcchi)
     type(v_ks_t), target,            intent(inout) :: ks
+    type(parser_t),                  intent(in)    :: parser
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
@@ -357,7 +359,7 @@ contains
       end if
       if(.not.oct_exchange_enabled(hm%oct_exchange)) then
         call density_calc(stphi, gr, stphi%rho)
-        call v_ks_calc(ks, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), time = tau)
+        call v_ks_calc(ks, parser, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), time = tau)
       else
         call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = tau)
       end if
@@ -431,7 +433,7 @@ contains
 
             do iatom = 1, geo%natoms
               do idir = 1, gr%sb%dim
-                call pert_init(pert, PERTURBATION_IONIC, gr, geo)
+                call pert_init(pert, parser, PERTURBATION_IONIC, gr, geo)
                 call pert_setup_atom(pert, iatom)
                 call pert_setup_dir(pert, idir)
                 call zpert_apply(pert, gr, geo, hm, ik, psi(:, :), dvpsi(:, :, idir))
@@ -482,8 +484,9 @@ contains
   end subroutine td_explicit_runge_kutta4
 
 
-  subroutine td_runge_kutta2(ks, hm, gr, st, tr, time, dt, ions, geo)
+  subroutine td_runge_kutta2(ks, parser, hm, gr, st, tr, time, dt, ions, geo)
     type(v_ks_t), target,            intent(inout) :: ks
+    type(parser_t),                  intent(in)    :: parser
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
@@ -594,7 +597,7 @@ contains
           end do
         end do
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
+        call v_ks_calc(ks, parser, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
       end if
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
@@ -695,8 +698,9 @@ contains
   end subroutine td_runge_kutta2
 
 
-  subroutine td_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo)
+  subroutine td_runge_kutta4(ks, parser, hm, gr, st, tr, time, dt, ions, geo)
     type(v_ks_t), target,            intent(inout) :: ks
+    type(parser_t),                  intent(in)    :: parser    
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
@@ -796,7 +800,7 @@ contains
         end do
       end do
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
+      call v_ks_calc(ks, parser, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
         call ion_dynamics_propagate(ions, gr%sb, geo, time - dt + c(1)*dt, c(1)*dt)
@@ -833,7 +837,7 @@ contains
         end do
       end do
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
+      call v_ks_calc(ks, parser, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
         call ion_dynamics_propagate(ions, gr%sb, geo, time - dt + c(2)*dt, c(2)*dt)

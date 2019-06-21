@@ -192,6 +192,7 @@ contains
     integer :: ns, iq, is, ikpoint
     FLOAT   :: kr, kpoint(1:MAX_DIM)
     integer :: ndim
+    FLOAT, allocatable :: diff(:,:) 
 
     PUSH_SUB(projector_init_phases)
 
@@ -201,6 +202,11 @@ contains
     if(.not. associated(this%phase) .and. ns > 0) then
       SAFE_ALLOCATE(this%phase(1:ns, std%kpt%start:std%kpt%end))
     end if
+
+    SAFE_ALLOCATE(diff(1:ndim, 1:ns))
+    do is = 1, ns
+      diff(1:ndim, is) = this%sphere%x(is, 1:ndim) - this%sphere%mesh%x(this%sphere%map(is), 1:ndim)
+    end do
 
     do iq = std%kpt%start, std%kpt%end
       ikpoint = states_dim_get_kpoint_index(std, iq)
@@ -215,11 +221,10 @@ contains
         ! this is only the correction to the global phase, that can
         ! appear if the sphere crossed the boundary of the cell.
         
-        kr = sum(kpoint(1:ndim)*(this%sphere%x(is, 1:ndim) - this%sphere%mesh%x(this%sphere%map(is), 1:ndim)))
+        kr = sum(kpoint(1:ndim)*diff(1:ndim, is))
 
         if(present(vec_pot)) then
-          if(allocated(vec_pot)) kr = kr + &
-            sum(vec_pot(1:ndim)*(this%sphere%x(is, 1:ndim)- this%sphere%mesh%x(this%sphere%map(is), 1:ndim)))
+          if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*diff(1:ndim, is))
         end if
 
         if(present(vec_pot_var)) then
@@ -230,6 +235,8 @@ contains
       end do
 
     end do
+
+    SAFE_DEALLOCATE_A(diff)
 
     POP_SUB(projector_init_phases)
 

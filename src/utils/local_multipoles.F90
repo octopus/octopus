@@ -69,13 +69,15 @@ program oct_local_multipoles
   type(simul_box_t)     :: sb
   integer, parameter    :: BADER = 512
   FLOAT                 :: BaderThreshold
-
+  type(parser_t)        :: parser
 
   ! Initialize stuff
   call global_init(is_serial = .false.)
   call calc_mode_par_init()
 
-  call messages_init()
+  call parser_init(parser)
+  
+  call messages_init(parser)
 
   call io_init()
   call profiling_init()
@@ -86,13 +88,13 @@ program oct_local_multipoles
     
   call messages_experimental("oct-local_multipoles utility")
 
-  call unit_system_init()
-  call restart_module_init()
+  call unit_system_init(parser)
+  call restart_module_init(parser)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  call system_init(sys)
-  call simul_box_init(sb, sys%geo, sys%space)
-  call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
+  call system_init(sys, parser)
+  call simul_box_init(sb, sys%parser, sys%geo, sys%space)
+  call hamiltonian_init(hm, sys%parser, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
              family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
 
   call local_domains()
@@ -105,6 +107,7 @@ program oct_local_multipoles
   call io_end()
   call print_date("Calculation ended on ")
   call messages_end()
+  call parser_end(parser)
   call global_end()
 
 contains
@@ -315,8 +318,8 @@ contains
       call messages_experimental('Bader volumes in oct-local_multipoles')
     end if
 
-    call kick_init(kick,  sys%st%d%ispin, sys%gr%mesh%sb%dim, sys%gr%mesh%sb%periodic_dim )
-    call local_write_init(local%writ, local%nd, local%lab, 0, dt)
+    call kick_init(kick, sys%parser, sys%st%d%ispin, sys%gr%mesh%sb%dim, sys%gr%mesh%sb%periodic_dim )
+    call local_write_init(local%writ, sys%parser, local%nd, local%lab, 0, dt)
 
     !TODO: initialize hamiltonian if needed: check for LDOuput = energy or potential, using local_write_check_hm(local%writ)
 
@@ -375,12 +378,12 @@ contains
 
       ! Look for the mesh points inside local domains
       if(iter == l_start .and. .not.ldrestart) then
-        call local_inside_domain(local, sys%st%rho(:,1))
+        call local_inside_domain(local, sys%parser, sys%st%rho(:,1))
       else
-        if (ldupdate) call local_inside_domain(local, sys%st%rho(:,1))
+        if (ldupdate) call local_inside_domain(local, sys%parser, sys%st%rho(:,1))
       end if
 
-      call local_write_iter(local%writ, local%nd, local%lab, local%ions_inside, local%inside, local%dcm, & 
+      call local_write_iter(local%writ, sys%parser, local%nd, local%lab, local%ions_inside, local%inside, local%dcm, & 
                               sys%gr, sys%st, hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
@@ -703,8 +706,9 @@ contains
     POP_SUB(local_restart)
   end subroutine local_restart
   ! ---------------------------------------------------------
-  subroutine local_inside_domain(lcl, ff)
+  subroutine local_inside_domain(lcl, parser, ff)
     type(local_domain_t),   intent(inout) :: lcl
+    type(parser_t),         intent(in)    :: parser
     FLOAT,                  intent(in)    :: ff(:)
     
     integer(8)          :: how
@@ -740,7 +744,7 @@ contains
       call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%lab, lcl%dshape, lcl%inside) 
 
       if (extra_write) then
-        call messages_obsolete_variable('LDOutputHow', 'LDOutputFormat')
+        call messages_obsolete_variable(parser, 'LDOutputHow', 'LDOutputFormat')
         call parse_variable('LDOutputFormat', 0, how)
         if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
           call messages_input_error('LDOutputFormat')

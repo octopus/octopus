@@ -126,8 +126,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_init(this, mesh, st, hm, save_iter, max_iter)
+  subroutine pes_flux_init(this, parser, mesh, st, hm, save_iter, max_iter)
     type(pes_flux_t),    intent(inout) :: this
+    type(parser_t),      intent(in)    :: parser
     type(mesh_t),        intent(in)    :: mesh
     type(states_t),      intent(in)    :: st
     type(hamiltonian_t), intent(in)    :: hm
@@ -307,7 +308,7 @@ contains
       !%Description
       !% The radius of the sphere, if <tt>PES_Flux_Shape == sph</tt>.
       !%End
-      if(parse_is_defined('PES_Flux_Radius')) then
+      if(parse_is_defined(parser, 'PES_Flux_Radius')) then
         call parse_variable('PES_Flux_Radius', M_ZERO, this%radius)
         if(this%radius <= M_ZERO) call messages_input_error('PES_Flux_Radius')
         call messages_print_var_value(stdout, 'PES_Flux_Radius', this%radius)
@@ -411,7 +412,7 @@ contains
     end if
 
     ! Generate the reciprocal space mesh grid
-    call pes_flux_reciprocal_mesh_gen(this, mesh%sb, st, mesh%mpi_grp%comm)
+    call pes_flux_reciprocal_mesh_gen(this, parser, mesh%sb, st, mesh%mpi_grp%comm)
 
     ! -----------------------------------------------------------------
     ! Options for time integration 
@@ -537,8 +538,9 @@ contains
   end subroutine pes_flux_end
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_reciprocal_mesh_gen(this, sb, st, comm, post)
+  subroutine pes_flux_reciprocal_mesh_gen(this, parser, sb, st, comm, post)
     type(pes_flux_t),  intent(inout) :: this
+    type(parser_t),    intent(in)    :: parser
     type(simul_box_t), intent(in)    :: sb
     type(states_t),    intent(in)    :: st
     integer,           intent(in)    :: comm
