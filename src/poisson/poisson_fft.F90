@@ -222,13 +222,13 @@ contains
     ! nfft/2 nor -nfft/2 should be a valid G-vector component.
     do iz = 1, cube%fs_n_global(3)
       ixx(3) = pad_feq(iz, db(3), .true.)
-      if(2 * ixx(3) == db(3)) cycle
+    !  if(2 * ixx(3) == db(3)) cycle
       do iy = 1, cube%fs_n_global(2)
         ixx(2) = pad_feq(iy, db(2), .true.)
-        if(2 * ixx(2) == db(2)) cycle
+    !    if(2 * ixx(2) == db(2)) cycle
         do ix = 1, cube%fs_n_global(1)
           ixx(1) = pad_feq(ix, db(1), .true.)
-          if(2 * ixx(1) == db(1)) cycle
+    !      if(2 * ixx(1) == db(1)) cycle
 
           call poisson_fft_gg_transform(ixx, temp, mesh%sb, gg, modg2)
           this%Gvec(1:3, ix, iy, iz) = gg(1:3) 
@@ -294,15 +294,15 @@ contains
     ! nfft/2 nor -nfft/2 should be a valid G-vector component.
     do iz = 1, cube%fs_n_global(3)
       ixx(3) = pad_feq(iz, db(3), .true.)
-      if(2 * ixx(3) == db(3)) cycle
+    !  if(2 * ixx(3) == db(3)) cycle
       boundaries1(1:2,iz) = 0
       do iy = 1, cube%fs_n_global(2)
         ixx(2) = pad_feq(iy, db(2), .true.)
-        if(2 * ixx(2) == db(2)) cycle
+    !    if(2 * ixx(2) == db(2)) cycle
         boundaries2(1:2,iy,iz) = 0 
         do ix = 1, cube%fs_n_global(1)
           ixx(1) = pad_feq(ix, db(1), .true.)
-          if(2 * ixx(1) == db(1)) cycle
+    !      if(2 * ixx(1) == db(1)) cycle
 
           if(.not. this%precalculated_g) then
             call poisson_fft_gg_transform(ixx, temp, mesh%sb, gg, modg2, this%qq)
@@ -311,7 +311,7 @@ contains
           end if
 
           !We only keep closed shells
-          if(M_HALF*modg2 > ekin_cutoff) cycle
+    !      if(M_HALF*modg2 > ekin_cutoff) cycle
 
           !This tests are done after the check on the cutoff
           if( boundaries2(1,iy,iz) == 0)  boundaries2(1,iy,iz) = ix
