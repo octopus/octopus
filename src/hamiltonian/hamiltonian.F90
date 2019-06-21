@@ -542,8 +542,8 @@ contains
       !keep a copy of the phase with only the k-point content
       !Note: this should depend on hm%F%boson==OPTION__FLOQUETBOSON__QED_PHOTON but its not initialized here
       SAFE_ALLOCATE(hm%hm_base%phase_only_k(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
-      hm%hm_base%phase_only_k(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end) = &
-             hm%hm_base%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end)
+      hm%hm_base%phase_only_k(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end) =  &
+            hm%hm_base%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end)
 
       if(accel_is_enabled()) then
         call accel_create_buffer(hm%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, gr%mesh%np_part*hm%d%kpt%nlocal)
