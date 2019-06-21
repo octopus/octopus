@@ -464,8 +464,8 @@ subroutine X(compute_ACBNO_U)(this, ios)
         !sum_{alpha} sum_{m,mp/=m} n^alpha_{mmp}n^alpha_{mpm}
         if(imp/=im) then
           do ispin1 = 1, this%spin_channels
-            tmpJ = tmpJ + R_REAL(this%X(n)(im,imp,ispin1,ios)*this%X(n)(imp,im,ispin1,ios))
-            tmpU = tmpU + R_REAL(this%X(n)(im,imp,ispin1,ios)*this%X(n)(imp,im,ispin1,ios))
+            tmpJ = tmpJ - R_REAL(this%X(n)(im,imp,ispin1,ios)*this%X(n)(imp,im,ispin1,ios))
+            tmpU = tmpU - R_REAL(this%X(n)(im,imp,ispin1,ios)*this%X(n)(imp,im,ispin1,ios))
           end do
           ASSERT(this%nspins==this%spin_channels)!Spinors not yet implemented
         end if
@@ -481,7 +481,8 @@ subroutine X(compute_ACBNO_U)(this, ios)
       !intraorbital term, which cancels out when one computes U-J.
       !This term has to be remove from both U and J for these two terms to be analyzed separately.
       do ispin1 = 1, this%spin_channels
-        correction = correction + R_REAL(this%X(n_alt)(im,im,ispin1,ios))**2*this%coulomb(im,im,im,im,ios)
+        correction = correction + R_REAL(this%X(n_alt)(im,im,ispin1,ios)*this%X(n_alt)(im,im,ispin1,ios)) &
+                                           *this%coulomb(im,im,im,im,ios)
       end do
     end if
 
@@ -580,8 +581,8 @@ subroutine X(compute_ACBNO_U_restricted)(this)
           !Rotationally invariance term
           !sum_{m,mp/=m} n^alpha_{mmp}n^alpha_{mpm}
           if(imp/=im) then
-            denomJ = denomJ + R_REAL(this%X(n)(im,imp,1,ios)*this%X(n)(imp,im,1,ios))
-            denomU = denomU + R_REAL(this%X(n)(im,imp,1,ios)*this%X(n)(imp,im,1,ios))
+            denomJ = denomJ - R_REAL(this%X(n)(im,imp,1,ios)*this%X(n)(imp,im,1,ios))
+            denomU = denomU - R_REAL(this%X(n)(im,imp,1,ios)*this%X(n)(imp,im,1,ios))
           end if
         end if
       end do
@@ -590,7 +591,8 @@ subroutine X(compute_ACBNO_U_restricted)(this)
         !The U and J of the original paper are ill defined, as they both contains the same 
         !intraorbital term, which cancels out when one computes U-J.
         !This term has to be remove from both U and J for these two terms to be analyzed separately.
-        correction = correction + R_REAL(this%X(n_alt)(im,im,1,ios))**2*this%coulomb(im,im,im,im,ios)
+        correction = correction + R_REAL(this%X(n_alt)(im,im,1,ios)*this%X(n_alt)(im,im,1,ios)) &
+                                      *this%coulomb(im,im,im,im,ios)
       end if
 
       end do
@@ -601,11 +603,11 @@ subroutine X(compute_ACBNO_U_restricted)(this)
  
     else !In the case of s orbitals, the expression is different
       ! P_{mmp}P_{mpp,mppp}(m,mp|mpp,mppp)  
-      numU = R_REAL(this%X(n_alt)(1,1,1,ios))**2*this%coulomb(1,1,1,1,ios)
+      numU = R_REAL(this%X(n_alt)(1,1,1,ios)*this%X(n_alt)(1,1,1,ios))*this%coulomb(1,1,1,1,ios)
 
       ! We compute the term
       ! sum_{alpha,beta} sum_{m,mp} N^alpha_{m}N^beta_{mp}
-      denomU = R_REAL(this%X(n)(1,1,1,ios))**2
+      denomU = R_REAL(this%X(n)(1,1,1,ios)*this%X(n)(1,1,1,ios))
 
       this%orbsets(ios)%Ueff = numU/denomU
       this%orbsets(ios)%Ubar = numU/denomU
