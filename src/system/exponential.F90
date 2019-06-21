@@ -806,20 +806,20 @@ contains
       PUSH_SUB(exponential_apply_batch.lanczos_batch)
       call profiling_in(prof, "EXP_LANCZOS_BATCH")
 
-      if(hamiltonian_apply_packed(hm, der%mesh)) then
-        call batch_pack(psib)
-      end if
-
       SAFE_ALLOCATE(beta(1:psib%nst))
       SAFE_ALLOCATE(res(1:psib%nst))
       SAFE_ALLOCATE(norm(1:psib%nst))
       call mesh_batch_nrm2(der%mesh, psib, beta) 
 
       ! If we have a null vector, no need to compute the action of the exponential.
-      if(all(abs(beta) < CNST(1.0e-12))) then
+      if(all(abs(beta) <= CNST(1.0e-12))) then
         call profiling_out(prof)
         POP_SUB(exponential_apply_batch.lanczos_batch)
         return
+      end if
+
+      if(hamiltonian_apply_packed(hm, der%mesh)) then
+        call batch_pack(psib)
       end if
 
       SAFE_ALLOCATE(vb(1:te%exp_order+1))
@@ -857,12 +857,12 @@ contains
           res(ii) = abs(hamilt(iter + 1, iter, ii)*abs(expo(iter, 1, ii)))
         end do !ii
 
-        if(all(abs(hamilt(iter + 1, iter, :)) <= CNST(1.0e4)*M_EPSILON)) exit ! "Happy breakdown"
+        if(all(abs(hamilt(iter + 1, iter, :)) < CNST(1.0e4)*M_EPSILON)) exit ! "Happy breakdown"
         !We normalize only if the norm is non-zero
         ! see http://www.netlib.org/utk/people/JackDongarra/etemplates/node216.html#alg:arn0 
-        norm = M_ZERO
+        norm = M_ONE
         do ist = 1, psib%nst
-          if( abs(hamilt(iter + 1, iter, ist)) > CNST(1.0e4)*M_EPSILON ) then
+          if( abs(hamilt(iter + 1, iter, ist)) >= CNST(1.0e4)*M_EPSILON ) then
             norm(ist) = M_ONE / abs(hamilt(iter + 1, iter, ist))
           end if
         end do
@@ -879,6 +879,7 @@ contains
 
       ! zpsi = nrm * V * expo(1:iter, 1) = nrm * V * expo * V^(T) * zpsi
       call batch_scal(der%mesh%np, expo(1,1,1:psib%nst), psib, a_full = .false.)
+      !TODO: We should have a routine batch_gemv fro improve performances
       do ii = 2, iter
         call batch_axpy(der%mesh%np, beta(1:psib%nst)*expo(ii,1,1:psib%nst), vb(ii), psib, a_full = .false.)
         !In order to apply the two exponentials, we mush store the eigenvales and eigenvectors given by zlalg_exp

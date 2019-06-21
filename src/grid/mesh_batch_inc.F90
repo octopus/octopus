@@ -328,7 +328,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   logical, optional, intent(in)    :: cproduct
 
   integer :: ist, indb, idim, ip, status
-  logical :: reduce_, cproduct_
+  logical :: cproduct_
   type(profile_t), save :: prof, profcomm
   R_TYPE, allocatable :: tmp(:), cltmp(:, :)
   type(accel_mem_t)  :: dot_buffer
@@ -336,9 +336,6 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   PUSH_SUB(X(mesh_batch_dotp_vector))
   call profiling_in(prof, "DOTPV_BATCH")
 
-  reduce_ = .true.
-  if(present(reduce)) reduce_ = reduce
-  
   cproduct_ = optional_default(cproduct, .false.)
   
   ASSERT(aa%nst == bb%nst)
@@ -436,7 +433,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
 
   end select
 
-  if(mesh%parallel_in_domains .and. reduce_) then
+  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(profcomm, "DOTPV_BATCH_REDUCE")
     call comm_allreduce(mesh%mpi_grp%comm, dot, dim = aa%nst)
     call profiling_out(profcomm)
@@ -735,7 +732,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
       nrm2(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
-         nrm2(ist) = hypot(nrm2(ist), scal(indb)*sqrt(mesh%volume_element*ssq(indb)))
+        nrm2(ist) = hypot(nrm2(ist), scal(indb)*sqrt(mesh%volume_element*ssq(indb)))
       end do
     end do
 
@@ -825,16 +822,18 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
     end if
     ss = R_TOTYPE(M_ZERO)
 
+    !TODO: We should reuse phib here for improved performances
     do ist = 1, nst
       call X(mesh_batch_dotp_vector)(mesh, psib(ist), phib, ss(1:phib%nst,ist), reduce = .false.) 
     end do
 
     if(mesh%parallel_in_domains) then
       call profiling_in(reduce_prof, "BATCH_GRAM_SCHMIDT_REDUCE")
-      call comm_allreduce(mesh%mpi_grp%comm, ss)
+      call comm_allreduce(mesh%mpi_grp%comm, ss, dim = (/phib%nst, nst/))
       call profiling_out(reduce_prof)
     end if
-
+   
+    !TODO: We should have a routine batch_gemv for improved performances
     do ist = 1, nst
       call batch_axpy(mesh%np, -ss(1:phib%nst,ist), psib(ist), phib, a_full = .false.)
     end do
@@ -864,6 +863,7 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
 
   if(present(norm) .or. normalize_) then
     SAFE_ALLOCATE(nrm2(1:phib%nst))
+    !Here we do not call mesh_batch_nrm2 which is too slow
     call X(mesh_batch_dotp_vector)(mesh, phib, phib, nrm2)
     if(present(norm)) then
       norm(1:phib%nst) = sqrt(real(nrm2(1:phib%nst), REAL_PRECISION))
