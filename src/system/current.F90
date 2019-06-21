@@ -29,6 +29,7 @@ module current_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use hamiltonian_base_oct_m
+  use lalg_basic_oct_m
   use lda_u_oct_m
   use math_oct_m
   use mesh_oct_m
@@ -126,7 +127,7 @@ contains
     type(batch_t),       intent(in)    :: psib
     type(batch_t),       intent(in)    :: gpsib(:)
     FLOAT,               intent(inout) :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
-    FLOAT, pointer,      intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, kpt%start:kpt%end)
+    FLOAT, pointer,      intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np, 1:der%mesh%sb%dim, kpt%start:kpt%end)
 
     integer :: ist, idir, ii, ip, idim, wgsize
     CMPLX, allocatable :: psi(:, :), gpsi(:, :)
@@ -283,7 +284,7 @@ contains
 
     ! spin not implemented or tested
     ASSERT(all(ubound(current) == (/der%mesh%np_part, der%mesh%sb%dim, st%d%nspin/)))
-    ASSERT(all(ubound(current_kpt) == (/der%mesh%np_part, der%mesh%sb%dim, st%d%kpt%end/)))
+    ASSERT(all(ubound(current_kpt) == (/der%mesh%np, der%mesh%sb%dim, st%d%kpt%end/)))
     ASSERT(all(lbound(current_kpt) == (/1, 1, st%d%kpt%start/)))
 
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
@@ -515,18 +516,13 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         ispin = states_dim_get_spin_index(st%d, ik)
         do idir = 1, der%mesh%sb%dim
-          !$omp parallel do
-          do ip = 1, der%mesh%np
-            current(ip, idir, ispin) = current(ip, idir, ispin) + current_kpt(ip, idir, ik)
-          end do
-          !$omp end parallel do
+          call lalg_axpy(der%mesh%np, M_ONE, current_kpt(:, idir, ik), current(1:der%mesh%np, idir, ispin))
         end do
       end do
     end if
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      ! TODO: this could take dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) to reduce the amount of data copied
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, current) 
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, current, dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) 
     end if
 
     if(st%symmetrize_density) then
