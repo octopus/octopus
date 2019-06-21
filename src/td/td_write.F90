@@ -153,8 +153,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_init(writ, outp, gr, st, hm, geo, ks, ions_move, with_gauge_field, kick, iter, max_iter, dt, mc)
+  subroutine td_write_init(writ, parser, outp, gr, st, hm, geo, ks, ions_move, with_gauge_field, kick, iter, max_iter, dt, mc)
     type(td_write_t), target, intent(out)   :: writ
+    type(parser_t),           intent(in)    :: parser
     type(output_t),           intent(out)   :: outp
     type(grid_t),             intent(in)    :: gr
     type(states_t),           intent(inout) :: st
@@ -335,7 +336,7 @@ contains
       message(2) = '(Must be TDMultipoleLmax >= 0 )'
       call messages_fatal(2)
     end if
-    call messages_obsolete_variable('TDDipoleLmax', 'TDMultipoleLmax')
+    call messages_obsolete_variable(parser, 'TDDipoleLmax', 'TDMultipoleLmax')
 
     ! Compatibility test
     if( (writ%out(OUT_ACC)%write) .and. ions_move ) then
@@ -433,7 +434,7 @@ contains
         
       end if
  
-      call states_load(restart_gs, writ%gs_st, gr, ierr, label = ': gs for TDOutput')
+      call states_load(restart_gs, parser, writ%gs_st, gr, ierr, label = ': gs for TDOutput')
 
       if(ierr /= 0 .and. ierr /= (writ%gs_st%st_end-writ%gs_st%st_start+1)*writ%gs_st%d%nik &
                                       *writ%gs_st%d%dim*writ%gs_st%mpi_grp%size) then
@@ -647,7 +648,7 @@ contains
     
     if(writ%out(OUT_TOTAL_CURRENT)%write .or. writ%out(OUT_TOTAL_HEAT_CURRENT)%write) then
       call v_ks_calculate_current(ks, .true.)
-      call v_ks_calc(ks, hm, st, geo, calc_eigenval=.false., time = iter*dt)
+      call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval=.false., time = iter*dt)
     end if
 
     if(writ%out(OUT_PARTIAL_CHARGES)%write) then
@@ -658,10 +659,7 @@ contains
       call io_mkdir(outp%iter_dir)
     end if
 
-    if(outp%how == 0 .and. writ%out(OUT_N_EX)%write) then
-      call io_function_read_how(gr%sb, outp%how)
-    end if
-
+    if(outp%how == 0 .and. writ%out(OUT_N_EX)%write) call io_function_read_how(gr%sb, parser, outp%how)
 
     !%Variable TDOutputDFTU
     !%Type flag
@@ -737,8 +735,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_iter(writ, outp, gr, st, hm, geo, kick, dt,ks, iter)
+  subroutine td_write_iter(writ, parser, outp, gr, st, hm, geo, kick, dt,ks, iter)
     type(td_write_t),    intent(inout) :: writ !< Write object
+    type(parser_t),      intent(in)    :: parser
     type(output_t),      intent(in)    :: outp
     type(grid_t),        intent(in)    :: gr   !< The grid
     type(states_t),      intent(inout) :: st   !< State object
@@ -759,8 +758,7 @@ contains
     if(writ%out(OUT_FTCHD)%write) &
       call td_write_ftchd(writ%out(OUT_FTCHD)%handle, gr, st, kick, iter)
 
-    if(writ%out(OUT_ANGULAR)%write) &
-      call td_write_angular(writ%out(OUT_ANGULAR)%handle, gr, geo, hm, st, kick, iter)
+    if(writ%out(OUT_ANGULAR)%write) call td_write_angular(writ%out(OUT_ANGULAR)%handle, parser, gr, geo, hm, st, kick, iter)
 
     if(writ%out(OUT_SPIN)%write) &
       call td_write_spin(writ%out(OUT_SPIN)%handle, gr, st, iter)
@@ -877,8 +875,9 @@ contains
   end subroutine td_write_data
 
   ! ---------------------------------------------------------
-  subroutine td_write_output(writ, gr, st, hm, ks, outp, geo, iter, dt)
+  subroutine td_write_output(writ, parser, gr, st, hm, ks, outp, geo, iter, dt)
     type(td_write_t),     intent(inout) :: writ
+    type(parser_t),       intent(in)    :: parser
     type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
@@ -897,7 +896,7 @@ contains
     ! now write down the rest
     write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
 
-    call output_all(outp, gr, geo, st, hm, ks, filename)
+    call output_all(outp, parser, gr, geo, st, hm, ks, filename)
     if(present(dt)) then
       call output_scalar_pot(outp, gr, geo, hm, filename, iter*dt)
     else
@@ -1019,8 +1018,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_angular(out_angular, gr, geo, hm, st, kick, iter)
+  subroutine td_write_angular(out_angular, parser, gr, geo, hm, st, kick, iter)
     type(c_ptr),            intent(inout) :: out_angular
+    type(parser_t),         intent(in)    :: parser
     type(grid_t),           intent(in)    :: gr
     type(geometry_t),       intent(inout) :: geo
     type(hamiltonian_t),    intent(inout) :: hm
@@ -1035,7 +1035,7 @@ contains
 
     PUSH_SUB(td_write_angular)
 
-    call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
+    call pert_init(angular_momentum, parser, PERTURBATION_MAGNETIC, gr, geo)
 
     do idir = 1, 3
        call pert_setup_dir(angular_momentum, idir)

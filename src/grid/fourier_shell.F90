@@ -38,6 +38,7 @@ module fourier_shell_oct_m
        fourier_shell_end
 
   type fourier_shell_t
+    ! Components are public by default
     integer          :: ngvectors
     FLOAT            :: ekin_cutoff
     integer, pointer :: coords(:, :)

@@ -64,6 +64,7 @@ module pes_flux_oct_m
     pes_flux_map_from_states
 
   type pes_flux_t
+    private
     integer          :: nkpnts                         !< total number of k-points
     integer          :: nkpnts_start, nkpnts_end       !< start/end of index for k-points on the current node
     integer          :: nk
@@ -75,7 +76,7 @@ module pes_flux_oct_m
     FLOAT, pointer   :: kcoords_cub(:,:,:)             !< coordinates of k-points
     FLOAT, pointer   :: kcoords_sph(:,:,:)
 
-    integer          :: shape                          !< shape of the surface (= cube/sphere/planes)
+    integer, public  :: shape                          !< shape of the surface (= cube/sphere/planes)
     integer          :: nsrfcpnts                      !< total number of surface points
     integer          :: nsrfcpnts_start, nsrfcpnts_end !< for cubic surface: number of surface points on node
     FLOAT, pointer   :: srfcnrml(:,:)                  !< vectors normal to the surface (includes surface element)
@@ -103,9 +104,9 @@ module pes_flux_oct_m
     CMPLX, pointer   :: spctramp_cub(:,:,:,:)          !< spectral amplitude
     CMPLX, pointer   :: spctramp_sph(:,:,:,:,:)
 
-    integer          :: ll(3)                          !< the dimensions of a cubic mesh containing the momentum-space
+    integer, public  :: ll(3)                          !< the dimensions of a cubic mesh containing the momentum-space
                                                        !< mesh. Used when working with semi-periodic systems 
-    integer          :: ngpt                           !< Number of free Gpoints use to increase resoltion                        
+    integer, public  :: ngpt                           !< Number of free Gpoints use to increase resoltion                        
 
     logical          :: usememory                      !< whether conjgplanewf should be kept in memory
     logical          :: avoid_ab
@@ -125,8 +126,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_init(this, mesh, st, hm, save_iter, max_iter)
+  subroutine pes_flux_init(this, parser, mesh, st, hm, save_iter, max_iter)
     type(pes_flux_t),    intent(inout) :: this
+    type(parser_t),      intent(in)    :: parser
     type(mesh_t),        intent(in)    :: mesh
     type(states_t),      intent(in)    :: st
     type(hamiltonian_t), intent(in)    :: hm
@@ -306,7 +308,7 @@ contains
       !%Description
       !% The radius of the sphere, if <tt>PES_Flux_Shape == sph</tt>.
       !%End
-      if(parse_is_defined('PES_Flux_Radius')) then
+      if(parse_is_defined(parser, 'PES_Flux_Radius')) then
         call parse_variable('PES_Flux_Radius', M_ZERO, this%radius)
         if(this%radius <= M_ZERO) call messages_input_error('PES_Flux_Radius')
         call messages_print_var_value(stdout, 'PES_Flux_Radius', this%radius)
@@ -410,7 +412,7 @@ contains
     end if
 
     ! Generate the reciprocal space mesh grid
-    call pes_flux_reciprocal_mesh_gen(this, mesh%sb, st, mesh%mpi_grp%comm)
+    call pes_flux_reciprocal_mesh_gen(this, parser, mesh%sb, st, mesh%mpi_grp%comm)
 
     ! -----------------------------------------------------------------
     ! Options for time integration 
@@ -536,8 +538,9 @@ contains
   end subroutine pes_flux_end
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_reciprocal_mesh_gen(this, sb, st, comm, post)
+  subroutine pes_flux_reciprocal_mesh_gen(this, parser, sb, st, comm, post)
     type(pes_flux_t),  intent(inout) :: this
+    type(parser_t),    intent(in)    :: parser
     type(simul_box_t), intent(in)    :: sb
     type(states_t),    intent(in)    :: st
     integer,           intent(in)    :: comm

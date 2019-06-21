@@ -100,6 +100,8 @@ module hamiltonian_oct_m
     zoct_exchange_operator
 
   type hamiltonian_t
+    ! Components are public by default
+
     !> The Hamiltonian must know what are the "dimensions" of the spaces,
     !! in order to be able to operate on the states.
     type(states_dim_t)       :: d
@@ -128,16 +130,16 @@ module hamiltonian_oct_m
     type(pcm_t)  :: pcm        !< handles pcm variables
  
     !> absorbing boundaries
-    logical :: adjoint
+    logical, private :: adjoint
 
     !> Spectral range
     FLOAT :: spectral_middle_point
     FLOAT :: spectral_half_span
 
     !> Mass of the particle (in most cases, mass = 1, electron mass)
-    FLOAT :: mass
+    FLOAT, private :: mass
     !> anisotropic scaling factor for the mass: different along x,y,z etc...
-    FLOAT :: mass_scaling(MAX_DIM)
+    FLOAT, private :: mass_scaling(MAX_DIM)
 
     !> For the Hartree-Fock Hamiltonian, the Fock operator depends on the states.
     type(states_t), pointer :: hf_st
@@ -145,7 +147,7 @@ module hamiltonian_oct_m
     logical :: scdm_EXX
 
     !> There may be an "inhomogeneous", "source", or "forcing" term (useful for the OCT formalism)
-    logical :: inh_term
+    logical, private :: inh_term
     type(states_t) :: inh_st
 
     !> There may also be a exchange-like term, similar to the one necessary for time-dependent
@@ -155,7 +157,7 @@ module hamiltonian_oct_m
     type(scissor_t) :: scissor
 
     FLOAT :: current_time
-    logical :: apply_packed  !< This is initialized by the StatesPack variable.
+    logical, private :: apply_packed  !< This is initialized by the StatesPack variable.
     
     type(scdm_t)  :: scdm
 
@@ -163,7 +165,7 @@ module hamiltonian_oct_m
     type(lda_u_t) :: lda_u
     integer       :: lda_u_level
 
-    logical :: time_zero
+    logical, private :: time_zero
   end type hamiltonian_t
 
   integer, public, parameter :: &
@@ -183,8 +185,9 @@ module hamiltonian_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(hm, gr, geo, st, theory_level, xc_family, family_is_mgga_with_exc)
+  subroutine hamiltonian_init(hm, parser, gr, geo, st, theory_level, xc_family, family_is_mgga_with_exc)
     type(hamiltonian_t),                        intent(out)   :: hm
+    type(parser_t),                             intent(in)    :: parser
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
     type(states_t),                     target, intent(inout) :: st
@@ -233,8 +236,8 @@ contains
     !% State Phys.</i> <b>17</b>, 6031 (1984)]. This variable determines the strength
     !% of this perturbation, and has dimensions of energy times length.
     !%End
-    call parse_variable('RashbaSpinOrbitCoupling', M_ZERO, rashba_coupling, units_inp%energy * units_inp%length)
-    if(parse_is_defined('RashbaSpinOrbitCoupling')) then
+    call parse_variable('RashbaSpinOrbitCoupling', M_ZERO, rashba_coupling, units_inp%energy*units_inp%length)
+    if(parse_is_defined(parser, 'RashbaSpinOrbitCoupling')) then
       if(gr%sb%dim .ne. 2) then
         write(message(1),'(a)') 'Rashba spin-orbit coupling can only be used for two-dimensional systems.'
         call messages_fatal(1)
@@ -277,7 +280,7 @@ contains
 
     hm%geo => geo
     !Initialize external potential
-    call epot_init(hm%ep, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%xc_family)
+    call epot_init(hm%ep, parser, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%xc_family)
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, gr%sb)
@@ -293,9 +296,10 @@ contains
 
     !Static magnetic field requires complex wavefunctions
     !Static magnetic field or rashba spin-orbit interaction requires complex wavefunctions
-    if (associated(hm%ep%B_field) .or. &
-      gauge_field_is_applied(hm%ep%gfield) .or. &
-      parse_is_defined('RashbaSpinOrbitCoupling')) call states_set_complex(st)
+    if (associated(hm%ep%B_field) .or. gauge_field_is_applied(hm%ep%gfield) .or. &
+      parse_is_defined(parser, 'RashbaSpinOrbitCoupling')) then
+      call states_set_complex(st)
+    end if
 
     call parse_variable('CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField

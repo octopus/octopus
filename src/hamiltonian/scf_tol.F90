@@ -44,23 +44,25 @@ module scf_tol_oct_m
        scf_tol_obsolete_variables
 
   type scf_tol_t
-     integer           :: max_iter
+    private
+     integer, public   :: max_iter
      integer           :: scheme
-     FLOAT             :: conv_rel_dens
-     FLOAT             :: conv_abs_dens
+     FLOAT,   public   :: conv_rel_dens
+     FLOAT,   public   :: conv_abs_dens
      FLOAT             :: conv_threshold_use
      FLOAT             :: dynamic_tol_factor
      FLOAT             :: current_tol
      FLOAT             :: initial_tol
-     FLOAT             :: final_tol
+     FLOAT,   public   :: final_tol
      integer           :: iter_window
   end type scf_tol_t
 
 contains
 
   !-----------------------------------------------------------------
-  subroutine scf_tol_init(this, qtot, def_maximumiter, tol_scheme)
+  subroutine scf_tol_init(this, parser, qtot, def_maximumiter, tol_scheme)
     type(scf_tol_t),    intent(out) :: this
+    type(parser_t),     intent(in)  :: parser
     FLOAT,              intent(in)  :: qtot
     integer, optional,  intent(in)  :: def_maximumiter
     integer, optional,  intent(in)  :: tol_scheme
@@ -282,19 +284,20 @@ contains
 
   !-----------------------------------------------------------------
 
-  subroutine scf_tol_obsolete_variables(old_prefix, new_prefix)
+  subroutine scf_tol_obsolete_variables(parser, old_prefix, new_prefix)
+    type(parser_t),      intent(in)    :: parser
     character(len=*),    intent(in)    :: old_prefix
     character(len=*),    intent(in)    :: new_prefix
 
     PUSH_SUB(scf_tol_obsolete_variables)
 
-    call messages_obsolete_variable(trim(old_prefix)//'LRMaximumIter', trim(new_prefix)//'LRMaximumIter')
-    call messages_obsolete_variable(trim(old_prefix)//'LRConvAbsDens', trim(new_prefix)//'LRConvAbsDens')
-    call messages_obsolete_variable(trim(old_prefix)//'LRTolScheme', trim(new_prefix)//'LRTolScheme')
-    call messages_obsolete_variable(trim(old_prefix)//'LRTolInitTol', trim(new_prefix)//'LRTolInitTol')
-    call messages_obsolete_variable(trim(old_prefix)//'LRTolFinalTol', trim(new_prefix)//'LRTolFinalTol')
-    call messages_obsolete_variable(trim(old_prefix)//'LRTolAdaptiveFactor', trim(new_prefix)//'LRTolAdaptiveFactor')
-    call messages_obsolete_variable(trim(old_prefix)//'LRTolIterWindow', trim(new_prefix)//'LRTolIterWindow')
+    call messages_obsolete_variable(parser, trim(old_prefix)//'LRMaximumIter', trim(new_prefix)//'LRMaximumIter')
+    call messages_obsolete_variable(parser, trim(old_prefix)//'LRConvAbsDens', trim(new_prefix)//'LRConvAbsDens')
+    call messages_obsolete_variable(parser, trim(old_prefix)//'LRTolScheme', trim(new_prefix)//'LRTolScheme')
+    call messages_obsolete_variable(parser, trim(old_prefix)//'LRTolInitTol', trim(new_prefix)//'LRTolInitTol')
+    call messages_obsolete_variable(parser, trim(old_prefix)//'LRTolFinalTol', trim(new_prefix)//'LRTolFinalTol')
+    call messages_obsolete_variable(parser, trim(old_prefix)//'LRTolAdaptiveFactor', trim(new_prefix)//'LRTolAdaptiveFactor')
+    call messages_obsolete_variable(parser, trim(old_prefix)//'LRTolIterWindow', trim(new_prefix)//'LRTolIterWindow')
 
     POP_SUB(scf_tol_obsolete_variables)
   end subroutine scf_tol_obsolete_variables

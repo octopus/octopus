@@ -702,7 +702,7 @@ contains
     if (present(st_start)) then
       ! If we are doing unocc calculation, do not mess with the correct eigenvalues
       ! of the occupied states.
-      call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start))
+      call v_ks_calc(sys%ks, sys%parser, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start))
 
       ASSERT(st_start >= 1)
       if(st_start > sys%st%nst) then ! nothing to be done in LCAO
@@ -734,7 +734,7 @@ contains
       call messages_info(1)
 
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.false., calc_berry=.false.)
+      call v_ks_calc(sys%ks, sys%parser, hm, sys%st, sys%geo, calc_eigenval=.false., calc_berry=.false.)
       ! eigenvalues have nevertheless to be initialized to something
       sys%st%eigenval = M_ZERO
 
@@ -800,7 +800,7 @@ contains
       if(.not. lcao_done) then
         ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
         ! of the occupied states.
-        call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start)) ! get potentials
+        call v_ks_calc(sys%ks, sys%parser, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start)) ! get potentials
         if(.not. present(st_start)) then
           call states_fermi(sys%st, sys%gr%mesh) ! occupations
         end if

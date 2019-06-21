@@ -58,6 +58,7 @@ module poisson_fft_oct_m
        POISSON_FFT_KERNEL_HOCKNEY   =  5
 
   type poisson_fft_t
+    ! Components are public by default
     type(fourier_space_op_t) :: coulb  !< object for Fourier space operations
     integer                  :: kernel !< choice of kernel, one of options above
     FLOAT                    :: qq(MAX_DIM) !< q-point for exchange in periodic system

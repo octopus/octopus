@@ -98,7 +98,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, degen_t
           eff_mass_inv(idir1, idir2, ist, ik) = M_TWO * R_REAL(term)
 
           call pert_setup_dir(perturbation, idir1, idir2)
-          call X(pert_apply_order_2)(perturbation, sys%gr, sys%geo, hm, ik, psi, pertpsi2(1:mesh%np, 1:hm%d%dim))
+          call X(pert_apply_order_2)(perturbation, sys%parser, sys%gr, sys%geo, hm, ik, psi, pertpsi2(1:mesh%np, 1:hm%d%dim))
           eff_mass_inv(idir1, idir2, ist, ik) = &
             eff_mass_inv(idir1, idir2, ist, ik) - R_REAL(X(mf_dotp)(mesh, hm%d%dim, psi, pertpsi2))
 

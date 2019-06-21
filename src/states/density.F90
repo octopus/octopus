@@ -59,6 +59,7 @@ module density_oct_m
     zdensity_accumulate_grad
 
   type density_calc_t
+    private
     FLOAT,                pointer :: density(:, :)
     type(states_t),       pointer :: st
     type(grid_t),         pointer :: gr

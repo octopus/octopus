@@ -112,10 +112,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine read_coords_read(what, gf, space)
+  subroutine read_coords_read(what, gf, space, parser)
     character(len=*),       intent(in)    :: what
     type(read_coords_info), intent(inout) :: gf
     type(space_t),          intent(in)    :: space
+    type(parser_t),         intent(in)    :: parser
 
     integer :: ia, ncol, iunit, jdir, int_one, nsteps, istep, step_to_use
     type(block_t) :: blk
@@ -163,7 +164,7 @@ contains
     !% Not available in periodic systems.
     !%End
 
-    if(parse_is_defined('PDB'//trim(what))) then
+    if(parse_is_defined(parser, 'PDB'//trim(what))) then
       call check_duplicated(done)
 
       gf%source = READ_COORDS_PDB
@@ -206,7 +207,7 @@ contains
     !% <tt>angstrom</tt>.
     !%End
 
-    if(parse_is_defined('XYZ'//trim(what))) then ! read an xyz file
+    if(parse_is_defined(parser, 'XYZ'//trim(what))) then ! read an xyz file
       call check_duplicated(done)
 
       gf%source = READ_COORDS_XYZ
@@ -248,7 +249,7 @@ contains
     !% NOTE: The coordinates are treated in the units specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>.
     !%End
 
-    if(parse_is_defined('XSF'//trim(what))) then ! read an xsf file
+    if(parse_is_defined(parser, 'XSF'//trim(what))) then ! read an xsf file
       call check_duplicated(done)
 
       gf%source = READ_COORDS_XSF

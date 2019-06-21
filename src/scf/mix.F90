@@ -64,6 +64,7 @@ module mix_oct_m
     mix_add_auxmixfield
 
   type mixfield_t
+    private
     FLOAT, pointer :: ddf(:, :, :, :)
     FLOAT, pointer :: ddv(:, :, :, :)
     FLOAT, pointer :: df_old(:, :, :)
@@ -85,6 +86,7 @@ module mix_oct_m
   end type mixfield_t
 
   type mixfield_ptr_t
+    private
     type(mixfield_t), pointer :: p
   end type mixfield_ptr_t
 
@@ -143,8 +145,9 @@ module mix_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine mix_init(smix, der, d1, d2, d3, def_, func_type_, prefix_)
+  subroutine mix_init(smix, parser, der, d1, d2, d3, def_, func_type_, prefix_)
     type(mix_t),                   intent(out) :: smix
+    type(parser_t),                intent(in)  :: parser
     type(derivatives_t), target,   intent(in)  :: der
     integer,                       intent(in)  :: d1, d2, d3
     integer,             optional, intent(in)  :: def_
@@ -169,7 +172,7 @@ contains
     prefix = ""
     if(present(prefix_)) prefix = prefix_
 
-    call messages_obsolete_variable('TypeOfMixing', 'MixingScheme')
+    call messages_obsolete_variable(parser, 'TypeOfMixing', 'MixingScheme')
     
     !%Variable MixingScheme
     !%Type integer

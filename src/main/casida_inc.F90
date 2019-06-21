@@ -922,7 +922,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
     return
   end if
 
-  call pert_init(ionic_pert, PERTURBATION_IONIC, sys%gr, sys%geo)
+  call pert_init(ionic_pert, sys%parser, PERTURBATION_IONIC, sys%gr, sys%geo)
   call pert_setup_atom(ionic_pert, iatom)
   call pert_setup_dir(ionic_pert, idir)
 

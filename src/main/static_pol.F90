@@ -81,7 +81,7 @@ contains
 
     ! load wavefunctions
     call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_load(gs_restart, sys%st, sys%gr, ierr)
+    if(ierr == 0) call states_load(gs_restart, sys%parser, sys%st, sys%gr, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)
@@ -189,7 +189,7 @@ contains
     gs_rho = M_ZERO
 
     call output_init_()
-    call scf_init(scfv, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks)
+    call scf_init(scfv, sys%parser, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks)
     call Born_charges_init(Born_charges, sys%geo, sys%st, sys%gr%mesh%sb%dim)
 
     ! now calculate the dipole without field
@@ -200,7 +200,7 @@ contains
     write(message(1), '(a)')
     write(message(2), '(a)') 'Info: Calculating dipole moment for zero field.'
     call messages_info(2)
-    call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
+    call scf_run(scfv, sys%parser, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
 
     gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
     trrho = M_ZERO
@@ -255,7 +255,7 @@ contains
 
         if(.not. fromScratch) then
           call restart_open_dir(restart_load, trim(dir_name), ierr)
-          if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr)
+          if (ierr == 0) call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr)
           call system_h_setup(sys, hm)
           if(ierr /= 0) fromScratch_local = .true.
           call restart_close_dir(restart_load)
@@ -271,7 +271,7 @@ contains
         end if
 
         call scf_mix_clear(scfv)
-        call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
+        call scf_run(scfv, sys%parser, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
 
         trrho = M_ZERO
         do is = 1, sys%st%d%spin_channels
@@ -335,7 +335,7 @@ contains
 
       if(.not. fromScratch) then
         call restart_open_dir(restart_load, "field_yz+", ierr)
-        if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr)
+        if (ierr == 0) call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr)
         call system_h_setup(sys, hm)
         if(ierr /= 0) fromScratch_local = .true.
         call restart_close_dir(restart_load)
@@ -351,7 +351,7 @@ contains
       end if
 
       call scf_mix_clear(scfv)
-      call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
+      call scf_run(scfv, sys%parser, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
   
       trrho = M_ZERO
       do is = 1, sys%st%d%spin_channels
@@ -411,7 +411,7 @@ contains
 
       call states_allocate_wfns(sys%st, sys%gr%mesh)
 
-      call messages_obsolete_variable("EMStaticField", "EMStaticElectricField")
+      call messages_obsolete_variable(sys%parser, "EMStaticField", "EMStaticElectricField")
       !%Variable EMStaticElectricField
       !%Type float
       !%Default 0.01 a.u.

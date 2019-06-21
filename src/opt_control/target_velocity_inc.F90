@@ -19,8 +19,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_velocity(gr, geo, tg, oct, td, ep)
+  subroutine target_init_velocity(gr, parser, geo, tg, oct, td, ep)
     type(grid_t),     intent(in)    :: gr
+    type(parser_t),   intent(in)    :: parser
     type(geometry_t), intent(in)    :: geo
     type(target_t),   intent(inout) :: tg
     type(oct_t),      intent(in)    :: oct
@@ -172,8 +173,9 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_velocity(tg, gr, dir, geo, hm, outp)
+  subroutine target_output_velocity(tg, parser, gr, dir, geo, hm, outp)
     type(target_t),      intent(in) :: tg
+    type(parser_t),      intent(in) :: parser
     type(grid_t),        intent(in) :: gr
     character(len=*),    intent(in) :: dir
     type(geometry_t),    intent(in) :: geo
@@ -183,7 +185,7 @@
     PUSH_SUB(target_output_velocity)
     
     call io_mkdir(trim(dir))
-    call output_states(tg%st, gr, geo, hm, trim(dir), outp)
+    call output_states(tg%st, parser, gr, geo, hm, trim(dir), outp)
 
     POP_SUB(target_output_velocity)
   end subroutine target_output_velocity

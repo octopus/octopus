@@ -64,8 +64,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_iterator_init(iterator, par)
-    type(oct_iterator_t), intent(inout)        :: iterator
+  subroutine oct_iterator_init(iterator, parser, par)
+    type(oct_iterator_t), intent(inout) :: iterator
+    type(parser_t),       intent(in)    :: parser        
     type(controlfunction_t), intent(in) :: par
 
     PUSH_SUB(oct_iterator_init)
@@ -139,7 +140,7 @@ contains
                                                 '               Delta'
     write(iterator%convergence_iunit, '(91(''#''))') 
 
-    if(parse_is_defined('OCTVelocityTarget')) then
+    if(parse_is_defined(parser, 'OCTVelocityTarget')) then
        iterator%velocities_iunit = io_open(OCT_DIR//'velocities', action='write')
     end if
 
@@ -149,9 +150,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_iterator_end(iterator)
+  subroutine oct_iterator_end(iterator, parser)
     type(oct_iterator_t), intent(inout) :: iterator
-
+    type(parser_t),       intent(in)    :: parser
+    
     PUSH_SUB(oct_iterator_end)
 
     call controlfunction_write(OCT_DIR//'laser.bestJ1', iterator%best_par)
@@ -161,7 +163,7 @@ contains
     write(iterator%convergence_iunit, '(91("#"))') 
     call io_close(iterator%convergence_iunit)
 
-    if(parse_is_defined('OCTVelocityTarget')) then
+    if(parse_is_defined(parser, 'OCTVelocityTarget')) then
        call io_close(iterator%velocities_iunit)
     end if
 
@@ -299,7 +301,7 @@ contains
     write(iterator%convergence_iunit, '(i11,4f20.8)')                &
       iterator%ctr_iter, j, j1, j2, delta
 
-    if(parse_is_defined('OCTVelocityTarget')) then
+    if(parse_is_defined(sys%parser, 'OCTVelocityTarget')) then
        call velocities_write(iterator, sys)
     end if
 

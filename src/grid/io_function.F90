@@ -101,8 +101,9 @@ module io_function_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine io_function_read_how(sb, how, ignore_error)
+  subroutine io_function_read_how(sb, parser, how, ignore_error)
     type(simul_box_t), intent(in)  :: sb
+    type(parser_t),    intent(in)  :: parser
     integer(8),        intent(out) :: how
     logical, optional, intent(in)  :: ignore_error !> Ignore error check. Used when called from some external utility.
 
@@ -110,7 +111,7 @@ contains
 
     how = 0_8
     
-    call messages_obsolete_variable('OutputHow', 'OutputFormat')
+    call messages_obsolete_variable(parser, 'OutputHow', 'OutputFormat')
     
     !%Variable OutputFormat
     !%Type flag

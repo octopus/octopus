@@ -89,8 +89,9 @@ module pes_mask_oct_m
     
   
   type pes_mask_t
-    CMPLX, pointer :: k(:,:,:,:,:,:) => NULL() !< The states in momentum space
-                                               !< mask%k(ll(1),ll(2),ll(3),st%d%dim, st%nst, st%d%nik)
+    private
+    CMPLX, pointer, public :: k(:,:,:,:,:,:) => NULL() !< The states in momentum space
+                                                       !< mask%k(ll(1),ll(2),ll(3),st%d%dim, st%nst, st%d%nik)
                                                
     ! mesh- and cube-related stuff      
     integer          :: np                     !< number of mesh points associated with the mesh
@@ -102,19 +103,19 @@ module pes_mask_oct_m
     
     FLOAT            :: spacing(3)       !< the spacing
     
-    type(mesh_t), pointer  :: mesh             !< a pointer to the mesh
-    type(cube_t)     :: cube                   !< the cubic mesh
+    type(mesh_t), pointer, public  :: mesh             !< a pointer to the mesh
+    type(cube_t)                   :: cube             !< the cubic mesh
     
-    FLOAT, pointer :: vec_pot(:,:) => NULL()   !< external time-dependent potential i.e. the lasers
+    FLOAT, pointer, public :: vec_pot(:,:) => NULL()   !< external time-dependent potential i.e. the lasers
     
-    FLOAT, pointer :: Mk(:,:,:) => NULL()      !< the momentum space filter
-    type(cube_function_t) :: cM                !< the mask cube function
-    FLOAT, pointer :: mask_R(:) => NULL()      !< the mask inner (component 1) and outer (component 2) radius
-    integer        :: shape                    !< which mask function?
-    FLOAT, pointer :: ufn(:) => NULL()         !< user-defined mask function
-    logical        :: user_def
+    FLOAT, pointer, public :: Mk(:,:,:) => NULL()      !< the momentum space filter
+    type(cube_function_t)  :: cM                       !< the mask cube function
+    FLOAT, pointer, public :: mask_R(:) => NULL()      !< the mask inner (component 1) and outer (component 2) radius
+    integer                :: shape                    !< which mask function?
+    FLOAT, pointer         :: ufn(:) => NULL()         !< user-defined mask function
+    logical                :: user_def
     
-    FLOAT, pointer :: Lk(:,:) => NULL()        !< associate a k value to a cube index Lk(i,{1,2,3})={kx,ky,kz}(i)
+    FLOAT, pointer, public :: Lk(:,:) => NULL()        !< associate a k value to a cube index Lk(i,{1,2,3})={kx,ky,kz}(i)
     
     FLOAT            :: enlarge(3)             !< Fourier space enlargement
     FLOAT            :: enlarge_2p(3)          !< Two-point space enlargement
@@ -173,8 +174,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_mask_init(mask, mesh, sb, st, hm, max_iter,dt)
+  subroutine pes_mask_init(mask, parser, mesh, sb, st, hm, max_iter,dt)
     type(pes_mask_t),         intent(out) :: mask
+    type(parser_t),           intent(in)  :: parser
     type(mesh_t), target,     intent(in)  :: mesh
     type(simul_box_t),        intent(in)  :: sb
     type(states_t),           intent(in)  :: st
@@ -367,8 +369,7 @@ contains
       call messages_fatal(1) 
     end if
  
-    
-     call messages_obsolete_variable('PESMaskEnlargeLev', 'PESMaskEnlargeFactor')
+    call messages_obsolete_variable(parser, 'PESMaskEnlargeLev', 'PESMaskEnlargeFactor')
     
     !%Variable PESMask2PEnlargeFactor
     !%Type float
@@ -412,7 +413,7 @@ contains
       call messages_fatal(1) 
     end if
     
-    call messages_obsolete_variable('PESMaskNFFTEnlargeLev', 'PESMask2PEnlargeFactor')
+    call messages_obsolete_variable(parser, 'PESMaskNFFTEnlargeLev', 'PESMask2PEnlargeFactor')
     
     
     mask%ll = 1

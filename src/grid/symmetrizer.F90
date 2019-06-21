@@ -44,6 +44,7 @@ module symmetrizer_oct_m
     zsymmetrize_magneto_optics_cart
 
   type symmetrizer_t
+    private
     type(mesh_t), pointer :: mesh
   end type symmetrizer_t
 

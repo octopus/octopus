@@ -106,6 +106,7 @@ module states_oct_m
   end type states_priv_t
 
   type states_t
+    ! Components are public by default
     type(states_dim_t)       :: d
     type(states_priv_t)      :: priv                  !< the private components
     integer                  :: nst                   !< Number of states in each irreducible subspace
@@ -141,7 +142,7 @@ module states_oct_m
     logical        :: restart_fixed_occ !< should the occupation numbers be fixed by restart?
     logical        :: restart_reorder_occs !< used for restart with altered occupation numbers
     FLOAT, pointer :: occ(:,:)      !< the occupation numbers
-    logical        :: fixed_spins   !< In spinors mode, the spin direction is set
+    logical, private :: fixed_spins   !< In spinors mode, the spin direction is set
                                     !< for the initial (random) orbitals.
     FLOAT, pointer :: spin(:, :, :)
 
@@ -170,10 +171,10 @@ module states_oct_m
     integer                     :: lnst               !< Number of states on local node.
     integer                     :: st_start, st_end   !< Range of states processed by local node.
     integer, pointer            :: node(:)            !< To which node belongs each state.
-    type(multicomm_all_pairs_t) :: ap                 !< All-pairs schedule.
+    type(multicomm_all_pairs_t), private :: ap        !< All-pairs schedule.
 
     logical                     :: symmetrize_density
-    logical                     :: packed
+    logical, private            :: packed
 
     integer                     :: randomization      !< Method used to generate random states
   end type states_t
@@ -237,8 +238,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_init(st, gr, geo)
+  subroutine states_init(st, parser, gr, geo)
     type(states_t), target, intent(inout) :: st
+    type(parser_t),         intent(in)    :: parser
     type(grid_t),           intent(in)    :: gr
     type(geometry_t),       intent(in)    :: geo
 
@@ -501,8 +503,8 @@ contains
     SAFE_ALLOCATE(st%occ     (1:st%nst, 1:st%d%nik))
     st%occ      = M_ZERO
     ! allocate space for formula strings that define user-defined states
-    if(parse_is_defined('UserDefinedStates') .or. parse_is_defined('OCTInitialUserdefined') &
-         .or. parse_is_defined('OCTTargetUserdefined')) then
+    if(parse_is_defined(parser, 'UserDefinedStates') .or. parse_is_defined(parser, 'OCTInitialUserdefined') &
+         .or. parse_is_defined(parser, 'OCTTargetUserdefined')) then
       SAFE_ALLOCATE(st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik))
       ! initially we mark all 'formulas' as undefined
       st%user_def_states(1:st%d%dim, 1:st%nst, 1:st%d%nik) = 'undefined'
@@ -532,8 +534,8 @@ contains
     call parse_variable('StatesRandomization', PAR_INDEPENDENT, st%randomization)
 
 
-    call states_read_initial_occs(st, excess_charge, gr%sb%kpoints)
-    call states_read_initial_spins(st)
+    call states_read_initial_occs(st, parser, excess_charge, gr%sb%kpoints)
+    call states_read_initial_spins(st, parser)
 
     st%st_start = 1
     st%st_end = st%nst
@@ -632,8 +634,9 @@ contains
   !! The resulting occupations are placed on the st\%occ variable. The
   !! boolean st\%fixed_occ is also set to .true., if the occupations are
   !! set by the user through the "Occupations" block; false otherwise.
-  subroutine states_read_initial_occs(st, excess_charge, kpoints)
+  subroutine states_read_initial_occs(st, parser, excess_charge, kpoints)
     type(states_t),  intent(inout) :: st
+    type(parser_t),  intent(in)    :: parser
     FLOAT,           intent(in)    :: excess_charge
     type(kpoints_t), intent(in)    :: kpoints
 
@@ -858,7 +861,7 @@ contains
       st%restart_reorder_occs = .false.
     end if
 
-    call smear_init(st%smear, st%d%ispin, st%fixed_occ, integral_occs, kpoints)
+    call smear_init(st%smear, parser, st%d%ispin, st%fixed_occ, integral_occs, kpoints)
 
     unoccupied_states = (st%d%ispin /= SPINORS .and. st%nst*2 > st%qtot) .or. (st%d%ispin == SPINORS .and. st%nst > st%qtot)
     
@@ -898,8 +901,9 @@ contains
   !! resulting spins are placed onto the st\%spin pointer. The boolean
   !! st\%fixed_spins is set to true if (and only if) the InitialSpins
   !! block is present.
-  subroutine states_read_initial_spins(st)
+  subroutine states_read_initial_spins(st, parser)
     type(states_t), intent(inout) :: st
+    type(parser_t), intent(in)    :: parser
 
     integer :: i, j
     type(block_t) :: blk
@@ -1894,6 +1898,9 @@ contains
 
       do ist = st%st_start, st%st_end
 
+        ww = st%d%kweights(ik)*st%occ(ist, ik)
+        if(abs(ww) <= M_EPSILON) cycle
+
         ! all calculations will be done with complex wavefunctions
         call states_get_state(st, der%mesh, ist, ik, wf_psi)
 
@@ -1912,8 +1919,6 @@ contains
             call zderivatives_lapl(der, wf_psi(:,st_dim), lwf_psi(:,st_dim), set_bc = .false.)
           end do
         end if
-
-        ww = st%d%kweights(ik)*st%occ(ist, ik)
 
         !We precompute some quantites, to avoid to compute it many times
         wf_psi_conj(1:der%mesh%np, 1:st%d%dim) = conjg(wf_psi(1:der%mesh%np,1:st%d%dim))

@@ -48,17 +48,18 @@ module smear_oct_m
     smear_is_semiconducting
 
   type smear_t
-    integer :: method       !< which smearing function to take
-    FLOAT   :: dsmear       !< the parameter defining this function
-    FLOAT   :: e_fermi      !< the Fermi energy
+    private
+    integer, public :: method       !< which smearing function to take
+    FLOAT,   public :: dsmear       !< the parameter defining this function
+    FLOAT,   public :: e_fermi      !< the Fermi energy
     
-    integer :: el_per_state !< How many electrons can we put in each state (1 or 2)
-    FLOAT   :: ef_occ       !< Occupancy of the level at the Fermi energy
-    logical :: integral_occs !< for fixed_occ, are they all integers?
-    integer :: MP_n         !< order of Methfessel-Paxton smearing
-    integer :: fermi_count  !< The number of occupied states at the fermi level
-    integer :: nik_factor   !< denominator, for treating k-weights as integers
-    integer :: nspins       !< = 2 if spin_polarized, else 1.
+    integer, public :: el_per_state !< How many electrons can we put in each state (1 or 2)
+    FLOAT,   public :: ef_occ       !< Occupancy of the level at the Fermi energy
+    logical, public :: integral_occs !< for fixed_occ, are they all integers?
+    integer         :: MP_n         !< order of Methfessel-Paxton smearing
+    integer         :: fermi_count  !< The number of occupied states at the fermi level
+    integer         :: nik_factor   !< denominator, for treating k-weights as integers
+    integer         :: nspins       !< = 2 if spin_polarized, else 1.
   end type smear_t
 
   integer, parameter, public ::       &
@@ -72,8 +73,9 @@ module smear_oct_m
 contains
 
   !--------------------------------------------------
-  subroutine smear_init(this, ispin, fixed_occ, integral_occs, kpoints)
+  subroutine smear_init(this, parser, ispin, fixed_occ, integral_occs, kpoints)
     type(smear_t),   intent(out) :: this
+    type(parser_t),  intent(in)    :: parser
     integer,         intent(in)  :: ispin
     logical,         intent(in)  :: fixed_occ
     logical,         intent(in)  :: integral_occs
@@ -128,7 +130,7 @@ contains
       call parse_variable('Smearing', CNST(0.1) / (M_TWO * P_Ry), this%dsmear, units_inp%energy)
     end if
 
-    call messages_obsolete_variable("ElectronicTemperature", "Smearing")
+    call messages_obsolete_variable(parser, 'ElectronicTemperature', 'Smearing')
 
     this%el_per_state = 1
     if(ispin == 1) & ! unpolarized

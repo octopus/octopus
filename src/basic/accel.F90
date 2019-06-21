@@ -96,6 +96,7 @@ module accel_oct_m
 #endif
 
   type accel_context_t
+    ! Components are public by default
 #ifdef HAVE_OPENCL
     type(cl_context) :: cl_context
 #elif defined(HAVE_CUDA)
@@ -106,6 +107,7 @@ module accel_oct_m
   end type accel_context_t
 
   type accel_device_t
+    ! Components are public by default
 #ifdef HAVE_OPENCL
     type(cl_device_id) :: cl_device
 #elif defined(HAVE_CUDA)
@@ -115,7 +117,8 @@ module accel_oct_m
 #endif
   end type accel_device_t
 
-  type accel_t 
+  type accel_t
+    ! Components are public by default
     type(accel_context_t)  :: context
     type(accel_device_t)   :: device
 #ifdef HAVE_OPENCL
@@ -131,6 +134,7 @@ module accel_oct_m
   end type accel_t
 
   type accel_mem_t
+    ! Components are public by default
 #ifdef HAVE_OPENCL
     type(cl_mem)           :: mem
 #else
@@ -143,6 +147,7 @@ module accel_oct_m
   end type accel_mem_t
 
   type accel_kernel_t
+    ! Components are public by default
 #ifdef HAVE_OPENCL
     type(cl_kernel)               :: kernel
 #endif
@@ -250,9 +255,10 @@ contains
 
   ! ------------------------------------------
 
-  subroutine accel_init(base_grp)
+  subroutine accel_init(base_grp, parser)
     type(mpi_grp_t),  intent(inout) :: base_grp
-
+    type(parser_t),   intent(in)    :: parser
+    
     logical  :: disable, default, run_benchmark
     integer  :: idevice, iplatform
 #ifdef HAVE_OPENCL
@@ -280,7 +286,7 @@ contains
     !% try to initialize and use an accelerator device. By setting this
     !% variable to <tt>yes</tt> you force Octopus not to use an accelerator even it is available.
     !%End
-    call messages_obsolete_variable('DisableOpenCL', 'DisableAccel')
+    call messages_obsolete_variable(parser, 'DisableOpenCL', 'DisableAccel')
 #ifdef HAVE_ACCEL
     default = .false.
 #else
@@ -301,7 +307,7 @@ contains
       return
     end if
 
-    !%Variable OpenCLPlatform
+    !%Variable AccelPlatform
     !%Type integer
     !%Default 0
     !%Section Execution::Accel
@@ -310,6 +316,8 @@ contains
     !% use. You can give an explicit platform number or use one of
     !% the options that select a particular vendor
     !% implementation. Platform 0 is used by default.
+    !%
+    !% This variable has no effect for CUDA.
     !%Option amd -2
     !% Use the AMD OpenCL platform.
     !%Option nvidia -3
@@ -319,33 +327,38 @@ contains
     !%Option intel -5
     !% Use the Intel OpenCL platform.
     !%End
-    call parse_variable('OpenCLPlatform', 0, iplatform)
+    call parse_variable('AccelPlatform', 0, iplatform)
 
-    !%Variable OpenCLDevice
+    call messages_obsolete_variable(parser, 'OpenCLPlatform', 'AccelPlatform')
+    
+    !%Variable AccelDevice
     !%Type integer
     !%Default gpu
     !%Section Execution::Accel
     !%Description
-    !% This variable selects the OpenCL device that Octopus will
-    !% use. You can specify one of the options below or a numerical
-    !% id to select a specific device.
+    !% This variable selects the OpenCL or CUDA accelerator device
+    !% that Octopus will use. You can specify one of the options below
+    !% or a numerical id to select a specific device.
+    !%
     !% Values >= 0 select the device to be used. In case of MPI enabled runs
     !% devices are distributed in a round robin fashion, starting at this value.
     !%Option gpu -1
-    !% If available, Octopus will use a GPU for OpenCL.
+    !% If available, Octopus will use a GPU.
     !%Option cpu -2
-    !% If available, Octopus will use a GPU for OpenCL.
+    !% If available, Octopus will use a CPU (only for OpenCL).
     !%Option accelerator -3
-    !% If available, Octopus will use an accelerator for OpenCL.
-    !%Option cl_default -4
-    !% Octopus will use the default device specified by the OpenCL
+    !% If available, Octopus will use an accelerator (only for OpenCL).
+    !%Option accel_default -4
+    !% Octopus will use the default device specified by the implementation.
     !% implementation.
     !%End
-    call parse_variable('OpenCLDevice', OPENCL_GPU, idevice)
+    call parse_variable('AccelDevice', OPENCL_GPU, idevice)
 
+    call messages_obsolete_variable(parser, 'OpenCLDevice', 'AccelDevice')
+    
     if(idevice < OPENCL_DEFAULT) then
-      message(1) = 'Invalid OpenCLDevice.'
-      call messages_fatal(1)
+      call messages_write('Invalid AccelDevice')
+      call messages_fatal()
     end if
 
     call messages_print_stress(stdout, "GPU acceleration")
@@ -567,16 +580,18 @@ contains
     call accel_kernel_start_call(dzmul, 'mul.cl', "dzmul", flags = '-DRTYPE_DOUBLE')
     call accel_kernel_start_call(zzmul, 'mul.cl', "zzmul", flags = '-DRTYPE_COMPLEX')
 
-    !%Variable OpenCLBenchmark
+    !%Variable AccelBenchmark
     !%Type logical
     !%Default no
     !%Section Execution::Accel
     !%Description
     !% If this variable is set to yes, Octopus will run some
-    !% routines to benchmark the performance of the OpenCL device.
+    !% routines to benchmark the performance of the accelerator device.
     !%End
-    call parse_variable('OpenCLBenchmark', .false., run_benchmark)
+    call parse_variable('AccelBenchmark', .false., run_benchmark)
 
+    call messages_obsolete_variable(parser, 'OpenCLBenchmark', 'AccelBenchmark')
+    
     if(run_benchmark) then
       call opencl_check_bandwidth()
     end if

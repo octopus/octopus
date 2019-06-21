@@ -72,7 +72,7 @@ contains
 
     ! load wavefunctions
     call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_load(gs_restart, sys%st, sys%gr, ierr)
+    if(ierr == 0) call states_load(gs_restart, sys%parser, sys%st, sys%gr, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)
@@ -99,7 +99,7 @@ contains
     call parse_variable('Displacement', CNST(0.01), vib%disp, units_inp%length)
 
     ! calculate dynamical matrix
-    call get_dyn_matrix(sys%gr, sys%mc, sys%geo, sys%st, sys%ks, hm, sys%outp, vib)
+    call get_dyn_matrix(sys%gr, sys%parser, sys%mc, sys%geo, sys%st, sys%ks, hm, sys%outp, vib)
 
     call vibrations_output(vib)
     
@@ -132,8 +132,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_dyn_matrix(gr, mc, geo, st, ks, hm, outp, vib)
+  subroutine get_dyn_matrix(gr, parser, mc, geo, st, ks, hm, outp, vib)
     type(grid_t), target, intent(inout) :: gr
+    type(parser_t),       intent(in)    :: parser
     type(multicomm_t),    intent(in)    :: mc
     type(geometry_t),     intent(inout) :: geo
     type(states_t),       intent(inout) :: st
@@ -151,7 +152,7 @@ contains
 
     mesh => gr%mesh
 
-    call scf_init(scf, gr, geo, st, mc, hm, ks)
+    call scf_init(scf, parser, gr, geo, st, mc, hm, ks)
     SAFE_ALLOCATE(forces0(1:geo%natoms, 1:mesh%sb%dim))
     SAFE_ALLOCATE(forces (1:geo%natoms, 1:mesh%sb%dim))
     forces = M_ZERO
@@ -172,10 +173,10 @@ contains
         ! first force
         call hamiltonian_epot_generate(hm, gr, geo, st)
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, hm, st, geo, calc_eigenval=.true.)
+        call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval=.true.)
         call energy_calc_total (hm, gr, st)
         call scf_mix_clear(scf)
-        call scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
+        call scf_run(scf, parser, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
           forces0(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
         end do
@@ -188,10 +189,10 @@ contains
         ! second force
         call hamiltonian_epot_generate(hm, gr, geo, st)
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, hm, st, geo, calc_eigenval=.true.)
+        call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval=.true.)
         call energy_calc_total(hm, gr, st)
         call scf_mix_clear(scf)
-        call scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
+        call scf_run(scf, parser, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
           forces(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
         end do

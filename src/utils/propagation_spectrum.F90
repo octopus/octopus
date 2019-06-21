@@ -24,6 +24,7 @@ program propagation_spectrum
   use io_oct_m
   use kick_oct_m
   use messages_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use spectrum_oct_m
   use unit_system_oct_m
@@ -36,7 +37,8 @@ program propagation_spectrum
   type(spectrum_t) :: spectrum
   type(unit_system_t) :: file_units
   character(len=80) :: refmultipoles
-
+  type(parser_t) :: parser
+  
   ! Initialize stuff
   call global_init(is_serial = .true.)
 
@@ -45,11 +47,13 @@ program propagation_spectrum
   if(ierr == 0) call getopt_propagation_spectrum(refmultipoles)
   call getopt_end()
 
-  call messages_init()
+  call parser_init(parser)
+  
+  call messages_init(parser)
 
   call io_init()
 
-  call unit_system_init()
+  call unit_system_init(parser)
 
   call spectrum_init(spectrum)
 
@@ -71,6 +75,9 @@ program propagation_spectrum
 
   call io_end()
   call messages_end()
+
+  call parser_end(parser)
+  
   call global_end()
 
   contains

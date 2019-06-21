@@ -77,6 +77,8 @@ module epot_oct_m
     SPIN_ORBIT = 1
 
   type epot_t
+    ! Components are public by default
+
     ! Classical charges:
     integer        :: classical_pot !< how to include the classical charges
     FLOAT, pointer :: Vclassical(:) !< We use it to store the potential of the classical charges
@@ -107,34 +109,35 @@ module epot_oct_m
     FLOAT :: gyromagnetic_ratio
 
     !> SO prefactor (1.0 = normal SO, 0.0 = no SO)
-    FLOAT :: so_strength
+    FLOAT, private :: so_strength
     
     !> the ion-ion energy and force
     FLOAT          :: eii
     FLOAT, pointer :: fii(:, :)
     FLOAT, allocatable :: vdw_forces(:, :)
     
-    real(4), pointer :: local_potential(:,:)
-    logical          :: local_potential_precalculated
+    real(4), pointer, private :: local_potential(:,:)
+    logical,          private :: local_potential_precalculated
 
     logical          :: ignore_external_ions
-    logical                  :: have_density
-    type(poisson_t), pointer :: poisson_solver
+    logical,                  private :: have_density
+    type(poisson_t), pointer, private :: poisson_solver
 
     logical :: force_total_enforce
 
     type(ion_interaction_t) :: ion_interaction
 
     !> variables for external forces over the ions
-    logical     :: global_force
-    type(tdf_t) :: global_force_function
+    logical,     private :: global_force
+    type(tdf_t), private :: global_force_function
   end type epot_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init( ep, gr, geo, ispin, nik, xc_family)
+  subroutine epot_init(ep, parser, gr, geo, ispin, nik, xc_family)
     type(epot_t),                       intent(out)   :: ep
+    type(parser_t),                     intent(in)    :: parser
     type(grid_t),                       intent(in)    :: gr
     type(geometry_t),                   intent(inout) :: geo
     integer,                            intent(in)    :: ispin
@@ -223,12 +226,12 @@ contains
     end if
 
     ! lasers
-    call laser_init(ep%no_lasers, ep%lasers, gr%mesh)
+    call laser_init(ep%lasers, parser, ep%no_lasers, gr%mesh)
 
-    call kick_init(ep%kick, ispin, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim)
+    call kick_init(ep%kick, parser, ispin, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim)
 
     ! No more "UserDefinedTDPotential" from this version on.
-    call messages_obsolete_variable('UserDefinedTDPotential', 'TDExternalFields')
+    call messages_obsolete_variable(parser, 'UserDefinedTDPotential', 'TDExternalFields')
 
     !%Variable StaticElectricField
     !%Type block
@@ -516,7 +519,7 @@ contains
     !% does not affect the electrons directly.
     !%End
 
-    if(parse_is_defined('TDGlobalForce')) then
+    if(parse_is_defined(parser, 'TDGlobalForce')) then
 
       ep%global_force = .true.
 

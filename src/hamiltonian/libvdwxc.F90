@@ -44,13 +44,14 @@ module libvdwxc_oct_m
     libvdwxc_end
 
   type libvdwxc_t
+    private
     integer, pointer               :: libvdwxc_ptr
     type(mesh_t)                   :: mesh
     type(cube_t)                   :: cube
     type(mesh_cube_parallel_map_t) :: mesh_cube_map
     integer                        :: functional
     logical                        :: debug
-    FLOAT                          :: energy
+    FLOAT, public                  :: energy
     FLOAT                          :: vdw_factor
   end type libvdwxc_t
 

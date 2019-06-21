@@ -143,7 +143,7 @@ contains
       !% How many points to use in the Gauss-Legendre integration to obtain the
       !% van der Waals coefficients.
       !%End
-      call messages_obsolete_variable('vdW_npoints', 'vdWNPoints')
+      call messages_obsolete_variable(sys%parser, 'vdW_npoints', 'vdWNPoints')
       call parse_variable('vdWNPoints', 6, gaus_leg_n)
 
       ! \todo symmetry stuff should be general
@@ -212,7 +212,7 @@ contains
       ! we always need complex response
       call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
       if(ierr == 0) then
-        call states_look_and_load(gs_restart, sys%st, sys%gr, is_complex = .true.)
+        call states_look_and_load(gs_restart, sys%parser, sys%st, sys%gr, is_complex = .true.)
         call restart_end(gs_restart)
       else
         message(1) = "Previous gs calculation required."
@@ -236,7 +236,7 @@ contains
         do dir = 1, ndir
           write(dirname,'(a,i1,a)') "wfs_", dir, "_1_1"
           call restart_open_dir(restart_load, dirname, ierr)
-          if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, lr=lr(dir,1))          
+          if (ierr == 0) call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr, lr=lr(dir,1))          
           if(ierr /= 0) then
             message(1) = "Unable to read response wavefunctions from '"//trim(dirname)//"'."
             call messages_warning(1)
@@ -284,7 +284,7 @@ contains
 
       PUSH_SUB(vdw_run.get_pol)
 
-      call pert_init(perturbation, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
+      call pert_init(perturbation, sys%parser, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
       do dir = 1, ndir
         write(message(1), '(3a,f7.3)') 'Info: Calculating response for the ', index2axis(dir), &
           '-direction and imaginary frequency ', units_from_atomic(units_out%energy, aimag(omega))

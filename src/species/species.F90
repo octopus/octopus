@@ -392,8 +392,9 @@ contains
   !! part of it (it has to be completed later with "species_build").
   !! Note that species_read has to be called only after species_init has been called.
   ! ---------------------------------------------------------
-  subroutine species_read(spec)
+  subroutine species_read(spec, parser)
     type(species_t), intent(inout) :: spec
+    type(parser_t),  intent(in)    :: parser
 
     character(len=LABEL_LEN)  :: lab
     integer :: ib, row, n_spec_block, read_data
@@ -594,8 +595,8 @@ contains
     !% as defined in PRB 71, 035105 (2005)
     !%End
 
-    call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
-    call messages_obsolete_variable('SpeciesAllElectronSigma', 'Species')
+    call messages_obsolete_variable(parser, 'SpecieAllElectronSigma', 'Species')
+    call messages_obsolete_variable(parser, 'SpeciesAllElectronSigma', 'Species')
 
     ! First, find out if there is a Species block.
     n_spec_block = 0
@@ -716,8 +717,9 @@ contains
   end function get_set_directory
 
   ! ---------------------------------------------------------
-  subroutine species_build(spec, ispin, dim, print_info)
+  subroutine species_build(spec, parser, ispin, dim, print_info)
     type(species_t),   intent(inout) :: spec
+    type(parser_t),    intent(in)    :: parser
     integer,           intent(in)    :: ispin
     integer,           intent(in)    :: dim
     logical, optional, intent(in)    :: print_info
@@ -754,7 +756,7 @@ contains
       if(spec%type == SPECIES_PSPIO) then
         call ps_pspio_init(spec%ps, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
       else
-        call ps_init(spec%ps, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
+        call ps_init(spec%ps, parser, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
       end if
       spec%z_val = spec%ps%z_val
       spec%nlcc = spec%ps%nlcc

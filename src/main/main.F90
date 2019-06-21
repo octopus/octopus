@@ -38,6 +38,7 @@ program octopus
 
   character(len=256) :: config_str
   integer :: inp_calc_mode, ierr
+  type(parser_t) :: parser
   type(block_t) :: blk
 
   call getopt_init(ierr)
@@ -46,7 +47,10 @@ program octopus
   call getopt_end()
 
   call global_init()
-  call messages_init()
+
+  call parser_init(parser)
+  
+  call messages_init(parser)
 
   call walltimer_init()
   
@@ -135,7 +139,7 @@ program octopus
 #endif
   
   ! now we really start
-  call run(inp_calc_mode)
+  call run(parser, inp_calc_mode)
   
 #if defined(HAVE_MPI)
   ! wait for all processors to finish
@@ -156,6 +160,9 @@ program octopus
   call print_walltime()
 
   call messages_end()
+
+  call parser_end(parser)
+  
   call global_end()
 
 contains

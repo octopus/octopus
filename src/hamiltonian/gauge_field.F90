@@ -59,6 +59,7 @@ module gauge_field_oct_m
     gauge_field_get_force
 
   type gauge_field_t
+    private
     FLOAT   :: vecpot(1:MAX_DIM)   
     FLOAT   :: vecpot_vel(1:MAX_DIM)
     FLOAT   :: vecpot_acc(1:MAX_DIM)    
@@ -66,7 +67,7 @@ module gauge_field_oct_m
     FLOAT   :: force(1:MAX_DIM)
     FLOAT   :: wp2
     integer :: ndim
-    logical :: with_gauge_field
+    logical, public :: with_gauge_field
     integer :: dynamics
     FLOAT   :: kicktime 
   end type gauge_field_t

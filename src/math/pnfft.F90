@@ -54,6 +54,7 @@ module pnfft_oct_m
     pnfft_t     
 
   type pnfft_t
+    private
     FLOAT                 :: norm  
   end type pnfft_t
 
@@ -74,21 +75,22 @@ module pnfft_oct_m
     
  
   type pnfft_t
+    private
   
 ! Parameters
-    integer               :: np(3)           !> Processes
-    integer(C_INTPTR_T)   :: N_local(3)     !> Number of Fourier coefficients
-    integer(C_INTPTR_T)   :: N(3)            !> Number of Fourier coefficients local
-    integer(C_INTPTR_T)   :: Nos(3)          !> FFT grid size
-    integer(C_INTPTR_T)   :: M(3)
-    integer               :: M_istart(3)
-    integer(C_INTPTR_T)   :: local_M         !> Local number of nodes per process
-    integer               :: mm              !> Real space cut-off
-    FLOAT                 :: sigma           !> oversampling factor
-    integer               :: flags           !> PNFFT initialization options 
-    logical               :: set_defaults = .false. !> set default values from the code
+    integer                       :: np(3)           !> Processes
+    integer(C_INTPTR_T)           :: N_local(3)     !> Number of Fourier coefficients
+    integer(C_INTPTR_T)           :: N(3)            !> Number of Fourier coefficients local
+    integer(C_INTPTR_T)           :: Nos(3)          !> FFT grid size
+    integer(C_INTPTR_T), public   :: M(3)
+    integer                       :: M_istart(3)
+    integer(C_INTPTR_T)           :: local_M         !> Local number of nodes per process
+    integer                       :: mm              !> Real space cut-off
+    FLOAT,               public   :: sigma           !> oversampling factor
+    integer                       :: flags           !> PNFFT initialization options 
+    logical,             public   :: set_defaults = .false. !> set default values from the code
 
-    FLOAT                 :: norm       !> Normalization  
+    FLOAT,               public   :: norm       !> Normalization  
 
 
 ! Data 

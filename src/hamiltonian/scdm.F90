@@ -58,38 +58,39 @@ module scdm_oct_m
        scdm_rotate_states
   
   type scdm_t
-    type(states_t)   :: st          !< localized orthogonal states
-    FLOAT, pointer   :: center(:,:) !< coordinates of centers of states (in same units as mesh%x)
-    integer          :: box_size    !< number of mesh points in the dimension of local box around scdm states 
-                                    !! NOTE: this could be dynamic and state dependent
-    integer          :: full_box    !< = (2*box_size+1)**3, i.e. number of points in box
-    type(mesh_t)     :: boxmesh     !< mesh describing the small box
-    type(cube_t)     :: boxcube     !< cube of the small box (used for fft in poisson solver
-                                    !! has doubled size for truncation)
-    integer, pointer :: box(:,:,:,:)  !< indices of global points that are contained in the local box for each state
+    private
+    type(states_t)           :: st          !< localized orthogonal states
+    FLOAT, pointer,   public :: center(:,:) !< coordinates of centers of states (in same units as mesh%x)
+    integer,          public :: box_size    !< number of mesh points in the dimension of local box around scdm states 
+                                            !! NOTE: this could be dynamic and state dependent
+    integer,          public :: full_box    !< = (2*box_size+1)**3, i.e. number of points in box
+    type(mesh_t)             :: boxmesh     !< mesh describing the small box
+    type(cube_t)             :: boxcube     !< cube of the small box (used for fft in poisson solver
+                                            !! has doubled size for truncation)
+    integer, pointer, public :: box(:,:,:,:)  !< indices of global points that are contained in the local box for each state
     
-    integer          :: full_cube_n(3) !< dimension of cube of fullsimulation cell
+    integer                  :: full_cube_n(3) !< dimension of cube of fullsimulation cell
     
-    FLOAT, pointer   :: dpsi(:,:)   !< scdm states in their local box
-    CMPLX, pointer   :: zpsi(:,:)   ! ^
-    type(poisson_fft_t) :: poisson_fft !< used for above poisson solver
+    FLOAT, pointer,   public :: dpsi(:,:)   !< scdm states in their local box
+    CMPLX, pointer,   public :: zpsi(:,:)   ! ^
+    type(poisson_fft_t)      :: poisson_fft !< used for above poisson solver
 
-    logical          :: verbose     !< write info about SCDM procedure
-    logical          :: psi_scdm    !< Hamiltonian is applied to an SCDM state
+    logical                  :: verbose     !< write info about SCDM procedure
+    logical,          public :: psi_scdm    !< Hamiltonian is applied to an SCDM state
 
-    integer          :: nst         !< total number of states, copy os st%nst
+    integer                  :: nst         !< total number of states, copy os st%nst
     
     ! parallelization of scdm states
-    type(mpi_grp_t)  :: st_grp      !< MPI group for states parallelization, inherited from st
-    type(mpi_grp_t)  :: dom_grp     !< MPI group for domain parallelization, inherited from mesh
-    type(mpi_grp_t)  :: st_exx_grp  !< MPI group for state parallelization in the exchange operator
-                                    !! this is a copy of the domain group, i.e. the domain group is
-                                    !! used for states parallelization in the exchange operator
-    integer          :: st_exx_start!< index of state distribution in the exchange operator
-    integer          :: st_exx_end  !.
-    logical          :: root        !< this is a redundat flag equal to mpi_world%rank==0
+    type(mpi_grp_t)          :: st_grp      !< MPI group for states parallelization, inherited from st
+    type(mpi_grp_t)          :: dom_grp     !< MPI group for domain parallelization, inherited from mesh
+    type(mpi_grp_t),  public :: st_exx_grp  !< MPI group for state parallelization in the exchange operator
+                                            !! this is a copy of the domain group, i.e. the domain group is
+                                             !! used for states parallelization in the exchange operator
+    integer,          public :: st_exx_start!< index of state distribution in the exchange operator
+    integer,          public :: st_exx_end  !.
+    logical                  :: root        !< this is a redundat flag equal to mpi_world%rank==0
 #ifdef HAVE_SCALAPACK 
-    type(blacs_proc_grid_t) :: proc_grid  !< blacs context for RRQR on transpose states with scalapack
+    type(blacs_proc_grid_t)  :: proc_grid  !< blacs context for RRQR on transpose states with scalapack
 #endif
   end type scdm_t
 

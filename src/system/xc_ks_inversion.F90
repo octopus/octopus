@@ -74,21 +74,23 @@ module xc_ks_inversion_oct_m
     XC_FLAGS_NONE = 0
 
   type xc_ks_inversion_t
-     integer             :: method
-     integer             :: level
-     integer             :: asymp
-     FLOAT, pointer      :: vhxc_previous_step(:,:)
-     type(states_t)      :: aux_st
-     type(hamiltonian_t) :: aux_hm
-     type(eigensolver_t) :: eigensolver
+    private
+     integer,             public :: method
+     integer                     :: level
+     integer,             public :: asymp
+     FLOAT, pointer              :: vhxc_previous_step(:,:)
+     type(states_t),      public :: aux_st
+     type(hamiltonian_t)         :: aux_hm
+     type(eigensolver_t), public :: eigensolver
   end type xc_ks_inversion_t
 
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_init(ks_inv, gr, geo, st, xc)
+  subroutine xc_ks_inversion_init(ks_inv, parser, gr, geo, st, xc)
     type(xc_ks_inversion_t), intent(out)   :: ks_inv
+    type(parser_t),          intent(in)    :: parser
     type(grid_t),            intent(inout) :: gr
     type(geometry_t),        intent(inout) :: geo
     type(states_t),          intent(in)    :: st
@@ -136,7 +138,7 @@ contains
     !%Option ks_inversion_adiabatic 2
     !% Compute exact adiabatic <math>v_{xc}</math>.
     !%End
-    call messages_obsolete_variable('KS_Inversion_Level', 'KSInversionLevel')
+    call messages_obsolete_variable(parser, 'KS_Inversion_Level', 'KSInversionLevel')
     call parse_variable('KSInversionLevel', XC_KS_INVERSION_ADIABATIC, ks_inv%level)
     if(.not.varinfo_valid_option('KSInversionLevel', ks_inv%level)) call messages_input_error('KSInversionLevel')
 
@@ -162,9 +164,8 @@ contains
 
       ! initialize densities, hamiltonian and eigensolver
       call states_densities_init(ks_inv%aux_st, gr, geo)
-      call hamiltonian_init(ks_inv%aux_hm, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, &
-                            XC_FAMILY_NONE, .false.)
-      call eigensolver_init(ks_inv%eigensolver, gr, ks_inv%aux_st, xc)
+      call hamiltonian_init(ks_inv%aux_hm, parser, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, XC_FAMILY_NONE, .false.)
+      call eigensolver_init(ks_inv%eigensolver, parser, gr, ks_inv%aux_st, xc)
     end if
 
     POP_SUB(xc_ks_inversion_init)

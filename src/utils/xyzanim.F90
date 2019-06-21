@@ -39,7 +39,8 @@ program xyzanim
   type(simul_box_t) :: sb
   type(geometry_t)  :: geo
   type(space_t)     :: space
-
+  type(parser_t) :: parser
+  
   ! Initialize stuff
   call global_init(is_serial = .true.)
 
@@ -47,9 +48,11 @@ program xyzanim
   if(ierr == 0) call getopt_xyz_anim()
   call getopt_end()
 
-  call messages_init()
+  call parser_init(parser)
+  
+  call messages_init(parser)
   call io_init()
-  call unit_system_init()
+  call unit_system_init(parser)
 
   ! Sets the filenames
   coords_file = 'td.general/coordinates'
@@ -78,8 +81,8 @@ program xyzanim
   call parse_variable('AnimationMultiFiles', .false., multifiles)
 
   call space_init(space)
-  call geometry_init(geo, space)
-  call simul_box_init(sb, geo, space)
+  call geometry_init(geo, parser, space)
+  call simul_box_init(sb, parser, geo, space)
 
   record_length = 100 + geo%space%dim*geo%natoms*3*20
 
@@ -117,6 +120,8 @@ program xyzanim
 
   call io_end()
   call messages_end()
+
+  call parser_end(parser)
   call global_end()
 
 end program xyzanim

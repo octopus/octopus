@@ -106,14 +106,15 @@ module poisson_oct_m
     POISSON_NULL          = -999
   
   type poisson_t
-    type(derivatives_t), pointer :: der
-    integer           :: method = POISSON_NULL
-    integer           :: kernel
-    type(cube_t)      :: cube
-    type(mesh_cube_parallel_map_t) :: mesh_cube_map
+    private
+    type(derivatives_t), pointer, public :: der
+    integer, public           :: method = POISSON_NULL
+    integer, public           :: kernel
+    type(cube_t), public      :: cube
+    type(mesh_cube_parallel_map_t), public :: mesh_cube_map
     type(mg_solver_t) :: mg
-    type(poisson_fft_t) :: fft_solver
-    FLOAT   :: poisson_soft_coulomb_param
+    type(poisson_fft_t), public :: fft_solver
+    FLOAT, public   :: poisson_soft_coulomb_param
     logical :: all_nodes_default
     type(poisson_corr_t) :: corrector
     type(poisson_isf_t)  :: isf_solver

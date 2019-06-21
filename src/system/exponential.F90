@@ -57,11 +57,12 @@ module exponential_oct_m
     EXP_CHEBYSHEV          = 4
 
   type exponential_t
-    integer     :: exp_method  !< which method is used to apply the exponential
-    FLOAT       :: lanczos_tol !< tolerance for the Lanczos method
-    integer     :: exp_order   !< order to which the propagator is expanded
-    integer     :: arnoldi_gs  !< Orthogonalization scheme used for Arnoldi
-    integer     :: tmp_nst, tmp_nst_linear
+    private
+    integer, public :: exp_method  !< which method is used to apply the exponential
+    FLOAT           :: lanczos_tol !< tolerance for the Lanczos method
+    integer, public :: exp_order   !< order to which the propagator is expanded
+    integer         :: arnoldi_gs  !< Orthogonalization scheme used for Arnoldi
+    integer         :: tmp_nst, tmp_nst_linear
   end type exponential_t
 
 contains
