@@ -77,7 +77,7 @@ function find_tests() {
 	awk -F: '{print $1}' | sort -u`
     # We now reorder the list so that long tests come first.
     # This is to optimize the total runtime when running many jobs concurrently.
-    if  [[ ! -z "$testfiles" ]]; then
+    if  [ -n "$testfiles" ]; then
         for duration in "long-run" "short-run"; do
             tests=`@EGREP@ "^TestGroups *:.*($duration)" $testfiles| \
             awk -F: '{print $1}'`
