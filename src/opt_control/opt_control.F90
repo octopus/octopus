@@ -41,6 +41,7 @@ module opt_control_oct_m
   use opt_control_global_oct_m
   use opt_control_iter_oct_m
   use opt_control_state_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use propagation_oct_m
   use propagator_oct_m
@@ -113,7 +114,7 @@ contains
 
     ! Read info about, and prepare, the control functions
     call controlfunction_mod_init(hm%ep, sys%parser, td%dt, td%max_iter, oct%mode_fixed_fluence)
-    call controlfunction_init(par, td%dt, td%max_iter)
+    call controlfunction_init(par, sys%parser, td%dt, td%max_iter)
     call controlfunction_set(par, hm%ep)
       ! This prints the initial control parameters, exactly as described in the inp file,
       ! that is, without applying any envelope or filter.
@@ -317,7 +318,7 @@ contains
 
       call controlfunction_copy(par_prev, par)
       call propagate_forward(sys, hm, td, par, oct_target, qcpsi, prop_psi)
-      j1 = target_j1(oct_target, sys%gr, qcpsi)
+      j1 = target_j1(oct_target, sys%parser, sys%gr, qcpsi)
       stop_loop = iteration_manager(j1, par, par_prev, iterator)
       if(clean_stop(sys%mc%master_comm) .or. stop_loop) then
         call opt_control_state_end(qcpsi)
@@ -331,7 +332,7 @@ contains
       ctr_loop: do
         call controlfunction_copy(par_prev, par)
         call f_zbr98(sys, hm, td, qcpsi, prop_psi, prop_chi, par)
-        j1 = target_j1(oct_target, sys%gr, qcpsi)
+        j1 = target_j1(oct_target, sys%parser, sys%gr, qcpsi)
         stop_loop = iteration_manager(j1, par, par_prev, iterator)
         if(clean_stop(sys%mc%master_comm) .or. stop_loop) exit ctr_loop
       end do ctr_loop
@@ -361,7 +362,7 @@ contains
       call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
       call propagate_forward(sys, hm, td, par, oct_target, qcpsi)
-      f = - target_j1(oct_target, sys%gr, qcpsi, sys%geo) - controlfunction_j2(par)
+      f = - target_j1(oct_target, sys%parser, sys%gr, qcpsi, sys%geo) - controlfunction_j2(par)
       call opt_control_state_end(qcpsi)
       call iteration_manager_direct(-f, par, iterator, sys)
       if(oct_iterator_maxiter(iterator) == 0) then
@@ -436,7 +437,7 @@ contains
       call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
       call propagate_forward(sys, hm, td, par, oct_target, qcpsi)
-      f = - target_j1(oct_target, sys%gr, qcpsi, sys%geo) - controlfunction_j2(par)
+      f = - target_j1(oct_target, sys%parser, sys%gr, qcpsi, sys%geo) - controlfunction_j2(par)
       call opt_control_state_end(qcpsi)
       call iteration_manager_direct(-f, par, iterator, sys)
       if(oct_iterator_maxiter(iterator) == 0) then
@@ -501,7 +502,7 @@ contains
       call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
       call propagate_forward(sys, hm, td, par, oct_target, qcpsi)
-      f = - target_j1(oct_target, sys%gr, qcpsi, sys%geo) - controlfunction_j2(par)
+      f = - target_j1(oct_target, sys%parser, sys%gr, qcpsi, sys%geo) - controlfunction_j2(par)
       call opt_control_state_end(qcpsi)
       call iteration_manager_direct(-f, par, iterator, sys)      
       if(oct_iterator_maxiter(iterator) == 0) then
@@ -607,7 +608,7 @@ contains
     if( oct_iterator_current(iterator)  ==  0) then
       call opt_control_state_copy(qcpsi, initial_st)
       call propagate_forward(sys, hm, td, par, oct_target, qcpsi, prop_psi)
-      j1 = target_j1(oct_target, sys%gr, qcpsi)
+      j1 = target_j1(oct_target, sys%parser, sys%gr, qcpsi)
       POP_SUB(f_wg05)
       return
     end if
@@ -634,7 +635,7 @@ contains
     call opt_control_state_copy(qcpsi, initial_st)
     call propagate_forward(sys, hm, td, par, oct_target, qcpsi, prop_psi)
 
-    j1 = target_j1(oct_target, sys%gr, qcpsi)
+    j1 = target_j1(oct_target, sys%parser, sys%gr, qcpsi)
 
     call opt_control_state_end(qcchi)
     call controlfunction_end(parp)
@@ -671,7 +672,7 @@ contains
     call propagate_forward(sys, hm, td, par, oct_target, qcpsi, prop_psi)
 
     ! Check the performance.
-    j1 = target_j1(oct_target, sys%gr, qcpsi, sys%geo)
+    j1 = target_j1(oct_target, sys%parser, sys%gr, qcpsi, sys%geo)
 
     ! Set the boundary condition for the backward propagation.
     call opt_control_state_null(qcchi)
@@ -715,7 +716,7 @@ contains
     if( oct_iterator_current(iterator)  ==  0) then
       call opt_control_state_copy(qcpsi, initial_st)
       call propagate_forward(sys, hm, td, par, oct_target, qcpsi, prop_psi)
-      j1 = target_j1(oct_target, sys%gr, qcpsi)
+      j1 = target_j1(oct_target, sys%parser, sys%gr, qcpsi)
       POP_SUB(f_iter)
       return
     end if
@@ -730,7 +731,7 @@ contains
     call opt_control_state_copy(qcpsi, initial_st)
     call fwd_step(sys, td, hm, oct_target, par, par_chi, qcpsi, prop_chi, prop_psi)
 
-    j1 = target_j1(oct_target, sys%gr, qcpsi)
+    j1 = target_j1(oct_target, sys%parser, sys%gr, qcpsi)
 
     call opt_control_state_end(qcchi)
     call controlfunction_end(par_chi)

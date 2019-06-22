@@ -803,7 +803,7 @@ contains
     PUSH_SUB(mesh_init_stage_3.do_partition)
 
     !Try to load the partition from the restart files
-    call restart_init(restart_load, RESTART_PARTITION, RESTART_TYPE_LOAD, mc, ierr, mesh=mesh, exact=.true.)
+    call restart_init(restart_load, parser, RESTART_PARTITION, RESTART_TYPE_LOAD, mc, ierr, mesh=mesh, exact=.true.)
     if (ierr == 0) call mesh_partition_load(restart_load, mesh, ierr)
     call restart_end(restart_load)
 
@@ -829,7 +829,7 @@ contains
       end if
       
       if(.not. present(parent)) then
-        call mesh_partition(mesh, stencil, vsize)
+        call mesh_partition(mesh, parser, stencil, vsize)
       else
         ! if there is a parent grid, use its partition
         call mesh_partition_from_parent(mesh, parent)
@@ -839,7 +839,7 @@ contains
       call mesh_partition_boundaries(mesh, stencil, vsize)
 
       !Now that we have the partitions, we save them
-      call restart_init(restart_dump, RESTART_PARTITION, RESTART_TYPE_DUMP, mc, ierr, mesh=mesh)
+      call restart_init(restart_dump, parser, RESTART_PARTITION, RESTART_TYPE_DUMP, mc, ierr, mesh=mesh)
       call mesh_partition_dump(restart_dump, mesh, vsize, ierr)
       call restart_end(restart_dump)
     end if

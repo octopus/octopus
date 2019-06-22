@@ -421,7 +421,7 @@ contains
 
     kick_present = epot_have_kick(hm%ep)
 
-    call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM  
+    call pcm_init(hm%pcm, parser, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM  
     if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT")
     
     !%Variable SCDM_EXX

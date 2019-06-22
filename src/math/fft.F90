@@ -277,8 +277,9 @@ contains
   end subroutine fft_all_end
 
   ! ---------------------------------------------------------
-  subroutine fft_init(this, nn, dim, type, library, optimize, optimize_parity, mpi_comm, mpi_grp)
+  subroutine fft_init(this, parser, nn, dim, type, library, optimize, optimize_parity, mpi_comm, mpi_grp)
     type(fft_t),       intent(inout) :: this     !< FFT data type
+    type(parser_t),    intent(in)    :: parser
     integer,           intent(inout) :: nn(3)    !< Size of the box
     integer,           intent(in)    :: dim      !< Dimensions of the box
     integer,           intent(in)    :: type     !< The type of the FFT; real or complex
@@ -535,7 +536,7 @@ contains
     case(FFTLIB_NFFT)
 #ifdef HAVE_NFFT
      call nfft_copy_info(this%nfft,fft_array(jj)%nfft) !copy default parameters set in the calling routine 
-     call nfft_init(fft_array(jj)%nfft, fft_array(jj)%rs_n_global, &
+     call nfft_init(fft_array(jj)%nfft, parser, fft_array(jj)%rs_n_global, &
                     fft_dim, fft_array(jj)%rs_n_global , type, optimize = .true.)
 #endif
 

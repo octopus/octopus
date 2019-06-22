@@ -340,7 +340,7 @@ contains
 
     SAFE_ALLOCATE(em_vars%lr(1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
     do ifactor = 1, em_vars%nfactor
-      call Born_charges_init(em_vars%Born_charges(ifactor), sys%geo, sys%st, gr%sb%dim)
+      call born_charges_init(em_vars%Born_charges(ifactor), sys%parser, sys%geo, sys%st, gr%sb%dim)
     end do
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC &

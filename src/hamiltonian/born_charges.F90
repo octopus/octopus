@@ -35,7 +35,7 @@ module born_charges_oct_m
   private
   public ::                &
     Born_charges_t,        &
-    Born_charges_init,     &
+    born_charges_init,     &
     Born_charges_end,      &
     out_Born_charges
 
@@ -50,15 +50,16 @@ module born_charges_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine Born_charges_init(this, geo, st, dim)
+  subroutine born_charges_init(this, parser, geo, st, dim)
     type(Born_charges_t), intent(out) :: this
+    type(parser_t),       intent(in)    :: parser
     type(geometry_t),     intent(in)  :: geo
     type(states_t),       intent(in)  :: st
     integer,              intent(in)  :: dim
 
     integer :: idir
 
-    PUSH_SUB(Born_charges_init)
+    PUSH_SUB(born_charges_init)
 
     nullify(this%charge)
     SAFE_ALLOCATE(this%charge(1:dim, 1:dim, 1:geo%natoms))
@@ -81,10 +82,10 @@ contains
     !% or <i>k</i>-point sampling (in periodic directions).
     !%End
 
-    call parse_variable(dummy_parser, 'BornChargeSumRuleCorrection', .true., this%correct)
+    call parse_variable(parser, 'BornChargeSumRuleCorrection', .true., this%correct)
 
-    POP_SUB(Born_charges_init)
-  end subroutine Born_charges_init
+    POP_SUB(born_charges_init)
+  end subroutine born_charges_init
 
   ! ---------------------------------------------------------
   subroutine Born_charges_end(this)

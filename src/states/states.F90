@@ -1712,8 +1712,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_distribute_nodes(st, mc)
+  subroutine states_distribute_nodes(st, parser, mc)
     type(states_t),    intent(inout) :: st
+    type(parser_t),    intent(in)    :: parser
     type(multicomm_t), intent(in)    :: mc
 
     PUSH_SUB(states_distribute_nodes)

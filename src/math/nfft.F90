@@ -97,8 +97,9 @@ contains
 
   ! ---------------------------------------------------------
   ! GURU options
-  subroutine nfft_guru_options(nfft)
-    type(nfft_t), intent(inout) :: nfft
+  subroutine nfft_guru_options(nfft, parser)
+    type(nfft_t),     intent(inout) :: nfft
+    type(parser_t),   intent(in)    :: parser
 
     PUSH_SUB(nfft_guru_options)
 
@@ -163,8 +164,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nfft_init(nfft, N, dim, M, is_real, optimize)
+  subroutine nfft_init(nfft, parser, N, dim, M, is_real, optimize)
     type(nfft_t),      intent(inout) :: nfft
+    type(parser_t),    intent(in)    :: parser
     integer,           intent(inout) :: N(3) !> nfft bandwidths
     integer,           intent(inout) :: M(3) !> nfft nodes
     integer,           intent(in)    :: dim
@@ -196,7 +198,7 @@ contains
     nfft%M(dim+1:3) = 1
     
 
-    call nfft_guru_options(nfft)
+    call nfft_guru_options(nfft, parser)
 
     my_N = 0
     do ii = 1, dim

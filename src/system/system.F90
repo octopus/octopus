@@ -100,7 +100,7 @@ contains
 
     call geometry_partition(sys%geo, sys%mc)
     call kpoints_distribute(sys%st%d, sys%mc)
-    call states_distribute_nodes(sys%st, sys%mc)
+    call states_distribute_nodes(sys%st, sys%parser, sys%mc)
     call grid_init_stage_2(sys%gr, sys%parser, sys%mc, sys%geo)
     if(sys%st%symmetrize_density) call mesh_check_symmetries(sys%gr%mesh, sys%gr%sb)
 

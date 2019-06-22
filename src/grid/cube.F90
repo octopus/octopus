@@ -237,7 +237,7 @@ contains
 
       if(present(tp_enlarge)) call cube_tp_fft_defaults(cube, fft_library_)
 
-      call fft_init(cube%fft, tmp_n, sb%dim, fft_type_, fft_library_, optimize, optimize_parity, &
+      call fft_init(cube%fft, dummy_parser, tmp_n, sb%dim, fft_type_, fft_library_, optimize, optimize_parity, &
            mpi_comm=mpi_comm, mpi_grp = mpi_grp_)
       if(present(nn_out)) nn_out(1:3) = tmp_n(1:3)
 

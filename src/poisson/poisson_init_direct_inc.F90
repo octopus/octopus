@@ -152,7 +152,7 @@ subroutine poisson_kernel_init(this, parser, all_nodes_comm)
     call poisson_multigrid_init(this%mg, parser, this%der%mesh, maxl, threshold)
      
   case(POISSON_ISF)
-    call poisson_isf_init(this%isf_solver, this%der%mesh, this%cube, all_nodes_comm, init_world = this%all_nodes_default)
+    call poisson_isf_init(this%isf_solver, parser, this%der%mesh, this%cube, all_nodes_comm, init_world = this%all_nodes_default)
     
   case(POISSON_LIBISF)
     !! We`ll use the MPI_WORLD_COMM, to use all the available processes for the

@@ -195,7 +195,7 @@ contains
     
     ! the user knows what he wants, give her that
     if(parse_is_defined(parser, 'TheoryLevel')) then
-      call parse_variable(dummy_parser, 'TheoryLevel', KOHN_SHAM_DFT, ks%theory_level)
+      call parse_variable(parser, 'TheoryLevel', KOHN_SHAM_DFT, ks%theory_level)
       if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error('TheoryLevel')
 
       parsed_theory_level = .true.
@@ -242,7 +242,7 @@ contains
     end if
     
     ! The description of this variable can be found in file src/xc/functionals_list.F90
-    call parse_variable(dummy_parser, 'XCFunctional', default, val)
+    call parse_variable(parser, 'XCFunctional', default, val)
 
     ! the first 3 digits of the number indicate the X functional and
     ! the next 3 the C functional.
@@ -273,7 +273,7 @@ contains
     !% The same functional defined by <tt>XCFunctional</tt>.
     !%End
     
-    call parse_variable(dummy_parser, 'XCKernel', default, val)
+    call parse_variable(parser, 'XCKernel', default, val)
     
     if( -1 == val ) then
       ck_id = c_id
@@ -296,7 +296,7 @@ contains
       x_id, c_id, xk_id, ck_id, hartree_fock = ks%theory_level == HARTREE_FOCK)
 
     if(bitand(ks%xc%family, XC_FAMILY_LIBVDWXC) /= 0) then
-      call libvdwxc_set_geometry(ks%xc%functional(FUNC_C,1)%libvdwxc, gr%mesh)
+      call libvdwxc_set_geometry(ks%xc%functional(FUNC_C,1)%libvdwxc, parser, gr%mesh)
     end if
 
     ks%xc_family = ks%xc%family
@@ -311,7 +311,7 @@ contains
       end if
 
       ! In principle we do not need to parse. However we do it for consistency
-      call parse_variable(dummy_parser, 'TheoryLevel', default, ks%theory_level)
+      call parse_variable(parser, 'TheoryLevel', default, ks%theory_level)
       if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error('TheoryLevel')
      
     end if
@@ -359,7 +359,7 @@ contains
         !% Average-density SIC.
         !% C. Legrand <i>et al.</i>, <i>J. Phys. B</i> <b>35</b>, 1115 (2002). 
         !%End
-        call parse_variable(dummy_parser, 'SICCorrection', sic_none, ks%sic_type)
+        call parse_variable(parser, 'SICCorrection', sic_none, ks%sic_type)
         if(.not. varinfo_valid_option('SICCorrection', ks%sic_type)) call messages_input_error('SICCorrection')
 
         ! Perdew-Zunger corrections
@@ -418,7 +418,7 @@ contains
     !% The DFT-D3 scheme of S. Grimme, J. Antony, S. Ehrlich, and
     !% S. Krieg, J. Chem. Phys. 132, 154104 (2010).
     !%End
-    call parse_variable(dummy_parser, 'VDWCorrection', OPTION__VDWCORRECTION__NONE, ks%vdw_correction)
+    call parse_variable(parser, 'VDWCorrection', OPTION__VDWCORRECTION__NONE, ks%vdw_correction)
     
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
       call messages_experimental('VDWCorrection')
@@ -435,9 +435,9 @@ contains
         !% self-consistently, the default, or just as a correction to
         !% the total energy. This option only works with vdw_ts.
         !%End
-        call parse_variable(dummy_parser, 'VDWSelfConsistent', .true., ks%vdw_self_consistent)
+        call parse_variable(parser, 'VDWSelfConsistent', .true., ks%vdw_self_consistent)
 
-        call vdw_ts_init(ks%vdw_ts, geo, gr%fine%der)
+        call vdw_ts_init(ks%vdw_ts, parser, geo, gr%fine%der)
 
       case(OPTION__VDWCORRECTION__VDW_D3)
         ks%vdw_self_consistent = .false.
@@ -486,7 +486,7 @@ contains
         !%
         !%End
         if(parse_is_defined(parser, 'VDWD3Functional')) call messages_experimental('VDWD3Functional')
-        call parse_variable(dummy_parser, 'VDWD3Functional', d3func_def, d3func)
+        call parse_variable(parser, 'VDWD3Functional', d3func_def, d3func)
         
         if(d3func == '') then
           call messages_write('Cannot find  a matching parametrization  of DFT-D3 for the current')

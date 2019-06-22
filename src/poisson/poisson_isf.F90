@@ -70,8 +70,9 @@ module poisson_isf_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_isf_init(this, mesh, cube, all_nodes_comm, init_world)
+  subroutine poisson_isf_init(this, parser, mesh, cube, all_nodes_comm, init_world)
     type(poisson_isf_t), intent(out)   :: this
+    type(parser_t),      intent(in)    :: parser
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
     integer,             intent(in)    :: all_nodes_comm

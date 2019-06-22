@@ -210,7 +210,7 @@ contains
       !% is added to the kinetic-energy density such as to make it gauge-independent.
       !% Applies only to meta-GGA (and hybrid meta-GGA) functionals.
       !%End
-      call parse_variable(dummy_parser, 'XCUseGaugeIndependentKED', .true., xcs%use_gi_ked)
+      call parse_variable(parser, 'XCUseGaugeIndependentKED', .true., xcs%use_gi_ked)
     end if
 
     POP_SUB(xc_init)
@@ -239,7 +239,7 @@ contains
       !% Applicable only to isotropic systems. (Experimental)
       !%End
 
-      call parse_variable(dummy_parser, 'XCKernelLRCAlpha', M_ZERO, xcs%kernel_lrc_alpha)
+      call parse_variable(parser, 'XCKernelLRCAlpha', M_ZERO, xcs%kernel_lrc_alpha)
       if(abs(xcs%kernel_lrc_alpha) > M_EPSILON) &
         call messages_experimental("Long-range correction to kernel")
 
@@ -255,7 +255,7 @@ contains
       !%Option long_range_x 1
       !% The correction is applied to the exchange potential.
       !%End
-      call parse_variable(dummy_parser, 'XCDensityCorrection', LR_NONE, xcs%xc_density_correction)
+      call parse_variable(parser, 'XCDensityCorrection', LR_NONE, xcs%xc_density_correction)
 
       if(xcs%xc_density_correction /= LR_NONE) then 
         call messages_experimental('XC density correction')
@@ -271,7 +271,7 @@ contains
         !% the cutoff must be given by the <tt>XCDensityCorrectionCutoff</tt>
         !% variable.
         !%End
-        call parse_variable(dummy_parser, 'XCDensityCorrectionOptimize', .true., xcs%xcd_optimize_cutoff)
+        call parse_variable(parser, 'XCDensityCorrectionOptimize', .true., xcs%xcd_optimize_cutoff)
 
         !%Variable XCDensityCorrectionCutoff
         !%Type float
@@ -280,7 +280,7 @@ contains
         !%Description
         !% The value of the cutoff applied to the XC density.
         !%End
-        call parse_variable(dummy_parser, 'XCDensityCorrectionCutoff', CNST(0.0), xcs%xcd_ncutoff)
+        call parse_variable(parser, 'XCDensityCorrectionCutoff', CNST(0.0), xcs%xcd_ncutoff)
 
         !%Variable XCDensityCorrectionMinimum
         !%Type logical
@@ -293,7 +293,7 @@ contains
         !% This is required for atoms or small
         !% molecules, but may cause numerical problems.
         !%End
-        call parse_variable(dummy_parser, 'XCDensityCorrectionMinimum', .true., xcs%xcd_minimum)
+        call parse_variable(parser, 'XCDensityCorrectionMinimum', .true., xcs%xcd_minimum)
 
         !%Variable XCDensityCorrectionNormalize
         !%Type logical
@@ -304,7 +304,7 @@ contains
         !% normalized to reproduce the exact boundary conditions of
         !% the XC potential.
         !%End
-        call parse_variable(dummy_parser, 'XCDensityCorrectionNormalize', .true., xcs%xcd_normalize)
+        call parse_variable(parser, 'XCDensityCorrectionNormalize', .true., xcs%xcd_normalize)
 
       end if
 
@@ -317,7 +317,7 @@ contains
       !% will be used for the calculation of the XC functional.
       !%End
       call messages_obsolete_variable(parser, 'XCParallel', 'ParallelXC')
-      call parse_variable(dummy_parser, 'ParallelXC', .true., xcs%parallel)
+      call parse_variable(parser, 'ParallelXC', .true., xcs%parallel)
       
       POP_SUB(xc_init.parse)
     end subroutine parse

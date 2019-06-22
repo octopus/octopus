@@ -170,7 +170,7 @@ contains
     !%Option filter_BSB 3
     !% The filter of E. L. Briggs, D. J. Sullivan, and J. Bernholc, <i>Phys. Rev. B</i> <b>54</b>, 14362 (1996).
     !%End
-    call parse_variable(dummy_parser, 'FilterPotentials', PS_FILTER_TS, filter)
+    call parse_variable(parser, 'FilterPotentials', PS_FILTER_TS, filter)
     if(.not.varinfo_valid_option('FilterPotentials', filter)) call messages_input_error('FilterPotentials')
     call messages_print_var_option(stdout, "FilterPotentials", filter)
 
@@ -209,7 +209,7 @@ contains
       !%  Classical charges are treated as Gaussian distributions. 
       !%  Smearing widths are hard-coded by species (experimental).
       !%End
-      call parse_variable(dummy_parser, 'ClassicalPotential', 0, ep%classical_pot)
+      call parse_variable(parser, 'ClassicalPotential', 0, ep%classical_pot)
       if(ep%classical_pot  ==  CLASSICAL_GAUSSIAN) then
         call messages_experimental("Gaussian smeared classical charges")
         ! This method probably works but definitely needs to be made user-friendly:
@@ -321,7 +321,7 @@ contains
       !% Linear gauge with <math>A = \frac{1}{c} \left( -y, 0 \right) B_z</math>. Can be used for <tt>PeriodicDimensions = 1</tt>
       !% but not <tt>PeriodicDimensions = 2</tt>.
       !%End
-      call parse_variable(dummy_parser, 'StaticMagneticField2DGauge', 0, gauge_2d)
+      call parse_variable(parser, 'StaticMagneticField2DGauge', 0, gauge_2d)
       if(.not.varinfo_valid_option('StaticMagneticField2DGauge', gauge_2d)) &
         call messages_input_error('StaticMagneticField2DGauge')
 
@@ -404,7 +404,7 @@ contains
     !% you calculate a 2D electron gas, in which case you have an effective
     !% gyromagnetic factor that depends on the material.
     !%End
-    call parse_variable(dummy_parser, 'GyromagneticRatio', P_g, ep%gyromagnetic_ratio)
+    call parse_variable(parser, 'GyromagneticRatio', P_g, ep%gyromagnetic_ratio)
 
     !%Variable RelativisticCorrection
     !%Type integer
@@ -420,7 +420,7 @@ contains
     !%Option spin_orbit 1
     !% Spin-orbit.
     !%End
-    call parse_variable(dummy_parser, 'RelativisticCorrection', NOREL, ep%reltype)
+    call parse_variable(parser, 'RelativisticCorrection', NOREL, ep%reltype)
     if(.not.varinfo_valid_option('RelativisticCorrection', ep%reltype)) call messages_input_error('RelativisticCorrection')
     if (ispin /= SPINORS .and. ep%reltype == SPIN_ORBIT) then
       message(1) = "The spin-orbit term can only be applied when using spinors."
@@ -438,7 +438,7 @@ contains
     !% the Hamiltonian, and setting it to one corresponds to full spin-orbit.
     !%End
     if (ep%reltype == SPIN_ORBIT) then
-      call parse_variable(dummy_parser, 'SOStrength', M_ONE, ep%so_strength)
+      call parse_variable(parser, 'SOStrength', M_ONE, ep%so_strength)
     else
       ep%so_strength = M_ONE
     end if
@@ -455,7 +455,7 @@ contains
     !% This feature is only available for finite systems; if the system is periodic in any dimension, 
     !% this variable cannot be set to "yes".
     !%End
-    call parse_variable(dummy_parser, 'IgnoreExternalIons', .false., ep%ignore_external_ions)
+    call parse_variable(parser, 'IgnoreExternalIons', .false., ep%ignore_external_ions)
     if(ep%ignore_external_ions) then
       if(gr%sb%periodic_dim > 0) call messages_input_error('IgnoreExternalIons')
     end if
@@ -468,7 +468,7 @@ contains
     !% (Experimental) If this variable is set to "yes", then the sum
     !% of the total forces will be enforced to be zero.
     !%End
-    call parse_variable(dummy_parser, 'ForceTotalEnforce', .false., ep%force_total_enforce)
+    call parse_variable(parser, 'ForceTotalEnforce', .false., ep%force_total_enforce)
     if(ep%force_total_enforce) call messages_experimental('ForceTotalEnforce')
 
     SAFE_ALLOCATE(ep%proj(1:geo%natoms))
@@ -506,7 +506,7 @@ contains
       nullify(ep%poisson_solver)
     end if
 
-    call ion_interaction_init(ep%ion_interaction)
+    call ion_interaction_init(ep%ion_interaction, parser)
 
     !%Variable TDGlobalForce
     !%Type string
@@ -523,7 +523,7 @@ contains
 
       ep%global_force = .true.
 
-      call parse_variable(dummy_parser, 'TDGlobalForce', 'none', function_name)
+      call parse_variable(parser, 'TDGlobalForce', 'none', function_name)
       call tdf_read(ep%global_force_function, parser, trim(function_name), ierr)
 
       if(ierr /= 0) then

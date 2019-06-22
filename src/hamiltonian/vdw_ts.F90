@@ -69,8 +69,9 @@ module vdw_ts_oct_m
 
 contains
 
-  subroutine vdw_ts_init(this, geo, der)
+  subroutine vdw_ts_init(this, parser, geo, der)
     type(vdw_ts_t),      intent(out)   :: this
+    type(parser_t),      intent(in)    :: parser
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
     
@@ -87,7 +88,7 @@ contains
     !% Set the value of the cutoff (unit of length) for the VDW correction in periodic system 
     !% in the Tkatchenko and Scheffler (vdw_ts) scheme only. 
     !%End
-    call parse_variable(dummy_parser, 'VDW_TS_cutoff', CNST(10.0), this%cutoff, units_inp%length)
+    call parse_variable(parser, 'VDW_TS_cutoff', CNST(10.0), this%cutoff, units_inp%length)
 
 
     !%Variable VDW_TS_damping
@@ -98,7 +99,7 @@ contains
     !% Set the value of the damping function (in unit of 1/length) steepness for the VDW correction in the 
     !% Tkatchenko-Scheffler scheme. See Equation (12) of Phys. Rev. Lett. 102 073005 (2009). 
     !%End
-    call parse_variable(dummy_parser, 'VDW_TS_damping', CNST(20.0), this%damping, units_inp%length**(-1))
+    call parse_variable(parser, 'VDW_TS_damping', CNST(20.0), this%damping, units_inp%length**(-1))
 
     !%Variable VDW_TS_sr
     !%Type float
@@ -110,7 +111,7 @@ contains
     !% This parameter depends on the xc functional used. 
     !% The default value is 0.94, which holds for PBE. For PBE0, a value of 0.96 should be used.
     !%End
-    call parse_variable(dummy_parser, 'VDW_TS_sr', CNST(0.94), this%sr)
+    call parse_variable(parser, 'VDW_TS_sr', CNST(0.94), this%sr)
 
 
     SAFE_ALLOCATE(this%c6free(1:geo%nspecies))

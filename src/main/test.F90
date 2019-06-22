@@ -613,7 +613,7 @@ contains
 
     call system_init(sys, parser)
 
-    call ion_interaction_test(sys%geo, sys%gr%sb)
+    call ion_interaction_test(sys%geo, sys%parser, sys%gr%sb)
 
     call system_end(sys)
 

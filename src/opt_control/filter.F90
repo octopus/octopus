@@ -123,7 +123,7 @@ contains
         call parse_block_integer(blk, i-1, 0, filter%domain(i))
         call parse_block_string(blk, i-1, 1, filter%expression(i))
         call conv_to_C_string(filter%expression(i))
-        call tdf_init_numerical(filter%f(i), steps, dt, -M_ONE)
+        call tdf_init_numerical(filter%f(i), parser, steps, dt, -M_ONE)
         call tdf_numerical_to_fourier(filter%f(i))
       end do
       call build_filter(filter)

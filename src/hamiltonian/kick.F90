@@ -131,7 +131,7 @@ contains
     !% external potential is used. However, one may want to apply a kick on top of a laser field,
     !% for example.
     !%End
-    call parse_variable(dummy_parser, 'TDDeltaKickTime', M_ZERO, kick%time, units_inp%time)
+    call parse_variable(parser, 'TDDeltaKickTime', M_ZERO, kick%time, units_inp%time)
     if(kick%time > M_ZERO) then
       call messages_experimental('TDDeltaKickTime > 0')
     end if
@@ -150,7 +150,7 @@ contains
     !% the wavefunctions instantaneously to acquire a phase <math>e^{ikx}</math>.
     !% The unit is inverse length.
     !%End
-    call parse_variable(dummy_parser, 'TDDeltaStrength', M_ZERO, kick%delta_strength, units_inp%length**(-1))
+    call parse_variable(parser, 'TDDeltaStrength', M_ZERO, kick%delta_strength, units_inp%length**(-1))
 
     nullify(kick%l)
     nullify(kick%m)
@@ -195,7 +195,7 @@ contains
     !% This mode is intended for use with symmetries to obtain both of the responses
     !% at once, at described in the reference above.
     !%End
-    call parse_variable(dummy_parser, 'TDDeltaStrengthMode', KICK_DENSITY_MODE, kick%delta_strength_mode)
+    call parse_variable(parser, 'TDDeltaStrengthMode', KICK_DENSITY_MODE, kick%delta_strength_mode)
     select case (kick%delta_strength_mode)
     case (KICK_DENSITY_MODE)
     case (KICK_SPIN_MODE, KICK_SPIN_DENSITY_MODE)
@@ -219,7 +219,7 @@ contains
       !% block will be ignored. The value of <tt>TDDeltaUserDefined</tt> should be a string describing
       !% the function that is going to be used as delta perturbation.
       !%End
-      call parse_variable(dummy_parser, 'TDDeltaUserDefined', '0', kick%user_defined_function)
+      call parse_variable(parser, 'TDDeltaUserDefined', '0', kick%user_defined_function)
 
       !%Variable TDKickFunction
       !%Type block
@@ -266,7 +266,7 @@ contains
       !% used by <tt>oct-propagation_spectrum</tt> to rebuild the full polarizability tensor from just the
       !% first <tt>TDPolarizationEquivAxes</tt> directions. This variable is also used by <tt>CalculationMode = vdw</tt>.
       !%End
-      call parse_variable(dummy_parser, 'TDPolarizationEquivAxes', 0, kick%pol_equiv_axes)
+      call parse_variable(parser, 'TDPolarizationEquivAxes', 0, kick%pol_equiv_axes)
 
       !%Variable TDPolarizationDirection
       !%Type integer
@@ -283,7 +283,7 @@ contains
       !% to <tt>TDPolarizationEquivAxes</tt>.
       !%End
 
-      call parse_variable(dummy_parser, 'TDPolarizationDirection', 0, kick%pol_dir)
+      call parse_variable(parser, 'TDPolarizationDirection', 0, kick%pol_dir)
 
       if(kick%pol_dir < 1 .or. kick%pol_dir > dim) call messages_input_error('TDPolarizationDirection')
       

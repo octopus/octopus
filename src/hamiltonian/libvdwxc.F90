@@ -61,8 +61,9 @@ module libvdwxc_oct_m
 
 contains
 
-  subroutine libvdwxc_init(libvdwxc, functional)
+  subroutine libvdwxc_init(libvdwxc, parser, functional)
     type(libvdwxc_t), intent(out) :: libvdwxc
+    type(parser_t),   intent(in)  :: parser
     integer,          intent(in)  :: functional
 
     PUSH_SUB(libvdwxc_init)
@@ -80,7 +81,7 @@ contains
     !%Description
     !% Dump libvdwxc inputs and outputs to files.
     !%End
-    call parse_variable(dummy_parser, 'libvdwxcDebug', .false., libvdwxc%debug)
+    call parse_variable(parser, 'libvdwxcDebug', .false., libvdwxc%debug)
     POP_SUB(libvdwxc_init)
 
     !%Variable libvdwxcVDWFactor
@@ -91,7 +92,7 @@ contains
     !% Setting a prefactor other than one is wrong, but useful
     !% for debugging.
     !%End
-    call parse_variable(dummy_parser, 'libvdwxcVDWFactor', M_ONE, libvdwxc%vdw_factor)
+    call parse_variable(parser, 'libvdwxcVDWFactor', M_ONE, libvdwxc%vdw_factor)
   end subroutine libvdwxc_init
 
   subroutine libvdwxc_print(this)
@@ -121,8 +122,9 @@ contains
     POP_SUB(libvdwxc_write_info)
   end subroutine libvdwxc_write_info
 
-  subroutine libvdwxc_set_geometry(this, mesh)
+  subroutine libvdwxc_set_geometry(this, parser, mesh)
     type(libvdwxc_t), intent(inout) :: this
+    type(parser_t),   intent(in)    :: parser
     type(mesh_t),     intent(inout) :: mesh
 
     integer :: blocksize
@@ -154,7 +156,7 @@ contains
     !%Option libvdwxc_mode_mpi 3
     !% Run with fftw3-mpi.  Works only if Octopus is compiled with MPI.
     !%End
-    call parse_variable(dummy_parser, 'libvdwxcMode', LIBVDWXC_MODE_AUTO, libvdwxc_mode)
+    call parse_variable(parser, 'libvdwxcMode', LIBVDWXC_MODE_AUTO, libvdwxc_mode)
 
     if(libvdwxc_mode == LIBVDWXC_MODE_AUTO) then
       if(mesh%mpi_grp%size == 1) then

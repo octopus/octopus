@@ -383,9 +383,9 @@ contains
     do il = 1, ep%no_lasers
       select case(cf_common%mode)
       case(controlfunction_mode_epsilon)
-        call laser_to_numerical_all(ep%lasers(il), dt, max_iter, cf_common%omegamax)
+        call laser_to_numerical_all(ep%lasers(il), parser, dt, max_iter, cf_common%omegamax)
       case default
-        call laser_to_numerical(ep%lasers(il), dt, max_iter, cf_common%omegamax)
+        call laser_to_numerical(ep%lasers(il), parser, dt, max_iter, cf_common%omegamax)
       end select
     end do
 
@@ -502,14 +502,14 @@ contains
           message(1) = 'Time-dependent function "'//trim(expression)//'" could not be read from inp file.'
           call messages_fatal(1)
         end if
-        call tdf_to_numerical(cf_common%td_penalty(irow), steps, dt, cf_common%omegamax)
+        call tdf_to_numerical(cf_common%td_penalty(irow), parser, steps, dt, cf_common%omegamax)
         ierr = parse_block(parser, 'OCTLaserEnvelope', blk)
       end do
 
       call parse_block_end(blk)
     else
       do ipar = 1, cf_common%no_controlfunctions
-        call tdf_init_numerical(cf_common%td_penalty(ipar), steps, dt, -M_ONE, initval = M_ONE)
+        call tdf_init_numerical(cf_common%td_penalty(ipar), parser, steps, dt, -M_ONE, initval = M_ONE)
       end do
     end if
 
@@ -539,8 +539,9 @@ contains
   !! to be initialized, either by calling controlfunction_init, or
   !! by copying another initialized variable through
   !! controlfunction_copy.
-  subroutine controlfunction_init(cp, dt, ntiter)
+  subroutine controlfunction_init(cp, parser, dt, ntiter)
     type(controlfunction_t), intent(inout) :: cp
+    type(parser_t),          intent(in)    :: parser
     FLOAT, intent(in) :: dt
     integer, intent(in) :: ntiter
 
@@ -557,7 +558,7 @@ contains
 
     SAFE_ALLOCATE(cp%f(1:cp%no_controlfunctions))
     do ipar = 1, cp%no_controlfunctions
-      call tdf_init_numerical(cp%f(ipar), ntiter, dt, cf_common%omegamax)
+      call tdf_init_numerical(cp%f(ipar), parser, ntiter, dt, cf_common%omegamax)
     end do
 
     ! If the control function is represented directly in real time, the "dimension" (cp%dim) is
@@ -632,7 +633,7 @@ contains
     end if
 
     ! Construct the transformation matrix, if needed.
-    call controlfunction_trans_matrix(cp)
+    call controlfunction_trans_matrix(cp, parser)
 
     POP_SUB(controlfunction_init)
   end subroutine controlfunction_init
@@ -1503,8 +1504,9 @@ contains
 
   !> controlfunction_der computes the derivative of a controlfunction with respect
   !! to one of its degrees of freedom.
-  subroutine controlfunction_der(par, depsilon, i)
+  subroutine controlfunction_der(par, parser, depsilon, i)
     type(controlfunction_t), intent(in)    :: par
+    type(parser_t),          intent(in)    :: parser
     type(tdf_t), intent(inout) :: depsilon
     integer,                 intent(in)    :: i
 
@@ -1515,7 +1517,7 @@ contains
     SAFE_ALLOCATE(dedu(1:par%dof, 1:par%dim))
     call controlfunction_deltaedeltau(par, dedu)
     call tdf_set_numerical(depsilon, dedu(i, 1:par%dim))
-    call tdf_to_numerical(depsilon)
+    call tdf_to_numerical(depsilon, parser)
     if(controlfunction_mode() == controlfunction_mode_f) call tdf_cosine_multiply(par%w0, depsilon)
 
     SAFE_DEALLOCATE_A(dedu)
@@ -1525,8 +1527,9 @@ contains
 
   !> controlfunction_gradient computes the (minus the) gradient of the
   !! J functional with respect to the parameters.
-  subroutine controlfunction_gradient(par, par_output, grad)
+  subroutine controlfunction_gradient(par, parser, par_output, grad)
     type(controlfunction_t), intent(in)    :: par, par_output
+    type(parser_t),          intent(in)    :: parser
     FLOAT,                   intent(inout) :: grad(:)
 
     integer :: jj
@@ -1543,7 +1546,7 @@ contains
     case(ctr_fourier_series, ctr_zero_fourier_series)
       do jj = 1, par%dof
         call tdf_copy(depsilon, par%f(1))
-        call controlfunction_der(par, depsilon, jj)
+        call controlfunction_der(par, parser, depsilon, jj)
         grad(jj) = M_TWO * controlfunction_alpha(par, 1) * sum(par%u(jj, :)*par%theta(:)) &
                  - tdf_dot_product(par_output%f(1), depsilon)
         call tdf_end(depsilon)
@@ -1552,7 +1555,7 @@ contains
     case(ctr_fourier_series_h, ctr_zero_fourier_series_h)
       do jj = 1, par%dof
         call tdf_copy(depsilon, par%f(1))
-        call controlfunction_der(par, depsilon, jj)
+        call controlfunction_der(par, parser, depsilon, jj)
         grad(jj) = - tdf_dot_product(par_output%f(1), depsilon)
         call tdf_end(depsilon)
       end do

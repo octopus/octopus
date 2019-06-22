@@ -193,7 +193,7 @@ contains
     call epot_precalc_local_potential(hm%ep, sys%parser, sys%gr, sys%geo)
 
     if(do_infrared) then
-      call Born_charges_init(born, geo, st, ndim)
+      call born_charges_init(born, sys%parser, geo, st, ndim)
     end if
     SAFE_ALLOCATE(force_deriv(1:ndim, 1:natoms))
 

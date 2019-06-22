@@ -538,8 +538,9 @@ contains
   !! <Psi(T)|\hat{O}|Psi(T) in the time-independent
   !! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
   !! the time-dependent case.
-  FLOAT function target_j1(tg, gr, qcpsi, geo) result(j1)
+  FLOAT function target_j1(tg, parser, gr, qcpsi, geo) result(j1)
     type(target_t), intent(inout)   :: tg
+    type(parser_t),  intent(in)     :: parser
     type(grid_t),   intent(in)      :: gr
     type(opt_control_state_t), intent(inout)   :: qcpsi
     type(geometry_t), intent(in), optional :: geo
@@ -568,7 +569,7 @@ contains
     case(oct_tg_exclude_state)
       j1 = target_j1_exclude(gr, tg, psi)
     case(oct_tg_hhg)
-      j1 = target_j1_hhg(tg)
+      j1 = target_j1_hhg(tg, parser)
     case(oct_tg_hhgnew)
       j1 = target_j1_hhgnew(gr, tg)
     case(oct_tg_velocity)

@@ -165,7 +165,7 @@
     !% In practice, it is better if you also set an upper limit, <i>e.g.</i>
     !% <math>f(\omega) = step(\omega-1) step(2-\omega)</math>.
     !%End
-    call parse_variable(dummy_parser, 'OCTHarmonicWeight', '1', tg%plateau_string)
+    call parse_variable(parser, 'OCTHarmonicWeight', '1', tg%plateau_string)
     tg%dt = td%dt
     SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))
     tg%td_fitness = M_ZERO
@@ -183,7 +183,7 @@
     nn(1:3) = (/ td%max_iter, 1, 1 /)
     optimize(1:3) = .false.
     optimize_parity(1:3) = -1
-    call fft_init(tg%fft_handler, nn(1:3), 1, FFT_COMPLEX, FFTLIB_FFTW, optimize, optimize_parity)
+    call fft_init(tg%fft_handler, parser, nn(1:3), 1, FFT_COMPLEX, FFTLIB_FFTW, optimize, optimize_parity)
 
     POP_SUB(target_init_hhgnew)
   end subroutine target_init_hhgnew
@@ -244,9 +244,10 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  FLOAT function target_j1_hhg(tg) result(j1)
+  FLOAT function target_j1_hhg(tg, parser) result(j1)
     type(target_t), intent(in) :: tg
-
+    type(parser_t), intent(in) :: parser
+    
     integer :: maxiter, jj
     FLOAT :: aa, ww, maxhh, omega
     CMPLX, allocatable :: ddipole(:)
@@ -257,7 +258,7 @@
     ddipole = M_z0
     ddipole = tg%td_fitness
 
-    call spectrum_hsfunction_init(tg%dt, 0, maxiter, maxiter, ddipole)
+    call spectrum_hsfunction_init(tg%dt, parser, 0, maxiter, maxiter, ddipole)
     do jj = 1, tg%hhg_nks
       aa = tg%hhg_a(jj) * tg%hhg_w0
       ww = tg%hhg_k(jj) * tg%hhg_w0

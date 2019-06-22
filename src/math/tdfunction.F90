@@ -462,8 +462,9 @@ contains
 
 
   !------------------------------------------------------------
-  subroutine tdf_init_numerical(f, niter, dt, omegamax, initval, rep)
+  subroutine tdf_init_numerical(f, parser, niter, dt, omegamax, initval, rep)
     type(tdf_t),       intent(inout) :: f
+    type(parser_t),    intent(in)    :: parser
     integer,           intent(in)    :: niter
     FLOAT,             intent(in)    :: dt
     FLOAT,             intent(in)    :: omegamax
@@ -499,7 +500,7 @@ contains
     n(1:3) = (/ f%niter, 1, 1 /)
     optimize(1:3) = .false.
     optimize_parity(1:3) = -1
-    call fft_init(f%fft_handler, n, 1, FFT_REAL, FFTLIB_FFTW, optimize, optimize_parity)
+    call fft_init(f%fft_handler, parser, n, 1, FFT_REAL, FFTLIB_FFTW, optimize, optimize_parity)
 
     if(present(rep)) then
       select case(rep)
@@ -738,8 +739,9 @@ contains
 
 
   !------------------------------------------------------------
-  subroutine tdf_to_numerical(f, niter, dt, omegamax)
+  subroutine tdf_to_numerical(f, parser, niter, dt, omegamax)
     type(tdf_t),       intent(inout) :: f
+    type(parser_t),    intent(in)    :: parser
     integer, optional, intent(in)    :: niter
     FLOAT,   optional, intent(in)    :: dt
     FLOAT,   optional, intent(in)    :: omegamax
@@ -766,7 +768,7 @@ contains
       ASSERT(present(niter))
       ASSERT(present(dt))
       ASSERT(present(omegamax))
-      call tdf_init_numerical(f, niter, dt, omegamax)
+      call tdf_init_numerical(f, parser, niter, dt, omegamax)
       call tdf_set_numerical(f, val)
       SAFE_DEALLOCATE_A(val)
     end select

@@ -237,9 +237,9 @@ program propagation_spectrum
 
         out_file(1) = io_open(trim(fname)//'_vector', action='write')
         if(.not.reference_multipoles) then
-          call spectrum_cross_section(in_file(1), out_file(1), spectrum)
+          call spectrum_cross_section(parser, in_file(1), out_file(1), spectrum)
         else
-          call spectrum_cross_section(in_file(1), out_file(1), spectrum, ref_file)
+          call spectrum_cross_section(parser, in_file(1), out_file(1), spectrum, ref_file)
         end if
         call io_close(in_file(1))
         call io_close(out_file(1))
@@ -256,9 +256,9 @@ program propagation_spectrum
           write(filename(ii),'(2a,i1)') trim(fname), '_vector.',ii
           out_file(ii) = io_open(trim(filename(ii)), action='write')
           if(.not.reference_multipoles) then
-            call spectrum_cross_section(in_file(ii), out_file(ii), spectrum)
+            call spectrum_cross_section(parser, in_file(ii), out_file(ii), spectrum)
           else
-            call spectrum_cross_section(in_file(ii), out_file(ii), spectrum, ref_file)
+            call spectrum_cross_section(parser, in_file(ii), out_file(ii), spectrum, ref_file)
           end if
           call io_close(in_file(ii))
           call io_close(out_file(ii))
