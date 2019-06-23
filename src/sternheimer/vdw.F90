@@ -144,10 +144,10 @@ contains
       !% van der Waals coefficients.
       !%End
       call messages_obsolete_variable(sys%parser, 'vdW_npoints', 'vdWNPoints')
-      call parse_variable(dummy_parser, 'vdWNPoints', 6, gaus_leg_n)
+      call parse_variable(sys%parser, 'vdWNPoints', 6, gaus_leg_n)
 
       ! \todo symmetry stuff should be general
-      call parse_variable(dummy_parser, 'TDPolarizationEquivAxes', 0, equiv_axes)
+      call parse_variable(sys%parser, 'TDPolarizationEquivAxes', 0, equiv_axes)
 
       select case(equiv_axes)
       case(3);      ndir = 1
