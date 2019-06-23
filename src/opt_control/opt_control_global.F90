@@ -143,7 +143,7 @@ contains
     !% The local BFGS, as implemented in the NLOPT library -- therefore, octopus has to
     !% be compiled with it in order to be able to use this option.
     !%End
-    call parse_variable(dummy_parser, 'OCTScheme', OPTION__OCTSCHEME__OCT_ZR98, oct%algorithm)
+    call parse_variable(parser, 'OCTScheme', OPTION__OCTSCHEME__OCT_ZR98, oct%algorithm)
     if(.not.varinfo_valid_option('OCTScheme', oct%algorithm)) call messages_input_error('OCTScheme')
     ! We must check that the algorithm is consistent with OCTControlRepresentation, i.e.
     ! some algorithms only make sense if the control functions are handled directly in real
@@ -162,7 +162,7 @@ contains
       !% described in [Y. Maday and G. Turinici, <i>J. Chem. Phys.</i> <b>118</b>, 8191 (2003)], using the
       !% <tt>OCTEta</tt> and <tt>OCTDelta</tt> variables.
       !%End
-      call parse_variable(dummy_parser, 'OCTEta', M_ONE, oct%eta)
+      call parse_variable(parser, 'OCTEta', M_ONE, oct%eta)
       !%Variable OCTDelta
       !%Type float
       !%Section Calculation Modes::Optimal Control
@@ -172,7 +172,7 @@ contains
       !% described in [Y. Maday and G. Turinici, <i>J. Chem. Phys.</i> <b>118</b>, 8191 (2003)], using the
       !% <tt>OCTEta</tt> and <tt>OCTDelta</tt> variables.
       !%End
-      call parse_variable(dummy_parser, 'OCTDelta', M_ZERO, oct%delta)
+      call parse_variable(parser, 'OCTDelta', M_ZERO, oct%delta)
 
     case(OPTION__OCTSCHEME__OCT_ZR98)
       oct%delta = M_ONE; oct%eta = M_ONE
@@ -186,13 +186,13 @@ contains
       oct%delta = M_ZERO; oct%eta = M_ONE
     case(OPTION__OCTSCHEME__OCT_DIRECT)
       ! The use of these variables for the direct and bobyqa schemes remain undocumented for the moment.
-      call parse_variable(dummy_parser, 'OCTEta', M_ONE, oct%eta)
-      call parse_variable(dummy_parser, 'OCTDelta', M_ZERO, oct%delta)
+      call parse_variable(parser, 'OCTEta', M_ONE, oct%eta)
+      call parse_variable(parser, 'OCTDelta', M_ZERO, oct%delta)
     case(OPTION__OCTSCHEME__OCT_NLOPT_BOBYQA, OPTION__OCTSCHEME__OCT_NLOPT_LBFGS)
 #if defined(HAVE_NLOPT)
       !WARNING: not clear if this is needed, probably not.
-      call parse_variable(dummy_parser, 'OCTEta', M_ONE, oct%eta)
-      call parse_variable(dummy_parser, 'OCTDelta', M_ZERO, oct%delta)
+      call parse_variable(parser, 'OCTEta', M_ONE, oct%eta)
+      call parse_variable(parser, 'OCTDelta', M_ZERO, oct%delta)
 #else
       write(message(1), '(a)') '"OCTScheme = oct_nlopt_bobyqa" or "OCTScheme = oct_nlopt_lbfgs" are'
       write(message(2), '(a)') ' only possible if the nlopt library has been compiled.'
@@ -210,7 +210,7 @@ contains
     !% In order to make sure that the optimized field indeed does its job, the code 
     !% may run a normal propagation after the optimization using the optimized field.
     !%End
-    call parse_variable(dummy_parser, 'OCTDoubleCheck', .true., oct%oct_double_check)
+    call parse_variable(parser, 'OCTDoubleCheck', .true., oct%oct_double_check)
     call messages_print_var_value(stdout, "OCTDoubleCheck", oct%oct_double_check)
 
 
@@ -228,7 +228,7 @@ contains
     !% In order to activate this feature, set <tt>OCTCheckGradient</tt> to some non-zero value,
     !% which will be the finite difference used to numerically compute the gradient.
     !%End
-    call parse_variable(dummy_parser, 'OCTCheckGradient', CNST(0.0), oct%check_gradient)
+    call parse_variable(parser, 'OCTCheckGradient', CNST(0.0), oct%check_gradient)
     call messages_print_var_value(stdout, "OCTCheckGradient", oct%check_gradient)
 
 
@@ -241,7 +241,7 @@ contains
     !% the algorithms necessitate an initial "step" to perform the direct search for the
     !% optimal value. The precise meaning of this "step" differs.
     !%End
-    call parse_variable(dummy_parser, 'OCTDirectStep', CNST(0.25), oct%direct_step)
+    call parse_variable(parser, 'OCTDirectStep', CNST(0.25), oct%direct_step)
     call messages_print_var_value(stdout, "OCTDirectStep", oct%direct_step)
 
     !%Variable OCTNumberCheckPoints
@@ -259,7 +259,7 @@ contains
     !% If the backward (or forward) propagation is not retracing the steps of the previous
     !% forward (or backward) propagation, the code will write a warning.
     !%End
-    call parse_variable(dummy_parser, 'OCTNumberCheckPoints', 0, oct%number_checkpoints)
+    call parse_variable(parser, 'OCTNumberCheckPoints', 0, oct%number_checkpoints)
     call messages_print_var_value(stdout, "OCTNumberCheckPoints", oct%number_checkpoints)
 
     !%Variable OCTRandomInitialGuess
@@ -274,7 +274,7 @@ contains
     !% Note, however, that this is only valid for the "direct" optimization schemes; moreover
     !% you still need to provide a <tt>TDExternalFields</tt> block.
     !%End
-    call parse_variable(dummy_parser, 'OCTRandomInitialGuess', .false., oct%random_initial_guess)
+    call parse_variable(parser, 'OCTRandomInitialGuess', .false., oct%random_initial_guess)
     call messages_print_var_value(stdout, "OCTRandomInitialGuess", oct%random_initial_guess)
 
     call messages_print_stress(stdout)

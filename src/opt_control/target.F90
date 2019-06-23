@@ -248,7 +248,7 @@ contains
     !%Option oct_tg_spin 14
     !% (Experimental)
     !%End
-    call parse_variable(dummy_parser, 'OCTTargetOperator', oct_tg_gstransformation, tg%type)
+    call parse_variable(parser, 'OCTTargetOperator', oct_tg_gstransformation, tg%type)
       if(tg%type == oct_tg_excited) call messages_experimental('OCTTargetOperator = oct_tg_excited')
       if(tg%type == oct_tg_userdefined) call messages_experimental('OCTTargetOperator = oct_tg_userdefined')
       if(tg%type == oct_tg_jdensity) call messages_experimental('OCTTargetOperator = oct_tg_jdensity')
