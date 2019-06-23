@@ -90,7 +90,7 @@ contains
 
   subroutine symmetries_init(this, parser, geo, dim, periodic_dim, rlattice, klattice)
     type(symmetries_t),  intent(out) :: this
-    type(parser_t,       intent(in)  :: parser
+    type(parser_t),      intent(in)  :: parser
     type(geometry_t),    intent(in)  :: geo
     integer,             intent(in)  :: dim
     integer,             intent(in)  :: periodic_dim
