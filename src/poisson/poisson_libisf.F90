@@ -86,8 +86,9 @@ module poisson_libisf_oct_m
 
 contains
 
-  subroutine poisson_libisf_init(this, mesh, cube)
+  subroutine poisson_libisf_init(this, parser, mesh, cube)
     type(poisson_libisf_t), intent(out)   :: this
+    type(parser_t),         intent(in)    :: parser
     type(mesh_t),           intent(inout) :: mesh
     type(cube_t),           intent(inout) :: cube
 
