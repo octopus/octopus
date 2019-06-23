@@ -72,7 +72,7 @@ program harmonic_spectrum
   call unit_system_init(parser)
   call fft_all_init(parser)
 
-  call spectrum_init(spectrum)
+  call spectrum_init(spectrum, parser)
 
   call messages_obsolete_variable(parser, 'HarmonicSpectrumPolarization')
   call messages_obsolete_variable(parser, 'HarmonicSpectrumMode')

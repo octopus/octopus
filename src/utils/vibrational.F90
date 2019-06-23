@@ -61,7 +61,7 @@
 
     call unit_system_init(parser)
 
-    call spectrum_init(spectrum, &
+    call spectrum_init(spectrum, parser, &
       default_energy_step = units_to_atomic(unit_invcm, CNST(0.2)), &
       default_max_energy  = units_to_atomic(unit_invcm, CNST(5000.0)))
  

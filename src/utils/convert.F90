@@ -556,7 +556,7 @@ contains
         call parse_variable(dummy_parser, 'ConvertEnergyStep',fdefault, dw, units_inp%energy)
         if (dw <= M_ZERO) dw = M_TWO * M_PI / (dt * time_steps)
         
-        call spectrum_init(spectrum, dw, w_max)
+        call spectrum_init(spectrum, parser, dw, w_max)
         ! Manually setting already defined variables on spectrum.
         spectrum%start_time = c_start * dt
         spectrum%end_time = c_end * dt 

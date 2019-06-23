@@ -68,7 +68,7 @@ program dielectric_function
 
   call unit_system_init(parser)
 
-  call spectrum_init(spectrum)
+  call spectrum_init(spectrum, parser)
 
   call space_init(space, parser)
   call geometry_init(geo, parser, space)

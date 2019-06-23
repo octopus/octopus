@@ -55,12 +55,12 @@ program propagation_spectrum
 
   call unit_system_init(parser)
 
-  call spectrum_init(spectrum)
+  call spectrum_init(spectrum, parser)
 
   select case (spectrum%spectype)
     case (SPECTRUM_ABSORPTION)
       call read_files('multipoles', refmultipoles)
-      call calculate_absorption('cross_section')
+      call calculate_absorption('cross_section', parser)
     case (SPECTRUM_P_POWER)
       call calculate_dipole_power("multipoles", 'dipole_power')
     case (SPECTRUM_ENERGYLOSS)
@@ -225,8 +225,9 @@ program propagation_spectrum
 
 
     !----------------------------------------------------------------------------   
-    subroutine calculate_absorption(fname)
+    subroutine calculate_absorption(fname, parser)
       character(len=*), intent(in) :: fname
+      type(parser_t),   intent(in) :: parser
 
       integer :: ii, jj
       character(len=150), allocatable :: filename(:)
@@ -266,7 +267,7 @@ program propagation_spectrum
         end do
 
         out_file(1) = io_open(trim(fname)//'_tensor', action='write')
-        call spectrum_cross_section_tensor(spectrum, out_file(1), in_file(1:jj))
+        call spectrum_cross_section_tensor(spectrum, parser, out_file(1), in_file(1:jj))
         do ii = 1, jj
           call io_close(in_file(ii))
         end do

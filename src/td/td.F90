@@ -160,7 +160,7 @@ contains
     !% so you will always use the optimal electronic time step
     !% (<a href=http://arxiv.org/abs/0710.3321>more details</a>).
     !%End
-    call parse_variable(dummy_parser, 'TDIonicTimeScale', CNST(1.0), td%mu)
+    call parse_variable(sys%parser, 'TDIonicTimeScale', CNST(1.0), td%mu)
 
     if (td%mu <= M_ZERO) then
       write(message(1),'(a)') 'Input: TDIonicTimeScale must be positive.'
@@ -189,7 +189,7 @@ contains
     default_dt = CNST(0.0426) - CNST(0.207)*spacing + CNST(0.808)*spacing**2
     default_dt = default_dt*td%mu
 
-    call parse_variable(dummy_parser, 'TDTimeStep', default_dt, td%dt, unit = units_inp%time)
+    call parse_variable(sys%parser, 'TDTimeStep', default_dt, td%dt, unit = units_inp%time)
 
     if (td%dt <= M_ZERO) then
       write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
@@ -217,7 +217,7 @@ contains
     !% selected <tt>ev_angstrom</tt> as input units). The approximate conversions to
     !% femtoseconds are 1 fs = 41.34 <math>\hbar</math>/Hartree = 1.52 <math>\hbar</math>/eV.
     !%End
-    call parse_variable(dummy_parser, 'TDPropagationTime', CNST(-1.0), propagation_time, unit = units_inp%time)
+    call parse_variable(sys%parser, 'TDPropagationTime', CNST(-1.0), propagation_time, unit = units_inp%time)
 
     call messages_obsolete_variable(sys%parser, 'TDMaximumIter', 'TDMaxSteps')
 
@@ -231,7 +231,7 @@ contains
     !%End
     default = 1500
     if(propagation_time > CNST(0.0)) default = nint(propagation_time/td%dt)
-    call parse_variable(dummy_parser, 'TDMaxSteps', default, td%max_iter)
+    call parse_variable(sys%parser, 'TDMaxSteps', default, td%max_iter)
 
     if(propagation_time <= CNST(0.0)) propagation_time = td%dt*td%max_iter
 
@@ -260,7 +260,7 @@ contains
     !% Born-Oppenheimer (Experimental).
     !%End
 
-    call parse_variable(dummy_parser, 'TDDynamics', EHRENFEST, td%dynamics)
+    call parse_variable(sys%parser, 'TDDynamics', EHRENFEST, td%dynamics)
     if(.not.varinfo_valid_option('TDDynamics', td%dynamics)) call messages_input_error('TDDynamics')
     call messages_print_var_option(stdout, 'TDDynamics', td%dynamics)
     if(td%dynamics .ne. EHRENFEST) then
@@ -283,7 +283,7 @@ contains
     !% The recalculation is not done every time step, but only every
     !% <tt>RestartWriteInterval</tt> time steps.
     !%End
-    call parse_variable(dummy_parser, 'RecalculateGSDuringEvolution', .false., td%recalculate_gs)
+    call parse_variable(sys%parser, 'RecalculateGSDuringEvolution', .false., td%recalculate_gs)
     if( hm%lda_u_level /= DFT_U_NONE .and. td%recalculate_gs) &
       call messages_not_implemented("DFT+U with RecalculateGSDuringEvolution=yes")
 
@@ -296,7 +296,7 @@ contains
     !% Hamiltonian, shifting the excitation energies by the amount 
     !% specified. By default, it is not applied. 
     !%End 
-    call parse_variable(dummy_parser, 'TDScissor', CNST(0.0), td%scissor) 
+    call parse_variable(sys%parser, 'TDScissor', CNST(0.0), td%scissor) 
     td%scissor = units_to_atomic(units_inp%energy, td%scissor) 
     call messages_print_var_value(stdout, 'TDScissor', td%scissor)
 
@@ -323,7 +323,7 @@ contains
 
     default = 10
     if(ion_dynamics_ions_move(td%ions)) default = 1
-    call parse_variable(dummy_parser, 'TDEnergyUpdateIter', default, td%energy_update_iter)
+    call parse_variable(sys%parser, 'TDEnergyUpdateIter', default, td%energy_update_iter)
 
     if(ion_dynamics_ions_move(td%ions) .and. td%energy_update_iter /= 1) then
       call messages_experimental('TDEnergyUpdateIter /= 1 when moving ions')
@@ -360,7 +360,10 @@ contains
     type(grid_t),     pointer :: gr   ! some shortcuts
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
-    logical                   :: stopping, stopping_tmp
+    logical                   :: stopping
+#ifdef HAVE_MPI
+    logical                   :: stopping_tmp
+#endif
     integer                   :: iter, ierr, scsteps
     real(8)                   :: etime
     type(profile_t),     save :: prof
@@ -689,7 +692,7 @@ contains
       !% It is almost equivalent to setting <tt>TDFreezeOrbitals = N-1</tt>, where <tt>N</tt> is the number
       !% of orbitals, but not completely.
       !%End
-      call parse_variable(dummy_parser, 'TDFreezeOrbitals', 0, freeze_orbitals)
+      call parse_variable(sys%parser, 'TDFreezeOrbitals', 0, freeze_orbitals)
 
       if(freeze_orbitals /= 0) then
         call messages_experimental('TDFreezeOrbitals')
@@ -734,7 +737,7 @@ contains
       !% The electrons are evolved as independent particles feeling the Hartree and 
       !% exchange-correlation potentials from the ground-state electronic configuration.
       !%End
-      call parse_variable(dummy_parser, 'TDFreezeHXC', .false., freeze_hxc)
+      call parse_variable(sys%parser, 'TDFreezeHXC', .false., freeze_hxc)
       if(freeze_hxc) then 
         write(message(1),'(a)') 'Info: Freezing Hartree and exchange-correlation potentials.'
         call messages_info(1)
@@ -765,7 +768,7 @@ contains
       !% The occupation matrices than enters in the LDA+U potential
       !% are not evolved during the time evolution.
       !%End
-      call parse_variable(dummy_parser, 'TDFreezeDFTUOccupations', .false., freeze_occ)
+      call parse_variable(sys%parser, 'TDFreezeDFTUOccupations', .false., freeze_occ)
       if(freeze_occ) then
         write(message(1),'(a)') 'Info: Freezing DFT+U occupation matrices that enters in the DFT+U potential.'
         call messages_info(1)
@@ -786,7 +789,7 @@ contains
       !%Description
       !% The effective U of LDA+U is not evolved during the time evolution.
       !%End
-      call parse_variable(dummy_parser, 'TDFreezeU', .false., freeze_u)
+      call parse_variable(sys%parser, 'TDFreezeU', .false., freeze_u)
       if(freeze_u) then
         write(message(1),'(a)') 'Info: Freezing the effective U of DFT+U.'
         call messages_info(1)

@@ -194,7 +194,7 @@ contains
     if(mdim <= 2) default_shape = M_CUBIC
     if(simul_box_is_periodic(mesh%sb)) default_shape = M_PLANES
     
-    call parse_variable(dummy_parser, 'PES_Flux_Shape', default_shape, this%shape)
+    call parse_variable(parser, 'PES_Flux_Shape', default_shape, this%shape)
     if(.not.varinfo_valid_option('PES_Flux_Shape', this%shape, is_flag = .true.)) &
       call messages_input_error('PES_Flux_Shape')
     if(this%shape == M_SPHERICAL .and. mdim /= 3) then
@@ -231,7 +231,7 @@ contains
     !% grid (to be changed to Gauss-Legendre quadrature).
     !%End
     if(this%shape == M_SPHERICAL) then
-      call parse_variable(dummy_parser, 'PES_Flux_Lmax', 1, this%lmax)
+      call parse_variable(parser, 'PES_Flux_Lmax', 1, this%lmax)
       if(this%lmax < 1) call messages_input_error('PES_Flux_Lmax', 'must be > 0')
       call messages_print_var_value(stdout, 'PES_Flux_Lmax', this%lmax)
     end if
@@ -247,7 +247,7 @@ contains
         !% For <tt>PES_Flux_Shape = cub</tt>, checks whether surface points are inside the
         !% absorbing zone and discards them if set to yes (default).
         !%End
-        call parse_variable(dummy_parser, 'PES_Flux_AvoidAB', .true., this%avoid_ab)
+        call parse_variable(parser, 'PES_Flux_AvoidAB', .true., this%avoid_ab)
         call messages_print_var_value(stdout, 'PES_Flux_AvoidAB', this%avoid_ab)
       end if
 
@@ -279,7 +279,7 @@ contains
         ! the cube sides along the periodic directions are out of the simulation box
         border(1:pdim)= mesh%sb%lsize(1:pdim) * M_TWO 
         border(mdim)  = mesh%sb%lsize(mdim) * M_HALF
-        call parse_variable(dummy_parser, 'PES_Flux_Lsize', border(mdim), border(mdim))
+        call parse_variable(parser, 'PES_Flux_Lsize', border(mdim), border(mdim))
         ! Snap the plane to the closest grid point
         border(mdim) = floor(border(mdim)/mesh%spacing(mdim))*mesh%spacing(mdim) 
         call messages_print_var_value(stdout, 'PES_Flux_Lsize', border(mdim))
@@ -309,7 +309,7 @@ contains
       !% The radius of the sphere, if <tt>PES_Flux_Shape == sph</tt>.
       !%End
       if(parse_is_defined(parser, 'PES_Flux_Radius')) then
-        call parse_variable(dummy_parser, 'PES_Flux_Radius', M_ZERO, this%radius)
+        call parse_variable(parser, 'PES_Flux_Radius', M_ZERO, this%radius)
         if(this%radius <= M_ZERO) call messages_input_error('PES_Flux_Radius')
         call messages_print_var_value(stdout, 'PES_Flux_Radius', this%radius)
       else
@@ -338,7 +338,7 @@ contains
     !% Number of steps in <math>\theta</math> (<math>0 \le \theta \le \pi</math>) for the spherical surface.
     !%End
     if(this%shape == M_SPHERICAL) then
-      call parse_variable(dummy_parser, 'PES_Flux_StepsThetaR', 2*this%lmax + 1, nstepsthetar)
+      call parse_variable(parser, 'PES_Flux_StepsThetaR', 2*this%lmax + 1, nstepsthetar)
       if(nstepsthetar < 0) call messages_input_error('PES_Flux_StepsThetaR')
       call messages_print_var_value(stdout, "PES_Flux_StepsThetaR", nstepsthetar)
     end if
@@ -351,7 +351,7 @@ contains
     !% Number of steps in <math>\phi</math> (<math>0 \le \phi \le 2 \pi</math>) for the spherical surface.
     !%End
     if(this%shape == M_SPHERICAL) then
-      call parse_variable(dummy_parser, 'PES_Flux_StepsPhiR', 2*this%lmax + 1, nstepsphir)
+      call parse_variable(parser, 'PES_Flux_StepsPhiR', 2*this%lmax + 1, nstepsphir)
       if(nstepsphir < 0) call messages_input_error('PES_Flux_StepsPhiR')
       call messages_print_var_value(stdout, "PES_Flux_StepsPhiR", nstepsphir)
     end if
@@ -442,7 +442,7 @@ contains
     !% on the suface. 
     !% By default true when <tt>PES_Flux_Shape = cub</tt>.
     !%End
-    call parse_variable(dummy_parser, 'PES_Flux_UseMemory', .true., this%usememory)
+    call parse_variable(parser, 'PES_Flux_UseMemory', .true., this%usememory)
     call messages_print_var_value(stdout, "PES_Flux_UseMemory", this%usememory)            
 
     SAFE_ALLOCATE(this%wf(stst:stend, 1:sdim, kptst:kptend, 0:this%nsrfcpnts, 1:this%tdsteps))
@@ -581,7 +581,7 @@ contains
       !%Description
       !% The maximum value of |k|.
       !%End
-      call parse_variable(dummy_parser, 'PES_Flux_Kmax', M_ONE, kmax)
+      call parse_variable(parser, 'PES_Flux_Kmax', M_ONE, kmax)
       call messages_print_var_value(stdout, "PES_Flux_Kmax", kmax)
       if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmax')
 
@@ -592,7 +592,7 @@ contains
       !%Description
       !% Spacing of the k-mesh in |k| (equidistant).
       !%End
-      call parse_variable(dummy_parser, 'PES_Flux_DeltaK', CNST(0.002), this%dk)
+      call parse_variable(parser, 'PES_Flux_DeltaK', CNST(0.002), this%dk)
       if(this%dk <= M_ZERO) call messages_input_error('PES_Flux_DeltaK')
       call messages_print_var_value(stdout, "PES_Flux_DeltaK", this%dk)
 
@@ -603,7 +603,7 @@ contains
       !%Description
       !% Number of steps in <math>\theta</math> (<math>0 \le \theta \le \pi</math>) for the spherical grid in k.
       !%End
-      call parse_variable(dummy_parser, 'PES_Flux_StepsThetaK', 45, this%nstepsthetak)
+      call parse_variable(parser, 'PES_Flux_StepsThetaK', 45, this%nstepsthetak)
       if(this%nstepsthetak < 0) call messages_input_error('PES_Flux_StepsThetaK')
 
       !%Variable PES_Flux_StepsPhiK
@@ -613,7 +613,7 @@ contains
       !%Description
       !% Number of steps in <math>\phi</math> (<math>0 \le \phi \le 2 \pi</math>) for the spherical grid in k.
       !%End
-      call parse_variable(dummy_parser, 'PES_Flux_StepsPhiK', 90, this%nstepsphik)
+      call parse_variable(parser, 'PES_Flux_StepsPhiK', 90, this%nstepsphik)
       if(this%nstepsphik < 0) call messages_input_error('PES_Flux_StepsPhiK')
       if(this%nstepsphik == 0) this%nstepsphik = 1
 
@@ -658,7 +658,7 @@ contains
       !% Kpoints. For each additional Gpoint G an entire Kpoint grid centered at 
       !% G is added to the momentum grid. 
       !%End
-      call parse_variable(dummy_parser, 'PES_Flux_Gpoint_Upsample', 1, this%ngpt)
+      call parse_variable(parser, 'PES_Flux_Gpoint_Upsample', 1, this%ngpt)
       call messages_print_var_value(stdout, "PES_Flux_Gpoint_Upsample", this%ngpt)
       
       SAFE_ALLOCATE(gpoints(1:mdim,1:this%ngpt))
@@ -685,7 +685,7 @@ contains
       !% regular grid.
       !% By default true when <tt>PES_Flux_Shape = pln</tt>.
       !%End
-      call parse_variable(dummy_parser, 'PES_Flux_ARPES_grid', .true., this%arpes_grid)
+      call parse_variable(parser, 'PES_Flux_ARPES_grid', .true., this%arpes_grid)
       call messages_print_var_value(stdout, "PES_Flux_ARPES_grid", this%arpes_grid)       
       
       
@@ -777,7 +777,7 @@ contains
         call parse_block_end(blk)
 
       else
-        call parse_variable(dummy_parser, 'PES_Flux_BZones', maxval(NBZ(:)), NBZ(1))
+        call parse_variable(parser, 'PES_Flux_BZones', maxval(NBZ(:)), NBZ(1))
         NBZ(:) = NBZ(1)
 
       end if
