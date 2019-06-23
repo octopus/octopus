@@ -137,7 +137,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine v_ks_init(ks, parser, gr, st, geo, mc)
-    type(v_ks_t),         intent(inout)   :: ks
+    type(v_ks_t),         intent(inout) :: ks
     type(parser_t),       intent(in)    :: parser
     type(grid_t), target, intent(inout) :: gr
     type(states_t),       intent(in)    :: st
@@ -400,7 +400,7 @@ contains
     ks%calc%calculating = .false.
 
     !The value of ks%calculate_current is set to false or true by Output    
-    call current_init(ks%current_calculator, gr%sb)
+    call current_init(ks%current_calculator, parser, gr%sb)
     
     !%Variable VDWCorrection
     !%Type integer
@@ -980,7 +980,7 @@ contains
 
         if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
           ! Also treat KS inversion separately (not part of libxc)
-          call xc_ks_inversion_calc(ks%ks_inversion, ks%gr, hm, st, vxc = ks%calc%vxc, time = ks%calc%time)
+          call xc_ks_inversion_calc(ks%ks_inversion, parser, ks%gr, hm, st, vxc = ks%calc%vxc, time = ks%calc%time)
         end if
       end if
 

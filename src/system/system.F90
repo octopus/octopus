@@ -107,7 +107,7 @@ contains
     call output_init(sys%outp, sys%parser, sys%gr%sb, sys%st, sys%st%nst, sys%ks)
     call states_densities_init(sys%st, sys%gr, sys%geo)
     call states_exec_init(sys%st, sys%parser, sys%mc)
-    call elf_init()
+    call elf_init(sys%parser)
 
     call poisson_init(psolver, sys%parser, sys%gr%der, sys%mc)
     if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%parser, sys%geo, sys%mc)

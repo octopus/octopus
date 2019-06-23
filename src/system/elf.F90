@@ -40,7 +40,9 @@ module elf_oct_m
 
 contains
 
-  subroutine elf_init
+  subroutine elf_init(parser)
+    type(parser_t),    intent(in)    :: parser
+    
     PUSH_SUB(elf_init)
 
     !%Variable ELFWithCurrentTerm
@@ -53,7 +55,7 @@ contains
     !% default; however, for research purposes it may be useful not to add it.
     !% If this feature proves to be useless, this option should go away.
     !%End
-    call parse_variable(dummy_parser, 'ELFWithCurrentTerm', .true., with_current_term)
+    call parse_variable(parser, 'ELFWithCurrentTerm', .true., with_current_term)
 
     POP_SUB(elf_init)
   end subroutine elf_init

@@ -345,7 +345,7 @@ contains
       call potential_interpolation_init(tr%vksold, gr%mesh%np, st%d%nspin, family_is_mgga)
     end select
 
-    call exponential_init(tr%te) ! initialize propagator
+    call exponential_init(tr%te, parser) ! initialize propagator
 
     call messages_obsolete_variable(parser, 'TDSelfConsistentSteps', 'TDStepsWithSelfConsistency')
 

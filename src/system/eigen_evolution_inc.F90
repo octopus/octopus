@@ -38,7 +38,7 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   maxiter = niter
   matvec = 0
 
-  call exponential_init(te)
+  call exponential_init(te, dummy_parser)
 
   SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part, 1:st%d%dim))

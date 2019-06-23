@@ -105,7 +105,7 @@ contains
     else ! iterative case
       if (sys%ks%ks_inversion%method >= XC_INV_METHOD_VS_ITER .and. &
           sys%ks%ks_inversion%method <= XC_INV_METHOD_ITER_GODBY) then ! iterative procedure for v_s 
-        call invertks_iter(target_rho, nspin, hm, sys%gr, &
+        call invertks_iter(target_rho, sys%parser, nspin, hm, sys%gr, &
              sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%ks%ks_inversion%asymp,&
              sys%ks%ks_inversion%method)
       end if
