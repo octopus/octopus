@@ -296,7 +296,7 @@ contains
 
     pnfft%N(1:3) = fs_n_global(1:3)
     
-    call pnfft_init_params(pnfft, fs_n_global(1:3), optimize = .true.)
+    call pnfft_init_params(pnfft, parser, fs_n_global(1:3), optimize = .true.)
     
     x_max(:) = CNST(0.4)
          
