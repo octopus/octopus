@@ -113,8 +113,9 @@ contains
 
 
 ! ---------------------------------------------------------  
-  subroutine pnfft_guru_options(pnfft)
-    type(pnfft_t), intent(inout) :: pnfft
+  subroutine pnfft_guru_options(pnfft, parser)
+    type(pnfft_t),     intent(inout) :: pnfft
+    type(parser_t),    intent(in)    :: parser
 
     PUSH_SUB(pnfft_guru_options)
 
@@ -128,7 +129,6 @@ contains
     !%End
     call parse_variable(parser, 'PNFFTCutoff', pnfft%mm, pnfft%mm)
 
-
     !%Variable PNFFTOversampling
     !%Type float
     !%Default 2.0
@@ -138,14 +138,13 @@ contains
     !%End
     call parse_variable(parser, 'PNFFTOversampling', pnfft%sigma, pnfft%sigma)
 
-
-
     POP_SUB(pnfft_guru_options)
   end subroutine pnfft_guru_options
 
   ! ---------------------------------------------------------
-  subroutine pnfft_init_params(pnfft, nn, optimize)
+  subroutine pnfft_init_params(pnfft, parser, nn, optimize)
     type(pnfft_t),     intent(inout) :: pnfft
+    type(parser_t),    intent(in)    :: parser
     integer,           intent(in)    :: nn(3) !> pnfft bandwidths 
     logical, optional, intent(in)    :: optimize
 
@@ -163,7 +162,7 @@ contains
       pnfft%sigma = M_TWO
     end if
     
-    call pnfft_guru_options(pnfft)
+    call pnfft_guru_options(pnfft, parser)
 
     my_nn = 0
     do ii = 1, 3
@@ -277,14 +276,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pnfft_init_plan(pnfft, mpi_comm, fs_n_global, fs_n, fs_istart, rs_n, rs_istart)
-    type(pnfft_t), intent(inout) :: pnfft
-    integer,         intent(in)  :: mpi_comm         !< MPI comunicator
-    integer,         intent(in)  :: fs_n_global(1:3) !< The general number of elements in each dimension in Fourier space
-    integer,         intent(out) :: fs_n(1:3)        !< Local number of elements in each direction in Fourier space
-    integer,         intent(out) :: fs_istart(1:3)   !< Where does the local portion of the function start in Fourier space
-    integer,         intent(out) :: rs_n(1:3)        !< Local number of elements in each direction in real space
-    integer,         intent(out) :: rs_istart(1:3)   !< Where does the local portion of the function start in real space
+  subroutine pnfft_init_plan(pnfft, parser, mpi_comm, fs_n_global, fs_n, fs_istart, rs_n, rs_istart)
+    type(pnfft_t),   intent(inout) :: pnfft
+    type(parser_t),  intent(in)    :: parser
+    integer,         intent(in)    :: mpi_comm         !< MPI comunicator
+    integer,         intent(in)    :: fs_n_global(1:3) !< The general number of elements in each dimension in Fourier space
+    integer,         intent(out)   :: fs_n(1:3)        !< Local number of elements in each direction in Fourier space
+    integer,         intent(out)   :: fs_istart(1:3)   !< Where does the local portion of the function start in Fourier space
+    integer,         intent(out)   :: rs_n(1:3)        !< Local number of elements in each direction in real space
+    integer,         intent(out)   :: rs_istart(1:3)   !< Where does the local portion of the function start in real space
 
     real(C_DOUBLE) :: lower_border(3), upper_border(3)
     real(C_DOUBLE) :: x_max(3)
