@@ -159,7 +159,7 @@ contains
       ASSERT(gr%der%mesh%np == gr%der%mesh%np_global)
 
       ! variables documented in td/td_write.F90
-      call parse_variable(dummy_parser, 'TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
+      call parse_variable(parser, 'TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
       call messages_print_var_value(stdout,'Frequency used for Floquet analysis', omega)
       if(abs(omega)<=M_EPSILON) then
          message(1) = "Please give a non-zero value for TDFloquetFrequency"
@@ -169,11 +169,11 @@ contains
       ! get time of one cycle
       Tcycle=M_TWO*M_PI/omega
 
-      call parse_variable(dummy_parser, 'TDFloquetSample',20 ,nt)
+      call parse_variable(parser, 'TDFloquetSample',20 ,nt)
       call messages_print_var_value(stdout,'Number of Floquet time-sampling points', nT)
       dt = Tcycle/real(nT)
 
-      call parse_variable(dummy_parser, 'TDFloquetDimension',-1,Forder)
+      call parse_variable(parser, 'TDFloquetDimension',-1,Forder)
       if(Forder.ge.0) then
         call messages_print_var_value(stdout,'Order of multiphoton Floquet-Hamiltonian', Forder)
         !Dimension of multiphoton Floquet-Hamiltonian

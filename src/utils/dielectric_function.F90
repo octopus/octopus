@@ -100,7 +100,7 @@ program dielectric_function
   call messages_warning(4)
 
   start_time = spectrum%start_time
-  call parse_variable(dummy_parser, 'GaugeFieldDelay', start_time, spectrum%start_time )
+  call parse_variable(parser, 'GaugeFieldDelay', start_time, spectrum%start_time )
 
   in_file = io_open('td.general/gauge_field', action='read', status='old', die=.false.)
   if(in_file < 0) then 
@@ -124,7 +124,7 @@ program dielectric_function
     !% relative to the current folder
     !%End
 
-    call parse_variable(dummy_parser, 'TransientAbsorptionReference', '.', ref_filename)
+    call parse_variable(parser, 'TransientAbsorptionReference', '.', ref_filename)
     ref_file = io_open(trim(ref_filename)//'/gauge_field', action='read', status='old', die=.false.)
     if(ref_file < 0) then
       message(1) = "Cannot open reference file '"//trim(io_workpath(trim(ref_filename)//'/gauge_field'))//"'"

@@ -77,7 +77,7 @@
     !%End
 
     call messages_obsolete_variable(parser, 'PropagationSpectrumTimeStepFactor', 'VibrationalSpectrumTimeStepFactor')
-    call parse_variable(dummy_parser, 'VibrationalSpectrumTimeStepFactor', 10, skip)
+    call parse_variable(parser, 'VibrationalSpectrumTimeStepFactor', 10, skip)
     if(skip <= 0) call messages_input_error('VibrationalSpectrumTimeStepFactor')
 
     max_freq = spectrum_nenergy_steps(spectrum)
@@ -185,7 +185,7 @@
     !% the velocity autocorrelation function. The default is the total
     !% propagation time.
     !%End
-    call parse_variable(dummy_parser, 'VibrationalSpectrumTime', ntime*deltat, vaftime)
+    call parse_variable(parser, 'VibrationalSpectrumTime', ntime*deltat, vaftime)
 
     nvaf = int(vaftime/deltat)
 

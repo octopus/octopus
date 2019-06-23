@@ -65,7 +65,7 @@ program xyzanim
   !% Sampling rate of the animation. The animation will be constructed using
   !% the iteration numbers that are multiples of <tt>AnimationSampling<tt>.
   !%End
-  call parse_variable(dummy_parser, 'AnimationSampling', 100, sampling)
+  call parse_variable(parser, 'AnimationSampling', 100, sampling)
   if(sampling < 1) then
     message(1) = 'Sampling rate (AnimationSampling) should be bigger than 0'
     call messages_fatal(1)
@@ -78,7 +78,7 @@ program xyzanim
   !%Description
   !% If true, each iteration written will be in a separate file.
   !%End
-  call parse_variable(dummy_parser, 'AnimationMultiFiles', .false., multifiles)
+  call parse_variable(parser, 'AnimationMultiFiles', .false., multifiles)
 
   call space_init(space, parser)
   call geometry_init(geo, parser, space)
