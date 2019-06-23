@@ -566,7 +566,7 @@ contains
     if(present(verbosity)) verbosity_ = verbosity
 
     if(scf%lcao_restricted) then
-      call lcao_init(lcao, gr, geo, st)
+      call lcao_init(lcao, parser, gr, geo, st)
       if(.not. lcao_is_available(lcao)) then
         message(1) = 'LCAO is not available. Cannot do SCF in LCAO.'
         call messages_fatal(1)
