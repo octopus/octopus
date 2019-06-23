@@ -65,7 +65,7 @@ program octopus
   !% generally it is a lower bound to the actual memory <tt>Octopus</tt> is
   !% using.
   !%End
-  call parse_variable(dummy_parser, 'ReportMemory', .false., conf%report_memory)
+  call parse_variable(parser, 'ReportMemory', .false., conf%report_memory)
 
   ! need to find out calc_mode already here since some of the variables here (e.g.
   ! periodic dimensions) can be different for the subsystems
@@ -116,7 +116,7 @@ program octopus
     call messages_fatal()
   end if
 
-  call parse_variable(dummy_parser, 'CalculationMode', CM_GS, inp_calc_mode)
+  call parse_variable(parser, 'CalculationMode', CM_GS, inp_calc_mode)
   if(.not.varinfo_valid_option('CalculationMode', inp_calc_mode)) call messages_input_error('CalculationMode')
 
   ! Now we can initialize the I/O
