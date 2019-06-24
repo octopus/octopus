@@ -112,7 +112,7 @@ contains
     !% Experimental, and incompatible with domain-parallelization.
     !%End
     if (gr%sb%dim == 3) then 
-      call parse_variable('UseFineMesh', .false., gr%have_fine_mesh)
+      call parse_variable(parser, 'UseFineMesh', .false., gr%have_fine_mesh)
     else
       gr%have_fine_mesh = .false.
     end if
@@ -150,7 +150,7 @@ contains
     !% <br>%</tt>
     !%End
 
-    if(parse_block('Spacing', blk) == 0) then
+    if(parse_block(parser, 'Spacing', blk) == 0) then
       if(parse_block_cols(blk,0) < gr%sb%dim) call messages_input_error('Spacing')
       do idir = 1, gr%sb%dim
         call parse_block_float(blk, 0, idir - 1, grid_spacing(idir), units_inp%length)
@@ -158,7 +158,7 @@ contains
       end do
       call parse_block_end(blk)
     else
-      call parse_variable('Spacing', -M_ONE, grid_spacing(1), units_inp%length)
+      call parse_variable(parser, 'Spacing', -M_ONE, grid_spacing(1), units_inp%length)
       grid_spacing(1:gr%sb%dim) = grid_spacing(1)
       if(def_h > M_ZERO) call messages_check_def(grid_spacing(1), .true., def_h, 'Spacing', units_out%length)
     end if
@@ -195,12 +195,12 @@ contains
     end if
 
     ! initialize curvilinear coordinates
-    call curvilinear_init(gr%cv, gr%sb, geo, grid_spacing)
+    call curvilinear_init(gr%cv, parser, gr%sb, geo, grid_spacing)
 
     ! initialize derivatives
     call derivatives_init(gr%der, parser, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
 
-    call double_grid_init(gr%dgrid, gr%sb)
+    call double_grid_init(gr%dgrid, parser, gr%sb)
 
     enlarge = 0
     enlarge(1:gr%sb%dim) = 2

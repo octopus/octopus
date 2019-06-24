@@ -16,18 +16,19 @@
 !! 02110-1301, USA.
 !!
 
-subroutine X(run_sternheimer)()
-
+subroutine X(run_sternheimer)(parser)
+  type(parser_t),      intent(in)  :: parser
+  
   R_TYPE, allocatable :: inhomog(:,:,:,:,:)
   integer :: ik, ik0, ist
 
   PUSH_SUB(em_resp_run.X(run_sternheimer))
 
-  call restart_init(restart_dump, RESTART_EM_RESP, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
+  call restart_init(restart_dump, parser, RESTART_EM_RESP, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
   if(.not. fromscratch) then
 
-    call restart_init(restart_load, RESTART_EM_RESP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
+    call restart_init(restart_load, parser, RESTART_EM_RESP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
 
     do idir = 1, sys%gr%sb%dim
 
@@ -327,7 +328,7 @@ subroutine X(run_sternheimer)()
       if(em_vars%calc_hyperpol .and. use_kdotp) then
         call X(em_resp_calc_eigenvalues)(sys, dl_eig)
 
-        call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
+        call restart_init(kdotp_restart, parser, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
 
         do idir2 = 1, gr%sb%periodic_dim
           write(message(1), '(a,a,a)') 'Info: Calculating kdotp response in ', index2axis(idir2), '-direction.'
@@ -510,7 +511,7 @@ subroutine X(calc_properties_linear)()
         message(1) = "Info: Calculating (frequency-dependent) Born effective charges."
         call messages_info(1)
       
-        call X(forces_born_charges)(sys%gr, sys%geo, hm%ep, sys%st, &
+        call X(forces_born_charges)(sys%gr, sys%parser, sys%geo, hm%ep, sys%st, &
           lr = em_vars%lr(:, 1, ifactor), lr2 = em_vars%lr(:, em_vars%nsigma, ifactor), &
           Born_charges = em_vars%Born_charges(ifactor), lda_u_level= hm%lda_u_level)
       end if

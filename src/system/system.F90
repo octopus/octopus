@@ -85,7 +85,7 @@ contains
 
     call messages_obsolete_variable(sys%parser, 'SystemName')
 
-    call space_init(sys%space)
+    call space_init(sys%space, sys%parser)
     
     call geometry_init(sys%geo, sys%parser, sys%space)
     call grid_init_stage_0(sys%gr, sys%parser, sys%geo, sys%space)
@@ -100,16 +100,16 @@ contains
 
     call geometry_partition(sys%geo, sys%mc)
     call kpoints_distribute(sys%st%d, sys%mc)
-    call states_distribute_nodes(sys%st, sys%mc)
+    call states_distribute_nodes(sys%st, sys%parser, sys%mc)
     call grid_init_stage_2(sys%gr, sys%parser, sys%mc, sys%geo)
     if(sys%st%symmetrize_density) call mesh_check_symmetries(sys%gr%mesh, sys%gr%sb)
 
     call output_init(sys%outp, sys%parser, sys%gr%sb, sys%st, sys%st%nst, sys%ks)
     call states_densities_init(sys%st, sys%gr, sys%geo)
-    call states_exec_init(sys%st, sys%mc)
-    call elf_init()
+    call states_exec_init(sys%st, sys%parser, sys%mc)
+    call elf_init(sys%parser)
 
-    call poisson_init(psolver, sys%gr%der, sys%mc)
+    call poisson_init(psolver, sys%parser, sys%gr%der, sys%mc)
     if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%parser, sys%geo, sys%mc)
 
     call v_ks_init(sys%ks, sys%parser, sys%gr, sys%st, sys%geo, sys%mc)

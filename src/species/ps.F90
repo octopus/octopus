@@ -189,7 +189,7 @@ contains
     !% absolute value of the projector functions, at points outside the localization sphere, is 
     !% below a certain threshold. This threshold is set by <tt>SpeciesProjectorSphereThreshold</tt>.
     !%End
-    call parse_variable('SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
+    call parse_variable(parser, 'SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
     if(ps%projectors_sphere_threshold <= M_ZERO) call messages_input_error('SpeciesProjectorSphereThreshold')
 
     ps%file_format = pseudo_detect_format(filename)

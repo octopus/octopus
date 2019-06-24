@@ -57,22 +57,22 @@
     
     call messages_init(parser)
 
-    call io_init()
+    call io_init(parser)
 
     call unit_system_init(parser)
 
     !These variables are documented in src/td/spectrum.F90
-    call parse_variable('TDMaxSteps', 1500, max_iter)
-    call parse_variable('PropagationSpectrumStartTime',  M_ZERO, start_time, units_inp%time)
-    call parse_variable('PropagationSpectrumEndTime',  -M_ONE, end_time, units_inp%time)
-    call parse_variable('PropagationSpectrumMaxEnergy', &
+    call parse_variable(parser, 'TDMaxSteps', 1500, max_iter)
+    call parse_variable(parser, 'PropagationSpectrumStartTime',  M_ZERO, start_time, units_inp%time)
+    call parse_variable(parser, 'PropagationSpectrumEndTime',  -M_ONE, end_time, units_inp%time)
+    call parse_variable(parser, 'PropagationSpectrumMaxEnergy', &
       units_from_atomic(units_inp%energy, units_to_atomic(unit_invcm, CNST(10000.0))), max_energy, units_inp%energy)
 
     dw = max_energy/(max_freq-M_ONE) !Initializes the wavevector step dw
 
     if (end_time < M_ZERO) end_time = huge(end_time)
 
-    call space_init(space)
+    call space_init(space, parser)
     call geometry_init(geo, parser, space)
     call simul_box_init(sb, parser, geo, space)
 

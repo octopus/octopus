@@ -89,7 +89,7 @@ contains
     if(.not. fromScratch) then
       ! load wavefunctions
       ! in RDMFT we need the full ground state
-      call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, &
+      call restart_init(restart_load, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, &
                         mesh=sys%gr%mesh, exact = (sys%ks%theory_level == RDMFT))
       if(ierr == 0) &
         call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr)
@@ -123,7 +123,7 @@ contains
       call system_h_setup(sys, hm, calc_eigenval = .false.)
     end if
 
-    call restart_init(restart_dump, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
+    call restart_init(restart_dump, sys%parser, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
     ! run self-consistency
     if (states_are_real(sys%st)) then

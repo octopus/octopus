@@ -108,7 +108,7 @@ contains
 
     ! load wavefunctions
     if(.not. fromscratch) then
-      call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
+      call restart_init(restart_load, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
       if(ierr == 0) call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr)
       call restart_end(restart_load)
       if(ierr /= 0) then
@@ -227,7 +227,7 @@ contains
       !% freedom of the optimization by using the translational
       !% invariance.
       !%End
-      call parse_variable('GOCenter', .false.,  center)
+      call parse_variable(sys%parser, 'GOCenter', .false.,  center)
 
       if(center) then
         g_opt%fixed_atom = 1
@@ -283,7 +283,7 @@ contains
       !% The FIRE algorithm. See also <tt>GOFireMass</tt> and <tt>GOFireIntegrator</tt>.
       !% Ref: E. Bitzek, P. Koskinen, F. Gahler, M. Moseler, and P. Gumbsch, <i>Phys. Rev. Lett.</i> <b>97</b>, 170201 (2006).
       !%End
-      call parse_variable('GOMethod', MINMETHOD_FIRE, g_opt%method)
+      call parse_variable(sys%parser, 'GOMethod', MINMETHOD_FIRE, g_opt%method)
       if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call messages_input_error('GOMethod')
       call messages_print_var_option(stdout, "GOMethod", g_opt%method)
 
@@ -298,7 +298,7 @@ contains
       !% <tt>GOMinimumMove</tt> is satisfied. If <tt>GOTolerance < 0</tt>,
       !% this criterion is ignored.
       !%End
-      call parse_variable('GOTolerance', CNST(0.001), g_opt%tolgrad, units_inp%force)
+      call parse_variable(sys%parser, 'GOTolerance', CNST(0.001), g_opt%tolgrad, units_inp%force)
       
       !%Variable GOMinimumMove
       !%Type float
@@ -318,7 +318,7 @@ contains
       else
         default_toldr = -M_ONE
       end if
-      call parse_variable('GOMinimumMove', default_toldr, g_opt%toldr, units_inp%length)
+      call parse_variable(sys%parser, 'GOMinimumMove', default_toldr, g_opt%toldr, units_inp%length)
 
       if(g_opt%method == MINMETHOD_NMSIMPLEX .and. g_opt%toldr <= M_ZERO) call messages_input_error('GOMinimumMove')
       
@@ -333,10 +333,10 @@ contains
       !%End
       if(g_opt%method /= MINMETHOD_FIRE ) then
         default_step = M_HALF
-        call parse_variable('GOStep', default_step, g_opt%step)
+        call parse_variable(sys%parser, 'GOStep', default_step, g_opt%step)
       else
         default_step = CNST(0.1)*unit_femtosecond%factor
-        call parse_variable('GOStep', default_step, g_opt%step, unit = units_inp%time)
+        call parse_variable(sys%parser, 'GOStep', default_step, g_opt%step, unit = units_inp%time)
       end if
 
       !%Variable GOLineTol
@@ -348,7 +348,7 @@ contains
       !% that use the forces.
       !% WARNING: in some weird units.
       !%End
-      call parse_variable('GOLineTol', CNST(0.1), g_opt%line_tol)
+      call parse_variable(sys%parser, 'GOLineTol', CNST(0.1), g_opt%line_tol)
 
       !%Variable GOMaxIter
       !%Type integer
@@ -358,7 +358,7 @@ contains
       !% Even if the convergence criterion is not satisfied, the minimization will stop
       !% after this number of iterations.
       !%End
-      call parse_variable('GOMaxIter', 200, g_opt%max_iter)
+      call parse_variable(sys%parser, 'GOMaxIter', 200, g_opt%max_iter)
       if(g_opt%max_iter <= 0) then
         message(1) = "GOMaxIter has to be larger than 0"
         call messages_fatal(1)
@@ -380,7 +380,7 @@ contains
       !% If <tt>GOFireMass</tt> <= 0, the masses of each 
       !% species will be used.
       !%End
-      call parse_variable('GOFireMass', M_ONE*unit_amu%factor, g_opt%fire_mass, unit = unit_amu)
+      call parse_variable(sys%parser, 'GOFireMass', M_ONE*unit_amu%factor, g_opt%fire_mass, unit = unit_amu)
 
       !%Variable GOFireIntegrator
       !%Type integer
@@ -395,7 +395,7 @@ contains
       !%Option euler 0
       !% The Euler method.
       !%End
-      call parse_variable('GOFireIntegrator', OPTION__GOFIREINTEGRATOR__VERLET, g_opt%fire_integrator)
+      call parse_variable(sys%parser, 'GOFireIntegrator', OPTION__GOFIREINTEGRATOR__VERLET, g_opt%fire_integrator)
 
       call messages_obsolete_variable(sys%parser, 'GOWhat2Minimize', 'GOObjective')
 
@@ -416,7 +416,7 @@ contains
       !% Note that in this case one still uses the forces as the gradient of the objective function.
       !% This is, of course, inconsistent, and may lead to very strange behavior.
       !%End
-      call parse_variable('GOObjective', MINWHAT_ENERGY, g_opt%what2minimize)
+      call parse_variable(sys%parser, 'GOObjective', MINWHAT_ENERGY, g_opt%what2minimize)
       if(.not.varinfo_valid_option('GOObjective', g_opt%what2minimize)) call messages_input_error('GOObjective')
       call messages_print_var_option(stdout, "GOObjective", g_opt%what2minimize)
 
@@ -525,7 +525,7 @@ contains
       ! TODO: clean forces directory
       end do
 
-      call restart_init(g_opt%restart_dump, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
+      call restart_init(g_opt%restart_dump, sys%parser, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
       POP_SUB(geom_opt_run.init_)
     end subroutine init_
@@ -569,7 +569,7 @@ contains
 
     call from_coords(g_opt, coords)
 
-    if(g_opt%fixed_atom /= 0) call xyz_adjust_it(g_opt%geo, rotate = .false.)
+    if(g_opt%fixed_atom /= 0) call xyz_adjust_it(g_opt%geo, g_opt%syst%parser, rotate = .false.)
 
     call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, warn_if_not = .false., die_if_not = .true.)
 
@@ -577,7 +577,7 @@ contains
 
     call scf_mix_clear(g_opt%scfv)
 
-    call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%gr, g_opt%geo, g_opt%st)
+    call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%parser, g_opt%syst%gr, g_opt%geo, g_opt%st)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
     call v_ks_calc(g_opt%syst%ks, g_opt%syst%parser, g_opt%hm, g_opt%st, g_opt%geo, calc_eigenval = .true.)
     call energy_calc_total(g_opt%hm, g_opt%syst%gr, g_opt%st)

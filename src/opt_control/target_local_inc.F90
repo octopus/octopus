@@ -44,7 +44,7 @@
     if(parse_is_defined(parser, 'OCTLocalTarget')) then
       SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
       tg%rho = M_ZERO
-      call parse_variable('OCTLocalTarget', "0", expression)
+      call parse_variable(parser, 'OCTLocalTarget', "0", expression)
       call conv_to_C_string(expression)
       do ip = 1, gr%mesh%np
         call mesh_r(gr%mesh, ip, rr, coords = xx)

@@ -177,8 +177,8 @@ contains
     call v_ks_calc(sys%ks, sys%parser, hm, psi, sys%geo, time = M_ZERO)
     call propagator_run_zero_iter(hm, gr, td%tr)
     if(ion_dynamics_ions_move(td%ions)) then
-      call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = M_ZERO)
-      call forces_calculate(gr, sys%geo, hm, psi, sys%ks, t = M_ZERO, dt = td%dt)
+      call hamiltonian_epot_generate(hm, sys%parser,  gr, sys%geo, psi, time = M_ZERO)
+      call forces_calculate(gr, sys%parser, sys%geo, hm, psi, sys%ks, t = M_ZERO, dt = td%dt)
     end if
 
 
@@ -195,7 +195,7 @@ contains
        end do
     end if
 
-    if(.not.target_move_ions(tg)) call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo)
+    if(.not.target_move_ions(tg)) call epot_precalc_local_potential(hm%ep, sys%parser, sys%gr, sys%geo)
 
     call target_tdcalc(tg, hm, gr, sys%geo, psi, 0, td%max_iter)
 
@@ -625,7 +625,7 @@ contains
     call states_copy(st_ref, psi)
 
     if(ion_dynamics_ions_move(td%ions)) &
-      call forces_calculate(gr, sys%geo, hm, psi, sys%ks, t = td%max_iter*abs(td%dt), dt = td%dt)
+      call forces_calculate(gr, sys%parser, sys%geo, hm, psi, sys%ks, t = td%max_iter*abs(td%dt), dt = td%dt)
 
     message(1) = "Info: Backward propagation."
     call messages_info(1)
@@ -658,7 +658,7 @@ contains
 
           SAFE_ALLOCATE(fold(1:sys%geo%natoms, 1:gr%sb%dim))
           SAFE_ALLOCATE(fnew(1:sys%geo%natoms, 1:gr%sb%dim))
-          call forces_costate_calculate(gr, sys%geo, hm, psi, chi, fold, q)
+          call forces_costate_calculate(gr, sys%parser, sys%geo, hm, psi, chi, fold, q)
 
           call ion_dynamics_verlet_step1(sys%geo, qtildehalf, p, fold, M_HALF * td%dt)
           call ion_dynamics_verlet_step1(sys%geo, q, p, fold, td%dt)
@@ -681,7 +681,7 @@ contains
         if(ion_dynamics_ions_move(td%ions)) then
           call ion_dynamics_save_state(td%ions, sys%geo, ions_state_final)
           call geometry_set_positions(sys%geo, qinitial)
-          call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = abs((i-1)*td%dt))
+          call hamiltonian_epot_generate(hm, sys%parser, gr, sys%geo, psi, time = abs((i-1)*td%dt))
         end if
 
         do ik = psi%d%kpt%start, psi%d%kpt%end
@@ -701,9 +701,9 @@ contains
 
         if(ion_dynamics_ions_move(td%ions)) then
           call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_final)
-          call hamiltonian_epot_generate(hm, gr, sys%geo, psi, time = abs((i-1)*td%dt))
-          call forces_calculate(gr, sys%geo, hm, psi, sys%ks, t = abs((i-1)*td%dt), dt = td%dt)
-          call forces_costate_calculate(gr, sys%geo, hm, psi, chi, fnew, q)
+          call hamiltonian_epot_generate(hm, sys%parser, gr, sys%geo, psi, time = abs((i-1)*td%dt))
+          call forces_calculate(gr, sys%parser, sys%geo, hm, psi, sys%ks, t = abs((i-1)*td%dt), dt = td%dt)
+          call forces_costate_calculate(gr, sys%parser, sys%geo, hm, psi, chi, fnew, q)
           call ion_dynamics_verlet_step2(sys%geo, p, fold, fnew, td%dt)
           SAFE_DEALLOCATE_A(fold)
           SAFE_DEALLOCATE_A(fnew)
@@ -808,7 +808,7 @@ contains
               call pert_init(pert, parser, PERTURBATION_IONIC, gr, geo)
               call pert_setup_atom(pert, iatom)
               call pert_setup_dir(pert, idim)
-              call zpert_apply(pert, gr, geo, hm, ik, zpsi(:, :), dvpsi(:, :, idim))
+              call zpert_apply(pert, parser, gr, geo, hm, ik, zpsi(:, :), dvpsi(:, :, idim))
               dvpsi(:, :, idim) = - dvpsi(:, :, idim)
               inhzpsi(:,  :)  = &
                 inhzpsi(:, :) + st%occ(ist, ik)*qtildehalf(iatom, idim)*dvpsi(:, :, idim)
@@ -1056,11 +1056,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_prop_init(prop, dirname, gr, mc)
-    type(oct_prop_t), intent(inout) :: prop
-    character(len=*), intent(in)    :: dirname
-    type(grid_t),     intent(in)    :: gr
-    type(multicomm_t), intent(in)   :: mc
+  subroutine oct_prop_init(prop, parser, dirname, gr, mc)
+    type(oct_prop_t),  intent(inout) :: prop
+    type(parser_t),    intent(in)    :: parser
+    character(len=*),  intent(in)    :: dirname
+    type(grid_t),      intent(in)    :: gr
+    type(multicomm_t), intent(in)    :: mc
     
     integer :: j, ierr
 
@@ -1072,8 +1073,8 @@ contains
 
     ! The OCT_DIR//trim(dirname) will be used to write and read information during the calculation,
     ! so they need to use the same path.
-    call restart_init(prop%restart_dump, RESTART_OCT, RESTART_TYPE_DUMP, mc, ierr, mesh=gr%mesh)
-    call restart_init(prop%restart_load, RESTART_OCT, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
+    call restart_init(prop%restart_dump, parser, RESTART_OCT, RESTART_TYPE_DUMP, mc, ierr, mesh=gr%mesh)
+    call restart_init(prop%restart_load, parser, RESTART_OCT, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
 
     SAFE_ALLOCATE(prop%iter(1:prop%number_checkpoints+2))
     prop%iter(1) = 0

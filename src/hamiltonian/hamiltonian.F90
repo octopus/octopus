@@ -224,7 +224,7 @@ contains
     !% This is useful to describe non-electronic systems, or for
     !% esoteric purposes.
     !%End
-    call parse_variable('ParticleMass', M_ONE, hm%mass)
+    call parse_variable(parser, 'ParticleMass', M_ONE, hm%mass)
 
     !%Variable RashbaSpinOrbitCoupling
     !%Type float
@@ -236,7 +236,7 @@ contains
     !% State Phys.</i> <b>17</b>, 6031 (1984)]. This variable determines the strength
     !% of this perturbation, and has dimensions of energy times length.
     !%End
-    call parse_variable('RashbaSpinOrbitCoupling', M_ZERO, rashba_coupling, units_inp%energy*units_inp%length)
+    call parse_variable(parser, 'RashbaSpinOrbitCoupling', M_ZERO, rashba_coupling, units_inp%energy*units_inp%length)
     if(parse_is_defined(parser, 'RashbaSpinOrbitCoupling')) then
       if(gr%sb%dim .ne. 2) then
         write(message(1),'(a)') 'Rashba spin-orbit coupling can only be used for two-dimensional systems.'
@@ -283,7 +283,7 @@ contains
     call epot_init(hm%ep, parser, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%xc_family)
 
     ! Calculate initial value of the gauge vector field
-    call gauge_field_init(hm%ep%gfield, gr%sb)
+    call gauge_field_init(hm%ep%gfield, parser, gr%sb)
 
     nullify(hm%vberry)
     if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb) .and. .not. gauge_field_is_applied(hm%ep%gfield)) then
@@ -301,7 +301,7 @@ contains
       call states_set_complex(st)
     end if
 
-    call parse_variable('CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
+    call parse_variable(parser, 'CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField
     !%Type logical
     !%Default no
@@ -335,7 +335,7 @@ contains
     end if
 
     ! Boundaries
-    call bc_init(hm%bc, gr%mesh, gr%mesh%sb, hm%geo)
+    call bc_init(hm%bc, parser, gr%mesh, gr%mesh%sb, hm%geo)
 
     !%Variable MassScaling
     !%Type block
@@ -354,7 +354,7 @@ contains
     !%
     !%End
     hm%mass_scaling(1:gr%sb%dim) = M_ONE
-    if(parse_block('MassScaling', blk) == 0) then
+    if(parse_block(parser, 'MassScaling', blk) == 0) then
         ncols = parse_block_cols(blk, 0)
         if(ncols > gr%sb%dim) then
           call messages_input_error("MassScaling")
@@ -389,12 +389,12 @@ contains
     !% Octopus determines the effective U term using the 
     !% ACBN0 functional as defined in PRX 5, 011006 (2015)
     !%End
-    call parse_variable('DFTULevel', DFT_U_NONE, hm%lda_u_level)
+    call parse_variable(parser, 'DFTULevel', DFT_U_NONE, hm%lda_u_level)
     call messages_print_var_option(stdout,  'DFTULevel', hm%lda_u_level)
     call lda_u_nullify(hm%lda_u)
     if(hm%lda_u_level /= DFT_U_NONE) then
       call messages_experimental('DFT+U')
-      call lda_u_init(hm%lda_u, hm%lda_u_level, gr, geo, st)
+      call lda_u_init(hm%lda_u, parser, hm%lda_u_level, gr, geo, st)
     end if
  
 
@@ -415,13 +415,13 @@ contains
     !% additional copying but makes operations more efficient.
     !% See also the related <tt>StatesPack</tt> variable.
     !%End
-    call parse_variable('HamiltonianApplyPacked', .true., hm%apply_packed)
+    call parse_variable(parser, 'HamiltonianApplyPacked', .true., hm%apply_packed)
 
     external_potentials_present = epot_have_external_potentials(hm%ep)
 
     kick_present = epot_have_kick(hm%ep)
 
-    call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM  
+    call pcm_init(hm%pcm, parser, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM  
     if(hm%pcm%run_pcm .and. hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT")
     
     !%Variable SCDM_EXX
@@ -432,7 +432,7 @@ contains
     !% If set to yes, and <tt>TheoryLevel = hartree_fock</tt>,
     !% the Fock operator for exact exchange will be applied with the SCDM method.
     !%End
-    call parse_variable('scdm_EXX', .false., hm%scdm_EXX)
+    call parse_variable(parser, 'scdm_EXX', .false., hm%scdm_EXX)
     if(hm%scdm_EXX) then
       call messages_experimental("SCDM method for exact exchange")
       if(hm%theory_level /= HARTREE_FOCK) then
@@ -461,7 +461,7 @@ contains
     !% zero, so that all time depedent field at that time will be
     !% included.
     !%End
-    call parse_variable('TimeZero', .false., hm%time_zero)
+    call parse_variable(parser, 'TimeZero', .false., hm%time_zero)
     if(hm%time_zero) call messages_experimental('TimeZero')
 
     call scissor_nullify(hm%scissor)
@@ -929,8 +929,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_epot_generate(this, gr, geo, st, time)
+  subroutine hamiltonian_epot_generate(this, parser, gr, geo, st, time)
     type(hamiltonian_t),      intent(inout) :: this
+    type(parser_t),           intent(in)    :: parser
     type(grid_t),             intent(in)    :: gr
     type(geometry_t), target, intent(inout) :: geo
     type(states_t),           intent(inout) :: st
@@ -939,7 +940,7 @@ contains
     PUSH_SUB(hamiltonian_epot_generate)
 
     this%geo => geo
-    call epot_generate(this%ep, gr, this%geo, st)
+    call epot_generate(this%ep, parser, gr, this%geo, st)
     call hamiltonian_base_build_proj(this%hm_base, gr%mesh, this%ep)
     call hamiltonian_update(this, gr%mesh, gr%der%boundaries, time)
    
@@ -1039,8 +1040,9 @@ contains
 
 
   ! -----------------------------------------------------------------
-  subroutine zhamiltonian_apply_atom (hm, geo, gr, ia, psi, vpsi)
+  subroutine zhamiltonian_apply_atom (hm, parser, geo, gr, ia, psi, vpsi)
     type(hamiltonian_t), intent(in)  :: hm
+    type(parser_t),      intent(in)  :: parser
     type(geometry_t),    intent(in)  :: geo
     type(grid_t),        intent(in)  :: gr
     integer,             intent(in)  :: ia
@@ -1053,7 +1055,7 @@ contains
 
     SAFE_ALLOCATE(vlocal(1:gr%mesh%np_part))
     vlocal = M_ZERO
-    call epot_local_potential(hm%ep, gr%der, gr%dgrid, geo, ia, vlocal)
+    call epot_local_potential(hm%ep, parser, gr%der, gr%dgrid, geo, ia, vlocal)
 
     do idim = 1, hm%d%dim
       vpsi(1:gr%mesh%np, idim)  = vlocal(1:gr%mesh%np) * psi(1:gr%mesh%np, idim)

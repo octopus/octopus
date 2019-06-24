@@ -146,7 +146,7 @@ contains
       !% ICL correction: S Ismail-Beigi, EK Chang, and SG Louie, <i>Phys. Rev. Lett.</i> <b>87</b>, 087402 (2001).
       !%End
       
-      call parse_variable('MagneticGaugeCorrection', GAUGE_GIPAW, this%gauge)
+      call parse_variable(parser, 'MagneticGaugeCorrection', GAUGE_GIPAW, this%gauge)
       if(.not.varinfo_valid_option('MagneticGaugeCorrection', this%gauge)) &
            call messages_input_error('MagneticGaugeCorrection')
 
@@ -167,7 +167,7 @@ contains
       !% the <math>\vec{k} \cdot \vec{p}</math> perturbation, which is due to non-local pseudopotentials.
       !%End
       call messages_obsolete_variable(parser, 'KdotP_UseNonLocalPseudopotential', 'KdotPUseNonLocalPseudopotential')
-      call parse_variable('KdotPUseNonLocalPseudopotential', .true., this%use_nonlocalpps)
+      call parse_variable(parser, 'KdotPUseNonLocalPseudopotential', .true., this%use_nonlocalpps)
 
       !%Variable KdotPVelMethod
       !%Type integer
@@ -180,7 +180,7 @@ contains
       !%Option hcom_vel 1
       !% As a commutator of the position operator and Hamiltonian, <math>-i \left[ r, H \right]</math>. 
       !%End
-      call parse_variable('KdotPVelMethod', OPTION__KDOTPVELMETHOD__GRAD_VEL, this%vel_method)
+      call parse_variable(parser, 'KdotPVelMethod', OPTION__KDOTPVELMETHOD__GRAD_VEL, this%vel_method)
     end if
 
     POP_SUB(pert_init)

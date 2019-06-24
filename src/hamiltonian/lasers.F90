@@ -196,18 +196,19 @@ contains
   !! the envelope, so that the envelope describes the full function (zero phase,
   !! zero carrier frequency).
   ! ---------------------------------------------------------
-  subroutine laser_to_numerical_all(laser, dt, max_iter, omegamax)
-    type(laser_t), intent(inout)  :: laser
-    FLOAT,         intent(in)     :: dt
-    integer,       intent(in)     :: max_iter
-    FLOAT,         intent(in)     :: omegamax
+  subroutine laser_to_numerical_all(laser, parser, dt, max_iter, omegamax)
+    type(laser_t),   intent(inout)  :: laser
+    type(parser_t),  intent(in)     :: parser
+    FLOAT,           intent(in)     :: dt
+    integer,         intent(in)     :: max_iter
+    FLOAT,           intent(in)     :: omegamax
 
     integer :: iter
     FLOAT   :: tt, fj, phi
 
     PUSH_SUB(lasers_to_numerical_all)
 
-    call tdf_to_numerical(laser%f, max_iter, dt, omegamax)
+    call tdf_to_numerical(laser%f, parser, max_iter, dt, omegamax)
     do iter = 1, max_iter + 1
       tt = (iter-1)*dt
       fj = tdf(laser%f, iter)
@@ -227,15 +228,17 @@ contains
   !> The td functions that describe the laser field are transformed to a 
   !! "numerical" representation (i.e. time grid, values at this time grid).
   ! ---------------------------------------------------------
-  subroutine laser_to_numerical(laser, dt, max_iter, omegamax)
-    type(laser_t), intent(inout)  :: laser
-    FLOAT,         intent(in)     :: dt
-    integer,       intent(in)     :: max_iter
-    FLOAT,         intent(in)     :: omegamax
+  subroutine laser_to_numerical(laser, parser, dt, max_iter, omegamax)
+    type(laser_t),   intent(inout) :: laser
+    type(parser_t),  intent(in)    :: parser
+    FLOAT,           intent(in)    :: dt
+    integer,         intent(in)    :: max_iter
+    FLOAT,           intent(in)    :: omegamax
+    
     PUSH_SUB(lasers_to_numerical)
 
-    call tdf_to_numerical(laser%f, max_iter, dt, omegamax)
-    call tdf_to_numerical(laser%phi, max_iter, dt, omegamax)
+    call tdf_to_numerical(laser%f, parser, max_iter, dt, omegamax)
+    call tdf_to_numerical(laser%phi, parser, max_iter, dt, omegamax)
 
     POP_SUB(lasers_to_numerical)
   end subroutine laser_to_numerical
@@ -348,7 +351,7 @@ contains
     !%End
 
     no_l = 0
-    if(parse_block('TDExternalFields', blk) == 0) then
+    if(parse_block(parser, 'TDExternalFields', blk) == 0) then
       no_l = parse_block_n(blk)
       SAFE_ALLOCATE(lasers(1:no_l))
 
@@ -374,12 +377,12 @@ contains
         lasers(il)%omega = omega0
      
         call parse_block_string(blk, il-1, jj+2, envelope_expression)
-        call tdf_read(lasers(il)%f, trim(envelope_expression), ierr)
+        call tdf_read(lasers(il)%f, parser, trim(envelope_expression), ierr)
 
         ! Check if there is a phase.
         if(parse_block_cols(blk, il-1) > jj+3) then
           call parse_block_string(blk, il-1, jj+3, phase_expression)
-          call tdf_read(lasers(il)%phi, trim(phase_expression), ierr)
+          call tdf_read(lasers(il)%phi, parser, trim(phase_expression), ierr)
           if (ierr /= 0) then            
             write(message(1),'(3A)') 'Error in the "', trim(envelope_expression), '" field defined in the TDExternalFields block:'
             write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'

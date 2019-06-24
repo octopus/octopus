@@ -144,10 +144,10 @@ contains
       !% van der Waals coefficients.
       !%End
       call messages_obsolete_variable(sys%parser, 'vdW_npoints', 'vdWNPoints')
-      call parse_variable('vdWNPoints', 6, gaus_leg_n)
+      call parse_variable(sys%parser, 'vdWNPoints', 6, gaus_leg_n)
 
       ! \todo symmetry stuff should be general
-      call parse_variable('TDPolarizationEquivAxes', 0, equiv_axes)
+      call parse_variable(sys%parser, 'TDPolarizationEquivAxes', 0, equiv_axes)
 
       select case(equiv_axes)
       case(3);      ndir = 1
@@ -210,7 +210,7 @@ contains
       end if
 
       ! we always need complex response
-      call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+      call restart_init(gs_restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
       if(ierr == 0) then
         call states_look_and_load(gs_restart, sys%parser, sys%st, sys%gr, is_complex = .true.)
         call restart_end(gs_restart)
@@ -231,7 +231,7 @@ contains
 
       ! load wavefunctions
       if (.not. fromScratch) then
-        call restart_init(restart_load, RESTART_VDW, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
+        call restart_init(restart_load, sys%parser, RESTART_VDW, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
 
         do dir = 1, ndir
           write(dirname,'(a,i1,a)') "wfs_", dir, "_1_1"
@@ -251,7 +251,7 @@ contains
         call io_mkdir(VDW_DIR)               ! output data
       end if
 
-      call restart_init(restart_dump, RESTART_VDW, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
+      call restart_init(restart_dump, sys%parser, RESTART_VDW, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
       POP_SUB(vdw_run.init_)
     end subroutine init_

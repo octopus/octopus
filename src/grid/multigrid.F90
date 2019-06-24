@@ -116,7 +116,7 @@ contains
     !% Calculate the optimal number of levels for the grid.
     !%End
 
-    call parse_variable('MultigridLevels', 0, n_levels)
+    call parse_variable(parser, 'MultigridLevels', 0, n_levels)
 
     ! default:
     order = der%order
@@ -134,7 +134,7 @@ contains
       !% the differential operators on the different levels of the multigrid.
       !% For more details, see the variable DerivativesOrder.
       !%End
-      call parse_variable('MultigridDerivativesOrder', 1, order)
+      call parse_variable(parser, 'MultigridDerivativesOrder', 1, order)
       ! set order to a minimum of 2 for general star stencil, fails otherwise
       ! the parameter DER_STARGENERAL is private to the derivatives module
       if (der%stencil_type == 5) then

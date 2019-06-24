@@ -29,6 +29,7 @@ module propagator_qoct_oct_m
   use lda_u_oct_m
   use messages_oct_m
   use oct_exchange_oct_m
+  use parser_oct_m
   use potential_interpolation_oct_m
   use propagator_base_oct_m
   use states_oct_m
@@ -45,8 +46,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator specifically designed for the QOCT+TDDFT problem
-  subroutine td_qoct_tddft_propagator(hm, xc, gr, st, tr, t, dt, ions, geo)
+  subroutine td_qoct_tddft_propagator(hm, parser, xc, gr, st, tr, t, dt, ions, geo)
     type(hamiltonian_t), intent(inout) :: hm
+    type(parser_t),      intent(in)    :: parser
     type(xc_t),          intent(in)    :: xc
     type(grid_t),        intent(inout) :: gr
     type(states_t),      intent(inout) :: st
@@ -72,7 +74,7 @@ contains
     if(ion_dynamics_ions_move(ions)) then
       call ion_dynamics_save_state(ions, geo, ions_state)
       call ion_dynamics_propagate(ions, gr%sb, geo, t - dt/M_TWO, M_HALF*dt)
-      call hamiltonian_epot_generate(hm, gr, geo, st, time = t - dt/M_TWO)
+      call hamiltonian_epot_generate(hm, parser, gr, geo, st, time = t - dt/M_TWO)
     end if
 
     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = t-dt/M_TWO)

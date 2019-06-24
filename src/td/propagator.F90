@@ -106,19 +106,19 @@ contains
       SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
 #ifdef HAVE_SPARSKIT
-      call sparskit_solver_init(tro%tdsk_size, tro%tdsk, .true.)
+      call sparskit_solver_init(dummy_parser, tro%tdsk_size, tro%tdsk, .true.)
 #endif
     case(PROP_RUNGE_KUTTA4)
       SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
 #ifdef HAVE_SPARSKIT
-      call sparskit_solver_init(tro%tdsk_size, tro%tdsk, .true.)
+      call sparskit_solver_init(dummy_parser, tro%tdsk_size, tro%tdsk, .true.)
 #endif
     case(PROP_RUNGE_KUTTA2)
       SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
 #ifdef HAVE_SPARSKIT
-      call sparskit_solver_init(tro%tdsk_size, tro%tdsk, .true.)
+      call sparskit_solver_init(dummy_parser, tro%tdsk_size, tro%tdsk, .true.)
 #endif
     end select
 
@@ -253,7 +253,7 @@ contains
     !%End
     call messages_obsolete_variable(parser, 'TDEvolutionMethod', 'TDPropagator')
 
-    call parse_variable('TDPropagator', PROP_ETRS, tr%method)
+    call parse_variable(parser, 'TDPropagator', PROP_ETRS, tr%method)
     if(.not.varinfo_valid_option('TDPropagator', tr%method)) call messages_input_error('TDPropagator')
 
     select case(tr%method)
@@ -272,7 +272,7 @@ contains
       sp_distdot_mode = 3
       tr%tdsk_size = 2 * st%d%dim * gr%mesh%np * (st%st_end - st%st_start + 1) * (st%d%kpt%end - st%d%kpt%start + 1)
       SAFE_ALLOCATE(tr%tdsk)
-      call sparskit_solver_init(tr%tdsk_size, tr%tdsk, .true.)
+      call sparskit_solver_init(parser, tr%tdsk_size, tr%tdsk, .true.)
 #else
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "runge_kutta4" propagator is selected.'
@@ -287,7 +287,7 @@ contains
       sp_distdot_mode = 2
       tr%tdsk_size = st%d%dim * gr%mesh%np * (st%st_end - st%st_start + 1) * (st%d%kpt%end - st%d%kpt%start + 1)
       SAFE_ALLOCATE(tr%tdsk)
-      call sparskit_solver_init(tr%tdsk_size, tr%tdsk, .true.)
+      call sparskit_solver_init(parser, tr%tdsk_size, tr%tdsk, .true.)
 #else
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "runge_kutta2" propagator is selected.'
@@ -302,7 +302,7 @@ contains
       sp_distdot_mode = 1
       tr%tdsk_size = st%d%dim*gr%mesh%np
       SAFE_ALLOCATE(tr%tdsk)
-      call sparskit_solver_init(st%d%dim*gr%mesh%np, tr%tdsk, .true.)
+      call sparskit_solver_init(parser, st%d%dim*gr%mesh%np, tr%tdsk, .true.)
 #else
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "crank_nicolson_sparskit" propagator is selected.'
@@ -345,7 +345,7 @@ contains
       call potential_interpolation_init(tr%vksold, gr%mesh%np, st%d%nspin, family_is_mgga)
     end select
 
-    call exponential_init(tr%te) ! initialize propagator
+    call exponential_init(tr%te, parser) ! initialize propagator
 
     call messages_obsolete_variable(parser, 'TDSelfConsistentSteps', 'TDStepsWithSelfConsistency')
 
@@ -367,7 +367,7 @@ contains
     !% Self-consistency is imposed for all propagation steps.
     !%End
 
-    call parse_variable('TDStepsWithSelfConsistency', 0, tr%scf_propagation_steps)
+    call parse_variable(parser, 'TDStepsWithSelfConsistency', 0, tr%scf_propagation_steps)
 
     if(tr%scf_propagation_steps == -1) tr%scf_propagation_steps = HUGE(tr%scf_propagation_steps)
     if(tr%scf_propagation_steps < 0) call messages_input_error('TDStepsWithSelfConsistency', 'Cannot be negative')
@@ -395,7 +395,7 @@ contains
     !% The self consistency has to be measured against some accuracy 
     !% threshold. This variable controls the value of that threshold.
     !%End
-    call parse_variable('TDSCFThreshold', CNST(1.0e-6), tr%scf_threshold)
+    call parse_variable(parser, 'TDSCFThreshold', CNST(1.0e-6), tr%scf_threshold)
 
     POP_SUB(propagator_init)
   end subroutine propagator_init
@@ -534,19 +534,19 @@ contains
     case(PROP_AETRS, PROP_CAETRS)
       call td_aetrs(ks, parser, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
     case(PROP_EXPONENTIAL_MIDPOINT)
-      call exponential_midpoint(hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
+      call exponential_midpoint(hm, parser, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
     case(PROP_CRANK_NICOLSON)
-      call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .false.)
+      call td_crank_nicolson(hm, parser, gr, st, tr, time, dt, ions, geo, .false.)
     case(PROP_RUNGE_KUTTA4)
       call td_runge_kutta4(ks, parser, hm, gr, st, tr, time, dt, ions, geo)
     case(PROP_RUNGE_KUTTA2)
       call td_runge_kutta2(ks, parser, hm, gr, st, tr, time, dt, ions, geo)
     case(PROP_CRANK_NICOLSON_SPARSKIT)
-      call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .true.)
+      call td_crank_nicolson(hm, parser, gr, st, tr, time, dt, ions, geo, .true.)
     case(PROP_MAGNUS)
       call td_magnus(hm, gr, st, tr, time, dt)
     case(PROP_QOCT_TDDFT_PROPAGATOR)
-      call td_qoct_tddft_propagator(hm, ks%xc, gr, st, tr, time, dt, ions, geo)
+      call td_qoct_tddft_propagator(hm, parser, ks%xc, gr, st, tr, time, dt, ions, geo)
     case(PROP_EXPLICIT_RUNGE_KUTTA4)
       if(present(qcchi)) then
         call td_explicit_runge_kutta4(ks, parser, hm, gr, st, time, dt, ions, geo, qcchi)
@@ -570,7 +570,7 @@ contains
     end if
 
     if(generate .or. geometry_species_time_dependent(geo)) then
-      call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
+      call hamiltonian_epot_generate(hm, parser,  gr, geo, st, time = abs(nt*dt))
     end if
 
     call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval = update_energy_, time = abs(nt*dt), calc_energy = update_energy_)
@@ -578,13 +578,13 @@ contains
 
     ! Recalculate forces, update velocities...
     if(update_energy_ .and. ion_dynamics_ions_move(ions) .and. tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) then
-      call forces_calculate(gr, geo, hm, st, ks, t = abs(nt*dt), dt = dt)
+      call forces_calculate(gr, parser, geo, hm, st, ks, t = abs(nt*dt), dt = dt)
       call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
-      if(generate) call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
+      if(generate) call hamiltonian_epot_generate(hm, parser,  gr, geo, st, time = abs(nt*dt))
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
       if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-        call forces_calculate(gr, geo, hm, st, ks, t = abs(nt*dt), dt = dt)
+        call forces_calculate(gr, parser, geo, hm, st, ks, t = abs(nt*dt), dt = dt)
       end if
     end if
 
@@ -649,7 +649,7 @@ contains
 
     ! move the hamiltonian to time t
     call ion_dynamics_propagate(ions, gr%sb, geo, iter*dt, dt)
-    call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
+    call hamiltonian_epot_generate(hm, parser, gr, geo, st, time = iter*dt)
     ! now calculate the eigenfunctions
     call scf_run(scf, parser, mc, gr, geo, st, ks, hm, outp, &
       gs_run = .false., verbosity = VERB_COMPACT, iters_done = scsteps)
@@ -663,7 +663,7 @@ contains
       call messages_not_implemented("DFT+U with propagator_dt_bo")  
     end if
 
-    call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
+    call hamiltonian_epot_generate(hm, parser,  gr, geo, st, time = iter*dt)
 
     ! update Hamiltonian and eigenvalues (fermi is *not* called)
     call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval = .true., time = iter*dt, calc_energy = .true.)
@@ -672,7 +672,7 @@ contains
     call energy_calc_total(hm, gr, st, iunit = -1)
 
     call ion_dynamics_propagate_vel(ions, geo)
-    call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
+    call hamiltonian_epot_generate(hm, parser, gr, geo, st, time = iter*dt)
      geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
 
     if(gauge_field_is_applied(hm%ep%gfield)) then

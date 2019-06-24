@@ -527,7 +527,7 @@ subroutine X(scdm_exchange_operator) (hm, der, psib, hpsib, ik, exx_coef)
   if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
   
   ! make sure scdm is initialized
-  call scdm_init(hm%hf_st, der, psolver%cube, hm%scdm)
+  call scdm_init(hm%hf_st, dummy_parser, der, psolver%cube, hm%scdm)
   ! make sure scdm is localized
   call X(scdm_localize)(hm%hf_st, der%mesh, hm%scdm)
   
