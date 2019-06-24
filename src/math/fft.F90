@@ -215,20 +215,6 @@ contains
     !%End
     call parse_variable(parser, 'FFTPreparePlan', FFTW_MEASURE, fft_prepare_plan)
     if(.not. varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call messages_input_error('FFTPreparePlan')
-     
-!    !%Variable FFTPlanTimeLimit
-!    !%Type float
-!    !%Default -1
-!    !%Section Mesh::FFTs
-!    !%Description
-!    !% Sometimes the FFTW_MEASURE takes a lot of time to compute
-!    !% many different plans. With this variable is possible to limit
-!    !% the time (in seconds) that has roughly going to use for the
-!    !% creation of the plan. If a negative value (default one) is
-!    !% assigned, there is no restriction.
-!    !%End   
-!    call parse_variable(parser, 'FFTPlanTimeLimit', -M_ONE, time_limit)    
-!    call fftw_set_timelimit(time_limit)
 
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
     if(omp_get_max_threads() > 1) then
