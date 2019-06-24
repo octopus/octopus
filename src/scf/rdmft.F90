@@ -468,14 +468,14 @@ contains
         if (rdm%do_basis) then
           write(iunit, '(a)')'Orbital optimization with [basis set]'
         else
-          write(iunit, '(a)')'Orbital optimization with [conjugated gradiens]'
+          write(iunit, '(a)')'Orbital optimization with [conjugated gradients]'
         end if
         write(iunit, '(1x)')
         
         if (rdm%hf) then
           write(iunit, '(a)')'Hartree Fock calculation'
+          write(iunit, '(1x)')
         end if
-        write(iunit, '(1x)')
         
         ! scf information
         if(conv) then
