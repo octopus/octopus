@@ -253,8 +253,8 @@ contains
         
         do ip = 1, this%gr%fine%mesh%np
 
-          psi1 = psib%states(ist)%zpsi(ip,(dim_-1)*2+1)
-          psi2 = psib%states(ist)%zpsi(ip,(dim_-1)*2+2)
+          psi1 = zpsi(ip,(dim_-1)*2+1)
+          psi2 = zpsi(ip,(dim_-1)*2+2)
 
           this%density(ip, 1) = this%density(ip, 1) + weight(ist)*(real(psi1, REAL_PRECISION)**2 + aimag(psi1)**2)
           this%density(ip, 2) = this%density(ip, 2) + weight(ist)*(real(psi2, REAL_PRECISION)**2 + aimag(psi2)**2)
@@ -381,7 +381,6 @@ contains
       end if
 
     end select
-    
     
     call density_calc_init(dens_calc, st, gr, density)
     
