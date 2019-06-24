@@ -846,11 +846,6 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
     end if
   end do
 
-  normalize_ = .false.
-  if(present(normalize)) then
-    normalize_ = normalize
-  end if
-
   !We have a transpose here because this helps for the Lanczos implementation
   !which is the only routine using this one at the moment
   if(present(overlap)) then
@@ -861,6 +856,7 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
     end if
   end if
 
+  normalize_ = optional_default(normalize, .false.)
   if(present(norm) .or. normalize_) then
     SAFE_ALLOCATE(nrm2(1:phib%nst))
     !Here we do not call mesh_batch_nrm2 which is too slow
