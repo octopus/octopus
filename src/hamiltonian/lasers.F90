@@ -196,9 +196,8 @@ contains
   !! the envelope, so that the envelope describes the full function (zero phase,
   !! zero carrier frequency).
   ! ---------------------------------------------------------
-  subroutine laser_to_numerical_all(laser, parser, dt, max_iter, omegamax)
+  subroutine laser_to_numerical_all(laser, dt, max_iter, omegamax)
     type(laser_t),   intent(inout)  :: laser
-    type(parser_t),  intent(in)     :: parser
     FLOAT,           intent(in)     :: dt
     integer,         intent(in)     :: max_iter
     FLOAT,           intent(in)     :: omegamax
@@ -208,7 +207,7 @@ contains
 
     PUSH_SUB(lasers_to_numerical_all)
 
-    call tdf_to_numerical(laser%f, parser, max_iter, dt, omegamax)
+    call tdf_to_numerical(laser%f, max_iter, dt, omegamax)
     do iter = 1, max_iter + 1
       tt = (iter-1)*dt
       fj = tdf(laser%f, iter)
@@ -228,17 +227,16 @@ contains
   !> The td functions that describe the laser field are transformed to a 
   !! "numerical" representation (i.e. time grid, values at this time grid).
   ! ---------------------------------------------------------
-  subroutine laser_to_numerical(laser, parser, dt, max_iter, omegamax)
+  subroutine laser_to_numerical(laser, dt, max_iter, omegamax)
     type(laser_t),   intent(inout) :: laser
-    type(parser_t),  intent(in)    :: parser
     FLOAT,           intent(in)    :: dt
     integer,         intent(in)    :: max_iter
     FLOAT,           intent(in)    :: omegamax
     
     PUSH_SUB(lasers_to_numerical)
 
-    call tdf_to_numerical(laser%f, parser, max_iter, dt, omegamax)
-    call tdf_to_numerical(laser%phi, parser, max_iter, dt, omegamax)
+    call tdf_to_numerical(laser%f, max_iter, dt, omegamax)
+    call tdf_to_numerical(laser%phi,  max_iter, dt, omegamax)
 
     POP_SUB(lasers_to_numerical)
   end subroutine laser_to_numerical
