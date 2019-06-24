@@ -131,9 +131,7 @@ module fft_oct_m
 #endif
     type(c_ptr)           :: cuda_plan_fw
     type(c_ptr)           :: cuda_plan_bw
-#ifdef HAVE_NFFT
     type(nfft_t), public :: nfft
-#endif
 #ifdef HAVE_PNFFT
     type(pnfft_t), public :: pnfft
 #endif
@@ -146,9 +144,7 @@ module fft_oct_m
   logical               :: fft_optimize
   integer               :: fft_prepare_plan
   integer, public       :: fft_default_lib = -1
-#ifdef HAVE_PNFFT
   type(nfft_t), save    :: nfft_options
-#endif
   
   integer, parameter ::  &
     CUFFT_R2C = z'2a',   &
@@ -266,9 +262,7 @@ contains
     end if
 #endif
 
-#ifdef HAVE_NFFT
     call nfft_guru_options(nfft_options, parser)
-#endif
     
     POP_SUB(fft_all_init)
   end subroutine fft_all_init
@@ -562,11 +556,9 @@ contains
            type == FFT_REAL, FFTW_BACKWARD, fft_prepare_plan+FFTW_UNALIGNED)
 
     case(FFTLIB_NFFT)
-#ifdef HAVE_NFFT
      call nfft_copy_info(this%nfft,fft_array(jj)%nfft) !copy default parameters set in the calling routine 
      call nfft_init(fft_array(jj)%nfft, nfft_options, fft_array(jj)%rs_n_global, &
                     fft_dim, fft_array(jj)%rs_n_global , type, optimize = .true.)
-#endif
 
     case (FFTLIB_PFFT)
 #ifdef HAVE_PFFT     
@@ -785,13 +777,11 @@ contains
 #ifdef HAVE_PNFFT
       call pnfft_write_info(fft_array(jj)%pnfft)
 #endif
-
+      
     case (FFTLIB_NFFT)
     call messages_write("Info: FFT library = NFFT")
     call messages_info()
-#ifdef HAVE_NFFT
       call nfft_write_info(fft_array(jj)%nfft)
-#endif
 
     end select
 
@@ -820,11 +810,10 @@ contains
     case (FFTLIB_FFTW)
     !Do nothing 
     case (FFTLIB_NFFT)
-#ifdef HAVE_NFFT
       ASSERT(present(nn))
       call nfft_precompute(fft_array(slot)%nfft, &
           XX(1:nn(1),1), XX(1:nn(2),2), XX(1:nn(3),3)) 
-#endif
+
     case (FFTLIB_PFFT)
     !Do nothing 
     case(FFTLIB_ACCEL)
@@ -884,10 +873,8 @@ contains
           call clfftDestroyPlan(fft_array(ii)%cl_plan_bw, status)
 #endif
 
-#ifdef HAVE_NFFT
         case(FFTLIB_NFFT)
         call nfft_end(fft_array(ii)%nfft)
-#endif
 
 #ifdef HAVE_PNFFT
         case(FFTLIB_PNFFT)

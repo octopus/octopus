@@ -286,7 +286,6 @@ contains
     PUSH_SUB(cube_tp_fft_defaults)
     select case (fft_library)
       case (FFTLIB_NFFT)
-#ifdef HAVE_NFFT    
         !Set NFFT defaults to values that gives good performance for two-point enlargement
         !These values are overridden by the NFFT options in the input file 
         cube%fft%nfft%set_defaults = .true.
@@ -294,7 +293,6 @@ contains
         cube%fft%nfft%mm = 2 
         cube%fft%nfft%sigma = CNST(1.1)
         cube%fft%nfft%precompute = NFFT_PRE_PSI
-#endif
 
       case (FFTLIB_PNFFT)
 #ifdef HAVE_PNFFT    

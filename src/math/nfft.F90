@@ -31,10 +31,6 @@ module nfft_oct_m
   
   private
   
-#if !defined(HAVE_NFFT)
-  integer, public :: nfft_dummy ! this avoids compilers complaining about empty module
-#else
-
   public ::          &
     nfft_t,          &
     nfft_copy_info,  &
@@ -42,6 +38,7 @@ module nfft_oct_m
     nfft_end,        &
     nfft_precompute, &
     nfft_write_info, &
+    nfft_guru_options, &
     znfft_forward,   &
     znfft_backward,  &
     dnfft_forward,   &
@@ -80,6 +77,7 @@ module nfft_oct_m
     FLOAT, public     :: norm       !> Normalization
 
     ! Guru options
+    logical, public   :: set_defaults = .false. !> the defaults can be overriden
     logical, public   :: guru                   !> use guru options?
     integer, public   :: precompute             !> precompute strategy
     integer, public   :: mm                     !> Window function cut-off parameter
@@ -166,7 +164,6 @@ contains
   subroutine nfft_init(nfft, nfft_options, N, dim, M, is_real, optimize)
     type(nfft_t),      intent(inout) :: nfft
     type(nfft_t),      intent(in)    :: nfft_options
-    type(parser_t),    intent(in)    :: parser
     integer,           intent(inout) :: N(3) !> nfft bandwidths
     integer,           intent(inout) :: M(3) !> nfft nodes
     integer,           intent(in)    :: dim
@@ -186,10 +183,12 @@ contains
     nfft%M(:) = M(:)
     nfft%N(:) = N(:)
 
-    nfft%guru = nfft_options%guru
-    nfft%mm = nfft_options%mm
-    nfft%sigma = nfft_options%sigma
-    nfft%precompute = nfft_options%precompute
+    if(.not. nfft%set_defaults) then
+      nfft%guru = nfft_options%guru
+      nfft%mm = nfft_options%mm
+      nfft%sigma = nfft_options%sigma
+      nfft%precompute = nfft_options%precompute
+    end if
     
     ! set unused dimensions to 1
     nfft%M(dim+1:3) = 1
@@ -502,8 +501,6 @@ contains
 #include "undef.F90"
 #include "complex.F90"
 #include "nfft_inc.F90"
-
-#endif
 
 end module nfft_oct_m
 
