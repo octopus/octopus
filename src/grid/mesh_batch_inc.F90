@@ -848,6 +848,10 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
 
   !We have a transpose here because this helps for the Lanczos implementation
   !which is the only routine using this one at the moment
+  !Indeed, Lanczos acts on phib%nst arrays of dimension nst, whereas the could would return 
+  !an array of dim (phib%nst, nst)
+  !For an orthogalization, it is more nature to have for each state the overlap with the others
+  !which is what the code outputs now.
   if(present(overlap)) then
     if(drcgs) then
       overlap(1:nst, 1:phib%nst) = transpose(ss_full(1:phib%nst, 1:nst))
