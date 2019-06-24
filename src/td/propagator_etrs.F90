@@ -128,7 +128,7 @@ contains
     ! first move the ions to time t
     if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
-      call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
+      call hamiltonian_epot_generate(hm, parser,  gr, geo, st, time = time)
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
@@ -231,7 +231,7 @@ contains
     ! first move the ions to time t
     if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
-      call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
+      call hamiltonian_epot_generate(hm, parser,  gr, geo, st, time = time)
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
@@ -419,7 +419,7 @@ contains
     ! move the ions to time t
     if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
-      call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
+      call hamiltonian_epot_generate(hm, parser, gr, geo, st, time = time)
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then

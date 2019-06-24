@@ -210,9 +210,10 @@
 
 
   ! ---------------------------------------------------------
-  subroutine controlfunction_trans_matrix(par)
+  subroutine controlfunction_trans_matrix(par, parser)
     type(controlfunction_t), intent(inout) :: par
-
+    type(parser_t),          intent(in)    :: parser
+    
     integer :: i, mm, nn, n, j, k
     FLOAT :: t, det, w1, dt
     FLOAT, allocatable :: neigenvec(:, :), eigenvec(:, :), eigenval(:)
@@ -247,7 +248,7 @@
 
         SAFE_ALLOCATE(fnn(1:par%dim))
         do mm = 1, par%dim
-          call tdf_init_numerical(fnn(mm), tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
+          call tdf_init_numerical(fnn(mm), parser, tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
             cf_common%omegamax, rep = TDF_FOURIER_SERIES)
           call tdf_set_numerical(fnn(mm), mm, M_ONE)
           call tdf_fourier_to_numerical(fnn(mm))
@@ -283,8 +284,7 @@
 
       SAFE_ALLOCATE(fnn(1:n))
       do mm = 1, n
-        call tdf_init_numerical(fnn(mm), tdf_niter(par%f(1)), tdf_dt(par%f(1)), &
-          cf_common%omegamax, rep = TDF_ZERO_FOURIER)
+        call tdf_init_numerical(fnn(mm), parser, tdf_niter(par%f(1)), tdf_dt(par%f(1)), cf_common%omegamax, rep = TDF_ZERO_FOURIER)
         call tdf_set_numerical(fnn(mm), mm+1, M_ONE)
         call tdf_fourier_to_numerical(fnn(mm))
         if(mm <= n/2) then

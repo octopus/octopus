@@ -59,8 +59,9 @@ subroutine X(forces_gather)(geo, force)
 end subroutine X(forces_gather)
 
 !---------------------------------------------------------------------------
-subroutine X(forces_from_local_potential)(gr, geo, ep, gdensity, force)
+subroutine X(forces_from_local_potential)(gr, parser, geo, ep, gdensity, force)
   type(grid_t),                   intent(in)    :: gr
+  type(parser_t),                 intent(in)    :: parser
   type(geometry_t),               intent(in)    :: geo
   type(epot_t),                   intent(in)    :: ep
   R_TYPE,                         intent(in)    :: gdensity(:, :)
@@ -86,7 +87,7 @@ subroutine X(forces_from_local_potential)(gr, geo, ep, gdensity, force)
     end if
     
     vloc(1:gr%mesh%np) = M_ZERO
-    call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, vloc)
+    call epot_local_potential(ep, parser, gr%der, gr%dgrid, geo, iatom, vloc)
 
     forall(ip = 1:gr%mesh%np) zvloc(ip) = vloc(ip)
 
@@ -143,8 +144,9 @@ end subroutine X(total_force_from_local_potential)
 !! First-principles calculations in real-space formalism: Electronic configurations
 !! and transport properties of nanostructures, Imperial College Press (2005)
 !! Section 1.6, page 12
-subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl, force_u)
+subroutine X(forces_from_potential)(gr, parser, geo, hm, st, force, force_loc, force_nl, force_u)
   type(grid_t),                   intent(in)    :: gr
+  type(parser_t),                 intent(in)    :: parser
   type(geometry_t),               intent(in)    :: geo
   type(hamiltonian_t),            intent(in)    :: hm
   type(states_t),                 intent(in)    :: st
@@ -386,7 +388,7 @@ subroutine X(forces_from_potential)(gr, geo, hm, st, force, force_loc, force_nl,
     call symmetrizer_end(symmetrizer)
   end if
 
-  call dforces_from_local_potential(gr, geo, hm%ep, grad_rho, force_loc)
+  call dforces_from_local_potential(gr, parser, geo, hm%ep, grad_rho, force_loc)
 
   do iatom = 1, geo%natoms
     do idir = 1, gr%mesh%sb%dim
@@ -512,8 +514,9 @@ end subroutine X(total_force_from_potential)
 
 
 ! --------------------------------------------------------------------------------
-subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv, lda_u_level)
+subroutine X(forces_derivative)(gr, parser, geo, ep, st, lr, lr2, force_deriv, lda_u_level)
   type(grid_t),                   intent(in)    :: gr
+  type(parser_t),                 intent(in)    :: parser
   type(geometry_t),               intent(in)    :: geo
   type(epot_t),                   intent(in)    :: ep
   type(states_t),                 intent(in)    :: st
@@ -634,7 +637,7 @@ subroutine X(forces_derivative)(gr, geo, ep, st, lr, lr2, force_deriv, lda_u_lev
   
   SAFE_ALLOCATE(force_local(1:gr%sb%dim, 1:geo%natoms))
   force_local = M_ZERO
-  call zforces_from_local_potential(gr, geo, ep, grad_rho, force_local)
+  call zforces_from_local_potential(gr, parser, geo, ep, grad_rho, force_local)
   force_deriv(:,:) = force_deriv(:,:) + force_local(:,:)
   SAFE_DEALLOCATE_A(force_local)
   SAFE_DEALLOCATE_A(grad_rho)
@@ -645,8 +648,9 @@ end subroutine X(forces_derivative)
 ! --------------------------------------------------------------------------------
 !> lr, lr2 are wfns from electric perturbation; lr is for +omega, lr2 is for -omega.
 !! for each atom, Z*(i,j) = dF(j)/dE(i)
-subroutine X(forces_born_charges)(gr, geo, ep, st, lr, lr2, born_charges, lda_u_level)
+subroutine X(forces_born_charges)(gr, parser, geo, ep, st, lr, lr2, born_charges, lda_u_level)
   type(grid_t),                   intent(in)    :: gr
+  type(parser_t),                 intent(in)    :: parser
   type(geometry_t),               intent(in)    :: geo
   type(epot_t),                   intent(in)    :: ep
   type(states_t),                 intent(in)    :: st
@@ -663,7 +667,7 @@ subroutine X(forces_born_charges)(gr, geo, ep, st, lr, lr2, born_charges, lda_u_
   SAFE_ALLOCATE(force_deriv(1:gr%mesh%sb%dim, 1:geo%natoms))
 
   do idir = 1, gr%mesh%sb%dim
-    call X(forces_derivative)(gr, geo, ep, st, lr(idir), lr2(idir), force_deriv, lda_u_level)
+    call X(forces_derivative)(gr, parser, geo, ep, st, lr(idir), lr2(idir), force_deriv, lda_u_level)
     do iatom = 1, geo%natoms
       born_charges%charge(:, idir, iatom) = force_deriv(:, iatom)
       born_charges%charge(idir, idir, iatom) = born_charges%charge(idir, idir, iatom) + species_zval(geo%atom(iatom)%species)

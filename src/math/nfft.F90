@@ -97,8 +97,9 @@ contains
 
   ! ---------------------------------------------------------
   ! GURU options
-  subroutine nfft_guru_options(nfft)
-    type(nfft_t), intent(inout) :: nfft
+  subroutine nfft_guru_options(nfft, parser)
+    type(nfft_t),     intent(inout) :: nfft
+    type(parser_t),   intent(in)    :: parser
 
     PUSH_SUB(nfft_guru_options)
 
@@ -109,7 +110,7 @@ contains
     !%Description
     !% Perform NFFT with guru interface. This permits the fine tuning of several critical parameters.
     !%End
-    call parse_variable('NFFTGuruInterface',  nfft%guru, nfft%guru)
+    call parse_variable(parser, 'NFFTGuruInterface',  nfft%guru, nfft%guru)
 
 
     !%Variable NFFTCutoff
@@ -120,7 +121,7 @@ contains
     !% Cut-off parameter of the window function.
     !% See NFFT manual for details.
     !%End
-    call parse_variable('NFFTCutoff', nfft%mm, nfft%mm)
+    call parse_variable(parser, 'NFFTCutoff', nfft%mm, nfft%mm)
 
 
     !%Variable NFFTOversampling
@@ -130,7 +131,7 @@ contains
     !%Description
     !% NFFT oversampling factor (sigma). This will rule the size of the FFT under the hood.
     !%End
-    call parse_variable('NFFTOversampling', nfft%sigma, nfft%sigma)
+    call parse_variable(parser, 'NFFTOversampling', nfft%sigma, nfft%sigma)
 
     !%Variable NFFTPrecompute
     !%Type integer
@@ -148,7 +149,7 @@ contains
     !% Is the fastest method but requires a large amount of memory as it requires to store (2*m+1)^d*M
     !% real numbers. No extra operations are needed during matrix vector multiplication.
     !%End
-    call parse_variable('NFFTPrecompute', nfft%precompute, nfft%precompute)
+    call parse_variable(parser, 'NFFTPrecompute', nfft%precompute, nfft%precompute)
      if(.not.varinfo_valid_option('NFFTPrecompute', nfft%precompute)) call messages_input_error('NFFTPrecompute')
 !    call messages_print_var_option(stdout, "NFFTPrecompute", nfft%precompute)
 
@@ -163,8 +164,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nfft_init(nfft, N, dim, M, is_real, optimize)
+  subroutine nfft_init(nfft, parser, N, dim, M, is_real, optimize)
     type(nfft_t),      intent(inout) :: nfft
+    type(parser_t),    intent(in)    :: parser
     integer,           intent(inout) :: N(3) !> nfft bandwidths
     integer,           intent(inout) :: M(3) !> nfft nodes
     integer,           intent(in)    :: dim
@@ -196,7 +198,7 @@ contains
     nfft%M(dim+1:3) = 1
     
 
-    call nfft_guru_options(nfft)
+    call nfft_guru_options(nfft, parser)
 
     my_N = 0
     do ii = 1, dim

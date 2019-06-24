@@ -64,19 +64,19 @@ program dielectric_function
   
   call messages_init(parser)
 
-  call io_init()
+  call io_init(parser)
 
   call unit_system_init(parser)
 
-  call spectrum_init(spectrum)
+  call spectrum_init(spectrum, parser)
 
-  call space_init(space)
+  call space_init(space, parser)
   call geometry_init(geo, parser, space)
   call simul_box_init(sb, parser, geo, space)
     
   SAFE_ALLOCATE(vecpot0(1:space%dim))
 
-  if(parse_block('GaugeVectorField', blk) == 0) then
+  if(parse_block(parser, 'GaugeVectorField', blk) == 0) then
     
     do ii = 1, space%dim
       call parse_block_float(blk, 0, ii - 1, vecpot0(ii))
@@ -100,7 +100,7 @@ program dielectric_function
   call messages_warning(4)
 
   start_time = spectrum%start_time
-  call parse_variable('GaugeFieldDelay', start_time, spectrum%start_time )
+  call parse_variable(parser, 'GaugeFieldDelay', start_time, spectrum%start_time )
 
   in_file = io_open('td.general/gauge_field', action='read', status='old', die=.false.)
   if(in_file < 0) then 
@@ -124,7 +124,7 @@ program dielectric_function
     !% relative to the current folder
     !%End
 
-    call parse_variable('TransientAbsorptionReference', '.', ref_filename)
+    call parse_variable(parser, 'TransientAbsorptionReference', '.', ref_filename)
     ref_file = io_open(trim(ref_filename)//'/gauge_field', action='read', status='old', die=.false.)
     if(ref_file < 0) then
       message(1) = "Cannot open reference file '"//trim(io_workpath(trim(ref_filename)//'/gauge_field'))//"'"

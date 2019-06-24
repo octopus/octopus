@@ -86,7 +86,7 @@
     !%
     !%End
        
-    if(parse_block('OCTVelocityTarget', blk)==0) then
+    if(parse_block(parser, 'OCTVelocityTarget', blk)==0) then
       tg%vel_input_string = " "
       do jj=0, parse_block_n(blk)-1
         call parse_block_string(blk, jj, 0, expression)
@@ -108,7 +108,7 @@
     end if
        
     if(oct%algorithm  ==  OPTION__OCTSCHEME__OCT_CG .or. oct%algorithm == OPTION__OCTSCHEME__OCT_BFGS) then
-      if(parse_block('OCTVelocityDerivatives', blk)==0) then
+      if(parse_block(parser, 'OCTVelocityDerivatives', blk)==0) then
         SAFE_ALLOCATE(tg%vel_der_array(1:geo%natoms,1:gr%sb%dim))
         do ist=0, geo%natoms-1
           do jst=0, gr%sb%dim-1
@@ -133,7 +133,7 @@
       do iatom=1, geo%natoms
         vl(:) = M_ZERO
         vl_grad(:,:) = M_ZERO
-        call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, vl)
+        call epot_local_potential(ep, parser, gr%der, gr%dgrid, geo, iatom, vl)
         call dderivatives_grad(gr%der, vl, vl_grad)
         forall(ist=1:gr%mesh%np, jst=1:gr%sb%dim)
           tg%grad_local_pot(iatom, ist, jst) = vl_grad(ist, jst)

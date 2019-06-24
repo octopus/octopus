@@ -55,8 +55,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine filter_init(steps, dt, filter)    
-    integer,          intent(in)  :: steps 
+  subroutine filter_init(steps, parser, dt, filter)    
+    integer,          intent(in)  :: steps
+    type(parser_t),   intent(in)  :: parser
     FLOAT,            intent(in)  :: dt
     type(filter_t), intent(inout) :: filter
 
@@ -105,7 +106,7 @@ contains
     !%Option frequency_filter 1
     !% The filter is applied in the frequency domain.
     !%End
-    if( parse_block('OCTFilter', blk) == 0 ) then
+    if( parse_block(parser, 'OCTFilter', blk) == 0 ) then
       no_f = parse_block_n(blk)
 
       if(no_f <= 0) then
@@ -122,7 +123,7 @@ contains
         call parse_block_integer(blk, i-1, 0, filter%domain(i))
         call parse_block_string(blk, i-1, 1, filter%expression(i))
         call conv_to_C_string(filter%expression(i))
-        call tdf_init_numerical(filter%f(i), steps, dt, -M_ONE)
+        call tdf_init_numerical(filter%f(i), parser, steps, dt, -M_ONE)
         call tdf_numerical_to_fourier(filter%f(i))
       end do
       call build_filter(filter)

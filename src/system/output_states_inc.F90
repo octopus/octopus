@@ -173,13 +173,13 @@ subroutine output_states(st, parser, gr, geo, hm, dir, outp)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
-    call dos_init(dos, st)
+    call dos_init(dos, parser, st)
     call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh, hm)
     call dos_end(dos)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__TPA) /= 0) then
-    call states_write_tpa (trim(dir), gr, st)
+    call states_write_tpa(trim(dir), parser, gr, st)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then

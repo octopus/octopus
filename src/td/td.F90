@@ -160,7 +160,7 @@ contains
     !% so you will always use the optimal electronic time step
     !% (<a href=http://arxiv.org/abs/0710.3321>more details</a>).
     !%End
-    call parse_variable('TDIonicTimeScale', CNST(1.0), td%mu)
+    call parse_variable(sys%parser, 'TDIonicTimeScale', CNST(1.0), td%mu)
 
     if (td%mu <= M_ZERO) then
       write(message(1),'(a)') 'Input: TDIonicTimeScale must be positive.'
@@ -189,7 +189,7 @@ contains
     default_dt = CNST(0.0426) - CNST(0.207)*spacing + CNST(0.808)*spacing**2
     default_dt = default_dt*td%mu
 
-    call parse_variable('TDTimeStep', default_dt, td%dt, unit = units_inp%time)
+    call parse_variable(sys%parser, 'TDTimeStep', default_dt, td%dt, unit = units_inp%time)
 
     if (td%dt <= M_ZERO) then
       write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
@@ -217,7 +217,7 @@ contains
     !% selected <tt>ev_angstrom</tt> as input units). The approximate conversions to
     !% femtoseconds are 1 fs = 41.34 <math>\hbar</math>/Hartree = 1.52 <math>\hbar</math>/eV.
     !%End
-    call parse_variable('TDPropagationTime', CNST(-1.0), propagation_time, unit = units_inp%time)
+    call parse_variable(sys%parser, 'TDPropagationTime', CNST(-1.0), propagation_time, unit = units_inp%time)
 
     call messages_obsolete_variable(sys%parser, 'TDMaximumIter', 'TDMaxSteps')
 
@@ -231,7 +231,7 @@ contains
     !%End
     default = 1500
     if(propagation_time > CNST(0.0)) default = nint(propagation_time/td%dt)
-    call parse_variable('TDMaxSteps', default, td%max_iter)
+    call parse_variable(sys%parser, 'TDMaxSteps', default, td%max_iter)
 
     if(propagation_time <= CNST(0.0)) propagation_time = td%dt*td%max_iter
 
@@ -260,7 +260,7 @@ contains
     !% Born-Oppenheimer (Experimental).
     !%End
 
-    call parse_variable('TDDynamics', EHRENFEST, td%dynamics)
+    call parse_variable(sys%parser, 'TDDynamics', EHRENFEST, td%dynamics)
     if(.not.varinfo_valid_option('TDDynamics', td%dynamics)) call messages_input_error('TDDynamics')
     call messages_print_var_option(stdout, 'TDDynamics', td%dynamics)
     if(td%dynamics .ne. EHRENFEST) then
@@ -283,7 +283,7 @@ contains
     !% The recalculation is not done every time step, but only every
     !% <tt>RestartWriteInterval</tt> time steps.
     !%End
-    call parse_variable('RecalculateGSDuringEvolution', .false., td%recalculate_gs)
+    call parse_variable(sys%parser, 'RecalculateGSDuringEvolution', .false., td%recalculate_gs)
     if( hm%lda_u_level /= DFT_U_NONE .and. td%recalculate_gs) &
       call messages_not_implemented("DFT+U with RecalculateGSDuringEvolution=yes")
 
@@ -296,7 +296,7 @@ contains
     !% Hamiltonian, shifting the excitation energies by the amount 
     !% specified. By default, it is not applied. 
     !%End 
-    call parse_variable('TDScissor', CNST(0.0), td%scissor) 
+    call parse_variable(sys%parser, 'TDScissor', CNST(0.0), td%scissor) 
     td%scissor = units_to_atomic(units_inp%energy, td%scissor) 
     call messages_print_var_value(stdout, 'TDScissor', td%scissor)
 
@@ -323,7 +323,7 @@ contains
 
     default = 10
     if(ion_dynamics_ions_move(td%ions)) default = 1
-    call parse_variable('TDEnergyUpdateIter', default, td%energy_update_iter)
+    call parse_variable(sys%parser, 'TDEnergyUpdateIter', default, td%energy_update_iter)
 
     if(ion_dynamics_ions_move(td%ions) .and. td%energy_update_iter /= 1) then
       call messages_experimental('TDEnergyUpdateIter /= 1 when moving ions')
@@ -360,7 +360,10 @@ contains
     type(grid_t),     pointer :: gr   ! some shortcuts
     type(states_t),   pointer :: st
     type(geometry_t), pointer :: geo
-    logical                   :: stopping, stopping_tmp
+    logical                   :: stopping
+#ifdef HAVE_MPI
+    logical                   :: stopping_tmp
+#endif
     integer                   :: iter, ierr, scsteps
     real(8)                   :: etime
     type(profile_t),     save :: prof
@@ -382,7 +385,7 @@ contains
         call lda_u_end(hm%lda_u)
         !complex wfs are required for Ehrenfest
         call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
-        call lda_u_init(hm%lda_u, hm%lda_u_level, gr, geo, st) 
+        call lda_u_init(hm%lda_u, sys%parser, hm%lda_u_level, gr, geo, st) 
       else
         !complex wfs are required for Ehrenfest
         call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
@@ -393,7 +396,7 @@ contains
     end if
 
     if(hm%scdm_EXX) then
-      call scdm_init(st,gr%der,psolver%cube, hm%scdm,operate_on_scdm=.true.)
+      call scdm_init(st, sys%parser, gr%der, psolver%cube, hm%scdm, operate_on_scdm = .true.)
       ! make sure scdm is constructed as soon as it is needed
       scdm_is_local = .false.
     end if
@@ -419,15 +422,15 @@ contains
     if(ion_dynamics_ions_move(td%ions)) then
       if(td%iter > 0) then
         call td_read_coordinates()
-        call hamiltonian_epot_generate(hm, gr, geo, st, time = td%iter*td%dt)
+        call hamiltonian_epot_generate(hm, sys%parser, gr, geo, st, time = td%iter*td%dt)
       end if
 
-      call forces_calculate(gr, geo, hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
+      call forces_calculate(gr, sys%parser, geo, hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
       if(bitand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-        call forces_calculate(gr, geo, hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
+        call forces_calculate(gr, sys%parser, geo, hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
       end if  
     end if
 
@@ -446,10 +449,10 @@ contains
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
 
-    call restart_init(restart_dump, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
+    call restart_init(restart_dump, sys%parser, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
     if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
       ! We will also use the TD restart directory as temporary storage during the time propagation
-      call restart_init(restart_load, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+      call restart_init(restart_load, sys%parser, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
     end if
 
     call messages_print_stress(stdout, "Time-Dependent Simulation")
@@ -592,7 +595,7 @@ contains
           end if
           call density_calc(st, gr, st%rho)
           call v_ks_calc(sys%ks, sys%parser, hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
-          call forces_calculate(gr, geo, hm, st, sys%ks, t = iter*td%dt, dt = td%dt)
+          call forces_calculate(gr, sys%parser, geo, hm, st, sys%ks, t = iter*td%dt, dt = td%dt)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds")
           call print_header()
         end if
@@ -624,7 +627,7 @@ contains
       PUSH_SUB(td_run.init_wfs)
 
       if (.not. fromscratch) then
-        call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+        call restart_init(restart, sys%parser, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
         if(ierr == 0) &
           call td_load(restart, sys%parser, gr, st, hm, td, ierr)
         if(ierr /= 0) then
@@ -644,7 +647,7 @@ contains
       end if
 
       if (fromScratch) then
-        call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+        call restart_init(restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
 
         if(.not. st%only_userdef_istates) then
           if(ierr == 0) call states_load(restart, sys%parser, st, gr, ierr, label = ": gs")
@@ -657,7 +660,7 @@ contains
         ! check if we should deploy user-defined wavefunctions.
         ! according to the settings in the input file the routine
         ! overwrites orbitals that were read from restart/gs
-        if(parse_is_defined(sys%parser, 'UserDefinedStates')) call states_read_user_def_orbitals(gr%mesh, st)
+        if(parse_is_defined(sys%parser, 'UserDefinedStates')) call states_read_user_def_orbitals(gr%mesh, sys%parser, st)
 
         call transform_states(st, sys%parser, restart, gr)
         call restart_end(restart)
@@ -689,7 +692,7 @@ contains
       !% It is almost equivalent to setting <tt>TDFreezeOrbitals = N-1</tt>, where <tt>N</tt> is the number
       !% of orbitals, but not completely.
       !%End
-      call parse_variable('TDFreezeOrbitals', 0, freeze_orbitals)
+      call parse_variable(sys%parser, 'TDFreezeOrbitals', 0, freeze_orbitals)
 
       if(freeze_orbitals /= 0) then
         call messages_experimental('TDFreezeOrbitals')
@@ -707,7 +710,7 @@ contains
 
       if(freeze_orbitals > 0) then
         ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
-        call states_freeze_orbitals(st, gr, sys%mc, freeze_orbitals)
+        call states_freeze_orbitals(st, sys%parser, gr, sys%mc, freeze_orbitals)
         write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
           ' orbitals have been frozen.', st%nst, ' will be propagated.'
         call messages_info(1)
@@ -718,7 +721,7 @@ contains
         write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
         call messages_info(1)
         call v_ks_calc(sys%ks, sys%parser, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
-        call states_freeze_orbitals(st, gr, sys%mc, n = st%nst-1)
+        call states_freeze_orbitals(st, sys%parser, gr, sys%mc, n = st%nst-1)
         call v_ks_freeze_hxc(sys%ks)
         call density_calc(st, gr, st%rho)
       else
@@ -734,7 +737,7 @@ contains
       !% The electrons are evolved as independent particles feeling the Hartree and 
       !% exchange-correlation potentials from the ground-state electronic configuration.
       !%End
-      call parse_variable('TDFreezeHXC', .false., freeze_hxc)
+      call parse_variable(sys%parser, 'TDFreezeHXC', .false., freeze_hxc)
       if(freeze_hxc) then 
         write(message(1),'(a)') 'Info: Freezing Hartree and exchange-correlation potentials.'
         call messages_info(1)
@@ -765,7 +768,7 @@ contains
       !% The occupation matrices than enters in the LDA+U potential
       !% are not evolved during the time evolution.
       !%End
-      call parse_variable('TDFreezeDFTUOccupations', .false., freeze_occ)
+      call parse_variable(sys%parser, 'TDFreezeDFTUOccupations', .false., freeze_occ)
       if(freeze_occ) then
         write(message(1),'(a)') 'Info: Freezing DFT+U occupation matrices that enters in the DFT+U potential.'
         call messages_info(1)
@@ -773,7 +776,7 @@ contains
 
         !In this case we should reload GS wavefunctions 
         if(hm%lda_u_level /= DFT_U_NONE .and..not.fromScratch) then 
-          call restart_init(restart_frozen, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+          call restart_init(restart_frozen, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
           call lda_u_load(restart_frozen, hm%lda_u, st, ierr)
           call restart_end(restart_frozen)
         end if
@@ -786,7 +789,7 @@ contains
       !%Description
       !% The effective U of LDA+U is not evolved during the time evolution.
       !%End
-      call parse_variable('TDFreezeU', .false., freeze_u)
+      call parse_variable(sys%parser, 'TDFreezeU', .false., freeze_u)
       if(freeze_u) then
         write(message(1),'(a)') 'Info: Freezing the effective U of DFT+U.'
         call messages_info(1)
@@ -794,7 +797,7 @@ contains
 
         !In this case we should reload GS wavefunctions
         if(hm%lda_u_level == DFT_U_ACBN0 .and. .not.fromScratch) then
-          call restart_init(restart_frozen, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+          call restart_init(restart_frozen, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
           call lda_u_load(restart_frozen, hm%lda_u, st, ierr)
           call restart_end(restart_frozen)    
           write(message(1),'(a)') 'Loaded GS effective U of DFT+U'
@@ -920,7 +923,7 @@ contains
     !% Note: This variable cannot be used when parallel in states.
     !%End
     if(parse_is_defined(parser, trim(block_name))) then
-      if(parse_block(trim(block_name), blk) == 0) then
+      if(parse_block(parser, trim(block_name), blk) == 0) then
         if(st%parallel_in_states) &
           call messages_not_implemented(trim(block_name) // " parallel in states")
         if(parse_block_n(blk) /= st%nst) then

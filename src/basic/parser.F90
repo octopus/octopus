@@ -51,6 +51,7 @@ module parser_oct_m
     parse_array
 
   type :: parser_t
+    private
     integer :: dummy
   end type parser_t
   
@@ -271,6 +272,8 @@ module parser_oct_m
     module procedure oct_parse_expression14
   end interface
 
+  type(parser_t), public, save :: dummy_parser
+  
 contains
 
   ! ---------------------------------------------------------
@@ -354,7 +357,8 @@ contains
 
   ! ---------------------------------------------------------  
   
-  subroutine parse_integer(name, def, res)
+  subroutine parse_integer(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     integer,          intent(in)    :: def
     integer,          intent(out)   :: res
@@ -370,7 +374,8 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine parse_integer8(name, def, res)
+  subroutine parse_integer8(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     integer(8),       intent(in)    :: def
     integer(8),       intent(out)   :: res
@@ -382,7 +387,8 @@ contains
 
   ! ---------------------------------------------------------  
   
-  subroutine parse_integer48(name, def, res)
+  subroutine parse_integer48(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     integer,          intent(in)    :: def
     integer(8),       intent(out)   :: res
@@ -394,7 +400,8 @@ contains
 
   ! ---------------------------------------------------------  
   
-  subroutine parse_integer84(name, def, res)
+  subroutine parse_integer84(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     integer(8),       intent(in)    :: def
     integer,          intent(out)   :: res
@@ -410,7 +417,8 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine parse_string(name, def, res)
+  subroutine parse_string(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     character(len=*), intent(in)    :: def
     character(len=*), intent(out)   :: res
@@ -422,7 +430,8 @@ contains
   
   ! ---------------------------------------------------------
   !> logical is a FORTRAN type, so we emulate the routine with integers
-  subroutine parse_logical(name, def, res)
+  subroutine parse_logical(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     logical,          intent(in)    :: def
     logical,          intent(out)   :: res
@@ -441,7 +450,8 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine parse_cmplx(name, def, res)
+  subroutine parse_cmplx(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     complex(8),       intent(in)    :: def
     complex(8),       intent(out)   :: res
@@ -453,7 +463,8 @@ contains
 
   ! ---------------------------------------------------------
   
-  integer function parse_block(name, blk, check_varinfo_)
+  integer function parse_block(self, name, blk, check_varinfo_)
+    type(parser_t),    intent(in)    :: self
     character(len=*),  intent(in)    :: name
     type(block_t),     intent(out)   :: blk
     logical, optional, intent(in)    :: check_varinfo_
@@ -508,7 +519,8 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine oct_parse_double4_unit(name, def4, res4, unit)
+  subroutine oct_parse_double4_unit(self, name, def4, res4, unit)
+    type(parser_t),         intent(in)  :: self
     character(len=*),       intent(in)  :: name
     real(4),                intent(in)  :: def4
     real(4),                intent(out) :: res4
@@ -530,7 +542,8 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine oct_parse_double8_unit(name, def, res, unit)
+  subroutine oct_parse_double8_unit(self, name, def, res, unit)
+    type(parser_t),   intent(in)  :: self
     character(len=*), intent(in)  :: name
     real(8),          intent(in)  :: def
     real(8),          intent(out) :: res

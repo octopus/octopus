@@ -141,11 +141,11 @@ contains
     !% See details on
     !% <a href=http://octopus-code.org/experimental_features>wiki page</a>.
     !%End
-    call parse_variable('ExperimentalFeatures', .false., conf%devel_version)
+    call parse_variable(parser, 'ExperimentalFeatures', .false., conf%devel_version)
     
     call messages_obsolete_variable(parser, 'DebugLevel', 'Debug')
 
-    call debug_init(debug)
+    call debug_init(debug, parser)
     
     warnings = 0
     experimentals = 0
@@ -161,7 +161,7 @@ contains
     !% variable is enabled if <tt>Debug</tt> is set to trace mode
     !% (<tt>trace</tt>, <tt>trace_term</tt> or <tt>trace_file</tt>).
     !%End
-    call parse_variable('DebugTrapSignals', debug%trace, trap_signals)
+    call parse_variable(parser, 'DebugTrapSignals', debug%trace, trap_signals)
 
     if (trap_signals) call trap_segfault()
 
@@ -609,11 +609,7 @@ contains
 
     type(block_t) :: blk
     
-    if(parse_block(var, blk) == 0) then
-      call messages_write('Input error in the input block %'// trim(var))
-    else
-      call messages_write('Input error in the input variable '// trim(var))
-    end if
+    call messages_write('Input error in the input variable '// trim(var))
     
     if(present(details)) then
       call messages_write(':', new_line = .true.)

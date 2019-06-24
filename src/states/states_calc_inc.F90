@@ -1612,9 +1612,10 @@ end subroutine X(states_me_one_body)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex, lindex, twoint, &
+subroutine X(states_me_two_body) (gr, parser, st, st_min, st_max, iindex, jindex, kindex, lindex, twoint, &
                  phase, singularity, exc_k)
   type(grid_t),     intent(in)              :: gr
+  type(parser_t),   intent(in)              :: parser
   type(states_t),   intent(in)              :: st
   integer,          intent(in)              :: st_min, st_max
   integer,          intent(out)             :: iindex(:,:)
@@ -1681,7 +1682,7 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
                          - kpoints_get_point(gr%sb%kpoints, jkpoint, absolute_coordinates=.false.)
         ! In case of k-points, the poisson solver must contains k-q 
         ! in the Coulomb potential, and must be changed for each q point
-        call poisson_kernel_reinit(exchange_psolver, qq, &
+        call poisson_kernel_reinit(exchange_psolver, parser, qq, &
                   -gr%sb%kpoints%full%npoints*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
       end if
 

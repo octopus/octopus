@@ -157,7 +157,9 @@ contains
 
   ! ---------------------------------------------------------
   !> initialize the table
-  subroutine fft_all_init()
+  subroutine fft_all_init(parser)
+    type(parser_t),      intent(in)   :: parser
+    
     integer :: ii
 
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
@@ -184,7 +186,7 @@ contains
     !% be written if the number is not good, with a suggestion of a better one to use, so you
     !% can try a different spacing if you want to get a good number.
     !%End
-    call parse_variable('FFTOptimize', .true., fft_optimize)
+    call parse_variable(parser, 'FFTOptimize', .true., fft_optimize)
     do ii = 1, FFT_MAX
       fft_refs(ii) = FFT_NULL
     end do
@@ -211,7 +213,7 @@ contains
     !% This is the "fast initialization" scheme, in which the plan is merely guessed from "reasonable"
     !% assumptions.
     !%End
-    call parse_variable('FFTPreparePlan', FFTW_MEASURE, fft_prepare_plan)
+    call parse_variable(parser, 'FFTPreparePlan', FFTW_MEASURE, fft_prepare_plan)
     if(.not. varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call messages_input_error('FFTPreparePlan')
      
 !    !%Variable FFTPlanTimeLimit
@@ -225,7 +227,7 @@ contains
 !    !% creation of the plan. If a negative value (default one) is
 !    !% assigned, there is no restriction.
 !    !%End   
-!    call parse_variable('FFTPlanTimeLimit', -M_ONE, time_limit)    
+!    call parse_variable(parser, 'FFTPlanTimeLimit', -M_ONE, time_limit)    
 !    call fftw_set_timelimit(time_limit)
 
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
@@ -275,8 +277,9 @@ contains
   end subroutine fft_all_end
 
   ! ---------------------------------------------------------
-  subroutine fft_init(this, nn, dim, type, library, optimize, optimize_parity, mpi_comm, mpi_grp)
+  subroutine fft_init(this, parser, nn, dim, type, library, optimize, optimize_parity, mpi_comm, mpi_grp)
     type(fft_t),       intent(inout) :: this     !< FFT data type
+    type(parser_t),    intent(in)    :: parser
     integer,           intent(inout) :: nn(3)    !< Size of the box
     integer,           intent(in)    :: dim      !< Dimensions of the box
     integer,           intent(in)    :: type     !< The type of the FFT; real or complex
@@ -533,7 +536,7 @@ contains
     case(FFTLIB_NFFT)
 #ifdef HAVE_NFFT
      call nfft_copy_info(this%nfft,fft_array(jj)%nfft) !copy default parameters set in the calling routine 
-     call nfft_init(fft_array(jj)%nfft, fft_array(jj)%rs_n_global, &
+     call nfft_init(fft_array(jj)%nfft, parser, fft_array(jj)%rs_n_global, &
                     fft_dim, fft_array(jj)%rs_n_global , type, optimize = .true.)
 #endif
 
@@ -570,7 +573,7 @@ contains
       ! Therefore, in order to perform rs->fs tranforms with PNFFT one should use the 
       ! backward transform.     
 
-      call pnfft_init_plan(fft_array(jj)%pnfft, mpi_comm, fft_array(jj)%fs_n_global, &
+      call pnfft_init_plan(fft_array(jj)%pnfft, parser, mpi_comm, fft_array(jj)%fs_n_global, &
            fft_array(jj)%fs_n, fft_array(jj)%fs_istart, fft_array(jj)%rs_n, fft_array(jj)%rs_istart)
       
 #endif

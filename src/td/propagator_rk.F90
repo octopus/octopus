@@ -297,8 +297,8 @@ contains
         geo%atom(iatom)%x(1:geo%space%dim) = posfinal(:, iatom)
         geo%atom(iatom)%v(1:geo%space%dim) = velfinal(:, iatom)
       end do
-      call hamiltonian_epot_generate(hm, gr, geo, st, time)
-      !call forces_calculate(gr, geo, hm, stphi, time, dt)
+      call hamiltonian_epot_generate(hm, parser,  gr, geo, st, time)
+      !call forces_calculate(gr, parser, geo, hm, stphi, time, dt)
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
 
       if(propagate_chi) then
@@ -355,7 +355,7 @@ contains
           geo%atom(iatom)%x(1:geo%space%dim) = pos(:, iatom)
           geo%atom(iatom)%v(1:geo%space%dim) = vel(:, iatom)
         end do
-        call hamiltonian_epot_generate(hm, gr, geo, stphi, time = tau)
+        call hamiltonian_epot_generate(hm, parser,  gr, geo, stphi, time = tau)
       end if
       if(.not.oct_exchange_enabled(hm%oct_exchange)) then
         call density_calc(stphi, gr, stphi%rho)
@@ -370,13 +370,13 @@ contains
     subroutine f_ions(tau)
       FLOAT, intent(in) :: tau
 
-      call forces_calculate(gr, geo, hm, stphi, ks, t = tau, dt = dt)
+      call forces_calculate(gr, parser, geo, hm, stphi, ks, t = tau, dt = dt)
       do iatom = 1, geo%natoms
         posk(:, iatom) = dt * vel(:, iatom)
         velk(:, iatom) = dt * geo%atom(iatom)%f(1:geo%space%dim) / species_mass(geo%atom(iatom)%species)
       end do
       if(propagate_chi) then
-        call forces_costate_calculate(gr, geo, hm, stphi, stchi, coforce, transpose(post))
+        call forces_costate_calculate(gr, parser, geo, hm, stphi, stchi, coforce, transpose(post))
         do iatom = 1, geo%natoms
           poskt(:, iatom) = dt * velt(:, iatom)
           velkt(:, iatom) = dt * coforce(iatom, :) / species_mass(geo%atom(iatom)%species)
@@ -436,7 +436,7 @@ contains
                 call pert_init(pert, parser, PERTURBATION_IONIC, gr, geo)
                 call pert_setup_atom(pert, iatom)
                 call pert_setup_dir(pert, idir)
-                call zpert_apply(pert, gr, geo, hm, ik, psi(:, :), dvpsi(:, :, idir))
+                call zpert_apply(pert, parser, gr, geo, hm, ik, psi(:, :), dvpsi(:, :, idir))
                 dvpsi(:, :, idir) = - dvpsi(:, :, idir)
                 inhpsi(1:gr%mesh%np, 1:stphi%d%dim) = inhpsi(1:gr%mesh%np, 1:stphi%d%dim) &
                   + st%occ(ist, ik)*post(idir, iatom)*dvpsi(1:gr%mesh%np, 1:stphi%d%dim, idir)
@@ -602,7 +602,7 @@ contains
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
         call ion_dynamics_propagate(ions, gr%sb, geo, time, dt)
-        call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
+        call hamiltonian_epot_generate(hm, parser,  gr, geo, st, time = time)
         vpsl1_op = hm%ep%vpsl
       end if
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time)
@@ -804,7 +804,7 @@ contains
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
         call ion_dynamics_propagate(ions, gr%sb, geo, time - dt + c(1)*dt, c(1)*dt)
-        call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt + c(1)*dt)
+        call hamiltonian_epot_generate(hm, parser,  gr, geo, st, time = time - dt + c(1)*dt)
         vpsl1_op = hm%ep%vpsl
       end if
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt + c(1)*dt)
@@ -841,7 +841,7 @@ contains
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
         call ion_dynamics_propagate(ions, gr%sb, geo, time - dt + c(2)*dt, c(2)*dt)
-        call hamiltonian_epot_generate(hm, gr, geo, st, time = time - dt + c(2)*dt)
+        call hamiltonian_epot_generate(hm, parser, gr, geo, st, time = time - dt + c(2)*dt)
         vpsl2_op = hm%ep%vpsl
       end if
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt + c(2)*dt)

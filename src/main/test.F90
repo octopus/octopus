@@ -100,7 +100,7 @@ contains
     !%Option density_calc 9
     !%Calculation of the density.
     !%End
-    call parse_variable('TestMode', OPTION__TESTMODE__HARTREE, test_mode)
+    call parse_variable(parser, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
     call messages_obsolete_variable(parser, 'TestDerivatives', 'TestType')
     call messages_obsolete_variable(parser, 'TestOrthogonalization', 'TestType')
@@ -122,7 +122,7 @@ contains
     !%Option all 3
     !% Tests for double-precision real and complex functions.
     !%End
-    call parse_variable('TestType', OPTION__TESTTYPE__ALL, param%type)
+    call parse_variable(parser, 'TestType', OPTION__TESTTYPE__ALL, param%type)
     if(param%type < 1 .or. param%type > 5) then
       message(1) = "Invalid option for TestType."
       call messages_fatal(1, only_root_writes = .true.)
@@ -141,7 +141,7 @@ contains
     !% Currently this variable is used by the <tt>hartree_test</tt>,
     !% <tt>derivatives</tt>, and <tt>projector</tt> tests.
     !%End  
-    call parse_variable('TestRepetitions', 1, param%repetitions)
+    call parse_variable(parser, 'TestRepetitions', 1, param%repetitions)
   
     !%Variable TestMinBlockSize
     !%Type integer
@@ -154,7 +154,7 @@ contains
     !%
     !% Currently this variable is only used by the derivatives test.
     !%End
-    call parse_variable('TestMinBlockSize', 1, param%min_blocksize)
+    call parse_variable(parser, 'TestMinBlockSize', 1, param%min_blocksize)
 
     !%Variable TestMaxBlockSize
     !%Type integer
@@ -167,7 +167,7 @@ contains
     !%
     !% Currently this variable is only used by the derivatives test.
     !%End
-    call parse_variable('TestMaxBlockSize', 128, param%max_blocksize)
+    call parse_variable(parser, 'TestMaxBlockSize', 128, param%max_blocksize)
 
     call messages_print_stress(stdout, "Test mode")
     call messages_print_var_option(stdout, "TestMode", test_mode)
@@ -245,7 +245,7 @@ contains
   
     !Initialize external potential
     call epot_init(ep, sys%parser, sys%gr, sys%geo, SPINORS, 1, XC_FAMILY_NONE)
-    call epot_generate(ep, sys%gr, sys%geo, sys%st)
+    call epot_generate(ep, sys%parser, sys%gr, sys%geo, sys%st)
    
     !Initialize external potential
     SAFE_ALLOCATE(epsib)
@@ -388,7 +388,7 @@ contains
     !%Option term_non_local_potential 4
     !% Apply only the non_local potential.
     !%End
-    call parse_variable('TestHamiltonianApply', OPTION__TESTMODE__HARTREE, terms)
+    call parse_variable(parser, 'TestHamiltonianApply', OPTION__TESTMODE__HARTREE, terms)
     if(terms==0) terms = huge(1)
 
 
@@ -409,7 +409,7 @@ contains
     call hamiltonian_init(hm, sys%parser, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
              family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
     if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_pack(sys%st)
-    call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
+    call hamiltonian_epot_generate(hm, sys%parser, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, sys%parser, hm, sys%st, sys%geo)
 
@@ -509,19 +509,19 @@ contains
     call messages_info(2)
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
-      call dderivatives_test(sys%gr%der, param%repetitions, param%min_blocksize, param%max_blocksize)
+      call dderivatives_test(sys%gr%der, sys%parser, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__COMPLEX) then
-      call zderivatives_test(sys%gr%der, param%repetitions, param%min_blocksize, param%max_blocksize)
+      call zderivatives_test(sys%gr%der, sys%parser, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
     if(param%type == OPTION__TESTTYPE__REAL_SINGLE) then
-      call sderivatives_test(sys%gr%der, param%repetitions, param%min_blocksize, param%max_blocksize)
+      call sderivatives_test(sys%gr%der, sys%parser, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
    
     if(param%type == OPTION__TESTTYPE__COMPLEX_SINGLE) then
-      call cderivatives_test(sys%gr%der, param%repetitions, param%min_blocksize, param%max_blocksize)
+      call cderivatives_test(sys%gr%der, sys%parser, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
     call system_end(sys)
@@ -613,7 +613,7 @@ contains
 
     call system_init(sys, parser)
 
-    call ion_interaction_test(sys%geo, sys%gr%sb)
+    call ion_interaction_test(sys%geo, sys%parser, sys%gr%sb)
 
     call system_end(sys)
 

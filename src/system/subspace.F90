@@ -68,8 +68,9 @@ module subspace_oct_m
   
 contains
 
-  subroutine subspace_init(this, st, no_sd)
+  subroutine subspace_init(this, parser, st, no_sd)
     type(subspace_t),  intent(out) :: this
+    type(parser_t),    intent(in)  :: parser
     type(states_t),    intent(in)  :: st
     logical,           intent(in)  :: no_sd
 
@@ -107,7 +108,7 @@ contains
       if(st%parallel_in_states) default = OPTION__SUBSPACEDIAGONALIZATION__SCALAPACK
 #endif
 
-      call parse_variable('SubspaceDiagonalization', default, this%method)
+      call parse_variable(parser, 'SubspaceDiagonalization', default, this%method)
 
       if(.not.varinfo_valid_option('SubspaceDiagonalization', this%method)) call messages_input_error('SubspaceDiagonalization')
     end if

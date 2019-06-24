@@ -82,8 +82,9 @@ module output_me_oct_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine output_me_init(this, sb, st, nst)
+  subroutine output_me_init(this, parser, sb, st, nst)
     type(output_me_t), intent(out) :: this
+    type(parser_t),    intent(in)  :: parser
     type(simul_box_t), intent(in)  :: sb
     type(states_t),    intent(in)  :: st
     integer,           intent(in)  :: nst
@@ -123,7 +124,7 @@ contains
     !% Not yet supported for spinors.
     !%End
 
-    call parse_variable('OutputMatrixElements', 0, this%what)
+    call parse_variable(parser, 'OutputMatrixElements', 0, this%what)
     if(.not.varinfo_valid_option('OutputMatrixElements', this%what, is_flag=.true.)) then
       call messages_input_error('OutputMatrixElements')
     end if
@@ -158,7 +159,7 @@ contains
       !% In 1D, if, for example, <tt>OutputMEMultipoles = 2</tt>, the program will print two files, containing the
       !% <math>x</math> and <math>x^2</math> matrix elements between Kohn-Sham states.
       !%End
-      call parse_variable('OutputMEMultipoles', 1, this%ks_multipoles)
+      call parse_variable(parser, 'OutputMEMultipoles', 1, this%ks_multipoles)
     end if
 
     !%Variable OutputMEStart
@@ -169,7 +170,7 @@ contains
     !% Specifies the state/band index for starting to compute the matrix element.
     !% So far, this is only used for dipole matrix elements.
     !%End
-    call parse_variable('OutputMEStart', 1, this%st_start)
+    call parse_variable(parser, 'OutputMEStart', 1, this%st_start)
     ASSERT(this%st_start > 0 .and. this%st_start <= nst)
 
     !%Variable OutputMEEnd
@@ -180,7 +181,7 @@ contains
     !% Specifies the highest state/band index used to compute the matrix element.
     !% So far, this is only used for dipole matrix elements.
     !%End
-    call parse_variable('OutputMEEnd', nst, this%st_end)
+    call parse_variable(parser, 'OutputMEEnd', nst, this%st_end)
     ASSERT(this%st_end > 0 .and. this%st_end <= nst)
     ASSERT(this%st_start <= this%st_end)
     this%nst = this%st_end - this%st_start +1
@@ -190,8 +191,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_me(this, dir, st, gr, geo, hm)
+  subroutine output_me(this, parser, dir, st, gr, geo, hm)
     type(output_me_t),   intent(in)    :: this
+    type(parser_t),      intent(in)    :: parser
     character(len=*),    intent(in)    :: dir
     type(states_t),      intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
@@ -349,7 +351,7 @@ contains
       end if
 
       if(states_are_complex(st)) then
-        call singularity_init(singul, st, gr%sb, gr%mesh)
+        call singularity_init(singul, parser, st, gr%sb)
       end if
       SAFE_ALLOCATE(iindex(1:2, 1:id))
       SAFE_ALLOCATE(jindex(1:2, 1:id))
@@ -358,7 +360,8 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(dtwoint(1:id))
-        call dstates_me_two_body(gr, st, this%st_start, this%st_end, iindex, jindex, kindex, lindex, dtwoint)
+        call dstates_me_two_body(gr, parser, st, this%st_start, this%st_end, &
+                                      iindex, jindex, kindex, lindex, dtwoint)
         do ll = 1, id
           write(iunit, '(4(i4,i5),e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), dtwoint(ll)
         enddo
@@ -368,11 +371,11 @@ contains
         if(associated(hm%hm_base%phase)) then
           !We cannot pass the phase array like that if kpt%start is not 1.  
           ASSERT(.not.st%d%kpt%parallel) 
-          call zstates_me_two_body(gr, st, this%st_start, this%st_end, &
+          call zstates_me_two_body(gr, parser, st, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase, singularity = singul, &
                      exc_k = (bitand(this%what, output_me_two_body_exc_k) /= 0))
         else
-          call zstates_me_two_body(gr, st, this%st_start, this%st_end, &
+          call zstates_me_two_body(gr, parser, st, this%st_start, this%st_end, &
                      iindex, jindex, kindex, lindex, ztwoint, &
                      exc_k = (bitand(this%what, output_me_two_body_exc_k) /= 0))
         end if

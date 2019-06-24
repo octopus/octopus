@@ -172,7 +172,7 @@ contains
       write(message(1), '(a)') '**********************************************************************'
       write(message(2),'(a, i4)') 'RDM Iteration:', iter
       call messages_info(2)
-      call scf_occ(rdm, gr, hm, st, energy_occ)
+      call scf_occ(rdm, parser, gr, hm, st, energy_occ)
       ! Diagonalization of the generalized Fock matrix 
       write(message(1), '(a)') 'Optimization of natural orbitals'
       call messages_info(1)
@@ -296,7 +296,7 @@ contains
       !% for the occupation number minimization also stops according to this criterion.
       !%End
 
-      call parse_variable('RDMTolerance', CNST(1.0e-7), rdm%toler)
+      call parse_variable(parser, 'RDMTolerance', CNST(1.0e-7), rdm%toler)
 
       !%Variable RDMConvEner
       !%Type float
@@ -310,7 +310,7 @@ contains
       !% orbitals is smaller than this criterion. It is also used to exit the orbital minimization.
       !%End
 
-      call parse_variable('RDMConvEner', CNST(1.0e-7), rdm%conv_ener)
+      call parse_variable(parser, 'RDMConvEner', CNST(1.0e-7), rdm%conv_ener)
       
       !%Variable RDMBasis
       !%Type logical
@@ -321,7 +321,7 @@ contains
       !% not be calculated on the grid but on the basis of the initial orbitals
       !%End
 
-      call parse_variable('RDMBasis',.true., rdm%do_basis)
+      call parse_variable(parser, 'RDMBasis',.true., rdm%do_basis)
 
       ! shortcuts
       rdm%gr   => gr
@@ -407,8 +407,9 @@ contains
   ! ---------------------------------------------------------
   
   ! scf for the occupation numbers 
-  subroutine scf_occ(rdm, gr, hm, st, energy)
+  subroutine scf_occ(rdm, parser, gr, hm, st, energy)
     type(rdm_t),          intent(inout) :: rdm
+    type(parser_t),       intent(in)    :: parser
     type(grid_t),         intent(inout) :: gr
     type(hamiltonian_t),  intent(inout) :: hm
     type(states_t),       intent(inout) :: st
@@ -460,7 +461,8 @@ contains
     st%occ = occin
     
     if((rdm%iter == 1).and. (rdm%do_basis.eqv. .true.))  then 
-      call dstates_me_two_body(gr, st, 1, st%nst, rdm%i_index, rdm%j_index, rdm%k_index, rdm%l_index, rdm%twoint)
+      call dstates_me_two_body(gr, parser, st, 1, st%nst, rdm%i_index, rdm%j_index, &
+                                     rdm%k_index, rdm%l_index, rdm%twoint)
       call rdm_integrals(rdm,hm,st,gr) 
       call sum_integrals(rdm)
     end if

@@ -271,7 +271,7 @@ contains
     !% automatic).
     !%
     !%End
-    call parse_variable('KPointsUseSymmetries', .false., this%use_symmetries)
+    call parse_variable(parser, 'KPointsUseSymmetries', .false., this%use_symmetries)
 
     !%Variable KPointsUseTimeReversal
     !%Type logical
@@ -291,7 +291,7 @@ contains
     !%
     !%End
     default_timereversal = this%use_symmetries .and. .not. symmetries_have_break_dir(symm)
-    call parse_variable('KPointsUseTimeReversal', default_timereversal, this%use_time_reversal)
+    call parse_variable(parser, 'KPointsUseTimeReversal', default_timereversal, this%use_time_reversal)
 
     !We determine the method used to define k-point
     this%method = 0
@@ -437,7 +437,7 @@ contains
 
       gamma_only_ = gamma_only
       if(.not. gamma_only_) &
-        gamma_only_ = (parse_block('KPointsGrid', blk) /= 0)
+        gamma_only_ = (parse_block(parser, 'KPointsGrid', blk) /= 0)
 
       this%nik_axis(1:MAX_DIM) = 1
 
@@ -609,7 +609,7 @@ contains
       !%
       !%End
 
-      if(parse_block('KPointsPath', blk) /= 0) then
+      if(parse_block(parser, 'KPointsPath', blk) /= 0) then
         write(message(1),'(a)') 'Internal error while reading KPointsPath.'
         call messages_fatal(1)
       end if
@@ -730,8 +730,8 @@ contains
       !%End
 
       reduced = .false.
-      if(parse_block('KPoints', blk) /= 0 ) then
-        if(parse_block('KPointsReduced', blk) == 0) then
+      if(parse_block(parser, 'KPoints', blk) /= 0 ) then
+        if(parse_block(parser, 'KPointsReduced', blk) == 0) then
           reduced = .true.
         else
           ! This case should really never happen. But why not dying otherwise?!
@@ -1083,7 +1083,7 @@ contains
      
       vec(1:dim) = kpt2(1:dim)-kpt1(1:dim) 
       length = sqrt(sum(vec(1:dim)**2)) 
-      total_length = total_length + length
+      if(resolution(is) > 0) total_length = total_length + length
     end do 
 
     accumulated_length = M_ZERO
@@ -1103,7 +1103,7 @@ contains
         coord(kpt_ind) = accumulated_length + (ik-1)*length/resolution(is) 
         kpoints(1:dim, kpt_ind) = kpt1(1:dim) + (ik-1)*length/resolution(is)*vec(1:dim)
       end do
-      accumulated_length = accumulated_length + length
+      if(resolution(is) > 0) accumulated_length = accumulated_length + length
     end do
     !We add the last point
     kpt_ind = kpt_ind +1

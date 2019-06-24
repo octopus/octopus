@@ -248,7 +248,7 @@ contains
     !%Option oct_tg_spin 14
     !% (Experimental)
     !%End
-    call parse_variable('OCTTargetOperator', oct_tg_gstransformation, tg%type)
+    call parse_variable(parser, 'OCTTargetOperator', oct_tg_gstransformation, tg%type)
       if(tg%type == oct_tg_excited) call messages_experimental('OCTTargetOperator = oct_tg_excited')
       if(tg%type == oct_tg_userdefined) call messages_experimental('OCTTargetOperator = oct_tg_userdefined')
       if(tg%type == oct_tg_jdensity) call messages_experimental('OCTTargetOperator = oct_tg_jdensity')
@@ -269,7 +269,7 @@ contains
     call states_deallocate_wfns(tg%st)
     call states_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
     nullify(tg%td_fitness)
-    call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, exact=.true.)
+    call restart_init(restart, parser, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, exact=.true.)
     if(ierr /= 0) then
       message(1) = "Could not read gs for OCTTargetOperator."
       call messages_fatal(1)
@@ -538,8 +538,9 @@ contains
   !! <Psi(T)|\hat{O}|Psi(T) in the time-independent
   !! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
   !! the time-dependent case.
-  FLOAT function target_j1(tg, gr, qcpsi, geo) result(j1)
+  FLOAT function target_j1(tg, parser, gr, qcpsi, geo) result(j1)
     type(target_t), intent(inout)   :: tg
+    type(parser_t),  intent(in)     :: parser
     type(grid_t),   intent(in)      :: gr
     type(opt_control_state_t), intent(inout)   :: qcpsi
     type(geometry_t), intent(in), optional :: geo
@@ -568,7 +569,7 @@ contains
     case(oct_tg_exclude_state)
       j1 = target_j1_exclude(gr, tg, psi)
     case(oct_tg_hhg)
-      j1 = target_j1_hhg(tg)
+      j1 = target_j1_hhg(tg, parser)
     case(oct_tg_hhgnew)
       j1 = target_j1_hhgnew(gr, tg)
     case(oct_tg_velocity)

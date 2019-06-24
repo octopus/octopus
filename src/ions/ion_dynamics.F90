@@ -141,7 +141,7 @@ contains
     !% move with a constant velocity given by the initial
     !% conditions. They will not be affected by any forces.
     !%End
-    call parse_variable('IonsConstantVelocity', .false., this%constant_velocity)
+    call parse_variable(parser, 'IonsConstantVelocity', .false., this%constant_velocity)
     call messages_print_var_value(stdout, 'IonsConstantVelocity', this%constant_velocity)
 
     if(this%constant_velocity) then
@@ -171,7 +171,7 @@ contains
 
     
     ndisp = 0
-    if(parse_block('IonsTimeDependentDisplacements', blk) == 0) then
+    if(parse_block(parser, 'IonsTimeDependentDisplacements', blk) == 0) then
       call messages_experimental("IonsTimeDependentDisplacements")
       ndisp= parse_block_n(blk)
       SAFE_ALLOCATE(this%td_displacements(1:geo%natoms))
@@ -183,7 +183,7 @@ contains
         this%td_displacements(iatom)%move = .true.
         
         call parse_block_string(blk, i-1, 1, expression)
-        call tdf_read(this%td_displacements(iatom)%fx, trim(expression), ierr)
+        call tdf_read(this%td_displacements(iatom)%fx, parser, trim(expression), ierr)
         if (ierr /= 0) then            
           write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
           call messages_warning(1)
@@ -191,14 +191,14 @@ contains
         
         
         call parse_block_string(blk, i-1, 2, expression)
-        call tdf_read(this%td_displacements(iatom)%fy, trim(expression), ierr)
+        call tdf_read(this%td_displacements(iatom)%fy, parser, trim(expression), ierr)
         if (ierr /= 0) then            
           write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
           call messages_warning(1)
         end if
         
         call parse_block_string(blk, i-1, 3, expression)
-        call tdf_read(this%td_displacements(iatom)%fz, trim(expression), ierr)
+        call tdf_read(this%td_displacements(iatom)%fz, parser, trim(expression), ierr)
         if (ierr /= 0) then            
           write(message(1),'(3A)') 'Could not find "', trim(expression), '" in the TDFunctions block:'
           call messages_warning(1)
@@ -229,7 +229,7 @@ contains
     !% Nose-Hoover thermostat.
     !%End
     
-    call parse_variable('Thermostat', THERMO_NONE, this%thermostat)
+    call parse_variable(parser, 'Thermostat', THERMO_NONE, this%thermostat)
     if(.not.varinfo_valid_option('Thermostat', this%thermostat)) call messages_input_error('Thermostat')
     call messages_print_var_option(stdout, 'Thermostat', this%thermostat)
     
@@ -255,9 +255,9 @@ contains
       !% temperature. The values of the temperature are given in
       !% degrees Kelvin.
       !%End
-      call parse_variable('TemperatureFunction', 'temperature', temp_function_name)
+      call parse_variable(parser, 'TemperatureFunction', 'temperature', temp_function_name)
 
-      call tdf_read(this%temperature_function, temp_function_name, ierr)
+      call tdf_read(this%temperature_function, parser, temp_function_name, ierr)
 
       if(ierr /= 0) then
         message(1) = "You have enabled a thermostat but Octopus could not find"
@@ -276,7 +276,7 @@ contains
         !%End
         call messages_obsolete_variable(parser, 'NHMass', 'ThermostatMass')
 
-        call parse_variable('ThermostatMass', CNST(1.0), this%nh(1)%mass)
+        call parse_variable(parser, 'ThermostatMass', CNST(1.0), this%nh(1)%mass)
         this%nh(2)%mass = this%nh(1)%mass
 
         this%nh(1:2)%pos = M_ZERO
@@ -310,7 +310,7 @@ contains
 
       if( mpi_grp_is_root(mpi_world)) then
         call loct_ran_init(random_gen_pointer)
-        call parse_variable('RandomVelocityTemp', M_ZERO, temperature, unit = unit_kelvin)
+        call parse_variable(parser, 'RandomVelocityTemp', M_ZERO, temperature, unit = unit_kelvin)
       end if
 
       do i = 1, geo%natoms
@@ -439,7 +439,7 @@ contains
     !% propagation run. The default is yes when the ion velocity is
     !% set explicitly or implicitly, otherwise is no.
     !%End
-    call parse_variable('MoveIons', have_velocities, this%move_ions)
+    call parse_variable(parser, 'MoveIons', have_velocities, this%move_ions)
     call messages_print_var_value(stdout, 'MoveIons', this%move_ions)
 
     if(ion_dynamics_ions_move(this)) then 

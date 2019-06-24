@@ -65,7 +65,7 @@ subroutine X(calc_eff_mass_inv)(sys, hm, lr, perturbation, eff_mass_inv, degen_t
       ! start by computing all the wavefunctions acted on by perturbation
       do idir1 = 1, pdim
         call pert_setup_dir(perturbation, idir1)
-        call X(pert_apply)(perturbation, sys%gr, sys%geo, hm, ik, psi, pertpsi(:, :, idir1))
+        call X(pert_apply)(perturbation, sys%parser, sys%gr, sys%geo, hm, ik, psi, pertpsi(:, :, idir1))
       end do
 
       do idir2 = 1, pdim
@@ -160,7 +160,7 @@ subroutine X(kdotp_add_occ)(sys, hm, pert, kdotp_lr, degen_thres)
 
       call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi1)
       
-      call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, psi1, pertpsi)
+      call X(pert_apply)(pert, sys%parser, sys%gr, sys%geo, hm, ik, psi1, pertpsi)
       
       do ist2 = ist + 1, sys%st%nst
 
@@ -220,7 +220,7 @@ subroutine X(kdotp_add_diagonal)(sys, hm, em_pert, kdotp_lr)
 
         call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
         
-        call X(pert_apply)(em_pert, sys%gr, sys%geo, hm, ik, psi, ppsi)
+        call X(pert_apply)(em_pert, sys%parser, sys%gr, sys%geo, hm, ik, psi, ppsi)
         
         expectation = X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi, ppsi)
         

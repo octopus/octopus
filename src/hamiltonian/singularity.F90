@@ -80,11 +80,11 @@ contains
     POP_SUB(singularity_nullify)
   end subroutine singularity_nullify
  
-  subroutine singularity_init(this, st, sb, mesh)
+  subroutine singularity_init(this, parser, st, sb)
     type(singularity_t),       intent(inout) :: this
+    type(parser_t),            intent(in)    :: parser
     type(states_t),            intent(in)    :: st
     type(simul_box_t),         intent(in)    :: sb
-    type(mesh_t),              intent(in)    :: mesh
 
     PUSH_SUB(singularity_init)
 
@@ -113,11 +113,11 @@ contains
       !%Option spherical_bz 3
       !% The divergence in q=0 is treated analytically assuming a spherical Brillouin zone
       !%End
-      call parse_variable('HFSingularity', SINGULARITY_GENERAL, this%coulomb_singularity)
+      call parse_variable(parser, 'HFSingularity', SINGULARITY_GENERAL, this%coulomb_singularity)
       call messages_print_var_option(stdout,  'HFSingularity', this%coulomb_singularity)
 
       if(this%coulomb_singularity /= SINGULARITY_NONE) then
-        call singularity_correction(this, st, sb, mesh)
+        call singularity_correction(this, parser, st, sb)
       end if
     end if
 
@@ -136,11 +136,11 @@ contains
 
   !This routine implements the general tratment of the singularity for periodic solids,
   !as described in Carrier et al. PRB 75, 205126 (2007)
-  subroutine singularity_correction(this, st, sb, mesh)
+  subroutine singularity_correction(this, parser, st, sb)
     type(singularity_t),       intent(inout) :: this
+    type(parser_t),            intent(in)    :: parser
     type(states_t),            intent(in)    :: st
     type(simul_box_t),         intent(in)    :: sb
-    type(mesh_t),              intent(in)    :: mesh
 
     integer :: ik, ik2, ikpoint, Nk, Nsteps
     integer :: ikx, iky, ikz, istep
@@ -182,7 +182,7 @@ contains
       !% of the auxiliary function f(q). See PRB 75, 205126 (2007) for more details. 
       !% Only for HFSingularity=general.
       !%End
-      call parse_variable('HFSingularity_Nk', 60, Nk)
+      call parse_variable(parser, 'HFSingularity_Nk', 60, Nk)
       if(abs(Nk/M_THREE-nint(Nk/M_THREE)) > M_EPSILON) then
         message(1) = 'HFSingularity_Nk must be a multiple of 3.'
         call messages_fatal(1)
@@ -196,7 +196,7 @@ contains
       !% Number of grid refinement steps in the numerical integration of the auxiliary function f(q).
       !% See PRB 75, 205126 (2007) for more details. Only for HFSingularity=general.
       !%End
-      call parse_variable('HFSingularity_Nsteps', 7, Nsteps)
+      call parse_variable(parser, 'HFSingularity_Nsteps', 7, Nsteps)
 
       this%FF = M_ZERO
       length = M_ONE

@@ -40,7 +40,7 @@
     !% definition of the time-dependent local target, <i>i.e.</i> a function of x,y,z and t that 
     !% is to be maximized along the evolution.
     !%End
-    if(parse_block('OCTTdTarget', blk)==0) then
+    if(parse_block(parser, 'OCTTdTarget', blk)==0) then
       call parse_block_string(blk, 0, 0, tg%td_local_target)
       call conv_to_C_string(tg%td_local_target)
       SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
