@@ -108,7 +108,7 @@ contains
     integer, optional, intent(in)  :: blocksize !< just use a fixed block decomposition without caring about FFT library.
                                                 !! See description for cube_set_blocksize.
 
-    integer :: mpi_comm, tmp_n(3), fft_type_, optimize_parity(3), default_lib, fft_library_
+    integer :: mpi_comm, tmp_n(3), fft_type_, optimize_parity(3), fft_library_
     integer :: effdim_fft
     logical :: optimize(3)
     type(mpi_grp_t) :: mpi_grp_
@@ -140,7 +140,6 @@ contains
     nullify(cube%xlocal_fs)
     nullify(cube%local_fs)
 
-
     mpi_grp_ = mpi_world
     if (present(mpi_grp)) mpi_grp_ = mpi_grp
 
@@ -149,47 +148,15 @@ contains
       if (present(fft_library)) then
         fft_library_ = fft_library
       else
-        !%Variable FFTLibrary
-        !%Type integer
-        !%Section Mesh::FFTs
-        !%Default fftw
-        !%Description
-        !% (experimental) You can select the FFT library to use.
-        !%Option fftw 1
-        !% Uses FFTW3 library.
-        !%Option pfft 2
-        !% (experimental) Uses PFFT library, which has to be linked.
-        !%Option accel 3
-        !% (experimental) Uses a GPU accelerated library. This only
-        !% works if Octopus was compiled with Cuda or OpenCL support.
-        !%End
-        default_lib = FFTLIB_FFTW
-
-#ifdef HAVE_CLFFT
-        ! disabled by default since there are some problems for dim != 3
-        ! if(accel_is_enabled() .and. sb%dim == 3) default_lib = FFTLIB_ACCEL
-#endif
-        call parse_variable(dummy_parser, 'FFTLibrary', default_lib, fft_library_)
-        if(optional_default(verbose, .false.)) call messages_print_var_option(stdout, 'FFTLibrary', fft_library_)
+        fft_library_ = fft_default_lib
       end if
+
 #ifndef HAVE_PFFT
       if (fft_library_ == FFTLIB_PFFT) then
         write(message(1),'(a)')'You have selected the PFFT for FFT, but it was not linked.'
         call messages_fatal(1)
       end if
 #endif
-
-      if (fft_library_ == FFTLIB_ACCEL) then
-#if ! (defined(HAVE_CLFFT) || defined(HAVE_CUDA))
-        call messages_write('You have selected the Accelerated FFT, but Octopus was compiled', new_line = .true.)
-        call messages_write('without clfft (OpenCL) or Cuda support.')
-        call messages_fatal()
-#endif
-        if(.not. accel_is_enabled()) then
-          call messages_write('You have selected the accelerated FFT, but acceleration is disabled.')
-          call messages_fatal()
-        end if
-      end if
 
     else
       fft_library_ = FFTLIB_NONE

@@ -140,10 +140,12 @@ module fft_oct_m
 
   end type fft_t
 
-  integer, save     :: fft_refs(FFT_MAX)
-  type(fft_t), save :: fft_array(FFT_MAX)
-  logical           :: fft_optimize
-  integer           :: fft_prepare_plan
+  logical, save, public :: fft_initialized = .false.
+  integer, save         :: fft_refs(FFT_MAX)
+  type(fft_t), save     :: fft_array(FFT_MAX)
+  logical               :: fft_optimize
+  integer               :: fft_prepare_plan
+  integer, public       :: fft_default_lib = -1
 
   integer, parameter ::  &
     CUFFT_R2C = z'2a',   &
@@ -161,13 +163,14 @@ contains
     type(parser_t),      intent(in)   :: parser
     
     integer :: ii
-
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
     integer :: iret
 #endif
 
     PUSH_SUB(fft_all_init)
 
+    fft_initialized = .true.
+    
     !%Variable FFTOptimize
     !%Type logical
     !%Default yes
@@ -216,6 +219,34 @@ contains
     call parse_variable(parser, 'FFTPreparePlan', FFTW_MEASURE, fft_prepare_plan)
     if(.not. varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call messages_input_error('FFTPreparePlan')
 
+    !%Variable FFTLibrary
+    !%Type integer
+    !%Section Mesh::FFTs
+    !%Default fftw
+    !%Description
+    !% (experimental) You can select the FFT library to use.
+    !%Option fftw 1
+    !% Uses FFTW3 library.
+    !%Option pfft 2
+    !% (experimental) Uses PFFT library, which has to be linked.
+    !%Option accel 3
+    !% (experimental) Uses a GPU accelerated library. This only
+    !% works if Octopus was compiled with Cuda or OpenCL support.
+    !%End
+    call parse_variable(parser, 'FFTLibrary', FFTLIB_FFTW, fft_default_lib)
+
+    if(fft_default_lib == FFTLIB_ACCEL) then
+#if ! (defined(HAVE_CLFFT) || defined(HAVE_CUDA))
+      call messages_write('You have selected the Accelerated FFT, but Octopus was compiled', new_line = .true.)
+      call messages_write('without clfft (OpenCL) or Cuda support.')
+      call messages_fatal()
+#endif
+      if(.not. accel_is_enabled()) then
+        call messages_write('You have selected the accelerated FFT, but acceleration is disabled.')
+        call messages_fatal()
+      end if
+    end if
+    
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
     if(omp_get_max_threads() > 1) then
 
@@ -259,6 +290,8 @@ contains
     call fftw_cleanup()
 #endif
 
+    fft_initialized = .false.
+    
     POP_SUB(fft_all_end)
   end subroutine fft_all_end
 
@@ -291,6 +324,8 @@ contains
 
     PUSH_SUB(fft_init)
 
+    ASSERT(fft_initialized)
+    
     ASSERT(type == FFT_REAL .or. type == FFT_COMPLEX)
 
     mpi_grp_ = mpi_world
