@@ -56,6 +56,7 @@ module pnfft_oct_m
     pnfft_init_procmesh,  &
     pnfft_end,            &
     pnfft_set_sp_nodes,   &
+    pnfft_guru_options,   &
     zpnfft_forward,       &
     zpnfft_backward,      &
     dpnfft_forward,       &
@@ -99,8 +100,7 @@ module pnfft_oct_m
 
 contains
 
-
-! ---------------------------------------------------------  
+  ! ---------------------------------------------------------  
   subroutine pnfft_guru_options(pnfft, parser)
     type(pnfft_t),     intent(inout) :: pnfft
     type(parser_t),    intent(in)    :: parser
@@ -130,9 +130,9 @@ contains
   end subroutine pnfft_guru_options
 
   ! ---------------------------------------------------------
-  subroutine pnfft_init_params(pnfft, parser, nn, optimize)
+  subroutine pnfft_init_params(pnfft, pnfft_options, nn, optimize)
     type(pnfft_t),     intent(inout) :: pnfft
-    type(parser_t),    intent(in)    :: parser
+    type(pnfft_t),     intent(in)    :: pnfft_options
     integer,           intent(in)    :: nn(3) !> pnfft bandwidths 
     logical, optional, intent(in)    :: optimize
 
@@ -146,12 +146,10 @@ contains
 
     if(.not. pnfft%set_defaults) then
       !Set defaults
-      pnfft%mm = 6 
-      pnfft%sigma = M_TWO
+      pnfft%mm = pnfft_options%mm 
+      pnfft%sigma = pnfft_options%sigma
     end if
     
-    call pnfft_guru_options(pnfft, parser)
-
     my_nn = 0
     do ii = 1, 3
       my_nn(ii) = nn(ii)*pnfft%sigma
@@ -255,19 +253,14 @@ contains
       if(idir < 3) call messages_write(" x ")
     end do
     call messages_info()
-
-
-
  
     POP_SUB(pnfft_write_info)
   end subroutine pnfft_write_info
 
-
-
   ! ---------------------------------------------------------
-  subroutine pnfft_init_plan(pnfft, parser, mpi_comm, fs_n_global, fs_n, fs_istart, rs_n, rs_istart)
+  subroutine pnfft_init_plan(pnfft, pnfft_options, mpi_comm, fs_n_global, fs_n, fs_istart, rs_n, rs_istart)
     type(pnfft_t),   intent(inout) :: pnfft
-    type(parser_t),  intent(in)    :: parser
+    type(pnfft_t),   intent(inout) :: pnfft_options
     integer,         intent(in)    :: mpi_comm         !< MPI comunicator
     integer,         intent(in)    :: fs_n_global(1:3) !< The general number of elements in each dimension in Fourier space
     integer,         intent(out)   :: fs_n(1:3)        !< Local number of elements in each direction in Fourier space
@@ -285,7 +278,7 @@ contains
 
     pnfft%N(1:3) = fs_n_global(1:3)
     
-    call pnfft_init_params(pnfft, parser, fs_n_global(1:3), optimize = .true.)
+    call pnfft_init_params(pnfft, pnfft_options, fs_n_global(1:3), optimize = .true.)
     
     x_max(:) = CNST(0.4)
 

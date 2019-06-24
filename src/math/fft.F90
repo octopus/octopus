@@ -143,6 +143,7 @@ module fft_oct_m
   integer               :: fft_prepare_plan
   integer, public       :: fft_default_lib = -1
   type(nfft_t), save    :: nfft_options
+  type(pnfft_t), save   :: pnfft_options
   
   integer, parameter ::  &
     CUFFT_R2C = z'2a',   &
@@ -261,6 +262,7 @@ contains
 #endif
 
     call nfft_guru_options(nfft_options, parser)
+    call pnfft_guru_options(pnfft_options, parser)
     
     POP_SUB(fft_all_init)
   end subroutine fft_all_init
@@ -586,7 +588,7 @@ contains
       ! Therefore, in order to perform rs->fs tranforms with PNFFT one should use the 
       ! backward transform.     
 
-      call pnfft_init_plan(fft_array(jj)%pnfft, parser, mpi_comm, fft_array(jj)%fs_n_global, &
+      call pnfft_init_plan(fft_array(jj)%pnfft, pnfft_options, mpi_comm, fft_array(jj)%fs_n_global, &
            fft_array(jj)%fs_n, fft_array(jj)%fs_istart, fft_array(jj)%rs_n, fft_array(jj)%rs_istart)
 
     case(FFTLIB_ACCEL)
