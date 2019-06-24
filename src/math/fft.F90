@@ -131,10 +131,8 @@ module fft_oct_m
 #endif
     type(c_ptr)           :: cuda_plan_fw
     type(c_ptr)           :: cuda_plan_bw
-    type(nfft_t), public :: nfft
-#ifdef HAVE_PNFFT
+    type(nfft_t),  public :: nfft
     type(pnfft_t), public :: pnfft
-#endif
 
   end type fft_t
 
@@ -465,11 +463,7 @@ contains
 #endif
 
     case (FFTLIB_PNFFT)
-#ifdef HAVE_PNFFT
-
       call pnfft_init_procmesh(fft_array(jj)%pnfft, mpi_grp_, fft_array(jj)%comm) 
-
-#endif
 
     case default
       fft_array(jj)%comm = -1
@@ -575,8 +569,7 @@ contains
       end if
 #endif
     case (FFTLIB_PNFFT)
-#ifdef HAVE_PNFFT     
-      call pnfft_copy_params(this%pnfft,fft_array(jj)%pnfft) ! pass default parameters like in NFFT
+      call pnfft_copy_params(this%pnfft, fft_array(jj)%pnfft) ! pass default parameters like in NFFT
 
       ! NOTE:
       ! PNFFT (likewise NFFT) breaks the symmetry between real space and Fourier space
@@ -595,8 +588,6 @@ contains
 
       call pnfft_init_plan(fft_array(jj)%pnfft, parser, mpi_comm, fft_array(jj)%fs_n_global, &
            fft_array(jj)%fs_n, fft_array(jj)%fs_istart, fft_array(jj)%rs_n, fft_array(jj)%rs_istart)
-      
-#endif
 
     case(FFTLIB_ACCEL)
 
@@ -774,13 +765,11 @@ contains
     case (FFTLIB_PNFFT)
       call messages_write("Info: FFT library = PNFFT")
       call messages_info()
-#ifdef HAVE_PNFFT
       call pnfft_write_info(fft_array(jj)%pnfft)
-#endif
       
     case (FFTLIB_NFFT)
-    call messages_write("Info: FFT library = NFFT")
-    call messages_info()
+      call messages_write("Info: FFT library = NFFT")
+      call messages_info()
       call nfft_write_info(fft_array(jj)%nfft)
 
     end select
@@ -819,9 +808,8 @@ contains
     case(FFTLIB_ACCEL)
     !Do nothing 
     case(FFTLIB_PNFFT)
-#ifdef HAVE_PNFFT
       call pnfft_set_sp_nodes(fft_array(slot)%pnfft, XX)
-#endif
+
     case default
       call messages_write('Invalid FFT library.')
       call messages_fatal()
@@ -874,12 +862,11 @@ contains
 #endif
 
         case(FFTLIB_NFFT)
-        call nfft_end(fft_array(ii)%nfft)
-
-#ifdef HAVE_PNFFT
+          call nfft_end(fft_array(ii)%nfft)
+          
         case(FFTLIB_PNFFT)
-        call pnfft_end(fft_array(ii)%pnfft)
-#endif
+          call pnfft_end(fft_array(ii)%pnfft)
+          
         end select
         fft_refs(ii) = FFT_NULL
       end if

@@ -24,11 +24,11 @@ module pnfft_params_oct_m
   use,intrinsic :: iso_c_binding
   use pfft_params_oct_m
   implicit none
-
 #ifdef HAVE_PNFFT
   include "pnfft.f03"
 #endif
 end module pnfft_params_oct_m
+
  
 !> The low level module to work with the PNFFT library.
 !! http://www-user.tu-chemnitz.de/~mpip/software.php?lang=en
@@ -48,18 +48,6 @@ module pnfft_oct_m
 
   private
 
-#ifndef HAVE_PNFFT
-
-  public ::               &
-    pnfft_t     
-
-  type pnfft_t
-    private
-    FLOAT                 :: norm  
-  end type pnfft_t
-
-
-#else
   public ::               &
     pnfft_t,              &      
     pnfft_write_info,     &
@@ -172,11 +160,10 @@ contains
     
     pnfft%Nos(1:3) = my_nn(1:3)
 
+#ifdef HAVE_PNFFT
     pnfft%flags = PNFFT_MALLOC_X + PNFFT_MALLOC_F_HAT + PNFFT_MALLOC_F + &
                   PNFFT_WINDOW_KAISER_BESSEL
-
-
-
+#endif
 
     POP_SUB(pnfft_init_params)
   end subroutine pnfft_init_params
@@ -192,21 +179,24 @@ contains
 
     PUSH_SUB(pnfft_init_procmesh)
 
-        call pnfft_init()
-      
-        pnfft%np(1:3) = 1
-
-        call pfft_decompose(mpi_grp%size, pnfft%np(1), pnfft%np(2))
-            
-        ierror = pnfft_create_procmesh(2, mpi_grp%comm,  pnfft%np, comm)        
-
-        if (ierror /= 0) then
-          message(1) = "The number of rows and columns in PNFFT processor grid is not equal to "
-          message(2) = "the number of processor in the MPI communicator."
-          message(3) = "Please check it."
-          call messages_fatal(3)
-        end if
- 
+#ifdef HAVE_PNFFT
+    call pnfft_init()
+    
+    pnfft%np(1:3) = 1
+    
+    call pfft_decompose(mpi_grp%size, pnfft%np(1), pnfft%np(2))
+    
+    
+    ierror = pnfft_create_procmesh(2, mpi_grp%comm,  pnfft%np, comm)        
+#endif
+    
+    if (ierror /= 0) then
+      message(1) = "The number of rows and columns in PNFFT processor grid is not equal to "
+      message(2) = "the number of processor in the MPI communicator."
+      message(3) = "Please check it."
+      call messages_fatal(3)
+    end if
+        
     POP_SUB(pnfft_init_procmesh)
   end subroutine pnfft_init_procmesh
 
@@ -222,8 +212,7 @@ contains
     out%mm = in%mm
     out%sigma = in%sigma
     out%set_defaults = in%set_defaults       
-  
- 
+   
     POP_SUB(pnfft_copy_params)
   end subroutine pnfft_copy_params
 
@@ -299,10 +288,12 @@ contains
     call pnfft_init_params(pnfft, parser, fs_n_global(1:3), optimize = .true.)
     
     x_max(:) = CNST(0.4)
-         
+
+#ifdef HAVE_PNFFT         
     call pnfft_local_size_guru(3, pnfft%N, pnfft%Nos, x_max, pnfft%mm, mpi_comm, &
          PNFFT_TRANSPOSED_F_HAT, local_N, local_N_start, lower_border, upper_border)
-
+#endif
+    
     pnfft%lower_border = lower_border
     pnfft%upper_border = upper_border
     pnfft%N_local(1:3)   = local_N(1:3) 
@@ -329,17 +320,20 @@ contains
     
     pnfft%M_istart(:) = rs_istart(:)
     
-
+#ifdef HAVE_PNFFT
     pnfft%plan = pnfft_init_guru(3, pnfft%N, pnfft%Nos, x_max, local_M, pnfft%mm, &
                  pnfft%flags, PFFT_ESTIMATE, mpi_comm)
-
+#endif
+    
     pnfft%local_M=local_M
-     
+
+#ifdef HAVE_PNFFT
     ! Get data pointers in C format
     cf_hat = pnfft_get_f_hat(pnfft%plan)
     cf     = pnfft_get_f(pnfft%plan)
     cx     = pnfft_get_x(pnfft%plan)
-
+#endif
+    
     ! Convert data pointers to Fortran format
     call c_f_pointer(cf_hat, pnfft%f_hat, [local_N(1),local_N(3),local_N(2)])
     call c_f_pointer(cf,     pnfft%f_lin, [pnfft%local_M])
@@ -374,9 +368,11 @@ contains
 
     PUSH_SUB(pnfft_end)
 
+#ifdef HAVE_PNFFT
     call pnfft_finalize(pnfft%plan, PNFFT_FREE_X + PNFFT_FREE_F_HAT + PNFFT_FREE_F)
     call pnfft_cleanup()
-   
+#endif
+    
     nullify(pnfft%f_lin)
     nullify(pnfft%f)
     nullify(pnfft%f_hat)
@@ -507,9 +503,11 @@ contains
   
       if(mpi_grp_is_root(mpi_world)) then
         call io_mkdir('debug/PNFFT')
-      end if      
+      end if
+#ifdef HAVE_MPI
       call MPI_Barrier(mpi_world%comm, ierr)
-
+#endif
+      
       nn = mpi_world%rank
       write(filenum, '(i3.3)') nn
 
@@ -542,9 +540,6 @@ contains
 
   end function pnfft_idx_3to1
 
-
-
-
   #include "undef.F90"
   #include "real.F90"
   #include "pnfft_inc.F90"
@@ -552,9 +547,6 @@ contains
   #include "undef.F90"
   #include "complex.F90"
   #include "pnfft_inc.F90"
-
-
-#endif
 
 end module pnfft_oct_m
 

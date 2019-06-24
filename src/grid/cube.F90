@@ -295,11 +295,10 @@ contains
         cube%fft%nfft%precompute = NFFT_PRE_PSI
 
       case (FFTLIB_PNFFT)
-#ifdef HAVE_PNFFT    
         cube%fft%pnfft%set_defaults = .true.
         cube%fft%pnfft%m = 2 
         cube%fft%pnfft%sigma = CNST(1.1)
-#endif
+
       case default 
       !do nothing  
     end select
