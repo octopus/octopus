@@ -54,10 +54,10 @@ contains
     integer :: ist, jst, iqn, idim, idir, jdir
     CMPLX, allocatable :: psii(:, :), psij(:, :), gpsii(:, :, :), gpsij(:, :, :)
     CMPLX, allocatable :: tensor(:, :, :), therm_tensor(:,:,:)
-    CMPLX, allocatable :: k11(:), k12(:), k21(:), k22(:)
+    CMPLX, allocatable :: k11(:,:,:), k12(:,:,:), k21(:,:,:), k22(:,:,:)
     CMPLX :: prod
     FLOAT :: eigi, eigj, occi, occj, df, width, dfreq, maxfreq, minfreq, ww
-    FLOAT :: sum_occ, sum_cond1, sum_cond2, sum_cond, sum_k
+    FLOAT :: sum_occ, sum_cond1, sum_cond2, sum_cond, sum_k, e_fermi
     type(mesh_t), pointer :: mesh
     character(len=80) :: dirname, str_tmp
 
@@ -139,10 +139,10 @@ contains
     nfreq = nint(maxfreq / (dfreq)) + 1
     SAFE_ALLOCATE(tensor(1:mesh%sb%dim, 1:mesh%sb%dim,1:nfreq))
     SAFE_ALLOCATE(therm_tensor(1:mesh%sb%dim, 1:mesh%sb%dim,1:nfreq))
-    SAFE_ALLOCATE(k11(1:nfreq))
-    SAFE_ALLOCATE(k12(1:nfreq))
-    SAFE_ALLOCATE(k21(1:nfreq))
-    SAFE_ALLOCATE(k22(1:nfreq))
+    SAFE_ALLOCATE(k11(1:mesh%sb%dim, 1:mesh%sb%dim, 1:nfreq))
+    SAFE_ALLOCATE(k12(1:mesh%sb%dim, 1:mesh%sb%dim, 1:nfreq))
+    SAFE_ALLOCATE(k21(1:mesh%sb%dim, 1:mesh%sb%dim, 1:nfreq))
+    SAFE_ALLOCATE(k22(1:mesh%sb%dim, 1:mesh%sb%dim, 1:nfreq))
     tensor = CNST(0.0)
     k12 = CNST(0.0)
     k11 = CNST(0.0)
@@ -154,10 +154,10 @@ contains
     sum_cond2 = CNST(0.0)
     sum_cond = CNST(0.0)
     sum_k = CNST(0.0)
-    
+    e_fermi = sys%st%smear%e_fermi
     
     do iqn = sys%st%d%kpt%start, sys%st%d%kpt%end
-    
+       
        do ist = 1, sys%st%nst
         ! get the state i and calculate the gradient
         call states_get_state(sys%st, mesh, ist, iqn, psii)
@@ -199,31 +199,47 @@ contains
 
           do idir = 1, mesh%sb%dim
              do jdir = 1, mesh%sb%dim
-                prod = zmf_dotp(mesh, sys%st%d%dim, psii, gpsij(:, idir, :))*zmf_dotp(mesh, sys%st%d%dim, psij, gpsii(:, jdir, :))
+                prod =  zmf_dotp(mesh, sys%st%d%dim, psii, gpsij(:, idir, :)) * zmf_dotp(mesh, sys%st%d%dim, psij, gpsii(:, jdir, :))
                 do ifreq = 1, nfreq
-                  tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - sys%st%d%kweights(iqn)*(CNST(-2.0)/mesh%sb%rcell_volume)* &
-                        df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*(eigi-eigj - (minfreq + (ifreq-1)*dfreq)))/ ((eigi-eigj - (minfreq + (ifreq-1)*dfreq))**2 + width**2/CNST(4.0))                   
+                   if (abs(eigi-eigj)<CNST(1.0e-10)) then 
+                      tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) + sys%st%d%kweights(iqn)*(CNST(-2.0)/mesh%sb%rcell_volume)* &
+                           df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*((minfreq + (ifreq-1)*dfreq)))/ (((minfreq + (ifreq-1)*dfreq))**2 + width**2/CNST(4.0)) /(CNST(2.0)*M_PI)/(CNST(2.0)*M_PI)
+                  else 
+                     tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - sys%st%d%kweights(iqn)*(CNST(-2.0)/mesh%sb%rcell_volume)* &
+                          df*real(prod,REAL_PRECISION) * (CNST(0.5)*width - M_ZI*(eigi-eigj - (minfreq + (ifreq-1)*dfreq)))/ ((eigi-eigj - (minfreq + (ifreq-1)*dfreq))**2 + width**2/CNST(4.0)) / (CNST(2.0)*M_PI)/(CNST(2.0)*M_PI)
+                  endif
                 end do
              end do !loop over jdir
           end do !loop over idir
+
+          do idir=1, mesh%sb%dim
+             do jdir=1, mesh%sb%dim
+                do ifreq = 1, nfreq
+                   k12(idir,jdir,ifreq) = k12(idir,jdir,ifreq) - tensor(idir,jdir,ifreq)*(eigi-e_fermi)
+                   k21(idir,jdir,ifreq) = k21(idir,jdir,ifreq) - tensor(idir,jdir,ifreq)*(eigj-e_fermi)
+                   k22(idir,jdir,ifreq) = k22(idir,jdir,ifreq) - tensor(idir,jdir,ifreq)*(eigi -e_fermi)*(eigj - e_fermi)
+                end do
+             end do
+          end do
+          
        end do !loop over states j
     end do !loop over states i
 
-    !begin sum rule
-
-    do ifreq=1,nfreq
-       sum_cond1 = sum_cond1 + (tensor(1,1,ifreq) + tensor(2,2,ifreq) + tensor(3,3,ifreq))
-    enddo
-
-    sum_cond1 = CNST(2.0) * mesh%sb%rcell_volume * sum_cond1 * sys%st%d%kweights(iqn)* dfreq / (M_PI* sum_occ)
-
-    !end sum rule
     sum_k = sum_k + sys%st%d%kweights(iqn)
    end do !kpt loop
 
+    !begin sum rule
+
+   do ifreq=1,nfreq
+      sum_cond1 = sum_cond1 + (tensor(1,1,ifreq) + tensor(2,2,ifreq) + tensor(3,3,ifreq))*dfreq/CNST(3.0)
+   enddo
+   sum_cond2 = sum_cond2 + CNST(2.0) * mesh%sb%rcell_volume * sum_cond1 / (sum_occ * M_PI)
+
+   
    write(*,*)"sum rule for occupations::: ", sum_occ
-   write(*,*)"sum rule for conductivity:: ", sum_cond1
+   write(*,*)"sum rule for conductivity:: ", sum_cond2
    write(*,*)"sum of k weights ", sum_k 
+
    !output
    write(dirname, '(a, a)') 'kubo_greenwood' 
    call io_mkdir(trim(dirname))
@@ -241,10 +257,32 @@ contains
     do ifreq = 1, nfreq
        ww = minfreq + (ifreq-1)*dfreq
        write(unit = iunit, iostat = ierr, fmt = '(7e20.10)') ww, &
-            tensor(1,1,ifreq), tensor(2,2,ifreq), tensor(3,3,ifreq) 
+            real(tensor(1,1,ifreq)), real(tensor(2,2,ifreq)), real(tensor(3,3,ifreq))
     end do
 
    
+   call io_close(iunit)
+
+
+   !output
+   write(dirname, '(a, a)') 'kubo_greenwood' 
+   call io_mkdir(trim(dirname))
+
+   iunit = io_open(trim(dirname)//'/L_coefficients', action='write')
+
+    write(unit = iunit, iostat = ierr, fmt = '(a)') &
+      '###########################################################################################################################'
+    write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
+    write(unit = iunit, iostat = ierr, fmt = '(a,a,a)') &
+      !'#  Energy [', trim(units_abbrev(units_out%energy)), '] Conductivity [a.u.] freq ReXX ImXX ReYY ImYY ReZZ ImZZ'
+      'freq L12 L21 L22'
+    write(unit = iunit, iostat = ierr, fmt = '(a)') &
+      '###########################################################################################################################'
+    do ifreq = 1, nfreq
+       ww = minfreq + (ifreq-1)*dfreq
+       write(unit = iunit, iostat = ierr, fmt = '(7e20.10)') ww, &
+            k12(1,1,ifreq), k21(1,1,ifreq), k22(1,1,ifreq) 
+    end do
    call io_close(iunit)
 
 
