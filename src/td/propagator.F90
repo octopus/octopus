@@ -105,17 +105,17 @@ contains
     case(PROP_CRANK_NICOLSON_SPARSKIT)
       SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
-      call sparskit_solver_init(dummy_parser, tro%tdsk_size, tro%tdsk, .true.)
+      call sparskit_solver_copy(tro%tdsk, tri%tdsk)
 
     case(PROP_RUNGE_KUTTA4)
       SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
-      call sparskit_solver_init(dummy_parser, tro%tdsk_size, tro%tdsk, .true.)
+      call sparskit_solver_copy(tro%tdsk, tri%tdsk)
 
     case(PROP_RUNGE_KUTTA2)
       SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
-      call sparskit_solver_init(dummy_parser, tro%tdsk_size, tro%tdsk, .true.)
+      call sparskit_solver_copy(tro%tdsk, tri%tdsk)
 
     end select
 
