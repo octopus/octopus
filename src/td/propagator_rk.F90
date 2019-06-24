@@ -40,9 +40,7 @@ module propagator_rk_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
   use species_oct_m
-#ifdef HAVE_SPARSKIT
   use sparskit_oct_m
-#endif
   use states_oct_m
   use v_ks_oct_m
   use xc_oct_m
@@ -645,11 +643,7 @@ contains
       end do
 
       t_op  = time - dt
-#ifdef HAVE_SPARSKIT
       call zsparskit_solver_run(tr%tdsk, td_rk2op, td_rk2opt, zpsi, rhs)
-#else
-      ASSERT(.false.)
-#endif
       
       k2 = M_z0
       j = 1
@@ -697,6 +691,7 @@ contains
     POP_SUB(td_runge_kutta2)
   end subroutine td_runge_kutta2
 
+  !----------------------------------------------------------------------------
 
   subroutine td_runge_kutta4(ks, parser, hm, gr, st, tr, time, dt, ions, geo)
     type(v_ks_t), target,            intent(inout) :: ks
@@ -905,11 +900,7 @@ contains
       end do
 
       t_op  = time - dt
-#ifdef HAVE_SPARSKIT
       call zsparskit_solver_run(tr%tdsk, td_rk4op, td_rk4opt, zpsi, rhs)
-#else
-      ASSERT(.false.)
-#endif
       
       k1 = M_z0
       k2 = M_z0

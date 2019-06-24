@@ -147,9 +147,7 @@ contains
         ik_op = ik
 
         if(use_sparskit) then
-#ifdef HAVE_SPARSKIT
           call zsparskit_solver_run(tr%tdsk, td_zop, td_zopt, zpsi, rhs)
-#endif
         else
           iter = 2000
           call zqmr_sym_gen_dotu(np*st%d%dim, zpsi, rhs, propagator_qmr_op, zmf_dotu_aux, zmf_nrm2_aux, &

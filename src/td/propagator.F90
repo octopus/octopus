@@ -105,21 +105,18 @@ contains
     case(PROP_CRANK_NICOLSON_SPARSKIT)
       SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
-#ifdef HAVE_SPARSKIT
       call sparskit_solver_init(dummy_parser, tro%tdsk_size, tro%tdsk, .true.)
-#endif
+
     case(PROP_RUNGE_KUTTA4)
       SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
-#ifdef HAVE_SPARSKIT
       call sparskit_solver_init(dummy_parser, tro%tdsk_size, tro%tdsk, .true.)
-#endif
+
     case(PROP_RUNGE_KUTTA2)
       SAFE_ALLOCATE(tro%tdsk)
       tro%tdsk_size = tri%tdsk_size
-#ifdef HAVE_SPARSKIT
       call sparskit_solver_init(dummy_parser, tro%tdsk_size, tro%tdsk, .true.)
-#endif
+
     end select
 
     call potential_interpolation_copy(tro%vksold, tri%vksold)
@@ -266,44 +263,47 @@ contains
       ! set up pointer for zmf_dotu_aux, zmf_nrm2_aux
       call mesh_init_mesh_aux(gr%mesh)
     case(PROP_RUNGE_KUTTA4)
-#ifdef HAVE_SPARSKIT
       ! set up pointer for zmf_dotu_aux, zmf_nrm2_aux
       call mesh_init_mesh_aux(gr%mesh)
       sp_distdot_mode = 3
       tr%tdsk_size = 2 * st%d%dim * gr%mesh%np * (st%st_end - st%st_start + 1) * (st%d%kpt%end - st%d%kpt%start + 1)
       SAFE_ALLOCATE(tr%tdsk)
       call sparskit_solver_init(parser, tr%tdsk_size, tr%tdsk, .true.)
-#else
+
+#ifndef HAVE_SPARSKIT
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "runge_kutta4" propagator is selected.'
       message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
       call messages_fatal(3)
 #endif
+
       call messages_experimental("Runge-Kutta 4 propagator")
     case(PROP_RUNGE_KUTTA2)
-#ifdef HAVE_SPARSKIT
+
       ! set up pointer for zmf_dotu_aux, zmf_nrm2_aux
       call mesh_init_mesh_aux(gr%mesh)
       sp_distdot_mode = 2
       tr%tdsk_size = st%d%dim * gr%mesh%np * (st%st_end - st%st_start + 1) * (st%d%kpt%end - st%d%kpt%start + 1)
       SAFE_ALLOCATE(tr%tdsk)
       call sparskit_solver_init(parser, tr%tdsk_size, tr%tdsk, .true.)
-#else
+
+#ifndef HAVE_SPARSKIT
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "runge_kutta2" propagator is selected.'
       message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
       call messages_fatal(3)
 #endif
+
       call messages_experimental("Runge-Kutta 2 propagator")
     case(PROP_CRANK_NICOLSON_SPARSKIT)
-#ifdef HAVE_SPARSKIT
       ! set up pointer for zmf_dotu_aux
       call mesh_init_mesh_aux(gr%mesh)
       sp_distdot_mode = 1
       tr%tdsk_size = st%d%dim*gr%mesh%np
       SAFE_ALLOCATE(tr%tdsk)
       call sparskit_solver_init(parser, st%d%dim*gr%mesh%np, tr%tdsk, .true.)
-#else
+
+#ifndef HAVE_SPARSKIT
       message(1) = 'Octopus was not compiled with support for the SPARSKIT library. This'
       message(2) = 'library is required if the "crank_nicolson_sparskit" propagator is selected.'
       message(3) = 'Try using a different propagation scheme or recompile with SPARSKIT support.'
@@ -444,11 +444,11 @@ contains
     case(PROP_MAGNUS)
       ASSERT(associated(tr%vmagnus))
       SAFE_DEALLOCATE_P(tr%vmagnus)
-#ifdef HAVE_SPARSKIT
+
     case(PROP_RUNGE_KUTTA4, PROP_RUNGE_KUTTA2, PROP_CRANK_NICOLSON_SPARSKIT)
       call sparskit_solver_end(tr%tdsk)
       SAFE_DEALLOCATE_P(tr%tdsk)
-#endif
+      
     end select
     
     call exponential_end(tr%te)       ! clean propagator method

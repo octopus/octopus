@@ -45,13 +45,11 @@ module sparskit_oct_m
   public ::                      &
     sparskit_solver_t
   
-#ifdef HAVE_SPARSKIT
-    public ::                      &
-      sparskit_solver_init,        &
-      dsparskit_solver_run,        &
-      zsparskit_solver_run,        &
-      sparskit_solver_end
-#endif
+  public ::                      &
+    sparskit_solver_init,        &
+    dsparskit_solver_run,        &
+    zsparskit_solver_run,        &
+    sparskit_solver_end
 
   type sparskit_solver_t
     private
@@ -73,8 +71,6 @@ module sparskit_oct_m
     FLOAT   :: fpar(16)             !< floating-point parameter array for the reverse communication protocol
     logical :: verbose              !< if .true. then the solver will write more details
   end type sparskit_solver_t
-
-#ifdef HAVE_SPARSKIT
 
 contains
 
@@ -295,8 +291,6 @@ contains
 #include "undef.F90"
 #include "complex.F90"
 #include "sparskit_inc.F90"
-
-#endif /* HAVE_SPARSKIT */
 
 ! distdot function for dot products is defined in mesh_function_oct_m
 
