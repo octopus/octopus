@@ -146,7 +146,10 @@ module fft_oct_m
   logical               :: fft_optimize
   integer               :: fft_prepare_plan
   integer, public       :: fft_default_lib = -1
-
+#ifdef HAVE_PNFFT
+  type(nfft_t), save    :: nfft_options
+#endif
+  
   integer, parameter ::  &
     CUFFT_R2C = z'2a',   &
     CUFFT_C2R = z'2c',   &
@@ -263,6 +266,10 @@ contains
     end if
 #endif
 
+#ifdef HAVE_NFFT
+    call nfft_guru_options(nfft_options, parser)
+#endif
+    
     POP_SUB(fft_all_init)
   end subroutine fft_all_init
 
@@ -557,7 +564,7 @@ contains
     case(FFTLIB_NFFT)
 #ifdef HAVE_NFFT
      call nfft_copy_info(this%nfft,fft_array(jj)%nfft) !copy default parameters set in the calling routine 
-     call nfft_init(fft_array(jj)%nfft, parser, fft_array(jj)%rs_n_global, &
+     call nfft_init(fft_array(jj)%nfft, nfft_options, fft_array(jj)%rs_n_global, &
                     fft_dim, fft_array(jj)%rs_n_global , type, optimize = .true.)
 #endif
 
