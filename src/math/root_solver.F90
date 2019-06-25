@@ -52,6 +52,7 @@ module root_solver_oct_m
     FLOAT   :: ws_radius      !< radius of circle in complex plane; used for initial values
     logical :: have_polynomial
     integer :: poly_order
+    type(ode_solver_t) :: ode_solver !< required for ROOT_WATTERSTROM
   end type root_solver_t
 
   !> a few variables which we have to define globally
@@ -162,17 +163,56 @@ contains
     !%End
     call parse_variable(parser, 'RootSolverWSRadius', CNST( 1.0), rs%ws_radius)
 
+    if(rs%solver_type == ROOT_WATTERSTROM) then
+
+      !%Variable WatterstromODESolver
+      !%Type integer
+      !%Default ode_pd89
+      !%Section Math::RootSolver
+      !%Description
+      !% The Watterstrom method (<i>J. Comp. Phys.</i> <b>8</b>, 304-308 (1971)) transforms
+      !% finding roots for <i>n</i>th-order polynomials into the solution of <i>n</i> uncoupled 
+      !% ODEs. This variable specifies the solver that should be used for the ODE 
+      !% stepping.
+      !%Option ode_rk4 1
+      !% Standard 4th-order Runge-Kutta.
+      !%Option ode_fb78 2
+      !% Fehlberg solver.
+      !%Option ode_vr89 3
+      !% Verner solver.
+      !%Option ode_pd89 4
+      !% Prince-Dormand solver.
+      !%End
+      call parse_variable(parser, 'WatterstromODESolver', ODE_PD89, rs%ode_solver%solver_type)
+
+      !%Variable WatterstromODESolverNSteps
+      !%Type integer
+      !%Default 400
+      !%Section Math::RootSolver
+      !%Description
+      !% Number of steps which the chosen ODE solver should perform
+      !% in the integration interval [<i>a</i>, <i>b</i>] of the Watterstrom ODE.
+      !%End
+      call parse_variable(parser, 'WatterstromODESolverNSteps', 400, rs%ode_solver%nsteps)
+
+      ! set up ODE solver
+      rs%ode_solver%nsize       = rs%poly_order
+      rs%ode_solver%tmin        = M_ZERO
+      rs%ode_solver%tmax        = M_ONE
+      call ode_solver_create(rs%ode_solver)
+
+    end if
+
     POP_SUB(root_solver_read)
   end subroutine root_solver_read
 
   ! ---------------------------------------------------------
   !> Implementation of J. Comp. Phys., 8, (1971), p. 304-308
   subroutine zroot_watterstrom(rs, roots, coeff)
-    type(root_solver_t), intent(in)  :: rs
-    CMPLX,                  intent(out) :: roots(:)    !< roots we are searching
-    CMPLX,                  intent(in)  :: coeff(:)    !< polynomial coefficients
+    type(root_solver_t), intent(inout)  :: rs
+    CMPLX,               intent(out)    :: roots(:)    !< roots we are searching
+    CMPLX,               intent(in)     :: coeff(:)    !< polynomial coefficients
 
-    type(ode_solver_t) :: os
     CMPLX, allocatable    :: base_roots(:)
     FLOAT   :: theta
     integer :: order, j
@@ -200,42 +240,7 @@ contains
       base_roots(j) = exp(M_zI*theta)*(rs%ws_radius)
     end do
 
-    !%Variable WatterstromODESolver
-    !%Type integer
-    !%Default ode_pd89
-    !%Section Math::RootSolver
-    !%Description
-    !% The Watterstrom method (<i>J. Comp. Phys.</i> <b>8</b>, 304-308 (1971)) transforms
-    !% finding roots for <i>n</i>th-order polynomials into the solution of <i>n</i> uncoupled 
-    !% ODEs. This variable specifies the solver that should be used for the ODE 
-    !% stepping.
-    !%Option ode_rk4 1
-    !% Standard 4th-order Runge-Kutta.
-    !%Option ode_fb78 2
-    !% Fehlberg solver.
-    !%Option ode_vr89 3
-    !% Verner solver.
-    !%Option ode_pd89 4
-    !% Prince-Dormand solver.
-    !%End
-    call parse_variable(dummy_parser, 'WatterstromODESolver', ODE_PD89, os%solver_type)
-
-    !%Variable WatterstromODESolverNSteps
-    !%Type integer
-    !%Default 400
-    !%Section Math::RootSolver
-    !%Description
-    !% Number of steps which the chosen ODE solver should perform
-    !% in the integration interval [<i>a</i>, <i>b</i>] of the Watterstrom ODE.
-    !%End
-    call parse_variable(dummy_parser, 'WatterstromODESolverNSteps', 400, os%nsteps)
-
-    ! set up ODE solver
-    os%nsize       = order
-    os%tmin        = M_ZERO
-    os%tmax        = M_ONE
-    call ode_solver_create(os)
-    call zode_solver_run(os, func_ws, base_roots, roots)
+    call zode_solver_run(rs%ode_solver, func_ws, base_roots, roots)
 
     SAFE_DEALLOCATE_A(gbase_coeff)
     SAFE_DEALLOCATE_A(gcoeff)

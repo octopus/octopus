@@ -541,7 +541,7 @@ contains
         SAFE_ALLOCATE(out_fft(0:time_steps))
         optimize = .false.
         optimize_parity = -1
-        call fft_init(fft, parser, nn, 1, FFT_REAL, FFTLIB_FFTW, optimize, optimize_parity)
+        call fft_init(fft, nn, 1, FFT_REAL, FFTLIB_FFTW, optimize, optimize_parity)
       case (STANDARD_FOURIER)
         !%Variable ConvertEnergyStep
         !%Type float

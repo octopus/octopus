@@ -31,10 +31,6 @@ module nfft_oct_m
   
   private
   
-#if !defined(HAVE_NFFT)
-  integer, public :: nfft_dummy ! this avoids compilers complaining about empty module
-#else
-
   public ::          &
     nfft_t,          &
     nfft_copy_info,  &
@@ -42,6 +38,7 @@ module nfft_oct_m
     nfft_end,        &
     nfft_precompute, &
     nfft_write_info, &
+    nfft_guru_options, &
     znfft_forward,   &
     znfft_backward,  &
     dnfft_forward,   &
@@ -80,7 +77,7 @@ module nfft_oct_m
     FLOAT, public     :: norm       !> Normalization
 
     ! Guru options
-    logical, public   :: set_defaults = .false. !> set default values from the code
+    logical, public   :: set_defaults = .false. !> the defaults can be overriden
     logical, public   :: guru                   !> use guru options?
     integer, public   :: precompute             !> precompute strategy
     integer, public   :: mm                     !> Window function cut-off parameter
@@ -110,7 +107,7 @@ contains
     !%Description
     !% Perform NFFT with guru interface. This permits the fine tuning of several critical parameters.
     !%End
-    call parse_variable(parser, 'NFFTGuruInterface',  nfft%guru, nfft%guru)
+    call parse_variable(parser, 'NFFTGuruInterface',  .false., nfft%guru)
 
 
     !%Variable NFFTCutoff
@@ -121,7 +118,7 @@ contains
     !% Cut-off parameter of the window function.
     !% See NFFT manual for details.
     !%End
-    call parse_variable(parser, 'NFFTCutoff', nfft%mm, nfft%mm)
+    call parse_variable(parser, 'NFFTCutoff', 6, nfft%mm)
 
 
     !%Variable NFFTOversampling
@@ -131,7 +128,7 @@ contains
     !%Description
     !% NFFT oversampling factor (sigma). This will rule the size of the FFT under the hood.
     !%End
-    call parse_variable(parser, 'NFFTOversampling', nfft%sigma, nfft%sigma)
+    call parse_variable(parser, 'NFFTOversampling', M_TWO, nfft%sigma)
 
     !%Variable NFFTPrecompute
     !%Type integer
@@ -149,7 +146,7 @@ contains
     !% Is the fastest method but requires a large amount of memory as it requires to store (2*m+1)^d*M
     !% real numbers. No extra operations are needed during matrix vector multiplication.
     !%End
-    call parse_variable(parser, 'NFFTPrecompute', nfft%precompute, nfft%precompute)
+    call parse_variable(parser, 'NFFTPrecompute', NFFT_PRE_PSI, nfft%precompute)
      if(.not.varinfo_valid_option('NFFTPrecompute', nfft%precompute)) call messages_input_error('NFFTPrecompute')
 !    call messages_print_var_option(stdout, "NFFTPrecompute", nfft%precompute)
 
@@ -164,9 +161,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nfft_init(nfft, parser, N, dim, M, is_real, optimize)
+  subroutine nfft_init(nfft, nfft_options, N, dim, M, is_real, optimize)
     type(nfft_t),      intent(inout) :: nfft
-    type(parser_t),    intent(in)    :: parser
+    type(nfft_t),      intent(in)    :: nfft_options
     integer,           intent(inout) :: N(3) !> nfft bandwidths
     integer,           intent(inout) :: M(3) !> nfft nodes
     integer,           intent(in)    :: dim
@@ -187,18 +184,14 @@ contains
     nfft%N(:) = N(:)
 
     if(.not. nfft%set_defaults) then
-      !Set defaults
-      nfft%guru = .false.
-      nfft%mm = 6
-      nfft%sigma = M_TWO
-      nfft%precompute = NFFT_PRE_PSI
+      nfft%guru = nfft_options%guru
+      nfft%mm = nfft_options%mm
+      nfft%sigma = nfft_options%sigma
+      nfft%precompute = nfft_options%precompute
     end if
     
     ! set unused dimensions to 1
     nfft%M(dim+1:3) = 1
-    
-
-    call nfft_guru_options(nfft, parser)
 
     my_N = 0
     do ii = 1, dim
@@ -325,7 +318,6 @@ contains
     out%fftN = in%fftN
     out%norm = in%norm
 
-    out%set_defaults = in%set_defaults
     out%guru = in%guru
     out%precompute = in%precompute
     out%mm = in%mm
@@ -509,8 +501,6 @@ contains
 #include "undef.F90"
 #include "complex.F90"
 #include "nfft_inc.F90"
-
-#endif
 
 end module nfft_oct_m
 

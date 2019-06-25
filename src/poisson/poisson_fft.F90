@@ -225,10 +225,9 @@ contains
           ixx(3) = pad_feq(iz, db(3), .true.)
 
          call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
-#ifdef HAVE_NFFT
+
          !HH not very elegant
          if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
-#endif
 
           if(abs(modg2) > M_EPSILON) then
             fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
@@ -581,13 +580,12 @@ contains
           ixx(3) = pad_feq(iz, db(3), .true.)
 
           call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
-#ifdef HAVE_NFFT
+
           !HH
           if(cube%fft%library.eq.FFTLIB_NFFT) then
              modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
              r_c = default_r_c*M_TWO
           end if
-#endif
 
           if(abs(modg2) > M_EPSILON) then
             select case(kernel)

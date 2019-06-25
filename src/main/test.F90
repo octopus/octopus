@@ -302,7 +302,7 @@ contains
     call batch_copy(sys%st%group%psib(1, 1), epsib, copy_data = .true.)
 
     !Initialize the orbital basis
-    call orbitalbasis_init(basis)
+    call orbitalbasis_init(basis, sys%parser)
     if (states_are_real(sys%st)) then
       call dorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, &
                                 .false., .false.)

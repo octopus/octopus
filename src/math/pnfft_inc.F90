@@ -48,8 +48,10 @@ subroutine X(pnfft_forward)(pnfft, in, out)
 
   pnfft%f_hat(:,:,:) = in(:,:,:)
 
+#ifdef HAVE_PNFFT
   call pnfft_trafo(pnfft%plan)
-
+#endif
+  
   out(:,:,:) = pnfft%f(:,:,:)
 
 
@@ -95,9 +97,10 @@ subroutine X(pnfft_backward)(pnfft, in, out)
 
   pnfft%f(:,:,:) = in(:,:,:)
 
-
+#ifdef HAVE_PNFFT
   call pnfft_adj(pnfft%plan)
-
+#endif
+  
   out(:,:,:) = pnfft%f_hat(:,:,:)
 
 !   do i1 = 1,pnfft%N_local(1)

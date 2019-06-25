@@ -383,9 +383,9 @@ contains
     do il = 1, ep%no_lasers
       select case(cf_common%mode)
       case(controlfunction_mode_epsilon)
-        call laser_to_numerical_all(ep%lasers(il), parser, dt, max_iter, cf_common%omegamax)
+        call laser_to_numerical_all(ep%lasers(il), dt, max_iter, cf_common%omegamax)
       case default
-        call laser_to_numerical(ep%lasers(il), parser, dt, max_iter, cf_common%omegamax)
+        call laser_to_numerical(ep%lasers(il), dt, max_iter, cf_common%omegamax)
       end select
     end do
 
@@ -502,14 +502,14 @@ contains
           message(1) = 'Time-dependent function "'//trim(expression)//'" could not be read from inp file.'
           call messages_fatal(1)
         end if
-        call tdf_to_numerical(cf_common%td_penalty(irow), parser, steps, dt, cf_common%omegamax)
+        call tdf_to_numerical(cf_common%td_penalty(irow), steps, dt, cf_common%omegamax)
         ierr = parse_block(parser, 'OCTLaserEnvelope', blk)
       end do
 
       call parse_block_end(blk)
     else
       do ipar = 1, cf_common%no_controlfunctions
-        call tdf_init_numerical(cf_common%td_penalty(ipar), parser, steps, dt, -M_ONE, initval = M_ONE)
+        call tdf_init_numerical(cf_common%td_penalty(ipar), steps, dt, -M_ONE, initval = M_ONE)
       end do
     end if
 
@@ -558,7 +558,7 @@ contains
 
     SAFE_ALLOCATE(cp%f(1:cp%no_controlfunctions))
     do ipar = 1, cp%no_controlfunctions
-      call tdf_init_numerical(cp%f(ipar), parser, ntiter, dt, cf_common%omegamax)
+      call tdf_init_numerical(cp%f(ipar), ntiter, dt, cf_common%omegamax)
     end do
 
     ! If the control function is represented directly in real time, the "dimension" (cp%dim) is
@@ -1517,7 +1517,7 @@ contains
     SAFE_ALLOCATE(dedu(1:par%dof, 1:par%dim))
     call controlfunction_deltaedeltau(par, dedu)
     call tdf_set_numerical(depsilon, dedu(i, 1:par%dim))
-    call tdf_to_numerical(depsilon, parser)
+    call tdf_to_numerical(depsilon)
     if(controlfunction_mode() == controlfunction_mode_f) call tdf_cosine_multiply(par%w0, depsilon)
 
     SAFE_DEALLOCATE_A(dedu)

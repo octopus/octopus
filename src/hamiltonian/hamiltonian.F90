@@ -438,8 +438,10 @@ contains
       if(hm%theory_level /= HARTREE_FOCK) then
         call messages_not_implemented("SCDM for exact exchange in OEP (TheoryLevel = dft)")
       end if
-       message(1) = "Info: Using SCDM for exact exchange"
-       call messages_info(1)
+      message(1) = "Info: Using SCDM for exact exchange"
+      call messages_info(1)
+
+      call scdm_init(hm%hf_st, parser, gr%der, psolver%cube, hm%scdm)
     end if
 
     if(hm%theory_level == HARTREE_FOCK .and. st%parallel_in_states) then

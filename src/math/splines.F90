@@ -292,7 +292,7 @@ module splines_oct_m
       type(c_ptr), intent(inout) :: spl, acc
     end subroutine oct_spline_end
 
-    subroutine oct_spline_fit(nrc, x, y, spl, acc, lib)
+    subroutine oct_spline_fit(nrc, x, y, spl, acc)
       use iso_c_binding
       implicit none
       integer,     intent(in) :: nrc
@@ -300,7 +300,6 @@ module splines_oct_m
       real(8),     intent(in) :: y
       type(c_ptr), intent(inout) :: spl
       type(c_ptr), intent(inout) :: acc
-      integer,     intent(in)    :: lib
     end subroutine oct_spline_fit
 
     real(8) pure function oct_spline_eval(x, spl, acc)
@@ -403,31 +402,7 @@ module splines_oct_m
     end function oct_spline_eval_integ_full
   end interface
 
-  integer, save :: library = 0
-
 contains
-
-  subroutine spline_init_global()
-    PUSH_SUB(spline_init_global)
-
-
-    !%Variable Splines
-    !%Type integer
-    !%Default gsl
-    !%Section Execution
-    !%Description
-    !% Selects the implementation of the spline interpolation.
-    !%Option gsl 1
-    !% The GNU scientific library. 
-    !%Option native 2
-    !% (experimental) Octopus own implementation. New, untested, and
-    !% hopefully faster.
-    !%End
-    
-    call parse_variable(dummy_parser, 'Splines', OPTION__SPLINES__GSL, library)
-
-    POP_SUB(spline_init_global)
-  end subroutine spline_init_global
 
   !------------------------------------------------------------
   subroutine spline_init_0(spl)
@@ -563,12 +538,10 @@ contains
     type(spline_t), intent(inout) :: spl
 
     !No PUSH SUB, called too often
-
-    if(library == 0) call spline_init_global()
     
     spl%x_limit(1) = rofi(1)
     spl%x_limit(2) = rofi(nrc)
-    call oct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc, library)
+    call oct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc)
 
   end subroutine spline_fit8
 

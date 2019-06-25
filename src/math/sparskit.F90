@@ -20,8 +20,9 @@
 
 module sparskit_oct_m
   use global_oct_m
-  use parser_oct_m
+  use loct_pointer_oct_m
   use messages_oct_m
+  use parser_oct_m
   use profiling_oct_m
 
   implicit none
@@ -45,14 +46,13 @@ module sparskit_oct_m
   public ::                      &
     sparskit_solver_t
   
-#ifdef HAVE_SPARSKIT
-    public ::                      &
-      sparskit_solver_init,        &
-      dsparskit_solver_run,        &
-      zsparskit_solver_run,        &
-      sparskit_solver_end
-#endif
-
+  public ::                      &
+    sparskit_solver_init,        &
+    dsparskit_solver_run,        &
+    zsparskit_solver_run,        &
+    sparskit_solver_end,         &
+    sparskit_solver_copy
+  
   type sparskit_solver_t
     private
     logical :: is_complex           !< whether set up for complex (otherwise real)
@@ -73,8 +73,6 @@ module sparskit_oct_m
     FLOAT   :: fpar(16)             !< floating-point parameter array for the reverse communication protocol
     logical :: verbose              !< if .true. then the solver will write more details
   end type sparskit_solver_t
-
-#ifdef HAVE_SPARSKIT
 
 contains
 
@@ -288,6 +286,34 @@ contains
     POP_SUB(sparskit_solver_end)
   end subroutine sparskit_solver_end
 
+  ! ---------------------------------------------------------
+  subroutine sparskit_solver_copy(ski, sko)
+    type(sparskit_solver_t), intent(in)  :: ski
+    type(sparskit_solver_t), intent(out) :: sko
+
+    PUSH_SUB(sparskit_solver_end)
+    
+    sko%is_complex      = ski%is_complex
+    sko%size            = ski%size
+    sko%solver_type     = ski%solver_type
+    sko%krylov_size     = ski%krylov_size
+    sko%preconditioning = ski%preconditioning
+    sko%maxiter         = ski%maxiter
+    sko%used_iter       = ski%used_iter
+    sko%iter_out        = ski%iter_out
+    sko%residual_norm   = ski%residual_norm
+    sko%rel_tolerance   = ski%rel_tolerance
+    sko%abs_tolerance   = ski%abs_tolerance
+    call loct_allocatable_copy(sko%sk_work, ski%sk_work)
+    call loct_allocatable_copy(sko%sk_b,    ski%sk_b)
+    call loct_allocatable_copy(sko%sk_y,    ski%sk_y)
+    sko%ipar            = ski%ipar
+    sko%fpar            = ski%fpar
+    sko%verbose         = ski%verbose
+
+    POP_SUB(sparskit_solver_end)
+  end subroutine sparskit_solver_copy
+  
 #include "undef.F90"
 #include "real.F90"
 #include "sparskit_inc.F90"
@@ -295,8 +321,6 @@ contains
 #include "undef.F90"
 #include "complex.F90"
 #include "sparskit_inc.F90"
-
-#endif /* HAVE_SPARSKIT */
 
 ! distdot function for dot products is defined in mesh_function_oct_m
 
