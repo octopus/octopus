@@ -103,6 +103,8 @@ program wannier90_interface
   call parser_init(parser)
 
   call messages_init(parser)
+  call io_init(parser)
+
   call calc_mode_par_init()
 
   call profiling_init(parser)
@@ -507,49 +509,49 @@ contains
     end do
    call io_close(w90_nnkp)
 
-    w90_nnkp = io_open(trim(filename), action='read')
-    ! read from nnkp file
-    ! find the nnkpts block
-    do while(.true.)
-      read(w90_nnkp,*,end=101) dummy, dummy1
-      if(dummy =='begin' .and. dummy1 == 'nnkpts' ) then
-        read(w90_nnkp,*) w90_nntot
-        SAFE_ALLOCATE(w90_nnk_list(1:w90_num_kpts*w90_nntot,1:5))
-        do ii=1,w90_num_kpts*w90_nntot
-          read(w90_nnkp,*) w90_nnk_list(ii,1:5)
-        end do
-        !make sure we are at the end of the block
-        read(w90_nnkp,*) dummy
-        if(dummy /= 'end') then
-          message(1) = 'oct-wannier90: There dont seem to be enough k-points in nnkpts file to.'
-          call messages_fatal(1)
-        end if
-        exit
-      end if
-    end do
+   w90_nnkp = io_open(trim(filename), action='read')
+   ! read from nnkp file
+   ! find the nnkpts block
+   do while(.true.)
+     read(w90_nnkp,*,end=101) dummy, dummy1
+     if(dummy =='begin' .and. dummy1 == 'nnkpts' ) then
+       read(w90_nnkp,*) w90_nntot
+       SAFE_ALLOCATE(w90_nnk_list(1:w90_num_kpts*w90_nntot,1:5))
+       do ii=1,w90_num_kpts*w90_nntot
+         read(w90_nnkp,*) w90_nnk_list(ii,1:5)
+       end do
+       !make sure we are at the end of the block
+       read(w90_nnkp,*) dummy
+       if(dummy /= 'end') then
+         message(1) = 'oct-wannier90: There dont seem to be enough k-points in nnkpts file to.'
+         call messages_fatal(1)
+       end if
+       exit
+     end if
+   end do
 
-    ! read from nnkp file
-    ! find the exclude block
-    SAFE_ALLOCATE(exclude_list(1:st%nst))
-    !By default we use all the bands
-    exclude_list(1:st%nst) = 1
-    do while(.true.)
-      read(w90_nnkp,*,end=102) dummy, dummy1
-      if(dummy =='begin' .and. dummy1 == 'exclude_bands' ) then
-        read(w90_nnkp,*) w90_num_exclude
-        do ii=1,w90_num_exclude
-          read(w90_nnkp,*) itemp
-          exclude_list(itemp) = 0
-        end do
-        !make sure we are at the end of the block
-        read(w90_nnkp,*) dummy
-        if(dummy /= 'end') then
-          message(1) = 'oct-wannier90: There dont seem to be enough bands in exclude_bands list.'
-          call messages_fatal(1)
-        end if
-        goto 102
-      end if
-    end do
+   ! read from nnkp file
+   ! find the exclude block
+   SAFE_ALLOCATE(exclude_list(1:st%nst))
+   !By default we use all the bands
+   exclude_list(1:st%nst) = 1
+   do while(.true.)
+     read(w90_nnkp,*,end=102) dummy, dummy1
+     if(dummy =='begin' .and. dummy1 == 'exclude_bands' ) then
+       read(w90_nnkp,*) w90_num_exclude
+       do ii=1,w90_num_exclude
+         read(w90_nnkp,*) itemp
+         exclude_list(itemp) = 0
+       end do
+       !make sure we are at the end of the block
+       read(w90_nnkp,*) dummy
+       if(dummy /= 'end') then
+         message(1) = 'oct-wannier90: There dont seem to be enough bands in exclude_bands list.'
+         call messages_fatal(1)
+       end if
+       goto 102
+     end if
+   end do
 
     ! jump point when EOF found while looking for nnkpts block
 101 message(1) = 'oct-wannier90: Did not find nnkpts block in nnkp file'
@@ -571,87 +573,87 @@ contains
     end do
 
     if(iand(w90_what, OPTION__WANNIER90_FILES__W90_AMN) /= 0) then
-       ! parse file again for definitions of projections
-       w90_nnkp = io_open(trim(filename), action='read')
+      ! parse file again for definitions of projections
+      w90_nnkp = io_open(trim(filename), action='read')
 
-       do while(.true.)
-          read(w90_nnkp,*,end=201) dummy, dummy1
+      do while(.true.)
+        read(w90_nnkp,*,end=201) dummy, dummy1
 
-          if(dummy =='begin' .and. (dummy1 == 'projections' .or. dummy1 == 'spinor_projections')) then
+        if(dummy =='begin' .and. (dummy1 == 'projections' .or. dummy1 == 'spinor_projections')) then
 
-              if(dummy1 == 'spinor_projections') then
-                 w90_spinors = .true.
-                 message(1) = 'oct-wannier90: Spinor interface incomplete. Note there is no quantization axis implemented'
-                 call messages_warning(1)
-              end if
-
-              read(w90_nnkp,*) w90_nproj
-              ! num_wann is given in w90.win, not double checked here
-              ! I assume that the wannier90.x -pp run has checked this
-              w90_num_wann = w90_nproj
-
-              SAFE_ALLOCATE(w90_proj_centers(w90_nproj,3))
-              SAFE_ALLOCATE(w90_proj_lmr(w90_nproj,3))
-              if(w90_spinors) SAFE_ALLOCATE(w90_spin_proj_component(w90_nproj))
-              if(w90_spinors) SAFE_ALLOCATE(w90_spin_proj_axis(w90_nproj,3))
-
-              do ii=1,w90_nproj
-                 read(w90_nnkp,*) w90_proj_centers(ii,1:3), w90_proj_lmr(ii,1:3)
-                 ! skip a line for now
-                 read(w90_nnkp,*) dummyr(1:7)
-                 if(w90_spinors) then
-                    read(w90_nnkp,*) w90_spin_proj_component(ii), w90_spin_proj_axis(ii,1:3)
-                    ! use octopus spindim conventions
-                    if(w90_spin_proj_component(ii) == -1) w90_spin_proj_component(ii) = 2
-                 end if
-              end do
-              !make sure we are at the end of the block
-              read(w90_nnkp,*) dummy
-              if(dummy /= 'end') then
-                 message(1) = 'oct-wannier90: There dont seem to be enough projections in nnkpts file to.'
-                 call messages_fatal(1)
-              end if
-              goto 202
+          if(dummy1 == 'spinor_projections') then
+            w90_spinors = .true.
+            message(1) = 'oct-wannier90: Spinor interface incomplete. Note there is no quantization axis implemented'
+            call messages_warning(1)
           end if
-       end do
 
-       ! jump point when EOF found while looking for projections block
-201    message(1) = 'oct-wannier90: Did not find projections block in w90.nnkp file'
-       call messages_fatal(1)
+          read(w90_nnkp,*) w90_nproj
+          ! num_wann is given in w90.win, not double checked here
+          ! I assume that the wannier90.x -pp run has checked this
+          w90_num_wann = w90_nproj
 
-       ! jump point when projections is found in file
-202    continue
+          SAFE_ALLOCATE(w90_proj_centers(w90_nproj,3))
+          SAFE_ALLOCATE(w90_proj_lmr(w90_nproj,3))
+          if(w90_spinors) SAFE_ALLOCATE(w90_spin_proj_component(w90_nproj))
+          if(w90_spinors) SAFE_ALLOCATE(w90_spin_proj_axis(w90_nproj,3))
 
-       ! look for auto_projection block
-       scdm_proj = .false.
-       do while(.true.)
-         read(w90_nnkp,*,end=203) dummy, dummy1
-
-         if(dummy =='begin' .and. dummy1 =='auto_projections') then
-           scdm_proj = .true.
-           read(w90_nnkp,*) w90_nproj
-           w90_num_wann = w90_nproj
-           if(.not. w90_scdm) then
-             message(1) = 'Found auto_projections block. Currently the only implemeted automatic way'
-             message(2) = 'to compute projections is the SCDM method.'
-             message(3) = 'Please set wannier90_mode = w90_scdm in the inp file.'
-             call messages_fatal(3)
-           end if
-           if(w90_nproj /= w90_num_bands) then
-             message(1) = 'In auto_projections block first row needs to be equal to num_bands.'
+          do ii=1,w90_nproj
+             read(w90_nnkp,*) w90_proj_centers(ii,1:3), w90_proj_lmr(ii,1:3)
+             ! skip a line for now
+             read(w90_nnkp,*) dummyr(1:7)
+             if(w90_spinors) then
+                read(w90_nnkp,*) w90_spin_proj_component(ii), w90_spin_proj_axis(ii,1:3)
+                ! use octopus spindim conventions
+                if(w90_spin_proj_component(ii) == -1) w90_spin_proj_component(ii) = 2
+             end if
+          end do
+          !make sure we are at the end of the block
+          read(w90_nnkp,*) dummy
+          if(dummy /= 'end') then
+             message(1) = 'oct-wannier90: There dont seem to be enough projections in nnkpts file to.'
              call messages_fatal(1)
-           end if
-           read(w90_nnkp,*) dummyint
-           if(dummyint /= 0) then
-             message(1) = 'The second row in auto_projections has to be 0, per Wannier90 documentation.'
-             call messages_fatal(1)
-           end if
-         end if
-       end do
+          end if
+          goto 202
+        end if
+      end do
 
-       ! Jump point for scan for auto_projections, nothing checked here
-203    continue     
-       call io_close(w90_nnkp)
+      ! jump point when EOF found while looking for projections block
+201   message(1) = 'oct-wannier90: Did not find projections block in w90.nnkp file'
+      call messages_fatal(1)
+
+      ! jump point when projections is found in file
+202   continue
+
+      ! look for auto_projection block
+      scdm_proj = .false.
+      do while(.true.)
+        read(w90_nnkp,*,end=203) dummy, dummy1
+
+        if(dummy =='begin' .and. dummy1 =='auto_projections') then
+          scdm_proj = .true.
+          read(w90_nnkp,*) w90_nproj
+          w90_num_wann = w90_nproj
+          if(.not. w90_scdm) then
+            message(1) = 'Found auto_projections block. Currently the only implemeted automatic way'
+            message(2) = 'to compute projections is the SCDM method.'
+            message(3) = 'Please set wannier90_mode = w90_scdm in the inp file.'
+            call messages_fatal(3)
+          end if
+          if(w90_nproj /= w90_num_bands) then
+            message(1) = 'In auto_projections block first row needs to be equal to num_bands.'
+            call messages_fatal(1)
+          end if
+          read(w90_nnkp,*) dummyint
+          if(dummyint /= 0) then
+            message(1) = 'The second row in auto_projections has to be 0, per Wannier90 documentation.'
+            call messages_fatal(1)
+          end if
+        end if
+      end do
+
+      ! Jump point for scan for auto_projections, nothing checked here
+203   continue     
+      call io_close(w90_nnkp)
  
     end if
 
@@ -995,15 +997,6 @@ contains
         SAFE_DEALLOCATE_A(rr)
       end do
       
-      filename = './'// trim(adjustl(w90_prefix))//'.amn'
-      w90_amn = io_open(trim(filename), action='write')
-      
-      ! write header
-      if(mpi_grp_is_root(mpi_world)) then
-        write(w90_amn,*) 'Created by oct-wannier90'
-        write(w90_amn,*)  w90_num_bands, w90_num_kpts, w90_num_wann
-      end if
-      
       SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
       SAFE_ALLOCATE(phase(1:mesh%np))
       SAFE_ALLOCATE(projection(1:w90_nproj))
@@ -1071,7 +1064,7 @@ contains
     type(simul_box_t), intent(in) :: sb
     type(geometry_t),  intent(in) :: geo
 
-    integer :: w90_Umat, w90_xyz, nwann, nik
+    integer :: w90_u_mat, w90_xyz, nwann, nik
     integer :: ik, iw, iw2, ip, ipmax
     integer(8) :: how
     FLOAT, allocatable :: centers(:,:), dwn(:)
@@ -1116,15 +1109,15 @@ contains
       write(message(2),'(a)') 'Please run wannier90.x with "write_u_matrices=.true." in '// trim(adjustl(w90_prefix)) // '.'
       call messages_fatal(2)
     end if
-    w90_Umat = io_open(trim(trim(adjustl(w90_prefix))//'_u.mat'), action='read')    
+    w90_u_mat = io_open(trim(trim(adjustl(w90_prefix))//'_u.mat'), action='read')    
 
     !To be read later
     w90_num_wann = w90_num_bands
     
     !Skip one line
-    read(w90_Umat, *)
+    read(w90_u_mat, *)
     !Read num_kpts, num_wann, num_wann for consistency check
-    read(w90_Umat, *) nik, nwann, nwann
+    read(w90_u_mat, *) nik, nwann, nwann
     if(nik /= w90_num_kpts .or. nwann /= w90_num_wann) then
       print *, nik, w90_num_kpts, nwann, w90_num_wann
       message(1) = "The file contains U matrices is inconsistent with the .win file."
@@ -1135,13 +1128,13 @@ contains
 
     do ik = 1, w90_num_kpts
       !Skip one line
-      read(w90_Umat, *)
+      read(w90_u_mat, *)
       !Skip one line (k-point coordinate)
-      read(w90_Umat, *)
-      read(w90_Umat, '(f15.10,sp,f15.10)') ((Umnk(iw, iw2, ik), iw=1, w90_num_wann), iw2=1, w90_num_wann)
+      read(w90_u_mat, *)
+      read(w90_u_mat, '(f15.10,sp,f15.10)') ((Umnk(iw, iw2, ik), iw=1, w90_num_wann), iw2=1, w90_num_wann)
     end do
     
-    call io_close(w90_Umat)
+    call io_close(w90_u_mat)
 
     !We read the output format for the Wannier states
     call io_function_read_how(sb, parser, how)
