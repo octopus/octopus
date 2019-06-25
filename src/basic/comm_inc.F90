@@ -166,9 +166,10 @@ subroutine X(comm_allreduce_3)(comm, aa, dim)
       SAFE_ALLOCATE(aac(1:dim_(1), 1:dim_(2), 1:dim_(3)))
       aac(1:dim_(1), 1:dim_(2), 1:dim_(3)) = aa(1:dim_(1), 1:dim_(2), 1:dim_(3))
       call MPI_Allreduce(aac(1, 1, 1), aa(1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
+      SAFE_DEALLOCATE_A(aac)
 #endif
 
- else
+  else
 
 #if defined(HAVE_MPI2)
 
@@ -176,6 +177,7 @@ subroutine X(comm_allreduce_3)(comm, aa, dim)
       aac(1:dim_(1), 1:dim_(2), 1:dim_(3)) = aa(1:dim_(1), 1:dim_(2), 1:dim_(3))
       call MPI_Allreduce(MPI_IN_PLACE, aac(1, 1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
       aa(1:dim_(1), 1:dim_(2), 1:dim_(3)) = aac(1:dim_(1), 1:dim_(2), 1:dim_(3))
+      SAFE_DEALLOCATE_A(aac)
 
 #elif defined(HAVE_MPI)
 
@@ -186,10 +188,9 @@ subroutine X(comm_allreduce_3)(comm, aa, dim)
           call MPI_Allreduce(aac(1, 1, 1), aa(1, ii, jj), dim_(1), R_MPITYPE, MPI_SUM, comm, mpi_err)
         end do
       end do
+      SAFE_DEALLOCATE_A(aac)
 #endif
   end if
-
-  SAFE_DEALLOCATE_A(aac)
 
   POP_SUB(X(comm_allreduce_3))
 end subroutine X(comm_allreduce_3)
