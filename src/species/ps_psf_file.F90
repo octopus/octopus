@@ -35,11 +35,12 @@ module ps_psf_file_oct_m
 
   ! First, the contents of the file.
   type ps_psf_file_t
+    ! Components are public by default
     character(len=2)   :: namatm
     character(len=2)   :: icorr
     character(len=3)   :: irel
     character(len=4)   :: icore
-    character(len=10)  :: method(6)
+    character(len=10), private :: method(6)
     character(len=70)  :: title
 
     integer            :: npotd         ! l = 0 .. npotd-1
@@ -48,7 +49,7 @@ module ps_psf_file_oct_m
     FLOAT              :: a, b
     FLOAT              :: zval          ! valence charge
 
-    FLOAT, pointer     :: rofi(:)
+    FLOAT, pointer, private :: rofi(:)
     FLOAT, pointer     :: vps(:,:)
     FLOAT, pointer     :: chcore(:)
     FLOAT, pointer     :: rho_val(:)

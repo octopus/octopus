@@ -40,6 +40,7 @@ module logrid_oct_m
     LOGRID_CPI  = 2    !< log grid used in FHI code
 
   type logrid_t
+    ! Components are public by default
     integer  :: flavor
 
     FLOAT    :: a, b

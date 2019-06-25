@@ -73,6 +73,7 @@ program wannier90_interface
   type(restart_t)      :: restart
   type(system_t)       :: sys
   type(states_t)       :: st
+  type(parser_t)       :: parser
   logical              :: w90_setup, w90_output, w90_wannier, w90_scdm
   logical              :: w90_spinors, scdm_proj
   integer              :: w90_nntot, w90_num_bands, w90_num_kpts   ! w90 input parameters
@@ -99,20 +100,20 @@ program wannier90_interface
   integer :: ist, jst, ik
 
   call global_init()
+  call parser_init(parser)
 
-  call messages_init()
-  call io_init()
+  call messages_init(parser)
   call calc_mode_par_init()
 
-  call profiling_init()
+  call profiling_init(parser)
 
-  call restart_module_init()
+  call restart_module_init(parser)
 
-  call fft_all_init()
-  call unit_system_init()
+  call fft_all_init(parser)
+  call unit_system_init(parser)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  call system_init(sys)
+  call system_init(sys, parser)
 
   !%Variable wannier90_prefix
   !%Type string
@@ -121,7 +122,7 @@ program wannier90_interface
   !%Description
   !% Prefix for wannier90 files
   !%End
-  call parse_variable('wannier90_prefix', 'w90', w90_prefix)
+  call parse_variable(parser, 'wannier90_prefix', 'w90', w90_prefix)
   if(w90_prefix=='w90') then
     message(1) = "Did not find wannier90_prefix keyword, will use default: w90"
     call  messages_warning(1)
@@ -149,7 +150,7 @@ program wannier90_interface
   !%Option w90_scdm bit(4)
   !% use scdm method to generate *.amn file for wannier90
   !%End
-  call parse_variable('wannier90_mode', 0, w90_what)
+  call parse_variable(parser, 'wannier90_mode', 0, w90_what)
   w90_setup = iand(w90_what, OPTION__WANNIER90_MODE__W90_SETUP) /= 0
   w90_output = iand(w90_what, OPTION__WANNIER90_MODE__W90_OUTPUT) /= 0
   w90_wannier = iand(w90_what, OPTION__WANNIER90_MODE__W90_WANNIER) /= 0
@@ -177,7 +178,7 @@ program wannier90_interface
   !% Eigenvalues. See Wannier90 documentation for more details.
   !%End
   w90_what = OPTION__WANNIER90_FILES__W90_MMN + OPTION__WANNIER90_FILES__W90_AMN + OPTION__WANNIER90_FILES__W90_EIG
-  call parse_variable('wannier90_files', w90_what, w90_what)
+  call parse_variable(parser, 'wannier90_files', w90_what, w90_what)
 
 
   ! sanity checks
@@ -208,7 +209,7 @@ program wannier90_interface
     call messages_fatal(1)
   end if
 
-  call states_init(st, sys%gr, sys%geo)
+  call states_init(st, parser, sys%gr, sys%geo)
 
   if(st%d%ispin /= UNPOLARIZED) then
     call messages_experimental("oct-wannier90 with SpinComponnents /= unpolarized") 
@@ -226,15 +227,15 @@ program wannier90_interface
 
     ! normal interface run
     call kpoints_distribute(st%d,sys%mc)
-    call states_distribute_nodes(st,sys%mc)
-    call states_exec_init(st, sys%mc)
+    call states_distribute_nodes(st, parser, sys%mc)
+    call states_exec_init(st, parser, sys%mc)
     call states_allocate_wfns(st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
-    call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, &
+    call restart_init(restart, parser, RESTART_GS, RESTART_TYPE_LOAD, &
                        sys%mc, ierr, sys%gr%der%mesh)
     if(ierr == 0) then
       call states_look(restart, nik, dim, nst, ierr)
       if(dim==st%d%dim .and. nik==sys%gr%sb%kpoints%reduced%npoints .and. nst==st%nst) then
-         call states_load(restart, st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
+         call states_load(restart, parser, st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
       else
          write(message(1),'(a)') 'Restart structure not commensurate.'
          call messages_fatal(1)
@@ -249,7 +250,7 @@ program wannier90_interface
       !%Description
       !% Broadening of SCDM smearing function
       !%End                                                                                                                                                                       
-      call parse_variable('scdm_sigma', CNST(0.2), scdm_sigma)
+      call parse_variable(parser, 'scdm_sigma', CNST(0.2), scdm_sigma)
 
       !%Variable scdm_mu
       !%Type float
@@ -257,7 +258,7 @@ program wannier90_interface
       !%Description
       !% Energy range up to which states are considered for SCDM 
       !%End
-      call parse_variable('scdm_mu', M_HUGE, scdm_mu)
+      call parse_variable(parser, 'scdm_mu', M_HUGE, scdm_mu)
 
       nik = w90_num_kpts
       SAFE_ALLOCATE(jpvt(1:sys%gr%der%mesh%np_global))
@@ -354,15 +355,15 @@ program wannier90_interface
 
    ! normal interface run
     call kpoints_distribute(st%d,sys%mc)
-    call states_distribute_nodes(st,sys%mc)
-    call states_exec_init(st, sys%mc)
+    call states_distribute_nodes(st, parser, sys%mc)
+    call states_exec_init(st, parser, sys%mc)
     call states_allocate_wfns(st,sys%gr%der%mesh, wfs_type = TYPE_CMPLX, skip=exclude_list)
-    call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, &
+    call restart_init(restart, parser, RESTART_GS, RESTART_TYPE_LOAD, &
                        sys%mc, ierr, sys%gr%der%mesh)
     if(ierr == 0) then
       call states_look(restart, nik, dim, nst, ierr)
       if(dim==st%d%dim .and. nik==sys%gr%sb%kpoints%reduced%npoints .and. nst==st%nst) then
-        call states_load(restart, st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
+        call states_load(restart, parser, st, sys%gr, ierr, iter, label = ": wannier90", skip=exclude_list)
       else
          write(message(1),'(a)') 'Restart structure not commensurate.'
          call messages_fatal(1)
@@ -381,6 +382,7 @@ program wannier90_interface
   call io_end()
   call profiling_end()
   call messages_end()
+  call parser_end(parser)
   call global_end()
 
 contains
@@ -436,7 +438,7 @@ contains
       write(w90_win,'(a)')  'gamma_only = .true.'
       write(w90_win,'(a)') ' '
     else
-      if(.not.parse_is_defined('KPointsGrid')) then
+      if(.not.parse_is_defined(parser, 'KPointsGrid')) then
         message(1) = 'oct-wannier90: need Monkhorst-Pack grid. Please specify %KPointsGrid'
         call messages_fatal(1)
       end if
@@ -942,7 +944,7 @@ contains
       call messages_info(1)
       
       !We use the variabel AOThreshold to deterine the threshold on the radii of the atomic orbitals
-      call parse_variable('AOThreshold', CNST(0.01), threshold)
+      call parse_variable(parser, 'AOThreshold', CNST(0.01), threshold)
       
       SAFE_ALLOCATE(orbitals(1:w90_nproj))
       ! precompute orbitals
@@ -1142,7 +1144,7 @@ contains
     call io_close(w90_Umat)
 
     !We read the output format for the Wannier states
-    call io_function_read_how(sb, how)
+    call io_function_read_how(sb, parser, how)
 
     call io_mkdir('wannier')
 
@@ -1269,7 +1271,7 @@ contains
       end do
     end do
  
-    call states_write_bandstructure('.', w90_num_bands, st, sys%gr%sb, sys%geo, sys%gr%der%mesh, dummyphase)
+    call states_write_bandstructure('.', parser, w90_num_bands, st, sys%gr%sb, sys%geo, sys%gr%der%mesh, dummyphase)
  
     SAFE_DEALLOCATE_A(eigk)
     SAFE_DEALLOCATE_A(hk_eigenval)

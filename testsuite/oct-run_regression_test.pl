@@ -117,12 +117,6 @@ if(length($opt_f) == 0) {
     die255("You must supply the name of a test file with the -f option.");
 }
 
-if($opt_G) {
-    $offset_GPU = $opt_G;
-} else {
-    $offset_GPU = -1
-}
-
 $aexec = get_env("EXEC");
 $global_np = get_env("OCT_TEST_MPI_NPROCS");
 
@@ -168,13 +162,13 @@ $options_required = "";
 $options_required_mpi = "";
 $options_are_mpi = 0;
 
-# adjust offset_GPU for MPI runs:
-
-if( "$mpiexec" eq "" ) {
-    $offset_GPU = $offset_GPU * $np;
+# Handle GPU offset
+$offset_GPU = defined $opt_G ? $opt_G : -1;
+if($offset_GPU >= 0) {
+    $command_env = "OCT_PARSE_ENV=1 OCT_AccelDevice=$offset_GPU";
+} else {
+    $command_env = "";
 }
-
-$ENV{OCT_OpenCLDevice} = $offset_GPU;
 
 # This variable counts the number of failed testcases.
 $failures = 0;
@@ -325,8 +319,8 @@ while ($_ = <TESTSUITE>) {
         }
       
 
-        if ( $_ =~ /^Util\s*:\s*(.*)\s*$/) {
-            $np = "serial";
+        if ( $_ =~ /^Util\s*:\s*(.*)\s*$/ || $_ =~ /^MPIUtil\s*:\s*(.*)\s*$/) {
+            if( $_ =~ /^Util\s*:\s*(.*)\s*$/) {$np = "serial";}
             $command = "$exec_directory/$1";
             if( ! -x "$command") {
                 $command = "$exec_directory/../utils/$1";
@@ -411,9 +405,9 @@ while ($_ = <TESTSUITE>) {
                         $specify_np = "-n $np";
                         $my_nslots = "";
                     }
-                    $command_line = "cd $workdir; $my_nslots $mpiexec $specify_np $machinelist $aexec $command > out";
+                    $command_line = "cd $workdir; $command_env $my_nslots $mpiexec $specify_np $machinelist $aexec $command > out";
                 } else {
-                    $command_line = "cd $workdir; $aexec $command > out ";
+                    $command_line = "cd $workdir; $command_env $aexec $command > out ";
                 }
 
                 # MPI implementations generally permit using more tasks than actual cores, and running tests this way makes it likely for developers to find race conditions.

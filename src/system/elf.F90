@@ -40,7 +40,9 @@ module elf_oct_m
 
 contains
 
-  subroutine elf_init
+  subroutine elf_init(parser)
+    type(parser_t),    intent(in)    :: parser
+    
     PUSH_SUB(elf_init)
 
     !%Variable ELFWithCurrentTerm
@@ -53,7 +55,7 @@ contains
     !% default; however, for research purposes it may be useful not to add it.
     !% If this feature proves to be useless, this option should go away.
     !%End
-    call parse_variable('ELFWithCurrentTerm', .true., with_current_term)
+    call parse_variable(parser, 'ELFWithCurrentTerm', .true., with_current_term)
 
     POP_SUB(elf_init)
   end subroutine elf_init
@@ -63,7 +65,7 @@ contains
   ! ---------------------------------------------------------
   subroutine elf_calc(st, gr, elf, de)
     type(states_t),   intent(inout) :: st
-    type(grid_t),     intent(inout) :: gr
+    type(grid_t),     intent(in)    :: gr
     !> elf(gr%mesh%np, 1) if st%d%ispin = 1, elf(gr%mesh%np, 3) otherwise.
     !! On output, it should contain the global ELF if st%d%ispin = 1,
     !! otherwise elf(:, 3) contains the global ELF, and 

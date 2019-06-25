@@ -33,18 +33,20 @@ module debug_oct_m
     debug_disable
 
   type debug_t
-    logical :: info
-    logical :: trace
-    logical :: trace_term
-    logical :: trace_file
+    private
+    logical, public :: info
+    logical, public :: trace
+    logical, public :: trace_term
+    logical, public :: trace_file
     logical :: extra_checks
     integer :: bits    
   end type debug_t
 
 contains
   
-  subroutine debug_init(this)
-    type(debug_t), intent(out) :: this
+  subroutine debug_init(this, parser)
+    type(debug_t),  intent(out)   :: this
+    type(parser_t), intent(in)    :: parser
 
     !%Variable Debug
     !%Type flag
@@ -73,7 +75,7 @@ contains
     !% This enables Octopus to perform some extra checks, to ensure
     !% code correctness, that might be too costly for regular runs.
     !%End
-    call parse_variable('Debug', OPTION__DEBUG__NO, this%bits)
+    call parse_variable(parser, 'Debug', OPTION__DEBUG__NO, this%bits)
 
     call from_bits(this)
     

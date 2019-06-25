@@ -43,14 +43,15 @@ module modelmb_particles_oct_m
   !!  container type for input vars concerning modelmb particles
   !!==============================================================
   type modelmb_particle_t
-    integer :: ndim              !< dimensionality of modelmb space each
-                                 !!  particle lives in
+    private
+    integer, public :: ndim              !< dimensionality of modelmb space each
+                                         !!  particle lives in
     
-    integer :: ntype_of_particle !< number of different types of particles
-                                 !!  modelmb in MAX_DIM dimensional space
+    integer, public :: ntype_of_particle !< number of different types of particles
+                                         !!  modelmb in MAX_DIM dimensional space
     integer :: max_particles_per_type    !< max number of different particle
 
-    integer :: nparticle         !< number of particles 
+    integer, public :: nparticle         !< number of particles 
 
     integer :: ndensities_to_calculate
 
@@ -63,16 +64,16 @@ module modelmb_particles_oct_m
     !!   %
     character(80), allocatable :: labels_particles(:)
 
-    integer, pointer :: particletype(:)
-    integer, pointer :: nparticles_per_type(:)
-    integer, pointer :: particles_of_type(:,:)
-    integer, pointer :: bosonfermion(:)
+    integer, pointer, public :: particletype(:)
+    integer, pointer, public :: nparticles_per_type(:)
+    integer, pointer, public :: particles_of_type(:,:)
+    integer, pointer, public :: bosonfermion(:)
     
     integer, pointer :: exchange_symmetry(:,:,:) !< (max_particles_per_type**2, ntype_of_particle)
     
     FLOAT, pointer :: mass_particle(:)
     
-    FLOAT, pointer :: charge_particle(:)
+    FLOAT, pointer, public :: charge_particle(:)
 
     !>   %block densitiestocalc
     !!   label1 |  particletokeep1(integer in [1:nparticle])
@@ -111,8 +112,9 @@ contains
   !>==============================================================
   !!  initialization function for modelmb particles information
   !!==============================================================
-  subroutine modelmb_particles_init (this,gr)
+  subroutine modelmb_particles_init(this, parser, gr)
     type(modelmb_particle_t), intent(inout) :: this
+    type(parser_t),           intent(in)    :: parser
     type(grid_t),             intent(in)    :: gr
     
     integer :: ipart, ncols, nline, itmp, jtmp, npar, ntype
@@ -130,7 +132,7 @@ contains
     !% Number of particles in modelmb space. 
     !% Full Ndim = <tt>NDimModelmb</tt>*<tt>NParticleModelmb</tt>
     !%End
-    call parse_variable('NParticleModelmb', 0, this%nparticle)
+    call parse_variable(parser, 'NParticleModelmb', 0, this%nparticle)
 
     if (this%nparticle == 0) then
       POP_SUB(modelmb_particles_init)
@@ -148,7 +150,7 @@ contains
     !% Full Ndim = <tt>NDimModelmb</tt>*<tt>NParticleModelmb</tt>
     !%
     !%End
-    call parse_variable('NDimModelmb', 1, this%ndim)
+    call parse_variable(parser, 'NDimModelmb', 1, this%ndim)
     call messages_print_var_value(stdout, "NDimModelmb", this%ndim)
     
     !%Variable NTypeParticleModelmb
@@ -158,7 +160,7 @@ contains
     !%Description
     !% Number of different types of particles in modelmb space.
     !%End
-    call parse_variable('NTypeParticleModelmb', 1, this%ntype_of_particle)
+    call parse_variable(parser, 'NTypeParticleModelmb', 1, this%ntype_of_particle)
     call messages_print_var_value(stdout, "NTypeParticleModelmb", this%ntype_of_particle)
     if (this%ntype_of_particle > this%nparticle) then
       write (message(1), '(2a,2I6)') ' Number of types of modelmb particles should be <= Number of modelmb particles ', &
@@ -220,7 +222,7 @@ contains
     this%bosonfermion = 1 ! set to fermion
     
     
-    if(parse_block('DescribeParticlesModelmb', blk) == 0) then
+    if(parse_block(parser, 'DescribeParticlesModelmb', blk) == 0) then
       
       call messages_experimental("Model many-body")
       

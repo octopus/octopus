@@ -39,7 +39,8 @@ module basins_oct_m
      basins_write
 
   type basins_t
-    integer, pointer :: map(:)
+    private
+    integer, pointer, public :: map(:)
 
     integer          :: number
     integer, pointer :: position(:)

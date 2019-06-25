@@ -33,6 +33,7 @@ module poisson_no_oct_m
     poisson_no_solve
 
   type poisson_no_t
+    private
     !integer         :: all_nodes_comm
     FLOAT                    :: qq(MAX_DIM) !< q-point for exchange in periodic system
   end type poisson_no_t

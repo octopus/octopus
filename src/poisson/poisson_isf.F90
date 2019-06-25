@@ -52,6 +52,7 @@ module poisson_isf_oct_m
   ! Datatype to store kernel values to solve Poisson equation
   ! on different communicators (configurations).
   type isf_cnf_t
+    private
     real(8), pointer  :: kernel(:, :, :)
     integer           :: nfft1, nfft2, nfft3
     type(mpi_grp_t)   :: mpi_grp
@@ -59,6 +60,7 @@ module poisson_isf_oct_m
   end type isf_cnf_t
 
   type poisson_isf_t
+    private
     integer         :: all_nodes_comm
     type(isf_cnf_t) :: cnf(1:N_CNF)
   end type poisson_isf_t
@@ -68,8 +70,9 @@ module poisson_isf_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_isf_init(this, mesh, cube, all_nodes_comm, init_world)
+  subroutine poisson_isf_init(this, parser, mesh, cube, all_nodes_comm, init_world)
     type(poisson_isf_t), intent(out)   :: this
+    type(parser_t),      intent(in)    :: parser
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
     integer,             intent(in)    :: all_nodes_comm
@@ -137,7 +140,7 @@ contains
     !% How many nodes to use to solve the Poisson equation. A value of
     !% 0, the default, implies that all available nodes are used.
     !%End
-    call parse_variable('PoissonSolverNodes', default_nodes, nodes)
+    call parse_variable(parser, 'PoissonSolverNodes', default_nodes, nodes)
 
     this%all_nodes_comm = all_nodes_comm
 

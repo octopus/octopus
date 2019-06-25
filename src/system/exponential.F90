@@ -57,19 +57,21 @@ module exponential_oct_m
     EXP_CHEBYSHEV          = 4
 
   type exponential_t
-    integer     :: exp_method  !< which method is used to apply the exponential
-    FLOAT       :: lanczos_tol !< tolerance for the Lanczos method
-    integer     :: exp_order   !< order to which the propagator is expanded
-    integer     :: arnoldi_gs  !< Orthogonalization scheme used for Arnoldi
-    integer     :: tmp_nst, tmp_nst_linear
+    private
+    integer, public :: exp_method  !< which method is used to apply the exponential
+    FLOAT           :: lanczos_tol !< tolerance for the Lanczos method
+    integer, public :: exp_order   !< order to which the propagator is expanded
+    integer         :: arnoldi_gs  !< Orthogonalization scheme used for Arnoldi
+    integer         :: tmp_nst, tmp_nst_linear
   end type exponential_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine exponential_init(te)
+  subroutine exponential_init(te, parser)
     type(exponential_t), intent(out) :: te
-
+    type(parser_t),      intent(in)  :: parser
+    
     PUSH_SUB(exponential_init)
 
     !%Variable TDExponentialMethod
@@ -124,7 +126,7 @@ contains
     !% 3967 (1984); R. Kosloff, <i>Annu. Rev. Phys. Chem.</i> <b>45</b>, 145 (1994);
     !% C. W. Clenshaw, <i>MTAC</i> <b>9</b>, 118 (1955).
     !%End
-    call parse_variable('TDExponentialMethod', EXP_TAYLOR, te%exp_method)
+    call parse_variable(parser, 'TDExponentialMethod', EXP_TAYLOR, te%exp_method)
 
     select case(te%exp_method)
     case(EXP_TAYLOR)
@@ -141,7 +143,7 @@ contains
       !% make sure that this value is not too big, or else the evolution will be
       !% wrong.
       !%End
-      call parse_variable('TDLanczosTol', CNST(1e-5), te%lanczos_tol)
+      call parse_variable(parser, 'TDLanczosTol', CNST(1e-5), te%lanczos_tol)
       if (te%lanczos_tol <= M_ZERO) call messages_input_error('TDLanczosTol')
 
     case default
@@ -159,7 +161,7 @@ contains
       !% the order to which the exponential is expanded. For the Lanczos approximation, 
       !% it is the Lanczos-subspace dimension.
       !%End
-      call parse_variable('TDExpOrder', DEFAULT__TDEXPORDER, te%exp_order)
+      call parse_variable(parser, 'TDExpOrder', DEFAULT__TDEXPORDER, te%exp_order)
       if (te%exp_order < 2) call messages_input_error('TDExpOrder')
 
     end if
@@ -180,7 +182,7 @@ contains
       !% The algorithm is taken from Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005). 
       !% According to this reference, this is much more precise than CGS or MGS algorithms.
       !%End
-      call parse_variable('ArnoldiOrthogonalization', OPTION__ARNOLDIORTHOGONALIZATION__CGS, &
+      call parse_variable(parser, 'ArnoldiOrthogonalization', OPTION__ARNOLDIORTHOGONALIZATION__CGS, &
                               te%arnoldi_gs)
     end if
 

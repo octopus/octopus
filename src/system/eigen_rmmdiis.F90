@@ -46,6 +46,7 @@ module eigen_rmmdiis_oct_m
     zeigensolver_rmmdiis_min
 
   type batch_pointer_t
+    private
     type(batch_t), pointer :: batch
   end type batch_pointer_t
 
