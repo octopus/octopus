@@ -79,6 +79,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
 
   ! density
   if (bitand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
+    call dcube_function_null(cf)
     call dcube_function_alloc_rs(dcube, cf)
 
     call output_etsf_geometry_dims(geo, gr%sb, density_dims, density_flags)
@@ -106,6 +107,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     if(st%d%kpt%parallel) &
       call messages_not_implemented("ETSF_IO real-space wavefunctions output parallel in k")
 
+    call dcube_function_null(cf)
     call dcube_function_alloc_rs(dcube, cf)
 
     call output_etsf_geometry_dims(geo, gr%sb, wfs_dims, wfs_flags)
@@ -138,6 +140,7 @@ subroutine output_etsf(st, gr, geo, dir, outp)
     if(st%d%kpt%parallel) &
       call messages_not_implemented("ETSF_IO Fourier-space wavefunctions output parallel in k")
 
+    call zcube_function_null(cf)
     call zcube_function_alloc_rs(zcube, cf)
     call cube_function_alloc_fs(zcube, cf)
     call fourier_shell_init(shell, zcube, gr%mesh)
