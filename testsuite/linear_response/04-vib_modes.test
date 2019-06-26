@@ -23,7 +23,7 @@ Precision: 5.0e-08
 match ;  Dynamical Matrix Entry   ; LINEFIELD(vib_modes/dynamical_matrix_lr, 2, 5) ; -0.01804332173065
 
 Input: 04-vib_modes.022-vib_modes_restart.inp
-Precision: 6.0-05
+Precision: 6.0e-05
 match ;  Vibrational Frequency    ; LINEFIELD(vib_modes/normal_frequencies_lr, 1, 2) ; 1420.925148345
 Precision: 1e-08
 match ;  Infrared Intensity       ; LINEFIELD(vib_modes/infrared, 2, 5) ; 0.304785695
