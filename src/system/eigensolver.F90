@@ -89,6 +89,8 @@ module eigensolver_oct_m
     integer :: conjugate_direction
     logical :: additional_terms
     FLOAT   :: energy_change_threshold
+
+    type(exponential_t) :: exponential_operator
   end type eigensolver_t
 
 
@@ -264,6 +266,9 @@ contains
       !%End
       call parse_variable(parser, 'EigensolverImaginaryTime', CNST(10.0), eigens%imag_time)
       if(eigens%imag_time <= M_ZERO) call messages_input_error('EigensolverImaginaryTime')
+      
+      call exponential_init(eigens%exponential_operator, parser)
+      
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
       default_iter = 3
@@ -405,6 +410,8 @@ contains
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
       call preconditioner_end(eigens%pre)
+    case(RS_EVO)
+      call exponential_end(eigens%exponential_operator)
     end select
 
     SAFE_DEALLOCATE_P(eigens%converged)
@@ -478,7 +485,7 @@ contains
         case(RS_PLAN)
           call deigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
-          call deigensolver_evolution(gr, st, hm, eigens%tolerance, maxiter, &
+          call deigensolver_evolution(gr, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
           call deigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
@@ -510,21 +517,21 @@ contains
         case(RS_CG)
            if(eigens%folded_spectrum) then
              call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, & 
-                                eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
-                                eigens%additional_terms, eigens%energy_change_threshold, &
-                                shift=eigens%spectrum_shift)
-
+               eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
+               eigens%additional_terms, eigens%energy_change_threshold, &
+               shift=eigens%spectrum_shift)
+             
            else
-              call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
-                                eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
-                                eigens%additional_terms, eigens%energy_change_threshold)
-
+             call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
+               eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
+               eigens%additional_terms, eigens%energy_change_threshold)
+             
            end if
         case(RS_PLAN)
           call zeigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
-          call zeigensolver_evolution(gr, st, hm, eigens%tolerance, maxiter, &
+          call zeigensolver_evolution(gr, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
           call zeigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &

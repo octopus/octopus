@@ -183,7 +183,7 @@
     nn(1:3) = (/ td%max_iter, 1, 1 /)
     optimize(1:3) = .false.
     optimize_parity(1:3) = -1
-    call fft_init(tg%fft_handler, parser, nn(1:3), 1, FFT_COMPLEX, FFTLIB_FFTW, optimize, optimize_parity)
+    call fft_init(tg%fft_handler, nn(1:3), 1, FFT_COMPLEX, FFTLIB_FFTW, optimize, optimize_parity)
 
     POP_SUB(target_init_hhgnew)
   end subroutine target_init_hhgnew

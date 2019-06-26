@@ -269,7 +269,7 @@ program oct_unfold
  
     call states_allocate_wfns(sys%st, sys%gr%mesh)
 
-    call restart_init(restart, parser, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+    call restart_init(restart, sys%parser, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) call states_load(restart, parser, sys%st, sys%gr, ierr, label = ": unfold")
     if(ierr /= 0) then
       message(1) = 'Unable to read unocc wavefunctions.'

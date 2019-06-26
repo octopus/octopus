@@ -1442,7 +1442,7 @@ contains
     optimize(1:3) = .false.
     optimize_parity(1:3) = -1
 
-    call fft_init(fft_handler, parser, nn(1:3), 1, FFT_COMPLEX, FFTLIB_FFTW, optimize, optimize_parity)
+    call fft_init(fft_handler, nn(1:3), 1, FFT_COMPLEX, FFTLIB_FFTW, optimize, optimize_parity)
     call zfft_forward1(fft_handler, func_(0:niter-1), funcw_(0:niter-1))
     do j = 0, niter - 1
       funcw_(j) = -abs(funcw_(j))**2 * dt**2

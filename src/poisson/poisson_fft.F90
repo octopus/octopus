@@ -321,10 +321,10 @@ contains
           if( boundaries1(1,iz) == 0)  boundaries1(1,iz) = iy
           boundaries1(2,iz) = max(iy,boundaries1(2,iz))
 
-#ifdef HAVE_NFFT
+ #ifdef HAVE_NFFT
          !HH not very elegant
          if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
-#endif
+ #endif
 
          if(abs(modg2) > CNST(1e-6)) then
            fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI/modg2
