@@ -152,6 +152,7 @@ contains
 
     found = (ifound == 1)
 
+    iihash_lookup = -1
     if(found) iihash_lookup = val
 
   end function iihash_lookup
