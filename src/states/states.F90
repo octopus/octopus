@@ -2110,14 +2110,15 @@ contains
     end if
 
     !If we freeze some of the orbitals, we need to had the contributions here
-    if(associated(st%frozen_tau)) then
+    !Only in the case we are not computing it
+    if(associated(st%frozen_tau) .and. .not. present(st_end)) then
       do is = 1, st%d%nspin
         do ii = 1, der%mesh%np
           tau(ii, is) = tau(ii, is) + st%frozen_tau(ii, is)
         end do
       end do
     end if
-    if(associated(st%frozen_gdens)) then
+    if(associated(st%frozen_gdens) .and. .not. present(st_end)) then
       do is = 1, st%d%nspin
         do idir = 1, der%mesh%sb%dim
           do ii = 1, der%mesh%np
@@ -2126,7 +2127,7 @@ contains
         end do
       end do
     end if
-    if(associated(st%frozen_tau)) then
+    if(associated(st%frozen_tau) .and. .not. present(st_end)) then
       do is = 1, st%d%nspin
         do ii = 1, der%mesh%np
           density_laplacian(ii, is) = density_laplacian(ii, is) + st%frozen_ldens(ii, is)
