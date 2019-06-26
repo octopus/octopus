@@ -161,6 +161,8 @@ $enabled = ""; # FIXME: should Enabled be optional?
 $options_required = "";
 $options_required_mpi = "";
 $options_are_mpi = 0;
+$expected_failure = "";
+$expect_error = 0;
 
 # Handle GPU offset
 $offset_GPU = defined $opt_G ? $opt_G : -1;
@@ -239,6 +241,15 @@ while ($_ = <TESTSUITE>) {
         $basedir = basename(dirname(File::Spec->rel2abs($opt_f)));
         $testname = "$basedir/$basename";
         $report{$testname} = {"input" => {}};
+
+    } elsif ( $_ =~ /^ExpectedFailure\s*:\s(.*)\s*$/) {
+
+        $expected_failure = $1;
+        $expected_failure =~ s/^\s*//;
+        $expected_failure =~ s/\s*$//;
+        $test{"expected_failure"} = $expected_failure;
+        $report{$testname}{"expected_failure"} = $expected_failure;
+        $expect_error = $expected_failure =~ /yes/i;
 
     } elsif ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
         %test = ();
@@ -417,6 +428,8 @@ while ($_ = <TESTSUITE>) {
                     }
                 }
 
+                if( $expect_error ) { $command_line = $command_line." 2>err";}
+
                 print "Executing: " . $command_line . "\n";
 
                 if ( !$opt_n ) {
@@ -438,11 +451,18 @@ while ($_ = <TESTSUITE>) {
                         system("tail -20 $workdir/out");
                         print "----------------------------------------\n\n";
 
-                        printf "%-40s%s", " Execution", ": \t [ $color_start{red} FAIL $color_end{red} ] \n\n";
-                        $input_report{"execution"} = "fail";
+                        if($expect_error) {
+                            printf "%-40s%s", " Execution", ": \t [ $color_start{green} OK (expecteded Fail) $color_end{green} ] \n\n";
+                            $input_report{"execution"} = "success";
 
-                        $failures++;
-                        $test_succeeded = 0;  
+                            $test_succeeded = 1;  
+                        } else {
+                            printf "%-40s%s", " Execution", ": \t [ $color_start{red} FAIL $color_end{red} ] \n\n";
+                            $input_report{"execution"} = "fail";
+
+                            $failures++;
+                            $test_succeeded = 0;  
+                        }
                     }
                     $test{"run"} = 1;
                 }
@@ -475,7 +495,7 @@ while ($_ = <TESTSUITE>) {
             my %match_report;
             $r_match_report = \%match_report;
           
-            if (!$opt_n && $return_value == 0) {
+            if (!$opt_n && ($expect_error || $return_value == 0) ) {
                 push( @{$r_matches_array}, $r_match_report);
                 if(run_match_new($_)){
                     printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";

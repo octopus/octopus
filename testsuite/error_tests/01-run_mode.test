@@ -1,0 +1,11 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Run_mode
+Program    : octopus
+TestGroups : long-run, error_tests
+Enabled    : Yes
+ExpectedFailure : Yes
+
+Input: 01-run_mode.01-one_shot.inp
+match ; Error message ; GREPCOUNT(err, 'one_shot is obsolete') ; 1
+
