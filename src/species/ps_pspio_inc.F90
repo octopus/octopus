@@ -17,8 +17,9 @@
 !!
 
   ! ---------------------------------------------------------
-  subroutine ps_pspio_init(ps, label, z, lmax, lloc, ispin, filename)
+  subroutine ps_pspio_init(ps, parser, label, z, lmax, lloc, ispin, filename)
     type(ps_t),        intent(out)   :: ps
+    type(parser_t),    intent(in)    :: parser
     character(len=10), intent(in)    :: label
     integer,           intent(inout) :: lmax
     integer,           intent(in)    :: lloc, ispin
@@ -95,7 +96,7 @@
     end if
 
     !No variable description, as it is already in ps.F90
-    call parse_variable('SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
+    call parse_variable(parser, 'SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
     if(ps%projectors_sphere_threshold <= M_ZERO) call messages_input_error('SpeciesProjectorSphereThreshold')
     ps%has_long_range = .true.
     ps%is_separated = .false.

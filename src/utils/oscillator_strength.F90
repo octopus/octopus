@@ -25,6 +25,7 @@ module oscillator_strength_oct_m
   use lalg_adv_oct_m
   use messages_oct_m
   use minimizer_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use spectrum_oct_m
   use string_oct_m
@@ -1127,6 +1128,7 @@ program oscillator_strength
                         READ_RESONANCES_FROM_FILE         = 3, &
                         GENERATE_OMEGA_FILE               = 4
   character(len=100) :: ffile
+  type(parser_t) :: parser
 
   ! Reads the information passed through the command line options (if available).
   call getopt_init(ierr)
@@ -1157,7 +1159,8 @@ program oscillator_strength
 
   ! Initialize stuff
   call global_init(is_serial = .true.)
-  call io_init(defaults = .true.)
+  call parser_init(parser)
+  call io_init(parser, defaults = .true.)
 
   select case(run_mode)
   case(GENERATE_NTHORDER_SIGNAL)
@@ -1172,6 +1175,7 @@ program oscillator_strength
   end select
 
   call io_end()
+  call parser_end(parser)
   call global_end()
 
 end program oscillator_strength

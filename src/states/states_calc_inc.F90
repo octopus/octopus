@@ -810,9 +810,9 @@ end function X(states_residue)
 !!
 ! ---------------------------------------------------------
 subroutine X(states_calc_momentum)(st, der, momentum)
-  type(states_t),      intent(inout) :: st
-  type(derivatives_t), intent(inout) :: der
-  FLOAT,               intent(out)   :: momentum(:,:,:)
+  type(states_t),      intent(in)  :: st
+  type(derivatives_t), intent(in)  :: der
+  FLOAT,               intent(out) :: momentum(:,:,:)
 
   integer             :: idim, ist, ik, idir
   CMPLX               :: expect_val_p
@@ -916,7 +916,7 @@ end subroutine X(states_calc_momentum)
 ! ---------------------------------------------------------
 subroutine X(states_angular_momentum)(st, gr, ll, l2)
   type(states_t),  intent(in)     :: st
-  type(grid_t),    intent(inout)  :: gr
+  type(grid_t),    intent(in)     :: gr
   FLOAT,           intent(out)    :: ll(:, :, :) !< (st%nst, st%d%nik, 1 or 3)
   FLOAT, optional, intent(out)    :: l2(:, :)    !< (st%nst, st%d%nik)
 
@@ -1346,7 +1346,7 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 
     SAFE_ALLOCATE(psi(1:st%nst, 1:st%d%dim, 1:block_size))
 
-    overlap(1:st%nst, 1:st%nst) = CNST(0.0)
+    overlap(1:st%nst, 1:st%nst) = R_TOTYPE(M_ZERO)
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
@@ -1442,15 +1442,19 @@ subroutine X(states_calc_overlap)(st, mesh, ik, overlap)
 
   else
 
+    overlap(1:st%nst, 1:st%nst) = R_TOTYPE(M_ZERO)
+
     do ib = st%group%block_start, st%group%block_end
       do jb = ib, st%group%block_end
         if(ib == jb) then
-          call X(mesh_batch_dotp_self)(mesh, st%group%psib(ib, ik), overlap)
+          call X(mesh_batch_dotp_self)(mesh, st%group%psib(ib, ik), overlap, reduce = .false.)
         else
-          call X(mesh_batch_dotp_matrix)(mesh, st%group%psib(ib, ik), st%group%psib(jb, ik), overlap)
+          call X(mesh_batch_dotp_matrix)(mesh, st%group%psib(ib, ik), st%group%psib(jb, ik), overlap, reduce = .false.)
         end if
       end do
     end do
+
+    if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
 
   end if
 
@@ -1550,7 +1554,7 @@ end subroutine X(states_calc_projections)
 subroutine X(states_me_one_body)(dir, gr, geo, st, nspin, vhxc, nint, iindex, jindex, oneint)
 
   character(len=*),    intent(in)    :: dir
-  type(grid_t),        intent(inout) :: gr
+  type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   type(states_t),      intent(inout) :: st
   integer,             intent(in)    :: nspin
@@ -1609,7 +1613,7 @@ end subroutine X(states_me_one_body)
 
 ! ---------------------------------------------------------
 subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex, lindex, twoint, phase)
-  type(grid_t),     intent(inout)           :: gr
+  type(grid_t),     intent(in)              :: gr
   type(states_t),   intent(in)              :: st
   integer,          intent(in)              :: st_min, st_max
   integer,          intent(out)             :: iindex(:,:)

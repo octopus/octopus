@@ -82,22 +82,27 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   niter = 0
   old_res = 10*tol
 
-  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(h_psi(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(  psi(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(   cg(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(    g(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(   g0(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(g_prev(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE( h_cg(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(  chi(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(omega(1:gr%mesh%np_part, 1:st%d%dim))
-  if(st%d%ispin == UNPOLARIZED) then
-    SAFE_ALLOCATE(fxc(1:gr%mesh%np, 1:1, 1:1))
-  else if(st%d%ispin == SPIN_POLARIZED) then
-    SAFE_ALLOCATE(fxc(1:gr%mesh%np, 1:2, 1:2))
+  SAFE_ALLOCATE(   g0(1:gr%mesh%np,      1:st%d%dim))
+  SAFE_ALLOCATE(g_prev(1:gr%mesh%np,     1:st%d%dim))
+  if(additional_terms) then
+    SAFE_ALLOCATE(  chi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(omega(1:gr%mesh%np_part, 1:st%d%dim))
+    if(st%d%ispin == UNPOLARIZED) then
+      SAFE_ALLOCATE(fxc(1:gr%mesh%np, 1:1, 1:1))
+    else if(st%d%ispin == SPIN_POLARIZED) then
+      SAFE_ALLOCATE(fxc(1:gr%mesh%np, 1:2, 1:2))
+    end if
   end if
   if(fold_) then
-    SAFE_ALLOCATE( psi2(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE( psi2(1:gr%mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(h_psi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE( h_cg(1:gr%mesh%np_part, 1:st%d%dim))
+  else
+    SAFE_ALLOCATE(h_psi(1:gr%mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE( h_cg(1:gr%mesh%np, 1:st%d%dim))
   end if
   
   if(hm%theory_level == RDMFT) then
@@ -131,12 +136,6 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   ! The steps in this loop follow closely the algorithm from
   ! Payne et al. (1992), Rev. Mod. Phys. 64, 4, section V.B
   eigenfunction_loop : do ist = converged + 1, st%nst
-    h_psi = R_TOTYPE(M_ZERO)
-    cg    = R_TOTYPE(M_ZERO)
-    g     = R_TOTYPE(M_ZERO)
-    g0    = R_TOTYPE(M_ZERO)
-    h_cg  = R_TOTYPE(M_ZERO)
-    g_prev = R_TOTYPE(M_ZERO)
     gg1   = R_TOTYPE(M_ZERO)
     
     call states_get_state(st, gr%mesh, ist, ik, psi)
@@ -150,7 +149,10 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     if(fold_) then
       call X(hamiltonian_apply)(hm, gr%der, h_psi, psi2, ist, ik)
       ! h_psi = (H-shift)^2 psi
-      h_psi = psi2 - M_TWO*shift(ist,ik)*h_psi + shift(ist,ik)**2*psi
+      do idim = 1, st%d%dim
+        h_psi(1:gr%mesh%np, idim) = psi2(1:gr%mesh%np, idim) - M_TWO*shift(ist,ik)*h_psi(1:gr%mesh%np, idim) &
+                                  + shift(ist,ik)**2*psi(1:gr%mesh%np, idim)
+      end do
     end if
 
     ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
@@ -285,10 +287,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         ! the corresponding coefficients are then divided by cg0
         norma =  X(mf_dotp) (gr%mesh, st%d%dim, psi, cg)
         do idim = 1, st%d%dim
-          forall (ip = 1:gr%mesh%np)
-            cg(ip, idim) = cg(ip, idim) - norma*psi(ip, idim)
-          end forall
+          call lalg_axpy(gr%mesh%np, -norma, psi(1:gr%mesh%np, idim), cg(:, idim))
         end do
+        
 
         call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 2*R_MUL))
       end if
@@ -297,9 +298,12 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       call X(hamiltonian_apply)(hm, gr%der, cg, h_cg, ist, ik)
 
       if(fold_) then
-         call X(hamiltonian_apply)(hm, gr%der, h_cg, psi2, ist, ik)
-         ! h_psi = (H-shift)^2 psi
-         h_cg = psi2 - M_TWO*shift(ist,ik)*h_cg + shift(ist,ik)**2*cg
+        call X(hamiltonian_apply)(hm, gr%der, h_cg, psi2, ist, ik)
+        ! h_psi = (H-shift)^2 psi
+        do idim = 1, st%d%dim
+          h_cg(1:gr%mesh%np, idim) = psi2(1:gr%mesh%np, idim) - M_TWO*shift(ist,ik)*h_cg(1:gr%mesh%np, idim) &
+                                 + shift(ist,ik)**2*cg(1:gr%mesh%np, idim)
+        end do
       end if
 
       ! Line minimization (eq. 5.23 to 5.38)
@@ -469,9 +473,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   SAFE_DEALLOCATE_A(chi)
   SAFE_DEALLOCATE_A(omega)
   SAFE_DEALLOCATE_A(fxc)
-  if(fold_) then
-    SAFE_DEALLOCATE_A(psi2)
-  end if
+  SAFE_DEALLOCATE_A(psi2)
   if(hm%theory_level == RDMFT) then
     SAFE_DEALLOCATE_A(psi_j)
     SAFE_DEALLOCATE_A(lam_sym)

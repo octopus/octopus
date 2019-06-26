@@ -49,6 +49,7 @@ module curv_modine_oct_m
     curv_modine_jacobian_inv
 
   type curv_modine_t
+    private
     FLOAT :: L(MAX_DIM)    !< size of the box
     FLOAT :: xbar          !< size of central flat region (in units of L)
     FLOAT :: Jbar          !< increase in density of points is 1/J
@@ -128,11 +129,12 @@ contains
   end subroutine getf2
 
   ! ---------------------------------------------------------
-  subroutine curv_modine_init(cv, sb, geo, spacing)
-    type(curv_modine_t), target, intent(out)  :: cv
-    type(simul_box_t),   target, intent(in)   :: sb
-    type(geometry_t),            intent(in)   :: geo
-    FLOAT,                       intent(in)   :: spacing(:)
+  subroutine curv_modine_init(cv, parser, sb, geo, spacing)
+    type(curv_modine_t), target, intent(out) :: cv
+    type(parser_t),              intent(in)  :: parser
+    type(simul_box_t),   target, intent(in)  :: sb
+    type(geometry_t),            intent(in)  :: geo
+    FLOAT,                       intent(in)  :: spacing(:)
 
     PUSH_SUB(curv_modine_init)
 
@@ -144,7 +146,7 @@ contains
     !% Size of central flat region (in units of <tt>Lsize</tt>). Must be between 0 and 1.
     !% See N. A. Modine, G. Zumbach, and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289-10301 (1997).
     !%End
-    call parse_variable('CurvModineXBar', M_ONE/M_THREE, cv%xbar)
+    call parse_variable(parser, 'CurvModineXBar', M_ONE/M_THREE, cv%xbar)
 
     !%Variable CurvModineJBar
     !%Type float
@@ -154,7 +156,7 @@ contains
     !% Increase in density of points is inverse of this parameter.
     !% See N. A. Modine, G. Zumbach, and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289-10301 (1997).
     !%End
-    call parse_variable('CurvModineJBar', M_HALF, cv%Jbar)
+    call parse_variable(parser, 'CurvModineJBar', M_HALF, cv%Jbar)
 
     cv%L = M_ZERO
     cv%L(1:sb%dim) = sb%lsize(1:sb%dim) / cv%Jbar
@@ -177,7 +179,7 @@ contains
     !% Local refinement around the atoms. Must be between 0 and 1.
     !% See N. A. Modine, G. Zumbach, and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289-10301 (1997).
     !%End
-    call parse_variable('CurvModineJlocal', CNST(0.25), cv%Jlocal(1))
+    call parse_variable(parser, 'CurvModineJlocal', CNST(0.25), cv%Jlocal(1))
 
     !%Variable CurvModineJrange
     !%Type float
@@ -187,7 +189,7 @@ contains
     !% Local refinement range (a length).
     !% See N. A. Modine, G. Zumbach, and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289-10301 (1997).
     !%End
-    call parse_variable('CurvModineJrange', M_TWO, cv%Jrange(1), units_inp%length)
+    call parse_variable(parser, 'CurvModineJrange', M_TWO, cv%Jrange(1), units_inp%length)
 
     if(cv%Jlocal(1)<M_ZERO.or.cv%Jlocal(1)>M_ONE) then
       message(1) = 'The parameter "CurvModineJlocal" must lie between 0 and 1.'

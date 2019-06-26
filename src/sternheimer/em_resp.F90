@@ -63,6 +63,7 @@ module em_resp_oct_m
        out_hyperpolarizability
 
   type em_resp_t
+    private
     type(pert_t) :: perturbation
 
     integer :: nsigma !< 1: consider only positive values of the frequency
@@ -167,9 +168,9 @@ contains
 
     complex_wfs = states_are_complex(sys%st)
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
-    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+    call restart_init(gs_restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_look_and_load(gs_restart, sys%st, sys%gr, is_complex = complex_response)
+      call states_look_and_load(gs_restart, sys%parser, sys%st, sys%gr, is_complex = complex_response)
       call restart_end(gs_restart)
     else
       message(1) = "Previous gs calculation is required."
@@ -205,7 +206,7 @@ contains
       message(1) = "Reading kdotp wavefunctions for periodic directions."
       call messages_info(1)
 
-      call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
+      call restart_init(kdotp_restart, sys%parser, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
       if(ierr /= 0) then
         message(1) = "Unable to read kdotp wavefunctions."
         message(2) = "Previous kdotp calculation required."
@@ -220,7 +221,7 @@ contains
         str_tmp = kdotp_wfs_tag(idir)
         ! 1 is the sigma index which is used in em_resp
         call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
-        if (ierr == 0) call states_load(kdotp_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir, 1))
+        if (ierr == 0) call states_load(kdotp_restart, sys%parser, sys%st, sys%gr, ierr, lr=kdotp_lr(idir, 1))
         call restart_close_dir(kdotp_restart)
 
         if(ierr /= 0) then
@@ -246,8 +247,8 @@ contains
     end if
 
     if(em_vars%calc_hyperpol .and. use_kdotp) then
-      call pert_init(pert_kdotp, PERTURBATION_KDOTP, sys%gr, sys%geo)
-      call pert_init(pert2_none, PERTURBATION_NONE,  sys%gr, sys%geo)
+      call pert_init(pert_kdotp, sys%parser, PERTURBATION_KDOTP, sys%gr, sys%geo)
+      call pert_init(pert2_none, sys%parser, PERTURBATION_NONE,  sys%gr, sys%geo)
       call messages_experimental("Second-order Sternheimer equation")
       call pert_setup_dir(pert2_none, 1)  ! direction is irrelevant
       SAFE_ALLOCATE(kdotp_em_lr2(1:gr%sb%periodic_dim, 1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
@@ -298,7 +299,7 @@ contains
       em_vars%occ_response = .false.
    
       if(use_kdotp) then
-        call pert_init(pert2_none, PERTURBATION_NONE,  sys%gr, sys%geo)
+        call pert_init(pert2_none, sys%parser, PERTURBATION_NONE,  sys%gr, sys%geo)
         call pert_setup_dir(pert2_none, 1) 
 
         SAFE_ALLOCATE(k2_lr(1:gr%sb%dim, 1:gr%sb%dim, 1:1))
@@ -339,7 +340,7 @@ contains
 
     SAFE_ALLOCATE(em_vars%lr(1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
     do ifactor = 1, em_vars%nfactor
-      call Born_charges_init(em_vars%Born_charges(ifactor), sys%geo, sys%st, gr%sb%dim)
+      call born_charges_init(em_vars%Born_charges(ifactor), sys%parser, sys%geo, sys%st, gr%sb%dim)
     end do
 
     if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC &
@@ -414,7 +415,7 @@ contains
           end do
         end do
       else
-        call pert_init(pert_b, PERTURBATION_MAGNETIC,  sys%gr, sys%geo)
+        call pert_init(pert_b, sys%parser, PERTURBATION_MAGNETIC,  sys%gr, sys%geo)
       end if
     end if
 
@@ -544,9 +545,9 @@ contains
           exact_freq(:) = .false.
 
           if(states_are_real(sys%st)) then
-            call drun_sternheimer()
+            call drun_sternheimer(sys%parser)
           else
-            call zrun_sternheimer()
+            call zrun_sternheimer(sys%parser)
           end if
 
         end if ! have_to_calculate
@@ -675,10 +676,10 @@ contains
 
       PUSH_SUB(em_resp_run.parse_input)
 
-      call messages_obsolete_variable('PolFreqs               ', 'EMFreqs             ')
-      call messages_obsolete_variable('PolHyper               ', 'EMHyperpol          ')
-      call messages_obsolete_variable('PolEta                 ', 'EMEta               ')
-      call messages_obsolete_variable('PolHamiltonianVariation', 'HamiltonianVariation')
+      call messages_obsolete_variable(sys%parser, 'PolFreqs               ', 'EMFreqs             ')
+      call messages_obsolete_variable(sys%parser, 'PolHyper               ', 'EMHyperpol          ')
+      call messages_obsolete_variable(sys%parser, 'PolEta                 ', 'EMEta               ')
+      call messages_obsolete_variable(sys%parser, 'PolHamiltonianVariation', 'HamiltonianVariation')
 
       !%Variable EMFreqs
       !%Type block
@@ -701,7 +702,7 @@ contains
       !%
       !%End
 
-      if (parse_block('EMFreqs', blk) == 0) then 
+      if(parse_block(sys%parser, 'EMFreqs', blk) == 0) then 
 
         nrow = parse_block_n(blk)
         em_vars%nomega = 0
@@ -747,7 +748,7 @@ contains
         !% they are calculated in increasing order. Can be set to false to use the order as stated,
         !% in case this makes better use of available restart information.
         !%End
-        call parse_variable('EMFreqsSort', .true., freq_sort)
+        call parse_variable(sys%parser, 'EMFreqsSort', .true., freq_sort)
 
         if(freq_sort) call sort(em_vars%omega)
 
@@ -770,7 +771,7 @@ contains
       !% In units of energy. Cannot be negative.
       !%End
 
-      call parse_variable('EMEta', M_ZERO, em_vars%eta, units_inp%energy)
+      call parse_variable(sys%parser, 'EMEta', M_ZERO, em_vars%eta, units_inp%energy)
       if(em_vars%eta < -M_EPSILON) then
         message(1) = "EMEta cannot be negative."
         call messages_fatal(1)
@@ -797,10 +798,10 @@ contains
       !%Option none 0
       !% Zero perturbation, for use in testing.
       !%End 
-      call parse_variable('EMPerturbationType', PERTURBATION_ELECTRIC, perturb_type)
+      call parse_variable(sys%parser, 'EMPerturbationType', PERTURBATION_ELECTRIC, perturb_type)
       call messages_print_var_option(stdout, 'EMPerturbationType', perturb_type)
       
-      call pert_init(em_vars%perturbation, perturb_type, sys%gr, sys%geo)
+      call pert_init(em_vars%perturbation, sys%parser, perturb_type, sys%gr, sys%geo)
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         !%Variable EMCalcRotatoryResponse
@@ -812,7 +813,7 @@ contains
         !% and write to file <tt>rotatory_strength</tt>.
         !%End
 
-        call parse_variable('EMCalcRotatoryResponse', .false., em_vars%calc_rotatory)
+        call parse_variable(sys%parser, 'EMCalcRotatoryResponse', .false., em_vars%calc_rotatory)
 
         !%Variable EMHyperpol
         !%Type block
@@ -826,7 +827,7 @@ contains
         !% <tt>1 | 1 | -2</tt>.
         !%End
 
-        if (parse_block('EMHyperpol', blk) == 0) then 
+        if (parse_block(sys%parser, 'EMHyperpol', blk) == 0) then 
           call parse_block_float(blk, 0, 0, em_vars%freq_factor(1))
           call parse_block_float(blk, 0, 1, em_vars%freq_factor(2))
           call parse_block_float(blk, 0, 2, em_vars%freq_factor(3))
@@ -848,7 +849,7 @@ contains
         !%Description
         !% Calculate magneto-optical response.
         !%End
-        call parse_variable('EMCalcMagnetooptics', .false., em_vars%calc_magnetooptics)
+        call parse_variable(sys%parser, 'EMCalcMagnetooptics', .false., em_vars%calc_magnetooptics)
 
         !%Variable EMMagnetoopticsNoHVar
         !%Type logical
@@ -858,7 +859,7 @@ contains
         !% Exclude corrections to the exchange-correlation and Hartree terms 
         !% from consideration of perturbations induced by a magnetic field
         !%End
-        call parse_variable('EMMagnetoopticsNoHVar', .true., em_vars%magnetooptics_nohvar)
+        call parse_variable(sys%parser, 'EMMagnetoopticsNoHVar', .true., em_vars%magnetooptics_nohvar)
 
         !%Variable EMKPointOutput
         !%Type logical
@@ -869,7 +870,7 @@ contains
         !% Can be also used for magneto-optical effects.
         !%End
 
-        call parse_variable('EMKPointOutput', .false., em_vars%kpt_output)
+        call parse_variable(sys%parser, 'EMKPointOutput', .false., em_vars%kpt_output)
 
       end if
 
@@ -885,7 +886,7 @@ contains
       !% for the finite system. This variable has no effect for a finite system.
       !%End
 
-      call parse_variable('EMForceNoKdotP', .false., em_vars%force_no_kdotp)
+      call parse_variable(sys%parser, 'EMForceNoKdotP', .false., em_vars%force_no_kdotp)
 
       !%Variable EMCalcBornCharges
       !%Type logical
@@ -895,7 +896,7 @@ contains
       !% Calculate linear-response Born effective charges from electric perturbation (experimental).
       !%End
 
-      call parse_variable('EMCalcBornCharges', .false., em_vars%calc_Born)
+      call parse_variable(sys%parser, 'EMCalcBornCharges', .false., em_vars%calc_Born)
       if (em_vars%calc_Born) call messages_experimental("Calculation of Born effective charges")
 
       !%Variable EMOccupiedResponse
@@ -909,7 +910,7 @@ contains
       !% the full response is always calculated.
       !%End
 
-      call parse_variable('EMOccupiedResponse', .false., em_vars%occ_response)
+      call parse_variable(sys%parser, 'EMOccupiedResponse', .false., em_vars%occ_response)
       if(em_vars%occ_response .and. .not. (smear_is_semiconducting(sys%st%smear) .or. sys%st%smear%method == SMEAR_FIXED_OCC)) then
         message(1) = "EMOccupiedResponse cannot be used if there are partial occupations."
         call messages_fatal(1)
@@ -925,7 +926,7 @@ contains
       !% be used. Restart wavefunctions from a very different frequency can hinder convergence.
       !%End
 
-      call parse_variable('EMWavefunctionsFromScratch', .false., em_vars%wfns_from_scratch)
+      call parse_variable(sys%parser, 'EMWavefunctionsFromScratch', .false., em_vars%wfns_from_scratch)
 
       POP_SUB(em_resp_run.parse_input)
 
@@ -980,8 +981,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine em_resp_output(st, gr, hm, geo, outp, em_vars, iomega, ifactor)
+  subroutine em_resp_output(st, parser, gr, hm, geo, outp, em_vars, iomega, ifactor)
     type(states_t),       intent(inout) :: st
+    type(parser_t),       intent(in)    :: parser
     type(grid_t),         intent(inout) :: gr
     type(hamiltonian_t),  intent(inout) :: hm
     type(geometry_t),     intent(inout) :: geo
@@ -1463,7 +1465,7 @@ contains
         message(1) = "Info: Calculating rotatory response."
         call messages_info(1)
 
-        call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
+        call pert_init(angular_momentum, parser, PERTURBATION_MAGNETIC, gr, geo)
         
         SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
@@ -1473,8 +1475,8 @@ contains
         do idir = 1, gr%sb%dim
           call pert_setup_dir(angular_momentum, idir)
           dic = dic &
-            + zpert_expectation_value(angular_momentum, gr, geo, hm, st, psi, em_vars%lr(idir, 1, ifactor)%zdl_psi) &
-            + zpert_expectation_value(angular_momentum, gr, geo, hm, st, em_vars%lr(idir, 2, ifactor)%zdl_psi, psi)
+            + zpert_expectation_value(angular_momentum, parser, gr, geo, hm, st, psi, em_vars%lr(idir, 1, ifactor)%zdl_psi) &
+            + zpert_expectation_value(angular_momentum, parser, gr, geo, hm, st, em_vars%lr(idir, 2, ifactor)%zdl_psi, psi)
         end do
 
         SAFE_DEALLOCATE_P(psi)

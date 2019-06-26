@@ -90,10 +90,10 @@ contains
     if(.not. fromScratch) then
       ! load wavefunctions
       ! in RDMFT we need the full ground state
-      call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, &
+      call restart_init(restart_load, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, &
                         mesh=sys%gr%mesh, exact = (sys%ks%theory_level == RDMFT))
       if(ierr == 0) &
-        call states_load(restart_load, sys%st, sys%gr, ierr)
+        call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr)
 
       if(ierr /= 0) then
         call messages_write("Unable to read wavefunctions.")
@@ -106,7 +106,7 @@ contains
 
     call write_canonicalized_xyz_file("exec", "initial_coordinates", sys%geo, sys%gr%mesh)
 
-    call scf_init(scfv, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks)
+    call scf_init(scfv, sys%parser, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks)
 
     if(fromScratch) then
       if(sys%ks%theory_level == RDMFT) then
@@ -124,7 +124,7 @@ contains
       call system_h_setup(sys, hm, calc_eigenval = .false.)
     end if
 
-    call restart_init(restart_dump, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
+    call restart_init(restart_dump, sys%parser, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
     ! run self-consistency
     if (states_are_real(sys%st)) then
@@ -138,16 +138,16 @@ contains
     
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
-      call rdmft_init(rdm, sys%gr, sys%st, sys%ks)
-      call scf_rdmft(rdm, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, scfv%max_iter, restart_dump)
+      call rdmft_init(rdm, sys%parser, sys%gr, sys%st, sys%ks)
+      call scf_rdmft(rdm, sys%parser, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, scfv%max_iter, restart_dump)
       call rdmft_end(rdm)
     else
       if(.not. fromScratch) then
-        call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, &
+        call scf_run(scfv, sys%parser, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, &
                      restart_load=restart_load, restart_dump=restart_dump)
         call restart_end(restart_load)
       else
-        call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, restart_dump=restart_dump)
+        call scf_run(scfv, sys%parser, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, restart_dump=restart_dump)
       end if
     end if
 

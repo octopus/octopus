@@ -51,13 +51,14 @@ module pes_oct_m
     pes_dump
 
   type pes_t
-    logical :: calc_spm
+    private
+    logical, public :: calc_spm
     type(pes_spm_t) :: spm
 
-    logical :: calc_mask
+    logical, public :: calc_mask
     type(pes_mask_t) :: mask
 
-    logical :: calc_flux
+    logical, public :: calc_flux
     type(pes_flux_t) :: flux
     
   end type pes_t
@@ -112,9 +113,10 @@ contains
   end subroutine pes_nullify
 
   ! ---------------------------------------------------------
-  subroutine pes_init(pes, mesh, sb, st, save_iter, hm, max_iter, dt)
+  subroutine pes_init(pes, parser, mesh, sb, st, save_iter, hm, max_iter, dt)
     type(pes_t),         intent(out)   :: pes
-    type(mesh_t),        intent(inout) :: mesh
+    type(parser_t),      intent(in)    :: parser
+    type(mesh_t),        intent(in)    :: mesh
     type(simul_box_t),   intent(in)    :: sb
     type(states_t),      intent(in)    :: st
     integer,             intent(in)    :: save_iter
@@ -155,7 +157,7 @@ contains
     !% L. Tao and A. Scrinzi, <i>New Journal of Physics</i> <b>14</b>, 013021 (2012).
     !%End
 
-    call parse_variable('PhotoElectronSpectrum', PHOTOELECTRON_NONE, photoelectron_flags)
+    call parse_variable(parser, 'PhotoElectronSpectrum', PHOTOELECTRON_NONE, photoelectron_flags)
     if(.not.varinfo_valid_option('PhotoElectronSpectrum', photoelectron_flags, is_flag = .true.)) then
       call messages_input_error('PhotoElectronSpectrum')
     end if
@@ -171,9 +173,9 @@ contains
     end if 
 
     
-    if(pes%calc_spm)  call pes_spm_init(pes%spm, mesh, st, save_iter)
-    if(pes%calc_mask) call pes_mask_init(pes%mask, mesh, sb, st, hm, max_iter,dt)
-    if(pes%calc_flux) call pes_flux_init(pes%flux, mesh, st, hm, save_iter, max_iter)
+    if(pes%calc_spm)  call pes_spm_init(pes%spm, parser, mesh, st, save_iter)
+    if(pes%calc_mask) call pes_mask_init(pes%mask, parser, mesh, sb, st, hm, max_iter,dt)
+    if(pes%calc_flux) call pes_flux_init(pes%flux, parser, mesh, st, hm, save_iter, max_iter)
 
 
     !Footer Photoelectron info
@@ -227,7 +229,7 @@ contains
     integer,          intent(in)    :: iter
     type(output_t),   intent(in)    :: outp
     FLOAT,            intent(in)    :: dt
-    type(grid_t),     intent(inout) :: gr
+    type(grid_t),     intent(in)    :: gr
     type(geometry_t), intent(in)    :: geo
 
     PUSH_SUB(pes_output)

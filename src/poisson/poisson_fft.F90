@@ -55,14 +55,16 @@ module poisson_fft_oct_m
        POISSON_FFT_KERNEL_HOCKNEY   =  5
 
   type poisson_fft_t
+    ! Components are public by default
     type(fourier_space_op_t) :: coulb  !< object for Fourier space operations
     integer                  :: kernel !< choice of kernel, one of options above
     FLOAT                    :: qq(MAX_DIM) !< q-point for exchange in periodic system
   end type poisson_fft_t
 contains
 
-  subroutine poisson_fft_init(this, mesh, cube, kernel, soft_coulb_param, qq, fullcube)
+  subroutine poisson_fft_init(this, parser, mesh, cube, kernel, soft_coulb_param, qq, fullcube)
     type(poisson_fft_t), intent(out)   :: this
+    type(parser_t),      intent(in)    :: parser
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
     integer,             intent(in)    :: kernel
@@ -97,9 +99,9 @@ contains
       ASSERT(present(soft_coulb_param))
       select case(kernel)
       case(POISSON_FFT_KERNEL_SPH)
-        call poisson_fft_build_1d_0d(this, mesh, cube, soft_coulb_param)
+        call poisson_fft_build_1d_0d(this, parser, mesh, cube, soft_coulb_param)
       case(POISSON_FFT_KERNEL_NOCUT)
-        call poisson_fft_build_1d_1d(this, mesh, cube, soft_coulb_param)
+        call poisson_fft_build_1d_1d(this, parser, mesh, cube, soft_coulb_param)
       case default
         message(1) = "Invalid Poisson FFT kernel for 1D."
         call messages_fatal(1)
@@ -108,9 +110,9 @@ contains
     case(2)
       select case(kernel)
       case(POISSON_FFT_KERNEL_SPH)
-        call poisson_fft_build_2d_0d(this, mesh, cube)
+        call poisson_fft_build_2d_0d(this, parser, mesh, cube)
       case(POISSON_FFT_KERNEL_CYL)
-        call poisson_fft_build_2d_1d(this, mesh, cube)
+        call poisson_fft_build_2d_1d(this, parser, mesh, cube)
       case(POISSON_FFT_KERNEL_NOCUT)
         call poisson_fft_build_2d_2d(this, mesh, cube)
       case default
@@ -121,19 +123,19 @@ contains
     case(3)
       select case(kernel)
       case(POISSON_FFT_KERNEL_SPH, POISSON_FFT_KERNEL_CORRECTED)
-        call poisson_fft_build_3d_0d(this, mesh, cube, kernel)
+        call poisson_fft_build_3d_0d(this, parser,  mesh, cube, kernel)
 
       case(POISSON_FFT_KERNEL_CYL)
-        call poisson_fft_build_3d_1d(this, mesh, cube)
+        call poisson_fft_build_3d_1d(this, parser, mesh, cube)
 
       case(POISSON_FFT_KERNEL_PLA)
-        call poisson_fft_build_3d_2d(this, mesh, cube)
+        call poisson_fft_build_3d_2d(this, parser, mesh, cube)
 
       case(POISSON_FFT_KERNEL_NOCUT)
         call poisson_fft_build_3d_3d(this, mesh, cube)
 
       case(POISSON_FFT_KERNEL_HOCKNEY)
-        call poisson_fft_build_3d_3d_hockney(this, mesh, cube, fullcube)
+        call poisson_fft_build_3d_3d_hockney(this, parser, mesh, cube, fullcube)
 
       case default
         message(1) = "Invalid Poisson FFT kernel for 3D."
@@ -146,13 +148,14 @@ contains
 
   !-----------------------------------------------------------------
 
-  subroutine get_cutoff(default_r_c, r_c)
-    FLOAT, intent(in)  :: default_r_c
-    FLOAT, intent(out) :: r_c
+  subroutine get_cutoff(parser, default_r_c, r_c)
+    type(parser_t),      intent(in)  :: parser
+    FLOAT,               intent(in)  :: default_r_c
+    FLOAT,               intent(out) :: r_c
 
     PUSH_SUB(get_cutoff)
 
-    call parse_variable('PoissonCutoffRadius', default_r_c, r_c, units_inp%length)
+    call parse_variable(parser, 'PoissonCutoffRadius', default_r_c, r_c, units_inp%length)
 
     call messages_write('Info: Poisson Cutoff Radius     =')
     call messages_write(r_c, units = units_out%length, fmt = '(f6.1)')
@@ -222,10 +225,9 @@ contains
           ixx(3) = pad_feq(iz, db(3), .true.)
 
          call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
-#ifdef HAVE_NFFT
+
          !HH not very elegant
          if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
-#endif
 
           if(abs(modg2) > M_EPSILON) then
             fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
@@ -253,8 +255,9 @@ contains
   !! in a small box while respecting the periodicity of a larger box
   !! A. Damle, L. Lin, L. Ying, JCTC, 2015
   !! DOI: 10.1021/ct500985f, supplementary info  
-  subroutine poisson_fft_build_3d_3d_hockney(this, mesh, cube, fullcube)
+  subroutine poisson_fft_build_3d_3d_hockney(this, parser, mesh, cube, fullcube)
     type(poisson_fft_t), intent(inout) :: this
+        type(parser_t),      intent(in)    :: parser
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
     type(cube_t),        intent(in)    :: fullcube
@@ -358,8 +361,9 @@ contains
 
   !-----------------------------------------------------------------
   !> C. A. Rozzi et al., Phys. Rev. B 73, 205119 (2006), Table I
-  subroutine poisson_fft_build_3d_2d(this, mesh, cube)
+  subroutine poisson_fft_build_3d_2d(this, parser, mesh, cube)
     type(poisson_fft_t), intent(inout) :: this
+    type(parser_t),      intent(in)    :: parser
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
 
@@ -384,7 +388,7 @@ contains
     !%End
 
     default_r_c = db(3)*mesh%spacing(3)/M_TWO
-    call get_cutoff(default_r_c, r_c)
+    call get_cutoff(parser, default_r_c, r_c)
 
     ! store the fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
@@ -428,8 +432,9 @@ contains
 
   !-----------------------------------------------------------------
   !> C. A. Rozzi et al., Phys. Rev. B 73, 205119 (2006), Table I
-  subroutine poisson_fft_build_3d_1d(this, mesh, cube)
+  subroutine poisson_fft_build_3d_1d(this, parser, mesh, cube)
     type(poisson_fft_t), intent(inout) :: this
+    type(parser_t),      intent(in)    :: parser
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
 
@@ -445,7 +450,7 @@ contains
     db(1:3) = cube%rs_n_global(1:3)
 
     default_r_c = maxval(db(2:3)*mesh%spacing(2:3)/M_TWO)
-    call get_cutoff(default_r_c, r_c)
+    call get_cutoff(parser, default_r_c, r_c)
 
     ! store the fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
@@ -533,8 +538,9 @@ contains
 
   !-----------------------------------------------------------------
   !> C. A. Rozzi et al., Phys. Rev. B 73, 205119 (2006), Table I
-  subroutine poisson_fft_build_3d_0d(this, mesh, cube, kernel)
+  subroutine poisson_fft_build_3d_0d(this, parser, mesh, cube, kernel)
     type(poisson_fft_t), intent(inout) :: this
+    type(parser_t),      intent(in)    :: parser
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
     integer,             intent(in)    :: kernel
@@ -550,7 +556,7 @@ contains
 
     if (kernel /= POISSON_FFT_KERNEL_CORRECTED) then
       default_r_c = maxval(db(1:3)*mesh%spacing(1:3)/M_TWO)
-      call get_cutoff(default_r_c, r_c)
+      call get_cutoff(parser, default_r_c, r_c)
     end if
 
     n1 = max(1, cube%fs_n(1))
@@ -574,13 +580,12 @@ contains
           ixx(3) = pad_feq(iz, db(3), .true.)
 
           call poisson_fft_gg_transform(ixx, temp, mesh%sb, this%qq, gg, modg2)
-#ifdef HAVE_NFFT
+
           !HH
           if(cube%fft%library.eq.FFTLIB_NFFT) then
              modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
              r_c = default_r_c*M_TWO
           end if
-#endif
 
           if(abs(modg2) > M_EPSILON) then
             select case(kernel)
@@ -615,8 +620,9 @@ contains
 
   !-----------------------------------------------------------------
   !> A. Castro et al., Phys. Rev. B 80, 033102 (2009)
-  subroutine poisson_fft_build_2d_0d(this, mesh, cube)
+  subroutine poisson_fft_build_2d_0d(this, parser, mesh, cube)
     type(poisson_fft_t), intent(inout) :: this
+    type(parser_t),      intent(in)    :: parser
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
 
@@ -631,7 +637,7 @@ contains
     db(1:2) = cube%rs_n_global(1:2)
 
     default_r_c = maxval(db(1:2)*mesh%spacing(1:2)/M_TWO)
-    call get_cutoff(default_r_c, r_c)
+    call get_cutoff(parser, default_r_c, r_c)
 
     call spline_init(besselintf)
 
@@ -679,8 +685,9 @@ contains
 
   !-----------------------------------------------------------------
   !> A. Castro et al., Phys. Rev. B 80, 033102 (2009)
-  subroutine poisson_fft_build_2d_1d(this, mesh, cube)
+  subroutine poisson_fft_build_2d_1d(this, parser, mesh, cube)
     type(poisson_fft_t), intent(inout) :: this
+    type(parser_t),      intent(in)    :: parser
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
 
@@ -693,7 +700,7 @@ contains
     db(1:2) = cube%rs_n_global(1:2)
 
     default_r_c = db(2)*mesh%spacing(2)/M_TWO
-    call get_cutoff(default_r_c, r_c)
+    call get_cutoff(parser, default_r_c, r_c)
 
     ! store the fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
@@ -765,8 +772,9 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_1d_1d(this, mesh, cube, poisson_soft_coulomb_param)
+  subroutine poisson_fft_build_1d_1d(this, parser, mesh, cube, poisson_soft_coulomb_param)
     type(poisson_fft_t), intent(inout) :: this
+    type(parser_t),      intent(in)    :: parser
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
     FLOAT,               intent(in)    :: poisson_soft_coulomb_param
@@ -795,8 +803,9 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_1d_0d(this, mesh, cube, poisson_soft_coulomb_param)
+  subroutine poisson_fft_build_1d_0d(this, parser, mesh, cube, poisson_soft_coulomb_param)
     type(poisson_fft_t), intent(inout) :: this
+    type(parser_t),      intent(in)    :: parser
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
     FLOAT,               intent(in)    :: poisson_soft_coulomb_param
@@ -810,7 +819,7 @@ contains
     box(1:1) = cube%rs_n_global(1:1)
 
     default_r_c = box(1)*mesh%spacing(1)/M_TWO
-    call get_cutoff(default_r_c, r_c)
+    call get_cutoff(parser, default_r_c, r_c)
 
     SAFE_ALLOCATE(fft_coulb_fs(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
     fft_coulb_fs = M_ZERO

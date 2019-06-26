@@ -57,6 +57,7 @@ module states_dim_oct_m
     SPIN_UP   = 2
 
   type states_dim_t
+    ! Components are public by default
     integer :: dim                  !< Dimension of the state (one, or two for spinors)
     integer :: nik                  !< Number of irreducible subspaces
     integer :: ispin                !< spin mode (unpolarized, spin-polarized, spinors)

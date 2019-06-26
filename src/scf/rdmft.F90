@@ -63,6 +63,7 @@ module rdmft_oct_m
     scf_rdmft
 
   type rdm_t
+    private
     type(eigensolver_t) :: eigens
     integer  :: iter
     integer  :: nst !< number of states
@@ -97,8 +98,9 @@ module rdmft_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine rdmft_init(rdm, gr, st, ks)
+  subroutine rdmft_init(rdm, parser, gr, st, ks)
     type(rdm_t),    intent(out) :: rdm
+    type(parser_t), intent(in)  :: parser
     type(grid_t),   intent(in)  :: gr  !< grid
     type(states_t), intent(in)  :: st  !< States
     type(v_ks_t),   intent(in)  :: ks  !< Kohn-Sham
@@ -127,7 +129,7 @@ contains
     !% are smaller than this criterion. The bisection for finding the correct mu that is needed
     !% for the occupation number minimization also stops according to this criterion.
     !%End
-    call parse_variable('RDMTolerance', CNST(1.0e-7), rdm%toler)
+    call parse_variable(parser, 'RDMTolerance', CNST(1.0e-7), rdm%toler)
 
     !%Variable RDMToleranceFO
     !%Type float
@@ -138,7 +140,7 @@ contains
     !% Orbital minimization is stopped when all off-diagonal ellements of the FOck Matrix  
     !% are smaller than this criterion.
     !%End
-    call parse_variable('RDMToleranceFO', CNST(1.0e-4), rdm%tolerFO)
+    call parse_variable(parser, 'RDMToleranceFO', CNST(1.0e-4), rdm%tolerFO)
 
     !%Variable RDMConvEner
     !%Type float
@@ -151,7 +153,7 @@ contains
     !% minimizations of the energy with respect to the occupation numbers and the
     !% orbitals is smaller than this criterion. It is also used to exit the orbital minimization.
     !%End
-    call parse_variable('RDMConvEner', CNST(1.0e-7), rdm%conv_ener)
+    call parse_variable(parser, 'RDMConvEner', CNST(1.0e-7), rdm%conv_ener)
 
     !%Variable RDMBasis
     !%Type logical
@@ -161,7 +163,7 @@ contains
     !% If true, all the energy terms and corresponding derivatives involved in RDMFT will
     !% not be calculated on the grid but on the basis of the initial orbitals
     !%End
-    call parse_variable('RDMBasis',.true., rdm%do_basis)
+    call parse_variable(parser, 'RDMBasis',.true., rdm%do_basis)
 
     !%Variable RDMHartreeFock
     !%Type logical
@@ -171,7 +173,7 @@ contains
     !% If true, the code simulates a HF calculation, by omitting the occ.num. optimization
     !% can be used for test reasons
     !%End
-    call parse_variable('RDMHartreeFock',.false., rdm%hf)
+    call parse_variable(parser, 'RDMHartreeFock',.false., rdm%hf)
 
     rdm%nst = st%nst
     if (rdm%do_basis) then
@@ -199,7 +201,7 @@ contains
       end do
     else
       ! initialize eigensolver. No preconditioner for rdmft is implemented, so we disable it.
-      call eigensolver_init(rdm%eigens, gr, st, ks%xc, disable_preconditioner=.true.)
+      call eigensolver_init(rdm%eigens, parser, gr, st, ks%xc, disable_preconditioner=.true.)
       if (rdm%eigens%additional_terms) call messages_not_implemented("CG Additional Terms with RDMFT.")
     end if
 
@@ -254,10 +256,11 @@ contains
   ! ----------------------------------------
 
   ! scf for the occupation numbers and the natural orbitals
-  subroutine scf_rdmft(rdm, gr, geo, st, ks, hm, outp, max_iter, restart_dump)
+  subroutine scf_rdmft(rdm, parser, gr, geo, st, ks, hm, outp, max_iter, restart_dump)
     type(rdm_t),         intent(inout) :: rdm
+    type(parser_t),      intent(in)    :: parser
     type(grid_t),        intent(in)    :: gr  !< grid
-    type(geometry_t),    intent(in) :: geo !< geometry
+    type(geometry_t),    intent(in)    :: geo !< geometry
     type(states_t),      intent(inout) :: st  !< States
     type(v_ks_t),        intent(inout) :: ks  !< Kohn-Sham
     type(hamiltonian_t), intent(inout) :: hm  !< Hamiltonian
@@ -333,7 +336,7 @@ contains
         if (rdm%do_basis) then
           call scf_orb(rdm, gr, st, hm, energy)
         else
-          call scf_orb_cg(rdm, gr, geo, st, ks, hm, energy)
+          call scf_orb_cg(rdm, parser, gr, geo, st, ks, hm, energy)
         end if
         energy_dif = energy - energy_old
         energy_old = energy
@@ -424,7 +427,7 @@ contains
       if (outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir), "scf.", iter
-        call output_all(outp, gr, geo, st, hm, ks, dirname)
+        call output_all(outp, parser, gr, geo, st, hm, ks, dirname)
         call scf_write_static(dirname, "info")
       end if
 
@@ -437,7 +440,7 @@ contains
       call messages_info(3)
       if(gs_run_) then 
         call scf_write_static(STATIC_DIR, "info")
-        call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
+        call output_all(outp, parser, gr, geo, st, hm, ks, STATIC_DIR)
       end if
     else
       write(message(1),'(a,i3,a)')  'The calculation did not converge after ', iter-1, ' iterations '
@@ -909,8 +912,9 @@ contains
   !-----------------------------------------------------------------
   ! Minimize the total energy wrt. an orbital by conjugate gradient
   !-----------------------------------------------------------------
-  subroutine scf_orb_cg(rdm, gr, geo, st, ks, hm, energy)
+  subroutine scf_orb_cg(rdm, parser, gr, geo, st, ks, hm, energy)
     type(rdm_t),          intent(inout) :: rdm
+    type(parser_t),       intent(in)    :: parser
     type(grid_t),         intent(in)    :: gr !< grid
     type(geometry_t),     intent(in)    :: geo !< geometry
     type(states_t),       intent(inout) :: st !< States
@@ -927,7 +931,7 @@ contains
     PUSH_SUB(scf_orb_cg)
     call profiling_in(prof_orb_cg, "CG")
     
-    call v_ks_calc(ks, hm, st, geo)
+    call v_ks_calc(ks, parser, hm, st, geo)
     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     
     !parameters for cg_solver
@@ -968,7 +972,7 @@ contains
 
     ! calculate total energy with new states
     call density_calc (st, gr, st%rho)
-    call v_ks_calc(ks, hm, st, geo)
+    call v_ks_calc(ks, parser, hm, st, geo)
     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     call rdm_derivatives(rdm, hm, st, gr)
     

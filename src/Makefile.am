@@ -53,7 +53,6 @@ basic_f_srcs =                                 \
 	basic/distributed.F90                  \
 	basic/global.F90                       \
 	basic/hardware.F90                     \
-	basic/ialist.F90                       \
 	basic/iihash.F90                       \
 	basic/io_binary_f.F90                  \
 	basic/io_csv_f.F90                     \
@@ -76,6 +75,7 @@ basic_f_srcs =                                 \
 	basic/unit_system.F90                  \
 	basic/utils.F90                        \
 	basic/varinfo.F90                      \
+	basic/walltimer.F90                    \
 	basic/write_iter.F90
 
 basic_c_srcs =                                 \
@@ -83,6 +83,7 @@ basic_c_srcs =                                 \
 	basic/cublas.cc                        \
 	basic/cuda_low.cc                      \
 	basic/getopt_f.c                       \
+	basic/iihash_low.cc                    \
 	basic/io_binary.c                      \
 	basic/io_csv.c                         \
 	basic/oct_f.c                          \
@@ -661,7 +662,8 @@ EXTRA_PROGRAMS = oct-propagation_spectrum \
                  oct-convert \
                  oct-local_multipoles \
                  oct-conductivity \
-                 oct-floquet
+                 oct-floquet \
+                 oct-unfold
 
 bin_PROGRAMS += @UTILITY_PROGRAMS@
 
@@ -745,6 +747,14 @@ oct_floquet_SOURCES = $(td_srcs) $(scf_srcs) $(system_srcs) $(hamiltonian_srcs) 
 			utils/floquet.F90
 oct_floquet_LINK = $(FCLINK)
 oct_floquet_LDADD = $(all_LIBS)
+
+oct_unfold_SOURCES    = $(td_srcs) $(scf_srcs) $(system_srcs) $(hamiltonian_srcs) \
+                        $(basis_set_srcs) $(poisson_srcs) $(states_srcs) $(grid_srcs) \
+                        $(ions_srcs) $(species_srcs) $(math_srcs) $(basic_srcs) \
+                        utils/unfold.F90
+oct_unfold_LINK = $(FCLINK)
+oct_unfold_LDADD = $(all_LIBS)
+
 
 
 # debug files from MacOS gcc with -g

@@ -169,7 +169,7 @@ subroutine X(sternheimer_solve)(                           &
             call batch_copy_data(mesh%np, orhsb, rhsb)
             call batch_end(orhsb)
           else
-            call X(pert_apply_batch)(perturbation, sys%gr, sys%geo, hm, ik, st%group%psib(ib, ik), rhsb)
+            call X(pert_apply_batch)(perturbation, sys%parser, sys%gr, sys%geo, hm, ik, st%group%psib(ib, ik), rhsb)
           end if
 
           call batch_end(rhsb)
@@ -676,14 +676,14 @@ subroutine X(sternheimer_solve_order2)( &
 
         call states_get_state(st, sys%gr%mesh, ist, ik, psi)
 
-        call X(pert_apply)(pert1, sys%gr, sys%geo, hm, ik, psi, pert1psi)
-        call X(pert_apply)(pert2, sys%gr, sys%geo, hm, ik, psi, pert2psi)
+        call X(pert_apply)(pert1, sys%parser, sys%gr, sys%geo, hm, ik, psi, pert1psi)
+        call X(pert_apply)(pert2, sys%parser, sys%gr, sys%geo, hm, ik, psi, pert2psi)
         if(present(give_pert1psi2)) then
           pert1psi2(1:mesh%np, 1:st%d%dim) = give_pert1psi2(1:sys%gr%mesh%np, 1:st%d%dim, ist, ik)
         else
-          call X(pert_apply)(pert1, sys%gr, sys%geo, hm, ik, lr2(isigma)%X(dl_psi)(:, :, ist, ik), pert1psi2)
+          call X(pert_apply)(pert1, sys%parser, sys%gr, sys%geo, hm, ik, lr2(isigma)%X(dl_psi)(:, :, ist, ik), pert1psi2)
         end if
-        call X(pert_apply)(pert2, sys%gr, sys%geo, hm, ik, lr1(isigma)%X(dl_psi)(:, :, ist, ik), pert2psi1)
+        call X(pert_apply)(pert2, sys%parser, sys%gr, sys%geo, hm, ik, lr1(isigma)%X(dl_psi)(:, :, ist, ik), pert2psi1)
 
         ! derivative of the eigenvalues:
         ! bare perturbation

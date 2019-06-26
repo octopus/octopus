@@ -19,8 +19,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_gstransformation(gr, tg, td, restart)
+  subroutine target_init_gstransformation(gr, parser, tg, td, restart)
     type(grid_t),     intent(in)    :: gr
+    type(parser_t),   intent(in)    :: parser
     type(target_t),   intent(inout) :: tg
     type(td_t),       intent(in)    :: td
     type(restart_t),  intent(inout) :: restart
@@ -45,9 +46,9 @@
     !% 
     !% The syntax is the same as the <tt>TransformStates</tt> block.
     !%End
-    call transform_states(tg%st, restart, gr, prefix = "OCTTarget")
+    call transform_states(tg%st, parser, restart, gr, prefix = "OCTTarget")
 
-    if(.not. parse_is_defined('OCTTargetTransformStates')) then
+    if(.not. parse_is_defined(parser, 'OCTTargetTransformStates')) then
       message(1) = 'If "OCTTargetOperator = oct_tg_superposition", then you must'
       message(2) = 'supply an "OCTTargetTransformStates" block to create the superposition.'
       call messages_fatal(2)
@@ -69,17 +70,18 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_gstransformation(tg, gr, dir, geo, hm, outp)
-    type(target_t), intent(inout) :: tg
-    type(grid_t), intent(inout)   :: gr
-    character(len=*), intent(in)  :: dir
-    type(geometry_t),       intent(in)  :: geo
-    type(hamiltonian_t),    intent(in)  :: hm
-    type(output_t),         intent(in)  :: outp
+  subroutine target_output_gstransformation(tg, parser, gr, dir, geo, hm, outp)
+    type(target_t),      intent(in) :: tg
+    type(parser_t),      intent(in)    :: parser
+    type(grid_t),        intent(in) :: gr
+    character(len=*),    intent(in) :: dir
+    type(geometry_t),    intent(in) :: geo
+    type(hamiltonian_t), intent(in) :: hm
+    type(output_t),      intent(in) :: outp
     PUSH_SUB(target_output_gstransformation)
     
     call io_mkdir(trim(dir))
-    call output_states(tg%st, gr, geo, hm, trim(dir), outp)
+    call output_states(tg%st, parser, gr, geo, hm, trim(dir), outp)
 
     POP_SUB(target_output_gstransformation)
   end subroutine target_output_gstransformation
@@ -90,9 +92,9 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_gstransformation(tg, gr, psi) result(j1)
-    type(target_t),   intent(inout) :: tg
-    type(grid_t),     intent(inout) :: gr
-    type(states_t),   intent(inout) :: psi
+    type(target_t), intent(in) :: tg
+    type(grid_t),   intent(in) :: gr
+    type(states_t), intent(in) :: psi
 
     integer :: ik, ist
 
@@ -125,9 +127,9 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_gstransformation(tg, gr, psi_in, chi_out)
-    type(target_t),    intent(inout) :: tg
-    type(grid_t),      intent(inout) :: gr
-    type(states_t),    intent(inout) :: psi_in
+    type(target_t),    intent(in)    :: tg
+    type(grid_t),      intent(in)    :: gr
+    type(states_t),    intent(in)    :: psi_in
     type(states_t),    intent(inout) :: chi_out
 
     integer :: ik, ist
