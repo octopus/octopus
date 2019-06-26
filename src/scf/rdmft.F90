@@ -98,12 +98,13 @@ module rdmft_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine rdmft_init(rdm, parser, gr, st, ks)
-    type(rdm_t),    intent(out) :: rdm
-    type(parser_t), intent(in)  :: parser
-    type(grid_t),   intent(in)  :: gr  !< grid
-    type(states_t), intent(in)  :: st  !< States
-    type(v_ks_t),   intent(in)  :: ks  !< Kohn-Sham
+  subroutine rdmft_init(rdm, parser, gr, st, ks, fromScratch)
+    type(rdm_t),    intent(out)   :: rdm
+    type(parser_t), intent(in)    :: parser
+    type(grid_t),   intent(in)    :: gr  !< grid
+    type(states_t), intent(in)    :: st  !< States
+    type(v_ks_t),   intent(in)    :: ks  !< Kohn-Sham
+    logical,        intent(inout) :: fromScratch
 
     integer :: ist
 
@@ -164,6 +165,13 @@ contains
     !% not be calculated on the grid but on the basis of the initial orbitals
     !%End
     call parse_variable(parser, 'RDMBasis',.true., rdm%do_basis)
+    
+    if (rdm%do_basis .and. fromScratch) then
+      call messages_write("RDMFT calculations with RDMBasis = yes cannot be started FromScratch")
+      call messages_new_line()
+      call messages_write("Run a calculation for independent particles first")
+      call messages_fatal()
+    end if
 
     !%Variable RDMHartreeFock
     !%Type logical

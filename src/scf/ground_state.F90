@@ -109,14 +109,7 @@ contains
     call scf_init(scfv, sys%parser, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks)
 
     if(fromScratch) then
-      if(sys%ks%theory_level == RDMFT) then
-        call messages_write("RDMFT calculations cannot be started FromScratch")
-        call messages_new_line()
-        call messages_write("Run a calculation for independent particles first")
-        call messages_fatal()
-      else
-        call lcao_run(sys, hm, lmm_r = scfv%lmm_r)
-      end if
+      call lcao_run(sys, hm, lmm_r = scfv%lmm_r)
     else
       ! setup Hamiltonian
       call messages_write('Info: Setting up Hamiltonian.')
@@ -138,7 +131,7 @@ contains
     
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
-      call rdmft_init(rdm, sys%parser, sys%gr, sys%st, sys%ks)
+      call rdmft_init(rdm, sys%parser, sys%gr, sys%st, sys%ks, fromScratch)
       call scf_rdmft(rdm, sys%parser, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, scfv%max_iter, restart_dump)
       call rdmft_end(rdm)
     else
