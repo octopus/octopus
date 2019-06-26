@@ -559,7 +559,7 @@ contains
 
     ! Add, if it exists, the frozen density from the inner orbitals.
     if(associated(st%frozen_rho)) then
-      forall(ip = 1:mesh%np, is = 1:st%d%spin)
+      forall(ip = 1:mesh%np, is = 1:st%d%nspin)
         total_rho(ip, is) = total_rho(ip, is) + st%frozen_rho(ip, is)
       end forall
     end if
