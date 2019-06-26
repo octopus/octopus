@@ -202,11 +202,11 @@ contains
                 prod =  zmf_dotp(mesh, sys%st%d%dim, psii, gpsij(:, idir, :)) * zmf_dotp(mesh, sys%st%d%dim, psij, gpsii(:, jdir, :))
                 do ifreq = 1, nfreq
                    if (abs(eigi-eigj)<CNST(1.0e-10)) then 
-                      tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) + sys%st%d%kweights(iqn)*(CNST(-2.0)/mesh%sb%rcell_volume)* &
-                           df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*((minfreq + (ifreq-1)*dfreq)))/ (((minfreq + (ifreq-1)*dfreq))**2 + width**2/CNST(4.0)) /(CNST(2.0)*M_PI)/(CNST(2.0)*M_PI)
+                      tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) + sys%st%d%kweights(iqn)*(CNST(-1.0)/mesh%sb%rcell_volume)* &
+                           df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*((minfreq + (ifreq-1)*dfreq)))/ (((minfreq + (ifreq-1)*dfreq))**2 + width**2/CNST(4.0))
                   else 
-                     tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - sys%st%d%kweights(iqn)*(CNST(-2.0)/mesh%sb%rcell_volume)* &
-                          df*real(prod,REAL_PRECISION) * (CNST(0.5)*width - M_ZI*(eigi-eigj - (minfreq + (ifreq-1)*dfreq)))/ ((eigi-eigj - (minfreq + (ifreq-1)*dfreq))**2 + width**2/CNST(4.0)) / (CNST(2.0)*M_PI)/(CNST(2.0)*M_PI)
+                     tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - sys%st%d%kweights(iqn)*(CNST(-1.0)/mesh%sb%rcell_volume)* &
+                          df*real(prod,REAL_PRECISION) * (CNST(0.5)*width - M_ZI*(eigi-eigj - (minfreq + (ifreq-1)*dfreq)))/ ((eigi-eigj - (minfreq + (ifreq-1)*dfreq))**2 + width**2/CNST(4.0))
                   endif
                 end do
              end do !loop over jdir
@@ -233,6 +233,7 @@ contains
    do ifreq=1,nfreq
       sum_cond1 = sum_cond1 + (tensor(1,1,ifreq) + tensor(2,2,ifreq) + tensor(3,3,ifreq))*dfreq/CNST(3.0)
    enddo
+!   sum_cond2 = sum_cond2 + CNST(2.0) * CNST(4.0)* M_PI * M_PI * mesh%sb%rcell_volume * sum_cond1 / (sum_occ * M_PI)
    sum_cond2 = sum_cond2 + CNST(2.0) * mesh%sb%rcell_volume * sum_cond1 / (sum_occ * M_PI)
 
    
