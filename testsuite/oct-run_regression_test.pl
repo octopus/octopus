@@ -244,6 +244,15 @@ while ($_ = <TESTSUITE>) {
         $testname = "$basedir/$basename";
         $report{$testname} = {"input" => {}};
 
+    } elsif ( $_ =~ /^ExpectedFailure\s*:\s(.*)\s*$/) {
+
+        $expected_failure = $1;
+        $expected_failure =~ s/^\s*//;
+        $expected_failure =~ s/\s*$//;
+        $test{"expected_failure"} = $expected_failure;
+        $report{$testname}{"expected_failure"} = $expected_failure;
+        $expect_error = $expected_failure =~ /yes/i;
+
     } elsif ( $_ =~ /^Enabled\s*:\s*(.*)\s*$/) {
         %test = ();
         $enabled = $1;
