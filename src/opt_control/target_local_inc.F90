@@ -19,10 +19,11 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_local(gr, tg, td)
-    type(grid_t),     intent(in)    :: gr
-    type(target_t),   intent(inout) :: tg
-    type(td_t),       intent(in)    :: td
+  subroutine target_init_local(gr, parser, tg, td)
+    type(grid_t),   intent(in)    :: gr
+    type(parser_t), intent(in)    :: parser
+    type(target_t), intent(inout) :: tg
+    type(td_t),     intent(in)    :: td
 
     integer             :: ip
     FLOAT               :: xx(MAX_DIM), rr, psi_re, psi_im
@@ -40,7 +41,7 @@
     !% that defines the target. This should be done by defining it through a string, using 
     !% the variable <tt>OCTLocalTarget</tt>.
     !%End
-    if(parse_is_defined('OCTLocalTarget')) then
+    if(parse_is_defined(parser, 'OCTLocalTarget')) then
       SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
       tg%rho = M_ZERO
       call parse_variable('OCTLocalTarget', "0", expression)
@@ -73,11 +74,11 @@
 
   ! ----------------------------------------------------------------------
   subroutine target_output_local(tg, gr, dir, geo, outp)
-    type(target_t), intent(inout) :: tg
-    type(grid_t), intent(inout)   :: gr
-    character(len=*), intent(in)  :: dir
-    type(geometry_t),       intent(in)  :: geo
-    type(output_t),         intent(in)  :: outp
+    type(target_t),   intent(in) :: tg
+    type(grid_t),     intent(in) :: gr
+    character(len=*), intent(in) :: dir
+    type(geometry_t), intent(in) :: geo
+    type(output_t),   intent(in) :: outp
 
     integer :: ierr
     PUSH_SUB(target_output_local)
@@ -96,9 +97,9 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_local(gr, tg, psi) result(j1)
-    type(grid_t),     intent(inout) :: gr
-    type(target_t),   intent(inout) :: tg
-    type(states_t),   intent(inout) :: psi
+    type(grid_t),   intent(in) :: gr
+    type(target_t), intent(in) :: tg
+    type(states_t), intent(in) :: psi
 
     integer :: is
     PUSH_SUB(target_j1_local)
@@ -115,10 +116,10 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_local(tg, gr, psi_in, chi_out)
-    type(target_t),    intent(inout) :: tg
-    type(grid_t),      intent(inout) :: gr
-    type(states_t),    intent(inout) :: psi_in
-    type(states_t),    intent(inout) :: chi_out
+    type(target_t), intent(in)    :: tg
+    type(grid_t),   intent(in)    :: gr
+    type(states_t), intent(in)    :: psi_in
+    type(states_t), intent(inout) :: chi_out
 
     integer :: ik, idim, ist, ip
     CMPLX, allocatable :: zpsi(:, :)

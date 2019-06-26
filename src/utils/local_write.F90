@@ -87,8 +87,9 @@ contains
   end function local_write_check_hm
 
   ! ---------------------------------------------------------
-  subroutine local_write_init(writ, nd, lab, iter, dt)
+  subroutine local_write_init(writ, parser, nd, lab, iter, dt)
     type(local_write_t), intent(out)   :: writ
+    type(parser_t),      intent(in)    :: parser
     integer,             intent(in)    :: nd 
     character(len=15),   intent(in)    :: lab(:)
     integer,             intent(in)    :: iter
@@ -139,7 +140,7 @@ contains
       writ%out(iout,:)%write = (bitand(flags, 2**(iout - 1)) /= 0)
     end do
 
-    call messages_obsolete_variable('LDOutputHow', 'LDOutputFormat')
+    call messages_obsolete_variable(parser, 'LDOutputHow', 'LDOutputFormat')
     
     !%Variable LDOutputFormat
     !%Type flag
@@ -227,15 +228,16 @@ contains
   end subroutine local_write_end
 
   ! ---------------------------------------------------------
-  subroutine local_write_iter(writ, nd, lab, ions_inside, inside, center, gr, st, & 
+  subroutine local_write_iter(writ, parser, nd, lab, ions_inside, inside, center, gr, st, & 
                               hm, ks, geo, kick, iter, l_start, ldoverwrite)
     type(local_write_t),    intent(inout) :: writ
+    type(parser_t),         intent(in)    :: parser
     integer,                intent(in)    :: nd 
     character(len=15),      intent(in)    :: lab(:)
     logical,                intent(in)    :: ions_inside(:,:)
     logical,                intent(in)    :: inside(:,:)
     FLOAT  ,                intent(in)    :: center(:,:)
-    type(grid_t),           intent(inout) :: gr
+    type(grid_t),           intent(in)    :: gr
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(inout) :: hm
     type(v_ks_t),           intent(inout) :: ks
@@ -264,12 +266,12 @@ contains
     end if
 
     if(any(writ%out(LOCAL_OUT_DENSITY,:)%write).or.any(writ%out(LOCAL_OUT_POTENTIAL,:)%write)) &
-      call local_write_density(writ%out(LOCAL_OUT_DENSITY, :), writ%out(LOCAL_OUT_POTENTIAL,:), & 
+      call local_write_density(writ%out(LOCAL_OUT_DENSITY, :), parser, writ%out(LOCAL_OUT_POTENTIAL,:), & 
                                nd, lab, inside, &
                                gr, geo, st, hm, ks, iter, writ%how)
     
     if(any(writ%out(LOCAL_OUT_ENERGY, :)%write)) then
-      call local_write_energy(writ%out(LOCAL_OUT_ENERGY, :), nd, lab, inside, &
+      call local_write_energy(writ%out(LOCAL_OUT_ENERGY, :), parser, nd, lab, inside, &
                                gr, geo, st, hm, ks, iter, l_start, ldoverwrite)
       if(mpi_grp_is_root(mpi_world)) then
         do id = 1, nd
@@ -283,14 +285,15 @@ contains
   end subroutine local_write_iter
 
   ! ---------------------------------------------------------
-  subroutine local_write_density(out_dens, out_pot, nd, lab, inside, & 
+  subroutine local_write_density(out_dens, parser, out_pot, nd, lab, inside, & 
                                 gr, geo, st, hm, ks, iter, how)
     type(local_write_prop_t),      intent(inout) :: out_dens(:)
+    type(parser_t),                intent(in)    :: parser
     type(local_write_prop_t),      intent(inout) :: out_pot(:)
     integer,                  intent(in)    :: nd 
     character(len=15),        intent(in)    :: lab(:)
     logical,                  intent(in)    :: inside(:,:)
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),         intent(in)    :: gr
     type(geometry_t),     intent(inout) :: geo
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
@@ -336,7 +339,7 @@ contains
           do ix = 1, gr%mesh%np
             if (inside(ix, id)) st%rho(ix, is) = st_rho(ix)
           end do
-          call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+          call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
           folder = 'local.general/potential/'//trim(lab(id))//'.potential/'
           write(out_name, '(a,i0,a1,i7.7)')'vxc.',is,'.',iter
           call dio_function_output(how, &
@@ -355,7 +358,7 @@ contains
         call dio_function_output(how, &
           trim(folder), trim(out_name), gr%mesh, hm%vhartree, units_out%length, ierr, geo = geo)
       !Computes global XC potential
-        call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+        call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
         folder = 'local.general/potential/'
         write(out_name, '(a,i0,a1,i7.7)')'global-vxc.',is,'.',iter
         call dio_function_output(how, &
@@ -370,13 +373,14 @@ contains
   end subroutine local_write_density
 
   ! ---------------------------------------------------------
-  subroutine local_write_energy(out_energy, nd, lab, inside, & 
+  subroutine local_write_energy(out_energy, parser, nd, lab, inside, & 
                                 gr, geo, st, hm, ks, iter, l_start, start)
     type(local_write_prop_t),      intent(inout) :: out_energy(:)
+    type(parser_t),                intent(in)    :: parser
     integer,                  intent(in)    :: nd 
     character(len=15),        intent(in)    :: lab(:)
     logical,                  intent(in)    :: inside(:,:)
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),         intent(in)    :: gr
     type(geometry_t),     intent(inout) :: geo
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
@@ -447,7 +451,7 @@ contains
       !Compute Hartree potential
       call dpoisson_solve(psolver, hm%vhartree, st%rho(1:gr%mesh%np, is))
       !Compute XC potential
-      call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+      call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
  ! 
       st_rho(:) = st%rho(:, is)
       hm_vxc(:) = hm%vxc(:, is)
@@ -471,7 +475,7 @@ contains
         do ix = 1, gr%mesh%np 
           if (inside(ix, id)) st%rho(ix, is) = st_rho(ix)
         end do
-        call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+        call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
         tmp_rhoi(1:gr%mesh%np) = st%rho(1:gr%mesh%np, is)
       !eh = Int[n(id)*v_h(id)]
         leh = dmf_integrate(gr%mesh, tmp_rhoi*hm%vhartree(1:gr%mesh%np)) 
@@ -491,7 +495,7 @@ contains
             do ix = 1, gr%mesh%np 
               if (inside(ix, jd)) st%rho(ix, is) = st_rho(ix)
             end do
-            call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+            call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
             leh = dmf_integrate(gr%mesh, tmp_rhoi*hm%vhartree(1:gr%mesh%np)) 
           !exc = Int[n(id)*v_xc(jd)]
             lexc = dmf_integrate(gr%mesh, tmp_rhoi*hm%vxc(1:gr%mesh%np, is))

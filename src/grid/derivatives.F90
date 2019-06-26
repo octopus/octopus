@@ -98,6 +98,7 @@ module derivatives_oct_m
     NON_BLOCKING = 2 
 
   type derivatives_t
+    ! Components are public by default
     type(boundaries_t)    :: boundaries
     type(mesh_t), pointer :: mesh          !< pointer to the underlying mesh
     integer               :: dim           !< dimensionality of the space (sb%dim)
@@ -108,16 +109,16 @@ module derivatives_oct_m
 
     !> If the so-called variational discretization is used, this controls a
     !! possible filter on the Laplacian.
-    FLOAT :: lapl_cutoff   
+    FLOAT, private :: lapl_cutoff   
 
-    type(nl_operator_t), pointer :: op(:)  !< op(1:conf%dim) => gradient
-    !! op(conf%dim+1) => Laplacian
-    type(nl_operator_t), pointer :: lapl   !< these are just shortcuts for op
+    type(nl_operator_t), pointer, private :: op(:)  !< op(1:conf%dim) => gradient
+                                                    !! op(conf%dim+1) => Laplacian
+    type(nl_operator_t), pointer :: lapl            !< these are just shortcuts for op
     type(nl_operator_t), pointer :: grad(:)
 
     integer                      :: n_ghost(MAX_DIM)   !< ghost points to add in each dimension
 #if defined(HAVE_MPI)
-    integer                      :: comm_method 
+    integer, private             :: comm_method 
 #endif
     type(derivatives_t),    pointer :: finer
     type(derivatives_t),    pointer :: coarser
@@ -165,8 +166,9 @@ contains
   end subroutine derivatives_nullify
 
   ! ---------------------------------------------------------
-  subroutine derivatives_init(der, sb, use_curvilinear, order)
+  subroutine derivatives_init(der, parser, sb, use_curvilinear, order)
     type(derivatives_t), target, intent(out) :: der
+    type(parser_t),              intent(in)  :: parser
     type(simul_box_t),           intent(in)  :: sb
     logical,                     intent(in)  :: use_curvilinear
     integer, optional,           intent(in)  :: order
@@ -260,7 +262,7 @@ contains
       call messages_input_error('ParallelizationOfDerivatives')
     end if
 
-    call messages_obsolete_variable('OverlapDerivatives', 'ParallelizationOfDerivatives')
+    call messages_obsolete_variable(parser, 'OverlapDerivatives', 'ParallelizationOfDerivatives')
 #endif
 
     ! if needed, der%masses should be initialized in modelmb_particles_init
@@ -404,20 +406,22 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine derivatives_update(der, mesh)
+  subroutine derivatives_update(der, parser, mesh)
     type(derivatives_t),    intent(inout) :: der
+    type(parser_t),         intent(in)    :: parser
     type(mesh_t),   target, intent(in)    :: mesh
     
     call derivatives_get_stencil_lapl(der)
     call derivatives_get_stencil_grad(der)
     
-    call derivatives_build(der, mesh)
+    call derivatives_build(der, parser, mesh)
     
   end subroutine derivatives_update
 
   ! ---------------------------------------------------------
-  subroutine derivatives_build(der, mesh)
+  subroutine derivatives_build(der, parser, mesh)
     type(derivatives_t),    intent(inout) :: der
+    type(parser_t),         intent(in)    :: parser
     type(mesh_t),   target, intent(in)    :: mesh
 
     integer, allocatable :: polynomials(:,:)
@@ -430,7 +434,7 @@ contains
 
     PUSH_SUB(derivatives_build)
 
-    call boundaries_init(der%boundaries, mesh)
+    call boundaries_init(der%boundaries, parser, mesh)
 
     ASSERT(associated(der%op))
     ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARGENERAL)

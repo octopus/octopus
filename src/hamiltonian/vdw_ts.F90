@@ -53,6 +53,7 @@ module vdw_ts_oct_m
     vdw_ts_calculate
   
   type vdw_ts_t
+    private
     FLOAT, allocatable :: c6free(:)        !> Free atomic volumes for each atomic species.
     FLOAT, allocatable :: dpfree(:)        !> Free atomic static dipole polarizability for each atomic species.
     FLOAT, allocatable :: r0free(:)        !> Free atomic vdW radius for each atomic species.

@@ -75,6 +75,8 @@ module kick_oct_m
 
 
   type kick_t
+    ! Components are public by default
+
     !> The time which the kick is applied (normally, this is zero)
     FLOAT             :: time
     !> The strength, and strength "mode".
@@ -101,19 +103,21 @@ module kick_oct_m
     integer, pointer  :: l(:), m(:)
     FLOAT, pointer    :: weight(:)
     FLOAT             :: qvector(MAX_DIM)
+    FLOAT             :: trans_vec(MAX_DIM,2)
     FLOAT             :: qlength
     integer           :: qkick_mode
     integer           :: qbessel_l, qbessel_m
     !> In case we use a general function
     integer           :: function_mode
-    character(len=200):: user_defined_function
+    character(len=200), private:: user_defined_function
   end type kick_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine kick_init(kick, sb, nspin, dim, periodic_dim)
+  subroutine kick_init(kick, parser, sb, nspin, dim, periodic_dim)
     type(kick_t),   intent(out) :: kick
+    type(parser_t), intent(in)  :: parser
     type(simul_box_t), intent(in) :: sb
     integer,        intent(in)  :: nspin
     integer,        intent(in)  :: dim
@@ -121,7 +125,7 @@ contains
 
     type(block_t) :: blk
     integer :: n_rows, irow, idir, iop
-    FLOAT :: norm
+    FLOAT :: norm, dot
 
     PUSH_SUB(kick_init)
 
@@ -214,7 +218,7 @@ contains
       call messages_input_error('TDDeltaStrengthMode')
     end select
 
-    if(parse_is_defined('TDDeltaUserDefined')) then
+    if(parse_is_defined(parser, 'TDDeltaUserDefined')) then
 
       kick%function_mode = KICK_FUNCTION_USER_DEFINED
       kick%n_multipoles = 0
@@ -497,6 +501,32 @@ contains
         message(1) = "For magnons, the variable TDEasyAxis must be defined."
         call messages_fatal(1)
       end if
+
+      !We first two vectors defining a basis in the transverse plane
+      !For this we take two vectors not align with the first one
+      !and we perform a Gram-Schmidt orthogonalization
+      kick%trans_vec(1,1) = -kick%easy_axis(2)
+      kick%trans_vec(2,1) = M_TWO*kick%easy_axis(3)
+      kick%trans_vec(3,1) = M_THREE*kick%easy_axis(1)
+
+      kick%trans_vec(1,2) = M_TWO*kick%easy_axis(3)
+      kick%trans_vec(2,2) = -M_HALF*kick%easy_axis(1)
+      kick%trans_vec(3,2) = kick%easy_axis(2)
+
+      dot = sum(kick%easy_axis(1:3)*kick%trans_vec(1:3,1))
+      kick%trans_vec(1:3,1) = kick%trans_vec(1:3,1) - dot*kick%easy_axis(1:3)
+      norm = sum(kick%trans_vec(1:3,1)**2)
+      kick%trans_vec(1:3,1) = kick%trans_vec(1:3,1)/sqrt(norm)
+
+      dot = sum(kick%easy_axis(1:3)*kick%trans_vec(1:3,2))
+      norm = sum(kick%trans_vec(1:3,1)*kick%trans_vec(1:3,2))
+      kick%trans_vec(1:3,2) = kick%trans_vec(1:3,2) - dot*kick%easy_axis(1:3) &
+                                                    - norm*kick%trans_vec(1:3,1)
+      norm = sum(kick%trans_vec(1:3,2)**2)
+      kick%trans_vec(1:3,2) = kick%trans_vec(1:3,2)/sqrt(norm)
+
+      !The perturbation direction is defined as
+      !cos(q.r)*uvec + sin(q.r)*vvec
     end if
 
     POP_SUB(kick_init)
@@ -857,7 +887,7 @@ contains
 
     CMPLX, allocatable :: kick_pcm_function(:)
     integer :: ns
-    FLOAT :: uvec(MAX_DIM), vvec(MAX_DIM), norm, dot
+    FLOAT :: uvec(MAX_DIM), vvec(MAX_DIM)
 
     PUSH_SUB(kick_apply)
 
@@ -953,35 +983,15 @@ contains
       else
         ASSERT(st%d%ispin==SPINORS)
 
+        !The perturbation direction is defined as
+        !cos(q.r)*uvec + sin(q.r)*vvec
+        uvec(1:3) = kick%trans_vec(1:3,1)
+        vvec(1:3) = kick%trans_vec(1:3,2)
+
         do iqn = st%d%kpt%start, st%d%kpt%end, ns
           do ist = st%st_start, st%st_end
 
             call states_get_state(st, mesh, ist, iqn, psi)
-
-            !We first two vectors defining a basis in the transverse plane
-            !For this we take two vectors not align with the first one
-            !and we perform a Gram-Schmidt orthogonalization
-            uvec(1) = -kick%easy_axis(2)
-            uvec(2) = M_TWO*kick%easy_axis(3)
-            uvec(3) = M_THREE*kick%easy_axis(1)
- 
-            vvec(1) = M_TWO*kick%easy_axis(3)
-            vvec(2) = -M_HALF*kick%easy_axis(1)
-            vvec(3) = kick%easy_axis(2)
-
-            dot = sum(kick%easy_axis(1:3)*uvec(1:3))
-            uvec(1:3) = uvec(1:3) - dot*kick%easy_axis(1:3)
-            norm = sum(uvec(1:3)**2)
-            uvec(1:3) = uvec(1:3)/sqrt(norm)
-
-            dot = sum(kick%easy_axis(1:3)*vvec(1:3))
-            norm = sum(uvec(1:3)*vvec(1:3))
-            vvec(1:3) = vvec(1:3) - dot*kick%easy_axis(1:3) - norm*uvec(1:3)
-            norm = sum(vvec(1:3)**2)
-            vvec(1:3) = vvec(1:3)/sqrt(norm)
-    
-            !The perturbation direction is defined as
-            !cos(q.r)*uvec + sin(q.r)*vvec
 
             do ip = 1, mesh%np
               

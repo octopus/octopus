@@ -17,13 +17,14 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine output_states(st, gr, geo, hm, dir, outp)
-  type(states_t),         intent(inout) :: st
-  type(grid_t),           intent(inout) :: gr
-  type(geometry_t),       intent(in)    :: geo
-  type(hamiltonian_t),    intent(in)    :: hm
-  character(len=*),       intent(in)    :: dir
-  type(output_t),         intent(in)    :: outp
+subroutine output_states(st, parser, gr, geo, hm, dir, outp)
+  type(states_t),         intent(in) :: st
+  type(parser_t),         intent(in) :: parser
+  type(grid_t),           intent(in) :: gr
+  type(geometry_t),       intent(in) :: geo
+  type(hamiltonian_t),    intent(in) :: hm
+  character(len=*),       intent(in) :: dir
+  type(output_t),         intent(in) :: outp
 
   integer :: ik, ist, idim, idir, is, ierr, ip
   character(len=MAX_PATH_LEN) :: fname
@@ -183,9 +184,9 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
 
   if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
     if (states_are_real(st)) then
-      call doutput_modelmb (trim(dir), gr, st, geo, outp)
+      call doutput_modelmb(trim(dir), parser, gr, st, geo, outp)
     else
-      call zoutput_modelmb (trim(dir), gr, st, geo, outp)
+      call zoutput_modelmb(trim(dir), parser, gr, st, geo, outp)
     end if
   end if
 
@@ -196,10 +197,10 @@ end subroutine output_states
 
 ! ---------------------------------------------------------
 subroutine output_current_flow(gr, st, dir, outp)
-  type(grid_t),         intent(inout) :: gr
-  type(states_t),       intent(inout) :: st
-  character(len=*),     intent(in)    :: dir
-  type(output_t),       intent(in)    :: outp
+  type(grid_t),         intent(in) :: gr
+  type(states_t),       intent(in) :: st
+  character(len=*),     intent(in) :: dir
+  type(output_t),       intent(in) :: outp
 
   integer :: iunit, ip, idir, rankmin
   FLOAT   :: flow, dmin

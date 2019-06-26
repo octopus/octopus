@@ -134,8 +134,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine propagator_init(gr, st, tr, have_fields, family_is_mgga)
+  subroutine propagator_init(gr, parser, st, tr, have_fields, family_is_mgga)
     type(grid_t),        intent(in)    :: gr
+    type(parser_t),      intent(in)    :: parser
     type(states_t),      intent(in)    :: st
     type(propagator_t),  intent(inout) :: tr
     !> whether there is an associated "field"
@@ -250,7 +251,7 @@ contains
     !%Option cfmagnus4 16
     !% WARNING EXPERIMENTAL
     !%End
-    call messages_obsolete_variable('TDEvolutionMethod', 'TDPropagator')
+    call messages_obsolete_variable(parser, 'TDEvolutionMethod', 'TDPropagator')
 
     call parse_variable('TDPropagator', PROP_ETRS, tr%method)
     if(.not.varinfo_valid_option('TDPropagator', tr%method)) call messages_input_error('TDPropagator')
@@ -346,7 +347,7 @@ contains
 
     call exponential_init(tr%te) ! initialize propagator
 
-    call messages_obsolete_variable('TDSelfConsistentSteps', 'TDStepsWithSelfConsistency')
+    call messages_obsolete_variable(parser, 'TDSelfConsistentSteps', 'TDStepsWithSelfConsistency')
 
     !%Variable TDStepsWithSelfConsistency
     !%Type integer
@@ -481,9 +482,10 @@ contains
   !> Propagates st from time - dt to t.
   !! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
-  subroutine propagator_dt(ks, hm, gr, st, tr, time, dt, ionic_scale, nt, ions, geo, outp, &
+  subroutine propagator_dt(ks, parser, hm, gr, st, tr, time, dt, ionic_scale, nt, ions, geo, outp, &
     scsteps, update_energy, qcchi)
     type(v_ks_t), target,            intent(inout) :: ks
+    type(parser_t),                  intent(in)    :: parser
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
@@ -524,21 +526,21 @@ contains
     select case(tr%method)
     case(PROP_ETRS)
       if(self_consistent_step()) then
-        call td_etrs_sc(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, tr%scf_threshold, &
+        call td_etrs_sc(ks, parser, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, tr%scf_threshold, &
            scsteps)
       else
-        call td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
+        call td_etrs(ks, parser, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
       end if
     case(PROP_AETRS, PROP_CAETRS)
-      call td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
+      call td_aetrs(ks, parser, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
     case(PROP_EXPONENTIAL_MIDPOINT)
       call exponential_midpoint(hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
     case(PROP_CRANK_NICOLSON)
       call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .false.)
     case(PROP_RUNGE_KUTTA4)
-      call td_runge_kutta4(ks, hm, gr, st, tr, time, dt, ions, geo)
+      call td_runge_kutta4(ks, parser, hm, gr, st, tr, time, dt, ions, geo)
     case(PROP_RUNGE_KUTTA2)
-      call td_runge_kutta2(ks, hm, gr, st, tr, time, dt, ions, geo)
+      call td_runge_kutta2(ks, parser, hm, gr, st, tr, time, dt, ions, geo)
     case(PROP_CRANK_NICOLSON_SPARSKIT)
       call td_crank_nicolson(hm, gr, st, tr, time, dt, ions, geo, .true.)
     case(PROP_MAGNUS)
@@ -547,12 +549,12 @@ contains
       call td_qoct_tddft_propagator(hm, ks%xc, gr, st, tr, time, dt, ions, geo)
     case(PROP_EXPLICIT_RUNGE_KUTTA4)
       if(present(qcchi)) then
-        call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo, qcchi)
+        call td_explicit_runge_kutta4(ks, parser, hm, gr, st, time, dt, ions, geo, qcchi)
       else
-        call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo)
+        call td_explicit_runge_kutta4(ks, parser, hm, gr, st, time, dt, ions, geo)
       end if
     case(PROP_CFMAGNUS4)
-      call td_cfmagnus4(ks, hm, gr, st, tr, time, dt, ions, geo, nt)
+      call td_cfmagnus4(ks, parser, hm, gr, st, tr, time, dt, ions, geo, nt)
     end select
 
     generate = .false.
@@ -571,7 +573,7 @@ contains
       call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
     end if
 
-    call v_ks_calc(ks, hm, st, geo, calc_eigenval = update_energy_, time = abs(nt*dt), calc_energy = update_energy_)
+    call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval = update_energy_, time = abs(nt*dt), calc_energy = update_energy_)
     if(update_energy_) call energy_calc_total(hm, gr, st, iunit = -1)
 
     ! Recalculate forces, update velocities...
@@ -628,8 +630,9 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine propagator_dt_bo(scf, gr, ks, st, hm, geo, mc, outp, iter, dt, ions, scsteps)
+  subroutine propagator_dt_bo(scf, parser, gr, ks, st, hm, geo, mc, outp, iter, dt, ions, scsteps)
     type(scf_t), intent(inout)         :: scf
+    type(parser_t),      intent(in)    :: parser
     type(grid_t), intent(inout)        :: gr
     type(v_ks_t), intent(inout)        :: ks
     type(states_t), intent(inout)      :: st
@@ -648,7 +651,7 @@ contains
     call ion_dynamics_propagate(ions, gr%sb, geo, iter*dt, dt)
     call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
     ! now calculate the eigenfunctions
-    call scf_run(scf, mc, gr, geo, st, ks, hm, outp, &
+    call scf_run(scf, parser, mc, gr, geo, st, ks, hm, outp, &
       gs_run = .false., verbosity = VERB_COMPACT, iters_done = scsteps)
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
@@ -663,7 +666,7 @@ contains
     call hamiltonian_epot_generate(hm, gr, geo, st, time = iter*dt)
 
     ! update Hamiltonian and eigenvalues (fermi is *not* called)
-    call v_ks_calc(ks, hm, st, geo, calc_eigenval = .true., time = iter*dt, calc_energy = .true.)
+    call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval = .true., time = iter*dt, calc_energy = .true.)
 
     ! Get the energies.
     call energy_calc_total(hm, gr, st, iunit = -1)

@@ -220,8 +220,11 @@ contains
     FLOAT, allocatable :: md(:, :)
     FLOAT :: rr, xx(MAX_DIM)
     CMPLX :: expqr
+    type(profile_t), save :: prof
 
     PUSH_SUB(magnetic_total_magnetization)
+
+    call profiling_in(prof, "TOTAL_MAGNETIZATION")
 
     SAFE_ALLOCATE(tmp(1:mesh%np, 1:6))
     SAFE_ALLOCATE(md (1:mesh%np, 1:max(mesh%sb%dim, 3)))
@@ -229,7 +232,7 @@ contains
     call magnetic_density(mesh, st, st%rho, md)
     do ip = 1, mesh%np
       call mesh_r(mesh, ip, rr, coords=xx)
-      expqr = exp(M_zI*sum(xx(1:mesh%sb%dim)*qq(1:mesh%sb%dim)))
+      expqr = exp(-M_zI*sum(xx(1:mesh%sb%dim)*qq(1:mesh%sb%dim)))
       tmp(ip,1) = expqr*md(ip,1)
       tmp(ip,2) = expqr*md(ip,2)
       tmp(ip,3) = expqr*md(ip,3)
@@ -246,6 +249,8 @@ contains
 
     SAFE_DEALLOCATE_A(md)
     SAFE_DEALLOCATE_A(tmp)
+
+    call profiling_out(prof)
 
     POP_SUB(magnetic_total_magnetization)
   end subroutine magnetic_total_magnetization

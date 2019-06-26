@@ -24,6 +24,7 @@ program spin_susceptibility
   use geometry_oct_m
   use global_oct_m
   use io_oct_m
+  use kick_oct_m
   use lalg_adv_oct_m
   use loct_oct_m
   use messages_oct_m
@@ -37,15 +38,17 @@ program spin_susceptibility
 
   implicit none
 
-  integer :: in_file, out_file, ref_file, ii, jj, kk, idir, jdir, ierr, ib, num_col
-  integer :: time_steps, time_steps_ref, energy_steps, istart, iend, ntiter
-  FLOAT   :: dt, dt_ref, tt, ww
+  integer :: in_file, out_file, ref_file, ii, jj, kk, idir, jdir, ierr, ib, num_col, num_col_cart
+  integer :: time_steps, time_steps_ref, energy_steps, istart, iend, ntiter, n_rows
+  FLOAT   :: dt, dt_ref, tt, ww, norm, dot
   FLOAT, allocatable :: ftreal(:,:), ftimag(:,:)
-  FLOAT, allocatable :: magnetization(:,:)
+  FLOAT, allocatable :: m_cart(:,:), magnetization(:,:)
   type(spectrum_t)  :: spectrum
   type(block_t)     :: blk
   type(batch_t)     :: vecpotb, ftrealb, ftimagb
-  character(len=120) :: header
+  type(parser_t)    :: parser
+  type(kick_t)      :: kick
+  character(len=256) :: header
   FLOAT :: delta_strength
   character(len=MAX_PATH_LEN) :: ref_filename
   CMPLX, allocatable :: chi(:,:)
@@ -57,15 +60,58 @@ program spin_susceptibility
   if(ierr == 0) call getopt_dielectric_function()
   call getopt_end()
 
-  call messages_init()
+  call parser_init(parser)
+
+  call messages_init(parser)
 
   call io_init()
 
-  call unit_system_init()
+  call unit_system_init(parser)
 
   call spectrum_init(spectrum)
 
   call parse_variable('TDDeltaStrength', M_ZERO, delta_strength )
+
+  if(parse_block('TDEasyAxis', blk)==0) then
+    n_rows = parse_block_n(blk)
+
+    do idir = 1, 3
+      call parse_block_float(blk, 0, idir - 1, kick%easy_axis(idir))
+    end do
+    norm = sqrt(sum(kick%easy_axis(1:3)**2))
+    if(norm < CNST(1e-9)) then
+      message(1) = "TDEasyAxis norm is too small."
+      call messages_fatal(1)
+    end if
+    kick%easy_axis(1:3) = kick%easy_axis(1:3)/norm
+    call parse_block_end(blk)
+  else
+    message(1) = "For magnons, the variable TDEasyAxis must be defined."
+    call messages_fatal(1)
+  end if
+
+  !We first two vectors defining a basis in the transverse plane
+  !For this we take two vectors not align with the first one
+  !and we perform a Gram-Schmidt orthogonalization
+  kick%trans_vec(1,1) = -kick%easy_axis(2)
+  kick%trans_vec(2,1) = M_TWO*kick%easy_axis(3)
+  kick%trans_vec(3,1) = M_THREE*kick%easy_axis(1)
+
+  kick%trans_vec(1,2) = M_TWO*kick%easy_axis(3)
+  kick%trans_vec(2,2) = -M_HALF*kick%easy_axis(1)
+  kick%trans_vec(3,2) = kick%easy_axis(2)
+
+  dot = sum(kick%easy_axis(1:3)*kick%trans_vec(1:3,1))
+  kick%trans_vec(1:3,1) = kick%trans_vec(1:3,1) - dot*kick%easy_axis(1:3)
+  norm = sum(kick%trans_vec(1:3,1)**2)
+  kick%trans_vec(1:3,1) = kick%trans_vec(1:3,1)/sqrt(norm)
+
+  dot = sum(kick%easy_axis(1:3)*kick%trans_vec(1:3,2))
+  norm = sum(kick%trans_vec(1:3,1)*kick%trans_vec(1:3,2))
+  kick%trans_vec(1:3,2) = kick%trans_vec(1:3,2) - dot*kick%easy_axis(1:3) &
+                                                    - norm*kick%trans_vec(1:3,1)
+  norm = sum(kick%trans_vec(1:3,2)**2)
+  kick%trans_vec(1:3,2) = kick%trans_vec(1:3,2)/sqrt(norm)
 
   in_file = io_open('td.general/total_magnetization', action='read', status='old', die=.false.)
   if(in_file < 0) then 
@@ -77,14 +123,47 @@ program spin_susceptibility
 
   time_steps = time_steps + 1
 
-  num_col = 12
-  SAFE_ALLOCATE(magnetization(1:time_steps, 1:num_col))
+  num_col_cart = 12
+  SAFE_ALLOCATE(m_cart(1:time_steps, 1:num_col_cart))
   
   call io_skip_header(in_file)
   
   do ii = 1, time_steps
-    read(in_file, *) jj, tt, (magnetization(ii,ib),ib = 1, num_col)
+    read(in_file, *) jj, tt, (m_cart(ii,ib),ib = 1, num_col_cart)
   end do
+
+  !We now perform the change of basis to the rotating basis
+  !In this basis we have only m_+(q), m_-(q), and m_z(+/-q)
+  !where z means here along the easy axis
+  num_col = 8
+  SAFE_ALLOCATE(magnetization(1:time_steps, 1:num_col))
+  !Real part of m_x
+  magnetization(:,1) = m_cart(:,1)*kick%trans_vec(1,1) + m_cart(:,3)*kick%trans_vec(2,1) + m_cart(:,5)*kick%trans_vec(3,1)
+  !We add -Im(m_y)
+  magnetization(:,1) = magnetization(:,1) -(m_cart(:,2)*kick%trans_vec(1,2) + m_cart(:,4)*kick%trans_vec(2,2) + m_cart(:,6)*kick%trans_vec(3,2))  
+  
+  !Im part of m_x
+  magnetization(:,2) = m_cart(:,2)*kick%trans_vec(1,1) + m_cart(:,4)*kick%trans_vec(2,1) + m_cart(:,6)*kick%trans_vec(3,1)
+  !We add +Re(m_y)
+  magnetization(:,2) = magnetization(:,2) +(m_cart(:,1)*kick%trans_vec(1,2) + m_cart(:,3)*kick%trans_vec(2,2) + m_cart(:,5)*kick%trans_vec(3,2))
+
+  !Real part of m_x
+  magnetization(:,3) = m_cart(:,7)*kick%trans_vec(1,1) + m_cart(:,9)*kick%trans_vec(2,1) + m_cart(:,11)*kick%trans_vec(3,1)
+  !We add +Im(m_y)
+  magnetization(:,3) = magnetization(:,3) +(m_cart(:,8)*kick%trans_vec(1,2) + m_cart(:,10)*kick%trans_vec(2,2) + m_cart(:,12)*kick%trans_vec(3,2))
+
+  !Im part of m_x
+  magnetization(:,4) = m_cart(:,8)*kick%trans_vec(1,1) + m_cart(:,10)*kick%trans_vec(2,1) + m_cart(:,12)*kick%trans_vec(3,1)
+  !We add -Re(m_y)
+  magnetization(:,4) = magnetization(:,4) -(m_cart(:,7)*kick%trans_vec(1,2) + m_cart(:,9)*kick%trans_vec(2,2) + m_cart(:,11)*kick%trans_vec(3,2))
+  
+  !Real and Im part of m_z
+  magnetization(:,5) = m_cart(:,1)*kick%easy_axis(1) + m_cart(:,3)*kick%easy_axis(2) + m_cart(:,5)*kick%easy_axis(3)
+  magnetization(:,6) = m_cart(:,2)*kick%easy_axis(1) + m_cart(:,4)*kick%easy_axis(2) + m_cart(:,6)*kick%easy_axis(3)
+  magnetization(:,7) = m_cart(:,7)*kick%easy_axis(1) + m_cart(:,9)*kick%easy_axis(2) + m_cart(:,11)*kick%easy_axis(3)
+  magnetization(:,8) = m_cart(:,8)*kick%easy_axis(1) + m_cart(:,10)*kick%easy_axis(2) + m_cart(:,12)*kick%easy_axis(3)
+
+  SAFE_DEALLOCATE_A(m_cart)
 
   call io_close(in_file)
 
@@ -98,10 +177,10 @@ program spin_susceptibility
 
   istart = max(1, istart)
 
-  energy_steps = int(spectrum%max_energy / spectrum%energy_step)
+  energy_steps = spectrum_nenergy_steps(spectrum)
 
-  SAFE_ALLOCATE(ftreal(0:energy_steps, num_col))
-  SAFE_ALLOCATE(ftimag(0:energy_steps, num_col))
+  SAFE_ALLOCATE(ftreal(1:energy_steps, num_col))
+  SAFE_ALLOCATE(ftimag(1:energy_steps, num_col))
 
   call batch_init(vecpotb, num_col)
   call batch_init(ftrealb, num_col)
@@ -109,18 +188,20 @@ program spin_susceptibility
 
   do ib = 1, num_col
     call batch_add_state(vecpotb, magnetization(:, ib))
-    call batch_add_state(ftrealb, ftreal(0:energy_steps,ib))
-    call batch_add_state(ftimagb, ftimag(0:energy_steps,ib))
+    call batch_add_state(ftrealb, ftreal(1:energy_steps,ib))
+    call batch_add_state(ftimagb, ftimag(1:energy_steps,ib))
   end do
 
 
   call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, spectrum%start_time, dt, vecpotb)
 
   call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-    istart, iend, spectrum%start_time, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftrealb)
+    istart, iend, spectrum%start_time, dt, vecpotb, spectrum%min_energy, &
+    spectrum%max_energy, spectrum%energy_step, ftrealb)
 
   call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
-    istart, iend, spectrum%start_time, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftimagb)
+    istart, iend, spectrum%start_time, dt, vecpotb, spectrum%min_energy, &
+    spectrum%max_energy, spectrum%energy_step, ftimagb)
 
 
   call batch_end(vecpotb)
@@ -129,11 +210,11 @@ program spin_susceptibility
   SAFE_DEALLOCATE_A(magnetization)
 
   ASSERT(abs(anint(num_col*M_HALF) - num_col*M_HALF) <= M_EPSILON)
-  SAFE_ALLOCATE(chi(0:energy_steps, 1:num_col/2))
-  do ii = 1, num_col/2 
-    do kk = 0, energy_steps
-      chi(kk,ii) = (ftreal(kk, (ii-1)*2+1) + M_zI*ftimag(kk, (ii-1)*2+1)&
-                   -ftimag(kk, (ii-1)*2+2) + M_zI*ftreal(kk, (ii-1)*2+2))/delta_strength
+  SAFE_ALLOCATE(chi(1:energy_steps, 1:num_col/2))
+  do ii = 1, num_col/2
+    do kk = 1, energy_steps
+      chi(kk,ii) = (ftreal(kk,(ii-1)*2+1) + M_zI*ftimag(kk, (ii-1)*2+1)&
+                 -ftimag(kk, (ii-1)*2+2) + M_zI*ftreal(kk, (ii-1)*2+2))/delta_strength
     end do
   end do
 
@@ -141,11 +222,13 @@ program spin_susceptibility
   SAFE_DEALLOCATE_A(ftimag)
   
 
-  write(header, '(5a15)') '#        energy', 'Re[\chi_{+-}]', 'Im[\chi_{+-}]', 'Re[\chi_{-+}]', 'Im[\chi_{-+}]'
+  write(header, '(9a15)') '#        energy', 'Re[\chi_{+-}(q)]', 'Im[\chi_{+-}(q)]', &
+            'Re[\chi_{-+}(-q)]', 'Im[\chi_{-+}(-q)]', &
+            'Re[\chi_{zz}(q)]', 'Im[\chi_{zz}(q)]', 'Re[\chi_{zz}(-q)]', 'Im[\chi_{zz}(-q)]'
 
   out_file = io_open('td.general/spin_susceptibility', action='write')
   write(out_file,'(a)') trim(header)
-  do kk = 0, energy_steps
+  do kk = 1, energy_steps
     ww = kk*spectrum%energy_step
     write(out_file, '(13e15.6)') ww,                                   &
              (real(chi(kk,ii), REAL_PRECISION), aimag(chi(kk,ii)), ii = 1, num_col/2)
@@ -153,9 +236,10 @@ program spin_susceptibility
   call io_close(out_file)
  
   SAFE_DEALLOCATE_A(chi)
-    
+
   call io_end()
   call messages_end()
+  call parser_end(parser)
   call global_end()
 
 end program spin_susceptibility

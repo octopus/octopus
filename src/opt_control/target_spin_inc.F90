@@ -19,8 +19,10 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_spin(tg)
+  subroutine target_init_spin(tg, parser)
     type(target_t),   intent(inout) :: tg
+    type(parser_t),   intent(in)    :: parser
+        
 
     type(block_t)       :: blk
     integer :: jst
@@ -38,7 +40,7 @@
     !%Description
     !% (Experimental) Specify the targeted spin as a 3-component vector. It will be normalized.
     !%End
-    if(parse_is_defined('OCTTargetSpin')) then
+    if(parse_is_defined(parser, 'OCTTargetSpin')) then
       if(parse_block('OCTTargetSpin', blk) == 0) then
         alpha = M_z0
         do jst = 1, parse_block_cols(blk, 0)
@@ -73,9 +75,9 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_spin(tg, gr, psi) result(j1)
-    type(target_t),   intent(inout) :: tg
-    type(grid_t),     intent(inout) :: gr
-    type(states_t),   intent(inout) :: psi
+    type(target_t),   intent(in) :: tg
+    type(grid_t),     intent(in) :: gr
+    type(states_t),   intent(in) :: psi
     
     integer :: i, j
     CMPLX, allocatable :: zpsi(:, :)
@@ -103,9 +105,9 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_spin(tg, gr, psi_in, chi_out)
-    type(target_t),    intent(inout) :: tg
-    type(grid_t),      intent(inout) :: gr
-    type(states_t),    intent(inout) :: psi_in
+    type(target_t),    intent(in)    :: tg
+    type(grid_t),      intent(in)    :: gr
+    type(states_t),    intent(in)    :: psi_in
     type(states_t),    intent(inout) :: chi_out
     
     integer :: i, j

@@ -49,4 +49,4 @@ TDExpOrder = 16
 TDPropagationTime = 5
 SpiralBoundaryCondition = yes
 
-TDOutput = transverse_magnetization + energy
+TDOutput = total_magnetization + energy

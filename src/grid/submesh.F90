@@ -67,7 +67,8 @@ module submesh_oct_m
     submesh_end
 
   type submesh_t
-    FLOAT                 :: center(1:MAX_DIM)
+    ! Components are public by default
+    FLOAT, private        :: center(1:MAX_DIM)
     FLOAT                 :: radius
     integer               :: np             !< number of points inside the submesh
     integer               :: np_part        !< number of points inside the submesh including ghost points
@@ -441,15 +442,47 @@ contains
 
   ! --------------------------------------------------------------
 
-  logical pure function submesh_overlap(sm1, sm2) result(overlap)
+  logical function submesh_overlap(sm1, sm2) result(overlap)
     type(submesh_t),      intent(in)   :: sm1
     type(submesh_t),      intent(in)   :: sm2
     
+    integer :: ii, jj, dd
     FLOAT :: distance
 
-    distance = sum((sm1%center(1:sm1%mesh%sb%dim) - sm2%center(1:sm2%mesh%sb%dim))**2)
-    overlap = distance + CNST(100.0)*M_EPSILON <= (sm1%radius + sm2%radius)**2
+    !no PUSH_SUB, called too often
 
+    if(.not. simul_box_is_periodic(sm1%mesh%sb)) then
+      !first check the distance
+      distance = sum((sm1%center(1:sm1%mesh%sb%dim) - sm2%center(1:sm2%mesh%sb%dim))**2)
+      overlap = distance <= (CNST(1.5)*(sm1%radius + sm2%radius))**2
+      
+      ! if they are very far, no need to check in detail
+      if(.not. overlap) return
+    end if
+    
+    ! Otherwise check whether they have the some point in common. We
+    ! can make the comparison faster using that the arrays are sorted.
+    overlap = .false.
+    ii = 1
+    jj = 1
+    do while(ii <= sm1%np_part .and. jj <= sm2%np_part)
+      dd = sm1%map(ii) - sm2%map(jj)
+      if(dd < 0) then
+        ii = ii + 1
+      else if(dd > 0) then
+        jj = jj + 1
+      else
+        overlap = .true.
+        exit
+      end if
+    end do
+
+#ifdef HAVE_MPI
+    if(sm1%mesh%parallel_in_domains) then
+      call MPI_Allreduce(MPI_IN_PLACE, overlap, 1, MPI_LOGICAL, MPI_LOR, sm1%mesh%mpi_grp%comm, mpi_err)
+    end if
+#endif
+    
   end function submesh_overlap
 
   ! -------------------------------------------------------------

@@ -54,6 +54,7 @@ module grid_oct_m
     grid_create_multigrid
 
   type grid_t
+    ! Components are public by default
     type(simul_box_t)           :: sb
     type(mesh_t)                :: mesh
     type(multigrid_level_t)     :: fine
@@ -72,22 +73,24 @@ contains
   !-------------------------------------------------------------------
   !>
   !! "Zero-th" stage of grid initialization. It initializes the simulation box.
-  subroutine grid_init_stage_0(gr, geo, space)
+  subroutine grid_init_stage_0(gr, parser, geo, space)
     type(grid_t),          intent(inout) :: gr
+    type(parser_t),        intent(in)    :: parser
     type(geometry_t),      intent(inout) :: geo
     type(space_t),         intent(in)    :: space
 
     PUSH_SUB(grid_init_stage_0)
 
-    call simul_box_init(gr%sb, geo, space)
+    call simul_box_init(gr%sb, parser, geo, space)
       
     POP_SUB(grid_init_stage_0)
   end subroutine grid_init_stage_0
 
 
   !-------------------------------------------------------------------
-  subroutine grid_init_stage_1(gr, geo)
+  subroutine grid_init_stage_1(gr, parser, geo)
     type(grid_t),      intent(inout) :: gr
+    type(parser_t),    intent(in)    :: parser
     type(geometry_t),  intent(in)    :: geo
 
     type(stencil_t) :: cube
@@ -196,7 +199,7 @@ contains
 
     ! initialize derivatives
     call derivatives_nullify(gr%der)
-    call derivatives_init(gr%der, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+    call derivatives_init(gr%der, parser, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
 
     call double_grid_init(gr%dgrid, gr%sb)
 
@@ -222,21 +225,22 @@ contains
 
 
   !-------------------------------------------------------------------
-  subroutine grid_init_stage_2(gr, mc, geo)
+  subroutine grid_init_stage_2(gr, parser, mc, geo)
     type(grid_t), target, intent(inout) :: gr
+    type(parser_t),       intent(in)    :: parser
     type(multicomm_t),    intent(in)    :: mc
     type(geometry_t),     intent(in)    :: geo
 
     PUSH_SUB(grid_init_stage_2)
 
-    call mesh_init_stage_3(gr%mesh, gr%stencil, mc)
+    call mesh_init_stage_3(gr%mesh, parser, gr%stencil, mc)
 
-    call nl_operator_global_init()
+    call nl_operator_global_init(parser)
     if(gr%have_fine_mesh) then
       message(1) = "Info: coarse mesh"
       call messages_info(1)
     end if
-    call derivatives_build(gr%der, gr%mesh)
+    call derivatives_build(gr%der, parser, gr%mesh)
 
     ! initialize a finer mesh to hold the density, for this we use the
     ! multigrid routines
@@ -254,15 +258,15 @@ contains
       call multigrid_mesh_double(geo, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
 
       call derivatives_nullify(gr%fine%der)      
-      call derivatives_init(gr%fine%der, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+      call derivatives_init(gr%fine%der, parser, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
       
-      call mesh_init_stage_3(gr%fine%mesh, gr%stencil, mc)
+      call mesh_init_stage_3(gr%fine%mesh, parser, gr%stencil, mc)
       
       call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
       
       message(1) = "Info: fine mesh"
       call messages_info(1)
-      call derivatives_build(gr%fine%der, gr%fine%mesh)
+      call derivatives_build(gr%fine%der, parser, gr%fine%mesh)
 
       gr%fine%der%coarser => gr%der
       gr%der%finer =>  gr%fine%der
@@ -361,15 +365,16 @@ contains
 
 
   !-------------------------------------------------------------------
-  subroutine grid_create_multigrid(gr, geo, mc)
+  subroutine grid_create_multigrid(gr, parser, geo, mc)
     type(grid_t),      intent(inout) :: gr
+    type(parser_t),    intent(in)    :: parser
     type(geometry_t),  intent(in)    :: geo
     type(multicomm_t), intent(in)    :: mc
 
     PUSH_SUB(grid_create_multigrid)
 
     SAFE_ALLOCATE(gr%mgrid)
-    call multigrid_init(gr%mgrid, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
+    call multigrid_init(gr%mgrid, parser, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
 
     POP_SUB(grid_create_multigrid)
   end subroutine grid_create_multigrid

@@ -43,14 +43,15 @@ module modelmb_particles_oct_m
   !!  container type for input vars concerning modelmb particles
   !!==============================================================
   type modelmb_particle_t
-    integer :: ndim              !< dimensionality of modelmb space each
-                                 !!  particle lives in
+    private
+    integer, public :: ndim              !< dimensionality of modelmb space each
+                                         !!  particle lives in
     
-    integer :: ntype_of_particle !< number of different types of particles
-                                 !!  modelmb in MAX_DIM dimensional space
+    integer, public :: ntype_of_particle !< number of different types of particles
+                                         !!  modelmb in MAX_DIM dimensional space
     integer :: max_particles_per_type    !< max number of different particle
 
-    integer :: nparticle         !< number of particles 
+    integer, public :: nparticle         !< number of particles 
 
     integer :: ndensities_to_calculate
 
@@ -63,16 +64,16 @@ module modelmb_particles_oct_m
     !!   %
     character(80), allocatable :: labels_particles(:)
 
-    integer, pointer :: particletype(:)
-    integer, pointer :: nparticles_per_type(:)
-    integer, pointer :: particles_of_type(:,:)
-    integer, pointer :: bosonfermion(:)
+    integer, pointer, public :: particletype(:)
+    integer, pointer, public :: nparticles_per_type(:)
+    integer, pointer, public :: particles_of_type(:,:)
+    integer, pointer, public :: bosonfermion(:)
     
     integer, pointer :: exchange_symmetry(:,:,:) !< (max_particles_per_type**2, ntype_of_particle)
     
     FLOAT, pointer :: mass_particle(:)
     
-    FLOAT, pointer :: charge_particle(:)
+    FLOAT, pointer, public :: charge_particle(:)
 
     !>   %block densitiestocalc
     !!   label1 |  particletokeep1(integer in [1:nparticle])

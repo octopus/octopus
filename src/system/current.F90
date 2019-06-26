@@ -51,6 +51,7 @@ module current_oct_m
   private
 
   type current_t
+    private
     integer :: method
   end type current_t
     
@@ -147,13 +148,15 @@ contains
       do idir = 1, der%mesh%sb%dim
         do ist = states_block_min(st, ib), states_block_max(st, ib)
 
+          ww = st%d%kweights(ik)*st%occ(ist, ik)
+          if(abs(ww) <= M_EPSILON) cycle
+
           do idim = 1, st%d%dim
             ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
             call batch_get_state(psib, ii, der%mesh%np, psi(:, idim))
             call batch_get_state(gpsib(idir), ii, der%mesh%np, gpsi(:, idim))
           end do
 
-          ww = st%d%kweights(ik)*st%occ(ist, ik) 
           if(st%d%ispin /= SPINORS) then
             !$omp parallel do
             do ip = 1, der%mesh%np
@@ -223,6 +226,7 @@ contains
       do ii = 1, psib%nst
         ist = states_block_min(st, ib) + ii - 1
         ww = st%d%kweights(ik)*st%occ(ist, ik)
+        if(abs(ww) <= M_EPSILON) cycle
 
         if(batch_is_packed(psib)) then
           do idir = 1, der%mesh%sb%dim
@@ -319,6 +323,8 @@ contains
             call zhamiltonian_apply_batch(hm, der, rpsib, hrpsib, ik, set_bc = .false.)
 
             do ist = states_block_min(st, ib), states_block_max(st, ib)
+              ww = st%d%kweights(ik)*st%occ(ist, ik)
+              if(ww <= M_EPSILON) cycle
 
               do idim = 1, st%d%dim
                 ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
@@ -326,8 +332,6 @@ contains
                 call batch_get_state(hrpsib, ii, der%mesh%np, hrpsi(:, idim))
                 call batch_get_state(rhpsib, ii, der%mesh%np, rhpsi(:, idim))
               end do
-
-              ww = st%d%kweights(ik)*st%occ(ist, ik)              
 
               if(st%d%ispin /= SPINORS) then
                 !$omp parallel do
@@ -424,6 +428,9 @@ contains
           ispin = states_dim_get_spin_index(st%d, ik)
           do ist = st%st_start, st%st_end
 
+            ww = st%d%kweights(ik)*st%occ(ist, ik)
+            if(abs(ww) <= M_EPSILON) cycle
+
             call states_get_state(st, der%mesh, ist, ik, psi)
 
             do idim = 1, st%d%dim
@@ -466,8 +473,6 @@ contains
               end if
 
             end if
-
-            ww = st%d%kweights(ik)*st%occ(ist, ik)
 
             if(st%d%ispin /= SPINORS) then
               do idir = 1, der%mesh%sb%dim
@@ -636,12 +641,13 @@ contains
       
       do idim = 1, hm%d%dim
           
-        cmel(idir,ispin) = M_zI * zmf_dotp(der%mesh, psi_i(:, idim), gpsi_j(:, idir,idim))
-        cmel(idir,ispin) = cmel(idir,ispin) - M_zI * zmf_dotp(der%mesh, gpsi_i(:, idir, idim), psi_j(:, idim))
+        cmel(idir,ispin) = M_zI * zmf_dotp(der%mesh, psi_i(:, idim), gpsi_j(:, idir,idim), reduce = .false.)
+        cmel(idir,ispin) = cmel(idir,ispin) - M_zI * zmf_dotp(der%mesh, gpsi_i(:, idir, idim), psi_j(:, idim), reduce = .false.)
           
       end do
     end do
 
+    if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp%comm,  cmel)
 
     
 
@@ -685,6 +691,8 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       ispin = states_dim_get_spin_index(st%d, ik)
       do ist = st%st_start, st%st_end
+
+        if(abs(st%d%kweights(ik)*st%occ(ist, ik)) <= M_EPSILON) cycle
         
         call states_get_state(st, der%mesh, ist, ik, psi)
         do idim = 1, st%d%dim

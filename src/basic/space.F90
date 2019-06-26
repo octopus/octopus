@@ -40,6 +40,7 @@ module space_oct_m
   integer, parameter :: default_ndim = 3
 
   type space_t
+    ! Components are public by default
     integer :: dim
   end type space_t
 

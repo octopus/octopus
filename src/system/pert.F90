@@ -113,11 +113,12 @@ module pert_oct_m
 contains
 
   ! --------------------------------------------------------------------
-  subroutine pert_init(this, pert_type, gr, geo)
-    type(pert_t),      intent(out)   :: this
-    integer,           intent(in)    :: pert_type
-    type(grid_t),      intent(inout) :: gr
-    type(geometry_t),  intent(in)    :: geo
+  subroutine pert_init(this, parser, pert_type, gr, geo)
+    type(pert_t),      intent(out) :: this
+    type(parser_t),    intent(in)  :: parser
+    integer,           intent(in)  :: pert_type
+    type(grid_t),      intent(in)  :: gr
+    type(geometry_t),  intent(in)  :: geo
 
     PUSH_SUB(pert_init)
     
@@ -165,7 +166,7 @@ contains
       !% For testing purposes, set to false to ignore the term <math>-i \left[\vec{r}, V\right]</math> in
       !% the <math>\vec{k} \cdot \vec{p}</math> perturbation, which is due to non-local pseudopotentials.
       !%End
-      call messages_obsolete_variable('KdotP_UseNonLocalPseudopotential', 'KdotPUseNonLocalPseudopotential')
+      call messages_obsolete_variable(parser, 'KdotP_UseNonLocalPseudopotential', 'KdotPUseNonLocalPseudopotential')
       call parse_variable('KdotPUseNonLocalPseudopotential', .true., this%use_nonlocalpps)
 
       !%Variable KdotPVelMethod

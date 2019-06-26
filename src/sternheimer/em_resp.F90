@@ -63,6 +63,7 @@ module em_resp_oct_m
        out_hyperpolarizability
 
   type em_resp_t
+    private
     type(pert_t) :: perturbation
 
     integer :: nsigma !< 1: consider only positive values of the frequency
@@ -169,7 +170,7 @@ contains
     complex_response = (em_vars%eta > M_EPSILON) .or. states_are_complex(sys%st)
     call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_look_and_load(gs_restart, sys%st, sys%gr, is_complex = complex_response)
+      call states_look_and_load(gs_restart, sys%parser, sys%st, sys%gr, is_complex = complex_response)
       call restart_end(gs_restart)
     else
       message(1) = "Previous gs calculation is required."
@@ -220,7 +221,7 @@ contains
         str_tmp = kdotp_wfs_tag(idir)
         ! 1 is the sigma index which is used in em_resp
         call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
-        if (ierr == 0) call states_load(kdotp_restart, sys%st, sys%gr, ierr, lr=kdotp_lr(idir, 1))
+        if (ierr == 0) call states_load(kdotp_restart, sys%parser, sys%st, sys%gr, ierr, lr=kdotp_lr(idir, 1))
         call restart_close_dir(kdotp_restart)
 
         if(ierr /= 0) then
@@ -246,8 +247,8 @@ contains
     end if
 
     if(em_vars%calc_hyperpol .and. use_kdotp) then
-      call pert_init(pert_kdotp, PERTURBATION_KDOTP, sys%gr, sys%geo)
-      call pert_init(pert2_none, PERTURBATION_NONE,  sys%gr, sys%geo)
+      call pert_init(pert_kdotp, sys%parser, PERTURBATION_KDOTP, sys%gr, sys%geo)
+      call pert_init(pert2_none, sys%parser, PERTURBATION_NONE,  sys%gr, sys%geo)
       call messages_experimental("Second-order Sternheimer equation")
       call pert_setup_dir(pert2_none, 1)  ! direction is irrelevant
       SAFE_ALLOCATE(kdotp_em_lr2(1:gr%sb%periodic_dim, 1:gr%sb%dim, 1:em_vars%nsigma, 1:em_vars%nfactor))
@@ -298,7 +299,7 @@ contains
       em_vars%occ_response = .false.
    
       if(use_kdotp) then
-        call pert_init(pert2_none, PERTURBATION_NONE,  sys%gr, sys%geo)
+        call pert_init(pert2_none, sys%parser, PERTURBATION_NONE,  sys%gr, sys%geo)
         call pert_setup_dir(pert2_none, 1) 
 
         SAFE_ALLOCATE(k2_lr(1:gr%sb%dim, 1:gr%sb%dim, 1:1))
@@ -414,7 +415,7 @@ contains
           end do
         end do
       else
-        call pert_init(pert_b, PERTURBATION_MAGNETIC,  sys%gr, sys%geo)
+        call pert_init(pert_b, sys%parser, PERTURBATION_MAGNETIC,  sys%gr, sys%geo)
       end if
     end if
 
@@ -675,10 +676,10 @@ contains
 
       PUSH_SUB(em_resp_run.parse_input)
 
-      call messages_obsolete_variable('PolFreqs               ', 'EMFreqs             ')
-      call messages_obsolete_variable('PolHyper               ', 'EMHyperpol          ')
-      call messages_obsolete_variable('PolEta                 ', 'EMEta               ')
-      call messages_obsolete_variable('PolHamiltonianVariation', 'HamiltonianVariation')
+      call messages_obsolete_variable(sys%parser, 'PolFreqs               ', 'EMFreqs             ')
+      call messages_obsolete_variable(sys%parser, 'PolHyper               ', 'EMHyperpol          ')
+      call messages_obsolete_variable(sys%parser, 'PolEta                 ', 'EMEta               ')
+      call messages_obsolete_variable(sys%parser, 'PolHamiltonianVariation', 'HamiltonianVariation')
 
       !%Variable EMFreqs
       !%Type block
@@ -800,7 +801,7 @@ contains
       call parse_variable('EMPerturbationType', PERTURBATION_ELECTRIC, perturb_type)
       call messages_print_var_option(stdout, 'EMPerturbationType', perturb_type)
       
-      call pert_init(em_vars%perturbation, perturb_type, sys%gr, sys%geo)
+      call pert_init(em_vars%perturbation, sys%parser, perturb_type, sys%gr, sys%geo)
 
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
         !%Variable EMCalcRotatoryResponse
@@ -980,8 +981,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine em_resp_output(st, gr, hm, geo, outp, em_vars, iomega, ifactor)
+  subroutine em_resp_output(st, parser, gr, hm, geo, outp, em_vars, iomega, ifactor)
     type(states_t),       intent(inout) :: st
+    type(parser_t),       intent(in)    :: parser
     type(grid_t),         intent(inout) :: gr
     type(hamiltonian_t),  intent(inout) :: hm
     type(geometry_t),     intent(inout) :: geo
@@ -1463,7 +1465,7 @@ contains
         message(1) = "Info: Calculating rotatory response."
         call messages_info(1)
 
-        call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
+        call pert_init(angular_momentum, parser, PERTURBATION_MAGNETIC, gr, geo)
         
         SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
@@ -1473,8 +1475,8 @@ contains
         do idir = 1, gr%sb%dim
           call pert_setup_dir(angular_momentum, idir)
           dic = dic &
-            + zpert_expectation_value(angular_momentum, gr, geo, hm, st, psi, em_vars%lr(idir, 1, ifactor)%zdl_psi) &
-            + zpert_expectation_value(angular_momentum, gr, geo, hm, st, em_vars%lr(idir, 2, ifactor)%zdl_psi, psi)
+            + zpert_expectation_value(angular_momentum, parser, gr, geo, hm, st, psi, em_vars%lr(idir, 1, ifactor)%zdl_psi) &
+            + zpert_expectation_value(angular_momentum, parser, gr, geo, hm, st, em_vars%lr(idir, 2, ifactor)%zdl_psi, psi)
         end do
 
         SAFE_DEALLOCATE_P(psi)

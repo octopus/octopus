@@ -84,40 +84,43 @@ module lda_u_oct_m
 
 
   type lda_u_t
-    integer                  :: level
-    FLOAT, pointer           :: dn(:,:,:,:), dV(:,:,:,:) !> Occupation matrices and potentials 
-                                                         !> for the standard scheme
-    CMPLX, pointer           :: zn(:,:,:,:), zV(:,:,:,:)
-    FLOAT, pointer           :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
-    CMPLX, pointer           :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used  
+    private
+    integer,        public   :: level
+    FLOAT, pointer, public   :: dn(:,:,:,:) !> Occupation matrices for the standard scheme
+    FLOAT, pointer           :: dV(:,:,:,:) !> Potentials for the standard scheme
+
+    CMPLX, pointer, public   :: zn(:,:,:,:)
+    CMPLX, pointer           :: zV(:,:,:,:)
+    FLOAT, pointer, public   :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
+    CMPLX, pointer, public   :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used  
   
     FLOAT, pointer           :: drenorm_occ(:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)  
     CMPLX, pointer           :: zrenorm_occ(:,:,:,:,:)
  
     FLOAT, pointer           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
-                                                       !> (for the ACBN0 functional) 
+                                                   !> (for the ACBN0 functional) 
     CMPLX, pointer           :: zcoulomb(:,:,:,:,:,:,:) !>Coulomb integrals for all the system
                                                         !> (for the ACBN0 functional with spinors) 
 
-    type(orbitalbasis_t) :: basis               !> The full basis of localized orbitals
-    type(orbitalset_t), pointer :: orbsets(:)   !> All the orbital setss of the system
-    integer             :: norbsets
+    type(orbitalbasis_t),        public :: basis        !> The full basis of localized orbitals
+    type(orbitalset_t), pointer, public :: orbsets(:)   !> All the orbital setss of the system
+    integer,                     public :: norbsets
 
-    integer             :: nspins
-    integer             :: spin_channels
-    integer             :: nspecies        
-    integer             :: maxnorbs           !> Maximal number of orbitals for all the atoms
-    integer             :: max_np             !> Maximum number of points in all orbitals submesh spheres 
+    integer,              public :: nspins
+    integer,              public :: spin_channels
+    integer                      :: nspecies        
+    integer,              public :: maxnorbs           !> Maximal number of orbitals for all the atoms
+    integer                      :: max_np             !> Maximum number of points in all orbitals submesh spheres 
  
-    logical             :: useAllOrbitals     !> Do we use all atomic orbitals possible
-    logical             :: skipSOrbitals      !> Not using s orbitals
-    logical             :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
-    logical             :: freeze_u           !> U is not recomputed during TD evolution
-    logical             :: basisfromstates    !> We can construct the localized basis from user-defined states
-    FLOAT               :: acbn0_screening    !> We use or not the screening in the ACBN0 functional
-    integer, allocatable:: basisstates(:)
-    logical             :: rot_inv            !> Use a rotationally invariant formula for U and J (ACBN0 case)
-    integer             :: double_couting     !> Double-couting term 
+    logical                      :: useAllOrbitals     !> Do we use all atomic orbitals possible
+    logical                      :: skipSOrbitals      !> Not using s orbitals
+    logical                      :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
+    logical                      :: freeze_u           !> U is not recomputed during TD evolution
+    logical,              public :: basisfromstates    !> We can construct the localized basis from user-defined states
+    FLOAT                        :: acbn0_screening    !> We use or not the screening in the ACBN0 functional
+    integer, allocatable, public :: basisstates(:)
+    logical                      :: rot_inv            !> Use a rotationally invariant formula for U and J (ACBN0 case)
+    integer                      :: double_couting     !> Double-couting term 
 
     type(distributed_t) :: orbs_dist
   end type lda_u_t

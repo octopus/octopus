@@ -48,6 +48,7 @@ module poisson_libisf_oct_m
     poisson_libisf_get_dims
 
   type poisson_libisf_t
+    private
     type(fourier_space_op_t) :: coulb  !< object for Fourier space operations
 #ifdef HAVE_LIBISF
     type(coulomb_operator)   :: kernel !< choice of kernel, one of options above
@@ -74,7 +75,7 @@ module poisson_libisf_oct_m
     !!                gradient, needed for XC part, and for the White-Bird correction, which
     !!                may lead up to 8 planes more on each side. Due to this fact, the information
     !!                between the processors may overlap.
-    character(len = 1) :: datacode = "G" 
+    character(len = 1), public :: datacode = "G" 
 
     integer :: isf_order           !< order of the interpolating scaling functions used in the decomposition 
     integer :: localnscatterarr(5)

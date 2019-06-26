@@ -109,8 +109,9 @@ module ion_dynamics_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine ion_dynamics_init(this, geo)
+  subroutine ion_dynamics_init(this, parser, geo)
     type(ion_dynamics_t), intent(out)   :: this
+    type(parser_t),       intent(in)    :: parser
     type(geometry_t),     intent(inout) :: geo
 
     integer :: i, j, iatom, ierr
@@ -273,7 +274,7 @@ contains
         !% This variable sets the fictitious mass for the Nose-Hoover
         !% thermostat.
         !%End
-        call messages_obsolete_variable('NHMass', 'ThermostatMass')
+        call messages_obsolete_variable(parser, 'NHMass', 'ThermostatMass')
 
         call parse_variable('ThermostatMass', CNST(1.0), this%nh(1)%mass)
         this%nh(2)%mass = this%nh(1)%mass
@@ -303,7 +304,7 @@ contains
     !%End
 
     ! we now load the velocities, either from the temperature, from the input, or from a file
-    if(parse_is_defined('RandomVelocityTemp')) then
+    if(parse_is_defined(parser, 'RandomVelocityTemp')) then
 
       have_velocities = .true.
 
@@ -404,7 +405,7 @@ contains
       !%End
 
       call read_coords_init(xyz)
-      call read_coords_read('Velocities', xyz, geo%space)
+      call read_coords_read('Velocities', xyz, geo%space, parser)
       if(xyz%source /= READ_COORDS_ERR) then
         
         have_velocities = .true.

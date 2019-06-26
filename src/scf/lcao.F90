@@ -129,10 +129,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lcao_init(this, gr, geo, st)
-    type(lcao_t),         intent(out)   :: this
-    type(grid_t),         intent(inout) :: gr
-    type(geometry_t),     intent(in)    :: geo
-    type(states_t),       intent(in)    :: st
+    type(lcao_t),         intent(out) :: this
+    type(grid_t),         intent(in)  :: gr
+    type(geometry_t),     intent(in)  :: geo
+    type(states_t),       intent(in)  :: st
 
     integer :: ia, n, iorb, jj, maxj, idim
     integer :: ii, ll, mm
@@ -703,7 +703,7 @@ contains
     if (present(st_start)) then
       ! If we are doing unocc calculation, do not mess with the correct eigenvalues
       ! of the occupied states.
-      call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start))
+      call v_ks_calc(sys%ks, sys%parser, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start))
 
       ASSERT(st_start >= 1)
       if(st_start > sys%st%nst) then ! nothing to be done in LCAO
@@ -735,7 +735,7 @@ contains
       call messages_info(1)
 
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.false., calc_berry=.false.)
+      call v_ks_calc(sys%ks, sys%parser, hm, sys%st, sys%geo, calc_eigenval=.false., calc_berry=.false.)
       ! eigenvalues have nevertheless to be initialized to something
       sys%st%eigenval = M_ZERO
 
@@ -801,7 +801,7 @@ contains
       if(.not. lcao_done) then
         ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
         ! of the occupied states.
-        call v_ks_calc(sys%ks, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start)) ! get potentials
+        call v_ks_calc(sys%ks, sys%parser, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start)) ! get potentials
         if(.not. present(st_start)) then
           call states_fermi(sys%st, sys%gr%mesh) ! occupations
         end if
@@ -857,7 +857,7 @@ contains
   subroutine lcao_wf(this, st, gr, geo, hm, start)
     type(lcao_t),        intent(inout) :: this
     type(states_t),      intent(inout) :: st
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
     type(hamiltonian_t), intent(in)    :: hm
     integer, optional,   intent(in)    :: start
@@ -1332,7 +1332,7 @@ contains
   subroutine lcao_init_orbitals(this, st, gr, geo, start)
     type(lcao_t),        intent(inout) :: this
     type(states_t),      intent(inout) :: st
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
     integer, optional,   intent(in)    :: start
 

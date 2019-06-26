@@ -57,6 +57,7 @@ module states_dim_oct_m
     SPIN_UP   = 2
 
   type states_dim_t
+    ! Components are public by default
     integer :: dim                  !< Dimension of the state (one, or two for spinors)
     integer :: nik                  !< Number of irreducible subspaces
     integer :: ispin                !< spin mode (unpolarized, spin-polarized, spinors)
@@ -99,7 +100,8 @@ contains
     dout%spin_channels  = din%spin_channels
     dout%block_size     = din%block_size
     dout%orth_method    = din%orth_method
-    dout%mirror_states    = din%mirror_states
+    dout%pack_states    = din%pack_states
+    dout%mirror_states  = din%mirror_states
     dout%cl_states_mem  = din%cl_states_mem
 
     SAFE_ALLOCATE(dout%kweights(1:din%nik))

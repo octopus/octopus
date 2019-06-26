@@ -233,6 +233,7 @@ module splines_oct_m
 
   !> the basic spline datatype
   type spline_t
+    private
     real(8)     :: x_limit(2)
     type(c_ptr) :: spl, acc
   end type spline_t

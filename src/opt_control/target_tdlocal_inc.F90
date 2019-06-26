@@ -19,10 +19,11 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_tdlocal(gr, tg, td)
-    type(grid_t),     intent(in)    :: gr
-    type(target_t),   intent(inout) :: tg
-    type(td_t),       intent(in)    :: td
+  subroutine target_init_tdlocal(gr, parser, tg, td)
+    type(grid_t),   intent(in)    :: gr
+    type(parser_t), intent(in)    :: parser
+    type(target_t), intent(inout) :: tg
+    type(td_t),     intent(in)    :: td
 
     type(block_t)       :: blk
     PUSH_SUB(target_init_tdlocal)
@@ -69,11 +70,11 @@
 
   ! ----------------------------------------------------------------------
   subroutine target_output_tdlocal(tg, gr, dir, geo, outp)
-    type(target_t), intent(inout) :: tg
-    type(grid_t), intent(inout)   :: gr
-    character(len=*), intent(in)  :: dir
-    type(geometry_t),       intent(in)  :: geo
-    type(output_t),         intent(in)  :: outp
+    type(target_t),   intent(inout) :: tg
+    type(grid_t),     intent(in)    :: gr
+    character(len=*), intent(in)    :: dir
+    type(geometry_t), intent(in)    :: geo
+    type(output_t),   intent(in)    :: outp
 
     integer :: ierr
     PUSH_SUB(target_output_tdlocal)
@@ -93,7 +94,7 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_tdlocal(tg) result(j1)
-    type(target_t),   intent(inout) :: tg
+    type(target_t), intent(in) :: tg
 
     integer :: maxiter
     PUSH_SUB(target_j1_tdlocal)
@@ -110,9 +111,8 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_chi_tdlocal(gr, chi_out)
-    type(grid_t),      intent(inout) :: gr
-    type(states_t),    intent(inout) :: chi_out
+  subroutine target_chi_tdlocal(chi_out)
+    type(states_t), intent(inout) :: chi_out
 
     integer :: ik, ib
     PUSH_SUB(target_chi_tdlocal)
@@ -134,8 +134,8 @@
   !!
   subroutine target_tdcalc_tdlocal(tg, gr, psi, time)
     type(target_t),      intent(inout) :: tg
-    type(grid_t),        intent(inout) :: gr
-    type(states_t),      intent(inout) :: psi
+    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(in)    :: psi
     integer,             intent(in)    :: time
 
     CMPLX, allocatable :: opsi(:, :), zpsi(:, :)

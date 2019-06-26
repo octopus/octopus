@@ -63,6 +63,7 @@ module xc_functl_oct_m
 #endif
 
   type xc_functl_t
+    ! Components are public by default
     integer         :: family            !< LDA, GGA, etc.
     integer         :: type              !< exchange, correlation, or exchange-correlation
     integer         :: id                !< identifier
@@ -70,9 +71,9 @@ module xc_functl_oct_m
     integer         :: spin_channels     !< XC_UNPOLARIZED | XC_POLARIZED
     integer         :: flags             !< XC_FLAGS_HAVE_EXC + XC_FLAGS_HAVE_VXC + ...
 
-    type(XC_F90(pointer_t)) :: conf         !< the pointer used to call the library
-    type(XC_F90(pointer_t)) :: info         !< information about the functional
-    type(libvdwxc_t)        :: libvdwxc     !< libvdwxc data for van der Waals functionals
+    type(XC_F90(pointer_t))          :: conf         !< the pointer used to call the library
+    type(XC_F90(pointer_t)), private :: info         !< information about the functional
+    type(libvdwxc_t)                 :: libvdwxc     !< libvdwxc data for van der Waals functionals
 
     integer         :: LB94_modified     !< should I use a special version of LB94 that
     FLOAT           :: LB94_threshold    !< needs to be handled specially
@@ -98,8 +99,9 @@ contains
 
   ! ---------------------------------------------------------
 
- subroutine xc_functl_init_functl(functl, id, ndim, nel, spin_channels)
-    type(xc_functl_t), intent(out) :: functl
+ subroutine xc_functl_init_functl(functl, parser, id, ndim, nel, spin_channels)
+   type(xc_functl_t),  intent(out) :: functl
+   type(parser_t),     intent(in)  :: parser
     integer,           intent(in)  :: id
     integer,           intent(in)  :: ndim
     FLOAT,             intent(in)  :: nel
@@ -256,7 +258,7 @@ contains
       !%Option interaction_soft_coulomb 1
       !% Soft Coulomb interaction of the form <math>1/\sqrt{x^2 + \alpha^2}</math>.
       !%End
-      call messages_obsolete_variable('SoftInteraction1D_alpha', 'Interaction1D')
+      call messages_obsolete_variable(parser, 'SoftInteraction1D_alpha', 'Interaction1D')
       call parse_variable('Interaction1D', INT_SOFT_COULOMB, interact_1d)
 
       !%Variable Interaction1DScreening
@@ -267,7 +269,7 @@ contains
       !% Defines the screening parameter <math>\alpha</math> of the softened Coulomb interaction
       !% when running in 1D.
       !%End
-      call messages_obsolete_variable('SoftInteraction1D_alpha', 'Interaction1DScreening')
+      call messages_obsolete_variable(parser, 'SoftInteraction1D_alpha', 'Interaction1DScreening')
       call parse_variable('Interaction1DScreening', M_ONE, alpha)
 #ifdef HAVE_LIBXC4
       parameters(1) = real(interact_1d, REAL_PRECISION)

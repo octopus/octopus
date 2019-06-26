@@ -42,6 +42,7 @@ module boundaries_oct_m
   private
 
   type boundaries_t
+    private
     type(mesh_t), pointer :: mesh
     integer          :: nper             !< the number of points that correspond to pbc
     integer, pointer :: per_points(:, :) !< (1:2, 1:nper) the list of points that correspond to pbc 
@@ -54,9 +55,9 @@ module boundaries_oct_m
     type(accel_mem_t) :: buff_per_recv
     type(accel_mem_t) :: buff_nsend
     type(accel_mem_t) :: buff_nrecv
-    logical           :: spiral
-    logical           :: spiralBC
-    FLOAT             :: spiral_q(MAX_DIM)
+    logical, public   :: spiral
+    logical, public   :: spiralBC
+    FLOAT,   public   :: spiral_q(MAX_DIM)
   end type boundaries_t
 
   public ::                        &
@@ -141,8 +142,9 @@ contains
   end subroutine boundaries_nullify
 
   ! ---------------------------------------------------------
-  subroutine boundaries_init(this, mesh)
+  subroutine boundaries_init(this, parser, mesh)
     type(boundaries_t),   intent(out)   :: this
+    type(parser_t),       intent(in)    :: parser
     type(mesh_t), target, intent(in)    :: mesh
 
     integer :: sp, ip, ip_inner, iper, ip_global, idir
@@ -174,7 +176,7 @@ contains
       !%End
       call parse_variable('SpiralBoundaryCondition', .false., this%spiralBC)
       if(this%spiralBC) then
-        if(parse_is_defined('TDMomentumTransfer')) then
+        if(parse_is_defined(parser, 'TDMomentumTransfer')) then
           if(parse_block('TDMomentumTransfer', blk)==0) then
             do idir = 1, MAX_DIM
              call parse_block_float(blk, 0, idir - 1, this%spiral_q(idir))

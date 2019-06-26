@@ -52,6 +52,7 @@ module poisson_isf_oct_m
   ! Datatype to store kernel values to solve Poisson equation
   ! on different communicators (configurations).
   type isf_cnf_t
+    private
     real(8), pointer  :: kernel(:, :, :)
     integer           :: nfft1, nfft2, nfft3
     type(mpi_grp_t)   :: mpi_grp
@@ -59,6 +60,7 @@ module poisson_isf_oct_m
   end type isf_cnf_t
 
   type poisson_isf_t
+    private
     integer         :: all_nodes_comm
     type(isf_cnf_t) :: cnf(1:N_CNF)
   end type poisson_isf_t

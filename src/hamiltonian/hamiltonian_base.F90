@@ -87,47 +87,49 @@ module hamiltonian_base_oct_m
   !! can be represented by different types of potentials.
 
   type hamiltonian_base_t
-    integer                               :: nspin
-    FLOAT                                 :: mass  !< Needed to compute the magnetic terms, if the mass is not one.
-    FLOAT                                 :: rashba_coupling
-    type(nl_operator_t),      pointer     :: kinetic
-    type(projector_matrix_t), allocatable :: projector_matrices(:) 
-    FLOAT,                    allocatable :: potential(:, :)
-    FLOAT,                    allocatable :: Impotential(:, :)
-    FLOAT,                    allocatable :: uniform_magnetic_field(:)
-    FLOAT,                    allocatable :: uniform_vector_potential(:)
-    FLOAT,                    allocatable :: vector_potential(:, :)
-    integer                               :: nprojector_matrices
-    logical                               :: apply_projector_matrices
-    integer                               :: full_projection_size
-    integer                               :: max_npoints
-    integer                               :: total_points
-    integer                               :: max_nprojs
-    logical                               :: projector_mix
-    CMPLX,                    allocatable :: projector_phases(:, :, :, :)
-    integer,                  allocatable :: projector_to_atom(:)
-    integer                               :: nregions
-    integer,                  allocatable :: regions(:)
-    type(accel_mem_t)                    :: potential_opencl
-    type(accel_mem_t)                    :: buff_offsets
-    type(accel_mem_t)                    :: buff_matrices
-    type(accel_mem_t)                    :: buff_maps
-    type(accel_mem_t)                    :: buff_scals
-    type(accel_mem_t)                    :: buff_position
-    type(accel_mem_t)                    :: buff_pos
-    type(accel_mem_t)                    :: buff_invmap
-    type(accel_mem_t)                    :: buff_projector_phases
-    type(accel_mem_t)                    :: buff_mix
-    CMPLX, pointer                       :: phase(:, :)
-    CMPLX, allocatable                   :: phase_corr(:,:)
-    CMPLX, allocatable                   :: phase_spiral(:, :)
-    type(accel_mem_t)                    :: buff_phase
-    integer                              :: buff_phase_qn_start
-    logical                              :: projector_self_overlap  !< if .true. some projectors overlap with themselves
-    FLOAT, pointer                       :: spin(:,:,:)
+    private
+    integer                                       :: nspin
+    FLOAT                                         :: mass  !< Needed to compute the magnetic terms, if the mass is not one.
+    FLOAT                                         :: rashba_coupling
+    type(nl_operator_t),      pointer,     public :: kinetic
+    type(projector_matrix_t), allocatable, public :: projector_matrices(:) 
+    FLOAT,                    allocatable, public :: potential(:, :)
+    FLOAT,                    allocatable, public :: Impotential(:, :)
+    FLOAT,                    allocatable, public :: uniform_magnetic_field(:)
+    FLOAT,                    allocatable, public :: uniform_vector_potential(:)
+    FLOAT,                    allocatable, public :: vector_potential(:, :)
+    integer,                               public :: nprojector_matrices
+    logical,                               public :: apply_projector_matrices
+    integer                                       :: full_projection_size
+    integer,                               public :: max_npoints
+    integer,                               public :: total_points
+    integer                                       :: max_nprojs
+    logical                                       :: projector_mix
+    CMPLX,                    allocatable, public :: projector_phases(:, :, :, :)
+    integer,                  allocatable, public :: projector_to_atom(:)
+    integer                                       :: nregions
+    integer,                  allocatable         :: regions(:)
+    type(accel_mem_t)                             :: potential_opencl
+    type(accel_mem_t)                             :: buff_offsets
+    type(accel_mem_t)                             :: buff_matrices
+    type(accel_mem_t)                             :: buff_maps
+    type(accel_mem_t)                             :: buff_scals
+    type(accel_mem_t)                             :: buff_position
+    type(accel_mem_t)                             :: buff_pos
+    type(accel_mem_t)                             :: buff_invmap
+    type(accel_mem_t),                     public :: buff_projector_phases
+    type(accel_mem_t)                             :: buff_mix
+    CMPLX,                    pointer,     public :: phase(:, :)
+    CMPLX,                    allocatable, public :: phase_corr(:,:)
+    CMPLX,                    allocatable, public :: phase_spiral(:,:)
+    type(accel_mem_t),                     public :: buff_phase
+    integer,                               public :: buff_phase_qn_start
+    logical                                       :: projector_self_overlap  !< if .true. some projectors overlap with themselves
+    FLOAT,                    pointer,     public :: spin(:,:,:)
   end type hamiltonian_base_t
 
   type projection_t
+    private
     FLOAT, allocatable     :: dprojection(:, :)
     CMPLX, allocatable     :: zprojection(:, :)
     type(accel_mem_t)      :: buff_projection
@@ -592,6 +594,12 @@ contains
       end do
     end do
 
+#ifdef HAVE_MPI
+    if(mesh%parallel_in_domains) then
+      call MPI_Allreduce(MPI_IN_PLACE, this%projector_self_overlap, 1, MPI_LOGICAL, MPI_LOR, mesh%mpi_grp%comm, mpi_err)
+    end if
+#endif
+    
     SAFE_DEALLOCATE_A(order)
     SAFE_DEALLOCATE_A(head)
 

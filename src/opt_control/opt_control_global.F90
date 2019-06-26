@@ -41,6 +41,7 @@ module opt_control_global_oct_m
   !! is done: which algorithm, how the control funtion is stored, should the
   !! intermediate results be stored for debugging, etc.
   type oct_t
+    ! Components are public by default
     integer :: algorithm            !< The algorithm to optimize depends on whether the control function is
                                     !! represented in real time, or is parametrized. Filled by the OCTScheme input variable.
     logical :: mode_fixed_fluence   !< Whether or not the optimization is performed in the subspace of external fields
@@ -66,12 +67,14 @@ contains
   !! should be. It uses this information to fill the "oct" variable. All the components
   !! of oct are filled, except for mode_fixed_fluence, which is filled when the control
   !! parameters module is initialized.
-  subroutine oct_read_inp(oct)
-    type(oct_t), intent(inout) :: oct
+  subroutine oct_read_inp(oct, parser)
+    type(oct_t),    intent(inout) :: oct
+    type(parser_t), intent(in)    :: parser
+
     PUSH_SUB(oct_read_inp)
 
     call messages_print_stress(stdout, "OCT run mode")
-    call messages_obsolete_variable('OCTControlRepresentation')
+    call messages_obsolete_variable(parser, 'OCTControlRepresentation')
 
     !%Variable OCTScheme
     !%Type integer
