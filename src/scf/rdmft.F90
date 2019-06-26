@@ -364,7 +364,7 @@ contains
       call messages_info(2)
 
       if (.not. rdm%hf .and. rdm%do_basis) then
-        write(message(1),'(a,18x,es20.10)') 'Max F0', rdm%maxFO
+        write(message(1),'(a,18x,es20.10)') 'Max F0:', rdm%maxFO
         call messages_info(1)
       end if
 
@@ -764,8 +764,8 @@ contains
       call messages_info(1)
     end do
 
-    write(message(1),'(a,3x,f11.9)') 'Sum of occupation numbers', rdm%occsum
-    write(message(2),'(a,11x,es20.10)') 'Total energy ', units_from_atomic(units_out%energy, energy + hm%ep%eii)
+    write(message(1),'(a,3x,f11.9)') 'Sum of occupation numbers:', rdm%occsum
+    write(message(2),'(a,11x,es20.10)') 'Total energy: ', units_from_atomic(units_out%energy, energy + hm%ep%eii)
     call messages_info(2)   
 
     SAFE_DEALLOCATE_A(occin)
