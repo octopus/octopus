@@ -23,3 +23,5 @@ EigenSolverMaxIter = 50
 
 Mixing = 0.1
 ConvRelDens = 5e-6
+
+MeshPartitionPackage = metis
