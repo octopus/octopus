@@ -673,6 +673,9 @@ contains
 
       if(phase_correction) then
         call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np, ik, .true., psib)
+        if(present(psib2)) then
+          call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np, ik, .true., psib2)
+        end if
       end if
     else
 
