@@ -50,7 +50,7 @@
     !%
     !% The QOCT algorithm will attempt to maximize this expression, at the end of the propagation.
     !%End
-    if(parse_block('OCTClassicalTarget', blk)==0) then
+    if(parse_block(parser, 'OCTClassicalTarget', blk)==0) then
       tg%classical_input_string = " "
       do jj=0, parse_block_n(blk)-1
         call parse_block_string(blk, jj, 0, expression)
@@ -73,7 +73,7 @@
     !% columns correspond to each spatial dimension: the (i,j) block component
     !% corresponds with the derivative wrt p[i,j].
     !%End
-    if( parse_block('OCTMomentumDerivatives', blk)==0   ) then
+    if( parse_block(parser, 'OCTMomentumDerivatives', blk)==0   ) then
       SAFE_ALLOCATE(tg%mom_der_array(1:geo%natoms,1:geo%space%dim))
       do ist=0, geo%natoms-1
         do jst=0, geo%space%dim-1
@@ -98,7 +98,7 @@
     !% columns correspond to each spatial dimension: the (i,j) block component
     !% corresponds with the derivative wrt q[i,j].
     !%End
-    if( parse_block('OCTPositionDerivatives', blk)==0 ) then
+    if( parse_block(parser, 'OCTPositionDerivatives', blk)==0 ) then
       SAFE_ALLOCATE(tg%pos_der_array(1:geo%natoms,1:geo%space%dim))
       do ist=0, geo%natoms-1
         do jst=0, geo%space%dim-1

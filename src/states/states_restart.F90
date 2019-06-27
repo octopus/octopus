@@ -902,8 +902,9 @@ contains
   ! ---------------------------------------------------------
   !> the routine reads formulas for user-defined wavefunctions
   !! from the input file and fills the respective orbitals
-  subroutine states_read_user_def_orbitals(mesh, st)
-    type(mesh_t),   intent(in) :: mesh
+  subroutine states_read_user_def_orbitals(mesh, parser, st)
+    type(mesh_t),   intent(in)    :: mesh
+    type(parser_t), intent(in)    :: parser
     type(states_t), intent(inout) :: st
 
     type(block_t) :: blk
@@ -968,7 +969,7 @@ contains
     !%Option normalize_no 0
     !% Do not normalize orbitals.
     !%End
-    if(parse_block('UserDefinedStates', blk) == 0) then
+    if(parse_block(parser, 'UserDefinedStates', blk) == 0) then
 
       call messages_print_stress(stdout, trim('Substitution of orbitals'))
 

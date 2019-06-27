@@ -32,6 +32,7 @@ module exponential_oct_m
   use loct_math_oct_m
   use parser_oct_m
   use mesh_function_oct_m
+  use mesh_batch_oct_m
   use messages_oct_m
   use profiling_oct_m
   use states_oct_m
@@ -68,9 +69,10 @@ module exponential_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine exponential_init(te)
+  subroutine exponential_init(te, parser)
     type(exponential_t), intent(out) :: te
-
+    type(parser_t),      intent(in)  :: parser
+    
     PUSH_SUB(exponential_init)
 
     !%Variable TDExponentialMethod
@@ -125,7 +127,7 @@ contains
     !% 3967 (1984); R. Kosloff, <i>Annu. Rev. Phys. Chem.</i> <b>45</b>, 145 (1994);
     !% C. W. Clenshaw, <i>MTAC</i> <b>9</b>, 118 (1955).
     !%End
-    call parse_variable('TDExponentialMethod', EXP_TAYLOR, te%exp_method)
+    call parse_variable(parser, 'TDExponentialMethod', EXP_TAYLOR, te%exp_method)
 
     select case(te%exp_method)
     case(EXP_TAYLOR)
@@ -142,7 +144,7 @@ contains
       !% make sure that this value is not too big, or else the evolution will be
       !% wrong.
       !%End
-      call parse_variable('TDLanczosTol', CNST(1e-5), te%lanczos_tol)
+      call parse_variable(parser, 'TDLanczosTol', CNST(1e-5), te%lanczos_tol)
       if (te%lanczos_tol <= M_ZERO) call messages_input_error('TDLanczosTol')
 
     case default
@@ -160,7 +162,7 @@ contains
       !% the order to which the exponential is expanded. For the Lanczos approximation, 
       !% it is the Lanczos-subspace dimension.
       !%End
-      call parse_variable('TDExpOrder', DEFAULT__TDEXPORDER, te%exp_order)
+      call parse_variable(parser, 'TDExpOrder', DEFAULT__TDEXPORDER, te%exp_order)
       if (te%exp_order < 2) call messages_input_error('TDExpOrder')
 
     end if
@@ -181,7 +183,7 @@ contains
       !% The algorithm is taken from Giraud et al., Computers and Mathematics with Applications 50, 1069 (2005). 
       !% According to this reference, this is much more precise than CGS or MGS algorithms.
       !%End
-      call parse_variable('ArnoldiOrthogonalization', OPTION__ARNOLDIORTHOGONALIZATION__CGS, &
+      call parse_variable(parser, 'ArnoldiOrthogonalization', OPTION__ARNOLDIORTHOGONALIZATION__CGS, &
                               te%arnoldi_gs)
     end if
 
@@ -641,14 +643,21 @@ contains
     if(associated(hm%hm_base%phase)) phase_correction = .true.
     if(accel_is_enabled()) phase_correction = .false.
 
-    if (te%exp_method == EXP_TAYLOR) then 
+    if (te%exp_method == EXP_TAYLOR .or. &
+          (te%exp_method == EXP_LANCZOS.and..not. hamiltonian_inh_term(hm)&
+           .and..not. present(psib2))) then 
      !We apply the phase only to np points, and the phase for the np+1 to np_part points
      !will be treated as a phase correction in the Hamiltonian
       if(phase_correction) then
         call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np, ik, .false., psib)
       end if
 
-      call taylor_series_batch()
+      select case(te%exp_method)
+      case(EXP_TAYLOR)
+        call taylor_series_batch()
+      case(EXP_LANCZOS) 
+        call lanczos_batch()
+      end select
 
       if(phase_correction) then
         call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np, ik, .true., psib)
@@ -783,6 +792,120 @@ contains
       POP_SUB(exponential_apply_batch.taylor_series_batch)
 
     end subroutine taylor_series_batch
+
+
+    ! ---------------------------------------------------------
+    !TODO: Add a reference
+    subroutine lanczos_batch()
+
+      integer ::  iter, l, idim, bind
+      CMPLX, allocatable :: hamilt(:,:,:), expo(:,:,:)
+      FLOAT, allocatable :: beta(:), res(:), norm(:)
+      type(batch_t), allocatable :: vb(:)
+      type(profile_t), save :: prof
+
+      PUSH_SUB(exponential_apply_batch.lanczos_batch)
+      call profiling_in(prof, "EXP_LANCZOS_BATCH")
+
+      SAFE_ALLOCATE(beta(1:psib%nst))
+      SAFE_ALLOCATE(res(1:psib%nst))
+      SAFE_ALLOCATE(norm(1:psib%nst))
+      call mesh_batch_nrm2(der%mesh, psib, beta) 
+
+      ! If we have a null vector, no need to compute the action of the exponential.
+      if(all(abs(beta) <= CNST(1.0e-12))) then
+        call profiling_out(prof)
+        POP_SUB(exponential_apply_batch.lanczos_batch)
+        return
+      end if
+
+      if(hamiltonian_apply_packed(hm, der%mesh)) then
+        call batch_pack(psib)
+      end if
+
+      SAFE_ALLOCATE(vb(1:te%exp_order+1))
+      do iter = 1, te%exp_order+1
+        call batch_copy(psib, vb(iter))
+      end do
+      call batch_copy_data(der%mesh%np, psib, vb(1))
+      call batch_scal(der%mesh%np, M_ONE/beta, vb(1), a_full = .false.)
+
+      SAFE_ALLOCATE(hamilt(1:te%exp_order+1, 1:te%exp_order+1, 1:psib%nst))
+      SAFE_ALLOCATE(  expo(1:te%exp_order+1, 1:te%exp_order+1, 1:psib%nst))
+      hamilt = M_z0
+      expo = M_z0
+
+      ! This is the Lanczos loop...
+      do iter = 1, te%exp_order
+
+        !to apply the Hamiltonian
+        call zhamiltonian_apply_batch(hm, der, vb(iter), vb(iter+1), ik, set_phase = .not.phase_correction)
+
+        if(hamiltonian_hermitian(hm)) then
+          l = max(1, iter - 1)
+        else
+          l = 1
+        end if
+
+         !orthogonalize against previous vectors
+        call zmesh_batch_orthogonalization(der%mesh, iter - l + 1, vb(l:iter), vb(iter+1), &
+            normalize = .false., overlap = hamilt(l:iter, iter, 1:psib%nst), norm = hamilt(iter + 1, iter, 1:psib%nst), &
+            gs_scheme = te%arnoldi_gs)
+
+        do ii = 1, psib%nst
+          call zlalg_exp(iter, -M_zI*deltat, hamilt(:,:,ii), expo(:,:,ii), hamiltonian_hermitian(hm))
+
+          res(ii) = abs(hamilt(iter + 1, iter, ii)*abs(expo(iter, 1, ii)))
+        end do !ii
+
+        if(all(abs(hamilt(iter + 1, iter, :)) < CNST(1.0e4)*M_EPSILON)) exit ! "Happy breakdown"
+        !We normalize only if the norm is non-zero
+        ! see http://www.netlib.org/utk/people/JackDongarra/etemplates/node216.html#alg:arn0 
+        norm = M_ONE
+        do ist = 1, psib%nst
+          if( abs(hamilt(iter + 1, iter, ist)) >= CNST(1.0e4)*M_EPSILON ) then
+            norm(ist) = M_ONE / abs(hamilt(iter + 1, iter, ist))
+          end if
+        end do
+        call batch_scal(der%mesh%np, norm, vb(iter+1), a_full = .false.)
+
+        if(iter > 3 .and. all(res < te%lanczos_tol)) exit
+
+      end do !iter 
+
+      if(any(res > te%lanczos_tol)) then ! Here one should consider the possibility of the happy breakdown.
+        write(message(1),'(a,es9.2)') 'Lanczos exponential expansion did not converge: ', maxval(res)
+        call messages_warning(1)
+      end if
+
+      ! zpsi = nrm * V * expo(1:iter, 1) = nrm * V * expo * V^(T) * zpsi
+      call batch_scal(der%mesh%np, expo(1,1,1:psib%nst), psib, a_full = .false.)
+      !TODO: We should have a routine batch_gemv fro improve performances
+      do ii = 2, iter
+        call batch_axpy(der%mesh%np, beta(1:psib%nst)*expo(ii,1,1:psib%nst), vb(ii), psib, a_full = .false.)
+        !In order to apply the two exponentials, we mush store the eigenvales and eigenvectors given by zlalg_exp
+        !And to recontruct here the exp(i*dt*H) for deltat2
+      end do
+
+      do iter = 1, te%exp_order+1
+        call batch_end(vb(iter))
+      end do
+
+      SAFE_DEALLOCATE_A(hamilt)
+      SAFE_DEALLOCATE_A(expo)
+      SAFE_DEALLOCATE_A(beta)
+      SAFE_DEALLOCATE_A(res)
+      SAFE_DEALLOCATE_A(norm)
+
+      if(hamiltonian_apply_packed(hm, der%mesh)) then
+        call batch_unpack(psib)
+      end if
+
+      call profiling_out(prof)
+
+      POP_SUB(exponential_apply_batch.lanczos_batch)
+    end subroutine lanczos_batch
+
   end subroutine exponential_apply_batch
 
   ! ---------------------------------------------------------

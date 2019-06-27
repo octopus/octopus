@@ -65,8 +65,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_atom_density(mesh, sb, atom, spin_channels, rho)
+  subroutine species_atom_density(mesh, parser, sb, atom, spin_channels, rho)
     type(mesh_t),         intent(in)    :: mesh
+    type(parser_t),       intent(in)    :: parser
     type(simul_box_t),    intent(in)    :: sb
     type(atom_t), target, intent(in)    :: atom
     integer,              intent(in)    :: spin_channels
@@ -107,7 +108,7 @@ contains
 
        if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
           call volume_init(volume)
-          call volume_read_from_block(volume, trim(species_rho_string(species)))
+          call volume_read_from_block(volume, parser, trim(species_rho_string(species)))
        end if
 
       call periodic_copy_init(pp, sb, spread(M_ZERO, dim=1, ncopies = sb%dim), &
@@ -543,8 +544,9 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine species_get_density(species, pos, mesh, boundaries, rho)
+  subroutine species_get_density(species, parser, pos, mesh, boundaries, rho)
     type(species_t),    target, intent(in)  :: species
+    type(parser_t),             intent(in)  :: parser
     FLOAT,                      intent(in)  :: pos(:)
     type(mesh_t),       target, intent(in)  :: mesh
     type(boundaries_t),         intent(in)  :: boundaries
@@ -704,7 +706,7 @@ contains
 
       if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
         call volume_init(volume)
-        call volume_read_from_block(volume, trim(species_rho_string(species)))
+        call volume_read_from_block(volume, parser, trim(species_rho_string(species)))
       end if
        
       call periodic_copy_init(pp, mesh%sb, spread(M_ZERO, dim=1, ncopies = mesh%sb%dim), &

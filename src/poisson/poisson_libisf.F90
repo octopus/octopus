@@ -86,8 +86,9 @@ module poisson_libisf_oct_m
 
 contains
 
-  subroutine poisson_libisf_init(this, mesh, cube)
+  subroutine poisson_libisf_init(this, parser, mesh, cube)
     type(poisson_libisf_t), intent(out)   :: this
+    type(parser_t),         intent(in)    :: parser
     type(mesh_t),           intent(inout) :: mesh
     type(cube_t),           intent(inout) :: cube
 
@@ -115,7 +116,7 @@ contains
     !% If "no", entire input and output vector is saved in all the MPI processes.
     !% If k-points parallelization is used, "no" must be selected.
     !%End
-    call parse_variable('PoissonSolverISFParallelData', .true., data_is_parallel)
+    call parse_variable(parser, 'PoissonSolverISFParallelData', .true., data_is_parallel)
     if (data_is_parallel) then
       this%datacode = "D"
     else 

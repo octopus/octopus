@@ -295,7 +295,7 @@ contains
     if(hm%ep%no_lasers > 0) default = default + 2**(OUT_LASER - 1)
     if(kick%qkick_mode /= QKICKMODE_NONE) default = default + 2**(OUT_FTCHD - 1)
 
-    call parse_variable('TDOutput', default, flags)
+    call parse_variable(parser, 'TDOutput', default, flags)
 
     if(.not.varinfo_valid_option('TDOutput', flags, is_flag = .true.)) call messages_input_error('TDOutput')
 
@@ -335,7 +335,7 @@ contains
     !% Maximum electric multipole of the density output to the file <tt>td.general/multipoles</tt>
     !% during a time-dependent simulation. Must be non-negative.
     !%End
-    call parse_variable('TDMultipoleLmax', 1, writ%lmax)
+    call parse_variable(parser, 'TDMultipoleLmax', 1, writ%lmax)
     if (writ%lmax < 0) then
       write(message(1), '(a,i6,a)') "Input: '", writ%lmax, "' is not a valid TDMultipoleLmax."
       message(2) = '(Must be TDMultipoleLmax >= 0 )'
@@ -359,7 +359,7 @@ contains
     end if
 
     ! This variable is documented in scf/scf.F90
-    call parse_variable('LocalMagneticMomentsSphereRadius', rmin*M_HALF, writ%lmm_r, units_inp%length)
+    call parse_variable(parser, 'LocalMagneticMomentsSphereRadius', rmin*M_HALF, writ%lmm_r, units_inp%length)
 
     if(writ%out(OUT_PROJ)%write .or. writ%out(OUT_POPULATIONS)%write &
       .or.writ%out(OUT_KP_PROJ)%write .or. writ%out(OUT_N_EX)%write) then
@@ -384,7 +384,7 @@ contains
       ! clean up all the stuff we have to reallocate
       SAFE_DEALLOCATE_P(writ%gs_st%node)
 
-      call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
+      call restart_init(restart_gs, parser, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
 
       if(.not.writ%out(OUT_KP_PROJ)%write.and..not.writ%out(OUT_N_EX)%write) then
         if(ierr == 0) &
@@ -410,7 +410,7 @@ contains
           !% is set by the number of states in the propagation and the number of unoccupied states
           !% available.
           !%End
-          call parse_variable('TDProjStateStart', 1, writ%gs_st%st_start)
+          call parse_variable(parser, 'TDProjStateStart', 1, writ%gs_st%st_start)
         else
            writ%gs_st%st_start = 1
         end if
@@ -488,7 +488,7 @@ contains
       !% These weights should be normalized to one; otherwise the routine
       !% will normalize them, and write a warning.
       !%End
-      if(parse_block('TDExcitedStatesToProject', blk) == 0) then
+      if(parse_block(parser, 'TDExcitedStatesToProject', blk) == 0) then
         writ%n_excited_states = parse_block_n(blk)
         SAFE_ALLOCATE(writ%excited_st(1:writ%n_excited_states))
         do ist = 1, writ%n_excited_states
@@ -511,7 +511,7 @@ contains
     !% Must be >= 0. If it is 0, then no output is written. 
     !% Implemented only for projections and number of excited electrons for the moment.
     !%End
-    call parse_variable('TDOutputComputeInterval', 50, writ%compute_interval)
+    call parse_variable(parser, 'TDOutputComputeInterval', 50, writ%compute_interval)
     if(writ%compute_interval < 0) then
       message(1) = "TDOutputComputeInterval must be >= 0."
       call messages_fatal(1)
@@ -685,7 +685,7 @@ contains
     !%End
     default = 0
     if(hm%lda_u_level == DFT_U_ACBN0) default = default + 2**(OUT_DFTU_EFFECTIVE_U - 1)
-    call parse_variable('TDOutputDFTU', default, flags)
+    call parse_variable(parser, 'TDOutputDFTU', default, flags)
 
     if(.not.varinfo_valid_option('TDOutputDFTU', flags, is_flag = .true.)) &
       call messages_input_error('TDOutputDFTU')
@@ -784,7 +784,7 @@ contains
     end if
 
     if(writ%out(OUT_FLOQUET)%write) &
-      call td_write_floquet(writ%out(OUT_FLOQUET)%handle,hm, gr, st, ks, iter)
+      call td_write_floquet(writ%out(OUT_FLOQUET)%handle, parser, hm, gr, st, ks, iter)
 
     if(writ%out(OUT_KP_PROJ)%write) &
       call td_write_proj_kp(writ%out(OUT_KP_PROJ)%handle,hm, gr, st, writ%gs_st, iter)
@@ -837,9 +837,10 @@ contains
       call td_write_total_heat_current(writ%out(OUT_TOTAL_HEAT_CURRENT)%handle, hm, gr, geo, st, iter)
     end if
     
-    if(writ%out(OUT_PARTIAL_CHARGES)%write) &
-      call td_write_partial_charges(writ%out(OUT_PARTIAL_CHARGES)%handle, writ%partial_charges, gr%fine%mesh, st, geo, iter)
-
+    if(writ%out(OUT_PARTIAL_CHARGES)%write) then
+      call td_write_partial_charges(writ%out(OUT_PARTIAL_CHARGES)%handle, parser, writ%partial_charges, gr%fine%mesh, st, geo, iter)
+    end if
+    
     if(writ%out(OUT_N_EX)%write .and. mod(iter, writ%compute_interval) == 0) then
       if (mpi_grp_is_root(mpi_world))  call write_iter_set(writ%out(OUT_N_EX)%handle, iter)
       call td_write_n_ex(writ%out(OUT_N_EX)%handle, outp, gr, st, writ%gs_st, iter)
@@ -1104,7 +1105,7 @@ contains
     do idir = 1, 3
        call pert_setup_dir(angular_momentum, idir)
        !we have to multiply by 2, because the perturbation returns L/2
-       angular(idir) = M_TWO*real(zpert_states_expectation_value(angular_momentum, gr, geo, hm, st), REAL_PRECISION)
+       angular(idir) = M_TWO*real(zpert_states_expectation_value(angular_momentum, parser, gr, geo, hm, st), REAL_PRECISION)
     end do
 
     call pert_end(angular_momentum)
@@ -2633,8 +2634,9 @@ contains
   end subroutine td_write_proj_kp
 
   !---------------------------------------
-  subroutine td_write_floquet(out_floquet, hm, gr, st, ks, iter)
+  subroutine td_write_floquet(out_floquet, parser, hm, gr, st, ks, iter)
     type(c_ptr),         intent(inout) :: out_floquet
+    type(parser_t),      intent(in)    :: parser
     type(hamiltonian_t), intent(inout) :: hm
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(inout) :: st !< at iter=0 this is the groundstate
@@ -2679,7 +2681,7 @@ contains
     !% Other options will work, but likely be nonsense.
     !% 
     !%End
-    call parse_variable('TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
+    call parse_variable(parser, 'TDFloquetFrequency', M_ZERO, omega, units_inp%energy)
     call messages_print_var_value(stdout,'Frequency used for Floquet analysis', omega)
     if(abs(omega)<=M_EPSILON) then
        message(1) = "Please give a non-zero value for TDFloquetFrequency"
@@ -2697,7 +2699,7 @@ contains
     !% Number of points on which one Floquet cycle is sampled in the time-integral of the Floquet analysis.
     !%
     !%End 
-    call parse_variable('TDFloquetSample',20 ,nt)
+    call parse_variable(parser, 'TDFloquetSample',20 ,nt)
     call messages_print_var_value(stdout,'Number of Floquet time-sampling points', nT)
     dt = Tcycle/real(nT)
 
@@ -2708,7 +2710,7 @@ contains
     !%Description
     !% Order of Floquet Hamiltonian. If negative number is given, downfolding is performed.
     !%End
-    call parse_variable('TDFloquetDimension',-1,Forder)
+    call parse_variable(parser, 'TDFloquetDimension',-1,Forder)
     if(Forder.ge.0) then
        call messages_print_var_value(stdout,'Order of multiphoton Floquet-Hamiltonian', Forder)
        !Dimension of multiphoton Floquet-Hamiltonian
@@ -3047,8 +3049,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_partial_charges(out_partial_charges, partial_charges, mesh, st, geo, iter)
+  subroutine td_write_partial_charges(out_partial_charges, parser, partial_charges, mesh, st, geo, iter)
     type(c_ptr),             intent(inout) :: out_partial_charges
+    type(parser_t),          intent(in)    :: parser
     type(partial_charges_t), intent(in)    :: partial_charges
     type(mesh_t),            intent(in)    :: mesh
     type(states_t),          intent(in)    :: st
@@ -3063,7 +3066,7 @@ contains
 
     SAFE_ALLOCATE(hirshfeld_charges(1:geo%natoms))
 
-    call partial_charges_calculate(partial_charges, mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
+    call partial_charges_calculate(partial_charges, parser, mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
         
     if(mpi_grp_is_root(mpi_world)) then
 

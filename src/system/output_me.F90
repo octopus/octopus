@@ -80,8 +80,9 @@ module output_me_oct_m
 contains
   
   ! ---------------------------------------------------------
-  subroutine output_me_init(this, sb, st, nst)
+  subroutine output_me_init(this, parser, sb, st, nst)
     type(output_me_t), intent(out) :: this
+    type(parser_t),    intent(in)  :: parser
     type(simul_box_t), intent(in)  :: sb
     type(states_t),    intent(in)  :: st
     integer,           intent(in)  :: nst
@@ -118,7 +119,7 @@ contains
     !% Not yet supported for spinors.
     !%End
 
-    call parse_variable('OutputMatrixElements', 0, this%what)
+    call parse_variable(parser, 'OutputMatrixElements', 0, this%what)
     if(.not.varinfo_valid_option('OutputMatrixElements', this%what, is_flag=.true.)) then
       call messages_input_error('OutputMatrixElements')
     end if
@@ -153,7 +154,7 @@ contains
       !% In 1D, if, for example, <tt>OutputMEMultipoles = 2</tt>, the program will print two files, containing the
       !% <math>x</math> and <math>x^2</math> matrix elements between Kohn-Sham states.
       !%End
-      call parse_variable('OutputMEMultipoles', 1, this%ks_multipoles)
+      call parse_variable(parser, 'OutputMEMultipoles', 1, this%ks_multipoles)
     end if
 
     !%Variable OutputMEStart
@@ -164,7 +165,7 @@ contains
     !% Specifies the state/band index for starting to compute the matrix element.
     !% So far, this is only used for dipole matrix elements.
     !%End
-    call parse_variable('OutputMEStart', 1, this%st_start)
+    call parse_variable(parser, 'OutputMEStart', 1, this%st_start)
     ASSERT(this%st_start > 0 .and. this%st_start <= nst)
 
     !%Variable OutputMEEnd
@@ -175,7 +176,7 @@ contains
     !% Specifies the highest state/band index used to compute the matrix element.
     !% So far, this is only used for dipole matrix elements.
     !%End
-    call parse_variable('OutputMEEnd', nst, this%st_end)
+    call parse_variable(parser, 'OutputMEEnd', nst, this%st_end)
     ASSERT(this%st_end > 0 .and. this%st_end <= nst)
     ASSERT(this%st_start <= this%st_end)
     this%nst = this%st_end - this%st_start +1

@@ -35,6 +35,7 @@ module density_oct_m
   use multigrid_oct_m
   use multicomm_oct_m
   use mpi_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
@@ -373,8 +374,9 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_freeze_orbitals(st, gr, mc, n)
+  subroutine states_freeze_orbitals(st, parser, gr, mc, n)
     type(states_t),    intent(inout) :: st
+    type(parser_t),    intent(in)    :: parser
     type(grid_t),      intent(in)    :: gr
     type(multicomm_t), intent(in)    :: mc
     integer,           intent(in)    :: n
@@ -444,7 +446,7 @@ contains
     st%nst = st%nst - n
 
     call states_deallocate_wfns(st)
-    call states_distribute_nodes(st, mc)
+    call states_distribute_nodes(st, parser, mc)
     call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim, 1))

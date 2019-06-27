@@ -201,7 +201,7 @@ contains
     !%Option integrate_yz bit(23)
     !% Integrates the function in the y-z plane and the result on the <i>x</i> axis is printed
     !%End
-    call parse_variable('OutputFormat', 0, how)
+    call parse_variable(parser, 'OutputFormat', 0, how)
     if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
       call messages_input_error('OutputFormat')
     end if

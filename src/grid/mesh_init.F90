@@ -546,7 +546,7 @@ contains
     !% grid in two of the dimensions.
     !%End
 
-    call parse_variable('MeshOrder', ORDER_BLOCKS, order)
+    call parse_variable(parser, 'MeshOrder', ORDER_BLOCKS, order)
 
     select case(order)
     case(ORDER_BLOCKS)
@@ -589,7 +589,7 @@ contains
         bsize(1:3) = (/ 15,  15,   4/)
       end select
 
-      if(parse_block('MeshBlockSize', blk) == 0) then
+      if(parse_block(parser, 'MeshBlockSize', blk) == 0) then
         nn = parse_block_cols(blk, 0)
         do idir = 1, nn
           call parse_block_integer(blk, 0, idir - 1, bsize(idir))
@@ -708,7 +708,7 @@ contains
       bits = log2(pad_pow2(size))
 
       bsize = 10
-      if(parse_block('MeshBlockSize', blk) == 0) then
+      if(parse_block(parser, 'MeshBlockSize', blk) == 0) then
         nn = parse_block_cols(blk, 0)
         do idir = 1, nn
           call parse_block_integer(blk, 0, idir - 1, bsize(idir))
@@ -803,7 +803,7 @@ contains
     PUSH_SUB(mesh_init_stage_3.do_partition)
 
     !Try to load the partition from the restart files
-    call restart_init(restart_load, RESTART_PARTITION, RESTART_TYPE_LOAD, mc, ierr, mesh=mesh, exact=.true.)
+    call restart_init(restart_load, parser, RESTART_PARTITION, RESTART_TYPE_LOAD, mc, ierr, mesh=mesh, exact=.true.)
     if (ierr == 0) call mesh_partition_load(restart_load, mesh, ierr)
     call restart_end(restart_load)
 
@@ -817,7 +817,7 @@ contains
       !% Gives the possibility to change the partition nodes.
       !% Afterward, it crashes.
       !%End
-      call parse_variable('MeshPartitionVirtualSize', mesh%mpi_grp%size, vsize)
+      call parse_variable(parser, 'MeshPartitionVirtualSize', mesh%mpi_grp%size, vsize)
       
       if (vsize /= mesh%mpi_grp%size) then
         write(message(1),'(a,I7)') "Changing the partition size to", vsize
@@ -829,7 +829,7 @@ contains
       end if
       
       if(.not. present(parent)) then
-        call mesh_partition(mesh, stencil, vsize)
+        call mesh_partition(mesh, parser, stencil, vsize)
       else
         ! if there is a parent grid, use its partition
         call mesh_partition_from_parent(mesh, parent)
@@ -839,7 +839,7 @@ contains
       call mesh_partition_boundaries(mesh, stencil, vsize)
 
       !Now that we have the partitions, we save them
-      call restart_init(restart_dump, RESTART_PARTITION, RESTART_TYPE_DUMP, mc, ierr, mesh=mesh)
+      call restart_init(restart_dump, parser, RESTART_PARTITION, RESTART_TYPE_DUMP, mc, ierr, mesh=mesh)
       call mesh_partition_dump(restart_dump, mesh, vsize, ierr)
       call restart_end(restart_dump)
     end if
@@ -869,7 +869,7 @@ contains
     !% topology to map the processors. This can improve performance
     !% for certain interconnection systems.
     !%End
-    call parse_variable('MeshUseTopology', .false., use_topo)
+    call parse_variable(parser, 'MeshUseTopology', .false., use_topo)
 
     if(use_topo) then
       ! this should be integrated in vec_init
@@ -969,7 +969,7 @@ contains
     !% nor print the partition information, such as local points,
     !% no. of neighbours, ghost points and boundary points.
     !%End
-    call parse_variable('PartitionPrint', .true., partition_print)
+    call parse_variable(parser, 'PartitionPrint', .true., partition_print)
     
     if (partition_print) then
       call mesh_partition_write_info(mesh, stencil, mesh%vp%part_vec)

@@ -292,7 +292,7 @@ contains
 #else
     default = .true.
 #endif
-    call parse_variable('DisableAccel', default, disable)
+    call parse_variable(parser, 'DisableAccel', default, disable)
     accel%enabled = .not. disable
     
 #ifndef HAVE_ACCEL
@@ -327,7 +327,7 @@ contains
     !%Option intel -5
     !% Use the Intel OpenCL platform.
     !%End
-    call parse_variable('AccelPlatform', 0, iplatform)
+    call parse_variable(parser, 'AccelPlatform', 0, iplatform)
 
     call messages_obsolete_variable(parser, 'OpenCLPlatform', 'AccelPlatform')
     
@@ -352,7 +352,7 @@ contains
     !% Octopus will use the default device specified by the implementation.
     !% implementation.
     !%End
-    call parse_variable('AccelDevice', OPENCL_GPU, idevice)
+    call parse_variable(parser, 'AccelDevice', OPENCL_GPU, idevice)
 
     call messages_obsolete_variable(parser, 'OpenCLDevice', 'AccelDevice')
     
@@ -588,7 +588,7 @@ contains
     !% If this variable is set to yes, Octopus will run some
     !% routines to benchmark the performance of the accelerator device.
     !%End
-    call parse_variable('AccelBenchmark', .false., run_benchmark)
+    call parse_variable(parser, 'AccelBenchmark', .false., run_benchmark)
 
     call messages_obsolete_variable(parser, 'OpenCLBenchmark', 'AccelBenchmark')
     

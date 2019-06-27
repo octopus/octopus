@@ -208,14 +208,14 @@ contains
     if(use_curvilinear) default_stencil = DER_STARPLUS
     if(sb%nonorthogonal) default_stencil = DER_STARGENERAL
 
-    call parse_variable('DerivativesStencil', default_stencil, der%stencil_type)
+    call parse_variable(parser, 'DerivativesStencil', default_stencil, der%stencil_type)
     
     if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) call messages_input_error('DerivativesStencil')
     call messages_print_var_option(stdout, "DerivativesStencil", der%stencil_type)
 
     if(use_curvilinear  .and.  der%stencil_type < DER_CUBE) call messages_input_error('DerivativesStencil')
     if(der%stencil_type == DER_VARIATIONAL) then
-      call parse_variable('DerivativesLaplacianFilter', M_ONE, der%lapl_cutoff)
+      call parse_variable(parser, 'DerivativesLaplacianFilter', M_ONE, der%lapl_cutoff)
     end if
 
     !%Variable DerivativesOrder
@@ -237,7 +237,7 @@ contains
     !% in 2D and 24 in 3D.
     !% </ul>
     !%End
-    call parse_variable('DerivativesOrder', 4, der%order)
+    call parse_variable(parser, 'DerivativesOrder', 4, der%order)
     ! overwrite order if given as argument
     if(present(order)) then
       der%order = order
@@ -256,7 +256,7 @@ contains
     !% Communication is based on non-blocking point-to-point communication.
     !%End
     
-    call parse_variable('ParallelizationOfDerivatives', NON_BLOCKING, der%comm_method)
+    call parse_variable(parser, 'ParallelizationOfDerivatives', NON_BLOCKING, der%comm_method)
     
     if(.not. varinfo_valid_option('ParallelizationOfDerivatives', der%comm_method)) then
       call messages_input_error('ParallelizationOfDerivatives')

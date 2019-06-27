@@ -80,7 +80,7 @@ contains
     !% has not been achieved. -1 means unlimited. 0 means just do LCAO or read from
     !% restart, and stop.
     !%End
-    call parse_variable('MaximumIter', 50, max_iter)
+    call parse_variable(sys%parser, 'MaximumIter', 50, max_iter)
     call messages_obsolete_variable(sys%parser, 'UnoccMaximumIter', 'MaximumIter')
     if(max_iter < 0) max_iter = huge(max_iter)
 
@@ -93,7 +93,7 @@ contains
     !% This is useful for testing, or if the occupied states fail to converge.
     !% It will be enabled automatically if only occupied states are being calculated.
     !%End
-    call parse_variable('UnoccShowOccStates', .false., showoccstates)
+    call parse_variable(sys%parser, 'UnoccShowOccStates', .false., showoccstates)
 
     bandstructure_mode = .false.
     if(simul_box_is_periodic(sys%gr%sb) .and. kpoints_get_kpoint_method(sys%gr%sb%kpoints) == KPOINTS_PATH) then
@@ -110,7 +110,8 @@ contains
     
     read_gs = .true.
     if (.not. fromScratch) then
-      call restart_init(restart_load_unocc, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+      call restart_init(restart_load_unocc, sys%parser, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, &
+        mesh = sys%gr%mesh, exact = .true.)
 
       if(ierr == 0) then
         call states_load(restart_load_unocc, sys%parser, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
@@ -126,7 +127,7 @@ contains
         read_gs = .false.
     end if
 
-    call restart_init(restart_load_gs, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr_rho, mesh=sys%gr%mesh, exact=.true.)
+    call restart_init(restart_load_gs, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr_rho, mesh=sys%gr%mesh, exact=.true.)
 
     if(ierr_rho == 0) then
       if (read_gs) then
@@ -226,7 +227,7 @@ contains
 
     if(.not. bandstructure_mode) then
       ! Restart dump should be initialized after restart_load, as the mesh might have changed
-      call restart_init(restart_dump, RESTART_UNOCC, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
+      call restart_init(restart_dump, sys%parser, RESTART_UNOCC, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
       ! make sure the density is defined on the same mesh as the wavefunctions that will be written
       if(write_density) &
@@ -307,7 +308,7 @@ contains
 
     if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) then
       if(bitand(sys%gr%sb%kpoints%method, KPOINTS_PATH) /= 0) then
-        call states_write_bandstructure(STATIC_DIR, sys%st%nst, sys%st, &
+        call states_write_bandstructure(STATIC_DIR, sys%parser, sys%st%nst, sys%st, &
               sys%gr%sb, sys%geo, sys%gr%mesh, sys%gr%der%boundaries, &
               hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
               vec_pot_var = hm%hm_base%vector_potential)

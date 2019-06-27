@@ -64,15 +64,15 @@ program spin_susceptibility
 
   call messages_init(parser)
 
-  call io_init()
+  call io_init(parser)
 
   call unit_system_init(parser)
 
-  call spectrum_init(spectrum)
+  call spectrum_init(spectrum, parser)
 
-  call parse_variable('TDDeltaStrength', M_ZERO, delta_strength )
+  call parse_variable(parser, 'TDDeltaStrength', M_ZERO, delta_strength )
 
-  if(parse_block('TDEasyAxis', blk)==0) then
+  if(parse_block(parser, 'TDEasyAxis', blk)==0) then
     n_rows = parse_block_n(blk)
 
     do idir = 1, 3
@@ -97,21 +97,15 @@ program spin_susceptibility
   kick%trans_vec(2,1) = M_TWO*kick%easy_axis(3)
   kick%trans_vec(3,1) = M_THREE*kick%easy_axis(1)
 
-  kick%trans_vec(1,2) = M_TWO*kick%easy_axis(3)
-  kick%trans_vec(2,2) = -M_HALF*kick%easy_axis(1)
-  kick%trans_vec(3,2) = kick%easy_axis(2)
-
   dot = sum(kick%easy_axis(1:3)*kick%trans_vec(1:3,1))
   kick%trans_vec(1:3,1) = kick%trans_vec(1:3,1) - dot*kick%easy_axis(1:3)
   norm = sum(kick%trans_vec(1:3,1)**2)
   kick%trans_vec(1:3,1) = kick%trans_vec(1:3,1)/sqrt(norm)
 
-  dot = sum(kick%easy_axis(1:3)*kick%trans_vec(1:3,2))
-  norm = sum(kick%trans_vec(1:3,1)*kick%trans_vec(1:3,2))
-  kick%trans_vec(1:3,2) = kick%trans_vec(1:3,2) - dot*kick%easy_axis(1:3) &
-                                                    - norm*kick%trans_vec(1:3,1)
-  norm = sum(kick%trans_vec(1:3,2)**2)
-  kick%trans_vec(1:3,2) = kick%trans_vec(1:3,2)/sqrt(norm)
+  kick%trans_vec(1,2) = kick%easy_axis(2) * kick%trans_vec(3,1) - kick%easy_axis(3) * kick%trans_vec(2,1)
+  kick%trans_vec(2,2) = kick%easy_axis(3) * kick%trans_vec(1,1) - kick%easy_axis(1) * kick%trans_vec(3,1)
+  kick%trans_vec(3,2) = kick%easy_axis(1) * kick%trans_vec(2,1) - kick%easy_axis(2) * kick%trans_vec(1,1)
+
 
   in_file = io_open('td.general/total_magnetization', action='read', status='old', die=.false.)
   if(in_file < 0) then 

@@ -20,8 +20,9 @@
 
 module sparskit_oct_m
   use global_oct_m
-  use parser_oct_m
+  use loct_pointer_oct_m
   use messages_oct_m
+  use parser_oct_m
   use profiling_oct_m
 
   implicit none
@@ -45,14 +46,13 @@ module sparskit_oct_m
   public ::                      &
     sparskit_solver_t
   
-#ifdef HAVE_SPARSKIT
-    public ::                      &
-      sparskit_solver_init,        &
-      dsparskit_solver_run,        &
-      zsparskit_solver_run,        &
-      sparskit_solver_end
-#endif
-
+  public ::                      &
+    sparskit_solver_init,        &
+    dsparskit_solver_run,        &
+    zsparskit_solver_run,        &
+    sparskit_solver_end,         &
+    sparskit_solver_copy
+  
   type sparskit_solver_t
     private
     logical :: is_complex           !< whether set up for complex (otherwise real)
@@ -74,12 +74,11 @@ module sparskit_oct_m
     logical :: verbose              !< if .true. then the solver will write more details
   end type sparskit_solver_t
 
-#ifdef HAVE_SPARSKIT
-
 contains
 
   ! ---------------------------------------------------------
-  subroutine sparskit_solver_init(n, sk, is_complex)
+  subroutine sparskit_solver_init(parser, n, sk, is_complex)
+    type(parser_t),          intent(in)  :: parser
     integer,                 intent(in)  :: n
     type(sparskit_solver_t), intent(out) :: sk
     logical,                 intent(in)  :: is_complex
@@ -118,7 +117,7 @@ contains
     !%Option sk_dqgmres 10
     !% Direct versions of the Quasi-Generalized Minimum Residual method
     !%End
-    call parse_variable('SPARSKITSolver', SK_BCG, sk%solver_type)
+    call parse_variable(parser, 'SPARSKITSolver', SK_BCG, sk%solver_type)
     if ( sk%solver_type < SK_MINVAL.or.sk%solver_type > SK_MAXVAL ) then
       call messages_input_error('SPARSKITSolver')
     end if
@@ -132,7 +131,7 @@ contains
     !% This variable determines what size the solver will use 
     !% for the subspace.
     !%End
-    call parse_variable('SPARSKITKrylovSubspaceSize', 15, sk%krylov_size)
+    call parse_variable(parser, 'SPARSKITKrylovSubspaceSize', 15, sk%krylov_size)
 
     ! preconditioner not implemented
     sk%preconditioning = 0
@@ -145,7 +144,7 @@ contains
     !% This variable controls the maximum number of iteration steps that
     !% will be performed by the (iterative) linear solver.
     !%End
-    call parse_variable('SPARSKITMaxIter', 5000, sk%maxiter)
+    call parse_variable(parser, 'SPARSKITMaxIter', 5000, sk%maxiter)
     
     !%Variable SPARSKITIterOut
     !%Type integer
@@ -155,7 +154,7 @@ contains
     !% Determines how often status info of the solver is printed.
     !% If <= 0, will never be printed.
     !%End
-    call parse_variable('SPARSKITIterOut', -1, sk%iter_out)
+    call parse_variable(parser, 'SPARSKITIterOut', -1, sk%iter_out)
 
     !%Variable SPARSKITRelTolerance
     !%Type float
@@ -166,7 +165,7 @@ contains
     !% for the iterative solution process. This variable can be used to 
     !% specify the tolerance.
     !%End
-    call parse_variable('SPARSKITRelTolerance', CNST(1e-8), sk%rel_tolerance)
+    call parse_variable(parser, 'SPARSKITRelTolerance', CNST(1e-8), sk%rel_tolerance)
     
     !%Variable SPARSKITAbsTolerance
     !%Type float
@@ -177,7 +176,7 @@ contains
     !% for the iterative solution process. This variable can be used to 
     !% specify the tolerance.
     !%End
-    call parse_variable('SPARSKITAbsTolerance', CNST(1e-10), sk%abs_tolerance)
+    call parse_variable(parser, 'SPARSKITAbsTolerance', CNST(1e-10), sk%abs_tolerance)
 
     !%Variable SPARSKITVerboseSolver
     !%Type logical
@@ -186,7 +185,7 @@ contains
     !%Description
     !% When set to yes, the SPARSKIT solver will write more detailed output.
     !%End
-    call parse_variable('SPARSKITVerboseSolver', .false., sk%verbose)
+    call parse_variable(parser, 'SPARSKITVerboseSolver', .false., sk%verbose)
 
     ! size of the problem
     if(is_complex) then
@@ -287,6 +286,34 @@ contains
     POP_SUB(sparskit_solver_end)
   end subroutine sparskit_solver_end
 
+  ! ---------------------------------------------------------
+  subroutine sparskit_solver_copy(ski, sko)
+    type(sparskit_solver_t), intent(in)  :: ski
+    type(sparskit_solver_t), intent(out) :: sko
+
+    PUSH_SUB(sparskit_solver_end)
+    
+    sko%is_complex      = ski%is_complex
+    sko%size            = ski%size
+    sko%solver_type     = ski%solver_type
+    sko%krylov_size     = ski%krylov_size
+    sko%preconditioning = ski%preconditioning
+    sko%maxiter         = ski%maxiter
+    sko%used_iter       = ski%used_iter
+    sko%iter_out        = ski%iter_out
+    sko%residual_norm   = ski%residual_norm
+    sko%rel_tolerance   = ski%rel_tolerance
+    sko%abs_tolerance   = ski%abs_tolerance
+    call loct_allocatable_copy(sko%sk_work, ski%sk_work)
+    call loct_allocatable_copy(sko%sk_b,    ski%sk_b)
+    call loct_allocatable_copy(sko%sk_y,    ski%sk_y)
+    sko%ipar            = ski%ipar
+    sko%fpar            = ski%fpar
+    sko%verbose         = ski%verbose
+
+    POP_SUB(sparskit_solver_end)
+  end subroutine sparskit_solver_copy
+  
 #include "undef.F90"
 #include "real.F90"
 #include "sparskit_inc.F90"
@@ -294,8 +321,6 @@ contains
 #include "undef.F90"
 #include "complex.F90"
 #include "sparskit_inc.F90"
-
-#endif /* HAVE_SPARSKIT */
 
 ! distdot function for dot products is defined in mesh_function_oct_m
 

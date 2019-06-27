@@ -131,20 +131,20 @@ module fft_oct_m
 #endif
     type(c_ptr)           :: cuda_plan_fw
     type(c_ptr)           :: cuda_plan_bw
-#ifdef HAVE_NFFT
-    type(nfft_t), public :: nfft
-#endif
-#ifdef HAVE_PNFFT
+    type(nfft_t),  public :: nfft
     type(pnfft_t), public :: pnfft
-#endif
 
   end type fft_t
 
-  integer, save     :: fft_refs(FFT_MAX)
-  type(fft_t), save :: fft_array(FFT_MAX)
-  logical           :: fft_optimize
-  integer           :: fft_prepare_plan
-
+  logical, save, public :: fft_initialized = .false.
+  integer, save         :: fft_refs(FFT_MAX)
+  type(fft_t), save     :: fft_array(FFT_MAX)
+  logical               :: fft_optimize
+  integer               :: fft_prepare_plan
+  integer, public       :: fft_default_lib = -1
+  type(nfft_t), save    :: nfft_options
+  type(pnfft_t), save   :: pnfft_options
+  
   integer, parameter ::  &
     CUFFT_R2C = z'2a',   &
     CUFFT_C2R = z'2c',   &
@@ -157,15 +157,18 @@ contains
 
   ! ---------------------------------------------------------
   !> initialize the table
-  subroutine fft_all_init()
+  subroutine fft_all_init(parser)
+    type(parser_t),      intent(in)   :: parser
+    
     integer :: ii
-
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
     integer :: iret
 #endif
 
     PUSH_SUB(fft_all_init)
 
+    fft_initialized = .true.
+    
     !%Variable FFTOptimize
     !%Type logical
     !%Default yes
@@ -184,7 +187,7 @@ contains
     !% be written if the number is not good, with a suggestion of a better one to use, so you
     !% can try a different spacing if you want to get a good number.
     !%End
-    call parse_variable('FFTOptimize', .true., fft_optimize)
+    call parse_variable(parser, 'FFTOptimize', .true., fft_optimize)
     do ii = 1, FFT_MAX
       fft_refs(ii) = FFT_NULL
     end do
@@ -211,23 +214,37 @@ contains
     !% This is the "fast initialization" scheme, in which the plan is merely guessed from "reasonable"
     !% assumptions.
     !%End
-    call parse_variable('FFTPreparePlan', FFTW_MEASURE, fft_prepare_plan)
+    call parse_variable(parser, 'FFTPreparePlan', FFTW_MEASURE, fft_prepare_plan)
     if(.not. varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call messages_input_error('FFTPreparePlan')
-     
-!    !%Variable FFTPlanTimeLimit
-!    !%Type float
-!    !%Default -1
-!    !%Section Mesh::FFTs
-!    !%Description
-!    !% Sometimes the FFTW_MEASURE takes a lot of time to compute
-!    !% many different plans. With this variable is possible to limit
-!    !% the time (in seconds) that has roughly going to use for the
-!    !% creation of the plan. If a negative value (default one) is
-!    !% assigned, there is no restriction.
-!    !%End   
-!    call parse_variable('FFTPlanTimeLimit', -M_ONE, time_limit)    
-!    call fftw_set_timelimit(time_limit)
 
+    !%Variable FFTLibrary
+    !%Type integer
+    !%Section Mesh::FFTs
+    !%Default fftw
+    !%Description
+    !% (experimental) You can select the FFT library to use.
+    !%Option fftw 1
+    !% Uses FFTW3 library.
+    !%Option pfft 2
+    !% (experimental) Uses PFFT library, which has to be linked.
+    !%Option accel 3
+    !% (experimental) Uses a GPU accelerated library. This only
+    !% works if Octopus was compiled with Cuda or OpenCL support.
+    !%End
+    call parse_variable(parser, 'FFTLibrary', FFTLIB_FFTW, fft_default_lib)
+
+    if(fft_default_lib == FFTLIB_ACCEL) then
+#if ! (defined(HAVE_CLFFT) || defined(HAVE_CUDA))
+      call messages_write('You have selected the Accelerated FFT, but Octopus was compiled', new_line = .true.)
+      call messages_write('without clfft (OpenCL) or Cuda support.')
+      call messages_fatal()
+#endif
+      if(.not. accel_is_enabled()) then
+        call messages_write('You have selected the accelerated FFT, but acceleration is disabled.')
+        call messages_fatal()
+      end if
+    end if
+    
 #if defined(HAVE_OPENMP) && defined(HAVE_FFTW3_THREADS)
     if(omp_get_max_threads() > 1) then
 
@@ -244,6 +261,9 @@ contains
     end if
 #endif
 
+    call nfft_guru_options(nfft_options, parser)
+    call pnfft_guru_options(pnfft_options, parser)
+    
     POP_SUB(fft_all_init)
   end subroutine fft_all_init
 
@@ -271,6 +291,8 @@ contains
     call fftw_cleanup()
 #endif
 
+    fft_initialized = .false.
+    
     POP_SUB(fft_all_end)
   end subroutine fft_all_end
 
@@ -302,6 +324,8 @@ contains
 
     PUSH_SUB(fft_init)
 
+    ASSERT(fft_initialized)
+    
     ASSERT(type == FFT_REAL .or. type == FFT_COMPLEX)
 
     mpi_grp_ = mpi_world
@@ -440,11 +464,7 @@ contains
 #endif
 
     case (FFTLIB_PNFFT)
-#ifdef HAVE_PNFFT
-
       call pnfft_init_procmesh(fft_array(jj)%pnfft, mpi_grp_, fft_array(jj)%comm) 
-
-#endif
 
     case default
       fft_array(jj)%comm = -1
@@ -531,11 +551,9 @@ contains
            type == FFT_REAL, FFTW_BACKWARD, fft_prepare_plan+FFTW_UNALIGNED)
 
     case(FFTLIB_NFFT)
-#ifdef HAVE_NFFT
      call nfft_copy_info(this%nfft,fft_array(jj)%nfft) !copy default parameters set in the calling routine 
-     call nfft_init(fft_array(jj)%nfft, fft_array(jj)%rs_n_global, &
+     call nfft_init(fft_array(jj)%nfft, nfft_options, fft_array(jj)%rs_n_global, &
                     fft_dim, fft_array(jj)%rs_n_global , type, optimize = .true.)
-#endif
 
     case (FFTLIB_PFFT)
 #ifdef HAVE_PFFT     
@@ -552,8 +570,7 @@ contains
       end if
 #endif
     case (FFTLIB_PNFFT)
-#ifdef HAVE_PNFFT     
-      call pnfft_copy_params(this%pnfft,fft_array(jj)%pnfft) ! pass default parameters like in NFFT
+      call pnfft_copy_params(this%pnfft, fft_array(jj)%pnfft) ! pass default parameters like in NFFT
 
       ! NOTE:
       ! PNFFT (likewise NFFT) breaks the symmetry between real space and Fourier space
@@ -570,10 +587,8 @@ contains
       ! Therefore, in order to perform rs->fs tranforms with PNFFT one should use the 
       ! backward transform.     
 
-      call pnfft_init_plan(fft_array(jj)%pnfft, mpi_comm, fft_array(jj)%fs_n_global, &
+      call pnfft_init_plan(fft_array(jj)%pnfft, pnfft_options, mpi_comm, fft_array(jj)%fs_n_global, &
            fft_array(jj)%fs_n, fft_array(jj)%fs_istart, fft_array(jj)%rs_n, fft_array(jj)%rs_istart)
-      
-#endif
 
     case(FFTLIB_ACCEL)
 
@@ -751,16 +766,12 @@ contains
     case (FFTLIB_PNFFT)
       call messages_write("Info: FFT library = PNFFT")
       call messages_info()
-#ifdef HAVE_PNFFT
       call pnfft_write_info(fft_array(jj)%pnfft)
-#endif
-
+      
     case (FFTLIB_NFFT)
-    call messages_write("Info: FFT library = NFFT")
-    call messages_info()
-#ifdef HAVE_NFFT
+      call messages_write("Info: FFT library = NFFT")
+      call messages_info()
       call nfft_write_info(fft_array(jj)%nfft)
-#endif
 
     end select
 
@@ -789,19 +800,17 @@ contains
     case (FFTLIB_FFTW)
     !Do nothing 
     case (FFTLIB_NFFT)
-#ifdef HAVE_NFFT
       ASSERT(present(nn))
       call nfft_precompute(fft_array(slot)%nfft, &
           XX(1:nn(1),1), XX(1:nn(2),2), XX(1:nn(3),3)) 
-#endif
+
     case (FFTLIB_PFFT)
     !Do nothing 
     case(FFTLIB_ACCEL)
     !Do nothing 
     case(FFTLIB_PNFFT)
-#ifdef HAVE_PNFFT
       call pnfft_set_sp_nodes(fft_array(slot)%pnfft, XX)
-#endif
+
     case default
       call messages_write('Invalid FFT library.')
       call messages_fatal()
@@ -853,15 +862,12 @@ contains
           call clfftDestroyPlan(fft_array(ii)%cl_plan_bw, status)
 #endif
 
-#ifdef HAVE_NFFT
         case(FFTLIB_NFFT)
-        call nfft_end(fft_array(ii)%nfft)
-#endif
-
-#ifdef HAVE_PNFFT
+          call nfft_end(fft_array(ii)%nfft)
+          
         case(FFTLIB_PNFFT)
-        call pnfft_end(fft_array(ii)%pnfft)
-#endif
+          call pnfft_end(fft_array(ii)%pnfft)
+          
         end select
         fft_refs(ii) = FFT_NULL
       end if

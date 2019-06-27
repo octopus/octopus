@@ -174,10 +174,10 @@ contains
       !% The momentum of the spin spiral is defined by the variable 
       !% <tt>TDMomentumTransfer</tt> 
       !%End
-      call parse_variable('SpiralBoundaryCondition', .false., this%spiralBC)
+      call parse_variable(parser, 'SpiralBoundaryCondition', .false., this%spiralBC)
       if(this%spiralBC) then
         if(parse_is_defined(parser, 'TDMomentumTransfer')) then
-          if(parse_block('TDMomentumTransfer', blk)==0) then
+          if(parse_block(parser, 'TDMomentumTransfer', blk)==0) then
             do idir = 1, MAX_DIM
              call parse_block_float(blk, 0, idir - 1, this%spiral_q(idir))
              this%spiral_q(idir) = units_to_atomic(unit_one / units_inp%length, this%spiral_q(idir))

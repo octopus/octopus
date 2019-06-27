@@ -140,7 +140,7 @@ contains
     !% external potential is used. However, one may want to apply a kick on top of a laser field,
     !% for example.
     !%End
-    call parse_variable('TDDeltaKickTime', M_ZERO, kick%time, units_inp%time)
+    call parse_variable(parser, 'TDDeltaKickTime', M_ZERO, kick%time, units_inp%time)
     if(kick%time > M_ZERO) then
       call messages_experimental('TDDeltaKickTime > 0')
     end if
@@ -159,7 +159,7 @@ contains
     !% the wavefunctions instantaneously to acquire a phase <math>e^{ikx}</math>.
     !% The unit is inverse length.
     !%End
-    call parse_variable('TDDeltaStrength', M_ZERO, kick%delta_strength, units_inp%length**(-1))
+    call parse_variable(parser, 'TDDeltaStrength', M_ZERO, kick%delta_strength, units_inp%length**(-1))
 
     nullify(kick%l)
     nullify(kick%m)
@@ -208,7 +208,7 @@ contains
     !% Can be used in a supercell or my making use of the generalized Bloch theorem.
     !% In the later case (see <tt>SpiralBoundaryConditions</tt>) spin-orbit coupling cannot be used.
     !%End
-    call parse_variable('TDDeltaStrengthMode', KICK_DENSITY_MODE, kick%delta_strength_mode)
+    call parse_variable(parser, 'TDDeltaStrengthMode', KICK_DENSITY_MODE, kick%delta_strength_mode)
     select case (kick%delta_strength_mode)
     case (KICK_DENSITY_MODE)
     case (KICK_SPIN_MODE, KICK_SPIN_DENSITY_MODE)
@@ -233,7 +233,7 @@ contains
       !% block will be ignored. The value of <tt>TDDeltaUserDefined</tt> should be a string describing
       !% the function that is going to be used as delta perturbation.
       !%End
-      call parse_variable('TDDeltaUserDefined', '0', kick%user_defined_function)
+      call parse_variable(parser, 'TDDeltaUserDefined', '0', kick%user_defined_function)
 
       !%Variable TDKickFunction
       !%Type block
@@ -250,7 +250,7 @@ contains
       !%
       !% This feature allows calculation of quadrupole, octupole, etc., response functions.
       !%End
-    else if(parse_block('TDKickFunction', blk) == 0) then
+    else if(parse_block(parser, 'TDKickFunction', blk) == 0) then
 
       kick%function_mode = KICK_FUNCTION_MULTIPOLE
       n_rows = parse_block_n(blk)
@@ -280,7 +280,7 @@ contains
       !% used by <tt>oct-propagation_spectrum</tt> to rebuild the full polarizability tensor from just the
       !% first <tt>TDPolarizationEquivAxes</tt> directions. This variable is also used by <tt>CalculationMode = vdw</tt>.
       !%End
-      call parse_variable('TDPolarizationEquivAxes', 0, kick%pol_equiv_axes)
+      call parse_variable(parser, 'TDPolarizationEquivAxes', 0, kick%pol_equiv_axes)
 
       !%Variable TDPolarizationDirection
       !%Type integer
@@ -297,7 +297,7 @@ contains
       !% to <tt>TDPolarizationEquivAxes</tt>.
       !%End
 
-      call parse_variable('TDPolarizationDirection', 0, kick%pol_dir)
+      call parse_variable(parser, 'TDPolarizationDirection', 0, kick%pol_dir)
 
       if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
         if(kick%pol_dir < 1 .or. kick%pol_dir > dim) call messages_input_error('TDPolarizationDirection')
@@ -339,7 +339,7 @@ contains
       !%End
 
       kick%pol(:, :) = M_ZERO
-      if(parse_block('TDPolarization', blk)==0) then
+      if(parse_block(parser, 'TDPolarization', blk)==0) then
         n_rows = parse_block_n(blk)
         
         if(n_rows < dim) call messages_input_error('TDPolarization')
@@ -387,7 +387,7 @@ contains
       !% <i>et al.</i>, <i>J. Nanoscience and Nanotechnology</i> <b>8</b>,
       !% 3392 (2008).
       !%End
-      if(parse_block('TDPolarizationWprime', blk)==0) then
+      if(parse_block(parser, 'TDPolarizationWprime', blk)==0) then
         do idir = 1, 3
           call parse_block_float(blk, 0, idir - 1, kick%wprime(idir))
         end do
@@ -426,7 +426,7 @@ contains
     !% In this case, the block has to include two extra values (<i>l</i> and <i>m</i>).
     !%End
 
-    if(parse_block('TDMomentumTransfer', blk)==0) then
+    if(parse_block(parser, 'TDMomentumTransfer', blk)==0) then
       do idir = 1, MAX_DIM
         call parse_block_float(blk, 0, idir - 1, kick%qvector(idir))
         kick%qvector(idir) = units_to_atomic(unit_one / units_inp%length, kick%qvector(idir))
@@ -484,7 +484,7 @@ contains
       !% This variable defines the direction of the easy axis of the crystal.
       !% The magnetization is kicked in the plane transverse to this vector
       !%End
-      if(parse_block('TDEasyAxis', blk)==0) then
+      if(parse_block(parser, 'TDEasyAxis', blk)==0) then
         n_rows = parse_block_n(blk)
 
         do idir = 1, 3
@@ -509,21 +509,15 @@ contains
       kick%trans_vec(2,1) = M_TWO*kick%easy_axis(3)
       kick%trans_vec(3,1) = M_THREE*kick%easy_axis(1)
 
-      kick%trans_vec(1,2) = M_TWO*kick%easy_axis(3)
-      kick%trans_vec(2,2) = -M_HALF*kick%easy_axis(1)
-      kick%trans_vec(3,2) = kick%easy_axis(2)
-
       dot = sum(kick%easy_axis(1:3)*kick%trans_vec(1:3,1))
       kick%trans_vec(1:3,1) = kick%trans_vec(1:3,1) - dot*kick%easy_axis(1:3)
       norm = sum(kick%trans_vec(1:3,1)**2)
       kick%trans_vec(1:3,1) = kick%trans_vec(1:3,1)/sqrt(norm)
 
-      dot = sum(kick%easy_axis(1:3)*kick%trans_vec(1:3,2))
-      norm = sum(kick%trans_vec(1:3,1)*kick%trans_vec(1:3,2))
-      kick%trans_vec(1:3,2) = kick%trans_vec(1:3,2) - dot*kick%easy_axis(1:3) &
-                                                    - norm*kick%trans_vec(1:3,1)
-      norm = sum(kick%trans_vec(1:3,2)**2)
-      kick%trans_vec(1:3,2) = kick%trans_vec(1:3,2)/sqrt(norm)
+      !To get a direct basis, the last vector is obtained by the cross product
+      kick%trans_vec(1,2) = kick%easy_axis(2) * kick%trans_vec(3,1) - kick%easy_axis(3) * kick%trans_vec(2,1)
+      kick%trans_vec(2,2) = kick%easy_axis(3) * kick%trans_vec(1,1) - kick%easy_axis(1) * kick%trans_vec(3,1)
+      kick%trans_vec(3,2) = kick%easy_axis(1) * kick%trans_vec(2,1) - kick%easy_axis(2) * kick%trans_vec(1,1)
 
       !The perturbation direction is defined as
       !cos(q.r)*uvec + sin(q.r)*vvec

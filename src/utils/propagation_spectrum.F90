@@ -51,16 +51,16 @@ program propagation_spectrum
   
   call messages_init(parser)
 
-  call io_init()
+  call io_init(parser)
 
   call unit_system_init(parser)
 
-  call spectrum_init(spectrum)
+  call spectrum_init(spectrum, parser)
 
   select case (spectrum%spectype)
     case (SPECTRUM_ABSORPTION)
       call read_files('multipoles', refmultipoles)
-      call calculate_absorption('cross_section')
+      call calculate_absorption('cross_section', parser)
     case (SPECTRUM_P_POWER)
       call calculate_dipole_power("multipoles", 'dipole_power')
     case (SPECTRUM_ENERGYLOSS)
@@ -225,8 +225,9 @@ program propagation_spectrum
 
 
     !----------------------------------------------------------------------------   
-    subroutine calculate_absorption(fname)
+    subroutine calculate_absorption(fname, parser)
       character(len=*), intent(in) :: fname
+      type(parser_t),   intent(in) :: parser
 
       integer :: ii, jj
       character(len=150), allocatable :: filename(:)
@@ -237,9 +238,9 @@ program propagation_spectrum
 
         out_file(1) = io_open(trim(fname)//'_vector', action='write')
         if(.not.reference_multipoles) then
-          call spectrum_cross_section(in_file(1), out_file(1), spectrum)
+          call spectrum_cross_section(parser, in_file(1), out_file(1), spectrum)
         else
-          call spectrum_cross_section(in_file(1), out_file(1), spectrum, ref_file)
+          call spectrum_cross_section(parser, in_file(1), out_file(1), spectrum, ref_file)
         end if
         call io_close(in_file(1))
         call io_close(out_file(1))
@@ -256,9 +257,9 @@ program propagation_spectrum
           write(filename(ii),'(2a,i1)') trim(fname), '_vector.',ii
           out_file(ii) = io_open(trim(filename(ii)), action='write')
           if(.not.reference_multipoles) then
-            call spectrum_cross_section(in_file(ii), out_file(ii), spectrum)
+            call spectrum_cross_section(parser, in_file(ii), out_file(ii), spectrum)
           else
-            call spectrum_cross_section(in_file(ii), out_file(ii), spectrum, ref_file)
+            call spectrum_cross_section(parser, in_file(ii), out_file(ii), spectrum, ref_file)
           end if
           call io_close(in_file(ii))
           call io_close(out_file(ii))
@@ -266,7 +267,7 @@ program propagation_spectrum
         end do
 
         out_file(1) = io_open(trim(fname)//'_tensor', action='write')
-        call spectrum_cross_section_tensor(spectrum, out_file(1), in_file(1:jj))
+        call spectrum_cross_section_tensor(spectrum, parser, out_file(1), in_file(1:jj))
         do ii = 1, jj
           call io_close(in_file(ii))
         end do

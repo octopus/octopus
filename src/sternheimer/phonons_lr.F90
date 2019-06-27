@@ -114,7 +114,7 @@ contains
     !% and written in directory <tt>restart/vib_modes/phn_nm_wfs_XXXXX</tt>.
     !% This part is time-consuming and not parallel, but not needed for most purposes.
     !%End
-    call parse_variable('CalcNormalModeWfs', .false., normal_mode_wfs)
+    call parse_variable(sys%parser, 'CalcNormalModeWfs', .false., normal_mode_wfs)
 
     !%Variable CalcInfrared
     !%Type logical
@@ -124,7 +124,7 @@ contains
     !% If set to true, infrared intensities (and Born charges) will be calculated
     !% and written in <tt>vib_modes/infrared</tt>.
     !%End
-    call parse_variable('CalcInfrared', .true., do_infrared)
+    call parse_variable(sys%parser, 'CalcInfrared', .true., do_infrared)
 
     !%Variable SymmetrizeDynamicalMatrix
     !%Type logical
@@ -135,7 +135,7 @@ contains
     !% the matrix will be symmetrized to enforce <math>D_{ij} = D_{ji}</math>. If set to false,
     !% only the upper half of the matrix will be calculated.
     !%End
-    call parse_variable('SymmetrizeDynamicalMatrix', .true., symmetrize)
+    call parse_variable(sys%parser, 'SymmetrizeDynamicalMatrix', .true., symmetrize)
 
     ! replaced by properly saving and reading the dynamical matrix
     call messages_obsolete_variable(sys%parser, 'UseRestartDontSolve')
@@ -143,7 +143,7 @@ contains
     natoms = geo%natoms
     ndim = gr%mesh%sb%dim
 
-    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+    call restart_init(gs_restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
     if(ierr == 0) then
       call states_look_and_load(gs_restart, sys%parser, st, gr)
       call restart_end(gs_restart)
@@ -157,7 +157,7 @@ contains
       message(1) = "Reading kdotp wavefunctions for periodic directions."
       call messages_info(1)
 
-      call restart_init(kdotp_restart, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+      call restart_init(kdotp_restart, sys%parser, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
       if(ierr /= 0) then
         message(1) = "Unable to read kdotp wavefunctions."
         message(2) = "Previous kdotp calculation required."
@@ -190,10 +190,10 @@ contains
     call sternheimer_init(sh, sys, hm, wfs_are_cplx = states_are_complex(st))
     call vibrations_init(vib, geo, gr%sb, "lr")
 
-    call epot_precalc_local_potential(hm%ep, sys%gr, sys%geo)
+    call epot_precalc_local_potential(hm%ep, sys%parser, sys%gr, sys%geo)
 
     if(do_infrared) then
-      call Born_charges_init(born, geo, st, ndim)
+      call born_charges_init(born, sys%parser, geo, st, ndim)
     end if
     SAFE_ALLOCATE(force_deriv(1:ndim, 1:natoms))
 
@@ -204,9 +204,9 @@ contains
 
     !the  <phi0 | v2 | phi0> term
     if(states_are_real(st)) then
-      call dionic_pert_matrix_elements_2(sys%gr, sys%geo, hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
+      call dionic_pert_matrix_elements_2(sys%gr, sys%parser, sys%geo, hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
     else
-      call zionic_pert_matrix_elements_2(sys%gr, sys%geo, hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
+      call zionic_pert_matrix_elements_2(sys%gr, sys%parser, sys%geo, hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
     end if
 
     call pert_init(ionic_pert, sys%parser, PERTURBATION_IONIC, gr, geo)
@@ -214,8 +214,8 @@ contains
     call lr_init(lr(1))
     call lr_allocate(lr(1), st, gr%mesh)
 
-    call restart_init(restart_dump, RESTART_VIB_MODES, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
-    call restart_init(restart_load, RESTART_VIB_MODES, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+    call restart_init(restart_dump, sys%parser, RESTART_VIB_MODES, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
+    call restart_init(restart_load, sys%parser, RESTART_VIB_MODES, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
 
     if (fromScratch) then
       start_mode = 1
@@ -265,9 +265,9 @@ contains
       end if
       
       if(states_are_real(st)) then
-        call dforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv, hm%lda_u_level)
+        call dforces_derivative(gr, sys%parser, geo, hm%ep, st, lr(1), lr(1), force_deriv, hm%lda_u_level)
       else
-        call zforces_derivative(gr, geo, hm%ep, st, lr(1), lr(1), force_deriv, hm%lda_u_level)
+        call zforces_derivative(gr, sys%parser, geo, hm%ep, st, lr(1), lr(1), force_deriv, hm%lda_u_level)
       end if
 
       do jmat = 1, vib%num_modes

@@ -595,7 +595,7 @@ subroutine X(lr_calc_beta) (sh, sys, hm, em_lr, dipole, beta, kdotp_lr, kdotp_em
                   else
                     call pert_setup_dir(dipole, u(2))
                     call X(pert_apply) &
-                      (dipole, sys%gr, sys%geo, hm, ik, em_lr(u(3), isigma, w(3))%X(dl_psi)(:, :, ist, ik), tmp)
+                      (dipole, sys%parser, sys%gr, sys%geo, hm, ik, em_lr(u(3), isigma, w(3))%X(dl_psi)(:, :, ist, ik), tmp)
                   end if
 
                   do ip = 1, np
@@ -732,7 +732,7 @@ contains
                   forall (idim = 1:st%d%dim, ip = 1:np) ppsi(ip, idim) = kdotp_lr(ii)%X(dl_psi)(ip, idim, ist, ik)
                 end if
               else
-                call X(pert_apply)(dipole, sys%gr, sys%geo, hm, ik, psi1, ppsi)
+                call X(pert_apply)(dipole, sys%parser, sys%gr, sys%geo, hm, ik, psi1, ppsi)
               end if
 
               isigma = 1
@@ -998,7 +998,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, nfactor,
             if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
               do ii = 1, nfactor
                 do isigma = 1, nsigma
-                  call X(pert_apply)(pert_e(swap_sigma(ii)), sys%gr, sys%geo, hm, ik, &
+                  call X(pert_apply)(pert_e(swap_sigma(ii)), sys%parser, sys%gr, sys%geo, hm, ik, &
                     lr_e(dir(ii), isigma, ii)%X(dl_psi)(:, :, ist, ik), pertpsi_e(:, :, isigma))
                   if(calc_var) then
                     do idim = 1, hm%d%dim
@@ -1014,7 +1014,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, nfactor,
                 end do
                 chi(dir(nfactor), dir(1), dir3) = chi(dir(nfactor), dir(1), dir3) + term(1) + R_CONJ(term(nsigma))
 
-                call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, &
+                call X(pert_apply)(pert_m, sys%parser, sys%gr, sys%geo, hm, ik, &
                   lr_e(dir(ii), 1, ii)%X(dl_psi)(:, :, ist, ik), pertpsi_b(:, :))
                 if(calc_var_mo) then
                   do idim = 1, hm%d%dim
@@ -1044,7 +1044,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, nfactor,
             do ist = 1, sys%st%nst
               if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
                 call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
-                call X(pert_apply)(pert_e(ii), sys%gr, sys%geo, hm, ik, psi, pertpsi_e(:, :, 1))
+                call X(pert_apply)(pert_e(ii), sys%parser, sys%gr, sys%geo, hm, ik, psi, pertpsi_e(:, :, 1))
                 if(nfactor > 1) pertpsi_e(:, :, nfactor) = pertpsi_e(:, :, 1)
                 if(calc_var) then
                   do idim = 1, hm%d%dim
@@ -1056,7 +1056,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, hm, nsigma, nfactor,
                     end do
                   end do
                 end if
-                call X(pert_apply)(pert_m, sys%gr, sys%geo, hm, ik, psi, pertpsi_b(:, :))
+                call X(pert_apply)(pert_m, sys%parser, sys%gr, sys%geo, hm, ik, psi, pertpsi_b(:, :))
                 if(calc_var_mo) then
                   do idim = 1, hm%d%dim
                     do ip = 1, sys%gr%mesh%np
@@ -1585,7 +1585,7 @@ contains
 
     psi_out(:, :, :) = M_ZERO
     do isigma = 1, nsigma_in
-      call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik0, &
+      call X(pert_apply)(pert_kdotp, sys%parser, sys%gr, sys%geo, hm, ik0, &
         lr_in(isigma)%X(dl_psi)(:, :, ist0, ik0), psi_out(:, :, isigma))
     end do
     if((nsigma_h == 2) .and. (nsigma_in == 1)) psi_out(:, :, nsigma_h) = psi_out(:, :, 1)
@@ -2076,8 +2076,7 @@ subroutine X(inhomog_per_component)(sys, hm, idir, ik, &
   do ist = 1, sys%st%nst
     if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
       call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi(:,:,ist))
-      call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik, &  
-        psi(:,:,ist), f_out) 
+      call X(pert_apply)(pert_kdotp, sys%parser, sys%gr, sys%geo, hm, ik, psi(:,:,ist), f_out) 
       do idim = 1, hm%d%dim
         do ip = 1, sys%gr%mesh%np
           vel(ip,idim,ist) = factor * f_out(ip,idim)
@@ -2092,8 +2091,7 @@ subroutine X(inhomog_per_component)(sys, hm, idir, ik, &
   do ist = 1, sys%st%nst
     if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
 
-      call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik, &  
-        factor_k * psi_k2(:, :, ist), f_out)
+      call X(pert_apply)(pert_kdotp, sys%parser, sys%gr, sys%geo, hm, ik, factor_k * psi_k2(:, :, ist), f_out)
         
       do idim = 1, hm%d%dim
         do ip = 1, sys%gr%mesh%np
@@ -2171,8 +2169,7 @@ subroutine X(inhomog_per_component_2nd_order)(sys, hm, idir, ik, &
   do ist = 1, sys%st%nst
     if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
       call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
-      call X(pert_apply)(pert_kdotp, sys%gr, sys%geo, hm, ik, &  
-        psi, f_out)
+      call X(pert_apply)(pert_kdotp, sys%parser, sys%gr, sys%geo, hm, ik, psi, f_out)
       do idim = 1, hm%d%dim
         do ip = 1, sys%gr%mesh%np
           vel(ip, idim, ist) = factor * f_out(ip, idim)
