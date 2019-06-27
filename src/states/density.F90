@@ -523,8 +523,8 @@ contains
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(rec_buffer)
     
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = st%st_start, st%st_end
+    do ik = 1, st%d%nik
+      do ist = 1, st%nst
         st%occ(ist, ik) = staux%occ(n+ist, ik)
         st%eigenval(ist, ik) = staux%eigenval(n+ist, ik)
       end do
