@@ -243,8 +243,8 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
                   ios2 = os%map_os(inn)
                   os2 => this%orbsets(ios2)
                   
-                  renorm_weight = M_HALF*(this%X(renorm_occ)(species_index(os%spec), os%nn, os%ll, ist, ik) &
-                           +this%X(renorm_occ)(species_index(os2%spec), os2%nn, os2%ll, ist, ik))*weight
+                  renorm_weight = sqrt(this%X(renorm_occ)(species_index(os%spec), os%nn, os%ll, ist, ik) &
+                           *this%X(renorm_occ)(species_index(os2%spec), os2%nn, os2%ll, ist, ik))*weight
                   do im2 = 1, os2%norbs
                     if(present(phase)) then
                     
@@ -701,7 +701,7 @@ subroutine X(compute_ACBNO_V)(this, ios)
   type(lda_u_t), intent(inout)    :: this
   integer,       intent(in)       :: ios
 
-  integer :: ios2, im, imp, impp, imppp
+  integer :: ios2, im, imp
   integer :: inn, norbs, norbs2
   integer :: ispin1, ispin2
   FLOAT   :: numV, denomV
@@ -719,22 +719,18 @@ subroutine X(compute_ACBNO_V)(this, ios)
     norbs2 = this%orbsets(ios2)%norbs
 
     do im = 1, norbs
-    do imp = 1,norbs
-      do impp = 1, norbs2
-      do imppp = 1, norbs2
+      do imp= 1, norbs2
         do ispin1 = 1, this%spin_channels
         do ispin2 = 1, this%spin_channels
-          numV = numV + R_REAL(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios2))   &
-                       *this%orbsets(ios)%coulomb_IIJJ(im,imp,impp,imppp,inn)
+          numV = numV + R_REAL(this%X(n_alt)(im,im,ispin1,ios)*this%X(n_alt)(imp,imp,ispin2,ios2))   &
+                       *this%orbsets(ios)%coulomb_IIJJ(im,im,imp,imp,inn)
           if(ispin1 == ispin2) then
-            numV = numV - R_REAL(this%X(n_alt_IJ)(im,imppp,1,ios,inn)*R_CONJ(this%X(n_alt_IJ)(imp,impp,1,ios,inn)))&
-                       *this%orbsets(ios)%coulomb_IIJJ(im,imp,impp,imppp,inn)
+            numV = numV - R_REAL(this%X(n_alt_IJ)(im,imp,ispin1,ios,inn)*R_CONJ(this%X(n_alt_IJ)(im,imp,ispin1,ios,inn)))&
+                       *this%orbsets(ios)%coulomb_IIJJ(im,im,imp,imp,inn)
           end if
         end do
         end do
       end do
-      end do
-    end do
     end do
 
     do im = 1, norbs
@@ -743,8 +739,8 @@ subroutine X(compute_ACBNO_V)(this, ios)
       ! sum_{m,mp} ( 2*N_{m}N_{mp} - n_{mmp}n_{mpm})
       do ispin1 = 1, this%spin_channels
       do ispin2 = 1, this%spin_channels 
-        denomV = denomV + R_REAL(this%X(n)(im,im,1,ios))*R_REAL(this%X(n)(imp,imp,1,ios2))
-        if(ispin1 == ispin2) denomV = denomV - abs(this%X(n_IJ)(im,imp,1,ios,inn))**2
+        denomV = denomV + R_REAL(this%X(n)(im,im,ispin1,ios))*R_REAL(this%X(n)(imp,imp,ispin2,ios2))
+        if(ispin1 == ispin2) denomV = denomV - abs(this%X(n_IJ)(im,imp,ispin1,ios,inn))**2
       end do
       end do
     end do
@@ -764,7 +760,7 @@ end subroutine X(compute_ACBNO_V)
 subroutine X(compute_ACBNO_V_restricted)(this)
   type(lda_u_t), intent(inout)    :: this
   
-  integer :: ios, ios2, im, imp, impp, imppp
+  integer :: ios, ios2, im, imp
   integer :: inn, norbs, norbs2
   FLOAT   :: numV, denomV
 
@@ -782,24 +778,18 @@ subroutine X(compute_ACBNO_V_restricted)(this)
       norbs2 = this%orbsets(ios2)%norbs
 
       do im = 1, norbs
-      do imp = 1,norbs
-       !imp = im
-        do impp = 1, norbs2
-        do imppp = 1, norbs2
-        ! imppp = impp
-          numV = numV + (M_TWO*R_REAL(this%X(n_alt)(im,imp,1,ios)*this%X(n_alt)(impp,imppp,1,ios2))   &
-               - R_REAL(this%X(n_alt_IJ)(im,imppp,1,ios,inn)*this%X(n_alt_IJ)(imp,impp,1,ios,inn)))&
-                         *this%orbsets(ios)%coulomb_IIJJ(im,imp,impp,imppp,inn)
+        do imp = 1, norbs2
+          numV = numV + (M_TWO*R_REAL(this%X(n_alt)(im,im,1,ios)*this%X(n_alt)(imp,imp,1,ios2))   &
+               - R_REAL(this%X(n_alt_IJ)(im,imp,1,ios,inn)*R_CONJ(this%X(n_alt_IJ)(im,imp,1,ios,inn))))&
+                         *this%orbsets(ios)%coulomb_IIJJ(im,im,imp,imp,inn)
         end do
-        end do
-      end do
 
-      do imp = 1,norbs2
-        ! We compute the term
-        ! sum_{m,mp} ( 2*N_{m}N_{mp} - n_{mmp}n_{mpm})
-        denomV = denomV + M_TWO*R_REAL(this%X(n)(im,im,1,ios))*R_REAL(this%X(n)(imp,imp,1,ios2)) &
+        do imp = 1,norbs2
+          ! We compute the term
+          ! sum_{m,mp} ( 2*N_{m}N_{mp} - n_{mmp}n_{mpm})
+          denomV = denomV + M_TWO*R_REAL(this%X(n)(im,im,1,ios))*R_REAL(this%X(n)(imp,imp,1,ios2)) &
                         - abs(this%X(n_IJ)(im,imp,1,ios,inn))**2
-      end do
+        end do
       end do
 
       this%orbsets(ios)%V_IJ(inn,0) = numV/denomV*M_HALF

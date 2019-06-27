@@ -283,7 +283,7 @@ contains
       !This is a non local operator. To make this working, one probably needs to apply the 
       ! symmetries to the generalized occupation matrices 
       if(gr%sb%kpoints%use_symmetries) then
-        call messages_not_implemented("Intersite interaction with kpoint symmetries.")
+        call messages_not_implemented("Intersite interaction with kpoint symmetries")
       end if
 
       !%Variable ACBN0IntersiteCutoff

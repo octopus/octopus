@@ -86,7 +86,7 @@ contains
     type(periodic_copy_t) :: pc
     FLOAT :: xat(1:MAX_DIM), xi(1:MAX_DIM)
     FLOAT :: rr
-    integer :: inn, nnn, ist, jst, kst, lst, ijst, klst, ntodo
+    integer :: inn, nnn, ist, jst, ntodo
     integer :: norbs, np_sphere, ip, idone, ios
     type(submesh_t) :: sm
     FLOAT, allocatable :: tmp(:), vv(:), nn(:)
@@ -204,36 +204,29 @@ contains
         np_sphere = sm%np
 
         do ist = 1, this%norbs
-       !   do jst = 1, this%norbs
-            jst = ist
-
             !$omp parallel do
             do ip=1,np_sphere
-              nn(ip)  = orb(ip,ist,1)*orb(ip,jst,1)
+              nn(ip)  = orb(ip,ist,1)*orb(ip,ist,1)
             end do
             !$omp end parallel do    
 
             !Here it is important to use a non-periodic poisson solver, e.g. the direct solver
             call dpoisson_solve_sm(this%poisson, sm, vv(1:np_sphere), nn(1:np_sphere))
 
-            do kst = 1, os(ios)%norbs
-         !     do lst = 1, os(ios)%norbs
-                lst = kst
+            do jst = 1, os(ios)%norbs
 
                 !$omp parallel do
                 do ip=1,np_sphere
-                  tmp(ip) = vv(ip)*orb(ip,kst,2)*orb(ip,lst,2)
+                  tmp(ip) = vv(ip)*orb(ip,jst,2)*orb(ip,jst,2)
                 end do
                 !$omp end parallel do
 
-                this%coulomb_IIJJ(ist,jst,kst,lst,inn) = dsm_integrate(der%mesh, sm, tmp(1:np_sphere))
-                if(abs(this%coulomb_IIJJ(ist,jst,kst,lst,inn))<CNST(1.0e-12)) then
-                  this%coulomb_IIJJ(ist,jst,kst,lst,inn) = M_ZERO
+                this%coulomb_IIJJ(ist,ist,jst,jst,inn) = dsm_integrate(der%mesh, sm, tmp(1:np_sphere))
+                if(abs(this%coulomb_IIJJ(ist,ist,jst,jst,inn))<CNST(1.0e-12)) then
+                  this%coulomb_IIJJ(ist,ist,jst,jst,inn) = M_ZERO
                 end if
 
-          !    end do !lst
             end do !kst 
-         ! end do !jst
         end do !ist
 
         call poisson_end(this%poisson)
