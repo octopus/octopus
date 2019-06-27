@@ -362,7 +362,7 @@ while ($_ = <TESTSUITE>) {
             $expect_error = $expected_failure =~ /yes/i;
         }
 
-        elsif ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
+        elsif ( $_ =~ /^Input\s*:\s*(.*)\s*$/ ) {
             $input_base = $1;
             $input_file = dirname($opt_f) . "/" . $input_base;
 
