@@ -95,6 +95,8 @@ module rdmft_oct_m
     integer, allocatable :: l_index(:,:)
   end type rdm_t
 
+  type(rdm_t), pointer :: rdm_ptr
+  
 contains
 
   ! ---------------------------------------------------------
@@ -588,7 +590,6 @@ contains
 
 
   ! ---------------------------------------------------------
-
   ! dummy routine for occupation numbers which only calculates the necessary vairables for further use
   ! used in Hartree-Fock mode
   subroutine scf_occ_NO(rdm, gr, hm, st, energy)
@@ -638,7 +639,7 @@ contains
     
   ! scf for the occupation numbers 
   subroutine scf_occ(rdm, gr, hm, st, energy)
-    type(rdm_t),          intent(inout) :: rdm
+    type(rdm_t), target,  intent(inout) :: rdm
     type(grid_t),         intent(in)    :: gr
     type(hamiltonian_t),  intent(in)    :: hm
     type(states_t),       intent(inout) :: st
@@ -694,6 +695,9 @@ contains
     mu1 = rdm%mu   !initial guess for mu 
     mu2 = -CNST(1.0e-6)
     dinterv = M_HALF
+
+    ! Set pointer to rdm, so that it is available in the functions called by the minimizer
+    rdm_ptr => rdm
 
     !use n_j=sin^2(2pi*theta_j) to treat pinned states, minimize for both intial mu
     theta(:) = asin(sqrt(occin(:, 1)/st%smear%el_per_state))*(M_HALF/M_PI)
@@ -752,6 +756,8 @@ contains
       if (abs(sumgim) < rdm%toler .or. abs((mu1-mu2)*M_HALF) < rdm%toler)  exit
     end do
 
+    nullify(rdm_ptr)
+
     if (icycle >= 50) then
       write(message(1),'(a,1x,f11.4)') 'Bisection ended without finding mu, sum of occupation numbers:', rdm%occsum
       call messages_fatal(1)
@@ -781,78 +787,77 @@ contains
 
     call profiling_out(prof_occ)
     POP_SUB(scf_occ)
-
-  contains
-
-    subroutine objective_rdmft(size, theta, objective, getgrad, df)
-      integer,     intent(in)    :: size
-      REAL_DOUBLE, intent(in)    :: theta(size)
-      REAL_DOUBLE, intent(inout) :: objective
-      integer,     intent(in)    :: getgrad
-      REAL_DOUBLE, intent(inout) :: df(size)
-
-      integer :: ist
-      FLOAT   :: thresh_occ, thresh_theta
-      FLOAT, allocatable :: dE_dn(:),occ(:)
- 
-      PUSH_SUB(scf_occ.objective_rdmft)
-
-      ASSERT(size == rdm%nst)
-
-      SAFE_ALLOCATE(dE_dn(1:size))
-      SAFE_ALLOCATE(occ(1:size))
-
-      occ = M_ZERO
-      
-      ! Defines a threshold on occ nums to avoid numerical instabilities.
-      ! Needs to be changed consistently with the same variable in scf_occ
-      thresh_occ = CNST(1e-14)
-      thresh_theta = asin(sqrt(thresh_occ/M_TWO))*(M_HALF/M_PI)
-    
-      do ist = 1, size
-        occ(ist) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
-        if (occ(ist) <= thresh_occ ) occ(ist) = thresh_occ
-      end do
-      
-      rdm%occsum = M_ZERO
-      do ist = 1, size
-        rdm%occsum = rdm%occsum + occ(ist)
-      end do
-      
-      !calculate the total energy without nuclei interaction and the energy
-      !derivatives with respect to the occupation numbers
-
-      call total_energy_rdm(rdm, occ, objective, dE_dn)
-      do ist = 1, size
-        if (occ(ist) <= thresh_occ ) then
-          df(ist) = M_FOUR*M_PI*sin(M_FOUR*thresh_theta*M_PI)*(dE_dn(ist) - rdm%mu)
-        else
-          df(ist) = M_FOUR*M_PI*sin(M_FOUR*theta(ist)*M_PI)*(dE_dn(ist) - rdm%mu)
-        end if
-      end do
-      objective = objective - rdm%mu*(rdm%occsum - rdm%qtot)
-
-      SAFE_DEALLOCATE_A(dE_dn)
-      SAFE_DEALLOCATE_A(occ)
-
-      POP_SUB(scf_occ.objective_rdmft)
-    end subroutine objective_rdmft
-
-    subroutine write_iter_info_rdmft(iter, size, energy, maxdr, maxdf, theta)
-      integer,     intent(in) :: iter
-      integer,     intent(in) :: size
-      real(8),     intent(in) :: energy, maxdr, maxdf
-      real(8),     intent(in) :: theta(size)
-
-      PUSH_SUB(scf_occ.write_iter_info_rdmft)
-
-      ! Nothing to do.
-
-      POP_SUB(scf_occ.write_iter_info_rdmft)
-    end subroutine write_iter_info_rdmft
-
   end subroutine scf_occ
+
+  ! ---------------------------------------------------------
+  subroutine objective_rdmft(size, theta, objective, getgrad, df)
+    integer,     intent(in)    :: size
+    REAL_DOUBLE, intent(in)    :: theta(size)
+    REAL_DOUBLE, intent(inout) :: objective
+    integer,     intent(in)    :: getgrad
+    REAL_DOUBLE, intent(inout) :: df(size)
+
+    integer :: ist
+    FLOAT   :: thresh_occ, thresh_theta
+    FLOAT, allocatable :: dE_dn(:),occ(:)
+ 
+    PUSH_SUB(objective_rdmft)
+
+    ASSERT(size == rdm_ptr%nst)
+
+    SAFE_ALLOCATE(dE_dn(1:size))
+    SAFE_ALLOCATE(occ(1:size))
+
+    occ = M_ZERO
+      
+    ! Defines a threshold on occ nums to avoid numerical instabilities.
+    ! Needs to be changed consistently with the same variable in scf_occ
+    thresh_occ = CNST(1e-14)
+    thresh_theta = asin(sqrt(thresh_occ/M_TWO))*(M_HALF/M_PI)
     
+    do ist = 1, size
+      occ(ist) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
+      if (occ(ist) <= thresh_occ ) occ(ist) = thresh_occ
+    end do
+      
+    rdm_ptr%occsum = M_ZERO
+    do ist = 1, size
+      rdm_ptr%occsum = rdm_ptr%occsum + occ(ist)
+    end do
+      
+    !calculate the total energy without nuclei interaction and the energy
+    !derivatives with respect to the occupation numbers
+
+    call total_energy_rdm(rdm_ptr, occ, objective, dE_dn)
+    do ist = 1, size
+      if (occ(ist) <= thresh_occ ) then
+        df(ist) = M_FOUR*M_PI*sin(M_FOUR*thresh_theta*M_PI)*(dE_dn(ist) - rdm_ptr%mu)
+      else
+        df(ist) = M_FOUR*M_PI*sin(M_FOUR*theta(ist)*M_PI)*(dE_dn(ist) - rdm_ptr%mu)
+      end if
+    end do
+    objective = objective - rdm_ptr%mu*(rdm_ptr%occsum - rdm_ptr%qtot)
+
+    SAFE_DEALLOCATE_A(dE_dn)
+    SAFE_DEALLOCATE_A(occ)
+
+    POP_SUB(objective_rdmft)
+  end subroutine objective_rdmft
+
+  ! ---------------------------------------------------------
+  subroutine write_iter_info_rdmft(iter, size, energy, maxdr, maxdf, theta)
+    integer,     intent(in) :: iter
+    integer,     intent(in) :: size
+    real(8),     intent(in) :: energy, maxdr, maxdf
+    real(8),     intent(in) :: theta(size)
+
+    PUSH_SUB(write_iter_info_rdmft)
+
+    ! Nothing to do.
+
+    POP_SUB(write_iter_info_rdmft)
+  end subroutine write_iter_info_rdmft
+
   ! scf for the natural orbitals
   subroutine scf_orb(rdm, gr, st, hm, energy)
     type(rdm_t),          intent(inout) :: rdm
