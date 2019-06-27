@@ -94,15 +94,15 @@ contains
     !%Option oct_is_userdefined 4
     !% Start in a user-defined state.
     !%End
-    call parse_variable('OCTInitialState', oct_is_groundstate, istype)
+    call parse_variable(sys%parser, 'OCTInitialState', oct_is_groundstate, istype)
     if(.not.varinfo_valid_option('OCTInitialState', istype)) call messages_input_error('OCTInitialState')    
 
     select case(istype)
     case(oct_is_groundstate) 
       message(1) =  'Info: Using ground state for initial state.'
       call messages_info(1)
-      call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-      if(ierr == 0) call states_load(restart, psi, sys%gr, ierr)
+      call restart_init(restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+      if(ierr == 0) call states_load(restart, sys%parser, psi, sys%gr, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to read wavefunctions."
         call messages_fatal(1)
@@ -132,19 +132,19 @@ contains
       !% The syntax is the same as the <tt>TransformStates</tt> block.
       !%End
 
-      if(.not. parse_is_defined("OCTInitialTransformStates")) then
+      if(.not. parse_is_defined(sys%parser, "OCTInitialTransformStates")) then
         message(1) = 'If "OCTInitialState = oct_is_gstransformation", then you must'
         message(2) = 'supply an "OCTInitialTransformStates" block to define the transformation.'
         call messages_fatal(2)
       end if
 
-      call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+      call restart_init(restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
       if(ierr /= 0) then
         message(1) = "Could not read states for OCTInitialTransformStates."
         call messages_fatal(1)
       end if
       
-      call transform_states(psi, restart, sys%gr, prefix = "OCTInitial")
+      call transform_states(psi, sys%parser, restart, sys%gr, prefix = "OCTInitial")
       call restart_end(restart)
 
     case(oct_is_userdefined) 
@@ -163,7 +163,7 @@ contains
       !% <br>%</tt>
       !%  
       !%End
-      if(parse_block('OCTInitialUserdefined', blk) == 0) then
+      if(parse_block(sys%parser, 'OCTInitialUserdefined', blk) == 0) then
 
         SAFE_ALLOCATE(zpsi(1:sys%gr%mesh%np, 1:psi%d%dim))
         
@@ -224,29 +224,29 @@ contains
     end select
 
     ! Check whether we want to freeze some of the deeper orbitals.
-    call parse_variable('TDFreezeOrbitals', 0, freeze_orbitals)
+    call parse_variable(sys%parser, 'TDFreezeOrbitals', 0, freeze_orbitals)
     if(freeze_orbitals > 0) then
       ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
-      call states_freeze_orbitals(psi, sys%gr, sys%mc, freeze_orbitals, family_is_mgga(sys%ks%xc_family))
+      call states_freeze_orbitals(psi, sys%parser, sys%gr, sys%mc, freeze_orbitals, family_is_mgga(sys%ks%xc_family))
       write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
         ' orbitals have been frozen.', psi%nst, ' will be propagated.'
       call messages_info(1)
       call density_calc(psi, sys%gr, psi%rho)
-      call v_ks_calc(sys%ks, hm, psi, sys%geo, calc_eigenval = .true.)
+      call v_ks_calc(sys%ks, sys%parser, hm, psi, sys%geo, calc_eigenval = .true.)
     elseif(freeze_orbitals < 0) then
       ! This means SAE approximation. We calculate the Hxc first, then freeze all
       ! orbitals minus one.
       write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
       call messages_info(1)
       call density_calc(psi, sys%gr, psi%rho)
-      call v_ks_calc(sys%ks, hm, psi, sys%geo, calc_eigenval = .true.)
-      call states_freeze_orbitals(psi, sys%gr, sys%mc, psi%nst - 1, family_is_mgga(sys%ks%xc_family))
+      call v_ks_calc(sys%ks, sys%parser, hm, psi, sys%geo, calc_eigenval = .true.)
+      call states_freeze_orbitals(psi, sys%parser, sys%gr, sys%mc, psi%nst - 1, family_is_mgga(sys%ks%xc_family))
       call v_ks_freeze_hxc(sys%ks)
       call density_calc(psi, sys%gr, psi%rho)
     else
       ! Normal run.
       call density_calc(psi, sys%gr, psi%rho)
-      call v_ks_calc(sys%ks, hm, psi, sys%geo, calc_eigenval = .true.)
+      call v_ks_calc(sys%ks, sys%parser, hm, psi, sys%geo, calc_eigenval = .true.)
     end if
     
     POP_SUB(initial_state_init)

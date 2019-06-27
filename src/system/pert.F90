@@ -113,8 +113,9 @@ module pert_oct_m
 contains
 
   ! --------------------------------------------------------------------
-  subroutine pert_init(this, pert_type, gr, geo)
+  subroutine pert_init(this, parser, pert_type, gr, geo)
     type(pert_t),      intent(out) :: this
+    type(parser_t),    intent(in)  :: parser
     integer,           intent(in)  :: pert_type
     type(grid_t),      intent(in)  :: gr
     type(geometry_t),  intent(in)  :: geo
@@ -145,7 +146,7 @@ contains
       !% ICL correction: S Ismail-Beigi, EK Chang, and SG Louie, <i>Phys. Rev. Lett.</i> <b>87</b>, 087402 (2001).
       !%End
       
-      call parse_variable('MagneticGaugeCorrection', GAUGE_GIPAW, this%gauge)
+      call parse_variable(parser, 'MagneticGaugeCorrection', GAUGE_GIPAW, this%gauge)
       if(.not.varinfo_valid_option('MagneticGaugeCorrection', this%gauge)) &
            call messages_input_error('MagneticGaugeCorrection')
 
@@ -165,8 +166,8 @@ contains
       !% For testing purposes, set to false to ignore the term <math>-i \left[\vec{r}, V\right]</math> in
       !% the <math>\vec{k} \cdot \vec{p}</math> perturbation, which is due to non-local pseudopotentials.
       !%End
-      call messages_obsolete_variable('KdotP_UseNonLocalPseudopotential', 'KdotPUseNonLocalPseudopotential')
-      call parse_variable('KdotPUseNonLocalPseudopotential', .true., this%use_nonlocalpps)
+      call messages_obsolete_variable(parser, 'KdotP_UseNonLocalPseudopotential', 'KdotPUseNonLocalPseudopotential')
+      call parse_variable(parser, 'KdotPUseNonLocalPseudopotential', .true., this%use_nonlocalpps)
 
       !%Variable KdotPVelMethod
       !%Type integer
@@ -179,7 +180,7 @@ contains
       !%Option hcom_vel 1
       !% As a commutator of the position operator and Hamiltonian, <math>-i \left[ r, H \right]</math>. 
       !%End
-      call parse_variable('KdotPVelMethod', OPTION__KDOTPVELMETHOD__GRAD_VEL, this%vel_method)
+      call parse_variable(parser, 'KdotPVelMethod', OPTION__KDOTPVELMETHOD__GRAD_VEL, this%vel_method)
     end if
 
     POP_SUB(pert_init)

@@ -17,8 +17,9 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine output_states(st, gr, geo, hm, dir, outp)
+subroutine output_states(st, parser, gr, geo, hm, dir, outp)
   type(states_t),         intent(in) :: st
+  type(parser_t),         intent(in) :: parser
   type(grid_t),           intent(in) :: gr
   type(geometry_t),       intent(in) :: geo
   type(hamiltonian_t),    intent(in) :: hm
@@ -172,20 +173,20 @@ subroutine output_states(st, gr, geo, hm, dir, outp)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__DOS) /= 0) then
-    call dos_init(dos, st)
+    call dos_init(dos, parser, st)
     call dos_write_dos (dos, trim(dir), st, gr%sb, geo, gr%mesh, hm)
     call dos_end(dos)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__TPA) /= 0) then
-    call states_write_tpa (trim(dir), gr, st)
+    call states_write_tpa(trim(dir), parser, gr, st)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
     if (states_are_real(st)) then
-      call doutput_modelmb (trim(dir), gr, st, geo, outp)
+      call doutput_modelmb(trim(dir), parser, gr, st, geo, outp)
     else
-      call zoutput_modelmb (trim(dir), gr, st, geo, outp)
+      call zoutput_modelmb(trim(dir), parser, gr, st, geo, outp)
     end if
   end if
 

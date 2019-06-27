@@ -50,6 +50,7 @@ module dos_oct_m
     dos_write_dos
 
   type dos_t
+    private
     FLOAT   :: emin
     FLOAT   :: emax
     integer :: epoints
@@ -60,9 +61,10 @@ module dos_oct_m
 
 contains
 
-  subroutine dos_init(this, st)
-    type(dos_t), intent(out)   :: this
-    type(states_t), intent(in) :: st
+  subroutine dos_init(this, parser, st)
+    type(dos_t),    intent(out)   :: this
+    type(parser_t), intent(in)    :: parser
+    type(states_t), intent(in)    :: st
 
     FLOAT :: evalmin, evalmax, eextend
 
@@ -80,7 +82,7 @@ contains
     !% Lower bound for the energy mesh of the DOS.
     !% The default is the lowest eigenvalue, minus a quarter of the total range of eigenvalues.
     !%End
-    call parse_variable('DOSEnergyMin', evalmin - eextend, this%emin, units_inp%energy)
+    call parse_variable(parser, 'DOSEnergyMin', evalmin - eextend, this%emin, units_inp%energy)
 
     !%Variable DOSEnergyMax
     !%Type float
@@ -89,7 +91,7 @@ contains
     !% Upper bound for the energy mesh of the DOS.
     !% The default is the highest eigenvalue, plus a quarter of the total range of eigenvalues.
     !%End
-    call parse_variable('DOSEnergyMax', evalmax + eextend, this%emax, units_inp%energy)
+    call parse_variable(parser, 'DOSEnergyMax', evalmax + eextend, this%emax, units_inp%energy)
 
     !%Variable DOSEnergyPoints
     !%Type integer
@@ -99,7 +101,7 @@ contains
     !% Determines how many energy points <tt>Octopus</tt> should use for 
     !% the DOS energy grid.
     !%End
-    call parse_variable('DOSEnergyPoints', 500, this%epoints)
+    call parse_variable(parser, 'DOSEnergyPoints', 500, this%epoints)
 
     !%Variable DOSGamma
     !%Type float
@@ -108,7 +110,7 @@ contains
     !%Description
     !% Determines the width of the Lorentzian which is used for the DOS sum.
     !%End
-    call parse_variable('DOSGamma', units_from_atomic(units_inp%energy, CNST(0.008)), this%gamma)
+    call parse_variable(parser, 'DOSGamma', units_from_atomic(units_inp%energy, CNST(0.008)), this%gamma)
     this%gamma = units_to_atomic(units_inp%energy, this%gamma)
 
     !%Variable DOSComputePDOS
@@ -118,7 +120,7 @@ contains
     !%Description
     !% Determines if projected dos are computed or not.
     !%End
-    call parse_variable('DOSComputePDOS', .false., this%computepdos)
+    call parse_variable(parser, 'DOSComputePDOS', .false., this%computepdos)
 
     ! spacing for energy mesh
     this%de = (this%emax - this%emin) / (this%epoints - 1)

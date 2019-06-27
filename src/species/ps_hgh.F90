@@ -45,12 +45,14 @@ module ps_hgh_oct_m
   !!   (a) the pseudopotential parameters, as read from a *.hgh file,
   !!   (b) auxiliary intermediate functions, to store stuff before passing it to the "ps" variable.
   type ps_hgh_t
+    ! Components are public by default
+
     !< HGH parameters.
-    character(len=5) :: atom_name
+    character(len=5), private :: atom_name
     integer          :: z_val
-    FLOAT            :: rlocal
-    FLOAT            :: rc(0:3)
-    FLOAT            :: c(1:4)
+    FLOAT, private   :: rlocal
+    FLOAT, private   :: rc(0:3)
+    FLOAT, private   :: c(1:4)
     FLOAT            :: h(0:3, 1:3, 1:3)
     FLOAT            :: k(0:3, 1:3, 1:3)
 
@@ -60,7 +62,8 @@ module ps_hgh_oct_m
     FLOAT, pointer   :: vlocal(:) !< Local potential
     FLOAT, pointer   :: kb(:,:,:) !< KB projectors
     FLOAT, pointer   :: kbr(:)    !< KB radii
-    FLOAT, pointer   :: rphi(:,:), eigen(:)
+    FLOAT, pointer   :: rphi(:,:)
+    FLOAT, pointer, private :: eigen(:)
 
     !> Logarithmic grid parameters
     type(logrid_t) :: g

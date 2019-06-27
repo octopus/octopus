@@ -18,22 +18,7 @@
 
 #include "global.h"
 
-!> This module is only supposed to be used within this file.
-module block_t_oct_m
-  implicit none
-  
-  private
-
-  type, public :: block_t
-    private
-    integer, pointer :: p
-  end type block_t
-
-end module block_t_oct_m
-
-
 module parser_oct_m
-  use block_t_oct_m
   use global_oct_m
   use loct_oct_m
   use mpi_oct_m
@@ -44,7 +29,8 @@ module parser_oct_m
 
   private
   public ::              &
-    block_t,             &   ! This is defined in block_t_oct_m above
+    parser_t,            &
+    block_t,             &
     parser_init,         &
     parser_end,          &
     parse_init,          &
@@ -63,6 +49,16 @@ module parser_oct_m
     parse_block_logical, &
     parse_expression,    &
     parse_array
+
+  type :: parser_t
+    private
+    integer :: dummy
+  end type parser_t
+  
+  type :: block_t
+    private
+    integer, pointer :: p
+  end type block_t
 
   interface parse_init
     integer function oct_parse_init(file_out, mpiv_node)
@@ -151,7 +147,7 @@ module parser_oct_m
     end subroutine oct_parse_string
 
     integer function oct_parse_block(name, blk)
-      use block_t_oct_m
+      import block_t
       implicit none
       character(len=*), intent(in) :: name
       type(block_t), intent(out) :: blk
@@ -173,7 +169,7 @@ module parser_oct_m
 
   interface parse_block_end
     subroutine oct_parse_block_end(blk)
-      use block_t_oct_m
+      import block_t
       implicit none
       type(block_t), intent(inout) :: blk
     end subroutine oct_parse_block_end
@@ -181,7 +177,7 @@ module parser_oct_m
 
   interface parse_block_n
     integer function oct_parse_block_n(blk)
-      use block_t_oct_m
+      import block_t
       implicit none
       type(block_t), intent(in) :: blk
     end function oct_parse_block_n
@@ -189,7 +185,7 @@ module parser_oct_m
 
   interface parse_block_cols
     integer function oct_parse_block_cols(blk, line)
-      use block_t_oct_m
+      import block_t
       implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in) :: line
@@ -198,7 +194,7 @@ module parser_oct_m
 
   interface parse_block_integer
     subroutine oct_parse_block_int(blk, l, c, res)
-      use block_t_oct_m
+      import block_t
       implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
@@ -208,7 +204,7 @@ module parser_oct_m
 
   interface parse_block_float
     subroutine oct_parse_block_double(blk, l, c, res)
-      use block_t_oct_m
+      import block_t
       implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
@@ -221,7 +217,7 @@ module parser_oct_m
 
   interface parse_block_cmplx
     subroutine oct_parse_block_complex(blk, l, c, res)
-      use block_t_oct_m
+      import block_t
       implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
@@ -232,7 +228,7 @@ module parser_oct_m
 
   interface parse_block_string
     subroutine oct_parse_block_string(blk, l, c, res)
-      use block_t_oct_m
+      import block_t
       implicit none
       type(block_t), intent(in) :: blk
       integer, intent(in)          :: l, c
@@ -279,7 +275,9 @@ module parser_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine parser_init
+  subroutine parser_init(self)
+    type(parser_t), intent(out) :: self
+    
     integer :: ierr
     logical :: file_exists
     
@@ -337,8 +335,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine parser_end
-
+  subroutine parser_end(self)
+    type(parser_t), intent(inout) :: self
+    
     call sym_output_table(only_unused = 1, mpiv_node = mpi_world%rank)
     call parse_end()
 
@@ -346,7 +345,8 @@ contains
 
   ! ---------------------------------------------------------  
 
-  logical function parse_is_defined(name) result(isdef)
+  logical function parse_is_defined(self, name) result(isdef)
+    type(parser_t), intent(in)   :: self
     character(len=*), intent(in) :: name
 
     isdef = parse_isdef(name) /= 0
@@ -355,7 +355,8 @@ contains
 
   ! ---------------------------------------------------------  
   
-  subroutine parse_integer(name, def, res)
+  subroutine parse_integer(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     integer,          intent(in)    :: def
     integer,          intent(out)   :: res
@@ -371,7 +372,8 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine parse_integer8(name, def, res)
+  subroutine parse_integer8(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     integer(8),       intent(in)    :: def
     integer(8),       intent(out)   :: res
@@ -383,7 +385,8 @@ contains
 
   ! ---------------------------------------------------------  
   
-  subroutine parse_integer48(name, def, res)
+  subroutine parse_integer48(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     integer,          intent(in)    :: def
     integer(8),       intent(out)   :: res
@@ -395,7 +398,8 @@ contains
 
   ! ---------------------------------------------------------  
   
-  subroutine parse_integer84(name, def, res)
+  subroutine parse_integer84(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     integer(8),       intent(in)    :: def
     integer,          intent(out)   :: res
@@ -411,7 +415,8 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine parse_string(name, def, res)
+  subroutine parse_string(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     character(len=*), intent(in)    :: def
     character(len=*), intent(out)   :: res
@@ -423,7 +428,8 @@ contains
   
   ! ---------------------------------------------------------
   !> logical is a FORTRAN type, so we emulate the routine with integers
-  subroutine parse_logical(name, def, res)
+  subroutine parse_logical(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     logical,          intent(in)    :: def
     logical,          intent(out)   :: res
@@ -442,7 +448,8 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine parse_cmplx(name, def, res)
+  subroutine parse_cmplx(self, name, def, res)
+    type(parser_t),   intent(in)    :: self
     character(len=*), intent(in)    :: name
     complex(8),       intent(in)    :: def
     complex(8),       intent(out)   :: res
@@ -454,7 +461,8 @@ contains
 
   ! ---------------------------------------------------------
   
-  integer function parse_block(name, blk, check_varinfo_)
+  integer function parse_block(self, name, blk, check_varinfo_)
+    type(parser_t),    intent(in)    :: self
     character(len=*),  intent(in)    :: name
     type(block_t),     intent(out)   :: blk
     logical, optional, intent(in)    :: check_varinfo_
@@ -509,7 +517,8 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine oct_parse_double4_unit(name, def4, res4, unit)
+  subroutine oct_parse_double4_unit(self, name, def4, res4, unit)
+    type(parser_t),         intent(in)  :: self
     character(len=*),       intent(in)  :: name
     real(4),                intent(in)  :: def4
     real(4),                intent(out) :: res4
@@ -531,7 +540,8 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine oct_parse_double8_unit(name, def, res, unit)
+  subroutine oct_parse_double8_unit(self, name, def, res, unit)
+    type(parser_t),   intent(in)  :: self
     character(len=*), intent(in)  :: name
     real(8),          intent(in)  :: def
     real(8),          intent(out) :: res

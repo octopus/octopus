@@ -40,10 +40,11 @@ module ps_fhi_oct_m
 
   !> remember that the FHI format is basically the CPI format with a header
   type ps_fhi_t
-    type(ps_fhi_file_t), pointer :: fhi_file !< This just includes the extra header
-    type(ps_cpi_file_t), pointer :: cpi_file !< This includes the real pseudopotential
-    type(ps_in_grid_t),  pointer :: ps_grid  !< the pseudopotential in the grid
-    type(valconf_t),     pointer :: conf
+    ! Components are public by default
+    type(ps_fhi_file_t), pointer, private :: fhi_file !< This just includes the extra header
+    type(ps_cpi_file_t), pointer, private :: cpi_file !< This includes the real pseudopotential
+    type(ps_in_grid_t),  pointer          :: ps_grid  !< the pseudopotential in the grid
+    type(valconf_t),     pointer, private :: conf
   end type ps_fhi_t
 
 contains

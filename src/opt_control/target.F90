@@ -178,8 +178,9 @@ contains
 
   ! ----------------------------------------------------------------------
   !> The target is initialized, mainly by reading from the inp file.
-  subroutine target_init(gr, geo, qcs, td, w0, tg, oct, ep, mc)
+  subroutine target_init(gr, parser, geo, qcs, td, w0, tg, oct, ep, mc)
     type(grid_t),     intent(in)    :: gr
+    type(parser_t),   intent(in)    :: parser
     type(geometry_t), intent(in)    :: geo
     type(opt_control_state_t),   intent(inout) :: qcs
     type(td_t),       intent(in)    :: td
@@ -247,7 +248,7 @@ contains
     !%Option oct_tg_spin 14
     !% (Experimental)
     !%End
-    call parse_variable('OCTTargetOperator', oct_tg_gstransformation, tg%type)
+    call parse_variable(parser, 'OCTTargetOperator', oct_tg_gstransformation, tg%type)
       if(tg%type == oct_tg_excited) call messages_experimental('OCTTargetOperator = oct_tg_excited')
       if(tg%type == oct_tg_userdefined) call messages_experimental('OCTTargetOperator = oct_tg_userdefined')
       if(tg%type == oct_tg_jdensity) call messages_experimental('OCTTargetOperator = oct_tg_jdensity')
@@ -268,7 +269,7 @@ contains
     call states_deallocate_wfns(tg%st)
     call states_allocate_wfns(tg%st, gr%mesh, TYPE_CMPLX)
     nullify(tg%td_fitness)
-    call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, exact=.true.)
+    call restart_init(restart, parser, RESTART_GS, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh, exact=.true.)
     if(ierr /= 0) then
       message(1) = "Could not read gs for OCTTargetOperator."
       call messages_fatal(1)
@@ -276,35 +277,35 @@ contains
 
     select case(tg%type)
     case(oct_tg_groundstate)
-      call target_init_groundstate(gr, tg, td, restart)
+      call target_init_groundstate(gr, parser, tg, td, restart)
     case(oct_tg_excited)
       call messages_experimental('OCTTargetOperator = oct_tg_excited')
-      call target_init_excited(gr, tg, td, restart)
+      call target_init_excited(gr, parser, tg, td, restart)
     case(oct_tg_exclude_state)
-      call target_init_exclude(gr, tg, td, restart)
+      call target_init_exclude(gr, parser, tg, td, restart)
     case(oct_tg_gstransformation)
-      call target_init_gstransformation(gr, tg, td, restart)
+      call target_init_gstransformation(gr, parser, tg, td, restart)
     case(oct_tg_userdefined) 
-      call target_init_userdefined(gr, tg, td)
+      call target_init_userdefined(gr, parser, tg, td)
     case(oct_tg_jdensity)
-      call target_init_density(gr, tg, stin, td, restart)
+      call target_init_density(gr, parser, tg, stin, td, restart)
     case(oct_tg_local)
-      call target_init_local(gr, tg, td)
+      call target_init_local(gr, parser, tg, td)
     case(oct_tg_td_local)
-      call target_init_tdlocal(gr, tg, td)
+      call target_init_tdlocal(gr, parser, tg, td)
     case(oct_tg_hhg)
-      call target_init_hhg(tg, td, w0)
+      call target_init_hhg(tg, parser, td, w0)
     case(oct_tg_hhgnew)
       call messages_experimental('OCTTargetOperator = oct_tg_hhgnew')
-      call target_init_hhgnew(gr, tg, td, geo, ep)
+      call target_init_hhgnew(gr, parser, tg, td, geo, ep)
     case(oct_tg_velocity)
-      call target_init_velocity(gr, geo, tg, oct, td, ep)
+      call target_init_velocity(gr, parser, geo, tg, oct, td, ep)
     case(oct_tg_classical)
       call messages_experimental('OCTTargetOperator = oct_tg_classical')
-      call target_init_classical(geo, tg, td, oct)
+      call target_init_classical(geo, parser, tg, td, oct)
     case(oct_tg_spin)
       call messages_experimental('OCTTargetOperator = oct_tg_spin')
-      call target_init_spin(tg)
+      call target_init_spin(tg, parser)
     case default
       write(message(1),'(a)') "Target Operator not properly defined."
       call messages_fatal(1)
@@ -360,8 +361,9 @@ contains
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output(tg, gr, dir, geo, hm, outp)
-    type(target_t), intent(inout) :: tg
+  subroutine target_output(tg, parser, gr, dir, geo, hm, outp)
+    type(target_t),         intent(inout) :: tg
+    type(parser_t),         intent(in)    :: parser
     type(grid_t), intent(in)   :: gr
     character(len=*), intent(in)  :: dir
     type(geometry_t),       intent(in)  :: geo
@@ -372,15 +374,15 @@ contains
 
     select case(tg%type)
     case(oct_tg_groundstate)
-      call target_output_groundstate(tg, gr, dir, geo, hm, outp)
+      call target_output_groundstate(tg, parser, gr, dir, geo, hm, outp)
     case(oct_tg_excited)
-      call target_output_excited(tg, gr, dir, geo, hm, outp)
+      call target_output_excited(tg, parser, gr, dir, geo, hm, outp)
     case(oct_tg_exclude_state)
-      call target_output_exclude(tg, gr, dir, geo, hm, outp)
+      call target_output_exclude(tg, parser, gr, dir, geo, hm, outp)
     case(oct_tg_gstransformation)
-      call target_output_gstransformation(tg, gr, dir, geo, hm, outp)
+      call target_output_gstransformation(tg, parser, gr, dir, geo, hm, outp)
     case(oct_tg_userdefined) 
-      call target_output_userdefined(tg, gr, dir, geo, hm, outp)
+      call target_output_userdefined(tg, parser, gr, dir, geo, hm, outp)
     case(oct_tg_jdensity)
       call target_output_density(tg, gr, dir, geo, outp)
     case(oct_tg_local)
@@ -388,13 +390,13 @@ contains
     case(oct_tg_td_local)
       call target_output_tdlocal(tg, gr, dir, geo, outp)
     case(oct_tg_hhg)
-      call target_output_hhg(tg, gr, dir, geo, hm, outp)
+      call target_output_hhg(tg, parser, gr, dir, geo, hm, outp)
     case(oct_tg_hhgnew)
-      call target_output_hhg(tg, gr, dir, geo, hm, outp)
+      call target_output_hhg(tg, parser, gr, dir, geo, hm, outp)
     case(oct_tg_velocity)
-      call target_output_velocity(tg, gr, dir, geo, hm, outp)
+      call target_output_velocity(tg, parser, gr, dir, geo, hm, outp)
     case(oct_tg_classical)
-      call target_output_classical
+      call target_output_classical()
     end select
     
     POP_SUB(target_output)
@@ -536,8 +538,9 @@ contains
   !! <Psi(T)|\hat{O}|Psi(T) in the time-independent
   !! case, or else \int_0^T dt <Psi(t)|\hat{O}(t)|Psi(t) in 
   !! the time-dependent case.
-  FLOAT function target_j1(tg, gr, qcpsi, geo) result(j1)
+  FLOAT function target_j1(tg, parser, gr, qcpsi, geo) result(j1)
     type(target_t), intent(inout)   :: tg
+    type(parser_t),  intent(in)     :: parser
     type(grid_t),   intent(in)      :: gr
     type(opt_control_state_t), intent(inout)   :: qcpsi
     type(geometry_t), intent(in), optional :: geo
@@ -566,7 +569,7 @@ contains
     case(oct_tg_exclude_state)
       j1 = target_j1_exclude(gr, tg, psi)
     case(oct_tg_hhg)
-      j1 = target_j1_hhg(tg)
+      j1 = target_j1_hhg(tg, parser)
     case(oct_tg_hhgnew)
       j1 = target_j1_hhgnew(gr, tg)
     case(oct_tg_velocity)

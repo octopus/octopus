@@ -51,7 +51,8 @@ program dielectric_function
   character(len=120) :: header
   FLOAT :: start_time
   character(len=MAX_PATH_LEN) :: ref_filename
-
+  type(parser_t) :: parser
+  
   ! Initialize stuff
   call global_init(is_serial = .true.)
 
@@ -59,21 +60,23 @@ program dielectric_function
   if(ierr == 0) call getopt_dielectric_function()
   call getopt_end()
 
-  call messages_init()
+  call parser_init(parser)
+  
+  call messages_init(parser)
 
-  call io_init()
+  call io_init(parser)
 
-  call unit_system_init()
+  call unit_system_init(parser)
 
-  call spectrum_init(spectrum)
+  call spectrum_init(spectrum, parser)
 
-  call space_init(space)
-  call geometry_init(geo, space)
-  call simul_box_init(sb, geo, space)
+  call space_init(space, parser)
+  call geometry_init(geo, parser, space)
+  call simul_box_init(sb, parser, geo, space)
     
   SAFE_ALLOCATE(vecpot0(1:space%dim))
 
-  if(parse_block('GaugeVectorField', blk) == 0) then
+  if(parse_block(parser, 'GaugeVectorField', blk) == 0) then
     
     do ii = 1, space%dim
       call parse_block_float(blk, 0, ii - 1, vecpot0(ii))
@@ -97,7 +100,7 @@ program dielectric_function
   call messages_warning(4)
 
   start_time = spectrum%start_time
-  call parse_variable('GaugeFieldDelay', start_time, spectrum%start_time )
+  call parse_variable(parser, 'GaugeFieldDelay', start_time, spectrum%start_time )
 
   in_file = io_open('td.general/gauge_field', action='read', status='old', die=.false.)
   if(in_file < 0) then 
@@ -107,7 +110,7 @@ program dielectric_function
   call io_skip_header(in_file)
   call spectrum_count_time_steps(in_file, time_steps, dt)
 
-  if(parse_is_defined('TransientAbsorptionReference')) then
+  if(parse_is_defined(parser, 'TransientAbsorptionReference')) then
     !%Variable TransientAbsorptionReference
     !%Type string
     !%Default "."
@@ -121,7 +124,7 @@ program dielectric_function
     !% relative to the current folder
     !%End
 
-    call parse_variable('TransientAbsorptionReference', '.', ref_filename)
+    call parse_variable(parser, 'TransientAbsorptionReference', '.', ref_filename)
     ref_file = io_open(trim(ref_filename)//'/gauge_field', action='read', status='old', die=.false.)
     if(ref_file < 0) then
       message(1) = "Cannot open reference file '"//trim(io_workpath(trim(ref_filename)//'/gauge_field'))//"'"
@@ -154,7 +157,7 @@ program dielectric_function
   call io_close(in_file)
 
   !We remove the reference
-  if(parse_is_defined('TransientAbsorptionReference')) then
+  if(parse_is_defined(parser, 'TransientAbsorptionReference')) then
     time_steps_ref = time_steps_ref + 1
     SAFE_ALLOCATE(vecpot_ref(1:time_steps_ref, space%dim*3))
     call io_skip_header(ref_file)
@@ -295,6 +298,8 @@ program dielectric_function
   call space_end(space)
   call io_end()
   call messages_end()
+
+  call parser_end(parser)
   call global_end()
 
 end program dielectric_function

@@ -24,6 +24,7 @@ module partial_charges_oct_m
   use hirshfeld_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use states_oct_m
 
@@ -32,6 +33,7 @@ module partial_charges_oct_m
   private
 
   type partial_charges_t
+    private
     integer :: dummy
   end type partial_charges_t
 
@@ -55,8 +57,9 @@ contains
 
   !----------------------------------------------
 
-  subroutine partial_charges_calculate(this, mesh, st, geo, hirshfeld_charges)
+  subroutine partial_charges_calculate(this, parser, mesh, st, geo, hirshfeld_charges)
     type(partial_charges_t), intent(in)    :: this
+    type(parser_t),          intent(in)    :: parser
     type(mesh_t),            intent(in)    :: mesh
     type(states_t),          intent(in)    :: st
     type(geometry_t),        intent(in)    :: geo
@@ -71,10 +74,10 @@ contains
 
     if(present(hirshfeld_charges)) then
 
-      call hirshfeld_init(hirshfeld, mesh, geo, st)
+      call hirshfeld_init(hirshfeld, parser, mesh, geo, st)
       
       do iatom = 1, geo%natoms
-        call hirshfeld_charge(hirshfeld, iatom, st%rho, hirshfeld_charges(iatom))
+        call hirshfeld_charge(hirshfeld, parser, iatom, st%rho, hirshfeld_charges(iatom))
       end do
       
       call hirshfeld_end(hirshfeld)

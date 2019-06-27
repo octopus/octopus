@@ -24,6 +24,7 @@ program harmonic_spectrum
   use global_oct_m
   use io_oct_m
   use messages_oct_m
+  use parser_oct_m
   use spectrum_oct_m
   use unit_system_oct_m
 
@@ -34,7 +35,8 @@ program harmonic_spectrum
   type(spectrum_t) :: spectrum
   character :: pol
   logical :: get_maxima
-
+  type(parser_t) :: parser
+  
   integer, parameter :: &
     HS_FROM_MULT = 1,   &
     HS_FROM_ACC  = 2,   &
@@ -61,16 +63,19 @@ program harmonic_spectrum
 
   ! Initialize stuff
   call global_init(is_serial = .true.)
-  call messages_init()
 
-  call io_init()
-  call unit_system_init()
-  call fft_all_init()
+  call parser_init(parser)
+  
+  call messages_init(parser)
 
-  call spectrum_init(spectrum)
+  call io_init(parser)
+  call unit_system_init(parser)
+  call fft_all_init(parser)
 
-  call messages_obsolete_variable('HarmonicSpectrumPolarization')
-  call messages_obsolete_variable('HarmonicSpectrumMode')
+  call spectrum_init(spectrum, parser)
+
+  call messages_obsolete_variable(parser, 'HarmonicSpectrumPolarization')
+  call messages_obsolete_variable(parser, 'HarmonicSpectrumMode')
 
   if( (pol /= 'x') .and. &
       (pol /= 'y') .and. &
@@ -85,33 +90,33 @@ program harmonic_spectrum
   select case(mode)
   case(HS_FROM_MULT)
     if(get_maxima) then
-      call spectrum_hs_from_mult('hs-mult-maxima', spectrum, pol, vec, w0)
+      call spectrum_hs_from_mult('hs-mult-maxima', parser, spectrum, pol, vec, w0)
     else
       if(ar  ==  1) then
          message(1)= "Calculating angle-resolved hs from multipoles."
         call messages_info(1)
         call spectrum_hs_ar_from_mult('hs-mult', spectrum, vec)
       else
-        call spectrum_hs_from_mult('hs-mult', spectrum, pol, vec)
+        call spectrum_hs_from_mult('hs-mult', parser, spectrum, pol, vec)
       end if
     end if
   case(HS_FROM_ACC)
     if(get_maxima) then
-      call spectrum_hs_from_acc('hs-acc-maxima', spectrum, pol, vec, w0)
+      call spectrum_hs_from_acc('hs-acc-maxima', parser, spectrum, pol, vec, w0)
     else
       if(ar  ==  1) then
          message(1)= "Calculating angle-resolved hs from acceleration."
         call messages_info(1)
         call spectrum_hs_ar_from_acc('hs-acc', spectrum, vec)
       else
-       call spectrum_hs_from_acc('hs-acc', spectrum, pol, vec)
+       call spectrum_hs_from_acc('hs-acc', parser, spectrum, pol, vec)
       end if
     end if
   case(HS_FROM_CURR)
     if(get_maxima) then
-      call spectrum_hs_from_mult('hs-curr-maxima', spectrum, pol, vec, w0)
+      call spectrum_hs_from_mult('hs-curr-maxima', parser, spectrum, pol, vec, w0)
     else
-      call spectrum_hs_from_current('hs-curr', spectrum, pol, vec)
+      call spectrum_hs_from_current('hs-curr', parser, spectrum, pol, vec)
     end if  
   case default
     message(1) = 'The harmonic-spectrum mode given in the command line is not valid.'
@@ -121,6 +126,9 @@ program harmonic_spectrum
 
   call io_end()
   call messages_end()
+
+  call parser_end(parser)
+  
   call global_end()
 end program harmonic_spectrum
 

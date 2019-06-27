@@ -35,12 +35,14 @@ module stencil_oct_m
     stencil_union
 
   type stargeneral_arms_t
+    ! Components are public by default
     integer          :: arms(1:3,1:3)
     integer          :: narms  
   end type stargeneral_arms_t
 
 
   type stencil_t
+    ! Components are public by default
     integer          :: center
     integer          :: size
     integer          :: npoly

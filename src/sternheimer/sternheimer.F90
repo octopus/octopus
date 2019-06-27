@@ -139,9 +139,9 @@ contains
     end if
 
     if(wfs_are_cplx) then
-      call mix_init(this%mixer, sys%gr%der, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type_= TYPE_CMPLX)
+      call mix_init(this%mixer, sys%parser, sys%gr%der, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type_= TYPE_CMPLX)
     else
-      call mix_init(this%mixer, sys%gr%der, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type_= TYPE_FLOAT)
+      call mix_init(this%mixer, sys%parser, sys%gr%der, sys%gr%mesh%np, sys%st%d%nspin, 1, func_type_= TYPE_FLOAT)
     end if
 
     if(present(set_occ_response)) then
@@ -165,7 +165,7 @@ contains
     default_preorthog = (sys%st%smear%method == SMEAR_SEMICONDUCTOR .or. &
       (sys%st%smear%method == SMEAR_FIXED_OCC .and. sys%st%smear%integral_occs)) &
       .and. .not. this%occ_response
-    call parse_variable('Preorthogonalization', default_preorthog, this%preorthogonalization) 
+    call parse_variable(sys%parser, 'Preorthogonalization', default_preorthog, this%preorthogonalization) 
 
     !%Variable HamiltonianVariation
     !%Type integer
@@ -193,7 +193,7 @@ contains
     if(present(set_ham_var)) then
       ham_var = set_ham_var
     else if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-      call parse_variable('HamiltonianVariation', 3, ham_var)
+      call parse_variable(sys%parser, 'HamiltonianVariation', 3, ham_var)
     else
       ham_var = 0
     end if
@@ -231,20 +231,20 @@ contains
     end if
     call messages_info(3) 
 
-    call linear_solver_init(this%solver, sys%gr, states_are_real(sys%st), set_default_solver)
+    call linear_solver_init(this%solver, sys%parser, sys%gr, states_are_real(sys%st), set_default_solver)
 
     if(this%solver%solver == OPTION__LINEARSOLVER__MULTIGRID .or. preconditioner_is_multigrid(this%solver%pre)) then
       if(.not. associated(sys%gr%mgrid)) then
         SAFE_ALLOCATE(sys%gr%mgrid)
-        call multigrid_init(sys%gr%mgrid, sys%geo, sys%gr%cv, sys%gr%mesh, sys%gr%der, sys%gr%stencil, sys%mc)
+        call multigrid_init(sys%gr%mgrid, sys%parser, sys%geo, sys%gr%cv, sys%gr%mesh, sys%gr%der, sys%gr%stencil, sys%mc)
       end if
     end if
 
     ! will not converge for non-self-consistent calculation unless LRTolScheme = fixed
     if (ham_var == 0) then
-      call scf_tol_init(this%scf_tol, sys%st%qtot, tol_scheme = 0) ! fixed
+      call scf_tol_init(this%scf_tol, sys%parser, sys%st%qtot, tol_scheme = 0) ! fixed
     else
-      call scf_tol_init(this%scf_tol, sys%st%qtot)
+      call scf_tol_init(this%scf_tol, sys%parser, sys%st%qtot)
     end if
 
     if(this%add_fxc) call sternheimer_build_fxc(this, sys%gr%mesh, sys%st, sys%ks)
@@ -432,17 +432,18 @@ contains
 
   ! --------------------------------------------------------
 
-  subroutine sternheimer_obsolete_variables(old_prefix, new_prefix)
+  subroutine sternheimer_obsolete_variables(parser, old_prefix, new_prefix)
+    type(parser_t),      intent(in)    :: parser
     character(len=*),    intent(in)    :: old_prefix
     character(len=*),    intent(in)    :: new_prefix
     
     PUSH_SUB(sternheimer_obsolete_variables)
 
-    call messages_obsolete_variable(trim(old_prefix)//'Preorthogonalization', trim(new_prefix)//'Preorthogonalization')
-    call messages_obsolete_variable(trim(old_prefix)//'HamiltonianVariation', trim(new_prefix)//'HamiltonianVariation')
+    call messages_obsolete_variable(parser, trim(old_prefix)//'Preorthogonalization', trim(new_prefix)//'Preorthogonalization')
+    call messages_obsolete_variable(parser, trim(old_prefix)//'HamiltonianVariation', trim(new_prefix)//'HamiltonianVariation')
 
-    call linear_solver_obsolete_variables(old_prefix, new_prefix)
-    call scf_tol_obsolete_variables(old_prefix, new_prefix)
+    call linear_solver_obsolete_variables(parser, old_prefix, new_prefix)
+    call scf_tol_obsolete_variables(parser, old_prefix, new_prefix)
 
     POP_SUB(sternheimer_obsolete_variables)
   end subroutine sternheimer_obsolete_variables

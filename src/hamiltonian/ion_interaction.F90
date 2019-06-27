@@ -44,6 +44,7 @@ module ion_interaction_oct_m
     ion_interaction_test
 
   type ion_interaction_t
+    ! Components are public by default
     FLOAT                      :: alpha
   end type ion_interaction_t
 
@@ -55,8 +56,9 @@ module ion_interaction_oct_m
   
 contains
 
-  subroutine ion_interaction_init(this)
+  subroutine ion_interaction_init(this, parser)
     type(ion_interaction_t), intent(out)   :: this
+    type(parser_t),          intent(in)    :: parser
 
     PUSH_SUB(ion_interaction_init)
 
@@ -70,7 +72,7 @@ contains
     !% interaction for periodic systems. This value affects the speed
     !% of the calculation, normally users do not need to modify it.
     !%End
-    call parse_variable('EwaldAlpha', CNST(0.21), this%alpha)
+    call parse_variable(parser, 'EwaldAlpha', CNST(0.21), this%alpha)
     
     POP_SUB(ion_interaction_init)
   end subroutine ion_interaction_init
@@ -605,8 +607,9 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine ion_interaction_test(geo, sb)
+  subroutine ion_interaction_test(geo, parser, sb)
     type(geometry_t),         intent(in)    :: geo
+    type(parser_t),           intent(in)    :: parser
     type(simul_box_t),        intent(in)    :: sb
 
     type(ion_interaction_t) :: ion_interaction
@@ -617,7 +620,7 @@ contains
     
     PUSH_SUB(ion_interaction_test)
 
-    call ion_interaction_init(ion_interaction)
+    call ion_interaction_init(ion_interaction, parser)
 
     SAFE_ALLOCATE(force(1:sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_components(1:sb%dim, 1:geo%natoms, ION_NUM_COMPONENTS))

@@ -35,6 +35,7 @@ module density_oct_m
   use multigrid_oct_m
   use multicomm_oct_m
   use mpi_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
@@ -61,6 +62,7 @@ module density_oct_m
     states_freeze_adjust_qtot
 
   type density_calc_t
+    private
     FLOAT,                pointer :: density(:, :)
     type(states_t),       pointer :: st
     type(grid_t),         pointer :: gr
@@ -374,8 +376,9 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_freeze_orbitals(st, gr, mc, n, family_is_mgga)
+  subroutine states_freeze_orbitals(st, parser, gr, mc, n, family_is_mgga)
     type(states_t),    intent(inout) :: st
+    type(parser_t),    intent(in)    :: parser
     type(grid_t),      intent(in)    :: gr
     type(multicomm_t), intent(in)    :: mc
     integer,           intent(in)    :: n
@@ -459,7 +462,7 @@ contains
 
     call states_copy(staux, st)
 
-    call states_freeze_redistribute_states(st, gr, mc, n)
+    call states_freeze_redistribute_states(st, parser, gr, mc, n)
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim, 1))
     SAFE_ALLOCATE(rec_buffer(1:gr%mesh%np, 1:st%d%dim))
@@ -535,8 +538,9 @@ contains
   end subroutine states_freeze_orbitals
 
   ! ---------------------------------------------------------
-  subroutine states_freeze_redistribute_states(st, gr, mc, nn)
+  subroutine states_freeze_redistribute_states(st, parser, gr, mc, nn)
     type(states_t),    intent(inout) :: st
+    type(parser_t),    intent(in)    :: parser
     type(grid_t),      intent(in)    :: gr
     type(multicomm_t), intent(in)    :: mc
     integer,           intent(in)    :: nn
@@ -546,7 +550,7 @@ contains
     st%nst = st%nst - nn
 
     call states_deallocate_wfns(st)
-    call states_distribute_nodes(st, mc)
+    call states_distribute_nodes(st, parser, mc)
     call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
 
     SAFE_DEALLOCATE_P(st%eigenval)

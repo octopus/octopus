@@ -1,4 +1,4 @@
-!! Copyright (C) 2015 H. Huebener
+!! Copyright (C) 2019 H. Huebener, X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -58,39 +58,40 @@ module scdm_oct_m
        scdm_rotate_states
   
   type scdm_t
-    type(states_t)   :: st          !< localized orthogonal states
-    FLOAT, pointer   :: center(:,:) !< coordinates of centers of states (in same units as mesh%x)
-    integer          :: box_size    !< number of mesh points in the dimension of local box around scdm states 
-                                    !! NOTE: this could be dynamic and state dependent
-    integer          :: full_box    !< = (2*box_size+1)**3, i.e. number of points in box
-    type(mesh_t)     :: boxmesh     !< mesh describing the small box
-    type(cube_t)     :: boxcube     !< cube of the small box (used for fft in poisson solver
-                                    !! has doubled size for truncation)
-    integer, pointer :: box(:,:,:,:)  !< indices of global points that are contained in the local box for each state
+    private
+    type(states_t)           :: st          !< localized orthogonal states
+    FLOAT, pointer,   public :: center(:,:) !< coordinates of centers of states (in same units as mesh%x)
+    integer,          public :: box_size    !< number of mesh points in the dimension of local box around scdm states 
+                                            !! NOTE: this could be dynamic and state dependent
+    integer,          public :: full_box    !< = (2*box_size+1)**3, i.e. number of points in box
+    type(mesh_t)             :: boxmesh     !< mesh describing the small box
+    type(cube_t)             :: boxcube     !< cube of the small box (used for fft in poisson solver
+                                            !! has doubled size for truncation)
+    integer, pointer, public :: box(:,:,:,:)  !< indices of global points that are contained in the local box for each state
     
-    integer          :: full_cube_n(3) !< dimension of cube of fullsimulation cell
+    integer                  :: full_cube_n(3) !< dimension of cube of fullsimulation cell
     
-    FLOAT, pointer   :: dpsi(:,:)   !< scdm states in their local box
-    CMPLX, pointer   :: zpsi(:,:)   ! ^
-    type(poisson_t)  :: poisson     !< solver used to compute exchange with localized scdm states
-    type(poisson_fft_t) :: poisson_fft !< used for above poisson solver
+    FLOAT, pointer,   public :: dpsi(:,:)   !< scdm states in their local box
+    CMPLX, pointer,   public :: zpsi(:,:)   ! ^
+    type(poisson_t),  public :: poisson     !< solver used to compute exchange with localized scdm states
+    type(poisson_fft_t)      :: poisson_fft !< used for above poisson solver
 
-    logical          :: verbose     !< write info about SCDM procedure
-    logical          :: psi_scdm    !< Hamiltonian is applied to an SCDM state
+    logical                  :: verbose     !< write info about SCDM procedure
+    logical,          public :: psi_scdm    !< Hamiltonian is applied to an SCDM state
 
-    integer          :: nst         !< total number of states, copy os st%nst
+    integer                  :: nst         !< total number of states, copy os st%nst
     
     ! parallelization of scdm states
-    type(mpi_grp_t)  :: st_grp      !< MPI group for states parallelization, inherited from st
-    type(mpi_grp_t)  :: dom_grp     !< MPI group for domain parallelization, inherited from mesh
-    type(mpi_grp_t)  :: st_exx_grp  !< MPI group for state parallelization in the exchange operator
-                                    !! this is a copy of the domain group, i.e. the domain group is
-                                    !! used for states parallelization in the exchange operator
-    integer          :: st_exx_start!< index of state distribution in the exchange operator
-    integer          :: st_exx_end  !.
-    logical          :: root        !< this is a redundat flag equal to mpi_world%rank==0
+    type(mpi_grp_t)          :: st_grp      !< MPI group for states parallelization, inherited from st
+    type(mpi_grp_t)          :: dom_grp     !< MPI group for domain parallelization, inherited from mesh
+    type(mpi_grp_t),  public :: st_exx_grp  !< MPI group for state parallelization in the exchange operator
+                                            !! this is a copy of the domain group, i.e. the domain group is
+                                             !! used for states parallelization in the exchange operator
+    integer,          public :: st_exx_start!< index of state distribution in the exchange operator
+    integer,          public :: st_exx_end  !.
+    logical                  :: root        !< this is a redundat flag equal to mpi_world%rank==0
 #ifdef HAVE_SCALAPACK 
-    type(blacs_proc_grid_t) :: proc_grid  !< blacs context for RRQR on transpose states with scalapack
+    type(blacs_proc_grid_t)  :: proc_grid  !< blacs context for RRQR on transpose states with scalapack
 #endif
   end type scdm_t
 
@@ -105,9 +106,9 @@ contains
 !! A. Damle, L. Lin, L. Ying: Compressed representation of Kohn-Sham orbitals via 
 !!                            selected columns of the density matrix
 !! http://arxiv.org/abs/1408.4926 (accepted in JCTC as of 17th March 2015)
-subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
-    
-  type(states_t), intent(in)  :: st !< this contains the KS set (for now from hm%hf_st which is confusing)
+subroutine scdm_init(st, parser, der, fullcube, scdm, operate_on_scdm)
+  type(states_t),      intent(in)  :: st !< this contains the KS set (for now from hm%hf_st which is confusing)
+  type(parser_t),      intent(in)  :: parser
   type(derivatives_t) :: der
   type(cube_t) :: fullcube !< cube of the full cell
   type(scdm_t) :: scdm
@@ -164,7 +165,7 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   !%Description
   !% Output detailed information on SCDM procedure.
   !%End
-  call parse_variable('SCDM_verbose', .false., scdm%verbose)
+  call parse_variable(parser, 'SCDM_verbose', .false., scdm%verbose)
   
   scdm%full_cube_n = fullcube%rs_n_global
   
@@ -181,7 +182,7 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   !%Description
   !% Controls the size of the box on which the SCDM states are defined (box size = 2*radius).
   !%End  
-  call parse_variable('SCDMCutoffRadius', 3._8, rcut, units_inp%length)
+  call parse_variable(parser, 'SCDMCutoffRadius', 3._8, rcut, units_inp%length)
   if (scdm%root.and.scdm%verbose) call messages_print_var_value(stdout, 'SCDM cutoff', rcut)
   ! box_size is half the size of the  box
   scdm%box_size = 0
@@ -275,10 +276,10 @@ subroutine scdm_init(st,der,fullcube,scdm,operate_on_scdm)
   ! this replicates poisson_kernel_init()
   scdm%poisson%poisson_soft_coulomb_param = M_ZERO
   if (der%mesh%sb%periodic_dim.eq.3) then
-    call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, &
+    call poisson_fft_init(scdm%poisson_fft, parser, scdm%boxmesh, scdm%boxcube, &
          kernel=POISSON_FFT_KERNEL_HOCKNEY,fullcube=fullcube)
   else !non periodic case
-    call poisson_fft_init(scdm%poisson_fft, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_SPH)
+    call poisson_fft_init(scdm%poisson_fft, parser, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_SPH)
   end if
   
   ! create poisson object

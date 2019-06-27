@@ -294,10 +294,9 @@ contains
                   ixx(3) = pad_feq(iz, db(3), .true.)
 
                   call poisson_fft_gg_transform_l(ixx, temp, gr%fine%der%mesh%sb, this%fft_solver%qq, gg, modg2)
-#ifdef HAVE_NFFT
+
                   !HH not very elegant
                   if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
-#endif
 
                   if(abs(modg2) > M_EPSILON) then
                      FourPi_G2(ix,iy,iz) = 4d0*M_PI/modg2
