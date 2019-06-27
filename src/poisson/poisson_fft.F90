@@ -209,7 +209,7 @@ contains
     FLOAT :: modg2, gg(3), temp(3)
     integer :: ix, iy, iz, ixx(3), db(3)
 
-    ASSERT(MAX_DIM == 3)
+    ASSERT(mesh%sb%dim == 3)
 
     PUSH_SUB(poisson_fft_precalculate_g)
 
