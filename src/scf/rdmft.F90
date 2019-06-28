@@ -597,7 +597,7 @@ contains
     type(states_t),       intent(inout) :: st
     FLOAT,                intent(out)   :: energy
 
-    integer :: ist,ik
+    integer :: ist
 
     PUSH_SUB(scf_occ_NO)
 
@@ -612,13 +612,7 @@ contains
 
     call total_energy_rdm(rdm, st%occ(:,1), energy)
 
-    rdm%occsum = M_ZERO
-
-    do ist = 1, st%nst
-      do ik = 1, st%d%nik
-        rdm%occsum = rdm%occsum + st%occ(ist,ik)
-      end do
-    end do
+    rdm%occsum = sum(st%occ(1:st%nst, 1:st%d%nik))
     
     write(message(1),'(a4,5x,a12)')'#st','Occupation'
     call messages_info(1)   
@@ -818,10 +812,7 @@ contains
       if (occ(ist) <= thresh_occ ) occ(ist) = thresh_occ
     end do
       
-    rdm_ptr%occsum = M_ZERO
-    do ist = 1, size
-      rdm_ptr%occsum = rdm_ptr%occsum + occ(ist)
-    end do
+    rdm_ptr%occsum = sum(occ(1:size))
       
     !calculate the total energy without nuclei interaction and the energy
     !derivatives with respect to the occupation numbers
