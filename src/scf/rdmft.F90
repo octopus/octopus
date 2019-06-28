@@ -101,12 +101,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine rdmft_init(rdm, parser, gr, st, ks, fromScratch)
-    type(rdm_t),    intent(out)   :: rdm
-    type(parser_t), intent(in)    :: parser
-    type(grid_t),   intent(in)    :: gr  !< grid
-    type(states_t), intent(in)    :: st  !< States
-    type(v_ks_t),   intent(in)    :: ks  !< Kohn-Sham
-    logical,        intent(inout) :: fromScratch
+    type(rdm_t),    intent(out) :: rdm
+    type(parser_t), intent(in)  :: parser
+    type(grid_t),   intent(in)  :: gr  !< grid
+    type(states_t), intent(in)  :: st  !< States
+    type(v_ks_t),   intent(in)  :: ks  !< Kohn-Sham
+    logical,        intent(in)  :: fromScratch
 
     integer :: ist
 
