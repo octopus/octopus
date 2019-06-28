@@ -182,8 +182,9 @@ contains
   !!
   !! Output argument "mode_fixed_fluence" is also given a value, depending on whether
   !! the user requires a fixed-fluence run (.true.) or not (.false.).
-  subroutine controlfunction_mod_init(ep, dt, max_iter, mode_fixed_fluence)
+  subroutine controlfunction_mod_init(ep, parser, dt, max_iter, mode_fixed_fluence)
     type(epot_t), intent(inout)                   :: ep
+    type(parser_t),                 intent(in)    :: parser
     FLOAT, intent(in)                             :: dt
     integer, intent(in)                           :: max_iter
     logical, intent(out)                          :: mode_fixed_fluence
@@ -245,7 +246,7 @@ contains
     !%Option control_rt 7
     !% (experimental)
     !%End
-    call parse_variable('OCTControlFunctionRepresentation', ctr_rt, cf_common%representation)
+    call parse_variable(parser, 'OCTControlFunctionRepresentation', ctr_rt, cf_common%representation)
       if(.not.varinfo_valid_option('OCTControlFunctionRepresentation', cf_common%representation)) &
         call messages_input_error('OCTControlFunctionRepresentation')
       select case(cf_common%representation)
@@ -287,7 +288,7 @@ contains
     !% The Fourier series that can be used to represent the control functions must be truncated;
     !% the truncation is given by a cut-off frequency which is determined by this variable.
     !%End
-    call parse_variable('OCTControlFunctionOmegaMax', -M_ONE, cf_common%omegamax)
+    call parse_variable(parser, 'OCTControlFunctionOmegaMax', -M_ONE, cf_common%omegamax)
     if(cf_common%representation /= ctr_rt) then
       write(message(1), '(a)')         'Info: The representation of the OCT control parameters will be restricted'
       write(message(2), '(a,f10.5,a)') '      with an energy cut-off of ', &
@@ -312,7 +313,7 @@ contains
     !% first the code applies the envelope provided by the <tt>OCTLaserEnvelope</tt> input
     !% option, and afterwards it calculates the fluence.
     !%End
-    call parse_variable('OCTFixFluenceTo', M_ZERO, cf_common%targetfluence)
+    call parse_variable(parser, 'OCTFixFluenceTo', M_ZERO, cf_common%targetfluence)
 
     !%Variable OCTFixInitialFluence
     !%Type logical
@@ -324,7 +325,7 @@ contains
     !% fluence. However, you can force the program to use that initial laser as the initial
     !% guess, no matter the fluence, by setting <tt>OCTFixInitialFluence = no</tt>.
     !%End
-    call parse_variable('OCTFixInitialFluence', .true., cf_common%fix_initial_fluence)
+    call parse_variable(parser, 'OCTFixInitialFluence', .true., cf_common%fix_initial_fluence)
 
 
     !%Variable OCTControlFunctionType
@@ -348,7 +349,7 @@ contains
     !% This carrier frequency is given by the carrier frequency of the <tt>TDExternalFields</tt> 
     !% in the <tt>inp</tt> file.
     !%End
-    call parse_variable('OCTControlFunctionType', controlfunction_mode_epsilon, cf_common%mode)
+    call parse_variable(parser, 'OCTControlFunctionType', controlfunction_mode_epsilon, cf_common%mode)
     if(.not.varinfo_valid_option('OCTControlFunctionType', cf_common%mode)) &
       call messages_input_error('OCTControlFunctionType')
     if(cf_common%representation == ctr_rt .and. (cf_common%mode /= controlfunction_mode_epsilon) ) &
@@ -389,7 +390,7 @@ contains
     end do
 
     ! Fix the carrier frequency
-    call messages_obsolete_variable('OCTCarrierFrequency')
+    call messages_obsolete_variable(parser, 'OCTCarrierFrequency')
     cf_common%w0 = laser_carrier_frequency(ep%lasers(1))
 
     ! Fix the number of control functions: if we have "traditional" QOCT (i.e. the control functions
@@ -447,7 +448,7 @@ contains
     !%End
     SAFE_ALLOCATE(cf_common%alpha(1:cf_common%no_controlfunctions))
     cf_common%alpha = M_ZERO
-    if(parse_block('OCTPenalty', blk) == 0) then
+    if(parse_block(parser, 'OCTPenalty', blk) == 0) then
       ! We have a block
       ncols = parse_block_cols(blk, 0)
       if(ncols /= cf_common%no_controlfunctions) then
@@ -460,7 +461,7 @@ contains
       end if
     else
       ! We have the same penalty for all the control functions.
-      call parse_variable('OCTPenalty', M_ONE, octpenalty)
+      call parse_variable(parser, 'OCTPenalty', M_ONE, octpenalty)
       cf_common%alpha(1:cf_common%no_controlfunctions) = octpenalty
     end if
 
@@ -481,7 +482,7 @@ contains
     steps = max_iter
     SAFE_ALLOCATE(cf_common%td_penalty(1:cf_common%no_controlfunctions))
 
-    if (parse_block('OCTLaserEnvelope', blk)==0) then
+    if (parse_block(parser, 'OCTLaserEnvelope', blk)==0) then
 
       ! Cannot have this unless we have the "usual" controlfunction_mode_epsilon.
       if(cf_common%mode /= controlfunction_mode_epsilon) then
@@ -496,13 +497,13 @@ contains
       do irow = 1, no_lines
         call parse_block_string(blk, irow - 1, 0, expression)
         call parse_block_end(blk)
-        call tdf_read(cf_common%td_penalty(irow), trim(expression), ierr)
+        call tdf_read(cf_common%td_penalty(irow), parser, trim(expression), ierr)
         if(ierr.ne.0) then
           message(1) = 'Time-dependent function "'//trim(expression)//'" could not be read from inp file.'
           call messages_fatal(1)
         end if
         call tdf_to_numerical(cf_common%td_penalty(irow), steps, dt, cf_common%omegamax)
-        ierr = parse_block('OCTLaserEnvelope', blk)
+        ierr = parse_block(parser, 'OCTLaserEnvelope', blk)
       end do
 
       call parse_block_end(blk)
@@ -538,8 +539,9 @@ contains
   !! to be initialized, either by calling controlfunction_init, or
   !! by copying another initialized variable through
   !! controlfunction_copy.
-  subroutine controlfunction_init(cp, dt, ntiter)
+  subroutine controlfunction_init(cp, parser, dt, ntiter)
     type(controlfunction_t), intent(inout) :: cp
+    type(parser_t),          intent(in)    :: parser
     FLOAT, intent(in) :: dt
     integer, intent(in) :: ntiter
 
@@ -631,7 +633,7 @@ contains
     end if
 
     ! Construct the transformation matrix, if needed.
-    call controlfunction_trans_matrix(cp)
+    call controlfunction_trans_matrix(cp, parser)
 
     POP_SUB(controlfunction_init)
   end subroutine controlfunction_init
@@ -1502,8 +1504,9 @@ contains
 
   !> controlfunction_der computes the derivative of a controlfunction with respect
   !! to one of its degrees of freedom.
-  subroutine controlfunction_der(par, depsilon, i)
+  subroutine controlfunction_der(par, parser, depsilon, i)
     type(controlfunction_t), intent(in)    :: par
+    type(parser_t),          intent(in)    :: parser
     type(tdf_t), intent(inout) :: depsilon
     integer,                 intent(in)    :: i
 
@@ -1524,8 +1527,9 @@ contains
 
   !> controlfunction_gradient computes the (minus the) gradient of the
   !! J functional with respect to the parameters.
-  subroutine controlfunction_gradient(par, par_output, grad)
+  subroutine controlfunction_gradient(par, parser, par_output, grad)
     type(controlfunction_t), intent(in)    :: par, par_output
+    type(parser_t),          intent(in)    :: parser
     FLOAT,                   intent(inout) :: grad(:)
 
     integer :: jj
@@ -1542,7 +1546,7 @@ contains
     case(ctr_fourier_series, ctr_zero_fourier_series)
       do jj = 1, par%dof
         call tdf_copy(depsilon, par%f(1))
-        call controlfunction_der(par, depsilon, jj)
+        call controlfunction_der(par, parser, depsilon, jj)
         grad(jj) = M_TWO * controlfunction_alpha(par, 1) * sum(par%u(jj, :)*par%theta(:)) &
                  - tdf_dot_product(par_output%f(1), depsilon)
         call tdf_end(depsilon)
@@ -1551,7 +1555,7 @@ contains
     case(ctr_fourier_series_h, ctr_zero_fourier_series_h)
       do jj = 1, par%dof
         call tdf_copy(depsilon, par%f(1))
-        call controlfunction_der(par, depsilon, jj)
+        call controlfunction_der(par, parser, depsilon, jj)
         grad(jj) = - tdf_dot_product(par_output%f(1), depsilon)
         call tdf_end(depsilon)
       end do

@@ -74,6 +74,7 @@ module mesh_oct_m
   !! - x, vol_pp
   !! These four are defined for all the points the node is responsible for.
   type mesh_t
+    ! Components are public by default
     type(simul_box_t),   pointer :: sb  !< simulation box
     type(curvilinear_t), pointer :: cv  
     type(index_t)                :: idx 
@@ -114,6 +115,7 @@ module mesh_oct_m
   !!   x_{i,j} = origin + i*spacing*u + j*spacing*v,
   !! for nu <= i <= mu and nv <= j <= mv
   type mesh_plane_t
+    ! Components are public by default
     FLOAT :: n(MAX_DIM)
     FLOAT :: u(MAX_DIM), v(MAX_DIM)
     FLOAT :: origin(MAX_DIM)
@@ -124,6 +126,7 @@ module mesh_oct_m
   !> This data type defines a line, and a regular grid defined on this
   !! line (or rather, on a portion of this line).
   type mesh_line_t
+    ! Components are public by default
     FLOAT :: n(MAX_DIM)
     FLOAT :: u(MAX_DIM)
     FLOAT :: origin(MAX_DIM)

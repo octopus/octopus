@@ -29,6 +29,7 @@ module transfer_table_oct_m
 
 
   type transfer_table_t
+    ! Components are public by default
     integer          ::  n_coarse
     integer, pointer :: to_coarse(:)
 

@@ -57,6 +57,7 @@ module kdotp_oct_m
        int2str      
 
   type kdotp_t
+    private
     type(pert_t) :: perturbation
     type(pert_t) :: perturbation2
 
@@ -116,23 +117,23 @@ contains
     kdotp_vars%eff_mass_inv(:,:,:,:) = 0 
     kdotp_vars%velocity(:,:,:) = 0 
 
-    call pert_init(kdotp_vars%perturbation, PERTURBATION_KDOTP, sys%gr, sys%geo)
+    call pert_init(kdotp_vars%perturbation, sys%parser, PERTURBATION_KDOTP, sys%gr, sys%geo)
     SAFE_ALLOCATE(kdotp_vars%lr(1:1, 1:pdim))
 
     call parse_input()
 
     if(calc_2nd_order) then
-      call pert_init(kdotp_vars%perturbation2, PERTURBATION_NONE, sys%gr, sys%geo)
-      call pert_init(pert2, PERTURBATION_KDOTP, sys%gr, sys%geo)
+      call pert_init(kdotp_vars%perturbation2, sys%parser, PERTURBATION_NONE, sys%gr, sys%geo)
+      call pert_init(pert2, sys%parser, PERTURBATION_KDOTP, sys%gr, sys%geo)
       call pert_setup_dir(kdotp_vars%perturbation2, 1) ! direction is irrelevant
       SAFE_ALLOCATE(kdotp_vars%lr2(1:1, 1:pdim, 1:pdim))
     end if
 
     !Read ground-state wavefunctions
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
-    call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+    call restart_init(restart_load, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_look_and_load(restart_load, sys%st, sys%gr, is_complex = complex_response)
+      call states_look_and_load(restart_load, sys%parser, sys%st, sys%gr, is_complex = complex_response)
       call restart_end(restart_load)
     else
       message(1) = "A previous gs calculation is required."
@@ -146,9 +147,9 @@ contains
     ! Start restart. Note: we are going to use the same directory to read and write.
     ! Therefore, restart_dump must be initialized first to make sure the directory
     ! exists when we initialize restart_load.
-    call restart_init(restart_dump, RESTART_KDOTP, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
+    call restart_init(restart_dump, sys%parser, RESTART_KDOTP, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
     ! no problem if this fails
-    call restart_init(restart_load, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
+    call restart_init(restart_load, sys%parser, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
@@ -176,7 +177,7 @@ contains
       call kdotp_write_band_velocity(sys%st, pdim, kdotp_vars%velocity(:,:,:))
     end if
 
-    call sternheimer_obsolete_variables('KdotP_', 'KdotP')
+    call sternheimer_obsolete_variables(sys%parser, 'KdotP_', 'KdotP')
     call sternheimer_init(sh, sys, hm, complex_response, set_ham_var = 0, &
       set_occ_response = (kdotp_vars%occ_solution_method == 0), set_last_occ_response = (kdotp_vars%occ_solution_method == 0), &
       occ_response_by_sternheimer = .true.)
@@ -201,7 +202,7 @@ contains
       if(.not. fromScratch) then
         str_tmp = kdotp_wfs_tag(idir)
         call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, 1), ierr)
-        if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(1, idir))
+        if (ierr == 0) call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(1, idir))
         call restart_close_dir(restart_load)
           
         if(ierr /= 0) then
@@ -213,7 +214,7 @@ contains
           do idir2 = idir, pdim
             str_tmp = kdotp_wfs_tag(idir, idir2)
             call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, 1), ierr)
-            if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
+            if (ierr == 0) call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
             call restart_close_dir(restart_load)
           
             if(ierr /= 0) then
@@ -369,9 +370,9 @@ contains
       !% evaluate the contributions in the occupied subspace.
       !%End
 
-      call messages_obsolete_variable('KdotP_OccupiedSolutionMethod', 'KdotPOccupiedSolutionMethod')
+      call messages_obsolete_variable(sys%parser, 'KdotP_OccupiedSolutionMethod', 'KdotPOccupiedSolutionMethod')
 
-      call parse_variable('KdotPOccupiedSolutionMethod', 0, kdotp_vars%occ_solution_method)
+      call parse_variable(sys%parser, 'KdotPOccupiedSolutionMethod', 0, kdotp_vars%occ_solution_method)
       if(kdotp_vars%occ_solution_method == 1 .and. .not. smear_is_semiconducting(sys%st%smear)) then
         call messages_not_implemented('KdotPOccupiedSolutionMethod = sum_over_states for non-semiconducting smearing')
       end if
@@ -384,7 +385,7 @@ contains
       !% States with energy <math>E_i</math> and <math>E_j</math> will be considered degenerate
       !% if <math> \left| E_i - E_j \right| < </math><tt>DegeneracyThreshold</tt>.
       !%End
-      call parse_variable('DegeneracyThreshold', units_from_atomic(units_inp%energy, CNST(1e-5)), kdotp_vars%degen_thres)
+      call parse_variable(sys%parser, 'DegeneracyThreshold', units_from_atomic(units_inp%energy, CNST(1e-5)), kdotp_vars%degen_thres)
       kdotp_vars%degen_thres = units_to_atomic(units_inp%energy, kdotp_vars%degen_thres)
 
       !%Variable KdotPEta
@@ -395,8 +396,8 @@ contains
       !% Imaginary frequency added to Sternheimer equation which may improve convergence.
       !% Not recommended.
       !%End
-      call messages_obsolete_variable('KdotP_Eta', 'KdotPEta')
-      call parse_variable('KdotPEta', M_ZERO, kdotp_vars%eta)
+      call messages_obsolete_variable(sys%parser, 'KdotP_Eta', 'KdotPEta')
+      call parse_variable(sys%parser, 'KdotPEta', M_ZERO, kdotp_vars%eta)
       kdotp_vars%eta = units_to_atomic(units_inp%energy, kdotp_vars%eta)
 
       !%Variable KdotPCalculateEffectiveMasses
@@ -407,8 +408,8 @@ contains
       !% If true, uses <tt>kdotp</tt> perturbations of ground-state wavefunctions
       !% to calculate effective masses. It is not correct for degenerate states.
       !%End      
-      call messages_obsolete_variable('KdotP_CalculateEffectiveMasses', 'KdotPCalculateEffectiveMasses')
-      call parse_variable('KdotPCalculateEffectiveMasses', .true., calc_eff_mass)
+      call messages_obsolete_variable(sys%parser, 'KdotP_CalculateEffectiveMasses', 'KdotPCalculateEffectiveMasses')
+      call parse_variable(sys%parser, 'KdotPCalculateEffectiveMasses', .true., calc_eff_mass)
 
       !%Variable KdotPCalcSecondOrder
       !%Type logical
@@ -419,7 +420,7 @@ contains
       !% Note that the second derivative of the Hamiltonian is NOT included in this calculation.
       !% This is needed for a subsequent run in <tt>CalculationMode = em_resp</tt> with <tt>EMHyperpol</tt>.
       !%End      
-      call parse_variable('KdotPCalcSecondOrder', .false., calc_2nd_order)
+      call parse_variable(sys%parser, 'KdotPCalcSecondOrder', .false., calc_2nd_order)
 
       POP_SUB(kdotp_lr_run.parse_input)
 

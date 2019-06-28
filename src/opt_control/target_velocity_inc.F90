@@ -19,13 +19,14 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_velocity(gr, geo, tg, oct, td, ep)
+  subroutine target_init_velocity(gr, parser, geo, tg, oct, td, ep)
     type(grid_t),     intent(in)    :: gr
+    type(parser_t),   intent(in)    :: parser
     type(geometry_t), intent(in)    :: geo
     type(target_t),   intent(inout) :: tg
     type(oct_t),      intent(in)    :: oct
     type(td_t),       intent(in)    :: td
-    type(epot_t),     intent(inout) :: ep
+    type(epot_t),     intent(in)    :: ep
 
     integer             :: iatom, ist, jst, jj
     FLOAT, allocatable  :: vl(:), vl_grad(:,:)
@@ -85,7 +86,7 @@
     !%
     !%End
        
-    if(parse_block('OCTVelocityTarget', blk)==0) then
+    if(parse_block(parser, 'OCTVelocityTarget', blk)==0) then
       tg%vel_input_string = " "
       do jj=0, parse_block_n(blk)-1
         call parse_block_string(blk, jj, 0, expression)
@@ -107,7 +108,7 @@
     end if
        
     if(oct%algorithm  ==  OPTION__OCTSCHEME__OCT_CG .or. oct%algorithm == OPTION__OCTSCHEME__OCT_BFGS) then
-      if(parse_block('OCTVelocityDerivatives', blk)==0) then
+      if(parse_block(parser, 'OCTVelocityDerivatives', blk)==0) then
         SAFE_ALLOCATE(tg%vel_der_array(1:geo%natoms,1:gr%sb%dim))
         do ist=0, geo%natoms-1
           do jst=0, gr%sb%dim-1
@@ -132,7 +133,7 @@
       do iatom=1, geo%natoms
         vl(:) = M_ZERO
         vl_grad(:,:) = M_ZERO
-        call epot_local_potential(ep, gr%der, gr%dgrid, geo, iatom, vl)
+        call epot_local_potential(ep, parser, gr%der, gr%dgrid, geo, iatom, vl)
         call dderivatives_grad(gr%der, vl, vl_grad)
         forall(ist=1:gr%mesh%np, jst=1:gr%sb%dim)
           tg%grad_local_pot(iatom, ist, jst) = vl_grad(ist, jst)
@@ -158,8 +159,8 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_end_velocity(tg, oct)
-    type(target_t),   intent(inout) :: tg
-    type(oct_t), intent(in)       :: oct
+    type(target_t), intent(inout) :: tg
+    type(oct_t),    intent(in)    :: oct
     PUSH_SUB(target_end_velocity)
     if(oct%algorithm  ==  OPTION__OCTSCHEME__OCT_CG .or. oct%algorithm  ==  OPTION__OCTSCHEME__OCT_BFGS) then
       SAFE_DEALLOCATE_P(tg%vel_der_array)
@@ -172,18 +173,19 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_velocity(tg, gr, dir, geo, hm, outp)
-    type(target_t), intent(inout) :: tg
-    type(grid_t), intent(inout)   :: gr
-    character(len=*), intent(in)  :: dir
-    type(geometry_t),       intent(in)  :: geo
-    type(hamiltonian_t),    intent(in)  :: hm
-    type(output_t),         intent(in)  :: outp
+  subroutine target_output_velocity(tg, parser, gr, dir, geo, hm, outp)
+    type(target_t),      intent(in) :: tg
+    type(parser_t),      intent(in) :: parser
+    type(grid_t),        intent(in) :: gr
+    character(len=*),    intent(in) :: dir
+    type(geometry_t),    intent(in) :: geo
+    type(hamiltonian_t), intent(in) :: hm
+    type(output_t),      intent(in) :: outp
 
     PUSH_SUB(target_output_velocity)
     
     call io_mkdir(trim(dir))
-    call output_states(tg%st, gr, geo, hm, trim(dir), outp)
+    call output_states(tg%st, parser, gr, geo, hm, trim(dir), outp)
 
     POP_SUB(target_output_velocity)
   end subroutine target_output_velocity
@@ -193,8 +195,8 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_velocity(tg, geo) result(j1)
-    type(target_t),   intent(inout) :: tg
-    type(geometry_t), intent(in)    :: geo
+    type(target_t),   intent(in) :: tg
+    type(geometry_t), intent(in) :: geo
 
     integer :: i
     FLOAT :: f_re, dummy(3)
@@ -221,7 +223,7 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_chi_velocity(gr, tg, chi_out, geo)
-    type(grid_t),     intent(inout) :: gr
+    type(grid_t),     intent(in)    :: gr
     type(target_t),   intent(inout) :: tg
     type(states_t),   intent(inout) :: chi_out
     type(geometry_t), intent(in)    :: geo
@@ -266,10 +268,10 @@
   !!
   subroutine target_tdcalc_velocity(tg, hm, gr, geo, psi, time, max_time)
     type(target_t),      intent(inout) :: tg
-    type(hamiltonian_t), intent(inout) :: hm
-    type(grid_t),        intent(inout) :: gr
+    type(hamiltonian_t), intent(in)    :: hm
+    type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(inout) :: geo
-    type(states_t),      intent(inout) :: psi
+    type(states_t),      intent(in)    :: psi
     integer,             intent(in)    :: time
     integer,             intent(in)    :: max_time
 

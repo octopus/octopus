@@ -35,6 +35,7 @@ module density_oct_m
   use multigrid_oct_m
   use multicomm_oct_m
   use mpi_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
@@ -59,6 +60,7 @@ module density_oct_m
     zdensity_accumulate_grad
 
   type density_calc_t
+    private
     FLOAT,                pointer :: density(:, :)
     type(states_t),       pointer :: st
     type(grid_t),         pointer :: gr
@@ -116,7 +118,7 @@ contains
   subroutine density_calc_accumulate(this, ik, psib)
     type(density_calc_t),         intent(inout) :: this
     integer,                      intent(in)    :: ik
-    type(batch_t),                intent(inout) :: psib
+    type(batch_t),                intent(in)    :: psib
 
     integer :: ist, ip, ispin
     FLOAT   :: nrm
@@ -142,15 +144,17 @@ contains
       case(BATCH_NOT_PACKED)
         if(states_are_real(this%st)) then
           do ist = 1, psib%nst
+            if(abs(weight(ist)) <= M_EPSILON) cycle
             forall(ip = 1:this%gr%mesh%np)
               this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%states(ist)%dpsi(ip, 1)**2
             end forall
           end do
         else
           do ist = 1, psib%nst
+            if(abs(weight(ist)) <= M_EPSILON) cycle
             forall(ip = 1:this%gr%mesh%np)
               this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                (real(psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)**2 + aimag(psib%states(ist)%zpsi(ip, 1))**2)
+                real(conjg(psib%states(ist)%zpsi(ip, 1))*psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)
             end forall
           end do
         end if
@@ -165,7 +169,7 @@ contains
           do ip = 1, this%gr%mesh%np
             do ist = 1, psib%nst
               this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                (real(psib%pack%zpsi(ist, ip), REAL_PRECISION)**2 + aimag(psib%pack%zpsi(ist, ip))**2)
+               real(conjg(psib%pack%zpsi(ist, ip))*psib%pack%zpsi(ist, ip), REAL_PRECISION)
             end do
           end do
         end if
@@ -207,6 +211,8 @@ contains
 
       do ist = 1, psib%nst
 
+        if(abs(weight(ist)) <= M_EPSILON) cycle
+
         call batch_get_state(psib, ist, this%gr%mesh%np, psi)
 
         call zmultigrid_coarse2fine(this%gr%fine%tt, this%gr%der, this%gr%fine%mesh, psi, fpsi, order = 2)
@@ -240,7 +246,10 @@ contains
 
       SAFE_ALLOCATE(zpsi(1:this%gr%mesh%np, 1:this%st%d%dim))
 
+
       do ist = 1, psib%nst
+        if(abs(weight(ist)) <= M_EPSILON) cycle
+
         call batch_get_state(psib, ist, this%gr%mesh%np, zpsi)
         
         do ip = 1, this%gr%fine%mesh%np
@@ -248,8 +257,8 @@ contains
           psi1 = zpsi(ip, 1)
           psi2 = zpsi(ip, 2)
 
-          this%density(ip, 1) = this%density(ip, 1) + weight(ist)*(real(psi1, REAL_PRECISION)**2 + aimag(psi1)**2)
-          this%density(ip, 2) = this%density(ip, 2) + weight(ist)*(real(psi2, REAL_PRECISION)**2 + aimag(psi2)**2)
+          this%density(ip, 1) = this%density(ip, 1) + weight(ist)*real(conjg(psi1)*psi1, REAL_PRECISION)
+          this%density(ip, 2) = this%density(ip, 2) + weight(ist)*real(conjg(psi2)*psi2, REAL_PRECISION)
 
           term = weight(ist)*psi1*conjg(psi2)
           this%density(ip, 3) = this%density(ip, 3) + real(term, REAL_PRECISION)
@@ -339,9 +348,9 @@ contains
   ! ---------------------------------------------------------
   !> Computes the density from the orbitals in st. 
   subroutine density_calc(st, gr, density)
-    type(states_t),          intent(inout)  :: st
-    type(grid_t),            intent(in)     :: gr
-    FLOAT,                   intent(out)    :: density(:, :)
+    type(states_t),          intent(in)  :: st
+    type(grid_t),            intent(in)  :: gr
+    FLOAT,                   intent(out) :: density(:, :)
 
     integer :: ik, ib
     type(density_calc_t) :: dens_calc
@@ -365,8 +374,9 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_freeze_orbitals(st, gr, mc, n)
+  subroutine states_freeze_orbitals(st, parser, gr, mc, n)
     type(states_t),    intent(inout) :: st
+    type(parser_t),    intent(in)    :: parser
     type(grid_t),      intent(in)    :: gr
     type(multicomm_t), intent(in)    :: mc
     integer,           intent(in)    :: n
@@ -436,7 +446,7 @@ contains
     st%nst = st%nst - n
 
     call states_deallocate_wfns(st)
-    call states_distribute_nodes(st, mc)
+    call states_distribute_nodes(st, parser, mc)
     call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim, 1))
@@ -559,7 +569,7 @@ contains
 
     ! Add, if it exists, the frozen density from the inner orbitals.
     if(associated(st%frozen_rho)) then
-      forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
+      forall(ip = 1:mesh%np, is = 1:st%d%nspin)
         total_rho(ip, is) = total_rho(ip, is) + st%frozen_rho(ip, is)
       end forall
     end if

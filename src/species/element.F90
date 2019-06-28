@@ -33,6 +33,7 @@ module element_oct_m
     element_atomic_number
 
   type element_t
+    private
     integer(8) :: dummy
   end type element_t
 

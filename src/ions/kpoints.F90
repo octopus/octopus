@@ -55,9 +55,15 @@ module kpoints_oct_m
     kpoints_have_zero_weight_path,&
     kpoints_to_absolute,          &
     kpoints_get_kpoint_method,    &
-    kpoints_get_path_coord
+    kpoints_get_path_coord,       &
+    kpoints_grid_init,            &
+    kpoints_path_generate,        &
+    kpoints_to_reduced,           & 
+    kpoints_fold_to_1BZ,          &
+    kpoints_grid_end
 
   type kpoints_grid_t
+    ! Components are public by default
     FLOAT, pointer   :: point(:, :)
     FLOAT, pointer   :: point1BZ(:, :)
     FLOAT, pointer   :: red_point(:, :)
@@ -69,6 +75,7 @@ module kpoints_oct_m
   end type kpoints_grid_t
 
   type kpoints_t
+    ! Components are public by default
     type(kpoints_grid_t) :: full
     type(kpoints_grid_t) :: reduced
 
@@ -79,12 +86,12 @@ module kpoints_oct_m
     integer              :: nik_skip=0 !< number of user defined points with zero weight
 
     !> For the modified Monkhorst-Pack scheme
-    integer              :: nik_axis(MAX_DIM)    !< number of MP divisions
-    integer, pointer     :: symmetry_ops(:, :)  !< (reduced%npoints, nops)
-    integer, pointer     :: num_symmetry_ops(:) !< (reduced%npoints)
+    integer                   :: nik_axis(MAX_DIM)    !< number of MP divisions
+    integer, pointer, private :: symmetry_ops(:, :)  !< (reduced%npoints, nops)
+    integer, pointer, private :: num_symmetry_ops(:) !< (reduced%npoints)
 
     !> For the output of a band-structure
-    FLOAT, pointer       :: coord_along_path(:)
+    FLOAT, pointer            :: coord_along_path(:)
   end type kpoints_t
 
   integer, public, parameter ::        &
@@ -228,8 +235,9 @@ contains
   end subroutine kpoints_nullify
 
   ! ---------------------------------------------------------
-  subroutine kpoints_init(this, symm, dim, rlattice, klattice, only_gamma)
+  subroutine kpoints_init(this, parser, symm, dim, rlattice, klattice, only_gamma)
     type(kpoints_t),    intent(out) :: this
+    type(parser_t),     intent(in)  :: parser
     type(symmetries_t), intent(in)  :: symm
     integer,            intent(in)  :: dim
     FLOAT,              intent(in)  :: rlattice(:,:), klattice(:,:)
@@ -263,7 +271,7 @@ contains
     !% automatic).
     !%
     !%End
-    call parse_variable('KPointsUseSymmetries', .false., this%use_symmetries)
+    call parse_variable(parser, 'KPointsUseSymmetries', .false., this%use_symmetries)
 
     !%Variable KPointsUseTimeReversal
     !%Type logical
@@ -283,7 +291,7 @@ contains
     !%
     !%End
     default_timereversal = this%use_symmetries .and. .not. symmetries_have_break_dir(symm)
-    call parse_variable('KPointsUseTimeReversal', default_timereversal, this%use_time_reversal)
+    call parse_variable(parser, 'KPointsUseTimeReversal', default_timereversal, this%use_time_reversal)
 
     !We determine the method used to define k-point
     this%method = 0
@@ -296,14 +304,14 @@ contains
     end if
 
     !Monkhorst Pack grid
-    if(parse_is_defined('KPointsGrid')) then
+    if(parse_is_defined(parser, 'KPointsGrid')) then
       this%method = this%method + KPOINTS_MONKH_PACK
       
       call read_MP(gamma_only = .false.)
     end if
 
     !User-defined kpoints
-    if(parse_is_defined('KPointsReduced').or. parse_is_defined('KPoints')) then
+    if(parse_is_defined(parser, 'KPointsReduced').or. parse_is_defined(parser, 'KPoints')) then
       this%method = this%method + KPOINTS_USER
 
       if(this%use_symmetries) then
@@ -315,7 +323,7 @@ contains
     end if
 
     !User-defined k-points path
-    if(parse_is_defined('KPointsPath')) then
+    if(parse_is_defined(parser, 'KPointsPath')) then
       this%method = this%method + KPOINTS_PATH
        
       if(this%use_symmetries) then
@@ -394,7 +402,7 @@ contains
 
       PUSH_SUB(kpoints_init.read_MP)
 
-      call messages_obsolete_variable('KPointsMonkhorstPack', 'KPointsGrid')
+      call messages_obsolete_variable(parser, 'KPointsMonkhorstPack', 'KPointsGrid')
 
       !%Variable KPointsGrid
       !%Type block
@@ -429,7 +437,7 @@ contains
 
       gamma_only_ = gamma_only
       if(.not. gamma_only_) &
-        gamma_only_ = (parse_block('KPointsGrid', blk) /= 0)
+        gamma_only_ = (parse_block(parser, 'KPointsGrid', blk) /= 0)
 
       this%nik_axis(1:MAX_DIM) = 1
 
@@ -601,7 +609,7 @@ contains
       !%
       !%End
 
-      if(parse_block('KPointsPath', blk) /= 0) then
+      if(parse_block(parser, 'KPointsPath', blk) /= 0) then
         write(message(1),'(a)') 'Internal error while reading KPointsPath.'
         call messages_fatal(1)
       end if
@@ -722,8 +730,8 @@ contains
       !%End
 
       reduced = .false.
-      if(parse_block('KPoints', blk) /= 0 ) then
-        if(parse_block('KPointsReduced', blk) == 0) then
+      if(parse_block(parser, 'KPoints', blk) /= 0 ) then
+        if(parse_block(parser, 'KPointsReduced', blk) == 0) then
           reduced = .true.
         else
           ! This case should really never happen. But why not dying otherwise?!
@@ -1075,7 +1083,7 @@ contains
      
       vec(1:dim) = kpt2(1:dim)-kpt1(1:dim) 
       length = sqrt(sum(vec(1:dim)**2)) 
-      total_length = total_length + length
+      if(resolution(is) > 0) total_length = total_length + length
     end do 
 
     accumulated_length = M_ZERO
@@ -1095,7 +1103,7 @@ contains
         coord(kpt_ind) = accumulated_length + (ik-1)*length/resolution(is) 
         kpoints(1:dim, kpt_ind) = kpt1(1:dim) + (ik-1)*length/resolution(is)*vec(1:dim)
       end do
-      accumulated_length = accumulated_length + length
+      if(resolution(is) > 0) accumulated_length = accumulated_length + length
     end do
     !We add the last point
     kpt_ind = kpt_ind +1

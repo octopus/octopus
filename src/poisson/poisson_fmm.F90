@@ -67,6 +67,7 @@ module poisson_fmm_oct_m
 #endif
 
   type poisson_fmm_t
+    private
     FLOAT   :: delta_E_fmm
     FLOAT   :: alpha_fmm  !< Alpha for the correction of the FMM
     type(mpi_grp_t) :: all_nodes_grp !< The communicator for all nodes.
@@ -133,7 +134,7 @@ contains
     !% <tt>DeltaEFMM</tt>.
     !%
     !%End
-    call parse_variable('DeltaEFMM', CNST(1e-4), this%delta_E_fmm)
+    call parse_variable(parser, 'DeltaEFMM', CNST(1e-4), this%delta_E_fmm)
 
     !%Variable AlphaFMM
     !%Type float
@@ -169,7 +170,7 @@ contains
     !% term <math>-\alpha_{FMM}V_{self.int.}(i)</math> is added to the summation (see
     !% the paper for the explicit formulae).
     !%End
-    call parse_variable('AlphaFMM', CNST(0.291262136), this%alpha_fmm)
+    call parse_variable(parser, 'AlphaFMM', CNST(0.291262136), this%alpha_fmm)
 
     ! FMM: Variable periodic sets periodicity
     ! 0 = open system

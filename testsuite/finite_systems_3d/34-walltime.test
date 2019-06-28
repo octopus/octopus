@@ -1,0 +1,34 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Walltime
+Program    : octopus
+TestGroups : short-run, finite_systems_3d
+Enabled    : Yes
+
+# Note: the first 4 runs should _not_ reach full SCF convergence, otherwise
+# all the final results will be identical whether or not the restart of the 
+# density, vhxc, and mixing is working properly.
+
+Precision : 7.0e-6
+# First start a ground state calculation that uses the mixing of the density
+Input: 34-walltime.01-gs_walltime.inp
+match ; SCF convergence ; GREPCOUNT(workdir/static/info, 'SCF \*not\* converged') ; 1
+match ; Walltimer ; GREPCOUNT(out, 'Walltimer stopping execution') ; 1
+match ; Writing States ; GREPCOUNT(out, 'Finished writing states') ; 1
+
+# Now restart the previous calculation reading the states, the density, and the mixing
+Input: 34-walltime.02-restart_gs.inp
+match ; Reading States ; GREPCOUNT(out, 'Info: States reading done.') ; 1
+match ; SCF convergence ; GREPCOUNT(workdir/static/info, 'SCF converged') ; 1
+match ; Initial energy ; GREPFIELD(workdir/static/info, 'Total       =', 3) ; -37.92522847
+
+# Now start a TD propagation
+Input: 34-walltime.03-td_walltime.inp
+match ; Walltimer ; GREPCOUNT(out, 'Walltimer stopping execution') ; 1
+match ; Writing States ; GREPCOUNT(out, 'Finished writing states') ; 1
+
+# Finally restart the time propagation after being stopped
+Input: 34-walltime.04-restart_td.inp
+match ; Reading States ; GREPCOUNT(out, 'Info: States reading done.') ; 1
+match ; Energy [step 50] ; LINEFIELD(workdir/td.general/energy, -1, 3) ; -3.792367769449e+01
+

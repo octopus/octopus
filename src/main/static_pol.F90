@@ -80,8 +80,8 @@ contains
     call init_()
 
     ! load wavefunctions
-    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_load(gs_restart, sys%st, sys%gr, ierr)
+    call restart_init(gs_restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+    if(ierr == 0) call states_load(gs_restart, sys%parser, sys%st, sys%gr, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)
@@ -107,10 +107,10 @@ contains
     diagonal_done = .false.
     field_written = .false.
 
-    call restart_init(restart_dump, RESTART_EM_RESP_FD, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
+    call restart_init(restart_dump, sys%parser, RESTART_EM_RESP_FD, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
     if(.not. fromScratch) then
-      call restart_init(restart_load, RESTART_EM_RESP_FD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
+      call restart_init(restart_load, sys%parser, RESTART_EM_RESP_FD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
       if(ierr == 0) then
         iunit = restart_open(restart_load, RESTART_FILE)
       else
@@ -189,8 +189,8 @@ contains
     gs_rho = M_ZERO
 
     call output_init_()
-    call scf_init(scfv, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks)
-    call Born_charges_init(Born_charges, sys%geo, sys%st, sys%gr%mesh%sb%dim)
+    call scf_init(scfv, sys%parser, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks)
+    call born_charges_init(Born_charges, sys%parser, sys%geo, sys%st, sys%gr%mesh%sb%dim)
 
     ! now calculate the dipole without field
 
@@ -200,7 +200,7 @@ contains
     write(message(1), '(a)')
     write(message(2), '(a)') 'Info: Calculating dipole moment for zero field.'
     call messages_info(2)
-    call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
+    call scf_run(scfv, sys%parser, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
 
     gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
     trrho = M_ZERO
@@ -255,7 +255,7 @@ contains
 
         if(.not. fromScratch) then
           call restart_open_dir(restart_load, trim(dir_name), ierr)
-          if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr)
+          if (ierr == 0) call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr)
           call system_h_setup(sys, hm)
           if(ierr /= 0) fromScratch_local = .true.
           call restart_close_dir(restart_load)
@@ -271,7 +271,7 @@ contains
         end if
 
         call scf_mix_clear(scfv)
-        call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
+        call scf_run(scfv, sys%parser, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
 
         trrho = M_ZERO
         do is = 1, sys%st%d%spin_channels
@@ -335,7 +335,7 @@ contains
 
       if(.not. fromScratch) then
         call restart_open_dir(restart_load, "field_yz+", ierr)
-        if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr)
+        if (ierr == 0) call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr)
         call system_h_setup(sys, hm)
         if(ierr /= 0) fromScratch_local = .true.
         call restart_close_dir(restart_load)
@@ -351,7 +351,7 @@ contains
       end if
 
       call scf_mix_clear(scfv)
-      call scf_run(scfv, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
+      call scf_run(scfv, sys%parser, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, gs_run=.false., verbosity = verbosity)
   
       trrho = M_ZERO
       do is = 1, sys%st%d%spin_channels
@@ -411,7 +411,7 @@ contains
 
       call states_allocate_wfns(sys%st, sys%gr%mesh)
 
-      call messages_obsolete_variable("EMStaticField", "EMStaticElectricField")
+      call messages_obsolete_variable(sys%parser, "EMStaticField", "EMStaticElectricField")
       !%Variable EMStaticElectricField
       !%Type float
       !%Default 0.01 a.u.
@@ -420,7 +420,7 @@ contains
       !% Magnitude of the static electric field used to calculate the static polarizability,
       !% if <tt>ResponseMethod = finite_differences</tt>.
       !%End
-      call parse_variable('EMStaticElectricField', CNST(0.01), e_field, units_inp%force)
+      call parse_variable(sys%parser, 'EMStaticElectricField', CNST(0.01), e_field, units_inp%force)
       if (e_field <= M_ZERO) then
         write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid EMStaticElectricField."
         message(2) = '(Must have EMStaticElectricField > 0)'
@@ -428,7 +428,7 @@ contains
       end if
 
       ! variable defined in em_resp
-      call parse_variable('EMCalcBornCharges', .false., calc_Born)
+      call parse_variable(sys%parser, 'EMCalcBornCharges', .false., calc_Born)
       if (calc_Born) call messages_experimental("Calculation of Born effective charges")
 
       !%Variable EMStartDensityIsZeroField
@@ -442,7 +442,7 @@ contains
       !% to initialize the calculation for each field from scratch, as specified by the LCAO variables. 
       !% Only applies if <tt>ResponseMethod = finite_differences</tt>.
       !%End
-      call parse_variable('EMStartDensityIsZeroField', .true., start_density_is_zero_field)
+      call parse_variable(sys%parser, 'EMStartDensityIsZeroField', .true., start_density_is_zero_field)
 
       !%Variable EMCalcDiagonalField
       !%Type logical
@@ -452,7 +452,7 @@ contains
       !% Calculate <i>yz</i>-field for <math>\beta_{xyz}</math> hyperpolarizability, which is sometimes harder to converge.
       !% Only applies if <tt>ResponseMethod = finite_differences</tt>.
       !%End
-      call parse_variable('EMCalcDiagonalField', .true., calc_diagonal)
+      call parse_variable(sys%parser, 'EMCalcDiagonalField', .true., calc_diagonal)
 
       !%Variable EMWriteRestartDensities
       !%Type logical
@@ -463,7 +463,7 @@ contains
       !% Only applies if <tt>ResponseMethod = finite_differences</tt>. Restarting from calculations at smaller
       !% fields can be helpful if there are convergence problems.
       !%End
-      call parse_variable('EMWriteRestartDensities', .true., write_restart_densities)
+      call parse_variable(sys%parser, 'EMWriteRestartDensities', .true., write_restart_densities)
 
       !%Variable EMVerbose
       !%Type logical
@@ -473,7 +473,7 @@ contains
       !% Write full SCF output.
       !% Only applies if <tt>ResponseMethod = finite_differences</tt>.
       !%End
-      call parse_variable('EMVerbose', .false., verbose)
+      call parse_variable(sys%parser, 'EMVerbose', .false., verbose)
 
       if(verbose) then
         verbosity = VERB_FULL

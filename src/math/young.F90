@@ -39,10 +39,12 @@ module young_oct_m
             young_end,            &
             young_t
 
-  type young_t 
-   integer :: nyoung, nup, ndown, iyoung
-   integer, pointer :: young_up(:,:)
-   integer, pointer :: young_down(:,:)
+  type young_t
+    private
+    integer,          public :: nyoung
+    integer                  :: nup, ndown, iyoung
+    integer, pointer, public :: young_up(:,:)
+    integer, pointer, public :: young_down(:,:)
   end type young_t 
 
 contains

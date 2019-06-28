@@ -46,6 +46,7 @@ module unit_system_oct_m
     unit_system_from_file
 
   type unit_system_t
+    ! Components are public by default
     type(unit_t) :: length
     type(unit_t) :: length_xyz_file
     type(unit_t) :: energy
@@ -81,7 +82,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine unit_system_init()
+  subroutine unit_system_init(parser)
+    type(parser_t),             intent(in) :: parser
+    
     integer :: cc, cinp, cout, xyz_units
 
     PUSH_SUB(unit_system_init)
@@ -148,19 +151,19 @@ contains
     !% units are derived from these and <math>\hbar=1</math>.
     !%End
 
-    if(parse_is_defined('Units') .or. parse_is_defined('Units')) then
+    if(parse_is_defined(parser, 'Units') .or. parse_is_defined(parser, 'Units')) then
       call messages_write("The 'Units' variable is obsolete. Now Octopus always works in atomic", new_line = .true.)
       call messages_write("units. For different units you can use values like 'angstrom', 'eV' ", new_line = .true.)
       call messages_write("and others in the input file.")
       call messages_fatal()
     end if
 
-    call messages_obsolete_variable('Units')
-    call messages_obsolete_variable('UnitsInput')
+    call messages_obsolete_variable(parser, 'Units')
+    call messages_obsolete_variable(parser, 'UnitsInput')
 
     cinp = UNITS_ATOMIC
     
-    call parse_variable('UnitsOutput', UNITS_ATOMIC, cc)
+    call parse_variable(parser, 'UnitsOutput', UNITS_ATOMIC, cc)
     if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call messages_input_error('UnitsOutput')
     cout = cc
 
@@ -233,7 +236,7 @@ contains
     !% coordinates in Angstrom.
     !%End
 
-    call parse_variable('UnitsXYZFiles', OPTION__UNITSXYZFILES__ANGSTROM_UNITS, xyz_units)
+    call parse_variable(parser, 'UnitsXYZFiles', OPTION__UNITSXYZFILES__ANGSTROM_UNITS, xyz_units)
 
     if(.not.varinfo_valid_option('UnitsXYZFiles', xyz_units)) call messages_input_error('UnitsXYZFiles', 'Invalid option')
 

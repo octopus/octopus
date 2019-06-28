@@ -17,8 +17,9 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine xc_kli_pauli_solve(mesh, st, oep)
+subroutine xc_kli_pauli_solve(mesh, parser, st, oep)
   type(mesh_t),   intent(in)    :: mesh
+  type(parser_t), intent(in)    :: parser
   type(states_t), intent(in)    :: st
   type(xc_oep_t), intent(inout) :: oep
   !
@@ -109,7 +110,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
     vs = vloc ! Slater part
 
     ! iteration criteria
-    call scf_tol_init(oep%scftol, st%qtot, def_maximumiter=50)
+    call scf_tol_init(oep%scftol, parser, st%qtot, def_maximumiter=50)
 
     ! get the HOMO state
     call xc_oep_AnalyzeEigen(oep, st, 1)

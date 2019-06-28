@@ -43,6 +43,7 @@ module oct_exchange_oct_m
     zoct_exchange_operator
 
   type oct_exchange_t
+    private
     logical :: oct_exchange
     type(states_t), pointer :: oct_st
     FLOAT, pointer :: oct_fxc(:, :, :)

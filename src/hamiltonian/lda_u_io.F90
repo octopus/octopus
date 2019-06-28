@@ -29,6 +29,7 @@ module lda_u_io_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
   use species_oct_m
@@ -495,11 +496,13 @@ contains
 
 
  ! ---------------------------------------------------------
-  subroutine lda_u_load(restart, this, st, ierr)
+  subroutine lda_u_load(restart, this, st, ierr, occ_only, u_only)
     type(restart_t),      intent(in)    :: restart
     type(lda_u_t),        intent(inout) :: this
     type(states_t),       intent(in)    :: st
     integer,              intent(out)   :: ierr
+    logical, optional,    intent(in)    :: occ_only
+    logical, optional,    intent(in)    :: u_only
 
     integer :: err, occsize
     FLOAT, allocatable :: Ueff(:), docc(:)
@@ -521,7 +524,7 @@ contains
     end if
 
     !We have to read the effective U first, as we call lda_u_uptade_potential latter
-    if(this%level == DFT_U_ACBN0) then
+    if(this%level == DFT_U_ACBN0 .and. .not. optional_default(occ_only, .false.)) then
       SAFE_ALLOCATE(Ueff(1:this%norbsets))
       call drestart_read_binary(restart, "lda_u_Ueff", this%norbsets, Ueff, err)
       if (err /= 0) ierr = ierr + 1
@@ -530,23 +533,25 @@ contains
     end if
 
 
-    occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
-    if(this%level == DFT_U_ACBN0) occsize = occsize*2
+    if(.not. optional_default(u_only, .false.)) then
+      occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
+      if(this%level == DFT_U_ACBN0) occsize = occsize*2
 
-    if (states_are_real(st)) then
-      SAFE_ALLOCATE(docc(1:occsize))
-      call drestart_read_binary(restart, "lda_u_occ", occsize, docc, err) 
-      if (err /= 0) ierr = ierr + 1
-      call dlda_u_set_occupations(this, docc)
-      call dlda_u_update_potential(this, st)
-      SAFE_DEALLOCATE_A(docc)
-    else
-      SAFE_ALLOCATE(zocc(1:occsize))
-      call zrestart_read_binary(restart, "lda_u_occ", occsize, zocc, err)
-      if (err /= 0) ierr = ierr + 1
-      call zlda_u_set_occupations(this, zocc)
-      call zlda_u_update_potential(this, st)
-      SAFE_DEALLOCATE_A(zocc)
+      if (states_are_real(st)) then
+        SAFE_ALLOCATE(docc(1:occsize))
+        call drestart_read_binary(restart, "lda_u_occ", occsize, docc, err) 
+        if (err /= 0) ierr = ierr + 1
+        call dlda_u_set_occupations(this, docc)
+        call dlda_u_update_potential(this, st)
+        SAFE_DEALLOCATE_A(docc)
+      else
+        SAFE_ALLOCATE(zocc(1:occsize))
+        call zrestart_read_binary(restart, "lda_u_occ", occsize, zocc, err)
+        if (err /= 0) ierr = ierr + 1
+        call zlda_u_set_occupations(this, zocc)
+        call zlda_u_update_potential(this, st)
+        SAFE_DEALLOCATE_A(zocc)
+      end if
     end if
 
     if (debug%info) then
@@ -559,8 +564,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lda_u_loadbasis(lda_u, st, mesh, mc, ierr)
+  subroutine lda_u_loadbasis(lda_u, parser, st, mesh, mc, ierr)
     type(lda_u_t),        intent(inout) :: lda_u
+    type(parser_t),       intent(in)  :: parser
     type(states_t),       intent(in)    :: st
     type(mesh_t),         intent(in)    :: mesh
     type(multicomm_t),    intent(in)    :: mc
@@ -587,7 +593,7 @@ contains
       call messages_info(1)
     end if
 
-    call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, mc, err, mesh=mesh)
+    call restart_init(restart_gs, parser, RESTART_PROJ, RESTART_TYPE_LOAD, mc, err, mesh=mesh)
 
     ! open files to read
     wfns_file  = restart_open(restart_gs, 'wfns')

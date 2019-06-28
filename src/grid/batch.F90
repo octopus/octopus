@@ -64,6 +64,7 @@ module batch_oct_m
   
   !--------------------------------------------------------------
   type batch_state_t
+    ! Components are public by default
     FLOAT,      pointer :: dpsi(:, :)
     CMPLX,      pointer :: zpsi(:, :)
     real(4),    pointer :: spsi(:, :)
@@ -72,6 +73,7 @@ module batch_oct_m
   end type batch_state_t
 
   type batch_state_l_t
+    ! Components are public by default
     FLOAT,      pointer :: dpsi(:)
     CMPLX,      pointer :: zpsi(:)
     real(4),    pointer :: spsi(:)
@@ -79,6 +81,7 @@ module batch_oct_m
   end type batch_state_l_t
   
   type batch_pack_t
+    ! Components are public by default
     integer                        :: size(1:2)
     integer                        :: size_real(1:2)
     FLOAT,      allocatable        :: dpsi(:, :)
@@ -89,31 +92,32 @@ module batch_oct_m
   end type batch_pack_t
   
   type batch_t
-    type(batch_state_t), pointer   :: states(:)
-    integer                        :: nst
-    integer                        :: current
-    integer                        :: dim
-    integer                        :: max_size
+    private
+    type(batch_state_t),   pointer, public :: states(:)
+    integer,                        public :: nst
+    integer                                :: current
+    integer,                        public :: dim
+    integer                                :: max_size
 
-    integer                        :: ndims
-    integer,             pointer   :: ist_idim_index(:, :)
+    integer                                :: ndims
+    integer,               pointer         :: ist_idim_index(:, :)
 
-    logical                        :: is_allocated
-    logical                        :: mirror !< keep a copy of the batch data in unpacked form
+    logical                                :: is_allocated
+    logical                                :: mirror !< keep a copy of the batch data in unpacked form
 
     !> We also need a linear array with the states in order to calculate derivatives, etc.
-    integer                        :: nst_linear
-    type(batch_state_l_t), pointer :: states_linear(:)
+    integer,                        public :: nst_linear
+    type(batch_state_l_t), pointer, public :: states_linear(:)
 
     !> If the memory is contiguous, we can perform some operations faster.
-    FLOAT,               pointer   :: dpsicont(:, :, :)
-    CMPLX,               pointer   :: zpsicont(:, :, :)
-    real(4),             pointer   :: spsicont(:, :, :)
-    complex(4),          pointer   :: cpsicont(:, :, :)
-    integer                        :: status
-    integer                        :: in_buffer_count !< whether there is a copy in the opencl buffer
-    type(batch_pack_t)             :: pack
-    type(type_t)                   :: type !< only available if the batched is packed
+    FLOAT,                 pointer, public :: dpsicont(:, :, :)
+    CMPLX,                 pointer, public :: zpsicont(:, :, :)
+    real(4),               pointer, public :: spsicont(:, :, :)
+    complex(4),            pointer, public :: cpsicont(:, :, :)
+    integer                                :: status
+    integer                                :: in_buffer_count !< whether there is a copy in the opencl buffer
+    type(batch_pack_t),             public :: pack
+    type(type_t)                           :: type !< only available if the batched is packed
   end type batch_t
 
   !--------------------------------------------------------------

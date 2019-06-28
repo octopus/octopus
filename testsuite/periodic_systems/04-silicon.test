@@ -170,10 +170,10 @@ match ; Mag.-opt. Im epsilon       ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Im
 match ; Mag.-opt. Im epsilon       ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'Im epsilon', 10) ; 0.70069675E+01
 
 Precision : 0.0005
-match ; MO Re eps (w/o G=0)        ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'LRC kernel', 7, 4) ; 0.31105770
-match ; MO Re eps (w/o G=0)        ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'LRC kernel', 8, 4) ; 0.31105770
-match ; MO Re eps (w/o G=0)        ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'LRC kernel', 9, 4) ; 0.31105770
-match ; MO Re eps (w/o G=0)        ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'LRC kernel', 10, 4); 0.31105770
+match ; MO Re eps (w/o G=0)        ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'LRC kernel', 7, 4) ; 0.31086729
+match ; MO Re eps (w/o G=0)        ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'LRC kernel', 8, 4) ; 0.31086729
+match ; MO Re eps (w/o G=0)        ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'LRC kernel', 9, 4) ; 0.31086729
+match ; MO Re eps (w/o G=0)        ; GREPFIELD(em_resp/freq_0.1000/alpha_mo, 'LRC kernel', 10, 4) ; 0.31086729
 
 Precision : 0.001
 match ; Mag.-opt. Re eps at kpt    ; GREPFIELD(em_resp/freq_0.1000/epsilon_mo_k, "  4   ", 8) ; 0.78915820E+01
@@ -186,4 +186,3 @@ Precision : 0.3
 match ; Susceptibility XX          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 1, 1) ; -6185.012367
 match ; Susceptibility YY          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 2, 2) ; -6185.012367
 match ; Susceptibility ZZ          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 3, 3) ; -6185.012367
-

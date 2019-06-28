@@ -56,6 +56,7 @@ module rdmft_oct_m
        scf_rdmft
 
   type rdm_t
+    private
     type(states_t) :: psi
     integer  :: max_iter
     integer  :: iter
@@ -79,8 +80,9 @@ contains
   ! ----------------------------------------
 
   ! scf for the occupation numbers and the natural orbitals
-  subroutine scf_rdmft(gr, geo, st, ks, hm, outp, max_iter, restart_dump)
+  subroutine scf_rdmft(gr, parser, geo, st, ks, hm, outp, max_iter, restart_dump)
     type(grid_t),  target, intent(inout) :: gr  !< grid
+    type(parser_t),        intent(in)    :: parser
     type(geometry_t),      intent(inout) :: geo !< geometry
     type(states_t),target, intent(inout) :: st  !< States
     type(v_ks_t),          intent(inout) :: ks  !< Kohn-Sham
@@ -176,9 +178,9 @@ contains
       call messages_info(1)
       do icount = 1, maxcount !still under investigation how many iterations we need
         if (rdm%do_basis.eqv..false.) then
-          call scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
+          call scf_orb_direct(rdm, parser, gr, geo, st, ks, hm, stepsize, energy)
         else
-          call scf_orb(rdm, gr, geo, st, ks, hm, energy)
+          call scf_orb(rdm, parser, gr, geo, st, ks, hm, energy)
         end if
         energy_dif = energy - energy_old
         energy_old = energy
@@ -229,7 +231,7 @@ contains
       if(outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
-        call output_all(outp, gr, geo, st, hm, ks, dirname)
+        call output_all(outp, parser, gr, geo, st, hm, ks, dirname)
       end if
 
       if (conv) exit
@@ -248,7 +250,7 @@ contains
       call messages_info(2)
       if(gs_run_) then 
         !call scf_write_static(STATIC_DIR, "info") !NH can we turn this on?
-        call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
+        call output_all(outp, parser, gr, geo, st, hm, ks, STATIC_DIR)
       end if
     else
       write(message(1),'(a,i3,a)')  'The calculation did not converge after ', iter, ' iterations '
@@ -294,7 +296,7 @@ contains
       !% for the occupation number minimization also stops according to this criterion.
       !%End
 
-      call parse_variable('RDMTolerance', CNST(1.0e-7), rdm%toler)
+      call parse_variable(parser, 'RDMTolerance', CNST(1.0e-7), rdm%toler)
 
       !%Variable RDMConvEner
       !%Type float
@@ -308,7 +310,7 @@ contains
       !% orbitals is smaller than this criterion. It is also used to exit the orbital minimization.
       !%End
 
-      call parse_variable('RDMConvEner', CNST(1.0e-7), rdm%conv_ener)
+      call parse_variable(parser, 'RDMConvEner', CNST(1.0e-7), rdm%conv_ener)
       
       !%Variable RDMBasis
       !%Type logical
@@ -319,7 +321,7 @@ contains
       !% not be calculated on the grid but on the basis of the initial orbitals
       !%End
 
-      call parse_variable('RDMBasis',.true., rdm%do_basis)
+      call parse_variable(parser, 'RDMBasis',.true., rdm%do_basis)
 
       ! shortcuts
       rdm%gr   => gr
@@ -615,8 +617,9 @@ contains
   ! --------------------------------------------
     
   ! scf for the natural orbitals
-  subroutine scf_orb(rdm, gr, geo, st, ks, hm, energy)
+  subroutine scf_orb(rdm, parser, gr, geo, st, ks, hm, energy)
     type(rdm_t),          intent(inout) :: rdm
+    type(parser_t),       intent(in)    :: parser
     type(grid_t),         intent(inout) :: gr !< grid
     type(geometry_t),     intent(inout) :: geo !< geometry
     type(states_t),       intent(inout) :: st !< States
@@ -637,7 +640,7 @@ contains
     FO = M_ZERO
     if (rdm%do_basis.eqv..false.) then 
       call density_calc (st,gr,st%rho)
-      call v_ks_calc(ks,hm,st,geo)
+      call v_ks_calc(ks, parser, hm, st, geo)
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
     end if
 
@@ -687,9 +690,9 @@ contains
   ! Minimize the total energy wrt. an orbital by steepest descent
   !---------------------------------------------------------------
 
-  subroutine scf_orb_direct(rdm, gr, geo, st, ks, hm, stepsize, energy)
-    
+  subroutine scf_orb_direct(rdm, parser, gr, geo, st, ks, hm, stepsize, energy)
     type(rdm_t),          intent(inout) :: rdm
+    type(parser_t),       intent(in)    :: parser
     type(grid_t),         intent(inout) :: gr !< grid
     type(geometry_t),     intent(inout) :: geo !< geometry
     type(states_t),       intent(inout) :: st !< States
@@ -721,7 +724,7 @@ contains
     thresh = 1d-10
 
     call density_calc (st, gr, st%rho)
-    call v_ks_calc(ks, hm, st, geo)
+    call v_ks_calc(ks, parser, hm, st, geo)
     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
 
     call rdm_derivatives(rdm, hm, st, gr)
@@ -777,7 +780,7 @@ contains
         
         !calculate total energy
         call density_calc (st, gr, st%rho)
-        call v_ks_calc(ks, hm, st, geo)
+        call v_ks_calc(ks, parser, hm, st, geo)
         call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
         call rdm_derivatives(rdm, hm, st, gr)
         call total_energy_rdm(rdm, st%occ(:,1), energy)
