@@ -668,14 +668,6 @@ contains
     where(occin(:,:) > st%smear%el_per_state-smallocc) occin(:,:) = st%smear%el_per_state - smallocc
 
     !Renormalize the occupation numbers 
-    rdm%occsum = M_ZERO
-
-    do ist = 1, st%nst
-      do ik = 1, st%d%nik
-        rdm%occsum = rdm%occsum + occin(ist,ik)
-      end do
-    end do
-
     rdm%occsum = st%qtot
 
     st%occ = occin
