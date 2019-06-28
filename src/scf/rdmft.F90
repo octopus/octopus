@@ -390,19 +390,19 @@ contains
       if ((conv .or. (modulo(iter, outp%restart_write_interval) == 0) .or. iter == max_iter)) then
         if (rdm%do_basis) then
           call states_copy(states_save, st)
-          SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part, 1:st%d%dim))
-          SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part, 1:st%d%dim))
+          SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:st%d%dim))
+          SAFE_ALLOCATE(dpsi2(1:gr%mesh%np, 1:st%d%dim))
           do iorb = 1, st%nst
             dpsi = M_ZERO
             do ist = 1, st%nst
               call states_get_state(st, gr%mesh, ist, 1, dpsi2)
-              forall(ip=1:gr%mesh%np_part)
+              forall(ip = 1:gr%mesh%np)
                 dpsi(ip,1) = dpsi(ip,1) + rdm%vecnat(ist, iorb)*dpsi2(ip,1)
               end forall
             end do
             call states_set_state(states_save, gr%mesh, iorb, 1, dpsi)
           end do
-          call density_calc (states_save,gr,states_save%rho)
+          call density_calc(states_save, gr, states_save%rho)
           ! if other quantities besides the densities and the states are needed they also have to be recalculated here!
           call states_dump(restart_dump, states_save, gr, ierr, iter=iter) 
 
@@ -1013,8 +1013,8 @@ contains
 
     !calculate the Lagrange multiplyer lambda matrix on the grid, Eq. (9), Piris and Ugalde, Vol. 30, No. 13, J. Comput. Chem.
     if (.not. rdm%do_basis) then
-      SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part,1:st%d%dim))
-      SAFE_ALLOCATE(hpsi1(1:gr%mesh%np_part,1:st%d%dim))
+      SAFE_ALLOCATE(hpsi(1:gr%mesh%np,1:st%d%dim))
+      SAFE_ALLOCATE(hpsi1(1:gr%mesh%np,1:st%d%dim))
       SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part ,1:st%d%dim))
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part ,1:st%d%dim))
 
