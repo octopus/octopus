@@ -384,7 +384,7 @@ contains
         conv = rel_ener < rdm%conv_ener
       endif
  
-      if (rdm%toler > 1e-4) rdm%toler = rdm%toler*1e-1 !Is this still okay or does it restrict the possible convergence? FB: Does this makes sense at all?
+      if (rdm%toler > CNST(1e-4)) rdm%toler = rdm%toler*CNST(1e-1) !Is this still okay or does it restrict the possible convergence? FB: Does this makes sense at all?
 
       ! save restart information
       if ((conv .or. (modulo(iter, outp%restart_write_interval) == 0) .or. iter == max_iter)) then
@@ -577,8 +577,8 @@ contains
     
     occin = M_ZERO
     occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
-    where(occin(:,:) < 1) occin(:,:) = M_ZERO
-    where(occin(:,:) > 1) occin(:,:) = st%smear%el_per_state
+    where(occin(:,:) < M_ONE) occin(:,:) = M_ZERO
+    where(occin(:,:) > M_ONE) occin(:,:) = st%smear%el_per_state
     
     st%occ = occin
 
