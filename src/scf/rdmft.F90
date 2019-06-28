@@ -575,7 +575,6 @@ contains
 
     SAFE_ALLOCATE(occin(1:st%nst, 1:st%d%nik))
     
-    occin = M_ZERO
     occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
     where(occin(:,:) < M_ONE) occin(:,:) = M_ZERO
     where(occin(:,:) > M_ONE) occin(:,:) = st%smear%el_per_state
@@ -1019,11 +1018,6 @@ contains
       SAFE_ALLOCATE(dpsi2(1:gr%mesh%np_part ,1:st%d%dim))
       SAFE_ALLOCATE(dpsi(1:gr%mesh%np_part ,1:st%d%dim))
 
-      hpsi = M_ZERO
-      hpsi1 = M_ZERO
-      dpsi2 = M_ZERO
-      dpsi = M_ZERO
- 
       do iorb = 1, st%nst
         call states_get_state(st, gr%mesh, iorb, 1, dpsi)
         call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, iorb, 1)
