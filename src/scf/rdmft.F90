@@ -917,9 +917,8 @@ contains
     FLOAT,                intent(out)   :: energy    
 
     integer            :: ik, ist
-    integer            :: maxiter, nstconv_ ! maximum number of orbital optimization iterations
+    integer            :: maxiter ! maximum number of orbital optimization iterations
     
-    logical :: conv
     type(profile_t), save :: prof_orb_cg
     
     PUSH_SUB(scf_orb_cg)
@@ -927,10 +926,6 @@ contains
     
     call v_ks_calc(ks, parser, hm, st, geo)
     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
-    
-    !parameters for cg_solver
-    conv = .false.
-    nstconv_ = st%nst
     
     rdm%eigens%converged = 0
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
@@ -957,13 +952,6 @@ contains
       rdm%eigens%matvec = rdm%eigens%matvec + maxiter ! necessary?  
     end do
     
-    ! For debug
-    if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
-      write(stdout, '(1x)')
-    end if
-
-    conv = all(rdm%eigens%converged(st%d%kpt%start:st%d%kpt%end) >= nstconv_)
-
     ! calculate total energy with new states
     call density_calc (st, gr, st%rho)
     call v_ks_calc(ks, parser, hm, st, geo)
