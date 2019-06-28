@@ -933,11 +933,11 @@ contains
     nstconv_ = st%nst
     
     rdm%eigens%converged = 0
+    if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
+      call loct_progress_bar(-1, st%lnst*st%d%kpt%nlocal)
+    end if
     do ik = st%d%kpt%start, st%d%kpt%end
       rdm%eigens%matvec = 0  
-      if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then 
-        call loct_progress_bar(-1, st%lnst*st%d%kpt%nlocal)
-      end if
       call deigensolver_cg2(gr, st, hm, rdm%eigens%xc, rdm%eigens%pre, rdm%eigens%tolerance, rdm%eigens%es_maxiter, &
         rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), rdm%eigens%orthogonalize_to_all, &
         rdm%eigens%conjugate_direction, rdm%eigens%additional_terms, rdm%eigens%energy_change_threshold)
