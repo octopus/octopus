@@ -19,6 +19,7 @@
 #include "global.h"
 
 module invert_ks_oct_m
+  use comm_oct_m
   use density_oct_m
   use eigensolver_oct_m
   use global_oct_m
@@ -209,8 +210,11 @@ contains
       ! we now renormalize the density (necessary if we have a charged system)
       rr = M_ZERO
       do ii = 1, sys%st%d%spin_channels
-        rr = rr + dmf_integrate(sys%gr%mesh, target_rho(:, ii))
+        rr = rr + dmf_integrate(sys%gr%mesh, target_rho(:, ii), reduce = .false.)
       end do
+      if(sys%gr%mesh%parallel_in_domains) then
+        call comm_allreduce(sys%gr%mesh%mpi_grp%comm, rr)
+      end if
       rr = sys%st%qtot/rr
       target_rho(:,:) = rr*target_rho(:,:)
 

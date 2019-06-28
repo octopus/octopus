@@ -49,8 +49,12 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
         zf(ip) = exp(M_zI*dot_product(cas%qvector(1:mesh%sb%dim), mesh%x(ip, 1:mesh%sb%dim)))*aimag(zf(ip))*psi_a(ip)
       end do
 
-      zx(ia) = zmf_integrate(mesh, zf)
+      zx(ia) = zmf_integrate(mesh, zf, reduce = .false.)
     end do
+
+    if(mesh%parallel_in_domains) then
+      call comm_allreduce(mesh%mpi_grp%comm, zx)
+    end if
 
     ! intensity
     do ia = 1, cas%n_pairs
@@ -87,8 +91,13 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
             forall(ip = 1:mesh%np)
               zf(ip) = exp(M_zI*dot_product(qvect(1:mesh%sb%dim), mesh%x(ip, 1:mesh%sb%dim)))*aimag(zf(ip))*psi_a(ip)
             end forall
-            zx(ia) = zmf_integrate(mesh, zf)
+            zx(ia) = zmf_integrate(mesh, zf, reduce = .false.)
           end do
+
+          if(mesh%parallel_in_domains) then
+            call comm_allreduce(mesh%mpi_grp%comm, zx)
+          end if
+          
 
           ! intensities
           do ia = 1, cas%n_pairs
@@ -167,8 +176,12 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
       ff(ip) = dv(ip)*sum(R_CONJ(psii(ip, 1:st%d%dim))*psia(ip, 1:st%d%dim))
     end forall
 
-    xx(ia) = X(mf_integrate)(mesh, ff)
+    xx(ia) = X(mf_integrate)(mesh, ff, reduce = .false.)
   end do
+
+   if(mesh%parallel_in_domains) then
+     call comm_allreduce(mesh%mpi_grp%comm, xx)
+   end if
 
   SAFE_DEALLOCATE_A(ff)
 

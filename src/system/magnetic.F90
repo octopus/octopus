@@ -20,6 +20,7 @@
 #include "global.h"
 
 module magnetic_oct_m
+  use comm_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -90,9 +91,13 @@ contains
     SAFE_ALLOCATE(md(1:mesh%np, 1:3))
     call magnetic_density(mesh, st, rho, md)
 
-    mm(1) = dmf_integrate(mesh, md(:, 1))
-    mm(2) = dmf_integrate(mesh, md(:, 2))
-    mm(3) = dmf_integrate(mesh, md(:, 3))
+    mm(1) = dmf_integrate(mesh, md(:, 1), reduce = .false.)
+    mm(2) = dmf_integrate(mesh, md(:, 2), reduce = .false.)
+    mm(3) = dmf_integrate(mesh, md(:, 3), reduce = .false.)
+
+    if(mesh%parallel_in_domains) then
+      call comm_allreduce(mesh%mpi_grp%comm, mm)
+    end if
 
     SAFE_DEALLOCATE_A(md)
 
@@ -171,11 +176,15 @@ contains
       call submesh_init(sphere, mesh%sb, mesh, geo%atom(ia)%x, rr)
       
       do idir = 1, max(mesh%sb%dim, 3)
-        lmm(idir, ia) = dsm_integrate_frommesh(mesh, sphere, md(1:mesh%np,idir))
+        lmm(idir, ia) = dsm_integrate_frommesh(mesh, sphere, md(1:mesh%np,idir), reduce = .false.)
       end do
       
       call submesh_end(sphere) 
     end do
+
+    if(mesh%parallel_in_domains) then
+      call comm_allreduce(mesh%mpi_grp%comm, lmm)
+    end if 
     
     SAFE_DEALLOCATE_A(md)
 

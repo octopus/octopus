@@ -19,6 +19,7 @@
 #include "global.h"
 
 module hirshfeld_oct_m
+  use comm_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -117,9 +118,13 @@ contains
         end do
       end do
       call periodic_copy_end(pp)
-      this%free_volume(iatom) = dmf_integrate(this%mesh, atom_density_acc(:))
+      this%free_volume(iatom) = dmf_integrate(this%mesh, atom_density_acc(:), reduce = .false.)
       this%free_vol_r3(iatom,:) = atom_density_acc(:)
     end do
+
+    if(this%mesh%parallel_in_domains) then
+      call comm_allreduce(this%mesh%mpi_grp%comm, this%free_volume)
+    end if
 
     SAFE_DEALLOCATE_A(atom_density)
     SAFE_DEALLOCATE_A(atom_density_acc)
@@ -385,8 +390,13 @@ contains
 
     call periodic_copy_end(pp_j)
     do idir = 1, this%mesh%sb%dim
-      dposition(idir) = dmf_integrate(this%mesh, grad(1:this%mesh%np, idir))/this%free_volume(iatom)
+      dposition(idir) = dmf_integrate(this%mesh, grad(1:this%mesh%np, idir), reduce = .false.) &
+                             /this%free_volume(iatom)
     end do
+
+    if(this%mesh%parallel_in_domains) then
+      call comm_allreduce(this%mesh%mpi_grp%comm, dposition, dim = this%mesh%sb%dim)
+    end if
 
     SAFE_DEALLOCATE_A(atom_density)
     SAFE_DEALLOCATE_A(atom_derivative)

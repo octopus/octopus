@@ -24,6 +24,7 @@ module lcao_oct_m
   use batch_oct_m
   use blacs_oct_m
   use blacs_proc_grid_oct_m
+  use comm_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
@@ -1307,8 +1308,11 @@ contains
     ! we now renormalize the density (necessary if we have a charged system)
     rr = M_ZERO
     do is = 1, spin_channels
-      rr = rr + dmf_integrate(gr%fine%mesh, rho(:, is))
+      rr = rr + dmf_integrate(gr%fine%mesh, rho(:, is), reduce = .false.)
     end do
+    if(gr%fine%mesh%parallel_in_domains) then
+      call comm_allreduce(gr%fine%mesh%mpi_grp%comm, rr)
+    end if
 
     write(message(1),'(a,f13.6)')'Info: Unnormalized total charge = ', rr
     call messages_info(1)
@@ -1319,8 +1323,11 @@ contains
     end if
     rr = M_ZERO
     do is = 1, spin_channels
-      rr = rr + dmf_integrate(gr%fine%mesh, rho(:, is))
+      rr = rr + dmf_integrate(gr%fine%mesh, rho(:, is),  reduce = .false.)
     end do
+    if(gr%fine%mesh%parallel_in_domains) then
+      call comm_allreduce(gr%fine%mesh%mpi_grp%comm, rr)
+    end if
 
     write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', rr
     call messages_info(1)
