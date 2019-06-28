@@ -308,6 +308,21 @@ while ($_ = <TESTSUITE>) {
                     print "Available options: $options_available\n\n";
                     skip_exit();
                 }
+
+                # FIXME: here we could add code to probe for and remove 'not_' from $options
+
+                if( $option =~ /\bnot_\b/i ) {
+                    if(" $options_available " =~ (" $option "=~ s/not//) )  {
+                        print "\nSkipping test: executable does have the option '$option' required to be absent";
+                        if($options_are_mpi) {
+                            print " for MPI";
+                        }
+                        print ".\n";
+                        print "Executable: $command\n";
+                        print "Available options: $options_available\n\n";
+                        skip_exit();
+                    }
+                }
             }
         }
         # FIXME: import Options to BGW version
@@ -352,6 +367,7 @@ while ($_ = <TESTSUITE>) {
             $np = $1;
         }
 
+        # FIXME: the following block can be removed once "FailingInput" is working.
         elsif ( $_ =~ /^ExpectedFailure\s*:\s(.*)\s*$/) {
 
             $expected_failure = $1;
@@ -362,14 +378,19 @@ while ($_ = <TESTSUITE>) {
             $expect_error = $expected_failure =~ /yes/i;
         }
 
-        elsif ( $_ =~ /^Input\s*:\s*(.*)\s*$/ ) {
+        elsif ( $_ =~ /^Input\s*:\s*(.*)\s*$/  || $_ =~ /^FailingInput\s*:\s*(.*)\s*$/  ) {
             $input_base = $1;
             $input_file = dirname($opt_f) . "/" . $input_base;
 
             my %input_report;
             $r_input_report = \%input_report;          
             $report{$testname}{"input"}{basename($input_file)} = \%input_report;
-          
+
+            if( $_ =~ /^Failing/) {
+                $expect_error = 1;
+                $input_report{"expected_failure"} = $expected_failure;
+            }
+
             my @matches_array;
             $r_matches_array = \@matches_array;
             $input_report{"matches"} = \@matches_array;
