@@ -64,10 +64,10 @@ contains
     type(hamiltonian_t), intent(inout) :: hm
     logical,             intent(inout) :: fromScratch
 
-    type(scf_t)  :: scfv
+    type(scf_t)     :: scfv
     type(restart_t) :: restart_load, restart_dump
-    integer      :: ierr
-    type(rdm_t) :: rdm
+    integer         :: ierr
+    type(rdm_t)     :: rdm
 
     PUSH_SUB(ground_state_run)
 

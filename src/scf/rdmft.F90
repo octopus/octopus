@@ -139,8 +139,8 @@ contains
     !%Default 1e-4 Ha
     !%Section SCF::RDMFT
     !%Description
-    !% Convergence criterion for stopping the diagonalization of the Fock Matrix in the Piris Method. 
-    !% Orbital minimization is stopped when all off-diagonal ellements of the FOck Matrix  
+    !% Convergence criterion for stopping the diagonalization of the Fock matrix in the Piris method.
+    !% Orbital minimization is stopped when all off-diagonal ellements of the Fock matrix 
     !% are smaller than this criterion.
     !%End
     call parse_variable(parser, 'RDMToleranceFO', CNST(1.0e-4), rdm%tolerFO)
@@ -169,8 +169,7 @@ contains
     call parse_variable(parser, 'RDMBasis',.true., rdm%do_basis)
     
     if (rdm%do_basis .and. fromScratch) then
-      call messages_write("RDMFT calculations with RDMBasis = yes cannot be started FromScratch")
-      call messages_new_line()
+      call messages_write("RDMFT calculations with RDMBasis = yes cannot be started FromScratch", new_line=.true.)
       call messages_write("Run a calculation for independent particles first")
       call messages_fatal()
     end if
@@ -778,7 +777,7 @@ contains
       call messages_info(1)
     end do
 
-    write(message(1),'(a,3x,f11.9)') 'Sum of occupation numbers:', rdm%occsum
+    write(message(1),'(a,3x,f11.9)') 'Sum of occupation numbers: ', rdm%occsum
     write(message(2),'(a,11x,es20.10)') 'Total energy: ', units_from_atomic(units_out%energy, energy + hm%ep%eii)
     call messages_info(2)   
 
@@ -1127,7 +1126,7 @@ contains
         do ist = 1, st%nst
           vecnat_new(ist, iorb) = M_ZERO
           do jorb = 1, st%nst
-            vecnat_new(ist , iorb) = vecnat_new(ist , iorb) + rdm%vecnat(ist, jorb)*lambda(jorb, iorb)
+            vecnat_new(ist , iorb) = vecnat_new(ist, iorb) + rdm%vecnat(ist, jorb)*lambda(jorb, iorb)
           end do
         end do
       end do
@@ -1344,21 +1343,21 @@ contains
     integer :: ist, jst, kst, lst, iorb, icount
     logical :: inv_pairs
     FLOAT :: two_int, wij, wik, wil, wjk, wjl, wkl
-    FLOAT, allocatable                :: DM(:,:,:)
+    FLOAT, allocatable :: dm(:,:,:)
 
     PUSH_SUB(sum_integrals)
 
-    SAFE_ALLOCATE(DM(1:rdm%nst, 1:rdm%nst, 1:rdm%nst))
+    SAFE_ALLOCATE(dm(1:rdm%nst, 1:rdm%nst, 1:rdm%nst))
      
     rdm%Coul = M_ZERO  
     rdm%Exch = M_ZERO 
-    DM = M_ZERO 
+    dm = M_ZERO 
   
     do iorb = 1, rdm%nst
       do ist = 1, rdm%nst
         do jst = 1, ist
-          DM(ist, jst, iorb) = rdm%vecnat(ist, iorb)*rdm%vecnat(jst, iorb)
-          DM(jst, ist, iorb) = DM(ist, jst, iorb)
+          dm(ist, jst, iorb) = rdm%vecnat(ist, iorb)*rdm%vecnat(jst, iorb)
+          dm(jst, ist, iorb) = dm(ist, jst, iorb)
         end do
       end do
     end do
@@ -1410,27 +1409,27 @@ contains
       do iorb = 1, rdm%nst 
 
         !the Hartree terms
-        rdm%Coul(ist, jst, iorb) = rdm%Coul(ist, jst, iorb) + DM(kst, lst, iorb)*wkl*two_int
-        if (inv_pairs) rdm%Coul(kst, lst, iorb) = rdm%Coul(kst, lst, iorb) + DM(ist, jst, iorb)*wij*two_int
+        rdm%Coul(ist, jst, iorb) = rdm%Coul(ist, jst, iorb) + dm(kst, lst, iorb)*wkl*two_int
+        if (inv_pairs) rdm%Coul(kst, lst, iorb) = rdm%Coul(kst, lst, iorb) + dm(ist, jst, iorb)*wij*two_int
 
         !the exchange terms
         !weights are only included if they can differ from one
-        rdm%Exch(ist, kst, iorb) = rdm%Exch(ist, kst, iorb) + two_int*DM(jst, lst, iorb)*wik
+        rdm%Exch(ist, kst, iorb) = rdm%Exch(ist, kst, iorb) + two_int*dm(jst, lst, iorb)*wik
         if (kst /= lst) then 
-          rdm%Exch(ist, lst, iorb) = rdm%Exch(ist, lst, iorb) + two_int*DM(jst, kst, iorb)*wil
+          rdm%Exch(ist, lst, iorb) = rdm%Exch(ist, lst, iorb) + two_int*dm(jst, kst, iorb)*wil
         end if
         if (ist /= jst) then
           if(jst >= kst) then
-            rdm%Exch(jst, kst, iorb) = rdm%Exch(jst, kst, iorb) + two_int*DM(ist, lst, iorb)*wjk
+            rdm%Exch(jst, kst, iorb) = rdm%Exch(jst, kst, iorb) + two_int*dm(ist, lst, iorb)*wjk
           else
-            if (inv_pairs) rdm%Exch(kst, jst, iorb) = rdm%Exch(kst, jst, iorb) + two_int*DM(ist, lst, iorb)
+            if (inv_pairs) rdm%Exch(kst, jst, iorb) = rdm%Exch(kst, jst, iorb) + two_int*dm(ist, lst, iorb)
           end if
         end if
         if (ist /=jst .and. kst /= lst) then
           if (jst >= lst) then
-            rdm%Exch(jst, lst, iorb) = rdm%Exch(jst, lst, iorb) + two_int*DM(ist, kst, iorb)*wjl
+            rdm%Exch(jst, lst, iorb) = rdm%Exch(jst, lst, iorb) + two_int*dm(ist, kst, iorb)*wjl
           else
-            if (inv_pairs) rdm%Exch(lst, jst, iorb) = rdm%Exch(lst, jst, iorb) + two_int*DM(ist, kst, iorb)
+            if (inv_pairs) rdm%Exch(lst, jst, iorb) = rdm%Exch(lst, jst, iorb) + two_int*dm(ist, kst, iorb)
           end if
         end if
 
@@ -1446,7 +1445,7 @@ contains
       end do
     end do
 
-    SAFE_DEALLOCATE_A(DM)
+    SAFE_DEALLOCATE_A(dm)
 
     POP_SUB(sum_integrals)
   end subroutine sum_integrals
