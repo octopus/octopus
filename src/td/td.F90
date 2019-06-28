@@ -626,7 +626,43 @@ contains
 
       PUSH_SUB(td_run.init_wfs)
 
+      !%Variable TDFreezeOrbitals
+      !%Type integer
+      !%Default 0
+      !%Section Time-Dependent
+      !%Description
+      !% (Experimental) You have the possibility of "freezing" a number of orbitals during a time-propagation.
+      !% The Hartree and exchange-correlation potential due to these orbitals (which
+      !% will be the lowest-energy ones) will be added during the propagation, but the orbitals
+      !% will not be propagated.
+      !%Option sae -1
+      !% Single-active-electron approximation. This option is only valid for time-dependent
+      !% calculations (<tt>CalculationMode = td</tt>). Also, the nuclei should not move.
+      !% The idea is that all orbitals except the last one are frozen. The orbitals are to
+      !% be read from a previous ground-state calculation. The active orbital is then treated
+      !% as independent (whether it contains one electron or two) -- although it will
+      !% feel the Hartree and exchange-correlation potentials from the ground-state electronic
+      !% configuration.
+      !%
+      !% It is almost equivalent to setting <tt>TDFreezeOrbitals = N-1</tt>, where <tt>N</tt> is the number
+      !% of orbitals, but not completely.
+      !%End
+      call parse_variable(sys%parser, 'TDFreezeOrbitals', 0, freeze_orbitals)
+
+      if(freeze_orbitals /= 0) then
+        call messages_experimental('TDFreezeOrbitals')
+
+        if(hm%lda_u_level /= DFT_U_NONE) then
+          call messages_not_implemented('TDFreezeOrbitals with DFT+U')
+        end if
+      end if
+
       if (.not. fromscratch) then
+        !We redistribute the states before the restarting
+        if(freeze_orbitals > 0) then
+          call states_freeze_redistribute_states(st, sys%parser, sys%gr, sys%mc, freeze_orbitals)
+        end if
+
         call restart_init(restart, sys%parser, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
         if(ierr == 0) &
           call td_load(restart, sys%parser, gr, st, hm, td, ierr)
@@ -671,49 +707,26 @@ contains
       ! in order that the code does properly the initialization.
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
-      !%Variable TDFreezeOrbitals
-      !%Type integer
-      !%Default 0
-      !%Section Time-Dependent
-      !%Description
-      !% (Experimental) You have the possibility of "freezing" a number of orbitals during a time-propagation.
-      !% The Hartree and exchange-correlation potential due to these orbitals (which
-      !% will be the lowest-energy ones) will be added during the propagation, but the orbitals
-      !% will not be propagated.
-      !%Option sae -1
-      !% Single-active-electron approximation. This option is only valid for time-dependent
-      !% calculations (<tt>CalculationMode = td</tt>). Also, the nuclei should not move.
-      !% The idea is that all orbitals except the last one are frozen. The orbitals are to
-      !% be read from a previous ground-state calculation. The active orbital is then treated
-      !% as independent (whether it contains one electron or two) -- although it will
-      !% feel the Hartree and exchange-correlation potentials from the ground-state electronic
-      !% configuration.
-      !%
-      !% It is almost equivalent to setting <tt>TDFreezeOrbitals = N-1</tt>, where <tt>N</tt> is the number
-      !% of orbitals, but not completely.
-      !%End
-      call parse_variable(sys%parser, 'TDFreezeOrbitals', 0, freeze_orbitals)
-
-      if(freeze_orbitals /= 0) then
-        call messages_experimental('TDFreezeOrbitals')
-        if(family_is_mgga(sys%ks%xc_family)) then
-          call messages_not_implemented('TDFreezeOrbitals with MGGAs')
-        end if
-
-        if(hm%lda_u_level /= DFT_U_NONE) then
-          call messages_not_implemented('TDFreezeOrbitals with DFT+U')
-        end if
-      end if
-
-
-      call density_calc(st, gr, st%rho)
-
       if(freeze_orbitals > 0) then
-        ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
-        call states_freeze_orbitals(st, sys%parser, gr, sys%mc, freeze_orbitals)
+        if(fromScratch) then
+          ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
+          call states_freeze_orbitals(st, sys%parser, gr, sys%mc, freeze_orbitals, family_is_mgga(sys%ks%xc_family))
+        else
+          call restart_init(restart, sys%parser, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+          if(ierr == 0) &
+            call td_load_frozen(restart, gr, st, hm, td, ierr)
+          if(ierr /= 0) then
+            td%iter = 0
+            message(1) = "Unable to read frozen restart information."
+            call messages_fatal(1)
+          end if
+          call restart_end(restart)
+        end if
         write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
           ' orbitals have been frozen.', st%nst, ' will be propagated.'
         call messages_info(1)
+        call states_freeze_adjust_qtot(st)
+        call density_calc(st, gr, st%rho)
         call v_ks_calc(sys%ks, sys%parser, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
       elseif(freeze_orbitals < 0) then
         ! This means SAE approximation. We calculate the Hxc first, then freeze all
@@ -721,11 +734,16 @@ contains
         write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
         call messages_info(1)
         call v_ks_calc(sys%ks, sys%parser, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
-        call states_freeze_orbitals(st, sys%parser, gr, sys%mc, n = st%nst-1)
+        if(fromScratch) then
+          call states_freeze_orbitals(st, sys%parser, gr, sys%mc, st%nst-1, family_is_mgga(sys%ks%xc_family))
+        else
+           call messages_not_implemented("TDFreezeOrbials < 0 with FromScratch=no")
+        end if
         call v_ks_freeze_hxc(sys%ks)
         call density_calc(st, gr, st%rho)
       else
         ! Normal run.
+        call density_calc(st, gr, st%rho)
         call v_ks_calc(sys%ks, sys%parser, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
       end if
 
@@ -1031,6 +1049,10 @@ contains
       call gauge_field_dump(restart, hm%ep%gfield, ierr)
     end if
 
+    if(associated(st%frozen_rho)) then
+      call states_dump_frozen(restart, st, gr, ierr)
+    end if
+
     if (debug%info) then
       message(1) = "Debug: Writing td restart done."
       call messages_info(1)
@@ -1099,6 +1121,48 @@ contains
 
     POP_SUB(td_load)
   end subroutine td_load
+
+  ! ---------------------------------------------------------
+  subroutine td_load_frozen(restart, gr, st, hm, td, ierr)
+    type(restart_t),     intent(in)    :: restart
+    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(inout) :: st
+    type(hamiltonian_t), intent(inout) :: hm
+    type(td_t),          intent(inout) :: td
+    integer,             intent(out)   :: ierr
+
+    PUSH_SUB(td_load_frozen)
+
+    ierr = 0
+
+    if (restart_skip(restart)) then
+      ierr = -1
+      POP_SUB(td_load)
+      return
+    end if
+
+    if (debug%info) then
+      message(1) = "Debug: Reading td frozen restart."
+      call messages_info(1)
+    end if
+
+    SAFE_ALLOCATE(st%frozen_rho(1:gr%mesh%np,1:st%d%nspin))
+    if(family_is_mgga(hm%xc_family)) then
+      SAFE_ALLOCATE(st%frozen_tau(1:gr%mesh%np,1:st%d%nspin))
+      SAFE_ALLOCATE(st%frozen_gdens(1:gr%mesh%np,1:gr%sb%dim,1:st%d%nspin))
+      SAFE_ALLOCATE(st%frozen_ldens(1:gr%mesh%np,1:st%d%nspin))
+    end if
+
+    call states_load_frozen(restart, st, gr, ierr)
+
+    if (debug%info) then
+      message(1) = "Debug: Reading td frozen restart done."
+      call messages_info(1)
+    end if
+
+    POP_SUB(td_load_frozen)
+  end subroutine td_load_frozen
+
 
 end module td_oct_m
 

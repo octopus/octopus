@@ -38,6 +38,7 @@ module initst_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
   use types_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -226,7 +227,7 @@ contains
     call parse_variable(sys%parser, 'TDFreezeOrbitals', 0, freeze_orbitals)
     if(freeze_orbitals > 0) then
       ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
-      call states_freeze_orbitals(psi, sys%parser, sys%gr, sys%mc, freeze_orbitals)
+      call states_freeze_orbitals(psi, sys%parser, sys%gr, sys%mc, freeze_orbitals, family_is_mgga(sys%ks%xc_family))
       write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
         ' orbitals have been frozen.', psi%nst, ' will be propagated.'
       call messages_info(1)
@@ -239,7 +240,7 @@ contains
       call messages_info(1)
       call density_calc(psi, sys%gr, psi%rho)
       call v_ks_calc(sys%ks, sys%parser, hm, psi, sys%geo, calc_eigenval = .true.)
-      call states_freeze_orbitals(psi, sys%parser, sys%gr, sys%mc, n = psi%nst - 1)
+      call states_freeze_orbitals(psi, sys%parser, sys%gr, sys%mc, psi%nst - 1, family_is_mgga(sys%ks%xc_family))
       call v_ks_freeze_hxc(sys%ks)
       call density_calc(psi, sys%gr, psi%rho)
     else
