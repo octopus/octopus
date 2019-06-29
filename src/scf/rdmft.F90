@@ -665,7 +665,7 @@ contains
     !Initialize the occin. Smallocc is used for numerical stability
     occin(1:st%nst, 1:st%d%nik) = st%occ(1:st%nst, 1:st%d%nik)
     where(occin(:,:) < smallocc) occin(:,:) = smallocc
-    where(occin(:,:) > st%smear%el_per_state-smallocc) occin(:,:) = st%smear%el_per_state - smallocc
+    where(occin(:,:) > st%smear%el_per_state - smallocc) occin(:,:) = st%smear%el_per_state - smallocc
 
     !Renormalize the occupation numbers 
     rdm%occsum = st%qtot
@@ -846,9 +846,9 @@ contains
     type(states_t),       intent(inout) :: st !< States
     type(hamiltonian_t),  intent(in)    :: hm !< Hamiltonian
     FLOAT,                intent(out)   :: energy    
-    
+
     integer :: ist, jst
-    FLOAT, allocatable ::  lambda(:,:), FO(:,:)
+    FLOAT, allocatable ::  lambda(:,:), fo(:,:)
     type(profile_t), save :: prof_orb_basis
     
     PUSH_SUB(scf_orb)
@@ -856,47 +856,47 @@ contains
 
     !matrix of Lagrange Multipliers from  Equation (8), Piris and Ugalde, Vol. 30, No. 13, J. Comput. Chem. 
     SAFE_ALLOCATE(lambda(1:st%nst,1:st%nst)) 
-    SAFE_ALLOCATE(FO(1:st%nst, 1:st%nst))    !Generalized Fockian Equation (11) 
+    SAFE_ALLOCATE(fo(1:st%nst, 1:st%nst))    !Generalized Fockian Equation (11) 
 
     lambda = M_ZERO
-    FO = M_ZERO
+    fo = M_ZERO
 
     call construct_lambda(hm, st, gr, lambda, rdm)
     
-    !Set up FO matrix 
+    !Set up fo matrix 
     if (rdm%iter==1) then
       do ist = 1, st%nst
         do jst = 1, ist
-          FO(ist, jst) = M_HALF*(lambda(ist, jst) + lambda(jst, ist))
-          FO(jst, ist) = FO(ist, jst)
+          fo(ist, jst) = M_HALF*(lambda(ist, jst) + lambda(jst, ist))
+          fo(jst, ist) = fo(ist, jst)
         end do
       end do
     else
       do ist = 1, st%nst
         do jst = 1, ist - 1
-          FO(jst, ist) = - ( lambda(jst, ist) - lambda(ist ,jst))
+          fo(jst, ist) = - ( lambda(jst, ist) - lambda(ist ,jst))
         end do
       end do
-      rdm%maxFO = maxval(abs(FO))
+      rdm%maxfo = maxval(abs(fo))
       do ist = 1, st%nst
-        FO(ist, ist) = rdm%evalues(ist)
+        fo(ist, ist) = rdm%evalues(ist)
         do jst = 1, ist-1
-          if(abs(FO(jst, ist)) > rdm%scale_f) then
-            FO(jst, ist) = rdm%scale_f*FO(jst,ist)/abs(FO(jst, ist))
+          if(abs(fo(jst, ist)) > rdm%scale_f) then
+            fo(jst, ist) = rdm%scale_f*fo(jst,ist)/abs(fo(jst, ist))
           end if
-          FO(ist, jst) = FO(jst, ist)
+          fo(ist, jst) = fo(jst, ist)
         end do
       end do
     end if
  
-    call lalg_eigensolve(st%nst, FO, rdm%evalues)
-    call assign_eigfunctions(rdm, st, gr, FO)
+    call lalg_eigensolve(st%nst, fo, rdm%evalues)
+    call assign_eigfunctions(rdm, st, gr, fo)
     if (rdm%do_basis.eqv..true.) call sum_integrals(rdm) ! to calculate rdm%Coul and rdm%Exch with the new rdm%vecnat 
     call rdm_derivatives(rdm, hm, st, gr)
     call total_energy_rdm(rdm, st%occ(:,1), energy)
 
     SAFE_DEALLOCATE_A(lambda) 
-    SAFE_DEALLOCATE_A(FO) 
+    SAFE_DEALLOCATE_A(fo) 
 
     call profiling_out(prof_orb_basis)
     POP_SUB(scf_orb)
@@ -999,7 +999,7 @@ contains
           lambda(jorb, iorb) = dmf_dotp(gr%mesh, dpsi2(:,1), hpsi(:,1))
           
           ! calculate <phi_i|H|phi_j>=lam_ij
-          if (.not. iorb==jorb ) then
+          if (.not. iorb == jorb ) then
             call dhamiltonian_apply(hm,gr%der, dpsi2, hpsi1, jorb, 1)
             lambda(iorb, jorb) = dmf_dotp(gr%mesh, dpsi(:,1), hpsi1(:,1))
           end if
@@ -1010,19 +1010,19 @@ contains
     else ! calculate the same lambda matrix on the basis
       !call sum_integrals(rdm)
       SAFE_ALLOCATE(fvec(1:st%nst))
-      SAFE_ALLOCATE(Fock(1:st%nst, 1:st%nst, 1:st%nst))
-      Fock = M_ZERO
+      SAFE_ALLOCATE(fock(1:st%nst, 1:st%nst, 1:st%nst))
+      fock = M_ZERO
       
       do iorb = 1, st%nst
         do ist = 1, st%nst
           do jst = 1, ist
-            Fock(ist,jst,iorb) = st%occ(iorb, 1)*rdm%eone_int(ist,jst)
+            fock(ist, jst, iorb) = st%occ(iorb, 1)*rdm%eone_int(ist,jst)
             do jorb = 1, st%nst
               !The coefficient of the Exchange term below is only for the Mueller functional
-              Fock(ist ,jst, iorb) =  Fock(ist ,jst, iorb) + st%occ(iorb, 1)*st%occ(jorb,1)*rdm%Coul(ist, jst, jorb)  &
-                                      - sqrt(st%occ(iorb,1))*sqrt(st%occ(jorb,1))*rdm%Exch(ist, jst,jorb)
+              fock(ist ,jst, iorb) =  fock(ist, jst, iorb) + st%occ(iorb, 1)*st%occ(jorb, 1)*rdm%Coul(ist, jst, jorb)  &
+                                      - sqrt(st%occ(iorb, 1))*sqrt(st%occ(jorb, 1))*rdm%Exch(ist, jst, jorb)
             end do
-            Fock(jst, ist, iorb) = Fock(ist, jst, iorb)
+            fock(jst, ist, iorb) = fock(ist, jst, iorb)
           end do
         end do
       end do
@@ -1030,14 +1030,14 @@ contains
       do jorb = 1, st%nst
         do ist = 1, st%nst
           fvec(ist) = M_ZERO
-          do jst =1, st%nst
-            fvec(ist) = fvec(ist)+Fock(ist,jst,jorb)*rdm%vecnat(jst,jorb)
+          do jst = 1, st%nst
+            fvec(ist) = fvec(ist) + fock(ist, jst, jorb)*rdm%vecnat(jst, jorb)
           end do
         end do
         do iorb= 1, st%nst
           lambda(iorb, jorb) = M_ZERO
           do ist = 1, st%nst
-            lambda(iorb,jorb) = lambda(iorb,jorb) + rdm%vecnat(ist,iorb)*fvec(ist)
+            lambda(iorb, jorb) = lambda(iorb, jorb) + rdm%vecnat(ist, iorb)*fvec(ist)
           end do
         end do
       end do
@@ -1056,11 +1056,10 @@ contains
       SAFE_DEALLOCATE_A(pot) 
     else
       SAFE_DEALLOCATE_A(fvec) 
-      SAFE_DEALLOCATE_A(Fock) 
+      SAFE_DEALLOCATE_A(fock) 
     end if
    
     POP_SUB(construct_lambda)
-
   end subroutine construct_lambda
    
   ! ----------------------------------------
@@ -1208,7 +1207,6 @@ contains
       end do
       do ist = 1, st%nst
         call states_get_state(st, gr%mesh, ist, 1, dpsi)
-
 
         rho1(1:gr%mesh%np) = dpsi(1:gr%mesh%np, 1)**2
 
