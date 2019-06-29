@@ -203,9 +203,9 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
             lam_conj = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
             lam_sym(jst) = lam + lam_conj
 
-            forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-              g(ip, idim) = g(ip, idim) - lam_conj*psi_j(ip, idim)
-            end forall
+            do idim = 1, st%d%dim
+              call lalg_axpy(gr%mesh%np, -lam_conj, psi_j(:, idim), g(:, idim))
+            end do
           end if
         end do
       end if
