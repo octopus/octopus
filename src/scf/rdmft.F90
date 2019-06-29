@@ -1,4 +1,5 @@
-!!  Copyright (C) 2012 I. Theophilou, N. Helbig
+!!  Copyright (C) 2012-2019 I. Theophilou, N. Helbig
+!!  Copyright (C) 2019 F. Buchholz, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
