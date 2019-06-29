@@ -546,7 +546,7 @@ contains
       ! calculate FO operator to check Hermiticity of lagrange multiplier matrix (lambda)
       lambda = M_ZERO
       FO = M_ZERO
-      call construct_f(hm, st, gr, lambda, rdm)
+      call construct_lambda(hm, st, gr, lambda, rdm)
 
       !Set up FO matrix to check maxFO
       do ist = 1, st%nst
@@ -861,7 +861,7 @@ contains
     lambda = M_ZERO
     FO = M_ZERO
 
-    call construct_f(hm, st, gr, lambda, rdm)
+    call construct_lambda(hm, st, gr, lambda, rdm)
     
     !Set up FO matrix 
     if (rdm%iter==1) then
@@ -967,18 +967,18 @@ contains
 
   ! ----------------------------------------
   ! constructs the Lagrange multiplyers needed for the orbital minimization
-  subroutine construct_f(hm, st, gr, lambda, rdm)
+  subroutine construct_lambda(hm, st, gr, lambda, rdm)
     type(hamiltonian_t),  intent(in)    :: hm
     type(states_t),       intent(inout) :: st
     type(grid_t),         intent(in)    :: gr
     FLOAT,                intent(out)   :: lambda(:,:) !< (1:st%nst, 1:st%nst)
     type(rdm_t),          intent(inout) :: rdm
-      
+
     FLOAT, allocatable :: hpsi(:,:), hpsi1(:,:), dpsi(:,:), dpsi2(:,:), fvec(:) 
     FLOAT, allocatable :: g_x(:,:), g_h(:,:), rho(:,:), rho_tot(:), pot(:), fock(:,:,:)
     integer :: ist, iorb, jorb, jst
 
-    PUSH_SUB(construct_f)
+    PUSH_SUB(construct_lambda)
 
     lambda = M_ZERO
 
@@ -1059,9 +1059,9 @@ contains
       SAFE_DEALLOCATE_A(Fock) 
     end if
    
-    POP_SUB(construct_f)
+    POP_SUB(construct_lambda)
 
-  end subroutine construct_f
+  end subroutine construct_lambda
    
   ! ----------------------------------------
   
