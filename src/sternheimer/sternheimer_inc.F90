@@ -20,11 +20,10 @@
 !> This routine calculates the first-order variations of the wavefunctions 
 !! for an applied perturbation.
 subroutine X(sternheimer_solve)(                           &
-  this, sys, hm, lr, nsigma, omega, perturbation,       &
+  this, sys, lr, nsigma, omega, perturbation,       &
   restart, rho_tag, wfs_tag, have_restart_rho, have_exact_freq)
   type(sternheimer_t),    intent(inout) :: this
   type(system_t), target, intent(inout) :: sys
-  type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(inout) :: lr(:) 
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(in)    :: omega
@@ -169,7 +168,7 @@ subroutine X(sternheimer_solve)(                           &
             call batch_copy_data(mesh%np, orhsb, rhsb)
             call batch_end(orhsb)
           else
-            call X(pert_apply_batch)(perturbation, sys%parser, sys%gr, sys%geo, hm, ik, st%group%psib(ib, ik), rhsb)
+            call X(pert_apply_batch)(perturbation, sys%parser, sys%gr, sys%geo, sys%hm, ik, st%group%psib(ib, ik), rhsb)
           end if
 
           call batch_end(rhsb)
@@ -207,7 +206,7 @@ subroutine X(sternheimer_solve)(                           &
           call batch_init(dlpsib, st%d%dim, sst, est, lr(sigma)%X(dl_psi)(:, :, sst:, ik))
           call batch_init(rhsb, st%d%dim, sst, est, rhs)
 
-          call X(linear_solver_solve_HXeY_batch)(this%solver, hm, sys%gr, sys%st, ik, &
+          call X(linear_solver_solve_HXeY_batch)(this%solver, sys%hm, sys%gr, sys%st, ik, &
             dlpsib, rhsb, -sys%st%eigenval(sst:est, ik) + omega_sigma, tol, &
             residue(sigma, sst:est), conv_iters(sigma, sst:est), occ_response = this%occ_response)
 

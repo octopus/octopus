@@ -366,9 +366,8 @@ end subroutine X(calc_polarizability_periodic)
 ! ---------------------------------------------------------
 !> alpha_ij(w) = - sum(m occ) [<psi_m(0)|r_i|psi_mj(1)(w)> + <psi_mj(1)(-w)|r_i|psi_m(0)>]
 !! minus sign is from electronic charge -e
-subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol, doalldirs, ndir)
+subroutine X(calc_polarizability_finite)(sys, lr, nsigma, perturbation, zpol, doalldirs, ndir)
   type(system_t), target, intent(inout) :: sys
-  type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(inout) :: lr(:,:)
   integer,                intent(in)    :: nsigma
   type(pert_t),           intent(inout) :: perturbation
@@ -400,13 +399,13 @@ subroutine X(calc_polarizability_finite)(sys, hm, lr, nsigma, perturbation, zpol
   do dir1 = startdir, ndir_
     do dir2 = 1, sys%gr%sb%dim
       call pert_setup_dir(perturbation, dir1)
-      zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, sys%parser, sys%gr, sys%geo, hm, sys%st, psi, lr(dir2, 1)%X(dl_psi))
+      zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, sys%parser, sys%gr, sys%geo, sys%hm, sys%st, psi, lr(dir2, 1)%X(dl_psi))
 
       if(nsigma == 1) then
         zpol(dir1, dir2) = zpol(dir1, dir2) + R_CONJ(zpol(dir1, dir2))
       else
         zpol(dir1, dir2) = zpol(dir1, dir2) &
-          - X(pert_expectation_value)(perturbation, sys%parser, sys%gr, sys%geo, hm, sys%st, lr(dir2, 2)%X(dl_psi), psi)
+          - X(pert_expectation_value)(perturbation, sys%parser, sys%gr, sys%geo, sys%hm, sys%st, lr(dir2, 2)%X(dl_psi), psi)
       end if
     end do
   end do
