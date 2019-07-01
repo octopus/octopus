@@ -1,5 +1,6 @@
 CalculationMode = gs
 FromScratch = yes
+TheoryLevel = independent_particles
 
 %Coordinates
  'H' |  0.717157 | 0 | 0
