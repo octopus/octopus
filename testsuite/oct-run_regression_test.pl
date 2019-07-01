@@ -162,7 +162,9 @@ $options_required = "";
 $options_required_mpi = "";
 $options_are_mpi = 0;
 $expected_failure = "";
-$expect_error = 0;
+$expect_error = 0; # check for controlled failure 
+$match_error = 0;  # flag to switch to alternative matches
+$match_done = 1;   # check that at least one error-match has been done.
 
 # Handle GPU offset
 $offset_GPU = defined $opt_G ? $opt_G : -1;
@@ -299,29 +301,20 @@ while ($_ = <TESTSUITE>) {
             # check if the executable was compiled with the required options
             foreach my $option (split(/;/, $options_required)){
                 if(" $options_available " !~ " $option ") {
-                    print "\nSkipping test: executable does not have the required option '$option'";
+
+                # FIXME: instead of skipping, we should switch to the alternative matching rules
+                    $match_error = 1;
+                    $match_done = 0;
+
+                    # print "\nSkipping test: executable does not have the required option '$option'";
+                    print "\nChanging rules: executable does not have the required option '$option'";
                     if($options_are_mpi) {
                         print " for MPI";
                     }
                     print ".\n";
                     print "Executable: $command\n";
                     print "Available options: $options_available\n\n";
-                    skip_exit();
-                }
-
-                # FIXME: here we could add code to probe for and remove 'not_' from $options
-
-                if( $option =~ /\bnot_\b/i ) {
-                    if(" $options_available " =~ (" $option "=~ s/not//) )  {
-                        print "\nSkipping test: executable does have the option '$option' required to be absent";
-                        if($options_are_mpi) {
-                            print " for MPI";
-                        }
-                        print ".\n";
-                        print "Executable: $command\n";
-                        print "Available options: $options_available\n\n";
-                        skip_exit();
-                    }
+                    # skip_exit();
                 }
             }
         }
@@ -365,17 +358,6 @@ while ($_ = <TESTSUITE>) {
         elsif ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
             # FIXME: enforce this is "serial" or numeric
             $np = $1;
-        }
-
-        # FIXME: the following block can be removed once "FailingInput" is working.
-        elsif ( $_ =~ /^ExpectedFailure\s*:\s(.*)\s*$/) {
-
-            $expected_failure = $1;
-            $expected_failure =~ s/^\s*//;
-            $expected_failure =~ s/\s*$//;
-            $test{"expected_failure"} = $expected_failure;
-            $report{$testname}{"expected_failure"} = $expected_failure;
-            $expect_error = $expected_failure =~ /yes/i;
         }
 
         elsif ( $_ =~ /^Input\s*:\s*(.*)\s*$/  || $_ =~ /^FailingInput\s*:\s*(.*)\s*$/  ) {
@@ -438,9 +420,9 @@ while ($_ = <TESTSUITE>) {
                         $specify_np = "-n $np";
                         $my_nslots = "";
                     }
-                    $command_line = "cd $workdir; $command_env $my_nslots $mpiexec $specify_np $machinelist $aexec $command > out";
+                    $command_line = "cd $workdir; $command_env $my_nslots $mpiexec $specify_np $machinelist $aexec $command ";
                 } else {
-                    $command_line = "cd $workdir; $command_env $aexec $command > out ";
+                    $command_line = "cd $workdir; $command_env $aexec $command ";
                 }
 
                 # MPI implementations generally permit using more tasks than actual cores, and running tests this way makes it likely for developers to find race conditions.
@@ -450,7 +432,7 @@ while ($_ = <TESTSUITE>) {
                     }
                 }
 
-                if( $expect_error ) { $command_line = $command_line." 2>err";}
+                $command_line = $command_line." 2>&1 1> out | tee err";
 
                 print "Executing: " . $command_line . "\n";
 
@@ -529,7 +511,31 @@ while ($_ = <TESTSUITE>) {
                     $failures++;
                 }
             }
-        } else {
+        } 
+        
+
+        elsif ( $_ =~ /^errormatch/ ) {
+            # FIXME: should we do matches even when execution failed?
+
+            my %match_report;
+            $r_match_report = \%match_report;
+
+            if (!$opt_n && ($expect_error || $return_value != 0) ) {
+                push( @{$r_matches_array}, $r_match_report);
+                if(run_match_new($_)){
+                    printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
+                    if ($opt_v) { print_hline(); }
+                } else {
+                    printf "%-40s%s", "$name", ":\t [ $color_start{red} FAIL $color_end{red} ] \n";
+                    print_hline();
+                    $test_succeeded = 0;
+                    $failures++;
+                }
+            }
+            $error_done = 1;
+        }        
+
+        else {
             die255("Unknown command '$_'.");
         }
     }

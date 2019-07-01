@@ -6,12 +6,10 @@ TestGroups : long-run, error_tests
 Enabled    : Yes
 
 
-ExpectedFailure : Yes
 
-Input: 01-run_mode.01-one_shot.inp
+FailingInput: 01-run_mode.01-one_shot.inp
 match ; Error message ; GREPCOUNT(err, 'one_shot is obsolete') ; 1
 
-ExpectedFailure : No
 
 Input: 01-run_mode.02-one_shot.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1

@@ -4,8 +4,7 @@ Test       : SCF errors
 Program    : octopus
 TestGroups : long-run, error_tests
 Enabled    : Yes
-ExpectedFailure : Yes
 
-Input: 02-scf_errors.01-rdmft.inp
+FailingInput: 02-scf_errors.01-rdmft.inp
 match ; Error message ; GREPCOUNT(err, 'RDMFT theory level is an experimental feature') ; 1
 
