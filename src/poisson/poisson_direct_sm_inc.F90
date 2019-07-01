@@ -28,6 +28,7 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
   integer              :: ip, jp, dim, nthreads
   FLOAT                :: xx1(1:MAX_DIM), xx2(1:MAX_DIM), xx3(1:MAX_DIM), xx4(1:MAX_DIM)
 #ifdef HAVE_MPI
+  FLOAT                :: tmp
   FLOAT, allocatable   :: pvec(:)
 #endif
   type(profile_t), save :: prof
@@ -89,13 +90,12 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
           pvec(jp) = rho(jp)/sqrt(sum((xx1(1:dim) -  sm%x(jp, 1:dim))**2))
         end do
       end if
+      tmp = dsm_integrate(sm%mesh, sm, pvec)    
 
       if (sm%part_v(ip) == sm%mesh%vp%partno) then
-        pot(sm%global2local(ip)) = dsm_integrate(sm%mesh, sm, pvec, reduce = .false.)
+        pot(sm%global2local(ip)) = tmp
       end if
     end do
-
-    call comm_allreduce(sm%mesh%mpi_grp%comm, pot)
 
     SAFE_DEALLOCATE_A(pvec)
 

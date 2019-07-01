@@ -64,9 +64,10 @@ contains
     type(hamiltonian_t), intent(inout) :: hm
     logical,             intent(inout) :: fromScratch
 
-    type(scf_t)  :: scfv
+    type(scf_t)     :: scfv
     type(restart_t) :: restart_load, restart_dump
-    integer      :: ierr
+    integer         :: ierr
+    type(rdm_t)     :: rdm
 
     PUSH_SUB(ground_state_run)
 
@@ -108,14 +109,7 @@ contains
     call scf_init(scfv, sys%parser, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks)
 
     if(fromScratch) then
-      if(sys%ks%theory_level == RDMFT) then
-        call messages_write("RDMFT calculations cannot be started FromScratch")
-        call messages_new_line()
-        call messages_write("Run a DFT calculation with XCFunctional = oep_x first")
-        call messages_fatal()
-      else
-        call lcao_run(sys, hm, lmm_r = scfv%lmm_r)
-      end if
+      call lcao_run(sys, hm, lmm_r = scfv%lmm_r)
     else
       ! setup Hamiltonian
       call messages_write('Info: Setting up Hamiltonian.')
@@ -137,7 +131,9 @@ contains
     
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
-      call scf_rdmft(sys%gr, sys%parser, sys%geo, sys%st, sys%ks, hm, sys%outp, scfv%max_iter, restart_dump)
+      call rdmft_init(rdm, sys%parser, sys%gr, sys%st, sys%ks, fromScratch)
+      call scf_rdmft(rdm, sys%parser, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, scfv%max_iter, restart_dump)
+      call rdmft_end(rdm)
     else
       if(.not. fromScratch) then
         call scf_run(scfv, sys%parser, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, &

@@ -1152,24 +1152,7 @@ contains
 
     PUSH_SUB(states_deallocate_wfns)
 
-    if (st%group%block_initialized) then
-       do ib = 1, st%group%nblocks
-          do iq = st%d%kpt%start, st%d%kpt%end
-            if(st%group%block_is_local(ib, iq)) then
-              call batch_end(st%group%psib(ib, iq))
-            end if
-          end do
-       end do
-
-       SAFE_DEALLOCATE_P(st%group%psib)
-
-       SAFE_DEALLOCATE_P(st%group%iblock)
-       SAFE_DEALLOCATE_P(st%group%block_range)
-       SAFE_DEALLOCATE_P(st%group%block_size)
-       SAFE_DEALLOCATE_P(st%group%block_is_local)
-       SAFE_DEALLOCATE_A(st%group%block_node)
-       st%group%block_initialized = .false.
-    end if
+    call states_group_end(st%group, st%d)
 
     POP_SUB(states_deallocate_wfns)
   end subroutine states_deallocate_wfns
