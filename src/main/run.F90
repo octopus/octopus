@@ -33,6 +33,7 @@ module run_oct_m
   use multicomm_oct_m
   use opt_control_oct_m
   use parser_oct_m
+  use pcm_oct_m
   use phonons_fd_oct_m
   use phonons_lr_oct_m
   use poisson_oct_m
@@ -164,7 +165,7 @@ contains
     if (sys%hm%pcm%run_pcm) then
       select case (calc_mode_id)
       case (CM_GS)
-        if (sys%hm%pcm%epsilon_infty /= sys%hm%pcm%epsilon_0 .and. sys%hm%pcm%noneq) then
+        if (sys%hm%pcm%epsilon_infty /= sys%hm%pcm%epsilon_0 .and. sys%hm%pcm%tdlevel /= PCM_TD_EQ) then
           call messages_write('Non-equilbrium PCM is not active in a time-independent run.', &
             new_line=.true.)
           call messages_write('You set epsilon_infty /= epsilon_0, but epsilon_infty is not relevant for CalculationMode = gs.', &
