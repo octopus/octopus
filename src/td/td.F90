@@ -24,6 +24,7 @@ module td_oct_m
   use calc_mode_par_oct_m
   use density_oct_m
   use energy_calc_oct_m
+  use epot_oct_m
   use forces_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
@@ -329,6 +330,12 @@ contains
     if(ion_dynamics_ions_move(td%ions) .and. td%energy_update_iter /= 1) then
       call messages_experimental('TDEnergyUpdateIter /= 1 when moving ions')
     end if
+
+    if(sys%gr%der%boundaries%spiralBC .and. hm%ep%reltype == SPIN_ORBIT) then
+      message(1) = "Generalized Bloch theorem cannot be used with spin-orbit coupling."
+      call messages_fatal(1)
+    end if
+      
 
     POP_SUB(td_init)
   end subroutine td_init
