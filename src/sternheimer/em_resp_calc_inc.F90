@@ -399,7 +399,8 @@ subroutine X(calc_polarizability_finite)(sys, lr, nsigma, perturbation, zpol, do
   do dir1 = startdir, ndir_
     do dir2 = 1, sys%gr%sb%dim
       call pert_setup_dir(perturbation, dir1)
-      zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, sys%parser, sys%gr, sys%geo, sys%hm, sys%st, psi, lr(dir2, 1)%X(dl_psi))
+      zpol(dir1, dir2) = -X(pert_expectation_value)(perturbation, sys%parser,&
+           & sys%gr, sys%geo, sys%hm, sys%st, psi, lr(dir2, 1)%X(dl_psi))
 
       if(nsigma == 1) then
         zpol(dir1, dir2) = zpol(dir1, dir2) + R_CONJ(zpol(dir1, dir2))

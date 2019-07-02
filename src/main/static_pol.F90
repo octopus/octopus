@@ -270,7 +270,8 @@ contains
         end if
 
         call scf_mix_clear(scfv)
-        call scf_run(scfv, sys%parser, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, gs_run=.false., verbosity = verbosity)
+        call scf_run(scfv, sys%parser, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, gs_run=.false.,&
+             & verbosity = verbosity)
 
         trrho = M_ZERO
         do is = 1, sys%st%d%spin_channels
@@ -350,7 +351,8 @@ contains
       end if
 
       call scf_mix_clear(scfv)
-      call scf_run(scfv, sys%parser, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, gs_run=.false., verbosity = verbosity)
+      call scf_run(scfv, sys%parser, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, gs_run=.false.,&
+           & verbosity = verbosity)
   
       trrho = M_ZERO
       do is = 1, sys%st%d%spin_channels

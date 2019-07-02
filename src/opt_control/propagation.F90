@@ -164,8 +164,9 @@ contains
     call opt_control_get_classical(sys%geo, qcpsi)
 
     if(write_iter_) then
-      call td_write_init(write_handler, sys%parser, sys%outp, gr, sys%st, sys%hm, sys%geo, sys%ks, ion_dynamics_ions_move(td%ions), &
-           gauge_field_is_applied(sys%hm%ep%gfield), sys%hm%ep%kick, td%iter, td%max_iter, td%dt, sys%mc)
+      call td_write_init(write_handler, sys%parser, sys%outp, gr, sys%st, sys%hm, sys%geo, sys%ks,&
+      & ion_dynamics_ions_move(td%ions), gauge_field_is_applied(sys%hm%ep%gfield), sys%hm%ep%kick,&
+      & td%iter, td%max_iter, td%dt, sys%mc)
       call td_write_data(write_handler, gr, psi, sys%hm, sys%ks, sys%outp, sys%geo, 0)
     end if
 
@@ -515,7 +516,8 @@ contains
       call update_field(i, par_chi, gr, sys%hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
       call update_hamiltonian_chi(i-1, sys%parser, gr, sys%ks, sys%hm, td, tg, par_chi, sys%geo, psi)
       call hamiltonian_update(sys%hm, gr%mesh, gr%der%boundaries, time = abs(i*td%dt))
-      call propagator_dt(sys%ks, sys%parser, sys%hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, i-1, td%ions, sys%geo, sys%outp)
+      call propagator_dt(sys%ks, sys%parser, sys%hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, i-1, td%ions, sys%geo,&
+           & sys%outp)
       call oct_prop_dump_states(prop_chi, i-1, chi, gr, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to write OCT states restart."
@@ -523,7 +525,8 @@ contains
       end if
       call update_hamiltonian_psi(i-1, sys%parser, gr, sys%ks, sys%hm, td, tg, par, psi, sys%geo)
       call hamiltonian_update(sys%hm, gr%mesh, gr%der%boundaries, time = abs(i*td%dt))
-      call propagator_dt(sys%ks, sys%parser, sys%hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, td%ions, sys%geo, sys%outp)
+      call propagator_dt(sys%ks, sys%parser, sys%hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, td%ions, sys%geo,&
+           & sys%outp)
     end do
     td%dt = -td%dt
     call update_field(0, par_chi, gr, sys%hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
@@ -671,7 +674,8 @@ contains
         end do
 
         vhxc(:, :) = sys%hm%vhxc(:, :)
-        call propagator_dt(sys%ks, sys%parser, sys%hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, td%ions, sys%geo, sys%outp)
+        call propagator_dt(sys%ks, sys%parser, sys%hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, td%ions, sys%geo,&
+             & sys%outp)
 
         if(ion_dynamics_ions_move(td%ions)) then
           call ion_dynamics_save_state(td%ions, sys%geo, ions_state_final)
@@ -691,7 +695,8 @@ contains
         sys%hm%vhxc(:, :) = M_HALF * (sys%hm%vhxc(:, :) + vhxc(:, :))
         call update_hamiltonian_chi(i-1, sys%parser, gr, sys%ks, sys%hm, td, tg, par, sys%geo, st_ref, qtildehalf)
         freeze = ion_dynamics_freeze(td%ions)
-        call propagator_dt(sys%ks, sys%parser, sys%hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, i-1, td%ions, sys%geo, sys%outp)
+        call propagator_dt(sys%ks, sys%parser, sys%hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, i-1, td%ions, sys%geo,&
+             & sys%outp)
         if(freeze) call ion_dynamics_unfreeze(td%ions)
 
         if(ion_dynamics_ions_move(td%ions)) then
