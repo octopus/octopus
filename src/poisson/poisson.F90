@@ -21,6 +21,7 @@
 
 module poisson_oct_m
   use batch_oct_m
+  use comm_oct_m
   use cube_oct_m
   use cube_function_oct_m
   use derivatives_oct_m

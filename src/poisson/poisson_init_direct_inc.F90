@@ -221,9 +221,9 @@ subroutine poisson_solve_direct(this, pot, rho)
   FLOAT                :: xx1(1:MAX_DIM), xx2(1:MAX_DIM), xx3(1:MAX_DIM), xx4(1:MAX_DIM)
 #ifdef HAVE_MPI
   FLOAT                :: xx(1:this%der%mesh%sb%dim), yy(1:this%der%mesh%sb%dim) 
-  FLOAT                :: tmp, xg(MAX_DIM)
+  FLOAT                :: xg(MAX_DIM)
   integer, allocatable :: ip_v(:), part_v(:)
-  FLOAT, allocatable   :: pvec(:) 
+  FLOAT, allocatable   :: pvec(:), tmp(:)
 #endif
 
   PUSH_SUB(poisson_solve_direct)
@@ -251,6 +251,7 @@ subroutine poisson_solve_direct(this, pot, rho)
     SAFE_ALLOCATE(pvec(1:this%der%mesh%np))
     SAFE_ALLOCATE(part_v(1:this%der%mesh%np_global))
     SAFE_ALLOCATE(ip_v(1:this%der%mesh%np_global))
+    SAFE_ALLOCATE(tmp(1:this%der%mesh%np_global))
     do ip = 1, this%der%mesh%np_global
       ip_v(ip) = ip
     end do
@@ -279,14 +280,19 @@ subroutine poisson_solve_direct(this, pot, rho)
           end if
         end do
       end if
-      tmp = dmf_integrate(this%der%mesh, pvec)
+      tmp(ip) = dmf_integrate(this%der%mesh, pvec, reduce = .false.)
+    end do
 
+    call comm_allreduce(this%der%mesh%mpi_grp%comm, tmp)
+
+    do ip = 1, this%der%mesh%np_global
       if (part_v(ip) == this%der%mesh%vp%partno) then
-        pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp
+        pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp(ip)
       end if
     end do
 
     SAFE_DEALLOCATE_A(pvec)
+    SAFE_DEALLOCATE_A(tmp)
 
   else ! serial mode
 #endif

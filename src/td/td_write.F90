@@ -2957,18 +2957,24 @@ contains
     total_current = CNST(0.0)
     do idir = 1, gr%sb%dim
       do ispin = 1, st%d%spin_channels
-        total_current(idir) =  total_current(idir) + dmf_integrate(gr%mesh, st%current(:, idir, ispin))
+        total_current(idir) =  total_current(idir) + dmf_integrate(gr%mesh, st%current(:, idir, ispin), reduce = .false.)
       end do
       total_current(idir) = units_from_atomic(units_out%length/units_out%time, total_current(idir))
     end do
+    if(gr%mesh%parallel_in_domains) then
+      call comm_allreduce(gr%mesh%mpi_grp%comm, total_current, dim = gr%sb%dim)
+    end if
 
     abs_current = CNST(0.0)
     do idir = 1, gr%sb%dim
       do ispin = 1, st%d%spin_channels
-        abs_current(idir) =  abs_current(idir) + dmf_integrate(gr%mesh, abs(st%current(:, idir, ispin)))
+        abs_current(idir) =  abs_current(idir) + dmf_integrate(gr%mesh, abs(st%current(:, idir, ispin)), reduce = .false.)
       end do
       abs_current(idir) = units_from_atomic(units_out%length/units_out%time, abs_current(idir))
     end do
+    if(gr%mesh%parallel_in_domains) then
+      call comm_allreduce(gr%mesh%mpi_grp%comm, abs_current, dim = gr%sb%dim)
+    end if
 
    if(mpi_grp_is_root(mpi_world)) then
       call write_iter_double(out_total_current, total_current, gr%mesh%sb%dim)
@@ -2979,8 +2985,11 @@ contains
       total_current = CNST(0.0)
       do idir = 1, gr%sb%dim
         total_current(idir) = units_from_atomic(units_out%length/units_out%time, &
-                                    dmf_integrate(gr%mesh, st%current(:, idir, ispin)))
+                               dmf_integrate(gr%mesh, st%current(:, idir, ispin), reduce = .false.))
       end do
+      if(gr%mesh%parallel_in_domains) then
+        call comm_allreduce(gr%mesh%mpi_grp%comm, total_current, dim = gr%sb%dim)
+      end if
       if(mpi_grp_is_root(mpi_world)) &
         call write_iter_double(out_total_current, total_current, gr%mesh%sb%dim)
     end do

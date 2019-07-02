@@ -143,7 +143,8 @@ module hamiltonian_base_oct_m
     TERM_OTHERS              =   8,      &
     TERM_LOCAL_EXTERNAL      =  16,      &
     TERM_MGGA                =  32,      &
-    TERM_DFT_U               =  64 
+    TERM_DFT_U               =  64,      &
+    TERM_RDMFT_OCC           = 128
 
   integer, parameter, public ::            &
     FIELD_POTENTIAL                = 1,    &

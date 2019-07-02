@@ -36,16 +36,17 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   FLOAT,                    intent(in)    :: energy_change_threshold
   FLOAT, pointer, optional, intent(in)   :: shift(:,:)
 
-  R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:)
-  R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
-  FLOAT    :: cg0, e0, res, alpha, beta, dot, old_res, old_energy, first_delta_e
+  R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:), psi_j(:,:)
+  R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma, cg_phi
+  FLOAT    :: cg0, e0, res, alpha, beta, dot, old_res, old_energy, first_delta_e, lam, lam_conj
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
-  FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :)
+  FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :), lam_sym(:)
   FLOAT    :: integral_hartree, integral_xc, tmp
-  integer  :: ist, iter, maxter, idim, ip, isp, ixc
+  integer  :: ist, jst, iter, maxter, idim, ip, isp, ixc, ib
   R_TYPE   :: sb(3)
   logical  :: fold_ ! use folded spectrum operator (H-shift)^2
   logical  :: add_xc_term
+  type(states_group_t) :: hpsi_j
 
   PUSH_SUB(X(eigensolver_cg2))
 
@@ -103,6 +104,22 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     SAFE_ALLOCATE(h_psi(1:gr%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE( h_cg(1:gr%mesh%np, 1:st%d%dim))
   end if
+  
+  if(hm%theory_level == RDMFT) then
+    SAFE_ALLOCATE(psi_j(1:gr%mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(lam_sym(1:st%nst))
+    call states_group_copy(st%d, st%group, hpsi_j, copy_data=.false.)
+    do ib = hpsi_j%block_start, hpsi_j%block_end
+      call X(hamiltonian_apply_batch) (hm, gr%der, st%group%psib(ib, ik), hpsi_j%psib(ib, ik), ik)
+    end do
+  end if
+
+  h_psi = R_TOTYPE(M_ZERO)
+  cg    = R_TOTYPE(M_ZERO)
+  g     = R_TOTYPE(M_ZERO)
+  g0    = R_TOTYPE(M_ZERO)
+  h_cg  = R_TOTYPE(M_ZERO)
+  g_prev = R_TOTYPE(M_ZERO)
 
   ! get derivative once here -> the density does not change in the loop
   if(add_xc_term) then
@@ -120,7 +137,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   ! Payne et al. (1992), Rev. Mod. Phys. 64, 4, section V.B
   eigenfunction_loop : do ist = converged + 1, st%nst
     gg1   = R_TOTYPE(M_ZERO)
-
+    
     call states_get_state(st, gr%mesh, ist, ik, psi)
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
@@ -158,6 +175,40 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
         g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
       end forall
+
+      if (hm%theory_level == RDMFT) then
+        ! For RDMFT, the gradient of the total energy functional differs from
+        ! the DFT and HF cases, as the lagrange multiplier matrix lambda cannot
+        ! be diagonalized together with the Hamiltonian. This is because the
+        ! orbitals of the minimization are not the eigenstates of the
+        ! single-body Hamiltonian, but of the systems 1RDM.
+        ! The functional to be minimized here is:
+        !  F = E[psi_i]-sum_ij lam_ij (<psi_i|psi_j> - delta_ij) + const.
+        ! The respective gradient reads:
+        !   dF/dpsi_i= dE/dphi_i - sum_j lam_ij |psi_j>= H|psi_i> - sum_j lam_ij |psi_j>
+        ! We get the expression for lam_ij from the gradient with respect to
+        ! psi*: lam_ij = <psi_i|dE/dpsi_j^*> = <psi_i|H|psi_j>
+        ! NB: lam_ij != lam_ji until SCF convergence!
+        do jst = 1, st%nst
+          if (jst == ist) then
+            lam_sym(jst) = M_TWO*st%eigenval(jst, ik)
+          else
+            call states_get_state(st, gr%mesh, jst, ik, psi_j)
+            do idim = 1, st%d%dim
+              call batch_get_state(hpsi_j%psib(hpsi_j%iblock(jst, ik), ik), (/jst, idim/), gr%mesh%np, h_cg(:, idim))
+            end do
+
+            ! calculate <phi_j|H|phi_i> = lam_ji and <phi_i|H|phi_j> = lam_ij
+            lam = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_j, h_psi))
+            lam_conj = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
+            lam_sym(jst) = lam + lam_conj
+
+            do idim = 1, st%d%dim
+              call lalg_axpy(gr%mesh%np, -lam_conj, psi_j(:, idim), g(:, idim))
+            end do
+          end if
+        end do
+      end if
 
       ! PTA92, eq. 5.12
       ! Orthogonalize to all states -> not needed for good convergence
@@ -303,8 +354,19 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
           (integral_hartree + integral_xc) / gr%sb%rcell_volume**2
       end if
 
-
       beta = R_REAL(a0) * M_TWO
+
+      ! For RDMFT, we get a different formula for the line minimization, which turns out to
+      ! only change the beta of the original expression.
+      ! beta -> beta + beta_rdmft, with beta_rdmft= - sum_j (lam_ji <cg_i|phi_k> + c.c.)
+      if(hm%theory_level == RDMFT) then
+        do jst = 1, st%nst
+          call states_get_state(st, gr%mesh, jst, ik, psi_j)
+          cg_phi = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_j, cg))
+          beta = beta - M_TWO * cg_phi / cg0 * lam_sym(jst)
+        end do
+      end if
+
       theta = atan(beta/alpha)*M_HALF
       stheta = sin(theta)
       ctheta = cos(theta)
@@ -335,6 +397,12 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       st%eigenval(ist, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi))
       res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
+
+      if (hm%theory_level == RDMFT) then
+        do idim = 1, st%d%dim
+          call batch_set_state(hpsi_j%psib(hpsi_j%iblock(ist, ik), ik), (/ist, idim/), gr%mesh%np, h_psi(:, idim))
+        end do
+      end if
 
       ! consider change in energy
       if(iter == 1) then
@@ -406,6 +474,12 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   SAFE_DEALLOCATE_A(omega)
   SAFE_DEALLOCATE_A(fxc)
   SAFE_DEALLOCATE_A(psi2)
+  if(hm%theory_level == RDMFT) then
+    SAFE_DEALLOCATE_A(psi_j)
+    SAFE_DEALLOCATE_A(lam_sym)
+    call states_group_end(hpsi_j, st%d)
+  end if
+
   POP_SUB(X(eigensolver_cg2))
 end subroutine X(eigensolver_cg2)
 

@@ -53,7 +53,8 @@ module states_io_oct_m
   public ::                           &
     states_write_eigenvalues,         &
     states_write_tpa,                 &
-    states_write_bandstructure
+    states_write_bandstructure,       &
+    states_write_gaps
 
 contains
 
@@ -361,6 +362,72 @@ contains
     end subroutine print_dos
  
   end subroutine states_write_eigenvalues
+
+  ! ---------------------------------------------------------
+  subroutine states_write_gaps(iunit, st, sb)
+    integer,           intent(in) :: iunit
+    type(states_t),    intent(in) :: st
+    type(simul_box_t), intent(in) :: sb
+    
+    integer :: ik, ikk, ist
+
+    FLOAT :: homo, lumo, egdir, egindir
+    integer :: homok, lumok, egdirk
+
+    PUSH_SUB(states_write_gaps)
+
+    if(.not. st%calc_eigenval .or. .not. mpi_grp_is_root(mpi_world) &
+     .or. .not. simul_box_is_periodic(sb) .or. st%smear%method  /=  SMEAR_SEMICONDUCTOR) then 
+      POP_SUB(states_write_gaps)
+      return
+    end if
+
+    homo = -M_HUGE
+    homok = -1
+    lumo =  M_HUGE 
+    lumok = -1
+    egdir = M_HUGE
+    egdirk = -1
+    
+    !TODO: This definition depends on the type of smearing
+    do ik = 1, st%d%nik
+      if(abs(st%d%kweights(ik)) < M_EPSILON) cycle
+      do ist = 1,st%nst-1
+        if(st%occ(ist,ik) > M_EPSILON .and. st%eigenval(ist,ik) > homo) then
+          homo = st%eigenval(ist,ik)
+          homok = ik
+        end if
+
+        if(st%occ(ist+1,ik) <= M_EPSILON .and. st%eigenval(ist+1,ik) < lumo) then
+          lumo = st%eigenval(ist+1,ik)
+          lumok = ik
+        end if
+
+        if(st%occ(ist,ik) > M_EPSILON .and. st%occ(ist+1,ik) <= M_EPSILON &
+          .and. (st%eigenval(ist+1,ik)-st%eigenval(ist,ik))< egdir) then
+          egdir = (st%eigenval(ist+1,ik)-st%eigenval(ist,ik))
+          egdirk = ik 
+        end if
+      end do
+    end do
+
+    egindir = lumo-homo
+
+    if(lumo == -1 .or. egdir <= M_EPSILON) then
+      write(message(1),'(a)') 'The system seems to have no gap.'
+      call messages_info(1, iunit)
+    else
+      write(message(1),'(a,i5,a,f7.4,a)') 'Direct gap at ik=', egdirk, ' of ', &
+              units_from_atomic(units_out%energy, egdir),  ' ' // trim(units_abbrev(units_out%energy))
+      write(message(2),'(a,i5,a,i5,a,f7.4,a)') 'Indirect gap between ik=', homok, ' and ik=', lumok, &
+            ' of ', units_from_atomic(units_out%energy, egindir),  ' ' // trim(units_abbrev(units_out%energy))
+      call messages_info(2, iunit)
+    end if
+
+
+    POP_SUB(states_write_gaps)
+  end subroutine states_write_gaps
+
 
   ! ---------------------------------------------------------
   subroutine states_write_tpa(dir, parser, gr, st)
