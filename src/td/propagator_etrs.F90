@@ -23,7 +23,6 @@ module propagator_etrs_oct_m
   use batch_oct_m
   use density_oct_m
   use exponential_oct_m
-  use gauge_field_oct_m
   use grid_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -88,27 +87,7 @@ contains
       SAFE_ALLOCATE(vhxc_t2(1:gr%mesh%np, 1:st%d%nspin))
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t1)
 
-      call density_calc_init(dens_calc, st, gr, st%rho)
-
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ib = st%group%block_start, st%group%block_end
-
-          call batch_copy(st%group%psib(ib, ik), zpsib_dt)
-          if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(zpsib_dt, copy = .false.)
-
-          !propagate the state dt/2 and dt, simultaneously, with H(time - dt)
-          call exponential_apply_batch(tr%te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, CNST(0.5)*dt, &
-            psib2 = zpsib_dt, deltat2 = dt)
-
-          !use the dt propagation to calculate the density
-          call density_calc_accumulate(dens_calc, ik, zpsib_dt)
-
-          call batch_end(zpsib_dt)
-
-        end do
-      end do
-
-      call density_calc_end(dens_calc)
+      call worker_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, CNST(0.5)*dt, dt)
 
       call v_ks_calc(ks, namespace, hm, st, geo, calc_current = .false.)
 
@@ -118,7 +97,6 @@ contains
 
     else
 
-      ! propagate dt/2 with H(time - dt)
       call worker_elec_exp_apply(tr%te, st, gr, hm, psolver, CNST(0.5)*dt)
 
     end if
@@ -126,32 +104,24 @@ contains
     ! propagate dt/2 with H(t)
 
     ! first move the ions to time t
-    if(move_ions .and. ion_dynamics_ions_move(ions)) then
-      call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
-      call hamiltonian_epot_generate(hm, namespace,  gr, geo, st, psolver, time = time)
-    end if
+    call worker_elec_move_ions(tr%worker_elec, gr, hm, psolver, st, namespace, ions, geo, &
+               time, ionic_scale*dt, move_ions = move_ions)
 
-    if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_propagate(hm%ep%gfield, dt, time)
-    end if
+    call worker_elec_propagate_gauge_field(tr%worker_elec, hm, dt, time)
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
     end if
-    call hamiltonian_update(hm, gr%mesh, namespace, time = time)
-    !We update the occupation matrices
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
-
+    
+    call worker_elec_update_hamiltonian(namespace, st, gr, hm, time)
     
     ! propagate dt/2 with H(time - dt)
-    call worker_elec_exp_apply(tr%te, st, gr, hm, psolver, CNST(0.5)*dt)
+    call worker_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, CNST(0.5)*dt)
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       SAFE_DEALLOCATE_A(vhxc_t1)
       SAFE_DEALLOCATE_A(vhxc_t2)
     end if
-
-    call density_calc(st, gr, st%rho)
 
     POP_SUB(td_etrs)
   end subroutine td_etrs
@@ -201,27 +171,22 @@ contains
 
     call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
     call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
-    call hamiltonian_update(hm, gr%mesh, namespace, time = time - dt)
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
+
+    call worker_elec_update_hamiltonian(namespace, st, gr, hm, time - dt)
 
     ! propagate dt/2 with H(t)
 
     ! first move the ions to time t
-    if(move_ions .and. ion_dynamics_ions_move(ions)) then
-      call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
-      call hamiltonian_epot_generate(hm, namespace,  gr, geo, st, psolver, time = time)
-    end if
+    call worker_elec_move_ions(tr%worker_elec, gr, hm, psolver, st, namespace, ions, geo, &
+                time, ionic_scale*dt, move_ions = move_ions)
 
-    if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_propagate(hm%ep%gfield, dt, time)
-    end if
+    call worker_elec_propagate_gauge_field(tr%worker_elec, hm, dt, time)
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
     end if
 
-    call hamiltonian_update(hm, gr%mesh, namespace, time = time)
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
+    call worker_elec_update_hamiltonian(namespace, st, gr, hm, time)
 
     SAFE_ALLOCATE(psi2(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
@@ -331,9 +296,8 @@ contains
         call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
       endif
 
-      call hamiltonian_update(hm, gr%mesh, namespace, time = time - dt)
-      !We update the occupation matrices
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
+      call worker_elec_update_hamiltonian(namespace, st, gr, hm, time - dt) 
+
       call v_ks_calc_start(ks, namespace, hm, st, geo, time = time - dt, calc_energy = .false., &
              calc_current = .false.)
     end if
@@ -386,18 +350,12 @@ contains
     end if
 
     ! move the ions to time t
-    if(move_ions .and. ion_dynamics_ions_move(ions)) then
-      call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
-      call hamiltonian_epot_generate(hm, namespace, gr, geo, st, psolver, time = time)
-    end if
+    call worker_elec_move_ions(tr%worker_elec, gr, hm, psolver, st, namespace, ions, &
+              geo, time, ionic_scale*dt, move_ions = move_ions)
 
-    if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_propagate(hm%ep%gfield, dt, time)
-    end if
+    call worker_elec_propagate_gauge_field(tr%worker_elec, hm, dt, time)
 
-    call hamiltonian_update(hm, gr%mesh, namespace, time = time)
-    !We update the occupation matrices
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
+    call worker_elec_update_hamiltonian(namespace, st, gr, hm, time)
 
     if(tr%method == PROP_CAETRS) then
  

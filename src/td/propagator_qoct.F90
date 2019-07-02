@@ -21,12 +21,12 @@
 module propagator_qoct_oct_m
   use density_oct_m
   use exponential_oct_m
+  use gauge_field_oct_m
   use grid_oct_m
   use geometry_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
-  use lda_u_oct_m
   use messages_oct_m
   use namespace_oct_m
   use oct_exchange_oct_m
@@ -49,7 +49,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator specifically designed for the QOCT+TDDFT problem
-  subroutine td_qoct_tddft_propagator(hm, psolver, namespace, xc, gr, st, tr, t, dt, ions, geo)
+  subroutine td_qoct_tddft_propagator(hm, psolver, namespace, xc, gr, st, tr, time, dt, ions, geo)
     type(hamiltonian_t), intent(inout) :: hm
     type(poisson_t),     intent(in)    :: psolver
     type(namespace_t),   intent(in)    :: namespace
@@ -57,40 +57,39 @@ contains
     type(grid_t),        intent(inout) :: gr
     type(states_elec_t), intent(inout) :: st
     type(propagator_t),  intent(inout) :: tr
-    FLOAT,               intent(in)    :: t, dt
+    FLOAT,               intent(in)    :: time, dt
     type(ion_dynamics_t),            intent(inout) :: ions
     type(geometry_t),                intent(inout) :: geo
 
-    type(ion_state_t) :: ions_state
     PUSH_SUB(td_qoct_tddft_propagator)
+
+    !TODO: Add gauge field support
+    ASSERT(.not.gauge_field_is_applied(hm%ep%gfield))
 
     if( (hm%theory_level /= INDEPENDENT_PARTICLES) .and. &
       (.not. oct_exchange_enabled(hm%oct_exchange)) ) then
       !TODO: This does not support complex scaling
       if(hm%family_is_mgga_with_exc) then
-        call potential_interpolation_interpolate(tr%vksold, 2, t, dt, t-dt/M_TWO, hm%vhxc, vtau = hm%vtau)
+        call potential_interpolation_interpolate(tr%vksold, 2, time, dt, time-dt/M_TWO, &
+                  hm%vhxc, vtau = hm%vtau)
       else
-        call potential_interpolation_interpolate(tr%vksold, 2, t, dt, t-dt/M_TWO, hm%vhxc)
+        call potential_interpolation_interpolate(tr%vksold, 2, time, dt, time-dt/M_TWO, &
+                  hm%vhxc)
       end if
     end if
 
     !move the ions to time 'time - dt/2'
-    if(ion_dynamics_ions_move(ions)) then
-      call ion_dynamics_save_state(ions, geo, ions_state)
-      call ion_dynamics_propagate(ions, gr%sb, geo, t - dt/M_TWO, M_HALF*dt)
-      call hamiltonian_epot_generate(hm, namespace, gr, geo, st, psolver, time = t - dt/M_TWO)
-    end if
+    call worker_elec_move_ions(tr%worker_elec, gr, hm, psolver, st, namespace, ions, geo, &
+                time - M_HALF*dt, M_HALF*dt, save_pos = .true.)
 
-    call worker_elec_update_hamiltonian(namespace, st, gr, hm, t-dt/M_TWO)
+    call worker_elec_update_hamiltonian(namespace, st, gr, hm, time-dt/M_TWO)
 
     call exponential_apply_all(tr%te, gr%der, hm, psolver, xc, st, dt)
 
     call density_calc(st, gr, st%rho)
 
     !restore to time 'time - dt'
-    if(ion_dynamics_ions_move(ions)) then
-      call ion_dynamics_restore_state(ions, geo, ions_state)
-    end if
+    call worker_elec_restore_ions(tr%worker_elec, ions, geo)
 
     POP_SUB(td_qoct_tddft_propagator)
   end subroutine td_qoct_tddft_propagator

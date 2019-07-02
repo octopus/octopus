@@ -22,9 +22,12 @@ module worker_elec_oct_m
   use batch_oct_m
   use density_oct_m  
   use exponential_oct_m
+  use geometry_oct_m
+  use gauge_field_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
+  use ion_dynamics_oct_m
   use lda_u_oct_m
   use messages_oct_m
   use namespace_oct_m
@@ -37,14 +40,21 @@ module worker_elec_oct_m
   implicit none
 
   private
-  public ::                            &
-    worker_elec_t,                     &
-    worker_elec_update_hamiltonian,    &
-    worker_elec_exp_apply,             &
-    worker_elec_fuse_density_exp_apply
+  public ::                             &
+    worker_elec_t,                      &
+    worker_elec_update_hamiltonian,     &
+    worker_elec_exp_apply,              &
+    worker_elec_fuse_density_exp_apply, &
+    worker_elec_move_ions,              &
+    worker_elec_restore_ions,           &
+    worker_elec_propagate_gauge_field,  &
+    worker_elec_restore_gauge_field
 
   type, extends(worker_abst_t) :: worker_elec_t
     private
+
+    type(ion_state_t) :: ions_state
+    FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
 
   contains
 
@@ -92,6 +102,113 @@ contains
     POP_SUB(worker_elec_update_hamiltonian)
 
   end subroutine worker_elec_update_hamiltonian
+
+  subroutine worker_elec_move_ions(wo, gr, hm, psolver, st, namespace, ions, geo, time, ion_time, save_pos, move_ions)
+    class(worker_elec_t),    intent(inout) :: wo
+    type(grid_t),            intent(in)    :: gr
+    type(hamiltonian_t),     intent(inout) :: hm
+    type(poisson_t),         intent(in)    :: psolver
+    type(states_elec_t),     intent(inout) :: st
+    type(namespace_t),       intent(in)    :: namespace
+    type(ion_dynamics_t),    intent(inout) :: ions
+    type(geometry_t),        intent(inout) :: geo
+    FLOAT,                   intent(in)    :: time
+    FLOAT,                   intent(in)    :: ion_time
+    logical, optional,       intent(in)    :: save_pos
+    logical, optional,       intent(in)    :: move_ions
+
+    type(profile_t), save :: prof
+
+    PUSH_SUB(worker_elec_move_ions)    
+
+    call profiling_in(prof, 'ELEC_MOVE_IONS')
+   
+    if (ion_dynamics_ions_move(ions) .and. optional_default(move_ions, .true.)) then
+      if (optional_default(save_pos, .false.)) then
+        call ion_dynamics_save_state(ions, geo, wo%ions_state)
+      end if
+      call ion_dynamics_propagate(ions, gr%sb, geo, time, ion_time)
+      call hamiltonian_epot_generate(hm, namespace, gr, geo, st, psolver, time = time)
+    end if
+
+    POP_SUB(worker_elec_move_ions)
+
+    call profiling_out(prof)
+
+  end subroutine worker_elec_move_ions
+
+  subroutine worker_elec_restore_ions(wo, ions, geo, move_ions)
+    class(worker_elec_t),    intent(inout) :: wo
+    type(ion_dynamics_t),    intent(inout) :: ions
+    type(geometry_t),        intent(inout) :: geo
+    logical, optional,       intent(in)    :: move_ions
+
+    type(profile_t), save :: prof
+
+    PUSH_SUB(worker_elec_restore_ions)    
+
+    call profiling_in(prof, 'ELEC_RESTORE_IONS')
+
+    if (ion_dynamics_ions_move(ions) .and. optional_default(move_ions, .true.)) then
+      call ion_dynamics_restore_state(ions, geo, wo%ions_state)
+    end if
+
+    call profiling_out(prof)
+
+    POP_SUB(worker_elec_retore_ions)
+
+  end subroutine worker_elec_restore_ions
+
+  subroutine worker_elec_propagate_gauge_field(wo, hm, dt, time, save_gf)
+    class(worker_elec_t),    intent(inout) :: wo
+    type(hamiltonian_t),     intent(inout) :: hm
+    FLOAT,                   intent(in)    :: dt
+    FLOAT,                   intent(in)    :: time
+    logical,  optional,      intent(in)    :: save_gf
+
+    type(profile_t), save :: prof
+
+    PUSH_SUB(worker_elec_propagate_gauge_field)
+
+    call profiling_in(prof, 'ELEC_MOVE_GAUGE')
+
+    if(gauge_field_is_applied(hm%ep%gfield)) then
+      if(optional_default(save_gf, .false.)) then
+        call gauge_field_get_vec_pot(hm%ep%gfield, wo%vecpot)
+        call gauge_field_get_vec_pot_vel(hm%ep%gfield, wo%vecpot_vel)
+      end if
+      call gauge_field_propagate(hm%ep%gfield, dt, time)
+    end if
+
+    POP_SUB(worker_elec_propagate_gauge_field)
+
+    call profiling_out(prof)
+
+  end subroutine worker_elec_propagate_gauge_field
+
+  subroutine worker_elec_restore_gauge_field(wo, namespace, hm, gr)
+    class(worker_elec_t),    intent(in)    :: wo
+    type(namespace_t),       intent(in)    :: namespace
+    type(hamiltonian_t),     intent(inout) :: hm
+    type(grid_t),            intent(in)    :: gr
+
+    type(profile_t), save :: prof
+
+    PUSH_SUB(worker_elec_restore_gauge_field)
+
+    call profiling_in(prof, 'ELEC_RESTORE_GAUGE')
+
+    if(gauge_field_is_applied(hm%ep%gfield)) then
+      call gauge_field_set_vec_pot(hm%ep%gfield, wo%vecpot)
+      call gauge_field_set_vec_pot_vel(hm%ep%gfield, wo%vecpot_vel)
+      call hamiltonian_update(hm, gr%mesh, namespace)
+    end if
+
+    call profiling_out(prof)
+
+    POP_SUB(worker_elec_retore_gauge_field)
+
+  end subroutine worker_elec_restore_gauge_field
 
   subroutine worker_elec_exp_apply(te, st, gr, hm, psolver, dt)
     type(exponential_t), intent(inout) :: te 

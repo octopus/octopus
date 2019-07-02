@@ -19,15 +19,11 @@
 #include "global.h"
 
 module propagator_expmid_oct_m
-  use density_oct_m
-  use exponential_oct_m
-  use gauge_field_oct_m
   use grid_oct_m
   use geometry_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use ion_dynamics_oct_m
-  use lda_u_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -62,56 +58,29 @@ contains
     type(geometry_t),                intent(inout) :: geo
     logical,                         intent(in)    :: move_ions
 
-    integer :: ib, ik
-    type(ion_state_t) :: ions_state
-    FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
-
     PUSH_SUB(propagator_dt.exponential_midpoint)
 
     ! the half step of this propagator screws with the gauge field kick
     ASSERT(hm%ep%gfield%with_gauge_field .eqv. .false.)
 
-    vecpot(:)     = M_ZERO
-    vecpot_vel(:) = M_ZERO
-    
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
         call potential_interpolation_interpolate(tr%vksold, 3, &
           time, dt, time - dt/M_TWO, hm%vhxc)
     end if
 
     !move the ions to time 'time - dt/2'
-    if(move_ions .and.  ion_dynamics_ions_move(ions)) then
-      call ion_dynamics_save_state(ions, geo, ions_state)
-      call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, ionic_scale*CNST(0.5)*dt)
-      call hamiltonian_epot_generate(hm, namespace, gr, geo, st, psolver, time = time - dt/M_TWO)
-    end if
+    call worker_elec_move_ions(tr%worker_elec, gr, hm, psolver, st, namespace, ions, geo, &
+            time - M_HALF*dt, ionic_scale*M_HALF*dt, save_pos = .true., move_ions = move_ions)
 
-    if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_get_vec_pot(hm%ep%gfield, vecpot)
-      call gauge_field_get_vec_pot_vel(hm%ep%gfield, vecpot_vel)
-      call gauge_field_propagate(hm%ep%gfield, M_HALF*dt, time)
-    end if
-    call hamiltonian_update(hm, gr%mesh, namespace, time = time - M_HALF*dt)
-    !We update the occupation matrices
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
+    call worker_elec_propagate_gauge_field(tr%worker_elec, hm, M_HALF*dt, time, save_gf = .true.)
 
-     
-    ! propagate dt/2 with H(time - dt)
-    !TODO: Fuse it with density calculation
-    call worker_elec_exp_apply(tr%te, st, gr, hm, psolver, dt)
+    call worker_elec_update_hamiltonian(namespace, st, gr, hm, time - dt*M_HALF)
 
-    !restore to time 'time - dt'
-    if(move_ions .and. ion_dynamics_ions_move(ions)) then
-      call ion_dynamics_restore_state(ions, geo, ions_state)
-    end if
+    call worker_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, dt)
 
-    if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_set_vec_pot(hm%ep%gfield, vecpot)
-      call gauge_field_set_vec_pot_vel(hm%ep%gfield, vecpot_vel)
-      call hamiltonian_update(hm, gr%mesh, namespace)
-    end if
+    call worker_elec_restore_ions(tr%worker_elec, ions, geo, move_ions = move_ions)
 
-    call density_calc(st, gr, st%rho)
+    call worker_elec_restore_gauge_field(tr%worker_elec, namespace, hm, gr)
 
     POP_SUB(propagator_dt.exponential_midpoint)
   end subroutine exponential_midpoint
