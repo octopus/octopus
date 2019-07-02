@@ -332,7 +332,10 @@ contains
     call parse_environment("OCT_")
 
     ! set namespace to empty for the global parser
-    self%namespace = ''
+    ! TODO: for testing purposes, this is currently set to default
+    ! -> should be removed once multisystem support is implemented
+    ! (there is a test for this)
+    self%namespace = 'default'
 
   end subroutine parser_init
 
@@ -367,7 +370,8 @@ contains
     integer(8) :: res8
     character(len=len(name)+len(self%namespace)+1) :: full_name
 
-    full_name = parse_check_varinfo(self, name)
+    call parse_check_varinfo(name)
+    full_name = parse_get_full_name(self, name)
     call oct_parse_int(full_name, int(def, 8), res8)
 
     res = int(res8)
@@ -384,7 +388,8 @@ contains
 
     character(len=len(name)+len(self%namespace)+1) :: full_name
 
-    full_name = parse_check_varinfo(self, name)
+    call parse_check_varinfo(name)
+    full_name = parse_get_full_name(self, name)
     call oct_parse_int(full_name, def, res)
 
   end subroutine parse_integer8
@@ -399,7 +404,8 @@ contains
 
     character(len=len(name)+len(self%namespace)+1) :: full_name
 
-    full_name = parse_check_varinfo(self, name)
+    call parse_check_varinfo(name)
+    full_name = parse_get_full_name(self, name)
     call oct_parse_int(full_name, int(def, 8), res)
 
   end subroutine parse_integer48
@@ -415,7 +421,8 @@ contains
     integer(8) :: res8
     character(len=len(name)+len(self%namespace)+1) :: full_name
 
-    full_name = parse_check_varinfo(self, name)
+    call parse_check_varinfo(name)
+    full_name = parse_get_full_name(self, name)
     call oct_parse_int(full_name, def, res8)
 
     res = int(res8)
@@ -432,7 +439,8 @@ contains
 
     character(len=len(name)+len(self%namespace)+1) :: full_name
 
-    full_name = parse_check_varinfo(self, name)
+    call parse_check_varinfo(name)
+    full_name = parse_get_full_name(self, name)
     call oct_parse_string(full_name, def, res)
 
   end subroutine parse_string
@@ -448,7 +456,8 @@ contains
     integer(8) :: idef, ires
     character(len=len(name)+len(self%namespace)+1) :: full_name
 
-    full_name = parse_check_varinfo(self, name)
+    call parse_check_varinfo(name)
+    full_name = parse_get_full_name(self, name)
 
     idef = 0
     if(def) idef = 1
@@ -468,7 +477,8 @@ contains
 
     character(len=len(name)+len(self%namespace)+1) :: full_name
 
-    full_name = parse_check_varinfo(self, name)
+    call parse_check_varinfo(name)
+    full_name = parse_get_full_name(self, name)
     call oct_parse_complex(full_name, def, res)
 
   end subroutine parse_cmplx
@@ -489,10 +499,9 @@ contains
     if(present(check_varinfo_)) check_varinfo = check_varinfo_
 
     if(check_varinfo) then
-      full_name = parse_check_varinfo(self, name)
-    else
-      full_name = name
+      call parse_check_varinfo(name)
     end if
+    full_name = parse_get_full_name(self, name)
     parse_block = oct_parse_block(full_name, blk)
 
   end function parse_block
@@ -547,7 +556,8 @@ contains
     real(8) :: res8
     character(len=len(name)+len(self%namespace)+1) :: full_name
 
-    full_name = parse_check_varinfo(self, name)
+    call parse_check_varinfo(name)
+    full_name = parse_get_full_name(self, name)
 
     if(present(unit)) then
       call oct_parse_double(full_name, units_from_atomic(unit, real(def4, 8)), res8)
@@ -570,7 +580,8 @@ contains
 
     character(len=len(name)+len(self%namespace)+1) :: full_name
 
-    full_name = parse_check_varinfo(self, name)
+    call parse_check_varinfo(name)
+    full_name = parse_get_full_name(self, name)
 
     if(present(unit)) then
       call oct_parse_double(full_name, units_from_atomic(unit, def), res)
@@ -707,24 +718,31 @@ contains
 
   ! ----------------------------------------------------------------------
 
-  function parse_check_varinfo(self, varname) result(full_name)
-    type(parser_t), intent(in) :: self
+  subroutine parse_check_varinfo(varname)
     character(len=*), intent(in) :: varname
-    character(len=len(varname)+len(self%namespace)+1) :: full_name
 
-    ! try first the variable prefixed by namespace
-    full_name = trim(self%namespace) // "." // trim(varname)
-    if(.not. varinfo_exists(full_name)) then
-      full_name = varname
-    end if
-    ! now the normal check
     if(.not. varinfo_exists(varname)) then
       write(stderr,'(a)') "*** Fatal Internal Error (description follows)"
       write(stderr,'(a)') 'Attempting to parse undocumented variable '//trim(varname)//'.'
       call parse_fatal()
     end if
 
-  end function parse_check_varinfo
+  end subroutine parse_check_varinfo
+
+
+  ! this function returns the full name, possibly including the namespace
+  ! of the current parser
+  function parse_get_full_name(self, varname) result(full_name)
+    type(parser_t), intent(in) :: self
+    character(len=*), intent(in) :: varname
+    character(len=len(varname)+len(self%namespace)+1) :: full_name
+
+    ! try first the variable prefixed by namespace
+    full_name = trim(self%namespace) // "." // trim(varname)
+    if(.not. parse_is_defined(self, full_name)) then
+      full_name = varname
+    end if
+  end function parse_get_full_name
 
 
   ! ----------------------------------------------------------------------
