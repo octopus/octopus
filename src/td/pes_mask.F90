@@ -53,8 +53,8 @@ module pes_mask_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use sort_oct_m
-  use states_dim_oct_m
-  use states_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_oct_m
   use string_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -180,7 +180,7 @@ contains
     type(namespace_t),        intent(in)  :: namespace
     type(mesh_t), target,     intent(in)  :: mesh
     type(simul_box_t),        intent(in)  :: sb
-    type(states_t),           intent(in)  :: st
+    type(states_elec_t),      intent(in)  :: st
     type(hamiltonian_t),      intent(in)  :: hm
     integer,                  intent(in)  :: max_iter
     FLOAT,                    intent(in)  :: dt
@@ -1015,8 +1015,8 @@ contains
 
   ! --------------------------------------------------------
   subroutine pes_mask_apply_mask(mask, st)
-    type(states_t),   intent(inout) :: st
-    type(pes_mask_t), intent(in)    :: mask
+    type(states_elec_t), intent(inout) :: st
+    type(pes_mask_t),    intent(in)    :: mask
     
     integer :: ik, ist, idim
     CMPLX, allocatable :: mmask(:), psi(:)
@@ -1030,9 +1030,9 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         do idim = 1, st%d%dim
-          call states_get_state(st, mask%mesh, idim, ist, ik, psi)
+          call states_elec_get_state(st, mask%mesh, idim, ist, ik, psi)
           psi(1:mask%mesh%np) = psi(1:mask%mesh%np) * mmask(1:mask%mesh%np)
-          call states_set_state(st, mask%mesh, idim, ist, ik, psi)
+          call states_elec_set_state(st, mask%mesh, idim, ist, ik, psi)
         end do
       end do
     end do
@@ -1296,7 +1296,7 @@ contains
   subroutine pes_mask_calc(mask, mesh, st, dt, iter)
     type(pes_mask_t),    intent(inout) :: mask
     type(mesh_t),        intent(in)    :: mesh
-    type(states_t),      intent(inout) :: st
+    type(states_elec_t), intent(inout) :: st
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
 
@@ -1336,7 +1336,7 @@ contains
         do ist = st%st_start, st%st_end
           do idim = 1, st%d%dim
 
-            call states_get_state(st, mask%mesh, idim, ist, ik, psi)
+            call states_elec_get_state(st, mask%mesh, idim, ist, ik, psi)
             
             cf1%zRs(:,:,:) = M_z0
             cf2%zRS(:,:,:) = M_z0
@@ -1364,7 +1364,7 @@ contains
               cf1%Fs(:,:,:) = mask%k(:,:,:, idim, ist, ik)                            ! cf1 = \Psi_B(k,t1)
               mask%k(:,:,:, idim, ist, ik) =  cf2%Fs(:,:,:)                           ! mask%k = \tilde{\Psi}_A(k,t2)
               call pes_mask_Volkov_time_evolution_wf(mask, mesh,dt,iter-1,cf1%Fs, &   ! cf1 = \tilde{\Psi}_B(k,t2)
-                                                     states_dim_get_kpoint_index(st%d, ik))
+                                                     states_elec_dim_get_kpoint_index(st%d, ik))
                                                      
               mask%k(:,:,:, idim, ist, ik) =  mask%k(:,:,:, idim, ist, ik)&
                 + cf1%Fs(:,:,:)      ! mask%k = \tilde{\Psi}_A(k,t2) + \tilde{\Psi}_B(k,t2)
@@ -1375,7 +1375,7 @@ contains
                 call pes_mask_K_to_X(mask,mesh,cf1%Fs,cf2%zRs)                       ! cf2 = \Psi_B(x,t2)
                 call pes_mask_cube_to_mesh(mask, cf2, mf)
                 psi(1:mask%mesh%np) = psi(1:mask%mesh%np) + mf(1:mask%mesh%np)
-                call states_set_state(st, mask%mesh, idim, ist, ik, psi)
+                call states_elec_set_state(st, mask%mesh, idim, ist, ik, psi)
                 
                 ! Apply correction to wavefunction in B
                 cf2%zRs= (mask%cM%zRs) * cf2%zRs                                     ! cf2 = M*\Psi_B(x,t1)

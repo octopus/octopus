@@ -51,9 +51,10 @@ module v_ks_oct_m
   use pcm_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_parallel_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_parallel_oct_m
   use varinfo_oct_m
   use vdw_ts_oct_m
   use xc_oct_m
@@ -96,7 +97,7 @@ module v_ks_oct_m
     FLOAT,                pointer :: total_density(:)
     FLOAT                         :: amaldi_factor
     type(energy_t),       pointer :: energy
-    type(states_t),       pointer :: hf_st
+    type(states_elec_t),  pointer :: hf_st
     FLOAT,                pointer :: vxc(:, :)
     FLOAT,                pointer :: vtau(:, :)
     FLOAT,                pointer :: axc(:, :, :)
@@ -142,7 +143,7 @@ contains
     type(namespace_t),       intent(in)    :: namespace
     type(grid_t),    target, intent(inout) :: gr
     type(poisson_t), target, intent(in)    :: psolver
-    type(states_t),          intent(in)    :: st
+    type(states_elec_t),     intent(in)    :: st
     type(geometry_t),        intent(inout) :: geo
     type(multicomm_t),       intent(in)    :: mc  
 
@@ -402,7 +403,7 @@ contains
     ks%calc%calculating = .false.
 
     !The value of ks%calculate_current is set to false or true by Output    
-    call current_init(ks%current_calculator, namespace, gr%sb)
+    call current_init(ks%current_calculator, namespace)
     
     !%Variable VDWCorrection
     !%Type integer
@@ -654,7 +655,7 @@ contains
     type(v_ks_t),               intent(inout) :: ks
     type(namespace_t),          intent(in)    :: namespace
     type(hamiltonian_t),        intent(inout) :: hm
-    type(states_t),             intent(inout) :: st
+    type(states_elec_t),        intent(inout) :: st
     type(geometry_t),           intent(in)    :: geo
     logical,          optional, intent(in)    :: calc_eigenval
     FLOAT,            optional, intent(in)    :: time
@@ -688,7 +689,7 @@ contains
     type(v_ks_t),            target,   intent(inout) :: ks
     type(namespace_t),                 intent(in)    :: namespace
     type(hamiltonian_t),     target,   intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
-    type(states_t),                    intent(inout) :: st
+    type(states_elec_t),              intent(inout) :: st
     type(geometry_t) ,       target,   intent(in)    :: geo
     FLOAT,                   optional, intent(in)    :: time 
     logical,                 optional, intent(in)    :: calc_berry !< Use this before wfns initialized.
@@ -736,7 +737,7 @@ contains
     ! If the Hxc term is frozen, there is nothing more to do (WARNING: MISSING ks%calc%energy%intnvxc)
     if(ks%frozen_hxc) then      
       if(ks%calculate_current .and. calc_current_ ) then
-        call states_allocate_current(st, ks%gr)
+        call states_elec_allocate_current(st, ks%gr)
         call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, ks%psolver, st%current, st%current_kpt)
       end if      
 
@@ -771,14 +772,14 @@ contains
     end if
 
     if(ks%calculate_current .and. calc_current_ ) then
-      call states_allocate_current(st, ks%gr)
+      call states_elec_allocate_current(st, ks%gr)
       call current_calculate(ks%current_calculator, ks%gr%der, hm, geo, st, ks%psolver, st%current, st%current_kpt)
     end if
 
     nullify(ks%calc%hf_st) 
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
       SAFE_ALLOCATE(ks%calc%hf_st)
-      call states_copy(ks%calc%hf_st, st)
+      call states_elec_copy(ks%calc%hf_st, st)
       if(st%parallel_in_states) then
         if(accel_is_enabled()) then
           call messages_write('State parallelization of Hartree-Fock exchange  is not supported')
@@ -788,7 +789,7 @@ contains
           call messages_write("or disable acceleration using 'DisableAccel = yes'.")
           call messages_fatal()
         end if
-        call states_parallel_remote_access_start(ks%calc%hf_st)
+        call states_elec_parallel_remote_access_start(ks%calc%hf_st)
       end if
     end if
 
@@ -815,7 +816,7 @@ contains
 
       ! get density taking into account non-linear core corrections
       SAFE_ALLOCATE(ks%calc%density(1:ks%gr%fine%mesh%np, 1:st%d%nspin))
-      call states_total_density(st, ks%gr%fine%mesh, ks%calc%density)
+      call states_elec_total_density(st, ks%gr%fine%mesh, ks%calc%density)
 
       ! Amaldi correction
       if(ks%sic_type == SIC_AMALDI) &
@@ -1162,8 +1163,8 @@ contains
 
         ! swap the states object
         if(associated(hm%hf_st)) then
-          if(hm%hf_st%parallel_in_states) call states_parallel_remote_access_stop(hm%hf_st)
-          call states_end(hm%hf_st)
+          if(hm%hf_st%parallel_in_states) call states_elec_parallel_remote_access_stop(hm%hf_st)
+          call states_elec_end(hm%hf_st)
           SAFE_DEALLOCATE_P(hm%hf_st)
         end if
         
@@ -1189,9 +1190,9 @@ contains
     end if
 
     if(ks%calc%time_present) then
-      call hamiltonian_update(hm, ks%gr%mesh, ks%gr%der%boundaries, time = ks%calc%time)
+      call hamiltonian_update(hm, ks%gr%mesh, time = ks%calc%time)
     else
-      call hamiltonian_update(hm, ks%gr%mesh, ks%gr%der%boundaries)
+      call hamiltonian_update(hm, ks%gr%mesh)
     end if
 
 
@@ -1220,8 +1221,6 @@ contains
     CMPLX, allocatable :: kick(:)
     FLOAT, allocatable :: kick_real(:)
     integer :: ii
-
-    FLOAT :: dt
 
     logical :: kick_time
 

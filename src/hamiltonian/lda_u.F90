@@ -47,8 +47,9 @@ module lda_u_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use submesh_oct_m
   use unit_system_oct_m
  
@@ -198,7 +199,7 @@ contains
    integer,                   intent(in)    :: level
    type(grid_t),              intent(in)    :: gr
    type(geometry_t), target,  intent(in)    :: geo
-   type(states_t),            intent(in)    :: st
+   type(states_elec_t),       intent(in)    :: st
    type(poisson_t),           intent(in)    :: psolver
 
    logical :: complex_coulomb_integrals
@@ -379,9 +380,9 @@ contains
        if(.not. complex_coulomb_integrals) then 
          write(message(1),'(a)')    'Computing the Coulomb integrals of the localized basis.'
          if (states_are_real(st)) then
-           call dcompute_coulomb_integrals(this, namespace, gr%mesh, gr%der, psolver)
+           call dcompute_coulomb_integrals(this, gr%mesh, gr%der, psolver)
          else
-           call zcompute_coulomb_integrals(this, namespace, gr%mesh, gr%der, psolver)
+           call zcompute_coulomb_integrals(this, gr%mesh, gr%der, psolver)
          end if
        else
          ASSERT(.not.states_are_real(st))
@@ -491,7 +492,7 @@ contains
   type(lda_u_t),             intent(inout) :: this
   type(grid_t),              intent(in)    :: gr
   type(geometry_t), target,  intent(in)    :: geo
-  type(states_t),            intent(in)    :: st
+  type(states_elec_t),       intent(in)    :: st
   type(poisson_t),           intent(in)    :: psolver
   logical,                   intent(in)    :: has_phase
 
@@ -560,7 +561,7 @@ contains
  subroutine lda_u_update_occ_matrices(this, mesh, st, hm_base, energy )
    type(lda_u_t),             intent(inout) :: this
    type(mesh_t),              intent(in)    :: mesh 
-   type(states_t),            intent(in)    :: st
+   type(states_elec_t),       intent(in)    :: st
    type(hamiltonian_base_t),  intent(in)    :: hm_base 
    type(energy_t),            intent(inout) :: energy
 
@@ -585,7 +586,7 @@ contains
  subroutine lda_u_build_phase_correction(this, sb, std, vec_pot, vec_pot_var)
    type(lda_u_t),                 intent(inout) :: this
    type(simul_box_t),             intent(in)    :: sb 
-   type(states_dim_t),            intent(in)    :: std
+   type(states_elec_dim_t),       intent(in)    :: std
    FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
    FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
@@ -615,7 +616,7 @@ contains
  subroutine lda_u_periodic_coulomb_integrals(this, namespace, st, der, mc, has_phase)
    type(lda_u_t),                 intent(inout) :: this
    type(namespace_t),             intent(in)    :: namespace
-   type(states_t),                intent(in)    :: st
+   type(states_elec_t),           intent(in)    :: st
    type(derivatives_t),           intent(in)    :: der
    type(multicomm_t),             intent(in)    :: mc
    logical,                       intent(in)    :: has_phase
@@ -653,9 +654,9 @@ contains
  end subroutine lda_u_periodic_coulomb_integrals
 
  subroutine compute_ACBNO_U_kanamori(this, st, kanamori)
-   type(lda_u_t),     intent(in)  :: this
-   type(states_t),    intent(in)  :: st
-   FLOAT,             intent(out) :: kanamori(:,:)
+   type(lda_u_t),        intent(in)  :: this
+   type(states_elec_t),  intent(in)  :: st
+   FLOAT,                intent(out) :: kanamori(:,:)
 
    if(this%nspins == 1) then
      if(states_are_real(st)) then

@@ -26,7 +26,7 @@
 !! We also implement the "smoothing" preconditioning described in that paper.
 subroutine X(eigensolver_plan) (gr, st, hm, psolver, pre, tol, niter, converged, ik, diff)
   type(grid_t),                intent(in)    :: gr
-  type(states_t),              intent(inout) :: st
+  type(states_elec_t),         intent(inout) :: st
   type(hamiltonian_t),         intent(in)    :: hm
   type(poisson_t),             intent(in)    :: psolver
   type(preconditioner_t),      intent(in)    :: pre
@@ -97,7 +97,7 @@ subroutine X(eigensolver_plan) (gr, st, hm, psolver, pre, tol, niter, converged,
 
   ! First of all, copy the initial estimates.
   do ist = 1, st%nst
-    call states_get_state(st, gr%mesh, ist, ik, eigenvec(:, :, ist))
+    call states_elec_get_state(st, gr%mesh, ist, ik, eigenvec(:, :, ist))
     eigenval(ist) = st%eigenval(ist, ik)
   end do
 
@@ -299,13 +299,13 @@ subroutine X(eigensolver_plan) (gr, st, hm, psolver, pre, tol, niter, converged,
       do idim = 1, dim
         call lalg_copy(gr%mesh%np, av(:, idim, d1 + 1), aux(:, idim))
       end do
-      call X(preconditioner_apply)(pre, gr, hm, psolver, ik, aux(:,:), vv(:,:, d1+1))
+      call X(preconditioner_apply)(pre, gr, hm, psolver, aux(:,:), vv(:,:, d1+1))
 
     end do inner_loop
   end do outer_loop
 
   do ist = 1, st%nst
-    call states_set_state(st, gr%mesh, ist, ik, eigenvec(:, :, ist))
+    call states_elec_set_state(st, gr%mesh, ist, ik, eigenvec(:, :, ist))
     st%eigenval(ist, ik) = eigenval(ist)
     diff(ist) = res(ist)
   end do

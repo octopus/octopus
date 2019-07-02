@@ -26,7 +26,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel,
   type(lcao_t),             intent(in)    :: this
   integer,                  intent(in)    :: iorb
   type(mesh_t),             intent(in)    :: mesh
-  type(states_t),           intent(in)    :: st
+  type(states_elec_t),      intent(in)    :: st
   type(geometry_t), target, intent(in)    :: geo
   R_TYPE,                   intent(inout) :: psi(:, :)
   integer,                  intent(in)    :: spin_channel
@@ -100,12 +100,11 @@ end subroutine X(lcao_atomic_orbital)
 
 ! ---------------------------------------------------------
 
-subroutine X(lcao_simple)(this, st, gr, geo, hm, start)
+subroutine X(lcao_simple)(this, st, gr, geo, start)
   type(lcao_t),        intent(inout) :: this
-  type(states_t),      intent(inout) :: st
+  type(states_elec_t), intent(inout) :: st
   type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
-  type(hamiltonian_t), intent(in)    :: hm
   integer, optional,   intent(in)    :: start
 
   integer :: lcao_start, ist, iqn, iorb, ispin
@@ -120,10 +119,10 @@ subroutine X(lcao_simple)(this, st, gr, geo, hm, start)
 
   SAFE_ALLOCATE(orbital(1:gr%mesh%np, 1:st%d%dim))
 
-  call states_set_zero(st)
+  call st%set_zero()
   
   do iqn = st%d%kpt%start, st%d%kpt%end
-    ispin = states_dim_get_spin_index(st%d, iqn)
+    ispin = states_elec_dim_get_spin_index(st%d, iqn)
 
     ist = 0
     do iorb = 1, this%norbs
@@ -134,15 +133,15 @@ subroutine X(lcao_simple)(this, st, gr, geo, hm, start)
       if(ist > st%st_end) cycle
       if(ist < lcao_start) cycle
 
-      call states_get_state(st, gr%mesh, ist, iqn, orbital)
+      call states_elec_get_state(st, gr%mesh, ist, iqn, orbital)
       call X(lcao_atomic_orbital)(this, iorb, gr%mesh, st, geo, orbital, ispin, add = .true.)
-      call states_set_state(st, gr%mesh, ist, iqn, orbital)
+      call states_elec_set_state(st, gr%mesh, ist, iqn, orbital)
       
     end do
 
     ! if we don't have all states we can't orthogonalize right now
     if(st%nst <= this%norbs) then
-      call X(states_orthogonalization_full)(st, gr%mesh, iqn)
+      call X(states_elec_orthogonalization_full)(st, gr%mesh, iqn)
     end if
 
   end do
@@ -157,7 +156,7 @@ end subroutine X(lcao_simple)
 
 subroutine X(lcao_wf)(this, st, gr, geo, hm, psolver, start)
   type(lcao_t),        intent(inout) :: this
-  type(states_t),      intent(inout) :: st
+  type(states_elec_t), intent(inout) :: st
   type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(in)    :: hm
@@ -237,7 +236,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, psolver, start)
     end do
 
     do ik = kstart, kend
-      ispin = states_dim_get_spin_index(st%d, ik)
+      ispin = states_elec_dim_get_spin_index(st%d, ik)
       call X(hamiltonian_apply)(hm, gr%der, psolver, lcaopsi(:, :, ispin), hpsi(:, :, ik), n1, ik)
     end do
 
@@ -254,7 +253,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, psolver, start)
 #endif
 
         do ik = kstart, kend
-          if(ispin /= states_dim_get_spin_index(st%d, ik)) cycle
+          if(ispin /= states_elec_dim_get_spin_index(st%d, ik)) cycle
           hamilt(n1, n2, ik) = X(mf_dotp)(gr%mesh, st%d%dim, hpsi(:, :, ik), lcaopsi2)
           hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
 
@@ -288,7 +287,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, psolver, start)
   zeropsi = R_TOTYPE(M_ZERO)
 
   do ik = kstart, kend
-    ispin = states_dim_get_spin_index(st%d, ik)
+    ispin = states_elec_dim_get_spin_index(st%d, ik)
     call lalg_geneigensolve(this%norbs, hamilt(:, :, ik), overlap(:, :, ispin), ev)
 
 #ifdef HAVE_MPI
@@ -303,7 +302,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, psolver, start)
 
     do n1 = max(lcao_start, st%st_start), st%st_end
       do idim = 1, st%d%dim
-        call states_set_state(st, gr%mesh, idim, n1, ik, zeropsi)
+        call states_elec_set_state(st, gr%mesh, idim, n1, ik, zeropsi)
       end do
     end do
   end do
@@ -343,12 +342,12 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, psolver, start)
       call X(get_ao)(this, st, gr%mesh, geo, n2, ispin, lcaopsi2, use_psi = .false.)
 
       do ik = kstart, kend
-        if(ispin /= states_dim_get_spin_index(st%d, ik)) cycle
+        if(ispin /= states_elec_dim_get_spin_index(st%d, ik)) cycle
         do idim = 1, st%d%dim
           do n1 = max(lcao_start, st%st_start), min(this%norbs, st%st_end)
-            call states_get_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
+            call states_elec_get_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
             call lalg_axpy(gr%mesh%np, hamilt(n2, n1, ik), lcaopsi2(:, idim), lcaopsi(:, 1, 1))
-            call states_set_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
+            call states_elec_set_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
           end do
         end do
       end do
@@ -371,7 +370,7 @@ end subroutine X(lcao_wf)
 ! ---------------------------------------------------------
 subroutine X(init_orbitals)(this, st, gr, geo, start)
   type(lcao_t),        intent(inout) :: this
-  type(states_t),      intent(inout) :: st
+  type(states_elec_t), intent(inout) :: st
   type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   integer, optional,   intent(in)    :: start
@@ -409,7 +408,7 @@ subroutine X(init_orbitals)(this, st, gr, geo, start)
       this%ck(iorb, ispin) = ik
 
       call X(lcao_atomic_orbital)(this, iorb, gr%mesh, st, geo, ao, ispin)
-      call states_set_state(st, gr%mesh, ist, ik, ao)
+      call states_elec_set_state(st, gr%mesh, ist, ik, ao)
 
       if(ispin < st%d%spin_channels) then
         ispin = ispin + 1
@@ -455,7 +454,7 @@ end subroutine X(init_orbitals)
 ! ---------------------------------------------------------
 subroutine X(get_ao)(this, st, mesh, geo, iorb, ispin, ao, use_psi)
   type(lcao_t),        intent(inout) :: this
-  type(states_t),      intent(in)    :: st
+  type(states_elec_t), intent(in)    :: st
   type(mesh_t),        intent(in)    :: mesh
   type(geometry_t),    intent(in)    :: geo
   integer,             intent(in)    :: iorb
@@ -469,7 +468,7 @@ subroutine X(get_ao)(this, st, mesh, geo, iorb, ispin, ao, use_psi)
     ao(1:mesh%np, 1:st%d%dim) = this%X(buff)(1:mesh%np, 1:st%d%dim, iorb, ispin)
   else
     if(use_psi .and. this%initialized_orbitals) then
-      call states_get_state(st, mesh, this%cst(iorb, ispin), this%ck(iorb, ispin), ao)
+      call states_elec_get_state(st, mesh, this%cst(iorb, ispin), this%ck(iorb, ispin), ao)
     else
       call X(lcao_atomic_orbital)(this, iorb, mesh, st, geo, ao, ispin)
     end if
@@ -483,7 +482,7 @@ end subroutine X(get_ao)
 
 subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, start)
   type(lcao_t),        intent(inout) :: this
-  type(states_t),      intent(inout) :: st
+  type(states_elec_t), intent(inout) :: st
   type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   integer, optional,   intent(in)    :: start
@@ -537,7 +536,7 @@ end subroutine X(lcao_alt_init_orbitals)
 !> The alternative implementation.
 subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, psolver, start)
   type(lcao_t),        intent(inout) :: this
-  type(states_t),      intent(inout) :: st
+  type(states_elec_t), intent(inout) :: st
   type(grid_t),        intent(in)    :: gr
   type(geometry_t),    intent(in)    :: geo
   type(hamiltonian_t), intent(in)    :: hm
@@ -590,7 +589,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, psolver, start)
   SAFE_ALLOCATE(psii(1:gr%mesh%np_part, 1:st%d%dim, 1:this%maxorb))
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, 1:this%maxorb))
 
-  call states_set_zero(st)
+  call st%set_zero()
 
   do ispin = 1, st%d%spin_channels
 
@@ -610,11 +609,11 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, psolver, start)
 
     ! iterate over the kpoints for this spin
     do ik = st%d%kpt%start, st%d%kpt%end
-      if(ispin /= states_dim_get_spin_index(st%d, ik)) cycle
+      if(ispin /= states_elec_dim_get_spin_index(st%d, ik)) cycle
 
       if(st%d%nik > st%d%spin_channels) then
         write(message(1), '(a)') ' '
-        write(message(2), '(a,i5)') 'LCAO for k-point ', states_dim_get_kpoint_index(st%d, ik)
+        write(message(2), '(a,i5)') 'LCAO for k-point ', states_elec_dim_get_kpoint_index(st%d, ik)
         write(message(3), '(a)') ' '
         call messages_info(3)
       end if
@@ -783,16 +782,16 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, psolver, start)
         ! of doing this, but it avoids storing the full evec matrix in all processes.
 
         do ib = st%group%block_start, st%group%block_end
-          if(nev < states_block_min(st, ib)) cycle
+          if(nev < states_elec_block_min(st, ib)) cycle
 
-          block_evec_max = min(nev, states_block_max(st, ib))
-          block_evec_size = block_evec_max - states_block_min(st, ib) + 1
+          block_evec_max = min(nev, states_elec_block_max(st, ib))
+          block_evec_size = block_evec_max - states_elec_block_min(st, ib) + 1
           
           SAFE_ALLOCATE(block_evec(1:this%norbs, 1:block_evec_size))
 
           if (mpi_grp_is_root(gr%mesh%mpi_grp)) then
             block_evec(1:this%norbs, 1:block_evec_size) = &
-                 evec(1:this%norbs, states_block_min(st, ib):block_evec_max)
+                 evec(1:this%norbs, states_elec_block_min(st, ib):block_evec_max)
           end if
 #ifdef HAVE_MPI
           call MPI_Bcast(block_evec(1,1), size(block_evec), R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
@@ -813,7 +812,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, psolver, start)
 
             ibasis = ibasis + norbs
             if(mpi_grp_is_root(mpi_world)) then
-              call loct_progress_bar((states_block_min(st, ib) - 1) * this%norbs + block_evec_size * (ibasis - 1), &
+              call loct_progress_bar((states_elec_block_min(st, ib) - 1) * this%norbs + block_evec_size * (ibasis - 1), &
                 this%norbs * nev)
             end if
           end do
@@ -847,7 +846,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, psolver, start)
 
           do ib = st%group%block_start, st%group%block_end
             ! FIXME: this call handles spinors incorrectly.
-            call X(submesh_batch_add_matrix)(this%sphere(iatom), evec(ibasis:, states_block_min(st, ib):), &
+            call X(submesh_batch_add_matrix)(this%sphere(iatom), evec(ibasis:, states_elec_block_min(st, ib):), &
                  this%orbitals(iatom), st%group%psib(ib, ik))
           end do
 

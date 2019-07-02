@@ -36,7 +36,7 @@ module local_write_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use species_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
@@ -239,7 +239,7 @@ contains
     logical,                intent(in)    :: inside(:,:)
     FLOAT  ,                intent(in)    :: center(:,:)
     type(grid_t),           intent(in)    :: gr
-    type(states_t),         intent(inout) :: st
+    type(states_elec_t),    intent(inout) :: st
     type(hamiltonian_t),    intent(inout) :: hm
     type(poisson_t),        intent(in)    :: psolver
     type(v_ks_t),           intent(inout) :: ks
@@ -297,7 +297,7 @@ contains
     logical,                  intent(in)    :: inside(:,:)
     type(grid_t),         intent(in)    :: gr
     type(geometry_t),     intent(inout) :: geo
-    type(states_t),       intent(inout) :: st
+    type(states_elec_t),  intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
     type(poisson_t),      intent(in)    :: psolver
     type(v_ks_t),         intent(inout) :: ks
@@ -385,7 +385,7 @@ contains
     logical,                  intent(in)    :: inside(:,:)
     type(grid_t),         intent(in)    :: gr
     type(geometry_t),     intent(inout) :: geo
-    type(states_t),       intent(inout) :: st
+    type(states_elec_t),  intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
     type(poisson_t),      intent(in)    :: psolver
     type(v_ks_t),         intent(inout) :: ks
@@ -535,7 +535,7 @@ contains
     FLOAT,                    intent(in)    :: center(:,:)
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(in)    :: geo
-    type(states_t),           intent(in)    :: st
+    type(states_elec_t),      intent(in)    :: st
     integer,                  intent(in)    :: lmax
     type(kick_t),             intent(in)    :: kick
     integer,                  intent(in)    :: iter

@@ -34,8 +34,8 @@ module vdw_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_restart_oct_m
+  use states_elec_oct_m
+  use states_elec_restart_oct_m
   use sternheimer_oct_m
   use system_oct_m
   use unit_oct_m
@@ -211,7 +211,7 @@ contains
       ! we always need complex response
       call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
       if(ierr == 0) then
-        call states_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr, is_complex = .true.)
+        call states_elec_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr, is_complex = .true.)
         call restart_end(gs_restart)
       else
         message(1) = "Previous gs calculation required."
@@ -235,7 +235,7 @@ contains
         do dir = 1, ndir
           write(dirname,'(a,i1,a)') "wfs_", dir, "_1_1"
           call restart_open_dir(restart_load, dirname, ierr)
-          if (ierr == 0) call states_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, lr=lr(dir,1))          
+          if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, lr=lr(dir,1))          
           if(ierr /= 0) then
             message(1) = "Unable to read response wavefunctions from '"//trim(dirname)//"'."
             call messages_warning(1)

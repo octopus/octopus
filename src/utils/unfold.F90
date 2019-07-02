@@ -56,9 +56,9 @@ program oct_unfold
   use restart_oct_m
   use space_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_restart_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_restart_oct_m
+  use states_elec_dim_oct_m
   use system_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -269,10 +269,10 @@ program oct_unfold
     end if
     call io_close(file_gvec)
  
-    call states_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
     call restart_init(restart, default_namespace, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_load(restart, default_namespace, sys%st, sys%gr, ierr, label = ": unfold")
+    if(ierr == 0) call states_elec_load(restart, default_namespace, sys%st, sys%gr, ierr, label = ": unfold")
     if(ierr /= 0) then
       message(1) = 'Unable to read unocc wavefunctions.'
       call messages_fatal(1)
@@ -346,7 +346,7 @@ contains
 
   !--------------------------------------------------------------------
   subroutine wfs_extract_spec_fn(st, gr, zcube, cf)
-    type(states_t),        intent(in)    :: st
+    type(states_elec_t),   intent(in)    :: st
     type(grid_t),          intent(in)    :: gr
     type(cube_t),          intent(inout) :: zcube
     type(cube_function_t), intent(inout) :: cf
@@ -431,7 +431,7 @@ contains
     SAFE_ALLOCATE(pkm(st%d%kpt%start:st%d%kpt%end, 1:st%nst))
     pkm(:, :) = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end
-      iq = states_dim_get_kpoint_index(st%d, ik) 
+      iq = states_elec_dim_get_kpoint_index(st%d, ik) 
 
       call fourier_shell_init(shell, zcube, gr%mesh, kk = sb%kpoints%reduced%red_point(:, iq))  
 
@@ -490,7 +490,7 @@ contains
         do idim = 1, st%d%dim
           ! Getting wavefunctions 
           ! for the moment we treat all functions as complex
-          call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
+          call states_elec_get_state(st, gr%mesh, idim, ist, ik, zpsi)
             
           if(gr%mesh%parallel_in_domains) then
             call zmesh_to_cube(gr%mesh, zpsi, zcube, cf, local = .true.)

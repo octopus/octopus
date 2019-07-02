@@ -37,7 +37,7 @@ module vdw_ts_oct_m
   use ps_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
   
@@ -166,7 +166,7 @@ contains
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
     type(simul_box_t),   intent(in)    :: sb
-    type(states_t),      intent(in)    :: st
+    type(states_elec_t), intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
     FLOAT,               intent(out)   :: energy
     FLOAT,               intent(out)   :: potential(:)
@@ -324,7 +324,7 @@ contains
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
     type(simul_box_t),   intent(in)    :: sb
-    type(states_t),      intent(in)    :: st
+    type(states_elec_t), intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
 
     type(hirshfeld_t) :: hirshfeld

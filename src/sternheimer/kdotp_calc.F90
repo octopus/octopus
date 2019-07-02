@@ -28,8 +28,8 @@ module kdotp_calc_oct_m
   use mpi_oct_m
   use pert_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use states_calc_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
   use system_oct_m
   use utils_oct_m
 
@@ -87,7 +87,7 @@ subroutine zcalc_band_velocity(sys, pert, velocity)
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     do ist = sys%st%st_start, sys%st%st_end
 
-      call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+      call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
 
       do idir = 1, sys%gr%sb%periodic_dim
         call pert_setup_dir(pert, idir)
@@ -143,7 +143,7 @@ subroutine zcalc_dipole_periodic(sys, lr, dipole)
 
       do ist = 1, sys%st%nst
 
-        call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+        call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
         
         do idim = 1, sys%st%d%dim
           term = term + zmf_dotp(mesh, psi(1:mesh%np, idim), lr(1, idir)%zdl_psi(1:mesh%np, idim, ist, ik))

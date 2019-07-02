@@ -16,10 +16,10 @@
 !! 02110-1301, USA.
 !!
 
-subroutine X(states_parallel_gather_3)(st, dims, psi)
-  type(states_t), intent(in)    :: st
-  integer,        intent(in)    :: dims(2)
-  R_TYPE,         intent(inout) :: psi(:, :, :)
+subroutine X(states_elec_parallel_gather_3)(st, dims, psi)
+  type(states_elec_t), intent(in)  :: st
+  integer,           intent(in)    :: dims(2)
+  R_TYPE,            intent(inout) :: psi(:, :, :)
 
   integer :: maxst, ist, i1, i2
   R_TYPE, allocatable :: sendpsi(:, :, :), recvpsi(:, :, :)
@@ -64,13 +64,13 @@ subroutine X(states_parallel_gather_3)(st, dims, psi)
   end if
 
   call profiling_out(prof_gather)
-end subroutine X(states_parallel_gather_3)
+end subroutine X(states_elec_parallel_gather_3)
 
 !---------------------------------------------------
 
-subroutine X(states_parallel_gather_1)(st, aa)
-  type(states_t), intent(in)    :: st
-  R_TYPE,         intent(inout) :: aa(:)
+subroutine X(states_elec_parallel_gather_1)(st, aa)
+  type(states_elec_t), intent(in)    :: st
+  R_TYPE,              intent(inout) :: aa(:)
 
   !no PUSH_SUB, called too often
 
@@ -98,7 +98,7 @@ subroutine X(states_parallel_gather_1)(st, aa)
   end if
 
   call profiling_out(prof_gather)
-end subroutine X(states_parallel_gather_1)
+end subroutine X(states_elec_parallel_gather_1)
 
 !! Local Variables:
 !! mode: f90

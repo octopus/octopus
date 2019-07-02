@@ -45,9 +45,10 @@ module phonons_lr_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_restart_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_restart_oct_m
   use sternheimer_oct_m
   use system_oct_m
   use unit_oct_m
@@ -78,7 +79,7 @@ contains
     type(pert_t)        :: ionic_pert
 
     type(geometry_t), pointer :: geo
-    type(states_t),   pointer :: st
+    type(states_elec_t),   pointer :: st
     type(grid_t),     pointer :: gr
 
     integer :: natoms, ndim, iatom, idir, jatom, jdir, imat, jmat, iunit_restart, ierr, start_mode
@@ -145,7 +146,7 @@ contains
 
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_look_and_load(gs_restart, sys%namespace, st, gr)
+      call states_elec_look_and_load(gs_restart, sys%namespace, st, gr)
       call restart_end(gs_restart)
     else
       message(1) = "Previous gs calculation is required."
@@ -171,7 +172,7 @@ contains
         ! load wavefunctions
         str_tmp = trim(kdotp_wfs_tag(idir))
         call restart_open_dir(kdotp_restart, wfs_tag_sigma(str_tmp, 1), ierr)
-        if (ierr == 0) call states_load(kdotp_restart, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
+        if (ierr == 0) call states_elec_load(kdotp_restart, sys%namespace, sys%st, sys%gr, ierr, lr=kdotp_lr(idir))
         call restart_close_dir(kdotp_restart)
 
         if(ierr /= 0) then
@@ -245,7 +246,7 @@ contains
         message(1) = "Loading restart wavefunctions for linear response."
         call messages_info(1)
         call restart_open_dir(restart_load, wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1), ierr)
-        if (ierr == 0) call states_load(restart_load, sys%namespace, st, gr, ierr, lr = lr(1))
+        if (ierr == 0) call states_elec_load(restart_load, sys%namespace, st, gr, ierr, lr = lr(1))
         if (ierr /= 0) then
           message(1) = "Unable to read response wavefunctions from '"//trim(wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1))//"'."
           call messages_warning(1)
@@ -350,7 +351,7 @@ contains
     call lr_dealloc(lr(1))
     call vibrations_end(vib)
     call sternheimer_end(sh)
-    call states_deallocate_wfns(st)
+    call states_elec_deallocate_wfns(st)
     if (simul_box_is_periodic(gr%sb) .and. do_infrared) then
       do idir = 1, gr%sb%periodic_dim
         call lr_dealloc(kdotp_lr(idir))

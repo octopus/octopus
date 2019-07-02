@@ -54,9 +54,10 @@ module td_oct_m
   use scf_oct_m
   use scissor_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_calc_oct_m
-  use states_restart_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
+  use states_elec_restart_oct_m
   use system_oct_m
   use td_write_oct_m
   use types_oct_m
@@ -355,19 +356,19 @@ contains
     type(system_t), target, intent(inout) :: sys
     logical,                intent(inout) :: fromScratch
 
-    type(td_t)                :: td
-    type(td_write_t)          :: write_handler
-    type(grid_t),     pointer :: gr   ! some shortcuts
-    type(states_t),   pointer :: st
-    type(geometry_t), pointer :: geo
-    logical                   :: stopping
+    type(td_t)                   :: td
+    type(td_write_t)             :: write_handler
+    type(grid_t),        pointer :: gr   ! some shortcuts
+    type(states_elec_t), pointer :: st
+    type(geometry_t),    pointer :: geo
+    logical                      :: stopping
 #ifdef HAVE_MPI
-    logical                   :: stopping_tmp
+    logical                      :: stopping_tmp
 #endif
-    integer                   :: iter, ierr, scsteps
-    real(8)                   :: etime
-    type(profile_t),     save :: prof
-    type(restart_t)           :: restart_load, restart_dump
+    integer                      :: iter, ierr, scsteps
+    real(8)                      :: etime
+    type(profile_t),        save :: prof
+    type(restart_t)              :: restart_load, restart_dump
 
     PUSH_SUB(td_run)
 
@@ -384,14 +385,14 @@ contains
       if(sys%hm%lda_u_level /= DFT_U_NONE .and. states_are_real(st)) then
         call lda_u_end(sys%hm%lda_u)
         !complex wfs are required for Ehrenfest
-        call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
+        call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
         call lda_u_init(sys%hm%lda_u, sys%namespace, sys%hm%lda_u_level, gr, geo, st, sys%psolver)
       else
         !complex wfs are required for Ehrenfest
-        call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
+        call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
       end if 
     else
-      call states_allocate_wfns(st, gr%mesh)
+      call states_elec_allocate_wfns(st, gr%mesh)
       call scf_init(td%scf, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks)
     end if
 
@@ -407,7 +408,7 @@ contains
 
       ! initialize the vector field and update the hamiltonian
       call gauge_field_init_vec_pot(sys%hm%ep%gfield, gr%sb, st)
-      call hamiltonian_update(sys%hm, gr%mesh, gr%der%boundaries, time = td%dt*td%iter)
+      call hamiltonian_update(sys%hm, gr%mesh, time = td%dt*td%iter)
     end if
 
     call init_wfs()
@@ -462,7 +463,7 @@ contains
       call pes_init_write(td%pesv,gr%mesh,st)
     end if
 
-    if(st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, gr%mesh)) call states_pack(st)
+    if(st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, gr%mesh)) call st%pack()
     
     etime = loct_clock()
     ! This is the time-propagation loop. It starts at t=0 and finishes
@@ -525,7 +526,7 @@ contains
 
     end do propagation
 
-    if(st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, gr%mesh)) call states_unpack(st)
+    if(st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, gr%mesh)) call st%unpack()
 
     call restart_end(restart_dump)
     if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(restart_load)
@@ -561,14 +562,14 @@ contains
         iter == td%max_iter .or. stopping) then ! output
         ! TODO this now overwrites wf inside st. If this is not wanted need to add an optional overwrite=no flag
         if (st%modelmbparticles%nparticle > 0) then
-          call modelmb_sym_all_states (gr, st, geo)
+          call modelmb_sym_all_states (gr, st)
         end if
         call td_write_output(write_handler, sys%namespace, gr, st, sys%hm, sys%psolver, sys%ks, sys%outp, geo, iter, td%dt)
       end if
 
       if (mod(iter, sys%outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
         !if(iter == td%max_iter) sys%outp%iter = ii - 1
-        call td_write_data(write_handler, gr, st, sys%hm, sys%ks, sys%outp, geo, iter, td%dt)
+        call td_write_data(write_handler, td%dt)
         call td_dump(restart_dump, gr, st, sys%hm, td, iter, ierr)
         if (ierr /= 0) then
           message(1) = "Unable to write time-dependent restart information."
@@ -580,9 +581,9 @@ contains
         if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
           call messages_print_stress(stdout, 'Recalculating the ground state.')
           fromScratch = .false.
-          call states_deallocate_wfns(sys%st)
+          call states_elec_deallocate_wfns(sys%st)
           call ground_state_run(sys, fromScratch)
-          call states_allocate_wfns(sys%st, gr%mesh)
+          call states_elec_allocate_wfns(sys%st, gr%mesh)
           call td_load(restart_load, sys%namespace, gr, st, sys%hm, td, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to load TD states."
@@ -604,7 +605,7 @@ contains
       PUSH_SUB(td_run.end_)
 
       ! free memory
-      call states_deallocate_wfns(st)
+      call states_elec_deallocate_wfns(st)
       call td_end(td)
       if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(restart_load)
 
@@ -655,7 +656,7 @@ contains
       if (.not. fromscratch) then
         !We redistribute the states before the restarting
         if(freeze_orbitals > 0) then
-          call states_freeze_redistribute_states(st, sys%namespace, sys%gr, sys%mc, freeze_orbitals)
+          call states_elec_freeze_redistribute_states(st, sys%namespace, sys%gr, sys%mc, freeze_orbitals)
         end if
 
         call restart_init(restart, sys%namespace, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
@@ -681,7 +682,7 @@ contains
         call restart_init(restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
 
         if(.not. st%only_userdef_istates) then
-          if(ierr == 0) call states_load(restart, sys%namespace, st, gr, ierr, label = ": gs")
+          if(ierr == 0) call states_elec_load(restart, sys%namespace, st, gr, ierr, label = ": gs")
           if (ierr /= 0) then
             message(1) = 'Unable to read ground-state wavefunctions.'
             call messages_fatal(1)
@@ -691,7 +692,7 @@ contains
         ! check if we should deploy user-defined wavefunctions.
         ! according to the settings in the input file the routine
         ! overwrites orbitals that were read from restart/gs
-        if(parse_is_defined(sys%namespace, 'UserDefinedStates')) call states_read_user_def_orbitals(gr%mesh, sys%namespace, st)
+        if(parse_is_defined(sys%namespace, 'UserDefinedStates')) call states_elec_read_user_def_orbitals(gr%mesh, sys%namespace, st)
 
         call transform_states(st, sys%namespace, restart, gr)
         call restart_end(restart)
@@ -705,11 +706,11 @@ contains
       if(freeze_orbitals > 0) then
         if(fromScratch) then
           ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
-          call states_freeze_orbitals(st, sys%namespace, gr, sys%mc, freeze_orbitals, family_is_mgga(sys%ks%xc_family))
+          call states_elec_freeze_orbitals(st, sys%namespace, gr, sys%mc, freeze_orbitals, family_is_mgga(sys%ks%xc_family))
         else
           call restart_init(restart, sys%namespace, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
           if(ierr == 0) &
-            call td_load_frozen(restart, gr, st, sys%hm, td, ierr)
+            call td_load_frozen(restart, gr, st, sys%hm, ierr)
           if(ierr /= 0) then
             td%iter = 0
             message(1) = "Unable to read frozen restart information."
@@ -720,7 +721,7 @@ contains
         write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
           ' orbitals have been frozen.', st%nst, ' will be propagated.'
         call messages_info(1)
-        call states_freeze_adjust_qtot(st)
+        call states_elec_freeze_adjust_qtot(st)
         call density_calc(st, gr, st%rho)
         call v_ks_calc(sys%ks, sys%namespace, sys%hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
       elseif(freeze_orbitals < 0) then
@@ -730,7 +731,7 @@ contains
         call messages_info(1)
         call v_ks_calc(sys%ks, sys%namespace, sys%hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
         if(fromScratch) then
-          call states_freeze_orbitals(st, sys%namespace, gr, sys%mc, st%nst-1, family_is_mgga(sys%ks%xc_family))
+          call states_elec_freeze_orbitals(st, sys%namespace, gr, sys%mc, st%nst-1, family_is_mgga(sys%ks%xc_family))
         else
            call messages_not_implemented("TDFreezeOrbials < 0 with FromScratch=no")
         end if
@@ -770,7 +771,7 @@ contains
 #endif
       call hamiltonian_span(sys%hm, minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
       ! initialize Fermi energy
-      call states_fermi(st, gr%mesh)
+      call states_elec_fermi(st, gr%mesh)
       call energy_calc_total(sys%hm, sys%psolver, gr, st)
 
       !%Variable TDFreezeDFTUOccupations
@@ -842,7 +843,7 @@ contains
       end if
       call propagator_run_zero_iter(sys%hm, gr, td%tr)
       if (sys%outp%output_interval > 0) then
-        call td_write_data(write_handler, gr, st, sys%hm, sys%ks, sys%outp, geo, 0)
+        call td_write_data(write_handler)
         call td_write_output(write_handler, sys%namespace, gr, st, sys%hm, sys%psolver, sys%ks, sys%outp, geo, 0)
       end if
 
@@ -895,13 +896,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine transform_states(st, namespace, restart, gr, prefix)
-    type(states_t),             intent(inout) :: st
+    type(states_elec_t),        intent(inout) :: st
     type(namespace_t),          intent(in)    :: namespace
     type(restart_t),            intent(inout) :: restart
     type(grid_t),               intent(in)    :: gr
     character(len=*), optional, intent(in)    :: prefix
 
-    type(states_t) :: stin
+    type(states_elec_t) :: stin
     type(block_t) :: blk
     CMPLX, allocatable :: rotation_matrix(:,:), psi(:, :)
     integer :: ist, jst, ncols, iqn
@@ -944,8 +945,8 @@ contains
           message(1) = "Number of rows in block " // trim(block_name) // " must equal number of states in this calculation."
           call messages_fatal(1)
         end if
-        call states_copy(stin, st, exclude_wfns = .true.)
-        call states_look_and_load(restart, namespace, stin, gr)
+        call states_elec_copy(stin, st, exclude_wfns = .true.)
+        call states_elec_look_and_load(restart, namespace, stin, gr)
 
         ! FIXME: rotation matrix should be R_TYPE
         SAFE_ALLOCATE(rotation_matrix(1:stin%nst, 1:stin%nst))
@@ -970,14 +971,14 @@ contains
 
         do iqn = st%d%kpt%start, st%d%kpt%end
           if(states_are_real(st)) then
-            call states_rotate(gr%mesh, stin, real(rotation_matrix, REAL_PRECISION), iqn)
+            call states_elec_rotate(gr%mesh, stin, real(rotation_matrix, REAL_PRECISION), iqn)
           else
-            call states_rotate(gr%mesh, stin, rotation_matrix, iqn)
+            call states_elec_rotate(gr%mesh, stin, rotation_matrix, iqn)
           end if
 
           do ist = st%st_start, st%st_end 
-            call states_get_state(stin, gr%mesh, ist, iqn, psi)
-            call states_set_state(st, gr%mesh, ist, iqn, psi)
+            call states_elec_get_state(stin, gr%mesh, ist, iqn, psi)
+            call states_elec_set_state(st, gr%mesh, ist, iqn, psi)
           end do
 
         end do
@@ -985,7 +986,7 @@ contains
         SAFE_DEALLOCATE_A(rotation_matrix)
         SAFE_DEALLOCATE_A(psi)
 
-        call states_end(stin)
+        call states_elec_end(stin)
 
       else
         call messages_input_error(trim(block_name), '"' // trim(block_name) // '" has to be specified as block.')
@@ -1000,7 +1001,7 @@ contains
   subroutine td_dump(restart, gr, st, hm, td, iter, ierr)
     type(restart_t),     intent(in)  :: restart
     type(grid_t),        intent(in)  :: gr
-    type(states_t),      intent(in)  :: st
+    type(states_elec_t), intent(in)  :: st
     type(hamiltonian_t), intent(in)  :: hm
     type(td_t),          intent(in)  :: td
     integer,             intent(in)  :: iter
@@ -1023,10 +1024,10 @@ contains
     end if
 
     ! first write resume file
-    call states_dump(restart, st, gr, err, iter=iter)
+    call states_elec_dump(restart, st, gr, err, iter=iter)
     if (err /= 0) ierr = ierr + 1
 
-    call states_dump_rho(restart, st, gr, ierr, iter=iter)
+    call states_elec_dump_rho(restart, st, gr, ierr, iter=iter)
     if (err /= 0) ierr = ierr + 1 
 
     if(hm%lda_u_level /= DFT_U_NONE) then
@@ -1046,7 +1047,7 @@ contains
     end if
 
     if(associated(st%frozen_rho)) then
-      call states_dump_frozen(restart, st, gr, ierr)
+      call states_elec_dump_frozen(restart, st, gr, ierr)
     end if
 
     if (debug%info) then
@@ -1062,7 +1063,7 @@ contains
     type(restart_t),     intent(in)    :: restart
     type(namespace_t),   intent(in)    :: namespace
     type(grid_t),        intent(in)    :: gr
-    type(states_t),      intent(inout) :: st
+    type(states_elec_t), intent(inout) :: st
     type(hamiltonian_t), intent(inout) :: hm
     type(td_t),          intent(inout) :: td
     integer,             intent(out)   :: ierr
@@ -1084,7 +1085,7 @@ contains
     end if
 
     ! Read states
-    call states_load(restart, namespace, st, gr, err, iter=td%iter, label = ": td")
+    call states_elec_load(restart, namespace, st, gr, err, iter=td%iter, label = ": td")
     if (err /= 0) then
       ierr = ierr + 1
     end if
@@ -1106,7 +1107,7 @@ contains
       if (err /= 0) then
         ierr = ierr + 8
       else
-        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = td%dt*td%iter)
+        call hamiltonian_update(hm, gr%mesh, time = td%dt*td%iter)
       end if
     end if
 
@@ -1119,12 +1120,11 @@ contains
   end subroutine td_load
 
   ! ---------------------------------------------------------
-  subroutine td_load_frozen(restart, gr, st, hm, td, ierr)
+  subroutine td_load_frozen(restart, gr, st, hm, ierr)
     type(restart_t),     intent(in)    :: restart
     type(grid_t),        intent(in)    :: gr
-    type(states_t),      intent(inout) :: st
+    type(states_elec_t), intent(inout) :: st
     type(hamiltonian_t), intent(inout) :: hm
-    type(td_t),          intent(inout) :: td
     integer,             intent(out)   :: ierr
 
     PUSH_SUB(td_load_frozen)
@@ -1149,7 +1149,7 @@ contains
       SAFE_ALLOCATE(st%frozen_ldens(1:gr%mesh%np,1:st%d%nspin))
     end if
 
-    call states_load_frozen(restart, st, gr, ierr)
+    call states_elec_load_frozen(restart, st, gr, ierr)
 
     if (debug%info) then
       message(1) = "Debug: Reading td frozen restart done."

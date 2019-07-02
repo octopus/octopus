@@ -35,9 +35,10 @@ module em_resp_calc_oct_m
   use mpi_oct_m
   use pert_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use states_block_oct_m
-  use states_dim_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_block_oct_m
+  use states_elec_dim_oct_m
   use sternheimer_oct_m
   use symmetrizer_oct_m
   use system_oct_m
@@ -96,7 +97,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lr_calc_current(st, gr, lr, lr_m)
-    type(states_t),       intent(inout) :: st
+    type(states_elec_t),  intent(inout) :: st
     type(grid_t),         intent(inout) :: gr
     type(lr_t),           intent(inout) :: lr
     type(lr_t), optional, intent(inout) :: lr_m
@@ -126,7 +127,7 @@ contains
     do ispin = 1, st%d%nspin
       do ist = 1, st%nst
 
-        call states_set_state(st, gr%mesh, ist, ispin, psi)
+        call states_elec_set_state(st, gr%mesh, ist, ispin, psi)
         
         do idim = 1, st%d%dim
 

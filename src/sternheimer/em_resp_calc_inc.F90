@@ -21,7 +21,7 @@
 ! \warning: This subroutine is clearly broken after the changes
 ! to include temperature in linear response
 subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
-  type(states_t),       intent(inout) :: st
+  type(states_elec_t),  intent(inout) :: st
   type(grid_t),         intent(inout) :: gr
   type(lr_t),           intent(inout) :: lr
   type(lr_t), optional, intent(inout) :: lr_m !< when this argument is present, we are doing dynamical response
@@ -101,7 +101,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
     do ik = is, st%d%nik, st%d%nspin
       do ist = 1, st%nst
 
-        call states_get_state(st, gr%mesh, ist, is, psi)
+        call states_elec_get_state(st, gr%mesh, ist, is, psi)
         
         ik_weight = st%d%kweights(ik)*st%occ(ist, ik)/spin_factor
 
@@ -163,7 +163,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
     do ik = is, st%d%nik, st%d%nspin
       do ist = 1, st%nst
 
-        call states_get_state(st, gr%mesh, ist, is, psi)
+        call states_elec_get_state(st, gr%mesh, ist, is, psi)
         
         ik_weight = st%d%kweights(ik)*st%occ(ist, ik)/spin_factor
 
@@ -375,7 +375,7 @@ subroutine X(calc_polarizability_finite)(sys, lr, nsigma, perturbation, zpol, do
   logical, optional,      intent(in)    :: doalldirs
   integer, optional,      intent(in)    :: ndir
 
-  type(states_t), pointer :: st
+  type(states_elec_t), pointer :: st
   integer :: dir1, dir2, ndir_, startdir, np
   R_TYPE, pointer :: psi(:, :, :, :)
   
@@ -394,7 +394,7 @@ subroutine X(calc_polarizability_finite)(sys, lr, nsigma, perturbation, zpol, do
 
   SAFE_ALLOCATE(psi(1:np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
-  call states_get_state(sys%st, sys%gr%mesh, psi)
+  call states_elec_get_state(sys%st, sys%gr%mesh, psi)
   
   do dir1 = startdir, ndir_
     do dir2 = 1, sys%gr%sb%dim
@@ -425,7 +425,7 @@ subroutine X(lr_calc_susceptibility)(sys, lr, nsigma, perturbation, chi_para, ch
   type(pert_t),           intent(inout) :: perturbation
   CMPLX,                  intent(out)   :: chi_para(:,:), chi_dia(:,:)
 
-  type(states_t), pointer :: st
+  type(states_elec_t), pointer :: st
   integer :: dir1, dir2, np
   R_TYPE  :: trace
   R_TYPE, pointer :: psi(:, :, :, :)
@@ -440,7 +440,7 @@ subroutine X(lr_calc_susceptibility)(sys, lr, nsigma, perturbation, chi_para, ch
 
   SAFE_ALLOCATE(psi(1:np, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
-  call states_get_state(sys%st, sys%gr%mesh, psi)
+  call states_elec_get_state(sys%st, sys%gr%mesh, psi)
 
   do dir1 = 1, sys%gr%sb%dim
     do dir2 = 1, sys%gr%sb%dim
@@ -503,7 +503,7 @@ subroutine X(lr_calc_beta) (sh, sys, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr,
   !!   occupied subspace, it is just more efficient to use the other formula.
   FLOAT,         optional, intent(in)    :: dl_eig(:,:,:) !< state, kpt, dir
 
-  type(states_t), pointer :: st
+  type(states_elec_t), pointer :: st
   type(mesh_t),   pointer :: mesh
 
   integer :: ifreq, jfreq, isigma, idim, ispin, np, ndir, idir, ist, ik
@@ -539,7 +539,7 @@ subroutine X(lr_calc_beta) (sh, sys, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr,
     kxc = M_ZERO
     
     SAFE_ALLOCATE(rho(1:np, 1:st%d%nspin))
-    call states_total_density(st, mesh, rho)
+    call states_elec_total_density(st, mesh, rho)
     
     call xc_get_kxc(sys%ks%xc, mesh, rho, st%d%ispin, kxc)
     SAFE_DEALLOCATE_A(rho)
@@ -586,7 +586,7 @@ subroutine X(lr_calc_beta) (sh, sys, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr,
               do ist = 1, st%nst
                 do idim = 1, st%d%dim
 
-                  ispin = states_dim_get_spin_index(sys%st%d, ik)
+                  ispin = states_elec_dim_get_spin_index(sys%st%d, ik)
 
                   if (present(kdotp_em_lr) .and. u(2) <= sys%gr%sb%periodic_dim) then
                     tmp(1:np, idim) = kdotp_em_lr(u(2), u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ik)
@@ -706,16 +706,16 @@ contains
     SAFE_ALLOCATE(psi2(1:sys%gr%mesh%np_part, 1:st%d%dim))
     
     do ik = st%d%kpt%start, st%d%kpt%end
-      ispin = states_dim_get_spin_index(sys%st%d, ik)
+      ispin = states_elec_dim_get_spin_index(sys%st%d, ik)
       do ist = 1, st%nst
 
-        call states_get_state(st, sys%gr%mesh, ist, ik, psi1)
+        call states_elec_get_state(st, sys%gr%mesh, ist, ik, psi1)
         
         do ist2 = 1, st%nst
 
           if(occ_response_ .and. ist2 /= ist) cycle
 
-          call states_get_state(st, sys%gr%mesh, ist2, ik, psi2)
+          call states_elec_get_state(st, sys%gr%mesh, ist2, ik, psi2)
           
           do ii = 1, ndir
             call pert_setup_dir(dipole, ii)
@@ -771,7 +771,7 @@ contains
                                                  em_lr(jj, isigma,   jfreq)%X(dl_psi)(:, :, ist, ik))
                   end do
                 else
-                  call states_blockt_mul(mesh, st, st%st_start, st%st_start, &
+                  call states_elec_blockt_mul(mesh, st, st%st_start, st%st_start, &
                     em_lr(ii, op_sigma, ifreq)%X(dl_psi)(:, :, :, ik), &
                     em_lr(jj, isigma, jfreq)%X(dl_psi)(:, :, :, ik), &
                     me11(ii, jj, ifreq, jfreq, isigma, ik)%X(matrix))
@@ -863,7 +863,7 @@ subroutine X(em_resp_calc_eigenvalues)(sys, dl_eig)
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     do ist = sys%st%st_start, sys%st%st_end
         
-      call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+      call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
         
       do idir = 1, sys%gr%sb%periodic_dim
         do idim = 1, sys%st%d%dim
@@ -989,7 +989,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, nsigma, nfactor, lr_
           call pert_setup_dir(pert_e(ii), dir(ii))
         end do
         do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
-          ispin = states_dim_get_spin_index(sys%st%d, ik)
+          ispin = states_elec_dim_get_spin_index(sys%st%d, ik)
           weight = sys%st%d%kweights(ik) * sys%st%smear%el_per_state
           do ist = 1, sys%st%nst
             if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
@@ -1030,17 +1030,17 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, nsigma, nfactor, lr_
           end do
           do ii = 1, nfactor 
             do isigma = 1, nsigma
-              call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+              call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
                 lr_e(dir(swap_sigma(ii)), swap_sigma(isigma), swap_sigma(ii))%X(dl_psi)(:, :, :, ik), &
                 lr_b(dir3, 1)%X(dl_psi)(:, :, :, ik), prod_eb(isigma)%X(matrix))
             end do
-            call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+            call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
               lr_e(dir(ii), nsigma, ii)%X(dl_psi)(:, :, :, ik), lr_e(dir(swap_sigma(ii)), 1, &
               swap_sigma(ii))%X(dl_psi)(:, :, :, ik), prod_ee%X(matrix))
 
             do ist = 1, sys%st%nst
               if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
-                call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+                call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
                 call X(pert_apply)(pert_e(ii), sys%namespace, sys%gr, sys%geo, sys%hm, sys%psolver, ik, psi, pertpsi_e(:, :, 1))
                 if(nfactor > 1) pertpsi_e(:, :, nfactor) = pertpsi_e(:, :, 1)
                 if(calc_var) then
@@ -1063,7 +1063,7 @@ subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, nsigma, nfactor, lr_
                 end if
                 do ist_occ = 1, sys%st%nst
                   if(abs(sys%st%occ(ist_occ, ik)) .gt. M_EPSILON) then
-                    call states_get_state(sys%st, sys%gr%mesh, ist_occ, ik, psi1)
+                    call states_elec_get_state(sys%st, sys%gr%mesh, ist_occ, ik, psi1)
                     do isigma = 1, nsigma
                       term(isigma) = - weight * X(mf_dotp)(sys%gr%mesh, sys%st%d%dim, psi1, pertpsi_e(:, :, isigma)) &
                         * prod_eb(isigma)%X(matrix)(ist, ist_occ) 
@@ -1319,7 +1319,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, nsigma, nfactor, &
   end if
   
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
-    ispin = states_dim_get_spin_index(sys%st%d, ik)
+    ispin = states_elec_dim_get_spin_index(sys%st%d, ik)
     weight = sys%st%d%kweights(ik) * sys%st%smear%el_per_state
     zpol_k(:,:,:) = M_ZERO
     do ii = 1, nfactor_ke
@@ -1365,7 +1365,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, nsigma, nfactor, &
         end do
         do ist = 1, sys%st%nst
           if (abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
-            call states_get_state(sys%st, sys%gr%mesh, ist, ik, lr0(1)%X(dl_psi)(:, :, ist, ik))
+            call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, lr0(1)%X(dl_psi)(:, :, ist, ik))
             call apply_v(add_hartree1, add_fxc1, nsigma, 1, idir1, ist, ik, freq_factor(ii) * frequency, &
               hvar(:, ispin, :, idir1, swap_sigma(ii)), lr0(:), gpsi(:, :, ist, :))
             do idir2 = 1, ndir
@@ -1414,26 +1414,26 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, nsigma, nfactor, &
           end if
         end do
         do isigma = 1, nsigma
-          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+          call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
             lr0(1)%X(dl_psi)(:, :, :, ik), factor * gpsi(:, :, :, isigma), mat_g(idir1, isigma)%X(matrix))
         end do
       end do
       do idir1 = 1, ndir
         do idir2 = 1, ndir
           do idir3 = 1, ndir  
-            call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+            call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
               factor0 * lr_k(idir3, 1)%X(dl_psi)(:,:,:, ik), lr_ke(idir2, idir1, 1, ii)%X(dl_psi)(:,:,:, ik),&
               mat_kke(idir3, idir2)%X(matrix))
-            call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+            call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
               lr_ke(idir3, idir1, nsigma, ii)%X(dl_psi)(:,:,:, ik), factor0 * lr_k(idir2, 1)%X(dl_psi)(:,:,:, ik),&
               mat_kek(idir3, idir2)%X(matrix))
           end do
         end do
         do idir2 = 1, ndir
-          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+          call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
             factor1 * lr_b(idir2, 1)%X(dl_psi)(:,:,:, ik), lr_e(idir1, 1, ii)%X(dl_psi)(:,:,:, ik),&
             mat_be%X(matrix))
-          call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+          call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
             lr_e(idir1, nsigma, ii)%X(dl_psi)(:,:,:, ik), lr_b(idir2, 1)%X(dl_psi)(:,:,:, ik),&
             mat_eb%X(matrix))
           do idir3 = 1, ndir
@@ -1748,7 +1748,7 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, nsigma, lr_k, lr_b, &
   
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     weight = sys%st%d%kweights(ik)*sys%st%smear%el_per_state
-    ispin = states_dim_get_spin_index(sys%st%d,ik)
+    ispin = states_elec_dim_get_spin_index(sys%st%d,ik)
     do ist = 1, sys%st%nst
       if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
         do idir = 1, ndir
@@ -1885,13 +1885,13 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, nsigma, lr_k, lr_b, &
 
     do idir1 = 1, ndir
       do idir2 = 1, ndir
-        call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+        call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
           lr_k(idir1)%X(dl_psi)(:,:,:, ik), Hdl_k(:,:,:, idir2), kH_mat(idir1, idir2)%X(matrix))
     
-        call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+        call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
           Hdl_k(:,:,:, idir1), lr_k(idir2)%X(dl_psi)(:,:,:, ik), Hk_mat(idir1, idir2)%X(matrix))
     
-        call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+        call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
           lr_k(idir1)%X(dl_psi)(:,:,:, ik), lr_k(idir2)%X(dl_psi)(:,:,:, ik), kk_mat(idir1, idir2)%X(matrix))
       end do
     end do
@@ -2068,7 +2068,7 @@ subroutine X(inhomog_per_component)(sys, idir, ik, &
   psi(:,:,:) = M_ZERO
   do ist = 1, sys%st%nst
     if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
-      call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi(:,:,ist))
+      call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi(:,:,ist))
       call X(pert_apply)(pert_kdotp, sys%namespace, sys%gr, sys%geo, sys%hm, sys%psolver, ik, psi(:,:,ist), f_out) 
       do idim = 1, sys%hm%d%dim
         do ip = 1, sys%gr%mesh%np
@@ -2078,7 +2078,7 @@ subroutine X(inhomog_per_component)(sys, idir, ik, &
     end if
   end do  
     
-  call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+  call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
     psi(:,:,:), vel(:,:,:), vel_mat%X(matrix))
 
   do ist = 1, sys%st%nst
@@ -2160,7 +2160,7 @@ subroutine X(inhomog_per_component_2nd_order)(sys, idir, ik, &
   vel(:,:,:) = M_ZERO
   do ist = 1, sys%st%nst
     if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
-      call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+      call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
       call X(pert_apply)(pert_kdotp, sys%namespace, sys%gr, sys%geo, sys%hm, sys%psolver, ik, psi, f_out)
       do idim = 1, sys%hm%d%dim
         do ip = 1, sys%gr%mesh%np
@@ -2170,10 +2170,10 @@ subroutine X(inhomog_per_component_2nd_order)(sys, idir, ik, &
     end if
   end do  
 
-  call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+  call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
     factor_e * psi_e(:,:,:), vel(:,:,:), vel_mat%X(matrix))
 
-  call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+  call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
     factor_e * psi_e(:,:,:), factor_k * psi_k2(:,:,:), prod_mat%X(matrix))
 
   do ist = 1, sys%st%nst
@@ -2260,7 +2260,7 @@ subroutine X(inhomog_B)(sh, sys, idir1, idir2, &
     call lr_dealloc(lr0(1))
 
     do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
-      ispin = states_dim_get_spin_index(sys%st%d, ik)
+      ispin = states_elec_dim_get_spin_index(sys%st%d, ik)
       ik0 = ik-sys%st%d%kpt%start+1
       call X(calc_hvar_psi)(sys, ik, hvar(:, ispin, 1), psi_out(:, :, :, ik0, 1))
     end do
@@ -2344,7 +2344,7 @@ contains
     psi(:,:,:) = M_ZERO
     do ist = 1, sys%st%nst
       if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
-        call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi0)
+        call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi0)
         do idim = 1, sys%hm%d%dim
           do ip = 1, sys%gr%mesh%np
             psi(ip, idim, ist) = factor_e * hvar_e(ip) * psi0(ip,idim)
@@ -2353,15 +2353,15 @@ contains
       end if
     end do
       
-    call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+    call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
       factor_k * tlr_k1(:,:,:), factor_k * tlr_k2(:,:,:), prod_mat%X(matrix))
 
-    call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+    call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
       factor_k * tlr_k1(:,:,:), psi(:,:,:), prod_mat2%X(matrix))
   
     do ist1 = 1, sys%st%nst
       if(abs(sys%st%occ(ist1, ik)) .gt. M_EPSILON) then
-        call states_get_state(sys%st, sys%gr%mesh, ist1, ik, psi0)
+        call states_elec_get_state(sys%st, sys%gr%mesh, ist1, ik, psi0)
         do ist  = 1, sys%st%nst
           if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
             do idim = 1, sys%hm%d%dim
@@ -2503,7 +2503,7 @@ subroutine X(inhomog_K2)(sys, idir1, idir2, ik, &
   
   do ist = 1, sys%st%nst
     if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
-      call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi) 
+      call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi) 
       call X(pert_apply_order_2)(pert_kdotp2, sys%namespace, sys%gr, sys%geo, sys%hm, sys%psolver, ik, psi, f_out)
       if(idir1 == idir2) f_out(:,:) = M_HALF * f_out(:,:)
       do idim = 1, sys%hm%d%dim
@@ -2581,7 +2581,7 @@ subroutine X(inhomog_KB)(sys, idir, idir1, idir2, ik, &
   psi(:,:,:) = M_ZERO
   do ist = 1, sys%st%nst
     if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
-      call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi(:, :, ist))
+      call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi(:, :, ist))
       call pert_setup_dir(pert_kdotp2, idir, idir1)
       call X(pert_apply_order_2)(pert_kdotp2, sys%namespace, sys%gr, sys%geo, sys%hm, sys%psolver, ik, &
         psi_k2(:, :, ist), f_out1(:, :, ist))
@@ -2609,10 +2609,10 @@ subroutine X(inhomog_KB)(sys, idir, idir1, idir2, ik, &
     end if
   end do
     
-  call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+  call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
     psi, f_out1(:,:,:), vel_mat1%X(matrix))
 
-  call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+  call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
     psi, f_out2(:,:,:), vel_mat2%X(matrix))
 
   do ist = 1, sys%st%nst
@@ -2713,7 +2713,7 @@ subroutine X(inhomog_KB_tot)(sh, sys, idir, idir1, idir2, &
       lr_k1(1)%X(dl_psi)(:, :, :, ik), lr_k2(1)%X(dl_psi)(:, :, :, ik), &
       psi_out(:, :, :, ik0, 1))
     
-    ispin = states_dim_get_spin_index(sys%st%d, ik)
+    ispin = states_elec_dim_get_spin_index(sys%st%d, ik)
     call X(inhomog_BE)(sys, idir1, idir2, ik, & 
       add_hartree, add_fxc, hvar(:, ispin, 1),  &
       lr_k(1)%X(dl_psi)(:, :, :, ik), lr_k(1)%X(dl_psi)(:, :, :, ik), &
@@ -2765,7 +2765,7 @@ subroutine X(inhomog_KE_tot)(sh, sys, idir, nsigma, &
 
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     ik0 = ik-sys%st%d%kpt%start+1
-    ispin = states_dim_get_spin_index(sys%st%d, ik)
+    ispin = states_elec_dim_get_spin_index(sys%st%d, ik)
     do isigma = 1, nsigma
       call X(inhomog_EB)(sys, ik, add_hartree, add_fxc, &
         hvar(:, ispin, isigma), lr_k(1)%X(dl_psi)(:, :, :, ik), &
@@ -2842,13 +2842,13 @@ subroutine X(calc_rho)(sys, factor, factor_sum, factor_e, &
   SAFE_ALLOCATE(psi1(1:sys%gr%mesh%np, 1:sys%st%d%dim))
 
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
-    ispin = states_dim_get_spin_index(sys%st%d, ik)
-    call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+    ispin = states_elec_dim_get_spin_index(sys%st%d, ik)
+    call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
       factor_k * lr_k%X(dl_psi)(:,:,:, ik), factor_e*lr_e%X(dl_psi)(:,:,:, ik), mat%X(matrix))
 
     do ist  = 1, sys%st%nst
       if (sys%st%occ(ist, ik) .gt. M_EPSILON) then
-        call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+        call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
         weight = sys%st%d%kweights(ik) * sys%st%smear%el_per_state
         do idim = 1, sys%hm%d%dim
           do ip = 1, sys%gr%mesh%np
@@ -2858,7 +2858,7 @@ subroutine X(calc_rho)(sys, factor, factor_sum, factor_e, &
         end do
         do ist_occ  = 1, sys%st%nst
           if (sys%st%occ(ist_occ, ik) .gt. M_EPSILON) then
-            call states_get_state(sys%st, sys%gr%mesh, ist_occ, ik, psi1)
+            call states_elec_get_state(sys%st, sys%gr%mesh, ist_occ, ik, psi1)
             do idim = 1, sys%hm%d%dim
               do ip = 1, sys%gr%mesh%np
                 lr0%X(dl_rho)(ip, ispin) = lr0%X(dl_rho)(ip, ispin) - factor * factor_sum * weight * &
@@ -2898,7 +2898,7 @@ subroutine X(calc_hvar_psi)(sys, ik, hvar, psi_out)
   
   do ist = 1, sys%st%nst
     if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
-      call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
+      call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
       do idim = 1, sys%hm%d%dim
         do ip = 1, sys%gr%mesh%np
           psi_out(ip, idim, ist) = psi_out(ip, idim, ist) &
@@ -2939,7 +2939,7 @@ subroutine X(calc_hvar_lr)(sys, ik, hvar, psi_in, &
   psi0(:,:,:) = M_ZERO
   do ist = 1, sys%st%nst
     if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
-      call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi0(:, :, ist))
+      call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi0(:, :, ist))
       do idim = 1, sys%hm%d%dim
         do ip = 1, sys%gr%mesh%np
           psi_out(ip, idim, ist) = psi_out(ip, idim, ist) &
@@ -2950,7 +2950,7 @@ subroutine X(calc_hvar_lr)(sys, ik, hvar, psi_in, &
     end if
   end do
 
-  call states_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
+  call states_elec_blockt_mul(sys%gr%mesh, sys%st, sys%st%st_start, sys%st%st_start, &
     psi0, psi(:,:,:), mat%X(matrix))
         
   do ist = 1, sys%st%nst

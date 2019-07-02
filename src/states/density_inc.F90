@@ -18,12 +18,12 @@
 
 !---------------------------------------------------------------------------
 subroutine X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
-  type(grid_t),   intent(in)    :: gr
-  type(states_t), intent(in)    :: st
-  integer,        intent(in)    :: iq
-  type(batch_t),  intent(in)    :: psib
-  type(batch_t),  intent(in)    :: grad_psib(:)
-  FLOAT,          intent(inout) :: grad_rho(:, :)
+  type(grid_t),        intent(in)    :: gr
+  type(states_elec_t), intent(in)    :: st
+  integer,             intent(in)    :: iq
+  type(batch_t),       intent(in)    :: psib
+  type(batch_t),       intent(in)    :: grad_psib(:)
+  FLOAT,               intent(inout) :: grad_rho(:, :)
 
   integer :: ii, ist, idir, ip
   FLOAT :: ff
