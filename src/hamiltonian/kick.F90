@@ -758,13 +758,13 @@ contains
 
       select case (kick%qkick_mode)
         case (QKICKMODE_COS)
-          write(message(1), '(a,3F9.5,a)') 'Info: Using cos(q.r) field with q = (', kick%qvector(:), ')'
+          write(message(1), '(a,3F9.5,a)') 'Info: Using cos(q.r) field with q = (', kick%qvector(1:3), ')'
         case (QKICKMODE_SIN)
-          write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r) field with q = (', kick%qvector(:), ')'
+          write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r) field with q = (', kick%qvector(1:3), ')'
         case (QKICKMODE_SIN + QKICKMODE_COS)
-          write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r)+cos(q.r) field with q = (', kick%qvector(:), ')'
+          write(message(1), '(a,3F9.5,a)') 'Info: Using sin(q.r)+cos(q.r) field with q = (', kick%qvector(1:3), ')'
         case (QKICKMODE_EXP)
-          write(message(1), '(a,3F9.5,a)') 'Info: Using exp(iq.r) field with q = (', kick%qvector(:), ')'
+          write(message(1), '(a,3F9.5,a)') 'Info: Using exp(iq.r) field with q = (', kick%qvector(1:3), ')'
         case (QKICKMODE_BESSEL)
           write(message(1), '(a,I2,a,I2,a,F9.5)') 'Info: Using j_l(qr)*Y_lm(r) field with (l,m)= (', &
             kick%qbessel_l, ",", kick%qbessel_m,') and q = ', kick%qlength
