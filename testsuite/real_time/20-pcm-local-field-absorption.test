@@ -6,7 +6,7 @@ TestGroups : long-run, real_time
 Enabled    : Yes
 
 Processors : 1
-Input      : 20-local-field-absorption.01-gs.inp
+Input      : 20-pcm-local-field-absorption.01-gs.inp
 Precision: 0.0001
 match ; eigenvalue [1]                ;  GREPFIELD(static/info, '1   --', 3)            ;  -6.340082
 match ; electrons-solvent int. energy ;  GREPFIELD(static/info, 'E_e-solvent =', 3)     ;   0.00003115
@@ -16,7 +16,7 @@ match ; electronic pol. charge        ;  GREPFIELD(pcm/pcm_info.out, '       8  
 match ; nuclear pol. charge           ;  GREPFIELD(pcm/pcm_info.out, '       8   ', 9)  ;   0.98713876
 
 Processors : 4
-Input      : 20-local-field-absorption.02-td_prop_eom.inp
+Input      : 20-pcm-local-field-absorption.02-td_prop_eom.inp
 Precision: 0.0001
 match ; M-solvent int. energy at t=0      ;  GREPFIELD(td.general/energy,'       0', 12)   ; -4.691771297979e-08
 match ; M-solvent int. energy at t=100*dt ;  GREPFIELD(td.general/energy,'     100', 12)   ; -5.809845217443e-07
@@ -24,7 +24,7 @@ match ; M-solvent int. energy at t=100*dt ;  GREPFIELD(td.general/energy,'     1
 Util       : oct-propagation_spectrum
 
 Processors : 1
-Input      : 20-local-field-absorption.02-td_prop_eom.inp
+Input      : 20-pcm-local-field-absorption.02-td_prop_eom.inp
 
 Precision: 0.0001
 match ; Energy    ;  LINE(cross_section_vector, 49, 1)    ; 0.22000000E+00

@@ -1,0 +1,27 @@
+# -*- coding: utf-8 mode: shell-script -*-
+#
+
+PseudopotentialSet = hgh_lda
+
+CalculationMode = gs
+FromScratch = yes
+ExperimentalFeatures = yes
+
+%Coordinates
+"Cl" | 0.0 | 0.0 | 0.0
+%
+
+UnitsOutput = ev_angstrom
+ExcessCharge = -1
+
+BoxShape = minimum
+radius = 5.0*angstrom
+spacing = 0.19*angstrom
+
+ConvRelDens = 1e-5
+XCFunctional = gga_x_pbe + gga_c_pbe
+
+PCMCalculation = true
+PCMStaticEpsilon = 78.39
+PCMCalcMethod = pcm_poisson
+MixField = density
