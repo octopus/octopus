@@ -208,7 +208,7 @@ program spin_susceptibility
   do ii = 1, num_col/2
     do kk = 1, energy_steps
       chi(kk,ii) = (ftreal(kk,(ii-1)*2+1) + M_zI*ftimag(kk, (ii-1)*2+1)&
-                 -ftimag(kk, (ii-1)*2+2) + M_zI*ftreal(kk, (ii-1)*2+2))/delta_strength
+                  -ftimag(kk, (ii-1)*2+2) + M_zI*ftreal(kk, (ii-1)*2+2))/delta_strength
     end do
   end do
 
