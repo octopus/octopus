@@ -161,7 +161,6 @@ $enabled = ""; # FIXME: should Enabled be optional?
 $options_required = "";
 $options_required_mpi = "";
 $options_are_mpi = 0;
-$expected_failure = "";
 $expect_error = 0; # check for controlled failure 
 $match_error = 0;  # flag to switch to alternative matches
 $match_done = 1;   # check that at least one error-match has been done.
@@ -303,7 +302,7 @@ while ($_ = <TESTSUITE>) {
                 if(" $options_available " !~ " $option ") {
 
                 # FIXME: instead of skipping, we should switch to the alternative matching rules
-                    $match_error = 1;
+                    $expect_error = 1;
                     $match_done = 0;
 
                     # print "\nSkipping test: executable does not have the required option '$option'";
@@ -378,6 +377,8 @@ while ($_ = <TESTSUITE>) {
         elsif ( $_ =~ /^Input\s*:\s*(.*)\s*$/  || $_ =~ /^FailingInput\s*:\s*(.*)\s*$/  ) {
             $input_base = $1;
             $input_file = dirname($opt_f) . "/" . $input_base;
+
+            # FIXME: at some point we need to check whether the last Input has unresolved errormatches!
 
             my %input_report;
             $r_input_report = \%input_report;          
@@ -514,7 +515,8 @@ while ($_ = <TESTSUITE>) {
             my %match_report;
             $r_match_report = \%match_report;
           
-            if (!$opt_n && ($expect_error || $return_value == 0) ) {
+            if (!$opt_n && (!$expect_error && $return_value == 0) ) {
+                printf "running match branch \n";
                 push( @{$r_matches_array}, $r_match_report);
                 if(run_match_new($_)){
                     printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
@@ -536,6 +538,7 @@ while ($_ = <TESTSUITE>) {
             $r_match_report = \%match_report;
 
             if (!$opt_n && ($expect_error || $return_value != 0) ) {
+                printf "running errormatch branch \n";
                 push( @{$r_matches_array}, $r_match_report);
                 if(run_match_new($_)){
                     printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
