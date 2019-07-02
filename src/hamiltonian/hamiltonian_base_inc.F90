@@ -1401,7 +1401,7 @@ subroutine X(hamiltonian_base_nlocal_position_commutator)(this, mesh, std, ik, p
         do idir = 0, 3
           !$omp parallel do private(ip, ist, phase)
           do ip = 1, npoints
-            phase(:) = conjg(this%projector_phases(ip, imat, :, ik))
+            phase(1:std%dim) = conjg(this%projector_phases(ip, imat, 1:std%dim, ik))
             forall(ist = 1:nst)
               psi(ist, ip, idir) = phase(batch_linear_to_idim(psib, ist))*psi(ist, ip, idir)
             end forall
