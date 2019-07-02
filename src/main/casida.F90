@@ -168,9 +168,8 @@ contains
   end subroutine casida_run_init
 
   ! ---------------------------------------------------------
-  subroutine casida_run(sys, hm, fromScratch)
+  subroutine casida_run(sys, fromScratch)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: hm
     logical,             intent(inout) :: fromScratch
 
     type(casida_t) :: cas
@@ -236,7 +235,7 @@ contains
     ! setup Hamiltonian, without recalculating eigenvalues (use the ones from the restart information)
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call system_h_setup(sys, hm, calc_eigenval=.false.)
+    call system_h_setup(sys, calc_eigenval=.false.)
 
     !%Variable CasidaTheoryLevel
     !%Type flag
@@ -463,7 +462,7 @@ contains
       message(1) = "Info: Approximating resonance energies through KS eigenvalue differences"
       call messages_info(1)
       cas%type = CASIDA_EPS_DIFF
-      call casida_work(sys, hm, cas)
+      call casida_work(sys, cas)
     end if
 
     if (sys%st%d%ispin /= SPINORS) then
@@ -473,7 +472,7 @@ contains
         message(1) = "Info: Calculating matrix elements in the Tamm-Dancoff approximation"
         call messages_info(1)
         cas%type = CASIDA_TAMM_DANCOFF
-        call casida_work(sys, hm, cas)
+        call casida_work(sys, cas)
       end if
 
       if(bitand(theorylevel, CASIDA_VARIATIONAL) /= 0) then
@@ -481,14 +480,14 @@ contains
         message(1) = "Info: Calculating matrix elements with the CV(2)-DFT theory"
         call messages_info(1)
         cas%type = CASIDA_VARIATIONAL
-        call casida_work(sys, hm, cas)
+        call casida_work(sys, cas)
       end if
 
       if(bitand(theorylevel, CASIDA_CASIDA) /= 0) then
         message(1) = "Info: Calculating matrix elements with the full Casida method"
         call messages_info(1)
         cas%type = CASIDA_CASIDA
-        call casida_work(sys, hm, cas)
+        call casida_work(sys, cas)
       end if
 
       ! Doing this first, if doing the others later, takes longer, because we would use
@@ -497,7 +496,7 @@ contains
         message(1) = "Info: Calculating resonance energies via the Petersilka approximation"
         call messages_info(1)
         cas%type = CASIDA_PETERSILKA
-        call casida_work(sys, hm, cas)
+        call casida_work(sys, cas)
       end if
 
     end if
@@ -643,9 +642,8 @@ contains
   ! ---------------------------------------------------------
   !> this subroutine calculates electronic excitation energies using
   !! the matrix formulation of M. Petersilka, or of M. Casida
-  subroutine casida_work(sys, hm, cas)
+  subroutine casida_work(sys, cas)
     type(system_t), target, intent(inout) :: sys
-    type(hamiltonian_t),    intent(inout) :: hm
     type(casida_t),         intent(inout) :: cas
 
     type(states_t), pointer :: st
@@ -718,11 +716,11 @@ contains
       call solve_eps_diff()
     case(CASIDA_TAMM_DANCOFF,CASIDA_VARIATIONAL,CASIDA_CASIDA,CASIDA_PETERSILKA)
       if(cas%states_are_real) then
-        call dcasida_get_matrix(cas, hm, st, sys%ks, mesh, cas%dmat, cas%fxc, restart_filename)
+        call dcasida_get_matrix(cas, sys%hm, st, sys%ks, mesh, cas%dmat, cas%fxc, restart_filename)
         cas%dmat = cas%dmat * casida_matrix_factor(cas, sys)
         call dcasida_solve(cas, st)
       else
-        call zcasida_get_matrix(cas, hm, st, sys%ks, mesh, cas%zmat, cas%fxc, restart_filename)
+        call zcasida_get_matrix(cas, sys%hm, st, sys%ks, mesh, cas%zmat, cas%fxc, restart_filename)
         cas%zmat = cas%zmat * casida_matrix_factor(cas, sys)
         call zcasida_solve(cas, st)
       end if
@@ -738,9 +736,9 @@ contains
 
     if(cas%calc_forces) then
       if(cas%states_are_real) then
-        call dcasida_forces(cas, sys, mesh, st, hm)
+        call dcasida_forces(cas, sys, mesh, st)
       else
-        call zcasida_forces(cas, sys, mesh, st, hm)
+        call zcasida_forces(cas, sys, mesh, st)
       end if
     end if
 

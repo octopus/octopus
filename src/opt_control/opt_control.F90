@@ -153,7 +153,7 @@ contains
 
     ! Informative output.
     call opt_control_get_qs(psi, initial_st)
-    call output_states(psi, sys%parser, sys%gr, sys%geo, OCT_DIR//'initial', sys%outp)
+    call output_states(psi, sys%parser, sys%gr, sys%geo, sys%hm, OCT_DIR//'initial', sys%outp)
     call target_output(oct_target, sys%parser, sys%gr, OCT_DIR//'target', sys%geo, sys%hm, sys%outp)
     call states_end(psi)
 

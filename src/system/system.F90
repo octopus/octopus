@@ -43,6 +43,7 @@ module system_oct_m
   use states_oct_m
   use states_dim_oct_m
   use v_ks_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -150,6 +151,8 @@ contains
     type(system_t), intent(inout) :: sys
 
     PUSH_SUB(system_end)
+
+    call hamiltonian_end(sys%hm)
 
     call multicomm_end(sys%mc)
 

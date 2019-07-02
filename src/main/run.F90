@@ -270,19 +270,19 @@ contains
       case(CM_CASIDA)
         if(sys%gr%sb%kpoints%use_symmetries) &
           call messages_experimental("KPoints symmetries with CalculationMode = casida")
-        call casida_run(sys, hm, fromScratch)
+        call casida_run(sys, fromScratch)
       case(CM_ONE_SHOT)
         message(1) = "CalculationMode = one_shot is obsolete. Please use gs with MaximumIter = 0."
         call messages_fatal(1)
       case(CM_KDOTP)
         if(sys%gr%sb%kpoints%use_symmetries) &
           call messages_experimental("KPoints symmetries with CalculationMode = kdotp")
-        call kdotp_lr_run(sys, hm, fromScratch)
+        call kdotp_lr_run(sys, fromScratch)
       case(CM_DUMMY)
       case(CM_INVERTKDS)
         if(sys%gr%sb%kpoints%use_symmetries) &
           call messages_experimental("KPoints symmetries with CalculationMode = invert_ks")
-        call invert_ks_run(sys, hm)
+        call invert_ks_run(sys)
       case(CM_PULPO_A_FEIRA)
         ASSERT(.false.) !this is handled before, if we get here, it is an error
       end select
@@ -292,7 +292,6 @@ contains
 
     if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) call poisson_async_end(sys%ks%hartree_solver, sys%mc)
     
-    call hamiltonian_end(hm)
     call system_end(sys)
 
     call fft_all_end()

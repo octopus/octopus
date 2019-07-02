@@ -607,14 +607,13 @@ end subroutine X(sternheimer_set_inhomog)
 
 !--------------------------------------------------------------
 subroutine X(sternheimer_solve_order2)( &
-     sh1, sh2, sh_2ndorder, sys, hm, lr1, lr2, nsigma, omega1, omega2, pert1, pert2,       &
+     sh1, sh2, sh_2ndorder, sys, lr1, lr2, nsigma, omega1, omega2, pert1, pert2,       &
      lr_2ndorder, pert_2ndorder, restart, rho_tag, wfs_tag, have_restart_rho, have_exact_freq, &
      give_pert1psi2, give_dl_eig1)
   type(sternheimer_t),    intent(inout) :: sh1
   type(sternheimer_t),    intent(inout) :: sh2
   type(sternheimer_t),    intent(inout) :: sh_2ndorder
   type(system_t), target, intent(inout) :: sys
-  type(hamiltonian_t),    intent(inout) :: hm
   type(lr_t),             intent(inout) :: lr1(:) 
   type(lr_t),             intent(inout) :: lr2(:) 
   integer,                intent(in)    :: nsigma 
@@ -675,14 +674,14 @@ subroutine X(sternheimer_solve_order2)( &
 
         call states_get_state(st, sys%gr%mesh, ist, ik, psi)
 
-        call X(pert_apply)(pert1, sys%parser, sys%gr, sys%geo, hm, ik, psi, pert1psi)
-        call X(pert_apply)(pert2, sys%parser, sys%gr, sys%geo, hm, ik, psi, pert2psi)
+        call X(pert_apply)(pert1, sys%parser, sys%gr, sys%geo, sys%hm, ik, psi, pert1psi)
+        call X(pert_apply)(pert2, sys%parser, sys%gr, sys%geo, sys%hm, ik, psi, pert2psi)
         if(present(give_pert1psi2)) then
           pert1psi2(1:mesh%np, 1:st%d%dim) = give_pert1psi2(1:sys%gr%mesh%np, 1:st%d%dim, ist, ik)
         else
-          call X(pert_apply)(pert1, sys%parser, sys%gr, sys%geo, hm, ik, lr2(isigma)%X(dl_psi)(:, :, ist, ik), pert1psi2)
+          call X(pert_apply)(pert1, sys%parser, sys%gr, sys%geo, sys%hm, ik, lr2(isigma)%X(dl_psi)(:, :, ist, ik), pert1psi2)
         end if
-        call X(pert_apply)(pert2, sys%parser, sys%gr, sys%geo, hm, ik, lr1(isigma)%X(dl_psi)(:, :, ist, ik), pert2psi1)
+        call X(pert_apply)(pert2, sys%parser, sys%gr, sys%geo, sys%hm, ik, lr1(isigma)%X(dl_psi)(:, :, ist, ik), pert2psi1)
 
         ! derivative of the eigenvalues:
         ! bare perturbation
@@ -721,7 +720,7 @@ subroutine X(sternheimer_solve_order2)( &
 
   ! sum frequency
   call X(sternheimer_set_inhomog)(sh_2ndorder, inhomog)
-  call X(sternheimer_solve)(sh_2ndorder, sys, hm, lr_2ndorder, nsigma, &
+  call X(sternheimer_solve)(sh_2ndorder, sys, lr_2ndorder, nsigma, &
     omega1 + omega2, pert_2ndorder, restart, rho_tag, wfs_tag, &
     have_restart_rho = have_restart_rho, have_exact_freq = have_exact_freq)
   call sternheimer_unset_inhomog(sh_2ndorder)
