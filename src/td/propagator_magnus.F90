@@ -38,6 +38,7 @@ module propagator_magnus_oct_m
   use propagator_rk_oct_m
   use states_elec_oct_m
   use v_ks_oct_m
+  use worker_elec_oct_m
 
   implicit none
 
@@ -179,19 +180,14 @@ contains
 
     hm%vhxc = M_TWO * (alpha2 * vhxc1 + alpha1 * vhxc2)
     call hamiltonian_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha2, M_TWO * alpha1/) )
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ib = st%group%block_start, st%group%block_end
-        call exponential_apply_batch(tr%te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, M_HALF * dt)
-      end do
-    end do
+    ! propagate by dt/2 
+    call worker_elec_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
 
     hm%vhxc = M_TWO * (alpha1 * vhxc1 + alpha2 * vhxc2)
     call hamiltonian_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha1, M_TWO * alpha2/) )
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ib = st%group%block_start, st%group%block_end
-        call exponential_apply_batch(tr%te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, M_HALF * dt)
-      end do
-    end do
+    ! propagate by dt/2
+    !TODO: fuse this with density calc
+    call worker_elec_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
 
     call density_calc(st, gr, st%rho)
 

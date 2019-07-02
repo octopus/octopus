@@ -35,6 +35,7 @@ module propagator_expmid_oct_m
   use potential_interpolation_oct_m
   use propagator_base_oct_m
   use states_elec_oct_m
+  use worker_elec_oct_m
 
   implicit none
 
@@ -93,13 +94,11 @@ contains
     call hamiltonian_update(hm, gr%mesh, namespace, time = time - M_HALF*dt)
     !We update the occupation matrices
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ib = st%group%block_start, st%group%block_end
 
-        call exponential_apply_batch(tr%te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, dt)
-
-      end do
-    end do
+     
+    ! propagate dt/2 with H(time - dt)
+    !TODO: Fuse it with density calculation
+    call worker_elec_exp_apply(tr%te, st, gr, hm, psolver, dt)
 
     !restore to time 'time - dt'
     if(move_ions .and. ion_dynamics_ions_move(ions)) then
