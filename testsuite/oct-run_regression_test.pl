@@ -385,8 +385,8 @@ while ($_ = <TESTSUITE>) {
 
             if( $_ =~ /^Failing/) {
                 $expect_error = 1;
-                $input_report{"expected_failure"} = $expected_failure;
             }
+            $input_report{"expected_failure"} = $expect_error?"Yes":"No";
 
             my @matches_array;
             $r_matches_array = \@matches_array;
