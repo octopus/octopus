@@ -132,30 +132,42 @@ program spin_susceptibility
   num_col = 8
   SAFE_ALLOCATE(magnetization(1:time_steps, 1:num_col))
   !Real part of m_x
-  magnetization(:,1) = m_cart(:,1)*kick%trans_vec(1,1) + m_cart(:,3)*kick%trans_vec(2,1) + m_cart(:,5)*kick%trans_vec(3,1)
+  magnetization(:,1) = m_cart(:,1)*kick%trans_vec(1,1) + m_cart(:,3)*kick%trans_vec(2,1) &
+                         + m_cart(:,5)*kick%trans_vec(3,1)
   !We add -Im(m_y)
-  magnetization(:,1) = magnetization(:,1) -(m_cart(:,2)*kick%trans_vec(1,2) + m_cart(:,4)*kick%trans_vec(2,2) + m_cart(:,6)*kick%trans_vec(3,2))  
+  magnetization(:,1) = magnetization(:,1) -(m_cart(:,2)*kick%trans_vec(1,2) &
+                         + m_cart(:,4)*kick%trans_vec(2,2) + m_cart(:,6)*kick%trans_vec(3,2))  
   
   !Im part of m_x
-  magnetization(:,2) = m_cart(:,2)*kick%trans_vec(1,1) + m_cart(:,4)*kick%trans_vec(2,1) + m_cart(:,6)*kick%trans_vec(3,1)
+  magnetization(:,2) = m_cart(:,2)*kick%trans_vec(1,1) + m_cart(:,4)*kick%trans_vec(2,1) &
+                         + m_cart(:,6)*kick%trans_vec(3,1)
   !We add +Re(m_y)
-  magnetization(:,2) = magnetization(:,2) +(m_cart(:,1)*kick%trans_vec(1,2) + m_cart(:,3)*kick%trans_vec(2,2) + m_cart(:,5)*kick%trans_vec(3,2))
+  magnetization(:,2) = magnetization(:,2) +(m_cart(:,1)*kick%trans_vec(1,2) &
+                         + m_cart(:,3)*kick%trans_vec(2,2) + m_cart(:,5)*kick%trans_vec(3,2))
 
   !Real part of m_x
-  magnetization(:,3) = m_cart(:,7)*kick%trans_vec(1,1) + m_cart(:,9)*kick%trans_vec(2,1) + m_cart(:,11)*kick%trans_vec(3,1)
+  magnetization(:,3) = m_cart(:,7)*kick%trans_vec(1,1) + m_cart(:,9)*kick%trans_vec(2,1) &
+                         + m_cart(:,11)*kick%trans_vec(3,1)
   !We add +Im(m_y)
-  magnetization(:,3) = magnetization(:,3) +(m_cart(:,8)*kick%trans_vec(1,2) + m_cart(:,10)*kick%trans_vec(2,2) + m_cart(:,12)*kick%trans_vec(3,2))
+  magnetization(:,3) = magnetization(:,3) +(m_cart(:,8)*kick%trans_vec(1,2) &
+                         + m_cart(:,10)*kick%trans_vec(2,2) + m_cart(:,12)*kick%trans_vec(3,2))
 
   !Im part of m_x
-  magnetization(:,4) = m_cart(:,8)*kick%trans_vec(1,1) + m_cart(:,10)*kick%trans_vec(2,1) + m_cart(:,12)*kick%trans_vec(3,1)
+  magnetization(:,4) = m_cart(:,8)*kick%trans_vec(1,1) + m_cart(:,10)*kick%trans_vec(2,1) &
+                         + m_cart(:,12)*kick%trans_vec(3,1)
   !We add -Re(m_y)
-  magnetization(:,4) = magnetization(:,4) -(m_cart(:,7)*kick%trans_vec(1,2) + m_cart(:,9)*kick%trans_vec(2,2) + m_cart(:,11)*kick%trans_vec(3,2))
+  magnetization(:,4) = magnetization(:,4) -(m_cart(:,7)*kick%trans_vec(1,2) &
+                         + m_cart(:,9)*kick%trans_vec(2,2) + m_cart(:,11)*kick%trans_vec(3,2))
   
   !Real and Im part of m_z
-  magnetization(:,5) = m_cart(:,1)*kick%easy_axis(1) + m_cart(:,3)*kick%easy_axis(2) + m_cart(:,5)*kick%easy_axis(3)
-  magnetization(:,6) = m_cart(:,2)*kick%easy_axis(1) + m_cart(:,4)*kick%easy_axis(2) + m_cart(:,6)*kick%easy_axis(3)
-  magnetization(:,7) = m_cart(:,7)*kick%easy_axis(1) + m_cart(:,9)*kick%easy_axis(2) + m_cart(:,11)*kick%easy_axis(3)
-  magnetization(:,8) = m_cart(:,8)*kick%easy_axis(1) + m_cart(:,10)*kick%easy_axis(2) + m_cart(:,12)*kick%easy_axis(3)
+  magnetization(:,5) = m_cart(:,1)*kick%easy_axis(1) + m_cart(:,3)*kick%easy_axis(2) &
+                              + m_cart(:,5)*kick%easy_axis(3)
+  magnetization(:,6) = m_cart(:,2)*kick%easy_axis(1) + m_cart(:,4)*kick%easy_axis(2) &
+                              + m_cart(:,6)*kick%easy_axis(3)
+  magnetization(:,7) = m_cart(:,7)*kick%easy_axis(1) + m_cart(:,9)*kick%easy_axis(2) &
+                              + m_cart(:,11)*kick%easy_axis(3)
+  magnetization(:,8) = m_cart(:,8)*kick%easy_axis(1) + m_cart(:,10)*kick%easy_axis(2) &
+                              + m_cart(:,12)*kick%easy_axis(3)
 
   SAFE_DEALLOCATE_A(m_cart)
 
