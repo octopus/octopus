@@ -27,102 +27,91 @@
 
 module basis_set_abst_oct_m
 
-    use mpi_oct_m
+  use mpi_oct_m
 
-    implicit none
+  implicit none
     
-    
-!    private
-!    public :: &
-!        basis_set_abst_t
+  private
+  public :: &
+    basis_set_abst_t
 
-    type, abstract :: basis_set_abst_t
+  type, abstract :: basis_set_abst_t
 
-        private
-        integer :: size             !< Number of basis functions   TODO: Do we need this ???
-        logical :: time_dependent   !< flag for time-dependent basis sets
+    private
+    logical :: time_dependent   !< flag for time-dependent basis sets
 
+  contains
 
-        contains
+    private
 
-        private
+    procedure(init), deferred :: init
+    procedure(end),  deferred :: end
 
-        procedure(init), deferred :: init
-        procedure(end),  deferred :: end
+    procedure(write_info), deferred :: write_info
 
-        procedure(dump), deferred :: dump
-        procedure(load), deferred :: load
+    procedure(dump), deferred :: dump
+    procedure(load), deferred :: load
 
-        procedure, non_overridable, public :: get_size
-        procedure, non_overridable, public :: is_time_dependent
+    procedure, non_overridable, public :: is_time_dependent
+    procedure, non_overridable, public :: set_time_dependent
 
+  end type basis_set_abst_t
 
-    end type basis_set_abst_t
+  abstract interface
+    subroutine init(this)
+      import basis_set_abst_t
+      class(basis_set_abst_t), intent(inout) :: this
+    end subroutine init
 
-    abstract interface
-        subroutine init(this)
-            import basis_set_abst_t
-            class(basis_set_abst_t), intent(inout) :: this
-        end subroutine init
-    end interface
+    subroutine end(this)
+      import basis_set_abst_t
+      class(basis_set_abst_t), intent(inout) :: this
+    end subroutine end
 
-    abstract interface
-        subroutine end(this)
-            import basis_set_abst_t
-            class(basis_set_abst_t), intent(inout) :: this
-        end subroutine end
-    end interface
+    subroutine write_info(this, unit)
+      import basis_set_abst_t
+      class(basis_set_abst_t), intent(in) :: this
+      integer,                 intent(in) :: unit
+    end subroutine write_info
 
-    abstract interface    
-        subroutine dump(this, dir, filename, mpi_grp, ierr)
-            import basis_set_abst_t
-            import mpi_grp_t
+    subroutine dump(this, dir, filename, mpi_grp, ierr)
+      import basis_set_abst_t
+      import mpi_grp_t
+      class(basis_set_abst_t), intent(in) :: this
+      character(len=*), intent(in)    :: dir
+      character(len=*), intent(in)    :: filename
+      type(mpi_grp_t),  intent(in)    :: mpi_grp
+      integer,          intent(out)   :: ierr
+    end subroutine dump
 
-            class(basis_set_abst_t), intent(in) :: this
-            character(len=*), intent(in)    :: dir
-            character(len=*), intent(in)    :: filename
-            type(mpi_grp_t),  intent(in)    :: mpi_grp
-            integer,          intent(out)   :: ierr
-        
-        end subroutine dump
-    end interface
-
-    abstract interface    
-        subroutine load(this, dir, filename, mpi_grp, ierr)
-            import basis_set_abst_t
-            import mpi_grp_t
-
-            class(basis_set_abst_t), intent(inout) :: this
-            character(len=*), intent(in)    :: dir
-            character(len=*), intent(in)    :: filename
-            type(mpi_grp_t),  intent(in)    :: mpi_grp
-            integer,          intent(out)   :: ierr
-        
-        end subroutine load
-    end interface
+    subroutine load(this, dir, filename, mpi_grp, ierr)
+      import basis_set_abst_t
+      import mpi_grp_t
+      class(basis_set_abst_t), intent(inout) :: this
+      character(len=*), intent(in)    :: dir
+      character(len=*), intent(in)    :: filename
+      type(mpi_grp_t),  intent(in)    :: mpi_grp
+      integer,          intent(out)   :: ierr
+    end subroutine load
+  end interface
 
 contains
 
-    function get_size(this) result(size_)
-!        import basis_set_abst_t
+  function is_time_dependent(this) result(td_flag)
 
-        class(basis_set_abst_t), intent(in) :: this
-        integer :: size_
+    class(basis_set_abst_t), intent(in) :: this
+    logical :: td_flag
+    td_flag = this%time_dependent
 
-        size_ = this%size
+  end function is_time_dependent
 
-    end function get_size
+  subroutine set_time_dependent(this, td_flag)
 
+    class(basis_set_abst_t), intent(inout) :: this
+    logical, intent(in) :: td_flag
 
-    function is_time_dependent(this) result(td_)
-!        import basis_set_abst_t
+    this%time_dependent = td_flag
 
-        class(basis_set_abst_t), intent(in) :: this
-        logical :: td_
-
-        td_ = this%time_dependent
-
-    end function is_time_dependent
-
+  end subroutine set_time_dependent
 
 end module basis_set_abst_oct_m

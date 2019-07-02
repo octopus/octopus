@@ -112,6 +112,7 @@ module mesh_oct_m
     procedure :: dump => mesh_dump
     procedure :: end => mesh_end
     procedure :: init => mesh_init
+    procedure :: write_info => mesh_write_info
 
   end type mesh_t
   
@@ -147,9 +148,14 @@ module mesh_oct_m
   
 contains
 
-
   subroutine mesh_init(this)
+
     class(mesh_t), intent(inout) :: this
+
+    PUSH_SUB(mesh_init)
+    call this%set_time_dependent(.false.)
+    POP_SUB(mesh_init)
+
   end subroutine mesh_init
 
 ! ---------------------------------------------------------
@@ -179,8 +185,8 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine mesh_write_info(mesh, unit)
-    type(mesh_t), intent(in) :: mesh
+  subroutine mesh_write_info(this, unit)
+    class(mesh_t), intent(in) :: this
     integer,      intent(in) :: unit
     
     integer :: ii
@@ -191,18 +197,18 @@ contains
     PUSH_SUB(mesh_write_info)
     
     write(message(1),'(3a)') '  Spacing [', trim(units_abbrev(units_out%length)), '] = ('
-    do ii = 1, mesh%sb%dim
+    do ii = 1, this%sb%dim
       if(ii > 1) write(message(1), '(2a)') trim(message(1)), ','
-      write(message(1), '(a,f6.3)') trim(message(1)), units_from_atomic(units_out%length, mesh%spacing(ii))
+      write(message(1), '(a,f6.3)') trim(message(1)), units_from_atomic(units_out%length, this%spacing(ii))
     end do
     write(message(1), '(5a,f12.5)') trim(message(1)), ') ', &
-         '   volume/point [', trim(units_abbrev(units_out%length**mesh%sb%dim)), '] = ',      &
-         units_from_atomic(units_out%length**mesh%sb%dim, mesh%vol_pp(1))
+         '   volume/point [', trim(units_abbrev(units_out%length**this%sb%dim)), '] = ',      &
+         units_from_atomic(units_out%length**this%sb%dim, this%vol_pp(1))
     
-    write(message(2),'(a, i10)') '  # inner mesh = ', mesh%np_global
-    write(message(3),'(a, i10)') '  # total mesh = ', mesh%np_part_global
+    write(message(2),'(a, i10)') '  # inner mesh = ', this%np_global
+    write(message(3),'(a, i10)') '  # total mesh = ', this%np_part_global
     
-    cutoff = mesh_gcutoff(mesh)**2 / M_TWO
+    cutoff = mesh_gcutoff(this)**2 / M_TWO
     write(message(4),'(3a,f12.6,a,f12.6)') '  Grid Cutoff [', trim(units_abbrev(units_out%energy)),'] = ', &
       units_from_atomic(units_out%energy, cutoff), '    Grid Cutoff [Ry] = ', cutoff * M_TWO
     call messages_info(4, unit)
