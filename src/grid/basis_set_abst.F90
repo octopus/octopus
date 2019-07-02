@@ -18,9 +18,6 @@
 
 #include "global.h"
 
-
-
-
 !> Abstract class for basis sets. In our context, basis sets include meshes, atomic orbitals, plane waves, 
 !! possibly wavelets, etc. For this reason, the abstract class is very minimalistic, and only contains
 !! essential quantities and functions
