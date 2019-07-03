@@ -28,8 +28,7 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
   integer              :: ip, jp, dim, nthreads
   FLOAT                :: xx1(1:MAX_DIM), xx2(1:MAX_DIM), xx3(1:MAX_DIM), xx4(1:MAX_DIM)
 #ifdef HAVE_MPI
-  FLOAT                :: tmp
-  FLOAT, allocatable   :: pvec(:)
+  FLOAT, allocatable   :: pvec(:), tmp(:)
 #endif
   type(profile_t), save :: prof
 
@@ -67,6 +66,7 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
   if(sm%mesh%parallel_in_domains) then
     ASSERT(sm%np_global > -1) !We have to build the global array before
     SAFE_ALLOCATE(pvec(1:sm%np))
+    SAFE_ALLOCATE(tmp(1:sm%np_global))
 
     pot = M_ZERO
     do ip = 1, sm%np_global
@@ -90,14 +90,20 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
           pvec(jp) = rho(jp)/sqrt(sum((xx1(1:dim) -  sm%x(jp, 1:dim))**2))
         end do
       end if
-      tmp = dsm_integrate(sm%mesh, sm, pvec)    
+      tmp(ip) = dsm_integrate(sm%mesh, sm, pvec, reduce = .false.)
+   end do
 
+
+   call comm_allreduce(sm%mesh%mpi_grp%comm, tmp)
+
+   do ip = 1, sm%np_global
       if (sm%part_v(ip) == sm%mesh%vp%partno) then
-        pot(sm%global2local(ip)) = tmp
+        pot(sm%global2local(ip)) = tmp(ip)
       end if
     end do
 
     SAFE_DEALLOCATE_A(pvec)
+    SAFE_DEALLOCATE_A(tmp)
 
   else ! serial mode
 #endif
