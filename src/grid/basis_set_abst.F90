@@ -24,7 +24,10 @@
 
 module basis_set_abst_oct_m
 
+  use global_oct_m
+  use messages_oct_m
   use mpi_oct_m
+  use profiling_oct_m
 
   implicit none
     
@@ -98,7 +101,10 @@ contains
 
     class(basis_set_abst_t), intent(in) :: this
     logical :: td_flag
+
+    PUSH_SUB(is_time_dependent)
     td_flag = this%time_dependent
+    POP_SUB(is_time_dependent)
 
   end function is_time_dependent
 
@@ -107,7 +113,9 @@ contains
     class(basis_set_abst_t), intent(inout) :: this
     logical, intent(in) :: td_flag
 
+    PUSH_SUB(set_time_dependent)
     this%time_dependent = td_flag
+    POP_SUB(set_time_dependent)
 
   end subroutine set_time_dependent
 
