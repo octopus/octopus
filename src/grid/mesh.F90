@@ -146,13 +146,13 @@ module mesh_oct_m
 contains
 
   subroutine mesh_init(this)
-
     class(mesh_t), intent(inout) :: this
 
     PUSH_SUB(mesh_init)
-    call this%set_time_dependent(.false.)
-    POP_SUB(mesh_init)
 
+    call this%set_time_dependent(.false.)
+
+    POP_SUB(mesh_init)
   end subroutine mesh_init
 
 ! ---------------------------------------------------------
