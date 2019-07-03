@@ -23,7 +23,6 @@
 !! essential quantities and functions
 
 module basis_set_abst_oct_m
-
   use global_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -32,8 +31,7 @@ module basis_set_abst_oct_m
   implicit none
     
   private
-  public :: &
-    basis_set_abst_t
+  public :: basis_set_abst_t
 
   type, abstract :: basis_set_abst_t
     private
