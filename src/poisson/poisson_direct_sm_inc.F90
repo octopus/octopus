@@ -30,8 +30,11 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
 #ifdef HAVE_MPI
   FLOAT, allocatable   :: pvec(:), tmp(:)
 #endif
+  type(profile_t), save :: prof
 
   PUSH_SUB(dpoisson_solve_direct_sm)
+
+  call profiling_in(prof, "SM_POISSON_SOLVE")
 
   nthreads = 1
 #ifdef HAVE_OPENMP
@@ -88,6 +91,7 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
       tmp(ip) = dsm_integrate(sm%mesh, sm, pvec, reduce = .false.)
    end do
 
+
    call comm_allreduce(sm%mesh%mpi_grp%comm, tmp)
 
    do ip = 1, sm%np_global
@@ -132,13 +136,28 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
         aa4 = prefactor*rho(ip + 3)
 
         !$omp parallel do reduction(+:aa1,aa2,aa3,aa4) schedule(dynamic,sm%np/nthreads)
-        do jp = 1, sm%np
+        do jp = 1, ip-1
+          aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))
+          aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - sm%x(jp, 1:dim))**2))
+          aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - sm%x(jp, 1:dim))**2))
+          aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - sm%x(jp, 1:dim))**2))
+        end do
+  
+        do jp = ip, ip+3
           if(ip     /= jp) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))
           if(ip + 1 /= jp) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - sm%x(jp, 1:dim))**2))
           if(ip + 2 /= jp) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - sm%x(jp, 1:dim))**2))
           if(ip + 3 /= jp) aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - sm%x(jp, 1:dim))**2))
         end do
-      
+        
+        !$omp parallel do reduction(+:aa1,aa2,aa3,aa4) schedule(dynamic,sm%np/nthreads)
+        do jp = ip+4, sm%np
+          aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))
+          aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim) - sm%x(jp, 1:dim))**2))
+          aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim) - sm%x(jp, 1:dim))**2))
+          aa4 = aa4 + rho(jp)/sqrt(sum((xx4(1:dim) - sm%x(jp, 1:dim))**2))
+        end do
+
       end if
 
       pot(ip    ) = sm%mesh%volume_element*aa1
@@ -164,13 +183,15 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
           end if
         end do
       else
+
         !$omp parallel do reduction(+:aa1)
-        do jp = 1, sm%np
-          if(ip == jp) then
-            aa1 = aa1 + prefactor*rho(ip)
-          else
-            aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))
-          end if
+        do jp = 1, ip-1
+          aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))
+        end do
+        aa1 = aa1 + prefactor*rho(ip)
+        !$omp parallel do reduction(+:aa1)
+        do jp = ip+1, sm%np
+          aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim) - sm%x(jp, 1:dim))**2))
         end do
       end if
 
@@ -181,6 +202,8 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
 #ifdef HAVE_MPI
   end if
 #endif
+
+  call profiling_out(prof)
   
   POP_SUB(dpoisson_solve_direct_sm) 
 end subroutine dpoisson_solve_direct_sm
