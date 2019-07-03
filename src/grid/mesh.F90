@@ -105,15 +105,12 @@ module mesh_oct_m
     FLOAT,   allocatable :: vol_pp(:)         !< Element of volume for curvilinear coordinates.
 
     type(mesh_cube_map_t) :: cube_map
-
-    contains
-
+  contains
     procedure :: load => mesh_load
     procedure :: dump => mesh_dump
     procedure :: end => mesh_end
     procedure :: init => mesh_init
     procedure :: write_info => mesh_write_info
-
   end type mesh_t
   
   !> This data type defines a plane, and a regular grid defined on 

@@ -67,21 +67,21 @@ module basis_set_abst_oct_m
     subroutine dump(this, dir, filename, mpi_grp, ierr)
       import basis_set_abst_t
       import mpi_grp_t
-      class(basis_set_abst_t), intent(in) :: this
-      character(len=*), intent(in)    :: dir
-      character(len=*), intent(in)    :: filename
-      type(mpi_grp_t),  intent(in)    :: mpi_grp
-      integer,          intent(out)   :: ierr
+      class(basis_set_abst_t), intent(in)  :: this
+      character(len=*),        intent(in)  :: dir
+      character(len=*),        intent(in)  :: filename
+      type(mpi_grp_t),         intent(in)  :: mpi_grp
+      integer,                 intent(out) :: ierr
     end subroutine dump
 
     subroutine load(this, dir, filename, mpi_grp, ierr)
       import basis_set_abst_t
       import mpi_grp_t
       class(basis_set_abst_t), intent(inout) :: this
-      character(len=*), intent(in)    :: dir
-      character(len=*), intent(in)    :: filename
-      type(mpi_grp_t),  intent(in)    :: mpi_grp
-      integer,          intent(out)   :: ierr
+      character(len=*),        intent(in)    :: dir
+      character(len=*),        intent(in)    :: filename
+      type(mpi_grp_t),         intent(in)    :: mpi_grp
+      integer,                 intent(out)   :: ierr
     end subroutine load
   end interface
 
@@ -100,7 +100,7 @@ contains
 
   subroutine set_time_dependent(this, td_flag)
     class(basis_set_abst_t), intent(inout) :: this
-    logical, intent(in) :: td_flag
+    logical,                 intent(in)    :: td_flag
 
     PUSH_SUB(set_time_dependent)
 
