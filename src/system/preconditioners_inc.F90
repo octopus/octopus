@@ -18,13 +18,13 @@
 
 ! ---------------------------------------------------------
 subroutine X(preconditioner_apply)(pre, gr, hm, psolver, a, b, omega)
-  type(preconditioner_t), intent(in)    :: pre
-  type(grid_t), target,   intent(in)    :: gr
-  type(hamiltonian_t),    intent(in)    :: hm
-  type(poisson_t),        intent(in)    :: psolver
-  R_TYPE,                 intent(inout) :: a(:,:)
-  R_TYPE,                 intent(inout) :: b(:,:)
-  R_TYPE,       optional, intent(in)    :: omega
+  type(preconditioner_t),   intent(in)    :: pre
+  type(grid_t), target,     intent(in)    :: gr
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  R_TYPE,                   intent(inout) :: a(:,:)
+  R_TYPE,                   intent(inout) :: b(:,:)
+  R_TYPE,         optional, intent(in)    :: omega
 
   integer :: idim
   R_TYPE  :: omega_
@@ -224,13 +224,13 @@ end subroutine X(preconditioner_apply)
 ! ----------------------------------------
 
 subroutine X(preconditioner_apply_batch)(pre, gr, hm, psolver, aa, bb, omega)
-  type(preconditioner_t), intent(in)    :: pre
-  type(grid_t),           intent(in)    :: gr
-  type(hamiltonian_t),    intent(in)    :: hm
-  type(poisson_t),        intent(in)    :: psolver
-  type(batch_t),          intent(inout) :: aa
-  type(batch_t),          intent(inout) :: bb
-  R_TYPE,       optional, intent(in)    :: omega(:)
+  type(preconditioner_t),   intent(in)    :: pre
+  type(grid_t),             intent(in)    :: gr
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  type(batch_t),            intent(inout) :: aa
+  type(batch_t),            intent(inout) :: bb
+  R_TYPE,         optional, intent(in)    :: omega(:)
 
   integer :: ii
   type(profile_t), save :: prof

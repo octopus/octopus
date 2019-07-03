@@ -24,7 +24,7 @@ module pes_flux_oct_m
   use derivatives_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use kpoints_oct_m
   use io_oct_m
   use lasers_oct_m
@@ -132,7 +132,7 @@ contains
     type(namespace_t),   intent(in)    :: namespace
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(in)    :: st
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_elec_t), intent(in)    :: hm
     integer,             intent(in)    :: save_iter
     integer,             intent(in)    :: max_iter
 
@@ -1076,7 +1076,7 @@ contains
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_elec_t), intent(in)    :: hm
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
 
@@ -1565,7 +1565,7 @@ contains
   subroutine pes_flux_getcube(this, mesh, hm, border, offset)
     type(mesh_t),     intent(in)    :: mesh
     type(pes_flux_t), intent(inout) :: this
-    type(hamiltonian_t), intent(in) :: hm
+    type(hamiltonian_elec_t), intent(in) :: hm
     FLOAT,            intent(in)    :: border(1:MAX_DIM)
     FLOAT,            intent(in)    :: offset(1:MAX_DIM)
 

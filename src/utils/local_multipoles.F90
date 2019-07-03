@@ -27,7 +27,7 @@ program oct_local_multipoles
   use comm_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use io_function_oct_m
   use kick_oct_m

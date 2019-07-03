@@ -18,15 +18,15 @@
 
 ! --------------------------------------------------------------------------
 subroutine X(pert_apply_batch)(this, namespace, gr, geo, hm, psolver, ik, f_in, f_out)
-  type(pert_t),         intent(in)    :: this
-  type(namespace_t),    intent(in)    :: namespace
-  type(grid_t),         intent(in)    :: gr
-  type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(inout) :: hm
-  type(poisson_t),      intent(in)    :: psolver
-  integer,              intent(in)    :: ik
-  type(batch_t),        intent(in)    :: f_in
-  type(batch_t),        intent(inout) :: f_out
+  type(pert_t),             intent(in)    :: this
+  type(namespace_t),        intent(in)    :: namespace
+  type(grid_t),             intent(in)    :: gr
+  type(geometry_t),         intent(in)    :: geo
+  type(hamiltonian_elec_t), intent(inout) :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  integer,                  intent(in)    :: ik
+  type(batch_t),            intent(in)    :: f_in
+  type(batch_t),            intent(inout) :: f_out
 
   integer :: ist
   R_TYPE, allocatable :: fi(:, :), fo(:, :)
@@ -92,16 +92,16 @@ end subroutine X(pert_apply_batch)
 !> Returns f_out = H' f_in, where H' is perturbation Hamiltonian
 !! Note that e^ikr phase is applied to f_in, then is removed afterward
 subroutine X(pert_apply)(this, namespace, gr, geo, hm, psolver, ik, f_in, f_out, set_bc)
-  type(pert_t),         intent(in)    :: this
-  type(namespace_t),    intent(in)    :: namespace
-  type(grid_t),         intent(in)    :: gr
-  type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(inout) :: hm
-  type(poisson_t),      intent(in)    :: psolver
-  integer,              intent(in)    :: ik
-  R_TYPE,               intent(in)    :: f_in(:, :)
-  R_TYPE,               intent(out)   :: f_out(:, :)
-  logical,    optional, intent(in)    :: set_bc
+  type(pert_t),             intent(in)    :: this
+  type(namespace_t),        intent(in)    :: namespace
+  type(grid_t),             intent(in)    :: gr
+  type(geometry_t),         intent(in)    :: geo
+  type(hamiltonian_elec_t), intent(inout) :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  integer,                  intent(in)    :: ik
+  R_TYPE,                   intent(in)    :: f_in(:, :)
+  R_TYPE,                   intent(out)   :: f_out(:, :)
+  logical,        optional, intent(in)    :: set_bc
 
   R_TYPE, allocatable :: f_in_copy(:, :)
   logical :: apply_kpoint, set_bc_
@@ -230,7 +230,7 @@ contains
       SAFE_DEALLOCATE_A(grad)
     else
       SAFE_ALLOCATE(Hxpsi(1:gr%mesh%np,1:hm%d%dim))     
-      call X(hamiltonian_apply)(hm, gr%der, psolver, f_in_copy(:,:), Hxpsi(:,:), 1, ik, set_bc = .false.)
+      call X(hamiltonian_elec_apply)(hm, gr%der, psolver, f_in_copy(:,:), Hxpsi(:,:), 1, ik, set_bc = .false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
           f_out(ip,idim) = gr%mesh%x(ip,this%dir)*Hxpsi(ip,idim)
@@ -242,7 +242,7 @@ contains
           f_in_copy(ip,idim) = gr%mesh%x(ip,this%dir)*f_in_copy(ip,idim)
         end do
       end do
-      call X(hamiltonian_apply)(hm, gr%der, psolver, f_in_copy(:,:), Hxpsi(:,:), 1, ik, set_bc = .false.)
+      call X(hamiltonian_elec_apply)(hm, gr%der, psolver, f_in_copy(:,:), Hxpsi(:,:), 1, ik, set_bc = .false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
           f_out(ip,idim) = f_out(ip,idim) - Hxpsi(ip,idim)
@@ -350,7 +350,7 @@ subroutine X(ionic_perturbation)(gr, namespace, geo, hm, ik, f_in, f_out, iatom,
   type(grid_t),         intent(in)    :: gr
   type(namespace_t),    intent(in)    :: namespace
   type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(inout) :: hm
+  type(hamiltonian_elec_t),  intent(inout) :: hm
   integer,              intent(in)    :: ik
   R_TYPE,               intent(in)    :: f_in(:)
   R_TYPE,               intent(out)   :: f_out(:)
@@ -397,15 +397,15 @@ end subroutine X(ionic_perturbation)
 
 ! --------------------------------------------------------------------------
 subroutine X(pert_apply_order_2) (this, namespace, gr, geo, hm, psolver, ik, f_in, f_out)
-  type(pert_t),         intent(in)    :: this
-  type(namespace_t),    intent(in)    :: namespace
-  type(grid_t),         intent(in)    :: gr
-  type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(inout) :: hm
-  type(poisson_t),      intent(in)    :: psolver
-  integer,              intent(in)    :: ik
-  R_TYPE,               intent(in)    :: f_in(:, :)
-  R_TYPE,               intent(out)   :: f_out(:, :)
+  type(pert_t),             intent(in)    :: this
+  type(namespace_t),        intent(in)    :: namespace
+  type(grid_t),             intent(in)    :: gr
+  type(geometry_t),         intent(in)    :: geo
+  type(hamiltonian_elec_t), intent(inout) :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  integer,                  intent(in)    :: ik
+  R_TYPE,                   intent(in)    :: f_in(:, :)
+  R_TYPE,                   intent(out)   :: f_out(:, :)
 
   integer :: ip, idim
   R_TYPE, allocatable :: f_in_copy(:,:)
@@ -689,7 +689,7 @@ subroutine X(ionic_perturbation_order_2) (gr, namespace, geo, hm, ik, f_in, f_ou
   type(grid_t),        intent(in)    :: gr
   type(namespace_t),   intent(in)    :: namespace
   type(geometry_t),    intent(in)    :: geo
-  type(hamiltonian_t), intent(inout) :: hm
+  type(hamiltonian_elec_t), intent(inout) :: hm
   integer,             intent(in)    :: ik
   R_TYPE,              intent(in)    :: f_in(:)
   R_TYPE,              intent(out)   :: f_out(:)
@@ -750,7 +750,7 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, namespace, geo, hm, ik, st, vib, 
   type(grid_t),        intent(in)    :: gr
   type(namespace_t),   intent(in)    :: namespace
   type(geometry_t),    intent(in)    :: geo
-  type(hamiltonian_t), intent(inout) :: hm
+  type(hamiltonian_elec_t), intent(inout) :: hm
   integer,             intent(in)    :: ik
   type(states_elec_t), intent(in)    :: st
   type(vibrations_t),  intent(in)    :: vib
@@ -822,17 +822,17 @@ end subroutine X(ionic_pert_matrix_elements_2)
 !! occupation. This routine must be modified if used differently than these two
 !! ways.
 subroutine X(pert_expectation_density) (this, namespace, gr, geo, hm, psolver, st, psia, psib, density, pert_order)
-  type(pert_t),         intent(in)    :: this
-  type(namespace_t),    intent(in)    :: namespace
-  type(grid_t),         intent(in)    :: gr
-  type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(inout) :: hm
-  type(poisson_t),      intent(in)    :: psolver
-  type(states_elec_t),  intent(in)    :: st
-  R_TYPE,               pointer       :: psia(:, :, :, :)
-  R_TYPE,               pointer       :: psib(:, :, :, :)
-  R_TYPE,               intent(out)   :: density(:)
-  integer, optional,    intent(in)    :: pert_order
+  type(pert_t),             intent(in)    :: this
+  type(namespace_t),        intent(in)    :: namespace
+  type(grid_t),             intent(in)    :: gr
+  type(geometry_t),         intent(in)    :: geo
+  type(hamiltonian_elec_t), intent(inout) :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  type(states_elec_t),      intent(in)    :: st
+  R_TYPE,                   pointer       :: psia(:, :, :, :)
+  R_TYPE,                   pointer       :: psib(:, :, :, :)
+  R_TYPE,                   intent(out)   :: density(:)
+  integer, optional,        intent(in)    :: pert_order
 
   R_TYPE, allocatable :: pertpsib(:, :)
   integer :: ik, ist, idim, order
@@ -874,16 +874,16 @@ end subroutine X(pert_expectation_density)
 
 ! --------------------------------------------------------------------------
 R_TYPE function X(pert_expectation_value) (this, namespace, gr, geo, hm, psolver, st, psia, psib, pert_order) result(expval)
-  type(pert_t),         intent(in)    :: this
-  type(namespace_t),    intent(in)    :: namespace
-  type(grid_t),         intent(in)    :: gr
-  type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(inout) :: hm
-  type(poisson_t),      intent(in)    :: psolver
-  type(states_elec_t),  intent(in)    :: st
-  R_TYPE,               pointer       :: psia(:, :, :, :)
-  R_TYPE,               pointer       :: psib(:, :, :, :)
-  integer, optional,    intent(in)    :: pert_order
+  type(pert_t),             intent(in)    :: this
+  type(namespace_t),        intent(in)    :: namespace
+  type(grid_t),             intent(in)    :: gr
+  type(geometry_t),         intent(in)    :: geo
+  type(hamiltonian_elec_t), intent(inout) :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  type(states_elec_t),      intent(in)    :: st
+  R_TYPE,                   pointer       :: psia(:, :, :, :)
+  R_TYPE,                   pointer       :: psib(:, :, :, :)
+  integer, optional,        intent(in)    :: pert_order
 
   R_TYPE, allocatable :: density(:)
 #ifdef HAVE_MPI
@@ -920,14 +920,14 @@ end function X(pert_expectation_value)
 ! --------------------------------------------------------------------------
 
 R_TYPE function X(pert_states_elec_expectation_value)(this, namespace, gr, geo, hm, psolver, st, pert_order) result(expval)
-  type(pert_t),         intent(in)    :: this
-  type(namespace_t),    intent(in)    :: namespace
-  type(grid_t),         intent(in)    :: gr
-  type(geometry_t),     intent(in)    :: geo
-  type(hamiltonian_t),  intent(inout) :: hm
-  type(poisson_t),      intent(in)    :: psolver
-  type(states_elec_t),  intent(in)    :: st
-  integer, optional,    intent(in)    :: pert_order
+  type(pert_t),             intent(in)    :: this
+  type(namespace_t),        intent(in)    :: namespace
+  type(grid_t),             intent(in)    :: gr
+  type(geometry_t),         intent(in)    :: geo
+  type(hamiltonian_elec_t), intent(inout) :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  type(states_elec_t),      intent(in)    :: st
+  integer, optional,        intent(in)    :: pert_order
 
   integer :: order, ik, ib, minst, maxst, ist
   R_TYPE, allocatable :: tt(:)

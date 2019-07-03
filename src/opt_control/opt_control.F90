@@ -31,7 +31,7 @@ module opt_control_oct_m
   use initst_oct_m
   use iso_c_binding
   use output_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use lasers_oct_m
   use loct_oct_m
@@ -77,7 +77,7 @@ module opt_control_oct_m
   !> For the direct, nlopt, and cg schemes:
   type(controlfunction_t), save :: par_
   type(system_t), pointer :: sys_
-  type(hamiltonian_t), pointer :: hm_
+  type(hamiltonian_elec_t), pointer :: hm_
   type(td_t), pointer :: td_
   FLOAT, allocatable :: x_(:)
   integer :: index_

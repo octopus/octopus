@@ -27,8 +27,8 @@ module current_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
-  use hamiltonian_base_oct_m
+  use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use lalg_basic_oct_m
   use lda_u_oct_m
   use math_oct_m
@@ -264,7 +264,7 @@ contains
   subroutine current_calculate(this, der, hm, geo, st, psolver, current, current_kpt)
     type(current_t),      intent(in)    :: this
     type(derivatives_t),  intent(inout) :: der
-    type(hamiltonian_t),  intent(in)    :: hm
+    type(hamiltonian_elec_t),  intent(in)    :: hm
     type(geometry_t),     intent(in)    :: geo
     type(states_elec_t),  intent(inout) :: st
     type(poisson_t),      intent(in)    :: psolver
@@ -278,7 +278,7 @@ contains
     type(symmetrizer_t) :: symmetrizer
     type(batch_t) :: hpsib, rhpsib, rpsib, hrpsib, epsib
     type(batch_t), allocatable :: commpsib(:)
-    logical, parameter :: hamiltonian_current = .false.
+    logical, parameter :: hamiltonian_elec_current = .false.
     FLOAT :: ww
     CMPLX :: c_tmp
 
@@ -317,14 +317,14 @@ contains
           call batch_copy(st%group%psib(ib, ik), hrpsib)
 
           call boundaries_set(der%boundaries, st%group%psib(ib, ik))
-          call zhamiltonian_apply_batch(hm, der, psolver, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
+          call zhamiltonian_elec_apply_batch(hm, der, psolver, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
 
           do idir = 1, der%mesh%sb%dim
 
             call batch_mul(der%mesh%np, der%mesh%x(:, idir), hpsib, rhpsib)
             call batch_mul(der%mesh%np_part, der%mesh%x(:, idir), st%group%psib(ib, ik), rpsib)
 
-            call zhamiltonian_apply_batch(hm, der, psolver, rpsib, hrpsib, ik, set_bc = .false.)
+            call zhamiltonian_elec_apply_batch(hm, der, psolver, rpsib, hrpsib, ik, set_bc = .false.)
 
             do ist = states_elec_block_min(st, ib), states_elec_block_max(st, ib)
               ww = st%d%kweights(ik)*st%occ(ist, ik)
@@ -389,7 +389,7 @@ contains
             call boundaries_set(der%boundaries, st%group%psib(ib, ik))
 
             if(associated(hm%hm_base%phase)) then
-              call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np_part, ik, &
+              call zhamiltonian_elec_base_phase(hm%hm_base, der, der%mesh%np_part, ik, &
                 conjugate = .false., psib = epsib, src = st%group%psib(ib, ik))
             else
               call batch_copy_data(der%mesh%np_part, st%group%psib(ib, ik), epsib)
@@ -404,11 +404,11 @@ contains
               call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
             end do
 
-            call zhamiltonian_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, ik, epsib, commpsib)
+            call zhamiltonian_elec_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, ik, epsib, commpsib)
 
             if(associated(hm%hm_base%phase)) then
               do idir = 1, der%mesh%sb%dim
-                call zhamiltonian_base_phase(hm%hm_base, der, der%mesh%np_part, ik, conjugate = .true., psib = commpsib(idir))
+                call zhamiltonian_elec_base_phase(hm%hm_base, der, der%mesh%np_part, ik, conjugate = .true., psib = commpsib(idir))
               end do
             end if
             
@@ -562,7 +562,7 @@ contains
   
   subroutine current_calculate_mel(der, hm, geo, psi_i, psi_j, ik,  cmel)
     type(derivatives_t),  intent(inout) :: der
-    type(hamiltonian_t),  intent(in)    :: hm
+    type(hamiltonian_elec_t),  intent(in)    :: hm
     type(geometry_t),     intent(in)    :: geo
     CMPLX,                intent(in)    :: psi_i(:,:)
     CMPLX,                intent(in)    :: psi_j(:,:)
@@ -662,7 +662,7 @@ contains
   ! ---------------------------------------------------------
   subroutine current_heat_calculate(der, hm, st, current)
     type(derivatives_t),  intent(in)    :: der
-    type(hamiltonian_t),  intent(in)    :: hm
+    type(hamiltonian_elec_t),  intent(in)    :: hm
     type(states_elec_t),  intent(in)    :: st
     FLOAT,                intent(out)   :: current(:, :, :)
 

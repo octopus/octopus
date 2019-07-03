@@ -22,7 +22,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, psolver, xc, pre, tol, niter, converg
   conjugate_direction, additional_terms, energy_change_threshold, shift)
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(inout) :: st
-  type(hamiltonian_t),      intent(in)    :: hm
+  type(hamiltonian_elec_t), intent(in)    :: hm
   type(poisson_t),          intent(in)    :: psolver
   type(preconditioner_t),   intent(in)    :: pre
   type(xc_t),               intent(in)    :: xc
@@ -111,7 +111,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, psolver, xc, pre, tol, niter, converg
     SAFE_ALLOCATE(lam_sym(1:st%nst))
     call states_elec_group_copy(st%d, st%group, hpsi_j, copy_data=.false.)
     do ib = hpsi_j%block_start, hpsi_j%block_end
-      call X(hamiltonian_apply_batch) (hm, gr%der, psolver, st%group%psib(ib, ik), hpsi_j%psib(ib, ik), ik)
+      call X(hamiltonian_elec_apply_batch) (hm, gr%der, psolver, st%group%psib(ib, ik), hpsi_j%psib(ib, ik), ik)
     end do
   end if
 
@@ -145,10 +145,10 @@ subroutine X(eigensolver_cg2) (gr, st, hm, psolver, xc, pre, tol, niter, converg
     if(ist > 1) call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
 
     ! Calculate starting gradient: |hpsi> = H|psi>
-    call X(hamiltonian_apply)(hm, gr%der, psolver, psi, h_psi, ist, ik)
+    call X(hamiltonian_elec_apply)(hm, gr%der, psolver, psi, h_psi, ist, ik)
 
     if(fold_) then
-      call X(hamiltonian_apply)(hm, gr%der, psolver, h_psi, psi2, ist, ik)
+      call X(hamiltonian_elec_apply)(hm, gr%der, psolver, h_psi, psi2, ist, ik)
       ! h_psi = (H-shift)^2 psi
       do idim = 1, st%d%dim
         h_psi(1:gr%mesh%np, idim) = psi2(1:gr%mesh%np, idim) - M_TWO*shift(ist,ik)*h_psi(1:gr%mesh%np, idim) &
@@ -296,10 +296,10 @@ subroutine X(eigensolver_cg2) (gr, st, hm, psolver, xc, pre, tol, niter, converg
       end if
 
       ! cg contains now the conjugate gradient
-      call X(hamiltonian_apply)(hm, gr%der, psolver, cg, h_cg, ist, ik)
+      call X(hamiltonian_elec_apply)(hm, gr%der, psolver, cg, h_cg, ist, ik)
 
       if(fold_) then
-        call X(hamiltonian_apply)(hm, gr%der, psolver, h_cg, psi2, ist, ik)
+        call X(hamiltonian_elec_apply)(hm, gr%der, psolver, h_cg, psi2, ist, ik)
         ! h_psi = (H-shift)^2 psi
         do idim = 1, st%d%dim
           h_cg(1:gr%mesh%np, idim) = psi2(1:gr%mesh%np, idim) - M_TWO*shift(ist,ik)*h_cg(1:gr%mesh%np, idim) &
@@ -444,7 +444,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, psolver, xc, pre, tol, niter, converg
 
     ! if the folded operator was used, compute the actual eigenvalue
     if(fold_) then
-      call X(hamiltonian_apply)(hm, gr%der, psolver, psi, h_psi, ist, ik)
+      call X(hamiltonian_elec_apply)(hm, gr%der, psolver, psi, h_psi, ist, ik)
       st%eigenval(ist, ik) = X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi, reduce = .true.)
       res = X(states_elec_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
     end if
@@ -488,15 +488,15 @@ end subroutine X(eigensolver_cg2)
 ! ---------------------------------------------------------
 !> The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
 subroutine X(eigensolver_cg2_new) (gr, st, hm, psolver, tol, niter, converged, ik, diff)
-  type(grid_t),        intent(in)    :: gr
-  type(states_elec_t), intent(inout) :: st
-  type(hamiltonian_t), intent(in)    :: hm
-  type(poisson_t),     intent(in)    :: psolver
-  FLOAT,               intent(in)    :: tol
-  integer,             intent(inout) :: niter
-  integer,             intent(inout) :: converged
-  integer,             intent(in)    :: ik
-  FLOAT,     optional, intent(out)   :: diff(:) !< (1:st%nst)
+  type(grid_t),             intent(in)    :: gr
+  type(states_elec_t),      intent(inout) :: st
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(poisson_t),          intent(in)    :: psolver
+  FLOAT,                    intent(in)    :: tol
+  integer,                  intent(inout) :: niter
+  integer,                  intent(inout) :: converged
+  integer,                  intent(in)    :: ik
+  FLOAT,          optional, intent(out)   :: diff(:) !< (1:st%nst)
 
   integer :: nst, dim, ist, maxter, i, conv, ip, idim
   R_TYPE, allocatable :: psi(:,:), phi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
@@ -537,7 +537,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, psolver, tol, niter, converged, i
     if(ist > 1) call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
 
     ! Calculate starting gradient: |hpsi> = H|psi>
-    call X(hamiltonian_apply)(hm, gr%der, psolver, psi, phi, ist, ik)
+    call X(hamiltonian_elec_apply)(hm, gr%der, psolver, psi, phi, ist, ik)
     niter = niter + 1
 
     ! Initial settings for scalar variables.
@@ -612,7 +612,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, psolver, tol, niter, converged, i
 
       norm = X(mf_nrm2)(gr%mesh, dim, cgp)
 
-      call X(hamiltonian_apply)(hm, gr%der, psolver, cgp, hcgp, ist, ik)
+      call X(hamiltonian_elec_apply)(hm, gr%der, psolver, cgp, hcgp, ist, ik)
 
       niter = niter + 1
 

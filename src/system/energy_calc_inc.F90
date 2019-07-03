@@ -20,10 +20,10 @@
 ! ---------------------------------------------------------
 !> calculates the eigenvalues of the orbitals
 subroutine X(calculate_eigenvalues)(hm, der, psolver, st)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(in)    :: der
-  type(poisson_t),     intent(in)    :: psolver
-  type(states_elec_t), intent(inout) :: st
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(derivatives_t),      intent(in)    :: der
+  type(poisson_t),          intent(in)    :: psolver
+  type(states_elec_t),      intent(inout) :: st
 
   R_TYPE, allocatable :: eigen(:, :)
 
@@ -50,12 +50,12 @@ subroutine X(calculate_eigenvalues)(hm, der, psolver, st)
 end subroutine X(calculate_eigenvalues)
 
 subroutine X(calculate_expectation_values)(hm, der, psolver, st, eigen, terms)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(in)    :: der
-  type(poisson_t),     intent(in)    :: psolver
-  type(states_elec_t), intent(inout) :: st
-  R_TYPE,              intent(out)   :: eigen(st%st_start:, st%d%kpt%start:) !< (:st%st_end, :st%d%kpt%end)
-  integer, optional,   intent(in)    :: terms
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(derivatives_t),      intent(in)    :: der
+  type(poisson_t),          intent(in)    :: psolver
+  type(states_elec_t),      intent(inout) :: st
+  R_TYPE,                   intent(out)   :: eigen(st%st_start:, st%d%kpt%start:) !< (:st%st_end, :st%d%kpt%end)
+  integer, optional,        intent(in)    :: terms
 
   integer :: ik, minst, maxst, ib
   type(batch_t) :: hpsib
@@ -71,16 +71,16 @@ subroutine X(calculate_expectation_values)(hm, der, psolver, st, eigen, terms)
       minst = states_elec_block_min(st, ib)
       maxst = states_elec_block_max(st, ib)
 
-      if(hamiltonian_apply_packed(hm, der%mesh)) then
+      if(hamiltonian_elec_apply_packed(hm, der%mesh)) then
         call batch_pack(st%group%psib(ib, ik))
       end if
       
       call batch_copy(st%group%psib(ib, ik), hpsib)
 
-      call X(hamiltonian_apply_batch)(hm, der, psolver, st%group%psib(ib, ik), hpsib, ik, terms = terms)
+      call X(hamiltonian_elec_apply_batch)(hm, der, psolver, st%group%psib(ib, ik), hpsib, ik, terms = terms)
       call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst, ik), reduce = .false.)        
 
-      if(hamiltonian_apply_packed(hm, der%mesh)) then
+      if(hamiltonian_elec_apply_packed(hm, der%mesh)) then
         call batch_unpack(st%group%psib(ib, ik), copy = .false.)
       end if
 
@@ -98,11 +98,11 @@ end subroutine X(calculate_expectation_values)
 
 ! ---------------------------------------------------------
 FLOAT function X(energy_calc_electronic)(hm, der, psolver, st, terms) result(energy)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(in)    :: der
-  type(poisson_t),     intent(in)    :: psolver
-  type(states_elec_t), intent(inout) :: st
-  integer,             intent(in)    :: terms
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(derivatives_t),      intent(in)    :: der
+  type(poisson_t),          intent(in)    :: psolver
+  type(states_elec_t),      intent(inout) :: st
+  integer,                  intent(in)    :: terms
 
   R_TYPE, allocatable  :: tt(:, :)
  

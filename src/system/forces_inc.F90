@@ -148,7 +148,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
   type(grid_t),                   intent(in)    :: gr
   type(namespace_t),              intent(in)    :: namespace
   type(geometry_t),               intent(in)    :: geo
-  type(hamiltonian_t),            intent(in)    :: hm
+  type(hamiltonian_elec_t),            intent(in)    :: hm
   type(states_elec_t),            intent(in)    :: st
   FLOAT,                          intent(out)   :: force(:, :)
   FLOAT,                          intent(out)   :: force_loc(:, :)
@@ -204,7 +204,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
 
       ! set the phase for periodic systems
       if(associated(hm%hm_base%phase)) then
-        call X(hamiltonian_base_phase)(hm%hm_base, gr%der, gr%mesh%np_part, iq, .false., psib)
+        call X(hamiltonian_elec_base_phase)(hm%hm_base, gr%der, gr%mesh%np_part, iq, .false., psib)
       end if
 
       ! calculate the gradient
@@ -220,7 +220,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
       if(hm%hm_base%apply_projector_matrices .and. .not. accel_is_enabled() .and. &
         .not. (st%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
 
-        call X(hamiltonian_base_nlocal_force)(hm%hm_base, gr%mesh, st, iq, gr%mesh%sb%dim, psib, grad_psib, force_nl)
+        call X(hamiltonian_elec_base_nlocal_force)(hm%hm_base, gr%mesh, st, iq, gr%mesh%sb%dim, psib, grad_psib, force_nl)
 
       else 
 
@@ -345,7 +345,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
   SAFE_DEALLOCATE_A(grad_psi)
 
  ! in this case we need to convert to Cartesian coordinates at the end
- ! TODO: integrate this to the routine X(hamiltonian_base_nlocal_force)
+ ! TODO: integrate this to the routine X(hamiltonian_elec_base_nlocal_force)
  if(hm%hm_base%apply_projector_matrices .and. .not. accel_is_enabled() .and. &
         .not. (st%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
    ! We convert the forces to Cartesian coordinates

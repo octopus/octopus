@@ -28,8 +28,8 @@ module energy_calc_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
-  use hamiltonian_base_oct_m
+  use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use lda_u_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
@@ -60,12 +60,12 @@ contains
   !! adds up the KS eigenvalues, and then it subtracts whatever double
   !! counts exist (see TDDFT theory for details).
   subroutine energy_calc_total(hm, psolver, gr, st, iunit, full)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(poisson_t),     intent(in)    :: psolver
-    type(grid_t),        intent(in)    :: gr
-    type(states_elec_t), intent(inout) :: st
-    integer, optional,   intent(in)    :: iunit
-    logical, optional,   intent(in)    :: full
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(poisson_t),          intent(in)    :: psolver
+    type(grid_t),             intent(in)    :: gr
+    type(states_elec_t),      intent(inout) :: st
+    integer, optional,        intent(in)    :: iunit
+    logical, optional,        intent(in)    :: full
 
     FLOAT                             :: tnadd_energy, external_energy
     logical :: full_
@@ -213,10 +213,10 @@ contains
   ! --------------------------------------------------------------------
   
   subroutine energy_calc_eigenvalues(hm, der, psolver, st)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(derivatives_t), intent(in)    :: der
-    type(poisson_t),     intent(in)    :: psolver
-    type(states_elec_t), intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(derivatives_t),      intent(in)    :: der
+    type(poisson_t),          intent(in)    :: psolver
+    type(states_elec_t),      intent(inout) :: st
     
     PUSH_SUB(energy_calc_eigenvalues)
 

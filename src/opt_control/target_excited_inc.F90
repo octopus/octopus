@@ -86,7 +86,7 @@
     type(grid_t),        intent(in)  :: gr
     character(len=*),    intent(in)  :: dir
     type(geometry_t),    intent(in)  :: geo
-    type(hamiltonian_t), intent(in)  :: hm
+    type(hamiltonian_elec_t), intent(in)  :: hm
     type(output_t),      intent(in)  :: outp
 
     PUSH_SUB(target_output_excited)

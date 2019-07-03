@@ -25,7 +25,7 @@ module propagator_magnus_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use ion_dynamics_oct_m
   use lasers_oct_m
   use messages_oct_m
@@ -53,14 +53,14 @@ contains
   ! ---------------------------------------------------------
   !> Magnus propagator
   subroutine td_magnus(hm, psolver, gr, st, tr, namespace, time, dt)
-    type(hamiltonian_t), target,     intent(inout) :: hm
-    type(poisson_t),                 intent(in)    :: psolver
-    type(grid_t),        target,     intent(inout) :: gr
-    type(states_elec_t), target,     intent(inout) :: st
-    type(propagator_t),  target,     intent(inout) :: tr
-    type(namespace_t),               intent(in)    :: namespace
-    FLOAT,                           intent(in)    :: time
-    FLOAT,                           intent(in)    :: dt
+    type(hamiltonian_elec_t), target, intent(inout) :: hm
+    type(poisson_t),                  intent(in)    :: psolver
+    type(grid_t),             target, intent(inout) :: gr
+    type(states_elec_t),      target, intent(inout) :: st
+    type(propagator_t),       target, intent(inout) :: tr
+    type(namespace_t),                intent(in)    :: namespace
+    FLOAT,                            intent(in)    :: time
+    FLOAT,                            intent(in)    :: dt
 
     integer :: j, is, ist, ik, i
     FLOAT :: atime(2)
@@ -83,7 +83,7 @@ contains
         else
           call potential_interpolation_interpolate(tr%vksold, 3, time, dt, atime(j)-dt, hm%vhxc)
         end if
-        call hamiltonian_update(hm, gr%mesh, namespace)
+        call hamiltonian_elec_update(hm, gr%mesh, namespace)
       end do
     else
       vaux = M_ZERO
@@ -134,18 +134,18 @@ contains
   ! ---------------------------------------------------------
   !> Commutator-free Magnus propagator of order 4.
   subroutine td_cfmagnus4(ks, namespace, hm, psolver, gr, st, tr, time, dt, ions, geo, iter)
-    type(v_ks_t), target,            intent(inout) :: ks
-    type(namespace_t),               intent(in)    :: namespace
-    type(hamiltonian_t), target,     intent(inout) :: hm
-    type(poisson_t),                 intent(in)    :: psolver
-    type(grid_t),        target,     intent(inout) :: gr
-    type(states_elec_t), target,     intent(inout) :: st
-    type(propagator_t),  target,     intent(inout) :: tr
-    FLOAT,                           intent(in)    :: time
-    FLOAT,                           intent(in)    :: dt
-    type(ion_dynamics_t),            intent(inout) :: ions
-    type(geometry_t),                intent(inout) :: geo
-    integer,                         intent(in)    :: iter
+    type(v_ks_t),             target, intent(inout) :: ks
+    type(namespace_t),                intent(in)    :: namespace
+    type(hamiltonian_elec_t), target, intent(inout) :: hm
+    type(poisson_t),                  intent(in)    :: psolver
+    type(grid_t),             target, intent(inout) :: gr
+    type(states_elec_t),      target, intent(inout) :: st
+    type(propagator_t),       target, intent(inout) :: tr
+    FLOAT,                            intent(in)    :: time
+    FLOAT,                            intent(in)    :: dt
+    type(ion_dynamics_t),             intent(inout) :: ions
+    type(geometry_t),                 intent(inout) :: geo
+    integer,                          intent(in)    :: iter
 
     integer :: ik, ib
     FLOAT :: alpha1, alpha2, c1, c2, t1, t2
@@ -179,12 +179,12 @@ contains
     call potential_interpolation_interpolate(tr%vksold, 4, time, dt, t2, vhxc2)
 
     hm%vhxc = M_TWO * (alpha2 * vhxc1 + alpha1 * vhxc2)
-    call hamiltonian_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha2, M_TWO * alpha1/) )
+    call hamiltonian_elec_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha2, M_TWO * alpha1/) )
     ! propagate by dt/2 
     call propagation_ops_elec_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
 
     hm%vhxc = M_TWO * (alpha1 * vhxc1 + alpha2 * vhxc2)
-    call hamiltonian_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha1, M_TWO * alpha2/) )
+    call hamiltonian_elec_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha1, M_TWO * alpha2/) )
     ! propagate by dt/2
     !TODO: fuse this with density calc
     call propagation_ops_elec_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)

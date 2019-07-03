@@ -29,10 +29,7 @@ module hamiltonian_abst_oct_m
   private
 
   public ::                           &
-    hamiltonian_abst_t,                &
-    hamiltonian_are_complex,               &
-    hamiltonian_are_real,                  &
-    hamiltonian_set_complex
+    hamiltonian_abst_t
 
   type, abstract :: hamiltonian_abst_t
     private

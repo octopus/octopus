@@ -23,7 +23,7 @@ module dos_oct_m
   use comm_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -149,7 +149,7 @@ contains
     type(simul_box_t),        intent(in) :: sb
     type(geometry_t), target, intent(in) :: geo
     type(mesh_t),             intent(in) :: mesh
-    type(hamiltonian_t),      intent(in) :: hm
+    type(hamiltonian_elec_t), intent(in) :: hm
     type(namespace_t),        intent(in) :: namespace
 
     integer :: ie, ik, ist, is, ns, maxdos

@@ -22,7 +22,7 @@ module pes_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -121,7 +121,7 @@ contains
     type(simul_box_t),   intent(in)    :: sb
     type(states_elec_t), intent(in)    :: st
     integer,             intent(in)    :: save_iter
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_elec_t), intent(in)    :: hm
     integer,             intent(in)    :: max_iter
     FLOAT,               intent(in)    :: dt
 
@@ -210,7 +210,7 @@ contains
     type(grid_t),        intent(in)    :: gr
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_elec_t), intent(in)    :: hm
 
     PUSH_SUB(pes_calc)
 

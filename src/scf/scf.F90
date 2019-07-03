@@ -29,7 +29,7 @@ module scf_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lcao_oct_m
@@ -134,7 +134,7 @@ contains
     type(geometry_t),     intent(in)    :: geo
     type(states_elec_t),  intent(in)    :: st
     type(multicomm_t),    intent(in)    :: mc
-    type(hamiltonian_t),  intent(inout) :: hm
+    type(hamiltonian_elec_t),  intent(inout) :: hm
     type(v_ks_t),         intent(in)    :: ks
     FLOAT,   optional,    intent(in)    :: conv_force
 
@@ -537,7 +537,7 @@ contains
     type(geometry_t),          intent(inout) :: geo !< geometry
     type(states_elec_t),       intent(inout) :: st !< States
     type(v_ks_t),              intent(inout) :: ks !< Kohn-Sham
-    type(hamiltonian_t),       intent(inout) :: hm !< Hamiltonian
+    type(hamiltonian_elec_t),  intent(inout) :: hm !< Hamiltonian
     type(poisson_t),           intent(in)    :: psolver
     type(output_t),            intent(in)    :: outp
     logical,         optional, intent(in)    :: gs_run
@@ -600,12 +600,12 @@ contains
       end if
 
       if (restart_has_flag(restart_load, RESTART_FLAG_VHXC)) then
-        call hamiltonian_load_vhxc(restart_load, hm, gr%mesh, ierr)
+        call hamiltonian_elec_load_vhxc(restart_load, hm, gr%mesh, ierr)
         if (ierr /= 0) then
           message(1) = 'Unable to read Vhxc. Vhxc will be calculated from states.'
           call messages_warning(1)
         else
-          call hamiltonian_update(hm, gr%mesh, namespace)
+          call hamiltonian_elec_update(hm, gr%mesh, namespace)
           if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
             if (ks%oep%level == XC_OEP_FULL) then
               do is = 1, st%d%nspin
@@ -861,7 +861,7 @@ contains
         call mixing(scf%smix)
         call mixfield_get_vnew(scf%mixfield, hm%vhxc)
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
-        call hamiltonian_update(hm, gr%mesh, namespace)
+        call hamiltonian_elec_update(hm, gr%mesh, namespace)
         
       case(OPTION__MIXFIELD__STATES)
 
@@ -926,7 +926,7 @@ contains
               call messages_warning(1)
             end if
           case (OPTION__MIXFIELD__POTENTIAL)
-            call hamiltonian_dump_vhxc(restart_dump, hm, gr%mesh, ierr)
+            call hamiltonian_elec_dump_vhxc(restart_dump, hm, gr%mesh, ierr)
             if (ierr /= 0) then
               message(1) = 'Unable to write Vhxc.'
               call messages_warning(1)

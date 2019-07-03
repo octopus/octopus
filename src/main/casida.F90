@@ -28,7 +28,7 @@ module casida_oct_m
   use forces_oct_m
   use gauss_legendre_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use io_function_oct_m
   use kpoints_oct_m

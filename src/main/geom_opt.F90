@@ -23,7 +23,7 @@ module geom_opt_oct_m
   use energy_calc_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use io_function_oct_m
   use lcao_oct_m
@@ -69,7 +69,7 @@ module geom_opt_oct_m
     !> shortcuts
     type(scf_t)                  :: scfv
     type(geometry_t),    pointer :: geo
-    type(hamiltonian_t), pointer :: hm
+    type(hamiltonian_elec_t), pointer :: hm
     type(system_t),      pointer :: syst
     type(mesh_t),        pointer :: mesh
     type(states_elec_t), pointer :: st
@@ -133,7 +133,7 @@ contains
     SAFE_ALLOCATE(coords(1:g_opt%size))
     call to_coords(g_opt, coords)
 
-    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%pack()
 
     !Minimize
     select case(g_opt%method)
@@ -177,7 +177,7 @@ contains
       call messages_fatal(2)
     end if
 
-    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%unpack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm, sys%gr%mesh)) call sys%st%unpack()
   
     ! print out geometry
     call from_coords(g_opt, coords)
@@ -577,7 +577,7 @@ contains
 
     call scf_mix_clear(g_opt%scfv)
 
-    call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%namespace, g_opt%syst%gr, g_opt%geo, g_opt%st, g_opt%syst%psolver)
+    call hamiltonian_elec_epot_generate(g_opt%hm, g_opt%syst%namespace, g_opt%syst%gr, g_opt%geo, g_opt%st, g_opt%syst%psolver)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
     call v_ks_calc(g_opt%syst%ks, g_opt%syst%namespace, g_opt%hm, g_opt%st, g_opt%geo, calc_eigenval = .true.)
     call energy_calc_total(g_opt%hm, g_opt%syst%psolver, g_opt%syst%gr, g_opt%st)

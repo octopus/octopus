@@ -23,7 +23,7 @@ module local_write_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use io_function_oct_m
   use kick_oct_m
@@ -233,23 +233,23 @@ contains
   ! ---------------------------------------------------------
   subroutine local_write_iter(writ, namespace, nd, lab, ions_inside, inside, center, gr, st, & 
                               hm, psolver, ks, geo, kick, iter, l_start, ldoverwrite)
-    type(local_write_t),    intent(inout) :: writ
-    type(namespace_t),         intent(in)    :: namespace
-    integer,                intent(in)    :: nd 
-    character(len=15),      intent(in)    :: lab(:)
-    logical,                intent(in)    :: ions_inside(:,:)
-    logical,                intent(in)    :: inside(:,:)
-    FLOAT  ,                intent(in)    :: center(:,:)
-    type(grid_t),           intent(in)    :: gr
-    type(states_elec_t),    intent(inout) :: st
-    type(hamiltonian_t),    intent(inout) :: hm
-    type(poisson_t),        intent(in)    :: psolver
-    type(v_ks_t),           intent(inout) :: ks
-    type(geometry_t),       intent(inout) :: geo
-    type(kick_t),           intent(inout) :: kick
-    integer,                intent(in)    :: iter
-    integer,                intent(in)    :: l_start
-    logical,                intent(in)    :: ldoverwrite
+    type(local_write_t),      intent(inout) :: writ
+    type(namespace_t),        intent(in)    :: namespace
+    integer,                  intent(in)    :: nd 
+    character(len=15),        intent(in)    :: lab(:)
+    logical,                  intent(in)    :: ions_inside(:,:)
+    logical,                  intent(in)    :: inside(:,:)
+    FLOAT  ,                  intent(in)    :: center(:,:)
+    type(grid_t),             intent(in)    :: gr
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(poisson_t),          intent(in)    :: psolver
+    type(v_ks_t),             intent(inout) :: ks
+    type(geometry_t),         intent(inout) :: geo
+    type(kick_t),             intent(inout) :: kick
+    integer,                  intent(in)    :: iter
+    integer,                  intent(in)    :: l_start
+    logical,                  intent(in)    :: ldoverwrite
 
     type(profile_t), save :: prof
     integer :: id
@@ -291,20 +291,20 @@ contains
   ! ---------------------------------------------------------
   subroutine local_write_density(out_dens, namespace, out_pot, nd, lab, inside, & 
                                 gr, geo, st, hm, psolver, ks, iter, how)
-    type(local_write_prop_t),      intent(inout) :: out_dens(:)
-    type(namespace_t),                intent(in)    :: namespace
-    type(local_write_prop_t),      intent(inout) :: out_pot(:)
+    type(local_write_prop_t), intent(inout) :: out_dens(:)
+    type(namespace_t),        intent(in)    :: namespace
+    type(local_write_prop_t), intent(inout) :: out_pot(:)
     integer,                  intent(in)    :: nd 
     character(len=15),        intent(in)    :: lab(:)
     logical,                  intent(in)    :: inside(:,:)
-    type(grid_t),         intent(in)    :: gr
-    type(geometry_t),     intent(inout) :: geo
-    type(states_elec_t),  intent(inout) :: st
-    type(hamiltonian_t),  intent(inout) :: hm
-    type(poisson_t),      intent(in)    :: psolver
-    type(v_ks_t),         intent(inout) :: ks
-    integer,              intent(in) :: iter
-    integer(8),           intent(in) :: how
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(inout) :: geo
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(poisson_t),          intent(in)    :: psolver
+    type(v_ks_t),             intent(inout) :: ks
+    integer,                  intent(in) :: iter
+    integer(8),               intent(in) :: how
 
     integer            :: id, is, ix, ierr
     character(len=120) :: folder, out_name
@@ -380,20 +380,20 @@ contains
   ! ---------------------------------------------------------
   subroutine local_write_energy(out_energy, namespace, nd, lab, inside, & 
                                 gr, geo, st, hm, psolver, ks, iter, l_start, start)
-    type(local_write_prop_t),      intent(inout) :: out_energy(:)
-    type(namespace_t),                intent(in)    :: namespace
+    type(local_write_prop_t), intent(inout) :: out_energy(:)
+    type(namespace_t),        intent(in)    :: namespace
     integer,                  intent(in)    :: nd 
     character(len=15),        intent(in)    :: lab(:)
     logical,                  intent(in)    :: inside(:,:)
-    type(grid_t),         intent(in)    :: gr
-    type(geometry_t),     intent(inout) :: geo
-    type(states_elec_t),  intent(inout) :: st
-    type(hamiltonian_t),  intent(inout) :: hm
-    type(poisson_t),      intent(in)    :: psolver
-    type(v_ks_t),         intent(inout) :: ks
-    integer,              intent(in) :: iter
-    integer,              intent(in) :: l_start
-    logical,              intent(in) :: start
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(inout) :: geo
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(poisson_t),          intent(in)    :: psolver
+    type(v_ks_t),             intent(inout) :: ks
+    integer,                  intent(in) :: iter
+    integer,                  intent(in) :: l_start
+    logical,                  intent(in) :: start
 
     integer :: id, ii, is, ix, jd
     character(len=120) :: aux

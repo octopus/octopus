@@ -26,7 +26,7 @@ module propagator_etrs_oct_m
   use grid_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use ion_dynamics_oct_m
   use lalg_basic_oct_m
   use lda_u_oct_m
@@ -61,19 +61,19 @@ contains
   ! ---------------------------------------------------------
   !> Propagator with enforced time-reversal symmetry
   subroutine td_etrs(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
-    type(v_ks_t), target,            intent(inout) :: ks
-    type(namespace_t),               intent(in)    :: namespace
-    type(hamiltonian_t), target,     intent(inout) :: hm
-    type(poisson_t),                 intent(in)    :: psolver
-    type(grid_t),        target,     intent(inout) :: gr
-    type(states_elec_t), target,     intent(inout) :: st
-    type(propagator_t),  target,     intent(inout) :: tr
-    FLOAT,                           intent(in)    :: time
-    FLOAT,                           intent(in)    :: dt
-    FLOAT,                           intent(in)    :: ionic_scale
-    type(ion_dynamics_t),            intent(inout) :: ions
-    type(geometry_t),                intent(inout) :: geo
-    logical,                         intent(in)    :: move_ions
+    type(v_ks_t),             target, intent(inout) :: ks
+    type(namespace_t),                intent(in)    :: namespace
+    type(hamiltonian_elec_t), target, intent(inout) :: hm
+    type(poisson_t),                  intent(in)    :: psolver
+    type(grid_t),             target, intent(inout) :: gr
+    type(states_elec_t),      target, intent(inout) :: st
+    type(propagator_t),       target, intent(inout) :: tr
+    FLOAT,                            intent(in)    :: time
+    FLOAT,                            intent(in)    :: dt
+    FLOAT,                            intent(in)    :: ionic_scale
+    type(ion_dynamics_t),             intent(inout) :: ions
+    type(geometry_t),                 intent(inout) :: geo
+    logical,                          intent(in)    :: move_ions
 
     FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
     integer :: ik, ib
@@ -94,7 +94,7 @@ contains
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
-      call hamiltonian_update(hm, gr%mesh, namespace, time = time - dt)
+      call hamiltonian_elec_update(hm, gr%mesh, namespace, time = time - dt)
 
     else
 
@@ -130,21 +130,21 @@ contains
   ! ---------------------------------------------------------
   !> Propagator with enforced time-reversal symmetry and self-consistency
   subroutine td_etrs_sc(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, sctol, scsteps)
-    type(v_ks_t), target,            intent(inout) :: ks
-    type(namespace_t),               intent(in)    :: namespace
-    type(hamiltonian_t), target,     intent(inout) :: hm
-    type(poisson_t),                 intent(in)    :: psolver
-    type(grid_t),        target,     intent(inout) :: gr
-    type(states_elec_t), target,intent(inout) :: st
-    type(propagator_t),  target,     intent(inout) :: tr
-    FLOAT,                           intent(in)    :: time
-    FLOAT,                           intent(in)    :: dt
-    FLOAT,                           intent(in)    :: ionic_scale
-    type(ion_dynamics_t),            intent(inout) :: ions
-    type(geometry_t),                intent(inout) :: geo
-    logical,                         intent(in)    :: move_ions
-    FLOAT,                           intent(in)    :: sctol
-    integer,              optional,  intent(out)   :: scsteps
+    type(v_ks_t),             target, intent(inout) :: ks
+    type(namespace_t),                intent(in)    :: namespace
+    type(hamiltonian_elec_t), target, intent(inout) :: hm
+    type(poisson_t),                  intent(in)    :: psolver
+    type(grid_t),             target, intent(inout) :: gr
+    type(states_elec_t),      target, intent(inout) :: st
+    type(propagator_t),       target, intent(inout) :: tr
+    FLOAT,                            intent(in)    :: time
+    FLOAT,                            intent(in)    :: dt
+    FLOAT,                            intent(in)    :: ionic_scale
+    type(ion_dynamics_t),             intent(inout) :: ions
+    type(geometry_t),                 intent(inout) :: geo
+    logical,                          intent(in)    :: move_ions
+    FLOAT,                            intent(in)    :: sctol
+    integer,                optional, intent(out)   :: scsteps
 
     FLOAT :: diff
     FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
@@ -261,18 +261,18 @@ contains
   ! ---------------------------------------------------------
   !> Propagator with approximate enforced time-reversal symmetry
   subroutine td_aetrs(namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
-    type(namespace_t),               intent(in)    :: namespace
-    type(hamiltonian_t), target,     intent(inout) :: hm
-    type(poisson_t),                 intent(in)    :: psolver
-    type(grid_t),        target,     intent(inout) :: gr
-    type(states_elec_t), target,     intent(inout) :: st
-    type(propagator_t),  target,     intent(inout) :: tr
-    FLOAT,                           intent(in)    :: time
-    FLOAT,                           intent(in)    :: dt
-    FLOAT,                           intent(in)    :: ionic_scale
-    type(ion_dynamics_t),            intent(inout) :: ions
-    type(geometry_t),                intent(inout) :: geo
-    logical,                         intent(in)    :: move_ions
+    type(namespace_t),                intent(in)    :: namespace
+    type(hamiltonian_elec_t), target, intent(inout) :: hm
+    type(poisson_t),                  intent(in)    :: psolver
+    type(grid_t),             target, intent(inout) :: gr
+    type(states_elec_t),      target, intent(inout) :: st
+    type(propagator_t),       target, intent(inout) :: tr
+    FLOAT,                            intent(in)    :: time
+    FLOAT,                            intent(in)    :: dt
+    FLOAT,                            intent(in)    :: ionic_scale
+    type(ion_dynamics_t),             intent(inout) :: ions
+    type(geometry_t),                 intent(inout) :: geo
+    logical,                          intent(in)    :: move_ions
 
     PUSH_SUB(td_aetrs)
 
@@ -301,19 +301,19 @@ contains
   ! ---------------------------------------------------------
   !> Propagator with approximate enforced time-reversal symmetry
   subroutine td_caetrs(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
-    type(v_ks_t), target,            intent(inout) :: ks
-    type(namespace_t),               intent(in)    :: namespace
-    type(hamiltonian_t), target,     intent(inout) :: hm
-    type(poisson_t),                 intent(in)    :: psolver
-    type(grid_t),        target,     intent(inout) :: gr
-    type(states_elec_t), target,     intent(inout) :: st
-    type(propagator_t),  target,     intent(inout) :: tr
-    FLOAT,                           intent(in)    :: time
-    FLOAT,                           intent(in)    :: dt
-    FLOAT,                           intent(in)    :: ionic_scale
-    type(ion_dynamics_t),            intent(inout) :: ions
-    type(geometry_t),                intent(inout) :: geo
-    logical,                         intent(in)    :: move_ions
+    type(v_ks_t),             target, intent(inout) :: ks
+    type(namespace_t),                intent(in)    :: namespace
+    type(hamiltonian_elec_t), target, intent(inout) :: hm
+    type(poisson_t),                  intent(in)    :: psolver
+    type(grid_t),             target, intent(inout) :: gr
+    type(states_elec_t),      target, intent(inout) :: st
+    type(propagator_t),       target, intent(inout) :: tr
+    FLOAT,                            intent(in)    :: time
+    FLOAT,                            intent(in)    :: dt
+    FLOAT,                            intent(in)    :: ionic_scale
+    type(ion_dynamics_t),             intent(inout) :: ions
+    type(geometry_t),                 intent(inout) :: geo
+    logical,                          intent(in)    :: move_ions
 
     integer :: ik, ispin, ip, ist, ib
     FLOAT :: vv
@@ -330,10 +330,10 @@ contains
     if(hm%family_is_mgga_with_exc) then 
       SAFE_ALLOCATE(vtauold(1:gr%mesh%np, 1:st%d%nspin))
       call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold, vtau = vtauold)
-      call hamiltonian_set_vhxc(hm, gr%mesh, vold, vtauold)
+      call hamiltonian_elec_set_vhxc(hm, gr%mesh, vold, vtauold)
     else
       call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold)
-      call hamiltonian_set_vhxc(hm, gr%mesh, vold)
+      call hamiltonian_elec_set_vhxc(hm, gr%mesh, vold)
     endif
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time - dt) 
@@ -367,7 +367,7 @@ contains
     end if
 
     ! copy vold to a cl buffer
-    if(accel_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
+    if(accel_is_enabled() .and. hamiltonian_elec_apply_packed(hm, gr%mesh)) then
       if(hm%family_is_mgga_with_exc) then
         call messages_not_implemented('CAETRS propagator with accel and MGGA with energy functionals')
       end if
@@ -437,7 +437,7 @@ contains
 
     call density_calc_end(dens_calc)
 
-    if(accel_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
+    if(accel_is_enabled() .and. hamiltonian_elec_apply_packed(hm, gr%mesh)) then
       call accel_release_buffer(phase_buff)
     end if
 

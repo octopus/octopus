@@ -25,7 +25,7 @@ module propagator_cn_oct_m
   use grid_oct_m
   use geometry_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use ion_dynamics_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -47,29 +47,29 @@ module propagator_cn_oct_m
   public ::                    &
     td_crank_nicolson
 
-  type(grid_t),            pointer, private :: grid_p
-  type(hamiltonian_t),     pointer, private :: hm_p
-  type(poisson_t),         pointer, private :: psolver_p
-  type(propagator_t),      pointer, private :: tr_p
-  integer,                 private :: ik_op, ist_op, dim_op
-  FLOAT,                   private :: t_op, dt_op
+  type(grid_t),             pointer, private :: grid_p
+  type(hamiltonian_elec_t), pointer, private :: hm_p
+  type(poisson_t),          pointer, private :: psolver_p
+  type(propagator_t),       pointer, private :: tr_p
+  integer,                           private :: ik_op, ist_op, dim_op
+  FLOAT,                             private :: t_op, dt_op
 
 contains
 
   ! ---------------------------------------------------------
   !> Crank-Nicolson propagator
   subroutine td_crank_nicolson(hm, psolver, namespace, gr, st, tr, time, dt, ions, geo, use_sparskit)
-    type(hamiltonian_t), target,     intent(inout) :: hm
-    type(poisson_t),     target,     intent(in)    :: psolver
-    type(namespace_t),               intent(in)    :: namespace
-    type(grid_t),        target,     intent(inout) :: gr
-    type(states_elec_t), target,     intent(inout) :: st
-    type(propagator_t),  target,     intent(inout) :: tr
-    FLOAT,                           intent(in)    :: time
-    FLOAT,                           intent(in)    :: dt
-    type(ion_dynamics_t),            intent(inout) :: ions
-    type(geometry_t),                intent(inout) :: geo
-    logical, intent(in) :: use_sparskit
+    type(hamiltonian_elec_t), target, intent(inout) :: hm
+    type(poisson_t),          target, intent(in)    :: psolver
+    type(namespace_t),                intent(in)    :: namespace
+    type(grid_t),             target, intent(inout) :: gr
+    type(states_elec_t),      target, intent(inout) :: st
+    type(propagator_t),       target, intent(inout) :: tr
+    FLOAT,                            intent(in)    :: time
+    FLOAT,                            intent(in)    :: dt
+    type(ion_dynamics_t),             intent(inout) :: ions
+    type(geometry_t),                 intent(inout) :: geo
+    logical,                          intent(in) :: use_sparskit
 
     CMPLX, allocatable :: zpsi_rhs(:,:), zpsi(:), rhs(:), inhpsi(:)
     integer :: ik, ist, idim, ip, np_part, np, iter
@@ -131,7 +131,7 @@ contains
         call states_elec_get_state(st, gr%mesh, ist, ik, zpsi_rhs)
         call exponential_apply(tr%te, gr%der, hm, psolver, zpsi_rhs, ist, ik, dt/M_TWO)
 
-        if(hamiltonian_inh_term(hm)) then
+        if(hamiltonian_elec_inh_term(hm)) then
           SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
           do idim = 1, st%d%dim
             call states_elec_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)

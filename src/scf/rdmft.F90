@@ -27,8 +27,8 @@ module rdmft_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
-  use hamiltonian_base_oct_m
+  use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use io_oct_m
   use io_function_oct_m
   use lalg_adv_oct_m
@@ -269,17 +269,17 @@ contains
 
   ! scf for the occupation numbers and the natural orbitals
   subroutine scf_rdmft(rdm, namespace, gr, geo, st, ks, hm, psolver, outp, max_iter, restart_dump)
-    type(rdm_t),         intent(inout) :: rdm
-    type(namespace_t),   intent(in)    :: namespace
-    type(grid_t),        intent(in)    :: gr  !< grid
-    type(geometry_t),    intent(in)    :: geo !< geometry
-    type(states_elec_t), intent(inout) :: st  !< States
-    type(v_ks_t),        intent(inout) :: ks  !< Kohn-Sham
-    type(hamiltonian_t), intent(inout) :: hm  !< Hamiltonian
-    type(poisson_t),     intent(in)    :: psolver
-    type(output_t),      intent(in)    :: outp !< output
-    integer,             intent(in)    :: max_iter
-    type(restart_t),     intent(in)    :: restart_dump
+    type(rdm_t),              intent(inout) :: rdm
+    type(namespace_t),        intent(in)    :: namespace
+    type(grid_t),             intent(in)    :: gr  !< grid
+    type(geometry_t),         intent(in)    :: geo !< geometry
+    type(states_elec_t),      intent(inout) :: st  !< States
+    type(v_ks_t),             intent(inout) :: ks  !< Kohn-Sham
+    type(hamiltonian_elec_t), intent(inout) :: hm  !< Hamiltonian
+    type(poisson_t),          intent(in)    :: psolver
+    type(output_t),           intent(in)    :: outp !< output
+    integer,                  intent(in)    :: max_iter
+    type(restart_t),          intent(in)    :: restart_dump
 
     type(states_elec_t) :: states_save
     integer :: iter, icount, ip, ist, ierr, maxcount, iorb
@@ -536,7 +536,7 @@ contains
     subroutine calc_maxFO (hm, st, gr, rdm)
       type(rdm_t),          intent(inout) :: rdm
       type(grid_t),         intent(in)    :: gr
-      type(hamiltonian_t),  intent(inout) :: hm
+      type(hamiltonian_elec_t),  intent(inout) :: hm
       type(states_elec_t),  intent(inout) :: st
     
       FLOAT, allocatable ::  lambda(:,:), FO(:,:)
@@ -595,13 +595,13 @@ contains
   ! dummy routine for occupation numbers which only calculates the necessary vairables for further use
   ! used in Hartree-Fock mode
   subroutine scf_occ_NO(rdm, gr, hm, psolver, st, energy)
-    type(rdm_t),          intent(inout) :: rdm
-    type(grid_t),         intent(in)    :: gr
-    type(hamiltonian_t),  intent(in)    :: hm
-    type(poisson_t),      intent(in)    :: psolver
-    type(states_elec_t),  intent(inout) :: st
-    FLOAT,                intent(out)   :: energy
-
+    type(rdm_t),              intent(inout) :: rdm     
+    type(grid_t),             intent(in)    :: gr
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(poisson_t),          intent(in)    :: psolver
+    type(states_elec_t),      intent(inout) :: st
+    FLOAT,                    intent(out)   :: energy
+     
     integer :: ist
 
     PUSH_SUB(scf_occ_NO)
@@ -636,12 +636,12 @@ contains
     
   ! scf for the occupation numbers 
   subroutine scf_occ(rdm, gr, hm, psolver, st, energy)
-    type(rdm_t), target,  intent(inout) :: rdm
-    type(grid_t),         intent(in)    :: gr
-    type(hamiltonian_t),  intent(in)    :: hm
-    type(poisson_t),      intent(in)    :: psolver
-    type(states_elec_t),  intent(inout) :: st
-    FLOAT,                intent(out)   :: energy
+    type(rdm_t), target,      intent(inout) :: rdm
+    type(grid_t),             intent(in)    :: gr
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(poisson_t),          intent(in)    :: psolver
+    type(states_elec_t),      intent(inout) :: st
+    FLOAT,                    intent(out)   :: energy
 
     integer :: ist, icycle, ierr
     FLOAT ::  sumgi1, sumgi2, sumgim, mu1, mu2, mum, dinterv, thresh_occ
@@ -847,12 +847,12 @@ contains
 
   ! scf for the natural orbitals
   subroutine scf_orb(rdm, gr, st, hm, psolver, energy)
-    type(rdm_t),          intent(inout) :: rdm
-    type(grid_t),         intent(in)    :: gr !< grid
-    type(states_elec_t),  intent(inout) :: st !< States
-    type(hamiltonian_t),  intent(in)    :: hm !< Hamiltonian
-    type(poisson_t),      intent(in)    :: psolver
-    FLOAT,                intent(out)   :: energy    
+    type(rdm_t),              intent(inout) :: rdm
+    type(grid_t),             intent(in)    :: gr !< grid
+    type(states_elec_t),      intent(inout) :: st !< States
+    type(hamiltonian_elec_t), intent(in)    :: hm !< Hamiltonian
+    type(poisson_t),          intent(in)    :: psolver
+    FLOAT,                    intent(out)   :: energy    
 
     integer :: ist, jst
     FLOAT, allocatable ::  lambda(:,:), fo(:,:)
@@ -914,15 +914,15 @@ contains
   ! Minimize the total energy wrt. an orbital by conjugate gradient
   !-----------------------------------------------------------------
   subroutine scf_orb_cg(rdm, namespace, gr, geo, st, ks, hm, psolver, energy)
-    type(rdm_t),          intent(inout) :: rdm
-    type(namespace_t),    intent(in)    :: namespace
-    type(grid_t),         intent(in)    :: gr !< grid
-    type(geometry_t),     intent(in)    :: geo !< geometry
-    type(states_elec_t),  intent(inout) :: st !< States
-    type(v_ks_t),         intent(inout) :: ks !< Kohn-Sham
-    type(hamiltonian_t),  intent(inout) :: hm !< Hamiltonian
-    type(poisson_t),      intent(in)    :: psolver
-    FLOAT,                intent(out)   :: energy    
+    type(rdm_t),              intent(inout) :: rdm
+    type(namespace_t),        intent(in)    :: namespace
+    type(grid_t),             intent(in)    :: gr !< grid
+    type(geometry_t),         intent(in)    :: geo !< geometry
+    type(states_elec_t),      intent(inout) :: st !< States
+    type(v_ks_t),             intent(inout) :: ks !< Kohn-Sham
+    type(hamiltonian_elec_t), intent(inout) :: hm !< Hamiltonian
+    type(poisson_t),          intent(in)    :: psolver
+    FLOAT,                    intent(out)   :: energy
 
     integer            :: ik, ist
     integer            :: maxiter ! maximum number of orbital optimization iterations
@@ -933,7 +933,7 @@ contains
     call profiling_in(prof_orb_cg, "CG")
     
     call v_ks_calc(ks, namespace, hm, st, geo)
-    call hamiltonian_update(hm, gr%mesh, namespace)
+    call hamiltonian_elec_update(hm, gr%mesh, namespace)
     
     rdm%eigens%converged = 0
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
@@ -963,7 +963,7 @@ contains
     ! calculate total energy with new states
     call density_calc (st, gr, st%rho)
     call v_ks_calc(ks, namespace, hm, st, geo)
-    call hamiltonian_update(hm, gr%mesh, namespace)
+    call hamiltonian_elec_update(hm, gr%mesh, namespace)
     call rdm_derivatives(rdm, hm, psolver, st, gr)
     
     call total_energy_rdm(rdm, st%occ(:,1), energy)
@@ -976,12 +976,12 @@ contains
   ! ----------------------------------------
   ! constructs the Lagrange multiplyers needed for the orbital minimization
   subroutine construct_lambda(hm, psolver, st, gr, lambda, rdm)
-    type(hamiltonian_t),  intent(in)    :: hm
-    type(poisson_t),      intent(in)    :: psolver
-    type(states_elec_t),  intent(inout) :: st
-    type(grid_t),         intent(in)    :: gr
-    FLOAT,                intent(out)   :: lambda(:,:) !< (1:st%nst, 1:st%nst)
-    type(rdm_t),          intent(inout) :: rdm
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(poisson_t),          intent(in)    :: psolver
+    type(states_elec_t),      intent(inout) :: st
+    type(grid_t),             intent(in)    :: gr
+    FLOAT,                    intent(out)   :: lambda(:,:) !< (1:st%nst, 1:st%nst)
+    type(rdm_t),              intent(inout) :: rdm
 
     FLOAT, allocatable :: hpsi(:,:), hpsi1(:,:), dpsi(:,:), dpsi2(:,:), fvec(:) 
     FLOAT, allocatable :: g_x(:,:), g_h(:,:), rho(:,:), rho_tot(:), pot(:), fock(:,:,:)
@@ -1000,7 +1000,7 @@ contains
 
       do iorb = 1, st%nst
         call states_elec_get_state(st, gr%mesh, iorb, 1, dpsi)
-        call dhamiltonian_apply(hm, gr%der, psolver, dpsi, hpsi, iorb, 1)
+        call dhamiltonian_elec_apply(hm, gr%der, psolver, dpsi, hpsi, iorb, 1)
 
         do jorb = iorb, st%nst  
           ! calculate <phi_j|H|phi_i> =lam_ji
@@ -1009,7 +1009,7 @@ contains
           
           ! calculate <phi_i|H|phi_j>=lam_ij
           if (.not. iorb == jorb ) then
-            call dhamiltonian_apply(hm, gr%der, psolver, dpsi2, hpsi1, jorb, 1)
+            call dhamiltonian_elec_apply(hm, gr%der, psolver, dpsi2, hpsi1, jorb, 1)
             lambda(iorb, jorb) = dmf_dotp(gr%mesh, dpsi(:,1), hpsi1(:,1))
           end if
         end do
@@ -1165,11 +1165,11 @@ contains
   ! ----------------------------------------
   ! calculates the derivatives of the energy terms with respect to the occupation numbers
   subroutine rdm_derivatives(rdm, hm, psolver, st, gr)
-    type(rdm_t),          intent(inout) :: rdm
-    type(hamiltonian_t),  intent(in)    :: hm
-    type(poisson_t),      intent(in)    :: psolver
-    type(states_elec_t),  intent(in)    :: st 
-    type(grid_t),         intent(in)    :: gr
+    type(rdm_t),              intent(inout) :: rdm
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(poisson_t),          intent(in)    :: psolver
+    type(states_elec_t),      intent(in)    :: st 
+    type(grid_t),             intent(in)    :: gr
     
     FLOAT, allocatable :: hpsi(:,:), rho1(:), rho(:), dpsi(:,:), dpsi2(:,:)
     FLOAT, allocatable :: v_ij(:,:,:)
@@ -1202,7 +1202,7 @@ contains
       !derivative of one-electron energy with respect to the natural orbitals occupation number
       do ist = 1, st%nst
         call states_elec_get_state(st, gr%mesh, ist, 1, dpsi)
-        call dhamiltonian_apply(hm, gr%der, psolver, dpsi, hpsi, ist, 1, &
+        call dhamiltonian_elec_apply(hm, gr%der, psolver, dpsi, hpsi, ist, 1, &
                               terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
         rdm%eone(ist) = dmf_dotp(gr%mesh, dpsi(:, 1), hpsi(:, 1))
       end do
@@ -1272,11 +1272,11 @@ contains
   ! --------------------------------------------
   !calculates the one electron integrals in the basis of the initial orbitals
   subroutine rdm_integrals(rdm, hm, psolver, st, gr)
-    type(rdm_t),          intent(inout) :: rdm
-    type(hamiltonian_t),  intent(in)    :: hm
-    type(poisson_t),      intent(in)    :: psolver
-    type(states_elec_t),  intent(in)    :: st 
-    type(grid_t),         intent(in)    :: gr
+    type(rdm_t),              intent(inout) :: rdm
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(poisson_t),          intent(in)    :: psolver
+    type(states_elec_t),      intent(in)    :: st 
+    type(grid_t),             intent(in)    :: gr
     
     FLOAT, allocatable :: hpsi(:,:)
     FLOAT, allocatable :: dpsi(:,:), dpsi2(:,:)
@@ -1295,7 +1295,7 @@ contains
       call states_elec_get_state(st, gr%mesh, ist, 1, dpsi)
       do jst = ist, st%nst
         call states_elec_get_state(st, gr%mesh, jst, 1, dpsi2)
-        call dhamiltonian_apply(hm, gr%der, psolver, dpsi, hpsi, ist, 1, &
+        call dhamiltonian_elec_apply(hm, gr%der, psolver, dpsi, hpsi, ist, 1, &
                               terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
         rdm%eone_int(jst, ist) = dmf_dotp(gr%mesh, dpsi2(:, 1), hpsi(:, 1))
         rdm%eone_int(ist, jst) = rdm%eone_int(jst, ist)

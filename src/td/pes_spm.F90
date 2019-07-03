@@ -21,7 +21,7 @@
 module pes_spm_oct_m
   use comm_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use lasers_oct_m
   use mesh_interpolation_oct_m
@@ -354,7 +354,7 @@ contains
     type(mesh_t),        intent(in)    :: mesh
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_elec_t), intent(in)    :: hm
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
     integer            :: ist, ik, isdim
@@ -902,7 +902,7 @@ contains
   subroutine pes_spm_calc_rcphase(this, mesh, iter, dt, hm, ii)
     type(pes_spm_t),     intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
-    type(hamiltonian_t), intent(in)    :: hm
+    type(hamiltonian_elec_t), intent(in)    :: hm
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: ii
