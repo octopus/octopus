@@ -32,6 +32,7 @@ module worker_elec_oct_m
   use messages_oct_m
   use namespace_oct_m
   use poisson_oct_m
+  use potential_interpolation_oct_m
   use profiling_oct_m
   use states_elec_oct_m
   use varinfo_oct_m
@@ -48,7 +49,8 @@ module worker_elec_oct_m
     worker_elec_move_ions,              &
     worker_elec_restore_ions,           &
     worker_elec_propagate_gauge_field,  &
-    worker_elec_restore_gauge_field
+    worker_elec_restore_gauge_field,    &
+    worker_elec_interpolate_get
 
   type, extends(worker_abst_t) :: worker_elec_t
     private
@@ -81,6 +83,7 @@ contains
     POP_SUB(worker_elec_end)
   end subroutine
 
+  ! ---------------------------------------------------------
   subroutine worker_elec_update_hamiltonian(namespace, st, gr, hm, time)
     type(namespace_t),   intent(in)    :: namespace
     type(states_elec_t), intent(inout) :: st
@@ -103,6 +106,8 @@ contains
 
   end subroutine worker_elec_update_hamiltonian
 
+
+  ! ---------------------------------------------------------
   subroutine worker_elec_move_ions(wo, gr, hm, psolver, st, namespace, ions, geo, time, ion_time, save_pos, move_ions)
     class(worker_elec_t),    intent(inout) :: wo
     type(grid_t),            intent(in)    :: gr
@@ -137,6 +142,7 @@ contains
 
   end subroutine worker_elec_move_ions
 
+  ! ---------------------------------------------------------
   subroutine worker_elec_restore_ions(wo, ions, geo, move_ions)
     class(worker_elec_t),    intent(inout) :: wo
     type(ion_dynamics_t),    intent(inout) :: ions
@@ -159,6 +165,7 @@ contains
 
   end subroutine worker_elec_restore_ions
 
+  ! ---------------------------------------------------------
   subroutine worker_elec_propagate_gauge_field(wo, hm, dt, time, save_gf)
     class(worker_elec_t),    intent(inout) :: wo
     type(hamiltonian_t),     intent(inout) :: hm
@@ -186,6 +193,7 @@ contains
 
   end subroutine worker_elec_propagate_gauge_field
 
+  ! ---------------------------------------------------------
   subroutine worker_elec_restore_gauge_field(wo, namespace, hm, gr)
     class(worker_elec_t),    intent(in)    :: wo
     type(namespace_t),       intent(in)    :: namespace
@@ -210,6 +218,7 @@ contains
 
   end subroutine worker_elec_restore_gauge_field
 
+  ! ---------------------------------------------------------
   subroutine worker_elec_exp_apply(te, st, gr, hm, psolver, dt)
     type(exponential_t), intent(inout) :: te 
     type(states_elec_t), intent(inout) :: st
@@ -237,6 +246,7 @@ contains
 
   end subroutine worker_elec_exp_apply
 
+  ! ---------------------------------------------------------
   subroutine worker_elec_fuse_density_exp_apply(te, st, gr, hm, psolver, dt, dt2)
     type(exponential_t), intent(inout) :: te
     type(states_elec_t), intent(inout) :: st
@@ -296,7 +306,23 @@ contains
 
   end subroutine worker_elec_fuse_density_exp_apply
 
+  ! ---------------------------------------------------------
+  subroutine worker_elec_interpolate_get(gr, hm, interp)
+    type(grid_t),                       intent(in) :: gr
+    type(hamiltonian_t),             intent(inout) :: hm
+    type(potential_interpolation_t), intent(inout) :: interp
 
+    PUSH_SUB(worker_elec_interpolate_get)
+
+    if(hm%family_is_mgga_with_exc) then
+      call potential_interpolation_get(interp, gr%mesh%np, hm%d%nspin, 0, hm%vhxc, vtau = hm%vtau)
+    else
+      call potential_interpolation_get(interp, gr%mesh%np, hm%d%nspin, 0, hm%vhxc)
+    end if
+
+    POP_SUB(worker_elec_interpolate_get)
+
+  end subroutine worker_elec_interpolate_get
 
 end module worker_elec_oct_m
 

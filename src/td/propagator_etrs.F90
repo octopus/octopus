@@ -260,8 +260,7 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with approximate enforced time-reversal symmetry
-  subroutine td_aetrs(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
-    type(v_ks_t), target,            intent(inout) :: ks
+  subroutine td_aetrs(namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
     type(namespace_t),               intent(in)    :: namespace
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(poisson_t),                 intent(in)    :: psolver
@@ -280,20 +279,20 @@ contains
     ! propagate half of the time step with H(time - dt)
     call worker_elec_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
 
-    if(hm%family_is_mgga_with_exc) then
-      call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc, vtau = hm%vtau)
-    else
-      call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc)
-    end if
+    !Get the potentials from the interpolator
+    call worker_elec_interpolate_get(gr, hm, tr%vksold)
 
     ! move the ions to time t
     call worker_elec_move_ions(tr%worker_elec, gr, hm, psolver, st, namespace, ions, &
               geo, time, ionic_scale*dt, move_ions = move_ions)
 
+    !Propagate gauge field
     call worker_elec_propagate_gauge_field(tr%worker_elec, hm, dt, time)
 
+    !Update Hamiltonian
     call worker_elec_update_hamiltonian(namespace, st, gr, hm, time)
 
+    !Do the time propagation for the second half of the time step
     call worker_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
 
     POP_SUB(td_aetrs)
