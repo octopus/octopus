@@ -145,6 +145,7 @@ math_f_srcs =                                 \
 	math/math.F90                         \
 	math/matrix.F90                       \
 	math/matrix_ops.F90                   \
+	math/maxwell_function.F90             \
 	math/metis.F90                        \
 	math/minimizer.F90                    \
 	math/nfft.F90                         \
@@ -419,6 +420,7 @@ hamiltonian_f_srcs =                                 \
 	hamiltonian/epot.F90                         \
 	hamiltonian/functionals.F90                  \
 	hamiltonian/gauge_field.F90                  \
+        hamiltonian/hamiltonian_mxll.F90             \
 	hamiltonian/hamiltonian_base.F90             \
 	hamiltonian/hamiltonian.F90                  \
 	hamiltonian/hgh_projector.F90                \
@@ -430,6 +432,7 @@ hamiltonian_f_srcs =                                 \
 	hamiltonian/lda_u.F90                        \
 	hamiltonian/lda_u_io.F90                     \
 	hamiltonian/libvdwxc.F90                     \
+	hamiltonian/maxwell_boundary_op.F90           \
 	hamiltonian/oct_exchange.F90                 \
 	hamiltonian/pcm.F90                          \
 	hamiltonian/pcm_eom.F90                      \
