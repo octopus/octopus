@@ -125,7 +125,7 @@ module states_oct_m
     FLOAT, pointer :: current(:, :, :) !<   current(gr%mesh%np_part, gr%sb%dim, st%d%nspin)
 
     !> k-point resolved current
-    FLOAT, pointer :: current_kpt(:,:,:) !< current(gr%mesh%np_part, gr%sb%dim, kpt_start:kpt_end)
+    FLOAT, pointer :: current_kpt(:,:,:) !< current(gr%mesh%np gr%sb%dim, kpt_start:kpt_end)
 
 
     FLOAT, pointer :: rho_core(:)      !< core charge for nl core corrections
@@ -1198,7 +1198,7 @@ contains
     end if
 
     if(.not. associated(st%current_kpt)) then
-      SAFE_ALLOCATE(st%current_kpt(1:gr%mesh%np_part,1:gr%mesh%sb%dim,st%d%kpt%start:st%d%kpt%end))
+      SAFE_ALLOCATE(st%current_kpt(1:gr%mesh%np,1:gr%mesh%sb%dim,st%d%kpt%start:st%d%kpt%end))
       st%current_kpt = M_ZERO
     end if
 
