@@ -33,6 +33,7 @@ module hamiltonian_elec_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
+  use hamiltonian_abst_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
@@ -86,7 +87,6 @@ module hamiltonian_elec_oct_m
     hamiltonian_elec_remove_inh,          &
     hamiltonian_elec_adjoint,             &
     hamiltonian_elec_not_adjoint,         &
-    hamiltonian_elec_hermitian,           &
     hamiltonian_elec_epot_generate,       &
     hamiltonian_elec_update,              &
     hamiltonian_elec_update2,             &
@@ -102,7 +102,7 @@ module hamiltonian_elec_oct_m
     zoct_exchange_operator,               &
     hamiltonian_elec_set_vhxc
 
-  type hamiltonian_elec_t
+  type, extends(hamiltonian_abst_t) :: hamiltonian_elec_t
     ! Components are public by default
 
     !> The Hamiltonian must know what are the "dimensions" of the spaces,
@@ -169,6 +169,11 @@ module hamiltonian_elec_oct_m
     integer       :: lda_u_level
 
     logical, private :: time_zero
+
+  contains
+  
+    procedure :: is_hermitian => hamiltonian_elec_hermitian
+
   end type hamiltonian_elec_t
 
   integer, public, parameter :: &
@@ -588,7 +593,7 @@ contains
   ! ---------------------------------------------------------
   ! True if the Hamiltonian is Hermitian, false otherwise
   logical function hamiltonian_elec_hermitian(hm)
-    type(hamiltonian_elec_t), intent(in) :: hm
+    class(hamiltonian_elec_t), intent(in) :: hm
 
     PUSH_SUB(hamiltonian_elec_hermitian)
     hamiltonian_elec_hermitian = .not.((hm%bc%abtype == IMAGINARY_ABSORBING) .or. &

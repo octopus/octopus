@@ -509,7 +509,7 @@ contains
           !to apply the Hamiltonian
           call operate(zpsi, v(:, :,  iter + 1))
         
-          if(hamiltonian_elec_hermitian(hm)) then
+          if(hm%is_hermitian()) then
             l = max(1, iter - 1)
           else
             l = 1
@@ -520,7 +520,7 @@ contains
             normalize = .false., overlap = hamilt(l:iter, iter), norm = hamilt(iter + 1, iter), &
             gs_scheme = te%arnoldi_gs)
 
-          call zlalg_exp(iter, pp, hamilt, expo, hamiltonian_elec_hermitian(hm))
+          call zlalg_exp(iter, pp, hamilt, expo, hm%is_hermitian())
 
           res = abs(hamilt(iter + 1, iter)*abs(expo(iter, 1)))
 
@@ -570,7 +570,7 @@ contains
             call operate(psi, v(:, :, iter + 1))
   
 
-            if(hamiltonian_elec_hermitian(hm)) then
+            if(hm%is_hermitian()) then
               l = max(1, iter - 1)
             else
               l = 1
@@ -581,7 +581,7 @@ contains
               v(:, :, iter + 1), normalize = .true., overlap = hamilt(l:iter, iter), &
               norm = hamilt(iter + 1, iter), gs_scheme = te%arnoldi_gs)
 
-            call zlalg_phi(iter, pp, hamilt, expo, hamiltonian_elec_hermitian(hm))
+            call zlalg_phi(iter, pp, hamilt, expo, hm%is_hermitian())
  
             res = abs(hamilt(iter + 1, iter)*abs(expo(iter, 1)))
 
@@ -848,7 +848,7 @@ contains
         !to apply the Hamiltonian
         call zhamiltonian_elec_apply_batch(hm, der, psolver, vb(iter), vb(iter+1), ik, set_phase = .not.phase_correction)
 
-        if(hamiltonian_elec_hermitian(hm)) then
+        if(hm%is_hermitian()) then
           l = max(1, iter - 1)
         else
           l = 1
@@ -860,7 +860,7 @@ contains
             gs_scheme = te%arnoldi_gs)
 
         do ii = 1, psib%nst
-          call zlalg_exp(iter, -M_zI*deltat, hamilt(:,:,ii), expo(:,:,ii), hamiltonian_elec_hermitian(hm))
+          call zlalg_exp(iter, -M_zI*deltat, hamilt(:,:,ii), expo(:,:,ii), hm%is_hermitian())
 
           res(ii) = abs(hamilt(iter + 1, iter, ii)*abs(expo(iter, 1, ii)))
         end do !ii

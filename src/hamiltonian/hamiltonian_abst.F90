@@ -32,24 +32,17 @@ module hamiltonian_abst_oct_m
     hamiltonian_abst_t
 
   type, abstract :: hamiltonian_abst_t
-    private
 
   contains
-
-    procedure(unpack),     deferred :: unpack  
+    procedure(is_hermitian), deferred :: is_hermitian
   end type hamiltonian_abst_t
 
   abstract interface
-
-    subroutine unpack(st, copy)
+    logical function is_hermitian(hm)
       import hamiltonian_abst_t
-      class(hamiltonian_abst_t), intent(inout) :: st
-      logical, optional,    intent(in)    :: copy
-    end subroutine unpack
+      class(hamiltonian_abst_t), intent(in) :: hm
+    end function is_hermitian
   end interface
-
-contains
-
 
 end module hamiltonian_abst_oct_m
 
