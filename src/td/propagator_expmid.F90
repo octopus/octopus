@@ -64,8 +64,13 @@ contains
     ASSERT(hm%ep%gfield%with_gauge_field .eqv. .false.)
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
+      if(hm%family_is_mgga_with_exc) then
+        call potential_interpolation_interpolate(tr%vksold, 3, &
+          time, dt, time - dt/M_TWO, hm%vhxc, vtau = hm%vtau)
+      else
         call potential_interpolation_interpolate(tr%vksold, 3, &
           time, dt, time - dt/M_TWO, hm%vhxc)
+      end if
     end if
 
     !move the ions to time 'time - dt/2'
