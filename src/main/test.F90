@@ -244,8 +244,8 @@ contains
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
   
     !Initialize external potential
-    call epot_init(ep, sys%parser, sys%gr, sys%geo, SPINORS, 1, XC_FAMILY_NONE)
-    call epot_generate(ep, sys%parser, sys%gr, sys%geo, sys%st)
+    call hamiltonian_epot_generate(sys%hm, sys%parser, sys%gr, sys%geo, sys%st)
+  
    
     !Initialize external potential
     SAFE_ALLOCATE(epsib)
@@ -254,7 +254,7 @@ contains
     call batch_set_zero(epsib)
     
     do itime = 1, param%repetitions
-      call zproject_psi_batch(sys%gr%mesh, ep%proj, ep%natoms, 2, sys%st%group%psib(1, 1), epsib, 1)
+      call zproject_psi_batch(sys%gr%mesh, sys%hm%ep%proj, sys%hm%ep%natoms, 2, sys%st%group%psib(1, 1), epsib, 1)
     end do
     
     do itime = 1, epsib%nst
@@ -264,7 +264,6 @@ contains
 
     call batch_end(epsib)
     SAFE_DEALLOCATE_P(epsib)
-    call epot_end(ep)
     call states_deallocate_wfns(sys%st)
     call system_end(sys)
 
