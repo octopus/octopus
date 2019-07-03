@@ -36,25 +36,17 @@ module basis_set_abst_oct_m
     basis_set_abst_t
 
   type, abstract :: basis_set_abst_t
-
     private
     logical :: time_dependent   !< flag for time-dependent basis sets
-
   contains
-
     private
-
-    procedure(init), deferred :: init
-    procedure(end),  deferred :: end
-
-    procedure(write_info), deferred :: write_info
-
-    procedure(dump), deferred :: dump
-    procedure(load), deferred :: load
-
+    procedure(init),          deferred :: init
+    procedure(end),           deferred :: end
+    procedure(write_info),    deferred :: write_info
+    procedure(dump),          deferred :: dump
+    procedure(load),          deferred :: load
     procedure, non_overridable, public :: is_time_dependent
     procedure, non_overridable, public :: set_time_dependent
-
   end type basis_set_abst_t
 
   abstract interface
@@ -98,25 +90,25 @@ module basis_set_abst_oct_m
 contains
 
   function is_time_dependent(this) result(td_flag)
-
     class(basis_set_abst_t), intent(in) :: this
     logical :: td_flag
 
     PUSH_SUB(is_time_dependent)
-    td_flag = this%time_dependent
-    POP_SUB(is_time_dependent)
 
+    td_flag = this%time_dependent
+
+    POP_SUB(is_time_dependent)
   end function is_time_dependent
 
   subroutine set_time_dependent(this, td_flag)
-
     class(basis_set_abst_t), intent(inout) :: this
     logical, intent(in) :: td_flag
 
     PUSH_SUB(set_time_dependent)
-    this%time_dependent = td_flag
-    POP_SUB(set_time_dependent)
 
+    this%time_dependent = td_flag
+
+    POP_SUB(set_time_dependent)
   end subroutine set_time_dependent
 
 end module basis_set_abst_oct_m
