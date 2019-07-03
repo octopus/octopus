@@ -421,6 +421,7 @@ hamiltonian_f_srcs =                                 \
 	hamiltonian/epot.F90                         \
 	hamiltonian/functionals.F90                  \
 	hamiltonian/gauge_field.F90                  \
+	hamiltonian/hamiltonian_abst.F90             \
 	hamiltonian/hamiltonian_base.F90             \
 	hamiltonian/hamiltonian.F90                  \
 	hamiltonian/hgh_projector.F90                \
