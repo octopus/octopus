@@ -88,9 +88,8 @@ module geom_opt_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine geom_opt_run(sys, hm, fromscratch)
+  subroutine geom_opt_run(sys, fromscratch)
     type(system_t), target,      intent(inout) :: sys
-    type(hamiltonian_t), target, intent(inout) :: hm
     logical,                     intent(inout) :: fromscratch
 
     integer :: ierr
@@ -118,22 +117,22 @@ contains
       end if
     end if
 
-    call scf_init(g_opt%scfv, sys%parser, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks, conv_force = CNST(1e-8))
+    call scf_init(g_opt%scfv, sys%parser, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks, conv_force = CNST(1e-8))
 
     if(fromScratch) then
-      call lcao_run(sys, hm, lmm_r = g_opt%scfv%lmm_r)
+      call lcao_run(sys, lmm_r = g_opt%scfv%lmm_r)
     else
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
       call messages_info(1)
-      call system_h_setup(sys, hm)
+      call system_h_setup(sys)
     end if
 
     !Initial point
     SAFE_ALLOCATE(coords(1:g_opt%size))
     call to_coords(g_opt, coords)
 
-    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_pack(sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call states_pack(sys%st)
 
     !Minimize
     select case(g_opt%method)
@@ -177,7 +176,7 @@ contains
       call messages_fatal(2)
     end if
 
-    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_unpack(sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call states_unpack(sys%st)
   
     ! print out geometry
     call from_coords(g_opt, coords)
@@ -211,7 +210,7 @@ contains
       g_opt%mesh   => sys%gr%mesh
       g_opt%geo    => sys%geo
       g_opt%st     => sys%st
-      g_opt%hm     => hm
+      g_opt%hm     => sys%hm
       g_opt%syst   => sys
       g_opt%dim    =  sys%gr%mesh%sb%dim
 

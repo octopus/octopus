@@ -244,8 +244,8 @@ contains
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
   
     !Initialize external potential
-    call epot_init(ep, sys%parser, sys%gr, sys%geo, SPINORS, 1, XC_FAMILY_NONE)
-    call epot_generate(ep, sys%parser, sys%gr, sys%geo, sys%st)
+    call hamiltonian_epot_generate(sys%hm, sys%parser, sys%gr, sys%geo, sys%st)
+  
    
     !Initialize external potential
     SAFE_ALLOCATE(epsib)
@@ -254,7 +254,7 @@ contains
     call batch_set_zero(epsib)
     
     do itime = 1, param%repetitions
-      call zproject_psi_batch(sys%gr%mesh, ep%proj, ep%natoms, 2, sys%st%group%psib(1, 1), epsib, 1)
+      call zproject_psi_batch(sys%gr%mesh, sys%hm%ep%proj, sys%hm%ep%natoms, 2, sys%st%group%psib(1, 1), epsib, 1)
     end do
     
     do itime = 1, epsib%nst
@@ -264,7 +264,6 @@ contains
 
     call batch_end(epsib)
     SAFE_DEALLOCATE_P(epsib)
-    call epot_end(ep)
     call states_deallocate_wfns(sys%st)
     call system_end(sys)
 
@@ -368,7 +367,6 @@ contains
     type(system_t) :: sys
     type(batch_t), pointer :: hpsib
     integer :: itime, terms
-    type(hamiltonian_t) :: hm
     type(simul_box_t) :: sb
 
     PUSH_SUB(test_hamiltonian)
@@ -406,28 +404,26 @@ contains
 
     !Initialize external potential
     call simul_box_init(sb, sys%parser, sys%geo, sys%space)
-    call hamiltonian_init(hm, sys%parser, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
-             family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
-    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_pack(sys%st)
-    call hamiltonian_epot_generate(hm, sys%parser, sys%gr, sys%geo, sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call states_pack(sys%st)
+    call hamiltonian_epot_generate(sys%hm, sys%parser, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, sys%parser, hm, sys%st, sys%geo)
+    call v_ks_calc(sys%ks, sys%parser, sys%hm, sys%st, sys%geo)
 
     call boundaries_set(sys%gr%der%boundaries, sys%st%group%psib(1, 1)) 
 
     SAFE_ALLOCATE(hpsib)
     call batch_copy(sys%st%group%psib(1, 1), hpsib)
 
-    if(hamiltonian_apply_packed(hm, sys%gr%der%mesh)) then
+    if(hamiltonian_apply_packed(sys%hm, sys%gr%der%mesh)) then
       call batch_pack(sys%st%group%psib(1, 1))
       call batch_pack(hpsib, copy = .false.)
     end if
 
     do itime = 1, param%repetitions
       if(states_are_real(sys%st)) then
-        call dhamiltonian_apply_batch(hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
+        call dhamiltonian_apply_batch(sys%hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
       else
-        call zhamiltonian_apply_batch(hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
+        call zhamiltonian_apply_batch(sys%hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
       end if
     end do
 
@@ -446,7 +442,6 @@ contains
 
     call batch_end(hpsib, copy = .false.)
     SAFE_DEALLOCATE_P(hpsib)
-    call hamiltonian_end(hm)
     call simul_box_end(sb)
     call states_deallocate_wfns(sys%st)
     call system_end(sys)

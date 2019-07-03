@@ -51,9 +51,8 @@ module vdw_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine vdw_run(sys, hm, fromScratch)
+  subroutine vdw_run(sys, fromScratch)
     type(system_t),         intent(inout) :: sys
-    type(hamiltonian_t),    intent(inout) :: hm
     logical,                intent(inout) :: fromScratch
 
     type(lr_t) :: lr(MAX_DIM, 1)
@@ -77,7 +76,7 @@ contains
 
     call input()
     call init_()
-    call sternheimer_init(sh, sys, hm, wfs_are_cplx = .true.)
+    call sternheimer_init(sh, sys, wfs_are_cplx = .true.)
 
     if(gauss_start == 1 .and. mpi_grp_is_root(mpi_world)) then
       iunit = io_open(VDW_DIR//'vdw_c6', action='write')
@@ -222,7 +221,7 @@ contains
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian for linear response.'
       call messages_info(1)
-      call system_h_setup(sys, hm)
+      call system_h_setup(sys)
 
       do dir = 1, ndir
         call lr_init(lr(dir,1))
@@ -291,11 +290,11 @@ contains
         call messages_info(1)   
 
         call pert_setup_dir(perturbation, dir)
-        call zsternheimer_solve(sh, sys, hm, lr(dir, :), 1,  omega, perturbation, &
+        call zsternheimer_solve(sh, sys, lr(dir, :), 1,  omega, perturbation, &
              restart_dump, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
       end do
 
-      call zcalc_polarizability_finite(sys, hm, lr(:,:), 1, perturbation, alpha(:,:), ndir = ndir)
+      call zcalc_polarizability_finite(sys, lr(:,:), 1, perturbation, alpha(:,:), ndir = ndir)
 
       get_pol = M_ZERO
       do dir = 1, ndir
