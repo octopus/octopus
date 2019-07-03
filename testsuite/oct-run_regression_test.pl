@@ -162,8 +162,8 @@ $options_required = "";
 $options_required_mpi = "";
 $options_are_mpi = 0;
 $expect_error = 0; # check for controlled failure 
-$match_error = 0;  # flag to switch to alternative matches
-$match_done = 1;   # check that at least one error-match has been done.
+$match_error = 0;  # flag to switch to alternative matches for failling tests
+$error_match_done = 1;   # check that at least one error-match has been done. (Defaults to TRUE. Set false on expect_error)
 
 # Handle GPU offset
 $offset_GPU = defined $opt_G ? $opt_G : -1;
@@ -303,7 +303,7 @@ while ($_ = <TESTSUITE>) {
 
                 # FIXME: instead of skipping, we should switch to the alternative matching rules
                     $expect_error = 1;
-                    $match_done = 0;
+                    $error_match_done = 0;
 
                     # print "\nSkipping test: executable does not have the required option '$option'";
                     print "\nChanging rules: executable does not have the required option '$option'";
@@ -783,5 +783,12 @@ sub skip_exit {
         print "Status: ".$failures." failures\n";
         exit $failures;
         # if a previous step has failed, mark as failed not skipped
+    }
+}
+
+sub check_error_resolved {
+    if (!$opt_n && !$error_match_done) { 
+        print "No error check performed!\n"
+        $failures++; 
     }
 }
