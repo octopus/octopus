@@ -70,18 +70,24 @@ module system_oct_m
 contains
   
   !----------------------------------------------------------
-  subroutine system_init(sys, parser)
-    type(system_t), intent(out)   :: sys
-    type(parser_t), intent(in)    :: parser
-
+  subroutine system_init(sys, parser, name)
+    type(system_t),             intent(out) :: sys
+    type(parser_t),             intent(in)  :: parser
+    character(len=*), optional, intent(in)  :: name
+    
     type(profile_t), save :: prof
+
     PUSH_SUB(system_init)
     call profiling_in(prof,"SYSTEM_INIT")
     
     SAFE_ALLOCATE(sys%gr)
     SAFE_ALLOCATE(sys%st)
 
-    sys%parser = parser
+    if (present(name)) then
+      sys%parser = parser_init_namespace(parser, name)
+    else
+      sys%parser = parser
+    end if
 
     call accel_init(mpi_world, sys%parser)
 
