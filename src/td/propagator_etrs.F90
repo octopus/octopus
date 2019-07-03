@@ -328,6 +328,7 @@ contains
 
     SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
     if(hm%family_is_mgga_with_exc) then 
+      SAFE_ALLOCATE(vtauold(1:gr%mesh%np, 1:st%d%nspin))
       call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold, vtau = vtauold)
       call hamiltonian_set_vhxc(hm, gr%mesh, vold, vtauold)
     else
@@ -378,11 +379,8 @@ contains
       end do
     end if
 
-    if(hm%family_is_mgga_with_exc) then
-      call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc, vtau = hm%vtau)
-    else
-      call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc)
-    end if
+    !Get the potentials from the interpolator
+    call worker_elec_interpolate_get(gr, hm, tr%vksold)
 
     ! move the ions to time t
     call worker_elec_move_ions(tr%worker_elec, gr, hm, psolver, st, namespace, ions, &
@@ -444,6 +442,7 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(vold)
+    SAFE_DEALLOCATE_A(vtauold)
 
     POP_SUB(td_caetrs)
   end subroutine td_caetrs
