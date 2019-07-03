@@ -80,14 +80,12 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
           end if
         end do
       else
-        do jp = 1, sm%global2local(ip)-1
-          pvec(jp) = rho(jp)/sqrt(sum((xx1(1:dim) -  sm%x(jp, 1:dim))**2))
-        end do
-        if (sm%part_v(ip) == sm%mesh%vp%partno) then
-          pvec(sm%global2local(ip)) = rho(sm%global2local(ip))*prefactor
-        end if
-        do jp = sm%global2local(ip)+1, sm%np
-          pvec(jp) = rho(jp)/sqrt(sum((xx1(1:dim) -  sm%x(jp, 1:dim))**2))
+        do jp = 1, sm%np
+          if(sm%part_v(ip) == sm%mesh%vp%partno .and. sm%global2local(ip) == jp) then
+            pvec(jp) = rho(jp)*prefactor
+          else
+            pvec(jp) = rho(jp)/sqrt(sum((xx1(1:dim) -  sm%x(jp, 1:dim))**2))
+          end if
         end do
       end if
       tmp(ip) = dsm_integrate(sm%mesh, sm, pvec, reduce = .false.)
