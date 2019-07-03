@@ -57,6 +57,8 @@ basic_f_srcs =                                 \
 	basic/io_binary_f.F90                  \
 	basic/io_csv_f.F90                     \
 	basic/io.F90                           \
+	basic/linked_list.F90                  \
+	basic/list_node.F90                    \
 	basic/loct.F90                         \
 	basic/loct_pointer.F90                 \
 	basic/lookup.F90                       \
