@@ -53,7 +53,8 @@ module propagator_etrs_oct_m
   public ::                       &
     td_etrs,                      &
     td_etrs_sc,                   &
-    td_aetrs
+    td_aetrs,                     &
+    td_caetrs
 
 contains
 
@@ -274,6 +275,47 @@ contains
     type(geometry_t),                intent(inout) :: geo
     logical,                         intent(in)    :: move_ions
 
+    PUSH_SUB(td_aetrs)
+
+    ! propagate half of the time step with H(time - dt)
+    call worker_elec_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
+
+    if(hm%family_is_mgga_with_exc) then
+      call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc, vtau = hm%vtau)
+    else
+      call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 0, hm%vhxc)
+    end if
+
+    ! move the ions to time t
+    call worker_elec_move_ions(tr%worker_elec, gr, hm, psolver, st, namespace, ions, &
+              geo, time, ionic_scale*dt, move_ions = move_ions)
+
+    call worker_elec_propagate_gauge_field(tr%worker_elec, hm, dt, time)
+
+    call worker_elec_update_hamiltonian(namespace, st, gr, hm, time)
+
+    call worker_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
+
+    POP_SUB(td_aetrs)
+  end subroutine td_aetrs
+
+  ! ---------------------------------------------------------
+  !> Propagator with approximate enforced time-reversal symmetry
+  subroutine td_caetrs(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
+    type(v_ks_t), target,            intent(inout) :: ks
+    type(namespace_t),               intent(in)    :: namespace
+    type(hamiltonian_t), target,     intent(inout) :: hm
+    type(poisson_t),                 intent(in)    :: psolver
+    type(grid_t),        target,     intent(inout) :: gr
+    type(states_elec_t), target,     intent(inout) :: st
+    type(propagator_t),  target,     intent(inout) :: tr
+    FLOAT,                           intent(in)    :: time
+    FLOAT,                           intent(in)    :: dt
+    FLOAT,                           intent(in)    :: ionic_scale
+    type(ion_dynamics_t),            intent(inout) :: ions
+    type(geometry_t),                intent(inout) :: geo
+    logical,                         intent(in)    :: move_ions
+
     integer :: ik, ispin, ip, ist, ib
     FLOAT :: vv
     CMPLX :: phase
@@ -283,64 +325,58 @@ contains
     FLOAT, allocatable    :: vold(:, :), vtauold(:, :)
     type(accel_mem_t)    :: phase_buff
 
-    PUSH_SUB(td_aetrs)
+    PUSH_SUB(td_caetrs)
 
-    if(tr%method == PROP_CAETRS) then
-      SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
-      if(hm%family_is_mgga_with_exc) then 
-        call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold, vtau = vtauold)
-        call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
-        call lalg_copy(gr%mesh%np, st%d%nspin, vtauold, hm%vtau)
-      else
-        call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold)
-        call lalg_copy(gr%mesh%np, st%d%nspin, vold, hm%vhxc)
-      endif
+    SAFE_ALLOCATE(vold(1:gr%mesh%np, 1:st%d%nspin))
+    if(hm%family_is_mgga_with_exc) then 
+      call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold, vtau = vtauold)
+      call hamiltonian_set_vhxc(hm, gr%mesh, vold, vtauold)
+    else
+      call potential_interpolation_get(tr%vksold, gr%mesh%np, st%d%nspin, 2, vold)
+      call hamiltonian_set_vhxc(hm, gr%mesh, vold)
+    endif
 
-      call worker_elec_update_hamiltonian(namespace, st, gr, hm, time - dt) 
+    call worker_elec_update_hamiltonian(namespace, st, gr, hm, time - dt) 
 
-      call v_ks_calc_start(ks, namespace, hm, st, geo, time = time - dt, calc_energy = .false., &
-             calc_current = .false.)
-    end if
+    call v_ks_calc_start(ks, namespace, hm, st, geo, time = time - dt, calc_energy = .false., &
+           calc_current = .false.)
 
     ! propagate half of the time step with H(time - dt)
     call worker_elec_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
 
-    if(tr%method == PROP_CAETRS) then
-      call v_ks_calc_finish(ks, hm, namespace)
+    call v_ks_calc_finish(ks, hm, namespace)
 
-      if(hm%family_is_mgga_with_exc) then 
-        call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc, vtau = hm%vtau)
-        call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
-           tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
-        call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
-           tr%vksold%vtau_old(:, :, 1:3), time, tr%vksold%vtau_old(:, :, 0))
-        forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np)
-          vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
-          vtauold(ip, ispin) =  CNST(0.5)*dt*(hm%vtau(ip, ispin) - vtauold(ip, ispin))
-        end forall      
-      else
-        call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc)
-        call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
-           tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
+    if(hm%family_is_mgga_with_exc) then 
+      call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc, vtau = hm%vtau)
+      call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
+         tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
+      call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
+         tr%vksold%vtau_old(:, :, 1:3), time, tr%vksold%vtau_old(:, :, 0))
+      forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np)
+        vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
+        vtauold(ip, ispin) =  CNST(0.5)*dt*(hm%vtau(ip, ispin) - vtauold(ip, ispin))
+      end forall      
+    else
+      call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc)
+      call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
+         tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
 
-        forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np)
-          vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
-        end forall
+      forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np)
+        vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
+      end forall
+    end if
+
+    ! copy vold to a cl buffer
+    if(accel_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
+      if(hm%family_is_mgga_with_exc) then
+        call messages_not_implemented('CAETRS propagator with accel and MGGA with energy functionals')
       end if
-
-      ! copy vold to a cl buffer
-      if(accel_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
-        if(hm%family_is_mgga_with_exc) then
-          call messages_not_implemented('CAETRS propagator with accel and MGGA with energy functionals')
-        end if
-        pnp = accel_padded_size(gr%mesh%np)
-        call accel_create_buffer(phase_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp*st%d%nspin)
-        ASSERT(ubound(vold, dim = 1) == gr%mesh%np)
-        do ispin = 1, st%d%nspin
-          call accel_write_buffer(phase_buff, gr%mesh%np, vold(:, ispin), offset = (ispin - 1)*pnp)
-        end do
-      end if
-
+      pnp = accel_padded_size(gr%mesh%np)
+      call accel_create_buffer(phase_buff, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, pnp*st%d%nspin)
+      ASSERT(ubound(vold, dim = 1) == gr%mesh%np)
+      do ispin = 1, st%d%nspin
+        call accel_write_buffer(phase_buff, gr%mesh%np, vold(:, ispin), offset = (ispin - 1)*pnp)
+      end do
     end if
 
     if(hm%family_is_mgga_with_exc) then
@@ -357,71 +393,61 @@ contains
 
     call worker_elec_update_hamiltonian(namespace, st, gr, hm, time)
 
-    if(tr%method == PROP_CAETRS) then
+    call density_calc_init(dens_calc, st, gr, st%rho)
+
+    ! propagate the other half with H(t)
+    do ik = st%d%kpt%start, st%d%kpt%end
+      ispin = states_elec_dim_get_spin_index(st%d, ik)
+
+      do ib = st%group%block_start, st%group%block_end
+
+        call profiling_in(phase_prof, "CAETRS_PHASE")
+        select case(batch_status(st%group%psib(ib, ik)))
+        case(BATCH_NOT_PACKED)
+          do ip = 1, gr%mesh%np
+            vv = vold(ip, ispin)
+            phase = TOCMPLX(cos(vv), -sin(vv))
+            forall(ist = 1:st%group%psib(ib, ik)%nst_linear)
+              st%group%psib(ib, ik)%states_linear(ist)%zpsi(ip) = st%group%psib(ib, ik)%states_linear(ist)%zpsi(ip)*phase
+            end forall
+          end do
+        case(BATCH_PACKED)
+          do ip = 1, gr%mesh%np
+            vv = vold(ip, ispin)
+            phase = TOCMPLX(cos(vv), -sin(vv))
+            forall(ist = 1:st%group%psib(ib, ik)%nst_linear)
+              st%group%psib(ib, ik)%pack%zpsi(ist, ip) = st%group%psib(ib, ik)%pack%zpsi(ist, ip)*phase
+            end forall
+          end do
+        case(BATCH_DEVICE_PACKED)
+          call accel_set_kernel_arg(kernel_phase, 0, pnp*(ispin - 1))
+          call accel_set_kernel_arg(kernel_phase, 1, phase_buff)
+          call accel_set_kernel_arg(kernel_phase, 2, st%group%psib(ib, ik)%pack%buffer)
+          call accel_set_kernel_arg(kernel_phase, 3, log2(st%group%psib(ib, ik)%pack%size(1)))
+
+          iprange = accel_max_workgroup_size()/st%group%psib(ib, ik)%pack%size(1)
+
+          call accel_kernel_run(kernel_phase, (/st%group%psib(ib, ik)%pack%size(1), pnp/), &
+            (/st%group%psib(ib, ik)%pack%size(1), iprange/))
+        end select
+        call profiling_out(phase_prof)
+
+        call exponential_apply_batch(tr%te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+        call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
  
-      call density_calc_init(dens_calc, st, gr, st%rho)
-
-      ! propagate the other half with H(t)
-      do ik = st%d%kpt%start, st%d%kpt%end
-        ispin = states_elec_dim_get_spin_index(st%d, ik)
-
-        do ib = st%group%block_start, st%group%block_end
-
-          call profiling_in(phase_prof, "CAETRS_PHASE")
-          select case(batch_status(st%group%psib(ib, ik)))
-          case(BATCH_NOT_PACKED)
-            do ip = 1, gr%mesh%np
-              vv = vold(ip, ispin)
-              phase = TOCMPLX(cos(vv), -sin(vv))
-              forall(ist = 1:st%group%psib(ib, ik)%nst_linear)
-                st%group%psib(ib, ik)%states_linear(ist)%zpsi(ip) = st%group%psib(ib, ik)%states_linear(ist)%zpsi(ip)*phase
-              end forall
-            end do
-          case(BATCH_PACKED)
-            do ip = 1, gr%mesh%np
-              vv = vold(ip, ispin)
-              phase = TOCMPLX(cos(vv), -sin(vv))
-              forall(ist = 1:st%group%psib(ib, ik)%nst_linear)
-                st%group%psib(ib, ik)%pack%zpsi(ist, ip) = st%group%psib(ib, ik)%pack%zpsi(ist, ip)*phase
-              end forall
-            end do
-          case(BATCH_DEVICE_PACKED)
-            call accel_set_kernel_arg(kernel_phase, 0, pnp*(ispin - 1))
-            call accel_set_kernel_arg(kernel_phase, 1, phase_buff)
-            call accel_set_kernel_arg(kernel_phase, 2, st%group%psib(ib, ik)%pack%buffer)
-            call accel_set_kernel_arg(kernel_phase, 3, log2(st%group%psib(ib, ik)%pack%size(1)))
-
-            iprange = accel_max_workgroup_size()/st%group%psib(ib, ik)%pack%size(1)
-
-            call accel_kernel_run(kernel_phase, (/st%group%psib(ib, ik)%pack%size(1), pnp/), &
-              (/st%group%psib(ib, ik)%pack%size(1), iprange/))
-          end select
-          call profiling_out(phase_prof)
-
-          call exponential_apply_batch(tr%te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
-          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
- 
-        end do
       end do
+    end do
 
-      call density_calc_end(dens_calc)
+    call density_calc_end(dens_calc)
 
-    else
-
-      call worker_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
-
-    end if
-
-    if(tr%method == PROP_CAETRS .and. accel_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
+    if(accel_is_enabled() .and. hamiltonian_apply_packed(hm, gr%mesh)) then
       call accel_release_buffer(phase_buff)
     end if
 
-    if(tr%method == PROP_CAETRS) then
-      SAFE_DEALLOCATE_A(vold)
-    end if
+    SAFE_DEALLOCATE_A(vold)
 
-    POP_SUB(td_aetrs)
-  end subroutine td_aetrs
+    POP_SUB(td_caetrs)
+  end subroutine td_caetrs
 
 end module propagator_etrs_oct_m
 

@@ -99,7 +99,8 @@ module hamiltonian_oct_m
     zhamiltonian_apply_atom,         &
     hamiltonian_dump_vhxc,           &
     hamiltonian_load_vhxc,           &
-    zoct_exchange_operator
+    zoct_exchange_operator,          &
+    hamiltonian_set_vhxc
 
   type hamiltonian_t
     ! Components are public by default
@@ -1455,6 +1456,23 @@ contains
     end subroutine build_phase
 
   end subroutine hamiltonian_update2
+
+ ! ---------------------------------------------------------
+ subroutine hamiltonian_set_vhxc(hm, mesh, vold, vold_tau)
+   type(hamiltonian_t), intent(inout)  :: hm
+   type(mesh_t),        intent(in)     :: mesh
+   FLOAT,               intent(in)     :: vold(:, :)
+   FLOAT, optional,     intent(in)     :: vold_tau(:, :)
+
+   PUSH_SUB(hamiltonian_set_vhxc)
+
+   call lalg_copy(mesh%np, hm%d%nspin, vold, hm%vhxc)
+   if(present(vold_tau)) then
+     call lalg_copy(mesh%np, hm%d%nspin, vold_tau, hm%vtau)
+   end if
+
+   POP_SUB(hamiltonian_set_vhxc)
+ end subroutine hamiltonian_set_vhxc
 
 
 #include "undef.F90"

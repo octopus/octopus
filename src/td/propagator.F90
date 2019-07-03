@@ -539,8 +539,10 @@ contains
       else
         call td_etrs(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
       end if
-    case(PROP_AETRS, PROP_CAETRS)
+    case(PROP_AETRS)
       call td_aetrs(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
+    case(PROP_CAETRS)
+      call td_caetrs(ks, namespace, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
     case(PROP_EXPONENTIAL_MIDPOINT)
       call exponential_midpoint(hm, psolver, namespace, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
     case(PROP_CRANK_NICOLSON)
