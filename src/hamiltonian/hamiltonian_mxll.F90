@@ -19,29 +19,23 @@
 #include "global.h"
 
 module hamiltonian_mxll_oct_m
-  use accel_oct_m
   use batch_oct_m
-  use batch_ops_oct_m
   use blas_oct_m
   use boundaries_oct_m
   use boundary_op_oct_m
   use comm_oct_m
   use cube_oct_m
   use derivatives_oct_m
-  use energy_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hardware_oct_m
   use io_oct_m
   use io_function_oct_m
   use lalg_basic_oct_m
-  use lasers_oct_m
   use math_oct_m
   use maxwell_boundary_op_oct_m
   use mesh_oct_m
   use mesh_cube_parallel_map_oct_m
-  use mesh_batch_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -55,14 +49,10 @@ module hamiltonian_mxll_oct_m
   use simul_box_oct_m
   use states_oct_m
   use states_dim_oct_m
-  use states_parallel_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
-  use xc_oct_m
-  use xc_functl_oct_m
-  use XC_F90(lib_m)
   use xyz_adjust_oct_m
 
   implicit none
@@ -94,7 +84,6 @@ module hamiltonian_mxll_oct_m
     !> The Hamiltonian must know what are the "dimensions" of the spaces,
     !! in order to be able to operate on the states.
     type(states_dim_t)       :: d
-    type(bc_t)               :: bc      !< boundaries
 
     !> absorbing boundaries
     logical :: adjoint
@@ -104,96 +93,93 @@ module hamiltonian_mxll_oct_m
     
     logical :: time_zero
 
-    logical                        :: maxwell_ks_calculation
+    type(nl_operator_t), pointer   :: operators 
 
-    type(poisson_t)                :: maxwell_poisson_solver
-    FLOAT, pointer                 :: maxwell_vector_potential(:,:)
+    type(poisson_t)                :: poisson
+    FLOAT, pointer                 :: vector_potential(:,:)
 
-    type(maxwell_bc_t)             :: maxwell_bc
-    type(grid_t), pointer          :: maxwell_gr
-    type(states_t), pointer        :: maxwell_st
+    type(maxwell_bc_t)             :: bc
+    type(grid_t), pointer          :: gr
+    type(states_t), pointer        :: st
 
-    integer                        :: maxwell_rs_sign
+    integer                        :: rs_sign
 
-    logical                        :: maxwell_propagation_apply
+    logical                        :: propagation_apply
 
-    integer                        :: maxwell_op_method
+    integer                        :: op_method
 
-    logical                        :: maxwell_lorentz_force
-    logical                        :: maxwell_lorentz_force_apply
+    logical                        :: lorentz_force
+    logical                        :: lorentz_force_apply
 
-    integer, pointer               :: maxwell_rs_state_fft_map(:,:,:)
-    integer, pointer               :: maxwell_rs_state_fft_map_inv(:,:)
+    integer, pointer               :: rs_state_fft_map(:,:,:)
+    integer, pointer               :: rs_state_fft_map_inv(:,:)
 
-    integer                        :: mx_ma_trans_field_calc_method
-    logical                        :: mx_ma_trans_field_calc_corr
+    logical                        :: bc_add_ab_region  = .false.
+    logical                        :: bc_zero           = .false.
+    logical                        :: bc_constant       = .false.
+    logical                        :: bc_mirror_pec     = .false.
+    logical                        :: bc_mirror_pmc     = .false.
+    logical                        :: bc_periodic       = .false.
+    logical                        :: bc_plane_waves    = .false.
+    logical                        :: bc_medium         = .false.
 
-    logical                        :: maxwell_bc_add_ab_region  = .false.
-    logical                        :: maxwell_bc_zero           = .false.
-    logical                        :: maxwell_bc_constant       = .false.
-    logical                        :: maxwell_bc_mirror_pec     = .false.
-    logical                        :: maxwell_bc_mirror_pmc     = .false.
-    logical                        :: maxwell_bc_periodic       = .false.
-    logical                        :: maxwell_bc_plane_waves    = .false.
-    logical                        :: maxwell_bc_medium         = .false.
+    logical                        :: plane_waves
+    logical                        :: plane_waves_apply
+    logical                        :: spatial_constant
+    logical                        :: spatial_constant_apply
 
-    logical                        :: maxwell_plane_waves
-    logical                        :: maxwell_plane_waves_apply
-    logical                        :: maxwell_spatial_constant
-    logical                        :: maxwell_spatial_constant_apply
+    logical                        :: diamagnetic_current
+    logical                        :: spin_current
 
-    logical                        :: maxwell_diamagnetic_current
-    logical                        :: maxwell_spin_current
+    integer                        :: medium_calculation
 
-    integer                        :: maxwell_medium_calculation
-
-    logical                        :: maxwell_medium_box = .false.
-    integer                        :: maxwell_medium_box_number
-    integer, pointer               :: maxwell_medium_box_shape(:)
-    FLOAT, pointer                 :: maxwell_medium_box_center(:,:)
-    FLOAT, pointer                 :: maxwell_medium_box_size(:,:)
-    FLOAT, pointer                 :: maxwell_medium_box_ep(:,:)
-    FLOAT, pointer                 :: maxwell_medium_box_mu(:,:)
-    FLOAT, pointer                 :: maxwell_medium_box_c(:,:)
-    FLOAT, pointer                 :: maxwell_medium_box_ep_factor(:)
-    FLOAT, pointer                 :: maxwell_medium_box_mu_factor(:)
-    FLOAT, pointer                 :: maxwell_medium_box_sigma_e_factor(:)
-    FLOAT, pointer                 :: maxwell_medium_box_sigma_m_factor(:)
-    FLOAT, pointer                 :: maxwell_medium_box_sigma_e(:,:)
-    FLOAT, pointer                 :: maxwell_medium_box_sigma_m(:,:)
-    integer, pointer               :: maxwell_medium_box_points_number(:)
-    FLOAT, pointer                 :: maxwell_medium_box_points_map(:,:)
-    FLOAT, pointer                 :: maxwell_medium_box_aux_ep(:,:,:)
-    FLOAT, pointer                 :: maxwell_medium_box_aux_mu(:,:,:)
-    integer, pointer               :: maxwell_medium_box_bdry_number(:)
-    FLOAT, pointer                 :: maxwell_medium_box_bdry_map(:,:)
+    logical                        :: medium_box = .false.
+    integer                        :: medium_box_number
+    integer, pointer               :: medium_box_shape(:)
+    FLOAT, pointer                 :: medium_box_center(:,:)
+    FLOAT, pointer                 :: medium_box_size(:,:)
+    FLOAT, pointer                 :: medium_box_ep(:,:)
+    FLOAT, pointer                 :: medium_box_mu(:,:)
+    FLOAT, pointer                 :: medium_box_c(:,:)
+    FLOAT, pointer                 :: medium_box_ep_factor(:)
+    FLOAT, pointer                 :: medium_box_mu_factor(:)
+    FLOAT, pointer                 :: medium_box_sigma_e_factor(:)
+    FLOAT, pointer                 :: medium_box_sigma_m_factor(:)
+    FLOAT, pointer                 :: medium_box_sigma_e(:,:)
+    FLOAT, pointer                 :: medium_box_sigma_m(:,:)
+    integer, pointer               :: medium_box_points_number(:)
+    FLOAT, pointer                 :: medium_box_points_map(:,:)
+    FLOAT, pointer                 :: medium_box_aux_ep(:,:,:)
+    FLOAT, pointer                 :: medium_box_aux_mu(:,:,:)
+    integer, pointer               :: medium_box_bdry_number(:)
+    FLOAT, pointer                 :: medium_box_bdry_map(:,:)
   
     !> maxwell hamiltonian_mxll
-    integer                        :: maxwell_operator
-    logical                        :: maxwell_current_density_ext_flag
-    FLOAT                          :: maxwell_energy
-    FLOAT                          :: maxwell_energy_boundaries
-    FLOAT                          :: maxwell_e_energy
-    FLOAT                          :: maxwell_b_energy
-    FLOAT                          :: maxwell_energy_plane_waves
-    FLOAT                          :: maxwell_e_energy_plane_waves
-    FLOAT                          :: maxwell_b_energy_plane_waves
+    integer                        :: operator
+    logical                        :: current_density_ext_flag
+    FLOAT                          :: energy
+    FLOAT                          :: energy_boundaries
+    FLOAT                          :: e_energy
+    FLOAT                          :: b_energy
+    FLOAT                          :: energy_plane_waves
+    FLOAT                          :: e_energy_plane_waves
+    FLOAT                          :: b_energy_plane_waves
 
-    FLOAT                          :: maxwell_energy_pml
-    FLOAT                          :: maxwell_energy_mask
-    FLOAT, pointer                 :: maxwell_energy_density(:)
-    FLOAT, pointer                 :: maxwell_energy_density_plane_waves(:)
-    FLOAT, pointer                 :: maxwell_e_energy_density(:)
-    FLOAT, pointer                 :: maxwell_b_energy_density(:)
-    FLOAT                          :: maxwell_energy_trans
-    FLOAT                          :: maxwell_energy_long
-    FLOAT                          :: maxwell_e_energy_trans
-    FLOAT                          :: maxwell_b_energy_trans
-    FLOAT                          :: maxwell_energy_incident_waves
+    FLOAT                          :: energy_pml
+    FLOAT                          :: energy_mask
+    FLOAT, pointer                 :: energy_density(:)
+    FLOAT, pointer                 :: energy_density_plane_waves(:)
+    FLOAT, pointer                 :: e_energy_density(:)
+    FLOAT, pointer                 :: b_energy_density(:)
+    FLOAT                          :: energy_trans
+    FLOAT                          :: energy_long
+    FLOAT                          :: e_energy_trans
+    FLOAT                          :: b_energy_trans
+    FLOAT                          :: energy_incident_waves
 
-    logical                        :: maxwell_cpml_hamiltonian_mxll = .false.
+    logical                        :: cpml_hamiltonian_mxll = .false.
 
-    logical                        :: maxwell_diamag_current = .false.
+    logical                        :: diamag_current = .false.
 
     integer                        :: current_prop_test = 0
 
@@ -216,7 +202,7 @@ module hamiltonian_mxll_oct_m
     CLASSICAL             = 5, &
     RDMFT                 = 7
 
-  type(profile_t), save :: prof_hamiltonian_mxll, prof_kinetic_start, prof_kinetic_finish
+  type(profile_t), save :: prof_hamiltonian_mxll
 
 contains
 
@@ -228,18 +214,19 @@ contains
  
     hm%adjoint = .false.
     
-    hm%maxwell_hamiltonian_mxll = .false.
-    hm%maxwell_current_density_ext_flag = .false.
+    hm%hamiltonian_mxll = .false.
+    hm%current_density_ext_flag = .false.
 
-    nullify(hm%maxwell_energy_density)
-    nullify(hm%maxwell_e_energy_density)
-    nullify(hm%maxwell_b_energy_density)
+    nullify(hm%energy_density)
+    nullify(hm%e_energy_density)
+    nullify(hm%b_energy_density)
 
     POP_SUB(hamiltonian_mxll_null)
   end subroutine hamiltonian_mxll_null
 
 
   ! ---------------------------------------------------------
+  !> Initializing the Maxwell Hamiltonian
   subroutine hamiltonian_mxll_init(hm, parser, gr, geo, st)
     type(hamiltonian_mxll_t),                   intent(inout) :: hm
     type(parser_t),                             intent(in)    :: parser
@@ -263,22 +250,22 @@ contains
 
     ASSERT(associated(gr%der%lapl))
 
-    maxwell_hm%hm_base%maxwell_operator(1:MAX_DIM) => maxwell_gr%der%grad(1:MAX_DIM)     ! cross product for Maxwell calculation needs dimension >= 2
+    hm%operators(1:MAX_DIM) => gr%der%grad(1:MAX_DIM)     ! cross product for Maxwell calculation needs dimension >= 2
 
-    maxwell_hm%maxwell_rs_sign = maxwell_st%maxwell_rs_sign
+    hm%rs_sign = st%rs_sign
 
-    SAFE_ALLOCATE(maxwell_hm%maxwell_vector_potential(1:maxwell_gr%mesh%np_part,1:maxwell_st%d%dim))
-    SAFE_ALLOCATE(maxwell_hm%maxwell_energy_density(1:maxwell_gr%mesh%np_part))
-    SAFE_ALLOCATE(maxwell_hm%maxwell_energy_density_plane_waves(1:maxwell_gr%mesh%np_part))
-    SAFE_ALLOCATE(maxwell_hm%maxwell_e_energy_density(1:maxwell_gr%mesh%np_part))
-    SAFE_ALLOCATE(maxwell_hm%maxwell_b_energy_density(1:maxwell_gr%mesh%np_part))
+    SAFE_ALLOCATE(hm%vector_potential(1:gr%mesh%np_part,1:maxwell_st%d%dim))
+    SAFE_ALLOCATE(hm%energy_density(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(hm%energy_density_plane_waves(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(hm%e_energy_density(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(hm%b_energy_density(1:gr%mesh%np_part))
 
-    maxwell_hm%maxwell_vector_potential = M_ZERO
-    maxwell_hm%maxwell_energy_density = M_ZERO
-    maxwell_hm%maxwell_e_energy_density = M_ZERO
-    maxwell_hm%maxwell_b_energy_density = M_ZERO
+    hm%vector_potential = M_ZERO
+    hm%energy_density = M_ZERO
+    hm%e_energy_density = M_ZERO
+    hm%b_energy_density = M_ZERO
 
-    SAFE_ALLOCATE(maxwell_hm%cube%fft)
+    SAFE_ALLOCATE(hm%cube%fft)
 
     !%Variable MaxwellHamiltonianOperator
     !%Type integer
@@ -298,12 +285,12 @@ contains
     !% The propagation operation is done by 4x4 matrices also with Gauss laws constraint in medium
     !%End
     call parse_variable(parser, 'MaxwellHamiltonianOperator', OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE, &
-                        maxwell_hm%maxwell_operator)
+                        hm%maxwell_operator)
 
-    if (maxwell_hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
-      maxwell_hm%d%dim = maxwell_hm%d%dim+1
-    else if (maxwell_hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
-      maxwell_hm%d%dim = 2*maxwell_hm%d%dim
+    if (hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
+      hm%d%dim = hm%d%dim+1
+    else if (hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+      hm%d%dim = 2*hm%d%dim
     end if
 
     !%Variable MaxwellExternalCurrent
@@ -313,19 +300,7 @@ contains
     !%Description
     !% Description follows
     !%End
-    call parse_variable(parser, 'MaxwellExternalCurrent', .false., maxwell_hm%maxwell_current_density_ext_flag)
-
-    !%Variable MatterToMaxwellCoupling
-    !%Type logical
-    !%Default yes
-    !%Section Hamiltonian
-    !%Description
-    !% If the MatterToMaxwellCoupling flag is set, the time-depending motion of the matter 
-    !% electrons couples to the electromagnetic fields. In the case of switched off,
-    !% the initial electromagnetic fields propagate undisturbed.
-    !%End
-    call parse_variable(parser, 'MatterToMaxwellCoupling', .true., maxwell_hm%ma_mx_coupling)
-    maxwell_hm%ma_mx_coupling_apply = .false.
+    call parse_variable(parser, 'MaxwellExternalCurrent', .false., hm%current_density_ext_flag)
 
     maxwell_hm%maxwell_plane_waves_apply = .false.
     maxwell_hm%maxwell_spatial_constant_apply = .false.
@@ -346,213 +321,13 @@ contains
     !% Medium calculation via curl of electric field and magnetic field
     !%End
     default_propagator = OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN
-    call parse_variable('MaxwellMediumCalculation', default_propagator, maxwell_hm%maxwell_medium_calculation)
+    call parse_variable('MaxwellMediumCalculation', default_propagator, hm%medium_calculation)
 
-    maxwell_hm%maxwell_rs_state_fft_map     => maxwell_st%maxwell_rs_state_fft_map
-    maxwell_hm%maxwell_rs_state_fft_map_inv => maxwell_st%maxwell_rs_state_fft_map_inv
+    hm%rs_state_fft_map     => st%rs_state_fft_map
+    hm%rs_state_fft_map_inv => st%rs_state_fft_map_inv
 
-
-
-    if (hm%maxwell_ks_calculation) then
-
-      call epot_init_maxwell_coupling(hm%ep, gr%mesh)
-
-      !%Variable MaxwellTransFieldCalculationMethod
-      !%Type integer
-      !%Default 1
-      !%Section Hamiltonian
-      !%Description
-      !% Follows 
-      !%Option trans_field_matter 1
-      !% Follows
-      !%Option trans_field_poisson 3
-      !% Follows
-      !%Option trans_field_poisson_corr 4
-      !% Follows
-      !%Option trans_field_poisson_long 5
-      !% Follows
-      !%Option trans_field_poisson_long_corr 6
-      !% Follows
-      !%Option trans_field_poisson_no_corr 7
-      !% Follows
-      !%End
-      default = OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON
-      call parse_variable('MaxwellTransFieldCalculationMethod', default, hm%mx_ma_trans_field_calc_method)
-
-      !%Variable MaxwellTransFieldCalculationCorr
-      !%Type logical
-      !%Default yes
-      !%Section Hamiltonian
-      !%Description
-      !% Follows
-      !%End
-      call parse_variable('MaxwellTransFieldCalculationCorr', .true., hm%mx_ma_trans_field_calc_corr)
-
-      call messages_print_stress(stdout, 'Method of transverse electric field calculation')      
-      if (hm%mx_ma_trans_field_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_MATTER) then
-        string = ' Transverse electric field calculation by subtracting longitudinal'
-        write(message(1),'(a)') trim(string)
-        call messages_info(1)
-        string = ' part of matter electric field.'
-        write(message(1),'(a)') trim(string)
-        call messages_info(1)
-      else if (hm%mx_ma_trans_field_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON) then
-        string = ' Direct transverse electric field calculation with poisson solver'
-        write(message(1),'(a)') trim(string)
-        call messages_info(1)
-      else if (hm%mx_ma_trans_field_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON_CORR) then
-        string = ' Direct transverse electric field calculation with poisson solver'
-        write(message(1),'(a)') trim(string)
-        call messages_info(1)
-        string = ' after subtracting the longitudinal part of the matter electric field.'
-        write(message(1),'(a)') trim(string)
-        call messages_info(1)
-      else if (hm%mx_ma_trans_field_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON_LONG) then
-        string = ' Transverse electric field calculation by direct calculation'
-        write(message(1),'(a)') trim(string)
-        call messages_info(1)
-        string = ' of the longitudinal electric field and subtraction.'
-        write(message(1),'(a)') trim(string)
-        call messages_info(1)
-      else if (hm%mx_ma_trans_field_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON_LONG_CORR) then
-        string = ' Transverse electric field calculation by direct calculation'
-        write(message(1),'(a)') trim(string)
-        call messages_info(1)
-        string = ' of the longitudinal electric field after subtracting the'
-        write(message(1),'(a)') trim(string)
-        call messages_info(1)
-        string = ' longitudinal part of the matter electric field.'
-        write(message(1),'(a)') trim(string)
-        call messages_info(1)
-      end if
-      call messages_print_stress(stdout)
-
-      !%Variable MaxwellLorentzForce
-      !%Type logical
-      !%Default yes
-      !%Section Hamiltonian
-      !%Description
-      !% Follows...
-      !%End
-      call parse_variable('MaxwellLorentzForce', .true., hm%maxwell_lorentz_force)
-      hm%maxwell_lorentz_force_apply = .false.
-
-      !%Variable MaxwellDiamagneticCurrent
-      !%Type logical
-      !%Default yes
-      !%Section Hamiltonian
-      !%Description
-      !% Follows...
-      !%End
-      call parse_variable('MaxwellDiamagneticCurrent', .true., hm%maxwell_diamagnetic_current)
-
-      !%Variable MaxwellSpinCurrent
-      !%Type logical
-      !%Default yes
-      !%Section Hamiltonian
-      !%Description
-      !% Follows...
-      !%End
-      call parse_variable('MaxwellSpinCurrent', .true., hm%maxwell_spin_current)
-
-    end if
-    
-    if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb) .and. .not. gauge_field_is_applied(hm%ep%gfield)) then
-      ! only need vberry if there is a field in a periodic direction
-      ! and we are not setting a gauge field
-      if(any(abs(hm%ep%E_field(1:gr%sb%periodic_dim)) > M_EPSILON)) then
-        SAFE_ALLOCATE(hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
-      end if
-    end if
-
-    !Static magnetic field requires complex wavefunctions
-    !Static magnetic field or rashba spin-orbit interaction requires complex wavefunctions
-    if (associated(hm%ep%B_field)) call states_set_complex(st)
-
-    call parse_variable('CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
-    !%Variable CalculateSelfInducedMagneticField
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian
-    !%Description
-    !% The existence of an electronic current implies the creation of a self-induced magnetic
-    !% field, which may in turn back-react on the system. Of course, a fully consistent treatment
-    !% of this kind of effect should be done in QED theory, but we will attempt a first
-    !% approximation to the problem by considering the lowest-order relativistic terms
-    !% plugged into the normal Hamiltonian equations (spin-other-orbit coupling terms, etc.).
-    !% For the moment being, none of this is done, but a first step is taken by calculating
-    !% the induced magnetic field of a system that has a current, by considering the magnetostatic
-    !% approximation and Biot-Savart law:
-    !%
-    !% <math> \nabla^2 \vec{A} + 4\pi\alpha \vec{J} = 0</math>
-    !%
-    !% <math> \vec{B} = \vec{\nabla} \times \vec{A}</math>
-    !%
-    !% If <tt>CalculateSelfInducedMagneticField</tt> is set to yes, this <i>B</i> field is
-    !% calculated at the end of a <tt>gs</tt> calculation (nothing is done -- yet -- in the <tt>td</tt>case)
-    !% and printed out, if the <tt>Output</tt> variable contains the <tt>potential</tt> keyword (the prefix
-    !% of the output files is <tt>Bind</tt>).
-    !%End
-    if(hm%self_induced_magnetic) then
-      SAFE_ALLOCATE(hm%a_ind(1:gr%mesh%np_part, 1:gr%sb%dim))
-      SAFE_ALLOCATE(hm%b_ind(1:gr%mesh%np_part, 1:gr%sb%dim))
-
-      !(for dim = we could save some memory, but it is better to keep it simple)
-    end if
-
-    ! Boundaries
-    call bc_init(hm%bc, gr%mesh, gr%mesh%sb, hm%geo)
-
-    !%Variable MassScaling
-    !%Type block
-    !%Section Hamiltonian
-    !%Description
-    !% Scaling factor for anisotropic masses (different masses along each
-    !% geometric direction).
-    !%
-    !% <tt>%MassScaling
-    !% <br>&nbsp;&nbsp;1.0 | 1800.0 | 1800.0
-    !% <br>%</tt>
-    !%
-    !% would fix the mass of the particles to be 1800 along the <i>y</i> and <i>z</i>
-    !% directions. This can be useful, <i>e.g.</i>, to simulate 3 particles in 1D,
-    !% in this case an electron and 2 protons.
-    !%
-    !%End
-    hm%mass_scaling(1:gr%sb%dim) = M_ONE
-    if(parse_block('MassScaling', blk) == 0) then
-        ncols = parse_block_cols(blk, 0)
-        if(ncols > gr%sb%dim) then
-          call messages_input_error("MassScaling")
-        end if
-        iline = 1 ! just deal with 1 line - should be generalized
-        do icol = 1, ncols
-          call parse_block_float(blk, iline - 1, icol - 1, hm%mass_scaling(icol))
-        end do
-        call parse_block_end(blk)
-    end if
-
-    !%Variable StatesPack
-    !%Type logical
-    !%Default yes
-    !%Section Execution::Optimization
-    !%Description
-    !% If set to yes (the default), Octopus will 'pack' the
-    !% wave-functions when operating with them. This involves some
-    !% additional copying but makes operations more efficient.
-    !%End
     call parse_variable('StatesPack', .true., hm%apply_packed)
 
-    !%Variable TimeZero
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian
-    !%Description
-    !% (Experimental) If set to yes, the ground state and other time
-    !% dependent calculation will assume that they are done at time
-    !% zero, so that all time depedent field at that time will be
-    !% included.
-    !%End
     call parse_variable('TimeZero', .false., hm%time_zero)
     if(hm%time_zero) call messages_experimental('TimeZero')
 
@@ -568,7 +343,7 @@ contains
 
     PUSH_SUB(hamiltonian_mxll_end)
 
-    this%hm_base%maxwell_operator => null()
+    nullify(hm%operators)
 
     SAFE_DEALLOCATE_P(this%maxwell_energy_density)
     SAFE_DEALLOCATE_P(this%cube%fft)
@@ -622,6 +397,7 @@ contains
 
 
   ! ---------------------------------------------------------
+  !> Maxwell Hamiltonian update (here only the time is updated, can maybe be added to another routine)
   subroutine hamiltonian_mxll_update(this, mesh, time)
     type(hamiltonian_mxll_t), intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
@@ -666,13 +442,12 @@ subroutine hamiltonian_mxll_apply_batch (hm, der, psib, hpsib, time, terms, set_
   integer, optional,        intent(in)    :: terms
   logical, optional,        intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
+  type(profile_t), save :: prof_hamiltonian
   logical :: pack
   integer :: ii
-  type(derivatives_handle_batch_t) :: handle
   integer :: terms_
-  type(projection_t) :: projection
 
-  call profiling_in(prof_hamiltonian_mxll, "MXLL_HAMILTONIAN")
+  call profiling_in(prof_hamiltonian, "MXLL_HAMILTONIAN")
   PUSH_SUB(hamiltonian_mxll_apply_batch)
 
   ASSERT(batch_status(psib) == batch_status(hpsib))
@@ -695,7 +470,7 @@ subroutine hamiltonian_mxll_apply_batch (hm, der, psib, hpsib, time, terms, set_
 !  end if
 
   if(present(time)) then
-      if(abs(time - maxwell_hm%current_time) > CNST(1e-10)) then
+      if(abs(time - hm%current_time) > CNST(1e-10)) then
         write(message(1),'(a)') 'hamiltonian_apply_batch time assertion failed.'
         write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', maxwell_hm%current_time
         call messages_fatal(2)
@@ -711,12 +486,12 @@ subroutine hamiltonian_mxll_apply_batch (hm, der, psib, hpsib, time, terms, set_
 !  end if
 
   POP_SUB(hamiltonian_mxll_apply_batch)
-  call profiling_out(prof_hamiltonian_mxll)
+  call profiling_out(prof_hamiltonian)
 
 end subroutine hamiltonian_mxll_apply_batch
 
 ! ---------------------------------------------------------
-
+!> Applying the Maxwell Hamiltonian on Maxwell states
 subroutine hamiltonian_mxll_apply (hm, der, psi, hpsi, ist, ik, time, terms, set_bc)
   type(hamiltonian_mxll_t), intent(in)    :: hm
   type(derivatives_t), intent(in)    :: der
@@ -728,7 +503,8 @@ subroutine hamiltonian_mxll_apply (hm, der, psi, hpsi, ist, ik, time, terms, set
   integer,  optional,  intent(in)    :: terms
   logical,  optional,  intent(in)    :: set_bc
 
-  type(batch_t) :: psib, hpsib
+!  type(batch_t) :: psib, hpsib
+  type(profile_t), save :: prof_hamiltonian
 
   PUSH_SUB(hamiltonian_mxll_apply)
 
@@ -745,7 +521,7 @@ subroutine hamiltonian_mxll_apply (hm, der, psi, hpsi, ist, ik, time, terms, set
    call profiling_in(prof_hamiltonian, "MAXWELLHAMILTONIAN")
 
    if(present(time)) then
-      if(abs(time - maxwell_hm%current_time) > CNST(1e-10)) then
+      if(abs(time - hm%current_time) > CNST(1e-10)) then
         write(message(1),'(a)') 'hamiltonian_apply_batch time assertion failed.'
         write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', maxwell_hm%current_time
         call messages_fatal(2)
@@ -755,28 +531,27 @@ subroutine hamiltonian_mxll_apply (hm, der, psi, hpsi, ist, ik, time, terms, set
     select case (maxwell_hm%maxwell_op_method)
       case(OPTION__MAXWELLTDOPERATORMETHOD__MAXWELL_OP_FD)
         call maxwell_hamiltonian_apply_fd(maxwell_hm, maxwell_der, psi, oppsi)
-     ! case(OPTION__MAXWELLTDOPERATORMETHOD__MAXWELL_OP_FFT)
-     !   call maxwell_hamiltonian_apply_fft(maxwell_hm, maxwell_der, psi, oppsi)
+      case(OPTION__MAXWELLTDOPERATORMETHOD__MAXWELL_OP_FFT)
+        call maxwell_hamiltonian_apply_fft(maxwell_hm, maxwell_der, psi, oppsi)
     end select
 
+  call profiling_out(prof_hamiltonian)
 
   POP_SUB(hamiltonian_mxll_apply)
 end subroutine hamiltonian_mxll_apply
 
 
 ! ---------------------------------------------------------
-subroutine hamiltonian_mxll_apply_all (hm, xc, der, st, hst, time, Imtime)
+subroutine hamiltonian_mxll_apply_all (hm, xc, der, st, hst, time)
   type(hamiltonian_mxll_t), intent(inout) :: hm
   type(xc_t),          intent(in)    :: xc
   type(derivatives_t), intent(inout) :: der
   type(states_t),      intent(inout) :: st
   type(states_t),      intent(inout) :: hst
   FLOAT, optional,     intent(in)    :: time
-  FLOAT, optional,     intent(in)    :: Imtime
 
   integer :: ik, ib, ist
   R_TYPE, allocatable :: psi(:, :)
-  CMPLX,  allocatable :: psiall(:, :, :, :)
   
   PUSH_SUB(X(hamiltonian_mxll_apply_all))
 
@@ -798,11 +573,12 @@ subroutine hamiltonian_mxll_apply_all (hm, xc, der, st, hst, time, Imtime)
 end subroutine hamiltonian_mxll_apply_all
 
   ! ---------------------------------------------------------
-  subroutine maxwell_hamiltonian_apply_fd(maxwell_hm, maxwell_der, psi, oppsi)
-    type(hamiltonian_t), intent(in)    :: maxwell_hm
-    type(derivatives_t), intent(in)    :: maxwell_der
-    CMPLX,               intent(inout) :: psi(:,:)
-    CMPLX,               intent(inout) :: oppsi(:,:)
+  !> Applying the Maxwell Hamiltonian on Maxwell states with finite difference
+  subroutine maxwell_hamiltonian_apply_fd(hm, der, psi, oppsi)
+    type(hamiltonian_mxll_t), intent(in)    :: hm
+    type(derivatives_t),      intent(in)    :: der
+    CMPLX,                    intent(inout) :: psi(:,:)
+    CMPLX,                    intent(inout) :: oppsi(:,:)
 
     FLOAT              :: kk(MAX_DIM), aa_e(MAX_DIM), aa_m(MAX_DIM), bb_e(MAX_DIM), bb_m(MAX_DIM)
     FLOAT              :: aux_ep(3), aux_mu(3), cc, pml_c(3), pml_aux_ep(3,3), pml_aux_mu(3,3), pml_g_e(3), pml_g_m(3)
@@ -816,65 +592,60 @@ end subroutine hamiltonian_mxll_apply_all
 
     PUSH_SUB(maxwell_hamiltonian_apply_fd)
 
-    np = maxwell_der%mesh%np
-    np_part = maxwell_der%mesh%np_part
-    rs_sign = maxwell_hm%maxwell_rs_sign
+    np = der%mesh%np
+    np_part = der%mesh%np_part
+    rs_sign = hm%rs_sign
 
 
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum via partial derivatives:
 
-    if (maxwell_hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE) then
+    if (hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE) then
 
       SAFE_ALLOCATE(tmp(np_part,2))
       oppsi       = M_z0
 
-      if (maxwell_hm%maxwell_diamag_current) then
-        mx_rho    => maxwell_hm%maxwell_st%maxwell_grid_rho
-        kappa_psi => maxwell_hm%maxwell_st%maxwell_kappa_psi 
+      if (hm%diamag_current) then
+        mx_rho    => hm%st%grid_rho
+        kappa_psi => hm%st%kappa_psi 
       end if
 
       !----------------------------------------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 1 calculation:
       tmp = M_z0
-      call zderivatives_partial(maxwell_der, psi(:,3), tmp(:,1), 2, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,2), tmp(:,2), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,3), tmp(:,1), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,2), tmp(:,2), 3, set_bc = .false.)
       tmp = rs_sign * P_c * tmp
-      call maxwell_pml_hamiltonian(maxwell_hm, maxwell_der, psi, 2, 3, tmp(:,1))
-      call maxwell_pml_hamiltonian(maxwell_hm, maxwell_der, psi, 3, 2, tmp(:,2))
+      call maxwell_pml_hamiltonian(hm, der, psi, 2, 3, tmp(:,1))
+      call maxwell_pml_hamiltonian(hm, der, psi, 3, 2, tmp(:,2))
       oppsi(1:np_part,1) = ( tmp(1:np_part,1)-tmp(1:np_part,2) )
 
       !----------------------------------------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 2 calculation:
       tmp = M_z0
-      call zderivatives_partial(maxwell_der, psi(:,1), tmp(:,1), 3, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,3), tmp(:,2), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,1), tmp(:,1), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,3), tmp(:,2), 1, set_bc = .false.)
       tmp = rs_sign * P_c * tmp
-      call maxwell_pml_hamiltonian(maxwell_hm, maxwell_der, psi, 3, 1, tmp(:,1))
-      call maxwell_pml_hamiltonian(maxwell_hm, maxwell_der, psi, 1, 3, tmp(:,2))
+      call maxwell_pml_hamiltonian(hm, der, psi, 3, 1, tmp(:,1))
+      call maxwell_pml_hamiltonian(hm, der, psi, 1, 3, tmp(:,2))
       oppsi(1:np_part,2) = ( tmp(1:np_part,1)-tmp(1:np_part,2) )
 
       !----------------------------------------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 3 calculation:
       tmp = M_z0
-      call zderivatives_partial(maxwell_der, psi(:,2), tmp(:,1), 1, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,1), tmp(:,2), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,2), tmp(:,1), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,1), tmp(:,2), 2, set_bc = .false.)
       tmp = rs_sign * P_c * tmp
-      call maxwell_pml_hamiltonian(maxwell_hm, maxwell_der, psi, 1, 2, tmp(:,1))
-      call maxwell_pml_hamiltonian(maxwell_hm, maxwell_der, psi, 2, 1, tmp(:,2))
+      call maxwell_pml_hamiltonian(hm, der, psi, 1, 2, tmp(:,1))
+      call maxwell_pml_hamiltonian(hm, der, psi, 2, 1, tmp(:,2))
       oppsi(1:np_part,3) = ( tmp(1:np_part,1)-tmp(1:np_part,2) )
 
-      if (maxwell_hm%maxwell_bc_constant) then
-        do ip_in=1, maxwell_hm%maxwell_bc%constant_points_number
-          ip = maxwell_hm%maxwell_bc%constant_points_map(ip_in)
-          oppsi(ip,:) = maxwell_hm%maxwell_st%maxwell_rs_state_const(:)
+      if (hm%bc_constant) then
+        do ip_in = 1, hm%bc%constant_points_number
+          ip = hm%bc%constant_points_map(ip_in)
+          oppsi(ip,:) = hm%st%rs_state_const(:)
         end do
       end if
-
-!write(*,*) '1', oppsi(maxwell_der%mesh%idx%lxyz_inv(14,0,0),1) !, oppsi(maxwell_der%mesh%idx%lxyz_inv(14,0,0),4)
-!write(*,*) '2', oppsi(maxwell_der%mesh%idx%lxyz_inv(14,0,0),2) !, oppsi(maxwell_der%mesh%idx%lxyz_inv(14,0,0),5) 
-!write(*,*) '3', oppsi(maxwell_der%mesh%idx%lxyz_inv(14,0,0),3) !, oppsi(maxwell_der%mesh%idx%lxyz_inv(14,0,0),6)
-!write(*,*)
 
       SAFE_DEALLOCATE_A(tmp)
 
@@ -890,58 +661,52 @@ end subroutine hamiltonian_mxll_apply_all
       !----------------------------------------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 1 calculation:
       tmp = M_z0
-      call zderivatives_partial(maxwell_der, psi(:,3), tmp(:,1), 2, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,2), tmp(:,3), 3, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,6), tmp(:,2), 2, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,5), tmp(:,4), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,3), tmp(:,1), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,2), tmp(:,3), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,6), tmp(:,2), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,5), tmp(:,4), 3, set_bc = .false.)
       tmp = P_c * tmp
-      call maxwell_pml_hamiltonian_medium(maxwell_hm, maxwell_der, psi, 2, 3, tmp(:,1:2))
-      call maxwell_pml_hamiltonian_medium(maxwell_hm, maxwell_der, psi, 3, 2, tmp(:,3:4))
+      call maxwell_pml_hamiltonian_medium(hm, der, psi, 2, 3, tmp(:,1:2))
+      call maxwell_pml_hamiltonian_medium(hm, der, psi, 3, 2, tmp(:,3:4))
       oppsi(1:np_part,1) =   ( tmp(1:np_part,1)-tmp(1:np_part,3) )
       oppsi(1:np_part,4) = - ( tmp(1:np_part,2)-tmp(1:np_part,4) )
 
       !----------------------------------------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 2 calculation:
       tmp = M_z0
-      call zderivatives_partial(maxwell_der, psi(:,1), tmp(:,1), 3, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,3), tmp(:,3), 1, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,4), tmp(:,2), 3, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,6), tmp(:,4), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,1), tmp(:,1), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,3), tmp(:,3), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,4), tmp(:,2), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,6), tmp(:,4), 1, set_bc = .false.)
       tmp = P_c * tmp
-      call maxwell_pml_hamiltonian_medium(maxwell_hm, maxwell_der, psi, 3, 1, tmp(:,1:2))
-      call maxwell_pml_hamiltonian_medium(maxwell_hm, maxwell_der, psi, 1, 3, tmp(:,3:4))
+      call maxwell_pml_hamiltonian_medium(hm, der, psi, 3, 1, tmp(:,1:2))
+      call maxwell_pml_hamiltonian_medium(hm, der, psi, 1, 3, tmp(:,3:4))
       oppsi(1:np_part,2) =   ( tmp(1:np_part,1)-tmp(1:np_part,3) )
       oppsi(1:np_part,5) = - ( tmp(1:np_part,2)-tmp(1:np_part,4) )
 
       !----------------------------------------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 3 calculation:
       tmp = M_z0
-      call zderivatives_partial(maxwell_der, psi(:,2), tmp(:,1), 1, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,1), tmp(:,3), 2, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,5), tmp(:,2), 1, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,4), tmp(:,4), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,2), tmp(:,1), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,1), tmp(:,3), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,5), tmp(:,2), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,4), tmp(:,4), 2, set_bc = .false.)
       tmp = P_c * tmp
-      call maxwell_pml_hamiltonian_medium(maxwell_hm, maxwell_der, psi, 1, 2, tmp(:,1:2))
-      call maxwell_pml_hamiltonian_medium(maxwell_hm, maxwell_der, psi, 2, 1, tmp(:,3:4))
+      call maxwell_pml_hamiltonian_medium(hm, der, psi, 1, 2, tmp(:,1:2))
+      call maxwell_pml_hamiltonian_medium(hm, der, psi, 2, 1, tmp(:,3:4))
       oppsi(1:np_part,3) =   ( tmp(1:np_part,1)-tmp(1:np_part,3) )
       oppsi(1:np_part,6) = - ( tmp(1:np_part,2)-tmp(1:np_part,4) )
 
-!write(*,*) '1', oppsi(maxwell_der%mesh%idx%lxyz_inv(14,0,0),1), oppsi(maxwell_der%mesh%idx%lxyz_inv(14,0,0),4)
-!write(*,*) '2', oppsi(maxwell_der%mesh%idx%lxyz_inv(14,0,0),2), oppsi(maxwell_der%mesh%idx%lxyz_inv(14,0,0),5) 
-!write(*,*) '3', oppsi(maxwell_der%mesh%idx%lxyz_inv(14,0,0),3), oppsi(maxwell_der%mesh%idx%lxyz_inv(14,0,0),6)
-!write(*,*)
 
       SAFE_DEALLOCATE_A(tmp)
 
       !----------------------------------------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector calculation if medium boundaries is set:
-      call maxwell_medium_boundaries_calculation(maxwell_hm, maxwell_der, psi, oppsi)
+      call maxwell_medium_boundaries_calculation(hm, der, psi, oppsi)
 
       !----------------------------------------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector calculation for medium boxes:
-      call maxwell_medium_boxes_calculation(maxwell_hm, maxwell_der, psi, oppsi)
-
-      SAFE_DEALLOCATE_A(tmp)
+      call maxwell_medium_boxes_calculation(hm, der, psi, oppsi)
 
 
     !==============================================================================================================================
@@ -953,24 +718,24 @@ end subroutine hamiltonian_mxll_apply_all
       oppsi       = M_z0
       tmp = M_z0
 
-      call zderivatives_partial(maxwell_der, psi(:,1), tmp(:,1), 3, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,3), tmp(:,2), 2, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,3), tmp(:,3), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,1), tmp(:,1), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,3), tmp(:,2), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,3), tmp(:,3), 1, set_bc = .false.)
       oppsi(1:np_part,1) = rs_sign * P_c * ( - M_zI*tmp(1:np_part,1) - tmp(1:np_part,2) - M_zI*tmp(1:np_part,3) )
 
-      call zderivatives_partial(maxwell_der, psi(:,2), tmp(:,1), 3, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,4), tmp(:,2), 2, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,4), tmp(:,3), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,2), tmp(:,1), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,4), tmp(:,2), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,4), tmp(:,3), 1, set_bc = .false.)
       oppsi(1:np_part,2) = rs_sign * P_c * ( - M_zI*tmp(1:np_part,1) - tmp(1:np_part,2) - M_zI*tmp(1:np_part,3) )
 
-      call zderivatives_partial(maxwell_der, psi(:,1), tmp(:,1), 2, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,1), tmp(:,2), 1, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,3), tmp(:,3), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,1), tmp(:,1), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,1), tmp(:,2), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,3), tmp(:,3), 3, set_bc = .false.)
       oppsi(1:np_part,3) = rs_sign * P_c * ( tmp(1:np_part,1) - M_zI*tmp(1:np_part,2) + M_zI*tmp(1:np_part,3) )
 
-      call zderivatives_partial(maxwell_der, psi(:,2), tmp(:,1), 2, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,2), tmp(:,2), 1, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,4), tmp(:,3), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,2), tmp(:,1), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,2), tmp(:,2), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,4), tmp(:,3), 3, set_bc = .false.)
       oppsi(1:np_part,4) = rs_sign * P_c * ( tmp(1:np_part,1) - M_zI*tmp(1:np_part,2) + M_zI*tmp(1:np_part,3) )
 
       SAFE_DEALLOCATE_A(tmp)
@@ -979,50 +744,50 @@ end subroutine hamiltonian_mxll_apply_all
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium with Gauss condition via partial derivatives:
 
-    else if (maxwell_hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS_MEDIUM) then
+    else if (hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS_MEDIUM) then
 
       SAFE_ALLOCATE(tmp(np_part,3))
       oppsi       = M_z0
       tmp = M_z0
 
-      call zderivatives_partial(maxwell_der, psi(:,1), tmp(:,1), 3, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,3), tmp(:,2), 2, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,3), tmp(:,3), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,1), tmp(:,1), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,3), tmp(:,2), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,3), tmp(:,3), 1, set_bc = .false.)
       oppsi(1:np_part,1) = P_c*(-M_zI*tmp(1:np_part,1)-tmp(1:np_part,2)-M_zI*tmp(1:np_part,3))
 
-      call zderivatives_partial(maxwell_der, psi(:,2), tmp(:,1), 3, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,4), tmp(:,2), 2, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,4), tmp(:,3), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,2), tmp(:,1), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,4), tmp(:,2), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,4), tmp(:,3), 1, set_bc = .false.)
       oppsi(1:np_part,2) = P_c*(-M_zI*tmp(1:np_part,1)-tmp(1:np_part,2)-M_zI*tmp(1:np_part,3))
 
-      call zderivatives_partial(maxwell_der, psi(:,1), tmp(:,1), 2, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,1), tmp(:,2), 1, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,3), tmp(:,3), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,1), tmp(:,1), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,1), tmp(:,2), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,3), tmp(:,3), 3, set_bc = .false.)
       oppsi(1:np_part,3) = P_c*(tmp(1:np_part,1)-M_zI*tmp(1:np_part,2)+M_zI*tmp(1:np_part,3))
 
-      call zderivatives_partial(maxwell_der, psi(:,2), tmp(:,1), 2, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,2), tmp(:,2), 1, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,4), tmp(:,3), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,2), tmp(:,1), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,2), tmp(:,2), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,4), tmp(:,3), 3, set_bc = .false.)
       oppsi(1:np_part,4) = P_c*(tmp(1:np_part,1)-M_zI*tmp(1:np_part,2)+M_zI*tmp(1:np_part,3))
 
-      call zderivatives_partial(maxwell_der, psi(:,5), tmp(:,1), 3, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,7), tmp(:,2), 2, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,7), tmp(:,3), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,5), tmp(:,1), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,7), tmp(:,2), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,7), tmp(:,3), 1, set_bc = .false.)
       oppsi(1:np_part,5) = - P_c*(-M_zI*tmp(1:np_part,1)-tmp(1:np_part,2)-M_zI*tmp(1:np_part,3))
 
-      call zderivatives_partial(maxwell_der, psi(:,6), tmp(:,1), 3, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,8), tmp(:,2), 2, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,8), tmp(:,3), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,6), tmp(:,1), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,8), tmp(:,2), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,8), tmp(:,3), 1, set_bc = .false.)
       oppsi(1:np_part,6) = - P_c*(-M_zI*tmp(1:np_part,1)-tmp(1:np_part,2)-M_zI*tmp(1:np_part,3))
 
-      call zderivatives_partial(maxwell_der, psi(:,5), tmp(:,1), 2, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,5), tmp(:,2), 1, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,7), tmp(:,3), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,5), tmp(:,1), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,5), tmp(:,2), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,7), tmp(:,3), 3, set_bc = .false.)
       oppsi(1:np_part,7) = - P_c*(tmp(1:np_part,1)-M_zI*tmp(1:np_part,2)+M_zI*tmp(1:np_part,3))
 
-      call zderivatives_partial(maxwell_der, psi(:,6), tmp(:,1), 2, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,6), tmp(:,2), 1, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,7), tmp(:,3), 3, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,6), tmp(:,1), 2, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,6), tmp(:,2), 1, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,7), tmp(:,3), 3, set_bc = .false.)
       oppsi(1:np_part,8) = - P_c*(tmp(1:np_part,1)-M_zI*tmp(1:np_part,2)+M_zI*tmp(1:np_part,3))
 
       SAFE_DEALLOCATE_A(tmp)
@@ -1037,22 +802,23 @@ end subroutine hamiltonian_mxll_apply_all
 
 
   ! ---------------------------------------------------------
-  subroutine maxwell_pml_hamiltonian(maxwell_hm, maxwell_der, psi, dir1, dir2, tmp)
-    type(hamiltonian_t), intent(in)    :: maxwell_hm
-    type(derivatives_t), intent(in)    :: maxwell_der
-    CMPLX,               intent(inout) :: psi(:,:)
-    integer,             intent(in)    :: dir1
-    integer,             intent(in)    :: dir2
-    CMPLX,               intent(inout) :: tmp(:)
+  !> Maxwell Hamiltonian is updated for the PML calculation
+  subroutine maxwell_pml_hamiltonian(hm, der, psi, dir1, dir2, tmp)
+    type(hamiltonian_mxll_t), intent(in)    :: hm
+    type(derivatives_t),      intent(in)    :: der
+    CMPLX,                    intent(inout) :: psi(:,:)
+    integer,                  intent(in)    :: dir1
+    integer,                  intent(in)    :: dir2
+    CMPLX,                    intent(inout) :: tmp(:)
 
     PUSH_SUB(maxwell_pml_hamiltonian)
 
-    if ( (maxwell_hm%maxwell_bc%bc_ab_type(dir1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) .and. &
-          maxwell_hm%maxwell_cpml_hamiltonian ) then
-      if (maxwell_hm%maxwell_medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) then
-        call maxwell_pml_calculation_via_riemann_silberstein(maxwell_hm, maxwell_der, psi, dir1, dir2, tmp(:))
-      else if (maxwell_hm%maxwell_medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__ELECTRIC_MAGNETIC_FIELDS) then
-        call maxwell_pml_calculation_via_e_b_fields(maxwell_hm, maxwell_der, psi, dir1, dir2, tmp(:))
+    if ( (hm%bc%bc_ab_type(dir1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) .and. &
+          hm%cpml_hamiltonian ) then
+      if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) then
+        call maxwell_pml_calculation_via_riemann_silberstein(hm, der, psi, dir1, dir2, tmp(:))
+      else if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__ELECTRIC_MAGNETIC_FIELDS) then
+        call maxwell_pml_calculation_via_e_b_fields(hm, der, psi, dir1, dir2, tmp(:))
       end if
     end if
 
@@ -1061,9 +827,10 @@ end subroutine hamiltonian_mxll_apply_all
 
 
   ! ---------------------------------------------------------
-  subroutine maxwell_pml_hamiltonian_medium(maxwell_hm, maxwell_der, psi, dir1, dir2, tmp)
-    type(hamiltonian_t), intent(in)    :: maxwell_hm
-    type(derivatives_t), intent(in)    :: maxwell_der
+  !> Maxwell Hamiltonian is updated for the PML calculation
+  subroutine maxwell_pml_hamiltonian_medium(hm, der, psi, dir1, dir2, tmp)
+    type(hamiltonian_t), intent(in)    :: hm
+    type(derivatives_t), intent(in)    :: der
     CMPLX,               intent(inout) :: psi(:,:)
     integer,             intent(in)    :: dir1
     integer,             intent(in)    :: dir2
@@ -1071,12 +838,12 @@ end subroutine hamiltonian_mxll_apply_all
 
     PUSH_SUB(maxwell_pml_hamiltonian_medium)
 
-    if ( (maxwell_hm%maxwell_bc%bc_ab_type(dir1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) .and. &
-          maxwell_hm%maxwell_cpml_hamiltonian ) then
-      if (maxwell_hm%maxwell_medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) then
-        call maxwell_pml_calculation_via_riemann_silberstein_medium(maxwell_hm, maxwell_der, psi, dir1, dir2, tmp(:,:))
+    if ( (hm%bc%bc_ab_type(dir1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) .and. &
+          hm%cpml_hamiltonian ) then
+      if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) then
+        call maxwell_pml_calculation_via_riemann_silberstein_medium(hm, der, psi, dir1, dir2, tmp(:,:))
       else if (maxwell_hm%maxwell_medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__ELECTRIC_MAGNETIC_FIELDS) then
-        call maxwell_pml_calculation_via_e_b_fields_medium(maxwell_hm, maxwell_der, psi, dir1, dir2, tmp(:,:))
+        call maxwell_pml_calculation_via_e_b_fields_medium(hm, der, psi, dir1, dir2, tmp(:,:))
       end if
     end if
 
@@ -1085,13 +852,14 @@ end subroutine hamiltonian_mxll_apply_all
 
 
   ! ---------------------------------------------------------
-  subroutine maxwell_pml_calculation_via_riemann_silberstein(maxwell_hm, maxwell_der, psi, pml_dir, field_dir, pml)
-    type(hamiltonian_t), intent(in)    :: maxwell_hm
-    type(derivatives_t), intent(in)    :: maxwell_der
-    integer,             intent(in)    :: pml_dir
-    CMPLX,               intent(inout) :: psi(:,:)
-    integer,             intent(in)    :: field_dir
-    CMPLX,               intent(inout) :: pml(:)
+  !> Maxwell Hamiltonian is updated for the PML calculation via Riemann-Silberstein vector
+  subroutine maxwell_pml_calculation_via_riemann_silberstein(hm, der, psi, pml_dir, field_dir, pml)
+    type(hamiltonian_mxll_t), intent(in)    :: hm
+    type(derivatives_t),      intent(in)    :: der
+    integer,                  intent(in)    :: pml_dir
+    CMPLX,                    intent(inout) :: psi(:,:)
+    integer,                  intent(in)    :: field_dir
+    CMPLX,                    intent(inout) :: pml(:)
 
     integer            :: ip, ip_in, np_part, rs_sign
     FLOAT              :: pml_c(3)
@@ -1100,20 +868,20 @@ end subroutine hamiltonian_mxll_apply_all
 
     PUSH_SUB(maxwell_pml_calculation_via_riemann_silberstein)
 
-    if (maxwell_hm%maxwell_cpml_hamiltonian) then
+    if (hm%maxwell_cpml_hamiltonian) then
 
-      rs_sign = maxwell_hm%maxwell_rs_sign
+      rs_sign = hm%rs_sign
 
-      np_part = maxwell_der%mesh%np_part
+      np_part = der%mesh%np_part
       SAFE_ALLOCATE(tmp_partial(np_part))
 
-      call zderivatives_partial(maxwell_der, psi(:,field_dir), tmp_partial(:), pml_dir, set_bc = .false.)
-      do ip_in=1, maxwell_hm%maxwell_bc%pml_points_number
-        ip       = maxwell_hm%maxwell_bc%pml_points_map(ip_in)
-        pml_c(:) = maxwell_hm%maxwell_bc%pml_c(ip_in,:)
-        pml_a(:) = maxwell_hm%maxwell_bc%pml_a(ip_in,:)
-        pml_b(:) = maxwell_hm%maxwell_bc%pml_b(ip_in,:)
-        pml_g(:) = maxwell_hm%maxwell_bc%pml_conv_plus(ip_in,pml_dir,:)
+      call zderivatives_partial(der, psi(:,field_dir), tmp_partial(:), pml_dir, set_bc = .false.)
+      do ip_in=1, hm%bc%pml_points_number
+        ip       = hm%bc%pml_points_map(ip_in)
+        pml_c(:) = hm%bc%pml_c(ip_in,:)
+        pml_a(:) = hm%bc%pml_a(ip_in,:)
+        pml_b(:) = hm%bc%pml_b(ip_in,:)
+        pml_g(:) = hm%bc%pml_conv_plus(ip_in,pml_dir,:)
         pml(ip)  = rs_sign * pml_c(pml_dir) * tmp_partial(ip) &
                  + rs_sign * pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip)) &
                  + rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip)) &
@@ -1129,13 +897,14 @@ end subroutine hamiltonian_mxll_apply_all
 
 
   ! ---------------------------------------------------------
-  subroutine maxwell_pml_calculation_via_e_b_fields(maxwell_hm, maxwell_der, psi, pml_dir, field_dir, pml)
-    type(hamiltonian_t), intent(in)    :: maxwell_hm
-    type(derivatives_t), intent(in)    :: maxwell_der
-    integer,             intent(in)    :: pml_dir
-    CMPLX,               intent(in)    :: psi(:,:)
-    integer,             intent(in)    :: field_dir
-    CMPLX,               intent(inout) :: pml(:)
+  !> Maxwell Hamiltonian is updated for the PML calculation directly via electric and magnetic field
+  subroutine maxwell_pml_calculation_via_e_b_fields(hm, der, psi, pml_dir, field_dir, pml)
+    type(hamiltonian_mxll_t), intent(in)    :: hm
+    type(derivatives_t),      intent(in)    :: der
+    integer,                  intent(in)    :: pml_dir
+    CMPLX,                    intent(in)    :: psi(:,:)
+    integer,                  intent(in)    :: field_dir
+    CMPLX,                    intent(inout) :: pml(:)
 
     integer            :: ip, ip_in, np_part
     FLOAT              :: pml_c(3)
@@ -1144,26 +913,26 @@ end subroutine hamiltonian_mxll_apply_all
 
     PUSH_SUB(maxwell_pml_calculation_via_e_b_fields)
 
-    if (maxwell_hm%maxwell_cpml_hamiltonian) then
+    if (hm%cpml_hamiltonian) then
 
-      np_part = maxwell_der%mesh%np_part
+      np_part = der%mesh%np_part
       SAFE_ALLOCATE(tmp_e(np_part,3))
       SAFE_ALLOCATE(tmp_partial_e(np_part))
       SAFE_ALLOCATE(tmp_b(np_part,3))
       SAFE_ALLOCATE(tmp_partial_b(np_part))
 
       call maxwell_get_electric_field_state(psi, tmp_e)
-      call maxwell_get_magnetic_field_state(psi, maxwell_hm%maxwell_rs_sign, tmp_b)
-      call dderivatives_partial(maxwell_der, tmp_e(:,field_dir), tmp_partial_e(:), pml_dir, set_bc = .false.)
-      call dderivatives_partial(maxwell_der, tmp_b(:,field_dir), tmp_partial_b(:), pml_dir, set_bc = .false.)
+      call maxwell_get_magnetic_field_state(psi, hm%rs_sign, tmp_b)
+      call dderivatives_partial(der, tmp_e(:,field_dir), tmp_partial_e(:), pml_dir, set_bc = .false.)
+      call dderivatives_partial(der, tmp_b(:,field_dir), tmp_partial_b(:), pml_dir, set_bc = .false.)
       tmp_partial_e(:) = sqrt(P_ep/M_TWO) * tmp_partial_e(:)
       tmp_partial_b(:) = sqrt(M_ONE/(M_TWO*P_mu)) * tmp_partial_b(:)
-      do ip_in=1, maxwell_hm%maxwell_bc%pml_points_number
-        ip       = maxwell_hm%maxwell_bc%pml_points_map(ip_in)
-        pml_c(:) = maxwell_hm%maxwell_bc%pml_c(ip_in,:)
-        pml_a(:) = maxwell_hm%maxwell_bc%pml_a(ip_in,:)
-        pml_b(:) = maxwell_hm%maxwell_bc%pml_b(ip_in,:)
-        pml_g(:) = maxwell_hm%maxwell_bc%pml_conv_plus(ip_in,pml_dir,:)
+      do ip_in = 1, hm%bc%pml_points_number
+        ip       = hm%bc%pml_points_map(ip_in)
+        pml_c(:) = hm%bc%pml_c(ip_in,:)
+        pml_a(:) = hm%bc%pml_a(ip_in,:)
+        pml_b(:) = hm%bc%pml_b(ip_in,:)
+        pml_g(:) = hm%bc%pml_conv_plus(ip_in,pml_dir,:)
         pml(ip)  = pml_c(pml_dir) * tmp_partial_e(ip) + M_zI * pml_c(pml_dir) * tmp_partial_b(ip) &
                  + pml_c(pml_dir) * real(pml_a(pml_dir)) * tmp_partial_e(ip) &
                  + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * tmp_partial_b(ip) &
@@ -1183,13 +952,15 @@ end subroutine hamiltonian_mxll_apply_all
 
 
   ! ---------------------------------------------------------
-  subroutine maxwell_pml_calculation_via_riemann_silberstein_medium(maxwell_hm, maxwell_der, psi, pml_dir, field_dir, pml)
-    type(hamiltonian_t), intent(in)    :: maxwell_hm
-    type(derivatives_t), intent(in)    :: maxwell_der
-    integer,             intent(in)    :: pml_dir
-    CMPLX,               intent(inout) :: psi(:,:)
-    integer,             intent(in)    :: field_dir
-    CMPLX,               intent(inout) :: pml(:,:)
+  !> Maxwell Hamiltonian is updated for the PML calculation via Riemann-Silberstein 
+  !> vector with medium inside the box
+  subroutine maxwell_pml_calculation_via_riemann_silberstein_medium(hm, der, psi, pml_dir, field_dir, pml)
+    type(hamiltonian_mxll_t), intent(in)    :: hm
+    type(derivatives_t),      intent(in)    :: der
+    integer,                  intent(in)    :: pml_dir
+    CMPLX,                    intent(inout) :: psi(:,:)
+    integer,                  intent(in)    :: field_dir
+    CMPLX,                    intent(inout) :: pml(:,:)
 
     integer            :: ip, ip_in, np_part
     FLOAT              :: pml_c(3)
@@ -1198,20 +969,20 @@ end subroutine hamiltonian_mxll_apply_all
 
     PUSH_SUB(maxwell_pml_calculation_via_riemann_silberstein_medium)
 
-    if (maxwell_hm%maxwell_cpml_hamiltonian) then
+    if (hm%cpml_hamiltonian) then
 
-      np_part = maxwell_der%mesh%np_part
+      np_part = der%mesh%np_part
       SAFE_ALLOCATE(tmp_partial(np_part,1:2))
 
-      call zderivatives_partial(maxwell_der, psi(:,field_dir  ), tmp_partial(:,1), pml_dir, set_bc = .false.)
-      call zderivatives_partial(maxwell_der, psi(:,field_dir+3), tmp_partial(:,2), pml_dir, set_bc = .false.)
-      do ip_in=1, maxwell_hm%maxwell_bc%pml_points_number
-        ip         = maxwell_hm%maxwell_bc%pml_points_map(ip_in)
-        pml_c(:)   = maxwell_hm%maxwell_bc%pml_c(ip_in,:)
-        pml_a(:)   = maxwell_hm%maxwell_bc%pml_a(ip_in,:)
-        pml_b(:)   = maxwell_hm%maxwell_bc%pml_b(ip_in,:)
-        pml_g_p(:) = maxwell_hm%maxwell_bc%pml_conv_plus(ip_in,pml_dir,:)
-        pml_g_m(:) = maxwell_hm%maxwell_bc%pml_conv_minus(ip_in,pml_dir,:)
+      call zderivatives_partial(der, psi(:,field_dir  ), tmp_partial(:,1), pml_dir, set_bc = .false.)
+      call zderivatives_partial(der, psi(:,field_dir+3), tmp_partial(:,2), pml_dir, set_bc = .false.)
+      do ip_in = 1, hm%bc%pml_points_number
+        ip         = hm%bc%pml_points_map(ip_in)
+        pml_c(:)   = hm%bc%pml_c(ip_in,:)
+        pml_a(:)   = hm%bc%pml_a(ip_in,:)
+        pml_b(:)   = hm%bc%pml_b(ip_in,:)
+        pml_g_p(:) = hm%bc%pml_conv_plus(ip_in,pml_dir,:)
+        pml_g_m(:) = hm%bc%pml_conv_minus(ip_in,pml_dir,:)
         pml(ip,1)  = pml_c(pml_dir) * tmp_partial(ip,1) &
                    + pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip,1)) &
                    + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip,1)) &
@@ -1233,13 +1004,15 @@ end subroutine hamiltonian_mxll_apply_all
 
 
   ! ---------------------------------------------------------
-  subroutine maxwell_pml_calculation_via_e_b_fields_medium(maxwell_hm, maxwell_der, psi, pml_dir, field_dir, pml)
-    type(hamiltonian_t), intent(in)    :: maxwell_hm
-    type(derivatives_t), intent(in)    :: maxwell_der
-    integer,             intent(in)    :: pml_dir
-    CMPLX,               intent(in)    :: psi(:,:)
-    integer,             intent(in)    :: field_dir
-    CMPLX,               intent(inout) :: pml(:,:)
+  !> Maxwell Hamiltonian is updated for the PML calculation directly 
+  !> via electric and magnetic field with medium inside the box
+   subroutine maxwell_pml_calculation_via_e_b_fields_medium(hm, der, psi, pml_dir, field_dir, pml)
+    type(hamiltonian__mxllt), intent(in)    :: hm
+    type(derivatives_t),      intent(in)    :: der
+    integer,                  intent(in)    :: pml_dir
+    CMPLX,                    intent(in)    :: psi(:,:)
+    integer,                  intent(in)    :: field_dir
+    CMPLX,                    intent(inout) :: pml(:,:)
 
     integer            :: ip, ip_in, np_part
     FLOAT              :: pml_c(3)
@@ -1248,9 +1021,9 @@ end subroutine hamiltonian_mxll_apply_all
 
     PUSH_SUB(maxwell_pml_calculation_via_e_b_fields_medium)
 
-    if (maxwell_hm%maxwell_cpml_hamiltonian) then
+    if (hm%cpml_hamiltonian) then
 
-      np_part = maxwell_der%mesh%np_part
+      np_part = der%mesh%np_part
       SAFE_ALLOCATE(tmp_e(np_part,3))
       SAFE_ALLOCATE(tmp_partial_e(np_part,2))
       SAFE_ALLOCATE(tmp_b(np_part,3))
@@ -1258,21 +1031,21 @@ end subroutine hamiltonian_mxll_apply_all
 
       call maxwell_get_electric_field_state(psi(:,1:3), tmp_e)
       call maxwell_get_magnetic_field_state(psi(:,1:3), 1, tmp_b)
-      call dderivatives_partial(maxwell_der, tmp_e(:,field_dir), tmp_partial_e(:,1), pml_dir, set_bc = .false.)
-      call dderivatives_partial(maxwell_der, tmp_b(:,field_dir), tmp_partial_b(:,1), pml_dir, set_bc = .false.)
+      call dderivatives_partial(der, tmp_e(:,field_dir), tmp_partial_e(:,1), pml_dir, set_bc = .false.)
+      call dderivatives_partial(der, tmp_b(:,field_dir), tmp_partial_b(:,1), pml_dir, set_bc = .false.)
       call maxwell_get_electric_field_state(psi(:,4:6), tmp_e)
       call maxwell_get_magnetic_field_state(psi(:,4:6), -1, tmp_b)
-      call dderivatives_partial(maxwell_der, tmp_e(:,field_dir), tmp_partial_e(:,2), pml_dir, set_bc = .false.)
-      call dderivatives_partial(maxwell_der, tmp_b(:,field_dir), tmp_partial_b(:,2), pml_dir, set_bc = .false.)
+      call dderivatives_partial(der, tmp_e(:,field_dir), tmp_partial_e(:,2), pml_dir, set_bc = .false.)
+      call dderivatives_partial(der, tmp_b(:,field_dir), tmp_partial_b(:,2), pml_dir, set_bc = .false.)
       tmp_partial_e(:,:) = sqrt(P_ep/M_TWO) * tmp_partial_e(:,:)
       tmp_partial_b(:,:) = sqrt(M_ONE/(M_TWO*P_mu)) * tmp_partial_b(:,:)
-      do ip_in=1, maxwell_hm%maxwell_bc%pml_points_number
-        ip         = maxwell_hm%maxwell_bc%pml_points_map(ip_in)
-        pml_c(:)   = maxwell_hm%maxwell_bc%pml_c(ip_in,:)
-        pml_a(:)   = maxwell_hm%maxwell_bc%pml_a(ip_in,:)
-        pml_b(:)   = maxwell_hm%maxwell_bc%pml_b(ip_in,:)
-        pml_g_p(:) = maxwell_hm%maxwell_bc%pml_conv_plus(ip_in,pml_dir,:)
-        pml_g_m(:) = maxwell_hm%maxwell_bc%pml_conv_minus(ip_in,pml_dir,:)
+      do ip_in=1, hm%bc%pml_points_number
+        ip         = hm%bc%pml_points_map(ip_in)
+        pml_c(:)   = hm%bc%pml_c(ip_in,:)
+        pml_a(:)   = hm%bc%pml_a(ip_in,:)
+        pml_b(:)   = hm%bc%pml_b(ip_in,:)
+        pml_g_p(:) = hm%bc%pml_conv_plus(ip_in,pml_dir,:)
+        pml_g_m(:) = hm%bc%pml_conv_minus(ip_in,pml_dir,:)
         pml(ip,1)  = pml_c(pml_dir) * tmp_partial_e(ip,1) + M_zI * pml_c(pml_dir) * tmp_partial_b(ip,1) &
                    + pml_c(pml_dir) * real(pml_a(pml_dir)) * tmp_partial_e(ip,1) &
                    + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * tmp_partial_b(ip,1) &
@@ -1297,11 +1070,12 @@ end subroutine hamiltonian_mxll_apply_all
 
 
   ! ---------------------------------------------------------
-  subroutine maxwell_medium_boundaries_calculation(maxwell_hm, maxwell_der, psi, oppsi)
-    type(hamiltonian_t), intent(in)    :: maxwell_hm
-    type(derivatives_t), intent(in)    :: maxwell_der
-    CMPLX,               intent(in)    :: psi(:,:)
-    CMPLX,               intent(inout) :: oppsi(:,:)
+  !> Maxwell Hamiltonian for medium boundaries
+  subroutine maxwell_medium_boundaries_calculation(hm, der, psi, oppsi)
+    type(hamiltonian_mxll_t), intent(in)    :: hm
+    type(derivatives_t),      intent(in)    :: der
+    CMPLX,                    intent(in)    :: psi(:,:)
+    CMPLX,                    intent(inout) :: oppsi(:,:)
 
     integer            :: ip, ip_in, idim
     FLOAT              :: cc, aux_ep(3), aux_mu(3), sigma_e, sigma_m
@@ -1310,15 +1084,15 @@ end subroutine hamiltonian_mxll_apply_all
     PUSH_SUB(maxwell_medium_boundaries_calculation)
 
     do idim=1, 3
-      if ( (maxwell_hm%maxwell_bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) .and. &
-           (maxwell_hm%maxwell_medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) ) then
-        do ip_in=1, maxwell_hm%maxwell_bc%medium_points_number(idim)
-          ip          = maxwell_hm%maxwell_bc%medium_points_map(ip_in,idim)
-          cc          = maxwell_hm%maxwell_bc%medium_c(ip_in,idim)/P_c
-          aux_ep(:)   = maxwell_hm%maxwell_bc%medium_aux_ep(ip_in,:,idim)
-          aux_mu(:)   = maxwell_hm%maxwell_bc%medium_aux_mu(ip_in,:,idim)
-          sigma_e     = maxwell_hm%maxwell_bc%medium_sigma_e(ip_in,idim)
-          sigma_m     = maxwell_hm%maxwell_bc%medium_sigma_m(ip_in,idim)
+      if ( (hm%bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) .and. &
+           (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) ) then
+        do ip_in=1, hm%bc%medium_points_number(idim)
+          ip          = hm%bc%medium_points_map(ip_in,idim)
+          cc          = hm%bc%medium_c(ip_in,idim)/P_c
+          aux_ep(:)   = hm%bc%medium_aux_ep(ip_in,:,idim)
+          aux_mu(:)   = hm%bc%medium_aux_mu(ip_in,:,idim)
+          sigma_e     = hm%bc%medium_sigma_e(ip_in,idim)
+          sigma_m     = hm%bc%medium_sigma_m(ip_in,idim)
           ff_plus(1)  = psi(ip,1)
           ff_plus(2)  = psi(ip,2)
           ff_plus(3)  = psi(ip,3)
@@ -1360,11 +1134,12 @@ end subroutine hamiltonian_mxll_apply_all
 
 
   ! ---------------------------------------------------------
-  subroutine maxwell_medium_boxes_calculation(maxwell_hm, maxwell_der, psi, oppsi)
-    type(hamiltonian_t), intent(in)    :: maxwell_hm
-    type(derivatives_t), intent(in)    :: maxwell_der
-    CMPLX,               intent(in)    :: psi(:,:)
-    CMPLX,               intent(inout) :: oppsi(:,:)
+  ! > Maxwell Hamiltonian including medium boxes
+  subroutine maxwell_medium_boxes_calculation(hm, der, psi, oppsi)
+    type(hamiltonian_mxll_t), intent(in)    :: hm
+    type(derivatives_t),      intent(in)    :: der
+    CMPLX,                    intent(in)    :: psi(:,:)
+    CMPLX,                    intent(inout) :: oppsi(:,:)
 
     integer            :: ip, ip_in, idim, il, np_part
     FLOAT              :: cc, aux_ep(3), aux_mu(3), sigma_e, sigma_m
@@ -1373,18 +1148,18 @@ end subroutine hamiltonian_mxll_apply_all
 
     PUSH_SUB(maxwell_medium_boxes_calculation)
 
-    np_part = maxwell_der%mesh%np_part
+    np_part = der%mesh%np_part
 
-    if ( maxwell_hm%maxwell_medium_box .and. &
-         (maxwell_hm%maxwell_medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) ) then
-      do il=1, maxwell_hm%maxwell_medium_box_number
-        do ip_in=1, maxwell_hm%maxwell_medium_box_points_number(il)
-          ip           = maxwell_hm%maxwell_medium_box_points_map(ip_in,il)
-          cc           = maxwell_hm%maxwell_medium_box_c(ip_in,il)/P_c
-          aux_ep(:)    = maxwell_hm%maxwell_medium_box_aux_ep(ip_in,:,il)
-          aux_mu(:)    = maxwell_hm%maxwell_medium_box_aux_mu(ip_in,:,il)
-          sigma_e      = maxwell_hm%maxwell_medium_box_sigma_e(ip_in,il)
-          sigma_m      = maxwell_hm%maxwell_medium_box_sigma_m(ip_in,il)
+    if (hm%medium_box .and. &
+         (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) ) then
+      do il = 1, hm%medium_box_number
+        do ip_in = 1, hm%medium_box_points_number(il)
+          ip           = hm%medium_box_points_map(ip_in,il)
+          cc           = hm%medium_box_c(ip_in,il)/P_c
+          aux_ep(:)    = hm%medium_box_aux_ep(ip_in,:,il)
+          aux_mu(:)    = hm%medium_box_aux_mu(ip_in,:,il)
+          sigma_e      = hm%medium_box_sigma_e(ip_in,il)
+          sigma_m      = hm%medium_box_sigma_m(ip_in,il)
           ff_plus(1)   = psi(ip,1)
           ff_plus(2)   = psi(ip,2)
           ff_plus(3)   = psi(ip,3)
@@ -1421,31 +1196,30 @@ end subroutine hamiltonian_mxll_apply_all
       end do
     end if
 
-    if ( maxwell_hm%maxwell_medium_box .and. &
-         (maxwell_hm%maxwell_medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__ELECTRIC_MAGNETIC_FIELDS) ) then
+    if (hm%medium_box .and. &
+         (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__ELECTRIC_MAGNETIC_FIELDS) ) then
       SAFE_ALLOCATE(tmp_e(np_part,3))
       SAFE_ALLOCATE(tmp_curl_e(np_part,3))
       SAFE_ALLOCATE(tmp_b(np_part,3))
       SAFE_ALLOCATE(tmp_curl_b(np_part,3))
-      call maxwell_get_electric_field_state(psi(:,1:3)+psi(:,4:6), tmp_e, maxwell_hm%maxwell_st%maxwell_ep, np_part)
-      call maxwell_get_magnetic_field_state(psi(:,1:3)+psi(:,4:6), maxwell_hm%maxwell_rs_sign, tmp_b, &
-                                            maxwell_hm%maxwell_st%maxwell_mu, np_part)
+      call maxwell_get_electric_field_state(psi(:,1:3)+psi(:,4:6), tmp_e, hm%st%ep, np_part)
+      call maxwell_get_magnetic_field_state(psi(:,1:3)+psi(:,4:6), hm%rs_sign, tmp_b, hm%st%mu, np_part)
       call dderivatives_curl(maxwell_der, tmp_e, tmp_curl_e, set_bc = .false.)
       call dderivatives_curl(maxwell_der, tmp_b, tmp_curl_b, set_bc = .false.)
       SAFE_DEALLOCATE_A(tmp_e)
       SAFE_DEALLOCATE_A(tmp_b)
-      tmp_curl_e(:,1) = sqrt(maxwell_hm%maxwell_st%maxwell_ep(:)/M_TWO) * tmp_curl_e(:,1)
-      tmp_curl_e(:,2) = sqrt(maxwell_hm%maxwell_st%maxwell_ep(:)/M_TWO) * tmp_curl_e(:,2)
-      tmp_curl_e(:,3) = sqrt(maxwell_hm%maxwell_st%maxwell_ep(:)/M_TWO) * tmp_curl_e(:,3)
-      tmp_curl_b(:,1) = sqrt(M_ONE/(M_TWO*maxwell_hm%maxwell_st%maxwell_mu(:))) * tmp_curl_b(:,1)
-      tmp_curl_b(:,2) = sqrt(M_ONE/(M_TWO*maxwell_hm%maxwell_st%maxwell_mu(:))) * tmp_curl_b(:,2)
-      tmp_curl_b(:,3) = sqrt(M_ONE/(M_TWO*maxwell_hm%maxwell_st%maxwell_mu(:))) * tmp_curl_b(:,3)
-      do il=1, maxwell_hm%maxwell_medium_box_number
-        do ip_in=1, maxwell_hm%maxwell_medium_box_points_number(il)
-          ip           = maxwell_hm%maxwell_medium_box_points_map(ip_in,il)
-          cc           = maxwell_hm%maxwell_medium_box_c(ip_in,il)
-          sigma_e      = maxwell_hm%maxwell_medium_box_sigma_e(ip_in,il)
-          sigma_m      = maxwell_hm%maxwell_medium_box_sigma_m(ip_in,il)
+      tmp_curl_e(:,1) = sqrt(hm%st%ep(:)/M_TWO) * tmp_curl_e(:,1)
+      tmp_curl_e(:,2) = sqrt(hm%st%ep(:)/M_TWO) * tmp_curl_e(:,2)
+      tmp_curl_e(:,3) = sqrt(hm%st%ep(:)/M_TWO) * tmp_curl_e(:,3)
+      tmp_curl_b(:,1) = sqrt(M_ONE/(M_TWO*hm%st%mu(:))) * tmp_curl_b(:,1)
+      tmp_curl_b(:,2) = sqrt(M_ONE/(M_TWO*hm%st%mu(:))) * tmp_curl_b(:,2)
+      tmp_curl_b(:,3) = sqrt(M_ONE/(M_TWO*hm%st%mu(:))) * tmp_curl_b(:,3)
+      do il=1, hm%medium_box_number
+        do ip_in=1, hm%medium_box_points_number(il)
+          ip           = hm%medium_box_points_map(ip_in,il)
+          cc           = hm%medium_box_c(ip_in,il)
+          sigma_e      = hm%medium_box_sigma_e(ip_in,il)
+          sigma_m      = hm%medium_box_sigma_m(ip_in,il)
           ff_plus(1)   = psi(ip,1)
           ff_plus(2)   = psi(ip,2)
           ff_plus(3)   = psi(ip,3)
@@ -1479,24 +1253,25 @@ end subroutine hamiltonian_mxll_apply_all
 
 
   ! ---------------------------------------------------------
-  subroutine maxwell_fft_hamiltonian(maxwell_hm, k_vec, ff_dim, k_index_x, k_index_y, k_index_z, sigma, hm_matrix)
-    type(hamiltonian_t), intent(in)    :: maxwell_hm
-    FLOAT,               intent(in)    :: k_vec(:,:)
-    integer,             intent(in)    :: ff_dim
-    integer,             intent(in)    :: k_index_x
-    integer,             intent(in)    :: k_index_y
-    integer,             intent(in)    :: k_index_z
-    FLOAT,               intent(in)    :: sigma(:)
-    CMPLX,               intent(inout) :: hm_matrix(:,:)
+  !> Maxwell Hamiltonian as FFT
+  subroutine maxwell_fft_hamiltonian(hm, k_vec, ff_dim, k_index_x, k_index_y, k_index_z, sigma, hm_matrix)
+    type(hamiltonian_mxll_t), intent(in)    :: hm
+    FLOAT,                    intent(in)    :: k_vec(:,:)
+    integer,                  intent(in)    :: ff_dim
+    integer,                  intent(in)    :: k_index_x
+    integer,                  intent(in)    :: k_index_y
+    integer,                  intent(in)    :: k_index_z
+    FLOAT,                    intent(in)    :: sigma(:)
+    CMPLX,                    intent(inout) :: hm_matrix(:,:)
 
     FLOAT :: omega
     CMPLX :: ss(3)
 
     PUSH_SUB(maxwell_fft_hamiltonian)
 
-    if (maxwell_hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE) then
+    if (hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE) then
       hm_matrix(:,:) = M_z0
-      if (maxwell_hm%maxwell_bc%bc_ab_type(1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then   ! TODO different directions
+      if (hm%maxwell_bc%bc_ab_type(1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then   ! TODO different directions
         omega = P_c * sqrt(k_vec(k_index_x,1)**2+k_vec(k_index_y,2)**2+k_vec(k_index_z,3)**2)
         if (omega /= M_ZERO) then
           ss(:) = M_ONE + sigma(:)/(M_zI*P_ep*omega)
@@ -1523,8 +1298,8 @@ end subroutine hamiltonian_mxll_apply_all
         hm_matrix(3,2)   =   M_zI * P_c * k_vec(k_index_x,1)
         hm_matrix(3,3)   =   M_z0
       end if
-    else if (maxwell_hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
-      if (maxwell_hm%maxwell_bc%bc_ab_type(1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then   ! TODO different directions
+    else if (hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+      if (hm%bc%bc_ab_type(1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then   ! TODO different directions
         omega = P_c * sqrt(k_vec(k_index_x,1)**2+k_vec(k_index_y,2)**2+k_vec(k_index_z,3)**2)
         if (omega /= M_ZERO) then
           ss(:) = M_ONE + sigma(:)/(M_zI*P_ep*omega)
@@ -1575,10 +1350,10 @@ end subroutine hamiltonian_mxll_apply_all
   end subroutine maxwell_fft_hamiltonian
 
   !----------------------------------------------------------
-  subroutine get_electric_field_at_points(rs_state, maxwell_gr, maxwell_st, points_number, points, e_field_points)
+  subroutine get_electric_field_at_points(rs_state, gr, st, points_number, points, e_field_points)
     CMPLX,               intent(inout) :: rs_state(:,:)
-    type(grid_t),        intent(in)    :: maxwell_gr
-    type(states_t),      intent(in)    :: maxwell_st
+    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(in)    :: st
     integer,             intent(in)    :: points_number
     FLOAT,               intent(in)    :: points(:,:)
     FLOAT,               intent(inout) :: e_field_points(:,:)
@@ -1591,24 +1366,21 @@ end subroutine hamiltonian_mxll_apply_all
     PUSH_SUB(get_electric_field_at_points)
 
     ! Fist part: get transverse electric field an evaluation point
-    SAFE_ALLOCATE(ztmp_global(maxwell_gr%mesh%np_global))
+    SAFE_ALLOCATE(ztmp_global(gr%mesh%np_global))
     SAFE_ALLOCATE(ip_mx_gr_local(1:points_number))
     SAFE_ALLOCATE(ip_mx_gr_global(1:points_number))
 
-    do ig=1, points_number
-      ip_mx_gr_local(ig)  = mesh_nearest_point(maxwell_gr%mesh, points(:,ig), dmin_mx, rankmin_mx)
+    do ig = 1, points_number
+      ip_mx_gr_local(ig)  = mesh_nearest_point(gr%mesh, points(:,ig), dmin_mx, rankmin_mx)
       partmin_mx          = rankmin_mx + 1
-      ip_mx_gr_global(ig) = vec_local2global(maxwell_gr%mesh%vp, ip_mx_gr_local(ig), partmin_mx+1)
+      ip_mx_gr_global(ig) = vec_local2global(gr%mesh%vp, ip_mx_gr_local(ig), partmin_mx+1)
     end do
 
     do ig=1, points_number
-      do idim=1, maxwell_st%d%dim
-        if (maxwell_gr%mesh%parallel_in_domains) then
+      do idim=1, st%d%dim
+        if (gr%mesh%parallel_in_domains) then
 #ifdef HAVE_MPI
-          call vec_allgather(maxwell_gr%mesh%vp, ztmp_global, rs_state(:,idim))
-     !     call MPI_Barrier(maxwell_st%mpi_grp%comm, mpi_err)
-     !     call MPI_Bcast(maxwell_st%maxwell_rs_state_trans(ip_mx_gr_local,idim), 1, MPI_CMPLX, &
-     !                    maxwell_gr%mesh%vp%rank, maxwell_st%mpi_grp%comm-1, mpi_err)
+          call vec_allgather(gr%mesh%vp, ztmp_global, rs_state(:,idim))
 #endif
         else
           ztmp_global = rs_state(:,idim)
@@ -1627,10 +1399,10 @@ end subroutine hamiltonian_mxll_apply_all
 
 
   !----------------------------------------------------------
-  subroutine get_magnetic_field_at_points(rs_state, maxwell_gr, maxwell_st, points_number, points, b_field_points)
+  subroutine get_magnetic_field_at_points(rs_state, gr, st, points_number, points, b_field_points)
     CMPLX,               intent(inout) :: rs_state(:,:)
-    type(grid_t),        intent(in)    :: maxwell_gr
-    type(states_t),      intent(in)    :: maxwell_st
+    type(grid_t),        intent(in)    :: gr
+    type(states_t),      intent(in)    :: st
     integer,             intent(in)    :: points_number
     FLOAT,               intent(in)    :: points(:,:)
     FLOAT,               intent(inout) :: b_field_points(:,:)
@@ -1643,24 +1415,21 @@ end subroutine hamiltonian_mxll_apply_all
     PUSH_SUB(get_magnetic_field_at_points)
 
     ! Fist part: get transverse electric field an evaluation point
-    SAFE_ALLOCATE(ztmp_global(maxwell_gr%mesh%np_global))
+    SAFE_ALLOCATE(ztmp_global(gr%mesh%np_global))
     SAFE_ALLOCATE(ip_mx_gr_local(points_number))
     SAFE_ALLOCATE(ip_mx_gr_global(points_number))
 
-    do ig=1, points_number
-      ip_mx_gr_local(ig)    = mesh_nearest_point(maxwell_gr%mesh, points(:,ig), dmin_mx, rankmin_mx)
+    do ig = 1, points_number
+      ip_mx_gr_local(ig)    = mesh_nearest_point(gr%mesh, points(:,ig), dmin_mx, rankmin_mx)
       partmin_mx            = rankmin_mx + 1
-      ip_mx_gr_global(ig)   = vec_local2global(maxwell_gr%mesh%vp, ip_mx_gr_local(ig), partmin_mx+1)
+      ip_mx_gr_global(ig)   = vec_local2global(gr%mesh%vp, ip_mx_gr_local(ig), partmin_mx+1)
     end do
 
-    do ig=1, points_number
-      do idim=1, maxwell_st%d%dim
-        if (maxwell_gr%mesh%parallel_in_domains) then
+    do ig = 1, points_number
+      do idim = 1, st%d%dim
+        if (gr%mesh%parallel_in_domains) then
 #ifdef HAVE_MPI
-          call vec_allgather(maxwell_gr%mesh%vp, ztmp_global, rs_state(:,idim))
-     !     call MPI_Barrier(maxwell_st%mpi_grp%comm, mpi_err)
-     !     call MPI_Bcast(maxwell_st%maxwell_rs_state_trans(ip_mx_gr_local,idim), 1, MPI_CMPLX, &
-     !                    maxwell_gr%mesh%vp%rank, maxwell_st%mpi_grp%comm-1, mpi_err)
+          call vec_allgather(gr%mesh%vp, ztmp_global, rs_state(:,idim))
 #endif
         else
           ztmp_global = rs_state(:,idim)
@@ -1679,6 +1448,7 @@ end subroutine hamiltonian_mxll_apply_all
 
 
   !----------------------------------------------------------
+  !>  Helmholtz decomposition to calculate a transverse field (maybe should be a general math function)
   subroutine maxwell_helmholtz_decomposition_trans_field(poisson, gr, maxwell_hm, hm, maxwell_st, transverse_field)
     type(poisson_t),     intent(in)    :: poisson
     type(grid_t),        intent(in)    :: gr
@@ -1709,10 +1479,6 @@ end subroutine hamiltonian_mxll_apply_all
       call zpoisson_solve(poisson, tmp_poisson(:), ztmp(:,idim), .true.)
       ztmp(1:gr%mesh%np_part,idim) = M_ONE / (M_FOUR * M_PI) * tmp_poisson(1:gr%mesh%np_part)
     end do
-    !do ip_in=1, maxwell_hm%maxwell_bc%der_bndry_mask_points_number
-    !  ip = maxwell_hm%maxwell_bc%der_bndry_mask_points_map(ip_in)
-    !  ztmp(ip,:) = maxwell_hm%maxwell_bc%der_bndry_mask(ip_in) * ztmp(ip,:)
-    !end do
     call zderivatives_curl(gr%der, ztmp, transverse_field, set_bc = .false.)
     do ip_in=1, maxwell_hm%maxwell_bc%der_bndry_mask_points_number
       ip = maxwell_hm%maxwell_bc%der_bndry_mask_points_map(ip_in)
@@ -1742,12 +1508,6 @@ end subroutine hamiltonian_mxll_apply_all
       pos(:) = maxwell_gr%mesh%x(ip_local,:)
     end if
 
-    !do ip=1, maxwell_gr%mesh%np
-    !  pos(:) = maxwell_gr%mesh%x(ip,:)
-    !  call surface_integral_helmholtz_transverse(maxwell_gr, maxwell_st, pos, field_old, surface_integral)
-    !  transverse_field(ip,:) = transverse_field(ip,:) - M_ONE / (M_FOUR * M_PI) * surface_integral(:)
-    !end do
-
     SAFE_DEALLOCATE_A(field_old)
 
     POP_SUB(maxwell_helmholtz_decomposition_trans_field)
@@ -1755,6 +1515,7 @@ end subroutine hamiltonian_mxll_apply_all
 
 
   !----------------------------------------------------------
+  !> Helmholtz decomposition to calculate a longitudinal field (maybe should be a general math function)
   subroutine maxwell_helmholtz_decomposition_long_field(poisson, gr, longitudinal_field)
     type(poisson_t),     intent(in)    :: poisson
     type(grid_t),        intent(in)    :: gr
@@ -1772,16 +1533,7 @@ end subroutine hamiltonian_mxll_apply_all
     ! Apply poisson equation to solve helmholtz decomposition integral
     call zpoisson_solve(poisson, tmp_poisson(:), ztmp(:), .true.)
     ztmp(1:gr%mesh%np_part) = - M_ONE / (M_FOUR * M_PI) * tmp_poisson(1:gr%mesh%np_part)
-    !do ip_in=1, maxwell_hm%maxwell_bc%der_bndry_mask_points_number
-    !  ip = maxwell_hm%maxwell_bc%der_bndry_mask_points_map(ip_in)
-    !  ztmp(ip) = maxwell_hm%maxwell_bc%der_bndry_mask(ip_in) * ztmp(ip)
-    !end do
     call zderivatives_grad(gr%der, ztmp(:), longitudinal_field(:,:), set_bc = .false.)
-
-    !do ip_in=1, maxwell_hm%maxwell_bc%der_bndry_mask_points_number
-    !  ip = maxwell_hm%maxwell_bc%der_bndry_mask_points_map(ip_in)
-    !  longitudinal_field(ip,:) = maxwell_hm%maxwell_bc%der_bndry_mask(ip_in) * field_long(ip,:)
-    !end do
 
     SAFE_DEALLOCATE_A(ztmp)
     SAFE_DEALLOCATE_A(tmp_poisson)
@@ -1790,6 +1542,8 @@ end subroutine hamiltonian_mxll_apply_all
 
 
   ! ---------------------------------------------------------
+  !> Surface integral of the Helmholtz decomposition to calculate the transverse field
+  !> (maybe should be a general math function)
   subroutine surface_integral_helmholtz_transverse(gr, st, pos, field, surface_integral)
     type(grid_t),      intent(in)    :: gr
     type(states_t),    intent(in)    :: st
