@@ -14,17 +14,17 @@ Enabled    : Yes
 # V(x) = -5*step(x+5)*step(5-x),
 # are calculated. 
 Input: 04-box.01-ground_state.inp
-errormatch ; Error ; GREPCOUNT(err, "Error") ; 1
+errormatch ; Error nlopt ; GREPCOUNT(err, "nlopt library has been compiled") ; 1
 
 Input: 04-box.02-unocc.inp
-errormatch ; Error ; GREPCOUNT(err, "Error") ; 1
+errormatch ; Error nlopt ; GREPCOUNT(err, "nlopt library has been compiled") ; 1
 
 # These are the same files as in the 04-box.test. No need for matches.
 
 # run the optimization with the NLOPT BOBYQA algorithm
 Input: 13-box-nlopt.03-bobyqa.inp
 match ; J last iteration  ; LINEFIELD(opt-control/convergence, -2, 2) ; 0.60582990
-errormatch ; Error ; GREPCOUNT(err, "nlopt library has been compiled") ; 1
+errormatch ; Error nlopt ; GREPCOUNT(err, "nlopt library has been compiled") ; 1
 
 # run the optimization with the NLOPT LBFGS algorithm
 Input: 13-box-nlopt.04-lbfgs.inp

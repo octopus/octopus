@@ -10,4 +10,4 @@ match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -17.11611752
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.80140067
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.38368351
 
-errormatch; Error; GREPCOUNT(err, 'not compiled with libvdwxc') ; 1
+errormatch; Error libvcwxc ; GREPCOUNT(err, 'not compiled with libvdwxc') ; 1
