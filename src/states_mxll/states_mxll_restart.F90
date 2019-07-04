@@ -68,7 +68,6 @@ contains
     CMPLX, allocatable :: rs_state(:,:), rs_state_add(:,:)
     character(len=150), pointer :: filename_e_field, filename_b_field
     
-
     integer, parameter ::           &
       STATE_FROM_FORMULA  = 1,      &
       STATE_FROM_FILE     = -10010
