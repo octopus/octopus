@@ -41,7 +41,9 @@ module states_mxll_restart_oct_m
   use unit_system_oct_m
   use unit_oct_m
   use states_restart_oct_m
-  
+  use batch_oct_m
+  use batch_ops_oct_m
+    
   implicit none
 
   type(profile_t), save :: prof_read, prof_write
@@ -266,8 +268,9 @@ contains
     integer,    optional, intent(in)  :: st_start_writing
     logical,    optional, intent(in)  :: verbose
 
-    integer :: iunit_wfns, iunit_states, root, chunk, iwt, ii
+    integer :: iunit_wfns, iunit_states, iwt
     integer :: err, err2(2), idir, ist, idim, itot
+    integer :: root(1:P_STRATEGY_MAX)
     character(len=MAX_PATH_LEN) :: filename, filename1, filename_tmp
     character(len=300) :: lines(3)
     logical :: should_write, verbose_
@@ -294,14 +297,13 @@ contains
     call restart_block_signals()
 
     iunit_states = restart_open(restart, 'maxwell_states')
-    write(lines(1), '(a20,1i10)')  'nst=                ', st%nst
     write(lines(2), '(a20,1i10)')  'dim=                ', zff_dim
     call restart_write(restart, iunit_states, lines, 3, err)
     if (err /= 0) ierr = ierr + 1
     call restart_close(restart, iunit_states)
 
     iunit_wfns = restart_open(restart, 'wfns')
-    lines(1) = '#     #st            #dim    filename'
+    lines(1) = '#     #dim    filename'
     lines(2) = '%RS States'
     call restart_write(restart, iunit_wfns, lines, 2, err)
     if (err /= 0) ierr = ierr + 2
@@ -310,41 +312,31 @@ contains
 
     itot = 1
     root = 0
-    chunk = 0
     err2 = 0
-    do ist = 1, st%nst
-       do idim = 1, zff_dim
-          chunk = chunk + 1
-          root = mod(itot-1,gr%mesh%mpi_grp%size)
-          write(filename,'(i10.10)') itot
-          if (root == gr%mesh%mpi_grp%rank) then
-             filename_tmp = filename
-          end if
+    ist = 1
+    
+    do idim = 1, zff_dim
+       itot = itot + 1
 
-          write(lines(1), '(i8,a,i8,a,i8,3a)') ist, ' | ', idim, ' | "', trim(filename), '"'
-          call restart_write(restart, iunit_wfns, lines, 1, err)
-          if (err /= 0) err2(1) = err2(1) + 1
+       root(P_STRATEGY_DOMAINS) = mod(itot - 1, gr%mesh%mpi_grp%size)
+       write(filename,'(i10.10)') itot
 
-          should_write = st%st_start <= ist .and. ist <= st%st_end
-          if (should_write .and. present(st_start_writing)) then
-             if (ist < st_start_writing) should_write = .false.
-          end if
+       write(lines(1), '(i8,3a)') idim, ' | "', trim(filename), '"'
+       call restart_write(restart, iunit_wfns, lines, 1, err)
+       if (err /= 0) err2(1) = err2(1) + 1
 
-          if (should_write) then
-             if (gr%mesh%parallel_in_domains) then
-#ifdef HAVE_MPI
-                call vec_gather(gr%mesh%vp, root, zff_global, zff(:,idim))
-#endif
-             else
-                zff_global = zff(:,idim)
-             end if
-             call zrestart_write_mesh_function(restart, filename, gr%mesh, zff_global, err, root)
-             if (err /= 0) err2(2) = err2(2) + 1
-          end if
+       should_write = st%st_start <= ist .and. ist <= st%st_end
+       if (should_write .and. present(st_start_writing)) then
+          if (ist < st_start_writing) should_write = .false.
+       end if
 
-          itot = itot + 1
-       end do ! zff_dim
-    end do ! st%nst
+       if (should_write) then
+          call batch_get_state(st%rsb, (/ist, idim/), gr%mesh%np, zff_global)
+          call zrestart_write_mesh_function(restart, filename, gr%mesh, zff_global, err, root = root)
+          if (err /= 0) err2(2) = err2(2) + 1
+       end if
+    end do ! zff_dim
+
     if (err2(1) /= 0) ierr = ierr + 8
     if (err2(2) /= 0) ierr = ierr + 16
 
@@ -378,7 +370,7 @@ contains
   !----------------------------------------------------------
   subroutine states_mxll_load(restart, st, gr, zff, zff_dim, ierr, iter, lowest_missing, label, verbose)
     type(restart_t),            intent(in)    :: restart
-    type(states_mxll_t),             intent(inout) :: st
+    type(states_mxll_t),        intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
     CMPLX,                      intent(inout) :: zff(:,:)
     integer,                    intent(in)    :: zff_dim
@@ -433,14 +425,11 @@ contains
     if(verbose_) call print_date(trim(message(1))//' ')
 
     states_file  = restart_open(restart, 'maxwell_states')
-    ! sanity check on spin/k-points. Example file 'states':
-    ! nst=                         2
-    ! dim=                         1
     call restart_read(restart, states_file, lines, 3, err)
     if (err /= 0) then
       ierr = ierr - 2
     else
-      read(lines(2), *) str, idim
+      read(lines(2), *) idim
     end if
     call restart_close(restart, states_file)
 
@@ -475,7 +464,7 @@ contains
           !We reached the end of the file
           exit
         else
-          read(lines(1), *) ist, char, idim, char, filename
+          read(lines(1), *) idim, char, filename
         end if
       end if
 
@@ -515,38 +504,40 @@ contains
       call loct_progress_bar(-1, ntodo)
     end if
 
-    do ist = st%st_start, st%st_end
-       do idim = 1, zff_dim
+    ist = 1
+    do idim = 1, zff_dim
+       if (.not. restart_file_present(idim, ist)) then
+          if (present(lowest_missing)) &
+               lowest_missing(idim) = min(lowest_missing(idim), ist)
+          cycle
+       endif
 
-          if (.not. restart_file_present(idim, ist)) then
-             if (present(lowest_missing)) &
-                  lowest_missing(idim) = min(lowest_missing(idim), ist)
-             cycle
-          endif
+       call zrestart_read_mesh_function(restart, restart_file(idim, ist), gr%mesh, &
+            zff(:,idim), err)
+       call batch_set_state(st%rsb, (/ist, idim/), gr%mesh%np, zff(:,idim))
 
-          call zrestart_read_mesh_function(restart, restart_file(idim, ist), gr%mesh, &
-               zff(:,idim), err)
 
-          if (err == 0) then
-             filled(idim, ist) = .true.
-             iread = iread + 1
-          else if (present(lowest_missing)) then
-             lowest_missing(idim) = min(lowest_missing(idim), ist)
-          end if
+       if (err == 0) then
+          filled(idim, ist) = .true.
+          iread = iread + 1
+       else if (present(lowest_missing)) then
+          lowest_missing(idim) = min(lowest_missing(idim), ist)
+       end if
 
-          if (mpi_grp_is_root(mpi_world) .and. verbose_) then
-             idone = idone + 1
-             call loct_progress_bar(idone, ntodo)
-          end if
+       if (mpi_grp_is_root(mpi_world) .and. verbose_) then
+          idone = idone + 1
+          call loct_progress_bar(idone, ntodo)
+       end if
 
-       end do
     end do
+    
+    SAFE_DEALLOCATE_A(restart_file)
+    SAFE_DEALLOCATE_A(restart_file_present)
+    SAFE_DEALLOCATE_A(filled)
 
     if(mpi_grp_is_root(mpi_world) .and. verbose_) then
       call messages_new_line()
     end if
-
-    SAFE_DEALLOCATE_A(filled)
 
     if (ierr == 0 .and. iread /= st%nst * zff_dim) then
       if(iread > 0) then
@@ -556,7 +547,7 @@ contains
       endif
       ! otherwise ierr = 0 would mean either all was read correctly, or nothing at all was read!
 
-      write(str, '(a,i5)') 'Reading states.'
+      write(str, '(a,i5)') 'Reading Maxwell states.'
       call messages_print_stress(stdout, trim(str))
       write(message(1),'(a,i6,a,i6,a)') 'Only ', iread,' files out of ', &
            st%nst * zff_dim, ' could be read.'
@@ -564,7 +555,7 @@ contains
       call messages_print_stress(stdout)
     end if
 
-    message(1) = 'Info: States reading done.'
+    message(1) = 'Info: Maxwell states reading done.'
     if(verbose_) call print_date(trim(message(1))//' ')
 
     call profiling_out(prof_read)

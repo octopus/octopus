@@ -23,7 +23,7 @@ module states_mxll_oct_m
 !  use boundaries_oct_m
 !  use calc_mode_par_oct_m
   use batch_oct_m
-!  use batch_ops_oct_m
+  use batch_ops_oct_m
   use derivatives_oct_m
   use distributed_oct_m
   use geometry_oct_m
@@ -45,7 +45,7 @@ module states_mxll_oct_m
   use restart_oct_m
 !  use simul_box_oct_m
   use states_dim_oct_m
-!  use types_oct_m
+  use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
@@ -85,15 +85,15 @@ module states_mxll_oct_m
     state_diff,                       &
     get_charge_density_reference
 
-  type states_priv_t
+  type states_mxll_priv_t
     private
-    type(type_t) :: wfs_type            !< real (TYPE_FLOAT) or complex (TYPE_CMPLX) wavefunctions
-  end type states_priv_t
-    
+    type(type_t) :: wfs_type             !< always complex (TYPE_CMPLX) states
+  end type states_mxll_priv_t
+
   type states_mxll_t
     ! Components are public by default
     type(states_dim_t)           :: d
-    type(states_priv_t)          :: priv          !< the private components
+    type(states_mxll_priv_t)          :: priv          !< the private components
     integer                      :: nst           !< Number of states in each irreducible subspace
     integer                      :: rs_sign
     type(states_group_t)         :: group
@@ -103,17 +103,17 @@ module states_mxll_oct_m
     type(batch_t), pointer       :: rsb
     type(batch_t), pointer       :: rs_transb
     type(batch_t), pointer       :: rs_longb
-    type(batch_t), pointer       :: rs_curr_densb
-    type(batch_t), pointer       :: rs_curr_dens_restb
+    type(batch_t), pointer       :: rs_curr_dens_rest1b
+    type(batch_t), pointer       :: rs_curr_dens_rest2b
     
     CMPLX, pointer               :: rs_state_plane_waves(:,:)
 !   CMPLX, pointer               :: rs_state(:,:)
 !    CMPLX, pointer               :: rs_state_trans(:,:)
 !    CMPLX, pointer               :: rs_state_long(:,:)
-
+    
     logical                      :: rs_current_density_restart = .false.
-    CMPLX, pointer               :: rs_current_density_restart_t1(:,:)
-    CMPLX, pointer               :: rs_current_density_restart_t2(:,:)
+!    CMPLX, pointer               :: rs_current_density_restart_t1(:,:)
+!    CMPLX, pointer               :: rs_current_density_restart_t2(:,:)
 
     FLOAT, pointer               :: ep(:)
     FLOAT, pointer               :: mu(:)
@@ -194,7 +194,10 @@ module states_mxll_oct_m
     !! (st%d%dim, st%nst, st%d%nik)
     character(len=1024), allocatable :: user_def_states(:,:,:)
 
-    logical        :: fromScratch
+    logical                     :: fromScratch
+    type(mpi_grp_t)             :: mpi_grp            !< The MPI group related to the parallelization in states.
+    type(mpi_grp_t)             :: dom_st_mpi_grp     !< The MPI group related to the domains-states "plane".
+
 #ifdef HAVE_SCALAPACK
     type(blacs_proc_grid_t)     :: dom_st_proc_grid   !< The BLACS process grid for the domains-states plane
 #endif
@@ -217,15 +220,15 @@ contains
 
     call states_dim_null(st%d)
     call states_group_null(st%group)
-    call distributed_nullify(st%dist)
-    
+    call distributed_nullify(st%dist) 
+    st%priv%wfs_type = TYPE_CMPLX
+   
     st%d%orth_method = 0
     st%parallel_in_states = .false.
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_nullify(st%dom_st_proc_grid)
 #endif
     nullify(st%node)
-    nullify(st%ap%schedule)
 
     POP_SUB(states_mxll_null)
   end subroutine states_mxll_null
@@ -247,11 +250,13 @@ contains
 
     st%fromScratch = .true. ! this will be reset if restart_read is called
     call states_mxll_null(st)
-
-    st%d%ispin = 1
-    st%d%nspin = 1
+    
     st%d%dim = 3
     st%nst   = 1
+    st%d%ispin = UNPOLARIZED
+    st%d%nspin = 1
+    st%d%spin_channels = 1
+    call states_choose_kpoints(st%d, gr%sb)
 
     SAFE_ALLOCATE(st%user_def_e_field(1:st%d%dim))
     SAFE_ALLOCATE(st%user_def_b_field(1:st%d%dim))
@@ -260,10 +265,6 @@ contains
     st%st_end = st%nst
     st%lnst = st%nst
 
-    SAFE_ALLOCATE(st%node(1:st%nst))
-    st%node(1:st%nst) = 0
-
-    st%priv%wfs_type = TYPE_CMPLX
     SAFE_ALLOCATE(st%node(1:st%nst))
     st%node(1:st%nst) = 0
 
@@ -353,13 +354,13 @@ contains
     call zbatch_allocate(st%rs_longb, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
     call batch_set_zero(st%rs_longb)
 
-    call batch_init(st%rs_curr_densb, st%d%dim, 1)
-    call zbatch_allocate(st%rs_curr_densb, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
-    call batch_set_zero(st%rs_curr_densb)
+    call batch_init(st%rs_curr_dens_rest1b, st%d%dim, 1)
+    call zbatch_allocate(st%rs_curr_dens_rest1b, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call batch_set_zero(st%rs_curr_dens_rest1b)
     
-    call batch_init(st%rs_curr_dens_restb, st%d%dim, 1)
-    call zbatch_allocate(st%rs_curr_dens_restb, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
-    call batch_set_zero(st%rs_curr_dens_restb)
+    call batch_init(st%rs_curr_dens_rest2b, st%d%dim, 1)
+    call zbatch_allocate(st%rs_curr_dens_rest2b, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call batch_set_zero(st%rs_curr_dens_rest2b)
    
 !    Another alternative
 !    call batch_init(st%rs_state_transb, hm%d%dim, 1)
@@ -380,8 +381,8 @@ contains
     call batch_end(st%rsb)
     call batch_end(st%rs_transb)
     call batch_end(st%rs_longb)
-    call batch_end(st%rs_curr_densb)
-    call batch_end(st%rs_curr_dens_restb)
+    call batch_end(st%rs_curr_dens_rest1b)
+    call batch_end(st%rs_curr_dens_rest2b)
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_end(st%dom_st_proc_grid)
@@ -710,7 +711,7 @@ contains
     SAFE_ALLOCATE(ztmp_global(mesh%np_global))
 
     do ip=1, st%selected_points_number
-      call mesh_nearest_point_infos(mesh, pos(:,ip), dmin, rankmin, pos_index_local, pos_index_global)
+      call mesh_nearest_point(mesh, pos(:,ip), dmin, rankmin, pos_index_local, pos_index_global)
       if (mesh%parallel_in_domains) then
         ztmp(:) = rs_state(pos_index_local,:)
 #ifdef HAVE_MPI
