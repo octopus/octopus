@@ -81,7 +81,8 @@ module run_oct_m
 contains
 
   ! ---------------------------------------------------------
-  integer function get_resp_method()
+  integer function get_resp_method(parser)
+    type(parser_t),    intent(in)    :: parser
 
     PUSH_SUB(get_resp_method)
     
@@ -107,7 +108,7 @@ contains
     !% mainly because it is simple and useful for testing purposes.
     !%End
     
-    call parse_variable('ResponseMethod', LR, get_resp_method)
+    call parse_variable(parser, 'ResponseMethod', LR, get_resp_method)
 
     if(.not.varinfo_valid_option('ResponseMethod', get_resp_method)) then
       call messages_input_error('ResponseMethod')
@@ -117,8 +118,9 @@ contains
   end function get_resp_method
   
   ! ---------------------------------------------------------
-  subroutine run(cm)
-    integer, intent(in) :: cm
+  subroutine run(parser, cm)
+    type(parser_t), intent(in) :: parser
+    integer,        intent(in) :: cm
 
     type(system_t)      :: sys
     type(hamiltonian_t) :: hm
@@ -141,15 +143,15 @@ contains
       return
     end if
 
-    call restart_module_init()
+    call restart_module_init(parser)
 
     ! initialize FFTs
-    call fft_all_init()
+    call fft_all_init(parser)
 
-    call unit_system_init()
+    call unit_system_init(parser)
 
     if(calc_mode_id == CM_TEST) then
-      call test_run()
+      call test_run(parser)
       call fft_all_end()
 #ifdef HAVE_MPI
       call mpi_debug_statistics()
@@ -158,9 +160,9 @@ contains
       return
     end if
 
-    call system_init(sys)
+    call system_init(sys, parser)
 
-    call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
+    call hamiltonian_init(hm, parser, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
       sys%ks%xc_family, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
 
     if (hm%pcm%run_pcm) then
@@ -197,7 +199,7 @@ contains
     if(calc_mode_id /= CM_DUMMY) then
       message(1) = "Info: Generating external potential"
       call messages_info(1)
-      call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
+      call hamiltonian_epot_generate(hm, sys%parser, sys%gr, sys%geo, sys%st)
       message(1) = "      done."
       call messages_info(1)
     end if
@@ -226,7 +228,7 @@ contains
       !% information.
       !%End
 
-      call parse_variable('FromScratch', .false., fromScratch)
+      call parse_variable(parser, 'FromScratch', .false., fromScratch)
 
       call profiling_in(calc_mode_prof, "CALC_MODE")
 
@@ -242,7 +244,7 @@ contains
       case(CM_LR_POL)
         if(sys%gr%sb%kpoints%use_symmetries) &
           call messages_experimental("KPoints symmetries with CalculationMode = em_resp")
-        select case(get_resp_method())
+        select case(get_resp_method(sys%parser))
         case(FD)
           call static_pol_run(sys, hm, fromScratch)
         case(LR)
@@ -259,7 +261,7 @@ contains
       case(CM_PHONONS_LR)
         if(sys%gr%sb%kpoints%use_symmetries) &
           call messages_experimental("KPoints symmetries with CalculationMode = vib_modes")
-        select case(get_resp_method())
+        select case(get_resp_method(sys%parser))
         case(FD)
           call phonons_run(sys, hm)
         case(LR)

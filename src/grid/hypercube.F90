@@ -38,6 +38,7 @@ module hypercube_oct_m
        hypercube_number_total_points
 
   type hypercube_t
+    private
     integer, pointer :: boxdim(:)
   end type hypercube_t
 

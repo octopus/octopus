@@ -328,7 +328,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   logical, optional, intent(in)    :: cproduct
 
   integer :: ist, indb, idim, ip, status
-  logical :: reduce_, cproduct_
+  logical :: cproduct_
   type(profile_t), save :: prof, profcomm
   R_TYPE, allocatable :: tmp(:), cltmp(:, :)
   type(accel_mem_t)  :: dot_buffer
@@ -336,9 +336,6 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   PUSH_SUB(X(mesh_batch_dotp_vector))
   call profiling_in(prof, "DOTPV_BATCH")
 
-  reduce_ = .true.
-  if(present(reduce)) reduce_ = reduce
-  
   cproduct_ = optional_default(cproduct, .false.)
   
   ASSERT(aa%nst == bb%nst)
@@ -436,7 +433,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
 
   end select
 
-  if(mesh%parallel_in_domains .and. reduce_) then
+  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(profcomm, "DOTPV_BATCH_REDUCE")
     call comm_allreduce(mesh%mpi_grp%comm, dot, dim = aa%nst)
     call profiling_out(profcomm)
@@ -735,7 +732,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
       nrm2(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
-         nrm2(ist) = hypot(nrm2(ist), scal(indb)*sqrt(mesh%volume_element*ssq(indb)))
+        nrm2(ist) = hypot(nrm2(ist), scal(indb)*sqrt(mesh%volume_element*ssq(indb)))
       end do
     end do
 
@@ -775,6 +772,114 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   call profiling_out(prof)
   POP_SUB(X(priv_mesh_batch_nrm2))
 end subroutine X(priv_mesh_batch_nrm2)
+
+! ---------------------------------------------------------
+!> Orthonormalizes states of phib to the orbitals of nst batches of psi.
+!! It also permits doing only the orthogonalization (no normalization).
+subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
+  normalize, overlap, norm, gs_scheme)
+  type(mesh_t),      intent(in)    :: mesh
+  integer,           intent(in)    :: nst
+  type(batch_t),     intent(in)    :: psib(:)   !< psi(nst)
+  type(batch_t),     intent(inout) :: phib      
+  logical, optional, intent(in)    :: normalize
+  R_TYPE,  optional, intent(out)   :: overlap(:,:) !< (nst, phib%nst)
+  R_TYPE,  optional, intent(out)   :: norm(:)
+  integer, optional, intent(in)    :: gs_scheme
+
+  logical :: normalize_
+  integer :: ist, idim, is
+  R_TYPE, allocatable   :: nrm2(:)
+  R_TYPE, allocatable  :: ss(:,:), ss_full(:,:)
+  integer :: block_size, size, sp, ep
+  type(profile_t), save :: prof
+  type(profile_t), save :: reduce_prof
+  logical :: drcgs
+  integer :: nsteps
+
+  call profiling_in(prof, "BATCH_GRAM_SCHMIDT")
+  PUSH_SUB(X(mesh_batch_orthogonalization))
+
+  SAFE_ALLOCATE(ss(1:phib%nst, 1:nst))
+  ss = R_TOTYPE(M_ZERO)
+
+  drcgs = .false.
+  nsteps = 1
+  if(present(gs_scheme)) then
+    if(gs_scheme == OPTION__ARNOLDIORTHOGONALIZATION__DRCGS) then
+      drcgs = .true.
+      nsteps = 2
+      SAFE_ALLOCATE(ss_full(1:phib%nst, 1:nst))
+      ss_full = R_TOTYPE(M_ZERO)
+    end if
+  end if
+
+  do is = 1, nsteps
+    if(nst>=1 .and. drcgs) then
+      call X(mesh_batch_dotp_vector)(mesh, psib(nst), phib, ss(1:phib%nst,1))
+      call batch_axpy(mesh%np, -ss(1:phib%nst,1), psib(nst), phib, a_full = .false.)
+      if(present(overlap)) ss_full(1:phib%nst, nst) = ss_full(1:phib%nst, nst) + ss(1:phib%nst, 1)
+    end if
+    ss = R_TOTYPE(M_ZERO)
+
+    !TODO: We should reuse phib here for improved performances
+    do ist = 1, nst
+      call X(mesh_batch_dotp_vector)(mesh, psib(ist), phib, ss(1:phib%nst,ist), reduce = .false.) 
+    end do
+
+    if(mesh%parallel_in_domains) then
+      call profiling_in(reduce_prof, "BATCH_GRAM_SCHMIDT_REDUCE")
+      call comm_allreduce(mesh%mpi_grp%comm, ss, dim = (/phib%nst, nst/))
+      call profiling_out(reduce_prof)
+    end if
+   
+    !TODO: We should have a routine batch_gemv for improved performances
+    do ist = 1, nst
+      call batch_axpy(mesh%np, -ss(1:phib%nst,ist), psib(ist), phib, a_full = .false.)
+    end do
+
+    !We accumulate the overlap
+    if(drcgs .and. present(overlap)) then
+      do ist = 1, nst
+        ss_full(1:phib%nst, ist) = ss_full(1:phib%nst, ist) + ss(1:phib%nst, ist)
+      end do 
+    end if
+  end do
+
+  !We have a transpose here because this helps for the Lanczos implementation
+  !which is the only routine using this one at the moment
+  !Indeed, Lanczos acts on phib%nst arrays of dimension nst, whereas the code would return 
+  !an array of dim (phib%nst, nst)
+  !For an orthogalization, it is more natural to have for each state the overlap with the others
+  !which is what the code outputs now.
+  if(present(overlap)) then
+    if(drcgs) then
+      overlap(1:nst, 1:phib%nst) = transpose(ss_full(1:phib%nst, 1:nst))
+    else
+      overlap(1:nst, 1:phib%nst) = transpose(ss(1:phib%nst, 1:nst))
+    end if
+  end if
+
+  normalize_ = optional_default(normalize, .false.)
+  if(present(norm) .or. normalize_) then
+    SAFE_ALLOCATE(nrm2(1:phib%nst))
+    !Here we do not call mesh_batch_nrm2 which is too slow
+    call X(mesh_batch_dotp_vector)(mesh, phib, phib, nrm2)
+    if(present(norm)) then
+      norm(1:phib%nst) = sqrt(real(nrm2(1:phib%nst), REAL_PRECISION))
+    end if
+    if(normalize_) then
+      call batch_scal(mesh%np, M_ONE/sqrt(real(nrm2, REAL_PRECISION)), phib, a_full =.false.)
+    end if
+    SAFE_DEALLOCATE_A(nrm2)
+  end if
+
+  SAFE_DEALLOCATE_A(ss)
+  SAFE_DEALLOCATE_A(ss_full)
+
+  POP_SUB(X(mesh_batch_orthogonalization))
+  call profiling_out(prof)
+end subroutine X(mesh_batch_orthogonalization)
 
 
 !! Local Variables:

@@ -29,6 +29,7 @@ module lda_u_io_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
   use species_oct_m
@@ -613,8 +614,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lda_u_loadbasis(lda_u, st, mesh, mc, ierr)
+  subroutine lda_u_loadbasis(lda_u, parser, st, mesh, mc, ierr)
     type(lda_u_t),        intent(inout) :: lda_u
+    type(parser_t),       intent(in)  :: parser
     type(states_t),       intent(in)    :: st
     type(mesh_t),         intent(in)    :: mesh
     type(multicomm_t),    intent(in)    :: mc
@@ -641,7 +643,7 @@ contains
       call messages_info(1)
     end if
 
-    call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, mc, err, mesh=mesh)
+    call restart_init(restart_gs, parser, RESTART_PROJ, RESTART_TYPE_LOAD, mc, err, mesh=mesh)
 
     ! open files to read
     wfns_file  = restart_open(restart_gs, 'wfns')

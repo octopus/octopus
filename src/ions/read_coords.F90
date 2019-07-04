@@ -112,10 +112,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine read_coords_read(what, gf, space)
+  subroutine read_coords_read(what, gf, space, parser)
     character(len=*),       intent(in)    :: what
     type(read_coords_info), intent(inout) :: gf
     type(space_t),          intent(in)    :: space
+    type(parser_t),         intent(in)    :: parser
 
     integer :: ia, ncol, iunit, jdir, int_one, nsteps, istep, step_to_use
     type(block_t) :: blk
@@ -163,7 +164,7 @@ contains
     !% Not available in periodic systems.
     !%End
 
-    if(parse_is_defined('PDB'//trim(what))) then
+    if(parse_is_defined(parser, 'PDB'//trim(what))) then
       call check_duplicated(done)
 
       gf%source = READ_COORDS_PDB
@@ -171,7 +172,7 @@ contains
       gf%flags = ior(gf%flags, XYZ_FLAGS_CHARGE)
 
       ! no default, since we do not do this unless the input tag is present
-      call parse_variable('PDB'//trim(what), '', str)
+      call parse_variable(parser, 'PDB'//trim(what), '', str)
 
       message(1) = "Reading " // trim(what) // " from " // trim(str)
       call messages_info(1)
@@ -206,12 +207,12 @@ contains
     !% <tt>angstrom</tt>.
     !%End
 
-    if(parse_is_defined('XYZ'//trim(what))) then ! read an xyz file
+    if(parse_is_defined(parser, 'XYZ'//trim(what))) then ! read an xyz file
       call check_duplicated(done)
 
       gf%source = READ_COORDS_XYZ
       ! no default, since we do not do this unless the input tag is present
-      call parse_variable('XYZ'//trim(what), '', str)
+      call parse_variable(parser, 'XYZ'//trim(what), '', str)
 
       message(1) = "Reading " // trim(what) // " from " // trim(str)
       call messages_info(1)
@@ -248,12 +249,12 @@ contains
     !% NOTE: The coordinates are treated in the units specified by <tt>Units</tt> and/or <tt>UnitsInput</tt>.
     !%End
 
-    if(parse_is_defined('XSF'//trim(what))) then ! read an xsf file
+    if(parse_is_defined(parser, 'XSF'//trim(what))) then ! read an xsf file
       call check_duplicated(done)
 
       gf%source = READ_COORDS_XSF
       ! no default, since we do not do this unless the input tag is present
-      call parse_variable('XSF'//trim(what), '', str)
+      call parse_variable(parser, 'XSF'//trim(what), '', str)
 
       message(1) = "Reading " // trim(what) // " from " // trim(str)
       call messages_info(1)
@@ -273,7 +274,7 @@ contains
         !% If an animated file is given with <tt>XSFCoordinates</tt>, this variable selects which animation step
         !% will be used. The <tt>PRIMVEC</tt> block must be written for each step.
         !%End
-        call parse_variable('XSFCoordinatesAnimStep', 1, step_to_use)
+        call parse_variable(parser, 'XSFCoordinatesAnimStep', 1, step_to_use)
         if(step_to_use < 1) then
           message(1) = "XSFCoordinatesAnimStep must be > 0."
           call messages_fatal(1)
@@ -401,7 +402,7 @@ contains
     !% It is always possible to fix <b>all</b> atoms using the <tt>MoveIons</tt> directive.
     !%End
 
-    if(parse_block(trim(what), blk) == 0) then
+    if(parse_block(parser, trim(what), blk) == 0) then
       call check_duplicated(done)
 
       gf%n = parse_block_n(blk)
@@ -451,7 +452,7 @@ contains
 
     ! This is valid only for Coordinates.
     if(trim(what) == 'Coordinates') then
-      if(parse_block('Reduced'//trim(what), blk) == 0) then
+      if(parse_block(parser, 'Reduced'//trim(what), blk) == 0) then
         call check_duplicated(done)
 
         gf%n = parse_block_n(blk)

@@ -49,6 +49,7 @@ module poisson_multigrid_oct_m
     mg_solver_t
 
   type mg_solver_t
+    private
 
     FLOAT ::                    &
       threshold,                &
@@ -68,15 +69,16 @@ module poisson_multigrid_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_multigrid_init(this, mesh, ml, thr)
+  subroutine poisson_multigrid_init(this, parser, mesh, ml, thr)
     type(mg_solver_t), intent(out)   :: this
+    type(parser_t),    intent(in)    :: parser
     type(mesh_t),      intent(inout) :: mesh
     integer,           intent(in)    :: ml
     FLOAT,             intent(in)    :: thr
 
     PUSH_SUB(poisson_multigrid_init)
 
-    call poisson_corrections_init(this%corrector, ml, mesh)
+    call poisson_corrections_init(this%corrector, parser, ml, mesh)
 
     this%threshold = thr
 
@@ -88,7 +90,7 @@ contains
     !% Number of Gauss-Seidel smoothing steps before coarse-level
     !% correction in the multigrid Poisson solver.
     !%End
-    call parse_variable('PoissonSolverMGPresmoothingSteps', 1, this%presteps)
+    call parse_variable(parser, 'PoissonSolverMGPresmoothingSteps', 1, this%presteps)
 
     !%Variable PoissonSolverMGPostsmoothingSteps
     !%Type integer
@@ -98,7 +100,7 @@ contains
     !% Number of Gauss-Seidel smoothing steps after coarse-level
     !% correction in the multigrid Poisson solver.
     !%End
-    call parse_variable('PoissonSolverMGPostsmoothingSteps', 4, this%poststeps)
+    call parse_variable(parser, 'PoissonSolverMGPostsmoothingSteps', 4, this%poststeps)
 
     !%Variable PoissonSolverMGMaxCycles
     !%Type integer
@@ -108,7 +110,7 @@ contains
     !% Maximum number of multigrid cycles that are performed if
     !% convergence is not achieved.
     !%End
-    call parse_variable('PoissonSolverMGMaxCycles', 50, this%maxcycles)
+    call parse_variable(parser, 'PoissonSolverMGMaxCycles', 50, this%maxcycles)
 
     !%Variable PoissonSolverMGRestrictionMethod
     !%Type integer
@@ -121,7 +123,7 @@ contains
     !%Option fullweight 2
     !% Fullweight restriction
     !%End
-    call parse_variable('PoissonSolverMGRestrictionMethod', 2, this%restriction_method)
+    call parse_variable(parser, 'PoissonSolverMGRestrictionMethod', 2, this%restriction_method)
     if(.not.varinfo_valid_option('PoissonSolverMGRestrictionMethod', this%restriction_method)) &
        call messages_input_error('PoissonSolverMGRestrictionMethod')
     call messages_print_var_option(stdout, "PoissonSolverMGRestrictionMethod", this%restriction_method)
@@ -141,9 +143,9 @@ contains
     !% Alternative implementation of Gauss-Jacobi.
     !%End
     if ( mesh%use_curvilinear ) then
-      call parse_variable('PoissonSolverMGRelaxationMethod', GAUSS_JACOBI, this%relaxation_method)
+      call parse_variable(parser, 'PoissonSolverMGRelaxationMethod', GAUSS_JACOBI, this%relaxation_method)
     else
-      call parse_variable('PoissonSolverMGRelaxationMethod', GAUSS_SEIDEL, this%relaxation_method)
+      call parse_variable(parser, 'PoissonSolverMGRelaxationMethod', GAUSS_SEIDEL, this%relaxation_method)
     end if
 
     if(.not.varinfo_valid_option('PoissonSolverMGRelaxationMethod', this%relaxation_method)) &
@@ -160,9 +162,9 @@ contains
     !% The default is 1.0, except 0.6666 for the <tt>gauss_jacobi</tt> method.
     !%End
     if ( this%relaxation_method == GAUSS_JACOBI) then
-      call parse_variable('PoissonSolverMGRelaxationFactor', CNST(0.6666), this%relax_factor )
+      call parse_variable(parser, 'PoissonSolverMGRelaxationFactor', CNST(0.6666), this%relax_factor )
     else
-      call parse_variable('PoissonSolverMGRelaxationFactor', M_ONE, this%relax_factor)
+      call parse_variable(parser, 'PoissonSolverMGRelaxationFactor', M_ONE, this%relax_factor)
     end if
 
     POP_SUB(poisson_multigrid_init)

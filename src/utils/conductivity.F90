@@ -54,7 +54,7 @@
     integer :: skip
     FLOAT, parameter :: inv_ohm_meter = CNST(4599848.1)
     logical :: from_forces
-    
+    type(parser_t) :: parser    
     
     ! Initialize stuff
     call global_init(is_serial = .true.)		 
@@ -62,15 +62,17 @@
     call getopt_init(ierr)
     call getopt_end()
 
-    call messages_init()
+    call parser_init(parser)
+    
+    call messages_init(parser)
 
     call messages_experimental('oct-conductivity')
 
-    call io_init()
+    call io_init(parser)
 
-    call unit_system_init()
+    call unit_system_init(parser)
 
-    call spectrum_init(spectrum, default_energy_step = CNST(0.0001), default_max_energy  = CNST(1.0))
+    call spectrum_init(spectrum, parser, default_energy_step = CNST(0.0001), default_max_energy  = CNST(1.0))
  
     !%Variable ConductivitySpectrumTimeStepFactor
     !%Type integer
@@ -83,8 +85,8 @@
     !% time step used to calculate the conductivity.
     !%End
 
-    call messages_obsolete_variable('PropagationSpectrumTimeStepFactor', 'ConductivitySpectrumTimeStepFactor')
-    call parse_variable('ConductivitySpectrumTimeStepFactor', 1, skip)
+    call messages_obsolete_variable(parser, 'PropagationSpectrumTimeStepFactor', 'ConductivitySpectrumTimeStepFactor')
+    call parse_variable(parser, 'ConductivitySpectrumTimeStepFactor', 1, skip)
     if(skip <= 0) call messages_input_error('ConductivitySpectrumTimeStepFactor')
 
     !%Variable ConductivityFromForces
@@ -94,19 +96,19 @@
     !%Description
     !% (Experimental) If enabled, Octopus will attempt to calculate the conductivity from the forces instead of the current. 
     !%End
-    call parse_variable('ConductivityFromForces', .false., from_forces)
+    call parse_variable(parser, 'ConductivityFromForces', .false., from_forces)
     if(from_forces) call messages_experimental('ConductivityFromForces')
     
     max_freq = spectrum_nenergy_steps(spectrum)
     
     if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
 
-    call space_init(space)
-    call geometry_init(geo, space)
-    call simul_box_init(sb, geo, space)
+    call space_init(space, parser)
+    call geometry_init(geo, parser, space)
+    call simul_box_init(sb, parser, geo, space)
 
-    call grid_init_stage_0(gr, geo, space)
-    call states_init(st, gr, geo)
+    call grid_init_stage_0(gr, parser, geo, space)
+    call states_init(st, parser, gr, geo)
     
     if(from_forces) then
 
@@ -452,6 +454,8 @@
 
     call io_end()
     call messages_end()
+
+    call parser_end(parser)
     call global_end()
 
   end program conductivity

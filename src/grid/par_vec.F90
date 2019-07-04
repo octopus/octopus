@@ -112,6 +112,8 @@ module par_vec_oct_m
   
   !> Parallel information
   type pv_t
+    ! Components are public by default
+
     ! The content of these members is process-dependent.
     integer          :: rank                 !< Our rank in the communicator. 
     !> Partition number of the
@@ -138,14 +140,14 @@ module par_vec_oct_m
                                                     !! Global vector; npart elements.
     integer                 :: np_local             !< How many points has running partition? 
                                                     !! Local value.
-    integer, pointer        :: xlocal_vec(:)        !< Points of partition r start at
+    integer, pointer, private :: xlocal_vec(:)      !< Points of partition r start at
                                                     !! xlocal_vec(r) in local. Global start point
                                                     !! of the local index.  
                                                     !! Global vector; npart elements.
     integer                 :: xlocal               !< Starting index of running process in local(:) vector.
                                                     !! Local value.
           
-    integer, pointer        :: local_vec(:)         !< Partition r has points
+    integer, pointer, private :: local_vec(:)       !< Partition r has points
                                                     !! local_vec(xlocal_vec(r):
                                                     !! xlocal_vec(r)+np_local_vec(r)-1). 
                                                     !! Global vector; np_global elements    
@@ -165,9 +167,9 @@ module par_vec_oct_m
     integer, pointer        :: bndry(:)             !< Global numbers of boundary points.
                                                     !! Global vector; np_enl elements
       
-    type(iihash_t), pointer :: global(:)            !< global(r) contains the global ->
+    type(iihash_t), pointer, private :: global(:)   !< global(r) contains the global ->
                                                     !! local mapping for partition r.   
-    integer                 :: total                !< Total number of ghost points. 
+    integer, private        :: total                !< Total number of ghost points. 
 
     integer                 :: np_ghost                 !< How many ghost points has partition r?
                                                         !! Local value

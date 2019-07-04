@@ -59,6 +59,7 @@ module gauge_field_oct_m
     gauge_field_get_force
 
   type gauge_field_t
+    private
     FLOAT   :: vecpot(1:MAX_DIM)   
     FLOAT   :: vecpot_vel(1:MAX_DIM)
     FLOAT   :: vecpot_acc(1:MAX_DIM)    
@@ -66,7 +67,7 @@ module gauge_field_oct_m
     FLOAT   :: force(1:MAX_DIM)
     FLOAT   :: wp2
     integer :: ndim
-    logical :: with_gauge_field
+    logical, public :: with_gauge_field
     integer :: dynamics
     FLOAT   :: kicktime 
   end type gauge_field_t
@@ -83,8 +84,9 @@ contains
   end subroutine gauge_field_nullify
 
   ! ---------------------------------------------------------
-  subroutine gauge_field_init(this, sb)
+  subroutine gauge_field_init(this, parser, sb)
     type(gauge_field_t),     intent(out)   :: this
+    type(parser_t),          intent(in)    :: parser
     type(simul_box_t),       intent(in)    :: sb
 
     integer :: ii, iop
@@ -115,7 +117,7 @@ contains
     !% Bertsch et al, Phys. Rev. B 62 7998 (2000).
     !%End
 
-    call parse_variable('GaugeFieldDynamics', OPTION__GAUGEFIELDDYNAMICS__POLARIZATION, this%dynamics)
+    call parse_variable(parser, 'GaugeFieldDynamics', OPTION__GAUGEFIELDDYNAMICS__POLARIZATION, this%dynamics)
 
     !%Variable GaugeFieldPropagate
     !%Type logical
@@ -125,7 +127,7 @@ contains
     !% Propagate the gauge field with initial condition set by GaugeVectorField or zero if not specified
     !%End
 
-    call parse_variable('GaugeFieldPropagate', .false., this%with_gauge_field)
+    call parse_variable(parser, 'GaugeFieldPropagate', .false., this%with_gauge_field)
 
     !%Variable GaugeVectorField
     !%Type block
@@ -144,7 +146,7 @@ contains
     !%End
     ! Read the initial gauge vector field
 
-    if(parse_block('GaugeVectorField', blk) == 0) then
+    if(parse_block(parser, 'GaugeVectorField', blk) == 0) then
 
       this%with_gauge_field = .true.
 
@@ -180,7 +182,7 @@ contains
     !% systems one can apply this probe with a delay relative to the start of the simulation.
     !%End
 
-    call parse_variable('GaugeFieldDelay', M_ZERO, this%kicktime)
+    call parse_variable(parser, 'GaugeFieldDelay', M_ZERO, this%kicktime)
 
     if(abs(this%kicktime) <= M_EPSILON) then
        this%vecpot(1:this%ndim) = this%vecpot_kick(1:this%ndim)

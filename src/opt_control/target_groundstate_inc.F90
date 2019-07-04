@@ -19,8 +19,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_groundstate(gr, tg, td, restart)
+  subroutine target_init_groundstate(gr, parser, tg, td, restart)
     type(grid_t),     intent(in)    :: gr
+    type(parser_t),   intent(in)    :: parser
     type(target_t),   intent(inout) :: tg
     type(td_t),       intent(in)    :: td
     type(restart_t),  intent(in)    :: restart
@@ -32,7 +33,7 @@
     message(1) =  'Info: Using Ground State for TargetOperator'
     call messages_info(1)
 
-    call states_load(restart, tg%st, gr, ierr)
+    call states_load(restart, parser, tg%st, gr, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)
@@ -55,8 +56,9 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_groundstate(tg, gr, dir, geo, hm, outp)
+  subroutine target_output_groundstate(tg, parser, gr, dir, geo, hm, outp)
     type(target_t),      intent(in) :: tg
+    type(parser_t),      intent(in) :: parser
     type(grid_t),        intent(in) :: gr
     character(len=*),    intent(in) :: dir
     type(geometry_t),    intent(in) :: geo
@@ -66,7 +68,7 @@
     PUSH_SUB(target_output_groundstate)
     
     call io_mkdir(trim(dir))
-    call output_states(tg%st, gr, geo, hm, trim(dir), outp)
+    call output_states(tg%st, parser, gr, geo, hm, trim(dir), outp)
 
     POP_SUB(target_output_groundstate)
   end subroutine target_output_groundstate

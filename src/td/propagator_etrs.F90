@@ -35,6 +35,7 @@ module propagator_etrs_oct_m
   use math_oct_m
   use messages_oct_m
   use mesh_function_oct_m
+  use parser_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
@@ -56,8 +57,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with enforced time-reversal symmetry
-  subroutine td_etrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
+  subroutine td_etrs(ks, parser, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
     type(v_ks_t), target,            intent(inout) :: ks
+    type(parser_t),                  intent(in)    :: parser
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
@@ -104,7 +106,7 @@ contains
 
       call density_calc_end(dens_calc)
 
-      call v_ks_calc(ks, hm, st, geo, calc_current = .false.)
+      call v_ks_calc(ks, parser, hm, st, geo, calc_current = .false.)
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
@@ -126,7 +128,7 @@ contains
     ! first move the ions to time t
     if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
-      call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
+      call hamiltonian_epot_generate(hm, parser,  gr, geo, st, time = time)
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
@@ -158,8 +160,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with enforced time-reversal symmetry and self-consistency
-  subroutine td_etrs_sc(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, sctol, scsteps)
+  subroutine td_etrs_sc(ks, parser, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions, sctol, scsteps)
     type(v_ks_t), target,            intent(inout) :: ks
+    type(parser_t),                  intent(in)    :: parser
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
@@ -216,7 +219,7 @@ contains
 
     call density_calc_end(dens_calc)
 
-    call v_ks_calc(ks, hm, st, geo, calc_current = .false.)
+    call v_ks_calc(ks, parser, hm, st, geo, calc_current = .false.)
 
     call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
     call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
@@ -228,7 +231,7 @@ contains
     ! first move the ions to time t
     if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
-      call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
+      call hamiltonian_epot_generate(hm, parser,  gr, geo, st, time = time)
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
@@ -257,15 +260,16 @@ contains
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
 
+      call density_calc_init(dens_calc, st, gr, st%rho)
       do ik = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
           call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
         end do
       end do
+      call density_calc_end(dens_calc)
 
-      call density_calc(st, gr, st%rho)
-
-      call v_ks_calc(ks, hm, st, geo, time = time, calc_current = .false.)
+      call v_ks_calc(ks, parser, hm, st, geo, time = time, calc_current = .false.)
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
 
       ! now check how much the potential changed
@@ -319,8 +323,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Propagator with approximate enforced time-reversal symmetry
-  subroutine td_aetrs(ks, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
+  subroutine td_aetrs(ks, parser, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, move_ions)
     type(v_ks_t), target,            intent(inout) :: ks
+    type(parser_t),                  intent(in)    :: parser
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
@@ -357,7 +362,7 @@ contains
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt)
       !We update the occupation matrices
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
-      call v_ks_calc_start(ks, hm, st, geo, time = time - dt, calc_energy = .false., &
+      call v_ks_calc_start(ks, parser, hm, st, geo, time = time - dt, calc_energy = .false., &
              calc_current = .false.)
     end if
 
@@ -415,7 +420,7 @@ contains
     ! move the ions to time t
     if(move_ions .and. ion_dynamics_ions_move(ions)) then
       call ion_dynamics_propagate(ions, gr%sb, geo, time, ionic_scale*dt)
-      call hamiltonian_epot_generate(hm, gr, geo, st, time = time)
+      call hamiltonian_epot_generate(hm, parser, gr, geo, st, time = time)
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield)) then

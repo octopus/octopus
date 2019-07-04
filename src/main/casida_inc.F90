@@ -355,7 +355,7 @@ subroutine X(casida_calc_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, is_saved, st_s
 
   do ist = st_start, st_end
     if(all(is_saved(ist, ist:st_end, ik))) cycle
-    call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, psi(:, :, ist), pert_psi(:, :))
+    call X(pert_apply)(pert, sys%parser, sys%gr, sys%geo, hm, ik, psi(:, :, ist), pert_psi(:, :))
     do idim = 1, sys%st%d%dim
       pert_psi(:, idim) = pert_psi(:, idim) + hvar(:, ispin, 1) * psi(:, idim, ist)
     end do
@@ -766,7 +766,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   SAFE_ALLOCATE(cas%X(mat2)(1:cas%n_pairs, 1:cas%n_pairs))
   SAFE_ALLOCATE(cas%X(w2)(1:cas%n_pairs))
 
-  call restart_init(restart_vib, RESTART_VIB_MODES, RESTART_TYPE_LOAD, sys%mc, ierr, mesh = sys%gr%mesh)
+  call restart_init(restart_vib, sys%parser, RESTART_VIB_MODES, RESTART_TYPE_LOAD, sys%mc, ierr, mesh = sys%gr%mesh)
 
   do iatom = 1, sys%geo%natoms
     do idir = 1, mesh%sb%dim
@@ -830,7 +830,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   SAFE_DEALLOCATE_P(cas%X(w2))
   
   if(cas%calc_forces_scf) then
-    call forces_calculate(sys%gr, sys%geo, hm, st, sys%ks)
+    call forces_calculate(sys%gr, sys%parser, sys%geo, hm, st, sys%ks)
     do ia = 1, cas%n_pairs
       do iatom = 1, sys%geo%natoms
         do idir = 1, sys%gr%sb%dim
@@ -922,7 +922,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
     return
   end if
 
-  call pert_init(ionic_pert, PERTURBATION_IONIC, sys%gr, sys%geo)
+  call pert_init(ionic_pert, sys%parser, PERTURBATION_IONIC, sys%gr, sys%geo)
   call pert_setup_atom(ionic_pert, iatom)
   call pert_setup_dir(ionic_pert, idir)
 

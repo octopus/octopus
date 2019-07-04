@@ -40,6 +40,7 @@ module compressed_sensing_oct_m
     compressed_sensing_spectral_analysis
 
   type compressed_sensing_t
+    private
     FLOAT   :: sigma
     integer :: ntime
     FLOAT   :: dtime

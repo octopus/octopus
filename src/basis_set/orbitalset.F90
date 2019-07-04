@@ -59,6 +59,7 @@ module orbitalset_oct_m
        orbitalset_set_jln
 
   type orbitalset_t
+    ! Components are public by default
     integer             :: nn, ll, ii
     FLOAT               :: jj
     integer             :: norbs
