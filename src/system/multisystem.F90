@@ -61,6 +61,8 @@ contains
     !% available system types.
     !%Option electronic 1
     !% An electronic system.
+    !%Option maxwell 2
+    !% A maxwell system.
     !%End
     if(parse_block(parser, 'Systems', blk) == 0) then
       do isys = 1, parse_block_n(blk)
