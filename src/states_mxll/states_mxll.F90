@@ -100,7 +100,8 @@ module states_mxll_oct_m
     logical                      :: parallel_in_states !< Am I parallel in states?
 
 
-    CMPLX, pointer               :: rs_state(:,:)
+    !CMPLX, pointer               :: rs_state(:,:)
+    type(batch_t)                :: rsb
     CMPLX, pointer               :: rs_state_plane_waves(:,:)
     CMPLX, pointer               :: rs_state_trans(:,:)
     CMPLX, pointer               :: rs_state_long(:,:)
@@ -374,11 +375,17 @@ contains
 
     ! This should be done using batches
 
-    SAFE_ALLOCATE(st%rs_state(1:mesh%np_part, 1:st%d%dim))
-    st%rs_state(:,:) = M_z0
+    call batch_init(st%rsb, st%d%dim, 1)
+    call zbatch_allocate(st%rsb, 1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call batch_set_zero(st%rsb)
 
     SAFE_ALLOCATE(st%rs_state_trans(1:mesh%np_part, 1:st%d%dim))
     st%rs_state_trans(:,:) = M_z0
+
+!    call batch_init(st%rs_state_transb, hm%d%dim, 1)
+!    call batch_add_state(st%rs_state_transb, 1, st%rs_state_trans)
+
+!    call batch_end(st%rs_state_transb)
 
     SAFE_ALLOCATE(st%rs_state_long(1:mesh%np_part, 1:st%d%dim))
     st%rs_state_long(:,:) = M_z0
