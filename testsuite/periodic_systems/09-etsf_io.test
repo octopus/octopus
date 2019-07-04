@@ -53,4 +53,4 @@ match ; density.ncdf     ; SIZE(static/density.ncdf)        ;   22248
 match ; netcdf wfn 3     ; SIZE(static/wf-k001-st0003.ncdf) ;   44320
 match ; netcdf wfn 4     ; SIZE(static/wf-k001-st0004.ncdf) ;   44320
 
-errormatch; Error; GREPCOUNT(err, 'nlopt library has been compiled') ; 1
+errormatch; Error; GREPCOUNT(err, 'Octopus was compiled without NetCDF support') ; 1

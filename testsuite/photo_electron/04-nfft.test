@@ -14,6 +14,8 @@ match ; PES [val  1] ; LINEFIELD(td.general/PESM_power.sum, 16, 2) ;  3.09551509
 match ; PES [val  2] ; LINEFIELD(td.general/PESM_power.sum, 24, 2) ;  5.825348194087E-05
 match ; PES [val  3] ; LINEFIELD(td.general/PESM_power.sum, 33, 2) ;  2.188081572396E-04
 
+errormatch; Error; GREPCOUNT(err, 'NFFT but that library was not linked'); 1
+
 # ATI with nfft
 Processors : 2
 Input      : 04-nfft.02-ati.inp
@@ -22,4 +24,5 @@ match ; PES [val  1] ; LINEFIELD(td.general/PESM_power.sum, 30, 2) ;  6.64850270
 match ; PES [val  2] ; LINEFIELD(td.general/PESM_power.sum, 49, 2) ;  4.532980021948E-01
 match ; PES [val  3] ; LINEFIELD(td.general/PESM_power.sum, 62, 2) ;  1.826169875388E-01
 
+errormatch; Error; GREPCOUNT(err, 'NFFT but that library was not linked'); 1
 

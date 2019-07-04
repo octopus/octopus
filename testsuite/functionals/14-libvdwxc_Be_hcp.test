@@ -12,3 +12,5 @@ Precision: 3.0e-07
 match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.769097225
 Precision: 1.5e-7
 match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.414032305
+
+errormatch; Error; GREPCOUNT(err, 'not compiled with libvdwxc') ; 1

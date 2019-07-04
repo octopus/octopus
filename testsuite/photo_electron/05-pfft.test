@@ -17,6 +17,8 @@ Input      : 05-pfft.01-gs.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy   ; GREPFIELD(static/info, 'Total       =', 3) ;  -0.49919533
 
+errormatch; Error; GREPCOUNT(err, 'NFFT but that library was not linked'); 1
+
 # Hydrogen PES spectrum mask-method
 # This test basically checks the forward transform
 Processors : 4
@@ -25,6 +27,8 @@ match ; PES [val  1] ; LINEFIELD(td.general/PESM_power.sum, 23, 2) ;  1.25666292
 match ; PES [val  2] ; LINEFIELD(td.general/PESM_power.sum, 25, 2) ;  3.449654452396E-05
 match ; PES [val  3] ; LINEFIELD(td.general/PESM_power.sum, 60, 2) ;  1.174295927407E-07
 
+errormatch; Error; GREPCOUNT(err, 'NFFT but that library was not linked'); 1
+
 # Hydrogen PES spectrum full mask-method
 # This test checks both forward and backward transforms
 Processors : 4
@@ -32,3 +36,5 @@ Input      : 05-pfft.03-ba.inp
 match ; PES [val  1] ; LINEFIELD(td.general/PESM_power.sum, 23, 2) ;  3.384099673837E-05
 match ; PES [val  2] ; LINEFIELD(td.general/PESM_power.sum, 25, 2) ;  6.990706948261E-06
 match ; PES [val  3] ; LINEFIELD(td.general/PESM_power.sum, 60, 2) ;  3.931730291888E-08
+
+errormatch; Error; GREPCOUNT(err, 'NFFT but that library was not linked'); 1
