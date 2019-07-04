@@ -43,6 +43,7 @@ module system_oct_m
   use states_oct_m
   use states_dim_oct_m
   use v_ks_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -63,6 +64,7 @@ module system_oct_m
     type(output_t)               :: outp  !< the output
     type(multicomm_t)            :: mc    !< index and domain communicators
     type(parser_t)               :: parser
+    type(hamiltonian_t)          :: hm
   end type system_t
   
 contains
@@ -123,6 +125,8 @@ contains
       end if
     end if
 
+    call hamiltonian_init(sys%hm, parser, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
+      sys%ks%xc_family, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
 
     call profiling_out(prof)
     POP_SUB(system_init)
@@ -157,6 +161,8 @@ contains
 
     PUSH_SUB(system_end)
 
+    call hamiltonian_end(sys%hm)
+
     call multicomm_end(sys%mc)
 
     call poisson_end(psolver)
@@ -185,9 +191,8 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine system_h_setup(sys, hm, calc_eigenval)
+  subroutine system_h_setup(sys, calc_eigenval)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: hm
     logical,   optional, intent(in)    :: calc_eigenval !< default is true
 
     integer, allocatable :: ind(:)
@@ -200,7 +205,7 @@ contains
     calc_eigenval_ = optional_default(calc_eigenval, .true.)
     call states_fermi(sys%st, sys%gr%mesh)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, sys%parser, hm, sys%st, sys%geo, calc_eigenval = calc_eigenval_) ! get potentials
+    call v_ks_calc(sys%ks, sys%parser, sys%hm, sys%st, sys%geo, calc_eigenval = calc_eigenval_) ! get potentials
 
     if(sys%st%restart_reorder_occs .and. .not. sys%st%fromScratch) then
       message(1) = "Reordering occupations for restart."
@@ -222,7 +227,7 @@ contains
     end if
 
     call states_fermi(sys%st, sys%gr%mesh) ! occupations
-    call energy_calc_total(hm, sys%gr, sys%st)
+    call energy_calc_total(sys%hm, sys%gr, sys%st)
 
     POP_SUB(system_h_setup)
   end subroutine system_h_setup

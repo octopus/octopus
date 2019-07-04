@@ -61,7 +61,7 @@ module eigensolver_oct_m
     integer, public :: es_type    !< which eigensolver to use
 
     FLOAT,   public :: tolerance
-    integer         :: es_maxiter
+    integer, public :: es_maxiter
 
     FLOAT,   public :: current_rel_dens_error
     FLOAT           :: imag_time
@@ -76,19 +76,19 @@ module eigensolver_oct_m
 
     type(subspace_t) :: sdiag
 
-    type(xc_t), pointer :: xc
+    type(xc_t), pointer, public :: xc
 
     integer :: rmmdiis_minimization_iter
 
     logical :: skip_finite_weight_kpoints
-    logical :: folded_spectrum
+    logical, public :: folded_spectrum
     FLOAT, pointer   :: spectrum_shift(:,:)
 
     ! cg options
-    logical :: orthogonalize_to_all
-    integer :: conjugate_direction
-    logical :: additional_terms
-    FLOAT   :: energy_change_threshold
+    logical, public :: orthogonalize_to_all
+    integer, public :: conjugate_direction
+    logical, public :: additional_terms
+    FLOAT,   public :: energy_change_threshold
 
     type(exponential_t) :: exponential_operator
   end type eigensolver_t
@@ -108,12 +108,13 @@ module eigensolver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_init(eigens, parser, gr, st, xc)
+  subroutine eigensolver_init(eigens, parser, gr, st, xc, disable_preconditioner)
     type(eigensolver_t), intent(out)   :: eigens
     type(parser_t),      intent(in)    :: parser
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(in)    :: st
     type(xc_t), target,  intent(in)    :: xc
+    logical, optional,   intent(in)    :: disable_preconditioner
 
     integer :: default_iter, default_es
     FLOAT   :: default_tol
@@ -343,12 +344,12 @@ contains
       call messages_warning()
     end if
 
-    select case(eigens%es_type)
-    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
+    if (.not. optional_default(disable_preconditioner, .false.) .and. &
+      any(eigens%es_type == (/RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD/))) then
       call preconditioner_init(eigens%pre, parser, gr)
-    case default
+    else
       call preconditioner_null(eigens%pre)
-    end select
+    end if
 
     nullify(eigens%diff)
     SAFE_ALLOCATE(eigens%diff(1:st%nst, 1:st%d%nik))

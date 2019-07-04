@@ -34,7 +34,7 @@ Precision : 0.002
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;    -5.35947811
 
 Precision : 0.002
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;    18.03828793
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;    18.03609383
 
 Precision : 0.002
 match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -5.88005659
@@ -46,13 +46,13 @@ Precision : default
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;     0.00000000
 
 Precision : 0.002
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;     7.80992258
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;     7.81545303
 
 Precision : 0.003
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;   -43.36372056
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;   -43.36704243
 
 Precision : 5e-04
-match ; Eigenvalue 1       ; GREPFIELD(static/info, '1   --', 3) ; -1.051035 
+match ; Eigenvalue 1       ; GREPFIELD(static/info, '1   --', 3) ; -1.051627
 match ; Eigenvalue 2       ; GREPFIELD(static/info, '2   --', 3) ; -0.542949
 match ; Eigenvalue 3       ; GREPFIELD(static/info, '3   --', 3) ; -0.542878
 match ; Eigenvalue 4       ; GREPFIELD(static/info, '4   --', 3) ; -0.542878

@@ -67,9 +67,8 @@ module phonons_lr_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine phonons_lr_run(sys, hm, fromscratch)
+  subroutine phonons_lr_run(sys, fromscratch)
     type(system_t), target, intent(inout) :: sys
-    type(hamiltonian_t),    intent(inout) :: hm
     logical,                intent(in)    :: fromscratch
 
     type(sternheimer_t) :: sh
@@ -186,11 +185,11 @@ contains
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
 
-    call system_h_setup(sys, hm)
-    call sternheimer_init(sh, sys, hm, wfs_are_cplx = states_are_complex(st))
+    call system_h_setup(sys)
+    call sternheimer_init(sh, sys, wfs_are_cplx = states_are_complex(st))
     call vibrations_init(vib, geo, gr%sb, "lr")
 
-    call epot_precalc_local_potential(hm%ep, sys%parser, sys%gr, sys%geo)
+    call epot_precalc_local_potential(sys%hm%ep, sys%parser, sys%gr, sys%geo)
 
     if(do_infrared) then
       call born_charges_init(born, sys%parser, geo, st, ndim)
@@ -204,9 +203,9 @@ contains
 
     !the  <phi0 | v2 | phi0> term
     if(states_are_real(st)) then
-      call dionic_pert_matrix_elements_2(sys%gr, sys%parser, sys%geo, hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
+      call dionic_pert_matrix_elements_2(sys%gr, sys%parser, sys%geo, sys%hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
     else
-      call zionic_pert_matrix_elements_2(sys%gr, sys%parser, sys%geo, hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
+      call zionic_pert_matrix_elements_2(sys%gr, sys%parser, sys%geo, sys%hm, 1, st, vib, CNST(-1.0), vib%dyn_matrix)
     end if
 
     call pert_init(ionic_pert, sys%parser, PERTURBATION_IONIC, gr, geo)
@@ -257,17 +256,17 @@ contains
       call pert_setup_dir(ionic_pert, idir)
       
       if(states_are_real(st)) then
-        call dsternheimer_solve(sh, sys, hm, lr, 1, M_ZERO, ionic_pert, &
+        call dsternheimer_solve(sh, sys, lr, 1, M_ZERO, ionic_pert, &
           restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       else
-        call zsternheimer_solve(sh, sys, hm, lr, 1, M_z0, ionic_pert, &
+        call zsternheimer_solve(sh, sys, lr, 1, M_z0, ionic_pert, &
           restart_dump, phn_rho_tag(iatom, idir), phn_wfs_tag(iatom, idir))
       end if
       
       if(states_are_real(st)) then
-        call dforces_derivative(gr, sys%parser, geo, hm%ep, st, lr(1), lr(1), force_deriv, hm%lda_u_level)
+        call dforces_derivative(gr, sys%parser, geo, sys%hm%ep, st, lr(1), lr(1), force_deriv, sys%hm%lda_u_level)
       else
-        call zforces_derivative(gr, sys%parser, geo, hm%ep, st, lr(1), lr(1), force_deriv, hm%lda_u_level)
+        call zforces_derivative(gr, sys%parser, geo, sys%hm%ep, st, lr(1), lr(1), force_deriv, sys%hm%lda_u_level)
       end if
 
       do jmat = 1, vib%num_modes

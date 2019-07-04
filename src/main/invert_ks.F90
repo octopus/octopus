@@ -19,6 +19,7 @@
 #include "global.h"
 
 module invert_ks_oct_m
+  use comm_oct_m
   use density_oct_m
   use eigensolver_oct_m
   use global_oct_m
@@ -43,9 +44,8 @@ module invert_ks_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine invert_ks_run(sys, hm)
+  subroutine invert_ks_run(sys)
     type(system_t),              intent(inout) :: sys
-    type(hamiltonian_t),         intent(inout) :: hm
 
     integer :: ii, jj, np, ndim, nspin
     integer :: err
@@ -69,11 +69,11 @@ contains
        
     call read_target_rho()
 
-    hm%energy%intnvxc = M_ZERO
-    hm%energy%hartree = M_ZERO
-    hm%energy%exchange = M_ZERO
-    hm%energy%correlation = M_ZERO
-    hm%vxc = M_ZERO
+    sys%hm%energy%intnvxc = M_ZERO
+    sys%hm%energy%hartree = M_ZERO
+    sys%hm%energy%exchange = M_ZERO
+    sys%hm%energy%correlation = M_ZERO
+    sys%hm%vxc = M_ZERO
 
     ! calculate total density
     
@@ -83,15 +83,15 @@ contains
     end do
     
     ! calculate the Hartree potential
-    call dpoisson_solve(sys%ks%hartree_solver, hm%vhartree, rho)
+    call dpoisson_solve(sys%ks%hartree_solver, sys%hm%vhartree, rho)
 
     do ii = 1, nspin
-      hm%vhxc(1:np, ii) = hm%vhartree(1:np)
+      sys%hm%vhxc(1:np, ii) = sys%hm%vhartree(1:np)
     end do
 
-    call hamiltonian_update(hm, sys%gr%mesh, sys%gr%der%boundaries)
+    call hamiltonian_update(sys%hm, sys%gr%mesh, sys%gr%der%boundaries)
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
-                         sys%ks%ks_inversion%aux_st, hm, 1)
+                         sys%ks%ks_inversion%aux_st, sys%hm, 1)
     call density_calc(sys%ks%ks_inversion%aux_st, sys%gr, sys%ks%ks_inversion%aux_st%rho)
     
     write(message(1),'(a)') "Calculating KS potential"
@@ -99,13 +99,13 @@ contains
        
     if (sys%ks%ks_inversion%method == XC_INV_METHOD_TWO_PARTICLE) then ! 2-particle exact inversion
      
-      call invertks_2part(target_rho, nspin, hm, sys%gr, &
+      call invertks_2part(target_rho, nspin, sys%hm, sys%gr, &
              sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%ks%ks_inversion%asymp)
      
     else ! iterative case
       if (sys%ks%ks_inversion%method >= XC_INV_METHOD_VS_ITER .and. &
           sys%ks%ks_inversion%method <= XC_INV_METHOD_ITER_GODBY) then ! iterative procedure for v_s 
-        call invertks_iter(target_rho, sys%parser, nspin, hm, sys%gr, &
+        call invertks_iter(target_rho, sys%parser, nspin, sys%hm, sys%gr, &
              sys%ks%ks_inversion%aux_st, sys%ks%ks_inversion%eigensolver, sys%ks%ks_inversion%asymp,&
              sys%ks%ks_inversion%method)
       end if
@@ -113,10 +113,10 @@ contains
 
     ! output quality of KS inversion
     
-    call hamiltonian_update(hm, sys%gr%mesh, sys%gr%der%boundaries)
+    call hamiltonian_update(sys%hm, sys%gr%mesh, sys%gr%der%boundaries)
     
     call eigensolver_run(sys%ks%ks_inversion%eigensolver, sys%gr, &
-         sys%ks%ks_inversion%aux_st, hm, 1)
+         sys%ks%ks_inversion%aux_st, sys%hm, 1)
     
     call density_calc(sys%ks%ks_inversion%aux_st, sys%gr, sys%ks%ks_inversion%aux_st%rho)
 
@@ -133,7 +133,7 @@ contains
     call messages_info(1)
 
     ! output for all cases    
-    call output_all(sys%outp, sys%parser, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, hm, sys%ks, STATIC_DIR)
+    call output_all(sys%outp, sys%parser, sys%gr, sys%geo, sys%ks%ks_inversion%aux_st, sys%hm, sys%ks, STATIC_DIR)
 
     sys%ks%ks_inversion%aux_st%dom_st_kpt_mpi_grp = sys%st%dom_st_kpt_mpi_grp
     ! save files in restart format
@@ -209,8 +209,11 @@ contains
       ! we now renormalize the density (necessary if we have a charged system)
       rr = M_ZERO
       do ii = 1, sys%st%d%spin_channels
-        rr = rr + dmf_integrate(sys%gr%mesh, target_rho(:, ii))
+        rr = rr + dmf_integrate(sys%gr%mesh, target_rho(:, ii), reduce = .false.)
       end do
+      if(sys%gr%mesh%parallel_in_domains) then
+        call comm_allreduce(sys%gr%mesh%mpi_grp%comm, rr)
+      end if
       rr = sys%st%qtot/rr
       target_rho(:,:) = rr*target_rho(:,:)
 

@@ -55,7 +55,6 @@ program oct_floquet
 
   type(system_t) :: sys
   type(simul_box_t) :: sb
-  type(hamiltonian_t) :: hm
   type(states_t) :: st
   type(grid_t)   :: gr
   CMPLX, allocatable :: hmss(:,:), psi(:,:,:), hpsi(:,:,:), temp_state1(:,:)
@@ -98,20 +97,18 @@ program oct_floquet
   gr = sys%gr
 
   ! generate the full hamiltonian following the sequence in td_init
-  call hamiltonian_init(hm, sys%parser, gr, sys%geo, st, sys%ks%theory_level, sys%ks%xc_family, &
-              family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
-  call hamiltonian_epot_generate(hm, sys%parser, gr, sys%geo, st, time=M_ZERO)
-  call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
+  call hamiltonian_epot_generate(sys%hm, sys%parser, gr, sys%geo, st, time=M_ZERO)
+  call hamiltonian_update(sys%hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
 
   call states_allocate_wfns(st, gr%mesh)
   ! not sure this is needed ...
-  if (gauge_field_is_applied(hm%ep%gfield)) then
+  if (gauge_field_is_applied(sys%hm%ep%gfield)) then
      !if the gauge field is applied, we need to tell v_ks to calculate the current
      call v_ks_calculate_current(sys%ks, .true.)
 
      ! initialize the vector field and update the hamiltonian     
-     call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb, st)
-     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
+     call gauge_field_init_vec_pot(sys%hm%ep%gfield, gr%sb, st)
+     call hamiltonian_update(sys%hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
   end if
 
   call restart_init(restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
@@ -122,8 +119,8 @@ program oct_floquet
   end if
 
   call density_calc(st, gr, st%rho)
-  call v_ks_calc(sys%ks, sys%parser, hm, st, sys%geo, calc_eigenval=.true., time = M_ZERO)
-  call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
+  call v_ks_calc(sys%ks, sys%parser, sys%hm, st, sys%geo, calc_eigenval=.true., time = M_ZERO)
+  call hamiltonian_update(sys%hm, gr%mesh, gr%der%boundaries, time = M_ZERO)
 
   call floquet_init()
 
@@ -135,7 +132,6 @@ program oct_floquet
   call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
 
-  call hamiltonian_end(hm)
   call simul_box_end(sb)
   call fft_all_end()
   call system_end(sys)
@@ -224,9 +220,9 @@ contains
     ! perform time-integral over one cycle
     do it=1,nT
       ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
-      call hamiltonian_update(hm,gr%mesh, gr%der%boundaries,time=Tcycle+it*dt)
+      call hamiltonian_update(sys%hm, gr%mesh, gr%der%boundaries,time=Tcycle+it*dt)
       ! get hpsi
-      call zhamiltonian_apply_all(hm, sys%ks%xc, gr%der, st, hm_st)
+      call zhamiltonian_apply_all(sys%hm, sys%ks%xc, gr%der, st, hm_st)
 
       ! project Hamiltonian into grounstates for zero weight k-points
       ik_count = 0
@@ -373,7 +369,7 @@ contains
      end if
   
     ! reset time in Hamiltonian
-    call hamiltonian_update(hm,gr%mesh, gr%der%boundaries,time=M_ZERO)
+    call hamiltonian_update(sys%hm,gr%mesh, gr%der%boundaries,time=M_ZERO)
 
     SAFE_DEALLOCATE_A(hmss)
     SAFE_DEALLOCATE_A(psi)
