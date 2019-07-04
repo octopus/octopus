@@ -49,9 +49,8 @@ module phonons_fd_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine phonons_run(sys, hm)
+  subroutine phonons_run(sys)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: hm
 
     type(vibrations_t) :: vib
     integer :: ierr
@@ -82,7 +81,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call system_h_setup(sys, hm)
+    call system_h_setup(sys)
 
     call vibrations_init(vib, sys%geo, sys%gr%sb, "fd")
 
@@ -99,7 +98,7 @@ contains
     call parse_variable(sys%parser, 'Displacement', CNST(0.01), vib%disp, units_inp%length)
 
     ! calculate dynamical matrix
-    call get_dyn_matrix(sys%gr, sys%parser, sys%mc, sys%geo, sys%st, sys%ks, hm, sys%outp, vib)
+    call get_dyn_matrix(sys%gr, sys%parser, sys%mc, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, vib)
 
     call vibrations_output(vib)
     

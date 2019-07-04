@@ -550,11 +550,13 @@ contains
 
 
  ! ---------------------------------------------------------
-  subroutine lda_u_load(restart, this, st, ierr)
+  subroutine lda_u_load(restart, this, st, ierr, occ_only, u_only)
     type(restart_t),      intent(in)    :: restart
     type(lda_u_t),        intent(inout) :: this
     type(states_t),       intent(in)    :: st
     integer,              intent(out)   :: ierr
+    logical, optional,    intent(in)    :: occ_only
+    logical, optional,    intent(in)    :: u_only
 
     integer :: err, occsize
     FLOAT, allocatable :: Ueff(:), docc(:)
@@ -576,7 +578,7 @@ contains
     end if
 
     !We have to read the effective U first, as we call lda_u_uptade_potential latter
-    if(this%level == DFT_U_ACBN0) then
+    if(this%level == DFT_U_ACBN0 .and. .not. optional_default(occ_only, .false.)) then
       SAFE_ALLOCATE(Ueff(1:this%norbsets))
       call drestart_read_binary(restart, "lda_u_Ueff", this%norbsets, Ueff, err)
       if (err /= 0) ierr = ierr + 1
@@ -585,23 +587,25 @@ contains
     end if
 
 
-    occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
-    if(this%level == DFT_U_ACBN0) occsize = occsize*2
+    if(.not. optional_default(u_only, .false.)) then
+      occsize = this%maxnorbs*this%maxnorbs*this%nspins*this%norbsets
+      if(this%level == DFT_U_ACBN0) occsize = occsize*2
 
-    if (states_are_real(st)) then
-      SAFE_ALLOCATE(docc(1:occsize))
-      call drestart_read_binary(restart, "lda_u_occ", occsize, docc, err) 
-      if (err /= 0) ierr = ierr + 1
-      call dlda_u_set_occupations(this, docc)
-      call dlda_u_update_potential(this, st)
-      SAFE_DEALLOCATE_A(docc)
-    else
-      SAFE_ALLOCATE(zocc(1:occsize))
-      call zrestart_read_binary(restart, "lda_u_occ", occsize, zocc, err)
-      if (err /= 0) ierr = ierr + 1
-      call zlda_u_set_occupations(this, zocc)
-      call zlda_u_update_potential(this, st)
-      SAFE_DEALLOCATE_A(zocc)
+      if (states_are_real(st)) then
+        SAFE_ALLOCATE(docc(1:occsize))
+        call drestart_read_binary(restart, "lda_u_occ", occsize, docc, err) 
+        if (err /= 0) ierr = ierr + 1
+        call dlda_u_set_occupations(this, docc)
+        call dlda_u_update_potential(this, st)
+        SAFE_DEALLOCATE_A(docc)
+      else
+        SAFE_ALLOCATE(zocc(1:occsize))
+        call zrestart_read_binary(restart, "lda_u_occ", occsize, zocc, err)
+        if (err /= 0) ierr = ierr + 1
+        call zlda_u_set_occupations(this, zocc)
+        call zlda_u_update_potential(this, st)
+        SAFE_DEALLOCATE_A(zocc)
+      end if
     end if
 
     if (debug%info) then

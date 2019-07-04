@@ -14,10 +14,9 @@ CH = 1.097*angstrom
 %
 
 PCMCalculation = yes
-PCMCalcMethod = pcm_direct
 PCMStaticEpsilon = 78.39
 PCMDynamicEpsilon = 1.789
-PCMEoM = yes
+PCMTDLevel = eom
 PCMDebyeRelaxTime =  139320.4323203
 
 TDDeltaStrength = 0.01/angstrom

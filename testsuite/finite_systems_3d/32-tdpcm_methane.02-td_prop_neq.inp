@@ -14,10 +14,9 @@ CH = 1.097*angstrom
 %
 
 PCMCalculation = yes
-PCMCalcMethod = pcm_direct
 PCMStaticEpsilon = 78.39
 PCMDynamicEpsilon = 1.789
-PCMNonequilibrium = yes
+PCMTDLevel = neq
 
 TDDeltaStrength = 0.01/angstrom
 TDPolarizationDirection = 3

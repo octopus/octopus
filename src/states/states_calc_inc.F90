@@ -1649,8 +1649,6 @@ subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex
   nst_tot = (st_max-st_min+1)*st%d%nik
   nst = (st_max-st_min+1)
 
-  print *, present(phase)
-
   do ist_global = 1, nst_tot
     ist = mod(ist_global-1, nst) +1
     ikpt = (ist_global-ist)/nst+1

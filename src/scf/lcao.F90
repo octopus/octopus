@@ -24,6 +24,7 @@ module lcao_oct_m
   use batch_oct_m
   use blacs_oct_m
   use blacs_proc_grid_oct_m
+  use comm_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
@@ -687,9 +688,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_run(sys, hm, st_start, lmm_r)
+  subroutine lcao_run(sys, st_start, lmm_r)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: hm
     integer, optional,   intent(in)    :: st_start !< use for unoccupied-states run
     FLOAT,   optional,   intent(in)    :: lmm_r !< used only if not present(st_start)
 
@@ -703,7 +703,7 @@ contains
     if (present(st_start)) then
       ! If we are doing unocc calculation, do not mess with the correct eigenvalues
       ! of the occupied states.
-      call v_ks_calc(sys%ks, sys%parser, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start))
+      call v_ks_calc(sys%ks, sys%parser, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start))
 
       ASSERT(st_start >= 1)
       if(st_start > sys%st%nst) then ! nothing to be done in LCAO
@@ -735,7 +735,7 @@ contains
       call messages_info(1)
 
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(sys%ks, sys%parser, hm, sys%st, sys%geo, calc_eigenval=.false., calc_berry=.false.)
+      call v_ks_calc(sys%ks, sys%parser, sys%hm, sys%st, sys%geo, calc_eigenval=.false., calc_berry=.false.)
       ! eigenvalues have nevertheless to be initialized to something
       sys%st%eigenval = M_ZERO
 
@@ -754,12 +754,12 @@ contains
 
       if(lcao%mode == OPTION__LCAOSTART__LCAO_SIMPLE) then
         if (states_are_real(sys%st)) then
-          call dlcao_simple(lcao, sys%st, sys%gr, sys%geo, hm, start = st_start)
+          call dlcao_simple(lcao, sys%st, sys%gr, sys%geo, sys%hm, start = st_start)
         else
-          call zlcao_simple(lcao, sys%st, sys%gr, sys%geo, hm, start = st_start)
+          call zlcao_simple(lcao, sys%st, sys%gr, sys%geo, sys%hm, start = st_start)
         end if
       else
-        call lcao_wf(lcao, sys%st, sys%gr, sys%geo, hm, start = st_start)
+        call lcao_wf(lcao, sys%st, sys%gr, sys%geo, sys%hm, start = st_start)
       end if
 
       if (lcao%mode /= OPTION__LCAOSTART__LCAO_SIMPLE .and. .not. present(st_start)) then
@@ -768,7 +768,7 @@ contains
 
         ! Update the density and the Hamiltonian
         if (lcao%mode == OPTION__LCAOSTART__LCAO_FULL) then
-          call system_h_setup(sys, hm, calc_eigenval = .false.)
+          call system_h_setup(sys, calc_eigenval = .false.)
           if(sys%st%d%ispin > UNPOLARIZED) then
             ASSERT(present(lmm_r))
             call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, lmm_r)
@@ -801,7 +801,7 @@ contains
       if(.not. lcao_done) then
         ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
         ! of the occupied states.
-        call v_ks_calc(sys%ks, sys%parser, hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start)) ! get potentials
+        call v_ks_calc(sys%ks, sys%parser, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start)) ! get potentials
         if(.not. present(st_start)) then
           call states_fermi(sys%st, sys%gr%mesh) ! occupations
         end if
@@ -1307,8 +1307,11 @@ contains
     ! we now renormalize the density (necessary if we have a charged system)
     rr = M_ZERO
     do is = 1, spin_channels
-      rr = rr + dmf_integrate(gr%fine%mesh, rho(:, is))
+      rr = rr + dmf_integrate(gr%fine%mesh, rho(:, is), reduce = .false.)
     end do
+    if(gr%fine%mesh%parallel_in_domains) then
+      call comm_allreduce(gr%fine%mesh%mpi_grp%comm, rr)
+    end if
 
     write(message(1),'(a,f13.6)')'Info: Unnormalized total charge = ', rr
     call messages_info(1)
@@ -1319,8 +1322,11 @@ contains
     end if
     rr = M_ZERO
     do is = 1, spin_channels
-      rr = rr + dmf_integrate(gr%fine%mesh, rho(:, is))
+      rr = rr + dmf_integrate(gr%fine%mesh, rho(:, is),  reduce = .false.)
     end do
+    if(gr%fine%mesh%parallel_in_domains) then
+      call comm_allreduce(gr%fine%mesh%mpi_grp%comm, rr)
+    end if
 
     write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', rr
     call messages_info(1)

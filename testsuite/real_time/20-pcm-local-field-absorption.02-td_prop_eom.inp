@@ -26,12 +26,10 @@ TDDeltaStrength = 0.01/angstrom
 TDPolarizationDirection = 1
 
 PCMCalculation = yes
-PCMCalcMethod = pcm_direct
 PCMStaticEpsilon = 78.39
 PCMRadiusScaling = 5.0
 PCMSpheresOnH = yes
-
-PCMEoM = yes
+PCMTDLevel = eom
 PCMDynamicEpsilon = 1.789
 PCMDebyeRelaxTime =  139320.4323203
 

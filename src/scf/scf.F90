@@ -1169,6 +1169,11 @@ contains
         call states_write_eigenvalues(iunit, st%nst, st, gr%sb)
         write(iunit, '(1x)')
 
+        if(simul_box_is_periodic(gr%sb)) then
+          call states_write_gaps(iunit, st, gr%sb)
+          write(iunit, '(1x)')
+        end if
+
         write(iunit, '(3a)') 'Energy [', trim(units_abbrev(units_out%energy)), ']:'
       else
         iunit = 0

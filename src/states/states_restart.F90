@@ -53,6 +53,8 @@ module states_restart_oct_m
     states_load,                    &
     states_dump_rho,                &
     states_load_rho,                &
+    states_dump_frozen,             &
+    states_load_frozen,             &
     states_read_user_def_orbitals
 
 contains
@@ -896,6 +898,173 @@ contains
 
     POP_SUB(states_load_rho)
   end subroutine states_load_rho
+
+  subroutine states_dump_frozen(restart, st, gr, ierr)
+    type(restart_t),      intent(in)    :: restart
+    type(states_t),       intent(in)    :: st
+    type(grid_t),         intent(in)    :: gr
+    integer,              intent(out)   :: ierr
+
+    integer :: iunit, isp, err, err2(2), idir
+    character(len=80) :: filename
+    character(len=300) :: lines(2)
+
+    PUSH_SUB(states_dump_frozen)
+
+    ierr = 0
+
+    ASSERT(associated(st%frozen_rho))
+
+    if (restart_skip(restart)) then
+      POP_SUB(states_dump_frozen)
+      return
+    end if
+
+    if (debug%info) then
+      message(1) = "Debug: Writing frozen densities restart."
+      call messages_info(1)
+    end if
+
+    call restart_block_signals()
+
+    err2 = 0
+    do isp = 1, st%d%nspin
+      if(st%d%nspin==1) then
+        write(filename, fmt='(a)') 'frozen_rho'
+      else
+        write(filename, fmt='(a,i1)') 'frozen_rho-sp', isp
+      end if
+
+      call drestart_write_mesh_function(restart, filename, gr%mesh, st%frozen_rho(:,isp), err)
+      if (err /= 0) err2(2) = err2(2) + 1
+
+      if(associated(st%frozen_tau)) then 
+        if(st%d%nspin==1) then
+          write(filename, fmt='(a)') 'frozen_tau'
+        else
+          write(filename, fmt='(a,i1)') 'frozen_tau-sp', isp
+        end if
+        call drestart_write_mesh_function(restart, filename, gr%mesh, st%frozen_tau(:,isp), err)
+        if (err /= 0) err2 = err2 + 1
+      end if
+
+      if(associated(st%frozen_gdens)) then
+        do idir = 1, gr%sb%dim
+          if(st%d%nspin==1) then
+            write(filename, fmt='(a,i1)') 'frozen_gdens-dir', idir
+          else
+            write(filename, fmt='(a,i1,a,i1)') 'frozen_tau-dir', idir, '-', isp
+          end if
+          call drestart_write_mesh_function(restart, filename, gr%mesh, st%frozen_gdens(:,idir,isp), err)
+          if (err /= 0) err2 = err2 + 1
+        end do
+      end if
+
+      if(associated(st%frozen_ldens)) then
+        if(st%d%nspin==1) then
+          write(filename, fmt='(a)') 'frozen_ldens'
+        else
+          write(filename, fmt='(a,i1)') 'frozen_ldens-sp', isp
+        end if
+        call drestart_write_mesh_function(restart, filename, gr%mesh, st%frozen_ldens(:,isp), err)
+        if (err /= 0) err2 = err2 + 1
+      end if
+
+    end do
+    if (err2(1) /= 0) ierr = ierr + 2
+    if (err2(2) /= 0) ierr = ierr + 4
+
+    call restart_unblock_signals()
+
+    if (debug%info) then
+      message(1) = "Debug: Writing frozen densities restart done."
+      call messages_info(1)
+    end if
+
+    POP_SUB(states_dump_frozen)
+  end subroutine states_dump_frozen
+
+
+  ! ---------------------------------------------------------
+  subroutine states_load_frozen(restart, st, gr, ierr)
+    type(restart_t), intent(in)    :: restart
+    type(states_t),  intent(inout) :: st
+    type(grid_t),    intent(in)    :: gr
+    integer,         intent(out)   :: ierr
+
+    integer              :: err, err2, isp, idir
+    character(len=80)    :: filename
+
+    PUSH_SUB(states_load_frozen)
+
+    ASSERT(associated(st%frozen_rho))
+
+    ierr = 0
+
+    if (restart_skip(restart)) then
+      ierr = -1
+      POP_SUB(states_load_frozen)
+      return
+    end if
+
+    if (debug%info) then
+      message(1) = "Debug: Reading densities restart."
+      call messages_info(1)
+    end if
+
+    err2 = 0
+    do isp = 1, st%d%nspin
+      if(st%d%nspin==1) then
+        write(filename, fmt='(a)') 'frozen_rho'
+      else
+        write(filename, fmt='(a,i1)') 'frozen_rho-sp', isp
+      end if
+      call drestart_read_mesh_function(restart, filename, gr%mesh, st%frozen_rho(:,isp), err)
+      if (err /= 0) err2 = err2 + 1
+
+      if(associated(st%frozen_tau)) then
+        if(st%d%nspin==1) then
+          write(filename, fmt='(a)') 'frozen_tau'
+        else
+          write(filename, fmt='(a,i1)') 'frozen_tau-sp', isp
+        end if
+        call drestart_read_mesh_function(restart, filename, gr%mesh, st%frozen_tau(:,isp), err)
+        if (err /= 0) err2 = err2 + 1
+      end if
+      
+      if(associated(st%frozen_gdens)) then
+        do idir = 1, gr%sb%dim
+          if(st%d%nspin==1) then
+            write(filename, fmt='(a,i1)') 'frozen_gdens-dir', idir
+          else
+            write(filename, fmt='(a,i1,a,i1)') 'frozen_tau-dir', idir, '-', isp
+          end if
+          call drestart_read_mesh_function(restart, filename, gr%mesh, st%frozen_gdens(:,idir,isp), err)
+          if (err /= 0) err2 = err2 + 1
+        end do
+      end if
+
+      if(associated(st%frozen_ldens)) then 
+        if(st%d%nspin==1) then
+          write(filename, fmt='(a)') 'frozen_ldens'
+        else
+          write(filename, fmt='(a,i1)') 'frozen_ldens-sp', isp
+        end if
+        call drestart_read_mesh_function(restart, filename, gr%mesh, st%frozen_ldens(:,isp), err)
+        if (err /= 0) err2 = err2 + 1
+      end if
+
+    end do
+    if (err2 /= 0) ierr = ierr + 1
+
+    if (debug%info) then
+      message(1) = "Debug: Reading frozen densities restart done."
+      call messages_info(1)
+    end if
+
+    POP_SUB(states_load_frozen)
+  end subroutine states_load_frozen
+
 
   ! ---------------------------------------------------------
   !> the routine reads formulas for user-defined wavefunctions

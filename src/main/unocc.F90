@@ -54,9 +54,8 @@ module unocc_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine unocc_run(sys, hm, fromscratch)
+  subroutine unocc_run(sys, fromscratch)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: hm
     logical,             intent(inout) :: fromscratch
 
     type(eigensolver_t) :: eigens
@@ -115,8 +114,8 @@ contains
 
       if(ierr == 0) then
         call states_load(restart_load_unocc, sys%parser, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
-        if(hm%lda_u_level /= DFT_U_NONE) &
-          call lda_u_load(restart_load_unocc, hm%lda_u, sys%st, ierr)
+        if(sys%hm%lda_u_level /= DFT_U_NONE) &
+          call lda_u_load(restart_load_unocc, sys%hm%lda_u, sys%st, ierr)
         call restart_end(restart_load_unocc)
       end if
       
@@ -132,8 +131,8 @@ contains
     if(ierr_rho == 0) then
       if (read_gs) then
         call states_load(restart_load_gs, sys%parser, sys%st, sys%gr, ierr, lowest_missing = lowest_missing)
-        if(hm%lda_u_level /= DFT_U_NONE) &
-          call lda_u_load(restart_load_gs, hm%lda_u, sys%st, ierr)
+        if(sys%hm%lda_u_level /= DFT_U_NONE) &
+          call lda_u_load(restart_load_gs, sys%hm%lda_u, sys%st, ierr)
       end if
       call states_load_rho(restart_load_gs, sys%st, sys%gr, ierr_rho)
       write_density = restart_has_map(restart_load_gs)
@@ -200,10 +199,10 @@ contains
         nst_calculated = minval(lowest_missing) - 1
       end if
       showstart = max(nst_calculated + 1, 1)
-      call lcao_run(sys, hm, st_start = showstart)
+      call lcao_run(sys, st_start = showstart)
     else
       ! we successfully read all the states and are planning to use them, no need for LCAO
-      call v_ks_calc(sys%ks, sys%parser, hm, sys%st, sys%geo, calc_eigenval = .false.)
+      call v_ks_calc(sys%ks, sys%parser, sys%hm, sys%st, sys%geo, calc_eigenval = .false.)
       showstart = minval(occ_states(:)) + 1
     end if
 
@@ -246,7 +245,7 @@ contains
     call states_fermi(sys%st, sys%gr%mesh)
 
     do iter = 1, max_iter
-      call eigensolver_run(eigens, sys%gr, sys%st, hm, 1, converged, sys%st%nst_conv)
+      call eigensolver_run(eigens, sys%gr, sys%st, sys%hm, 1, converged, sys%st%nst_conv)
 
       ! If not all gs wavefunctions were read when starting, in particular for nscf with different k-points,
       ! the occupations must be recalculated each time, though they do not affect the result of course.
@@ -285,7 +284,7 @@ contains
       end if 
       if(sys%outp%output_interval /= 0 .and. mod(iter, sys%outp%output_interval) == 0) then
         write(dirname,'(a,i4.4)') "unocc.",iter
-        call output_all(sys%outp, sys%parser, sys%gr, sys%geo, sys%st, hm, sys%ks, dirname)
+        call output_all(sys%outp, sys%parser, sys%gr, sys%geo, sys%st, sys%hm, sys%ks, dirname)
       end if
      
       if(converged .or. forced_finish) exit
@@ -309,13 +308,13 @@ contains
     if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) then
       if(bitand(sys%gr%sb%kpoints%method, KPOINTS_PATH) /= 0) then
         call states_write_bandstructure(STATIC_DIR, sys%parser, sys%st%nst, sys%st, sys%gr%sb, sys%geo, sys%gr%mesh, &
-              hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
-              vec_pot_var = hm%hm_base%vector_potential)
+              sys%hm%hm_base%phase, vec_pot = sys%hm%hm_base%uniform_vector_potential, &
+              vec_pot_var = sys%hm%hm_base%vector_potential)
       end if
     end if
  
 
-    call output_all(sys%outp, sys%parser, sys%gr, sys%geo, sys%st, hm, sys%ks, STATIC_DIR)
+    call output_all(sys%outp, sys%parser, sys%gr, sys%geo, sys%st, sys%hm, sys%ks, STATIC_DIR)
 
     call end_()
     POP_SUB(unocc_run)

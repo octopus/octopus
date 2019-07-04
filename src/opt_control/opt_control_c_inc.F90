@@ -59,7 +59,7 @@
     call controlfunction_set_theta(par_, theta)
     call opt_control_state_null(qcpsi)
     call opt_control_state_copy(qcpsi, initial_st)
-    call propagate_forward(sys_, hm_, td_, par_, oct_target, qcpsi)
+    call propagate_forward(sys_, td_, par_, oct_target, qcpsi)
     f = - target_j1(oct_target, sys_%parser, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
 
     SAFE_DEALLOCATE_A(theta)
@@ -90,7 +90,7 @@
       theta = x
       call controlfunction_set_theta(par_, theta)
       call controlfunction_copy(par_new, par_)
-      call f_striter(sys_, hm_, td_, par_new, j1)
+      call f_striter(sys_, td_, par_new, j1)
       f = - j1 - controlfunction_j2(par_)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
       SAFE_ALLOCATE(dff(1:n))
@@ -141,7 +141,7 @@
       call controlfunction_set_theta(par_, theta)
       call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
-      call propagate_forward(sys_, hm_, td_, par_, oct_target, qcpsi)
+      call propagate_forward(sys_, td_, par_, oct_target, qcpsi)
       f = - target_j1(oct_target, sys_%parser, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
       call opt_control_state_end(qcpsi)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
@@ -210,13 +210,13 @@
       ! We only need the value of the target functional.
       call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
-      call propagate_forward(sys_, hm_, td_, par_, oct_target, qcpsi)
+      call propagate_forward(sys_, td_, par_, oct_target, qcpsi)
       f = - target_j1(oct_target, sys_%parser, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
       call opt_control_state_end(qcpsi)
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
     else
       call controlfunction_copy(par_new, par_)
-      call f_striter(sys_, hm_, td_, par_new, j1)
+      call f_striter(sys_, td_, par_new, j1)
       delta = controlfunction_diff(par_, par_new)
       f = - oct%eta * j1 + oct%delta * delta
       call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_, delta)

@@ -18,9 +18,8 @@
 
 
   ! ---------------------------------------------------------
-  subroutine oct_finalcheck(sys, hm, td)
+  subroutine oct_finalcheck(sys, td)
     type(system_t), intent(inout)      :: sys
-    type(hamiltonian_t), intent(inout) :: hm
     type(td_t), intent(inout)          :: td
 
     type(states_t) :: psi
@@ -40,7 +39,7 @@
 
     call opt_control_state_null(qcpsi)
     call opt_control_state_copy(qcpsi, initial_st)
-    call propagate_forward(sys, hm, td, par, oct_target, qcpsi, write_iter = .true.)
+    call propagate_forward(sys, td, par, oct_target, qcpsi, write_iter = .true.)
     call opt_control_get_qs(psi, qcpsi)
 
     j1 = target_j1(oct_target, sys%parser, sys%gr, qcpsi)
@@ -59,7 +58,7 @@
     call messages_info(4)
     call messages_print_stress(stdout)
 
-    call output_states(psi, sys%parser, sys%gr, sys%geo, hm, OCT_DIR//'final', sys%outp)
+    call output_states(psi, sys%parser, sys%gr, sys%geo, sys%hm, OCT_DIR//'final', sys%outp)
 
     nullify(par)
     call states_end(psi)
