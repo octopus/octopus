@@ -2,13 +2,13 @@
 
 Test       : Run_mode
 Program    : octopus
-TestGroups : long-run, error_tests
+TestGroups : short-run, error_tests
 Enabled    : Yes
 
 
 
 FailingInput: 01-run_mode.01-one_shot.inp
-match ; Error message ; GREPCOUNT(err, 'one_shot is obsolete') ; 1
+errormatch ; Error message ; GREPCOUNT(err, 'one_shot is obsolete') ; 1
 
 
 Input: 01-run_mode.02-one_shot.inp

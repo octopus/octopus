@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : 1D Box (NLOPT)
-# Options    : nlopt
+Options    : nlopt
 Program    : octopus
 TestGroups : long-run, optimal_control
 Enabled    : Yes
@@ -22,13 +22,11 @@ errormatch ; Error ; GREPCOUNT(err, "Error") ; 1
 # These are the same files as in the 04-box.test. No need for matches.
 
 # run the optimization with the NLOPT BOBYQA algorithm
-Options : nlopt
 Input: 13-box-nlopt.03-bobyqa.inp
 match ; J last iteration  ; LINEFIELD(opt-control/convergence, -2, 2) ; 0.60582990
-errormatch ; Error ; GREPCOUNT(err, "Error") ; 1
+errormatch ; Error ; GREPCOUNT(err, "nlopt library has been compiled") ; 1
 
 # run the optimization with the NLOPT LBFGS algorithm
-Options : nlopt
 Input: 13-box-nlopt.04-lbfgs.inp
 match ; J last iteration  ; LINEFIELD(opt-control/convergence, -2, 2) ; 0.67344994
-errormatch ; Error ; GREPCOUNT(err, "Error") ; 1
+errormatch ; Error ; GREPCOUNT(err, "nlopt library has been compiled") ; 1

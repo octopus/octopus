@@ -62,6 +62,7 @@ match ; vxc k 2 offdiag ; LINEFIELD(static/vxc.dat, 344, 5);   324
 match ; vxc k 1 1 Re    ; LINEFIELD(static/vxc.dat, 352, 3);   -10.671756
 match ; vxc k 1 1 Im    ; LINEFIELD(static/vxc.dat, 352, 4);     0.0
 
+errormatch ; Error; GREPCOUNT(err, 'Cannot do BerkeleyGW') ; 1
 
 
 Input      : 10-berkeleygw.02-unocc.inp
@@ -97,3 +98,5 @@ match ; x k 1 2 Re    ; LINEFIELD(static/x.dat,   3, 3);    -8.792822115
 match ; x k 1 2 Im    ; LINEFIELD(static/x.dat,   3, 4);     0.0
 match ; x k 1 8 8 Re  ; LINEFIELD(static/x.dat, 217, 4);    -6.962036810
 match ; x k 1 8 8 Im  ; LINEFIELD(static/x.dat, 217, 5);     0.0
+
+errormatch ; Error; GREPCOUNT(err, 'Cannot do BerkeleyGW') ; 1

@@ -6,5 +6,5 @@ TestGroups : long-run, error_tests
 Enabled    : Yes
 
 FailingInput: 02-scf_errors.01-rdmft.inp
-match ; Error message ; GREPCOUNT(err, 'RDMFT theory level is an experimental feature') ; 1
+errormatch ; Error message ; GREPCOUNT(err, 'RDMFT theory level is an experimental feature') ; 1
 

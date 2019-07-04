@@ -9,7 +9,9 @@ Enabled    : Yes
 Precision : 0.005
 Input: 10-hartree_pfft.01-fft.inp
 match ; FFT           ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00035839
+errormatch; Error;      GREPCOUNT(err, 'PFFT'); 1
 
 Input: 10-hartree_pfft.02-fft_corrected.inp
 match ; FFT Corrected ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00154839
+errormatch; Error;      GREPCOUNT(err, 'PFFT'); 1
 

@@ -26,6 +26,7 @@ match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -1.265
 Precision  : 2e-8
 match ; Forces [step  0]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.08598283102774501
 match ; Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 8.013132187403e-02
+errormatch ; Error ; GREPCOUNT(err, 'recompile with SPARSKIT support') ; 1
 
 Processors : 4
 Input      : 02-propagators.03-rungekutta2.inp
@@ -38,6 +39,7 @@ match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -1.266
 Precision  : 2e-8
 match ; Forces [step  0]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.08598283102774501
 match ; Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 8.013267180893e-02
+errormatch ; Error ; GREPCOUNT(err, 'recompile with SPARSKIT support') ; 1
 
 Processors : 4
 Input      : 02-propagators.04-rungekutta4.inp
@@ -50,3 +52,4 @@ match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -1.265
 Precision  : 2e-8
 match ; Forces [step  0]  ; LINEFIELD(td.general/coordinates, -21, 15) ; 0.08598283102774501
 match ; Forces [step 20]  ; LINEFIELD(td.general/coordinates, -1, 15) ; 8.014185716090e-02
+errormatch ; Error ; GREPCOUNT(err, 'recompile with SPARSKIT support') ; 1

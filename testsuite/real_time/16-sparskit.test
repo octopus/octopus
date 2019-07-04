@@ -24,3 +24,5 @@ match ; Dipole [step  5] ; LINEFIELD(td.general/multipoles, -16, 4) ; -7.2958100
 match ; Dipole [step 10] ; LINEFIELD(td.general/multipoles, -11, 4) ; -1.339402779435e+00
 match ; Dipole [step 15] ; LINEFIELD(td.general/multipoles, -6, 4) ; -1.833991374772e+00
 match ; Dipole [step 20] ; LINEFIELD(td.general/multipoles, -1, 4) ; -2.215415201335e+00
+
+errormatch; Error; GREPCOUNT(err, 'recompile with SPARSKIT support') ; 1

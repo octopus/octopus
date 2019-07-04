@@ -163,7 +163,7 @@ $options_required_mpi = "";
 $options_are_mpi = 0;
 $expect_error = 0; # check for controlled failure 
 $match_error = 0;  # flag to switch to alternative matches for failling tests
-$error_match_done = 1;   # check that at least one error-match has been done. (Defaults to TRUE. Set false on expect_error)
+$error_match_done = 1;   # check that at least one error-match has been done. 
 
 # Handle GPU offset
 $offset_GPU = defined $opt_G ? $opt_G : -1;
@@ -261,6 +261,7 @@ while ($_ = <TESTSUITE>) {
 
     } elsif ( $_ =~ /^Options\s*:\s*(.*)\s*$/) {
         $options_required = $1;
+        print "Found options: $options_required \n";
         # note: we could implement Options by baking this into the script via configure...
         $report{$testname}{"options"} = $options_required;
         
@@ -303,7 +304,6 @@ while ($_ = <TESTSUITE>) {
 
                 # FIXME: instead of skipping, we should switch to the alternative matching rules
                     $expect_error = 1;
-                    $error_match_done = 0;
 
                     # print "\nSkipping test: executable does not have the required option '$option'";
                     print "\nChanging rules: executable does not have the required option '$option'";
@@ -380,6 +380,9 @@ while ($_ = <TESTSUITE>) {
 
             # FIXME: at some point we need to check whether the last Input has unresolved errormatches!
 
+            check_error_resolved();
+
+
             my %input_report;
             $r_input_report = \%input_report;          
             $report{$testname}{"input"}{basename($input_file)} = \%input_report;
@@ -448,7 +451,8 @@ while ($_ = <TESTSUITE>) {
                     }
                 }
 
-                $command_line = $command_line." 2>&1 1> out | tee err";
+                $command_line = $command_line." > out 2> err";
+#                $command_line = $command_line." 2>&1 1> out | tee err";
 
                 print "Executing: " . $command_line . "\n";
 
@@ -463,6 +467,7 @@ while ($_ = <TESTSUITE>) {
                     if($return_value == 0) {
                         printf "%-40s%s", " Execution", ": \t [ $color_start{green}  OK  $color_end{green} ] \n";
                         $input_report{"execution"} = "success";
+                        $error_match_done = 1;
               
                     } else {
                         print "Test run failed with exit code $return_value.\n";
@@ -470,12 +475,18 @@ while ($_ = <TESTSUITE>) {
                         print "----------------------------------------\n";
                         system("tail -20 $workdir/out");
                         print "----------------------------------------\n\n";
+                        print "These are the last lines of stderr:\n\n";
+                        print "----------------------------------------\n";
+                        system("tail -20 $workdir/err");
+                        print "----------------------------------------\n\n";
 
                         if($expect_error) {
                             printf "%-40s%s", " Execution", ": \t [ $color_start{green} OK (expecteded Fail) $color_end{green} ] \n\n";
                             $input_report{"execution"} = "success";
-
+                            $match_error = 1;
                             $test_succeeded = 1;  
+                            $error_match_done = 0;
+
                         } else {
                             printf "%-40s%s", " Execution", ": \t [ $color_start{red} FAIL $color_end{red} ] \n\n";
                             $input_report{"execution"} = "fail";
@@ -515,8 +526,7 @@ while ($_ = <TESTSUITE>) {
             my %match_report;
             $r_match_report = \%match_report;
           
-            if (!$opt_n && (!$expect_error && $return_value == 0) ) {
-                printf "running match branch \n";
+            if (!$opt_n && ($return_value == 0) ) {
                 push( @{$r_matches_array}, $r_match_report);
                 if(run_match_new($_)){
                     printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
@@ -537,8 +547,7 @@ while ($_ = <TESTSUITE>) {
             my %match_report;
             $r_match_report = \%match_report;
 
-            if (!$opt_n && ($expect_error || $return_value != 0) ) {
-                printf "running errormatch branch \n";
+            if (!$opt_n && ($match_error && $return_value != 0) ) {
                 push( @{$r_matches_array}, $r_match_report);
                 if(run_match_new($_)){
                     printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
@@ -550,7 +559,7 @@ while ($_ = <TESTSUITE>) {
                     $failures++;
                 }
             }
-            $error_done = 1;
+            $error_match_done = 1;
         }        
 
         else {
