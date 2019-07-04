@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module states_restart_oct_m
+module states_mxll_restart_oct_m
   use global_oct_m
   use grid_oct_m
   use io_function_oct_m
@@ -38,7 +38,10 @@ module states_restart_oct_m
   use states_dim_oct_m
   use string_oct_m
   use types_oct_m
-
+  use unit_system_oct_m
+  use unit_oct_m
+  use states_restart_oct_m
+  
   implicit none
 
   type(profile_t), save :: prof_read, prof_write
@@ -52,9 +55,10 @@ module states_restart_oct_m
 contains
 
   !----------------------------------------------------------
-  subroutine states_mxll_read_user_def(mesh, st, user_def_rs_state)
+  subroutine states_mxll_read_user_def(mesh, st, user_def_rs_state, parser)
     type(mesh_t),        intent(inout) :: mesh
     type(states_mxll_t), intent(inout) :: st
+    type(parser_t),      intent(in)    :: parser
     CMPLX,               intent(inout) :: user_def_rs_state(:,:)
 
     type(block_t)      :: blk
@@ -120,7 +124,7 @@ contains
     !% This row defines the magnetic field component of the corresponding dimension
     !%End
 
-    if(parse_block('UserDefinedInitialMaxwellStates', blk) == 0) then
+    if(parse_block(parser, 'UserDefinedInitialMaxwellStates', blk) == 0) then
 
       !call messages_print_stress(stdout, trim('Substitution of the electromagnetic fields'))
 
@@ -254,7 +258,7 @@ contains
   !----------------------------------------------------------
   subroutine states_mxll_dump(restart, st, gr, zff, zff_dim, ierr, iter, st_start_writing, verbose)
     type(restart_t),      intent(in)  :: restart
-    type(states_t),       intent(in)  :: st
+    type(states_mxll_t),       intent(in)  :: st
     type(grid_t),         intent(in)  :: gr
     CMPLX,                intent(in)  :: zff(:,:)
     integer,              intent(in)  :: zff_dim
@@ -263,9 +267,9 @@ contains
     integer,    optional, intent(in)  :: st_start_writing
     logical,    optional, intent(in)  :: verbose
 
-    integer :: iunit_wfns, iunit_states, root, chunk, iwt, ii
+    integer :: iunit_wfns, iunit_states, chunk, iwt, ii, root(1:P_STRATEGY_MAX)
     integer :: err, err2(2), idir, ist, idim, itot
-    character(len=MAX_PATH_LEN) :: filename, filename1, filename_tmp
+    character(len=MAX_PATH_LEN) :: filename, filename1
     character(len=300) :: lines(3)
     logical :: should_write, verbose_
     CMPLX,  allocatable :: zff_global(:)
@@ -306,22 +310,18 @@ contains
     SAFE_ALLOCATE(zff_global(1:gr%mesh%np_global))
 
     itot = 1
-    root = 0
-    chunk = 0
+    root = -1
     err2 = 0
     do ist = 1, st%nst
-       do idim = 1, zff_dim
-          chunk = chunk + 1
-          root = mod(itot-1,gr%mesh%mpi_grp%size)
+        do idim = 1, st%d%dim
+          root(P_STRATEGY_DOMAINS) = mod(itot - 1, gr%mesh%mpi_grp%size)
           write(filename,'(i10.10)') itot
-          if (root == gr%mesh%mpi_grp%rank) then
-             filename_tmp = filename
-          end if
-
+          
           write(lines(1), '(i8,a,i8,a,i8,3a)') ist, ' | ', idim, ' | "', trim(filename), '"'
           call restart_write(restart, iunit_wfns, lines, 1, err)
           if (err /= 0) err2(1) = err2(1) + 1
 
+          
           should_write = st%st_start <= ist .and. ist <= st%st_end
           if (should_write .and. present(st_start_writing)) then
              if (ist < st_start_writing) should_write = .false.
@@ -335,14 +335,21 @@ contains
              else
                 zff_global = zff(:,idim)
              end if
-             call zrestart_write_mesh_function(restart, filename, gr%mesh, zff_global, err, &
-                  root=root, is_global=.true.)
+             call zrestart_write_mesh_function(restart, filename, gr%mesh, zff_global, err, root=root)
              if (err /= 0) err2(2) = err2(2) + 1
           end if
 
+
+          if (should_write) then
+             call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
+             call zrestart_write_mesh_function(restart, filename, gr%mesh, zff_global, err, root = root)
+            if (err /= 0) err2(2) = err2(2) + 1
+          end if
+
           itot = itot + 1
-       end do ! zff_dim
-    end do ! st%nst
+        end do ! st%d%dim
+      end do ! st%nst
+
     if (err2(1) /= 0) ierr = ierr + 8
     if (err2(2) /= 0) ierr = ierr + 16
 
@@ -376,7 +383,7 @@ contains
   !----------------------------------------------------------
   subroutine states_mxll_load(restart, st, gr, zff, zff_dim, ierr, iter, lowest_missing, label, verbose)
     type(restart_t),            intent(in)    :: restart
-    type(states_t),             intent(inout) :: st
+    type(states_mxll_t),             intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
     CMPLX,                      intent(inout) :: zff(:,:)
     integer,                    intent(in)    :: zff_dim
@@ -570,7 +577,7 @@ contains
 
   end subroutine states_mxll_load
 
-end module states_restart_oct_m
+end module states_mxll_restart_oct_m
 
 
 !! Local Variables:

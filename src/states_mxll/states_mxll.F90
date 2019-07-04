@@ -19,21 +19,21 @@
 
 module states_mxll_oct_m
 !  use accel_oct_m
-!  use blacs_proc_grid_oct_m
+  use blacs_proc_grid_oct_m
 !  use boundaries_oct_m
 !  use calc_mode_par_oct_m
   use batch_oct_m
 !  use batch_ops_oct_m
   use derivatives_oct_m
   use distributed_oct_m
-!  use geometry_oct_m
+  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
 !  use loct_oct_m
 !  use loct_pointer_oct_m
-!  use math_oct_m
+  use math_oct_m
   use mesh_oct_m
-!  use mesh_function_oct_m
+  use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
@@ -49,7 +49,10 @@ module states_mxll_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
-
+  use states_oct_m
+  use tdfunction_oct_m
+  use states_group_oct_m
+  
   implicit none
 
   private
@@ -57,8 +60,8 @@ module states_mxll_oct_m
   public ::                           &
     states_mxll_t,                    &
     states_mxll_init,                 &
-    states_mxll_allocates,            &
-    states_mwll_null,                 &
+    states_mxll_allocate,             &
+    states_mxll_null,                 &
     states_mxll_end,                  &
     build_rs_element,                 &
     build_rs_vector,                  &
@@ -82,12 +85,20 @@ module states_mxll_oct_m
     state_diff,                       &
     get_charge_density_reference
 
+  type states_priv_t
+    private
+    type(type_t) :: wfs_type            !< real (TYPE_FLOAT) or complex (TYPE_CMPLX) wavefunctions
+  end type states_priv_t
     
   type states_mxll_t
     ! Components are public by default
     type(states_dim_t)           :: d
-    integer                      :: nst            !< Number of states in each irreducible subspace
+    type(states_priv_t)          :: priv          !< the private components
+    integer                      :: nst           !< Number of states in each irreducible subspace
     integer                      :: rs_sign
+    type(states_group_t)         :: group
+    logical                      :: parallel_in_states !< Am I parallel in states?
+
 
     CMPLX, pointer               :: rs_state(:,:)
     CMPLX, pointer               :: rs_state_plane_waves(:,:)
@@ -181,37 +192,16 @@ module states_mxll_oct_m
 #ifdef HAVE_SCALAPACK
     type(blacs_proc_grid_t)     :: dom_st_proc_grid   !< The BLACS process grid for the domains-states plane
 #endif
-    type(distributed_t)         :: dist
-    logical                     :: scalapack_compatible !< Whether the states parallelization uses ScaLAPACK layout
+   type(distributed_t)          :: dist
+   logical                      :: scalapack_compatible !< Whether the states parallelization use! ScaLAPACK layout
     integer                     :: lnst               !< Number of states on local node.
     integer                     :: st_start, st_end   !< Range of states processed by local node.
     integer, pointer            :: node(:)            !< To which node belongs each state.
     type(multicomm_all_pairs_t), private :: ap        !< All-pairs schedule.
 
     logical, private            :: packed
-
-    integer                     :: randomization      !< Method used to generate random states
   end type states_mxll_t
 
-  !> Method used to generate random states
-  integer, public, parameter :: &
-    PAR_INDEPENDENT = 1,              &
-    PAR_DEPENDENT   = 2
-
-
-  interface states_get_state
-    module procedure dstates_get_state1, zstates_get_state1, dstates_get_state2, zstates_get_state2
-    module procedure dstates_get_state3, zstates_get_state3, dstates_get_state4, zstates_get_state4
-  end interface states_get_state
-
-  interface states_set_state
-    module procedure dstates_set_state1, zstates_set_state1, dstates_set_state2, zstates_set_state2
-    module procedure dstates_set_state3, zstates_set_state3, dstates_set_state4, zstates_set_state4
-  end interface states_set_state
-
-  interface states_get_points
-    module procedure dstates_get_points1, zstates_get_points1, dstates_get_points2, zstates_get_points2 
-  end interface states_get_points
 
 contains
 
@@ -222,8 +212,10 @@ contains
     PUSH_SUB(states_mxll_null)
 
     call states_dim_null(st%d)
+    call states_group_null(st%group)
     call distributed_nullify(st%dist)
-
+    
+    st%d%orth_method = 0
     st%parallel_in_states = .false.
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_nullify(st%dom_st_proc_grid)
@@ -233,33 +225,32 @@ contains
 
     st%packed = .false.
 
-    POP_SUB(states_null)
+    POP_SUB(states_mxll_null)
   end subroutine states_mxll_null
 
 
   ! ---------------------------------------------------------
   subroutine states_mxll_init(st, parser, gr, geo)
-    type(states_mxwll_t), target, intent(inout) :: st
+    type(states_mxll_t), target, intent(inout) :: st
     type(parser_t),         intent(in)    :: parser
     type(grid_t),           intent(in)    :: gr
     type(geometry_t),       intent(in)    :: geo
 
-    FLOAT :: excess_charge
-    integer :: nempty, ntot, default, nthreads
-    integer :: nempty_conv
-    logical :: force
+    type(block_t)        :: blk
+    integer :: idim, nlines, ncols, il
+    FLOAT   :: zero_dummy(MAX_DIM), pos(MAX_DIM)
+    character(len=1024)  :: string(MAX_DIM)
 
     PUSH_SUB(states_mxll_init)
 
     st%fromScratch = .true. ! this will be reset if restart_read is called
     call states_mxll_null(st)
-    
+
+    st%d%ispin = 1 
+    st%d%nspin = 1
     st%d%dim = 3
     st%nst   = 1
-    st%have_left_states = .false.
 
-    st%priv%wfs_type = TYPE_CMPLX
-    
     SAFE_ALLOCATE(st%user_def_e_field(1:st%d%dim))
     SAFE_ALLOCATE(st%user_def_b_field(1:st%d%dim))
 
@@ -270,8 +261,47 @@ contains
     SAFE_ALLOCATE(st%node(1:st%nst))
     st%node(1:st%nst) = 0
 
+    !%Variable MaxwellStatesBlockSize
+    !%Type integer
+    !%Section Execution::Optimization
+    !%Description
+    !% Some routines work over blocks of eigenfunctions, which
+    !% generally improves performance at the expense of increased
+    !% memory consumption. This variable selects the size of the
+    !% blocks to be used. If OpenCl is enabled, the default is 32;
+    !% otherwise it is max(4, 2*nthreads).
+    !%End
+
+    nthreads = 1
+#ifdef HAVE_OPENMP
+    !$omp parallel
+    !$omp master
+    nthreads = omp_get_num_threads()
+    !$omp end master
+    !$omp end parallel
+#endif
+    
+    default = max(4, 2*nthreads)
+    if(default > pad_pow2(st%nst)) default = pad_pow2(st%nst)
+    ASSERT(default > 0)
+
+    call parse_variable(parser, 'MaxwellStatesBlockSize', default, st%d%block_size)
+    if(st%d%block_size < 1) then
+      call messages_write("The variable 'MaxwellStatesBlockSize' must be greater than 0.")
+      call messages_fatal()
+    end if
+    st%d%block_size = min(st%d%block_size, st%nst)
+!    conf%target_states_block_size = st%d%block_size
+
+    st%priv%wfs_type = TYPE_CMPLX
+    SAFE_ALLOCATE(st%node(1:st%nst))
+    st%node(1:st%nst) = 0
+
     call mpi_grp_init(st%mpi_grp, -1)
-    st%d%block_size = 1    
+    st%parallel_in_states = .false.
+    st%packed = .false.
+    
+!    st%d%block_size = 1    
     call distributed_nullify(st%d%kpt, st%d%nik)
 
     !%Variable RiemannSilbersteinSign
@@ -285,7 +315,7 @@ contains
     !%Option minus -1
     !% Riemann Silberstein sign is minus
     !%End
-    call parse_variable('RiemannSilbersteinSign', OPTION__RIEMANNSILBERSTEINSIGN__PLUS, st%rs_sign)
+    call parse_variable(parser, 'RiemannSilbersteinSign', OPTION__RIEMANNSILBERSTEINSIGN__PLUS, st%rs_sign)
 
     !%Variable MaxwellFieldsCoordinate
     !%Type block
@@ -300,7 +330,7 @@ contains
     !%End
 
     st%selected_points_number = 1
-    if(parse_block('MaxwellFieldsCoordinate', blk) == 0) then
+    if(parse_block(parser, 'MaxwellFieldsCoordinate', blk) == 0) then
       nlines = parse_block_n(blk)
       st%selected_points_number = nlines
       SAFE_ALLOCATE(st%selected_points_coordinate(1:st%d%dim,1:nlines))
@@ -315,16 +345,16 @@ contains
         do idim=1, st%d%dim
           call parse_block_float(blk, il-1, idim-1, pos(idim), units_inp%length)
         end do
-        st%selected_points_coordinate(:,il)     = pos(:)
-        st%selected_points_rs_state(:,il)       = M_z0
+        st%selected_points_coordinate(:,il) = pos
+        st%selected_points_rs_state(:,il)  = M_z0
         st%selected_points_rs_state_trans(:,il) = M_z0
       end do
     else
       SAFE_ALLOCATE(st%selected_points_coordinate(1:st%d%dim,1))
       SAFE_ALLOCATE(st%selected_points_rs_state(1:st%d%dim,1))
       SAFE_ALLOCATE(st%selected_points_rs_state_trans(1:st%d%dim,1))
-      st%selected_points_coordinate(:,:)     = M_ZERO
-      st%selected_points_rs_state(:,:)       = M_z0
+      st%selected_points_coordinate(:,:) = M_ZERO
+      st%selected_points_rs_state(:,:) = M_z0
       st%selected_points_rs_state_trans(:,:) = M_z0
     end if
 
@@ -341,6 +371,8 @@ contains
     type(mesh_t),           intent(in)      :: mesh
 
     PUSH_SUB(states_mxll_allocate)
+
+    ! This should be done using batches
 
     SAFE_ALLOCATE(st%rs_state(1:mesh%np_part, 1:st%d%dim))
     st%rs_state(:,:) = M_z0
@@ -362,10 +394,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_mwll_end(st)
+  subroutine states_mxll_end(st)
     type(states_mxll_t), intent(inout) :: st
 
-    PUSH_SUB(states_mwll_end)
+    PUSH_SUB(states_mxll_end)
 
     call states_dim_end(st%d)
 
@@ -378,8 +410,8 @@ contains
 
     call distributed_end(st%dist)
 
-    POP_SUB(states_mwll_end)
-  end subroutine states_mwll_end
+    POP_SUB(states_mxll_end)
+  end subroutine states_mxll_end
 
 
   !----------------------------------------------------------
@@ -861,6 +893,137 @@ contains
 
     POP_SUB(get_charge_density_reference)
   end subroutine get_charge_density_reference
+
+  
+  !---------------------------------------------------------------------
+  !> Initializes the data components in st that describe how the states
+  !! are distributed in blocks:
+  !!
+  !! st\%nblocks: this is the number of blocks in which the states are divided. Note that
+  !!   this number is the total number of blocks, regardless of how many are actually stored
+  !!   in each node.
+  !! block_start: in each node, the index of the first block.
+  !! block_end: in each node, the index of the last block.
+  !!   If the states are not parallelized, then block_start is 1 and block_end is st\%nblocks.
+  !! st\%iblock(1:st\%nst, 1:st\%d\%nik): it points, for each state, to the block that contains it.
+  !! st\%block_is_local(): st\%block_is_local(ib) is .true. if block ib is stored in the running node.
+  !! st\%block_range(1:st\%nblocks, 1:2): Block ib contains states fromn st\%block_range(ib, 1) to st\%block_range(ib, 2)
+  !! st\%block_size(1:st\%nblocks): Block ib contains a number st\%block_size(ib) of states.
+  !! st\%block_initialized: it should be .false. on entry, and .true. after exiting this routine.
+  !!
+  !! The set of batches st\%psib(1:st\%nblocks) contains the blocks themselves.
+  subroutine states_mxll_init_block(st, mesh, verbose)
+    type(states_mxll_t),      intent(inout) :: st
+    type(mesh_t),             intent(in)    :: mesh
+    logical, optional,        intent(in)    :: verbose
+
+    integer :: ib, iqn, ist
+    logical :: same_node, verbose_
+    integer, allocatable :: bstart(:), bend(:)
+
+    PUSH_SUB(states_mxll_init_block)
+
+    SAFE_ALLOCATE(bstart(1:st%nst))
+    SAFE_ALLOCATE(bend(1:st%nst))
+    SAFE_ALLOCATE(st%group%iblock(1:st%nst, 1:st%d%nik))
+
+    st%group%iblock = 0
+
+    verbose_ = optional_default(verbose, .true.)
+
+    ! count and assign blocks
+    ib = 0
+    st%group%nblocks = 0
+    bstart(1) = 1
+    do ist = 1, st%nst
+      INCR(ib, 1)
+
+      st%group%iblock(ist, st%d%kpt%start:st%d%kpt%end) = st%group%nblocks + 1
+
+      same_node = .true.
+      if(ib == st%d%block_size .or. ist == st%nst .or. .not. same_node) then
+        ib = 0
+        INCR(st%group%nblocks, 1)
+        bend(st%group%nblocks) = ist
+        if(ist /= st%nst) bstart(st%group%nblocks + 1) = ist + 1
+      end if
+    end do
+
+    SAFE_ALLOCATE(st%group%psib(1:st%group%nblocks, st%d%kpt%start:st%d%kpt%end))
+
+    SAFE_ALLOCATE(st%group%block_is_local(1:st%group%nblocks, st%d%kpt%start:st%d%kpt%end))
+    st%group%block_is_local = .false.
+    st%group%block_start  = -1
+    st%group%block_end    = -2  ! this will make that loops block_start:block_end do not run if not initialized
+
+    do ib = 1, st%group%nblocks
+      if(bstart(ib) >= st%st_start .and. bend(ib) <= st%st_end) then
+        if(st%group%block_start == -1) st%group%block_start = ib
+        st%group%block_end = ib
+        do iqn = st%d%kpt%start, st%d%kpt%end
+          st%group%block_is_local(ib, iqn) = .true.
+          call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
+          call zbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part, mirror = st%d%mirror_states)
+        end do
+      end if
+    end do
+
+    SAFE_ALLOCATE(st%group%block_range(1:st%group%nblocks, 1:2))
+    SAFE_ALLOCATE(st%group%block_size(1:st%group%nblocks))
+    
+    st%group%block_range(1:st%group%nblocks, 1) = bstart(1:st%group%nblocks)
+    st%group%block_range(1:st%group%nblocks, 2) = bend(1:st%group%nblocks)
+    st%group%block_size(1:st%group%nblocks) = bend(1:st%group%nblocks) - bstart(1:st%group%nblocks) + 1
+
+    st%group%block_initialized = .true.
+
+    SAFE_ALLOCATE(st%group%block_node(1:st%group%nblocks))
+
+    ASSERT(associated(st%node))
+    ASSERT(all(st%node >= 0) .and. all(st%node < st%mpi_grp%size))
+    
+    do ib = 1, st%group%nblocks
+      st%group%block_node(ib) = st%node(st%group%block_range(ib, 1))
+      ASSERT(st%group%block_node(ib) == st%node(st%group%block_range(ib, 2)))
+    end do
+    
+    if(verbose_) then
+      call messages_write('Info: Blocks of Maxwell states')
+      call messages_info()
+      do ib = 1, st%group%nblocks
+        call messages_write('      Block ')
+        call messages_write(ib, fmt = 'i8')
+        call messages_write(' contains ')
+        call messages_write(st%group%block_size(ib), fmt = 'i8')
+        call messages_write(' states')
+        if(st%group%block_size(ib) > 0) then
+          call messages_write(':')
+          call messages_write(st%group%block_range(ib, 1), fmt = 'i8')
+          call messages_write(' - ')
+          call messages_write(st%group%block_range(ib, 2), fmt = 'i8')
+        end if
+        call messages_info()
+      end do
+    end if
+    
+    SAFE_DEALLOCATE_A(bstart)
+    SAFE_DEALLOCATE_A(bend)
+    POP_SUB(states_mxll_init_block)
+  end subroutine states_mxll_init_block
+
+  ! ---------------------------------------------------------
+  !> Deallocates the Maxwell wavefunctions defined within a states_t structure.
+  subroutine states_mxll_deallocate_wfns(st)
+    type(states_mxll_t), intent(inout) :: st
+
+    integer :: ib, iq
+
+    PUSH_SUB(states_mxll_deallocate_wfns)
+
+    call states_group_end(st%group, st%d)
+
+    POP_SUB(states_mxll_deallocate_wfns)
+  end subroutine states_mxll_deallocate_wfns
 
 
 end module states_mxll_oct_m
