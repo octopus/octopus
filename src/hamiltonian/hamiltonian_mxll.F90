@@ -73,8 +73,8 @@ module hamiltonian_mxll_oct_m
     hamiltonian_mxll_get_time,                  &
     hamiltonian_mxll_apply_packed,              &
     maxwell_fft_hamiltonian,                    &
-    get_electric_field_at_points,               &
-    get_magnetic_field_at_points,               &
+    get_Efield_at_points,               &
+    get_Bfield_at_points,               &
     maxwell_helmholtz_decomposition_trans_field,&
     maxwell_helmholtz_decomposition_long_field, &
     surface_integral_helmholtz_transverse
@@ -194,15 +194,12 @@ module hamiltonian_mxll_oct_m
     LENGTH     = 1,             &
     VELOCITY   = 2
 
-  integer, public, parameter ::        &
-    INDEPENDENT_PARTICLES = 2, &
-    HARTREE               = 1, &
-    HARTREE_FOCK          = 3, &
-    KOHN_SHAM_DFT         = 4, &
-    CLASSICAL             = 5, &
-    RDMFT                 = 7
-
-  type(profile_t), save :: prof_hamiltonian_mxll
+  integer, public, parameter ::      &
+    FARADAY_AMPERE_OLD          = 0, &
+    FARADAY_AMPERE              = 1, &
+    FARADAT_AMPERE_MEDIUM       = 2, &
+    FARADAT_AMPERE_GAUSS        = 3, &
+    FARADAT_AMPERE_GUASS_MEDIUM = 4
 
 contains
 
@@ -284,12 +281,11 @@ contains
     !%Option faraday_ampere_gauss_medium 4
     !% The propagation operation is done by 4x4 matrices also with Gauss laws constraint in medium
     !%End
-    call parse_variable(parser, 'MaxwellHamiltonianOperator', OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE, &
-                        hm%maxwell_operator)
+    call parse_variable(parser, 'MaxwellHamiltonianOperator', FARADAY_AMPERE, hm%maxwell_operator)
 
-    if (hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
+    if (hm%maxwell_operator == FARADAY_AMPERE_GAUSS) then
       hm%d%dim = hm%d%dim+1
-    else if (hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    else if (hm%maxwell_operator == FARADAY_AMPERE_MEDIUM) then
       hm%d%dim = 2*hm%d%dim
     end if
 
@@ -600,7 +596,7 @@ end subroutine hamiltonian_mxll_apply_all
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum via partial derivatives:
 
-    if (hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE) then
+    if (hm%maxwell_operator == FARADAY_AMPERE) then
 
       SAFE_ALLOCATE(tmp(np_part,2))
       oppsi       = M_z0
@@ -653,7 +649,7 @@ end subroutine hamiltonian_mxll_apply_all
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium via partial derivatives:
 
-    else if (maxwell_hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    else if (maxwell_hm%maxwell_operator == FARADAY_AMPERE_MEDIUM) then
 
       SAFE_ALLOCATE(tmp(np_part,4))
       oppsi       = M_z0
@@ -712,7 +708,7 @@ end subroutine hamiltonian_mxll_apply_all
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum with Gauss condition via partial derivatives:
 
-    else if (maxwell_hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
+    else if (maxwell_hm%maxwell_operator == FARADAY_AMPERE_GAUSS) then
 
       SAFE_ALLOCATE(tmp(np_part,3))
       oppsi       = M_z0
@@ -744,7 +740,7 @@ end subroutine hamiltonian_mxll_apply_all
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium with Gauss condition via partial derivatives:
 
-    else if (hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS_MEDIUM) then
+    else if (hm%maxwell_operator == FARADAY_AMPERE_GAUSS_MEDIUM) then
 
       SAFE_ALLOCATE(tmp(np_part,3))
       oppsi       = M_z0
@@ -1269,7 +1265,7 @@ end subroutine hamiltonian_mxll_apply_all
 
     PUSH_SUB(maxwell_fft_hamiltonian)
 
-    if (hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE) then
+    if (hm%maxwell_operator == FARADAY_AMPERE) then
       hm_matrix(:,:) = M_z0
       if (hm%maxwell_bc%bc_ab_type(1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then   ! TODO different directions
         omega = P_c * sqrt(k_vec(k_index_x,1)**2+k_vec(k_index_y,2)**2+k_vec(k_index_z,3)**2)
@@ -1298,7 +1294,7 @@ end subroutine hamiltonian_mxll_apply_all
         hm_matrix(3,2)   =   M_zI * P_c * k_vec(k_index_x,1)
         hm_matrix(3,3)   =   M_z0
       end if
-    else if (hm%maxwell_operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    else if (hm%maxwell_operator == FARADAY_AMPERE_MEDIUM) then
       if (hm%bc%bc_ab_type(1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then   ! TODO different directions
         omega = P_c * sqrt(k_vec(k_index_x,1)**2+k_vec(k_index_y,2)**2+k_vec(k_index_z,3)**2)
         if (omega /= M_ZERO) then
@@ -1350,7 +1346,7 @@ end subroutine hamiltonian_mxll_apply_all
   end subroutine maxwell_fft_hamiltonian
 
   !----------------------------------------------------------
-  subroutine get_electric_field_at_points(rs_state, gr, st, points_number, points, e_field_points)
+  subroutine get_Efield_at_points(rs_state, gr, st, points_number, points, e_field_points)
     CMPLX,               intent(inout) :: rs_state(:,:)
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(in)    :: st
@@ -1363,7 +1359,7 @@ end subroutine hamiltonian_mxll_apply_all
     integer, allocatable :: ip_mx_gr_local(:), ip_mx_gr_global(:)
     CMPLX,   allocatable :: ztmp_global(:)
 
-    PUSH_SUB(get_electric_field_at_points)
+    PUSH_SUB(get_Efield_at_points)
 
     ! Fist part: get transverse electric field an evaluation point
     SAFE_ALLOCATE(ztmp_global(gr%mesh%np_global))
@@ -1393,13 +1389,13 @@ end subroutine hamiltonian_mxll_apply_all
     SAFE_DEALLOCATE_A(ip_mx_gr_local)
     SAFE_DEALLOCATE_A(ip_mx_gr_global)
 
-    POP_SUB(get_electric_field_at_points)
+    POP_SUB(get_Efield_at_points)
 
-  end subroutine get_electric_field_at_points
+  end subroutine get_Efield_at_points
 
 
   !----------------------------------------------------------
-  subroutine get_magnetic_field_at_points(rs_state, gr, st, points_number, points, b_field_points)
+  subroutine get_Bfield_at_points(rs_state, gr, st, points_number, points, b_field_points)
     CMPLX,               intent(inout) :: rs_state(:,:)
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(in)    :: st
@@ -1412,7 +1408,7 @@ end subroutine hamiltonian_mxll_apply_all
     integer, allocatable :: ip_mx_gr_local(:), ip_mx_gr_global(:)
     CMPLX,   allocatable :: ztmp_global(:)
 
-    PUSH_SUB(get_magnetic_field_at_points)
+    PUSH_SUB(get_Bfield_at_points)
 
     ! Fist part: get transverse electric field an evaluation point
     SAFE_ALLOCATE(ztmp_global(gr%mesh%np_global))
@@ -1442,20 +1438,20 @@ end subroutine hamiltonian_mxll_apply_all
     SAFE_DEALLOCATE_A(ip_mx_gr_local)
     SAFE_DEALLOCATE_A(ip_mx_gr_global)
 
-    POP_SUB(get_magnetic_field_at_points)
+    POP_SUB(get_Bfield_at_points)
 
-  end subroutine get_magnetic_field_at_points
+  end subroutine get_Bfield_at_points
 
 
   !----------------------------------------------------------
   !>  Helmholtz decomposition to calculate a transverse field (maybe should be a general math function)
-  subroutine maxwell_helmholtz_decomposition_trans_field(poisson, gr, maxwell_hm, hm, maxwell_st, transverse_field)
-    type(poisson_t),     intent(in)    :: poisson
-    type(grid_t),        intent(in)    :: gr
-    type(hamiltonian_t), intent(in)    :: maxwell_hm
-    type(hamiltonian_t), intent(in)    :: hm
-    type(states_t),      intent(in)    :: maxwell_st
-    CMPLX,               intent(inout) :: transverse_field(:,:)
+  subroutine maxwell_helmholtz_decomposition_trans_field(poisson, gr, hm_mxll, hm_elec, st, transverse_field)
+    type(poisson_t),          intent(in)    :: poisson
+    type(grid_t),             intent(in)    :: gr
+    type(hamiltonian_mxll_t), intent(in)    :: hm_mxll
+    type(hamiltonian_elec_t), intent(in)    :: hm_elec
+    type(states_t),           intent(in)    :: st
+    CMPLX,                    intent(inout) :: transverse_field(:,:)
 
     integer            :: idim, rankmin, ip_local, ip_global, ii, jj, kk, ip, ip_in
     FLOAT              :: pos(3), dmin
@@ -1475,38 +1471,38 @@ end subroutine hamiltonian_mxll_apply_all
     field_old = transverse_field
     call zderivatives_curl(gr%der, transverse_field(:,:), ztmp(:,:), set_bc = .false.)
     ! Apply poisson equation to solve helmholtz decomposition integral
-    do idim=1, maxwell_st%d%dim
+    do idim=1, st%d%dim
       call zpoisson_solve(poisson, tmp_poisson(:), ztmp(:,idim), .true.)
       ztmp(1:gr%mesh%np_part,idim) = M_ONE / (M_FOUR * M_PI) * tmp_poisson(1:gr%mesh%np_part)
     end do
     call zderivatives_curl(gr%der, ztmp, transverse_field, set_bc = .false.)
-    do ip_in=1, maxwell_hm%maxwell_bc%der_bndry_mask_points_number
-      ip = maxwell_hm%maxwell_bc%der_bndry_mask_points_map(ip_in)
-      transverse_field(ip,:) = maxwell_hm%maxwell_bc%der_bndry_mask(ip_in) * transverse_field(ip,:)
+    do ip_in=1, hm_mxll%bc%der_bndry_mask_points_number
+      ip = hm_mxll%bc%der_bndry_mask_points_map(ip_in)
+      transverse_field(ip,:) = hm_mxll%bc%der_bndry_mask(ip_in) * transverse_field(ip,:)
     end do
 
     SAFE_DEALLOCATE_A(ztmp)
     SAFE_DEALLOCATE_A(tmp_poisson)
 
-    ! correction surface integral
-    if (hm%mx_ma_trans_field_calc_corr) then
-      call mesh_nearest_point_infos(gr%mesh, hm%mx_ma_coupling_points(:,1), dmin, rankmin, &
-                                    ip_local, ip_global)
-      ip_local  = 1
-      ip_global = 1
-      do ii = -gr%der%order, gr%der%order
-        do jj = -gr%der%order, gr%der%order
-          do kk = -gr%der%order, gr%der%order
-            pos(1) = gr%mesh%x(ip_local,1) * ii * gr%mesh%spacing(1)
-            pos(2) = gr%mesh%x(ip_local,2) * jj * gr%mesh%spacing(2)
-            pos(3) = gr%mesh%x(ip_local,3) * kk * gr%mesh%spacing(3)
-            call surface_integral_helmholtz_transverse(gr, maxwell_st, pos, field_old, surface_integral)
-            transverse_field(ip_local,:) = transverse_field(ip_local,:) - M_ONE / (M_FOUR * M_PI) * surface_integral(:)
-          end do
-        end do
-      end do
-      pos(:) = maxwell_gr%mesh%x(ip_local,:)
-    end if
+!    ! correction surface integral
+!    if (hm_elec%mx_ma_trans_field_calc_corr) then
+!      call mesh_nearest_point_infos(gr%mesh, hm_elec%mx_ma_coupling_points(:,1), dmin, rankmin, &
+!                                    ip_local, ip_global)
+!      ip_local  = 1
+!      ip_global = 1
+!      do ii = -gr%der%order, gr%der%order
+!        do jj = -gr%der%order, gr%der%order
+!          do kk = -gr%der%order, gr%der%order
+!            pos(1) = gr%mesh%x(ip_local,1) * ii * gr%mesh%spacing(1)
+!            pos(2) = gr%mesh%x(ip_local,2) * jj * gr%mesh%spacing(2)
+!            pos(3) = gr%mesh%x(ip_local,3) * kk * gr%mesh%spacing(3)
+!            call surface_integral_helmholtz_transverse(gr, st, pos, field_old, surface_integral)
+!            transverse_field(ip_local,:) = transverse_field(ip_local,:) - M_ONE / (M_FOUR * M_PI) * surface_integral(:)
+!          end do
+!        end do
+!      end do
+!      pos(:) = gr%mesh%x(ip_local,:)
+!    end if
 
     SAFE_DEALLOCATE_A(field_old)
 
