@@ -31,7 +31,7 @@ module propagator_expmid_oct_m
   use potential_interpolation_oct_m
   use propagator_base_oct_m
   use states_elec_oct_m
-  use worker_elec_oct_m
+  use propagation_ops_elec_oct_m
 
   implicit none
 
@@ -74,18 +74,19 @@ contains
     end if
 
     !move the ions to time 'time - dt/2'
-    call worker_elec_move_ions(tr%worker_elec, gr, hm, psolver, st, namespace, ions, geo, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, psolver, st, namespace, ions, geo, &
             time - M_HALF*dt, ionic_scale*M_HALF*dt, save_pos = .true., move_ions = move_ions)
 
-    call worker_elec_propagate_gauge_field(tr%worker_elec, hm, M_HALF*dt, time, save_gf = .true.)
+    call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, hm, M_HALF*dt, time, save_gf = .true.)
 
-    call worker_elec_update_hamiltonian(namespace, st, gr, hm, time - dt*M_HALF)
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time - dt*M_HALF)
 
-    call worker_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, dt)
+    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, dt)
 
-    call worker_elec_restore_ions(tr%worker_elec, ions, geo, move_ions = move_ions)
+    !restore to time 'time - dt'
+    call propagation_ops_elec_restore_ions(tr%propagation_ops_elec, ions, geo, move_ions = move_ions)
 
-    call worker_elec_restore_gauge_field(tr%worker_elec, namespace, hm, gr)
+    call propagation_ops_elec_restore_gauge_field(tr%propagation_ops_elec, namespace, hm, gr)
 
     POP_SUB(propagator_dt.exponential_midpoint)
   end subroutine exponential_midpoint

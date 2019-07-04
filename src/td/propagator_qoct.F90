@@ -35,7 +35,7 @@ module propagator_qoct_oct_m
   use potential_interpolation_oct_m
   use propagator_base_oct_m
   use states_elec_oct_m
-  use worker_elec_oct_m
+  use propagation_ops_elec_oct_m
   use xc_oct_m
 
   implicit none
@@ -79,17 +79,17 @@ contains
     end if
 
     !move the ions to time 'time - dt/2'
-    call worker_elec_move_ions(tr%worker_elec, gr, hm, psolver, st, namespace, ions, geo, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, psolver, st, namespace, ions, geo, &
                 time - M_HALF*dt, M_HALF*dt, save_pos = .true.)
 
-    call worker_elec_update_hamiltonian(namespace, st, gr, hm, time-dt/M_TWO)
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time-dt/M_TWO)
 
     call exponential_apply_all(tr%te, gr%der, hm, psolver, xc, st, dt)
 
     call density_calc(st, gr, st%rho)
 
     !restore to time 'time - dt'
-    call worker_elec_restore_ions(tr%worker_elec, ions, geo)
+    call propagation_ops_elec_restore_ions(tr%propagation_ops_elec, ions, geo)
 
     POP_SUB(td_qoct_tddft_propagator)
   end subroutine td_qoct_tddft_propagator

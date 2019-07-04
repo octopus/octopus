@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module worker_elec_oct_m
+module propagation_ops_elec_oct_m
   use batch_oct_m
   use density_oct_m  
   use exponential_oct_m
@@ -36,23 +36,23 @@ module worker_elec_oct_m
   use profiling_oct_m
   use states_elec_oct_m
   use varinfo_oct_m
-  use worker_abst_oct_m
+  use propagation_ops_abst_oct_m
 
   implicit none
 
   private
   public ::                             &
-    worker_elec_t,                      &
-    worker_elec_update_hamiltonian,     &
-    worker_elec_exp_apply,              &
-    worker_elec_fuse_density_exp_apply, &
-    worker_elec_move_ions,              &
-    worker_elec_restore_ions,           &
-    worker_elec_propagate_gauge_field,  &
-    worker_elec_restore_gauge_field,    &
-    worker_elec_interpolate_get
+    propagation_ops_elec_t,                      &
+    propagation_ops_elec_update_hamiltonian,     &
+    propagation_ops_elec_exp_apply,              &
+    propagation_ops_elec_fuse_density_exp_apply, &
+    propagation_ops_elec_move_ions,              &
+    propagation_ops_elec_restore_ions,           &
+    propagation_ops_elec_propagate_gauge_field,  &
+    propagation_ops_elec_restore_gauge_field,    &
+    propagation_ops_elec_interpolate_get
 
-  type, extends(worker_abst_t) :: worker_elec_t
+  type, extends(propagation_ops_abst_t) :: propagation_ops_elec_t
     private
 
     type(ion_state_t) :: ions_state
@@ -60,31 +60,31 @@ module worker_elec_oct_m
 
   contains
 
-    procedure :: init => worker_elec_init
-    procedure :: end => worker_elec_end
-  end type worker_elec_t
+    procedure :: init => propagation_ops_elec_init
+    procedure :: end => propagation_ops_elec_end
+  end type propagation_ops_elec_t
 
 
 contains
 
-  subroutine worker_elec_init(wo)
-    class(worker_elec_t),  intent(inout) :: wo
+  subroutine propagation_ops_elec_init(wo)
+    class(propagation_ops_elec_t),  intent(inout) :: wo
 
-    PUSH_SUB(worker_elec_init)
+    PUSH_SUB(propagation_ops_elec_init)
 
-    POP_SUB(worker_elec_init)
+    POP_SUB(propagation_ops_elec_init)
   end subroutine
 
-  subroutine worker_elec_end(wo)
-    class(worker_elec_t),  intent(inout) :: wo
+  subroutine propagation_ops_elec_end(wo)
+    class(propagation_ops_elec_t),  intent(inout) :: wo
 
-    PUSH_SUB(worker_elec_end)
+    PUSH_SUB(propagation_ops_elec_end)
 
-    POP_SUB(worker_elec_end)
+    POP_SUB(propagation_ops_elec_end)
   end subroutine
 
   ! ---------------------------------------------------------
-  subroutine worker_elec_update_hamiltonian(namespace, st, gr, hm, time)
+  subroutine propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time)
     type(namespace_t),   intent(in)    :: namespace
     type(states_elec_t), intent(inout) :: st
     type(grid_t),        intent(inout) :: gr
@@ -93,7 +93,7 @@ contains
 
     type(profile_t), save :: prof
 
-    PUSH_SUB(worker_elec_update_hamiltonian)
+    PUSH_SUB(propagation_ops_elec_update_hamiltonian)
 
     call profiling_in(prof, 'ELEC_UPDATE_H')
 
@@ -102,29 +102,29 @@ contains
 
     call profiling_out(prof)
 
-    POP_SUB(worker_elec_update_hamiltonian)
+    POP_SUB(propagation_ops_elec_update_hamiltonian)
 
-  end subroutine worker_elec_update_hamiltonian
+  end subroutine propagation_ops_elec_update_hamiltonian
 
 
   ! ---------------------------------------------------------
-  subroutine worker_elec_move_ions(wo, gr, hm, psolver, st, namespace, ions, geo, time, ion_time, save_pos, move_ions)
-    class(worker_elec_t),    intent(inout) :: wo
-    type(grid_t),            intent(in)    :: gr
-    type(hamiltonian_t),     intent(inout) :: hm
-    type(poisson_t),         intent(in)    :: psolver
-    type(states_elec_t),     intent(inout) :: st
-    type(namespace_t),       intent(in)    :: namespace
-    type(ion_dynamics_t),    intent(inout) :: ions
-    type(geometry_t),        intent(inout) :: geo
-    FLOAT,                   intent(in)    :: time
-    FLOAT,                   intent(in)    :: ion_time
-    logical, optional,       intent(in)    :: save_pos
-    logical, optional,       intent(in)    :: move_ions
+  subroutine propagation_ops_elec_move_ions(wo, gr, hm, psolver, st, namespace, ions, geo, time, ion_time, save_pos, move_ions)
+    class(propagation_ops_elec_t), intent(inout) :: wo
+    type(grid_t),                  intent(in)    :: gr
+    type(hamiltonian_t),           intent(inout) :: hm
+    type(poisson_t),               intent(in)    :: psolver
+    type(states_elec_t),           intent(inout) :: st
+    type(namespace_t),             intent(in)    :: namespace
+    type(ion_dynamics_t),          intent(inout) :: ions
+    type(geometry_t),              intent(inout) :: geo
+    FLOAT,                         intent(in)    :: time
+    FLOAT,                         intent(in)    :: ion_time
+    logical, optional,             intent(in)    :: save_pos
+    logical, optional,             intent(in)    :: move_ions
 
     type(profile_t), save :: prof
 
-    PUSH_SUB(worker_elec_move_ions)    
+    PUSH_SUB(propagation_ops_elec_move_ions)    
 
     call profiling_in(prof, 'ELEC_MOVE_IONS')
    
@@ -136,22 +136,22 @@ contains
       call hamiltonian_epot_generate(hm, namespace, gr, geo, st, psolver, time = time)
     end if
 
-    POP_SUB(worker_elec_move_ions)
+    POP_SUB(propagation_ops_elec_move_ions)
 
     call profiling_out(prof)
 
-  end subroutine worker_elec_move_ions
+  end subroutine propagation_ops_elec_move_ions
 
   ! ---------------------------------------------------------
-  subroutine worker_elec_restore_ions(wo, ions, geo, move_ions)
-    class(worker_elec_t),    intent(inout) :: wo
+  subroutine propagation_ops_elec_restore_ions(wo, ions, geo, move_ions)
+    class(propagation_ops_elec_t),    intent(inout) :: wo
     type(ion_dynamics_t),    intent(inout) :: ions
     type(geometry_t),        intent(inout) :: geo
     logical, optional,       intent(in)    :: move_ions
 
     type(profile_t), save :: prof
 
-    PUSH_SUB(worker_elec_restore_ions)    
+    PUSH_SUB(propagation_ops_elec_restore_ions)    
 
     call profiling_in(prof, 'ELEC_RESTORE_IONS')
 
@@ -161,21 +161,21 @@ contains
 
     call profiling_out(prof)
 
-    POP_SUB(worker_elec_retore_ions)
+    POP_SUB(propagation_ops_elec_retore_ions)
 
-  end subroutine worker_elec_restore_ions
+  end subroutine propagation_ops_elec_restore_ions
 
   ! ---------------------------------------------------------
-  subroutine worker_elec_propagate_gauge_field(wo, hm, dt, time, save_gf)
-    class(worker_elec_t),    intent(inout) :: wo
-    type(hamiltonian_t),     intent(inout) :: hm
-    FLOAT,                   intent(in)    :: dt
-    FLOAT,                   intent(in)    :: time
-    logical,  optional,      intent(in)    :: save_gf
+  subroutine propagation_ops_elec_propagate_gauge_field(wo, hm, dt, time, save_gf)
+    class(propagation_ops_elec_t), intent(inout) :: wo
+    type(hamiltonian_t),           intent(inout) :: hm
+    FLOAT,                         intent(in)    :: dt
+    FLOAT,                         intent(in)    :: time
+    logical,  optional,            intent(in)    :: save_gf
 
     type(profile_t), save :: prof
 
-    PUSH_SUB(worker_elec_propagate_gauge_field)
+    PUSH_SUB(propagation_ops_elec_propagate_gauge_field)
 
     call profiling_in(prof, 'ELEC_MOVE_GAUGE')
 
@@ -187,22 +187,22 @@ contains
       call gauge_field_propagate(hm%ep%gfield, dt, time)
     end if
 
-    POP_SUB(worker_elec_propagate_gauge_field)
+    POP_SUB(propagation_ops_elec_propagate_gauge_field)
 
     call profiling_out(prof)
 
-  end subroutine worker_elec_propagate_gauge_field
+  end subroutine propagation_ops_elec_propagate_gauge_field
 
   ! ---------------------------------------------------------
-  subroutine worker_elec_restore_gauge_field(wo, namespace, hm, gr)
-    class(worker_elec_t),    intent(in)    :: wo
-    type(namespace_t),       intent(in)    :: namespace
-    type(hamiltonian_t),     intent(inout) :: hm
-    type(grid_t),            intent(in)    :: gr
+  subroutine propagation_ops_elec_restore_gauge_field(wo, namespace, hm, gr)
+    class(propagation_ops_elec_t), intent(in)    :: wo
+    type(namespace_t),             intent(in)    :: namespace
+    type(hamiltonian_t),           intent(inout) :: hm
+    type(grid_t),                  intent(in)    :: gr
 
     type(profile_t), save :: prof
 
-    PUSH_SUB(worker_elec_restore_gauge_field)
+    PUSH_SUB(propagation_ops_elec_restore_gauge_field)
 
     call profiling_in(prof, 'ELEC_RESTORE_GAUGE')
 
@@ -214,12 +214,12 @@ contains
 
     call profiling_out(prof)
 
-    POP_SUB(worker_elec_retore_gauge_field)
+    POP_SUB(propagation_ops_elec_retore_gauge_field)
 
-  end subroutine worker_elec_restore_gauge_field
+  end subroutine propagation_ops_elec_restore_gauge_field
 
   ! ---------------------------------------------------------
-  subroutine worker_elec_exp_apply(te, st, gr, hm, psolver, dt)
+  subroutine propagation_ops_elec_exp_apply(te, st, gr, hm, psolver, dt)
     type(exponential_t), intent(inout) :: te 
     type(states_elec_t), intent(inout) :: st
     type(grid_t),        intent(inout) :: gr
@@ -230,7 +230,7 @@ contains
     integer :: ik, ib
     type(profile_t), save :: prof
 
-    PUSH_SUB(worker_elec_exp_apply)
+    PUSH_SUB(propagation_ops_elec_exp_apply)
 
     call profiling_in(prof, 'ELEC_EXP_APPLY')
 
@@ -242,12 +242,12 @@ contains
 
     call profiling_out(prof)
 
-    POP_SUB(worker_elec_exp_apply)
+    POP_SUB(propagation_ops_elec_exp_apply)
 
-  end subroutine worker_elec_exp_apply
+  end subroutine propagation_ops_elec_exp_apply
 
   ! ---------------------------------------------------------
-  subroutine worker_elec_fuse_density_exp_apply(te, st, gr, hm, psolver, dt, dt2)
+  subroutine propagation_ops_elec_fuse_density_exp_apply(te, st, gr, hm, psolver, dt, dt2)
     type(exponential_t), intent(inout) :: te
     type(states_elec_t), intent(inout) :: st
     type(grid_t),        intent(inout) :: gr
@@ -261,7 +261,7 @@ contains
     type(density_calc_t) :: dens_calc
     type(profile_t), save :: prof
 
-    PUSH_SUB(worker_elec_fuse_density_exp_apply)
+    PUSH_SUB(propagation_ops_elec_fuse_density_exp_apply)
 
     call profiling_in(prof, 'ELEC_FUSE_DENS_EXP_APPLY')
 
@@ -302,17 +302,17 @@ contains
 
     call profiling_out(prof)
 
-    POP_SUB(worker_elec_fuse_density_exp_apply)
+    POP_SUB(propagation_ops_elec_fuse_density_exp_apply)
 
-  end subroutine worker_elec_fuse_density_exp_apply
+  end subroutine propagation_ops_elec_fuse_density_exp_apply
 
   ! ---------------------------------------------------------
-  subroutine worker_elec_interpolate_get(gr, hm, interp)
+  subroutine propagation_ops_elec_interpolate_get(gr, hm, interp)
     type(grid_t),                       intent(in) :: gr
     type(hamiltonian_t),             intent(inout) :: hm
     type(potential_interpolation_t), intent(inout) :: interp
 
-    PUSH_SUB(worker_elec_interpolate_get)
+    PUSH_SUB(propagation_ops_elec_interpolate_get)
 
     if(hm%family_is_mgga_with_exc) then
       call potential_interpolation_get(interp, gr%mesh%np, hm%d%nspin, 0, hm%vhxc, vtau = hm%vtau)
@@ -320,11 +320,11 @@ contains
       call potential_interpolation_get(interp, gr%mesh%np, hm%d%nspin, 0, hm%vhxc)
     end if
 
-    POP_SUB(worker_elec_interpolate_get)
+    POP_SUB(propagation_ops_elec_interpolate_get)
 
-  end subroutine worker_elec_interpolate_get
+  end subroutine propagation_ops_elec_interpolate_get
 
-end module worker_elec_oct_m
+end module propagation_ops_elec_oct_m
 
 
 !! Local Variables:

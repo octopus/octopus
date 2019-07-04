@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module worker_abst_oct_m
+module propagation_ops_abst_oct_m
   use global_oct_m
   use messages_oct_m
   use profiling_oct_m
@@ -28,35 +28,35 @@ module worker_abst_oct_m
 
   private
   public ::                  &
-    worker_abst_t
+    propagation_ops_abst_t
 
-  type, abstract :: worker_abst_t
+  type, abstract :: propagation_ops_abst_t
     private
 
   contains
 
-    !Below are the list of operations that needs to be implemented by the workers
-    procedure(worker_init), deferred    :: init
-    procedure(worker_end),  deferred    :: end
-  end type worker_abst_t
+    !Below are the list of operations that needs to be implemented by the propagation_opss
+    procedure(propagation_ops_init), deferred    :: init
+    procedure(propagation_ops_end),  deferred    :: end
+  end type propagation_ops_abst_t
 
 
   abstract interface
-    subroutine worker_init(wo)
-      import worker_abst_t
-      class(worker_abst_t), intent(inout) :: wo
-    end subroutine worker_init
+    subroutine propagation_ops_init(wo)
+      import propagation_ops_abst_t
+      class(propagation_ops_abst_t), intent(inout) :: wo
+    end subroutine propagation_ops_init
 
-    subroutine worker_end(wo)
-      import worker_abst_t
-      class(worker_abst_t), intent(inout) :: wo
-    end subroutine worker_end
+    subroutine propagation_ops_end(wo)
+      import propagation_ops_abst_t
+      class(propagation_ops_abst_t), intent(inout) :: wo
+    end subroutine propagation_ops_end
 
   end interface 
 
 contains
 
-end module worker_abst_oct_m
+end module propagation_ops_abst_oct_m
 
 
 !! Local Variables:

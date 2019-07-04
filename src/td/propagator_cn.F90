@@ -38,7 +38,7 @@ module propagator_cn_oct_m
   use solvers_oct_m
   use sparskit_oct_m
   use states_elec_oct_m
-  use worker_elec_oct_m
+  use propagation_ops_elec_oct_m
 
   implicit none
 
@@ -111,7 +111,7 @@ contains
     SAFE_ALLOCATE(rhs(1:np*st%d%dim))
 
     !move the ions to time 'time - dt/2', and save the current status to return to it later.
-    call worker_elec_move_ions(tr%worker_elec, gr, hm, psolver, st, namespace, ions, geo, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, psolver, st, namespace, ions, geo, &
                 time - M_HALF*dt, M_HALF*dt, save_pos = .true.)
 
     if(hm%family_is_mgga_with_exc) then
@@ -122,7 +122,7 @@ contains
         time, dt, time -dt/M_TWO, hm%vhxc)
     end if
 
-    call worker_elec_update_hamiltonian(namespace, st, gr, hm, time - dt*M_HALF)
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time - dt*M_HALF)
 
     ! solve (1+i\delta t/2 H_n)\psi^{predictor}_{n+1} = (1-i\delta t/2 H_n)\psi^n
     do ik = st%d%kpt%start, st%d%kpt%end
@@ -174,7 +174,7 @@ contains
     call density_calc(st, gr, st%rho)
 
     !restore to time 'time - dt'
-    call worker_elec_restore_ions(tr%worker_elec, ions, geo)
+    call propagation_ops_elec_restore_ions(tr%propagation_ops_elec, ions, geo)
 
     SAFE_DEALLOCATE_A(zpsi_rhs)
     SAFE_DEALLOCATE_A(zpsi)

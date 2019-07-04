@@ -22,7 +22,7 @@ module propagator_base_oct_m
   use exponential_oct_m
   use potential_interpolation_oct_m
   use sparskit_oct_m
-  use worker_elec_oct_m
+  use propagation_ops_elec_oct_m
   
   implicit none
 
@@ -57,7 +57,7 @@ module propagator_base_oct_m
     integer             :: tdsk_size
     FLOAT               :: scf_threshold
     
-    type(worker_elec_t) :: worker_elec
+    type(propagation_ops_elec_t) :: propagation_ops_elec
   end type propagator_t
 
 end module propagator_base_oct_m

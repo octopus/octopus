@@ -44,7 +44,7 @@ module propagator_etrs_oct_m
   use states_elec_oct_m
   use types_oct_m
   use v_ks_oct_m
-  use worker_elec_oct_m
+  use propagation_ops_elec_oct_m
 
   implicit none
 
@@ -88,7 +88,7 @@ contains
       SAFE_ALLOCATE(vhxc_t2(1:gr%mesh%np, 1:st%d%nspin))
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t1)
 
-      call worker_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, CNST(0.5)*dt, dt)
+      call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, CNST(0.5)*dt, dt)
 
       call v_ks_calc(ks, namespace, hm, st, geo, calc_current = .false.)
 
@@ -98,26 +98,26 @@ contains
 
     else
 
-      call worker_elec_exp_apply(tr%te, st, gr, hm, psolver, CNST(0.5)*dt)
+      call propagation_ops_elec_exp_apply(tr%te, st, gr, hm, psolver, CNST(0.5)*dt)
 
     end if
 
     ! propagate dt/2 with H(t)
 
     ! first move the ions to time t
-    call worker_elec_move_ions(tr%worker_elec, gr, hm, psolver, st, namespace, ions, geo, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, psolver, st, namespace, ions, geo, &
                time, ionic_scale*dt, move_ions = move_ions)
 
-    call worker_elec_propagate_gauge_field(tr%worker_elec, hm, dt, time)
+    call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, hm, dt, time)
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
     end if
     
-    call worker_elec_update_hamiltonian(namespace, st, gr, hm, time)
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time)
     
     ! propagate dt/2 with H(time - dt)
-    call worker_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, CNST(0.5)*dt)
+    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, CNST(0.5)*dt)
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       SAFE_DEALLOCATE_A(vhxc_t1)
@@ -166,28 +166,28 @@ contains
     call messages_info()
 
     !Propagate the states to t+dt/2 and compute the density at t+dt
-    call worker_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt, dt)
+    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt, dt)
 
     call v_ks_calc(ks, namespace, hm, st, geo, calc_current = .false.)
 
     call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
     call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t1, hm%vhxc)
 
-    call worker_elec_update_hamiltonian(namespace, st, gr, hm, time - dt)
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time - dt)
 
     ! propagate dt/2 with H(t)
 
     ! first move the ions to time t
-    call worker_elec_move_ions(tr%worker_elec, gr, hm, psolver, st, namespace, ions, geo, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, psolver, st, namespace, ions, geo, &
                 time, ionic_scale*dt, move_ions = move_ions)
 
-    call worker_elec_propagate_gauge_field(tr%worker_elec, hm, dt, time)
+    call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, hm, dt, time)
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
       call lalg_copy(gr%mesh%np, st%d%nspin, vhxc_t2, hm%vhxc)
     end if
 
-    call worker_elec_update_hamiltonian(namespace, st, gr, hm, time)
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time)
 
     SAFE_ALLOCATE(psi2(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
@@ -204,7 +204,7 @@ contains
 
       call lalg_copy(gr%mesh%np, st%d%nspin, hm%vhxc, vhxc_t2)
 
-      call worker_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
+      call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
 
       call v_ks_calc(ks, namespace, hm, st, geo, time = time, calc_current = .false.)
       call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
@@ -277,23 +277,23 @@ contains
     PUSH_SUB(td_aetrs)
 
     ! propagate half of the time step with H(time - dt)
-    call worker_elec_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
+    call propagation_ops_elec_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
 
     !Get the potentials from the interpolator
-    call worker_elec_interpolate_get(gr, hm, tr%vksold)
+    call propagation_ops_elec_interpolate_get(gr, hm, tr%vksold)
 
     ! move the ions to time t
-    call worker_elec_move_ions(tr%worker_elec, gr, hm, psolver, st, namespace, ions, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, psolver, st, namespace, ions, &
               geo, time, ionic_scale*dt, move_ions = move_ions)
 
     !Propagate gauge field
-    call worker_elec_propagate_gauge_field(tr%worker_elec, hm, dt, time)
+    call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, hm, dt, time)
 
     !Update Hamiltonian
-    call worker_elec_update_hamiltonian(namespace, st, gr, hm, time)
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time)
 
     !Do the time propagation for the second half of the time step
-    call worker_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
+    call propagation_ops_elec_fuse_density_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
 
     POP_SUB(td_aetrs)
   end subroutine td_aetrs
@@ -336,13 +336,13 @@ contains
       call hamiltonian_set_vhxc(hm, gr%mesh, vold)
     endif
 
-    call worker_elec_update_hamiltonian(namespace, st, gr, hm, time - dt) 
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time - dt) 
 
     call v_ks_calc_start(ks, namespace, hm, st, geo, time = time - dt, calc_energy = .false., &
            calc_current = .false.)
 
     ! propagate half of the time step with H(time - dt)
-    call worker_elec_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
+    call propagation_ops_elec_exp_apply(tr%te, st, gr, hm, psolver, M_HALF*dt)
 
     call v_ks_calc_finish(ks, hm, namespace)
 
@@ -380,15 +380,15 @@ contains
     end if
 
     !Get the potentials from the interpolator
-    call worker_elec_interpolate_get(gr, hm, tr%vksold)
+    call propagation_ops_elec_interpolate_get(gr, hm, tr%vksold)
 
     ! move the ions to time t
-    call worker_elec_move_ions(tr%worker_elec, gr, hm, psolver, st, namespace, ions, &
+    call propagation_ops_elec_move_ions(tr%propagation_ops_elec, gr, hm, psolver, st, namespace, ions, &
               geo, time, ionic_scale*dt, move_ions = move_ions)
 
-    call worker_elec_propagate_gauge_field(tr%worker_elec, hm, dt, time)
+    call propagation_ops_elec_propagate_gauge_field(tr%propagation_ops_elec, hm, dt, time)
 
-    call worker_elec_update_hamiltonian(namespace, st, gr, hm, time)
+    call propagation_ops_elec_update_hamiltonian(namespace, st, gr, hm, time)
 
     call density_calc_init(dens_calc, st, gr, st%rho)
 
