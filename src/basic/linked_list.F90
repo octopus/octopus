@@ -40,14 +40,14 @@ module linked_list_oct_m
     procedure :: rewind
     procedure :: has_more_values
     generic   :: add => add_node
-    procedure :: finalizer
+    final     :: finalize
   end type linked_list_t
 
 contains
 
   subroutine add_node(this, value)
-    class(linked_list_t) :: this
-    class(*)             :: value
+    class(linked_list_t), intent(inout) :: this
+    class(*),             intent(in)    :: value
 
     class(list_node_t), pointer :: new_node
 
@@ -66,8 +66,8 @@ contains
   end subroutine add_node
 
   function first(this)
-    class(linked_list_t) :: this
-    class(*), pointer    :: first
+    class(linked_list_t), intent(in) :: this
+    class(*),             pointer    :: first
 
     PUSH_SUB(first)
 
@@ -77,8 +77,8 @@ contains
   end function first
 
   function current(this)
-    class(linked_list_t) :: this
-    class(*), pointer    :: current
+    class(linked_list_t), intent(in) :: this
+    class(*),             pointer    :: current
 
     PUSH_SUB(current)
 
@@ -88,7 +88,7 @@ contains
   end function current
 
   subroutine next(this)
-    class(linked_list_t) :: this
+    class(linked_list_t), intent(inout) :: this
 
     PUSH_SUB(next)
 
@@ -98,7 +98,7 @@ contains
   end subroutine next
 
   logical function has_more_values(this)
-    class(linked_list_t) :: this
+    class(linked_list_t), intent(in) :: this
 
     PUSH_SUB(has_more_values)
 
@@ -108,7 +108,7 @@ contains
   end function has_more_values
 
   subroutine rewind(this)
-    class(linked_list_t) :: this
+    class(linked_list_t), intent(inout) :: this
 
     PUSH_SUB(rewind)
 
@@ -117,8 +117,8 @@ contains
     POP_SUB(rewind)
   end subroutine rewind
 
-  subroutine finalizer(this)
-    class(linked_list_t), intent(inout) :: this
+  subroutine finalize(this)
+    type(linked_list_t), intent(inout) :: this
 
     class(list_node_t), pointer :: next
 
@@ -127,13 +127,11 @@ contains
     call this%rewind()
     do while (associated(this%current_node))
       next => this%current_node%next()
-      ! No safe_deallocate macro here, as the call to sizeof() causes an
-      ! internal compiler error with GCC 6.4.0
       deallocate(this%current_node)
       this%current_node => next
     end do
 
     POP_SUB(finalizer)
-  end subroutine finalizer
+  end subroutine finalize
 
 end module linked_list_oct_m

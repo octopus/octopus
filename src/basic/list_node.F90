@@ -35,6 +35,7 @@ module list_node_oct_m
     procedure :: get
     procedure :: next
     procedure :: set_next
+    final :: finalize
   end type list_node_t
 
   interface list_node
@@ -54,14 +55,14 @@ contains
     ! causes an internal compiler error with GCC 6.4.0
     allocate(constructor)
     constructor%next_node => next
-    constructor%value => value
+    allocate(constructor%value, source = value)
 
     POP_SUB(constructor)
   end function constructor
 
   function next(this)
-    class(list_node_t) :: this
-    class(list_node_t), pointer :: next
+    class(list_node_t), intent(in) :: this
+    class(list_node_t), pointer    :: next
 
     PUSH_SUB(next)
 
@@ -71,8 +72,8 @@ contains
   end function next
 
   subroutine set_next(this, next_node)
-    class(list_node_t) :: this
-    class(list_node_t), pointer :: next_node
+    class(list_node_t), intent(inout) :: this
+    class(list_node_t), pointer       :: next_node
 
     PUSH_SUB(set_next)
 
@@ -82,8 +83,8 @@ contains
   end subroutine set_next
 
   function get(this)
-    class(list_node_t) :: this
-    class(*), pointer :: get
+    class(list_node_t), intent(in) :: this
+    class(*),           pointer :: get
 
     PUSH_SUB(get)
 
@@ -92,4 +93,19 @@ contains
     POP_SUB(get)
   end function get
 
+  subroutine finalize(this)
+    type(list_node_t), intent(inout) :: this
+
+    PUSH_SUB(finalize)
+
+    if (associated(this%next_node)) then
+      nullify(this%next_node)
+    end if
+    if (associated(this%value)) then
+      deallocate(this%value)
+    end if
+    
+    POP_SUB(finalize)
+  end subroutine finalize
+  
 end module list_node_oct_m
