@@ -29,6 +29,7 @@ dist_doc_DATA = \
 	Hamiltonian.html \
 	Linear_Response.html \
 	Math.html \
+	MaxwellStates.html \
 	Mesh.html \
 	Output.html \
 	SCF.html \
