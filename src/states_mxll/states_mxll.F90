@@ -18,10 +18,7 @@
 #include "global.h"
 
 module states_mxll_oct_m
-!  use accel_oct_m
   use blacs_proc_grid_oct_m
-!  use boundaries_oct_m
-!  use calc_mode_par_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use derivatives_oct_m
@@ -29,8 +26,6 @@ module states_mxll_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-!  use loct_oct_m
-!  use loct_pointer_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -43,7 +38,6 @@ module states_mxll_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
-!  use simul_box_oct_m
   use states_dim_oct_m
   use types_oct_m
   use unit_oct_m
@@ -82,8 +76,7 @@ module states_mxll_oct_m
     get_divergence_field,             &
     get_poynting_vector,              &
     get_poynting_vector_plane_waves,  &
-    state_diff,                       &
-    get_charge_density_reference
+    state_diff
 
   type states_mxll_priv_t
     private
@@ -237,9 +230,9 @@ contains
   ! ---------------------------------------------------------
   subroutine states_mxll_init(st, parser, gr, geo)
     type(states_mxll_t), target, intent(inout) :: st
-    type(parser_t),         intent(in)    :: parser
-    type(grid_t),           intent(in)    :: gr
-    type(geometry_t),       intent(in)    :: geo
+    type(parser_t),              intent(in)    :: parser
+    type(grid_t),                intent(in)    :: gr
+    type(geometry_t),            intent(in)    :: geo
 
     type(block_t)        :: blk
     integer :: idim, nlines, ncols, il
@@ -695,13 +688,13 @@ contains
   !----------------------------------------------------------
   subroutine get_rs_state_at_point(rs_state_point, rs_state, pos, st, mesh)
 
-    CMPLX,          intent(inout) :: rs_state_point(:,:)
-    CMPLX,          intent(in)    :: rs_state(:,:)
-    FLOAT,          intent(in)    :: pos(:,:)
-    type(states_mxll_t), intent(in)    :: st
-    type(mesh_t),   intent(in)    :: mesh
+    CMPLX,               intent(inout)   :: rs_state_point(:,:)
+    CMPLX,               intent(in)      :: rs_state(:,:)
+    FLOAT,               intent(in)      :: pos(:,:)
+    type(states_mxll_t), intent(in)      :: st
+    type(mesh_t),        intent(in)      :: mesh
 
-    integer :: ip, mpi_err, pos_index_local, pos_index_global, rankmin, ip_global
+    integer :: ip, mpi_err, pos_index, rankmin, ip_global
     FLOAT   :: dmin
     CMPLX   :: ztmp(MAX_DIM)
     CMPLX, allocatable :: ztmp_global(:)
@@ -711,16 +704,16 @@ contains
     SAFE_ALLOCATE(ztmp_global(mesh%np_global))
 
     do ip=1, st%selected_points_number
-      call mesh_nearest_point(mesh, pos(:,ip), dmin, rankmin, pos_index_local, pos_index_global)
-      if (mesh%parallel_in_domains) then
-        ztmp(:) = rs_state(pos_index_local,:)
-#ifdef HAVE_MPI
-        call MPI_Bcast(ztmp, st%d%dim, MPI_CMPLX, rankmin, mesh%mpi_grp%comm, mpi_err)
-        call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
-#endif
-      else
-        ztmp(:) = rs_state(pos_index_global,:)
-      end if
+      pos_index = mesh_nearest_point(mesh, pos(:,ip), dmin, rankmin)
+!      if (mesh%parallel_in_domains) then
+      ztmp(:) = rs_state(pos_index,:)
+!#ifdef HAVE_MPI
+!        call MPI_Bcast(ztmp, st%d%dim, MPI_CMPLX, rankmin, mesh%mpi_grp%comm, mpi_err)
+!        call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
+!#endif
+!      else
+!        ztmp(:) = rs_state(pos_index_global,:)
+!      end if
       rs_state_point(:,ip) = ztmp(:)
     end do
 
@@ -752,7 +745,7 @@ contains
   ! ---------------------------------------------------------
   subroutine get_poynting_vector(gr, st, rs_state, rs_sign, poynting_vector, ep_field, mu_field)
     type(grid_t),             intent(in)    :: gr
-    type(states_mxll_t),           intent(in)    :: st
+    type(states_mxll_t),      intent(in)    :: st
     CMPLX,                    intent(in)    :: rs_state(:,:)
     integer,                  intent(in)    :: rs_sign
     FLOAT,                    intent(inout) :: poynting_vector(:,:)
@@ -786,7 +779,7 @@ contains
   ! ---------------------------------------------------------
   subroutine get_poynting_vector_plane_waves(gr, st, rs_sign, poynting_vector)
     type(grid_t),             intent(in)    :: gr
-    type(states_mxll_t),           intent(in)    :: st
+    type(states_mxll_t),      intent(in)    :: st
     integer,                  intent(in)    :: rs_sign
     FLOAT,                    intent(inout) :: poynting_vector(:,:)
 
@@ -836,47 +829,8 @@ contains
   end subroutine state_diff
 
 
-  !----------------------------------------------------------
-  subroutine get_charge_density_reference(gr, maxwell_gr, st, maxwell_st, charge_density, &
-                                                  density_diff, density_diff_sum)
-    type(grid_t),   intent(in)         :: gr
-    type(grid_t),   intent(in)         :: maxwell_gr
-    type(states_t), intent(in)         :: st
-    type(states_mxll_t), intent(in)    :: maxwell_st
-    FLOAT,          intent(inout)      :: charge_density(:)
-    FLOAT,          intent(inout)      :: density_diff(:)
-    FLOAT,          intent(inout)      :: density_diff_sum
-
-    integer            :: ii
-    FLOAT, allocatable :: mx_gr_rho(:)
-    CMPLX, allocatable :: tmp_ma_rho(:,:), tmp_mx_rho(:,:)
-
-    PUSH_SUB(get_charge_density_reference)
-
-    SAFE_ALLOCATE(mx_gr_rho(1:maxwell_gr%mesh%np))
-    SAFE_ALLOCATE(tmp_ma_rho(1:gr%mesh%np_part,1))
-    SAFE_ALLOCATE(tmp_mx_rho(1:maxwell_gr%mesh%np_part,1))
-
-    tmp_ma_rho(:,1) = M_z1 * st%rho(:,1)
-
-    call zma_mesh_to_mx_mesh(maxwell_st, maxwell_gr, st, gr, tmp_ma_rho(:,:), tmp_mx_rho(:,:),1)
-    mx_gr_rho(1:maxwell_gr%mesh%np) = real(tmp_mx_rho(1:maxwell_gr%mesh%np,1))
-
-    do ii=1, maxwell_gr%mesh%np
-      density_diff(ii) = mx_gr_rho(ii) - charge_density(ii)
-    end do
-
-    density_diff_sum = dmf_integrate(maxwell_gr%mesh, abs(density_diff))
-
-    SAFE_DEALLOCATE_A(mx_gr_rho)
-    SAFE_DEALLOCATE_A(tmp_ma_rho)
-    SAFE_DEALLOCATE_A(tmp_mx_rho)
-
-    POP_SUB(get_charge_density_reference)
-  end subroutine get_charge_density_reference
-
-
 end module states_mxll_oct_m
+
 
 
 !! Local Variables:

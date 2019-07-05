@@ -269,7 +269,7 @@ contains
     logical,    optional, intent(in)  :: verbose
 
     integer :: iunit_wfns, iunit_states, iwt
-    integer :: err, err2(2), idir, ist, idim, itot
+    integer :: err, err2(2), ist, idim, itot
     integer :: root(1:P_STRATEGY_MAX)
     character(len=MAX_PATH_LEN) :: filename, filename1, filename_tmp
     character(len=300) :: lines(3)
@@ -380,8 +380,8 @@ contains
     character(len=*), optional, intent(in)    :: label
     logical,          optional, intent(in)    :: verbose
 
-    integer              :: states_file, wfns_file, occ_file, err, ist, idir, idim, dim, mx_st_start, mx_st_end
-    integer              :: idone, iread, ntodo, iread_tmp
+    integer              :: states_file, wfns_file, err, ist, idim, dim, mx_st_start, mx_st_end
+    integer              :: idone, iread, ntodo
     character(len=12)    :: filename
     character(len=1)     :: char
     logical, allocatable :: filled(:, :)
