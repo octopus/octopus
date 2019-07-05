@@ -407,9 +407,6 @@ states_mxll_f_srcs =                            \
 
 states_mxll_srcs = $(states_mxll_f_srcs)
 
-noinst_HEADERS +=                               \
-	states_mxll/states_mxll_inc.F90
-
 # Sources in hamiltonian
 hamiltonian_f_srcs =                                 \
 	hamiltonian/berry.F90                        \
