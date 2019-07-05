@@ -528,13 +528,6 @@ contains
     call td_write_end(write_handler)
     call end_()
 
-#ifdef HAVE_MPI
-    ! wait for all processors to finish
-    if(st%parallel_in_states) then
-      call MPI_Barrier(st%mpi_grp%comm, mpi_err)
-    end if
-#endif
-
     POP_SUB(td_run)
 
   contains
