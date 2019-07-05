@@ -299,6 +299,9 @@ contains
 
         if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) call poisson_async_end(sys%ks%hartree_solver, sys%mc)
 
+      class default
+        message(1) = "Unknow system type."
+        call messages_fatal(1)
       end select
       call systems%next()
     end do
