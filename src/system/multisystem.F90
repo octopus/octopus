@@ -76,12 +76,8 @@ contains
         call systems%add(system)
         deallocate(system)
       end do
-    else
-      call systems%add(system_elec)
-    end if
 
-    call systems%rewind()
-    if(parse_block(parser, 'Systems', blk) == 0) then
+      call systems%rewind()
       do isys = 1, parse_block_n(blk)
         call parse_block_string(blk, isys-1, 0, system_name)
         sys_ptr => systems%current()
@@ -91,14 +87,17 @@ contains
         end select
         call systems%next()
       end do
+      call parse_block_end(blk)
     else
+      call systems%add(system_elec)
+      call systems%rewind()
       sys_ptr => systems%current()
       select type (sys_ptr)
       type is (system_t)
         call system_init(sys_ptr, parser)
       end select
     end if
-    
+
     POP_SUB(multisystem_init)
   end subroutine multisystem_init
 
