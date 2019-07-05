@@ -122,7 +122,7 @@ contains
 
     class(list_node_t), pointer :: next
 
-    PUSH_SUB(finalizer)
+    PUSH_SUB(finalize)
 
     call this%rewind()
     do while (associated(this%current_node))
@@ -131,7 +131,7 @@ contains
       this%current_node => next
     end do
 
-    POP_SUB(finalizer)
+    POP_SUB(finalize)
   end subroutine finalize
 
 end module linked_list_oct_m
