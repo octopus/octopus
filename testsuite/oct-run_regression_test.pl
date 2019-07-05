@@ -159,6 +159,7 @@ if(!$opt_s) {
 $np = 2;
 $enabled = ""; # FIXME: should Enabled be optional?
 $options_required = "";
+$options_skip = "";
 $options_required_mpi = "";
 $options_are_mpi = 0;
 $expect_error = 0; # check for controlled failure 
@@ -261,9 +262,13 @@ while ($_ = <TESTSUITE>) {
 
     } elsif ( $_ =~ /^Options\s*:\s*(.*)\s*$/) {
         $options_required = $1;
-        print "Found options: $options_required \n";
         # note: we could implement Options by baking this into the script via configure...
         $report{$testname}{"options"} = $options_required;
+        
+    } elsif ( $_ =~ /^Options_skip\s*:\s*(.*)\s*$/) {
+        $options_skip = $1;
+        # note: we could implement Options by baking this into the script via configure...
+        $report{$testname}{"options_skip"} = $options_skip;
         
     } elsif ( $_ =~ /^Options_MPI\s*:\s*(.*)\s*$/) {
         if ($is_parallel && $np ne "serial") {
@@ -332,6 +337,27 @@ while ($_ = <TESTSUITE>) {
                 }
             }
         }
+
+        if(length($options_skip) > 0) {
+            # check if the executable was compiled with the required options
+            foreach my $option (split(/;/, $options_skip)){
+                if(" $options_available " !~ " $option ") {
+
+                # FIXME: instead of skipping, we should switch to the alternative matching rules
+                    $expect_error = 1;
+
+                    print "\nSkipping test: executable does not have the required option '$option'";
+                    if($options_are_mpi) {
+                        print " for MPI";
+                    }
+                    print ".\n";
+                    print "Executable: $command\n";
+                    print "Available options: $options_available\n\n";
+                    skip_exit();
+                }
+            }
+        }
+
         # FIXME: import Options to BGW version
     } elsif ( $_ =~ /^TestGroups\s*:\s*(.*)\s*$/) {
         # handled by oct-run_testsuite.sh

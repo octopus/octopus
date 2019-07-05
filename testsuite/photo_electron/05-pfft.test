@@ -1,10 +1,10 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
-Test       : Photoelectron - PFFT
-Options    : pfft
-Program    : octopus
-TestGroups : short-run, photo_electron
-Enabled    : Yes
+Test         : Photoelectron - PFFT
+Options_skip : pfft
+Program      : octopus
+TestGroups   : short-run, photo_electron
+Enabled      : Yes
 
 # Note: the discrepancy between the numbers in test 02 and 03 
 # is due to the fact that we are not converged wrt the box 
