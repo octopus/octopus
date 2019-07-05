@@ -237,7 +237,7 @@ contains
   !! \phi(x) = (e^x - 1)/x
   !! \f]
   ! ---------------------------------------------------------
-  subroutine exponential_apply(te, der, hm, psolver, zpsi, ist, ik, deltat, order, vmagnus, imag_time, Imdeltat)
+  subroutine exponential_apply(te, der, hm, psolver, zpsi, ist, ik, deltat, order, vmagnus, imag_time)
     type(exponential_t),      intent(inout) :: te
     type(derivatives_t),      intent(in)    :: der
     type(hamiltonian_elec_t), intent(in)    :: hm
@@ -249,7 +249,6 @@ contains
     integer, optional,        intent(inout) :: order
     FLOAT,   optional,        intent(in)    :: vmagnus(der%mesh%np, hm%d%nspin, 2)
     logical, optional,        intent(in)    :: imag_time
-    FLOAT,   optional,        intent(in)    :: Imdeltat !< also needed for cmplxscl\%time
 
     CMPLX   :: timestep
     logical :: apply_magnus, phase_correction
@@ -257,10 +256,6 @@ contains
 
     PUSH_SUB(exponential_apply)
     call profiling_in(exp_prof, "EXPONENTIAL")
-
-    if (present(imag_time)) then
-      ASSERT(.not. present(Imdeltat)) 
-    end if
 
     ! The only method that is currently taking care of the presence of an inhomogeneous
     ! term is the Lanczos expansion.
@@ -295,21 +290,6 @@ contains
             call messages_fatal(3)
         end select
       end if
-    end if
-
-    if(present(Imdeltat)) then
-      select case(te%exp_method)
-        case(EXP_TAYLOR, EXP_LANCZOS)
-          timestep = timestep + M_zI*Imdeltat
-        case default
-          write(message(1), '(a)') &
-            'Complex time evolution can only be performed with the Lanczos'
-          write(message(2), '(a)') &
-            'exponentiation scheme ("TDExponentialMethod = lanczos") or with the'
-          write(message(3), '(a)') &
-            'Taylor expansion ("TDExponentialMethod = taylor") method.'
-          call messages_fatal(3)
-      end select
     end if
 
    !We apply the phase only to np points, and the phase for the np+1 to np_part points
@@ -615,7 +595,7 @@ contains
 
   end subroutine exponential_apply
 
-  subroutine exponential_apply_batch(te, der, hm, psolver, psib, ik, deltat, Imdeltat, psib2, deltat2, Imdeltat2)
+  subroutine exponential_apply_batch(te, der, hm, psolver, psib, ik, deltat, psib2, deltat2)
     type(exponential_t),             intent(inout) :: te
     type(derivatives_t),             intent(inout) :: der
     type(hamiltonian_elec_t),        intent(inout) :: hm
@@ -623,10 +603,8 @@ contains
     integer,                         intent(in)    :: ik
     type(batch_t), target,           intent(inout) :: psib
     FLOAT,                           intent(in)    :: deltat
-    FLOAT, optional,                 intent(in)    :: Imdeltat
     type(batch_t), target, optional, intent(inout) :: psib2
     FLOAT, optional,                 intent(in)    :: deltat2
-    FLOAT, optional,                 intent(in)    :: Imdeltat2
     
     integer :: ii, ist
     CMPLX, pointer :: psi(:, :), psi2(:, :)
@@ -638,10 +616,6 @@ contains
     ASSERT(present(psib2) .eqv. present(deltat2))
 
     
-    if(present(Imdeltat) .and. present(psib2)) then
-      ASSERT(present(Imdeltat2))
-    end if
-
     ! check if we only want a phase correction for the boundary points
     phase_correction = .false.
     if(associated(hm%hm_base%phase)) phase_correction = .true.
@@ -694,7 +668,7 @@ contains
         else
           psi => psib%states(ii)%zpsi
         end if
-        call exponential_apply(te, der, hm, psolver, psi, ist, ik, deltat, Imdeltat = Imdeltat)
+        call exponential_apply(te, der, hm, psolver, psi, ist, ik, deltat)
         if (batch_status(psib) /= BATCH_NOT_PACKED) then
           call batch_set_state(psib, ii, der%mesh%np, psi)
         end if
@@ -706,7 +680,7 @@ contains
           else
             psi2 => psib2%states(ii)%zpsi
           end if
-          call exponential_apply(te, der, hm, psolver, psi2, ist, ik, deltat2, Imdeltat = Imdeltat2)
+          call exponential_apply(te, der, hm, psolver, psi2, ist, ik, deltat2)
           if (batch_status(psib2) /= BATCH_NOT_PACKED) then
             call batch_set_state(psib2, ii, der%mesh%np, psi2)
           end if
@@ -753,15 +727,9 @@ contains
       if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
 
       do iter = 1, te%exp_order
-        if(present(Imdeltat2)) then
-          zfact = zfact*(-M_zI*(deltat + M_zI * Imdeltat))/iter
-          if(present(deltat2)) zfact2 = zfact2*(-M_zI*(deltat2 + M_zI * Imdeltat2))/iter
-          zfact_is_real = .false.
-        else
-          zfact = zfact*(-M_zI*deltat)/iter
-          if(present(deltat2)) zfact2 = zfact2*(-M_zI*deltat2)/iter
-          zfact_is_real = .not. zfact_is_real
-        end if
+        zfact = zfact*(-M_zI*deltat)/iter
+        if(present(deltat2)) zfact2 = zfact2*(-M_zI*deltat2)/iter
+        zfact_is_real = .not. zfact_is_real
         ! FIXME: need a test here for runaway exponential, e.g. for too large dt.
         !  in runaway case the problem is really hard to trace back: the positions
         !  go haywire on the first step of dynamics (often NaN) and with debugging options
