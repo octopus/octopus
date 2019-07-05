@@ -66,7 +66,7 @@ contains
     !%End
     if(parse_block(parser, 'Systems', blk) == 0) then
       do isys = 1, parse_block_n(blk)
-        call parse_block_integer(blk, isys-1, 1, system_type)
+        call parse_block_integer(blk, isys - 1, 1, system_type)
         select case (system_type)
         case (SYSTEM_ELECTRONIC)
           allocate(system_t::system)
@@ -79,7 +79,7 @@ contains
 
       call systems%rewind()
       do isys = 1, parse_block_n(blk)
-        call parse_block_string(blk, isys-1, 0, system_name)
+        call parse_block_string(blk, isys - 1, 0, system_name)
         sys_ptr => systems%current()
         select type (sys_ptr)
         type is (system_t)
