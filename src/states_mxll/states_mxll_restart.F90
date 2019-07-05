@@ -69,6 +69,7 @@ contains
     FLOAT, allocatable :: e_field(:), b_field(:)
     CMPLX, allocatable :: rs_state(:,:), rs_state_add(:,:)
     character(len=150), pointer :: filename_e_field, filename_b_field
+    character(1) :: cdim
     
     integer, parameter ::           &
       STATE_FROM_FORMULA  = 1,      &
@@ -147,6 +148,7 @@ contains
         end if
 
         call parse_block_integer(blk, il - 1, 0, idim)
+        write(cdim,'(I1)')idim
 
         ! Calculate from expression or read from file?
         call parse_block_integer(blk, il - 1, 1, state_from)
@@ -158,15 +160,11 @@ contains
           call parse_block_integer(blk, il - 1, 2, maxwell_field )
           if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__ELECTRIC_FIELD) then
             call parse_block_string( blk, il - 1, 3, st%user_def_e_field(idim))
-            !write(message(1), '(a,i1,2a)') "  E-field in dimension ", idim, " : ",trim(st%user_def_e_field(idim))
-            !call messages_info(1)
+            call messages_write("  E-field in dimension "//trim(cdim)//" : "//trim(st%user_def_e_field(idim)), fmt='(a,i1,2a)')
             call conv_to_C_string(st%user_def_e_field(idim))
           else if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__MAGNETIC_FIELD) then
             call parse_block_string( blk, il - 1, 3, st%user_def_b_field(idim))
-            !write(message(1), '(a,i1,2a)') "  B-field in dimension ", idim, " : ",trim(st%user_def_b_field(idim))
-            !write(*, '(a,i1,2a)') "  B-field in dimension ", idim, " : ",trim(st%user_def_b_field(idim))
-            !write(*, *) "  B-field in dimension ", idim, " : ",trim(st%user_def_b_field(idim))
-            !call messages_info(1)
+            call messages_write("  B-field in dimension "//trim(cdim)//" : "//trim(st%user_def_b_field(idim)), fmt='(a,i1,2a)')
             call conv_to_C_string(st%user_def_b_field(idim))
           end if
           ! fill Maxwell states with user-defined formulas
@@ -201,8 +199,7 @@ contains
           b_field = M_ZERO
           if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__ELECTRIC_FIELD) then
             call parse_block_string(blk, il - 1, 3, filename_e_field)
-            write(message(3), '(a,i1,2a)') "  E-field in dimension ", idim, " : ",trim(filename_e_field)
-            call messages_info(1)
+            call messages_write("  E-field in dimension "//trim(cdim)//" : "//trim(filename_e_field), fmt='(a,i1,2a)')
             call dio_function_input(filename_e_field, mesh, e_field(:), ierr)
             if (ierr > 0) then
               message(1) = 'Could not read the file!'
@@ -212,7 +209,7 @@ contains
             e_field = units_to_atomic(units_inp%energy/units_inp%length, e_field)
           else if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__MAGNETIC_FIELD) then
             call parse_block_string(blk, il - 1, 3, filename_b_field)
-            write(message(4), '(a,i1,2a)') "  B-field in dimension ", idim, " : ",trim(filename_b_field)
+            call messages_write("  B-field in dimension "//trim(cdim)//" : "//trim(filename_b_field), fmt='(a,i1,2a)')
             call dio_function_input(filename_b_field, mesh, b_field(:), ierr)
             if (ierr > 0) then
               message(1) = 'Could not read the file!'
