@@ -307,7 +307,7 @@ while ($_ = <TESTSUITE>) {
             foreach my $option (split(/;/, $options_required)){
                 if(" $options_available " !~ " $option ") {
 
-                # FIXME: instead of skipping, we should switch to the alternative matching rules
+                # instead of skipping, we should switch to the alternative matching rules
                     $expect_error = 1;
 
                     # print "\nSkipping test: executable does not have the required option '$option'";
@@ -343,7 +343,6 @@ while ($_ = <TESTSUITE>) {
             foreach my $option (split(/;/, $options_skip)){
                 if(" $options_available " !~ " $option ") {
 
-                # FIXME: instead of skipping, we should switch to the alternative matching rules
                     $expect_error = 1;
 
                     print "\nSkipping test: executable does not have the required option '$option'";
@@ -404,10 +403,8 @@ while ($_ = <TESTSUITE>) {
             $input_base = $1;
             $input_file = dirname($opt_f) . "/" . $input_base;
 
-            # FIXME: at some point we need to check whether the last Input has unresolved errormatches!
-
+            # as we are starting a new input file, we need to check whether the last one had unresolved error_matches:
             check_error_resolved();
-
 
             my %input_report;
             $r_input_report = \%input_report;          
@@ -478,7 +475,6 @@ while ($_ = <TESTSUITE>) {
                 }
 
                 $command_line = $command_line." > out 2> err";
-#                $command_line = $command_line." 2>&1 1> out | tee err";
 
                 print "Executing: " . $command_line . "\n";
 
@@ -507,7 +503,7 @@ while ($_ = <TESTSUITE>) {
                         print "----------------------------------------\n\n";
 
                         if($expect_error) {
-                            printf "%-40s%s", " Execution", ": \t [ $color_start{green} OK (expecteded Fail) $color_end{green} ] \n\n";
+                            printf "%-40s%s", " Execution", ": \t [ $color_start{green} OK (expected Fail) $color_end{green} ] \n\n";
                             $input_report{"execution"} = "success";
                             $match_error = 1;
                             $test_succeeded = 1;  
@@ -547,7 +543,7 @@ while ($_ = <TESTSUITE>) {
         }
 
         elsif ( $_ =~ /^match/ ) {
-            # FIXME: should we do matches even when execution failed?
+            # matches results when execution was successful
 
             my %match_report;
             $r_match_report = \%match_report;
@@ -566,9 +562,8 @@ while ($_ = <TESTSUITE>) {
             }
         } 
         
-
         elsif ( $_ =~ /^errormatch/ ) {
-            # FIXME: should we do matches even when execution failed?
+            # perform matches for error messages when execution failed?
 
             my %match_report;
             $r_match_report = \%match_report;
