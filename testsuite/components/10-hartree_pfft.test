@@ -1,10 +1,10 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
-Test       : Hartree pfft
-Options    : pfft
-Program    : octopus
-TestGroups : short-run, components
-Enabled    : Yes
+Test         : Hartree pfft
+Options_skip : pfft
+Program      : octopus
+TestGroups   : short-run, components
+Enabled      : Yes
 
 Precision : 0.005
 Input: 10-hartree_pfft.01-fft.inp
