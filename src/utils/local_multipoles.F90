@@ -65,7 +65,6 @@ program oct_local_multipoles
   end type local_domain_t
 
   type(system_t)        :: sys
-  type(hamiltonian_t)   :: hm
   type(simul_box_t)     :: sb
   integer, parameter    :: BADER = 512
   FLOAT                 :: BaderThreshold
@@ -94,12 +93,9 @@ program oct_local_multipoles
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
   call system_init(sys, parser)
   call simul_box_init(sb, sys%parser, sys%geo, sys%space)
-  call hamiltonian_init(hm, sys%parser, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
-             family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
 
   call local_domains()
 
-  call hamiltonian_end(hm)
   call simul_box_end(sb)
   call system_end(sys)
   call profiling_output()
@@ -384,7 +380,7 @@ contains
       end if
 
       call local_write_iter(local%writ, sys%parser, local%nd, local%lab, local%ions_inside, local%inside, local%dcm, & 
-                              sys%gr, sys%st, hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
+                              sys%gr, sys%st, sys%hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
 

@@ -59,9 +59,8 @@ contains
   end subroutine ground_state_run_init
 
   ! ---------------------------------------------------------
-  subroutine ground_state_run(sys, hm, fromScratch)
+  subroutine ground_state_run(sys, fromScratch)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: hm
     logical,             intent(inout) :: fromScratch
 
     type(scf_t)     :: scfv
@@ -106,15 +105,15 @@ contains
 
     call write_canonicalized_xyz_file("exec", "initial_coordinates", sys%geo, sys%gr%mesh)
 
-    call scf_init(scfv, sys%parser, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks)
+    call scf_init(scfv, sys%parser, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks)
 
     if(fromScratch) then
-      call lcao_run(sys, hm, lmm_r = scfv%lmm_r)
+      call lcao_run(sys, lmm_r = scfv%lmm_r)
     else
       ! setup Hamiltonian
       call messages_write('Info: Setting up Hamiltonian.')
       call messages_info()
-      call system_h_setup(sys, hm, calc_eigenval = .false.)
+      call system_h_setup(sys, calc_eigenval = .false.)
     end if
 
     call restart_init(restart_dump, sys%parser, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
@@ -127,27 +126,27 @@ contains
     end if
     call messages_info()
 
-    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_pack(sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call states_pack(sys%st)
     
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
       call rdmft_init(rdm, sys%parser, sys%gr, sys%st, sys%ks, fromScratch)
-      call scf_rdmft(rdm, sys%parser, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, scfv%max_iter, restart_dump)
+      call scf_rdmft(rdm, sys%parser, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, scfv%max_iter, restart_dump)
       call rdmft_end(rdm)
     else
       if(.not. fromScratch) then
-        call scf_run(scfv, sys%parser, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, &
+        call scf_run(scfv, sys%parser, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
                      restart_load=restart_load, restart_dump=restart_dump)
         call restart_end(restart_load)
       else
-        call scf_run(scfv, sys%parser, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, hm, sys%outp, restart_dump=restart_dump)
+        call scf_run(scfv, sys%parser, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, restart_dump=restart_dump)
       end if
     end if
 
     call scf_end(scfv)
     call restart_end(restart_dump)
 
-    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_unpack(sys%st)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call states_unpack(sys%st)
 
     ! clean up
     call states_deallocate_wfns(sys%st)

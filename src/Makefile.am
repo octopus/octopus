@@ -57,6 +57,8 @@ basic_f_srcs =                                 \
 	basic/io_binary_f.F90                  \
 	basic/io_csv_f.F90                     \
 	basic/io.F90                           \
+	basic/linked_list.F90                  \
+	basic/list_node.F90                    \
 	basic/loct.F90                         \
 	basic/loct_pointer.F90                 \
 	basic/lookup.F90                       \
@@ -469,6 +471,7 @@ system_f_srcs =                                 \
 	system/forces.F90                       \
 	system/linear_solver.F90                \
 	system/magnetic.F90                     \
+	system/multisystem.F90                  \
 	system/output.F90                       \
 	system/output_me.F90                    \
 	system/partial_charges.F90              \

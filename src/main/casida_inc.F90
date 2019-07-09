@@ -338,9 +338,8 @@ end subroutine X(casida_get_rho)
 ! -----------------------------------------------------------------------------
 
 !> one-particle matrix elements of perturbation
-subroutine X(casida_calc_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, is_saved, st_start, st_end, ik)
-  type(system_t),      intent(in)    :: sys
-  type(hamiltonian_t), intent(inout) :: hm
+subroutine X(casida_calc_lr_hmat1)(sys, pert, hvar, lr_hmat1, is_saved, st_start, st_end, ik)
+  type(system_t),      intent(inout) :: sys
   type(pert_t),        intent(in)    :: pert
   FLOAT,               intent(in)    :: hvar(:,:,:)
   R_TYPE,              intent(out)   :: lr_hmat1(:,:,:)
@@ -368,7 +367,7 @@ subroutine X(casida_calc_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, is_saved, st_s
 
   do ist = st_start, st_end
     if(all(is_saved(ist, ist:st_end, ik))) cycle
-    call X(pert_apply)(pert, sys%parser, sys%gr, sys%geo, hm, ik, psi(:, :, ist), pert_psi(:, :))
+    call X(pert_apply)(pert, sys%parser, sys%gr, sys%geo, sys%hm, ik, psi(:, :, ist), pert_psi(:, :))
     do idim = 1, sys%st%d%dim
       pert_psi(:, idim) = pert_psi(:, idim) + hvar(:, ispin, 1) * psi(:, idim, ist)
     end do
@@ -721,12 +720,11 @@ subroutine X(write_K_term)(cas, mat_val, iunit, ia, jb)
 end subroutine X(write_K_term)
 
 ! ---------------------------------------------------------
-subroutine X(casida_forces)(cas, sys, mesh, st, hm)
+subroutine X(casida_forces)(cas, sys, mesh, st)
   type(casida_t), intent(inout) :: cas
   type(system_t), intent(inout) :: sys
   type(mesh_t), intent(in) :: mesh
   type(states_t), intent(inout) :: st
-  type(hamiltonian_t), intent(inout) :: hm
   
   integer :: ip, iatom, idir, is1, is2, ierr, ik, ia
   FLOAT, allocatable :: ddl_rho(:,:), kxc(:,:,:,:)
@@ -798,7 +796,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
         end if
         ddl_rho = TOFLOAT(zdl_rho)
       end if
-      call X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, ddl_rho, lr_hmat1)
+      call X(casida_get_lr_hmat1)(cas, sys, iatom, idir, ddl_rho, lr_hmat1)
       
       cas%X(lr_hmat2) = M_ZERO
       ! use them to make two-particle matrix elements (as for eigenvalues)
@@ -814,7 +812,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
         write(restart_filename,'(a,i6.6,a,i1)') 'lr_kernel_', iatom, '_', idir
         if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
         
-        call X(casida_get_matrix)(cas, hm, st, sys%ks, mesh, cas%X(mat2), lr_fxc, restart_filename, is_forces = .true.)
+        call X(casida_get_matrix)(cas, sys%hm, st, sys%ks, mesh, cas%X(mat2), lr_fxc, restart_filename, is_forces = .true.)
         cas%X(mat2) = cas%X(mat2) * casida_matrix_factor(cas, sys)
       else
         cas%X(mat2) = M_ZERO
@@ -843,7 +841,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   SAFE_DEALLOCATE_P(cas%X(w2))
   
   if(cas%calc_forces_scf) then
-    call forces_calculate(sys%gr, sys%parser, sys%geo, hm, st, sys%ks)
+    call forces_calculate(sys%gr, sys%parser, sys%geo, sys%hm, st, sys%ks)
     do ia = 1, cas%n_pairs
       do iatom = 1, sys%geo%natoms
         do idir = 1, sys%gr%sb%dim
@@ -858,10 +856,9 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
 end subroutine X(casida_forces)
 
 ! ---------------------------------------------------------
-subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
+subroutine X(casida_get_lr_hmat1)(cas, sys, iatom, idir, dl_rho, lr_hmat1)
   type(casida_t),      intent(in)     :: cas
   type(system_t),      intent(inout)  :: sys
-  type(hamiltonian_t), intent(inout)  :: hm
   integer,             intent(in)     :: iatom
   integer,             intent(in)     :: idir
   FLOAT,               intent(in)     :: dl_rho(:,:)
@@ -945,9 +942,9 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
   ! FIXME: do this only for states called for in CasidaKohnShamStates
   do ik = 1, cas%nik
     ! occ-occ matrix elements
-    call X(casida_calc_lr_hmat1)(sys, hm, ionic_pert, hvar, lr_hmat1, is_saved, 1, cas%n_occ(ik), ik)
+    call X(casida_calc_lr_hmat1)(sys, ionic_pert, hvar, lr_hmat1, is_saved, 1, cas%n_occ(ik), ik)
     ! unocc-unocc matrix elements
-    call X(casida_calc_lr_hmat1)(sys, hm, ionic_pert, hvar, lr_hmat1, is_saved, cas%n_occ(ik) + 1, cas%nst, ik)
+    call X(casida_calc_lr_hmat1)(sys, ionic_pert, hvar, lr_hmat1, is_saved, cas%n_occ(ik) + 1, cas%nst, ik)
   end do
 
   SAFE_DEALLOCATE_A(hvar)

@@ -226,6 +226,8 @@ contains
     type(parser_t),         intent(in)  :: parser
     
     integer :: ierr
+
+    if (initialized) return
     
     PUSH_SUB(species_init_global)
 
@@ -360,7 +362,10 @@ contains
   subroutine species_end_global()
     PUSH_SUB(species_end_global)
 
-    call pseudo_set_end(default_pseudopotential_set)
+    if (initialized) then
+      call pseudo_set_end(default_pseudopotential_set)
+      initialized = .false.
+    end if
     
     POP_SUB(species_end_global)
   end subroutine species_end_global

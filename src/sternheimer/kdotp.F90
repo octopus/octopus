@@ -81,9 +81,8 @@ module kdotp_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine kdotp_lr_run(sys, hm, fromScratch)
+  subroutine kdotp_lr_run(sys, fromScratch)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: hm
     logical,             intent(inout) :: fromScratch
 
     type(kdotp_t)           :: kdotp_vars
@@ -101,7 +100,7 @@ contains
 
     call messages_experimental("k.p perturbation and calculation of effective masses")
 
-    if(hm%theory_level == HARTREE_FOCK) then
+    if(sys%hm%theory_level == HARTREE_FOCK) then
       call messages_not_implemented('Commutator of Fock operator')
     end if
 
@@ -154,7 +153,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
-    call system_h_setup(sys, hm)
+    call system_h_setup(sys)
     
     if(states_are_real(sys%st)) then
       message(1) = 'Info: Using real wavefunctions.'
@@ -169,7 +168,7 @@ contains
     if(states_are_real(sys%st)) then
       kdotp_vars%velocity(:,:,:) = M_ZERO
     else
-      call zcalc_band_velocity(sys, hm, kdotp_vars%perturbation, kdotp_vars%velocity(:,:,:))
+      call zcalc_band_velocity(sys, kdotp_vars%perturbation, kdotp_vars%velocity(:,:,:))
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
@@ -178,12 +177,12 @@ contains
     end if
 
     call sternheimer_obsolete_variables(sys%parser, 'KdotP_', 'KdotP')
-    call sternheimer_init(sh, sys, hm, complex_response, set_ham_var = 0, &
+    call sternheimer_init(sh, sys, complex_response, set_ham_var = 0, &
       set_occ_response = (kdotp_vars%occ_solution_method == 0), set_last_occ_response = (kdotp_vars%occ_solution_method == 0), &
       occ_response_by_sternheimer = .true.)
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
     if(calc_2nd_order) then
-      call sternheimer_init(sh2, sys, hm, complex_response, set_ham_var = 0, &
+      call sternheimer_init(sh2, sys, complex_response, set_ham_var = 0, &
         set_occ_response = .false., set_last_occ_response = .false.)
     end if
 
@@ -239,17 +238,17 @@ contains
       call pert_setup_dir(kdotp_vars%perturbation, idir)
 
       if(states_are_real(sys%st)) then
-        call dsternheimer_solve(sh, sys, hm, kdotp_vars%lr(1:1, idir), 1, &
+        call dsternheimer_solve(sh, sys, kdotp_vars%lr(1:1, idir), 1, &
           M_ZERO, kdotp_vars%perturbation, restart_dump, &
           "", kdotp_wfs_tag(idir), have_restart_rho = .false.)
         if(kdotp_vars%occ_solution_method == 1) &
-          call dkdotp_add_occ(sys, hm, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
+          call dkdotp_add_occ(sys, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
       else
-        call zsternheimer_solve(sh, sys, hm, kdotp_vars%lr(1:1, idir), 1, &
+        call zsternheimer_solve(sh, sys, kdotp_vars%lr(1:1, idir), 1, &
           M_zI * kdotp_vars%eta, kdotp_vars%perturbation, restart_dump, &
           "", kdotp_wfs_tag(idir), have_restart_rho = .false.)
         if(kdotp_vars%occ_solution_method == 1) &
-          call zkdotp_add_occ(sys, hm, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
+          call zkdotp_add_occ(sys, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
       end if
 
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)         
@@ -282,12 +281,12 @@ contains
           call pert_setup_dir(pert2, idir2)
 
           if(states_are_real(sys%st)) then
-            call dsternheimer_solve_order2(sh, sh, sh2, sys, hm, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
+            call dsternheimer_solve_order2(sh, sh, sh2, sys, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
               1, M_ZERO, M_ZERO, kdotp_vars%perturbation, pert2, &
               kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, restart_dump, "", kdotp_wfs_tag(idir, idir2), &
               have_restart_rho = .false., have_exact_freq = .true.)
           else
-            call zsternheimer_solve_order2(sh, sh, sh2, sys, hm, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
+            call zsternheimer_solve_order2(sh, sh, sh2, sys, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
               1, M_zI * kdotp_vars%eta, M_zI * kdotp_vars%eta, kdotp_vars%perturbation, pert2, &
               kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, restart_dump, "", kdotp_wfs_tag(idir, idir2), &
               have_restart_rho = .false., have_exact_freq = .true.)
@@ -305,10 +304,10 @@ contains
       call messages_info(1)
 
       if(states_are_real(sys%st)) then
-        call dcalc_eff_mass_inv(sys, hm, kdotp_vars%lr, kdotp_vars%perturbation, &
+        call dcalc_eff_mass_inv(sys, kdotp_vars%lr, kdotp_vars%perturbation, &
           kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
       else
-        call zcalc_eff_mass_inv(sys, hm, kdotp_vars%lr, kdotp_vars%perturbation, &
+        call zcalc_eff_mass_inv(sys, kdotp_vars%lr, kdotp_vars%perturbation, &
           kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
       end if
 
