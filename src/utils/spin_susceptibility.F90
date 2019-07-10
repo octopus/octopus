@@ -235,7 +235,8 @@ program spin_susceptibility
   out_file = io_open('td.general/spin_susceptibility', action='write')
   write(out_file,'(a)') trim(header)
   do kk = 1, energy_steps
-    ww = kk*spectrum%energy_step
+    ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
+!    ww = kk*spectrum%energy_step
     write(out_file, '(13e15.6)') ww,                                   &
              (real(chi(kk,ii), REAL_PRECISION), aimag(chi(kk,ii)), ii = 1, num_col/2)
   end do
