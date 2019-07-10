@@ -154,7 +154,8 @@ contains
     sum_cond2 = CNST(0.0)
     sum_cond = CNST(0.0)
     sum_k = CNST(0.0)
-    e_fermi = sys%st%smear%e_fermi
+    !test for now. 
+    e_fermi = sys%st%smear%e_fermi !CNST(0.166981) 
     
     do iqn = sys%st%d%kpt%start, sys%st%d%kpt%end
        
@@ -203,24 +204,27 @@ contains
                 do ifreq = 1, nfreq
                    if (abs(eigi-eigj)<CNST(1.0e-10)) then 
                       tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) + sys%st%d%kweights(iqn)*(CNST(-1.0)/mesh%sb%rcell_volume)* &
-                           df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*((minfreq + (ifreq-1)*dfreq)))/ (((minfreq + (ifreq-1)*dfreq))**2 + width**2/CNST(4.0))
-                  else 
-                     tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - sys%st%d%kweights(iqn)*(CNST(-1.0)/mesh%sb%rcell_volume)* &
+                           df*real(prod,REAL_PRECISION) * (CNST(0.5)*width + M_ZI*((minfreq + (ifreq-1)*dfreq)))/ (((minfreq + (ifreq-1)*dfreq))**2 + width**2/CNST(4.0)) 
+                      k12(idir,jdir,ifreq) = k12(idir,jdir,ifreq) - (eigi - e_fermi)*sys%st%d%kweights(iqn)*(CNST(-1.0)/mesh%sb%rcell_volume)* &
+                           df*real(prod,REAL_PRECISION) * (CNST(0.5)*width - M_ZI*(eigi-eigj - (minfreq + (ifreq-1)*dfreq)))/ ((eigi-eigj - (minfreq + (ifreq-1)*dfreq))**2 + width**2/CNST(4.0))
+                      k21(idir,jdir,ifreq) = k21(idir,jdir,ifreq) - (eigj - e_fermi)*sys%st%d%kweights(iqn)*(CNST(-1.0)/mesh%sb%rcell_volume)* &
+                           df*real(prod,REAL_PRECISION) * (CNST(0.5)*width - M_ZI*(eigi-eigj - (minfreq + (ifreq-1)*dfreq)))/ ((eigi-eigj - (minfreq + (ifreq-1)*dfreq))**2 + width**2/CNST(4.0))
+                      k22(idir,jdir,ifreq) = k22(idir,jdir,ifreq) - (eigi - e_fermi)*(eigj - e_fermi)*sys%st%d%kweights(iqn)*(CNST(-1.0)/mesh%sb%rcell_volume)* &
+                          df*real(prod,REAL_PRECISION) * (CNST(0.5)*width - M_ZI*(eigi-eigj - (minfreq + (ifreq-1)*dfreq)))/ ((eigi-eigj - (minfreq + (ifreq-1)*dfreq))**2 + width**2/CNST(4.0))
+                   else 
+                      tensor(idir, jdir,ifreq) = tensor(idir, jdir,ifreq) - sys%st%d%kweights(iqn)*(CNST(-1.0)/mesh%sb%rcell_volume)* &
+                          df*real(prod,REAL_PRECISION) * (CNST(0.5)*width - M_ZI*(eigi-eigj - (minfreq + (ifreq-1)*dfreq)))/ ((eigi-eigj - (minfreq + (ifreq-1)*dfreq))**2 + width**2/CNST(4.0))
+                      k12(idir,jdir,ifreq) = k12(idir,jdir,ifreq) - (eigi - e_fermi)*sys%st%d%kweights(iqn)*(CNST(-1.0)/mesh%sb%rcell_volume)* &
+                           df*real(prod,REAL_PRECISION) * (CNST(0.5)*width - M_ZI*(eigi-eigj - (minfreq + (ifreq-1)*dfreq)))/ ((eigi-eigj - (minfreq + (ifreq-1)*dfreq))**2 + width**2/CNST(4.0))
+                      k21(idir,jdir,ifreq) = k21(idir,jdir,ifreq) - (eigj - e_fermi)*sys%st%d%kweights(iqn)*(CNST(-1.0)/mesh%sb%rcell_volume)* &
+                           df*real(prod,REAL_PRECISION) * (CNST(0.5)*width - M_ZI*(eigi-eigj - (minfreq + (ifreq-1)*dfreq)))/ ((eigi-eigj - (minfreq + (ifreq-1)*dfreq))**2 + width**2/CNST(4.0))
+                      k22(idir,jdir,ifreq) = k22(idir,jdir,ifreq) - (eigi - e_fermi)*(eigj - e_fermi)*sys%st%d%kweights(iqn)*(CNST(-1.0)/mesh%sb%rcell_volume)* &
                           df*real(prod,REAL_PRECISION) * (CNST(0.5)*width - M_ZI*(eigi-eigj - (minfreq + (ifreq-1)*dfreq)))/ ((eigi-eigj - (minfreq + (ifreq-1)*dfreq))**2 + width**2/CNST(4.0))
                   endif
                 end do
              end do !loop over jdir
           end do !loop over idir
 
-          do idir=1, mesh%sb%dim
-             do jdir=1, mesh%sb%dim
-                do ifreq = 1, nfreq
-                   k12(idir,jdir,ifreq) = k12(idir,jdir,ifreq) - tensor(idir,jdir,ifreq)*(eigi-e_fermi)
-                   k21(idir,jdir,ifreq) = k21(idir,jdir,ifreq) - tensor(idir,jdir,ifreq)*(eigj-e_fermi)
-                   k22(idir,jdir,ifreq) = k22(idir,jdir,ifreq) - tensor(idir,jdir,ifreq)*(eigi -e_fermi)*(eigj - e_fermi)
-                end do
-             end do
-          end do
           
        end do !loop over states j
     end do !loop over states i
@@ -233,7 +237,6 @@ contains
    do ifreq=1,nfreq
       sum_cond1 = sum_cond1 + (tensor(1,1,ifreq) + tensor(2,2,ifreq) + tensor(3,3,ifreq))*dfreq/CNST(3.0)
    enddo
-!   sum_cond2 = sum_cond2 + CNST(2.0) * CNST(4.0)* M_PI * M_PI * mesh%sb%rcell_volume * sum_cond1 / (sum_occ * M_PI)
    sum_cond2 = sum_cond2 + CNST(2.0) * mesh%sb%rcell_volume * sum_cond1 / (sum_occ * M_PI)
 
    
