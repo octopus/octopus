@@ -120,7 +120,7 @@ module v_ks_oct_m
     type(xc_t),               public :: xc
     type(xc_OEP_t)                   :: oep
     type(xc_ks_inversion_t),  public :: ks_inversion
-    type(poisson_t), pointer, public :: hartree_solver
+    type(poisson_t), pointer, public :: psolver
     logical                          :: new_hartree
     type(grid_t), pointer,    public :: gr
     type(v_ks_calc_t)                :: calc
@@ -385,14 +385,14 @@ contains
     call v_ks_write_info(ks, stdout)
 
     ks%new_hartree = .false.
-    nullify(ks%hartree_solver)
+    nullify(ks%psolver)
     if(ks%theory_level /= INDEPENDENT_PARTICLES) then
       if(gr%have_fine_mesh) then
         ks%new_hartree = .true.
-        SAFE_ALLOCATE(ks%hartree_solver)
-        call poisson_init(ks%hartree_solver, parser, gr%fine%der, mc, label = " (fine mesh)")
+        SAFE_ALLOCATE(ks%psolver)
+        call poisson_init(ks%psolver, parser, gr%fine%der, mc, label = " (fine mesh)")
       else
-        ks%hartree_solver => psolver
+        ks%psolver => psolver
       end if
     end if
 
@@ -598,8 +598,8 @@ contains
     end select
 
     if(ks%new_hartree) then
-      call poisson_end(ks%hartree_solver)
-      SAFE_DEALLOCATE_P(ks%hartree_solver)
+      call poisson_end(ks%psolver)
+      SAFE_DEALLOCATE_P(ks%psolver)
     end if
 
     POP_SUB(v_ks_end)
@@ -759,8 +759,8 @@ contains
 
       call calculate_density()
 
-      if(poisson_is_async(ks%hartree_solver)) then
-        call dpoisson_solve_start(ks%hartree_solver, ks%calc%total_density)
+      if(poisson_is_async(ks%psolver)) then
+        call dpoisson_solve_start(ks%psolver, ks%calc%total_density)
       end if
 
       if(ks%theory_level /= HARTREE .and. ks%theory_level /= RDMFT) call v_a_xc(hm)
@@ -898,7 +898,7 @@ contains
       end select
 
       rho(:, 1) = ks%calc%total_density / st%qtot
-      call dpoisson_solve(ks%hartree_solver, vh_sic, rho(:,1))
+      call dpoisson_solve(ks%psolver, vh_sic, rho(:,1))
       forall(ip = 1:ks%gr%mesh%np) ks%calc%vxc(ip,:) = ks%calc%vxc(ip,:) - vh_sic(ip)
 
       SAFE_DEALLOCATE_P(vxc_sic)
@@ -1230,7 +1230,7 @@ contains
 
     PUSH_SUB(v_ks_hartree)
 
-    ASSERT(associated(ks%hartree_solver))
+    ASSERT(associated(ks%psolver))
 
     if(.not. ks%gr%have_fine_mesh) then
       pot => hm%vhartree
@@ -1239,12 +1239,12 @@ contains
       pot = M_ZERO
     end if
 
-    if(.not. poisson_is_async(ks%hartree_solver)) then
+    if(.not. poisson_is_async(ks%psolver)) then
       ! solve the Poisson equation
-      call dpoisson_solve(ks%hartree_solver, pot, ks%calc%total_density)
+      call dpoisson_solve(ks%psolver, pot, ks%calc%total_density)
     else
       ! The calculation was started by v_ks_calc_start.
-      call dpoisson_solve_finish(ks%hartree_solver, pot)
+      call dpoisson_solve_finish(ks%psolver, pot)
     end if
 
 
