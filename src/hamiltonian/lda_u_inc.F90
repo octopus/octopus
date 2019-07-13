@@ -329,12 +329,12 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
       do ios = 1, this%norbsets
         if(this%orbsets(ios)%ndim  == 1) then
           call X(compute_ACBNO_U)(this, ios)
-          if(this%intersite) &
-            call X(compute_ACBNO_V)(this, ios)
+          if(this%intersite) call X(compute_ACBNO_V)(this, ios)
         else
           call compute_ACBNO_U_noncollinear(this, ios)
-          if(this%intersite) &
+          if(this%intersite) then
             call messages_not_implemented("Intersite interaction with spinors.")
+          end if
         end if
       end do
     else
@@ -373,7 +373,7 @@ subroutine X(compute_dftu_energy)(this, energy, st)
       do im = 1, this%orbsets(ios)%norbs
         do imp = 1, this%orbsets(ios)%norbs
           energy = energy - M_HALF*this%orbsets(ios)%Ueff &
-                                        *abs(this%X(n)(im, imp, ispin, ios))**2/st%smear%el_per_state**2
+                                        *abs(this%X(n)(im, imp, ispin, ios))**2/st%smear%el_per_state
         end do
         if(ispin <= this%spin_channels) &
           energy = energy + M_HALF*this%orbsets(ios)%Ueff*real(this%X(n)(im, im, ispin, ios))
@@ -388,7 +388,7 @@ subroutine X(compute_dftu_energy)(this, energy, st)
         do ispin = 1, this%nspins
           do im = 1, os%norbs
             do imp = 1, this%orbsets(os%map_os(inn))%norbs
-              energy = energy - M_HALF*os%V_IJ(inn,0)/st%smear%el_per_state**2 &
+              energy = energy - M_HALF*os%V_IJ(inn,0)/st%smear%el_per_state &
                                *abs(this%X(n_IJ)(im, imp, ispin, ios, inn))**2
             end do
           end do
@@ -1050,7 +1050,7 @@ subroutine X(compute_coulomb_integrals) (this, parser, mesh, der)
             end do
             !$omp end parallel do
 
-            this%coulomb(ist,jst,kst,lst,ios) = dsm_integrate(mesh, os%sphere, tmp(1:np_sphere))
+            this%coulomb(ist,jst,kst,lst,ios) = dsm_integrate(mesh, os%sphere, tmp(1:np_sphere), reduce = .false.)
 
             if(abs(this%coulomb(ist,jst,kst,lst,ios))<CNST(1.0e-12)) then
               this%coulomb(ist,jst,kst,lst,ios) = M_ZERO
@@ -1075,6 +1075,10 @@ subroutine X(compute_coulomb_integrals) (this, parser, mesh, der)
 
     call submesh_end_global(os%sphere)
   end do !iorb
+
+  if(mesh%parallel_in_domains) then 
+    call comm_allreduce(mesh%mpi_grp%comm, this%coulomb)
+  end if 
 
   if(this%orbs_dist%parallel) then
     call comm_allreduce(this%orbs_dist%mpi_grp%comm, this%coulomb)

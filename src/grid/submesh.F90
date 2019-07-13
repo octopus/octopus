@@ -327,9 +327,9 @@ contains
     diff_centers(1:sb%dim) = sm1%center(1:sb%dim)-sm2%center(1:sb%dim)
     if(present(shift)) diff_centers(1:sb%dim) = diff_centers(1:sb%dim) - shift(1:sb%dim)
 
-    !As we take the union of the two submesh, we know that we have all the points from the first one included.
-    !The extra points from the second submesh as those which are not included in the first one
-    !At the moment np_part extra points are not uncluded
+    !As we take the union of the two submeshes, we know that we have all the points from the first one included.
+    !The extra points from the second submesh are those which are not included in the first one
+    !At the moment np_part extra points are not included
     is = sm1%np
     do ip = 1, sm2%np
       !sm2%x contains points coordinates defined with respect to sm2%center
@@ -374,7 +374,6 @@ contains
     integer :: ip
     type(profile_t), save :: prof
     FLOAT :: xx(1:MAX_DIM), diff_centers(1:MAX_DIM), oldcenter(1:MAX_DIM)
-    logical :: in_sm1
     
     PUSH_SUB(submesh_shift_center)
     call profiling_in(prof, "SUBMESH_SHIFT")

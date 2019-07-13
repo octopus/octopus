@@ -102,11 +102,10 @@ contains
     call messages_print_stress(stdout, "Intersite Coulomb integrals")
 
     !From the formula and the coding point of view, it is interesting to split the intersite terms
-    !into the neigbors (between two different atoms) and periodic copies (same atom).
+    !into the neighbors (between two different atoms) and periodic copies (same atom).
     !In the last case, due to periodicity of Bloch states, projections on the atomic orbitals
     !or its periodic copy is the same, making easier to implement the formulas
 
-    !Not implemented at the moment
     this%nneighbors = 0
     if(this%iatom /= -1)then
       xat(1:sb%dim) = geo%atom(this%iatom)%x(1:sb%dim)
@@ -130,9 +129,9 @@ contains
       end do
 
       !The first three values are the position of the periodic copies
-      !and the zero value one is used to store the actual value of V_IJ
-      SAFE_ALLOCATE(this%V_IJ(1:this%nneighbors, 0:sb%dim+1))
-      this%V_IJ(1:this%nneighbors, 0:sb%dim+1) = M_ZERO
+      !and the zero value one is used to store the actual value of V_ij
+      SAFE_ALLOCATE(this%V_ij(1:this%nneighbors, 0:sb%dim+1))
+      this%V_ij(1:this%nneighbors, 0:sb%dim+1) = M_ZERO
       SAFE_ALLOCATE(this%map_os(1:this%nneighbors))
       this%map_os(1:this%nneighbors) = 0
       if(has_phase) then
@@ -151,8 +150,8 @@ contains
 
           this%nneighbors = this%nneighbors +1
 
-          this%V_IJ(this%nneighbors, 1:sb%dim) = xi(1:sb%dim) -os(ios)%sphere%center(1:sb%dim)
-          this%V_IJ(this%nneighbors, sb%dim+1) = rr
+          this%V_ij(this%nneighbors, 1:sb%dim) = xi(1:sb%dim) -os(ios)%sphere%center(1:sb%dim)
+          this%V_ij(this%nneighbors, sb%dim+1) = rr
           
           this%map_os(this%nneighbors) = ios
         end do
@@ -167,9 +166,9 @@ contains
       this%coulomb_IIJJ = M_ZERO
 
       call distributed_nullify(dist, this%nneighbors)
-      #ifdef HAVE_MPI
+#ifdef HAVE_MPI
       call distributed_init(dist, this%nneighbors, MPI_COMM_WORLD, 'orbs')
-      #endif
+#endif
 
       do inn = dist%start, dist%end
 
@@ -177,9 +176,9 @@ contains
 
         !Init a submesh from the union of two submeshes
         call submesh_merge(sm, sb, der%mesh, this%sphere, os(ios)%sphere, &
-                       shift = this%V_IJ(inn, 1:sb%dim))
+                       shift = this%V_ij(inn, 1:sb%dim))
 
-        write(message(1),'(a, i3, a, f6.3, a, i5, a)') 'Neighbor ', inn, ' is located at ', this%V_IJ(inn, sb%dim+1), ' Bohr and has ', sm%np, ' grid points.'
+        write(message(1),'(a, i3, a, f6.3, a, i5, a)') 'Neighbor ', inn, ' is located at ', this%V_ij(inn, sb%dim+1), ' Bohr and has ', sm%np, ' grid points.'
         call messages_info(1)
 
         SAFE_ALLOCATE(orb(1:sm%np, 1:max(this%norbs,os(ios)%norbs),1:2))
@@ -191,7 +190,7 @@ contains
                           1, orb(1:sm%np, ist,1))
         end do
          
-        call submesh_shift_center(sm, sb, this%V_IJ(inn, 1:sb%dim)+os(ios)%sphere%center(1:sb%dim))
+        call submesh_shift_center(sm, sb, this%V_ij(inn, 1:sb%dim)+os(ios)%sphere%center(1:sb%dim))
 
         do ist = 1, os(ios)%norbs
           call datomic_orbital_get_submesh(os(ios)%spec, sm, os(ios)%ii, os(ios)%ll, ist-1-os(ios)%ll, &
@@ -205,8 +204,8 @@ contains
 
         do ist = 1, this%norbs
             !$omp parallel do
-            do ip=1,np_sphere
-              nn(ip)  = orb(ip,ist,1)*orb(ip,ist,1)
+            do ip = 1, np_sphere
+              nn(ip) = orb(ip,ist,1)*orb(ip,ist,1)
             end do
             !$omp end parallel do    
 
@@ -216,14 +215,14 @@ contains
             do jst = 1, os(ios)%norbs
 
                 !$omp parallel do
-                do ip=1,np_sphere
-                  tmp(ip) = vv(ip)*orb(ip,jst,2)*orb(ip,jst,2)
+                do ip = 1, np_sphere
+                  tmp(ip) = vv(ip)*orb(ip, jst, 2)*orb(ip, jst, 2)
                 end do
                 !$omp end parallel do
 
-                this%coulomb_IIJJ(ist,ist,jst,jst,inn) = dsm_integrate(der%mesh, sm, tmp(1:np_sphere))
-                if(abs(this%coulomb_IIJJ(ist,ist,jst,jst,inn))<CNST(1.0e-12)) then
-                  this%coulomb_IIJJ(ist,ist,jst,jst,inn) = M_ZERO
+                this%coulomb_IIJJ(ist, ist, jst, jst, inn) = dsm_integrate(der%mesh, sm, tmp(1:np_sphere), reduce = .false.)
+                if(abs(this%coulomb_IIJJ(ist, ist, jst, jst, inn)) < CNST(1.0e-12)) then
+                  this%coulomb_IIJJ(ist, ist, jst, jst, inn) = M_ZERO
                 end if
 
             end do !kst 

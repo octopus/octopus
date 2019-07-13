@@ -140,7 +140,7 @@
     end do !ind2
   end do !ind
 
-  !The overlap matric is Hermitian
+  !The overlap matrix is Hermitian
   do ind = 1, basis%size
     do ind2 = 1, ind-1
       overlap(ind,ind2) = R_CONJ(overlap(ind2, ind))
