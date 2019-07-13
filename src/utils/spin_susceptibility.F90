@@ -126,6 +126,8 @@ program spin_susceptibility
     read(in_file, *) jj, tt, (m_cart(ii,ib),ib = 1, num_col_cart)
   end do
 
+  call io_close(in_file)
+
   !We now perform the change of basis to the rotating basis
   !In this basis we have only m_+(q), m_-(q), and m_z(+/-q)
   !where z means here along the easy axis
@@ -171,11 +173,20 @@ program spin_susceptibility
 
   SAFE_DEALLOCATE_A(m_cart)
 
-  call io_close(in_file)
-
   write(message(1), '(a, i7, a)') "Info: Read ", time_steps, " steps from file '"// &
     trim(io_workpath('td.general/total_magnetization'))//"'"
   call messages_info(1)
+
+  write(header, '(9a15)') '#  time', 'Re[m_+(q,t)]', 'Im[m_+(q,t)]', &
+            'Re[m_-(-q, t)]', 'Im[m_-(-q,t)]', &
+            'Re[m_z(q,t)]', 'Im[m_z(q,t)]', 'Re[m_z(-q,t)]', 'Im[m_z(-q,t)]'
+
+  out_file = io_open('td.general/tranverse_magnetization', action='write')
+  write(out_file,'(a)') trim(header)
+  do kk = 1, time_steps
+    write(out_file, '(9e15.6)') (kk - 1)*dt, (magnetization(kk,ii), ii = 1, 8)
+  end do
+  call io_close(out_file)
 
 
   ! Find out the iteration numbers corresponding to the time limits.
@@ -236,7 +247,6 @@ program spin_susceptibility
   write(out_file,'(a)') trim(header)
   do kk = 1, energy_steps
     ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
-!    ww = kk*spectrum%energy_step
     write(out_file, '(13e15.6)') ww,                                   &
              (real(chi(kk,ii), REAL_PRECISION), aimag(chi(kk,ii)), ii = 1, num_col/2)
   end do
