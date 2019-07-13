@@ -178,7 +178,8 @@ contains
         call submesh_merge(sm, sb, der%mesh, this%sphere, os(ios)%sphere, &
                        shift = this%V_ij(inn, 1:sb%dim))
 
-        write(message(1),'(a, i3, a, f6.3, a, i5, a)') 'Neighbor ', inn, ' is located at ', this%V_ij(inn, sb%dim+1), ' Bohr and has ', sm%np, ' grid points.'
+        write(message(1),'(a, i3, a, f6.3, a, i5, a)') 'Neighbor ', inn, ' is located at ', &
+                             this%V_ij(inn, sb%dim+1), ' Bohr and has ', sm%np, ' grid points.'
         call messages_info(1)
 
         SAFE_ALLOCATE(orb(1:sm%np, 1:max(this%norbs,os(ios)%norbs),1:2))

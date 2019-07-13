@@ -73,7 +73,7 @@ module orbitalset_oct_m
     FLOAT               :: alpha              !> A potential used to constrained occupations, as defined in PRB 71, 035105 (2005)
     integer             :: nneighbors         !> Number of neighbouring atoms on which the intersite
                                               !> interaction is considered
-    FLOAT, allocatable  :: V_IJ(:,:)          !> The list of intersite interaction parameters
+    FLOAT, allocatable  :: V_ij(:,:)          !> The list of intersite interaction parameters
     FLOAT, allocatable  :: coulomb_IIJJ(:,:,:,:,:) !> Coulomb integrales with neighboring atoms
     integer, allocatable:: map_os(:)
     CMPLX, allocatable  :: phase_shift(:,:)
@@ -149,7 +149,7 @@ contains
    nullify(this%spec)
    call submesh_end(this%sphere)
 
-   SAFE_DEALLOCATE_A(this%V_IJ)
+   SAFE_DEALLOCATE_A(this%V_ij)
    SAFE_DEALLOCATE_A(this%coulomb_IIJJ)
    SAFE_DEALLOCATE_A(this%map_os)
    SAFE_DEALLOCATE_A(this%phase_shift)
@@ -245,7 +245,7 @@ contains
 
       if(os%nneighbors > 0) then
         do inn = 1, os%nneighbors       
-          dx(1:ndim) = os%V_IJ(inn,1:ndim)
+          dx(1:ndim) = os%V_ij(inn,1:ndim)
           kr = sum(kpoint(1:ndim)*dx(1:ndim))
           if(present(vec_pot)) then
             if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*dx(1:ndim))

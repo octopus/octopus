@@ -128,8 +128,8 @@ module lda_u_oct_m
     type(distributed_t) :: orbs_dist
 
     integer             :: maxneighbors       
-    FLOAT, pointer      :: dn_IJ(:,:,:,:,:), dn_alt_IJ(:,:,:,:,:)
-    CMPLX, pointer      :: zn_IJ(:,:,:,:,:), zn_alt_IJ(:,:,:,:,:)
+    FLOAT, pointer      :: dn_ij(:,:,:,:,:), dn_alt_IJ(:,:,:,:,:)
+    CMPLX, pointer      :: zn_ij(:,:,:,:,:), zn_alt_IJ(:,:,:,:,:)
   end type lda_u_t
 
   integer, public, parameter ::        &
@@ -178,8 +178,8 @@ contains
   nullify(this%drenorm_occ)
   nullify(this%zrenorm_occ)
   nullify(this%orbsets)
-  nullify(this%dn_IJ)
-  nullify(this%zn_IJ)
+  nullify(this%dn_ij)
+  nullify(this%zn_ij)
   nullify(this%dn_alt_IJ)
   nullify(this%zn_alt_IJ)
 
@@ -464,8 +464,8 @@ contains
    SAFE_DEALLOCATE_P(this%zcoulomb)
    SAFE_DEALLOCATE_P(this%drenorm_occ)
    SAFE_DEALLOCATE_P(this%zrenorm_occ)
-   SAFE_DEALLOCATE_P(this%dn_IJ)
-   SAFE_DEALLOCATE_P(this%zn_IJ)
+   SAFE_DEALLOCATE_P(this%dn_ij)
+   SAFE_DEALLOCATE_P(this%zn_ij)
    SAFE_DEALLOCATE_P(this%dn_alt_IJ)
    SAFE_DEALLOCATE_P(this%zn_alt_IJ)
    SAFE_DEALLOCATE_A(this%basisstates)
@@ -527,16 +527,16 @@ contains
     nspin = this%nspins
 
     if(states_are_real(st)) then
-      SAFE_DEALLOCATE_P(this%dn_IJ)
-      SAFE_ALLOCATE(this%dn_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
-      this%dn_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
+      SAFE_DEALLOCATE_P(this%dn_ij)
+      SAFE_ALLOCATE(this%dn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
+      this%dn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
       SAFE_DEALLOCATE_P(this%dn_alt_IJ)
       SAFE_ALLOCATE(this%dn_alt_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
       this%dn_alt_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
     else
-      SAFE_DEALLOCATE_P(this%zn_IJ)
-      SAFE_ALLOCATE(this%zn_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
-      this%zn_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
+      SAFE_DEALLOCATE_P(this%zn_ij)
+      SAFE_ALLOCATE(this%zn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
+      this%zn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
       SAFE_DEALLOCATE_P(this%zn_alt_IJ)
       SAFE_ALLOCATE(this%zn_alt_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
       this%zn_alt_IJ(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
