@@ -28,26 +28,27 @@ module parser_oct_m
   implicit none
 
   private
-  public ::              &
-    parser_t,            &
-    block_t,             &
-    parser_init,         &
-    parser_end,          &
-    parse_init,          &
-    parse_putsym,        &
-    parse_end,           &
-    parse_is_defined,    &
-    parse_variable,      &
-    parse_block,         &
-    parse_block_end,     &
-    parse_block_n,       &
-    parse_block_cols,    &
-    parse_block_integer, &
-    parse_block_float,   &
-    parse_block_cmplx,   &
-    parse_block_string,  &
-    parse_block_logical, &
-    parse_expression,    &
+  public ::                &
+    parser_t,              &
+    block_t,               &
+    parser_init,           &
+    parser_end,            &
+    parser_init_namespace, &
+    parse_init,            &
+    parse_putsym,          &
+    parse_end,             &
+    parse_is_defined,      &
+    parse_variable,        &
+    parse_block,           &
+    parse_block_end,       &
+    parse_block_n,         &
+    parse_block_cols,      &
+    parse_block_integer,   &
+    parse_block_float,     &
+    parse_block_cmplx,     &
+    parse_block_string,    &
+    parse_block_logical,   &
+    parse_expression,      &
     parse_array
 
   type :: parser_t
@@ -348,6 +349,23 @@ contains
     call parse_end()
 
   end subroutine parser_end
+
+  ! ---------------------------------------------------------
+  
+  function parser_init_namespace(global_parser, namespace) result(parser)
+    type(parser_t),   intent(in) :: global_parser
+    character(len=*), intent(in) :: namespace
+    type(parser_t) :: parser
+
+    parser = global_parser
+    if (len(namespace) <= 128) then
+      parser%namespace = namespace
+    else
+      write(stderr,'(a)') '*** Fatal Error (description follows)'
+      write(stderr,'(a)') 'Parser namespaces are limited to 128 characters'
+    end if
+
+  end function parser_init_namespace
 
   ! ---------------------------------------------------------
 
