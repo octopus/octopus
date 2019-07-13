@@ -404,7 +404,7 @@ subroutine X(compute_dftu_energy)(this, energy, st)
       do ispin = 1, this%nspins
         nsigma = M_ZERO
         do im = 1, this%orbsets(ios)%norbs
-          nsigma = nsigma + R_REAL(this%X(n)(im,im,ispin,ios))/st%smear%el_per_state**2
+          nsigma = nsigma + R_REAL(this%X(n)(im,im,ispin,ios))/st%smear%el_per_state
         end do
 
         do im = 1, this%orbsets(ios)%norbs
