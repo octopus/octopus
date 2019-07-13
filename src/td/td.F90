@@ -334,7 +334,12 @@ contains
       message(1) = "Generalized Bloch theorem cannot be used with spin-orbit coupling."
       call messages_fatal(1)
     end if
-      
+
+    if(sys%gr%der%boundaries%spiralBC .and. &
+          any(abs(sys%hm%ep%kick%easy_axis(1:2)) > M_EPSILON)) then 
+      message(1) = "Generalized Bloch theorem cannot be used for an easy axis along the z direction."
+      call messages_fatal(1)
+    end if
 
     POP_SUB(td_init)
   end subroutine td_init
