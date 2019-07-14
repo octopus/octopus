@@ -250,9 +250,10 @@ contains
           if(present(vec_pot)) then
             if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*dx(1:ndim))
           end if
-
+    
+          !At the moment the uniform vector potential is in vec_pot_var
           if(present(vec_pot_var)) then
-            call messages_not_implemented('Position dependent vector potential and intersite interaction')
+            if(allocated(vec_pot_var))  kr = kr + sum(vec_pot_var(1:ndim, 1)*dx(1:ndim))
           end if
 
           !The sign is different as this is applied on the wavefunction and not the orbitals
