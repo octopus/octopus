@@ -40,8 +40,8 @@ match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2
 #The following values should be the same by symmetries
 match ; Density value 1   ; LINEFIELD(static/density.y=0\,z=0,  2, 2) ; 3.66443374687087E-002
 match ; Density value 2   ; LINEFIELD(static/density.y=0\,z=0, 14, 2) ; 3.66443875019183E-002
-match ; Bader value 1     ; LINEFIELD(static/bader-sp1.y=0\,z=0,  2, 2) ; -4.71277006299386E-003
-match ; Bader value 2     ; LINEFIELD(static/bader-sp1.y=0\,z=0, 14, 2) ; -4.71308282528424E-003
+match ; Bader value 1     ; LINEFIELD(static/bader.y=0\,z=0,  2, 2) ; -4.71277006299386E-003
+match ; Bader value 2     ; LINEFIELD(static/bader.y=0\,z=0, 14, 2) ; -4.71308282528424E-003
 
 
 
@@ -72,8 +72,8 @@ match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2
 match ; Partial charge  2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)  ; 1.0
 match ; Density value 1   ; LINEFIELD(static/density.y=0\,z=0,  5, 2)   ; 2.30907281287646E-002
 match ; Density value 2   ; LINEFIELD(static/density.y=0\,z=0,  6, 2)   ; 3.27531739509330E-002
-match ; Bader value 1     ; LINEFIELD(static/bader-sp1.y=0\,z=0,  5, 2) ; 1.90952057569318E-002
-match ; Bader value 2     ; LINEFIELD(static/bader-sp1.y=0\,z=0,  6, 2) ; 1.40436127567851E-002
+match ; Bader value 1     ; LINEFIELD(static/bader.y=0\,z=0,  5, 2) ; 1.90952057569318E-002
+match ; Bader value 2     ; LINEFIELD(static/bader.y=0\,z=0,  6, 2) ; 1.40436127567851E-002
 
 
 
@@ -104,6 +104,6 @@ match ; Partial charge  1 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2
 match ; Partial charge  2 ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)  ; 1.0
 match ; Density value 1   ; LINEFIELD(static/density.y=0\,z=0,  5, 2)   ; 2.13029916823236E-002
 match ; Density value 2   ; LINEFIELD(static/density.y=0\,z=0,  6, 2)   ; 3.14261395757928E-002
-match ; Bader value 1     ; LINEFIELD(static/bader-sp1.y=0\,z=0,  6, 2) ; 4.40523517841285E-002
-match ; Bader value 2     ; LINEFIELD(static/bader-sp1.y=0\,z=0,  9, 2) ; 7.47075112164838E-002
+match ; Bader value 1     ; LINEFIELD(static/bader.y=0\,z=0,  6, 2) ; 4.40523517841285E-002
+match ; Bader value 2     ; LINEFIELD(static/bader.y=0\,z=0,  9, 2) ; 7.47075112164838E-002
 
