@@ -29,6 +29,7 @@ module propagator_magnus_oct_m
   use ion_dynamics_oct_m
   use lasers_oct_m
   use messages_oct_m
+  use parser_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
@@ -127,8 +128,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Commutator-free Magnus propagator of order 4.
-  subroutine td_cfmagnus4(ks, hm, gr, st, tr, time, dt, ions, geo, iter)
+  subroutine td_cfmagnus4(ks, parser, hm, gr, st, tr, time, dt, ions, geo, iter)
     type(v_ks_t), target,            intent(inout) :: ks
+    type(parser_t),                  intent(in)    :: parser
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
@@ -151,7 +153,7 @@ contains
     PUSH_SUB(propagator_dt.td_cfmagnus4)
 
     if(iter < 4) then
-      call td_explicit_runge_kutta4(ks, hm, gr, st, time, dt, ions, geo)
+      call td_explicit_runge_kutta4(ks, parser, hm, gr, st, time, dt, ions, geo)
       POP_SUB(propagator_dt.td_cfmagnus4)
       return
     end if

@@ -1,4 +1,4 @@
-!! Copyright (C) 2016 N. Tancogne-Dejean 
+!! Copyright (C) 2016-2019 N. Tancogne-Dejean, X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -795,10 +795,11 @@ end subroutine X(compute_ACBNO_U_kanamori_restricted)
 
 ! ---------------------------------------------------------
 ! TODO: Merge this with the two_body routine in system/output_me_inc.F90
-subroutine X(compute_coulomb_integrals) (this, mesh, der)
-  type(lda_u_t),   intent(inout)  :: this
-  type(mesh_t),       intent(in)  :: mesh
-  type(derivatives_t), intent(in) :: der
+subroutine X(compute_coulomb_integrals) (this, parser, mesh, der)
+  type(lda_u_t),       intent(inout)  :: this
+  type(parser_t),      intent(in)     :: parser
+  type(mesh_t),        intent(in)     :: mesh
+  type(derivatives_t), intent(in)     :: der
 
   integer :: ist, jst, kst, lst, ijst, klst
   integer :: norbs, np_sphere, ios, ip
@@ -905,10 +906,11 @@ subroutine X(compute_coulomb_integrals) (this, mesh, der)
   call profiling_out(prof)
 end subroutine X(compute_coulomb_integrals)
 
-subroutine X(compute_periodic_coulomb_integrals) (this, der, mc)
-  type(lda_u_t),    intent(inout)  :: this
-  type(derivatives_t), intent(in)  :: der
-  type(multicomm_t),   intent(in)  :: mc
+subroutine X(compute_periodic_coulomb_integrals)(this, parser, der, mc)
+  type(lda_u_t),       intent(inout)  :: this
+  type(parser_t),      intent(in)     :: parser
+  type(derivatives_t), intent(in)     :: der
+  type(multicomm_t),   intent(in)     :: mc
 
   integer :: ist, jst, kst, lst, ijst, klst
   integer :: norbs, np, ip
@@ -942,7 +944,7 @@ subroutine X(compute_periodic_coulomb_integrals) (this, der, mc)
   norbs = os%norbs
   np = der%mesh%np  
 
-  call poisson_init(os%poisson, der, mc, solver=POISSON_DIRECT_SUM) !POISSON_ISF)
+  call poisson_init(os%poisson, parser, der, mc, solver=POISSON_DIRECT_SUM) !POISSON_ISF)
 
   ijst=0
   do ist = 1, norbs

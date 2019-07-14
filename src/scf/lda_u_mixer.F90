@@ -42,6 +42,7 @@ module lda_u_mixer_oct_m
        lda_u_mixer_get_vnew
 
   type lda_u_mixer_t
+    private
     integer :: occsize
     logical :: realstates
     logical :: apply = .false.

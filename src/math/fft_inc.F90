@@ -57,17 +57,13 @@ subroutine X(fft_forward)(fft, in, out, norm)
 #endif
       end if
     case (FFTLIB_NFFT)
-#ifdef HAVE_NFFT
       call X(nfft_forward)(fft_array(slot)%nfft, in(:,:,:), out(:,:,:))
       if(present(norm)) norm = fft_array(slot)%nfft%norm
-#endif
+
     case (FFTLIB_PNFFT)
-#ifdef HAVE_PNFFT
       call X(pnfft_forward)(fft_array(slot)%pnfft, in(:,:,:), out(:,:,:))
       if(present(norm)) norm = fft_array(slot)%pnfft%norm
-#else
-      if(present(norm)) norm = M_ZERO
-#endif
+
     case (FFTLIB_PFFT)
       if (all(fft_array(slot)%rs_n /= 0)) then
         ASSERT(fft_array(slot)%X(rs_data)(1,1,1) == in(1,1,1))
@@ -239,18 +235,14 @@ subroutine X(fft_forward)(fft, in, out, norm)
 #endif
     case (FFTLIB_NFFT)
       scale = .false. ! the result is already scaled
-#ifdef HAVE_NFFT    
       call X(nfft_backward)(fft_array(slot)%nfft, in(:,:,:), out(:,:,:))
       if(present(norm)) norm = fft_array(slot)%nfft%norm
-#else
-      if(present(norm)) norm = M_ZERO
-#endif
+
     case (FFTLIB_PNFFT)
       scale = .false. ! the result is already scaled
-#ifdef HAVE_PNFFT    
       call X(pnfft_backward)(fft_array(slot)%pnfft, in(:,:,:), out(:,:,:))
       if(present(norm)) norm = fft_array(slot)%pnfft%norm
-#endif
+
     case (FFTLIB_PFFT)
       if (all(fft_array(slot)%fs_n /= 0)) then
         ASSERT(fft_array(slot)%fs_data(1,1,1) == in(1,1,1))

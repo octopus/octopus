@@ -57,37 +57,40 @@ module eigensolver_oct_m
     eigensolver_run
 
   type eigensolver_t
-    integer :: es_type    !< which eigensolver to use
+    private
+    integer, public :: es_type    !< which eigensolver to use
 
-    FLOAT   :: tolerance
-    integer :: es_maxiter
+    FLOAT,   public :: tolerance
+    integer, public :: es_maxiter
 
-    FLOAT   :: current_rel_dens_error
-    FLOAT   :: imag_time
+    FLOAT,   public :: current_rel_dens_error
+    FLOAT           :: imag_time
 
     !> Stores information about how well it performed.
-    FLOAT, pointer   :: diff(:, :)
-    integer          :: matvec
-    integer, pointer :: converged(:)
+    FLOAT, pointer,   public :: diff(:, :)
+    integer,          public :: matvec
+    integer, pointer, public :: converged(:)
 
     !> Stores information about the preconditioning.
-    type(preconditioner_t) :: pre
+    type(preconditioner_t), public :: pre
 
     type(subspace_t) :: sdiag
 
-    type(xc_t), pointer :: xc
+    type(xc_t), pointer, public :: xc
 
     integer :: rmmdiis_minimization_iter
 
     logical :: skip_finite_weight_kpoints
-    logical :: folded_spectrum
+    logical, public :: folded_spectrum
     FLOAT, pointer   :: spectrum_shift(:,:)
 
     ! cg options
-    logical :: orthogonalize_to_all
-    integer :: conjugate_direction
-    logical :: additional_terms
-    FLOAT   :: energy_change_threshold
+    logical, public :: orthogonalize_to_all
+    integer, public :: conjugate_direction
+    logical, public :: additional_terms
+    FLOAT,   public :: energy_change_threshold
+
+    type(exponential_t) :: exponential_operator
   end type eigensolver_t
 
 
@@ -105,11 +108,13 @@ module eigensolver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_init(eigens, gr, st, xc)
+  subroutine eigensolver_init(eigens, parser, gr, st, xc, disable_preconditioner)
     type(eigensolver_t), intent(out)   :: eigens
+    type(parser_t),      intent(in)    :: parser
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(in)    :: st
     type(xc_t), target,  intent(in)    :: xc
+    logical, optional,   intent(in)    :: disable_preconditioner
 
     integer :: default_iter, default_es
     FLOAT   :: default_tol
@@ -164,7 +169,7 @@ contains
       default_es = RS_CG
     end if
 
-    call parse_variable('Eigensolver', default_es, eigens%es_type)
+    call parse_variable(parser, 'Eigensolver', default_es, eigens%es_type)
 
     if(st%parallel_in_states .and. .not. eigensolver_parallel_in_states(eigens)) then
       message(1) = "The selected eigensolver is not parallel in states."
@@ -172,11 +177,12 @@ contains
       call messages_fatal(2)
     end if
 
-    if(eigens%es_type == RS_LOBPCG .and. st%group%block_start /= st%group%block_end) &
+    if(eigens%es_type == RS_LOBPCG .and. st%group%block_start /= st%group%block_end) then
       call messages_experimental("lobpcg eigensolver with more than one block per node")
+    end if
 
-    call messages_obsolete_variable('EigensolverVerbose')
-    call messages_obsolete_variable('EigensolverSubspaceDiag', 'SubspaceDiagonalization')
+    call messages_obsolete_variable(parser, 'EigensolverVerbose')
+    call messages_obsolete_variable(parser, 'EigensolverSubspaceDiag', 'SubspaceDiagonalization')
 
     default_iter = 25
     default_tol = CNST(1e-6)
@@ -195,7 +201,7 @@ contains
       !% against all other bands can improve convergence properties, whereas
       !% orthogonalizing against lower bands needs less operations.
       !%End
-      call parse_variable('CGOrthogonalizeAll', .false., eigens%orthogonalize_to_all)
+      call parse_variable(parser, 'CGOrthogonalizeAll', .false., eigens%orthogonalize_to_all)
 
       !%Variable CGDirection
       !%Type integer
@@ -212,7 +218,7 @@ contains
       !% For the Polak-Ribiere scheme, a product of the current with the previous
       !% steepest descent vector is subtracted in the nominator.
       !%End
-      call parse_variable('CGDirection', OPTION__CGDIRECTION__FLETCHER, eigens%conjugate_direction)
+      call parse_variable(parser, 'CGDirection', OPTION__CGDIRECTION__FLETCHER, eigens%conjugate_direction)
 
       !%Variable CGAdditionalTerms
       !%Type logical
@@ -225,7 +231,7 @@ contains
       !% If you experience convergence problems, you might try out this option.
       !% This feature is still experimental.
       !%End
-      call parse_variable('CGAdditionalTerms', .false., eigens%additional_terms)
+      call parse_variable(parser, 'CGAdditionalTerms', .false., eigens%additional_terms)
       if(eigens%additional_terms) then
         call messages_experimental("The additional terms for the CG eigensolver are not tested for all cases.")
       end if
@@ -244,7 +250,7 @@ contains
       !% are solving the OEP equation, you might want to set this value to 1e-3 or smaller. In general,
       !% smaller values might help if you experience convergence problems.
       !%End
-      call parse_variable('CGEnergyChangeThreshold', CNST(0.1), eigens%energy_change_threshold)
+      call parse_variable(parser, 'CGEnergyChangeThreshold', CNST(0.1), eigens%energy_change_threshold)
 
     case(RS_PLAN)
     case(RS_EVO)
@@ -259,8 +265,11 @@ contains
       !% method (<tt>Eigensolver = evolution</tt>) to obtain the lowest eigenvalues/eigenvectors.
       !% It must satisfy <tt>EigensolverImaginaryTime > 0</tt>.
       !%End
-      call parse_variable('EigensolverImaginaryTime', CNST(10.0), eigens%imag_time)
+      call parse_variable(parser, 'EigensolverImaginaryTime', CNST(10.0), eigens%imag_time)
       if(eigens%imag_time <= M_ZERO) call messages_input_error('EigensolverImaginaryTime')
+      
+      call exponential_init(eigens%exponential_operator, parser)
+      
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
       default_iter = 3
@@ -276,7 +285,7 @@ contains
       !% minimizations.
       !%End
 
-      call parse_variable('EigensolverMinimizationIter', 5, eigens%rmmdiis_minimization_iter)
+      call parse_variable(parser, 'EigensolverMinimizationIter', 5, eigens%rmmdiis_minimization_iter)
 
       if(gr%mesh%use_curvilinear) call messages_experimental("RMMDIIS eigensolver for curvilinear coordinates")
 
@@ -292,9 +301,9 @@ contains
 
     call messages_print_var_option(stdout, "Eigensolver", eigens%es_type)
 
-    call messages_obsolete_variable('EigensolverInitTolerance', 'EigensolverTolerance')
-    call messages_obsolete_variable('EigensolverFinalTolerance', 'EigensolverTolerance')
-    call messages_obsolete_variable('EigensolverFinalToleranceIteration')
+    call messages_obsolete_variable(parser, 'EigensolverInitTolerance', 'EigensolverTolerance')
+    call messages_obsolete_variable(parser, 'EigensolverFinalTolerance', 'EigensolverTolerance')
+    call messages_obsolete_variable(parser, 'EigensolverFinalToleranceIteration')
 
     ! this is an internal option that makes the solver use the 
     ! folded operator (H-shift)^2 to converge first eigenvalues around
@@ -310,7 +319,7 @@ contains
     !% This is the tolerance for the eigenvectors. The default is 1e-6,
     !% except for the ARPACK solver for which it is 0.
     !%End
-    call parse_variable('EigensolverTolerance', default_tol, eigens%tolerance)
+    call parse_variable(parser, 'EigensolverTolerance', default_tol, eigens%tolerance)
 
     !%Variable EigensolverMaxIter
     !%Type integer
@@ -322,7 +331,7 @@ contains
     !% except for <tt>rmdiis</tt>, which performs only 3 iterations (only
     !% increase it if you know what you are doing).
     !%End
-    call parse_variable('EigensolverMaxIter', default_iter, eigens%es_maxiter)
+    call parse_variable(parser, 'EigensolverMaxIter', default_iter, eigens%es_maxiter)
     if(eigens%es_maxiter < 1) call messages_input_error('EigensolverMaxIter')
 
     if(eigens%es_maxiter > default_iter) then
@@ -335,12 +344,12 @@ contains
       call messages_warning()
     end if
 
-    select case(eigens%es_type)
-    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
-      call preconditioner_init(eigens%pre, gr)
-    case default
+    if (.not. optional_default(disable_preconditioner, .false.) .and. &
+      any(eigens%es_type == (/RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD/))) then
+      call preconditioner_init(eigens%pre, parser, gr)
+    else
       call preconditioner_null(eigens%pre)
-    end select
+    end if
 
     nullify(eigens%diff)
     SAFE_ALLOCATE(eigens%diff(1:st%nst, 1:st%d%nik))
@@ -352,7 +361,7 @@ contains
 
     ! FEAST: subspace diagonalization or not?  I guess not.
     ! But perhaps something could be gained by changing this.
-    call subspace_init(eigens%sdiag, st, no_sd = .false.)
+    call subspace_init(eigens%sdiag, parser, st, no_sd = .false.)
 
     ! print memory requirements
     select case(eigens%es_type)
@@ -383,7 +392,7 @@ contains
     !%Description
     !% Only solve Hamiltonian for k-points with zero weight
     !%End
-    call parse_variable('EigensolverSkipKpoints', .false., eigens%skip_finite_weight_kpoints)
+    call parse_variable(parser, 'EigensolverSkipKpoints', .false., eigens%skip_finite_weight_kpoints)
     call messages_print_var_value(stdout,'EigensolverSkipKpoints',  eigens%skip_finite_weight_kpoints)
 
     ! set KS object
@@ -402,6 +411,8 @@ contains
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
       call preconditioner_end(eigens%pre)
+    case(RS_EVO)
+      call exponential_end(eigens%exponential_operator)
     end select
 
     SAFE_DEALLOCATE_P(eigens%converged)
@@ -475,7 +486,7 @@ contains
         case(RS_PLAN)
           call deigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
-          call deigensolver_evolution(gr, st, hm, eigens%tolerance, maxiter, &
+          call deigensolver_evolution(gr, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
           call deigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
@@ -507,21 +518,21 @@ contains
         case(RS_CG)
            if(eigens%folded_spectrum) then
              call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, & 
-                                eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
-                                eigens%additional_terms, eigens%energy_change_threshold, &
-                                shift=eigens%spectrum_shift)
-
+               eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
+               eigens%additional_terms, eigens%energy_change_threshold, &
+               shift=eigens%spectrum_shift)
+             
            else
-              call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
-                                eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
-                                eigens%additional_terms, eigens%energy_change_threshold)
-
+             call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
+               eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
+               eigens%additional_terms, eigens%energy_change_threshold)
+             
            end if
         case(RS_PLAN)
           call zeigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
-          call zeigensolver_evolution(gr, st, hm, eigens%tolerance, maxiter, &
+          call zeigensolver_evolution(gr, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
           call zeigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &

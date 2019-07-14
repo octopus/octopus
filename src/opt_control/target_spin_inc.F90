@@ -19,8 +19,10 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_spin(tg)
+  subroutine target_init_spin(tg, parser)
     type(target_t),   intent(inout) :: tg
+    type(parser_t),   intent(in)    :: parser
+        
 
     type(block_t)       :: blk
     integer :: jst
@@ -38,8 +40,8 @@
     !%Description
     !% (Experimental) Specify the targeted spin as a 3-component vector. It will be normalized.
     !%End
-    if(parse_is_defined('OCTTargetSpin')) then
-      if(parse_block('OCTTargetSpin', blk) == 0) then
+    if(parse_is_defined(parser, 'OCTTargetSpin')) then
+      if(parse_block(parser, 'OCTTargetSpin', blk) == 0) then
         alpha = M_z0
         do jst = 1, parse_block_cols(blk, 0)
           call parse_block_cmplx(blk, 0, jst - 1, alpha(jst))

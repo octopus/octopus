@@ -87,6 +87,7 @@ module em_resp_calc_oct_m
   type(profile_t), save :: beta_prof
 
   type matrix_t
+    private
     FLOAT, pointer :: dmatrix(:, :)
     CMPLX, pointer :: zmatrix(:, :)
   end type matrix_t

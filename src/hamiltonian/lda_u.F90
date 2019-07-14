@@ -83,40 +83,43 @@ module lda_u_oct_m
 
 
   type lda_u_t
-    integer                  :: level
-    FLOAT, pointer           :: dn(:,:,:,:), dV(:,:,:,:) !> Occupation matrices and potentials 
-                                                         !> for the standard scheme
-    CMPLX, pointer           :: zn(:,:,:,:), zV(:,:,:,:)
-    FLOAT, pointer           :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
-    CMPLX, pointer           :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used  
+    private
+    integer,        public   :: level
+    FLOAT, pointer, public   :: dn(:,:,:,:) !> Occupation matrices for the standard scheme
+    FLOAT, pointer           :: dV(:,:,:,:) !> Potentials for the standard scheme
+
+    CMPLX, pointer, public   :: zn(:,:,:,:)
+    CMPLX, pointer           :: zV(:,:,:,:)
+    FLOAT, pointer, public   :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
+    CMPLX, pointer, public   :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used  
   
     FLOAT, pointer           :: drenorm_occ(:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)  
     CMPLX, pointer           :: zrenorm_occ(:,:,:,:,:)
  
     FLOAT, pointer           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
-                                                       !> (for the ACBN0 functional) 
+                                                   !> (for the ACBN0 functional) 
     CMPLX, pointer           :: zcoulomb(:,:,:,:,:,:,:) !>Coulomb integrals for all the system
                                                         !> (for the ACBN0 functional with spinors) 
 
-    type(orbitalbasis_t) :: basis               !> The full basis of localized orbitals
-    type(orbitalset_t), pointer :: orbsets(:)   !> All the orbital setss of the system
-    integer             :: norbsets
+    type(orbitalbasis_t),        public :: basis        !> The full basis of localized orbitals
+    type(orbitalset_t), pointer, public :: orbsets(:)   !> All the orbital setss of the system
+    integer,                     public :: norbsets
 
-    integer             :: nspins
-    integer             :: spin_channels
-    integer             :: nspecies        
-    integer             :: maxnorbs           !> Maximal number of orbitals for all the atoms
-    integer             :: max_np             !> Maximum number of points in all orbitals submesh spheres 
+    integer,              public :: nspins
+    integer,              public :: spin_channels
+    integer                      :: nspecies        
+    integer,              public :: maxnorbs           !> Maximal number of orbitals for all the atoms
+    integer                      :: max_np             !> Maximum number of points in all orbitals submesh spheres 
  
-    logical             :: useAllOrbitals     !> Do we use all atomic orbitals possible
-    logical             :: skipSOrbitals      !> Not using s orbitals
-    logical             :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
-    logical             :: freeze_u           !> U is not recomputed during TD evolution
-    logical             :: basisfromstates    !> We can construct the localized basis from user-defined states
-    FLOAT               :: acbn0_screening    !> We use or not the screening in the ACBN0 functional
-    integer, allocatable:: basisstates(:)
-    logical             :: rot_inv            !> Use a rotationally invariant formula for U and J (ACBN0 case)
-    integer             :: double_couting     !> Double-couting term 
+    logical                      :: useAllOrbitals     !> Do we use all atomic orbitals possible
+    logical                      :: skipSOrbitals      !> Not using s orbitals
+    logical                      :: freeze_occ         !> Occupation matrices are not recomputed during TD evolution
+    logical                      :: freeze_u           !> U is not recomputed during TD evolution
+    logical,              public :: basisfromstates    !> We can construct the localized basis from user-defined states
+    FLOAT                        :: acbn0_screening    !> We use or not the screening in the ACBN0 functional
+    integer, allocatable, public :: basisstates(:)
+    logical                      :: rot_inv            !> Use a rotationally invariant formula for U and J (ACBN0 case)
+    integer                      :: double_couting     !> Double-couting term 
 
     type(distributed_t) :: orbs_dist
   end type lda_u_t
@@ -174,222 +177,223 @@ contains
 
  end subroutine lda_u_nullify
 
- subroutine lda_u_init(this, level, gr, geo, st)
-  type(lda_u_t),             intent(inout) :: this
-  integer,                   intent(in)    :: level
-  type(grid_t),              intent(in)    :: gr
-  type(geometry_t), target,  intent(in)    :: geo
-  type(states_t),            intent(in)    :: st
+ subroutine lda_u_init(this, parser, level, gr, geo, st)
+   type(lda_u_t),             intent(inout) :: this
+   type(parser_t),            intent(in)    :: parser
+   integer,                   intent(in)    :: level
+   type(grid_t),              intent(in)    :: gr
+   type(geometry_t), target,  intent(in)    :: geo
+   type(states_t),            intent(in)    :: st
 
-  logical :: complex_coulomb_integrals
-  integer :: ios, is
-  type(block_t) :: blk
+   logical :: complex_coulomb_integrals
+   integer :: ios, is
+   type(block_t) :: blk
 
-  PUSH_SUB(lda_u_init)
+   PUSH_SUB(lda_u_init)
 
-  ASSERT(.not. (level == DFT_U_NONE))
+   ASSERT(.not. (level == DFT_U_NONE))
 
-  call messages_print_stress(stdout, "DFT+U")
-  if(gr%mesh%parallel_in_domains) call messages_experimental("dft+u parallel in domains")
-  this%level = level
-  
-  call lda_u_write_info(this, stdout)
+   call messages_print_stress(stdout, "DFT+U")
+   if(gr%mesh%parallel_in_domains) call messages_experimental("dft+u parallel in domains")
+   this%level = level
 
-  !%Variable DFTUBasisFromStates
-  !%Type logical
-  !%Default no
-  !%Section Hamiltonian::DFT+U
-  !%Description
-  !% If set to yes, Octopus will construct the localized basis from
-  !% user-defined states. The states are taken at the Gamma point (or the first k-point of the
-  !% states in the restart_proj folder.
-  !% The states are defined via the block DFTUBasisStates
-  !%End
-  call parse_variable('DFTUBasisFromStates', .false., this%basisfromstates)
-  if(this%basisfromstates) call messages_experimental("DFTUBasisFromStates") 
+   call lda_u_write_info(this, stdout)
 
-  !%Variable DFTUDoubleCounting
-  !%Type integer
-  !%Default dft_u_fll
-  !%Section Hamiltonian::DFT+U
-  !%Description
-  !% This variable selects which DFT+U
-  !% double counting term is used.
-  !%Option dft_u_fll 0
-  !% (Default) The Fully Localized Limit (FLL)
-  !%Option dft_u_amf 1
-  !% (Experimental) Around mean field double counting, as defined in PRB 44, 943 (1991) and PRB 49, 14211 (1994).
-  !%End
-  call parse_variable('DFTUDoubleCounting', DFT_U_FLL, this%double_couting)
-  call messages_print_var_option(stdout,  'DFTUDoubleCounting', this%double_couting)
-  if(this%double_couting /= DFT_U_FLL) call messages_experimental("DFTUDoubleCounting = dft_u_amf")
-  if(st%d%ispin == SPINORS .and. this%double_couting /= DFT_U_FLL) then
-    call messages_not_implemented("AMF double couting with spinors.")
-  end if
+   !%Variable DFTUBasisFromStates
+   !%Type logical
+   !%Default no
+   !%Section Hamiltonian::DFT+U
+   !%Description
+   !% If set to yes, Octopus will construct the localized basis from
+   !% user-defined states. The states are taken at the Gamma point (or the first k-point of the
+   !% states in the restart_proj folder.
+   !% The states are defined via the block DFTUBasisStates
+   !%End
+   call parse_variable(parser, 'DFTUBasisFromStates', .false., this%basisfromstates)
+   if(this%basisfromstates) call messages_experimental("DFTUBasisFromStates") 
 
-  if( this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
-    !%Variable UseAllAtomicOrbitals
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian::DFT+U
-    !%Description
-    !% If set to yes, Octopus will determine the effective U for all atomic orbitals
-    !% from the peusopotential. Only available with ACBN0 functional.
-    !% It is strongly recommended to set AOLoewdin=yes when using the option.
-    !%End
-    call parse_variable('UseAllAtomicOrbitals', .false., this%useAllOrbitals)
-    if(this%useAllOrbitals) call messages_experimental("UseAllAtomicOrbitals")
+   !%Variable DFTUDoubleCounting
+   !%Type integer
+   !%Default dft_u_fll
+   !%Section Hamiltonian::DFT+U
+   !%Description
+   !% This variable selects which DFT+U
+   !% double counting term is used.
+   !%Option dft_u_fll 0
+   !% (Default) The Fully Localized Limit (FLL)
+   !%Option dft_u_amf 1
+   !% (Experimental) Around mean field double counting, as defined in PRB 44, 943 (1991) and PRB 49, 14211 (1994).
+   !%End
+   call parse_variable(parser, 'DFTUDoubleCounting', DFT_U_FLL, this%double_couting)
+   call messages_print_var_option(stdout,  'DFTUDoubleCounting', this%double_couting)
+   if(this%double_couting /= DFT_U_FLL) call messages_experimental("DFTUDoubleCounting = dft_u_amf")
+   if(st%d%ispin == SPINORS .and. this%double_couting /= DFT_U_FLL) then
+     call messages_not_implemented("AMF double couting with spinors.")
+   end if
 
-    !%Variable SkipSOrbitals
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian::DFT+U
-    !%Description
-    !% If set to yes, Octopus will determine the effective U for all atomic orbitals
-    !% from the peusopotential but s orbitals. Only available with ACBN0 functional.
-    !%End
-    call parse_variable('SkipSOrbitals', .true., this%skipSOrbitals)   
-    if(.not.this%SkipSOrbitals) call messages_experimental("SkipSOrbitals")
+   if( this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
+     !%Variable UseAllAtomicOrbitals
+     !%Type logical
+     !%Default no
+     !%Section Hamiltonian::DFT+U
+     !%Description
+     !% If set to yes, Octopus will determine the effective U for all atomic orbitals
+     !% from the peusopotential. Only available with ACBN0 functional.
+     !% It is strongly recommended to set AOLoewdin=yes when using the option.
+     !%End
+     call parse_variable(parser, 'UseAllAtomicOrbitals', .false., this%useAllOrbitals)
+     if(this%useAllOrbitals) call messages_experimental("UseAllAtomicOrbitals")
 
-    !%Variable ACBN0Screening
-    !%Type float
-    !%Default 1.0
-    !%Section Hamiltonian::DFT+U
-    !%Description
-    !% If set to 0, no screening will be included in the ACBN0 functional, and the U 
-    !% will be estimated from bare Hartree-Fock. If set to 1 (default), the full screening
-    !% of the U, as defined in the ACBN0 functional, is used.
-    !%End
-    call parse_variable('ACBN0Screening', M_ONE, this%acbn0_screening)
-    call messages_print_var_value(stdout, 'ACBN0Screening', this%acbn0_screening)
+     !%Variable SkipSOrbitals
+     !%Type logical
+     !%Default no
+     !%Section Hamiltonian::DFT+U
+     !%Description
+     !% If set to yes, Octopus will determine the effective U for all atomic orbitals
+     !% from the peusopotential but s orbitals. Only available with ACBN0 functional.
+     !%End
+     call parse_variable(parser, 'SkipSOrbitals', .true., this%skipSOrbitals)   
+     if(.not.this%SkipSOrbitals) call messages_experimental("SkipSOrbitals")
 
-    !%Variable ACBN0RotationallyInvariant
-    !%Type logical
-    !%Section Hamiltonian::DFT+U
-    !%Description
-    !% If set to yes, Octopus will use for U and J a formula which is rotationally invariant.
-    !% This is different from the original formula for U and J.
-    !% This is activated by default, except in the case of spinors, as this is not yet implemented in this case.
-    !%End
-    call parse_variable('ACBN0RotationallyInvariant', st%d%ispin /= SPINORS, this%rot_inv)
-    call messages_print_var_value(stdout, 'ACBN0RotationallyInvariant', this%rot_inv)
-    if(this%rot_inv .and. st%d%ispin == SPINORS ) then
-      call messages_not_implemented("Rotationally invariant ACBN0 with spinors.")
-    end if
+     !%Variable ACBN0Screening
+     !%Type float
+     !%Default 1.0
+     !%Section Hamiltonian::DFT+U
+     !%Description
+     !% If set to 0, no screening will be included in the ACBN0 functional, and the U 
+     !% will be estimated from bare Hartree-Fock. If set to 1 (default), the full screening
+     !% of the U, as defined in the ACBN0 functional, is used.
+     !%End
+     call parse_variable(parser, 'ACBN0Screening', M_ONE, this%acbn0_screening)
+     call messages_print_var_value(stdout, 'ACBN0Screening', this%acbn0_screening)
 
-  end if
+     !%Variable ACBN0RotationallyInvariant
+     !%Type logical
+     !%Section Hamiltonian::DFT+U
+     !%Description
+     !% If set to yes, Octopus will use for U and J a formula which is rotationally invariant.
+     !% This is different from the original formula for U and J.
+     !% This is activated by default, except in the case of spinors, as this is not yet implemented in this case.
+     !%End
+     call parse_variable(parser, 'ACBN0RotationallyInvariant', st%d%ispin /= SPINORS, this%rot_inv)
+     call messages_print_var_value(stdout, 'ACBN0RotationallyInvariant', this%rot_inv)
+     if(this%rot_inv .and. st%d%ispin == SPINORS ) then
+       call messages_not_implemented("Rotationally invariant ACBN0 with spinors.")
+     end if
 
-  if(.not.this%basisfromstates) then
+   end if
 
-    call orbitalbasis_init(this%basis)
+   if(.not.this%basisfromstates) then
 
-    if (states_are_real(st)) then
-      call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
-                               this%skipSOrbitals, this%useAllOrbitals)
-    else
-      call zorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
-                             this%skipSOrbitals, this%useAllOrbitals)
-    end if
-    this%orbsets => this%basis%orbsets
-    this%norbsets = this%basis%norbsets
-    this%maxnorbs = this%basis%maxnorbs
-    this%max_np = this%basis%max_np
-    this%nspins = st%d%nspin
-    this%spin_channels = st%d%spin_channels
-    this%nspecies = geo%nspecies
+     call orbitalbasis_init(this%basis, parser)
 
-    !We allocate the necessary ressources
-    if (states_are_real(st)) then
-      call dlda_u_allocate(this, st)
-    else
-      call zlda_u_allocate(this, st)
-    end if
+     if (states_are_real(st)) then
+       call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
+         this%skipSOrbitals, this%useAllOrbitals)
+     else
+       call zorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
+         this%skipSOrbitals, this%useAllOrbitals)
+     end if
+     this%orbsets => this%basis%orbsets
+     this%norbsets = this%basis%norbsets
+     this%maxnorbs = this%basis%maxnorbs
+     this%max_np = this%basis%max_np
+     this%nspins = st%d%nspin
+     this%spin_channels = st%d%spin_channels
+     this%nspecies = geo%nspecies
 
-    call distributed_nullify(this%orbs_dist, this%norbsets)
-   #ifdef HAVE_MPI
-    if(.not. gr%mesh%parallel_in_domains) then
-      call distributed_init(this%orbs_dist, this%norbsets, MPI_COMM_WORLD, "orbsets")
-    end if
-   #endif 
+     !We allocate the necessary ressources
+     if (states_are_real(st)) then
+       call dlda_u_allocate(this, st)
+     else
+       call zlda_u_allocate(this, st)
+     end if
 
-
-    if( this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV ) then
- 
-      complex_coulomb_integrals = .false.
-      do ios = 1, this%norbsets
-          if(this%orbsets(ios)%ndim  > 1) complex_coulomb_integrals = .true.
-      end do
-
-      call messages_info(1)
-      if(.not. complex_coulomb_integrals) then 
-        write(message(1),'(a)')    'Computing the Coulomb integrals of the localized basis.'
-        if (states_are_real(st)) then
-          call dcompute_coulomb_integrals(this, gr%mesh, gr%der)
-        else
-          call zcompute_coulomb_integrals(this, gr%mesh, gr%der)
-        end if
-      else
-        ASSERT(.not.states_are_real(st))
-        write(message(1),'(a)')    'Computing complex Coulomb integrals of the localized basis.'
-        call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st)
-      end if
-    end if
-
-  else
-
-    !%Variable DFTUBasisStates
-    !%Type block
-    !%Default none
-    !%Section Hamiltonian::DFT+U
-    !%Description
-    !% Each line of this block contains the index of a state to be used to construct the 
-    !% localized basis. See DFTUBasisFromStates for details.
-    !%End
-    if(parse_block('DFTUBasisStates', blk) == 0) then
-      this%norbsets = 1
-      this%maxnorbs = parse_block_n(blk) 
-      if(this%maxnorbs <1) then
-        write(message(1),'(a,i3,a,i3)') 'DFTUBasisStates must contains at least one state.'
-        call messages_fatal(1)
-      end if
-      SAFE_ALLOCATE(this%basisstates(1:this%maxnorbs))
-      do is = 1, this%maxnorbs
-        call parse_block_integer(blk, is-1, 0, this%basisstates(is))
-      end do
-      call parse_block_end(blk)
-    else
-      write(message(1),'(a,i3,a,i3)') 'DFTUBasisStates must be specified if DFTUBasisFromStates=yes'
-      call messages_fatal(1)
-    end if
-
-    if (states_are_real(st)) then
-      call dorbitalbasis_build_empty(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, this%maxnorbs)
-    else
-      call zorbitalbasis_build_empty(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, this%maxnorbs)
-    end if
-
-    this%max_np = gr%mesh%np
-    this%nspins = st%d%nspin
-    this%spin_channels = st%d%spin_channels
-    this%nspecies = 1
-
-    this%orbsets => this%basis%orbsets
-
-    call distributed_nullify(this%orbs_dist, this%norbsets)
+     call distributed_nullify(this%orbs_dist, this%norbsets)
+#ifdef HAVE_MPI
+     if(.not. gr%mesh%parallel_in_domains) then
+       call distributed_init(this%orbs_dist, this%norbsets, MPI_COMM_WORLD, "orbsets")
+     end if
+#endif 
 
 
-    !We allocate the necessary ressources
-    if (states_are_real(st)) then
-      call dlda_u_allocate(this, st)
-    else
-      call zlda_u_allocate(this, st)
-    end if
+     if(this%level == DFT_U_ACBN0 .or. this%level == DFT_U_ACBN0_REV) then
 
-  end if
+       complex_coulomb_integrals = .false.
+       do ios = 1, this%norbsets
+         if(this%orbsets(ios)%ndim  > 1) complex_coulomb_integrals = .true.
+       end do
 
-  call messages_print_stress(stdout)
+       call messages_info(1)
+       if(.not. complex_coulomb_integrals) then 
+         write(message(1),'(a)')    'Computing the Coulomb integrals of the localized basis.'
+         if (states_are_real(st)) then
+           call dcompute_coulomb_integrals(this, parser, gr%mesh, gr%der)
+         else
+           call zcompute_coulomb_integrals(this, parser, gr%mesh, gr%der)
+         end if
+       else
+         ASSERT(.not.states_are_real(st))
+         write(message(1),'(a)')    'Computing complex Coulomb integrals of the localized basis.'
+         call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st)
+       end if
+     end if
 
-  POP_SUB(lda_u_init)
+   else
+
+     !%Variable DFTUBasisStates
+     !%Type block
+     !%Default none
+     !%Section Hamiltonian::DFT+U
+     !%Description
+     !% Each line of this block contains the index of a state to be used to construct the 
+     !% localized basis. See DFTUBasisFromStates for details.
+     !%End
+     if(parse_block(parser, 'DFTUBasisStates', blk) == 0) then
+       this%norbsets = 1
+       this%maxnorbs = parse_block_n(blk) 
+       if(this%maxnorbs <1) then
+         write(message(1),'(a,i3,a,i3)') 'DFTUBasisStates must contains at least one state.'
+         call messages_fatal(1)
+       end if
+       SAFE_ALLOCATE(this%basisstates(1:this%maxnorbs))
+       do is = 1, this%maxnorbs
+         call parse_block_integer(blk, is-1, 0, this%basisstates(is))
+       end do
+       call parse_block_end(blk)
+     else
+       write(message(1),'(a,i3,a,i3)') 'DFTUBasisStates must be specified if DFTUBasisFromStates=yes'
+       call messages_fatal(1)
+     end if
+
+     if (states_are_real(st)) then
+       call dorbitalbasis_build_empty(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, this%maxnorbs)
+     else
+       call zorbitalbasis_build_empty(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, this%maxnorbs)
+     end if
+
+     this%max_np = gr%mesh%np
+     this%nspins = st%d%nspin
+     this%spin_channels = st%d%spin_channels
+     this%nspecies = 1
+
+     this%orbsets => this%basis%orbsets
+
+     call distributed_nullify(this%orbs_dist, this%norbsets)
+
+
+     !We allocate the necessary ressources
+     if (states_are_real(st)) then
+       call dlda_u_allocate(this, st)
+     else
+       call zlda_u_allocate(this, st)
+     end if
+
+   end if
+
+   call messages_print_stress(stdout)
+
+   POP_SUB(lda_u_init)
  end subroutine lda_u_init
 
 
@@ -521,8 +525,9 @@ contains
 
  end subroutine lda_u_build_phase_correction
 
- subroutine lda_u_periodic_coulomb_integrals(this, st, der, mc, has_phase)
+ subroutine lda_u_periodic_coulomb_integrals(this, parser, st, der, mc, has_phase)
    type(lda_u_t),                 intent(inout) :: this
+   type(parser_t),                intent(in)    :: parser
    type(states_t),                intent(in)    :: st
    type(derivatives_t),           intent(in)    :: der
    type(multicomm_t),             intent(in)    :: mc
@@ -537,9 +542,9 @@ contains
    PUSH_SUB(lda_u_periodic_coulomb_integrals)
 
    if(states_are_real(st)) then
-     call dcompute_periodic_coulomb_integrals(this, der, mc)
+     call dcompute_periodic_coulomb_integrals(this, parser, der, mc)
    else
-     call zcompute_periodic_coulomb_integrals(this, der, mc)
+     call zcompute_periodic_coulomb_integrals(this, parser, der, mc)
    end if
 
   ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials

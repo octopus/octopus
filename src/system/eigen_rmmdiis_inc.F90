@@ -30,7 +30,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   FLOAT,                  intent(out)   :: diff(:) !< (1:st%nst)
 
   R_TYPE, allocatable :: mm(:, :, :, :), evec(:, :, :), finalpsi(:)
-  R_TYPE, allocatable :: eigen(:), nrmsq(:)
+  R_TYPE, allocatable :: eigen(:), nrmsq(:), eigen_full(:)
   FLOAT,  allocatable :: eval(:, :)
   FLOAT,  allocatable :: lambda(:)
   integer :: ist, minst, idim, ii, iter, nops, maxst, jj, bsize, ib, jter, kter, prog
@@ -297,6 +297,9 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   call X(states_orthogonalization_full)(st, gr%mesh, ik)
 
   ! recalculate the eigenvalues and residuals
+  SAFE_ALLOCATE(eigen_full(1:st%nst))
+  eigen_full(1:st%nst) = R_TOTYPE(M_ZERO)
+
   do ib = st%group%block_start, st%group%block_end
     minst = states_block_min(st, ib)
     maxst = states_block_max(st, ib)
@@ -315,9 +318,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     
     call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), st%group%psib(ib, ik), resb(1)%batch)
     
-    call X(mesh_batch_dotp_vector)(gr%der%mesh, resb(1)%batch, resb(1)%batch, eigen)
-    
-    diff(minst:maxst) = sqrt(abs(eigen(1:maxst - minst + 1)))
+    call X(mesh_batch_dotp_vector)(gr%der%mesh, resb(1)%batch, resb(1)%batch, eigen_full(minst:maxst), reduce = .false.)
     
     call batch_end(resb(1)%batch)
 
@@ -325,6 +326,11 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     
     nops = nops + maxst - minst + 1
   end do
+
+  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, eigen_full)
+
+  diff(:) = sqrt(abs(eigen_full(:)))
+  SAFE_DEALLOCATE_A(eigen_full)
   
   converged = converged + count(diff(:) <= tol)
 

@@ -18,8 +18,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_density(gr, tg, stin, td, restart)
+  subroutine target_init_density(gr, parser, tg, stin, td, restart)
     type(grid_t),     intent(in)    :: gr
+    type(parser_t),   intent(in)    :: parser
     type(target_t),   intent(inout) :: tg
     type(states_t),   intent(inout) :: stin 
     type(td_t),       intent(in)    :: td
@@ -68,18 +69,18 @@
     !% The syntax is the same as the <tt>TransformStates</tt> block.
     !%End
 
-    if(parse_is_defined('OCTTargetDensity')) then
+    if(parse_is_defined(parser, 'OCTTargetDensity')) then
       tg%density_weight = M_ONE
       SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
       tg%rho = M_ZERO
-      call parse_variable('OCTTargetDensity', "0", expression)
+      call parse_variable(parser, 'OCTTargetDensity', "0", expression)
 
       if(trim(expression)  ==  'OCTTargetDensityFromState') then
 
-        if(parse_block('OCTTargetDensityFromState', blk) == 0) then
+        if(parse_block(parser, 'OCTTargetDensityFromState', blk) == 0) then
           call states_copy(tmp_st, tg%st)
           call states_deallocate_wfns(tmp_st)
-          call states_look_and_load(restart, tmp_st, gr)
+          call states_look_and_load(restart, parser, tmp_st, gr)
 
           SAFE_ALLOCATE(rotation_matrix(1:tmp_st%nst, 1:tmp_st%nst))
 
@@ -223,7 +224,7 @@
       !% with <tt>startpoint  <  endpoint</tt>. <tt>dimension > 0</tt> is integer, <tt>fact</tt> is float.
       !%End
 
-    call parse_variable('OCTCurrentFunctional', oct_no_curr, tg%curr_functional)
+    call parse_variable(parser, 'OCTCurrentFunctional', oct_no_curr, tg%curr_functional)
     select case(tg%curr_functional)
     case(oct_no_curr)
     case(oct_curr_square, oct_max_curr_ring, oct_curr_square_td)
@@ -233,13 +234,13 @@
       end if
     end select
 
-    call parse_variable('OCTCurrentWeight', M_ZERO, tg%curr_weight)
+    call parse_variable(parser, 'OCTCurrentWeight', M_ZERO, tg%curr_weight)
     write(message(1), '(a,i3)')   'Info: OCTCurrentFunctional = ', tg%curr_functional
     write(message(2), '(a,f8.3)') 'Info: OCTCurrentWeight = ',  tg%curr_weight
     call messages_info(2)
 
     if (target_mode(tg)  ==  oct_targetmode_td) then
-      call parse_variable('OCTStartIterCurrTg', 0, tg%strt_iter_curr_tg)
+      call parse_variable(parser, 'OCTStartIterCurrTg', 0, tg%strt_iter_curr_tg)
       if (tg%strt_iter_curr_tg  <  0) then
         message(1) = 'OCTStartIterCurrTg must be positive.'
         call messages_fatal(1)
@@ -257,8 +258,8 @@
       tg%strt_iter_curr_tg = 0
     end if
 
-    if(parse_is_defined('OCTSpatialCurrWeight')) then
-      if(parse_block('OCTSpatialCurrWeight', blk) == 0) then
+    if(parse_is_defined(parser, 'OCTSpatialCurrWeight')) then
+      if(parse_block(parser, 'OCTSpatialCurrWeight', blk) == 0) then
         SAFE_ALLOCATE(tg%spatial_curr_wgt(1:gr%mesh%np_part))
         SAFE_ALLOCATE(xp(1:gr%mesh%np_part))
         SAFE_ALLOCATE(tmp_box(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))

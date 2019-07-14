@@ -66,8 +66,9 @@ module double_grid_oct_m
 
 contains
 
-  subroutine double_grid_init(this, sb)
+  subroutine double_grid_init(this, parser, sb)
     type(double_grid_t), intent(out) :: this
+    type(parser_t),      intent(in)  :: parser
     type(simul_box_t),   intent(in)  :: sb
 
     PUSH_SUB(double_grid_init)
@@ -85,7 +86,7 @@ contains
     !% pseudopotentials. This is experimental, especially in parallel.
     !%End
     if (sb%dim == 3) then 
-      call parse_variable('DoubleGrid', .false., this%use_double_grid)
+      call parse_variable(parser, 'DoubleGrid', .false., this%use_double_grid)
     else
       this%use_double_grid = .false.
     end if
@@ -101,7 +102,7 @@ contains
     !% an odd number. Low-order interpolation schemes are not
     !% recommended.
     !%End
-    call parse_variable('DoubleGridOrder', 9, this%order)
+    call parse_variable(parser, 'DoubleGridOrder', 9, this%order)
     
     ASSERT(mod(this%order,2) == 1)
     

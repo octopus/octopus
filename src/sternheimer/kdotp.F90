@@ -57,6 +57,7 @@ module kdotp_oct_m
        int2str      
 
   type kdotp_t
+    private
     type(pert_t) :: perturbation
     type(pert_t) :: perturbation2
 
@@ -80,9 +81,8 @@ module kdotp_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine kdotp_lr_run(sys, hm, fromScratch)
+  subroutine kdotp_lr_run(sys, fromScratch)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: hm
     logical,             intent(inout) :: fromScratch
 
     type(kdotp_t)           :: kdotp_vars
@@ -100,7 +100,7 @@ contains
 
     call messages_experimental("k.p perturbation and calculation of effective masses")
 
-    if(hm%theory_level == HARTREE_FOCK) then
+    if(sys%hm%theory_level == HARTREE_FOCK) then
       call messages_not_implemented('Commutator of Fock operator')
     end if
 
@@ -116,23 +116,23 @@ contains
     kdotp_vars%eff_mass_inv(:,:,:,:) = 0 
     kdotp_vars%velocity(:,:,:) = 0 
 
-    call pert_init(kdotp_vars%perturbation, PERTURBATION_KDOTP, sys%gr, sys%geo)
+    call pert_init(kdotp_vars%perturbation, sys%parser, PERTURBATION_KDOTP, sys%gr, sys%geo)
     SAFE_ALLOCATE(kdotp_vars%lr(1:1, 1:pdim))
 
     call parse_input()
 
     if(calc_2nd_order) then
-      call pert_init(kdotp_vars%perturbation2, PERTURBATION_NONE, sys%gr, sys%geo)
-      call pert_init(pert2, PERTURBATION_KDOTP, sys%gr, sys%geo)
+      call pert_init(kdotp_vars%perturbation2, sys%parser, PERTURBATION_NONE, sys%gr, sys%geo)
+      call pert_init(pert2, sys%parser, PERTURBATION_KDOTP, sys%gr, sys%geo)
       call pert_setup_dir(kdotp_vars%perturbation2, 1) ! direction is irrelevant
       SAFE_ALLOCATE(kdotp_vars%lr2(1:1, 1:pdim, 1:pdim))
     end if
 
     !Read ground-state wavefunctions
     complex_response = (kdotp_vars%eta /= M_ZERO ) .or. states_are_complex(sys%st)
-    call restart_init(restart_load, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+    call restart_init(restart_load, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_look_and_load(restart_load, sys%st, sys%gr, is_complex = complex_response)
+      call states_look_and_load(restart_load, sys%parser, sys%st, sys%gr, is_complex = complex_response)
       call restart_end(restart_load)
     else
       message(1) = "A previous gs calculation is required."
@@ -146,14 +146,14 @@ contains
     ! Start restart. Note: we are going to use the same directory to read and write.
     ! Therefore, restart_dump must be initialized first to make sure the directory
     ! exists when we initialize restart_load.
-    call restart_init(restart_dump, RESTART_KDOTP, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
+    call restart_init(restart_dump, sys%parser, RESTART_KDOTP, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
     ! no problem if this fails
-    call restart_init(restart_load, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
+    call restart_init(restart_load, sys%parser, RESTART_KDOTP, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
-    call system_h_setup(sys, hm)
+    call system_h_setup(sys)
     
     if(states_are_real(sys%st)) then
       message(1) = 'Info: Using real wavefunctions.'
@@ -168,7 +168,7 @@ contains
     if(states_are_real(sys%st)) then
       kdotp_vars%velocity(:,:,:) = M_ZERO
     else
-      call zcalc_band_velocity(sys, hm, kdotp_vars%perturbation, kdotp_vars%velocity(:,:,:))
+      call zcalc_band_velocity(sys, kdotp_vars%perturbation, kdotp_vars%velocity(:,:,:))
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
@@ -176,13 +176,13 @@ contains
       call kdotp_write_band_velocity(sys%st, pdim, kdotp_vars%velocity(:,:,:))
     end if
 
-    call sternheimer_obsolete_variables('KdotP_', 'KdotP')
-    call sternheimer_init(sh, sys, hm, complex_response, set_ham_var = 0, &
+    call sternheimer_obsolete_variables(sys%parser, 'KdotP_', 'KdotP')
+    call sternheimer_init(sh, sys, complex_response, set_ham_var = 0, &
       set_occ_response = (kdotp_vars%occ_solution_method == 0), set_last_occ_response = (kdotp_vars%occ_solution_method == 0), &
       occ_response_by_sternheimer = .true.)
     ! ham_var_set = 0 results in HamiltonianVariation = V_ext_only
     if(calc_2nd_order) then
-      call sternheimer_init(sh2, sys, hm, complex_response, set_ham_var = 0, &
+      call sternheimer_init(sh2, sys, complex_response, set_ham_var = 0, &
         set_occ_response = .false., set_last_occ_response = .false.)
     end if
 
@@ -201,7 +201,7 @@ contains
       if(.not. fromScratch) then
         str_tmp = kdotp_wfs_tag(idir)
         call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, 1), ierr)
-        if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(1, idir))
+        if (ierr == 0) call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr, lr=kdotp_vars%lr(1, idir))
         call restart_close_dir(restart_load)
           
         if(ierr /= 0) then
@@ -213,7 +213,7 @@ contains
           do idir2 = idir, pdim
             str_tmp = kdotp_wfs_tag(idir, idir2)
             call restart_open_dir(restart_load, wfs_tag_sigma(str_tmp, 1), ierr)
-            if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
+            if (ierr == 0) call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr, lr=kdotp_vars%lr2(1, idir, idir2))
             call restart_close_dir(restart_load)
           
             if(ierr /= 0) then
@@ -238,17 +238,17 @@ contains
       call pert_setup_dir(kdotp_vars%perturbation, idir)
 
       if(states_are_real(sys%st)) then
-        call dsternheimer_solve(sh, sys, hm, kdotp_vars%lr(1:1, idir), 1, &
+        call dsternheimer_solve(sh, sys, kdotp_vars%lr(1:1, idir), 1, &
           M_ZERO, kdotp_vars%perturbation, restart_dump, &
           "", kdotp_wfs_tag(idir), have_restart_rho = .false.)
         if(kdotp_vars%occ_solution_method == 1) &
-          call dkdotp_add_occ(sys, hm, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
+          call dkdotp_add_occ(sys, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
       else
-        call zsternheimer_solve(sh, sys, hm, kdotp_vars%lr(1:1, idir), 1, &
+        call zsternheimer_solve(sh, sys, kdotp_vars%lr(1:1, idir), 1, &
           M_zI * kdotp_vars%eta, kdotp_vars%perturbation, restart_dump, &
           "", kdotp_wfs_tag(idir), have_restart_rho = .false.)
         if(kdotp_vars%occ_solution_method == 1) &
-          call zkdotp_add_occ(sys, hm, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
+          call zkdotp_add_occ(sys, kdotp_vars%perturbation, kdotp_vars%lr(1, idir), kdotp_vars%degen_thres)
       end if
 
       kdotp_vars%ok = kdotp_vars%ok .and. sternheimer_has_converged(sh)         
@@ -281,12 +281,12 @@ contains
           call pert_setup_dir(pert2, idir2)
 
           if(states_are_real(sys%st)) then
-            call dsternheimer_solve_order2(sh, sh, sh2, sys, hm, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
+            call dsternheimer_solve_order2(sh, sh, sh2, sys, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
               1, M_ZERO, M_ZERO, kdotp_vars%perturbation, pert2, &
               kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, restart_dump, "", kdotp_wfs_tag(idir, idir2), &
               have_restart_rho = .false., have_exact_freq = .true.)
           else
-            call zsternheimer_solve_order2(sh, sh, sh2, sys, hm, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
+            call zsternheimer_solve_order2(sh, sh, sh2, sys, kdotp_vars%lr(1:1, idir), kdotp_vars%lr(1:1, idir2), &
               1, M_zI * kdotp_vars%eta, M_zI * kdotp_vars%eta, kdotp_vars%perturbation, pert2, &
               kdotp_vars%lr2(1:1, idir, idir2), kdotp_vars%perturbation2, restart_dump, "", kdotp_wfs_tag(idir, idir2), &
               have_restart_rho = .false., have_exact_freq = .true.)
@@ -304,10 +304,10 @@ contains
       call messages_info(1)
 
       if(states_are_real(sys%st)) then
-        call dcalc_eff_mass_inv(sys, hm, kdotp_vars%lr, kdotp_vars%perturbation, &
+        call dcalc_eff_mass_inv(sys, kdotp_vars%lr, kdotp_vars%perturbation, &
           kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
       else
-        call zcalc_eff_mass_inv(sys, hm, kdotp_vars%lr, kdotp_vars%perturbation, &
+        call zcalc_eff_mass_inv(sys, kdotp_vars%lr, kdotp_vars%perturbation, &
           kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
       end if
 
@@ -369,9 +369,9 @@ contains
       !% evaluate the contributions in the occupied subspace.
       !%End
 
-      call messages_obsolete_variable('KdotP_OccupiedSolutionMethod', 'KdotPOccupiedSolutionMethod')
+      call messages_obsolete_variable(sys%parser, 'KdotP_OccupiedSolutionMethod', 'KdotPOccupiedSolutionMethod')
 
-      call parse_variable('KdotPOccupiedSolutionMethod', 0, kdotp_vars%occ_solution_method)
+      call parse_variable(sys%parser, 'KdotPOccupiedSolutionMethod', 0, kdotp_vars%occ_solution_method)
       if(kdotp_vars%occ_solution_method == 1 .and. .not. smear_is_semiconducting(sys%st%smear)) then
         call messages_not_implemented('KdotPOccupiedSolutionMethod = sum_over_states for non-semiconducting smearing')
       end if
@@ -384,7 +384,7 @@ contains
       !% States with energy <math>E_i</math> and <math>E_j</math> will be considered degenerate
       !% if <math> \left| E_i - E_j \right| < </math><tt>DegeneracyThreshold</tt>.
       !%End
-      call parse_variable('DegeneracyThreshold', units_from_atomic(units_inp%energy, CNST(1e-5)), kdotp_vars%degen_thres)
+      call parse_variable(sys%parser, 'DegeneracyThreshold', units_from_atomic(units_inp%energy, CNST(1e-5)), kdotp_vars%degen_thres)
       kdotp_vars%degen_thres = units_to_atomic(units_inp%energy, kdotp_vars%degen_thres)
 
       !%Variable KdotPEta
@@ -395,8 +395,8 @@ contains
       !% Imaginary frequency added to Sternheimer equation which may improve convergence.
       !% Not recommended.
       !%End
-      call messages_obsolete_variable('KdotP_Eta', 'KdotPEta')
-      call parse_variable('KdotPEta', M_ZERO, kdotp_vars%eta)
+      call messages_obsolete_variable(sys%parser, 'KdotP_Eta', 'KdotPEta')
+      call parse_variable(sys%parser, 'KdotPEta', M_ZERO, kdotp_vars%eta)
       kdotp_vars%eta = units_to_atomic(units_inp%energy, kdotp_vars%eta)
 
       !%Variable KdotPCalculateEffectiveMasses
@@ -407,8 +407,8 @@ contains
       !% If true, uses <tt>kdotp</tt> perturbations of ground-state wavefunctions
       !% to calculate effective masses. It is not correct for degenerate states.
       !%End      
-      call messages_obsolete_variable('KdotP_CalculateEffectiveMasses', 'KdotPCalculateEffectiveMasses')
-      call parse_variable('KdotPCalculateEffectiveMasses', .true., calc_eff_mass)
+      call messages_obsolete_variable(sys%parser, 'KdotP_CalculateEffectiveMasses', 'KdotPCalculateEffectiveMasses')
+      call parse_variable(sys%parser, 'KdotPCalculateEffectiveMasses', .true., calc_eff_mass)
 
       !%Variable KdotPCalcSecondOrder
       !%Type logical
@@ -419,7 +419,7 @@ contains
       !% Note that the second derivative of the Hamiltonian is NOT included in this calculation.
       !% This is needed for a subsequent run in <tt>CalculationMode = em_resp</tt> with <tt>EMHyperpol</tt>.
       !%End      
-      call parse_variable('KdotPCalcSecondOrder', .false., calc_2nd_order)
+      call parse_variable(sys%parser, 'KdotPCalcSecondOrder', .false., calc_2nd_order)
 
       POP_SUB(kdotp_lr_run.parse_input)
 

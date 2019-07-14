@@ -19,8 +19,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_hhg(tg, td, w0)
+  subroutine target_init_hhg(tg, parser, td, w0)
     type(target_t),   intent(inout) :: tg
+    type(parser_t),   intent(in)    :: parser
     type(td_t),       intent(in)    :: td
     FLOAT,            intent(in)    :: w0
 
@@ -63,8 +64,8 @@
     !% <br>%</tt>
     !%
     !%End
-    if(parse_is_defined('OCTOptimizeHarmonicSpectrum')) then
-      if(parse_block('OCTOptimizeHarmonicSpectrum', blk) == 0) then
+    if(parse_is_defined(parser, 'OCTOptimizeHarmonicSpectrum')) then
+      if(parse_block(parser, 'OCTOptimizeHarmonicSpectrum', blk) == 0) then
         tg%hhg_nks = parse_block_cols(blk, 0)
         SAFE_ALLOCATE(    tg%hhg_k(1:tg%hhg_nks))
         SAFE_ALLOCATE(tg%hhg_alpha(1:tg%hhg_nks))
@@ -97,8 +98,9 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_hhgnew(gr, tg, td, geo, ep)
+  subroutine target_init_hhgnew(gr, parser, tg, td, geo, ep)
     type(grid_t),     intent(in)    :: gr
+    type(parser_t),   intent(in)    :: parser
     type(target_t),   intent(inout) :: tg
     type(td_t),       intent(in)    :: td
     type(geometry_t), intent(in)    :: geo
@@ -137,7 +139,7 @@
 
     vl(:) = M_ZERO
     vl_grad(:,:) = M_ZERO
-    call epot_local_potential(ep, gr%der, gr%dgrid, geo, 1, vl)
+    call epot_local_potential(ep, parser, gr%der, gr%dgrid, geo, 1, vl)
     call dderivatives_grad(gr%der, vl, vl_grad)
     forall(ist=1:gr%mesh%np, jst=1:gr%sb%dim)
       tg%grad_local_pot(1, ist, jst) = vl_grad(ist, jst)
@@ -163,7 +165,7 @@
     !% In practice, it is better if you also set an upper limit, <i>e.g.</i>
     !% <math>f(\omega) = step(\omega-1) step(2-\omega)</math>.
     !%End
-    call parse_variable('OCTHarmonicWeight', '1', tg%plateau_string)
+    call parse_variable(parser, 'OCTHarmonicWeight', '1', tg%plateau_string)
     tg%dt = td%dt
     SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))
     tg%td_fitness = M_ZERO
@@ -201,8 +203,9 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_hhg(tg, gr, dir, geo, hm, outp)
+  subroutine target_output_hhg(tg, parser, gr, dir, geo, hm, outp)
     type(target_t),      intent(in) :: tg
+    type(parser_t),      intent(in) :: parser
     type(grid_t),        intent(in) :: gr
     character(len=*),    intent(in) :: dir
     type(geometry_t),    intent(in) :: geo
@@ -212,7 +215,7 @@
     PUSH_SUB(target_output_hhg)
     
     call io_mkdir(trim(dir))
-    call output_states(tg%st, gr, geo, hm, trim(dir), outp)
+    call output_states(tg%st, parser, gr, geo, hm, trim(dir), outp)
 
     POP_SUB(target_output_hhg)
   end subroutine target_output_hhg
@@ -241,9 +244,10 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  FLOAT function target_j1_hhg(tg) result(j1)
+  FLOAT function target_j1_hhg(tg, parser) result(j1)
     type(target_t), intent(in) :: tg
-
+    type(parser_t), intent(in) :: parser
+    
     integer :: maxiter, jj
     FLOAT :: aa, ww, maxhh, omega
     CMPLX, allocatable :: ddipole(:)
@@ -254,7 +258,7 @@
     ddipole = M_z0
     ddipole = tg%td_fitness
 
-    call spectrum_hsfunction_init(tg%dt, 0, maxiter, maxiter, ddipole)
+    call spectrum_hsfunction_init(tg%dt, parser, 0, maxiter, maxiter, ddipole)
     do jj = 1, tg%hhg_nks
       aa = tg%hhg_a(jj) * tg%hhg_w0
       ww = tg%hhg_k(jj) * tg%hhg_w0

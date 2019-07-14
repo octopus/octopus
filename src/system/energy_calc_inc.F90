@@ -76,7 +76,7 @@ subroutine X(calculate_expectation_values)(hm, der, st, eigen, terms)
       call batch_copy(st%group%psib(ib, ik), hpsib)
 
       call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik, terms = terms)
-      call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst, ik))        
+      call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst, ik), reduce = .false.)        
 
       if(hamiltonian_apply_packed(hm, der%mesh)) then
         call batch_unpack(st%group%psib(ib, ik), copy = .false.)
@@ -86,6 +86,9 @@ subroutine X(calculate_expectation_values)(hm, der, st, eigen, terms)
 
     end do
   end do
+
+  if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp%comm, &
+                   eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
   call profiling_out(prof)
   POP_SUB(X(calculate_expectation_values))

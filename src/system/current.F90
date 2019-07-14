@@ -29,6 +29,7 @@ module current_oct_m
   use global_oct_m
   use hamiltonian_oct_m
   use hamiltonian_base_oct_m
+  use lalg_basic_oct_m
   use lda_u_oct_m
   use math_oct_m
   use mesh_oct_m
@@ -51,6 +52,7 @@ module current_oct_m
   private
 
   type current_t
+    private
     integer :: method
   end type current_t
     
@@ -70,9 +72,10 @@ module current_oct_m
 
 contains
 
-  subroutine current_init(this, sb)
-    type(current_t), intent(out)   :: this
-    type(simul_box_t), intent(in)  :: sb
+  subroutine current_init(this, parser, sb)
+    type(current_t),   intent(out)   :: this
+    type(parser_t),    intent(in)    :: parser
+    type(simul_box_t), intent(in)    :: sb
 
     PUSH_SUB(current_init)
 
@@ -95,7 +98,7 @@ contains
     !% Hamiltonian with the position operator. (Experimental)
     !%End
 
-    call parse_variable('CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
+    call parse_variable(parser, 'CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
     if(.not.varinfo_valid_option('CurrentDensity', this%method)) call messages_input_error('CurrentDensity')
     if(this%method /= CURRENT_GRADIENT_CORR) then
       call messages_experimental("CurrentDensity /= gradient_corrected")
@@ -125,7 +128,7 @@ contains
     type(batch_t),       intent(in)    :: psib
     type(batch_t),       intent(in)    :: gpsib(:)
     FLOAT,               intent(inout) :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
-    FLOAT, pointer,      intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, kpt%start:kpt%end)
+    FLOAT, pointer,      intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np, 1:der%mesh%sb%dim, kpt%start:kpt%end)
 
     integer :: ist, idir, ii, ip, idim, wgsize
     CMPLX, allocatable :: psi(:, :), gpsi(:, :)
@@ -147,13 +150,15 @@ contains
       do idir = 1, der%mesh%sb%dim
         do ist = states_block_min(st, ib), states_block_max(st, ib)
 
+          ww = st%d%kweights(ik)*st%occ(ist, ik)
+          if(abs(ww) <= M_EPSILON) cycle
+
           do idim = 1, st%d%dim
             ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
             call batch_get_state(psib, ii, der%mesh%np, psi(:, idim))
             call batch_get_state(gpsib(idir), ii, der%mesh%np, gpsi(:, idim))
           end do
 
-          ww = st%d%kweights(ik)*st%occ(ist, ik) 
           if(st%d%ispin /= SPINORS) then
             !$omp parallel do
             do ip = 1, der%mesh%np
@@ -223,6 +228,7 @@ contains
       do ii = 1, psib%nst
         ist = states_block_min(st, ib) + ii - 1
         ww = st%d%kweights(ik)*st%occ(ist, ik)
+        if(abs(ww) <= M_EPSILON) cycle
 
         if(batch_is_packed(psib)) then
           do idir = 1, der%mesh%sb%dim
@@ -279,7 +285,7 @@ contains
 
     ! spin not implemented or tested
     ASSERT(all(ubound(current) == (/der%mesh%np_part, der%mesh%sb%dim, st%d%nspin/)))
-    ASSERT(all(ubound(current_kpt) == (/der%mesh%np_part, der%mesh%sb%dim, st%d%kpt%end/)))
+    ASSERT(all(ubound(current_kpt) == (/der%mesh%np, der%mesh%sb%dim, st%d%kpt%end/)))
     ASSERT(all(lbound(current_kpt) == (/1, 1, st%d%kpt%start/)))
 
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
@@ -319,6 +325,8 @@ contains
             call zhamiltonian_apply_batch(hm, der, rpsib, hrpsib, ik, set_bc = .false.)
 
             do ist = states_block_min(st, ib), states_block_max(st, ib)
+              ww = st%d%kweights(ik)*st%occ(ist, ik)
+              if(ww <= M_EPSILON) cycle
 
               do idim = 1, st%d%dim
                 ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
@@ -326,8 +334,6 @@ contains
                 call batch_get_state(hrpsib, ii, der%mesh%np, hrpsi(:, idim))
                 call batch_get_state(rhpsib, ii, der%mesh%np, rhpsi(:, idim))
               end do
-
-              ww = st%d%kweights(ik)*st%occ(ist, ik)              
 
               if(st%d%ispin /= SPINORS) then
                 !$omp parallel do
@@ -424,6 +430,9 @@ contains
           ispin = states_dim_get_spin_index(st%d, ik)
           do ist = st%st_start, st%st_end
 
+            ww = st%d%kweights(ik)*st%occ(ist, ik)
+            if(abs(ww) <= M_EPSILON) cycle
+
             call states_get_state(st, der%mesh, ist, ik, psi)
 
             do idim = 1, st%d%dim
@@ -467,8 +476,6 @@ contains
 
             end if
 
-            ww = st%d%kweights(ik)*st%occ(ist, ik)
-
             if(st%d%ispin /= SPINORS) then
               do idir = 1, der%mesh%sb%dim
                 !$omp parallel do
@@ -510,18 +517,13 @@ contains
       do ik = st%d%kpt%start, st%d%kpt%end
         ispin = states_dim_get_spin_index(st%d, ik)
         do idir = 1, der%mesh%sb%dim
-          !$omp parallel do
-          do ip = 1, der%mesh%np
-            current(ip, idir, ispin) = current(ip, idir, ispin) + current_kpt(ip, idir, ik)
-          end do
-          !$omp end parallel do
+          call lalg_axpy(der%mesh%np, M_ONE, current_kpt(:, idir, ik), current(1:der%mesh%np, idir, ispin))
         end do
       end do
     end if
 
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
-      ! TODO: this could take dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) to reduce the amount of data copied
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, current) 
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, current, dim = (/der%mesh%np, der%mesh%sb%dim, st%d%nspin/)) 
     end if
 
     if(st%symmetrize_density) then
@@ -686,6 +688,8 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       ispin = states_dim_get_spin_index(st%d, ik)
       do ist = st%st_start, st%st_end
+
+        if(abs(st%d%kweights(ik)*st%occ(ist, ik)) <= M_EPSILON) cycle
         
         call states_get_state(st, der%mesh, ist, ik, psi)
         do idim = 1, st%d%dim
