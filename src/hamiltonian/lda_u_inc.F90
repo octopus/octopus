@@ -32,7 +32,7 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
   type(orbitalset_t), pointer  :: os
   type(profile_t), save :: prof
   integer :: el_per_state
-  FLOAT :: weight
+  R_TYPE :: weight
 
   call profiling_in(prof, "DFTU_APPLY")
 
@@ -90,29 +90,35 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
 
     !We add the intersite interaction
     if(this%intersite) then
-      ASSERT(d%ispin /= SPINORS)
-
       !Loop over nearest neighbors
       do inn = 1, os%nneighbors
-
-        weight = M_HALF*os%V_ij(inn, 0)/el_per_state
-
         ios2 = os%map_os(inn) 
 
+        if(has_phase) then
+#ifdef R_TCOMPLEX
+          weight = os%phase_shift(inn, ik)*os%V_ij(inn, 0)/el_per_state
+#endif
+        else
+          weight = os%phase_shift(inn, ik)*os%V_ij(inn, 0)/el_per_state
+        end if
+
         do ibatch = 1, psib%nst
+          bind1 = batch_ist_idim_to_linear(psib, (/ibatch, 1/))
+          bind2 = batch_ist_idim_to_linear(psib, (/ibatch, 2/))
           do im = 1, os%norbs
             do imp = 1, this%orbsets(ios2)%norbs
-              if(has_phase) then
-                reduced(im, ibatch, ios) = reduced(im,ibatch,ios) - dot(1, imp, ios2, ibatch)*os%phase_shift(inn, ik) &
-                         *this%X(n_ij)(im, imp, ispin, ios, inn)*weight
-                reduced(imp, ibatch,ios2) = reduced(imp,ibatch,ios2) - dot(1, im, ios, ibatch)*R_CONJ(os%phase_shift(inn, ik)) &
+              if(d%ispin /= SPINORS) then
+                reduced(im, ibatch, ios) = reduced(im, ibatch, ios) - dot(1, imp, ios2, ibatch) &
                          *R_CONJ(this%X(n_ij)(im, imp, ispin, ios, inn))*weight
-
-              else 
-                reduced(im, ibatch,ios) = reduced(im,ibatch,ios) - dot(1, imp, ios2, ibatch) &
-                           *this%X(n_ij)(im, imp, ispin, ios, inn)*weight
-                reduced(imp, ibatch,ios2) = reduced(imp,ibatch,ios2) - dot(1, im, ios, ibatch) &
-                           *R_CONJ(this%X(n_ij)(im, imp, ispin, ios, inn))*weight
+              else ! Spinors
+                reduced(im, bind1, ios) = reduced(im, bind1, ios) - dot(1, imp, ios2, ibatch) &
+                         *R_CONJ(this%X(n_ij)(im, imp, 1, ios, inn))*weight
+                reduced(im, bind1, ios) = reduced(im, bind1, ios) - dot(2, imp, ios2, ibatch) &
+                         *R_CONJ(this%X(n_ij)(im, imp, 3, ios, inn))*weight
+                reduced(im, bind2, ios) = reduced(im, bind2, ios) - dot(1, imp, ios2, ibatch) &
+                         *R_CONJ(this%X(n_ij)(im, imp, 4, ios, inn))*weight
+                reduced(im, bind2, ios) = reduced(im, bind2, ios) - dot(2, imp, ios2, ibatch) &
+                         *R_CONJ(this%X(n_ij)(im, imp, 2, ios, inn))*weight
               end if
             end do !imp
           end do !im
@@ -731,6 +737,11 @@ subroutine X(compute_ACBNO_V)(this, ios)
             numV = numV - R_REAL(this%X(n_alt_ij)(im,imp,ispin1,ios,inn)*R_CONJ(this%X(n_alt_ij)(im,imp,ispin1,ios,inn)))&
                        *this%orbsets(ios)%coulomb_IIJJ(im,im,imp,imp,inn)
           end if
+          if(this%nspins>this%spin_channels) then !Spinors
+            numV = numV -(R_REAL(this%X(n_alt_ij)(im,imp,3,ios,inn)*R_CONJ(this%X(n_alt_ij)(im,imp,3,ios,inn))) &
+                        +R_REAL(this%X(n_alt_ij)(im,imp,4,ios,inn)*R_CONJ(this%X(n_alt_ij)(im,imp,4,ios,inn)))) &
+                          *this%orbsets(ios)%coulomb_IIJJ(im,im,imp,imp,inn)
+          end if
         end do
         end do
       end do
@@ -744,6 +755,9 @@ subroutine X(compute_ACBNO_V)(this, ios)
       do ispin2 = 1, this%spin_channels 
         denomV = denomV + R_REAL(this%X(n)(im,im,ispin1,ios))*R_REAL(this%X(n)(imp,imp,ispin2,ios2))
         if(ispin1 == ispin2) denomV = denomV - abs(this%X(n_ij)(im,imp,ispin1,ios,inn))**2
+        if(this%nspins>this%spin_channels) then !Spinors
+          denomV = denomV - abs(this%X(n_ij)(im,imp,3,ios,inn))**2 - abs(this%X(n_ij)(im,imp,4,ios,inn))**2
+        end if
       end do
       end do
     end do
@@ -1217,7 +1231,11 @@ end subroutine X(compute_periodic_coulomb_integrals)
    PUSH_SUB(lda_u_commute_r)
 
    if(this%double_couting /= DFT_U_FLL) then
-    call messages_not_implemented("AMF double couting and commutator [r,V_u].")
+    call messages_not_implemented("AMF double couting and commutator [r,V_u]")
+   end if
+
+   if(this%intersite .and. d%ispin == SPINORS) then
+     call messages_not_implemented("Intersite interaction, spinors, and commutator [r,V_u]")
    end if
 
    if((simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) &
@@ -1498,7 +1516,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
    if(this%basisfromstates) return
 
    if(this%double_couting /= DFT_U_FLL) then
-    call messages_not_implemented("AMF double couting with forces.")
+    call messages_not_implemented("AMF double couting with forces")
    end if
 
    PUSH_SUB(X(lda_u_force))
