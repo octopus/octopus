@@ -284,7 +284,8 @@ contains
           end if
         end if
       end if 
-      if(sys%outp%output_interval /= 0 .and. mod(iter, sys%outp%output_interval) == 0) then
+      if(sys%outp%output_interval /= 0 .and. mod(iter, sys%outp%output_interval) == 0 &
+            .and. sys%outp%duringscf) then
         write(dirname,'(a,i4.4)') "unocc.",iter
         call output_all(sys%outp, sys%gr, sys%geo, sys%st, hm, sys%ks, dirname)
       end if
