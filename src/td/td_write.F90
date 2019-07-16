@@ -2239,12 +2239,12 @@ contains
       SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
       SAFE_ALLOCATE(gspsi(1:gr%mesh%np, 1:st%d%dim))
       SAFE_ALLOCATE(xpsi(1:gr%mesh%np, 1:st%d%dim))
-      
-      do ik = 1, st%d%nik
-        do ist = gs_st%st_start, st%nst
+
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ist = st%st_start, st%st_end
           call states_get_state(st, gr%mesh, ist, ik, psi)
           do uist = gs_st%st_start, gs_st%st_end
-            call states_get_state(gs_st, gr%mesh, ist, ik, gspsi)
+            call states_get_state(gs_st, gr%mesh, uist, ik, gspsi)
 
             do idim = 1, st%d%dim
               xpsi(1:gr%mesh%np, idim) = gr%mesh%x(1:gr%mesh%np, dir)*gspsi(1:gr%mesh%np, idim)
@@ -2261,6 +2261,12 @@ contains
 
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  projections)
 
+      if(st%d%kpt%parallel) then
+        call comm_allreduce(st%d%kpt%mpi_grp%comm, projections)
+      end if
+
+      call distribute_projections(st, gs_st, projections)
+
       ! n_dip is not defined for more than space%dim
       call geometry_dipole(geo, n_dip)
       do ik = 1, st%d%nik
@@ -2271,8 +2277,6 @@ contains
         end do
       end do
 
-
-      call distribute_projections(st, gs_st, projections)
 
       POP_SUB(td_write_proj.dipole_matrix_elements)
     end subroutine dipole_matrix_elements
