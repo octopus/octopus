@@ -62,6 +62,7 @@ module forces_oct_m
   use utils_oct_m
   use v_ks_oct_m
   use vdw_ts_oct_m
+  use gauge_field_oct_m
 
   implicit none
 
@@ -262,7 +263,7 @@ contains
     FLOAT,     optional, intent(in)    :: dt
 
     integer :: j, iatom, idir
-    FLOAT :: x(MAX_DIM), time, global_force(1:MAX_DIM)
+    FLOAT :: x(MAX_DIM), time, global_force(1:MAX_DIM), gauge_vec_pot_vel(1:MAX_DIM)
     FLOAT, allocatable :: force(:, :), force_loc(:, :), force_nl(:, :), force_u(:, :)
     FLOAT, allocatable :: force_nlcc(: ,:)
     FLOAT, allocatable :: force_scf(:, :)
@@ -397,6 +398,20 @@ contains
           call messages_fatal(2)
         end select
       end do
+
+! Forces from gauge fields
+      if(gauge_field_is_applied(hm%ep%gfield)) then
+        call gauge_field_get_vec_pot(hm%ep%gfield,gauge_vec_pot_vel(1:gr%mesh%sb%dim))
+        do iatom = 1, geo%natoms
+            geo%atom(iatom)%f(1:gr%mesh%sb%dim) = geo%atom(iatom)%f(1:gr%mesh%sb%dim) &
+                 - species_zval(geo%atom(iatom)%species) &
+                 * gauge_vec_pot_vel(1:gr%mesh%sb%dim)/P_C
+            geo%atom(iatom)%f_fields(1:gr%mesh%sb%dim) = geo%atom(iatom)%f_fields(1:gr%mesh%sb%dim) &
+                 - species_zval(geo%atom(iatom)%species) &
+                 * gauge_vec_pot_vel(1:gr%mesh%sb%dim)/P_C
+         end do
+      end if
+
     end if
 
     if(associated(hm%ep%E_field)) then
