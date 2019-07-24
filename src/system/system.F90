@@ -65,6 +65,7 @@ module system_oct_m
     type(multicomm_t)            :: mc    !< index and domain communicators
     type(parser_t)               :: parser
     type(hamiltonian_t)          :: hm
+    type(poisson_t)              :: psolver
   end type system_t
   
 contains
@@ -117,12 +118,12 @@ contains
     call states_exec_init(sys%st, sys%parser, sys%mc)
     call elf_init(sys%parser)
 
-    call poisson_init(psolver, sys%parser, sys%gr%der, sys%mc)
-    if(poisson_is_multigrid(psolver)) call grid_create_multigrid(sys%gr, sys%parser, sys%geo, sys%mc)
+    call poisson_init(sys%psolver, sys%parser, sys%gr%der, sys%mc)
+    if(poisson_is_multigrid(sys%psolver)) call grid_create_multigrid(sys%gr, sys%parser, sys%geo, sys%mc)
 
-    call v_ks_init(sys%ks, sys%parser, sys%gr, sys%st, sys%geo, sys%mc)
+    call v_ks_init(sys%ks, sys%parser, sys%gr, sys%psolver, sys%st, sys%geo, sys%mc)
 
-    call hamiltonian_init(sys%hm, parser, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
+    call hamiltonian_init(sys%hm, parser, sys%gr, sys%geo, sys%st, sys%psolver, sys%ks%theory_level, &
       sys%ks%xc_family, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
 
     call profiling_out(prof)
@@ -162,7 +163,7 @@ contains
 
     call multicomm_end(sys%mc)
 
-    call poisson_end(psolver)
+    call poisson_end(sys%psolver)
     call v_ks_end(sys%ks)
     
     call output_end(sys%outp)
@@ -223,7 +224,7 @@ contains
     end if
 
     call states_fermi(sys%st, sys%gr%mesh) ! occupations
-    call energy_calc_total(sys%hm, sys%gr, sys%st)
+    call energy_calc_total(sys%hm, sys%psolver, sys%gr, sys%st)
 
     POP_SUB(system_h_setup)
   end subroutine system_h_setup

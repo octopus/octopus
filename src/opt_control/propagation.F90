@@ -44,6 +44,7 @@ module propagation_oct_m
   use opt_control_state_oct_m
   use parser_oct_m
   use pert_oct_m
+  use poisson_oct_m
   use propagator_oct_m
   use propagator_base_oct_m
   use profiling_oct_m
@@ -177,7 +178,7 @@ contains
     call v_ks_calc(sys%ks, sys%parser, sys%hm, psi, sys%geo, time = M_ZERO)
     call propagator_run_zero_iter(sys%hm, gr, td%tr)
     if(ion_dynamics_ions_move(td%ions)) then
-      call hamiltonian_epot_generate(sys%hm, sys%parser,  gr, sys%geo, psi, time = M_ZERO)
+      call hamiltonian_epot_generate(sys%hm, sys%parser,  gr, sys%geo, psi, sys%psolver, time = M_ZERO)
       call forces_calculate(gr, sys%parser, sys%geo, sys%hm, psi, sys%ks, t = M_ZERO, dt = td%dt)
     end if
 
@@ -197,7 +198,7 @@ contains
 
     if(.not.target_move_ions(tg)) call epot_precalc_local_potential(sys%hm%ep, sys%parser, sys%gr, sys%geo)
 
-    call target_tdcalc(tg, sys%hm, gr, sys%geo, psi, 0, td%max_iter)
+    call target_tdcalc(tg, sys%hm, sys%psolver, gr, sys%geo, psi, 0, td%max_iter)
 
     if (present(prop)) then
       call oct_prop_dump_states(prop, 0, psi, gr, ierr)
@@ -214,7 +215,8 @@ contains
     do istep = 1, td%max_iter
       ! time-iterate wavefunctions
 
-      call propagator_dt(sys%ks, sys%parser, sys%hm, gr, psi, td%tr, istep*td%dt, td%dt, td%mu, istep, td%ions, sys%geo, sys%outp)
+      call propagator_dt(sys%ks, sys%parser, sys%hm, sys%psolver, gr, psi, td%tr, istep*td%dt, td%dt, td%mu, istep, td%ions, &
+        sys%geo, sys%outp)
 
       if(present(prop)) then
         call oct_prop_dump_states(prop, istep, psi, gr, ierr)
@@ -226,16 +228,17 @@ contains
 
       ! update
       call v_ks_calc(sys%ks, sys%parser, sys%hm, psi, sys%geo, time = istep*td%dt)
-      call energy_calc_total(sys%hm, sys%gr, psi)
+      call energy_calc_total(sys%hm, sys%psolver, sys%gr, psi)
 
       if(sys%hm%bc%abtype == MASK_ABSORBING) call zvmask(gr, sys%hm, psi)
 
       ! if td_target
-      call target_tdcalc(tg, sys%hm, gr, sys%geo, psi, istep, td%max_iter)
+      call target_tdcalc(tg, sys%hm, sys%psolver, gr, sys%geo, psi, istep, td%max_iter)
 
       ! only write in final run
       if(write_iter_) then
-        call td_write_iter(write_handler, sys%parser, sys%outp, gr, psi, sys%hm, sys%geo, sys%hm%ep%kick, td%dt, sys%ks, istep)
+        call td_write_iter(write_handler, sys%parser, sys%outp, gr, psi, sys%hm, sys%psolver, sys%geo, sys%hm%ep%kick, td%dt, &
+          sys%ks, istep)
         ii = ii + 1 
         if(ii == sys%outp%output_interval+1 .or. istep == td%max_iter) then ! output
           if(istep == td%max_iter) sys%outp%output_interval = ii - 1
@@ -306,7 +309,7 @@ contains
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
 
     do istep = td%max_iter, 1, -1
-      call propagator_dt(sys%ks, sys%parser, sys%hm, gr, psi, td%tr, &
+      call propagator_dt(sys%ks, sys%parser, sys%hm, sys%psolver, gr, psi, td%tr, &
         (istep - 1)*td%dt, -td%dt, td%mu, istep-1, td%ions, sys%geo, sys%outp)
 
       call oct_prop_dump_states(prop, istep - 1, psi, gr, ierr)
@@ -408,17 +411,20 @@ contains
 
     do i = 1, td%max_iter
       call update_field(i, par, gr, sys%hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
-      call update_hamiltonian_chi(i, sys%parser, gr, sys%ks, sys%hm, td, tg, par_chi, sys%geo, psi2)
+      call update_hamiltonian_chi(i, sys%parser, gr, sys%ks, sys%hm, sys%psolver, td, tg, par_chi, sys%geo, psi2)
       call hamiltonian_update(sys%hm, gr%mesh, gr%der%boundaries, time = (i - 1)*td%dt)
-      call propagator_dt(sys%ks, sys%parser, sys%hm, gr, chi, tr_chi, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, sys%outp)
+      call propagator_dt(sys%ks, sys%parser, sys%hm, sys%psolver, gr, chi, tr_chi, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, &
+        sys%outp)
       if(aux_fwd_propagation) then
         call update_hamiltonian_psi(i, sys%parser, gr, sys%ks, sys%hm, td, tg, par_prev, psi2, sys%geo)
-        call propagator_dt(sys%ks, sys%parser, sys%hm, gr, psi2, tr_psi2, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, sys%outp)
+        call propagator_dt(sys%ks, sys%parser, sys%hm, sys%psolver, gr, psi2, tr_psi2, i*td%dt, td%dt, td%mu, i, td%ions, &
+          sys%geo, sys%outp)
       end if
       call update_hamiltonian_psi(i, sys%parser, gr, sys%ks, sys%hm, td, tg, par, psi, sys%geo)
       call hamiltonian_update(sys%hm, gr%mesh, gr%der%boundaries, time = (i - 1)*td%dt)
-      call propagator_dt(sys%ks, sys%parser, sys%hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, sys%outp)
-      call target_tdcalc(tg, sys%hm, gr, sys%geo, psi, i, td%max_iter) 
+      call propagator_dt(sys%ks, sys%parser, sys%hm, sys%psolver, gr, psi, td%tr, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, &
+        sys%outp)
+      call target_tdcalc(tg, sys%hm, sys%psolver, gr, sys%geo, psi, i, td%max_iter) 
 
       call oct_prop_dump_states(prop_psi, i, psi, gr, ierr)
       if (ierr /= 0) then
@@ -514,10 +520,10 @@ contains
     do i = td%max_iter, 1, -1
       call oct_prop_check(prop_psi, sys%parser, psi, gr, i)
       call update_field(i, par_chi, gr, sys%hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
-      call update_hamiltonian_chi(i-1, sys%parser, gr, sys%ks, sys%hm, td, tg, par_chi, sys%geo, psi)
+      call update_hamiltonian_chi(i-1, sys%parser, gr, sys%ks, sys%hm, sys%psolver, td, tg, par_chi, sys%geo, psi)
       call hamiltonian_update(sys%hm, gr%mesh, gr%der%boundaries, time = abs(i*td%dt))
-      call propagator_dt(sys%ks, sys%parser, sys%hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, i-1, td%ions, sys%geo,&
-           & sys%outp)
+      call propagator_dt(sys%ks, sys%parser, sys%hm, sys%psolver, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
+        td%ions, sys%geo, sys%outp)
       call oct_prop_dump_states(prop_chi, i-1, chi, gr, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to write OCT states restart."
@@ -525,8 +531,8 @@ contains
       end if
       call update_hamiltonian_psi(i-1, sys%parser, gr, sys%ks, sys%hm, td, tg, par, psi, sys%geo)
       call hamiltonian_update(sys%hm, gr%mesh, gr%der%boundaries, time = abs(i*td%dt))
-      call propagator_dt(sys%ks, sys%parser, sys%hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, td%ions, sys%geo,&
-           & sys%outp)
+      call propagator_dt(sys%ks, sys%parser, sys%hm, sys%psolver, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
+        td%ions, sys%geo, sys%outp)
     end do
     td%dt = -td%dt
     call update_field(0, par_chi, gr, sys%hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
@@ -641,8 +647,8 @@ contains
       case(PROP_EXPLICIT_RUNGE_KUTTA4)
 
         call update_hamiltonian_psi(i-1, sys%parser, gr, sys%ks, sys%hm, td, tg, par, psi, sys%geo)
-        call propagator_dt(sys%ks, sys%parser, sys%hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, td%ions, sys%geo, &
-          sys%outp, qcchi = qcchi)
+        call propagator_dt(sys%ks, sys%parser, sys%hm, sys%psolver, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
+          td%ions, sys%geo, sys%outp, qcchi = qcchi)
 
       case default
 
@@ -674,13 +680,13 @@ contains
         end do
 
         vhxc(:, :) = sys%hm%vhxc(:, :)
-        call propagator_dt(sys%ks, sys%parser, sys%hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, td%ions, sys%geo,&
-             & sys%outp)
+        call propagator_dt(sys%ks, sys%parser, sys%hm, sys%psolver, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
+          td%ions, sys%geo, sys%outp)
 
         if(ion_dynamics_ions_move(td%ions)) then
           call ion_dynamics_save_state(td%ions, sys%geo, ions_state_final)
           call geometry_set_positions(sys%geo, qinitial)
-          call hamiltonian_epot_generate(sys%hm, sys%parser, gr, sys%geo, psi, time = abs((i-1)*td%dt))
+          call hamiltonian_epot_generate(sys%hm, sys%parser, gr, sys%geo, psi, sys%psolver, time = abs((i-1)*td%dt))
         end if
 
         do ik = psi%d%kpt%start, psi%d%kpt%end
@@ -693,15 +699,15 @@ contains
         end do
 
         sys%hm%vhxc(:, :) = M_HALF * (sys%hm%vhxc(:, :) + vhxc(:, :))
-        call update_hamiltonian_chi(i-1, sys%parser, gr, sys%ks, sys%hm, td, tg, par, sys%geo, st_ref, qtildehalf)
+        call update_hamiltonian_chi(i-1, sys%parser, gr, sys%ks, sys%hm, sys%psolver, td, tg, par, sys%geo, st_ref, qtildehalf)
         freeze = ion_dynamics_freeze(td%ions)
-        call propagator_dt(sys%ks, sys%parser, sys%hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, i-1, td%ions, sys%geo,&
-             & sys%outp)
+        call propagator_dt(sys%ks, sys%parser, sys%hm, sys%psolver, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
+          td%ions, sys%geo, sys%outp)
         if(freeze) call ion_dynamics_unfreeze(td%ions)
 
         if(ion_dynamics_ions_move(td%ions)) then
           call ion_dynamics_restore_state(td%ions, sys%geo, ions_state_final)
-          call hamiltonian_epot_generate(sys%hm, sys%parser, gr, sys%geo, psi, time = abs((i-1)*td%dt))
+          call hamiltonian_epot_generate(sys%hm, sys%parser, gr, sys%geo, psi, sys%psolver, time = abs((i-1)*td%dt))
           call forces_calculate(gr, sys%parser, sys%geo, sys%hm, psi, sys%ks, t = abs((i-1)*td%dt), dt = td%dt)
           call forces_costate_calculate(gr, sys%parser, sys%geo, sys%hm, psi, chi, fnew, q)
           call ion_dynamics_verlet_step2(sys%geo, p, fold, fnew, td%dt)
@@ -759,12 +765,13 @@ contains
   ! ----------------------------------------------------------
   !
   ! ----------------------------------------------------------
-  subroutine update_hamiltonian_chi(iter, parser, gr, ks, hm, td, tg, par_chi, geo, st, qtildehalf)
+  subroutine update_hamiltonian_chi(iter, parser, gr, ks, hm, psolver, td, tg, par_chi, geo, st, qtildehalf)
     integer,                 intent(in)    :: iter
     type(parser_t),          intent(in)    :: parser
     type(grid_t),            intent(inout) :: gr
     type(v_ks_t),            intent(inout) :: ks
     type(hamiltonian_t),     intent(inout) :: hm
+    type(poisson_t),         intent(in)    :: psolver
     type(td_t),              intent(inout) :: td
     type(target_t),          intent(inout) :: tg
     type(controlfunction_t), intent(in)    :: par_chi
@@ -808,7 +815,7 @@ contains
               call pert_init(pert, parser, PERTURBATION_IONIC, gr, geo)
               call pert_setup_atom(pert, iatom)
               call pert_setup_dir(pert, idim)
-              call zpert_apply(pert, parser, gr, geo, hm, ik, zpsi(:, :), dvpsi(:, :, idim))
+              call zpert_apply(pert, parser, gr, geo, hm, psolver, ik, zpsi(:, :), dvpsi(:, :, idim))
               dvpsi(:, :, idim) = - dvpsi(:, :, idim)
               inhzpsi(:,  :)  = &
                 inhzpsi(:, :) + st%occ(ist, ik)*qtildehalf(iatom, idim)*dvpsi(:, :, idim)

@@ -1612,9 +1612,10 @@ end subroutine X(states_me_one_body)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_me_two_body) (gr, st, st_min, st_max, iindex, jindex, kindex, lindex, twoint, phase)
+subroutine X(states_me_two_body) (gr, st, psolver, st_min, st_max, iindex, jindex, kindex, lindex, twoint, phase)
   type(grid_t),     intent(in)              :: gr
   type(states_t),   intent(in)              :: st
+  type(poisson_t),  intent(in)              :: psolver
   integer,          intent(in)              :: st_min, st_max
   integer,          intent(out)             :: iindex(:,:)
   integer,          intent(out)             :: jindex(:,:)

@@ -58,6 +58,7 @@ module output_oct_m
   use output_me_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
+  use poisson_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
@@ -634,12 +635,13 @@ contains
   end subroutine output_end
 
   ! ---------------------------------------------------------
-  subroutine output_all(outp, parser, gr, geo, st, hm, ks, dir)
+  subroutine output_all(outp, parser, gr, geo, st, hm, psolver, ks, dir)
     type(grid_t),         intent(in)    :: gr
     type(parser_t),       intent(in)    :: parser
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
+    type(poisson_t),      intent(in)    :: psolver
     type(v_ks_t),         intent(in)    :: ks
     type(output_t),       intent(in)    :: outp
     character(len=*),     intent(in)    :: dir
@@ -692,7 +694,7 @@ contains
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me(outp%me, dir, st, gr, geo, hm)
+      call output_me(outp%me, dir, st, gr, geo, hm, psolver)
     end if
 
     if (bitand(outp%how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
@@ -700,10 +702,10 @@ contains
     end if
 
     if (bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
-      call output_berkeleygw(outp%bgw, dir, st, gr, ks, hm, geo)
+      call output_berkeleygw(outp%bgw, dir, st, gr, ks, hm, psolver, geo)
     end if
     
-    call output_energy_density(hm, ks, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
+    call output_energy_density(hm, psolver, ks, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
 
     if(hm%lda_u_level /= DFT_U_NONE) then
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCC_MATRICES) /= 0)&
@@ -884,8 +886,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_energy_density(hm, ks, st, der, dir, outp, geo, gr, grp)
+  subroutine output_energy_density(hm, psolver, ks, st, der, dir, outp, geo, gr, grp)
     type(hamiltonian_t),       intent(in) :: hm
+    type(poisson_t),           intent(in) :: psolver
     type(v_ks_t),              intent(in) :: ks
     type(states_t),            intent(in) :: st
     type(derivatives_t),       intent(in) :: der
@@ -927,7 +930,7 @@ contains
 
       ASSERT(.not. gr%have_fine_mesh)
 
-      call xc_get_vxc(gr%fine%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), &
+      call xc_get_vxc(gr%fine%der, ks%xc, st, psolver, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), &
                       st%qtot, ex_density = ex_density, ec_density = ec_density)
       forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
         energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
@@ -1169,13 +1172,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_berkeleygw(bgw, dir, st, gr, ks, hm, geo)
+  subroutine output_berkeleygw(bgw, dir, st, gr, ks, hm, psolver, geo)
     type(output_bgw_t),  intent(in)    :: bgw
     character(len=*),    intent(in)    :: dir
     type(states_t),      intent(in)    :: st
     type(grid_t),        intent(in)    :: gr
     type(v_ks_t),        intent(in)    :: ks
     type(hamiltonian_t), intent(inout) :: hm
+    type(poisson_t),     intent(in)    :: psolver
     type(geometry_t),    intent(in)    :: geo
 
 #ifdef HAVE_BERKELEYGW
@@ -1217,16 +1221,16 @@ contains
     SAFE_ALLOCATE(vxc(1:gr%mesh%np, 1:st%d%nspin))
     vxc(:,:) = M_ZERO
     ! we should not include core rho here. that is why we do not just use hm%vxc
-    call xc_get_vxc(gr%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc)
+    call xc_get_vxc(gr%der, ks%xc, st, psolver, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc)
 
     message(1) = "BerkeleyGW output: vxc.dat"
     if(bgw%calc_exchange) message(1) = trim(message(1)) // ", x.dat"
     call messages_info(1)
 
     if(states_are_real(st)) then
-      call dbgw_vxc_dat(bgw, dir, st, gr, hm, vxc)
+      call dbgw_vxc_dat(bgw, dir, st, gr, hm, psolver, vxc)
     else
-      call zbgw_vxc_dat(bgw, dir, st, gr, hm, vxc)
+      call zbgw_vxc_dat(bgw, dir, st, gr, hm, psolver, vxc)
     end if
 
     call cube_init(cube, gr%mesh%idx%ll, gr%sb, fft_type = FFT_COMPLEX, dont_optimize = .true., nn_out = FFTgrid)

@@ -176,13 +176,14 @@ contains
 
  end subroutine lda_u_nullify
 
- subroutine lda_u_init(this, parser, level, gr, geo, st)
+ subroutine lda_u_init(this, parser, level, gr, geo, st, psolver)
    type(lda_u_t),             intent(inout) :: this
    type(parser_t),            intent(in)    :: parser
    integer,                   intent(in)    :: level
    type(grid_t),              intent(in)    :: gr
    type(geometry_t), target,  intent(in)    :: geo
    type(states_t),            intent(in)    :: st
+   type(poisson_t),           intent(in)    :: psolver
 
    logical :: complex_coulomb_integrals
    integer :: ios, is
@@ -327,14 +328,14 @@ contains
        if(.not. complex_coulomb_integrals) then 
          write(message(1),'(a)')    'Computing the Coulomb integrals of the localized basis.'
          if (states_are_real(st)) then
-           call dcompute_coulomb_integrals(this, parser, gr%mesh, gr%der)
+           call dcompute_coulomb_integrals(this, parser, gr%mesh, gr%der, psolver)
          else
-           call zcompute_coulomb_integrals(this, parser, gr%mesh, gr%der)
+           call zcompute_coulomb_integrals(this, parser, gr%mesh, gr%der, psolver)
          end if
        else
          ASSERT(.not.states_are_real(st))
          write(message(1),'(a)')    'Computing complex Coulomb integrals of the localized basis.'
-         call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st)
+         call compute_complex_coulomb_integrals(this, gr%mesh, gr%der, st, psolver)
        end if
      end if
 

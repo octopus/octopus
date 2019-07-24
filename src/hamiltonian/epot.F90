@@ -135,11 +135,12 @@ module epot_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init(ep, parser, gr, geo, ispin, nik, xc_family)
+  subroutine epot_init(ep, parser, gr, geo, psolver, ispin, nik, xc_family)
     type(epot_t),                       intent(out)   :: ep
     type(parser_t),                     intent(in)    :: parser
     type(grid_t),                       intent(in)    :: gr
     type(geometry_t),                   intent(inout) :: geo
+    type(poisson_t),  target,           intent(in)    :: psolver
     integer,                            intent(in)    :: ispin
     integer,                            intent(in)    :: nik
     integer,                            intent(in)    :: xc_family

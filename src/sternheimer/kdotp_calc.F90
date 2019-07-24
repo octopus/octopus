@@ -91,7 +91,7 @@ subroutine zcalc_band_velocity(sys, pert, velocity)
 
       do idir = 1, sys%gr%sb%periodic_dim
         call pert_setup_dir(pert, idir)
-        call zpert_apply(pert, sys%parser, sys%gr, sys%geo, sys%hm, ik, psi, pertpsi)
+        call zpert_apply(pert, sys%parser, sys%gr, sys%geo, sys%hm, sys%psolver, ik, psi, pertpsi)
         velocity(idir, ist, ik) = -aimag(zmf_dotp(sys%gr%mesh, sys%st%d%dim, psi, pertpsi))
       end do
     end do

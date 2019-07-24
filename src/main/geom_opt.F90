@@ -576,14 +576,14 @@ contains
 
     call scf_mix_clear(g_opt%scfv)
 
-    call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%parser, g_opt%syst%gr, g_opt%geo, g_opt%st)
+    call hamiltonian_epot_generate(g_opt%hm, g_opt%syst%parser, g_opt%syst%gr, g_opt%geo, g_opt%st, g_opt%syst%psolver)
     call density_calc(g_opt%st, g_opt%syst%gr, g_opt%st%rho)
     call v_ks_calc(g_opt%syst%ks, g_opt%syst%parser, g_opt%hm, g_opt%st, g_opt%geo, calc_eigenval = .true.)
-    call energy_calc_total(g_opt%hm, g_opt%syst%gr, g_opt%st)
+    call energy_calc_total(g_opt%hm, g_opt%syst%psolver, g_opt%syst%gr, g_opt%st)
 
     ! do SCF calculation
-    call scf_run(g_opt%scfv, g_opt%syst%parser, g_opt%syst%mc, g_opt%syst%gr, g_opt%geo, g_opt%st, &
-      g_opt%syst%ks, g_opt%hm, g_opt%syst%outp, verbosity = VERB_COMPACT, restart_dump=g_opt%restart_dump)
+    call scf_run(g_opt%scfv, g_opt%syst%parser, g_opt%syst%mc, g_opt%syst%gr, g_opt%geo, g_opt%st, g_opt%syst%ks, &
+      g_opt%hm, g_opt%syst%psolver, g_opt%syst%outp, verbosity = VERB_COMPACT, restart_dump=g_opt%restart_dump)
 
     ! store results
     if(getgrad  ==  1) call to_grad(g_opt, df)

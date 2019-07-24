@@ -185,12 +185,13 @@ module hamiltonian_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_init(hm, parser, gr, geo, st, theory_level, xc_family, family_is_mgga_with_exc)
+  subroutine hamiltonian_init(hm, parser, gr, geo, st, psolver, theory_level, xc_family, family_is_mgga_with_exc)
     type(hamiltonian_t),                        intent(out)   :: hm
     type(parser_t),                             intent(in)    :: parser
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
     type(states_t),                     target, intent(inout) :: st
+    type(poisson_t),                            intent(in)    :: psolver
     integer,                                    intent(in)    :: theory_level
     integer,                                    intent(in)    :: xc_family
     logical,                                    intent(in)    :: family_is_mgga_with_exc
@@ -280,7 +281,7 @@ contains
 
     hm%geo => geo
     !Initialize external potential
-    call epot_init(hm%ep, parser, gr, hm%geo, hm%d%ispin, hm%d%nik, hm%xc_family)
+    call epot_init(hm%ep, parser, gr, hm%geo, psolver, hm%d%ispin, hm%d%nik, hm%xc_family)
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, parser, gr%sb)
@@ -394,7 +395,7 @@ contains
     call lda_u_nullify(hm%lda_u)
     if(hm%lda_u_level /= DFT_U_NONE) then
       call messages_experimental('DFT+U')
-      call lda_u_init(hm%lda_u, parser, hm%lda_u_level, gr, geo, st)
+      call lda_u_init(hm%lda_u, parser, hm%lda_u_level, gr, geo, st, psolver)
     end if
  
 
@@ -935,12 +936,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hamiltonian_epot_generate(this, parser, gr, geo, st, time)
+  subroutine hamiltonian_epot_generate(this, parser, gr, geo, st, psolver, time)
     type(hamiltonian_t),      intent(inout) :: this
     type(parser_t),           intent(in)    :: parser
     type(grid_t),             intent(in)    :: gr
     type(geometry_t), target, intent(inout) :: geo
     type(states_t),           intent(inout) :: st
+    type(poisson_t),          intent(in)    :: psolver
     FLOAT,          optional, intent(in)    :: time
 
     PUSH_SUB(hamiltonian_epot_generate)
@@ -954,13 +956,13 @@ contains
      !> Generates the real-space PCM potential due to nuclei which do not change
      !! during the SCF calculation.
      if (this%pcm%solute) &
-       call pcm_calc_pot_rs(this%pcm, gr%mesh, geo = geo)
+       call pcm_calc_pot_rs(this%pcm, gr%mesh, psolver, geo = geo)
 
       !> Local field effects due to static electrostatic potentials (if they were).
       !! The laser and the kick are included in subroutine v_ks_hartree (module v_ks).
       !  Interpolation is needed, hence gr%mesh%np_part -> 1:gr%mesh%np
       if( this%pcm%localf .and. associated(this%ep%v_static)) &
-        call pcm_calc_pot_rs(this%pcm, gr%mesh, v_ext = this%ep%v_ext(1:gr%mesh%np_part))
+        call pcm_calc_pot_rs(this%pcm, gr%mesh, psolver, v_ext = this%ep%v_ext(1:gr%mesh%np_part))
 
     end if
 

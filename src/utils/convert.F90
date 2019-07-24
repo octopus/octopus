@@ -54,6 +54,7 @@ program oct_convert
   character(len=256) :: config_str
   integer :: ierr
   type(parser_t) :: parser
+  type(poisson_t) :: psolver
   
   call getopt_init(ierr)
   config_str = trim(get_config_opts()) // trim(get_optional_libraries())

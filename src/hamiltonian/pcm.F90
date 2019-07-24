@@ -1098,10 +1098,11 @@ contains
   end subroutine pcm_init
 
   ! -----------------------------------------------------------------------------
-  subroutine pcm_calc_pot_rs(pcm, mesh, geo, v_h, v_ext, kick, time_present, kick_time)
+  subroutine pcm_calc_pot_rs(pcm, mesh, psolver, geo, v_h, v_ext, kick, time_present, kick_time)
     save
     type(pcm_t),                intent(inout) :: pcm
     type(mesh_t),               intent(in)    :: mesh
+    type(poisson_t),            intent(in)    :: psolver
     type(geometry_t), optional, intent(in)    :: geo
     FLOAT,            optional, intent(in)    :: v_h(:)
     FLOAT,            optional, intent(in)    :: v_ext(:)
@@ -1169,7 +1170,7 @@ contains
       call pcm_charges(pcm%q_n, pcm%qtot_n, pcm%v_n, pcm%matrix, pcm%n_tesserae, &
                        pcm%q_n_nominal, pcm%epsilon_0, pcm%renorm_charges, pcm%q_tot_tol, pcm%deltaQ_n)
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_n, pcm%qtot_n, mesh, pcm%rho_n)
-      call pcm_pot_rs(pcm, pcm%v_n_rs, pcm%q_n, pcm%rho_n, mesh)
+      call pcm_pot_rs(pcm, pcm%v_n_rs, pcm%q_n, pcm%rho_n, mesh, psolver)
     end if
 
     if (calc == PCM_ELECTRONS) then
@@ -1221,7 +1222,7 @@ contains
 
       end if !< END - pcm charges propagation in equilibrium with solute
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_e, pcm%qtot_e, mesh, pcm%rho_e)
-      call pcm_pot_rs(pcm, pcm%v_e_rs, pcm%q_e, pcm%rho_e, mesh )
+      call pcm_pot_rs(pcm, pcm%v_e_rs, pcm%q_e, pcm%rho_e, mesh, psolver)
     end if
 
     if ((calc == PCM_EXTERNAL_PLUS_KICK .or. calc == PCM_KICK) .and. .not. pcm%kick_like) then
@@ -1271,7 +1272,7 @@ contains
         pcm%qtot_ext_in = pcm%qtot_ext
       end if !< END - pcm charges propagation in equilibrium with external field
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_ext, pcm%qtot_ext, mesh, pcm%rho_ext)
-      call pcm_pot_rs(pcm, pcm%v_ext_rs, pcm%q_ext, pcm%rho_ext, mesh )
+      call pcm_pot_rs(pcm, pcm%v_ext_rs, pcm%q_ext, pcm%rho_ext, mesh, psolver)
 
     end if
 
@@ -1326,7 +1327,7 @@ contains
       end if
 
       if (pcm%calc_method == PCM_CALC_POISSON) call pcm_charge_density(pcm, pcm%q_kick, pcm%qtot_kick, mesh, pcm%rho_kick)
-      call pcm_pot_rs(pcm, pcm%v_kick_rs, pcm%q_kick, pcm%rho_kick, mesh )
+      call pcm_pot_rs(pcm, pcm%v_kick_rs, pcm%q_kick, pcm%rho_kick, mesh, psolver)
       if (.not. pcm%kick_like) then
         if (calc == PCM_EXTERNAL_PLUS_KICK) then
           pcm%q_ext    = pcm%q_ext    + pcm%q_kick
@@ -1849,12 +1850,13 @@ contains
 
   ! -----------------------------------------------------------------------------  
   !> Generates the potential 'v_pcm' in real-space.
-  subroutine pcm_pot_rs(pcm, v_pcm, q_pcm, rho, mesh)
+  subroutine pcm_pot_rs(pcm, v_pcm, q_pcm, rho, mesh, psolver)
     type(pcm_t),     intent(inout) :: pcm 
     FLOAT,           intent(inout) :: v_pcm(:)!< (1:mesh%np) running serially np=np_global
     FLOAT,           intent(in)    :: q_pcm(:)!< (1:n_tess)
     FLOAT,           intent(inout) :: rho(:)
     type(mesh_t),    intent(in)    :: mesh
+    type(poisson_t), intent(in)    :: psolver
 
     type(profile_t), save :: prof_init
     integer  :: ierr
@@ -1869,7 +1871,7 @@ contains
       call pcm_pot_rs_direct(v_pcm, q_pcm, pcm%tess, pcm%n_tesserae, mesh, pcm%gaussian_width)
 
     case(PCM_CALC_POISSON)
-      call pcm_pot_rs_poisson(v_pcm, rho)
+      call pcm_pot_rs_poisson(v_pcm, psolver, rho)
 
     case default
       message(1) = "BAD BAD BAD"
@@ -1889,9 +1891,10 @@ contains
   
   ! -----------------------------------------------------------------------------  
   !> Generates the potential 'v_pcm' in real-space solving the poisson equation for rho
-  subroutine pcm_pot_rs_poisson(v_pcm, rho)
-    FLOAT, intent(inout) :: v_pcm(:)
-    FLOAT, intent(inout) :: rho(:)
+  subroutine pcm_pot_rs_poisson(v_pcm, psolver, rho)
+    FLOAT,           intent(inout) :: v_pcm(:)
+    type(poisson_t), intent(in)    :: psolver
+    FLOAT,           intent(inout) :: rho(:)
       
     PUSH_SUB(pcm_pot_rs_poisson)
     

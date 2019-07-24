@@ -36,6 +36,7 @@ module propagator_oct_m
   use multicomm_oct_m
   use opt_control_state_oct_m
   use output_oct_m
+  use poisson_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
@@ -482,11 +483,12 @@ contains
   !> Propagates st from time - dt to t.
   !! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
-  subroutine propagator_dt(ks, parser, hm, gr, st, tr, time, dt, ionic_scale, nt, ions, geo, outp, &
+  subroutine propagator_dt(ks, parser, hm, psolver, gr, st, tr, time, dt, ionic_scale, nt, ions, geo, outp, &
     scsteps, update_energy, qcchi)
     type(v_ks_t), target,            intent(inout) :: ks
     type(parser_t),                  intent(in)    :: parser
     type(hamiltonian_t), target,     intent(inout) :: hm
+    type(poisson_t),                 intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
     type(propagator_t),  target,     intent(inout) :: tr
@@ -526,35 +528,35 @@ contains
     select case(tr%method)
     case(PROP_ETRS)
       if(self_consistent_step()) then
-        call td_etrs_sc(ks, parser, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, tr%scf_threshold, &
+        call td_etrs_sc(ks, parser, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_, tr%scf_threshold, &
            scsteps)
       else
-        call td_etrs(ks, parser, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
+        call td_etrs(ks, parser, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
       end if
     case(PROP_AETRS, PROP_CAETRS)
-      call td_aetrs(ks, parser, hm, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
+      call td_aetrs(ks, parser, hm, psolver, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
     case(PROP_EXPONENTIAL_MIDPOINT)
-      call exponential_midpoint(hm, parser, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
+      call exponential_midpoint(hm, psolver, parser, gr, st, tr, time, dt, ionic_scale, ions, geo, update_energy_)
     case(PROP_CRANK_NICOLSON)
-      call td_crank_nicolson(hm, parser, gr, st, tr, time, dt, ions, geo, .false.)
+      call td_crank_nicolson(hm, psolver, parser, gr, st, tr, time, dt, ions, geo, .false.)
     case(PROP_RUNGE_KUTTA4)
-      call td_runge_kutta4(ks, parser, hm, gr, st, tr, time, dt, ions, geo)
+      call td_runge_kutta4(ks, parser, hm, psolver, gr, st, tr, time, dt, ions, geo)
     case(PROP_RUNGE_KUTTA2)
-      call td_runge_kutta2(ks, parser, hm, gr, st, tr, time, dt, ions, geo)
+      call td_runge_kutta2(ks, parser, hm, psolver, gr, st, tr, time, dt, ions, geo)
     case(PROP_CRANK_NICOLSON_SPARSKIT)
-      call td_crank_nicolson(hm, parser, gr, st, tr, time, dt, ions, geo, .true.)
+      call td_crank_nicolson(hm, psolver, parser, gr, st, tr, time, dt, ions, geo, .true.)
     case(PROP_MAGNUS)
-      call td_magnus(hm, gr, st, tr, time, dt)
+      call td_magnus(hm, psolver, gr, st, tr, time, dt)
     case(PROP_QOCT_TDDFT_PROPAGATOR)
-      call td_qoct_tddft_propagator(hm, parser, ks%xc, gr, st, tr, time, dt, ions, geo)
+      call td_qoct_tddft_propagator(hm, psolver, parser, ks%xc, gr, st, tr, time, dt, ions, geo)
     case(PROP_EXPLICIT_RUNGE_KUTTA4)
       if(present(qcchi)) then
-        call td_explicit_runge_kutta4(ks, parser, hm, gr, st, time, dt, ions, geo, qcchi)
+        call td_explicit_runge_kutta4(ks, parser, hm, psolver, gr, st, time, dt, ions, geo, qcchi)
       else
-        call td_explicit_runge_kutta4(ks, parser, hm, gr, st, time, dt, ions, geo)
+        call td_explicit_runge_kutta4(ks, parser, hm, psolver, gr, st, time, dt, ions, geo)
       end if
     case(PROP_CFMAGNUS4)
-      call td_cfmagnus4(ks, parser, hm, gr, st, tr, time, dt, ions, geo, nt)
+      call td_cfmagnus4(ks, parser, hm, psolver, gr, st, tr, time, dt, ions, geo, nt)
     end select
 
     generate = .false.
@@ -570,17 +572,17 @@ contains
     end if
 
     if(generate .or. geometry_species_time_dependent(geo)) then
-      call hamiltonian_epot_generate(hm, parser,  gr, geo, st, time = abs(nt*dt))
+      call hamiltonian_epot_generate(hm, parser,  gr, geo, st, psolver, time = abs(nt*dt))
     end if
 
     call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval = update_energy_, time = abs(nt*dt), calc_energy = update_energy_)
-    if(update_energy_) call energy_calc_total(hm, gr, st, iunit = -1)
+    if(update_energy_) call energy_calc_total(hm, psolver, gr, st, iunit = -1)
 
     ! Recalculate forces, update velocities...
     if(update_energy_ .and. ion_dynamics_ions_move(ions) .and. tr%method .ne. PROP_EXPLICIT_RUNGE_KUTTA4) then
       call forces_calculate(gr, parser, geo, hm, st, ks, t = abs(nt*dt), dt = dt)
       call ion_dynamics_propagate_vel(ions, geo, atoms_moved = generate)
-      if(generate) call hamiltonian_epot_generate(hm, parser,  gr, geo, st, time = abs(nt*dt))
+      if(generate) call hamiltonian_epot_generate(hm, parser,  gr, geo, st, psolver, time = abs(nt*dt))
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
       if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
@@ -630,28 +632,29 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine propagator_dt_bo(scf, parser, gr, ks, st, hm, geo, mc, outp, iter, dt, ions, scsteps)
-    type(scf_t), intent(inout)         :: scf
-    type(parser_t),      intent(in)    :: parser
-    type(grid_t), intent(inout)        :: gr
-    type(v_ks_t), intent(inout)        :: ks
-    type(states_t), intent(inout)      :: st
-    type(hamiltonian_t), intent(inout) :: hm
-    type(geometry_t), intent(inout)    :: geo
-    type(multicomm_t), intent(inout)   :: mc    !< index and domain communicators
-    type(output_t), intent(inout)      :: outp
-    integer, intent(in)                :: iter
-    FLOAT, intent(in)                  :: dt
+  subroutine propagator_dt_bo(scf, parser, gr, ks, st, hm, psolver, geo, mc, outp, iter, dt, ions, scsteps)
+    type(scf_t),          intent(inout) :: scf
+    type(parser_t),       intent(in)    :: parser
+    type(grid_t),         intent(inout) :: gr
+    type(v_ks_t),         intent(inout) :: ks
+    type(states_t),       intent(inout) :: st
+    type(hamiltonian_t),  intent(inout) :: hm
+    type(poisson_t),      intent(in)    :: psolver
+    type(geometry_t),     intent(inout) :: geo
+    type(multicomm_t),    intent(inout) :: mc    !< index and domain communicators
+    type(output_t),       intent(inout) :: outp
+    integer,              intent(in)    :: iter
+    FLOAT,                intent(in)    :: dt
     type(ion_dynamics_t), intent(inout) :: ions
-    integer, intent(inout)             :: scsteps
+    integer,              intent(inout) :: scsteps
 
     PUSH_SUB(propagator_dt_bo)
 
     ! move the hamiltonian to time t
     call ion_dynamics_propagate(ions, gr%sb, geo, iter*dt, dt)
-    call hamiltonian_epot_generate(hm, parser, gr, geo, st, time = iter*dt)
+    call hamiltonian_epot_generate(hm, parser, gr, geo, st, psolver, time = iter*dt)
     ! now calculate the eigenfunctions
-    call scf_run(scf, parser, mc, gr, geo, st, ks, hm, outp, &
+    call scf_run(scf, parser, mc, gr, geo, st, ks, hm, psolver, outp, &
       gs_run = .false., verbosity = VERB_COMPACT, iters_done = scsteps)
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
@@ -663,16 +666,16 @@ contains
       call messages_not_implemented("DFT+U with propagator_dt_bo")  
     end if
 
-    call hamiltonian_epot_generate(hm, parser,  gr, geo, st, time = iter*dt)
+    call hamiltonian_epot_generate(hm, parser,  gr, geo, st, psolver, time = iter*dt)
 
     ! update Hamiltonian and eigenvalues (fermi is *not* called)
     call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval = .true., time = iter*dt, calc_energy = .true.)
 
     ! Get the energies.
-    call energy_calc_total(hm, gr, st, iunit = -1)
+    call energy_calc_total(hm, psolver, gr, st, iunit = -1)
 
     call ion_dynamics_propagate_vel(ions, geo)
-    call hamiltonian_epot_generate(hm, parser, gr, geo, st, time = iter*dt)
+    call hamiltonian_epot_generate(hm, parser, gr, geo, st, psolver, time = iter*dt)
      geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
 
     if(gauge_field_is_applied(hm%ep%gfield)) then

@@ -578,7 +578,7 @@ subroutine X(calc_properties_linear)()
     end if
   end if
   
-  call em_resp_output(sys%st, sys%parser, sys%gr, sys%hm, sys%geo, sys%outp, em_vars, iomega, ifactor)
+  call em_resp_output(sys%st, sys%parser, sys%gr, sys%hm, sys%psolver, sys%geo, sys%outp, em_vars, iomega, ifactor)
   
   POP_SUB(em_resp_run.X(calc_properties_linear))
 end subroutine X(calc_properties_linear)

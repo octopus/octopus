@@ -42,6 +42,7 @@ module lcao_oct_m
   use mpi_oct_m
   use mpi_debug_oct_m
   use parser_oct_m
+  use poisson_oct_m
   use profiling_oct_m
   use ps_oct_m
   use quickrnd_oct_m
@@ -759,7 +760,7 @@ contains
           call zlcao_simple(lcao, sys%st, sys%gr, sys%geo, sys%hm, start = st_start)
         end if
       else
-        call lcao_wf(lcao, sys%st, sys%gr, sys%geo, sys%hm, start = st_start)
+        call lcao_wf(lcao, sys%st, sys%gr, sys%geo, sys%hm, sys%psolver, start = st_start)
       end if
 
       if (lcao%mode /= OPTION__LCAOSTART__LCAO_SIMPLE .and. .not. present(st_start)) then
@@ -854,12 +855,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_wf(this, st, gr, geo, hm, start)
+  subroutine lcao_wf(this, st, gr, geo, hm, psolver, start)
     type(lcao_t),        intent(inout) :: this
     type(states_t),      intent(inout) :: st
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(in)    :: geo
     type(hamiltonian_t), intent(in)    :: hm
+    type(poisson_t),     intent(in)    :: psolver
     integer, optional,   intent(in)    :: start
 
     integer :: start_
@@ -875,15 +877,15 @@ contains
 
     if(this%alternative) then
       if (states_are_real(st)) then
-        call dlcao_alt_wf(this, st, gr, geo, hm, start_)
+        call dlcao_alt_wf(this, st, gr, geo, hm, psolver, start_)
       else
-        call zlcao_alt_wf(this, st, gr, geo, hm, start_)
+        call zlcao_alt_wf(this, st, gr, geo, hm, psolver, start_)
       end if
     else
       if (states_are_real(st)) then
-        call dlcao_wf(this, st, gr, geo, hm, start_)
+        call dlcao_wf(this, st, gr, geo, hm, psolver, start_)
       else
-        call zlcao_wf(this, st, gr, geo, hm, start_)
+        call zlcao_wf(this, st, gr, geo, hm, psolver, start_)
       end if
     end if
     POP_SUB(lcao_wf)

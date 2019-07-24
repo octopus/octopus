@@ -215,9 +215,10 @@ contains
   !> This subroutine receives as input a current, and produces
   !! as an output the vector potential that it induces.
   !! \warning There is probably a problem for 2D. For 1D none of this makes sense?
-  subroutine magnetic_induced(der, st, a_ind, b_ind)
+  subroutine magnetic_induced(der, st, psolver, a_ind, b_ind)
     type(derivatives_t),  intent(in)    :: der
     type(states_t),       intent(inout) :: st
+    type(poisson_t),      intent(in)    :: psolver
     FLOAT,                intent(out)   :: a_ind(:, :) !< a_ind(der%mesh%np_part, der%mesh%sb%dim)
     FLOAT,                intent(out)   :: b_ind(:, :)
     !< if der%mesh%sb%dim=3, b_ind(der%mesh%np_part, der%mesh%sb%dim)

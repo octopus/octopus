@@ -18,10 +18,11 @@
 
 ! ---------------------------------------------------------
 !> See http://prola.aps.org/abstract/PRB/v54/i16/p11169_1
-subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, diff)
+subroutine X(eigensolver_rmmdiis) (gr, st, hm, psolver, pre, tol, niter, converged, ik, diff)
   type(grid_t),           intent(in)    :: gr
   type(states_t), target, intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
+  type(poisson_t),        intent(in)    :: psolver
   type(preconditioner_t), intent(in)    :: pre
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
@@ -82,7 +83,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
 
     call batch_copy(psib(1)%batch, resb(1)%batch)
 
-    call X(hamiltonian_apply_batch)(hm, gr%der, psib(1)%batch, resb(1)%batch, ik)
+    call X(hamiltonian_apply_batch)(hm, gr%der, psolver, psib(1)%batch, resb(1)%batch, ik)
     nops = nops + bsize
 
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, resb(1)%batch, me(1, :), reduce = .false.)
@@ -111,11 +112,11 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     call batch_copy(psib(1)%batch, psib(2)%batch)
 
     ! get lambda 
-    call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb(1)%batch, psib(2)%batch)
+    call X(preconditioner_apply_batch)(pre, gr, hm, psolver, ik, resb(1)%batch, psib(2)%batch)
 
     call batch_copy(psib(1)%batch, resb(2)%batch)
 
-    call X(hamiltonian_apply_batch)(hm, gr%der, psib(2)%batch, resb(2)%batch, ik)
+    call X(hamiltonian_apply_batch)(hm, gr%der, psolver, psib(2)%batch, resb(2)%batch, ik)
     nops = nops + bsize
 
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(2)%batch, psib(2)%batch, fr(1, :), reduce = .false.)
@@ -147,7 +148,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       ! for iter == 2 the preconditioning was done already
       if(iter > 2) then
         call batch_copy(psib(iter - 1)%batch, psib(iter)%batch)
-        call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb(iter - 1)%batch, psib(iter)%batch)
+        call X(preconditioner_apply_batch)(pre, gr, hm, psolver, ik, resb(iter - 1)%batch, psib(iter)%batch)
       end if
 
       ! predict by jacobi
@@ -158,7 +159,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       end if
 
       ! calculate the residual
-      call X(hamiltonian_apply_batch)(hm, gr%der, psib(iter)%batch, resb(iter)%batch, ik)
+      call X(hamiltonian_apply_batch)(hm, gr%der, psolver, psib(iter)%batch, resb(iter)%batch, ik)
       nops = nops + bsize
 
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(iter)%batch, resb(iter)%batch)
@@ -229,7 +230,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
       call batch_copy(psib(iter)%batch, resb(iter)%batch)
 
       ! re-calculate the residual
-      call X(hamiltonian_apply_batch)(hm, gr%der, psib(iter)%batch, resb(iter)%batch, ik)
+      call X(hamiltonian_apply_batch)(hm, gr%der, psolver, psib(iter)%batch, resb(iter)%batch, ik)
       nops = nops + bsize
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(iter)%batch, resb(iter)%batch)
 
@@ -252,7 +253,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
     SAFE_DEALLOCATE_A(mm)
 
     ! end with a trial move
-    call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb(niter)%batch, resb(niter - 1)%batch)
+    call X(preconditioner_apply_batch)(pre, gr, hm, psolver, ik, resb(niter)%batch, resb(niter - 1)%batch)
 
     call batch_xpay(gr%mesh%np, psib(niter)%batch, lambda, resb(niter - 1)%batch)
 
@@ -308,7 +309,7 @@ subroutine X(eigensolver_rmmdiis) (gr, st, hm, pre, tol, niter, converged, ik, d
   
     call batch_copy(st%group%psib(ib, ik), resb(1)%batch)
     
-    call X(hamiltonian_apply_batch)(hm, gr%der, st%group%psib(ib, ik), resb(1)%batch, ik)
+    call X(hamiltonian_apply_batch)(hm, gr%der, psolver, st%group%psib(ib, ik), resb(1)%batch, ik)
     call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), resb(1)%batch, me(1, :), reduce = .false.)
     call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), st%group%psib(ib, ik), me(2, :), reduce = .false.)
     if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me)
@@ -360,10 +361,11 @@ end subroutine X(eigensolver_rmmdiis)
 
 ! ---------------------------------------------------------
 
-subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
+subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, psolver, pre, niter, converged, ik)
   type(grid_t),           intent(in)    :: gr
   type(states_t),         intent(inout) :: st
   type(hamiltonian_t),    intent(in)    :: hm
+  type(poisson_t),        intent(in)    :: psolver
   type(preconditioner_t), intent(in)    :: pre
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged
@@ -407,7 +409,7 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
     do isd = 1, sd_steps
 
       !We start by computing the Rayleigh quotient
-      call X(hamiltonian_apply_batch)(hm, gr%der, st%group%psib(ib, ik), resb, ik)
+      call X(hamiltonian_apply_batch)(hm, gr%der, psolver, st%group%psib(ib, ik), resb, ik)
 
       call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), resb, me1(1, :), reduce = .false.)
       call X(mesh_batch_dotp_vector)(gr%mesh, st%group%psib(ib, ik), st%group%psib(ib, ik), me1(2, :), reduce = .false.)
@@ -430,9 +432,9 @@ subroutine X(eigensolver_rmmdiis_min) (gr, st, hm, pre, niter, converged, ik)
         end do
       end if
 
-      call X(preconditioner_apply_batch)(pre, gr, hm, ik, resb, kresb)
+      call X(preconditioner_apply_batch)(pre, gr, hm, psolver, ik, resb, kresb)
 
-      call X(hamiltonian_apply_batch)(hm, gr%der, kresb, resb, ik)
+      call X(hamiltonian_apply_batch)(hm, gr%der, psolver, kresb, resb, ik)
 
       niter = niter + 2*(maxst - minst + 1)
 

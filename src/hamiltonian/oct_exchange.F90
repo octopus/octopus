@@ -109,11 +109,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_exchange_prepare(this, mesh, psi, xc)
+  subroutine oct_exchange_prepare(this, mesh, psi, xc, psolver)
     type(oct_exchange_t), intent(inout) :: this
-    type(mesh_t),        intent(in)    :: mesh
-    CMPLX,               intent(in)    :: psi(:, :, :, :)
-    type(xc_t),          intent(in)    :: xc
+    type(mesh_t),         intent(in)    :: mesh
+    CMPLX,                intent(in)    :: psi(:, :, :, :)
+    type(xc_t),           intent(in)    :: xc
+    type(poisson_t),      intent(in)    :: psolver
 
     integer :: jst, ip, ik
     CMPLX, allocatable :: psi2(:, :)
