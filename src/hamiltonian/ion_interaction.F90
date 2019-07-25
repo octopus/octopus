@@ -517,6 +517,8 @@ contains
 
 ! force
         if(iatom == jatom)cycle
+        if(abs(tmp_erf) < M_EPSILON) cycle
+
         force(3,iatom) = force(3,iatom) - (- M_TWO*factor) &
           * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
           * tmp_erf
@@ -548,9 +550,17 @@ contains
             dz_ij = geo%atom(iatom)%x(3)-geo%atom(jatom)%x(3)
 
             erfc1 = M_ONE - loct_erf(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
-            factor1 = exp(gg_abs*dz_ij)*erfc1
+            if(abs(erfc1) > M_EPSILON) then
+              factor1 = exp(gg_abs*dz_ij)*erfc1
+            else
+              factor1 = M_ZERO
+            end if
             erfc2 = M_ONE - loct_erf(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)
-            factor2 = exp(-gg_abs*dz_ij)*erfc2
+            if(abs(erfc2) > M_EPSILON) then
+              factor2 = exp(-gg_abs*dz_ij)*erfc2
+            else
+              factor2 = M_ZERO
+            end if
 
             if(iatom == jatom) then
               coeff = M_ONE
@@ -576,10 +586,22 @@ contains
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               *sin(gx)*(factor1 + factor2)
 
-            factor1 = exp(gg_abs*dz_ij)*( gg_abs*erfc1 &
-              - M_TWO*this%alpha/sqrt(M_PI)*exp(-(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)**2))
-            factor2 = exp(-gg_abs*dz_ij)*( gg_abs*erfc2 &
-              - M_TWO*this%alpha/sqrt(M_PI)*exp(-(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)**2))
+            factor1 = gg_abs*erfc1 &
+              - M_TWO*this%alpha/sqrt(M_PI)*exp(-(this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)**2)
+            if(abs(factor1) > M_EPSILON) then
+              factor1 = factor1*exp(gg_abs*dz_ij)
+            else
+              factor1 = M_ZERO
+            end if
+
+            factor2 = gg_abs*erfc2 &
+              - M_TWO*this%alpha/sqrt(M_PI)*exp(-(-this%alpha*dz_ij + M_HALF*gg_abs/this%alpha)**2)
+            if(abs(factor2) > M_EPSILON) then
+              factor2 = factor2*exp(-gg_abs*dz_ij)
+            else
+              factor2 = M_ZERO
+            end if
+             
 
             force(3, iatom) = force(3, iatom) &
               - M_TWO*factor &
