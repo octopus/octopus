@@ -305,13 +305,60 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
                                          + renorm_weight*dot(1,1:norbs,ios)*R_CONJ(dot(2,im,ios))
               this%X(n_alt)(1:norbs,im,4,ios) = this%X(n_alt)(1:norbs,im,4,ios) &
                                          + renorm_weight*dot(2,1:norbs,ios)*R_CONJ(dot(1,im,ios))
+
+              if(this%intersite) then
+                do inn = 1, os%nneighbors
+                  ios2 = os%map_os(inn)
+                  os2 => this%orbsets(ios2)
+
+                  renorm_weight = sqrt(this%X(renorm_occ)(species_index(os%spec), os%nn, os%ll, ist, ik) &
+                           *this%X(renorm_occ)(species_index(os2%spec), os2%nn, os2%ll, ist, ik))*weight
+                  do im2 = 1, os2%norbs
+                    if(present(phase)) then
+                      this%X(n_ij)(im, im2, 1, ios, inn) = this%X(n_ij)(im, im2, 1, ios, inn) &
+                             + weight*dot(1, im, ios)*R_CONJ(dot(1, im2, ios2)*os%phase_shift(inn, ik))
+                      this%X(n_ij)(im, im2, 2, ios, inn) = this%X(n_ij)(im, im2, 2, ios, inn) &
+                             + weight*dot(2, im, ios)*R_CONJ(dot(2, im2, ios2)*os%phase_shift(inn, ik))
+                      this%X(n_ij)(im, im2, 3, ios, inn) = this%X(n_ij)(im, im2, 3, ios, inn) &
+                             + weight*dot(1, im, ios)*R_CONJ(dot(2, im2, ios2)*os%phase_shift(inn, ik))
+                      this%X(n_ij)(im, im2, 4, ios, inn) = this%X(n_ij)(im, im2, 4, ios, inn) &
+                             + weight*dot(2, im, ios)*R_CONJ(dot(1, im2, ios2)*os%phase_shift(inn, ik))
+                      
+
+                      this%X(n_alt_ij)(im, im2, 1, ios, inn) = this%X(n_alt_ij)(im, im2, 1, ios, inn) &
+                             + renorm_weight*dot(1, im, ios)*R_CONJ(dot(1, im2,ios2)*os%phase_shift(inn,ik))
+                      this%X(n_alt_ij)(im, im2, 2, ios, inn) = this%X(n_alt_ij)(im, im2, 2, ios, inn) &
+                             + renorm_weight*dot(2, im, ios)*R_CONJ(dot(2, im2,ios2)*os%phase_shift(inn,ik))
+                      this%X(n_alt_ij)(im, im2, 3, ios, inn) = this%X(n_alt_ij)(im, im2, 3, ios, inn) &
+                             + renorm_weight*dot(1, im, ios)*R_CONJ(dot(2, im2,ios2)*os%phase_shift(inn,ik))
+                      this%X(n_alt_ij)(im, im2, 4, ios, inn) = this%X(n_alt_ij)(im, im2, 4, ios, inn) &
+                             + renorm_weight*dot(2, im, ios)*R_CONJ(dot(1, im2,ios2)*os%phase_shift(inn,ik))
+                    else
+                      this%X(n_ij)(im, im2, 1, ios, inn) = this%X(n_ij)(im, im2, 1, ios, inn) &
+                             + weight*dot(1, im, ios)*R_CONJ(dot(1, im2, ios2))
+                      this%X(n_ij)(im, im2, 2, ios, inn) = this%X(n_ij)(im, im2, 2, ios, inn) &
+                             + weight*dot(2, im, ios)*R_CONJ(dot(2, im2, ios2))
+                      this%X(n_ij)(im, im2, 3, ios, inn) = this%X(n_ij)(im, im2, 3, ios, inn) &
+                             + weight*dot(1, im, ios)*R_CONJ(dot(2, im2, ios2))
+                      this%X(n_ij)(im, im2, 4, ios, inn) = this%X(n_ij)(im, im2, 4, ios, inn) &
+                             + weight*dot(2, im, ios)*R_CONJ(dot(1, im2, ios2))
+
+
+                      this%X(n_alt_ij)(im, im2, 1, ios, inn) = this%X(n_alt_ij)(im, im2, 1, ios, inn) &
+                             + renorm_weight*dot(1, im, ios)*R_CONJ(dot(1, im2,ios2))
+                      this%X(n_alt_ij)(im, im2, 2, ios, inn) = this%X(n_alt_ij)(im, im2, 2, ios, inn) &
+                             + renorm_weight*dot(2, im, ios)*R_CONJ(dot(2, im2,ios2))
+                      this%X(n_alt_ij)(im, im2, 3, ios, inn) = this%X(n_alt_ij)(im, im2, 3, ios, inn) &
+                             + renorm_weight*dot(1, im, ios)*R_CONJ(dot(2, im2,ios2))
+                      this%X(n_alt_ij)(im, im2, 4, ios, inn) = this%X(n_alt_ij)(im, im2, 4, ios, inn) &
+                             + renorm_weight*dot(2, im, ios)*R_CONJ(dot(1, im2,ios2))
+                    end if
+                   end do !im2
+                 end do !inn
+               end if
             end if
           end do !im
-        end do !ios 
-      
-        if(this%intersite) &
-          call messages_not_implemented("Intersite interaction with spinors")
-
+        end do !ios
       end if !Spinors
     end do
   end do
