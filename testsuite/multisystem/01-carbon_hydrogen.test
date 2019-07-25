@@ -3,7 +3,7 @@
 Test       : Carbon and Hydrogen multisystem
 Program    : octopus
 TestGroups : long-run, multisystem
-Enabled    : No
+Enabled    : Yes
 
 Input: 01-carbon_hydrogen.01-gs.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
