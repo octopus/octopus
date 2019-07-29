@@ -136,8 +136,6 @@ module poisson_oct_m
 #endif
   end type poisson_t
 
-  type(poisson_t), target, save, public :: psolver2
-
   integer, parameter ::             &
     CMD_FINISH = 1,                 &
     CMD_POISSON_SOLVE = 2
