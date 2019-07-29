@@ -453,13 +453,18 @@ contains
       if(projector_is(epot%proj(iatom), PROJ_KB) .or. projector_is(epot%proj(iatom), PROJ_HGH)) then
         INCR(this%nprojector_matrices, 1)
         this%apply_projector_matrices = .true.
+        !The HGH pseudopotentials are now supporting the SOC
+        if(epot%reltype /= NOREL .and. &
+             (.not. projector_is(epot%proj(iatom), PROJ_HGH) .or. accel_is_enabled())) then 
+          this%apply_projector_matrices = .false.
+          exit
+        end if
       else if(.not. projector_is_null(epot%proj(iatom))) then
         this%apply_projector_matrices = .false.
         exit
       end if
     end do
 
-    if(epot%reltype /= NOREL) this%apply_projector_matrices = .false.
     if(mesh%use_curvilinear)  this%apply_projector_matrices = .false.
 
     if(.not. this%apply_projector_matrices) then
@@ -512,15 +517,14 @@ contains
           call projector_matrix_allocate(pmat, epot%proj(iatom)%sphere%np, nmat, has_mix_matrix = .false.)
           
           ! generate the matrix
-          pmat%projectors = M_ZERO
-          
+          pmat%dprojectors = M_ZERO
           imat = 1
           do ll = 0, lmax
             if (ll == lloc) cycle
             do mm = -ll, ll
               kb_p =>  epot%proj(iatom)%kb_p(ll, mm)
               do ic = 1, kb_p%n_c
-                forall(ip = 1:pmat%npoints) pmat%projectors(ip, imat) = kb_p%p(ip, ic)
+                forall(ip = 1:pmat%npoints) pmat%dprojectors(ip, imat) = kb_p%p(ip, ic)
                 pmat%scal(imat) = kb_p%e(ic)*mesh%vol_pp(1)
                 INCR(imat, 1)
               end do
@@ -542,12 +546,18 @@ contains
             end do
           end do
           
-          call projector_matrix_allocate(pmat, epot%proj(iatom)%sphere%np, nmat, has_mix_matrix = .true.)
+          call projector_matrix_allocate(pmat, epot%proj(iatom)%sphere%np, nmat, has_mix_matrix = .true., &
+                                            is_cmplx = (epot%reltype == SPIN_ORBIT) )
 
           ! generate the matrix
-          pmat%projectors = M_ZERO
-          pmat%mix = M_ZERO
-          
+          if(epot%reltype == SPIN_ORBIT) then
+            pmat%zprojectors = M_ZERO
+            pmat%zmix = M_ZERO
+          else
+            pmat%dprojectors = M_ZERO
+            pmat%dmix = M_ZERO
+          end if
+
           imat = 1
           do ll = 0, lmax
             if (ll == lloc) cycle
@@ -556,14 +566,35 @@ contains
 
               ! HGH pseudos mix different components, so we need to
               ! generate a matrix that mixes the projections
-              do ic = 1, 3
-                do jc = 1, 3
-                  pmat%mix(imat - 1 + ic, imat - 1 + jc) = hgh_p%h(ic, jc)
+              if(epot%reltype == SPIN_ORBIT) then
+                do ic = 1, 3
+                  do jc = 1, 3
+                    pmat%zmix(imat - 1 + ic, imat - 1 + jc, 1) = hgh_p%h(ic, jc) + M_HALF*mm*hgh_p%k(ic, jc)
+                    pmat%zmix(imat - 1 + ic, imat - 1 + jc, 2) = hgh_p%h(ic, jc) - M_HALF*mm*hgh_p%k(ic, jc)
+     
+                    if(mm < ll) then
+                      pmat%zmix(imat - 1 + ic, imat + 3 - 1 + jc, 3) = M_HALF*hgh_p%k(ic, jc)*sqrt(real(ll*(ll+1)-mm*(mm+1)))
+                    end if
+
+                    if(-mm < ll) then
+                      pmat%zmix(imat - 1 + ic, imat - 3 - 1 + jc, 4) = M_HALF*hgh_p%k(ic, jc)*sqrt(real(ll*(ll+1)-mm*(mm-1)))
+                    end if
+                  end do
                 end do
-              end do
+              else
+                do ic = 1, 3
+                  do jc = 1, 3
+                    pmat%dmix(imat - 1 + ic, imat - 1 + jc) = hgh_p%h(ic, jc)
+                  end do
+                end do
+              end if
               
               do ic = 1, 3
-                forall(ip = 1:pmat%npoints) pmat%projectors(ip, imat) = hgh_p%dp(ip, ic)
+                if(epot%reltype == SPIN_ORBIT) then
+                  forall(ip = 1:pmat%npoints) pmat%zprojectors(ip, imat) = hgh_p%zp(ip, ic)
+                else
+                  forall(ip = 1:pmat%npoints) pmat%dprojectors(ip, imat) = hgh_p%dp(ip, ic)
+                end if
                 pmat%scal(imat) = mesh%volume_element
                 INCR(imat, 1)
               end do
@@ -657,7 +688,7 @@ contains
         offsets(SCAL, imat) = scal_size
         INCR(scal_size, pmat%nprojs)
 
-        if(allocated(pmat%mix)) then
+        if(allocated(pmat%dmix) .or. allocated(pmat%zmix)) then
           offsets(MIX, imat) = mix_offset
           INCR(mix_offset, pmat%nprojs**2)
         else
@@ -708,12 +739,12 @@ contains
         pmat => this%projector_matrices(imat)
         ! in parallel some spheres might not have points
         if(pmat%npoints > 0) then
-          call accel_write_buffer(this%buff_matrices, pmat%nprojs*pmat%npoints, pmat%projectors, offset = offsets(MATRIX, imat))
+          call accel_write_buffer(this%buff_matrices, pmat%nprojs*pmat%npoints, pmat%dprojectors, offset = offsets(MATRIX, imat))
           call accel_write_buffer(this%buff_maps, pmat%npoints, pmat%map, offset = offsets(MAP, imat))
           call accel_write_buffer(this%buff_position, 3*pmat%npoints, pmat%position, offset = 3*offsets(MAP, imat))
         end if
         call accel_write_buffer(this%buff_scals, pmat%nprojs, pmat%scal, offset = offsets(SCAL, imat))
-        if(offsets(MIX, imat) /= -1) call accel_write_buffer(this%buff_mix, pmat%nprojs**2, pmat%mix, offset = offsets(MIX, imat))
+        if(offsets(MIX, imat) /= -1) call accel_write_buffer(this%buff_mix, pmat%nprojs**2, pmat%dmix, offset = offsets(MIX, imat))
       end do
 
       ! write the offsets
