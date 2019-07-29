@@ -1022,13 +1022,14 @@ contains
       ! Delta v_z = ( Z*e*E_0 / M) = - ( Z*k*\hbar / M)
       ! where M and Z are the ionic mass and charge, respectively.
       if(ion_dynamics_ions_move(ions)  .and. kick%delta_strength /= M_ZERO) then
-        ASSERT(kick%delta_strength_mode /= KICK_MAGNON_MODE)
-        do iatom = 1, geo%natoms
-          geo%atom(iatom)%v(1:mesh%sb%dim) = geo%atom(iatom)%v(1:mesh%sb%dim) + &
-               kick%delta_strength * kick%pol(1:mesh%sb%dim, kick%pol_dir) * &
-               P_PROTON_CHARGE * species_zval(geo%atom(iatom)%species) / &
-               species_mass(geo%atom(iatom)%species)
-        end do
+        if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
+          do iatom = 1, geo%natoms
+            geo%atom(iatom)%v(1:mesh%sb%dim) = geo%atom(iatom)%v(1:mesh%sb%dim) + &
+                 kick%delta_strength * kick%pol(1:mesh%sb%dim, kick%pol_dir) * &
+                 P_PROTON_CHARGE * species_zval(geo%atom(iatom)%species) / &
+                 species_mass(geo%atom(iatom)%species)
+          end do
+        end if
       end if
 
       SAFE_DEALLOCATE_A(kick_function)
