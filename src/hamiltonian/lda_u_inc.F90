@@ -114,9 +114,9 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, ik, psib, hpsib, has_phase)
                 reduced(im, bind1, ios) = reduced(im, bind1, ios) - dot(1, imp, ios2, ibatch) &
                          *R_CONJ(this%X(n_ij)(im, imp, 1, ios, inn))*weight
                 reduced(im, bind1, ios) = reduced(im, bind1, ios) - dot(2, imp, ios2, ibatch) &
-                         *R_CONJ(this%X(n_ij)(im, imp, 3, ios, inn))*weight
-                reduced(im, bind2, ios) = reduced(im, bind2, ios) - dot(1, imp, ios2, ibatch) &
                          *R_CONJ(this%X(n_ij)(im, imp, 4, ios, inn))*weight
+                reduced(im, bind2, ios) = reduced(im, bind2, ios) - dot(1, imp, ios2, ibatch) &
+                         *R_CONJ(this%X(n_ij)(im, imp, 3, ios, inn))*weight
                 reduced(im, bind2, ios) = reduced(im, bind2, ios) - dot(2, imp, ios2, ibatch) &
                          *R_CONJ(this%X(n_ij)(im, imp, 2, ios, inn))*weight
               end if
@@ -388,7 +388,7 @@ subroutine X(update_occ_matrices)(this, mesh, st, lda_u_energy, phase)
         else
           call compute_ACBNO_U_noncollinear(this, ios)
           if(this%intersite) then
-            call messages_not_implemented("Intersite interaction with spinors.")
+            call messages_not_implemented("Intersite interaction with spinors orbitals.")
           end if
         end if
       end do
@@ -784,13 +784,13 @@ subroutine X(compute_ACBNO_V)(this, ios)
             numV = numV - R_REAL(this%X(n_alt_ij)(im,imp,ispin1,ios,inn)*R_CONJ(this%X(n_alt_ij)(im,imp,ispin1,ios,inn)))&
                        *this%orbsets(ios)%coulomb_IIJJ(im,im,imp,imp,inn)
           end if
-          if(this%nspins>this%spin_channels) then !Spinors
-            numV = numV -(R_REAL(this%X(n_alt_ij)(im,imp,3,ios,inn)*R_CONJ(this%X(n_alt_ij)(im,imp,3,ios,inn))) &
-                        +R_REAL(this%X(n_alt_ij)(im,imp,4,ios,inn)*R_CONJ(this%X(n_alt_ij)(im,imp,4,ios,inn)))) &
-                          *this%orbsets(ios)%coulomb_IIJJ(im,im,imp,imp,inn)
-          end if
         end do
         end do
+        if(this%nspins>this%spin_channels) then !Spinors
+          numV = numV -(R_REAL(this%X(n_alt_ij)(im,imp,3,ios,inn)*R_CONJ(this%X(n_alt_ij)(im,imp,3,ios,inn))) &
+                       +R_REAL(this%X(n_alt_ij)(im,imp,4,ios,inn)*R_CONJ(this%X(n_alt_ij)(im,imp,4,ios,inn)))) &
+                        *this%orbsets(ios)%coulomb_IIJJ(im,im,imp,imp,inn)
+        end if
       end do
     end do
 
@@ -802,11 +802,11 @@ subroutine X(compute_ACBNO_V)(this, ios)
       do ispin2 = 1, this%spin_channels 
         denomV = denomV + R_REAL(this%X(n)(im,im,ispin1,ios))*R_REAL(this%X(n)(imp,imp,ispin2,ios2))
         if(ispin1 == ispin2) denomV = denomV - abs(this%X(n_ij)(im,imp,ispin1,ios,inn))**2
-        if(this%nspins>this%spin_channels) then !Spinors
-          denomV = denomV - abs(this%X(n_ij)(im,imp,3,ios,inn))**2 - abs(this%X(n_ij)(im,imp,4,ios,inn))**2
-        end if
       end do
       end do
+      if(this%nspins>this%spin_channels) then !Spinors
+        denomV = denomV - abs(this%X(n_ij)(im,imp,3,ios,inn))**2 - abs(this%X(n_ij)(im,imp,4,ios,inn))**2
+      end if
     end do
     end do
 
