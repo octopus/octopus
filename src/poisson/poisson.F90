@@ -125,7 +125,10 @@ module poisson_oct_m
     integer :: nslaves
     FLOAT :: theta !< cmplxscl
     FLOAT :: qq(MAX_DIM) !< for exchange in periodic system
-    FLOAT :: dressed_lambda,dressed_omega,dressed_electrons,dressed_coulomb
+    FLOAT :: dressed_lambda
+    FLOAT :: dressed_omega
+    FLOAT :: dressed_electrons
+    FLOAT :: dressed_coulomb
     type(poisson_fmm_t)  :: params_fmm
 #ifdef HAVE_MPI2
     integer         :: intercomm
@@ -273,62 +276,57 @@ contains
       this%method = solver
     end if
     if(.not.varinfo_valid_option('PoissonSolver', this%method)) call messages_input_error('PoissonSolver')
-    
+
     if (this%method == POISSON_DRDMFT) then
-				!%Variable RDMParamLambda
-				!%Type float
-				!%Default 1e-7 Ha !!needs to be changed!
-				!%Section SCF::RDMFT
-				!%Description
-				!% interaction strength in dressed state formalism.
-				!%End
-			call parse_variable(parser, 'RDMParamLambda', CNST(1.0e-7), this%dressed_lambda)
-		 
-			
-			!%Variable RDMParamOmega
-				!%Type float
-				!%Default 1e-7 Ha !!needs to be changed!
-				!%Section SCF::RDMFT
-				!%Description
-				!% mode frequency in dressed state formalism.
-				!%End
-			call parse_variable(parser, 'RDMParamOmega', CNST(1.0e-7), this%dressed_omega)
+      !%Variable RDMParamLambda
+      !%Type float
+      !%Default 1e-7 Ha !!needs to be changed!
+      !%Section SCF::RDMFT
+      !%Description
+      !% interaction strength in dressed state formalism.
+      !%End
+      call parse_variable(parser, 'RDMParamLambda', CNST(1.0e-7), this%dressed_lambda)
 
-			
-			!%Variable RDMNoElectrons
-				!%Type float
-				!%Default 2.0
-				!%Section SCF::RDMFT
-				!%Description
-				!% number of active electrons as extra variable, necessary in dressed state formalism. Defined as float
-				!% for better usage later
-				!%End
-			call parse_variable(parser, 'RDMNoElectrons', CNST(2.0), this%dressed_electrons)
+      !%Variable RDMParamOmega
+      !%Type float
+      !%Default 1e-7 Ha !!needs to be changed!
+      !%Section SCF::RDMFT
+      !%Description
+      !% mode frequency in dressed state formalism.
+      !%End
+      call parse_variable(parser, 'RDMParamOmega', CNST(1.0e-7), this%dressed_omega)
 
-			
-			!%Variable RDMCoulomb
-				!%Type float
-				!%Default 1.0
-				!%Section SCF::RDMFT
-				!%Description
-				!% allows to control the prefactor of the electron electron interaction
-				!%End
-			call parse_variable(parser, 'RDMCoulomb', CNST(1.0), this%dressed_coulomb)
+      !%Variable RDMNoElectrons
+      !%Type float
+      !%Default 2.0
+      !%Section SCF::RDMFT
+      !%Description
+      !% number of active electrons as extra variable, necessary in dressed state formalism. Defined as float
+      !% for better usage later
+      !%End
+      call parse_variable(parser, 'RDMNoElectrons', CNST(2.0), this%dressed_electrons)
 
-			
-			write(message(1),'(a,1x,f14.12)') 'RDMParamLambda', this%dressed_lambda
-			write(message(2),'(a,1x,f14.12)') 'RDMParamOmega', this%dressed_omega
-			write(message(3),'(a,1x,f14.12)') 'RDMNoElectrons', this%dressed_electrons
-			write(message(4),'(a,1x,f14.12)') 'RDMCoulomb', this%dressed_coulomb
-			call messages_info(4) 
-			
+      !%Variable RDMCoulomb
+      !%Type float
+      !%Default 1.0
+      !%Section SCF::RDMFT
+      !%Description
+      !% allows to control the prefactor of the electron electron interaction
+      !%End
+      call parse_variable(parser, 'RDMCoulomb', CNST(1.0), this%dressed_coulomb)
+
+      write(message(1),'(a,1x,f14.12)') 'RDMParamLambda', this%dressed_lambda
+      write(message(2),'(a,1x,f14.12)') 'RDMParamOmega', this%dressed_omega
+      write(message(3),'(a,1x,f14.12)') 'RDMNoElectrons', this%dressed_electrons
+      write(message(4),'(a,1x,f14.12)') 'RDMCoulomb', this%dressed_coulomb
+      call messages_info(4)
     end if
    
     select case(this%method)
     case (POISSON_DIRECT_SUM)
       str = "direct sum"
     case (POISSON_DRDMFT)
-      str = "direct sum with dressed state interaction"   
+      str = "direct sum with dressed state interaction"
     case (POISSON_FMM)
       str = "fast multipole method"
     case (POISSON_FFT)
@@ -453,12 +451,12 @@ contains
           call messages_not_implemented('Complex scaled 1D soft Coulomb with Poisson solver other than direct_sum')
         end if
 
-    case(2)
-    
-      if( (this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM) .and. (this%method /= POISSON_DRDMFT)) then
-        message(1) = 'A 2D system may only use fft or direct_sum Poisson solvers. Exeption for dressed state formalism'
-        call messages_fatal(1)
-      end if
+      case(2)
+
+        if ((this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM) .and. (this%method /= POISSON_DRDMFT)) then
+          message(1) = 'A 2D system may only use fft, direct_sum, or drdmft Poisson solvers.'
+          call messages_fatal(1)
+        end if
 
         if(der%mesh%use_curvilinear .and. (this%method /= POISSON_DIRECT_SUM) ) then
           message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
@@ -865,7 +863,7 @@ contains
         message(1) = "Direct sum Poisson solver only available for 1, 2, or 3 dimensions."
         call messages_fatal(1)
       end select
-      
+
     case(POISSON_DRDMFT)
 	  call poisson_solve_drdmft(this, pot, rho)
 

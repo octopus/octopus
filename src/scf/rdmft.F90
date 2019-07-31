@@ -184,7 +184,7 @@ contains
 
     !%Variable RDMHartreeFock
     !%Type logical
-    !%Default no 
+    !%Default no
     !%Section SCF::RDMFT
     !%Description
     !% If true, the code simulates a HF calculation, by omitting the occ.num. optimization
@@ -194,53 +194,48 @@ contains
 
     !%Variable RDMDressedState
     !%Type logical
-    !%Default no 
+    !%Default no
     !%Section SCF::RDMFT
     !%Description
-    !% If true, the dressed electron photon state formalism can be applied
-    !% WARNING: very experimental
-    !% only works for 1 mode and 1d electrons, coordinate 1- electron, coordinate 2 - photon
+    !% If true, the dressed electron photon state formalism is applied.
+    !% Only works for 1 mode and 1d electrons. Coordinate 1: electron; coordinate 2: photon.
+    !% WARNING: experimental
     !%End
-
     call parse_variable(parser, 'RDMDressedState',.false., rdm%dressed)
-      
+
     !%Variable RDMParamLambda
     !%Type float
     !%Default 0.0
     !%Section SCF::RDMFT
     !%Description
-    !% Interaction strength in dressed state formalism
+    !% Interaction strength in dressed state formalism.
     !%End
-
     call parse_variable(parser, 'RDMParamLambda', M_ZERO, rdm%dressed_lambda)
-      
+
     !%Variable RDMParamOmega
     !%Type float
     !%Default 0.0
     !%Section SCF::RDMFT
     !%Description
-    !% Mode frequency in dressed state formalism
+    !% Mode frequency in dressed state formalism.
     !%End
-
     call parse_variable(parser, 'RDMParamOmega', M_ZERO, rdm%dressed_omega)
-      
+
     !%Variable RDMNoElectrons
     !%Type float
     !%Default 2.0
     !%Section SCF::RDMFT
     !%Description
-    !% number of active electrons as extra variable, necessary in dressed state formalism. Defined as float
-    !% for better usage later
+    !% Number of active electrons as extra variable, necessary in dressed state formalism.
     !%End
     call parse_variable(parser, 'RDMNoElectrons', CNST(2.0), rdm%dressed_electrons)
 
-      
     !%Variable RDMCoulomb
     !%Type float
     !%Default 1.0
     !%Section SCF::RDMFT
     !%Description
-    !% allows to control the prefactor of the electron electron interaction
+    !% Allows to control the prefactor of the electron-electron interaction in the dressed state formalism.
     !%End
     call parse_variable(parser, 'RDMCoulomb', CNST(1.0), rdm%dressed_coulomb)
 
@@ -537,7 +532,7 @@ contains
       FLOAT, allocatable :: photon_number_state (:), ekin_state (:), epot_state (:)
 
       PUSH_SUB(scf_rdmft.scf_write_static)
-      
+
       SAFE_ALLOCATE(photon_number_state(1:st%nst))
       SAFE_ALLOCATE(ekin_state(1:st%nst))
       SAFE_ALLOCATE(epot_state(1:st%nst))
@@ -570,7 +565,7 @@ contains
           write(iunit, '(a,5x,f14.12)') 'RDMCoulomb:', rdm%dressed_coulomb
         end if
         write(iunit, '(1x)')
-        
+
         ! scf information
         if(conv) then
           write(iunit, '(a, i4, a)')'SCF converged in ', iter, ' iterations'
@@ -644,12 +639,12 @@ contains
       SAFE_DEALLOCATE_A(photon_number_state)
       SAFE_DEALLOCATE_A(ekin_state)
       SAFE_DEALLOCATE_A(epot_state)
-      
+
       POP_SUB(scf_rdmft.scf_write_static)
     end subroutine scf_write_static 
     
   ! ---------------------------------------------------------
-    subroutine calc_photon_number(photon_number_state,photon_number,ekin_state,epot_state)
+    subroutine calc_photon_number(photon_number_state, photon_number, ekin_state, epot_state)
       FLOAT, intent(out) :: photon_number
       FLOAT, intent(out) :: photon_number_state (st%nst), ekin_state (st%nst), epot_state (st%nst)
 
@@ -659,43 +654,43 @@ contains
       FLOAT, allocatable :: grad_psi(:, :), grad_square_psi (:,:)
 
       PUSH_SUB(scf_rdmft.calc_photon_number)
-      
+
       SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
       SAFE_ALLOCATE(psi_q_square(1:gr%mesh%np_part, 1:st%d%dim))
       SAFE_ALLOCATE(grad_psi(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
       SAFE_ALLOCATE(grad_square_psi(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
 
       photon_number = M_ZERO
-      
+
       do ist = 1, st%nst
         call states_get_state(st, gr%mesh, ist, 1, psi)
-        
+
         grad_psi = M_ZERO
         grad_square_psi = M_ZERO
         laplace_exp = M_ZERO
-        
+
         ! <phi(ist)|d^2/dq^2|phi(ist)> ~= <phi(ist)| d/dq (d/dq|phi(ist)>)   at the moment not possible to calculate Laplacian only for one coordinate
         call dderivatives_grad(gr%der, psi(:, 1), grad_psi(:, :), ghost_update = .true., set_bc = .false.)
         call dderivatives_grad(gr%der, grad_psi(:, 2), grad_square_psi(:, :), ghost_update = .true., set_bc = .false.)
         laplace_exp = dmf_dotp(gr%mesh, psi(:,1), grad_square_psi(:,2))
-        ekin_state(ist) = -0.5*laplace_exp
-        
+        ekin_state(ist) = -M_HALF*laplace_exp
+
         ! <phi(ist)|q^2|psi(ist)>= |q|psi(ist)>|^2
         psi_q_square(1:gr%mesh%np, 1) = psi(1:gr%mesh%np, 1)* gr%mesh%x(1:gr%mesh%np, 2) * gr%mesh%x(1:gr%mesh%np, 2)
         q_square_exp = dmf_dotp(gr%mesh, psi(:,1),psi_q_square(:,1))
-        epot_state(ist) = 0.5 * rdm%dressed_omega * rdm%dressed_omega * q_square_exp
-        
+        epot_state(ist) = M_HALF * rdm%dressed_omega * rdm%dressed_omega * q_square_exp
+
         !! N_phot(ist)=( <phi_i|H_ph|phi_i>/omega - 0.5 ) / N_elec
         !! with <phi_i|H_ph|phi_i>=-0.5* <phi(ist)|d^2/dq^2|phi(ist)> + 0.5*omega <phi(ist)|q^2|psi(ist)>
-        photon_number_state(ist)  = -0.5*laplace_exp / rdm%dressed_omega + 0.5 * rdm%dressed_omega  * q_square_exp
-        photon_number_state(ist) = photon_number_state(ist) - 0.5
-        
+        photon_number_state(ist) = -M_HALF*laplace_exp / rdm%dressed_omega + M_HALF * rdm%dressed_omega * q_square_exp
+        photon_number_state(ist) = photon_number_state(ist) - M_HALF
+
         !! N_phot_total= sum_ist occ_ist*N_phot(ist)
-        photon_number =  photon_number + ( photon_number_state(ist) + 0.5 )*st%occ(ist,1) ! 0.5 must be added again to do the normalization due to the total charge correctly
+        photon_number =  photon_number + (photon_number_state(ist) + M_HALF)*st%occ(ist,1) ! 0.5 must be added again to do the normalization due to the total charge correctly
       end do
-      
-      photon_number =  photon_number - st%qtot/2
-  
+
+      photon_number =  photon_number - st%qtot/M_TWO
+
       SAFE_DEALLOCATE_A(psi)
       SAFE_DEALLOCATE_A(grad_psi)
 
@@ -787,7 +782,7 @@ contains
     call total_energy_rdm(rdm, st%occ(:,1), energy)
 
     rdm%occsum = sum(st%occ(1:st%nst, 1:st%d%nik))
-    
+
     write(message(1),'(a4,5x,a12)')'#st','Occupation'
     call messages_info(1)   
 
@@ -898,20 +893,20 @@ contains
       call minimize_multidim(MINMETHOD_BFGS, st%nst, theta, CNST(0.05), CNST(0.0001), &
           CNST(1e-12), CNST(1e-12), 200, objective_rdmft, write_iter_info_rdmft, objective, ierr)
       sumgim = rdm%occsum - st%qtot
-      
+
       if (sumgi1*sumgim < M_ZERO) then
         mu2 = mum
       else
         mu1 = mum
         sumgi1 = sumgim
       end if
-      
+
       ! check occ.num. threshold again after minimization
       do ist = 1, st%nst
         st%occ(ist,1) = M_TWO*sin(theta(ist)*M_PI*M_TWO)**2
         if (st%occ(ist,1) <= thresh_occ ) st%occ(ist,1) = thresh_occ
       end do
-      
+
       if (abs(sumgim) < rdm%toler .or. abs((mu1-mu2)*M_HALF) < rdm%toler)  exit
     end do
 
@@ -925,10 +920,10 @@ contains
     do ist = 1, st%nst
       st%occ(ist, 1) = st%smear%el_per_state*sin(theta(ist)*M_PI*M_TWO)**2
     end do
-    
+
     objective = objective + rdm%mu*(rdm%occsum - rdm%qtot)
     energy = objective
-    
+
     write(message(1),'(a4,5x,a12)')'#st','Occupation'
     call messages_info(1)   
 
@@ -1314,16 +1309,13 @@ contains
     if (present(dE_dn)) then
       dE_dn(:) = rdm%eone(:) + V_h(:) + V_x(:)
     end if
-  
+
     !Total energy calculation without nuclei interaction  
     do ist = 1, rdm%nst
       energy = energy + occ(ist)*rdm%eone(ist) &
                       + M_HALF*occ(ist)*V_h(ist) & 
                       + occ(ist)*V_x(ist)
     end do
- 
-
-
 
     SAFE_DEALLOCATE_A(V_h)
     SAFE_DEALLOCATE_A(V_x)
@@ -1370,7 +1362,7 @@ contains
       !derivative of one-electron energy with respect to the natural orbitals occupation number
       do ist = 1, st%nst
         call states_get_state(st, gr%mesh, ist, 1, dpsi)
-        
+
         ! calculate one-body energy
         call dhamiltonian_apply(hm,gr%der, dpsi, hpsi, ist, 1, &
                               terms = TERM_KINETIC + TERM_LOCAL_EXTERNAL + TERM_NON_LOCAL_POTENTIAL)
