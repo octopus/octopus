@@ -451,6 +451,12 @@ contains
           call messages_not_implemented('Complex scaled 1D soft Coulomb with Poisson solver other than direct_sum')
         end if
 
+        if(der%mesh%use_curvilinear .and. this%method /= POISSON_DIRECT_SUM) then
+          message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
+          message(2) = 'Poisson solver is direct_sum.'
+          call messages_fatal(2)
+        end if
+
       case(2)
 
         if ((this%method /= POISSON_FFT) .and. (this%method /= POISSON_DIRECT_SUM) .and. (this%method /= POISSON_DRDMFT)) then
