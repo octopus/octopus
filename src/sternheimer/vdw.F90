@@ -51,9 +51,8 @@ module vdw_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine vdw_run(sys, hm, fromScratch)
+  subroutine vdw_run(sys, fromScratch)
     type(system_t),         intent(inout) :: sys
-    type(hamiltonian_t),    intent(inout) :: hm
     logical,                intent(inout) :: fromScratch
 
     type(lr_t) :: lr(MAX_DIM, 1)
@@ -77,7 +76,7 @@ contains
 
     call input()
     call init_()
-    call sternheimer_init(sh, sys, hm, wfs_are_cplx = .true.)
+    call sternheimer_init(sh, sys, wfs_are_cplx = .true.)
 
     if(gauss_start == 1 .and. mpi_grp_is_root(mpi_world)) then
       iunit = io_open(VDW_DIR//'vdw_c6', action='write')
@@ -143,11 +142,11 @@ contains
       !% How many points to use in the Gauss-Legendre integration to obtain the
       !% van der Waals coefficients.
       !%End
-      call messages_obsolete_variable('vdW_npoints', 'vdWNPoints')
-      call parse_variable('vdWNPoints', 6, gaus_leg_n)
+      call messages_obsolete_variable(sys%parser, 'vdW_npoints', 'vdWNPoints')
+      call parse_variable(sys%parser, 'vdWNPoints', 6, gaus_leg_n)
 
       ! \todo symmetry stuff should be general
-      call parse_variable('TDPolarizationEquivAxes', 0, equiv_axes)
+      call parse_variable(sys%parser, 'TDPolarizationEquivAxes', 0, equiv_axes)
 
       select case(equiv_axes)
       case(3);      ndir = 1
@@ -210,9 +209,9 @@ contains
       end if
 
       ! we always need complex response
-      call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+      call restart_init(gs_restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
       if(ierr == 0) then
-        call states_look_and_load(gs_restart, sys%st, sys%gr, is_complex = .true.)
+        call states_look_and_load(gs_restart, sys%parser, sys%st, sys%gr, is_complex = .true.)
         call restart_end(gs_restart)
       else
         message(1) = "Previous gs calculation required."
@@ -222,7 +221,7 @@ contains
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian for linear response.'
       call messages_info(1)
-      call system_h_setup(sys, hm)
+      call system_h_setup(sys)
 
       do dir = 1, ndir
         call lr_init(lr(dir,1))
@@ -231,12 +230,12 @@ contains
 
       ! load wavefunctions
       if (.not. fromScratch) then
-        call restart_init(restart_load, RESTART_VDW, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
+        call restart_init(restart_load, sys%parser, RESTART_VDW, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
 
         do dir = 1, ndir
           write(dirname,'(a,i1,a)') "wfs_", dir, "_1_1"
           call restart_open_dir(restart_load, dirname, ierr)
-          if (ierr == 0) call states_load(restart_load, sys%st, sys%gr, ierr, lr=lr(dir,1))          
+          if (ierr == 0) call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr, lr=lr(dir,1))          
           if(ierr /= 0) then
             message(1) = "Unable to read response wavefunctions from '"//trim(dirname)//"'."
             call messages_warning(1)
@@ -251,7 +250,7 @@ contains
         call io_mkdir(VDW_DIR)               ! output data
       end if
 
-      call restart_init(restart_dump, RESTART_VDW, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
+      call restart_init(restart_dump, sys%parser, RESTART_VDW, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
       POP_SUB(vdw_run.init_)
     end subroutine init_
@@ -284,18 +283,18 @@ contains
 
       PUSH_SUB(vdw_run.get_pol)
 
-      call pert_init(perturbation, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
+      call pert_init(perturbation, sys%parser, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
       do dir = 1, ndir
         write(message(1), '(3a,f7.3)') 'Info: Calculating response for the ', index2axis(dir), &
           '-direction and imaginary frequency ', units_from_atomic(units_out%energy, aimag(omega))
         call messages_info(1)   
 
         call pert_setup_dir(perturbation, dir)
-        call zsternheimer_solve(sh, sys, hm, lr(dir, :), 1,  omega, perturbation, &
+        call zsternheimer_solve(sh, sys, lr(dir, :), 1,  omega, perturbation, &
              restart_dump, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
       end do
 
-      call zcalc_polarizability_finite(sys, hm, lr(:,:), 1, perturbation, alpha(:,:), ndir = ndir)
+      call zcalc_polarizability_finite(sys, lr(:,:), 1, perturbation, alpha(:,:), ndir = ndir)
 
       get_pol = M_ZERO
       do dir = 1, ndir

@@ -40,6 +40,7 @@ module space_oct_m
   integer, parameter :: default_ndim = 3
 
   type space_t
+    ! Components are public by default
     integer :: dim
   end type space_t
 
@@ -54,8 +55,9 @@ module space_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine space_init(this, dim)
+  subroutine space_init(this, parser, dim)
     type(space_t),     intent(inout) :: this
+    type(parser_t),    intent(in)    :: parser
     integer, optional, intent(in)    :: dim
 
     PUSH_SUB(space_init_simple)
@@ -72,7 +74,7 @@ contains
       !% variable (or more, if configured with <tt>--with-max-dim=4</tt> or higher).
       !% Note that not all input variables may be available in all cases.
       !%End
-      call parse_variable('Dimensions', default_ndim, this%dim)
+      call parse_variable(parser, 'Dimensions', default_ndim, this%dim)
     end if
     if((this%dim>MAX_DIM).or.(this%dim<1)) call messages_input_error('Dimensions')
 

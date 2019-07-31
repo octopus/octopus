@@ -54,6 +54,7 @@ module grid_oct_m
     grid_create_multigrid
 
   type grid_t
+    ! Components are public by default
     type(simul_box_t)           :: sb
     type(mesh_t)                :: mesh
     type(multigrid_level_t)     :: fine
@@ -72,22 +73,24 @@ contains
   !-------------------------------------------------------------------
   !>
   !! "Zero-th" stage of grid initialization. It initializes the simulation box.
-  subroutine grid_init_stage_0(gr, geo, space)
+  subroutine grid_init_stage_0(gr, parser, geo, space)
     type(grid_t),          intent(inout) :: gr
+    type(parser_t),        intent(in)    :: parser
     type(geometry_t),      intent(inout) :: geo
     type(space_t),         intent(in)    :: space
 
     PUSH_SUB(grid_init_stage_0)
 
-    call simul_box_init(gr%sb, geo, space)
+    call simul_box_init(gr%sb, parser, geo, space)
       
     POP_SUB(grid_init_stage_0)
   end subroutine grid_init_stage_0
 
 
   !-------------------------------------------------------------------
-  subroutine grid_init_stage_1(gr, geo)
+  subroutine grid_init_stage_1(gr, parser, geo)
     type(grid_t),      intent(inout) :: gr
+    type(parser_t),    intent(in)    :: parser
     type(geometry_t),  intent(in)    :: geo
 
     type(stencil_t) :: cube
@@ -109,7 +112,7 @@ contains
     !% Experimental, and incompatible with domain-parallelization.
     !%End
     if (gr%sb%dim == 3) then 
-      call parse_variable('UseFineMesh', .false., gr%have_fine_mesh)
+      call parse_variable(parser, 'UseFineMesh', .false., gr%have_fine_mesh)
     else
       gr%have_fine_mesh = .false.
     end if
@@ -117,7 +120,6 @@ contains
     if(gr%have_fine_mesh) call messages_experimental("UseFineMesh")
 
     call geometry_grid_defaults(geo, def_h, def_rsize)
-    call geometry_grid_defaults_info(geo)
     
     ! initialize to -1
     grid_spacing = -M_ONE
@@ -148,7 +150,7 @@ contains
     !% <br>%</tt>
     !%End
 
-    if(parse_block('Spacing', blk) == 0) then
+    if(parse_block(parser, 'Spacing', blk) == 0) then
       if(parse_block_cols(blk,0) < gr%sb%dim) call messages_input_error('Spacing')
       do idir = 1, gr%sb%dim
         call parse_block_float(blk, 0, idir - 1, grid_spacing(idir), units_inp%length)
@@ -156,7 +158,7 @@ contains
       end do
       call parse_block_end(blk)
     else
-      call parse_variable('Spacing', -M_ONE, grid_spacing(1), units_inp%length)
+      call parse_variable(parser, 'Spacing', -M_ONE, grid_spacing(1), units_inp%length)
       grid_spacing(1:gr%sb%dim) = grid_spacing(1)
       if(def_h > M_ZERO) call messages_check_def(grid_spacing(1), .true., def_h, 'Spacing', units_out%length)
     end if
@@ -172,32 +174,33 @@ contains
     end if
 #endif
 
-    do idir = 1, gr%sb%dim
-      if(grid_spacing(idir) < M_EPSILON) then
-        if(def_h > M_ZERO .and. def_h < huge(def_h)) then
+    if (any(grid_spacing(1:gr%sb%dim) < M_EPSILON)) then
+      if (def_h > M_ZERO .and. def_h < huge(def_h)) then
+        call geometry_grid_defaults_info(geo)
+        do idir = 1, gr%sb%dim
           grid_spacing(idir) = def_h
           write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", idir, &
             ") [", trim(units_abbrev(units_out%length)), "] = ",                        &
             units_from_atomic(units_out%length, grid_spacing(idir))
           call messages_info(1)
+        end do
         ! Note: the default automatically matches the 'recommended' value compared by messages_check_def above.
-        else
-          message(1) = 'Either:'
-          message(2) = "   *) variable 'Spacing' is not defined and"
-          message(3) = "      I can't find a suitable default"
-          message(4) = "   *) your input for 'Spacing' is negative or zero"
-          call messages_fatal(4)
-        end if
+      else
+        message(1) = 'Either:'
+        message(2) = "   *) variable 'Spacing' is not defined and"
+        message(3) = "      I can't find a suitable default"
+        message(4) = "   *) your input for 'Spacing' is negative or zero"
+        call messages_fatal(4)
       end if
-    end do
+    end if
 
     ! initialize curvilinear coordinates
-    call curvilinear_init(gr%cv, gr%sb, geo, grid_spacing)
+    call curvilinear_init(gr%cv, parser, gr%sb, geo, grid_spacing)
 
     ! initialize derivatives
-    call derivatives_init(gr%der, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+    call derivatives_init(gr%der, parser, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
 
-    call double_grid_init(gr%dgrid, gr%sb)
+    call double_grid_init(gr%dgrid, parser, gr%sb)
 
     enlarge = 0
     enlarge(1:gr%sb%dim) = 2
@@ -221,16 +224,17 @@ contains
 
 
   !-------------------------------------------------------------------
-  subroutine grid_init_stage_2(gr, mc, geo)
+  subroutine grid_init_stage_2(gr, parser, mc, geo)
     type(grid_t), target, intent(inout) :: gr
+    type(parser_t),       intent(in)    :: parser
     type(multicomm_t),    intent(in)    :: mc
     type(geometry_t),     intent(in)    :: geo
 
     PUSH_SUB(grid_init_stage_2)
 
-    call mesh_init_stage_3(gr%mesh, gr%stencil, mc)
+    call mesh_init_stage_3(gr%mesh, parser, gr%stencil, mc)
 
-    call nl_operator_global_init()
+    call nl_operator_global_init(parser)
     if(gr%have_fine_mesh) then
       message(1) = "Info: coarse mesh"
       call messages_info(1)
@@ -252,9 +256,9 @@ contains
       
       call multigrid_mesh_double(geo, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil)
       
-      call derivatives_init(gr%fine%der, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+      call derivatives_init(gr%fine%der, parser, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
       
-      call mesh_init_stage_3(gr%fine%mesh, gr%stencil, mc)
+      call mesh_init_stage_3(gr%fine%mesh, parser, gr%stencil, mc)
       
       call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
       
@@ -271,8 +275,6 @@ contains
       gr%fine%mesh => gr%mesh
       gr%fine%der => gr%der
     end if
-
-    call mesh_check_symmetries(gr%mesh, gr%mesh%sb)
 
     ! multigrids are not initialized by default
     nullify(gr%mgrid)
@@ -361,15 +363,16 @@ contains
 
 
   !-------------------------------------------------------------------
-  subroutine grid_create_multigrid(gr, geo, mc)
+  subroutine grid_create_multigrid(gr, parser, geo, mc)
     type(grid_t),      intent(inout) :: gr
+    type(parser_t),    intent(in)    :: parser
     type(geometry_t),  intent(in)    :: geo
     type(multicomm_t), intent(in)    :: mc
 
     PUSH_SUB(grid_create_multigrid)
 
     SAFE_ALLOCATE(gr%mgrid)
-    call multigrid_init(gr%mgrid, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
+    call multigrid_init(gr%mgrid, parser, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
 
     POP_SUB(grid_create_multigrid)
   end subroutine grid_create_multigrid

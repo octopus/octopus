@@ -44,23 +44,25 @@ module scf_tol_oct_m
        scf_tol_obsolete_variables
 
   type scf_tol_t
-     integer           :: max_iter
+    private
+     integer, public   :: max_iter
      integer           :: scheme
-     FLOAT             :: conv_rel_dens
-     FLOAT             :: conv_abs_dens
+     FLOAT,   public   :: conv_rel_dens
+     FLOAT,   public   :: conv_abs_dens
      FLOAT             :: conv_threshold_use
      FLOAT             :: dynamic_tol_factor
      FLOAT             :: current_tol
      FLOAT             :: initial_tol
-     FLOAT             :: final_tol
+     FLOAT,   public   :: final_tol
      integer           :: iter_window
   end type scf_tol_t
 
 contains
 
   !-----------------------------------------------------------------
-  subroutine scf_tol_init(this, qtot, def_maximumiter, tol_scheme)
+  subroutine scf_tol_init(this, parser, qtot, def_maximumiter, tol_scheme)
     type(scf_tol_t),    intent(out) :: this
+    type(parser_t),     intent(in)  :: parser
     FLOAT,              intent(in)  :: qtot
     integer, optional,  intent(in)  :: def_maximumiter
     integer, optional,  intent(in)  :: tol_scheme
@@ -79,7 +81,7 @@ contains
     def_maximumiter_ = 200
     if(present(def_maximumiter)) def_maximumiter_ = def_maximumiter
 
-    call parse_variable('LRMaximumIter', def_maximumiter_, this%max_iter)
+    call parse_variable(parser, 'LRMaximumIter', def_maximumiter_, this%max_iter)
     
     !%Variable LRConvAbsDens
     !%Type float
@@ -92,7 +94,7 @@ contains
     !% A zero value means do not use this criterion.
     !%End
 
-    call parse_variable('LRConvAbsDens', CNST(1e-5), this%conv_abs_dens)
+    call parse_variable(parser, 'LRConvAbsDens', CNST(1e-5), this%conv_abs_dens)
 
     !%Variable LRConvRelDens
     !%Type float
@@ -105,7 +107,7 @@ contains
     !% A zero value means do not use this criterion.
     !%End
     
-    call parse_variable('LRConvRelDens', M_ZERO, this%conv_rel_dens)
+    call parse_variable(parser, 'LRConvRelDens', M_ZERO, this%conv_rel_dens)
 
     ! value to use for adaptive tol scheme
     if(this%conv_abs_dens <= M_ZERO) then
@@ -146,7 +148,7 @@ contains
     if(present(tol_scheme)) then
       this%scheme = tol_scheme
     else
-      call parse_variable('LRTolScheme', SCF_TOL_ADAPTIVE, this%scheme)
+      call parse_variable(parser, 'LRTolScheme', SCF_TOL_ADAPTIVE, this%scheme)
     end if
     if(.not.varinfo_valid_option('LRTolScheme', this%scheme)) &
       call messages_input_error('LRTolScheme')
@@ -160,7 +162,7 @@ contains
     !% for the first SCF iteration. Ignored if <tt>LRTolScheme = fixed</tt>.
     !%End
 
-    call parse_variable('LRTolInitTol', CNST(1e-2), this%initial_tol)
+    call parse_variable(parser, 'LRTolInitTol', CNST(1e-2), this%initial_tol)
     this%current_tol = this%initial_tol
 
     !%Variable LRTolFinalTol
@@ -171,7 +173,7 @@ contains
     !% This is the tolerance to determine that the linear solver has converged.
     !%End
 
-    call parse_variable('LRTolFinalTol', CNST(1e-6), this%final_tol)
+    call parse_variable(parser, 'LRTolFinalTol', CNST(1e-6), this%final_tol)
 
     if(this%scheme == SCF_TOL_ADAPTIVE) then 
       !%Variable LRTolAdaptiveFactor
@@ -184,7 +186,7 @@ contains
       !% tolerance is decreased faster.
       !%End
 
-      call parse_variable('LRTolAdaptiveFactor', CNST(0.1), this%dynamic_tol_factor)
+      call parse_variable(parser, 'LRTolAdaptiveFactor', CNST(0.1), this%dynamic_tol_factor)
     end if
 
     if(this%scheme==SCF_TOL_LINEAR.or.this%scheme==SCF_TOL_EXP) then
@@ -196,7 +198,7 @@ contains
       !% Number of iterations necessary to reach the final tolerance.
       !%End
 
-      call parse_variable('LRTolIterWindow', 10, this%iter_window)
+      call parse_variable(parser, 'LRTolIterWindow', 10, this%iter_window)
     end if
 
     POP_SUB(scf_tol_init)
@@ -282,19 +284,20 @@ contains
 
   !-----------------------------------------------------------------
 
-  subroutine scf_tol_obsolete_variables(old_prefix, new_prefix)
+  subroutine scf_tol_obsolete_variables(parser, old_prefix, new_prefix)
+    type(parser_t),      intent(in)    :: parser
     character(len=*),    intent(in)    :: old_prefix
     character(len=*),    intent(in)    :: new_prefix
 
     PUSH_SUB(scf_tol_obsolete_variables)
 
-    call messages_obsolete_variable(trim(old_prefix)//'LRMaximumIter', trim(new_prefix)//'LRMaximumIter')
-    call messages_obsolete_variable(trim(old_prefix)//'LRConvAbsDens', trim(new_prefix)//'LRConvAbsDens')
-    call messages_obsolete_variable(trim(old_prefix)//'LRTolScheme', trim(new_prefix)//'LRTolScheme')
-    call messages_obsolete_variable(trim(old_prefix)//'LRTolInitTol', trim(new_prefix)//'LRTolInitTol')
-    call messages_obsolete_variable(trim(old_prefix)//'LRTolFinalTol', trim(new_prefix)//'LRTolFinalTol')
-    call messages_obsolete_variable(trim(old_prefix)//'LRTolAdaptiveFactor', trim(new_prefix)//'LRTolAdaptiveFactor')
-    call messages_obsolete_variable(trim(old_prefix)//'LRTolIterWindow', trim(new_prefix)//'LRTolIterWindow')
+    call messages_obsolete_variable(parser, trim(old_prefix)//'LRMaximumIter', trim(new_prefix)//'LRMaximumIter')
+    call messages_obsolete_variable(parser, trim(old_prefix)//'LRConvAbsDens', trim(new_prefix)//'LRConvAbsDens')
+    call messages_obsolete_variable(parser, trim(old_prefix)//'LRTolScheme', trim(new_prefix)//'LRTolScheme')
+    call messages_obsolete_variable(parser, trim(old_prefix)//'LRTolInitTol', trim(new_prefix)//'LRTolInitTol')
+    call messages_obsolete_variable(parser, trim(old_prefix)//'LRTolFinalTol', trim(new_prefix)//'LRTolFinalTol')
+    call messages_obsolete_variable(parser, trim(old_prefix)//'LRTolAdaptiveFactor', trim(new_prefix)//'LRTolAdaptiveFactor')
+    call messages_obsolete_variable(parser, trim(old_prefix)//'LRTolIterWindow', trim(new_prefix)//'LRTolIterWindow')
 
     POP_SUB(scf_tol_obsolete_variables)
   end subroutine scf_tol_obsolete_variables

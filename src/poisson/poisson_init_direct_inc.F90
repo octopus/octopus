@@ -17,8 +17,9 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine poisson_kernel_init(this, all_nodes_comm)
+subroutine poisson_kernel_init(this, parser, all_nodes_comm)
   type(poisson_t),  intent(inout) :: this
+  type(parser_t),   intent(in)    :: parser
   integer,          intent(in)    :: all_nodes_comm
 
   integer :: maxl, iter
@@ -115,7 +116,7 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
     !% When <tt>Dimensions = 1</tt>, to prevent divergence, the Coulomb interaction treated by the Poisson
     !% solver is not <math>1/r</math> but <math>1/\sqrt{a^2 + r^2}</math>, where this variable sets the value of <math>a</math>.
     !%End
-    call parse_variable('Poisson1DSoftCoulombParam', M_ONE, this%poisson_soft_coulomb_param, units_inp%length)
+    call parse_variable(parser, 'Poisson1DSoftCoulombParam', M_ONE, this%poisson_soft_coulomb_param, units_inp%length)
   else
     this%poisson_soft_coulomb_param = M_ZERO
   end if
@@ -125,39 +126,39 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
     call poisson_fmm_init(this%params_fmm, this%der, all_nodes_comm)
 
   case(POISSON_CG)
-    call parse_variable('PoissonSolverMaxMultipole', 4, maxl)
+    call parse_variable(parser, 'PoissonSolverMaxMultipole', 4, maxl)
     write(message(1),'(a,i2)')'Info: Boundary conditions fixed up to L =',  maxl
     call messages_info(1)
-    call parse_variable('PoissonSolverMaxIter', 400, iter)
-    call parse_variable('PoissonSolverThreshold', CNST(1.0e-6), threshold)
-    call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
+    call parse_variable(parser, 'PoissonSolverMaxIter', 400, iter)
+    call parse_variable(parser, 'PoissonSolverThreshold', CNST(1.0e-6), threshold)
+    call poisson_corrections_init(this%corrector, parser, maxl, this%der%mesh)
     call poisson_cg_init(threshold, iter)
 
   case(POISSON_CG_CORRECTED)
-    call parse_variable('PoissonSolverMaxMultipole', 4, maxl)
-    call parse_variable('PoissonSolverMaxIter', 400, iter)
-    call parse_variable('PoissonSolverThreshold', CNST(1.0e-6), threshold)
+    call parse_variable(parser, 'PoissonSolverMaxMultipole', 4, maxl)
+    call parse_variable(parser, 'PoissonSolverMaxIter', 400, iter)
+    call parse_variable(parser, 'PoissonSolverThreshold', CNST(1.0e-6), threshold)
     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
     call messages_info(1)
-    call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
+    call poisson_corrections_init(this%corrector, parser, maxl, this%der%mesh)
     call poisson_cg_init(threshold, iter)
 
   case(POISSON_MULTIGRID)
-    call parse_variable('PoissonSolverMaxMultipole', 4, maxl)
-    call parse_variable('PoissonSolverThreshold', CNST(1.0e-6), threshold)
+    call parse_variable(parser, 'PoissonSolverMaxMultipole', 4, maxl)
+    call parse_variable(parser, 'PoissonSolverThreshold', CNST(1.0e-6), threshold)
     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
     call messages_info(1)
 
-    call poisson_multigrid_init(this%mg, this%der%mesh, maxl, threshold)
+    call poisson_multigrid_init(this%mg, parser, this%der%mesh, maxl, threshold)
      
   case(POISSON_ISF)
-    call poisson_isf_init(this%isf_solver, this%der%mesh, this%cube, all_nodes_comm, init_world = this%all_nodes_default)
+    call poisson_isf_init(this%isf_solver, parser, this%der%mesh, this%cube, all_nodes_comm, init_world = this%all_nodes_default)
     
   case(POISSON_LIBISF)
     !! We`ll use the MPI_WORLD_COMM, to use all the available processes for the
     !! Poisson solver
     this%cube%mpi_grp = mpi_world
-    call poisson_libisf_init(this%libisf_solver, this%der%mesh, this%cube)
+    call poisson_libisf_init(this%libisf_solver, parser, this%der%mesh, this%cube)
     call poisson_libisf_get_dims(this%libisf_solver, this%cube)
     this%cube%parallel_in_domains = this%libisf_solver%datacode == "D" .and. mpi_world%size > 1
     if (this%cube%parallel_in_domains) then
@@ -166,15 +167,15 @@ subroutine poisson_kernel_init(this, all_nodes_comm)
     
   case(POISSON_FFT)
 
-    call poisson_fft_init(this%fft_solver, this%der%mesh, this%cube, this%kernel, &
+    call poisson_fft_init(this%fft_solver, parser, this%der%mesh, this%cube, this%kernel, &
       soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq)
     ! soft parameter has no effect unless in 1D
 
     if (this%kernel == POISSON_FFT_KERNEL_CORRECTED) then
-      call parse_variable('PoissonSolverMaxMultipole', 2, maxl)
+      call parse_variable(parser, 'PoissonSolverMaxMultipole', 2, maxl)
       write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
       call messages_info(1)
-      call poisson_corrections_init(this%corrector, maxl, this%der%mesh)
+      call poisson_corrections_init(this%corrector, parser, maxl, this%der%mesh)
     end if
 
   case(POISSON_NO)
@@ -186,8 +187,9 @@ end subroutine poisson_kernel_init
 
 
 !-----------------------------------------------------------------
-subroutine poisson_kernel_reinit(this, qq)
+subroutine poisson_kernel_reinit(this, parser, qq)
   type(poisson_t), intent(inout) :: this
+  type(parser_t),  intent(in)    :: parser
   FLOAT,           intent(in)    :: qq(:)
 
   PUSH_SUB(poisson_kernel_reinit)
@@ -197,7 +199,7 @@ subroutine poisson_kernel_reinit(this, qq)
     if(any(abs(this%qq(1:this%der%mesh%sb%periodic_dim) - qq(1:this%der%mesh%sb%periodic_dim)) > M_EPSILON)) then
       this%qq(1:this%der%mesh%sb%periodic_dim) = qq(1:this%der%mesh%sb%periodic_dim)
       call poisson_fft_end(this%fft_solver)
-      call poisson_fft_init(this%fft_solver, this%der%mesh, this%cube, this%kernel, &
+      call poisson_fft_init(this%fft_solver, parser, this%der%mesh, this%cube, this%kernel, &
         soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq)
     end if
   case default
@@ -576,9 +578,9 @@ subroutine poisson_solve_direct(this, pot, rho)
   FLOAT                :: xx1(1:MAX_DIM), xx2(1:MAX_DIM), xx3(1:MAX_DIM), xx4(1:MAX_DIM)
 #ifdef HAVE_MPI
   FLOAT                :: xx(1:this%der%mesh%sb%dim), yy(1:this%der%mesh%sb%dim) 
-  FLOAT                :: tmp, xg(MAX_DIM)
+  FLOAT                :: xg(MAX_DIM)
   integer, allocatable :: ip_v(:), part_v(:)
-  FLOAT, allocatable   :: pvec(:) 
+  FLOAT, allocatable   :: pvec(:), tmp(:)
 #endif
 
   PUSH_SUB(poisson_solve_direct)
@@ -606,6 +608,7 @@ subroutine poisson_solve_direct(this, pot, rho)
     SAFE_ALLOCATE(pvec(1:this%der%mesh%np))
     SAFE_ALLOCATE(part_v(1:this%der%mesh%np_global))
     SAFE_ALLOCATE(ip_v(1:this%der%mesh%np_global))
+    SAFE_ALLOCATE(tmp(1:this%der%mesh%np_global))
     do ip = 1, this%der%mesh%np_global
       ip_v(ip) = ip
     end do
@@ -634,14 +637,19 @@ subroutine poisson_solve_direct(this, pot, rho)
           end if
         end do
       end if
-      tmp = dmf_integrate(this%der%mesh, pvec)
+      tmp(ip) = dmf_integrate(this%der%mesh, pvec, reduce = .false.)
+    end do
 
+    call comm_allreduce(this%der%mesh%mpi_grp%comm, tmp)
+
+    do ip = 1, this%der%mesh%np_global
       if (part_v(ip) == this%der%mesh%vp%partno) then
-        pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp
+        pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp(ip)
       end if
     end do
 
     SAFE_DEALLOCATE_A(pvec)
+    SAFE_DEALLOCATE_A(tmp)
 
   else ! serial mode
 #endif

@@ -156,7 +156,7 @@ subroutine X(hamiltonian_apply_batch) (hm, der, psib, hpsib, ik, terms, set_bc, 
       end if
 
     case(RDMFT)
-       call X(exchange_operator)(hm, der, ik, hm%exx_coef, epsib, hpsib)
+      call X(exchange_operator)(hm, der, ik, hm%exx_coef, epsib, hpsib)
     end select
     call profiling_out(prof_exx)
     
@@ -299,7 +299,7 @@ end subroutine X(hamiltonian_rdmft_occ_apply)
 subroutine X(hamiltonian_apply_all) (hm, xc, der, st, hst)
   type(hamiltonian_t), intent(inout) :: hm
   type(xc_t),          intent(in)    :: xc
-  type(derivatives_t), intent(inout) :: der
+  type(derivatives_t), intent(in)    :: der
   type(states_t),      intent(inout) :: st
   type(states_t),      intent(inout) :: hst
 
@@ -554,8 +554,6 @@ subroutine X(scdm_exchange_operator) (hm, der, psib, hpsib, ik, exx_coef)
 
   if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points")
   
-  ! make sure scdm is initialized
-  call scdm_init(hm%hf_st, der, psolver%cube, hm%scdm)
   ! make sure scdm is localized
   call X(scdm_localize)(hm%hf_st, der%mesh, hm%scdm)
   

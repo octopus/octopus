@@ -45,20 +45,23 @@
     FLOAT :: ww, curtime, vaftime, deltat
     integer :: ifreq, max_freq
     integer :: skip
-
+    type(parser_t) :: parser
+    
     ! Initialize stuff
     call global_init(is_serial = .true.)		 
 
     call getopt_init(ierr)
     call getopt_end()
 
-    call messages_init()
+    call parser_init(parser)
+    
+    call messages_init(parser)
 
-    call io_init()
+    call io_init(parser)
 
-    call unit_system_init()
+    call unit_system_init(parser)
 
-    call spectrum_init(spectrum, &
+    call spectrum_init(spectrum, parser, &
       default_energy_step = units_to_atomic(unit_invcm, CNST(0.2)), &
       default_max_energy  = units_to_atomic(unit_invcm, CNST(5000.0)))
  
@@ -73,17 +76,17 @@
     !% time step used to calculate the vibrational spectrum.
     !%End
 
-    call messages_obsolete_variable('PropagationSpectrumTimeStepFactor', 'VibrationalSpectrumTimeStepFactor')
-    call parse_variable('VibrationalSpectrumTimeStepFactor', 10, skip)
+    call messages_obsolete_variable(parser, 'PropagationSpectrumTimeStepFactor', 'VibrationalSpectrumTimeStepFactor')
+    call parse_variable(parser, 'VibrationalSpectrumTimeStepFactor', 10, skip)
     if(skip <= 0) call messages_input_error('VibrationalSpectrumTimeStepFactor')
 
-    max_freq = 1 + nint(spectrum%max_energy/spectrum%energy_step)
+    max_freq = spectrum_nenergy_steps(spectrum)
 
     if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
 
-    call space_init(space)
-    call geometry_init(geo, space)
-    call simul_box_init(sb, geo, space)
+    call space_init(space, parser)
+    call geometry_init(geo, parser, space)
+    call simul_box_init(sb, parser, geo, space)
 
     ! Opens the coordinates files.
     iunit = io_open('td.general/coordinates', action='read')
@@ -182,7 +185,7 @@
     !% the velocity autocorrelation function. The default is the total
     !% propagation time.
     !%End
-    call parse_variable('VibrationalSpectrumTime', ntime*deltat, vaftime)
+    call parse_variable(parser, 'VibrationalSpectrumTime', ntime*deltat, vaftime)
 
     nvaf = int(vaftime/deltat)
 
@@ -228,7 +231,7 @@
     call batch_add_state(ftvafb, ftvaf)
 
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-      1, nvaf, M_ZERO, deltat, vafb, 1, max_freq, spectrum%energy_step, ftvafb)
+      1, nvaf, M_ZERO, deltat, vafb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, ftvafb)
 
     call batch_end(vafb)
     call batch_end(ftvafb)
@@ -243,7 +246,7 @@
     write(unit = iunit, iostat = ierr, fmt = 800 ) 
 
     do ifreq = 1, max_freq
-      ww = spectrum%energy_step*(ifreq - 1)
+      ww = spectrum%energy_step*(ifreq - 1) + spectrum%min_energy
       write(unit = iunit, iostat = ierr, fmt = '(2e20.10)') units_from_atomic(unit_invcm, ww), ftvaf(ifreq)
     end do
 
@@ -261,6 +264,8 @@
 
     call io_end()
     call messages_end()
+
+    call parser_end(parser)
     call global_end()
 
   contains

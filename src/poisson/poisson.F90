@@ -21,6 +21,7 @@
 
 module poisson_oct_m
   use batch_oct_m
+  use comm_oct_m
   use cube_oct_m
   use cube_function_oct_m
   use derivatives_oct_m
@@ -107,14 +108,15 @@ module poisson_oct_m
     POISSON_NULL          = -999
   
   type poisson_t
-    type(derivatives_t), pointer :: der
-    integer           :: method = POISSON_NULL
-    integer           :: kernel
-    type(cube_t)      :: cube
-    type(mesh_cube_parallel_map_t) :: mesh_cube_map
+    private
+    type(derivatives_t), pointer, public :: der
+    integer, public           :: method = POISSON_NULL
+    integer, public           :: kernel
+    type(cube_t), public      :: cube
+    type(mesh_cube_parallel_map_t), public :: mesh_cube_map
     type(mg_solver_t) :: mg
-    type(poisson_fft_t) :: fft_solver
-    FLOAT   :: poisson_soft_coulomb_param
+    type(poisson_fft_t), public :: fft_solver
+    FLOAT, public   :: poisson_soft_coulomb_param
     logical :: all_nodes_default
     type(poisson_corr_t) :: corrector
     type(poisson_isf_t)  :: isf_solver
@@ -145,8 +147,9 @@ module poisson_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, der, mc, label, theta, qq, solver)
+  subroutine poisson_init(this, parser, der, mc, label, theta, qq, solver)
     type(poisson_t),             intent(out) :: this
+    type(parser_t),              intent(in)  :: parser
     type(derivatives_t), target, intent(in)  :: der
     type(multicomm_t),           intent(in)  :: mc
     character(len=*),  optional, intent(in)  :: label
@@ -190,7 +193,7 @@ contains
     !% among the parallelization-in-domains groups.
     !%End
 
-    call parse_variable('ParallelizationPoissonAllNodes', .true., this%all_nodes_default)
+    call parse_variable(parser, 'ParallelizationPoissonAllNodes', .true., this%all_nodes_default)
 #endif
 
     !%Variable PoissonSolver
@@ -265,7 +268,7 @@ contains
     if(abs(this%theta) > M_EPSILON .and. der%mesh%sb%dim == 1) default_solver = POISSON_DIRECT_SUM
 
     if(.not.present(solver)) then
-      call parse_variable('PoissonSolver', default_solver, this%method)
+      call parse_variable(parser, 'PoissonSolver', default_solver, this%method)
     else
       this%method = solver
     end if
@@ -279,7 +282,7 @@ contains
 				!%Description
 				!% interaction strength in dressed state formalism.
 				!%End
-			call parse_variable('RDMParamLambda', CNST(1.0e-7), this%dressed_lambda)
+			call parse_variable(parser, 'RDMParamLambda', CNST(1.0e-7), this%dressed_lambda)
 		 
 			
 			!%Variable RDMParamOmega
@@ -289,7 +292,7 @@ contains
 				!%Description
 				!% mode frequency in dressed state formalism.
 				!%End
-			call parse_variable('RDMParamOmega', CNST(1.0e-7), this%dressed_omega)
+			call parse_variable(parser, 'RDMParamOmega', CNST(1.0e-7), this%dressed_omega)
 
 			
 			!%Variable RDMNoElectrons
@@ -300,7 +303,7 @@ contains
 				!% number of active electrons as extra variable, necessary in dressed state formalism. Defined as float
 				!% for better usage later
 				!%End
-			call parse_variable('RDMNoElectrons', CNST(2.0), this%dressed_electrons)
+			call parse_variable(parser, 'RDMNoElectrons', CNST(2.0), this%dressed_electrons)
 
 			
 			!%Variable RDMCoulomb
@@ -310,7 +313,7 @@ contains
 				!%Description
 				!% allows to control the prefactor of the electron electron interaction
 				!%End
-			call parse_variable('RDMCoulomb', CNST(1.0), this%dressed_coulomb)
+			call parse_variable(parser, 'RDMCoulomb', CNST(1.0), this%dressed_coulomb)
 
 			
 			write(message(1),'(a,1x,f14.12)') 'RDMParamLambda', this%dressed_lambda
@@ -353,7 +356,7 @@ contains
     else
 
       ! Documentation in cube.F90
-      call parse_variable('FFTLibrary', FFTLIB_FFTW, fft_library)
+      call parse_variable(parser, 'FFTLibrary', FFTLIB_FFTW, fft_library)
       
       !%Variable PoissonFFTKernel
       !%Type integer
@@ -401,7 +404,7 @@ contains
         default_kernel = der%mesh%sb%periodic_dim
       end select
 
-      call parse_variable('PoissonFFTKernel', default_kernel, this%kernel)
+      call parse_variable(parser, 'PoissonFFTKernel', default_kernel, this%kernel)
       if(.not.varinfo_valid_option('PoissonFFTKernel', this%kernel)) call messages_input_error('PoissonFFTKernel')
 
       call messages_print_var_option(stdout, "PoissonFFTKernel", this%kernel)
@@ -532,7 +535,7 @@ contains
 
     if ( multicomm_strategy_is_parallel(mc, P_STRATEGY_KPOINTS) ) then
       ! Documentation in poisson_libisf.F90
-      call parse_variable('PoissonSolverISFParallelData', .true., isf_data_is_parallel)
+      call parse_variable(parser, 'PoissonSolverISFParallelData', .true., isf_data_is_parallel)
       if ( this%method == POISSON_LIBISF .and. isf_data_is_parallel ) then
         call messages_not_implemented("k-point parallelization with LibISF Poisson solver and PoissonSolverISFParallelData = yes")
       end if
@@ -556,7 +559,7 @@ contains
       !% the section that refers to Poisson equation, and to the local potential for details
       !% [the default value of two is typically good].
       !%End
-      call parse_variable('DoubleFFTParameter', M_TWO, fft_alpha)
+      call parse_variable(parser, 'DoubleFFTParameter', M_TWO, fft_alpha)
       if (fft_alpha < M_ONE .or. fft_alpha > M_THREE ) then
         write(message(1), '(a,f12.5,a)') "Input: '", fft_alpha, &
           "' is not a valid DoubleFFTParameter"
@@ -648,7 +651,7 @@ contains
 #endif
     end if
     
-    call poisson_kernel_init(this, mc%master_comm)
+    call poisson_kernel_init(this, parser, mc%master_comm)
 
     POP_SUB(poisson_init)
   end subroutine poisson_init

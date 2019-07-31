@@ -74,6 +74,7 @@ module mesh_oct_m
   !! - x, vol_pp
   !! These four are defined for all the points the node is responsible for.
   type mesh_t
+    ! Components are public by default
     type(simul_box_t),   pointer :: sb  !< simulation box
     type(curvilinear_t), pointer :: cv  
     type(index_t)                :: idx 
@@ -114,6 +115,7 @@ module mesh_oct_m
   !!   x_{i,j} = origin + i*spacing*u + j*spacing*v,
   !! for nu <= i <= mu and nv <= j <= mv
   type mesh_plane_t
+    ! Components are public by default
     FLOAT :: n(MAX_DIM)
     FLOAT :: u(MAX_DIM), v(MAX_DIM)
     FLOAT :: origin(MAX_DIM)
@@ -124,6 +126,7 @@ module mesh_oct_m
   !> This data type defines a line, and a regular grid defined on this
   !! line (or rather, on a portion of this line).
   type mesh_line_t
+    ! Components are public by default
     FLOAT :: n(MAX_DIM)
     FLOAT :: u(MAX_DIM)
     FLOAT :: origin(MAX_DIM)
@@ -404,8 +407,6 @@ contains
     else
       if (mpi_grp_is_root(mpi_grp)) then
         write(iunit, '(a)') dump_tag
-        write(iunit, '(a20,1i10)')  'np=                 ', mesh%np
-        write(iunit, '(a20,1i10)')  'np_part=            ', mesh%np_part
         write(iunit, '(a20,1i10)')  'np_global=          ', mesh%np_global
         write(iunit, '(a20,1i10)')  'np_part_global=     ', mesh%np_part_global
       end if
@@ -449,12 +450,10 @@ contains
       if (err /= 0) ierr = ierr + 2
 
       if (ierr == 0) then
-        call iopar_read(mpi_grp, iunit, lines, 4, err)
+        call iopar_read(mpi_grp, iunit, lines, 2, err)
         if (err /= 0) then
           ierr = ierr + 4
         else
-          read(lines(1), '(a20,1i10)') str, mesh%np
-          read(lines(2), '(a20,1i10)') str, mesh%np_part
           read(lines(3), '(a20,1i10)') str, mesh%np_global
           read(lines(4), '(a20,1i10)') str, mesh%np_part_global
           mesh%parallel_in_domains = .false.
@@ -795,8 +794,6 @@ contains
     integer :: iop, ip, idim, nops
     FLOAT :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
 
-    if(.not.sb%kpoints%use_symmetries) return
-
     !If all the axis have the same spacing and the same length
     !the grid is by obviously symmetric 
     !Indeed, reduced coordinates are proportional to the point index
@@ -813,8 +810,8 @@ contains
     message(1) = "Checking if the real-space grid is symmetric";
     call messages_info(1)
 
-    lsize(1:3) = dble(mesh%idx%ll(1:3))
-    offset(1:3) = dble(mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3))
+    lsize(1:3) = real(mesh%idx%ll(1:3), REAL_PRECISION)
+    offset(1:3) = real(mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3), REAL_PRECISION)
 
     nops = symmetries_number(mesh%sb%symm)
 
@@ -824,41 +821,44 @@ contains
       !If yes, it should have integer reduced coordinates 
       if(mesh%parallel_in_domains) then
         ! convert to global point
-        destpoint(1:3) = dble(mesh%idx%lxyz(mesh%vp%local(mesh%vp%xlocal + ip - 1), 1:3)) - offset(1:3)
+        destpoint(1:3) = real(mesh%idx%lxyz(mesh%vp%local(mesh%vp%xlocal + ip - 1), 1:3), REAL_PRECISION) - offset(1:3)
       else
-        destpoint(1:3) = dble(mesh%idx%lxyz(ip, 1:3)) - offset(1:3)
+        destpoint(1:3) = real(mesh%idx%lxyz(ip, 1:3), REAL_PRECISION) - offset(1:3)
       end if
       ! offset moves corner of cell to origin, in integer mesh coordinates
       ASSERT(all(destpoint >= 0))
       ASSERT(all(destpoint < lsize))
 
       ! move to center of cell in real coordinates
-      destpoint = destpoint - dble(int(lsize)/2)
+      destpoint = destpoint - real(int(lsize)/2, REAL_PRECISION)
 
       !convert to proper reduced coordinates
       forall(idim = 1:3) destpoint(idim) = destpoint(idim)/lsize(idim)
 
       ! iterate over all points that go to this point by a symmetry operation
       do iop = 1, nops
-        srcpoint = symm_op_apply_inv_red(mesh%sb%symm%ops(iop), destpoint) 
+        srcpoint = symm_op_apply_red(mesh%sb%symm%ops(iop), destpoint) 
 
         !We now come back to what should be an integer, if the symmetric point beloings to the grid
         forall(idim = 1:3) srcpoint(idim) = srcpoint(idim)*lsize(idim)
 
         ! move back to reference to origin at corner of cell
-        srcpoint = srcpoint + dble(int(lsize)/2)
+        srcpoint = srcpoint + real(int(lsize)/2, REAL_PRECISION)
+
+        ! apply periodic boundary conditions in periodic directions 
+        do idim = 1, mesh%sb%periodic_dim
+          if(nint(srcpoint(idim)) < 0 .or. nint(srcpoint(idim)) >= lsize(idim)) then
+            srcpoint(idim) = modulo(srcpoint(idim)+M_HALF*SYMPREC, lsize(idim))
+          end if
+        end do
+        ASSERT(all(srcpoint >= -SYMPREC))
+        ASSERT(all(srcpoint < lsize))
 
         srcpoint(1:3) = srcpoint(1:3) + offset(1:3)
  
-        if(any(srcpoint-anint(srcpoint)> SYMPREC)) then
+        if(any(srcpoint-anint(srcpoint)> SYMPREC*M_TWO)) then
           message(1) = "The real-space grid breaks at least one of the symmetries of the system."
-          message(2) = "Change your spacing or use KPointsUseSymmetries=no."
-          !print '(3(3i4,2x))', symm_op_rotation_matrix_red(mesh%sb%symm%ops(iop))
-          !print *, srcpoint
-          !print *, destpoint
-          !print *, offset
-          !print *, mesh%idx%lxyz(ip, 1:3)
-          !print *, lsize
+          message(2) = "Change your spacing or use SymmetrizeDensity=no."
           call messages_fatal(2)
         end if
       end do

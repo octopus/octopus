@@ -102,6 +102,7 @@ module output_oct_m
 
 
   type output_bgw_t
+    private
     integer           :: nbands
     integer           :: vxc_diag_nmin
     integer           :: vxc_diag_nmax
@@ -117,20 +118,21 @@ module output_oct_m
   end type output_bgw_t
 
   type output_t
+    private
     !> General output variables:
-    integer(8) :: what                !< what to output
-    integer(8) :: whatBZ              !< what to output - for k-point resolved output
-    integer(8) :: what_lda_u          !< what to output for the LDA+U part
-    integer(8) :: how                 !< how to output
+    integer(8), public :: what                !< what to output
+    integer(8), public :: whatBZ              !< what to output - for k-point resolved output
+    integer(8), public :: what_lda_u          !< what to output for the LDA+U part
+    integer(8), public :: how                 !< how to output
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
 
     !> These variables fine-tune the output for some of the possible output options:
-    integer :: output_interval     !< output every iter
-    integer :: restart_write_interval
-    logical :: duringscf
+    integer, public :: output_interval     !< output every iter
+    integer, public :: restart_write_interval
+    logical, public :: duringscf
     character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
-    character(len=MAX_PATH_LEN) :: iter_dir  !< The folder name, if information will be output while iterating.
+    character(len=MAX_PATH_LEN), public :: iter_dir  !< The folder name, if information will be output while iterating.
 
     type(mesh_plane_t) :: plane    !< This is to calculate the current flow across a plane
     type(mesh_line_t)  :: line     !< or through a line (in 2D)
@@ -144,9 +146,11 @@ module output_oct_m
   
 contains
 
-  subroutine output_init(outp, sb, nst, ks)
+  subroutine output_init(outp, parser, sb, st, nst, ks)
     type(output_t),       intent(out)   :: outp
+    type(parser_t),       intent(in)    :: parser
     type(simul_box_t),    intent(in)    :: sb
+    type(states_t),       intent(in)    :: st
     integer,              intent(in)    :: nst
     type(v_ks_t),         intent(inout) :: ks
 
@@ -285,7 +289,7 @@ contains
     !% Outputs the total heat current density. The output file is
     !% called <tt>heat_current-</tt>.
     !%End
-    call parse_variable('Output', 0, outp%what)
+    call parse_variable(parser, 'Output', 0, outp%what)
 
     if(bitand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
       call messages_experimental("Wave-functions in Fourier space")
@@ -334,10 +338,10 @@ contains
 
       write(nst_string,'(i6)') nst
       write(default,'(a,a)') "1-", trim(adjustl(nst_string))
-      call parse_variable('OutputWfsNumber', default, outp%wfs_list)
+      call parse_variable(parser, 'OutputWfsNumber', default, outp%wfs_list)
     end if
 
-    if(parse_block('CurrentThroughPlane', blk) == 0) then
+    if(parse_block(parser, 'CurrentThroughPlane', blk) == 0) then
       outp%what = ior(outp%what, OPTION__OUTPUT__J_FLOW)
 
       !%Variable CurrentThroughPlane
@@ -457,11 +461,11 @@ contains
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me_init(outp%me, sb, nst)
+      call output_me_init(outp%me, parser, sb, st, nst)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
-      call output_berkeleygw_init(nst, outp%bgw, sb%periodic_dim)
+      call output_berkeleygw_init(nst, parser, outp%bgw, sb%periodic_dim)
     end if
 
     !%Variable OutputLDA_U
@@ -496,7 +500,7 @@ contains
     !% These parameters are not determined self-consistently, but are taken from the 
     !% occupation matrices and Coulomb integrals comming from a standard +U calculation.
     !%End
-    call parse_variable('OutputLDA_U', 0_8, outp%what_lda_u)
+    call parse_variable(parser, 'OutputLDA_U', 0_8, outp%what_lda_u)
 
     !%Variable OutputInterval
     !%Type integer
@@ -512,8 +516,8 @@ contains
     !% Must be >= 0. If it is 0, then no output is written. For <tt>gs</tt> and <tt>unocc</tt>
     !% calculations, <tt>OutputDuringSCF</tt> must be set too for this output to be produced.
     !%End
-    call parse_variable('OutputInterval', 50, outp%output_interval)
-    call messages_obsolete_variable("OutputEvery", "OutputInterval/RestartWriteInterval")
+    call parse_variable(parser, 'OutputInterval', 50, outp%output_interval)
+    call messages_obsolete_variable(parser, 'OutputEvery', 'OutputInterval/RestartWriteInterval')
     if(outp%output_interval < 0) then
       message(1) = "OutputInterval must be >= 0."
       call messages_fatal(1)
@@ -527,7 +531,7 @@ contains
     !% During <tt>gs</tt> and <tt>unocc</tt> runs, if this variable is set to yes, 
     !% output will be written after every <tt>OutputInterval</tt> iterations.
     !%End
-    call parse_variable('OutputDuringSCF', .false., outp%duringscf) 
+    call parse_variable(parser, 'OutputDuringSCF', .false., outp%duringscf) 
 
     !%Variable RestartWriteInterval
     !%Type integer
@@ -540,7 +544,7 @@ contains
     !% controlled by the <tt>TDOutput</tt> variable. (Other output is
     !% controlled by <tt>OutputInterval</tt>.)
     !%End
-    call parse_variable('RestartWriteInterval', 50, outp%restart_write_interval)
+    call parse_variable(parser, 'RestartWriteInterval', 50, outp%restart_write_interval)
     if(outp%restart_write_interval <= 0) then
       message(1) = "RestartWriteInterval must be > 0."
       call messages_fatal(1)
@@ -580,7 +584,7 @@ contains
     !%Option density_kpt bit(1)
     !% Outputs the electronic density resolved in momentum space. 
     !%End
-    call parse_variable('Output_KPT', 0_8, outp%whatBZ)
+    call parse_variable(parser, 'Output_KPT', 0_8, outp%whatBZ)
 
     if(.not.varinfo_valid_option('Output_KPT', outp%whatBZ, is_flag=.true.)) then
       call messages_input_error('Output_KPT')
@@ -601,7 +605,7 @@ contains
     !% This information is written while iterating <tt>CalculationMode = gs</tt>, <tt>unocc</tt>, or <tt>td</tt>,
     !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
-    call parse_variable('OutputIterDir', "output_iter", outp%iter_dir)
+    call parse_variable(parser, 'OutputIterDir', "output_iter", outp%iter_dir)
     if(outp%what + outp%whatBZ + outp%what_lda_u /= 0 .and. outp%output_interval > 0) then
       call io_mkdir(outp%iter_dir)
     end if
@@ -609,7 +613,7 @@ contains
 
     ! we are using a what that has a how.
     if(bitand(outp%what, not(what_no_how)) /= 0 .or. outp%whatBZ /= 0 .or. bitand(outp%what_lda_u, not(what_no_how_u)) /= 0) then
-      call io_function_read_how(sb, outp%how)
+      call io_function_read_how(sb, parser, outp%how)
     else
       outp%how = 0
     end if
@@ -630,8 +634,9 @@ contains
   end subroutine output_end
 
   ! ---------------------------------------------------------
-  subroutine output_all(outp, gr, geo, st, hm, ks, dir)
-    type(grid_t),         intent(inout) :: gr
+  subroutine output_all(outp, parser, gr, geo, st, hm, ks, dir)
+    type(grid_t),         intent(in)    :: gr
+    type(parser_t),       intent(in)    :: parser
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
@@ -660,7 +665,7 @@ contains
       end do
     end if
     
-    call output_states(st, gr, geo, hm, dir, outp)
+    call output_states(st, parser, gr, geo, hm, dir, outp)
     call output_hamiltonian(hm, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
     call output_localization_funct(st, hm, gr, dir, outp, geo)
     call output_current_flow(gr, st, dir, outp)
@@ -726,7 +731,7 @@ contains
   subroutine output_localization_funct(st, hm, gr, dir, outp, geo)
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(in)    :: hm
-    type(grid_t),           intent(inout) :: gr
+    type(grid_t),           intent(in)    :: gr
     character(len=*),       intent(in)    :: dir
     type(output_t),         intent(in)    :: outp
     type(geometry_t),       intent(in)    :: geo
@@ -835,7 +840,7 @@ contains
   subroutine calc_electronic_pressure(st, hm, gr, pressure)
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(in)    :: hm
-    type(grid_t),           intent(inout) :: gr
+    type(grid_t),           intent(in)    :: gr
     FLOAT,                  intent(out)   :: pressure(:)
 
     FLOAT, allocatable :: rho(:,:), lrho(:), tau(:,:)
@@ -880,15 +885,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine output_energy_density(hm, ks, st, der, dir, outp, geo, gr, grp)
-    type(hamiltonian_t),       intent(in)    :: hm
-    type(v_ks_t),              intent(in)    :: ks
-    type(states_t),            intent(inout) :: st
-    type(derivatives_t),       intent(inout) :: der
-    character(len=*),          intent(in)    :: dir
-    type(output_t),            intent(in)    :: outp
-    type(geometry_t),          intent(in)    :: geo
-    type(grid_t),              intent(in)    :: gr
-    type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
+    type(hamiltonian_t),       intent(in) :: hm
+    type(v_ks_t),              intent(in) :: ks
+    type(states_t),            intent(in) :: st
+    type(derivatives_t),       intent(in) :: der
+    character(len=*),          intent(in) :: dir
+    type(output_t),            intent(in) :: outp
+    type(geometry_t),          intent(in) :: geo
+    type(grid_t),              intent(in) :: gr
+    type(mpi_grp_t), optional, intent(in) :: grp !< the group that shares the same data, must contain the domains group
 
     integer :: is, ierr, ip
     character(len=MAX_PATH_LEN) :: fname
@@ -951,8 +956,9 @@ contains
 
   
   ! ---------------------------------------------------------
-  subroutine output_berkeleygw_init(nst, bgw, periodic_dim)
+  subroutine output_berkeleygw_init(nst, parser, bgw, periodic_dim)
     integer,            intent(in)  :: nst
+    type(parser_t),     intent(in)  :: parser
     type(output_bgw_t), intent(out) :: bgw
     integer,            intent(in)  :: periodic_dim
 
@@ -977,7 +983,7 @@ contains
     !% Wavefunctions for bands up to this number will be output. Must be between <= number of states.
     !% If < 1, no wavefunction file will be output.
     !%End
-    call parse_variable('BerkeleyGW_NumberBands', nst, bgw%nbands)
+    call parse_variable(parser, 'BerkeleyGW_NumberBands', nst, bgw%nbands)
 
     ! these cannot be checked earlier, since output is initialized before unocc determines nst
     if(bgw%nbands > nst) then
@@ -993,7 +999,7 @@ contains
     !% Lowest band for which to write diagonal exchange-correlation matrix elements. Must be <= number of states.
     !% If < 1, diagonals will be skipped.
     !%End
-    call parse_variable('BerkeleyGW_Vxc_diag_nmin', 1, bgw%vxc_diag_nmin)
+    call parse_variable(parser, 'BerkeleyGW_Vxc_diag_nmin', 1, bgw%vxc_diag_nmin)
 
     if(bgw%vxc_diag_nmin > nst) then
       message(1) = "BerkeleyGW_Vxc_diag_nmin must be <= number of states."
@@ -1008,7 +1014,7 @@ contains
     !% Highest band for which to write diagonal exchange-correlation matrix elements. Must be between <= number of states.
     !% If < 1, diagonals will be skipped.
     !%End
-    call parse_variable('BerkeleyGW_Vxc_diag_nmax', nst, bgw%vxc_diag_nmax)
+    call parse_variable(parser, 'BerkeleyGW_Vxc_diag_nmax', nst, bgw%vxc_diag_nmax)
 
     if(bgw%vxc_diag_nmax > nst) then
       message(1) = "BerkeleyGW_Vxc_diag_nmax must be <= number of states."
@@ -1028,7 +1034,7 @@ contains
     !% Lowest band for which to write off-diagonal exchange-correlation matrix elements. Must be <= number of states.
     !% If < 1, off-diagonals will be skipped.
     !%End
-    call parse_variable('BerkeleyGW_Vxc_offdiag_nmin', 1, bgw%vxc_offdiag_nmin)
+    call parse_variable(parser, 'BerkeleyGW_Vxc_offdiag_nmin', 1, bgw%vxc_offdiag_nmin)
     
     if(bgw%vxc_offdiag_nmin > nst) then
       message(1) = "BerkeleyGW_Vxc_offdiag_nmin must be <= number of states."
@@ -1043,7 +1049,7 @@ contains
     !% Highest band for which to write off-diagonal exchange-correlation matrix elements. Must be <= number of states.
     !% If < 1, off-diagonals will be skipped.
     !%End
-    call parse_variable('BerkeleyGW_Vxc_offdiag_nmax', nst, bgw%vxc_offdiag_nmax)
+    call parse_variable(parser, 'BerkeleyGW_Vxc_offdiag_nmax', nst, bgw%vxc_offdiag_nmax)
 
     if(bgw%vxc_offdiag_nmax > nst) then
       message(1) = "BerkeleyGW_Vxc_offdiag_nmax must be <= number of states."
@@ -1063,7 +1069,7 @@ contains
     !!% Even when wavefunctions, density, and XC potential could be real in reciprocal space,
     !!% they will be output as complex.
     !!%End
-    !call parse_variable('BerkeleyGW_Complex', .false., bgw%complex)
+    !call parse_variable(parser, 'BerkeleyGW_Complex', .false., bgw%complex)
     
     bgw%complex = .true.
     ! real output not implemented, so currently this is always true
@@ -1075,7 +1081,7 @@ contains
     !%Description
     !% Filename for the wavefunctions.
     !%End
-    call parse_variable('BerkeleyGW_WFN_filename', 'WFN', bgw%wfn_filename)
+    call parse_variable(parser, 'BerkeleyGW_WFN_filename', 'WFN', bgw%wfn_filename)
   
     !%Variable BerkeleyGW_CalcExchange
     !%Type logical
@@ -1086,7 +1092,7 @@ contains
     !% These will be calculated anyway by BerkeleyGW <tt>Sigma</tt>, so this is useful
     !% mainly for comparison and testing.
     !%End
-    call parse_variable('BerkeleyGW_CalcExchange', .false., bgw%calc_exchange)
+    call parse_variable(parser, 'BerkeleyGW_CalcExchange', .false., bgw%calc_exchange)
 
     !%Variable BerkeleyGW_CalcDipoleMtxels
     !%Type logical
@@ -1101,7 +1107,7 @@ contains
     !% and <tt>use_momentum</tt>. Specify the number of conduction and valence bands you will
     !% use in BSE here with <tt>BerkeleyGW_VmtxelNumCondBands</tt> and <tt>BerkeleyGW_VmtxelNumValBands</tt>.
     !%End
-    call parse_variable('BerkeleyGW_CalcDipoleMtxels', .false., bgw%calc_vmtxel)
+    call parse_variable(parser, 'BerkeleyGW_CalcDipoleMtxels', .false., bgw%calc_vmtxel)
 
     !%Variable BerkeleyGW_VmtxelPolarization
     !%Type block
@@ -1116,7 +1122,7 @@ contains
     bgw%vmtxel_polarization(1:3) = M_ZERO
     bgw%vmtxel_polarization(1) = M_ONE
 
-    if(bgw%calc_vmtxel .and. parse_block('BerkeleyGW_VmtxelPolarization', blk)==0) then
+    if(bgw%calc_vmtxel .and. parse_block(parser, 'BerkeleyGW_VmtxelPolarization', blk)==0) then
       do idir = 1, 3
         call parse_block_float(blk, 0, idir - 1, bgw%vmtxel_polarization(idir))
 
@@ -1143,7 +1149,7 @@ contains
     !% <tt>BerkeleyGW_CalcDipoleMtxels = yes</tt>. This should be equal to the number to be
     !% used in BSE.
     !%End
-    if(bgw%calc_vmtxel) call parse_variable('BerkeleyGW_VmtxelNumCondBands', 0, bgw%vmtxel_ncband)
+    if(bgw%calc_vmtxel) call parse_variable(parser, 'BerkeleyGW_VmtxelNumCondBands', 0, bgw%vmtxel_ncband)
     ! The default should be the minimum number of occupied states on any k-point or spin.
 
     !%Variable BerkeleyGW_VmtxelNumValBands
@@ -1155,7 +1161,7 @@ contains
     !% <tt>BerkeleyGW_CalcDipoleMtxels = yes</tt>. This should be equal to the number to be
     !% used in BSE.
     !%End
-    if(bgw%calc_vmtxel) call parse_variable('BerkeleyGW_VmtxelNumValBands', 0, bgw%vmtxel_nvband)
+    if(bgw%calc_vmtxel) call parse_variable(parser, 'BerkeleyGW_VmtxelNumValBands', 0, bgw%vmtxel_nvband)
     ! The default should be the minimum number of unoccupied states on any k-point or spin.
 
     POP_SUB(output_berkeleygw_init)
@@ -1324,7 +1330,7 @@ contains
 
     ! deallocate everything
     call cube_function_free_fs(cube, cf)
-    call dcube_function_free_rs(cube, cf)
+    call zcube_function_free_rs(cube, cf)
     call cube_end(cube)
     
     if(states_are_real(st)) then

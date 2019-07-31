@@ -111,16 +111,17 @@ module multicomm_oct_m
 
   !> Stores all communicators and groups
   type multicomm_t
+    private
     integer          :: n_node           !< Total number of nodes.
 
-    integer          :: par_strategy     !< What kind of parallelization strategy should we use?
+    integer, public  :: par_strategy     !< What kind of parallelization strategy should we use?
 
-    integer, allocatable :: group_sizes(:)   !< Number of processors in each group.
-    integer, allocatable :: who_am_i(:)      !< Rank in the "line"-communicators.
-    integer, allocatable :: group_comm(:)    !< "Line"-communicators I belong to.
-    integer          :: dom_st_comm      !< States-domain plane communicator.
-    integer          :: st_kpt_comm      !< Kpoints-states plane communicator.
-    integer          :: dom_st_kpt_comm  !< Kpoints-states-domain cube communicator.
+    integer, allocatable         :: group_sizes(:)   !< Number of processors in each group.
+    integer, allocatable, public :: who_am_i(:)      !< Rank in the "line"-communicators.
+    integer, allocatable, public :: group_comm(:)    !< "Line"-communicators I belong to.
+    integer, public              :: dom_st_comm      !< States-domain plane communicator.
+    integer, public              :: st_kpt_comm      !< Kpoints-states plane communicator.
+    integer, public              :: dom_st_kpt_comm  !< Kpoints-states-domain cube communicator.
 
     integer          :: nthreads         !< Number of OMP threads
     integer          :: node_type        !< Is this node a P_MASTER or a P_SLAVE?
@@ -128,16 +129,17 @@ module multicomm_oct_m
     
     integer          :: full_comm        !< The base communicator.
     integer          :: full_comm_rank   !< The rank in the base communicator.
-    integer          :: master_comm      !< The communicator without slaves.
+    integer, public  :: master_comm      !< The communicator without slaves.
     integer          :: master_comm_rank !< The rank in the communicator without slaves.
-    integer          :: slave_intercomm  !< the intercomm to communicate with slaves
+    integer, public  :: slave_intercomm  !< the intercomm to communicate with slaves
   end type multicomm_t
 
   !> An all-pairs communication schedule for a given group.
   type multicomm_all_pairs_t
-    type(mpi_grp_t)  :: grp            !< Schedule for this group.
-    integer          :: rounds         !< This many comm. rounds.
-    integer, pointer :: schedule(:, :) !< This is the schedule.
+    private
+    type(mpi_grp_t)  :: grp                    !< Schedule for this group.
+    integer          :: rounds                 !< This many comm. rounds.
+    integer, pointer, public :: schedule(:, :) !< This is the schedule.
   end type multicomm_all_pairs_t
 
 contains
@@ -161,8 +163,9 @@ contains
 
   ! ---------------------------------------------------------
   !> create index and domain communicators
-  subroutine multicomm_init(mc, base_grp, parallel_mask, default_mask, n_node, index_range, min_range)
+  subroutine multicomm_init(mc, parser, base_grp, parallel_mask, default_mask, n_node, index_range, min_range)
     type(multicomm_t), intent(out)   :: mc
+    type(parser_t),    intent(in)    :: parser
     type(mpi_grp_t),   intent(inout) :: base_grp
     integer,           intent(in)    :: parallel_mask
     integer,           intent(in)    :: default_mask
@@ -179,8 +182,8 @@ contains
 
     call messages_print_stress(stdout, "Parallelization")
 
-    call messages_obsolete_variable('ParallelizationStrategy')
-    call messages_obsolete_variable('ParallelizationGroupRanks')
+    call messages_obsolete_variable(parser, 'ParallelizationStrategy')
+    call messages_obsolete_variable(parser, 'ParallelizationGroupRanks')
     
     do ipar = 1, P_STRATEGY_MAX
       default(ipar) = PAR_NO
@@ -209,7 +212,7 @@ contains
     !%Option no 0
     !% This parallelization strategy is not used.    
     !%End
-    call parse_variable('ParDomains', default(P_STRATEGY_DOMAINS), parse(P_STRATEGY_DOMAINS))
+    call parse_variable(parser, 'ParDomains', default(P_STRATEGY_DOMAINS), parse(P_STRATEGY_DOMAINS))
 
     !%Variable ParStates
     !%Type integer
@@ -232,7 +235,7 @@ contains
     !%Option no 0
     !% This parallelization strategy is not used.    
     !%End
-    call parse_variable('ParStates', default(P_STRATEGY_STATES), parse(P_STRATEGY_STATES))
+    call parse_variable(parser, 'ParStates', default(P_STRATEGY_STATES), parse(P_STRATEGY_STATES))
 
     !%Variable ParKPoints
     !%Type integer
@@ -253,7 +256,7 @@ contains
     !%Option no 0
     !% This parallelization strategy is not used.    
     !%End
-    call parse_variable('ParKPoints', default(P_STRATEGY_KPOINTS), parse(P_STRATEGY_KPOINTS))
+    call parse_variable(parser, 'ParKPoints', default(P_STRATEGY_KPOINTS), parse(P_STRATEGY_KPOINTS))
 
     !%Variable ParOther
     !%Type integer
@@ -278,7 +281,7 @@ contains
     !%Option no 0
     !% This parallelization strategy is not used.    
     !%End
-    call parse_variable('ParOther', default(P_STRATEGY_OTHER), parse(P_STRATEGY_OTHER))
+    call parse_variable(parser, 'ParOther', default(P_STRATEGY_OTHER), parse(P_STRATEGY_OTHER))
 
     do ipar = 1, P_STRATEGY_MAX
       if(parse(ipar) == PAR_NO) parse(ipar) = 1
@@ -316,7 +319,7 @@ contains
       !% such nodes is given by this variable multiplied by the number
       !% of domains used in domain parallelization.
       !%End
-      call parse_variable('ParallelizationNumberSlaves', 0, num_slaves)
+      call parse_variable(parser, 'ParallelizationNumberSlaves', 0, num_slaves)
       
       ! the slaves must be defined at a certain parallelization level, for the moment this is state parallelization.
       slave_level = P_STRATEGY_STATES

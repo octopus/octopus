@@ -52,7 +52,8 @@ module states_io_oct_m
   public ::                           &
     states_write_eigenvalues,         &
     states_write_tpa,                 &
-    states_write_bandstructure
+    states_write_bandstructure,       &
+    states_write_gaps
 
 contains
 
@@ -362,8 +363,75 @@ contains
   end subroutine states_write_eigenvalues
 
   ! ---------------------------------------------------------
-  subroutine states_write_tpa(dir, gr, st)
+  subroutine states_write_gaps(iunit, st, sb)
+    integer,           intent(in) :: iunit
+    type(states_t),    intent(in) :: st
+    type(simul_box_t), intent(in) :: sb
+    
+    integer :: ik, ikk, ist
+
+    FLOAT :: homo, lumo, egdir, egindir
+    integer :: homok, lumok, egdirk
+
+    PUSH_SUB(states_write_gaps)
+
+    if(.not. st%calc_eigenval .or. .not. mpi_grp_is_root(mpi_world) &
+     .or. .not. simul_box_is_periodic(sb) .or. st%smear%method  /=  SMEAR_SEMICONDUCTOR) then 
+      POP_SUB(states_write_gaps)
+      return
+    end if
+
+    homo = -M_HUGE
+    homok = -1
+    lumo =  M_HUGE 
+    lumok = -1
+    egdir = M_HUGE
+    egdirk = -1
+    
+    !TODO: This definition depends on the type of smearing
+    do ik = 1, st%d%nik
+      if(abs(st%d%kweights(ik)) < M_EPSILON) cycle
+      do ist = 1,st%nst-1
+        if(st%occ(ist,ik) > M_EPSILON .and. st%eigenval(ist,ik) > homo) then
+          homo = st%eigenval(ist,ik)
+          homok = ik
+        end if
+
+        if(st%occ(ist+1,ik) <= M_EPSILON .and. st%eigenval(ist+1,ik) < lumo) then
+          lumo = st%eigenval(ist+1,ik)
+          lumok = ik
+        end if
+
+        if(st%occ(ist,ik) > M_EPSILON .and. st%occ(ist+1,ik) <= M_EPSILON &
+          .and. (st%eigenval(ist+1,ik)-st%eigenval(ist,ik))< egdir) then
+          egdir = (st%eigenval(ist+1,ik)-st%eigenval(ist,ik))
+          egdirk = ik 
+        end if
+      end do
+    end do
+
+    egindir = lumo-homo
+
+    if(lumo == -1 .or. egdir <= M_EPSILON) then
+      write(message(1),'(a)') 'The system seems to have no gap.'
+      call messages_info(1, iunit)
+    else
+      write(message(1),'(a,i5,a,f7.4,a)') 'Direct gap at ik=', egdirk, ' of ', &
+              units_from_atomic(units_out%energy, egdir),  ' ' // trim(units_abbrev(units_out%energy))
+      write(message(2),'(a,i5,a,i5,a,f7.4,a)') 'Indirect gap between ik=', homok, ' and ik=', lumok, &
+            ' of ', units_from_atomic(units_out%energy, egindir),  ' ' // trim(units_abbrev(units_out%energy))
+      call messages_info(2, iunit)
+    end if
+
+
+    POP_SUB(states_write_gaps)
+  end subroutine states_write_gaps
+
+
+  ! ---------------------------------------------------------
+  subroutine states_write_tpa(dir, parser, gr, st)
     character(len=*), intent(in) :: dir
+    type(parser_t),   intent(in) :: parser
     type(grid_t),     intent(in) :: gr
     type(states_t),   intent(in) :: st
 
@@ -421,7 +489,7 @@ contains
     !% <br>&nbsp;&nbsp; 0.1 | 0.2 | 0.3
     !% <br>%</tt>
     !%End
-    if(parse_block('MomentumTransfer', blk) == 0) then
+    if(parse_block(parser, 'MomentumTransfer', blk) == 0) then
 
       ! check if input makes sense
       ncols = parse_block_cols(blk, 0)
@@ -562,8 +630,9 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_write_bandstructure(dir, nst, st, sb, geo, mesh, phase, vec_pot, vec_pot_var)
+  subroutine states_write_bandstructure(dir, parser, nst, st, sb, geo, mesh, phase, vec_pot, vec_pot_var)
     character(len=*),  intent(in)             :: dir
+    type(parser_t),               intent(in)  :: parser
     integer,           intent(in)             :: nst
     type(states_t),    intent(in)             :: st
     type(simul_box_t), intent(in)             :: sb
@@ -602,7 +671,7 @@ contains
     !% Determines if projections of wavefunctions on the atomic orbitals 
     !% are computed or not for obtaining the orbital resolved band-structure.
     !%End
-    call parse_variable('BandStructureComputeProjections', .false., projection)
+    call parse_variable(parser, 'BandStructureComputeProjections', .false., projection)
 
 
     if(mpi_grp_is_root(mpi_world)) then

@@ -44,6 +44,7 @@ module propagator_base_oct_m
     PROP_CFMAGNUS4               = 16
 
   type propagator_t
+    ! Components are public by default
     integer             :: method           !< Which evolution method to use.
     type(exponential_t) :: te               !< How to apply the propagator \f$ e^{-i H \Delta t} \f$.
     !> Storage of the KS potential of previous iterations.

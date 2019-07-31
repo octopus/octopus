@@ -69,6 +69,7 @@ module accel_oct_m
     accel_write_buffer,           &
     accel_read_buffer,            &
     accel_release_buffer,         &
+    accel_buffer_is_allocated,    &
     accel_finish,                 &
     accel_set_kernel_arg,         &
     accel_max_workgroup_size,     &
@@ -95,6 +96,7 @@ module accel_oct_m
 #endif
 
   type accel_context_t
+    ! Components are public by default
 #ifdef HAVE_OPENCL
     type(cl_context) :: cl_context
 #elif defined(HAVE_CUDA)
@@ -105,6 +107,7 @@ module accel_oct_m
   end type accel_context_t
 
   type accel_device_t
+    ! Components are public by default
 #ifdef HAVE_OPENCL
     type(cl_device_id) :: cl_device
 #elif defined(HAVE_CUDA)
@@ -114,7 +117,8 @@ module accel_oct_m
 #endif
   end type accel_device_t
 
-  type accel_t 
+  type accel_t
+    ! Components are public by default
     type(accel_context_t)  :: context
     type(accel_device_t)   :: device
 #ifdef HAVE_OPENCL
@@ -130,6 +134,7 @@ module accel_oct_m
   end type accel_t
 
   type accel_mem_t
+    ! Components are public by default
 #ifdef HAVE_OPENCL
     type(cl_mem)           :: mem
 #else
@@ -138,9 +143,11 @@ module accel_oct_m
     integer(SIZEOF_SIZE_T) :: size
     type(type_t)           :: type
     integer                :: flags
+    logical                :: allocated
   end type accel_mem_t
 
   type accel_kernel_t
+    ! Components are public by default
 #ifdef HAVE_OPENCL
     type(cl_kernel)               :: kernel
 #endif
@@ -248,9 +255,10 @@ contains
 
   ! ------------------------------------------
 
-  subroutine accel_init(base_grp)
+  subroutine accel_init(base_grp, parser)
     type(mpi_grp_t),  intent(inout) :: base_grp
-
+    type(parser_t),   intent(in)    :: parser
+    
     logical  :: disable, default, run_benchmark
     integer  :: idevice, iplatform
 #ifdef HAVE_OPENCL
@@ -278,13 +286,13 @@ contains
     !% try to initialize and use an accelerator device. By setting this
     !% variable to <tt>yes</tt> you force Octopus not to use an accelerator even it is available.
     !%End
-    call messages_obsolete_variable('DisableOpenCL', 'DisableAccel')
+    call messages_obsolete_variable(parser, 'DisableOpenCL', 'DisableAccel')
 #ifdef HAVE_ACCEL
     default = .false.
 #else
     default = .true.
 #endif
-    call parse_variable('DisableAccel', default, disable)
+    call parse_variable(parser, 'DisableAccel', default, disable)
     accel%enabled = .not. disable
     
 #ifndef HAVE_ACCEL
@@ -299,7 +307,7 @@ contains
       return
     end if
 
-    !%Variable OpenCLPlatform
+    !%Variable AccelPlatform
     !%Type integer
     !%Default 0
     !%Section Execution::Accel
@@ -308,6 +316,8 @@ contains
     !% use. You can give an explicit platform number or use one of
     !% the options that select a particular vendor
     !% implementation. Platform 0 is used by default.
+    !%
+    !% This variable has no effect for CUDA.
     !%Option amd -2
     !% Use the AMD OpenCL platform.
     !%Option nvidia -3
@@ -317,36 +327,44 @@ contains
     !%Option intel -5
     !% Use the Intel OpenCL platform.
     !%End
-    call parse_variable('OpenCLPlatform', 0, iplatform)
+    call parse_variable(parser, 'AccelPlatform', 0, iplatform)
 
-    !%Variable OpenCLDevice
+    call messages_obsolete_variable(parser, 'OpenCLPlatform', 'AccelPlatform')
+    
+    !%Variable AccelDevice
     !%Type integer
     !%Default gpu
     !%Section Execution::Accel
     !%Description
-    !% This variable selects the OpenCL device that Octopus will
-    !% use. You can specify one of the options below or a numerical
-    !% id to select a specific device.
+    !% This variable selects the OpenCL or CUDA accelerator device
+    !% that Octopus will use. You can specify one of the options below
+    !% or a numerical id to select a specific device.
+    !%
+    !% Values >= 0 select the device to be used. In case of MPI enabled runs
+    !% devices are distributed in a round robin fashion, starting at this value.
     !%Option gpu -1
-    !% If available, Octopus will use a GPU for OpenCL.
+    !% If available, Octopus will use a GPU.
     !%Option cpu -2
-    !% If available, Octopus will use a GPU for OpenCL.
+    !% If available, Octopus will use a CPU (only for OpenCL).
     !%Option accelerator -3
-    !% If available, Octopus will use an accelerator for OpenCL.
-    !%Option cl_default -4
-    !% Octopus will use the default device specified by the OpenCL
+    !% If available, Octopus will use an accelerator (only for OpenCL).
+    !%Option accel_default -4
+    !% Octopus will use the default device specified by the implementation.
     !% implementation.
     !%End
-    call parse_variable('OpenCLDevice', OPENCL_GPU, idevice)
+    call parse_variable(parser, 'AccelDevice', OPENCL_GPU, idevice)
 
+    call messages_obsolete_variable(parser, 'OpenCLDevice', 'AccelDevice')
+    
     if(idevice < OPENCL_DEFAULT) then
-      message(1) = 'Invalid OpenCLDevice.'
-      call messages_fatal(1)
+      call messages_write('Invalid AccelDevice')
+      call messages_fatal()
     end if
 
     call messages_print_stress(stdout, "GPU acceleration")
 
 #ifdef HAVE_CUDA
+    if(idevice<0) idevice = 0
     call cuda_init(accel%context%cuda_context, accel%device%cuda_device, idevice, base_grp%rank)
 #ifdef HAVE_MPI
     write(message(1), '(A, I5.5, A, I5.5)') "Rank ", base_grp%rank, " uses device number ", idevice
@@ -562,16 +580,18 @@ contains
     call accel_kernel_start_call(dzmul, 'mul.cl', "dzmul", flags = '-DRTYPE_DOUBLE')
     call accel_kernel_start_call(zzmul, 'mul.cl', "zzmul", flags = '-DRTYPE_COMPLEX')
 
-    !%Variable OpenCLBenchmark
+    !%Variable AccelBenchmark
     !%Type logical
     !%Default no
     !%Section Execution::Accel
     !%Description
     !% If this variable is set to yes, Octopus will run some
-    !% routines to benchmark the performance of the OpenCL device.
+    !% routines to benchmark the performance of the accelerator device.
     !%End
-    call parse_variable('OpenCLBenchmark', .false., run_benchmark)
+    call parse_variable(parser, 'AccelBenchmark', .false., run_benchmark)
 
+    call messages_obsolete_variable(parser, 'OpenCLBenchmark', 'AccelBenchmark')
+    
     if(run_benchmark) then
       call opencl_check_bandwidth()
     end if
@@ -803,10 +823,10 @@ contains
       call messages_write(volume_hits + volume_misses, fmt = 'f18.1', units = unit_gigabytes, align_left = .true., &
         new_line = .true.)
       call messages_write('    Hit ratio                =')
-      call messages_write(hits/dble(hits + misses)*100, fmt='(f5.1)')
+      call messages_write(hits/dble(hits + misses)*100, fmt='(f6.1)', align_left = .true.)
       call messages_write('%', new_line = .true.)
       call messages_write('    Volume hit ratio         =')
-      call messages_write(volume_hits/(volume_hits + volume_misses)*100, fmt='(f5.1)')
+      call messages_write(volume_hits/(volume_hits + volume_misses)*100, fmt='(f6.1)', align_left = .true.)
       call messages_write('%')
       call messages_new_line()
       call messages_info()
@@ -859,7 +879,8 @@ contains
     !> To be implemented.
     this%size = 0
     this%flags = 0
-
+    this%allocated = .false.
+    
   end subroutine accel_mem_nullify
 
   ! ------------------------------------------
@@ -914,7 +935,8 @@ contains
     this%size = size
     this%flags = flags
     fsize = int(size, 8)*types_get_size(type)
-
+    this%allocated = .true.
+    
     if(fsize > 0) then
 
       call alloc_cache_get(memcache, fsize, found, this%mem)
@@ -974,9 +996,19 @@ contains
     this%size = 0
     this%flags = 0
 
+    this%allocated = .false.
+    
     POP_SUB(accel_release_buffer)
   end subroutine accel_release_buffer
+    
+  ! ------------------------------------------
+  
+  logical pure function accel_buffer_is_allocated(this) result(allocated)
+    type(accel_mem_t), intent(in) :: this
 
+    allocated = this%allocated
+  end function accel_buffer_is_allocated
+    
   ! ------------------------------------------
 
   integer(SIZEOF_SIZE_T) pure function opencl_get_buffer_size(this) result(size)
@@ -1022,6 +1054,8 @@ contains
     integer :: ierr
 #endif
 
+    ASSERT(accel_buffer_is_allocated(buffer))
+    
     ! no push_sub, called too frequently
 #ifdef HAVE_OPENCL
     call clSetKernelArg(kernel%kernel, narg, buffer%mem, ierr)

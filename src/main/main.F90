@@ -32,11 +32,13 @@ program octopus
   use string_oct_m
   use utils_oct_m
   use varinfo_oct_m
+  use walltimer_oct_m
 
   implicit none
 
   character(len=256) :: config_str
   integer :: inp_calc_mode, ierr
+  type(parser_t) :: parser
   type(block_t) :: blk
 
   call getopt_init(ierr)
@@ -45,8 +47,13 @@ program octopus
   call getopt_end()
 
   call global_init()
-  call messages_init()
 
+  call parser_init(parser)
+  
+  call messages_init(parser)
+
+  call walltimer_init(parser)
+  
   !%Variable ReportMemory
   !%Type logical
   !%Default no
@@ -58,7 +65,7 @@ program octopus
   !% generally it is a lower bound to the actual memory <tt>Octopus</tt> is
   !% using.
   !%End
-  call parse_variable('ReportMemory', .false., conf%report_memory)
+  call parse_variable(parser, 'ReportMemory', .false., conf%report_memory)
 
   ! need to find out calc_mode already here since some of the variables here (e.g.
   ! periodic dimensions) can be different for the subsystems
@@ -103,29 +110,36 @@ program octopus
   !%Option recipe 99
   !% Prints out a tasty recipe.
   !%End
-  if(parse_block('CalculationMode', blk) == 0) then
+  if(parse_block(parser, 'CalculationMode', blk) == 0) then
     call messages_write('The datasets mode has been deprecated,', new_line = .true.)
     call messages_write('please use several Octopus runs.')
     call messages_fatal()
   end if
 
-  call parse_variable('CalculationMode', CM_GS, inp_calc_mode)
+  call parse_variable(parser, 'CalculationMode', CM_GS, inp_calc_mode)
   if(.not.varinfo_valid_option('CalculationMode', inp_calc_mode)) call messages_input_error('CalculationMode')
 
   ! Now we can initialize the I/O
-  call io_init()
+  call io_init(parser)
 
   call calc_mode_par_init()
   
   ! now we declare octopus as running
   call messages_switch_status('running')
   
-  call profiling_init()
+  call profiling_init(parser)
   
   call print_header()
+
+#if !defined(HAVE_LIBXC3) && !defined(HAVE_LIBXC4)
+  call messages_write('You have compiled Octopus with version 2 of Libxc.', new_line = .true.)
+  call messages_write('Support for this version of Libxc has been deprecated and', new_line = .true.)
+  call messages_write('will be removed in the next major release of Octopus.', new_line = .true.)
+  call messages_warning()
+#endif
   
   ! now we really start
-  call run(inp_calc_mode)
+  call run(parser, inp_calc_mode)
   
 #if defined(HAVE_MPI)
   ! wait for all processors to finish
@@ -139,11 +153,16 @@ program octopus
   call profiling_end()
   
   call calc_mode_par_end()
+
+  call walltimer_end()
   
   call print_date("Calculation ended on ")
   call print_walltime()
 
   call messages_end()
+
+  call parser_end(parser)
+  
   call global_end()
 
 contains

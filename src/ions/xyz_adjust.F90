@@ -39,8 +39,9 @@ module xyz_adjust_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xyz_adjust_it(geo, rotate)
+  subroutine xyz_adjust_it(geo, parser, rotate)
     type(geometry_t),           intent(inout) :: geo
+    type(parser_t),             intent(in)    :: parser
     logical,          optional, intent(in)    :: rotate
 
     integer, parameter :: &
@@ -61,7 +62,7 @@ contains
     if(optional_default(rotate, .true.)) then
 
       ! get to axis
-      if(parse_block('MainAxis', blk)==0) then
+      if(parse_block(parser, 'MainAxis', blk)==0) then
         do idir = 1, geo%space%dim
           call parse_block_float(blk, 0, idir - 1, to(idir))
         end do
@@ -110,7 +111,7 @@ contains
       else
         default = NONE
       end if
-      call parse_variable('AxisType', default, axis_type)
+      call parse_variable(parser, 'AxisType', default, axis_type)
       call messages_print_var_option(stdout, "AxisType", axis_type)
 
       if(geo%space%dim /= 3 .and. axis_type /= NONE) then

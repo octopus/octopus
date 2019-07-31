@@ -17,10 +17,11 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff, tau)
+subroutine X(eigensolver_evolution)(gr, st, hm, te, tol, niter, converged, ik, diff, tau)
   type(grid_t),        target, intent(in)    :: gr
   type(states_t),              intent(inout) :: st
   type(hamiltonian_t), target, intent(in)    :: hm
+  type(exponential_t),         intent(inout) :: te
   FLOAT,                       intent(in)    :: tol
   integer,                     intent(inout) :: niter
   integer,                     intent(inout) :: converged
@@ -31,14 +32,11 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   integer :: ist, iter, maxiter, conv, matvec, i, j
   R_TYPE, allocatable :: hpsi(:, :), c(:, :), psi(:, :)
   FLOAT, allocatable :: eig(:)
-  type(exponential_t) :: te
 
   PUSH_SUB(X(eigensolver_evolution))
 
   maxiter = niter
   matvec = 0
-
-  call exponential_init(te)
 
   SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np_part, 1:st%d%dim))
@@ -96,7 +94,6 @@ subroutine X(eigensolver_evolution) (gr, st, hm, tol, niter, converged, ik, diff
   converged = conv
 
   niter = matvec
-  call exponential_end(te)
 
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(hpsi)

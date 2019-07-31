@@ -36,9 +36,11 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, basisfro
     if(.not.has_phase .or..not.simul_box_is_periodic(os%sphere%mesh%sb) &
             .or. os%submeshforperiodic) then
       SAFE_ALLOCATE(spsi(1:os%sphere%np, 1:ndim))
-      forall(ip=1:os%sphere%np, idim=1:ndim)
-        spsi(ip,idim) = psi(os%sphere%map(ip), idim)
-      end forall
+      do idim = 1, ndim
+        forall(ip=1:os%sphere%np)
+          spsi(ip,idim) = psi(os%sphere%map(ip), idim)
+        end forall
+      end do
     end if
   end if
 

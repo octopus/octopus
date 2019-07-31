@@ -20,7 +20,7 @@
   subroutine output_hamiltonian(hm, st, der, dir, outp, geo, gr, grp)
     type(hamiltonian_t),       intent(in)    :: hm
     type(states_t),            intent(inout) :: st
-    type(derivatives_t),       intent(inout) :: der
+    type(derivatives_t),       intent(in)    :: der
     character(len=*),          intent(in)    :: dir
     type(output_t),            intent(in)    :: outp
     type(geometry_t),          intent(in)    :: geo
@@ -184,12 +184,16 @@
     if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
       if(states_are_complex(st)) then
       
-        SAFE_ALLOCATE(current_kpt(st%d%kpt%start:st%d%kpt%end, der%mesh%sb%dim)) 
+        SAFE_ALLOCATE(current_kpt(st%d%kpt%start:st%d%kpt%end, 1:der%mesh%sb%dim)) 
         do ik = st%d%kpt%start,st%d%kpt%end
           do idir = 1,der%mesh%sb%dim
-            current_kpt(ik,idir) = dmf_integrate(der%mesh, st%current_kpt(:, idir, ik))
+            current_kpt(ik,idir) = dmf_integrate(der%mesh, st%current_kpt(:, idir, ik), reduce = .false.)
           end do
         end do
+        if(der%mesh%parallel_in_domains) then
+          call comm_allreduce(der%mesh%mpi_grp%comm, current_kpt, dim = (/st%d%kpt%end-st%d%kpt%start+1, der%mesh%sb%dim/))
+        end if
+
         write(fname, '(2a)') 'current_kpt'
         call io_function_output_vector_BZ(outp%how, dir, fname, der%mesh, st%d%kpt, &
             current_kpt(:, :), der%mesh%sb%dim, (unit_one/units_out%time)*units_out%length**(1 - der%mesh%sb%dim), err, &
@@ -241,15 +245,13 @@
  
         density_kpt(ik) = M_ZERO
         do is = 1, st%d%nspin
-          density_kpt(ik) = density_kpt(ik) + dmf_integrate(der%mesh, density_tmp(:,is))
+          density_kpt(ik) = density_kpt(ik) + dmf_integrate(der%mesh, density_tmp(:,is), reduce = .false.)
         end do
       end do
-
-   #if defined(HAVE_MPI)        
+    
       if(st%parallel_in_states .or. st%d%kpt%parallel) then
-        call comm_allreduce(st%st_kpt_mpi_grp%comm, density_kpt)
+        call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, density_kpt)
       end if
-   #endif  
 
       call io_function_output_global_BZ(outp%how, dir, "density_kpt", gr%mesh, density_kpt, unit_one, err)
       SAFE_DEALLOCATE_A(density_tmp)
@@ -262,7 +264,7 @@
 
   ! ---------------------------------------------------------
   subroutine output_scalar_pot(outp, gr, geo, hm, dir, time)
-    type(grid_t),         intent(inout) :: gr
+    type(grid_t),         intent(in)    :: gr
     type(geometry_t),     intent(in)    :: geo
     type(hamiltonian_t),  intent(inout) :: hm
     type(output_t),       intent(in)    :: outp

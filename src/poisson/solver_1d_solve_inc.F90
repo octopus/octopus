@@ -29,10 +29,9 @@ subroutine X(poisson1D_solve_direct)(this, pot, rho)
   FLOAT               :: xx, yy
   R_TYPE              :: soft_coulomb_param_squared
 #ifdef HAVE_MPI
-  R_TYPE              :: tmp
   FLOAT               :: xg(1:MAX_DIM)
   integer, allocatable :: ip_v(:), part_v(:)
-  R_TYPE, allocatable :: pvec(:)
+  R_TYPE, allocatable :: pvec(:), tmp(:)
 #endif
 
   PUSH_SUB(X(poisson1D_solve_direct))
@@ -48,6 +47,7 @@ subroutine X(poisson1D_solve_direct)(this, pot, rho)
     SAFE_ALLOCATE(pvec(1:this%der%mesh%np))
     SAFE_ALLOCATE(part_v(1:this%der%mesh%np_global))
     SAFE_ALLOCATE(ip_v(1:this%der%mesh%np_global))
+    SAFE_ALLOCATE(tmp(1:this%der%mesh%np_global))
     do ip = 1, this%der%mesh%np_global
       ip_v(ip) = ip
     end do
@@ -61,16 +61,20 @@ subroutine X(poisson1D_solve_direct)(this, pot, rho)
         yy = this%der%mesh%x(jp, 1)
         pvec(jp) = rho(jp)/sqrt(soft_coulomb_param_squared + (xx - yy)**2)
       end do
-      tmp = X(mf_integrate)(this%der%mesh, pvec) 
+      tmp = X(mf_integrate)(this%der%mesh, pvec, reduce = .false.) 
+    end do
+
+    do ip = 1, this%der%mesh%np_global
       ip_v(1) = ip
       call partition_get_partition_number(this%der%mesh%inner_partition, 1, ip_v, part_v)
 
       if (part_v(1) == this%der%mesh%vp%partno) then
-        pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp
+        pot(vec_global2local(this%der%mesh%vp, ip, this%der%mesh%vp%partno)) = tmp(ip)
       end if
     end do
 
     SAFE_DEALLOCATE_A(pvec)
+    SAFE_DEALLOCATE_A(tmp)
 
   else  ! running in serial
 #endif

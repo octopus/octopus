@@ -64,13 +64,15 @@ module test_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine test_run()
+  subroutine test_run(parser)
+    type(parser_t),       intent(in)    :: parser
+        
     type(test_parameters_t) :: param
     integer :: test_mode
     
     PUSH_SUB(test_run)
 
-    call messages_obsolete_variable('WhichTest', 'TestMode')
+    call messages_obsolete_variable(parser, 'WhichTest', 'TestMode')
 
     !%Variable TestMode
     !%Type integer
@@ -95,11 +97,13 @@ contains
     !% Tests the DFT+U part of the code for projections on the basis.
     !%Option hamiltonian_apply 8
     !% Tests the application of the Hamiltonian, or a part of it
+    !%Option density_calc 9
+    !%Calculation of the density.
     !%End
-    call parse_variable('TestMode', OPTION__TESTMODE__HARTREE, test_mode)
+    call parse_variable(parser, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
-    call messages_obsolete_variable('TestDerivatives', 'TestType')
-    call messages_obsolete_variable('TestOrthogonalization', 'TestType')
+    call messages_obsolete_variable(parser, 'TestDerivatives', 'TestType')
+    call messages_obsolete_variable(parser, 'TestOrthogonalization', 'TestType')
   
     !%Variable TestType
     !%Type integer
@@ -118,7 +122,7 @@ contains
     !%Option all 3
     !% Tests for double-precision real and complex functions.
     !%End
-    call parse_variable('TestType', OPTION__TESTTYPE__ALL, param%type)
+    call parse_variable(parser, 'TestType', OPTION__TESTTYPE__ALL, param%type)
     if(param%type < 1 .or. param%type > 5) then
       message(1) = "Invalid option for TestType."
       call messages_fatal(1, only_root_writes = .true.)
@@ -137,7 +141,7 @@ contains
     !% Currently this variable is used by the <tt>hartree_test</tt>,
     !% <tt>derivatives</tt>, and <tt>projector</tt> tests.
     !%End  
-    call parse_variable('TestRepetitions', 1, param%repetitions)
+    call parse_variable(parser, 'TestRepetitions', 1, param%repetitions)
   
     !%Variable TestMinBlockSize
     !%Type integer
@@ -150,7 +154,7 @@ contains
     !%
     !% Currently this variable is only used by the derivatives test.
     !%End
-    call parse_variable('TestMinBlockSize', 1, param%min_blocksize)
+    call parse_variable(parser, 'TestMinBlockSize', 1, param%min_blocksize)
 
     !%Variable TestMaxBlockSize
     !%Type integer
@@ -163,7 +167,7 @@ contains
     !%
     !% Currently this variable is only used by the derivatives test.
     !%End
-    call parse_variable('TestMaxBlockSize', 128, param%max_blocksize)
+    call parse_variable(parser, 'TestMaxBlockSize', 128, param%max_blocksize)
 
     call messages_print_stress(stdout, "Test mode")
     call messages_print_var_option(stdout, "TestMode", test_mode)
@@ -175,37 +179,40 @@ contains
   
     select case(test_mode)
     case(OPTION__TESTMODE__HARTREE)
-      call test_hartree(param)
+      call test_hartree(param, parser)
     case(OPTION__TESTMODE__DERIVATIVES)
-      call test_derivatives(param)
+      call test_derivatives(param, parser)
     case(OPTION__TESTMODE__ORTHOGONALIZATION)
-      call test_orthogonalization(param)
+      call test_orthogonalization(param, parser)
     case(OPTION__TESTMODE__INTERPOLATION)
-      call test_interpolation(param)
+      call test_interpolation(param, parser)
     case(OPTION__TESTMODE__ION_INTERACTION)
-      call test_ion_interaction()
+      call test_ion_interaction(parser)
     case(OPTION__TESTMODE__PROJECTOR)
-      call test_projector(param)
+      call test_projector(param, parser)
     case(OPTION__TESTMODE__DFT_U)
-      call test_dft_u(param)
+      call test_dft_u(param, parser)
     case(OPTION__TESTMODE__HAMILTONIAN_APPLY)
-      call test_hamiltonian(param)
+      call test_hamiltonian(param, parser)
+    case(OPTION__TESTMODE__DENSITY_CALC)
+      call test_density_calc(param, parser)
     end select
   
     POP_SUB(test_run)
   end subroutine test_run
 
   ! ---------------------------------------------------------
-  subroutine test_hartree(param)
+  subroutine test_hartree(param, parser)
     type(test_parameters_t), intent(in) :: param
-    
+    type(parser_t),          intent(in) :: parser
+
     type(system_t) :: sys
 
     PUSH_SUB(test_hartree)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
-    call system_init(sys)
+    call system_init(sys, parser)
     call poisson_test(sys%gr%mesh, param%repetitions)
     call system_end(sys)
 
@@ -213,8 +220,9 @@ contains
   end subroutine test_hartree
 
  ! ---------------------------------------------------------
-  subroutine test_projector(param)
+  subroutine test_projector(param, parser)
     type(test_parameters_t), intent(in) :: param
+    type(parser_t),          intent(in) :: parser
     
     type(system_t) :: sys
     type(epot_t) :: ep
@@ -230,14 +238,14 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys)
+    call system_init(sys, parser)
 
     call states_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
   
     !Initialize external potential
-    call epot_init(ep, sys%gr, sys%geo, SPINORS, 1, XC_FAMILY_NONE)
-    call epot_generate(ep, sys%gr, sys%geo, sys%st)
+    call hamiltonian_epot_generate(sys%hm, sys%parser, sys%gr, sys%geo, sys%st)
+  
    
     !Initialize external potential
     SAFE_ALLOCATE(epsib)
@@ -246,7 +254,7 @@ contains
     call batch_set_zero(epsib)
     
     do itime = 1, param%repetitions
-      call zproject_psi_batch(sys%gr%mesh, ep%proj, ep%natoms, 2, sys%st%group%psib(1, 1), epsib, 1)
+      call zproject_psi_batch(sys%gr%mesh, sys%hm%ep%proj, sys%hm%ep%natoms, 2, sys%st%group%psib(1, 1), epsib, 1)
     end do
     
     do itime = 1, epsib%nst
@@ -256,7 +264,6 @@ contains
 
     call batch_end(epsib)
     SAFE_DEALLOCATE_P(epsib)
-    call epot_end(ep)
     call states_deallocate_wfns(sys%st)
     call system_end(sys)
 
@@ -264,9 +271,10 @@ contains
   end subroutine test_projector
 
   ! ---------------------------------------------------------
-  subroutine test_dft_u(param)
+  subroutine test_dft_u(param, parser)
     type(test_parameters_t), intent(in) :: param
-
+    type(parser_t),          intent(in) :: parser
+    
     type(system_t) :: sys
     type(batch_t), pointer :: epsib
     integer :: itime
@@ -283,7 +291,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys)
+    call system_init(sys, parser)
 
     call states_allocate_wfns(sys%st, sys%gr%mesh)
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -293,7 +301,7 @@ contains
     call batch_copy(sys%st%group%psib(1, 1), epsib, copy_data = .true.)
 
     !Initialize the orbital basis
-    call orbitalbasis_init(basis)
+    call orbitalbasis_init(basis, sys%parser)
     if (states_are_real(sys%st)) then
       call dorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, &
                                 .false., .false.)
@@ -352,13 +360,13 @@ contains
   end subroutine test_dft_u
 
   ! ---------------------------------------------------------
-  subroutine test_hamiltonian(param)
+  subroutine test_hamiltonian(param, parser)
     type(test_parameters_t), intent(in) :: param
+    type(parser_t),          intent(in) :: parser
     
     type(system_t) :: sys
     type(batch_t), pointer :: hpsib
     integer :: itime, terms
-    type(hamiltonian_t) :: hm
     type(simul_box_t) :: sb
 
     PUSH_SUB(test_hamiltonian)
@@ -378,7 +386,7 @@ contains
     !%Option term_non_local_potential 4
     !% Apply only the non_local potential.
     !%End
-    call parse_variable('TestHamiltonianApply', OPTION__TESTMODE__HARTREE, terms)
+    call parse_variable(parser, 'TestHamiltonianApply', OPTION__TESTMODE__HARTREE, terms)
     if(terms==0) terms = huge(1)
 
 
@@ -389,36 +397,33 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys)
+    call system_init(sys, parser)
 
     call states_allocate_wfns(sys%st, sys%gr%mesh)
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
-    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_pack(sys%st)
 
     !Initialize external potential
-    call simul_box_init(sb, sys%geo, sys%space)
-    call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
-             family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
-    call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
+    call simul_box_init(sb, sys%parser, sys%geo, sys%space)
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(sys%hm, sys%gr%mesh)) call states_pack(sys%st)
+    call hamiltonian_epot_generate(sys%hm, sys%parser, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, hm, sys%st, sys%geo)
+    call v_ks_calc(sys%ks, sys%parser, sys%hm, sys%st, sys%geo)
 
-   
     call boundaries_set(sys%gr%der%boundaries, sys%st%group%psib(1, 1)) 
 
     SAFE_ALLOCATE(hpsib)
     call batch_copy(sys%st%group%psib(1, 1), hpsib)
 
-    if(hamiltonian_apply_packed(hm, sys%gr%der%mesh)) then
+    if(hamiltonian_apply_packed(sys%hm, sys%gr%der%mesh)) then
       call batch_pack(sys%st%group%psib(1, 1))
       call batch_pack(hpsib, copy = .false.)
     end if
 
     do itime = 1, param%repetitions
       if(states_are_real(sys%st)) then
-        call dhamiltonian_apply_batch(hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
+        call dhamiltonian_apply_batch(sys%hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
       else
-        call zhamiltonian_apply_batch(hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
+        call zhamiltonian_apply_batch(sys%hm, sys%gr%der, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, set_bc = .false.)
       end if
     end do
 
@@ -437,7 +442,6 @@ contains
 
     call batch_end(hpsib, copy = .false.)
     SAFE_DEALLOCATE_P(hpsib)
-    call hamiltonian_end(hm)
     call simul_box_end(sb)
     call states_deallocate_wfns(sys%st)
     call system_end(sys)
@@ -446,34 +450,73 @@ contains
   end subroutine test_hamiltonian
 
 
-! ---------------------------------------------------------
-  subroutine test_derivatives(param)
+  ! ---------------------------------------------------------
+  subroutine test_density_calc(param, parser)
     type(test_parameters_t), intent(in) :: param
+    type(parser_t),          intent(in) :: parser
+    
+    type(system_t) :: sys
+    integer :: itime
+
+    PUSH_SUB(test_density_calc)
+
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+    call messages_write('Info: Testing density calculation')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    call system_init(sys, parser)
+
+    call states_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    if(sys%st%d%pack_states) call states_pack(sys%st)
+
+    do itime = 1, param%repetitions
+      call density_calc(sys%st, sys%gr, sys%st%rho)
+    end do
+
+    write(message(1),'(a,3x, f12.6)') "Norm density  ", dmf_nrm2(sys%gr%mesh, sys%st%rho(:,1))
+    call messages_info(1)
+
+    call states_deallocate_wfns(sys%st)
+    call system_end(sys)
+
+    POP_SUB(test_density_calc)
+  end subroutine test_density_calc
+
+
+
+! ---------------------------------------------------------
+  subroutine test_derivatives(param, parser)
+    type(test_parameters_t), intent(in) :: param
+    type(parser_t),          intent(in) :: parser
     
     type(system_t) :: sys
 
     PUSH_SUB(test_derivatives)
 
-    call system_init(sys)
+    call system_init(sys, parser)
 
     message(1) = 'Info: Testing the finite-differences derivatives.'
     message(2) = ''
     call messages_info(2)
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
-      call dderivatives_test(sys%gr%der, param%repetitions, param%min_blocksize, param%max_blocksize)
+      call dderivatives_test(sys%gr%der, sys%parser, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__COMPLEX) then
-      call zderivatives_test(sys%gr%der, param%repetitions, param%min_blocksize, param%max_blocksize)
+      call zderivatives_test(sys%gr%der, sys%parser, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
     if(param%type == OPTION__TESTTYPE__REAL_SINGLE) then
-      call sderivatives_test(sys%gr%der, param%repetitions, param%min_blocksize, param%max_blocksize)
+      call sderivatives_test(sys%gr%der, sys%parser, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
    
     if(param%type == OPTION__TESTTYPE__COMPLEX_SINGLE) then
-      call cderivatives_test(sys%gr%der, param%repetitions, param%min_blocksize, param%max_blocksize)
+      call cderivatives_test(sys%gr%der, sys%parser, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
     call system_end(sys)
@@ -483,8 +526,9 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine test_orthogonalization(param)
+  subroutine test_orthogonalization(param, parser)
     type(test_parameters_t), intent(in) :: param
+    type(parser_t),          intent(in) :: parser
     
     type(system_t) :: sys
 
@@ -493,7 +537,7 @@ contains
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
     call calc_mode_par_set_scalapack_compat()
 
-    call system_init(sys)
+    call system_init(sys, parser)
 
     message(1) = 'Info: Testing orthogonalization.'
     message(2) = ''
@@ -518,14 +562,15 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine test_interpolation(param)
+  subroutine test_interpolation(param, parser)
     type(test_parameters_t), intent(in) :: param
-
+    type(parser_t),          intent(in) :: parser
+    
     type(system_t) :: sys
 
     PUSH_SUB(test_interpolation)
 
-    call system_init(sys)
+    call system_init(sys, parser)
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
       call messages_write('Info: Testing real interpolation routines')
@@ -554,14 +599,16 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine test_ion_interaction()
+  subroutine test_ion_interaction(parser)
+    type(parser_t),          intent(in) :: parser
+    
     type(system_t) :: sys
 
     PUSH_SUB(test_ion_interaction)
 
-    call system_init(sys)
+    call system_init(sys, parser)
 
-    call ion_interaction_test(sys%geo, sys%gr%sb)
+    call ion_interaction_test(sys%geo, sys%parser, sys%gr%sb)
 
     call system_end(sys)
 

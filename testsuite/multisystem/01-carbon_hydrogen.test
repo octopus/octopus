@@ -1,0 +1,12 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Carbon and Hydrogen multisystem
+Program    : octopus
+TestGroups : long-run, multisystem
+Enabled    : No
+
+Input: 01-carbon_hydrogen.01-gs.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -0.47347615
+match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -0.255242
+match ; Eigenvalue   [1dn] ; GREPFIELD(static/info, '1   dn', 3) ; -0.048493

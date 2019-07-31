@@ -17,8 +17,9 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine xc_kli_pauli_solve(mesh, st, oep)
+subroutine xc_kli_pauli_solve(mesh, parser, st, oep)
   type(mesh_t),   intent(in)    :: mesh
+  type(parser_t), intent(in)    :: parser
   type(states_t), intent(in)    :: st
   type(xc_oep_t), intent(inout) :: oep
   !
@@ -109,7 +110,7 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
     vs = vloc ! Slater part
 
     ! iteration criteria
-    call scf_tol_init(oep%scftol, st%qtot, def_maximumiter=50)
+    call scf_tol_init(oep%scftol, parser, st%qtot, def_maximumiter=50)
 
     ! get the HOMO state
     call xc_oep_AnalyzeEigen(oep, st, 1)
@@ -165,10 +166,14 @@ subroutine xc_kli_pauli_solve(mesh, st, oep)
         ! delta_v^KLI
         delta_v = M_ZERO
         do ist=1,eigen_n
-          kssi = oep%eigen_index(ist)
           do is = 1,st%d%nspin
-            delta_v(ist) = delta_v(ist)+ dmf_dotp(mesh,p_i(1:mesh%np,is,ist),v_m1(1:mesh%np,is))
+            delta_v(ist) = delta_v(ist)+ dmf_dotp(mesh,p_i(1:mesh%np,is,ist),v_m1(1:mesh%np,is), reduce = .false.)
           end do
+        end do
+        if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  delta_v, dim = eigen_n)
+
+        do ist=1,eigen_n
+          kssi = oep%eigen_index(ist)
           delta_v(ist) = delta_v(ist) - real(sum(oep%uxc_bar(kssi,:)))
         end do
 

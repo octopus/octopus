@@ -76,11 +76,11 @@ contains
   ! ---------------------------------------------------------
   !> This computes the total stress on the lattice
   subroutine stress_calculate(gr, hm, st, geo, ks )
-    type(grid_t),              intent(inout) :: gr !< grid
-    type(hamiltonian_t),  intent(inout)    :: hm
+    type(grid_t),         intent(inout) :: gr !< grid
+    type(hamiltonian_t),  intent(inout) :: hm
     type(states_t),       intent(inout) :: st
-    type(geometry_t),          intent(inout) :: geo !< geometry
-    type(v_ks_t),              intent(inout) :: ks !< Kohn-Sham
+    type(geometry_t),     intent(inout) :: geo !< geometry
+    type(v_ks_t),         intent(inout) :: ks !< Kohn-Sham
     type(profile_t), save :: stress_prof
     FLOAT :: stress(3,3) ! stress tensor in Cartecian coordinate
     FLOAT :: stress_KE(3,3), stress_Hartree(3,3), stress_xc(3,3) ! temporal
@@ -132,7 +132,11 @@ contains
     SAFE_DEALLOCATE_A(Gvec)
     SAFE_DEALLOCATE_A(Gvec_G)
     SAFE_DEALLOCATE_P(rho)
-    
+    if (total_density_alloc) then
+      SAFE_DEALLOCATE_P(rho_total)
+    end if
+    SAFE_DEALLOCATE_A(rho_total_fs)
+
     POP_SUB(stress_calculate)
     call profiling_out(stress_prof)
 
@@ -290,10 +294,9 @@ contains
                   ixx(3) = pad_feq(iz, db(3), .true.)
 
                   call poisson_fft_gg_transform_l(ixx, temp, gr%fine%der%mesh%sb, this%fft_solver%qq, gg, modg2)
-#ifdef HAVE_NFFT
+
                   !HH not very elegant
                   if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
-#endif
 
                   if(abs(modg2) > M_EPSILON) then
                      FourPi_G2(ix,iy,iz) = 4d0*M_PI/modg2
@@ -324,7 +327,7 @@ contains
 
   ! -------------------------------------------------------
   subroutine stress_from_kinetic_energy_electron(der, hm, st, stress, stress_KE)
-    type(derivatives_t),  intent(inout) :: der
+    type(derivatives_t),  intent(in)    :: der
     type(hamiltonian_t),  intent(in)    :: hm
     type(states_t),       intent(inout) :: st
     FLOAT,                         intent(inout) :: stress(:, :)

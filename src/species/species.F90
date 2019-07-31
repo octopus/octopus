@@ -222,8 +222,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine species_init_global()
+  subroutine species_init_global(parser)
+    type(parser_t),         intent(in)  :: parser
+    
     integer :: ierr
+
+    if (initialized) return
     
     PUSH_SUB(species_init_global)
 
@@ -237,14 +241,14 @@ contains
     !%Section System::Species
     !%Description
     !% (Experimental) This enables a new automatic method for
-    !% determining the best parameters for the pseudopotential
+    !% determining the grid parameters for the pseudopotential
     !% (spacing and radius). For the moment, only the spacing can be
     !% adjusted for a few pseudopotentials.
     !%
-    !% This does not affect Octopus fixed parameters for the standard
+    !% This does not affect Octopus fixed default parameters for the standard
     !% pseudopotential set.
     !%End
-    call parse_variable('PseudopotentialAutomaticParameters', .false., automatic)
+    call parse_variable(parser, 'PseudopotentialAutomaticParameters', .false., automatic)
     
     if(automatic) call messages_experimental('PseudopotentialAutomaticParameters')
     
@@ -253,12 +257,14 @@ contains
     !%Default 0.005
     !%Section System::Species
     !%Description
-    !% For some pseudopotentials, Octopus can select the convergence
-    !% parameters (spacing and radius) automatically so that the
-    !% discretization error is below a certain threshold. This
-    !% variable controls the value of that threshold.
+    !% For some pseudopotentials, Octopus can select the grid
+    !% spacing automatically so that the discretization error
+    !% when calculating the total energy is below a certain
+    !% threshold. This variable controls the value of that threshold.
+    !% Note that other quantities of interest might require a
+    !% different spacing to be considered converged within a similar threshold.
     !%End
-    call parse_variable('PseudopotentialEnergyTolerance', CNST(0.005), energy_tolerance)
+    call parse_variable(parser, 'PseudopotentialEnergyTolerance', CNST(0.005), energy_tolerance)
     
     !%Variable PseudopotentialSet
     !%Type integer
@@ -318,7 +324,7 @@ contains
     !% (experimental) High-accuracy PBEsol version of the pseudopotentials of http://pseudo-dojo.org. Version 0.4.
     !%End
 
-    call parse_variable('PseudopotentialSet', OPTION__PSEUDOPOTENTIALSET__STANDARD, default_pseudopotential_set_id)
+    call parse_variable(parser, 'PseudopotentialSet', OPTION__PSEUDOPOTENTIALSET__STANDARD, default_pseudopotential_set_id)
     call messages_print_var_option(stdout, 'PseudopotentialSet', default_pseudopotential_set_id)
     select case (default_pseudopotential_set_id)
     case (OPTION__PSEUDOPOTENTIALSET__NONE)
@@ -356,7 +362,10 @@ contains
   subroutine species_end_global()
     PUSH_SUB(species_end_global)
 
-    call pseudo_set_end(default_pseudopotential_set)
+    if (initialized) then
+      call pseudo_set_end(default_pseudopotential_set)
+      initialized = .false.
+    end if
     
     POP_SUB(species_end_global)
   end subroutine species_end_global
@@ -390,8 +399,9 @@ contains
   !! part of it (it has to be completed later with "species_build").
   !! Note that species_read has to be called only after species_init has been called.
   ! ---------------------------------------------------------
-  subroutine species_read(spec)
+  subroutine species_read(spec, parser)
     type(species_t), intent(inout) :: spec
+    type(parser_t),  intent(in)    :: parser
 
     character(len=LABEL_LEN)  :: lab
     integer :: ib, row, n_spec_block, read_data
@@ -592,12 +602,12 @@ contains
     !% as defined in PRB 71, 035105 (2005)
     !%End
 
-    call messages_obsolete_variable('SpecieAllElectronSigma', 'Species')
-    call messages_obsolete_variable('SpeciesAllElectronSigma', 'Species')
+    call messages_obsolete_variable(parser, 'SpecieAllElectronSigma', 'Species')
+    call messages_obsolete_variable(parser, 'SpeciesAllElectronSigma', 'Species')
 
     ! First, find out if there is a Species block.
     n_spec_block = 0
-    if(parse_block('Species', blk) == 0) then
+    if(parse_block(parser, 'Species', blk) == 0) then
       n_spec_block = parse_block_n(blk)
     end if
 
@@ -714,8 +724,9 @@ contains
   end function get_set_directory
 
   ! ---------------------------------------------------------
-  subroutine species_build(spec, ispin, dim, print_info)
+  subroutine species_build(spec, parser, ispin, dim, print_info)
     type(species_t),   intent(inout) :: spec
+    type(parser_t),    intent(in)    :: parser
     integer,           intent(in)    :: ispin
     integer,           intent(in)    :: dim
     logical, optional, intent(in)    :: print_info
@@ -750,9 +761,9 @@ contains
       ! allocate structure
       SAFE_ALLOCATE(spec%ps)
       if(spec%type == SPECIES_PSPIO) then
-        call ps_pspio_init(spec%ps, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
+        call ps_pspio_init(spec%ps, parser, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
       else
-        call ps_init(spec%ps, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
+        call ps_init(spec%ps, parser, spec%label, spec%Z, spec%user_lmax, spec%user_llocal, ispin, spec%filename)
       end if
       spec%z_val = spec%ps%z_val
       spec%nlcc = spec%ps%nlcc

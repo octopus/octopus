@@ -72,6 +72,8 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
     end do
   else
     do ia = 1, geo%natoms
+      if(species_type(geo%atom(ia)%species) /= SPECIES_PSEUDO &
+           .and. species_type(geo%atom(ia)%species) /= SPECIES_PSPIO) cycle
       work = 0
       n_s_orb = 0
       hubbardj = species_hubbard_j(geo%atom(ia)%species)
@@ -382,10 +384,8 @@ subroutine X(orbitalbasis_build_empty)(this, geo, mesh, kpt, ndim, nstates, verb
   os%sphere%mesh => mesh
   nullify(os%spec)
   os%iatom = -1
-  do is = 1, nstates
-    SAFE_ALLOCATE(os%X(orb)(1:mesh%np,1:os%ndim,1:os%norbs))
-    os%X(orb)(:,:,:) = R_TOTYPE(M_ZERO)
-  end do
+  SAFE_ALLOCATE(os%X(orb)(1:mesh%np,1:os%ndim,1:os%norbs))
+  os%X(orb)(:,:,:) = R_TOTYPE(M_ZERO)
 
   this%maxnorbs = nstates
   this%max_np = mesh%np 
