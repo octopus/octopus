@@ -608,9 +608,11 @@ contains
         if (rdm%do_basis) then
           ! for do_basis=true, we cannot differentiate between the convergences of different states
           if (rdm%dressed) then
-            write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','Occupation', 'Mode Occ.', '-1/2d^2/dq^2', '1/2w^2q^2'
+            write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','Occupation', 'Mode Occ.', '-1/2d^2/dq^2', &
+              '1/2w^2q^2'
             do ist = 1, st%nst
-              write(iunit,'(i4,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12)') ist, st%occ(ist, 1), photon_number_state(ist), ekin_state(ist), epot_state(ist)
+              write(iunit,'(i4,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12)') ist, st%occ(ist, 1), &
+                photon_number_state(ist), ekin_state(ist), epot_state(ist)
             end do
           else
             write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','Occupation'
@@ -620,9 +622,11 @@ contains
           end if
         else
           if (rdm%dressed) then
-            write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','Occupation','conv', 'Mode Occ.', '-1/2d^2/dq^2', '1/2w^2q^2'
+            write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','Occupation','conv', 'Mode Occ.', '-1/2d^2/dq^2', &
+              '1/2w^2q^2'
             do ist = 1, st%nst
-              write(iunit,'(i4,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12)') ist, st%occ(ist, 1), rdm%eigens%diff(ist, 1), photon_number_state(ist), ekin_state(ist), epot_state(ist)
+              write(iunit,'(i4,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12,3x,f14.12)') ist, st%occ(ist, 1), rdm%eigens%diff(ist, 1), &
+                photon_number_state(ist), ekin_state(ist), epot_state(ist)
             end do
           else
             write(iunit,'(a4,5x,a12,5x,a12,5x,a12,5x,a12,5x,a12)')'#st','Occupation','conv'

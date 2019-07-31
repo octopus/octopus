@@ -453,10 +453,10 @@ subroutine poisson_solve_drdmft(this, pot, rho)
 !            pvec(jp) = rho(jp)*prefactor
 !          else
             yy(1:dim) = this%der%mesh%x(jp, 1:dim)
-            pvec(jp) = 	this%dressed_coulomb*rho(jp)/sqrt((xx(1) - yy(1))**2 + 1) 										  									&
-						+ rho(jp)*( 																									&
-						- this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*xx(2)*yy(1) 												&
-						- this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*yy(2)*xx(1) + this%dressed_lambda**2*xx(1)*yy(1)) 
+            pvec(jp) = 	this%dressed_coulomb*rho(jp)/sqrt((xx(1) - yy(1))**2 + 1) + rho(jp)*( &
+              - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*xx(2)*yy(1) &
+              - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*yy(2)*xx(1) &
+              + this%dressed_lambda**2*xx(1)*yy(1))
 !          end if
         end do
 !      end if
@@ -512,22 +512,22 @@ subroutine poisson_solve_drdmft(this, pot, rho)
         ! q2=this%der%mesh%x(jp, 2)
         ! v(x1,x2;q1,q2)= rho(jp)/sqrt((x1 - x2)**2 + 1) + rho(jp)*(w**2 q1*q2 - w/sqrt(2)*lam*q1*x2 - w/sqrt(2)*lam*q2*x1 + lam/2*x1*x2) 
 		do jp = 1, this%der%mesh%np
-          aa1 = aa1 + this%dressed_coulomb*rho(jp)/sqrt((xx1(1) - this%der%mesh%x(jp, 1))**2 + 1) 										  									&
-			+ rho(jp)*( & 
-			- this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*xx1(2)*this%der%mesh%x(jp, 1) 	&
-			- this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx1(1) + this%dressed_lambda**2*xx1(1)*this%der%mesh%x(jp, 1)) 
-          aa2 = aa2 + this%dressed_coulomb*rho(jp)/sqrt((xx2(1) - this%der%mesh%x(jp, 1))**2 + 1) 										  									&
-			+ rho(jp)*( &
-			- this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*xx2(2)*this%der%mesh%x(jp, 1) 	&
-			- this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx2(1) + this%dressed_lambda**2*xx2(1)*this%der%mesh%x(jp, 1)) 
-          aa3 = aa3 + this%dressed_coulomb*rho(jp)/sqrt((xx3(1) - this%der%mesh%x(jp, 1))**2 + 1) 										  									&
-			+ rho(jp)*( &
-			- this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*xx3(2)*this%der%mesh%x(jp, 1) 	&
-			- this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx3(1) + this%dressed_lambda**2*xx3(1)*this%der%mesh%x(jp, 1))
-          aa4 = aa4 + this%dressed_coulomb*rho(jp)/sqrt((xx4(1) - this%der%mesh%x(jp, 1))**2 + 1)										  									&
-			+ rho(jp)*( &
-			- this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*xx4(2)*this%der%mesh%x(jp, 1) 	&
-			- this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx4(1) + this%dressed_lambda**2*xx4(1)*this%der%mesh%x(jp, 1))
+          aa1 = aa1 + this%dressed_coulomb*rho(jp)/sqrt((xx1(1) - this%der%mesh%x(jp, 1))**2 + 1) + rho(jp)*( &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*xx1(2)*this%der%mesh%x(jp, 1) &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx1(1) &
+            + this%dressed_lambda**2*xx1(1)*this%der%mesh%x(jp, 1))
+          aa2 = aa2 + this%dressed_coulomb*rho(jp)/sqrt((xx2(1) - this%der%mesh%x(jp, 1))**2 + 1) + rho(jp)*( &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*xx2(2)*this%der%mesh%x(jp, 1) &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx2(1) &
+            + this%dressed_lambda**2*xx2(1)*this%der%mesh%x(jp, 1))
+          aa3 = aa3 + this%dressed_coulomb*rho(jp)/sqrt((xx3(1) - this%der%mesh%x(jp, 1))**2 + 1) + rho(jp)*( &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*xx3(2)*this%der%mesh%x(jp, 1) &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx3(1) &
+            + this%dressed_lambda**2*xx3(1)*this%der%mesh%x(jp, 1))
+          aa4 = aa4 + this%dressed_coulomb*rho(jp)/sqrt((xx4(1) - this%der%mesh%x(jp, 1))**2 + 1) + rho(jp)*( &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*xx4(2)*this%der%mesh%x(jp, 1) &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx4(1) &
+            + this%dressed_lambda**2*xx4(1)*this%der%mesh%x(jp, 1))
         end do      
       end if
 
@@ -547,15 +547,19 @@ subroutine poisson_solve_drdmft(this, pot, rho)
       xx1(1:dim) = this%der%mesh%x(ip,1:dim)
       if(this%der%mesh%use_curvilinear) then
         do jp = 1, this%der%mesh%np
-          aa1 = aa1 + rho(jp)/sqrt((xx1(1) - this%der%mesh%x(jp, 1))**2 + 1) 										  									&
-			+ rho(jp)*(this%dressed_omega**2*xx1(2)*this%der%mesh%x(jp, 2) - this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*xx1(2)*this%der%mesh%x(jp, 1) 	&
-			- this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx1(1) + this%dressed_lambda**2/M_TWO*xx1(1)*this%der%mesh%x(jp, 1)) 
+          aa1 = aa1 + rho(jp)/sqrt((xx1(1) - this%der%mesh%x(jp, 1))**2 + 1) &
+            + rho(jp)*(this%dressed_omega**2*xx1(2)*this%der%mesh%x(jp, 2) &
+            - this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*xx1(2)*this%der%mesh%x(jp, 1) &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx1(1) &
+            + this%dressed_lambda**2/M_TWO*xx1(1)*this%der%mesh%x(jp, 1))
         end do
       else
         do jp = 1, this%der%mesh%np
-            aa1 = aa1 + rho(jp)/sqrt((xx1(1) - this%der%mesh%x(jp, 1))**2 + 1) 										  									&
-			+ rho(jp)*(this%dressed_omega**2*xx1(2)*this%der%mesh%x(jp, 2) - this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*xx1(2)*this%der%mesh%x(jp, 1) 	&
-			- this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx1(1) + this%dressed_lambda**2/M_TWO*xx1(1)*this%der%mesh%x(jp, 1)) 			
+          aa1 = aa1 + rho(jp)/sqrt((xx1(1) - this%der%mesh%x(jp, 1))**2 + 1) &
+            + rho(jp)*(this%dressed_omega**2*xx1(2)*this%der%mesh%x(jp, 2) &
+            - this%dressed_omega/sqrt(M_TWO)*this%dressed_lambda*xx1(2)*this%der%mesh%x(jp, 1) &
+            - this%dressed_omega/sqrt(this%dressed_electrons)*this%dressed_lambda*this%der%mesh%x(jp, 2)*xx1(1) &
+            + this%dressed_lambda**2/M_TWO*xx1(1)*this%der%mesh%x(jp, 1))
         end do
       end if
 
