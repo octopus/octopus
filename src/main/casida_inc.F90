@@ -306,7 +306,6 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, kk, rho)
   integer,        intent(in)  :: kk
   R_TYPE,         intent(out) :: rho(:)
 
-  R_TYPE, pointer :: psi_i(:), psi_a(:)
   integer :: ip, idim, iblock, ablock, ilin, alin
   type(profile_t), save :: prof
 
@@ -326,10 +325,9 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, kk, rho)
   ASSERT(.not. batch_is_packed(st%group%psib(iblock, kk)))
   ASSERT(.not. batch_is_packed(st%group%psib(ablock, kk)))
 
-  psi_i => st%group%psib(iblock, kk)%states_linear(ilin)%X(psi)
-  psi_a => st%group%psib(ablock, kk)%states_linear(alin)%X(psi)
-
-  forall(ip = 1:mesh%np) rho(ip) = R_CONJ(psi_i(ip))*psi_a(ip)
+  do ip = 1, mesh%np
+    rho(ip) = R_CONJ(st%group%psib(iblock, kk)%states_linear(ilin)%X(psi)(ip))*st%group%psib(ablock, kk)%states_linear(alin)%X(psi)(ip)
+  end do
 
   call profiling_out(prof)
   POP_SUB(X(casida_get_rho))
@@ -840,9 +838,9 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
   SAFE_DEALLOCATE_A(zdl_rho)
 
   SAFE_DEALLOCATE_A(lr_hmat1)
-  SAFE_DEALLOCATE_P(cas%X(lr_hmat2))
-  SAFE_DEALLOCATE_P(cas%X(mat2))
-  SAFE_DEALLOCATE_P(cas%X(w2))
+  SAFE_DEALLOCATE_A(cas%X(lr_hmat2))
+  SAFE_DEALLOCATE_A(cas%X(mat2))
+  SAFE_DEALLOCATE_A(cas%X(w2))
   
   if(cas%calc_forces_scf) then
     call forces_calculate(sys%gr, sys%namespace, sys%geo, sys%hm, st, sys%ks)
@@ -990,7 +988,7 @@ end subroutine X(casida_save_pot_init)
 subroutine X(casida_save_pot_end)(this)
   type(casida_save_pot_t), intent(inout)   :: this
 
-  SAFE_DEALLOCATE_P(this%X(pot))
+  SAFE_DEALLOCATE_A(this%X(pot))
 
 end subroutine X(casida_save_pot_end)
 
@@ -1002,7 +1000,6 @@ subroutine X(casida_solve)(cas, st)
   FLOAT :: eig_diff
   FLOAT, allocatable :: occ_diffs(:)
   integer :: ia, jb
-  type(states_pair_t), pointer :: p
 
   PUSH_SUB(X(casida_solve))
 
@@ -1034,8 +1031,7 @@ subroutine X(casida_solve)(cas, st)
 
     ! complete the matrix
     do ia = 1, cas%n_pairs
-      p => cas%pair(ia)
-      eig_diff = st%eigenval(p%a, p%kk) - st%eigenval(p%i, p%kk)
+      eig_diff = st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk)
       
       do jb = ia, cas%n_pairs
         ! FIXME: need the equivalent of this stuff for forces too.
