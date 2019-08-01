@@ -3051,7 +3051,7 @@ contains
     type(lda_u_t),     intent(in) :: lda_u
     integer,           intent(in) :: iter
 
-    integer :: ios
+    integer :: ios, inn
     character(len=50) :: aux
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
@@ -3078,6 +3078,16 @@ contains
         write(aux, '(a2,i3,a1)') 'J(', ios, ')'
         call write_iter_header(out_coords, aux)
       end do
+
+      if(lda_u%intersite) then
+        do ios = 1, lda_u%norbsets
+          do inn = 1, lda_u%orbsets(ios)%nneighbors
+            write(aux, '(a2,i3,a1,i3,a1)') 'V(', ios,'-', inn, ')'
+            call write_iter_header(out_coords, aux)
+          end do
+        end do
+      end if
+        
 
       call write_iter_nl(out_coords)
 
@@ -3109,6 +3119,15 @@ contains
       call write_iter_double(out_coords, units_from_atomic(units_out%energy,  &
                                                 lda_u%orbsets(ios)%Jbar), 1)
     end do
+
+    if(lda_u%intersite) then
+      do ios = 1, lda_u%norbsets
+        do inn = 1, lda_u%orbsets(ios)%nneighbors
+          call write_iter_double(out_coords, units_from_atomic(units_out%energy,  &
+                                              lda_u%orbsets(ios)%V_ij(inn,0)), 1)
+        end do
+      end do
+    end if   
 
     call write_iter_nl(out_coords)
 
