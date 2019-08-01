@@ -770,11 +770,12 @@ end subroutine X(compute_ACBNO_U_kanamori_restricted)
 
 ! ---------------------------------------------------------
 ! TODO: Merge this with the two_body routine in system/output_me_inc.F90
-subroutine X(compute_coulomb_integrals) (this, parser, mesh, der)
+subroutine X(compute_coulomb_integrals) (this, parser, mesh, der, psolver)
   type(lda_u_t),       intent(inout)  :: this
   type(parser_t),      intent(in)     :: parser
   type(mesh_t),        intent(in)     :: mesh
   type(derivatives_t), intent(in)     :: der
+  type(poisson_t),     intent(in)     :: psolver
 
   integer :: ist, jst, kst, lst, ijst, klst
   integer :: norbs, np_sphere, ios, ip

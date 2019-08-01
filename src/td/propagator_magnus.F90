@@ -30,6 +30,7 @@ module propagator_magnus_oct_m
   use lasers_oct_m
   use messages_oct_m
   use parser_oct_m
+  use poisson_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
@@ -49,8 +50,9 @@ contains
   
   ! ---------------------------------------------------------
   !> Magnus propagator
-  subroutine td_magnus(hm, gr, st, tr, time, dt)
+  subroutine td_magnus(hm, psolver, gr, st, tr, time, dt)
     type(hamiltonian_t), target,     intent(inout) :: hm
+    type(poisson_t),                 intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
     type(propagator_t),  target,     intent(inout) :: tr
@@ -112,7 +114,7 @@ contains
     do ik = st%d%kpt%start, st%d%kpt%end
       do ist = st%st_start, st%st_end
         call states_get_state(st, gr%mesh, ist, ik, psi)
-        call exponential_apply(tr%te, gr%der, hm, psi, ist, ik, dt, vmagnus = tr%vmagnus)
+        call exponential_apply(tr%te, gr%der, hm, psolver, psi, ist, ik, dt, vmagnus = tr%vmagnus)
         call states_set_state(st, gr%mesh, ist, ik, psi)
       end do
     end do
@@ -128,10 +130,11 @@ contains
 
   ! ---------------------------------------------------------
   !> Commutator-free Magnus propagator of order 4.
-  subroutine td_cfmagnus4(ks, parser, hm, gr, st, tr, time, dt, ions, geo, iter)
+  subroutine td_cfmagnus4(ks, parser, hm, psolver, gr, st, tr, time, dt, ions, geo, iter)
     type(v_ks_t), target,            intent(inout) :: ks
     type(parser_t),                  intent(in)    :: parser
     type(hamiltonian_t), target,     intent(inout) :: hm
+    type(poisson_t),                 intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
     type(propagator_t),  target,     intent(inout) :: tr
@@ -153,7 +156,7 @@ contains
     PUSH_SUB(propagator_dt.td_cfmagnus4)
 
     if(iter < 4) then
-      call td_explicit_runge_kutta4(ks, parser, hm, gr, st, time, dt, ions, geo)
+      call td_explicit_runge_kutta4(ks, parser, hm, psolver, gr, st, time, dt, ions, geo)
       POP_SUB(propagator_dt.td_cfmagnus4)
       return
     end if
@@ -176,7 +179,7 @@ contains
     call hamiltonian_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha2, M_TWO * alpha1/) )
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, M_HALF * dt)
+        call exponential_apply_batch(tr%te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, M_HALF * dt)
       end do
     end do
 
@@ -184,7 +187,7 @@ contains
     call hamiltonian_update2(hm, gr%mesh, (/ t1, t2 /), (/ M_TWO * alpha1, M_TWO * alpha2/) )
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call exponential_apply_batch(tr%te, gr%der, hm, st%group%psib(ib, ik), ik, M_HALF * dt)
+        call exponential_apply_batch(tr%te, gr%der, hm, psolver, st%group%psib(ib, ik), ik, M_HALF * dt)
       end do
     end do
 

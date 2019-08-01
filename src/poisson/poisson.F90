@@ -136,8 +136,6 @@ module poisson_oct_m
 #endif
   end type poisson_t
 
-  type(poisson_t), target, save, public :: psolver
-
   integer, parameter ::             &
     CMD_FINISH = 1,                 &
     CMD_POISSON_SOLVE = 2
@@ -934,9 +932,10 @@ contains
   !! file by calculating numerically and analytically the Hartree
   !! potential originated by a Gaussian distribution of charge.
   !! This only makes sense for finite systems.
-  subroutine poisson_test(mesh, repetitions)
-    type(mesh_t), intent(in) :: mesh
-    integer,      intent(in) :: repetitions
+  subroutine poisson_test(this, mesh, repetitions)
+    type(poisson_t), intent(in) :: this
+    type(mesh_t),    intent(in) :: mesh
+    integer,         intent(in) :: repetitions
 
     FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), rhop(:), xx(:, :)
     FLOAT :: alpha, beta, rr, delta, ralpha, hartree_nrg_num, &
@@ -1019,7 +1018,7 @@ contains
 
     ! This calculates the numerical potential
     do itime = 1, repetitions
-      call dpoisson_solve(psolver, vh, rho)
+      call dpoisson_solve(this, vh, rho)
     end do
 
     ! Output results

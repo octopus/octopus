@@ -38,6 +38,7 @@ module em_resp_oct_m
   use mpi_oct_m
   use parser_oct_m
   use pert_oct_m
+  use poisson_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
@@ -980,11 +981,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine em_resp_output(st, parser, gr, hm, geo, outp, em_vars, iomega, ifactor)
+  subroutine em_resp_output(st, parser, gr, hm, psolver, geo, outp, em_vars, iomega, ifactor)
     type(states_t),       intent(inout) :: st
     type(parser_t),       intent(in)    :: parser
     type(grid_t),         intent(inout) :: gr
     type(hamiltonian_t),  intent(inout) :: hm
+    type(poisson_t),      intent(in)    :: psolver
     type(geometry_t),     intent(inout) :: geo
     type(output_t),       intent(in)    :: outp
     type(em_resp_t),      intent(inout) :: em_vars
@@ -1474,8 +1476,10 @@ contains
         do idir = 1, gr%sb%dim
           call pert_setup_dir(angular_momentum, idir)
           dic = dic &
-            + zpert_expectation_value(angular_momentum, parser, gr, geo, hm, st, psi, em_vars%lr(idir, 1, ifactor)%zdl_psi) &
-            + zpert_expectation_value(angular_momentum, parser, gr, geo, hm, st, em_vars%lr(idir, 2, ifactor)%zdl_psi, psi)
+            + zpert_expectation_value(angular_momentum, parser, gr, geo, hm, psolver, st, &
+            psi, em_vars%lr(idir, 1, ifactor)%zdl_psi) &
+            + zpert_expectation_value(angular_momentum, parser, gr, geo, hm, psolver, st, &
+            em_vars%lr(idir, 2, ifactor)%zdl_psi, psi)
         end do
 
         SAFE_DEALLOCATE_P(psi)

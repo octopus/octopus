@@ -229,7 +229,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine local_write_iter(writ, parser, nd, lab, ions_inside, inside, center, gr, st, & 
-                              hm, ks, geo, kick, iter, l_start, ldoverwrite)
+                              hm, psolver, ks, geo, kick, iter, l_start, ldoverwrite)
     type(local_write_t),    intent(inout) :: writ
     type(parser_t),         intent(in)    :: parser
     integer,                intent(in)    :: nd 
@@ -240,6 +240,7 @@ contains
     type(grid_t),           intent(in)    :: gr
     type(states_t),         intent(inout) :: st
     type(hamiltonian_t),    intent(inout) :: hm
+    type(poisson_t),        intent(in)    :: psolver
     type(v_ks_t),           intent(inout) :: ks
     type(geometry_t),       intent(inout) :: geo
     type(kick_t),           intent(inout) :: kick
@@ -268,11 +269,11 @@ contains
     if(any(writ%out(LOCAL_OUT_DENSITY,:)%write).or.any(writ%out(LOCAL_OUT_POTENTIAL,:)%write)) &
       call local_write_density(writ%out(LOCAL_OUT_DENSITY, :), parser, writ%out(LOCAL_OUT_POTENTIAL,:), & 
                                nd, lab, inside, &
-                               gr, geo, st, hm, ks, iter, writ%how)
+                               gr, geo, st, hm, psolver, ks, iter, writ%how)
     
     if(any(writ%out(LOCAL_OUT_ENERGY, :)%write)) then
       call local_write_energy(writ%out(LOCAL_OUT_ENERGY, :), parser, nd, lab, inside, &
-                               gr, geo, st, hm, ks, iter, l_start, ldoverwrite)
+                               gr, geo, st, hm, psolver, ks, iter, l_start, ldoverwrite)
       if(mpi_grp_is_root(mpi_world)) then
         do id = 1, nd
           call write_iter_flush(writ%out(LOCAL_OUT_ENERGY, id)%handle)
@@ -286,7 +287,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine local_write_density(out_dens, parser, out_pot, nd, lab, inside, & 
-                                gr, geo, st, hm, ks, iter, how)
+                                gr, geo, st, hm, psolver, ks, iter, how)
     type(local_write_prop_t),      intent(inout) :: out_dens(:)
     type(parser_t),                intent(in)    :: parser
     type(local_write_prop_t),      intent(inout) :: out_pot(:)
@@ -297,6 +298,7 @@ contains
     type(geometry_t),     intent(inout) :: geo
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
+    type(poisson_t),      intent(in)    :: psolver
     type(v_ks_t),         intent(inout) :: ks
     integer,              intent(in) :: iter
     integer(8),           intent(in) :: how
@@ -374,7 +376,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine local_write_energy(out_energy, parser, nd, lab, inside, & 
-                                gr, geo, st, hm, ks, iter, l_start, start)
+                                gr, geo, st, hm, psolver, ks, iter, l_start, start)
     type(local_write_prop_t),      intent(inout) :: out_energy(:)
     type(parser_t),                intent(in)    :: parser
     integer,                  intent(in)    :: nd 
@@ -384,6 +386,7 @@ contains
     type(geometry_t),     intent(inout) :: geo
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
+    type(poisson_t),      intent(in)    :: psolver
     type(v_ks_t),         intent(inout) :: ks
     integer,              intent(in) :: iter
     integer,              intent(in) :: l_start

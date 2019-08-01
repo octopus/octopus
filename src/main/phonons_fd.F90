@@ -30,6 +30,7 @@ module phonons_fd_oct_m
   use multicomm_oct_m
   use output_oct_m
   use parser_oct_m
+  use poisson_oct_m
   use profiling_oct_m
   use restart_oct_m
   use scf_oct_m
@@ -98,7 +99,7 @@ contains
     call parse_variable(sys%parser, 'Displacement', CNST(0.01), vib%disp, units_inp%length)
 
     ! calculate dynamical matrix
-    call get_dyn_matrix(sys%gr, sys%parser, sys%mc, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, vib)
+    call get_dyn_matrix(sys%gr, sys%parser, sys%mc, sys%geo, sys%st, sys%ks, sys%hm, sys%psolver, sys%outp, vib)
 
     call vibrations_output(vib)
     
@@ -131,7 +132,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_dyn_matrix(gr, parser, mc, geo, st, ks, hm, outp, vib)
+  subroutine get_dyn_matrix(gr, parser, mc, geo, st, ks, hm, psolver, outp, vib)
     type(grid_t), target, intent(inout) :: gr
     type(parser_t),       intent(in)    :: parser
     type(multicomm_t),    intent(in)    :: mc
@@ -139,6 +140,7 @@ contains
     type(states_t),       intent(inout) :: st
     type(v_ks_t),         intent(inout) :: ks
     type(hamiltonian_t),  intent(inout) :: hm
+    type(poisson_t),      intent(in)    :: psolver
     type(output_t),       intent(in)    :: outp
     type(vibrations_t),   intent(inout) :: vib
 
@@ -170,12 +172,12 @@ contains
         geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) + vib%disp
 
         ! first force
-        call hamiltonian_epot_generate(hm, parser, gr, geo, st)
+        call hamiltonian_epot_generate(hm, parser, gr, geo, st, psolver)
         call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval=.true.)
-        call energy_calc_total (hm, gr, st)
+        call energy_calc_total (hm, psolver, gr, st)
         call scf_mix_clear(scf)
-        call scf_run(scf, parser, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
+        call scf_run(scf, parser, mc, gr, geo, st, ks, hm, psolver, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
           forces0(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
         end do
@@ -186,12 +188,12 @@ contains
         geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) - M_TWO*vib%disp
 
         ! second force
-        call hamiltonian_epot_generate(hm, parser, gr, geo, st)
+        call hamiltonian_epot_generate(hm, parser, gr, geo, st, psolver)
         call density_calc(st, gr, st%rho)
         call v_ks_calc(ks, parser, hm, st, geo, calc_eigenval=.true.)
-        call energy_calc_total(hm, gr, st)
+        call energy_calc_total(hm, psolver, gr, st)
         call scf_mix_clear(scf)
-        call scf_run(scf, parser, mc, gr, geo, st, ks, hm, outp, gs_run=.false., verbosity = VERB_COMPACT)
+        call scf_run(scf, parser, mc, gr, geo, st, ks, hm, psolver, outp, gs_run=.false., verbosity = VERB_COMPACT)
         do jatom = 1, geo%natoms
           forces(jatom, 1:mesh%sb%dim) = geo%atom(jatom)%f(1:mesh%sb%dim)
         end do

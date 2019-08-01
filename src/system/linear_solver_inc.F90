@@ -20,9 +20,10 @@
 !> This subroutine calculates the solution of (H + shift) x = y
 !! Typically shift = - eigenvalue + omega
 ! ---------------------------------------------------------
-subroutine X(linear_solver_solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response)
+subroutine X(linear_solver_solve_HXeY) (this, hm, psolver, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response)
   type(linear_solver_t), target, intent(inout) :: this
   type(hamiltonian_t),   target, intent(in)    :: hm
+  type(poisson_t),       target, intent(in)    :: psolver
   type(grid_t),          target, intent(in)    :: gr
   type(states_t),        target, intent(in)    :: st
   integer,                       intent(in)    :: ist
@@ -46,6 +47,7 @@ subroutine X(linear_solver_solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, 
 
   args%ls       => this
   args%hm       => hm
+  args%psolver  => psolver
   args%gr       => gr 
   args%st       => st
   args%ist      = ist
@@ -56,16 +58,16 @@ subroutine X(linear_solver_solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, 
   select case(this%solver)
 
   case(OPTION__LINEARSOLVER__CG)
-    call X(linear_solver_cg)       (this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
+    call X(linear_solver_cg)       (this, hm, psolver, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
 
   case(OPTION__LINEARSOLVER__IDRS)
     call X(linear_solver_idrs) (this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
 
   case(OPTION__LINEARSOLVER__BICGSTAB)
-    call X(linear_solver_bicgstab) (this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response_)
+    call X(linear_solver_bicgstab) (this, hm, psolver, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response_)
 
   case(OPTION__LINEARSOLVER__MULTIGRID)
-    call X(linear_solver_multigrid)(this, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
+    call X(linear_solver_multigrid)(this, hm, psolver, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
 
   case(OPTION__LINEARSOLVER__QMR_SYMMETRIC)   
     ! complex symmetric: for Sternheimer, only if wfns are real
@@ -94,7 +96,7 @@ subroutine X(linear_solver_solve_HXeY) (this, hm, gr, st, ist, ik, x, y, shift, 
       iter_used, residue = residue, threshold = tol, showprogress = .false.)
 
   case(OPTION__LINEARSOLVER__SOS)
-    call X(linear_solver_sos)(hm, gr, st, ist, ik, x, y, shift, residue, iter_used)
+    call X(linear_solver_sos)(hm, psolver, gr, st, ist, ik, x, y, shift, residue, iter_used)
 
   case default 
     write(message(1), '(a,i2)') "Unknown linear-response solver", this%solver
@@ -109,9 +111,10 @@ end subroutine X(linear_solver_solve_HXeY)
 
 ! ---------------------------------------------------------
 
-subroutine X(linear_solver_solve_HXeY_batch) (this, hm, gr, st, ik, xb, yb, shift, tol, residue, iter_used, occ_response)
+subroutine X(linear_solver_solve_HXeY_batch) (this, hm, psolver, gr, st, ik, xb, yb, shift, tol, residue, iter_used, occ_response)
   type(linear_solver_t), target, intent(inout) :: this
   type(hamiltonian_t),   target, intent(in)    :: hm
+  type(poisson_t),       target, intent(in)    :: psolver
   type(grid_t),          target, intent(in)    :: gr
   type(states_t),        target, intent(in)    :: st
   integer,                       intent(in)    :: ik
@@ -131,12 +134,12 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, hm, gr, st, ik, xb, yb, shif
   case(OPTION__LINEARSOLVER__QMR_DOTP)
 
     call profiling_in(prof_batch, "LINEAR_SOLVER_BATCH")
-    call X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, yb, shift, iter_used, residue, tol)
+    call X(linear_solver_qmr_dotp)(this, hm, psolver, gr, st, ik, xb, yb, shift, iter_used, residue, tol)
     call profiling_out(prof_batch)
 
   case default
     do ii = 1, xb%nst
-      call X(linear_solver_solve_HXeY) (this, hm, gr, st, xb%states(ii)%ist, ik, xb%states(ii)%X(psi), yb%states(ii)%X(psi), &
+      call X(linear_solver_solve_HXeY) (this, hm, psolver, gr, st, xb%states(ii)%ist, ik, xb%states(ii)%X(psi), yb%states(ii)%X(psi), &
         shift(ii), tol, residue(ii), iter_used(ii), occ_response)
     end do
 
@@ -148,9 +151,10 @@ end subroutine X(linear_solver_solve_HXeY_batch)
 
 ! ---------------------------------------------------------
 !> Conjugate gradients
-subroutine X(linear_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
+subroutine X(linear_solver_cg) (ls, hm, psolver, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
   type(linear_solver_t), intent(inout) :: ls
   type(hamiltonian_t),   intent(in)    :: hm
+  type(poisson_t),       intent(in)    :: psolver
   type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
@@ -174,7 +178,7 @@ subroutine X(linear_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol, resid
   SAFE_ALLOCATE(Hp(1:gr%mesh%np, 1:st%d%dim))
 
   ! Initial residue
-  call X(linear_solver_operator)(hm, gr, st, ist, ik, shift, x, Hp)
+  call X(linear_solver_operator)(hm, psolver, gr, st, ist, ik, shift, x, Hp)
   r(1:gr%mesh%np, 1:st%d%dim) = y(1:gr%mesh%np, 1:st%d%dim) - Hp(1:gr%mesh%np, 1:st%d%dim)
   
   ! Initial search direction
@@ -190,7 +194,7 @@ subroutine X(linear_solver_cg) (ls, hm, gr, st, ist, ik, x, y, shift, tol, resid
     if(conv.and.conv_last) exit
     conv_last = conv
     
-    call X(linear_solver_operator)(hm, gr, st, ist, ik, shift, p, Hp)
+    call X(linear_solver_operator)(hm, psolver, gr, st, ist, ik, shift, p, Hp)
 
     alpha = gamma/X(mf_dotp) (gr%mesh, st%d%dim, p, Hp)
 
@@ -279,9 +283,10 @@ end subroutine X(linear_solver_idrs)
 ! ---------------------------------------------------------
 !> BICONJUGATE GRADIENTS STABILIZED
 !! see http://math.nist.gov/iml++/bicgstab.h.txt
-subroutine X(linear_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response)
+subroutine X(linear_solver_bicgstab) (ls, hm, psolver, gr, st, ist, ik, x, y, shift, tol, residue, iter_used, occ_response)
   type(linear_solver_t), intent(inout) :: ls
   type(hamiltonian_t),   intent(in)    :: hm
+  type(poisson_t),       intent(in)    :: psolver
   type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
@@ -315,7 +320,7 @@ subroutine X(linear_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol,
   SAFE_ALLOCATE(shat(1:gr%mesh%np_part, 1:st%d%dim))
 
   ! Initial residue
-  call X(linear_solver_operator) (hm, gr, st, ist, ik, shift, x, Hp)
+  call X(linear_solver_operator) (hm, psolver, gr, st, ist, ik, shift, x, Hp)
 
   forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) r(ip, idim) = y(ip, idim) - Hp(ip, idim)
 
@@ -359,8 +364,8 @@ subroutine X(linear_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol,
     end if
 
     ! preconditioning 
-    call X(preconditioner_apply)(ls%pre, gr, hm, ik, p, phat, shift)
-    call X(linear_solver_operator)(hm, gr, st, ist, ik, shift, phat, Hp)
+    call X(preconditioner_apply)(ls%pre, gr, hm, psolver, ik, p, phat, shift)
+    call X(linear_solver_operator)(hm, psolver, gr, st, ist, ik, shift, phat, Hp)
     
     alpha = rho_1/X(mf_dotp)(gr%mesh, st%d%dim, rs, Hp)
 
@@ -376,8 +381,8 @@ subroutine X(linear_solver_bicgstab) (ls, hm, gr, st, ist, ik, x, y, shift, tol,
       exit
     end if
 
-    call X(preconditioner_apply)(ls%pre, gr, hm, ik, s, shat, shift)
-    call X(linear_solver_operator)(hm, gr, st, ist, ik, shift, shat, Hs)
+    call X(preconditioner_apply)(ls%pre, gr, hm, psolver, ik, s, shat, shift)
+    call X(linear_solver_operator)(hm, psolver, gr, st, ist, ik, shift, shat, Hs)
 
     w = X(mf_dotp)(gr%mesh, st%d%dim, Hs, s)/X(mf_dotp) (gr%mesh, st%d%dim, Hs, Hs)
 
@@ -421,9 +426,10 @@ end subroutine X(linear_solver_bicgstab)
 
 
 ! ---------------------------------------------------------
-subroutine X(linear_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
+subroutine X(linear_solver_multigrid) (ls, hm, psolver, gr, st, ist, ik, x, y, shift, tol, residue, iter_used)
   type(linear_solver_t), intent(inout) :: ls
   type(hamiltonian_t),   intent(in)    :: hm
+  type(poisson_t),       intent(in)    :: psolver
   type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
@@ -454,7 +460,7 @@ subroutine X(linear_solver_multigrid) (ls, hm, gr, st, ist, ik, x, y, shift, tol
     call smoothing(3)
 
     !calculate the residue
-    call X(linear_solver_operator)(hm, gr, st, ist, ik, shift, x, hx)
+    call X(linear_solver_operator)(hm, psolver, gr, st, ist, ik, shift, x, hx)
     res(1:gr%mesh%np, 1:st%d%dim) = hx(1:gr%mesh%np, 1:st%d%dim) - y(1:gr%mesh%np, 1:st%d%dim)
     residue = X(mf_nrm2)(gr%mesh, st%d%dim, res)
 
@@ -495,7 +501,7 @@ contains
 
     do ii = 1, steps
 
-      call X(linear_solver_operator)(hm, gr, st, ist, ik, shift, x, hx)
+      call X(linear_solver_operator)(hm, psolver, gr, st, ist, ik, shift, x, hx)
 
       do idim = 1, st%d%dim
         do ip = 1, gr%mesh%np
@@ -516,8 +522,9 @@ end subroutine X(linear_solver_multigrid)
 
 ! ---------------------------------------------------------
 !> This routine applies the operator hx = [H (+ Q) + shift] x
-subroutine X(linear_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
+subroutine X(linear_solver_operator) (hm, psolver, gr, st, ist, ik, shift, x, hx)
   type(hamiltonian_t),   intent(in)    :: hm
+  type(poisson_t),       intent(in)    :: psolver
   type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ist
@@ -533,7 +540,7 @@ subroutine X(linear_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
 
   PUSH_SUB(X(linear_solver_operator))
 
-  call X(hamiltonian_apply)(hm, gr%der, x, Hx, ist, ik)
+  call X(hamiltonian_apply)(hm, gr%der, psolver, x, Hx, ist, ik)
 
   !Hx = Hx + shift*x
   do idim = 1, st%d%dim
@@ -569,8 +576,9 @@ subroutine X(linear_solver_operator) (hm, gr, st, ist, ik, shift, x, hx)
 end subroutine X(linear_solver_operator)
 
 ! ---------------------------------------------------------
-subroutine X(linear_solver_operator_batch) (hm, gr, st, ik, shift, xb, hxb)
+subroutine X(linear_solver_operator_batch) (hm, psolver, gr, st, ik, shift, xb, hxb)
   type(hamiltonian_t),   intent(in)    :: hm
+  type(poisson_t),       intent(in)    :: psolver
   type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ik
@@ -585,7 +593,7 @@ subroutine X(linear_solver_operator_batch) (hm, gr, st, ik, shift, xb, hxb)
 
   if(st%smear%method == SMEAR_SEMICONDUCTOR .or. st%smear%integral_occs) then
 
-    call X(hamiltonian_apply_batch)(hm, gr%der, xb, hxb, ik)
+    call X(hamiltonian_apply_batch)(hm, gr%der, psolver, xb, hxb, ik)
     
     SAFE_ALLOCATE(shift_ist_indexed(st%st_start:st%st_end))
     
@@ -600,7 +608,7 @@ subroutine X(linear_solver_operator_batch) (hm, gr, st, ik, shift, xb, hxb)
   else
 
     do ii = 1, xb%nst
-      call X(linear_solver_operator)(hm, gr, st, xb%states(ii)%ist, ik, shift(ii), &
+      call X(linear_solver_operator)(hm, psolver, gr, st, xb%states(ii)%ist, ik, shift(ii), &
         xb%states(ii)%X(psi), hxb%states(ii)%X(psi))
     end do
 
@@ -623,7 +631,7 @@ subroutine X(linear_solver_operator_na) (x, hx)
   SAFE_ALLOCATE(tmpy(1:args%gr%mesh%np, 1:1))
 
   call lalg_copy(args%gr%mesh%np, x, tmpx(:, 1))
-  call X(linear_solver_operator)(args%hm, args%gr, args%st, args%ist, args%ik, args%X(shift), tmpx, tmpy)
+  call X(linear_solver_operator)(args%hm, args%psolver, args%gr, args%st, args%ist, args%ik, args%X(shift), tmpx, tmpy)
   call lalg_copy(args%gr%mesh%np, tmpy(:, 1), hx)
 
   SAFE_DEALLOCATE_A(tmpx)
@@ -646,7 +654,7 @@ subroutine X(linear_solver_operator_t_na) (x, hx)
   SAFE_ALLOCATE(tmpy(1:args%gr%mesh%np, 1:1))
 
   call lalg_copy(args%gr%mesh%np, R_CONJ(x), tmpx(:, 1))
-  call X(linear_solver_operator)(args%hm, args%gr, args%st, args%ist, args%ik, R_CONJ(args%X(shift)), tmpx, tmpy)
+  call X(linear_solver_operator)(args%hm, args%psolver, args%gr, args%st, args%ist, args%ik, R_CONJ(args%X(shift)), tmpx, tmpy)
   call lalg_copy(args%gr%mesh%np, R_CONJ(tmpy(:, 1)), hx)
 
   SAFE_DEALLOCATE_A(tmpx)
@@ -670,7 +678,7 @@ subroutine X(linear_solver_operator_sym_na) (x, hx)
   SAFE_ALLOCATE(tmpz(1:args%gr%mesh%np_part, 1:1))
 
   call lalg_copy(args%gr%mesh%np, x, tmpx(:, 1))
-  call X(linear_solver_operator)(args%hm, args%gr, args%st, args%ist, args%ik, args%X(shift), tmpx, tmpy)
+  call X(linear_solver_operator)(args%hm, args%psolver, args%gr, args%st, args%ist, args%ik, args%X(shift), tmpx, tmpy)
   call X(linear_solver_operator_t_na)(tmpy(:, 1), tmpz(:, 1))
   call lalg_copy(args%gr%mesh%np, tmpz(:, 1), hx)
 
@@ -694,7 +702,7 @@ subroutine X(linear_solver_preconditioner) (x, hx)
   SAFE_ALLOCATE(tmpy(1:args%gr%mesh%np_part, 1:1))
 
   call lalg_copy(args%gr%mesh%np, x, tmpx(:, 1))
-  call X(preconditioner_apply)(args%ls%pre, args%gr, args%hm, args%ik, tmpx, tmpy, args%X(shift))
+  call X(preconditioner_apply)(args%ls%pre, args%gr, args%hm, args%psolver, args%ik, tmpx, tmpy, args%X(shift))
   call lalg_copy(args%gr%mesh%np, tmpy(:, 1), hx)
 
   SAFE_DEALLOCATE_A(tmpx)
@@ -704,8 +712,9 @@ subroutine X(linear_solver_preconditioner) (x, hx)
 end subroutine X(linear_solver_preconditioner)
 
 ! ---------------------------------------------------------
-subroutine X(linear_solver_sos) (hm, gr, st, ist, ik, x, y, shift, residue, iter_used)
+subroutine X(linear_solver_sos) (hm, psolver, gr, st, ist, ik, x, y, shift, residue, iter_used)
   type(hamiltonian_t),            intent(in)    :: hm
+  type(poisson_t),                intent(in)    :: psolver
   type(grid_t),                   intent(in)    :: gr
   type(states_t),                 intent(in)    :: st
   integer,                        intent(in)    :: ist
@@ -747,7 +756,7 @@ subroutine X(linear_solver_sos) (hm, gr, st, ist, ik, x, y, shift, residue, iter
 
   ! calculate the residual
   SAFE_ALLOCATE(rr(1:gr%mesh%np, 1:st%d%dim))
-  call X(linear_solver_operator)(hm, gr, st, ist, ik, shift, x, rr)
+  call X(linear_solver_operator)(hm, psolver, gr, st, ist, ik, shift, x, rr)
 
   do idim = 1, st%d%dim
     call lalg_axpy(gr%mesh%np, -M_ONE, y(:, idim), rr(:, idim))
@@ -764,9 +773,10 @@ end subroutine X(linear_solver_sos)
 ! ---------------------------------------------------------
 !> for complex symmetric matrices
 !! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
-subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_used, residue, threshold)
+subroutine X(linear_solver_qmr_dotp)(this, hm, psolver, gr, st, ik, xb, bb, shift, iter_used, residue, threshold)
   type(linear_solver_t), intent(inout) :: this
   type(hamiltonian_t),   intent(in)    :: hm
+  type(poisson_t),       intent(in)    :: psolver
   type(grid_t),          intent(in)    :: gr
   type(states_t),        intent(in)    :: st
   integer,               intent(in)    :: ik
@@ -823,7 +833,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
   call batch_copy(xb, deltax)
   call batch_copy(xb, deltar)
 
-  call X(linear_solver_operator_batch)(hm, gr, st, ik, shift, xb, vvb)
+  call X(linear_solver_operator_batch)(hm, psolver, gr, st, ik, shift, xb, vvb)
 
   call batch_xpay(gr%mesh%np, bb, CNST(-1.0), vvb)
   call batch_copy_data(gr%mesh%np, vvb, res)
@@ -859,7 +869,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
   end do
 
-  call X(preconditioner_apply_batch)(this%pre, gr, hm, ik, vvb, zzb, omega = shift)
+  call X(preconditioner_apply_batch)(this%pre, gr, hm, psolver, ik, vvb, zzb, omega = shift)
   call mesh_batch_nrm2(gr%mesh, zzb, xsi)
 
   gamma = CNST(1.0)
@@ -903,7 +913,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
       call batch_xpay(gr%mesh%np, zzb, -rho*delta/eps, qqb, a_full = .false.)
     end if
 
-    call X(linear_solver_operator_batch)(hm, gr, st, ik, shift, qqb, ppb)
+    call X(linear_solver_operator_batch)(hm, psolver, gr, st, ik, shift, qqb, ppb)
 
     call batch_scal(gr%mesh%np, alpha, ppb, a_full = .false.)
 
@@ -926,7 +936,7 @@ subroutine X(linear_solver_qmr_dotp)(this, hm, gr, st, ik, xb, bb, shift, iter_u
 
     call mesh_batch_nrm2(gr%mesh, vvb, rho)
 
-    call X(preconditioner_apply_batch)(this%pre, gr, hm, ik, vvb, zzb, omega = shift)
+    call X(preconditioner_apply_batch)(this%pre, gr, hm, psolver, ik, vvb, zzb, omega = shift)
 
     call batch_scal(gr%mesh%np, CNST(1.0)/alpha, zzb, a_full = .false.)
 
@@ -1085,7 +1095,7 @@ function X(matrixvector)( v )
   
   phi = R_TOTYPE(M_ZERO)
   phi(1:np, 1:dim) = X(doubledimarray)(np, dim, v(:, 1))
-  call X(linear_solver_operator) (args%hm, args%gr, args%st, args%ist, args%ik, args%X(shift), phi, hphi)
+  call X(linear_solver_operator) (args%hm, args%psolver, args%gr, args%st, args%ist, args%ik, args%X(shift), phi, hphi)
   X(matrixvector)(1:np*dim, 1) = X(singledimarray)(np*dim, hphi)
 
   SAFE_DEALLOCATE_A(phi)
@@ -1108,7 +1118,7 @@ function X(preconditioner)( v )
 
   phi = R_TOTYPE(M_ZERO)
   phi(1:np, 1:dim) = X(doubledimarray)(np, dim, v(:, 1))
-  call X(preconditioner_apply)(args%ls%pre, args%gr, args%hm, args%ik, phi, precphi, args%X(shift))
+  call X(preconditioner_apply)(args%ls%pre, args%gr, args%hm, args%psolver, args%ik, phi, precphi, args%X(shift))
   X(preconditioner)(1:np*dim, 1) = X(singledimarray)(np*dim, precphi)
 
   SAFE_DEALLOCATE_A(phi)

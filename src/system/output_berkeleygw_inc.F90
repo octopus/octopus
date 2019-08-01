@@ -16,12 +16,13 @@
 !! 02110-1301, USA.
 !!
 
-subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
+subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, psolver, vxc)
   type(output_bgw_t),     intent(in)    :: bgw
   character(len=*),       intent(in)    :: dir
   type(states_t), target, intent(in)    :: st
   type(grid_t),           intent(in)    :: gr
   type(hamiltonian_t),    intent(inout) :: hm
+  type(poisson_t),        intent(in)    :: psolver
   FLOAT,                  intent(in)    :: vxc(:,:)
 
   integer :: iunit, iunit_x, ispin, ik, ikk, ist, ist2, idiag, ioff, ndiag, noffdiag, spin_index(st%d%nspin)
@@ -107,7 +108,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
         mtxel(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), psi(:, 1)*vxc(:, ispin))
         if(bgw%calc_exchange) then
           xpsi(:, :) = M_ZERO
-          call X(exchange_operator_single)(hm, gr%der, ist, ikk, CNST(1.0), psi, xpsi)
+          call X(exchange_operator_single)(hm, gr%der, psolver, ist, ikk, CNST(1.0), psi, xpsi)
           mtxel_x(idiag, ispin) = X(mf_dotp)(gr%mesh, psi(:, 1), xpsi(:, 1))
         end if
       end do
@@ -120,7 +121,7 @@ subroutine X(bgw_vxc_dat)(bgw, dir, st, gr, hm, vxc)
         ! FIXME: we should calc xpsi only for each state, not for each offdiag
         if(bgw%calc_exchange) then
           xpsi(:,:) = M_ZERO
-          call X(exchange_operator_single)(hm, gr%der, ist, ikk, CNST(1.0), psi, xpsi)
+          call X(exchange_operator_single)(hm, gr%der, psolver, ist, ikk, CNST(1.0), psi, xpsi)
           mtxel_x(ndiag + ioff, ispin) = R_CONJ(X(mf_dotp)(gr%mesh, psi2, xpsi(:, 1)))
         end if
       end do

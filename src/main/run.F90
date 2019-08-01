@@ -202,17 +202,17 @@ contains
         if(calc_mode_id /= CM_DUMMY) then
           message(1) = "Info: Generating external potential"
           call messages_info(1)
-          call hamiltonian_epot_generate(sys%hm, sys%parser, sys%gr, sys%geo, sys%st)
+          call hamiltonian_epot_generate(sys%hm, sys%parser, sys%gr, sys%geo, sys%st, sys%psolver)
           message(1) = "      done."
           call messages_info(1)
         end if
 
         if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
-          call poisson_async_init(sys%ks%hartree_solver, sys%mc)
+          call poisson_async_init(sys%ks%psolver, sys%mc)
           ! slave nodes do not call the calculation routine
           if(multicomm_is_slave(sys%mc))then
             !for the moment we only have one type of slave
-            call poisson_slave_work(sys%ks%hartree_solver)
+            call poisson_slave_work(sys%ks%psolver)
           end if
         end if
 
@@ -297,7 +297,7 @@ contains
           call profiling_out(calc_mode_prof)
         end if
 
-        if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) call poisson_async_end(sys%ks%hartree_solver, sys%mc)
+        if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) call poisson_async_end(sys%ks%psolver, sys%mc)
 
       class default
         message(1) = "Unknow system type."

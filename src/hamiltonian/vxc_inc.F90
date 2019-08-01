@@ -16,10 +16,11 @@
 !! 02110-1301, USA.
 !!
 
-subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
+subroutine xc_get_vxc(der, xcs, st, psolver, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
   type(derivatives_t),  intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,   intent(in)    :: xcs             !< Details about the xc functional used
   type(states_t),       intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
+  type(poisson_t),      intent(in)    :: psolver
   FLOAT,                intent(in)    :: rho(:, :)       !< Electronic density 
   integer,              intent(in)    :: ispin           !< Number of spin channels 
   FLOAT,                intent(in)    :: ioniz_pot
@@ -399,7 +400,7 @@ subroutine xc_get_vxc(der, xcs, st, rho, ispin, ioniz_pot, qtot, vxc, ex, ec, de
   if(present(deltaxc)) deltaxc = M_ZERO
 
   if(xcs%xc_density_correction == LR_X) then
-    call xc_density_correction_calc(xcs, der, spin_channels, rho, vx, dedd, deltaxc = deltaxc)
+    call xc_density_correction_calc(xcs, der, psolver, spin_channels, rho, vx, dedd, deltaxc = deltaxc)
 
     if(calc_energy) then
       ! correct the energy density from Levy-Perdew, note that vx now
@@ -884,9 +885,10 @@ end subroutine xc_get_vxc
 
 ! -----------------------------------------------------
 
-subroutine xc_density_correction_calc(xcs, der, nspin, density, refvx, vxc, deltaxc)
+subroutine xc_density_correction_calc(xcs, der, psolver, nspin, density, refvx, vxc, deltaxc)
   type(xc_t),          intent(in)    :: xcs
   type(derivatives_t), intent(in)    :: der
+  type(poisson_t),     intent(in)    :: psolver
   integer,             intent(in)    :: nspin
   FLOAT,               intent(in)    :: density(:, :)
   FLOAT,               intent(inout) :: refvx(:)

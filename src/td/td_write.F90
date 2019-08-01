@@ -49,6 +49,7 @@ module td_write_oct_m
   use parser_oct_m
   use partial_charges_oct_m
   use pert_oct_m
+  use poisson_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
@@ -735,13 +736,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_iter(writ, parser, outp, gr, st, hm, geo, kick, dt,ks, iter)
+  subroutine td_write_iter(writ, parser, outp, gr, st, hm, psolver, geo, kick, dt,ks, iter)
     type(td_write_t),    intent(inout) :: writ !< Write object
     type(parser_t),      intent(in)    :: parser
     type(output_t),      intent(in)    :: outp
     type(grid_t),        intent(in)    :: gr   !< The grid
     type(states_t),      intent(inout) :: st   !< State object
     type(hamiltonian_t), intent(inout) :: hm   !< Hamiltonian object
+    type(poisson_t),     intent(in)    :: psolver
     type(geometry_t),    intent(inout) :: geo  !< Geometry object
     type(kick_t),        intent(in)    :: kick !< The kick
     FLOAT,               intent(in)    :: dt   !< Delta T, time interval
@@ -758,7 +760,9 @@ contains
     if(writ%out(OUT_FTCHD)%write) &
       call td_write_ftchd(writ%out(OUT_FTCHD)%handle, gr, st, kick, iter)
 
-    if(writ%out(OUT_ANGULAR)%write) call td_write_angular(writ%out(OUT_ANGULAR)%handle, parser, gr, geo, hm, st, kick, iter)
+    if(writ%out(OUT_ANGULAR)%write) then
+      call td_write_angular(writ%out(OUT_ANGULAR)%handle, parser, gr, geo, hm, psolver, st, kick, iter)
+    end if
 
     if(writ%out(OUT_SPIN)%write) &
       call td_write_spin(writ%out(OUT_SPIN)%handle, gr, st, iter)
@@ -771,8 +775,9 @@ contains
       call td_write_proj(writ%out(OUT_PROJ)%handle, gr, geo, st, writ%gs_st, kick, iter)
     end if
 
-    if(writ%out(OUT_FLOQUET)%write) &
-      call td_write_floquet(writ%out(OUT_FLOQUET)%handle, parser, hm, gr, st, ks, iter)
+    if (writ%out(OUT_FLOQUET)%write) then
+      call td_write_floquet(writ%out(OUT_FLOQUET)%handle, parser, hm, psolver, gr, st, ks, iter)
+    end if
 
     if(writ%out(OUT_KP_PROJ)%write) &
       call td_write_proj_kp(writ%out(OUT_KP_PROJ)%handle,hm, gr, st, writ%gs_st, iter)
@@ -796,8 +801,9 @@ contains
       call td_write_populations(writ%out(OUT_POPULATIONS)%handle, gr%mesh, gr%sb, st, &
         writ, dt, iter)
 
-    if(writ%out(OUT_ACC)%write) &
-      call td_write_acc(writ%out(OUT_ACC)%handle, gr, geo, st, hm, dt, iter)
+    if (writ%out(OUT_ACC)%write) then
+      call td_write_acc(writ%out(OUT_ACC)%handle, gr, geo, st, hm, psolver, dt, iter)
+    end if
       
     if(writ%out(OUT_VEL)%write) &
       call td_write_vel(writ%out(OUT_VEL)%handle, gr, st, iter)
@@ -876,12 +882,13 @@ contains
   end subroutine td_write_data
 
   ! ---------------------------------------------------------
-  subroutine td_write_output(writ, parser, gr, st, hm, ks, outp, geo, iter, dt)
+  subroutine td_write_output(writ, parser, gr, st, hm, psolver, ks, outp, geo, iter, dt)
     type(td_write_t),     intent(inout) :: writ
     type(parser_t),       intent(in)    :: parser
     type(grid_t),         intent(in)    :: gr
     type(states_t),       intent(inout) :: st
     type(hamiltonian_t),  intent(inout) :: hm
+    type(poisson_t),      intent(in)    :: psolver
     type(v_ks_t),         intent(in)    :: ks
     type(output_t),       intent(in)    :: outp
     type(geometry_t),     intent(in)    :: geo
@@ -897,7 +904,7 @@ contains
     ! now write down the rest
     write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
 
-    call output_all(outp, parser, gr, geo, st, hm, ks, filename)
+    call output_all(outp, parser, gr, geo, st, hm, psolver, ks, filename)
     if(present(dt)) then
       call output_scalar_pot(outp, gr, geo, hm, filename, iter*dt)
     else
@@ -1019,12 +1026,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_angular(out_angular, parser, gr, geo, hm, st, kick, iter)
+  subroutine td_write_angular(out_angular, parser, gr, geo, hm, psolver, st, kick, iter)
     type(c_ptr),            intent(inout) :: out_angular
     type(parser_t),         intent(in)    :: parser
     type(grid_t),           intent(in)    :: gr
     type(geometry_t),       intent(inout) :: geo
     type(hamiltonian_t),    intent(inout) :: hm
+    type(poisson_t),        intent(in)    :: psolver
     type(states_t),         intent(inout) :: st
     type(kick_t),           intent(in)    :: kick
     integer,                intent(in)    :: iter
@@ -1041,7 +1049,8 @@ contains
     do idir = 1, 3
        call pert_setup_dir(angular_momentum, idir)
        !we have to multiply by 2, because the perturbation returns L/2
-       angular(idir) = M_TWO*real(zpert_states_expectation_value(angular_momentum, parser, gr, geo, hm, st), REAL_PRECISION)
+       angular(idir) = &
+         M_TWO*real(zpert_states_expectation_value(angular_momentum, parser, gr, geo, hm, psolver, st), REAL_PRECISION)
     end do
 
     call pert_end(angular_momentum)
@@ -1575,12 +1584,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_acc(out_acc, gr, geo, st, hm, dt, iter)
+  subroutine td_write_acc(out_acc, gr, geo, st, hm, psolver, dt, iter)
     type(c_ptr),         intent(inout) :: out_acc
     type(grid_t),        intent(in)    :: gr
     type(geometry_t),    intent(inout) :: geo
     type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(inout) :: hm
+    type(poisson_t),     intent(in)    :: psolver
     FLOAT,               intent(in)    :: dt
     integer,             intent(in)    :: iter
 
@@ -1611,7 +1621,7 @@ contains
       call td_write_print_header_end(out_acc)
     end if
 
-    call td_calc_tacc(gr, geo, st, hm, acc, dt*iter)
+    call td_calc_tacc(gr, geo, st, hm, psolver, acc, dt*iter)
 
     if(mpi_grp_is_root(mpi_world)) then
       call write_iter_start(out_acc)
@@ -2574,10 +2584,11 @@ contains
   end subroutine td_write_proj_kp
 
   !---------------------------------------
-  subroutine td_write_floquet(out_floquet, parser, hm, gr, st, ks, iter)
+  subroutine td_write_floquet(out_floquet, parser, hm, psolver, gr, st, ks, iter)
     type(c_ptr),         intent(inout) :: out_floquet
     type(parser_t),      intent(in)    :: parser
     type(hamiltonian_t), intent(inout) :: hm
+    type(poisson_t),     intent(in)    :: psolver
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(inout) :: st !< at iter=0 this is the groundstate
     type(v_ks_t),        intent(in)    :: ks
@@ -2687,7 +2698,7 @@ contains
       ! get non-interacting Hamiltonian at time (offset by one cycle to allow for ramp)
       call hamiltonian_update(hm,gr%mesh,gr%der%boundaries,time=Tcycle+it*dt)
       ! get hpsi
-      call zhamiltonian_apply_all(hm, ks%xc, gr%der, st, hm_st)
+      call zhamiltonian_apply_all(hm, ks%xc, gr%der, psolver, st, hm_st)
 
       ! project Hamiltonian into grounstates for zero weight k-points
       ik_count = 0

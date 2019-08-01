@@ -18,11 +18,12 @@
 
 ! ---------------------------------------------------------
 ! TODO: Merge this with the two_body routine in system/output_me_inc.F90
-subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
-  type(lda_u_t),   intent(inout)  :: this
-  type(mesh_t),       intent(in)  :: mesh
-  type(derivatives_t), intent(in) :: der
-  type(states_t),     intent(in)  :: st
+subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver)
+  type(lda_u_t),       intent(inout) :: this
+  type(mesh_t),        intent(in)    :: mesh
+  type(derivatives_t), intent(in)    :: der
+  type(states_t),      intent(in)    :: st
+  type(poisson_t),     intent(in)    :: psolver
 
   integer :: ist, jst, kst, lst, ijst, klst
   integer :: is1, is2

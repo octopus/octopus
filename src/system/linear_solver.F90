@@ -28,6 +28,7 @@ module linear_solver_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m
   use parser_oct_m
+  use poisson_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
@@ -67,6 +68,7 @@ module linear_solver_oct_m
     private
     type(linear_solver_t), pointer :: ls
     type(hamiltonian_t),   pointer :: hm
+    type(poisson_t),       pointer :: psolver
     type(grid_t),          pointer :: gr
     type(states_t),        pointer :: st
     integer                        :: ist
