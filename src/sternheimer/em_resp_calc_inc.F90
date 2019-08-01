@@ -592,8 +592,8 @@ subroutine X(lr_calc_beta) (sh, sys, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr,
                     tmp(1:np, idim) = kdotp_em_lr(u(2), u(3), isigma, w(3))%X(dl_psi)(1:np, idim, ist, ik)
                   else
                     call pert_setup_dir(dipole, u(2))
-                    call X(pert_apply)(dipole, sys%parser, sys%gr, sys%geo, sys%hm, sys%psolver, ik, em_lr(u(3), isigma, &
-                      w(3))%X(dl_psi)(:, :, ist, ik), tmp)
+                    call X(pert_apply)(dipole, sys%parser, sys%gr, sys%geo, sys%hm, sys%psolver, ik, &
+                      em_lr(u(3), isigma, w(3))%X(dl_psi)(:, :, ist, ik), tmp)
                   end if
 
                   do ip = 1, np
