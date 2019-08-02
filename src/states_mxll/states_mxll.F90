@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2019 R. Jestaedt, F. Bonafe, H. Appel, A. Rubio
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -86,12 +86,11 @@ module states_mxll_oct_m
   type states_mxll_t
     ! Components are public by default
     type(states_dim_t)           :: d
-    type(states_mxll_priv_t)          :: priv          !< the private components
+    type(states_mxll_priv_t)     :: priv          !< the private components
     integer                      :: nst           !< Number of states in each irreducible subspace
     integer                      :: rs_sign
     type(states_group_t)         :: group
     logical                      :: parallel_in_states !< Am I parallel in states?
-
 
     type(batch_t), pointer       :: rsb
     type(batch_t), pointer       :: rs_transb
@@ -101,12 +100,12 @@ module states_mxll_oct_m
     
     CMPLX, pointer               :: rs_state_plane_waves(:,:)
 !   CMPLX, pointer               :: rs_state(:,:)
-!    CMPLX, pointer               :: rs_state_trans(:,:)
-!    CMPLX, pointer               :: rs_state_long(:,:)
+!    CMPLX, pointer              :: rs_state_trans(:,:)
+!    CMPLX, pointer              :: rs_state_long(:,:)
     
     logical                      :: rs_current_density_restart = .false.
-!    CMPLX, pointer               :: rs_current_density_restart_t1(:,:)
-!    CMPLX, pointer               :: rs_current_density_restart_t2(:,:)
+!    CMPLX, pointer              :: rs_current_density_restart_t1(:,:)
+!    CMPLX, pointer              :: rs_current_density_restart_t2(:,:)
 
     FLOAT, pointer               :: ep(:)
     FLOAT, pointer               :: mu(:)
@@ -170,8 +169,8 @@ module states_mxll_oct_m
     character(len=1024), pointer :: user_def_e_field(:)
     character(len=1024), pointer :: user_def_b_field(:)
 
-    integer :: energy_incident_waves_calc_iter
-    logical :: energy_incident_waves_calc
+    integer                      :: energy_incident_waves_calc_iter
+    logical                      :: energy_incident_waves_calc
 
     ! external current variables
     integer                      :: external_current_number
@@ -186,22 +185,20 @@ module states_mxll_oct_m
     !> used for the user-defined wavefunctions (they are stored as formula strings)
     !! (st%d%dim, st%nst, st%d%nik)
     character(len=1024), allocatable :: user_def_states(:,:,:)
-
     logical                     :: fromScratch
-    type(mpi_grp_t)             :: mpi_grp            !< The MPI group related to the parallelization in states.
-    type(mpi_grp_t)             :: dom_st_mpi_grp     !< The MPI group related to the domains-states "plane".
+    type(mpi_grp_t)             :: mpi_grp
+    type(mpi_grp_t)             :: dom_st_mpi_grp
 
 #ifdef HAVE_SCALAPACK
-    type(blacs_proc_grid_t)     :: dom_st_proc_grid   !< The BLACS process grid for the domains-states plane
+    type(blacs_proc_grid_t)     :: dom_st_proc_grid
 #endif
-   type(distributed_t)          :: dist
-   logical                      :: scalapack_compatible !< Whether the states parallelization use! ScaLAPACK layout
-    integer                     :: lnst               !< Number of states on local node.
-    integer                     :: st_start, st_end   !< Range of states processed by local node.
-    integer, pointer            :: node(:)            !< To which node belongs each state.
+    type(distributed_t)         :: dist
+    logical                     :: scalapack_compatible
+    integer                     :: lnst
+    integer                     :: st_start, st_end
+    integer, pointer            :: node(:)
     logical, private            :: packed
   end type states_mxll_t
-
 
 contains
 
@@ -215,7 +212,6 @@ contains
     call states_group_null(st%group)
     call distributed_nullify(st%dist) 
     st%priv%wfs_type = TYPE_CMPLX
-   
     st%d%orth_method = 0
     st%parallel_in_states = .false.
 #ifdef HAVE_SCALAPACK
@@ -226,14 +222,12 @@ contains
     POP_SUB(states_mxll_null)
   end subroutine states_mxll_null
 
-
   ! ---------------------------------------------------------
   subroutine states_mxll_init(st, parser, gr, geo)
     type(states_mxll_t), target, intent(inout) :: st
     type(parser_t),              intent(in)    :: parser
     type(grid_t),                intent(in)    :: gr
     type(geometry_t),            intent(in)    :: geo
-
     type(block_t)        :: blk
     integer :: idim, nlines, ncols, il
     FLOAT   :: zero_dummy(MAX_DIM), pos(MAX_DIM)
@@ -325,7 +319,6 @@ contains
     POP_SUB(states_mxll_init)
       
   end subroutine states_mxll_init
-
   
   ! ---------------------------------------------------------
   !> Allocates the Maxwell states defined within a states_mxll_t structure.
@@ -362,7 +355,6 @@ contains
 
     POP_SUB(states_mxll_allocate)
   end subroutine states_mxll_allocate
-
 
   ! ---------------------------------------------------------
   subroutine states_mxll_end(st)

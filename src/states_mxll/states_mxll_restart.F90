@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2016 M. Marques, A. Castro, A. Rubio, G. Bertsch, X. Andrade
+!! Copyright (C) 2019 R. Jestaedt, F. Bonafe, H. Appel, A. Rubio
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -256,7 +256,7 @@ contains
   !----------------------------------------------------------
   subroutine states_mxll_dump(restart, st, gr, zff, zff_dim, ierr, iter, st_start_writing, verbose)
     type(restart_t),      intent(in)  :: restart
-    type(states_mxll_t),       intent(in)  :: st
+    type(states_mxll_t),  intent(in)  :: st
     type(grid_t),         intent(in)  :: gr
     CMPLX,                intent(in)  :: zff(:,:)
     integer,              intent(in)  :: zff_dim
@@ -363,7 +363,6 @@ contains
 
   end subroutine states_mxll_dump
 
-
   !----------------------------------------------------------
   subroutine states_mxll_load(restart, st, gr, zff, zff_dim, ierr, iter, lowest_missing, label, verbose)
     type(restart_t),            intent(in)    :: restart
@@ -466,7 +465,6 @@ contains
       end if
 
       if (ist >= st%st_start .and. ist <= st%st_end) then
-          
         restart_file(idim, ist) = trim(filename)
         restart_file_present(idim, ist) = .true.
       end if
