@@ -2374,7 +2374,7 @@ contains
     integer,           intent(out) :: n_pairs
     integer,           intent(out) :: n_occ(:)   !< nik
     integer,           intent(out) :: n_unocc(:) !< nik
-    logical, pointer,  intent(out) :: is_included(:,:,:) !< (max(n_occ), max(n_unocc), st%d%nik)
+    logical, allocatable, intent(out) :: is_included(:,:,:) !< (max(n_occ), max(n_unocc), st%d%nik)
     logical,           intent(out) :: is_frac_occ !< are there fractional occupations?
 
     integer :: ik, ist, ast, n_filled, n_partially_filled, n_half_filled
