@@ -41,6 +41,7 @@ module td_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use pes_oct_m
   use poisson_oct_m
@@ -126,7 +127,7 @@ contains
 
     PUSH_SUB(td_init)
 
-    call ion_dynamics_init(td%ions, sys%parser, sys%geo)
+    call ion_dynamics_init(td%ions, sys%namespace, sys%geo)
 
     td%iter = 0
 
@@ -159,7 +160,7 @@ contains
     !% so you will always use the optimal electronic time step
     !% (<a href=http://arxiv.org/abs/0710.3321>more details</a>).
     !%End
-    call parse_variable(sys%parser, 'TDIonicTimeScale', CNST(1.0), td%mu)
+    call parse_variable(sys%namespace, 'TDIonicTimeScale', CNST(1.0), td%mu)
 
     if (td%mu <= M_ZERO) then
       write(message(1),'(a)') 'Input: TDIonicTimeScale must be positive.'
@@ -188,7 +189,7 @@ contains
     default_dt = CNST(0.0426) - CNST(0.207)*spacing + CNST(0.808)*spacing**2
     default_dt = default_dt*td%mu
 
-    call parse_variable(sys%parser, 'TDTimeStep', default_dt, td%dt, unit = units_inp%time)
+    call parse_variable(sys%namespace, 'TDTimeStep', default_dt, td%dt, unit = units_inp%time)
 
     if (td%dt <= M_ZERO) then
       write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
@@ -199,7 +200,7 @@ contains
 
     td%dt = td%dt/td%mu
     
-    if(parse_is_defined(sys%parser, 'TDMaxSteps') .and. parse_is_defined(sys%parser, 'TDPropagationTime')) then
+    if(parse_is_defined(sys%namespace, 'TDMaxSteps') .and. parse_is_defined(sys%namespace, 'TDPropagationTime')) then
       call messages_write('You cannot set TDMaxSteps and TDPropagationTime at the same time')
       call messages_fatal()
     end if
@@ -216,9 +217,9 @@ contains
     !% selected <tt>ev_angstrom</tt> as input units). The approximate conversions to
     !% femtoseconds are 1 fs = 41.34 <math>\hbar</math>/Hartree = 1.52 <math>\hbar</math>/eV.
     !%End
-    call parse_variable(sys%parser, 'TDPropagationTime', CNST(-1.0), propagation_time, unit = units_inp%time)
+    call parse_variable(sys%namespace, 'TDPropagationTime', CNST(-1.0), propagation_time, unit = units_inp%time)
 
-    call messages_obsolete_variable(sys%parser, 'TDMaximumIter', 'TDMaxSteps')
+    call messages_obsolete_variable(sys%namespace, 'TDMaximumIter', 'TDMaxSteps')
 
     !%Variable TDMaxSteps
     !%Type integer
@@ -230,7 +231,7 @@ contains
     !%End
     default = 1500
     if(propagation_time > CNST(0.0)) default = nint(propagation_time/td%dt)
-    call parse_variable(sys%parser, 'TDMaxSteps', default, td%max_iter)
+    call parse_variable(sys%namespace, 'TDMaxSteps', default, td%max_iter)
 
     if(propagation_time <= CNST(0.0)) propagation_time = td%dt*td%max_iter
 
@@ -244,7 +245,8 @@ contains
     end if
 
     ! now the photoelectron stuff
-    call pes_init(td%pesv, sys%parser, sys%gr%mesh, sys%gr%sb, sys%st, sys%outp%restart_write_interval, sys%hm, td%max_iter, td%dt)
+    call pes_init(td%pesv, sys%namespace, sys%gr%mesh, sys%gr%sb, sys%st, sys%outp%restart_write_interval, sys%hm, td%max_iter, &
+      td%dt)
 
     !%Variable TDDynamics
     !%Type integer
@@ -259,7 +261,7 @@ contains
     !% Born-Oppenheimer (Experimental).
     !%End
 
-    call parse_variable(sys%parser, 'TDDynamics', EHRENFEST, td%dynamics)
+    call parse_variable(sys%namespace, 'TDDynamics', EHRENFEST, td%dynamics)
     if(.not.varinfo_valid_option('TDDynamics', td%dynamics)) call messages_input_error('TDDynamics')
     call messages_print_var_option(stdout, 'TDDynamics', td%dynamics)
     if(td%dynamics .ne. EHRENFEST) then
@@ -282,7 +284,7 @@ contains
     !% The recalculation is not done every time step, but only every
     !% <tt>RestartWriteInterval</tt> time steps.
     !%End
-    call parse_variable(sys%parser, 'RecalculateGSDuringEvolution', .false., td%recalculate_gs)
+    call parse_variable(sys%namespace, 'RecalculateGSDuringEvolution', .false., td%recalculate_gs)
     if( sys%hm%lda_u_level /= DFT_U_NONE .and. td%recalculate_gs) &
       call messages_not_implemented("DFT+U with RecalculateGSDuringEvolution=yes")
 
@@ -295,11 +297,11 @@ contains
     !% Hamiltonian, shifting the excitation energies by the amount 
     !% specified. By default, it is not applied. 
     !%End 
-    call parse_variable(sys%parser, 'TDScissor', CNST(0.0), td%scissor) 
+    call parse_variable(sys%namespace, 'TDScissor', CNST(0.0), td%scissor) 
     td%scissor = units_to_atomic(units_inp%energy, td%scissor) 
     call messages_print_var_value(stdout, 'TDScissor', td%scissor)
 
-    call propagator_init(sys%gr, sys%parser, sys%st, td%tr, &
+    call propagator_init(sys%gr, sys%namespace, sys%st, td%tr, &
       ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(sys%hm%ep%gfield), sys%hm%family_is_mgga_with_exc)
     
     if(sys%hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
@@ -322,7 +324,7 @@ contains
 
     default = 10
     if(ion_dynamics_ions_move(td%ions)) default = 1
-    call parse_variable(sys%parser, 'TDEnergyUpdateIter', default, td%energy_update_iter)
+    call parse_variable(sys%namespace, 'TDEnergyUpdateIter', default, td%energy_update_iter)
 
     if(ion_dynamics_ions_move(td%ions) .and. td%energy_update_iter /= 1) then
       call messages_experimental('TDEnergyUpdateIter /= 1 when moving ions')
@@ -383,18 +385,18 @@ contains
         call lda_u_end(sys%hm%lda_u)
         !complex wfs are required for Ehrenfest
         call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
-        call lda_u_init(sys%hm%lda_u, sys%parser, sys%hm%lda_u_level, gr, geo, st, sys%psolver)
+        call lda_u_init(sys%hm%lda_u, sys%namespace, sys%hm%lda_u_level, gr, geo, st, sys%psolver)
       else
         !complex wfs are required for Ehrenfest
         call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
       end if 
     else
       call states_allocate_wfns(st, gr%mesh)
-      call scf_init(td%scf, sys%parser, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks)
+      call scf_init(td%scf, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks)
     end if
 
     if(sys%hm%scdm_EXX) then
-      call scdm_init(st, sys%parser, gr%der, sys%psolver%cube, sys%hm%scdm, operate_on_scdm = .true.)
+      call scdm_init(st, sys%namespace, gr%der, sys%psolver%cube, sys%hm%scdm, operate_on_scdm = .true.)
       ! make sure scdm is constructed as soon as it is needed
       scdm_is_local = .false.
     end if
@@ -420,24 +422,24 @@ contains
     if(ion_dynamics_ions_move(td%ions)) then
       if(td%iter > 0) then
         call td_read_coordinates()
-        call hamiltonian_epot_generate(sys%hm, sys%parser, gr, geo, st, sys%psolver, time = td%iter*td%dt)
+        call hamiltonian_epot_generate(sys%hm, sys%namespace, gr, geo, st, sys%psolver, time = td%iter*td%dt)
       end if
 
-      call forces_calculate(gr, sys%parser, geo, sys%hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
+      call forces_calculate(gr, sys%namespace, geo, sys%hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
 
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
       if(bitand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-        call forces_calculate(gr, sys%parser, geo, sys%hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
+        call forces_calculate(gr, sys%namespace, geo, sys%hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
       end if  
     end if
 
-    call td_write_init(write_handler, sys%parser, sys%outp, gr, st, sys%hm, geo, sys%ks, &
+    call td_write_init(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, geo, sys%ks, &
       ion_dynamics_ions_move(td%ions), gauge_field_is_applied(sys%hm%ep%gfield), &
       sys%hm%ep%kick, td%iter, td%max_iter, td%dt, sys%mc)
 
     if(td%scissor > M_EPSILON) then
-      call scissor_init(sys%hm%scissor, sys%parser, st, gr, sys%hm%d, td%scissor, sys%mc)
+      call scissor_init(sys%hm%scissor, sys%namespace, st, gr, sys%hm%d, td%scissor, sys%mc)
     end if
 
     if(td%iter == 0) call td_run_zero_iter()
@@ -447,10 +449,10 @@ contains
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
 
-    call restart_init(restart_dump, sys%parser, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
+    call restart_init(restart_dump, sys%namespace, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
     if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
       ! We will also use the TD restart directory as temporary storage during the time propagation
-      call restart_init(restart_load, sys%parser, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+      call restart_init(restart_load, sys%namespace, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
     end if
 
     call messages_print_stress(stdout, "Time-Dependent Simulation")
@@ -494,11 +496,11 @@ contains
       ! time iterate the system, one time step.
       select case(td%dynamics)
       case(EHRENFEST)
-        call propagator_dt(sys%ks, sys%parser, sys%hm, sys%psolver, gr, st, td%tr, iter*td%dt, td%dt, &
+        call propagator_dt(sys%ks, sys%namespace, sys%hm, sys%psolver, gr, st, td%tr, iter*td%dt, td%dt, &
           td%energy_update_iter*td%mu, iter, td%ions, geo, sys%outp, scsteps = scsteps, &
           update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
       case(BO)
-        call propagator_dt_bo(td%scf, sys%parser, gr, sys%ks, st, sys%hm, sys%psolver, geo, sys%mc, sys%outp, iter, td%dt, &
+        call propagator_dt_bo(td%scf, sys%namespace, gr, sys%ks, st, sys%hm, sys%psolver, geo, sys%mc, sys%outp, iter, td%dt, &
           td%ions, scsteps)
       end select
 
@@ -509,7 +511,8 @@ contains
       if(td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) &
         call pes_calc(td%pesv, gr%mesh, st, td%dt, iter, gr, sys%hm)
 
-      call td_write_iter(write_handler, sys%parser, sys%outp, gr, st, sys%hm, sys%psolver, geo, sys%hm%ep%kick, td%dt, sys%ks, iter)
+      call td_write_iter(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, sys%psolver, geo, sys%hm%ep%kick, td%dt, &
+        sys%ks, iter)
 
       ! write down data
       call check_point()
@@ -560,7 +563,7 @@ contains
         if (st%modelmbparticles%nparticle > 0) then
           call modelmb_sym_all_states (gr, st, geo)
         end if
-        call td_write_output(write_handler, sys%parser, gr, st, sys%hm, sys%psolver, sys%ks, sys%outp, geo, iter, td%dt)
+        call td_write_output(write_handler, sys%namespace, gr, st, sys%hm, sys%psolver, sys%ks, sys%outp, geo, iter, td%dt)
       end if
 
       if (mod(iter, sys%outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
@@ -580,14 +583,14 @@ contains
           call states_deallocate_wfns(sys%st)
           call ground_state_run(sys, fromScratch)
           call states_allocate_wfns(sys%st, gr%mesh)
-          call td_load(restart_load, sys%parser, gr, st, sys%hm, td, ierr)
+          call td_load(restart_load, sys%namespace, gr, st, sys%hm, td, ierr)
           if (ierr /= 0) then
             message(1) = "Unable to load TD states."
             call messages_fatal(1)
           end if
           call density_calc(st, gr, st%rho)
-          call v_ks_calc(sys%ks, sys%parser, sys%hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
-          call forces_calculate(gr, sys%parser, geo, sys%hm, st, sys%ks, t = iter*td%dt, dt = td%dt)
+          call v_ks_calc(sys%ks, sys%namespace, sys%hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
+          call forces_calculate(gr, sys%namespace, geo, sys%hm, st, sys%ks, t = iter*td%dt, dt = td%dt)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds")
           call print_header()
         end if
@@ -639,7 +642,7 @@ contains
       !% It is almost equivalent to setting <tt>TDFreezeOrbitals = N-1</tt>, where <tt>N</tt> is the number
       !% of orbitals, but not completely.
       !%End
-      call parse_variable(sys%parser, 'TDFreezeOrbitals', 0, freeze_orbitals)
+      call parse_variable(sys%namespace, 'TDFreezeOrbitals', 0, freeze_orbitals)
 
       if(freeze_orbitals /= 0) then
         call messages_experimental('TDFreezeOrbitals')
@@ -652,12 +655,12 @@ contains
       if (.not. fromscratch) then
         !We redistribute the states before the restarting
         if(freeze_orbitals > 0) then
-          call states_freeze_redistribute_states(st, sys%parser, sys%gr, sys%mc, freeze_orbitals)
+          call states_freeze_redistribute_states(st, sys%namespace, sys%gr, sys%mc, freeze_orbitals)
         end if
 
-        call restart_init(restart, sys%parser, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+        call restart_init(restart, sys%namespace, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
         if(ierr == 0) &
-          call td_load(restart, sys%parser, gr, st, sys%hm, td, ierr)
+          call td_load(restart, sys%namespace, gr, st, sys%hm, td, ierr)
         if(ierr /= 0) then
           fromScratch = .true.
           td%iter = 0
@@ -675,10 +678,10 @@ contains
       end if
 
       if (fromScratch) then
-        call restart_init(restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+        call restart_init(restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
 
         if(.not. st%only_userdef_istates) then
-          if(ierr == 0) call states_load(restart, sys%parser, st, gr, ierr, label = ": gs")
+          if(ierr == 0) call states_load(restart, sys%namespace, st, gr, ierr, label = ": gs")
           if (ierr /= 0) then
             message(1) = 'Unable to read ground-state wavefunctions.'
             call messages_fatal(1)
@@ -688,9 +691,9 @@ contains
         ! check if we should deploy user-defined wavefunctions.
         ! according to the settings in the input file the routine
         ! overwrites orbitals that were read from restart/gs
-        if(parse_is_defined(sys%parser, 'UserDefinedStates')) call states_read_user_def_orbitals(gr%mesh, sys%parser, st)
+        if(parse_is_defined(sys%namespace, 'UserDefinedStates')) call states_read_user_def_orbitals(gr%mesh, sys%namespace, st)
 
-        call transform_states(st, sys%parser, restart, gr)
+        call transform_states(st, sys%namespace, restart, gr)
         call restart_end(restart)
       end if
 
@@ -702,9 +705,9 @@ contains
       if(freeze_orbitals > 0) then
         if(fromScratch) then
           ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
-          call states_freeze_orbitals(st, sys%parser, gr, sys%mc, freeze_orbitals, family_is_mgga(sys%ks%xc_family))
+          call states_freeze_orbitals(st, sys%namespace, gr, sys%mc, freeze_orbitals, family_is_mgga(sys%ks%xc_family))
         else
-          call restart_init(restart, sys%parser, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+          call restart_init(restart, sys%namespace, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
           if(ierr == 0) &
             call td_load_frozen(restart, gr, st, sys%hm, td, ierr)
           if(ierr /= 0) then
@@ -719,15 +722,15 @@ contains
         call messages_info(1)
         call states_freeze_adjust_qtot(st)
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(sys%ks, sys%parser, sys%hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
+        call v_ks_calc(sys%ks, sys%namespace, sys%hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
       elseif(freeze_orbitals < 0) then
         ! This means SAE approximation. We calculate the Hxc first, then freeze all
         ! orbitals minus one.
         write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
         call messages_info(1)
-        call v_ks_calc(sys%ks, sys%parser, sys%hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
+        call v_ks_calc(sys%ks, sys%namespace, sys%hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
         if(fromScratch) then
-          call states_freeze_orbitals(st, sys%parser, gr, sys%mc, st%nst-1, family_is_mgga(sys%ks%xc_family))
+          call states_freeze_orbitals(st, sys%namespace, gr, sys%mc, st%nst-1, family_is_mgga(sys%ks%xc_family))
         else
            call messages_not_implemented("TDFreezeOrbials < 0 with FromScratch=no")
         end if
@@ -736,7 +739,7 @@ contains
       else
         ! Normal run.
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(sys%ks, sys%parser, sys%hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
+        call v_ks_calc(sys%ks, sys%namespace, sys%hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
       end if
 
       !%Variable TDFreezeHXC
@@ -747,7 +750,7 @@ contains
       !% The electrons are evolved as independent particles feeling the Hartree and 
       !% exchange-correlation potentials from the ground-state electronic configuration.
       !%End
-      call parse_variable(sys%parser, 'TDFreezeHXC', .false., freeze_hxc)
+      call parse_variable(sys%namespace, 'TDFreezeHXC', .false., freeze_hxc)
       if(freeze_hxc) then 
         write(message(1),'(a)') 'Info: Freezing Hartree and exchange-correlation potentials.'
         call messages_info(1)
@@ -778,7 +781,7 @@ contains
       !% The occupation matrices than enters in the LDA+U potential
       !% are not evolved during the time evolution.
       !%End
-      call parse_variable(sys%parser, 'TDFreezeDFTUOccupations', .false., freeze_occ)
+      call parse_variable(sys%namespace, 'TDFreezeDFTUOccupations', .false., freeze_occ)
       if(freeze_occ) then
         write(message(1),'(a)') 'Info: Freezing DFT+U occupation matrices that enters in the DFT+U potential.'
         call messages_info(1)
@@ -786,7 +789,7 @@ contains
 
         !In this case we should reload GS wavefunctions 
         if(sys%hm%lda_u_level /= DFT_U_NONE .and..not.fromScratch) then 
-          call restart_init(restart_frozen, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+          call restart_init(restart_frozen, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
           call lda_u_load(restart_frozen, sys%hm%lda_u, st, ierr, occ_only = .true.)
           call restart_end(restart_frozen)
         end if
@@ -799,7 +802,7 @@ contains
       !%Description
       !% The effective U of LDA+U is not evolved during the time evolution.
       !%End
-      call parse_variable(sys%parser, 'TDFreezeU', .false., freeze_u)
+      call parse_variable(sys%namespace, 'TDFreezeU', .false., freeze_u)
       if(freeze_u) then
         write(message(1),'(a)') 'Info: Freezing the effective U of DFT+U.'
         call messages_info(1)
@@ -807,7 +810,7 @@ contains
 
         !In this case we should reload GS wavefunctions
         if(sys%hm%lda_u_level == DFT_U_ACBN0 .and. .not.fromScratch) then
-          call restart_init(restart_frozen, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+          call restart_init(restart_frozen, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
           call lda_u_load(restart_frozen, sys%hm%lda_u, st, ierr, u_only = .true.)
           call restart_end(restart_frozen)    
           write(message(1),'(a)') 'Loaded GS effective U of DFT+U'
@@ -824,7 +827,7 @@ contains
     subroutine td_run_zero_iter()
       PUSH_SUB(td_run.td_run_zero_iter)
 
-      call td_write_iter(write_handler, sys%parser, sys%outp, gr, st, sys%hm, sys%psolver, geo, sys%hm%ep%kick, td%dt, sys%ks, 0)
+      call td_write_iter(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, sys%psolver, geo, sys%hm%ep%kick, td%dt, sys%ks, 0)
 
       ! I apply the delta electric field *after* td_write_iter, otherwise the
       ! dipole matrix elements in write_proj are wrong
@@ -839,7 +842,7 @@ contains
       call propagator_run_zero_iter(sys%hm, gr, td%tr)
       if (sys%outp%output_interval > 0) then
         call td_write_data(write_handler, gr, st, sys%hm, sys%ks, sys%outp, geo, 0)
-        call td_write_output(write_handler, sys%parser, gr, st, sys%hm, sys%psolver, sys%ks, sys%outp, geo, 0)
+        call td_write_output(write_handler, sys%namespace, gr, st, sys%hm, sys%psolver, sys%ks, sys%outp, geo, 0)
       end if
 
       POP_SUB(td_run.td_run_zero_iter)
@@ -890,9 +893,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine transform_states(st, parser, restart, gr, prefix)
+  subroutine transform_states(st, namespace, restart, gr, prefix)
     type(states_t),             intent(inout) :: st
-    type(parser_t),             intent(in)    :: parser
+    type(namespace_t),          intent(in)    :: namespace
     type(restart_t),            intent(inout) :: restart
     type(grid_t),               intent(in)    :: gr
     character(len=*), optional, intent(in)    :: prefix
@@ -932,8 +935,8 @@ contains
     !% ignored for real wavefunctions.
     !% Note: This variable cannot be used when parallel in states.
     !%End
-    if(parse_is_defined(parser, trim(block_name))) then
-      if(parse_block(parser, trim(block_name), blk) == 0) then
+    if(parse_is_defined(namespace, trim(block_name))) then
+      if(parse_block(namespace, trim(block_name), blk) == 0) then
         if(st%parallel_in_states) &
           call messages_not_implemented(trim(block_name) // " parallel in states")
         if(parse_block_n(blk) /= st%nst) then
@@ -941,7 +944,7 @@ contains
           call messages_fatal(1)
         end if
         call states_copy(stin, st, exclude_wfns = .true.)
-        call states_look_and_load(restart, parser, stin, gr)
+        call states_look_and_load(restart, namespace, stin, gr)
 
         ! FIXME: rotation matrix should be R_TYPE
         SAFE_ALLOCATE(rotation_matrix(1:stin%nst, 1:stin%nst))
@@ -1054,9 +1057,9 @@ contains
   end subroutine td_dump
 
   ! ---------------------------------------------------------
-  subroutine td_load(restart, parser, gr, st, hm, td, ierr)
+  subroutine td_load(restart, namespace, gr, st, hm, td, ierr)
     type(restart_t),     intent(in)    :: restart
-    type(parser_t),      intent(in)    :: parser
+    type(namespace_t),   intent(in)    :: namespace
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(inout) :: hm
@@ -1080,7 +1083,7 @@ contains
     end if
 
     ! Read states
-    call states_load(restart, parser, st, gr, err, iter=td%iter, label = ": td")
+    call states_load(restart, namespace, st, gr, err, iter=td%iter, label = ": td")
     if (err /= 0) then
       ierr = ierr + 1
     end if

@@ -22,8 +22,9 @@ module xyz_adjust_oct_m
   use global_oct_m
   use geometry_oct_m
   use lalg_adv_oct_m
-  use parser_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use species_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -39,9 +40,9 @@ module xyz_adjust_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xyz_adjust_it(geo, parser, rotate)
+  subroutine xyz_adjust_it(geo, namespace, rotate)
     type(geometry_t),           intent(inout) :: geo
-    type(parser_t),             intent(in)    :: parser
+    type(namespace_t),          intent(in)    :: namespace
     logical,          optional, intent(in)    :: rotate
 
     integer, parameter :: &
@@ -62,7 +63,7 @@ contains
     if(optional_default(rotate, .true.)) then
 
       ! get to axis
-      if(parse_block(parser, 'MainAxis', blk)==0) then
+      if(parse_block(namespace, 'MainAxis', blk)==0) then
         do idir = 1, geo%space%dim
           call parse_block_float(blk, 0, idir - 1, to(idir))
         end do
@@ -111,7 +112,7 @@ contains
       else
         default = NONE
       end if
-      call parse_variable(parser, 'AxisType', default, axis_type)
+      call parse_variable(namespace, 'AxisType', default, axis_type)
       call messages_print_var_option(stdout, "AxisType", axis_type)
 
       if(geo%space%dim /= 3 .and. axis_type /= NONE) then

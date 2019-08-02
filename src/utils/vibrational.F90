@@ -25,6 +25,7 @@
     use global_oct_m
     use io_oct_m
     use messages_oct_m
+    use namespace_oct_m
     use parser_oct_m
     use profiling_oct_m
     use simul_box_oct_m
@@ -45,7 +46,7 @@
     FLOAT :: ww, curtime, vaftime, deltat
     integer :: ifreq, max_freq
     integer :: skip
-    type(parser_t) :: parser
+    type(namespace_t) :: namespace
     
     ! Initialize stuff
     call global_init(is_serial = .true.)		 
@@ -53,15 +54,16 @@
     call getopt_init(ierr)
     call getopt_end()
 
-    call parser_init(parser)
+    call parser_init()
+    namespace = namespace_t("")
     
-    call messages_init(parser)
+    call messages_init(namespace)
 
-    call io_init(parser)
+    call io_init(namespace)
 
-    call unit_system_init(parser)
+    call unit_system_init(namespace)
 
-    call spectrum_init(spectrum, parser, &
+    call spectrum_init(spectrum, namespace, &
       default_energy_step = units_to_atomic(unit_invcm, CNST(0.2)), &
       default_max_energy  = units_to_atomic(unit_invcm, CNST(5000.0)))
  
@@ -76,17 +78,17 @@
     !% time step used to calculate the vibrational spectrum.
     !%End
 
-    call messages_obsolete_variable(parser, 'PropagationSpectrumTimeStepFactor', 'VibrationalSpectrumTimeStepFactor')
-    call parse_variable(parser, 'VibrationalSpectrumTimeStepFactor', 10, skip)
+    call messages_obsolete_variable(namespace, 'PropagationSpectrumTimeStepFactor', 'VibrationalSpectrumTimeStepFactor')
+    call parse_variable(namespace, 'VibrationalSpectrumTimeStepFactor', 10, skip)
     if(skip <= 0) call messages_input_error('VibrationalSpectrumTimeStepFactor')
 
     max_freq = spectrum_nenergy_steps(spectrum)
 
     if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
 
-    call space_init(space, parser)
-    call geometry_init(geo, parser, space)
-    call simul_box_init(sb, parser, geo, space)
+    call space_init(space, namespace)
+    call geometry_init(geo, namespace, space)
+    call simul_box_init(sb, namespace, geo, space)
 
     ! Opens the coordinates files.
     iunit = io_open('td.general/coordinates', action='read')
@@ -185,7 +187,7 @@
     !% the velocity autocorrelation function. The default is the total
     !% propagation time.
     !%End
-    call parse_variable(parser, 'VibrationalSpectrumTime', ntime*deltat, vaftime)
+    call parse_variable(namespace, 'VibrationalSpectrumTime', ntime*deltat, vaftime)
 
     nvaf = int(vaftime/deltat)
 
@@ -265,7 +267,7 @@
     call io_end()
     call messages_end()
 
-    call parser_end(parser)
+    call parser_end()
     call global_end()
 
   contains

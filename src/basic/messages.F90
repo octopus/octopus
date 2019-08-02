@@ -23,6 +23,7 @@ module messages_oct_m
   use debug_oct_m
   use loct_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use string_oct_m
   use unit_oct_m
@@ -123,12 +124,12 @@ module messages_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine messages_init(parser)
-    type(parser_t), intent(in) :: parser
+  subroutine messages_init(namespace)
+    type(namespace_t), intent(in) :: namespace
     
     logical :: trap_signals
 
-    call messages_obsolete_variable(parser, 'DevelVersion', 'ExperimentalFeatures')
+    call messages_obsolete_variable(namespace, 'DevelVersion', 'ExperimentalFeatures')
 
     !%Variable ExperimentalFeatures
     !%Type logical
@@ -141,11 +142,11 @@ contains
     !% See details on
     !% <a href=http://octopus-code.org/experimental_features>wiki page</a>.
     !%End
-    call parse_variable(parser, 'ExperimentalFeatures', .false., conf%devel_version)
+    call parse_variable(namespace, 'ExperimentalFeatures', .false., conf%devel_version)
     
-    call messages_obsolete_variable(parser, 'DebugLevel', 'Debug')
+    call messages_obsolete_variable(namespace, 'DebugLevel', 'Debug')
 
-    call debug_init(debug, parser)
+    call debug_init(debug, namespace)
     
     warnings = 0
     experimentals = 0
@@ -161,7 +162,7 @@ contains
     !% variable is enabled if <tt>Debug</tt> is set to trace mode
     !% (<tt>trace</tt>, <tt>trace_term</tt> or <tt>trace_file</tt>).
     !%End
-    call parse_variable(parser, 'DebugTrapSignals', debug%trace, trap_signals)
+    call parse_variable(namespace, 'DebugTrapSignals', debug%trace, trap_signals)
 
     if (trap_signals) call trap_segfault()
 
@@ -1078,12 +1079,12 @@ contains
 #endif
   
   ! ---------------------------------------------------------
-  subroutine messages_obsolete_variable(parser, name, rep)
-    type(parser_t),             intent(in) :: parser
+  subroutine messages_obsolete_variable(namespace, name, rep)
+    type(namespace_t),          intent(in) :: namespace
     character(len=*),           intent(in) :: name
     character(len=*), optional, intent(in) :: rep
     
-    if(parse_is_defined(parser, trim(name))) then 
+    if(parse_is_defined(namespace, trim(name))) then 
 
       write(message(1), '(a)') 'Input variable '//trim(name)//' is obsolete.'
 

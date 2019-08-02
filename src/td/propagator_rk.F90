@@ -32,6 +32,7 @@ module propagator_rk_oct_m
   use lda_u_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use oct_exchange_oct_m
   use opt_control_state_oct_m
   use parser_oct_m
@@ -68,9 +69,9 @@ module propagator_rk_oct_m
   
 contains
   
-  subroutine td_explicit_runge_kutta4(ks, parser, hm, psolver, gr, st, time, dt, ions, geo, qcchi)
+  subroutine td_explicit_runge_kutta4(ks, namespace, hm, psolver, gr, st, time, dt, ions, geo, qcchi)
     type(v_ks_t), target,            intent(inout) :: ks
-    type(parser_t),                  intent(in)    :: parser
+    type(namespace_t),               intent(in)    :: namespace
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(poisson_t),     target,     intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
@@ -298,8 +299,8 @@ contains
         geo%atom(iatom)%x(1:geo%space%dim) = posfinal(:, iatom)
         geo%atom(iatom)%v(1:geo%space%dim) = velfinal(:, iatom)
       end do
-      call hamiltonian_epot_generate(hm, parser,  gr, geo, st, psolver, time)
-      !call forces_calculate(gr, parser, geo, hm, stphi, time, dt)
+      call hamiltonian_epot_generate(hm, namespace,  gr, geo, st, psolver, time)
+      !call forces_calculate(gr, namespace, geo, hm, stphi, time, dt)
       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
 
       if(propagate_chi) then
@@ -356,11 +357,11 @@ contains
           geo%atom(iatom)%x(1:geo%space%dim) = pos(:, iatom)
           geo%atom(iatom)%v(1:geo%space%dim) = vel(:, iatom)
         end do
-        call hamiltonian_epot_generate(hm, parser,  gr, geo, stphi, psolver, time = tau)
+        call hamiltonian_epot_generate(hm, namespace,  gr, geo, stphi, psolver, time = tau)
       end if
       if(.not.oct_exchange_enabled(hm%oct_exchange)) then
         call density_calc(stphi, gr, stphi%rho)
-        call v_ks_calc(ks, parser, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), time = tau)
+        call v_ks_calc(ks, namespace, hm, stphi, geo, calc_current = gauge_field_is_applied(hm%ep%gfield), time = tau)
       else
         call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = tau)
       end if
@@ -371,13 +372,13 @@ contains
     subroutine f_ions(tau)
       FLOAT, intent(in) :: tau
 
-      call forces_calculate(gr, parser, geo, hm, stphi, ks, t = tau, dt = dt)
+      call forces_calculate(gr, namespace, geo, hm, stphi, ks, t = tau, dt = dt)
       do iatom = 1, geo%natoms
         posk(:, iatom) = dt * vel(:, iatom)
         velk(:, iatom) = dt * geo%atom(iatom)%f(1:geo%space%dim) / species_mass(geo%atom(iatom)%species)
       end do
       if(propagate_chi) then
-        call forces_costate_calculate(gr, parser, geo, hm, stphi, stchi, coforce, transpose(post))
+        call forces_costate_calculate(gr, namespace, geo, hm, stphi, stchi, coforce, transpose(post))
         do iatom = 1, geo%natoms
           poskt(:, iatom) = dt * velt(:, iatom)
           velkt(:, iatom) = dt * coforce(iatom, :) / species_mass(geo%atom(iatom)%species)
@@ -434,10 +435,10 @@ contains
 
             do iatom = 1, geo%natoms
               do idir = 1, gr%sb%dim
-                call pert_init(pert, parser, PERTURBATION_IONIC, gr, geo)
+                call pert_init(pert, namespace, PERTURBATION_IONIC, gr, geo)
                 call pert_setup_atom(pert, iatom)
                 call pert_setup_dir(pert, idir)
-                call zpert_apply(pert, parser, gr, geo, hm, psolver, ik, psi(:, :), dvpsi(:, :, idir))
+                call zpert_apply(pert, namespace, gr, geo, hm, psolver, ik, psi(:, :), dvpsi(:, :, idir))
                 dvpsi(:, :, idir) = - dvpsi(:, :, idir)
                 inhpsi(1:gr%mesh%np, 1:stphi%d%dim) = inhpsi(1:gr%mesh%np, 1:stphi%d%dim) &
                   + st%occ(ist, ik)*post(idir, iatom)*dvpsi(1:gr%mesh%np, 1:stphi%d%dim, idir)
@@ -485,9 +486,9 @@ contains
   end subroutine td_explicit_runge_kutta4
 
 
-  subroutine td_runge_kutta2(ks, parser, hm, psolver, gr, st, tr, time, dt, ions, geo)
+  subroutine td_runge_kutta2(ks, namespace, hm, psolver, gr, st, tr, time, dt, ions, geo)
     type(v_ks_t), target,            intent(inout) :: ks
-    type(parser_t),                  intent(in)    :: parser
+    type(namespace_t),               intent(in)    :: namespace
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(poisson_t),     target,     intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
@@ -602,12 +603,12 @@ contains
           end do
         end do
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, parser, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
       end if
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
         call ion_dynamics_propagate(ions, gr%sb, geo, time, dt)
-        call hamiltonian_epot_generate(hm, parser,  gr, geo, st, psolver, time = time)
+        call hamiltonian_epot_generate(hm, namespace,  gr, geo, st, psolver, time = time)
         vpsl1_op = hm%ep%vpsl
       end if
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time)
@@ -700,9 +701,9 @@ contains
 
   !----------------------------------------------------------------------------
 
-  subroutine td_runge_kutta4(ks, parser, hm, psolver, gr, st, tr, time, dt, ions, geo)
+  subroutine td_runge_kutta4(ks, namespace, hm, psolver, gr, st, tr, time, dt, ions, geo)
     type(v_ks_t), target,            intent(inout) :: ks
-    type(parser_t),                  intent(in)    :: parser    
+    type(namespace_t),               intent(in)    :: namespace    
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(poisson_t),     target,     intent(in)    :: psolver
     type(grid_t),        target,     intent(inout) :: gr
@@ -804,11 +805,11 @@ contains
         end do
       end do
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, parser, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
         call ion_dynamics_propagate(ions, gr%sb, geo, time - dt + c(1)*dt, c(1)*dt)
-        call hamiltonian_epot_generate(hm, parser,  gr, geo, st, psolver, time = time - dt + c(1)*dt)
+        call hamiltonian_epot_generate(hm, namespace,  gr, geo, st, psolver, time = time - dt + c(1)*dt)
         vpsl1_op = hm%ep%vpsl
       end if
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt + c(1)*dt)
@@ -841,11 +842,11 @@ contains
         end do
       end do
       call density_calc(st, gr, st%rho)
-      call v_ks_calc(ks, parser, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_current = gauge_field_is_applied(hm%ep%gfield))
       if(ion_dynamics_ions_move(ions)) then
         call ion_dynamics_save_state(ions, geo, ions_state)
         call ion_dynamics_propagate(ions, gr%sb, geo, time - dt + c(2)*dt, c(2)*dt)
-        call hamiltonian_epot_generate(hm, parser, gr, geo, st, psolver, time = time - dt + c(2)*dt)
+        call hamiltonian_epot_generate(hm, namespace, gr, geo, st, psolver, time = time - dt + c(2)*dt)
         vpsl2_op = hm%ep%vpsl
       end if
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time - dt + c(2)*dt)

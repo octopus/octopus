@@ -29,6 +29,7 @@ module propagator_cn_oct_m
   use lda_u_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use poisson_oct_m
   use potential_interpolation_oct_m
@@ -56,10 +57,10 @@ contains
 
   ! ---------------------------------------------------------
   !> Crank-Nicolson propagator
-  subroutine td_crank_nicolson(hm, psolver, parser, gr, st, tr, time, dt, ions, geo, use_sparskit)
+  subroutine td_crank_nicolson(hm, psolver, namespace, gr, st, tr, time, dt, ions, geo, use_sparskit)
     type(hamiltonian_t), target,     intent(inout) :: hm
     type(poisson_t),     target,     intent(in)    :: psolver
-    type(parser_t),                  intent(in)    :: parser
+    type(namespace_t),               intent(in)    :: namespace
     type(grid_t),        target,     intent(inout) :: gr
     type(states_t),      target,     intent(inout) :: st
     type(propagator_t),  target,     intent(inout) :: tr
@@ -110,7 +111,7 @@ contains
     if(ion_dynamics_ions_move(ions)) then
       call ion_dynamics_save_state(ions, geo, ions_state)
       call ion_dynamics_propagate(ions, gr%sb, geo, time - dt/M_TWO, M_HALF*dt)
-      call hamiltonian_epot_generate(hm, parser, gr, geo, st, psolver, time = time - dt/M_TWO)
+      call hamiltonian_epot_generate(hm, namespace, gr, geo, st, psolver, time = time - dt/M_TWO)
     end if
 
     if(hm%family_is_mgga_with_exc) then

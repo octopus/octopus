@@ -26,6 +26,7 @@ module hirshfeld_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
@@ -63,9 +64,9 @@ module hirshfeld_oct_m
     
 contains
 
-  subroutine hirshfeld_init(this, parser, mesh, geo, st)
+  subroutine hirshfeld_init(this, namespace, mesh, geo, st)
     type(hirshfeld_t),         intent(out)   :: this
-    type(parser_t),            intent(in)    :: parser
+    type(namespace_t),         intent(in)    :: namespace
     type(mesh_t),      target, intent(in)    :: mesh
     type(geometry_t),  target, intent(in)    :: geo
     type(states_t),    target, intent(in)    :: st
@@ -154,9 +155,9 @@ contains
 
   ! -----------------------------------------------
   
-  subroutine hirshfeld_charge(this, parser, iatom, density, charge)
+  subroutine hirshfeld_charge(this, namespace, iatom, density, charge)
     type(hirshfeld_t),         intent(in)    :: this
-    type(parser_t),            intent(in)    :: parser
+    type(namespace_t),         intent(in)    :: namespace
     integer,                   intent(in)    :: iatom
     FLOAT,                     intent(in)    :: density(:, :)
     FLOAT,                     intent(out)   :: charge
@@ -175,7 +176,7 @@ contains
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
     SAFE_ALLOCATE(hirshfeld_density(1:this%mesh%np))
     
-    call species_atom_density(this%mesh, parser, this%mesh%sb, this%geo%atom(iatom), this%st%d%nspin, atom_density)
+    call species_atom_density(this%mesh, namespace, this%mesh%sb, this%geo%atom(iatom), this%st%d%nspin, atom_density)
 
     do ip = 1, this%mesh%np
       dens_ip = sum(atom_density(ip, 1:this%st%d%nspin))

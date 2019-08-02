@@ -27,13 +27,13 @@ module linear_solver_oct_m
   use hamiltonian_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m
-  use parser_oct_m
-  use poisson_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
+  use poisson_oct_m
   use profiling_oct_m
   use preconditioners_oct_m
   use smear_oct_m
@@ -82,9 +82,9 @@ module linear_solver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine linear_solver_init(this, parser, gr, states_are_real, def_solver)
+  subroutine linear_solver_init(this, namespace, gr, states_are_real, def_solver)
     type(linear_solver_t),  intent(out)   :: this
-    type(parser_t),         intent(in)    :: parser
+    type(namespace_t),      intent(in)    :: namespace
     type(grid_t),           intent(in)    :: gr
     logical,                intent(in)    :: states_are_real !< for choosing solver
     integer(8), optional,   intent(in)    :: def_solver
@@ -152,7 +152,7 @@ contains
       end if
     end if
 
-    call parse_variable(parser, "LinearSolver", defsolver_, fsolver)
+    call parse_variable(namespace, "LinearSolver", defsolver_, fsolver)
 
     ! set up pointer for dot product and norm in QMR solvers
     call mesh_init_mesh_aux(gr%mesh)
@@ -160,7 +160,7 @@ contains
     !the last 2 digits select the linear solver
     this%solver = mod(fsolver, 100)
 
-    call preconditioner_init(this%pre, parser, gr)
+    call preconditioner_init(this%pre, namespace, gr)
 
     !%Variable LinearSolverMaxIter
     !%Type integer
@@ -170,7 +170,7 @@ contains
     !% Maximum number of iterations the linear solver does, even if
     !% convergence is not achieved.
     !%End
-    call parse_variable(parser, "LinearSolverMaxIter", 1000, this%max_iter)
+    call parse_variable(namespace, "LinearSolverMaxIter", 1000, this%max_iter)
 
     write(message(1),'(a)') 'Linear Solver'
     call messages_print_stress(stdout, trim(message(1)))
@@ -243,15 +243,15 @@ contains
 
   ! ----------------------------------------------------------
   
-  subroutine linear_solver_obsolete_variables(parser, old_prefix, new_prefix)
-    type(parser_t),      intent(in)    :: parser
+  subroutine linear_solver_obsolete_variables(namespace, old_prefix, new_prefix)
+    type(namespace_t),   intent(in)    :: namespace
     character(len=*),    intent(in)    :: old_prefix
     character(len=*),    intent(in)    :: new_prefix
     
-    call messages_obsolete_variable(parser, trim(old_prefix)//"LinearSolver", trim(new_prefix)//"LinearSolver")
-    call messages_obsolete_variable(parser, trim(old_prefix)//"LinearSolverMaxIter", trim(new_prefix)//"LinearSolverMaxIter")
+    call messages_obsolete_variable(namespace, trim(old_prefix)//"LinearSolver", trim(new_prefix)//"LinearSolver")
+    call messages_obsolete_variable(namespace, trim(old_prefix)//"LinearSolverMaxIter", trim(new_prefix)//"LinearSolverMaxIter")
 
-    call preconditioner_obsolete_variables(parser, old_prefix, new_prefix)
+    call preconditioner_obsolete_variables(namespace, old_prefix, new_prefix)
 
   end subroutine linear_solver_obsolete_variables
 

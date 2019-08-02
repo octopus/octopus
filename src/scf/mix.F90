@@ -28,6 +28,7 @@ module mix_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use nl_operator_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -145,9 +146,9 @@ module mix_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine mix_init(smix, parser, der, d1, d2, d3, def_, func_type_, prefix_)
+  subroutine mix_init(smix, namespace, der, d1, d2, d3, def_, func_type_, prefix_)
     type(mix_t),                   intent(out) :: smix
-    type(parser_t),                intent(in)  :: parser
+    type(namespace_t),             intent(in)  :: namespace
     type(derivatives_t), target,   intent(in)  :: der
     integer,                       intent(in)  :: d1, d2, d3
     integer,             optional, intent(in)  :: def_
@@ -172,7 +173,7 @@ contains
     prefix = ""
     if(present(prefix_)) prefix = prefix_
 
-    call messages_obsolete_variable(parser, 'TypeOfMixing', 'MixingScheme')
+    call messages_obsolete_variable(namespace, 'TypeOfMixing', 'MixingScheme')
     
     !%Variable MixingScheme
     !%Type integer
@@ -199,7 +200,7 @@ contains
     !% Bowler and Gillan [D. R. Bowler and M. J. Gillan,
     !% <i>Chem. Phys.  Lett.</i> <b>325</b>, 473 (2000)].
     !%End
-    call parse_variable(parser, trim(prefix)//'MixingScheme', def, smix%scheme)
+    call parse_variable(namespace, trim(prefix)//'MixingScheme', def, smix%scheme)
     if(.not.varinfo_valid_option('MixingScheme', smix%scheme)) call messages_input_error('MixingScheme', 'invalid option')
     call messages_print_var_option(stdout, "MixingScheme", smix%scheme)
 
@@ -213,7 +214,7 @@ contains
     !% (Experimental) If set to yes, Octopus will use a preconditioner
     !% for the mixing operator.
     !%End
-    call parse_variable(parser, trim(prefix)+'MixingPreconditioner', .false., smix%precondition)
+    call parse_variable(namespace, trim(prefix)+'MixingPreconditioner', .false., smix%precondition)
     if(smix%precondition) call messages_experimental('MixingPreconditioner')
     
     !%Variable Mixing
@@ -224,7 +225,7 @@ contains
     !% The linear, Broyden and DIIS scheme depend on a "mixing parameter", set by this variable. 
     !% Must be 0 < <tt>Mixing</tt> <= 1.
     !%End
-    call parse_variable(parser, trim(prefix)+'Mixing', CNST(0.3), smix%coeff)
+    call parse_variable(namespace, trim(prefix)+'Mixing', CNST(0.3), smix%coeff)
     if(smix%coeff <= M_ZERO .or. smix%coeff > M_ONE) then
       call messages_input_error('Mixing', 'Value should be positive and smaller than one.')
     end if
@@ -237,7 +238,7 @@ contains
     !% In the DIIS mixing it is benefitial to include a bit of
     !% residual into the mixing. This parameter controls this amount.
     !%End
-    call parse_variable(parser, trim(prefix)+'MixingResidual', CNST(0.05), smix%residual_coeff)
+    call parse_variable(namespace, trim(prefix)+'MixingResidual', CNST(0.05), smix%residual_coeff)
     if(smix%residual_coeff <= M_ZERO .or. smix%residual_coeff > M_ONE) then
       call messages_input_error('MixingResidual', 'Value should be positive and smaller than one.')
     end if
@@ -252,7 +253,7 @@ contains
     !% This number is set by this variable. Must be greater than 1.
     !%End
     if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
-      call parse_variable(parser, trim(prefix)//'MixNumberSteps', 3, smix%ns)
+      call parse_variable(namespace, trim(prefix)//'MixNumberSteps', 3, smix%ns)
       if(smix%ns <= 1) call messages_input_error('MixNumberSteps')
     else
       smix%ns = 0
@@ -268,7 +269,7 @@ contains
     !% - 1 steps of linear mixing followed by 1 step of the selected
     !% mixing. For the moment this variable only works with DIIS mixing.
     !%End
-    call parse_variable(parser, trim(prefix)//'MixInterval', 1, smix%interval)
+    call parse_variable(namespace, trim(prefix)//'MixInterval', 1, smix%interval)
     if(smix%interval < 1) call messages_input_error('MixInterval', 'MixInterval must be larger or equal than 1')
     
     smix%iter = 0

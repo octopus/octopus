@@ -27,6 +27,7 @@ module poisson_isf_oct_m
   use messages_oct_m
   use mesh_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use scaling_function_oct_m
@@ -70,9 +71,9 @@ module poisson_isf_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_isf_init(this, parser, mesh, cube, all_nodes_comm, init_world)
+  subroutine poisson_isf_init(this, namespace, mesh, cube, all_nodes_comm, init_world)
     type(poisson_isf_t), intent(out)   :: this
-    type(parser_t),      intent(in)    :: parser
+    type(namespace_t),   intent(in)    :: namespace
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(inout) :: cube
     integer,             intent(in)    :: all_nodes_comm
@@ -140,7 +141,7 @@ contains
     !% How many nodes to use to solve the Poisson equation. A value of
     !% 0, the default, implies that all available nodes are used.
     !%End
-    call parse_variable(parser, 'PoissonSolverNodes', default_nodes, nodes)
+    call parse_variable(namespace, 'PoissonSolverNodes', default_nodes, nodes)
 
     this%all_nodes_comm = all_nodes_comm
 

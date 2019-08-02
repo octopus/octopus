@@ -770,9 +770,9 @@ end subroutine X(compute_ACBNO_U_kanamori_restricted)
 
 ! ---------------------------------------------------------
 ! TODO: Merge this with the two_body routine in system/output_me_inc.F90
-subroutine X(compute_coulomb_integrals) (this, parser, mesh, der, psolver)
+subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
   type(lda_u_t),       intent(inout)  :: this
-  type(parser_t),      intent(in)     :: parser
+  type(namespace_t),   intent(in)     :: namespace
   type(mesh_t),        intent(in)     :: mesh
   type(derivatives_t), intent(in)     :: der
   type(poisson_t),     intent(in)     :: psolver
@@ -882,9 +882,9 @@ subroutine X(compute_coulomb_integrals) (this, parser, mesh, der, psolver)
   call profiling_out(prof)
 end subroutine X(compute_coulomb_integrals)
 
-subroutine X(compute_periodic_coulomb_integrals)(this, parser, der, mc)
+subroutine X(compute_periodic_coulomb_integrals)(this, namespace, der, mc)
   type(lda_u_t),       intent(inout)  :: this
-  type(parser_t),      intent(in)     :: parser
+  type(namespace_t),   intent(in)     :: namespace
   type(derivatives_t), intent(in)     :: der
   type(multicomm_t),   intent(in)     :: mc
 
@@ -920,7 +920,7 @@ subroutine X(compute_periodic_coulomb_integrals)(this, parser, der, mc)
   norbs = os%norbs
   np = der%mesh%np  
 
-  call poisson_init(os%poisson, parser, der, mc, solver=POISSON_DIRECT_SUM) !POISSON_ISF)
+  call poisson_init(os%poisson, namespace, der, mc, solver=POISSON_DIRECT_SUM) !POISSON_ISF)
 
   ijst=0
   do ist = 1, norbs

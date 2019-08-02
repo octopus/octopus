@@ -22,6 +22,7 @@ module space_oct_m
 
   use global_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
 
   implicit none
@@ -55,9 +56,9 @@ module space_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine space_init(this, parser, dim)
+  subroutine space_init(this, namespace, dim)
     type(space_t),     intent(inout) :: this
-    type(parser_t),    intent(in)    :: parser
+    type(namespace_t), intent(in)    :: namespace
     integer, optional, intent(in)    :: dim
 
     PUSH_SUB(space_init_simple)
@@ -74,7 +75,7 @@ contains
       !% variable (or more, if configured with <tt>--with-max-dim=4</tt> or higher).
       !% Note that not all input variables may be available in all cases.
       !%End
-      call parse_variable(parser, 'Dimensions', default_ndim, this%dim)
+      call parse_variable(namespace, 'Dimensions', default_ndim, this%dim)
     end if
     if((this%dim>MAX_DIM).or.(this%dim<1)) call messages_input_error('Dimensions')
 

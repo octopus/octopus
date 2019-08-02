@@ -24,6 +24,7 @@
     use global_oct_m
     use io_oct_m
     use messages_oct_m
+    use namespace_oct_m
     use parser_oct_m
     use profiling_oct_m
     use simul_box_oct_m
@@ -44,7 +45,7 @@
     FLOAT :: dw, max_energy
     integer :: ifreq, idir
     integer, parameter :: max_freq = 10000
-    type(parser_t) :: parser
+    type(namespace_t) :: namespace
 
     ! Initialize stuff
     call global_init(is_serial = .true.)
@@ -53,28 +54,29 @@
 
     call getopt_end()
 
-    call parser_init(parser)
+    call parser_init()
+    namespace = namespace_t("")
     
-    call messages_init(parser)
+    call messages_init(namespace)
 
-    call io_init(parser)
+    call io_init(namespace)
 
-    call unit_system_init(parser)
+    call unit_system_init(namespace)
 
     !These variables are documented in src/td/spectrum.F90
-    call parse_variable(parser, 'TDMaxSteps', 1500, max_iter)
-    call parse_variable(parser, 'PropagationSpectrumStartTime',  M_ZERO, start_time, units_inp%time)
-    call parse_variable(parser, 'PropagationSpectrumEndTime',  -M_ONE, end_time, units_inp%time)
-    call parse_variable(parser, 'PropagationSpectrumMaxEnergy', &
+    call parse_variable(namespace, 'TDMaxSteps', 1500, max_iter)
+    call parse_variable(namespace, 'PropagationSpectrumStartTime',  M_ZERO, start_time, units_inp%time)
+    call parse_variable(namespace, 'PropagationSpectrumEndTime',  -M_ONE, end_time, units_inp%time)
+    call parse_variable(namespace, 'PropagationSpectrumMaxEnergy', &
       units_from_atomic(units_inp%energy, units_to_atomic(unit_invcm, CNST(10000.0))), max_energy, units_inp%energy)
 
     dw = max_energy/(max_freq-M_ONE) !Initializes the wavevector step dw
 
     if (end_time < M_ZERO) end_time = huge(end_time)
 
-    call space_init(space, parser)
-    call geometry_init(geo, parser, space)
-    call simul_box_init(sb, parser, geo, space)
+    call space_init(space, namespace)
+    call geometry_init(geo, namespace, space)
+    call simul_box_init(sb, namespace, geo, space)
 
       SAFE_ALLOCATE(dipole(0:max_iter+1, 1:3))
 
@@ -118,7 +120,7 @@
     call io_end()
     call messages_end()
 
-    call parser_end(parser)
+    call parser_end()
     call global_end()
 
   contains

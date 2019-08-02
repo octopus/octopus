@@ -30,6 +30,7 @@ module xc_ks_inversion_oct_m
   use io_function_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -89,9 +90,9 @@ module xc_ks_inversion_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_init(ks_inv, parser, gr, geo, st, xc, psolver)
+  subroutine xc_ks_inversion_init(ks_inv, namespace, gr, geo, st, xc, psolver)
     type(xc_ks_inversion_t), intent(out)   :: ks_inv
-    type(parser_t),          intent(in)    :: parser
+    type(namespace_t),       intent(in)    :: namespace
     type(grid_t),            intent(inout) :: gr
     type(geometry_t),        intent(inout) :: geo
     type(states_t),          intent(in)    :: st
@@ -121,7 +122,7 @@ contains
     !%Option iter_godby 4
     !% Iterative scheme for <math>v_s</math> using power method from Rex Godby.
     !%End
-    call parse_variable(parser, 'InvertKSmethod', XC_INV_METHOD_ITER_STELLA, ks_inv%method)
+    call parse_variable(namespace, 'InvertKSmethod', XC_INV_METHOD_ITER_STELLA, ks_inv%method)
 
     if(ks_inv%method < XC_INV_METHOD_TWO_PARTICLE &
       .or. ks_inv%method > XC_INV_METHOD_ITER_GODBY) then
@@ -140,8 +141,8 @@ contains
     !%Option ks_inversion_adiabatic 2
     !% Compute exact adiabatic <math>v_{xc}</math>.
     !%End
-    call messages_obsolete_variable(parser, 'KS_Inversion_Level', 'KSInversionLevel')
-    call parse_variable(parser, 'KSInversionLevel', XC_KS_INVERSION_ADIABATIC, ks_inv%level)
+    call messages_obsolete_variable(namespace, 'KS_Inversion_Level', 'KSInversionLevel')
+    call parse_variable(namespace, 'KSInversionLevel', XC_KS_INVERSION_ADIABATIC, ks_inv%level)
     if(.not.varinfo_valid_option('KSInversionLevel', ks_inv%level)) call messages_input_error('KSInversionLevel')
 
     !%Variable KSInversionAsymptotics
@@ -155,7 +156,7 @@ contains
     !%Option xc_asymptotics_sc 2
     !% Applies the soft-Coulomb decay of <math>-1/\sqrt{r^2+1}</math> to <math>v_{xc}</math> in the asymptotic region.
     !%End
-    call parse_variable(parser, 'KSInversionAsymptotics', XC_ASYMPTOTICS_NONE, ks_inv%asymp)
+    call parse_variable(namespace, 'KSInversionAsymptotics', XC_ASYMPTOTICS_NONE, ks_inv%asymp)
 
     if(ks_inv%level /= XC_KS_INVERSION_NONE) then
       call states_copy(ks_inv%aux_st, st, exclude_wfns = .true.)
@@ -166,8 +167,9 @@ contains
 
       ! initialize densities, hamiltonian and eigensolver
       call states_densities_init(ks_inv%aux_st, gr, geo)
-      call hamiltonian_init(ks_inv%aux_hm, parser, gr, geo, ks_inv%aux_st, psolver, INDEPENDENT_PARTICLES, XC_FAMILY_NONE, .false.)
-      call eigensolver_init(ks_inv%eigensolver, parser, gr, ks_inv%aux_st, xc)
+      call hamiltonian_init(ks_inv%aux_hm, namespace, gr, geo, ks_inv%aux_st, psolver, INDEPENDENT_PARTICLES, XC_FAMILY_NONE, &
+        .false.)
+      call eigensolver_init(ks_inv%eigensolver, namespace, gr, ks_inv%aux_st, xc)
     end if
 
     POP_SUB(xc_ks_inversion_init)
@@ -333,9 +335,9 @@ contains
   ! here states are used to iterate KS solution and update of the VHXC potential,
   ! then new calculation of rho.
   ! ---------------------------------------------------------
-  subroutine invertks_iter(target_rho, parser, nspin, aux_hm, psolver, gr, st, eigensolver, asymptotics, method)
+  subroutine invertks_iter(target_rho, namespace, nspin, aux_hm, psolver, gr, st, eigensolver, asymptotics, method)
     type(grid_t),        intent(in)    :: gr
-    type(parser_t),      intent(in)    :: parser
+    type(namespace_t),   intent(in)    :: namespace
     type(states_t),      intent(inout) :: st
     type(hamiltonian_t), intent(inout) :: aux_hm
     type(poisson_t),     intent(in)    :: psolver
@@ -369,7 +371,7 @@ contains
     !% Absolute difference between the calculated and the target density in the KS
     !% inversion. Has to be larger than the convergence of the density in the SCF run.
     !%End    
-    call parse_variable(parser, 'InvertKSConvAbsDens', CNST(1e-5), convdensity)
+    call parse_variable(namespace, 'InvertKSConvAbsDens', CNST(1e-5), convdensity)
 
     !%Variable InvertKSStellaBeta
     !%Type float
@@ -378,7 +380,7 @@ contains
     !%Description
     !% residual term in Stella iterative scheme to avoid 0 denominators
     !%End    
-    call parse_variable(parser, 'InvertKSStellaBeta', CNST(.000001), beta)
+    call parse_variable(namespace, 'InvertKSStellaBeta', CNST(.000001), beta)
 
     !%Variable InvertKSStellaAlpha
     !%Type float
@@ -387,7 +389,7 @@ contains
     !%Description
     !% prefactor term in iterative scheme from L Stella
     !%End    
-    call parse_variable(parser, 'InvertKSStellaAlpha', CNST(0.25), alpha)
+    call parse_variable(namespace, 'InvertKSStellaAlpha', CNST(0.25), alpha)
 
     !%Variable InvertKSGodbyMu
     !%Type float
@@ -396,7 +398,7 @@ contains
     !%Description
     !% prefactor for iterative KS inversion convergence scheme from Godby based on van Leeuwen scheme
     !%End    
-    call parse_variable(parser, 'InvertKSGodbyMu', CNST(1.0), mu)
+    call parse_variable(namespace, 'InvertKSGodbyMu', CNST(1.0), mu)
 
     !%Variable InvertKSGodbyPower
     !%Type float
@@ -406,7 +408,7 @@ contains
     !% power to which density is elevated for iterative KS inversion convergence 
     !% scheme from Godby based on van Leeuwen scheme
     !%End    
-    call parse_variable(parser, 'InvertKSGodbyPower', CNST(0.05), npower_in)
+    call parse_variable(namespace, 'InvertKSGodbyPower', CNST(0.05), npower_in)
     npower = npower_in
 
     !%Variable InvertKSVerbosity
@@ -424,7 +426,7 @@ contains
     !% Same as 1 but outputs the density and the KS potential in each iteration in 
     !% addition.
     !%End
-    call parse_variable(parser, 'InvertKSVerbosity', 0, verbosity)  
+    call parse_variable(namespace, 'InvertKSVerbosity', 0, verbosity)  
     if(verbosity < 0 .or. verbosity > 2) then
       call messages_input_error('InvertKSVerbosity')
       call messages_fatal(1)
@@ -437,7 +439,7 @@ contains
     !%Description
     !% Selects how many iterations of inversion will be done in the iterative scheme
     !%End
-    call parse_variable(parser, 'InvertKSMaxIter', 200, max_iter)  
+    call parse_variable(namespace, 'InvertKSMaxIter', 200, max_iter)  
            
     SAFE_ALLOCATE(vhxc(1:np, 1:nspin))
 
@@ -606,9 +608,9 @@ contains
   end subroutine invertks_iter
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_calc(ks_inversion, parser, gr, hm, psolver, st, vxc, time)
+  subroutine xc_ks_inversion_calc(ks_inversion, namespace, gr, hm, psolver, st, vxc, time)
     type(xc_ks_inversion_t),  intent(inout) :: ks_inversion
-    type(parser_t),           intent(in)    :: parser
+    type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
     type(hamiltonian_t),      intent(in)    :: hm
     type(poisson_t),          intent(in)    :: psolver
@@ -667,7 +669,7 @@ contains
       call invertks_2part(ks_inversion%aux_st%rho, st%d%nspin, ks_inversion%aux_hm, psolver, gr, &
                          ks_inversion%aux_st, ks_inversion%eigensolver, ks_inversion%asymp)
     case(XC_INV_METHOD_VS_ITER : XC_INV_METHOD_ITER_GODBY)
-      call invertks_iter(st%rho, parser, st%d%nspin, ks_inversion%aux_hm, psolver, gr, &
+      call invertks_iter(st%rho, namespace, st%d%nspin, ks_inversion%aux_hm, psolver, gr, &
                          ks_inversion%aux_st, ks_inversion%eigensolver, ks_inversion%asymp, &
                          ks_inversion%method)
     end select

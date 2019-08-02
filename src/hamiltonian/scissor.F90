@@ -30,6 +30,7 @@ module scissor_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -64,9 +65,9 @@ module scissor_oct_m
 
 contains
 
- subroutine scissor_init(this, parser, st, gr, d, gap, mc)
+ subroutine scissor_init(this, namespace, st, gr, d, gap, mc)
    type(scissor_t),          intent(inout) :: this
-   type(parser_t),           intent(in)    :: parser
+   type(namespace_t),        intent(in)    :: namespace
   type(states_t),            intent(in)    :: st
   type(grid_t),              intent(in)    :: gr
   type(states_dim_t),        intent(in)    :: d
@@ -98,13 +99,13 @@ contains
   !We need to load GS states and to store them in this%gs_st
   call states_copy(this%gs_st, st)
   
-  call restart_init(restart_gs, parser, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
+  call restart_init(restart_gs, namespace, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
   if(ierr /= 0) then
      message(1) = "Unable to read states information."
      call messages_fatal(1)
   end if
 
-  call states_load(restart_gs, parser, this%gs_st, gr, ierr, label = ': gs for TDScissor')
+  call states_load(restart_gs, namespace, this%gs_st, gr, ierr, label = ': gs for TDScissor')
   if(ierr /= 0 .and. ierr /= (this%gs_st%st_end-this%gs_st%st_start+1)*this%gs_st%d%nik*this%gs_st%d%dim) then
     message(1) = "Unable to read wavefunctions for TDScissor."
     call messages_fatal(1)

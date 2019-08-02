@@ -38,6 +38,7 @@ module lda_u_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use orbitalbasis_oct_m
   use orbitalset_oct_m
   use parser_oct_m
@@ -176,9 +177,9 @@ contains
 
  end subroutine lda_u_nullify
 
- subroutine lda_u_init(this, parser, level, gr, geo, st, psolver)
+ subroutine lda_u_init(this, namespace, level, gr, geo, st, psolver)
    type(lda_u_t),             intent(inout) :: this
-   type(parser_t),            intent(in)    :: parser
+   type(namespace_t),         intent(in)    :: namespace
    integer,                   intent(in)    :: level
    type(grid_t),              intent(in)    :: gr
    type(geometry_t), target,  intent(in)    :: geo
@@ -209,7 +210,7 @@ contains
    !% states in the restart_proj folder.
    !% The states are defined via the block DFTUBasisStates
    !%End
-   call parse_variable(parser, 'DFTUBasisFromStates', .false., this%basisfromstates)
+   call parse_variable(namespace, 'DFTUBasisFromStates', .false., this%basisfromstates)
    if(this%basisfromstates) call messages_experimental("DFTUBasisFromStates") 
 
    !%Variable DFTUDoubleCounting
@@ -224,7 +225,7 @@ contains
    !%Option dft_u_amf 1
    !% (Experimental) Around mean field double counting, as defined in PRB 44, 943 (1991) and PRB 49, 14211 (1994).
    !%End
-   call parse_variable(parser, 'DFTUDoubleCounting', DFT_U_FLL, this%double_couting)
+   call parse_variable(namespace, 'DFTUDoubleCounting', DFT_U_FLL, this%double_couting)
    call messages_print_var_option(stdout,  'DFTUDoubleCounting', this%double_couting)
    if(this%double_couting /= DFT_U_FLL) call messages_experimental("DFTUDoubleCounting = dft_u_amf")
    if(st%d%ispin == SPINORS .and. this%double_couting /= DFT_U_FLL) then
@@ -241,7 +242,7 @@ contains
      !% from the peusopotential. Only available with ACBN0 functional.
      !% It is strongly recommended to set AOLoewdin=yes when using the option.
      !%End
-     call parse_variable(parser, 'UseAllAtomicOrbitals', .false., this%useAllOrbitals)
+     call parse_variable(namespace, 'UseAllAtomicOrbitals', .false., this%useAllOrbitals)
      if(this%useAllOrbitals) call messages_experimental("UseAllAtomicOrbitals")
 
      !%Variable SkipSOrbitals
@@ -252,7 +253,7 @@ contains
      !% If set to yes, Octopus will determine the effective U for all atomic orbitals
      !% from the peusopotential but s orbitals. Only available with ACBN0 functional.
      !%End
-     call parse_variable(parser, 'SkipSOrbitals', .true., this%skipSOrbitals)   
+     call parse_variable(namespace, 'SkipSOrbitals', .true., this%skipSOrbitals)   
      if(.not.this%SkipSOrbitals) call messages_experimental("SkipSOrbitals")
 
      !%Variable ACBN0Screening
@@ -264,7 +265,7 @@ contains
      !% will be estimated from bare Hartree-Fock. If set to 1 (default), the full screening
      !% of the U, as defined in the ACBN0 functional, is used.
      !%End
-     call parse_variable(parser, 'ACBN0Screening', M_ONE, this%acbn0_screening)
+     call parse_variable(namespace, 'ACBN0Screening', M_ONE, this%acbn0_screening)
      call messages_print_var_value(stdout, 'ACBN0Screening', this%acbn0_screening)
 
      !%Variable ACBN0RotationallyInvariant
@@ -275,7 +276,7 @@ contains
      !% This is different from the original formula for U and J.
      !% This is activated by default, except in the case of spinors, as this is not yet implemented in this case.
      !%End
-     call parse_variable(parser, 'ACBN0RotationallyInvariant', st%d%ispin /= SPINORS, this%rot_inv)
+     call parse_variable(namespace, 'ACBN0RotationallyInvariant', st%d%ispin /= SPINORS, this%rot_inv)
      call messages_print_var_value(stdout, 'ACBN0RotationallyInvariant', this%rot_inv)
      if(this%rot_inv .and. st%d%ispin == SPINORS ) then
        call messages_not_implemented("Rotationally invariant ACBN0 with spinors.")
@@ -285,7 +286,7 @@ contains
 
    if(.not.this%basisfromstates) then
 
-     call orbitalbasis_init(this%basis, parser)
+     call orbitalbasis_init(this%basis, namespace)
 
      if (states_are_real(st)) then
        call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
@@ -328,9 +329,9 @@ contains
        if(.not. complex_coulomb_integrals) then 
          write(message(1),'(a)')    'Computing the Coulomb integrals of the localized basis.'
          if (states_are_real(st)) then
-           call dcompute_coulomb_integrals(this, parser, gr%mesh, gr%der, psolver)
+           call dcompute_coulomb_integrals(this, namespace, gr%mesh, gr%der, psolver)
          else
-           call zcompute_coulomb_integrals(this, parser, gr%mesh, gr%der, psolver)
+           call zcompute_coulomb_integrals(this, namespace, gr%mesh, gr%der, psolver)
          end if
        else
          ASSERT(.not.states_are_real(st))
@@ -349,7 +350,7 @@ contains
      !% Each line of this block contains the index of a state to be used to construct the 
      !% localized basis. See DFTUBasisFromStates for details.
      !%End
-     if(parse_block(parser, 'DFTUBasisStates', blk) == 0) then
+     if(parse_block(namespace, 'DFTUBasisStates', blk) == 0) then
        this%norbsets = 1
        this%maxnorbs = parse_block_n(blk) 
        if(this%maxnorbs <1) then
@@ -525,9 +526,9 @@ contains
 
  end subroutine lda_u_build_phase_correction
 
- subroutine lda_u_periodic_coulomb_integrals(this, parser, st, der, mc, has_phase)
+ subroutine lda_u_periodic_coulomb_integrals(this, namespace, st, der, mc, has_phase)
    type(lda_u_t),                 intent(inout) :: this
-   type(parser_t),                intent(in)    :: parser
+   type(namespace_t),             intent(in)    :: namespace
    type(states_t),                intent(in)    :: st
    type(derivatives_t),           intent(in)    :: der
    type(multicomm_t),             intent(in)    :: mc
@@ -542,9 +543,9 @@ contains
    PUSH_SUB(lda_u_periodic_coulomb_integrals)
 
    if(states_are_real(st)) then
-     call dcompute_periodic_coulomb_integrals(this, parser, der, mc)
+     call dcompute_periodic_coulomb_integrals(this, namespace, der, mc)
    else
-     call zcompute_periodic_coulomb_integrals(this, parser, der, mc)
+     call zcompute_periodic_coulomb_integrals(this, namespace, der, mc)
    end if
 
   ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials

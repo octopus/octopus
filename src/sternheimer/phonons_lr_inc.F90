@@ -56,9 +56,9 @@ end subroutine X(phonons_lr_infrared)
 
 ! ---------------------------------------------------------
 !> calculate the wavefunction associated with each normal mode
-subroutine X(phonons_lr_wavefunctions)(lr, parser, st, gr, vib, restart_load, restart_dump)
+subroutine X(phonons_lr_wavefunctions)(lr, namespace, st, gr, vib, restart_load, restart_dump)
   type(lr_t),         intent(inout) :: lr
-  type(parser_t),     intent(in)    :: parser
+  type(namespace_t),  intent(in)    :: namespace
   type(states_t),     intent(inout) :: st !< not changed, just because of restart_read intent
   type(grid_t),       intent(in)    :: gr
   type(vibrations_t), intent(in)    :: vib
@@ -83,7 +83,7 @@ subroutine X(phonons_lr_wavefunctions)(lr, parser, st, gr, vib, restart_load, re
         imat = vibrations_get_index(vib, iatom, idir)
 
         call restart_open_dir(restart_load, wfs_tag_sigma(phn_wfs_tag(iatom, idir), 1), ierr)
-        if (ierr == 0) call states_load(restart_load, parser, st, gr, ierr, lr = lrtmp)
+        if (ierr == 0) call states_load(restart_load, namespace, st, gr, ierr, lr = lrtmp)
         call restart_close_dir(restart_load)
 
         if(ierr /= 0) then

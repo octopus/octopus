@@ -32,6 +32,7 @@ module xc_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -119,17 +120,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_init(xcs, parser, ndim, periodic_dim, nel, x_id, c_id, xk_id, ck_id, hartree_fock)
-    type(xc_t),     intent(out) :: xcs
-    type(parser_t), intent(in)  :: parser
-    integer,        intent(in)  :: ndim
-    integer,        intent(in)  :: periodic_dim
-    FLOAT,          intent(in)  :: nel
-    integer,        intent(in)  :: x_id
-    integer,        intent(in)  :: c_id
-    integer,        intent(in)  :: xk_id
-    integer,        intent(in)  :: ck_id
-    logical,        intent(in)  :: hartree_fock
+  subroutine xc_init(xcs, namespace, ndim, periodic_dim, nel, x_id, c_id, xk_id, ck_id, hartree_fock)
+    type(xc_t),        intent(out) :: xcs
+    type(namespace_t), intent(in)  :: namespace
+    integer,           intent(in)  :: ndim
+    integer,           intent(in)  :: periodic_dim
+    FLOAT,             intent(in)  :: nel
+    integer,           intent(in)  :: x_id
+    integer,           intent(in)  :: c_id
+    integer,           intent(in)  :: xk_id
+    integer,           intent(in)  :: ck_id
+    logical,           intent(in)  :: hartree_fock
 
     integer :: isp
     logical :: ll
@@ -146,11 +147,11 @@ contains
     !get both spin-polarized and unpolarized
     do isp = 1, 2
 
-      call xc_functl_init_functl(xcs%functional(FUNC_X, isp), parser, x_id, ndim, nel, isp)
-      call xc_functl_init_functl(xcs%functional(FUNC_C, isp), parser, c_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%functional(FUNC_X, isp), namespace, x_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%functional(FUNC_C, isp), namespace, c_id, ndim, nel, isp)
 
-      call xc_functl_init_functl(xcs%kernel(FUNC_X, isp), parser, xk_id, ndim, nel, isp)
-      call xc_functl_init_functl(xcs%kernel(FUNC_C, isp), parser, ck_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%kernel(FUNC_X, isp), namespace, xk_id, ndim, nel, isp)
+      call xc_functl_init_functl(xcs%kernel(FUNC_C, isp), namespace, ck_id, ndim, nel, isp)
 
     end do
 
@@ -197,8 +198,8 @@ contains
     if (bitand(xcs%family, XC_FAMILY_LCA) /= 0) &
       call messages_not_implemented("LCA current functionals") ! not even in libxc!
 
-    call messages_obsolete_variable(parser, 'MGGAimplementation')
-    call messages_obsolete_variable(parser, 'CurrentInTau', 'XCUseGaugeIndependentKED')
+    call messages_obsolete_variable(namespace, 'MGGAimplementation')
+    call messages_obsolete_variable(namespace, 'CurrentInTau', 'XCUseGaugeIndependentKED')
 
     if(family_is_mgga(xcs%family)) then
       !%Variable XCUseGaugeIndependentKED
@@ -210,7 +211,7 @@ contains
       !% is added to the kinetic-energy density such as to make it gauge-independent.
       !% Applies only to meta-GGA (and hybrid meta-GGA) functionals.
       !%End
-      call parse_variable(parser, 'XCUseGaugeIndependentKED', .true., xcs%use_gi_ked)
+      call parse_variable(namespace, 'XCUseGaugeIndependentKED', .true., xcs%use_gi_ked)
     end if
 
     POP_SUB(xc_init)
@@ -239,7 +240,7 @@ contains
       !% Applicable only to isotropic systems. (Experimental)
       !%End
 
-      call parse_variable(parser, 'XCKernelLRCAlpha', M_ZERO, xcs%kernel_lrc_alpha)
+      call parse_variable(namespace, 'XCKernelLRCAlpha', M_ZERO, xcs%kernel_lrc_alpha)
       if(abs(xcs%kernel_lrc_alpha) > M_EPSILON) &
         call messages_experimental("Long-range correction to kernel")
 
@@ -255,7 +256,7 @@ contains
       !%Option long_range_x 1
       !% The correction is applied to the exchange potential.
       !%End
-      call parse_variable(parser, 'XCDensityCorrection', LR_NONE, xcs%xc_density_correction)
+      call parse_variable(namespace, 'XCDensityCorrection', LR_NONE, xcs%xc_density_correction)
 
       if(xcs%xc_density_correction /= LR_NONE) then 
         call messages_experimental('XC density correction')
@@ -271,7 +272,7 @@ contains
         !% the cutoff must be given by the <tt>XCDensityCorrectionCutoff</tt>
         !% variable.
         !%End
-        call parse_variable(parser, 'XCDensityCorrectionOptimize', .true., xcs%xcd_optimize_cutoff)
+        call parse_variable(namespace, 'XCDensityCorrectionOptimize', .true., xcs%xcd_optimize_cutoff)
 
         !%Variable XCDensityCorrectionCutoff
         !%Type float
@@ -280,7 +281,7 @@ contains
         !%Description
         !% The value of the cutoff applied to the XC density.
         !%End
-        call parse_variable(parser, 'XCDensityCorrectionCutoff', CNST(0.0), xcs%xcd_ncutoff)
+        call parse_variable(namespace, 'XCDensityCorrectionCutoff', CNST(0.0), xcs%xcd_ncutoff)
 
         !%Variable XCDensityCorrectionMinimum
         !%Type logical
@@ -293,7 +294,7 @@ contains
         !% This is required for atoms or small
         !% molecules, but may cause numerical problems.
         !%End
-        call parse_variable(parser, 'XCDensityCorrectionMinimum', .true., xcs%xcd_minimum)
+        call parse_variable(namespace, 'XCDensityCorrectionMinimum', .true., xcs%xcd_minimum)
 
         !%Variable XCDensityCorrectionNormalize
         !%Type logical
@@ -304,7 +305,7 @@ contains
         !% normalized to reproduce the exact boundary conditions of
         !% the XC potential.
         !%End
-        call parse_variable(parser, 'XCDensityCorrectionNormalize', .true., xcs%xcd_normalize)
+        call parse_variable(namespace, 'XCDensityCorrectionNormalize', .true., xcs%xcd_normalize)
 
       end if
 
@@ -316,8 +317,8 @@ contains
       !% When enabled, additional parallelization
       !% will be used for the calculation of the XC functional.
       !%End
-      call messages_obsolete_variable(parser, 'XCParallel', 'ParallelXC')
-      call parse_variable(parser, 'ParallelXC', .true., xcs%parallel)
+      call messages_obsolete_variable(namespace, 'XCParallel', 'ParallelXC')
+      call parse_variable(namespace, 'ParallelXC', .true., xcs%parallel)
       
       POP_SUB(xc_init.parse)
     end subroutine parse

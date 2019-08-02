@@ -20,9 +20,9 @@
 !
 !> routine for output of model many-body quantities.
 !
-subroutine X(output_modelmb) (dir, parser, gr, st, geo, outp)
+subroutine X(output_modelmb) (dir, namespace, gr, st, geo, outp)
   type(states_t),         intent(in)    :: st
-  type(parser_t),         intent(in)    :: parser
+  type(namespace_t),      intent(in)    :: namespace
   type(grid_t),           intent(in)    :: gr ! may have to revert to intent inout if some subroutine complains
   character(len=*),       intent(in)    :: dir
   type(geometry_t),       intent(in)    :: geo
@@ -77,7 +77,7 @@ subroutine X(output_modelmb) (dir, parser, gr, st, geo, outp)
 
   call modelmb_density_matrix_nullify(denmat)
   if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
-    call modelmb_density_matrix_init(dirname, parser, st, denmat)
+    call modelmb_density_matrix_init(dirname, namespace, st, denmat)
   end if
 
   do mm = 1, st%nst

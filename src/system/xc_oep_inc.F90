@@ -25,9 +25,9 @@
 !! This is why it needs the xc_functl module. I prefer to put it here since
 !! the rest of the Hamiltonian module does not know about the gory details
 !! of how xc is defined and calculated.
-subroutine X(xc_oep_calc)(oep, parser, xcs, apply_sic_pz, gr, hm, psolver, st, ex, ec, vxc)
+subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, psolver, st, ex, ec, vxc)
   type(xc_oep_t),      intent(inout) :: oep
-  type(parser_t),      intent(in)    :: parser
+  type(namespace_t),   intent(in)    :: namespace
   type(xc_t),          intent(in)    :: xcs
   logical,             intent(in)    :: apply_sic_pz
   type(grid_t),        intent(in)    :: gr
@@ -110,7 +110,7 @@ subroutine X(xc_oep_calc)(oep, parser, xcs, apply_sic_pz, gr, hm, psolver, st, e
 #endif
 
   if (st%d%ispin==SPINORS) then
-    call xc_KLI_Pauli_solve(gr%mesh, parser, st, oep)
+    call xc_KLI_Pauli_solve(gr%mesh, namespace, st, oep)
     vxc(1:gr%mesh%np,:) = oep%vxc(1:gr%mesh%np,:)
     ! full OEP not implemented!
   else

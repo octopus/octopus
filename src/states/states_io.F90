@@ -30,6 +30,7 @@ module states_io_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use orbitalset_oct_m
   use orbitalset_utils_oct_m
   use parser_oct_m
@@ -429,11 +430,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_write_tpa(dir, parser, gr, st)
-    character(len=*), intent(in) :: dir
-    type(parser_t),   intent(in) :: parser
-    type(grid_t),     intent(in) :: gr
-    type(states_t),   intent(in) :: st
+  subroutine states_write_tpa(dir, namespace, gr, st)
+    character(len=*),  intent(in) :: dir
+    type(namespace_t), intent(in) :: namespace
+    type(grid_t),      intent(in) :: gr
+    type(states_t),    intent(in) :: st
 
     type(block_t) :: blk
     integer       :: ncols, icoord, ist, ik, tpa_initialst, tpa_initialk
@@ -489,7 +490,7 @@ contains
     !% <br>&nbsp;&nbsp; 0.1 | 0.2 | 0.3
     !% <br>%</tt>
     !%End
-    if(parse_block(parser, 'MomentumTransfer', blk) == 0) then
+    if(parse_block(namespace, 'MomentumTransfer', blk) == 0) then
 
       ! check if input makes sense
       ncols = parse_block_cols(blk, 0)
@@ -630,12 +631,12 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine states_write_bandstructure(dir, parser, nst, st, sb, geo, mesh, phase, vec_pot, vec_pot_var)
-    character(len=*),  intent(in)             :: dir
-    type(parser_t),               intent(in)  :: parser
-    integer,           intent(in)             :: nst
-    type(states_t),    intent(in)             :: st
-    type(simul_box_t), intent(in)             :: sb
+  subroutine states_write_bandstructure(dir, namespace, nst, st, sb, geo, mesh, phase, vec_pot, vec_pot_var)
+    character(len=*),         intent(in)      :: dir
+    type(namespace_t),        intent(in)      :: namespace
+    integer,                  intent(in)      :: nst
+    type(states_t),           intent(in)      :: st
+    type(simul_box_t),        intent(in)      :: sb
     type(geometry_t), target, intent(in)      :: geo
     type(mesh_t),             intent(in)      :: mesh
     CMPLX, pointer                            :: phase(:, :)
@@ -671,7 +672,7 @@ contains
     !% Determines if projections of wavefunctions on the atomic orbitals 
     !% are computed or not for obtaining the orbital resolved band-structure.
     !%End
-    call parse_variable(parser, 'BandStructureComputeProjections', .false., projection)
+    call parse_variable(namespace, 'BandStructureComputeProjections', .false., projection)
 
 
     if(mpi_grp_is_root(mpi_world)) then

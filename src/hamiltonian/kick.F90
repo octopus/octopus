@@ -27,6 +27,7 @@ module kick_oct_m
   use math_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use pcm_eom_oct_m
   use pcm_oct_m
@@ -110,12 +111,12 @@ module kick_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine kick_init(kick, parser, nspin, dim, periodic_dim)
-    type(kick_t),   intent(out) :: kick
-    type(parser_t), intent(in)  :: parser
-    integer,        intent(in)  :: nspin
-    integer,        intent(in)  :: dim
-    integer,        intent(in)  :: periodic_dim
+  subroutine kick_init(kick, namespace, nspin, dim, periodic_dim)
+    type(kick_t),      intent(out) :: kick
+    type(namespace_t), intent(in)  :: namespace
+    integer,           intent(in)  :: nspin
+    integer,           intent(in)  :: dim
+    integer,           intent(in)  :: periodic_dim
 
     type(block_t) :: blk
     integer :: n_rows, irow, idir
@@ -133,7 +134,7 @@ contains
     !% external potential is used. However, one may want to apply a kick on top of a laser field,
     !% for example.
     !%End
-    call parse_variable(parser, 'TDDeltaKickTime', M_ZERO, kick%time, units_inp%time)
+    call parse_variable(namespace, 'TDDeltaKickTime', M_ZERO, kick%time, units_inp%time)
     if(kick%time > M_ZERO) then
       call messages_experimental('TDDeltaKickTime > 0')
     end if
@@ -152,7 +153,7 @@ contains
     !% the wavefunctions instantaneously to acquire a phase <math>e^{ikx}</math>.
     !% The unit is inverse length.
     !%End
-    call parse_variable(parser, 'TDDeltaStrength', M_ZERO, kick%delta_strength, units_inp%length**(-1))
+    call parse_variable(namespace, 'TDDeltaStrength', M_ZERO, kick%delta_strength, units_inp%length**(-1))
 
     nullify(kick%l)
     nullify(kick%m)
@@ -197,7 +198,7 @@ contains
     !% This mode is intended for use with symmetries to obtain both of the responses
     !% at once, at described in the reference above.
     !%End
-    call parse_variable(parser, 'TDDeltaStrengthMode', KICK_DENSITY_MODE, kick%delta_strength_mode)
+    call parse_variable(namespace, 'TDDeltaStrengthMode', KICK_DENSITY_MODE, kick%delta_strength_mode)
     select case (kick%delta_strength_mode)
     case (KICK_DENSITY_MODE)
     case (KICK_SPIN_MODE, KICK_SPIN_DENSITY_MODE)
@@ -206,7 +207,7 @@ contains
       call messages_input_error('TDDeltaStrengthMode')
     end select
 
-    if(parse_is_defined(parser, 'TDDeltaUserDefined')) then
+    if(parse_is_defined(namespace, 'TDDeltaUserDefined')) then
 
       kick%function_mode = KICK_FUNCTION_USER_DEFINED
       kick%n_multipoles = 0
@@ -221,7 +222,7 @@ contains
       !% block will be ignored. The value of <tt>TDDeltaUserDefined</tt> should be a string describing
       !% the function that is going to be used as delta perturbation.
       !%End
-      call parse_variable(parser, 'TDDeltaUserDefined', '0', kick%user_defined_function)
+      call parse_variable(namespace, 'TDDeltaUserDefined', '0', kick%user_defined_function)
 
       !%Variable TDKickFunction
       !%Type block
@@ -238,7 +239,7 @@ contains
       !%
       !% This feature allows calculation of quadrupole, octupole, etc., response functions.
       !%End
-    else if(parse_block(parser, 'TDKickFunction', blk) == 0) then
+    else if(parse_block(namespace, 'TDKickFunction', blk) == 0) then
 
       kick%function_mode = KICK_FUNCTION_MULTIPOLE
       n_rows = parse_block_n(blk)
@@ -268,7 +269,7 @@ contains
       !% used by <tt>oct-propagation_spectrum</tt> to rebuild the full polarizability tensor from just the
       !% first <tt>TDPolarizationEquivAxes</tt> directions. This variable is also used by <tt>CalculationMode = vdw</tt>.
       !%End
-      call parse_variable(parser, 'TDPolarizationEquivAxes', 0, kick%pol_equiv_axes)
+      call parse_variable(namespace, 'TDPolarizationEquivAxes', 0, kick%pol_equiv_axes)
 
       !%Variable TDPolarizationDirection
       !%Type integer
@@ -285,7 +286,7 @@ contains
       !% to <tt>TDPolarizationEquivAxes</tt>.
       !%End
 
-      call parse_variable(parser, 'TDPolarizationDirection', 0, kick%pol_dir)
+      call parse_variable(namespace, 'TDPolarizationDirection', 0, kick%pol_dir)
 
       if(kick%pol_dir < 1 .or. kick%pol_dir > dim) call messages_input_error('TDPolarizationDirection')
       
@@ -325,7 +326,7 @@ contains
       !%End
 
       kick%pol(:, :) = M_ZERO
-      if(parse_block(parser, 'TDPolarization', blk)==0) then
+      if(parse_block(namespace, 'TDPolarization', blk)==0) then
         n_rows = parse_block_n(blk)
         
         if(n_rows < dim) call messages_input_error('TDPolarization')
@@ -371,7 +372,7 @@ contains
       !% <i>et al.</i>, <i>J. Nanoscience and Nanotechnology</i> <b>8</b>,
       !% 3392 (2008).
       !%End
-      if(parse_block(parser, 'TDPolarizationWprime', blk)==0) then
+      if(parse_block(namespace, 'TDPolarizationWprime', blk)==0) then
         do idir = 1, 3
           call parse_block_float(blk, 0, idir - 1, kick%wprime(idir))
         end do
@@ -410,7 +411,7 @@ contains
     !% In this case, the block has to include two extra values (<i>l</i> and <i>m</i>).
     !%End
 
-    if(parse_block(parser, 'TDMomentumTransfer', blk)==0) then
+    if(parse_block(namespace, 'TDMomentumTransfer', blk)==0) then
       do idir = 1, MAX_DIM
         call parse_block_float(blk, 0, idir - 1, kick%qvector(idir))
         kick%qvector(idir) = units_to_atomic(unit_one / units_inp%length, kick%qvector(idir))

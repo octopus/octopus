@@ -43,6 +43,7 @@ module v_ks_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use multigrid_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -136,9 +137,9 @@ module v_ks_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine v_ks_init(ks, parser, gr, psolver, st, geo, mc)
+  subroutine v_ks_init(ks, namespace, gr, psolver, st, geo, mc)
     type(v_ks_t),            intent(inout) :: ks
-    type(parser_t),          intent(in)    :: parser
+    type(namespace_t),       intent(in)    :: namespace
     type(grid_t),    target, intent(inout) :: gr
     type(poisson_t), target, intent(in)    :: psolver
     type(states_t),          intent(in)    :: st
@@ -195,8 +196,8 @@ contains
     parsed_theory_level = .false.
     
     ! the user knows what he wants, give her that
-    if(parse_is_defined(parser, 'TheoryLevel')) then
-      call parse_variable(parser, 'TheoryLevel', KOHN_SHAM_DFT, ks%theory_level)
+    if(parse_is_defined(namespace, 'TheoryLevel')) then
+      call parse_variable(namespace, 'TheoryLevel', KOHN_SHAM_DFT, ks%theory_level)
       if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error('TheoryLevel')
 
       parsed_theory_level = .true.
@@ -235,7 +236,7 @@ contains
 
     ASSERT(default >= 0)
 
-    if(.not. parse_is_defined(parser, 'XCFunctional') &
+    if(.not. parse_is_defined(namespace, 'XCFunctional') &
       .and. (pseudo_x_functional /= PSEUDO_EXCHANGE_ANY .or. pseudo_c_functional /= PSEUDO_CORRELATION_ANY)) then
       call messages_write('Info: the XCFunctional has been selected to match the pseudopotentials', new_line = .true.)
       call messages_write('      used in the calculation.')
@@ -243,7 +244,7 @@ contains
     end if
     
     ! The description of this variable can be found in file src/xc/functionals_list.F90
-    call parse_variable(parser, 'XCFunctional', default, val)
+    call parse_variable(namespace, 'XCFunctional', default, val)
 
     ! the first 3 digits of the number indicate the X functional and
     ! the next 3 the C functional.
@@ -274,7 +275,7 @@ contains
     !% The same functional defined by <tt>XCFunctional</tt>.
     !%End
     
-    call parse_variable(parser, 'XCKernel', default, val)
+    call parse_variable(namespace, 'XCKernel', default, val)
     
     if( -1 == val ) then
       ck_id = c_id
@@ -284,8 +285,8 @@ contains
       xk_id = val - ck_id*1000  
     end if
     
-    call messages_obsolete_variable(parser, 'XFunctional', 'XCFunctional')
-    call messages_obsolete_variable(parser, 'CFunctional', 'XCFunctional')
+    call messages_obsolete_variable(namespace, 'XFunctional', 'XCFunctional')
+    call messages_obsolete_variable(namespace, 'CFunctional', 'XCFunctional')
 
     ! initialize XC modules
 
@@ -293,11 +294,11 @@ contains
     ! but it might become Hartree-Fock later. This is safe because it
     ! becomes Hartree-Fock in the cases where the functional is hybrid
     ! and the ifs inside check for both conditions.
-    call xc_init(ks%xc, parser, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st%qtot, &
+    call xc_init(ks%xc, namespace, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st%qtot, &
       x_id, c_id, xk_id, ck_id, hartree_fock = ks%theory_level == HARTREE_FOCK)
 
     if(bitand(ks%xc%family, XC_FAMILY_LIBVDWXC) /= 0) then
-      call libvdwxc_set_geometry(ks%xc%functional(FUNC_C,1)%libvdwxc, parser, gr%mesh)
+      call libvdwxc_set_geometry(ks%xc%functional(FUNC_C,1)%libvdwxc, namespace, gr%mesh)
     end if
 
     ks%xc_family = ks%xc%family
@@ -312,13 +313,13 @@ contains
       end if
 
       ! In principle we do not need to parse. However we do it for consistency
-      call parse_variable(parser, 'TheoryLevel', default, ks%theory_level)
+      call parse_variable(namespace, 'TheoryLevel', default, ks%theory_level)
       if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error('TheoryLevel')
      
     end if
 
-    call messages_obsolete_variable(parser, 'NonInteractingElectrons', 'TheoryLevel')
-    call messages_obsolete_variable(parser, 'HartreeFock', 'TheoryLevel')
+    call messages_obsolete_variable(namespace, 'NonInteractingElectrons', 'TheoryLevel')
+    call messages_obsolete_variable(namespace, 'HartreeFock', 'TheoryLevel')
 
     if(ks%theory_level == RDMFT ) call messages_experimental('RDMFT theory level')
     
@@ -360,7 +361,7 @@ contains
         !% Average-density SIC.
         !% C. Legrand <i>et al.</i>, <i>J. Phys. B</i> <b>35</b>, 1115 (2002). 
         !%End
-        call parse_variable(parser, 'SICCorrection', sic_none, ks%sic_type)
+        call parse_variable(namespace, 'SICCorrection', sic_none, ks%sic_type)
         if(.not. varinfo_valid_option('SICCorrection', ks%sic_type)) call messages_input_error('SICCorrection')
 
         ! Perdew-Zunger corrections
@@ -370,10 +371,10 @@ contains
         ks%sic_type = SIC_NONE
       end if
 
-      if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) call xc_oep_init(ks%oep, parser, ks%xc_family, gr, st)
+      if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st)
 
       if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_init(ks%ks_inversion, parser, gr, geo, st, ks%xc, psolver)
+        call xc_ks_inversion_init(ks%ks_inversion, namespace, gr, geo, st, ks%xc, psolver)
       end if
 
     end select
@@ -392,7 +393,7 @@ contains
     if (gr%have_fine_mesh) then
       ks%new_hartree = .true.
       SAFE_ALLOCATE(ks%psolver)
-      call poisson_init(ks%psolver, parser, gr%fine%der, mc, label = " (fine mesh)")
+      call poisson_init(ks%psolver, namespace, gr%fine%der, mc, label = " (fine mesh)")
     else
         ks%psolver => psolver
     end if
@@ -401,7 +402,7 @@ contains
     ks%calc%calculating = .false.
 
     !The value of ks%calculate_current is set to false or true by Output    
-    call current_init(ks%current_calculator, parser, gr%sb)
+    call current_init(ks%current_calculator, namespace, gr%sb)
     
     !%Variable VDWCorrection
     !%Type integer
@@ -419,7 +420,7 @@ contains
     !% The DFT-D3 scheme of S. Grimme, J. Antony, S. Ehrlich, and
     !% S. Krieg, J. Chem. Phys. 132, 154104 (2010).
     !%End
-    call parse_variable(parser, 'VDWCorrection', OPTION__VDWCORRECTION__NONE, ks%vdw_correction)
+    call parse_variable(namespace, 'VDWCorrection', OPTION__VDWCORRECTION__NONE, ks%vdw_correction)
     
     if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
       call messages_experimental('VDWCorrection')
@@ -436,9 +437,9 @@ contains
         !% self-consistently, the default, or just as a correction to
         !% the total energy. This option only works with vdw_ts.
         !%End
-        call parse_variable(parser, 'VDWSelfConsistent', .true., ks%vdw_self_consistent)
+        call parse_variable(namespace, 'VDWSelfConsistent', .true., ks%vdw_self_consistent)
 
-        call vdw_ts_init(ks%vdw_ts, parser, geo, gr%fine%der)
+        call vdw_ts_init(ks%vdw_ts, namespace, geo, gr%fine%der)
 
       case(OPTION__VDWCORRECTION__VDW_D3)
         ks%vdw_self_consistent = .false.
@@ -486,8 +487,8 @@ contains
         !%  VDWD3Functional = 'pbe'
         !%
         !%End
-        if(parse_is_defined(parser, 'VDWD3Functional')) call messages_experimental('VDWD3Functional')
-        call parse_variable(parser, 'VDWD3Functional', d3func_def, d3func)
+        if(parse_is_defined(namespace, 'VDWD3Functional')) call messages_experimental('VDWD3Functional')
+        call parse_variable(namespace, 'VDWD3Functional', d3func_def, d3func)
         
         if(d3func == '') then
           call messages_write('Cannot find  a matching parametrization  of DFT-D3 for the current')
@@ -649,9 +650,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine v_ks_calc(ks, parser, hm, st, geo, calc_eigenval, time, calc_berry, calc_energy, calc_current)
+  subroutine v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval, time, calc_berry, calc_energy, calc_current)
     type(v_ks_t),               intent(inout) :: ks
-    type(parser_t),             intent(in)    :: parser
+    type(namespace_t),          intent(in)    :: namespace
     type(hamiltonian_t),        intent(inout) :: hm
     type(states_t),             intent(inout) :: st
     type(geometry_t),           intent(in)    :: geo
@@ -667,7 +668,7 @@ contains
 
     calc_current_ = optional_default(calc_current, .true.)
 
-    call v_ks_calc_start(ks, parser, hm, st, geo, time, calc_berry, calc_energy, calc_current_)
+    call v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_berry, calc_energy, calc_current_)
     call v_ks_calc_finish(ks, hm)
 
     if(optional_default(calc_eigenval, .false.)) then
@@ -683,9 +684,9 @@ contains
   !! potential. The routine v_ks_calc_finish must be called to finish
   !! the calculation. The argument hm is not modified. The argument st
   !! can be modified after the function have been used.
-  subroutine v_ks_calc_start(ks, parser, hm, st, geo, time, calc_berry, calc_energy, calc_current) 
+  subroutine v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_berry, calc_energy, calc_current) 
     type(v_ks_t),            target,   intent(inout) :: ks
-    type(parser_t),                    intent(in)    :: parser
+    type(namespace_t),                 intent(in)    :: namespace
     type(hamiltonian_t),     target,   intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
     type(states_t),                    intent(inout) :: st
     type(geometry_t) ,       target,   intent(in)    :: geo
@@ -968,17 +969,17 @@ contains
         ! The OEP family has to be handled specially
         if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
           if (states_are_real(st)) then
-            call dxc_oep_calc(ks%oep, parser, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
+            call dxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
               hm, ks%psolver, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
           else
-            call zxc_oep_calc(ks%oep, parser, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
+            call zxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
               hm, ks%psolver, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
           end if
         end if
 
         if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
           ! Also treat KS inversion separately (not part of libxc)
-          call xc_ks_inversion_calc(ks%ks_inversion, parser, ks%gr, hm, ks%psolver, st, vxc = ks%calc%vxc, time = ks%calc%time)
+          call xc_ks_inversion_calc(ks%ks_inversion, namespace, ks%gr, hm, ks%psolver, st, vxc = ks%calc%vxc, time = ks%calc%time)
         end if
       end if
 
@@ -992,7 +993,7 @@ contains
 
         case(OPTION__VDWCORRECTION__VDW_TS)
           vvdw = CNST(0.0)
-          call vdw_ts_calculate(ks%vdw_ts, parser, geo, ks%gr%der, ks%gr%sb, st, st%rho, &
+          call vdw_ts_calculate(ks%vdw_ts, namespace, geo, ks%gr%der, ks%gr%sb, st, st%rho, &
             ks%calc%energy%vdw, vvdw, ks%calc%vdw_forces)
            
         case(OPTION__VDWCORRECTION__VDW_D3)

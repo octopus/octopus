@@ -34,6 +34,7 @@ module scdm_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use poisson_oct_m
@@ -106,13 +107,13 @@ contains
 !! A. Damle, L. Lin, L. Ying: Compressed representation of Kohn-Sham orbitals via 
 !!                            selected columns of the density matrix
 !! http://arxiv.org/abs/1408.4926 (accepted in JCTC as of 17th March 2015)
-subroutine scdm_init(st, parser, der, fullcube, scdm, operate_on_scdm)
+subroutine scdm_init(st, namespace, der, fullcube, scdm, operate_on_scdm)
   type(states_t),      intent(in)  :: st !< this contains the KS set (for now from hm%hf_st which is confusing)
-  type(parser_t),      intent(in)  :: parser
-  type(derivatives_t) :: der
-  type(cube_t) :: fullcube !< cube of the full cell
-  type(scdm_t) :: scdm
-  logical, optional :: operate_on_scdm  !< apply exchange to SCDM states by performing a basis rotation on the st object
+  type(namespace_t),   intent(in)  :: namespace
+  type(derivatives_t)              :: der
+  type(cube_t)                     :: fullcube !< cube of the full cell
+  type(scdm_t)                     :: scdm
+  logical,                optional :: operate_on_scdm  !< apply exchange to SCDM states by performing a basis rotation on the st object
   
   integer :: ii, jj, kk, ip
   logical :: operate_on_scdm_
@@ -165,7 +166,7 @@ subroutine scdm_init(st, parser, der, fullcube, scdm, operate_on_scdm)
   !%Description
   !% Output detailed information on SCDM procedure.
   !%End
-  call parse_variable(parser, 'SCDM_verbose', .false., scdm%verbose)
+  call parse_variable(namespace, 'SCDM_verbose', .false., scdm%verbose)
   
   scdm%full_cube_n = fullcube%rs_n_global
   
@@ -182,7 +183,7 @@ subroutine scdm_init(st, parser, der, fullcube, scdm, operate_on_scdm)
   !%Description
   !% Controls the size of the box on which the SCDM states are defined (box size = 2*radius).
   !%End  
-  call parse_variable(parser, 'SCDMCutoffRadius', 3._8, rcut, units_inp%length)
+  call parse_variable(namespace, 'SCDMCutoffRadius', 3._8, rcut, units_inp%length)
   if (scdm%root.and.scdm%verbose) call messages_print_var_value(stdout, 'SCDM cutoff', rcut)
   ! box_size is half the size of the  box
   scdm%box_size = 0
@@ -276,10 +277,10 @@ subroutine scdm_init(st, parser, der, fullcube, scdm, operate_on_scdm)
   ! this replicates poisson_kernel_init()
   scdm%poisson%poisson_soft_coulomb_param = M_ZERO
   if (der%mesh%sb%periodic_dim.eq.3) then
-    call poisson_fft_init(scdm%poisson_fft, parser, scdm%boxmesh, scdm%boxcube, &
+    call poisson_fft_init(scdm%poisson_fft, namespace, scdm%boxmesh, scdm%boxcube, &
          kernel=POISSON_FFT_KERNEL_HOCKNEY,fullcube=fullcube)
   else !non periodic case
-    call poisson_fft_init(scdm%poisson_fft, parser, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_SPH)
+    call poisson_fft_init(scdm%poisson_fft, namespace, scdm%boxmesh, scdm%boxcube, kernel=POISSON_FFT_KERNEL_SPH)
   end if
   
   ! create poisson object

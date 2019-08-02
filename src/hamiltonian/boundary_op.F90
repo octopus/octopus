@@ -24,6 +24,7 @@ module boundary_op_oct_m
   use global_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use unit_oct_m
@@ -58,9 +59,9 @@ module boundary_op_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine bc_init(this, parser, mesh, sb, geo)
+  subroutine bc_init(this, namespace, mesh, sb, geo)
     type(bc_t),               intent(out) :: this
-    type(parser_t),           intent(in)  :: parser
+    type(namespace_t),        intent(in)  :: namespace
     type(mesh_t),             intent(in)  :: mesh
     type(simul_box_t),        intent(in)  :: sb
     type(geometry_t),         intent(in)  :: geo
@@ -100,7 +101,7 @@ contains
     !%Option exterior 3
     !% Exterior complex scaling (not yet implemented).
     !%End
-    call parse_variable(parser, 'AbsorbingBoundaries', NOT_ABSORBING, this%abtype)
+    call parse_variable(namespace, 'AbsorbingBoundaries', NOT_ABSORBING, this%abtype)
     if(.not.varinfo_valid_option('AbsorbingBoundaries', this%abtype, is_flag = .true.)) then
       call messages_input_error('AbsorbingBoundaries')
     end if
@@ -120,7 +121,7 @@ contains
       !% When <tt>AbsorbingBoundaries = cap</tt>, this is the height of the imaginary potential.
       !%End
       if(this%abtype == IMAGINARY_ABSORBING) then
-        call parse_variable(parser, 'ABCapHeight', -CNST(0.2), abheight, units_inp%energy)
+        call parse_variable(namespace, 'ABCapHeight', -CNST(0.2), abheight, units_inp%energy)
       end if
 
       !%Variable ABShape
@@ -145,7 +146,7 @@ contains
       !%End
 
       cols_abshape_block = 0
-      if(parse_block(parser, 'ABShape', blk) < 0) then
+      if(parse_block(namespace, 'ABShape', blk) < 0) then
         message(1) = "Input: ABShape not specified. Using default values for absorbing boundaries."
         call messages_info(1)
       
@@ -209,7 +210,7 @@ contains
       !%End
 !       call messages_obsolete_variable('ABWidth', 'ABShape')
       abwidth = bounds(2)-bounds(1)
-      call parse_variable(parser, 'ABWidth', abwidth, abwidth, units_inp%length)
+      call parse_variable(namespace, 'ABWidth', abwidth, abwidth, units_inp%length)
       bounds(1) = bounds(2) - abwidth
       
       write(message(1),'(a,es10.3,3a)') & 

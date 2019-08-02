@@ -32,6 +32,7 @@ module states_restart_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use multigrid_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -60,9 +61,9 @@ module states_restart_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine states_look_and_load(restart, parser, st, gr, is_complex)
+  subroutine states_look_and_load(restart, namespace, st, gr, is_complex)
     type(restart_t),            intent(in)    :: restart
-    type(parser_t),             intent(in)    :: parser
+    type(namespace_t),          intent(in)    :: namespace
     type(states_t),     target, intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
     logical,          optional, intent(in)    :: is_complex
@@ -124,7 +125,7 @@ contains
     end if
 
     ! load wavefunctions
-    call states_load(restart, parser, st, gr, ierr)
+    call states_load(restart, namespace, st, gr, ierr)
     if(ierr /= 0) then
       message(1) = "Unable to read wavefunctions."
       call messages_fatal(1)
@@ -322,9 +323,9 @@ contains
   !! <0 => Fatal error, or nothing read
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine states_load(restart, parser, st, gr, ierr, iter, lr, lowest_missing, label, verbose)
+  subroutine states_load(restart, namespace, st, gr, ierr, iter, lr, lowest_missing, label, verbose)
     type(restart_t),            intent(in)    :: restart
-    type(parser_t),             intent(in)    :: parser
+    type(namespace_t),          intent(in)    :: namespace
     type(states_t),             intent(inout) :: st
     type(grid_t),               intent(in)    :: gr
     integer,                    intent(out)   :: ierr
@@ -574,7 +575,7 @@ contains
 
     if (st%restart_fixed_occ) then
       ! reset to overwrite whatever smearing may have been set earlier
-      call smear_init(st%smear, parser, st%d%ispin, fixed_occ = .true., integral_occs = integral_occs, kpoints = gr%sb%kpoints)
+      call smear_init(st%smear, namespace, st%d%ispin, fixed_occ = .true., integral_occs = integral_occs, kpoints = gr%sb%kpoints)
     end if
 
 
@@ -1069,10 +1070,10 @@ contains
   ! ---------------------------------------------------------
   !> the routine reads formulas for user-defined wavefunctions
   !! from the input file and fills the respective orbitals
-  subroutine states_read_user_def_orbitals(mesh, parser, st)
-    type(mesh_t),   intent(in)    :: mesh
-    type(parser_t), intent(in)    :: parser
-    type(states_t), intent(inout) :: st
+  subroutine states_read_user_def_orbitals(mesh, namespace, st)
+    type(mesh_t),      intent(in)    :: mesh
+    type(namespace_t), intent(in)    :: namespace
+    type(states_t),    intent(inout) :: st
 
     type(block_t) :: blk
     integer :: ip, id, is, ik, nstates, state_from, ierr, ncols
@@ -1136,7 +1137,7 @@ contains
     !%Option normalize_no 0
     !% Do not normalize orbitals.
     !%End
-    if(parse_block(parser, 'UserDefinedStates', blk) == 0) then
+    if(parse_block(namespace, 'UserDefinedStates', blk) == 0) then
 
       call messages_print_stress(stdout, trim('Substitution of orbitals'))
 

@@ -142,11 +142,11 @@ contains
       !% How many points to use in the Gauss-Legendre integration to obtain the
       !% van der Waals coefficients.
       !%End
-      call messages_obsolete_variable(sys%parser, 'vdW_npoints', 'vdWNPoints')
-      call parse_variable(sys%parser, 'vdWNPoints', 6, gaus_leg_n)
+      call messages_obsolete_variable(sys%namespace, 'vdW_npoints', 'vdWNPoints')
+      call parse_variable(sys%namespace, 'vdWNPoints', 6, gaus_leg_n)
 
       ! \todo symmetry stuff should be general
-      call parse_variable(sys%parser, 'TDPolarizationEquivAxes', 0, equiv_axes)
+      call parse_variable(sys%namespace, 'TDPolarizationEquivAxes', 0, equiv_axes)
 
       select case(equiv_axes)
       case(3);      ndir = 1
@@ -209,9 +209,9 @@ contains
       end if
 
       ! we always need complex response
-      call restart_init(gs_restart, sys%parser, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+      call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
       if(ierr == 0) then
-        call states_look_and_load(gs_restart, sys%parser, sys%st, sys%gr, is_complex = .true.)
+        call states_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr, is_complex = .true.)
         call restart_end(gs_restart)
       else
         message(1) = "Previous gs calculation required."
@@ -230,12 +230,12 @@ contains
 
       ! load wavefunctions
       if (.not. fromScratch) then
-        call restart_init(restart_load, sys%parser, RESTART_VDW, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
+        call restart_init(restart_load, sys%namespace, RESTART_VDW, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh)
 
         do dir = 1, ndir
           write(dirname,'(a,i1,a)') "wfs_", dir, "_1_1"
           call restart_open_dir(restart_load, dirname, ierr)
-          if (ierr == 0) call states_load(restart_load, sys%parser, sys%st, sys%gr, ierr, lr=lr(dir,1))          
+          if (ierr == 0) call states_load(restart_load, sys%namespace, sys%st, sys%gr, ierr, lr=lr(dir,1))          
           if(ierr /= 0) then
             message(1) = "Unable to read response wavefunctions from '"//trim(dirname)//"'."
             call messages_warning(1)
@@ -250,7 +250,7 @@ contains
         call io_mkdir(VDW_DIR)               ! output data
       end if
 
-      call restart_init(restart_dump, sys%parser, RESTART_VDW, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
+      call restart_init(restart_dump, sys%namespace, RESTART_VDW, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
       POP_SUB(vdw_run.init_)
     end subroutine init_
@@ -283,7 +283,7 @@ contains
 
       PUSH_SUB(vdw_run.get_pol)
 
-      call pert_init(perturbation, sys%parser, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
+      call pert_init(perturbation, sys%namespace, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
       do dir = 1, ndir
         write(message(1), '(3a,f7.3)') 'Info: Calculating response for the ', index2axis(dir), &
           '-direction and imaginary frequency ', units_from_atomic(units_out%energy, aimag(omega))

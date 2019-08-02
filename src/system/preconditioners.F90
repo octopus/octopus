@@ -26,11 +26,12 @@ module preconditioners_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use lalg_basic_oct_m
-  use parser_oct_m
   use mesh_oct_m
   use messages_oct_m
   use multigrid_oct_m
+  use namespace_oct_m
   use nl_operator_oct_m
+  use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use stencil_star_oct_m
@@ -71,9 +72,9 @@ module preconditioners_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine preconditioner_init(this, parser, gr)
+  subroutine preconditioner_init(this, namespace, gr)
     type(preconditioner_t), intent(out)    :: this
-    type(parser_t),         intent(in)     :: parser
+    type(namespace_t),      intent(in)     :: namespace
     type(grid_t),           intent(in)     :: gr
 
     FLOAT :: alpha, default_alpha
@@ -111,7 +112,7 @@ contains
       default = PRE_FILTER
     end if
 
-    call parse_variable(parser, 'Preconditioner', default, this%which)
+    call parse_variable(namespace, 'Preconditioner', default, this%which)
     if(.not.varinfo_valid_option('Preconditioner', this%which)) call messages_input_error('Preconditioner')
     call messages_print_var_option(stdout, 'Preconditioner', this%which)
 
@@ -143,7 +144,7 @@ contains
       default_alpha = CNST(0.5)
       if(simul_box_is_periodic(gr%sb)) default_alpha = CNST(0.6)
 
-      call parse_variable(parser, 'PreconditionerFilterFactor', default_alpha, alpha)
+      call parse_variable(namespace, 'PreconditionerFilterFactor', default_alpha, alpha)
 
       call messages_print_var_value(stdout, 'PreconditionerFilterFactor', alpha)
 
@@ -192,7 +193,7 @@ contains
       !% This variable is the number of pre-smoothing iterations for the multigrid
       !% preconditioner. The default is 1.
       !%End
-      call parse_variable(parser, 'PreconditionerIterationsPre', 1, this%npre)
+      call parse_variable(namespace, 'PreconditionerIterationsPre', 1, this%npre)
 
       !%Variable PreconditionerIterationsMiddle
       !%Type integer
@@ -201,7 +202,7 @@ contains
       !% This variable is the number of smoothing iterations on the coarsest grid for the multigrid
       !% preconditioner. The default is 1.
       !%End
-      call parse_variable(parser, 'PreconditionerIterationsMiddle', 1, this%nmiddle)
+      call parse_variable(namespace, 'PreconditionerIterationsMiddle', 1, this%nmiddle)
 
       !%Variable PreconditionerIterationsPost
       !%Type integer
@@ -210,7 +211,7 @@ contains
       !% This variable is the number of post-smoothing iterations for the multigrid
       !% preconditioner. The default is 2.
       !%End
-      call parse_variable(parser, 'PreconditionerIterationsPost', 2, this%npost)
+      call parse_variable(namespace, 'PreconditionerIterationsPost', 2, this%npost)
     end if
 
     POP_SUB(preconditioner_init)
@@ -255,12 +256,12 @@ contains
   end function preconditioner_is_multigrid
 
   ! ---------------------------------------------------------
-  subroutine preconditioner_obsolete_variables(parser, old_prefix, new_prefix)
-    type(parser_t),      intent(in)    :: parser
+  subroutine preconditioner_obsolete_variables(namespace, old_prefix, new_prefix)
+    type(namespace_t),   intent(in)    :: namespace
     character(len=*),    intent(in)    :: old_prefix
     character(len=*),    intent(in)    :: new_prefix
 
-    call messages_obsolete_variable(parser, trim(old_prefix)//'Preconditioner', trim(new_prefix)//'Preconditioner')
+    call messages_obsolete_variable(namespace, trim(old_prefix)//'Preconditioner', trim(new_prefix)//'Preconditioner')
   end subroutine preconditioner_obsolete_variables
 
 #include "undef.F90"

@@ -29,6 +29,7 @@ module pcm_oct_m
   use mesh_oct_m
   use mesh_interpolation_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use pcm_eom_oct_m
@@ -188,15 +189,15 @@ contains
 
   !-------------------------------------------------------------------------------------------------------
   !> Initializes the PCM calculation: reads the VdW molecular cavity and generates the PCM response matrix.
-  subroutine pcm_init(pcm, parser, geo, grid, qtot, val_charge, external_potentials_present, kick_present)
-    type(pcm_t)     , intent(out) :: pcm
-    type(geometry_t), intent(in)  :: geo
-    type(parser_t),   intent(in)  :: parser
-    type(grid_t)    , intent(in)  :: grid
-    FLOAT           , intent(in)  :: qtot
-    FLOAT           , intent(in)  :: val_charge
-    logical         , intent(in)  :: external_potentials_present
-    logical         , intent(in)  :: kick_present
+  subroutine pcm_init(pcm, namespace, geo, grid, qtot, val_charge, external_potentials_present, kick_present)
+    type(pcm_t),       intent(out) :: pcm
+    type(geometry_t),  intent(in)  :: geo
+    type(namespace_t), intent(in)  :: namespace
+    type(grid_t),      intent(in)  :: grid
+    FLOAT,             intent(in)  :: qtot
+    FLOAT,             intent(in)  :: val_charge
+    logical,           intent(in)  :: external_potentials_present
+    logical,           intent(in)  :: kick_present
 
     integer :: ia, ii, itess, jtess, pcm_vdw_type, subdivider
     integer :: cav_unit_test, iunit, pcmmat_unit
@@ -238,7 +239,7 @@ contains
     !% At the moment, this option is available only for <tt>TheoryLevel = DFT</tt>.
     !% PCM is tested for CalculationMode = gs, while still experimental for other values (in particular, CalculationMode = td).
     !%End
-    call parse_variable(parser, 'PCMCalculation', .false., pcm%run_pcm)
+    call parse_variable(namespace, 'PCMCalculation', .false., pcm%run_pcm)
     if (pcm%run_pcm) then
       call messages_print_stress(stdout, trim('PCM'))
       if ( (grid%sb%box_shape /= MINIMUM) .or. (grid%sb%dim /= PCM_DIM_SPACE) ) then
@@ -263,7 +264,7 @@ contains
     !% The vdW radii are set from the <tt>share/pseudopotentials/elements</tt> file. These values are obtained from
     !% Alvarez S., Dalton Trans., 2013, 42, 8617-8636. Values can be changed in the <tt>Species</tt> block.
     !%End
-    call parse_variable(parser, 'PCMVdWRadii', PCM_VDW_OPTIMIZED, pcm_vdw_type)
+    call parse_variable(namespace, 'PCMVdWRadii', PCM_VDW_OPTIMIZED, pcm_vdw_type)
     call messages_print_var_option(stdout, "PCMVdWRadii", pcm_vdw_type)
 
     select case (pcm_vdw_type)
@@ -281,7 +282,7 @@ contains
     !% The default value depends on the choice of <tt>PCMVdWRadii</tt>:
     !% 1.2 for <tt>pcm_vdw_optimized</tt> and 1.0 for <tt>pcm_vdw_species</tt>.
     !%End
-    call parse_variable(parser, 'PCMRadiusScaling', default_value, pcm%scale_r)
+    call parse_variable(namespace, 'PCMRadiusScaling', default_value, pcm%scale_r)
     call messages_print_var_value(stdout, "PCMRadiusScaling", pcm%scale_r)
 
     !%Variable PCMTDLevel
@@ -302,7 +303,7 @@ contains
     !% If PCMTDLevel=eom, solvent polarization charges evolves following an equation of motion, generalizing 'neq' propagation.
     !% The equation of motion used here depends on the value of PCMEpsilonModel.
     !%End
-    call parse_variable(parser, 'PCMTDLevel', PCM_TD_EQ, pcm%tdlevel)
+    call parse_variable(namespace, 'PCMTDLevel', PCM_TD_EQ, pcm%tdlevel)
     call messages_print_var_value(stdout, "PCMTDLevel", pcm%tdlevel)
 
     if (pcm%tdlevel /= PCM_TD_EQ .and. (.not. pcm%run_pcm)) then
@@ -319,7 +320,7 @@ contains
     !%Description
     !% Static dielectric constant of the solvent (<math>\varepsilon_0</math>). 1.0 indicates gas phase.
     !%End
-    call parse_variable(parser, 'PCMStaticEpsilon', M_ONE, pcm%epsilon_0)
+    call parse_variable(namespace, 'PCMStaticEpsilon', M_ONE, pcm%epsilon_0)
     call messages_print_var_value(stdout, "PCMStaticEpsilon", pcm%epsilon_0)
 
     !%Variable PCMDynamicEpsilon
@@ -330,7 +331,7 @@ contains
     !% High-frequency dielectric constant of the solvent (<math>\varepsilon_d</math>). 
     !% <math>\varepsilon_d=\varepsilon_0</math> indicate equilibrium with solvent. 
     !%End
-    call parse_variable(parser, 'PCMDynamicEpsilon', pcm%epsilon_0, pcm%epsilon_infty)
+    call parse_variable(namespace, 'PCMDynamicEpsilon', pcm%epsilon_0, pcm%epsilon_infty)
     call messages_print_var_value(stdout, "PCMDynamicEpsilon", pcm%epsilon_infty)
     
     !%Variable PCMEpsilonModel
@@ -344,7 +345,7 @@ contains
     !%Option pcm_drude 2
     !% Drude-Lorentz model: <math>\varepsilon(\omega)=1+\frac{A}{\omega_0^2-\omega^2+i\gamma\omega}</math>
     !%End
-    call parse_variable(parser, 'PCMEpsilonModel', PCM_DEBYE_MODEL, pcm%which_eps)
+    call parse_variable(namespace, 'PCMEpsilonModel', PCM_DEBYE_MODEL, pcm%which_eps)
     call messages_print_var_value(stdout, "PCMEpsilonModel", pcm%which_eps)
     if (.not. varinfo_valid_option('PCMEpsilonModel', pcm%which_eps)) call messages_input_error('PCMEpsilonModel')
 
@@ -384,7 +385,7 @@ contains
     !% Files should be located in pcm directory and are called ASC_e.dat and ASC_ext.dat, respectively.
     !% The latter files are generated after any PCM run and contain the last values of the polarization charges.
     !%End
-    call parse_variable(parser, 'PCMEoMInitialCharges', 0, pcm%initial_asc)
+    call parse_variable(namespace, 'PCMEoMInitialCharges', 0, pcm%initial_asc)
     call messages_print_var_value(stdout, "PCMEoMInitialCharges", pcm%initial_asc)
 
     if (pcm%initial_asc /= 0) then
@@ -403,7 +404,7 @@ contains
     pcm%deb%eps_d = pcm%epsilon_infty
 
     !< re-parse TDTimeStep to propagate polarization charges
-    call parse_variable(parser, 'TDTimeStep', M_ZERO, pcm%dt, unit = units_inp%time)
+    call parse_variable(namespace, 'TDTimeStep', M_ZERO, pcm%dt, unit = units_inp%time)
 
     !%Variable PCMDebyeRelaxTime
     !%Type float
@@ -413,7 +414,7 @@ contains
     !% Relaxation time of the solvent within Debye model (<math>\tau</math>). Recall Debye dieletric function: 
     !% <math>\varepsilon(\omega)=\varepsilon_d+\frac{\varepsilon_0-\varepsilon_d}{1-i\omega\tau}</math>    
     !%End
-    call parse_variable(parser, 'PCMDebyeRelaxTime', M_ZERO, pcm%deb%tau)
+    call parse_variable(namespace, 'PCMDebyeRelaxTime', M_ZERO, pcm%deb%tau)
     call messages_print_var_value(stdout, "PCMDebyeRelaxTime", pcm%deb%tau)
 
     if (pcm%tdlevel == PCM_TD_EOM .and. pcm%which_eps == PCM_DEBYE_MODEL .and. &
@@ -442,7 +443,7 @@ contains
       !% Recall Drude-Lorentz dielectric function: <math>\varepsilon(\omega)=1+\frac{A}{\omega_0^2-\omega^2+i\gamma\omega}</math>   
       !% Default values of <math>\omega_0</math> guarantee to recover static dielectric constant.   
       !%End
-      call parse_variable(parser, 'PCMDrudeLOmega', sqrt(M_ONE/(pcm%epsilon_0 - M_ONE)), pcm%drl%w0)
+      call parse_variable(namespace, 'PCMDrudeLOmega', sqrt(M_ONE/(pcm%epsilon_0 - M_ONE)), pcm%drl%w0)
       call messages_print_var_value(stdout, "PCMDrudeLOmega", pcm%drl%w0)
     end if    
 
@@ -467,7 +468,7 @@ contains
     !% Damping factor of the solvent charges oscillations within Drude-Lorentz model (<math>\gamma</math>).
     !% Recall Drude-Lorentz dielectric function: <math>\varepsilon(\omega)=1+\frac{A}{\omega_0^2-\omega^2+i\gamma\omega}</math>   
     !%End
-    call parse_variable(parser, 'PCMDrudeLDamping', M_ZERO, pcm%drl%gm)
+    call parse_variable(namespace, 'PCMDrudeLDamping', M_ZERO, pcm%drl%gm)
     call messages_print_var_value(stdout, "PCMDrudeLDamping", pcm%drl%gm)
 
     !< Parameter (<math>A</math>) interpolating Drude-Lorentz dielectric function to its static value (<math>\varepsilon_0</math>).
@@ -483,7 +484,7 @@ contains
     !% include a contribution due to the polarization of the solvent. The latter is calculated here within the PCM framework.
     !% See [G. Gil, et al., J. Chem. Theory Comput., 2019, 15 (4), pp 2306–2319].
     !%End
-    call parse_variable(parser, 'PCMLocalField', .false., pcm%localf)
+    call parse_variable(namespace, 'PCMLocalField', .false., pcm%localf)
     call messages_print_var_value(stdout, "PCMLocalField", pcm%localf)
 
     if (pcm%localf .and. ((.not.external_potentials_present) .and. (.not.pcm%kick_is_present))) then
@@ -500,7 +501,7 @@ contains
     !% (Useful for analysis) When external fields are applied, turning off the solvent-molecule interaction (PCMSolute=no) and 
     !% activating the solvent polarization due to the applied field (PCMLocalField=yes) allows to include only local field effects. 
     !%End
-    call parse_variable(parser, 'PCMSolute', .true., pcm%solute)
+    call parse_variable(namespace, 'PCMSolute', .true., pcm%solute)
     call messages_print_var_value(stdout, "PCMSolute", pcm%solute)
 
     if (pcm%run_pcm .and. (.not. pcm%solute)) then
@@ -523,7 +524,7 @@ contains
     !% If .false. ALL           degrees-of-freedom of the solvent follow the kick. The potential due to polarization charges evolves 
     !%  following an equation of motion. When Debye dielectric model is used, just a part of the potential behaves as another kick.
     !%End
-    call parse_variable(parser, 'PCMKick', .false., pcm%kick_like)
+    call parse_variable(namespace, 'PCMKick', .false., pcm%kick_like)
     call messages_print_var_value(stdout, "PCMKick", pcm%kick_like)
 
     if (pcm%kick_like .and. (.not. pcm%run_pcm)) then
@@ -554,7 +555,7 @@ contains
     !%Description
     !% Defines how often the PCM potential is updated during time propagation.
     !%End
-    call parse_variable(parser, 'PCMUpdateIter', 1, pcm%update_iter)
+    call parse_variable(namespace, 'PCMUpdateIter', 1, pcm%update_iter)
     call messages_print_var_value(stdout, "PCMUpdateIter", pcm%update_iter)
 
     !%Variable PCMGamessBenchmark
@@ -565,7 +566,7 @@ contains
     !% If PCMGamessBenchmark is set to "yes", the pcm_matrix is also written in a Gamess format.
     !% for benchamarking purposes.
     !%End
-    call parse_variable(parser, 'PCMGamessBenchmark', .false., gamess_benchmark)
+    call parse_variable(namespace, 'PCMGamessBenchmark', .false., gamess_benchmark)
 
     !%Variable PCMRenormCharges
     !%Type logical
@@ -578,7 +579,7 @@ contains
     !% and <math>Q_M^{e/n}</math> is the nominal electronic/nuclear charge of the system. This can be needed
     !% to treat molecules in weakly polar solvents.
     !%End
-    call parse_variable(parser, 'PCMRenormCharges', .false., pcm%renorm_charges)
+    call parse_variable(namespace, 'PCMRenormCharges', .false., pcm%renorm_charges)
 
     !%Variable PCMQtotTol
     !%Type float
@@ -592,7 +593,7 @@ contains
     !% (printed by the code in the file pcm/pcm_info.out) even, if polarization charges are renormalized, 
     !% the calculated results might be inaccurate or erroneous.
     !%End
-    call parse_variable(parser, 'PCMQtotTol', CNST(0.5), pcm%q_tot_tol)
+    call parse_variable(namespace, 'PCMQtotTol', CNST(0.5), pcm%q_tot_tol)
 
     if (pcm%renorm_charges) then
       message(1) = "Info: Polarization charges will be renormalized"
@@ -609,7 +610,7 @@ contains
     !% the polarization charges on each tessera (arXiv:1507.05471). If set to zero, the solvent 
     !% reaction potential in real-space is defined by using point charges.
     !%End
-    call parse_variable(parser, 'PCMSmearingFactor', M_ONE, pcm%gaussian_width)
+    call parse_variable(namespace, 'PCMSmearingFactor', M_ONE, pcm%gaussian_width)
     call messages_print_var_value(stdout, "PCMSmearingFactor", pcm%gaussian_width)
 
     if (abs(pcm%gaussian_width) <= M_EPSILON) then
@@ -636,7 +637,7 @@ contains
     !%  R_sph(1:T)      < Radii of the spheres to which the tesserae belong
     !%  normal(1:T,1:3) < Outgoing unitary vectors at the tesserae surfaces 
     !%End
-    call parse_variable(parser, 'PCMCavity', '', pcm%input_cavity)
+    call parse_variable(namespace, 'PCMCavity', '', pcm%input_cavity)
 
     if (pcm%input_cavity == '') then
 
@@ -647,7 +648,7 @@ contains
       !%Description
       !% If true, spheres centered at the Hydrogens atoms are included to build the solute cavity surface.
       !%End
-      call parse_variable(parser, 'PCMSpheresOnH', .false., add_spheres_h)
+      call parse_variable(namespace, 'PCMSpheresOnH', .false., add_spheres_h)
 
       pcm%n_spheres = 0
       band = .false.
@@ -712,7 +713,7 @@ contains
       !% Allows to subdivide further each tessera refining the discretization of the cavity tesselation. 
       !% Can take only two values, 1 or 4. 1 corresponds to 60 tesserae per sphere, while 4 corresponds to 240 tesserae per sphere.
       !%End
-      call parse_variable(parser, 'PCMTessSubdivider', 1, subdivider)
+      call parse_variable(namespace, 'PCMTessSubdivider', 1, subdivider)
 
       SAFE_ALLOCATE(dum2(1:subdivider*N_TESS_SPHERE*pcm%n_spheres))
 
@@ -724,7 +725,7 @@ contains
       !% Minimum distance between tesserae. 
       !% Any two tesserae having smaller distance in the starting tesselation will be merged together. 
       !%End
-      call parse_variable(parser, 'PCMTessMinDistance', CNST(0.1), min_distance)
+      call parse_variable(namespace, 'PCMTessMinDistance', CNST(0.1), min_distance)
       call messages_print_var_value(stdout, "PCMTessMinDistance", min_distance)
 
       !> Counting the number of tesserae and generating the Van der Waals discretized surface of the solute system
@@ -978,7 +979,7 @@ contains
     !%Option pcm_poisson 2
     !% Solving the Poisson equation for the polarization charge density.
     !%End
-    call parse_variable(parser, 'PCMCalcMethod', PCM_CALC_DIRECT, pcm%calc_method)
+    call parse_variable(namespace, 'PCMCalcMethod', PCM_CALC_DIRECT, pcm%calc_method)
     call messages_print_var_option(stdout, "PCMCalcMethod", pcm%calc_method)
 
 
@@ -1027,7 +1028,7 @@ contains
       !% The default value is such that the neighbor mesh contains points in a radius 
       !% equal to the width used for the gaussian smearing.
       !%End
-      call parse_variable(parser, 'PCMChargeSmearNN', pcm%tess_nn, pcm%tess_nn)
+      call parse_variable(namespace, 'PCMChargeSmearNN', pcm%tess_nn, pcm%tess_nn)
       call messages_print_var_value(stdout, "PCMChargeSmearNN", pcm%tess_nn)
       
       call pcm_poisson_sanity_check(pcm, grid%mesh)
@@ -3282,16 +3283,16 @@ contains
 
   ! -----------------------------------------------------------------------------
 
-  subroutine pcm_min_input_parsing_for_spectrum(pcm, parser)
-    type(pcm_min_t), intent(out)   :: pcm
-    type(parser_t),  intent(in)    :: parser
+  subroutine pcm_min_input_parsing_for_spectrum(pcm, namespace)
+    type(pcm_min_t),   intent(out)   :: pcm
+    type(namespace_t), intent(in)    :: namespace
 
     PUSH_SUB(pcm_min_input_parsing_for_spectrum)
 
     ! re-parsing PCM keywords
-    call parse_variable(parser, 'PCMCalculation', .false., pcm%run_pcm)
+    call parse_variable(namespace, 'PCMCalculation', .false., pcm%run_pcm)
     call messages_print_stress(stdout, trim('PCM'))
-    call parse_variable(parser, 'PCMLocalField', .false., pcm%localf)
+    call parse_variable(namespace, 'PCMLocalField', .false., pcm%localf)
     call messages_print_var_value(stdout, "PCMLocalField", pcm%localf)
     if ( pcm%localf ) then
       call messages_experimental("PCM local field effects in the optical spectrum")
@@ -3305,28 +3306,28 @@ contains
       call messages_write('in the nonequilibrium or equation-of-motion TD-PCM propagation schemes.')
       call messages_warning()
     end if
-    call parse_variable(parser, 'PCMTDLevel' , PCM_TD_EQ, pcm%tdlevel)
+    call parse_variable(namespace, 'PCMTDLevel' , PCM_TD_EQ, pcm%tdlevel)
     call messages_print_var_value(stdout, "PCMTDLevel", pcm%tdlevel)
 
     ! reading dielectric function model parameters
-    call parse_variable(parser, 'PCMStaticEpsilon' , M_ONE, pcm%deb%eps_0)
+    call parse_variable(namespace, 'PCMStaticEpsilon' , M_ONE, pcm%deb%eps_0)
     call messages_print_var_value(stdout, "PCMStaticEpsilon", pcm%deb%eps_0)
     if (pcm%tdlevel == PCM_TD_EOM) then
-      call parse_variable(parser, 'PCMEpsilonModel', PCM_DEBYE_MODEL, pcm%which_eps)
+      call parse_variable(namespace, 'PCMEpsilonModel', PCM_DEBYE_MODEL, pcm%which_eps)
       call messages_print_var_value(stdout, "PCMEpsilonModel", pcm%which_eps)
       if (pcm%which_eps == PCM_DEBYE_MODEL) then
-        call parse_variable(parser, 'PCMDynamicEpsilon', pcm%deb%eps_0, pcm%deb%eps_d)
+        call parse_variable(namespace, 'PCMDynamicEpsilon', pcm%deb%eps_0, pcm%deb%eps_d)
         call messages_print_var_value(stdout, "PCMDynamicEpsilon", pcm%deb%eps_d)
-        call parse_variable(parser, 'PCMDebyeRelaxTime', M_ZERO, pcm%deb%tau)
+        call parse_variable(namespace, 'PCMDebyeRelaxTime', M_ZERO, pcm%deb%tau)
         call messages_print_var_value(stdout, "PCMDebyeRelaxTime", pcm%deb%tau)
       else if (pcm%which_eps == PCM_DRUDE_MODEL) then
-        call parse_variable(parser, 'PCMDrudeLOmega', sqrt(M_ONE/(pcm%deb%eps_0-M_ONE)), pcm%drl%w0)
+        call parse_variable(namespace, 'PCMDrudeLOmega', sqrt(M_ONE/(pcm%deb%eps_0-M_ONE)), pcm%drl%w0)
         call messages_print_var_value(stdout, "PCMDrudeLOmega", pcm%drl%w0)
-        call parse_variable(parser, 'PCMDrudeLDamping', M_ZERO, pcm%drl%gm)
+        call parse_variable(namespace, 'PCMDrudeLDamping', M_ZERO, pcm%drl%gm)
         call messages_print_var_value(stdout, "PCMDrudeLDamping", pcm%drl%gm)
       end if
     else if (pcm%tdlevel == PCM_TD_NEQ) then
-      call parse_variable(parser, 'PCMDynamicEpsilon', pcm%deb%eps_0, pcm%deb%eps_d)
+      call parse_variable(namespace, 'PCMDynamicEpsilon', pcm%deb%eps_0, pcm%deb%eps_d)
       call messages_print_var_value(stdout, "PCMDynamicEpsilon", pcm%deb%eps_d)
     end if
 

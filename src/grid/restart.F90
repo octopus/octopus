@@ -32,6 +32,7 @@ module restart_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use par_vec_oct_m
   use profiling_oct_m
@@ -190,8 +191,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine restart_module_init(parser)
-    type(parser_t),         intent(in)    :: parser
+  subroutine restart_module_init(namespace)
+    type(namespace_t),         intent(in)    :: namespace
 
     logical :: set(RESTART_N_DATA_TYPES)
     integer :: iline, n_cols, data_type
@@ -233,12 +234,12 @@ contains
     info(RESTART_PARTITION)%dir = PARTITION_DIR
 
     ! Read input
-    call messages_obsolete_variable(parser, 'RestartFileFormat', 'RestartOptions')
-    call messages_obsolete_variable(parser, 'TmpDir', 'RestartOptions')
-    call messages_obsolete_variable(parser, 'RestartDir', 'RestartOptions')
-    call messages_obsolete_variable(parser, 'MeshPartitionRead', 'RestartOptions')
-    call messages_obsolete_variable(parser, 'MeshPartitionWrite', 'RestartOptions')
-    call messages_obsolete_variable(parser, 'MeshPartitionDir', 'RestartOptions')
+    call messages_obsolete_variable(namespace, 'RestartFileFormat', 'RestartOptions')
+    call messages_obsolete_variable(namespace, 'TmpDir', 'RestartOptions')
+    call messages_obsolete_variable(namespace, 'RestartDir', 'RestartOptions')
+    call messages_obsolete_variable(namespace, 'MeshPartitionRead', 'RestartOptions')
+    call messages_obsolete_variable(namespace, 'MeshPartitionWrite', 'RestartOptions')
+    call messages_obsolete_variable(namespace, 'MeshPartitionDir', 'RestartOptions')
 
     !%Variable RestartOptions
     !%Type block
@@ -364,7 +365,7 @@ contains
     !% This flag allows to selectively skip the reading and writting of specific restart information.
     !%End
     set = .false.
-    if(parse_block(parser, 'RestartOptions', blk) == 0) then
+    if(parse_block(namespace, 'RestartOptions', blk) == 0) then
 
       default_basedir = 'restart'
 
@@ -396,9 +397,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Initializes a restart object.
-  subroutine restart_init(restart, parser, data_type, type, mc, ierr, mesh, dir, exact)
+  subroutine restart_init(restart, namespace, data_type, type, mc, ierr, mesh, dir, exact)
     type(restart_t),             intent(out) :: restart   !< Restart information
-    type(parser_t),              intent(in)  :: parser
+    type(namespace_t),           intent(in)  :: namespace
     integer,                     intent(in)  :: data_type !< Restart data type (RESTART_GS, RESTART_TD, etc)
     integer,                     intent(in)  :: type      !< Is this restart used for dumping (type = RESTART_TYPE_DUMP)
                                                           !! or for loading (type = RESTART_TYPE_LOAD)?
@@ -452,7 +453,7 @@ contains
       !% option and write some restart information anyway.
       !%End
 
-      call parse_variable(parser, 'RestartWrite', .true., restart_write)
+      call parse_variable(namespace, 'RestartWrite', .true., restart_write)
       restart%skip = .not. restart_write
 
       if(restart%skip) then

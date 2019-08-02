@@ -24,6 +24,7 @@ program xyzanim
   use global_oct_m
   use io_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use simul_box_oct_m
   use space_oct_m
@@ -39,7 +40,7 @@ program xyzanim
   type(simul_box_t) :: sb
   type(geometry_t)  :: geo
   type(space_t)     :: space
-  type(parser_t) :: parser
+  type(namespace_t) :: namespace
   
   ! Initialize stuff
   call global_init(is_serial = .true.)
@@ -48,11 +49,12 @@ program xyzanim
   if(ierr == 0) call getopt_xyz_anim()
   call getopt_end()
 
-  call parser_init(parser)
+  call parser_init()
+  namespace = namespace_t("")
   
-  call messages_init(parser)
-  call io_init(parser)
-  call unit_system_init(parser)
+  call messages_init(namespace)
+  call io_init(namespace)
+  call unit_system_init(namespace)
 
   ! Sets the filenames
   coords_file = 'td.general/coordinates'
@@ -65,7 +67,7 @@ program xyzanim
   !% Sampling rate of the animation. The animation will be constructed using
   !% the iteration numbers that are multiples of <tt>AnimationSampling<tt>.
   !%End
-  call parse_variable(parser, 'AnimationSampling', 100, sampling)
+  call parse_variable(namespace, 'AnimationSampling', 100, sampling)
   if(sampling < 1) then
     message(1) = 'Sampling rate (AnimationSampling) should be bigger than 0'
     call messages_fatal(1)
@@ -78,11 +80,11 @@ program xyzanim
   !%Description
   !% If true, each iteration written will be in a separate file.
   !%End
-  call parse_variable(parser, 'AnimationMultiFiles', .false., multifiles)
+  call parse_variable(namespace, 'AnimationMultiFiles', .false., multifiles)
 
-  call space_init(space, parser)
-  call geometry_init(geo, parser, space)
-  call simul_box_init(sb, parser, geo, space)
+  call space_init(space, namespace)
+  call geometry_init(geo, namespace, space)
+  call simul_box_init(sb, namespace, geo, space)
 
   record_length = 100 + geo%space%dim*geo%natoms*3*20
 
@@ -121,7 +123,7 @@ program xyzanim
   call io_end()
   call messages_end()
 
-  call parser_end(parser)
+  call parser_end()
   call global_end()
 
 end program xyzanim
