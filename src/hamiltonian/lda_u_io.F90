@@ -47,6 +47,7 @@ module lda_u_io_oct_m
        lda_u_write_effectiveU,          &
        lda_u_write_kanamoriU,           &
        lda_u_write_U,                   &
+       lda_u_write_V,                   &
        lda_u_write_magnetization,       &
        lda_u_load,                      &
        lda_u_loadbasis,                 &
@@ -431,6 +432,62 @@ contains
  
    POP_SUB(lda_u_write_U)
  end subroutine lda_u_write_U
+
+ !--------------------------------------------------------- 
+ subroutine lda_u_write_V(this, iunit)
+   type(lda_u_t),     intent(in) :: this
+   integer,           intent(in) :: iunit
+
+   integer :: ios, icopies, ios2
+
+   if(.not. this%intersite) return
+
+   PUSH_SUB(lda_u_write_V)
+
+   if(mpi_grp_is_root(mpi_world)) then
+
+     write(iunit, '(a,a,a,f7.3,a)') 'Effective intersite V [', &
+       trim(units_abbrev(units_out%energy)),']:'
+     write(iunit,'(a,14x,a)') ' Orbital',  'V'
+     do ios = 1, this%norbsets
+       do icopies = 1, this%orbsets(ios)%nneighbors
+         ios2 = this%orbsets(ios)%map_os(icopies)
+         if(this%orbsets(ios)%ndim == 1) then
+           if(this%orbsets(ios)%nn /= 0 ) then
+             write(iunit,'(i4,a10, 2x, i1, a1, i2, 1x, i1, a1, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                                             this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), ios2, &
+                                             this%orbsets(ios2)%nn, l_notation(this%orbsets(ios2)%ll), &
+                                             units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
+                                             units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
+           else
+             write(iunit,'(i4,a10, 3x, a1, i2, 1x, a1, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                                             l_notation(this%orbsets(ios)%ll), ios2, l_notation(this%orbsets(ios2)%ll), &
+                                             units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
+                                             units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
+           end if
+        else
+          if(this%orbsets(ios)%nn /= 0 ) then
+             write(iunit,'(i4,a10, 2x, i1, a1, i1, a2, i2, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                          this%orbsets(ios)%nn, l_notation(this%orbsets(ios)%ll), &
+                          int(M_TWO*(this%orbsets(ios)%jj)), '/2',  ios2,      &
+                          units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
+                          units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
+           else
+             write(iunit,'(i4,a10, 3x, a1, i1, a2, i2, f7.3, f15.6)') ios, trim(species_label(this%orbsets(ios)%spec)), &
+                                  l_notation(this%orbsets(ios)%ll), int(M_TWO*(this%orbsets(ios)%jj)), '/2',  ios2,   &
+                                  units_from_atomic(units_out%length, this%orbsets(ios)%V_ij(icopies,3+1)), &
+                                  units_from_atomic(units_out%energy, this%orbsets(ios)%V_ij(icopies,0))
+           end if
+         end if
+       end do
+
+
+     end do
+   end if
+
+   POP_SUB(lda_u_write_V)
+ end subroutine lda_u_write_V
+ 
 
   ! ---------------------------------------------------------
   subroutine lda_u_dump(restart, this, st, ierr, iter)

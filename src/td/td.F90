@@ -816,6 +816,7 @@ contains
           write(message(1),'(a)') 'Loaded GS effective U of DFT+U'
           call messages_info(1)
           call lda_u_write_U(sys%hm%lda_u, stdout)
+          call lda_u_write_V(sys%hm%lda_u, stdout)
         end if
       end if
 

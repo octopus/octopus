@@ -856,7 +856,8 @@ contains
                                                    absolute_coordinates=.false.)
         write(iunit(is),'(1x)',advance='no')
         write(iunit(is),'(f14.8)',advance='no') kpoints_get_path_coord(sb%kpoints, & 
-                                                   states_dim_get_kpoint_index(st%d, ik + is)-(st%d%nik -npath)) 
+                                                   states_dim_get_kpoint_index(st%d, ik + is) &
+                                                  -states_dim_get_kpoint_index(st%d, st%d%nik -npath)) 
         do idir = 1, sb%dim
           write(iunit(is),'(f14.8)',advance='no') red_kpoint(idir)
         end do

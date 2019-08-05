@@ -110,18 +110,18 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
   #ifdef R_TCOMPLEX
     !In this case we want to get a real orbital and to store it in complex array
     SAFE_ALLOCATE(tmp(1:sm%np))
-    call datomic_orbital_get_submesh(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x, tmp)
+    call datomic_orbital_get_submesh(spec, sm, ii, ll, mm, 1, tmp)
     os%X(orb)(1:sm%np,1,orbind) = tmp(1:sm%np)
     SAFE_DEALLOCATE_A(tmp)
   #else
-    call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
+    call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, &
                                          os%X(orb)(1:sm%np,1,orbind))
   #endif
   else
     if(jj == ll+M_HALF) then
       mm = orbind - 2 - ll
       if(mm >= -ll) then
-        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
+        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, &
                                          os%X(orb)(1:sm%np,1,orbind))
         coeff = sqrt((ll+mm+M_ONE)/(M_TWO*ll+M_ONE)) 
         do is=1,sm%np
@@ -131,7 +131,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
         os%X(orb)(1:sm%np,1,orbind) = M_ZERO
       end if
       if(mm < ll) then
-        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm+1, 1, geo%atom(iatom)%x,&
+        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm+1, 1, &
                                          os%X(orb)(1:sm%np,2,orbind))
         coeff = sqrt((ll-mm)/(M_TWO*ll+M_ONE))                           
         do is=1,sm%np
@@ -142,14 +142,14 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
       end if
     else
       mm = orbind - ll
-      call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, geo%atom(iatom)%x,&
+      call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, &
                                         os%X(orb)(1:sm%np,2,orbind))
       coeff = -sqrt((ll+mm)/(M_TWO*ll+M_ONE))                           
       do is=1,sm%np
         os%X(orb)(is,2,orbind) = coeff*os%X(orb)(is,2,orbind)
       end do
       if(mm > -ll) then
-        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm-1, 1, geo%atom(iatom)%x,&
+        call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm-1, 1, &
                                          os%X(orb)(1:sm%np,1,orbind))
         coeff = sqrt((ll-mm+M_ONE)/(M_TWO*ll+M_ONE))      
         do is=1,sm%np
@@ -169,14 +169,13 @@ end subroutine X(get_atomic_orbital)
 
 
   ! ---------------------------------------------------------
-  subroutine X(atomic_orbital_get_submesh)(species, submesh, ii, ll, mm, ispin, pos, phi, derivative)
+  subroutine X(atomic_orbital_get_submesh)(species, submesh, ii, ll, mm, ispin, phi, derivative)
     type(species_t), target, intent(in)  :: species       !< The species.
     type(submesh_t),         intent(in)  :: submesh    !< The submesh descriptor where the orbital will be calculated.
     integer,                 intent(in)  :: ii
     integer,                 intent(in)  :: ll
     integer,                 intent(in)  :: mm
     integer,                 intent(in)  :: ispin      !< The spin index.
-    FLOAT,                   intent(in)  :: pos(:)     !< The position of the atom.
     R_TYPE,                  intent(out) :: phi(:)     !< The function defined in the mesh where the orbitals is returned.
     logical,       optional, intent(in)  :: derivative !< If present and .true. returns the derivative of the orbital.
 

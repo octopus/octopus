@@ -1089,6 +1089,7 @@ contains
 
         if(hm%lda_u_level == DFT_U_ACBN0) then
           call lda_u_write_U(hm%lda_u, stdout)
+          call lda_u_write_V(hm%lda_u, stdout)
         end if
 
         write(message(1),'(a)') ''
@@ -1192,6 +1193,7 @@ contains
 
       if(hm%lda_u_level == DFT_U_ACBN0) then
           call lda_u_write_U(hm%lda_u, iunit)
+          call lda_u_write_V(hm%lda_u, iunit)
           if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
         end if 
 
